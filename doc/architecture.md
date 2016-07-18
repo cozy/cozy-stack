@@ -25,6 +25,8 @@ Overview
 - security, performances, help for developers
 - migration from current
 - import/export data ("you will stay because you can leave")
+- Rest best pratices (jsonapi)
+- ifttt / webhooks
 
 ----
 
