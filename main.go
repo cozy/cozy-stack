@@ -1,6 +1,6 @@
 package main
 
-import "github.com/nono/stack/cmd"
+import "github.com/nono/cozy-stack/cmd"
 
 func main() {
 	cmd.Execute()

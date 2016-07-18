@@ -1,0 +1,9 @@
+---
+language: go
+go:
+  - 1.6.2
+
+before_script:
+  - go get -u github.com/alecthomas/gometalinter
+  - gometalinter --install --update
+  - gometalinter ./...
