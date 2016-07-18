@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nono/cozy-stack/web"
 	"github.com/spf13/cobra"
 )
 
@@ -14,13 +15,9 @@ var serveCmd = &cobra.Command{
 	Long: `Start the HTTP server for the server.
 It will accept HTTP request.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		r := gin.Default()
-		r.GET("/ping", func(c *gin.Context) {
-			c.JSON(200, gin.H{
-				"message": "pong",
-			})
-		})
-		if err := r.Run(); err != nil {
+		router := gin.Default()
+		web.SetupRoutes(router)
+		if err := router.Run(); err != nil {
 			fmt.Println("Error:", err)
 		}
 	},
