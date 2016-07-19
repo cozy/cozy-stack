@@ -1,3 +1,19 @@
+Introduction
+============
+
+This roadmap is not a prediction on what will be made when. It's just a tool
+to think about what should be made be coded and in what order. It can also be
+used to track the progress.
+
+But it's not realistic. In particular, I've prefered to put one subject per
+sprint with the whole team on it. But, of course, the development won't happen
+like that: the team can be split to work on several subjects and a subject
+will progress on several sprint.
+
+Like I said, this roadmap is to help see how things can be done, not an
+operational tool.
+
+
 Milestone 1
 ===========
 
@@ -5,43 +21,37 @@ Sprint 1
 --------
 
 * Back: Data
-* Front:
-* Demo:
+* Front: Emails
 
 Sprint 2
 --------
 
 * Back: Data (bis)
-* Front: -
-* Demo:
+* Front: Emails
 
 Sprint 3
 --------
 
-* Back: Files
-* Front:
-* Demo:
+* Back: Virtual File System
+* Front: Emails
 
 Sprint 4
 --------
 
-* Back: Applications
-* Front:
-* Demo:
+* Back: Virtual File System (bis)
+* Front: Emails
 
 Sprint 5
 --------
 
-* Back: Authentication & permissions
-* Front:
-* Demo:
+* Back: Applications
+* Front: Devtools
 
 Sprint 6
 --------
 
-* Back: Testing & Refactoring
-* Front:
-* Demo:
+* Back: Authentication & permissions
+* Front: Marketplace + My apps
 
 
 Milestone 2
@@ -50,44 +60,38 @@ Milestone 2
 Sprint 7
 --------
 
-* Back: Preferences
-* Front:
-* Demo:
+* Back: Settings
+* Front: Home
 
 Sprint 8
 --------
 
 * Back: Jobs
-* Front:
-* Demo:
+* Front: Home
 
 Sprint 9
 --------
 
 * Back: Scheduler
-* Front:
-* Demo:
+* Front: Preferences + Cozy-ui
 
 Sprint 10
 ---------
 
 * Back: Metrics
-* Front:
-* Demo:
+* Front: Files
 
 Sprint 11
 ---------
 
 * Back: Load testing
-* Front:
-* Demo:
+* Front: Files
 
 Sprint 12
 ---------
 
 * Back: Notifications
-* Front:
-* Demo:
+* Front: Files
 
 
 Milestone 3
@@ -97,40 +101,34 @@ Sprint 13
 ---------
 
 * Back: Import/export data
-* Front:
-* Demo:
+* Front: Contacts
 
 Sprint 14
 ---------
 
 * Back: Migration from old cozy instances
-* Front:
-* Demo:
+* Front: Calendar
 
 Sprint 15
 ---------
 
-* Back: Konnectors
-* Front:
-* Demo:
+* Back: Jobs for konnectors
+* Front: Todo list
 
 Sprint 16
 ---------
 
 * Back: Emails
-* Front:
-* Demo:
+* Front: Konnectors
 
 Sprint 17
 ---------
 
-* Back: Emails & more konnectors
-* Front:
-* Demo:
+* Back: Emails
+* Front: Emails
 
 Sprint 18
 ---------
 
 * Back: Testing & Refactoring
-* Front:
-* Demo:
+* Front: Emails

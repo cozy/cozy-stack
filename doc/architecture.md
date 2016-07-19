@@ -46,8 +46,8 @@ Apps that run in the browser
 List of services:
 
 - Data
-- Files
-- Preferences
+- Virtual File System
+- Settings
 - Applications
 - Scheduler
 - Jobs
@@ -61,7 +61,7 @@ Serverless apps / demos to write:
 
 - Home
 - Marketplace
-- Installed apps + permissions manager
+- My apps + permissions manager
 - Preferences (+ theme)
 - Devtools
 - Contacts
