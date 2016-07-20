@@ -26,9 +26,35 @@ for Cozy Cloud in all aspects. From an architectural point, it declines to:
 Overview
 --------
 
+The architecture of Cozy Cloud is composed of:
+
+- a reverse proxy that can accept https connexions and forward them
+- the cozy stack
+- a couchdb instance to persist the JSON documents
+- a space for storing files.
+
+All of this can run on a personal server, self-hosted at home, like a
+Raspberry Pi:
+
 ![Architecture for a self-hosted](self-hosted.png)
 
+But it's also possible to deploy a farm of servers for hosting thousands of
+cozy instances. It will looks like this:
+
 ![Architecture for a big instance](big-instance.png)
+
+This elasticity comes with some constraints:
+
+- most applications are run in the browser, not in the server
+- what must run on the server is mutualized inside the cozy stack
+- the cozy stack is stateless
+- the data are stored in couchdb and a space for files
+- a couchdb database is specific to an instance (no mix of data from 2 users
+  in the same database).
+
+
+The Cozy Stack
+--------------
 
 **TODO**
 
@@ -41,18 +67,7 @@ Overview
 - context for sharing a photos album
 - migration from current
 - import/export data ("you will stay because you can leave")
-
-----
-
-A single executable
-Stateless
-Elastic
-- can be self-hosted
-- farms of 1000 - 10000 cozys
-CouchDB for data
-Open Stack for files
-A jobs service (scheduler + queues)
-Apps that run in the browser
+- A single executable
 
 
 Services
