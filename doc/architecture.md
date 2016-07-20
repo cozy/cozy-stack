@@ -4,10 +4,23 @@ Cozy Cloud
 What is Cozy Cloud?
 -------------------
 
+Cozy Cloud is a personal platform as a service with a focus on data.
+Cozy Cloud can be seen as 4 layers, from inside to outside:
+
 1. A place to keep your personnal data
 2. A core API to handle the data
 3. Your web apps, and also the mobile & desktop clients
 4. A coherent User Experience
+
+It's also a set of values: Simple, Versatile, Yours. These values mean a lot
+for Cozy Cloud in all aspects. From an architectural point, it declines to:
+
+- Simple to deploy and understand, not built as a galaxy of optimized
+  microservices managed by kubernetes that only experts can debug.
+- Versatile, can be hosted on a Raspberry Pi for geeks to massive scale on
+  multiple servers by specialized hosting.
+- Yours, you own your data and you control them. If you want to take back your
+  data to go elsewhere, you can.
 
 
 Overview
@@ -16,7 +29,6 @@ Overview
 ![Architecture for a self-hosted](self-hosted.png)
 
 ![Architecture for a big instance](big-instance.png)
-
 
 **TODO**
 
@@ -27,15 +39,11 @@ Overview
 - explain permissions
 - how to add a cozy instance to a farm
 - context for sharing a photos album
-- security, performances, help for developers
 - migration from current
 - import/export data ("you will stay because you can leave")
-- Rest best pratices (jsonapi)
-- ifttt / webhooks
 
 ----
 
-Golang, with Gin framework
 A single executable
 Stateless
 Elastic
@@ -102,6 +110,15 @@ There is also a scheduler that acts like a crontab. It can add jobs at
 recurrent time. For example, it can add a job for fetching github commits
 every hour.
 
+Later, we can dream about having more ways to create jobs (webhooks, on
+document creation) and make them communicate. With a web interface on that, it
+can become a simplified [_Ifttt_](https://ifttt.com/).
+
+### Sync `/sync`
+
+This endpoint will be for synchronizing your contacts and calendars by using
+standard methods like caldav and carddav.
+
 ### Settings `/settings`
 
 Each cozy instance has some settings, like its domain name, its language, the
@@ -117,16 +134,65 @@ Serverless apps
 ---------------
 
 ### Home
-### App Center
-### Activity Monitor
-### My Accounts
-### Preferences (+ theme)
+
+It's where you land on your cozy and launch your apps.
+
+### App Center (was marketplace)
+
+You can install new apps here.
+
+### Activity Monitor (was My apps)
+
+It's a list of your installed apps and devices.
+
+### My Accounts (was konnectors)
+
+You can configure new accounts, to fetch data from them, and see the already
+configured accounts.
+
+### Preferences
+
+You can set the settings of your cozy, choose a new background for the home,
+and select a theme.
+
 ### Devtools
+
+Some tools for the developpers of applications only: an API console,
+documentation, etc.
+
 ### Contacts
+
+Manage your contact books.
+
 ### Calendar
+
+Manage your events and alarms.
+
 ### Emails
+
+A webmail client to read, send and backup your emails.
+
 ### Files
+
+A web interface to browse your files.
+
 ### Photos
+
+Organize your photos and share them with friends.
+
 ### Todo list
+
+A task manager to never forgot what you should do.
+
 ### Onboarding
+
+Start your cozy and setup your accounts.
+
+
+Guidelines
+----------
+
+- Golang, with Gin framework
+- Rest best pratices (jsonapi)
+- security, performances, help for developers
 
