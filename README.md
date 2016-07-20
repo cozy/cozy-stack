@@ -20,7 +20,6 @@ This repository contains thoughts for a new version of Cozy Cloud which aims
 to be simpler for hosting thousands of instances. You can find:
 
 - [some notes about the architecture](doc/architecture.md)
-- [a draft of a possible roadmap](doc/roadmap.md)
 - some code in Go to help me immerse in the new architecture
 
 
