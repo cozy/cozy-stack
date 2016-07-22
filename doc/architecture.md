@@ -1,5 +1,5 @@
-Cozy Cloud
-==========
+Cozy Cloud Architecture
+=======================
 
 What is Cozy Cloud?
 -------------------
@@ -28,7 +28,7 @@ Overview
 
 The architecture of Cozy Cloud is composed of:
 
-- a reverse proxy that can accept https connexions and forward them
+- a reverse proxy
 - the cozy stack
 - a couchdb instance to persist the JSON documents
 - a space for storing files.
@@ -51,6 +51,11 @@ This elasticity comes with some constraints:
 - the data are stored in couchdb and a space for files
 - a couchdb database is specific to an instance (no mix of data from 2 users
   in the same database).
+
+### Reverse proxy
+
+The reverse proxy is here to accept HTTPS connexions and forward the request
+to the cozy stack. It's here mainly to manage the TLS part.
 
 ### The Cozy Stack
 
@@ -220,7 +225,7 @@ and select a theme.
 ### Devtools
 
 Some tools for the developpers of applications only: an API console,
-documentation, etc.
+documentation, logs of the permission checks, etc.
 
 ### Contacts
 
