@@ -52,13 +52,48 @@ This elasticity comes with some constraints:
 - a couchdb database is specific to an instance (no mix of data from 2 users
   in the same database).
 
+### The Cozy Stack
 
-The Cozy Stack
---------------
+The Cozy Stack is a single executable. It can do several things but it's most
+important usage is starting an HTTP server to serve as an API for all the
+services of Cozy, from authentication to real-time events. This API can be
+used on several domains. Each domain is a cozy instance for a specific user
+("multi-tenant").
 
-**TODO**
+### Databases
 
-- explain the many couchdb databases
+The JSON documents that reprensent the users data are stored in CouchDB, but
+they are not mixed in a single database. We don't mix data from 2 users in the
+same database. It's easier and safer to control the access to the data by
+using different databases per user.
+
+But we think to go even farther by spliting the data of a user in several
+databases, one per document type. For example, we can have a database for the
+emails of a user and one for her todo list. This can simplify the
+implementation of permissions (this app has access to these document types)
+and can improve performances. CouchDB queries work with views. A view is
+defined ahead of its usage and is built by couchdb when it is requested and is
+stale, ie there were writes in the database since the last time it was
+updated. So, with a single database per user, it's possible to experience lag
+when the todolist view is requested after fetching a long list of emails. By
+spliting the databases per doctypes, we gain on two fronts:
+
+1. The views are updated less frequently, only when documents of the matching
+doctypes are writen.
+2. Some views are no longer necessary: those to access documents of a specific
+doctypes.
+
+There are downsides, mostly:
+
+1. It can be harder to manage more databases
+2. We don't really know how well CouchDB will perform with so many databases
+3. It's no longer possible to use a single view for documents from doctypes
+that are no longer in the same database.
+
+We think that we can work on that and the pros will outweight the cons.
+
+### TODO
+
 - List konnectors / jobs
 - say a word on metrics
 - explain auth for users + apps + context
@@ -67,7 +102,6 @@ The Cozy Stack
 - context for sharing a photos album
 - migration from current
 - import/export data ("you will stay because you can leave")
-- A single executable
 
 
 Services
@@ -144,6 +178,19 @@ name of its owner, the background for the home, etc.
 The applications can put some notifications for the user. That goes from a
 reminder for a meeting in 10 minutes to a suggestion to update your app.
 
+### Real-time `/real-time`
+
+This endpoint can be use to subscribe for real-time events. An application
+that shows items of a specific doctype can listen for this doctype to be
+notified of all the changes for this doctype. For example, the calendar app
+can listen for all the events and if a synchronization with the mobile adds a
+new event, the app will be notified and can show this new event.
+
+### Status `/status`
+
+It's here just to say that the API is up and that it can access the CouchDB
+databases.
+
 
 Serverless apps
 ---------------
@@ -210,4 +257,5 @@ Guidelines
 - Golang, with Gin framework
 - Rest best pratices (jsonapi)
 - security, performances, help for developers
+- [The 12-factor app](http://12factor.net/)
 

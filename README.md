@@ -6,7 +6,7 @@ Cozy Cloud
 
 ## What is Cozy?
 
-![Cozy Logo](https://raw.github.com/cozy/cozy-setup/gh-pages/assets/images/happycloud.png)
+![Cozy Logo](assets/images/happycloud.png)
 
 [Cozy](https://cozy.io) is a platform that brings all your web services in the
 same private space.  With it, your web apps and your devices can share data
@@ -17,10 +17,15 @@ hardware where no one profiles you.
 ## And what about this repository?
 
 This repository contains thoughts for a new version of Cozy Cloud which aims
-to be simpler for hosting thousands of instances. You can find:
+to be simpler for hosting thousands of instances. It should also bring
+multi-users for self-hosted and improve many things, starting with security
+and reliability. You can find:
 
 - [some notes about the architecture](doc/architecture.md)
-- some code in Go to help me immerse in the new architecture
+- some code in Go to help me immerse in the new architecture.
+
+Feel free to [open an issue](https://github.com/nono/cozy-stack/issues/new)
+for questions and suggestions.
 
 
 ## Community
