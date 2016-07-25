@@ -127,7 +127,7 @@ It's possible to manage serverless applications from the cozy stack and serve
 them via cozy stack. The stack does the routing and serve the HTML and the
 assets for the applications.
 
-### Data `/data`
+### Data System `/data`
 
 CouchDB is used for persistence of JSON documents. The data service is a layer
 on top of it for routing the requests to the corresponding CouchDB database
@@ -148,6 +148,9 @@ implementations, depending on where the files are effectively stored:
 
 - in a directory of a local file system (easier for self-hosted users)
 - Swift from Open Stack (convenient for massive hosting)
+
+The range of operations possible with this endpoint goes from simple ones,
+like uploading a file, to more complex ones, like renaming a folder.
 
 ### Jobs `/jobs`
 
@@ -259,8 +262,25 @@ Start your cozy and setup your accounts.
 Guidelines
 ----------
 
-- Golang, with Gin framework
-- Rest best pratices (jsonapi)
-- security, performances, help for developers
+### Golang
+
+Why?
+
+- used by a lot of people -> https://github.com/golang/go/wiki/GoUsers
+- some known open source projects: docker, kubernetes, grafana, syncthing,
+  influxdb, caddy, etc.
+
+
+### Gin framework
+
+### Rest best pratices (jsonapi)
+
+### Others
+
+- security, backup, performances, help for developers
 - [The 12-factor app](http://12factor.net/)
+- quota
+- streaming
+- doctype with Romain
+- indexer (bleve ?)
 
