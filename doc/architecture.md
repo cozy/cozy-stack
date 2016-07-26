@@ -139,7 +139,8 @@ implementations, depending on where the files are effectively stored:
 - Swift from Open Stack (convenient for massive hosting)
 
 The range of operations possible with this endpoint goes from simple ones,
-like uploading a file, to more complex ones, like renaming a folder.
+like uploading a file, to more complex ones, like renaming a folder. It also
+ensure that an instance is not exceeding its quota.
 
 ### Jobs `/jobs`
 
@@ -189,62 +190,100 @@ It's here just to say that the API is up and that it can access the CouchDB
 databases.
 
 
+Workers
+-------
+
+The workers take jobs from the queues and process them.
+
+### Fetch emails `/jobs/mailbox`
+
+It fetches a mailbox to synchronize it and see if there are some new emails.
+
+Payload: the mailbox
+
+### Send email `/jobs/sendmail`
+
+It connects to the SMTP server to send an email.
+
+Payload: mail account, recipient, body, attachments
+
+### Extract metadata `/jobs/metadata`
+
+When a file is added or updated, this worker will extract its metadata (EXIF
+for an image, id3 for a music, etc.)
+
+Payload: the filepath
+
+### Konnectors `/jobs/konnector`
+
+It synchronizes an account on a remote service (fetch bills for example).
+
+Payload: the kind of konnector, the credentials of the account and some
+optional parameters (like the folder where to put the files)
+
+### Registry `/jobs/registry`
+
+It updates the list of available applications.
+
+Payload: none
+
+
 Serverless apps
 ---------------
 
-### Home
+### Home `/`
 
 It's where you land on your cozy and launch your apps. Having widgets to
 display informations would be nice too!
 
-### App Center (was marketplace)
+### App Center (was marketplace) `/apps/app-center`
 
 You can install new apps here.
 
-### Activity Monitor (was My apps)
+### Activity Monitor (was My apps) `/apps/activity-monitor`
 
 It's a list of your installed apps and devices.
 
-### My Accounts (was konnectors)
+### My Accounts (was konnectors) `/apps/my-accounts`
 
 You can configure new accounts, to fetch data from them, and see the already
 configured accounts.
 
-### Preferences
+### Preferences `/apps/preferences`
 
 You can set the settings of your cozy, choose a new background for the home,
 and select a theme.
 
-### Devtools
+### Devtools `/apps/devtools`
 
 Some tools for the developpers of applications only: an API console,
 documentation, logs of the permission checks, etc.
 
-### Contacts
+### Contacts `/apps/contacts`
 
 Manage your contact books.
 
-### Calendar
+### Calendar `/apps/calendar`
 
 Manage your events and alarms.
 
-### Emails
+### Emails `/apps/emails`
 
 A webmail client to read, send and backup your emails.
 
-### Files
+### Files `/apps/files`
 
 A web interface to browse your files.
 
-### Photos
+### Photos `/apps/photos`
 
 Organize your photos and share them with friends.
 
-### Todo list
+### Todo list `/apps/todo`
 
 A task manager to never forgot what you should do.
 
-### Onboarding
+### Onboarding `/apps/onboarding`
 
 Start your cozy and setup your accounts.
 
@@ -333,16 +372,16 @@ one instance to another, and so, it can be used as a backup.
 TODO
 ----
 
-- List konnectors / jobs
 - say a word on metrics
 - explain auth for users + apps + context
 - explain permissions
 - context for sharing a photos album
 - import/export data ("you will stay because you can leave")
-- security, backup, performances, help for developers
+- security
+- performances
+- help for developers
 - [The 12-factor app](http://12factor.net/)
-- quota
-- streaming
 - doctype with Romain
 - indexer (bleve ?)
+- intent
 
