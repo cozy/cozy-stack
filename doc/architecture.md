@@ -97,17 +97,6 @@ that are no longer in the same database.
 
 We think that we can work on that and the pros will outweight the cons.
 
-### TODO
-
-- List konnectors / jobs
-- say a word on metrics
-- explain auth for users + apps + context
-- explain permissions
-- how to add a cozy instance to a farm
-- context for sharing a photos album
-- migration from current
-- import/export data ("you will stay because you can leave")
-
 
 Services
 --------
@@ -205,7 +194,8 @@ Serverless apps
 
 ### Home
 
-It's where you land on your cozy and launch your apps.
+It's where you land on your cozy and launch your apps. Having widgets to
+display informations would be nice too!
 
 ### App Center (was marketplace)
 
@@ -267,16 +257,88 @@ Guidelines
 Why?
 
 - used by a lot of people -> https://github.com/golang/go/wiki/GoUsers
+- http://redmonk.com/sogrady/2016/07/20/language-rankings-6-16/
+- https://github.com/golang/go/wiki/GoArm
 - some known open source projects: docker, kubernetes, grafana, syncthing,
   influxdb, caddy, etc.
-
 
 ### Gin framework
 
 ### Rest best pratices (jsonapi)
 
-### Others
 
+FAQ
+---
+
+> Does the current konnectors in nodejs will be lost?
+
+No, they won't. The business logic to scrap data from the many sources will be
+kept and they will be adapted to fit in this new architecture. It won't be a
+daemonized http server anymore, just some node scripts. The Cozy Stack will
+listen for jobs for them and, then, will launch these nodejs scripts with the
+right parameters.
+
+> So, it's not possible to have a custom application with a server part, like
+the lounge IRC client?
+
+We want to support this use case, just not on the short term. It's not clear
+how we can do that (and not weakening the security). One idea is to run the
+applications in a different server, or maybe in docker.
+
+> How to install and update cozy?
+
+The Cozy Stack will have no auto-update mechanism. For installing and updating
+it, you can use the classical ways:
+
+- using a package manager, like apt for debian & ubuntu
+- using an official image for Raspberry Pi (and other embedded platforms)
+- using the image and services of an hosting company
+- or compiling and installing it manually if you are really brave ;-)
+
+> How to add a cozy instance to a farm?
+
+1. Choose a (sub-)domain and configure the DNS for this (sub-)domain
+2. Configure the reverse-proxy to accept this (sub-)domain
+3. Use the `cozy` executable to configure the cozy stack
+
+> How to migrate from the nodejs cozy to this new architecture for cozy?
+
+1. Export the data from the nodejs cozy (we need to add a button in the web
+interface for that in the coming months)
+2. Install the new cozy
+3. Import the data
+
+Please note that we don't support a continuous replication method that will
+enable to use both the nodejs and the new architecture at the same time. It
+looks too complicated for a temporary thing.
+
+> How to backup the data?
+
+There are 2 sensitive places with data:
+
+- in CouchDB
+- on the place used for the Virtual File System (a directory on the local
+  filesystem, or in Swift).
+
+You can use the tools of your choice to backup these 2 locations. The good old
+rsync works fine (CouchDB files are append-only, except when compaction
+happens, so it's friendly to rsync).
+
+It's highly recommended to have an automated backup, but sometimes it can be
+useful to have a way to backup manually the data. The "export data" button in
+the web interface give a tarball that can be used to transfer your data from
+one instance to another, and so, it can be used as a backup.
+
+
+TODO
+----
+
+- List konnectors / jobs
+- say a word on metrics
+- explain auth for users + apps + context
+- explain permissions
+- context for sharing a photos album
+- import/export data ("you will stay because you can leave")
 - security, backup, performances, help for developers
 - [The 12-factor app](http://12factor.net/)
 - quota
