@@ -314,6 +314,23 @@ Why?
 - Gin framework
 - Best pratices (jsonapi)
 
+### DocTypes
+
+Each JSON document saved in CouchDB has a field `docType` that identify the
+kind of thing it is. For example, a contact will have the docType
+`github.com/cozy/cozy-doctypes/contact`, and in the cozy-doctypes repository,
+there will be a contact folder with a JSON inside it that describes this
+doctype (a bit like the golang imports):
+
+- What are the mandatory and optional fields?
+- What is the type (string, integer, date) of the fields?
+- Is there a validation rule for a field?
+- How the fields can be indexed for full text search?
+- What is the role of each field (documentation)?
+
+This description can be used by any cozy client library (JS, Golang, etc.) to
+generate some models to simplify the use of documents of this doctype.
+
 ### How to contribute?
 
 We want to stay Open Source and have a vibrant community. Having contributions
@@ -329,7 +346,7 @@ contributors have been promoted to the maintainers team and can merge the pull
 requests. We have done workshops to help new developers code their first
 konnector and we will keep doing it.
 
-### Creating a new application
+#### Creating a new application
 
 We want to make simple to create a new app. It means having a good
 documentation, but also some devtools to help:
@@ -340,7 +357,7 @@ documentation, but also some devtools to help:
 - `cozy-ui` will make it easy to reuse some widgets and offer an application
   with a style coherent to the cozy identity.
 
-### Reporting a bug or suggesting a new feature
+#### Reporting a bug or suggesting a new feature
 
 We are listening to our users. The forum is here to discuss on many subjects,
 including how the applications are used. The issues on github are a good place
@@ -421,5 +438,4 @@ TODO
 - security
 - performance
 - [The 12-factor app](http://12factor.net/)
-- doctype with Romain
 - intent
