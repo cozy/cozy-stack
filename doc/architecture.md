@@ -230,7 +230,8 @@ Payload: none
 ### Indexer `/jobs/indexer`
 
 When a JSON document is added, updated or deleted, this worker will update the
-index for full text search.
+index for full text search. [Bleve](http://www.blevesearch.com/) looks like a
+good candidate for the indexing and full text search technology.
 
 Payload: the doctype and the document to index
 
@@ -315,9 +316,35 @@ Why?
 
 ### How to contribute?
 
-- documentation for the cozy stack and the core apps
-- tools to make it simple to create a new app
-- it should be easy to add a new konnector
+We want to stay Open Source and have a vibrant community. Having contributions
+(code, design, translations) is important for us and we will try to create the
+favorable conditions to support it.
+
+#### Adding a new konnector
+
+Adding a konnector is easy for someone who knows JavaScript. The repository
+has already a lot of pull requests by external contributors. The wiki has
+documentation to explain the first steps of creating a new konnector. 3 active
+contributors have been promoted to the maintainers team and can merge the pull
+requests. We have done workshops to help new developers code their first
+konnector and we will keep doing it.
+
+### Creating a new application
+
+We want to make simple to create a new app. It means having a good
+documentation, but also some devtools to help:
+
+- the `cozy` executable will have a command to setup a new project
+- the devtools on the cozy interface will give documentation about the
+  doctypes, help explore the Rest API, and check if the permissions are OK
+- `cozy-ui` will make it easy to reuse some widgets and offer an application
+  with a style coherent to the cozy identity.
+
+### Reporting a bug or suggesting a new feature
+
+We are listening to our users. The forum is here to discuss on many subjects,
+including how the applications are used. The issues on github are a good place
+for bug tracking.
 
 
 FAQ
@@ -392,7 +419,7 @@ TODO
 - context for sharing a photos album
 - import/export data ("you will stay because you can leave")
 - security
-- performances
+- performance
 - [The 12-factor app](http://12factor.net/)
 - doctype with Romain
 - intent
