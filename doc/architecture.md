@@ -227,11 +227,18 @@ It updates the list of available applications.
 
 Payload: none
 
+### Indexer `/jobs/indexer`
+
+When a JSON document is added, updated or deleted, this worker will update the
+index for full text search.
+
+Payload: the doctype and the document to index
+
 
 Serverless apps
 ---------------
 
-### Home `/`
+### Home `/apps/home` (and aliased to `/` by default)
 
 It's where you land on your cozy and launch your apps. Having widgets to
 display informations would be nice too!
@@ -301,9 +308,16 @@ Why?
 - some known open source projects: docker, kubernetes, grafana, syncthing,
   influxdb, caddy, etc.
 
-### Gin framework
+### Rest API
 
-### Rest best pratices (jsonapi)
+- Gin framework
+- Best pratices (jsonapi)
+
+### How to contribute?
+
+- documentation for the cozy stack and the core apps
+- tools to make it simple to create a new app
+- it should be easy to add a new konnector
 
 
 FAQ
@@ -379,9 +393,6 @@ TODO
 - import/export data ("you will stay because you can leave")
 - security
 - performances
-- help for developers
 - [The 12-factor app](http://12factor.net/)
 - doctype with Romain
-- indexer (bleve ?)
 - intent
-
