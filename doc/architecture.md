@@ -333,9 +333,9 @@ generate some models to simplify the use of documents of this doctype.
 
 ### How to contribute?
 
-We want to stay Open Source and have a vibrant community. Having contributions
-(code, design, translations) is important for us and we will try to create the
-favorable conditions to support it.
+Cozy's DNA is fundamentally Open Source and we want our community to thrive.
+Having contributions (code, design, translations) is important for us and we
+will try to create the favorable conditions to support it.
 
 #### Adding a new konnector
 
@@ -348,8 +348,9 @@ konnector and we will keep doing it.
 
 #### Creating a new application
 
-We want to make simple to create a new app. It means having a good
-documentation, but also some devtools to help:
+One of the goals of the new architecture is to make it easier for developers
+to write new apps. It means having a good documentation, but also some
+devtools to help:
 
 - the `cozy` executable will have a command to setup a new project
 - the devtools on the cozy interface will give documentation about the
