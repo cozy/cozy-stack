@@ -7,7 +7,7 @@ What is Cozy Cloud?
 Cozy Cloud is a personal platform as a service with a focus on data.
 Cozy Cloud can be seen as 4 layers, from inside to outside:
 
-1. A place to keep your personnal data
+1. A place to keep your personal data
 2. A core API to handle the data
 3. Your web apps, and also the mobile & desktop clients
 4. A coherent User Experience
@@ -18,8 +18,8 @@ for Cozy Cloud in all aspects. From an architectural point, it declines to:
 - Simple to deploy and understand, not built as a galaxy of optimized
   microservices managed by kubernetes that only experts can debug.
 - Versatile, can be hosted on a Raspberry Pi for geeks to massive scale on
-  multiple servers by specialized hosting.
-- Yours, you own your data and you control them. If you want to take back your
+  multiple servers by specialized hosting. Users can install apps.
+- Yours, you own your data and you control it. If you want to take back your
   data to go elsewhere, you can.
 
 
@@ -38,7 +38,7 @@ Raspberry Pi:
 
 ![Architecture for a self-hosted](self-hosted.png)
 
-But it's also possible to deploy a farm of servers for hosting thousands of
+But it's also possible to deploy a server farm in order to host thousands of
 cozy instances. It will looks like this:
 
 ![Architecture for a big instance](big-instance.png)
@@ -48,7 +48,7 @@ This elasticity comes with some constraints:
 - most applications are run in the browser, not in the server
 - what must run on the server is mutualized inside the cozy stack
 - the cozy stack is stateless
-- the data are stored in couchdb and a space for files
+- the data is stored in couchdb and a space for files
 - a couchdb database is specific to an instance (no mix of data from 2 users
   in the same database).
 
@@ -72,19 +72,19 @@ they are not mixed in a single database. We don't mix data from 2 users in the
 same database. It's easier and safer to control the access to the data by
 using different databases per user.
 
-But we think to go even farther by spliting the data of a user in several
+But we think to go even further by splitting the data of a user in several
 databases, one per document type. For example, we can have a database for the
 emails of a user and one for her todo list. This can simplify the
 implementation of permissions (this app has access to these document types)
-and can improve performances. CouchDB queries work with views. A view is
+and can improve performance. CouchDB queries work with views. A view is
 defined ahead of its usage and is built by couchdb when it is requested and is
 stale, ie there were writes in the database since the last time it was
 updated. So, with a single database per user, it's possible to experience lag
 when the todolist view is requested after fetching a long list of emails. By
-spliting the databases per doctypes, we gain on two fronts:
+splitting the databases per doctypes, we gain on two fronts:
 
 1. The views are updated less frequently, only when documents of the matching
-doctypes are writen.
+doctypes are written.
 2. Some views are no longer necessary: those to access documents of a specific
 doctypes.
 
@@ -102,7 +102,7 @@ Services
 --------
 
 The cozy stack came with several services. They run on the server, inside the
-golang processus and have an HTTP interface.
+golang process and have an HTTP interface.
 
 ### Authentication `/auth`
 
@@ -335,7 +335,7 @@ right parameters.
 the lounge IRC client?
 
 We want to support this use case, just not on the short term. It's not clear
-how we can do that (and not weakening the security). One idea is to run the
+how we can do that (while not weakening the security). One idea is to run the
 applications in a different server, or maybe in docker.
 
 > How to install and update cozy?
