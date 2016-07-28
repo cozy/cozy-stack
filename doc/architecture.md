@@ -61,7 +61,8 @@ This elasticity comes with some constraints:
 ### Reverse proxy
 
 The reverse proxy is here to accept HTTPS connexions and forward the request
-to the cozy stack. It's here mainly to manage the TLS part.
+to the cozy stack. It's here mainly to manage the TLS part and binding a port
+< 1024 without needing to launch the cozy stack as root.
 
 ### The Cozy Stack
 
@@ -136,6 +137,11 @@ It's possible to manage serverless applications from the cozy stack and serve
 them via cozy stack. The stack does the routing and serve the HTML and the
 assets for the applications.
 
+The assets of the applications are installed in the virtual file system. On
+the big instances, it means that even if it is the frontal 1 that installs the
+application, frontal 2 will still be able to serve the application by getting
+its assets from Swift.
+
 ### Data System `/data`
 
 CouchDB is used for persistence of JSON documents. The data service is a layer
@@ -189,7 +195,10 @@ standard methods like caldav and carddav.
 ### Settings `/settings`
 
 Each cozy instance has some settings, like its domain name, its language, the
-name of its owner, the background for the home, etc.
+name of its owner, the background for the home, etc. Also, the owner of the
+cozy instance can choose a theme (a set of colors and a font) and this theme
+will be available as a set of CSS variables in a stylesheet that can be
+imported by the applications.
 
 ### Notifications `/notifications`
 
@@ -198,7 +207,7 @@ reminder for a meeting in 10 minutes to a suggestion to update your app.
 
 ### Real-time `/real-time`
 
-This endpoint can be use to subscribe for real-time events. An application
+This endpoint can be used to subscribe for real-time events. An application
 that shows items of a specific doctype can listen for this doctype to be
 notified of all the changes for this doctype. For example, the calendar app
 can listen for all the events and if a synchronization with the mobile adds a
@@ -207,7 +216,7 @@ new event, the app will be notified and can show this new event.
 ### Status `/status`
 
 It's here just to say that the API is up and that it can access the CouchDB
-databases.
+databases, for debugging and monitoring purposes.
 
 
 Workers
@@ -485,8 +494,7 @@ TODO
 - explain auth for users + apps + context
 - explain permissions
 - context for sharing a photos album
+- intent
+
 - import/export data ("you will stay because you can leave")
 - security
-- performance
-- [The 12-factor app](http://12factor.net/)
-- intent
