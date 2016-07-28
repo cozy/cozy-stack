@@ -38,8 +38,14 @@ Raspberry Pi:
 
 ![Architecture for a self-hosted](self-hosted.png)
 
-But it's also possible to deploy a server farm in order to host thousands of
-cozy instances. It will looks like this:
+But it's also possible to deploy a cozy on a more powerful server in order to
+host dozens of cozy instances (an association for example). It will looks
+like this:
+
+![Architecture for a medium instance](middle-instance.png)
+
+And even to scale to thousands of cozy instances on a server farm, with high
+availability:
 
 ![Architecture for a big instance](big-instance.png)
 
@@ -64,6 +70,13 @@ important usage is starting an HTTP server to serve as an API for all the
 services of Cozy, from authentication to real-time events. This API can be
 used on several domains. Each domain is a cozy instance for a specific user
 ("multi-tenant").
+
+### Redis
+
+Redis is optional when there is a single cozy stack running, and is used to
+synchronize the Cozy Stacks else: distributed locks for special operations
+like installing an application, queues for recurrent jobs, etc. As a bonus,
+it can also be used to cache some frequently used documents.
 
 ### Databases
 
@@ -305,6 +318,7 @@ Why?
 
 - used by a lot of people -> https://github.com/golang/go/wiki/GoUsers
 - http://redmonk.com/sogrady/2016/07/20/language-rankings-6-16/
+- http://spectrum.ieee.org/computing/software/the-2016-top-programming-languages
 - https://github.com/golang/go/wiki/GoArm
 - some known open source projects: docker, kubernetes, grafana, syncthing,
   influxdb, caddy, etc.
