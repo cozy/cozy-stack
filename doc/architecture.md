@@ -448,6 +448,21 @@ useful to have a way to backup manually the data. The "export data" button in
 the web interface give a tarball that can be used to transfer your data from
 one instance to another, and so, it can be used as a backup.
 
+> Aren't microservices better for scaling?
+
+Yes, it's often easier to scale by separating concerns, and microservices is a
+way to achieve that. But, it has some serious downsides:
+
+- It takes more memory and it's probably a no-go for Raspberry Pi
+- It's more complicated for a developper to install the whole stack before
+  coding its application
+- It's harder to deploy in production.
+
+For the scalability, we can also deploy some specialized instances of the Cozy
+Stack. For example, we can have some Cozy Stack processes dedicated for
+real-time. Even, if they have all the code, we can route only the relevant
+trafic from the load-balancer.
+
 
 TODO
 ----
