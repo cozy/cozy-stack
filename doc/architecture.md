@@ -110,6 +110,13 @@ that are no longer in the same database.
 
 We think that we can work on that and the pros will outweight the cons.
 
+### Metrics
+
+The Cozy Stack can generate some metrics about its usage (the size of the
+files transfered, the number of opened connexions, the number of requests to
+redis, etc.) and export them to a metrics backend. It will help identify the
+bottlenecks when scaling to add more users.
+
 
 Services
 --------
@@ -445,7 +452,6 @@ one instance to another, and so, it can be used as a backup.
 TODO
 ----
 
-- say a word on metrics
 - explain auth for users + apps + context
 - explain permissions
 - context for sharing a photos album
