@@ -319,16 +319,31 @@ Start your cozy and setup your accounts.
 Guidelines
 ----------
 
-### Golang
+### The Go Programming Language
 
-Why?
+Go (often referred as golang) is an open source programming language created
+at Google in 2007. It has nice properties for our usage:
 
-- used by a lot of people -> https://github.com/golang/go/wiki/GoUsers
-- http://redmonk.com/sogrady/2016/07/20/language-rankings-6-16/
-- http://spectrum.ieee.org/computing/software/the-2016-top-programming-languages
-- https://github.com/golang/go/wiki/GoArm
-- some known open source projects: docker, kubernetes, grafana, syncthing,
-  influxdb, caddy, etc.
+- simplicity (the language can be learned in weeks, not years)
+- a focus on productivity
+- good performance
+- a good support of concurrency with channels and goroutines.
+
+Moreover, Go is
+[used by a lot of companies](https://github.com/golang/go/wiki/GoUsers),
+is in [the Top 10 of the most used languages](http://spectrum.ieee.org/computing/software/the-2016-top-programming-languages)
+and has some known open source projects: docker, kubernetes, grafana,
+syncthing, influxdb, caddy, etc. And it works on
+[the ARM platforms](https://github.com/golang/go/wiki/GoArm).
+
+Go has some tools to help the developers to format its code (`go fmt`),
+retrieve and install external packages (`go get`), display documentation
+(`godoc`), check for potential errors with static analysis (`go vet`), etc.
+Most of them can be used via
+[gometalinter](https://github.com/alecthomas/gometalinter), which is nice for
+continuous integration.
+
+So, we think that writing the Cozy Stack in Go is the right choice.
 
 ### Rest API
 
