@@ -410,6 +410,12 @@ We are listening to our users. The forum is here to discuss on many subjects,
 including how the applications are used. The issues on github are a good place
 for bug tracking.
 
+#### Translating to a new language
+
+We will keep having internationalization for our applications and the
+translations are maintained on transifex by the community. Translating to a
+new language, or reviewing an existing one, is really appreciated.
+
 
 FAQ
 ---
