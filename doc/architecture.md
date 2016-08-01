@@ -326,6 +326,89 @@ A task manager to never forgot what you should do.
 Start your cozy and setup your accounts.
 
 
+Security
+--------
+
+### Access Control in the Cozy Stack
+
+Authentication, authorizations and other things like that are simple for a
+personal cloud, right? Well, not really. Let's see why.
+
+First, authentication doesn't come only on the classical web flavour with a
+login+password form and cookies. The login is not necessary, as the cozy
+instance is already identified by its domain and has only one owner. But, more
+than that, the authentication can also happen from a remote application, like
+cozy-mobile or cozy-desktop. Oh, and 2 factor authentication (2FA) is
+mandatory for something as valuable as personal data.
+
+Then, authorizations are complicated. When the Cozy Stack receives a request
+for accessing a JSON document, it has to check if it's authorized and this
+control doesn't depend of only the user. The same document can be read in one
+application but not in another. And even inside an application, there is a
+notion of context. For example, in the photos application, the authenticated
+owner of the cozy can see all the photos and share an album with some photos
+to some of her friends. This album is a context and the cozy stack will allow
+the access to the photos of this album, and only those.
+
+**TODO** OAuth 2, permissions, intent, etc.
+
+### Protection mechanisms for the client side applications
+
+This is mostly applying the state of the art:
+
+- Using HTTPS, with HSTS
+- Using secure, httpOnly,
+  [sameSite](https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00)
+  cookies to avoid cookies theft or misuse
+- Using a Content Security Policy (CSP)
+- Using X-frame-options http header to protect against click-jacking
+
+But, it's more complicated than for a classical Single Page App. A cozy
+instance on a domain have many SPAs, and these apps have different
+permissions. Since they are in the same domain, separating them is not easy.
+We have to forbid embeding in iframes and set a very strict Content Security
+Policy. Even then, they share some ground, like localStorage, and we can't
+block two applications to communicate between them.
+
+That's why we want to have code review of the applications and a way to alert
+of suspect behaviours via the marketplace.
+
+**TODO** CSRF
+
+### Encrypted data
+
+Some data are encrypted before being saved in CouchDB (passwords for the
+accounts for example). Encrypting everything has some downsides:
+
+- It's not possible to do computations on the encrypted fields (
+  [homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption)
+  are still an open subject)
+- Having more encrypted data can weaken globally the encryption
+- If the encryption key is lost or a bug happen, the data is lost with no way
+  to recover them.
+
+So, we are more confortable to encrypt only some fields. And later, when we
+will have more experience and feedbacks from the user, extend the encryption
+to more fields.
+
+### Be open to external contributors
+
+Our code is Open Source, external contributors can review it. If they (you?)
+find a weakness, please contact us by sending an email to security AT
+cozycloud.cc. This is a mailing-list specially setup for responsible
+disclosure of security weaknesses in Cozy Cloud. We will respond in less than
+72 hours.
+
+When a security flaw is found, the process is the following:
+
+- make a pull-request to fix (on our private git instance) and test it
+- deploy the fix on cozycloud.cc
+- publish a new version, announce it on
+  [the forum](https://forum.cozy.io/c/latest-information-about-cozy-security)
+  as a security update and on the mailing-lists
+- 15 days later, add the details on the forum.
+
+
 Guidelines
 ----------
 
@@ -376,32 +459,6 @@ doctype (a bit like the golang imports):
 
 This description can be used by any cozy client library (JS, Golang, etc.) to
 generate some models to simplify the use of documents of this doctype.
-
-### Access Control
-
-Authentication, authorizations and other things like that are simple for a
-personal cloud, right? Well, not really. Let's see why.
-
-First, authentication doesn't come only on the classical web flavour with a
-login+password form and cookies. The login is not necessary, as the cozy
-instance is already identified by its domain and has only one owner. But, more
-than that, the authentication can also happen from a remote application, like
-cozy-mobile or cozy-desktop.
-
-Then, authorizations are complicated. When the Cozy Stack receives a request
-for accessing a JSON document, it has to check if it's authorized and this
-control doesn't depend of only the user. The same document can be read in one
-application but not in another. And even inside an application, there is a
-notion of context. For example, in the photos application, the authenticated
-owner of the cozy can see all the photos and share an album with some photos
-to some of her friends. This album is a context and the cozy stack will allow
-the access to the photos of this album, and only those.
-
-**TODO** OAuth 2, permissions, intent, etc.
-
-### Security
-
-**TODO**
 
 ### Import and export
 
