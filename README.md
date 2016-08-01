@@ -27,6 +27,14 @@ and reliability. You can find:
 Feel free to [open an issue](https://github.com/nono/cozy-stack/issues/new)
 for questions and suggestions.
 
+There are some useful commands to know in order to play with the go code:
+
+```bash
+go get -u ./...         # To install the go dependencies
+go test -v ./...        # To launch the tests
+go run main.go serve    # To start the API server
+```
+
 
 ## Community
 
