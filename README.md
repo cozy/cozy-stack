@@ -30,7 +30,11 @@ for questions and suggestions.
 There are some useful commands to know in order to play with the go code:
 
 ```bash
-go get -u ./...         # To install the go dependencies
+mkdir -p $GOPATH/github.com/nono
+cd $GOPATH/github.com/nono
+git clone https://github.com/nono/cozy-stack.git
+
+go get -t -u ./...      # To install the go dependencies
 go test -v ./...        # To launch the tests
 go run main.go serve    # To start the API server
 ```
