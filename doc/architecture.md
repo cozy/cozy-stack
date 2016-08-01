@@ -438,6 +438,19 @@ continuous integration.
 
 So, we think that writing the Cozy Stack in Go is the right choice.
 
+### Repository organisation
+
+```
+├── assets          The assets for the front-end
+│   ├── fonts       The webfonts
+│   ├── images      The images
+│   ├── scripts     The javascript files
+│   └── styles      The CSS files
+├── cmd             One .go file for each command of the cozy executable
+├── doc             Documentation, including this file
+└── web             One sub-directory for each of the services listed above
+```
+
 ### Rest API
 
 - Gin framework

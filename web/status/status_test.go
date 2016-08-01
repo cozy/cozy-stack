@@ -1,4 +1,4 @@
-package web
+package status
 
 import (
 	"io/ioutil"
@@ -18,15 +18,15 @@ func testRequest(t *testing.T, url string) {
 	body, ioerr := ioutil.ReadAll(resp.Body)
 	assert.NoError(t, ioerr)
 	assert.Equal(t, "200 OK", resp.Status, "should get a 200")
-	assert.Equal(t, "{\"message\":\"pong\"}\n", string(body), "resp body should match")
+	assert.Equal(t, "{\"message\":\"ok\"}\n", string(body), "resp body should match")
 }
 
-func TestPingRoute(t *testing.T) {
+func TestRoutes(t *testing.T) {
 	router := gin.New()
-	SetupRoutes(router)
+	Routes(router.Group("/status"))
 
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	testRequest(t, ts.URL+"/ping")
+	testRequest(t, ts.URL+"/status")
 }
