@@ -377,6 +377,45 @@ doctype (a bit like the golang imports):
 This description can be used by any cozy client library (JS, Golang, etc.) to
 generate some models to simplify the use of documents of this doctype.
 
+### Access Control
+
+Authentication, authorizations and other things like that are simple for a
+personal cloud, right? Well, not really. Let's see why.
+
+First, authentication doesn't come only on the classical web flavour with a
+login+password form and cookies. The login is not necessary, as the cozy
+instance is already identified by its domain and has only one owner. But, more
+than that, the authentication can also happen from a remote application, like
+cozy-mobile or cozy-desktop.
+
+Then, authorizations are complicated. When the Cozy Stack receives a request
+for accessing a JSON document, it has to check if it's authorized and this
+control doesn't depend of only the user. The same document can be read in one
+application but not in another. And even inside an application, there is a
+notion of context. For example, in the photos application, the authenticated
+owner of the cozy can see all the photos and share an album with some photos
+to some of her friends. This album is a context and the cozy stack will allow
+the access to the photos of this album, and only those.
+
+**TODO** OAuth 2, permissions, intent, etc.
+
+### Security
+
+**TODO**
+
+### Import and export
+
+> You will stay because you can leave.
+
+An important promise of Cozy Cloud is to give back to the users the control of
+their data. And this promise is not complete with a way to export the data to
+use it somewhere else.
+
+The Cozy Stack will offer an export button that gives a tarball to the user
+with the full data. She can then import it on another instance for example. It
+should also be possible to use the data outside of Cozy. So, the format for
+the tarball should be as simple as possible and be documented.
+
 ### How to contribute?
 
 Cozy's DNA is fundamentally Open Source and we want our community to thrive.
@@ -493,15 +532,3 @@ For the scalability, we can also deploy some specialized instances of the Cozy
 Stack. For example, we can have some Cozy Stack processes dedicated for
 real-time. Even, if they have all the code, we can route only the relevant
 trafic from the load-balancer.
-
-
-TODO
-----
-
-- explain auth for users + apps + context
-- explain permissions
-- context for sharing a photos album
-- intent
-
-- import/export data ("you will stay because you can leave")
-- security
