@@ -131,6 +131,8 @@ The cozy stack can authenticate the owner of a cozy instance. This can happen
 in the classical web style, with a form and a cookie, but also with OAuth2 for
 remote interactions like cozy-mobile and cozy-desktop.
 
+**TODO** say more about mobile & desktop
+
 ### Applications `/apps`
 
 It's possible to manage serverless applications from the cozy stack and serve
@@ -141,6 +143,9 @@ The assets of the applications are installed in the virtual file system. On
 the big instances, it means that even if it is the frontal 1 that installs the
 application, frontal 2 will still be able to serve the application by getting
 its assets from Swift.
+
+**TODO** git or npm to install apps?
+**TODO** 2 channels (stable / unstable)
 
 ### Data System `/data`
 
