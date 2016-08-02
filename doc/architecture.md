@@ -131,8 +131,6 @@ The cozy stack can authenticate the owner of a cozy instance. This can happen
 in the classical web style, with a form and a cookie, but also with OAuth2 for
 remote interactions like cozy-mobile and cozy-desktop.
 
-**TODO** say more about mobile & desktop
-
 ### Applications `/apps`
 
 It's possible to manage serverless applications from the cozy stack and serve
@@ -331,6 +329,21 @@ A task manager to never forgot what you should do.
 Start your cozy and setup your accounts.
 
 
+Clients
+-------
+
+### Mobile
+
+Cozy-mobile is an application for android and iOS for synchronizing files,
+contacts and calendars between the phone and the cozy instance.
+
+
+### Desktop
+
+Cozy-desktop is a client for Linux, OSX and windows that allows to sync the
+files in a cozy instance with a laptop or desktop.
+
+
 Security
 --------
 
@@ -458,8 +471,16 @@ So, we think that writing the Cozy Stack in Go is the right choice.
 
 ### Rest API
 
-- Gin framework
-- Best pratices (jsonapi)
+We follow the best practices about Rest API (using the right status codes,
+HTTP verbs, organise code by resources, use content-negociation, etc.). When
+known standards make sense (caldav & carddav for example), use them. Else,
+[JSON API](http://jsonapi.org) is a good default.
+
+The golang web framework used for the cozy stack is
+[Gin](https://gin-gonic.github.io/gin/).
+
+All the HTTP resources will be documented with
+[swagger-ui](https://github.com/swagger-api/swagger-ui).
 
 ### DocTypes
 
