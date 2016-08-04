@@ -1,3 +1,5 @@
+// Package status is here just to say that the API is up and that it can
+// access the CouchDB databases, for debugging and monitoring purposes.
 package status
 
 import (
