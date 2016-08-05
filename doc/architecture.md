@@ -1,11 +1,11 @@
-Cozy Cloud Architecture
-=======================
+Cozy Architecture
+=================
 
-What is Cozy Cloud?
--------------------
+What is Cozy?
+-------------
 
-Cozy Cloud is a personal platform as a service with a focus on data.
-Cozy Cloud can be seen as 4 layers, from inside to outside:
+Cozy is a personal platform as a service with a focus on data.
+Cozy can be seen as 4 layers, from inside to outside:
 
 1. A place to keep your personal data
 2. A core API to handle the data
@@ -13,7 +13,7 @@ Cozy Cloud can be seen as 4 layers, from inside to outside:
 4. A coherent User Experience
 
 It's also a set of values: Simple, Versatile, Yours. These values mean a lot
-for Cozy Cloud in all aspects. From an architectural point, it declines to:
+for Cozy in all aspects. From an architectural point, it declines to:
 
 - Simple to deploy and understand, not built as a galaxy of optimized
   microservices managed by kubernetes that only experts can debug.
@@ -26,7 +26,7 @@ for Cozy Cloud in all aspects. From an architectural point, it declines to:
 Overview
 --------
 
-The architecture of Cozy Cloud is composed of:
+The architecture of Cozy is composed of:
 
 - a reverse proxy
 - the cozy stack
@@ -74,10 +74,10 @@ used on several domains. Each domain is a cozy instance for a specific user
 
 ### Redis
 
-Redis is optional when there is a single cozy stack running, and is used to
-synchronize the Cozy Stacks else: distributed locks for special operations
-like installing an application, queues for recurrent jobs, etc. As a bonus,
-it can also be used to cache some frequently used documents.
+Redis is optional when there is a single cozy stack running. When available,
+it is used to synchronize the Cozy Stacks: distributed locks for special
+operations like installing an application, queues for recurrent jobs, etc. As
+a bonus, it can also be used to cache some frequently used documents.
 
 ### Databases
 
@@ -398,9 +398,10 @@ of suspect behaviours via the marketplace.
 Some data are encrypted before being saved in CouchDB (passwords for the
 accounts for example). Encrypting everything has some downsides:
 
-- It's not possible to do computations on the encrypted fields (
-  [homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption)
-  are still an open subject)
+- It's not possible to index encryped documents or do computations on the
+  encrypted fields in reasonable time
+  ([homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption)
+  is still an open subject)
 - Having more encrypted data can weaken globally the encryption
 - If the encryption key is lost or a bug happen, the data is lost with no way
   to recover them.
@@ -414,7 +415,7 @@ to more fields.
 Our code is Open Source, external contributors can review it. If they (you?)
 find a weakness, please contact us by sending an email to security AT
 cozycloud.cc. This is a mailing-list specially setup for responsible
-disclosure of security weaknesses in Cozy Cloud. We will respond in less than
+disclosure of security weaknesses in Cozy. We will respond in less than
 72 hours.
 
 When a security flaw is found, the process is the following:
@@ -503,7 +504,7 @@ generate some models to simplify the use of documents of this doctype.
 
 > You will stay because you can leave.
 
-An important promise of Cozy Cloud is to give back to the users the control of
+An important promise of Cozy is to give back to the users the control of
 their data. And this promise is not complete with a way to export the data to
 use it somewhere else.
 
