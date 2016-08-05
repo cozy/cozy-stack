@@ -172,6 +172,12 @@ like uploading a file, to more complex ones, like renaming a folder. It also
 ensure that an instance is not exceeding its quota, and keeps a trash to
 recover files recently deleted.
 
+### Sharing `/sharing`
+
+Users will want to share things like calendar. This service is there for
+sharing JSON documents between cozy instances, with respect to the access
+control.
+
 ### Jobs `/jobs`
 
 The cozy stack has queues where job descriptions can be put. For example, a
