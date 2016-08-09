@@ -395,7 +395,9 @@ Policy. Even then, they share some ground, like localStorage, and we can't
 block two applications to communicate between them.
 
 That's why we want to have code review of the applications and a way to alert
-of suspect behaviours via the marketplace.
+of suspect behaviours via the marketplace. This also serves another purpose:
+keeping the data inside the cozy space and avoid a malicious application to
+send data without the agreement of its owner.
 
 **TODO** CSRF
 
@@ -416,7 +418,8 @@ So, we are more confortable to encrypt only some fields. And later, when we
 will have more experience and feedbacks from the user, extend the encryption
 to more fields.
 
-We are also working with [SMIS](https://project.inria.fr/smis/), a research lab, to find a way to securely store and backup the encryption keys.
+We are also working with [SMIS](https://project.inria.fr/smis/), a research
+lab, to find a way to securely store and backup the encryption keys.
 
 ### Be open to external contributors
 
