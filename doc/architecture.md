@@ -7,9 +7,9 @@ What is Cozy?
 Cozy is a personal platform as a service with a focus on data.
 Cozy can be seen as 4 layers, from inside to outside:
 
-1. A place to keep your personal data.
-2. A core API to handle the data.
-3. Your web apps, and also the mobile & desktop clients.
+1. A place to keep your personal data
+2. A core API to handle the data
+3. Your web apps, and also the mobile & desktop clients
 4. A coherent User Experience.
 
 It's also a set of values: Simple, Versatile, Yours. These values mean a lot
@@ -28,9 +28,9 @@ Overview
 
 The architecture of Cozy is composed of:
 
-- A reverse proxy.
-- The cozy stack.
-- A CouchDB instance to persist the JSON documents.
+- A reverse proxy
+- The cozy stack
+- A CouchDB instance to persist the JSON documents
 - A space for storing files.
 
 All of this can run on a personal server, self-hosted at home, like a
@@ -508,6 +508,14 @@ doctype (a bit like the golang imports):
 This description can be used by any cozy client library (JS, Golang, etc.) to
 generate some models to simplify the use of documents of this doctype.
 
+When a docType has a lot of logic (calendar events for example), a JS class
+should be shared between the several client-side apps that use this docType,
+in order to avoid recoding this logic in each application.
+
+**TODO** try to explain the differences between cozy-browser-sdk,
+cozy-device-sdk, cozysdk-client, cozy-db, cozy-odm, etc. and choose the ones
+we will keep
+
 ### Import and export
 
 > You will stay because you can leave.
@@ -547,6 +555,8 @@ devtools to help:
   doctypes, help explore the Rest API, and check if the permissions are OK.
 - `cozy-ui` will make it easy to reuse some widgets and offer an application
   with a style coherent to the cozy identity.
+- Some docTypes with heavy logic will be available as JS classes to be reused
+  in the apps.
 
 #### Reporting a bug or suggesting a new feature
 
