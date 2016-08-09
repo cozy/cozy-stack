@@ -7,13 +7,13 @@ What is Cozy?
 Cozy is a personal platform as a service with a focus on data.
 Cozy can be seen as 4 layers, from inside to outside:
 
-1. A place to keep your personal data
-2. A core API to handle the data
-3. Your web apps, and also the mobile & desktop clients
-4. A coherent User Experience
+1. A place to keep your personal data.
+2. A core API to handle the data.
+3. Your web apps, and also the mobile & desktop clients.
+4. A coherent User Experience.
 
 It's also a set of values: Simple, Versatile, Yours. These values mean a lot
-for Cozy in all aspects. From an architectural point, it declines to:
+for Cozy in all aspects. From an architectural point of view, it declines to:
 
 - Simple to deploy and understand, not built as a galaxy of optimized
   microservices managed by kubernetes that only experts can debug.
@@ -28,10 +28,10 @@ Overview
 
 The architecture of Cozy is composed of:
 
-- a reverse proxy
-- the cozy stack
-- a couchdb instance to persist the JSON documents
-- a space for storing files.
+- A reverse proxy.
+- The cozy stack.
+- A CouchDB instance to persist the JSON documents.
+- A space for storing files.
 
 All of this can run on a personal server, self-hosted at home, like a
 Raspberry Pi:
@@ -51,11 +51,11 @@ availability:
 
 This elasticity comes with some constraints:
 
-- most applications are run in the browser, not in the server
-- what must run on the server is mutualized inside the cozy stack
-- the cozy stack is stateless
-- the data is stored in couchdb and a space for files
-- a couchdb database is specific to an instance (no mix of data from 2 users
+- Most applications are run in the browser, not in the server.
+- What must run on the server is mutualized inside the cozy stack.
+- The cozy stack is stateless.
+- The data is stored in couchdb and a space for files.
+- A couchdb database is specific to an instance (no mix of data from 2 users
   in the same database).
 
 ### Reverse proxy
@@ -66,7 +66,7 @@ to the cozy stack. It's here mainly to manage the TLS part and binding a port
 
 ### The Cozy Stack
 
-The Cozy Stack is a single executable. It can do several things but it's most
+The Cozy Stack is a single executable. It can do several things but its most
 important usage is starting an HTTP server to serve as an API for all the
 services of Cozy, from authentication to real-time events. This API can be
 used on several domains. Each domain is a cozy instance for a specific user
@@ -81,7 +81,7 @@ a bonus, it can also be used to cache some frequently used documents.
 
 ### Databases
 
-The JSON documents that reprensent the users data are stored in CouchDB, but
+The JSON documents that represent the users data are stored in CouchDB, but
 they are not mixed in a single database. We don't mix data from 2 users in the
 same database. It's easier and safer to control the access to the data by
 using different databases per user.
@@ -91,8 +91,8 @@ databases, one per document type. For example, we can have a database for the
 emails of a user and one for her todo list. This can simplify the
 implementation of permissions (this app has access to these document types)
 and can improve performance. CouchDB queries work with views. A view is
-defined ahead of its usage and is built by couchdb when it is requested and is
-stale, ie there were writes in the database since the last time it was
+defined ahead of its usage and is built by CouchDB when it is requested and is
+stale, i.e. there were writes in the database since the last time it was
 updated. So, with a single database per user, it's possible to experience lag
 when the todolist view is requested after fetching a long list of emails. By
 splitting the databases per doctypes, we gain on two fronts:
@@ -104,9 +104,9 @@ doctypes.
 
 There are downsides, mostly:
 
-1. It can be harder to manage more databases
-2. We don't really know how well CouchDB will perform with so many databases
-3. It's no longer possible to use a single view for documents from doctypes
+1. It can be harder to manage more databases.
+2. We don't really know how well CouchDB will perform with so many databases.
+3. It's no longer possible to use a single view for documents from doctypes.
 that are no longer in the same database.
 
 We think that we can work on that and the pros will outweight the cons.
@@ -164,17 +164,17 @@ It's possible to store files on the cozy, including binary ones like photos
 and movies, thanks to the virtual file system. It's a facade, with several
 implementations, depending on where the files are effectively stored:
 
-- in a directory of a local file system (easier for self-hosted users)
-- Swift from Open Stack (convenient for massive hosting)
+- In a directory of a local file system (easier for self-hosted users).
+- Swift from Open Stack (convenient for massive hosting).
 
-The range of operations possible with this endpoint goes from simple ones,
+The range of possible operations with this endpoint goes from simple ones,
 like uploading a file, to more complex ones, like renaming a folder. It also
 ensure that an instance is not exceeding its quota, and keeps a trash to
 recover files recently deleted.
 
 ### Sharing `/sharing`
 
-Users will want to share things like calendar. This service is there for
+Users will want to share things like calendars. This service is there for
 sharing JSON documents between cozy instances, with respect to the access
 control.
 
@@ -380,12 +380,12 @@ the access to the photos of this album, and only those.
 
 This is mostly applying the state of the art:
 
-- Using HTTPS, with HSTS
+- Using HTTPS, with HSTS.
 - Using secure, httpOnly,
   [sameSite](https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00)
-  cookies to avoid cookies theft or misuse
-- Using a Content Security Policy (CSP)
-- Using X-frame-options http header to protect against click-jacking
+  cookies to avoid cookies theft or misuse.
+- Using a Content Security Policy (CSP).
+- Using X-frame-options http header to protect against click-jacking.
 
 But, it's more complicated than for a classical Single Page App. A cozy
 instance on a domain have many SPAs, and these apps have different
@@ -407,14 +407,16 @@ accounts for example). Encrypting everything has some downsides:
 - It's not possible to index encryped documents or do computations on the
   encrypted fields in reasonable time
   ([homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption)
-  is still an open subject)
-- Having more encrypted data can weaken globally the encryption
+  is still an open subject).
+- Having more encrypted data can globally weaken the encryption, if it's not handled properly.
 - If the encryption key is lost or a bug happen, the data is lost with no way
   to recover them.
 
 So, we are more confortable to encrypt only some fields. And later, when we
 will have more experience and feedbacks from the user, extend the encryption
 to more fields.
+
+We are also working with [SMIS](https://project.inria.fr/smis/), a research lab, to find a way to securely store and backup the encryption keys.
 
 ### Be open to external contributors
 
@@ -426,11 +428,11 @@ disclosure of security weaknesses in Cozy. We will respond in less than
 
 When a security flaw is found, the process is the following:
 
-- make a pull-request to fix (on our private git instance) and test it
-- deploy the fix on cozycloud.cc
-- publish a new version, announce it on
+- Make a pull-request to fix (on our private git instance) and test it.
+- Deploy the fix on cozycloud.cc
+- Publish a new version, announce it on
   [the forum](https://forum.cozy.io/c/latest-information-about-cozy-security)
-  as a security update and on the mailing-lists
+  as a security update and on the mailing-lists.
 - 15 days later, add the details on the forum.
 
 
@@ -442,10 +444,10 @@ Guidelines
 Go (often referred as golang) is an open source programming language created
 at Google in 2007. It has nice properties for our usage:
 
-- simplicity (the language can be learned in weeks, not years)
-- a focus on productivity
-- good performance
-- a good support of concurrency with channels and goroutines.
+- Simplicity (the language can be learned in weeks, not years).
+- A focus on productivity.
+- Good performance.
+- A good support of concurrency with channels and goroutines.
 
 Moreover, Go is
 [used by a lot of companies](https://github.com/golang/go/wiki/GoUsers),
@@ -540,9 +542,9 @@ One of the goals of the new architecture is to make it easier for developers
 to write new apps. It means having a good documentation, but also some
 devtools to help:
 
-- the `cozy` executable will have a command to setup a new project
-- the devtools on the cozy interface will give documentation about the
-  doctypes, help explore the Rest API, and check if the permissions are OK
+- The `cozy` executable will have a command to setup a new project.
+- The devtools on the cozy interface will give documentation about the
+  doctypes, help explore the Rest API, and check if the permissions are OK.
 - `cozy-ui` will make it easy to reuse some widgets and offer an application
   with a style coherent to the cozy identity.
 
@@ -582,23 +584,23 @@ applications in a different server, or maybe in docker.
 The Cozy Stack will have no auto-update mechanism. For installing and updating
 it, you can use the classical ways:
 
-- using a package manager, like apt for debian & ubuntu
-- using an official image for Raspberry Pi (and other embedded platforms)
-- using the image and services of an hosting company
-- or compiling and installing it manually if you are really brave ;-)
+- Using a package manager, like apt for debian & ubuntu.
+- Using an official image for Raspberry Pi (and other embedded platforms).
+- Using the image and services of an hosting company.
+- Or compiling and installing it manually if you are really brave ;-)
 
 > How to add a cozy instance to a farm?
 
-1. Choose a (sub-)domain and configure the DNS for this (sub-)domain
-2. Configure the reverse-proxy to accept this (sub-)domain
-3. Use the `cozy` executable to configure the cozy stack
+1. Choose a (sub-)domain and configure the DNS for this (sub-)domain.
+2. Configure the reverse-proxy to accept this (sub-)domain.
+3. Use the `cozy` executable to configure the cozy stack.
 
 > How to migrate from the nodejs cozy to this new architecture for cozy?
 
 1. Export the data from the nodejs cozy (we need to add a button in the web
-interface for that in the coming months)
-2. Install the new cozy
-3. Import the data
+interface for that in the coming months).
+2. Install the new cozy.
+3. Import the data.
 
 Please note that we don't support a continuous replication method that will
 enable to use both the nodejs and the new architecture at the same time. It
@@ -608,7 +610,7 @@ looks too complicated for a temporary thing.
 
 There are 2 sensitive places with data:
 
-- in CouchDB
+- In CouchDB.
 - on the place used for the Virtual File System (a directory on the local
   filesystem, or in Swift).
 
@@ -626,9 +628,9 @@ one instance to another, and so, it can be used as a backup.
 Yes, it's often easier to scale by separating concerns, and microservices is a
 way to achieve that. But, it has some serious downsides:
 
-- It takes more memory and it's probably a no-go for Raspberry Pi
+- It takes more memory and it's probably a no-go for Raspberry Pi.
 - It's more complicated for a developper to install the whole stack before
-  coding its application
+  coding its application.
 - It's harder to deploy in production.
 
 For the scalability, we can also deploy some specialized instances of the Cozy
