@@ -9,7 +9,7 @@ Cozy Cloud
 ![Cozy Logo](assets/images/happycloud.png)
 
 [Cozy](https://cozy.io) is a platform that brings all your web services in the
-same private space.  With it, your web apps and your devices can share data
+same private space. With it, your web apps and your devices can share data
 easily, providing you with a new experience. You can install Cozy on your own
 hardware where no one profiles you.
 
@@ -38,6 +38,19 @@ go test -v ./...        # To launch the tests
 go run main.go serve    # To start the API server
 godoc -http=:6060       # To start the documentation server
                         # Open http://127.0.0.1:6060/pkg/github.com/nono/cozy-stack/
+
+```
+
+The swagger description of the REST API can be displayed with those commands:
+
+```bash
+go get -u github.com/go-swagger/go-swagger/cmd/swagger
+g clone git@github.com:swagger-api/swagger-ui.git
+mkdir -p swagger-ui/dist/specs
+swagger generate spec -o swagger-ui/dist/specs/swagger.json
+go get github.com/mholt/caddy/caddy
+cd swagger-ui/dist && caddy
+xdg-open http://localhost:2015/index.html?url=http://localhost:2015/specs/swagger.json
 ```
 
 

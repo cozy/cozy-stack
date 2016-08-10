@@ -12,7 +12,11 @@ import (
 // CouchDBURL is the URL where to check if CouchDB is up
 var CouchDBURL = "http://localhost:5984/"
 
-// Status responds OK if the service is running
+// Status responds with the status of the service
+//
+// swagger:route GET /status status showStatus
+//
+// It responds OK if the service is running
 func Status(c *gin.Context) {
 	message := "OK"
 
@@ -21,8 +25,8 @@ func Status(c *gin.Context) {
 		URL:      CouchDBURL,
 		Attempts: 3,
 	}
-	couchdb, _ := checker.Check()
-	if couchdb.Status() != checkup.Healthy {
+	couchdb, err := checker.Check()
+	if err != nil || couchdb.Status() != checkup.Healthy {
 		message = "KO"
 	}
 
