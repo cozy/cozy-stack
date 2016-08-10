@@ -3,13 +3,32 @@
 package status
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+	"github.com/sourcegraph/checkup"
 )
+
+// CouchDBURL is the URL where to check if CouchDB is up
+var CouchDBURL = "http://localhost:5984/"
 
 // Status responds OK if the service is running
 func Status(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "ok",
+	message := "OK"
+
+	checker := checkup.HTTPChecker{
+		Name:     "CouchDB",
+		URL:      CouchDBURL,
+		Attempts: 3,
+	}
+	couchdb, _ := checker.Check()
+	if couchdb.Status() != checkup.Healthy {
+		message = "KO"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": message,
+		"couchdb": couchdb.Status(),
 	})
 }
 

@@ -11,14 +11,14 @@ import (
 )
 
 func testRequest(t *testing.T, url string) {
-	resp, err := http.Get(url)
+	res, err := http.Get(url)
 	assert.NoError(t, err)
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
-	body, ioerr := ioutil.ReadAll(resp.Body)
+	body, ioerr := ioutil.ReadAll(res.Body)
 	assert.NoError(t, ioerr)
-	assert.Equal(t, "200 OK", resp.Status, "should get a 200")
-	assert.Equal(t, "{\"message\":\"ok\"}\n", string(body), "resp body should match")
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, "{\"couchdb\":\"down\",\"message\":\"KO\"}\n", string(body), "res body should match")
 }
 
 func TestRoutes(t *testing.T) {
