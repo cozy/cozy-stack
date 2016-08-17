@@ -118,6 +118,9 @@ files transfered, the number of opened connexions, the number of requests to
 redis, etc.) and export them to a metrics backend. It will help identify the
 bottlenecks when scaling to add more users.
 
+[The Warp 10 Platform](http://www.warp10.io/) looks like a good candidate for
+this.
+
 
 Services
 --------
@@ -650,3 +653,13 @@ For the scalability, we can also deploy some specialized instances of the Cozy
 Stack. For example, we can have some Cozy Stack processes dedicated for
 real-time. Even, if they have all the code, we can route only the relevant
 trafic from the load-balancer.
+
+> What are the frameworks and tools used for the front-end apps?
+
+If you want to develop your own app, you can use the framework and the tools
+you like, nothing is mandatory. For the official apps, we will want to move
+to:
+
+- es6 (but converting the existing coffeescript code will take time)
+- npm scripts and webpack
+- react & redux (but probably keep backbone & marionette for basic apps)
