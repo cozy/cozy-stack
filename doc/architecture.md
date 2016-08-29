@@ -62,7 +62,8 @@ This elasticity comes with some constraints:
 
 The reverse proxy is here to accept HTTPS connexions and forward the request
 to the cozy stack. It's here mainly to manage the TLS part and binding a port
-< 1024 without needing to launch the cozy stack as root.
+< 1024 without needing to launch the cozy stack as root. And it's better if
+http/2 is supported, as it will make the web interface to load faster.
 
 ### The Cozy Stack
 
