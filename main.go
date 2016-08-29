@@ -22,7 +22,7 @@
 // data to go elsewhere, you can.
 package main
 
-import "github.com/nono/cozy-stack/cmd"
+import "github.com/cozy/cozy-stack/cmd"
 
 func main() {
 	cmd.Execute()

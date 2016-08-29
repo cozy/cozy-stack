@@ -168,8 +168,9 @@ It's possible to store files on the cozy, including binary ones like photos
 and movies, thanks to the virtual file system. It's a facade, with several
 implementations, depending on where the files are effectively stored:
 
-- In a directory of a local file system (easier for self-hosted users).
-- Swift from Open Stack (convenient for massive hosting).
+- In a directory of a local file system (easier for self-hosted users)
+- Swift from Open Stack (convenient for massive hosting)
+- And more storage providers, like [minio](https://minio.io/), later.
 
 The range of possible operations with this endpoint goes from simple ones,
 like uploading a file, to more complex ones, like renaming a folder. It also
@@ -204,7 +205,8 @@ can become a simplified [_Ifttt_](https://ifttt.com/).
 ### Sync `/sync`
 
 This endpoint will be for synchronizing your contacts and calendars by using
-standard methods like caldav and carddav.
+standard methods like caldav and carddav. Later, we hope to support also
+Webdav and RemoteStorage.
 
 ### Settings `/settings`
 
@@ -534,7 +536,8 @@ use it somewhere else.
 The Cozy Stack will offer an export button that gives a tarball to the user
 with the full data. She can then import it on another instance for example. It
 should also be possible to use the data outside of Cozy. So, the format for
-the tarball should be as simple as possible and be documented.
+the tarball should be as simple as possible and be documented. Of course, when
+it's possible, we will use open formats.
 
 ### How to contribute?
 

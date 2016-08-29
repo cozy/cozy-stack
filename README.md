@@ -1,7 +1,7 @@
 Cozy Cloud
 ==========
 
-[![Build Status](https://travis-ci.org/nono/cozy-stack.svg?branch=master)](https://travis-ci.org/nono/cozy-stack)
+[![Build Status](https://travis-ci.org/cozy/cozy-stack.svg?branch=master)](https://travis-ci.org/cozy/cozy-stack)
 
 
 ## What is Cozy?
@@ -24,20 +24,20 @@ and reliability. You can find:
 - [some notes about the architecture](doc/architecture.md)
 - some code in Go to help me immerse in the new architecture.
 
-Feel free to [open an issue](https://github.com/nono/cozy-stack/issues/new)
+Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
 for questions and suggestions.
 
 There are some useful commands to know in order to play with the go code:
 
 ```bash
-go get -u github.com/nono/cozy-stack
-cd $GOPATH/github.com/nono/cozy-stack
+go get -u github.com/cozy/cozy-stack
+cd $GOPATH/github.com/cozy/cozy-stack
 
 go get -t -u ./...      # To install or update the go dependencies
 go test -v ./...        # To launch the tests
 go run main.go serve    # To start the API server
 godoc -http=:6060       # To start the documentation server
-                        # Open http://127.0.0.1:6060/pkg/github.com/nono/cozy-stack/
+                        # Open http://127.0.0.1:6060/pkg/github.com/cozy/cozy-stack/
 
 ```
 

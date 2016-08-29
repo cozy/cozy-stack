@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nono/cozy-stack/web"
+	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
 )
 
