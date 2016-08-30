@@ -146,8 +146,10 @@ the big instances, it means that even if it is the frontal 1 that installs the
 application, frontal 2 will still be able to serve the application by getting
 its assets from Swift.
 
-**TODO** git or npm to install apps?
-**TODO** 2 channels (stable / unstable)
+It will be possible to install applications from several sources (git,
+mercurial, npm or even just a tarball). Also, we want to offer two channels
+for our official apps: one with a stable and well tested release, and one with
+more frequent updates for our more adventurous users.
 
 ### Data System `/data`
 
@@ -177,7 +179,7 @@ like uploading a file, to more complex ones, like renaming a folder. It also
 ensure that an instance is not exceeding its quota, and keeps a trash to
 recover files recently deleted.
 
-### Sharing `/sharing`
+### Sharing `/sharings`
 
 Users will want to share things like calendars. This service is there for
 sharing JSON documents between cozy instances, with respect to the access
@@ -380,7 +382,8 @@ owner of the cozy can see all the photos and share an album with some photos
 to some of her friends. This album is a context and the cozy stack will allow
 the access to the photos of this album, and only those.
 
-**TODO** OAuth 2, permissions, intent, etc.
+**Note**: this section is still work in progress. We need to experiment to see
+how it can work and describe it in this document.
 
 ### Protection mechanisms for the client side applications
 
@@ -404,8 +407,6 @@ That's why we want to have code review of the applications and a way to alert
 of suspect behaviours via the marketplace. This also serves another purpose:
 keeping the data inside the cozy space and avoid a malicious application to
 send data without the agreement of its owner.
-
-**TODO** CSRF
 
 ### Encrypted data
 
@@ -520,10 +521,6 @@ generate some models to simplify the use of documents of this doctype.
 When a docType has a lot of logic (calendar events for example), a JS class
 should be shared between the several client-side apps that use this docType,
 in order to avoid recoding this logic in each application.
-
-**TODO** try to explain the differences between cozy-browser-sdk,
-cozy-device-sdk, cozysdk-client, cozy-db, cozy-odm, etc. and choose the ones
-we will keep
 
 ### Import and export
 
@@ -667,3 +664,11 @@ to:
 - es6 (but converting the existing coffeescript code will take time)
 - npm scripts and webpack
 - react & redux (but probably keep backbone & marionette for basic apps)
+
+> When will this new architecture be available?
+
+The development has not yet started. We wanted to hear the community feedbacks
+before starting to code. It will take several months to have a first alpha
+version, and some time after to go in production with it. During all the time,
+the development will be open and you can see the code in
+[this repository](https://github.com/cozy/cozy-stack).
