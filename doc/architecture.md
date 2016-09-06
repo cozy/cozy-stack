@@ -107,7 +107,7 @@ There are downsides, mostly:
 
 1. It can be harder to manage more databases.
 2. We don't really know how well CouchDB will perform with so many databases.
-3. It's no longer possible to use a single view for documents from doctypes.
+3. It's no longer possible to use a single view for documents from doctypes
 that are no longer in the same database.
 
 We think that we can work on that and the pros will outweight the cons.
