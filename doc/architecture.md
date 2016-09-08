@@ -231,6 +231,20 @@ notified of all the changes for this doctype. For example, the calendar app
 can listen for all the events and if a synchronization with the mobile adds a
 new event, the app will be notified and can show this new event.
 
+### Error catcher `/errors`
+
+Client-side applications can have some JS errors. By sending the error, with
+its backtrace, to this endpoint, it will be kept in a logfile to help the
+developers debug the application later. We should look at the
+[airbrake API](https://airbrake.io/docs/api/) and probably be compatible with
+it to avoid redeveloping JS code to send the errors.
+
+### Proxy `/proxy`
+
+It can be useful for client-side apps to get data from public APIs. But,
+sometimes, these APIs don't have CORS enabled. A proxy endpoint can be a
+simple but effective solution for these cases.
+
 ### Status `/status`
 
 It's here just to say that the API is up and that it can access the CouchDB
