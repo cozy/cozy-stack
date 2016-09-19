@@ -1,7 +1,7 @@
 ---
 language: go
 go:
-  - 1.6.2
+  - 1.7.1
 
 before_script:
   - go get -u github.com/alecthomas/gometalinter
