@@ -179,6 +179,8 @@ like uploading a file, to more complex ones, like renaming a folder. It also
 ensure that an instance is not exceeding its quota, and keeps a trash to
 recover files recently deleted.
 
+More informations [here](files.md).
+
 ### Sharing `/sharings`
 
 Users will want to share things like calendars. This service is there for
