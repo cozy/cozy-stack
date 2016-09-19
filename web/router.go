@@ -23,8 +23,8 @@
 package web
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/cozy/cozy-stack/web/status"
+	"github.com/gin-gonic/gin"
 )
 
 // SetupRoutes sets the routing for HTTP endpoints to the Go methods
