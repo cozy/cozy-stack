@@ -7,9 +7,8 @@ having to know the underlying storage layer. The metadata are kept in CouchDB,
 but the binaries can go to the local system, or a Swift instance.
 
 **TODO** move/rename files and folders
-**TODO** overwrite an existing file
 **TODO** update metadata of a file or folder
-**TODO** look at [Content-Disposition](https://www.ietf.org/rfc/rfc2183.txt)
+**TODO** use relationships instead of links for parent
 
 
 Folders
@@ -32,6 +31,8 @@ Parameter | Description
 type      | `folder`
 name      | the folder name
 tags      | an array of tags
+
+**TODO** use a plural for the type, as in the jsonapi examples?
 
 #### Request
 
@@ -72,7 +73,80 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 
 Get the folder informations and the list of files and sub-folders inside it.
 
-**TODO** example
+#### Request
+
+```http
+GET /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "folder",
+    "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
+    "attributes": {
+      "rev": "1-e36ab092",
+      "name": "Documents",
+      "created_at": "2016-09-19T12:35:00Z",
+      "updated_at": "2016-09-19T12:35:00Z",
+      "tags": []
+    },
+    "relationships": {
+      "listing": {
+        "data": [
+          { "type": "folder", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
+          { "type": "file", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
+        ]
+      }
+    },
+    "links": {
+      "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    }
+  },
+  "included": [{
+    "type": "folder",
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "attributes": {
+      "rev": "1-ff3beeb456eb",
+      "name": "phone",
+      "created_at": "2016-09-19T12:35:08Z",
+      "updated_at": "2016-09-19T12:35:08Z",
+      "tags": ["bills"]
+    },
+    "links": {
+      "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    }
+  }, {
+    "type": "file",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "attributes": {
+      "rev": "1-0e6d5b72",
+      "name": "hello.txt",
+      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": [],
+      "size": 12,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain"
+    },
+    "links": {
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    }
+  }]
+}
+```
 
 ### DELETE /files/:folder-id
 
@@ -136,6 +210,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "attributes": {
       "rev": "1-0e6d5b72",
       "name": "hello.txt",
+      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
@@ -152,13 +227,143 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 }
 ```
 
+**Note**: for an image, the links section will also include a link called
+`thumbnail` to the thumbnail URL of the image.
+
 ### GET /files/:file-id
 
 Get the file content
 
+#### Request
+
+```http
+GET /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81 HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Length: 12
+Content-Disposition: inline; filename="hello.txt"
+Content-Type: text/plain
+
+Hello world!
+```
+
+### GET /files/download
+
+Download a file (its content) from its path
+
+#### Request
+
+```http
+GET /files/download?path=/Documents/hello.txt HTTP/1.1
+```
+
+### GET /files/metadata
+
+Get metadata about a file (or folder) from its path
+
+#### Request
+
+```http
+GET /files/metadata?path=/Documents/hello.txt HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
+```
+
+```json
+{
+  "data": {
+    "type": "file",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "attributes": {
+      "rev": "1-0e6d5b72",
+      "name": "hello.txt",
+      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": [],
+      "size": 12,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain"
+    },
+    "links": {
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    }
+  }
+}
+```
+
 ### GET /files/:file-id/thumbnail
 
 Get a thumbnail of a file (for an image only).
+
+### PUT /files/:file-id
+
+Overwrite a file
+
+#### HTTP headers
+
+The HTTP headers are the same than for uploading a file. There is one
+additional header, `If-Match`, with the previous revision of the file.
+It's optional, but if it is set and it doesn't match the last revision of the
+file, the request will be refused with `412 Precondition Failed`.
+
+#### Request
+
+```http
+PUT /files/9152d568-7e7c-11e6-a377-37cbfb190b4b HTTP/1.1
+Accept: application/vnd.api+json
+Content-Length: 12
+Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
+Content-Type: text/plain
+Date: Mon, 20 Sep 2016 16:43:12 GMT
+If-Match: 1-0e6d5b72
+
+HELLO WORLD!
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "file",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "attributes": {
+      "rev": "2-d903b54c",
+      "name": "hello.txt",
+      "md5sum": "b59bc37d6441d96785bda7ab2ae98f75",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": [],
+      "size": 12,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain"
+    },
+    "links": {
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    }
+  }
+}
+```
 
 ### DELETE /files/:file-id
 
@@ -176,7 +381,61 @@ permanently destroyed.
 
 List the files inside the trash.
 
-**TODO** example
+#### Request
+
+```http
+GET /files/trash HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [{
+    "type": "file",
+    "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
+    "attributes": {
+      "rev": "1-3b75377c",
+      "name": "foo.txt",
+      "md5sum": "b01341e7803c800cc8db4de46f377a87",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": [],
+      "size": 123,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain"
+    },
+    "links": {
+      "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
+    }
+  }, {
+    "type": "file",
+    "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
+    "attributes": {
+      "rev": "1-4a09030e",
+      "name": "bar.txt",
+      "md5sum": "aeab87eb49d3f4e0e5625ada9b49f8e1",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": [],
+      "size": 456,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain"
+    },
+    "links": {
+      "self": "/files/trash/4a4fc582-7f3e-11e6-b9ca-278406b6ddd4"
+    }
+  }]
+}
+```
 
 ### POST /files/trash/:file-id
 
