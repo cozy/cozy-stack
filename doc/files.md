@@ -6,10 +6,6 @@ bills in PDF. This service offers a REST API to manipulate easily without
 having to know the underlying storage layer. The metadata are kept in CouchDB,
 but the binaries can go to the local system, or a Swift instance.
 
-**TODO** move/rename files and folders
-**TODO** update metadata of a file or folder
-**TODO** use relationships instead of links for parent
-
 
 Folders
 -------
@@ -28,16 +24,14 @@ given, the folder is created at the root of the virtual file system.
 
 Parameter | Description
 ----------|------------
-type      | `folder`
+type      | `github.com/cozy/cozy-types/folders`
 name      | the folder name
 tags      | an array of tags
-
-**TODO** use a plural for the type, as in the jsonapi examples?
 
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?type=folder&name=phone&tags[]=bills HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?type=github.com/cozy/cozy-types/folders&name=phone&tags[]=bills HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -52,7 +46,7 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ```json
 {
   "data": {
-    "type": "folder",
+    "type": "github.com/cozy/cozy-types/folders",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "attributes": {
       "rev": "1-ff3beeb456eb",
@@ -61,9 +55,19 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
       "updated_at": "2016-09-19T12:35:08Z",
       "tags": ["bills"]
     },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        },
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        }
+      }
+    },
     "links": {
-      "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+      "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
     }
   }
 }
@@ -90,7 +94,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "folder",
+    "type": "github.com/cozy/cozy-types/folders",
     "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
     "attributes": {
       "rev": "1-e36ab092",
@@ -102,8 +106,8 @@ Content-Type: application/vnd.api+json
     "relationships": {
       "listing": {
         "data": [
-          { "type": "folder", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
-          { "type": "file", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
+          { "type": "github.com/cozy/cozy-types/folders", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
+          { "type": "github.com/cozy/cozy-types/files", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
         ]
       }
     },
@@ -112,7 +116,7 @@ Content-Type: application/vnd.api+json
     }
   },
   "included": [{
-    "type": "folder",
+    "type": "github.com/cozy/cozy-types/folders",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "attributes": {
       "rev": "1-ff3beeb456eb",
@@ -121,12 +125,22 @@ Content-Type: application/vnd.api+json
       "updated_at": "2016-09-19T12:35:08Z",
       "tags": ["bills"]
     },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        },
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        }
+      }
+    },
     "links": {
-      "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+      "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
     }
   }, {
-    "type": "file",
+    "type": "github.com/cozy/cozy-types/files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "1-0e6d5b72",
@@ -140,9 +154,19 @@ Content-Type: application/vnd.api+json
       "class": "document",
       "mime": "text/plain"
     },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        },
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        }
+      }
+    },
     "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
   }]
 }
@@ -164,7 +188,7 @@ A file is a binary content with some metadata.
 
 Parameter | Description
 ----------|------------
-type      | `file`
+type      | `github.com/cozy/cozy-types/files`
 name      | the file name
 tags      | an array of tags
 executable| `true` if the file is executable (UNIX permission)
@@ -184,7 +208,7 @@ on the server, the server responds with a `412 Precondition Failed`.
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?type=file&name=hello.txt HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?type=github.com/cozy/cozy-types/files&name=hello.txt HTTP/1.1
 Accept: application/vnd.api+json
 Content-Length: 12
 Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
@@ -205,7 +229,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ```json
 {
   "data": {
-    "type": "file",
+    "type": "github.com/cozy/cozy-types/files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "1-0e6d5b72",
@@ -219,9 +243,19 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
       "class": "document",
       "mime": "text/plain"
     },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        },
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        }
+      }
+    },
     "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
   }
 }
@@ -259,49 +293,6 @@ Download a file (its content) from its path
 
 ```http
 GET /files/download?path=/Documents/hello.txt HTTP/1.1
-```
-
-### GET /files/metadata
-
-Get metadata about a file (or folder) from its path
-
-#### Request
-
-```http
-GET /files/metadata?path=/Documents/hello.txt HTTP/1.1
-```
-
-#### Response
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json
-Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
-```
-
-```json
-{
-  "data": {
-    "type": "file",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "attributes": {
-      "rev": "1-0e6d5b72",
-      "name": "hello.txt",
-      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "size": 12,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-    }
-  }
-}
 ```
 
 ### GET /files/:file-id/thumbnail
@@ -343,7 +334,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "file",
+    "type": "github.com/cozy/cozy-types/files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "2-d903b54c",
@@ -357,9 +348,19 @@ Content-Type: application/vnd.api+json
       "class": "document",
       "mime": "text/plain"
     },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        },
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        }
+      }
+    },
     "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "parent": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
   }
 }
@@ -368,6 +369,173 @@ Content-Type: application/vnd.api+json
 ### DELETE /files/:file-id
 
 Put a file in the trash.
+
+
+Common
+------
+
+### GET /files/metadata
+
+Get metadata about a file (or folder) from its path
+
+#### Request
+
+```http
+GET /files/metadata?path=/Documents/hello.txt HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
+```
+
+```json
+{
+  "data": {
+    "type": "github.com/cozy/cozy-types/files",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "attributes": {
+      "rev": "1-0e6d5b72",
+      "name": "hello.txt",
+      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": [],
+      "size": 12,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain"
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        },
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+        }
+      }
+    },
+    "links": {
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+    }
+  }
+}
+```
+
+### PATCH /files/:file-id and PATCH /files/metadata
+
+Both endpoints can be used to update the metadata of a file or folder, or to
+rename/move it. The difference is the first one uses an id to identify the
+file/folder to update, and the second one uses the path.
+
+The parent relationship can be updated to move a file or folder.
+
+#### HTTP headers
+
+It's possible to send the `If-Match` header, with the previous revision of the
+file. It's optional, but if it is set and it doesn't match the last revision
+of the file, the request will be refused with `412 Precondition Failed`.
+
+#### Request
+
+```http
+PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b HTTP/1.1
+Accept: application/vnd.api+json
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "github.com/cozy/cozy-types/files",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "attributes": {
+      "name": "hi.txt",
+      "tags": ["poem"]
+    },
+    "relationships": {
+      "parent": {
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
+        }
+      }
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
+```
+
+```json
+{
+  "data": {
+    "type": "github.com/cozy/cozy-types/files",
+    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "attributes": {
+      "rev": "1-0e6d5b72",
+      "name": "hi.txt",
+      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "created_at": "2016-09-19T12:38:04Z",
+      "updated_at": "2016-09-19T12:38:04Z",
+      "tags": ["poem"],
+      "size": 12,
+      "executable": false,
+      "class": "document",
+      "mime": "text/plain"
+    },
+    "relationships": {
+      "parent": {
+        "links": {
+          "related": "/files/f2f36fec-8018-11e6-abd8-8b3814d9a465"
+        },
+        "data": {
+          "type": "github.com/cozy/cozy-types/folders",
+          "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
+        }
+      }
+    },
+    "links": {
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+    }
+  }
+}
+```
+
+### POST /files/archive
+
+Create an archive and download it. The body of the request lists the files and
+folders that will be included in the archive. For folders, it includes all the
+files and sub-folders in the archive.
+
+#### Request
+
+```http
+POST /files/archive HTTP/1.1
+Accept: application/zip
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    "/Documents/bills",
+    "/Documents/images/sunset.jpg",
+    "/Documents/images/eiffel-tower.jpg"
+  ]
+}
+```
 
 
 Trash
@@ -398,7 +566,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": [{
-    "type": "file",
+    "type": "github.com/cozy/cozy-types/files",
     "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
     "attributes": {
       "rev": "1-3b75377c",
@@ -416,7 +584,7 @@ Content-Type: application/vnd.api+json
       "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
     }
   }, {
-    "type": "file",
+    "type": "github.com/cozy/cozy-types/files",
     "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
     "attributes": {
       "rev": "1-4a09030e",
