@@ -179,6 +179,8 @@ like uploading a file, to more complex ones, like renaming a folder. It also
 ensure that an instance is not exceeding its quota, and keeps a trash to
 recover files recently deleted.
 
+More informations [here](files.md).
+
 ### Sharing `/sharings`
 
 Users will want to share things like calendars. This service is there for
@@ -514,6 +516,22 @@ The golang web framework used for the cozy stack is
 
 All the HTTP resources will be documented with
 [swagger-ui](https://github.com/swagger-api/swagger-ui).
+
+#### HTTP status codes
+
+There are some HTTP status codes that are generally used in the API:
+
+* 200 OK, when everything is OK
+* 201 Created, when a resource was created
+* 204 No Content, when a resource was deleted
+* 400 Bad Request, when the request has some unknown parameters and the
+  request body is not in the expected format
+* 401 Unauthorized, when the user is not authenticated
+* 403 Forbidden, when the permissions forbid this action
+* 404 Not Found, when the resouce can't be found
+* 500 Internal Server Error, when a bug occurs
+* 503 Service Unavailable, when the stack, CouchDB, Redis or Swift is
+  unavailable.
 
 ### DocTypes
 
