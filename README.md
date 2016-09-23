@@ -31,7 +31,7 @@ There are some useful commands to know in order to play with the go code:
 
 ```bash
 go get -u github.com/cozy/cozy-stack
-cd $GOPATH/github.com/cozy/cozy-stack
+cd $GOPATH/src/github.com/cozy/cozy-stack
 
 go get -t -u ./...      # To install or update the go dependencies
 go test -v ./...        # To launch the tests
