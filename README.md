@@ -45,7 +45,7 @@ The swagger description of the REST API can be displayed with those commands:
 
 ```bash
 go get -u github.com/go-swagger/go-swagger/cmd/swagger
-g clone git@github.com:swagger-api/swagger-ui.git
+git clone git@github.com:swagger-api/swagger-ui.git
 mkdir -p swagger-ui/dist/specs
 swagger generate spec -o swagger-ui/dist/specs/swagger.json
 go get github.com/mholt/caddy/caddy
