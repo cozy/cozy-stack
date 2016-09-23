@@ -24,16 +24,22 @@ given, the folder is created at the root of the virtual file system.
 
 Parameter | Description
 ----------|------------
-type      | `github.com/cozy/cozy-types/folders`
-name      | the folder name
-tags      | an array of tags
+Type      | `github.com/cozy/cozy-types/folders`
+Name      | the folder name
+Tags      | an array of tags
 
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?type=github.com/cozy/cozy-types/folders&name=phone&tags[]=bills HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=github.com/cozy/cozy-types/folders&Name=phone&Tags[]=bills HTTP/1.1
 Accept: application/vnd.api+json
 ```
+
+#### Status codes
+
+* 201 Created, when the folder has been successfully created
+* 404 Not Found, when the parent folder does not exist
+* 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or invalid
 
 #### Response
 
@@ -184,14 +190,16 @@ A file is a binary content with some metadata.
 
 ### POST /files/:folder-id
 
+Upload a file
+
 #### Query-String
 
 Parameter | Description
 ----------|------------
-type      | `github.com/cozy/cozy-types/files`
-name      | the file name
-tags      | an array of tags
-executable| `true` if the file is executable (UNIX permission)
+Type      | `github.com/cozy/cozy-types/files`
+Name      | the file name
+Tags      | an array of tags
+Executable| `true` if the file is executable (UNIX permission)
 
 #### HTTP headers
 
@@ -202,13 +210,10 @@ Content-MD5   | A Base64-encoded binary MD5 sum of the file
 Content-Type  | The mime-type of the file
 Date          | The modification date of the file
 
-**Note:** if the md5 sum in `Content-MD5` is not equal to the md5 sum computed
-on the server, the server responds with a `412 Precondition Failed`.
-
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?type=github.com/cozy/cozy-types/files&name=hello.txt HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=github.com/cozy/cozy-types/files&Name=hello.txt HTTP/1.1
 Accept: application/vnd.api+json
 Content-Length: 12
 Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
@@ -217,6 +222,13 @@ Date: Mon, 19 Sep 2016 12:38:04 GMT
 
 Hello world!
 ```
+
+#### Status codes
+
+* 201 Created, when the file has been successfully created
+* 404 Not Found, when the parent folder does not exist
+* 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to the md5sum computed by the server
+* 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or invalid
 
 #### Response
 
@@ -306,9 +318,8 @@ Overwrite a file
 #### HTTP headers
 
 The HTTP headers are the same than for uploading a file. There is one
-additional header, `If-Match`, with the previous revision of the file.
-It's optional, but if it is set and it doesn't match the last revision of the
-file, the request will be refused with `412 Precondition Failed`.
+additional header, `If-Match`, with the previous revision of the file
+(optional).
 
 #### Request
 
@@ -323,6 +334,12 @@ If-Match: 1-0e6d5b72
 
 HELLO WORLD!
 ```
+
+#### Status codes
+
+* 200 OK, when the file has been successfully overwritten
+* 404 Not Found, when the file wasn't existing
+* 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file
 
 #### Response
 
@@ -438,8 +455,7 @@ The parent relationship can be updated to move a file or folder.
 #### HTTP headers
 
 It's possible to send the `If-Match` header, with the previous revision of the
-file. It's optional, but if it is set and it doesn't match the last revision
-of the file, the request will be refused with `412 Precondition Failed`.
+file/folder (optional).
 
 #### Request
 
@@ -469,6 +485,13 @@ Content-Type: application/vnd.api+json
   }
 }
 ```
+
+#### Status codes
+
+* 200 OK, when the file or folder metadata has been successfully updated
+* 404 Not Found, when the file/folder wasn't existing
+* 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file/folder
+* 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist)
 
 #### Response
 
