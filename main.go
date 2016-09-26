@@ -22,8 +22,16 @@
 // data to go elsewhere, you can.
 package main
 
-import "github.com/cozy/cozy-stack/cmd"
+import (
+	"fmt"
+	"os"
+
+	"github.com/cozy/cozy-stack/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	if err := cmd.RootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
 }
