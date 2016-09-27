@@ -110,7 +110,7 @@ Content-Type: application/vnd.api+json
       "tags": []
     },
     "relationships": {
-      "listing": {
+      "contents": {
         "data": [
           { "type": "github.com/cozy/cozy-types/folders", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
           { "type": "github.com/cozy/cozy-types/files", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
@@ -489,6 +489,7 @@ Content-Type: application/vnd.api+json
 #### Status codes
 
 * 200 OK, when the file or folder metadata has been successfully updated
+* 400 Bad Request, when a the folder is asked to move to one of its sub-folders
 * 404 Not Found, when the file/folder wasn't existing
 * 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file/folder
 * 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist)
