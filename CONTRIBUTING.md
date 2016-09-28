@@ -1,7 +1,7 @@
 How to contribute to the Cozy Stack?
 ====================================
 
-Thank you for your interest in contributing to Rust! There are many ways to
+Thank you for your interest in contributing to Cozy! There are many ways to
 contribute, and we appreciate all of them.
 
 
@@ -40,7 +40,7 @@ Pull Requests
 
 ### Workflow
 
-Pull requests are the primary mechanism we use to change Rust. GitHub itself
+Pull requests are the primary mechanism we use to change Cozy. GitHub itself
 has some [great documentation
 ](https://help.github.com/categories/collaborating-with-issues-and-pull-requests/)
 on using the Pull Request feature. We use the 'fork and pull' model described
