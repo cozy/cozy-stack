@@ -23,7 +23,7 @@ given, the folder is created at the root of the virtual file system.
 #### Query-String
 
 Parameter | Description
-----------|------------
+----------|-------------------------------------
 Type      | `github.com/cozy/cozy-types/folders`
 Name      | the folder name
 Tags      | an array of tags
@@ -82,6 +82,14 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ### GET /files/:folder-id
 
 Get the folder informations and the list of files and sub-folders inside it.
+Contents is paginated. By default, only the 100 first entries are given.
+
+### Query-String
+
+Parameter    | Description
+-------------|---------------------------------------
+page[cursor] | the last id of the results
+page[limit]  | the number of entries (100 by default)
 
 #### Request
 
@@ -99,6 +107,9 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
+  "links": {
+    "next": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
+  },
   "data": {
     "type": "github.com/cozy/cozy-types/folders",
     "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
@@ -110,7 +121,7 @@ Content-Type: application/vnd.api+json
       "tags": []
     },
     "relationships": {
-      "listing": {
+      "contents": {
         "data": [
           { "type": "github.com/cozy/cozy-types/folders", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
           { "type": "github.com/cozy/cozy-types/files", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
@@ -195,7 +206,7 @@ Upload a file
 #### Query-String
 
 Parameter | Description
-----------|------------
+----------|---------------------------------------------------
 Type      | `github.com/cozy/cozy-types/files`
 Name      | the file name
 Tags      | an array of tags
@@ -204,7 +215,7 @@ Executable| `true` if the file is executable (UNIX permission)
 #### HTTP headers
 
 Parameter     | Description
---------------|------------
+--------------|--------------------------------------------
 Content-Length| The file size
 Content-MD5   | A Base64-encoded binary MD5 sum of the file
 Content-Type  | The mime-type of the file
@@ -489,6 +500,7 @@ Content-Type: application/vnd.api+json
 #### Status codes
 
 * 200 OK, when the file or folder metadata has been successfully updated
+* 400 Bad Request, when a the folder is asked to move to one of its sub-folders
 * 404 Not Found, when the file/folder wasn't existing
 * 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file/folder
 * 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist)
@@ -570,7 +582,14 @@ permanently destroyed.
 
 ### GET /files/trash
 
-List the files inside the trash.
+List the files inside the trash. It's paginated.
+
+### Query-String
+
+Parameter    | Description
+-------------|---------------------------------------
+page[cursor] | the last id of the results
+page[limit]  | the number of entries (100 by default)
 
 #### Request
 
