@@ -122,6 +122,11 @@ bottlenecks when scaling to add more users.
 [The Warp 10 Platform](http://www.warp10.io/) looks like a good candidate for
 this.
 
+### Glossary
+
+Some technical terms have a special meaning in the cozy context. They are
+explained in [the glossary](glossary.md).
+
 
 Services
 --------
