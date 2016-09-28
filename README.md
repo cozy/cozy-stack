@@ -55,6 +55,13 @@ xdg-open http://localhost:2015/index.html?url=http://localhost:2015/specs/swagge
 ```
 
 
+## How to contribute?
+
+We are eager for contributions and very happy when we receive them! It can
+code, of course, but it can also take other forms. The workflow is explained
+in [the contributing guide](CONTRIBUTING.md).
+
+
 ## Community
 
 You can reach the Cozy Community by:
