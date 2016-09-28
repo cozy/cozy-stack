@@ -106,3 +106,62 @@ Content-Type: application/json
 - A doc cannot contain an `_id` field, if so an error 400 is returned
 - A doc cannot contain a `_type` different from the URL one, if so an error 400 is returned
 - A doc cannot contain any field starting with `_`, those are reserved for future cozy & couchdb api evolution
+
+
+--------------------------------------------------------------------------------
+
+# Delete a document
+
+### Request
+```http
+DELETE /data/:type/:id
+```
+```http
+DELETE /data/types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+Accept: application/json
+
+```
+
+### Response OK
+```http
+200 OK
+Content-Length: ...
+Content-Type: application/json
+```
+```json
+{
+    "id": "types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "ok": true,
+    "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
+    "_deleted": true
+}
+```
+### Possible errors :
+- 400 bad request
+- 403 unauthenticated
+- 401 unauthorized
+- 404 not_found
+  - reason: missing
+  - reason: deleted
+- 500 unkown
+
+### Conflict prevention
+
+It is possible to use either a `rev` query string parameter or a HTTP `If-Match` header to prevent conflict on deletion:
+- If both are passed and are different, an error 400 is returned
+- If only one is passed or they are equals, the document will only be deleted if its `_rev` match the passed one. Otherwise, an error 412  is returned.
+- If none is passed, the document will be force-deleted.
+
+**Why shouldn't you force delete** (contrieved example) the user is syncing contacts from his mobile, a contact is created with name but no number, the user see it in the contact app. In parallel, the number is added by sync and the user click "delete" because a contact with no number is useless. The decision to delete is based on outdated data state and should therefore be aborted.
+Couchdb will prevent this, the stack API allow it for fast prototyping but it should be avoided for serious applications.
+
+### Binary attachments
+
+When a document is deleted and it was the last reference to a binary, said binary is deleted as well.
+
+If you are moving binary from one document to another, you will need to create the new document with binary link first, and only afterward delete the previous document.
+
+### Details
+
+- If no id is provided in URL, an error 400 is returned
+-
