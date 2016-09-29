@@ -20,12 +20,12 @@ func TestGetStorageProvider(t *testing.T) {
 	storage, err := instance.GetStorageProvider()
 	assert.NoError(t, err)
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-	err = afero.WriteFile(storage, "foo", content, 0644)
+	err = afero.WriteFile(*storage, "foo", content, 0644)
 	assert.NoError(t, err)
 	storage, err = instance.GetStorageProvider()
 	assert.NoError(t, err)
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-	buf, err := afero.ReadFile(storage, "foo")
+	buf, err := afero.ReadFile(*storage, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, content, buf, "the storage should have persist the content of the foo file")
 }
@@ -36,7 +36,7 @@ func TestSetInstance(t *testing.T) {
 	router.GET("/", func(c *gin.Context) {
 		instanceInterface, exists := c.Get("instance")
 		assert.True(t, exists, "the instance should have been set in the gin context")
-		instance := instanceInterface.(Instance)
+		instance := instanceInterface.(*Instance)
 		assert.Equal(t, "dev", instance.Domain, "the domain should have been set in the instance")
 		storage, err := instance.GetStorageProvider()
 		assert.NoError(t, err)

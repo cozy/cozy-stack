@@ -1,3 +1,5 @@
+// Package middlewares is a group of functions. They mutualize some actions
+// common to many gin handlers, like checking authentication or permissions.
 package middlewares
 
 import (
@@ -20,9 +22,9 @@ type Instance struct {
 
 // GetStorageProvider returns the afero storage provider where the binaries for
 // the current instance are persisted
-func (instance *Instance) GetStorageProvider() (afero.Fs, error) {
+func (instance *Instance) GetStorageProvider() (*afero.Fs, error) {
 	if instance.storage != nil {
-		return instance.storage, nil
+		return &instance.storage, nil
 	}
 	u, err := url.Parse(instance.StorageURL)
 	if err != nil {
@@ -36,7 +38,7 @@ func (instance *Instance) GetStorageProvider() (afero.Fs, error) {
 	default:
 		return nil, fmt.Errorf("Unknown storage provider: %v", u.Scheme)
 	}
-	return instance.storage, nil
+	return &instance.storage, nil
 }
 
 // SetInstance creates a gin middleware to put the instance in the gin context
@@ -51,7 +53,7 @@ func SetInstance() gin.HandlerFunc {
 			return
 		}
 		storageURL := "file://localhost" + wd + "/" + domain + "/"
-		instance := Instance{
+		instance := &Instance{
 			Domain:     domain,
 			StorageURL: storageURL,
 		}
