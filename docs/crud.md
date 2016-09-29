@@ -1,3 +1,13 @@
+# General
+
+### Typing
+
+The notion of document type does not exist in couchdb.
+Cozy-stack introduce this notion with a special `_type` field. This type cannot contain "/", it should be unique among all developers, it is recommend to use the Java naming convention with a domain you own.
+All CozyCloud types will be prefixed by io.cozy
+
+------------------------------------------------------------------------------
+
 # Access a document
 
 #### Request
@@ -5,7 +15,7 @@
 GET /data/:type/:id
 ```
 ```http
-GET /data/types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ```
 
 #### Response OK
@@ -18,9 +28,9 @@ Etag: "3-6494e0ac6494e0ac"
 ```
 ```json
 {
-    "_id": "types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "_rev": "3-6494e0ac6494e0ac",
-    "_type": "types.cozy.io/events",
+    "_type": "io.cozy.events",
     "startdate": "20160823T150000Z",
     "enddate": "20160923T160000Z",
     "summary": "A long month",
@@ -62,14 +72,14 @@ Content-Type: application/json
 POST /data/:type/
 ```
 ```http
-POST /data/types.cozy.io/events/
+POST /data/io.cozy.events/
 Content-Length: ...
 Content-Type: application/json
 Accept: application/json
 ```
 ```json
 {
-    "_type": "types.cozy.io/events",
+    "_type": "io.cozy.events",
     "startdate": "20160712T150000",
     "enddate": "20160712T150000",
 }
@@ -83,13 +93,13 @@ Content-Type: application/json
 ```
 ```json
 {
-  "id": "types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+  "id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
   "ok": true,
   "rev": "1-6494e0ac6494e0ac",
   "data": {
-    "_id": "types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "_rev": "1-6494e0ac6494e0ac",
-    "_type": "types.cozy.io/events",
+    "_type": "io.cozy.events",
     "startdate": "20160712T150000",
     "enddate": "20160712T150000"
   }
@@ -117,7 +127,7 @@ Content-Type: application/json
 DELETE /data/:type/:id
 ```
 ```http
-DELETE /data/types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+DELETE /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 Accept: application/json
 
 ```
@@ -130,7 +140,7 @@ Content-Type: application/json
 ```
 ```json
 {
-    "id": "types.cozy.io/events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "ok": true,
     "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
     "_deleted": true
