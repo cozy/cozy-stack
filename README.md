@@ -63,6 +63,26 @@ xdg-open http://localhost:2015/index.html?url=http://localhost:2015/specs/swagge
 
 ## With Docker
 
+### Building a `cozy-stack` binary
+
+To build a `cozy-stack` binary with Docker using the **local** source code, run:
+
+```bash
+# From your cozy-stack developement folder
+docker run -it --rm --name cozy-stack \
+    -v $(pwd):/go/src/github.com/cozy/cozy-stack \
+    -v $(pwd):/go/bin \
+    golang:1.7.1 \
+    go get -v github.com/cozy/cozy-stack
+```
+
+The `cozy-stack` binary is now present in the current folder. Run it with:
+
+```bash
+./cozy-stack serve
+```
+
+
 ### Running a CouchDB instance
 
 This will run a new instance of CouchDB in `single` mode (no cluster) and in `admin-party-mode` (no user).
