@@ -56,12 +56,12 @@ Content-Type: application/json
 ```
 
 ### possible errors :
-- 403 unauthenticated
-- 401 unauthorized
+- 401 unauthorized (no authentication has been provided)
+- 403 forbidden (the authentication does not provide permissions for this action)
 - 404 not_found
   - reason: missing
   - reason: deleted
-- 500 unkown
+- 500 internal server error
 
 --------------------------------------------------------------------------------
 
@@ -107,9 +107,10 @@ Content-Type: application/json
 ```
 
 ### possible errors :
-- 403 unauthenticated
-- 401 unauthorized
-- 500 unkown
+- 400 bad request
+- 401 unauthorized (no authentication has been provided)
+- 403 forbidden (the authentication does not provide permissions for this action)
+- 500 internal server error
 
 ### Details
 
@@ -148,12 +149,13 @@ Content-Type: application/json
 ```
 ### Possible errors :
 - 400 bad request
-- 403 unauthenticated
-- 401 unauthorized
+- 401 unauthorized (no authentication has been provided)
+- 403 forbidden (the authentication does not provide permissions for this action)
 - 404 not_found
   - reason: missing
   - reason: deleted
-- 500 unkown
+- 412 Conflict (see Conflict prevention section below)
+- 500 internal server error
 
 ### Conflict prevention
 
@@ -165,13 +167,6 @@ It is possible to use either a `rev` query string parameter or a HTTP `If-Match`
 **Why shouldn't you force delete** (contrieved example) the user is syncing contacts from his mobile, a contact is created with name but no number, the user see it in the contact app. In parallel, the number is added by sync and the user click "delete" because a contact with no number is useless. The decision to delete is based on outdated data state and should therefore be aborted.
 Couchdb will prevent this, the stack API allow it for fast prototyping but it should be avoided for serious applications.
 
-### Binary attachments
-
-When a document is deleted and it was the last reference to a binary, said binary is deleted as well.
-
-If you are moving binary from one document to another, you will need to create the new document with binary link first, and only afterward delete the previous document.
-
 ### Details
 
 - If no id is provided in URL, an error 400 is returned
--
