@@ -55,6 +55,12 @@ xdg-open http://localhost:2015/index.html?url=http://localhost:2015/specs/swagge
 ```
 
 
+## Requirements
+
+* Go 1.7.1
+* CouchDB 2.0.0
+
+
 ## How to contribute?
 
 We are eager for contributions and very happy when we receive them! It can
