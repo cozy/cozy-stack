@@ -156,6 +156,8 @@ mercurial, npm or even just a tarball). Also, we want to offer two channels
 for our official apps: one with a stable and well tested release, and one with
 more frequent updates for our more adventurous users.
 
+More informations [here](apps.md).
+
 ### Data System `/data`
 
 CouchDB is used for persistence of JSON documents. The data service is a layer
