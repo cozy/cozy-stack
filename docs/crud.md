@@ -2,9 +2,15 @@
 
 ### Typing
 
-The notion of document type does not exist in couchdb.
-Cozy-stack introduce this notion with a special `_type` field. This type cannot contain "/", it should be unique among all developers, it is recommend to use the Java naming convention with a domain you own.
-All CozyCloud types will be prefixed by io.cozy
+The notion of document type does not exist in Couchdb.
+
+Cozy-stack introduce this notion by prefixing each document's `_id` with a fully qualified type name followed by `/`.
+
+This type name cannot contain `/`, and it should be unique among all developers, it is recommended to use the Java naming convention with a domain you own.
+
+All CozyCloud types will be prefixed by io.cozy and be pluralized.
+Example ID : `io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee`
+Where, `io.cozy.` is the developer specific prefix, `events` the actual type, and `6494e0ac-dfcb-11e5-88c1-472e84a9cbee` the document's unique (within a type) id .
 
 ------------------------------------------------------------------------------
 
@@ -30,7 +36,6 @@ Etag: "3-6494e0ac6494e0ac"
 {
     "_id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "_rev": "3-6494e0ac6494e0ac",
-    "_type": "io.cozy.events",
     "startdate": "20160823T150000Z",
     "enddate": "20160923T160000Z",
     "summary": "A long month",
@@ -79,7 +84,6 @@ Accept: application/json
 ```
 ```json
 {
-    "_type": "io.cozy.events",
     "startdate": "20160712T150000",
     "enddate": "20160712T150000",
 }
@@ -99,7 +103,6 @@ Content-Type: application/json
   "data": {
     "_id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "_rev": "1-6494e0ac6494e0ac",
-    "_type": "io.cozy.events",
     "startdate": "20160712T150000",
     "enddate": "20160712T150000"
   }
@@ -115,7 +118,6 @@ Content-Type: application/json
 ### Details
 
 - A doc cannot contain an `_id` field, if so an error 400 is returned
-- A doc cannot contain a `_type` different from the URL one, if so an error 400 is returned
 - A doc cannot contain any field starting with `_`, those are reserved for future cozy & couchdb api evolution
 
 
