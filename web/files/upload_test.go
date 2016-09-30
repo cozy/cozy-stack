@@ -22,33 +22,35 @@ func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
 	}
 }
 
-func TestUploadWithNoType(t *testing.T) {
-	buf := strings.NewReader("foo")
-	res, err := http.Post(ts.URL+"/files/123", "text/plain", buf)
+func upload(t *testing.T, path, contentType, body string) *http.Response {
+	buf := strings.NewReader(body)
+	res, err := http.Post(ts.URL+path, contentType, buf)
 	assert.NoError(t, err)
+	return res
+}
+
+func TestUploadWithNoType(t *testing.T) {
+	res := upload(t, "/files/123", "text/plain", "foo")
 	assert.Equal(t, 422, res.StatusCode)
 	res.Body.Close()
 }
 
 func TestUploadWithNoName(t *testing.T) {
-	buf := strings.NewReader("foo")
-	res, err := http.Post(ts.URL+"/files/123?Type=io.cozy.files", "text/plain", buf)
-	assert.NoError(t, err)
+	res := upload(t, "/files/123?Type=io.cozy.files", "text/plain", "foo")
 	assert.Equal(t, 422, res.StatusCode)
 	res.Body.Close()
 }
 
 func TestUploadSuccess(t *testing.T) {
-	foo := []byte{'f', 'o', 'o'}
-	body := strings.NewReader(string(foo))
-	res, err := http.Post(ts.URL+"/files/123?Type=io.cozy.files&Name=bar", "text/plain", body)
-	assert.NoError(t, err)
+	body := "foo"
+	res := upload(t, "/files/123?Type=io.cozy.files&Name=bar", "text/plain", body)
 	assert.Equal(t, 201, res.StatusCode)
 	res.Body.Close()
+
 	storage, _ := instance.GetStorageProvider()
 	buf, err := afero.ReadFile(*storage, "123/bar")
 	assert.NoError(t, err)
-	assert.Equal(t, foo, buf)
+	assert.Equal(t, body, string(buf))
 }
 
 func TestMain(m *testing.M) {
