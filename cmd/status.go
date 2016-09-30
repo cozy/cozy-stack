@@ -15,7 +15,7 @@ var statusCmd = &cobra.Command{
 	Long:  `Check if the HTTP server has been started and answer 200 for /status.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		port := os.Getenv("PORT")
-		if len(port) == 0 {
+		if port == "" {
 			port = "8080"
 		}
 		resp, err := http.Get("http://localhost:" + port + "/status")
