@@ -19,7 +19,7 @@ func testRequest(t *testing.T, url string) {
 	body, ioerr := ioutil.ReadAll(res.Body)
 	assert.NoError(t, ioerr)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	assert.Equal(t, "{\"couchdb\":\"down\",\"message\":\"KO\"}\n", string(body), "res body should match")
+	assert.Equal(t, "{\"couchdb\":\"healthy\",\"message\":\"OK\"}\n", string(body), "res body should match")
 }
 
 func TestRoutes(t *testing.T) {
