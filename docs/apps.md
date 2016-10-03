@@ -10,7 +10,35 @@ the virtual file system.
 Install an application
 ----------------------
 
-**TODO** explain the manifest
+To install an application, cozy needs a manifest. It's a JSON document that
+describes the application (its name and icon for example), how to install it
+and what it needs for its usage (the permissions in particular). While we have
+considered to use the same [manifest format as the W3C for
+PWAs](https://www.w3.org/TR/appmanifest/), it didn't match our expectations.
+The [manifest format for
+FirefoxOS](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest)
+is a better fit. We took a lot of inspirations from it, starting with the
+filename for this file: `manifest.webapp`.
+
+Field          | Description
+---------------|-----------------------------------------------------------------
+name           | the name to display on the home
+icon           | an icon for the home
+description    | a short description of the application
+source         | where the files of the app can be downloaded
+developer      | `name` and `url` for the developer
+default_locale | the locale used for the name and description fields
+locales        | translations of the name and description fields in other locales
+version        | the current version number
+license        | [the SPDX license identifier](https://spdx.org/licenses/)
+
+**TODO** permissions
+
+**TODO** intents / [activities](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
+
+**TODO** Contexts
+
+**TODO** [CSP policy](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#csp)
 
 ### GET /apps/manifests
 
@@ -45,6 +73,22 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.manifests",
     "id": "git://github.com/cozy/cozy-emails",
     "attributes": {
+      "name": "emails",
+      "icon": "icon.svg",
+      "description": "A webmail for Cozy Cloud",
+      "source": "git://github.com/cozy/cozy-emails",
+      "developer": {
+        "name": "Cozy",
+        "url": "https://cozy.io/"
+      },
+      "default_locale": "en",
+      "locales": {
+        "fr": {
+          "description": "Un client web pour les courriels"
+        }
+      },
+      "version": "1.2.3",
+      "license": "AGPL-3.0"
     }
   }
 }
