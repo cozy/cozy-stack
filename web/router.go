@@ -27,6 +27,7 @@ import (
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/status"
+	"github.com/cozy/cozy-stack/web/version"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,4 +38,5 @@ func SetupRoutes(router *gin.Engine) {
 	files.Routes(router.Group("/files"))
 	status.Routes(router.Group("/status"))
 	data.Routes(router.Group("/data"))
+	version.Routes(router.Group("/version"))
 }
