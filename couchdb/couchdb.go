@@ -42,17 +42,18 @@ func GetDoc(dbprefix, doctype, id string, out interface{}) error {
 	url := docURL(dbprefix, doctype, id)
 	fmt.Printf("[couchdb request] %v\n", url)
 	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Add("Accept", "application/json")
 	// Possible err = wrong method, wrong url --> 500
 	if err != nil {
 		return &Error{http.StatusInternalServerError,
 			[]byte("{\"error\":\"Wrong configuration for couchdbserver\"}")}
 	}
+	req.Header.Add("Accept", "application/json")
 	resp, err := couchdbClient.Do(req)
 	if err != nil {
 		return &Error{http.StatusServiceUnavailable,
 			[]byte("{\"error\":\"No couch to seat on.\"}")}
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return &Error{resp.StatusCode,
