@@ -7,8 +7,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "cozy",
@@ -17,25 +15,55 @@ var RootCmd = &cobra.Command{
 With it, your web apps and your devices can share data easily, providing you
 with a new experience. You can install Cozy on your own hardware where no one
 profiles you.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return configureViper()
+	},
 }
+
+var cfgFile string
+
+// Default config values
+const (
+	defaultMode = "development"
+)
 
 func init() {
-	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cozy.yaml)")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.cozy.yaml)")
+
+	RootCmd.PersistentFlags().StringP("mode", "m", defaultMode, "server mode: development or production")
+	viper.BindPFlag("mode", RootCmd.PersistentFlags().Lookup("mode"))
+	viper.SetDefault("mode", defaultMode)
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" { // enable ability to specify config file via flag
+func configureViper() error {
+	viper.SetEnvPrefix("cozy")
+	viper.AutomaticEnv()
+
+	if cfgFile != "" {
+		// Read given config file and skip other paths
 		viper.SetConfigFile(cfgFile)
+	} else {
+		viper.SetConfigName(".cozy")
+		viper.AddConfigPath("/etc/cozy")
+		viper.AddConfigPath("$HOME")
+		viper.AddConfigPath(".")
 	}
 
-	viper.SetConfigName(".cozy") // name of config file (without extension)
-	viper.AddConfigPath("$HOME") // adding home directory as first search path
-	viper.AutomaticEnv()         // read in environment variables that match
+	err := viper.ReadInConfig()
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
+	if err != nil {
+		if _, ok := err.(viper.ConfigParseError); ok {
+			return err
+		}
+
+		if cfgFile != "" {
+			return fmt.Errorf("Unable to locate config file: %s\n", cfgFile)
+		}
+	}
+
+	if viper.ConfigFileUsed() != "" {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+
+	return nil
 }
