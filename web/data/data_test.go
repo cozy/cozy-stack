@@ -2,12 +2,13 @@ package data
 
 import (
 	"bytes"
-	"io"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -15,9 +16,10 @@ import (
 
 var client = &http.Client{}
 var DOCUMENT = map[string]string{
-	"_id": TYPE + "/" + ID,
+	"_id":  TYPE + "/" + ID,
 	"test": "testvalue",
 }
+
 const HOST = "example.com"
 const TYPE = "io.cozy.events"
 const ID = "4521C325F6478E45"
@@ -27,7 +29,7 @@ const EXPECTEDDBNAME = "example-com%2Fio-cozy-events"
 // some test helpers files.
 
 func couchReq(method, path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, "http://localhost:5984/" + path, body)
+	req, err := http.NewRequest(method, "http://localhost:5984/"+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +42,7 @@ func couchReq(method, path string, body io.Reader) (*http.Response, error) {
 }
 
 func testRoute(t *testing.T, url string, host string, jsonout interface{}) (
-			*http.Response, []byte, error){
+	*http.Response, []byte, error) {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -62,7 +64,7 @@ func testRoute(t *testing.T, url string, host string, jsonout interface{}) (
 }
 
 // prepareCouch destroy and re-create the database
-func prepareCouchdb(t *testing.T){
+func prepareCouchdb(t *testing.T) {
 	_, err := couchReq("DELETE", EXPECTEDDBNAME, nil)
 	assert.NoError(t, err)
 
@@ -71,10 +73,9 @@ func prepareCouchdb(t *testing.T){
 
 	jsonbytes, _ := json.Marshal(DOCUMENT)
 	reqbody := bytes.NewReader(jsonbytes)
-	_, err = couchReq("PUT", EXPECTEDDBNAME + "/" + TYPE + "%2F" + ID, reqbody)
+	_, err = couchReq("PUT", EXPECTEDDBNAME+"/"+TYPE+"%2F"+ID, reqbody)
 	assert.NoError(t, err)
 }
-
 
 func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -97,7 +98,7 @@ func TestRoutes(t *testing.T) {
 	prepareCouchdb(t)
 
 	var out interface{}
-	res, _, err := testRoute(t, ts.URL + "/data/" + TYPE + "/" + ID, HOST, &out)
+	res, _, err := testRoute(t, ts.URL+"/data/"+TYPE+"/"+ID, HOST, &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	jsonmap, ok := out.(map[string]interface{})
@@ -106,12 +107,12 @@ func TestRoutes(t *testing.T) {
 	}
 
 	var out2 interface{}
-	res, _, err = testRoute(t, ts.URL + "/data/nottype/" + ID, HOST, &out2)
+	res, _, err = testRoute(t, ts.URL+"/data/nottype/"+ID, HOST, &out2)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
 
 	var out3 interface{}
-	res, _, err = testRoute(t, ts.URL + "/data/" + TYPE + "/NOTID", HOST, &out3)
+	res, _, err = testRoute(t, ts.URL+"/data/"+TYPE+"/NOTID", HOST, &out3)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
 }

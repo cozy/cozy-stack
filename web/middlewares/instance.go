@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"os"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/afero"
 )
@@ -41,6 +42,8 @@ func (instance *Instance) GetStorageProvider() (*afero.Fs, error) {
 	return &instance.storage, nil
 }
 
+// GetDatabasePrefix returns the prefix to use in database naming for the
+// current instance
 func (instance *Instance) GetDatabasePrefix() string {
 	return instance.Domain + "/"
 }

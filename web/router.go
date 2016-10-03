@@ -23,9 +23,9 @@
 package web
 
 import (
+	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/gin-gonic/gin"
 )

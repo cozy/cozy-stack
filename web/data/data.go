@@ -4,20 +4,18 @@ package data
 import (
 	"fmt"
 	"net/http"
+
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
 // @TODO test only, to be removed
-func transformOutput(doc map[string]interface{}){
+func transformOutput(doc map[string]interface{}) {
 
 }
 
-
-// get a doc by its type and id
-//
-// It returns the doc
+// GetDoc get a doc by its type and id
 func GetDoc(c *gin.Context) {
 	// @TODO this should be extracted to a middleware
 	instance, exists := c.Get("instance")
@@ -30,20 +28,19 @@ func GetDoc(c *gin.Context) {
 	prefix := instance.(*middlewares.Instance).GetDatabasePrefix()
 	var out interface{}
 
-	reqerr := couchdb.GetDoc(prefix, c.Param("doctype"), c.Param("docid"),	&out)
+	reqerr := couchdb.GetDoc(prefix, c.Param("doctype"), c.Param("docid"), &out)
 	if reqerr != nil {
-		coucherr, ok := reqerr.(*couchdb.CouchdbError)
-		if ok {
+		coucherr, iscoucherr := reqerr.(*couchdb.Error)
+		if iscoucherr {
 			c.AbortWithError(coucherr.StatusCode, coucherr)
-		}else{
+		} else {
 			c.AbortWithError(http.StatusInternalServerError, reqerr)
 		}
 		return
 	}
 	transformOutput(out.(map[string]interface{}))
-	c.JSON(200, out);
+	c.JSON(200, out)
 }
-
 
 // Routes sets the routing for the status service
 func Routes(router *gin.RouterGroup) {

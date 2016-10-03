@@ -1,14 +1,15 @@
 package couchdb
 
 import (
-  "fmt"
+	"fmt"
 )
 
-type CouchdbError struct {
-  StatusCode int
-  CouchdbJSON []byte
+// Error represent an error from couchdb
+type Error struct {
+	StatusCode  int
+	CouchdbJSON []byte
 }
 
-func (e *CouchdbError) Error() string {
-    return fmt.Sprintf("CouchdbError %d : %s", e.StatusCode, e.CouchdbJSON)
+func (e *Error) Error() string {
+	return fmt.Sprintf("CouchdbError %d : %s", e.StatusCode, e.CouchdbJSON)
 }
