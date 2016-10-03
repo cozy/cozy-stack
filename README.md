@@ -22,7 +22,7 @@ to be simpler for hosting thousands of instances. It should also bring
 multi-users for self-hosted and improve many things, starting with security
 and reliability. You can find:
 
-- [some notes about the architecture](doc/architecture.md)
+- [some notes about the architecture](docs/architecture.md)
 - some code in Go to help me immerse in the new architecture.
 
 Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
