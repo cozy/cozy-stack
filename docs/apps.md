@@ -12,7 +12,7 @@ Install an application
 
 **TODO** explain the manifest
 
-### GET /apps/manifest
+### GET /apps/manifests
 
 Give access to the manifest for an application. It can have several usages,
 but the most important one is to display informations about the app to the
@@ -23,12 +23,12 @@ knowledge of the cause.
 
 Parameter | Description
 ----------|-----------------------------------------
-From      | URL from where the app can be downloaded
+Source    | URL from where the app can be downloaded
 
 #### Request
 
 ```http
-GET /apps/manifest?From=git://github.com/cozy/cozy-emails HTTP/1.1
+GET /apps/manifests?Source=git://github.com/cozy/cozy-emails HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -69,12 +69,52 @@ register the permissions, etc.
 
 Parameter | Description
 ----------|-----------------------------------------
-From      | URL from where the app can be downloaded
+Source    | URL from where the app can be downloaded
 
 #### Request
 
 ```http
-POST /apps/emails?From=git://github.com/cozy/cozy-emails HTTP/1.1
+POST /apps/emails?Source=git://github.com/cozy/cozy-emails HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [{
+    "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+    "type": "io.cozy.applications",
+    "attributes": {
+      "name": "calendar",
+      "state": "installing"
+    }
+  }]
+}
+```
+
+
+List installed applications
+---------------------------
+
+### GET /apps
+
+An application can be in one of these states:
+
+- `ready`, the user can use it
+- `installing`, the installation is running and the app will soon be usable
+- `upgrading`, a new version is being installed
+- `uninstalling`, the app will be removed, and will return to the `available` state.
+
+#### Request
+
+```http
+GET /apps HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -86,40 +126,97 @@ Content-Type: application/vnd.api+json
 ```
 
 ```json
+{
+  "data": [{
+    "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+    "type": "io.cozy.applications",
+    "attributes": {
+      "name": "calendar",
+      "state": "ready"
+    }
+  }]
+}
 ```
 
 
-List applications
------------------
+Manage the marketplace
+----------------------
 
-### GET /apps
+### GET /apps/manifests
 
-#### Query-String
+List applications in the marketplace.
 
-Parameter     | Description
---------------|----------------------------------------------------------------------
-filter[state] | give only the apps on this state (`installed`, `available`), optional
+### POST /apps/manifests
+
+Add an application to the marketplace. The payload is a subset of the
+manifest, with at least `name` and `source`. But it's possible to add the
+other fields of the manifest to give more informations.
 
 #### Request
 
 ```http
 GET /apps?filter[state]=installed HTTP/1.1
 Accept: application/vnd.api+json
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.manifests",
+    "attributes": {
+      "name": "emails",
+      "icon": "/Apps/marketplace/emails.svg",
+      "source": "git://github.com/cozy/cozy-emails",
+      "default_locale": "en",
+      "description": "A webmail for Cozy Cloud",
+      "locales": {
+        "fr": {
+          "name": "courriels",
+          "description": "Un client web pour les courriels dans Cozy Cloud"
+        }
+      }
+    }
+  }
+}
 ```
 
 #### Response
 
 ```http
-HTTP/1.1 200 OK
+HTTP/1.1 201 Created
 Content-Type: application/vnd.api+json
 ```
 
 ```json
+{
+  "data": {
+    "id": "4f6436ce-8967-11e6-b174-ab83adac69f2",
+    "type": "io.cozy.manifests",
+    "attributes": {
+      "name": "emails",
+      "icon": "/Apps/marketplace/emails.svg",
+      "source": "git://github.com/cozy/cozy-emails",
+      "default_locale": "en",
+      "description": "A webmail for Cozy Cloud",
+      "locales": {
+        "fr": {
+          "name": "courriels",
+          "description": "Un client web pour les courriels dans Cozy Cloud"
+        }
+      }
+    }
+  }
+}
 ```
 
-### POST /apps
+### PATCH /apps/manifests/:id
 
-**TODO** explain how to add an application to the marketplace
+Update an application in the marketplace.
+
+### DELETE /apps/manifests/:id
+
+Remove an application from the marketplace.
 
 
 Uninstall an application
