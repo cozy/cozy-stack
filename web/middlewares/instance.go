@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"os"
-
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/afero"
 )
@@ -41,12 +41,19 @@ func (instance *Instance) GetStorageProvider() (*afero.Fs, error) {
 	return &instance.storage, nil
 }
 
+func (instance *Instance) GetDatabasePrefix() string {
+	return instance.Domain + "/"
+}
+
 // SetInstance creates a gin middleware to put the instance in the gin context
 // for next handlers
 func SetInstance() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// TODO the instance should be fetched, using the request parameters
-		domain := "dev"
+		domain := c.Request.Host
+		// TODO this is not fail-safe, to be modified before production
+		if domain == "" || strings.Contains(c.Request.Host, "127.0.0.1") {
+			domain = "dev"
+		}
 		wd, err := os.Getwd()
 		if err != nil {
 			c.AbortWithError(http.StatusInternalServerError, err)
