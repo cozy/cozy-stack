@@ -24,10 +24,12 @@ package web
 
 import (
 	"github.com/cozy/cozy-stack/web/status"
+	"github.com/cozy/cozy-stack/web/version"
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRoutes sets the routing for HTTP endpoints to the Go methods
 func SetupRoutes(router *gin.Engine) {
 	status.Routes(router.Group("/status"))
+	version.Routes(router.Group("/version"))
 }
