@@ -37,8 +37,9 @@ func GetConfig() *Config {
 // UseViper sets the configured instance of Config
 func UseViper(viper *viper.Viper) {
 	config = &Config{
-		Mode: parseMode(viper.GetString("mode")),
-		Port: viper.GetInt("port"),
+		Mode:    parseMode(viper.GetString("mode")),
+		Address: viper.GetString("address"),
+		Port:    viper.GetInt("port"),
 		Database: Database{
 			URL: viper.GetString("database.url"),
 		},
