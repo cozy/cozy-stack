@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -59,6 +60,8 @@ func Configure() error {
 	if viper.ConfigFileUsed() != "" {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+
+	config.UseViper(viper.GetViper())
 
 	return nil
 }
