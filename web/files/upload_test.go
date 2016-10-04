@@ -47,6 +47,12 @@ func TestCreateDirWithNoName(t *testing.T) {
 	res.Body.Close()
 }
 
+func TestCreateDirOnNonExistingParent(t *testing.T) {
+	res := createDir(t, "/files/noooop?Name=foo&Type=io.cozy.folders")
+	assert.Equal(t, 404, res.StatusCode)
+	res.Body.Close()
+}
+
 func TestUploadWithNoType(t *testing.T) {
 	res := upload(t, "/files/123", "text/plain", "foo")
 	assert.Equal(t, 422, res.StatusCode)
@@ -77,9 +83,13 @@ func TestMain(m *testing.M) {
 		Domain:     "test",
 		StorageURL: "mem://test",
 	}
+
+	storage, _ := instance.GetStorageProvider()
+	storage.Mkdir("/123", 0777)
+
 	router := gin.New()
 	router.Use(injectInstance(instance))
-	router.POST("/files/:folder-id", FilesWriterHandle)
+	router.POST("/files/:folder-id", FolderPostHandler)
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())

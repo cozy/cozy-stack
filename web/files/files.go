@@ -40,6 +40,23 @@ func extractTags(str string) []string {
 	return tags
 }
 
+func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
+	if folderID == "" {
+		return true, nil
+	}
+
+	exists, err := afero.DirExists(storage, "/"+folderID)
+	if err != nil {
+		return false, err
+	}
+
+	if !exists {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // Upload is the method for uploading a file
 //
 // This will be used to upload a file
@@ -66,13 +83,6 @@ func CreateDirectory(metadata *FileMetadata, storage afero.Fs) error {
 //
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func FolderPostHandler(c *gin.Context) {
-	name := c.Query("Name")
-	if name == "" {
-		err := fmt.Errorf("Missing Name in the query-string")
-		c.AbortWithError(http.StatusUnprocessableEntity, err)
-		return
-	}
-
 	instanceInterface, exists := c.Get("instance")
 	if !exists {
 		err := fmt.Errorf("No instance found")
@@ -90,7 +100,7 @@ func FolderPostHandler(c *gin.Context) {
 	tags := extractTags(c.Query("Tags"))
 
 	metadata := &FileMetadata{
-		Name:       name,
+		Name:       c.Query("Name"),
 		DocType:    c.Query("Type"),
 		Executable: c.Query("Executable") == "true",
 		FolderID:   c.Param("folder-id"),
@@ -100,6 +110,23 @@ func FolderPostHandler(c *gin.Context) {
 	contentType := c.ContentType()
 	if contentType == "" {
 		contentType = DefaultContentType
+	}
+
+	if metadata.Name == "" {
+		err := fmt.Errorf("Missing Name in the query-string")
+		c.AbortWithError(http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	exists, err = checkParentFolderID(storage, metadata.FolderID)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	if !exists {
+		err := fmt.Errorf("Parent folder with given FolderID does not exist")
+		c.AbortWithError(http.StatusNotFound, err)
+		return
 	}
 
 	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", metadata, contentType)
