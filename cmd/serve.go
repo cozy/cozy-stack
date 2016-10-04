@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/web"
 )
 
@@ -21,14 +22,22 @@ If you want to use another port, on you can use the PORT env variable.`,
 			return err
 		}
 
-		router := gin.Default()
+		router := getGin()
 		web.SetupRoutes(router)
-		if err := router.Run(); err != nil {
-			fmt.Println("Error:", err)
-		}
+
+		address := ":" + strconv.Itoa(config.GetConfig().Port)
+		return router.Run(address)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
+}
+
+func getGin() *gin.Engine {
+	if config.GetConfig().Mode == config.Production {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	return gin.Default()
 }
