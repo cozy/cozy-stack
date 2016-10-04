@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/spf13/cobra"
+	"strconv"
 )
 
 // statusCmd represents the status command
@@ -18,10 +20,7 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-		}
+		port := strconv.Itoa(config.GetConfig().Port)
 		resp, err := http.Get("http://localhost:" + port + "/status")
 		if err != nil {
 			fmt.Println("Error the HTTP server is not running:", err)
