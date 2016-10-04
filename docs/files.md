@@ -23,15 +23,16 @@ given, the folder is created at the root of the virtual file system.
 #### Query-String
 
 Parameter | Description
-----------|-------------------------------------
-Type      | `github.com/cozy/cozy-types/folders`
+----------|------------------
+Type      | `io.cozy.folders`
 Name      | the folder name
 Tags      | an array of tags
 
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=github.com/cozy/cozy-types/folders&Name=phone&Tags[]=bills HTTP/1.1
+POST
+/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=io.cozy.folders&Name=phone&Tags=bills,konnectors HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -52,7 +53,7 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ```json
 {
   "data": {
-    "type": "github.com/cozy/cozy-types/folders",
+    "type": "io.cozy.folders",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "attributes": {
       "rev": "1-ff3beeb456eb",
@@ -67,7 +68,7 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -111,7 +112,7 @@ Content-Type: application/vnd.api+json
     "next": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
   },
   "data": {
-    "type": "github.com/cozy/cozy-types/folders",
+    "type": "io.cozy.folders",
     "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
     "attributes": {
       "rev": "1-e36ab092",
@@ -123,8 +124,8 @@ Content-Type: application/vnd.api+json
     "relationships": {
       "contents": {
         "data": [
-          { "type": "github.com/cozy/cozy-types/folders", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
-          { "type": "github.com/cozy/cozy-types/files", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
+          { "type": "io.cozy.folders", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
+          { "type": "io.cozy.files", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
         ]
       }
     },
@@ -133,7 +134,7 @@ Content-Type: application/vnd.api+json
     }
   },
   "included": [{
-    "type": "github.com/cozy/cozy-types/folders",
+    "type": "io.cozy.folders",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "attributes": {
       "rev": "1-ff3beeb456eb",
@@ -148,7 +149,7 @@ Content-Type: application/vnd.api+json
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -157,7 +158,7 @@ Content-Type: application/vnd.api+json
       "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
     }
   }, {
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "1-0e6d5b72",
@@ -177,7 +178,7 @@ Content-Type: application/vnd.api+json
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -207,7 +208,7 @@ Upload a file
 
 Parameter | Description
 ----------|---------------------------------------------------
-Type      | `github.com/cozy/cozy-types/files`
+Type      | `io.cozy.files`
 Name      | the file name
 Tags      | an array of tags
 Executable| `true` if the file is executable (UNIX permission)
@@ -224,7 +225,7 @@ Date          | The modification date of the file
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=github.com/cozy/cozy-types/files&Name=hello.txt HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=io.cozy.files&Name=hello.txt HTTP/1.1
 Accept: application/vnd.api+json
 Content-Length: 12
 Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
@@ -252,7 +253,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ```json
 {
   "data": {
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "1-0e6d5b72",
@@ -272,7 +273,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -362,7 +363,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "2-d903b54c",
@@ -382,7 +383,7 @@ Content-Type: application/vnd.api+json
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -423,7 +424,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ```json
 {
   "data": {
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "1-0e6d5b72",
@@ -443,7 +444,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -479,7 +480,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "name": "hi.txt",
@@ -488,7 +489,7 @@ Content-Type: application/vnd.api+json
     "relationships": {
       "parent": {
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
         }
       }
@@ -516,7 +517,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ```json
 {
   "data": {
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
       "rev": "1-0e6d5b72",
@@ -536,7 +537,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "related": "/files/f2f36fec-8018-11e6-abd8-8b3814d9a465"
         },
         "data": {
-          "type": "github.com/cozy/cozy-types/folders",
+          "type": "io.cozy.folders",
           "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
         }
       }
@@ -608,7 +609,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": [{
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
     "attributes": {
       "rev": "1-3b75377c",
@@ -626,7 +627,7 @@ Content-Type: application/vnd.api+json
       "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
     }
   }, {
-    "type": "github.com/cozy/cozy-types/files",
+    "type": "io.cozy.files",
     "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
     "attributes": {
       "rev": "1-4a09030e",
