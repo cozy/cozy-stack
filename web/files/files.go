@@ -63,7 +63,7 @@ func Upload(c *gin.Context) {
 
 	fmt.Printf("%s:\n\t- %s\n\t- %v\n\t- %v\n", name, contentType, tags, executable)
 	path := folderID + "/" + name
-	err = afero.SafeWriteReader(*storage, path, c.Request.Body)
+	err = afero.SafeWriteReader(storage, path, c.Request.Body)
 	c.Request.Body.Close()
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)

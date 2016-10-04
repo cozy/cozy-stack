@@ -48,7 +48,7 @@ func TestUploadSuccess(t *testing.T) {
 	res.Body.Close()
 
 	storage, _ := instance.GetStorageProvider()
-	buf, err := afero.ReadFile(*storage, "123/bar")
+	buf, err := afero.ReadFile(storage, "123/bar")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
 }
