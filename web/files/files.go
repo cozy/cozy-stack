@@ -20,7 +20,7 @@ import (
 // DefaultContentType is used for files uploaded with no content-type
 const DefaultContentType = "application/octet-stream"
 
-type FileMetadata struct {
+type fileMetadata struct {
 	DocType    string
 	Name       string
 	FolderID   string
@@ -28,7 +28,7 @@ type FileMetadata struct {
 	Tags       []string
 }
 
-func (metadata *FileMetadata) Path() string {
+func (metadata *fileMetadata) Path() string {
 	return escapeSlash(metadata.FolderID) + "/" + escapeSlash(metadata.Name)
 }
 
@@ -37,7 +37,7 @@ func escapeSlash(str string) string {
 }
 
 func extractTags(str string) []string {
-	tags := make([]string, 0)
+	var tags []string
 	for _, tag := range strings.Split(str, ",") {
 		// @TODO: more sanitization maybe ?
 		tag = strings.TrimSpace(tag)
@@ -69,7 +69,7 @@ func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
 //
 // This will be used to upload a file
 // @TODO(bruno): wip
-func Upload(metadata *FileMetadata, storage afero.Fs, body io.ReadCloser) error {
+func Upload(metadata *fileMetadata, storage afero.Fs, body io.ReadCloser) error {
 	path := metadata.Path()
 
 	defer body.Close()
@@ -79,7 +79,7 @@ func Upload(metadata *FileMetadata, storage afero.Fs, body io.ReadCloser) error 
 // CreateDirectory is the method for creating a new directory
 //
 // @TODO(pierre): wip
-func CreateDirectory(metadata *FileMetadata, storage afero.Fs) error {
+func CreateDirectory(metadata *fileMetadata, storage afero.Fs) error {
 	path := metadata.Path()
 
 	exists, err := afero.DirExists(storage, path)
@@ -93,9 +93,9 @@ func CreateDirectory(metadata *FileMetadata, storage afero.Fs) error {
 	return storage.Mkdir(path, 0777)
 }
 
-// Handle all POST requests on /:folder-id and given the Type
-// parameter of the request, it will either upload a new file or
-// create a new directory.
+// FolderPostHandler Handle all POST requests on /:folder-id and given
+// the Type parameter of the request, it will either upload a new file
+// or create a new directory.
 //
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func FolderPostHandler(c *gin.Context) {
@@ -115,7 +115,7 @@ func FolderPostHandler(c *gin.Context) {
 
 	tags := extractTags(c.Query("Tags"))
 
-	metadata := &FileMetadata{
+	metadata := &fileMetadata{
 		Name:       c.Query("Name"),
 		DocType:    c.Query("Type"),
 		Executable: c.Query("Executable") == "true",
@@ -129,7 +129,7 @@ func FolderPostHandler(c *gin.Context) {
 	}
 
 	if metadata.Name == "" {
-		err := fmt.Errorf("Missing Name in the query-string")
+		err = fmt.Errorf("Missing Name in the query-string")
 		c.AbortWithError(http.StatusUnprocessableEntity, err)
 		return
 	}
@@ -140,12 +140,12 @@ func FolderPostHandler(c *gin.Context) {
 		return
 	}
 	if !exists {
-		err := fmt.Errorf("Parent folder with given FolderID does not exist")
+		err = fmt.Errorf("Parent folder with given FolderID does not exist")
 		c.AbortWithError(http.StatusNotFound, err)
 		return
 	}
 
-	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", metadata, contentType)
+	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", metadata.DocType, metadata, contentType)
 
 	switch metadata.DocType {
 	case "io.cozy.files":
