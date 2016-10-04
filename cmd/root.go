@@ -22,17 +22,11 @@ profiles you.`,
 
 var cfgFile string
 
-// Default config values
-const (
-	defaultMode = "development"
-)
-
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.cozy.yaml)")
 
-	RootCmd.PersistentFlags().StringP("mode", "m", defaultMode, "server mode: development or production")
+	RootCmd.PersistentFlags().StringP("mode", "m", "development", "server mode: development or production")
 	viper.BindPFlag("mode", RootCmd.PersistentFlags().Lookup("mode"))
-	viper.SetDefault("mode", defaultMode)
 }
 
 func configureViper() error {
