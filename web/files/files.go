@@ -28,6 +28,14 @@ type FileMetadata struct {
 	Tags       []string
 }
 
+func (metadata *FileMetadata) Path() string {
+	return escapeSlash(metadata.FolderID) + "/" + escapeSlash(metadata.Name)
+}
+
+func escapeSlash(str string) string {
+	return strings.Replace(str, "/", "\\/", -1)
+}
+
 func extractTags(str string) []string {
 	tags := make([]string, 0)
 	for _, tag := range strings.Split(str, ",") {
@@ -45,7 +53,7 @@ func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
 		return true, nil
 	}
 
-	exists, err := afero.DirExists(storage, "/"+folderID)
+	exists, err := afero.DirExists(storage, folderID)
 	if err != nil {
 		return false, err
 	}
@@ -62,7 +70,7 @@ func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
 // This will be used to upload a file
 // @TODO(bruno): wip
 func Upload(metadata *FileMetadata, storage afero.Fs, body io.ReadCloser) error {
-	path := metadata.FolderID + "/" + metadata.Name
+	path := metadata.Path()
 
 	defer body.Close()
 	return afero.SafeWriteReader(storage, path, body)
@@ -72,7 +80,15 @@ func Upload(metadata *FileMetadata, storage afero.Fs, body io.ReadCloser) error 
 //
 // @TODO(pierre): wip
 func CreateDirectory(metadata *FileMetadata, storage afero.Fs) error {
-	path := metadata.FolderID + "/" + metadata.Name
+	path := metadata.Path()
+
+	exists, err := afero.DirExists(storage, path)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("Directory already exists")
+	}
 
 	return storage.Mkdir(path, 0777)
 }

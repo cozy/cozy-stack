@@ -53,6 +53,34 @@ func TestCreateDirOnNonExistingParent(t *testing.T) {
 	res.Body.Close()
 }
 
+func TestCreateDirAlreadyExists(t *testing.T) {
+	res := createDir(t, "/files/123?Name=456&Type=io.cozy.folders")
+	assert.Equal(t, 422, res.StatusCode)
+	res.Body.Close()
+}
+
+func TestCreateDirSuccess(t *testing.T) {
+	res := createDir(t, "/files/123?Name=coucou&Type=io.cozy.folders")
+	assert.Equal(t, 201, res.StatusCode)
+	res.Body.Close()
+
+	storage, _ := instance.GetStorageProvider()
+	exists, err := afero.DirExists(storage, "123/coucou")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+}
+
+func TestCreateDirWithSlashInName(t *testing.T) {
+	res := createDir(t, "/files/123?Name=coucou/les/copains!&Type=io.cozy.folders")
+	assert.Equal(t, 201, res.StatusCode)
+	res.Body.Close()
+
+	storage, _ := instance.GetStorageProvider()
+	exists, err := afero.DirExists(storage, "123/coucou\\/les\\/copains!")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+}
+
 func TestUploadWithNoType(t *testing.T) {
 	res := upload(t, "/files/123", "text/plain", "foo")
 	assert.Equal(t, 422, res.StatusCode)
@@ -85,7 +113,8 @@ func TestMain(m *testing.M) {
 	}
 
 	storage, _ := instance.GetStorageProvider()
-	storage.Mkdir("/123", 0777)
+	storage.Mkdir("123", 0777)
+	storage.Mkdir("123/456", 0777)
 
 	router := gin.New()
 	router.Use(injectInstance(instance))
