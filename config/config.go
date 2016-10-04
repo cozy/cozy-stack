@@ -41,7 +41,7 @@ func UseViper(viper *viper.Viper) {
 		Address: viper.GetString("address"),
 		Port:    viper.GetInt("port"),
 		Database: Database{
-			URL: viper.GetString("database.url"),
+			URL: viper.GetString("databaseUrl"),
 		},
 	}
 }

@@ -34,6 +34,9 @@ func init() {
 
 	RootCmd.PersistentFlags().IntP("port", "p", 8080, "Port on which the server will listen")
 	viper.BindPFlag("port", RootCmd.PersistentFlags().Lookup("port"))
+
+	RootCmd.PersistentFlags().StringP("databaseUrl", "d", "http://localhost:5984", "Database to connect to")
+	viper.BindPFlag("databaseUrl", RootCmd.PersistentFlags().Lookup("databaseUrl"))
 }
 
 // Configure Viper to read the environment and the optional config file
