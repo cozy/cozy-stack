@@ -16,7 +16,7 @@ With it, your web apps and your devices can share data easily, providing you
 with a new experience. You can install Cozy on your own hardware where no one
 profiles you.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return configureViper()
+		return Configure()
 	},
 }
 
@@ -29,7 +29,8 @@ func init() {
 	viper.BindPFlag("mode", RootCmd.PersistentFlags().Lookup("mode"))
 }
 
-func configureViper() error {
+// Configure Viper to read the environment and the optional config file
+func Configure() error {
 	viper.SetEnvPrefix("cozy")
 	viper.AutomaticEnv()
 

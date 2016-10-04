@@ -13,7 +13,11 @@ var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Check if the HTTP server is running",
 	Long:  `Check if the HTTP server has been started and answer 200 for /status.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := Configure(); err != nil {
+			return err
+		}
+
 		port := os.Getenv("PORT")
 		if port == "" {
 			port = "8080"
@@ -28,7 +32,9 @@ var statusCmd = &cobra.Command{
 			fmt.Println("Error, unexpected HTTP status code:", resp.Status)
 			os.Exit(1)
 		}
+
 		fmt.Println("OK, the HTTP server is ready.")
+		return nil
 	},
 }
 
