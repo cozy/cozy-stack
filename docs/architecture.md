@@ -309,7 +309,7 @@ Payload: the doctype and the document to index
 Serverless apps
 ---------------
 
-### Home `/apps/home` (and aliased to `/` by default)
+### Home `/apps/home`
 
 It's where you land on your cozy and launch your apps. Having widgets to
 display informations would be nice too!

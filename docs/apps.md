@@ -10,6 +10,8 @@ the virtual file system.
 Install an application
 ----------------------
 
+### The manifest
+
 To install an application, cozy needs a manifest. It's a JSON document that
 describes the application (its name and icon for example), how to install it
 and what it needs for its usage (the permissions in particular). While we have
@@ -21,8 +23,9 @@ is a better fit. We took a lot of inspirations from it, starting with the
 filename for this file: `manifest.webapp`.
 
 Field          | Description
----------------|-----------------------------------------------------------------
+---------------|---------------------------------------------------------------------
 name           | the name to display on the home
+slug           | the default slug (it can be changed at install time)
 icon           | an icon for the home
 description    | a short description of the application
 source         | where the files of the app can be downloaded
@@ -31,14 +34,32 @@ default_locale | the locale used for the name and description fields
 locales        | translations of the name and description fields in other locales
 version        | the current version number
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
+permissions    | a list of permissions needed by the app (see below for more details)
+contexts       | a list of contexts for the app (see below for more details)
 
-**TODO** permissions
+**TODO** [CSP policy](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#csp)
+
+### Permissions
+
+**TODO** explain how the permissions work
+
+### Contexts
+
+**TODO** explain what are contexts
 
 **TODO** intents / [activities](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
 
-**TODO** Contexts
+If an application has no context in its manifest, the stack will create one
+context, this default one:
 
-**TODO** [CSP policy](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#csp)
+```json
+{
+  "/": {
+    "file": "/index.html",
+    "public": false
+  }
+}
+```
 
 ### GET /apps/manifests
 
@@ -73,7 +94,8 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.manifests",
     "id": "git://github.com/cozy/cozy-emails",
     "attributes": {
-      "name": "emails",
+      "name": "cozy-emails",
+      "slug": "emails",
       "icon": "icon.svg",
       "description": "A webmail for Cozy Cloud",
       "source": "git://github.com/cozy/cozy-emails",
@@ -209,7 +231,8 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.manifests",
     "attributes": {
-      "name": "emails",
+      "name": "cozy-emails",
+      "slug": "emails",
       "icon": "/Apps/marketplace/emails.svg",
       "source": "git://github.com/cozy/cozy-emails",
       "default_locale": "en",
@@ -238,7 +261,8 @@ Content-Type: application/vnd.api+json
     "id": "4f6436ce-8967-11e6-b174-ab83adac69f2",
     "type": "io.cozy.manifests",
     "attributes": {
-      "name": "emails",
+      "name": "cozy-emails",
+      "slug": "emails",
       "icon": "/Apps/marketplace/emails.svg",
       "source": "git://github.com/cozy/cozy-emails",
       "default_locale": "en",
@@ -284,4 +308,63 @@ HTTP/1.1 204 No Content
 Access an application
 ---------------------
 
-**TODO**
+Each application will run on its sub-domain. The sub-domain is the slug used
+when installing the application (`calendar.cozy.example.org` if it was
+installed via a POST on /apps/calendar). On the main domain
+(`cozy.example.org`), there will be the registration process, the login form,
+and it will redirect to `home.cozy.example.org` for logged-in users.
+
+### Rationale
+
+The applications have different roles and permissions. An application is
+identified when talking to the stack via a token. The token has to be injected
+in the application, one way or another, and it have to be unaccessible from
+other apps.
+
+If the applications run on the same domain (for example
+`https://cozy.example.org/apps/calendar`), it's nearly impossible to protect
+an application to take the token of another application. The security model of
+the web is based too heavily on [Same Origin
+Policy](https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy)
+for that. If the token is put in the html of the index.html page of an app,
+another app can use the fetch API to get the html page, parse its content and
+extract the token. We can think of other ways to inject the token (indexeddb,
+URL, cookies) but none will provide a better isolation. Maybe in a couple
+years, when [the origin spec](https://w3c.github.io/webappsec-suborigins/)
+will be more advanced.
+
+So, if having the apps on the same domain is not possible, we have to put them
+on several domains. One interesting way to do that is using sandboxed iframes.
+An iframe with [the sandbox
+attribute](https://www.w3.org/TR/html5/embedded-content-0.html#attr-iframe-sandbox),
+and not `allow-same-origin` in it, will be assigned to a unique origin. The
+W3C warns:
+
+> Potentially hostile files should not be served from the same server as the
+> file containing the iframe element. Sandboxing hostile content is of minimal
+> help if an attacker can convince the user to just visit the hostile content
+> directly, rather than in the iframe. To limit the damage that can be caused
+> by hostile HTML content, it should be served from a separate dedicated
+> domain. Using a different domain ensures that scripts in the files are
+> unable to attack the site, even if the user is tricked into visiting those
+> pages directly, without the protection of the sandbox attribute.
+
+It may be possible to disable all html pages to have an html content-type,
+except the home, and having the home loading the apps in a sandboxed iframe,
+via the `srcdoc` attribute. But, it will mean that we will have to reinvent
+nearly everything. Even showing an image can no longer be done via an `<img>`
+tag, it will need to use post-message with the home. Such a solution is
+difficult to implement, is a very fragile (both for the apps developer than
+for security) and is an hell to debug when it breaks. Clearly, it's not an
+acceptable solution.
+
+Thus, the only choice is to have several origins, and sub-domains is the best
+way for that. Of course, it has the downside to be more complicated to deploy
+(DNS and TLS certificates). But, in the tradeoff between security and ease of
+administration, we definetively take the security first.
+
+### Contexts
+
+> Should we be concerned that all the contexts are on the same sub-domain?
+
+No, **TODO** explain why.
