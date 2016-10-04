@@ -23,9 +23,9 @@ type Instance struct {
 
 // GetStorageProvider returns the afero storage provider where the binaries for
 // the current instance are persisted
-func (instance *Instance) GetStorageProvider() (*afero.Fs, error) {
+func (instance *Instance) GetStorageProvider() (afero.Fs, error) {
 	if instance.storage != nil {
-		return &instance.storage, nil
+		return instance.storage, nil
 	}
 	u, err := url.Parse(instance.StorageURL)
 	if err != nil {
@@ -39,7 +39,7 @@ func (instance *Instance) GetStorageProvider() (*afero.Fs, error) {
 	default:
 		return nil, fmt.Errorf("Unknown storage provider: %v", u.Scheme)
 	}
-	return &instance.storage, nil
+	return instance.storage, nil
 }
 
 // GetDatabasePrefix returns the prefix to use in database naming for the
