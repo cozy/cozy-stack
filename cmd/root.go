@@ -29,7 +29,10 @@ func init() {
 	RootCmd.PersistentFlags().StringP("mode", "m", "development", "server mode: development or production")
 	viper.BindPFlag("mode", RootCmd.PersistentFlags().Lookup("mode"))
 
-	RootCmd.PersistentFlags().IntP("port", "p", 8080, "Port use by the server")
+	RootCmd.PersistentFlags().StringP("address", "a", "localhost", "Address on which the server will listen")
+	viper.BindPFlag("address", RootCmd.PersistentFlags().Lookup("address"))
+
+	RootCmd.PersistentFlags().IntP("port", "p", 8080, "Port on which the server will listen")
 	viper.BindPFlag("port", RootCmd.PersistentFlags().Lookup("port"))
 }
 

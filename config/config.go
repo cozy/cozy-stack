@@ -9,6 +9,7 @@ var config *Config
 // Config contains the configuration values of the application
 type Config struct {
 	Mode     Mode
+	Address  string
 	Port     int
 	Database Database
 }

@@ -20,8 +20,8 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 
-		port := strconv.Itoa(config.GetConfig().Port)
-		resp, err := http.Get("http://localhost:" + port + "/status")
+		address := "http://" + config.GetConfig().Address + ":" + strconv.Itoa(config.GetConfig().Port) + "/status"
+		resp, err := http.Get(address)
 		if err != nil {
 			fmt.Println("Error the HTTP server is not running:", err)
 			os.Exit(1)

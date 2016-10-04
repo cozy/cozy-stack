@@ -25,7 +25,7 @@ If you want to use another port, on you can use the PORT env variable.`,
 		router := getGin()
 		web.SetupRoutes(router)
 
-		address := ":" + strconv.Itoa(config.GetConfig().Port)
+		address := config.GetConfig().Address + ":" + strconv.Itoa(config.GetConfig().Port)
 		return router.Run(address)
 	},
 }
