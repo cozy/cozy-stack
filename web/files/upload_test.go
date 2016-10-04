@@ -22,11 +22,29 @@ func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
 	}
 }
 
+func createDir(t *testing.T, path string) *http.Response {
+	res, err := http.Post(ts.URL+path, "text/plain", strings.NewReader(""))
+	assert.NoError(t, err)
+	return res
+}
+
 func upload(t *testing.T, path, contentType, body string) *http.Response {
 	buf := strings.NewReader(body)
 	res, err := http.Post(ts.URL+path, contentType, buf)
 	assert.NoError(t, err)
 	return res
+}
+
+func TestCreateDirWithNoType(t *testing.T) {
+	res := createDir(t, "/files/123")
+	assert.Equal(t, 422, res.StatusCode)
+	res.Body.Close()
+}
+
+func TestCreateDirWithNoName(t *testing.T) {
+	res := createDir(t, "/files/123?Type=io.cozy.folders")
+	assert.Equal(t, 422, res.StatusCode)
+	res.Body.Close()
 }
 
 func TestUploadWithNoType(t *testing.T) {
@@ -61,7 +79,7 @@ func TestMain(m *testing.M) {
 	}
 	router := gin.New()
 	router.Use(injectInstance(instance))
-	router.POST("/files/:folder-id", Upload)
+	router.POST("/files/:folder-id", FilesWriterHandle)
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())

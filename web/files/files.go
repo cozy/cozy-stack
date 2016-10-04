@@ -7,6 +7,7 @@ package files
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -19,33 +20,57 @@ import (
 // DefaultContentType is used for files uploaded with no content-type
 const DefaultContentType = "application/octet-stream"
 
-// Upload is the handler for uploading a file
-//
-// swagger:route POST /files/:folder-id files uploadFile
+type FileMetadata struct {
+	DocType    string
+	Name       string
+	FolderID   string
+	Executable bool
+	Tags       []string
+}
+
+func extractTags(str string) []string {
+	tags := make([]string, 0)
+	for _, tag := range strings.Split(str, ",") {
+		// @TODO: more sanitization maybe ?
+		tag = strings.TrimSpace(tag)
+		if tag != "" {
+			tags = append(tags, tag)
+		}
+	}
+	return tags
+}
+
+// Upload is the method for uploading a file
 //
 // This will be used to upload a file
-func Upload(c *gin.Context) {
-	doctype := c.Query("Type")
-	if doctype != "io.cozy.files" {
-		err := fmt.Errorf("Invalid Type in the query-string")
-		c.AbortWithError(422, err)
-		return
-	}
+// @TODO(bruno): wip
+func Upload(metadata *FileMetadata, storage afero.Fs, body io.ReadCloser) error {
+	path := metadata.FolderID + "/" + metadata.Name
 
+	defer body.Close()
+	return afero.SafeWriteReader(storage, path, body)
+}
+
+// CreateDirectory is the method for creating a new directory
+//
+// @TODO(pierre): wip
+func CreateDirectory(metadata *FileMetadata, storage afero.Fs) error {
+	path := metadata.FolderID + "/" + metadata.Name
+
+	return storage.Mkdir(path, 0777)
+}
+
+// Handle all POST requests on /:folder-id and given the Type
+// parameter of the request, it will either upload a new file or
+// create a new directory.
+//
+// swagger:route POST /files/:folder-id files uploadFileOrCreateDir
+func FolderPostHandler(c *gin.Context) {
 	name := c.Query("Name")
 	if name == "" {
 		err := fmt.Errorf("Missing Name in the query-string")
-		c.AbortWithError(422, err)
+		c.AbortWithError(http.StatusUnprocessableEntity, err)
 		return
-	}
-
-	tags := strings.Split(c.Query("Tags"), ",")
-	executable := c.Query("Executable") == "true"
-	folderID := c.Param("folder-id")
-
-	contentType := c.ContentType()
-	if contentType == "" {
-		contentType = DefaultContentType
 	}
 
 	instanceInterface, exists := c.Get("instance")
@@ -54,6 +79,7 @@ func Upload(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
+
 	instance := instanceInterface.(*middlewares.Instance)
 	storage, err := instance.GetStorageProvider()
 	if err != nil {
@@ -61,10 +87,34 @@ func Upload(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("%s:\n\t- %s\n\t- %v\n\t- %v\n", name, contentType, tags, executable)
-	path := folderID + "/" + name
-	err = afero.SafeWriteReader(storage, path, c.Request.Body)
-	c.Request.Body.Close()
+	tags := extractTags(c.Query("Tags"))
+
+	metadata := &FileMetadata{
+		Name:       name,
+		DocType:    c.Query("Type"),
+		Executable: c.Query("Executable") == "true",
+		FolderID:   c.Param("folder-id"),
+		Tags:       tags,
+	}
+
+	contentType := c.ContentType()
+	if contentType == "" {
+		contentType = DefaultContentType
+	}
+
+	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", metadata, contentType)
+
+	switch metadata.DocType {
+	case "io.cozy.files":
+		err = Upload(metadata, storage, c.Request.Body)
+	case "io.cozy.folders":
+		err = CreateDirectory(metadata, storage)
+	default:
+		err = fmt.Errorf("Invalid Type in the query-string")
+		c.AbortWithError(http.StatusUnprocessableEntity, err)
+		return
+	}
+
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
@@ -76,5 +126,5 @@ func Upload(c *gin.Context) {
 
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
-	router.POST("/:folder-id", Upload)
+	router.POST("/:folder-id", FolderPostHandler)
 }
