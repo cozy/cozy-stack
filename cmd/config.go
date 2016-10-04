@@ -19,8 +19,12 @@ the given parameters to display the configuration.`,
 		}
 
 		cfg, err := json.MarshalIndent(config.GetConfig(), "", "  ")
+		if err != nil {
+			return err
+		}
+
 		fmt.Println(string(cfg))
-		return err
+		return nil
 	},
 }
 
