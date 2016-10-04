@@ -28,6 +28,9 @@ func init() {
 
 	RootCmd.PersistentFlags().StringP("mode", "m", "development", "server mode: development or production")
 	viper.BindPFlag("mode", RootCmd.PersistentFlags().Lookup("mode"))
+
+	RootCmd.PersistentFlags().IntP("port", "p", 8080, "Port use by the server")
+	viper.BindPFlag("port", RootCmd.PersistentFlags().Lookup("port"))
 }
 
 // Configure Viper to read the environment and the optional config file
