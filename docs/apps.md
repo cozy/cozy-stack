@@ -107,9 +107,36 @@ Example:
 
 ### Contexts
 
-**TODO** explain what are contexts
+A context is a route that serves a folder. It can have an index, which is an
+HTML file, with a token injected on it that identify both the application and
+the context. This token must be used with the user cookies to use the services
+of the cozy-stack.
 
-**TODO** intents / [activities](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
+By default, a route can be only visited by the authenticated owner of the
+instance where the app is installed. But a context can be marked as public.
+In that case, anybody can visit the route.
+
+For example, an application can offer an administration interface on `/admin`,
+a public page on `/public`, and shared assets in `/assets`:
+
+```json
+{
+  "/admin": {
+    "folder": "/",
+    "index": "admin.html",
+    "public": false
+  },
+  "/public": {
+    "folder": "/public",
+    "index": "index.html",
+    "public": true
+  },
+  "/assets": {
+    "folder": "/assets",
+    "public": true
+  }
+}
+```
 
 If an application has no contexts in its manifest, the stack will create one
 context, this default one:
@@ -117,8 +144,27 @@ context, this default one:
 ```json
 {
   "/": {
-    "file": "/index.html",
+    "folder": "/",
+    "index": "index.html",
     "public": false
+  }
+}
+```
+
+**TODO** later, it will be possible to associate an intent /
+[activity](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
+with a context. Probably something like:
+
+```json
+{
+  "/picker": {
+    "folder": "/",
+    "index": "picker.html",
+    "public": false,
+    "intent": {
+      "action": "pick",
+      "type": "io.cozy.contacts"
+    }
   }
 }
 ```
@@ -446,4 +492,14 @@ administration, we definetively take the security first.
 
 > Should we be concerned that all the contexts are on the same sub-domain?
 
-No, **TODO** explain why.
+No, it's not an issue. There are two types of contexts: the ones that are
+publics and those reserved to the authenticated user. Public contexts have a
+token can't be used for the services of the cozy-stack. So, even if another
+app can capture it, it can't be used for anything (except reading the public
+data).
+
+Private contexts are private, they can't be accessed. Another application
+can't use the user cookies to read the token, because of the same origin
+policy (they are on different domains). And the application can't use an open
+proxy to read the private context, because it doesn't have the user cookies
+for that (the cookie is marked as `httpOnly`).
