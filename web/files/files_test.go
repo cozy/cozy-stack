@@ -28,9 +28,14 @@ func createDir(t *testing.T, path string) *http.Response {
 	return res
 }
 
-func upload(t *testing.T, path, contentType, body string) *http.Response {
+func upload(t *testing.T, path, contentType, body, hash string) *http.Response {
 	buf := strings.NewReader(body)
-	res, err := http.Post(ts.URL+path, contentType, buf)
+	req, err := http.NewRequest("POST", ts.URL+path, buf)
+	assert.NoError(t, err)
+
+	req.Header.Add("Content-MD5", hash)
+
+	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	return res
 }
@@ -81,20 +86,27 @@ func TestCreateDirWithIllegalCharacter(t *testing.T) {
 }
 
 func TestUploadWithNoType(t *testing.T) {
-	res := upload(t, "/files/123", "text/plain", "foo")
+	res := upload(t, "/files/123", "text/plain", "foo", "")
 	assert.Equal(t, 422, res.StatusCode)
 	res.Body.Close()
 }
 
 func TestUploadWithNoName(t *testing.T) {
-	res := upload(t, "/files/123?Type=io.cozy.files", "text/plain", "foo")
+	res := upload(t, "/files/123?Type=io.cozy.files", "text/plain", "foo", "")
 	assert.Equal(t, 422, res.StatusCode)
+	res.Body.Close()
+}
+
+func TestUploadBadHash(t *testing.T) {
+	body := "foo"
+	res := upload(t, "/files/123?Type=io.cozy.files&Name=quz", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
+	assert.Equal(t, 412, res.StatusCode)
 	res.Body.Close()
 }
 
 func TestUploadSuccess(t *testing.T) {
 	body := "foo"
-	res := upload(t, "/files/123?Type=io.cozy.files&Name=bar", "text/plain", body)
+	res := upload(t, "/files/123?Type=io.cozy.files&Name=bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
 	res.Body.Close()
 
