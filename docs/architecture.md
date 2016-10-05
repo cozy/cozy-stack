@@ -405,8 +405,7 @@ owner of the cozy can see all the photos and share an album with some photos
 to some of her friends. This album is a context and the cozy stack will allow
 the access to the photos of this album, and only those.
 
-**Note**: this section is still work in progress. We need to experiment to see
-how it can work and describe it in this document.
+More informations [here](apps.md).
 
 ### Protection mechanisms for the client side applications
 
@@ -706,7 +705,7 @@ to:
 
 > When will this new architecture be available?
 
-The development has not yet started. We wanted to hear the community feedbacks
+The development has just started. We wanted to hear the community feedbacks
 before starting to code. It will take several months to have a first alpha
 version, and some time after to go in production with it. During all the time,
 the development will be open and you can see the code in
