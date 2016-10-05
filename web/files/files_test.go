@@ -55,7 +55,7 @@ func TestCreateDirOnNonExistingParent(t *testing.T) {
 
 func TestCreateDirAlreadyExists(t *testing.T) {
 	res := createDir(t, "/files/123?Name=456&Type=io.cozy.folders")
-	assert.Equal(t, 422, res.StatusCode)
+	assert.Equal(t, 409, res.StatusCode)
 	res.Body.Close()
 }
 
@@ -118,7 +118,7 @@ func TestMain(m *testing.M) {
 
 	router := gin.New()
 	router.Use(injectInstance(instance))
-	router.POST("/files/:folder-id", FolderPostHandler)
+	router.POST("/files/:folder-id", CreationHandler)
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())
