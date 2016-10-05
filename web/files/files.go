@@ -144,7 +144,7 @@ func CreationHandler(c *gin.Context) {
 		c.Query("Type"),
 		c.Query("Name"),
 		c.Param("folder-id"),
-		c.Param("Tags"),
+		c.Query("Tags"),
 		c.Query("Executable") == "true",
 	)
 
