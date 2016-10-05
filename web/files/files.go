@@ -6,13 +6,11 @@
 package files
 
 import (
-	"bytes"
 	"crypto/md5"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"hash"
 	"net/http"
 	"strings"
 
@@ -39,7 +37,7 @@ const (
 )
 
 var (
-	errDocAlreadyExists = errors.New("Directory already exists")
+	errDocAlreadyExists = errors.New("Directory or file already exists")
 	errDocTypeInvalid   = errors.New("Invalid document type")
 	errIllegalFilename  = errors.New("Invalid filename: empty or contains an illegal character")
 	errInvalidHash      = errors.New("Invalid hash")
@@ -53,94 +51,72 @@ type DocMetadata struct {
 	FolderID   string
 	Executable bool
 	Tags       []string
-	MD5Hash    []byte
+	GivenMD5   []byte
+
+	md5H   hash.Hash
+	doneCh chan bool
+	errsCh chan error
 }
 
-func (metadata *DocMetadata) path() string {
-	return metadata.FolderID + "/" + metadata.Name
+func (m *DocMetadata) path() string {
+	return m.FolderID + "/" + m.Name
 }
 
 // NewDocMetadata is the DocMetadata constructor. All inputs are
 // validated and if wrong, an error is returned.
-func NewDocMetadata(docTypeStr, name, folderID, tagsStr, md5Str string, executable bool) (*DocMetadata, error) {
+func NewDocMetadata(docTypeStr, name, folderID, tagsStr, md5Str string, executable bool) (m *DocMetadata, err error) {
 	docType, err := parseDocType(docTypeStr)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	if err = checkFileName(name); err != nil {
-		return nil, err
+		return
 	}
 
 	// FolderID is not mandatory. If empty, the document is at the root
 	// of the FS
 	if folderID != "" {
 		if err = checkFileName(folderID); err != nil {
-			return nil, err
+			return
 		}
 	}
 
 	tags := parseTags(tagsStr)
 
-	var md5 []byte
+	var givenMD5 []byte
 	if md5Str != "" {
-		md5, err = parseMD5Hash(md5Str)
-		fmt.Println(md5Str, md5, err)
+		givenMD5, err = parseMD5Hash(md5Str)
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
-	return &DocMetadata{
+	m = &DocMetadata{
 		Type:       docType,
 		Name:       name,
 		FolderID:   folderID,
 		Tags:       tags,
 		Executable: executable,
-		MD5Hash:    md5,
-	}, nil
-}
+		GivenMD5:   givenMD5,
 
-// Upload is the method for uploading a file
-//
-// This will be used to upload a file
-// @TODO
-func Upload(metadata *DocMetadata, storage afero.Fs, body io.ReadCloser) error {
-	if metadata.Type != FileDocType {
-		return errDocTypeInvalid
+		md5H:   md5.New(),
+		doneCh: make(chan bool),
+		errsCh: make(chan error),
 	}
 
-	path := metadata.path()
-
-	// @TODO: we really want to stream the request body in the Fs to
-	// avoid having to be synchronous and load the entire file in memory
-	bodyCopy, err := ioutil.ReadAll(body)
-	if err != nil {
-		return err
-	}
-
-	// We only read from the body, the closing error is not really
-	// relevant
-	defer body.Close()
-
-	if metadata.MD5Hash != nil {
-		if err := checkMD5Integrity(bodyCopy, metadata.MD5Hash); err != nil {
-			return err
-		}
-	}
-
-	return afero.SafeWriteReader(storage, path, bytes.NewReader(bodyCopy))
+	return
 }
 
 // CreateDirectory is the method for creating a new directory
 //
 // @TODO
-func CreateDirectory(metadata *DocMetadata, storage afero.Fs) error {
-	if metadata.Type != FolderDocType {
+func CreateDirectory(m *DocMetadata, storage afero.Fs) error {
+	if m.Type != FolderDocType {
 		return errDocTypeInvalid
 	}
 
-	path := metadata.path()
+	path := m.path()
 
 	exists, err := afero.DirExists(storage, path)
 	if err != nil {
@@ -169,7 +145,7 @@ func CreationHandler(c *gin.Context) {
 
 	header := c.Request.Header
 
-	metadata, err := NewDocMetadata(
+	m, err := NewDocMetadata(
 		c.Query("Type"),
 		c.Query("Name"),
 		c.Param("folder-id"),
@@ -188,7 +164,7 @@ func CreationHandler(c *gin.Context) {
 		contentType = DefaultContentType
 	}
 
-	exists, err := checkParentFolderID(storage, metadata.FolderID)
+	exists, err := checkParentFolderID(storage, m.FolderID)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return
@@ -199,13 +175,13 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", metadata.Name, metadata, contentType)
+	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", m.Name, m, contentType)
 
-	switch metadata.Type {
+	switch m.Type {
 	case FileDocType:
-		err = Upload(metadata, storage, c.Request.Body)
+		err = Upload(m, storage, c.Request.Body)
 	case FolderDocType:
-		err = CreateDirectory(metadata, storage)
+		err = CreateDirectory(m, storage)
 	}
 
 	if err != nil {
@@ -297,17 +273,4 @@ func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func checkMD5Integrity(buf, givenHash []byte) error {
-	h := md5.New()
-	h.Write(buf)
-	calcHash := h.Sum(nil)
-
-	if !bytes.Equal(givenHash, calcHash) {
-		fmt.Println(buf, givenHash, calcHash)
-		return errInvalidHash
-	}
-
-	return nil
 }

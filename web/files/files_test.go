@@ -33,7 +33,9 @@ func upload(t *testing.T, path, contentType, body, hash string) *http.Response {
 	req, err := http.NewRequest("POST", ts.URL+path, buf)
 	assert.NoError(t, err)
 
-	req.Header.Add("Content-MD5", hash)
+	if hash != "" {
+		req.Header.Add("Content-MD5", hash)
+	}
 
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -99,19 +101,23 @@ func TestUploadWithNoName(t *testing.T) {
 
 func TestUploadBadHash(t *testing.T) {
 	body := "foo"
-	res := upload(t, "/files/123?Type=io.cozy.files&Name=quz", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
+	res := upload(t, "/files/123?Type=io.cozy.files&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
 	assert.Equal(t, 412, res.StatusCode)
 	res.Body.Close()
+
+	storage, _ := instance.GetStorageProvider()
+	_, err := afero.ReadFile(storage, "123/badhash")
+	assert.Error(t, err)
 }
 
 func TestUploadSuccess(t *testing.T) {
 	body := "foo"
-	res := upload(t, "/files/123?Type=io.cozy.files&Name=bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res := upload(t, "/files/123?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
 	res.Body.Close()
 
 	storage, _ := instance.GetStorageProvider()
-	buf, err := afero.ReadFile(storage, "123/bar")
+	buf, err := afero.ReadFile(storage, "123/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
 }
