@@ -54,6 +54,8 @@ access can be `read`, `write` or `readwrite`.
 For files, the permission key is composed of `files/` and a type of files. The
 access can also be `read`, `write` or `readwrite`. The type can be :
 
+**Type**    | **Description**
+------------|---------------------------------------------------------
 `app`       | the folder `Apps/:app_name` and the files inside it
 `data`      | the folder `Documents/:app_name` and the files inside it
 `downloads` | the folder `Documents/downloads` and the file inside it
@@ -195,6 +197,10 @@ Content-Type: application/vnd.api+json
   apps. Later, we will add other providers, like mercurial and npm.
 - It's possible to use a branch for git, by putting it the fragment of the
   URL, like `git://github.com/cozy/cozy-emails#develop`.
+- To download the manifest with git, we can use [git
+  archive](https://www.kernel.org/pub/software/scm/git/docs/git-archive.html),
+  except on github (where it's blocked). For github, we can use
+  `https://raw.githubusercontent.com/:user/:project/:branch/manifest.webapp`
 
 ### POST /apps/:slug
 
