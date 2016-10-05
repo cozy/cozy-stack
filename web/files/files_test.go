@@ -70,15 +70,10 @@ func TestCreateDirSuccess(t *testing.T) {
 	assert.True(t, exists)
 }
 
-func TestCreateDirWithSlashInName(t *testing.T) {
+func TestCreateDirWithIllegalCharacter(t *testing.T) {
 	res := createDir(t, "/files/123?Name=coucou/les/copains!&Type=io.cozy.folders")
-	assert.Equal(t, 201, res.StatusCode)
+	assert.Equal(t, 422, res.StatusCode)
 	res.Body.Close()
-
-	storage, _ := instance.GetStorageProvider()
-	exists, err := afero.DirExists(storage, "123/coucou\\/les\\/copains!")
-	assert.NoError(t, err)
-	assert.True(t, exists)
 }
 
 func TestUploadWithNoType(t *testing.T) {

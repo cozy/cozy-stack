@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -34,7 +35,10 @@ const (
 var (
 	errDocAlreadyExists = errors.New("Directory already exists")
 	errDocTypeInvalid   = errors.New("Invalid document type")
+	errIllegalFilename  = errors.New("Invalid filename: empty or contains one of these illegal characters: / \\ : ? * \" |")
 )
+
+var regFileName = regexp.MustCompile("[\\/\\\\:\\?\\*\"|]+")
 
 // DocMetadata encapsulates the few metadata linked to a document
 // creation request.
@@ -47,7 +51,38 @@ type DocMetadata struct {
 }
 
 func (metadata *DocMetadata) path() string {
-	return escapeSlash(metadata.FolderID) + "/" + escapeSlash(metadata.Name)
+	return metadata.FolderID + "/" + metadata.Name
+}
+
+// NewDocMetadata is the DocMetadata constructor. All inputs are
+// validated and if wrong, an error is returned.
+func NewDocMetadata(docTypeStr, name, folderID, tagsStr string, executable bool) (*DocMetadata, error) {
+	docType, err := parseDocType(docTypeStr)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = checkFileName(name); err != nil {
+		return nil, err
+	}
+
+	// FolderID is not mandatory. If empty, the document is at the root
+	// of the FS
+	if folderID != "" {
+		if err = checkFileName(folderID); err != nil {
+			return nil, err
+		}
+	}
+
+	tags := parseTags(tagsStr)
+
+	return &DocMetadata{
+		Type:       docType,
+		Name:       name,
+		FolderID:   folderID,
+		Tags:       tags,
+		Executable: executable,
+	}, nil
 }
 
 // Upload is the method for uploading a file
@@ -105,31 +140,22 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	docType, err := parseDocType(c.Query("Type"))
+	metadata, err := NewDocMetadata(
+		c.Query("Type"),
+		c.Query("Name"),
+		c.Param("folder-id"),
+		c.Param("Tags"),
+		c.Query("Executable") == "true",
+	)
+
 	if err != nil {
 		c.AbortWithError(http.StatusUnprocessableEntity, err)
 		return
 	}
 
-	tags := parseTags(c.Query("Tags"))
-
-	metadata := &DocMetadata{
-		Type:       docType,
-		Name:       c.Query("Name"),
-		Executable: c.Query("Executable") == "true",
-		FolderID:   c.Param("folder-id"),
-		Tags:       tags,
-	}
-
 	contentType := c.ContentType()
 	if contentType == "" {
 		contentType = DefaultContentType
-	}
-
-	if metadata.Name == "" {
-		err = fmt.Errorf("Missing Name in the query-string")
-		c.AbortWithError(http.StatusUnprocessableEntity, err)
-		return
 	}
 
 	exists, err := checkParentFolderID(storage, metadata.FolderID)
@@ -173,10 +199,6 @@ func Routes(router *gin.RouterGroup) {
 	router.POST("/:folder-id", CreationHandler)
 }
 
-func escapeSlash(str string) string {
-	return strings.Replace(str, "/", "\\/", -1)
-}
-
 func parseTags(str string) []string {
 	var tags []string
 	for _, tag := range strings.Split(str, ",") {
@@ -201,6 +223,13 @@ func parseDocType(docType string) (DocType, error) {
 		err = errDocTypeInvalid
 	}
 	return result, err
+}
+
+func checkFileName(str string) error {
+	if str == "" || regFileName.MatchString(str) {
+		return errIllegalFilename
+	}
+	return nil
 }
 
 func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
