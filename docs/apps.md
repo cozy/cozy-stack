@@ -98,7 +98,7 @@ Example:
       "description": "Required to send a congratulations email to your friends"
     },
     "settings/theme": {
-      "description": "Required to use the same colors as other cozy apps"
+      "description": "Required to use the same colors as other cozy apps",
       "access": "read"
     }
   }
