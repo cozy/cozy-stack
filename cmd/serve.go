@@ -1,11 +1,13 @@
 package cmd
 
 import (
-	"fmt"
+	"strconv"
 
-	"github.com/cozy/cozy-stack/web"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
+
+	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/web"
 )
 
 // serveCmd represents the serve command
@@ -15,15 +17,27 @@ var serveCmd = &cobra.Command{
 	Long: `Start the HTTP server for the server.
 It will accept HTTP request on port 8080 by default.
 If you want to use another port, on you can use the PORT env variable.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		router := gin.Default()
-		web.SetupRoutes(router)
-		if err := router.Run(); err != nil {
-			fmt.Println("Error:", err)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := Configure(); err != nil {
+			return err
 		}
+
+		router := getGin()
+		web.SetupRoutes(router)
+
+		address := config.GetConfig().Address + ":" + strconv.Itoa(config.GetConfig().Port)
+		return router.Run(address)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
+}
+
+func getGin() *gin.Engine {
+	if config.GetConfig().Mode == config.Production {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	return gin.Default()
 }
