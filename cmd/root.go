@@ -19,6 +19,8 @@ profiles you.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return Configure()
 	},
+	// Do not display usage on error
+	SilenceUsage: true,
 }
 
 var cfgFile string
