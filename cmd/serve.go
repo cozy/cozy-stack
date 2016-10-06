@@ -13,10 +13,10 @@ import (
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "Start the stack and listens for HTTP calls",
-	Long: `Start the HTTP server for the server.
-It will accept HTTP request on port 8080 by default.
-If you want to use another port, on you can use the PORT env variable.`,
+	Short: "Starts the stack and listens for HTTP calls",
+	Long: `Starts the stack and listens for HTTP calls
+It will accept HTTP requests on localhost:8080 by default.
+Use the --port and --address flags to change the listening option.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := Configure(); err != nil {
 			return err
