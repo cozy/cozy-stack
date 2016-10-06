@@ -70,3 +70,9 @@ func SetInstance() gin.HandlerFunc {
 		c.Set("instance", instance)
 	}
 }
+
+// GetInstance will return the instance linked to the given gin
+// context or panic if none exists
+func GetInstance(c *gin.Context) *Instance {
+	return c.MustGet("instance").(*Instance)
+}
