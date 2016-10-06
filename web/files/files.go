@@ -6,11 +6,9 @@
 package files
 
 import (
-	"crypto/md5"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"hash"
 	"net/http"
 	"strings"
 
@@ -52,10 +50,6 @@ type DocMetadata struct {
 	Executable bool
 	Tags       []string
 	GivenMD5   []byte
-
-	md5H   hash.Hash
-	doneCh chan bool
-	errsCh chan error
 }
 
 func (m *DocMetadata) path() string {
@@ -99,10 +93,6 @@ func NewDocMetadata(docTypeStr, name, folderID, tagsStr, md5Str string, executab
 		Tags:       tags,
 		Executable: executable,
 		GivenMD5:   givenMD5,
-
-		md5H:   md5.New(),
-		doneCh: make(chan bool),
-		errsCh: make(chan error),
 	}
 
 	return

@@ -7,12 +7,13 @@ package files
 
 import (
 	"bytes"
+	"crypto/md5"
 	"io"
 
 	"github.com/spf13/afero"
 )
 
-// Upload is the method for uploading a file
+// Upload is the method for uploading a file onto the filesystem.
 func Upload(m *DocMetadata, fs afero.Fs, body io.ReadCloser) (err error) {
 	if m.Type != FileDocType {
 		return errDocTypeInvalid
@@ -30,47 +31,18 @@ func Upload(m *DocMetadata, fs afero.Fs, body io.ReadCloser) (err error) {
 	}
 
 	defer body.Close()
-	return copyOnFsAndCheck(m, fs, path, body)
+	return copyOnFsAndCheckIntegrity(m, fs, path, body)
 }
 
-func copyOnFsAndCheck(m *DocMetadata, fs afero.Fs, path string, r io.Reader) (err error) {
+func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, path string, r io.Reader) (err error) {
 	file, err := fs.Create(path)
 	if err != nil {
 		return
 	}
 	defer file.Close()
 
-	md5H := m.md5H
-	done := m.doneCh
-	errs := m.errsCh
-	defer close(done)
-	defer close(errs)
-
-	docR, docW := io.Pipe()
-	md5R, md5W := io.Pipe()
-
-	go doCopy(file, docR, done, errs)
-	go doCopy(md5H, md5R, done, errs)
-
-	go func() {
-		defer docW.Close()
-		defer md5W.Close()
-
-		mw := io.MultiWriter(docW, md5W)
-
-		_, err = io.Copy(mw, r)
-		if err != nil {
-			errs <- err
-		}
-	}()
-
-	for c := 0; c < 2; c++ {
-		select {
-		case <-done:
-		case err = <-errs:
-			return
-		}
-	}
+	md5H := md5.New()
+	_, err = io.Copy(file, io.TeeReader(r, md5H))
 
 	calcMD5 := md5H.Sum(nil)
 	if !bytes.Equal(m.GivenMD5, calcMD5) {
@@ -82,13 +54,4 @@ func copyOnFsAndCheck(m *DocMetadata, fs afero.Fs, path string, r io.Reader) (er
 	}
 
 	return
-}
-
-func doCopy(dst io.Writer, src io.Reader, done chan bool, errs chan error) {
-	_, err := io.Copy(dst, src)
-	if err != nil {
-		errs <- err
-	} else {
-		done <- true
-	}
 }
