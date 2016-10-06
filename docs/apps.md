@@ -458,8 +458,8 @@ URL, cookies) but none will provide a better isolation. Maybe in a couple
 years, when [the origin spec](https://w3c.github.io/webappsec-suborigins/)
 will be more advanced.
 
-So, if having the apps on the same domain is not possible, we have to put them
-on several domains. One interesting way to do that is using sandboxed iframes.
+So, if having the apps on the same origin is not possible, we have to put them
+on several origins. One interesting way to do that is using sandboxed iframes.
 An iframe with [the sandbox
 attribute](https://www.w3.org/TR/html5/embedded-content-0.html#attr-iframe-sandbox),
 and not `allow-same-origin` in it, will be assigned to a unique origin. The

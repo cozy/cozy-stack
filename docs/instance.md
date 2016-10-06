@@ -35,3 +35,5 @@ The ids are forced to known values. So, even if these folders are moved or
 renamed, they can still be found for the permissions.
 
 Finally, the default application for the current environment are installed.
+
+**TODO** explain that the folder names will be localized, and how
