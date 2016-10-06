@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -30,15 +29,16 @@ const (
 	FileDocType DocType = "io.cozy.files"
 	// FolderDocType is document type
 	FolderDocType = "io.cozy.folders"
+
+	// ForbiddenFilenameChars is the list of forbidden characters in a filename.
+	ForbiddenFilenameChars = "/"
 )
 
 var (
 	errDocAlreadyExists = errors.New("Directory already exists")
 	errDocTypeInvalid   = errors.New("Invalid document type")
-	errIllegalFilename  = errors.New("Invalid filename: empty or contains one of these illegal characters: / \\ : ? * \" |")
+	errIllegalFilename  = errors.New("Invalid filename: empty or contains an illegal character")
 )
-
-var regFileName = regexp.MustCompile("[\\/\\\\:\\?\\*\"|]+")
 
 // DocMetadata encapsulates the few metadata linked to a document
 // creation request.
@@ -201,7 +201,6 @@ func makeCode(err error) (code int) {
 func parseTags(str string) []string {
 	var tags []string
 	for _, tag := range strings.Split(str, ",") {
-		// @TODO: more sanitization maybe ?
 		tag = strings.TrimSpace(tag)
 		if tag != "" {
 			tags = append(tags, tag)
@@ -225,7 +224,7 @@ func parseDocType(docType string) (DocType, error) {
 }
 
 func checkFileName(str string) error {
-	if str == "" || regFileName.MatchString(str) {
+	if str == "" || strings.ContainsAny(str, ForbiddenFilenameChars) {
 		return errIllegalFilename
 	}
 	return nil
