@@ -41,7 +41,7 @@ func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, path string, r io.Re
 	}
 	defer file.Close()
 
-	md5H := md5.New()
+	md5H := md5.New() // #nosec
 	_, err = io.Copy(file, io.TeeReader(r, md5H))
 
 	calcMD5 := md5H.Sum(nil)
