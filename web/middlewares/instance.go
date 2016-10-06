@@ -54,7 +54,7 @@ func SetInstance() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		domain := c.Request.Host
 		// TODO this is not fail-safe, to be modified before production
-		if domain == "" || strings.Contains(c.Request.Host, "127.0.0.1") {
+		if domain == "" || strings.Contains(c.Request.Host, "127.0.0.1") || strings.Contains(c.Request.Host, "localhost") {
 			domain = "dev"
 		}
 		wd, err := os.Getwd()

@@ -2,49 +2,70 @@
 package data
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 )
 
-// @TODO test only, to be removed
-func transformOutput(doc map[string]interface{}) {
-
+func validDoctype(c *gin.Context) {
+	// TODO extends me to verificate characters allowed in db name.
+	doctype := c.Param("doctype")
+	if doctype == "" {
+		c.AbortWithError(http.StatusBadRequest, errors.InvalidDoctype(doctype))
+	} else {
+		c.Set("doctype", doctype)
+	}
 }
 
 // GetDoc get a doc by its type and id
-func GetDoc(c *gin.Context) {
-	// @TODO this should be extracted to a middleware
-	instance, exists := c.Get("instance")
-	if !exists {
-		err := fmt.Errorf("No instance found")
-		c.AbortWithError(http.StatusInternalServerError, err)
+func getDoc(c *gin.Context) {
+	instance := c.MustGet("instance").(*middlewares.Instance)
+	doctype := c.MustGet("doctype").(string)
+
+	prefix := instance.GetDatabasePrefix()
+
+	var out couchdb.Doc
+	err := couchdb.GetDoc(prefix, doctype, c.Param("docid"), &out)
+	if err != nil {
+		c.AbortWithError(errors.HTTPStatus(err), err)
 		return
 	}
-
-	prefix := instance.(*middlewares.Instance).GetDatabasePrefix()
-	var out interface{}
-
-	reqerr := couchdb.GetDoc(prefix, c.Param("doctype"), c.Param("docid"), &out)
-	if reqerr != nil {
-		coucherr, iscoucherr := reqerr.(*couchdb.Error)
-		if iscoucherr {
-			c.AbortWithError(coucherr.StatusCode, coucherr)
-		} else {
-			c.AbortWithError(http.StatusInternalServerError, reqerr)
-		}
-		return
-	}
-	transformOutput(out.(map[string]interface{}))
 	c.JSON(200, out)
+}
+
+// CreateDoc create doc from the json passed as body
+func createDoc(c *gin.Context) {
+	doctype := c.MustGet("doctype").(string)
+	instance := c.MustGet("instance").(*middlewares.Instance)
+	prefix := instance.GetDatabasePrefix()
+
+	var doc couchdb.Doc
+	if err := c.BindJSON(&doc); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	err := couchdb.CreateDoc(prefix, doctype, doc)
+	if err != nil {
+		c.AbortWithError(errors.HTTPStatus(err), err)
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"ok":   true,
+		"id":   doc["_id"],
+		"rev":  doc["_rev"],
+		"data": doc,
+	})
+
 }
 
 // Routes sets the routing for the status service
 func Routes(router *gin.RouterGroup) {
-	// router.POST("/*type", CreateDoc)
-	router.GET("/:doctype/:docid", GetDoc)
-	// router.DELETE("/*type/:id", DeleteDoc)
+	router.GET("/:doctype/:docid", validDoctype, getDoc)
+	router.POST("/:doctype", validDoctype, createDoc)
+	// router.DELETE("/:doctype/:docid", DeleteDoc)
 }
