@@ -66,17 +66,17 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("CouchdbError %d : %s(%s)", e.StatusCode, e.Name, e.Reason)
 }
 
-// JSON returns the hash to ouput in HTTP for a given error
+// JSON returns the hash to output in HTTP for a given error
 func (e *Error) JSON() map[string]interface{} {
-	json := map[string]interface{}{
+	jsonMap := map[string]interface{}{
 		"status": string(e.StatusCode),
 		"error":  e.Name,
 		"reason": e.Reason,
 	}
 	if e.Original != nil {
-		json["original"] = e.Original.Error()
+		jsonMap["original"] = e.Original.Error()
 	}
-	return json
+	return jsonMap
 }
 
 func isNoDatabaseError(err error) bool {
