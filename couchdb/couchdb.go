@@ -8,14 +8,25 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 
 	uuid "github.com/satori/go.uuid"
 )
 
+type updateResponse struct {
+	ID  string `json:"id"`
+	Rev string `json:"rev"`
+	Ok  bool   `json:"ok"`
+}
+
 // Doc : A couchdb Doc is just a json object
 type Doc map[string]interface{}
+
+// GetDoctypeAndID returns the doctype and unqualified id of a document
+func (d Doc) GetDoctypeAndID() (string, string) {
+	parts := strings.Split(d["_id"].(string), "/")
+	return parts[0], parts[1]
+}
 
 // CouchURL is the URL where to check if CouchDB is up
 func CouchURL() string {
@@ -78,27 +89,48 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		return newIOReadError(err)
 	}
 
+	fmt.Printf("[couchdb response] %v\n", string(body))
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		// Couchdb as returned an error HTTP status code
 		return newCouchdbError(resp.StatusCode, body)
 	}
 
-	fmt.Printf("BODY = %v %v\n", string(body), reflect.TypeOf(resbody))
-
-	return json.Unmarshal(body, &resbody)
-
+	if resbody == nil {
+		// dont care about the return value
+		return nil
+	}
+	err = json.Unmarshal(body, &resbody)
+	return err
 }
 
 // GetDoc fetch a document by its docType and ID, out is filled with
 // the document by json.Unmarshal-ing
-func GetDoc(dbprefix, doctype, id string, out Doc) error {
-	return makeRequest("GET", docURL(dbprefix, doctype, id), nil, &out)
+func GetDoc(dbprefix, doctype, id string, out *Doc) error {
+	err := makeRequest("GET", docURL(dbprefix, doctype, id), nil, out)
+	if isNoDatabaseError(err) {
+		err.(*Error).Reason = "wrong_doctype"
+	}
+	return err
 }
 
 // CreateDB creates the necessary database for a doctype
 func CreateDB(dbprefix, doctype string) error {
-	var out Doc
-	return makeRequest("PUT", makeDBName(dbprefix, doctype), nil, &out)
+	return makeRequest("PUT", makeDBName(dbprefix, doctype), nil, nil)
+}
+
+// DeleteDB destroy the database for a doctype
+func DeleteDB(dbprefix, doctype string) error {
+	return makeRequest("DELETE", makeDBName(dbprefix, doctype), nil, nil)
+}
+
+// ResetDB destroy and recreate the database for a doctype
+func ResetDB(dbprefix, doctype string) error {
+	err := DeleteDB(dbprefix, doctype)
+	if err != nil {
+		return err
+	}
+	return CreateDB(dbprefix, doctype)
 }
 
 func attemptCreateDBAndDoc(dbprefix, doctype string, doc Doc) error {
@@ -112,21 +144,23 @@ func attemptCreateDBAndDoc(dbprefix, doctype string, doc Doc) error {
 // CreateDoc creates a document
 // created is populated with keys from
 func CreateDoc(dbprefix, doctype string, doc Doc) error {
-	var response map[string]interface{}
+	var response updateResponse
 
 	doc["_id"] = doctype + "/" + makeUUID()
 
 	err := makeRequest("POST", makeDBName(dbprefix, doctype), &doc, &response)
 	if isNoDatabaseError(err) {
 		return attemptCreateDBAndDoc(dbprefix, doctype, doc)
-	} else if err != nil {
+	}
+	if err != nil {
 		return err
-	} else if !response["ok"].(bool) {
+	}
+	if !response.Ok {
 		return fmt.Errorf("couchdb replied with 200 ok=false")
 	}
 	// assign extracted values to the given doc
 	// doubt : should we instead try to be more immutable and make a new map ?
-	doc["_id"] = response["id"]
-	doc["_rev"] = response["rev"]
+	doc["_id"] = response.ID
+	doc["_rev"] = response.Rev
 	return nil
 }
