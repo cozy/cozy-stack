@@ -53,14 +53,12 @@ func docURL(dbprefix, doctype, id string) string {
 
 func makeUUID() string {
 	u := uuid.NewV4()
-	return hex.Dump(u[:])
+	return hex.EncodeToString(u[:])
 }
 
 func makeRequest(method, path string, reqbody interface{}, resbody interface{}) error {
 	var reqjson []byte
 	var err error
-
-	fmt.Printf("[couchdb request] %v %v \n", method, path)
 
 	if reqbody != nil {
 		reqjson, err = json.Marshal(reqbody)
@@ -68,6 +66,9 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 			return err
 		}
 	}
+
+	fmt.Printf("[couchdb request] %v %v %v\n", method, path, string(reqjson))
+
 	req, err := http.NewRequest(method, CouchURL()+path, bytes.NewReader(reqjson))
 	// Possible err = wrong method, unparsable url
 	if err != nil {
