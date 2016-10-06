@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 // This file contains error handling code for couchdb request
@@ -69,7 +70,7 @@ func (e *Error) Error() string {
 // JSON returns the json representation of this error
 func (e *Error) JSON() map[string]interface{} {
 	jsonMap := map[string]interface{}{
-		"status": string(e.StatusCode),
+		"status": strconv.Itoa(e.StatusCode),
 		"error":  e.Name,
 		"reason": e.Reason,
 	}
@@ -83,12 +84,12 @@ func isNoDatabaseError(err error) bool {
 	if err == nil {
 		return false
 	}
-	coucherr, iscoucherr := err.(*Error)
-	if !iscoucherr {
+	couchErr, isCouchErr := err.(*Error)
+	if !isCouchErr {
 		return false
 	}
-	return coucherr.Reason == "no_db_file" ||
-		coucherr.Reason == "Database does not exist."
+	return couchErr.Reason == "no_db_file" ||
+		couchErr.Reason == "Database does not exist."
 }
 
 func newRequestError(originalError error) error {
