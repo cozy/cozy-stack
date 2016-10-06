@@ -142,8 +142,8 @@ func attemptCreateDBAndDoc(dbprefix, doctype string, doc Doc) error {
 	return CreateDoc(dbprefix, doctype, doc)
 }
 
-// CreateDoc creates a document
-// created is populated with keys from
+// CreateDoc creates a document in couchdb. It modifies doc in place to add
+// _id and _rev.
 func CreateDoc(dbprefix, doctype string, doc Doc) error {
 	var response updateResponse
 
