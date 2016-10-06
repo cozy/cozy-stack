@@ -2,6 +2,7 @@ package couchdb
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -37,6 +38,11 @@ func makeDocID(doctype string, id string) string {
 
 func docURL(dbprefix, doctype, id string) string {
 	return makeDBName(dbprefix, doctype) + "/" + makeDocID(doctype, id)
+}
+
+func makeUUID() string {
+	u := uuid.NewV4()
+	return hex.Dump(u[:])
 }
 
 func makeRequest(method, path string, reqbody interface{}, resbody interface{}) error {
@@ -108,7 +114,7 @@ func attemptCreateDBAndDoc(dbprefix, doctype string, doc Doc) error {
 func CreateDoc(dbprefix, doctype string, doc Doc) error {
 	var response map[string]interface{}
 
-	doc["_id"] = doctype + "/" + uuid.NewV4().String()
+	doc["_id"] = doctype + "/" + makeUUID()
 
 	err := makeRequest("POST", makeDBName(dbprefix, doctype), &doc, &response)
 	if isNoDatabaseError(err) {
