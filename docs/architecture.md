@@ -156,6 +156,8 @@ mercurial, npm or even just a tarball). Also, we want to offer two channels
 for our official apps: one with a stable and well tested release, and one with
 more frequent updates for our more adventurous users.
 
+More informations [here](apps.md).
+
 ### Data System `/data`
 
 CouchDB is used for persistence of JSON documents. The data service is a layer
@@ -307,7 +309,7 @@ Payload: the doctype and the document to index
 Serverless apps
 ---------------
 
-### Home `/apps/home` (and aliased to `/` by default)
+### Home `/apps/home`
 
 It's where you land on your cozy and launch your apps. Having widgets to
 display informations would be nice too!
@@ -403,8 +405,7 @@ owner of the cozy can see all the photos and share an album with some photos
 to some of her friends. This album is a context and the cozy stack will allow
 the access to the photos of this album, and only those.
 
-**Note**: this section is still work in progress. We need to experiment to see
-how it can work and describe it in this document.
+More informations [here](apps.md).
 
 ### Protection mechanisms for the client side applications
 
@@ -704,7 +705,7 @@ to:
 
 > When will this new architecture be available?
 
-The development has not yet started. We wanted to hear the community feedbacks
+The development has just started. We wanted to hear the community feedbacks
 before starting to code. It will take several months to have a first alpha
 version, and some time after to go in production with it. During all the time,
 the development will be open and you can see the code in
