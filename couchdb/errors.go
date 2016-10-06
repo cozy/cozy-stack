@@ -50,8 +50,6 @@ import (
 // 		supplied JSON was invalid, or invalid information was supplied as part
 // 		of the request.
 
-const ()
-
 // Error represent an error from couchdb
 type Error struct {
 	StatusCode  int
