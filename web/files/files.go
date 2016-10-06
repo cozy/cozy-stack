@@ -31,7 +31,7 @@ const (
 	FolderDocType = "io.cozy.folders"
 
 	// ForbiddenFilenameChars is the list of forbidden characters in a filename.
-	ForbiddenFilenameChars = "/"
+	ForbiddenFilenameChars = "/\x00"
 )
 
 var (
