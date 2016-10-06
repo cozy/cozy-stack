@@ -75,6 +75,8 @@ the `access` to say which konnector can be used).
 For settings, the permission key is composed of `settings/` and a type. The
 access can be `read`, `write` and `readwrite`. The type can be:
 
+**Type**     | **Description**
+-------------|--------------------------------------------
 `locale`     | the default locale for the cozy instance
 `background` | the background for the home
 `theme`      | the CSS theme
