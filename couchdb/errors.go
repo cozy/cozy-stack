@@ -66,7 +66,7 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("CouchdbError %d : %s(%s)", e.StatusCode, e.Name, e.Reason)
 }
 
-// JSON returns the hash to output in HTTP for a given error
+// JSON returns the json representation of this error
 func (e *Error) JSON() map[string]interface{} {
 	jsonMap := map[string]interface{}{
 		"status": string(e.StatusCode),
