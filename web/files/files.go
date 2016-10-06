@@ -196,6 +196,7 @@ func CreationHandler(c *gin.Context) {
 
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
+	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
 }
 
