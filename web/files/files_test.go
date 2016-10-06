@@ -74,6 +74,10 @@ func TestCreateDirWithIllegalCharacter(t *testing.T) {
 	res := createDir(t, "/files/123?Name=coucou/les/copains!&Type=io.cozy.folders")
 	assert.Equal(t, 422, res.StatusCode)
 	res.Body.Close()
+
+	res = createDir(t, "/files/123?Name=j'ai\x00untrou!&Type=io.cozy.folders")
+	assert.Equal(t, 422, res.StatusCode)
+	res.Body.Close()
 }
 
 func TestUploadWithNoType(t *testing.T) {
