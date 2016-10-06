@@ -174,14 +174,7 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		var code int
-		switch err {
-		case errDocAlreadyExists:
-			code = http.StatusConflict
-		default:
-			code = http.StatusInternalServerError
-		}
-		c.AbortWithError(code, err)
+		c.AbortWithError(makeCode(err), err)
 		return
 	}
 
@@ -193,6 +186,16 @@ func CreationHandler(c *gin.Context) {
 func Routes(router *gin.RouterGroup) {
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
+}
+
+func makeCode(err error) (code int) {
+	switch err {
+	case errDocAlreadyExists:
+		code = http.StatusConflict
+	default:
+		code = http.StatusInternalServerError
+	}
+	return
 }
 
 func parseTags(str string) []string {
