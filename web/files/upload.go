@@ -7,7 +7,7 @@ package files
 
 import (
 	"bytes"
-	"crypto/md5"
+	"crypto/md5" // #nosec
 	"io"
 
 	"github.com/spf13/afero"
