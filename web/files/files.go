@@ -128,12 +128,7 @@ func CreateDirectory(metadata *DocMetadata, storage afero.Fs) error {
 //
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func CreationHandler(c *gin.Context) {
-	instance, err := middlewares.GetInstance(c)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
+	instance := middlewares.GetInstance(c)
 	storage, err := instance.GetStorageProvider()
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)

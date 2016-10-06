@@ -71,17 +71,8 @@ func SetInstance() gin.HandlerFunc {
 	}
 }
 
-// GetInstance will return the instance linked to the given gin context
-func GetInstance(c *gin.Context) (*Instance, error) {
-	instanceInterface, exists := c.Get("instance")
-	if !exists {
-		return nil, fmt.Errorf("No instance found")
-	}
-
-	instance, ok := instanceInterface.(*Instance)
-	if !ok {
-		return nil, fmt.Errorf("No instance found")
-	}
-
-	return instance, nil
+// GetInstance will return the instance linked to the given gin
+// context or panic if none exists
+func GetInstance(c *gin.Context) *Instance {
+	return c.MustGet("instance").(*Instance)
 }
