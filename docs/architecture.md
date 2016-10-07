@@ -314,7 +314,7 @@ Serverless apps
 It's where you land on your cozy and launch your apps. Having widgets to
 display informations would be nice too!
 
-### App Center (was marketplace) `/apps/app-center`
+### Store (was marketplace) `/apps/store`
 
 You can install new apps here.
 
