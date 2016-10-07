@@ -35,10 +35,11 @@ const (
 )
 
 var (
-	errDocAlreadyExists = errors.New("Directory or file already exists")
-	errDocTypeInvalid   = errors.New("Invalid document type")
-	errIllegalFilename  = errors.New("Invalid filename: empty or contains an illegal character")
-	errInvalidHash      = errors.New("Invalid hash")
+	errDocAlreadyExists   = errors.New("Directory or file already exists")
+	errParentDoesNotExist = errors.New("Parent folder with given FolderID does not exist")
+	errDocTypeInvalid     = errors.New("Invalid document type")
+	errIllegalFilename    = errors.New("Invalid filename: empty or contains an illegal character")
+	errInvalidHash        = errors.New("Invalid hash")
 )
 
 // DocMetadata encapsulates the few metadata linked to a document
@@ -101,16 +102,20 @@ func NewDocMetadata(docTypeStr, name, folderID, tagsStr, md5Str string, executab
 // CreateDirectory is the method for creating a new directory
 //
 // @TODO
-func CreateDirectory(m *DocMetadata, storage afero.Fs) error {
+func CreateDirectory(m *DocMetadata, storage afero.Fs) (err error) {
 	if m.Type != FolderDocType {
 		return errDocTypeInvalid
+	}
+
+	if err = checkParentFolderID(storage, m.FolderID); err != nil {
+		return
 	}
 
 	path := m.path()
 
 	exists, err := afero.DirExists(storage, path)
 	if err != nil {
-		return err
+		return
 	}
 	if exists {
 		return errDocAlreadyExists
@@ -154,17 +159,6 @@ func CreationHandler(c *gin.Context) {
 		contentType = DefaultContentType
 	}
 
-	exists, err := checkParentFolderID(storage, m.FolderID)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-	if !exists {
-		err = fmt.Errorf("Parent folder with given FolderID does not exist")
-		c.AbortWithError(http.StatusNotFound, err)
-		return
-	}
-
 	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", m.Name, m, contentType)
 
 	switch m.Type {
@@ -193,6 +187,8 @@ func makeCode(err error) (code int) {
 	switch err {
 	case errDocAlreadyExists:
 		code = http.StatusConflict
+	case errParentDoesNotExist:
+		code = http.StatusNotFound
 	case errInvalidHash:
 		code = http.StatusPreconditionFailed
 	default:
@@ -249,18 +245,18 @@ func checkFileName(str string) error {
 	return nil
 }
 
-func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
+func checkParentFolderID(storage afero.Fs, folderID string) (err error) {
 	if folderID == "" {
-		return true, nil
+		return
 	}
 
 	exists, err := afero.DirExists(storage, folderID)
 	if err != nil {
-		return false, err
+		return
 	}
 	if !exists {
-		return false, nil
+		err = errParentDoesNotExist
 	}
 
-	return true, nil
+	return
 }

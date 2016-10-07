@@ -19,9 +19,12 @@ func Upload(m *DocMetadata, fs afero.Fs, body io.ReadCloser) (err error) {
 		return errDocTypeInvalid
 	}
 
+	if err = checkParentFolderID(fs, m.FolderID); err != nil {
+		return
+	}
+
 	path := m.path()
 
-	// Existence of FolderID is mandatory
 	exists, err := afero.Exists(fs, path)
 	if err != nil {
 		return
