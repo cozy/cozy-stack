@@ -36,18 +36,18 @@ The architecture of Cozy is composed of:
 All of this can run on a personal server, self-hosted at home, like a
 Raspberry Pi:
 
-![Architecture for a self-hosted](self-hosted.png)
+![Architecture for a self-hosted](diagrams/self-hosted.png)
 
 But it's also possible to deploy a cozy on a more powerful server in order to
 host dozens of cozy instances (an association for example). It will looks
 like this:
 
-![Architecture for a medium instance](middle-instance.png)
+![Architecture for a medium instance](diagrams/middle-instance.png)
 
 And even to scale to thousands of cozy instances on a server farm, with high
 availability:
 
-![Architecture for a big instance](big-instance.png)
+![Architecture for a big instance](diagrams/big-instance.png)
 
 This elasticity comes with some constraints:
 
