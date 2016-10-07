@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/cozy/cozy-stack/config"
@@ -20,8 +21,12 @@ var statusCmd = &cobra.Command{
 			return err
 		}
 
-		address := "http://" + config.GetConfig().Address + ":" + strconv.Itoa(config.GetConfig().Port) + "/status"
-		resp, err := http.Get(address)
+		url := &url.URL{
+			Scheme: "http",
+			Host:   config.GetConfig().Host + ":" + strconv.Itoa(config.GetConfig().Port),
+			Path:   "/status",
+		}
+		resp, err := http.Get(url.String())
 		if err != nil {
 			fmt.Println("Error the HTTP server is not running:", err)
 			os.Exit(1)

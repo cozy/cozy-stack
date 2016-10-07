@@ -9,7 +9,7 @@ var config *Config
 // Config contains the configuration values of the application
 type Config struct {
 	Mode     Mode
-	Address  string
+	Host     string
 	Port     int
 	Database Database
 }
@@ -37,9 +37,9 @@ func GetConfig() *Config {
 // UseViper sets the configured instance of Config
 func UseViper(viper *viper.Viper) {
 	config = &Config{
-		Mode:    parseMode(viper.GetString("mode")),
-		Address: viper.GetString("address"),
-		Port:    viper.GetInt("port"),
+		Mode: parseMode(viper.GetString("mode")),
+		Host: viper.GetString("host"),
+		Port: viper.GetInt("port"),
 		Database: Database{
 			URL: viper.GetString("databaseUrl"),
 		},

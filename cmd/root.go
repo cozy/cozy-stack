@@ -31,18 +31,18 @@ profiles you.`,
 var cfgFile string
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.cozy.yaml)")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
 
 	RootCmd.PersistentFlags().StringP("mode", "m", "development", "server mode: development or production")
 	viper.BindPFlag("mode", RootCmd.PersistentFlags().Lookup("mode"))
 
-	RootCmd.PersistentFlags().StringP("address", "a", "localhost", "Address on which the server will listen")
-	viper.BindPFlag("address", RootCmd.PersistentFlags().Lookup("address"))
+	RootCmd.PersistentFlags().StringP("host", "", "localhost", "server host")
+	viper.BindPFlag("host", RootCmd.PersistentFlags().Lookup("host"))
 
-	RootCmd.PersistentFlags().IntP("port", "p", 8080, "Port on which the server will listen")
+	RootCmd.PersistentFlags().IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", RootCmd.PersistentFlags().Lookup("port"))
 
-	RootCmd.PersistentFlags().StringP("databaseUrl", "d", "http://localhost:5984", "Database to connect to")
+	RootCmd.PersistentFlags().StringP("databaseUrl", "d", "http://localhost:5984", "couchdb database address")
 	viper.BindPFlag("databaseUrl", RootCmd.PersistentFlags().Lookup("databaseUrl"))
 }
 
