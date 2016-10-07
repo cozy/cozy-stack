@@ -17,7 +17,7 @@ func TestError_JSON(t *testing.T) {
 		Original: fmt.Errorf("universe %d", 42),
 	}
 
-	asJson := couchError.JSON()
+	asJSON := couchError.JSON()
 
 	expectedMap := map[string]interface{}{
 		"status":   "200",
@@ -26,5 +26,5 @@ func TestError_JSON(t *testing.T) {
 		"original": "universe 42",
 	}
 
-	assert.EqualValues(t, expectedMap, asJson)
+	assert.EqualValues(t, expectedMap, asJSON)
 }
