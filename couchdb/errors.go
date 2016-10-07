@@ -86,7 +86,11 @@ func isNoDatabaseError(err error) bool {
 		return false
 	}
 	coucherr, iscoucherr := err.(*Error)
-	return iscoucherr && coucherr.Reason == "no_db_file"
+	if !iscoucherr {
+		return false
+	}
+	return coucherr.Reason == "no_db_file" ||
+		coucherr.Reason == "Database does not exist."
 }
 
 func newRequestError(originalError error) error {
