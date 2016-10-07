@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 )
 
 // This file contains error handling code for couchdb request
@@ -50,8 +51,6 @@ import (
 // 		supplied JSON was invalid, or invalid information was supplied as part
 // 		of the request.
 
-const ()
-
 // Error represent an error from couchdb
 type Error struct {
 	StatusCode  int
@@ -68,29 +67,29 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("CouchdbError %d : %s(%s)", e.StatusCode, e.Name, e.Reason)
 }
 
-// JSON returns the hash to ouput in HTTP for a given error
+// JSON returns the json representation of this error
 func (e *Error) JSON() map[string]interface{} {
-	json := map[string]interface{}{
-		"status": string(e.StatusCode),
+	jsonMap := map[string]interface{}{
+		"status": strconv.Itoa(e.StatusCode),
 		"error":  e.Name,
 		"reason": e.Reason,
 	}
 	if e.Original != nil {
-		json["original"] = e.Original.Error()
+		jsonMap["original"] = e.Original.Error()
 	}
-	return json
+	return jsonMap
 }
 
 func isNoDatabaseError(err error) bool {
 	if err == nil {
 		return false
 	}
-	coucherr, iscoucherr := err.(*Error)
-	if !iscoucherr {
+	couchErr, isCouchErr := err.(*Error)
+	if !isCouchErr {
 		return false
 	}
-	return coucherr.Reason == "no_db_file" ||
-		coucherr.Reason == "Database does not exist."
+	return couchErr.Reason == "no_db_file" ||
+		couchErr.Reason == "Database does not exist."
 }
 
 func newRequestError(originalError error) error {
