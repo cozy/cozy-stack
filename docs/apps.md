@@ -252,15 +252,15 @@ Content-Type: application/vnd.api+json
 
 ### POST /apps/:slug
 
-Install an application, ie download the files and put them in `/apps/:slug` in
-the virtual file system of the user, create an `io.cozy/apps` document,
-register the permissions, etc.
+Install or update an application, ie download the files and put them in
+`/apps/:slug` in the virtual file system of the user, create an `io.cozy/apps`
+document, register the permissions, etc.
 
 #### Query-String
 
 Parameter | Description
-----------|-----------------------------------------
-Source    | URL from where the app can be downloaded
+----------|------------------------------------------------------------
+Source    | URL from where the app can be downloaded (only for install)
 
 #### Request
 
