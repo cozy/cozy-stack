@@ -24,7 +24,7 @@ var statusCmd = &cobra.Command{
 		url := &url.URL{
 			Scheme: "http",
 			Host:   config.GetConfig().Host + ":" + strconv.Itoa(config.GetConfig().Port),
-			Path:   "/status",
+			Path:   "status",
 		}
 		resp, err := http.Get(url.String())
 		if err != nil {
