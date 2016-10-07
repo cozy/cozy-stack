@@ -1,6 +1,8 @@
 package couchdb
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/sourcegraph/checkup"
@@ -21,20 +23,11 @@ func makeTestDoc() Doc {
 	}
 }
 
-func TestMain(t *testing.T) {
-
-	TestErrors(t)
-
-	// First we make sure couchdb is started
-	couchdb, err := checkup.HTTPChecker{URL: CouchDBURL}.Check()
-	if err != nil || couchdb.Status() != checkup.Healthy {
-		t.Fatal("This test need couchdb to run.")
-	}
-
+func TestCreateDoc(t *testing.T) {
 	var TESTPREFIX = "dev/"
 	var TESTTYPE = "io.cozy.testobject"
 	var doc = makeTestDoc()
-	err = CreateDoc(TESTPREFIX, TESTTYPE, doc)
+	err := CreateDoc(TESTPREFIX, TESTTYPE, doc)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, doc["_id"])
 	docType, id := doc.GetDoctypeAndID()
@@ -43,5 +36,15 @@ func TestMain(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, out["_id"], doc["_id"])
 	assert.Equal(t, out["test"], "somevalue")
+}
 
+func TestMain(m *testing.M) {
+	// First we make sure couchdb is started
+	couchdb, err := checkup.HTTPChecker{URL: CouchDBURL}.Check()
+	if err != nil || couchdb.Status() != checkup.Healthy {
+		fmt.Println("This test need couchdb to run.")
+		os.Exit(1)
+	}
+
+	os.Exit(m.Run())
 }
