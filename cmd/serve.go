@@ -16,7 +16,7 @@ var serveCmd = &cobra.Command{
 	Short: "Starts the stack and listens for HTTP calls",
 	Long: `Starts the stack and listens for HTTP calls
 It will accept HTTP requests on localhost:8080 by default.
-Use the --port and --address flags to change the listening option.`,
+Use the --port and --host flags to change the listening option.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := Configure(); err != nil {
 			return err
@@ -25,8 +25,8 @@ Use the --port and --address flags to change the listening option.`,
 		router := getGin()
 		web.SetupRoutes(router)
 
-		address := config.GetConfig().Address + ":" + strconv.Itoa(config.GetConfig().Port)
-		return router.Run(address)
+		addr := config.GetConfig().Host + ":" + strconv.Itoa(config.GetConfig().Port)
+		return router.Run(addr)
 	},
 }
 
