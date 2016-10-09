@@ -19,13 +19,24 @@ type updateResponse struct {
 	Ok  bool   `json:"ok"`
 }
 
-// Doc : A couchdb Doc is just a json object
-type Doc map[string]interface{}
+// Doc is the interface that encapsulate a couchdb document, of any
+// serializable type. This interface defines method to set and get the
+// ID of the document.
+type Doc interface {
+	GetID() string
+	SetID(id string)
+}
 
-// GetDoctypeAndID returns the doctype and unqualified id of a document
-func (d Doc) GetDoctypeAndID() (string, string) {
-	parts := strings.Split(d["_id"].(string), "/")
-	return parts[0], parts[1]
+// JSONDoc is a map representing a simple json object that implements
+// the Doc interface.
+type JSONDoc map[string]interface{}
+
+func (j JSONDoc) GetID() string {
+	return j["_id"].(string)
+}
+
+func (j JSONDoc) SetID(id string) {
+	j["_id"] = id
 }
 
 // CouchURL is the URL where to check if CouchDB is up
@@ -43,17 +54,13 @@ func makeDBName(dbprefix, doctype string) string {
 	return url.QueryEscape(dbname)
 }
 
-func makeDocID(doctype string, id string) string {
-	return url.QueryEscape(doctype + "/" + id)
-}
-
 func docURL(dbprefix, doctype, id string) string {
-	return makeDBName(dbprefix, doctype) + "/" + makeDocID(doctype, id)
+	return makeDBName(dbprefix, doctype) + "/" + url.QueryEscape(doctype+"/"+id)
 }
 
-func makeUUID() string {
+func genDocID(doctype string) string {
 	u := uuid.NewV4()
-	return hex.EncodeToString(u[:])
+	return doctype + "/" + hex.EncodeToString(u[:])
 }
 
 func makeRequest(method, path string, reqbody interface{}, resbody interface{}) error {
@@ -107,7 +114,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 
 // GetDoc fetch a document by its docType and ID, out is filled with
 // the document by json.Unmarshal-ing
-func GetDoc(dbprefix, doctype, id string, out *Doc) error {
+func GetDoc(dbprefix, doctype, id string, out Doc) error {
 	err := makeRequest("GET", docURL(dbprefix, doctype, id), nil, out)
 	if isNoDatabaseError(err) {
 		err.(*Error).Reason = "wrong_doctype"
@@ -134,34 +141,47 @@ func ResetDB(dbprefix, doctype string) error {
 	return CreateDB(dbprefix, doctype)
 }
 
-func attemptCreateDBAndDoc(dbprefix, doctype string, doc Doc) error {
-	createErr := CreateDB(dbprefix, doctype)
-	if createErr != nil {
-		return createErr
+func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err error) {
+	db := makeDBName(dbprefix, doctype)
+	err = makeRequest("POST", db, doc, response)
+	if err == nil || !isNoDatabaseError(err) {
+		return
 	}
-	return CreateDoc(dbprefix, doctype, doc)
+
+	err = CreateDB(dbprefix, doctype)
+	if err == nil {
+		err = makeRequest("POST", db, doc, response)
+	}
+	return
 }
 
-// CreateDoc creates a document in couchdb. It modifies doc in place to add
-// _id and _rev.
-func CreateDoc(dbprefix, doctype string, doc Doc) error {
-	var response updateResponse
+// CreateDoc is used to persist the given document in the couchdb
+// database. It returns the revision of the added document and sets the
+// document id.
+func CreateDoc(dbprefix, doctype string, doc Doc) (rev string, err error) {
+	var res *updateResponse
 
-	doc["_id"] = doctype + "/" + makeUUID()
-
-	err := makeRequest("POST", makeDBName(dbprefix, doctype), &doc, &response)
-	if isNoDatabaseError(err) {
-		return attemptCreateDBAndDoc(dbprefix, doctype, doc)
+	if doc.GetID() != "" {
+		err = fmt.Errorf("Can not create document with a defined ID")
+		return
 	}
+
+	doc.SetID(genDocID(doctype))
+	err = createDocOrDb(dbprefix, doctype, doc, &res)
 	if err != nil {
-		return err
+		return
 	}
-	if !response.Ok {
-		return fmt.Errorf("couchdb replied with 200 ok=false")
+
+	if !res.Ok {
+		err = fmt.Errorf("CouchDB replied with 200 ok=false")
+		return
 	}
-	// assign extracted values to the given doc
-	// doubt : should we instead try to be more immutable and make a new map ?
-	doc["_id"] = response.ID
-	doc["_rev"] = response.Rev
-	return nil
+
+	rev = res.Rev
+	return
+}
+
+func GetDoctypeAndID(doc Doc) (string, string) {
+	parts := strings.Split(doc.GetID(), "/")
+	return parts[0], parts[1]
 }

@@ -27,7 +27,7 @@ func getDoc(c *gin.Context) {
 
 	prefix := instance.GetDatabasePrefix()
 
-	var out couchdb.Doc
+	var out couchdb.JSONDoc
 	err := couchdb.GetDoc(prefix, doctype, c.Param("docid"), &out)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
@@ -39,16 +39,16 @@ func getDoc(c *gin.Context) {
 // CreateDoc create doc from the json passed as body
 func createDoc(c *gin.Context) {
 	doctype := c.MustGet("doctype").(string)
-	instance := c.MustGet("instance").(*middlewares.Instance)
+	instance := middlewares.GetInstance(c)
 	prefix := instance.GetDatabasePrefix()
 
-	var doc couchdb.Doc
+	var doc couchdb.JSONDoc
 	if err := c.BindJSON(&doc); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
-	err := couchdb.CreateDoc(prefix, doctype, doc)
+	rev, err := couchdb.CreateDoc(prefix, doctype, doc)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
 		return
@@ -56,11 +56,10 @@ func createDoc(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"ok":   true,
-		"id":   doc["_id"],
-		"rev":  doc["_rev"],
+		"id":   doc.GetID(),
+		"rev":  rev,
 		"data": doc,
 	})
-
 }
 
 // Routes sets the routing for the status service

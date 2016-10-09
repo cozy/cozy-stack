@@ -17,9 +17,22 @@ func TestErrors(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing")
 }
 
+type testDoc struct {
+	ID   string `json:"_id"`
+	Test string `json:"test"`
+}
+
+func (t *testDoc) GetID() string {
+	return t.ID
+}
+
+func (t *testDoc) SetID(id string) {
+	t.ID = id
+}
+
 func makeTestDoc() Doc {
-	return map[string]interface{}{
-		"test": "somevalue",
+	return &testDoc{
+		Test: "somevalue",
 	}
 }
 
@@ -27,15 +40,18 @@ func TestCreateDoc(t *testing.T) {
 	var TESTPREFIX = "dev/"
 	var TESTTYPE = "io.cozy.testobject"
 	var doc = makeTestDoc()
-	err := CreateDoc(TESTPREFIX, TESTTYPE, doc)
+	assert.Empty(t, doc.GetID())
+	rev, err := CreateDoc(TESTPREFIX, TESTTYPE, doc)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, doc["_id"])
-	docType, id := doc.GetDoctypeAndID()
-	var out Doc
-	err = GetDoc(TESTPREFIX, docType, id, &out)
+	assert.NotEmpty(t, rev, doc.GetID())
+
+	docType, id := GetDoctypeAndID(doc)
+
+	out := &testDoc{}
+	err = GetDoc(TESTPREFIX, docType, id, out)
 	assert.NoError(t, err)
-	assert.Equal(t, out["_id"], doc["_id"])
-	assert.Equal(t, out["test"], "somevalue")
+	assert.Equal(t, out.GetID(), doc.GetID())
+	assert.Equal(t, out.Test, "somevalue")
 }
 
 func TestMain(m *testing.M) {
