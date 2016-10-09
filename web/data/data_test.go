@@ -48,10 +48,7 @@ func couchReq(method, path string, body io.Reader) (*http.Response, error) {
 	return res, nil
 }
 
-func testRoute(t *testing.T, url string, host string, jsonout interface{}) (
-	*http.Response, []byte, error) {
-
-	fmt.Println("test req", url)
+func testRoute(t *testing.T, url string, host string, jsonout interface{}) (*http.Response, []byte, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, nil, err
@@ -65,10 +62,9 @@ func testRoute(t *testing.T, url string, host string, jsonout interface{}) (
 	defer res.Body.Close()
 	body, ioerr := ioutil.ReadAll(res.Body)
 	if ioerr != nil {
-		return res, nil, nil
+		return nil, nil, ioerr
 	}
 	return res, body, json.Unmarshal(body, jsonout)
-
 }
 
 func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
