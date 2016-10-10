@@ -42,13 +42,13 @@ func createDoc(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	prefix := instance.GetDatabasePrefix()
 
-	var doc couchdb.JSONDoc
-	if err := c.BindJSON(&doc); err != nil {
+	doc := &couchdb.JSONDoc{Type: doctype}
+
+	if err := c.BindJSON(doc.Data); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
-	doc["doctype"] = doctype
 	err := couchdb.CreateDoc(prefix, doc)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
@@ -59,7 +59,7 @@ func createDoc(c *gin.Context) {
 		"ok":   true,
 		"id":   doc.ID(),
 		"rev":  doc.Rev(),
-		"data": doc,
+		"data": doc.Data,
 	})
 }
 
