@@ -18,17 +18,17 @@ func TestErrors(t *testing.T) {
 }
 
 type testDoc struct {
-	ID_  string `json:"_id"`
-	Rev_ string `json:"_rev,omitempty"`
-	Test string `json:"test"`
+	TestID  string `json:"_id"`
+	TestRev string `json:"_rev,omitempty"`
+	Test    string `json:"test"`
 }
 
 func (t *testDoc) ID() string {
-	return t.ID_
+	return t.TestID
 }
 
 func (t *testDoc) Rev() string {
-	return t.Rev_
+	return t.TestRev
 }
 
 func (t *testDoc) DocType() string {
@@ -36,11 +36,11 @@ func (t *testDoc) DocType() string {
 }
 
 func (t *testDoc) SetID(id string) {
-	t.ID_ = id
+	t.TestID = id
 }
 
 func (t *testDoc) SetRev(rev string) {
-	t.Rev_ = rev
+	t.TestRev = rev
 }
 
 func makeTestDoc() Doc {
@@ -59,7 +59,7 @@ func TestCreateDoc(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, doc.Rev(), doc.ID())
 
-	docType, id := GetDoctypeAndID(doc)
+	docType, id := doc.DocType(), doc.ID()
 
 	out := &testDoc{}
 	err = GetDoc(TESTPREFIX, docType, id, out)

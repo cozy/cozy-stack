@@ -38,22 +38,27 @@ type JSONDoc struct {
 	Data map[string]interface{}
 }
 
+// ID returns the identifier field of the document
 func (j *JSONDoc) ID() string {
 	return j.Data["_id"].(string)
 }
 
+// Rev returns the revision field of the document
 func (j *JSONDoc) Rev() string {
 	return j.Data["_rev"].(string)
 }
 
+// DocType returns the document type
 func (j *JSONDoc) DocType() string {
 	return j.Type
 }
 
+// SetID is used to set the identifier of the document
 func (j *JSONDoc) SetID(id string) {
 	j.Data["_id"] = id
 }
 
+// SetRev is used to set the revision of the document
 func (j *JSONDoc) SetRev(rev string) {
 	j.Data["_rev"] = rev
 }
@@ -200,9 +205,4 @@ func CreateDoc(dbprefix string, doc Doc) (err error) {
 
 	doc.SetRev(res.Rev)
 	return
-}
-
-func GetDoctypeAndID(doc Doc) (string, string) {
-	parts := strings.Split(doc.ID(), "/")
-	return parts[0], parts[1]
 }
