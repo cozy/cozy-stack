@@ -162,9 +162,7 @@ func ResetDB(dbprefix, doctype string) error {
 	return CreateDB(dbprefix, doctype)
 }
 
-func createDocOrDb(dbprefix string, doc Doc, response interface{}) (err error) {
-	doctype := doc.DocType()
-
+func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err error) {
 	db := makeDBName(dbprefix, doctype)
 	err = makeRequest("POST", db, doc, response)
 	if err == nil || !isNoDatabaseError(err) {
@@ -181,7 +179,9 @@ func createDocOrDb(dbprefix string, doc Doc, response interface{}) (err error) {
 // CreateDoc is used to persist the given document in the couchdb
 // database. It returns the revision of the added document and sets the
 // document id.
-func CreateDoc(dbprefix string, doc Doc) (err error) {
+//
+// @TODO: we still pass the doctype around to handle the /data api
+func CreateDoc(dbprefix, doctype string, doc Doc) (err error) {
 	var res *updateResponse
 
 	if doc.ID() != "" {
@@ -189,8 +189,8 @@ func CreateDoc(dbprefix string, doc Doc) (err error) {
 		return
 	}
 
-	doc.SetID(genDocID(doc.DocType()))
-	err = createDocOrDb(dbprefix, doc, &res)
+	doc.SetID(genDocID(doctype))
+	err = createDocOrDb(dbprefix, doctype, doc, &res)
 	if err != nil {
 		return
 	}

@@ -55,7 +55,7 @@ func TestCreateDoc(t *testing.T) {
 	var TESTPREFIX = "dev/"
 	var doc = makeTestDoc()
 	assert.Empty(t, doc.Rev(), doc.ID())
-	err = CreateDoc(TESTPREFIX, doc)
+	err = CreateDoc(TESTPREFIX, "io.cozy.testobject", doc)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, doc.Rev(), doc.ID())
 
