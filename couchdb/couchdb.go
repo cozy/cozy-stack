@@ -33,34 +33,31 @@ type Doc interface {
 
 // JSONDoc is a map representing a simple json object that implements
 // the Doc interface.
-type JSONDoc struct {
-	Type string
-	Data map[string]interface{}
-}
+type JSONDoc map[string]interface{}
 
 // ID returns the identifier field of the document
-func (j *JSONDoc) ID() string {
-	return j.Data["_id"].(string)
+func (j JSONDoc) ID() string {
+	return j["_id"].(string)
 }
 
 // Rev returns the revision field of the document
-func (j *JSONDoc) Rev() string {
-	return j.Data["_rev"].(string)
+func (j JSONDoc) Rev() string {
+	return j["_rev"].(string)
 }
 
 // DocType returns the document type
-func (j *JSONDoc) DocType() string {
-	return j.Type
+func (j JSONDoc) DocType() string {
+	return j["doctype"].(string)
 }
 
 // SetID is used to set the identifier of the document
-func (j *JSONDoc) SetID(id string) {
-	j.Data["_id"] = id
+func (j JSONDoc) SetID(id string) {
+	j["_id"] = id
 }
 
 // SetRev is used to set the revision of the document
-func (j *JSONDoc) SetRev(rev string) {
-	j.Data["_rev"] = rev
+func (j JSONDoc) SetRev(rev string) {
+	j["_rev"] = rev
 }
 
 // CouchURL is the URL where to check if CouchDB is up
