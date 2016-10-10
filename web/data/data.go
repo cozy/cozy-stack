@@ -48,7 +48,8 @@ func createDoc(c *gin.Context) {
 		return
 	}
 
-	rev, err := couchdb.CreateDoc(prefix, doctype, doc)
+	doc["doctype"] = doctype
+	err := couchdb.CreateDoc(prefix, doc)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
 		return
@@ -56,8 +57,8 @@ func createDoc(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"ok":   true,
-		"id":   doc.GetID(),
-		"rev":  rev,
+		"id":   doc.ID(),
+		"rev":  doc.Rev(),
 		"data": doc,
 	})
 }

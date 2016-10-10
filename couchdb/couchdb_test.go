@@ -18,16 +18,29 @@ func TestErrors(t *testing.T) {
 }
 
 type testDoc struct {
-	ID   string `json:"_id"`
+	ID_  string `json:"_id"`
+	Rev_ string `json:"_rev,omitempty"`
 	Test string `json:"test"`
 }
 
-func (t *testDoc) GetID() string {
-	return t.ID
+func (t *testDoc) ID() string {
+	return t.ID_
+}
+
+func (t *testDoc) Rev() string {
+	return t.Rev_
+}
+
+func (t *testDoc) DocType() string {
+	return "io.cozy.testobject"
 }
 
 func (t *testDoc) SetID(id string) {
-	t.ID = id
+	t.ID_ = id
+}
+
+func (t *testDoc) SetRev(rev string) {
+	t.Rev_ = rev
 }
 
 func makeTestDoc() Doc {
@@ -37,20 +50,21 @@ func makeTestDoc() Doc {
 }
 
 func TestCreateDoc(t *testing.T) {
+	var err error
+
 	var TESTPREFIX = "dev/"
-	var TESTTYPE = "io.cozy.testobject"
 	var doc = makeTestDoc()
-	assert.Empty(t, doc.GetID())
-	rev, err := CreateDoc(TESTPREFIX, TESTTYPE, doc)
+	assert.Empty(t, doc.Rev(), doc.ID())
+	err = CreateDoc(TESTPREFIX, doc)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, rev, doc.GetID())
+	assert.NotEmpty(t, doc.Rev(), doc.ID())
 
 	docType, id := GetDoctypeAndID(doc)
 
 	out := &testDoc{}
 	err = GetDoc(TESTPREFIX, docType, id, out)
 	assert.NoError(t, err)
-	assert.Equal(t, out.GetID(), doc.GetID())
+	assert.Equal(t, out.ID(), doc.ID())
 	assert.Equal(t, out.Test, "somevalue")
 }
 

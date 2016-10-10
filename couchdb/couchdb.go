@@ -23,20 +23,36 @@ type updateResponse struct {
 // serializable type. This interface defines method to set and get the
 // ID of the document.
 type Doc interface {
-	GetID() string
+	ID() string
+	Rev() string
+	DocType() string
+
 	SetID(id string)
+	SetRev(rev string)
 }
 
 // JSONDoc is a map representing a simple json object that implements
 // the Doc interface.
 type JSONDoc map[string]interface{}
 
-func (j JSONDoc) GetID() string {
+func (j JSONDoc) ID() string {
 	return j["_id"].(string)
+}
+
+func (j JSONDoc) Rev() string {
+	return j["_rev"].(string)
+}
+
+func (j JSONDoc) DocType() string {
+	return j["doctype"].(string)
 }
 
 func (j JSONDoc) SetID(id string) {
 	j["_id"] = id
+}
+
+func (j JSONDoc) SetRev(rev string) {
+	j["_rev"] = rev
 }
 
 // CouchURL is the URL where to check if CouchDB is up
@@ -141,7 +157,9 @@ func ResetDB(dbprefix, doctype string) error {
 	return CreateDB(dbprefix, doctype)
 }
 
-func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err error) {
+func createDocOrDb(dbprefix string, doc Doc, response interface{}) (err error) {
+	doctype := doc.DocType()
+
 	db := makeDBName(dbprefix, doctype)
 	err = makeRequest("POST", db, doc, response)
 	if err == nil || !isNoDatabaseError(err) {
@@ -158,16 +176,16 @@ func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err
 // CreateDoc is used to persist the given document in the couchdb
 // database. It returns the revision of the added document and sets the
 // document id.
-func CreateDoc(dbprefix, doctype string, doc Doc) (rev string, err error) {
+func CreateDoc(dbprefix string, doc Doc) (err error) {
 	var res *updateResponse
 
-	if doc.GetID() != "" {
+	if doc.ID() != "" {
 		err = fmt.Errorf("Can not create document with a defined ID")
 		return
 	}
 
-	doc.SetID(genDocID(doctype))
-	err = createDocOrDb(dbprefix, doctype, doc, &res)
+	doc.SetID(genDocID(doc.DocType()))
+	err = createDocOrDb(dbprefix, doc, &res)
 	if err != nil {
 		return
 	}
@@ -177,11 +195,11 @@ func CreateDoc(dbprefix, doctype string, doc Doc) (rev string, err error) {
 		return
 	}
 
-	rev = res.Rev
+	doc.SetRev(res.Rev)
 	return
 }
 
 func GetDoctypeAndID(doc Doc) (string, string) {
-	parts := strings.Split(doc.GetID(), "/")
+	parts := strings.Split(doc.ID(), "/")
 	return parts[0], parts[1]
 }
