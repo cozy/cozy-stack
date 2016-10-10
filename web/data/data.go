@@ -24,11 +24,12 @@ func validDoctype(c *gin.Context) {
 func getDoc(c *gin.Context) {
 	instance := c.MustGet("instance").(*middlewares.Instance)
 	doctype := c.MustGet("doctype").(string)
+	docid := doctype + "/" + c.Param("docid")
 
 	prefix := instance.GetDatabasePrefix()
 
 	var out couchdb.JSONDoc
-	err := couchdb.GetDoc(prefix, doctype, c.Param("docid"), &out)
+	err := couchdb.GetDoc(prefix, doctype, docid, &out)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
 		return

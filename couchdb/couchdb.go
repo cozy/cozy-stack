@@ -76,7 +76,7 @@ func makeDBName(dbprefix, doctype string) string {
 }
 
 func docURL(dbprefix, doctype, id string) string {
-	return makeDBName(dbprefix, doctype) + "/" + url.QueryEscape(doctype+"/"+id)
+	return makeDBName(dbprefix, doctype) + "/" + url.QueryEscape(id)
 }
 
 func genDocID(doctype string) string {
