@@ -24,11 +24,12 @@ func validDoctype(c *gin.Context) {
 func getDoc(c *gin.Context) {
 	instance := c.MustGet("instance").(*middlewares.Instance)
 	doctype := c.MustGet("doctype").(string)
+	docid := doctype + "/" + c.Param("docid")
 
 	prefix := instance.GetDatabasePrefix()
 
-	var out couchdb.Doc
-	err := couchdb.GetDoc(prefix, doctype, c.Param("docid"), &out)
+	var out couchdb.JSONDoc
+	err := couchdb.GetDoc(prefix, doctype, docid, &out)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
 		return
@@ -39,10 +40,10 @@ func getDoc(c *gin.Context) {
 // CreateDoc create doc from the json passed as body
 func createDoc(c *gin.Context) {
 	doctype := c.MustGet("doctype").(string)
-	instance := c.MustGet("instance").(*middlewares.Instance)
+	instance := middlewares.GetInstance(c)
 	prefix := instance.GetDatabasePrefix()
 
-	var doc couchdb.Doc
+	var doc couchdb.JSONDoc
 	if err := c.BindJSON(&doc); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
@@ -56,11 +57,10 @@ func createDoc(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"ok":   true,
-		"id":   doc["_id"],
-		"rev":  doc["_rev"],
+		"id":   doc.ID(),
+		"rev":  doc.Rev(),
 		"data": doc,
 	})
-
 }
 
 // Routes sets the routing for the status service
