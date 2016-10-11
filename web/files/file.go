@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
 
@@ -25,36 +24,53 @@ type fileAttributes struct {
 	Mime       string    `json:"mime"`
 }
 
-type fileDoc struct {
-	QID      string          `json:"_id"`
-	FRev     string          `json:"_rev,omitempty"`
-	Attrs    *fileAttributes `json:"attributes"`
-	FolderID string          `json:"folderID"`
-	Path     string          `json:"path"`
+// FileDoc is a struct containing all the informations about a file.
+// It implements the couchdb.Doc and jsonapi.JSONApier interfaces.
+type FileDoc struct {
+	// Qualified file identifier
+	QID string `json:"_id"`
+	// File revision
+	FRev string `json:"_rev,omitempty"`
+	// File attributes
+	Attrs *fileAttributes `json:"attributes"`
+	// Parent folder identifier
+	FolderID string `json:"folderID"`
+	// File path on VFS
+	Path string `json:"path"`
 }
 
-func (f *fileDoc) ID() string {
+// ID returns the file qualified identifier (part of couchdb.Doc
+// interface)
+func (f *FileDoc) ID() string {
 	return f.QID
 }
 
-func (f *fileDoc) Rev() string {
+// Rev returns the file revision (part of couchdb.Doc interface)
+func (f *FileDoc) Rev() string {
 	return f.FRev
 }
 
-func (f *fileDoc) DocType() string {
+// DocType returns the file document type (part of couchdb.Doc
+// interface)
+func (f *FileDoc) DocType() string {
 	return string(FileDocType)
 }
 
-func (f *fileDoc) SetID(id string) {
+// SetID is used to change the file qualified identifier (part of
+// couchdb.Doc interface)
+func (f *FileDoc) SetID(id string) {
 	f.QID = id
 }
 
-func (f *fileDoc) SetRev(rev string) {
+// SetRev is used to change the file revision (part of couchdb.Doc
+// interface)
+func (f *FileDoc) SetRev(rev string) {
 	f.FRev = rev
 }
 
-// implement temporary interface JSONApier
-func (f *fileDoc) ToJSONApi() ([]byte, error) {
+// ToJSONApi implements temporary interface JSONApier to serialize
+// the file document
+func (f *FileDoc) ToJSONApi() ([]byte, error) {
 	qid := f.QID
 	data := map[string]interface{}{
 		"id":         qid[strings.Index(qid, "/")+1:],
@@ -69,9 +85,10 @@ func (f *fileDoc) ToJSONApi() ([]byte, error) {
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.ReadCloser) (jsonapier jsonapi.JSONApier, err error) {
+func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
 	if m.Type != FileDocType {
-		return errDocTypeInvalid
+		err = errDocTypeInvalid
+		return
 	}
 
 	pth, _, err := createNewFilePath(m, fs, dbPrefix)
@@ -92,7 +109,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.R
 		Mime:       "text/plain", // @TODO
 	}
 
-	doc := &fileDoc{
+	doc = &FileDoc{
 		Attrs:    attrs,
 		FolderID: m.FolderID,
 		Path:     pth,
@@ -121,7 +138,6 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.R
 		return
 	}
 
-	jsonapier = jsonapi.JSONApier(doc)
 	return
 }
 

@@ -235,7 +235,7 @@ func checkFileName(str string) error {
 // defined is the database and filesystem and it will generate the new
 // path of the wanted file, checking if there is not colision with
 // existing file.
-func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth string, parentDoc *dirDoc, err error) {
+func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth string, parentDoc *DirDoc, err error) {
 	folderID := m.FolderID
 
 	var parentPath string
@@ -244,7 +244,7 @@ func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth s
 		parentPath = "/"
 	} else {
 		qFolderID := string(FolderDocType) + "/" + folderID
-		parentDoc = &dirDoc{}
+		parentDoc = &DirDoc{}
 
 		// NOTE: we only check the existence of the folder on the db
 		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), qFolderID, parentDoc)
@@ -264,7 +264,8 @@ func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth s
 		return
 	}
 	if exists {
-		return errDocAlreadyExists
+		err = errDocAlreadyExists
+		return
 	}
 
 	return

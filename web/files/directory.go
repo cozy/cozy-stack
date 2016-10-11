@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
 
@@ -17,36 +16,53 @@ type dirAttributes struct {
 	Tags      []string  `json:"tags"`
 }
 
-type dirDoc struct {
-	QID      string         `json:"_id"`
-	DRev     string         `json:"_rev,omitempty"`
-	Attrs    *dirAttributes `json:"attributes"`
-	FolderID string         `json:"folderID"`
-	Path     string         `json:"path"`
+// DirDoc is a struct containing all the informations about a
+// directory. It implements the couchdb.Doc and jsonapi.JSONApier
+// interfaces.
+type DirDoc struct {
+	// Qualified file identifier
+	QID string `json:"_id"`
+	// Directory revision
+	DRev string `json:"_rev,omitempty"`
+	// Directory attributes
+	Attrs *dirAttributes `json:"attributes"`
+	// Parent folder identifier
+	FolderID string `json:"folderID"`
+	// Directory path on VFS
+	Path string `json:"path"`
 }
 
-func (d *dirDoc) ID() string {
+// ID returns the directory qualified identifier (part of couchdb.Doc interface)
+func (d *DirDoc) ID() string {
 	return d.QID
 }
 
-func (d *dirDoc) Rev() string {
+// Rev returns the directory revision (part of couchdb.Doc interface)
+func (d *DirDoc) Rev() string {
 	return d.DRev
 }
 
-func (d *dirDoc) DocType() string {
+// DocType returns the directory document type (part of couchdb.Doc
+// interface)
+func (d *DirDoc) DocType() string {
 	return string(FolderDocType)
 }
 
-func (d *dirDoc) SetID(id string) {
+// SetID is used to change the directory qualified identifier (part of
+// couchdb.Doc interface)
+func (d *DirDoc) SetID(id string) {
 	d.QID = id
 }
 
-func (d *dirDoc) SetRev(rev string) {
+// SetRev is used to change the directory revision (part of
+// couchdb.Doc interface)
+func (d *DirDoc) SetRev(rev string) {
 	d.DRev = rev
 }
 
-// implement temporary interface JSONApier
-func (d *dirDoc) ToJSONApi() ([]byte, error) {
+// ToJSONApi implements temporary interface JSONApier to serialize
+// the directory document
+func (d *DirDoc) ToJSONApi() ([]byte, error) {
 	qid := d.QID
 	data := map[string]interface{}{
 		"type":       d.DocType(),
@@ -61,7 +77,7 @@ func (d *dirDoc) ToJSONApi() ([]byte, error) {
 }
 
 // CreateDirectory is the method for creating a new directory
-func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (jsonapier jsonapi.JSONApier, err error) {
+func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (doc *DirDoc, err error) {
 	if m.Type != FolderDocType {
 		err = errDocTypeInvalid
 		return
@@ -80,7 +96,7 @@ func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (jsonapier js
 		Tags:      m.Tags,
 	}
 
-	doc := &dirDoc{
+	doc = &DirDoc{
 		Attrs:    attrs,
 		FolderID: m.FolderID,
 		Path:     pth,
@@ -100,6 +116,5 @@ func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (jsonapier js
 		return
 	}
 
-	jsonapier = jsonapi.JSONApier(doc)
 	return
 }
