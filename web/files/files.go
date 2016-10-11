@@ -264,8 +264,7 @@ func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth s
 		return
 	}
 	if exists {
-		err = errDocAlreadyExists
-		return
+		return errDocAlreadyExists
 	}
 
 	return

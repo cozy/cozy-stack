@@ -71,8 +71,7 @@ func (f *fileDoc) ToJSONApi() ([]byte, error) {
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
 func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.ReadCloser) (jsonapier jsonapi.JSONApier, err error) {
 	if m.Type != FileDocType {
-		err = errDocTypeInvalid
-		return
+		return errDocTypeInvalid
 	}
 
 	pth, _, err := createNewFilePath(m, fs, dbPrefix)
@@ -143,8 +142,7 @@ func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.Rea
 
 	calcMD5 := md5H.Sum(nil)
 	if !bytes.Equal(m.GivenMD5, calcMD5) {
-		err = errInvalidHash
-		return
+		return errInvalidHash
 	}
 
 	return
