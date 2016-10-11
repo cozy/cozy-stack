@@ -177,11 +177,15 @@ func ResetDB(dbprefix, doctype string) (err error) {
 // Delete destroy a document by its doctype and ID .
 // If the document's current rev does not match the one passed,
 // a CouchdbError(409 conflict) will be returned.
-func Delete(dbprefix, doctype, id, rev string) (err error) {
+func Delete(dbprefix, doctype, id, rev string) (tombrev string, err error) {
 	var res updateResponse
 	qs := url.Values{"rev": []string{rev}}
 	url := docURL(dbprefix, doctype, id) + "?" + qs.Encode()
-	return makeRequest("DELETE", url, nil, &res)
+	err = makeRequest("DELETE", url, nil, &res)
+	if err == nil {
+		tombrev = res.Rev
+	}
+	return
 }
 
 // DeleteDoc deletes a struct implementing the couchb.Doc interface
@@ -189,7 +193,11 @@ func DeleteDoc(dbprefix string, doc Doc) (err error) {
 	doctype := doc.DocType()
 	id := doc.ID()
 	rev := doc.Rev()
-	return Delete(dbprefix, doctype, id, rev)
+	tombrev, err := Delete(dbprefix, doctype, id, rev)
+	if err == nil {
+		doc.SetRev(tombrev)
+	}
+	return
 }
 
 // UpdateDoc update a document. The document ID and Rev should be fillled.

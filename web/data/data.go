@@ -101,7 +101,7 @@ func deleteDoc(c *gin.Context) {
 		return
 	}
 
-	err := couchdb.Delete(prefix, doctype, docid, rev)
+	tombrev, err := couchdb.Delete(prefix, doctype, docid, rev)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
 		return
@@ -110,6 +110,7 @@ func deleteDoc(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"ok":      true,
 		"id":      docid,
+		"rev":     tombrev,
 		"deleted": true,
 	})
 
