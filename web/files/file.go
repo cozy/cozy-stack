@@ -14,7 +14,6 @@ import (
 )
 
 type fileAttributes struct {
-	Rev        string    `json:"rev,omitempty"`
 	Name       string    `json:"name"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
@@ -28,6 +27,7 @@ type fileAttributes struct {
 
 type fileDoc struct {
 	QID      string          `json:"_id"`
+	FRev     string          `json:"_rev,omitempty"`
 	Attrs    *fileAttributes `json:"attributes"`
 	FolderID string          `json:"folderID"`
 	Path     string          `json:"path"`
@@ -38,7 +38,7 @@ func (f *fileDoc) ID() string {
 }
 
 func (f *fileDoc) Rev() string {
-	return f.Attrs.Rev
+	return f.FRev
 }
 
 func (f *fileDoc) DocType() string {
@@ -50,14 +50,16 @@ func (f *fileDoc) SetID(id string) {
 }
 
 func (f *fileDoc) SetRev(rev string) {
-	f.Attrs.Rev = rev
+	f.FRev = rev
 }
 
 // implement temporary interface JSONApier
 func (f *fileDoc) ToJSONApi() ([]byte, error) {
 	qid := f.QID
 	dat := map[string]interface{}{
+		"type":       f.DocType(),
 		"id":         qid[strings.Index(qid, "/")+1:],
+		"rev":        f.Rev(),
 		"attributes": f.Attrs,
 	}
 	m := map[string]interface{}{

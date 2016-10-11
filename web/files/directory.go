@@ -11,7 +11,6 @@ import (
 )
 
 type dirAttributes struct {
-	Rev       string    `json:"rev,omitempty"`
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -20,6 +19,7 @@ type dirAttributes struct {
 
 type dirDoc struct {
 	QID      string         `json:"_id"`
+	DRev     string         `json:"_rev,omitempty"`
 	Attrs    *dirAttributes `json:"attributes"`
 	FolderID string         `json:"folderID"`
 	Path     string         `json:"path"`
@@ -30,7 +30,7 @@ func (d *dirDoc) ID() string {
 }
 
 func (d *dirDoc) Rev() string {
-	return d.Attrs.Rev
+	return d.DRev
 }
 
 func (d *dirDoc) DocType() string {
@@ -42,14 +42,16 @@ func (d *dirDoc) SetID(id string) {
 }
 
 func (d *dirDoc) SetRev(rev string) {
-	d.Attrs.Rev = rev
+	d.DRev = rev
 }
 
 // implement temporary interface JSONApier
 func (d *dirDoc) ToJSONApi() ([]byte, error) {
 	qid := d.QID
 	dat := map[string]interface{}{
+		"type":       d.DocType(),
 		"id":         qid[strings.Index(qid, "/")+1:],
+		"rev":        d.Rev(),
 		"attributes": d.Attrs,
 	}
 	m := map[string]interface{}{
