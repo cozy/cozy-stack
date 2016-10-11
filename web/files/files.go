@@ -10,8 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
@@ -51,10 +53,6 @@ type DocMetadata struct {
 	Executable bool
 	Tags       []string
 	GivenMD5   []byte
-}
-
-func (m *DocMetadata) path() string {
-	return m.FolderID + "/" + m.Name
 }
 
 // NewDocMetadata is the DocMetadata constructor. All inputs are
@@ -99,31 +97,6 @@ func NewDocMetadata(docTypeStr, name, folderID, tagsStr, md5Str string, executab
 	return
 }
 
-// CreateDirectory is the method for creating a new directory
-//
-// @TODO
-func CreateDirectory(m *DocMetadata, storage afero.Fs) (err error) {
-	if m.Type != FolderDocType {
-		return errDocTypeInvalid
-	}
-
-	if err = checkParentFolderID(storage, m.FolderID); err != nil {
-		return
-	}
-
-	path := m.path()
-
-	exists, err := afero.DirExists(storage, path)
-	if err != nil {
-		return
-	}
-	if exists {
-		return errDocAlreadyExists
-	}
-
-	return storage.Mkdir(path, 0777)
-}
-
 // CreationHandler handle all POST requests on /files/:folder-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
@@ -132,6 +105,7 @@ func CreateDirectory(m *DocMetadata, storage afero.Fs) (err error) {
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func CreationHandler(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
+	dbPrefix := instance.GetDatabasePrefix()
 	storage, err := instance.GetStorageProvider()
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
@@ -161,11 +135,12 @@ func CreationHandler(c *gin.Context) {
 
 	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", m.Name, m, contentType)
 
+	var doc jsonapi.JSONApier
 	switch m.Type {
 	case FileDocType:
-		err = Upload(m, storage, c.Request.Body)
+		doc, err = CreateFileAndUpload(m, storage, dbPrefix, c.Request.Body)
 	case FolderDocType:
-		err = CreateDirectory(m, storage)
+		doc, err = CreateDirectory(m, storage, dbPrefix)
 	}
 
 	if err != nil {
@@ -173,7 +148,12 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	data := []byte{'O', 'K'}
+	data, err := doc.ToJSONApi()
+	if err != nil {
+		c.AbortWithError(makeCode(err), err)
+		return
+	}
+
 	c.Data(http.StatusCreated, jsonapi.ContentType, data)
 }
 
@@ -245,17 +225,42 @@ func checkFileName(str string) error {
 	return nil
 }
 
-func checkParentFolderID(storage afero.Fs, folderID string) (err error) {
+// checkParentFolderID is used to generate the filepath of a new file
+// or directory. It will check if the given parent folderID is well
+// defined is the database and filesystem and it will generate the new
+// path of the wanted file, checking if there is not colision with
+// existing file.
+func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth string, parentDoc *dirDoc, err error) {
+	folderID := m.FolderID
+
+	var parentPath string
+
 	if folderID == "" {
-		return
+		parentPath = "/"
+	} else {
+		qFolderID := string(FolderDocType) + "/" + folderID
+		parentDoc = &dirDoc{}
+
+		// NOTE: we only check the existence of the folder on the db
+		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), qFolderID, parentDoc)
+		if couchdb.IsNotFoundError(err) {
+			err = errParentDoesNotExist
+		}
+		if err != nil {
+			return
+		}
+
+		parentPath = parentDoc.Path
 	}
 
-	exists, err := afero.DirExists(storage, folderID)
+	pth = path.Join(parentPath, m.Name)
+	exists, err := afero.Exists(storage, pth)
 	if err != nil {
 		return
 	}
-	if !exists {
-		err = errParentDoesNotExist
+	if exists {
+		err = errDocAlreadyExists
+		return
 	}
 
 	return
