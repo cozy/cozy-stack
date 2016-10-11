@@ -102,7 +102,7 @@ func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (jsonapier js
 		return
 	}
 
-	if err = fs.Mkdir(pth, 0777); err != nil {
+	if err = fs.Mkdir(pth, 0755); err != nil {
 		return
 	}
 
