@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const COUCHURL = "http://localhost:5984/"
+const CouchURL = "http://localhost:5984/"
 
 var ts *httptest.Server
 var instance *middlewares.Instance
@@ -223,7 +223,7 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	// First we make sure couchdb is started
-	couchdb, err := checkup.HTTPChecker{URL: COUCHURL}.Check()
+	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
 	if err != nil || couchdb.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)

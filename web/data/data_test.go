@@ -20,11 +20,11 @@ import (
 
 var client = &http.Client{}
 
-const COUCHURL = "http://localhost:5984/"
-const HOST = "example.com"
-const TYPE = "io.cozy.events"
+const CouchURL = "http://localhost:5984/"
+const Host = "example.com"
+const Type = "io.cozy.events"
 const ID = "4521C325F6478E45"
-const EXPECTEDDBNAME = "example-com%2Fio-cozy-events"
+const ExpectedDBName = "example-com%2Fio-cozy-events"
 
 var DOCUMENT = []byte(`{
 	"test": "testvalue"
@@ -36,7 +36,7 @@ var ts *httptest.Server
 // some test helpers files.
 
 func couchReq(method, path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, COUCHURL+path, body)
+	req, err := http.NewRequest(method, CouchURL+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
 func TestMain(m *testing.M) {
 
 	// First we make sure couchdb is started
-	couchdb, err := checkup.HTTPChecker{URL: COUCHURL}.Check()
+	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
 	if err != nil || couchdb.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
@@ -89,24 +89,24 @@ func TestMain(m *testing.M) {
 
 	router := gin.New()
 	instance := &middlewares.Instance{
-		Domain:     HOST,
+		Domain:     Host,
 		StorageURL: "mem://test",
 	}
 	router.Use(errors.Handler())
 	router.Use(injectInstance(instance))
 	Routes(router.Group("/data"))
 	ts = httptest.NewServer(router)
-	couchReq("DELETE", EXPECTEDDBNAME, nil)
-	couchReq("PUT", EXPECTEDDBNAME, nil)
-	couchReq("PUT", EXPECTEDDBNAME+"/"+TYPE+"%2F"+ID, bytes.NewReader(DOCUMENT))
+	couchReq("DELETE", ExpectedDBName, nil)
+	couchReq("PUT", ExpectedDBName, nil)
+	couchReq("PUT", ExpectedDBName+"/"+Type+"%2F"+ID, bytes.NewReader(DOCUMENT))
 
 	defer ts.Close()
 	os.Exit(m.Run())
 }
 
 func TestSuccessGet(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
-	req.Header.Add("Host", HOST)
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
+	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
@@ -117,7 +117,7 @@ func TestSuccessGet(t *testing.T) {
 
 func TestWrongDoctype(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/nottype/"+ID, nil)
-	req.Header.Add("Host", HOST)
+	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
@@ -131,8 +131,8 @@ func TestWrongDoctype(t *testing.T) {
 }
 
 func TestWrongID(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/NOTID", nil)
-	req.Header.Add("Host", HOST)
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/NOTID", nil)
+	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
@@ -146,7 +146,7 @@ func TestWrongID(t *testing.T) {
 
 func TestWrongHost(t *testing.T) {
 	t.Skip("unskip me when we stop falling back to Host = dev")
-	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
 	req.Header.Add("Host", "NOTHOST")
 	out, res, err := doRequest(req)
 	assert.NoError(t, err)
@@ -163,8 +163,8 @@ func TestSuccessCreate(t *testing.T) {
 	var in = jsonReader(&map[string]interface{}{
 		"somefield": "avalue",
 	})
-	req, _ := http.NewRequest("POST", ts.URL+"/data/"+TYPE+"/", in)
-	req.Header.Add("Host", HOST)
+	req, _ := http.NewRequest("POST", ts.URL+"/data/"+Type+"/", in)
+	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "201 Created", res.Status, "should get a 201")
@@ -187,7 +187,7 @@ func TestSuccessCreate(t *testing.T) {
 func TestSuccessUpdate(t *testing.T) {
 
 	// Get revision
-	get, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	get, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
 	doc, res, err := doRequest(get)
 
 	// update it
@@ -197,8 +197,8 @@ func TestSuccessUpdate(t *testing.T) {
 		"test":      doc["test"],
 		"somefield": "anewvalue",
 	})
-	req, _ := http.NewRequest("PUT", ts.URL+"/data/"+TYPE+"/"+ID, in)
-	req.Header.Add("Host", HOST)
+	req, _ := http.NewRequest("PUT", ts.URL+"/data/"+Type+"/"+ID, in)
+	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 201")
@@ -223,14 +223,14 @@ func TestSuccessUpdate(t *testing.T) {
 
 func TestSuccessDelete(t *testing.T) {
 	// Get revision
-	get, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	get, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
 	doc, res, err := doRequest(get)
 	rev := doc["_rev"].(string)
 
 	// Do deletion
-	req, _ := http.NewRequest("DELETE", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	req, _ := http.NewRequest("DELETE", ts.URL+"/data/"+Type+"/"+ID, nil)
 	req.Header.Add("If-Match", rev)
-	req.Header.Add("Host", HOST)
+	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 201")
