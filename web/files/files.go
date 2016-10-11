@@ -8,8 +8,10 @@ package files
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -33,11 +35,13 @@ const (
 )
 
 var (
-	errDocAlreadyExists   = errors.New("Directory or file already exists")
-	errParentDoesNotExist = errors.New("Parent folder with given FolderID does not exist")
-	errDocTypeInvalid     = errors.New("Invalid document type")
-	errIllegalFilename    = errors.New("Invalid filename: empty or contains an illegal character")
-	errInvalidHash        = errors.New("Invalid hash")
+	errDocAlreadyExists      = errors.New("Directory or file already exists")
+	errParentDoesNotExist    = errors.New("Parent folder with given FolderID does not exist")
+	errDocTypeInvalid        = errors.New("Invalid document type")
+	errIllegalFilename       = errors.New("Invalid filename: empty or contains an illegal character")
+	errInvalidHash           = errors.New("Invalid hash")
+	errContentLengthInvalid  = errors.New("Invalid content length")
+	errContentLengthMismatch = errors.New("Content length does not match")
 )
 
 // DocMetadata encapsulates the few metadata linked to a document
@@ -125,11 +129,17 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	contentType := c.ContentType()
+	contentLength, err := parseContentLength(header.Get("Content-Length"))
+	fmt.Println("parsedContentLength", contentLength, err)
+	if err != nil {
+		c.AbortWithError(http.StatusUnprocessableEntity, err)
+		return
+	}
 
 	var doc jsonapi.JSONApier
 	switch m.Type {
 	case FileDocType:
-		doc, err = CreateFileAndUpload(m, storage, contentType, dbPrefix, c.Request.Body)
+		doc, err = CreateFileAndUpload(m, storage, contentType, contentLength, dbPrefix, c.Request.Body)
 	case FolderDocType:
 		doc, err = CreateDirectory(m, storage, dbPrefix)
 	}
@@ -162,6 +172,8 @@ func makeCode(err error) (code int) {
 		code = http.StatusNotFound
 	case errInvalidHash:
 		code = http.StatusPreconditionFailed
+	case errContentLengthMismatch:
+		code = http.StatusPreconditionFailed
 	default:
 		couchErr, isCouchErr := err.(*couchdb.Error)
 		if isCouchErr {
@@ -191,6 +203,19 @@ func parseDocType(docType string) (result DocType, err error) {
 		result = FolderDocType
 	default:
 		err = errDocTypeInvalid
+	}
+	return
+}
+
+func parseContentLength(contentLength string) (size int64, err error) {
+	if contentLength == "" {
+		size = -1
+		return
+	}
+
+	size, err = strconv.ParseInt(contentLength, 10, 64)
+	if err != nil {
+		err = errContentLengthInvalid
 	}
 	return
 }

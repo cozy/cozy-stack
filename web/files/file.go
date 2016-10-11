@@ -88,7 +88,7 @@ func (f *FileDoc) ToJSONApi() ([]byte, error) {
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
+func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, contentLength int64, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
 	if m.Type != FileDocType {
 		err = errDocTypeInvalid
 		return
@@ -105,7 +105,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType, dbPrefix stri
 		Name:       m.Name,
 		CreatedAt:  createDate,
 		UpdatedAt:  createDate,
-		Size:       int64(0),
+		Size:       contentLength,
 		Tags:       m.Tags,
 		MD5Sum:     m.GivenMD5,
 		Executable: m.Executable,
@@ -134,8 +134,18 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType, dbPrefix stri
 		}
 	}()
 
-	if err = copyOnFsAndCheckIntegrity(m, fs, pth, body); err != nil {
+	var written int64
+	if written, err = copyOnFsAndCheckIntegrity(m, fs, pth, body); err != nil {
 		return
+	}
+
+	if contentLength >= 0 && written != contentLength {
+		err = errContentLengthMismatch
+		return
+	}
+
+	if contentLength < 0 {
+		attrs.Size = written
 	}
 
 	if err = couchdb.CreateDoc(dbPrefix, doc.DocType(), doc); err != nil {
@@ -145,7 +155,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType, dbPrefix stri
 	return
 }
 
-func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.ReadCloser) (err error) {
+func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.ReadCloser) (written int64, err error) {
 	f, err := fs.Create(pth)
 	if err != nil {
 		return
@@ -155,14 +165,15 @@ func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.Rea
 	defer r.Close()
 
 	md5H := md5.New() // #nosec
-	_, err = io.Copy(f, io.TeeReader(r, md5H))
+	written, err = io.Copy(f, io.TeeReader(r, md5H))
 	if err != nil {
-		return err
+		return
 	}
 
 	calcMD5 := md5H.Sum(nil)
 	if !bytes.Equal(m.GivenMD5, calcMD5) {
-		return errInvalidHash
+		err = errInvalidHash
+		return
 	}
 
 	return
