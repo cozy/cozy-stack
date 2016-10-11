@@ -57,7 +57,7 @@ func (f *fileDoc) SetRev(rev string) {
 func (f *fileDoc) ToJSONApi() ([]byte, error) {
 	qid := f.QID
 	dat := map[string]interface{}{
-		"id":         qid[0:strings.Index(qid, "/")],
+		"id":         qid[strings.Index(qid, "/")+1:],
 		"attributes": f.Attrs,
 	}
 	m := map[string]interface{}{

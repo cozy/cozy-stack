@@ -49,7 +49,7 @@ func (d *dirDoc) SetRev(rev string) {
 func (d *dirDoc) ToJSONApi() ([]byte, error) {
 	qid := d.QID
 	dat := map[string]interface{}{
-		"id":         qid[0:strings.Index(qid, "/")],
+		"id":         qid[strings.Index(qid, "/")+1:],
 		"attributes": d.Attrs,
 	}
 	m := map[string]interface{}{
