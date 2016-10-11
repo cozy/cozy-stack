@@ -8,7 +8,6 @@ package files
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"path"
 	"strconv"
@@ -130,7 +129,6 @@ func CreationHandler(c *gin.Context) {
 
 	contentType := c.ContentType()
 	contentLength, err := parseContentLength(header.Get("Content-Length"))
-	fmt.Println("parsedContentLength", contentLength, err)
 	if err != nil {
 		c.AbortWithError(http.StatusUnprocessableEntity, err)
 		return
