@@ -172,7 +172,12 @@ func makeCode(err error) (code int) {
 	case errInvalidHash:
 		code = http.StatusPreconditionFailed
 	default:
-		code = http.StatusInternalServerError
+		couchErr, isCouchErr := err.(*couchdb.Error)
+		if isCouchErr {
+			code = couchErr.StatusCode
+		} else {
+			code = http.StatusInternalServerError
+		}
 	}
 	return
 }
