@@ -86,7 +86,18 @@ func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (jsonapier js
 		Path:     pth,
 	}
 
-	// @TODO: make this "atomic"
+	defer func() {
+		if err == nil {
+			return
+		}
+		_, isCouchErr := err.(*couchdb.Error)
+		if isCouchErr {
+			couchdb.DeleteDoc(dbPrefix, doc)
+		} else {
+			fs.Remove(pth)
+		}
+	}()
+
 	if err = couchdb.CreateDoc(dbPrefix, doc.DocType(), doc); err != nil {
 		return
 	}

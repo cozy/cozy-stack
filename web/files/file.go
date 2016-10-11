@@ -57,8 +57,8 @@ func (f *fileDoc) SetRev(rev string) {
 func (f *fileDoc) ToJSONApi() ([]byte, error) {
 	qid := f.QID
 	dat := map[string]interface{}{
-		"type":       f.DocType(),
 		"id":         qid[strings.Index(qid, "/")+1:],
+		"type":       f.DocType(),
 		"rev":        f.Rev(),
 		"attributes": f.Attrs,
 	}
@@ -99,9 +99,21 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.R
 		Path:     pth,
 	}
 
-	// @TODO: we need to make sure the copy on fs + couchdb doc creation
-	// is "atomic". To enforce that we could also use a temporary file
-	// or delete the file in case of failrure with couch... or ...
+	// Error handling to make sure the steps of uploading the file and
+	// creating the corresponding are both rollbacked in case of an
+	// error. This should preserve our VFS coherency a little.
+	defer func() {
+		if err == nil {
+			return
+		}
+		_, isCouchErr := err.(*couchdb.Error)
+		if isCouchErr {
+			couchdb.DeleteDoc(dbPrefix, doc)
+		} else {
+			fs.Remove(pth)
+		}
+	}()
+
 	if err = copyOnFsAndCheckIntegrity(m, fs, pth, body); err != nil {
 		return
 	}
@@ -131,10 +143,7 @@ func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.Rea
 
 	calcMD5 := md5H.Sum(nil)
 	if !bytes.Equal(m.GivenMD5, calcMD5) {
-		err = fs.Remove(pth)
-		if err == nil {
-			err = errInvalidHash
-		}
+		err = errInvalidHash
 		return
 	}
 
