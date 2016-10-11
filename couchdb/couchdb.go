@@ -37,17 +37,28 @@ type JSONDoc map[string]interface{}
 
 // ID returns the identifier field of the document
 func (j JSONDoc) ID() string {
-	return j["_id"].(string)
+	id, ok := j["_id"].(string)
+	if ok {
+		return id
+	}
+	return ""
 }
 
 // Rev returns the revision field of the document
 func (j JSONDoc) Rev() string {
-	return j["_rev"].(string)
+	id, ok := j["_rev"].(string)
+	if ok {
+		return id
+	}
+	return ""
 }
 
 // DocType returns the document type
 func (j JSONDoc) DocType() string {
-	qid := j["_id"].(string)
+	qid, ok := j["_id"].(string)
+	if !ok {
+		return ""
+	}
 	return qid[0:strings.Index(qid, "/")]
 }
 
