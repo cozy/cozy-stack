@@ -144,21 +144,20 @@ func TestWrongID(t *testing.T) {
 	}
 }
 
-// @TODO uncomment me when we stop falling back to Host = dev
-//
-// func TestWrongHost(t *testing.T) {
-// 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
-// 	req.Header.Add("Host", "NOTHOST")
-// 	out, res, err := doRequest(req)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-// 	if assert.Contains(t, out, "error") {
-// 		assert.Equal(t, "not_found", out["error"], "should give a json error")
-// 	}
-// 	if assert.Contains(t, out, "reason") {
-// 		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
-// 	}
-// }
+func TestWrongHost(t *testing.T) {
+	t.Skip("unskip me when we stop falling back to Host = dev")
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	req.Header.Add("Host", "NOTHOST")
+	out, res, err := doRequest(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
+	if assert.Contains(t, out, "error") {
+		assert.Equal(t, "not_found", out["error"], "should give a json error")
+	}
+	if assert.Contains(t, out, "reason") {
+		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
+	}
+}
 
 func TestSuccessCreate(t *testing.T) {
 	var in = jsonReader(&map[string]interface{}{
