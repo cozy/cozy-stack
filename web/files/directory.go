@@ -47,14 +47,14 @@ func (d *dirDoc) SetRev(rev string) {
 
 // implement temporary interface JSONApier
 func (d *dirDoc) ToJSONApi() ([]byte, error) {
-	md := make(map[string]interface{})
-
 	qid := d.QID
-	md["id"] = qid[strings.Index(qid, "/")+1:]
-	md["attributes"] = d.Attrs
-
-	m := make(map[string]interface{})
-	m["data"] = md
+	dat := map[string]interface{}{
+		"id":         qid[0:strings.Index(qid, "/")],
+		"attributes": d.Attrs,
+	}
+	m := map[string]interface{}{
+		"data": dat,
+	}
 	return json.Marshal(m)
 }
 
