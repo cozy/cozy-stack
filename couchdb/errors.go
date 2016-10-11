@@ -80,7 +80,9 @@ func (e *Error) JSON() map[string]interface{} {
 	return jsonMap
 }
 
-func isNoDatabaseError(err error) bool {
+// IsNoDatabaseError checks if the given error is a couch no_db_file
+// error
+func IsNoDatabaseError(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -90,6 +92,19 @@ func isNoDatabaseError(err error) bool {
 	}
 	return couchErr.Reason == "no_db_file" ||
 		couchErr.Reason == "Database does not exist."
+}
+
+// IsNotFoundError checks if the given error is a couch not_found
+// error
+func IsNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	couchErr, isCouchErr := err.(*Error)
+	if !isCouchErr {
+		return false
+	}
+	return couchErr.Name == "not_found"
 }
 
 func newRequestError(originalError error) error {

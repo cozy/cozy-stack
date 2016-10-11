@@ -152,7 +152,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 // the document by json.Unmarshal-ing
 func GetDoc(dbprefix, doctype, id string, out Doc) error {
 	err := makeRequest("GET", docURL(dbprefix, doctype, id), nil, out)
-	if isNoDatabaseError(err) {
+	if IsNoDatabaseError(err) {
 		err.(*Error).Reason = "wrong_doctype"
 	}
 	return err
@@ -227,7 +227,7 @@ func UpdateDoc(dbprefix string, doc Doc) (err error) {
 func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err error) {
 	db := makeDBName(dbprefix, doctype)
 	err = makeRequest("POST", db, doc, response)
-	if err == nil || !isNoDatabaseError(err) {
+	if err == nil || !IsNoDatabaseError(err) {
 		return
 	}
 

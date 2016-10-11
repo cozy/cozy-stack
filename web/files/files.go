@@ -10,16 +10,16 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
+	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/afero"
 )
-
-// DefaultContentType is used for files uploaded with no content-type
-const DefaultContentType = "application/octet-stream"
 
 // DocType is the type of document, eg. file or folder
 type DocType string
@@ -35,10 +35,13 @@ const (
 )
 
 var (
-	errDocAlreadyExists = errors.New("Directory or file already exists")
-	errDocTypeInvalid   = errors.New("Invalid document type")
-	errIllegalFilename  = errors.New("Invalid filename: empty or contains an illegal character")
-	errInvalidHash      = errors.New("Invalid hash")
+	errDocAlreadyExists      = errors.New("Directory or file already exists")
+	errParentDoesNotExist    = errors.New("Parent folder with given FolderID does not exist")
+	errDocTypeInvalid        = errors.New("Invalid document type")
+	errIllegalFilename       = errors.New("Invalid filename: empty or contains an illegal character")
+	errInvalidHash           = errors.New("Invalid hash")
+	errContentLengthInvalid  = errors.New("Invalid content length")
+	errContentLengthMismatch = errors.New("Content length does not match")
 )
 
 // DocMetadata encapsulates the few metadata linked to a document
@@ -50,10 +53,6 @@ type DocMetadata struct {
 	Executable bool
 	Tags       []string
 	GivenMD5   []byte
-}
-
-func (m *DocMetadata) path() string {
-	return m.FolderID + "/" + m.Name
 }
 
 // NewDocMetadata is the DocMetadata constructor. All inputs are
@@ -98,27 +97,6 @@ func NewDocMetadata(docTypeStr, name, folderID, tagsStr, md5Str string, executab
 	return
 }
 
-// CreateDirectory is the method for creating a new directory
-//
-// @TODO
-func CreateDirectory(m *DocMetadata, storage afero.Fs) error {
-	if m.Type != FolderDocType {
-		return errDocTypeInvalid
-	}
-
-	path := m.path()
-
-	exists, err := afero.DirExists(storage, path)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return errDocAlreadyExists
-	}
-
-	return storage.Mkdir(path, 0777)
-}
-
 // CreationHandler handle all POST requests on /files/:folder-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
@@ -127,6 +105,7 @@ func CreateDirectory(m *DocMetadata, storage afero.Fs) error {
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func CreationHandler(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
+	dbPrefix := instance.GetDatabasePrefix()
 	storage, err := instance.GetStorageProvider()
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
@@ -150,28 +129,19 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	contentType := c.ContentType()
-	if contentType == "" {
-		contentType = DefaultContentType
-	}
-
-	exists, err := checkParentFolderID(storage, m.FolderID)
+	contentLength, err := parseContentLength(header.Get("Content-Length"))
+	fmt.Println("parsedContentLength", contentLength, err)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-	if !exists {
-		err = fmt.Errorf("Parent folder with given FolderID does not exist")
-		c.AbortWithError(http.StatusNotFound, err)
+		c.AbortWithError(http.StatusUnprocessableEntity, err)
 		return
 	}
 
-	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", m.Name, m, contentType)
-
+	var doc jsonapi.JSONApier
 	switch m.Type {
 	case FileDocType:
-		err = Upload(m, storage, c.Request.Body)
+		doc, err = CreateFileAndUpload(m, storage, contentType, contentLength, dbPrefix, c.Request.Body)
 	case FolderDocType:
-		err = CreateDirectory(m, storage)
+		doc, err = CreateDirectory(m, storage, dbPrefix)
 	}
 
 	if err != nil {
@@ -179,7 +149,12 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	data := []byte{'O', 'K'}
+	data, err := doc.ToJSONApi()
+	if err != nil {
+		c.AbortWithError(makeCode(err), err)
+		return
+	}
+
 	c.Data(http.StatusCreated, jsonapi.ContentType, data)
 }
 
@@ -193,10 +168,19 @@ func makeCode(err error) (code int) {
 	switch err {
 	case errDocAlreadyExists:
 		code = http.StatusConflict
+	case errParentDoesNotExist:
+		code = http.StatusNotFound
 	case errInvalidHash:
 		code = http.StatusPreconditionFailed
+	case errContentLengthMismatch:
+		code = http.StatusPreconditionFailed
 	default:
-		code = http.StatusInternalServerError
+		couchErr, isCouchErr := err.(*couchdb.Error)
+		if isCouchErr {
+			code = couchErr.StatusCode
+		} else {
+			code = http.StatusInternalServerError
+		}
 	}
 	return
 }
@@ -219,6 +203,19 @@ func parseDocType(docType string) (result DocType, err error) {
 		result = FolderDocType
 	default:
 		err = errDocTypeInvalid
+	}
+	return
+}
+
+func parseContentLength(contentLength string) (size int64, err error) {
+	if contentLength == "" {
+		size = -1
+		return
+	}
+
+	size, err = strconv.ParseInt(contentLength, 10, 64)
+	if err != nil {
+		err = errContentLengthInvalid
 	}
 	return
 }
@@ -249,18 +246,43 @@ func checkFileName(str string) error {
 	return nil
 }
 
-func checkParentFolderID(storage afero.Fs, folderID string) (bool, error) {
+// checkParentFolderID is used to generate the filepath of a new file
+// or directory. It will check if the given parent folderID is well
+// defined is the database and filesystem and it will generate the new
+// path of the wanted file, checking if there is not colision with
+// existing file.
+func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth string, parentDoc *DirDoc, err error) {
+	folderID := m.FolderID
+
+	var parentPath string
+
 	if folderID == "" {
-		return true, nil
+		parentPath = "/"
+	} else {
+		qFolderID := string(FolderDocType) + "/" + folderID
+		parentDoc = &DirDoc{}
+
+		// NOTE: we only check the existence of the folder on the db
+		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), qFolderID, parentDoc)
+		if couchdb.IsNotFoundError(err) {
+			err = errParentDoesNotExist
+		}
+		if err != nil {
+			return
+		}
+
+		parentPath = parentDoc.Path
 	}
 
-	exists, err := afero.DirExists(storage, folderID)
+	pth = path.Join(parentPath, m.Name)
+	exists, err := afero.Exists(storage, pth)
 	if err != nil {
-		return false, err
+		return
 	}
-	if !exists {
-		return false, nil
+	if exists {
+		err = errDocAlreadyExists
+		return
 	}
 
-	return true, nil
+	return
 }
