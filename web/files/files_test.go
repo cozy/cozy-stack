@@ -28,6 +28,22 @@ func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
 	}
 }
 
+func extractJSONRes(res *http.Response, mp *map[string]interface{}) (err error) {
+	if res.StatusCode >= 300 {
+		return
+	}
+
+	var b []byte
+
+	b, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(b, mp)
+	return
+}
+
 func createDir(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
 	res, err := http.Post(ts.URL+path, "text/plain", strings.NewReader(""))
 	if !assert.NoError(t, err) {
@@ -35,17 +51,8 @@ func createDir(t *testing.T, path string) (res *http.Response, v map[string]inte
 	}
 	defer res.Body.Close()
 
-	b, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	if res.StatusCode >= 200 && res.StatusCode < 300 {
-		err = json.Unmarshal(b, &v)
-		if !assert.NoError(t, err) {
-			return
-		}
-	}
+	err = extractJSONRes(res, &v)
+	assert.NoError(t, err)
 
 	return
 }
@@ -68,17 +75,8 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 
 	defer res.Body.Close()
 
-	b, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	if res.StatusCode >= 200 && res.StatusCode < 300 {
-		err = json.Unmarshal(b, &v)
-		if !assert.NoError(t, err) {
-			return
-		}
-	}
+	err = extractJSONRes(res, &v)
+	assert.NoError(t, err)
 
 	return
 }
