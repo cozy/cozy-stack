@@ -173,8 +173,15 @@ func extractMimeAndClass(contentType string) (mime, class string) {
 		contentType = DefaultContentType
 	}
 
-	// @TODO improve for specific mime types
 	mime = contentType
-	class = contentType[:strings.Index(contentType, "/")]
+
+	// @TODO improve for specific mime types
+	slashIndex := strings.Index(contentType, "/")
+	if slashIndex >= 0 {
+		class = contentType[:slashIndex]
+	} else {
+		class = contentType
+	}
+
 	return
 }
