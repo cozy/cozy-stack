@@ -123,13 +123,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, conten
 	// creating the corresponding are both rollbacked in case of an
 	// error. This should preserve our VFS coherency a little.
 	defer func() {
-		if err == nil {
-			return
-		}
-		_, isCouchErr := err.(*couchdb.Error)
-		if isCouchErr {
-			couchdb.DeleteDoc(dbPrefix, doc)
-		} else {
+		if err != nil {
 			fs.Remove(pth)
 		}
 	}()
