@@ -158,7 +158,7 @@ func TestUploadBadHash(t *testing.T) {
 	assert.Equal(t, 412, res.StatusCode)
 
 	storage, _ := instance.GetStorageProvider()
-	_, err := afero.ReadFile(storage, "123/badhash")
+	_, err := afero.ReadFile(storage, "/badhash")
 	assert.Error(t, err)
 }
 
