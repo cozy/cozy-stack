@@ -12,6 +12,9 @@ import (
 	"github.com/spf13/afero"
 )
 
+// DefaultContentType is used for files uploaded with no content-type
+const DefaultContentType = "application/octet-stream"
+
 type fileAttributes struct {
 	Name       string    `json:"name"`
 	CreatedAt  time.Time `json:"created_at"`
@@ -85,7 +88,7 @@ func (f *FileDoc) ToJSONApi() ([]byte, error) {
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
+func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
 	if m.Type != FileDocType {
 		err = errDocTypeInvalid
 		return
@@ -96,6 +99,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.R
 		return
 	}
 
+	mime, class := extractMimeAndClass(contentType)
 	createDate := time.Now()
 	attrs := &fileAttributes{
 		Name:       m.Name,
@@ -105,8 +109,8 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.R
 		Tags:       m.Tags,
 		MD5Sum:     m.GivenMD5,
 		Executable: m.Executable,
-		Class:      "document",   // @TODO
-		Mime:       "text/plain", // @TODO
+		Class:      class,
+		Mime:       mime,
 	}
 
 	doc = &FileDoc{
@@ -161,5 +165,16 @@ func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.Rea
 		return errInvalidHash
 	}
 
+	return
+}
+
+func extractMimeAndClass(contentType string) (mime, class string) {
+	if contentType == "" {
+		contentType = DefaultContentType
+	}
+
+	// @TODO improve for specific mime types
+	mime = contentType
+	class = contentType[:strings.Index(contentType, "/")]
 	return
 }

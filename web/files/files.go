@@ -8,7 +8,6 @@ package files
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/http"
 	"path"
 	"strings"
@@ -19,9 +18,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/afero"
 )
-
-// DefaultContentType is used for files uploaded with no content-type
-const DefaultContentType = "application/octet-stream"
 
 // DocType is the type of document, eg. file or folder
 type DocType string
@@ -129,16 +125,11 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	contentType := c.ContentType()
-	if contentType == "" {
-		contentType = DefaultContentType
-	}
-
-	fmt.Printf("%s:\n\t- %+v\n\t- %v\n", m.Name, m, contentType)
 
 	var doc jsonapi.JSONApier
 	switch m.Type {
 	case FileDocType:
-		doc, err = CreateFileAndUpload(m, storage, dbPrefix, c.Request.Body)
+		doc, err = CreateFileAndUpload(m, storage, contentType, dbPrefix, c.Request.Body)
 	case FolderDocType:
 		doc, err = CreateDirectory(m, storage, dbPrefix)
 	}
