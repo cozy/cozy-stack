@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
 
@@ -66,7 +67,7 @@ func (f *fileDoc) ToJSONApi() ([]byte, error) {
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.ReadCloser) (doc *fileDoc, err error) {
+func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.ReadCloser) (jsonapier jsonapi.JSONApier, err error) {
 	if m.Type != FileDocType {
 		err = errDocTypeInvalid
 		return
@@ -90,7 +91,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.R
 		Mime:       "text/plain", // @TODO
 	}
 
-	doc = &fileDoc{
+	doc := &fileDoc{
 		Attrs:    attrs,
 		FolderID: m.FolderID,
 		Path:     pth,
@@ -107,6 +108,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, dbPrefix string, body io.R
 		return
 	}
 
+	jsonapier = jsonapi.JSONApier(doc)
 	return
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
 
@@ -58,7 +59,7 @@ func (d *dirDoc) ToJSONApi() ([]byte, error) {
 }
 
 // CreateDirectory is the method for creating a new directory
-func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (doc *dirDoc, err error) {
+func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (jsonapier jsonapi.JSONApier, err error) {
 	if m.Type != FolderDocType {
 		err = errDocTypeInvalid
 		return
@@ -77,7 +78,7 @@ func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (doc *dirDoc,
 		Tags:      m.Tags,
 	}
 
-	doc = &dirDoc{
+	doc := &dirDoc{
 		Attrs:    attrs,
 		FolderID: m.FolderID,
 		Path:     pth,
@@ -92,5 +93,6 @@ func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (doc *dirDoc,
 		return
 	}
 
+	jsonapier = jsonapi.JSONApier(doc)
 	return
 }
