@@ -55,17 +55,52 @@ func TestCreateDoc(t *testing.T) {
 	var TESTPREFIX = "dev/"
 	var doc = makeTestDoc()
 	assert.Empty(t, doc.Rev(), doc.ID())
+
+	// Create the document
 	err = CreateDoc(TESTPREFIX, "io.cozy.testobject", doc)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, doc.Rev(), doc.ID())
 
 	docType, id := doc.DocType(), doc.ID()
 
-	out := &testDoc{}
-	err = GetDoc(TESTPREFIX, docType, id, out)
+	// Fetch it and see if its match
+	fetched := &testDoc{}
+	err = GetDoc(TESTPREFIX, docType, id, fetched)
 	assert.NoError(t, err)
-	assert.Equal(t, out.ID(), doc.ID())
-	assert.Equal(t, out.Test, "somevalue")
+	assert.Equal(t, doc.ID(), fetched.ID())
+	assert.Equal(t, doc.Rev(), fetched.Rev())
+	assert.Equal(t, "somevalue", fetched.Test)
+
+	revBackup := fetched.Rev()
+
+	// Update it
+	updated := fetched
+	updated.Test = "changedvalue"
+	err = UpdateDoc(TESTPREFIX, updated)
+	assert.NoError(t, err)
+	assert.NotEqual(t, revBackup, updated.Rev())
+	assert.Equal(t, "changedvalue", updated.Test)
+
+	// Refetch it and see if its match
+	fetched2 := &testDoc{}
+	err = GetDoc(TESTPREFIX, docType, id, fetched2)
+	assert.NoError(t, err)
+	assert.Equal(t, doc.ID(), fetched2.ID())
+	assert.Equal(t, updated.Rev(), fetched2.Rev())
+	assert.Equal(t, "changedvalue", fetched2.Test)
+
+	// Delete it
+	err = DeleteDoc(TESTPREFIX, updated)
+	assert.NoError(t, err)
+
+	fetched3 := &testDoc{}
+	err = GetDoc(TESTPREFIX, docType, id, fetched3)
+	assert.Error(t, err)
+	coucherr, iscoucherr := err.(*Error)
+	if assert.True(t, iscoucherr) {
+		assert.Equal(t, coucherr.Reason, "deleted")
+	}
+
 }
 
 func TestMain(m *testing.M) {

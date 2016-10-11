@@ -2,6 +2,7 @@
 package data
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -22,7 +23,7 @@ func validDoctype(c *gin.Context) {
 
 // GetDoc get a doc by its type and id
 func getDoc(c *gin.Context) {
-	instance := c.MustGet("instance").(*middlewares.Instance)
+	instance := middlewares.GetInstance(c)
 	doctype := c.MustGet("doctype").(string)
 	docid := doctype + "/" + c.Param("docid")
 
@@ -55,6 +56,30 @@ func createDoc(c *gin.Context) {
 		return
 	}
 
+	c.JSON(201, gin.H{
+		"ok":   true,
+		"id":   doc.ID(),
+		"rev":  doc.Rev(),
+		"data": doc,
+	})
+}
+
+func updateDoc(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+	prefix := instance.GetDatabasePrefix()
+
+	var doc couchdb.JSONDoc
+	if err := c.BindJSON(&doc); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	err := couchdb.UpdateDoc(prefix, doc)
+	if err != nil {
+		c.AbortWithError(errors.HTTPStatus(err), err)
+		return
+	}
+
 	c.JSON(200, gin.H{
 		"ok":   true,
 		"id":   doc.ID(),
@@ -63,9 +88,39 @@ func createDoc(c *gin.Context) {
 	})
 }
 
+func deleteDoc(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+	doctype := c.MustGet("doctype").(string)
+	docid := doctype + "/" + c.Param("docid")
+	prefix := instance.GetDatabasePrefix()
+	rev := c.Request.Header.Get("If-Match")
+
+	if rev == "" {
+		err := fmt.Errorf("NotImplemented : delete without If-Match")
+		c.AbortWithError(http.StatusNotImplemented, err)
+		return
+	}
+
+	tombrev, err := couchdb.Delete(prefix, doctype, docid, rev)
+	if err != nil {
+		c.AbortWithError(errors.HTTPStatus(err), err)
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"ok":      true,
+		"id":      docid,
+		"rev":     tombrev,
+		"deleted": true,
+	})
+
+}
+
 // Routes sets the routing for the status service
 func Routes(router *gin.RouterGroup) {
 	router.GET("/:doctype/:docid", validDoctype, getDoc)
-	router.POST("/:doctype", validDoctype, createDoc)
+	router.PUT("/:doctype/:docid", validDoctype, updateDoc)
+	router.DELETE("/:doctype/:docid", validDoctype, deleteDoc)
+	router.POST("/:doctype/", validDoctype, createDoc)
 	// router.DELETE("/:doctype/:docid", DeleteDoc)
 }

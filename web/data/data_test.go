@@ -48,23 +48,28 @@ func couchReq(method, path string, body io.Reader) (*http.Response, error) {
 	return res, nil
 }
 
-func testRoute(t *testing.T, url string, host string, jsonout interface{}) (*http.Response, []byte, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	req.Header.Add("Host", host)
+func jsonReader(data *map[string]interface{}) io.Reader {
+	bs, _ := json.Marshal(&data)
+	return bytes.NewReader(bs)
+}
 
-	res, err := client.Do(req)
+func doRequest(req *http.Request) (jsonres map[string]interface{}, res *http.Response, err error) {
+
+	res, err = client.Do(req)
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 	defer res.Body.Close()
-	body, ioerr := ioutil.ReadAll(res.Body)
-	if ioerr != nil {
-		return nil, nil, ioerr
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return
 	}
-	return res, body, json.Unmarshal(body, jsonout)
+	var out map[string]interface{}
+	err = json.Unmarshal(body, &out)
+	if err != nil {
+		return
+	}
+	return out, res, err
 }
 
 func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
@@ -100,8 +105,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestSuccessGet(t *testing.T) {
-	var out map[string]interface{}
-	res, _, err := testRoute(t, ts.URL+"/data/"+TYPE+"/"+ID, HOST, &out)
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	req.Header.Add("Host", HOST)
+	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	if assert.Contains(t, out, "test") {
@@ -110,10 +116,10 @@ func TestSuccessGet(t *testing.T) {
 }
 
 func TestWrongDoctype(t *testing.T) {
-	var out map[string]interface{}
-	res, _, err := testRoute(t, ts.URL+"/data/nottype/"+ID, HOST, &out)
+	req, _ := http.NewRequest("GET", ts.URL+"/data/nottype/"+ID, nil)
+	req.Header.Add("Host", HOST)
+	out, res, err := doRequest(req)
 	assert.NoError(t, err)
-	fmt.Println("RESULT=", out)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
 	if assert.Contains(t, out, "error") {
 		assert.Equal(t, "not_found", out["error"], "should give a json error")
@@ -125,8 +131,9 @@ func TestWrongDoctype(t *testing.T) {
 }
 
 func TestWrongID(t *testing.T) {
-	var out map[string]interface{}
-	res, _, err := testRoute(t, ts.URL+"/data/"+TYPE+"/NOTID", HOST, &out)
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/NOTID", nil)
+	req.Header.Add("Host", HOST)
+	out, res, err := doRequest(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
 	if assert.Contains(t, out, "error") {
@@ -135,4 +142,100 @@ func TestWrongID(t *testing.T) {
 	if assert.Contains(t, out, "reason") {
 		assert.Equal(t, "missing", out["reason"], "should give a reason")
 	}
+}
+
+func TestWrongHost(t *testing.T) {
+	t.Skip("unskip me when we stop falling back to Host = dev")
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	req.Header.Add("Host", "NOTHOST")
+	out, res, err := doRequest(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
+	if assert.Contains(t, out, "error") {
+		assert.Equal(t, "not_found", out["error"], "should give a json error")
+	}
+	if assert.Contains(t, out, "reason") {
+		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
+	}
+}
+
+func TestSuccessCreate(t *testing.T) {
+	var in = jsonReader(&map[string]interface{}{
+		"somefield": "avalue",
+	})
+	req, _ := http.NewRequest("POST", ts.URL+"/data/"+TYPE+"/", in)
+	req.Header.Add("Host", HOST)
+	out, res, err := doRequest(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status, "should get a 201")
+	assert.Contains(t, out, "ok", "ok at top level (couchdb compatibility)")
+	assert.Equal(t, out["ok"], true, "ok is true")
+	assert.Contains(t, out, "id", "id at top level (couchdb compatibility)")
+	assert.Contains(t, out, "rev", "rev at top level (couchdb compatibility)")
+	if assert.Contains(t, out, "data", "document included") {
+		data, ismap := out["data"].(map[string]interface{})
+		if assert.True(t, ismap, "document is a json object") {
+			assert.Contains(t, out["data"], "_id", "document contains _id")
+			assert.Contains(t, out["data"], "_rev", "document contains _rev")
+			if assert.Contains(t, out["data"], "somefield") {
+				assert.Equal(t, data["somefield"], "avalue", "document contains fields")
+			}
+		}
+	}
+}
+
+func TestSuccessUpdate(t *testing.T) {
+
+	// Get revision
+	get, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	doc, res, err := doRequest(get)
+
+	// update it
+	var in = jsonReader(&map[string]interface{}{
+		"_id":       doc["_id"],
+		"_rev":      doc["_rev"],
+		"test":      doc["test"],
+		"somefield": "anewvalue",
+	})
+	req, _ := http.NewRequest("PUT", ts.URL+"/data/"+TYPE+"/"+ID, in)
+	req.Header.Add("Host", HOST)
+	out, res, err := doRequest(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "should get a 201")
+	assert.Contains(t, out, "ok", "ok at top level (couchdb compatibility)")
+	assert.Equal(t, out["ok"], true, "ok is true")
+	assert.Contains(t, out, "id", "id at top level (couchdb compatibility)")
+	assert.Contains(t, out, "rev", "rev at top level (couchdb compatibility)")
+	if assert.Contains(t, out, "data", "document included") {
+		data, ismap := out["data"].(map[string]interface{})
+		if assert.True(t, ismap, "document is a json object") {
+			assert.Contains(t, data, "_id", "document contains _id")
+			assert.Contains(t, data, "_rev", "document contains _rev")
+			if assert.Contains(t, data, "test") {
+				assert.Equal(t, data["test"], "testvalue", "document contains old fields")
+			}
+			if assert.Contains(t, data, "somefield") {
+				assert.Equal(t, data["somefield"], "anewvalue", "document contains new fields")
+			}
+		}
+	}
+}
+
+func TestSuccessDelete(t *testing.T) {
+	// Get revision
+	get, _ := http.NewRequest("GET", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	doc, res, err := doRequest(get)
+	rev := doc["_rev"].(string)
+
+	// Do deletion
+	req, _ := http.NewRequest("DELETE", ts.URL+"/data/"+TYPE+"/"+ID, nil)
+	req.Header.Add("If-Match", rev)
+	req.Header.Add("Host", HOST)
+	out, res, err := doRequest(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "should get a 201")
+	assert.Contains(t, out, "ok", "ok at top level (couchdb compatibility)")
+	assert.Equal(t, out["ok"], true, "ok is true")
+	assert.Contains(t, out, "id", "id at top level (couchdb compatibility)")
+	assert.Contains(t, out, "rev", "rev at top level (couchdb compatibility)")
 }

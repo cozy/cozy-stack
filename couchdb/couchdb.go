@@ -35,24 +35,39 @@ type Doc interface {
 // the Doc interface.
 type JSONDoc map[string]interface{}
 
-// ID returns the identifier field of the document
+// ID returns the qualified identifier field of the document
+//   "io.cozy.event/123abc123" == doc.ID()
 func (j JSONDoc) ID() string {
-	return j["_id"].(string)
+	qid, ok := j["_id"].(string)
+	if ok {
+		return qid
+	}
+	return ""
 }
 
 // Rev returns the revision field of the document
+//   "3-1234def1234" == doc.Rev()
 func (j JSONDoc) Rev() string {
-	return j["_rev"].(string)
+	rev, ok := j["_rev"].(string)
+	if ok {
+		return rev
+	}
+	return ""
 }
 
-// DocType returns the document type
+// DocType returns the document type of the document
+//   "io.cozy.event" == doc.Doctype()
 func (j JSONDoc) DocType() string {
-	return j["doctype"].(string)
+	qid, ok := j["_id"].(string)
+	if !ok {
+		return ""
+	}
+	return qid[0:strings.Index(qid, "/")]
 }
 
-// SetID is used to set the identifier of the document
-func (j JSONDoc) SetID(id string) {
-	j["_id"] = id
+// SetID is used to set the qualified identifier of the document
+func (j JSONDoc) SetID(qid string) {
+	j["_id"] = qid
 }
 
 // SetRev is used to set the revision of the document
@@ -154,12 +169,59 @@ func DeleteDB(dbprefix, doctype string) error {
 }
 
 // ResetDB destroy and recreate the database for a doctype
-func ResetDB(dbprefix, doctype string) error {
-	err := DeleteDB(dbprefix, doctype)
+func ResetDB(dbprefix, doctype string) (err error) {
+	err = DeleteDB(dbprefix, doctype)
 	if err != nil {
 		return err
 	}
 	return CreateDB(dbprefix, doctype)
+}
+
+// Delete destroy a document by its doctype and ID .
+// If the document's current rev does not match the one passed,
+// a CouchdbError(409 conflict) will be returned.
+// This functions returns the tombstone revision as string
+func Delete(dbprefix, doctype, id, rev string) (tombrev string, err error) {
+	var res updateResponse
+	qs := url.Values{"rev": []string{rev}}
+	url := docURL(dbprefix, doctype, id) + "?" + qs.Encode()
+	err = makeRequest("DELETE", url, nil, &res)
+	if err == nil {
+		tombrev = res.Rev
+	}
+	return
+}
+
+// DeleteDoc deletes a struct implementing the couchb.Doc interface
+// The document's SetRev will be called with tombstone revision
+func DeleteDoc(dbprefix string, doc Doc) (err error) {
+	doctype := doc.DocType()
+	id := doc.ID()
+	rev := doc.Rev()
+	tombrev, err := Delete(dbprefix, doctype, id, rev)
+	if err == nil {
+		doc.SetRev(tombrev)
+	}
+	return
+}
+
+// UpdateDoc update a document. The document ID and Rev should be fillled.
+// The doc SetRev function will be called with the new rev.
+func UpdateDoc(dbprefix string, doc Doc) (err error) {
+	doctype := doc.DocType()
+	id := doc.ID()
+	rev := doc.Rev()
+	if id == "" || rev == "" || doctype == "" {
+		return fmt.Errorf("UpdateDoc argument should have doctype, id and rev ")
+	}
+
+	url := docURL(dbprefix, doctype, id)
+	var res updateResponse
+	err = makeRequest("PUT", url, doc, &res)
+	if err == nil {
+		doc.SetRev(res.Rev)
+	}
+	return err
 }
 
 func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err error) {
@@ -177,8 +239,9 @@ func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err
 }
 
 // CreateDoc is used to persist the given document in the couchdb
-// database. It returns the revision of the added document and sets the
-// document id.
+// database. The document's SetRev and SetID function will be called
+// with the document's new QID and Rev.
+// This function creates a database if this is the first document of its type
 //
 // @TODO: we still pass the doctype around to handle the /data api
 func CreateDoc(dbprefix, doctype string, doc Doc) (err error) {
