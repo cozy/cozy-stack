@@ -1,3 +1,8 @@
+// Package vfs is for storing files on the cozy, including binary ones like
+// photos and movies. The range of possible operations with this endpoint goes
+// from simple ones, like uploading a file, to more complex ones, like renaming
+// a folder. It also ensure that an instance is not exceeding its quota, and
+// keeps a trash to recover files recently deleted.
 package vfs
 
 import (

@@ -1,8 +1,6 @@
-// Package files is for storing files on the cozy, including binary ones like
-// photos and movies. The range of possible operations with this endpoint goes
-// from simple ones, like uploading a file, to more complex ones, like renaming
-// a folder. It also ensure that an instance is not exceeding its quota, and
-// keeps a trash to recover files recently deleted.
+// Package files is the HTTP frontend of the vfs package. It exposes
+// an HTTP api to manipulate the filesystem and offer all the
+// possibilities given by the vfs.
 package files
 
 import (
