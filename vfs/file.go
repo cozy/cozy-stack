@@ -8,15 +8,11 @@ import (
 	"io"
 	"net/http"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
-
-// DefaultContentType is used for files uploaded with no content-type
-const DefaultContentType = "application/octet-stream"
 
 type fileAttributes struct {
 	Name       string    `json:"name"`
@@ -235,29 +231,6 @@ func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.R
 	if !bytes.Equal(m.givenMD5, calcMD5) {
 		err = ErrInvalidHash
 		return
-	}
-
-	return
-}
-
-func extractMimeAndClass(contentType string) (mime, class string) {
-	if contentType == "" {
-		contentType = DefaultContentType
-	}
-
-	charsetIndex := strings.Index(contentType, ";")
-	if charsetIndex >= 0 {
-		mime = contentType[:charsetIndex]
-	} else {
-		mime = contentType
-	}
-
-	// @TODO improve for specific mime types
-	slashIndex := strings.Index(contentType, "/")
-	if slashIndex >= 0 {
-		class = contentType[:slashIndex]
-	} else {
-		class = contentType
 	}
 
 	return

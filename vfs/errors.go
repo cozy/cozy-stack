@@ -22,9 +22,6 @@ var (
 	// ErrInvalidHash is used when the given hash does not match the
 	// calculated one
 	ErrInvalidHash = errors.New("Invalid hash")
-	// ErrContentLengthInvalid is used when the content-length is not
-	// valid
-	ErrContentLengthInvalid = errors.New("Invalid content length")
 	// ErrContentLengthMismatch is used when the content-length does not
 	// match the calculated one
 	ErrContentLengthMismatch = errors.New("Content length does not match")
@@ -42,13 +39,13 @@ func HTTPStatus(err error) (code int) {
 	case ErrParentDoesNotExist:
 		code = http.StatusNotFound
 	case ErrDocTypeInvalid:
+		code = http.StatusUnprocessableEntity
 	case ErrIllegalFilename:
+		code = http.StatusUnprocessableEntity
 	case ErrInvalidHash:
 		code = http.StatusPreconditionFailed
-	case ErrContentLengthInvalid:
-		code = http.StatusUnprocessableEntity
 	case ErrContentLengthMismatch:
-		code = http.StatusPreconditionFailed
+		code = http.StatusUnprocessableEntity
 	}
 	return
 }

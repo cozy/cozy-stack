@@ -6,9 +6,7 @@
 package vfs
 
 import (
-	"encoding/base64"
 	"path"
-	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -49,7 +47,7 @@ func (d *DocAttributes) DocType() DocType {
 
 // NewDocAttributes is the DocAttributes constructor. All inputs are
 // validated and if wrong, an error is returned.
-func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str, contentType, contentLength string, executable bool) (m *DocAttributes, err error) {
+func NewDocAttributes(docTypeStr, name, folderID, mime, class string, size int64, givenMD5 []byte, tags []string, executable bool) (m *DocAttributes, err error) {
 	docType, err := parseDocType(docTypeStr)
 	if err != nil {
 		return
@@ -67,23 +65,6 @@ func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str, contentType, 
 		}
 	}
 
-	tags := parseTags(tagsStr)
-
-	var givenMD5 []byte
-	if md5Str != "" {
-		givenMD5, err = parseMD5Hash(md5Str)
-		if err != nil {
-			return
-		}
-	}
-
-	size, err := parseContentLength(contentLength)
-	if err != nil {
-		return
-	}
-
-	mime, class := extractMimeAndClass(contentType)
-
 	m = &DocAttributes{
 		docType:    docType,
 		name:       name,
@@ -99,16 +80,6 @@ func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str, contentType, 
 	return
 }
 
-func parseTags(str string) (tags []string) {
-	for _, tag := range strings.Split(str, ",") {
-		tag = strings.TrimSpace(tag)
-		if tag != "" {
-			tags = append(tags, tag)
-		}
-	}
-	return
-}
-
 func parseDocType(docType string) (result DocType, err error) {
 	switch docType {
 	case "io.cozy.files":
@@ -117,38 +88,6 @@ func parseDocType(docType string) (result DocType, err error) {
 		result = FolderDocType
 	default:
 		err = ErrDocTypeInvalid
-	}
-	return
-}
-
-func parseMD5Hash(md5B64 string) ([]byte, error) {
-	// Encoded md5 hash in base64 should at least have 22 caracters in
-	// base64: 16*3/4 = 21+1/3
-	//
-	// The padding may add up to 2 characters (non useful). If we are
-	// out of these boundaries we know we don't have a good hash and we
-	// can bail immediatly.
-	if len(md5B64) < 22 || len(md5B64) > 24 {
-		return nil, ErrInvalidHash
-	}
-
-	givenMD5, err := base64.StdEncoding.DecodeString(md5B64)
-	if err != nil || len(givenMD5) != 16 {
-		return nil, ErrInvalidHash
-	}
-
-	return givenMD5, nil
-}
-
-func parseContentLength(contentLength string) (size int64, err error) {
-	if contentLength == "" {
-		size = -1
-		return
-	}
-
-	size, err = strconv.ParseInt(contentLength, 10, 64)
-	if err != nil {
-		err = ErrContentLengthInvalid
 	}
 	return
 }
