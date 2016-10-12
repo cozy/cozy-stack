@@ -28,6 +28,8 @@ func HTTPStatus(err error) (code int) {
 		code = http.StatusNotFound
 	case vfs.ErrDocDoesNotExist:
 		code = http.StatusNotFound
+	case vfs.ErrContentLengthInvalid:
+		code = http.StatusUnprocessableEntity
 	case vfs.ErrInvalidHash:
 		code = http.StatusPreconditionFailed
 	case vfs.ErrContentLengthMismatch:

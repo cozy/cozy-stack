@@ -3,6 +3,7 @@ package vfs
 import (
 	"encoding/base64"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -31,11 +32,14 @@ type DocAttributes struct {
 	Executable bool
 	Tags       []string
 	GivenMD5   []byte
+	Size       int64
+	Mime       string
+	Class      string
 }
 
 // NewDocAttributes is the DocAttributes constructor. All inputs are
 // validated and if wrong, an error is returned.
-func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str string, executable bool) (m *DocAttributes, err error) {
+func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str, contentType, contentLength string, executable bool) (m *DocAttributes, err error) {
 	docType, err := parseDocType(docTypeStr)
 	if err != nil {
 		return
@@ -63,6 +67,13 @@ func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str string, execut
 		}
 	}
 
+	size, err := parseContentLength(contentLength)
+	if err != nil {
+		return
+	}
+
+	mime, class := extractMimeAndClass(contentType)
+
 	m = &DocAttributes{
 		Type:       docType,
 		Name:       name,
@@ -70,6 +81,9 @@ func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str string, execut
 		Tags:       tags,
 		Executable: executable,
 		GivenMD5:   givenMD5,
+		Size:       size,
+		Mime:       mime,
+		Class:      class,
 	}
 
 	return
@@ -114,6 +128,19 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	}
 
 	return givenMD5, nil
+}
+
+func parseContentLength(contentLength string) (size int64, err error) {
+	if contentLength == "" {
+		size = -1
+		return
+	}
+
+	size, err = strconv.ParseInt(contentLength, 10, 64)
+	if err != nil {
+		err = ErrContentLengthInvalid
+	}
+	return
 }
 
 func checkFileName(str string) error {

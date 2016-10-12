@@ -156,7 +156,7 @@ func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, na
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, contentType string, contentLength int64, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
+func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
 	if m.Type != FileDocType {
 		err = ErrDocTypeInvalid
 		return
@@ -167,18 +167,17 @@ func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, contentType string, cont
 		return
 	}
 
-	mime, class := extractMimeAndClass(contentType)
 	createDate := time.Now()
 	attrs := &fileAttributes{
 		Name:       m.Name,
 		CreatedAt:  createDate,
 		UpdatedAt:  createDate,
-		Size:       contentLength,
+		Size:       m.Size,
 		Tags:       m.Tags,
 		MD5Sum:     m.GivenMD5,
 		Executable: m.Executable,
-		Class:      class,
-		Mime:       mime,
+		Class:      m.Class,
+		Mime:       m.Mime,
 	}
 
 	doc = &FileDoc{
@@ -201,13 +200,13 @@ func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, contentType string, cont
 		return
 	}
 
-	if contentLength >= 0 && written != contentLength {
-		err = ErrContentLengthMismatch
-		return
+	if attrs.Size < 0 {
+		attrs.Size = written
 	}
 
-	if contentLength < 0 {
-		attrs.Size = written
+	if attrs.Size != written {
+		err = ErrContentLengthMismatch
+		return
 	}
 
 	if err = couchdb.CreateDoc(dbPrefix, doc); err != nil {

@@ -7,7 +7,6 @@ package files
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -32,6 +31,8 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	header := c.Request.Header
+	contentType := c.ContentType()
+	contentLength := header.Get("Content-Length")
 
 	m, err := vfs.NewDocAttributes(
 		c.Query("Type"),
@@ -39,6 +40,8 @@ func CreationHandler(c *gin.Context) {
 		c.Param("folder-id"),
 		c.Query("Tags"),
 		header.Get("Content-MD5"),
+		contentType,
+		contentLength,
 		c.Query("Executable") == "true",
 	)
 
@@ -47,17 +50,10 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	contentType := c.ContentType()
-	contentLength, err := parseContentLength(header.Get("Content-Length"))
-	if err != nil {
-		c.AbortWithError(http.StatusUnprocessableEntity, err)
-		return
-	}
-
 	var doc jsonapi.JSONApier
 	switch m.Type {
 	case vfs.FileDocType:
-		doc, err = vfs.CreateFileAndUpload(m, storage, contentType, contentLength, dbPrefix, c.Request.Body)
+		doc, err = vfs.CreateFileAndUpload(m, storage, dbPrefix, c.Request.Body)
 	case vfs.FolderDocType:
 		doc, err = vfs.CreateDirectory(m, storage, dbPrefix)
 	}
@@ -123,17 +119,4 @@ func Routes(router *gin.RouterGroup) {
 
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
-}
-
-func parseContentLength(contentLength string) (size int64, err error) {
-	if contentLength == "" {
-		size = -1
-		return
-	}
-
-	size, err = strconv.ParseInt(contentLength, 10, 64)
-	if err != nil {
-		err = vfs.ErrContentLengthInvalid
-	}
-	return
 }
