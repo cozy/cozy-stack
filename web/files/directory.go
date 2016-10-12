@@ -20,7 +20,7 @@ type dirAttributes struct {
 // interfaces.
 type DirDoc struct {
 	// Qualified file identifier
-	QID string `json:"_id,omitempty"`
+	DID string `json:"_id,omitempty"`
 	// Directory revision
 	DRev string `json:"_rev,omitempty"`
 	// Directory attributes
@@ -33,7 +33,7 @@ type DirDoc struct {
 
 // ID returns the directory qualified identifier (part of couchdb.Doc interface)
 func (d *DirDoc) ID() string {
-	return d.QID
+	return d.DID
 }
 
 // Rev returns the directory revision (part of couchdb.Doc interface)
@@ -50,7 +50,7 @@ func (d *DirDoc) DocType() string {
 // SetID is used to change the directory qualified identifier (part of
 // couchdb.Doc interface)
 func (d *DirDoc) SetID(id string) {
-	d.QID = id
+	d.DID = id
 }
 
 // SetRev is used to change the directory revision (part of
@@ -62,7 +62,7 @@ func (d *DirDoc) SetRev(rev string) {
 // ToJSONApi implements temporary interface JSONApier to serialize
 // the directory document
 func (d *DirDoc) ToJSONApi() ([]byte, error) {
-	qid := d.QID
+	qid := d.DID
 	data := map[string]interface{}{
 		"type":       d.DocType(),
 		"id":         qid,

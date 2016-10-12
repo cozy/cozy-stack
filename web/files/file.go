@@ -34,7 +34,7 @@ type fileAttributes struct {
 // It implements the couchdb.Doc and jsonapi.JSONApier interfaces.
 type FileDoc struct {
 	// Qualified file identifier
-	QID string `json:"_id,omitempty"`
+	FID string `json:"_id,omitempty"`
 	// File revision
 	FRev string `json:"_rev,omitempty"`
 	// File attributes
@@ -48,7 +48,7 @@ type FileDoc struct {
 // ID returns the file qualified identifier (part of couchdb.Doc
 // interface)
 func (f *FileDoc) ID() string {
-	return f.QID
+	return f.FID
 }
 
 // Rev returns the file revision (part of couchdb.Doc interface)
@@ -65,7 +65,7 @@ func (f *FileDoc) DocType() string {
 // SetID is used to change the file qualified identifier (part of
 // couchdb.Doc interface)
 func (f *FileDoc) SetID(id string) {
-	f.QID = id
+	f.FID = id
 }
 
 // SetRev is used to change the file revision (part of couchdb.Doc
@@ -77,7 +77,7 @@ func (f *FileDoc) SetRev(rev string) {
 // ToJSONApi implements temporary interface JSONApier to serialize
 // the file document
 func (f *FileDoc) ToJSONApi() ([]byte, error) {
-	qid := f.QID
+	qid := f.FID
 	data := map[string]interface{}{
 		"id":         qid[strings.Index(qid, "/")+1:],
 		"type":       f.DocType(),
