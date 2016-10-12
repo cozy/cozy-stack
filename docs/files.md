@@ -55,8 +55,8 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
   "data": {
     "type": "io.cozy.folders",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "rev": "1-ff3beeb456eb",
     "attributes": {
-      "rev": "1-ff3beeb456eb",
       "name": "phone",
       "created_at": "2016-09-19T12:35:08Z",
       "updated_at": "2016-09-19T12:35:08Z",
@@ -114,8 +114,8 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.folders",
     "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
+    "rev": "1-e36ab092",
     "attributes": {
-      "rev": "1-e36ab092",
       "name": "Documents",
       "created_at": "2016-09-19T12:35:00Z",
       "updated_at": "2016-09-19T12:35:00Z",
@@ -136,8 +136,8 @@ Content-Type: application/vnd.api+json
   "included": [{
     "type": "io.cozy.folders",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "rev": "1-ff3beeb456eb",
     "attributes": {
-      "rev": "1-ff3beeb456eb",
       "name": "phone",
       "created_at": "2016-09-19T12:35:08Z",
       "updated_at": "2016-09-19T12:35:08Z",
@@ -160,8 +160,8 @@ Content-Type: application/vnd.api+json
   }, {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "rev": "1-0e6d5b72",
     "attributes": {
-      "rev": "1-0e6d5b72",
       "name": "hello.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -255,8 +255,8 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "rev": "1-0e6d5b72",
     "attributes": {
-      "rev": "1-0e6d5b72",
       "name": "hello.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -365,8 +365,8 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "rev": "2-d903b54c",
     "attributes": {
-      "rev": "2-d903b54c",
       "name": "hello.txt",
       "md5sum": "b59bc37d6441d96785bda7ab2ae98f75",
       "created_at": "2016-09-19T12:38:04Z",
@@ -426,8 +426,8 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "rev": "1-0e6d5b72",
     "attributes": {
-      "rev": "1-0e6d5b72",
       "name": "hello.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -519,8 +519,8 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+    "rev": "1-0e6d5b72",
     "attributes": {
-      "rev": "1-0e6d5b72",
       "name": "hi.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -611,8 +611,8 @@ Content-Type: application/vnd.api+json
   "data": [{
     "type": "io.cozy.files",
     "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
+    "rev": "1-3b75377c",
     "attributes": {
-      "rev": "1-3b75377c",
       "name": "foo.txt",
       "md5sum": "b01341e7803c800cc8db4de46f377a87",
       "created_at": "2016-09-19T12:38:04Z",
@@ -629,8 +629,8 @@ Content-Type: application/vnd.api+json
   }, {
     "type": "io.cozy.files",
     "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
+    "rev": "1-4a09030e",
     "attributes": {
-      "rev": "1-4a09030e",
       "name": "bar.txt",
       "md5sum": "aeab87eb49d3f4e0e5625ada9b49f8e1",
       "created_at": "2016-09-19T12:38:04Z",
