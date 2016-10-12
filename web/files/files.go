@@ -312,11 +312,10 @@ func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth s
 	if folderID == "" {
 		parentPath = "/"
 	} else {
-		qFolderID := string(FolderDocType) + "/" + folderID
 		parentDoc = &DirDoc{}
 
 		// NOTE: we only check the existence of the folder on the db
-		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), qFolderID, parentDoc)
+		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), folderID, parentDoc)
 		if couchdb.IsNotFoundError(err) {
 			err = errParentDoesNotExist
 		}

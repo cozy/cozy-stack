@@ -34,7 +34,7 @@ type fileAttributes struct {
 // It implements the couchdb.Doc and jsonapi.JSONApier interfaces.
 type FileDoc struct {
 	// Qualified file identifier
-	QID string `json:"_id"`
+	QID string `json:"_id,omitempty"`
 	// File revision
 	FRev string `json:"_rev,omitempty"`
 	// File attributes
@@ -210,7 +210,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, conten
 		attrs.Size = written
 	}
 
-	if err = couchdb.CreateDoc(dbPrefix, doc.DocType(), doc); err != nil {
+	if err = couchdb.CreateDoc(dbPrefix, doc); err != nil {
 		return
 	}
 

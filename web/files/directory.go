@@ -2,7 +2,6 @@ package files
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -21,7 +20,7 @@ type dirAttributes struct {
 // interfaces.
 type DirDoc struct {
 	// Qualified file identifier
-	QID string `json:"_id"`
+	QID string `json:"_id,omitempty"`
 	// Directory revision
 	DRev string `json:"_rev,omitempty"`
 	// Directory attributes
@@ -66,7 +65,7 @@ func (d *DirDoc) ToJSONApi() ([]byte, error) {
 	qid := d.QID
 	data := map[string]interface{}{
 		"type":       d.DocType(),
-		"id":         qid[strings.Index(qid, "/")+1:],
+		"id":         qid,
 		"rev":        d.Rev(),
 		"attributes": d.Attrs,
 	}
@@ -108,7 +107,7 @@ func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (doc *DirDoc,
 		}
 	}()
 
-	if err = couchdb.CreateDoc(dbPrefix, doc.DocType(), doc); err != nil {
+	if err = couchdb.CreateDoc(dbPrefix, doc); err != nil {
 		return
 	}
 
