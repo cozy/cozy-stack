@@ -3,8 +3,10 @@ package errors
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/vfs"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,11 +20,22 @@ var NoInstance = &gin.Error{
 }
 
 // HTTPStatus gives the http status for given error
-func HTTPStatus(err error) int {
-	if coucherr, iscoucherr := err.(*couchdb.Error); iscoucherr {
-		return coucherr.StatusCode
+func HTTPStatus(err error) (code int) {
+	if os.IsNotExist(err) {
+		code = http.StatusNotFound
+	} else if os.IsExist(err) {
+		code = http.StatusConflict
+	} else if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
+		code = couchErr.StatusCode
+	} else {
+		code = vfs.HTTPStatus(err)
 	}
-	return http.StatusInternalServerError
+
+	if code == 0 {
+		code = http.StatusInternalServerError
+	}
+
+	return
 }
 
 // Handler returns a gin middleware to handle the errors

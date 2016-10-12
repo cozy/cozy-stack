@@ -1,4 +1,4 @@
-package files
+package vfs
 
 import (
 	"bytes"
@@ -8,15 +8,11 @@ import (
 	"io"
 	"net/http"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
-
-// DefaultContentType is used for files uploaded with no content-type
-const DefaultContentType = "application/octet-stream"
 
 type fileAttributes struct {
 	Name       string    `json:"name"`
@@ -156,9 +152,9 @@ func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, na
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, contentLength int64, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
-	if m.Type != FileDocType {
-		err = errDocTypeInvalid
+func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
+	if m.docType != FileDocType {
+		err = ErrDocTypeInvalid
 		return
 	}
 
@@ -167,23 +163,22 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, conten
 		return
 	}
 
-	mime, class := extractMimeAndClass(contentType)
 	createDate := time.Now()
 	attrs := &fileAttributes{
-		Name:       m.Name,
+		Name:       m.name,
 		CreatedAt:  createDate,
 		UpdatedAt:  createDate,
-		Size:       contentLength,
-		Tags:       m.Tags,
-		MD5Sum:     m.GivenMD5,
-		Executable: m.Executable,
-		Class:      class,
-		Mime:       mime,
+		Size:       m.size,
+		Tags:       m.tags,
+		MD5Sum:     m.givenMD5,
+		Executable: m.executable,
+		Class:      m.class,
+		Mime:       m.mime,
 	}
 
 	doc = &FileDoc{
 		Attrs:    attrs,
-		FolderID: m.FolderID,
+		FolderID: m.folderID,
 		Path:     pth,
 	}
 
@@ -201,13 +196,13 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, conten
 		return
 	}
 
-	if contentLength >= 0 && written != contentLength {
-		err = errContentLengthMismatch
-		return
+	if attrs.Size < 0 {
+		attrs.Size = written
 	}
 
-	if contentLength < 0 {
-		attrs.Size = written
+	if attrs.Size != written {
+		err = ErrContentLengthMismatch
+		return
 	}
 
 	if err = couchdb.CreateDoc(dbPrefix, doc); err != nil {
@@ -217,7 +212,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, conten
 	return
 }
 
-func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.ReadCloser) (written int64, err error) {
+func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.ReadCloser) (written int64, err error) {
 	f, err := fs.Create(pth)
 	if err != nil {
 		return
@@ -233,32 +228,9 @@ func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.Rea
 	}
 
 	calcMD5 := md5H.Sum(nil)
-	if !bytes.Equal(m.GivenMD5, calcMD5) {
-		err = errInvalidHash
+	if !bytes.Equal(m.givenMD5, calcMD5) {
+		err = ErrInvalidHash
 		return
-	}
-
-	return
-}
-
-func extractMimeAndClass(contentType string) (mime, class string) {
-	if contentType == "" {
-		contentType = DefaultContentType
-	}
-
-	charsetIndex := strings.Index(contentType, ";")
-	if charsetIndex >= 0 {
-		mime = contentType[:charsetIndex]
-	} else {
-		mime = contentType
-	}
-
-	// @TODO improve for specific mime types
-	slashIndex := strings.Index(contentType, "/")
-	if slashIndex >= 0 {
-		class = contentType[:slashIndex]
-	} else {
-		class = contentType
 	}
 
 	return
