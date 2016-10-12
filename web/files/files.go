@@ -167,6 +167,8 @@ func CreationHandler(c *gin.Context) {
 // swagger:route GET /files/download files downloadFileByPath
 // swagger:route GET /files/:file-id files downloadFileByID
 func ReadHandler(c *gin.Context) {
+	var err error
+
 	instance := middlewares.GetInstance(c)
 	dbPrefix := instance.GetDatabasePrefix()
 	storage, err := instance.GetStorageProvider()
@@ -175,60 +177,34 @@ func ReadHandler(c *gin.Context) {
 		return
 	}
 
-	fileIDParam := c.Param("file-id")
-	if fileIDParam == "download" {
-		err = readFileFromPath(c, storage, c.Query("path"))
-	} else {
-		err = readFileFromID(c, storage, fileIDParam, dbPrefix)
-	}
+	fileID := c.Param("file-id")
 
-	if err != nil {
-		if c.Writer.Written() {
-			c.Abort()
-		} else {
-			c.AbortWithError(http.StatusInternalServerError, err)
+	// Path /files/download is handled specifically to download file
+	// form their path
+	if fileID == "download" {
+		pth := c.Query("path")
+		err = ServeFileContentByPath(pth, c.Request, c.Writer, storage)
+	} else {
+		var doc *FileDoc
+		doc, err = GetFileDoc(string(FileDocType)+"/"+fileID, dbPrefix)
+		if err == nil {
+			err = ServeFileContent(doc, c.Request, c.Writer, storage)
 		}
 	}
-}
 
-func readFileFromPath(c *gin.Context, storage afero.Fs, pth string) error {
-	info, err := StatFile(pth, storage)
 	if err != nil {
-		return err
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
-
-	name := path.Base(pth)
-
-	w := c.Writer
-	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
-	w.Header().Set("Content-Disposition", "attachment; filename="+name+"")
-	w.WriteHeader(http.StatusOK)
-
-	return ReadFile(pth, storage, c.Writer)
-}
-
-func readFileFromID(c *gin.Context, storage afero.Fs, fileID, dbPrefix string) error {
-	doc, err := GetFileDoc(string(FileDocType)+"/"+fileID, dbPrefix)
-	if err != nil {
-		return err
-	}
-
-	attrs := doc.Attrs
-	w := c.Writer
-	w.Header().Set("Content-Type", attrs.Mime)
-	w.Header().Set("Content-Length", strconv.FormatInt(attrs.Size, 10))
-	w.Header().Set("Content-Disposition", "inline; filename="+attrs.Name+"")
-	w.WriteHeader(http.StatusOK)
-
-	return ReadFile(doc.Path, storage, c.Writer)
 }
 
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
+	router.HEAD("/:file-id", ReadHandler)
+	router.GET("/:file-id", ReadHandler)
+
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
-
-	router.GET("/:file-id", ReadHandler)
 }
 
 func makeCode(err error) (code int) {

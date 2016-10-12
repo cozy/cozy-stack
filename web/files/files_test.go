@@ -269,6 +269,9 @@ func TestDownloadFileByIDSuccess(t *testing.T) {
 
 	res2, resbody := download(t, "/files/"+fileID, "")
 	assert.Equal(t, 200, res2.StatusCode)
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "inline"))
+	assert.NotEmpty(t, res2.Header.Get("Etag"))
+	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
 	assert.Equal(t, body, string(resbody))
 }
 
@@ -279,6 +282,8 @@ func TestDownloadFileByPathSuccess(t *testing.T) {
 
 	res2, resbody := download(t, "/files/download?path="+url.QueryEscape("/downloadme2"), "")
 	assert.Equal(t, 200, res2.StatusCode)
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "attachment"))
+	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
 	assert.Equal(t, body, string(resbody))
 }
 
