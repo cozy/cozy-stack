@@ -35,7 +35,7 @@ type JSONDoc struct {
 	Type string
 }
 
-// ID returns the qualified identifier field of the document
+// ID returns the identifier field of the document
 //   "io.cozy.event/123abc123" == doc.ID()
 func (j JSONDoc) ID() string {
 	id, ok := j.M["_id"].(string)
@@ -61,7 +61,7 @@ func (j JSONDoc) DocType() string {
 	return j.Type
 }
 
-// SetID is used to set the qualified identifier of the document
+// SetID is used to set the identifier of the document
 func (j JSONDoc) SetID(id string) {
 	j.M["_id"] = id
 }

@@ -4,13 +4,13 @@
 
 The notion of document type does not exist in Couchdb.
 
-Cozy-stack introduce this notion by prefixing each document's `_id` with a fully qualified type name followed by `/`.
+Cozy-stack introduce this notion through a special `_type` field.
 
 This type name cannot contain `/`, and it should be unique among all developers, it is recommended to use the Java naming convention with a domain you own.
 
 All CozyCloud types will be prefixed by io.cozy and be pluralized.
-Example ID : `io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee`
-Where, `io.cozy.` is the developer specific prefix, `events` the actual type, and `6494e0ac-dfcb-11e5-88c1-472e84a9cbee` the document's unique (within a type) id .
+Example : `/data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee`
+Where, `io.cozy.` is the developer specific prefix, `events` the actual type, and `6494e0ac-dfcb-11e5-88c1-472e84a9cbee` the document's unique id .
 
 ------------------------------------------------------------------------------
 
@@ -34,7 +34,8 @@ Etag: "3-6494e0ac6494e0ac"
 ```
 ```json
 {
-    "_id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_type": "io.cozy.events",
     "_rev": "3-6494e0ac6494e0ac",
     "startdate": "20160823T150000Z",
     "enddate": "20160923T160000Z",
@@ -97,11 +98,13 @@ Content-Type: application/json
 ```
 ```json
 {
-  "id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+  "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+  "type": "io.cozy.events",
   "ok": true,
   "rev": "1-6494e0ac6494e0ac",
   "data": {
-    "_id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_type": "io.cozy.events",
     "_rev": "1-6494e0ac6494e0ac",
     "startdate": "20160712T150000",
     "enddate": "20160712T150000"
@@ -143,7 +146,8 @@ Content-Type: application/json
 ```
 ```json
 {
-    "id": "io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "type": "io.cozy.events",
     "ok": true,
     "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
     "_deleted": true
