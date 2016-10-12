@@ -1,4 +1,4 @@
-package files
+package vfs
 
 import (
 	"bytes"
@@ -156,9 +156,9 @@ func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, na
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, contentLength int64, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
+func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, contentType string, contentLength int64, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
 	if m.Type != FileDocType {
-		err = errDocTypeInvalid
+		err = ErrDocTypeInvalid
 		return
 	}
 
@@ -202,7 +202,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, conten
 	}
 
 	if contentLength >= 0 && written != contentLength {
-		err = errContentLengthMismatch
+		err = ErrContentLengthMismatch
 		return
 	}
 
@@ -217,7 +217,7 @@ func CreateFileAndUpload(m *DocMetadata, fs afero.Fs, contentType string, conten
 	return
 }
 
-func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.ReadCloser) (written int64, err error) {
+func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.ReadCloser) (written int64, err error) {
 	f, err := fs.Create(pth)
 	if err != nil {
 		return
@@ -234,7 +234,7 @@ func copyOnFsAndCheckIntegrity(m *DocMetadata, fs afero.Fs, pth string, r io.Rea
 
 	calcMD5 := md5H.Sum(nil)
 	if !bytes.Equal(m.GivenMD5, calcMD5) {
-		err = errInvalidHash
+		err = ErrInvalidHash
 		return
 	}
 

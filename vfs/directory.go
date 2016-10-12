@@ -1,4 +1,4 @@
-package files
+package vfs
 
 import (
 	"encoding/json"
@@ -76,9 +76,9 @@ func (d *DirDoc) ToJSONApi() ([]byte, error) {
 }
 
 // CreateDirectory is the method for creating a new directory
-func CreateDirectory(m *DocMetadata, fs afero.Fs, dbPrefix string) (doc *DirDoc, err error) {
+func CreateDirectory(m *DocAttributes, fs afero.Fs, dbPrefix string) (doc *DirDoc, err error) {
 	if m.Type != FolderDocType {
-		err = errDocTypeInvalid
+		err = ErrDocTypeInvalid
 		return
 	}
 
