@@ -77,9 +77,9 @@ func (f *FileDoc) SetRev(rev string) {
 // ToJSONApi implements temporary interface JSONApier to serialize
 // the file document
 func (f *FileDoc) ToJSONApi() ([]byte, error) {
-	qid := f.FID
+	id := f.FID
 	data := map[string]interface{}{
-		"id":         qid[strings.Index(qid, "/")+1:],
+		"id":         id,
 		"type":       f.DocType(),
 		"rev":        f.Rev(),
 		"attributes": f.Attrs,

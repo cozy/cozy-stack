@@ -186,7 +186,7 @@ func ReadHandler(c *gin.Context) {
 		err = ServeFileContentByPath(pth, c.Request, c.Writer, storage)
 	} else {
 		var doc *FileDoc
-		doc, err = GetFileDoc(string(FileDocType)+"/"+fileID, dbPrefix)
+		doc, err = GetFileDoc(fileID, dbPrefix)
 		if err == nil {
 			err = ServeFileContent(doc, c.Request, c.Writer, storage)
 		}
