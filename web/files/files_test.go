@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -77,6 +78,29 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 
 	err = extractJSONRes(res, &v)
 	assert.NoError(t, err)
+
+	return
+}
+
+func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
+	req, err := http.NewRequest("GET", ts.URL+path, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	if byteRange != "" {
+		req.Header.Add("Range", byteRange)
+	}
+
+	res, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	body, err = ioutil.ReadAll(res.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	return
 }
@@ -221,6 +245,43 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 	assert.Equal(t, 409, res2.StatusCode)
 }
 
+func TestDownloadFileBadID(t *testing.T) {
+	res, _ := download(t, "/badid", "")
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestDownloadFileBadPath(t *testing.T) {
+	res, _ := download(t, "/download?path=/i/do/not/exist", "")
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestDownloadFileByIDSuccess(t *testing.T) {
+	body := "foo"
+	res1, filedata := upload(t, "/files/?Type=io.cozy.files&Name=downloadme1", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	filedata, ok = filedata["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := filedata["id"].(string)
+	assert.True(t, ok)
+
+	res2, resbody := download(t, "/files/"+fileID, "")
+	assert.Equal(t, 200, res2.StatusCode)
+	assert.Equal(t, body, string(resbody))
+}
+
+func TestDownloadFileByPathSuccess(t *testing.T) {
+	body := "foo"
+	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadme2", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	res2, resbody := download(t, "/files/download?path="+url.QueryEscape("/downloadme2"), "")
+	assert.Equal(t, 200, res2.StatusCode)
+	assert.Equal(t, body, string(resbody))
+}
+
 func TestMain(m *testing.M) {
 	// First we make sure couchdb is started
 	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
@@ -239,6 +300,7 @@ func TestMain(m *testing.M) {
 	router.Use(injectInstance(instance))
 	router.POST("/files/", CreationHandler)
 	router.POST("/files/:folder-id", CreationHandler)
+	router.GET("/files/:file-id", ReadHandler)
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())

@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -34,7 +35,8 @@ const (
 )
 
 var (
-	errDocAlreadyExists      = errors.New("Directory or file already exists")
+	errDocAlreadyExists      = os.ErrExist
+	errDocDoesNotExist       = os.ErrNotExist
 	errParentDoesNotExist    = errors.New("Parent folder with given FolderID does not exist")
 	errDocTypeInvalid        = errors.New("Invalid document type")
 	errIllegalFilename       = errors.New("Invalid filename: empty or contains an illegal character")
@@ -156,10 +158,77 @@ func CreationHandler(c *gin.Context) {
 	c.Data(http.StatusCreated, jsonapi.ContentType, data)
 }
 
+// ReadHandler handle all GET requests on /files/:file-id aiming at
+// downloading a file. It serves two main purposes in this regard:
+//  - downloading a file given its ID in inline mode
+//  - downloading a file given its path in attachment mode on the
+//    /files/download endpoint
+//
+// swagger:route GET /files/download files downloadFileByPath
+// swagger:route GET /files/:file-id files downloadFileByID
+func ReadHandler(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+	dbPrefix := instance.GetDatabasePrefix()
+	storage, err := instance.GetStorageProvider()
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	fileIDParam := c.Param("file-id")
+	if fileIDParam == "download" {
+		err = readFileFromPath(c, storage, c.Query("path"))
+	} else {
+		err = readFileFromID(c, storage, fileIDParam, dbPrefix)
+	}
+
+	if err != nil {
+		if c.Writer.Written() {
+			c.Abort()
+		} else {
+			c.AbortWithError(http.StatusInternalServerError, err)
+		}
+	}
+}
+
+func readFileFromPath(c *gin.Context, storage afero.Fs, pth string) error {
+	info, err := StatFile(pth, storage)
+	if err != nil {
+		return err
+	}
+
+	name := path.Base(pth)
+
+	w := c.Writer
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	w.Header().Set("Content-Disposition", "attachment; filename="+name+"")
+	w.WriteHeader(http.StatusOK)
+
+	return ReadFile(pth, storage, c.Writer)
+}
+
+func readFileFromID(c *gin.Context, storage afero.Fs, fileID, dbPrefix string) error {
+	doc, err := GetFileDoc(string(FileDocType)+"/"+fileID, dbPrefix)
+	if err != nil {
+		return err
+	}
+
+	attrs := doc.Attrs
+	w := c.Writer
+	w.Header().Set("Content-Type", attrs.Mime)
+	w.Header().Set("Content-Length", strconv.FormatInt(attrs.Size, 10))
+	w.Header().Set("Content-Disposition", "inline; filename="+attrs.Name+"")
+	w.WriteHeader(http.StatusOK)
+
+	return ReadFile(doc.Path, storage, c.Writer)
+}
+
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
+
+	router.GET("/:file-id", ReadHandler)
 }
 
 func makeCode(err error) (code int) {
@@ -167,6 +236,8 @@ func makeCode(err error) (code int) {
 	case errDocAlreadyExists:
 		code = http.StatusConflict
 	case errParentDoesNotExist:
+		code = http.StatusNotFound
+	case errDocDoesNotExist:
 		code = http.StatusNotFound
 	case errInvalidHash:
 		code = http.StatusPreconditionFailed

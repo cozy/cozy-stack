@@ -5,6 +5,7 @@ import (
 	"crypto/md5" // #nosec
 	"encoding/json"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -85,6 +86,34 @@ func (f *FileDoc) ToJSONApi() ([]byte, error) {
 		"data": data,
 	}
 	return json.Marshal(m)
+}
+
+// GetFileDoc is used to fetch file document information form our
+// database.
+func GetFileDoc(fileID, dbPrefix string) (doc *FileDoc, err error) {
+	doc = &FileDoc{}
+	err = couchdb.GetDoc(dbPrefix, string(FileDocType), fileID, doc)
+	return
+}
+
+// StatFile is used to have information about the a file from its
+// path.
+func StatFile(pth string, fs afero.Fs) (os.FileInfo, error) {
+	return fs.Stat(pth)
+}
+
+// ReadFile is used to read a file given its path from the filesystem
+// into the given writer.
+func ReadFile(pth string, fs afero.Fs, w io.Writer) (err error) {
+	f, err := fs.Open(pth)
+	if err != nil {
+		return
+	}
+
+	defer f.Close()
+	_, err = io.Copy(w, f)
+
+	return
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
