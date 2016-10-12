@@ -25,7 +25,7 @@ func validDoctype(c *gin.Context) {
 func getDoc(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	doctype := c.MustGet("doctype").(string)
-	docid := doctype + "/" + c.Param("docid")
+	docid := c.Param("docid")
 
 	prefix := instance.GetDatabasePrefix()
 
@@ -35,7 +35,8 @@ func getDoc(c *gin.Context) {
 		c.AbortWithError(errors.HTTPStatus(err), err)
 		return
 	}
-	c.JSON(200, out)
+	out.Type = doctype
+	c.JSON(200, out.ToMapWithType())
 }
 
 // CreateDoc create doc from the json passed as body
@@ -44,13 +45,13 @@ func createDoc(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	prefix := instance.GetDatabasePrefix()
 
-	var doc couchdb.JSONDoc
-	if err := c.BindJSON(&doc); err != nil {
+	var doc = couchdb.JSONDoc{Type: doctype}
+	if err := c.BindJSON(&doc.M); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
-	err := couchdb.CreateDoc(prefix, doctype, doc)
+	err := couchdb.CreateDoc(prefix, doc)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
 		return
@@ -60,7 +61,8 @@ func createDoc(c *gin.Context) {
 		"ok":   true,
 		"id":   doc.ID(),
 		"rev":  doc.Rev(),
-		"data": doc,
+		"type": doc.DocType(),
+		"data": doc.ToMapWithType(),
 	})
 }
 
@@ -74,6 +76,19 @@ func updateDoc(c *gin.Context) {
 		return
 	}
 
+	doc.Type = c.Param("doctype")
+
+	if doc.ID() != "" && doc.ID() != c.Param("docid") {
+		err := fmt.Errorf("_id in document doesnt match url")
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	rev := c.Request.Header.Get("If-Match")
+	if rev != "" {
+		doc.SetRev(rev)
+	}
+
 	err := couchdb.UpdateDoc(prefix, doc)
 	if err != nil {
 		c.AbortWithError(errors.HTTPStatus(err), err)
@@ -84,14 +99,15 @@ func updateDoc(c *gin.Context) {
 		"ok":   true,
 		"id":   doc.ID(),
 		"rev":  doc.Rev(),
-		"data": doc,
+		"type": doc.DocType(),
+		"data": doc.ToMapWithType(),
 	})
 }
 
 func deleteDoc(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	doctype := c.MustGet("doctype").(string)
-	docid := doctype + "/" + c.Param("docid")
+	docid := c.Param("docid")
 	prefix := instance.GetDatabasePrefix()
 	rev := c.Request.Header.Get("If-Match")
 
@@ -111,6 +127,7 @@ func deleteDoc(c *gin.Context) {
 		"ok":      true,
 		"id":      docid,
 		"rev":     tombrev,
+		"type":    doctype,
 		"deleted": true,
 	})
 

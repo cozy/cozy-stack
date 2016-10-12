@@ -98,7 +98,7 @@ func TestMain(m *testing.M) {
 	ts = httptest.NewServer(router)
 	couchReq("DELETE", ExpectedDBName, nil)
 	couchReq("PUT", ExpectedDBName, nil)
-	couchReq("PUT", ExpectedDBName+"/"+Type+"%2F"+ID, bytes.NewReader(DOCUMENT))
+	couchReq("PUT", ExpectedDBName+"/"+ID, bytes.NewReader(DOCUMENT))
 
 	defer ts.Close()
 	os.Exit(m.Run())
