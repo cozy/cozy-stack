@@ -37,6 +37,7 @@ type DocAttributes struct {
 	class      string
 }
 
+// DocType returns the document type of the attributes.
 func (d *DocAttributes) DocType() DocType {
 	return d.docType
 }
