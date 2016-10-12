@@ -297,6 +297,23 @@ func TestDownloadFileByPathSuccess(t *testing.T) {
 	assert.Equal(t, body, string(resbody))
 }
 
+func TestDownloadRangeSuccess(t *testing.T) {
+	body := "foo,bar"
+	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadmebyrange", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	res2, _ := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "nimp")
+	assert.Equal(t, 416, res2.StatusCode)
+
+	res3, res3body := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "bytes=0-2")
+	assert.Equal(t, 206, res3.StatusCode)
+	assert.Equal(t, "foo", string(res3body))
+
+	res4, res4body := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "bytes=4-")
+	assert.Equal(t, 206, res4.StatusCode)
+	assert.Equal(t, "bar", string(res4body))
+}
+
 func TestMain(m *testing.M) {
 	// First we make sure couchdb is started
 	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
