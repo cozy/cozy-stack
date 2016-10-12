@@ -186,7 +186,7 @@ func ReadHandler(c *gin.Context) {
 		err = ServeFileContentByPath(pth, c.Request, c.Writer, storage)
 	} else {
 		var doc *FileDoc
-		doc, err = GetFileDoc(string(FileDocType)+"/"+fileID, dbPrefix)
+		doc, err = GetFileDoc(fileID, dbPrefix)
 		if err == nil {
 			err = ServeFileContent(doc, c.Request, c.Writer, storage)
 		}
@@ -312,11 +312,10 @@ func createNewFilePath(m *DocMetadata, storage afero.Fs, dbPrefix string) (pth s
 	if folderID == "" {
 		parentPath = "/"
 	} else {
-		qFolderID := string(FolderDocType) + "/" + folderID
 		parentDoc = &DirDoc{}
 
 		// NOTE: we only check the existence of the folder on the db
-		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), qFolderID, parentDoc)
+		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), folderID, parentDoc)
 		if couchdb.IsNotFoundError(err) {
 			err = errParentDoesNotExist
 		}

@@ -18,7 +18,7 @@ func TestErrors(t *testing.T) {
 }
 
 type testDoc struct {
-	TestID  string `json:"_id"`
+	TestID  string `json:"_id,omitempty"`
 	TestRev string `json:"_rev,omitempty"`
 	Test    string `json:"test"`
 }
@@ -57,7 +57,7 @@ func TestCreateDoc(t *testing.T) {
 	assert.Empty(t, doc.Rev(), doc.ID())
 
 	// Create the document
-	err = CreateDoc(TESTPREFIX, "io.cozy.testobject", doc)
+	err = CreateDoc(TESTPREFIX, doc)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, doc.Rev(), doc.ID())
 

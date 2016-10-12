@@ -2,15 +2,12 @@ package couchdb
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 type updateResponse struct {
@@ -33,14 +30,17 @@ type Doc interface {
 
 // JSONDoc is a map representing a simple json object that implements
 // the Doc interface.
-type JSONDoc map[string]interface{}
+type JSONDoc struct {
+	M    map[string]interface{}
+	Type string
+}
 
-// ID returns the qualified identifier field of the document
+// ID returns the identifier field of the document
 //   "io.cozy.event/123abc123" == doc.ID()
 func (j JSONDoc) ID() string {
-	qid, ok := j["_id"].(string)
+	id, ok := j.M["_id"].(string)
 	if ok {
-		return qid
+		return id
 	}
 	return ""
 }
@@ -48,7 +48,7 @@ func (j JSONDoc) ID() string {
 // Rev returns the revision field of the document
 //   "3-1234def1234" == doc.Rev()
 func (j JSONDoc) Rev() string {
-	rev, ok := j["_rev"].(string)
+	rev, ok := j.M["_rev"].(string)
 	if ok {
 		return rev
 	}
@@ -58,21 +58,34 @@ func (j JSONDoc) Rev() string {
 // DocType returns the document type of the document
 //   "io.cozy.event" == doc.Doctype()
 func (j JSONDoc) DocType() string {
-	qid, ok := j["_id"].(string)
-	if !ok {
-		return ""
-	}
-	return qid[0:strings.Index(qid, "/")]
+	return j.Type
 }
 
-// SetID is used to set the qualified identifier of the document
-func (j JSONDoc) SetID(qid string) {
-	j["_id"] = qid
+// SetID is used to set the identifier of the document
+func (j JSONDoc) SetID(id string) {
+	j.M["_id"] = id
 }
 
 // SetRev is used to set the revision of the document
 func (j JSONDoc) SetRev(rev string) {
-	j["_rev"] = rev
+	j.M["_rev"] = rev
+}
+
+// MarshalJSON implements json.Marshaller by proxying to internal map
+func (j JSONDoc) MarshalJSON() ([]byte, error) {
+	return json.Marshal(j.M)
+}
+
+// UnmarshalJSON implements json.Unmarshaller by proxying to internal map
+func (j *JSONDoc) UnmarshalJSON(bytes []byte) error {
+	return json.Unmarshal(bytes, &j.M)
+}
+
+// ToMapWithType returns the JSONDoc internal map including its DocType
+// its used in request response.
+func (j *JSONDoc) ToMapWithType() map[string]interface{} {
+	j.M["_type"] = j.DocType()
+	return j.M
 }
 
 // CouchURL is the URL where to check if CouchDB is up
@@ -92,11 +105,6 @@ func makeDBName(dbprefix, doctype string) string {
 
 func docURL(dbprefix, doctype, id string) string {
 	return makeDBName(dbprefix, doctype) + "/" + url.QueryEscape(id)
-}
-
-func genDocID(doctype string) string {
-	u := uuid.NewV4()
-	return doctype + "/" + hex.EncodeToString(u[:])
 }
 
 func makeRequest(method, path string, reqbody interface{}, resbody interface{}) error {
@@ -224,7 +232,8 @@ func UpdateDoc(dbprefix string, doc Doc) (err error) {
 	return err
 }
 
-func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err error) {
+func createDocOrDb(dbprefix string, doc Doc, response interface{}) (err error) {
+	doctype := doc.DocType()
 	db := makeDBName(dbprefix, doctype)
 	err = makeRequest("POST", db, doc, response)
 	if err == nil || !IsNoDatabaseError(err) {
@@ -240,11 +249,9 @@ func createDocOrDb(dbprefix, doctype string, doc Doc, response interface{}) (err
 
 // CreateDoc is used to persist the given document in the couchdb
 // database. The document's SetRev and SetID function will be called
-// with the document's new QID and Rev.
+// with the document's new ID and Rev.
 // This function creates a database if this is the first document of its type
-//
-// @TODO: we still pass the doctype around to handle the /data api
-func CreateDoc(dbprefix, doctype string, doc Doc) (err error) {
+func CreateDoc(dbprefix string, doc Doc) (err error) {
 	var res *updateResponse
 
 	if doc.ID() != "" {
@@ -252,17 +259,14 @@ func CreateDoc(dbprefix, doctype string, doc Doc) (err error) {
 		return
 	}
 
-	doc.SetID(genDocID(doctype))
-	err = createDocOrDb(dbprefix, doctype, doc, &res)
+	err = createDocOrDb(dbprefix, doc, &res)
 	if err != nil {
-		return
+		return err
+	} else if !res.Ok {
+		return fmt.Errorf("CouchDB replied with 200 ok=false")
 	}
 
-	if !res.Ok {
-		err = fmt.Errorf("CouchDB replied with 200 ok=false")
-		return
-	}
-
+	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
-	return
+	return nil
 }
