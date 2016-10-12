@@ -110,7 +110,7 @@ func ServeFileContent(fileDoc *FileDoc, req *http.Request, w http.ResponseWriter
 	attrs := fileDoc.Attrs
 	header := w.Header()
 	header.Set("Content-Type", attrs.Mime)
-	header.Set("Content-Disposition", "inline; filename="+attrs.Name+"")
+	header.Set("Content-Disposition", "inline; filename="+attrs.Name)
 
 	if header.Get("Range") == "" {
 		header.Set("Etag", fileDoc.Rev())
@@ -136,7 +136,7 @@ func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter
 	}
 
 	name := path.Base(pth)
-	w.Header().Set("Content-Disposition", "attachment; filename="+name+"")
+	w.Header().Set("Content-Disposition", "attachment; filename="+name)
 
 	serveContent(req, w, fs, pth, name, fileInfo.ModTime())
 	return
