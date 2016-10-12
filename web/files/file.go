@@ -3,6 +3,7 @@ package files
 import (
 	"bytes"
 	"crypto/md5" // #nosec
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -113,7 +114,8 @@ func ServeFileContent(fileDoc *FileDoc, req *http.Request, w http.ResponseWriter
 	header.Set("Content-Disposition", "inline; filename="+attrs.Name)
 
 	if header.Get("Range") == "" {
-		header.Set("Etag", fileDoc.Rev())
+		eTag := base64.StdEncoding.EncodeToString(fileDoc.Attrs.MD5Sum)
+		header.Set("Etag", eTag)
 	}
 
 	serveContent(req, w, fs, fileDoc.Path, attrs.Name, attrs.UpdatedAt)
