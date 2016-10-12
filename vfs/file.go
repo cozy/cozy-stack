@@ -192,12 +192,17 @@ func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io
 	}()
 
 	var written int64
-	if written, err = copyOnFsAndCheckIntegrity(m, fs, pth, body); err != nil {
+	var md5Sum []byte
+	if written, md5Sum, err = copyOnFsAndCheckIntegrity(m, fs, pth, body); err != nil {
 		return
 	}
 
 	if attrs.Size < 0 {
 		attrs.Size = written
+	}
+
+	if attrs.MD5Sum == nil {
+		attrs.MD5Sum = md5Sum
 	}
 
 	if attrs.Size != written {
@@ -212,7 +217,7 @@ func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io
 	return
 }
 
-func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.ReadCloser) (written int64, err error) {
+func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.ReadCloser) (written int64, md5Sum []byte, err error) {
 	f, err := fs.Create(pth)
 	if err != nil {
 		return
@@ -222,13 +227,15 @@ func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.R
 	defer r.Close()
 
 	md5H := md5.New() // #nosec
+
 	written, err = io.Copy(f, io.TeeReader(r, md5H))
 	if err != nil {
 		return
 	}
 
-	calcMD5 := md5H.Sum(nil)
-	if !bytes.Equal(m.givenMD5, calcMD5) {
+	doCheck := m.givenMD5 != nil
+	md5Sum = md5H.Sum(nil)
+	if doCheck && !bytes.Equal(m.givenMD5, md5Sum) {
 		err = ErrInvalidHash
 		return
 	}
