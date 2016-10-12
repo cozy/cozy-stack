@@ -193,7 +193,7 @@ func ReadHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		c.AbortWithError(makeCode(err), err)
 		return
 	}
 }
@@ -219,14 +219,22 @@ func makeCode(err error) (code int) {
 		code = http.StatusPreconditionFailed
 	case errContentLengthMismatch:
 		code = http.StatusPreconditionFailed
-	default:
-		couchErr, isCouchErr := err.(*couchdb.Error)
-		if isCouchErr {
-			code = couchErr.StatusCode
-		} else {
-			code = http.StatusInternalServerError
-		}
 	}
+
+	if code != 0 {
+		return
+	}
+
+	if os.IsNotExist(err) {
+		code = http.StatusNotFound
+	} else if os.IsExist(err) {
+		code = http.StatusConflict
+	} else if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
+		code = couchErr.StatusCode
+	} else {
+		code = http.StatusInternalServerError
+	}
+
 	return
 }
 

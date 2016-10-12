@@ -250,12 +250,12 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 }
 
 func TestDownloadFileBadID(t *testing.T) {
-	res, _ := download(t, "/badid", "")
+	res, _ := download(t, "/files/badid", "")
 	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestDownloadFileBadPath(t *testing.T) {
-	res, _ := download(t, "/download?path=/i/do/not/exist", "")
+	res, _ := download(t, "/files/download?path=/i/do/not/exist", "")
 	assert.Equal(t, 404, res.StatusCode)
 }
 
