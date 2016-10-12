@@ -3,8 +3,11 @@ package files
 import (
 	"bytes"
 	"crypto/md5" // #nosec
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -85,6 +88,71 @@ func (f *FileDoc) ToJSONApi() ([]byte, error) {
 		"data": data,
 	}
 	return json.Marshal(m)
+}
+
+// GetFileDoc is used to fetch file document information form our
+// database.
+func GetFileDoc(fileID, dbPrefix string) (doc *FileDoc, err error) {
+	doc = &FileDoc{}
+	err = couchdb.GetDoc(dbPrefix, string(FileDocType), fileID, doc)
+	return
+}
+
+// ServeFileContent replies to a http request using the content of a
+// file given its FileDoc.
+//
+// It uses internally http.ServeContent and benefits from it by
+// offering support to Range, If-Modified-Since and If-None-Match
+// requests. It uses the revision of the file as the Etag value for
+// non-ranged requests
+//
+// The content disposition is inlined.
+func ServeFileContent(fileDoc *FileDoc, req *http.Request, w http.ResponseWriter, fs afero.Fs) (err error) {
+	attrs := fileDoc.Attrs
+	header := w.Header()
+	header.Set("Content-Type", attrs.Mime)
+	header.Set("Content-Disposition", "inline; filename="+attrs.Name)
+
+	if header.Get("Range") == "" {
+		eTag := base64.StdEncoding.EncodeToString(fileDoc.Attrs.MD5Sum)
+		header.Set("Etag", eTag)
+	}
+
+	serveContent(req, w, fs, fileDoc.Path, attrs.Name, attrs.UpdatedAt)
+	return
+}
+
+// ServeFileContentByPath replies to a http request using the content
+// of a file identified by its full path on the VFS. Unlike
+// ServeFileContent, this method does not require the full file
+// document but only its path.
+//
+// It also uses internally http.ServeContent but does not provide an
+// Etag.
+//
+// The content disposition is attached
+func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter, fs afero.Fs) (err error) {
+	fileInfo, err := fs.Stat(pth)
+	if err != nil {
+		return
+	}
+
+	name := path.Base(pth)
+	w.Header().Set("Content-Disposition", "attachment; filename="+name)
+
+	serveContent(req, w, fs, pth, name, fileInfo.ModTime())
+	return
+}
+
+func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, name string, modtime time.Time) (err error) {
+	content, err := fs.Open(pth)
+	if err != nil {
+		return
+	}
+
+	defer content.Close()
+	http.ServeContent(w, req, name, modtime, content)
+	return
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.

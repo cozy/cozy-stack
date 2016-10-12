@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -34,7 +35,8 @@ const (
 )
 
 var (
-	errDocAlreadyExists      = errors.New("Directory or file already exists")
+	errDocAlreadyExists      = os.ErrExist
+	errDocDoesNotExist       = os.ErrNotExist
 	errParentDoesNotExist    = errors.New("Parent folder with given FolderID does not exist")
 	errDocTypeInvalid        = errors.New("Invalid document type")
 	errIllegalFilename       = errors.New("Invalid filename: empty or contains an illegal character")
@@ -156,8 +158,51 @@ func CreationHandler(c *gin.Context) {
 	c.Data(http.StatusCreated, jsonapi.ContentType, data)
 }
 
+// ReadHandler handle all GET requests on /files/:file-id aiming at
+// downloading a file. It serves two main purposes in this regard:
+//  - downloading a file given its ID in inline mode
+//  - downloading a file given its path in attachment mode on the
+//    /files/download endpoint
+//
+// swagger:route GET /files/download files downloadFileByPath
+// swagger:route GET /files/:file-id files downloadFileByID
+func ReadHandler(c *gin.Context) {
+	var err error
+
+	instance := middlewares.GetInstance(c)
+	dbPrefix := instance.GetDatabasePrefix()
+	storage, err := instance.GetStorageProvider()
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	fileID := c.Param("file-id")
+
+	// Path /files/download is handled specifically to download file
+	// form their path
+	if fileID == "download" {
+		pth := c.Query("path")
+		err = ServeFileContentByPath(pth, c.Request, c.Writer, storage)
+	} else {
+		var doc *FileDoc
+		doc, err = GetFileDoc(string(FileDocType)+"/"+fileID, dbPrefix)
+		if err == nil {
+			err = ServeFileContent(doc, c.Request, c.Writer, storage)
+		}
+	}
+
+	if err != nil {
+		c.AbortWithError(makeCode(err), err)
+		return
+	}
+}
+
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
+	router.HEAD("/:file-id", ReadHandler)
+	router.GET("/:file-id", ReadHandler)
+
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
 }
@@ -168,18 +213,28 @@ func makeCode(err error) (code int) {
 		code = http.StatusConflict
 	case errParentDoesNotExist:
 		code = http.StatusNotFound
+	case errDocDoesNotExist:
+		code = http.StatusNotFound
 	case errInvalidHash:
 		code = http.StatusPreconditionFailed
 	case errContentLengthMismatch:
 		code = http.StatusPreconditionFailed
-	default:
-		couchErr, isCouchErr := err.(*couchdb.Error)
-		if isCouchErr {
-			code = couchErr.StatusCode
-		} else {
-			code = http.StatusInternalServerError
-		}
 	}
+
+	if code != 0 {
+		return
+	}
+
+	if os.IsNotExist(err) {
+		code = http.StatusNotFound
+	} else if os.IsExist(err) {
+		code = http.StatusConflict
+	} else if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
+		code = couchErr.StatusCode
+	} else {
+		code = http.StatusInternalServerError
+	}
+
 	return
 }
 

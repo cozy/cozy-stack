@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -64,6 +65,10 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 		return
 	}
 
+	if contentType != "" {
+		req.Header.Add("Content-Type", contentType)
+	}
+
 	if hash != "" {
 		req.Header.Add("Content-MD5", hash)
 	}
@@ -77,6 +82,29 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 
 	err = extractJSONRes(res, &v)
 	assert.NoError(t, err)
+
+	return
+}
+
+func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
+	req, err := http.NewRequest("GET", ts.URL+path, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	if byteRange != "" {
+		req.Header.Add("Range", byteRange)
+	}
+
+	res, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	body, err = ioutil.ReadAll(res.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	return
 }
@@ -221,6 +249,71 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 	assert.Equal(t, 409, res2.StatusCode)
 }
 
+func TestDownloadFileBadID(t *testing.T) {
+	res, _ := download(t, "/files/badid", "")
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestDownloadFileBadPath(t *testing.T) {
+	res, _ := download(t, "/files/download?path=/i/do/not/exist", "")
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestDownloadFileByIDSuccess(t *testing.T) {
+	body := "foo"
+	res1, filedata := upload(t, "/files/?Type=io.cozy.files&Name=downloadme1", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	filedata, ok = filedata["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := filedata["id"].(string)
+	assert.True(t, ok)
+
+	res2, resbody := download(t, "/files/"+fileID, "")
+	assert.Equal(t, 200, res2.StatusCode)
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "inline"))
+	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme1"))
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
+	assert.NotEmpty(t, res2.Header.Get("Etag"))
+	assert.Equal(t, res2.Header.Get("Content-Length"), "3")
+	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
+	assert.Equal(t, body, string(resbody))
+}
+
+func TestDownloadFileByPathSuccess(t *testing.T) {
+	body := "foo"
+	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadme2", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	res2, resbody := download(t, "/files/download?path="+url.QueryEscape("/downloadme2"), "")
+	assert.Equal(t, 200, res2.StatusCode)
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "attachment"))
+	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme2"))
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
+	assert.Equal(t, res2.Header.Get("Content-Length"), "3")
+	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
+	assert.Equal(t, body, string(resbody))
+}
+
+func TestDownloadRangeSuccess(t *testing.T) {
+	body := "foo,bar"
+	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadmebyrange", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	res2, _ := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "nimp")
+	assert.Equal(t, 416, res2.StatusCode)
+
+	res3, res3body := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "bytes=0-2")
+	assert.Equal(t, 206, res3.StatusCode)
+	assert.Equal(t, "foo", string(res3body))
+
+	res4, res4body := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "bytes=4-")
+	assert.Equal(t, 206, res4.StatusCode)
+	assert.Equal(t, "bar", string(res4body))
+}
+
 func TestMain(m *testing.M) {
 	// First we make sure couchdb is started
 	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
@@ -239,6 +332,7 @@ func TestMain(m *testing.M) {
 	router.Use(injectInstance(instance))
 	router.POST("/files/", CreationHandler)
 	router.POST("/files/:folder-id", CreationHandler)
+	router.GET("/files/:file-id", ReadHandler)
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())
