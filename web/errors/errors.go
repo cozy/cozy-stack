@@ -21,25 +21,6 @@ var NoInstance = &gin.Error{
 
 // HTTPStatus gives the http status for given error
 func HTTPStatus(err error) (code int) {
-	switch err {
-	case vfs.ErrDocAlreadyExists:
-		code = http.StatusConflict
-	case vfs.ErrParentDoesNotExist:
-		code = http.StatusNotFound
-	case vfs.ErrDocDoesNotExist:
-		code = http.StatusNotFound
-	case vfs.ErrContentLengthInvalid:
-		code = http.StatusUnprocessableEntity
-	case vfs.ErrInvalidHash:
-		code = http.StatusPreconditionFailed
-	case vfs.ErrContentLengthMismatch:
-		code = http.StatusPreconditionFailed
-	}
-
-	if code != 0 {
-		return
-	}
-
 	if os.IsNotExist(err) {
 		code = http.StatusNotFound
 	} else if os.IsExist(err) {
@@ -47,6 +28,10 @@ func HTTPStatus(err error) (code int) {
 	} else if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
 		code = couchErr.StatusCode
 	} else {
+		code = vfs.HTTPStatus(err)
+	}
+
+	if code == 0 {
 		code = http.StatusInternalServerError
 	}
 
