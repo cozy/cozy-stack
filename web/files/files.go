@@ -51,7 +51,7 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	var doc jsonapi.JSONApier
-	switch m.Type {
+	switch m.DocType() {
 	case vfs.FileDocType:
 		doc, err = vfs.CreateFileAndUpload(m, storage, dbPrefix, c.Request.Body)
 	case vfs.FolderDocType:

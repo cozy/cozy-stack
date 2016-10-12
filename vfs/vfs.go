@@ -26,15 +26,19 @@ const ForbiddenFilenameChars = "/\x00"
 // DocAttributes encapsulates the few metadata linked to a document
 // creation request.
 type DocAttributes struct {
-	Type       DocType
-	Name       string
-	FolderID   string
-	Executable bool
-	Tags       []string
-	GivenMD5   []byte
-	Size       int64
-	Mime       string
-	Class      string
+	docType    DocType
+	name       string
+	folderID   string
+	executable bool
+	tags       []string
+	givenMD5   []byte
+	size       int64
+	mime       string
+	class      string
+}
+
+func (d *DocAttributes) DocType() DocType {
+	return d.docType
 }
 
 // NewDocAttributes is the DocAttributes constructor. All inputs are
@@ -75,15 +79,15 @@ func NewDocAttributes(docTypeStr, name, folderID, tagsStr, md5Str, contentType, 
 	mime, class := extractMimeAndClass(contentType)
 
 	m = &DocAttributes{
-		Type:       docType,
-		Name:       name,
-		FolderID:   folderID,
-		Tags:       tags,
-		Executable: executable,
-		GivenMD5:   givenMD5,
-		Size:       size,
-		Mime:       mime,
-		Class:      class,
+		docType:    docType,
+		name:       name,
+		folderID:   folderID,
+		tags:       tags,
+		executable: executable,
+		givenMD5:   givenMD5,
+		size:       size,
+		mime:       mime,
+		class:      class,
 	}
 
 	return
@@ -156,7 +160,7 @@ func checkFileName(str string) error {
 // path of the wanted file, checking if there is not colision with
 // existing file.
 func createNewFilePath(m *DocAttributes, storage afero.Fs, dbPrefix string) (pth string, parentDoc *DirDoc, err error) {
-	folderID := m.FolderID
+	folderID := m.folderID
 
 	var parentPath string
 
@@ -177,7 +181,7 @@ func createNewFilePath(m *DocAttributes, storage afero.Fs, dbPrefix string) (pth
 		parentPath = parentDoc.Path
 	}
 
-	pth = path.Join(parentPath, m.Name)
+	pth = path.Join(parentPath, m.name)
 	exists, err := afero.Exists(storage, pth)
 	if err != nil {
 		return

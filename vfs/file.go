@@ -157,7 +157,7 @@ func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, na
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
 func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
-	if m.Type != FileDocType {
+	if m.docType != FileDocType {
 		err = ErrDocTypeInvalid
 		return
 	}
@@ -169,20 +169,20 @@ func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io
 
 	createDate := time.Now()
 	attrs := &fileAttributes{
-		Name:       m.Name,
+		Name:       m.name,
 		CreatedAt:  createDate,
 		UpdatedAt:  createDate,
-		Size:       m.Size,
-		Tags:       m.Tags,
-		MD5Sum:     m.GivenMD5,
-		Executable: m.Executable,
-		Class:      m.Class,
-		Mime:       m.Mime,
+		Size:       m.size,
+		Tags:       m.tags,
+		MD5Sum:     m.givenMD5,
+		Executable: m.executable,
+		Class:      m.class,
+		Mime:       m.mime,
 	}
 
 	doc = &FileDoc{
 		Attrs:    attrs,
-		FolderID: m.FolderID,
+		FolderID: m.folderID,
 		Path:     pth,
 	}
 
@@ -232,7 +232,7 @@ func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.R
 	}
 
 	calcMD5 := md5H.Sum(nil)
-	if !bytes.Equal(m.GivenMD5, calcMD5) {
+	if !bytes.Equal(m.givenMD5, calcMD5) {
 		err = ErrInvalidHash
 		return
 	}

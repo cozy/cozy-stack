@@ -77,7 +77,7 @@ func (d *DirDoc) ToJSONApi() ([]byte, error) {
 
 // CreateDirectory is the method for creating a new directory
 func CreateDirectory(m *DocAttributes, fs afero.Fs, dbPrefix string) (doc *DirDoc, err error) {
-	if m.Type != FolderDocType {
+	if m.docType != FolderDocType {
 		err = ErrDocTypeInvalid
 		return
 	}
@@ -89,15 +89,15 @@ func CreateDirectory(m *DocAttributes, fs afero.Fs, dbPrefix string) (doc *DirDo
 
 	createDate := time.Now()
 	attrs := &dirAttributes{
-		Name:      m.Name,
+		Name:      m.name,
 		CreatedAt: createDate,
 		UpdatedAt: createDate,
-		Tags:      m.Tags,
+		Tags:      m.tags,
 	}
 
 	doc = &DirDoc{
 		Attrs:    attrs,
-		FolderID: m.FolderID,
+		FolderID: m.folderID,
 		Path:     pth,
 	}
 
