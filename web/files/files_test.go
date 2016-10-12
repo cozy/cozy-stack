@@ -65,6 +65,10 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 		return
 	}
 
+	if contentType != "" {
+		req.Header.Add("Content-Type", contentType)
+	}
+
 	if hash != "" {
 		req.Header.Add("Content-MD5", hash)
 	}
@@ -270,7 +274,10 @@ func TestDownloadFileByIDSuccess(t *testing.T) {
 	res2, resbody := download(t, "/files/"+fileID, "")
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "inline"))
+	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme1"))
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
 	assert.NotEmpty(t, res2.Header.Get("Etag"))
+	assert.Equal(t, res2.Header.Get("Content-Length"), "3")
 	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
 	assert.Equal(t, body, string(resbody))
 }
@@ -283,6 +290,9 @@ func TestDownloadFileByPathSuccess(t *testing.T) {
 	res2, resbody := download(t, "/files/download?path="+url.QueryEscape("/downloadme2"), "")
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "attachment"))
+	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme2"))
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
+	assert.Equal(t, res2.Header.Get("Content-Length"), "3")
 	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
 	assert.Equal(t, body, string(resbody))
 }
