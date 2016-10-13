@@ -126,6 +126,129 @@ Content-Type: application/json
 
 --------------------------------------------------------------------------------
 
+# Update an existing document
+
+### Request
+```http
+PUT /data/:type/:id
+```
+```http
+PUT /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+Content-Length: ...
+Content-Type: application/json
+Accept: application/json
+```
+```json
+{
+    "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "_type": "io.cozy.events",
+    "_rev": "1-6494e0ac6494e0ac",
+    "startdate": "20160712T150000",
+    "enddate": "20160712T200000",
+}
+```
+
+### Response OK
+```http
+200 OK
+Content-Length: ...
+Content-Type: application/json
+```
+```json
+{
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "type": "io.cozy.events",
+    "ok": true,
+    "rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
+    "data": {
+        "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+        "_type": "io.cozy.events",
+        "_rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
+        "startdate": "20160712T150000",
+        "enddate": "20160712T200000",
+    }
+}
+```
+
+### Possible errors :
+- 400 bad request
+- 401 unauthorized (no authentication has been provided)
+- 403 forbidden (the authentication does not provide permissions for this action)
+- 404 not_found
+  - reason: missing
+  - reason: deleted
+- 409 Conflict (see Conflict prevention section below)
+- 500 internal server error
+
+### Conflict prevention
+
+The client MUST give a `_rev` field in the document. If this field is different from the one in the current version of the document, an error 409 Conflict will be returned.
+
+### Details
+
+- If no id is provided in URL, an error 400 is returned
+- If the id provided in URL is not the same than the one in document, an error 400 is returned.
+
+--------------------------------------------------------------------------
+
+
+# Create a document with a fixed id
+
+### Request
+```http
+PUT /data/:type/:id
+```
+```http
+PUT /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+Content-Length: ...
+Content-Type: application/json
+Accept: application/json
+```
+```json
+{
+    "startdate": "20160712T150000",
+    "enddate": "20160712T200000",
+}
+```
+
+### Response OK
+```http
+200 OK
+Content-Length: ...
+Content-Type: application/json
+```
+```json
+{
+    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+    "type": "io.cozy.events",
+    "ok": true,
+    "rev": "1-056f5f44046ecafc08a2bc2b9c229e20",
+    "data": {
+        "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+        "_type": "io.cozy.events",
+        "_rev": "1-056f5f44046ecafc08a2bc2b9c229e20",
+        "startdate": "20160712T150000",
+        "enddate": "20160712T200000",
+    }
+}
+```
+
+### Possible errors :
+- 400 bad request
+- 401 unauthorized (no authentication has been provided)
+- 403 forbidden (the authentication does not provide permissions for this action)
+- 404 not_found
+  - reason: missing
+  - reason: deleted
+- 409 Conflict (see Conflict prevention section below)
+- 500 internal server error
+
+### Details
+
+- No id should be provide in the document itself
+
+--------------------------------------------------------------------------------
+
 # Delete a document
 
 ### Request
@@ -160,18 +283,14 @@ Content-Type: application/json
 - 404 not_found
   - reason: missing
   - reason: deleted
-- 412 Conflict (see Conflict prevention section below)
+- 409 Conflict (see Conflict prevention section below)
 - 500 internal server error
 
 ### Conflict prevention
 
 It is possible to use either a `rev` query string parameter or a HTTP `If-Match` header to prevent conflict on deletion:
-- If both are passed and are different, an error 400 is returned
-- If only one is passed or they are equals, the document will only be deleted if its `_rev` match the passed one. Otherwise, an error 412  is returned.
-- If none is passed, the document will be force-deleted.
-
-**Why shouldn't you force delete** (contrieved example) the user is syncing contacts from his mobile, a contact is created with name but no number, the user see it in the contact app. In parallel, the number is added by sync and the user click "delete" because a contact with no number is useless. The decision to delete is based on outdated data state and should therefore be aborted.
-Couchdb will prevent this, the stack API allow it for fast prototyping but it should be avoided for serious applications.
+- If none is passed or they are different, an error 400 is returned
+- If only one is passed or they are equals, the document will only be deleted if its `_rev` match the passed one. Otherwise, an error 409  is returned.
 
 ### Details
 

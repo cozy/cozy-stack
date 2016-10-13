@@ -50,6 +50,12 @@ func createDoc(c *gin.Context) {
 		return
 	}
 
+	if doc.ID() != "" {
+		err := fmt.Errorf("Cannot create a document with _id")
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
 	err := couchdb.CreateDoc(prefix, doc)
 	if err != nil {
 		c.AbortWithError(HTTPStatus(err), err)
@@ -77,18 +83,26 @@ func updateDoc(c *gin.Context) {
 
 	doc.Type = c.Param("doctype")
 
-	if doc.ID() != "" && doc.ID() != c.Param("docid") {
-		err := fmt.Errorf("_id in document doesnt match url")
+	if (doc.ID() == "") != (doc.Rev() == "") {
+		err := fmt.Errorf("You must either provide an _id and _rev in document (update) or neither (create with  fixed id).")
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
-	rev := c.Request.Header.Get("If-Match")
-	if rev != "" {
-		doc.SetRev(rev)
+	if doc.ID() != "" && doc.ID() != c.Param("docid") {
+		err := fmt.Errorf("document _id doesnt match url")
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
-	err := couchdb.UpdateDoc(prefix, doc)
+	var err error
+	if doc.ID() == "" {
+		doc.SetID(c.Param("docid"))
+		err = couchdb.CreateNamedDoc(prefix, doc)
+	} else {
+		err = couchdb.UpdateDoc(prefix, doc)
+	}
+
 	if err != nil {
 		c.AbortWithError(HTTPStatus(err), err)
 		return
@@ -108,11 +122,21 @@ func deleteDoc(c *gin.Context) {
 	doctype := c.MustGet("doctype").(string)
 	docid := c.Param("docid")
 	prefix := instance.GetDatabasePrefix()
-	rev := c.Request.Header.Get("If-Match")
+	revHeader := c.Request.Header.Get("If-Match")
+	revQuery := c.Query("rev")
+	rev := ""
 
-	if rev == "" {
-		err := fmt.Errorf("NotImplemented : delete without If-Match")
-		c.AbortWithError(http.StatusNotImplemented, err)
+	if revHeader != "" && revQuery != "" && revQuery != revHeader {
+		err := fmt.Errorf("If-Match Header and rev query parameters mismatch")
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	} else if revHeader != "" {
+		rev = revHeader
+	} else if revQuery != "" {
+		rev = revQuery
+	} else {
+		err := fmt.Errorf("delete without revision")
+		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 

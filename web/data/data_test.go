@@ -11,6 +11,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
@@ -24,6 +25,7 @@ const Host = "example.com"
 const Type = "io.cozy.events"
 const ID = "4521C325F6478E45"
 const ExpectedDBName = "example-com%2Fio-cozy-events"
+const TestPrefix = "example-com/"
 
 var DOCUMENT = []byte(`{
 	"test": "testvalue"
@@ -47,12 +49,27 @@ func couchReq(method, path string, body io.Reader) (*http.Response, error) {
 	return res, nil
 }
 
+type stackUpdateResponse struct {
+	ID      string          `json:"id"`
+	Rev     string          `json:"rev"`
+	Type    string          `json:"type"`
+	Ok      bool            `json:"ok"`
+	Deleted bool            `json:"deleted"`
+	Error   string          `json:"error"`
+	Reason  string          `json:"reason"`
+	Data    couchdb.JSONDoc `json:"data"`
+}
+
 func jsonReader(data *map[string]interface{}) io.Reader {
 	bs, _ := json.Marshal(&data)
 	return bytes.NewReader(bs)
 }
 
-func doRequest(req *http.Request) (jsonres map[string]interface{}, res *http.Response, err error) {
+func docURL(ts *httptest.Server, doc couchdb.JSONDoc) string {
+	return ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
+}
+
+func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface{}, res *http.Response, err error) {
 
 	res, err = client.Do(req)
 	if err != nil {
@@ -63,18 +80,33 @@ func doRequest(req *http.Request) (jsonres map[string]interface{}, res *http.Res
 	if err != nil {
 		return
 	}
-	var out map[string]interface{}
+	if out == nil {
+		var out map[string]interface{}
+		err = json.Unmarshal(body, &out)
+		if err != nil {
+			return
+		}
+		return out, res, err
+	}
+
 	err = json.Unmarshal(body, &out)
 	if err != nil {
 		return
 	}
-	return out, res, err
+	return nil, res, err
+
 }
 
 func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set("instance", instance)
 	}
+}
+
+func getDocForTest() couchdb.JSONDoc {
+	doc := couchdb.JSONDoc{Type: Type, M: map[string]interface{}{"test": "value"}}
+	couchdb.CreateDoc(TestPrefix, &doc)
+	return doc
 }
 
 func TestMain(m *testing.M) {
@@ -107,7 +139,7 @@ func TestMain(m *testing.M) {
 func TestSuccessGet(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
 	req.Header.Add("Host", Host)
-	out, res, err := doRequest(req)
+	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	if assert.Contains(t, out, "test") {
@@ -118,7 +150,7 @@ func TestSuccessGet(t *testing.T) {
 func TestWrongDoctype(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/nottype/"+ID, nil)
 	req.Header.Add("Host", Host)
-	out, res, err := doRequest(req)
+	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
 	if assert.Contains(t, out, "error") {
@@ -133,7 +165,7 @@ func TestWrongDoctype(t *testing.T) {
 func TestWrongID(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/NOTID", nil)
 	req.Header.Add("Host", Host)
-	out, res, err := doRequest(req)
+	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
 	if assert.Contains(t, out, "error") {
@@ -148,7 +180,7 @@ func TestWrongHost(t *testing.T) {
 	t.Skip("unskip me when we stop falling back to Host = dev")
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
 	req.Header.Add("Host", "NOTHOST")
-	out, res, err := doRequest(req)
+	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
 	if assert.Contains(t, out, "error") {
@@ -159,83 +191,241 @@ func TestWrongHost(t *testing.T) {
 	}
 }
 
-func TestSuccessCreate(t *testing.T) {
+func TestSuccessCreateKnownDoctype(t *testing.T) {
 	var in = jsonReader(&map[string]interface{}{
+		"somefield": "avalue",
+	})
+	var sur stackUpdateResponse
+	req, _ := http.NewRequest("POST", ts.URL+"/data/"+Type+"/", in)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, &sur)
+	assert.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status, "should get a 201")
+	assert.Equal(t, sur.Ok, true, "ok is true")
+	assert.NotContains(t, sur.ID, "/", "id is simple uuid")
+	assert.Equal(t, sur.Type, Type, "type is correct")
+	assert.NotEmpty(t, sur.Rev, "rev at top level (couchdb compatibility)")
+	assert.Equal(t, sur.ID, sur.Data.ID(), "id is simple uuid")
+	assert.Equal(t, sur.Type, sur.Data.Type, "type is correct")
+	assert.Equal(t, sur.Rev, sur.Data.Rev(), "rev is correct")
+	assert.Equal(t, "avalue", sur.Data.Get("somefield"), "content is correct")
+}
+
+func TestSuccessCreateUnknownDoctype(t *testing.T) {
+	var in = jsonReader(&map[string]interface{}{
+		"somefield": "avalue",
+	})
+	var sur stackUpdateResponse
+	type2 := "io.cozy.anothertype"
+	req, _ := http.NewRequest("POST", ts.URL+"/data/"+type2+"/", in)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, &sur)
+	assert.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status, "should get a 201")
+	assert.Equal(t, sur.Ok, true, "ok is true")
+	assert.NotContains(t, sur.ID, "/", "id is simple uuid")
+	assert.Equal(t, sur.Type, type2, "type is correct")
+	assert.NotEmpty(t, sur.Rev, "rev at top level (couchdb compatibility)")
+	assert.Equal(t, sur.ID, sur.Data.ID(), "in doc id is correct")
+	assert.Equal(t, sur.Type, sur.Data.Type, "in doc type is correct")
+	assert.Equal(t, sur.Rev, sur.Data.Rev(), "in doc rev is correct")
+	assert.Equal(t, "avalue", sur.Data.Get("somefield"), "content is correct")
+}
+
+func TestWrongCreateWithID(t *testing.T) {
+	var in = jsonReader(&map[string]interface{}{
+		"_id":       "this-should-not-be-an-id",
 		"somefield": "avalue",
 	})
 	req, _ := http.NewRequest("POST", ts.URL+"/data/"+Type+"/", in)
 	req.Header.Add("Host", Host)
-	out, res, err := doRequest(req)
+	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, "201 Created", res.Status, "should get a 201")
-	assert.Contains(t, out, "ok", "ok at top level (couchdb compatibility)")
-	assert.Equal(t, out["ok"], true, "ok is true")
-	assert.Contains(t, out, "id", "id at top level (couchdb compatibility)")
-	assert.Contains(t, out, "rev", "rev at top level (couchdb compatibility)")
-	if assert.Contains(t, out, "data", "document included") {
-		data, ismap := out["data"].(map[string]interface{})
-		if assert.True(t, ismap, "document is a json object") {
-			assert.Contains(t, out["data"], "_id", "document contains _id")
-			assert.Contains(t, out["data"], "_rev", "document contains _rev")
-			if assert.Contains(t, out["data"], "somefield") {
-				assert.Equal(t, data["somefield"], "avalue", "document contains fields")
-			}
-		}
-	}
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
 }
 
 func TestSuccessUpdate(t *testing.T) {
 
 	// Get revision
-	get, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
-	doc, res, err := doRequest(get)
+	doc := getDocForTest()
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 
 	// update it
 	var in = jsonReader(&map[string]interface{}{
-		"_id":       doc["_id"],
-		"_rev":      doc["_rev"],
-		"test":      doc["test"],
+		"_id":       doc.ID(),
+		"_rev":      doc.Rev(),
+		"test":      doc.Get("test"),
 		"somefield": "anewvalue",
 	})
-	req, _ := http.NewRequest("PUT", ts.URL+"/data/"+Type+"/"+ID, in)
+	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
-	out, res, err := doRequest(req)
+	var out stackUpdateResponse
+	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 201")
-	assert.Contains(t, out, "ok", "ok at top level (couchdb compatibility)")
-	assert.Equal(t, out["ok"], true, "ok is true")
-	assert.Contains(t, out, "id", "id at top level (couchdb compatibility)")
-	assert.Contains(t, out, "rev", "rev at top level (couchdb compatibility)")
-	if assert.Contains(t, out, "data", "document included") {
-		data, ismap := out["data"].(map[string]interface{})
-		if assert.True(t, ismap, "document is a json object") {
-			assert.Contains(t, data, "_id", "document contains _id")
-			assert.Contains(t, data, "_rev", "document contains _rev")
-			if assert.Contains(t, data, "test") {
-				assert.Equal(t, data["test"], "testvalue", "document contains old fields")
-			}
-			if assert.Contains(t, data, "somefield") {
-				assert.Equal(t, data["somefield"], "anewvalue", "document contains new fields")
-			}
-		}
-	}
+	assert.Empty(t, out.Error, "there is no error")
+	assert.Equal(t, out.ID, doc.ID(), "id has not changed")
+	assert.Equal(t, out.Ok, true, "ok is true")
+	assert.NotEmpty(t, out.Rev, "there is a rev")
+	assert.NotEqual(t, out.Rev, doc.Rev(), "rev has changed")
+	assert.Equal(t, out.ID, out.Data.ID(), "in doc id is simple uuid")
+	assert.Equal(t, out.Type, out.Data.Type, "in doc type is correct")
+	assert.Equal(t, out.Rev, out.Data.Rev(), "in doc rev is correct")
+	assert.Equal(t, "anewvalue", out.Data.Get("somefield"), "content has changed")
 }
 
-func TestSuccessDelete(t *testing.T) {
+// Test for having not the same ID in document and URL
+func TestWrongIDInDocUpdate(t *testing.T) {
 	// Get revision
-	get, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
-	doc, res, err := doRequest(get)
-	rev := doc["_rev"].(string)
-
-	// Do deletion
-	req, _ := http.NewRequest("DELETE", ts.URL+"/data/"+Type+"/"+ID, nil)
-	req.Header.Add("If-Match", rev)
+	doc := getDocForTest()
+	// update it
+	var in = jsonReader(&map[string]interface{}{
+		"_id":       "this is not the id in the URL",
+		"_rev":      doc.Rev(),
+		"test":      doc.M["test"],
+		"somefield": "anewvalue",
+	})
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
+	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
-	out, res, err := doRequest(req)
+	_, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 404")
+}
+
+// Test for having an inexisting id at all
+func TestCreateDocWithAFixedID(t *testing.T) {
+	// update it
+	var in = jsonReader(&map[string]interface{}{
+		"test":      "value",
+		"somefield": "anewvalue",
+	})
+	url := ts.URL + "/data/" + Type + "/specific-id"
+	req, _ := http.NewRequest("PUT", url, in)
+	req.Header.Add("Host", Host)
+	var out stackUpdateResponse
+	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 201")
-	assert.Contains(t, out, "ok", "ok at top level (couchdb compatibility)")
-	assert.Equal(t, out["ok"], true, "ok is true")
-	assert.Contains(t, out, "id", "id at top level (couchdb compatibility)")
-	assert.Contains(t, out, "rev", "rev at top level (couchdb compatibility)")
+	assert.Empty(t, out.Error, "there is no error")
+	assert.Equal(t, out.ID, "specific-id", "id has not changed")
+	assert.Equal(t, out.Ok, true, "ok is true")
+	assert.NotEmpty(t, out.Rev, "there is a rev")
+	assert.Equal(t, out.ID, out.Data.ID(), "in doc id is simple uuid")
+	assert.Equal(t, out.Type, out.Data.Type, "in doc type is correct")
+	assert.Equal(t, out.Rev, out.Data.Rev(), "in doc rev is correct")
+	assert.Equal(t, "anewvalue", out.Data.Get("somefield"), "content has changed")
+
+}
+
+func TestNoRevInDocUpdate(t *testing.T) {
+	// Get revision
+	doc := getDocForTest()
+	// update it
+	var in = jsonReader(&map[string]interface{}{
+		"_id":       doc.ID(),
+		"test":      doc.M["test"],
+		"somefield": "anewvalue",
+	})
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
+	req, _ := http.NewRequest("PUT", url, in)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+}
+
+func TestPreviousRevInDocUpdate(t *testing.T) {
+	// Get revision
+	doc := getDocForTest()
+	firstRev := doc.Rev()
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
+
+	// correcly update it
+	var in = jsonReader(&map[string]interface{}{
+		"_id":       doc.ID(),
+		"_rev":      doc.Rev(),
+		"somefield": "anewvalue",
+	})
+	req, _ := http.NewRequest("PUT", url, in)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "first update should work")
+
+	// update it
+	var in2 = jsonReader(&map[string]interface{}{
+		"_id":       doc.ID(),
+		"_rev":      firstRev,
+		"somefield": "anewvalue2",
+	})
+	req2, _ := http.NewRequest("PUT", url, in2)
+	req2.Header.Add("Host", Host)
+	_, res2, err := doRequest(req2, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "409 Conflict", res2.Status, "should get a 409")
+}
+
+func TestSuccessDeleteIfMatch(t *testing.T) {
+	// Get revision
+	doc := getDocForTest()
+	rev := doc.Rev()
+
+	// Do deletion
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
+	req, _ := http.NewRequest("DELETE", url, nil)
+	req.Header.Add("If-Match", rev)
+	req.Header.Add("Host", Host)
+	var out stackUpdateResponse
+	_, res, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "should get a 201")
+	assert.Equal(t, out.Ok, true, "ok at top level (couchdb compatibility)")
+	assert.Equal(t, out.ID, doc.ID(), "id at top level (couchdb compatibility)")
+	assert.Equal(t, out.Deleted, true, "id at top level (couchdb compatibility)")
+	assert.NotEqual(t, out.Rev, doc.Rev(), "id at top level (couchdb compatibility)")
+}
+
+func TestFailDeleteIfNotMatch(t *testing.T) {
+	// Get revision
+	doc := getDocForTest()
+
+	// Do deletion
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
+	req, _ := http.NewRequest("DELETE", url, nil)
+	req.Header.Add("If-Match", "1-238238232322121") // not correct rev
+	req.Header.Add("Host", Host)
+	var out stackUpdateResponse
+	_, res, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "409 Conflict", res.Status, "should get a 409")
+}
+
+func TestFailDeleteIfHeaderAndRevMismatch(t *testing.T) {
+	// Get revision
+	doc := getDocForTest()
+
+	// Do deletion
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "?rev=1-238238232322121"
+	req, _ := http.NewRequest("DELETE", url, nil)
+	req.Header.Add("If-Match", "1-23823823231") // not same rev
+	req.Header.Add("Host", Host)
+	var out stackUpdateResponse
+	_, res, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+}
+
+func TestFailDeleteIfNoRev(t *testing.T) {
+	// Get revision
+	doc := getDocForTest()
+
+	// Do deletion
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
+	req, _ := http.NewRequest("DELETE", url, nil)
+	req.Header.Add("Host", Host)
+	var out stackUpdateResponse
+	_, res, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
 }
