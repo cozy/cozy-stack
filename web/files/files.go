@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/vfs"
-	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
@@ -31,7 +30,7 @@ func CreationHandler(c *gin.Context) {
 	dbPrefix := instance.GetDatabasePrefix()
 	storage, err := instance.GetStorageProvider()
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 		return
 	}
 
@@ -44,13 +43,13 @@ func CreationHandler(c *gin.Context) {
 		givenMD5, err = parseMD5Hash(md5Str)
 	}
 	if err != nil {
-		c.AbortWithError(http.StatusUnprocessableEntity, err)
+		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-MD5", err))
 		return
 	}
 
 	size, err := parseContentLength(header.Get("Content-Length"))
 	if err != nil {
-		c.AbortWithError(http.StatusUnprocessableEntity, err)
+		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-Length", err))
 		return
 	}
 
@@ -67,7 +66,7 @@ func CreationHandler(c *gin.Context) {
 	)
 
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
 	}
 
@@ -80,13 +79,13 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
 	}
 
 	data, err := doc.ToJSONApi()
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
 	}
 
@@ -108,7 +107,7 @@ func ReadHandler(c *gin.Context) {
 	dbPrefix := instance.GetDatabasePrefix()
 	storage, err := instance.GetStorageProvider()
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
+		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 		return
 	}
 
@@ -128,7 +127,7 @@ func ReadHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
 	}
 }

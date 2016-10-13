@@ -11,7 +11,7 @@ import (
 // go build -ldflags "-X github.com/cozy/cozy-stack/web/version.Build=<sha1>"
 var Build = "Unknown"
 
-// Version responds the git commit used at the build
+// Version responds with the git commit used at the build
 //
 // swagger:route GET /version version showVersion
 //
