@@ -24,7 +24,6 @@ package web
 
 import (
 	"github.com/cozy/cozy-stack/web/data"
-	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/status"
@@ -35,9 +34,9 @@ import (
 // SetupRoutes sets the routing for HTTP endpoints to the Go methods
 func SetupRoutes(router *gin.Engine) {
 	router.Use(middlewares.SetInstance())
-	router.Use(errors.Handler())
+	router.Use(middlewares.ErrorHandler())
+	data.Routes(router.Group("/data"))
 	files.Routes(router.Group("/files"))
 	status.Routes(router.Group("/status"))
-	data.Routes(router.Group("/data"))
 	version.Routes(router.Group("/version"))
 }

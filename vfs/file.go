@@ -14,7 +14,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-type fileAttributes struct {
+// FileAttributes is a struct with the attributes of a file
+type FileAttributes struct {
 	Name       string    `json:"name"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
@@ -34,7 +35,7 @@ type FileDoc struct {
 	// File revision
 	FRev string `json:"_rev,omitempty"`
 	// File attributes
-	Attrs *fileAttributes `json:"attributes"`
+	Attrs *FileAttributes `json:"attributes"`
 	// Parent folder identifier
 	FolderID string `json:"folderID"`
 	// File path on VFS
@@ -162,7 +163,7 @@ func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io
 	}
 
 	createDate := time.Now()
-	attrs := &fileAttributes{
+	attrs := &FileAttributes{
 		Name:       m.name,
 		CreatedAt:  createDate,
 		UpdatedAt:  createDate,
