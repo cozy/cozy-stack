@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/afero"
 )
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -26,56 +27,25 @@ const DefaultContentType = "application/octet-stream"
 //
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func CreationHandler(c *gin.Context) {
-	instance := middlewares.GetInstance(c)
-	dbPrefix := instance.GetDatabasePrefix()
-	storage, err := instance.GetStorageProvider()
+	fs, dbPrefix, err := getFsAndDBPrefix(c)
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 		return
 	}
 
-	header := c.Request.Header
-
-	mime, class := extractMimeAndClass(c.ContentType())
-
-	var givenMD5 []byte
-	if md5Str := header.Get("Content-MD5"); md5Str != "" {
-		givenMD5, err = parseMD5Hash(md5Str)
-	}
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-MD5", err))
-		return
-	}
-
-	size, err := parseContentLength(header.Get("Content-Length"))
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-Length", err))
-		return
-	}
-
-	d, err := vfs.NewDocAttributes(
-		c.Query("Type"),
-		c.Query("Name"),
-		c.Param("folder-id"),
-		mime,
-		class,
-		size,
-		givenMD5,
-		parseTags(c.Query("Tags")),
-		c.Query("Executable") == "true",
-	)
-
+	docType, err := vfs.ParseDocType(c.Query("Type"))
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
 	}
 
 	var doc jsonapi.JSONApier
-	switch d.DocType() {
+	switch docType {
 	case vfs.FileDocType:
-		doc, err = vfs.CreateFileAndUpload(d, storage, dbPrefix, c.Request.Body)
+		doc, err = createFileHandler(c, fs, dbPrefix)
 	case vfs.FolderDocType:
-		doc, err = vfs.CreateDirectory(d, storage, dbPrefix)
+		doc, err = createDirectoryHandler(c, fs, dbPrefix)
+	default:
+		err = vfs.ErrDocTypeInvalid
 	}
 
 	if err != nil {
@@ -92,22 +62,104 @@ func CreationHandler(c *gin.Context) {
 	c.Data(http.StatusCreated, jsonapi.ContentType, data)
 }
 
-// ReadHandler handle all GET requests on /files/:file-id aiming at
-// downloading a file. It serves two main purposes in this regard:
+func createFileHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *vfs.FileDoc, err error) {
+	doc, err = fileDocFromReq(
+		c,
+		c.Query("Name"),
+		c.Param("folder-id"),
+		parseTags(c.Query("Tags")),
+	)
+	if err != nil {
+		return
+	}
+
+	err = vfs.CreateFileAndUpload(doc, fs, dbPrefix, c.Request.Body)
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	return
+}
+
+func createDirectoryHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *vfs.DirDoc, err error) {
+	doc, err = vfs.NewDirDoc(
+		c.Query("Name"),
+		c.Param("folder-id"),
+		parseTags(c.Query("Tags")),
+	)
+	if err != nil {
+		return
+	}
+
+	err = vfs.CreateDirectory(doc, fs, dbPrefix)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+// OverwriteFileContentHandler handles PUT requests on /files/:file-id
+// to overwrite the content of a file given its identifier.
+//
+// swagger:route PUT /files/:file-id files overwriteFileContent
+func OverwriteFileContentHandler(c *gin.Context) {
+	var err error
+
+	fs, dbPrefix, err := getFsAndDBPrefix(c)
+	if err != nil {
+		return
+	}
+
+	var oldDoc *vfs.FileDoc
+	var newDoc *vfs.FileDoc
+
+	oldDoc, err = vfs.GetFileDoc(c.Param("file-id"), dbPrefix)
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	newDoc, err = fileDocFromReq(
+		c,
+		oldDoc.Name,
+		oldDoc.FolderID,
+		oldDoc.Tags,
+	)
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	err = vfs.ModifyFileContent(oldDoc, newDoc, fs, dbPrefix, c.Request.Body)
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	data, err := newDoc.ToJSONApi()
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	c.Data(http.StatusOK, jsonapi.ContentType, data)
+}
+
+// ReadFileHandler handles all GET requests on /files/:file-id aiming
+// at downloading a file. It serves two main purposes in this regard:
 //  - downloading a file given its ID in inline mode
 //  - downloading a file given its path in attachment mode on the
 //    /files/download endpoint
 //
 // swagger:route GET /files/download files downloadFileByPath
 // swagger:route GET /files/:file-id files downloadFileByID
-func ReadHandler(c *gin.Context) {
+func ReadFileHandler(c *gin.Context) {
 	var err error
 
-	instance := middlewares.GetInstance(c)
-	dbPrefix := instance.GetDatabasePrefix()
-	storage, err := instance.GetStorageProvider()
+	fs, dbPrefix, err := getFsAndDBPrefix(c)
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 		return
 	}
 
@@ -117,12 +169,12 @@ func ReadHandler(c *gin.Context) {
 	// form their path
 	if fileID == "download" {
 		pth := c.Query("path")
-		err = vfs.ServeFileContentByPath(pth, c.Request, c.Writer, storage)
+		err = vfs.ServeFileContentByPath(pth, c.Request, c.Writer, fs)
 	} else {
 		var doc *vfs.FileDoc
 		doc, err = vfs.GetFileDoc(fileID, dbPrefix)
 		if err == nil {
-			err = vfs.ServeFileContent(doc, c.Request, c.Writer, storage)
+			err = vfs.ServeFileContent(doc, c.Request, c.Writer, fs)
 		}
 	}
 
@@ -134,11 +186,58 @@ func ReadHandler(c *gin.Context) {
 
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
-	router.HEAD("/:file-id", ReadHandler)
-	router.GET("/:file-id", ReadHandler)
+	router.HEAD("/:file-id", ReadFileHandler)
+	router.GET("/:file-id", ReadFileHandler)
 
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
+
+	router.PUT("/:file-id", OverwriteFileContentHandler)
+}
+
+func getFsAndDBPrefix(c *gin.Context) (fs afero.Fs, dbPrefix string, err error) {
+	instance := middlewares.GetInstance(c)
+	dbPrefix = instance.GetDatabasePrefix()
+	fs, err = instance.GetStorageProvider()
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
+		return
+	}
+	return
+}
+
+func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *vfs.FileDoc, err error) {
+	header := c.Request.Header
+
+	size, err := parseContentLength(header.Get("Content-Length"))
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-Length", err))
+		return
+	}
+
+	var md5Sum []byte
+	if md5Str := header.Get("Content-MD5"); md5Str != "" {
+		md5Sum, err = parseMD5Hash(md5Str)
+	}
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-MD5", err))
+		return
+	}
+
+	executable := c.Query("Executable") == "true"
+	mime, class := extractMimeAndClass(c.ContentType())
+	doc, err = vfs.NewFileDoc(
+		name,
+		folderID,
+		size,
+		md5Sum,
+		mime,
+		class,
+		executable,
+		tags,
+	)
+
+	return
 }
 
 func parseTags(str string) (tags []string) {
@@ -162,12 +261,12 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 		return nil, fmt.Errorf("Given Content-MD5 is invalid")
 	}
 
-	givenMD5, err := base64.StdEncoding.DecodeString(md5B64)
-	if err != nil || len(givenMD5) != 16 {
+	md5Sum, err := base64.StdEncoding.DecodeString(md5B64)
+	if err != nil || len(md5Sum) != 16 {
 		return nil, fmt.Errorf("Given Content-MD5 is invalid")
 	}
 
-	return givenMD5, nil
+	return md5Sum, nil
 }
 
 func parseContentLength(contentLength string) (size int64, err error) {
