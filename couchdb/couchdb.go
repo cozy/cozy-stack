@@ -97,6 +97,11 @@ func (j *JSONDoc) ToMapWithType() map[string]interface{} {
 	return j.M
 }
 
+// Get returns the value of one of the db fields
+func (j JSONDoc) Get(key string) interface{} {
+	return j.M[key]
+}
+
 // CouchURL is the URL where to check if CouchDB is up
 func CouchURL() string {
 	return "http://localhost:5984/"
@@ -165,13 +170,17 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 	return err
 }
 
+func fixErrorNoDatabaseIsWrongDoctype(err error) {
+	if IsNoDatabaseError(err) {
+		err.(*Error).Reason = "wrong_doctype"
+	}
+}
+
 // GetDoc fetch a document by its docType and ID, out is filled with
 // the document by json.Unmarshal-ing
 func GetDoc(dbprefix, doctype, id string, out Doc) error {
 	err := makeRequest("GET", docURL(dbprefix, doctype, id), nil, out)
-	if IsNoDatabaseError(err) {
-		err.(*Error).Reason = "wrong_doctype"
-	}
+	fixErrorNoDatabaseIsWrongDoctype(err)
 	return err
 }
 
@@ -203,6 +212,7 @@ func Delete(dbprefix, doctype, id, rev string) (tombrev string, err error) {
 	qs := url.Values{"rev": []string{rev}}
 	url := docURL(dbprefix, doctype, id) + "?" + qs.Encode()
 	err = makeRequest("DELETE", url, nil, &res)
+	fixErrorNoDatabaseIsWrongDoctype(err)
 	if err == nil {
 		tombrev = res.Rev
 	}
@@ -229,12 +239,35 @@ func UpdateDoc(dbprefix string, doc Doc) (err error) {
 	id := doc.ID()
 	rev := doc.Rev()
 	if id == "" || rev == "" || doctype == "" {
-		return fmt.Errorf("UpdateDoc argument should have doctype, id and rev ")
+		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
 	}
 
 	url := docURL(dbprefix, doctype, id)
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
+	fixErrorNoDatabaseIsWrongDoctype(err)
+	if err == nil {
+		doc.SetRev(res.Rev)
+	}
+	return err
+}
+
+// CreateNamedDoc persist a document with an ID.
+// if the document already exist, it will return a 409 error.
+// The document ID should be fillled.
+// The doc SetRev function will be called with the new rev.
+func CreateNamedDoc(dbprefix string, doc Doc) (err error) {
+	doctype := doc.DocType()
+	id := doc.ID()
+
+	if doc.Rev() != "" || doc.ID() == "" || doctype == "" {
+		return fmt.Errorf("CreateNamedDoc should have type and id but no rev")
+	}
+
+	url := docURL(dbprefix, doctype, id)
+	var res updateResponse
+	err = makeRequest("PUT", url, doc, &res)
+	fixErrorNoDatabaseIsWrongDoctype(err)
 	if err == nil {
 		doc.SetRev(res.Rev)
 	}
