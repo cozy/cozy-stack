@@ -78,7 +78,16 @@ func (j JSONDoc) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaller by proxying to internal map
 func (j *JSONDoc) UnmarshalJSON(bytes []byte) error {
-	return json.Unmarshal(bytes, &j.M)
+	err := json.Unmarshal(bytes, &j.M)
+	if err != nil {
+		return err
+	}
+	doctype, ok := j.M["_type"].(string)
+	if ok {
+		j.Type = doctype
+	}
+	delete(j.M, "_type")
+	return nil
 }
 
 // ToMapWithType returns the JSONDoc internal map including its DocType
