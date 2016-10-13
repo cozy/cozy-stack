@@ -127,10 +127,10 @@ func ServeFileContent(fileDoc *FileDoc, req *http.Request, w http.ResponseWriter
 // Etag.
 //
 // The content disposition is attached
-func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter, fs afero.Fs) (err error) {
+func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter, fs afero.Fs) error {
 	fileInfo, err := fs.Stat(pth)
 	if err != nil {
-		return
+		return ErrDocDoesNotExist
 	}
 
 	name := path.Base(pth)
