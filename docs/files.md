@@ -40,6 +40,7 @@ Accept: application/vnd.api+json
 
 * 201 Created, when the folder has been successfully created
 * 404 Not Found, when the parent folder does not exist
+* 409 Conflict, when a directory with the same name already exists
 * 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or invalid
 
 #### Response
@@ -239,6 +240,7 @@ Hello world!
 
 * 201 Created, when the file has been successfully created
 * 404 Not Found, when the parent folder does not exist
+* 409 Conflict, when a file with the same name already exists
 * 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to the md5sum computed by the server
 * 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist, `Type` or `Name` parameter is missing or invalid, etc.)
 
