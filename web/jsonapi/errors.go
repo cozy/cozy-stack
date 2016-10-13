@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/vfs"
 )
 
@@ -22,8 +23,20 @@ type Error struct {
 	Source SourceError `json:"source,omitempty"`
 }
 
+// WrapCouchError returns a formatted error from a couchdb error
+func WrapCouchError(err *couchdb.Error) *Error {
+	return &Error{
+		Status: err.StatusCode,
+		Title:  err.Name,
+		Detail: err.Reason,
+	}
+}
+
 // WrapVfsError returns a formatted error from a golang error emitted by the vfs
 func WrapVfsError(err error) *Error {
+	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
+		return WrapCouchError(couchErr)
+	}
 	switch err {
 	case vfs.ErrDocAlreadyExists:
 		return &Error{
@@ -40,9 +53,9 @@ func WrapVfsError(err error) *Error {
 	case vfs.ErrIllegalFilename:
 		return InvalidParameter("folder-id", err)
 	case vfs.ErrInvalidHash:
-		return InvalidParameter("Content-MD5", err)
+		return PreconditionFailed("Content-MD5", err)
 	case vfs.ErrContentLengthMismatch:
-		return InvalidParameter("Content-Length", err)
+		return PreconditionFailed("Content-Length", err)
 	}
 	return InternalServerError(err)
 }
@@ -62,6 +75,19 @@ func InternalServerError(err error) *Error {
 		Status: http.StatusInternalServerError,
 		Title:  "Internal Server Error",
 		Detail: err.Error(),
+	}
+}
+
+// PreconditionFailed returns a 412 formatted error when an expectation from an
+// HTTP header is not matched
+func PreconditionFailed(parameter string, err error) *Error {
+	return &Error{
+		Status: http.StatusPreconditionFailed,
+		Title:  "Precondition Failed",
+		Detail: err.Error(),
+		Source: SourceError{
+			Parameter: parameter,
+		},
 	}
 }
 

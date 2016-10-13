@@ -128,17 +128,17 @@ func ServeFileContent(fileDoc *FileDoc, req *http.Request, w http.ResponseWriter
 // Etag.
 //
 // The content disposition is attached
-func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter, fs afero.Fs) (err error) {
+func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter, fs afero.Fs) error {
 	fileInfo, err := fs.Stat(pth)
 	if err != nil {
-		return
+		return ErrDocDoesNotExist
 	}
 
 	name := path.Base(pth)
 	w.Header().Set("Content-Disposition", "attachment; filename="+name)
 
 	serveContent(req, w, fs, pth, name, fileInfo.ModTime())
-	return
+	return nil
 }
 
 func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, name string, modtime time.Time) (err error) {
