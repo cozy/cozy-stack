@@ -4,11 +4,11 @@ package middlewares
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/afero"
 )
@@ -59,7 +59,7 @@ func SetInstance() gin.HandlerFunc {
 		}
 		wd, err := os.Getwd()
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 			return
 		}
 		storageURL := "file://localhost" + wd + "/" + domain + "/"

@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +14,7 @@ func validDoctype(c *gin.Context) {
 	// TODO extends me to verificate characters allowed in db name.
 	doctype := c.Param("doctype")
 	if doctype == "" {
-		c.AbortWithError(http.StatusBadRequest, errors.InvalidDoctype(doctype))
+		c.AbortWithError(http.StatusBadRequest, invalidDoctypeErr(doctype))
 	} else {
 		c.Set("doctype", doctype)
 	}
@@ -32,7 +31,7 @@ func getDoc(c *gin.Context) {
 	var out couchdb.JSONDoc
 	err := couchdb.GetDoc(prefix, doctype, docid, &out)
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		c.AbortWithError(HTTPStatus(err), err)
 		return
 	}
 	out.Type = doctype
@@ -53,7 +52,7 @@ func createDoc(c *gin.Context) {
 
 	err := couchdb.CreateDoc(prefix, doc)
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		c.AbortWithError(HTTPStatus(err), err)
 		return
 	}
 
@@ -91,7 +90,7 @@ func updateDoc(c *gin.Context) {
 
 	err := couchdb.UpdateDoc(prefix, doc)
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		c.AbortWithError(HTTPStatus(err), err)
 		return
 	}
 
@@ -119,7 +118,7 @@ func deleteDoc(c *gin.Context) {
 
 	tombrev, err := couchdb.Delete(prefix, doctype, docid, rev)
 	if err != nil {
-		c.AbortWithError(errors.HTTPStatus(err), err)
+		c.AbortWithError(HTTPStatus(err), err)
 		return
 	}
 
