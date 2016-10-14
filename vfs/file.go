@@ -114,8 +114,7 @@ func ServeFileContent(fileDoc *FileDoc, req *http.Request, w http.ResponseWriter
 		header.Set("Etag", eTag)
 	}
 
-	serveContent(req, w, fs, fileDoc.Path, attrs.Name, attrs.UpdatedAt)
-	return
+	return serveContent(req, w, fs, fileDoc.Path, attrs.Name, attrs.UpdatedAt)
 }
 
 // ServeFileContentByPath replies to a http request using the content
@@ -136,8 +135,7 @@ func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter
 	name := path.Base(pth)
 	w.Header().Set("Content-Disposition", "attachment; filename="+name)
 
-	serveContent(req, w, fs, pth, name, fileInfo.ModTime())
-	return
+	return serveContent(req, w, fs, pth, name, fileInfo.ModTime())
 }
 
 func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, name string, modtime time.Time) (err error) {
