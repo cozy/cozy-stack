@@ -282,16 +282,16 @@ func copyOnFsAndCheckIntegrity(pth string, givenMD5 []byte, executable bool, fs 
 		return
 	}
 
-	err = fs.Chmod(pth, mode)
-	if err != nil {
-		return
-	}
-
 	defer func() {
 		if cerr := f.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
 	}()
+
+	err = fs.Chmod(pth, mode)
+	if err != nil {
+		return
+	}
 
 	md5H := md5.New() // #nosec
 
