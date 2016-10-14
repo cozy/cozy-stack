@@ -267,15 +267,16 @@ func ModifyFileContent(oldDoc *FileDoc, newDoc *FileDoc, fs afero.Fs, dbPrefix s
 }
 
 func copyOnFsAndCheckIntegrity(pth string, givenMD5 []byte, executable bool, fs afero.Fs, r io.Reader) (written int64, md5Sum []byte, err error) {
+	var mode os.FileMode
+	if executable {
+		mode = 0755 // -rwxr-xr-x
+	} else {
+		mode = 0644 // -rw-r--r--
+	}
+
 	// We want to write only (O_WRONLY), create the file if it does not
 	// already exist (O_CREATE) and truncate it to length 0 if necessary
 	// (O_TRUNC).
-	var mode os.FileMode
-	if executable {
-		mode = 0755
-	} else {
-		mode = 0644
-	}
 	flag := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 	f, err := fs.OpenFile(pth, flag, mode)
 	if err != nil {
