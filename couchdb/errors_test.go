@@ -2,8 +2,9 @@ package couchdb
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestError_JSON(t *testing.T) {
@@ -20,6 +21,7 @@ func TestError_JSON(t *testing.T) {
 	asJSON := couchError.JSON()
 
 	expectedMap := map[string]interface{}{
+		"ok":       false,
 		"status":   "200",
 		"error":    "a name",
 		"reason":   "a reason",

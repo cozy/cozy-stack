@@ -70,6 +70,7 @@ func (e *Error) Error() string {
 // JSON returns the json representation of this error
 func (e *Error) JSON() map[string]interface{} {
 	jsonMap := map[string]interface{}{
+		"ok":     false,
 		"status": strconv.Itoa(e.StatusCode),
 		"error":  e.Name,
 		"reason": e.Reason,
