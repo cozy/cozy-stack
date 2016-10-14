@@ -11,7 +11,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
@@ -79,7 +78,6 @@ func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
 }
 
 func TestMain(m *testing.M) {
-
 	// First we make sure couchdb is started
 	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
 	if err != nil || couchdb.Status() != checkup.Healthy {
@@ -87,12 +85,14 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	router := gin.New()
+	gin.SetMode(gin.TestMode)
 	instance := &middlewares.Instance{
 		Domain:     Host,
 		StorageURL: "mem://test",
 	}
-	router.Use(errors.Handler())
+
+	router := gin.New()
+	router.Use(middlewares.ErrorHandler())
 	router.Use(injectInstance(instance))
 	Routes(router.Group("/data"))
 	ts = httptest.NewServer(router)

@@ -8,7 +8,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-type dirAttributes struct {
+// DirAttributes is a struct with the attributes of a directory
+type DirAttributes struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -24,7 +25,7 @@ type DirDoc struct {
 	// Directory revision
 	DRev string `json:"_rev,omitempty"`
 	// Directory attributes
-	Attrs *dirAttributes `json:"attributes"`
+	Attrs *DirAttributes `json:"attributes"`
 	// Parent folder identifier
 	FolderID string `json:"folderID"`
 	// Directory path on VFS
@@ -62,10 +63,9 @@ func (d *DirDoc) SetRev(rev string) {
 // ToJSONApi implements temporary interface JSONApier to serialize
 // the directory document
 func (d *DirDoc) ToJSONApi() ([]byte, error) {
-	qid := d.DID
 	data := map[string]interface{}{
 		"type":       d.DocType(),
-		"id":         qid,
+		"id":         d.ID(),
 		"rev":        d.Rev(),
 		"attributes": d.Attrs,
 	}
@@ -88,7 +88,7 @@ func CreateDirectory(m *DocAttributes, fs afero.Fs, dbPrefix string) (doc *DirDo
 	}
 
 	createDate := time.Now()
-	attrs := &dirAttributes{
+	attrs := &DirAttributes{
 		Name:      m.name,
 		CreatedAt: createDate,
 		UpdatedAt: createDate,

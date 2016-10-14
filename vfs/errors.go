@@ -2,7 +2,6 @@ package vfs
 
 import (
 	"errors"
-	"net/http"
 	"os"
 )
 
@@ -26,26 +25,3 @@ var (
 	// match the calculated one
 	ErrContentLengthMismatch = errors.New("Content length does not match")
 )
-
-// HTTPStatus returns the HTTP status code associated to a given
-// error. If the error is not part of vfs errors, the code returned is
-// 0.
-func HTTPStatus(err error) (code int) {
-	switch err {
-	case ErrDocAlreadyExists:
-		code = http.StatusConflict
-	case ErrDocDoesNotExist:
-		code = http.StatusNotFound
-	case ErrParentDoesNotExist:
-		code = http.StatusNotFound
-	case ErrDocTypeInvalid:
-		code = http.StatusUnprocessableEntity
-	case ErrIllegalFilename:
-		code = http.StatusUnprocessableEntity
-	case ErrInvalidHash:
-		code = http.StatusPreconditionFailed
-	case ErrContentLengthMismatch:
-		code = http.StatusUnprocessableEntity
-	}
-	return
-}
