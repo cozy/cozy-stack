@@ -132,6 +132,12 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
+	ifMatch := c.Request.Header.Get("If-Match")
+	if ifMatch != "" && oldDoc.Rev() != ifMatch {
+		jsonapi.AbortWithError(c, jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match.")))
+		return
+	}
+
 	err = vfs.ModifyFileContent(oldDoc, newDoc, fs, dbPrefix, c.Request.Body)
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))

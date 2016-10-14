@@ -59,12 +59,8 @@ func createDir(t *testing.T, path string) (res *http.Response, v map[string]inte
 	return
 }
 
-func doUploadOrMod(t *testing.T, method, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
-	buf := strings.NewReader(body)
-	req, err := http.NewRequest(method, ts.URL+path, buf)
-	if !assert.NoError(t, err) {
-		return
-	}
+func doUploadOrMod(t *testing.T, req *http.Request, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
+	var err error
 
 	if contentType != "" {
 		req.Header.Add("Content-Type", contentType)
@@ -88,11 +84,21 @@ func doUploadOrMod(t *testing.T, method, path, contentType, body, hash string) (
 }
 
 func upload(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
-	return doUploadOrMod(t, "POST", path, contentType, body, hash)
+	buf := strings.NewReader(body)
+	req, err := http.NewRequest("POST", ts.URL+path, buf)
+	if !assert.NoError(t, err) {
+		return
+	}
+	return doUploadOrMod(t, req, contentType, body, hash)
 }
 
 func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
-	return doUploadOrMod(t, "PUT", path, contentType, body, hash)
+	buf := strings.NewReader(body)
+	req, err := http.NewRequest("PUT", ts.URL+path, buf)
+	if !assert.NoError(t, err) {
+		return
+	}
+	return doUploadOrMod(t, req, contentType, body, hash)
 }
 
 func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
@@ -261,6 +267,36 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 func TestModifyContentNoFileID(t *testing.T) {
 	res, _ := uploadMod(t, "/files/badid", "text/plain", "nil", "")
 	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestModifyContentBadRev(t *testing.T) {
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=modbadrev&Executable=true", "text/plain", "foo", "")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	data1, ok = data1["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := data1["id"].(string)
+	assert.True(t, ok)
+	fileRev, ok := data1["rev"].(string)
+	assert.True(t, ok)
+
+	newcontent := "newcontent :)"
+
+	req2, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
+	assert.NoError(t, err)
+
+	req2.Header.Add("If-Match", "badrev")
+	res2, _ := doUploadOrMod(t, req2, "text/plain", newcontent, "")
+	assert.Equal(t, 412, res2.StatusCode)
+
+	req3, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
+	assert.NoError(t, err)
+
+	req3.Header.Add("If-Match", fileRev)
+	res3, _ := doUploadOrMod(t, req3, "text/plain", newcontent, "")
+	assert.Equal(t, 200, res3.StatusCode)
 }
 
 func TestModifyContentSuccess(t *testing.T) {
