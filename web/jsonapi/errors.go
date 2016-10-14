@@ -25,6 +25,9 @@ type Error struct {
 	Source SourceError `json:"source,omitempty"`
 }
 
+// ErrorList is just an array of error objects
+type ErrorList []*Error
+
 func (e *Error) Error() string {
 	return e.Title + "(" + strconv.Itoa(e.Status) + ")" + ": " + e.Detail
 }

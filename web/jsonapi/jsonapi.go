@@ -19,11 +19,39 @@ type JSONApier interface {
 	ToJSONApi() ([]byte, error)
 }
 
+// Document is JSON-API document, identified by the mediatype
+// application/vnd.api+json
+// See http://jsonapi.org/format/#document-structure
+type Document struct {
+	Data   *json.RawMessage `json:"data,omitempty"`
+	Errors ErrorList        `json:"errors,omitempty"`
+	// TODO included, links
+}
+
+// Data can be called to send an answer with a JSON-API document containing a
+// single object as data
+func Data(c *gin.Context, statusCode int, o Object) {
+	data, err := MarshalObject(o)
+	if err != nil {
+		AbortWithError(c, InternalServerError(err))
+		return
+	}
+	doc := Document{
+		Data: &data,
+	}
+	body, err := json.Marshal(doc)
+	if err != nil {
+		AbortWithError(c, InternalServerError(err))
+		return
+	}
+	c.Data(statusCode, ContentType, body)
+}
+
 // AbortWithError can be called to abort the current http request/response
 // processing, and send an error in the JSON-API format
 func AbortWithError(c *gin.Context, e *Error) {
-	doc := map[string]interface{}{
-		"errors": []*Error{e},
+	doc := Document{
+		Errors: ErrorList{e},
 	}
 	body, err := json.Marshal(doc)
 	if err != nil {
@@ -33,3 +61,5 @@ func AbortWithError(c *gin.Context, e *Error) {
 	c.Data(e.Status, ContentType, body)
 	c.Abort()
 }
+
+// TODO could be nice to have AbortWithErrors(c *gin.Context, errors ErrorList)

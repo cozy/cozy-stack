@@ -480,12 +480,15 @@ func TestModifyContentSuccess(t *testing.T) {
 	data2, ok = data2["data"].(map[string]interface{})
 	assert.True(t, ok)
 
+	meta2, ok := data2["meta"].(map[string]interface{})
+	assert.True(t, ok)
+
 	attrs2, ok := data2["attributes"].(map[string]interface{})
 	assert.True(t, ok)
 
 	assert.Equal(t, data2["id"], data1["id"], "same id")
 	assert.Equal(t, data2["path"], data1["path"], "same path")
-	assert.NotEqual(t, data2["rev"], data1["res"], "different rev")
+	assert.NotEqual(t, meta2["rev"], data1["rev"], "different rev")
 
 	assert.Equal(t, attrs2["name"], attrs1["name"])
 	assert.Equal(t, attrs2["created_at"], attrs1["created_at"])

@@ -143,13 +143,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
-	data, err := newDoc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusOK, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusOK, newDoc)
 }
 
 // @TODO: get rid of this with jsonapi package
