@@ -49,8 +49,8 @@ const nor LogicOperator = "$nor"
 // In the future, we might add go-side validation
 // but we will need to duplicate the couchdb UCA algorithm
 type Filter interface {
+	json.Marshaler
 	ToMango() map[string]interface{}
-	MarshalJSON() ([]byte, error)
 }
 
 // valueFilter is a filter on a single field

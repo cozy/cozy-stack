@@ -322,7 +322,7 @@ func DefineIndex(dbprefix, doctype string, index mango.IndexDefinitionRequest) e
 func FindDocs(dbprefix, doctype string, req *FindRequest, results interface{}) error {
 	url := makeDBName(dbprefix, doctype) + "/_find"
 	// prepare a structure to receive the results
-	var response = findResponse{}
+	var response findResponse
 	err := makeRequest("POST", url, &req, &response)
 	if err != nil {
 		return err
