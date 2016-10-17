@@ -33,11 +33,14 @@ type DocMetaAttributes struct {
 	Tags     []string `json:"tags,omitempty"`
 }
 
+// Context is used to convey the afero.Fs object along with the
+// CouchDb database prefix.
 type Context struct {
 	fs afero.Fs
 	db string
 }
 
+// NewContext is the constructor function for Context
 func NewContext(fs afero.Fs, dbprefix string) *Context {
 	return &Context{fs, dbprefix}
 }
