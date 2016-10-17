@@ -424,6 +424,50 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.Equal(t, fileInfo.Mode().String(), "-rw-r--r--")
 }
 
+func TestModifyContentConcurrently(t *testing.T) {
+	done := make(chan *http.Response)
+	errs := make(chan *http.Response)
+
+	res, data := upload(t, "/files/?Type=io.cozy.files&Name=willbemodifiedconcurrently&Executable=true", "text/plain", "foo", "")
+	if !assert.Equal(t, 201, res.StatusCode) {
+		return
+	}
+
+	var ok bool
+	data, ok = data["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := data["id"].(string)
+	assert.True(t, ok)
+
+	doModContent := func() {
+		res, _ := uploadMod(t, "/files/"+fileID, "plain/text", "newcontent", "")
+		if res.StatusCode == 200 {
+			done <- res
+		} else {
+			errs <- res
+		}
+	}
+
+	n := 100
+	c := 0
+
+	for i := 0; i < n; i++ {
+		go doModContent()
+	}
+
+	for i := 0; i < n; i++ {
+		select {
+		case res := <-errs:
+			assert.True(t, res.StatusCode == 409 || res.StatusCode == 503)
+		case <-done:
+			c = c + 1
+		}
+	}
+
+	assert.Equal(t, 1, c)
+}
+
 func TestDownloadFileBadID(t *testing.T) {
 	res, _ := download(t, "/files/badid", "")
 	assert.Equal(t, 404, res.StatusCode)
