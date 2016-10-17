@@ -82,6 +82,8 @@ The `cozy-stack` binary is now present in the current folder. Run it with:
 ./cozy-stack serve
 ```
 
+The cozy-stack server listens on http://localhost:8080/ by default.
+
 
 ### Running a CouchDB instance
 
