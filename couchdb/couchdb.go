@@ -8,13 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-)
 
-type updateResponse struct {
-	ID  string `json:"id"`
-	Rev string `json:"rev"`
-	Ok  bool   `json:"ok"`
-}
+	"github.com/cozy/cozy-stack/couchdb/mango"
+)
 
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
@@ -197,7 +193,7 @@ func DeleteDB(dbprefix, doctype string) error {
 // ResetDB destroy and recreate the database for a doctype
 func ResetDB(dbprefix, doctype string) (err error) {
 	err = DeleteDB(dbprefix, doctype)
-	if err != nil {
+	if err != nil && !IsNoDatabaseError(err) {
 		return err
 	}
 	return CreateDB(dbprefix, doctype)
@@ -311,4 +307,51 @@ func CreateDoc(dbprefix string, doc Doc) (err error) {
 	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
 	return nil
+}
+
+// DefineIndex define the index on the doctype database
+// see query package on how to define an index
+func DefineIndex(dbprefix, doctype string, index mango.IndexDefinitionRequest) error {
+	url := makeDBName(dbprefix, doctype) + "/_index"
+	var response indexCreationResponse
+	return makeRequest("POST", url, &index, &response)
+}
+
+// FindDocs returns all documents matching the passed FindRequest
+// documents will be unmarshalled in the provided results slice.
+func FindDocs(dbprefix, doctype string, req *FindRequest, results interface{}) error {
+	url := makeDBName(dbprefix, doctype) + "/_find"
+	// prepare a structure to receive the results
+	var response = findResponse{}
+	err := makeRequest("POST", url, &req, &response)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(response.Docs, results)
+}
+
+type indexCreationResponse struct {
+	Result string `json:"result"`
+	Error  string `json:"error"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+}
+
+type updateResponse struct {
+	ID  string `json:"id"`
+	Rev string `json:"rev"`
+	Ok  bool   `json:"ok"`
+}
+
+type findResponse struct {
+	Docs json.RawMessage `json:"docs"`
+}
+
+// A FindRequest is a structure containin
+type FindRequest struct {
+	Selector mango.Filter  `json:"selector"`
+	Limit    int           `json:"limit,omitempty"`
+	Skip     int           `json:"skip,omitempty"`
+	Sort     *mango.SortBy `json:"sort,omitempty"`
+	Fields   []string      `json:"fields,omitempty"`
 }
