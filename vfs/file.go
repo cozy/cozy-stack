@@ -294,7 +294,7 @@ func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error
 	return fs.OpenFile(pth, flag, mode)
 }
 
-func copyOnFsAndCheckIntegrity(file afero.File, givenMD5 []byte, fs afero.Fs, r io.Reader) (written int64, md5Sum []byte, err error) {
+func copyOnFsAndCheckIntegrity(file io.WriteCloser, givenMD5 []byte, fs afero.Fs, r io.Reader) (written int64, md5Sum []byte, err error) {
 	defer func() {
 		if cerr := file.Close(); cerr != nil && err == nil {
 			err = cerr
