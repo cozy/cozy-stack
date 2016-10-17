@@ -33,6 +33,15 @@ type DocMetaAttributes struct {
 	Tags     []string `json:"tags,omitempty"`
 }
 
+type Context struct {
+	fs afero.Fs
+	db string
+}
+
+func NewContext(fs afero.Fs, dbprefix string) *Context {
+	return &Context{fs, dbprefix}
+}
+
 // ParseDocType is used to transform a string to a DocType.
 func ParseDocType(docType string) (result DocType, err error) {
 	switch docType {
@@ -58,7 +67,7 @@ func checkFileName(str string) error {
 // defined is the database and filesystem and it will generate the new
 // path of the wanted file, checking if there is not colision with
 // existing file.
-func createNewFilePath(name, folderID string, storage afero.Fs, dbPrefix string) (pth string, parentDoc *DirDoc, err error) {
+func createNewFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
@@ -68,7 +77,7 @@ func createNewFilePath(name, folderID string, storage afero.Fs, dbPrefix string)
 	if folderID == "" {
 		parentPath = "/"
 	} else {
-		parentDoc, err = GetDirectoryDoc(folderID, dbPrefix)
+		parentDoc, err = GetDirectoryDoc(c, folderID)
 		if err != nil {
 			return
 		}

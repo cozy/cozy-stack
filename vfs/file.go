@@ -123,9 +123,9 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 
 // GetFileDoc is used to fetch file document information form our
 // database.
-func GetFileDoc(fileID, dbPrefix string) (doc *FileDoc, err error) {
+func GetFileDoc(c *Context, fileID string) (doc *FileDoc, err error) {
 	doc = &FileDoc{}
-	err = couchdb.GetDoc(dbPrefix, string(FileDocType), fileID, doc)
+	err = couchdb.GetDoc(c.db, string(FileDocType), fileID, doc)
 	return
 }
 
@@ -138,7 +138,7 @@ func GetFileDoc(fileID, dbPrefix string) (doc *FileDoc, err error) {
 // non-ranged requests
 //
 // The content disposition is inlined.
-func ServeFileContent(doc *FileDoc, req *http.Request, w http.ResponseWriter, fs afero.Fs) (err error) {
+func ServeFileContent(c *Context, doc *FileDoc, req *http.Request, w http.ResponseWriter) (err error) {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
 	header.Set("Content-Disposition", "inline; filename="+doc.Name)
@@ -148,7 +148,7 @@ func ServeFileContent(doc *FileDoc, req *http.Request, w http.ResponseWriter, fs
 		header.Set("Etag", eTag)
 	}
 
-	return serveContent(req, w, fs, doc.Path, doc.Name, doc.UpdatedAt)
+	return serveContent(c, req, w, doc.Path, doc.Name, doc.UpdatedAt)
 }
 
 // ServeFileContentByPath replies to a http request using the content
@@ -160,8 +160,8 @@ func ServeFileContent(doc *FileDoc, req *http.Request, w http.ResponseWriter, fs
 // Etag.
 //
 // The content disposition is attached
-func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter, fs afero.Fs) error {
-	fileInfo, err := fs.Stat(pth)
+func ServeFileContentByPath(c *Context, pth string, req *http.Request, w http.ResponseWriter) error {
+	fileInfo, err := c.fs.Stat(pth)
 	if err != nil {
 		return err
 	}
@@ -169,11 +169,11 @@ func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter
 	name := path.Base(pth)
 	w.Header().Set("Content-Disposition", "attachment; filename="+name)
 
-	return serveContent(req, w, fs, pth, name, fileInfo.ModTime())
+	return serveContent(c, req, w, pth, name, fileInfo.ModTime())
 }
 
-func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, name string, modtime time.Time) (err error) {
-	content, err := fs.Open(pth)
+func serveContent(c *Context, req *http.Request, w http.ResponseWriter, pth, name string, modtime time.Time) (err error) {
+	content, err := c.fs.Open(pth)
 	if err != nil {
 		return
 	}
@@ -184,24 +184,24 @@ func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, na
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) (err error) {
-	newpath, _, err := createNewFilePath(doc.Name, doc.FolderID, fs, dbPrefix)
+func CreateFileAndUpload(c *Context, doc *FileDoc, body io.Reader) (err error) {
+	newpath, _, err := createNewFilePath(c, doc.Name, doc.FolderID)
 	if err != nil {
 		return err
 	}
 
-	file, err := safeCreateFile(newpath, doc.Executable, fs)
+	file, err := safeCreateFile(newpath, doc.Executable, c.fs)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
 		if err != nil {
-			fs.Remove(newpath)
+			c.fs.Remove(newpath)
 		}
 	}()
 
-	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, doc.MD5Sum, fs, body)
+	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, doc.MD5Sum, c.fs, body)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Rea
 
 	doc.Path = newpath
 
-	return couchdb.CreateDoc(dbPrefix, doc)
+	return couchdb.CreateDoc(c.db, doc)
 }
 
 // ModifyFileContent overrides the content of a file onto the
@@ -229,7 +229,7 @@ func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Rea
 // This method should change the file content atomically. If any error
 // happens while copying the content, the previous file revision is
 // kept undamaged.
-func ModifyFileContent(olddoc *FileDoc, newdoc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) (err error) {
+func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Reader) (err error) {
 	mdate := time.Now()
 
 	tmppath := "/" + olddoc.ID() + "_" + olddoc.Rev() + "_" + strconv.FormatInt(mdate.UnixNano(), 10)
@@ -238,18 +238,18 @@ func ModifyFileContent(olddoc *FileDoc, newdoc *FileDoc, fs afero.Fs, dbPrefix s
 		return err
 	}
 
-	file, err := safeCreateFile(tmppath, newdoc.Executable, fs)
+	file, err := safeCreateFile(tmppath, newdoc.Executable, c.fs)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
 		if err != nil {
-			fs.Remove(tmppath)
+			c.fs.Remove(tmppath)
 		}
 	}()
 
-	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, newdoc.MD5Sum, fs, body)
+	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, newdoc.MD5Sum, c.fs, body)
 	if err != nil {
 		return err
 	}
@@ -272,17 +272,17 @@ func ModifyFileContent(olddoc *FileDoc, newdoc *FileDoc, fs afero.Fs, dbPrefix s
 	newdoc.CreatedAt = olddoc.CreatedAt
 	newdoc.UpdatedAt = mdate
 
-	err = couchdb.UpdateDoc(dbPrefix, newdoc)
+	err = couchdb.UpdateDoc(c.db, newdoc)
 	if err != nil {
 		return err
 	}
 
-	return renameFile(tmppath, newpath, fs)
+	return renameFile(tmppath, newpath, c.fs)
 }
 
 // ModifyFileMetadata modify the metadata associated to a file. It can
 // be used to rename or move the file in the VFS.
-func ModifyFileMetadata(olddoc *FileDoc, data *DocMetaAttributes, fs afero.Fs, dbPrefix string) (newdoc *FileDoc, err error) {
+func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (newdoc *FileDoc, err error) {
 	newpath := olddoc.Path
 	newname := olddoc.Name
 	newtags := olddoc.Tags
@@ -294,7 +294,7 @@ func ModifyFileMetadata(olddoc *FileDoc, data *DocMetaAttributes, fs afero.Fs, d
 
 	if data.FolderID != "" && data.FolderID != olddoc.FolderID {
 		var parentDoc *DirDoc
-		parentDoc, err = GetDirectoryDoc(data.FolderID, dbPrefix)
+		parentDoc, err = GetDirectoryDoc(c, data.FolderID)
 		if err != nil {
 			return
 		}
@@ -331,13 +331,13 @@ func ModifyFileMetadata(olddoc *FileDoc, data *DocMetaAttributes, fs afero.Fs, d
 	newdoc.Path = newpath
 
 	if newpath != olddoc.Path {
-		err = renameFile(olddoc.Path, newpath, fs)
+		err = renameFile(olddoc.Path, newpath, c.fs)
 		if err != nil {
 			return
 		}
 	}
 
-	err = couchdb.UpdateDoc(dbPrefix, newdoc)
+	err = couchdb.UpdateDoc(c.db, newdoc)
 	return
 }
 
