@@ -9,7 +9,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
 
@@ -25,6 +24,14 @@ const (
 	// FolderDocType is document type
 	FolderDocType = "io.cozy.folders"
 )
+
+// DocMetaAttributes is a struct containing modifiable fields from
+// file and directory documents.
+type DocMetaAttributes struct {
+	Name     string   `json:"name,omitempty"`
+	FolderID string   `json:"folderID,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+}
 
 // ParseDocType is used to transform a string to a DocType.
 func ParseDocType(docType string) (result DocType, err error) {
@@ -61,17 +68,10 @@ func createNewFilePath(name, folderID string, storage afero.Fs, dbPrefix string)
 	if folderID == "" {
 		parentPath = "/"
 	} else {
-		parentDoc = &DirDoc{}
-
-		// NOTE: we only check the existence of the folder on the db
-		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), folderID, parentDoc)
-		if couchdb.IsNotFoundError(err) {
-			err = ErrParentDoesNotExist
-		}
+		parentDoc, err = GetDirectoryDoc(folderID, dbPrefix)
 		if err != nil {
 			return
 		}
-
 		parentPath = parentDoc.Path
 	}
 

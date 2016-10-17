@@ -5,6 +5,7 @@ import (
 	"crypto/md5" // #nosec
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -276,7 +277,68 @@ func ModifyFileContent(olddoc *FileDoc, newdoc *FileDoc, fs afero.Fs, dbPrefix s
 		return err
 	}
 
-	return fs.Rename(tmppath, newpath)
+	return renameFile(tmppath, newpath, fs)
+}
+
+// ModifyFileMetadata modify the metadata associated to a file. It can
+// be used to rename or move the file in the VFS.
+func ModifyFileMetadata(olddoc *FileDoc, data *DocMetaAttributes, fs afero.Fs, dbPrefix string) (newdoc *FileDoc, err error) {
+	newpath := olddoc.Path
+	newname := olddoc.Name
+	newtags := olddoc.Tags
+	newfolderID := olddoc.FolderID
+
+	if data.Name != "" {
+		newname = data.Name
+	}
+
+	if data.FolderID != "" && data.FolderID != olddoc.FolderID {
+		var parentDoc *DirDoc
+		parentDoc, err = GetDirectoryDoc(data.FolderID, dbPrefix)
+		if err != nil {
+			return
+		}
+		newpath = path.Join(parentDoc.Path, olddoc.Name)
+		newfolderID = data.FolderID
+	}
+
+	if data.Tags != nil {
+		newtags = data.Tags
+	}
+
+	newdoc, err = NewFileDoc(
+		newname,
+		newfolderID,
+		olddoc.Size,
+		olddoc.MD5Sum,
+		olddoc.Mime,
+		olddoc.Class,
+		olddoc.Executable,
+		newtags,
+	)
+	if err != nil {
+		return
+	}
+
+	if newname != olddoc.Name {
+		newpath = path.Join(path.Dir(newpath), newname)
+	}
+
+	newdoc.SetID(olddoc.ID())
+	newdoc.SetRev(olddoc.Rev())
+	newdoc.CreatedAt = olddoc.CreatedAt
+	newdoc.UpdatedAt = time.Now()
+	newdoc.Path = newpath
+
+	if newpath != olddoc.Path {
+		err = renameFile(olddoc.Path, newpath, fs)
+		if err != nil {
+			return
+		}
+	}
+
+	err = couchdb.UpdateDoc(dbPrefix, newdoc)
+	return
 }
 
 func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error) {
@@ -316,4 +378,15 @@ func copyOnFsAndCheckIntegrity(file io.WriteCloser, givenMD5 []byte, fs afero.Fs
 	}
 
 	return
+}
+
+func renameFile(oldpath, newpath string, fs afero.Fs) error {
+	newpath = path.Clean(newpath)
+	oldpath = path.Clean(oldpath)
+
+	if !path.IsAbs(newpath) || !path.IsAbs(oldpath) {
+		return fmt.Errorf("renameFile: paths should be absolute")
+	}
+
+	return fs.Rename(oldpath, newpath)
 }
