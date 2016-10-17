@@ -13,6 +13,9 @@ import (
 	"github.com/spf13/afero"
 )
 
+// ForbiddenFilenameChars is the list of forbidden characters in a filename.
+const ForbiddenFilenameChars = "/\x00"
+
 // DocType is the type of document, eg. file or folder
 type DocType string
 
@@ -23,64 +26,8 @@ const (
 	FolderDocType = "io.cozy.folders"
 )
 
-// ForbiddenFilenameChars is the list of forbidden characters in a filename.
-const ForbiddenFilenameChars = "/\x00"
-
-// DocAttributes encapsulates the few metadata linked to a document
-// creation request.
-type DocAttributes struct {
-	docType    DocType
-	name       string
-	folderID   string
-	executable bool
-	tags       []string
-	givenMD5   []byte
-	size       int64
-	mime       string
-	class      string
-}
-
-// DocType returns the document type of the attributes.
-func (d *DocAttributes) DocType() DocType {
-	return d.docType
-}
-
-// NewDocAttributes is the DocAttributes constructor. All inputs are
-// validated and if wrong, an error is returned.
-func NewDocAttributes(docTypeStr, name, folderID, mime, class string, size int64, givenMD5 []byte, tags []string, executable bool) (m *DocAttributes, err error) {
-	docType, err := parseDocType(docTypeStr)
-	if err != nil {
-		return
-	}
-
-	if err = checkFileName(name); err != nil {
-		return
-	}
-
-	// FolderID is not mandatory. If empty, the document is at the root
-	// of the FS
-	if folderID != "" {
-		if err = checkFileName(folderID); err != nil {
-			return
-		}
-	}
-
-	m = &DocAttributes{
-		docType:    docType,
-		name:       name,
-		folderID:   folderID,
-		tags:       tags,
-		executable: executable,
-		givenMD5:   givenMD5,
-		size:       size,
-		mime:       mime,
-		class:      class,
-	}
-
-	return
-}
-
-func parseDocType(docType string) (result DocType, err error) {
+// ParseDocType is used to transform a string to a DocType.
+func ParseDocType(docType string) (result DocType, err error) {
 	switch docType {
 	case "io.cozy.files":
 		result = FileDocType
@@ -104,8 +51,10 @@ func checkFileName(str string) error {
 // defined is the database and filesystem and it will generate the new
 // path of the wanted file, checking if there is not colision with
 // existing file.
-func createNewFilePath(m *DocAttributes, storage afero.Fs, dbPrefix string) (pth string, parentDoc *DirDoc, err error) {
-	folderID := m.folderID
+func createNewFilePath(name, folderID string, storage afero.Fs, dbPrefix string) (pth string, parentDoc *DirDoc, err error) {
+	if err = checkFileName(name); err != nil {
+		return
+	}
 
 	var parentPath string
 
@@ -126,7 +75,7 @@ func createNewFilePath(m *DocAttributes, storage afero.Fs, dbPrefix string) (pth
 		parentPath = parentDoc.Path
 	}
 
-	pth = path.Join(parentPath, m.name)
+	pth = path.Join(parentPath, name)
 	exists, err := afero.Exists(storage, pth)
 	if err != nil {
 		return

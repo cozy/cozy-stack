@@ -8,14 +8,6 @@ import (
 	"github.com/spf13/afero"
 )
 
-// DirAttributes is a struct with the attributes of a directory
-type DirAttributes struct {
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Tags      []string  `json:"tags"`
-}
-
 // DirDoc is a struct containing all the informations about a
 // directory. It implements the couchdb.Doc and jsonapi.JSONApier
 // interfaces.
@@ -24,12 +16,16 @@ type DirDoc struct {
 	DID string `json:"_id,omitempty"`
 	// Directory revision
 	DRev string `json:"_rev,omitempty"`
-	// Directory attributes
-	Attrs *DirAttributes `json:"attributes"`
+	// Directory name
+	Name string `json:"name"`
 	// Parent folder identifier
 	FolderID string `json:"folderID"`
 	// Directory path on VFS
 	Path string `json:"path"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Tags      []string  `json:"tags"`
 }
 
 // ID returns the directory qualified identifier (part of couchdb.Doc interface)
@@ -63,11 +59,17 @@ func (d *DirDoc) SetRev(rev string) {
 // ToJSONApi implements temporary interface JSONApier to serialize
 // the directory document
 func (d *DirDoc) ToJSONApi() ([]byte, error) {
+	attrs := map[string]interface{}{
+		"name":       d.Name,
+		"created_at": d.CreatedAt,
+		"updated_at": d.UpdatedAt,
+		"tags":       d.Tags,
+	}
 	data := map[string]interface{}{
 		"type":       d.DocType(),
 		"id":         d.ID(),
 		"rev":        d.Rev(),
-		"attributes": d.Attrs,
+		"attributes": attrs,
 	}
 	m := map[string]interface{}{
 		"data": data,
@@ -75,30 +77,32 @@ func (d *DirDoc) ToJSONApi() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-// CreateDirectory is the method for creating a new directory
-func CreateDirectory(m *DocAttributes, fs afero.Fs, dbPrefix string) (doc *DirDoc, err error) {
-	if m.docType != FolderDocType {
-		err = ErrDocTypeInvalid
-		return
-	}
-
-	pth, _, err := createNewFilePath(m, fs, dbPrefix)
-	if err != nil {
+// NewDirDoc is the DirDoc constructor. The given name is validated.
+func NewDirDoc(name, folderID string, tags []string) (doc *DirDoc, err error) {
+	if err = checkFileName(name); err != nil {
 		return
 	}
 
 	createDate := time.Now()
-	attrs := &DirAttributes{
-		Name:      m.name,
+	doc = &DirDoc{
+		Name:     name,
+		FolderID: folderID,
+
 		CreatedAt: createDate,
 		UpdatedAt: createDate,
-		Tags:      m.tags,
+		Tags:      tags,
 	}
 
-	doc = &DirDoc{
-		Attrs:    attrs,
-		FolderID: m.folderID,
-		Path:     pth,
+	return
+}
+
+// CreateDirectory is the method for creating a new directory
+func CreateDirectory(doc *DirDoc, fs afero.Fs, dbPrefix string) error {
+	var err error
+
+	pth, _, err := createNewFilePath(doc.Name, doc.FolderID, fs, dbPrefix)
+	if err != nil {
+		return err
 	}
 
 	defer func() {
@@ -107,13 +111,15 @@ func CreateDirectory(m *DocAttributes, fs afero.Fs, dbPrefix string) (doc *DirDo
 		}
 	}()
 
+	doc.Path = pth
+
 	if err = couchdb.CreateDoc(dbPrefix, doc); err != nil {
-		return
+		return err
 	}
 
 	if err = fs.Mkdir(pth, 0755); err != nil {
-		return
+		return err
 	}
 
-	return
+	return nil
 }

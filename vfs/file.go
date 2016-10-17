@@ -7,25 +7,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
-
-// FileAttributes is a struct with the attributes of a file
-type FileAttributes struct {
-	Name       string    `json:"name"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-	Size       int64     `json:"size,string"`
-	Tags       []string  `json:"tags"`
-	MD5Sum     []byte    `json:"md5sum"`
-	Executable bool      `json:"executable"`
-	Class      string    `json:"class"`
-	Mime       string    `json:"mime"`
-}
 
 // FileDoc is a struct containing all the informations about a file.
 // It implements the couchdb.Doc and jsonapi.JSONApier interfaces.
@@ -34,12 +23,21 @@ type FileDoc struct {
 	FID string `json:"_id,omitempty"`
 	// File revision
 	FRev string `json:"_rev,omitempty"`
-	// File attributes
-	Attrs *FileAttributes `json:"attributes"`
+	// File name
+	Name string `json:"name"`
 	// Parent folder identifier
 	FolderID string `json:"folderID"`
 	// File path on VFS
 	Path string `json:"path"`
+
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	Size       int64     `json:"size,string"`
+	Tags       []string  `json:"tags"`
+	MD5Sum     []byte    `json:"md5sum"`
+	Executable bool      `json:"executable"`
+	Class      string    `json:"class"`
+	Mime       string    `json:"mime"`
 }
 
 // ID returns the file qualified identifier (part of couchdb.Doc
@@ -75,16 +73,51 @@ func (f *FileDoc) SetRev(rev string) {
 // the file document
 func (f *FileDoc) ToJSONApi() ([]byte, error) {
 	id := f.FID
+	attrs := map[string]interface{}{
+		"name":       f.Name,
+		"created_at": f.CreatedAt,
+		"updated_at": f.UpdatedAt,
+		"size":       strconv.FormatInt(f.Size, 10),
+		"tags":       f.Tags,
+		"md5sum":     f.MD5Sum,
+		"executable": f.Executable,
+		"class":      f.Class,
+		"mime":       f.Mime,
+	}
 	data := map[string]interface{}{
 		"id":         id,
 		"type":       f.DocType(),
 		"rev":        f.Rev(),
-		"attributes": f.Attrs,
+		"attributes": attrs,
 	}
 	m := map[string]interface{}{
 		"data": data,
 	}
 	return json.Marshal(m)
+}
+
+// NewFileDoc is the FileDoc constructor. The given name is validated.
+func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
+	if err = checkFileName(name); err != nil {
+		return
+	}
+
+	createDate := time.Now()
+	doc = &FileDoc{
+		Name:     name,
+		FolderID: folderID,
+
+		CreatedAt:  createDate,
+		UpdatedAt:  createDate,
+		Size:       size,
+		MD5Sum:     md5Sum,
+		Mime:       mime,
+		Class:      class,
+		Executable: executable,
+		Tags:       tags,
+	}
+
+	return
 }
 
 // GetFileDoc is used to fetch file document information form our
@@ -104,18 +137,17 @@ func GetFileDoc(fileID, dbPrefix string) (doc *FileDoc, err error) {
 // non-ranged requests
 //
 // The content disposition is inlined.
-func ServeFileContent(fileDoc *FileDoc, req *http.Request, w http.ResponseWriter, fs afero.Fs) (err error) {
-	attrs := fileDoc.Attrs
+func ServeFileContent(doc *FileDoc, req *http.Request, w http.ResponseWriter, fs afero.Fs) (err error) {
 	header := w.Header()
-	header.Set("Content-Type", attrs.Mime)
-	header.Set("Content-Disposition", "inline; filename="+attrs.Name)
+	header.Set("Content-Type", doc.Mime)
+	header.Set("Content-Disposition", "inline; filename="+doc.Name)
 
 	if header.Get("Range") == "" {
-		eTag := base64.StdEncoding.EncodeToString(fileDoc.Attrs.MD5Sum)
+		eTag := base64.StdEncoding.EncodeToString(doc.MD5Sum)
 		header.Set("Etag", eTag)
 	}
 
-	return serveContent(req, w, fs, fileDoc.Path, attrs.Name, attrs.UpdatedAt)
+	return serveContent(req, w, fs, doc.Path, doc.Name, doc.UpdatedAt)
 }
 
 // ServeFileContentByPath replies to a http request using the content
@@ -151,34 +183,12 @@ func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, na
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io.ReadCloser) (doc *FileDoc, err error) {
-	if m.docType != FileDocType {
-		err = ErrDocTypeInvalid
-		return
-	}
+func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) error {
+	var err error
 
-	pth, _, err := createNewFilePath(m, fs, dbPrefix)
+	pth, _, err := createNewFilePath(doc.Name, doc.FolderID, fs, dbPrefix)
 	if err != nil {
-		return
-	}
-
-	createDate := time.Now()
-	attrs := &FileAttributes{
-		Name:       m.name,
-		CreatedAt:  createDate,
-		UpdatedAt:  createDate,
-		Size:       m.size,
-		Tags:       m.tags,
-		MD5Sum:     m.givenMD5,
-		Executable: m.executable,
-		Class:      m.class,
-		Mime:       m.mime,
-	}
-
-	doc = &FileDoc{
-		Attrs:    attrs,
-		FolderID: m.folderID,
-		Path:     pth,
+		return err
 	}
 
 	// Error handling to make sure the steps of uploading the file and
@@ -192,38 +202,97 @@ func CreateFileAndUpload(m *DocAttributes, fs afero.Fs, dbPrefix string, body io
 
 	var written int64
 	var md5Sum []byte
-	if written, md5Sum, err = copyOnFsAndCheckIntegrity(m, fs, pth, body); err != nil {
-		return
+	if written, md5Sum, err = copyOnFsAndCheckIntegrity(pth, doc.MD5Sum, doc.Executable, fs, body); err != nil {
+		return err
 	}
 
-	if attrs.Size < 0 {
-		attrs.Size = written
+	if doc.Size < 0 {
+		doc.Size = written
 	}
 
-	if attrs.MD5Sum == nil {
-		attrs.MD5Sum = md5Sum
+	if doc.MD5Sum == nil {
+		doc.MD5Sum = md5Sum
 	}
 
-	if attrs.Size != written {
-		err = ErrContentLengthMismatch
-		return
+	if doc.Size != written {
+		return ErrContentLengthMismatch
 	}
 
-	if err = couchdb.CreateDoc(dbPrefix, doc); err != nil {
-		return
-	}
+	doc.Path = pth
 
-	return
+	return couchdb.CreateDoc(dbPrefix, doc)
 }
 
-func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.ReadCloser) (written int64, md5Sum []byte, err error) {
-	f, err := fs.Create(pth)
+// ModifyFileContent overrides the content of a file onto the
+// filesystem.
+//
+// @TODO: make it more resilient to not lose data if the transfer
+// fails.
+func ModifyFileContent(oldDoc *FileDoc, newDoc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) (err error) {
+	updateDate := time.Now()
+
+	pth := oldDoc.Path
+
+	defer func() {
+		if err != nil {
+			fs.Remove(pth)
+		}
+	}()
+
+	var written int64
+	var md5Sum []byte
+	if written, md5Sum, err = copyOnFsAndCheckIntegrity(pth, newDoc.MD5Sum, newDoc.Executable, fs, body); err != nil {
+		return err
+	}
+
+	if newDoc.Size < 0 {
+		newDoc.Size = written
+	}
+
+	if newDoc.MD5Sum == nil {
+		newDoc.MD5Sum = md5Sum
+	}
+
+	if newDoc.Size != written {
+		return ErrContentLengthMismatch
+	}
+
+	newDoc.Path = pth
+	newDoc.SetID(oldDoc.ID())
+	newDoc.SetRev(oldDoc.Rev())
+	newDoc.CreatedAt = oldDoc.CreatedAt
+	newDoc.UpdatedAt = updateDate
+
+	return couchdb.UpdateDoc(dbPrefix, newDoc)
+}
+
+func copyOnFsAndCheckIntegrity(pth string, givenMD5 []byte, executable bool, fs afero.Fs, r io.Reader) (written int64, md5Sum []byte, err error) {
+	var mode os.FileMode
+	if executable {
+		mode = 0755 // -rwxr-xr-x
+	} else {
+		mode = 0644 // -rw-r--r--
+	}
+
+	// We want to write only (O_WRONLY), create the file if it does not
+	// already exist (O_CREATE) and truncate it to length 0 if necessary
+	// (O_TRUNC).
+	flag := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	f, err := fs.OpenFile(pth, flag, mode)
 	if err != nil {
 		return
 	}
 
-	defer f.Close()
-	defer r.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
+	err = fs.Chmod(pth, mode)
+	if err != nil {
+		return
+	}
 
 	md5H := md5.New() // #nosec
 
@@ -232,9 +301,9 @@ func copyOnFsAndCheckIntegrity(m *DocAttributes, fs afero.Fs, pth string, r io.R
 		return
 	}
 
-	doCheck := m.givenMD5 != nil
+	doCheck := givenMD5 != nil
 	md5Sum = md5H.Sum(nil)
-	if doCheck && !bytes.Equal(m.givenMD5, md5Sum) {
+	if doCheck && !bytes.Equal(givenMD5, md5Sum) {
 		err = ErrInvalidHash
 		return
 	}

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -58,12 +59,8 @@ func createDir(t *testing.T, path string) (res *http.Response, v map[string]inte
 	return
 }
 
-func upload(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
-	buf := strings.NewReader(body)
-	req, err := http.NewRequest("POST", ts.URL+path, buf)
-	if !assert.NoError(t, err) {
-		return
-	}
+func doUploadOrMod(t *testing.T, req *http.Request, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
+	var err error
 
 	if contentType != "" {
 		req.Header.Add("Content-Type", contentType)
@@ -84,6 +81,24 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 	assert.NoError(t, err)
 
 	return
+}
+
+func upload(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
+	buf := strings.NewReader(body)
+	req, err := http.NewRequest("POST", ts.URL+path, buf)
+	if !assert.NoError(t, err) {
+		return
+	}
+	return doUploadOrMod(t, req, contentType, body, hash)
+}
+
+func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
+	buf := strings.NewReader(body)
+	req, err := http.NewRequest("PUT", ts.URL+path, buf)
+	if !assert.NoError(t, err) {
+		return
+	}
+	return doUploadOrMod(t, req, contentType, body, hash)
 }
 
 func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
@@ -249,6 +264,102 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 	assert.Equal(t, 409, res2.StatusCode)
 }
 
+func TestModifyContentNoFileID(t *testing.T) {
+	res, _ := uploadMod(t, "/files/badid", "text/plain", "nil", "")
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestModifyContentBadRev(t *testing.T) {
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=modbadrev&Executable=true", "text/plain", "foo", "")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	data1, ok = data1["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := data1["id"].(string)
+	assert.True(t, ok)
+	fileRev, ok := data1["rev"].(string)
+	assert.True(t, ok)
+
+	newcontent := "newcontent :)"
+
+	req2, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
+	assert.NoError(t, err)
+
+	req2.Header.Add("If-Match", "badrev")
+	res2, _ := doUploadOrMod(t, req2, "text/plain", newcontent, "")
+	assert.Equal(t, 412, res2.StatusCode)
+
+	req3, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
+	assert.NoError(t, err)
+
+	req3.Header.Add("If-Match", fileRev)
+	res3, _ := doUploadOrMod(t, req3, "text/plain", newcontent, "")
+	assert.Equal(t, 200, res3.StatusCode)
+}
+
+func TestModifyContentSuccess(t *testing.T) {
+	var err error
+	var buf []byte
+	var fileInfo os.FileInfo
+
+	storage, _ := instance.GetStorageProvider()
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=willbemodified&Executable=true", "text/plain", "foo", "")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	buf, err = afero.ReadFile(storage, "/willbemodified")
+	assert.Equal(t, "foo", string(buf))
+	fileInfo, err = storage.Stat("/willbemodified")
+	assert.NoError(t, err)
+	assert.Equal(t, fileInfo.Mode().String(), "-rwxr-xr-x")
+
+	var ok bool
+	data1, ok = data1["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	attrs1, ok := data1["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := data1["id"].(string)
+	assert.True(t, ok)
+
+	newcontent := "newcontent :)"
+	res2, data2 := uploadMod(t, "/files/"+fileID+"?Executable=false", "audio/mp3", newcontent, "")
+	assert.Equal(t, 200, res2.StatusCode)
+
+	data2, ok = data2["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	attrs2, ok := data2["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+
+	assert.Equal(t, data2["id"], data1["id"], "same id")
+	assert.Equal(t, data2["path"], data1["path"], "same path")
+	assert.NotEqual(t, data2["rev"], data1["res"], "different rev")
+
+	assert.Equal(t, attrs2["name"], attrs1["name"])
+	assert.Equal(t, attrs2["created_at"], attrs1["created_at"])
+	assert.NotEqual(t, attrs2["updated_at"], attrs1["updated_at"])
+	assert.NotEqual(t, attrs2["size"], attrs1["size"])
+
+	assert.Equal(t, attrs2["size"], strconv.Itoa(len(newcontent)))
+	assert.NotEqual(t, attrs2["md5sum"], attrs1["md5sum"])
+	assert.NotEqual(t, attrs2["class"], attrs1["class"])
+	assert.NotEqual(t, attrs2["mime"], attrs1["mime"])
+	assert.NotEqual(t, attrs2["executable"], attrs1["executable"])
+	assert.Equal(t, attrs2["class"], "audio")
+	assert.Equal(t, attrs2["mime"], "audio/mp3")
+	assert.Equal(t, attrs2["executable"], false)
+
+	buf, err = afero.ReadFile(storage, "/willbemodified")
+	assert.NoError(t, err)
+	assert.Equal(t, newcontent, string(buf))
+	fileInfo, err = storage.Stat("/willbemodified")
+	assert.NoError(t, err)
+	assert.Equal(t, fileInfo.Mode().String(), "-rw-r--r--")
+}
+
 func TestDownloadFileBadID(t *testing.T) {
 	res, _ := download(t, "/files/badid", "")
 	assert.Equal(t, 404, res.StatusCode)
@@ -332,7 +443,9 @@ func TestMain(m *testing.M) {
 	router.Use(injectInstance(instance))
 	router.POST("/files/", CreationHandler)
 	router.POST("/files/:folder-id", CreationHandler)
-	router.GET("/files/:file-id", ReadHandler)
+	router.PUT("/files/:file-id", OverwriteFileContentHandler)
+	router.HEAD("/files/:file-id", ReadFileHandler)
+	router.GET("/files/:file-id", ReadFileHandler)
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())
