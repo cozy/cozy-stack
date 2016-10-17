@@ -76,14 +76,5 @@ func createNewFilePath(name, folderID string, storage afero.Fs, dbPrefix string)
 	}
 
 	pth = path.Join(parentPath, name)
-	exists, err := afero.Exists(storage, pth)
-	if err != nil {
-		return
-	}
-	if exists {
-		err = ErrDocAlreadyExists
-		return
-	}
-
 	return
 }

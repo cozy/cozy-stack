@@ -185,6 +185,38 @@ func TestCreateDirWithIllegalCharacter(t *testing.T) {
 	assert.Equal(t, 422, res2.StatusCode)
 }
 
+func TestCreateDirConcurrently(t *testing.T) {
+	done := make(chan *http.Response)
+	errs := make(chan *http.Response)
+
+	doCreateDir := func(name string) {
+		res, _ := createDir(t, "/files/?Name="+name+"&Type=io.cozy.folders")
+		if res.StatusCode == 201 {
+			done <- res
+		} else {
+			errs <- res
+		}
+	}
+
+	n := 100
+	c := 0
+
+	for i := 0; i < n; i++ {
+		go doCreateDir("foo")
+	}
+
+	for i := 0; i < n; i++ {
+		select {
+		case res := <-errs:
+			assert.Equal(t, 409, res.StatusCode)
+		case <-done:
+			c = c + 1
+		}
+	}
+
+	assert.Equal(t, 1, c)
+}
+
 func TestUploadWithNoType(t *testing.T) {
 	res, _ := upload(t, "/files/", "text/plain", "foo", "")
 	assert.Equal(t, 422, res.StatusCode)
@@ -214,6 +246,38 @@ func TestUploadAtRootSuccess(t *testing.T) {
 	buf, err := afero.ReadFile(storage, "/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
+}
+
+func TestUploadConcurrently(t *testing.T) {
+	done := make(chan *http.Response)
+	errs := make(chan *http.Response)
+
+	doUpload := func(name, body string) {
+		res, _ := upload(t, "/files/?Type=io.cozy.files&Name="+name, "text/plain", body, "")
+		if res.StatusCode == 201 {
+			done <- res
+		} else {
+			errs <- res
+		}
+	}
+
+	n := 100
+	c := 0
+
+	for i := 0; i < n; i++ {
+		go doUpload("uploadedconcurrently", "body "+strconv.Itoa(i))
+	}
+
+	for i := 0; i < n; i++ {
+		select {
+		case res := <-errs:
+			assert.Equal(t, 409, res.StatusCode)
+		case <-done:
+			c = c + 1
+		}
+	}
+
+	assert.Equal(t, 1, c)
 }
 
 func TestUploadWithParentSuccess(t *testing.T) {
@@ -433,10 +497,19 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	if err != nil {
+		fmt.Println("Could not create temporary directory.")
+		os.Exit(1)
+	}
+	defer func() {
+		os.RemoveAll(tempdir)
+	}()
+
 	gin.SetMode(gin.TestMode)
 	instance = &middlewares.Instance{
 		Domain:     "test",
-		StorageURL: "mem://test",
+		StorageURL: "file://localhost" + tempdir,
 	}
 
 	router := gin.New()
