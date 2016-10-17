@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -425,7 +426,12 @@ func TestModifyContentSuccess(t *testing.T) {
 }
 
 func TestModifyContentConcurrently(t *testing.T) {
-	done := make(chan *http.Response)
+	type result struct {
+		rev string
+		idx int64
+	}
+
+	done := make(chan *result)
 	errs := make(chan *http.Response)
 
 	res, data := upload(t, "/files/?Type=io.cozy.files&Name=willbemodifiedconcurrently&Executable=true", "text/plain", "foo", "")
@@ -440,32 +446,46 @@ func TestModifyContentConcurrently(t *testing.T) {
 	fileID, ok := data["id"].(string)
 	assert.True(t, ok)
 
+	var c int64
+
 	doModContent := func() {
-		res, _ := uploadMod(t, "/files/"+fileID, "plain/text", "newcontent", "")
+		idx := atomic.AddInt64(&c, 1)
+		res, data := uploadMod(t, "/files/"+fileID, "plain/text", "newcontent "+strconv.FormatInt(idx, 10), "")
 		if res.StatusCode == 200 {
-			done <- res
+			data = data["data"].(map[string]interface{})
+			done <- &result{data["rev"].(string), idx}
 		} else {
 			errs <- res
 		}
 	}
 
 	n := 100
-	c := 0
 
 	for i := 0; i < n; i++ {
 		go doModContent()
 	}
 
+	var successes []*result
 	for i := 0; i < n; i++ {
 		select {
 		case res := <-errs:
 			assert.True(t, res.StatusCode == 409 || res.StatusCode == 503)
-		case <-done:
-			c = c + 1
+		case res := <-done:
+			successes = append(successes, res)
 		}
 	}
 
-	assert.Equal(t, 1, c)
+	assert.True(t, len(successes) >= 1)
+
+	for i, s := range successes {
+		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
+	}
+
+	lastS := successes[len(successes)-1]
+	storage, _ := instance.GetStorageProvider()
+	buf, err := afero.ReadFile(storage, "/willbemodifiedconcurrently")
+	assert.NoError(t, err)
+	assert.Equal(t, "newcontent "+strconv.FormatInt(lastS.idx, 10), string(buf))
 }
 
 func TestDownloadFileBadID(t *testing.T) {
