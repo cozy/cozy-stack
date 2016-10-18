@@ -8,6 +8,7 @@ package vfs
 import (
 	"path"
 	"strings"
+	"time"
 
 	"github.com/spf13/afero"
 )
@@ -28,9 +29,11 @@ const (
 // DocMetaAttributes is a struct containing modifiable fields from
 // file and directory documents.
 type DocMetaAttributes struct {
-	Name     string   `json:"name,omitempty"`
-	FolderID string   `json:"folderID,omitempty"`
-	Tags     []string `json:"tags,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	FolderID   *string    `json:"folderID,omitempty"`
+	Tags       []string   `json:"tags,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	Executable *bool      `json:"executable,omitempty"`
 }
 
 // Context is used to convey the afero.Fs object along with the
@@ -65,12 +68,12 @@ func checkFileName(str string) error {
 	return nil
 }
 
-// checkParentFolderID is used to generate the filepath of a new file
-// or directory. It will check if the given parent folderID is well
+// getFilePath is used to generate the filepath of a new file or
+// directory. It will check if the given parent folderID is well
 // defined is the database and filesystem and it will generate the new
 // path of the wanted file, checking if there is not colision with
 // existing file.
-func createNewFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirDoc, err error) {
+func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}

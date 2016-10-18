@@ -63,6 +63,8 @@ func WrapVfsError(err error) *Error {
 		return InvalidAttribute("type", err)
 	case vfs.ErrIllegalFilename:
 		return InvalidParameter("folder-id", err)
+	case vfs.ErrIllegalTime:
+		return InvalidParameter("UpdatedAt", err)
 	case vfs.ErrInvalidHash:
 		return PreconditionFailed("Content-MD5", err)
 	case vfs.ErrContentLengthMismatch:

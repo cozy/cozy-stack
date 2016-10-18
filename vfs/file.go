@@ -185,7 +185,7 @@ func serveContent(c *Context, req *http.Request, w http.ResponseWriter, pth, nam
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
 func CreateFileAndUpload(c *Context, doc *FileDoc, body io.Reader) (err error) {
-	newpath, _, err := createNewFilePath(c, doc.Name, doc.FolderID)
+	newpath, _, err := getFilePath(c, doc.Name, doc.FolderID)
 	if err != nil {
 		return err
 	}
@@ -283,55 +283,72 @@ func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Rea
 // ModifyFileMetadata modify the metadata associated to a file. It can
 // be used to rename or move the file in the VFS.
 func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (newdoc *FileDoc, err error) {
-	newpath := olddoc.Path
-	newname := olddoc.Name
-	newtags := olddoc.Tags
-	newfolderID := olddoc.FolderID
+	pth := olddoc.Path
+	name := olddoc.Name
+	tags := olddoc.Tags
+	exec := olddoc.Executable
+	folderID := olddoc.FolderID
+	mdate := olddoc.UpdatedAt
 
-	if data.Name != "" {
-		newname = data.Name
-	}
-
-	if data.FolderID != "" && data.FolderID != olddoc.FolderID {
-		var parentDoc *DirDoc
-		parentDoc, err = GetDirectoryDoc(c, data.FolderID)
+	if data.FolderID != nil && *data.FolderID != folderID {
+		folderID = *data.FolderID
+		pth, _, err = getFilePath(c, name, folderID)
 		if err != nil {
 			return
 		}
-		newpath = path.Join(parentDoc.Path, olddoc.Name)
-		newfolderID = data.FolderID
+	}
+
+	if data.Name != "" {
+		name = data.Name
+		pth = path.Join(path.Dir(pth), name)
 	}
 
 	if data.Tags != nil {
-		newtags = data.Tags
+		tags = appendTags(tags, data.Tags)
+	}
+
+	if data.Executable != nil {
+		exec = *data.Executable
+	}
+
+	if data.UpdatedAt != nil {
+		mdate = *data.UpdatedAt
+	}
+
+	if mdate.Before(olddoc.CreatedAt) {
+		err = ErrIllegalTime
+		return
 	}
 
 	newdoc, err = NewFileDoc(
-		newname,
-		newfolderID,
+		name,
+		folderID,
 		olddoc.Size,
 		olddoc.MD5Sum,
 		olddoc.Mime,
 		olddoc.Class,
-		olddoc.Executable,
-		newtags,
+		exec,
+		tags,
 	)
 	if err != nil {
 		return
 	}
 
-	if newname != olddoc.Name {
-		newpath = path.Join(path.Dir(newpath), newname)
-	}
-
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	newdoc.CreatedAt = olddoc.CreatedAt
-	newdoc.UpdatedAt = time.Now()
-	newdoc.Path = newpath
+	newdoc.UpdatedAt = mdate
+	newdoc.Path = pth
 
-	if newpath != olddoc.Path {
-		err = renameFile(olddoc.Path, newpath, c.fs)
+	if pth != olddoc.Path {
+		err = renameFile(olddoc.Path, pth, c.fs)
+		if err != nil {
+			return
+		}
+	}
+
+	if exec != olddoc.Executable {
+		err = c.fs.Chmod(pth, getFileMode(exec))
 		if err != nil {
 			return
 		}
@@ -345,14 +362,7 @@ func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error
 	// write only (O_WRONLY), try to create the file and check that it
 	// does not already exist (O_CREATE|O_EXCL).
 	flag := os.O_WRONLY | os.O_CREATE | os.O_EXCL
-
-	var mode os.FileMode
-	if executable {
-		mode = 0755 // -rwxr-xr-x
-	} else {
-		mode = 0644 // -rw-r--r--
-	}
-
+	mode := getFileMode(executable)
 	return fs.OpenFile(pth, flag, mode)
 }
 
@@ -389,4 +399,28 @@ func renameFile(oldpath, newpath string, fs afero.Fs) error {
 	}
 
 	return fs.Rename(oldpath, newpath)
+}
+
+func getFileMode(executable bool) (mode os.FileMode) {
+	if executable {
+		mode = 0755 // -rwxr-xr-x
+	} else {
+		mode = 0644 // -rw-r--r--
+	}
+	return
+}
+
+func appendTags(oldtags, newtags []string) []string {
+	stags := make([]string, len(oldtags))
+	mtags := make(map[string]struct{})
+	for i, tag := range oldtags {
+		stags[i] = tag
+		mtags[tag] = struct{}{}
+	}
+	for _, tag := range newtags {
+		if _, ok := mtags[tag]; !ok {
+			stags = append(stags, tag)
+		}
+	}
+	return stags
 }

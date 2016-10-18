@@ -364,7 +364,7 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 
 func TestModifyMetadataFileMove(t *testing.T) {
 	body := "foo"
-	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=filemoveme", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	var ok bool
@@ -386,14 +386,28 @@ func TestModifyMetadataFileMove(t *testing.T) {
 	assert.True(t, ok)
 
 	attrs := map[string]interface{}{
-		"tags":     []string{"foo", "bar"},
-		"name":     "moved",
-		"folderID": folderID,
+		"tags":       []string{"bar", "baz"},
+		"name":       "moved",
+		"folderID":   folderID,
+		"executable": true,
 	}
 
 	res3, data3 := patchFile(t, "/files/"+fileID, "io.cozy.files", fileID, attrs)
 	assert.Equal(t, 200, res3.StatusCode)
-	t.Log(data3)
+
+	data3, ok = data3["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	attrs3, ok := data3["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+
+	assert.Equal(t, "text/plain", attrs3["mime"])
+	assert.Equal(t, "moved", attrs3["name"])
+	assert.EqualValues(t, []interface{}{"foo", "bar", "baz"}, attrs3["tags"])
+	assert.Equal(t, "text", attrs3["class"])
+	assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
+	assert.Equal(t, true, attrs3["executable"])
+	assert.Equal(t, "3", attrs3["size"])
 }
 
 func TestModifyContentNoFileID(t *testing.T) {

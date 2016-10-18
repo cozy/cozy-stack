@@ -108,7 +108,7 @@ func GetDirectoryDoc(c *Context, fileID string) (doc *DirDoc, err error) {
 
 // CreateDirectory is the method for creating a new directory
 func CreateDirectory(c *Context, doc *DirDoc) (err error) {
-	pth, _, err := createNewFilePath(c, doc.Name, doc.FolderID)
+	pth, _, err := getFilePath(c, doc.Name, doc.FolderID)
 	if err != nil {
 		return err
 	}
