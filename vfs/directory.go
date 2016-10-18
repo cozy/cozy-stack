@@ -97,10 +97,13 @@ func NewDirDoc(name, folderID string, tags []string) (doc *DirDoc, err error) {
 }
 
 // CreateDirectory is the method for creating a new directory
-func CreateDirectory(doc *DirDoc, fs afero.Fs, dbPrefix string) error {
-	var err error
-
+func CreateDirectory(doc *DirDoc, fs afero.Fs, dbPrefix string) (err error) {
 	pth, _, err := createNewFilePath(doc.Name, doc.FolderID, fs, dbPrefix)
+	if err != nil {
+		return err
+	}
+
+	err = fs.Mkdir(pth, 0755)
 	if err != nil {
 		return err
 	}
@@ -113,13 +116,5 @@ func CreateDirectory(doc *DirDoc, fs afero.Fs, dbPrefix string) error {
 
 	doc.Path = pth
 
-	if err = couchdb.CreateDoc(dbPrefix, doc); err != nil {
-		return err
-	}
-
-	if err = fs.Mkdir(pth, 0755); err != nil {
-		return err
-	}
-
-	return nil
+	return couchdb.CreateDoc(dbPrefix, doc)
 }

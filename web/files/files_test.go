@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -185,6 +186,38 @@ func TestCreateDirWithIllegalCharacter(t *testing.T) {
 	assert.Equal(t, 422, res2.StatusCode)
 }
 
+func TestCreateDirConcurrently(t *testing.T) {
+	done := make(chan *http.Response)
+	errs := make(chan *http.Response)
+
+	doCreateDir := func(name string) {
+		res, _ := createDir(t, "/files/?Name="+name+"&Type=io.cozy.folders")
+		if res.StatusCode == 201 {
+			done <- res
+		} else {
+			errs <- res
+		}
+	}
+
+	n := 100
+	c := 0
+
+	for i := 0; i < n; i++ {
+		go doCreateDir("foo")
+	}
+
+	for i := 0; i < n; i++ {
+		select {
+		case res := <-errs:
+			assert.Equal(t, 409, res.StatusCode)
+		case <-done:
+			c = c + 1
+		}
+	}
+
+	assert.Equal(t, 1, c)
+}
+
 func TestUploadWithNoType(t *testing.T) {
 	res, _ := upload(t, "/files/", "text/plain", "foo", "")
 	assert.Equal(t, 422, res.StatusCode)
@@ -214,6 +247,38 @@ func TestUploadAtRootSuccess(t *testing.T) {
 	buf, err := afero.ReadFile(storage, "/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
+}
+
+func TestUploadConcurrently(t *testing.T) {
+	done := make(chan *http.Response)
+	errs := make(chan *http.Response)
+
+	doUpload := func(name, body string) {
+		res, _ := upload(t, "/files/?Type=io.cozy.files&Name="+name, "text/plain", body, "")
+		if res.StatusCode == 201 {
+			done <- res
+		} else {
+			errs <- res
+		}
+	}
+
+	n := 100
+	c := 0
+
+	for i := 0; i < n; i++ {
+		go doUpload("uploadedconcurrently", "body "+strconv.Itoa(i))
+	}
+
+	for i := 0; i < n; i++ {
+		select {
+		case res := <-errs:
+			assert.Equal(t, 409, res.StatusCode)
+		case <-done:
+			c = c + 1
+		}
+	}
+
+	assert.Equal(t, 1, c)
 }
 
 func TestUploadWithParentSuccess(t *testing.T) {
@@ -360,6 +425,69 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.Equal(t, fileInfo.Mode().String(), "-rw-r--r--")
 }
 
+func TestModifyContentConcurrently(t *testing.T) {
+	type result struct {
+		rev string
+		idx int64
+	}
+
+	done := make(chan *result)
+	errs := make(chan *http.Response)
+
+	res, data := upload(t, "/files/?Type=io.cozy.files&Name=willbemodifiedconcurrently&Executable=true", "text/plain", "foo", "")
+	if !assert.Equal(t, 201, res.StatusCode) {
+		return
+	}
+
+	var ok bool
+	data, ok = data["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := data["id"].(string)
+	assert.True(t, ok)
+
+	var c int64
+
+	doModContent := func() {
+		idx := atomic.AddInt64(&c, 1)
+		res, data := uploadMod(t, "/files/"+fileID, "plain/text", "newcontent "+strconv.FormatInt(idx, 10), "")
+		if res.StatusCode == 200 {
+			data = data["data"].(map[string]interface{})
+			done <- &result{data["rev"].(string), idx}
+		} else {
+			errs <- res
+		}
+	}
+
+	n := 100
+
+	for i := 0; i < n; i++ {
+		go doModContent()
+	}
+
+	var successes []*result
+	for i := 0; i < n; i++ {
+		select {
+		case res := <-errs:
+			assert.True(t, res.StatusCode == 409 || res.StatusCode == 503)
+		case res := <-done:
+			successes = append(successes, res)
+		}
+	}
+
+	assert.True(t, len(successes) >= 1)
+
+	for i, s := range successes {
+		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
+	}
+
+	lastS := successes[len(successes)-1]
+	storage, _ := instance.GetStorageProvider()
+	buf, err := afero.ReadFile(storage, "/willbemodifiedconcurrently")
+	assert.NoError(t, err)
+	assert.Equal(t, "newcontent "+strconv.FormatInt(lastS.idx, 10), string(buf))
+}
+
 func TestDownloadFileBadID(t *testing.T) {
 	res, _ := download(t, "/files/badid", "")
 	assert.Equal(t, 404, res.StatusCode)
@@ -433,10 +561,19 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	if err != nil {
+		fmt.Println("Could not create temporary directory.")
+		os.Exit(1)
+	}
+	defer func() {
+		os.RemoveAll(tempdir)
+	}()
+
 	gin.SetMode(gin.TestMode)
 	instance = &middlewares.Instance{
 		Domain:     "test",
-		StorageURL: "mem://test",
+		StorageURL: "file://localhost" + tempdir,
 	}
 
 	router := gin.New()

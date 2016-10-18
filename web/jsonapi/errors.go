@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/vfs"
@@ -37,15 +38,17 @@ func WrapVfsError(err error) *Error {
 	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
 		return WrapCouchError(couchErr)
 	}
-	switch err {
-	case vfs.ErrDocAlreadyExists:
+	if os.IsExist(err) {
 		return &Error{
 			Status: http.StatusConflict,
 			Title:  "Conflict",
 			Detail: err.Error(),
 		}
-	case vfs.ErrDocDoesNotExist:
+	}
+	if os.IsNotExist(err) {
 		return NotFound(err)
+	}
+	switch err {
 	case vfs.ErrParentDoesNotExist:
 		return NotFound(err)
 	case vfs.ErrDocTypeInvalid:

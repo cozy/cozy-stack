@@ -1,15 +1,8 @@
 package vfs
 
-import (
-	"errors"
-	"os"
-)
+import "errors"
 
 var (
-	// ErrDocAlreadyExists is used when file or directory already exists
-	ErrDocAlreadyExists = os.ErrExist
-	// ErrDocDoesNotExist is used when file or directory does not exist
-	ErrDocDoesNotExist = os.ErrNotExist
 	// ErrParentDoesNotExist is used when the parent folder does not
 	// exist
 	ErrParentDoesNotExist = errors.New("Parent folder with given FolderID does not exist")

@@ -162,7 +162,7 @@ func ServeFileContent(doc *FileDoc, req *http.Request, w http.ResponseWriter, fs
 func ServeFileContentByPath(pth string, req *http.Request, w http.ResponseWriter, fs afero.Fs) error {
 	fileInfo, err := fs.Stat(pth)
 	if err != nil {
-		return ErrDocDoesNotExist
+		return err
 	}
 
 	name := path.Base(pth)
@@ -183,26 +183,25 @@ func serveContent(req *http.Request, w http.ResponseWriter, fs afero.Fs, pth, na
 }
 
 // CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) error {
-	var err error
-
-	pth, _, err := createNewFilePath(doc.Name, doc.FolderID, fs, dbPrefix)
+func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) (err error) {
+	newpath, _, err := createNewFilePath(doc.Name, doc.FolderID, fs, dbPrefix)
 	if err != nil {
 		return err
 	}
 
-	// Error handling to make sure the steps of uploading the file and
-	// creating the corresponding are both rollbacked in case of an
-	// error. This should preserve our VFS coherency a little.
+	file, err := safeCreateFile(newpath, doc.Executable, fs)
+	if err != nil {
+		return err
+	}
+
 	defer func() {
 		if err != nil {
-			fs.Remove(pth)
+			fs.Remove(newpath)
 		}
 	}()
 
-	var written int64
-	var md5Sum []byte
-	if written, md5Sum, err = copyOnFsAndCheckIntegrity(pth, doc.MD5Sum, doc.Executable, fs, body); err != nil {
+	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, doc.MD5Sum, fs, body)
+	if err != nil {
 		return err
 	}
 
@@ -218,7 +217,7 @@ func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Rea
 		return ErrContentLengthMismatch
 	}
 
-	doc.Path = pth
+	doc.Path = newpath
 
 	return couchdb.CreateDoc(dbPrefix, doc)
 }
@@ -226,47 +225,65 @@ func CreateFileAndUpload(doc *FileDoc, fs afero.Fs, dbPrefix string, body io.Rea
 // ModifyFileContent overrides the content of a file onto the
 // filesystem.
 //
-// @TODO: make it more resilient to not lose data if the transfer
-// fails.
-func ModifyFileContent(oldDoc *FileDoc, newDoc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) (err error) {
-	updateDate := time.Now()
+// This method should change the file content atomically. If any error
+// happens while copying the content, the previous file revision is
+// kept undamaged.
+func ModifyFileContent(olddoc *FileDoc, newdoc *FileDoc, fs afero.Fs, dbPrefix string, body io.Reader) (err error) {
+	mdate := time.Now()
 
-	pth := oldDoc.Path
-
-	defer func() {
-		if err != nil {
-			fs.Remove(pth)
-		}
-	}()
-
-	var written int64
-	var md5Sum []byte
-	if written, md5Sum, err = copyOnFsAndCheckIntegrity(pth, newDoc.MD5Sum, newDoc.Executable, fs, body); err != nil {
+	tmppath := "/" + olddoc.ID() + "_" + olddoc.Rev() + "_" + strconv.FormatInt(mdate.UnixNano(), 10)
+	newpath := olddoc.Path
+	if err != nil {
 		return err
 	}
 
-	if newDoc.Size < 0 {
-		newDoc.Size = written
+	file, err := safeCreateFile(tmppath, newdoc.Executable, fs)
+	if err != nil {
+		return err
 	}
 
-	if newDoc.MD5Sum == nil {
-		newDoc.MD5Sum = md5Sum
+	defer func() {
+		if err != nil {
+			fs.Remove(tmppath)
+		}
+	}()
+
+	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, newdoc.MD5Sum, fs, body)
+	if err != nil {
+		return err
 	}
 
-	if newDoc.Size != written {
+	if newdoc.Size < 0 {
+		newdoc.Size = written
+	}
+
+	if newdoc.MD5Sum == nil {
+		newdoc.MD5Sum = md5Sum
+	}
+
+	if newdoc.Size != written {
 		return ErrContentLengthMismatch
 	}
 
-	newDoc.Path = pth
-	newDoc.SetID(oldDoc.ID())
-	newDoc.SetRev(oldDoc.Rev())
-	newDoc.CreatedAt = oldDoc.CreatedAt
-	newDoc.UpdatedAt = updateDate
+	newdoc.Path = newpath
+	newdoc.SetID(olddoc.ID())
+	newdoc.SetRev(olddoc.Rev())
+	newdoc.CreatedAt = olddoc.CreatedAt
+	newdoc.UpdatedAt = mdate
 
-	return couchdb.UpdateDoc(dbPrefix, newDoc)
+	err = couchdb.UpdateDoc(dbPrefix, newdoc)
+	if err != nil {
+		return err
+	}
+
+	return fs.Rename(tmppath, newpath)
 }
 
-func copyOnFsAndCheckIntegrity(pth string, givenMD5 []byte, executable bool, fs afero.Fs, r io.Reader) (written int64, md5Sum []byte, err error) {
+func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error) {
+	// write only (O_WRONLY), try to create the file and check that it
+	// does not already exist (O_CREATE|O_EXCL).
+	flag := os.O_WRONLY | os.O_CREATE | os.O_EXCL
+
 	var mode os.FileMode
 	if executable {
 		mode = 0755 // -rwxr-xr-x
@@ -274,29 +291,19 @@ func copyOnFsAndCheckIntegrity(pth string, givenMD5 []byte, executable bool, fs 
 		mode = 0644 // -rw-r--r--
 	}
 
-	// We want to write only (O_WRONLY), create the file if it does not
-	// already exist (O_CREATE) and truncate it to length 0 if necessary
-	// (O_TRUNC).
-	flag := os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-	f, err := fs.OpenFile(pth, flag, mode)
-	if err != nil {
-		return
-	}
+	return fs.OpenFile(pth, flag, mode)
+}
 
+func copyOnFsAndCheckIntegrity(file io.WriteCloser, givenMD5 []byte, fs afero.Fs, r io.Reader) (written int64, md5Sum []byte, err error) {
 	defer func() {
-		if cerr := f.Close(); cerr != nil && err == nil {
+		if cerr := file.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
 	}()
 
-	err = fs.Chmod(pth, mode)
-	if err != nil {
-		return
-	}
-
 	md5H := md5.New() // #nosec
 
-	written, err = io.Copy(f, io.TeeReader(r, md5H))
+	written, err = io.Copy(file, io.TeeReader(r, md5H))
 	if err != nil {
 		return
 	}
