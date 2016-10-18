@@ -28,9 +28,7 @@ type FileDoc struct {
 	// File name
 	Name string `json:"name"`
 	// Parent folder identifier
-	FolderID string `json:"folderID"`
-	// File path on VFS
-	Path string `json:"path"`
+	FolderID string `json:"folder_id"`
 
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
@@ -40,6 +38,8 @@ type FileDoc struct {
 	Executable bool      `json:"executable"`
 	Class      string    `json:"class"`
 	Mime       string    `json:"mime"`
+
+	parent *DirDoc
 }
 
 // ID returns the file qualified identifier (part of couchdb.Doc
@@ -77,6 +77,24 @@ func (f *FileDoc) SelfLink() string {
 	return "/files/" + f.FID
 }
 
+// Path is used to generate the file path
+func (f *FileDoc) Path(c *Context) (string, error) {
+	var parentPath string
+	if f.FolderID == RootFolderID {
+		parentPath = "/"
+	} else if f.parent == nil {
+		parent, err := GetDirectoryDoc(c, f.FolderID)
+		if err != nil {
+			return "", err
+		}
+		f.parent = parent
+		parentPath = parent.Path
+	} else {
+		parentPath = f.parent.Path
+	}
+	return path.Join(parentPath, f.Name), nil
+}
+
 // Relationships is used to generate the parent relationship in JSON-API format
 // (part of the jsonapi.Object interface)
 func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
@@ -99,10 +117,16 @@ func (f *FileDoc) Included() []jsonapi.Object {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
+func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string, parent *DirDoc) (doc *FileDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
+
+	if folderID == "" {
+		folderID = RootFolderID
+	}
+
+	tags = appendTags(nil, tags)
 
 	createDate := time.Now()
 	doc = &FileDoc{
@@ -117,6 +141,8 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 		Class:      class,
 		Executable: executable,
 		Tags:       tags,
+
+		parent: parent,
 	}
 
 	return
@@ -133,12 +159,32 @@ func GetFileDoc(c *Context, fileID string) (doc *FileDoc, err error) {
 // GetFileDocFromPath is used to fetch file document information from
 // the database from its path.
 func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
+	var err error
+	var folderID string
+
+	dirpath := path.Dir(pth)
+	if dirpath != "/" {
+		var parent *DirDoc
+		parent, err = GetDirectoryDocFromPath(c, dirpath)
+		if err != nil {
+			return nil, err
+		}
+		folderID = parent.ID()
+	} else {
+		folderID = RootFolderID
+	}
+
+	selector := mango.And(
+		mango.Equal("folder_id", folderID),
+		mango.Equal("name", path.Base(pth)),
+	)
+
 	var docs []*FileDoc
 	req := &couchdb.FindRequest{
-		Selector: mango.Equal("path", path.Clean(pth)),
+		Selector: selector,
 		Limit:    1,
 	}
-	err := couchdb.FindDocs(c.db, string(FileDocType), req, &docs)
+	err = couchdb.FindDocs(c.db, string(FileDocType), req, &docs)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +213,12 @@ func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Re
 		header.Set("Etag", eTag)
 	}
 
-	content, err := c.fs.Open(doc.Path)
+	pth, err := doc.Path(c)
+	if err != nil {
+		return
+	}
+
+	content, err := c.fs.Open(pth)
 	if err != nil {
 		return
 	}
@@ -212,8 +263,6 @@ func CreateFileAndUpload(c *Context, doc *FileDoc, body io.Reader) (err error) {
 		return ErrContentLengthMismatch
 	}
 
-	doc.Path = newpath
-
 	return couchdb.CreateDoc(c.db, doc)
 }
 
@@ -227,7 +276,7 @@ func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Rea
 	mdate := time.Now()
 
 	tmppath := "/" + olddoc.ID() + "_" + olddoc.Rev() + "_" + strconv.FormatInt(mdate.UnixNano(), 10)
-	newpath := olddoc.Path
+	newpath, err := olddoc.Path(c)
 	if err != nil {
 		return err
 	}
@@ -260,7 +309,6 @@ func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Rea
 		return ErrContentLengthMismatch
 	}
 
-	newdoc.Path = newpath
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	newdoc.CreatedAt = olddoc.CreatedAt
@@ -277,16 +325,21 @@ func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Rea
 // ModifyFileMetadata modify the metadata associated to a file. It can
 // be used to rename or move the file in the VFS.
 func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (newdoc *FileDoc, err error) {
-	pth := olddoc.Path
+	oldpath, err := olddoc.Path(c)
+	if err != nil {
+		return
+	}
+	newpath := oldpath
 	name := olddoc.Name
 	tags := olddoc.Tags
 	exec := olddoc.Executable
 	folderID := olddoc.FolderID
 	mdate := olddoc.UpdatedAt
+	parent := olddoc.parent
 
 	if data.FolderID != nil && *data.FolderID != folderID {
 		folderID = *data.FolderID
-		pth, _, err = getFilePath(c, name, folderID)
+		newpath, parent, err = getFilePath(c, name, folderID)
 		if err != nil {
 			return
 		}
@@ -294,7 +347,7 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (n
 
 	if data.Name != "" {
 		name = data.Name
-		pth = path.Join(path.Dir(pth), name)
+		newpath = path.Join(path.Dir(newpath), name)
 	}
 
 	if data.Tags != nil {
@@ -323,6 +376,7 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (n
 		olddoc.Class,
 		exec,
 		tags,
+		parent,
 	)
 	if err != nil {
 		return
@@ -332,17 +386,16 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (n
 	newdoc.SetRev(olddoc.Rev())
 	newdoc.CreatedAt = olddoc.CreatedAt
 	newdoc.UpdatedAt = mdate
-	newdoc.Path = pth
 
-	if pth != olddoc.Path {
-		err = renameFile(olddoc.Path, pth, c.fs)
+	if newpath != oldpath {
+		err = renameFile(oldpath, newpath, c.fs)
 		if err != nil {
 			return
 		}
 	}
 
 	if exec != olddoc.Executable {
-		err = c.fs.Chmod(pth, getFileMode(exec))
+		err = c.fs.Chmod(newpath, getFileMode(exec))
 		if err != nil {
 			return
 		}
@@ -402,19 +455,4 @@ func getFileMode(executable bool) (mode os.FileMode) {
 		mode = 0644 // -rw-r--r--
 	}
 	return
-}
-
-func appendTags(oldtags, newtags []string) []string {
-	stags := make([]string, len(oldtags))
-	mtags := make(map[string]struct{})
-	for i, tag := range oldtags {
-		stags[i] = tag
-		mtags[tag] = struct{}{}
-	}
-	for _, tag := range newtags {
-		if _, ok := mtags[tag]; !ok {
-			stags = append(stags, tag)
-		}
-	}
-	return stags
 }

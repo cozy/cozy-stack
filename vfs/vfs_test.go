@@ -19,8 +19,8 @@ const TestPrefix = "dev/"
 
 var vfsC *Context
 
-func TestGetFileDocFromPath(t *testing.T) {
-	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", false, []string{})
+func TestGetFileDocFromPathAtRoot(t *testing.T) {
+	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", false, []string{}, nil)
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
@@ -35,6 +35,26 @@ func TestGetFileDocFromPath(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestGetFileDocFromPath(t *testing.T) {
+	dir, _ := NewDirDoc("container", "", nil)
+	err := CreateDirectory(vfsC, dir)
+	assert.NoError(t, err)
+
+	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", false, []string{}, nil)
+	assert.NoError(t, err)
+
+	body := bytes.NewReader([]byte("hello !"))
+
+	err = CreateFileAndUpload(vfsC, doc, body)
+	assert.NoError(t, err)
+
+	_, err = GetFileDocFromPath(vfsC, "/container/toto")
+	assert.NoError(t, err)
+
+	_, err = GetFileDocFromPath(vfsC, "/container/noooo")
+	assert.Error(t, err)
+}
+
 func TestMain(m *testing.M) {
 	db, err := checkup.HTTPChecker{URL: CouchDBURL}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
@@ -46,7 +66,17 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineIndex(TestPrefix, string(FileDocType), mango.IndexOnFields("path"))
+	err = couchdb.ResetDB(TestPrefix, string(FolderDocType))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = couchdb.DefineIndex(TestPrefix, string(FolderDocType), mango.IndexOnFields("path"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = couchdb.DefineIndex(TestPrefix, string(FileDocType), mango.IndexOnFields("folder_id", "name"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

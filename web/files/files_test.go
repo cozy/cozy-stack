@@ -16,6 +16,7 @@ import (
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
@@ -104,6 +105,22 @@ func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Re
 		return
 	}
 	return doUploadOrMod(t, req, contentType, body, hash)
+}
+
+func extractDirData(t *testing.T, data map[string]interface{}) (string, map[string]interface{}) {
+	var ok bool
+
+	data, ok = data["data"].(map[string]interface{})
+	if !assert.True(t, ok) {
+		return "", nil
+	}
+
+	id, ok := data["id"].(string)
+	if !assert.True(t, ok) {
+		return "", nil
+	}
+
+	return id, data
 }
 
 func patchFile(t *testing.T, path, docType, id string, attrs map[string]interface{}) (res *http.Response, v map[string]interface{}) {
@@ -391,7 +408,7 @@ func TestModifyMetadataFileMove(t *testing.T) {
 	attrs := map[string]interface{}{
 		"tags":       []string{"bar", "baz"},
 		"name":       "moved",
-		"folderID":   folderID,
+		"folder_id":  folderID,
 		"executable": true,
 	}
 
@@ -411,6 +428,50 @@ func TestModifyMetadataFileMove(t *testing.T) {
 	assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
 	assert.Equal(t, true, attrs3["executable"])
 	assert.Equal(t, "3", attrs3["size"])
+}
+
+func TestModifyMetadataDirMove(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=dirmodme&Type=io.cozy.folders&Tags=foo,bar,bar")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	folder1ID, _ := extractDirData(t, data1)
+
+	reschild1, _ := createDir(t, "/files/"+folder1ID+"?Name=child1&Type=io.cozy.folders")
+	assert.Equal(t, 201, reschild1.StatusCode)
+
+	reschild2, _ := createDir(t, "/files/"+folder1ID+"?Name=child2&Type=io.cozy.folders")
+	assert.Equal(t, 201, reschild2.StatusCode)
+
+	res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinme&Type=io.cozy.folders")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	folder2ID, _ := extractDirData(t, data2)
+
+	attrs1 := map[string]interface{}{
+		"tags":      []string{"bar", "baz"},
+		"name":      "renamed",
+		"folder_id": folder2ID,
+	}
+
+	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs1)
+	assert.Equal(t, 200, res3.StatusCode)
+
+	storage, _ := instance.GetStorageProvider()
+	exists, err := afero.DirExists(storage, "/dirmodmemoveinme/renamed")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	attrs2 := map[string]interface{}{
+		"tags":      []string{"bar", "baz"},
+		"name":      "renamed",
+		"folder_id": folder1ID,
+	}
+
+	res4, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs2)
+	assert.Equal(t, 412, res4.StatusCode)
+
+	res5, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs2)
+	assert.Equal(t, 412, res5.StatusCode)
 }
 
 func TestModifyContentNoFileID(t *testing.T) {
@@ -671,16 +732,24 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	couchdb.ResetDB(TestPrefix, "io.cozy.files")
-	couchdb.ResetDB(TestPrefix, "io.cozy.folders")
-
-	err = couchdb.DefineIndex(TestPrefix, "io.cozy.files", mango.IndexOnFields("path"))
+	err = couchdb.ResetDB(TestPrefix, string(vfs.FileDocType))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = couchdb.ResetDB(TestPrefix, string(vfs.FolderDocType))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndex(TestPrefix, "io.cozy.folders", mango.IndexOnFields("path"))
+	err = couchdb.DefineIndex(TestPrefix, string(vfs.FolderDocType), mango.IndexOnFields("folder_id", "path"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.DefineIndex(TestPrefix, string(vfs.FileDocType), mango.IndexOnFields("folder_id", "name"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
