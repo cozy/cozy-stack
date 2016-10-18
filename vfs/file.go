@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/spf13/afero"
 )
 
@@ -121,12 +122,30 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 	return
 }
 
-// GetFileDoc is used to fetch file document information form our
+// GetFileDoc is used to fetch file document information form the
 // database.
 func GetFileDoc(c *Context, fileID string) (doc *FileDoc, err error) {
 	doc = &FileDoc{}
 	err = couchdb.GetDoc(c.db, string(FileDocType), fileID, doc)
-	return
+	return doc, err
+}
+
+// GetFileDocFromPath is used to fetch file document information from
+// the database from its path.
+func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
+	var docs []*FileDoc
+	req := &couchdb.FindRequest{
+		Selector: mango.Equal("path", path.Clean(pth)),
+		Limit:    1,
+	}
+	err := couchdb.FindDocs(c.db, string(FileDocType), req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, os.ErrNotExist
+	}
+	return docs[0], nil
 }
 
 // ServeFileContent replies to a http request using the content of a
@@ -138,48 +157,23 @@ func GetFileDoc(c *Context, fileID string) (doc *FileDoc, err error) {
 // non-ranged requests
 //
 // The content disposition is inlined.
-func ServeFileContent(c *Context, doc *FileDoc, req *http.Request, w http.ResponseWriter) (err error) {
+func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) (err error) {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
-	header.Set("Content-Disposition", "inline; filename="+doc.Name)
+	header.Set("Content-Disposition", disposition+"; filename="+doc.Name)
 
 	if header.Get("Range") == "" {
 		eTag := base64.StdEncoding.EncodeToString(doc.MD5Sum)
 		header.Set("Etag", eTag)
 	}
 
-	return serveContent(c, req, w, doc.Path, doc.Name, doc.UpdatedAt)
-}
-
-// ServeFileContentByPath replies to a http request using the content
-// of a file identified by its full path on the VFS. Unlike
-// ServeFileContent, this method does not require the full file
-// document but only its path.
-//
-// It also uses internally http.ServeContent but does not provide an
-// Etag.
-//
-// The content disposition is attached
-func ServeFileContentByPath(c *Context, pth string, req *http.Request, w http.ResponseWriter) error {
-	fileInfo, err := c.fs.Stat(pth)
-	if err != nil {
-		return err
-	}
-
-	name := path.Base(pth)
-	w.Header().Set("Content-Disposition", "attachment; filename="+name)
-
-	return serveContent(c, req, w, pth, name, fileInfo.ModTime())
-}
-
-func serveContent(c *Context, req *http.Request, w http.ResponseWriter, pth, name string, modtime time.Time) (err error) {
-	content, err := c.fs.Open(pth)
+	content, err := c.fs.Open(doc.Path)
 	if err != nil {
 		return
 	}
-
 	defer content.Close()
-	http.ServeContent(w, req, name, modtime, content)
+
+	http.ServeContent(w, req, doc.Name, doc.UpdatedAt, content)
 	return
 }
 

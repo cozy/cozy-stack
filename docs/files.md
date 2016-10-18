@@ -318,7 +318,7 @@ Download a file (its content) from its path
 #### Request
 
 ```http
-GET /files/download?path=/Documents/hello.txt HTTP/1.1
+GET /files/download?Path=/Documents/hello.txt HTTP/1.1
 ```
 
 ### GET /files/:file-id/thumbnail
@@ -412,7 +412,7 @@ Get metadata about a file (or folder) from its path
 #### Request
 
 ```http
-GET /files/metadata?path=/Documents/hello.txt HTTP/1.1
+GET /files/metadata?Path=/Documents/hello.txt HTTP/1.1
 ```
 
 #### Response
