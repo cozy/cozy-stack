@@ -3,6 +3,7 @@ package jsonapi
 import (
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/vfs"
@@ -24,6 +25,10 @@ type Error struct {
 	Source SourceError `json:"source,omitempty"`
 }
 
+func (e *Error) Error() string {
+	return e.Title + "(" + strconv.Itoa(e.Status) + ")" + ": " + e.Detail
+}
+
 // WrapCouchError returns a formatted error from a couchdb error
 func WrapCouchError(err *couchdb.Error) *Error {
 	return &Error{
@@ -35,6 +40,9 @@ func WrapCouchError(err *couchdb.Error) *Error {
 
 // WrapVfsError returns a formatted error from a golang error emitted by the vfs
 func WrapVfsError(err error) *Error {
+	if jsonErr, isJSONApiError := err.(*Error); isJSONApiError {
+		return jsonErr
+	}
 	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
 		return WrapCouchError(couchErr)
 	}
@@ -55,6 +63,8 @@ func WrapVfsError(err error) *Error {
 		return InvalidAttribute("type", err)
 	case vfs.ErrIllegalFilename:
 		return InvalidParameter("folder-id", err)
+	case vfs.ErrIllegalTime:
+		return InvalidParameter("UpdatedAt", err)
 	case vfs.ErrInvalidHash:
 		return PreconditionFailed("Content-MD5", err)
 	case vfs.ErrContentLengthMismatch:
@@ -68,6 +78,15 @@ func NotFound(err error) *Error {
 	return &Error{
 		Status: http.StatusNotFound,
 		Title:  "Not Found",
+		Detail: err.Error(),
+	}
+}
+
+// BadRequest returns a 400 formatted error
+func BadRequest(err error) *Error {
+	return &Error{
+		Status: http.StatusBadRequest,
+		Title:  "Bad request",
 		Detail: err.Error(),
 	}
 }

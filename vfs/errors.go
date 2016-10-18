@@ -11,6 +11,9 @@ var (
 	ErrDocTypeInvalid = errors.New("Invalid document type")
 	// ErrIllegalFilename is used when the given filename is not allowed
 	ErrIllegalFilename = errors.New("Invalid filename: empty or contains an illegal character")
+	// ErrIllegalTime is used when a time given (creation or
+	// modification) is not allowed
+	ErrIllegalTime = errors.New("Invalid time given")
 	// ErrInvalidHash is used when the given hash does not match the
 	// calculated one
 	ErrInvalidHash = errors.New("Invalid hash")

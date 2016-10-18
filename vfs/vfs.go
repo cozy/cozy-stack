@@ -8,8 +8,8 @@ package vfs
 import (
 	"path"
 	"strings"
+	"time"
 
-	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
 
@@ -25,6 +25,28 @@ const (
 	// FolderDocType is document type
 	FolderDocType = "io.cozy.folders"
 )
+
+// DocMetaAttributes is a struct containing modifiable fields from
+// file and directory documents.
+type DocMetaAttributes struct {
+	Name       string     `json:"name,omitempty"`
+	FolderID   *string    `json:"folderID,omitempty"`
+	Tags       []string   `json:"tags,omitempty"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	Executable *bool      `json:"executable,omitempty"`
+}
+
+// Context is used to convey the afero.Fs object along with the
+// CouchDb database prefix.
+type Context struct {
+	fs afero.Fs
+	db string
+}
+
+// NewContext is the constructor function for Context
+func NewContext(fs afero.Fs, dbprefix string) *Context {
+	return &Context{fs, dbprefix}
+}
 
 // ParseDocType is used to transform a string to a DocType.
 func ParseDocType(docType string) (result DocType, err error) {
@@ -46,12 +68,12 @@ func checkFileName(str string) error {
 	return nil
 }
 
-// checkParentFolderID is used to generate the filepath of a new file
-// or directory. It will check if the given parent folderID is well
+// getFilePath is used to generate the filepath of a new file or
+// directory. It will check if the given parent folderID is well
 // defined is the database and filesystem and it will generate the new
 // path of the wanted file, checking if there is not colision with
 // existing file.
-func createNewFilePath(name, folderID string, storage afero.Fs, dbPrefix string) (pth string, parentDoc *DirDoc, err error) {
+func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
@@ -61,17 +83,10 @@ func createNewFilePath(name, folderID string, storage afero.Fs, dbPrefix string)
 	if folderID == "" {
 		parentPath = "/"
 	} else {
-		parentDoc = &DirDoc{}
-
-		// NOTE: we only check the existence of the folder on the db
-		err = couchdb.GetDoc(dbPrefix, string(FolderDocType), folderID, parentDoc)
-		if couchdb.IsNotFoundError(err) {
-			err = ErrParentDoesNotExist
-		}
+		parentDoc, err = GetDirectoryDoc(c, folderID)
 		if err != nil {
 			return
 		}
-
 		parentPath = parentDoc.Path
 	}
 

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/spf13/afero"
 )
 
 // DirDoc is a struct containing all the informations about a
@@ -96,25 +95,36 @@ func NewDirDoc(name, folderID string, tags []string) (doc *DirDoc, err error) {
 	return
 }
 
+// GetDirectoryDoc is used to fetch directory document information
+// form the database.
+func GetDirectoryDoc(c *Context, fileID string) (doc *DirDoc, err error) {
+	doc = &DirDoc{}
+	err = couchdb.GetDoc(c.db, string(FolderDocType), fileID, doc)
+	if couchdb.IsNotFoundError(err) {
+		err = ErrParentDoesNotExist
+	}
+	return
+}
+
 // CreateDirectory is the method for creating a new directory
-func CreateDirectory(doc *DirDoc, fs afero.Fs, dbPrefix string) (err error) {
-	pth, _, err := createNewFilePath(doc.Name, doc.FolderID, fs, dbPrefix)
+func CreateDirectory(c *Context, doc *DirDoc) (err error) {
+	pth, _, err := getFilePath(c, doc.Name, doc.FolderID)
 	if err != nil {
 		return err
 	}
 
-	err = fs.Mkdir(pth, 0755)
+	err = c.fs.Mkdir(pth, 0755)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
 		if err != nil {
-			fs.Remove(pth)
+			c.fs.Remove(pth)
 		}
 	}()
 
 	doc.Path = pth
 
-	return couchdb.CreateDoc(dbPrefix, doc)
+	return couchdb.CreateDoc(c.db, doc)
 }

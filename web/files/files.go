@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/afero"
 )
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -27,7 +26,7 @@ const DefaultContentType = "application/octet-stream"
 //
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func CreationHandler(c *gin.Context) {
-	fs, dbPrefix, err := getFsAndDBPrefix(c)
+	vfsC, err := getVfsContext(c)
 	if err != nil {
 		return
 	}
@@ -41,9 +40,9 @@ func CreationHandler(c *gin.Context) {
 	var doc jsonapi.JSONApier
 	switch docType {
 	case vfs.FileDocType:
-		doc, err = createFileHandler(c, fs, dbPrefix)
+		doc, err = createFileHandler(c, vfsC)
 	case vfs.FolderDocType:
-		doc, err = createDirectoryHandler(c, fs, dbPrefix)
+		doc, err = createDirectoryHandler(c, vfsC)
 	default:
 		err = vfs.ErrDocTypeInvalid
 	}
@@ -62,7 +61,7 @@ func CreationHandler(c *gin.Context) {
 	c.Data(http.StatusCreated, jsonapi.ContentType, data)
 }
 
-func createFileHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *vfs.FileDoc, err error) {
+func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err error) {
 	doc, err = fileDocFromReq(
 		c,
 		c.Query("Name"),
@@ -73,7 +72,7 @@ func createFileHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *vfs.F
 		return
 	}
 
-	err = vfs.CreateFileAndUpload(doc, fs, dbPrefix, c.Request.Body)
+	err = vfs.CreateFileAndUpload(vfsC, doc, c.Request.Body)
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
@@ -82,7 +81,7 @@ func createFileHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *vfs.F
 	return
 }
 
-func createDirectoryHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *vfs.DirDoc, err error) {
+func createDirectoryHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.DirDoc, err error) {
 	doc, err = vfs.NewDirDoc(
 		c.Query("Name"),
 		c.Param("folder-id"),
@@ -92,7 +91,7 @@ func createDirectoryHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *
 		return
 	}
 
-	err = vfs.CreateDirectory(doc, fs, dbPrefix)
+	err = vfs.CreateDirectory(vfsC, doc)
 	if err != nil {
 		return
 	}
@@ -107,7 +106,7 @@ func createDirectoryHandler(c *gin.Context, fs afero.Fs, dbPrefix string) (doc *
 func OverwriteFileContentHandler(c *gin.Context) {
 	var err error
 
-	fs, dbPrefix, err := getFsAndDBPrefix(c)
+	vfsC, err := getVfsContext(c)
 	if err != nil {
 		return
 	}
@@ -115,7 +114,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 	var oldDoc *vfs.FileDoc
 	var newDoc *vfs.FileDoc
 
-	oldDoc, err = vfs.GetFileDoc(c.Param("file-id"), dbPrefix)
+	oldDoc, err = vfs.GetFileDoc(vfsC, c.Param("file-id"))
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
@@ -138,7 +137,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
-	err = vfs.ModifyFileContent(oldDoc, newDoc, fs, dbPrefix, c.Request.Body)
+	err = vfs.ModifyFileContent(vfsC, oldDoc, newDoc, c.Request.Body)
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
 		return
@@ -153,6 +152,85 @@ func OverwriteFileContentHandler(c *gin.Context) {
 	c.Data(http.StatusOK, jsonapi.ContentType, data)
 }
 
+// @TODO: get rid of this with jsonapi package
+type jsonData struct {
+	Type  string                 `json:"type"`
+	ID    string                 `json:"id"`
+	Attrs *vfs.DocMetaAttributes `json:"attributes"`
+}
+
+type jsonDataContainer struct {
+	Data *jsonData `json:"data"`
+}
+
+// ModificationHandler handles PATCH requests on /files/:file-id. It
+// can be used to modify the file or directory metadata, as well as
+// moving and renaming it in the filesystem.
+func ModificationHandler(c *gin.Context) {
+	var err error
+
+	vfsC, err := getVfsContext(c)
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
+		return
+	}
+
+	var container jsonDataContainer
+	err = c.BindJSON(&container)
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.BadRequest(err))
+		return
+	}
+
+	patchData := container.Data
+	docType, err := vfs.ParseDocType(patchData.Type)
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	var doc jsonapi.JSONApier
+	switch docType {
+	case vfs.FileDocType:
+		doc, err = modFileHandler(vfsC, c.Request, patchData)
+	case vfs.FolderDocType:
+		// @TODO
+		err = fmt.Errorf("Not implemented")
+	}
+
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	data, err := doc.ToJSONApi()
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	c.Data(http.StatusOK, jsonapi.ContentType, data)
+}
+
+func modFileHandler(vfsC *vfs.Context, req *http.Request, patchData *jsonData) (jsonapi.JSONApier, error) {
+	doc, err := vfs.GetFileDoc(vfsC, patchData.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	ifMatch := req.Header.Get("If-Match")
+	if ifMatch != "" && doc.Rev() != ifMatch {
+		return nil, jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match."))
+	}
+
+	doc, err = vfs.ModifyFileMetadata(vfsC, doc, patchData.Attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	return doc, nil
+}
+
 // ReadFileHandler handles all GET requests on /files/:file-id aiming
 // at downloading a file. It serves two main purposes in this regard:
 //  - downloading a file given its ID in inline mode
@@ -164,7 +242,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 func ReadFileHandler(c *gin.Context) {
 	var err error
 
-	fs, dbPrefix, err := getFsAndDBPrefix(c)
+	vfsC, err := getVfsContext(c)
 	if err != nil {
 		return
 	}
@@ -175,12 +253,12 @@ func ReadFileHandler(c *gin.Context) {
 	// form their path
 	if fileID == "download" {
 		pth := c.Query("path")
-		err = vfs.ServeFileContentByPath(pth, c.Request, c.Writer, fs)
+		err = vfs.ServeFileContentByPath(vfsC, pth, c.Request, c.Writer)
 	} else {
 		var doc *vfs.FileDoc
-		doc, err = vfs.GetFileDoc(fileID, dbPrefix)
+		doc, err = vfs.GetFileDoc(vfsC, fileID)
 		if err == nil {
-			err = vfs.ServeFileContent(doc, c.Request, c.Writer, fs)
+			err = vfs.ServeFileContent(vfsC, doc, c.Request, c.Writer)
 		}
 	}
 
@@ -198,18 +276,20 @@ func Routes(router *gin.RouterGroup) {
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
 
+	router.PATCH("/:file-id", ModificationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 }
 
-func getFsAndDBPrefix(c *gin.Context) (fs afero.Fs, dbPrefix string, err error) {
+func getVfsContext(c *gin.Context) (*vfs.Context, error) {
 	instance := middlewares.GetInstance(c)
-	dbPrefix = instance.GetDatabasePrefix()
-	fs, err = instance.GetStorageProvider()
+	dbprefix := instance.GetDatabasePrefix()
+	fs, err := instance.GetStorageProvider()
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
-		return
+		return nil, err
 	}
-	return
+	vfsC := vfs.NewContext(fs, dbprefix)
+	return vfsC, nil
 }
 
 func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *vfs.FileDoc, err error) {

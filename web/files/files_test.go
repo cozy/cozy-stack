@@ -1,6 +1,7 @@
 package files
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -100,6 +101,38 @@ func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Re
 		return
 	}
 	return doUploadOrMod(t, req, contentType, body, hash)
+}
+
+func patchFile(t *testing.T, path, docType, id string, attrs map[string]interface{}) (res *http.Response, v map[string]interface{}) {
+	type jsonData struct {
+		Type  string                 `json:"type"`
+		ID    string                 `json:"id"`
+		Attrs map[string]interface{} `json:"attributes,omitempty"`
+	}
+
+	bodyreq := &jsonData{
+		Type:  docType,
+		ID:    id,
+		Attrs: attrs,
+	}
+
+	b, err := json.Marshal(map[string]*jsonData{"data": bodyreq})
+	req, err := http.NewRequest("PATCH", ts.URL+path, bytes.NewReader(b))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	res, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer res.Body.Close()
+
+	err = extractJSONRes(res, &v)
+	assert.NoError(t, err)
+
+	return
 }
 
 func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
@@ -327,6 +360,54 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 
 	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 409, res2.StatusCode)
+}
+
+func TestModifyMetadataFileMove(t *testing.T) {
+	body := "foo"
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	data1, ok = data1["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	fileID, ok := data1["id"].(string)
+	assert.True(t, ok)
+	// fileRev, ok := data1["rev"].(string)
+	// assert.True(t, ok)
+
+	res2, data2 := createDir(t, "/files/?Name=movemeinme&Type=io.cozy.folders")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	data2, ok = data2["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	folderID, ok := data2["id"].(string)
+	assert.True(t, ok)
+
+	attrs := map[string]interface{}{
+		"tags":       []string{"bar", "baz"},
+		"name":       "moved",
+		"folderID":   folderID,
+		"executable": true,
+	}
+
+	res3, data3 := patchFile(t, "/files/"+fileID, "io.cozy.files", fileID, attrs)
+	assert.Equal(t, 200, res3.StatusCode)
+
+	data3, ok = data3["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	attrs3, ok := data3["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+
+	assert.Equal(t, "text/plain", attrs3["mime"])
+	assert.Equal(t, "moved", attrs3["name"])
+	assert.EqualValues(t, []interface{}{"foo", "bar", "baz"}, attrs3["tags"])
+	assert.Equal(t, "text", attrs3["class"])
+	assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
+	assert.Equal(t, true, attrs3["executable"])
+	assert.Equal(t, "3", attrs3["size"])
 }
 
 func TestModifyContentNoFileID(t *testing.T) {
@@ -580,6 +661,7 @@ func TestMain(m *testing.M) {
 	router.Use(injectInstance(instance))
 	router.POST("/files/", CreationHandler)
 	router.POST("/files/:folder-id", CreationHandler)
+	router.PATCH("/files/:file-id", ModificationHandler)
 	router.PUT("/files/:file-id", OverwriteFileContentHandler)
 	router.HEAD("/files/:file-id", ReadFileHandler)
 	router.GET("/files/:file-id", ReadFileHandler)
