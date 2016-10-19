@@ -55,6 +55,12 @@ func (d *DirDoc) SetRev(rev string) {
 	d.DRev = rev
 }
 
+// SelfLink is used to generate a JSON-API link for the directory (part of
+// jsonapi.Object interface)
+func (d *DirDoc) SelfLink() string {
+	return "/files/" + d.DID
+}
+
 // ToJSONApi implements temporary interface JSONApier to serialize
 // the directory document
 func (d *DirDoc) ToJSONApi() ([]byte, error) {

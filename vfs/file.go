@@ -71,6 +71,12 @@ func (f *FileDoc) SetRev(rev string) {
 	f.FRev = rev
 }
 
+// SelfLink is used to generate a JSON-API link for the file (part of
+// jsonapi.Object interface)
+func (f *FileDoc) SelfLink() string {
+	return "/files/" + f.FID
+}
+
 // ToJSONApi implements temporary interface JSONApier to serialize
 // the file document
 func (f *FileDoc) ToJSONApi() ([]byte, error) {

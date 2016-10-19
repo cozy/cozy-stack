@@ -37,7 +37,7 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	var doc jsonapi.JSONApier
+	var doc jsonapi.Object
 	switch docType {
 	case vfs.FileDocType:
 		doc, err = createFileHandler(c, vfsC)
@@ -52,13 +52,7 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	data, err := doc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusCreated, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusCreated, doc)
 }
 
 func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err error) {

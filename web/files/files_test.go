@@ -426,9 +426,12 @@ func TestModifyContentBadRev(t *testing.T) {
 	data1, ok = data1["data"].(map[string]interface{})
 	assert.True(t, ok)
 
+	meta1, ok := data1["meta"].(map[string]interface{})
+	assert.True(t, ok)
+
 	fileID, ok := data1["id"].(string)
 	assert.True(t, ok)
-	fileRev, ok := data1["rev"].(string)
+	fileRev, ok := meta1["rev"].(string)
 	assert.True(t, ok)
 
 	newcontent := "newcontent :)"
@@ -470,6 +473,9 @@ func TestModifyContentSuccess(t *testing.T) {
 	attrs1, ok := data1["attributes"].(map[string]interface{})
 	assert.True(t, ok)
 
+	links1, ok := data1["links"].(map[string]interface{})
+	assert.True(t, ok)
+
 	fileID, ok := data1["id"].(string)
 	assert.True(t, ok)
 
@@ -486,9 +492,13 @@ func TestModifyContentSuccess(t *testing.T) {
 	attrs2, ok := data2["attributes"].(map[string]interface{})
 	assert.True(t, ok)
 
+	links2, ok := data2["links"].(map[string]interface{})
+	assert.True(t, ok)
+
 	assert.Equal(t, data2["id"], data1["id"], "same id")
 	assert.Equal(t, data2["path"], data1["path"], "same path")
 	assert.NotEqual(t, meta2["rev"], data1["rev"], "different rev")
+	assert.Equal(t, links2["self"], links1["self"], "same self link")
 
 	assert.Equal(t, attrs2["name"], attrs1["name"])
 	assert.Equal(t, attrs2["created_at"], attrs1["created_at"])
@@ -540,7 +550,8 @@ func TestModifyContentConcurrently(t *testing.T) {
 		res, data := uploadMod(t, "/files/"+fileID, "plain/text", "newcontent "+strconv.FormatInt(idx, 10), "")
 		if res.StatusCode == 200 {
 			data = data["data"].(map[string]interface{})
-			done <- &result{data["rev"].(string), idx}
+			meta := data["meta"].(map[string]interface{})
+			done <- &result{meta["rev"].(string), idx}
 		} else {
 			errs <- res
 		}

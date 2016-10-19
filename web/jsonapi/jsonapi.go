@@ -25,6 +25,7 @@ type JSONApier interface {
 type Document struct {
 	Data   *json.RawMessage `json:"data,omitempty"`
 	Errors ErrorList        `json:"errors,omitempty"`
+	Links  LinksList        `json:"links,omitempty"`
 	// TODO included, links
 }
 
