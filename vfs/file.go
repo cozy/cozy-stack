@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
 
@@ -74,6 +75,22 @@ func (f *FileDoc) SetRev(rev string) {
 // jsonapi.Object interface)
 func (f *FileDoc) SelfLink() string {
 	return "/files/" + f.FID
+}
+
+// Relationships is used to generate the parent relationship in JSON-API format
+// (part of the jsonapi.Object interface)
+func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{
+		"parent": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Related: "/files/" + f.FolderID,
+			},
+			Data: jsonapi.ResourceIdentifier{
+				ID:   f.FolderID,
+				Type: FolderDocType,
+			},
+		},
+	}
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // DirDoc is a struct containing all the informations about a
@@ -58,6 +59,13 @@ func (d *DirDoc) SetRev(rev string) {
 // jsonapi.Object interface)
 func (d *DirDoc) SelfLink() string {
 	return "/files/" + d.DID
+}
+
+// Relationships is used to generate the content relationship in JSON-API format
+// (part of the jsonapi.Object interface)
+func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
+	// TODO
+	return jsonapi.RelationshipMap{}
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
