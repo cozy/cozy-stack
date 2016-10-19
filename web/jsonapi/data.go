@@ -11,6 +11,7 @@ type Object interface {
 	couchdb.Doc
 	SelfLink() string
 	Relationships() RelationshipMap
+	Included() []Object
 }
 
 // Meta is a container for the couchdb revision, in JSON-API land

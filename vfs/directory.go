@@ -68,6 +68,12 @@ func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
 	return jsonapi.RelationshipMap{}
 }
 
+// Included is part of the jsonapi.Object interface
+func (d *DirDoc) Included() []jsonapi.Object {
+	// TODO
+	return []jsonapi.Object{}
+}
+
 // NewDirDoc is the DirDoc constructor. The given name is validated.
 func NewDirDoc(name, folderID string, tags []string) (doc *DirDoc, err error) {
 	if err = checkFileName(name); err != nil {

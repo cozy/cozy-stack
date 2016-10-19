@@ -16,23 +16,25 @@ const ContentType = "application/vnd.api+json"
 // application/vnd.api+json
 // See http://jsonapi.org/format/#document-structure
 type Document struct {
-	Data   *json.RawMessage `json:"data,omitempty"`
-	Errors ErrorList        `json:"errors,omitempty"`
-	Links  *LinksList       `json:"links,omitempty"`
-	// TODO included, links
+	Data     *json.RawMessage `json:"data,omitempty"`
+	Errors   ErrorList        `json:"errors,omitempty"`
+	Links    *LinksList       `json:"links,omitempty"`
+	Included []Object         `json:"included,omitempty"`
 }
 
 // Data can be called to send an answer with a JSON-API document containing a
 // single object as data
 func Data(c *gin.Context, statusCode int, o Object, links *LinksList) {
+	included := o.Included()
 	data, err := MarshalObject(o)
 	if err != nil {
 		AbortWithError(c, InternalServerError(err))
 		return
 	}
 	doc := Document{
-		Data:  &data,
-		Links: links,
+		Data:     &data,
+		Links:    links,
+		Included: included,
 	}
 	body, err := json.Marshal(doc)
 	if err != nil {

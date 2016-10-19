@@ -93,6 +93,11 @@ func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
 	}
 }
 
+// Included is part of the jsonapi.Object interface
+func (f *FileDoc) Included() []jsonapi.Object {
+	return []jsonapi.Object{}
+}
+
 // NewFileDoc is the FileDoc constructor. The given name is validated.
 func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
 	if err = checkFileName(name); err != nil {
