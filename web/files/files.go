@@ -177,7 +177,7 @@ func ModificationHandler(c *gin.Context) {
 		return
 	}
 
-	var doc jsonapi.JSONApier
+	var doc jsonapi.Object
 	switch docType {
 	case vfs.FileDocType:
 		doc, err = modFileHandler(vfsC, c.Request, patchData)
@@ -191,16 +191,10 @@ func ModificationHandler(c *gin.Context) {
 		return
 	}
 
-	data, err := doc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusOK, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusOK, doc)
 }
 
-func modFileHandler(vfsC *vfs.Context, req *http.Request, patchData *jsonData) (jsonapi.JSONApier, error) {
+func modFileHandler(vfsC *vfs.Context, req *http.Request, patchData *jsonData) (jsonapi.Object, error) {
 	doc, err := vfs.GetFileDoc(vfsC, patchData.ID)
 	if err != nil {
 		return nil, err
@@ -252,13 +246,7 @@ func ReadMetadataHandler(c *gin.Context) {
 		return
 	}
 
-	data, err := fileDoc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusOK, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusOK, fileDoc)
 }
 
 // ReadFileContentHandler handles all GET requests on /files/:file-id

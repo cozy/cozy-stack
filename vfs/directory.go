@@ -1,14 +1,13 @@
 package vfs
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
 )
 
 // DirDoc is a struct containing all the informations about a
-// directory. It implements the couchdb.Doc and jsonapi.JSONApier
+// directory. It implements the couchdb.Doc and jsonapi.Object
 // interfaces.
 type DirDoc struct {
 	// Qualified file identifier
@@ -59,27 +58,6 @@ func (d *DirDoc) SetRev(rev string) {
 // jsonapi.Object interface)
 func (d *DirDoc) SelfLink() string {
 	return "/files/" + d.DID
-}
-
-// ToJSONApi implements temporary interface JSONApier to serialize
-// the directory document
-func (d *DirDoc) ToJSONApi() ([]byte, error) {
-	attrs := map[string]interface{}{
-		"name":       d.Name,
-		"created_at": d.CreatedAt,
-		"updated_at": d.UpdatedAt,
-		"tags":       d.Tags,
-	}
-	data := map[string]interface{}{
-		"type":       d.DocType(),
-		"id":         d.ID(),
-		"rev":        d.Rev(),
-		"attributes": attrs,
-	}
-	m := map[string]interface{}{
-		"data": data,
-	}
-	return json.Marshal(m)
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.

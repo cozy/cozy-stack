@@ -12,13 +12,6 @@ import (
 // ContentType is the official mime-type for JSON-API
 const ContentType = "application/vnd.api+json"
 
-// JSONApier is a temporary interface to describe how to serialize an
-// object on the api side.
-// @TODO: proper jsonapi handling. See issue #10
-type JSONApier interface {
-	ToJSONApi() ([]byte, error)
-}
-
 // Document is JSON-API document, identified by the mediatype
 // application/vnd.api+json
 // See http://jsonapi.org/format/#document-structure

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5" // #nosec
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,7 +18,7 @@ import (
 )
 
 // FileDoc is a struct containing all the informations about a file.
-// It implements the couchdb.Doc and jsonapi.JSONApier interfaces.
+// It implements the couchdb.Doc and jsonapi.Object interfaces.
 type FileDoc struct {
 	// Qualified file identifier
 	FID string `json:"_id,omitempty"`
@@ -75,33 +74,6 @@ func (f *FileDoc) SetRev(rev string) {
 // jsonapi.Object interface)
 func (f *FileDoc) SelfLink() string {
 	return "/files/" + f.FID
-}
-
-// ToJSONApi implements temporary interface JSONApier to serialize
-// the file document
-func (f *FileDoc) ToJSONApi() ([]byte, error) {
-	id := f.FID
-	attrs := map[string]interface{}{
-		"name":       f.Name,
-		"created_at": f.CreatedAt,
-		"updated_at": f.UpdatedAt,
-		"size":       strconv.FormatInt(f.Size, 10),
-		"tags":       f.Tags,
-		"md5sum":     f.MD5Sum,
-		"executable": f.Executable,
-		"class":      f.Class,
-		"mime":       f.Mime,
-	}
-	data := map[string]interface{}{
-		"id":         id,
-		"type":       f.DocType(),
-		"rev":        f.Rev(),
-		"attributes": attrs,
-	}
-	m := map[string]interface{}{
-		"data": data,
-	}
-	return json.Marshal(m)
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
