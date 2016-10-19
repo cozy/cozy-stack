@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
@@ -22,6 +24,7 @@ import (
 )
 
 const CouchURL = "http://localhost:5984/"
+const TestPrefix = "test/"
 
 var ts *httptest.Server
 var instance *middlewares.Instance
@@ -575,7 +578,7 @@ func TestDownloadFileBadID(t *testing.T) {
 }
 
 func TestDownloadFileBadPath(t *testing.T) {
-	res, _ := download(t, "/files/download?path=/i/do/not/exist", "")
+	res, _ := download(t, "/files/download?Path=/i/do/not/exist", "")
 	assert.Equal(t, 404, res.StatusCode)
 }
 
@@ -607,7 +610,7 @@ func TestDownloadFileByPathSuccess(t *testing.T) {
 	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadme2", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	res2, resbody := download(t, "/files/download?path="+url.QueryEscape("/downloadme2"), "")
+	res2, resbody := download(t, "/files/download?Path="+url.QueryEscape("/downloadme2"), "")
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "attachment"))
 	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme2"))
@@ -622,23 +625,50 @@ func TestDownloadRangeSuccess(t *testing.T) {
 	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadmebyrange", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	res2, _ := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "nimp")
+	res2, _ := download(t, "/files/download?Path="+url.QueryEscape("/downloadmebyrange"), "nimp")
 	assert.Equal(t, 416, res2.StatusCode)
 
-	res3, res3body := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "bytes=0-2")
+	res3, res3body := download(t, "/files/download?Path="+url.QueryEscape("/downloadmebyrange"), "bytes=0-2")
 	assert.Equal(t, 206, res3.StatusCode)
 	assert.Equal(t, "foo", string(res3body))
 
-	res4, res4body := download(t, "/files/download?path="+url.QueryEscape("/downloadmebyrange"), "bytes=4-")
+	res4, res4body := download(t, "/files/download?Path="+url.QueryEscape("/downloadmebyrange"), "bytes=4-")
 	assert.Equal(t, 206, res4.StatusCode)
 	assert.Equal(t, "bar", string(res4body))
 }
 
+func TestGetFileMetadata(t *testing.T) {
+	res1, _ := http.Get(ts.URL + "/files/metadata?Path=/noooooop")
+	assert.Equal(t, 404, res1.StatusCode)
+
+	body := "foo,bar"
+	res2, _ := upload(t, "/files/?Type=io.cozy.files&Name=getmetadata", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getmetadata")
+	assert.Equal(t, 200, res3.StatusCode)
+}
+
 func TestMain(m *testing.M) {
 	// First we make sure couchdb is started
-	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
-	if err != nil || couchdb.Status() != checkup.Healthy {
+	db, err := checkup.HTTPChecker{URL: CouchURL}.Check()
+	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
+		os.Exit(1)
+	}
+
+	couchdb.ResetDB(TestPrefix, "io.cozy.files")
+	couchdb.ResetDB(TestPrefix, "io.cozy.folders")
+
+	err = couchdb.DefineIndex(TestPrefix, "io.cozy.files", mango.IndexOnFields("path"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.DefineIndex(TestPrefix, "io.cozy.folders", mango.IndexOnFields("path"))
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 

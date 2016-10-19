@@ -231,15 +231,58 @@ func modFileHandler(vfsC *vfs.Context, req *http.Request, patchData *jsonData) (
 	return doc, nil
 }
 
-// ReadFileHandler handles all GET requests on /files/:file-id aiming
-// at downloading a file. It serves two main purposes in this regard:
+// ReadFileHandler handles all GET requests on /files/:file-id,
+// /files/download and /files/metadata and dispatches to the right
+// handler. See ReadMetadataHandler and ReadFileContentHandler.
+func ReadFileHandler(c *gin.Context) {
+	fileID := c.Param("file-id")
+
+	// Path /files/metadata is handled specifically to read file
+	// metadata informations
+	if fileID == "metadata" {
+		ReadMetadataHandler(c)
+	} else {
+		ReadFileContentHandler(c)
+	}
+}
+
+// ReadMetadataHandler handles all GET requests on /files/metadata
+// aiming at getting file metadata from its path.
+//
+// swagger:route GET /files/metadata files getFileMetadata
+func ReadMetadataHandler(c *gin.Context) {
+	var err error
+
+	vfsC, err := getVfsContext(c)
+	if err != nil {
+		return
+	}
+
+	fileDoc, err := vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	data, err := fileDoc.ToJSONApi()
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	c.Data(http.StatusOK, jsonapi.ContentType, data)
+}
+
+// ReadFileContentHandler handles all GET requests on /files/:file-id
+// aiming at downloading a file. It serves two main purposes in this
+// regard:
 //  - downloading a file given its ID in inline mode
 //  - downloading a file given its path in attachment mode on the
 //    /files/download endpoint
 //
 // swagger:route GET /files/download files downloadFileByPath
 // swagger:route GET /files/:file-id files downloadFileByID
-func ReadFileHandler(c *gin.Context) {
+func ReadFileContentHandler(c *gin.Context) {
 	var err error
 
 	vfsC, err := getVfsContext(c)
@@ -251,16 +294,22 @@ func ReadFileHandler(c *gin.Context) {
 
 	// Path /files/download is handled specifically to download file
 	// form their path
+	var doc *vfs.FileDoc
+	var disposition string
 	if fileID == "download" {
-		pth := c.Query("path")
-		err = vfs.ServeFileContentByPath(vfsC, pth, c.Request, c.Writer)
+		disposition = "attachment"
+		doc, err = vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
 	} else {
-		var doc *vfs.FileDoc
+		disposition = "inline"
 		doc, err = vfs.GetFileDoc(vfsC, fileID)
-		if err == nil {
-			err = vfs.ServeFileContent(vfsC, doc, c.Request, c.Writer)
-		}
 	}
+
+	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		return
+	}
+
+	err = vfs.ServeFileContent(vfsC, doc, disposition, c.Request, c.Writer)
 
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
