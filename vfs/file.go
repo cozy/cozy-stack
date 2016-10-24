@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/md5" // #nosec
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,11 +14,12 @@ import (
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
 
 // FileDoc is a struct containing all the informations about a file.
-// It implements the couchdb.Doc and jsonapi.JSONApier interfaces.
+// It implements the couchdb.Doc and jsonapi.Object interfaces.
 type FileDoc struct {
 	// Qualified file identifier
 	FID string `json:"_id,omitempty"`
@@ -71,31 +71,31 @@ func (f *FileDoc) SetRev(rev string) {
 	f.FRev = rev
 }
 
-// ToJSONApi implements temporary interface JSONApier to serialize
-// the file document
-func (f *FileDoc) ToJSONApi() ([]byte, error) {
-	id := f.FID
-	attrs := map[string]interface{}{
-		"name":       f.Name,
-		"created_at": f.CreatedAt,
-		"updated_at": f.UpdatedAt,
-		"size":       strconv.FormatInt(f.Size, 10),
-		"tags":       f.Tags,
-		"md5sum":     f.MD5Sum,
-		"executable": f.Executable,
-		"class":      f.Class,
-		"mime":       f.Mime,
+// SelfLink is used to generate a JSON-API link for the file (part of
+// jsonapi.Object interface)
+func (f *FileDoc) SelfLink() string {
+	return "/files/" + f.FID
+}
+
+// Relationships is used to generate the parent relationship in JSON-API format
+// (part of the jsonapi.Object interface)
+func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{
+		"parent": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Related: "/files/" + f.FolderID,
+			},
+			Data: jsonapi.ResourceIdentifier{
+				ID:   f.FolderID,
+				Type: FolderDocType,
+			},
+		},
 	}
-	data := map[string]interface{}{
-		"id":         id,
-		"type":       f.DocType(),
-		"rev":        f.Rev(),
-		"attributes": attrs,
-	}
-	m := map[string]interface{}{
-		"data": data,
-	}
-	return json.Marshal(m)
+}
+
+// Included is part of the jsonapi.Object interface
+func (f *FileDoc) Included() []jsonapi.Object {
+	return []jsonapi.Object{}
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.

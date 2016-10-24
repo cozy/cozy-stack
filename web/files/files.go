@@ -7,9 +7,11 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -18,6 +20,41 @@ import (
 
 // DefaultContentType is used for files uploaded with no content-type
 const DefaultContentType = "application/octet-stream"
+
+// WrapVfsError returns a formatted error from a golang error emitted by the vfs
+func WrapVfsError(err error) *jsonapi.Error {
+	if jsonErr, isJSONApiError := err.(*jsonapi.Error); isJSONApiError {
+		return jsonErr
+	}
+	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
+		return jsonapi.WrapCouchError(couchErr)
+	}
+	if os.IsExist(err) {
+		return &jsonapi.Error{
+			Status: http.StatusConflict,
+			Title:  "Conflict",
+			Detail: err.Error(),
+		}
+	}
+	if os.IsNotExist(err) {
+		return jsonapi.NotFound(err)
+	}
+	switch err {
+	case vfs.ErrParentDoesNotExist:
+		return jsonapi.NotFound(err)
+	case vfs.ErrDocTypeInvalid:
+		return jsonapi.InvalidAttribute("type", err)
+	case vfs.ErrIllegalFilename:
+		return jsonapi.InvalidParameter("folder-id", err)
+	case vfs.ErrIllegalTime:
+		return jsonapi.InvalidParameter("UpdatedAt", err)
+	case vfs.ErrInvalidHash:
+		return jsonapi.PreconditionFailed("Content-MD5", err)
+	case vfs.ErrContentLengthMismatch:
+		return jsonapi.PreconditionFailed("Content-Length", err)
+	}
+	return jsonapi.InternalServerError(err)
+}
 
 // CreationHandler handle all POST requests on /files/:folder-id
 // aiming at creating a new document in the FS. Given the Type
@@ -33,11 +70,11 @@ func CreationHandler(c *gin.Context) {
 
 	docType, err := vfs.ParseDocType(c.Query("Type"))
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	var doc jsonapi.JSONApier
+	var doc jsonapi.Object
 	switch docType {
 	case vfs.FileDocType:
 		doc, err = createFileHandler(c, vfsC)
@@ -48,17 +85,11 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	data, err := doc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusCreated, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
 func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err error) {
@@ -74,7 +105,7 @@ func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err
 
 	err = vfs.CreateFileAndUpload(vfsC, doc, c.Request.Body)
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
@@ -116,7 +147,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 
 	oldDoc, err = vfs.GetFileDoc(vfsC, c.Param("file-id"))
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
@@ -127,7 +158,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		oldDoc.Tags,
 	)
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
@@ -139,17 +170,11 @@ func OverwriteFileContentHandler(c *gin.Context) {
 
 	err = vfs.ModifyFileContent(vfsC, oldDoc, newDoc, c.Request.Body)
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	data, err := newDoc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusOK, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusOK, newDoc, nil)
 }
 
 // @TODO: get rid of this with jsonapi package
@@ -185,11 +210,11 @@ func ModificationHandler(c *gin.Context) {
 	patchData := container.Data
 	docType, err := vfs.ParseDocType(patchData.Type)
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	var doc jsonapi.JSONApier
+	var doc jsonapi.Object
 	switch docType {
 	case vfs.FileDocType:
 		doc, err = modFileHandler(vfsC, c.Request, patchData)
@@ -199,20 +224,14 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	data, err := doc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusOK, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusOK, doc, nil)
 }
 
-func modFileHandler(vfsC *vfs.Context, req *http.Request, patchData *jsonData) (jsonapi.JSONApier, error) {
+func modFileHandler(vfsC *vfs.Context, req *http.Request, patchData *jsonData) (jsonapi.Object, error) {
 	doc, err := vfs.GetFileDoc(vfsC, patchData.ID)
 	if err != nil {
 		return nil, err
@@ -260,17 +279,11 @@ func ReadMetadataHandler(c *gin.Context) {
 
 	fileDoc, err := vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	data, err := fileDoc.ToJSONApi()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
-		return
-	}
-
-	c.Data(http.StatusOK, jsonapi.ContentType, data)
+	jsonapi.Data(c, http.StatusOK, fileDoc, nil)
 }
 
 // ReadFileContentHandler handles all GET requests on /files/:file-id
@@ -305,14 +318,14 @@ func ReadFileContentHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
 	err = vfs.ServeFileContent(vfsC, doc, disposition, c.Request, c.Writer)
 
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.WrapVfsError(err))
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 }

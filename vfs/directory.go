@@ -1,14 +1,14 @@
 package vfs
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // DirDoc is a struct containing all the informations about a
-// directory. It implements the couchdb.Doc and jsonapi.JSONApier
+// directory. It implements the couchdb.Doc and jsonapi.Object
 // interfaces.
 type DirDoc struct {
 	// Qualified file identifier
@@ -55,25 +55,23 @@ func (d *DirDoc) SetRev(rev string) {
 	d.DRev = rev
 }
 
-// ToJSONApi implements temporary interface JSONApier to serialize
-// the directory document
-func (d *DirDoc) ToJSONApi() ([]byte, error) {
-	attrs := map[string]interface{}{
-		"name":       d.Name,
-		"created_at": d.CreatedAt,
-		"updated_at": d.UpdatedAt,
-		"tags":       d.Tags,
-	}
-	data := map[string]interface{}{
-		"type":       d.DocType(),
-		"id":         d.ID(),
-		"rev":        d.Rev(),
-		"attributes": attrs,
-	}
-	m := map[string]interface{}{
-		"data": data,
-	}
-	return json.Marshal(m)
+// SelfLink is used to generate a JSON-API link for the directory (part of
+// jsonapi.Object interface)
+func (d *DirDoc) SelfLink() string {
+	return "/files/" + d.DID
+}
+
+// Relationships is used to generate the content relationship in JSON-API format
+// (part of the jsonapi.Object interface)
+func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
+	// TODO
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the jsonapi.Object interface
+func (d *DirDoc) Included() []jsonapi.Object {
+	// TODO
+	return []jsonapi.Object{}
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.

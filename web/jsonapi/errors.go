@@ -2,11 +2,9 @@ package jsonapi
 
 import (
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/vfs"
 )
 
 // SourceError contains references to the source of the error
@@ -25,6 +23,9 @@ type Error struct {
 	Source SourceError `json:"source,omitempty"`
 }
 
+// ErrorList is just an array of error objects
+type ErrorList []*Error
+
 func (e *Error) Error() string {
 	return e.Title + "(" + strconv.Itoa(e.Status) + ")" + ": " + e.Detail
 }
@@ -36,41 +37,6 @@ func WrapCouchError(err *couchdb.Error) *Error {
 		Title:  err.Name,
 		Detail: err.Reason,
 	}
-}
-
-// WrapVfsError returns a formatted error from a golang error emitted by the vfs
-func WrapVfsError(err error) *Error {
-	if jsonErr, isJSONApiError := err.(*Error); isJSONApiError {
-		return jsonErr
-	}
-	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
-		return WrapCouchError(couchErr)
-	}
-	if os.IsExist(err) {
-		return &Error{
-			Status: http.StatusConflict,
-			Title:  "Conflict",
-			Detail: err.Error(),
-		}
-	}
-	if os.IsNotExist(err) {
-		return NotFound(err)
-	}
-	switch err {
-	case vfs.ErrParentDoesNotExist:
-		return NotFound(err)
-	case vfs.ErrDocTypeInvalid:
-		return InvalidAttribute("type", err)
-	case vfs.ErrIllegalFilename:
-		return InvalidParameter("folder-id", err)
-	case vfs.ErrIllegalTime:
-		return InvalidParameter("UpdatedAt", err)
-	case vfs.ErrInvalidHash:
-		return PreconditionFailed("Content-MD5", err)
-	case vfs.ErrContentLengthMismatch:
-		return PreconditionFailed("Content-Length", err)
-	}
-	return InternalServerError(err)
 }
 
 // NotFound returns a 404 formatted error
