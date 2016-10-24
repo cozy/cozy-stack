@@ -65,21 +65,25 @@ type ObjectMarshalling struct {
 // MarshalObject serializes an Object to JSON.
 // It returns a json.RawMessage that can be used a in Document.
 func MarshalObject(o Object) (json.RawMessage, error) {
-	self := o.SelfLink()
 	id := o.ID()
-	o.SetID("")
 	rev := o.Rev()
+	self := o.SelfLink()
+	rels := o.Relationships()
+
+	o.SetID("")
 	o.SetRev("")
 	defer func() {
 		o.SetID(id)
 		o.SetRev(rev)
 	}()
+
 	data := ObjectMarshalling{
-		Type:       o.DocType(),
-		ID:         id,
-		Attributes: o,
-		Meta:       Meta{Rev: rev},
-		Links:      LinksList{Self: self},
+		Type:          o.DocType(),
+		ID:            id,
+		Attributes:    o,
+		Meta:          Meta{Rev: rev},
+		Links:         LinksList{Self: self},
+		Relationships: rels,
 	}
 	return json.Marshal(data)
 }
