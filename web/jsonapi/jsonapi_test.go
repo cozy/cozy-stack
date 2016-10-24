@@ -2,12 +2,16 @@ package jsonapi
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
+
+var ts *httptest.Server
 
 type Foo struct {
 	FID  string `json:"-"`
@@ -112,7 +116,39 @@ func TestObjectMarshalling(t *testing.T) {
 	assert.Equal(t, qux["id"], "qux")
 }
 
+func TestData(t *testing.T) {
+	res, err := http.Get(ts.URL + "/foos/courge")
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Equal(t, "application/vnd.api+json", res.Header.Get("Content-Type"))
+	defer res.Body.Close()
+	var body map[string]interface{}
+	json.NewDecoder(res.Body).Decode(&body)
+
+	assert.Contains(t, body, "data")
+	data := body["data"].(map[string]interface{})
+	assert.Equal(t, data["type"], "io.cozy.foos")
+	assert.Equal(t, data["id"], "courge")
+	assert.Contains(t, data, "attributes")
+	assert.Contains(t, data, "relationships")
+	assert.Contains(t, data, "links")
+
+	assert.Contains(t, body, "included")
+	included := body["included"].([]interface{})
+	assert.Len(t, included, 1)
+	qux, _ := included[0].(map[string]interface{})
+	assert.Equal(t, qux["type"], "io.cozy.foos")
+	assert.Equal(t, qux["id"], "qux")
+}
+
 func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.GET("/foos/courge", func(c *gin.Context) {
+		courge := &Foo{FID: "courge", FRev: "1-abc", Bar: "baz"}
+		Data(c, 200, courge, nil)
+	})
+	ts = httptest.NewServer(router)
+	defer ts.Close()
 	os.Exit(m.Run())
 }

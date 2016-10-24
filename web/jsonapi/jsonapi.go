@@ -19,13 +19,21 @@ type Document struct {
 	Data     *json.RawMessage `json:"data,omitempty"`
 	Errors   ErrorList        `json:"errors,omitempty"`
 	Links    *LinksList       `json:"links,omitempty"`
-	Included []Object         `json:"included,omitempty"`
+	Included []interface{}    `json:"included,omitempty"`
 }
 
 // Data can be called to send an answer with a JSON-API document containing a
 // single object as data
 func Data(c *gin.Context, statusCode int, o Object, links *LinksList) {
-	included := o.Included()
+	var included []interface{}
+	for _, o := range o.Included() {
+		data, err := MarshalObject(o)
+		if err != nil {
+			AbortWithError(c, InternalServerError(err))
+			return
+		}
+		included = append(included, &data)
+	}
 	data, err := MarshalObject(o)
 	if err != nil {
 		AbortWithError(c, InternalServerError(err))
