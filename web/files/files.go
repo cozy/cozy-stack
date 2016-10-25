@@ -21,6 +21,13 @@ import (
 // DefaultContentType is used for files uploaded with no content-type
 const DefaultContentType = "application/octet-stream"
 
+// TagSeparator is the character separating tags
+const TagSeparator = ","
+
+// MetadataPath is a generic placeholder used in our routes to handle
+// files and directories by path.
+const MetadataPath = "metadata"
+
 // WrapVfsError returns a formatted error from a golang error emitted by the vfs
 func WrapVfsError(err error) *jsonapi.Error {
 	if jsonErr, isJSONApiError := err.(*jsonapi.Error); isJSONApiError {
@@ -42,6 +49,8 @@ func WrapVfsError(err error) *jsonapi.Error {
 	switch err {
 	case vfs.ErrParentDoesNotExist:
 		return jsonapi.NotFound(err)
+	case vfs.ErrForbiddenDocMove:
+		return jsonapi.PreconditionFailed("folder-id", err)
 	case vfs.ErrDocTypeInvalid:
 		return jsonapi.InvalidAttribute("type", err)
 	case vfs.ErrIllegalFilename:
@@ -97,7 +106,7 @@ func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err
 		c,
 		c.Query("Name"),
 		c.Param("folder-id"),
-		parseTags(c.Query("Tags")),
+		strings.Split(c.Query("Tags"), TagSeparator),
 	)
 	if err != nil {
 		return
@@ -116,7 +125,7 @@ func createDirectoryHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.DirDoc,
 	doc, err = vfs.NewDirDoc(
 		c.Query("Name"),
 		c.Param("folder-id"),
-		parseTags(c.Query("Tags")),
+		strings.Split(c.Query("Tags"), TagSeparator),
 	)
 	if err != nil {
 		return
@@ -162,9 +171,8 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
-	ifMatch := c.Request.Header.Get("If-Match")
-	if ifMatch != "" && oldDoc.Rev() != ifMatch {
-		jsonapi.AbortWithError(c, jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match.")))
+	if err = checkIfMatch(c.Request, oldDoc.Rev()); err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
@@ -188,8 +196,10 @@ type jsonDataContainer struct {
 	Data *jsonData `json:"data"`
 }
 
-// ModificationHandler handles PATCH requests on /files/:file-id. It
-// can be used to modify the file or directory metadata, as well as
+// ModificationHandler handles PATCH requests on /files/:file-id and
+// /files/metadata.
+//
+// It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
 func ModificationHandler(c *gin.Context) {
 	var err error
@@ -208,61 +218,65 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	patchData := container.Data
-	docType, err := vfs.ParseDocType(patchData.Type)
-	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
-		return
-	}
 
-	var doc jsonapi.Object
-	switch docType {
-	case vfs.FileDocType:
-		doc, err = modFileHandler(vfsC, c.Request, patchData)
-	case vfs.FolderDocType:
-		// @TODO
-		err = fmt.Errorf("Not implemented")
-	}
-
-	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
-		return
-	}
-
-	jsonapi.Data(c, http.StatusOK, doc, nil)
-}
-
-func modFileHandler(vfsC *vfs.Context, req *http.Request, patchData *jsonData) (jsonapi.Object, error) {
-	doc, err := vfs.GetFileDoc(vfsC, patchData.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	ifMatch := req.Header.Get("If-Match")
-	if ifMatch != "" && doc.Rev() != ifMatch {
-		return nil, jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match."))
-	}
-
-	doc, err = vfs.ModifyFileMetadata(vfsC, doc, patchData.Attrs)
-	if err != nil {
-		return nil, err
-	}
-
-	return doc, nil
-}
-
-// ReadFileHandler handles all GET requests on /files/:file-id,
-// /files/download and /files/metadata and dispatches to the right
-// handler. See ReadMetadataHandler and ReadFileContentHandler.
-func ReadFileHandler(c *gin.Context) {
 	fileID := c.Param("file-id")
 
-	// Path /files/metadata is handled specifically to read file
-	// metadata informations
-	if fileID == "metadata" {
-		ReadMetadataHandler(c)
+	var docType vfs.DocType
+	if fileID == MetadataPath {
+		docType, err = vfs.ParseDocType(c.Query("Type"))
 	} else {
-		ReadFileContentHandler(c)
+		docType, err = vfs.ParseDocType(patchData.Type)
 	}
+
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	var doc couchdb.Doc
+	if fileID == MetadataPath {
+		switch docType {
+		case vfs.FileDocType:
+			doc, err = vfs.GetFileDocFromPath(vfsC, c.Query("path"))
+		case vfs.FolderDocType:
+			doc, err = vfs.GetDirectoryDocFromPath(vfsC, c.Query("path"))
+		default:
+			err = vfs.ErrDocTypeInvalid
+		}
+	} else {
+		switch docType {
+		case vfs.FileDocType:
+			doc, err = vfs.GetFileDoc(vfsC, fileID)
+		case vfs.FolderDocType:
+			doc, err = vfs.GetDirectoryDoc(vfsC, fileID)
+		default:
+			err = vfs.ErrDocTypeInvalid
+		}
+	}
+
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	if err = checkIfMatch(c.Request, doc.Rev()); err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	var data jsonapi.Object
+	if fileDoc, ok := doc.(*vfs.FileDoc); ok {
+		data, err = vfs.ModifyFileMetadata(vfsC, fileDoc, patchData.Attrs)
+	} else if dirDoc, ok := doc.(*vfs.DirDoc); ok {
+		data, err = vfs.ModifyDirectoryMetadata(vfsC, dirDoc, patchData.Attrs)
+	}
+
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
 // ReadMetadataHandler handles all GET requests on /files/metadata
@@ -332,8 +346,16 @@ func ReadFileContentHandler(c *gin.Context) {
 
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
-	router.HEAD("/:file-id", ReadFileHandler)
-	router.GET("/:file-id", ReadFileHandler)
+	// @TODO: get rid of this handler when switching to
+	// echo/httprouterv2.
+	router.GET("/:file-id", func(c *gin.Context) {
+		if c.Param("file-id") == MetadataPath {
+			ReadMetadataHandler(c)
+		} else {
+			ReadFileContentHandler(c)
+		}
+	})
+	router.HEAD("/:file-id", ReadFileContentHandler)
 
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
@@ -383,19 +405,18 @@ func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *
 		class,
 		executable,
 		tags,
+		nil,
 	)
 
 	return
 }
 
-func parseTags(str string) (tags []string) {
-	for _, tag := range strings.Split(str, ",") {
-		tag = strings.TrimSpace(tag)
-		if tag != "" {
-			tags = append(tags, tag)
-		}
+func checkIfMatch(req *http.Request, rev string) error {
+	ifMatch := req.Header.Get("If-Match")
+	if ifMatch != "" && rev != ifMatch {
+		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match."))
 	}
-	return
+	return nil
 }
 
 func parseMD5Hash(md5B64 string) ([]byte, error) {

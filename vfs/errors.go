@@ -6,6 +6,9 @@ var (
 	// ErrParentDoesNotExist is used when the parent folder does not
 	// exist
 	ErrParentDoesNotExist = errors.New("Parent folder with given FolderID does not exist")
+	// ErrForbiddenDocMove is used when trying to move a document in an
+	// illicit destination
+	ErrForbiddenDocMove = errors.New("Forbidden document move")
 	// ErrDocTypeInvalid is used when the document type sent is not
 	// recognized
 	ErrDocTypeInvalid = errors.New("Invalid document type")

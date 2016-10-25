@@ -16,6 +16,9 @@ import (
 // ForbiddenFilenameChars is the list of forbidden characters in a filename.
 const ForbiddenFilenameChars = "/\x00"
 
+// RootFolderID is the identifier of the root folder
+const RootFolderID = "io.cozy.folders-root"
+
 // DocType is the type of document, eg. file or folder
 type DocType string
 
@@ -30,7 +33,7 @@ const (
 // file and directory documents.
 type DocMetaAttributes struct {
 	Name       string     `json:"name,omitempty"`
-	FolderID   *string    `json:"folderID,omitempty"`
+	FolderID   *string    `json:"folder_id,omitempty"`
 	Tags       []string   `json:"tags,omitempty"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 	Executable *bool      `json:"executable,omitempty"`
@@ -80,7 +83,7 @@ func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirD
 
 	var parentPath string
 
-	if folderID == "" {
+	if folderID == "" || folderID == RootFolderID {
 		parentPath = "/"
 	} else {
 		parentDoc, err = GetDirectoryDoc(c, folderID)
@@ -92,4 +95,29 @@ func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirD
 
 	pth = path.Join(parentPath, name)
 	return
+}
+
+func appendTags(oldtags, newtags []string) []string {
+	mtags := make(map[string]struct{})
+	var stags []string
+
+	addTag := func(tag string) {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			return
+		}
+		if _, ok := mtags[tag]; !ok {
+			stags = append(stags, tag)
+			mtags[tag] = struct{}{}
+		}
+	}
+
+	for _, tag := range oldtags {
+		addTag(tag)
+	}
+	for _, tag := range newtags {
+		addTag(tag)
+	}
+
+	return stags
 }
