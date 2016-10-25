@@ -80,9 +80,9 @@ func (d *DirDoc) Included() []jsonapi.Object {
 	return []jsonapi.Object{}
 }
 
-func fetchChildren(c *Context, parent *DirDoc, doctype DocType, docs interface{}) error {
+func fetchChildrenDeep(c *Context, parent *DirDoc, doctype DocType, docs interface{}) error {
 	req := &couchdb.FindRequest{
-		Selector: mango.Equal("folder_id", parent.ID()),
+		Selector: mango.StartWith("path", parent.Path+"/"),
 	}
 	return couchdb.FindDocs(c.db, string(doctype), req, docs)
 }
@@ -228,25 +228,27 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 // @TODO remove this method and use couchdb bulk updates instead
 func bulkUpdateDocsPath(c *Context, olddoc *DirDoc, newpath string) error {
 	var children []*DirDoc
-	err := fetchChildren(c, olddoc, FolderDocType, &children)
-	if err != nil {
+
+	err := fetchChildrenDeep(c, olddoc, FolderDocType, &children)
+	if err != nil || len(children) == 0 {
 		return err
 	}
 
-	if len(children) == 0 {
-		return nil
-	}
-
+	oldpath := path.Clean(olddoc.Path)
 	errc := make(chan error)
 
 	for _, child := range children {
 		go func(child *DirDoc) {
-			child.Path = path.Join(newpath, child.Name)
-			errc <- couchdb.UpdateDoc(c.db, child)
+			if !strings.HasPrefix(child.Path, oldpath+"/") {
+				errc <- fmt.Errorf("Child has wrong base directory")
+			} else {
+				child.Path = path.Join(newpath, child.Path[len(oldpath)+1:])
+				errc <- couchdb.UpdateDoc(c.db, child)
+			}
 		}(child)
 	}
 
-	for i := 0; i < len(children); i++ {
+	for range children {
 		if e := <-errc; e != nil {
 			err = e
 		}
