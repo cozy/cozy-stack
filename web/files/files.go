@@ -240,6 +240,8 @@ func ModificationHandler(c *gin.Context) {
 			doc, err = vfs.GetFileDocFromPath(vfsC, c.Query("path"))
 		case vfs.FolderDocType:
 			doc, err = vfs.GetDirectoryDocFromPath(vfsC, c.Query("path"))
+		default:
+			err = vfs.ErrDocTypeInvalid
 		}
 	} else {
 		switch docType {
@@ -247,6 +249,8 @@ func ModificationHandler(c *gin.Context) {
 			doc, err = vfs.GetFileDoc(vfsC, fileID)
 		case vfs.FolderDocType:
 			doc, err = vfs.GetDirectoryDoc(vfsC, fileID)
+		default:
+			err = vfs.ErrDocTypeInvalid
 		}
 	}
 
