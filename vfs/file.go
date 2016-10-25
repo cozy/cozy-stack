@@ -21,6 +21,9 @@ import (
 // FileDoc is a struct containing all the informations about a file.
 // It implements the couchdb.Doc and jsonapi.Object interfaces.
 type FileDoc struct {
+	// Type of document. Useful to (de)serialize and filter the data
+	// from couch.
+	Type string `json:"type"`
 	// Qualified file identifier
 	FID string `json:"_id,omitempty"`
 	// File revision
@@ -30,14 +33,15 @@ type FileDoc struct {
 	// Parent folder identifier
 	FolderID string `json:"folder_id"`
 
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-	Size       int64     `json:"size,string"`
-	Tags       []string  `json:"tags"`
-	MD5Sum     []byte    `json:"md5sum"`
-	Executable bool      `json:"executable"`
-	Class      string    `json:"class"`
-	Mime       string    `json:"mime"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	Size       int64    `json:"size,string"`
+	MD5Sum     []byte   `json:"md5sum"`
+	Mime       string   `json:"mime"`
+	Class      string   `json:"class"`
+	Executable bool     `json:"executable"`
+	Tags       []string `json:"tags"`
 
 	parent *DirDoc
 }
@@ -56,7 +60,7 @@ func (f *FileDoc) Rev() string {
 // DocType returns the file document type (part of couchdb.Doc
 // interface)
 func (f *FileDoc) DocType() string {
-	return string(FileDocType)
+	return FsDocType
 }
 
 // SetID is used to change the file qualified identifier (part of
@@ -83,7 +87,7 @@ func (f *FileDoc) Path(c *Context) (string, error) {
 	if f.FolderID == RootFolderID {
 		parentPath = "/"
 	} else if f.parent == nil {
-		parent, err := GetDirectoryDoc(c, f.FolderID)
+		parent, err := GetDirectoryDoc(c, f.FolderID, false)
 		if err != nil {
 			return "", err
 		}
@@ -105,7 +109,7 @@ func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
 			},
 			Data: jsonapi.ResourceIdentifier{
 				ID:   f.FolderID,
-				Type: FolderDocType,
+				Type: FsDocType,
 			},
 		},
 	}
@@ -130,6 +134,7 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 
 	createDate := time.Now()
 	doc = &FileDoc{
+		Type:     FileType,
 		Name:     name,
 		FolderID: folderID,
 
@@ -152,7 +157,7 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 // database.
 func GetFileDoc(c *Context, fileID string) (doc *FileDoc, err error) {
 	doc = &FileDoc{}
-	err = couchdb.GetDoc(c.db, string(FileDocType), fileID, doc)
+	err = couchdb.GetDoc(c.db, FsDocType, fileID, doc)
 	return doc, err
 }
 
@@ -165,7 +170,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 	dirpath := path.Dir(pth)
 	if dirpath != "/" {
 		var parent *DirDoc
-		parent, err = GetDirectoryDocFromPath(c, dirpath)
+		parent, err = GetDirectoryDocFromPath(c, dirpath, false)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +189,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 		Selector: selector,
 		Limit:    1,
 	}
-	err = couchdb.FindDocs(c.db, string(FileDocType), req, &docs)
+	err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
 	if err != nil {
 		return nil, err
 	}
@@ -456,3 +461,8 @@ func getFileMode(executable bool) (mode os.FileMode) {
 	}
 	return
 }
+
+var (
+	_ couchdb.Doc    = &FileDoc{}
+	_ jsonapi.Object = &FileDoc{}
+)

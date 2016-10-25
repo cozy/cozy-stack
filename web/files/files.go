@@ -5,6 +5,7 @@ package files
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -28,6 +29,15 @@ const TagSeparator = ","
 // files and directories by path.
 const MetadataPath = "metadata"
 
+const (
+	fileType   = "io.cozy.files"
+	folderType = "io.cozy.folders"
+)
+
+// ErrDocTypeInvalid is used when the document type sent is not
+// recognized
+var ErrDocTypeInvalid = errors.New("Invalid document type")
+
 // WrapVfsError returns a formatted error from a golang error emitted by the vfs
 func WrapVfsError(err error) *jsonapi.Error {
 	if jsonErr, isJSONApiError := err.(*jsonapi.Error); isJSONApiError {
@@ -47,12 +57,12 @@ func WrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.NotFound(err)
 	}
 	switch err {
+	case ErrDocTypeInvalid:
+		return jsonapi.InvalidAttribute("type", err)
 	case vfs.ErrParentDoesNotExist:
 		return jsonapi.NotFound(err)
 	case vfs.ErrForbiddenDocMove:
 		return jsonapi.PreconditionFailed("folder-id", err)
-	case vfs.ErrDocTypeInvalid:
-		return jsonapi.InvalidAttribute("type", err)
 	case vfs.ErrIllegalFilename:
 		return jsonapi.InvalidParameter("folder-id", err)
 	case vfs.ErrIllegalTime:
@@ -77,20 +87,14 @@ func CreationHandler(c *gin.Context) {
 		return
 	}
 
-	docType, err := vfs.ParseDocType(c.Query("Type"))
-	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
-		return
-	}
-
 	var doc jsonapi.Object
-	switch docType {
-	case vfs.FileDocType:
+	switch c.Query("Type") {
+	case fileType:
 		doc, err = createFileHandler(c, vfsC)
-	case vfs.FolderDocType:
+	case folderType:
 		doc, err = createDirectoryHandler(c, vfsC)
 	default:
-		err = vfs.ErrDocTypeInvalid
+		err = ErrDocTypeInvalid
 	}
 
 	if err != nil {
@@ -126,6 +130,7 @@ func createDirectoryHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.DirDoc,
 		c.Query("Name"),
 		c.Param("folder-id"),
 		strings.Split(c.Query("Tags"), TagSeparator),
+		nil,
 	)
 	if err != nil {
 		return
@@ -221,36 +226,31 @@ func ModificationHandler(c *gin.Context) {
 
 	fileID := c.Param("file-id")
 
-	var docType vfs.DocType
+	var docType string
 	if fileID == MetadataPath {
-		docType, err = vfs.ParseDocType(c.Query("Type"))
+		docType = c.Query("Type")
 	} else {
-		docType, err = vfs.ParseDocType(patchData.Type)
-	}
-
-	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
-		return
+		docType = patchData.Type
 	}
 
 	var doc couchdb.Doc
 	if fileID == MetadataPath {
 		switch docType {
-		case vfs.FileDocType:
-			doc, err = vfs.GetFileDocFromPath(vfsC, c.Query("path"))
-		case vfs.FolderDocType:
-			doc, err = vfs.GetDirectoryDocFromPath(vfsC, c.Query("path"))
+		case fileType:
+			doc, err = vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
+		case folderType:
+			doc, err = vfs.GetDirectoryDocFromPath(vfsC, c.Query("Path"), true)
 		default:
-			err = vfs.ErrDocTypeInvalid
+			err = ErrDocTypeInvalid
 		}
 	} else {
 		switch docType {
-		case vfs.FileDocType:
+		case fileType:
 			doc, err = vfs.GetFileDoc(vfsC, fileID)
-		case vfs.FolderDocType:
-			doc, err = vfs.GetDirectoryDoc(vfsC, fileID)
+		case folderType:
+			doc, err = vfs.GetDirectoryDoc(vfsC, fileID, true)
 		default:
-			err = vfs.ErrDocTypeInvalid
+			err = ErrDocTypeInvalid
 		}
 	}
 
@@ -291,13 +291,22 @@ func ReadMetadataHandler(c *gin.Context) {
 		return
 	}
 
-	fileDoc, err := vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
+	var data jsonapi.Object
+	switch c.Query("Type") {
+	case folderType:
+		data, err = vfs.GetDirectoryDocFromPath(vfsC, c.Query("Path"), true)
+	case fileType:
+		data, err = vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
+	default:
+		err = ErrDocTypeInvalid
+	}
+
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	jsonapi.Data(c, http.StatusOK, fileDoc, nil)
+	jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
 // ReadFileContentHandler handles all GET requests on /files/:file-id

@@ -17,16 +17,16 @@ import (
 const ForbiddenFilenameChars = "/\x00"
 
 // RootFolderID is the identifier of the root folder
-const RootFolderID = "io.cozy.folders-root"
+const RootFolderID = "io.cozy.files.rootdir"
 
-// DocType is the type of document, eg. file or folder
-type DocType string
+// FsDocType is document type
+const FsDocType = "io.cozy.files"
 
 const (
-	// FileDocType is document type
-	FileDocType DocType = "io.cozy.files"
-	// FolderDocType is document type
-	FolderDocType = "io.cozy.folders"
+	// DirType is the type attribute for directories
+	DirType = "directory"
+	// FileType is the type attribute for files
+	FileType = "file"
 )
 
 // DocMetaAttributes is a struct containing modifiable fields from
@@ -51,17 +51,13 @@ func NewContext(fs afero.Fs, dbprefix string) *Context {
 	return &Context{fs, dbprefix}
 }
 
-// ParseDocType is used to transform a string to a DocType.
-func ParseDocType(docType string) (result DocType, err error) {
-	switch docType {
-	case "io.cozy.files":
-		result = FileDocType
-	case "io.cozy.folders":
-		result = FolderDocType
-	default:
-		err = ErrDocTypeInvalid
+// @TODO: do a fetch from couchdb when instance creation is ok.
+func getRootDirDoc() *DirDoc {
+	return &DirDoc{
+		DID:  RootFolderID,
+		DRev: "1-",
+		Path: "/",
 	}
-	return
 }
 
 func checkFileName(str string) error {
@@ -86,7 +82,7 @@ func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirD
 	if folderID == "" || folderID == RootFolderID {
 		parentPath = "/"
 	} else {
-		parentDoc, err = GetDirectoryDoc(c, folderID)
+		parentDoc, err = GetDirectoryDoc(c, folderID, false)
 		if err != nil {
 			return
 		}

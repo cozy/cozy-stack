@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -17,6 +18,9 @@ import (
 // directory. It implements the couchdb.Doc and jsonapi.Object
 // interfaces.
 type DirDoc struct {
+	// Type of document. Useful to (de)serialize and filter the data
+	// from couch.
+	Type string `json:"type"`
 	// Qualified file identifier
 	DID string `json:"_id,omitempty"`
 	// Directory revision
@@ -25,12 +29,17 @@ type DirDoc struct {
 	Name string `json:"name"`
 	// Parent folder identifier
 	FolderID string `json:"folder_id"`
-	// Directory path on VFS
-	Path string `json:"path"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	Tags      []string  `json:"tags"`
+
+	// Directory path on VFS
+	Path string   `json:"path"`
+	Tags []string `json:"tags"`
+
+	parent *DirDoc
+	files  []*FileDoc
+	dirs   []*DirDoc
 }
 
 // ID returns the directory qualified identifier (part of couchdb.Doc interface)
@@ -46,7 +55,7 @@ func (d *DirDoc) Rev() string {
 // DocType returns the directory document type (part of couchdb.Doc
 // interface)
 func (d *DirDoc) DocType() string {
-	return string(FolderDocType)
+	return FsDocType
 }
 
 // SetID is used to change the directory qualified identifier (part of
@@ -69,26 +78,66 @@ func (d *DirDoc) SelfLink() string {
 
 // Relationships is used to generate the content relationship in JSON-API format
 // (part of the jsonapi.Object interface)
+//
+// TODO: pagination
 func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
-	// TODO
-	return jsonapi.RelationshipMap{}
+	l := len(d.files) + len(d.dirs)
+	i := 0
+
+	data := make([]jsonapi.ResourceIdentifier, l)
+	for _, child := range d.dirs {
+		data[i] = jsonapi.ResourceIdentifier{ID: child.ID(), Type: child.DocType()}
+		i++
+	}
+
+	for _, child := range d.files {
+		data[i] = jsonapi.ResourceIdentifier{ID: child.ID(), Type: child.DocType()}
+		i++
+	}
+
+	contents := jsonapi.Relationship{Data: data}
+
+	var parent jsonapi.Relationship
+	if d.ID() != RootFolderID {
+		parent = jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Related: "/files/" + d.FolderID,
+			},
+			Data: jsonapi.ResourceIdentifier{
+				ID:   d.FolderID,
+				Type: FsDocType,
+			},
+		}
+	}
+
+	return jsonapi.RelationshipMap{
+		"parent":   parent,
+		"contents": contents,
+	}
 }
 
 // Included is part of the jsonapi.Object interface
 func (d *DirDoc) Included() []jsonapi.Object {
-	// TODO
-	return []jsonapi.Object{}
+	var included []jsonapi.Object
+	for _, child := range d.dirs {
+		included = append(included, child)
+	}
+	for _, child := range d.files {
+		included = append(included, child)
+	}
+	return included
 }
 
-func fetchChildrenDeep(c *Context, parent *DirDoc, doctype DocType, docs interface{}) error {
-	req := &couchdb.FindRequest{
-		Selector: mango.StartWith("path", parent.Path+"/"),
-	}
-	return couchdb.FindDocs(c.db, string(doctype), req, docs)
+// FetchFiles is used to fetch direct children of the directory.
+//
+// @TODO: add pagination control
+func (d *DirDoc) FetchFiles(c *Context) (err error) {
+	d.files, d.dirs, err = fetchChildren(c, d)
+	return err
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
-func NewDirDoc(name, folderID string, tags []string) (doc *DirDoc, err error) {
+func NewDirDoc(name, folderID string, tags []string, parent *DirDoc) (doc *DirDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
@@ -97,14 +146,21 @@ func NewDirDoc(name, folderID string, tags []string) (doc *DirDoc, err error) {
 		folderID = RootFolderID
 	}
 
+	if folderID == RootFolderID && parent == nil {
+		parent = getRootDirDoc()
+	}
+
 	createDate := time.Now()
 	doc = &DirDoc{
+		Type:     DirType,
 		Name:     name,
 		FolderID: folderID,
 
 		CreatedAt: createDate,
 		UpdatedAt: createDate,
 		Tags:      tags,
+
+		parent: parent,
 	}
 
 	return
@@ -112,31 +168,48 @@ func NewDirDoc(name, folderID string, tags []string) (doc *DirDoc, err error) {
 
 // GetDirectoryDoc is used to fetch directory document information
 // form the database.
-func GetDirectoryDoc(c *Context, fileID string) (doc *DirDoc, err error) {
-	doc = &DirDoc{}
-	err = couchdb.GetDoc(c.db, string(FolderDocType), fileID, doc)
+func GetDirectoryDoc(c *Context, fileID string, withChildren bool) (*DirDoc, error) {
+	if fileID == RootFolderID {
+		return getRootDirDoc(), nil
+	}
+	doc := &DirDoc{}
+	err := couchdb.GetDoc(c.db, FsDocType, fileID, doc)
 	if couchdb.IsNotFoundError(err) {
 		err = ErrParentDoesNotExist
 	}
-	return
+	if err != nil {
+		return nil, err
+	}
+	if withChildren {
+		err = doc.FetchFiles(c)
+	}
+	return doc, err
 }
 
 // GetDirectoryDocFromPath is used to fetch directory document information from
 // the database from its path.
-func GetDirectoryDocFromPath(c *Context, pth string) (*DirDoc, error) {
-	var docs []*DirDoc
-	req := &couchdb.FindRequest{
-		Selector: mango.Equal("path", path.Clean(pth)),
-		Limit:    1,
+func GetDirectoryDocFromPath(c *Context, pth string, withChildren bool) (*DirDoc, error) {
+	var doc *DirDoc
+	var err error
+	if pth == "/" {
+		doc = getRootDirDoc()
+	} else {
+		var docs []*DirDoc
+		sel := mango.Equal("path", path.Clean(pth))
+		req := &couchdb.FindRequest{Selector: sel, Limit: 1}
+		err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
+		if err != nil {
+			return nil, err
+		}
+		if len(docs) == 0 {
+			return nil, os.ErrNotExist
+		}
+		doc = docs[0]
 	}
-	err := couchdb.FindDocs(c.db, string(FolderDocType), req, &docs)
-	if err != nil {
-		return nil, err
+	if withChildren {
+		err = doc.FetchFiles(c)
 	}
-	if len(docs) == 0 {
-		return nil, os.ErrNotExist
-	}
-	return docs[0], nil
+	return doc, err
 }
 
 // CreateDirectory is the method for creating a new directory
@@ -171,10 +244,11 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 	tags := olddoc.Tags
 	folderID := olddoc.FolderID
 	mdate := olddoc.UpdatedAt
+	parent := olddoc.parent
 
 	if data.FolderID != nil && *data.FolderID != folderID {
 		folderID = *data.FolderID
-		pth, _, err = getFilePath(c, name, folderID)
+		pth, parent, err = getFilePath(c, name, folderID)
 		if err != nil {
 			return
 		}
@@ -198,7 +272,7 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 		return
 	}
 
-	newdoc, err = NewDirDoc(name, folderID, tags)
+	newdoc, err = NewDirDoc(name, folderID, tags, parent)
 	if err != nil {
 		return
 	}
@@ -208,6 +282,8 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 	newdoc.CreatedAt = olddoc.CreatedAt
 	newdoc.UpdatedAt = mdate
 	newdoc.Path = pth
+	newdoc.files = olddoc.files
+	newdoc.dirs = olddoc.dirs
 
 	if pth != olddoc.Path {
 		err = renameDirectory(olddoc.Path, pth, c.fs)
@@ -227,14 +303,16 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 
 // @TODO remove this method and use couchdb bulk updates instead
 func bulkUpdateDocsPath(c *Context, olddoc *DirDoc, newpath string) error {
-	var children []*DirDoc
+	oldpath := path.Clean(olddoc.Path)
 
-	err := fetchChildrenDeep(c, olddoc, FolderDocType, &children)
+	var children []*DirDoc
+	sel := mango.StartWith("path", oldpath+"/")
+	req := &couchdb.FindRequest{Selector: sel}
+	err := couchdb.FindDocs(c.db, FsDocType, req, &children)
 	if err != nil || len(children) == 0 {
 		return err
 	}
 
-	oldpath := path.Clean(olddoc.Path)
 	errc := make(chan error)
 
 	for _, child := range children {
@@ -257,6 +335,45 @@ func bulkUpdateDocsPath(c *Context, olddoc *DirDoc, newpath string) error {
 	return err
 }
 
+func fetchChildren(c *Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc, err error) {
+	var docs []json.RawMessage
+	sel := mango.Equal("folder_id", parent.ID())
+	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
+	err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
+	if err != nil {
+		return
+	}
+
+	var t struct {
+		Type string `json:"type"`
+	}
+
+	// @NOTE: this unmarshaling technique is very slow...
+	for _, raw := range docs {
+		if err = json.Unmarshal(raw, &t); err != nil {
+			break
+		}
+		switch t.Type {
+		case FileType:
+			var file *FileDoc
+			if err = json.Unmarshal(raw, &file); err != nil {
+				break
+			}
+			file.parent = parent
+			files = append(files, file)
+		case DirType:
+			var dir *DirDoc
+			if err = json.Unmarshal(raw, &dir); err != nil {
+				break
+			}
+			dir.parent = parent
+			dirs = append(dirs, dir)
+		}
+	}
+
+	return
+}
+
 func renameDirectory(oldpath, newpath string, fs afero.Fs) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
@@ -271,3 +388,8 @@ func renameDirectory(oldpath, newpath string, fs afero.Fs) error {
 
 	return fs.Rename(oldpath, newpath)
 }
+
+var (
+	_ couchdb.Doc    = &DirDoc{}
+	_ jsonapi.Object = &DirDoc{}
+)
