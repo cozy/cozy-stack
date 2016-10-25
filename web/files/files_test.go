@@ -776,8 +776,14 @@ func TestMain(m *testing.M) {
 	router.POST("/files/:folder-id", CreationHandler)
 	router.PATCH("/files/:file-id", ModificationHandler)
 	router.PUT("/files/:file-id", OverwriteFileContentHandler)
-	router.HEAD("/files/:file-id", ReadFileHandler)
-	router.GET("/files/:file-id", ReadFileHandler)
+	router.HEAD("/files/:file-id", ReadFileContentHandler)
+	router.GET("/files/:file-id", func(c *gin.Context) {
+		if c.Param("file-id") == MetadataPath {
+			ReadMetadataHandler(c)
+		} else {
+			ReadFileContentHandler(c)
+		}
+	})
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())

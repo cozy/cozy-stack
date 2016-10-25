@@ -279,25 +279,6 @@ func ModificationHandler(c *gin.Context) {
 	jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
-// ReadFileHandler handles all GET requests on /files/:file-id,
-// /files/download and /files/metadata and dispatches to the right
-// handler. See ReadMetadataHandler and ReadFileContentHandler.
-//
-// @TODO: get rid of this handler which should be split in two
-// distinct handlers on the router level. This is not handled properly
-// by httprouter-v1.
-func ReadFileHandler(c *gin.Context) {
-	fileID := c.Param("file-id")
-
-	// Path /files/metadata is handled specifically to read file
-	// metadata informations
-	if fileID == MetadataPath {
-		ReadMetadataHandler(c)
-	} else {
-		ReadFileContentHandler(c)
-	}
-}
-
 // ReadMetadataHandler handles all GET requests on /files/metadata
 // aiming at getting file metadata from its path.
 //
@@ -365,8 +346,16 @@ func ReadFileContentHandler(c *gin.Context) {
 
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
-	router.HEAD("/:file-id", ReadFileHandler)
-	router.GET("/:file-id", ReadFileHandler)
+	// @TODO: get rid of this handler when switching to
+	// echo/httprouterv2.
+	router.GET("/:file-id", func(c *gin.Context) {
+		if c.Param("file-id") == MetadataPath {
+			ReadMetadataHandler(c)
+		} else {
+			ReadFileContentHandler(c)
+		}
+	})
+	router.HEAD("/:file-id", ReadFileContentHandler)
 
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
