@@ -282,6 +282,10 @@ func ModificationHandler(c *gin.Context) {
 // ReadFileHandler handles all GET requests on /files/:file-id,
 // /files/download and /files/metadata and dispatches to the right
 // handler. See ReadMetadataHandler and ReadFileContentHandler.
+//
+// @TODO: get rid of this handler which should be split in two
+// distinct handlers on the router level. This is not handled properly
+// by httprouter-v1.
 func ReadFileHandler(c *gin.Context) {
 	fileID := c.Param("file-id")
 
