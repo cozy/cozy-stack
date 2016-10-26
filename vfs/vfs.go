@@ -39,6 +39,44 @@ type DocMetaAttributes struct {
 	Executable *bool      `json:"executable,omitempty"`
 }
 
+// dirOrFile is a union struct of FileDoc and DirDoc. It is useful to
+// unmarshal documents from couch.
+type dirOrFile struct {
+	DirDoc
+
+	// fields from FileDoc not contained in DirDoc
+	Size       int64  `json:"size,string"`
+	MD5Sum     []byte `json:"md5sum"`
+	Mime       string `json:"mime"`
+	Class      string `json:"class"`
+	Executable bool   `json:"executable"`
+}
+
+func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
+	typ = fd.Type
+	switch typ {
+	case DirType:
+		dir = &fd.DirDoc
+	case FileType:
+		file = &FileDoc{
+			Type:       fd.Type,
+			ObjID:      fd.ObjID,
+			ObjRev:     fd.ObjRev,
+			Name:       fd.Name,
+			FolderID:   fd.FolderID,
+			CreatedAt:  fd.CreatedAt,
+			UpdatedAt:  fd.UpdatedAt,
+			Size:       fd.Size,
+			MD5Sum:     fd.MD5Sum,
+			Mime:       fd.Mime,
+			Class:      fd.Class,
+			Executable: fd.Executable,
+			Tags:       fd.Tags,
+		}
+	}
+	return
+}
+
 // Context is used to convey the afero.Fs object along with the
 // CouchDb database prefix.
 type Context struct {
@@ -54,9 +92,9 @@ func NewContext(fs afero.Fs, dbprefix string) *Context {
 // @TODO: do a fetch from couchdb when instance creation is ok.
 func getRootDirDoc() *DirDoc {
 	return &DirDoc{
-		DID:  RootFolderID,
-		DRev: "1-",
-		Path: "/",
+		ObjID:  RootFolderID,
+		ObjRev: "1-",
+		Path:   "/",
 	}
 }
 

@@ -25,9 +25,9 @@ type FileDoc struct {
 	// from couch.
 	Type string `json:"type"`
 	// Qualified file identifier
-	FID string `json:"_id,omitempty"`
+	ObjID string `json:"_id,omitempty"`
 	// File revision
-	FRev string `json:"_rev,omitempty"`
+	ObjRev string `json:"_rev,omitempty"`
 	// File name
 	Name string `json:"name"`
 	// Parent folder identifier
@@ -49,12 +49,12 @@ type FileDoc struct {
 // ID returns the file qualified identifier (part of couchdb.Doc
 // interface)
 func (f *FileDoc) ID() string {
-	return f.FID
+	return f.ObjID
 }
 
 // Rev returns the file revision (part of couchdb.Doc interface)
 func (f *FileDoc) Rev() string {
-	return f.FRev
+	return f.ObjRev
 }
 
 // DocType returns the file document type (part of couchdb.Doc
@@ -66,19 +66,19 @@ func (f *FileDoc) DocType() string {
 // SetID is used to change the file qualified identifier (part of
 // couchdb.Doc interface)
 func (f *FileDoc) SetID(id string) {
-	f.FID = id
+	f.ObjID = id
 }
 
 // SetRev is used to change the file revision (part of couchdb.Doc
 // interface)
 func (f *FileDoc) SetRev(rev string) {
-	f.FRev = rev
+	f.ObjRev = rev
 }
 
 // SelfLink is used to generate a JSON-API link for the file (part of
 // jsonapi.Object interface)
 func (f *FileDoc) SelfLink() string {
-	return "/files/" + f.FID
+	return "/files/" + f.ObjID
 }
 
 // Path is used to generate the file path

@@ -1,7 +1,6 @@
 package vfs
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -22,9 +21,9 @@ type DirDoc struct {
 	// from couch.
 	Type string `json:"type"`
 	// Qualified file identifier
-	DID string `json:"_id,omitempty"`
+	ObjID string `json:"_id,omitempty"`
 	// Directory revision
-	DRev string `json:"_rev,omitempty"`
+	ObjRev string `json:"_rev,omitempty"`
 	// Directory name
 	Name string `json:"name"`
 	// Parent folder identifier
@@ -44,12 +43,12 @@ type DirDoc struct {
 
 // ID returns the directory qualified identifier (part of couchdb.Doc interface)
 func (d *DirDoc) ID() string {
-	return d.DID
+	return d.ObjID
 }
 
 // Rev returns the directory revision (part of couchdb.Doc interface)
 func (d *DirDoc) Rev() string {
-	return d.DRev
+	return d.ObjRev
 }
 
 // DocType returns the directory document type (part of couchdb.Doc
@@ -61,19 +60,19 @@ func (d *DirDoc) DocType() string {
 // SetID is used to change the directory qualified identifier (part of
 // couchdb.Doc interface)
 func (d *DirDoc) SetID(id string) {
-	d.DID = id
+	d.ObjID = id
 }
 
 // SetRev is used to change the directory revision (part of
 // couchdb.Doc interface)
 func (d *DirDoc) SetRev(rev string) {
-	d.DRev = rev
+	d.ObjRev = rev
 }
 
 // SelfLink is used to generate a JSON-API link for the directory (part of
 // jsonapi.Object interface)
 func (d *DirDoc) SelfLink() string {
-	return "/files/" + d.DID
+	return "/files/" + d.ObjID
 }
 
 // Relationships is used to generate the content relationship in JSON-API format
@@ -336,7 +335,7 @@ func bulkUpdateDocsPath(c *Context, olddoc *DirDoc, newpath string) error {
 }
 
 func fetchChildren(c *Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc, err error) {
-	var docs []json.RawMessage
+	var docs []*dirOrFile
 	sel := mango.Equal("folder_id", parent.ID())
 	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
 	err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
@@ -344,28 +343,13 @@ func fetchChildren(c *Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc
 		return
 	}
 
-	var t struct {
-		Type string `json:"type"`
-	}
-
-	// @NOTE: this unmarshaling technique is very slow...
-	for _, raw := range docs {
-		if err = json.Unmarshal(raw, &t); err != nil {
-			break
-		}
-		switch t.Type {
+	for _, doc := range docs {
+		typ, dir, file := doc.refine()
+		switch typ {
 		case FileType:
-			var file *FileDoc
-			if err = json.Unmarshal(raw, &file); err != nil {
-				break
-			}
 			file.parent = parent
 			files = append(files, file)
 		case DirType:
-			var dir *DirDoc
-			if err = json.Unmarshal(raw, &dir); err != nil {
-				break
-			}
 			dir.parent = parent
 			dirs = append(dirs, dir)
 		}
