@@ -66,7 +66,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineIndex(TestPrefix, FsDocType, mango.IndexOnFields("folder_id", "name", "path"))
+	err = couchdb.DefineIndex(TestPrefix, FsDocType, mango.IndexOnFields("folder_id", "name"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
