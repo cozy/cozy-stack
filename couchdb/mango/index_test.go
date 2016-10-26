@@ -8,8 +8,8 @@ import (
 )
 
 func TestIndexMarshaling(t *testing.T) {
-	def := IndexOnFields("folderID", "name")
+	def := IndexOnFields("folder_id", "name")
 	jsonbytes, _ := json.Marshal(def)
-	expected := `{"index":{"fields":["folderID","name"]}}`
+	expected := `{"index":{"fields":["folder_id","name"]}}`
 	assert.Equal(t, expected, string(jsonbytes), "index should MarshalJSON properly")
 }

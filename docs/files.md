@@ -54,10 +54,11 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ```json
 {
   "data": {
-    "type": "io.cozy.folders",
+    "type": "io.cozy.files",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "rev": "1-ff3beeb456eb",
     "attributes": {
+      "type": "directory",
       "name": "phone",
       "created_at": "2016-09-19T12:35:08Z",
       "updated_at": "2016-09-19T12:35:08Z",
@@ -69,7 +70,7 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -113,10 +114,11 @@ Content-Type: application/vnd.api+json
     "next": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
   },
   "data": {
-    "type": "io.cozy.folders",
+    "type": "io.cozy.files",
     "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
     "rev": "1-e36ab092",
     "attributes": {
+      "type": "directory",
       "name": "Documents",
       "created_at": "2016-09-19T12:35:00Z",
       "updated_at": "2016-09-19T12:35:00Z",
@@ -125,7 +127,7 @@ Content-Type: application/vnd.api+json
     "relationships": {
       "contents": {
         "data": [
-          { "type": "io.cozy.folders", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
+          { "type": "io.cozy.files", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
           { "type": "io.cozy.files", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
         ]
       }
@@ -135,10 +137,11 @@ Content-Type: application/vnd.api+json
     }
   },
   "included": [{
-    "type": "io.cozy.folders",
+    "type": "io.cozy.files",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "rev": "1-ff3beeb456eb",
     "attributes": {
+      "type": "directory",
       "name": "phone",
       "created_at": "2016-09-19T12:35:08Z",
       "updated_at": "2016-09-19T12:35:08Z",
@@ -150,7 +153,7 @@ Content-Type: application/vnd.api+json
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -163,6 +166,7 @@ Content-Type: application/vnd.api+json
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "rev": "1-0e6d5b72",
     "attributes": {
+      "type": "file",
       "name": "hello.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -179,7 +183,7 @@ Content-Type: application/vnd.api+json
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -259,6 +263,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "rev": "1-0e6d5b72",
     "attributes": {
+      "type": "file",
       "name": "hello.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -275,7 +280,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -369,6 +374,7 @@ Content-Type: application/vnd.api+json
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "rev": "2-d903b54c",
     "attributes": {
+      "type": "file",
       "name": "hello.txt",
       "md5sum": "b59bc37d6441d96785bda7ab2ae98f75",
       "created_at": "2016-09-19T12:38:04Z",
@@ -385,7 +391,7 @@ Content-Type: application/vnd.api+json
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -430,6 +436,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "rev": "1-0e6d5b72",
     "attributes": {
+      "type": "file",
       "name": "hello.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -446,7 +453,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         },
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       }
@@ -485,13 +492,14 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "attributes": {
+      "type": "file",
       "name": "hi.txt",
       "tags": ["poem"]
     },
     "relationships": {
       "parent": {
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
         }
       }
@@ -523,6 +531,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "rev": "1-0e6d5b72",
     "attributes": {
+      "type": "file",
       "name": "hi.txt",
       "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
       "created_at": "2016-09-19T12:38:04Z",
@@ -539,7 +548,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "related": "/files/f2f36fec-8018-11e6-abd8-8b3814d9a465"
         },
         "data": {
-          "type": "io.cozy.folders",
+          "type": "io.cozy.files",
           "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
         }
       }
@@ -615,6 +624,7 @@ Content-Type: application/vnd.api+json
     "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
     "rev": "1-3b75377c",
     "attributes": {
+      "type": "file",
       "name": "foo.txt",
       "md5sum": "b01341e7803c800cc8db4de46f377a87",
       "created_at": "2016-09-19T12:38:04Z",
@@ -633,6 +643,7 @@ Content-Type: application/vnd.api+json
     "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
     "rev": "1-4a09030e",
     "attributes": {
+      "type": "file",
       "name": "bar.txt",
       "md5sum": "aeab87eb49d3f4e0e5625ada9b49f8e1",
       "created_at": "2016-09-19T12:38:04Z",

@@ -145,24 +145,23 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		return newConnectionError(err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	// Possible err = mostly connection failure (hangup)
-	if err != nil {
-		return newIOReadError(err)
-	}
-
-	fmt.Printf("[couchdb response] %v\n", string(body))
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// Couchdb as returned an error HTTP status code
-		return newCouchdbError(resp.StatusCode, body)
+		var body []byte
+		body, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			err = newIOReadError(err)
+		} else {
+			err = newCouchdbError(resp.StatusCode, body)
+		}
+		fmt.Printf("[couchdb error] %v\n", err.Error())
+		return err
 	}
 
-	if resbody == nil {
-		// dont care about the return value
-		return nil
+	if resbody != nil {
+		err = json.NewDecoder(resp.Body).Decode(&resbody)
 	}
-	err = json.Unmarshal(body, &resbody)
+
 	return err
 }
 

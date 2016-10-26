@@ -713,14 +713,33 @@ func TestDownloadRangeSuccess(t *testing.T) {
 }
 
 func TestGetFileMetadata(t *testing.T) {
-	res1, _ := http.Get(ts.URL + "/files/metadata?Path=/noooooop")
+	res1, _ := http.Get(ts.URL + "/files/metadata?Path=/noooooop&Type=io.cozy.files")
 	assert.Equal(t, 404, res1.StatusCode)
 
 	body := "foo,bar"
 	res2, _ := upload(t, "/files/?Type=io.cozy.files&Name=getmetadata", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getmetadata")
+	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getmetadata&Type=io.cozy.files")
+	assert.Equal(t, 200, res3.StatusCode)
+}
+
+func TestGetDirectoryMetadata(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=getdirmeta&Type=io.cozy.folders")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	var ok bool
+	data1, ok = data1["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	parentID, ok := data1["id"].(string)
+	assert.True(t, ok)
+
+	body := "foo"
+	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=firstfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getdirmeta&Type=io.cozy.folders")
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
@@ -732,24 +751,25 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.ResetDB(TestPrefix, string(vfs.FileDocType))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	err = couchdb.ResetDB(TestPrefix, string(vfs.FolderDocType))
+	err = couchdb.ResetDB(TestPrefix, string(vfs.FsDocType))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndex(TestPrefix, string(vfs.FolderDocType), mango.IndexOnFields("folder_id", "path"))
+	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("folder_id", "name"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndex(TestPrefix, string(vfs.FileDocType), mango.IndexOnFields("folder_id", "name"))
+	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("path"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("folder_id"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

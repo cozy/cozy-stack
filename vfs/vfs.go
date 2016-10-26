@@ -17,16 +17,16 @@ import (
 const ForbiddenFilenameChars = "/\x00"
 
 // RootFolderID is the identifier of the root folder
-const RootFolderID = "io.cozy.folders-root"
+const RootFolderID = "io.cozy.files.rootdir"
 
-// DocType is the type of document, eg. file or folder
-type DocType string
+// FsDocType is document type
+const FsDocType = "io.cozy.files"
 
 const (
-	// FileDocType is document type
-	FileDocType DocType = "io.cozy.files"
-	// FolderDocType is document type
-	FolderDocType = "io.cozy.folders"
+	// DirType is the type attribute for directories
+	DirType = "directory"
+	// FileType is the type attribute for files
+	FileType = "file"
 )
 
 // DocMetaAttributes is a struct containing modifiable fields from
@@ -37,6 +37,44 @@ type DocMetaAttributes struct {
 	Tags       []string   `json:"tags,omitempty"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 	Executable *bool      `json:"executable,omitempty"`
+}
+
+// dirOrFile is a union struct of FileDoc and DirDoc. It is useful to
+// unmarshal documents from couch.
+type dirOrFile struct {
+	DirDoc
+
+	// fields from FileDoc not contained in DirDoc
+	Size       int64  `json:"size,string"`
+	MD5Sum     []byte `json:"md5sum"`
+	Mime       string `json:"mime"`
+	Class      string `json:"class"`
+	Executable bool   `json:"executable"`
+}
+
+func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
+	typ = fd.Type
+	switch typ {
+	case DirType:
+		dir = &fd.DirDoc
+	case FileType:
+		file = &FileDoc{
+			Type:       fd.Type,
+			ObjID:      fd.ObjID,
+			ObjRev:     fd.ObjRev,
+			Name:       fd.Name,
+			FolderID:   fd.FolderID,
+			CreatedAt:  fd.CreatedAt,
+			UpdatedAt:  fd.UpdatedAt,
+			Size:       fd.Size,
+			MD5Sum:     fd.MD5Sum,
+			Mime:       fd.Mime,
+			Class:      fd.Class,
+			Executable: fd.Executable,
+			Tags:       fd.Tags,
+		}
+	}
+	return
 }
 
 // Context is used to convey the afero.Fs object along with the
@@ -51,17 +89,13 @@ func NewContext(fs afero.Fs, dbprefix string) *Context {
 	return &Context{fs, dbprefix}
 }
 
-// ParseDocType is used to transform a string to a DocType.
-func ParseDocType(docType string) (result DocType, err error) {
-	switch docType {
-	case "io.cozy.files":
-		result = FileDocType
-	case "io.cozy.folders":
-		result = FolderDocType
-	default:
-		err = ErrDocTypeInvalid
+// @TODO: do a fetch from couchdb when instance creation is ok.
+func getRootDirDoc() *DirDoc {
+	return &DirDoc{
+		ObjID:  RootFolderID,
+		ObjRev: "1-",
+		Path:   "/",
 	}
-	return
 }
 
 func checkFileName(str string) error {
@@ -86,7 +120,7 @@ func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirD
 	if folderID == "" || folderID == RootFolderID {
 		parentPath = "/"
 	} else {
-		parentDoc, err = GetDirectoryDoc(c, folderID)
+		parentDoc, err = GetDirectoryDoc(c, folderID, false)
 		if err != nil {
 			return
 		}

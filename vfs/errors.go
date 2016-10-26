@@ -9,9 +9,6 @@ var (
 	// ErrForbiddenDocMove is used when trying to move a document in an
 	// illicit destination
 	ErrForbiddenDocMove = errors.New("Forbidden document move")
-	// ErrDocTypeInvalid is used when the document type sent is not
-	// recognized
-	ErrDocTypeInvalid = errors.New("Invalid document type")
 	// ErrIllegalFilename is used when the given filename is not allowed
 	ErrIllegalFilename = errors.New("Invalid filename: empty or contains an illegal character")
 	// ErrIllegalTime is used when a time given (creation or

@@ -36,7 +36,7 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := NewDirDoc("container", "", nil)
+	dir, _ := NewDirDoc("container", "", nil, nil)
 	err := CreateDirectory(vfsC, dir)
 	assert.NoError(t, err)
 
@@ -61,22 +61,12 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	err = couchdb.ResetDB(TestPrefix, string(FileDocType))
+	err = couchdb.ResetDB(TestPrefix, FsDocType)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = couchdb.ResetDB(TestPrefix, string(FolderDocType))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	err = couchdb.DefineIndex(TestPrefix, string(FolderDocType), mango.IndexOnFields("path"))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	err = couchdb.DefineIndex(TestPrefix, string(FileDocType), mango.IndexOnFields("folder_id", "name"))
+	err = couchdb.DefineIndex(TestPrefix, FsDocType, mango.IndexOnFields("folder_id", "name"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
