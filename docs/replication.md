@@ -105,6 +105,8 @@ Depending on benchmarking, we can do some optimization on the feed:
 - close feeds when the user is not on screen
 - multiplex different applications' feed, so each open cozy will only use one socket to the server. This is hard, as all apps live on separate domain, an (hackish) option might be a iframe/SharedWorker bridge.
 
+To have some form of couchdb-to-stack continuous changes monitoring, we can monitor `_db_udpates` [(Doc)](http://docs.couchdb.org/en/2.0.0/api/server/common.html#db-updates) which gives us an update when a couchdb has changed. We can then perform a `_changes` query on this database to get the changed docs and proxy that to the stack-to-client change feed.
+
 **Conclusion:** We will use Websocket from the client to the stack. We will try to avoid using continuous changes feed from couchdb to the stack. We will optimize if proven needed by benchmarks, starting with "useless" changes and eventually some multiplexing.
 
 ## Sharing
