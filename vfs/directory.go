@@ -373,6 +373,11 @@ func renameDirectory(oldpath, newpath string, fs afero.Fs) error {
 		return ErrForbiddenDocMove
 	}
 
+	_, err := GetDirOrFileDocFromPath(c, newpath, nil)
+	if !os.IsNotExist(err) {
+		return os.ErrExist
+	}
+
 	return fs.Rename(oldpath, newpath)
 }
 

@@ -457,6 +457,11 @@ func renameFile(oldpath, newpath string, fs afero.Fs) error {
 		return fmt.Errorf("renameFile: paths should be absolute")
 	}
 
+	_, err := GetDirOrFileDocFromPath(c, newpath, nil)
+	if !os.IsNotExist(err) {
+		return os.ErrExist
+	}
+
 	return fs.Rename(oldpath, newpath)
 }
 
