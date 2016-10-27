@@ -6,13 +6,18 @@
 package vfs
 
 import (
+	mimetype "mime"
 	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
+
+// DefaultContentType is used for files uploaded with no content-type
+const DefaultContentType = "application/octet-stream"
 
 // ForbiddenFilenameChars is the list of forbidden characters in a filename.
 const ForbiddenFilenameChars = "/\x00"
@@ -128,6 +133,139 @@ type Context struct {
 // NewContext is the constructor function for Context
 func NewContext(fs afero.Fs, dbprefix string) *Context {
 	return &Context{fs, dbprefix}
+}
+
+func (c *Context) Stat(pth string) (os.FileInfo, error) {
+	return c.fs.Stat(pth)
+}
+
+func (c *Context) Open(pth string) (afero.File, error) {
+	return c.fs.Open(pth)
+}
+
+func (c *Context) ReadDir(pth string) ([]os.FileInfo, error) {
+	return afero.ReadDir(c.fs, pth)
+}
+
+func (c *Context) Create(pth string) (*FileCreation, error) {
+	pth = path.Clean(pth)
+
+	filename, dirpath := path.Base(pth), path.Dir(pth)
+	parent, err := GetDirDocFromPath(c, dirpath, false)
+	if err != nil {
+		return nil, err
+	}
+
+	exec := false
+	extn := path.Ext(pth)
+	mime, class := ExtractMimeAndClass(mimetype.TypeByExtension(extn))
+
+	doc, err := NewFileDoc(filename, parent.ID(), -1, nil, mime, class, exec, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateFile(c, doc, nil)
+}
+
+func (c *Context) Mkdir(pth string) error {
+	pth = path.Clean(pth)
+	if pth == "/" {
+		return nil
+	}
+
+	dirname, dirpath := path.Base(pth), path.Dir(pth)
+	parent, err := GetDirDocFromPath(c, dirpath, false)
+	if err != nil {
+		return err
+	}
+
+	dir, err := NewDirDoc(dirname, parent.ID(), nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return CreateDirectory(c, dir)
+}
+
+func (c *Context) MkdirAll(pth string) error {
+	var err error
+	var dirs []string
+	var base, file string
+	var parent *DirDoc
+
+	base = pth
+	for {
+		parent, err = GetDirDocFromPath(c, base, false)
+		if os.IsNotExist(err) {
+			base, file = path.Dir(base), path.Base(base)
+			dirs = append(dirs, file)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		base = path.Dir(pth)
+		break
+	}
+
+	for i := len(dirs) - 1; i >= 0; i-- {
+		parent, err = NewDirDoc(dirs[i], parent.ID(), nil, parent)
+		if err == nil {
+			err = CreateDirectory(c, parent)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Context) Rename(oldpath, newpath string) error {
+	typ, dir, file, err := GetDirOrFileDocFromPath(c, oldpath, false)
+	if err != nil {
+		return err
+	}
+
+	// simple rename
+	if path.Dir(oldpath) == path.Dir(newpath) {
+		newname := path.Base(newpath)
+		patch := &DocPatch{Name: &newname}
+		switch typ {
+		case FileType:
+			_, err = ModifyFileMetadata(c, file, patch)
+		case DirType:
+			_, err = ModifyDirMetadata(c, dir, patch)
+		}
+	} else {
+		// @TODO
+	}
+
+	return err
+}
+
+func ExtractMimeAndClass(contentType string) (mime, class string) {
+	if contentType == "" {
+		contentType = DefaultContentType
+	}
+
+	charsetIndex := strings.Index(contentType, ";")
+	if charsetIndex >= 0 {
+		mime = contentType[:charsetIndex]
+	} else {
+		mime = contentType
+	}
+
+	// @TODO improve for specific mime types
+	slashIndex := strings.Index(contentType, "/")
+	if slashIndex >= 0 {
+		class = contentType[:slashIndex]
+	} else {
+		class = contentType
+	}
+
+	return
 }
 
 // getParentDir returns the parent directory document if nil.

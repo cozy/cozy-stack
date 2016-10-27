@@ -131,7 +131,7 @@ func (f *FileDoc) Included() []jsonapi.Object {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string, parent *DirDoc) (doc *FileDoc, err error) {
+func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
@@ -156,8 +156,6 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 		Class:      class,
 		Executable: executable,
 		Tags:       tags,
-
-		parent: parent,
 	}
 
 	return
@@ -228,7 +226,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) (err error) {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
-	header.Set("Content-Disposition", disposition+"; filename="+doc.Name)
+	header.Set("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, doc.Name))
 
 	if header.Get("Range") == "" {
 		eTag := base64.StdEncoding.EncodeToString(doc.MD5Sum)
@@ -287,7 +285,7 @@ func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*FileCreation, error) {
 
 	var tmppath string
 	if olddoc != nil {
-		tmppath = "/" + olddoc.ID() + "_" + olddoc.Rev() + "_" + strconv.FormatInt(now.UnixNano(), 10)
+		tmppath = fmt.Sprintf("/%s_%s_%s", olddoc.ID(), olddoc.Rev(), strconv.FormatInt(now.UnixNano(), 10))
 	} else {
 		tmppath = newpath
 	}
@@ -417,7 +415,6 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, patch *DocPatch) (newdoc *F
 		olddoc.Class,
 		*patch.Executable,
 		*patch.Tags,
-		nil,
 	)
 	if err != nil {
 		return

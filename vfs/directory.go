@@ -274,10 +274,9 @@ func CreateRootDirectory(c *Context) (err error) {
 	return couchdb.CreateNamedDocWithDB(c.db, root)
 }
 
-// ModifyDirectoryMetadata modify the metadata associated to a
-// directory. It can be used to rename or move the directory in the
-// VFS.
-func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
+// ModifyDirMetadata modify the metadata associated to a directory. It
+// can be used to rename or move the directory in the VFS.
+func ModifyDirMetadata(c *Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:      &olddoc.Name,
