@@ -713,14 +713,14 @@ func TestDownloadRangeSuccess(t *testing.T) {
 }
 
 func TestGetFileMetadata(t *testing.T) {
-	res1, _ := http.Get(ts.URL + "/files/metadata?Path=/noooooop&Type=io.cozy.files")
+	res1, _ := http.Get(ts.URL + "/files/metadata?Path=/noooooop")
 	assert.Equal(t, 404, res1.StatusCode)
 
 	body := "foo,bar"
 	res2, _ := upload(t, "/files/?Type=io.cozy.files&Name=getmetadata", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getmetadata&Type=io.cozy.files")
+	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getmetadata")
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
@@ -739,7 +739,7 @@ func TestGetDirectoryMetadata(t *testing.T) {
 	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=firstfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getdirmeta&Type=io.cozy.folders")
+	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getdirmeta")
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
@@ -757,7 +757,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("folder_id", "name"))
+	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("folder_id", "name", "type"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

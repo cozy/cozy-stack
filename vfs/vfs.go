@@ -6,10 +6,12 @@
 package vfs
 
 import (
+	"os"
 	"path"
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
 
@@ -74,6 +76,48 @@ func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
 			Tags:       fd.Tags,
 		}
 	}
+	return
+}
+
+// GetDirOrFileDoc is used to fetch a document from its identifier
+// without knowing in advance its type.
+func GetDirOrFileDoc(c *Context, fileID string) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+	if fileID == RootFolderID {
+		typ, dirDoc = DirType, getRootDirDoc()
+		return
+	}
+
+	dirOrFile := &dirOrFile{}
+	err = couchdb.GetDoc(c.db, FsDocType, fileID, dirOrFile)
+	if err != nil {
+		return
+	}
+
+	typ, dirDoc, fileDoc = dirOrFile.refine()
+	return
+}
+
+// GetDirOrFileDocFromPath is used to fetch a document from its path
+// without knowning in advance its type.
+func GetDirOrFileDocFromPath(c *Context, pth string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+	dirDoc, err = GetDirectoryDocFromPath(c, pth, withChildren)
+	if err != nil && !os.IsNotExist(err) {
+		return
+	}
+	if err == nil {
+		typ = DirType
+		return
+	}
+
+	fileDoc, err = GetFileDocFromPath(c, pth)
+	if err != nil && !os.IsNotExist(err) {
+		return
+	}
+	if err == nil {
+		typ = FileType
+		return
+	}
+
 	return
 }
 

@@ -179,6 +179,9 @@ func GetDirectoryDoc(c *Context, fileID string, withChildren bool) (*DirDoc, err
 	if err != nil {
 		return nil, err
 	}
+	if doc.Type != DirType {
+		return nil, os.ErrNotExist
+	}
 	if withChildren {
 		err = doc.FetchFiles(c)
 	}

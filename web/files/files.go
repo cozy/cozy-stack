@@ -226,37 +226,27 @@ func ModificationHandler(c *gin.Context) {
 
 	fileID := c.Param("file-id")
 
-	var docType string
-	if fileID == MetadataPath {
-		docType = c.Query("Type")
-	} else {
-		docType = patchData.Type
-	}
+	var typ string
+	var file *vfs.FileDoc
+	var dir *vfs.DirDoc
 
-	var doc couchdb.Doc
 	if fileID == MetadataPath {
-		switch docType {
-		case fileType:
-			doc, err = vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
-		case folderType:
-			doc, err = vfs.GetDirectoryDocFromPath(vfsC, c.Query("Path"), true)
-		default:
-			err = ErrDocTypeInvalid
-		}
+		typ, dir, file, err = vfs.GetDirOrFileDocFromPath(vfsC, c.Query("Path"), false)
 	} else {
-		switch docType {
-		case fileType:
-			doc, err = vfs.GetFileDoc(vfsC, fileID)
-		case folderType:
-			doc, err = vfs.GetDirectoryDoc(vfsC, fileID, true)
-		default:
-			err = ErrDocTypeInvalid
-		}
+		typ, dir, file, err = vfs.GetDirOrFileDoc(vfsC, fileID)
 	}
 
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
+	}
+
+	var doc couchdb.Doc
+	switch typ {
+	case vfs.DirType:
+		doc = dir
+	case vfs.FileType:
+		doc = file
 	}
 
 	if err = checkIfMatch(c.Request, doc.Rev()); err != nil {
@@ -291,19 +281,18 @@ func ReadMetadataHandler(c *gin.Context) {
 		return
 	}
 
-	var data jsonapi.Object
-	switch c.Query("Type") {
-	case folderType:
-		data, err = vfs.GetDirectoryDocFromPath(vfsC, c.Query("Path"), true)
-	case fileType:
-		data, err = vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
-	default:
-		err = ErrDocTypeInvalid
-	}
-
+	typ, dir, file, err := vfs.GetDirOrFileDocFromPath(vfsC, c.Query("Path"), true)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
+	}
+
+	var data jsonapi.Object
+	switch typ {
+	case vfs.DirType:
+		data = dir
+	case vfs.FileType:
+		data = file
 	}
 
 	jsonapi.Data(c, http.StatusOK, data, nil)

@@ -155,10 +155,16 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 
 // GetFileDoc is used to fetch file document information form the
 // database.
-func GetFileDoc(c *Context, fileID string) (doc *FileDoc, err error) {
-	doc = &FileDoc{}
-	err = couchdb.GetDoc(c.db, FsDocType, fileID, doc)
-	return doc, err
+func GetFileDoc(c *Context, fileID string) (*FileDoc, error) {
+	doc := &FileDoc{}
+	err := couchdb.GetDoc(c.db, FsDocType, fileID, doc)
+	if err != nil {
+		return nil, err
+	}
+	if doc.Type != FileType {
+		return nil, os.ErrNotExist
+	}
+	return doc, nil
 }
 
 // GetFileDocFromPath is used to fetch file document information from
@@ -182,6 +188,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 	selector := mango.And(
 		mango.Equal("folder_id", folderID),
 		mango.Equal("name", path.Base(pth)),
+		mango.Equal("type", FileType),
 	)
 
 	var docs []*FileDoc
