@@ -3,6 +3,7 @@ package vfs
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
@@ -25,7 +26,14 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 
 	body := bytes.NewReader([]byte("hello !"))
 
-	err = CreateFileAndUpload(vfsC, doc, body)
+	file, err := CreateFile(vfsC, doc, nil)
+	assert.NoError(t, err)
+
+	n, err := io.Copy(file, body)
+	assert.NoError(t, err)
+	assert.Equal(t, len("hello !"), int(n))
+
+	err = file.Close()
 	assert.NoError(t, err)
 
 	_, err = GetFileDocFromPath(vfsC, "/toto")
@@ -45,7 +53,14 @@ func TestGetFileDocFromPath(t *testing.T) {
 
 	body := bytes.NewReader([]byte("hello !"))
 
-	err = CreateFileAndUpload(vfsC, doc, body)
+	file, err := CreateFile(vfsC, doc, nil)
+	assert.NoError(t, err)
+
+	n, err := io.Copy(file, body)
+	assert.NoError(t, err)
+	assert.Equal(t, len("hello !"), int(n))
+
+	err = file.Close()
 	assert.NoError(t, err)
 
 	_, err = GetFileDocFromPath(vfsC, "/container/toto")
