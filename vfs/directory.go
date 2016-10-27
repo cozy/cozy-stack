@@ -165,9 +165,9 @@ func NewDirDoc(name, folderID string, tags []string, parent *DirDoc) (doc *DirDo
 	return
 }
 
-// GetDirectoryDoc is used to fetch directory document information
+// GetDirDoc is used to fetch directory document information
 // form the database.
-func GetDirectoryDoc(c *Context, fileID string, withChildren bool) (*DirDoc, error) {
+func GetDirDoc(c *Context, fileID string, withChildren bool) (*DirDoc, error) {
 	if fileID == RootFolderID {
 		return getRootDirDoc(), nil
 	}
@@ -179,15 +179,18 @@ func GetDirectoryDoc(c *Context, fileID string, withChildren bool) (*DirDoc, err
 	if err != nil {
 		return nil, err
 	}
+	if doc.Type != DirType {
+		return nil, os.ErrNotExist
+	}
 	if withChildren {
 		err = doc.FetchFiles(c)
 	}
 	return doc, err
 }
 
-// GetDirectoryDocFromPath is used to fetch directory document information from
+// GetDirDocFromPath is used to fetch directory document information from
 // the database from its path.
-func GetDirectoryDocFromPath(c *Context, pth string, withChildren bool) (*DirDoc, error) {
+func GetDirDocFromPath(c *Context, pth string, withChildren bool) (*DirDoc, error) {
 	var doc *DirDoc
 	var err error
 	if pth == "/" {
