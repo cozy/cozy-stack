@@ -100,7 +100,7 @@ func GetDirOrFileDoc(c *Context, fileID string) (typ string, dirDoc *DirDoc, fil
 // GetDirOrFileDocFromPath is used to fetch a document from its path
 // without knowning in advance its type.
 func GetDirOrFileDocFromPath(c *Context, pth string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
-	dirDoc, err = GetDirectoryDocFromPath(c, pth, withChildren)
+	dirDoc, err = GetDirDocFromPath(c, pth, withChildren)
 	if err != nil && !os.IsNotExist(err) {
 		return
 	}
@@ -164,7 +164,7 @@ func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirD
 	if folderID == "" || folderID == RootFolderID {
 		parentPath = "/"
 	} else {
-		parentDoc, err = GetDirectoryDoc(c, folderID, false)
+		parentDoc, err = GetDirDoc(c, folderID, false)
 		if err != nil {
 			return
 		}

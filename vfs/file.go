@@ -87,7 +87,7 @@ func (f *FileDoc) Path(c *Context) (string, error) {
 	if f.FolderID == RootFolderID {
 		parentPath = "/"
 	} else if f.parent == nil {
-		parent, err := GetDirectoryDoc(c, f.FolderID, false)
+		parent, err := GetDirDoc(c, f.FolderID, false)
 		if err != nil {
 			return "", err
 		}
@@ -176,7 +176,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 	dirpath := path.Dir(pth)
 	if dirpath != "/" {
 		var parent *DirDoc
-		parent, err = GetDirectoryDocFromPath(c, dirpath, false)
+		parent, err = GetDirDocFromPath(c, dirpath, false)
 		if err != nil {
 			return nil, err
 		}
