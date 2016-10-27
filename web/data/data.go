@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 func validDoctype(c *gin.Context) {
@@ -45,7 +46,7 @@ func createDoc(c *gin.Context) {
 	prefix := instance.GetDatabasePrefix()
 
 	var doc = couchdb.JSONDoc{Type: doctype}
-	if err := c.BindJSON(&doc.M); err != nil {
+	if err = binding.JSON.Bind(c.Request, &doc.M); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -76,7 +77,7 @@ func updateDoc(c *gin.Context) {
 	prefix := instance.GetDatabasePrefix()
 
 	var doc couchdb.JSONDoc
-	if err := c.BindJSON(&doc); err != nil {
+	if err = binding.JSON.Bind(c.Request, &doc); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -216,13 +217,16 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	var container jsonDataContainer
-	err = c.BindJSON(&container)
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.BadRequest(err))
+	if err = binding.JSON.Bind(c.Request, &container); err != nil {
+		jsonapi.AbortWithError(c, jsonapi.BadJSON())
 		return
 	}
 
 	patchData := container.Data
+	if patchData == nil || patchData.Attrs == nil {
+		jsonapi.AbortWithError(c, jsonapi.BadJSON())
+		return
+	}
 
 	fileID := c.Param("file-id")
 

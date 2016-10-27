@@ -57,6 +57,16 @@ func BadRequest(err error) *Error {
 	}
 }
 
+// BadJSON returns a 400 formatted error meaning the json input is
+// malformed.
+func BadJSON() *Error {
+	return &Error{
+		Status: http.StatusBadRequest,
+		Title:  "Bad request",
+		Detail: "JSON input is malformed or is missing mandatory fields",
+	}
+}
+
 // InternalServerError returns a 500 formatted error
 func InternalServerError(err error) *Error {
 	return &Error{
