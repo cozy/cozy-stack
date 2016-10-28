@@ -174,6 +174,8 @@ func NewDirDoc(name, folderID string, tags []string, parent *DirDoc) (doc *DirDo
 		parent = getRootDirDoc()
 	}
 
+	tags = uniqueTags(tags)
+
 	createDate := time.Now()
 	doc = &DirDoc{
 		Type:     DirType,

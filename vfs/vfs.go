@@ -192,7 +192,7 @@ func checkFileName(str string) error {
 
 func uniqueTags(tags []string) []string {
 	m := make(map[string]struct{})
-	var clone []string
+	clone := make([]string, 0)
 	for _, tag := range tags {
 		tag = strings.TrimSpace(tag)
 		if tag == "" {
