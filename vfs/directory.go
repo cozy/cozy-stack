@@ -263,43 +263,40 @@ func CreateDirectory(c *Context, doc *DirDoc) (err error) {
 // ModifyDirectoryMetadata modify the metadata associated to a
 // directory. It can be used to rename or move the directory in the
 // VFS.
-func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes) (newdoc *DirDoc, err error) {
-	name := olddoc.Name
-	tags := olddoc.Tags
-	folderID := olddoc.FolderID
-	mdate := olddoc.UpdatedAt
-	parent := olddoc.parent
+func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
+	cdate := olddoc.CreatedAt
+	patch, err = normalizeDocPatch(&DocPatch{
+		Name:      &olddoc.Name,
+		FolderID:  &olddoc.FolderID,
+		Tags:      &olddoc.Tags,
+		UpdatedAt: &olddoc.UpdatedAt,
+	}, patch, cdate)
 
-	if data.FolderID != nil && *data.FolderID != folderID {
-		folderID = *data.FolderID
-	}
-
-	if data.Name != "" {
-		name = data.Name
-	}
-
-	if data.Tags != nil {
-		tags = appendTags(tags, data.Tags)
-	}
-
-	if data.UpdatedAt != nil {
-		mdate = *data.UpdatedAt
-	}
-
-	if mdate.Before(olddoc.CreatedAt) {
-		err = ErrIllegalTime
+	if err != nil {
 		return
 	}
 
-	newdoc, err = NewDirDoc(name, folderID, tags, parent)
+	newdoc, err = NewDirDoc(*patch.Name, *patch.FolderID, *patch.Tags, nil)
+	if err != nil {
+		return
+	}
+
+	var parent *DirDoc
+	if newdoc.FolderID != olddoc.FolderID {
+		parent, err = newdoc.Parent(c)
+	} else {
+		parent = olddoc.parent
+	}
+
 	if err != nil {
 		return
 	}
 
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
-	newdoc.CreatedAt = olddoc.CreatedAt
-	newdoc.UpdatedAt = mdate
+	newdoc.CreatedAt = cdate
+	newdoc.UpdatedAt = *patch.UpdatedAt
+	newdoc.parent = parent
 	newdoc.files = olddoc.files
 	newdoc.dirs = olddoc.dirs
 

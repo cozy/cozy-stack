@@ -215,9 +215,9 @@ func OverwriteFileContentHandler(c *gin.Context) {
 
 // @TODO: get rid of this with jsonapi package
 type jsonData struct {
-	Type  string                 `json:"type"`
-	ID    string                 `json:"id"`
-	Attrs *vfs.DocMetaAttributes `json:"attributes"`
+	Type  string        `json:"type"`
+	ID    string        `json:"id"`
+	Attrs *vfs.DocPatch `json:"attributes"`
 }
 
 type jsonDataContainer struct {

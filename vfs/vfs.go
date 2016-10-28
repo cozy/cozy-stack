@@ -30,12 +30,12 @@ const (
 	FileType = "file"
 )
 
-// DocMetaAttributes is a struct containing modifiable fields from
-// file and directory documents.
-type DocMetaAttributes struct {
-	Name       string     `json:"name,omitempty"`
+// DocPatch is a struct containing modifiable fields from file and
+// directory documents.
+type DocPatch struct {
+	Name       *string    `json:"name,omitempty"`
 	FolderID   *string    `json:"folder_id,omitempty"`
-	Tags       []string   `json:"tags,omitempty"`
+	Tags       *[]string  `json:"tags,omitempty"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 	Executable *bool      `json:"executable,omitempty"`
 }
@@ -153,6 +153,37 @@ func getRootDirDoc() *DirDoc {
 		ObjRev:   "1-",
 		Fullpath: "/",
 	}
+}
+
+func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error) {
+	if patch.FolderID == nil {
+		patch.FolderID = data.FolderID
+	}
+
+	if patch.Name == nil {
+		patch.Name = data.Name
+	}
+
+	if patch.Tags == nil {
+		patch.Tags = data.Tags
+	} else {
+		newtags := appendTags(*data.Tags, *patch.Tags)
+		patch.Tags = &newtags
+	}
+
+	if patch.UpdatedAt == nil {
+		patch.UpdatedAt = data.UpdatedAt
+	}
+
+	if patch.UpdatedAt.Before(cdate) {
+		return nil, ErrIllegalTime
+	}
+
+	if patch.Executable == nil {
+		patch.Executable = data.Executable
+	}
+
+	return patch, nil
 }
 
 func checkFileName(str string) error {
