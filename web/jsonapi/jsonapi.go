@@ -69,6 +69,8 @@ func AbortWithError(c *gin.Context, e *Error) {
 	c.Abort()
 }
 
+// Bind is used to unmarshal an input JSONApi document. It binds an
+// incoming request to a attribute type.
 func Bind(req *http.Request, attrs interface{}) (*ObjectMarshalling, error) {
 	decoder := json.NewDecoder(req.Body)
 	var doc *Document
