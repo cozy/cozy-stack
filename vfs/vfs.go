@@ -158,6 +158,14 @@ func getRootDirDoc() *DirDoc {
 	}
 }
 
+// MakeRoot returns a new instance of a DirDoc usable as root
+func MakeRoot() *DirDoc {
+	return &DirDoc{
+		ObjID:    RootFolderID,
+		Fullpath: "/",
+	}
+}
+
 func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error) {
 	if patch.FolderID == nil {
 		patch.FolderID = data.FolderID
