@@ -331,7 +331,7 @@ func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Rea
 		return err
 	}
 
-	return renameFile(tmppath, newpath, c.fs)
+	return c.fs.Rename(tmppath, newpath)
 }
 
 // ModifyFileMetadata modify the metadata associated to a file. It can
@@ -400,7 +400,7 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (n
 	newdoc.UpdatedAt = mdate
 
 	if newpath != oldpath {
-		err = renameFile(oldpath, newpath, c.fs)
+		err = safeRenameFile(oldpath, newpath, c.fs)
 		if err != nil {
 			return
 		}
@@ -449,17 +449,20 @@ func copyOnFsAndCheckIntegrity(file io.WriteCloser, givenMD5 []byte, fs afero.Fs
 	return
 }
 
-func renameFile(oldpath, newpath string, fs afero.Fs) error {
+func safeRenameFile(oldpath, newpath string, fs afero.Fs) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 
 	if !path.IsAbs(newpath) || !path.IsAbs(oldpath) {
-		return fmt.Errorf("renameFile: paths should be absolute")
+		return fmt.Errorf("paths should be absolute")
 	}
 
-	_, err := GetDirOrFileDocFromPath(c, newpath, nil)
-	if !os.IsNotExist(err) {
+	_, err := fs.Stat(newpath)
+	if err == nil {
 		return os.ErrExist
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	return fs.Rename(oldpath, newpath)

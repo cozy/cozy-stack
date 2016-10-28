@@ -46,7 +46,7 @@ func createDoc(c *gin.Context) {
 	prefix := instance.GetDatabasePrefix()
 
 	var doc = couchdb.JSONDoc{Type: doctype}
-	if err = binding.JSON.Bind(c.Request, &doc.M); err != nil {
+	if err := binding.JSON.Bind(c.Request, &doc.M); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
@@ -77,7 +77,7 @@ func updateDoc(c *gin.Context) {
 	prefix := instance.GetDatabasePrefix()
 
 	var doc couchdb.JSONDoc
-	if err = binding.JSON.Bind(c.Request, &doc); err != nil {
+	if err := binding.JSON.Bind(c.Request, &doc); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}

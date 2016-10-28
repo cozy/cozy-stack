@@ -288,7 +288,7 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 	newdoc.dirs = olddoc.dirs
 
 	if pth != olddoc.Path {
-		err = renameDirectory(olddoc.Path, pth, c.fs)
+		err = safeRenameDirectory(olddoc.Path, pth, c.fs)
 		if err != nil {
 			return
 		}
@@ -361,21 +361,24 @@ func fetchChildren(c *Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc
 	return
 }
 
-func renameDirectory(oldpath, newpath string, fs afero.Fs) error {
+func safeRenameDirectory(oldpath, newpath string, fs afero.Fs) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 
 	if !path.IsAbs(newpath) || !path.IsAbs(oldpath) {
-		return fmt.Errorf("renameDirectory: paths should be absolute")
+		return fmt.Errorf("paths should be absolute")
 	}
 
 	if strings.HasPrefix(newpath, oldpath+"/") {
 		return ErrForbiddenDocMove
 	}
 
-	_, err := GetDirOrFileDocFromPath(c, newpath, nil)
-	if !os.IsNotExist(err) {
+	_, err := fs.Stat(newpath)
+	if err == nil {
 		return os.ErrExist
+	}
+	if err != nil && !os.IsNotExist(err) {
+		return err
 	}
 
 	return fs.Rename(oldpath, newpath)
