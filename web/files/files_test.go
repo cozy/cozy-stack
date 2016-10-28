@@ -393,8 +393,6 @@ func TestModifyMetadataFileMove(t *testing.T) {
 
 	fileID, ok := data1["id"].(string)
 	assert.True(t, ok)
-	// fileRev, ok := data1["rev"].(string)
-	// assert.True(t, ok)
 
 	res2, data2 := createDir(t, "/files/?Name=movemeinme&Type=io.cozy.folders")
 	assert.Equal(t, 201, res2.StatusCode)
@@ -428,6 +426,24 @@ func TestModifyMetadataFileMove(t *testing.T) {
 	assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
 	assert.Equal(t, true, attrs3["executable"])
 	assert.Equal(t, "3", attrs3["size"])
+}
+
+func TestModifyMetadataFileConflict(t *testing.T) {
+	body := "foo"
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=fmodme1&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	res2, _ := upload(t, "/files/?Type=io.cozy.files&Name=fmodme2&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	file1ID, _ := extractDirData(t, data1)
+
+	attrs := map[string]interface{}{
+		"name": "fmodme2",
+	}
+
+	res3, _ := patchFile(t, "/files/"+file1ID, "io.cozy.files", file1ID, attrs)
+	assert.Equal(t, 409, res3.StatusCode)
 }
 
 func TestModifyMetadataDirMove(t *testing.T) {
@@ -472,6 +488,24 @@ func TestModifyMetadataDirMove(t *testing.T) {
 
 	res5, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs2)
 	assert.Equal(t, 412, res5.StatusCode)
+}
+
+func TestModifyMetadataDirMoveConflict(t *testing.T) {
+	res1, _ := createDir(t, "/files/?Name=conflictmodme1&Type=io.cozy.folders&Tags=foo,bar,bar")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	res2, data2 := createDir(t, "/files/?Name=conflictmodme2&Type=io.cozy.folders")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	folder2ID, _ := extractDirData(t, data2)
+
+	attrs1 := map[string]interface{}{
+		"tags": []string{"bar", "baz"},
+		"name": "conflictmodme1",
+	}
+
+	res3, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs1)
+	assert.Equal(t, 409, res3.StatusCode)
 }
 
 func TestModifyContentNoFileID(t *testing.T) {
