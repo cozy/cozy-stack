@@ -140,7 +140,7 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 		folderID = RootFolderID
 	}
 
-	tags = appendTags(nil, tags)
+	tags = uniqueTags(tags)
 
 	createDate := time.Now()
 	doc = &FileDoc{

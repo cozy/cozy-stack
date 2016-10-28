@@ -166,9 +166,6 @@ func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error
 
 	if patch.Tags == nil {
 		patch.Tags = data.Tags
-	} else {
-		newtags := appendTags(*data.Tags, *patch.Tags)
-		patch.Tags = &newtags
 	}
 
 	if patch.UpdatedAt == nil {
@@ -193,27 +190,18 @@ func checkFileName(str string) error {
 	return nil
 }
 
-func appendTags(oldtags, newtags []string) []string {
-	mtags := make(map[string]struct{})
-	var stags []string
-
-	addTag := func(tag string) {
+func uniqueTags(tags []string) []string {
+	m := make(map[string]struct{})
+	var clone []string
+	for _, tag := range tags {
 		tag = strings.TrimSpace(tag)
 		if tag == "" {
-			return
+			continue
 		}
-		if _, ok := mtags[tag]; !ok {
-			stags = append(stags, tag)
-			mtags[tag] = struct{}{}
+		if _, ok := m[tag]; !ok {
+			clone = append(clone, tag)
+			m[tag] = struct{}{}
 		}
 	}
-
-	for _, tag := range oldtags {
-		addTag(tag)
-	}
-	for _, tag := range newtags {
-		addTag(tag)
-	}
-
-	return stags
+	return clone
 }
