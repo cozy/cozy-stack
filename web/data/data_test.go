@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
@@ -97,7 +98,7 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 
 }
 
-func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
+func injectInstance(instance *instance.Instance) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set("instance", instance)
 	}
@@ -118,7 +119,7 @@ func TestMain(m *testing.M) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	instance := &middlewares.Instance{
+	instance := &instance.Instance{
 		Domain:     Host,
 		StorageURL: "mem://test",
 	}

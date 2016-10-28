@@ -15,9 +15,8 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
-	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
 	"github.com/spf13/afero"
@@ -28,11 +27,11 @@ const CouchURL = "http://localhost:5984/"
 const TestPrefix = "test/"
 
 var ts *httptest.Server
-var instance *middlewares.Instance
+var testInstance *instance.Instance
 
-func injectInstance(instance *middlewares.Instance) gin.HandlerFunc {
+func injectInstance(i *instance.Instance) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set("instance", instance)
+		c.Set("instance", i)
 	}
 }
 
@@ -218,7 +217,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 	res, _ := createDir(t, "/files/?Name=coucou&Type=io.cozy.folders")
 	assert.Equal(t, 201, res.StatusCode)
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	exists, err := afero.DirExists(storage, "/coucou")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -238,7 +237,7 @@ func TestCreateDirWithParentSuccess(t *testing.T) {
 	res2, _ := createDir(t, "/files/"+parentID+"?Name=child&Type=io.cozy.folders")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	exists, err := afero.DirExists(storage, "/dirparent/child")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -299,7 +298,7 @@ func TestUploadBadHash(t *testing.T) {
 	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
 	assert.Equal(t, 412, res.StatusCode)
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	_, err := afero.ReadFile(storage, "/badhash")
 	assert.Error(t, err)
 }
@@ -309,7 +308,7 @@ func TestUploadAtRootSuccess(t *testing.T) {
 	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	buf, err := afero.ReadFile(storage, "/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
@@ -362,7 +361,7 @@ func TestUploadWithParentSuccess(t *testing.T) {
 	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	buf, err := afero.ReadFile(storage, "/fileparent/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
@@ -485,7 +484,7 @@ func TestModifyMetadataDirMove(t *testing.T) {
 	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs1, nil)
 	assert.Equal(t, 200, res3.StatusCode)
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	exists, err := afero.DirExists(storage, "/dirmodmemoveinme/renamed")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -599,7 +598,7 @@ func TestModifyContentSuccess(t *testing.T) {
 	var buf []byte
 	var fileInfo os.FileInfo
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=willbemodified&Executable=true", "text/plain", "foo", "")
 	assert.Equal(t, 201, res1.StatusCode)
 
@@ -723,7 +722,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 	}
 
 	lastS := successes[len(successes)-1]
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	buf, err := afero.ReadFile(storage, "/willbemodifiedconcurrently")
 	assert.NoError(t, err)
 	assert.Equal(t, "newcontent "+strconv.FormatInt(lastS.idx, 10), string(buf))
@@ -858,24 +857,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("folder_id", "name", "type"))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("path"))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, mango.IndexOnFields("folder_id"))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
 		fmt.Println("Could not create temporary directory.")
@@ -886,13 +867,13 @@ func TestMain(m *testing.M) {
 	}()
 
 	gin.SetMode(gin.TestMode)
-	instance = &middlewares.Instance{
+	testInstance = &instance.Instance{
 		Domain:     "test",
 		StorageURL: "file://localhost" + tempdir,
 	}
 
 	router := gin.New()
-	router.Use(injectInstance(instance))
+	router.Use(injectInstance(testInstance))
 	router.POST("/files/", CreationHandler)
 	router.POST("/files/:folder-id", CreationHandler)
 	router.PATCH("/files/:file-id", ModificationHandler)

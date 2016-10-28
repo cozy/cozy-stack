@@ -6,13 +6,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/instance"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetStorageProvider(t *testing.T) {
-	instance := Instance{
+	instance := instance.Instance{
 		Domain:     "test.cozycloud.cc",
 		StorageURL: "mem://test",
 	}
@@ -36,7 +37,7 @@ func TestSetInstance(t *testing.T) {
 	router.GET("/", func(c *gin.Context) {
 		instanceInterface, exists := c.Get("instance")
 		assert.True(t, exists, "the instance should have been set in the gin context")
-		instance := instanceInterface.(*Instance)
+		instance := instanceInterface.(*instance.Instance)
 		assert.Equal(t, "dev", instance.Domain, "the domain should have been set in the instance")
 		storage, err := instance.GetStorageProvider()
 		assert.NoError(t, err)
