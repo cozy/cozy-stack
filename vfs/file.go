@@ -465,7 +465,7 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (n
 	}
 
 	if newpath != oldpath {
-		err = safeRenameFile(oldpath, newpath, c.fs)
+		err = safeRenameFile(c, oldpath, newpath)
 		if err != nil {
 			return
 		}
@@ -490,7 +490,7 @@ func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error
 	return fs.OpenFile(pth, flag, mode)
 }
 
-func safeRenameFile(oldpath, newpath string, fs afero.Fs) error {
+func safeRenameFile(c *Context, oldpath, newpath string) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 
@@ -498,7 +498,7 @@ func safeRenameFile(oldpath, newpath string, fs afero.Fs) error {
 		return fmt.Errorf("paths should be absolute")
 	}
 
-	_, err := fs.Stat(newpath)
+	_, err := c.fs.Stat(newpath)
 	if err == nil {
 		return os.ErrExist
 	}
@@ -506,7 +506,7 @@ func safeRenameFile(oldpath, newpath string, fs afero.Fs) error {
 		return err
 	}
 
-	return fs.Rename(oldpath, newpath)
+	return c.fs.Rename(oldpath, newpath)
 }
 
 func getFileMode(executable bool) (mode os.FileMode) {

@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/spf13/afero"
 )
 
 // DirDoc is a struct containing all the informations about a
@@ -314,7 +313,7 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 	}
 
 	if oldpath != newpath {
-		err = safeRenameDirectory(oldpath, newpath, c.fs)
+		err = safeRenameDirectory(c, oldpath, newpath)
 		if err != nil {
 			return
 		}
@@ -384,7 +383,7 @@ func fetchChildren(c *Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc
 	return
 }
 
-func safeRenameDirectory(oldpath, newpath string, fs afero.Fs) error {
+func safeRenameDirectory(c *Context, oldpath, newpath string) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 
@@ -396,7 +395,7 @@ func safeRenameDirectory(oldpath, newpath string, fs afero.Fs) error {
 		return ErrForbiddenDocMove
 	}
 
-	_, err := fs.Stat(newpath)
+	_, err := c.fs.Stat(newpath)
 	if err == nil {
 		return os.ErrExist
 	}
@@ -404,7 +403,7 @@ func safeRenameDirectory(oldpath, newpath string, fs afero.Fs) error {
 		return err
 	}
 
-	return fs.Rename(oldpath, newpath)
+	return c.fs.Rename(oldpath, newpath)
 }
 
 var (
