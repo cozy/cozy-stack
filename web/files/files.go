@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 )
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -39,43 +38,6 @@ const (
 // ErrDocTypeInvalid is used when the document type sent is not
 // recognized
 var ErrDocTypeInvalid = errors.New("Invalid document type")
-
-// WrapVfsError returns a formatted error from a golang error emitted by the vfs
-func WrapVfsError(err error) *jsonapi.Error {
-	if jsonErr, isJSONApiError := err.(*jsonapi.Error); isJSONApiError {
-		return jsonErr
-	}
-	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
-		return jsonapi.WrapCouchError(couchErr)
-	}
-	if os.IsExist(err) {
-		return &jsonapi.Error{
-			Status: http.StatusConflict,
-			Title:  "Conflict",
-			Detail: err.Error(),
-		}
-	}
-	if os.IsNotExist(err) {
-		return jsonapi.NotFound(err)
-	}
-	switch err {
-	case ErrDocTypeInvalid:
-		return jsonapi.InvalidAttribute("type", err)
-	case vfs.ErrParentDoesNotExist:
-		return jsonapi.NotFound(err)
-	case vfs.ErrForbiddenDocMove:
-		return jsonapi.PreconditionFailed("folder-id", err)
-	case vfs.ErrIllegalFilename:
-		return jsonapi.InvalidParameter("folder-id", err)
-	case vfs.ErrIllegalTime:
-		return jsonapi.InvalidParameter("UpdatedAt", err)
-	case vfs.ErrInvalidHash:
-		return jsonapi.PreconditionFailed("Content-MD5", err)
-	case vfs.ErrContentLengthMismatch:
-		return jsonapi.PreconditionFailed("Content-Length", err)
-	}
-	return jsonapi.InternalServerError(err)
-}
 
 // CreationHandler handle all POST requests on /files/:folder-id
 // aiming at creating a new document in the FS. Given the Type
@@ -213,17 +175,6 @@ func OverwriteFileContentHandler(c *gin.Context) {
 	jsonapi.Data(c, http.StatusOK, newdoc, nil)
 }
 
-// @TODO: get rid of this with jsonapi package
-type jsonData struct {
-	Type  string        `json:"type"`
-	ID    string        `json:"id"`
-	Attrs *vfs.DocPatch `json:"attributes"`
-}
-
-type jsonDataContainer struct {
-	Data *jsonData `json:"data"`
-}
-
 // ModificationHandler handles PATCH requests on /files/:file-id and
 // /files/metadata.
 //
@@ -238,16 +189,18 @@ func ModificationHandler(c *gin.Context) {
 		return
 	}
 
-	var container jsonDataContainer
-	if err = binding.JSON.Bind(c.Request, &container); err != nil {
+	var obj *jsonapi.ObjectMarshalling
+	var patch *vfs.DocPatch
+	if obj, err = jsonapi.Bind(c.Request, &patch); err != nil {
 		jsonapi.AbortWithError(c, jsonapi.BadJSON())
 		return
 	}
 
-	patchData := container.Data
-	if patchData == nil || patchData.Attrs == nil {
-		jsonapi.AbortWithError(c, jsonapi.BadJSON())
-		return
+	if rel, ok := obj.GetRelationship("parent"); ok {
+		rid, ok := rel.Data.(jsonapi.ResourceIdentifier)
+		if ok {
+			patch.FolderID = &rid.ID
+		}
 	}
 
 	fileID := c.Param("file-id")
@@ -282,9 +235,9 @@ func ModificationHandler(c *gin.Context) {
 
 	var data jsonapi.Object
 	if fileDoc, ok := doc.(*vfs.FileDoc); ok {
-		data, err = vfs.ModifyFileMetadata(vfsC, fileDoc, patchData.Attrs)
+		data, err = vfs.ModifyFileMetadata(vfsC, fileDoc, patch)
 	} else if dirDoc, ok := doc.(*vfs.DirDoc); ok {
-		data, err = vfs.ModifyDirectoryMetadata(vfsC, dirDoc, patchData.Attrs)
+		data, err = vfs.ModifyDirectoryMetadata(vfsC, dirDoc, patch)
 	}
 
 	if err != nil {
@@ -386,6 +339,43 @@ func Routes(router *gin.RouterGroup) {
 
 	router.PATCH("/:file-id", ModificationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
+}
+
+// WrapVfsError returns a formatted error from a golang error emitted by the vfs
+func WrapVfsError(err error) *jsonapi.Error {
+	if jsonErr, isJSONApiError := err.(*jsonapi.Error); isJSONApiError {
+		return jsonErr
+	}
+	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
+		return jsonapi.WrapCouchError(couchErr)
+	}
+	if os.IsExist(err) {
+		return &jsonapi.Error{
+			Status: http.StatusConflict,
+			Title:  "Conflict",
+			Detail: err.Error(),
+		}
+	}
+	if os.IsNotExist(err) {
+		return jsonapi.NotFound(err)
+	}
+	switch err {
+	case ErrDocTypeInvalid:
+		return jsonapi.InvalidAttribute("type", err)
+	case vfs.ErrParentDoesNotExist:
+		return jsonapi.NotFound(err)
+	case vfs.ErrForbiddenDocMove:
+		return jsonapi.PreconditionFailed("folder-id", err)
+	case vfs.ErrIllegalFilename:
+		return jsonapi.InvalidParameter("folder-id", err)
+	case vfs.ErrIllegalTime:
+		return jsonapi.InvalidParameter("UpdatedAt", err)
+	case vfs.ErrInvalidHash:
+		return jsonapi.PreconditionFailed("Content-MD5", err)
+	case vfs.ErrContentLengthMismatch:
+		return jsonapi.PreconditionFailed("Content-Length", err)
+	}
+	return jsonapi.InternalServerError(err)
 }
 
 func getVfsContext(c *gin.Context) (*vfs.Context, error) {

@@ -404,7 +404,7 @@ func TestModifyMetadataFileMove(t *testing.T) {
 	assert.True(t, ok)
 
 	attrs := map[string]interface{}{
-		"tags":       []string{"bar", "baz"},
+		"tags":       []string{"bar", "bar", "baz"},
 		"name":       "moved",
 		"folder_id":  folderID,
 		"executable": true,
@@ -421,7 +421,7 @@ func TestModifyMetadataFileMove(t *testing.T) {
 
 	assert.Equal(t, "text/plain", attrs3["mime"])
 	assert.Equal(t, "moved", attrs3["name"])
-	assert.EqualValues(t, []interface{}{"foo", "bar", "baz"}, attrs3["tags"])
+	assert.EqualValues(t, []interface{}{"bar", "baz"}, attrs3["tags"])
 	assert.Equal(t, "text", attrs3["class"])
 	assert.Equal(t, "rL0Y20zC+Fzt72VPzMSk2A==", attrs3["md5sum"])
 	assert.Equal(t, true, attrs3["executable"])

@@ -54,12 +54,20 @@ type RelationshipMap map[string]Relationship
 // ObjectMarshalling is a JSON-API object
 // See http://jsonapi.org/format/#document-resource-objects
 type ObjectMarshalling struct {
-	Type          string          `json:"type"`
-	ID            string          `json:"id"`
-	Attributes    interface{}     `json:"attributes"`
-	Meta          Meta            `json:"meta"`
-	Links         LinksList       `json:"links,omitempty"`
-	Relationships RelationshipMap `json:"relationships,omitempty"`
+	Type          string           `json:"type"`
+	ID            string           `json:"id"`
+	Attributes    *json.RawMessage `json:"attributes"`
+	Meta          Meta             `json:"meta"`
+	Links         LinksList        `json:"links,omitempty"`
+	Relationships RelationshipMap  `json:"relationships,omitempty"`
+}
+
+func (o *ObjectMarshalling) GetRelationship(name string) (*Relationship, bool) {
+	rel, ok := o.Relationships[name]
+	if !ok {
+		return nil, false
+	}
+	return &rel, true
 }
 
 // MarshalObject serializes an Object to JSON.
@@ -77,10 +85,15 @@ func MarshalObject(o Object) (json.RawMessage, error) {
 		o.SetRev(rev)
 	}()
 
+	b, err := json.Marshal(o)
+	if err != nil {
+		return nil, err
+	}
+
 	data := ObjectMarshalling{
 		Type:          o.DocType(),
 		ID:            id,
-		Attributes:    o,
+		Attributes:    (*json.RawMessage)(&b),
 		Meta:          Meta{Rev: rev},
 		Links:         LinksList{Self: self},
 		Relationships: rels,
