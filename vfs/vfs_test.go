@@ -18,12 +18,14 @@ import (
 )
 
 type TestContext struct {
-	prefix string
-	fs     afero.Fs
+	prefix  string
+	fs      afero.Fs
+	fsCache Cache
 }
 
 func (c TestContext) Prefix() string { return c.prefix }
 func (c TestContext) FS() afero.Fs   { return c.fs }
+func (c TestContext) FSCache() Cache { return c.fsCache }
 
 var vfsC TestContext
 
@@ -144,7 +146,7 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := NewDirDoc("container", "", nil, nil)
+	dir, _ := NewDirDoc("container", "", nil)
 	err := CreateDir(vfsC, dir)
 	assert.NoError(t, err)
 
@@ -356,6 +358,7 @@ func TestMain(m *testing.M) {
 
 	vfsC.prefix = "dev/"
 	vfsC.fs = afero.NewBasePathFs(afero.NewOsFs(), tempdir)
+	vfsC.fsCache = NewLocalCache(10)
 
 	err = couchdb.ResetDB(vfsC, FsDocType)
 	if err != nil {

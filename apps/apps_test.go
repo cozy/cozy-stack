@@ -14,16 +14,19 @@ import (
 )
 
 type TestContext struct {
-	prefix string
-	fs     afero.Fs
+	prefix  string
+	fs      afero.Fs
+	fsCache vfs.Cache
 }
 
-func (c TestContext) Prefix() string { return c.prefix }
-func (c TestContext) FS() afero.Fs   { return c.fs }
+func (c TestContext) Prefix() string     { return c.prefix }
+func (c TestContext) FS() afero.Fs       { return c.fs }
+func (c TestContext) FSCache() vfs.Cache { return c.fsCache }
 
 var c = &TestContext{
-	prefix: "apps-test/",
-	fs:     afero.NewMemMapFs(),
+	prefix:  "apps-test/",
+	fs:      afero.NewMemMapFs(),
+	fsCache: vfs.NewLocalCache(256),
 }
 
 func TestInstallBadSlug(t *testing.T) {

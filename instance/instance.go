@@ -33,6 +33,13 @@ var (
 	ErrInvalidToken = errors.New("Invalid register token")
 )
 
+var (
+	// fsLocalCache is the FS Cache used for a classical (non-
+	// distributed) filesystem. It is base on a simple in-memory cache.
+	// There is no fundamental theory behind the size of the cache.
+	fsLocalCache = vfs.NewLocalCache(50)
+)
+
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
@@ -43,7 +50,9 @@ type Instance struct {
 	StorageURL     string `json:"storage"`        // Where the binaries are persisted
 	RegisterToken  []byte `json:"registerToken,omitempty"`
 	PassphraseHash []byte `json:"passphraseHash,omitempty"`
-	storage        afero.Fs
+
+	fs      afero.Fs
+	fsCache vfs.Cache
 }
 
 // DocType implements couchdb.Doc
@@ -77,10 +86,6 @@ func (i *Instance) SubDomain(s string) string {
 	return "https://" + s + "." + i.Addr()
 }
 
-// ensure Instance implements couchdb.Doc & vfs.Context
-var _ couchdb.Doc = (*Instance)(nil)
-var _ vfs.Context = (*Instance)(nil)
-
 // CreateInCouchdb create the instance doc in the global database
 func (i *Instance) createInCouchdb() (err error) {
 	if _, err = Get(i.Domain); err == nil {
@@ -102,7 +107,7 @@ func (i *Instance) createRootFolder() error {
 	rootFsURL := config.BuildAbsFsURL("/")
 	domainURL := config.BuildRelFsURL(i.Domain)
 
-	rootFs, err := createFs(rootFsURL)
+	rootFs, _, err := createFs(rootFsURL)
 	if err != nil {
 		return err
 	}
@@ -202,7 +207,7 @@ func (i *Instance) makeStorageFs() error {
 	if err != nil {
 		return err
 	}
-	i.storage, err = createFs(u)
+	i.fs, i.fsCache, err = createFs(u)
 	return err
 }
 
@@ -272,7 +277,7 @@ func Destroy(domain string) (*Instance, error) {
 	rootFsURL := config.BuildAbsFsURL("/")
 	domainURL := config.BuildRelFsURL(i.Domain)
 
-	rootFs, err := createFs(rootFsURL)
+	rootFs, _, err := createFs(rootFsURL)
 	if err != nil {
 		return nil, err
 	}
@@ -287,12 +292,22 @@ func Destroy(domain string) (*Instance, error) {
 // FS returns the afero storage provider where the binaries for
 // the current instance are persisted
 func (i *Instance) FS() afero.Fs {
-	if i.storage == nil {
+	if i.fs == nil {
 		if err := i.makeStorageFs(); err != nil {
 			panic(err)
 		}
 	}
-	return i.storage
+	return i.fs
+}
+
+// FSCache returns the storage attributes cache
+func (i *Instance) FSCache() vfs.Cache {
+	if i.fsCache == nil {
+		if err := i.makeStorageFs(); err != nil {
+			panic(err)
+		}
+	}
+	return i.fsCache
 }
 
 // Prefix returns the prefix to use in database naming for the
@@ -340,14 +355,20 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 	return nil
 }
 
-func createFs(u *url.URL) (fs afero.Fs, err error) {
+func createFs(u *url.URL) (fs afero.Fs, fsCache vfs.Cache, err error) {
 	switch u.Scheme {
 	case "file":
 		fs = afero.NewBasePathFs(afero.NewOsFs(), u.Path)
+		fsCache = fsLocalCache
 	case "mem":
 		fs = afero.NewMemMapFs()
+		fsCache = fsLocalCache
 	default:
 		err = fmt.Errorf("Unknown storage provider: %v", u.Scheme)
 	}
 	return
 }
+
+// ensure Instance implements couchdb.Doc & vfs.Context
+var _ couchdb.Doc = (*Instance)(nil)
+var _ vfs.Context = (*Instance)(nil)

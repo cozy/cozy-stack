@@ -63,6 +63,7 @@ var ErrSkipDir = errors.New("skip directories")
 type Context interface {
 	couchdb.Database
 	FS() afero.Fs
+	FSCache() Cache
 }
 
 // DocPatch is a struct containing modifiable fields from file and
@@ -117,13 +118,10 @@ func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
 func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (dirDoc *DirDoc, fileDoc *FileDoc, err error) {
-	dirOrFile := &DirOrFileDoc{}
-	err = couchdb.GetDoc(c, FsDocType, fileID, dirOrFile)
+	dirDoc, fileDoc, err = c.FSCache().DirOrFileByID(c, fileID)
 	if err != nil {
 		return
 	}
-
-	dirDoc, fileDoc = dirOrFile.Refine()
 	if dirDoc != nil && withChildren {
 		dirDoc.FetchFiles(c)
 	}
@@ -239,7 +237,7 @@ func Mkdir(c Context, name string, tags []string) (*DirDoc, error) {
 		return nil, err
 	}
 
-	dir, err := NewDirDoc(dirname, parent.ID(), tags, nil)
+	dir, err := NewDirDoc(dirname, parent.ID(), tags)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +272,7 @@ func MkdirAll(c Context, name string, tags []string) (*DirDoc, error) {
 	}
 
 	for i := len(dirs) - 1; i >= 0; i-- {
-		parent, err = NewDirDoc(dirs[i], parent.ID(), nil, parent)
+		parent, err = NewDirDoc(dirs[i], parent.ID(), nil)
 		if err == nil {
 			err = CreateDir(c, parent)
 		}
@@ -419,16 +417,6 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 	ext := path.Ext(name)
 	return ExtractMimeAndClass(mimetype.TypeByExtension(ext))
-}
-
-// getParentDir returns the parent directory document if nil.
-func getParentDir(c Context, parent *DirDoc, folderID string) (*DirDoc, error) {
-	if parent != nil {
-		return parent, nil
-	}
-	var err error
-	parent, err = GetDirDoc(c, folderID, false)
-	return parent, err
 }
 
 func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error) {
