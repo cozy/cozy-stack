@@ -5,7 +5,7 @@ import (
 	"crypto/md5" // #nosec
 	"encoding/base64"
 	"fmt"
-	"io"
+	"hash"
 	"net/http"
 	"os"
 	"path"
@@ -86,17 +86,27 @@ func (f *FileDoc) Path(c *Context) (string, error) {
 	var parentPath string
 	if f.FolderID == RootFolderID {
 		parentPath = "/"
-	} else if f.parent == nil {
-		parent, err := GetDirDoc(c, f.FolderID, false)
+	} else {
+		parent, err := f.Parent(c)
 		if err != nil {
 			return "", err
 		}
-		f.parent = parent
-		parentPath = parent.Path
-	} else {
-		parentPath = f.parent.Path
+		parentPath, err = parent.Path(c)
+		if err != nil {
+			return "", err
+		}
 	}
 	return path.Join(parentPath, f.Name), nil
+}
+
+// Parent returns the parent directory document
+func (f *FileDoc) Parent(c *Context) (*DirDoc, error) {
+	parent, err := getParentDir(c, f.parent, f.FolderID)
+	if err != nil {
+		return nil, err
+	}
+	f.parent = parent
+	return parent, nil
 }
 
 // Relationships is used to generate the parent relationship in JSON-API format
@@ -171,20 +181,20 @@ func GetFileDoc(c *Context, fileID string) (*FileDoc, error) {
 // the database from its path.
 func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 	var err error
-	var folderID string
 
 	dirpath := path.Dir(pth)
-	if dirpath != "/" {
-		var parent *DirDoc
-		parent, err = GetDirDocFromPath(c, dirpath, false)
-		if err != nil {
-			return nil, err
-		}
-		folderID = parent.ID()
+	var parent *DirDoc
+	if dirpath == "/" {
+		parent = getRootDirDoc()
 	} else {
-		folderID = RootFolderID
+		parent, err = GetDirDocFromPath(c, dirpath, false)
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
+	folderID := parent.ID()
 	selector := mango.And(
 		mango.Equal("folder_id", folderID),
 		mango.Equal("name", path.Base(pth)),
@@ -203,7 +213,11 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 	if len(docs) == 0 {
 		return nil, os.ErrNotExist
 	}
-	return docs[0], nil
+
+	fileDoc := docs[0]
+	fileDoc.parent = parent
+
+	return fileDoc, nil
 }
 
 // ServeFileContent replies to a http request using the content of a
@@ -240,72 +254,115 @@ func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Re
 	return
 }
 
-// CreateFileAndUpload is the method for uploading a file onto the filesystem.
-func CreateFileAndUpload(c *Context, doc *FileDoc, body io.Reader) (err error) {
-	newpath, _, err := getFilePath(c, doc.Name, doc.FolderID)
-	if err != nil {
-		return err
-	}
+// FileCreation represents a file open for writing. It is used to
+// create of file or to modify the content of a file.
+//
+// FileCreation implements io.WriteCloser.
+type FileCreation struct {
+	c *Context   // vfs context
+	f afero.File // file handle
+	w int64      // total size written
 
-	file, err := safeCreateFile(newpath, doc.Executable, c.fs)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			c.fs.Remove(newpath)
-		}
-	}()
-
-	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, doc.MD5Sum, c.fs, body)
-	if err != nil {
-		return err
-	}
-
-	if doc.Size < 0 {
-		doc.Size = written
-	}
-
-	if doc.MD5Sum == nil {
-		doc.MD5Sum = md5Sum
-	}
-
-	if doc.Size != written {
-		return ErrContentLengthMismatch
-	}
-
-	return couchdb.CreateDoc(c.db, doc)
+	newdoc    *FileDoc  // new document
+	olddoc    *FileDoc  // old document if any
+	path      string    // file full path
+	tmppath   string    // temporary file path in case of modifying an existing file
+	checkHash bool      // whether or not we need the assert the hash is good
+	hash      hash.Hash // hash we build up along the file
 }
 
-// ModifyFileContent overrides the content of a file onto the
-// filesystem.
+// CreateFile is used to create file or modify an existing file
+// content. It returns a FileCreation handle. Along with the vfs
+// context, it receives the new file document that you want to create.
+// It can also receive the old document, representing the current
+// revision of the file. In this case it will try to modify the file,
+// otherwise it will create it.
 //
-// This method should change the file content atomically. If any error
-// happens while copying the content, the previous file revision is
-// kept undamaged.
-func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Reader) (err error) {
-	mdate := time.Now()
+// Warning: you MUST call the Close() method and check for its error.
+// The Close() method will actually create or update the document in
+// couchdb. It will also check the md5 hash if required.
+func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*FileCreation, error) {
+	now := time.Now()
 
-	tmppath := "/" + olddoc.ID() + "_" + olddoc.Rev() + "_" + strconv.FormatInt(mdate.UnixNano(), 10)
-	newpath, err := olddoc.Path(c)
+	newpath, err := newdoc.Path(c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	file, err := safeCreateFile(tmppath, newdoc.Executable, c.fs)
-	if err != nil {
-		return err
+	var tmppath string
+	if olddoc != nil {
+		tmppath = "/" + olddoc.ID() + "_" + olddoc.Rev() + "_" + strconv.FormatInt(now.UnixNano(), 10)
+	} else {
+		tmppath = newpath
 	}
+
+	if olddoc != nil {
+		newdoc.SetID(olddoc.ID())
+		newdoc.SetRev(olddoc.Rev())
+		newdoc.CreatedAt = olddoc.CreatedAt
+	} else {
+		newdoc.CreatedAt = now
+	}
+
+	newdoc.UpdatedAt = now
+
+	f, err := safeCreateFile(tmppath, newdoc.Executable, c.fs)
+	if err != nil {
+		return nil, err
+	}
+
+	hash := md5.New() // #nosec
+
+	return &FileCreation{
+		c: c,
+		f: f,
+		w: 0,
+
+		newdoc:  newdoc,
+		olddoc:  olddoc,
+		tmppath: tmppath,
+		path:    newpath,
+
+		checkHash: newdoc.MD5Sum != nil,
+		hash:      hash,
+	}, nil
+}
+
+// Write bytes to the file - part of io.WriteCloser
+func (fc *FileCreation) Write(p []byte) (n int, err error) {
+	n, err = fc.f.Write(p)
+	if err != nil {
+		return
+	}
+
+	fc.w += int64(n)
+
+	_, err = fc.hash.Write(p)
+	return
+}
+
+// Close the handle and commit the document in database if all checks
+// are OK. It is important to check errors returned by this method.
+func (fc *FileCreation) Close() error {
+	var err error
+	c := fc.c
 
 	defer func() {
 		if err != nil {
-			c.fs.Remove(tmppath)
+			c.fs.Remove(fc.tmppath)
 		}
 	}()
 
-	written, md5Sum, err := copyOnFsAndCheckIntegrity(file, newdoc.MD5Sum, c.fs, body)
+	err = fc.f.Close()
 	if err != nil {
+		return err
+	}
+
+	newdoc, olddoc, written := fc.newdoc, fc.olddoc, fc.w
+
+	md5sum := fc.hash.Sum(nil)
+	if fc.checkHash && !bytes.Equal(newdoc.MD5Sum, md5sum) {
+		err = ErrInvalidHash
 		return err
 	}
 
@@ -314,52 +371,51 @@ func ModifyFileContent(c *Context, olddoc *FileDoc, newdoc *FileDoc, body io.Rea
 	}
 
 	if newdoc.MD5Sum == nil {
-		newdoc.MD5Sum = md5Sum
+		newdoc.MD5Sum = md5sum
 	}
 
 	if newdoc.Size != written {
-		return ErrContentLengthMismatch
+		err = ErrContentLengthMismatch
+		return err
 	}
 
-	newdoc.SetID(olddoc.ID())
-	newdoc.SetRev(olddoc.Rev())
-	newdoc.CreatedAt = olddoc.CreatedAt
-	newdoc.UpdatedAt = mdate
+	if olddoc != nil {
+		err = couchdb.UpdateDoc(c.db, newdoc)
+	} else {
+		err = couchdb.CreateDoc(c.db, newdoc)
+	}
 
-	err = couchdb.UpdateDoc(c.db, newdoc)
 	if err != nil {
 		return err
 	}
 
-	return c.fs.Rename(tmppath, newpath)
+	if fc.tmppath != fc.path {
+		err = c.fs.Rename(fc.tmppath, fc.path)
+	}
+
+	return err
 }
 
 // ModifyFileMetadata modify the metadata associated to a file. It can
 // be used to rename or move the file in the VFS.
 func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (newdoc *FileDoc, err error) {
-	oldpath, err := olddoc.Path(c)
+	parent, err := olddoc.Parent(c)
 	if err != nil {
 		return
 	}
-	newpath := oldpath
+
 	name := olddoc.Name
 	tags := olddoc.Tags
 	exec := olddoc.Executable
 	folderID := olddoc.FolderID
 	mdate := olddoc.UpdatedAt
-	parent := olddoc.parent
 
 	if data.FolderID != nil && *data.FolderID != folderID {
 		folderID = *data.FolderID
-		newpath, parent, err = getFilePath(c, name, folderID)
-		if err != nil {
-			return
-		}
 	}
 
 	if data.Name != "" {
 		name = data.Name
-		newpath = path.Join(path.Dir(newpath), name)
 	}
 
 	if data.Tags != nil {
@@ -399,8 +455,17 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (n
 	newdoc.CreatedAt = olddoc.CreatedAt
 	newdoc.UpdatedAt = mdate
 
+	oldpath, err := olddoc.Path(c)
+	if err != nil {
+		return
+	}
+	newpath, err := newdoc.Path(c)
+	if err != nil {
+		return
+	}
+
 	if newpath != oldpath {
-		err = safeRenameFile(oldpath, newpath, c.fs)
+		err = safeRenameFile(c, oldpath, newpath)
 		if err != nil {
 			return
 		}
@@ -425,31 +490,7 @@ func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error
 	return fs.OpenFile(pth, flag, mode)
 }
 
-func copyOnFsAndCheckIntegrity(file io.WriteCloser, givenMD5 []byte, fs afero.Fs, r io.Reader) (written int64, md5Sum []byte, err error) {
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
-			err = cerr
-		}
-	}()
-
-	md5H := md5.New() // #nosec
-
-	written, err = io.Copy(file, io.TeeReader(r, md5H))
-	if err != nil {
-		return
-	}
-
-	doCheck := givenMD5 != nil
-	md5Sum = md5H.Sum(nil)
-	if doCheck && !bytes.Equal(givenMD5, md5Sum) {
-		err = ErrInvalidHash
-		return
-	}
-
-	return
-}
-
-func safeRenameFile(oldpath, newpath string, fs afero.Fs) error {
+func safeRenameFile(c *Context, oldpath, newpath string) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 
@@ -457,7 +498,7 @@ func safeRenameFile(oldpath, newpath string, fs afero.Fs) error {
 		return fmt.Errorf("paths should be absolute")
 	}
 
-	_, err := fs.Stat(newpath)
+	_, err := c.fs.Stat(newpath)
 	if err == nil {
 		return os.ErrExist
 	}
@@ -465,7 +506,7 @@ func safeRenameFile(oldpath, newpath string, fs afero.Fs) error {
 		return err
 	}
 
-	return fs.Rename(oldpath, newpath)
+	return c.fs.Rename(oldpath, newpath)
 }
 
 func getFileMode(executable bool) (mode os.FileMode) {

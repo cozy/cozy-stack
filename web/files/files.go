@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -117,9 +118,18 @@ func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err
 		return
 	}
 
-	err = vfs.CreateFileAndUpload(vfsC, doc, c.Request.Body)
+	file, err := vfs.CreateFile(vfsC, doc, nil)
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	_, err = io.Copy(file, c.Request.Body)
+	if err != nil {
+		return
+	}
+
+	err = file.Close()
+	if err != nil {
 		return
 	}
 
@@ -157,38 +167,50 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
-	var oldDoc *vfs.FileDoc
-	var newDoc *vfs.FileDoc
+	var olddoc *vfs.FileDoc
+	var newdoc *vfs.FileDoc
 
-	oldDoc, err = vfs.GetFileDoc(vfsC, c.Param("file-id"))
+	olddoc, err = vfs.GetFileDoc(vfsC, c.Param("file-id"))
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	newDoc, err = fileDocFromReq(
+	newdoc, err = fileDocFromReq(
 		c,
-		oldDoc.Name,
-		oldDoc.FolderID,
-		oldDoc.Tags,
+		olddoc.Name,
+		olddoc.FolderID,
+		olddoc.Tags,
 	)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	if err = checkIfMatch(c.Request, oldDoc.Rev()); err != nil {
+	if err = checkIfMatch(c.Request, olddoc.Rev()); err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	err = vfs.ModifyFileContent(vfsC, oldDoc, newDoc, c.Request.Body)
+	file, err := vfs.CreateFile(vfsC, newdoc, olddoc)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
-	jsonapi.Data(c, http.StatusOK, newDoc, nil)
+	_, err = io.Copy(file, c.Request.Body)
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	err = file.Close()
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	jsonapi.Data(c, http.StatusOK, newdoc, nil)
 }
 
 // @TODO: get rid of this with jsonapi package

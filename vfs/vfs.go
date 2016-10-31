@@ -7,7 +7,6 @@ package vfs
 
 import (
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -133,12 +132,26 @@ func NewContext(fs afero.Fs, dbprefix string) *Context {
 	return &Context{fs, dbprefix}
 }
 
+// getParentDir returns the parent directory document if nil.
+func getParentDir(c *Context, parent *DirDoc, folderID string) (*DirDoc, error) {
+	if parent != nil {
+		return parent, nil
+	}
+	var err error
+	if folderID == RootFolderID {
+		parent = getRootDirDoc()
+	} else {
+		parent, err = GetDirDoc(c, folderID, false)
+	}
+	return parent, err
+}
+
 // @TODO: do a fetch from couchdb when instance creation is ok.
 func getRootDirDoc() *DirDoc {
 	return &DirDoc{
-		ObjID:  RootFolderID,
-		ObjRev: "1-",
-		Path:   "/",
+		ObjID:    RootFolderID,
+		ObjRev:   "1-",
+		Fullpath: "/",
 	}
 }
 
@@ -147,32 +160,6 @@ func checkFileName(str string) error {
 		return ErrIllegalFilename
 	}
 	return nil
-}
-
-// getFilePath is used to generate the filepath of a new file or
-// directory. It will check if the given parent folderID is well
-// defined is the database and filesystem and it will generate the new
-// path of the wanted file, checking if there is not colision with
-// existing file.
-func getFilePath(c *Context, name, folderID string) (pth string, parentDoc *DirDoc, err error) {
-	if err = checkFileName(name); err != nil {
-		return
-	}
-
-	var parentPath string
-
-	if folderID == "" || folderID == RootFolderID {
-		parentPath = "/"
-	} else {
-		parentDoc, err = GetDirDoc(c, folderID, false)
-		if err != nil {
-			return
-		}
-		parentPath = parentDoc.Path
-	}
-
-	pth = path.Join(parentPath, name)
-	return
 }
 
 func appendTags(oldtags, newtags []string) []string {

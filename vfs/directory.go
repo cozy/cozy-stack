@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/spf13/afero"
 )
 
 // DirDoc is a struct containing all the informations about a
@@ -33,40 +32,66 @@ type DirDoc struct {
 	UpdatedAt time.Time `json:"updated_at"`
 
 	// Directory path on VFS
-	Path string   `json:"path"`
-	Tags []string `json:"tags"`
+	Fullpath string   `json:"path"`
+	Tags     []string `json:"tags"`
 
 	parent *DirDoc
 	files  []*FileDoc
 	dirs   []*DirDoc
 }
 
-// ID returns the directory qualified identifier (part of couchdb.Doc interface)
+// ID returns the directory qualified identifier - see couchdb.Doc interface
 func (d *DirDoc) ID() string {
 	return d.ObjID
 }
 
-// Rev returns the directory revision (part of couchdb.Doc interface)
+// Rev returns the directory revision - see couchdb.Doc interface
 func (d *DirDoc) Rev() string {
 	return d.ObjRev
 }
 
-// DocType returns the directory document type (part of couchdb.Doc
-// interface)
+// DocType returns the directory document type - see couchdb.Doc
+// interface
 func (d *DirDoc) DocType() string {
 	return FsDocType
 }
 
-// SetID is used to change the directory qualified identifier (part of
-// couchdb.Doc interface)
+// SetID is used to change the directory qualified identifier - see
+// couchdb.Doc interface
 func (d *DirDoc) SetID(id string) {
 	d.ObjID = id
 }
 
-// SetRev is used to change the directory revision (part of
-// couchdb.Doc interface)
+// SetRev is used to change the directory revision - see couchdb.Doc
+// interface
 func (d *DirDoc) SetRev(rev string) {
 	d.ObjRev = rev
+}
+
+// Path is used to generate the file path
+func (d *DirDoc) Path(c *Context) (string, error) {
+	if d.Fullpath == "" {
+		parent, err := d.Parent(c)
+		if err != nil {
+			return "", err
+		}
+		parentPath, err := parent.Path(c)
+		if err != nil {
+			return "", err
+		}
+		d.Fullpath = path.Join(parentPath, d.Name)
+	}
+	return d.Fullpath, nil
+}
+
+// Parent returns the parent directory document
+func (d *DirDoc) Parent(c *Context) (*DirDoc, error) {
+	parent, err := getParentDir(c, d.parent, d.FolderID)
+	if err != nil {
+		return nil, err
+	}
+	d.parent = parent
+	return parent, nil
 }
 
 // SelfLink is used to generate a JSON-API link for the directory (part of
@@ -216,7 +241,7 @@ func GetDirDocFromPath(c *Context, pth string, withChildren bool) (*DirDoc, erro
 
 // CreateDirectory is the method for creating a new directory
 func CreateDirectory(c *Context, doc *DirDoc) (err error) {
-	pth, _, err := getFilePath(c, doc.Name, doc.FolderID)
+	pth, err := doc.Path(c)
 	if err != nil {
 		return err
 	}
@@ -232,8 +257,6 @@ func CreateDirectory(c *Context, doc *DirDoc) (err error) {
 		}
 	}()
 
-	doc.Path = pth
-
 	return couchdb.CreateDoc(c.db, doc)
 }
 
@@ -241,7 +264,6 @@ func CreateDirectory(c *Context, doc *DirDoc) (err error) {
 // directory. It can be used to rename or move the directory in the
 // VFS.
 func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes) (newdoc *DirDoc, err error) {
-	pth := olddoc.Path
 	name := olddoc.Name
 	tags := olddoc.Tags
 	folderID := olddoc.FolderID
@@ -250,15 +272,10 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 
 	if data.FolderID != nil && *data.FolderID != folderID {
 		folderID = *data.FolderID
-		pth, parent, err = getFilePath(c, name, folderID)
-		if err != nil {
-			return
-		}
 	}
 
 	if data.Name != "" {
 		name = data.Name
-		pth = path.Join(path.Dir(pth), name)
 	}
 
 	if data.Tags != nil {
@@ -283,20 +300,27 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 	newdoc.SetRev(olddoc.Rev())
 	newdoc.CreatedAt = olddoc.CreatedAt
 	newdoc.UpdatedAt = mdate
-	newdoc.Path = pth
 	newdoc.files = olddoc.files
 	newdoc.dirs = olddoc.dirs
 
-	if pth != olddoc.Path {
-		err = safeRenameDirectory(olddoc.Path, pth, c.fs)
+	oldpath, err := olddoc.Path(c)
+	if err != nil {
+		return
+	}
+	newpath, err := newdoc.Path(c)
+	if err != nil {
+		return
+	}
+
+	if oldpath != newpath {
+		err = safeRenameDirectory(c, oldpath, newpath)
 		if err != nil {
 			return
 		}
-	}
-
-	err = bulkUpdateDocsPath(c, olddoc, pth)
-	if err != nil {
-		return
+		err = bulkUpdateDocsPath(c, oldpath, newpath)
+		if err != nil {
+			return
+		}
 	}
 
 	err = couchdb.UpdateDoc(c.db, newdoc)
@@ -304,9 +328,7 @@ func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, data *DocMetaAttributes
 }
 
 // @TODO remove this method and use couchdb bulk updates instead
-func bulkUpdateDocsPath(c *Context, olddoc *DirDoc, newpath string) error {
-	oldpath := path.Clean(olddoc.Path)
-
+func bulkUpdateDocsPath(c *Context, oldpath, newpath string) error {
 	var children []*DirDoc
 	sel := mango.StartWith("path", oldpath+"/")
 	req := &couchdb.FindRequest{Selector: sel}
@@ -319,10 +341,10 @@ func bulkUpdateDocsPath(c *Context, olddoc *DirDoc, newpath string) error {
 
 	for _, child := range children {
 		go func(child *DirDoc) {
-			if !strings.HasPrefix(child.Path, oldpath+"/") {
+			if !strings.HasPrefix(child.Fullpath, oldpath+"/") {
 				errc <- fmt.Errorf("Child has wrong base directory")
 			} else {
-				child.Path = path.Join(newpath, child.Path[len(oldpath)+1:])
+				child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
 				errc <- couchdb.UpdateDoc(c.db, child)
 			}
 		}(child)
@@ -361,7 +383,7 @@ func fetchChildren(c *Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc
 	return
 }
 
-func safeRenameDirectory(oldpath, newpath string, fs afero.Fs) error {
+func safeRenameDirectory(c *Context, oldpath, newpath string) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 
@@ -373,7 +395,7 @@ func safeRenameDirectory(oldpath, newpath string, fs afero.Fs) error {
 		return ErrForbiddenDocMove
 	}
 
-	_, err := fs.Stat(newpath)
+	_, err := c.fs.Stat(newpath)
 	if err == nil {
 		return os.ErrExist
 	}
@@ -381,7 +403,7 @@ func safeRenameDirectory(oldpath, newpath string, fs afero.Fs) error {
 		return err
 	}
 
-	return fs.Rename(oldpath, newpath)
+	return c.fs.Rename(oldpath, newpath)
 }
 
 var (
