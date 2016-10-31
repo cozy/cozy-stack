@@ -62,6 +62,8 @@ type ObjectMarshalling struct {
 	Relationships RelationshipMap  `json:"relationships,omitempty"`
 }
 
+// GetRelationship returns the relationship with the given name from
+// the relationships map.
 func (o *ObjectMarshalling) GetRelationship(name string) (*Relationship, bool) {
 	rel, ok := o.Relationships[name]
 	if !ok {
