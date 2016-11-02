@@ -1,7 +1,9 @@
 package apps
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/url"
 	"path"
 	"regexp"
@@ -10,8 +12,12 @@ import (
 	"github.com/cozy/cozy-stack/vfs"
 )
 
-// ManifestDocType is manifest type
-const ManifestDocType = "io.cozy.manifests"
+const (
+	// ManifestDocType is manifest type
+	ManifestDocType = "io.cozy.manifests"
+	// ManifestMaxSize is the manifest maximum size
+	ManifestMaxSize = 2 << (2 * 10) // 2MB
+)
 
 // AppsDirectory is the name of the directory in which apps are stored
 const AppsDirectory = "/_cozyapps"
@@ -34,6 +40,7 @@ var (
 )
 
 type Client interface {
+	FetchManifest() (io.ReadCloser, error)
 	Fetch(appdir string) error
 }
 
@@ -174,6 +181,17 @@ func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err er
 	}
 	if err == nil {
 		return man, nil
+	}
+
+	r, err := i.cli.FetchManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	defer r.Close()
+	err = json.NewDecoder(io.LimitReader(r, ManifestMaxSize)).Decode(&man)
+	if err != nil {
+		return nil, ErrBadManifest
 	}
 
 	man.Slug = slug

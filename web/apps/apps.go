@@ -3,6 +3,7 @@ package apps
 import (
 	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -16,6 +17,11 @@ var (
 	// ErrNotSupportedSource is used when the source transport or
 	// protocol is not supported
 	ErrNotSupportedSource = errors.New("Invalid or not supported source scheme")
+	// ErrSourceNotReachable is used when the given source for
+	// application is not reachable
+	ErrSourceNotReachable = errors.New("Application source is not reachable")
+	// ErrBadManifest when the manifest is not valid or malformed
+	ErrBadManifest = errors.New("Application manifest is invalid or malformed")
 )
 
 // Access is a string representing the access permission level. It can
@@ -102,11 +108,19 @@ func (m *Manifest) Included() []jsonapi.Object {
 }
 
 func wrapAppsError(err error) *jsonapi.Error {
+	if urlErr, isURLErr := err.(*url.Error); isURLErr {
+		return jsonapi.InvalidParameter("Source", urlErr)
+	}
+
 	switch err {
 	case ErrInvalidSlugName:
 		return jsonapi.InvalidParameter("slug", err)
 	case ErrNotSupportedSource:
 		return jsonapi.InvalidParameter("Source", err)
+	case ErrSourceNotReachable:
+		return jsonapi.BadRequest(err)
+	case ErrBadManifest:
+		return jsonapi.BadRequest(err)
 	}
 	return jsonapi.InternalServerError(err)
 }

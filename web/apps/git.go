@@ -1,10 +1,14 @@
 package apps
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -15,6 +19,11 @@ import (
 	gitFS "gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
+const manifestFilename = "manifest.webapp"
+const githubRawManifestUrl = "https://raw.githubusercontent.com/%s/%s/%s/%s"
+
+var githubURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+
 type GitClient struct {
 	vfsC *vfs.Context
 	src  string
@@ -22,6 +31,47 @@ type GitClient struct {
 
 func NewGitClient(vfsC *vfs.Context, rawurl string) *GitClient {
 	return &GitClient{vfsC: vfsC, src: rawurl}
+}
+
+func (g *GitClient) FetchManifest() (io.ReadCloser, error) {
+	src, err := url.Parse(g.src)
+	if err != nil {
+		return nil, err
+	}
+
+	if src.Host == "github.com" {
+		return g.fetchManifestFromGithub(src)
+	}
+
+	// TODO
+	return nil, errors.New("Not implemented")
+}
+
+func (g *GitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error) {
+	submatch := githubURLRegex.FindStringSubmatch(src.Path)
+	if len(submatch) != 3 {
+		return nil, &url.Error{"parsepath", src.String(), errors.New("Could not parse url git path")}
+	}
+
+	user, project := submatch[1], submatch[2]
+	var branch string
+	if src.Fragment != "" {
+		branch = src.Fragment
+	} else {
+		branch = "master"
+	}
+
+	manURL := fmt.Sprintf(githubRawManifestUrl, user, project, branch, manifestFilename)
+	resp, err := http.Get(manURL)
+	if err != nil {
+		return nil, ErrSourceNotReachable
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, ErrSourceNotReachable
+	}
+
+	return resp.Body, nil
 }
 
 func (g *GitClient) Fetch(appdir string) error {
