@@ -51,7 +51,7 @@ func TestInstanceHasRootFolder(t *testing.T) {
 	prefix := getDBPrefix(t, "test.cozycloud.cc")
 	err := couchdb.GetDoc(prefix, vfs.FsDocType, vfs.RootFolderID, &root)
 	if assert.NoError(t, err) {
-		assert.Equal(t, root.Path, "/")
+		assert.Equal(t, root.Fullpath, "/")
 	}
 }
 
@@ -75,7 +75,7 @@ func TestMain(m *testing.M) {
 	}
 	couchdb.DeleteDB(globalDBPrefix, instanceType)
 	couchdb.DeleteDB("test.cozycloud.cc/", vfs.FsDocType)
-	// ignore err, it is expected
+	os.RemoveAll("/usr/local/var/cozy2/")
 
 	os.Exit(m.Run())
 }

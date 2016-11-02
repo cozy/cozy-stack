@@ -253,6 +253,27 @@ func CreateDirectory(c *Context, doc *DirDoc) (err error) {
 	return couchdb.CreateDoc(c.db, doc)
 }
 
+// CreateRootDirectory creates the root folder for this context
+func CreateRootDirectory(c *Context) (err error) {
+	root := &DirDoc{
+		Type:     DirType,
+		ObjID:    RootFolderID,
+		Fullpath: "/",
+	}
+	err = c.fs.MkdirAll(root.Fullpath, 0755)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			c.fs.Remove(root.Fullpath)
+		}
+	}()
+
+	return couchdb.CreateNamedDocWithDB(c.db, root)
+}
+
 // ModifyDirectoryMetadata modify the metadata associated to a
 // directory. It can be used to rename or move the directory in the
 // VFS.

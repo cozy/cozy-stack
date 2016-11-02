@@ -871,6 +871,7 @@ func TestMain(m *testing.M) {
 		Domain:     "test",
 		StorageURL: "file://localhost" + tempdir,
 	}
+	testInstance.Create()
 
 	router := gin.New()
 	router.Use(injectInstance(testInstance))

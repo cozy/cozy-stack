@@ -425,13 +425,11 @@ func WrapVfsError(err error) *jsonapi.Error {
 
 func getVfsContext(c *gin.Context) (*vfs.Context, error) {
 	instance := middlewares.GetInstance(c)
-	dbprefix := instance.GetDatabasePrefix()
-	fs, err := instance.GetStorageProvider()
+	vfsC, err := instance.GetVFSContext()
 	if err != nil {
 		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 		return nil, err
 	}
-	vfsC := vfs.NewContext(fs, dbprefix)
 	return vfsC, nil
 }
 

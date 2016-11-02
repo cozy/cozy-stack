@@ -3,7 +3,6 @@ package instance
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -56,14 +55,11 @@ func (i *Instance) createInCouchdb() (err error) {
 
 // createRootFolder creates the root folder for this instance
 func (i *Instance) createRootFolder() error {
-	root := vfs.MakeRoot()
-	prefix := i.GetDatabasePrefix()
-	err := couchdb.CreateDB(prefix, root.DocType())
+	vfsC, err := i.GetVFSContext()
 	if err != nil {
 		return err
 	}
-	return couchdb.CreateNamedDoc(prefix, root)
-	// TODO (vfs) should we also create the root folder on FS ?
+	return vfs.CreateRootDirectory(vfsC)
 }
 
 // createFSIndexes creates the index needed by VFS
@@ -79,32 +75,41 @@ func (i *Instance) createFSIndexes() (err error) {
 	return err
 }
 
-// Create contains the whole process involved in creating an instance
+// Create build an instance and .Create it
 func Create(domain string, locale string, apps []string) (*Instance, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	storageURL := "file://localhost" + wd + "/" + domain + "/"
+	// TODO use a base directory provided by stack level config
+	base := "/tmp/cozy2/"
+	storageURL := "file://localhost" + base + "/" + domain + "/"
 
 	i := &Instance{
 		Domain:     domain,
 		StorageURL: storageURL,
 	}
-	if err := i.createInCouchdb(); err != nil {
-		return nil, err
-	}
-	if err := i.createRootFolder(); err != nil {
-		return nil, err
-	}
-	if err := i.createFSIndexes(); err != nil {
+	err := i.Create()
+	if err != nil {
 		return nil, err
 	}
 
+	return i, nil
+}
+
+// Create performs the necessary setups for this instance to be usable
+func (i *Instance) Create() error {
+	if err := i.createInCouchdb(); err != nil {
+		return err
+	}
+	if err := i.createRootFolder(); err != nil {
+		return err
+	}
+	if err := i.createFSIndexes(); err != nil {
+		return err
+	}
+
+	// TODO atomicity with defer
 	// TODO figure out what to do with locale
 	// TODO install apps
 
-	return i, nil
+	return nil
 }
 
 // Get retrieves the instance for a request by its host.
@@ -161,4 +166,14 @@ func (i *Instance) GetStorageProvider() (afero.Fs, error) {
 // current instance
 func (i *Instance) GetDatabasePrefix() string {
 	return i.Domain + "/"
+}
+
+// GetVFSContext returns a vfs.Context for this Instance
+func (i *Instance) GetVFSContext() (c *vfs.Context, err error) {
+	dbprefix := i.GetDatabasePrefix()
+	fs, err := i.GetStorageProvider()
+	if err != nil {
+		return nil, err
+	}
+	return vfs.NewContext(fs, dbprefix), nil
 }
