@@ -269,6 +269,20 @@ func CreateNamedDoc(dbprefix string, doc Doc) (err error) {
 	return err
 }
 
+// CreateNamedDocWithDB is equivalent to CreateNamedDoc but creates the database
+// if it does not exist
+func CreateNamedDocWithDB(dbprefix string, doc Doc) (err error) {
+	err = CreateNamedDoc(dbprefix, doc)
+	if coucherr, ok := err.(*Error); ok && coucherr.Reason == "wrong_doctype" {
+		err = CreateDB(dbprefix, doc.DocType())
+		if err != nil {
+			return err
+		}
+		return CreateNamedDoc(dbprefix, doc)
+	}
+	return err
+}
+
 func createDocOrDb(dbprefix string, doc Doc, response interface{}) (err error) {
 	doctype := doc.DocType()
 	db := makeDBName(dbprefix, doctype)
