@@ -82,9 +82,9 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 }
 ```
 
-### GET /files/:folder-id
+### GET /files/:file-id
 
-Get the folder informations and the list of files and sub-folders inside it.
+Get a folder or a file informations. In the case of a folder, it contains the list of files and sub-folders inside it.
 Contents is paginated. By default, only the 100 first entries are given.
 
 ### Query-String
@@ -295,9 +295,9 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 **Note**: for an image, the links section will also include a link called
 `thumbnail` to the thumbnail URL of the image.
 
-### GET /files/:file-id
+### GET /files/download/:file-id
 
-Get the file content
+Download the file content.
 
 #### Request
 
@@ -318,7 +318,7 @@ Hello world!
 
 ### GET /files/download
 
-Download a file (its content) from its path
+Download the file content from its path.
 
 #### Request
 
@@ -413,7 +413,7 @@ Common
 
 ### GET /files/metadata
 
-Get metadata about a file (or folder) from its path
+Same as `/files/:file-id` but to retrieve informations from a path.
 
 #### Request
 

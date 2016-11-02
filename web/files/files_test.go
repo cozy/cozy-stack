@@ -682,7 +682,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 }
 
 func TestDownloadFileBadID(t *testing.T) {
-	res, _ := download(t, "/files/badid", "")
+	res, _ := download(t, "/files/download/badid", "")
 	assert.Equal(t, 404, res.StatusCode)
 }
 
@@ -703,7 +703,7 @@ func TestDownloadFileByIDSuccess(t *testing.T) {
 	fileID, ok := filedata["id"].(string)
 	assert.True(t, ok)
 
-	res2, resbody := download(t, "/files/"+fileID, "")
+	res2, resbody := download(t, "/files/download/"+fileID, "")
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "inline"))
 	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme1"))
@@ -746,7 +746,7 @@ func TestDownloadRangeSuccess(t *testing.T) {
 	assert.Equal(t, "bar", string(res4body))
 }
 
-func TestGetFileMetadata(t *testing.T) {
+func TestGetFileMetadataFromPath(t *testing.T) {
 	res1, _ := http.Get(ts.URL + "/files/metadata?Path=/noooooop")
 	assert.Equal(t, 404, res1.StatusCode)
 
@@ -758,22 +758,41 @@ func TestGetFileMetadata(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
-func TestGetDirectoryMetadata(t *testing.T) {
-	res1, data1 := createDir(t, "/files/?Name=getdirmeta&Type=io.cozy.folders")
+func TestGetDirectoryMetadataFromPath(t *testing.T) {
+	res1, _ := createDir(t, "/files/?Name=getdirmeta&Type=io.cozy.folders")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	var ok bool
-	data1, ok = data1["data"].(map[string]interface{})
-	assert.True(t, ok)
+	res2, _ := http.Get(ts.URL + "/files/metadata?Path=/getdirmeta")
+	assert.Equal(t, 200, res2.StatusCode)
+}
 
-	parentID, ok := data1["id"].(string)
-	assert.True(t, ok)
+func TestGetFileMetadataFromID(t *testing.T) {
+	res1, _ := http.Get(ts.URL + "/files/qsdqsd")
+	assert.Equal(t, 404, res1.StatusCode)
 
-	body := "foo"
-	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=firstfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	body := "foo,bar"
+	res2, data2 := upload(t, "/files/?Type=io.cozy.files&Name=getmetadatafromid", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getdirmeta")
+	fileID, _ := extractDirData(t, data2)
+
+	res3, _ := http.Get(ts.URL + "/files/" + fileID)
+	assert.Equal(t, 200, res3.StatusCode)
+}
+
+func TestGetDirectoryMetadataFromID(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=getdirmetafromid&Type=io.cozy.folders")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	parentID, _ := extractDirData(t, data1)
+
+	body := "foo"
+	res2, data2 := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=firstfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	fileID, _ := extractDirData(t, data2)
+
+	res3, _ := http.Get(ts.URL + "/files/" + fileID)
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
@@ -830,14 +849,24 @@ func TestMain(m *testing.M) {
 	router.POST("/files/:folder-id", CreationHandler)
 	router.PATCH("/files/:file-id", ModificationHandler)
 	router.PUT("/files/:file-id", OverwriteFileContentHandler)
-	router.HEAD("/files/:file-id", ReadFileContentHandler)
-	router.GET("/files/:file-id", func(c *gin.Context) {
-		if c.Param("file-id") == MetadataPath {
-			ReadMetadataHandler(c)
+	router.HEAD("/files/download/:file-id", func(c *gin.Context) {
+		ReadFileContentHandler(c, c.Param("file-id"))
+	})
+	router.GET("/files/:dl-meta-or-file-id/*file-id", func(c *gin.Context) {
+		fileID := c.Param("file-id")[1:]
+		ReadFileContentHandler(c, fileID)
+	})
+	router.GET("/files/:dl-meta-or-file-id", func(c *gin.Context) {
+		dlMeta := c.Param("dl-meta-or-file-id")
+		if dlMeta == "download" {
+			ReadFileContentHandler(c, "")
+		} else if dlMeta == "metadata" {
+			ReadMetadataFromPathHandler(c)
 		} else {
-			ReadFileContentHandler(c)
+			ReadMetadataFromIDHandler(c, dlMeta)
 		}
 	})
+
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())

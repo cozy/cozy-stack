@@ -80,7 +80,7 @@ func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
 
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
-func GetDirOrFileDoc(c *Context, fileID string) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+func GetDirOrFileDoc(c *Context, fileID string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
 	if fileID == RootFolderID {
 		typ, dirDoc = DirType, getRootDirDoc()
 		return
@@ -93,6 +93,9 @@ func GetDirOrFileDoc(c *Context, fileID string) (typ string, dirDoc *DirDoc, fil
 	}
 
 	typ, dirDoc, fileDoc = dirOrFile.refine()
+	if typ == DirType && withChildren {
+		dirDoc.FetchFiles(c)
+	}
 	return
 }
 

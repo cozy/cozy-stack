@@ -26,10 +26,6 @@ const DefaultContentType = "application/octet-stream"
 // TagSeparator is the character separating tags
 const TagSeparator = ","
 
-// MetadataPath is a generic placeholder used in our routes to handle
-// files and directories by path.
-const MetadataPath = "metadata"
-
 const (
 	fileType   = "io.cozy.files"
 	folderType = "io.cozy.folders"
@@ -209,10 +205,10 @@ func ModificationHandler(c *gin.Context) {
 	var file *vfs.FileDoc
 	var dir *vfs.DirDoc
 
-	if fileID == MetadataPath {
+	if fileID == "metadata" {
 		typ, dir, file, err = vfs.GetDirOrFileDocFromPath(vfsC, c.Query("Path"), false)
 	} else {
-		typ, dir, file, err = vfs.GetDirOrFileDoc(vfsC, fileID)
+		typ, dir, file, err = vfs.GetDirOrFileDoc(vfsC, fileID, false)
 	}
 
 	if err != nil {
@@ -248,11 +244,40 @@ func ModificationHandler(c *gin.Context) {
 	jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
-// ReadMetadataHandler handles all GET requests on /files/metadata
-// aiming at getting file metadata from its path.
+// ReadMetadataFromIDHandler handles all GET requests on /files/:file-
+// id aiming at getting file metadata from its path.
+//
+// swagger:route GET /files/:file-id files getFileMetadata
+func ReadMetadataFromIDHandler(c *gin.Context, fileID string) {
+	var err error
+
+	vfsC, err := getVfsContext(c)
+	if err != nil {
+		return
+	}
+
+	typ, dir, file, err := vfs.GetDirOrFileDoc(vfsC, fileID, true)
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	var data jsonapi.Object
+	switch typ {
+	case vfs.DirType:
+		data = dir
+	case vfs.FileType:
+		data = file
+	}
+
+	jsonapi.Data(c, http.StatusOK, data, nil)
+}
+
+// ReadMetadataFromPathHandler handles all GET requests on
+// /files/metadata aiming at getting file metadata from its path.
 //
 // swagger:route GET /files/metadata files getFileMetadata
-func ReadMetadataHandler(c *gin.Context) {
+func ReadMetadataFromPathHandler(c *gin.Context) {
 	var err error
 
 	vfsC, err := getVfsContext(c)
@@ -286,7 +311,7 @@ func ReadMetadataHandler(c *gin.Context) {
 //
 // swagger:route GET /files/download files downloadFileByPath
 // swagger:route GET /files/:file-id files downloadFileByID
-func ReadFileContentHandler(c *gin.Context) {
+func ReadFileContentHandler(c *gin.Context, fileID string) {
 	var err error
 
 	vfsC, err := getVfsContext(c)
@@ -294,15 +319,15 @@ func ReadFileContentHandler(c *gin.Context) {
 		return
 	}
 
-	fileID := c.Param("file-id")
+	path := c.Query("Path")
 
 	// Path /files/download is handled specifically to download file
 	// form their path
 	var doc *vfs.FileDoc
 	var disposition string
-	if fileID == "download" {
+	if fileID == "" && path != "" {
 		disposition = "attachment"
-		doc, err = vfs.GetFileDocFromPath(vfsC, c.Query("Path"))
+		doc, err = vfs.GetFileDocFromPath(vfsC, path)
 	} else {
 		disposition = "inline"
 		doc, err = vfs.GetFileDoc(vfsC, fileID)
@@ -324,15 +349,32 @@ func ReadFileContentHandler(c *gin.Context) {
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
 	// @TODO: get rid of this handler when switching to
-	// echo/httprouterv2.
-	router.GET("/:file-id", func(c *gin.Context) {
-		if c.Param("file-id") == MetadataPath {
-			ReadMetadataHandler(c)
+	// echo/httprouterv2. This should ideally be:
+	//
+	//     router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
+	//     router.HEAD("/download", ReadFileContentFromPathHandler)
+	//     router.GET("/download", ReadFileContentFromPathHandler)
+	//     router.GET("/download/:file-id", ReadFileContentFromIDHandler)
+	//     router.GET("/metadata", ReadMetadataFromPathHandler)
+	//     router.GET("/:file-id", ReadMetadataFromIDHanler)
+	//
+	router.HEAD("/download/:file-id", func(c *gin.Context) {
+		ReadFileContentHandler(c, c.Param("file-id"))
+	})
+	router.GET("/:dl-meta-or-file-id/*file-id", func(c *gin.Context) {
+		fileID := c.Param("file-id")[1:]
+		ReadFileContentHandler(c, fileID)
+	})
+	router.GET("/:dl-meta-or-file-id", func(c *gin.Context) {
+		dlMeta := c.Param("dl-meta-or-file-id")
+		if dlMeta == "download" {
+			ReadFileContentHandler(c, "")
+		} else if dlMeta == "metadata" {
+			ReadMetadataFromPathHandler(c)
 		} else {
-			ReadFileContentHandler(c)
+			ReadMetadataFromIDHandler(c, dlMeta)
 		}
 	})
-	router.HEAD("/:file-id", ReadFileContentHandler)
 
 	router.POST("/", CreationHandler)
 	router.POST("/:folder-id", CreationHandler)
@@ -367,7 +409,7 @@ func WrapVfsError(err error) *jsonapi.Error {
 	case vfs.ErrForbiddenDocMove:
 		return jsonapi.PreconditionFailed("folder-id", err)
 	case vfs.ErrIllegalFilename:
-		return jsonapi.InvalidParameter("folder-id", err)
+		return jsonapi.InvalidParameter("name", err)
 	case vfs.ErrIllegalTime:
 		return jsonapi.InvalidParameter("UpdatedAt", err)
 	case vfs.ErrInvalidHash:
