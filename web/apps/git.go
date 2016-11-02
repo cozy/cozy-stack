@@ -15,42 +15,28 @@ import (
 	gitFS "gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
-type GitInstaller struct {
-	man  *Manifest
-	rep  *git.Repository
-	gfs  gitFS.Filesystem
+type GitClient struct {
 	vfsC *vfs.Context
+	src  string
 }
 
-func NewGitInstaller(vfsC *vfs.Context, man *Manifest) (*GitInstaller, error) {
-	err := vfsC.Mkdir("/test")
-	if err != nil {
-		return nil, err
-	}
+func NewGitClient(vfsC *vfs.Context, rawurl string) *GitClient {
+	return &GitClient{vfsC: vfsC, src: rawurl}
+}
 
-	gfs := newGFS(vfsC, "/test")
+func (g *GitClient) Fetch(appdir string) error {
+	gfs := newGFS(g.vfsC, appdir)
 	storage, err := gitSt.NewStorage(gfs)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	rep, err := git.NewRepository(storage)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	installer := &GitInstaller{
-		rep:  rep,
-		man:  man,
-		gfs:  gfs,
-		vfsC: vfsC,
-	}
-
-	return installer, nil
-}
-
-func (g *GitInstaller) Install() error {
-	src, err := url.Parse(g.man.Source)
+	src, err := url.Parse(g.src)
 	if err != nil {
 		return err
 	}
@@ -60,7 +46,7 @@ func (g *GitInstaller) Install() error {
 		src.Scheme = "https"
 	}
 
-	err = g.rep.Clone(&git.CloneOptions{
+	err = rep.Clone(&git.CloneOptions{
 		URL:   src.String(),
 		Depth: 1,
 	})
@@ -68,12 +54,12 @@ func (g *GitInstaller) Install() error {
 		return err
 	}
 
-	ref, err := g.rep.Head()
+	ref, err := rep.Head()
 	if err != nil {
 		return err
 	}
 
-	commit, err := g.rep.Commit(ref.Hash())
+	commit, err := rep.Commit(ref.Hash())
 	if err != nil {
 		return err
 	}
@@ -84,7 +70,7 @@ func (g *GitInstaller) Install() error {
 	}
 
 	return files.ForEach(func(f *git.File) (err error) {
-		abs := path.Join(g.gfs.Base(), f.Name)
+		abs := path.Join(gfs.Base(), f.Name)
 		dir := path.Dir(abs)
 
 		err = g.vfsC.MkdirAll(dir)
@@ -283,7 +269,7 @@ func (fs *gfs) Base() string {
 }
 
 var (
-	_ Installer        = &GitInstaller{}
+	_ Client           = &GitClient{}
 	_ gitFS.Filesystem = &gfs{}
 	_ gitFS.File       = &gfileWrite{}
 	_ gitFS.File       = &gfileRead{}
