@@ -123,17 +123,30 @@ func extractDirData(t *testing.T, data map[string]interface{}) (string, map[stri
 	return id, data
 }
 
-func patchFile(t *testing.T, path, docType, id string, attrs map[string]interface{}) (res *http.Response, v map[string]interface{}) {
-	type jsonData struct {
-		Type  string                 `json:"type"`
-		ID    string                 `json:"id"`
-		Attrs map[string]interface{} `json:"attributes,omitempty"`
-	}
+type relsParent struct {
+	parent *jsonData
+}
 
+type jsonData struct {
+	Type  string                 `json:"type"`
+	ID    string                 `json:"id"`
+	Attrs map[string]interface{} `json:"attributes,omitempty"`
+	Rels  map[string]interface{} `json:"relationships,omitempty"`
+}
+
+func patchFile(t *testing.T, path, docType, id string, attrs map[string]interface{}, parent *jsonData) (res *http.Response, v map[string]interface{}) {
 	bodyreq := &jsonData{
 		Type:  docType,
 		ID:    id,
 		Attrs: attrs,
+	}
+
+	if parent != nil {
+		bodyreq.Rels = map[string]interface{}{
+			"parent": map[string]interface{}{
+				"data": parent,
+			},
+		}
 	}
 
 	b, err := json.Marshal(map[string]*jsonData{"data": bodyreq})
@@ -410,7 +423,7 @@ func TestModifyMetadataFileMove(t *testing.T) {
 		"executable": true,
 	}
 
-	res3, data3 := patchFile(t, "/files/"+fileID, "io.cozy.files", fileID, attrs)
+	res3, data3 := patchFile(t, "/files/"+fileID, "io.cozy.files", fileID, attrs, nil)
 	assert.Equal(t, 200, res3.StatusCode)
 
 	data3, ok = data3["data"].(map[string]interface{})
@@ -442,7 +455,7 @@ func TestModifyMetadataFileConflict(t *testing.T) {
 		"name": "fmodme2",
 	}
 
-	res3, _ := patchFile(t, "/files/"+file1ID, "io.cozy.files", file1ID, attrs)
+	res3, _ := patchFile(t, "/files/"+file1ID, "io.cozy.files", file1ID, attrs, nil)
 	assert.Equal(t, 409, res3.StatusCode)
 }
 
@@ -469,7 +482,7 @@ func TestModifyMetadataDirMove(t *testing.T) {
 		"folder_id": folder2ID,
 	}
 
-	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs1)
+	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs1, nil)
 	assert.Equal(t, 200, res3.StatusCode)
 
 	storage, _ := instance.GetStorageProvider()
@@ -483,11 +496,46 @@ func TestModifyMetadataDirMove(t *testing.T) {
 		"folder_id": folder1ID,
 	}
 
-	res4, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs2)
+	res4, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs2, nil)
 	assert.Equal(t, 412, res4.StatusCode)
 
-	res5, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs2)
+	res5, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs2, nil)
 	assert.Equal(t, 412, res5.StatusCode)
+}
+
+func TestModifyMetadataDirMoveWithRel(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=dirmodmewithrel&Type=io.cozy.folders&Tags=foo,bar,bar")
+	assert.Equal(t, 201, res1.StatusCode)
+
+	folder1ID, _ := extractDirData(t, data1)
+
+	reschild1, datachild1 := createDir(t, "/files/"+folder1ID+"?Name=child1&Type=io.cozy.folders")
+	assert.Equal(t, 201, reschild1.StatusCode)
+
+	reschild2, datachild2 := createDir(t, "/files/"+folder1ID+"?Name=child2&Type=io.cozy.folders")
+	assert.Equal(t, 201, reschild2.StatusCode)
+
+	res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinmewithrel&Type=io.cozy.folders")
+	assert.Equal(t, 201, res2.StatusCode)
+
+	folder2ID, _ := extractDirData(t, data2)
+	child1ID, _ := extractDirData(t, datachild1)
+	child2ID, _ := extractDirData(t, datachild2)
+
+	fmt.Println(child1ID, child2ID)
+
+	parent := &jsonData{
+		ID:   folder2ID,
+		Type: "io.cozy.files",
+	}
+
+	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, nil, parent)
+	assert.Equal(t, 200, res3.StatusCode)
+
+	storage, _ := instance.GetStorageProvider()
+	exists, err := afero.DirExists(storage, "/dirmodmemoveinmewithrel/dirmodmewithrel")
+	assert.NoError(t, err)
+	assert.True(t, exists)
 }
 
 func TestModifyMetadataDirMoveConflict(t *testing.T) {
@@ -504,7 +552,7 @@ func TestModifyMetadataDirMoveConflict(t *testing.T) {
 		"name": "conflictmodme1",
 	}
 
-	res3, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs1)
+	res3, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs1, nil)
 	assert.Equal(t, 409, res3.StatusCode)
 }
 
