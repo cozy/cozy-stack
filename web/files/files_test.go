@@ -531,7 +531,7 @@ func TestModifyMetadataDirMoveWithRel(t *testing.T) {
 	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, nil, parent)
 	assert.Equal(t, 200, res3.StatusCode)
 
-	storage, _ := instance.GetStorageProvider()
+	storage, _ := testInstance.GetStorageProvider()
 	exists, err := afero.DirExists(storage, "/dirmodmemoveinmewithrel/dirmodmewithrel")
 	assert.NoError(t, err)
 	assert.True(t, exists)
