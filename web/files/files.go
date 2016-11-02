@@ -197,10 +197,12 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	if rel, ok := obj.GetRelationship("parent"); ok {
-		rid, ok := rel.Data.(jsonapi.ResourceIdentifier)
-		if ok {
-			patch.FolderID = &rid.ID
+		rid, ok := rel.ResourceIdentifier()
+		if !ok {
+			jsonapi.AbortWithError(c, jsonapi.BadJSON())
+			return
 		}
+		patch.FolderID = &rid.ID
 	}
 
 	fileID := c.Param("file-id")

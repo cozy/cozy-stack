@@ -47,6 +47,16 @@ type Relationship struct {
 	Data  interface{} `json:"data"`
 }
 
+// ResourceIdentifier returns the resource identifier of the relationship.
+func (r *Relationship) ResourceIdentifier() (*ResourceIdentifier, bool) {
+	if m, ok := r.Data.(map[string]interface{}); ok {
+		idd, _ := m["id"].(string)
+		typ, _ := m["type"].(string)
+		return &ResourceIdentifier{ID: idd, Type: typ}, true
+	}
+	return nil, false
+}
+
 // RelationshipMap is a map of relationships
 // See http://jsonapi.org/format/#document-resource-object-relationships
 type RelationshipMap map[string]Relationship
