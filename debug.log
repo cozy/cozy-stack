@@ -1,28 +1,0 @@
-[couchdb request] DELETE dev%2Fio-cozy-files 
-[couchdb request] PUT dev%2Fio-cozy-files 
-[couchdb request] POST dev%2Fio-cozy-files/_index {"index":{"fields":["folder_id","name"]}}
-[couchdb request] PUT dev%2Fio-cozy-files/io.cozy.files.rootdir {"type":"","_id":"io.cozy.files.rootdir","name":"","folder_id":"","created_at":"0001-01-01T00:00:00Z","updated_at":"0001-01-01T00:00:00Z","path":"/","tags":null}
-=== RUN   TestGetFileDocFromPathAtRoot
-[couchdb request] POST dev%2Fio-cozy-files {"type":"file","name":"toto","folder_id":"io.cozy.files.rootdir","created_at":"2016-11-02T15:39:41.073890175+01:00","updated_at":"2016-11-02T15:39:41.073890175+01:00","size":"7","md5sum":"MHm6zuV/0aAEzvWpObXh4A==","mime":"foo/bar","class":"foo","executable":false,"tags":[]}
-[couchdb request] POST dev%2Fio-cozy-files/_find {"selector":{"path":"/"},"limit":1}
-[couchdb request] POST dev%2Fio-cozy-files/_find {"selector":{"$and":[{"folder_id":"io.cozy.files.rootdir"},{"name":"toto"},{"type":"file"}]},"limit":1}
-[couchdb request] POST dev%2Fio-cozy-files/_find {"selector":{"path":"/"},"limit":1}
-[couchdb request] POST dev%2Fio-cozy-files/_find {"selector":{"$and":[{"folder_id":"io.cozy.files.rootdir"},{"name":"noooo"},{"type":"file"}]},"limit":1}
---- PASS: TestGetFileDocFromPathAtRoot (0.03s)
-=== RUN   TestGetFileDocFromPath
-[couchdb request] GET dev%2Fio-cozy-files/io.cozy.files.rootdir 
-[couchdb request] POST dev%2Fio-cozy-files {"type":"file","name":"toto","folder_id":"io.cozy.files.rootdir","created_at":"2016-11-02T15:39:41.111469439+01:00","updated_at":"2016-11-02T15:39:41.111469439+01:00","size":"7","md5sum":"MHm6zuV/0aAEzvWpObXh4A==","mime":"foo/bar","class":"foo","executable":false,"tags":[]}
-[couchdb request] POST dev%2Fio-cozy-files/_find {"selector":{"path":"/container"},"limit":1}
-[couchdb request] POST dev%2Fio-cozy-files/_find {"selector":{"path":"/container"},"limit":1}
---- FAIL: TestGetFileDocFromPath (0.03s)
-	assertions.go:241:                         	Error Trace:	vfs_test.go:49
-			Error:		Received unexpected error:
-			file does not exist
-		
-	assertions.go:241:                         	Error Trace:	vfs_test.go:67
-			Error:		Received unexpected error:
-			file does not exist
-		
-FAIL
-exit status 1
-FAIL	github.com/cozy/cozy-stack/vfs	0.165s
