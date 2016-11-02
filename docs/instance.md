@@ -100,7 +100,7 @@ Renaming
 An instance is renamed through the command line.
 
 ```sh
-$ cozy-stack rename <olddomain> <newdomain>
+$ cozy-stack instances rename <olddomain> <newdomain>
 ```
 
 Renaming an instance only change the HostName in global/instances base.
@@ -115,5 +115,5 @@ An instance is destroyed through the command line.
 A confirmation is asked from the CLI user unless the --yes flag is passed
 
 ```sh
-$ cozy-stack destroy <domain>
+$ cozy-stack instances destroy <domain>
 ```

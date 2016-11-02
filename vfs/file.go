@@ -184,11 +184,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 
 	dirpath := path.Dir(pth)
 	var parent *DirDoc
-	if dirpath == "/" {
-		parent = getRootDirDoc()
-	} else {
-		parent, err = GetDirDocFromPath(c, dirpath, false)
-	}
+	parent, err = GetDirDocFromPath(c, dirpath, false)
 
 	if err != nil {
 		return nil, err

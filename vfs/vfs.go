@@ -81,11 +81,6 @@ func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
 func GetDirOrFileDoc(c *Context, fileID string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
-	if fileID == RootFolderID {
-		typ, dirDoc = DirType, getRootDirDoc()
-		return
-	}
-
 	dirOrFile := &dirOrFile{}
 	err = couchdb.GetDoc(c.db, FsDocType, fileID, dirOrFile)
 	if err != nil {
@@ -141,21 +136,8 @@ func getParentDir(c *Context, parent *DirDoc, folderID string) (*DirDoc, error) 
 		return parent, nil
 	}
 	var err error
-	if folderID == RootFolderID {
-		parent = getRootDirDoc()
-	} else {
-		parent, err = GetDirDoc(c, folderID, false)
-	}
+	parent, err = GetDirDoc(c, folderID, false)
 	return parent, err
-}
-
-// @TODO: do a fetch from couchdb when instance creation is ok.
-func getRootDirDoc() *DirDoc {
-	return &DirDoc{
-		ObjID:    RootFolderID,
-		ObjRev:   "1-",
-		Fullpath: "/",
-	}
 }
 
 func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error) {
