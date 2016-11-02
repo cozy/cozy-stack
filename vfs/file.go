@@ -140,7 +140,7 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 		folderID = RootFolderID
 	}
 
-	tags = appendTags(nil, tags)
+	tags = uniqueTags(tags)
 
 	createDate := time.Now()
 	doc = &FileDoc{
@@ -398,62 +398,51 @@ func (fc *FileCreation) Close() error {
 
 // ModifyFileMetadata modify the metadata associated to a file. It can
 // be used to rename or move the file in the VFS.
-func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (newdoc *FileDoc, err error) {
-	parent, err := olddoc.Parent(c)
+func ModifyFileMetadata(c *Context, olddoc *FileDoc, patch *DocPatch) (newdoc *FileDoc, err error) {
+	cdate := olddoc.CreatedAt
+	patch, err = normalizeDocPatch(&DocPatch{
+		Name:       &olddoc.Name,
+		FolderID:   &olddoc.FolderID,
+		Tags:       &olddoc.Tags,
+		UpdatedAt:  &olddoc.UpdatedAt,
+		Executable: &olddoc.Executable,
+	}, patch, cdate)
+
 	if err != nil {
 		return
 	}
 
-	name := olddoc.Name
-	tags := olddoc.Tags
-	exec := olddoc.Executable
-	folderID := olddoc.FolderID
-	mdate := olddoc.UpdatedAt
-
-	if data.FolderID != nil && *data.FolderID != folderID {
-		folderID = *data.FolderID
-	}
-
-	if data.Name != "" {
-		name = data.Name
-	}
-
-	if data.Tags != nil {
-		tags = appendTags(tags, data.Tags)
-	}
-
-	if data.Executable != nil {
-		exec = *data.Executable
-	}
-
-	if data.UpdatedAt != nil {
-		mdate = *data.UpdatedAt
-	}
-
-	if mdate.Before(olddoc.CreatedAt) {
-		err = ErrIllegalTime
-		return
-	}
-
 	newdoc, err = NewFileDoc(
-		name,
-		folderID,
+		*patch.Name,
+		*patch.FolderID,
 		olddoc.Size,
 		olddoc.MD5Sum,
 		olddoc.Mime,
 		olddoc.Class,
-		exec,
-		tags,
-		parent,
+		*patch.Executable,
+		*patch.Tags,
+		nil,
 	)
+	if err != nil {
+		return
+	}
+
+	var parent *DirDoc
+	if newdoc.FolderID != olddoc.FolderID {
+		parent, err = newdoc.Parent(c)
+	} else {
+		parent = olddoc.parent
+	}
+
 	if err != nil {
 		return
 	}
 
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
-	newdoc.CreatedAt = olddoc.CreatedAt
-	newdoc.UpdatedAt = mdate
+	newdoc.CreatedAt = cdate
+	newdoc.UpdatedAt = *patch.UpdatedAt
+	newdoc.parent = parent
 
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
@@ -471,8 +460,8 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, data *DocMetaAttributes) (n
 		}
 	}
 
-	if exec != olddoc.Executable {
-		err = c.fs.Chmod(newpath, getFileMode(exec))
+	if newdoc.Executable != olddoc.Executable {
+		err = c.fs.Chmod(newpath, getFileMode(newdoc.Executable))
 		if err != nil {
 			return
 		}

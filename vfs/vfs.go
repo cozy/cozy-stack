@@ -30,12 +30,12 @@ const (
 	FileType = "file"
 )
 
-// DocMetaAttributes is a struct containing modifiable fields from
-// file and directory documents.
-type DocMetaAttributes struct {
-	Name       string     `json:"name,omitempty"`
+// DocPatch is a struct containing modifiable fields from file and
+// directory documents.
+type DocPatch struct {
+	Name       *string    `json:"name,omitempty"`
 	FolderID   *string    `json:"folder_id,omitempty"`
-	Tags       []string   `json:"tags,omitempty"`
+	Tags       *[]string  `json:"tags,omitempty"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 	Executable *bool      `json:"executable,omitempty"`
 }
@@ -155,6 +155,34 @@ func getRootDirDoc() *DirDoc {
 	}
 }
 
+func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error) {
+	if patch.FolderID == nil {
+		patch.FolderID = data.FolderID
+	}
+
+	if patch.Name == nil {
+		patch.Name = data.Name
+	}
+
+	if patch.Tags == nil {
+		patch.Tags = data.Tags
+	}
+
+	if patch.UpdatedAt == nil {
+		patch.UpdatedAt = data.UpdatedAt
+	}
+
+	if patch.UpdatedAt.Before(cdate) {
+		return nil, ErrIllegalTime
+	}
+
+	if patch.Executable == nil {
+		patch.Executable = data.Executable
+	}
+
+	return patch, nil
+}
+
 func checkFileName(str string) error {
 	if str == "" || strings.ContainsAny(str, ForbiddenFilenameChars) {
 		return ErrIllegalFilename
@@ -162,27 +190,18 @@ func checkFileName(str string) error {
 	return nil
 }
 
-func appendTags(oldtags, newtags []string) []string {
-	mtags := make(map[string]struct{})
-	var stags []string
-
-	addTag := func(tag string) {
+func uniqueTags(tags []string) []string {
+	m := make(map[string]struct{})
+	clone := make([]string, 0)
+	for _, tag := range tags {
 		tag = strings.TrimSpace(tag)
 		if tag == "" {
-			return
+			continue
 		}
-		if _, ok := mtags[tag]; !ok {
-			stags = append(stags, tag)
-			mtags[tag] = struct{}{}
+		if _, ok := m[tag]; !ok {
+			clone = append(clone, tag)
+			m[tag] = struct{}{}
 		}
 	}
-
-	for _, tag := range oldtags {
-		addTag(tag)
-	}
-	for _, tag := range newtags {
-		addTag(tag)
-	}
-
-	return stags
+	return clone
 }

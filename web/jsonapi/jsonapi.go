@@ -54,6 +54,8 @@ func Data(c *gin.Context, statusCode int, o Object, links *LinksList) {
 
 // AbortWithError can be called to abort the current http request/response
 // processing, and send an error in the JSON-API format
+//
+// TODO could be nice to have AbortWithErrors(c *gin.Context, errors ErrorList)
 func AbortWithError(c *gin.Context, e *Error) {
 	doc := Document{
 		Errors: ErrorList{e},
@@ -67,4 +69,26 @@ func AbortWithError(c *gin.Context, e *Error) {
 	c.Abort()
 }
 
-// TODO could be nice to have AbortWithErrors(c *gin.Context, errors ErrorList)
+// Bind is used to unmarshal an input JSONApi document. It binds an
+// incoming request to a attribute type.
+func Bind(req *http.Request, attrs interface{}) (*ObjectMarshalling, error) {
+	decoder := json.NewDecoder(req.Body)
+	var doc *Document
+	if err := decoder.Decode(&doc); err != nil {
+		return nil, err
+	}
+	if doc.Data == nil {
+		return nil, BadJSON()
+	}
+	var obj *ObjectMarshalling
+	if err := json.Unmarshal(*doc.Data, &obj); err != nil {
+		return nil, err
+	}
+	if obj.Attributes == nil {
+		return nil, BadJSON()
+	}
+	if err := json.Unmarshal(*obj.Attributes, &attrs); err != nil {
+		return nil, err
+	}
+	return obj, nil
+}
