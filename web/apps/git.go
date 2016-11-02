@@ -20,20 +20,20 @@ import (
 )
 
 const manifestFilename = "manifest.webapp"
-const githubRawManifestUrl = "https://raw.githubusercontent.com/%s/%s/%s/%s"
+const githubRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
 
 var githubURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 
-type GitClient struct {
+type gitClient struct {
 	vfsC *vfs.Context
 	src  string
 }
 
-func NewGitClient(vfsC *vfs.Context, rawurl string) *GitClient {
-	return &GitClient{vfsC: vfsC, src: rawurl}
+func newGitClient(vfsC *vfs.Context, rawurl string) *gitClient {
+	return &gitClient{vfsC: vfsC, src: rawurl}
 }
 
-func (g *GitClient) FetchManifest() (io.ReadCloser, error) {
+func (g *gitClient) FetchManifest() (io.ReadCloser, error) {
 	src, err := url.Parse(g.src)
 	if err != nil {
 		return nil, err
@@ -47,10 +47,14 @@ func (g *GitClient) FetchManifest() (io.ReadCloser, error) {
 	return nil, errors.New("Not implemented")
 }
 
-func (g *GitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error) {
+func (g *gitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error) {
 	submatch := githubURLRegex.FindStringSubmatch(src.Path)
 	if len(submatch) != 3 {
-		return nil, &url.Error{"parsepath", src.String(), errors.New("Could not parse url git path")}
+		return nil, &url.Error{
+			Op:  "parsepath",
+			URL: src.String(),
+			Err: errors.New("Could not parse url git path"),
+		}
 	}
 
 	user, project := submatch[1], submatch[2]
@@ -61,7 +65,7 @@ func (g *GitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error)
 		branch = "master"
 	}
 
-	manURL := fmt.Sprintf(githubRawManifestUrl, user, project, branch, manifestFilename)
+	manURL := fmt.Sprintf(githubRawManifestURL, user, project, branch, manifestFilename)
 	resp, err := http.Get(manURL)
 	if err != nil {
 		return nil, ErrSourceNotReachable
@@ -74,8 +78,8 @@ func (g *GitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error)
 	return resp.Body, nil
 }
 
-func (g *GitClient) Fetch(appdir string) error {
-	gfs := newGFS(g.vfsC, appdir)
+func (g *gitClient) Fetch(vfsC *vfs.Context, appdir string) error {
+	gfs := newGFS(vfsC, appdir)
 	storage, err := gitSt.NewStorage(gfs)
 	if err != nil {
 		return err
@@ -123,12 +127,12 @@ func (g *GitClient) Fetch(appdir string) error {
 		abs := path.Join(gfs.Base(), f.Name)
 		dir := path.Dir(abs)
 
-		err = g.vfsC.MkdirAll(dir)
+		err = vfsC.MkdirAll(dir)
 		if err != nil {
 			return
 		}
 
-		file, err := g.vfsC.Create(abs)
+		file, err := vfsC.Create(abs)
 		if err != nil {
 			return
 		}
@@ -319,7 +323,7 @@ func (fs *gfs) Base() string {
 }
 
 var (
-	_ Client           = &GitClient{}
+	_ Client           = &gitClient{}
 	_ gitFS.Filesystem = &gfs{}
 	_ gitFS.File       = &gfileWrite{}
 	_ gitFS.File       = &gfileRead{}

@@ -1,27 +1,14 @@
+// Package apps is the HTTP frontend of the application package. It
+// exposes the HTTP api install, update or uninstall applications.
 package apps
 
 import (
-	"errors"
 	"net/http"
 	"net/url"
 
-	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
-)
-
-var (
-	// ErrInvalidSlugName is used when the given slud name is not valid
-	ErrInvalidSlugName = errors.New("Invalid slug name")
-	// ErrNotSupportedSource is used when the source transport or
-	// protocol is not supported
-	ErrNotSupportedSource = errors.New("Invalid or not supported source scheme")
-	// ErrSourceNotReachable is used when the given source for
-	// application is not reachable
-	ErrSourceNotReachable = errors.New("Application source is not reachable")
-	// ErrBadManifest when the manifest is not valid or malformed
-	ErrBadManifest = errors.New("Application manifest is invalid or malformed")
 )
 
 // Access is a string representing the access permission level. It can
@@ -125,30 +112,26 @@ func wrapAppsError(err error) *jsonapi.Error {
 	return jsonapi.InternalServerError(err)
 }
 
-func InstallApplication(vfsC *vfs.Context, db, src, slug string) (*Installer, error) {
-	inst, err := NewInstaller(vfsC, db, slug, src)
+// InstallHandler handles all POST /:slug request and tries to install
+// the application with the given Source.
+func InstallHandler(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+	vfsC, err := instance.GetVFSContext()
 	if err != nil {
-		return nil, err
-	}
-
-	go inst.Install()
-
-	return inst, nil
-}
-
-func InstallOrUpdateHandler(c *gin.Context) {
-	vfsC, db, err := getVfsContext(c)
-	if err != nil {
+		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 		return
 	}
 
+	db := instance.GetDatabasePrefix()
 	src := c.Query("Source")
 	slug := c.Param("slug")
-	inst, err := InstallApplication(vfsC, db, src, slug)
+	inst, err := NewInstaller(vfsC, db, slug, src)
 	if err != nil {
 		jsonapi.AbortWithError(c, wrapAppsError(err))
 		return
 	}
+
+	go inst.Install()
 
 	man, err := inst.WaitManifest()
 	if err != nil {
@@ -169,19 +152,7 @@ func InstallOrUpdateHandler(c *gin.Context) {
 	}()
 }
 
+// Routes sets the routing for the apps service
 func Routes(router *gin.RouterGroup) {
-	router.POST("/:slug", InstallOrUpdateHandler)
-}
-
-// TODO: get rid of this and fix this mess with contexts
-func getVfsContext(c *gin.Context) (*vfs.Context, string, error) {
-	instance := middlewares.GetInstance(c)
-	dbprefix := instance.GetDatabasePrefix()
-	fs, err := instance.GetStorageProvider()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
-		return nil, "", err
-	}
-	vfsC := vfs.NewContext(fs, dbprefix)
-	return vfsC, dbprefix, nil
+	router.POST("/:slug", InstallHandler)
 }

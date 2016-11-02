@@ -135,18 +135,25 @@ func NewContext(fs afero.Fs, dbprefix string) *Context {
 	return &Context{fs, dbprefix}
 }
 
+// Stat returns the FileInfo of the specified file or directory.
 func (c *Context) Stat(pth string) (os.FileInfo, error) {
 	return c.fs.Stat(pth)
 }
 
+// Open returns a file handler of the specified name that can be used
+// for reading.
 func (c *Context) Open(pth string) (afero.File, error) {
 	return c.fs.Open(pth)
 }
 
+// ReadDir returns a list of FileInfo of all the direct children of
+// the specified directory.
 func (c *Context) ReadDir(pth string) ([]os.FileInfo, error) {
 	return afero.ReadDir(c.fs, pth)
 }
 
+// Create creates a new file with specified and returns a FileCreation
+// handler that can be used for writing.
 func (c *Context) Create(pth string) (*FileCreation, error) {
 	pth = path.Clean(pth)
 
@@ -168,6 +175,7 @@ func (c *Context) Create(pth string) (*FileCreation, error) {
 	return CreateFile(c, doc, nil)
 }
 
+// Mkdir creates a new directory with the specified name
 func (c *Context) Mkdir(pth string) error {
 	pth = path.Clean(pth)
 	if pth == "/" {
@@ -188,6 +196,8 @@ func (c *Context) Mkdir(pth string) error {
 	return CreateDirectory(c, dir)
 }
 
+// MkdirAll creates a directory named path, along with any necessary
+// parents, and returns nil, or else returns an error.
 func (c *Context) MkdirAll(pth string) error {
 	var err error
 	var dirs []string
@@ -222,29 +232,46 @@ func (c *Context) MkdirAll(pth string) error {
 	return nil
 }
 
+// Rename will rename a file or directory from a specified path to
+// another.
 func (c *Context) Rename(oldpath, newpath string) error {
 	typ, dir, file, err := GetDirOrFileDocFromPath(c, oldpath, false)
 	if err != nil {
 		return err
 	}
 
-	// simple rename
-	if path.Dir(oldpath) == path.Dir(newpath) {
-		newname := path.Base(newpath)
-		patch := &DocPatch{Name: &newname}
-		switch typ {
-		case FileType:
-			_, err = ModifyFileMetadata(c, file, patch)
-		case DirType:
-			_, err = ModifyDirMetadata(c, dir, patch)
-		}
+	newname := path.Base(newpath)
+
+	var newfolderID *string
+	if path.Dir(oldpath) != path.Dir(newpath) {
+		newfolderID = nil
 	} else {
-		// @TODO
+		var parent *DirDoc
+		parent, err = GetDirDocFromPath(c, path.Dir(newpath), false)
+		if err != nil {
+			return err
+		}
+		newfolderID = &parent.FolderID
+	}
+
+	patch := &DocPatch{
+		Name:     &newname,
+		FolderID: newfolderID,
+	}
+
+	switch typ {
+	case FileType:
+		_, err = ModifyFileMetadata(c, file, patch)
+	case DirType:
+		_, err = ModifyDirMetadata(c, dir, patch)
 	}
 
 	return err
 }
 
+// ExtractMimeAndClass returns a mime and class value from the
+// specified content-type. For now it only takes the first segment of
+// the type as the class and the whole type as mime.
 func ExtractMimeAndClass(contentType string) (mime, class string) {
 	if contentType == "" {
 		contentType = DefaultContentType

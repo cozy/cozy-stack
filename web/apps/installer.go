@@ -22,28 +22,54 @@ const (
 // AppsDirectory is the name of the directory in which apps are stored
 const AppsDirectory = "/_cozyapps"
 
+// State is the state of the application
 type State string
 
 const (
-	Available    State = "available"
-	Installing         = "installing"
-	Upgrading          = "upgrading"
-	Uninstalling       = "uninstalling"
-	Errored            = "errored"
-	Ready              = "ready"
+	// Available state
+	Available State = "available"
+	// Installing state
+	Installing = "installing"
+	// Upgrading state
+	Upgrading = "upgrading"
+	// Uninstalling state
+	Uninstalling = "uninstalling"
+	// Errored state
+	Errored = "errored"
+	// Ready state
+	Ready = "ready"
 )
 
 var slugReg = regexp.MustCompile(`[A-Za-z0-9\\-]`)
 
 var (
+	// ErrInvalidSlugName is used when the given slud name is not valid
+	ErrInvalidSlugName = errors.New("Invalid slug name")
+	// ErrNotSupportedSource is used when the source transport or
+	// protocol is not supported
+	ErrNotSupportedSource = errors.New("Invalid or not supported source scheme")
+	// ErrSourceNotReachable is used when the given source for
+	// application is not reachable
+	ErrSourceNotReachable = errors.New("Application source is not reachable")
+	// ErrBadManifest when the manifest is not valid or malformed
+	ErrBadManifest = errors.New("Application manifest is invalid or malformed")
+	// ErrBadState is used when trying to use the application while in a
+	// state that is not appropriate for the given operation.
 	ErrBadState = errors.New("Application is not in valid state to perform this operation")
 )
 
+// Client interface should be implemented by the underlying transport
+// used to fetch the application data.
 type Client interface {
+	// FetchManifest should returns an io.ReadCloser to read the
+	// manifest data
 	FetchManifest() (io.ReadCloser, error)
-	Fetch(appdir string) error
+	// Fetch should download the application and install it in the given
+	// directory.
+	Fetch(vfsC *vfs.Context, appdir string) error
 }
 
+// Installer is used to install or update applications.
 type Installer struct {
 	cli Client
 
@@ -60,6 +86,7 @@ type Installer struct {
 	manc chan *Manifest
 }
 
+// NewInstaller creates a new Installer
 // @TODO: fix this mess with contexts
 func NewInstaller(vfsC *vfs.Context, db, slug, src string) (*Installer, error) {
 	if !slugReg.MatchString(slug) {
@@ -74,7 +101,7 @@ func NewInstaller(vfsC *vfs.Context, db, slug, src string) (*Installer, error) {
 	var cli Client
 	switch parsedSrc.Scheme {
 	case "git":
-		cli = NewGitClient(vfsC, src)
+		cli = newGitClient(vfsC, src)
 	default:
 		err = ErrNotSupportedSource
 	}
@@ -98,6 +125,8 @@ func NewInstaller(vfsC *vfs.Context, db, slug, src string) (*Installer, error) {
 	return inst, err
 }
 
+// Install will install the application linked to the installer. It
+// will report its progress or error using the WaitManifest method.
 func (i *Installer) Install() (newman *Manifest, err error) {
 	if i.err != nil {
 		return nil, i.err
@@ -133,7 +162,7 @@ func (i *Installer) Install() (newman *Manifest, err error) {
 		return
 	}
 
-	err = i.cli.Fetch(appdir)
+	err = i.cli.Fetch(i.vfsC, appdir)
 	if err != nil {
 		return
 	}
@@ -227,6 +256,8 @@ func (i *Installer) updateManifest(newman *Manifest) (err error) {
 	return couchdb.UpdateDoc(i.db, newman)
 }
 
+// WaitManifest should be used to monitor the progress of the
+// Installer.
 func (i *Installer) WaitManifest() (man *Manifest, err error) {
 	select {
 	case man = <-i.manc:
