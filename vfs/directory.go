@@ -170,10 +170,6 @@ func NewDirDoc(name, folderID string, tags []string, parent *DirDoc) (doc *DirDo
 		folderID = RootFolderID
 	}
 
-	if folderID == RootFolderID && parent == nil {
-		parent = getRootDirDoc()
-	}
-
 	tags = uniqueTags(tags)
 
 	createDate := time.Now()
@@ -195,9 +191,6 @@ func NewDirDoc(name, folderID string, tags []string, parent *DirDoc) (doc *DirDo
 // GetDirDoc is used to fetch directory document information
 // form the database.
 func GetDirDoc(c *Context, fileID string, withChildren bool) (*DirDoc, error) {
-	if fileID == RootFolderID {
-		return getRootDirDoc(), nil
-	}
 	doc := &DirDoc{}
 	err := couchdb.GetDoc(c.db, FsDocType, fileID, doc)
 	if couchdb.IsNotFoundError(err) {
@@ -220,21 +213,19 @@ func GetDirDoc(c *Context, fileID string, withChildren bool) (*DirDoc, error) {
 func GetDirDocFromPath(c *Context, pth string, withChildren bool) (*DirDoc, error) {
 	var doc *DirDoc
 	var err error
-	if pth == "/" {
-		doc = getRootDirDoc()
-	} else {
-		var docs []*DirDoc
-		sel := mango.Equal("path", path.Clean(pth))
-		req := &couchdb.FindRequest{Selector: sel, Limit: 1}
-		err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
-		if err != nil {
-			return nil, err
-		}
-		if len(docs) == 0 {
-			return nil, os.ErrNotExist
-		}
-		doc = docs[0]
+
+	var docs []*DirDoc
+	sel := mango.Equal("path", path.Clean(pth))
+	req := &couchdb.FindRequest{Selector: sel, Limit: 1}
+	err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
+	if err != nil {
+		return nil, err
 	}
+	if len(docs) == 0 {
+		return nil, os.ErrNotExist
+	}
+	doc = docs[0]
+
 	if withChildren {
 		err = doc.FetchFiles(c)
 	}
