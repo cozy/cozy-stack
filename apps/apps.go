@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/vfs"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 const (
@@ -57,6 +58,89 @@ var (
 	// state that is not appropriate for the given operation.
 	ErrBadState = errors.New("Application is not in valid state to perform this operation")
 )
+
+// Access is a string representing the access permission level. It can
+// either be read, write or readwrite.
+type Access string
+
+// Permissions is a map of key, a description and an access level.
+type Permissions map[string]*struct {
+	Description string `json:"description"`
+	Access      Access `json:"access"`
+}
+
+// Developer is the name and url of a developer.
+type Developer struct {
+	Name string `json:"name"`
+	URL  string `json:"url,omitempty"`
+}
+
+// Manifest contains all the informations about an application.
+type Manifest struct {
+	ManID  string `json:"_id,omitempty"`  // Manifest identifier
+	ManRev string `json:"_rev,omitempty"` // Manifest revision
+
+	Name        string     `json:"name"`
+	Slug        string     `json:"slug"`
+	Source      string     `json:"source"`
+	State       State      `json:"state"`
+	Icon        string     `json:"icon"`
+	Description string     `json:"description"`
+	Developer   *Developer `json:"developer"`
+
+	DefaultLocal string `json:"default_locale"`
+	Locales      map[string]*struct {
+		Description string `json:"description"`
+	} `json:"locales"`
+
+	Version     string       `json:"version"`
+	License     string       `json:"license"`
+	Permissions *Permissions `json:"permissions"`
+}
+
+// ID returns the manifest identifier - see couchdb.Doc interface
+func (m *Manifest) ID() string {
+	return m.ManID
+}
+
+// Rev return the manifest revision - see couchdb.Doc interface
+func (m *Manifest) Rev() string {
+	return m.ManRev
+}
+
+// DocType returns the manifest doctype - see couchdb.Doc interfaces
+func (m *Manifest) DocType() string {
+	return ManifestDocType
+}
+
+// SetID is used to change the file identifier - see couchdb.Doc
+// interface
+func (m *Manifest) SetID(id string) {
+	m.ManID = id
+}
+
+// SetRev is used to change the file revision - see couchdb.Doc
+// interface
+func (m *Manifest) SetRev(rev string) {
+	m.ManRev = rev
+}
+
+// SelfLink is used to generate a JSON-API link for the file - see
+// jsonapi.Object interface
+func (m *Manifest) SelfLink() string {
+	return "/apps/" + m.ManID
+}
+
+// Relationships is used to generate the parent relationship in JSON-API format
+// - see jsonapi.Object interface
+func (m *Manifest) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the jsonapi.Object interface
+func (m *Manifest) Included() []jsonapi.Object {
+	return []jsonapi.Object{}
+}
 
 // Client interface should be implemented by the underlying transport
 // used to fetch the application data.
