@@ -84,11 +84,10 @@ func Bind(req *http.Request, attrs interface{}) (*ObjectMarshalling, error) {
 	if err := json.Unmarshal(*doc.Data, &obj); err != nil {
 		return nil, err
 	}
-	if obj.Attributes == nil {
-		return nil, BadJSON()
-	}
-	if err := json.Unmarshal(*obj.Attributes, &attrs); err != nil {
-		return nil, err
+	if obj.Attributes != nil {
+		if err := json.Unmarshal(*obj.Attributes, &attrs); err != nil {
+			return nil, err
+		}
 	}
 	return obj, nil
 }

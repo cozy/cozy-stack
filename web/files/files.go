@@ -189,8 +189,9 @@ func ModificationHandler(c *gin.Context) {
 		return
 	}
 
+	patch := &vfs.DocPatch{}
+
 	var obj *jsonapi.ObjectMarshalling
-	var patch *vfs.DocPatch
 	if obj, err = jsonapi.Bind(c.Request, &patch); err != nil {
 		jsonapi.AbortWithError(c, jsonapi.BadJSON())
 		return
