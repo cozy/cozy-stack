@@ -79,7 +79,13 @@ func (g *gitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error)
 }
 
 func (g *gitClient) Fetch(vfsC *vfs.Context, appdir string) error {
-	gfs := newGFS(vfsC, appdir)
+	gitdir := path.Join(appdir, ".git")
+	err := vfsC.Mkdir(gitdir)
+	if err != nil {
+		return err
+	}
+
+	gfs := newGFS(vfsC, gitdir)
 	storage, err := gitSt.NewStorage(gfs)
 	if err != nil {
 		return err
@@ -124,7 +130,7 @@ func (g *gitClient) Fetch(vfsC *vfs.Context, appdir string) error {
 	}
 
 	return files.ForEach(func(f *git.File) (err error) {
-		abs := path.Join(gfs.Base(), f.Name)
+		abs := path.Join(appdir, f.Name)
 		dir := path.Dir(abs)
 
 		err = vfsC.MkdirAll(dir)

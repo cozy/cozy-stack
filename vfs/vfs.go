@@ -244,14 +244,14 @@ func (c *Context) Rename(oldpath, newpath string) error {
 
 	var newfolderID *string
 	if path.Dir(oldpath) != path.Dir(newpath) {
-		newfolderID = nil
-	} else {
 		var parent *DirDoc
 		parent, err = GetDirDocFromPath(c, path.Dir(newpath), false)
 		if err != nil {
 			return err
 		}
 		newfolderID = &parent.FolderID
+	} else {
+		newfolderID = nil
 	}
 
 	patch := &DocPatch{

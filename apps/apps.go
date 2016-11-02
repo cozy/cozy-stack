@@ -99,37 +99,25 @@ type Manifest struct {
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
-func (m *Manifest) ID() string {
-	return m.ManID
-}
+func (m *Manifest) ID() string { return m.ManID }
 
 // Rev return the manifest revision - see couchdb.Doc interface
-func (m *Manifest) Rev() string {
-	return m.ManRev
-}
+func (m *Manifest) Rev() string { return m.ManRev }
 
 // DocType returns the manifest doctype - see couchdb.Doc interfaces
-func (m *Manifest) DocType() string {
-	return ManifestDocType
-}
+func (m *Manifest) DocType() string { return ManifestDocType }
 
 // SetID is used to change the file identifier - see couchdb.Doc
 // interface
-func (m *Manifest) SetID(id string) {
-	m.ManID = id
-}
+func (m *Manifest) SetID(id string) { m.ManID = id }
 
 // SetRev is used to change the file revision - see couchdb.Doc
 // interface
-func (m *Manifest) SetRev(rev string) {
-	m.ManRev = rev
-}
+func (m *Manifest) SetRev(rev string) { m.ManRev = rev }
 
 // SelfLink is used to generate a JSON-API link for the file - see
 // jsonapi.Object interface
-func (m *Manifest) SelfLink() string {
-	return "/apps/" + m.ManID
-}
+func (m *Manifest) SelfLink() string { return "/apps/" + m.ManID }
 
 // Relationships is used to generate the parent relationship in JSON-API format
 // - see jsonapi.Object interface
@@ -283,8 +271,7 @@ func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err er
 	}()
 
 	if i.man != nil {
-		err = errors.New("Manifest is already defined")
-		return
+		panic("Manifest is already defined")
 	}
 
 	man = &Manifest{}
@@ -331,7 +318,7 @@ func (i *Installer) updateManifest(newman *Manifest) (err error) {
 
 	oldman := i.man
 	if oldman == nil {
-		return errors.New("Manifest not defined")
+		panic("Manifest not defined")
 	}
 
 	newman.SetID(oldman.ID())
