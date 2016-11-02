@@ -54,7 +54,7 @@ func (i *Instance) createInCouchdb() (err error) {
 	return couchdb.DefineIndex(globalDBPrefix, instanceType, byDomain)
 }
 
-// CreateRootFolder creates the root folder for this instance
+// createRootFolder creates the root folder for this instance
 func (i *Instance) createRootFolder() error {
 	root := vfs.MakeRoot()
 	prefix := i.GetDatabasePrefix()
@@ -66,7 +66,7 @@ func (i *Instance) createRootFolder() error {
 	// TODO (vfs) should we also create the root folder on FS ?
 }
 
-// CreateRootFolder creates the root folder for this instance
+// createFSIndexes creates the index needed by VFS
 func (i *Instance) createFSIndexes() (err error) {
 	prefix := i.GetDatabasePrefix()
 	byParent := mango.IndexOnFields("folder_id", "name", "type")
@@ -76,10 +76,7 @@ func (i *Instance) createFSIndexes() (err error) {
 		return err
 	}
 	err = couchdb.DefineIndex(prefix, vfs.FsDocType, byPath)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Create contains the whole process involved in creating an instance
