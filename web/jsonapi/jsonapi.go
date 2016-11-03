@@ -52,6 +52,38 @@ func Data(c *gin.Context, statusCode int, o Object, links *LinksList) {
 	c.Data(statusCode, ContentType, body)
 }
 
+// DataList can be called to send an multiple-value answer with a
+// JSON-API document contains multiple objects.
+func DataList(c *gin.Context, statusCode int, objs []Object, links *LinksList) {
+	objsMarshaled := make([]json.RawMessage, len(objs))
+	for i, o := range objs {
+		j, err := MarshalObject(o)
+		if err != nil {
+			AbortWithError(c, InternalServerError(err))
+			return
+		}
+		objsMarshaled[i] = j
+	}
+
+	data, err := json.Marshal(objsMarshaled)
+	if err != nil {
+		AbortWithError(c, InternalServerError(err))
+		return
+	}
+
+	doc := Document{
+		Data:  (*json.RawMessage)(&data),
+		Links: links,
+	}
+
+	body, err := json.Marshal(doc)
+	if err != nil {
+		AbortWithError(c, InternalServerError(err))
+		return
+	}
+	c.Data(statusCode, ContentType, body)
+}
+
 // AbortWithError can be called to abort the current http request/response
 // processing, and send an error in the JSON-API format
 //

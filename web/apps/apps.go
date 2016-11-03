@@ -70,7 +70,26 @@ func InstallHandler(c *gin.Context) {
 	}()
 }
 
+// ListHandler handles all GET / requests which can be used to list
+// installed applications.
+func ListHandler(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+	docs, err := apps.List(instance.GetDatabasePrefix())
+	if err != nil {
+		jsonapi.AbortWithError(c, wrapAppsError(err))
+		return
+	}
+
+	objs := make([]jsonapi.Object, len(docs))
+	for i, d := range docs {
+		objs[i] = jsonapi.Object(d)
+	}
+
+	jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
 // Routes sets the routing for the apps service
 func Routes(router *gin.RouterGroup) {
+	router.GET("/", ListHandler)
 	router.POST("/:slug", InstallHandler)
 }

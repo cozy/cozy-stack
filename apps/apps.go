@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
@@ -139,6 +140,20 @@ type Client interface {
 	// Fetch should download the application and install it in the given
 	// directory.
 	Fetch(vfsC *vfs.Context, appdir string) error
+}
+
+// List returns the list of installed applications.
+//
+// TODO: pagination
+func List(db string) ([]*Manifest, error) {
+	var docs []*Manifest
+	sel := mango.Empty()
+	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
+	err := couchdb.FindDocs(db, ManifestDocType, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
 }
 
 // Installer is used to install or update applications.

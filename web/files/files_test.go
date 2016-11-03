@@ -274,7 +274,7 @@ func TestCreateDirConcurrently(t *testing.T) {
 	for i := 0; i < n; i++ {
 		select {
 		case res := <-errs:
-			assert.Equal(t, 409, res.StatusCode)
+			assert.True(t, res.StatusCode == 409 || res.StatusCode == 503)
 		case <-done:
 			c = c + 1
 		}
