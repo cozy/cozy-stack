@@ -40,8 +40,8 @@ TODO: 2FA
 Client-side apps
 ----------------
 
-**Important**: OAuth2 is not used here! The steps are similar (like obtaining
-a token), but going in the details, it doesn't match.
+**Important**: OAuth2 is not used here! The steps looks similar (like obtaining
+a token), but when going in the details, it doesn't match.
 
 ### How to register the application?
 
@@ -67,9 +67,28 @@ application.
 token appears in the URL and is shown by the browser. It can also be leaked
 with the HTTP `Referer` header.
 
+### How to use a token?
+
+The token can be sent to the cozy-stack in the query-string, like this:
+
+```http
+GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?CtxToken=e7af77ba2c2dbe2d
+HOST: cozy.example.org
+```
+
+If the user is authenticated, her cookies will be sent automatically. The
+cookies are needed for a token to a private context to be valid.
+
 ### How to refresh a token?
 
-### How to use a token?
+The context token is valid only for 24 hours. If the application is opened for
+more than that, it will need to get a new token. But most applications won't
+be kept open for so long and it's okay if they don't try to refresh tokens. At
+worst, the user just had to reload its page and it will work again.
+
+The app can know it's time to get a new token when the stack starts sending
+401 Unauthorized responses. In that case, it can fetches the same html page
+that it was loaded initially, parses it and extracts the new token.
 
 
 Devices
@@ -105,9 +124,9 @@ https://tools.ietf.org/html/rfc7592
 
 Chapter 11 about JWT
 
-### How to refresh a token?
-
 ### How to use a token?
+
+### How to refresh a token?
 
 
 Security considerations
