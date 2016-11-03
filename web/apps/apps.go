@@ -85,7 +85,7 @@ func ListHandler(c *gin.Context) {
 		objs[i] = jsonapi.Object(d)
 	}
 
-	jsonapi.DataList(c, http.StatusOK, objs)
+	jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
 // Routes sets the routing for the apps service
