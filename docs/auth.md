@@ -45,11 +45,11 @@ OAuth2) to allow the clients to obtain them.
 
 OAuth2 has also 3 ways to use a token:
 
-- in the query-string (even if the spec it's not recommended)
+- in the query-string (even if the spec does not recommended it)
 - in the POST body
 - in the HTTP Authorization header.
 
-On cozy, only the header is supported.
+On cozy, only the HTTP header is supported.
 
 OAuth2 has a lot of assumptions. Let's see some of them and their consequences
 on Cozy:
