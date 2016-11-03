@@ -275,39 +275,83 @@ The app can know it's time to get a new token when the stack starts sending
 that it was loaded initially, parses it and extracts the new token.
 
 
-Devices and browser extensions
-------------------------------
-
-### How to register the application?
-
-https://tools.ietf.org/html/draft-ietf-oauth-native-apps-05
-[PKCE](https://tools.ietf.org/html/rfc7636) and chapter 10
-
-https://developer.chrome.com/apps/app_identity#non
-https://developer.chrome.com/apps/identity#method-getRedirectURL
-https://github.com/AdrianArroyoCalle/firefox-addons/blob/master/addon-google-oauth2/addon-google-oauth2.js#L26
-
-### How to get a token?
-
-### How to use a token?
-
-### How to refresh a token?
-
-
 Third-party websites
 --------------------
 
 ### How to register the application?
 
-See chapter 12
+If a third-party websites would like to access a cozy, it had to register
+first. For example, a big company can have data about a user and may want
+to offer her a way to get her data back in her cozy. When the user is
+connected on the website of this company, she can give her cozy address. The
+website will then register on this cozy, using the OAuth2 Dynamic Client
+Registration Protocol, as explained [below](#post-authregister).
 
 ### How to get a token?
 
-Chapter 11 about JWT
+To get an access token, it's enough to follow the authorization code flow of
+OAuth2:
+
+- sending the user to the cozy, on the authorize page
+- if the user approves, she is then redirected back to the client
+- the client gets the access code and can exchange it to an access token.
 
 ### How to use a token?
 
+The access token can be sent as a bearer token, in the Authorization header of
+HTTP:
+
+```http
+GET /data/io.cozy.contacts/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
+Host: cozy.example.org
+Accept: application/json
+Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+```
+
 ### How to refresh a token?
+
+The access token will be valid only for 24 hours. After that, a new access
+token must be asked. To do that, just follow the refresh token flow, as
+explained [below](#post-authaccess_token).
+
+
+Devices and browser extensions
+------------------------------
+
+For devices and browser extensions, it is nearly the same than for third-party
+websites. The main difficulty is the redirect_uri. In OAuth2, the access code
+is given to the client by redirecting the user to an URL controlled by the
+client. But devices and browser extensions don't have an obvious URL for that.
+
+The IETF has published an RFC called [OAuth 2.0 for Native
+Apps](https://tools.ietf.org/html/draft-ietf-oauth-native-apps-05).
+
+### Native apps on desktop
+
+A desktop native application can start an embedded webserver on localhost. The
+redirect_uri will be something like `http://127.0.0.1:19856/callback`.
+
+### Native apps on mobile
+
+On mobile, the native apps can often register a custom URI scheme, like
+`com.example.oauthclient:/`. Just be sure that no other app has registered
+itself with the same URI.
+
+### Chrome extensions
+
+Chrome extensions can use URL like
+`https://<extension-id>.chromiumapp.org/<anything-here>` for their usage.
+See https://developer.chrome.com/apps/app_identity#non for more details. It
+has also a method to simplify the creation of such an URL:
+[`chrome.identity.getRedirectURL`](https://developer.chrome.com/apps/identity#method-getRedirectURL).
+
+### Firefox extensions
+
+It is possible to use an _out of band_ URN: `urn:ietf:wg:oauth:2.0:oob:auto`.
+The token is then extracted from the title of the page.
+See [this addon for google
+oauth2](https://github.com/AdrianArroyoCalle/firefox-addons/blob/master/addon-google-oauth2/addon-google-oauth2.js)
+as an example.
 
 
 Security considerations
