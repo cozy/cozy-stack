@@ -38,7 +38,10 @@ types, for the first part:
 - Client credentials grant type
 - Resource owner credentials grant type.
 
-On cozy, only the most typical one is used: authorization code.
+On cozy, only the most typical one is used: authorization code. To start this
+flow, the client must have a `client_id` and `client_secret`. The Cozy stack
+implements the OAuth2 Dynamic Client Registration Protocol (an extension to
+OAuth2) to allow the clients to obtain them.
 
 OAuth2 has also 3 ways to use a token:
 
@@ -106,7 +109,9 @@ Location: https://contacts.cozy.example.org/foo?bar#_=_
 ```
 
 If the `redirect` parameter is invalid, the response will be `400 Bad
-Request`.
+Request`. Same for other parameters, the redirection will happen only on
+success (even if OAuth2 says the authorization server can redirect on errors,
+it's very complicated to do it safely, and it is better to avoid this trap).
 
 ### POST /auth/login
 
@@ -403,20 +408,33 @@ as an example.
 Security considerations
 -----------------------
 
-See https://tools.ietf.org/html/rfc6749#page-53
-and https://tools.ietf.org/html/rfc6819
-and https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
-and http://www.oauthsecurity.com/
+The access code is valid only once, and will expire after 5 minutes
 
-Dynamically registered applications won't have access to some scopes. For
-example, an application that has been dynamically registered can't ask the
+Dynamically registered applications won't have access to all possible scopes.
+For example, an application that has been dynamically registered can't ask the
 cozy owner to give it the right to install other applications. This limitation
 should improve security, as avoiding too powerful scopes to be used with
 unknown applications.
 
-TODO: rate limiting
-TODO: no CORS for `/auth`
-TODO: TLS for redirect_uri (except for localhost)
+The cozy stack will apply rate limiting to avoid brute-force attacks.
+
+The cozy stack offers
+[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS)
+for most of its services. But it's disabled for `/auth` (it doesn't make sense
+here).
+
+The client should really use HTTPS for its `redirect_uri` parameter, but it's
+allowed to use HTTP for localhost, as in the native desktop app example.
+
+OAuth2 says that the `state` parameter is optional in the authorization code
+flow. But it is mandatory to use it with Cozy.
+
+For more on this subject, here is a list of links:
+
+-  https://tools.ietf.org/html/rfc6749#page-53
+-  https://tools.ietf.org/html/rfc6819
+-  https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
+-  http://www.oauthsecurity.com/
 
 
 Conclusion
