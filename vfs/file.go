@@ -177,10 +177,10 @@ func GetFileDoc(c *Context, fileID string) (*FileDoc, error) {
 
 // GetFileDocFromPath is used to fetch file document information from
 // the database from its path.
-func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
+func GetFileDocFromPath(c *Context, name string) (*FileDoc, error) {
 	var err error
 
-	dirpath := path.Dir(pth)
+	dirpath := path.Dir(name)
 	var parent *DirDoc
 	parent, err = GetDirDocFromPath(c, dirpath, false)
 
@@ -191,7 +191,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 	folderID := parent.ID()
 	selector := mango.And(
 		mango.Equal("folder_id", folderID),
-		mango.Equal("name", path.Base(pth)),
+		mango.Equal("name", path.Base(name)),
 		mango.Equal("type", FileType),
 	)
 
@@ -233,12 +233,12 @@ func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Re
 		header.Set("Etag", eTag)
 	}
 
-	pth, err := doc.Path(c)
+	name, err := doc.Path(c)
 	if err != nil {
 		return
 	}
 
-	content, err := c.fs.Open(pth)
+	content, err := c.fs.Open(name)
 	if err != nil {
 		return
 	}
@@ -464,12 +464,12 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, patch *DocPatch) (newdoc *F
 	return
 }
 
-func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error) {
+func safeCreateFile(name string, executable bool, fs afero.Fs) (afero.File, error) {
 	// write only (O_WRONLY), try to create the file and check that it
 	// does not already exist (O_CREATE|O_EXCL).
 	flag := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 	mode := getFileMode(executable)
-	return fs.OpenFile(pth, flag, mode)
+	return fs.OpenFile(name, flag, mode)
 }
 
 func safeRenameFile(c *Context, oldpath, newpath string) error {

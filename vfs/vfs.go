@@ -101,8 +101,8 @@ func GetDirOrFileDoc(c *Context, fileID string, withChildren bool) (typ string, 
 
 // GetDirOrFileDocFromPath is used to fetch a document from its path
 // without knowning in advance its type.
-func GetDirOrFileDocFromPath(c *Context, pth string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
-	dirDoc, err = GetDirDocFromPath(c, pth, withChildren)
+func GetDirOrFileDocFromPath(c *Context, name string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+	dirDoc, err = GetDirDocFromPath(c, name, withChildren)
 	if err != nil && !os.IsNotExist(err) {
 		return
 	}
@@ -111,7 +111,7 @@ func GetDirOrFileDocFromPath(c *Context, pth string, withChildren bool) (typ str
 		return
 	}
 
-	fileDoc, err = GetFileDocFromPath(c, pth)
+	fileDoc, err = GetFileDocFromPath(c, name)
 	if err != nil && !os.IsNotExist(err) {
 		return
 	}
@@ -136,35 +136,35 @@ func NewContext(fs afero.Fs, dbprefix string) *Context {
 }
 
 // Stat returns the FileInfo of the specified file or directory.
-func (c *Context) Stat(pth string) (os.FileInfo, error) {
-	return c.fs.Stat(pth)
+func (c *Context) Stat(name string) (os.FileInfo, error) {
+	return c.fs.Stat(name)
 }
 
 // Open returns a file handler of the specified name that can be used
 // for reading.
-func (c *Context) Open(pth string) (afero.File, error) {
-	return c.fs.Open(pth)
+func (c *Context) Open(name string) (afero.File, error) {
+	return c.fs.Open(name)
 }
 
 // ReadDir returns a list of FileInfo of all the direct children of
 // the specified directory.
-func (c *Context) ReadDir(pth string) ([]os.FileInfo, error) {
-	return afero.ReadDir(c.fs, pth)
+func (c *Context) ReadDir(name string) ([]os.FileInfo, error) {
+	return afero.ReadDir(c.fs, name)
 }
 
 // Create creates a new file with specified and returns a FileCreation
 // handler that can be used for writing.
-func (c *Context) Create(pth string) (*FileCreation, error) {
-	pth = path.Clean(pth)
+func (c *Context) Create(name string) (*FileCreation, error) {
+	name = path.Clean(name)
 
-	filename, dirpath := path.Base(pth), path.Dir(pth)
+	filename, dirpath := path.Base(name), path.Dir(name)
 	parent, err := GetDirDocFromPath(c, dirpath, false)
 	if err != nil {
 		return nil, err
 	}
 
 	exec := false
-	extn := path.Ext(pth)
+	extn := path.Ext(name)
 	mime, class := ExtractMimeAndClass(mimetype.TypeByExtension(extn))
 
 	doc, err := NewFileDoc(filename, parent.ID(), -1, nil, mime, class, exec, []string{})
@@ -176,13 +176,13 @@ func (c *Context) Create(pth string) (*FileCreation, error) {
 }
 
 // Mkdir creates a new directory with the specified name
-func (c *Context) Mkdir(pth string) error {
-	pth = path.Clean(pth)
-	if pth == "/" {
+func (c *Context) Mkdir(name string) error {
+	name = path.Clean(name)
+	if name == "/" {
 		return nil
 	}
 
-	dirname, dirpath := path.Base(pth), path.Dir(pth)
+	dirname, dirpath := path.Base(name), path.Dir(name)
 	parent, err := GetDirDocFromPath(c, dirpath, false)
 	if err != nil {
 		return err
@@ -198,13 +198,13 @@ func (c *Context) Mkdir(pth string) error {
 
 // MkdirAll creates a directory named path, along with any necessary
 // parents, and returns nil, or else returns an error.
-func (c *Context) MkdirAll(pth string) error {
+func (c *Context) MkdirAll(name string) error {
 	var err error
 	var dirs []string
 	var base, file string
 	var parent *DirDoc
 
-	base = pth
+	base = name
 	for {
 		parent, err = GetDirDocFromPath(c, base, false)
 		if os.IsNotExist(err) {
@@ -215,7 +215,7 @@ func (c *Context) MkdirAll(pth string) error {
 		if err != nil {
 			return err
 		}
-		base = path.Dir(pth)
+		base = path.Dir(name)
 		break
 	}
 
