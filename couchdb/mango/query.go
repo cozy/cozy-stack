@@ -107,11 +107,24 @@ func (lf logicFilter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(lf.ToMango())
 }
 
+type emptyFilter struct{}
+
+func (ef emptyFilter) ToMango() map[string]interface{} {
+	return make(map[string]interface{})
+}
+
+func (ef emptyFilter) MarshalJSON() ([]byte, error) {
+	return []byte("{}"), nil
+}
+
 // ensure ValueFilter & LogicFilter match FilterInterface
 var _ Filter = (*valueFilter)(nil)
 var _ Filter = (*logicFilter)(nil)
 
 // Some Filter creation function
+
+// Empty returns a wildcard filter to select all documents
+func Empty() Filter { return &emptyFilter{} }
 
 // And returns a filter combining several filters
 func And(filters ...Filter) Filter { return logicFilter{and, filters} }
