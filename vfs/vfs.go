@@ -6,13 +6,18 @@
 package vfs
 
 import (
+	mimetype "mime"
 	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/spf13/afero"
 )
+
+// DefaultContentType is used for files uploaded with no content-type
+const DefaultContentType = "application/octet-stream"
 
 // ForbiddenFilenameChars is the list of forbidden characters in a filename.
 const ForbiddenFilenameChars = "/\x00"
@@ -96,8 +101,8 @@ func GetDirOrFileDoc(c *Context, fileID string, withChildren bool) (typ string, 
 
 // GetDirOrFileDocFromPath is used to fetch a document from its path
 // without knowning in advance its type.
-func GetDirOrFileDocFromPath(c *Context, pth string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
-	dirDoc, err = GetDirDocFromPath(c, pth, withChildren)
+func GetDirOrFileDocFromPath(c *Context, name string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+	dirDoc, err = GetDirDocFromPath(c, name, withChildren)
 	if err != nil && !os.IsNotExist(err) {
 		return
 	}
@@ -106,7 +111,7 @@ func GetDirOrFileDocFromPath(c *Context, pth string, withChildren bool) (typ str
 		return
 	}
 
-	fileDoc, err = GetFileDocFromPath(c, pth)
+	fileDoc, err = GetFileDocFromPath(c, name)
 	if err != nil && !os.IsNotExist(err) {
 		return
 	}
@@ -128,6 +133,166 @@ type Context struct {
 // NewContext is the constructor function for Context
 func NewContext(fs afero.Fs, dbprefix string) *Context {
 	return &Context{fs, dbprefix}
+}
+
+// Stat returns the FileInfo of the specified file or directory.
+func (c *Context) Stat(name string) (os.FileInfo, error) {
+	return c.fs.Stat(name)
+}
+
+// Open returns a file handler of the specified name that can be used
+// for reading.
+func (c *Context) Open(name string) (afero.File, error) {
+	return c.fs.Open(name)
+}
+
+// ReadDir returns a list of FileInfo of all the direct children of
+// the specified directory.
+func (c *Context) ReadDir(name string) ([]os.FileInfo, error) {
+	return afero.ReadDir(c.fs, name)
+}
+
+// Create creates a new file with specified and returns a FileCreation
+// handler that can be used for writing.
+func (c *Context) Create(name string) (*FileCreation, error) {
+	name = path.Clean(name)
+
+	filename, dirpath := path.Base(name), path.Dir(name)
+	parent, err := GetDirDocFromPath(c, dirpath, false)
+	if err != nil {
+		return nil, err
+	}
+
+	exec := false
+	extn := path.Ext(name)
+	mime, class := ExtractMimeAndClass(mimetype.TypeByExtension(extn))
+
+	doc, err := NewFileDoc(filename, parent.ID(), -1, nil, mime, class, exec, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return CreateFile(c, doc, nil)
+}
+
+// Mkdir creates a new directory with the specified name
+func (c *Context) Mkdir(name string) error {
+	name = path.Clean(name)
+	if name == "/" {
+		return nil
+	}
+
+	dirname, dirpath := path.Base(name), path.Dir(name)
+	parent, err := GetDirDocFromPath(c, dirpath, false)
+	if err != nil {
+		return err
+	}
+
+	dir, err := NewDirDoc(dirname, parent.ID(), nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return CreateDirectory(c, dir)
+}
+
+// MkdirAll creates a directory named path, along with any necessary
+// parents, and returns nil, or else returns an error.
+func (c *Context) MkdirAll(name string) error {
+	var err error
+	var dirs []string
+	var base, file string
+	var parent *DirDoc
+
+	base = name
+	for {
+		parent, err = GetDirDocFromPath(c, base, false)
+		if os.IsNotExist(err) {
+			base, file = path.Dir(base), path.Base(base)
+			dirs = append(dirs, file)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		base = path.Dir(name)
+		break
+	}
+
+	for i := len(dirs) - 1; i >= 0; i-- {
+		parent, err = NewDirDoc(dirs[i], parent.ID(), nil, parent)
+		if err == nil {
+			err = CreateDirectory(c, parent)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Rename will rename a file or directory from a specified path to
+// another.
+func (c *Context) Rename(oldpath, newpath string) error {
+	typ, dir, file, err := GetDirOrFileDocFromPath(c, oldpath, false)
+	if err != nil {
+		return err
+	}
+
+	newname := path.Base(newpath)
+
+	var newfolderID *string
+	if path.Dir(oldpath) != path.Dir(newpath) {
+		var parent *DirDoc
+		parent, err = GetDirDocFromPath(c, path.Dir(newpath), false)
+		if err != nil {
+			return err
+		}
+		newfolderID = &parent.FolderID
+	} else {
+		newfolderID = nil
+	}
+
+	patch := &DocPatch{
+		Name:     &newname,
+		FolderID: newfolderID,
+	}
+
+	switch typ {
+	case FileType:
+		_, err = ModifyFileMetadata(c, file, patch)
+	case DirType:
+		_, err = ModifyDirMetadata(c, dir, patch)
+	}
+
+	return err
+}
+
+// ExtractMimeAndClass returns a mime and class value from the
+// specified content-type. For now it only takes the first segment of
+// the type as the class and the whole type as mime.
+func ExtractMimeAndClass(contentType string) (mime, class string) {
+	if contentType == "" {
+		contentType = DefaultContentType
+	}
+
+	charsetIndex := strings.Index(contentType, ";")
+	if charsetIndex >= 0 {
+		mime = contentType[:charsetIndex]
+	} else {
+		mime = contentType
+	}
+
+	// @TODO improve for specific mime types
+	slashIndex := strings.Index(contentType, "/")
+	if slashIndex >= 0 {
+		class = contentType[:slashIndex]
+	} else {
+		class = contentType
+	}
+
+	return
 }
 
 // getParentDir returns the parent directory document if nil.

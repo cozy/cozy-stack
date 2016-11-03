@@ -21,7 +21,7 @@ const TestPrefix = "dev/"
 var vfsC *Context
 
 func TestGetFileDocFromPathAtRoot(t *testing.T) {
-	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", false, []string{}, nil)
+	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
@@ -48,7 +48,7 @@ func TestGetFileDocFromPath(t *testing.T) {
 	err := CreateDirectory(vfsC, dir)
 	assert.NoError(t, err)
 
-	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", false, []string{}, nil)
+	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))

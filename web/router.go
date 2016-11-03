@@ -23,6 +23,7 @@
 package web
 
 import (
+	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -35,6 +36,7 @@ import (
 func SetupRoutes(router *gin.Engine) {
 	router.Use(middlewares.SetInstance())
 	router.Use(middlewares.ErrorHandler())
+	apps.Routes(router.Group("/apps"))
 	data.Routes(router.Group("/data"))
 	files.Routes(router.Group("/files"))
 	status.Routes(router.Group("/status"))

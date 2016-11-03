@@ -20,9 +20,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// DefaultContentType is used for files uploaded with no content-type
-const DefaultContentType = "application/octet-stream"
-
 // TagSeparator is the character separating tags
 const TagSeparator = ","
 
@@ -236,7 +233,7 @@ func ModificationHandler(c *gin.Context) {
 	if fileDoc, ok := doc.(*vfs.FileDoc); ok {
 		data, err = vfs.ModifyFileMetadata(vfsC, fileDoc, patch)
 	} else if dirDoc, ok := doc.(*vfs.DirDoc); ok {
-		data, err = vfs.ModifyDirectoryMetadata(vfsC, dirDoc, patch)
+		data, err = vfs.ModifyDirMetadata(vfsC, dirDoc, patch)
 	}
 
 	if err != nil {
@@ -452,7 +449,7 @@ func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *
 	}
 
 	executable := c.Query("Executable") == "true"
-	mime, class := extractMimeAndClass(c.ContentType())
+	mime, class := vfs.ExtractMimeAndClass(c.ContentType())
 	doc, err = vfs.NewFileDoc(
 		name,
 		folderID,
@@ -462,7 +459,6 @@ func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *
 		class,
 		executable,
 		tags,
-		nil,
 	)
 
 	return
@@ -505,28 +501,5 @@ func parseContentLength(contentLength string) (size int64, err error) {
 	if err != nil {
 		err = fmt.Errorf("Invalid content length")
 	}
-	return
-}
-
-func extractMimeAndClass(contentType string) (mime, class string) {
-	if contentType == "" {
-		contentType = DefaultContentType
-	}
-
-	charsetIndex := strings.Index(contentType, ";")
-	if charsetIndex >= 0 {
-		mime = contentType[:charsetIndex]
-	} else {
-		mime = contentType
-	}
-
-	// @TODO improve for specific mime types
-	slashIndex := strings.Index(contentType, "/")
-	if slashIndex >= 0 {
-		class = contentType[:slashIndex]
-	} else {
-		class = contentType
-	}
-
 	return
 }

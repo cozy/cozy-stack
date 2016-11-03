@@ -131,7 +131,7 @@ func (f *FileDoc) Included() []jsonapi.Object {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string, parent *DirDoc) (doc *FileDoc, err error) {
+func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
@@ -156,8 +156,6 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 		Class:      class,
 		Executable: executable,
 		Tags:       tags,
-
-		parent: parent,
 	}
 
 	return
@@ -179,10 +177,10 @@ func GetFileDoc(c *Context, fileID string) (*FileDoc, error) {
 
 // GetFileDocFromPath is used to fetch file document information from
 // the database from its path.
-func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
+func GetFileDocFromPath(c *Context, name string) (*FileDoc, error) {
 	var err error
 
-	dirpath := path.Dir(pth)
+	dirpath := path.Dir(name)
 	var parent *DirDoc
 	parent, err = GetDirDocFromPath(c, dirpath, false)
 
@@ -193,7 +191,7 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 	folderID := parent.ID()
 	selector := mango.And(
 		mango.Equal("folder_id", folderID),
-		mango.Equal("name", path.Base(pth)),
+		mango.Equal("name", path.Base(name)),
 		mango.Equal("type", FileType),
 	)
 
@@ -228,19 +226,19 @@ func GetFileDocFromPath(c *Context, pth string) (*FileDoc, error) {
 func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) (err error) {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
-	header.Set("Content-Disposition", disposition+"; filename="+doc.Name)
+	header.Set("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, doc.Name))
 
 	if header.Get("Range") == "" {
 		eTag := base64.StdEncoding.EncodeToString(doc.MD5Sum)
 		header.Set("Etag", eTag)
 	}
 
-	pth, err := doc.Path(c)
+	name, err := doc.Path(c)
 	if err != nil {
 		return
 	}
 
-	content, err := c.fs.Open(pth)
+	content, err := c.fs.Open(name)
 	if err != nil {
 		return
 	}
@@ -287,7 +285,7 @@ func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*FileCreation, error) {
 
 	var tmppath string
 	if olddoc != nil {
-		tmppath = "/" + olddoc.ID() + "_" + olddoc.Rev() + "_" + strconv.FormatInt(now.UnixNano(), 10)
+		tmppath = fmt.Sprintf("/%s_%s_%s", olddoc.ID(), olddoc.Rev(), strconv.FormatInt(now.UnixNano(), 10))
 	} else {
 		tmppath = newpath
 	}
@@ -417,7 +415,6 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, patch *DocPatch) (newdoc *F
 		olddoc.Class,
 		*patch.Executable,
 		*patch.Tags,
-		nil,
 	)
 	if err != nil {
 		return
@@ -467,12 +464,12 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, patch *DocPatch) (newdoc *F
 	return
 }
 
-func safeCreateFile(pth string, executable bool, fs afero.Fs) (afero.File, error) {
+func safeCreateFile(name string, executable bool, fs afero.Fs) (afero.File, error) {
 	// write only (O_WRONLY), try to create the file and check that it
 	// does not already exist (O_CREATE|O_EXCL).
 	flag := os.O_WRONLY | os.O_CREATE | os.O_EXCL
 	mode := getFileMode(executable)
-	return fs.OpenFile(pth, flag, mode)
+	return fs.OpenFile(name, flag, mode)
 }
 
 func safeRenameFile(c *Context, oldpath, newpath string) error {

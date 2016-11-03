@@ -210,12 +210,12 @@ func GetDirDoc(c *Context, fileID string, withChildren bool) (*DirDoc, error) {
 
 // GetDirDocFromPath is used to fetch directory document information from
 // the database from its path.
-func GetDirDocFromPath(c *Context, pth string, withChildren bool) (*DirDoc, error) {
+func GetDirDocFromPath(c *Context, name string, withChildren bool) (*DirDoc, error) {
 	var doc *DirDoc
 	var err error
 
 	var docs []*DirDoc
-	sel := mango.Equal("path", path.Clean(pth))
+	sel := mango.Equal("path", path.Clean(name))
 	req := &couchdb.FindRequest{Selector: sel, Limit: 1}
 	err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
 	if err != nil {
@@ -234,19 +234,19 @@ func GetDirDocFromPath(c *Context, pth string, withChildren bool) (*DirDoc, erro
 
 // CreateDirectory is the method for creating a new directory
 func CreateDirectory(c *Context, doc *DirDoc) (err error) {
-	pth, err := doc.Path(c)
+	name, err := doc.Path(c)
 	if err != nil {
 		return err
 	}
 
-	err = c.fs.Mkdir(pth, 0755)
+	err = c.fs.Mkdir(name, 0755)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
 		if err != nil {
-			c.fs.Remove(pth)
+			c.fs.Remove(name)
 		}
 	}()
 
@@ -274,10 +274,9 @@ func CreateRootDirectory(c *Context) (err error) {
 	return couchdb.CreateNamedDocWithDB(c.db, root)
 }
 
-// ModifyDirectoryMetadata modify the metadata associated to a
-// directory. It can be used to rename or move the directory in the
-// VFS.
-func ModifyDirectoryMetadata(c *Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
+// ModifyDirMetadata modify the metadata associated to a directory. It
+// can be used to rename or move the directory in the VFS.
+func ModifyDirMetadata(c *Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:      &olddoc.Name,
