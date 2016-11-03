@@ -12,6 +12,7 @@ type Config struct {
 	Host     string
 	Port     int
 	Database Database
+	Logger   Logger
 }
 
 // Mode is how is started the server, eg. production or development
@@ -29,21 +30,30 @@ type Database struct {
 	URL string
 }
 
+// Logger contains the configuration values of the logger system
+type Logger struct {
+	Level string
+}
+
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
 }
 
 // UseViper sets the configured instance of Config
-func UseViper(viper *viper.Viper) {
+func UseViper(viper *viper.Viper) error {
 	config = &Config{
 		Mode: parseMode(viper.GetString("mode")),
 		Host: viper.GetString("host"),
 		Port: viper.GetInt("port"),
 		Database: Database{
-			URL: viper.GetString("databaseUrl"),
+			URL: viper.GetString("database.url"),
+		},
+		Logger: Logger{
+			Level: viper.GetString("log.level"),
 		},
 	}
+	return nil
 }
 
 func parseMode(mode string) Mode {

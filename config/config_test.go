@@ -9,7 +9,7 @@ import (
 func TestUseViper(t *testing.T) {
 	cfg := viper.New()
 	cfg.Set("mode", "production")
-	cfg.Set("databaseUrl", "http://db:42")
+	cfg.Set("database.url", "http://db:42")
 
 	UseViper(cfg)
 

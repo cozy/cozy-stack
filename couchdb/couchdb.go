@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 )
 
@@ -128,7 +129,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		}
 	}
 
-	fmt.Printf("[couchdb request] %v %v %v\n", method, path, string(reqjson))
+	log.Debugf("[couchdb request] %v %v %v", method, path, string(reqjson))
 
 	req, err := http.NewRequest(method, CouchURL()+path, bytes.NewReader(reqjson))
 	// Possible err = wrong method, unparsable url
@@ -154,7 +155,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		} else {
 			err = newCouchdbError(resp.StatusCode, body)
 		}
-		fmt.Printf("[couchdb error] %v\n", err.Error())
+		log.Debugf("[couchdb error] %v", err.Error())
 		return err
 	}
 
