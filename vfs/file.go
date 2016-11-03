@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -248,25 +247,46 @@ func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Re
 	return
 }
 
-// FileCreation represents a file open for writing. It is used to
+// File represents a file handle. It can be used either for writing OR
+// reading, but not both at the same time.
+type File struct {
+	c  *Context      // vfs context
+	f  afero.File    // file handle
+	fc *fileCreation // file creation handle
+}
+
+// fileCreation represents a file open for writing. It is used to
 // create of file or to modify the content of a file.
 //
-// FileCreation implements io.WriteCloser.
-type FileCreation struct {
-	c *Context   // vfs context
-	f afero.File // file handle
-	w int64      // total size written
+// fileCreation implements io.WriteCloser.
+type fileCreation struct {
+	w int64 // total size written
 
 	newdoc    *FileDoc  // new document
 	olddoc    *FileDoc  // old document if any
-	path      string    // file full path
-	tmppath   string    // temporary file path in case of modifying an existing file
+	newpath   string    // file new path
+	bakpath   string    // backup file path in case of modifying an existing file
 	checkHash bool      // whether or not we need the assert the hash is good
 	hash      hash.Hash // hash we build up along the file
+	err       error     // write error
+}
+
+// Open returns a file handle that can be used to read form the file
+// specified by the given document.
+func Open(c *Context, doc *FileDoc) (*File, error) {
+	name, err := doc.Path(c)
+	if err != nil {
+		return nil, err
+	}
+	f, err := c.fs.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return &File{c, f, nil}, nil
 }
 
 // CreateFile is used to create file or modify an existing file
-// content. It returns a FileCreation handle. Along with the vfs
+// content. It returns a fileCreation handle. Along with the vfs
 // context, it receives the new file document that you want to create.
 // It can also receive the old document, representing the current
 // revision of the file. In this case it will try to modify the file,
@@ -275,7 +295,7 @@ type FileCreation struct {
 // Warning: you MUST call the Close() method and check for its error.
 // The Close() method will actually create or update the document in
 // couchdb. It will also check the md5 hash if required.
-func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*FileCreation, error) {
+func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*File, error) {
 	now := time.Now()
 
 	newpath, err := newdoc.Path(c)
@@ -283,11 +303,12 @@ func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*FileCreation, error) {
 		return nil, err
 	}
 
-	var tmppath string
+	var bakpath string
 	if olddoc != nil {
-		tmppath = fmt.Sprintf("/%s_%s_%s", olddoc.ID(), olddoc.Rev(), strconv.FormatInt(now.UnixNano(), 10))
-	} else {
-		tmppath = newpath
+		bakpath = fmt.Sprintf("/.%s_%s", olddoc.ID(), olddoc.Rev())
+		if err = safeRenameFile(c, newpath, bakpath); err != nil {
+			return nil, err
+		}
 	}
 
 	if olddoc != nil {
@@ -300,54 +321,92 @@ func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*FileCreation, error) {
 
 	newdoc.UpdatedAt = now
 
-	f, err := safeCreateFile(tmppath, newdoc.Executable, c.fs)
+	f, err := safeCreateFile(newpath, newdoc.Executable, c.fs)
 	if err != nil {
 		return nil, err
 	}
 
 	hash := md5.New() // #nosec
 
-	return &FileCreation{
-		c: c,
-		f: f,
+	fc := &fileCreation{
 		w: 0,
 
 		newdoc:  newdoc,
 		olddoc:  olddoc,
-		tmppath: tmppath,
-		path:    newpath,
+		bakpath: bakpath,
+		newpath: newpath,
 
 		checkHash: newdoc.MD5Sum != nil,
 		hash:      hash,
-	}, nil
+	}
+
+	return &File{c, f, fc}, nil
+}
+
+// Read bytes from the file into given buffer - part of io.Reader
+// This method can be called on read mode only
+func (f *File) Read(p []byte) (n int, err error) {
+	if f.fc != nil {
+		return 0, os.ErrInvalid
+	}
+	return f.f.Read(p)
+}
+
+// Seek into the file - part of io.Reader
+// This method can be called on read mode only
+func (f *File) Seek(offset int64, whence int) (int64, error) {
+	if f.fc != nil {
+		return 0, os.ErrInvalid
+	}
+	return f.f.Seek(offset, whence)
 }
 
 // Write bytes to the file - part of io.WriteCloser
-func (fc *FileCreation) Write(p []byte) (n int, err error) {
-	n, err = fc.f.Write(p)
+// This method can be called in write mode only
+func (f *File) Write(p []byte) (n int, err error) {
+	if f.fc == nil {
+		return 0, os.ErrInvalid
+	}
+
+	n, err = f.f.Write(p)
 	if err != nil {
+		f.fc.err = err
 		return
 	}
 
-	fc.w += int64(n)
+	f.fc.w += int64(n)
 
-	_, err = fc.hash.Write(p)
+	_, err = f.fc.hash.Write(p)
 	return
 }
 
 // Close the handle and commit the document in database if all checks
 // are OK. It is important to check errors returned by this method.
-func (fc *FileCreation) Close() error {
+func (f *File) Close() error {
+	if f.fc == nil {
+		return f.f.Close()
+	}
+
 	var err error
-	c := fc.c
+	fc, c := f.fc, f.c
 
 	defer func() {
-		if err != nil {
-			c.fs.Remove(fc.tmppath)
+		werr := fc.err
+		if fc.olddoc != nil {
+			// put back backup file revision in case on error occured while
+			// modifying file content or remove the backup file otherwise
+			if err != nil || werr != nil {
+				c.fs.Rename(fc.bakpath, fc.newpath)
+			} else if fc.olddoc != nil {
+				c.fs.Remove(fc.bakpath)
+			}
+		} else if err != nil || werr != nil {
+			// remove file if an error occured while file creation
+			c.fs.Remove(fc.newpath)
 		}
 	}()
 
-	err = fc.f.Close()
+	err = f.f.Close()
 	if err != nil {
 		return err
 	}
@@ -377,14 +436,6 @@ func (fc *FileCreation) Close() error {
 		err = couchdb.UpdateDoc(c.db, newdoc)
 	} else {
 		err = couchdb.CreateDoc(c.db, newdoc)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if fc.tmppath != fc.path {
-		err = c.fs.Rename(fc.tmppath, fc.path)
 	}
 
 	return err

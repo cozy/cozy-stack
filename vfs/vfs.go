@@ -142,37 +142,73 @@ func (c *Context) Stat(name string) (os.FileInfo, error) {
 
 // Open returns a file handler of the specified name that can be used
 // for reading.
-func (c *Context) Open(name string) (afero.File, error) {
-	return c.fs.Open(name)
+func (c *Context) Open(name string) (*File, error) {
+	return c.OpenFile(name, os.O_RDONLY, 0)
+}
+
+// OpenFile returns a file handler of the specified name. It is a
+// generalized the generilized call used to open a file. It opens the
+// file with the given flag (O_RDONLY, O_WRONLY, O_CREATE, O_EXCL) and
+// permission.
+func (c *Context) OpenFile(name string, flag int, perm os.FileMode) (*File, error) {
+	if flag&os.O_RDWR != 0 || flag&os.O_APPEND != 0 {
+		return nil, os.ErrInvalid
+	}
+	if flag&os.O_CREATE != 0 && flag&os.O_EXCL == 0 {
+		return nil, os.ErrInvalid
+	}
+
+	name = path.Clean(name)
+
+	if flag == os.O_RDONLY {
+		doc, err := GetFileDocFromPath(c, name)
+		if err != nil {
+			return nil, err
+		}
+		return Open(c, doc)
+	}
+
+	var err error
+	var folderID string
+	var olddoc *FileDoc
+	var parent *DirDoc
+
+	if flag&os.O_CREATE != 0 {
+		if parent, err = GetDirDocFromPath(c, path.Dir(name), false); err != nil {
+			return nil, err
+		}
+		folderID = parent.ID()
+	} else if flag&os.O_WRONLY != 0 {
+		if olddoc, err = GetFileDocFromPath(c, name); err != nil {
+			return nil, err
+		}
+		folderID = olddoc.FolderID
+	}
+
+	if folderID == "" {
+		return nil, os.ErrInvalid
+	}
+
+	filename := path.Base(name)
+	exec := false
+	mime, class := ExtractMimeAndClassFromFilename(filename)
+	newdoc, err := NewFileDoc(filename, folderID, -1, nil, mime, class, exec, []string{})
+	if err != nil {
+		return nil, err
+	}
+	return CreateFile(c, newdoc, olddoc)
+}
+
+// Create creates a new file with specified and returns a File handler
+// that can be used for writing.
+func (c *Context) Create(name string) (*File, error) {
+	return c.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 }
 
 // ReadDir returns a list of FileInfo of all the direct children of
 // the specified directory.
 func (c *Context) ReadDir(name string) ([]os.FileInfo, error) {
 	return afero.ReadDir(c.fs, name)
-}
-
-// Create creates a new file with specified and returns a FileCreation
-// handler that can be used for writing.
-func (c *Context) Create(name string) (*FileCreation, error) {
-	name = path.Clean(name)
-
-	filename, dirpath := path.Base(name), path.Dir(name)
-	parent, err := GetDirDocFromPath(c, dirpath, false)
-	if err != nil {
-		return nil, err
-	}
-
-	exec := false
-	extn := path.Ext(name)
-	mime, class := ExtractMimeAndClass(mimetype.TypeByExtension(extn))
-
-	doc, err := NewFileDoc(filename, parent.ID(), -1, nil, mime, class, exec, []string{})
-	if err != nil {
-		return nil, err
-	}
-
-	return CreateFile(c, doc, nil)
 }
 
 // Mkdir creates a new directory with the specified name
@@ -269,6 +305,14 @@ func (c *Context) Rename(oldpath, newpath string) error {
 	return err
 }
 
+// Remove removes the specified named file or directory.
+func (c *Context) Remove(name string) error {
+	// TODO: fix this remove method implemented for now only to support
+	// go-git. This method should also remove the document from
+	// database.
+	return c.fs.Remove(name)
+}
+
 // ExtractMimeAndClass returns a mime and class value from the
 // specified content-type. For now it only takes the first segment of
 // the type as the class and the whole type as mime.
@@ -293,6 +337,14 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 	}
 
 	return
+}
+
+// ExtractMimeAndClassFromFilename is a shortcut of
+// ExtractMimeAndClass used to generate the mime and class from a
+// filename.
+func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
+	ext := path.Ext(name)
+	return ExtractMimeAndClass(mimetype.TypeByExtension(ext))
 }
 
 // getParentDir returns the parent directory document if nil.
