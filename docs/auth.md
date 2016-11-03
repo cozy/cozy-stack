@@ -12,18 +12,64 @@ authorized, and if yes, it processes it and answers it.
 What about OAuth2?
 ------------------
 
-TODO what is OAuth2, what it aims to do
-TODO the 4 actors
-TODO what is in OAuth2 and what is left as an exercise to the reader
-TODO the 4 grant types and the 3 ways to send the access token
-  -> Authorization code
-  -> Implicit grant type
-  -> Client credentials grant type
-  -> Resource owner credentials grant type
+OAuth2 is about delegating an access to resources on a server to another
+party. It is a framework, not a strictly defined protocol, for organizing the
+interactions between these 4 actors:
 
-TODO list assumptions made in OAuth2
-  -> TLS
-  -> trust on first use principle
+- the resource owner, the "user" that can click on buttons
+- the client, the website or application that would like to access the
+  resources
+- the authorization server, whose role is limited to give tokens but is
+  central in OAuth2 interactions
+- the resources server, the server that controls the resources.
+
+For cozy, both the authorization server and the resources server roles are
+played by the cozy-stack. The resource owner is the owner of a cozy instance.
+The client can be the cozy-desktop app, cozy-mobile, or many other
+applications.
+
+OAuth2, and its extensions, is a large world. At its core, there is 2 things:
+letting the client get a token issued by the authorization server, and using
+this token to access to the resources. OAuth2 describe 4 flows, called grant
+types, for the first part:
+
+- Authorization code
+- Implicit grant type
+- Client credentials grant type
+- Resource owner credentials grant type.
+
+On cozy, only the most typical one is used: authorization code.
+
+OAuth2 has also 3 ways to use a token:
+
+- in the query-string (even if the spec it's not recommended)
+- in the POST body
+- in the HTTP Authorization header.
+
+On cozy, only the header is supported.
+
+OAuth2 has a lot of assumptions. Let's see some of them and their consequences
+on Cozy:
+
+- TLS is very important to secure the communications. in OAuth 1, there was a
+  mechanism to sign the requests. But it was very difficult to get it right
+  for the developers and was abandonned in OAuth2, in favor of using TLS. The
+  Cozy instance are already accessible only in HTTPS, so there is nothing
+  particular to do for that.
+
+- There is a principle called TOFU, Trust On First Use. It said that if the
+  user will give his permission for delegating access to its resources when
+  the client will try to access them for the first time. Later, the client
+  will be able to keep accessing them even if the user is no longer here to
+  give his permissions.
+
+- The client can't make the assumptions about when its tokens will work. The
+  tokens have no meaning for him (like cookies in a browser), they are just
+  something it got from the authorization server and can send with its
+  request. The access token can expire, the user can revoke them, etc.
+
+- OAuth 2.0 defines no cryptographic methods. But a developer that want to use
+  it will have to put her hands in that.
 
 If you want to learn OAuth 2 in details, I recommend the [OAuth 2 in Action
 book](https://www.manning.com/books/oauth-2-in-action).
@@ -370,3 +416,11 @@ unknown applications.
 
 TODO: rate limiting
 TODO: no CORS for `/auth`
+TODO: TLS for redirect_uri (except for localhost)
+
+
+Conclusion
+----------
+
+Security is hard. If you want to share some concerns with us, do not hesitate
+to send us an email to security AT cozycloud.cc.
