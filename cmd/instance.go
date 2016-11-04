@@ -31,7 +31,7 @@ var addInstanceCmd = &cobra.Command{
 	Use:   "add [domain]",
 	Short: "Manage instances of a stack",
 	Long: `
-cozy-stack instance add allows to create an instance on the cozy for a
+cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {

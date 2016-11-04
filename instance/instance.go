@@ -127,14 +127,14 @@ func Get(domainarg string) (*Instance, error) {
 	}
 	err := couchdb.FindDocs(globalDBPrefix, instanceType, req, &instances)
 	if couchdb.IsNoDatabaseError(err) {
-		return nil, fmt.Errorf("No instance for domain %v, use 'cozy-stack instance add'", domain)
+		return nil, fmt.Errorf("No instance for domain %v, use 'cozy-stack instances add'", domain)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	if len(instances) == 0 {
-		return nil, fmt.Errorf("No instance for domain %v, use 'cozy-stack instance add'", domain)
+		return nil, fmt.Errorf("No instance for domain %v, use 'cozy-stack instances add'", domain)
 	}
 
 	return instances[0], nil
