@@ -187,7 +187,7 @@ Source    | URL from where the app can be downloaded
 #### Request
 
 ```http
-GET /apps/manifests?Source=git://github.com/cozy/cozy-emails HTTP/1.1
+GET /apps/manifests?Source=git://github.com/cozy/cozy-emails.git HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
