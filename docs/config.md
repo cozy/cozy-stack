@@ -16,7 +16,7 @@ Example
 
 This example values represent the default values of the configuration. The equivalent cli flag is in parenthesis.
 
-```
+```yaml
 mode: development   # server mode: development or production (--mode -m)
 host: localhost     # server host (--host)
 port: 8080          # server port (--port -p)
