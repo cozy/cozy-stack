@@ -8,11 +8,11 @@ var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Mode     Mode
-	Host     string
-	Port     int
-	Database Database
-	Logger   Logger
+	Mode    Mode
+	Host    string
+	Port    int
+	CouchDB CouchDB
+	Logger  Logger
 }
 
 // Mode is how is started the server, eg. production or development
@@ -25,9 +25,10 @@ const (
 	Development Mode = "development"
 )
 
-// Database contains the configuration values of the database
-type Database struct {
-	URL string
+// CouchDB contains the configuration values of the database
+type CouchDB struct {
+	Host string
+	Port int
 }
 
 // Logger contains the configuration values of the logger system
@@ -46,8 +47,9 @@ func UseViper(viper *viper.Viper) error {
 		Mode: parseMode(viper.GetString("mode")),
 		Host: viper.GetString("host"),
 		Port: viper.GetInt("port"),
-		Database: Database{
-			URL: viper.GetString("database.url"),
+		CouchDB: CouchDB{
+			Host: viper.GetString("couchdb.host"),
+			Port: viper.GetInt("couchdb.port"),
 		},
 		Logger: Logger{
 			Level: viper.GetString("log.level"),

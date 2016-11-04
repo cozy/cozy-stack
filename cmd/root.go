@@ -57,8 +57,11 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
 
-	flags.StringP("database-url", "d", "http://localhost:5984", "couchdb database address")
-	viper.BindPFlag("database.url", flags.Lookup("database-url"))
+	flags.String("couchdb-host", "localhost", "couchdbdb host")
+	viper.BindPFlag("couchdb.host", flags.Lookup("couchdb-host"))
+
+	flags.Int("couchdb-port", 5984, "couchdbdb port")
+	viper.BindPFlag("couchdb.port", flags.Lookup("couchdb-port"))
 
 	flags.String("log-level", "info", "define the log level")
 	viper.BindPFlag("log.level", flags.Lookup("log-level"))
@@ -80,8 +83,14 @@ func Configure() error {
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: While reading cozy-stack configurations from %s\n", viper.ConfigFileUsed())
-		return err
+		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
+			fmt.Fprintf(os.Stderr, "Error: While reading cozy-stack configurations from %s\n", viper.ConfigFileUsed())
+			return err
+		}
+
+		if cfgFile != "" {
+			return fmt.Errorf("Unable to locate config file: %s\n", cfgFile)
+		}
 	}
 
 	if viper.ConfigFileUsed() != "" {

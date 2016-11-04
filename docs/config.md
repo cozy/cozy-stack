@@ -20,8 +20,9 @@ This example values represent the default values of the configuration. The equiv
 mode: development   # server mode: development or production (--mode -m)
 host: localhost     # server host (--host)
 port: 8080          # server port (--port -p)
-database:
-    url: http://localhost:5984  # couchdb database url (--database-url)
+couchdb:
+    host: localhost # couchdb host (--couchdb-host)
+    port: 5984      # couchdb port (--couchdb-port)
 log:
     level: info     # logger level (debug, info, warning, panic, fatal) (--log-level)
 ```
