@@ -14,15 +14,6 @@ See the example to check what contains the configuration.
 Example
 -------
 
-This example values represent the default values of the configuration. The equivalent cli flag is in parenthesis.
+You can see an example of configuration in the [cozy.dist.yaml](./cozy.dist.yaml) file at the root of this repository. 
 
-```yaml
-mode: development   # server mode: development or production (--mode -m)
-host: localhost     # server host (--host)
-port: 8080          # server port (--port -p)
-couchdb:
-    host: localhost # couchdb host (--couchdb-host)
-    port: 5984      # couchdb port (--couchdb-port)
-log:
-    level: info     # logger level (debug, info, warning, panic, fatal) (--log-level)
-```
+This example's values represent the default values of the configuration. The equivalent cli flag are also filled in.
