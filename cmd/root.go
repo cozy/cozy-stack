@@ -12,15 +12,14 @@ import (
 
 // ConfigFilename is the default configuration filename that cozy
 // search for
-const ConfigFilename = ".cozy"
+const ConfigFilename = "cozy"
 
 // ConfigPaths is the list of directories used to search for a
 // configuration file
 var ConfigPaths = []string{
 	".cozy",
+	"$HOME/.cozy",
 	"/etc/cozy",
-	"$HOME",
-	".",
 }
 
 // RootCmd represents the base command when called without any subcommands
