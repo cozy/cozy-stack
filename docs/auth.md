@@ -136,6 +136,17 @@ Set-Cookie: ...
 Location: https://contacts.cozy.example.org/foo
 ```
 
+### DELETE /auth/login
+
+This can be used to log-out the user. A private context must be passed in the
+query-string, to protect against CSRF attack on this (this can part of bigger
+attacks like session fixation).
+
+```http
+DELETE /auth/login?CtxToken=token-for-a-private-context HTTP/1.1
+Host: cozy.example.org
+```
+
 ### POST /auth/register
 
 This route is used by OAuth2 clients to dynamically register them-selves.
