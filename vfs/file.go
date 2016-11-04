@@ -189,11 +189,11 @@ func GetFileDocFromPath(c *Context, name string) (*FileDoc, error) {
 	}
 
 	folderID := parent.ID()
-	selector := mango.And(
-		mango.Equal("folder_id", folderID),
-		mango.Equal("name", path.Base(name)),
-		mango.Equal("type", FileType),
-	)
+	selector := mango.Map{
+		"folder_id": folderID,
+		"name":      path.Base(name),
+		"type":      FileType,
+	}
 
 	var docs []*FileDoc
 	req := &couchdb.FindRequest{
