@@ -419,6 +419,12 @@ as an example.
 Security considerations
 -----------------------
 
+The password will be stored in a secure fashion, with a password hashing
+function. The hashing function and its parameter will be stored with the hash,
+in order to make it possible to change the algorithm and/or the parameters
+later if we had any suspicion that it became too weak. The initial algorithm
+is [scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
+
 The access code is valid only once, and will expire after 5 minutes
 
 Dynamically registered applications won't have access to all possible scopes.
@@ -442,10 +448,11 @@ flow. But it is mandatory to use it with Cozy.
 
 For more on this subject, here is a list of links:
 
--  https://tools.ietf.org/html/rfc6749#page-53
--  https://tools.ietf.org/html/rfc6819
--  https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
--  http://www.oauthsecurity.com/
+- https://www.owasp.org/index.php/Authentication_Cheat_Sheet
+- https://tools.ietf.org/html/rfc6749#page-53
+- https://tools.ietf.org/html/rfc6819
+- https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
+- http://www.oauthsecurity.com/
 
 
 Conclusion
