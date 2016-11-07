@@ -397,7 +397,7 @@ func (f *File) Close() error {
 			// modifying file content or remove the backup file otherwise
 			if err != nil || werr != nil {
 				c.fs.Rename(fc.bakpath, fc.newpath)
-			} else if fc.olddoc != nil {
+			} else {
 				c.fs.Remove(fc.bakpath)
 			}
 		} else if err != nil || werr != nil {
