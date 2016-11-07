@@ -14,7 +14,7 @@ var (
 	BuildTime string
 	// BuildMode is the build mode of the release. Should be either
 	// production or development.
-	BuildMode string
+	BuildMode = "development"
 )
 
 var config *Config
@@ -77,6 +77,10 @@ func UseViper(viper *viper.Viper) error {
 func parseMode(mode string) (string, error) {
 	if BuildMode == Production && mode != Production {
 		return "", fmt.Errorf("Only production mode is allowed in this version")
+	}
+
+	if BuildMode == Development && mode == "" {
+		mode = Development
 	}
 
 	if mode == Production {
