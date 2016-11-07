@@ -13,8 +13,28 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/spf13/afero"
 )
+
+// Indexes is the list of required indexes by the VFS inside CouchDB.
+var Indexes = []mango.Index{
+	mango.Index{
+		Name:  "FileFromParent",
+		DDoc:  "used to lookup a file given its parent",
+		Index: mango.NewIndexFields("folder_id", "name", "type"),
+	},
+	mango.Index{
+		Name:  "DirectoryPath",
+		DDoc:  "used to lookup a directory given its path",
+		Index: mango.NewIndexFields("path"),
+	},
+	mango.Index{
+		Name:  "DirectoryChildren",
+		DDoc:  "used to lookup children of a directory",
+		Index: mango.NewIndexFields("folder_id"),
+	},
+}
 
 // DefaultContentType is used for files uploaded with no content-type
 const DefaultContentType = "application/octet-stream"

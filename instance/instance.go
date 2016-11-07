@@ -63,16 +63,15 @@ func (i *Instance) createRootFolder() error {
 }
 
 // createFSIndexes creates the index needed by VFS
-func (i *Instance) createFSIndexes() (err error) {
+func (i *Instance) createFSIndexes() error {
 	prefix := i.GetDatabasePrefix()
-	byParent := mango.IndexOnFields("folder_id", "name", "type")
-	byPath := mango.IndexOnFields("path")
-	err = couchdb.DefineIndex(prefix, vfs.FsDocType, byParent)
-	if err != nil {
-		return err
+	for _, index := range vfs.Indexes {
+		err := couchdb.DefineIndex(prefix, vfs.FsDocType, index)
+		if err != nil {
+			return err
+		}
 	}
-	err = couchdb.DefineIndex(prefix, vfs.FsDocType, byPath)
-	return err
+	return nil
 }
 
 // Create build an instance and .Create it

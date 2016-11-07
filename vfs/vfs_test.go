@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/sourcegraph/checkup"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -81,10 +80,13 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineIndex(TestPrefix, FsDocType, mango.IndexOnFields("folder_id", "name"))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+
+	for _, index := range Indexes {
+		err = couchdb.DefineIndex(TestPrefix, FsDocType, index)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	fs := afero.NewMemMapFs()

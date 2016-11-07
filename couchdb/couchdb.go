@@ -325,7 +325,7 @@ func CreateDoc(dbprefix string, doc Doc) (err error) {
 
 // DefineIndex define the index on the doctype database
 // see query package on how to define an index
-func DefineIndex(dbprefix, doctype string, index mango.IndexDefinitionRequest) error {
+func DefineIndex(dbprefix, doctype string, index mango.Index) error {
 	url := makeDBName(dbprefix, doctype) + "/_index"
 	var response indexCreationResponse
 	return makeRequest("POST", url, &index, &response)
