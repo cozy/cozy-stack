@@ -72,10 +72,7 @@ do_release() {
 	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 	BUILD_MODE=${COZY_ENV}
 
-	go build \
-		-ldflags "-X github.com/cozy/cozy-stack/config.Version=${VERSION_STRING}" \
-		-ldflags "-X github.com/cozy/cozy-stack/config.BuildTime=${BUILD_TIME}" \
-		-ldflags "-X github.com/cozy/cozy-stack/config.BuildMode=${BUILD_MODE}" \
+	go build -ldflags "-X github.com/cozy/cozy-stack/config.Version=${VERSION_STRING} -X github.com/cozy/cozy-stack/config.BuildTime=${BUILD_TIME} -X github.com/cozy/cozy-stack/config.BuildMode=${BUILD_MODE}" \
 		-o ${BINARY}
 
 	openssl dgst -sha256 -hex ${BINARY} > ${BINARY}.sha256
