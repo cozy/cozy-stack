@@ -506,7 +506,7 @@ So, we think that writing the Cozy Stack in Go is the right choice.
 │   ├── scripts     The javascript files
 │   └── styles      The CSS files
 ├── cmd             One .go file for each command of the cozy executable
-├── doc             Documentation, including this file
+├── docs            Documentation, including this file
 └── web             One sub-directory for each of the services listed above
 ```
 
