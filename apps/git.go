@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/vfs"
-	"github.com/spf13/afero"
 	git "gopkg.in/src-d/go-git.v4"
 	gitSt "gopkg.in/src-d/go-git.v4/storage/filesystem"
 	gitFS "gopkg.in/src-d/go-git.v4/utils/fs"
@@ -167,80 +166,41 @@ type gfs struct {
 	dir  *vfs.DirDoc
 }
 
-type gfileRead struct {
-	f      afero.File
+type gfile struct {
+	f      *vfs.File
 	name   string
 	closed bool
 }
 
-type gfileWrite struct {
-	f      io.WriteCloser
-	name   string
-	closed bool
-}
-
-func newGFileRead(f afero.File, name string) *gfileRead {
-	return &gfileRead{
+func newGFile(f *vfs.File, name string) *gfile {
+	return &gfile{
 		f:      f,
 		name:   name,
 		closed: false,
 	}
 }
 
-func (f *gfileRead) Filename() string {
+func (f *gfile) Filename() string {
 	return f.name
 }
 
-func (f *gfileRead) IsClosed() bool {
+func (f *gfile) IsClosed() bool {
 	return f.closed
 }
 
-func (f *gfileRead) Write(p []byte) (n int, err error) {
-	return 0, os.ErrInvalid
-}
-
-func (f *gfileRead) Read(p []byte) (n int, err error) {
+func (f *gfile) Read(p []byte) (n int, err error) {
 	return f.f.Read(p)
 }
 
-func (f *gfileRead) Seek(offset int64, whence int) (int64, error) {
-	return f.f.Seek(offset, whence)
-}
-
-func (f *gfileRead) Close() error {
-	f.closed = true
-	return f.f.Close()
-}
-
-func newGFileWrite(f io.WriteCloser, name string) *gfileWrite {
-	return &gfileWrite{
-		f:      f,
-		name:   name,
-		closed: false,
-	}
-}
-
-func (f *gfileWrite) Filename() string {
-	return f.name
-}
-
-func (f *gfileWrite) IsClosed() bool {
-	return f.closed
-}
-
-func (f *gfileWrite) Write(p []byte) (n int, err error) {
+func (f *gfile) Write(p []byte) (n int, err error) {
 	return f.f.Write(p)
 }
 
-func (f *gfileWrite) Read(p []byte) (n int, err error) {
-	return 0, os.ErrInvalid
+func (f *gfile) Seek(offset int64, whence int) (int64, error) {
+	return f.f.Seek(offset, whence)
 }
 
-func (f *gfileWrite) Seek(offset int64, whence int) (int64, error) {
-	return 0, os.ErrInvalid
-}
-
-func (f *gfileWrite) Close() error {
+func (f *gfile) Close() error {
 	f.closed = true
 	return f.f.Close()
 }
@@ -258,41 +218,49 @@ func newGFS(vfsC *vfs.Context, base string) *gfs {
 	}
 }
 
-func (fs *gfs) createFile(fullpath, filename string) (*gfileWrite, error) {
+func (fs *gfs) OpenFile(name string, flag int, perm os.FileMode) (gitFS.File, error) {
 	var err error
 
-	var dirbase = path.Dir(fullpath)
-	if err = fs.vfsC.MkdirAll(dirbase); err != nil {
-		return nil, err
+	fullpath := path.Join(fs.base, name)
+	dirbase := path.Dir(fullpath)
+
+	if flag&os.O_CREATE != 0 {
+		if err = fs.vfsC.MkdirAll(dirbase); err != nil {
+			return nil, err
+		}
 	}
 
-	file, err := fs.vfsC.Create(fullpath)
+	file, err := fs.vfsC.OpenFile(fullpath, flag, perm)
 	if err != nil {
 		return nil, err
 	}
 
-	return newGFileWrite(file, filename), nil
+	return newGFile(file, name), nil
 }
 
-func (fs *gfs) Create(filename string) (gitFS.File, error) {
-	return fs.createFile(fs.Join(fs.base, filename), filename)
+func (fs *gfs) Create(name string) (gitFS.File, error) {
+	return fs.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_TRUNC, 0666)
 }
 
-func (fs *gfs) Open(filename string) (gitFS.File, error) {
-	fullpath := fs.Join(fs.base, filename)
+func (fs *gfs) Open(name string) (gitFS.File, error) {
+	fullpath := fs.Join(fs.base, name)
 	f, err := fs.vfsC.Open(fullpath)
 	if err != nil {
 		return nil, err
 	}
-	return newGFileRead(f, fullpath[len(fs.base)+1:]), nil
+	return newGFile(f, fullpath[len(fs.base)+1:]), nil
 }
 
-func (fs *gfs) Stat(filename string) (gitFS.FileInfo, error) {
-	return fs.vfsC.Stat(fs.Join(fs.base, filename))
+func (fs *gfs) Remove(name string) error {
+	return fs.vfsC.Remove(fs.Join(fs.base, name))
 }
 
-func (fs *gfs) ReadDir(dirname string) ([]gitFS.FileInfo, error) {
-	l, err := fs.vfsC.ReadDir(fs.Join(fs.base, dirname))
+func (fs *gfs) Stat(name string) (gitFS.FileInfo, error) {
+	return fs.vfsC.Stat(fs.Join(fs.base, name))
+}
+
+func (fs *gfs) ReadDir(name string) ([]gitFS.FileInfo, error) {
+	l, err := fs.vfsC.ReadDir(fs.Join(fs.base, name))
 	if err != nil {
 		return nil, err
 	}
@@ -307,9 +275,15 @@ func (fs *gfs) ReadDir(dirname string) ([]gitFS.FileInfo, error) {
 
 func (fs *gfs) TempFile(dirname, prefix string) (gitFS.File, error) {
 	// TODO: not really robust tempfile...
-	filename := fs.Join("/", dirname, prefix+"_"+strconv.Itoa(int(time.Now().UnixNano())))
-	fullpath := fs.Join(fs.base, filename)
-	return fs.createFile(fullpath, filename)
+	name := fs.Join("/", dirname, prefix+"_"+strconv.Itoa(int(time.Now().UnixNano())))
+	file, err := fs.Create(name)
+	if err != nil {
+		return nil, err
+	}
+	if err := file.Close(); err != nil {
+		return nil, err
+	}
+	return fs.OpenFile(name, os.O_WRONLY|os.O_TRUNC, 0666)
 }
 
 func (fs *gfs) Rename(from, to string) error {
@@ -331,6 +305,5 @@ func (fs *gfs) Base() string {
 var (
 	_ Client           = &gitClient{}
 	_ gitFS.Filesystem = &gfs{}
-	_ gitFS.File       = &gfileWrite{}
-	_ gitFS.File       = &gfileRead{}
+	_ gitFS.File       = &gfile{}
 )

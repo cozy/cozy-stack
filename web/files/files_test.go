@@ -721,11 +721,19 @@ func TestModifyContentConcurrently(t *testing.T) {
 		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
 	}
 
-	lastS := successes[len(successes)-1]
 	storage, _ := testInstance.GetStorageProvider()
 	buf, err := afero.ReadFile(storage, "/willbemodifiedconcurrently")
 	assert.NoError(t, err)
-	assert.Equal(t, "newcontent "+strconv.FormatInt(lastS.idx, 10), string(buf))
+
+	found := false
+	for _, s := range successes {
+		if string(buf) == "newcontent "+strconv.FormatInt(s.idx, 10) {
+			found = true
+			break
+		}
+	}
+
+	assert.True(t, found)
 }
 
 func TestDownloadFileBadID(t *testing.T) {

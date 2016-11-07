@@ -78,16 +78,13 @@ func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err
 		return
 	}
 
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
 	_, err = io.Copy(file, c.Request.Body)
-	if err != nil {
-		return
-	}
-
-	err = file.Close()
-	if err != nil {
-		return
-	}
-
 	return
 }
 
@@ -153,19 +150,19 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+		if err != nil {
+			jsonapi.AbortWithError(c, WrapVfsError(err))
+		} else {
+			jsonapi.Data(c, http.StatusOK, newdoc, nil)
+		}
+	}()
+
 	_, err = io.Copy(file, c.Request.Body)
-	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
-		return
-	}
-
-	err = file.Close()
-	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
-		return
-	}
-
-	jsonapi.Data(c, http.StatusOK, newdoc, nil)
+	return
 }
 
 // ModificationHandler handles PATCH requests on /files/:file-id and
