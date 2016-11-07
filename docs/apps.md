@@ -294,7 +294,7 @@ Content-Type: application/vnd.api+json
 List installed applications
 ---------------------------
 
-### GET /apps
+### GET /apps/
 
 An application can be in one of these states:
 
@@ -306,7 +306,7 @@ An application can be in one of these states:
 #### Request
 
 ```http
-GET /apps HTTP/1.1
+GET /apps/ HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
