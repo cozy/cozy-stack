@@ -81,7 +81,7 @@ func (f *FileDoc) SelfLink() string {
 }
 
 // Path is used to generate the file path
-func (f *FileDoc) Path(c *Context) (string, error) {
+func (f *FileDoc) Path(c Context) (string, error) {
 	var parentPath string
 	if f.FolderID == RootFolderID {
 		parentPath = "/"
@@ -99,7 +99,7 @@ func (f *FileDoc) Path(c *Context) (string, error) {
 }
 
 // Parent returns the parent directory document
-func (f *FileDoc) Parent(c *Context) (*DirDoc, error) {
+func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
 	parent, err := getParentDir(c, f.parent, f.FolderID)
 	if err != nil {
 		return nil, err
@@ -162,9 +162,9 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 
 // GetFileDoc is used to fetch file document information form the
 // database.
-func GetFileDoc(c *Context, fileID string) (*FileDoc, error) {
+func GetFileDoc(c Context, fileID string) (*FileDoc, error) {
 	doc := &FileDoc{}
-	err := couchdb.GetDoc(c.db, FsDocType, fileID, doc)
+	err := couchdb.GetDoc(c, FsDocType, fileID, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func GetFileDoc(c *Context, fileID string) (*FileDoc, error) {
 
 // GetFileDocFromPath is used to fetch file document information from
 // the database from its path.
-func GetFileDocFromPath(c *Context, name string) (*FileDoc, error) {
+func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 	var err error
 
 	dirpath := path.Dir(name)
@@ -199,7 +199,7 @@ func GetFileDocFromPath(c *Context, name string) (*FileDoc, error) {
 		Selector: selector,
 		Limit:    1,
 	}
-	err = couchdb.FindDocs(c.db, FsDocType, req, &docs)
+	err = couchdb.FindDocs(c, FsDocType, req, &docs)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func GetFileDocFromPath(c *Context, name string) (*FileDoc, error) {
 // non-ranged requests
 //
 // The content disposition is inlined.
-func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) (err error) {
+func ServeFileContent(c Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) (err error) {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
 	header.Set("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, doc.Name))
@@ -237,7 +237,7 @@ func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Re
 		return
 	}
 
-	content, err := c.fs.Open(name)
+	content, err := c.FS().Open(name)
 	if err != nil {
 		return
 	}
@@ -250,7 +250,7 @@ func ServeFileContent(c *Context, doc *FileDoc, disposition string, req *http.Re
 // File represents a file handle. It can be used either for writing OR
 // reading, but not both at the same time.
 type File struct {
-	c  *Context      // vfs context
+	c  Context       // vfs context
 	f  afero.File    // file handle
 	fc *fileCreation // file creation handle
 }
@@ -260,8 +260,7 @@ type File struct {
 //
 // fileCreation implements io.WriteCloser.
 type fileCreation struct {
-	w int64 // total size written
-
+	w         int64     // total size written
 	newdoc    *FileDoc  // new document
 	olddoc    *FileDoc  // old document if any
 	newpath   string    // file new path
@@ -273,12 +272,12 @@ type fileCreation struct {
 
 // Open returns a file handle that can be used to read form the file
 // specified by the given document.
-func Open(c *Context, doc *FileDoc) (*File, error) {
+func Open(c Context, doc *FileDoc) (*File, error) {
 	name, err := doc.Path(c)
 	if err != nil {
 		return nil, err
 	}
-	f, err := c.fs.Open(name)
+	f, err := c.FS().Open(name)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +294,7 @@ func Open(c *Context, doc *FileDoc) (*File, error) {
 // Warning: you MUST call the Close() method and check for its error.
 // The Close() method will actually create or update the document in
 // couchdb. It will also check the md5 hash if required.
-func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*File, error) {
+func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
 	now := time.Now()
 
 	newpath, err := newdoc.Path(c)
@@ -328,7 +327,7 @@ func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*File, error) {
 
 	newdoc.UpdatedAt = now
 
-	f, err := safeCreateFile(newpath, newdoc.Executable, c.fs)
+	f, err := safeCreateFile(newpath, newdoc.Executable, c.FS())
 	if err != nil {
 		return nil, err
 	}
@@ -403,13 +402,13 @@ func (f *File) Close() error {
 			// put back backup file revision in case on error occured while
 			// modifying file content or remove the backup file otherwise
 			if err != nil || werr != nil {
-				c.fs.Rename(fc.bakpath, fc.newpath)
+				c.FS().Rename(fc.bakpath, fc.newpath)
 			} else {
-				c.fs.Remove(fc.bakpath)
+				c.FS().Remove(fc.bakpath)
 			}
 		} else if err != nil || werr != nil {
 			// remove file if an error occured while file creation
-			c.fs.Remove(fc.newpath)
+			c.FS().Remove(fc.newpath)
 		}
 	}()
 
@@ -440,9 +439,9 @@ func (f *File) Close() error {
 	}
 
 	if olddoc != nil {
-		err = couchdb.UpdateDoc(c.db, newdoc)
+		err = couchdb.UpdateDoc(c, newdoc)
 	} else {
-		err = couchdb.CreateDoc(c.db, newdoc)
+		err = couchdb.CreateDoc(c, newdoc)
 	}
 
 	return err
@@ -450,7 +449,7 @@ func (f *File) Close() error {
 
 // ModifyFileMetadata modify the metadata associated to a file. It can
 // be used to rename or move the file in the VFS.
-func ModifyFileMetadata(c *Context, olddoc *FileDoc, patch *DocPatch) (newdoc *FileDoc, err error) {
+func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *FileDoc, err error) {
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:       &olddoc.Name,
@@ -512,13 +511,13 @@ func ModifyFileMetadata(c *Context, olddoc *FileDoc, patch *DocPatch) (newdoc *F
 	}
 
 	if newdoc.Executable != olddoc.Executable {
-		err = c.fs.Chmod(newpath, getFileMode(newdoc.Executable))
+		err = c.FS().Chmod(newpath, getFileMode(newdoc.Executable))
 		if err != nil {
 			return
 		}
 	}
 
-	err = couchdb.UpdateDoc(c.db, newdoc)
+	err = couchdb.UpdateDoc(c, newdoc)
 	return
 }
 
@@ -530,7 +529,7 @@ func safeCreateFile(name string, executable bool, fs afero.Fs) (afero.File, erro
 	return fs.OpenFile(name, flag, mode)
 }
 
-func safeRenameFile(c *Context, oldpath, newpath string) error {
+func safeRenameFile(c Context, oldpath, newpath string) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 
@@ -538,7 +537,7 @@ func safeRenameFile(c *Context, oldpath, newpath string) error {
 		return fmt.Errorf("paths should be absolute")
 	}
 
-	_, err := c.fs.Stat(newpath)
+	_, err := c.FS().Stat(newpath)
 	if err == nil {
 		return os.ErrExist
 	}
@@ -546,7 +545,7 @@ func safeRenameFile(c *Context, oldpath, newpath string) error {
 		return err
 	}
 
-	return c.fs.Rename(oldpath, newpath)
+	return c.FS().Rename(oldpath, newpath)
 }
 
 func getFileMode(executable bool) (mode os.FileMode) {

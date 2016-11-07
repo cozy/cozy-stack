@@ -46,6 +46,13 @@ const (
 	FileType = "file"
 )
 
+// Context is used to convey the afero.Fs object along with the
+// CouchDb database prefix.
+type Context interface {
+	couchdb.Database
+	FS() afero.Fs
+}
+
 // DocPatch is a struct containing modifiable fields from file and
 // directory documents.
 type DocPatch struct {
@@ -96,9 +103,9 @@ func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
 
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
-func GetDirOrFileDoc(c *Context, fileID string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
 	dirOrFile := &dirOrFile{}
-	err = couchdb.GetDoc(c.db, FsDocType, fileID, dirOrFile)
+	err = couchdb.GetDoc(c, FsDocType, fileID, dirOrFile)
 	if err != nil {
 		return
 	}
@@ -112,7 +119,7 @@ func GetDirOrFileDoc(c *Context, fileID string, withChildren bool) (typ string, 
 
 // GetDirOrFileDocFromPath is used to fetch a document from its path
 // without knowning in advance its type.
-func GetDirOrFileDocFromPath(c *Context, name string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+func GetDirOrFileDocFromPath(c Context, name string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
 	dirDoc, err = GetDirDocFromPath(c, name, withChildren)
 	if err != nil && !os.IsNotExist(err) {
 		return
@@ -134,34 +141,16 @@ func GetDirOrFileDocFromPath(c *Context, name string, withChildren bool) (typ st
 	return
 }
 
-// Context is used to convey the afero.Fs object along with the
-// CouchDb database prefix.
-type Context struct {
-	fs afero.Fs
-	db string
-}
-
-// NewContext is the constructor function for Context
-func NewContext(fs afero.Fs, dbprefix string) *Context {
-	return &Context{fs, dbprefix}
-}
-
 // Stat returns the FileInfo of the specified file or directory.
-func (c *Context) Stat(name string) (os.FileInfo, error) {
-	return c.fs.Stat(name)
-}
-
-// Open returns a file handler of the specified name that can be used
-// for reading.
-func (c *Context) Open(name string) (*File, error) {
-	return c.OpenFile(name, os.O_RDONLY, 0)
+func Stat(c Context, name string) (os.FileInfo, error) {
+	return c.FS().Stat(name)
 }
 
 // OpenFile returns a file handler of the specified name. It is a
 // generalized the generilized call used to open a file. It opens the
 // file with the given flag (O_RDONLY, O_WRONLY, O_CREATE, O_EXCL) and
 // permission.
-func (c *Context) OpenFile(name string, flag int, perm os.FileMode) (*File, error) {
+func OpenFile(c Context, name string, flag int, perm os.FileMode) (*File, error) {
 	if flag&os.O_RDWR != 0 || flag&os.O_APPEND != 0 {
 		return nil, os.ErrInvalid
 	}
@@ -212,18 +201,18 @@ func (c *Context) OpenFile(name string, flag int, perm os.FileMode) (*File, erro
 
 // Create creates a new file with specified and returns a File handler
 // that can be used for writing.
-func (c *Context) Create(name string) (*File, error) {
-	return c.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+func Create(c Context, name string) (*File, error) {
+	return OpenFile(c, name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 }
 
 // ReadDir returns a list of FileInfo of all the direct children of
 // the specified directory.
-func (c *Context) ReadDir(name string) ([]os.FileInfo, error) {
-	return afero.ReadDir(c.fs, name)
+func ReadDir(c Context, name string) ([]os.FileInfo, error) {
+	return afero.ReadDir(c.FS(), name)
 }
 
 // Mkdir creates a new directory with the specified name
-func (c *Context) Mkdir(name string) error {
+func Mkdir(c Context, name string) error {
 	name = path.Clean(name)
 	if name == "/" {
 		return nil
@@ -245,7 +234,7 @@ func (c *Context) Mkdir(name string) error {
 
 // MkdirAll creates a directory named path, along with any necessary
 // parents, and returns nil, or else returns an error.
-func (c *Context) MkdirAll(name string) error {
+func MkdirAll(c Context, name string) error {
 	var err error
 	var dirs []string
 	var base, file string
@@ -280,7 +269,7 @@ func (c *Context) MkdirAll(name string) error {
 
 // Rename will rename a file or directory from a specified path to
 // another.
-func (c *Context) Rename(oldpath, newpath string) error {
+func Rename(c Context, oldpath, newpath string) error {
 	typ, dir, file, err := GetDirOrFileDocFromPath(c, oldpath, false)
 	if err != nil {
 		return err
@@ -316,11 +305,11 @@ func (c *Context) Rename(oldpath, newpath string) error {
 }
 
 // Remove removes the specified named file or directory.
-func (c *Context) Remove(name string) error {
+func Remove(c Context, name string) error {
 	// TODO: fix this remove method implemented for now only to support
 	// go-git. This method should also remove the document from
 	// database.
-	return c.fs.Remove(name)
+	return c.FS().Remove(name)
 }
 
 // ExtractMimeAndClass returns a mime and class value from the
@@ -358,7 +347,7 @@ func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 }
 
 // getParentDir returns the parent directory document if nil.
-func getParentDir(c *Context, parent *DirDoc, folderID string) (*DirDoc, error) {
+func getParentDir(c Context, parent *DirDoc, folderID string) (*DirDoc, error) {
 	if parent != nil {
 		return parent, nil
 	}
