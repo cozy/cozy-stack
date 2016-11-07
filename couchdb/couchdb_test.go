@@ -18,7 +18,12 @@ func TestErrors(t *testing.T) {
 }
 
 const TestDoctype = "io.cozy.testobject"
-const TestPrefix = "dev/"
+
+type TestDB struct{ prefix string }
+
+func (d *TestDB) Prefix() string { return d.prefix }
+
+var TestPrefix = &TestDB{"dev/"}
 
 type testDoc struct {
 	TestID  string `json:"_id,omitempty"`

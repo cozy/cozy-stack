@@ -202,7 +202,7 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
-	if err = couchdb.DeleteAllDBs(i.Domain + "/"); err != nil {
+	if err = couchdb.DeleteAllDBs(i); err != nil {
 		return nil, err
 	}
 

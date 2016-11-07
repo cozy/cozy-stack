@@ -26,6 +26,12 @@ type Doc interface {
 	SetRev(rev string)
 }
 
+// Database is the type passed to every function in couchdb package
+// for now it is just a string with the database prefix.
+type Database interface {
+	Prefix() string
+}
+
 // JSONDoc is a map representing a simple json object that implements
 // the Doc interface.
 type JSONDoc struct {
@@ -102,10 +108,11 @@ func (j JSONDoc) Get(key string) interface{} {
 
 var couchdbClient = &http.Client{}
 
-func makeDBName(dbprefix, doctype string) string {
+func makeDBName(db Database, doctype string) string {
 	// @TODO This should be better analysed
-	dbname := dbprefix + doctype
+	dbname := db.Prefix() + doctype
 	dbname = strings.Replace(dbname, ".", "-", -1)
+	dbname = strings.Replace(dbname, ":", "-", -1)
 	dbname = strings.ToLower(dbname)
 	return url.QueryEscape(dbname)
 }
@@ -118,8 +125,8 @@ func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
 	return true, strings.Replace(dbname, dbprefix, "", 1)
 }
 
-func docURL(dbprefix, doctype, id string) string {
-	return makeDBName(dbprefix, doctype) + "/" + url.QueryEscape(id)
+func docURL(db Database, doctype, id string) string {
+	return makeDBName(db, doctype) + "/" + url.QueryEscape(id)
 }
 
 func makeRequest(method, path string, reqbody interface{}, resbody interface{}) error {
@@ -192,25 +199,28 @@ func fixErrorNoDatabaseIsWrongDoctype(err error) {
 
 // GetDoc fetch a document by its docType and ID, out is filled with
 // the document by json.Unmarshal-ing
-func GetDoc(dbprefix, doctype, id string, out Doc) error {
-	err := makeRequest("GET", docURL(dbprefix, doctype, id), nil, out)
+func GetDoc(db Database, doctype, id string, out Doc) error {
+	err := makeRequest("GET", docURL(db, doctype, id), nil, out)
 	fixErrorNoDatabaseIsWrongDoctype(err)
 	return err
 }
 
 // CreateDB creates the necessary database for a doctype
-func CreateDB(dbprefix, doctype string) error {
-	return makeRequest("PUT", makeDBName(dbprefix, doctype), nil, nil)
+func CreateDB(db Database, doctype string) error {
+	return makeRequest("PUT", makeDBName(db, doctype), nil, nil)
 }
 
 // DeleteDB destroy the database for a doctype
-func DeleteDB(dbprefix, doctype string) error {
-	return makeRequest("DELETE", makeDBName(dbprefix, doctype), nil, nil)
+func DeleteDB(db Database, doctype string) error {
+	return makeRequest("DELETE", makeDBName(db, doctype), nil, nil)
 }
 
-// DeleteAllDBs will remove all the database sharing the specified
-// dbprefix. It only accepts db prefixes ending with a /.
-func DeleteAllDBs(dbprefix string) error {
+// DeleteAllDBs will remove all the couchdb doctype databases for
+// a couchdb.DB.
+func DeleteAllDBs(db Database) error {
+
+	dbprefix := db.Prefix()
+
 	if dbprefix == "" || dbprefix[len(dbprefix)-1] != '/' {
 		return fmt.Errorf("You need to provide the database prefix name ending with /")
 	}
@@ -221,12 +231,12 @@ func DeleteAllDBs(dbprefix string) error {
 		return err
 	}
 
-	for _, db := range dbsList {
-		hasPrefix, doctype := dbNameHasPrefix(db, dbprefix)
+	for _, doctypedb := range dbsList {
+		hasPrefix, doctype := dbNameHasPrefix(doctypedb, dbprefix)
 		if !hasPrefix {
 			continue
 		}
-		if err = DeleteDB(dbprefix, doctype); err != nil {
+		if err = DeleteDB(db, doctype); err != nil {
 			return err
 		}
 	}
@@ -235,22 +245,22 @@ func DeleteAllDBs(dbprefix string) error {
 }
 
 // ResetDB destroy and recreate the database for a doctype
-func ResetDB(dbprefix, doctype string) (err error) {
-	err = DeleteDB(dbprefix, doctype)
+func ResetDB(db Database, doctype string) (err error) {
+	err = DeleteDB(db, doctype)
 	if err != nil && !IsNoDatabaseError(err) {
 		return err
 	}
-	return CreateDB(dbprefix, doctype)
+	return CreateDB(db, doctype)
 }
 
 // Delete destroy a document by its doctype and ID .
 // If the document's current rev does not match the one passed,
 // a CouchdbError(409 conflict) will be returned.
 // This functions returns the tombstone revision as string
-func Delete(dbprefix, doctype, id, rev string) (tombrev string, err error) {
+func Delete(db Database, doctype, id, rev string) (tombrev string, err error) {
 	var res updateResponse
 	qs := url.Values{"rev": []string{rev}}
-	url := docURL(dbprefix, doctype, id) + "?" + qs.Encode()
+	url := docURL(db, doctype, id) + "?" + qs.Encode()
 	err = makeRequest("DELETE", url, nil, &res)
 	fixErrorNoDatabaseIsWrongDoctype(err)
 	if err == nil {
@@ -261,11 +271,11 @@ func Delete(dbprefix, doctype, id, rev string) (tombrev string, err error) {
 
 // DeleteDoc deletes a struct implementing the couchb.Doc interface
 // The document's SetRev will be called with tombstone revision
-func DeleteDoc(dbprefix string, doc Doc) (err error) {
+func DeleteDoc(db Database, doc Doc) (err error) {
 	doctype := doc.DocType()
 	id := doc.ID()
 	rev := doc.Rev()
-	tombrev, err := Delete(dbprefix, doctype, id, rev)
+	tombrev, err := Delete(db, doctype, id, rev)
 	if err == nil {
 		doc.SetRev(tombrev)
 	}
@@ -274,7 +284,7 @@ func DeleteDoc(dbprefix string, doc Doc) (err error) {
 
 // UpdateDoc update a document. The document ID and Rev should be fillled.
 // The doc SetRev function will be called with the new rev.
-func UpdateDoc(dbprefix string, doc Doc) (err error) {
+func UpdateDoc(db Database, doc Doc) (err error) {
 	doctype := doc.DocType()
 	id := doc.ID()
 	rev := doc.Rev()
@@ -282,7 +292,7 @@ func UpdateDoc(dbprefix string, doc Doc) (err error) {
 		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
 	}
 
-	url := docURL(dbprefix, doctype, id)
+	url := docURL(db, doctype, id)
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
 	fixErrorNoDatabaseIsWrongDoctype(err)
@@ -296,7 +306,7 @@ func UpdateDoc(dbprefix string, doc Doc) (err error) {
 // if the document already exist, it will return a 409 error.
 // The document ID should be fillled.
 // The doc SetRev function will be called with the new rev.
-func CreateNamedDoc(dbprefix string, doc Doc) (err error) {
+func CreateNamedDoc(db Database, doc Doc) (err error) {
 	doctype := doc.DocType()
 	id := doc.ID()
 
@@ -304,7 +314,7 @@ func CreateNamedDoc(dbprefix string, doc Doc) (err error) {
 		return fmt.Errorf("CreateNamedDoc should have type and id but no rev")
 	}
 
-	url := docURL(dbprefix, doctype, id)
+	url := docURL(db, doctype, id)
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
 	fixErrorNoDatabaseIsWrongDoctype(err)
@@ -316,29 +326,29 @@ func CreateNamedDoc(dbprefix string, doc Doc) (err error) {
 
 // CreateNamedDocWithDB is equivalent to CreateNamedDoc but creates the database
 // if it does not exist
-func CreateNamedDocWithDB(dbprefix string, doc Doc) (err error) {
-	err = CreateNamedDoc(dbprefix, doc)
+func CreateNamedDocWithDB(db Database, doc Doc) (err error) {
+	err = CreateNamedDoc(db, doc)
 	if coucherr, ok := err.(*Error); ok && coucherr.Reason == "wrong_doctype" {
-		err = CreateDB(dbprefix, doc.DocType())
+		err = CreateDB(db, doc.DocType())
 		if err != nil {
 			return err
 		}
-		return CreateNamedDoc(dbprefix, doc)
+		return CreateNamedDoc(db, doc)
 	}
 	return err
 }
 
-func createDocOrDb(dbprefix string, doc Doc, response interface{}) (err error) {
+func createDocOrDb(db Database, doc Doc, response interface{}) (err error) {
 	doctype := doc.DocType()
-	db := makeDBName(dbprefix, doctype)
-	err = makeRequest("POST", db, doc, response)
+	dbname := makeDBName(db, doctype)
+	err = makeRequest("POST", dbname, doc, response)
 	if err == nil || !IsNoDatabaseError(err) {
 		return
 	}
 
-	err = CreateDB(dbprefix, doctype)
+	err = CreateDB(db, doctype)
 	if err == nil {
-		err = makeRequest("POST", db, doc, response)
+		err = makeRequest("POST", dbname, doc, response)
 	}
 	return
 }
@@ -347,7 +357,7 @@ func createDocOrDb(dbprefix string, doc Doc, response interface{}) (err error) {
 // database. The document's SetRev and SetID function will be called
 // with the document's new ID and Rev.
 // This function creates a database if this is the first document of its type
-func CreateDoc(dbprefix string, doc Doc) (err error) {
+func CreateDoc(db Database, doc Doc) (err error) {
 	var res *updateResponse
 
 	if doc.ID() != "" {
@@ -355,7 +365,7 @@ func CreateDoc(dbprefix string, doc Doc) (err error) {
 		return
 	}
 
-	err = createDocOrDb(dbprefix, doc, &res)
+	err = createDocOrDb(db, doc, &res)
 	if err != nil {
 		return err
 	} else if !res.Ok {
@@ -369,16 +379,16 @@ func CreateDoc(dbprefix string, doc Doc) (err error) {
 
 // DefineIndex define the index on the doctype database
 // see query package on how to define an index
-func DefineIndex(dbprefix, doctype string, index mango.Index) error {
-	url := makeDBName(dbprefix, doctype) + "/_index"
+func DefineIndex(db Database, doctype string, index mango.Index) error {
+	url := makeDBName(db, doctype) + "/_index"
 	var response indexCreationResponse
 	return makeRequest("POST", url, &index, &response)
 }
 
 // FindDocs returns all documents matching the passed FindRequest
 // documents will be unmarshalled in the provided results slice.
-func FindDocs(dbprefix, doctype string, req *FindRequest, results interface{}) error {
-	url := makeDBName(dbprefix, doctype) + "/_find"
+func FindDocs(db Database, doctype string, req *FindRequest, results interface{}) error {
+	url := makeDBName(db, doctype) + "/_find"
 	// prepare a structure to receive the results
 	var response findResponse
 	err := makeRequest("POST", url, &req, &response)
