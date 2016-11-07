@@ -13,7 +13,12 @@ import (
 	"github.com/spf13/afero"
 )
 
-const globalDBPrefix = "global/"
+type dbPrefix struct{ prefix string }
+
+func (p *dbPrefix) Prefix() string { return p.prefix + "/" }
+
+var globalDBPrefix = &dbPrefix{"global"}
+
 const instanceType = "instances"
 
 var (
@@ -51,8 +56,9 @@ func (i *Instance) Rev() string { return i.DocRev }
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
 
-// ensure Instance implements couchdb.Doc
+// ensure Instance implements couchdb.Doc & vfs.Context
 var _ couchdb.Doc = (*Instance)(nil)
+var _ vfs.Context = (*Instance)(nil)
 
 // CreateInCouchdb create the instance doc in the global database
 func (i *Instance) createInCouchdb() (err error) {
@@ -99,9 +105,8 @@ func (i *Instance) createRootFolder() error {
 
 // createFSIndexes creates the index needed by VFS
 func (i *Instance) createFSIndexes() error {
-	prefix := i.GetDatabasePrefix()
 	for _, index := range vfs.Indexes {
-		err := couchdb.DefineIndex(prefix, vfs.FsDocType, index)
+		err := couchdb.DefineIndex(i, vfs.FsDocType, index)
 		if err != nil {
 			return err
 		}
@@ -129,6 +134,22 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 	return i, nil
 }
 
+func (i *Instance) checkAndMakeStorage() error {
+	u, err := url.Parse(i.StorageURL)
+	if err != nil {
+		return err
+	}
+	switch u.Scheme {
+	case "file":
+		i.storage = afero.NewBasePathFs(afero.NewOsFs(), u.Path)
+	case "mem":
+		i.storage = afero.NewMemMapFs()
+	default:
+		return fmt.Errorf("Unknown storage provider: %v", u.Scheme)
+	}
+	return nil
+}
+
 // Create performs the necessary setups for this instance to be usable
 func (i *Instance) Create() error {
 	if err := i.createInCouchdb(); err != nil {
@@ -142,7 +163,6 @@ func (i *Instance) Create() error {
 	if err := i.createFSIndexes(); err != nil {
 		return err
 	}
-
 	// TODO atomicity with defer
 	// TODO figure out what to do with locale
 	// TODO install apps
@@ -173,6 +193,10 @@ func Get(domain string) (*Instance, error) {
 
 	if len(instances) == 0 {
 		return nil, ErrNotFound
+	}
+
+	if err = instances[0].checkAndMakeStorage(); err != nil {
+		return nil, err
 	}
 
 	return instances[0], nil
@@ -221,34 +245,26 @@ func Destroy(domain string) (*Instance, error) {
 	return i, nil
 }
 
-// GetStorageProvider returns the afero storage provider where the binaries for
+// FS returns the afero storage provider where the binaries for
 // the current instance are persisted
-func (i *Instance) GetStorageProvider() (afero.Fs, error) {
-	if i.storage != nil {
-		return i.storage, nil
+func (i *Instance) FS() afero.Fs {
+	if i.storage == nil {
+		storageURL, err := url.Parse(i.StorageURL)
+		if err != nil {
+			panic(err)
+		}
+		i.storage, err = createFs(storageURL)
+		if err != nil {
+			panic(err)
+		}
 	}
-	storageURL, err := url.Parse(i.StorageURL)
-	if err != nil {
-		return nil, err
-	}
-	i.storage, err = createFs(storageURL)
-	return i.storage, err
+	return i.storage
 }
 
-// GetDatabasePrefix returns the prefix to use in database naming for the
+// Prefix returns the prefix to use in database naming for the
 // current instance
-func (i *Instance) GetDatabasePrefix() string {
+func (i *Instance) Prefix() string {
 	return i.Domain + "/"
-}
-
-// GetVFSContext returns a vfs.Context for this Instance
-func (i *Instance) GetVFSContext() (c *vfs.Context, err error) {
-	dbprefix := i.GetDatabasePrefix()
-	fs, err := i.GetStorageProvider()
-	if err != nil {
-		return nil, err
-	}
-	return vfs.NewContext(fs, dbprefix), nil
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {
