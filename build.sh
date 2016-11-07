@@ -86,6 +86,10 @@ do_release() {
 	set +e
 }
 
+do_clean() {
+	find ${WORK_DIR} -name "cozy-stack-*" -print -delete
+}
+
 check_env() {
 	if [ "${COZY_ENV}" != "production" ] && [ "${COZY_ENV}" != "development" ]; then
 		>&2 echo "ERR: COZY_ENV should either be production or development"
@@ -96,6 +100,10 @@ check_env() {
 case ${1} in
 	release)
 		do_release
+		;;
+
+	clean)
+		do_clean
 		;;
 
 	*)
