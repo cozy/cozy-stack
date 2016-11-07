@@ -14,9 +14,6 @@ import (
 // ValueOperator is an operator between a field and a value
 type ValueOperator string
 
-// Eq ($eq) checks that field == value
-const eq ValueOperator = "$eq"
-
 // Gt ($gt) checks that field > value
 const gt ValueOperator = "$gt"
 
@@ -50,7 +47,21 @@ const nor LogicOperator = "$nor"
 // but we will need to duplicate the couchdb UCA algorithm
 type Filter interface {
 	json.Marshaler
-	ToMango() map[string]interface{}
+	ToMango() Map
+}
+
+// Map is an alias for map[string]interface{}
+type Map map[string]interface{}
+
+// ToMango implements the Filter interface on Map
+// it returns the map itself
+func (m Map) ToMango() Map {
+	return m
+}
+
+// MarshalJSON returns a byte json representation of the map
+func (m Map) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}(m))
 }
 
 // valueFilter is a filter on a single field
@@ -62,14 +73,8 @@ type valueFilter struct {
 
 // ToMango implements the Filter interface on valueFilter
 // it returns a map, either `{field: value}` or `{field: {$op: value}}`
-func (vf *valueFilter) ToMango() map[string]interface{} {
-	var value interface{}
-	if vf.op == eq {
-		value = vf.value
-	} else {
-		value = makeMap(string(vf.op), vf.value)
-	}
-	return makeMap(vf.field, value)
+func (vf valueFilter) ToMango() Map {
+	return makeMap(vf.field, makeMap(string(vf.op), vf.value))
 }
 
 func (vf valueFilter) MarshalJSON() ([]byte, error) {
@@ -88,15 +93,14 @@ type logicFilter struct {
 // {"$and": [{"field": {"$lt":6}}, {"field": {"$gt":3}}]
 // ---> {"field": {"$lt":6, "$gt":3}
 // but it doesnt improve performances.
-func (lf logicFilter) ToMango() map[string]interface{} {
-
+func (lf logicFilter) ToMango() Map {
 	// special case, $not has an arity of one
 	if lf.op == not {
 		return makeMap(string(lf.op), lf.filters[0].ToMango())
 	}
 
 	// all other LogicOperator works on arrays
-	filters := make([]map[string]interface{}, len(lf.filters))
+	filters := make([]Map, len(lf.filters))
 	for i, v := range lf.filters {
 		filters[i] = v.ToMango()
 	}
@@ -109,8 +113,8 @@ func (lf logicFilter) MarshalJSON() ([]byte, error) {
 
 type emptyFilter struct{}
 
-func (ef emptyFilter) ToMango() map[string]interface{} {
-	return make(map[string]interface{})
+func (ef emptyFilter) ToMango() Map {
+	return make(Map)
 }
 
 func (ef emptyFilter) MarshalJSON() ([]byte, error) {
@@ -139,7 +143,7 @@ func Nor(filters ...Filter) Filter { return logicFilter{nor, filters} }
 func Not(filter Filter) Filter { return logicFilter{not, []Filter{filter}} }
 
 // Equal returns a filter that check if a field == value
-func Equal(field string, value interface{}) Filter { return &valueFilter{field, eq, value} }
+func Equal(field string, value interface{}) Filter { return makeMap(field, value) }
 
 // Gt returns a filter that check if a field > value
 func Gt(field string, value interface{}) Filter { return &valueFilter{field, gt, value} }
@@ -196,8 +200,8 @@ func (s SortBy) MarshalJSON() ([]byte, error) {
 }
 
 // utility function to create a map with a single key
-func makeMap(key string, value interface{}) map[string]interface{} {
-	out := make(map[string]interface{})
+func makeMap(key string, value interface{}) Map {
+	out := make(Map)
 	out[key] = value
 	return out
 }
