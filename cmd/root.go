@@ -2,11 +2,25 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+// ConfigFilename is the default configuration filename that cozy
+// search for
+const ConfigFilename = "cozy"
+
+// ConfigPaths is the list of directories used to search for a
+// configuration file
+var ConfigPaths = []string{
+	".cozy",
+	"$HOME/.cozy",
+	"/etc/cozy",
+}
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -31,19 +45,26 @@ profiles you.`,
 var cfgFile string
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
+	flags := RootCmd.PersistentFlags()
+	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
 
-	RootCmd.PersistentFlags().StringP("mode", "m", "development", "server mode: development or production")
-	viper.BindPFlag("mode", RootCmd.PersistentFlags().Lookup("mode"))
+	flags.StringP("mode", "m", "development", "server mode: development or production")
+	viper.BindPFlag("mode", flags.Lookup("mode"))
 
-	RootCmd.PersistentFlags().StringP("host", "", "localhost", "server host")
-	viper.BindPFlag("host", RootCmd.PersistentFlags().Lookup("host"))
+	flags.StringP("host", "", "localhost", "server host")
+	viper.BindPFlag("host", flags.Lookup("host"))
 
-	RootCmd.PersistentFlags().IntP("port", "p", 8080, "server port")
-	viper.BindPFlag("port", RootCmd.PersistentFlags().Lookup("port"))
+	flags.IntP("port", "p", 8080, "server port")
+	viper.BindPFlag("port", flags.Lookup("port"))
 
-	RootCmd.PersistentFlags().StringP("databaseUrl", "d", "http://localhost:5984", "couchdb database address")
-	viper.BindPFlag("databaseUrl", RootCmd.PersistentFlags().Lookup("databaseUrl"))
+	flags.String("couchdb-host", "localhost", "couchdbdb host")
+	viper.BindPFlag("couchdb.host", flags.Lookup("couchdb-host"))
+
+	flags.Int("couchdb-port", 5984, "couchdbdb port")
+	viper.BindPFlag("couchdb.port", flags.Lookup("couchdb-port"))
+
+	flags.String("log-level", "info", "define the log level")
+	viper.BindPFlag("log.level", flags.Lookup("log-level"))
 }
 
 // Configure Viper to read the environment and the optional config file
@@ -55,16 +76,15 @@ func Configure() error {
 		// Read given config file and skip other paths
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.SetConfigName(".cozy")
-		viper.AddConfigPath("/etc/cozy")
-		viper.AddConfigPath("$HOME")
-		viper.AddConfigPath(".")
+		viper.SetConfigName(ConfigFilename)
+		for _, cfgPath := range ConfigPaths {
+			viper.AddConfigPath(cfgPath)
+		}
 	}
 
-	err := viper.ReadInConfig()
-
-	if err != nil {
-		if _, ok := err.(viper.ConfigParseError); ok {
+	if err := viper.ReadInConfig(); err != nil {
+		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
+			fmt.Fprintf(os.Stderr, "Error: While reading cozy-stack configurations from %s\n", viper.ConfigFileUsed())
 			return err
 		}
 
@@ -77,7 +97,25 @@ func Configure() error {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 
-	config.UseViper(viper.GetViper())
+	if err := config.UseViper(viper.GetViper()); err != nil {
+		return err
+	}
 
+	if err := configureLogger(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func configureLogger() error {
+	loggerCfg := config.GetConfig().Logger
+
+	logLevel, err := log.ParseLevel(loggerCfg.Level)
+	if err != nil {
+		return err
+	}
+
+	log.SetLevel(logLevel)
 	return nil
 }

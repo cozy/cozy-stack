@@ -1,0 +1,20 @@
+# cozy-stack configuration file
+
+# server mode: development or production - flags: --mode -m
+mode: development
+# server host - flags: --host
+host: localhost
+# server port - flags: --port -p
+port: 8080
+
+
+couchdb:
+    # couchdb host - flags: --couchdb-host
+    host: localhost
+    # couchdb port - flags: --couchdb-port
+    port: 5984
+
+
+log:
+    # logger level (debug, info, warning, panic, fatal) - flags: --log-level
+    level: info

@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/spf13/cobra"
 )
@@ -50,7 +49,8 @@ given domain.
 			return err
 		}
 
-		fmt.Printf("Instance created for domain %s:\n%v\n", instance, domain)
+		log.Infof("Instance created for domain %s", domain)
+		log.Debugf("> %v", instance)
 		return nil
 	},
 }

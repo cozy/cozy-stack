@@ -8,10 +8,11 @@ var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Mode     Mode
-	Host     string
-	Port     int
-	Database Database
+	Mode    Mode
+	Host    string
+	Port    int
+	CouchDB CouchDB
+	Logger  Logger
 }
 
 // Mode is how is started the server, eg. production or development
@@ -24,9 +25,15 @@ const (
 	Development Mode = "development"
 )
 
-// Database contains the configuration values of the database
-type Database struct {
-	URL string
+// CouchDB contains the configuration values of the database
+type CouchDB struct {
+	Host string
+	Port int
+}
+
+// Logger contains the configuration values of the logger system
+type Logger struct {
+	Level string
 }
 
 // GetConfig returns the configured instance of Config
@@ -35,15 +42,20 @@ func GetConfig() *Config {
 }
 
 // UseViper sets the configured instance of Config
-func UseViper(viper *viper.Viper) {
+func UseViper(viper *viper.Viper) error {
 	config = &Config{
 		Mode: parseMode(viper.GetString("mode")),
 		Host: viper.GetString("host"),
 		Port: viper.GetInt("port"),
-		Database: Database{
-			URL: viper.GetString("databaseUrl"),
+		CouchDB: CouchDB{
+			Host: viper.GetString("couchdb.host"),
+			Port: viper.GetInt("couchdb.port"),
+		},
+		Logger: Logger{
+			Level: viper.GetString("log.level"),
 		},
 	}
+	return nil
 }
 
 func parseMode(mode string) Mode {
