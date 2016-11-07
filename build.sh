@@ -4,7 +4,9 @@ COZY_ENV_DFL=production
 
 [ -z ${COZY_ENV} ] && COZY_ENV=${COZY_ENV_DFL}
 
-WORK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+pushd `dirname $0` > /dev/null
+WORK_DIR=`pwd`
+popd > /dev/null
 
 usage() {
 	echo -e "Usage: ${1} [release]"
@@ -35,7 +37,7 @@ usage() {
 #
 # The outputed binary is named "cozy-stack-${VERSION_STRING}". A
 # SHA256 checksum of the binary is also generated in a file named
-# "cozy- stack-${VERSION_STRING}.sha256".
+# "cozy-stack-${VERSION_STRING}.sha256".
 do_release() {
 	set -e
 
