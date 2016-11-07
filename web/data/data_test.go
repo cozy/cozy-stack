@@ -26,7 +26,8 @@ const Host = "example.com"
 const Type = "io.cozy.events"
 const ID = "4521C325F6478E45"
 const ExpectedDBName = "example-com%2Fio-cozy-events"
-const TestPrefix = "example-com/"
+
+var testInstance = &instance.Instance{Domain: "example-com"}
 
 var DOCUMENT = []byte(`{
 	"test": "testvalue"
@@ -106,7 +107,7 @@ func injectInstance(instance *instance.Instance) gin.HandlerFunc {
 
 func getDocForTest() couchdb.JSONDoc {
 	doc := couchdb.JSONDoc{Type: Type, M: map[string]interface{}{"test": "value"}}
-	couchdb.CreateDoc(TestPrefix, &doc)
+	couchdb.CreateDoc(testInstance, &doc)
 	return doc
 }
 
@@ -126,6 +127,7 @@ func TestMain(m *testing.M) {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
 	}
+	instance.Create()
 
 	router := gin.New()
 	router.Use(middlewares.ErrorHandler())

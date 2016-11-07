@@ -24,11 +24,11 @@ const githubRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
 var githubURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 
 type gitClient struct {
-	vfsC *vfs.Context
+	vfsC vfs.Context
 	src  string
 }
 
-func newGitClient(vfsC *vfs.Context, rawurl string) *gitClient {
+func newGitClient(vfsC vfs.Context, rawurl string) *gitClient {
 	return &gitClient{vfsC: vfsC, src: rawurl}
 }
 
@@ -77,9 +77,9 @@ func (g *gitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error)
 	return resp.Body, nil
 }
 
-func (g *gitClient) Fetch(vfsC *vfs.Context, appdir string) error {
+func (g *gitClient) Fetch(vfsC vfs.Context, appdir string) error {
 	gitdir := path.Join(appdir, ".git")
-	err := vfsC.Mkdir(gitdir)
+	err := vfs.Mkdir(vfsC, gitdir)
 	if err != nil {
 		return err
 	}
@@ -132,12 +132,12 @@ func (g *gitClient) Fetch(vfsC *vfs.Context, appdir string) error {
 		abs := path.Join(appdir, f.Name)
 		dir := path.Dir(abs)
 
-		err = vfsC.MkdirAll(dir)
+		err = vfs.MkdirAll(vfsC, dir)
 		if err != nil {
 			return
 		}
 
-		file, err := vfsC.Create(abs)
+		file, err := vfs.Create(vfsC, abs)
 		if err != nil {
 			return
 		}
@@ -161,7 +161,7 @@ func (g *gitClient) Fetch(vfsC *vfs.Context, appdir string) error {
 }
 
 type gfs struct {
-	vfsC *vfs.Context
+	vfsC vfs.Context
 	base string
 	dir  *vfs.DirDoc
 }
@@ -205,7 +205,7 @@ func (f *gfile) Close() error {
 	return f.f.Close()
 }
 
-func newGFS(vfsC *vfs.Context, base string) *gfs {
+func newGFS(vfsC vfs.Context, base string) *gfs {
 	dir, err := vfs.GetDirDocFromPath(vfsC, base, false)
 	if err != nil {
 		panic(err)
@@ -225,12 +225,12 @@ func (fs *gfs) OpenFile(name string, flag int, perm os.FileMode) (gitFS.File, er
 	dirbase := path.Dir(fullpath)
 
 	if flag&os.O_CREATE != 0 {
-		if err = fs.vfsC.MkdirAll(dirbase); err != nil {
+		if err = vfs.MkdirAll(fs.vfsC, dirbase); err != nil {
 			return nil, err
 		}
 	}
 
-	file, err := fs.vfsC.OpenFile(fullpath, flag, perm)
+	file, err := vfs.OpenFile(fs.vfsC, fullpath, flag, perm)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (fs *gfs) Create(name string) (gitFS.File, error) {
 
 func (fs *gfs) Open(name string) (gitFS.File, error) {
 	fullpath := fs.Join(fs.base, name)
-	f, err := fs.vfsC.Open(fullpath)
+	f, err := vfs.OpenFile(fs.vfsC, fullpath, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -252,15 +252,15 @@ func (fs *gfs) Open(name string) (gitFS.File, error) {
 }
 
 func (fs *gfs) Remove(name string) error {
-	return fs.vfsC.Remove(fs.Join(fs.base, name))
+	return vfs.Remove(fs.vfsC, fs.Join(fs.base, name))
 }
 
 func (fs *gfs) Stat(name string) (gitFS.FileInfo, error) {
-	return fs.vfsC.Stat(fs.Join(fs.base, name))
+	return vfs.Stat(fs.vfsC, fs.Join(fs.base, name))
 }
 
 func (fs *gfs) ReadDir(name string) ([]gitFS.FileInfo, error) {
-	l, err := fs.vfsC.ReadDir(fs.Join(fs.base, name))
+	l, err := vfs.ReadDir(fs.vfsC, fs.Join(fs.base, name))
 	if err != nil {
 		return nil, err
 	}
@@ -287,7 +287,7 @@ func (fs *gfs) TempFile(dirname, prefix string) (gitFS.File, error) {
 }
 
 func (fs *gfs) Rename(from, to string) error {
-	return fs.vfsC.Rename(fs.Join(fs.base, from), fs.Join(fs.base, to))
+	return vfs.Rename(fs.vfsC, fs.Join(fs.base, from), fs.Join(fs.base, to))
 }
 
 func (fs *gfs) Join(elem ...string) string {

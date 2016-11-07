@@ -27,10 +27,8 @@ func getDoc(c *gin.Context) {
 	doctype := c.MustGet("doctype").(string)
 	docid := c.Param("docid")
 
-	prefix := instance.GetDatabasePrefix()
-
 	var out couchdb.JSONDoc
-	err := couchdb.GetDoc(prefix, doctype, docid, &out)
+	err := couchdb.GetDoc(instance, doctype, docid, &out)
 	if err != nil {
 		c.AbortWithError(HTTPStatus(err), err)
 		return
@@ -43,7 +41,6 @@ func getDoc(c *gin.Context) {
 func createDoc(c *gin.Context) {
 	doctype := c.MustGet("doctype").(string)
 	instance := middlewares.GetInstance(c)
-	prefix := instance.GetDatabasePrefix()
 
 	var doc = couchdb.JSONDoc{Type: doctype}
 	if err := binding.JSON.Bind(c.Request, &doc.M); err != nil {
@@ -57,7 +54,7 @@ func createDoc(c *gin.Context) {
 		return
 	}
 
-	err := couchdb.CreateDoc(prefix, doc)
+	err := couchdb.CreateDoc(instance, doc)
 	if err != nil {
 		c.AbortWithError(HTTPStatus(err), err)
 		return
@@ -74,7 +71,6 @@ func createDoc(c *gin.Context) {
 
 func updateDoc(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
-	prefix := instance.GetDatabasePrefix()
 
 	var doc couchdb.JSONDoc
 	if err := binding.JSON.Bind(c.Request, &doc); err != nil {
@@ -99,9 +95,9 @@ func updateDoc(c *gin.Context) {
 	var err error
 	if doc.ID() == "" {
 		doc.SetID(c.Param("docid"))
-		err = couchdb.CreateNamedDoc(prefix, doc)
+		err = couchdb.CreateNamedDoc(instance, doc)
 	} else {
-		err = couchdb.UpdateDoc(prefix, doc)
+		err = couchdb.UpdateDoc(instance, doc)
 	}
 
 	if err != nil {
@@ -122,7 +118,6 @@ func deleteDoc(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	doctype := c.MustGet("doctype").(string)
 	docid := c.Param("docid")
-	prefix := instance.GetDatabasePrefix()
 	revHeader := c.Request.Header.Get("If-Match")
 	revQuery := c.Query("rev")
 	rev := ""
@@ -141,7 +136,7 @@ func deleteDoc(c *gin.Context) {
 		return
 	}
 
-	tombrev, err := couchdb.Delete(prefix, doctype, docid, rev)
+	tombrev, err := couchdb.Delete(instance, doctype, docid, rev)
 	if err != nil {
 		c.AbortWithError(HTTPStatus(err), err)
 		return

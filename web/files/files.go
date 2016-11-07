@@ -39,17 +39,14 @@ var ErrDocTypeInvalid = errors.New("Invalid document type")
 //
 // swagger:route POST /files/:folder-id files uploadFileOrCreateDir
 func CreationHandler(c *gin.Context) {
-	vfsC, err := getVfsContext(c)
-	if err != nil {
-		return
-	}
-
+	instance := middlewares.GetInstance(c)
 	var doc jsonapi.Object
+	var err error
 	switch c.Query("Type") {
 	case fileType:
-		doc, err = createFileHandler(c, vfsC)
+		doc, err = createFileHandler(c, instance)
 	case folderType:
-		doc, err = createDirectoryHandler(c, vfsC)
+		doc, err = createDirectoryHandler(c, instance)
 	default:
 		err = ErrDocTypeInvalid
 	}
@@ -62,7 +59,7 @@ func CreationHandler(c *gin.Context) {
 	jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
-func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err error) {
+func createFileHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err error) {
 	doc, err = fileDocFromReq(
 		c,
 		c.Query("Name"),
@@ -88,7 +85,7 @@ func createFileHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.FileDoc, err
 	return
 }
 
-func createDirectoryHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.DirDoc, err error) {
+func createDirectoryHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.DirDoc, err error) {
 	doc, err = vfs.NewDirDoc(
 		c.Query("Name"),
 		c.Param("folder-id"),
@@ -113,16 +110,11 @@ func createDirectoryHandler(c *gin.Context, vfsC *vfs.Context) (doc *vfs.DirDoc,
 // swagger:route PUT /files/:file-id files overwriteFileContent
 func OverwriteFileContentHandler(c *gin.Context) {
 	var err error
-
-	vfsC, err := getVfsContext(c)
-	if err != nil {
-		return
-	}
-
+	var instance = middlewares.GetInstance(c)
 	var olddoc *vfs.FileDoc
 	var newdoc *vfs.FileDoc
 
-	olddoc, err = vfs.GetFileDoc(vfsC, c.Param("file-id"))
+	olddoc, err = vfs.GetFileDoc(instance, c.Param("file-id"))
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
@@ -144,7 +136,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
-	file, err := vfs.CreateFile(vfsC, newdoc, olddoc)
+	file, err := vfs.CreateFile(instance, newdoc, olddoc)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
@@ -173,11 +165,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 func ModificationHandler(c *gin.Context) {
 	var err error
 
-	vfsC, err := getVfsContext(c)
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
-		return
-	}
+	instance := middlewares.GetInstance(c)
 
 	patch := &vfs.DocPatch{}
 
@@ -203,9 +191,9 @@ func ModificationHandler(c *gin.Context) {
 	var dir *vfs.DirDoc
 
 	if fileID == "metadata" {
-		typ, dir, file, err = vfs.GetDirOrFileDocFromPath(vfsC, c.Query("Path"), false)
+		typ, dir, file, err = vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), false)
 	} else {
-		typ, dir, file, err = vfs.GetDirOrFileDoc(vfsC, fileID, false)
+		typ, dir, file, err = vfs.GetDirOrFileDoc(instance, fileID, false)
 	}
 
 	if err != nil {
@@ -228,9 +216,9 @@ func ModificationHandler(c *gin.Context) {
 
 	var data jsonapi.Object
 	if fileDoc, ok := doc.(*vfs.FileDoc); ok {
-		data, err = vfs.ModifyFileMetadata(vfsC, fileDoc, patch)
+		data, err = vfs.ModifyFileMetadata(instance, fileDoc, patch)
 	} else if dirDoc, ok := doc.(*vfs.DirDoc); ok {
-		data, err = vfs.ModifyDirMetadata(vfsC, dirDoc, patch)
+		data, err = vfs.ModifyDirMetadata(instance, dirDoc, patch)
 	}
 
 	if err != nil {
@@ -248,12 +236,9 @@ func ModificationHandler(c *gin.Context) {
 func ReadMetadataFromIDHandler(c *gin.Context, fileID string) {
 	var err error
 
-	vfsC, err := getVfsContext(c)
-	if err != nil {
-		return
-	}
+	instance := middlewares.GetInstance(c)
 
-	typ, dir, file, err := vfs.GetDirOrFileDoc(vfsC, fileID, true)
+	typ, dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
@@ -277,12 +262,9 @@ func ReadMetadataFromIDHandler(c *gin.Context, fileID string) {
 func ReadMetadataFromPathHandler(c *gin.Context) {
 	var err error
 
-	vfsC, err := getVfsContext(c)
-	if err != nil {
-		return
-	}
+	instance := middlewares.GetInstance(c)
 
-	typ, dir, file, err := vfs.GetDirOrFileDocFromPath(vfsC, c.Query("Path"), true)
+	typ, dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), true)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
@@ -311,10 +293,7 @@ func ReadMetadataFromPathHandler(c *gin.Context) {
 func ReadFileContentHandler(c *gin.Context, fileID string) {
 	var err error
 
-	vfsC, err := getVfsContext(c)
-	if err != nil {
-		return
-	}
+	instance := middlewares.GetInstance(c)
 
 	path := c.Query("Path")
 
@@ -324,10 +303,10 @@ func ReadFileContentHandler(c *gin.Context, fileID string) {
 	var disposition string
 	if fileID == "" && path != "" {
 		disposition = "attachment"
-		doc, err = vfs.GetFileDocFromPath(vfsC, path)
+		doc, err = vfs.GetFileDocFromPath(instance, path)
 	} else {
 		disposition = "inline"
-		doc, err = vfs.GetFileDoc(vfsC, fileID)
+		doc, err = vfs.GetFileDoc(instance, fileID)
 	}
 
 	if err != nil {
@@ -335,7 +314,7 @@ func ReadFileContentHandler(c *gin.Context, fileID string) {
 		return
 	}
 
-	err = vfs.ServeFileContent(vfsC, doc, disposition, c.Request, c.Writer)
+	err = vfs.ServeFileContent(instance, doc, disposition, c.Request, c.Writer)
 
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
@@ -415,16 +394,6 @@ func WrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.PreconditionFailed("Content-Length", err)
 	}
 	return jsonapi.InternalServerError(err)
-}
-
-func getVfsContext(c *gin.Context) (*vfs.Context, error) {
-	instance := middlewares.GetInstance(c)
-	vfsC, err := instance.GetVFSContext()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
-		return nil, err
-	}
-	return vfsC, nil
 }
 
 func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *vfs.FileDoc, err error) {

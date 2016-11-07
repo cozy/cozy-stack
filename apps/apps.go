@@ -139,13 +139,13 @@ type Client interface {
 	FetchManifest() (io.ReadCloser, error)
 	// Fetch should download the application and install it in the given
 	// directory.
-	Fetch(vfsC *vfs.Context, appdir string) error
+	Fetch(vfsC vfs.Context, appdir string) error
 }
 
 // List returns the list of installed applications.
 //
 // TODO: pagination
-func List(db string) ([]*Manifest, error) {
+func List(db couchdb.Database) ([]*Manifest, error) {
 	var docs []*Manifest
 	sel := mango.Empty()
 	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
@@ -161,8 +161,8 @@ type Installer struct {
 	cli Client
 
 	// TODO: fix this mess with contexts
-	db   string
-	vfsC *vfs.Context
+	db   couchdb.Database
+	vfsC vfs.Context
 
 	slug string
 	src  string
@@ -175,7 +175,7 @@ type Installer struct {
 
 // NewInstaller creates a new Installer
 // @TODO: fix this mess with contexts
-func NewInstaller(vfsC *vfs.Context, db, slug, src string) (*Installer, error) {
+func NewInstaller(vfsC vfs.Context, db couchdb.Database, slug, src string) (*Installer, error) {
 	if !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
@@ -244,7 +244,7 @@ func (i *Installer) Install() (newman *Manifest, err error) {
 	}
 
 	appdir := path.Join(AppsDirectory, newman.Slug)
-	err = i.vfsC.MkdirAll(appdir)
+	err = vfs.MkdirAll(i.vfsC, appdir)
 	if err != nil {
 		return
 	}

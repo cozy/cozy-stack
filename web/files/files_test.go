@@ -24,8 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const TestPrefix = "test/"
-
 var ts *httptest.Server
 var testInstance *instance.Instance
 
@@ -221,7 +219,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 	res, _ := createDir(t, "/files/?Name=coucou&Type=io.cozy.folders")
 	assert.Equal(t, 201, res.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/coucou")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -241,7 +239,7 @@ func TestCreateDirWithParentSuccess(t *testing.T) {
 	res2, _ := createDir(t, "/files/"+parentID+"?Name=child&Type=io.cozy.folders")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/dirparent/child")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -302,7 +300,7 @@ func TestUploadBadHash(t *testing.T) {
 	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
 	assert.Equal(t, 412, res.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	_, err := afero.ReadFile(storage, "/badhash")
 	assert.Error(t, err)
 }
@@ -312,7 +310,7 @@ func TestUploadAtRootSuccess(t *testing.T) {
 	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	buf, err := afero.ReadFile(storage, "/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
@@ -365,7 +363,7 @@ func TestUploadWithParentSuccess(t *testing.T) {
 	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	buf, err := afero.ReadFile(storage, "/fileparent/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
@@ -488,7 +486,7 @@ func TestModifyMetadataDirMove(t *testing.T) {
 	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs1, nil)
 	assert.Equal(t, 200, res3.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/dirmodmemoveinme/renamed")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -535,7 +533,7 @@ func TestModifyMetadataDirMoveWithRel(t *testing.T) {
 	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, nil, parent)
 	assert.Equal(t, 200, res3.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/dirmodmemoveinmewithrel/dirmodmewithrel")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -602,7 +600,7 @@ func TestModifyContentSuccess(t *testing.T) {
 	var buf []byte
 	var fileInfo os.FileInfo
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=willbemodified&Executable=true", "text/plain", "foo", "")
 	assert.Equal(t, 201, res1.StatusCode)
 
@@ -727,7 +725,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
 	}
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	buf, err := afero.ReadFile(storage, "/willbemodifiedconcurrently")
 	assert.NoError(t, err)
 
