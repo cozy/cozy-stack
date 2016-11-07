@@ -1,28 +1,38 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/spf13/viper"
+)
+
+var (
+	// Version of the release (see build.sh script)
+	Version string
+	// BuildTime is ISO-8601 UTC string representation of the time of
+	// the build
+	BuildTime string
+	// BuildMode is the build mode of the release. Should be either
+	// production or development.
+	BuildMode string
 )
 
 var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Mode    Mode
+	Mode    string
 	Host    string
 	Port    int
 	CouchDB CouchDB
 	Logger  Logger
 }
 
-// Mode is how is started the server, eg. production or development
-type Mode string
-
 const (
 	// Production mode
-	Production Mode = "production"
+	Production string = "production"
 	// Development mode
-	Development Mode = "development"
+	Development string = "development"
 )
 
 // CouchDB contains the configuration values of the database
@@ -43,8 +53,13 @@ func GetConfig() *Config {
 
 // UseViper sets the configured instance of Config
 func UseViper(viper *viper.Viper) error {
+	mode, err := parseMode(viper.GetString("mode"))
+	if err != nil {
+		return err
+	}
+
 	config = &Config{
-		Mode: parseMode(viper.GetString("mode")),
+		Mode: mode,
 		Host: viper.GetString("host"),
 		Port: viper.GetInt("port"),
 		CouchDB: CouchDB{
@@ -55,13 +70,22 @@ func UseViper(viper *viper.Viper) error {
 			Level: viper.GetString("log.level"),
 		},
 	}
+
 	return nil
 }
 
-func parseMode(mode string) Mode {
-	if mode == "production" {
-		return Production
+func parseMode(mode string) (string, error) {
+	if BuildMode == Production && mode != Production {
+		return "", fmt.Errorf("Only production mode is allowed in this version")
 	}
 
-	return Development
+	if mode == Production {
+		return Production, nil
+	}
+
+	if mode == Development {
+		return Development, nil
+	}
+
+	return "", fmt.Errorf("Unknown mode %s", mode)
 }

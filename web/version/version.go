@@ -3,13 +3,11 @@ package version
 
 import (
 	"net/http"
+	"runtime"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/gin-gonic/gin"
 )
-
-// Build is the git commit used at compilation
-// go build -ldflags "-X github.com/cozy/cozy-stack/web/version.Build=<sha1>"
-var Build = "Unknown"
 
 // Version responds with the git commit used at the build
 //
@@ -18,7 +16,10 @@ var Build = "Unknown"
 // It responds with the git commit used at the build
 func Version(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"build": Build,
+		"version":         config.Version,
+		"build_mode":      config.BuildMode,
+		"build_time":      config.BuildTime,
+		"runtime_version": runtime.Version(),
 	})
 }
 
