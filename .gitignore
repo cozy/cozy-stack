@@ -2,3 +2,4 @@
 /storage
 swagger-ui
 /.cozy
+/storage/*

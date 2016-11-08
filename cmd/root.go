@@ -22,6 +22,10 @@ var ConfigPaths = []string{
 	"/etc/cozy",
 }
 
+// DefaultStorageDirectory is the default directory name in which data
+// is stored relatively to the cozy-stack binary.
+const DefaultStorageDirectory = "storage"
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "cozy-stack",
@@ -62,7 +66,7 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
 
-	flags.String("fs-url", fmt.Sprintf("file://localhost%s/storage", pwd), "filesystem url")
+	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", pwd, DefaultStorageDirectory), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
 
 	flags.String("couchdb-host", "localhost", "couchdbdb host")

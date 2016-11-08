@@ -892,11 +892,7 @@ func TestMain(m *testing.M) {
 	gin.SetMode(gin.TestMode)
 
 	config.UseTestFile("../..")
-	config.GetConfig().Fs.URL = &url.URL{
-		Scheme: "file",
-		Host:   "localhost",
-		Path:   tempdir,
-	}
+	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
 	testInstance, err = instance.Create("test", "en", nil)
 	if err != nil {
