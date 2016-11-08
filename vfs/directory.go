@@ -253,25 +253,13 @@ func CreateDirectory(c *Context, doc *DirDoc) (err error) {
 	return couchdb.CreateDoc(c.db, doc)
 }
 
-// CreateRootDirectory creates the root folder for this context
-func CreateRootDirectory(c *Context) (err error) {
-	root := &DirDoc{
+// CreateRootDirDoc creates the root folder for this context
+func CreateRootDirDoc(c *Context) error {
+	return couchdb.CreateNamedDocWithDB(c.db, &DirDoc{
 		Type:     DirType,
 		ObjID:    RootFolderID,
 		Fullpath: "/",
-	}
-	err = c.fs.MkdirAll(root.Fullpath, 0755)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			c.fs.Remove(root.Fullpath)
-		}
-	}()
-
-	return couchdb.CreateNamedDocWithDB(c.db, root)
+	})
 }
 
 // ModifyDirMetadata modify the metadata associated to a directory. It

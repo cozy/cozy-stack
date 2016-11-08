@@ -3,8 +3,10 @@ package instance
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
@@ -59,7 +61,23 @@ func (i *Instance) createRootFolder() error {
 	if err != nil {
 		return err
 	}
-	return vfs.CreateRootDirectory(vfsC)
+
+	rootFsURL := config.GetConfig().Fs.URL
+	rootFs, err := createFs(rootFsURL)
+	if err != nil {
+		return err
+	}
+
+	if err = rootFs.Mkdir(i.Domain, 0755); err != nil {
+		return err
+	}
+
+	if err = vfs.CreateRootDirDoc(vfsC); err != nil {
+		rootFs.Remove(i.Domain)
+		return err
+	}
+
+	return nil
 }
 
 // createFSIndexes creates the index needed by VFS
@@ -77,15 +95,25 @@ func (i *Instance) createFSIndexes() (err error) {
 
 // Create build an instance and .Create it
 func Create(domain string, locale string, apps []string) (*Instance, error) {
-	// TODO use a base directory provided by stack level config
-	base := "/tmp/cozy2/"
-	storageURL := "file://localhost" + base + "/" + domain + "/"
+	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
+		return nil, fmt.Errorf("Domain is malformed")
+	}
+
+	rootFsURL := config.GetConfig().Fs.URL
+
+	storageURL, err := url.Parse(rootFsURL.String())
+	if err != nil {
+		return nil, err
+	}
+
+	storageURL.Path = path.Join(storageURL.Path, domain)
 
 	i := &Instance{
 		Domain:     domain,
-		StorageURL: storageURL,
+		StorageURL: storageURL.String(),
 	}
-	err := i.Create()
+
+	err = i.Create()
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +126,11 @@ func (i *Instance) Create() error {
 	if err := i.createInCouchdb(); err != nil {
 		return err
 	}
+
 	if err := i.createRootFolder(); err != nil {
 		return err
 	}
+
 	if err := i.createFSIndexes(); err != nil {
 		return err
 	}
@@ -113,8 +143,7 @@ func (i *Instance) Create() error {
 }
 
 // Get retrieves the instance for a request by its host.
-func Get(domainarg string) (*Instance, error) {
-	domain := domainarg
+func Get(domain string) (*Instance, error) {
 	// TODO this is not fail-safe, to be modified before production
 	if domain == "" || strings.Contains(domain, "127.0.0.1") || strings.Contains(domain, "localhost") {
 		domain = "dev"
@@ -138,7 +167,6 @@ func Get(domainarg string) (*Instance, error) {
 	}
 
 	return instances[0], nil
-
 }
 
 // GetStorageProvider returns the afero storage provider where the binaries for
@@ -147,19 +175,12 @@ func (i *Instance) GetStorageProvider() (afero.Fs, error) {
 	if i.storage != nil {
 		return i.storage, nil
 	}
-	u, err := url.Parse(i.StorageURL)
+	storageURL, err := url.Parse(i.StorageURL)
 	if err != nil {
 		return nil, err
 	}
-	switch u.Scheme {
-	case "file":
-		i.storage = afero.NewBasePathFs(afero.NewOsFs(), u.Path)
-	case "mem":
-		i.storage = afero.NewMemMapFs()
-	default:
-		return nil, fmt.Errorf("Unknown storage provider: %v", u.Scheme)
-	}
-	return i.storage, nil
+	i.storage, err = createFs(storageURL)
+	return i.storage, err
 }
 
 // GetDatabasePrefix returns the prefix to use in database naming for the
@@ -176,4 +197,16 @@ func (i *Instance) GetVFSContext() (c *vfs.Context, err error) {
 		return nil, err
 	}
 	return vfs.NewContext(fs, dbprefix), nil
+}
+
+func createFs(u *url.URL) (fs afero.Fs, err error) {
+	switch u.Scheme {
+	case "file":
+		fs = afero.NewBasePathFs(afero.NewOsFs(), u.Path)
+	case "mem":
+		fs = afero.NewMemMapFs()
+	default:
+		err = fmt.Errorf("Unknown storage provider: %v", u.Scheme)
+	}
+	return
 }

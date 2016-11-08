@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
@@ -881,11 +882,19 @@ func TestMain(m *testing.M) {
 	}()
 
 	gin.SetMode(gin.TestMode)
-	testInstance = &instance.Instance{
-		Domain:     "test",
-		StorageURL: "file://localhost" + tempdir,
+
+	config.UseTestFile("../..")
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   tempdir,
 	}
-	testInstance.Create()
+
+	testInstance, err = instance.Create("test", "en", nil)
+	if err != nil {
+		fmt.Println("Could not create test instance.", err)
+		os.Exit(1)
+	}
 
 	router := gin.New()
 	router.Use(injectInstance(testInstance))

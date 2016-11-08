@@ -1,0 +1,15 @@
+# cozy-stack configuration file for tests
+
+mode: development
+host: localhost
+port: 8080
+
+fs:
+  url: mem://test
+
+couchdb:
+    host: localhost
+    port: 5984
+
+log:
+    level: info
