@@ -141,6 +141,18 @@ func Get(domainarg string) (*Instance, error) {
 
 }
 
+// List returns the list of declared instances.
+//
+// TODO: pagination
+// TODO: don't return the design docs
+func List() ([]*Instance, error) {
+	var docs []*Instance
+	sel := mango.Empty()
+	req := &couchdb.FindRequest{Selector: sel, Limit: 100}
+	err := couchdb.FindDocs(globalDBPrefix, instanceType, req, &docs)
+	return docs, err
+}
+
 // GetStorageProvider returns the afero storage provider where the binaries for
 // the current instance are persisted
 func (i *Instance) GetStorageProvider() (afero.Fs, error) {

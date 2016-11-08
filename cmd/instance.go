@@ -55,8 +55,37 @@ given domain.
 	},
 }
 
+var lsInstanceCmd = &cobra.Command{
+	Use:   "ls",
+	Short: "List instances",
+	Long: `
+cozy-stack instances ls allows to list all the instances that can be served
+by this server.
+	`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := Configure(); err != nil {
+			return err
+		}
+
+		instances, err := instance.List()
+		if err != nil {
+			return err
+		}
+
+		if len(instances) == 0 {
+			log.Infof("No instances")
+		}
+
+		for _, i := range instances {
+			log.Infof("Instances %s for domain %s (storage: %s)", i.DocID, i.Domain, i.StorageURL)
+		}
+		return nil
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(addInstanceCmd)
+	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", "en", "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	RootCmd.AddCommand(instanceCmdGroup)
