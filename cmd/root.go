@@ -62,7 +62,7 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
 
-	flags.String("fs-url", fmt.Sprintf("files://localhost%s/storage", pwd), "filesystem url")
+	flags.String("fs-url", fmt.Sprintf("file://localhost%s/storage", pwd), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
 
 	flags.String("couchdb-host", "localhost", "couchdbdb host")
