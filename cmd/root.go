@@ -45,6 +45,11 @@ profiles you.`,
 var cfgFile string
 
 func init() {
+	pwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
 	flags := RootCmd.PersistentFlags()
 	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
 
@@ -57,7 +62,7 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
 
-	flags.String("fs-url", "files://localhost/tmp/cozy2", "filesystem url")
+	flags.String("fs-url", fmt.Sprintf("files://localhost%s/storage", pwd), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
 
 	flags.String("couchdb-host", "localhost", "couchdbdb host")

@@ -10,7 +10,9 @@ port: 8080
 
 fs:
   # file system url - flags: --fs-url
-  url: file://localhost/tmp/cozy2
+  # default url is the directory relative to the binary: ./storage
+
+  # url: file://localhost/var/lib/cozy
 
 
 couchdb:
