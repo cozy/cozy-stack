@@ -340,14 +340,25 @@ func CreateDoc(dbprefix string, doc Doc) (err error) {
 // DefineIndex define the index on the doctype database
 // see query package on how to define an index
 func DefineIndex(dbprefix, doctype string, index mango.Index) error {
+	_, err := DefineIndexRaw(dbprefix, doctype, &index)
+	return err
+}
+
+// DefineIndexRaw defines a index
+func DefineIndexRaw(dbprefix string, doctype string, index interface{}) (*IndexCreationResponse, error) {
 	url := makeDBName(dbprefix, doctype) + "/_index"
-	var response indexCreationResponse
-	return makeRequest("POST", url, &index, &response)
+	var response IndexCreationResponse
+	return &response, makeRequest("POST", url, &index, &response)
 }
 
 // FindDocs returns all documents matching the passed FindRequest
 // documents will be unmarshalled in the provided results slice.
-func FindDocs(dbprefix, doctype string, req *FindRequest, results interface{}) error {
+func FindDocs(dbprefix string, doctype string, req *FindRequest, results interface{}) error {
+	return FindDocsRaw(dbprefix, doctype, req, results)
+}
+
+// FindDocsRaw find documents
+func FindDocsRaw(dbprefix string, doctype string, req interface{}, results interface{}) error {
 	url := makeDBName(dbprefix, doctype) + "/_find"
 	// prepare a structure to receive the results
 	var response findResponse
@@ -355,12 +366,18 @@ func FindDocs(dbprefix, doctype string, req *FindRequest, results interface{}) e
 	if err != nil {
 		return err
 	}
+	if response.Warning != "" {
+		// Developer should not rely on unoptimized index.
+		return unoptimalError()
+	}
 	return json.Unmarshal(response.Docs, results)
 }
 
-type indexCreationResponse struct {
+// IndexCreationResponse is the response from couchdb when we create an Index
+type IndexCreationResponse struct {
 	Result string `json:"result"`
 	Error  string `json:"error"`
+	Reason string `json:"reason"`
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 }
@@ -372,7 +389,8 @@ type updateResponse struct {
 }
 
 type findResponse struct {
-	Docs json.RawMessage `json:"docs"`
+	Warning string          `json:"warning"`
+	Docs    json.RawMessage `json:"docs"`
 }
 
 // A FindRequest is a structure containin
