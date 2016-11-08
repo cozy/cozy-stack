@@ -866,10 +866,18 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.ResetDB(TestPrefix, string(vfs.FsDocType))
+	err = couchdb.ResetDB(TestPrefix, vfs.FsDocType)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+
+	for _, index := range vfs.Indexes {
+		err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, index)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	tempdir, err := ioutil.TempDir("", "cozy-stack")

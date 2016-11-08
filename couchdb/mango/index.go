@@ -2,26 +2,26 @@ package mango
 
 import "encoding/json"
 
-// An IndexDefinition is just a list of fields to be indexed.
-type IndexDefinition []string
+// An IndexFields is just a list of fields to be indexed.
+type IndexFields []string
 
-// MarshalJSON implements the json.Marshaller interface on IndexDefinition
+// MarshalJSON implements the json.Marshaller interface on IndexFields
 // by wrapping it in a {"fields": ...}
-func (def IndexDefinition) MarshalJSON() ([]byte, error) {
+func (def IndexFields) MarshalJSON() ([]byte, error) {
 	return json.Marshal(makeMap("fields", []string(def)))
 }
 
-// An IndexDefinitionRequest is a request to be POSTED to create the index
-type IndexDefinitionRequest struct {
-	Name  string          `json:"name,omitempty"`
-	DDoc  string          `json:"ddoc,omitempty"`
-	Index IndexDefinition `json:"index"`
+// An Index is a request to be POSTED to create the index
+type Index struct {
+	Name  string      `json:"name,omitempty"`
+	DDoc  string      `json:"ddoc,omitempty"`
+	Index IndexFields `json:"index"`
 }
 
-// IndexOnFields constructs a new IndexDefinitionRequest
+// IndexOnFields constructs a new Index
 // it lets couchdb defaults for index & designdoc names.
-func IndexOnFields(fields ...string) IndexDefinitionRequest {
-	return IndexDefinitionRequest{
-		Index: IndexDefinition(fields),
+func IndexOnFields(fields ...string) Index {
+	return Index{
+		Index: IndexFields(fields),
 	}
 }
