@@ -149,6 +149,10 @@ func patchFile(t *testing.T, path, docType, id string, attrs map[string]interfac
 	}
 
 	b, err := json.Marshal(map[string]*jsonData{"data": bodyreq})
+	if !assert.NoError(t, err) {
+		return
+	}
+
 	req, err := http.NewRequest("PATCH", ts.URL+path, bytes.NewReader(b))
 	if !assert.NoError(t, err) {
 		return
@@ -603,6 +607,8 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.Equal(t, 201, res1.StatusCode)
 
 	buf, err = afero.ReadFile(storage, "/willbemodified")
+	assert.NoError(t, err)
+
 	assert.Equal(t, "foo", string(buf))
 	fileInfo, err = storage.Stat("/willbemodified")
 	assert.NoError(t, err)

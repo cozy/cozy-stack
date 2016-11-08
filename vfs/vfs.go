@@ -251,7 +251,6 @@ func (c *Context) MkdirAll(name string) error {
 		if err != nil {
 			return err
 		}
-		base = path.Dir(name)
 		break
 	}
 
