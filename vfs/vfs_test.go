@@ -90,7 +90,7 @@ func TestMain(m *testing.M) {
 	fs := afero.NewMemMapFs()
 
 	vfsC = NewContext(fs, TestPrefix)
-	err = CreateRootDirectory(vfsC)
+	err = CreateRootDirDoc(vfsC)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
