@@ -36,9 +36,10 @@ import (
 func SetupRoutes(router *gin.Engine) {
 	router.Use(middlewares.ParseHost())
 
-	appsRouter = gin.New()
-	appsRouter.Use(middlewares.NeedInstance(), apps.Serve)
-	router.Use(middlewares.ServeApp(gin.wrapH(appsRouter)))
+	appsRouter := gin.New()
+	appsRouter.HEAD("/*anypath", middlewares.NeedInstance(), apps.Serve)
+	appsRouter.GET("/*anypath", middlewares.NeedInstance(), apps.Serve)
+	router.Use(middlewares.ServeApp(gin.WrapH(appsRouter)))
 
 	router.Use(middlewares.ErrorHandler())
 	apps.Routes(router.Group("/apps", middlewares.NeedInstance()))
