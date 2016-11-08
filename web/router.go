@@ -34,10 +34,16 @@ import (
 
 // SetupRoutes sets the routing for HTTP endpoints to the Go methods
 func SetupRoutes(router *gin.Engine) {
+	router.Use(middlewares.ParseHost())
+
+	appsRouter = gin.New()
+	appsRouter.Use(middlewares.NeedInstance(), apps.Serve)
+	router.Use(middlewares.ServeApp(gin.wrapH(appsRouter)))
+
 	router.Use(middlewares.ErrorHandler())
-	apps.Routes(router.Group("/apps", middlewares.SetInstance()))
-	data.Routes(router.Group("/data", middlewares.SetInstance()))
-	files.Routes(router.Group("/files", middlewares.SetInstance()))
+	apps.Routes(router.Group("/apps", middlewares.NeedInstance()))
+	data.Routes(router.Group("/data", middlewares.NeedInstance()))
+	files.Routes(router.Group("/files", middlewares.NeedInstance()))
 	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))
 }

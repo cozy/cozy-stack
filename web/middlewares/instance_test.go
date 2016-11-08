@@ -29,9 +29,9 @@ func TestFS(t *testing.T) {
 	assert.Equal(t, content, buf, "the storage should have persist the content of the foo file")
 }
 
-func TestSetInstance(t *testing.T) {
+func TestParseHost(t *testing.T) {
 	router := gin.New()
-	router.Use(SetInstance())
+	router.Use(ParseHost())
 	router.GET("/", func(c *gin.Context) {
 		instanceInterface, exists := c.Get("instance")
 		assert.True(t, exists, "the instance should have been set in the gin context")

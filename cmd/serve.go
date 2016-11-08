@@ -35,5 +35,7 @@ func getGin() *gin.Engine {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	return gin.Default()
+	engine := gin.New()
+	engine.Use(gin.Logger())
+	return engine
 }
