@@ -11,6 +11,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -119,9 +120,13 @@ func TestMain(m *testing.M) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	instance := &instance.Instance{
-		Domain:     Host,
-		StorageURL: "mem://test",
+
+	config.UseTestFile("../..")
+
+	instance, err := instance.Create(Host, "en", nil)
+	if err != nil {
+		fmt.Println("Could not create test instance.", err)
+		os.Exit(1)
 	}
 
 	router := gin.New()

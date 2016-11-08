@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -63,6 +64,7 @@ func InstallHandler(c *gin.Context) {
 		for {
 			_, err := inst.WaitManifest()
 			if err != nil {
+				log.Errorf("[apps] %s could not be installed: %v", slug, err)
 				break
 			}
 			// TODO: do nothing for now

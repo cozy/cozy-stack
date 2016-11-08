@@ -2,6 +2,9 @@ package config
 
 import (
 	"fmt"
+	"net/url"
+	"path"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -24,6 +27,7 @@ type Config struct {
 	Mode    string
 	Host    string
 	Port    int
+	Fs      Fs
 	CouchDB CouchDB
 	Logger  Logger
 }
@@ -34,6 +38,11 @@ const (
 	// Development mode
 	Development string = "development"
 )
+
+// Fs contains the configuration values of the file-system
+type Fs struct {
+	URL *url.URL
+}
 
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
@@ -52,26 +61,72 @@ func GetConfig() *Config {
 }
 
 // UseViper sets the configured instance of Config
-func UseViper(viper *viper.Viper) error {
-	mode, err := parseMode(viper.GetString("mode"))
+func UseViper(v *viper.Viper) error {
+	mode, err := parseMode(v.GetString("mode"))
+	if err != nil {
+		return err
+	}
+
+	fsURL, err := url.Parse(v.GetString("fs.url"))
 	if err != nil {
 		return err
 	}
 
 	config = &Config{
 		Mode: mode,
-		Host: viper.GetString("host"),
-		Port: viper.GetInt("port"),
+		Host: v.GetString("host"),
+		Port: v.GetInt("port"),
+		Fs: Fs{
+			URL: fsURL,
+		},
 		CouchDB: CouchDB{
-			Host: viper.GetString("couchdb.host"),
-			Port: viper.GetInt("couchdb.port"),
+			Host: v.GetString("couchdb.host"),
+			Port: v.GetInt("couchdb.port"),
 		},
 		Logger: Logger{
-			Level: viper.GetString("log.level"),
+			Level: v.GetString("log.level"),
 		},
 	}
 
 	return nil
+}
+
+// UseTestFile can be used in a test file to inject a configuration
+// from a cozy.test.* file. It should receive the relative path to the
+// root directory of the repository where the the default
+// cozy.test.yaml is installed.
+func UseTestFile(rel string) {
+	v := viper.New()
+	v.SetConfigName("cozy.test")
+	v.AddConfigPath(path.Join(rel, ".cozy"))
+	v.AddConfigPath("$HOME/.cozy")
+	v.AddConfigPath(rel)
+
+	if err := v.ReadInConfig(); err != nil {
+		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+	}
+
+	if err := UseViper(v); err != nil {
+		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+	}
+
+	return
+}
+
+// UseTestYAML can be used in a test file to inject a configuration
+// from a YAML string.
+func UseTestYAML(yaml string) {
+	v := viper.New()
+
+	if err := v.ReadConfig(strings.NewReader(yaml)); err != nil {
+		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+	}
+
+	if err := UseViper(v); err != nil {
+		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+	}
+
+	return
 }
 
 func parseMode(mode string) (string, error) {

@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
@@ -14,8 +15,6 @@ import (
 
 const globalDBPrefix = "global/"
 const instanceType = "instances"
-
-const globalFsURL = "file://localhost/tmp/cozy2"
 
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
@@ -63,12 +62,8 @@ func (i *Instance) createRootFolder() error {
 		return err
 	}
 
-	rootURL, err := url.Parse(globalFsURL)
-	if err != nil {
-		return err
-	}
-
-	rootFs, err := createFs(rootURL)
+	rootFsURL := config.GetConfig().Fs.URL
+	rootFs, err := createFs(rootFsURL)
 	if err != nil {
 		return err
 	}
@@ -104,7 +99,9 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, fmt.Errorf("Domain is malformed")
 	}
 
-	storageURL, err := url.Parse(globalFsURL)
+	rootFsURL := config.GetConfig().Fs.URL
+
+	storageURL, err := url.Parse(rootFsURL.String())
 	if err != nil {
 		return nil, err
 	}

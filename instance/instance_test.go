@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
@@ -27,6 +28,17 @@ func TestCreateInstance(t *testing.T) {
 		assert.NotEmpty(t, instance.ID())
 		assert.Equal(t, instance.Domain, "test.cozycloud.cc")
 	}
+}
+
+func TestCreateInstanceBadDomain(t *testing.T) {
+	_, err := Create("..", "en", nil)
+	assert.Error(t, err, "An error is expected")
+
+	_, err = Create(".", "en", nil)
+	assert.Error(t, err, "An error is expected")
+
+	_, err = Create("foo/bar", "en", nil)
+	assert.Error(t, err, "An error is expected")
 }
 
 func TestGetWrongInstance(t *testing.T) {
@@ -67,6 +79,8 @@ func TestInstanceHasIndexes(t *testing.T) {
 func TestMain(m *testing.M) {
 	const CouchDBURL = "http://localhost:5984/"
 	const TestPrefix = "dev/"
+
+	config.UseTestFile("..")
 
 	db, err := checkup.HTTPChecker{URL: CouchDBURL}.Check()
 	if err != nil || db.Status() != checkup.Healthy {

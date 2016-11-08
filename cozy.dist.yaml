@@ -8,6 +8,11 @@ host: localhost
 port: 8080
 
 
+fs:
+  # file system url - flags: --fs-url
+  url: file://localhost/tmp/cozy2
+
+
 couchdb:
     # couchdb host - flags: --couchdb-host
     host: localhost
