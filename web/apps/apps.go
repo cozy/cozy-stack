@@ -38,9 +38,7 @@ func Serve(c *gin.Context) {
 		return
 	}
 
-	vpath := c.Request.URL.Path
-	// TODO check path traversal attacks
-
+	vpath := path.Clean(c.Request.URL.Path)
 	appdir := path.Join(apps.AppsDirectory, app.Slug)
 	vpath = path.Join(appdir, vpath)
 	doc, err := vfs.GetFileDocFromPath(instance, vpath)
