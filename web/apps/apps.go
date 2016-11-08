@@ -17,6 +17,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const indexPage = "index.html"
+
 // Serve is an handler for serving files from the VFS for a client-side app
 func Serve(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
@@ -38,8 +40,13 @@ func Serve(c *gin.Context) {
 		return
 	}
 
-	vpath := path.Clean(c.Request.URL.Path)
+	vpath := c.Request.URL.Path
+	if vpath[len(vpath)-1] == '/' {
+		vpath = path.Join(vpath, indexPage)
+	}
+
 	appdir := path.Join(apps.AppsDirectory, app.Slug)
+	vpath = path.Clean(vpath)
 	vpath = path.Join(appdir, vpath)
 	doc, err := vfs.GetFileDocFromPath(instance, vpath)
 	if err != nil {
@@ -47,14 +54,7 @@ func Serve(c *gin.Context) {
 		return
 	}
 
-	abs, err := doc.Path(instance)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	c.Header("Content-Type", doc.Mime)
-	c.File(abs)
+	vfs.ServeFileContent(instance, doc, "", c.Request, c.Writer)
 }
 
 func wrapAppsError(err error) *jsonapi.Error {

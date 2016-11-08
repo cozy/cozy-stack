@@ -225,7 +225,9 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 func ServeFileContent(c Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) (err error) {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
-	header.Set("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, doc.Name))
+	if disposition != "" {
+		header.Set("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, doc.Name))
+	}
 
 	if header.Get("Range") == "" {
 		eTag := base64.StdEncoding.EncodeToString(doc.MD5Sum)
