@@ -11,12 +11,6 @@ func (def IndexFields) MarshalJSON() ([]byte, error) {
 	return json.Marshal(makeMap("fields", []string(def)))
 }
 
-// NewIndexFields returns an IndexFields from a list of string
-// arguments
-func NewIndexFields(fields ...string) IndexFields {
-	return IndexFields(fields)
-}
-
 // An Index is a request to be POSTED to create the index
 type Index struct {
 	Name  string      `json:"name,omitempty"`
