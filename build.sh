@@ -48,12 +48,13 @@ do_release() {
 		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
 
 	if [ "$VERSION_STRING" == "" ]; then
-		>&2 echo "WRN: No tag has been found to version the stack"
 		if [ "${COZY_ENV}" == production ]; then
 			>&2 echo "ERR: Can not build a production release without a tagged version"
 			exit 1
+		else
+			>&2 echo "WRN: No tag has been found to version the stack, using \"v0\" as version number"
 		fi
-		VERSION_STRING=v0-0-`git rev-parse --short HEAD`
+		VERSION_STRING=v0-`git rev-parse --short HEAD`
 	fi
 
 	if [ `git diff --shortstat 2> /dev/null | tail -n1 | wc -l` -gt 0 ]; then
