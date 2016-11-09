@@ -9,50 +9,48 @@ import (
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFS(t *testing.T) {
-	instance, err := instance.Create("test-instance-web", "en", nil)
-	assert.NoError(t, err)
-	content := []byte{'b', 'a', 'r'}
-	storage := instance.FS()
-	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-	err = afero.WriteFile(storage, "foo", content, 0644)
-	assert.NoError(t, err)
-	storage = instance.FS()
-	assert.NoError(t, err)
-	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-	buf, err := afero.ReadFile(storage, "foo")
-	assert.NoError(t, err)
-	assert.Equal(t, content, buf, "the storage should have persist the content of the foo file")
-}
+const domain = "cozy.example.net"
 
 func TestParseHost(t *testing.T) {
 	router := gin.New()
 	router.Use(ParseHost())
-	router.GET("/", func(c *gin.Context) {
+	router.GET("/:id", func(c *gin.Context) {
 		instanceInterface, exists := c.Get("instance")
 		assert.True(t, exists, "the instance should have been set in the gin context")
 		instance := instanceInterface.(*instance.Instance)
-		assert.Equal(t, "dev", instance.Domain, "the domain should have been set in the instance")
+		assert.Equal(t, domain, instance.Domain, "the domain should have been set in the instance")
 		storage := instance.FS()
 		assert.NotNil(t, storage, "the instance should have a storage provider")
+		slug, inApp := c.Get("app_slug")
+		assert.Equal(t, c.Param("id") == "app", inApp)
+		if inApp {
+			assert.Equal(t, "foo", slug)
+		}
 		c.String(http.StatusOK, "OK")
 	})
-	ts := httptest.NewServer(router)
-	defer ts.Close()
-	res, err := http.Get(ts.URL + "/")
-	assert.NoError(t, err)
-	res.Body.Close()
+
+	urls := []string{
+		"https://" + domain + "/stack",
+		"https://foo." + domain + "/app",
+	}
+	for _, u := range urls {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", u, nil)
+		router.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Equal(t, "OK", w.Body.String())
+	}
 }
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	instance.Destroy("test-instance-web")
+	instance.Destroy("cozy.example.net")
+	instance.Create("cozy.example.net", "en", nil)
 	gin.SetMode(gin.TestMode)
 	res := m.Run()
-	instance.Destroy("test-instance-web")
+	instance.Destroy("cozy.example.net")
 	os.Exit(res)
 }

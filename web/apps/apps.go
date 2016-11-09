@@ -35,7 +35,7 @@ func Serve(c *gin.Context) {
 	}
 
 	if app.State != apps.Ready {
-		err := fmt.Errorf("Application is not ready")
+		err = fmt.Errorf("Application is not ready")
 		c.AbortWithError(http.StatusServiceUnavailable, err)
 		return
 	}
