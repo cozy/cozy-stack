@@ -89,12 +89,11 @@ by this server.
 	},
 }
 
-var rmInstanceCmd = &cobra.Command{
-	Use:   "rm",
+var destroyInstanceCmd = &cobra.Command{
+	Use:   "destroy",
 	Short: "Remove instance",
-	Long: `
-cozy-stack instances rm allows to remove an instance and all
-its data.
+	Long: ` cozy-stack instances destroy allows to remove an instance
+and all its data.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := Configure(); err != nil {
@@ -133,7 +132,7 @@ All data associated with this domain will be permanently lost.
 func init() {
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
-	instanceCmdGroup.AddCommand(rmInstanceCmd)
+	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", "en", "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	RootCmd.AddCommand(instanceCmdGroup)
