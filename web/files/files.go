@@ -388,7 +388,7 @@ func WrapVfsError(err error) *jsonapi.Error {
 	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
 		return jsonapi.WrapCouchError(couchErr)
 	}
-	if os.IsExist(err) {
+	if os.IsExist(err) || err == vfs.ErrConflict {
 		return &jsonapi.Error{
 			Status: http.StatusConflict,
 			Title:  "Conflict",
