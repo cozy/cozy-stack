@@ -124,7 +124,7 @@ func TestMain(m *testing.M) {
 	config.UseTestFile("../..")
 
 	inst, err := instance.Create(Host, "en", nil)
-	if err != nil && err != instance.ErrExists {
+	if err != nil {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
 	}
@@ -138,8 +138,12 @@ func TestMain(m *testing.M) {
 	couchReq("PUT", ExpectedDBName, nil)
 	couchReq("PUT", ExpectedDBName+"/"+ID, bytes.NewReader(DOCUMENT))
 
-	defer ts.Close()
-	os.Exit(m.Run())
+	res := m.Run()
+
+	ts.Close()
+	instance.Destroy(Host)
+
+	os.Exit(res)
 }
 
 func TestSuccessGet(t *testing.T) {

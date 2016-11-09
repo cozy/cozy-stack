@@ -86,6 +86,26 @@ func TestInstanceNoDuplicate(t *testing.T) {
 	}
 }
 
+func TestInstanceDestroy(t *testing.T) {
+	Destroy("test.cozycloud.cc")
+
+	_, err := Create("test.cozycloud.cc", "en", nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	inst, err := Destroy("test.cozycloud.cc")
+	if assert.NoError(t, err) {
+		assert.NotNil(t, inst)
+	}
+
+	inst, err = Destroy("test.cozycloud.cc")
+	if assert.Error(t, err) {
+		assert.Equal(t, ErrNotFound, err)
+		assert.Nil(t, inst)
+	}
+}
+
 func TestMain(m *testing.M) {
 	const CouchDBURL = "http://localhost:5984/"
 	const TestPrefix = "dev/"
@@ -97,8 +117,9 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	couchdb.DeleteDB(globalDBPrefix, instanceType)
-	couchdb.DeleteDB("test.cozycloud.cc/", vfs.FsDocType)
+
+	Destroy("test.cozycloud.cc")
+	Destroy("test.cozycloud.cc.duplicate")
 	os.RemoveAll("/usr/local/var/cozy2/")
 
 	os.Exit(m.Run())

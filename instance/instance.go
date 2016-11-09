@@ -191,6 +191,37 @@ func List() ([]*Instance, error) {
 	return docs, err
 }
 
+// Destroy is used to remove the instance. All the data linked to this
+// instance will be permanently deleted.
+func Destroy(domain string) (*Instance, error) {
+	i, err := Get(domain)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = couchdb.DeleteDoc(globalDBPrefix, i); err != nil {
+		return nil, err
+	}
+
+	if err = couchdb.DeleteAllDBs(i.Domain + "/"); err != nil {
+		return nil, err
+	}
+
+	rootFsURL := config.GetConfig().BuildAbsFsURL("/")
+	domainURL := config.GetConfig().BuildRelFsURL(i.Domain)
+
+	rootFs, err := createFs(rootFsURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = rootFs.RemoveAll(domainURL.Path); err != nil {
+		return nil, err
+	}
+
+	return i, nil
+}
+
 // GetStorageProvider returns the afero storage provider where the binaries for
 // the current instance are persisted
 func (i *Instance) GetStorageProvider() (afero.Fs, error) {
