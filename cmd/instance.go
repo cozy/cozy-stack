@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/instance"
@@ -48,6 +51,7 @@ given domain.
 
 		instance, err := instance.Create(domain, flagLocale, flagApps)
 		if err != nil {
+			log.Errorf("Error while creating instance for domain %s", domain)
 			return err
 		}
 
@@ -75,12 +79,52 @@ by this server.
 		}
 
 		if len(instances) == 0 {
-			log.Infof("No instances")
+			fmt.Printf("No instances\n")
 		}
 
 		for _, i := range instances {
-			log.Infof("Instances %s for domain %s (storage: %s)", i.DocID, i.Domain, i.StorageURL)
+			fmt.Printf("instance %s for domain %s (storage: %s)\n", i.DocID, i.Domain, i.StorageURL)
 		}
+		return nil
+	},
+}
+
+var destroyInstanceCmd = &cobra.Command{
+	Use:   "destroy",
+	Short: "Remove instance",
+	Long: ` cozy-stack instances destroy allows to remove an instance
+and all its data.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := Configure(); err != nil {
+			return err
+		}
+
+		domain := args[0]
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Printf(`
+Are you sure you want to remove instance for domain %s ?
+All data associated with this domain will be permanently lost.
+[yes/NO]:`, domain)
+
+		in, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+
+		if strings.ToLower(strings.TrimSpace(in)) != "yes" {
+			return nil
+		}
+
+		fmt.Println()
+
+		instance, err := instance.Destroy(domain)
+		if err != nil {
+			log.Errorf("Error while remove instance for domain %s", domain)
+			return err
+		}
+
+		fmt.Printf("Instance for domain %s has been destroyed with success\n", instance.Domain)
 		return nil
 	},
 }
@@ -88,6 +132,7 @@ by this server.
 func init() {
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
+	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", "en", "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	RootCmd.AddCommand(instanceCmdGroup)

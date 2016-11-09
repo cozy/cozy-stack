@@ -925,6 +925,10 @@ func TestMain(m *testing.M) {
 	})
 
 	ts = httptest.NewServer(router)
-	defer ts.Close()
-	os.Exit(m.Run())
+
+	res := m.Run()
+	ts.Close()
+	instance.Destroy("test")
+
+	os.Exit(res)
 }

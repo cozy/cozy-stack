@@ -114,6 +114,14 @@ func makeDBName(dbprefix, doctype string) string {
 	return url.QueryEscape(dbname)
 }
 
+func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
+	dbprefix = strings.Replace(dbprefix, ".", "-", -1)
+	if !strings.HasPrefix(dbname, dbprefix) {
+		return false, ""
+	}
+	return true, strings.Replace(dbname, dbprefix, "", 1)
+}
+
 func docURL(dbprefix, doctype, id string) string {
 	return makeDBName(dbprefix, doctype) + "/" + url.QueryEscape(id)
 }
@@ -202,6 +210,32 @@ func CreateDB(dbprefix, doctype string) error {
 // DeleteDB destroy the database for a doctype
 func DeleteDB(dbprefix, doctype string) error {
 	return makeRequest("DELETE", makeDBName(dbprefix, doctype), nil, nil)
+}
+
+// DeleteAllDBs will remove all the database sharing the specified
+// dbprefix. It only accepts db prefixes ending with a /.
+func DeleteAllDBs(dbprefix string) error {
+	if dbprefix == "" || dbprefix[len(dbprefix)-1] != '/' {
+		return fmt.Errorf("You need to provide the database prefix name ending with /")
+	}
+
+	dbsList := make([]string, 0)
+	err := makeRequest("GET", "_all_dbs", nil, &dbsList)
+	if err != nil {
+		return err
+	}
+
+	for _, db := range dbsList {
+		hasPrefix, doctype := dbNameHasPrefix(db, dbprefix)
+		if !hasPrefix {
+			continue
+		}
+		if err = DeleteDB(dbprefix, doctype); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ResetDB destroy and recreate the database for a doctype

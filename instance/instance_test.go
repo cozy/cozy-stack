@@ -17,8 +17,7 @@ func TestGetInstanceNoDB(t *testing.T) {
 	instance, err := Get("no.instance.cozycloud.cc")
 	if assert.Error(t, err, "An error is expected") {
 		assert.Nil(t, instance)
-		assert.Contains(t, err.Error(), "No instance", "the error is not explicit")
-		assert.Contains(t, err.Error(), "no.instance.cozycloud.cc", "the error is not explicit")
+		assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
 	}
 }
 
@@ -45,8 +44,7 @@ func TestGetWrongInstance(t *testing.T) {
 	instance, err := Get("no.instance.cozycloud.cc")
 	if assert.Error(t, err, "An error is expected") {
 		assert.Nil(t, instance)
-		assert.Contains(t, err.Error(), "No instance", "the error is not explicit")
-		assert.Contains(t, err.Error(), "no.instance.cozycloud.cc", "the error is not explicit")
+		assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
 	}
 }
 
@@ -76,6 +74,38 @@ func TestInstanceHasIndexes(t *testing.T) {
 	assert.Len(t, results, 1)
 }
 
+func TestInstanceNoDuplicate(t *testing.T) {
+	_, err := Create("test.cozycloud.cc.duplicate", "en", nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	i, err := Create("test.cozycloud.cc.duplicate", "en", nil)
+	if assert.Error(t, err, "Should not be possible to create duplicate") {
+		assert.Nil(t, i)
+		assert.Contains(t, err.Error(), "Instance already exists", "the error is not explicit")
+	}
+}
+
+func TestInstanceDestroy(t *testing.T) {
+	Destroy("test.cozycloud.cc")
+
+	_, err := Create("test.cozycloud.cc", "en", nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	inst, err := Destroy("test.cozycloud.cc")
+	if assert.NoError(t, err) {
+		assert.NotNil(t, inst)
+	}
+
+	inst, err = Destroy("test.cozycloud.cc")
+	if assert.Error(t, err) {
+		assert.Equal(t, ErrNotFound, err)
+		assert.Nil(t, inst)
+	}
+}
+
 func TestMain(m *testing.M) {
 	const CouchDBURL = "http://localhost:5984/"
 	const TestPrefix = "dev/"
@@ -87,8 +117,9 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	couchdb.DeleteDB(globalDBPrefix, instanceType)
-	couchdb.DeleteDB("test.cozycloud.cc/", vfs.FsDocType)
+
+	Destroy("test.cozycloud.cc")
+	Destroy("test.cozycloud.cc.duplicate")
 	os.RemoveAll("/usr/local/var/cozy2/")
 
 	os.Exit(m.Run())
