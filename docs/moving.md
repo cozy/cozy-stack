@@ -1,4 +1,4 @@
-[Table of content](./README.md#table-of-content)
+[Table of contents](./README.md#table-of-contents)
 
 Moving
 =========

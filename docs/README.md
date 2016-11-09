@@ -1,4 +1,4 @@
-Table of content
+Table of contents
 ==========
 
 ### Architecture
