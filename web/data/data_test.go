@@ -123,15 +123,15 @@ func TestMain(m *testing.M) {
 
 	config.UseTestFile("../..")
 
-	instance, err := instance.Create(Host, "en", nil)
-	if err != nil {
+	inst, err := instance.Create(Host, "en", nil)
+	if err != nil && err != instance.ErrExists {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
 	}
 
 	router := gin.New()
 	router.Use(middlewares.ErrorHandler())
-	router.Use(injectInstance(instance))
+	router.Use(injectInstance(inst))
 	Routes(router.Group("/data"))
 	ts = httptest.NewServer(router)
 	couchReq("DELETE", ExpectedDBName, nil)

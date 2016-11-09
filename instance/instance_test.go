@@ -17,8 +17,7 @@ func TestGetInstanceNoDB(t *testing.T) {
 	instance, err := Get("no.instance.cozycloud.cc")
 	if assert.Error(t, err, "An error is expected") {
 		assert.Nil(t, instance)
-		assert.Contains(t, err.Error(), "No instance", "the error is not explicit")
-		assert.Contains(t, err.Error(), "no.instance.cozycloud.cc", "the error is not explicit")
+		assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
 	}
 }
 
@@ -45,8 +44,7 @@ func TestGetWrongInstance(t *testing.T) {
 	instance, err := Get("no.instance.cozycloud.cc")
 	if assert.Error(t, err, "An error is expected") {
 		assert.Nil(t, instance)
-		assert.Contains(t, err.Error(), "No instance", "the error is not explicit")
-		assert.Contains(t, err.Error(), "no.instance.cozycloud.cc", "the error is not explicit")
+		assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
 	}
 }
 
@@ -74,6 +72,18 @@ func TestInstanceHasIndexes(t *testing.T) {
 	err := couchdb.FindDocs(prefix, vfs.FsDocType, req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
+}
+
+func TestInstanceNoDuplicate(t *testing.T) {
+	_, err := Create("test.cozycloud.cc.duplicate", "en", nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	i, err := Create("test.cozycloud.cc.duplicate", "en", nil)
+	if assert.Error(t, err, "Should not be possible to create duplicate") {
+		assert.Nil(t, i)
+		assert.Contains(t, err.Error(), "Instance already exists", "the error is not explicit")
+	}
 }
 
 func TestMain(m *testing.M) {

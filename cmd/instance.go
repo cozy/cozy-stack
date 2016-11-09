@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/spf13/cobra"
@@ -35,6 +33,7 @@ var addInstanceCmd = &cobra.Command{
 cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 	`,
+	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := Configure(); err != nil {
 			return err
@@ -48,10 +47,12 @@ given domain.
 
 		instance, err := instance.Create(domain, flagLocale, flagApps)
 		if err != nil {
+			log.Errorf("Error while creating instance for domain %s", domain)
+			log.Errorf("Reason: %s", err)
 			return err
 		}
 
-		fmt.Printf("Instance created with success for domain %s\n", domain)
+		log.Infof("Instance created with success for domain %s", domain)
 		log.Debugf("> %v", instance)
 		return nil
 	},

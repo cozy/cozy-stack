@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -14,6 +15,15 @@ import (
 
 const globalDBPrefix = "global/"
 const instanceType = "instances"
+
+var (
+	// ErrNotFound is used when the seeked instance was not found
+	ErrNotFound = errors.New("Instance not found")
+	// ErrExists is used the instance already exists
+	ErrExists = errors.New("Instance already exists")
+	// ErrIllegalDomain is used when the domain named contains illegal characters
+	ErrIllegalDomain = errors.New("Domain name contains illegal characters")
+)
 
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
@@ -46,6 +56,12 @@ var _ couchdb.Doc = (*Instance)(nil)
 
 // CreateInCouchdb create the instance doc in the global database
 func (i *Instance) createInCouchdb() (err error) {
+	if _, err = Get(i.Domain); err == nil {
+		return ErrExists
+	}
+	if err != nil && err != ErrNotFound {
+		return err
+	}
 	err = couchdb.CreateDoc(globalDBPrefix, i)
 	if err != nil {
 		return err
@@ -98,7 +114,7 @@ func (i *Instance) createFSIndexes() error {
 // Create build an instance and .Create it
 func Create(domain string, locale string, apps []string) (*Instance, error) {
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
-		return nil, fmt.Errorf("Domain is malformed")
+		return nil, ErrIllegalDomain
 	}
 
 	domainURL := config.GetConfig().BuildRelFsURL(domain)
@@ -150,14 +166,14 @@ func Get(domain string) (*Instance, error) {
 	}
 	err := couchdb.FindDocs(globalDBPrefix, instanceType, req, &instances)
 	if couchdb.IsNoDatabaseError(err) {
-		return nil, fmt.Errorf("No instance for domain %v, use 'cozy-stack instances add'", domain)
+		return nil, ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	if len(instances) == 0 {
-		return nil, fmt.Errorf("No instance for domain %v, use 'cozy-stack instances add'", domain)
+		return nil, ErrNotFound
 	}
 
 	return instances[0], nil
