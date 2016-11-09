@@ -32,6 +32,34 @@ type Config struct {
 	Logger  Logger
 }
 
+// FsURL returns a copy of the filesystem URL
+func (c *Config) FsURL() *url.URL {
+	u, err := url.Parse(c.Fs.URL)
+	if err != nil {
+		panic(fmt.Errorf("Malformed configuration fs url %s.", c.Fs.URL))
+	}
+	return u
+}
+
+// BuildRelFsURL build a new url from the filesystem URL by adding the
+// specified relative path.
+func (c *Config) BuildRelFsURL(rel string) *url.URL {
+	u := c.FsURL()
+	if u.Path == "" {
+		u.Path = "/"
+	}
+	u.Path = path.Join(u.Path, rel)
+	return u
+}
+
+// BuildAbsFsURL build a new url from the filesystem URL by changing
+// the path to the specified absolute one.
+func (c *Config) BuildAbsFsURL(abs string) *url.URL {
+	u := c.FsURL()
+	u.Path = path.Join("/", abs)
+	return u
+}
+
 const (
 	// Production mode
 	Production string = "production"
@@ -41,7 +69,7 @@ const (
 
 // Fs contains the configuration values of the file-system
 type Fs struct {
-	URL *url.URL
+	URL string
 }
 
 // CouchDB contains the configuration values of the database
@@ -67,7 +95,8 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
-	fsURL, err := url.Parse(v.GetString("fs.url"))
+	fsURL := v.GetString("fs.url")
+	_, err = url.Parse(fsURL)
 	if err != nil {
 		return err
 	}

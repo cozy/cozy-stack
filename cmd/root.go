@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/config"
@@ -21,6 +22,10 @@ var ConfigPaths = []string{
 	"$HOME/.cozy",
 	"/etc/cozy",
 }
+
+// DefaultStorageDirectory is the default directory name in which data
+// is stored relatively to the cozy-stack binary.
+const DefaultStorageDirectory = "storage"
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -45,7 +50,7 @@ profiles you.`,
 var cfgFile string
 
 func init() {
-	pwd, err := os.Getwd()
+	binDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		panic(err)
 	}
@@ -62,7 +67,7 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
 
-	flags.String("fs-url", fmt.Sprintf("file://localhost%s/storage", pwd), "filesystem url")
+	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDirectory), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
 
 	flags.String("couchdb-host", "localhost", "couchdbdb host")

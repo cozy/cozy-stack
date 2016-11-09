@@ -3,7 +3,6 @@ package instance
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"strings"
 
 	"github.com/cozy/cozy-stack/config"
@@ -62,18 +61,22 @@ func (i *Instance) createRootFolder() error {
 		return err
 	}
 
-	rootFsURL := config.GetConfig().Fs.URL
+	config := config.GetConfig()
+
+	rootFsURL := config.BuildAbsFsURL("/")
+	domainURL := config.BuildRelFsURL(i.Domain)
+
 	rootFs, err := createFs(rootFsURL)
 	if err != nil {
 		return err
 	}
 
-	if err = rootFs.Mkdir(i.Domain, 0755); err != nil {
+	if err = rootFs.MkdirAll(domainURL.Path, 0755); err != nil {
 		return err
 	}
 
 	if err = vfs.CreateRootDirDoc(vfsC); err != nil {
-		rootFs.Remove(i.Domain)
+		rootFs.Remove(domainURL.Path)
 		return err
 	}
 
@@ -98,21 +101,13 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, fmt.Errorf("Domain is malformed")
 	}
 
-	rootFsURL := config.GetConfig().Fs.URL
-
-	storageURL, err := url.Parse(rootFsURL.String())
-	if err != nil {
-		return nil, err
-	}
-
-	storageURL.Path = path.Join(storageURL.Path, domain)
-
+	domainURL := config.GetConfig().BuildRelFsURL(domain)
 	i := &Instance{
 		Domain:     domain,
-		StorageURL: storageURL.String(),
+		StorageURL: domainURL.String(),
 	}
 
-	err = i.Create()
+	err := i.Create()
 	if err != nil {
 		return nil, err
 	}
