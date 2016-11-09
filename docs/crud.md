@@ -1,3 +1,5 @@
+[Table of content](./README.md#table-of-content)
+
 # General
 
 ### Typing
