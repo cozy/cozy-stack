@@ -20,4 +20,7 @@ var (
 	// ErrContentLengthMismatch is used when the content-length does not
 	// match the calculated one
 	ErrContentLengthMismatch = errors.New("Content length does not match")
+	// ErrConflict is used when the access to a file or directory is in
+	// conflict with another
+	ErrConflict = errors.New("Conflict access to same file or directory")
 )

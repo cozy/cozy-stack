@@ -307,6 +307,13 @@ func CreateFile(c *Context, newdoc, olddoc *FileDoc) (*File, error) {
 	if olddoc != nil {
 		bakpath = fmt.Sprintf("/.%s_%s", olddoc.ID(), olddoc.Rev())
 		if err = safeRenameFile(c, newpath, bakpath); err != nil {
+			// in case of a concurrent access to this method, it can happend
+			// that the file has already been renamed. In this case the
+			// safeRenameFile will return an os.ErrNotExist error. But this
+			// error is misleading since it does not reflect the conflict.
+			if os.IsNotExist(err) {
+				err = ErrConflict
+			}
 			return nil, err
 		}
 	}
