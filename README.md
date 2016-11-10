@@ -118,6 +118,8 @@ curl -H 'Accept: application/json' 'http://localhost:8080/status/'
 
 To build a release of cozy-stack, a `build.sh` script can automate the work. The `release` option of this script will generate a binary with a name containing the version of the file, along with a SHA-256 sum of the binary.
 
+You can use a `local.env` at the root of the repository to add your default values for environment variables.
+
 See `./build.sh --help` for more informations.
 
 ```sh

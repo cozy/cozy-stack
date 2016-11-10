@@ -1,12 +1,18 @@
 #!/bin/bash
+set -e
 
 COZY_ENV_DFL=production
 
 [ -z ${COZY_ENV} ] && COZY_ENV=${COZY_ENV_DFL}
+[ -z ${COZY_DEPLOY_USER} ] && COZY_DEPLOY_USER=${USER}
 
 pushd `dirname $0` > /dev/null
 WORK_DIR=`pwd`
 popd > /dev/null
+
+if [ -r ${WORK_DIR}/local.env ]; then
+	. ${WORK_DIR}/local.env
+fi
 
 usage() {
 	echo -e "Usage: ${1} [release]"
@@ -15,6 +21,10 @@ usage() {
 
 	echo -e "\nEnvironment variables:"
 	echo -e "\tCOZY_ENV: with release command, specify the environment of the release: production or development. default: ${COZY_ENV_DFL}"
+	echo -e "\tCOZY_DEPLOY_USER: with deploy command, specify the user used to deploy. default: \$USER"
+	echo -e "\tCOZY_DEPLOY_SERVER: with deploy command, specify the ssh server to deploy on."
+	echo -e "\tCOZY_DEPLOY_PROXY: with deploy command, specify an ssh proxy to go through."
+	echo -e "\tCOZY_DEPLOY_POSTSCRIPT: with deploy command, specify an optional script to execute on the deploy server after deploying."
 }
 
 # The version string is deterministic and reflects entirely the state
@@ -39,8 +49,6 @@ usage() {
 # SHA256 checksum of the binary is also generated in a file named
 # "cozy-stack-${VERSION_STRING}.sha256".
 do_release() {
-	set -e
-
 	check_env
 
 	VERSION_STRING=`git --git-dir=${WORK_DIR}/.git --work-tree=${WORK_DIR} \
@@ -57,7 +65,7 @@ do_release() {
 		VERSION_STRING=v0-`git rev-parse --short HEAD`
 	fi
 
-	if [ `git diff --shortstat 2> /dev/null | tail -n1 | wc -l` -gt 0 ]; then
+	if [ `git diff --shortstat HEAD 2> /dev/null | tail -n1 | wc -l` -gt 0 ]; then
 		if [ "${COZY_ENV}" == production ]; then
 			>&2 echo "ERR: Can not build a production release in a dirty work-tree"
 			exit 1
@@ -84,8 +92,36 @@ do_release() {
 
 	printf "${BINARY}\t"
 	cat ${BINARY}.sha256 | sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g'
+}
 
-	set +e
+# The deploy command will build a new release and deploy it on a
+# distant server using scp. To configure the distance server, you can
+# use the environment variables (see help usage):
+#
+#  - COZY_DEPLOY_USER: deploy user (default to $USER)
+#  - COZY_DEPLOY_SERVER: deploy server
+#  - COZY_DEPLOY_PROXY: deploy proxy (optional)
+#  - COZY_DEPLOY_POSTSCRIPT: deploy script to execute after deploy
+#    (optional)
+#
+do_deploy() {
+	check_env
+
+	do_release
+
+	if [ -z ${COZY_DEPLOY_PROXY} ]; then
+		scp ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
+	else
+		scp -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
+	fi
+
+	if [ -n ${COZY_DEPLOY_POSTSCRIPT} ]; then
+		if [ -z ${COZY_DEPLOY_PROXY} ]; then
+			ssh ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER} ${COZY_DEPLOY_POSTSCRIPT}
+		else
+			ssh ${COZY_DEPLOY_PROXY} ssh ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER} ${COZY_DEPLOY_POSTSCRIPT}
+		fi
+	fi
 }
 
 do_clean() {
@@ -102,6 +138,10 @@ check_env() {
 case ${1} in
 	release)
 		do_release
+		;;
+
+	deploy)
+		do_deploy
 		;;
 
 	clean)
