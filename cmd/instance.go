@@ -55,8 +55,8 @@ given domain.
 			return err
 		}
 
-		fmt.Printf("Instance created with success for domain %s\n", domain)
-		log.Debugf("> %v", instance)
+		log.Infof("Instance created with success for domain %s", domain)
+		log.Debugf("Instance created: %#v", instance)
 		return nil
 	},
 }
@@ -79,12 +79,14 @@ by this server.
 		}
 
 		if len(instances) == 0 {
-			fmt.Printf("No instances\n")
+			log.Warnf("No instances")
+			return nil
 		}
 
 		for _, i := range instances {
-			fmt.Printf("instance %s for domain %s (storage: %s)\n", i.DocID, i.Domain, i.StorageURL)
+			fmt.Printf("instance: %s\tdomain: %s\tstorage: %s\n", i.DocID, i.Domain, i.StorageURL)
 		}
+
 		return nil
 	},
 }
@@ -105,7 +107,7 @@ and all its data.
 		fmt.Printf(`
 Are you sure you want to remove instance for domain %s ?
 All data associated with this domain will be permanently lost.
-[yes/NO]:`, domain)
+[yes/NO]: `, domain)
 
 		in, err := reader.ReadString('\n')
 		if err != nil {
@@ -120,11 +122,11 @@ All data associated with this domain will be permanently lost.
 
 		instance, err := instance.Destroy(domain)
 		if err != nil {
-			log.Errorf("Error while remove instance for domain %s", domain)
+			log.Errorf("Error while removing instance for domain %s", domain)
 			return err
 		}
 
-		fmt.Printf("Instance for domain %s has been destroyed with success\n", instance.Domain)
+		log.Infof("Instance for domain %s has been destroyed with success", instance.Domain)
 		return nil
 	},
 }
