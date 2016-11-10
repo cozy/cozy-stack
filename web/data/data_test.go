@@ -38,7 +38,7 @@ var ts *httptest.Server
 // some test helpers files.
 
 func couchReq(method, path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, config.GetConfig().CouchURL()+path, body)
+	req, err := http.NewRequest(method, config.CouchURL()+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func getDocForTest() couchdb.JSONDoc {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	db, err := checkup.HTTPChecker{URL: config.GetConfig().CouchURL()}.Check()
+	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)

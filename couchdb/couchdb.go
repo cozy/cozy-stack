@@ -137,7 +137,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		log.Debugf("[couchdb request] %s %s %s", method, path, string(reqjson))
 	}
 
-	req, err := http.NewRequest(method, config.GetConfig().CouchURL()+path, bytes.NewReader(reqjson))
+	req, err := http.NewRequest(method, config.CouchURL()+path, bytes.NewReader(reqjson))
 	// Possible err = wrong method, unparsable url
 	if err != nil {
 		return newRequestError(err)

@@ -34,39 +34,6 @@ type Config struct {
 	Logger  Logger
 }
 
-// FsURL returns a copy of the filesystem URL
-func (c *Config) FsURL() *url.URL {
-	u, err := url.Parse(c.Fs.URL)
-	if err != nil {
-		panic(fmt.Errorf("Malformed configuration fs url %s.", c.Fs.URL))
-	}
-	return u
-}
-
-// BuildRelFsURL build a new url from the filesystem URL by adding the
-// specified relative path.
-func (c *Config) BuildRelFsURL(rel string) *url.URL {
-	u := c.FsURL()
-	if u.Path == "" {
-		u.Path = "/"
-	}
-	u.Path = path.Join(u.Path, rel)
-	return u
-}
-
-// BuildAbsFsURL build a new url from the filesystem URL by changing
-// the path to the specified absolute one.
-func (c *Config) BuildAbsFsURL(abs string) *url.URL {
-	u := c.FsURL()
-	u.Path = path.Join("/", abs)
-	return u
-}
-
-// CouchURL returns the CouchDB string url
-func (c *Config) CouchURL() string {
-	return c.CouchDB.URL
-}
-
 const (
 	// Production mode
 	Production string = "production"
@@ -89,14 +56,59 @@ type Logger struct {
 	Level string
 }
 
+// FsURL returns a copy of the filesystem URL
+func FsURL() *url.URL {
+	u, err := url.Parse(config.Fs.URL)
+	if err != nil {
+		panic(fmt.Errorf("Malformed configuration fs url %s.", config.Fs.URL))
+	}
+	return u
+}
+
+// BuildRelFsURL build a new url from the filesystem URL by adding the
+// specified relative path.
+func BuildRelFsURL(rel string) *url.URL {
+	u := FsURL()
+	if u.Path == "" {
+		u.Path = "/"
+	}
+	u.Path = path.Join(u.Path, rel)
+	return u
+}
+
+// BuildAbsFsURL build a new url from the filesystem URL by changing
+// the path to the specified absolute one.
+func BuildAbsFsURL(abs string) *url.URL {
+	u := FsURL()
+	u.Path = path.Join("/", abs)
+	return u
+}
+
+// ServerAddr returns the address on which the stack is run
+func ServerAddr() string {
+	return config.Host + ":" + strconv.Itoa(config.Port)
+}
+
+// CouchURL returns the CouchDB string url
+func CouchURL() string {
+	return config.CouchDB.URL
+}
+
+// IsMode returns whether or not the mode is equal to the specified
+// one
+func IsMode(mode string) bool {
+	return config.Mode == mode
+}
+
+// IsDevRelease returns whether or not the binary is a development
+// release
+func IsDevRelease() bool {
+	return BuildMode == Development
+}
+
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
-}
-
-// IsDevRelease returns true is the binary is a development release
-func IsDevRelease() bool {
-	return BuildMode == Development
 }
 
 // UseViper sets the configured instance of Config

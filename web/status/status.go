@@ -20,7 +20,7 @@ func Status(c *gin.Context) {
 
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",
-		URL:      config.GetConfig().CouchURL(),
+		URL:      config.CouchURL(),
 		Attempts: 3,
 	}
 	couchdb, err := checker.Check()
