@@ -118,9 +118,6 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 
 	var err error
 
-	if err != nil {
-		return nil, err
-	}
 	err = i.makeStorageFs()
 	if err != nil {
 		return nil, err
