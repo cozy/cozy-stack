@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const CouchURL = "http://localhost:5984/"
 const TestPrefix = "test/"
 
 var ts *httptest.Server
@@ -859,8 +858,9 @@ func TestGetDirectoryMetadataFromID(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// First we make sure couchdb is started
-	db, err := checkup.HTTPChecker{URL: CouchURL}.Check()
+	config.UseTestFile()
+
+	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
@@ -891,7 +891,6 @@ func TestMain(m *testing.M) {
 
 	gin.SetMode(gin.TestMode)
 
-	config.UseTestFile("../..")
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
 	testInstance, err = instance.Create("test", "en", nil)

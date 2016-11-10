@@ -22,7 +22,6 @@ import (
 
 var client = &http.Client{}
 
-const CouchURL = "http://localhost:5984/"
 const Host = "example.com"
 const Type = "io.cozy.events"
 const ID = "4521C325F6478E45"
@@ -39,7 +38,7 @@ var ts *httptest.Server
 // some test helpers files.
 
 func couchReq(method, path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, CouchURL+path, body)
+	req, err := http.NewRequest(method, config.CouchURL()+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -112,16 +111,15 @@ func getDocForTest() couchdb.JSONDoc {
 }
 
 func TestMain(m *testing.M) {
-	// First we make sure couchdb is started
-	couchdb, err := checkup.HTTPChecker{URL: CouchURL}.Check()
-	if err != nil || couchdb.Status() != checkup.Healthy {
+	config.UseTestFile()
+
+	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
+	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
 
 	gin.SetMode(gin.TestMode)
-
-	config.UseTestFile("../..")
 
 	inst, err := instance.Create(Host, "en", nil)
 	if err != nil {

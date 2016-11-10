@@ -5,12 +5,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/sourcegraph/checkup"
 	"github.com/stretchr/testify/assert"
 )
-
-var CouchDBURL = "http://localhost:5984/"
 
 func TestErrors(t *testing.T) {
 	err := Error{StatusCode: 404, Name: "not_found", Reason: "missing"}
@@ -164,12 +163,15 @@ func TestQuery(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	config.UseTestFile()
+
 	// First we make sure couchdb is started
-	couchdb, err := checkup.HTTPChecker{URL: CouchDBURL}.Check()
-	if err != nil || couchdb.Status() != checkup.Healthy {
+	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
+	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
+
 	err = ResetDB(TestPrefix, TestDoctype)
 	if err != nil {
 		fmt.Printf("Cant reset db (%s, %s) %s\n", TestPrefix, TestDoctype, err.Error())

@@ -7,13 +7,12 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/sourcegraph/checkup"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
-
-const CouchDBURL = "http://localhost:5984/"
 
 const TestPrefix = "dev/"
 
@@ -70,7 +69,9 @@ func TestGetFileDocFromPath(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	db, err := checkup.HTTPChecker{URL: CouchDBURL}.Check()
+	config.UseTestFile()
+
+	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)

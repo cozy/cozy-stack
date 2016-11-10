@@ -107,12 +107,9 @@ func TestInstanceDestroy(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	const CouchDBURL = "http://localhost:5984/"
-	const TestPrefix = "dev/"
+	config.UseTestFile()
 
-	config.UseTestFile("..")
-
-	db, err := checkup.HTTPChecker{URL: CouchDBURL}.Check()
+	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)

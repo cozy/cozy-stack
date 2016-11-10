@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 )
 
@@ -99,11 +100,6 @@ func (j JSONDoc) Get(key string) interface{} {
 	return j.M[key]
 }
 
-// CouchURL is the URL where to check if CouchDB is up
-func CouchURL() string {
-	return "http://localhost:5984/"
-}
-
 var couchdbClient = &http.Client{}
 
 func makeDBName(dbprefix, doctype string) string {
@@ -141,7 +137,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		log.Debugf("[couchdb request] %s %s %s", method, path, string(reqjson))
 	}
 
-	req, err := http.NewRequest(method, CouchURL()+path, bytes.NewReader(reqjson))
+	req, err := http.NewRequest(method, config.CouchURL()+path, bytes.NewReader(reqjson))
 	// Possible err = wrong method, unparsable url
 	if err != nil {
 		return newRequestError(err)

@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/afero"
@@ -52,6 +53,7 @@ func TestSetInstance(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	config.UseTestFile()
 	gin.SetMode(gin.TestMode)
 	os.Exit(m.Run())
 }

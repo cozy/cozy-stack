@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -32,34 +34,6 @@ type Config struct {
 	Logger  Logger
 }
 
-// FsURL returns a copy of the filesystem URL
-func (c *Config) FsURL() *url.URL {
-	u, err := url.Parse(c.Fs.URL)
-	if err != nil {
-		panic(fmt.Errorf("Malformed configuration fs url %s.", c.Fs.URL))
-	}
-	return u
-}
-
-// BuildRelFsURL build a new url from the filesystem URL by adding the
-// specified relative path.
-func (c *Config) BuildRelFsURL(rel string) *url.URL {
-	u := c.FsURL()
-	if u.Path == "" {
-		u.Path = "/"
-	}
-	u.Path = path.Join(u.Path, rel)
-	return u
-}
-
-// BuildAbsFsURL build a new url from the filesystem URL by changing
-// the path to the specified absolute one.
-func (c *Config) BuildAbsFsURL(abs string) *url.URL {
-	u := c.FsURL()
-	u.Path = path.Join("/", abs)
-	return u
-}
-
 const (
 	// Production mode
 	Production string = "production"
@@ -74,13 +48,62 @@ type Fs struct {
 
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
-	Host string
-	Port int
+	URL string
 }
 
 // Logger contains the configuration values of the logger system
 type Logger struct {
 	Level string
+}
+
+// FsURL returns a copy of the filesystem URL
+func FsURL() *url.URL {
+	u, err := url.Parse(config.Fs.URL)
+	if err != nil {
+		panic(fmt.Errorf("Malformed configuration fs url %s.", config.Fs.URL))
+	}
+	return u
+}
+
+// BuildRelFsURL build a new url from the filesystem URL by adding the
+// specified relative path.
+func BuildRelFsURL(rel string) *url.URL {
+	u := FsURL()
+	if u.Path == "" {
+		u.Path = "/"
+	}
+	u.Path = path.Join(u.Path, rel)
+	return u
+}
+
+// BuildAbsFsURL build a new url from the filesystem URL by changing
+// the path to the specified absolute one.
+func BuildAbsFsURL(abs string) *url.URL {
+	u := FsURL()
+	u.Path = path.Join("/", abs)
+	return u
+}
+
+// ServerAddr returns the address on which the stack is run
+func ServerAddr() string {
+	return config.Host + ":" + strconv.Itoa(config.Port)
+}
+
+// CouchURL returns the CouchDB string url
+func CouchURL() string {
+	return config.CouchDB.URL
+}
+
+// IsMode returns whether or not the mode is equal to the specified
+// one
+func IsMode(mode string) bool {
+	return config.Mode == mode
+}
+
+// IsDevRelease returns whether or not the binary is a development
+// release
+func IsDevRelease() bool {
+	return BuildMode == Development
 }
 
 // GetConfig returns the configured instance of Config
@@ -101,6 +124,14 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	couchHost := v.GetString("couchdb.host")
+	couchPort := strconv.Itoa(v.GetInt("couchdb.port"))
+	couchURL := "http://" + couchHost + ":" + couchPort + "/"
+	_, err = url.Parse(couchURL)
+	if err != nil {
+		return err
+	}
+
 	config = &Config{
 		Mode: mode,
 		Host: v.GetString("host"),
@@ -109,8 +140,7 @@ func UseViper(v *viper.Viper) error {
 			URL: fsURL,
 		},
 		CouchDB: CouchDB{
-			Host: v.GetString("couchdb.host"),
-			Port: v.GetInt("couchdb.port"),
+			URL: couchURL,
 		},
 		Logger: Logger{
 			Level: v.GetString("log.level"),
@@ -124,12 +154,15 @@ func UseViper(v *viper.Viper) error {
 // from a cozy.test.* file. It should receive the relative path to the
 // root directory of the repository where the the default
 // cozy.test.yaml is installed.
-func UseTestFile(rel string) {
+func UseTestFile() {
+	_, repo, _, _ := runtime.Caller(0)
+	repo = path.Join(repo, "../..")
+
 	v := viper.New()
 	v.SetConfigName("cozy.test")
-	v.AddConfigPath(path.Join(rel, ".cozy"))
+	v.AddConfigPath(path.Join(repo, ".cozy"))
 	v.AddConfigPath("$HOME/.cozy")
-	v.AddConfigPath(rel)
+	v.AddConfigPath(repo)
 
 	if err := v.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("Fatal error test config file: %s\n", err))

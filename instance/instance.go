@@ -77,8 +77,6 @@ func (i *Instance) createRootFolder() error {
 		return err
 	}
 
-	config := config.GetConfig()
-
 	rootFsURL := config.BuildAbsFsURL("/")
 	domainURL := config.BuildRelFsURL(i.Domain)
 
@@ -117,7 +115,7 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, ErrIllegalDomain
 	}
 
-	domainURL := config.GetConfig().BuildRelFsURL(domain)
+	domainURL := config.BuildRelFsURL(domain)
 	i := &Instance{
 		Domain:     domain,
 		StorageURL: domainURL.String(),
@@ -154,9 +152,10 @@ func (i *Instance) Create() error {
 
 // Get retrieves the instance for a request by its host.
 func Get(domain string) (*Instance, error) {
-	// TODO this is not fail-safe, to be modified before production
-	if domain == "" || strings.Contains(domain, "127.0.0.1") || strings.Contains(domain, "localhost") {
-		domain = "dev"
+	if config.IsDevRelease() {
+		if domain == "" || strings.Contains(domain, "127.0.0.1") || strings.Contains(domain, "localhost") {
+			domain = "dev"
+		}
 	}
 
 	var instances []*Instance
@@ -207,8 +206,8 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
-	rootFsURL := config.GetConfig().BuildAbsFsURL("/")
-	domainURL := config.GetConfig().BuildRelFsURL(i.Domain)
+	rootFsURL := config.BuildAbsFsURL("/")
+	domainURL := config.BuildRelFsURL(i.Domain)
 
 	rootFs, err := createFs(rootFsURL)
 	if err != nil {

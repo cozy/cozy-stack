@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"strconv"
-
-	"github.com/gin-gonic/gin"
-	"github.com/spf13/cobra"
-
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/web"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/cobra"
 )
 
 // serveCmd represents the serve command
@@ -25,8 +22,7 @@ Use the --port and --host flags to change the listening option.`,
 		router := getGin()
 		web.SetupRoutes(router)
 
-		addr := config.GetConfig().Host + ":" + strconv.Itoa(config.GetConfig().Port)
-		return router.Run(addr)
+		return router.Run(config.ServerAddr())
 	},
 }
 
@@ -35,7 +31,7 @@ func init() {
 }
 
 func getGin() *gin.Engine {
-	if config.GetConfig().Mode == config.Production {
+	if config.IsMode(config.Production) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 

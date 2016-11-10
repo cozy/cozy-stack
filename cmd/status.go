@@ -8,7 +8,6 @@ import (
 
 	"github.com/cozy/cozy-stack/config"
 	"github.com/spf13/cobra"
-	"strconv"
 )
 
 // statusCmd represents the status command
@@ -23,7 +22,7 @@ var statusCmd = &cobra.Command{
 
 		url := &url.URL{
 			Scheme: "http",
-			Host:   config.GetConfig().Host + ":" + strconv.Itoa(config.GetConfig().Port),
+			Host:   config.ServerAddr(),
 			Path:   "status",
 		}
 		resp, err := http.Get(url.String())

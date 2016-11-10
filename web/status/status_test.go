@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,6 +34,7 @@ func TestRoutes(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	config.UseTestFile()
 	gin.SetMode(gin.TestMode)
 	os.Exit(m.Run())
 }
