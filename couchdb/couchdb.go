@@ -122,17 +122,20 @@ func (j JSONDoc) Get(key string) interface{} {
 
 var couchdbClient = &http.Client{}
 
+func escapeCouchdbName(name string) string {
+	name = strings.Replace(name, ".", "-", -1)
+	name = strings.Replace(name, ":", "-", -1)
+	return strings.ToLower(name)
+}
+
 func makeDBName(db Database, doctype string) string {
 	// @TODO This should be better analysed
-	dbname := db.Prefix() + doctype
-	dbname = strings.Replace(dbname, ".", "-", -1)
-	dbname = strings.Replace(dbname, ":", "-", -1)
-	dbname = strings.ToLower(dbname)
+	dbname := escapeCouchdbName(db.Prefix() + doctype)
 	return url.QueryEscape(dbname)
 }
 
 func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
-	dbprefix = strings.Replace(dbprefix, ".", "-", -1)
+	dbprefix = escapeCouchdbName(dbprefix)
 	if !strings.HasPrefix(dbname, dbprefix) {
 		return false, ""
 	}
