@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -60,6 +62,11 @@ func (c *Config) BuildAbsFsURL(abs string) *url.URL {
 	return u
 }
 
+// CouchURL returns the CouchDB string url
+func (c *Config) CouchURL() string {
+	return c.CouchDB.URL
+}
+
 const (
 	// Production mode
 	Production string = "production"
@@ -74,8 +81,7 @@ type Fs struct {
 
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
-	Host string
-	Port int
+	URL string
 }
 
 // Logger contains the configuration values of the logger system
@@ -86,6 +92,11 @@ type Logger struct {
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
+}
+
+// IsDevRelease returns true is the binary is a development release
+func IsDevRelease() bool {
+	return BuildMode == Development
 }
 
 // UseViper sets the configured instance of Config
@@ -101,6 +112,14 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	couchHost := v.GetString("couchdb.host")
+	couchPort := strconv.Itoa(v.GetInt("couchdb.port"))
+	couchURL := "http://" + couchHost + ":" + couchPort + "/"
+	_, err = url.Parse(couchURL)
+	if err != nil {
+		return err
+	}
+
 	config = &Config{
 		Mode: mode,
 		Host: v.GetString("host"),
@@ -109,8 +128,7 @@ func UseViper(v *viper.Viper) error {
 			URL: fsURL,
 		},
 		CouchDB: CouchDB{
-			Host: v.GetString("couchdb.host"),
-			Port: v.GetInt("couchdb.port"),
+			URL: couchURL,
 		},
 		Logger: Logger{
 			Level: v.GetString("log.level"),
@@ -124,12 +142,15 @@ func UseViper(v *viper.Viper) error {
 // from a cozy.test.* file. It should receive the relative path to the
 // root directory of the repository where the the default
 // cozy.test.yaml is installed.
-func UseTestFile(rel string) {
+func UseTestFile() {
+	_, repo, _, _ := runtime.Caller(0)
+	repo = path.Join(repo, "../..")
+
 	v := viper.New()
 	v.SetConfigName("cozy.test")
-	v.AddConfigPath(path.Join(rel, ".cozy"))
+	v.AddConfigPath(path.Join(repo, ".cozy"))
 	v.AddConfigPath("$HOME/.cozy")
-	v.AddConfigPath(rel)
+	v.AddConfigPath(repo)
 
 	if err := v.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("Fatal error test config file: %s\n", err))

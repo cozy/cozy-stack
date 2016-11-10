@@ -15,6 +15,5 @@ func TestUseViper(t *testing.T) {
 	UseViper(cfg)
 
 	assert.Equal(t, Production, GetConfig().Mode)
-	assert.Equal(t, "db", GetConfig().CouchDB.Host)
-	assert.Equal(t, 1234, GetConfig().CouchDB.Port)
+	assert.Equal(t, "http://db:1234/", GetConfig().CouchURL())
 }

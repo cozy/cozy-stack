@@ -5,12 +5,10 @@ package status
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
 )
-
-// CouchDBURL is the URL where to check if CouchDB is up
-var CouchDBURL = "http://localhost:5984/"
 
 // Status responds with the status of the service
 //
@@ -22,7 +20,7 @@ func Status(c *gin.Context) {
 
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",
-		URL:      CouchDBURL,
+		URL:      config.GetConfig().CouchURL(),
 		Attempts: 3,
 	}
 	couchdb, err := checker.Check()

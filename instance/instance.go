@@ -154,9 +154,10 @@ func (i *Instance) Create() error {
 
 // Get retrieves the instance for a request by its host.
 func Get(domain string) (*Instance, error) {
-	// TODO this is not fail-safe, to be modified before production
-	if domain == "" || strings.Contains(domain, "127.0.0.1") || strings.Contains(domain, "localhost") {
-		domain = "dev"
+	if config.IsDevRelease() {
+		if domain == "" || strings.Contains(domain, "127.0.0.1") || strings.Contains(domain, "localhost") {
+			domain = "dev"
+		}
 	}
 
 	var instances []*Instance
