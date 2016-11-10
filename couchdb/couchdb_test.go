@@ -159,7 +159,6 @@ func TestQuery(t *testing.T) {
 		assert.Equal(t, doc4.ID(), out2[1].ID())
 	}
 
-	fmt.Println("results", out)
 }
 
 func TestMain(m *testing.M) {
