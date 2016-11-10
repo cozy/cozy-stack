@@ -25,11 +25,13 @@ package main
 import (
 	"os"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/cmd"
 )
 
 func main() {
 	if err := cmd.RootCmd.Execute(); err != nil {
+		log.Errorf(err.Error())
 		os.Exit(1)
 	}
 }

@@ -45,6 +45,8 @@ profiles you.`,
 	},
 	// Do not display usage on error
 	SilenceUsage: true,
+	// We have our own way to display error messages
+	SilenceErrors: true,
 }
 
 var cfgFile string
@@ -97,7 +99,7 @@ func Configure() error {
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
-			fmt.Fprintf(os.Stderr, "Error: While reading cozy-stack configurations from %s\n", viper.ConfigFileUsed())
+			log.Errorf("Error while reading cozy-stack configurations from %s", viper.ConfigFileUsed())
 			return err
 		}
 
@@ -107,7 +109,7 @@ func Configure() error {
 	}
 
 	if viper.ConfigFileUsed() != "" {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Debugf("Using config file: %s", viper.ConfigFileUsed())
 	}
 
 	if err := config.UseViper(viper.GetViper()); err != nil {
