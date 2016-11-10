@@ -50,7 +50,7 @@ func TestGetWrongInstance(t *testing.T) {
 
 func TestGetCorrectInstance(t *testing.T) {
 	instance, err := Get("test.cozycloud.cc")
-	if assert.NoError(t, err, "An error is expected") {
+	if assert.NoError(t, err) {
 		assert.NotNil(t, instance)
 		assert.Equal(t, instance.Domain, "test.cozycloud.cc")
 	}

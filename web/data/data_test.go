@@ -29,27 +29,10 @@ const ExpectedDBName = "example-com%2Fio-cozy-events"
 
 var testInstance = &instance.Instance{Domain: "example-com"}
 
-var DOCUMENT = []byte(`{
-	"test": "testvalue"
-}`)
-
 var ts *httptest.Server
 
 // @TODO this should be moved to our couchdb package or to
 // some test helpers files.
-
-func couchReq(method, path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, config.CouchURL()+path, body)
-	if err != nil {
-		return nil, err
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		return res, err
-	}
-	defer res.Body.Close()
-	return res, nil
-}
 
 type stackUpdateResponse struct {
 	ID      string          `json:"id"`
@@ -122,21 +105,26 @@ func TestMain(m *testing.M) {
 
 	gin.SetMode(gin.TestMode)
 
+	instance.Destroy(Host)
+
 	inst, err := instance.Create(Host, "en", nil)
 	if err != nil {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
 	}
-	instance.Create()
 
 	router := gin.New()
 	router.Use(middlewares.ErrorHandler())
 	router.Use(injectInstance(inst))
 	Routes(router.Group("/data"))
 	ts = httptest.NewServer(router)
-	couchReq("DELETE", ExpectedDBName, nil)
-	couchReq("PUT", ExpectedDBName, nil)
-	couchReq("PUT", ExpectedDBName+"/"+ID, bytes.NewReader(DOCUMENT))
+
+	couchdb.ResetDB(testInstance, Type)
+	doc := couchdb.JSONDoc{Type: Type, M: map[string]interface{}{
+		"_id":  ID,
+		"test": "testvalue",
+	}}
+	couchdb.CreateNamedDoc(testInstance, &doc)
 
 	res := m.Run()
 

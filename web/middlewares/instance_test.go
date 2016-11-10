@@ -13,16 +13,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetStorageProvider(t *testing.T) {
-	instance := instance.Instance{
-		Domain:     "test.cozycloud.cc",
-		StorageURL: "mem://test",
-	}
-	instance.Create()
+func TestFS(t *testing.T) {
+	instance, err := instance.Create("test", "en", nil)
+	assert.NoError(t, err)
 	content := []byte{'b', 'a', 'r'}
 	storage := instance.FS()
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-	err := afero.WriteFile(storage, "foo", content, 0644)
+	err = afero.WriteFile(storage, "foo", content, 0644)
 	assert.NoError(t, err)
 	storage = instance.FS()
 	assert.NoError(t, err)
@@ -53,6 +50,9 @@ func TestSetInstance(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	instance.Destroy("test")
 	gin.SetMode(gin.TestMode)
-	os.Exit(m.Run())
+	res := m.Run()
+	instance.Destroy("test")
+	os.Exit(res)
 }

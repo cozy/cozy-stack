@@ -88,6 +88,7 @@ func TestMain(m *testing.M) {
 	}
 
 	vfsC.prefix = "dev/"
+	vfsC.fs = afero.NewMemMapFs()
 
 	err = couchdb.ResetDB(vfsC, FsDocType)
 	if err != nil {
@@ -103,8 +104,7 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	vfsC.fs = afero.NewMemMapFs()
-	err = CreateRootDirectory(vfsC)
+	CreateRootDirDoc(vfsC)
 
 	if err != nil {
 		fmt.Println(err)
