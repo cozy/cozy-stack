@@ -19,11 +19,7 @@ func TestErrors(t *testing.T) {
 
 const TestDoctype = "io.cozy.testobject"
 
-type TestDB struct{ prefix string }
-
-func (d *TestDB) Prefix() string { return d.prefix }
-
-var TestPrefix = &TestDB{"dev/"}
+var TestPrefix = SimpleDatabasePrefix("dev")
 
 type testDoc struct {
 	TestID  string `json:"_id,omitempty"`
@@ -164,7 +160,6 @@ func TestQuery(t *testing.T) {
 		assert.Equal(t, doc4.ID(), out2[1].ID())
 	}
 
-	fmt.Println("results", out)
 }
 
 func TestMain(m *testing.M) {

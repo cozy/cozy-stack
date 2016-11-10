@@ -32,6 +32,20 @@ type Database interface {
 	Prefix() string
 }
 
+// SimpleDatabase implements the Database interface
+type simpleDB struct{ prefix string }
+
+// Prefix implements the Database interface on simpleDB
+func (sdb *simpleDB) Prefix() string { return sdb.prefix + "/" }
+
+// SimpleDatabasePrefix returns a Database from a prefix, useful for test
+func SimpleDatabasePrefix(prefix string) Database {
+	return &simpleDB{prefix}
+}
+
+// GlobalDB is the prefix used for stack-scoped db
+var GlobalDB = SimpleDatabasePrefix("global")
+
 // JSONDoc is a map representing a simple json object that implements
 // the Doc interface.
 type JSONDoc struct {
