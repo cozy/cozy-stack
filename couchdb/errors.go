@@ -135,6 +135,14 @@ func newIOReadError(originalError error) error {
 	}
 }
 
+func unoptimalError() error {
+	return &Error{
+		StatusCode: http.StatusBadRequest,
+		Name:       "no_index",
+		Reason:     "no matching index found, create an index",
+	}
+}
+
 func newCouchdbError(statusCode int, couchdbJSON []byte) error {
 	var err = &Error{
 		CouchdbJSON: couchdbJSON,

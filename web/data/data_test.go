@@ -27,7 +27,7 @@ const Type = "io.cozy.events"
 const ID = "4521C325F6478E45"
 const ExpectedDBName = "example-com%2Fio-cozy-events"
 
-var testInstance = &instance.Instance{Domain: "example-com"}
+var testInstance = &instance.Instance{Domain: "example.com"}
 
 var ts *httptest.Server
 
@@ -73,7 +73,7 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 		}
 		return out, res, err
 	}
-
+	fmt.Println("[result]", string(body))
 	err = json.Unmarshal(body, &out)
 	if err != nil {
 		return
@@ -146,6 +146,9 @@ func TestSuccessGet(t *testing.T) {
 }
 
 func TestWrongDoctype(t *testing.T) {
+
+	couchdb.DeleteDB(testInstance, "nottype")
+
 	req, _ := http.NewRequest("GET", ts.URL+"/data/nottype/"+ID, nil)
 	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req, nil)
@@ -426,4 +429,117 @@ func TestFailDeleteIfNoRev(t *testing.T) {
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+}
+
+type M map[string]interface{}
+type S []interface{}
+type indexCreationResponse struct {
+	Result string `json:"result"`
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+}
+
+func TestDefineIndex(t *testing.T) {
+	var def map[string]interface{}
+	def = M{"index": M{"fields": S{"foo"}}}
+	var url = ts.URL + "/data/" + Type + "/_index"
+	req, _ := http.NewRequest("POST", url, jsonReader(&def))
+	req.Header.Add("Host", Host)
+	var out indexCreationResponse
+	_, res, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "first update should work")
+	assert.Empty(t, out.Error, "should have no error")
+	assert.Empty(t, out.Reason, "should have no error")
+	assert.Equal(t, "created", out.Result, "should have created result")
+	assert.NotEmpty(t, out.Name, "should have a name")
+	assert.NotEmpty(t, out.ID, "should have an design doc ID")
+}
+
+func TestReDefineIndex(t *testing.T) {
+	var def map[string]interface{}
+	def = M{"index": M{"fields": S{"foo"}}}
+	var url = ts.URL + "/data/" + Type + "/_index"
+	req, _ := http.NewRequest("POST", url, jsonReader(&def))
+	req.Header.Add("Host", Host)
+	var out indexCreationResponse
+	_, res, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	assert.Empty(t, out.Error, "should have no error")
+	assert.Empty(t, out.Reason, "should have no error")
+	assert.Equal(t, "exists", out.Result, "should have exists result")
+	assert.NotEmpty(t, out.Name, "should have a name")
+	assert.NotEmpty(t, out.ID, "should have an design doc ID")
+}
+
+func TestDefineIndexUnexistingDoctype(t *testing.T) {
+
+	couchdb.DeleteDB(testInstance, "nottype")
+
+	var def map[string]interface{}
+	def = M{"index": M{"fields": S{"foo"}}}
+	var url = ts.URL + "/data/nottype/_index"
+	req, _ := http.NewRequest("POST", url, jsonReader(&def))
+	req.Header.Add("Host", Host)
+	var out indexCreationResponse
+	_, res, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	assert.Empty(t, out.Error, "should have no error")
+	assert.Empty(t, out.Reason, "should have no error")
+	assert.Equal(t, "created", out.Result, "should have created result")
+	assert.NotEmpty(t, out.Name, "should have a name")
+	assert.NotEmpty(t, out.ID, "should have an design doc ID")
+}
+
+func TestFindDocuments(t *testing.T) {
+
+	couchdb.ResetDB(testInstance, Type)
+
+	_ = getDocForTest()
+	_ = getDocForTest()
+	_ = getDocForTest()
+
+	var def map[string]interface{}
+	def = M{"index": M{"fields": S{"test"}}}
+	var url = ts.URL + "/data/" + Type + "/_index"
+	req, _ := http.NewRequest("POST", url, jsonReader(&def))
+	req.Header.Add("Host", Host)
+	var out indexCreationResponse
+	_, _, err := doRequest(req, &out)
+	assert.NoError(t, err)
+	assert.Empty(t, out.Error, "should have no error")
+
+	var query map[string]interface{}
+	query = M{"selector": M{"test": "value"}}
+	var url2 = ts.URL + "/data/" + Type + "/_find"
+	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
+	req.Header.Add("Host", Host)
+	var out2 struct {
+		Docs []couchdb.JSONDoc `json:"docs"`
+	}
+	_, res, err := doRequest(req, &out2)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	assert.Len(t, out2.Docs, 3, "should have found 3 docs")
+}
+
+func TestFindDocumentsWithoutIndex(t *testing.T) {
+	var query map[string]interface{}
+	query = M{"selector": M{"no-index-for-this-field": "value"}}
+	var url2 = ts.URL + "/data/" + Type + "/_find"
+	req, _ := http.NewRequest("POST", url2, jsonReader(&query))
+	req.Header.Add("Host", Host)
+	var out2 struct {
+		Error  string `json:"error"`
+		Reason string `json:"reason"`
+	}
+	_, res, err := doRequest(req, &out2)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	assert.Contains(t, out2.Error, "no_index")
+	assert.Contains(t, out2.Reason, "no matching index")
 }

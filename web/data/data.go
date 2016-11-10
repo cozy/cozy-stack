@@ -152,11 +152,57 @@ func deleteDoc(c *gin.Context) {
 
 }
 
+func defineIndex(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+	doctype := c.MustGet("doctype").(string)
+	var definitionRequest map[string]interface{}
+
+	if err := binding.JSON.Bind(c.Request, &definitionRequest); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	result, err := couchdb.DefineIndexRaw(instance, doctype, &definitionRequest)
+	if couchdb.IsNoDatabaseError(err) {
+		if err = couchdb.CreateDB(instance, doctype); err == nil {
+			result, err = couchdb.DefineIndexRaw(instance, doctype, &definitionRequest)
+		}
+	}
+	if err != nil {
+		c.AbortWithError(HTTPStatus(err), err)
+		return
+	}
+
+	c.JSON(200, result)
+}
+
+func findDocuments(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+	doctype := c.MustGet("doctype").(string)
+	var findRequest map[string]interface{}
+
+	if err := binding.JSON.Bind(c.Request, &findRequest); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	var results []couchdb.JSONDoc
+	err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
+	if err != nil {
+		c.AbortWithError(HTTPStatus(err), err)
+		return
+	}
+
+	c.JSON(200, gin.H{"docs": results})
+
+}
+
 // Routes sets the routing for the status service
 func Routes(router *gin.RouterGroup) {
 	router.GET("/:doctype/:docid", validDoctype, getDoc)
 	router.PUT("/:doctype/:docid", validDoctype, updateDoc)
 	router.DELETE("/:doctype/:docid", validDoctype, deleteDoc)
 	router.POST("/:doctype/", validDoctype, createDoc)
+	router.POST("/:doctype/_index", validDoctype, defineIndex)
+	router.POST("/:doctype/_find", validDoctype, findDocuments)
 	// router.DELETE("/:doctype/:docid", DeleteDoc)
 }

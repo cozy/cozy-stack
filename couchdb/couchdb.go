@@ -397,14 +397,25 @@ func CreateDoc(db Database, doc Doc) (err error) {
 // DefineIndex define the index on the doctype database
 // see query package on how to define an index
 func DefineIndex(db Database, doctype string, index mango.Index) error {
+	_, err := DefineIndexRaw(db, doctype, &index)
+	return err
+}
+
+// DefineIndexRaw defines a index
+func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreationResponse, error) {
 	url := makeDBName(db, doctype) + "/_index"
-	var response indexCreationResponse
-	return makeRequest("POST", url, &index, &response)
+	var response IndexCreationResponse
+	return &response, makeRequest("POST", url, &index, &response)
 }
 
 // FindDocs returns all documents matching the passed FindRequest
 // documents will be unmarshalled in the provided results slice.
 func FindDocs(db Database, doctype string, req *FindRequest, results interface{}) error {
+	return FindDocsRaw(db, doctype, req, results)
+}
+
+// FindDocsRaw find documents
+func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) error {
 	url := makeDBName(db, doctype) + "/_find"
 	// prepare a structure to receive the results
 	var response findResponse
@@ -412,12 +423,18 @@ func FindDocs(db Database, doctype string, req *FindRequest, results interface{}
 	if err != nil {
 		return err
 	}
+	if response.Warning != "" {
+		// Developer should not rely on unoptimized index.
+		return unoptimalError()
+	}
 	return json.Unmarshal(response.Docs, results)
 }
 
-type indexCreationResponse struct {
+// IndexCreationResponse is the response from couchdb when we create an Index
+type IndexCreationResponse struct {
 	Result string `json:"result"`
 	Error  string `json:"error"`
+	Reason string `json:"reason"`
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 }
@@ -429,7 +446,8 @@ type updateResponse struct {
 }
 
 type findResponse struct {
-	Docs json.RawMessage `json:"docs"`
+	Warning string          `json:"warning"`
+	Docs    json.RawMessage `json:"docs"`
 }
 
 // A FindRequest is a structure containin
