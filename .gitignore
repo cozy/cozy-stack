@@ -3,3 +3,4 @@
 swagger-ui
 /.cozy
 *.log
+local.env
