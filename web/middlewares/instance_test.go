@@ -14,7 +14,7 @@ import (
 )
 
 func TestFS(t *testing.T) {
-	instance, err := instance.Create("test", "en", nil)
+	instance, err := instance.Create("test-instance-web", "en", nil)
 	assert.NoError(t, err)
 	content := []byte{'b', 'a', 'r'}
 	storage := instance.FS()
@@ -50,9 +50,9 @@ func TestSetInstance(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	instance.Destroy("test")
+	instance.Destroy("test-instance-web")
 	gin.SetMode(gin.TestMode)
 	res := m.Run()
-	instance.Destroy("test")
+	instance.Destroy("test-instance-web")
 	os.Exit(res)
 }

@@ -874,8 +874,8 @@ func TestMain(m *testing.M) {
 
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
-	instance.Destroy("test")
-	testInstance, err = instance.Create("test", "en", nil)
+	instance.Destroy("test-files")
+	testInstance, err = instance.Create("test-files", "en", nil)
 	if err != nil {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
@@ -889,7 +889,7 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 	ts.Close()
-	instance.Destroy("test")
+	instance.Destroy("test-files")
 
 	os.Exit(res)
 }
