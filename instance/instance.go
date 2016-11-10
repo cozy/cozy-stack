@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/afero"
 )
 
-const globalDBPrefix = "global/"
-const instanceType = "instances"
+// InstanceType : The couchdb type for an Instance
+const InstanceType = "instances"
 
 var (
 	// ErrNotFound is used when the seeked instance was not found
@@ -37,7 +37,7 @@ type Instance struct {
 }
 
 // DocType implements couchdb.Doc
-func (i *Instance) DocType() string { return instanceType }
+func (i *Instance) DocType() string { return InstanceType }
 
 // ID implements couchdb.Doc
 func (i *Instance) ID() string { return i.DocID }
@@ -51,8 +51,9 @@ func (i *Instance) Rev() string { return i.DocRev }
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
 
-// ensure Instance implements couchdb.Doc
+// ensure Instance implements couchdb.Doc & vfs.Context
 var _ couchdb.Doc = (*Instance)(nil)
+var _ vfs.Context = (*Instance)(nil)
 
 // CreateInCouchdb create the instance doc in the global database
 func (i *Instance) createInCouchdb() (err error) {
@@ -62,21 +63,16 @@ func (i *Instance) createInCouchdb() (err error) {
 	if err != nil && err != ErrNotFound {
 		return err
 	}
-	err = couchdb.CreateDoc(globalDBPrefix, i)
+	err = couchdb.CreateDoc(couchdb.GlobalDB, i)
 	if err != nil {
 		return err
 	}
 	byDomain := mango.IndexOnFields("domain")
-	return couchdb.DefineIndex(globalDBPrefix, instanceType, byDomain)
+	return couchdb.DefineIndex(couchdb.GlobalDB, InstanceType, byDomain)
 }
 
 // createRootFolder creates the root folder for this instance
 func (i *Instance) createRootFolder() error {
-	vfsC, err := i.GetVFSContext()
-	if err != nil {
-		return err
-	}
-
 	rootFsURL := config.BuildAbsFsURL("/")
 	domainURL := config.BuildRelFsURL(i.Domain)
 
@@ -89,7 +85,7 @@ func (i *Instance) createRootFolder() error {
 		return err
 	}
 
-	if err = vfs.CreateRootDirDoc(vfsC); err != nil {
+	if err = vfs.CreateRootDirDoc(i); err != nil {
 		rootFs.Remove(domainURL.Path)
 		return err
 	}
@@ -99,9 +95,8 @@ func (i *Instance) createRootFolder() error {
 
 // createFSIndexes creates the index needed by VFS
 func (i *Instance) createFSIndexes() error {
-	prefix := i.GetDatabasePrefix()
 	for _, index := range vfs.Indexes {
-		err := couchdb.DefineIndex(prefix, vfs.FsDocType, index)
+		err := couchdb.DefineIndex(i, vfs.FsDocType, index)
 		if err != nil {
 			return err
 		}
@@ -121,33 +116,42 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		StorageURL: domainURL.String(),
 	}
 
-	err := i.Create()
+	var err error
+
+	err = i.makeStorageFs()
 	if err != nil {
 		return nil, err
 	}
 
-	return i, nil
-}
-
-// Create performs the necessary setups for this instance to be usable
-func (i *Instance) Create() error {
-	if err := i.createInCouchdb(); err != nil {
-		return err
+	err = i.createInCouchdb()
+	if err != nil {
+		return nil, err
 	}
 
-	if err := i.createRootFolder(); err != nil {
-		return err
+	err = i.createRootFolder()
+	if err != nil {
+		return nil, err
 	}
 
-	if err := i.createFSIndexes(); err != nil {
-		return err
+	err = i.createFSIndexes()
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO atomicity with defer
 	// TODO figure out what to do with locale
 	// TODO install apps
 
-	return nil
+	return i, nil
+}
+
+func (i *Instance) makeStorageFs() error {
+	u, err := url.Parse(i.StorageURL)
+	if err != nil {
+		return err
+	}
+	i.storage, err = createFs(u)
+	return err
 }
 
 // Get retrieves the instance for a request by its host.
@@ -163,7 +167,7 @@ func Get(domain string) (*Instance, error) {
 		Selector: mango.Equal("domain", domain),
 		Limit:    1,
 	}
-	err := couchdb.FindDocs(globalDBPrefix, instanceType, req, &instances)
+	err := couchdb.FindDocs(couchdb.GlobalDB, InstanceType, req, &instances)
 	if couchdb.IsNoDatabaseError(err) {
 		return nil, ErrNotFound
 	}
@@ -173,6 +177,11 @@ func Get(domain string) (*Instance, error) {
 
 	if len(instances) == 0 {
 		return nil, ErrNotFound
+	}
+
+	err = instances[0].makeStorageFs()
+	if err != nil {
+		return nil, err
 	}
 
 	return instances[0], nil
@@ -186,7 +195,7 @@ func List() ([]*Instance, error) {
 	var docs []*Instance
 	sel := mango.Empty()
 	req := &couchdb.FindRequest{Selector: sel, Limit: 100}
-	err := couchdb.FindDocs(globalDBPrefix, instanceType, req, &docs)
+	err := couchdb.FindDocs(couchdb.GlobalDB, InstanceType, req, &docs)
 	return docs, err
 }
 
@@ -198,11 +207,11 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
-	if err = couchdb.DeleteDoc(globalDBPrefix, i); err != nil {
+	if err = couchdb.DeleteDoc(couchdb.GlobalDB, i); err != nil {
 		return nil, err
 	}
 
-	if err = couchdb.DeleteAllDBs(i.Domain + "/"); err != nil {
+	if err = couchdb.DeleteAllDBs(i); err != nil {
 		return nil, err
 	}
 
@@ -221,34 +230,21 @@ func Destroy(domain string) (*Instance, error) {
 	return i, nil
 }
 
-// GetStorageProvider returns the afero storage provider where the binaries for
+// FS returns the afero storage provider where the binaries for
 // the current instance are persisted
-func (i *Instance) GetStorageProvider() (afero.Fs, error) {
-	if i.storage != nil {
-		return i.storage, nil
+func (i *Instance) FS() afero.Fs {
+	if i.storage == nil {
+		if err := i.makeStorageFs(); err != nil {
+			panic(err)
+		}
 	}
-	storageURL, err := url.Parse(i.StorageURL)
-	if err != nil {
-		return nil, err
-	}
-	i.storage, err = createFs(storageURL)
-	return i.storage, err
+	return i.storage
 }
 
-// GetDatabasePrefix returns the prefix to use in database naming for the
+// Prefix returns the prefix to use in database naming for the
 // current instance
-func (i *Instance) GetDatabasePrefix() string {
+func (i *Instance) Prefix() string {
 	return i.Domain + "/"
-}
-
-// GetVFSContext returns a vfs.Context for this Instance
-func (i *Instance) GetVFSContext() (c *vfs.Context, err error) {
-	dbprefix := i.GetDatabasePrefix()
-	fs, err := i.GetStorageProvider()
-	if err != nil {
-		return nil, err
-	}
-	return vfs.NewContext(fs, dbprefix), nil
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {

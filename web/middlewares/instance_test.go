@@ -13,18 +13,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetStorageProvider(t *testing.T) {
-	instance := instance.Instance{
-		Domain:     "test.cozycloud.cc",
-		StorageURL: "mem://test",
-	}
-	content := []byte{'b', 'a', 'r'}
-	storage, err := instance.GetStorageProvider()
+func TestFS(t *testing.T) {
+	instance, err := instance.Create("test", "en", nil)
 	assert.NoError(t, err)
+	content := []byte{'b', 'a', 'r'}
+	storage := instance.FS()
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
 	err = afero.WriteFile(storage, "foo", content, 0644)
 	assert.NoError(t, err)
-	storage, err = instance.GetStorageProvider()
+	storage = instance.FS()
 	assert.NoError(t, err)
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
 	buf, err := afero.ReadFile(storage, "foo")
@@ -40,8 +37,7 @@ func TestSetInstance(t *testing.T) {
 		assert.True(t, exists, "the instance should have been set in the gin context")
 		instance := instanceInterface.(*instance.Instance)
 		assert.Equal(t, "dev", instance.Domain, "the domain should have been set in the instance")
-		storage, err := instance.GetStorageProvider()
-		assert.NoError(t, err)
+		storage := instance.FS()
 		assert.NotNil(t, storage, "the instance should have a storage provider")
 		c.String(http.StatusOK, "OK")
 	})
@@ -54,6 +50,9 @@ func TestSetInstance(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	instance.Destroy("test")
 	gin.SetMode(gin.TestMode)
-	os.Exit(m.Run())
+	res := m.Run()
+	instance.Destroy("test")
+	os.Exit(res)
 }

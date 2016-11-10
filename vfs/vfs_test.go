@@ -16,7 +16,17 @@ import (
 
 const TestPrefix = "dev/"
 
-var vfsC *Context
+const CouchDBURL = "http://localhost:5984/"
+
+type TestContext struct {
+	prefix string
+	fs     afero.Fs
+}
+
+func (c TestContext) Prefix() string { return c.prefix }
+func (c TestContext) FS() afero.Fs   { return c.fs }
+
+var vfsC TestContext
 
 func TestGetFileDocFromPathAtRoot(t *testing.T) {
 	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", false, []string{})
@@ -76,24 +86,26 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	err = couchdb.ResetDB(TestPrefix, FsDocType)
+
+	vfsC.prefix = "dev/"
+	vfsC.fs = afero.NewMemMapFs()
+
+	err = couchdb.ResetDB(vfsC, FsDocType)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	for _, index := range Indexes {
-		err = couchdb.DefineIndex(TestPrefix, FsDocType, index)
+		err = couchdb.DefineIndex(vfsC, FsDocType, index)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
 
-	fs := afero.NewMemMapFs()
+	CreateRootDirDoc(vfsC)
 
-	vfsC = NewContext(fs, TestPrefix)
-	err = CreateRootDirDoc(vfsC)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

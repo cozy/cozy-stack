@@ -35,16 +35,9 @@ func wrapAppsError(err error) *jsonapi.Error {
 // the application with the given Source.
 func InstallHandler(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
-	vfsC, err := instance.GetVFSContext()
-	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
-		return
-	}
-
-	db := instance.GetDatabasePrefix()
 	src := c.Query("Source")
 	slug := c.Param("slug")
-	inst, err := apps.NewInstaller(vfsC, db, slug, src)
+	inst, err := apps.NewInstaller(instance, instance, slug, src)
 	if err != nil {
 		jsonapi.AbortWithError(c, wrapAppsError(err))
 		return
@@ -76,7 +69,7 @@ func InstallHandler(c *gin.Context) {
 // installed applications.
 func ListHandler(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
-	docs, err := apps.List(instance.GetDatabasePrefix())
+	docs, err := apps.List(instance)
 	if err != nil {
 		jsonapi.AbortWithError(c, wrapAppsError(err))
 		return

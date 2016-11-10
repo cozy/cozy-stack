@@ -15,16 +15,12 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
-	"github.com/cozy/cozy-stack/vfs"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
-
-const TestPrefix = "test/"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
@@ -221,7 +217,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 	res, _ := createDir(t, "/files/?Name=coucou&Type=io.cozy.folders")
 	assert.Equal(t, 201, res.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/coucou")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -241,7 +237,7 @@ func TestCreateDirWithParentSuccess(t *testing.T) {
 	res2, _ := createDir(t, "/files/"+parentID+"?Name=child&Type=io.cozy.folders")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/dirparent/child")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -302,7 +298,7 @@ func TestUploadBadHash(t *testing.T) {
 	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
 	assert.Equal(t, 412, res.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	_, err := afero.ReadFile(storage, "/badhash")
 	assert.Error(t, err)
 }
@@ -312,7 +308,7 @@ func TestUploadAtRootSuccess(t *testing.T) {
 	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	buf, err := afero.ReadFile(storage, "/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
@@ -365,7 +361,7 @@ func TestUploadWithParentSuccess(t *testing.T) {
 	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	buf, err := afero.ReadFile(storage, "/fileparent/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
@@ -488,7 +484,7 @@ func TestModifyMetadataDirMove(t *testing.T) {
 	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs1, nil)
 	assert.Equal(t, 200, res3.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/dirmodmemoveinme/renamed")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -535,7 +531,7 @@ func TestModifyMetadataDirMoveWithRel(t *testing.T) {
 	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, nil, parent)
 	assert.Equal(t, 200, res3.StatusCode)
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	exists, err := afero.DirExists(storage, "/dirmodmemoveinmewithrel/dirmodmewithrel")
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -602,13 +598,12 @@ func TestModifyContentSuccess(t *testing.T) {
 	var buf []byte
 	var fileInfo os.FileInfo
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=willbemodified&Executable=true", "text/plain", "foo", "")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	buf, err = afero.ReadFile(storage, "/willbemodified")
 	assert.NoError(t, err)
-
 	assert.Equal(t, "foo", string(buf))
 	fileInfo, err = storage.Stat("/willbemodified")
 	assert.NoError(t, err)
@@ -715,19 +710,19 @@ func TestModifyContentConcurrently(t *testing.T) {
 	for i := 0; i < n; i++ {
 		select {
 		case res := <-errs:
-			assert.True(t, res.StatusCode == 409 || res.StatusCode == 503)
+			assert.True(t, res.StatusCode == 409 || res.StatusCode == 503, "status code is %v and not 409 or 503", res.StatusCode)
 		case res := <-done:
 			successes = append(successes, res)
 		}
 	}
 
-	assert.True(t, len(successes) >= 1)
+	assert.True(t, len(successes) >= 1, "there is at least one success")
 
 	for i, s := range successes {
 		assert.True(t, strings.HasPrefix(s.rev, strconv.Itoa(i+2)+"-"))
 	}
 
-	storage, _ := testInstance.GetStorageProvider()
+	storage := testInstance.FS()
 	buf, err := afero.ReadFile(storage, "/willbemodifiedconcurrently")
 	assert.NoError(t, err)
 
@@ -866,20 +861,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.ResetDB(TestPrefix, vfs.FsDocType)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	for _, index := range vfs.Indexes {
-		err = couchdb.DefineIndex(TestPrefix, vfs.FsDocType, index)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
 		fmt.Println("Could not create temporary directory.")
@@ -893,6 +874,7 @@ func TestMain(m *testing.M) {
 
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
+	instance.Destroy("test")
 	testInstance, err = instance.Create("test", "en", nil)
 	if err != nil {
 		fmt.Println("Could not create test instance.", err)
@@ -901,27 +883,7 @@ func TestMain(m *testing.M) {
 
 	router := gin.New()
 	router.Use(injectInstance(testInstance))
-	router.POST("/files/", CreationHandler)
-	router.POST("/files/:folder-id", CreationHandler)
-	router.PATCH("/files/:file-id", ModificationHandler)
-	router.PUT("/files/:file-id", OverwriteFileContentHandler)
-	router.HEAD("/files/download/:file-id", func(c *gin.Context) {
-		ReadFileContentHandler(c, c.Param("file-id"))
-	})
-	router.GET("/files/:dl-meta-or-file-id/*file-id", func(c *gin.Context) {
-		fileID := c.Param("file-id")[1:]
-		ReadFileContentHandler(c, fileID)
-	})
-	router.GET("/files/:dl-meta-or-file-id", func(c *gin.Context) {
-		dlMeta := c.Param("dl-meta-or-file-id")
-		if dlMeta == "download" {
-			ReadFileContentHandler(c, "")
-		} else if dlMeta == "metadata" {
-			ReadMetadataFromPathHandler(c)
-		} else {
-			ReadMetadataFromIDHandler(c, dlMeta)
-		}
-	})
+	Routes(router.Group("/files"))
 
 	ts = httptest.NewServer(router)
 

@@ -50,7 +50,7 @@ func TestGetWrongInstance(t *testing.T) {
 
 func TestGetCorrectInstance(t *testing.T) {
 	instance, err := Get("test.cozycloud.cc")
-	if assert.NoError(t, err, "An error is expected") {
+	if assert.NoError(t, err) {
 		assert.NotNil(t, instance)
 		assert.Equal(t, instance.Domain, "test.cozycloud.cc")
 	}
@@ -58,7 +58,7 @@ func TestGetCorrectInstance(t *testing.T) {
 
 func TestInstanceHasRootFolder(t *testing.T) {
 	var root vfs.DirDoc
-	prefix := getDBPrefix(t, "test.cozycloud.cc")
+	prefix := getDB(t, "test.cozycloud.cc")
 	err := couchdb.GetDoc(prefix, vfs.FsDocType, vfs.RootFolderID, &root)
 	if assert.NoError(t, err) {
 		assert.Equal(t, root.Fullpath, "/")
@@ -67,7 +67,7 @@ func TestInstanceHasRootFolder(t *testing.T) {
 
 func TestInstanceHasIndexes(t *testing.T) {
 	var results []*vfs.DirDoc
-	prefix := getDBPrefix(t, "test.cozycloud.cc")
+	prefix := getDB(t, "test.cozycloud.cc")
 	req := &couchdb.FindRequest{Selector: mango.Equal("path", "/")}
 	err := couchdb.FindDocs(prefix, vfs.FsDocType, req, &results)
 	assert.NoError(t, err)
@@ -114,7 +114,6 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-
 	Destroy("test.cozycloud.cc")
 	Destroy("test.cozycloud.cc.duplicate")
 	os.RemoveAll("/usr/local/var/cozy2/")
@@ -122,10 +121,10 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func getDBPrefix(t *testing.T, domain string) string {
+func getDB(t *testing.T, domain string) couchdb.Database {
 	instance, err := Get(domain)
 	if !assert.NoError(t, err, "Should get instance %v", domain) {
 		t.FailNow()
 	}
-	return instance.GetDatabasePrefix()
+	return instance
 }
