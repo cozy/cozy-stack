@@ -866,9 +866,6 @@ func TestMain(m *testing.M) {
 		fmt.Println("Could not create temporary directory.")
 		os.Exit(1)
 	}
-	defer func() {
-		os.RemoveAll(tempdir)
-	}()
 
 	gin.SetMode(gin.TestMode)
 
@@ -890,6 +887,7 @@ func TestMain(m *testing.M) {
 	res := m.Run()
 	ts.Close()
 	instance.Destroy("test-files")
+	os.RemoveAll(tempdir)
 
 	os.Exit(res)
 }
