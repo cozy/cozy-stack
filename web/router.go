@@ -35,11 +35,9 @@ import (
 // SetupRoutes sets the routing for HTTP endpoints to the Go methods
 func SetupRoutes(router *gin.Engine) {
 	router.Use(middlewares.ErrorHandler())
+	apps.Routes(router.Group("/apps", middlewares.SetInstance()))
+	data.Routes(router.Group("/data", middlewares.SetInstance()))
+	files.Routes(router.Group("/files", middlewares.SetInstance()))
 	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))
-
-	router.Use(middlewares.SetInstance())
-	apps.Routes(router.Group("/apps"))
-	data.Routes(router.Group("/data"))
-	files.Routes(router.Group("/files"))
 }
