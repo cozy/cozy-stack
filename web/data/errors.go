@@ -28,3 +28,5 @@ func HTTPStatus(err error) (code int) {
 func invalidDoctypeErr(doctype string) error {
 	return fmt.Errorf("Invalid doctype '%s'", doctype)
 }
+
+var errVfsNotData = fmt.Errorf("Type io.cozy.files belongs to the vfs and cannot be manipulated from the /data endpoint.")
