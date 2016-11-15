@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
@@ -104,6 +105,11 @@ func (i *Instance) createFSIndexes() error {
 	return nil
 }
 
+// createAppsDB creates the database needed for Apps
+func (i *Instance) createAppsDB() error {
+	return couchdb.CreateDB(i, apps.ManifestDocType)
+}
+
 // Create build an instance and .Create it
 func Create(domain string, locale string, apps []string) (*Instance, error) {
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
@@ -134,6 +140,11 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 	}
 
 	err = i.createFSIndexes()
+	if err != nil {
+		return nil, err
+	}
+
+	err = i.createAppsDB()
 	if err != nil {
 		return nil, err
 	}
@@ -193,10 +204,12 @@ func Get(domain string) (*Instance, error) {
 // TODO: don't return the design docs
 func List() ([]*Instance, error) {
 	var docs []*Instance
-	sel := mango.Empty()
-	req := &couchdb.FindRequest{Selector: sel, Limit: 100}
-	err := couchdb.FindDocs(couchdb.GlobalDB, InstanceType, req, &docs)
-	return docs, err
+	req := &couchdb.AllDocsRequest{Limit: 100}
+	err := couchdb.GetAllDocs(couchdb.GlobalDB, InstanceType, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
 }
 
 // Destroy is used to remove the instance. All the data linked to this

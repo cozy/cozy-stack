@@ -18,7 +18,6 @@ import (
 	gitFS "gopkg.in/src-d/go-git.v4/utils/fs"
 )
 
-const manifestFilename = "manifest.webapp"
 const githubRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
 
 var githubURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
@@ -64,14 +63,14 @@ func (g *gitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error)
 		branch = "master"
 	}
 
-	manURL := fmt.Sprintf(githubRawManifestURL, user, project, branch, manifestFilename)
+	manURL := fmt.Sprintf(githubRawManifestURL, user, project, branch, ManifestFilename)
 	resp, err := http.Get(manURL)
 	if err != nil {
-		return nil, ErrSourceNotReachable
+		return nil, ErrManifestNotReachable
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, ErrSourceNotReachable
+		return nil, ErrManifestNotReachable
 	}
 
 	return resp.Body, nil
