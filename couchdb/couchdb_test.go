@@ -108,6 +108,21 @@ func TestCreateDoc(t *testing.T) {
 
 }
 
+func TestGetAllDocs(t *testing.T) {
+	doc1 := &testDoc{Test: "all_1"}
+	doc2 := &testDoc{Test: "all_2"}
+	CreateDoc(TestPrefix, doc1)
+	CreateDoc(TestPrefix, doc2)
+
+	var results []*testDoc
+	err := GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
+	if assert.NoError(t, err) {
+		assert.Len(t, results, 2)
+		assert.Equal(t, results[0].Test, "all_1")
+		assert.Equal(t, results[1].Test, "all_2")
+	}
+}
+
 func TestDefineIndex(t *testing.T) {
 	err := DefineIndex(TestPrefix, TestDoctype, mango.IndexOnFields("fieldA", "fieldB"))
 	assert.NoError(t, err)
