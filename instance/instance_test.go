@@ -75,6 +75,50 @@ func TestInstanceHasIndexes(t *testing.T) {
 	assert.Len(t, results, 1)
 }
 
+func TestRegisterPassword(t *testing.T) {
+	instance, err := Get("test.cozycloud.cc")
+	if !assert.NoError(t, err, "cant fetch instance") {
+		return
+	}
+	assert.NotNil(t, instance)
+	assert.NotEmpty(t, instance.RegisterToken)
+	rtoken := instance.RegisterToken
+
+	err = instance.RegisterPassword("password", "")
+	assert.Error(t, err, "RegisterPassword requires token")
+
+	err = instance.RegisterPassword("password", "not-token")
+	assert.Error(t, err)
+	assert.Error(t, err, "RegisterPassword requires proper token")
+
+	err = instance.RegisterPassword("password", rtoken)
+	assert.NoError(t, err)
+
+	assert.Empty(t, instance.RegisterToken, "RegisterToken has not been removed")
+	assert.NotEmpty(t, instance.PasswordHash, "PasswordHash has not been saved")
+
+	err = instance.RegisterPassword("password", rtoken)
+	assert.Error(t, err, "RegisterPassword works only once")
+
+}
+
+func TestCheckPassword(t *testing.T) {
+	instance, err := Get("test.cozycloud.cc")
+	if !assert.NoError(t, err, "cant fetch instance") {
+		return
+	}
+
+	assert.Empty(t, instance.RegisterToken, "changes have been saved in db")
+	assert.NotEmpty(t, instance.PasswordHash, "changes have been saved in db")
+
+	err = instance.CheckPassword("not-password")
+	assert.Error(t, err)
+
+	err = instance.CheckPassword("password")
+	assert.NoError(t, err)
+
+}
+
 func TestInstanceNoDuplicate(t *testing.T) {
 	_, err := Create("test.cozycloud.cc.duplicate", "en", nil)
 	if !assert.NoError(t, err) {

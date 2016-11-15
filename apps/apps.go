@@ -44,6 +44,12 @@ const (
 	Ready = "ready"
 )
 
+// Some well known slugs
+const (
+	OnboardingSlug = "onboarding"
+	HomeSlug       = "home"
+)
+
 var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 
 // Access is a string representing the access permission level. It can

@@ -11,6 +11,8 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
+	"github.com/dchest/uniuri"
+	scrypt "github.com/elithrar/simple-scrypt"
 	"github.com/spf13/afero"
 )
 
@@ -30,11 +32,13 @@ var (
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID      string `json:"_id,omitempty"`  // couchdb _id
-	DocRev     string `json:"_rev,omitempty"` // couchdb _rev
-	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	StorageURL string `json:"storage"`        // Where the binaries are persisted
-	storage    afero.Fs
+	DocID         string `json:"_id,omitempty"`  // couchdb _id
+	DocRev        string `json:"_rev,omitempty"` // couchdb _rev
+	Domain        string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	StorageURL    string `json:"storage"`        // Where the binaries are persisted
+	RegisterToken string `json:"registerToken,omitempty"`
+	PasswordHash  string `json:"passwordHash,omitempty"`
+	storage       afero.Fs
 }
 
 // DocType implements couchdb.Doc
@@ -51,6 +55,13 @@ func (i *Instance) Rev() string { return i.DocRev }
 
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
+
+// SubDomain returns the full url for a subdomain of this instance
+// usefull with apps slugs
+// TODO https is hardcoded
+func (i *Instance) SubDomain(s string) string {
+	return "https://" + s + "." + i.Domain
+}
 
 // ensure Instance implements couchdb.Doc & vfs.Context
 var _ couchdb.Doc = (*Instance)(nil)
@@ -118,8 +129,9 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 
 	domainURL := config.BuildRelFsURL(domain)
 	i := &Instance{
-		Domain:     domain,
-		StorageURL: domainURL.String(),
+		Domain:        domain,
+		StorageURL:    domainURL.String(),
+		RegisterToken: uniuri.New(),
 	}
 
 	var err error
@@ -258,6 +270,32 @@ func (i *Instance) FS() afero.Fs {
 // current instance
 func (i *Instance) Prefix() string {
 	return i.Domain + "/"
+}
+
+// RegisterPassword replace the instance registerToken by a password
+func (i *Instance) RegisterPassword(pass string, tok string) error {
+	if i.RegisterToken == "" {
+		return errors.New("Missing registerToken")
+	}
+	if i.RegisterToken != tok {
+		return errors.New("Invalid registerToken")
+	}
+
+	hash, err := scrypt.GenerateFromPassword([]byte(pass), scrypt.DefaultParams)
+	if err != nil {
+		return err
+	}
+
+	i.RegisterToken = ""
+	i.PasswordHash = string(hash)
+
+	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
+
+// CheckPassword confirm an instance passport
+func (i *Instance) CheckPassword(pass string) error {
+	hash := []byte(i.PasswordHash)
+	return scrypt.CompareHashAndPassword(hash, []byte(pass))
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {
