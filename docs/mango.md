@@ -74,8 +74,9 @@ Content-Type: application/json
   },
   "limit": 2,
   "skip": 3,
-  "sort": "date",
-  "fields": ["_id", "_type", "_date"]
+  "sort": ["calendar", "date"],
+  "fields": ["_id", "_type", "_date"],
+  "use_index": "_design/a5f4711fc9448864a13c81dc71e660b524d7410c"
 }
 ```
 
@@ -104,5 +105,8 @@ Content-Type: application/json
 ```
 
 ### Details
-- You can use the `{}` empty selector to get all docs for a db (beware it will also includes `_design/` docs)
 - If an index does not exist for the selector, an error 400 is returned
+- The sort field must contains all fields used in selector
+- The sort field must match an existing index
+- It is possible to sort in reverse direction `sort:[{"calendar":"desc"}, {"date": "desc"}]` but **all fields** must be sorted in same direction.
+- `use_index` is optional but recommended.
