@@ -145,7 +145,7 @@ func List(db couchdb.Database) ([]*Manifest, error) {
 // GetBySlug returns an app identified by its slug
 func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 	man := &Manifest{}
-	err := couchdb.GetDoc(db, ManifestDocType, slug, man)
+	err := couchdb.GetDoc(db, ManifestDocType, ManifestDocType+"/"+slug, man)
 	if err != nil {
 		return nil, err
 	}
