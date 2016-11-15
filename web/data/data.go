@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -16,6 +17,8 @@ func validDoctype(c *gin.Context) {
 	doctype := c.Param("doctype")
 	if doctype == "" {
 		c.AbortWithError(http.StatusBadRequest, invalidDoctypeErr(doctype))
+	} else if doctype == vfs.FsDocType {
+		c.AbortWithError(http.StatusBadRequest, errVfsNotData)
 	} else {
 		c.Set("doctype", doctype)
 	}

@@ -163,6 +163,18 @@ func TestWrongDoctype(t *testing.T) {
 
 }
 
+func TestVFSDoctype(t *testing.T) {
+
+	req, _ := http.NewRequest("GET", ts.URL+"/data/io.cozy.files/"+ID, nil)
+	req.Header.Add("Host", Host)
+	out, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+	if assert.Contains(t, out, "error") {
+		assert.Contains(t, out["error"], "vfs", "should give a clear error")
+	}
+}
+
 func TestWrongID(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/NOTID", nil)
 	req.Header.Add("Host", Host)
