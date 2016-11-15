@@ -66,7 +66,7 @@ func (lc *LocalCache) CreateDir(c Context, doc *DirDoc) error {
 	if err != nil {
 		return err
 	}
-	lc.touchDir(doc)
+	lc.tapDir(doc)
 	return nil
 }
 
@@ -136,7 +136,7 @@ func (lc *LocalCache) updateDirDoc(c Context, doc *DirDoc) error {
 		lc.rmDir(doc)
 		return err
 	}
-	lc.touchDir(doc)
+	lc.tapDir(doc)
 	return nil
 }
 
@@ -158,7 +158,7 @@ func (lc *LocalCache) DirByID(c Context, fileID string) (doc *DirDoc, err error)
 		return
 	}
 
-	lc.touchDir(doc)
+	lc.tapDir(doc)
 	return
 }
 
@@ -184,7 +184,7 @@ func (lc *LocalCache) DirByPath(c Context, name string) (doc *DirDoc, err error)
 	}
 	doc = docs[0]
 
-	lc.touchDir(doc)
+	lc.tapDir(doc)
 	return
 }
 
@@ -202,10 +202,10 @@ func (lc *LocalCache) DirFiles(c Context, doc *DirDoc) (files []*FileDoc, dirs [
 	for _, doc := range docs {
 		dir, file := doc.Refine()
 		if dir != nil {
-			lc.touchDir(dir)
+			lc.tapDir(dir)
 			dirs = append(dirs, dir)
 		} else {
-			lc.touchFile(file)
+			lc.tapFile(file)
 			files = append(files, file)
 		}
 	}
@@ -219,7 +219,7 @@ func (lc *LocalCache) CreateFile(c Context, doc *FileDoc) error {
 	if err != nil {
 		return err
 	}
-	lc.touchFile(doc)
+	lc.tapFile(doc)
 	return nil
 }
 
@@ -230,7 +230,7 @@ func (lc *LocalCache) UpdateFile(c Context, doc *FileDoc) error {
 		lc.rmFile(doc)
 		return err
 	}
-	lc.touchFile(doc)
+	lc.tapFile(doc)
 	return nil
 }
 
@@ -293,7 +293,7 @@ func (lc *LocalCache) FileByPath(c Context, name string) (doc *FileDoc, err erro
 	}
 
 	doc = docs[0]
-	lc.touchFile(doc)
+	lc.tapFile(doc)
 	return
 }
 
@@ -327,7 +327,7 @@ func (lc *LocalCache) Len() int {
 	return lc.lrud.Len() + lc.lruf.Len()
 }
 
-func (lc *LocalCache) touchDir(doc *DirDoc) {
+func (lc *LocalCache) tapDir(doc *DirDoc) {
 	lc.mud.Lock()
 	defer lc.mud.Unlock()
 	key := doc.DocID
@@ -338,7 +338,7 @@ func (lc *LocalCache) touchDir(doc *DirDoc) {
 	lc.pthd[doc.Fullpath] = &doc.DocID
 }
 
-func (lc *LocalCache) touchFile(doc *FileDoc) {
+func (lc *LocalCache) tapFile(doc *FileDoc) {
 	lc.muf.Lock()
 	defer lc.muf.Unlock()
 	key := doc.DocID
