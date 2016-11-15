@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/sourcegraph/checkup"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -106,6 +107,25 @@ func TestInstanceDestroy(t *testing.T) {
 	}
 }
 
+func TestGetFs(t *testing.T) {
+	instance := Instance{
+		Domain:     "test-provider.cozycloud.cc",
+		StorageURL: "mem://test",
+	}
+	content := []byte{'b', 'a', 'r'}
+	err := instance.makeStorageFs()
+	assert.NoError(t, err)
+	storage := instance.FS()
+	assert.NotNil(t, storage, "the instance should have a memory storage provider")
+	err = afero.WriteFile(storage, "foo", content, 0644)
+	assert.NoError(t, err)
+	storage = instance.FS()
+	assert.NotNil(t, storage, "the instance should have a memory storage provider")
+	buf, err := afero.ReadFile(storage, "foo")
+	assert.NoError(t, err)
+	assert.Equal(t, content, buf, "the storage should have persist the content of the foo file")
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
@@ -116,6 +136,7 @@ func TestMain(m *testing.M) {
 	}
 	Destroy("test.cozycloud.cc")
 	Destroy("test.cozycloud.cc.duplicate")
+
 	os.RemoveAll("/usr/local/var/cozy2/")
 
 	os.Exit(m.Run())
