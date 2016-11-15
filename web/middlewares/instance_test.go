@@ -47,10 +47,10 @@ func TestParseHost(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	instance.Destroy("cozy.example.net")
-	instance.Create("cozy.example.net", "en", nil)
+	instance.Destroy(domain)
+	instance.Create(domain, "en", nil)
 	gin.SetMode(gin.TestMode)
 	res := m.Run()
-	instance.Destroy("cozy.example.net")
+	instance.Destroy(domain)
 	os.Exit(res)
 }
