@@ -8,7 +8,6 @@ import (
 	"regexp"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
@@ -134,9 +133,8 @@ type Client interface {
 // TODO: pagination
 func List(db couchdb.Database) ([]*Manifest, error) {
 	var docs []*Manifest
-	sel := mango.Empty()
-	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
-	err := couchdb.FindDocs(db, ManifestDocType, req, &docs)
+	req := &couchdb.AllDocsRequest{Limit: 100}
+	err := couchdb.GetAllDocs(db, ManifestDocType, req, &docs)
 	if err != nil {
 		return nil, err
 	}

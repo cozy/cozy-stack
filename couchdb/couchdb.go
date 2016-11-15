@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/google/go-querystring/query"
 )
 
 // Doc is the interface that encapsulate a couchdb document, of any
@@ -415,6 +416,7 @@ func FindDocs(db Database, doctype string, req *FindRequest, results interface{}
 }
 
 // FindDocsRaw find documents
+// TODO: pagination
 func FindDocsRaw(db Database, doctype string, req interface{}, results interface{}) error {
 	url := makeDBName(db, doctype) + "/_find"
 	// prepare a structure to receive the results
@@ -428,6 +430,33 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 		return unoptimalError()
 	}
 	return json.Unmarshal(response.Docs, results)
+}
+
+// GetAllDocs returns all documents of a specified doctype. It filters
+// out the possible _design document.
+// TODO: pagination
+func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
+	var response allDocsResponse
+	v, err := query.Values(req)
+	if err != nil {
+		return err
+	}
+	url := makeDBName(db, doctype) + "/_all_docs?included_docs=true&" + v.Encode()
+	err = makeRequest("GET", url, &req, &response)
+	if err != nil {
+		return err
+	}
+	var docs []json.RawMessage
+	for _, row := range response.Rows {
+		if !strings.HasPrefix(row.ID, "_design") {
+			docs = append(docs, row.Doc)
+		}
+	}
+	data, err := json.Marshal(docs)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, results)
 }
 
 // IndexCreationResponse is the response from couchdb when we create an Index
@@ -450,11 +479,30 @@ type findResponse struct {
 	Docs    json.RawMessage `json:"docs"`
 }
 
-// A FindRequest is a structure containin
+type allDocsResponse struct {
+	Offset    int `json:"offset"`
+	TotalRows int `json:"total_rows"`
+	Rows      []struct {
+		ID  string          `json:"id"`
+		Doc json.RawMessage `json:"doc"`
+	} `json:"rows"`
+}
+
+// FindRequest is used to build a find request
 type FindRequest struct {
 	Selector mango.Filter  `json:"selector"`
 	Limit    int           `json:"limit,omitempty"`
 	Skip     int           `json:"skip,omitempty"`
 	Sort     *mango.SortBy `json:"sort,omitempty"`
 	Fields   []string      `json:"fields,omitempty"`
+}
+
+// AllDocsRequest is used to build a _all_docs request
+type AllDocsRequest struct {
+	Descending bool     `url:"descending,omitempty"`
+	Keys       []string `url:"keys,omitempty"`
+	Limit      int      `url:"limit,omitempty"`
+	Skip       int      `url:"skip,omitempty"`
+	StartKey   string   `url:"start_key,omitempty"`
+	EndKey     string   `url:"end_key,omitempty"`
 }
