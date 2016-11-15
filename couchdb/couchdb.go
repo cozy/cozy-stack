@@ -12,7 +12,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb/mango"
-	"github.com/google/go-querystring/query"
 )
 
 // Doc is the interface that encapsulate a couchdb document, of any
@@ -437,12 +436,8 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 // TODO: pagination
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
 	var response allDocsResponse
-	v, err := query.Values(req)
-	if err != nil {
-		return err
-	}
-	url := makeDBName(db, doctype) + "/_all_docs?included_docs=true&" + v.Encode()
-	err = makeRequest("GET", url, &req, &response)
+	url := makeDBName(db, doctype) + "/_all_docs"
+	err := makeRequest("POST", url, &req, &response)
 	if err != nil {
 		return err
 	}
@@ -452,6 +447,9 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 			docs = append(docs, row.Doc)
 		}
 	}
+	// TODO: better way to unmarshal returned data. For now we re-
+	// marshal the doc fields a a json array before unmarshalling it
+	// again...
 	data, err := json.Marshal(docs)
 	if err != nil {
 		return err
@@ -499,10 +497,11 @@ type FindRequest struct {
 
 // AllDocsRequest is used to build a _all_docs request
 type AllDocsRequest struct {
-	Descending bool     `url:"descending,omitempty"`
-	Keys       []string `url:"keys,omitempty"`
-	Limit      int      `url:"limit,omitempty"`
-	Skip       int      `url:"skip,omitempty"`
-	StartKey   string   `url:"start_key,omitempty"`
-	EndKey     string   `url:"end_key,omitempty"`
+	Descending  bool     `json:"descending,omitempty"`
+	Keys        []string `json:"keys,omitempty"`
+	Limit       int      `json:"limit,omitempty"`
+	Skip        int      `json:"skip,omitempty"`
+	StartKey    string   `json:"start_key,omitempty"`
+	EndKey      string   `json:"end_key,omitempty"`
+	IncludeDocs bool     `json:"include_docs,omitempty"`
 }
