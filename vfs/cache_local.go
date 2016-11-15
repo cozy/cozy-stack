@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/lru"
+	"github.com/jinroh/radix"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -19,9 +20,9 @@ import (
 // Internally it provides some optimisations to cache file attributes
 // and avoid having multiple useless RTTs with CouchDB.
 type LocalCache struct {
-	mud  sync.RWMutex      // mutex for directories data-structures
-	lrud *lru.Cache        // lru cache for directories
-	pthd map[string]string // path directory to id map
+	mud  sync.RWMutex // mutex for directories data-structures
+	lrud *lru.Cache   // lru cache for directories
+	pthd *radix.Tree  // path directory to id map
 
 	muf  sync.RWMutex      // mutex for files data-structures
 	lruf *lru.Cache        // lru cache for files
@@ -40,7 +41,7 @@ func NewLocalCache(maxEntries int) *LocalCache {
 func (lc *LocalCache) init(maxEntries int) {
 	dirEviction := func(key string, value interface{}) {
 		if doc, ok := value.(*DirDoc); ok {
-			delete(lc.pthd, doc.Fullpath)
+			lc.pthd.Remove(doc.Fullpath)
 		}
 	}
 
@@ -50,7 +51,7 @@ func (lc *LocalCache) init(maxEntries int) {
 		}
 	}
 
-	lc.pthd = make(map[string]string)
+	lc.pthd = radix.New()
 	lc.pthf = make(map[string]string)
 	lc.lrud = &lru.Cache{MaxEntries: maxEntries, OnEvicted: dirEviction}
 	lc.lruf = &lru.Cache{MaxEntries: maxEntries, OnEvicted: fileEviction}
@@ -333,11 +334,14 @@ func (lc *LocalCache) tapDir(doc *DirDoc) {
 	lc.mud.Lock()
 	defer lc.mud.Unlock()
 	key := doc.DocID
-	if olddoc, ok := lc.lrud.Get(key); ok {
-		delete(lc.pthd, olddoc.(*DirDoc).Fullpath)
+	if old, ok := lc.lrud.Get(key); ok {
+		olddoc := old.(*DirDoc)
+		if olddoc.Fullpath != doc.Fullpath {
+			lc.pthd.RemoveBranch(olddoc.Fullpath)
+		}
 	}
 	lc.lrud.Add(key, doc)
-	lc.pthd[doc.Fullpath] = doc.DocID
+	lc.pthd.Insert(doc.Fullpath, key)
 }
 
 func (lc *LocalCache) tapFile(doc *FileDoc) {
@@ -376,9 +380,9 @@ func (lc *LocalCache) dirCachedByID(fileID string) (*DirDoc, bool) {
 func (lc *LocalCache) dirCachedByPath(name string) (*DirDoc, bool) {
 	lc.mud.Lock()
 	defer lc.mud.Unlock()
-	pid, ok := lc.pthd[name]
+	pid, ok := lc.pthd.Get(name)
 	if ok {
-		v, _ := lc.lrud.Get(pid)
+		v, _ := lc.lrud.Get(pid.(string))
 		return v.(*DirDoc), true
 	}
 	return nil, false
