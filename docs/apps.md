@@ -258,6 +258,15 @@ Install or update an application, ie download the files and put them in
 `/apps/:slug` in the virtual file system of the user, create an `io.cozy/apps`
 document, register the permissions, etc.
 
+This endpoint is asynchronous and returns a successful return as soon as the application installation has started, meaning we have successfully reached the manifest and started to fetch application data.
+
+#### Status codes
+
+* 202 Accepted, when the application installation has been accepted.
+* 400 Bad-Request, when the manifest of the application could not be processed (for instance, it is not valid JSON).
+* 404 Not Found, when the manifest or the source of the application is not reachable.
+* 422 Unprocessable Entity, when the sent data is invalid (for example, the slug is invalid or the Source parameter is not a proper or supported url)
+
 #### Query-String
 
 Parameter | Description
@@ -304,6 +313,7 @@ An application can be in one of these states:
 - `installing`, the installation is running and the app will soon be usable
 - `upgrading`, a new version is being installed
 - `uninstalling`, the app will be removed, and will return to the `available` state.
+- `errored`, the app is in an error state and can not be used.
 
 #### Request
 
