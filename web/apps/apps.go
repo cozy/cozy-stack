@@ -19,7 +19,7 @@ func InstallHandler(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	src := c.Query("Source")
 	slug := c.Param("slug")
-	inst, err := apps.NewInstaller(instance, instance, slug, src)
+	inst, err := apps.NewInstaller(instance, slug, src)
 	if err != nil {
 		jsonapi.AbortWithError(c, wrapAppsError(err))
 		return
@@ -27,7 +27,7 @@ func InstallHandler(c *gin.Context) {
 
 	go inst.Install()
 
-	man, err := inst.WaitManifest()
+	man, _, err := inst.WaitManifest()
 	if err != nil {
 		jsonapi.AbortWithError(c, wrapAppsError(err))
 		return
@@ -37,12 +37,14 @@ func InstallHandler(c *gin.Context) {
 
 	go func() {
 		for {
-			_, err := inst.WaitManifest()
+			_, done, err := inst.WaitManifest()
 			if err != nil {
 				log.Errorf("[apps] %s could not be installed: %v", slug, err)
 				break
 			}
-			// TODO: do nothing for now
+			if done {
+				break
+			}
 		}
 	}()
 }

@@ -197,6 +197,9 @@ func GetDirDoc(c Context, fileID string, withChildren bool) (*DirDoc, error) {
 		err = ErrParentDoesNotExist
 	}
 	if err != nil {
+		if fileID == RootFolderID {
+			panic("Root folder is not in database")
+		}
 		return nil, err
 	}
 	if doc.Type != DirType {
@@ -222,6 +225,9 @@ func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, erro
 		return nil, err
 	}
 	if len(docs) == 0 {
+		if name == "/" {
+			panic("Root folder is not in database")
+		}
 		return nil, os.ErrNotExist
 	}
 	doc = docs[0]

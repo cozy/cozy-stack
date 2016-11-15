@@ -116,21 +116,5 @@ func Configure() error {
 		return err
 	}
 
-	if err := configureLogger(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func configureLogger() error {
-	loggerCfg := config.GetConfig().Logger
-
-	logLevel, err := log.ParseLevel(loggerCfg.Level)
-	if err != nil {
-		return err
-	}
-
-	log.SetLevel(logLevel)
 	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -147,7 +148,7 @@ func UseViper(v *viper.Viper) error {
 		},
 	}
 
-	return nil
+	return configureLogger()
 }
 
 // UseTestFile can be used in a test file to inject a configuration
@@ -189,6 +190,18 @@ func UseTestYAML(yaml string) {
 	}
 
 	return
+}
+
+func configureLogger() error {
+	loggerCfg := config.Logger
+
+	logLevel, err := log.ParseLevel(loggerCfg.Level)
+	if err != nil {
+		return err
+	}
+
+	log.SetLevel(logLevel)
+	return nil
 }
 
 func parseMode(mode string) (string, error) {

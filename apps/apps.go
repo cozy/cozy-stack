@@ -44,7 +44,7 @@ const (
 	Ready = "ready"
 )
 
-var slugReg = regexp.MustCompile(`[A-Za-z0-9\\-]`)
+var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 
 // Access is a string representing the access permission level. It can
 // either be read, write or readwrite.
@@ -64,7 +64,6 @@ type Developer struct {
 
 // Manifest contains all the informations about an application.
 type Manifest struct {
-	ManID  string `json:"_id,omitempty"`  // Manifest identifier
 	ManRev string `json:"_rev,omitempty"` // Manifest revision
 
 	Name        string     `json:"name"`
@@ -86,7 +85,9 @@ type Manifest struct {
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
-func (m *Manifest) ID() string { return m.ManID }
+func (m *Manifest) ID() string {
+	return ManifestDocType + "/" + m.Slug
+}
 
 // Rev return the manifest revision - see couchdb.Doc interface
 func (m *Manifest) Rev() string { return m.ManRev }
@@ -96,7 +97,7 @@ func (m *Manifest) DocType() string { return ManifestDocType }
 
 // SetID is used to change the file identifier - see couchdb.Doc
 // interface
-func (m *Manifest) SetID(id string) { m.ManID = id }
+func (m *Manifest) SetID(id string) {}
 
 // SetRev is used to change the file revision - see couchdb.Doc
 // interface
@@ -104,7 +105,7 @@ func (m *Manifest) SetRev(rev string) { m.ManRev = rev }
 
 // SelfLink is used to generate a JSON-API link for the file - see
 // jsonapi.Object interface
-func (m *Manifest) SelfLink() string { return "/apps/" + m.ManID }
+func (m *Manifest) SelfLink() string { return "/apps/" + m.Slug }
 
 // Relationships is used to generate the parent relationship in JSON-API format
 // - see jsonapi.Object interface
@@ -141,12 +142,20 @@ func List(db couchdb.Database) ([]*Manifest, error) {
 	return docs, nil
 }
 
+// GetBySlug returns an app identified by its slug
+func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
+	man := &Manifest{}
+	err := couchdb.GetDoc(db, ManifestDocType, slug, man)
+	if err != nil {
+		return nil, err
+	}
+	return man, nil
+}
+
 // Installer is used to install or update applications.
 type Installer struct {
 	cli Client
 
-	// TODO: fix this mess with contexts
-	db   couchdb.Database
 	vfsC vfs.Context
 
 	slug string
@@ -159,9 +168,8 @@ type Installer struct {
 }
 
 // NewInstaller creates a new Installer
-// @TODO: fix this mess with contexts
-func NewInstaller(vfsC vfs.Context, db couchdb.Database, slug, src string) (*Installer, error) {
-	if !slugReg.MatchString(slug) {
+func NewInstaller(vfsC vfs.Context, slug, src string) (*Installer, error) {
+	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
 
@@ -184,7 +192,6 @@ func NewInstaller(vfsC vfs.Context, db couchdb.Database, slug, src string) (*Ins
 
 	inst := &Installer{
 		cli:  cli,
-		db:   db,
 		vfsC: vfsC,
 
 		slug: slug,
@@ -273,7 +280,6 @@ func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err er
 			err = i.handleErr(err)
 		} else {
 			i.man = man
-			i.manc <- man
 		}
 	}()
 
@@ -281,8 +287,7 @@ func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err er
 		panic("Manifest is already defined")
 	}
 
-	man = &Manifest{}
-	err = couchdb.GetDoc(i.db, ManifestDocType, slug, man)
+	man, err = GetBySlug(i.vfsC, slug)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return nil, err
 	}
@@ -296,6 +301,7 @@ func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err er
 	}
 
 	defer r.Close()
+	man = &Manifest{}
 	err = json.NewDecoder(io.LimitReader(r, ManifestMaxSize)).Decode(&man)
 	if err != nil {
 		return nil, ErrBadManifest
@@ -305,7 +311,7 @@ func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err er
 	man.Source = src
 	man.State = Available
 
-	err = couchdb.CreateDoc(i.db, man)
+	err = couchdb.CreateNamedDoc(i.vfsC, man)
 	return
 }
 
@@ -331,14 +337,15 @@ func (i *Installer) updateManifest(newman *Manifest) (err error) {
 	newman.SetID(oldman.ID())
 	newman.SetRev(oldman.Rev())
 
-	return couchdb.UpdateDoc(i.db, newman)
+	return couchdb.UpdateDoc(i.vfsC, newman)
 }
 
 // WaitManifest should be used to monitor the progress of the
 // Installer.
-func (i *Installer) WaitManifest() (man *Manifest, err error) {
+func (i *Installer) WaitManifest() (man *Manifest, done bool, err error) {
 	select {
 	case man = <-i.manc:
+		done = man.State == Ready
 		return
 	case err = <-i.errc:
 		return

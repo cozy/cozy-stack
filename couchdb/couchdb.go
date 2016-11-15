@@ -498,10 +498,10 @@ type FindRequest struct {
 // AllDocsRequest is used to build a _all_docs request
 type AllDocsRequest struct {
 	Descending  bool     `json:"descending,omitempty"`
+	IncludeDocs bool     `json:"include_docs,omitempty"`
 	Keys        []string `json:"keys,omitempty"`
 	Limit       int      `json:"limit,omitempty"`
 	Skip        int      `json:"skip,omitempty"`
 	StartKey    string   `json:"start_key,omitempty"`
 	EndKey      string   `json:"end_key,omitempty"`
-	IncludeDocs bool     `json:"include_docs,omitempty"`
 }
