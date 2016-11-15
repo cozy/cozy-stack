@@ -6,6 +6,7 @@
 package vfs
 
 import (
+	"errors"
 	mimetype "mime"
 	"os"
 	"path"
@@ -45,6 +46,10 @@ const (
 	// FileType is the type attribute for files
 	FileType = "file"
 )
+
+// ErrSkipDir is used in WalkFn as an error to skip the current
+// directory. It is not returned by any function of the package.
+var ErrSkipDir = errors.New("skip directories")
 
 // Context is used to convey the afero.Fs object along with the
 // CouchDb database prefix.
@@ -310,6 +315,59 @@ func Remove(c Context, name string) error {
 	// go-git. This method should also remove the document from
 	// database.
 	return c.FS().Remove(name)
+}
+
+// WalkFn type works like filepath.WalkFn type function. It receives
+// as argument the complete name of the file or directory, the type of
+// the document, the actual directory or file document and a possible
+// error.
+type WalkFn func(name string, typ string, dir *DirDoc, file *FileDoc, err error) error
+
+// Walk walks the file tree document rooted at root. It should work
+// like filepath.Walk.
+func Walk(c Context, root string, walkFn WalkFn) error {
+	typ, dir, file, err := GetDirOrFileDocFromPath(c, root, false)
+	if err != nil {
+		return walkFn(root, typ, dir, file, err)
+	}
+	return walk(c, root, typ, dir, file, walkFn)
+}
+
+func walk(c Context, name string, typ string, dir *DirDoc, file *FileDoc, walkFn WalkFn) error {
+	err := walkFn(name, typ, dir, file, nil)
+	if err != nil {
+		if typ == DirType && err == ErrSkipDir {
+			return nil
+		}
+		return err
+	}
+
+	if typ != DirType {
+		return nil
+	}
+
+	err = dir.FetchFiles(c)
+	if err != nil {
+		return walkFn(name, typ, dir, nil, err)
+	}
+
+	for _, d := range dir.dirs {
+		fullpath := path.Join(name, d.Name)
+		err = walk(c, fullpath, DirType, d, nil, walkFn)
+		if err != nil && err != ErrSkipDir {
+			return err
+		}
+	}
+
+	for _, f := range dir.files {
+		fullpath := path.Join(name, f.Name)
+		err = walk(c, fullpath, FileType, nil, f, walkFn)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ExtractMimeAndClass returns a mime and class value from the
