@@ -12,6 +12,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/google/go-querystring/query"
 )
 
 // Doc is the interface that encapsulate a couchdb document, of any
@@ -435,9 +436,15 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 // out the possible _design document.
 // TODO: pagination
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
+	v, err := query.Values(req)
+	if err != nil {
+		return err
+	}
+	v.Add("include_docs", "true")
+
 	var response allDocsResponse
-	url := makeDBName(db, doctype) + "/_all_docs"
-	err := makeRequest("POST", url, &req, &response)
+	url := makeDBName(db, doctype) + "/_all_docs?" + v.Encode()
+	err = makeRequest("POST", url, &req, &response)
 	if err != nil {
 		return err
 	}
@@ -498,11 +505,10 @@ type FindRequest struct {
 
 // AllDocsRequest is used to build a _all_docs request
 type AllDocsRequest struct {
-	Descending  bool     `json:"descending,omitempty"`
-	IncludeDocs bool     `json:"include_docs,omitempty"`
-	Keys        []string `json:"keys,omitempty"`
-	Limit       int      `json:"limit,omitempty"`
-	Skip        int      `json:"skip,omitempty"`
-	StartKey    string   `json:"start_key,omitempty"`
-	EndKey      string   `json:"end_key,omitempty"`
+	Descending bool     `url:"descending,omitempty"`
+	Keys       []string `url:"keys,omitempty"`
+	Limit      int      `url:"limit,omitempty"`
+	Skip       int      `url:"skip,omitempty"`
+	StartKey   string   `url:"start_key,omitempty"`
+	EndKey     string   `url:"end_key,omitempty"`
 }
