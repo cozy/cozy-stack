@@ -432,11 +432,11 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 
 // IndexCreationResponse is the response from couchdb when we create an Index
 type IndexCreationResponse struct {
-	Result string `json:"result"`
-	Error  string `json:"error"`
-	Reason string `json:"reason"`
-	ID     string `json:"id"`
-	Name   string `json:"name"`
+	Result string `json:"result,omitempty"`
+	Error  string `json:"error,omitempty"`
+	Reason string `json:"reason,omitempty"`
+	ID     string `json:"id,omitempty"`
+	Name   string `json:"name,omitempty"`
 }
 
 type updateResponse struct {
@@ -453,6 +453,7 @@ type findResponse struct {
 // A FindRequest is a structure containin
 type FindRequest struct {
 	Selector mango.Filter  `json:"selector"`
+	UseIndex string        `json:"use_index,omitempty"`
 	Limit    int           `json:"limit,omitempty"`
 	Skip     int           `json:"skip,omitempty"`
 	Sort     *mango.SortBy `json:"sort,omitempty"`
