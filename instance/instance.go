@@ -37,7 +37,7 @@ var (
 	// fsLocalCache is the FS Cache used for a classical (non-
 	// distributed) filesystem. It is base on a simple in-memory cache.
 	// There is no fundamental theory behind the size of the cache.
-	fsLocalCache = vfs.NewLocalCache(50)
+	fsLocalCache = vfs.NewLocalCache(256)
 )
 
 // An Instance has the informations relatives to the logical cozy instance,

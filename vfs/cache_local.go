@@ -19,17 +19,17 @@ import (
 // Internally it provides some optimisations to cache file attributes
 // and avoid having multiple useless RTTs with CouchDB.
 type LocalCache struct {
-	mud  sync.RWMutex       // mutex for directories data-structures
-	lrud *lru.Cache         // lru cache for directories
-	pthd map[string]*string // path directory to id map
+	mud  sync.RWMutex      // mutex for directories data-structures
+	lrud *lru.Cache        // lru cache for directories
+	pthd map[string]string // path directory to id map
 
-	muf  sync.RWMutex       // mutex for files data-structures
-	lruf *lru.Cache         // lru cache for files
-	pthf map[string]*string // (folderID, name) file pair to id map
+	muf  sync.RWMutex      // mutex for files data-structures
+	lruf *lru.Cache        // lru cache for files
+	pthf map[string]string // (folderID, name) file pair to id map
 }
 
-// NewLocalCache creates an new LocalCache. The maxEntries parameter
-// is used to specified the cache size: how many files and directories
+// NewLocalCache creates a new LocalCache. The maxEntries parameter is
+// used to specified the cache size: how many files and directories
 // elements are kept in-memory
 func NewLocalCache(maxEntries int) *LocalCache {
 	lc := new(LocalCache)
@@ -50,8 +50,8 @@ func (lc *LocalCache) init(maxEntries int) {
 		}
 	}
 
-	lc.pthd = make(map[string]*string)
-	lc.pthf = make(map[string]*string)
+	lc.pthd = make(map[string]string)
+	lc.pthf = make(map[string]string)
 	lc.lrud = &lru.Cache{MaxEntries: maxEntries, OnEvicted: dirEviction}
 	lc.lruf = &lru.Cache{MaxEntries: maxEntries, OnEvicted: fileEviction}
 }
@@ -90,39 +90,41 @@ func (lc *LocalCache) UpdateDir(c Context, olddoc, newdoc *DirDoc) error {
 		return nil
 	}
 
-	var children []*DirDoc
+	// If the directory path actually changes, we need to update all the
+	// path attributes of our children directories and sub-directories.
+	var dirsChildren []*DirDoc
 	req := &couchdb.FindRequest{
 		Selector: mango.StartWith("path", oldpath+"/"),
 	}
 
-	err = couchdb.FindDocs(c, FsDocType, req, &children)
-	if err != nil || len(children) == 0 {
+	err = couchdb.FindDocs(c, FsDocType, req, &dirsChildren)
+	if err != nil || len(dirsChildren) == 0 {
 		return err
 	}
 
-	newchildren := make([]*DirDoc, len(children))
-	for i, child := range children {
-		newchild, err := NewDirDoc(
-			child.Name,
-			child.FolderID,
-			child.Tags,
+	subdirs := make([]*DirDoc, len(dirsChildren))
+	for i, childdir := range dirsChildren {
+		newchilddir, err := NewDirDoc(
+			childdir.Name,
+			childdir.FolderID,
+			childdir.Tags,
 		)
 		if err != nil {
 			return err
 		}
 
-		newchild.SetID(child.ID())
-		newchild.SetRev(child.Rev())
-		newchild.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
-		newchildren[i] = newchild
+		newchilddir.SetID(childdir.ID())
+		newchilddir.SetRev(childdir.Rev())
+		newchilddir.Fullpath = path.Join(newpath, childdir.Fullpath[len(oldpath)+1:])
+		subdirs[i] = newchilddir
 	}
 
 	// @TODO use couchdb bulk updates instead
 	var g errgroup.Group
-	for _, child := range newchildren {
-		newchild := child
+	for _, childdir := range subdirs {
+		newchilddir := childdir
 		g.Go(func() error {
-			return lc.updateDirDoc(c, newchild)
+			return lc.updateDirDoc(c, newchilddir)
 		})
 	}
 	return g.Wait()
@@ -335,7 +337,7 @@ func (lc *LocalCache) tapDir(doc *DirDoc) {
 		delete(lc.pthd, olddoc.(*DirDoc).Fullpath)
 	}
 	lc.lrud.Add(key, doc)
-	lc.pthd[doc.Fullpath] = &doc.DocID
+	lc.pthd[doc.Fullpath] = doc.DocID
 }
 
 func (lc *LocalCache) tapFile(doc *FileDoc) {
@@ -347,7 +349,7 @@ func (lc *LocalCache) tapFile(doc *FileDoc) {
 		delete(lc.pthf, genFilePathID(f.FolderID, f.Name))
 	}
 	lc.lruf.Add(key, doc)
-	lc.pthf[genFilePathID(doc.FolderID, doc.Name)] = &doc.DocID
+	lc.pthf[genFilePathID(doc.FolderID, doc.Name)] = doc.DocID
 }
 
 func (lc *LocalCache) rmDir(doc *DirDoc) {
@@ -376,7 +378,7 @@ func (lc *LocalCache) dirCachedByPath(name string) (*DirDoc, bool) {
 	defer lc.mud.Unlock()
 	pid, ok := lc.pthd[name]
 	if ok {
-		v, _ := lc.lrud.Get(*pid)
+		v, _ := lc.lrud.Get(pid)
 		return v.(*DirDoc), true
 	}
 	return nil, false
@@ -396,7 +398,7 @@ func (lc *LocalCache) fileCachedByFolderID(folderID, name string) (*FileDoc, boo
 	defer lc.muf.Unlock()
 	pid, ok := lc.pthf[genFilePathID(folderID, name)]
 	if ok {
-		v, _ := lc.lruf.Get(*pid)
+		v, _ := lc.lruf.Get(pid)
 		return v.(*FileDoc), true
 	}
 	return nil, false
