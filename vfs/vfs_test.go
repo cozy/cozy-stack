@@ -65,7 +65,7 @@ func createTree(tree H, folderID string) (*DirDoc, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err = CreateDirectory(vfsC, dirdoc); err != nil {
+			if err = CreateDir(vfsC, dirdoc); err != nil {
 				return nil, err
 			}
 			if _, err = createTree(children, dirdoc.ID()); err != nil {
@@ -149,7 +149,7 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 
 func TestGetFileDocFromPath(t *testing.T) {
 	dir, _ := NewDirDoc("container", "", nil, nil)
-	err := CreateDirectory(vfsC, dir)
+	err := CreateDir(vfsC, dir)
 	assert.NoError(t, err)
 
 	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", false, []string{})

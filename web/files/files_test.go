@@ -102,6 +102,23 @@ func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Re
 	return doUploadOrMod(t, req, contentType, body, hash)
 }
 
+func trash(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	res, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	err = extractJSONRes(res, &v)
+	assert.NoError(t, err)
+
+	return
+}
+
 func extractDirData(t *testing.T, data map[string]interface{}) (string, map[string]interface{}) {
 	var ok bool
 
@@ -850,6 +867,23 @@ func TestGetDirectoryMetadataFromID(t *testing.T) {
 
 	res3, _ := http.Get(ts.URL + "/files/" + fileID)
 	assert.Equal(t, 200, res3.StatusCode)
+}
+
+func TestDirectoryTrash(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=totrashdir&Type=io.cozy.folders")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+
+	res2, data2 := trash(t, "/files/"+dirID)
+	assert.Equal(t, 200, res2.StatusCode)
+	fmt.Println(data2)
+}
+
+func TestFileTrash(t *testing.T) {
+
 }
 
 func TestMain(m *testing.M) {

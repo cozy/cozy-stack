@@ -34,11 +34,16 @@ const DefaultContentType = "application/octet-stream"
 // ForbiddenFilenameChars is the list of forbidden characters in a filename.
 const ForbiddenFilenameChars = "/\x00"
 
-// RootFolderID is the identifier of the root folder
-const RootFolderID = "io.cozy.files.rootdir"
-
-// FsDocType is document type
-const FsDocType = "io.cozy.files"
+const (
+	// FsDocType is document type
+	FsDocType = "io.cozy.files"
+	// RootFolderID is the identifier of the root directory
+	RootFolderID = "io.cozy.files.rootdir"
+	// TrashFolderID is the identifier of the trash directory
+	TrashFolderID = "io.cozy.files.trashdir"
+	// TrashDirName is the path of the trash directory
+	TrashDirName = "/.cozy_trash"
+)
 
 const (
 	// DirType is the type attribute for directories
@@ -89,8 +94,8 @@ func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
 	case FileType:
 		file = &FileDoc{
 			Type:       fd.Type,
-			ObjID:      fd.ObjID,
-			ObjRev:     fd.ObjRev,
+			DocID:      fd.DocID,
+			DocRev:     fd.DocRev,
 			Name:       fd.Name,
 			FolderID:   fd.FolderID,
 			CreatedAt:  fd.CreatedAt,
@@ -234,7 +239,7 @@ func Mkdir(c Context, name string) error {
 		return err
 	}
 
-	return CreateDirectory(c, dir)
+	return CreateDir(c, dir)
 }
 
 // MkdirAll creates a directory named path, along with any necessary
@@ -262,7 +267,7 @@ func MkdirAll(c Context, name string) error {
 	for i := len(dirs) - 1; i >= 0; i-- {
 		parent, err = NewDirDoc(dirs[i], parent.ID(), nil, parent)
 		if err == nil {
-			err = CreateDirectory(c, parent)
+			err = CreateDir(c, parent)
 		}
 		if err != nil {
 			return err
