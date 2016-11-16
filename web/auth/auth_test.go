@@ -87,7 +87,7 @@ func TestMain(m *testing.M) {
 	registerToken = i.RegisterToken
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(middlewares.SetInstance())
+	router.Use(middlewares.ParseHost())
 	Routes(router)
 	router.GET("/test", func(c *gin.Context) {
 		var content string

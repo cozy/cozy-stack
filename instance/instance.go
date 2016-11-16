@@ -292,7 +292,7 @@ func (i *Instance) RegisterPassphrase(pass []byte, tok []byte) error {
 		return ErrInvalidToken
 	}
 
-	hash, err := crypto.GenerateFromPassphrase([]byte(pass))
+	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}

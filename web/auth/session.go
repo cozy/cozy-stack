@@ -89,10 +89,9 @@ func GetSession(c *gin.Context) (*Session, error) {
 	}
 
 	i := middlewares.GetInstance(c)
-	sid, _ := c.Cookie(SessionCookieName)
-
+	sid, err := c.Cookie(SessionCookieName)
 	// no cookie
-	if sid == "" {
+	if err != nil || sid == "" {
 		return nil, ErrNoCookie
 	}
 
