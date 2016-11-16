@@ -2,7 +2,6 @@
 package auth
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/apps"
@@ -36,7 +35,6 @@ func register(c *gin.Context) {
 
 	var form registerForm
 	if err := binding.Form.Bind(c.Request, &form); err != nil {
-		fmt.Println(err, form)
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
