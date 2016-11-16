@@ -75,11 +75,7 @@ func installMiniApp() error {
 		return err
 	}
 	err = createFile(pubdir, "index.html", "this is a file in public/")
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func assertGet(t *testing.T, path, contentType, content string) {

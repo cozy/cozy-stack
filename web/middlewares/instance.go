@@ -51,14 +51,16 @@ func NeedInstance() gin.HandlerFunc {
 			err := errInterface.(error)
 			if couchdb.IsNotFoundError(err) {
 				jsonapi.AbortWithError(c, jsonapi.NotFound(err))
-				return
+			} else {
+				jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
 			}
-			jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
+			return
 		}
 
 		instInterface, ok := c.Get("instance")
 		if !ok {
 			jsonapi.AbortWithError(c, jsonapi.InternalServerError(errors.New("no instance")))
+			return
 		}
 
 		_, ok = instInterface.(*instance.Instance)
