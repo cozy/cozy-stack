@@ -3,15 +3,80 @@
 package apps
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/apps"
+	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 )
+
+const indexPage = "index.html"
+
+// Serve is an handler for serving files from the VFS for a client-side app
+func Serve(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+
+	slug := c.MustGet("app_slug").(string)
+	app, err := apps.GetBySlug(instance, slug)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			c.AbortWithError(http.StatusNotFound, err)
+		} else {
+			c.AbortWithError(http.StatusInternalServerError, err)
+		}
+		return
+	}
+
+	if app.State != apps.Ready {
+		err = fmt.Errorf("Application is not ready")
+		c.AbortWithError(http.StatusServiceUnavailable, err)
+		return
+	}
+
+	vpath := c.Request.URL.Path
+	if vpath[len(vpath)-1] == '/' {
+		vpath = path.Join(vpath, indexPage)
+	}
+
+	appdir := path.Join(apps.AppsDirectory, app.Slug)
+	vpath = path.Clean(vpath)
+	vpath = path.Join(appdir, vpath)
+	doc, err := vfs.GetFileDocFromPath(instance, vpath)
+	if err != nil {
+		c.AbortWithError(http.StatusNotFound, err)
+		return
+	}
+
+	vfs.ServeFileContent(instance, doc, "", c.Request, c.Writer)
+}
+
+func wrapAppsError(err error) *jsonapi.Error {
+	if urlErr, isURLErr := err.(*url.Error); isURLErr {
+		return jsonapi.InvalidParameter("Source", urlErr)
+	}
+
+	switch err {
+	case apps.ErrInvalidSlugName:
+		return jsonapi.InvalidParameter("slug", err)
+	case apps.ErrNotSupportedSource:
+		return jsonapi.InvalidParameter("Source", err)
+	case apps.ErrManifestNotReachable:
+		return jsonapi.NotFound(err)
+	case apps.ErrSourceNotReachable:
+		return jsonapi.BadRequest(err)
+	case apps.ErrBadManifest:
+		return jsonapi.BadRequest(err)
+
+	}
+	return jsonapi.InternalServerError(err)
+}
 
 // InstallHandler handles all POST /:slug request and tries to install
 // the application with the given Source.
@@ -71,24 +136,4 @@ func ListHandler(c *gin.Context) {
 func Routes(router *gin.RouterGroup) {
 	router.GET("/", ListHandler)
 	router.POST("/:slug", InstallHandler)
-}
-
-func wrapAppsError(err error) *jsonapi.Error {
-	if urlErr, isURLErr := err.(*url.Error); isURLErr {
-		return jsonapi.InvalidParameter("Source", urlErr)
-	}
-
-	switch err {
-	case apps.ErrInvalidSlugName:
-		return jsonapi.InvalidParameter("slug", err)
-	case apps.ErrNotSupportedSource:
-		return jsonapi.InvalidParameter("Source", err)
-	case apps.ErrManifestNotReachable:
-		return jsonapi.NotFound(err)
-	case apps.ErrSourceNotReachable:
-		return jsonapi.NotFound(err)
-	case apps.ErrBadManifest:
-		return jsonapi.BadRequest(err)
-	}
-	return jsonapi.InternalServerError(err)
 }
