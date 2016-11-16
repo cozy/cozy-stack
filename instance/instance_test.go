@@ -75,7 +75,7 @@ func TestInstanceHasIndexes(t *testing.T) {
 	assert.Len(t, results, 1)
 }
 
-func TestRegisterPassword(t *testing.T) {
+func TestRegisterPassphrase(t *testing.T) {
 	instance, err := Get("test.cozycloud.cc")
 	if !assert.NoError(t, err, "cant fetch instance") {
 		return
@@ -83,38 +83,41 @@ func TestRegisterPassword(t *testing.T) {
 	assert.NotNil(t, instance)
 	assert.NotEmpty(t, instance.RegisterToken)
 	rtoken := instance.RegisterToken
+	pass := []byte("passphrase")
+	empty := []byte("")
+	badtoken := []byte("not-token")
 
-	err = instance.RegisterPassword("password", "")
-	assert.Error(t, err, "RegisterPassword requires token")
+	err = instance.RegisterPassphrase(pass, empty)
+	assert.Error(t, err, "RegisterPassphrase requires token")
 
-	err = instance.RegisterPassword("password", "not-token")
+	err = instance.RegisterPassphrase(pass, badtoken)
 	assert.Error(t, err)
-	assert.Error(t, err, "RegisterPassword requires proper token")
+	assert.Error(t, err, "RegisterPassphrase requires proper token")
 
-	err = instance.RegisterPassword("password", rtoken)
+	err = instance.RegisterPassphrase(pass, rtoken)
 	assert.NoError(t, err)
 
 	assert.Empty(t, instance.RegisterToken, "RegisterToken has not been removed")
-	assert.NotEmpty(t, instance.PasswordHash, "PasswordHash has not been saved")
+	assert.NotEmpty(t, instance.PassphraseHash, "PassphraseHash has not been saved")
 
-	err = instance.RegisterPassword("password", rtoken)
-	assert.Error(t, err, "RegisterPassword works only once")
+	err = instance.RegisterPassphrase(pass, rtoken)
+	assert.Error(t, err, "RegisterPassphrase works only once")
 
 }
 
-func TestCheckPassword(t *testing.T) {
+func TestCheckPassphrase(t *testing.T) {
 	instance, err := Get("test.cozycloud.cc")
 	if !assert.NoError(t, err, "cant fetch instance") {
 		return
 	}
 
 	assert.Empty(t, instance.RegisterToken, "changes have been saved in db")
-	assert.NotEmpty(t, instance.PasswordHash, "changes have been saved in db")
+	assert.NotEmpty(t, instance.PassphraseHash, "changes have been saved in db")
 
-	err = instance.CheckPassword("not-password")
+	err = instance.CheckPassphrase([]byte("not-passphrase"))
 	assert.Error(t, err)
 
-	err = instance.CheckPassword("password")
+	err = instance.CheckPassphrase([]byte("passphrase"))
 	assert.NoError(t, err)
 
 }

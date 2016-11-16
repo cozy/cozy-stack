@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -23,7 +24,6 @@ const SessionContextKey = "session"
 // SessionMaxAge : duration of the session
 const SessionMaxAge = 7 * 24 * 60 * 60
 const maxAgeDuration = SessionMaxAge * time.Second
-const renewDuration = maxAgeDuration / 2
 
 var (
 	// ErrNoCookie is returned by GetSession if there is no cookie
@@ -34,7 +34,7 @@ var (
 	ErrExpired = errors.New("Session cookie has wrong ID")
 )
 
-// A Session is an instance opened on a device
+// A Session is an instance opened in a browser
 type Session struct {
 	Instance *instance.Instance `json:"-"`
 	DocID    string             `json:"_id,omitempty"`
@@ -80,6 +80,7 @@ func NewSession(i *instance.Instance) (*Session, error) {
 // GetSession retrieves the session from a gin.Context
 func GetSession(c *gin.Context) (*Session, error) {
 	var s Session
+	var err error
 	// check for cached session in context
 	if si, ok := c.Get(SessionContextKey); ok {
 		if sp, ok := si.(*Session); ok {
@@ -88,7 +89,7 @@ func GetSession(c *gin.Context) (*Session, error) {
 	}
 
 	i := middlewares.GetInstance(c)
-	sid, err := c.Cookie(SessionCookieName)
+	sid, _ := c.Cookie(SessionCookieName)
 
 	// no cookie
 	if sid == "" {
@@ -114,7 +115,10 @@ func GetSession(c *gin.Context) (*Session, error) {
 	// save the new LastSeen
 	if s.OlderThan(maxAgeDuration / 2) {
 		s.LastSeen = time.Now()
-		couchdb.UpdateDoc(i, &s)
+		err := couchdb.UpdateDoc(i, &s)
+		if err != nil {
+			log.Warn("Failed to update session last seen.")
+		}
 	}
 
 	c.Set(SessionContextKey, &s)
@@ -124,13 +128,16 @@ func GetSession(c *gin.Context) (*Session, error) {
 }
 
 // ToCookie returns an http.Cookie for this Session
+// TODO SECURITY figure out if we keep session in couchdb or not
+// if we do, check if ID is random enough on the whole server to use as a
+// sessionid
 func (s *Session) ToCookie() *http.Cookie {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    s.ID(),
 		MaxAge:   SessionMaxAge,
 		Path:     "/",
-		Domain:   s.Instance.Domain,
+		Domain:   "." + s.Instance.Domain,
 		Secure:   true,
 		HttpOnly: true,
 	}

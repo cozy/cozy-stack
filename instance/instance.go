@@ -1,18 +1,19 @@
 package instance
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/vfs"
-	"github.com/dchest/uniuri"
-	scrypt "github.com/elithrar/simple-scrypt"
 	"github.com/spf13/afero"
 )
 
@@ -26,19 +27,23 @@ var (
 	ErrExists = errors.New("Instance already exists")
 	// ErrIllegalDomain is used when the domain named contains illegal characters
 	ErrIllegalDomain = errors.New("Domain name contains illegal characters")
+	// ErrMissingToken is returned by RegisterPassphrase if token is empty
+	ErrMissingToken = errors.New("Empty register token")
+	// ErrInvalidToken is returned by RegisterPassphrase if token is invalid
+	ErrInvalidToken = errors.New("Invalid register token")
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID         string `json:"_id,omitempty"`  // couchdb _id
-	DocRev        string `json:"_rev,omitempty"` // couchdb _rev
-	Domain        string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	StorageURL    string `json:"storage"`        // Where the binaries are persisted
-	RegisterToken string `json:"registerToken,omitempty"`
-	PasswordHash  string `json:"passwordHash,omitempty"`
-	storage       afero.Fs
+	DocID          string `json:"_id,omitempty"`  // couchdb _id
+	DocRev         string `json:"_rev,omitempty"` // couchdb _rev
+	Domain         string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	StorageURL     string `json:"storage"`        // Where the binaries are persisted
+	RegisterToken  []byte `json:"registerToken,omitempty"`
+	PassphraseHash []byte `json:"passphraseHash,omitempty"`
+	storage        afero.Fs
 }
 
 // DocType implements couchdb.Doc
@@ -128,13 +133,19 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 	}
 
 	domainURL := config.BuildRelFsURL(domain)
+
+	var err error
+
+	registerToken, err := crypto.GenerateRandomBytes(16)
+	if err != nil {
+		return nil, err
+	}
+
 	i := &Instance{
 		Domain:        domain,
 		StorageURL:    domainURL.String(),
-		RegisterToken: uniuri.New(),
+		RegisterToken: registerToken,
 	}
-
-	var err error
 
 	err = i.makeStorageFs()
 	if err != nil {
@@ -272,30 +283,43 @@ func (i *Instance) Prefix() string {
 	return i.Domain + "/"
 }
 
-// RegisterPassword replace the instance registerToken by a password
-func (i *Instance) RegisterPassword(pass string, tok string) error {
-	if i.RegisterToken == "" {
-		return errors.New("Missing registerToken")
+// RegisterPassphrase replace the instance registerToken by a passphrase
+func (i *Instance) RegisterPassphrase(pass []byte, tok []byte) error {
+	if len(i.RegisterToken) == 0 {
+		return ErrMissingToken
 	}
-	if i.RegisterToken != tok {
-		return errors.New("Invalid registerToken")
+	if subtle.ConstantTimeCompare(i.RegisterToken, tok) != 1 {
+		return ErrInvalidToken
 	}
 
-	hash, err := scrypt.GenerateFromPassword([]byte(pass), scrypt.DefaultParams)
+	hash, err := crypto.GenerateFromPassphrase([]byte(pass))
 	if err != nil {
 		return err
 	}
 
-	i.RegisterToken = ""
-	i.PasswordHash = string(hash)
+	i.RegisterToken = nil
+	i.PassphraseHash = hash
 
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
 }
 
-// CheckPassword confirm an instance passport
-func (i *Instance) CheckPassword(pass string) error {
-	hash := []byte(i.PasswordHash)
-	return scrypt.CompareHashAndPassword(hash, []byte(pass))
+// CheckPassphrase confirm an instance passport
+func (i *Instance) CheckPassphrase(pass []byte) error {
+	err := crypto.CompareHashAndPassphrase(i.PassphraseHash, pass)
+	if err != nil {
+		return err
+	}
+
+	newhash, err := crypto.UpdateHash(i.PassphraseHash, pass)
+	if err == nil {
+		i.PassphraseHash = newhash
+		err := couchdb.UpdateDoc(couchdb.GlobalDB, i)
+		if err != nil {
+			log.Info("Failed to update hash in db", err)
+		}
+	}
+
+	return nil
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {

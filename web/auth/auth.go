@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/apps"
@@ -11,12 +12,12 @@ import (
 )
 
 type registerForm struct {
-	Password string `form:"password"`
-	Token    string `form:"registerToken"`
+	Passphrase string `form:"passphrase"`
+	Token      string `form:"registerToken"`
 }
 
 type loginForm struct {
-	Password string `form:"password"`
+	Passphrase string `form:"passphrase"`
 }
 
 func redirectSuccessLogin(c *gin.Context) {
@@ -24,6 +25,7 @@ func redirectSuccessLogin(c *gin.Context) {
 	session, err := NewSession(instance)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
 	http.SetCookie(c.Writer, session.ToCookie())
 	c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.OnboardingSlug))
@@ -34,11 +36,17 @@ func register(c *gin.Context) {
 
 	var form registerForm
 	if err := binding.Form.Bind(c.Request, &form); err != nil {
+		fmt.Println(err, form)
 		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
-	if err := instance.RegisterPassword(form.Password, form.Token); err != nil {
+	pass := []byte(form.Passphrase)
+	token := []byte(form.Token)
+
+	if err := instance.RegisterPassphrase(pass, token); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
 	redirectSuccessLogin(c)
@@ -49,10 +57,14 @@ func login(c *gin.Context) {
 	var form loginForm
 	if err := binding.Form.Bind(c.Request, &form); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
-	if err := instance.CheckPassword(form.Password); err != nil {
+	pass := []byte(form.Passphrase)
+
+	if err := instance.CheckPassphrase(pass); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
 	redirectSuccessLogin(c)

@@ -19,7 +19,7 @@ import (
 const domain = "cozy.example.net"
 
 var ts *httptest.Server
-var registerToken string
+var registerToken []byte
 
 // Stupid http.CookieJar which always returns all cookies.
 // TODO use net/cookiejar when we have a proper dev env with hosts
@@ -49,7 +49,7 @@ func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 
 func TestRegisterWrongToken(t *testing.T) {
 	res, err := postForm("/register", &url.Values{
-		"password":      {"MyPassword"},
+		"passphrase":    {"MyPassphrase"},
 		"registerToken": {"123"},
 	})
 	assert.NoError(t, err)
@@ -59,18 +59,19 @@ func TestRegisterWrongToken(t *testing.T) {
 
 func TestRegisterCorrectToken(t *testing.T) {
 	res, err := postForm("/register", &url.Values{
-		"password":      {"MyPassword"},
-		"registerToken": {registerToken},
+		"passphrase":    {"MyPassphrase"},
+		"registerToken": {string(registerToken)},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	assert.Equal(t, "303 See Other", res.Status)
-	assert.Equal(t, "https://onboarding.cozy.example.net",
-		res.Header.Get("Location"))
-	cookies := res.Cookies()
-	assert.Len(t, cookies, 1)
-	assert.Equal(t, cookies[0].Name, SessionCookieName)
-	assert.NotEmpty(t, cookies[0].Value)
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://onboarding.cozy.example.net",
+			res.Header.Get("Location"))
+		cookies := res.Cookies()
+		assert.Len(t, cookies, 1)
+		assert.Equal(t, cookies[0].Name, SessionCookieName)
+		assert.NotEmpty(t, cookies[0].Value)
+	}
 }
 
 func TestIsLoggedInAfterRegister(t *testing.T) {
