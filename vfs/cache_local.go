@@ -1,7 +1,6 @@
 package vfs
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"sync"
@@ -24,9 +23,9 @@ type LocalCache struct {
 	lrud *lru.Cache   // lru cache for directories
 	pthd *radix.Tree  // path directory to id map
 
-	muf  sync.RWMutex      // mutex for files data-structures
-	lruf *lru.Cache        // lru cache for files
-	pthf map[string]string // (folderID, name) file pair to id map
+	muf  sync.RWMutex // mutex for files data-structures
+	lruf *lru.Cache   // lru cache for files
+	pthf *radix.Tree  // (folderID, name) file pair to id map
 }
 
 // NewLocalCache creates a new LocalCache. The maxEntries parameter is
@@ -47,12 +46,12 @@ func (lc *LocalCache) init(maxEntries int) {
 
 	fileEviction := func(key string, value interface{}) {
 		if doc, ok := value.(*FileDoc); ok {
-			delete(lc.pthf, genFilePathID(doc.FolderID, doc.Name))
+			lc.pthf.Remove(genFilePathID(doc.FolderID, doc.Name))
 		}
 	}
 
 	lc.pthd = radix.New()
-	lc.pthf = make(map[string]string)
+	lc.pthf = radix.New()
 	lc.lrud = &lru.Cache{MaxEntries: maxEntries, OnEvicted: dirEviction}
 	lc.lruf = &lru.Cache{MaxEntries: maxEntries, OnEvicted: fileEviction}
 }
@@ -334,12 +333,36 @@ func (lc *LocalCache) tapDir(doc *DirDoc) {
 	lc.mud.Lock()
 	defer lc.mud.Unlock()
 	key := doc.DocID
+
 	if old, ok := lc.lrud.Get(key); ok {
 		olddoc := old.(*DirDoc)
+		// if the directory was renamed, we invalidate all its
+		// subdirectories from the cache
 		if olddoc.Fullpath != doc.Fullpath {
-			lc.pthd.RemoveBranch(olddoc.Fullpath)
+			removed, ok := lc.pthd.RemoveBranch(olddoc.Fullpath)
+			if ok {
+				removed.Foreach(func(id interface{}, _ string) error {
+					lc.lrud.Remove(id.(string))
+					return nil
+				})
+			}
+		}
+
+		// if the directory has a new parent, we also invalidate all its
+		// direct children
+		if olddoc.FolderID != doc.FolderID {
+			lc.muf.Lock()
+			removed, ok := lc.pthf.RemoveBranch(olddoc.FolderID)
+			if ok {
+				removed.Foreach(func(id interface{}, _ string) error {
+					lc.lruf.Remove(id.(string))
+					return nil
+				})
+			}
+			lc.muf.Unlock()
 		}
 	}
+
 	lc.lrud.Add(key, doc)
 	lc.pthd.Insert(doc.Fullpath, key)
 }
@@ -348,12 +371,12 @@ func (lc *LocalCache) tapFile(doc *FileDoc) {
 	lc.muf.Lock()
 	defer lc.muf.Unlock()
 	key := doc.DocID
-	if olddoc, ok := lc.lruf.Get(key); ok {
-		f := olddoc.(*FileDoc)
-		delete(lc.pthf, genFilePathID(f.FolderID, f.Name))
+	if old, ok := lc.lruf.Get(key); ok {
+		olddoc := old.(*FileDoc)
+		lc.pthf.Remove(genFilePathID(olddoc.FolderID, olddoc.Name))
 	}
 	lc.lruf.Add(key, doc)
-	lc.pthf[genFilePathID(doc.FolderID, doc.Name)] = doc.DocID
+	lc.pthf.Insert(genFilePathID(doc.FolderID, doc.Name), key)
 }
 
 func (lc *LocalCache) rmDir(doc *DirDoc) {
@@ -400,16 +423,16 @@ func (lc *LocalCache) fileCachedByID(fileID string) (*FileDoc, bool) {
 func (lc *LocalCache) fileCachedByFolderID(folderID, name string) (*FileDoc, bool) {
 	lc.muf.Lock()
 	defer lc.muf.Unlock()
-	pid, ok := lc.pthf[genFilePathID(folderID, name)]
+	pid, ok := lc.pthf.Get(genFilePathID(folderID, name))
 	if ok {
-		v, _ := lc.lruf.Get(pid)
+		v, _ := lc.lruf.Get(pid.(string))
 		return v.(*FileDoc), true
 	}
 	return nil, false
 }
 
 func genFilePathID(folderID, name string) string {
-	return fmt.Sprintf("%s/%s", folderID, name)
+	return folderID + "/" + name
 }
 
 // check if LocalCache implements the Cache interface
