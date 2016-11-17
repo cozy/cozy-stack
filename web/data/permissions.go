@@ -27,7 +27,7 @@ func CheckReadable(c *gin.Context, doctype string) bool {
 		return true
 	}
 
-	err := fmt.Errorf("doctype %v unreadable", doctype)
+	err := fmt.Errorf("reserved doctype %v unreadable", doctype)
 	c.AbortWithError(http.StatusForbidden, err)
 
 	return false
@@ -41,7 +41,7 @@ func CheckWritable(c *gin.Context, doctype string) bool {
 		return true
 	}
 
-	err := fmt.Errorf("doctype %v unreadable", doctype)
+	err := fmt.Errorf("reserved doctype %v unwritable", doctype)
 	c.AbortWithError(http.StatusForbidden, err)
 
 	return false
