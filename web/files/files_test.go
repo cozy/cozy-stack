@@ -906,6 +906,11 @@ func TestDirectoryTrash(t *testing.T) {
 	if !assert.NoError(t, err) || !assert.Equal(t, 200, res7.StatusCode) {
 		return
 	}
+
+	res8, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 400, res8.StatusCode) {
+		return
+	}
 }
 
 func TestFileTrash(t *testing.T) {
@@ -924,6 +929,11 @@ func TestFileTrash(t *testing.T) {
 
 	res3, err := http.Get(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
 	if !assert.NoError(t, err) || !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	res4, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 400, res4.StatusCode) {
 		return
 	}
 }

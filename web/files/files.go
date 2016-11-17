@@ -426,6 +426,8 @@ func WrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.PreconditionFailed("Content-MD5", err)
 	case vfs.ErrContentLengthMismatch:
 		return jsonapi.PreconditionFailed("Content-Length", err)
+	case vfs.ErrFileInTrash:
+		return jsonapi.BadRequest(err)
 	}
 	return jsonapi.InternalServerError(err)
 }

@@ -279,6 +279,11 @@ func CreateTrashDir(c Context) error {
 // ModifyDirMetadata modify the metadata associated to a directory. It
 // can be used to rename or move the directory in the VFS.
 func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
+	id := olddoc.ID()
+	if id == RootFolderID || id == TrashFolderID {
+		return nil, os.ErrInvalid
+	}
+
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:      &olddoc.Name,
@@ -373,6 +378,13 @@ func bulkUpdateDocsPath(c Context, oldpath, newpath string) error {
 
 // TrashDir is used to delete a directory given its document
 func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
+	oldpath, err := olddoc.Path(c)
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(oldpath, TrashDirName) {
+		return nil, ErrFileInTrash
+	}
 	trashFolderID := TrashFolderID
 	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
 		newdoc, err = ModifyDirMetadata(c, olddoc, &DocPatch{
