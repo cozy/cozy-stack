@@ -14,17 +14,19 @@ import (
 
 // The code below is heavily inspired by https://github.com/elithrar/simple-scrypt
 
-// Scrypt params
-// TODO audit this parameters taken from simple-scrypt DefaultParams
-const n = 16384
-const r = 8
-const p = 1
+// Scrypt params, this set of parameters is recommended in
+// - https://www.tarsnap.com/scrypt/scrypt-slides.pdf
+// - https://godoc.org/golang.org/x/crypto/scrypt#Key
+// - https://godoc.org/github.com/elithrar/simple-scrypt#DefaultParams
+const defaultN = 16384
+const defaultR = 8
+const defaultP = 1
 
 // hash length
-const dkLen = 32
+const defaultDkLen = 32
 
 // salt length
-const saltLen = 16
+const defaultSaltLen = 16
 
 // Errors
 var (
@@ -107,7 +109,8 @@ func (h *scryptHash) Compare(passphrase []byte) error {
 }
 
 func (h *scryptHash) NeedUpdate() bool {
-	return h.n != n || h.p != p || h.r != r || len(h.salt) != saltLen || len(h.dk) != dkLen
+	return h.n != defaultN || h.p != defaultP || h.r != defaultR ||
+		len(h.salt) != defaultSaltLen || len(h.dk) != defaultDkLen
 }
 
 // GenerateFromPassphrase returns the derived key of the passphrase using the
@@ -116,17 +119,17 @@ func (h *scryptHash) NeedUpdate() bool {
 // If the parameters provided are less than the minimum acceptable values,
 // an error will be returned.
 func GenerateFromPassphrase(passphrase []byte) ([]byte, error) {
-	var h = &scryptHash{n: n, r: r, p: p}
+	var h = &scryptHash{n: defaultN, r: defaultR, p: defaultP}
 	var err error
 
-	h.salt, err = GenerateRandomBytes(saltLen)
+	h.salt, err = GenerateRandomBytes(defaultSaltLen)
 	if err != nil {
 		// Random generator is broken
 		return nil, err
 	}
 
 	// scrypt.Key returns the raw scrypt derived key.
-	h.dk, err = scrypt.Key(passphrase, h.salt, h.n, h.r, h.p, dkLen)
+	h.dk, err = scrypt.Key(passphrase, h.salt, h.n, h.r, h.p, defaultDkLen)
 	if err != nil {
 		return nil, err
 	}
