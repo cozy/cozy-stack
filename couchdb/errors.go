@@ -105,6 +105,18 @@ func IsNotFoundError(err error) bool {
 	return couchErr.Name == "not_found"
 }
 
+// IsConflictError checks if the given error is a couch conflict error
+func IsConflictError(err error) bool {
+	if err == nil {
+		return false
+	}
+	couchErr, isCouchErr := err.(*Error)
+	if !isCouchErr {
+		return false
+	}
+	return couchErr.StatusCode == 409
+}
+
 func newRequestError(originalError error) error {
 	return &Error{
 		StatusCode: http.StatusServiceUnavailable,

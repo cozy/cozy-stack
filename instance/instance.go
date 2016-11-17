@@ -86,8 +86,17 @@ func (i *Instance) createRootFolder() error {
 		return err
 	}
 
+	defer func() {
+		if err != nil {
+			rootFs.RemoveAll(domainURL.Path)
+		}
+	}()
+
 	if err = vfs.CreateRootDirDoc(i); err != nil {
-		rootFs.Remove(domainURL.Path)
+		return err
+	}
+
+	if err = vfs.CreateTrashDir(i); err != nil {
 		return err
 	}
 

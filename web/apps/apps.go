@@ -45,7 +45,7 @@ func Serve(c *gin.Context) {
 		vpath = path.Join(vpath, indexPage)
 	}
 
-	appdir := path.Join(apps.AppsDirectory, app.Slug)
+	appdir := path.Join(vfs.AppsDirName, app.Slug)
 	vpath = path.Clean(vpath)
 	vpath = path.Join(appdir, vpath)
 	doc, err := vfs.GetFileDocFromPath(instance, vpath)

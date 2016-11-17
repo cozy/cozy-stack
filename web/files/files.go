@@ -96,7 +96,7 @@ func createDirectoryHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.DirDoc, 
 		return
 	}
 
-	err = vfs.CreateDirectory(vfsC, doc)
+	err = vfs.CreateDir(vfsC, doc)
 	if err != nil {
 		return
 	}
@@ -322,6 +322,38 @@ func ReadFileContentHandler(c *gin.Context, fileID string) {
 	}
 }
 
+// TrashHandler handles all DELETE requests on /files/:file-id and
+// moves the file or directory with the specified file-id to the
+// trash.
+//
+// swagger:route DELETE /files/:file-id files trashFileOrDirectory
+func TrashHandler(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+
+	fileID := c.Param("file-id")
+
+	typ, dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	var data jsonapi.Object
+	switch typ {
+	case vfs.DirType:
+		data, err = vfs.TrashDir(instance, dir)
+	case vfs.FileType:
+		data, err = vfs.TrashFile(instance, file)
+	}
+
+	if err != nil {
+		jsonapi.AbortWithError(c, WrapVfsError(err))
+		return
+	}
+
+	jsonapi.Data(c, http.StatusOK, data, nil)
+}
+
 // Routes sets the routing for the files service
 func Routes(router *gin.RouterGroup) {
 	// @TODO: get rid of this handler when switching to
@@ -357,6 +389,8 @@ func Routes(router *gin.RouterGroup) {
 
 	router.PATCH("/:file-id", ModificationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
+
+	router.DELETE("/:file-id", TrashHandler)
 }
 
 // WrapVfsError returns a formatted error from a golang error emitted by the vfs

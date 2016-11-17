@@ -20,9 +20,9 @@ type DirDoc struct {
 	// from couch.
 	Type string `json:"type"`
 	// Qualified file identifier
-	ObjID string `json:"_id,omitempty"`
+	DocID string `json:"_id,omitempty"`
 	// Directory revision
-	ObjRev string `json:"_rev,omitempty"`
+	DocRev string `json:"_rev,omitempty"`
 	// Directory name
 	Name string `json:"name"`
 	// Parent folder identifier
@@ -40,33 +40,20 @@ type DirDoc struct {
 	dirs   []*DirDoc
 }
 
-// ID returns the directory qualified identifier - see couchdb.Doc interface
-func (d *DirDoc) ID() string {
-	return d.ObjID
-}
+// ID returns the directory qualified identifier
+func (d *DirDoc) ID() string { return d.DocID }
 
-// Rev returns the directory revision - see couchdb.Doc interface
-func (d *DirDoc) Rev() string {
-	return d.ObjRev
-}
+// Rev returns the directory revision
+func (d *DirDoc) Rev() string { return d.DocRev }
 
-// DocType returns the directory document type - see couchdb.Doc
-// interface
-func (d *DirDoc) DocType() string {
-	return FsDocType
-}
+// DocType returns the directory document type
+func (d *DirDoc) DocType() string { return FsDocType }
 
-// SetID is used to change the directory qualified identifier - see
-// couchdb.Doc interface
-func (d *DirDoc) SetID(id string) {
-	d.ObjID = id
-}
+// SetID changes the directory qualified identifier
+func (d *DirDoc) SetID(id string) { d.DocID = id }
 
-// SetRev is used to change the directory revision - see couchdb.Doc
-// interface
-func (d *DirDoc) SetRev(rev string) {
-	d.ObjRev = rev
-}
+// SetRev changes the directory revision
+func (d *DirDoc) SetRev(rev string) { d.DocRev = rev }
 
 // Path is used to generate the file path
 func (d *DirDoc) Path(c Context) (string, error) {
@@ -97,7 +84,7 @@ func (d *DirDoc) Parent(c Context) (*DirDoc, error) {
 // SelfLink is used to generate a JSON-API link for the directory (part of
 // jsonapi.Object interface)
 func (d *DirDoc) SelfLink() string {
-	return "/files/" + d.ObjID
+	return "/files/" + d.DocID
 }
 
 // Relationships is used to generate the content relationship in JSON-API format
@@ -238,8 +225,8 @@ func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, erro
 	return doc, err
 }
 
-// CreateDirectory is the method for creating a new directory
-func CreateDirectory(c Context, doc *DirDoc) (err error) {
+// CreateDir is the method for creating a new directory
+func CreateDir(c Context, doc *DirDoc) (err error) {
 	pth, err := doc.Path(c)
 	if err != nil {
 		return err
@@ -259,13 +246,30 @@ func CreateDirectory(c Context, doc *DirDoc) (err error) {
 	return couchdb.CreateDoc(c, doc)
 }
 
-// CreateRootDirDoc creates the root folder for this context
+// CreateRootDirDoc creates the root folder document for this context
 func CreateRootDirDoc(c Context) error {
 	return couchdb.CreateNamedDocWithDB(c, &DirDoc{
 		Type:     DirType,
-		ObjID:    RootFolderID,
+		DocID:    RootFolderID,
 		Fullpath: "/",
 	})
+}
+
+// CreateTrashDir creates the trash folder for this context
+func CreateTrashDir(c Context) error {
+	err := c.FS().Mkdir(TrashDirName, 0755)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	err = couchdb.CreateNamedDocWithDB(c, &DirDoc{
+		Type:     DirType,
+		DocID:    TrashFolderID,
+		Fullpath: TrashDirName,
+	})
+	if err != nil && !couchdb.IsConflictError(err) {
+		return err
+	}
+	return nil
 }
 
 // ModifyDirMetadata modify the metadata associated to a directory. It
@@ -361,6 +365,19 @@ func bulkUpdateDocsPath(c Context, oldpath, newpath string) error {
 	}
 
 	return err
+}
+
+// TrashDir is used to delete a directory given its document
+func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
+	trashFolderID := TrashFolderID
+	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
+		newdoc, err = ModifyDirMetadata(c, olddoc, &DocPatch{
+			FolderID: &trashFolderID,
+			Name:     &name,
+		})
+		return err
+	})
+	return
 }
 
 func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc, err error) {

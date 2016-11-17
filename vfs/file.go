@@ -24,9 +24,9 @@ type FileDoc struct {
 	// from couch.
 	Type string `json:"type"`
 	// Qualified file identifier
-	ObjID string `json:"_id,omitempty"`
+	DocID string `json:"_id,omitempty"`
 	// File revision
-	ObjRev string `json:"_rev,omitempty"`
+	DocRev string `json:"_rev,omitempty"`
 	// File name
 	Name string `json:"name"`
 	// Parent folder identifier
@@ -45,40 +45,20 @@ type FileDoc struct {
 	parent *DirDoc
 }
 
-// ID returns the file qualified identifier (part of couchdb.Doc
-// interface)
-func (f *FileDoc) ID() string {
-	return f.ObjID
-}
+// ID returns the file qualified identifier
+func (f *FileDoc) ID() string { return f.DocID }
 
-// Rev returns the file revision (part of couchdb.Doc interface)
-func (f *FileDoc) Rev() string {
-	return f.ObjRev
-}
+// Rev returns the file revision
+func (f *FileDoc) Rev() string { return f.DocRev }
 
-// DocType returns the file document type (part of couchdb.Doc
-// interface)
-func (f *FileDoc) DocType() string {
-	return FsDocType
-}
+// DocType returns the file document type
+func (f *FileDoc) DocType() string { return FsDocType }
 
-// SetID is used to change the file qualified identifier (part of
-// couchdb.Doc interface)
-func (f *FileDoc) SetID(id string) {
-	f.ObjID = id
-}
+// SetID changes the file qualified identifier
+func (f *FileDoc) SetID(id string) { f.DocID = id }
 
-// SetRev is used to change the file revision (part of couchdb.Doc
-// interface)
-func (f *FileDoc) SetRev(rev string) {
-	f.ObjRev = rev
-}
-
-// SelfLink is used to generate a JSON-API link for the file (part of
-// jsonapi.Object interface)
-func (f *FileDoc) SelfLink() string {
-	return "/files/" + f.ObjID
-}
+// SetRev changes the file revision
+func (f *FileDoc) SetRev(rev string) { f.DocRev = rev }
 
 // Path is used to generate the file path
 func (f *FileDoc) Path(c Context) (string, error) {
@@ -106,6 +86,12 @@ func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
 	}
 	f.parent = parent
 	return parent, nil
+}
+
+// SelfLink is used to generate a JSON-API link for the file (part of
+// jsonapi.Object interface)
+func (f *FileDoc) SelfLink() string {
+	return "/files/" + f.DocID
 }
 
 // Relationships is used to generate the parent relationship in JSON-API format
@@ -520,6 +506,19 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 	}
 
 	err = couchdb.UpdateDoc(c, newdoc)
+	return
+}
+
+// TrashFile is used to delete a file given its document
+func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
+	trashFolderID := TrashFolderID
+	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
+		newdoc, err = ModifyFileMetadata(c, olddoc, &DocPatch{
+			FolderID: &trashFolderID,
+			Name:     &name,
+		})
+		return err
+	})
 	return
 }
 
