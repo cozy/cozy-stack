@@ -19,9 +19,6 @@ const (
 	ManifestMaxSize = 2 << (2 * 10) // 2MB
 )
 
-// AppsDirectory is the name of the directory in which apps are stored
-const AppsDirectory = "/_cozyapps"
-
 // ManifestFilename is the name of the manifest at the root of the
 // application directory
 const ManifestFilename = "manifest.webapp"
@@ -242,7 +239,7 @@ func (i *Installer) Install() (newman *Manifest, err error) {
 		return
 	}
 
-	appdir := path.Join(AppsDirectory, newman.Slug)
+	appdir := path.Join(vfs.AppsDirName, newman.Slug)
 	err = vfs.MkdirAll(i.vfsC, appdir)
 	if err != nil {
 		return

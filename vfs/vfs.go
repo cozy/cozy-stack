@@ -43,6 +43,8 @@ const (
 	TrashFolderID = "io.cozy.files.trashdir"
 	// TrashDirName is the path of the trash directory
 	TrashDirName = "/.cozy_trash"
+	// AppsDirName is the path of the directory in which apps are stored
+	AppsDirName = "/.cozy_apps"
 )
 
 const (

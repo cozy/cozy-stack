@@ -370,7 +370,7 @@ func bulkUpdateDocsPath(c Context, oldpath, newpath string) error {
 // TrashDir is used to delete a directory given its document
 func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 	trashFolderID := TrashFolderID
-	err = tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
+	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
 		newdoc, err = ModifyDirMetadata(c, olddoc, &DocPatch{
 			FolderID: &trashFolderID,
 			Name:     &name,

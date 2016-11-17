@@ -512,7 +512,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 // TrashFile is used to delete a file given its document
 func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
 	trashFolderID := TrashFolderID
-	err = tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
+	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
 		newdoc, err = ModifyFileMetadata(c, olddoc, &DocPatch{
 			FolderID: &trashFolderID,
 			Name:     &name,

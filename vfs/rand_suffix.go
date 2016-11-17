@@ -46,15 +46,14 @@ func tryOrUseSuffix(name, format string, do func(suffix string) error) (err erro
 			newname = fmt.Sprintf(format, name, nextSuffix())
 		}
 		err = do(newname)
-		if os.IsExist(err) {
-			if nconflict++; nconflict > 10 {
-				randmu.Lock()
-				rand = reseed()
-				randmu.Unlock()
-			}
-			continue
+		if !os.IsExist(err) {
+			break
 		}
-		break
+		if nconflict++; nconflict > 10 {
+			randmu.Lock()
+			rand = reseed()
+			randmu.Unlock()
+		}
 	}
 	return
 }

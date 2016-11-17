@@ -16,6 +16,7 @@ import (
 
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/instance"
+	"github.com/cozy/cozy-stack/vfs"
 	"github.com/gin-gonic/gin"
 	"github.com/sourcegraph/checkup"
 	"github.com/spf13/afero"
@@ -877,13 +878,54 @@ func TestDirectoryTrash(t *testing.T) {
 
 	dirID, _ := extractDirData(t, data1)
 
-	res2, data2 := trash(t, "/files/"+dirID)
-	assert.Equal(t, 200, res2.StatusCode)
-	fmt.Println(data2)
+	res2, _ := createDir(t, "/files/"+dirID+"?Name=child1&Type=io.cozy.files")
+	if !assert.Equal(t, 201, res2.StatusCode) {
+		return
+	}
+	res3, _ := createDir(t, "/files/"+dirID+"?Name=child2&Type=io.cozy.files")
+	if !assert.Equal(t, 201, res3.StatusCode) {
+		return
+	}
+
+	res4, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res4.StatusCode) {
+		return
+	}
+
+	res5, err := http.Get(ts.URL + "/files/" + dirID)
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res5.StatusCode) {
+		return
+	}
+
+	res6, err := http.Get(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child1"))
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res6.StatusCode) {
+		return
+	}
+
+	res7, err := http.Get(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashdir/child2"))
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res7.StatusCode) {
+		return
+	}
 }
 
 func TestFileTrash(t *testing.T) {
+	body := "foo,bar"
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
 
+	fileID, _ := extractDirData(t, data1)
+
+	res2, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res3, err := http.Get(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
 }
 
 func TestMain(m *testing.M) {
