@@ -249,9 +249,11 @@ func CreateDir(c Context, doc *DirDoc) (err error) {
 // CreateRootDirDoc creates the root folder document for this context
 func CreateRootDirDoc(c Context) error {
 	return couchdb.CreateNamedDocWithDB(c, &DirDoc{
+		Name:     "",
 		Type:     DirType,
 		DocID:    RootFolderID,
 		Fullpath: "/",
+		FolderID: "",
 	})
 }
 
@@ -262,9 +264,11 @@ func CreateTrashDir(c Context) error {
 		return err
 	}
 	err = couchdb.CreateNamedDocWithDB(c, &DirDoc{
+		Name:     path.Base(TrashDirName),
 		Type:     DirType,
 		DocID:    TrashFolderID,
 		Fullpath: TrashDirName,
+		FolderID: RootFolderID,
 	})
 	if err != nil && !couchdb.IsConflictError(err) {
 		return err
