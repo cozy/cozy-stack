@@ -134,7 +134,7 @@ Authorization: base64(onboarding:onboardingapptoken)
 
 - The server administrator Bob creates an instance through the CLI. He knows the instance should be in french for an user named `alice`.
 ```
-cozy-stack instance add alice.example.com --locale fr --public-name "Alice Martin" --tz Europe/Paris
+cozy-stack instances add alice.example.com --locale fr --public-name "Alice Martin" --tz Europe/Paris
 >> https://alice.cozycloud.cc?registerToken=42456565213125454842
 ```
 The instance is created
