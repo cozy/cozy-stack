@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -511,6 +512,13 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 
 // TrashFile is used to delete a file given its document
 func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
+	oldpath, err := olddoc.Path(c)
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(oldpath, TrashDirName) {
+		return nil, ErrFileInTrash
+	}
 	trashFolderID := TrashFolderID
 	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
 		newdoc, err = ModifyFileMetadata(c, olddoc, &DocPatch{

@@ -23,4 +23,6 @@ var (
 	// ErrConflict is used when the access to a file or directory is in
 	// conflict with another
 	ErrConflict = errors.New("Conflict access to same file or directory")
+	// ErrFileInTrash is used when the file is already in the trash
+	ErrFileInTrash = errors.New("File or directory is already in the trash")
 )
