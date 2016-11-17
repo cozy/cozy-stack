@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -49,14 +50,16 @@ given domain.
 
 		domain := args[0]
 
-		instance, err := instance.Create(domain, flagLocale, flagApps)
+		i, err := instance.Create(domain, flagLocale, flagApps)
 		if err != nil {
 			log.Errorf("Error while creating instance for domain %s", domain)
 			return err
 		}
 
-		log.Infof("Instance created with success for domain %s", domain)
-		log.Debugf("Instance created: %#v", instance)
+		log.Infof("Instance created with success for domain %s", i.Domain)
+		params := url.Values{"registerToken": {string(i.RegisterToken)}}
+		log.Infof("Owner registration link : onboarding.%s/?%s", i.Domain, params.Encode())
+		log.Debugf("Instance created: %#v", i)
 		return nil
 	},
 }
