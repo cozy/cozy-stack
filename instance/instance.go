@@ -1,15 +1,18 @@
 package instance
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/spf13/afero"
 )
@@ -24,17 +27,23 @@ var (
 	ErrExists = errors.New("Instance already exists")
 	// ErrIllegalDomain is used when the domain named contains illegal characters
 	ErrIllegalDomain = errors.New("Domain name contains illegal characters")
+	// ErrMissingToken is returned by RegisterPassphrase if token is empty
+	ErrMissingToken = errors.New("Empty register token")
+	// ErrInvalidToken is returned by RegisterPassphrase if token is invalid
+	ErrInvalidToken = errors.New("Invalid register token")
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID      string `json:"_id,omitempty"`  // couchdb _id
-	DocRev     string `json:"_rev,omitempty"` // couchdb _rev
-	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	StorageURL string `json:"storage"`        // Where the binaries are persisted
-	storage    afero.Fs
+	DocID          string `json:"_id,omitempty"`  // couchdb _id
+	DocRev         string `json:"_rev,omitempty"` // couchdb _rev
+	Domain         string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	StorageURL     string `json:"storage"`        // Where the binaries are persisted
+	RegisterToken  []byte `json:"registerToken,omitempty"`
+	PassphraseHash []byte `json:"passphraseHash,omitempty"`
+	storage        afero.Fs
 }
 
 // DocType implements couchdb.Doc
@@ -51,6 +60,13 @@ func (i *Instance) Rev() string { return i.DocRev }
 
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
+
+// SubDomain returns the full url for a subdomain of this instance
+// usefull with apps slugs
+// TODO https is hardcoded
+func (i *Instance) SubDomain(s string) string {
+	return "https://" + s + "." + i.Domain
+}
 
 // ensure Instance implements couchdb.Doc & vfs.Context
 var _ couchdb.Doc = (*Instance)(nil)
@@ -126,12 +142,19 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 	}
 
 	domainURL := config.BuildRelFsURL(domain)
-	i := &Instance{
-		Domain:     domain,
-		StorageURL: domainURL.String(),
-	}
 
 	var err error
+
+	registerToken, err := crypto.GenerateRandomBytes(16)
+	if err != nil {
+		return nil, err
+	}
+
+	i := &Instance{
+		Domain:        domain,
+		StorageURL:    domainURL.String(),
+		RegisterToken: registerToken,
+	}
 
 	err = i.makeStorageFs()
 	if err != nil {
@@ -267,6 +290,45 @@ func (i *Instance) FS() afero.Fs {
 // current instance
 func (i *Instance) Prefix() string {
 	return i.Domain + "/"
+}
+
+// RegisterPassphrase replace the instance registerToken by a passphrase
+func (i *Instance) RegisterPassphrase(pass []byte, tok []byte) error {
+	if len(i.RegisterToken) == 0 {
+		return ErrMissingToken
+	}
+	if subtle.ConstantTimeCompare(i.RegisterToken, tok) != 1 {
+		return ErrInvalidToken
+	}
+
+	hash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		return err
+	}
+
+	i.RegisterToken = nil
+	i.PassphraseHash = hash
+
+	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
+
+// CheckPassphrase confirm an instance passport
+func (i *Instance) CheckPassphrase(pass []byte) error {
+	err := crypto.CompareHashAndPassphrase(i.PassphraseHash, pass)
+	if err != nil {
+		return err
+	}
+
+	newhash, err := crypto.UpdateHash(i.PassphraseHash, pass)
+	if err == nil {
+		i.PassphraseHash = newhash
+		err := couchdb.UpdateDoc(couchdb.GlobalDB, i)
+		if err != nil {
+			log.Info("Failed to update hash in db", err)
+		}
+	}
+
+	return nil
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {

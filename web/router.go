@@ -24,6 +24,7 @@ package web
 
 import (
 	"github.com/cozy/cozy-stack/web/apps"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -37,6 +38,7 @@ func SetupRoutes(router *gin.Engine) {
 	router.Use(middlewares.ParseHost())
 	router.Use(middlewares.ServeApp(apps.Serve))
 	router.Use(middlewares.ErrorHandler())
+	auth.Routes(router)
 	apps.Routes(router.Group("/apps", middlewares.NeedInstance()))
 	data.Routes(router.Group("/data", middlewares.NeedInstance()))
 	files.Routes(router.Group("/files", middlewares.NeedInstance()))

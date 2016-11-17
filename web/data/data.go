@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -17,8 +16,6 @@ func validDoctype(c *gin.Context) {
 	doctype := c.Param("doctype")
 	if doctype == "" {
 		c.AbortWithError(http.StatusBadRequest, invalidDoctypeErr(doctype))
-	} else if doctype == vfs.FsDocType {
-		c.AbortWithError(http.StatusBadRequest, errVfsNotData)
 	} else {
 		c.Set("doctype", doctype)
 	}
@@ -29,6 +26,10 @@ func getDoc(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	doctype := c.MustGet("doctype").(string)
 	docid := c.Param("docid")
+
+	if !CheckReadable(c, doctype) {
+		return
+	}
 
 	var out couchdb.JSONDoc
 	err := couchdb.GetDoc(instance, doctype, docid, &out)
@@ -48,6 +49,10 @@ func createDoc(c *gin.Context) {
 	var doc = couchdb.JSONDoc{Type: doctype}
 	if err := binding.JSON.Bind(c.Request, &doc.M); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	if !CheckWritable(c, doctype) {
 		return
 	}
 
@@ -82,6 +87,10 @@ func updateDoc(c *gin.Context) {
 	}
 
 	doc.Type = c.Param("doctype")
+
+	if !CheckWritable(c, doc.Type) {
+		return
+	}
 
 	if (doc.ID() == "") != (doc.Rev() == "") {
 		err := fmt.Errorf("You must either provide an _id and _rev in document (update) or neither (create with  fixed id).")
@@ -139,6 +148,10 @@ func deleteDoc(c *gin.Context) {
 		return
 	}
 
+	if !CheckWritable(c, doctype) {
+		return
+	}
+
 	tombrev, err := couchdb.Delete(instance, doctype, docid, rev)
 	if err != nil {
 		c.AbortWithError(HTTPStatus(err), err)
@@ -165,6 +178,10 @@ func defineIndex(c *gin.Context) {
 		return
 	}
 
+	if !CheckWritable(c, doctype) {
+		return
+	}
+
 	result, err := couchdb.DefineIndexRaw(instance, doctype, &definitionRequest)
 	if couchdb.IsNoDatabaseError(err) {
 		if err = couchdb.CreateDB(instance, doctype); err == nil {
@@ -188,6 +205,11 @@ func findDocuments(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
+
+	if !CheckReadable(c, doctype) {
+		return
+	}
+
 	var results []couchdb.JSONDoc
 	err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
 	if err != nil {

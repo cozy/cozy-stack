@@ -62,6 +62,7 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 	}
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
+	// fmt.Println("[result]", string(body))
 	if err != nil {
 		return
 	}
@@ -73,7 +74,6 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 		}
 		return out, res, err
 	}
-	fmt.Println("[result]", string(body))
 	err = json.Unmarshal(body, &out)
 	if err != nil {
 		return
@@ -165,13 +165,16 @@ func TestWrongDoctype(t *testing.T) {
 
 func TestVFSDoctype(t *testing.T) {
 
-	req, _ := http.NewRequest("GET", ts.URL+"/data/io.cozy.files/"+ID, nil)
+	var in = jsonReader(&map[string]interface{}{
+		"wrong-vfs": "structure",
+	})
+	req, _ := http.NewRequest("POST", ts.URL+"/data/io.cozy.files/", in)
 	req.Header.Add("Host", Host)
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+	assert.Equal(t, "403 Forbidden", res.Status, "should get a 403")
 	if assert.Contains(t, out, "error") {
-		assert.Contains(t, out["error"], "vfs", "should give a clear error")
+		assert.Contains(t, out["error"], "reserved", "should give a clear error")
 	}
 }
 
