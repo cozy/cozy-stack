@@ -88,9 +88,8 @@ type dirOrFile struct {
 	Executable bool   `json:"executable"`
 }
 
-func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
-	typ = fd.Type
-	switch typ {
+func (fd *dirOrFile) refine() (dir *DirDoc, file *FileDoc) {
+	switch fd.Type {
 	case DirType:
 		dir = &fd.DirDoc
 	case FileType:
@@ -115,15 +114,15 @@ func (fd *dirOrFile) refine() (typ string, dir *DirDoc, file *FileDoc) {
 
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
-func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (dirDoc *DirDoc, fileDoc *FileDoc, err error) {
 	dirOrFile := &dirOrFile{}
 	err = couchdb.GetDoc(c, FsDocType, fileID, dirOrFile)
 	if err != nil {
 		return
 	}
 
-	typ, dirDoc, fileDoc = dirOrFile.refine()
-	if typ == DirType && withChildren {
+	dirDoc, fileDoc = dirOrFile.refine()
+	if dirDoc != nil && withChildren {
 		dirDoc.FetchFiles(c)
 	}
 	return
@@ -131,13 +130,12 @@ func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (typ string, d
 
 // GetDirOrFileDocFromPath is used to fetch a document from its path
 // without knowning in advance its type.
-func GetDirOrFileDocFromPath(c Context, name string, withChildren bool) (typ string, dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+func GetDirOrFileDocFromPath(c Context, name string, withChildren bool) (dirDoc *DirDoc, fileDoc *FileDoc, err error) {
 	dirDoc, err = GetDirDocFromPath(c, name, withChildren)
 	if err != nil && !os.IsNotExist(err) {
 		return
 	}
 	if err == nil {
-		typ = DirType
 		return
 	}
 
@@ -146,7 +144,6 @@ func GetDirOrFileDocFromPath(c Context, name string, withChildren bool) (typ str
 		return
 	}
 	if err == nil {
-		typ = FileType
 		return
 	}
 
@@ -282,7 +279,7 @@ func MkdirAll(c Context, name string) error {
 // Rename will rename a file or directory from a specified path to
 // another.
 func Rename(c Context, oldpath, newpath string) error {
-	typ, dir, file, err := GetDirOrFileDocFromPath(c, oldpath, false)
+	dir, file, err := GetDirOrFileDocFromPath(c, oldpath, false)
 	if err != nil {
 		return err
 	}
@@ -306,11 +303,10 @@ func Rename(c Context, oldpath, newpath string) error {
 		FolderID: newfolderID,
 	}
 
-	switch typ {
-	case FileType:
-		_, err = ModifyFileMetadata(c, file, patch)
-	case DirType:
+	if dir != nil {
 		_, err = ModifyDirMetadata(c, dir, patch)
+	} else {
+		_, err = ModifyFileMetadata(c, file, patch)
 	}
 
 	return err
@@ -328,39 +324,39 @@ func Remove(c Context, name string) error {
 // as argument the complete name of the file or directory, the type of
 // the document, the actual directory or file document and a possible
 // error.
-type WalkFn func(name string, typ string, dir *DirDoc, file *FileDoc, err error) error
+type WalkFn func(name string, dir *DirDoc, file *FileDoc, err error) error
 
 // Walk walks the file tree document rooted at root. It should work
 // like filepath.Walk.
 func Walk(c Context, root string, walkFn WalkFn) error {
-	typ, dir, file, err := GetDirOrFileDocFromPath(c, root, false)
+	dir, file, err := GetDirOrFileDocFromPath(c, root, false)
 	if err != nil {
-		return walkFn(root, typ, dir, file, err)
+		return walkFn(root, dir, file, err)
 	}
-	return walk(c, root, typ, dir, file, walkFn)
+	return walk(c, root, dir, file, walkFn)
 }
 
-func walk(c Context, name string, typ string, dir *DirDoc, file *FileDoc, walkFn WalkFn) error {
-	err := walkFn(name, typ, dir, file, nil)
+func walk(c Context, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn) error {
+	err := walkFn(name, dir, file, nil)
 	if err != nil {
-		if typ == DirType && err == ErrSkipDir {
+		if dir != nil && err == ErrSkipDir {
 			return nil
 		}
 		return err
 	}
 
-	if typ != DirType {
+	if file != nil {
 		return nil
 	}
 
 	err = dir.FetchFiles(c)
 	if err != nil {
-		return walkFn(name, typ, dir, nil, err)
+		return walkFn(name, dir, nil, err)
 	}
 
 	for _, d := range dir.dirs {
 		fullpath := path.Join(name, d.Name)
-		err = walk(c, fullpath, DirType, d, nil, walkFn)
+		err = walk(c, fullpath, d, nil, walkFn)
 		if err != nil && err != ErrSkipDir {
 			return err
 		}
@@ -368,7 +364,7 @@ func walk(c Context, name string, typ string, dir *DirDoc, file *FileDoc, walkFn
 
 	for _, f := range dir.files {
 		fullpath := path.Join(name, f.Name)
-		err = walk(c, fullpath, FileType, nil, f, walkFn)
+		err = walk(c, fullpath, nil, f, walkFn)
 		if err != nil {
 			return err
 		}

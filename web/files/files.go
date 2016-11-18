@@ -186,14 +186,13 @@ func ModificationHandler(c *gin.Context) {
 
 	fileID := c.Param("file-id")
 
-	var typ string
 	var file *vfs.FileDoc
 	var dir *vfs.DirDoc
 
 	if fileID == "metadata" {
-		typ, dir, file, err = vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), false)
+		dir, file, err = vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), false)
 	} else {
-		typ, dir, file, err = vfs.GetDirOrFileDoc(instance, fileID, false)
+		dir, file, err = vfs.GetDirOrFileDoc(instance, fileID, false)
 	}
 
 	if err != nil {
@@ -202,10 +201,9 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	var doc couchdb.Doc
-	switch typ {
-	case vfs.DirType:
+	if dir != nil {
 		doc = dir
-	case vfs.FileType:
+	} else {
 		doc = file
 	}
 
@@ -238,17 +236,16 @@ func ReadMetadataFromIDHandler(c *gin.Context, fileID string) {
 
 	instance := middlewares.GetInstance(c)
 
-	typ, dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
 	var data jsonapi.Object
-	switch typ {
-	case vfs.DirType:
+	if dir != nil {
 		data = dir
-	case vfs.FileType:
+	} else {
 		data = file
 	}
 
@@ -264,17 +261,16 @@ func ReadMetadataFromPathHandler(c *gin.Context) {
 
 	instance := middlewares.GetInstance(c)
 
-	typ, dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), true)
+	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), true)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
 	var data jsonapi.Object
-	switch typ {
-	case vfs.DirType:
+	if dir != nil {
 		data = dir
-	case vfs.FileType:
+	} else {
 		data = file
 	}
 
@@ -332,17 +328,16 @@ func TrashHandler(c *gin.Context) {
 
 	fileID := c.Param("file-id")
 
-	typ, dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
 
 	var data jsonapi.Object
-	switch typ {
-	case vfs.DirType:
+	if dir != nil {
 		data, err = vfs.TrashDir(instance, dir)
-	case vfs.FileType:
+	} else {
 		data, err = vfs.TrashFile(instance, file)
 	}
 
