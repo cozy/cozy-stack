@@ -40,10 +40,6 @@ cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		if len(args) == 0 {
 			return cmd.Help()
 		}
@@ -72,10 +68,6 @@ cozy-stack instances ls allows to list all the instances that can be served
 by this server.
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		instances, err := instance.List()
 		if err != nil {
 			return err
@@ -101,10 +93,6 @@ var destroyInstanceCmd = &cobra.Command{
 and all its data.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		domain := args[0]
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf(`

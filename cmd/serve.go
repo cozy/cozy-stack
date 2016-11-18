@@ -15,10 +15,6 @@ var serveCmd = &cobra.Command{
 It will accept HTTP requests on localhost:8080 by default.
 Use the --port and --host flags to change the listening option.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		router := getGin()
 		web.SetupRoutes(router)
 
