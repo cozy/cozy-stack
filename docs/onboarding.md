@@ -100,7 +100,7 @@ If the user is logged in, allow to set instance fields
 
 #### Request
 ```http
-POST https://alice.example.com/instance
+POST https://alice.example.com/register
 Content-type: application/json
 Cookie sessionid=xxxxx
 Authorization: base64(onboarding:onboardingapptoken)
