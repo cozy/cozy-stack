@@ -19,7 +19,7 @@ func TestErrors(t *testing.T) {
 
 const TestDoctype = "io.cozy.testobject"
 
-var TestPrefix = SimpleDatabasePrefix("dev")
+var TestPrefix = SimpleDatabasePrefix("couchdb-tests")
 
 type testDoc struct {
 	TestID  string `json:"_id,omitempty"`
@@ -193,5 +193,9 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	os.Exit(m.Run())
+	res := m.Run()
+
+	DeleteDB(TestPrefix, TestDoctype)
+
+	os.Exit(res)
 }

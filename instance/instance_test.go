@@ -186,7 +186,12 @@ func TestMain(m *testing.M) {
 
 	os.RemoveAll("/usr/local/var/cozy2/")
 
-	os.Exit(m.Run())
+	res := m.Run()
+
+	Destroy("test.cozycloud.cc")
+	Destroy("test.cozycloud.cc.duplicate")
+
+	os.Exit(res)
 }
 
 func getDB(t *testing.T, domain string) couchdb.Database {
