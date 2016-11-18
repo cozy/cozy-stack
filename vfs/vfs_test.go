@@ -17,10 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const TestPrefix = "dev/"
-
-const CouchDBURL = "http://localhost:5984/"
-
 type TestContext struct {
 	prefix string
 	fs     afero.Fs
@@ -385,6 +381,7 @@ func TestMain(m *testing.M) {
 	res := m.Run()
 
 	os.RemoveAll(tempdir)
+	couchdb.DeleteDB(vfsC, FsDocType)
 
 	os.Exit(res)
 }

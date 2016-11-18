@@ -149,5 +149,8 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
+	couchdb.DeleteDB(c, ManifestDocType)
+	couchdb.DeleteDB(c, vfs.FsDocType)
+
 	os.Exit(res)
 }
