@@ -311,16 +311,16 @@ func TestWalk(t *testing.T) {
 	}
 
 	walked := ""
-	Walk(vfsC, "/walk", func(name string, typ string, dir *DirDoc, file *FileDoc, err error) error {
+	Walk(vfsC, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if !assert.NoError(t, err) {
 			return err
 		}
 
-		if typ == DirType && !assert.Equal(t, dir.Fullpath, name) {
+		if dir != nil && !assert.Equal(t, dir.Fullpath, name) {
 			return fmt.Errorf("Bad fullpath")
 		}
 
-		if typ == FileType && !assert.True(t, strings.HasSuffix(name, file.Name)) {
+		if file != nil && !assert.True(t, strings.HasSuffix(name, file.Name)) {
 			return fmt.Errorf("Bad fullpath")
 		}
 

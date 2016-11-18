@@ -406,14 +406,13 @@ func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc,
 	}
 
 	for _, doc := range docs {
-		typ, dir, file := doc.refine()
-		switch typ {
-		case FileType:
-			file.parent = parent
-			files = append(files, file)
-		case DirType:
+		dir, file := doc.refine()
+		if dir != nil {
 			dir.parent = parent
 			dirs = append(dirs, dir)
+		} else {
+			file.parent = parent
+			files = append(files, file)
 		}
 	}
 
