@@ -15,12 +15,12 @@ import (
 var flagLocale string
 var flagApps []string
 
-// serveCmd represents the serve command
+// instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
 	Use:   "instances [command]",
 	Short: "Manage instances of a stack",
 	Long: `
-cozy-stack instance allow to manage the instances of this stack
+cozy-stack instances allows to manage the instances of this stack
 
 An instance is a logical space owned by one user and identified by a domain.
 For example, bob.cozycloud.cc is the instance of Bob. A single cozy-stack
