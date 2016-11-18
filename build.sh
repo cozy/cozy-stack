@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 COZY_ENV_DFL=production
@@ -15,16 +15,24 @@ if [ -r ${WORK_DIR}/local.env ]; then
 fi
 
 usage() {
-	echo -e "Usage: ${1} [release]"
-	echo -e "\nCommands:"
-	echo -e "\trelease: builds a release of the current working-tree"
+	echo "Usage: ${1} [release]"
+	echo "\nCommands:"
+	echo "\n  release: builds a release of the current working-tree"
 
-	echo -e "\nEnvironment variables:"
-	echo -e "\tCOZY_ENV: with release command, specify the environment of the release: production or development. default: ${COZY_ENV_DFL}"
-	echo -e "\tCOZY_DEPLOY_USER: with deploy command, specify the user used to deploy. default: \$USER"
-	echo -e "\tCOZY_DEPLOY_SERVER: with deploy command, specify the ssh server to deploy on."
-	echo -e "\tCOZY_DEPLOY_PROXY: with deploy command, specify an ssh proxy to go through."
-	echo -e "\tCOZY_DEPLOY_POSTSCRIPT: with deploy command, specify an optional script to execute on the deploy server after deploying."
+	echo "\nEnvironment variables:"
+	echo "\n  COZY_ENV"
+	echo "    with release command, specify the environment of the release."
+	echo "    can be \"production\" or \"development\". default: \"${COZY_ENV_DFL}\""
+	echo "\n  COZY_DEPLOY_USER"
+	echo "    with deploy command, specify the user used to deploy."
+	echo "    default: \$USER (${USER})"
+	echo "\n  COZY_DEPLOY_SERVER"
+	echo "    with deploy command, specify the ssh server to deploy on."
+	echo "\n  COZY_DEPLOY_PROXY"
+	echo "    with deploy command, specify an ssh proxy to go through."
+	echo "\n  COZY_DEPLOY_POSTSCRIPT"
+	echo "    with deploy command, specify an optional script to execute"
+	echo "    on the deploy server after deploying."
 }
 
 # The version string is deterministic and reflects entirely the state
