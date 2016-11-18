@@ -361,7 +361,7 @@ func vfsTreeCmd(c *instance.Instance, root string, w io.Writer) error {
 		if name == root && dir != nil {
 			return nil
 		}
-		relname := strings.Replace(name, root+string(os.PathSeparator), "", 1)
+		relname := strings.Replace(name, root+"/", "", 1)
 		level := len(strings.Split("/"+relname, "/"))
 		for i := 0; i < level-1; i++ {
 			if i == level-2 {
