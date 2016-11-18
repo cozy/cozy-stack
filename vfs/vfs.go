@@ -214,9 +214,43 @@ func Create(c Context, name string) (*File, error) {
 	return OpenFile(c, name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 }
 
+// Touch creates a file or directory or updates its modification time
+// if it already exists.
+func Touch(c Context, name string) error {
+	dir, file, err := GetDirOrFileDocFromPath(c, name, false)
+	if os.IsNotExist(err) {
+		var f *File
+		f, err = Create(c, name)
+		if err != nil {
+			return err
+		}
+		if err = f.Close(); err != nil {
+			return err
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	now := time.Now()
+	patch := &DocPatch{UpdatedAt: &now}
+	if dir != nil {
+		_, err = ModifyDirMetadata(c, dir, patch)
+	} else {
+		_, err = ModifyFileMetadata(c, file, patch)
+	}
+
+	return err
+}
+
 // ReadDir returns a list of FileInfo of all the direct children of
 // the specified directory.
 func ReadDir(c Context, name string) ([]os.FileInfo, error) {
+	if !path.IsAbs(name) {
+		return nil, ErrNonAbsolutePath
+	}
+
 	return afero.ReadDir(c.FS(), name)
 }
 
@@ -314,10 +348,35 @@ func Rename(c Context, oldpath, newpath string) error {
 
 // Remove removes the specified named file or directory.
 func Remove(c Context, name string) error {
+	if !path.IsAbs(name) {
+		return ErrNonAbsolutePath
+	}
+
 	// TODO: fix this remove method implemented for now only to support
 	// go-git. This method should also remove the document from
 	// database.
 	return c.FS().Remove(name)
+}
+
+// Trash moves the specified file or directory into the trash. The
+// deleteDirContent boolean parameter if set to true will allow to
+// remove a directory even if its not empty.
+func Trash(c Context, name string, deleteDirContent bool) error {
+	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
+	if err != nil {
+		return err
+	}
+
+	if dir != nil {
+		if !deleteDirContent && len(dir.files)+len(dir.dirs) == 0 {
+			return ErrDirectoryNotEmpty
+		}
+		_, err = TrashDir(c, dir)
+	} else {
+		_, err = TrashFile(c, file)
+	}
+
+	return err
 }
 
 // WalkFn type works like filepath.WalkFn type function. It receives

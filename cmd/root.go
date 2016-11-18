@@ -71,6 +71,12 @@ func init() {
 	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDirectory), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
 
+	flags.String("cmd-host", "localhost", "command server host")
+	viper.BindPFlag("cmd.host", flags.Lookup("cmd-host"))
+
+	flags.Int("cmd-port", 5984, "command server port")
+	viper.BindPFlag("cmd.port", flags.Lookup("cmd-port"))
+
 	flags.String("couchdb-host", "localhost", "couchdbdb host")
 	viper.BindPFlag("couchdb.host", flags.Lookup("couchdb-host"))
 

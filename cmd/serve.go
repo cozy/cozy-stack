@@ -18,6 +18,8 @@ Use the --port and --host flags to change the listening option.`,
 		router := getGin()
 		web.SetupRoutes(router)
 
+		go vfsListenAndServe()
+
 		return router.Run(config.ServerAddr())
 	},
 }

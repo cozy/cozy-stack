@@ -30,6 +30,8 @@ type Config struct {
 	Mode    string
 	Host    string
 	Port    int
+	CmdHost string
+	CmdPort int
 	Fs      Fs
 	CouchDB CouchDB
 	Logger  Logger
@@ -90,6 +92,11 @@ func ServerAddr() string {
 	return config.Host + ":" + strconv.Itoa(config.Port)
 }
 
+// CmdAddr returns the address of the command server
+func CmdAddr() string {
+	return config.CmdHost + ":" + strconv.Itoa(config.CmdPort)
+}
+
 // CouchURL returns the CouchDB string url
 func CouchURL() string {
 	return config.CouchDB.URL
@@ -134,9 +141,11 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Mode: mode,
-		Host: v.GetString("host"),
-		Port: v.GetInt("port"),
+		Mode:    mode,
+		Host:    v.GetString("host"),
+		Port:    v.GetInt("port"),
+		CmdHost: v.GetString("cmd.host"),
+		CmdPort: v.GetInt("cmd.port"),
 		Fs: Fs{
 			URL: fsURL,
 		},

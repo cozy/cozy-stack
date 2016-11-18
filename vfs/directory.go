@@ -201,6 +201,10 @@ func GetDirDoc(c Context, fileID string, withChildren bool) (*DirDoc, error) {
 // GetDirDocFromPath is used to fetch directory document information from
 // the database from its path.
 func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, error) {
+	if !path.IsAbs(name) {
+		return nil, ErrNonAbsolutePath
+	}
+
 	var doc *DirDoc
 	var err error
 
@@ -424,7 +428,7 @@ func safeRenameDirectory(c Context, oldpath, newpath string) error {
 	oldpath = path.Clean(oldpath)
 
 	if !path.IsAbs(newpath) || !path.IsAbs(oldpath) {
-		return fmt.Errorf("paths should be absolute")
+		return ErrNonAbsolutePath
 	}
 
 	if strings.HasPrefix(newpath, oldpath+"/") {
