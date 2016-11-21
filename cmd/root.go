@@ -74,7 +74,7 @@ func init() {
 	flags.String("cmd-host", "localhost", "command server host")
 	viper.BindPFlag("cmd.host", flags.Lookup("cmd-host"))
 
-	flags.Int("cmd-port", 5984, "command server port")
+	flags.Int("cmd-port", 8081, "command server port")
 	viper.BindPFlag("cmd.port", flags.Lookup("cmd-port"))
 
 	flags.String("couchdb-host", "localhost", "couchdbdb host")
