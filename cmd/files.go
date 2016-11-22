@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -119,9 +118,17 @@ type fileData struct {
 	Attrs *vfs.DirOrFileDoc `json:"attributes"`
 }
 
-type rootData struct {
+type apiData struct {
 	Data     *fileData  `json:"data"`
 	Included []fileData `json:"included"`
+}
+
+type apiErrors struct {
+	Errors []struct {
+		Status string `json:"status"`
+		Title  string `json:"title"`
+		Detail string `json:"detail"`
+	}
 }
 
 type filePatch struct {
@@ -129,7 +136,7 @@ type filePatch struct {
 	FolderID string `json:"folder_id"`
 }
 
-type rootPatch struct {
+type apiPatch struct {
 	Data struct {
 		Attrs filePatch `json:"attributes"`
 	} `json:"data"`
@@ -198,7 +205,7 @@ func execCommand(c *instance.Instance, command string, w io.Writer) error {
 	return errFilesExec
 }
 
-func doVfsCreateRequest(c *instance.Instance, method, path string, q url.Values, r io.Reader) (*http.Request, error) {
+func vfsCreateRequest(c *instance.Instance, method, path string, q url.Values, r io.Reader) (*http.Request, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   c.Addr(),
@@ -211,7 +218,7 @@ func doVfsCreateRequest(c *instance.Instance, method, path string, q url.Values,
 	return http.NewRequest(method, u.String(), r)
 }
 
-func doVfsRequest(c *instance.Instance, client *http.Client, method, path string, q url.Values, body interface{}) (res *http.Response, err error) {
+func vfsDoRequest(c *instance.Instance, client *http.Client, method, path string, q url.Values, body interface{}) (res *http.Response, err error) {
 	var r io.Reader
 	var ok bool
 	if body != nil {
@@ -225,7 +232,7 @@ func doVfsRequest(c *instance.Instance, client *http.Client, method, path string
 		}
 	}
 
-	req, err := doVfsCreateRequest(c, method, path, q, r)
+	req, err := vfsCreateRequest(c, method, path, q, r)
 	if err != nil {
 		return
 	}
@@ -235,41 +242,42 @@ func doVfsRequest(c *instance.Instance, client *http.Client, method, path string
 		return
 	}
 
-	if err = doVfsErrCheck(res); err != nil {
+	if err = vfsErrCheck(res); err != nil {
 		return
 	}
 
 	return
 }
 
-func doVfsRequestAndClose(c *instance.Instance, client *http.Client, method, path string, q url.Values, body interface{}) error {
-	res, err := doVfsRequest(c, client, method, path, q, body)
+func vfsDoRequestAndClose(c *instance.Instance, client *http.Client, method, path string, q url.Values, body interface{}) error {
+	res, err := vfsDoRequest(c, client, method, path, q, body)
 	if err != nil {
 		return err
 	}
 	return res.Body.Close()
 }
 
-func doVfsErrCheck(res *http.Response) error {
+func vfsErrCheck(res *http.Response) error {
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		return nil
 	}
 	defer res.Body.Close()
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
+	var errs *apiErrors
+	err := json.NewDecoder(res.Body).Decode(&errs)
+	if err != nil || errs.Errors == nil || len(errs.Errors) == 0 {
+		return fmt.Errorf("Unknown error %d (%v)", res.StatusCode, err)
 	}
-	// TODO: improve error message
-	return fmt.Errorf(string(b))
+	apiErr := errs.Errors[0]
+	return fmt.Errorf("%s (%s %s)", apiErr.Detail, apiErr.Status, apiErr.Title)
 }
 
-func doVfsRequestAndParse(c *instance.Instance, client *http.Client, method, path string, q url.Values, body interface{}) (*rootData, error) {
-	res, err := doVfsRequest(c, client, method, path, q, body)
+func vfsRequestAndParse(c *instance.Instance, client *http.Client, method, path string, q url.Values, body interface{}) (*apiData, error) {
+	res, err := vfsDoRequest(c, client, method, path, q, body)
 	if err != nil {
 		return nil, err
 	}
 	defer res.Body.Close()
-	var doc rootData
+	var doc apiData
 	if err = json.NewDecoder(res.Body).Decode(&doc); err != nil {
 		return nil, err
 	}
@@ -286,13 +294,13 @@ func mkdirCmd(c *instance.Instance, client *http.Client, name string, mkdirP boo
 	if mkdirP {
 		q.Add("Recursive", "true")
 	}
-	return doVfsRequestAndClose(c, client, "POST", "/", q, nil)
+	return vfsDoRequestAndClose(c, client, "POST", "/", q, nil)
 }
 
 func lsCmd(c *instance.Instance, client *http.Client, root string, w io.Writer, verbose, human, all bool) error {
 	q := url.Values{}
 	q.Add("Path", root)
-	doc, err := doVfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
+	doc, err := vfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
 	if err != nil {
 		return err
 	}
@@ -387,7 +395,7 @@ func treeCmd(c *instance.Instance, client *http.Client, root string, w io.Writer
 	q := url.Values{}
 	q.Add("Path", root)
 
-	doc, err := doVfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
+	doc, err := vfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
 	if err != nil {
 		return err
 	}
@@ -405,7 +413,7 @@ func treeCmd(c *instance.Instance, client *http.Client, root string, w io.Writer
 	return treeRecurs(c, client, doc, root, 2, w)
 }
 
-func treeRecurs(c *instance.Instance, client *http.Client, doc *rootData, root string, level int, w io.Writer) (err error) {
+func treeRecurs(c *instance.Instance, client *http.Client, doc *apiData, root string, level int, w io.Writer) (err error) {
 	for _, f := range doc.Included {
 		for i := 0; i < level-1; i++ {
 			if i == level-2 {
@@ -425,8 +433,8 @@ func treeRecurs(c *instance.Instance, client *http.Client, doc *rootData, root s
 		}
 
 		if f.Attrs.Type == vfs.DirType {
-			var child *rootData
-			child, err = doVfsRequestAndParse(c, client, "GET", "/"+f.ID, nil, nil)
+			var child *apiData
+			child, err = vfsRequestAndParse(c, client, "GET", "/"+f.ID, nil, nil)
 			if err != nil {
 				return
 			}
@@ -444,7 +452,7 @@ func attrsCmd(c *instance.Instance, client *http.Client, name string, w io.Write
 	q := url.Values{}
 	q.Add("Path", name)
 
-	doc, err := doVfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
+	doc, err := vfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
 	if err != nil {
 		return err
 	}
@@ -458,7 +466,7 @@ func catCmd(c *instance.Instance, client *http.Client, name string, w io.Writer)
 	q := url.Values{}
 	q.Add("Path", name)
 
-	res, err := doVfsRequest(c, client, "GET", "/download", q, nil)
+	res, err := vfsDoRequest(c, client, "GET", "/download", q, nil)
 	if err != nil {
 		return err
 	}
@@ -472,14 +480,14 @@ func catCmd(c *instance.Instance, client *http.Client, name string, w io.Writer)
 func mvCmd(c *instance.Instance, client *http.Client, from, to string) error {
 	q := url.Values{}
 	q.Add("Path", from)
-	doc, err := doVfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
+	doc, err := vfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
 	if err != nil {
 		return err
 	}
 
 	q = url.Values{}
 	q.Add("Path", path.Dir(to))
-	parent, err := doVfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
+	parent, err := vfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
 	if err != nil {
 		return err
 	}
@@ -487,19 +495,19 @@ func mvCmd(c *instance.Instance, client *http.Client, from, to string) error {
 	q = url.Values{}
 	q.Add("rev", doc.Data.Rev)
 
-	body := &rootPatch{}
+	body := &apiPatch{}
 	body.Data.Attrs = filePatch{
 		Name:     path.Base(to),
 		FolderID: parent.Data.ID,
 	}
 
-	return doVfsRequestAndClose(c, client, "PATCH", "/"+doc.Data.ID, q, body)
+	return vfsDoRequestAndClose(c, client, "PATCH", "/"+doc.Data.ID, q, body)
 }
 
 func rmCmd(c *instance.Instance, client *http.Client, name string, force, recur bool) error {
 	q := url.Values{}
 	q.Add("Path", name)
-	doc, err := doVfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
+	doc, err := vfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
 	if err != nil {
 		return err
 	}
@@ -511,7 +519,7 @@ func rmCmd(c *instance.Instance, client *http.Client, name string, force, recur 
 	if !recur && len(doc.Included) > 0 {
 		return fmt.Errorf("Directory is not empty")
 	}
-	return doVfsRequestAndClose(c, client, "DELETE", "/"+doc.Data.ID, q, nil)
+	return vfsDoRequestAndClose(c, client, "DELETE", "/"+doc.Data.ID, q, nil)
 }
 
 func importFiles(c *instance.Instance, client *http.Client, from, to string, match *regexp.Regexp) error {
@@ -527,7 +535,7 @@ func importFiles(c *instance.Instance, client *http.Client, from, to string, mat
 		q.Add("Path", name)
 		q.Add("Type", "io.cozy.folders")
 		q.Add("Recursive", "true")
-		doc, err := doVfsRequestAndParse(c, client, "POST", "/", q, nil)
+		doc, err := vfsRequestAndParse(c, client, "POST", "/", q, nil)
 		if err != nil {
 			return err
 		}
@@ -561,7 +569,7 @@ func importFiles(c *instance.Instance, client *http.Client, from, to string, mat
 			panic(fmt.Errorf("Missing folder %s", dirname))
 		}
 
-		req, err := doVfsCreateRequest(c, "POST", "/"+folderID, q, r)
+		req, err := vfsCreateRequest(c, "POST", "/"+folderID, q, r)
 		if err != nil {
 			return err
 		}
@@ -572,7 +580,7 @@ func importFiles(c *instance.Instance, client *http.Client, from, to string, mat
 		}
 		defer res.Body.Close()
 
-		return doVfsErrCheck(res)
+		return vfsErrCheck(res)
 	}
 
 	// TODO: symlinks ?
