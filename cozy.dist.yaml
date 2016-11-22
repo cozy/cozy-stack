@@ -8,15 +8,6 @@ host: localhost
 port: 8080
 
 
-# cmd is used to configure the command server used for vfs exec
-# command
-cmd:
-  # cmd server host
-  host: localhost
-  # cmd server port
-  port: 8081
-
-
 fs:
   # file system url - flags: --fs-url
   # default url is the directory relative to the binary: ./storage

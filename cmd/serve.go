@@ -17,9 +17,6 @@ Use the --port and --host flags to change the listening option.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		router := getGin()
 		web.SetupRoutes(router)
-
-		go vfsListenAndServe()
-
 		return router.Run(config.ServerAddr())
 	},
 }

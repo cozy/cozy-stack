@@ -54,7 +54,7 @@ given domain.
 
 		log.Infof("Instance created with success for domain %s", i.Domain)
 		params := url.Values{"registerToken": {string(i.RegisterToken)}}
-		log.Infof("Owner registration link : onboarding.%s/?%s", i.Domain, params.Encode())
+		log.Infof("Owner registration link : onboarding.%s/?%s", i.Addr(), params.Encode())
 		log.Debugf("Instance created: %#v", i)
 		return nil
 	},

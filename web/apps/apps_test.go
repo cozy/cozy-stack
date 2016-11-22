@@ -56,12 +56,12 @@ func installMiniApp() error {
 	}
 
 	appdir := path.Join(vfs.AppsDirName, slug)
-	err = vfs.MkdirAll(testInstance, appdir)
+	_, err = vfs.MkdirAll(testInstance, appdir, nil)
 	if err != nil {
 		return err
 	}
 	pubdir := path.Join(appdir, "public")
-	err = vfs.Mkdir(testInstance, pubdir)
+	_, err = vfs.Mkdir(testInstance, pubdir, nil)
 	if err != nil {
 		return err
 	}

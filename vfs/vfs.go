@@ -75,9 +75,9 @@ type DocPatch struct {
 	Executable *bool      `json:"executable,omitempty"`
 }
 
-// dirOrFile is a union struct of FileDoc and DirDoc. It is useful to
+// DirOrFileDoc is a union struct of FileDoc and DirDoc. It is useful to
 // unmarshal documents from couch.
-type dirOrFile struct {
+type DirOrFileDoc struct {
 	DirDoc
 
 	// fields from FileDoc not contained in DirDoc
@@ -88,7 +88,9 @@ type dirOrFile struct {
 	Executable bool   `json:"executable"`
 }
 
-func (fd *dirOrFile) refine() (dir *DirDoc, file *FileDoc) {
+// Refine returns either a DirDoc or FileDoc pointer depending on the type of
+// the DirOrFileDoc
+func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
 	switch fd.Type {
 	case DirType:
 		dir = &fd.DirDoc
@@ -115,13 +117,13 @@ func (fd *dirOrFile) refine() (dir *DirDoc, file *FileDoc) {
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
 func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (dirDoc *DirDoc, fileDoc *FileDoc, err error) {
-	dirOrFile := &dirOrFile{}
+	dirOrFile := &DirOrFileDoc{}
 	err = couchdb.GetDoc(c, FsDocType, fileID, dirOrFile)
 	if err != nil {
 		return
 	}
 
-	dirDoc, fileDoc = dirOrFile.refine()
+	dirDoc, fileDoc = dirOrFile.Refine()
 	if dirDoc != nil && withChildren {
 		dirDoc.FetchFiles(c)
 	}
@@ -214,36 +216,6 @@ func Create(c Context, name string) (*File, error) {
 	return OpenFile(c, name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
 }
 
-// Touch creates a file or directory or updates its modification time
-// if it already exists.
-func Touch(c Context, name string) error {
-	dir, file, err := GetDirOrFileDocFromPath(c, name, false)
-	if os.IsNotExist(err) {
-		var f *File
-		f, err = Create(c, name)
-		if err != nil {
-			return err
-		}
-		if err = f.Close(); err != nil {
-			return err
-		}
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	now := time.Now()
-	patch := &DocPatch{UpdatedAt: &now}
-	if dir != nil {
-		_, err = ModifyDirMetadata(c, dir, patch)
-	} else {
-		_, err = ModifyFileMetadata(c, file, patch)
-	}
-
-	return err
-}
-
 // ReadDir returns a list of FileInfo of all the direct children of
 // the specified directory.
 func ReadDir(c Context, name string) ([]os.FileInfo, error) {
@@ -255,29 +227,33 @@ func ReadDir(c Context, name string) ([]os.FileInfo, error) {
 }
 
 // Mkdir creates a new directory with the specified name
-func Mkdir(c Context, name string) error {
+func Mkdir(c Context, name string, tags []string) (*DirDoc, error) {
 	name = path.Clean(name)
 	if name == "/" {
-		return nil
+		return nil, ErrParentDoesNotExist
 	}
 
 	dirname, dirpath := path.Base(name), path.Dir(name)
 	parent, err := GetDirDocFromPath(c, dirpath, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	dir, err := NewDirDoc(dirname, parent.ID(), nil, nil)
+	dir, err := NewDirDoc(dirname, parent.ID(), tags, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return CreateDir(c, dir)
+	if err = CreateDir(c, dir); err != nil {
+		return nil, err
+	}
+
+	return dir, nil
 }
 
 // MkdirAll creates a directory named path, along with any necessary
 // parents, and returns nil, or else returns an error.
-func MkdirAll(c Context, name string) error {
+func MkdirAll(c Context, name string, tags []string) (*DirDoc, error) {
 	var err error
 	var dirs []string
 	var base, file string
@@ -292,7 +268,7 @@ func MkdirAll(c Context, name string) error {
 			continue
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		break
 	}
@@ -303,11 +279,11 @@ func MkdirAll(c Context, name string) error {
 			err = CreateDir(c, parent)
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return parent, nil
 }
 
 // Rename will rename a file or directory from a specified path to
@@ -356,27 +332,6 @@ func Remove(c Context, name string) error {
 	// go-git. This method should also remove the document from
 	// database.
 	return c.FS().Remove(name)
-}
-
-// Trash moves the specified file or directory into the trash. The
-// deleteDirContent boolean parameter if set to true will allow to
-// remove a directory even if its not empty.
-func Trash(c Context, name string, deleteDirContent bool) error {
-	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
-	if err != nil {
-		return err
-	}
-
-	if dir != nil {
-		if !deleteDirContent && len(dir.files)+len(dir.dirs) == 0 {
-			return ErrDirectoryNotEmpty
-		}
-		_, err = TrashDir(c, dir)
-	} else {
-		_, err = TrashFile(c, file)
-	}
-
-	return err
 }
 
 // WalkFn type works like filepath.WalkFn type function. It receives

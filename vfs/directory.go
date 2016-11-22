@@ -401,7 +401,7 @@ func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 }
 
 func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc, err error) {
-	var docs []*dirOrFile
+	var docs []*DirOrFileDoc
 	sel := mango.Equal("folder_id", parent.ID())
 	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
 	err = couchdb.FindDocs(c, FsDocType, req, &docs)
@@ -410,7 +410,7 @@ func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc,
 	}
 
 	for _, doc := range docs {
-		dir, file := doc.refine()
+		dir, file := doc.Refine()
 		if dir != nil {
 			dir.parent = parent
 			dirs = append(dirs, dir)
