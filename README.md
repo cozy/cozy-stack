@@ -61,11 +61,9 @@ xdg-open http://localhost:2015/index.html?url=http://localhost:2015/specs/swagge
 * CouchDB 2.0.0
 
 
-## With Docker
+### Installing CouchDB *via* Docker
 
-### Running a CouchDB instance
-
-This will run a new instance of CouchDB in `single` mode (no cluster) and in `admin-party-mode` (no user).
+You can install CouchDB 2.0 via docker using the following command. This will run a new instance of CouchDB in `single` mode (no cluster) and in `admin-party-mode` (no user).
 
 ```bash
 $ docker run -d \
