@@ -77,7 +77,7 @@ $ curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
 Verify your installation at: http://127.0.0.1:5984/_utils/#verifyinstall
 
 
-### Building a `cozy-stack` binary
+## Building a `cozy-stack` binary
 
 To build a `cozy-stack` binary with Docker using the **local** source code, run:
 
