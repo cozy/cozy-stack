@@ -161,12 +161,12 @@ do_start_proxy() {
 
 	caddy_file="\n\
 ${COZY_DEV_HOST} {      \n\
-	proxy / ${COZY_STACK_HOST}:${COZY_STACK_PORT} \n\
-	tls off               \n\
+  proxy / ${COZY_STACK_HOST}:${COZY_STACK_PORT} \n\
+  tls off               \n\
 }                       \n\
 app.${COZY_DEV_HOST} {  \n\
-	root ${site_root}     \n\
-	tls off               \n\
+  root ${site_root}     \n\
+  tls off               \n\
 }                       \n\
  "
 
