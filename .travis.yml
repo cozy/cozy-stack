@@ -15,7 +15,7 @@ before_script:
   - gometalinter --deadline 120s --dupl-threshold 70 -D interfacer -D errcheck -D gocyclo -D dupl ./...
 
 script:
-  - ./coverage.sh
+  - ./scripts/coverage.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

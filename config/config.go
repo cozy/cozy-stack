@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	// Version of the release (see build.sh script)
+	// Version of the release (see scripts/build.sh script)
 	Version string
 	// BuildTime is ISO-8601 UTC string representation of the time of
 	// the build
