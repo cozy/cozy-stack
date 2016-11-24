@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 [ -z ${COZY_DEV_HOST} ] && COZY_DEV_HOST="cozy.local"
 [ -z ${COZY_DEV_PORT} ] && COZY_DEV_PORT="8080"
@@ -14,31 +14,31 @@ if [ -d ${COZY_STACK_PATH} ] && [ -f ${COZY_STACK_PATH}/cozy-stack ]; then
 fi
 
 usage() {
-	echo "Usage: ${0} [-h] [-d <app path>] [–v <stack version>]"
+	echo -e "Usage: ${0} [-h] [-d <app path>] [–v <stack version>]"
 
-	echo "\nEnvironment variables"
-	echo "\n  COZY_DEV_HOST"
-	echo "    specify the hostname or domain on which the dev server is listening"
-	echo "    to incoming requests. default: dev.cozycloud.cc"
-	echo "\n  COZY_DEV_PORT"
-	echo "    specify the port on which the dev server is listening."
-	echo "    default: 8080."
-	echo "\n  COZY_STACK_PATH"
-	echo "    specify the path of the cozy-stack binary folder or the binary"
-	echo "    itself. default: \"\$GOPATH/bin\"."
-	echo "\n  COZY_STACK_HOST"
-	echo "    specify the hostname on which the cozy-stack is launched."
-	echo "    default: localhost."
-	echo "\n  COZY_STACK_PORT"
-	echo "    specify the port on which the cozy-stack is listening."
-	echo "    default: 8080."
-	echo "\n  COUCHDB_ENABLE"
-	echo "    specify whether or not this script should launch couchdb."
-	echo "    default: 1"
-	echo "\n  COUCHDB_HOST"
-	echo "    specify the host of the couchdb database. default: localhost"
-	echo "\n  COUCHDB_PORT"
-	echo "    specify the port of the couchdb database. default: 5984"
+	echo -e "\nEnvironment variables"
+	echo -e "\n  COZY_DEV_HOST"
+	echo -e "    specify the hostname or domain on which the dev server is listening"
+	echo -e "    to incoming requests. default: dev.cozycloud.cc"
+	echo -e "\n  COZY_DEV_PORT"
+	echo -e "    specify the port on which the dev server is listening."
+	echo -e "    default: 8080."
+	echo -e "\n  COZY_STACK_PATH"
+	echo -e "    specify the path of the cozy-stack binary folder or the binary"
+	echo -e "    itself. default: \"\$GOPATH/bin\"."
+	echo -e "\n  COZY_STACK_HOST"
+	echo -e "    specify the hostname on which the cozy-stack is launched."
+	echo -e "    default: localhost."
+	echo -e "\n  COZY_STACK_PORT"
+	echo -e "    specify the port on which the cozy-stack is listening."
+	echo -e "    default: 8080."
+	echo -e "\n  COUCHDB_ENABLE"
+	echo -e "    specify whether or not this script should launch couchdb."
+	echo -e "    default: 1"
+	echo -e "\n  COUCHDB_HOST"
+	echo -e "    specify the host of the couchdb database. default: localhost"
+	echo -e "\n  COUCHDB_PORT"
+	echo -e "    specify the port of the couchdb database. default: 5984"
 }
 
 if [ -n "${COZY_STACK_PATH}" ] && [ ! -f "${COZY_STACK_PATH}" ]; then
@@ -214,7 +214,7 @@ check_hosts() {
 }
 
 echo_err() {
-	>&2 echo "error: ${1}"
+	>&2 echo -e "error: ${1}"
 }
 
 while getopts ":hd:v:" optname; do

@@ -1,3 +1,7 @@
+# This Dockerfile should be used to create an development environment to
+# develop applications for cozy-stack. It installs go and couchdb 2.
+# It should not be used for hosting your cozy cloud in production.
+
 FROM debian:jessie
 
 ENV COUCHDB_VERSION 2.0.0
