@@ -112,9 +112,12 @@ do_start_couchdb() {
 	# if COUCHDB_HOST or COUCHDB_PORT is non null, we do not try to start couchdb
 	# and only check if it is accessible on the given host:port.
 	if [ -n "${COUCHDB_HOST}" ] || [ -n "${COUCHDB_PORT}" ]; then
-		couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
-		printf "checking couchdb on ${couchdb_addr}... "
+		[ -z ${COUCHDB_PORT} ] && COUCHDB_PORT="5984"
+		[ -z ${COUCHDB_HOST} ] && COUCHDB_HOST="localhost"
 
+		couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
+
+		printf "checking couchdb on ${couchdb_addr}... "
 		couch_test=$(curl -s -XGET "${couchdb_addr}" || echo "")
 		couch_vers=$(echo "${couch_test}" | grep "\"version\":\s*\"2" || echo "")
 
