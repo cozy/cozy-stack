@@ -39,7 +39,9 @@ RUN mkdir /usr/src/couchdb \
   && cd /usr/src/couchdb \
   && ./configure --disable-docs \
   && make release \
-  && mv ./rel/couchdb /usr/local
+  && mv ./rel/couchdb /usr/local \
+  && printf "[httpd]\nport = 5984\nbind_address = 127.0.0.1\n" \
+      > /usr/local/couchdb/etc/local.ini
 
 ENV PATH $PATH:/usr/local/couchdb/bin
 
@@ -66,18 +68,17 @@ RUN apt-get purge -y \
   && apt-get clean \
   && rm -rf /usr/src/couchdb
 
-COPY dev.sh /usr/bin
-RUN chmod +x /usr/bin/dev.sh
+COPY app-dev.sh /usr/bin
+RUN chmod +x /usr/bin/app-dev.sh
 
-ENV COZY_DEV_HOST cozy.local
-ENV COZY_DEV_PORT 8080
+ENV COZY_PROXY_HOST cozy.local
+ENV COZY_PROXY_PORT 8080
 ENV COZY_STACK_HOST localhost
 ENV COZY_STACK_PORT 8081
-ENV COUCHDB_ENABLE 1
-ENV COUCHDB_HOST localhost
-ENV COUCHDB_PORT 5984
 
 RUN mkdir -p /data/cozy-app
 
-ENTRYPOINT ["/usr/bin/dev.sh"]
+EXPOSE $COZY_PROXY_PORT
+
+ENTRYPOINT ["/usr/bin/app-dev.sh"]
 CMD ["-d /data/cozy-app"]
