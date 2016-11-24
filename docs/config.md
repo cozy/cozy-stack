@@ -8,7 +8,7 @@ should be named `cozy.yaml` or `cozy.json` depending on the format of your
 chosing, and should be present in one of these directories (ordered by
 priority):
 
--  `.cozy`
+-  `./.cozy`
 -  `$HOME/.cozy`
 -  `/etc/cozy`
 

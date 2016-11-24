@@ -113,6 +113,10 @@ Make sure the full stack is up with:
 curl -H 'Accept: application/json' 'http://localhost:8080/status/'
 ```
 
+## Configuration
+
+See [configuration documentation](/docs/config.md).
+
 ## Building a release
 
 To build a release of cozy-stack, a `build.sh` script can automate the work. The `release` option of this script will generate a binary with a name containing the version of the file, along with a SHA-256 sum of the binary.
