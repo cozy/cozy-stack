@@ -102,7 +102,7 @@ cleanup() {
 		pid=`cat "${pidfile}"`
 		if [ -n "${pid}" ]; then
 			echo "stopping couchdb"
-			kill -9 ${pid} 2>&1 >/dev/null || true
+			kill -9 ${pid} 2>/dev/null || true
 		fi
 		rm "${pidfile}"
 	done
@@ -147,7 +147,7 @@ do_start_couchdb() {
 	couch_pid=`mktemp -t cozy-stack-dev.couch.XXXX` || exit 1
 	trap cleanup EXIT
 
-	couchdb 2>&1 > /dev/null
+	couchdb 2>/dev/null 1>/dev/null &
 	echo ${!} > ${couch_pid}
 	wait_for "${COUCHDB_HOST}:${COUCHDB_PORT}" "couchdb"
 	echo "ok"
@@ -207,7 +207,7 @@ app.${COZY_PROXY_HOST} {  \n\
 wait_for() {
 	i="0"
 	while ! curl -s --max-time 1 -XGET ${1} > /dev/null; do
-		sleep 0.5
+		sleep 1
 		i=$((i+1))
 		if [ "${i}" -gt "10" ]; then
 			echo_err "could not listen to ${2} on ${1}"

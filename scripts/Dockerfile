@@ -12,6 +12,7 @@ ENV GOLANG_VERSION 1.7.3
 ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
 ENV GOLANG_DOWNLOAD_SHA256 508028aac0654e993564b6e2014bf2d4a9751e3b286661b0b0040046cf18028e
 
+
 # CouchDB and CGo dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
@@ -30,20 +31,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
   && rm -rf /var/lib/apt/lists/*
 
-# CouchDB
-RUN mkdir /usr/src/couchdb \
-  && curl -fsSL "$COUCHDB_SRC_URL" -o couchdb.tar.gz \
-  && echo "$COUCHDB_SRC_SHA256  couchdb.tar.gz" | sha256sum -c - \
-  && tar -xzf couchdb.tar.gz -C /usr/src/couchdb --strip-components=1 \
-  && rm couchdb.tar.gz \
-  && cd /usr/src/couchdb \
-  && ./configure --disable-docs \
-  && make release \
-  && mv ./rel/couchdb /usr/local \
-  && printf "[httpd]\nport = 5984\nbind_address = 127.0.0.1\n" \
-      > /usr/local/couchdb/etc/local.ini
-
-ENV PATH $PATH:/usr/local/couchdb/bin
 
 # Go
 RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
@@ -59,6 +46,21 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 RUN go get github.com/mholt/caddy/caddy \
   && go get github.com/cozy/cozy-stack
 
+
+# CouchDB
+RUN mkdir /usr/src/couchdb \
+  && curl -fsSL "$COUCHDB_SRC_URL" -o couchdb.tar.gz \
+  && echo "$COUCHDB_SRC_SHA256  couchdb.tar.gz" | sha256sum -c - \
+  && tar -xzf couchdb.tar.gz -C /usr/src/couchdb --strip-components=1 \
+  && rm couchdb.tar.gz \
+  && cd /usr/src/couchdb \
+  && ./configure --disable-docs \
+  && make release \
+  && mv ./rel/couchdb /usr/local
+
+ENV PATH $PATH:/usr/local/couchdb/bin
+
+
 # Cleanup
 RUN apt-get purge -y \
     erlang-dev \
@@ -68,8 +70,9 @@ RUN apt-get purge -y \
   && apt-get clean \
   && rm -rf /usr/src/couchdb
 
-COPY app-dev.sh /usr/bin
-RUN chmod +x /usr/bin/app-dev.sh
+
+COPY cozy-app-dev.sh /usr/bin
+RUN chmod +x /usr/bin/cozy-app-dev.sh
 
 ENV COZY_PROXY_HOST cozy.local
 ENV COZY_PROXY_PORT 8080
@@ -78,7 +81,7 @@ ENV COZY_STACK_PORT 8081
 
 RUN mkdir -p /data/cozy-app
 
-EXPOSE $COZY_PROXY_PORT
+EXPOSE 8080 5984
 
-ENTRYPOINT ["/usr/bin/app-dev.sh"]
+ENTRYPOINT ["/usr/bin/cozy-app-dev.sh"]
 CMD ["-d /data/cozy-app"]
