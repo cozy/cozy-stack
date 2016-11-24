@@ -3,6 +3,7 @@ Cozy Cloud
 
 [![GoDoc](https://godoc.org/github.com/cozy/cozy-stack?status.svg)](https://godoc.org/github.com/cozy/cozy-stack)
 [![Build Status](https://travis-ci.org/cozy/cozy-stack.svg?branch=master)](https://travis-ci.org/cozy/cozy-stack)
+[![codecov](https://codecov.io/gh/cozy/cozy-stack/branch/master/graph/badge.svg)](https://codecov.io/gh/cozy/cozy-stack)
 
 
 ## What is Cozy?

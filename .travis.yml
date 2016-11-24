@@ -14,6 +14,12 @@ before_script:
   - gometalinter --install --update
   - gometalinter --deadline 120s --dupl-threshold 70 -D interfacer -D errcheck -D gocyclo -D dupl ./...
 
+script:
+  - ./coverage.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
 after_failure:
   - docker ps -a
   - docker logs couch
