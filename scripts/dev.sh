@@ -19,7 +19,7 @@ usage() {
 	echo -e "\nEnvironment variables"
 	echo -e "\n  COZY_DEV_HOST"
 	echo -e "    specify the hostname or domain on which the dev server is listening"
-	echo -e "    to incoming requests. default: dev.cozycloud.cc"
+	echo -e "    to incoming requests. default: cozy.local"
 	echo -e "\n  COZY_DEV_PORT"
 	echo -e "    specify the port on which the dev server is listening."
 	echo -e "    default: 8080."
