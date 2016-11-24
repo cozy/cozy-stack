@@ -10,12 +10,12 @@ Table of contents
 ### Usage
 - [Configuration](./config.md)
 - [Managing Instances](./instance.md)
+- [Docker](./docker.md)
+- [Build a release](./release.md)
 
 ### API
 - [Create, Read, Update, Delete](./crud.md)
 - [Virtual Filesystem](./files.md)
-
-
 
 ### In progress
 These pages are discussion for ideas not yet implemented

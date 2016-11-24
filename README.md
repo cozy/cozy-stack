@@ -29,83 +29,49 @@ and reliability. You can find:
 Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
 for questions and suggestions.
 
-There are some useful commands to know in order to play with the go code:
+## Dependencies
 
-```bash
-go get -u github.com/cozy/cozy-stack
-cd $GOPATH/src/github.com/cozy/cozy-stack
-
-go get -t -u ./...      # To install or update the go dependencies
-go test -v ./...        # To launch the tests
-go run main.go serve    # To start the API server
-godoc -http=:6060       # To start the documentation server
-                        # Open http://127.0.0.1:6060/pkg/github.com/cozy/cozy-stack/
-
-```
-
-The swagger description of the REST API can be displayed with those commands:
-
-```bash
-go get -u github.com/go-swagger/go-swagger/cmd/swagger
-git clone git@github.com:swagger-api/swagger-ui.git
-mkdir -p swagger-ui/dist/specs
-swagger generate spec -o swagger-ui/dist/specs/swagger.json
-go get github.com/mholt/caddy/caddy
-cd swagger-ui/dist && caddy
-xdg-open http://localhost:2015/index.html?url=http://localhost:2015/specs/swagger.json
-```
-
-
-## Requirements
-
-* Go 1.7.1
 * CouchDB 2.0.0
 
+To install CouchDB 2.0.0 through Docker, take a look at our [Docker specific documentation](docs/docker.md).
 
-### Installing CouchDB *via* Docker
+## Installing a `cozy-stack`
 
-You can install CouchDB 2.0 via docker using the following command. This will run a new instance of CouchDB in `single` mode (no cluster) and in `admin-party-mode` (no user).
+We do not yet provide releases binaries, but we will soon and you won't have to install go in order to run `cozy-stack`
 
-```bash
-$ docker run -d \
-    --name cozy-stack-couch \
-    -p 5984:5984 \
-    -v $HOME/.cozy-stack-couch:/opt/couchdb/data \
-    klaemo/couchdb:2.0.0
-$ curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
+### Using `go`
+
+[Install go](https://golang.org/doc/install), version >= 1.7. With `go` installed and configured, you can run the following command:
+
+```
+go get github.com/cozy/cozy-stack
 ```
 
-Verify your installation at: http://127.0.0.1:5984/_utils/#verifyinstall
+This will fetch the sources in `$GOPATH/src/github.com/cozy/cozy-stack` and build a binary in `$GOPATH/bin/cozy-stack`.
 
+Don't forget to add your `$GOPATH` to your `$PATH` in your `*rc` file so that you can execute the binary without entering its full path.
 
-## Building a `cozy-stack` binary
-
-To build a `cozy-stack` binary with Docker using the **local** source code, run:
-
-```bash
-# From your cozy-stack developement folder
-docker run -it --rm --name cozy-stack \
-    -v $(pwd):/go/src/github.com/cozy/cozy-stack \
-    -v $(pwd):/go/bin \
-    golang:1.7.1 \
-    go get -v github.com/cozy/cozy-stack
+```
+export PATH="$GOPATH:$PATH"
 ```
 
-The `cozy-stack` binary is now present in the current folder.
+### Add an instance and run
 
-Create a *dev* instance:
+You can configure your `cozy-stack` using a configuration file or different comand line arguments. You can have more informations on our [Configuration page](docs/config.md).
+
+Assuming CouchDB is installed and running on default port `5984`, you can a *dev* instance:
 
 ```bash
-./cozy-stack instances add dev  # assuming couchdb is running
+cozy-stack instances add dev  # assuming couchdb is running
 ```
 
 Then run the server with:
 
 ```bash
-./cozy-stack serve
+cozy-stack serve
 ```
 
-The cozy-stack server listens on http://localhost:8080/ by default.
+The cozy-stack server listens on http://localhost:8080/ by default. See `cozy-stack --help` for more informations.
 
 Make sure the full stack is up with:
 
@@ -117,34 +83,24 @@ curl -H 'Accept: application/json' 'http://localhost:8080/status/'
 
 See [configuration documentation](/docs/config.md).
 
-## Building a release
-
-To build a release of cozy-stack, a `build.sh` script can automate the work. The `release` option of this script will generate a binary with a name containing the version of the file, along with a SHA-256 sum of the binary.
-
-You can use a `local.env` at the root of the repository to add your default values for environment variables.
-
-See `./scripts/build.sh --help` for more informations.
-
-```sh
-COZY_ENV=development GOOS=linux GOARCH=arm64 ./scripts/build.sh release
-```
-
-The version string is deterministic and reflects entirely the state of the working-directory from which the release is built from. It is generated using the following format:
-
-        <TAG>[-<NUMBER OF COMMITS AFTER TAG>][-dirty][-dev]
-
-Where:
-
- - `<TAG>`: closest annotated tag of the current working directory. If no tag is present, is uses the string "v0". This is not allowed in a production release.
- - `<NUMBER OF COMMITS AFTER TAG>`: number of commits after the closest tag if the current working directory does not point exactly to a tag
- - `dirty`: added if the working if the working-directory is not clean (contains un-commited modifications). This is not allowed in production release.
- - `dev`: added for a development mode relase
-
 ## How to contribute?
 
 We are eager for contributions and very happy when we receive them! It can
 code, of course, but it can also take other forms. The workflow is explained
 in [the contributing guide](CONTRIBUTING.md).
+
+There are some useful commands to know in order to develop with the go code of cozy-stack:
+
+```bash
+go get -u github.com/cozy/cozy-stack
+cd $GOPATH/src/github.com/cozy/cozy-stack
+
+go get -t -u ./...      # To install or update the go dependencies
+go test -v ./...        # To launch the tests
+go run main.go serve    # To start the API server
+godoc -http=:6060       # To start the documentation server
+                        # Open http://127.0.0.1:6060/pkg/github.com/cozy/cozy-stack/
+```
 
 
 ## Community
