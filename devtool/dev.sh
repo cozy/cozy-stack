@@ -60,7 +60,7 @@ do_start() {
 			exit 1
 		fi
 		printf "installing http server (caddy)... "
-		go get -x -u "github.com/mholt/caddy/caddy"
+		go get "github.com/mholt/caddy/caddy"
 		echo "ok"
 	fi
 
@@ -73,7 +73,7 @@ do_start() {
 		COZY_STACK_PATH="${GOPATH}/bin/cozy-stack"
 		if [ ! -f "${COZY_STACK_PATH}" ]; then
 			printf "installing cozy-stack... "
-			go get -x -u "github.com/cozy/cozy-stack"
+			go get "github.com/cozy/cozy-stack"
 			echo "ok"
 		fi
 	fi
