@@ -112,19 +112,19 @@ do_start_couchdb() {
 	# if COUCHDB_HOST or COUCHDB_PORT is non null, we do not try to start couchdb
 	# and only check if it is accessible on the given host:port.
 	if [ -n "${COUCHDB_HOST}" ] || [ -n "${COUCHDB_PORT}" ]; then
-		couch_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
-		printf "checking couchdb on ${couch_addr}... "
+		couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
+		printf "checking couchdb on ${couchdb_addr}... "
 
-		couch_test=$(curl -s -XGET "${couch_addr}" || echo "")
+		couch_test=$(curl -s -XGET "${couchdb_addr}" || echo "")
 		couch_vers=$(echo "${couch_test}" | grep "\"version\":\s*\"2" || echo "")
 
 		if [ -z "${couch_test}" ]; then
 			echo "failed"
-			echo_err "could not reach couchdb on ${couch_addr}"
+			echo_err "could not reach couchdb on ${couchdb_addr}"
 			exit 1
 		elif [ -z "${couch_vers}" ]; then
 			echo "failed"
-			echo_err "couchdb v1 is running on ${couch_addr}"
+			echo_err "couchdb v1 is running on ${couchdb_addr}"
 			echo_err "you need couchdb version >= 2"
 			exit 1
 		fi
@@ -133,12 +133,15 @@ do_start_couchdb() {
 		return
 	fi
 
-	printf "starting couchdb... "
-
 	COUCHDB_HOST="localhost"
 	COUCHDB_PORT="5984"
+	couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
 
-	if [ -z `command -v go` ]; then
+	check_not_running "${couchdb_addr}" "couchdb"
+
+	printf "starting couchdb... "
+
+	if [ -z `command -v couchdb` ]; then
 		echo "failed"
 		echo_err "executable \"couchdb\" not found in \$PATH"
 		exit 1
@@ -149,11 +152,11 @@ do_start_couchdb() {
 
 	couchdb 2>/dev/null 1>/dev/null &
 	echo ${!} > ${couch_pid}
-	wait_for "${COUCHDB_HOST}:${COUCHDB_PORT}" "couchdb"
+	wait_for "${couchdb_addr}" "couchdb"
 	echo "ok"
 
 	for dbname in "_users" "_replicator" "_global_changes"; do
-		curl -s -XPUT "${COUCHDB_HOST}:${COUCHDB_PORT}/${dbname}" > /dev/null
+		curl -s -XPUT "${couchdb_addr}/${dbname}" > /dev/null
 	done
 }
 
