@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 COZY_ENV_DFL=production
@@ -7,7 +7,7 @@ COZY_ENV_DFL=production
 [ -z ${COZY_DEPLOY_USER} ] && COZY_DEPLOY_USER=${USER}
 
 pushd `dirname $0` > /dev/null
-WORK_DIR=`pwd`
+WORK_DIR=$(dirname "`pwd`")
 popd > /dev/null
 
 if [ -r ${WORK_DIR}/local.env ]; then
