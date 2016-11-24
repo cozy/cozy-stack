@@ -1,6 +1,7 @@
 [Table of contents](./README.md#table-of-contents)
 
-# Docker
+Docker
+======
 
 This page list various operations that can be automated *via* Docker.
 
@@ -21,7 +22,7 @@ Verify your installation at: http://127.0.0.1:5984/_utils/#verifyinstall
 
 ## Building a cozy-stack *via* Docker
 
-Warning, this command will build a linux binary. Use [`GOOS` and `GOARCH`](https://golang.org/doc/install/source#environment) to adapt to your system.
+Warning, this command will build a linux binary. Use [`GOOS` and `GOARCH`](https://golang.org/doc/install/source#environment) to adapt to your own system.
 
 ```bash
 # From your cozy-stack developement folder

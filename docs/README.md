@@ -11,6 +11,7 @@ Table of contents
 - [Configuration](./config.md)
 - [Managing Instances](./instance.md)
 - [Docker](./docker.md)
+- [Build a release](./release.md)
 
 ### API
 - [Create, Read, Update, Delete](./crud.md)

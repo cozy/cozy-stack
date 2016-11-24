@@ -29,18 +29,6 @@ and reliability. You can find:
 Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
 for questions and suggestions.
 
-The swagger description of the REST API can be displayed with those commands:
-
-```bash
-go get -u github.com/go-swagger/go-swagger/cmd/swagger
-git clone git@github.com:swagger-api/swagger-ui.git
-mkdir -p swagger-ui/dist/specs
-swagger generate spec -o swagger-ui/dist/specs/swagger.json
-go get github.com/mholt/caddy/caddy
-cd swagger-ui/dist && caddy
-xdg-open http://localhost:2015/index.html?url=http://localhost:2015/specs/swagger.json
-```
-
 ## Dependencies
 
 * CouchDB 2.0.0
@@ -61,15 +49,17 @@ go get github.com/cozy/cozy-stack
 
 This will fetch the sources in `$GOPATH/src/github.com/cozy/cozy-stack` and build a binary in `$GOPATH/bin/cozy-stack`.
 
-Don't forget to add your `$GOPATH` to your `$PATH` in your `*rc` file.
+Don't forget to add your `$GOPATH` to your `$PATH` in your `*rc` file so that you can execute the binary without entering its full path.
 
 ```
-export PATH="${GOPATH}:${PATH}"
+export PATH="$GOPATH:$PATH"
 ```
 
 ### Add an instance and run
 
-Assuming CouchDB is running, you can a *dev* instance:
+You can configure your `cozy-stack` using a configuration file or different comand line arguments. You can have more informations on our [Configuration page](docs/config.md).
+
+Assuming CouchDB is installed and running on default port `5984`, you can a *dev* instance:
 
 ```bash
 cozy-stack instances add dev  # assuming couchdb is running
@@ -93,29 +83,6 @@ curl -H 'Accept: application/json' 'http://localhost:8080/status/'
 
 See [configuration documentation](/docs/config.md).
 
-## Building a release
-
-To build a release of cozy-stack, a `build.sh` script can automate the work. The `release` option of this script will generate a binary with a name containing the version of the file, along with a SHA-256 sum of the binary.
-
-You can use a `local.env` at the root of the repository to add your default values for environment variables.
-
-See `./scripts/build.sh --help` for more informations.
-
-```sh
-COZY_ENV=development GOOS=linux GOARCH=arm64 ./scripts/build.sh release
-```
-
-The version string is deterministic and reflects entirely the state of the working-directory from which the release is built from. It is generated using the following format:
-
-        <TAG>[-<NUMBER OF COMMITS AFTER TAG>][-dirty][-dev]
-
-Where:
-
- - `<TAG>`: closest annotated tag of the current working directory. If no tag is present, is uses the string "v0". This is not allowed in a production release.
- - `<NUMBER OF COMMITS AFTER TAG>`: number of commits after the closest tag if the current working directory does not point exactly to a tag
- - `dirty`: added if the working if the working-directory is not clean (contains un-commited modifications). This is not allowed in production release.
- - `dev`: added for a development mode relase
-
 ## How to contribute?
 
 We are eager for contributions and very happy when we receive them! It can
@@ -134,6 +101,7 @@ go run main.go serve    # To start the API server
 godoc -http=:6060       # To start the documentation server
                         # Open http://127.0.0.1:6060/pkg/github.com/cozy/cozy-stack/
 ```
+
 
 ## Community
 
