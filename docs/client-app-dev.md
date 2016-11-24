@@ -3,7 +3,7 @@ Develop a client-side application
 
 This document describe a tool to run an environment in order to develop client-side application on the cozy-stack.
 
-We provide two different to ways to run this environment, either manually where you have to install part of the dependencies yourself or *via* a Docker image in which all dependencies are packed.
+We provide two different ways to run this environment, either manually where you have to install part of the dependencies yourself or *via* a Docker image in which all dependencies are packed.
 
 This environment will provide a running instance a http server serving both a specified directory of your application on `app.cozy.local:8080` and the `cozy-stack` on `cozy.local:8080` (you can change the hostname and port if you want, see below).
 
