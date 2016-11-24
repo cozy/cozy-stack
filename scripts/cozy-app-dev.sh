@@ -2,10 +2,10 @@
 
 set -e
 
-[ -z ${COZY_PROXY_HOST} ] && COZY_PROXY_HOST="cozy.local"
-[ -z ${COZY_PROXY_PORT} ] && COZY_PROXY_PORT="8080"
-[ -z ${COZY_STACK_HOST} ] && COZY_STACK_HOST="localhost"
-[ -z ${COZY_STACK_PORT} ] && COZY_STACK_PORT="8081"
+[ -z "${COZY_PROXY_HOST}" ] && COZY_PROXY_HOST="cozy.local"
+[ -z "${COZY_PROXY_PORT}" ] && COZY_PROXY_PORT="8080"
+[ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="localhost"
+[ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8081"
 
 if [ -d ${COZY_STACK_PATH} ] && [ -f ${COZY_STACK_PATH}/cozy-stack ]; then
 	COZY_STACK_PATH="${COZY_STACK_PATH}/cozy-stack"
@@ -112,8 +112,8 @@ do_start_couchdb() {
 	# if COUCHDB_HOST or COUCHDB_PORT is non null, we do not try to start couchdb
 	# and only check if it is accessible on the given host:port.
 	if [ -n "${COUCHDB_HOST}" ] || [ -n "${COUCHDB_PORT}" ]; then
-		[ -z ${COUCHDB_PORT} ] && COUCHDB_PORT="5984"
-		[ -z ${COUCHDB_HOST} ] && COUCHDB_HOST="localhost"
+		[ -z "${COUCHDB_PORT}" ] && COUCHDB_PORT="5984"
+		[ -z "${COUCHDB_HOST}" ] && COUCHDB_HOST="localhost"
 
 		couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
 
