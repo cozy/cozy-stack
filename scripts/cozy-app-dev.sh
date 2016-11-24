@@ -185,11 +185,11 @@ do_start_proxy() {
 	site_root=`realpath ${appdir}`
 
 	caddy_file="\n\
-${COZY_PROXY_HOST} {      \n\
+${COZY_PROXY_HOST} {    \n\
   proxy / ${COZY_STACK_HOST}:${COZY_STACK_PORT} \n\
   tls off               \n\
 }                       \n\
-app.${COZY_PROXY_HOST} {  \n\
+app.${COZY_PROXY_HOST} {\n\
   root ${site_root}     \n\
   tls off               \n\
 }                       \n\
