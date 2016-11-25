@@ -79,9 +79,9 @@ ENV COZY_PROXY_PORT 8080
 ENV COZY_STACK_HOST localhost
 ENV COZY_STACK_PORT 8081
 
-RUN mkdir -p /data/cozy-app
+RUN mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
 EXPOSE 8080 5984
 
 ENTRYPOINT ["/usr/bin/cozy-app-dev.sh"]
-CMD ["-d /data/cozy-app"]
+CMD ["-d", "/data/cozy-app", "-f", "/data/cozy-storage"]
