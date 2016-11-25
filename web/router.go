@@ -50,6 +50,9 @@ func SetupRoutes(router *gin.Engine) {
 	// entering the middleware.
 	router.Use(corsMiddleware("/apps", "/data", "/files"))
 
+	// TODO make the assets directory configurable
+	router.Static("/assets", "./assets")
+
 	auth.Routes(router)
 	apps.Routes(router.Group("/apps", middlewares.NeedInstance()))
 	data.Routes(router.Group("/data", middlewares.NeedInstance()))
