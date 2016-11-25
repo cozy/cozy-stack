@@ -64,6 +64,9 @@ func corsMiddleware(routes ...string) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
+
+		// TODO(oauth): check that the Origin header matches a subdomain of the
+		// instance or a registered domain for an OAuth2 app/device.
 		if origin == "" {
 			return
 		}
