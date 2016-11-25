@@ -80,6 +80,8 @@ do_start() {
 	do_start_proxy
 	check_hosts
 
+	echo "starting cozy-stack with ${vfsdir}..."
+
 	echo ""
 	echo "Go to http://app.${cozy_dev_addr}/"
 	echo ""
@@ -88,7 +90,8 @@ do_start() {
 		--port ${COZY_STACK_PORT} \
 		--host ${COZY_STACK_HOST} \
 		--couchdb-host ${COUCHDB_HOST} \
-		--couchdb-port ${COUCHDB_PORT}
+		--couchdb-port ${COUCHDB_PORT} \
+		--fs-url "file://localhost${vfsdir}"
 }
 
 cleanup() {
@@ -246,17 +249,20 @@ echo_err() {
 	>&2 echo -e "error: ${1}"
 }
 
-while getopts ":hd:v:" optname; do
+while getopts ":hd:f:v:" optname; do
 	case "${optname}" in
 	"h")
 		usage
 		exit 0
 		;;
 	"d")
-		appdir=${OPTARG}
+		appdir="${OPTARG}"
+		;;
+	"f")
+		vfsdir="${OPTARG}"
 		;;
 	"v")
-		cozy_stack_version=${OPTARG}
+		cozy_stack_version="${OPTARG}"
 		;;
 	":")
 		echo_err "Option -${OPTARG} requires an argument"
@@ -281,6 +287,12 @@ if [ ! -d ${appdir} ]; then
 	echo_err "Application directory ${1} does not exit"
 	exit 1
 fi
+
+if [ -z "${vfsdir}" ]; then
+	vfsdir=$(echo "$(pwd)/storage")
+fi
+
+vfsdir=$(realpath "${vfsdir}")
 
 do_start
 exit 0
