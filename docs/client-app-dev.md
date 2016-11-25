@@ -60,3 +60,5 @@ $ docker run -d \
     -v "$(pwd)":/usr/local/couchdb/data \
     cozy:cozy-app-dev
 ```
+
+You can also expose the couchdb port (listening in the container on 5984) in order to access its admin page. For instance add `-p 1234:5984` to access to the admin interface on `http://localhost:1234/_utils`.
