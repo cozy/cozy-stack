@@ -289,7 +289,7 @@ if [ ! -d ${appdir} ]; then
 fi
 
 if [ -z "${vfsdir}" ]; then
-	vfsdir=$(echo "$(pwd)/storage")
+	vfsdir="$(pwd)/storage"
 fi
 
 vfsdir=$(realpath "${vfsdir}")
