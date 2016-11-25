@@ -43,7 +43,7 @@ func SetupRoutes(router *gin.Engine) {
 	router.Use(middlewares.ParseHost())
 	router.Use(middlewares.ServeApp(apps.Serve))
 	router.Use(middlewares.ErrorHandler())
-	router.Use(corsMiddleware())
+	router.Use(corsMiddleware("/apps", "/data", "/files"))
 
 	auth.Routes(router)
 	apps.Routes(router.Group("/apps", middlewares.NeedInstance()))
@@ -53,7 +53,7 @@ func SetupRoutes(router *gin.Engine) {
 	version.Routes(router.Group("/version"))
 }
 
-func corsMiddleware() gin.HandlerFunc {
+func corsMiddleware(routes ...string) gin.HandlerFunc {
 	normalHeaders := make(http.Header)
 	normalHeaders.Set("Access-Control-Allow-Credentials", "true")
 
@@ -69,9 +69,13 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 
 		path := c.Request.URL.Path
-		valid := (strings.HasPrefix(path, "/apps") ||
-			strings.HasPrefix(path, "/data") ||
-			strings.HasPrefix(path, "/files"))
+		valid := false
+		for _, route := range routes {
+			if strings.HasPrefix(path, route) {
+				valid = true
+				break
+			}
+		}
 
 		if !valid {
 			c.AbortWithStatus(http.StatusForbidden)
