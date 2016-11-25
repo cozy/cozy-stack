@@ -43,6 +43,11 @@ func SetupRoutes(router *gin.Engine) {
 	router.Use(middlewares.ParseHost())
 	router.Use(middlewares.ServeApp(apps.Serve))
 	router.Use(middlewares.ErrorHandler())
+
+	// NOTE: CORS middleware is a "global" one because of the way gin works: to
+	// handle preflight requests with OPTIONS method, every route would have to
+	// have an empty OPTIONS handler in order to not get a 404 and actually
+	// entering the middleware.
 	router.Use(corsMiddleware("/apps", "/data", "/files"))
 
 	auth.Routes(router)
