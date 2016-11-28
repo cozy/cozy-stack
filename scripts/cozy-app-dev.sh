@@ -243,7 +243,7 @@ check_hosts() {
 	if [ -z "${devhost}" ] || [ -z "${apphost}" ]; then
 		echo ""
 		echo_err "You should probaby add the following line in the /etc/hosts file:"
-		echo_err "127.0.0.1\t${COZY_PROXY_HOST},app.${COZY_PROXY_HOST}"
+		echo_err "127.0.0.1\t${COZY_PROXY_HOST} app.${COZY_PROXY_HOST}"
 	fi
 }
 
@@ -294,6 +294,7 @@ if [ -z "${vfsdir}" ]; then
 	vfsdir="$(pwd)/storage"
 fi
 
+appdir=$(realpath "${appdir}")
 vfsdir=$(realpath "${vfsdir}")
 
 do_start
