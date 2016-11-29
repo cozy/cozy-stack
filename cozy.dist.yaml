@@ -6,6 +6,8 @@ mode: development
 host: localhost
 # server port - flags: --port -p
 port: 8080
+# path to the directory with the assets - flags: --assets
+assets: ./assets
 
 
 fs:

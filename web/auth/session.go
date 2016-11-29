@@ -126,6 +126,19 @@ func GetSession(c *gin.Context) (*Session, error) {
 
 }
 
+// Delete is a function to delete the session in couchdb,
+// and returns a cookie with a negative MaxAge to clear it
+func (s *Session) Delete(i *instance.Instance) *http.Cookie {
+	couchdb.DeleteDoc(i, s)
+	return &http.Cookie{
+		Name:   SessionCookieName,
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/",
+		Domain: "." + i.Domain,
+	}
+}
+
 // ToCookie returns an http.Cookie for this Session
 // TODO SECURITY figure out if we keep session in couchdb or not
 // if we do, check if ID is random enough on the whole server to use as a

@@ -39,7 +39,7 @@ import (
 )
 
 // SetupRoutes sets the routing for HTTP endpoints to the Go methods
-func SetupRoutes(router *gin.Engine) {
+func SetupRoutes(router *gin.Engine, assetsPath string) {
 	router.Use(middlewares.ParseHost())
 	router.Use(middlewares.ServeApp(apps.Serve))
 	router.Use(middlewares.ErrorHandler())
@@ -49,6 +49,9 @@ func SetupRoutes(router *gin.Engine) {
 	// have an empty OPTIONS handler in order to not get a 404 and actually
 	// entering the middleware.
 	router.Use(corsMiddleware("/apps", "/data", "/files"))
+
+	router.LoadHTMLGlob(assetsPath + "/templates/*.html")
+	router.Static("/assets", assetsPath)
 
 	auth.Routes(router)
 	apps.Routes(router.Group("/apps", middlewares.NeedInstance()))

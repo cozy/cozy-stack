@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <title>Cozy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/styles/stack.css">
+  </head>
+  <body>
+    <main role="application">
+      <section class="popup">
+        <header>
+          <a href="https://cozy.io" target="_blank" title="Cozy Website"></a>
+        </header>
+        <div class="container">
+          <form method="POST" action="/auth/login" class="login auth">
+            <div role="region">
+              <h1>Welcome</h1>
+              <p id="login-passphrase-tip" class="help">Please enter your passphrase to access to your Cozy</p>
+              <label for="login-passphrase" aria-describedby="login-passphrase-tip" class="with-input">
+                <input id="login-passphrase" name="passphrase" placeholder="Passphrase" autofocus="" type="password">
+              </label>
+            </div>
+            <footer>
+              <div class="controls">
+                <button type="submit" class="btn btn-primary">Login</button>
+              </div>
+              {{if .InvalidPassphrase}}
+              <div class="error">
+                <div class="alert">
+                  <h2>Wrong credentials</h2>
+                  <p>The credentials you entered are incorrect, please try again.</p>
+                </div>
+              </div>
+              {{end}}
+            </footer>
+          </form>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

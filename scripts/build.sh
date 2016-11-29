@@ -9,6 +9,7 @@ COZY_ENV_DFL=production
 pushd `dirname $0` > /dev/null
 WORK_DIR=$(dirname "`pwd`")
 popd > /dev/null
+ASSETS=./assets
 
 if [ -r ${WORK_DIR}/local.env ]; then
 	. ${WORK_DIR}/local.env
@@ -118,9 +119,9 @@ do_deploy() {
 	do_release
 
 	if [ -z ${COZY_DEPLOY_PROXY} ]; then
-		scp ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
+		scp -r ${BINARY} ${ASSETS} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
 	else
-		scp -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
+		scp -r -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${BINARY} ${ASSETS} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
 	fi
 
 	if [ -n ${COZY_DEPLOY_POSTSCRIPT} ]; then

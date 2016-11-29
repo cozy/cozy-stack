@@ -68,6 +68,9 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
 
+	flags.StringP("assets", "", "./assets", "path to the directory with the assets")
+	viper.BindPFlag("assets", flags.Lookup("assets"))
+
 	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDirectory), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
 

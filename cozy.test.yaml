@@ -3,6 +3,7 @@
 mode: development
 host: localhost
 port: 8080
+assets: ./assets
 
 fs:
   url: mem://test
