@@ -52,7 +52,7 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -121,7 +121,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 
 	olddoc, err = vfs.GetFileDoc(instance, c.Param("file-id"))
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -132,18 +132,18 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		olddoc.Tags,
 	)
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
 	if err = checkIfMatch(c, olddoc.Rev()); err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
 	file, err := vfs.CreateFile(instance, newdoc, olddoc)
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -152,7 +152,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 			err = cerr
 		}
 		if err != nil {
-			jsonapi.AbortWithError(c, WrapVfsError(err))
+			jsonapi.AbortWithError(c, wrapVfsError(err))
 		} else {
 			jsonapi.Data(c, http.StatusOK, newdoc, nil)
 		}
@@ -201,7 +201,7 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -213,7 +213,7 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	if err = checkIfMatch(c, doc.Rev()); err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -225,7 +225,7 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -243,7 +243,7 @@ func ReadMetadataFromIDHandler(c *gin.Context, fileID string) {
 
 	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -268,7 +268,7 @@ func ReadMetadataFromPathHandler(c *gin.Context) {
 
 	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), true)
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -311,14 +311,14 @@ func ReadFileContentHandler(c *gin.Context, fileID string) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
 	err = vfs.ServeFileContent(instance, doc, disposition, c.Request, c.Writer)
 
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 }
@@ -335,7 +335,7 @@ func TrashHandler(c *gin.Context) {
 
 	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
@@ -347,11 +347,25 @@ func TrashHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, WrapVfsError(err))
+		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
 	}
 
 	jsonapi.Data(c, http.StatusOK, data, nil)
+}
+
+// ReadTrashFilesHandler handle GET requests on /files/trash and return the
+// list of trashed files and directories
+func ReadTrashFilesHandler(c *gin.Context) {
+	instance := middlewares.GetInstance(c)
+
+	trash, err := vfs.GetDirDoc(instance, vfs.TrashFolderID, true)
+	if err != nil {
+		jsonapi.AbortWithError(c, wrapVfsError(err))
+		return
+	}
+
+	jsonapi.DataList(c, http.StatusOK, trash.Included(), nil)
 }
 
 // Routes sets the routing for the files service
@@ -364,6 +378,7 @@ func Routes(router *gin.RouterGroup) {
 	//     router.GET("/download", ReadFileContentFromPathHandler)
 	//     router.GET("/download/:file-id", ReadFileContentFromIDHandler)
 	//     router.GET("/metadata", ReadMetadataFromPathHandler)
+	//     router.GET("/trash", ReadMetadataFromPathHandler)
 	//     router.GET("/:file-id", ReadMetadataFromIDHanler)
 	//
 	router.HEAD("/download/:file-id", func(c *gin.Context) {
@@ -375,11 +390,14 @@ func Routes(router *gin.RouterGroup) {
 	})
 	router.GET("/:dl-meta-or-file-id", func(c *gin.Context) {
 		dlMeta := c.Param("dl-meta-or-file-id")
-		if dlMeta == "download" {
+		switch dlMeta {
+		case "download":
 			ReadFileContentHandler(c, "")
-		} else if dlMeta == "metadata" {
+		case "metadata":
 			ReadMetadataFromPathHandler(c)
-		} else {
+		case "trash":
+			ReadTrashFilesHandler(c)
+		default:
 			ReadMetadataFromIDHandler(c, dlMeta)
 		}
 	})
@@ -393,8 +411,8 @@ func Routes(router *gin.RouterGroup) {
 	router.DELETE("/:file-id", TrashHandler)
 }
 
-// WrapVfsError returns a formatted error from a golang error emitted by the vfs
-func WrapVfsError(err error) *jsonapi.Error {
+// wrapVfsError returns a formatted error from a golang error emitted by the vfs
+func wrapVfsError(err error) *jsonapi.Error {
 	if jsonErr, isJSONApiError := err.(*jsonapi.Error); isJSONApiError {
 		return jsonErr
 	}
