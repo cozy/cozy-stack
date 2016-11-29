@@ -11,6 +11,14 @@ if [ -d ${COZY_STACK_PATH} ] && [ -f ${COZY_STACK_PATH}/cozy-stack ]; then
 	COZY_STACK_PATH="${COZY_STACK_PATH}/cozy-stack"
 fi
 
+echo_err() {
+	>&2 echo -e "error: ${1}"
+}
+
+real_path() {
+	[[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+}
+
 usage() {
 	echo -e "Usage: ${0} [-h] [-d <app path>] [–v <stack version>]"
 
@@ -191,7 +199,7 @@ do_create_instance() {
 }
 
 do_start_proxy() {
-	site_root=`realpath ${appdir}`
+	site_root=$(real_path ${appdir})
 
 	caddy_file="\n\
 ${COZY_PROXY_HOST} {    \n\
@@ -247,10 +255,6 @@ check_hosts() {
 	fi
 }
 
-echo_err() {
-	>&2 echo -e "error: ${1}"
-}
-
 while getopts ":hd:f:v:" optname; do
 	case "${optname}" in
 	"h")
@@ -294,8 +298,8 @@ if [ -z "${vfsdir}" ]; then
 	vfsdir="$(pwd)/storage"
 fi
 
-appdir=$(realpath "${appdir}")
-vfsdir=$(realpath "${vfsdir}")
+appdir=$(real_path "${appdir}")
+vfsdir=$(real_path "${vfsdir}")
 
 do_start
 exit 0
