@@ -131,7 +131,7 @@ func deleteDoc(c *gin.Context) {
 	doctype := c.MustGet("doctype").(string)
 	docid := c.Param("docid")
 	revHeader := c.Request.Header.Get("If-Match")
-	revQuery := c.Query("rev")
+	revQuery := c.Query("Rev")
 	rev := ""
 
 	if revHeader != "" && revQuery != "" && revQuery != revHeader {
