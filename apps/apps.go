@@ -246,7 +246,7 @@ func (i *Installer) Install() (newman *Manifest, err error) {
 	}
 
 	appdir := path.Join(vfs.AppsDirName, newman.Slug)
-	err = vfs.MkdirAll(i.vfsC, appdir)
+	_, err = vfs.MkdirAll(i.vfsC, appdir, nil)
 	if err != nil {
 		return
 	}

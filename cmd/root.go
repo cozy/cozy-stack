@@ -35,11 +35,10 @@ var RootCmd = &cobra.Command{
 With it, your web apps and your devices can share data easily, providing you
 with a new experience. You can install Cozy on your own hardware where no one
 profiles you.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return Configure()
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		// Display the usage/help by default
 		return cmd.Help()
 	},

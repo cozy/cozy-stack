@@ -78,7 +78,7 @@ func (g *gitClient) fetchManifestFromGithub(src *url.URL) (io.ReadCloser, error)
 
 func (g *gitClient) Fetch(vfsC vfs.Context, appdir string) error {
 	gitdir := path.Join(appdir, ".git")
-	err := vfs.Mkdir(vfsC, gitdir)
+	_, err := vfs.Mkdir(vfsC, gitdir, nil)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (g *gitClient) Fetch(vfsC vfs.Context, appdir string) error {
 		abs := path.Join(appdir, f.Name)
 		dir := path.Dir(abs)
 
-		err = vfs.MkdirAll(vfsC, dir)
+		_, err = vfs.MkdirAll(vfsC, dir, nil)
 		if err != nil {
 			return
 		}
@@ -224,7 +224,7 @@ func (fs *gfs) OpenFile(name string, flag int, perm os.FileMode) (gitFS.File, er
 	dirbase := path.Dir(fullpath)
 
 	if flag&os.O_CREATE != 0 {
-		if err = vfs.MkdirAll(fs.vfsC, dirbase); err != nil {
+		if _, err = vfs.MkdirAll(fs.vfsC, dirbase, nil); err != nil {
 			return nil, err
 		}
 	}

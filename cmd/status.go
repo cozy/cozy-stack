@@ -16,10 +16,6 @@ var statusCmd = &cobra.Command{
 	Short: "Check if the HTTP server is running",
 	Long:  `Check if the HTTP server has been started and answer 200 for /status.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		url := &url.URL{
 			Scheme: "http",
 			Host:   config.ServerAddr(),

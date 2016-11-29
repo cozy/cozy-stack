@@ -164,8 +164,11 @@ func GetFileDoc(c Context, fileID string) (*FileDoc, error) {
 // GetFileDocFromPath is used to fetch file document information from
 // the database from its path.
 func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
-	var err error
+	if !path.IsAbs(name) {
+		return nil, ErrNonAbsolutePath
+	}
 
+	var err error
 	dirpath := path.Dir(name)
 	var parent *DirDoc
 	parent, err = GetDirDocFromPath(c, dirpath, false)
@@ -543,7 +546,7 @@ func safeRenameFile(c Context, oldpath, newpath string) error {
 	oldpath = path.Clean(oldpath)
 
 	if !path.IsAbs(newpath) || !path.IsAbs(oldpath) {
-		return fmt.Errorf("paths should be absolute")
+		return ErrNonAbsolutePath
 	}
 
 	_, err := c.FS().Stat(newpath)

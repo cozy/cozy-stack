@@ -85,23 +85,28 @@ func createFileHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err 
 	return
 }
 
-func createDirectoryHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.DirDoc, err error) {
-	doc, err = vfs.NewDirDoc(
-		c.Query("Name"),
-		c.Param("folder-id"),
-		strings.Split(c.Query("Tags"), TagSeparator),
-		nil,
-	)
-	if err != nil {
-		return
+func createDirectoryHandler(c *gin.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
+	tags := strings.Split(c.Query("Tags"), TagSeparator)
+	path := c.Query("Path")
+
+	if path != "" {
+		if c.Query("Recursive") == "true" {
+			return vfs.MkdirAll(vfsC, path, tags)
+		}
+		return vfs.Mkdir(vfsC, path, tags)
 	}
 
-	err = vfs.CreateDir(vfsC, doc)
+	name, folderID := c.Query("Name"), c.Param("folder-id")
+	doc, err := vfs.NewDirDoc(name, folderID, tags, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	return
+	if err = vfs.CreateDir(vfsC, doc); err != nil {
+		return nil, err
+	}
+
+	return doc, nil
 }
 
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
@@ -131,7 +136,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		return
 	}
 
-	if err = checkIfMatch(c.Request, olddoc.Rev()); err != nil {
+	if err = checkIfMatch(c, olddoc.Rev()); err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
@@ -207,7 +212,7 @@ func ModificationHandler(c *gin.Context) {
 		doc = file
 	}
 
-	if err = checkIfMatch(c.Request, doc.Rev()); err != nil {
+	if err = checkIfMatch(c, doc.Rev()); err != nil {
 		jsonapi.AbortWithError(c, WrapVfsError(err))
 		return
 	}
@@ -423,6 +428,10 @@ func WrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.PreconditionFailed("Content-Length", err)
 	case vfs.ErrFileInTrash:
 		return jsonapi.BadRequest(err)
+	case vfs.ErrNonAbsolutePath:
+		return jsonapi.BadRequest(err)
+	case vfs.ErrDirectoryNotEmpty:
+		return jsonapi.BadRequest(err)
 	}
 	return jsonapi.InternalServerError(err)
 }
@@ -461,9 +470,17 @@ func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *
 	return
 }
 
-func checkIfMatch(req *http.Request, rev string) error {
-	ifMatch := req.Header.Get("If-Match")
-	if ifMatch != "" && rev != ifMatch {
+func checkIfMatch(c *gin.Context, rev string) error {
+	ifMatch := c.Request.Header.Get("If-Match")
+	revQuery := c.Query("rev")
+	var wantedRev string
+	if ifMatch != "" {
+		wantedRev = ifMatch
+	}
+	if revQuery != "" && wantedRev == "" {
+		wantedRev = revQuery
+	}
+	if wantedRev != "" && rev != wantedRev {
 		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match."))
 	}
 	return nil

@@ -15,12 +15,12 @@ import (
 var flagLocale string
 var flagApps []string
 
-// serveCmd represents the serve command
+// instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
 	Use:   "instances [command]",
 	Short: "Manage instances of a stack",
 	Long: `
-cozy-stack instance allow to manage the instances of this stack
+cozy-stack instances allows to manage the instances of this stack
 
 An instance is a logical space owned by one user and identified by a domain.
 For example, bob.cozycloud.cc is the instance of Bob. A single cozy-stack
@@ -40,10 +40,6 @@ cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		if len(args) == 0 {
 			return cmd.Help()
 		}
@@ -58,7 +54,7 @@ given domain.
 
 		log.Infof("Instance created with success for domain %s", i.Domain)
 		params := url.Values{"registerToken": {string(i.RegisterToken)}}
-		log.Infof("Owner registration link : onboarding.%s/?%s", i.Domain, params.Encode())
+		log.Infof("Owner registration link : onboarding.%s/?%s", i.Addr(), params.Encode())
 		log.Debugf("Instance created: %#v", i)
 		return nil
 	},
@@ -72,10 +68,6 @@ cozy-stack instances ls allows to list all the instances that can be served
 by this server.
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		instances, err := instance.List()
 		if err != nil {
 			return err
@@ -101,10 +93,6 @@ var destroyInstanceCmd = &cobra.Command{
 and all its data.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		domain := args[0]
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf(`

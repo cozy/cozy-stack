@@ -14,10 +14,6 @@ var configCmd = &cobra.Command{
 	Long: `Read the environment variables, the config file and
 the given parameters to display the configuration.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := Configure(); err != nil {
-			return err
-		}
-
 		cfg, err := json.MarshalIndent(config.GetConfig(), "", "  ")
 		if err != nil {
 			return err
