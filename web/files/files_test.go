@@ -938,6 +938,50 @@ func TestFileTrash(t *testing.T) {
 	}
 }
 
+func TestTrashList(t *testing.T) {
+	body := "foo,bar"
+	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=io.cozy.folders")
+	if !assert.Equal(t, 201, res2.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+	fileID, _ := extractDirData(t, data2)
+
+	res3, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	res4, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res4.StatusCode) {
+		return
+	}
+
+	res5, err := http.Get(ts.URL + "/files/trash")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer res5.Body.Close()
+
+	var v struct {
+		Data []interface{} `json:"data"`
+	}
+
+	err = json.NewDecoder(res5.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.True(t, len(v.Data) >= 2)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
