@@ -15,11 +15,7 @@ type registerForm struct {
 	Token      string `form:"registerToken"`
 }
 
-type loginForm struct {
-	Passphrase string `form:"passphrase"`
-}
-
-func redirectSuccessLogin(c *gin.Context) {
+func redirectSuccessLogin(c *gin.Context, slug string) {
 	instance := middlewares.GetInstance(c)
 	session, err := NewSession(instance)
 	if err != nil {
@@ -27,7 +23,7 @@ func redirectSuccessLogin(c *gin.Context) {
 		return
 	}
 	http.SetCookie(c.Writer, session.ToCookie())
-	c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.OnboardingSlug))
+	c.Redirect(http.StatusSeeOther, instance.SubDomain(slug))
 }
 
 func register(c *gin.Context) {
@@ -47,25 +43,24 @@ func register(c *gin.Context) {
 		return
 	}
 
-	redirectSuccessLogin(c)
+	redirectSuccessLogin(c, apps.OnboardingSlug)
+}
+
+func loginForm(c *gin.Context) {
+	c.HTML(http.StatusOK, "login.html", nil)
 }
 
 func login(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
-	var form loginForm
-	if err := binding.Form.Bind(c.Request, &form); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
+	pass := c.PostForm("passphrase")
+	if err := instance.CheckPassphrase([]byte(pass)); err != nil {
+		c.HTML(http.StatusBadRequest, "login.html", gin.H{
+			"InvalidPassphrase": true,
+		})
 		return
 	}
 
-	pass := []byte(form.Passphrase)
-
-	if err := instance.CheckPassphrase(pass); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	redirectSuccessLogin(c)
+	redirectSuccessLogin(c, apps.HomeSlug)
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
@@ -76,7 +71,8 @@ func IsLoggedIn(c *gin.Context) bool {
 
 // Routes sets the routing for the status service
 func Routes(router gin.IRoutes) {
-	router.POST("/register", register)
-	router.POST("/login", login)
+	router.POST("/register", middlewares.NeedInstance(), register)
+	router.GET("/login", middlewares.NeedInstance(), loginForm)
+	router.POST("/login", middlewares.NeedInstance(), login)
 	// router.DELETE("/:doctype/:docid", DeleteDoc)
 }

@@ -16,15 +16,23 @@
           <form method="POST" action="/login" class="login auth">
             <div role="region">
               <h1>Welcome</h1>
-              <p id="login-password-tip" class="help">Please enter your password to access to your Cozy</p>
-              <label for="login-password" aria-describedby="login-password-tip" class="with-input">
-                <input id="login-password" name="password" placeholder="Password" autofocus="" type="password">
+              <p id="login-passphrase-tip" class="help">Please enter your passphrase to access to your Cozy</p>
+              <label for="login-passphrase" aria-describedby="login-passphrase-tip" class="with-input">
+                <input id="login-passphrase" name="passphrase" placeholder="Passphrase" autofocus="" type="password">
               </label>
             </div>
             <footer>
               <div class="controls">
                 <button type="submit" class="btn btn-primary">Login</button>
               </div>
+              {{if .InvalidPassphrase}}
+              <div class="error">
+                <div class="alert">
+                  <h2>Wrong credentials</h2>
+                  <p>The credentials you entered are incorrect, please try again.</p>
+                </div>
+              </div>
+              {{end}}
             </footer>
           </form>
         </div>
