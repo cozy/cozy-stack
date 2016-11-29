@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
@@ -42,8 +41,6 @@ type FileDoc struct {
 	Class      string   `json:"class"`
 	Executable bool     `json:"executable"`
 	Tags       []string `json:"tags"`
-
-	parent *DirDoc
 }
 
 // ID returns the file qualified identifier
@@ -67,7 +64,7 @@ func (f *FileDoc) Path(c Context) (string, error) {
 	if f.FolderID == RootFolderID {
 		parentPath = "/"
 	} else {
-		parent, err := f.Parent(c)
+		parent, err := GetDirDoc(c, f.FolderID, false)
 		if err != nil {
 			return "", err
 		}
@@ -77,16 +74,6 @@ func (f *FileDoc) Path(c Context) (string, error) {
 		}
 	}
 	return path.Join(parentPath, f.Name), nil
-}
-
-// Parent returns the parent directory document
-func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
-	parent, err := getParentDir(c, f.parent, f.FolderID)
-	if err != nil {
-		return nil, err
-	}
-	f.parent = parent
-	return parent, nil
 }
 
 // SelfLink is used to generate a JSON-API link for the file (part of
@@ -150,15 +137,7 @@ func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class st
 // GetFileDoc is used to fetch file document information form the
 // database.
 func GetFileDoc(c Context, fileID string) (*FileDoc, error) {
-	doc := &FileDoc{}
-	err := couchdb.GetDoc(c, FsDocType, fileID, doc)
-	if err != nil {
-		return nil, err
-	}
-	if doc.Type != FileType {
-		return nil, os.ErrNotExist
-	}
-	return doc, nil
+	return c.FSCache().FileByID(c, fileID)
 }
 
 // GetFileDocFromPath is used to fetch file document information from
@@ -167,40 +146,7 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 	if !path.IsAbs(name) {
 		return nil, ErrNonAbsolutePath
 	}
-
-	var err error
-	dirpath := path.Dir(name)
-	var parent *DirDoc
-	parent, err = GetDirDocFromPath(c, dirpath, false)
-
-	if err != nil {
-		return nil, err
-	}
-
-	folderID := parent.ID()
-	selector := mango.Map{
-		"folder_id": folderID,
-		"name":      path.Base(name),
-		"type":      FileType,
-	}
-
-	var docs []*FileDoc
-	req := &couchdb.FindRequest{
-		Selector: selector,
-		Limit:    1,
-	}
-	err = couchdb.FindDocs(c, FsDocType, req, &docs)
-	if err != nil {
-		return nil, err
-	}
-	if len(docs) == 0 {
-		return nil, os.ErrNotExist
-	}
-
-	fileDoc := docs[0]
-	fileDoc.parent = parent
-
-	return fileDoc, nil
+	return c.FSCache().FileByPath(c, name)
 }
 
 // ServeFileContent replies to a http request using the content of a
@@ -431,9 +377,9 @@ func (f *File) Close() error {
 	}
 
 	if olddoc != nil {
-		err = couchdb.UpdateDoc(c, newdoc)
+		err = f.c.FSCache().UpdateFile(c, newdoc)
 	} else {
-		err = couchdb.CreateDoc(c, newdoc)
+		err = f.c.FSCache().CreateFile(c, newdoc)
 	}
 
 	return err
@@ -469,22 +415,10 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 		return
 	}
 
-	var parent *DirDoc
-	if newdoc.FolderID != olddoc.FolderID {
-		parent, err = newdoc.Parent(c)
-	} else {
-		parent = olddoc.parent
-	}
-
-	if err != nil {
-		return
-	}
-
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	newdoc.CreatedAt = cdate
 	newdoc.UpdatedAt = *patch.UpdatedAt
-	newdoc.parent = parent
 
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
@@ -509,7 +443,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 		}
 	}
 
-	err = couchdb.UpdateDoc(c, newdoc)
+	err = c.FSCache().UpdateFile(c, newdoc)
 	return
 }
 

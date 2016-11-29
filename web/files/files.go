@@ -97,7 +97,7 @@ func createDirectoryHandler(c *gin.Context, vfsC vfs.Context) (*vfs.DirDoc, erro
 	}
 
 	name, folderID := c.Query("Name"), c.Param("folder-id")
-	doc, err := vfs.NewDirDoc(name, folderID, tags, nil)
+	doc, err := vfs.NewDirDoc(name, folderID, tags)
 	if err != nil {
 		return nil, err
 	}

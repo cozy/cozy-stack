@@ -18,14 +18,16 @@ import (
 )
 
 type TestContext struct {
-	prefix string
-	fs     afero.Fs
+	prefix  string
+	fs      afero.Fs
+	fsCache Cache
 }
 
 func (c TestContext) Prefix() string { return c.prefix }
 func (c TestContext) FS() afero.Fs   { return c.fs }
+func (c TestContext) FSCache() Cache { return c.fsCache }
 
-var vfsC TestContext
+var c TestContext
 
 type H map[string]H
 
@@ -57,11 +59,11 @@ func createTree(tree H, folderID string) (*DirDoc, error) {
 	var dirdoc *DirDoc
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
-			dirdoc, err = NewDirDoc(name[:len(name)-1], folderID, nil, nil)
+			dirdoc, err = NewDirDoc(name[:len(name)-1], folderID, nil)
 			if err != nil {
 				return nil, err
 			}
-			if err = CreateDir(vfsC, dirdoc); err != nil {
+			if err = CreateDir(c, dirdoc); err != nil {
 				return nil, err
 			}
 			if _, err = createTree(children, dirdoc.ID()); err != nil {
@@ -72,7 +74,7 @@ func createTree(tree H, folderID string) (*DirDoc, error) {
 			if err != nil {
 				return nil, err
 			}
-			f, err := CreateFile(vfsC, filedoc, nil)
+			f, err := CreateFile(c, filedoc, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -85,7 +87,7 @@ func createTree(tree H, folderID string) (*DirDoc, error) {
 }
 
 func fetchTree(root string) (H, error) {
-	parent, err := GetDirDocFromPath(vfsC, root, false)
+	parent, err := GetDirDocFromPath(c, root, false)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +102,7 @@ func fetchTree(root string) (H, error) {
 
 func recFetchTree(parent *DirDoc, name string) (H, error) {
 	h := make(H)
-	err := parent.FetchFiles(vfsC)
+	err := parent.FetchFiles(c)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +128,7 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 
 	body := bytes.NewReader([]byte("hello !"))
 
-	file, err := CreateFile(vfsC, doc, nil)
+	file, err := CreateFile(c, doc, nil)
 	assert.NoError(t, err)
 
 	n, err := io.Copy(file, body)
@@ -136,16 +138,16 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 	err = file.Close()
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/toto")
+	_, err = GetFileDocFromPath(c, "/toto")
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/noooo")
+	_, err = GetFileDocFromPath(c, "/noooo")
 	assert.Error(t, err)
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := NewDirDoc("container", "", nil, nil)
-	err := CreateDir(vfsC, dir)
+	dir, _ := NewDirDoc("container", "", nil)
+	err := CreateDir(c, dir)
 	assert.NoError(t, err)
 
 	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", false, []string{})
@@ -153,7 +155,7 @@ func TestGetFileDocFromPath(t *testing.T) {
 
 	body := bytes.NewReader([]byte("hello !"))
 
-	file, err := CreateFile(vfsC, doc, nil)
+	file, err := CreateFile(c, doc, nil)
 	assert.NoError(t, err)
 
 	n, err := io.Copy(file, body)
@@ -163,10 +165,10 @@ func TestGetFileDocFromPath(t *testing.T) {
 	err = file.Close()
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/container/toto")
+	_, err = GetFileDocFromPath(c, "/container/toto")
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/container/noooo")
+	_, err = GetFileDocFromPath(c, "/container/noooo")
 	assert.Error(t, err)
 }
 
@@ -193,7 +195,7 @@ func TestCreateAndGetFile(t *testing.T) {
 	}
 
 	newname := "createandget2"
-	_, err = ModifyDirMetadata(vfsC, olddoc, &DocPatch{
+	_, err = ModifyDirMetadata(c, olddoc, &DocPatch{
 		Name: &newname,
 	})
 	if !assert.NoError(t, err) {
@@ -230,7 +232,7 @@ func TestUpdateDir(t *testing.T) {
 	}
 
 	newname := "update2"
-	_, err = ModifyDirMetadata(vfsC, doc1, &DocPatch{
+	_, err = ModifyDirMetadata(c, doc1, &DocPatch{
 		Name: &newname,
 	})
 	if !assert.NoError(t, err) {
@@ -246,18 +248,18 @@ func TestUpdateDir(t *testing.T) {
 		return
 	}
 
-	dirchild2, err := GetDirDocFromPath(vfsC, "/update2/dirchild2", false)
+	dirchild2, err := GetDirDocFromPath(c, "/update2/dirchild2", false)
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	dirchild3, err := GetDirDocFromPath(vfsC, "/update2/dirchild3", false)
+	dirchild3, err := GetDirDocFromPath(c, "/update2/dirchild3", false)
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	newfolid := dirchild2.ID()
-	_, err = ModifyDirMetadata(vfsC, dirchild3, &DocPatch{
+	_, err = ModifyDirMetadata(c, dirchild3, &DocPatch{
 		FolderID: &newfolid,
 	})
 	if !assert.NoError(t, err) {
@@ -307,7 +309,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	walked := ""
-	Walk(vfsC, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
+	Walk(c, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if !assert.NoError(t, err) {
 			return err
 		}
@@ -354,24 +356,25 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	vfsC.prefix = "dev/"
-	vfsC.fs = afero.NewBasePathFs(afero.NewOsFs(), tempdir)
+	c.prefix = "dev/"
+	c.fs = afero.NewBasePathFs(afero.NewOsFs(), tempdir)
+	c.fsCache = NewLocalCache(256)
 
-	err = couchdb.ResetDB(vfsC, FsDocType)
+	err = couchdb.ResetDB(c, FsDocType)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	for _, index := range Indexes {
-		err = couchdb.DefineIndex(vfsC, FsDocType, index)
+		err = couchdb.DefineIndex(c, FsDocType, index)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	}
 
-	CreateRootDirDoc(vfsC)
+	CreateRootDirDoc(c)
 
 	if err != nil {
 		fmt.Println(err)
