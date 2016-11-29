@@ -16,7 +16,7 @@ It will accept HTTP requests on localhost:8080 by default.
 Use the --port and --host flags to change the listening option.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		router := getGin()
-		web.SetupRoutes(router)
+		web.SetupRoutes(router, config.GetConfig().Assets)
 		return router.Run(config.ServerAddr())
 	},
 }

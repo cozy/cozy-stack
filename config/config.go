@@ -30,6 +30,7 @@ type Config struct {
 	Mode    string
 	Host    string
 	Port    int
+	Assets  string
 	Fs      Fs
 	CouchDB CouchDB
 	Logger  Logger
@@ -134,9 +135,10 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Mode: mode,
-		Host: v.GetString("host"),
-		Port: v.GetInt("port"),
+		Mode:   mode,
+		Host:   v.GetString("host"),
+		Port:   v.GetInt("port"),
+		Assets: v.GetString("assets"),
 		Fs: Fs{
 			URL: fsURL,
 		},
