@@ -47,20 +47,39 @@ func register(c *gin.Context) {
 }
 
 func loginForm(c *gin.Context) {
-	c.HTML(http.StatusOK, "login.html", nil)
+	if IsLoggedIn(c) {
+		instance := middlewares.GetInstance(c)
+		c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
+		return
+	}
+	c.HTML(http.StatusOK, "login.html", gin.H{})
 }
 
 func login(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
+	if IsLoggedIn(c) {
+		c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
+		return
+	}
 	pass := c.PostForm("passphrase")
 	if err := instance.CheckPassphrase([]byte(pass)); err != nil {
-		c.HTML(http.StatusBadRequest, "login.html", gin.H{
+		c.HTML(http.StatusUnauthorized, "login.html", gin.H{
 			"InvalidPassphrase": true,
 		})
 		return
 	}
 
 	redirectSuccessLogin(c, apps.HomeSlug)
+}
+
+func logout(c *gin.Context) {
+	// TODO check that a valid CtxToken is given to protect against CSRF attacks
+	instance := middlewares.GetInstance(c)
+	session, err := GetSession(c)
+	if err == nil {
+		http.SetCookie(c.Writer, session.Delete(instance))
+	}
+	c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login"))
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
@@ -70,9 +89,11 @@ func IsLoggedIn(c *gin.Context) bool {
 }
 
 // Routes sets the routing for the status service
-func Routes(router gin.IRoutes) {
+func Routes(router *gin.Engine) {
 	router.POST("/register", middlewares.NeedInstance(), register)
-	router.GET("/login", middlewares.NeedInstance(), loginForm)
-	router.POST("/login", middlewares.NeedInstance(), login)
-	// router.DELETE("/:doctype/:docid", DeleteDoc)
+
+	auth := router.Group("/auth", middlewares.NeedInstance())
+	auth.GET("/login", loginForm)
+	auth.POST("/login", login)
+	auth.DELETE("/login", logout)
 }

@@ -77,6 +77,12 @@ func (i *Instance) SubDomain(s string) string {
 	return "https://" + s + "." + i.Addr()
 }
 
+// PageURL returns the full URL for a page on the cozy stack
+// TODO https is hardcoded
+func (i *Instance) PageURL(page string) string {
+	return "https://" + i.Domain + page
+}
+
 // ensure Instance implements couchdb.Doc & vfs.Context
 var _ couchdb.Doc = (*Instance)(nil)
 var _ vfs.Context = (*Instance)(nil)
