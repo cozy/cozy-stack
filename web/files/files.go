@@ -490,7 +490,7 @@ func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *
 
 func checkIfMatch(c *gin.Context, rev string) error {
 	ifMatch := c.Request.Header.Get("If-Match")
-	revQuery := c.Query("rev")
+	revQuery := c.Query("Rev")
 	var wantedRev string
 	if ifMatch != "" {
 		wantedRev = ifMatch
