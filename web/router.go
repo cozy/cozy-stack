@@ -51,7 +51,6 @@ func SetupRoutes(router *gin.Engine) {
 	router.Use(corsMiddleware("/apps", "/data", "/files"))
 
 	// TODO make the assets directory configurable
-	// TODO scp assets for deploy
 	router.LoadHTMLGlob("./assets/templates/*.html")
 	router.Static("/assets", "./assets")
 
