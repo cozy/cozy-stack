@@ -422,7 +422,7 @@ func TestFailDeleteIfHeaderAndRevMismatch(t *testing.T) {
 	doc := getDocForTest()
 
 	// Do deletion
-	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "?Rev=1-238238232322121"
+	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID() + "?rev=1-238238232322121"
 	req, _ := http.NewRequest("DELETE", url, nil)
 	req.Header.Add("If-Match", "1-23823823231") // not same rev
 	req.Header.Add("Host", Host)
