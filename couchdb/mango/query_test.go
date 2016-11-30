@@ -20,25 +20,25 @@ func DeepEqual(t *testing.T, map1, map2 interface{}) bool {
 }
 
 func TestQueryMarshaling(t *testing.T) {
-	q1 := Equal("FolderID", "ab123")
-	DeepEqual(t, q1.ToMango(), M{"FolderID": "ab123"})
+	q1 := Equal("DirID", "ab123")
+	DeepEqual(t, q1.ToMango(), M{"DirID": "ab123"})
 	q2 := Gt("Size", 1000)
 	DeepEqual(t, q2.ToMango(), M{"Size": M{"$gt": 1000}})
 	q3 := And(q1, q2)
 	DeepEqual(t, q3.ToMango(),
 		M{"$and": S{
-			M{"FolderID": "ab123"},
+			M{"DirID": "ab123"},
 			M{"Size": M{"$gt": 1000}},
 		}})
 
-	q4 := Not(Equal("FolderID", "ab123"))
-	DeepEqual(t, q4.ToMango(), M{"$not": M{"FolderID": "ab123"}})
+	q4 := Not(Equal("DirID", "ab123"))
+	DeepEqual(t, q4.ToMango(), M{"$not": M{"DirID": "ab123"}})
 }
 
 func TestSortMarshaling(t *testing.T) {
-	s1 := &SortBy{"folder_id", Asc}
+	s1 := &SortBy{"dir_id", Asc}
 	j1, err := json.Marshal(s1)
 	if assert.NoError(t, err) {
-		assert.Equal(t, j1, []byte(`["folder_id","asc"]`))
+		assert.Equal(t, j1, []byte(`["dir_id","asc"]`))
 	}
 }

@@ -132,8 +132,8 @@ type apiErrors struct {
 }
 
 type filePatch struct {
-	Name     string `json:"name"`
-	FolderID string `json:"folder_id"`
+	Name  string `json:"name"`
+	DirID string `json:"dir_id"`
 }
 
 type apiPatch struct {
@@ -290,7 +290,7 @@ func vfsRequestAndParse(c *instance.Instance, client *http.Client, method, path 
 func mkdirCmd(c *instance.Instance, client *http.Client, name string, mkdirP bool) error {
 	q := url.Values{}
 	q.Add("Path", name)
-	q.Add("Type", "io.cozy.folders")
+	q.Add("Type", "directory")
 	if mkdirP {
 		q.Add("Recursive", "true")
 	}
@@ -400,7 +400,7 @@ func treeCmd(c *instance.Instance, client *http.Client, root string, w io.Writer
 		return err
 	}
 
-	if doc.Data.ID == vfs.RootFolderID {
+	if doc.Data.ID == vfs.RootDirID {
 		_, err = fmt.Fprintln(w, "/")
 	} else {
 		_, err = fmt.Fprintln(w, doc.Data.Attrs.Name)
@@ -497,8 +497,8 @@ func mvCmd(c *instance.Instance, client *http.Client, from, to string) error {
 
 	body := &apiPatch{}
 	body.Data.Attrs = filePatch{
-		Name:     path.Base(to),
-		FolderID: parent.Data.ID,
+		Name:  path.Base(to),
+		DirID: parent.Data.ID,
 	}
 
 	return vfsDoRequestAndClose(c, client, "PATCH", "/"+doc.Data.ID, q, body)
@@ -533,7 +533,7 @@ func importFiles(c *instance.Instance, client *http.Client, from, to string, mat
 	mkdir := func(name string) error {
 		q := url.Values{}
 		q.Add("Path", name)
-		q.Add("Type", "io.cozy.folders")
+		q.Add("Type", "directory")
 		q.Add("Recursive", "true")
 		doc, err := vfsRequestAndParse(c, client, "POST", "/", q, nil)
 		if err != nil {
@@ -561,15 +561,15 @@ func importFiles(c *instance.Instance, client *http.Client, from, to string, mat
 		defer r.Close()
 
 		q := url.Values{}
-		q.Add("Type", "io.cozy.files")
+		q.Add("Type", "file")
 		q.Add("Name", path.Base(distname))
 
-		folderID := paths[dirname]
-		if folderID == "" {
-			panic(fmt.Errorf("Missing folder %s", dirname))
+		dirID := paths[dirname]
+		if dirID == "" {
+			panic(fmt.Errorf("Missing directory %s", dirname))
 		}
 
-		req, err := vfsCreateRequest(c, "POST", "/"+folderID, q, r)
+		req, err := vfsCreateRequest(c, "POST", "/"+dirID, q, r)
 		if err != nil {
 			return err
 		}

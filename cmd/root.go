@@ -23,9 +23,9 @@ var ConfigPaths = []string{
 	"/etc/cozy",
 }
 
-// DefaultStorageDirectory is the default directory name in which data
+// DefaultStorageDir is the default directory name in which data
 // is stored relatively to the cozy-stack binary.
-const DefaultStorageDirectory = "storage"
+const DefaultStorageDir = "storage"
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -71,7 +71,7 @@ func init() {
 	flags.StringP("assets", "", "./assets", "path to the directory with the assets")
 	viper.BindPFlag("assets", flags.Lookup("assets"))
 
-	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDirectory), "filesystem url")
+	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
 
 	flags.String("couchdb-host", "localhost", "couchdbdb host")

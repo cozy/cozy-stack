@@ -23,30 +23,25 @@ import (
 // TagSeparator is the character separating tags
 const TagSeparator = ","
 
-const (
-	fileType   = "io.cozy.files"
-	folderType = "io.cozy.folders"
-)
-
 // ErrDocTypeInvalid is used when the document type sent is not
 // recognized
 var ErrDocTypeInvalid = errors.New("Invalid document type")
 
-// CreationHandler handle all POST requests on /files/:folder-id
+// CreationHandler handle all POST requests on /files/:dir-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
 // create a new directory.
 //
-// swagger:route POST /files/:folder-id files uploadFileOrCreateDir
+// swagger:route POST /files/:dir-id files uploadFileOrCreateDir
 func CreationHandler(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 	var doc jsonapi.Object
 	var err error
 	switch c.Query("Type") {
-	case fileType:
+	case vfs.FileType:
 		doc, err = createFileHandler(c, instance)
-	case folderType:
-		doc, err = createDirectoryHandler(c, instance)
+	case vfs.DirType:
+		doc, err = createDirHandler(c, instance)
 	default:
 		err = ErrDocTypeInvalid
 	}
@@ -63,7 +58,7 @@ func createFileHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err 
 	doc, err = fileDocFromReq(
 		c,
 		c.Query("Name"),
-		c.Param("folder-id"),
+		c.Param("dir-id"),
 		strings.Split(c.Query("Tags"), TagSeparator),
 	)
 	if err != nil {
@@ -85,7 +80,7 @@ func createFileHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err 
 	return
 }
 
-func createDirectoryHandler(c *gin.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
+func createDirHandler(c *gin.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
 	tags := strings.Split(c.Query("Tags"), TagSeparator)
 	path := c.Query("Path")
 
@@ -96,8 +91,8 @@ func createDirectoryHandler(c *gin.Context, vfsC vfs.Context) (*vfs.DirDoc, erro
 		return vfs.Mkdir(vfsC, path, tags)
 	}
 
-	name, folderID := c.Query("Name"), c.Param("folder-id")
-	doc, err := vfs.NewDirDoc(name, folderID, tags, nil)
+	name, dirID := c.Query("Name"), c.Param("dir-id")
+	doc, err := vfs.NewDirDoc(name, dirID, tags, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +123,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 	newdoc, err = fileDocFromReq(
 		c,
 		olddoc.Name,
-		olddoc.FolderID,
+		olddoc.DirID,
 		olddoc.Tags,
 	)
 	if err != nil {
@@ -186,7 +181,7 @@ func ModificationHandler(c *gin.Context) {
 			jsonapi.AbortWithError(c, jsonapi.BadJSON())
 			return
 		}
-		patch.FolderID = &rid.ID
+		patch.DirID = &rid.ID
 	}
 
 	fileID := c.Param("file-id")
@@ -359,7 +354,7 @@ func TrashHandler(c *gin.Context) {
 func ReadTrashFilesHandler(c *gin.Context) {
 	instance := middlewares.GetInstance(c)
 
-	trash, err := vfs.GetDirDoc(instance, vfs.TrashFolderID, true)
+	trash, err := vfs.GetDirDoc(instance, vfs.TrashDirID, true)
 	if err != nil {
 		jsonapi.AbortWithError(c, wrapVfsError(err))
 		return
@@ -403,7 +398,7 @@ func Routes(router *gin.RouterGroup) {
 	})
 
 	router.POST("/", CreationHandler)
-	router.POST("/:folder-id", CreationHandler)
+	router.POST("/:dir-id", CreationHandler)
 
 	router.PATCH("/:file-id", ModificationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
@@ -435,7 +430,7 @@ func wrapVfsError(err error) *jsonapi.Error {
 	case vfs.ErrParentDoesNotExist:
 		return jsonapi.NotFound(err)
 	case vfs.ErrForbiddenDocMove:
-		return jsonapi.PreconditionFailed("folder-id", err)
+		return jsonapi.PreconditionFailed("dir-id", err)
 	case vfs.ErrIllegalFilename:
 		return jsonapi.InvalidParameter("name", err)
 	case vfs.ErrIllegalTime:
@@ -448,13 +443,13 @@ func wrapVfsError(err error) *jsonapi.Error {
 		return jsonapi.BadRequest(err)
 	case vfs.ErrNonAbsolutePath:
 		return jsonapi.BadRequest(err)
-	case vfs.ErrDirectoryNotEmpty:
+	case vfs.ErrDirNotEmpty:
 		return jsonapi.BadRequest(err)
 	}
 	return jsonapi.InternalServerError(err)
 }
 
-func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *vfs.FileDoc, err error) {
+func fileDocFromReq(c *gin.Context, name, dirID string, tags []string) (doc *vfs.FileDoc, err error) {
 	header := c.Request.Header
 
 	size, err := parseContentLength(header.Get("Content-Length"))
@@ -476,7 +471,7 @@ func fileDocFromReq(c *gin.Context, name, folderID string, tags []string) (doc *
 	mime, class := vfs.ExtractMimeAndClass(c.ContentType())
 	doc, err = vfs.NewFileDoc(
 		name,
-		folderID,
+		dirID,
 		size,
 		md5Sum,
 		mime,

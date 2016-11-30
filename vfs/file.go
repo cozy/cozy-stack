@@ -30,8 +30,8 @@ type FileDoc struct {
 	DocRev string `json:"_rev,omitempty"`
 	// File name
 	Name string `json:"name"`
-	// Parent folder identifier
-	FolderID string `json:"folder_id"`
+	// Parent directory identifier
+	DirID string `json:"dir_id"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -64,7 +64,7 @@ func (f *FileDoc) SetRev(rev string) { f.DocRev = rev }
 // Path is used to generate the file path
 func (f *FileDoc) Path(c Context) (string, error) {
 	var parentPath string
-	if f.FolderID == RootFolderID {
+	if f.DirID == RootDirID {
 		parentPath = "/"
 	} else {
 		parent, err := f.Parent(c)
@@ -81,7 +81,7 @@ func (f *FileDoc) Path(c Context) (string, error) {
 
 // Parent returns the parent directory document
 func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
-	parent, err := getParentDir(c, f.parent, f.FolderID)
+	parent, err := getParentDir(c, f.parent, f.DirID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,10 +101,10 @@ func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
 	return jsonapi.RelationshipMap{
 		"parent": jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
-				Related: "/files/" + f.FolderID,
+				Related: "/files/" + f.DirID,
 			},
 			Data: jsonapi.ResourceIdentifier{
-				ID:   f.FolderID,
+				ID:   f.DirID,
 				Type: FsDocType,
 			},
 		},
@@ -117,22 +117,22 @@ func (f *FileDoc) Included() []jsonapi.Object {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, folderID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
+func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
 
-	if folderID == "" {
-		folderID = RootFolderID
+	if dirID == "" {
+		dirID = RootDirID
 	}
 
 	tags = uniqueTags(tags)
 
 	createDate := time.Now()
 	doc = &FileDoc{
-		Type:     FileType,
-		Name:     name,
-		FolderID: folderID,
+		Type:  FileType,
+		Name:  name,
+		DirID: dirID,
 
 		CreatedAt:  createDate,
 		UpdatedAt:  createDate,
@@ -177,11 +177,11 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 		return nil, err
 	}
 
-	folderID := parent.ID()
+	dirID := parent.ID()
 	selector := mango.Map{
-		"folder_id": folderID,
-		"name":      path.Base(name),
-		"type":      FileType,
+		"dir_id": dirID,
+		"name":   path.Base(name),
+		"type":   FileType,
 	}
 
 	var docs []*FileDoc
@@ -445,7 +445,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:       &olddoc.Name,
-		FolderID:   &olddoc.FolderID,
+		DirID:      &olddoc.DirID,
 		Tags:       &olddoc.Tags,
 		UpdatedAt:  &olddoc.UpdatedAt,
 		Executable: &olddoc.Executable,
@@ -457,7 +457,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 
 	newdoc, err = NewFileDoc(
 		*patch.Name,
-		*patch.FolderID,
+		*patch.DirID,
 		olddoc.Size,
 		olddoc.MD5Sum,
 		olddoc.Mime,
@@ -470,7 +470,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 	}
 
 	var parent *DirDoc
-	if newdoc.FolderID != olddoc.FolderID {
+	if newdoc.DirID != olddoc.DirID {
 		parent, err = newdoc.Parent(c)
 	} else {
 		parent = olddoc.parent
@@ -522,11 +522,11 @@ func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
 	if strings.HasPrefix(oldpath, TrashDirName) {
 		return nil, ErrFileInTrash
 	}
-	trashFolderID := TrashFolderID
+	trashDirID := TrashDirID
 	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
 		newdoc, err = ModifyFileMetadata(c, olddoc, &DocPatch{
-			FolderID: &trashFolderID,
-			Name:     &name,
+			DirID: &trashDirID,
+			Name:  &name,
 		})
 		return err
 	})

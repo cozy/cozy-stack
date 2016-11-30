@@ -9,39 +9,39 @@ having to know the underlying storage layer. The metadata are kept in CouchDB,
 but the binaries can go to the local system, or a Swift instance.
 
 
-Folders
--------
+Directories
+-----------
 
-A folder is a container for files and sub-folders.
+A directory is a container for files and sub-directories.
 
 Its path is the path of its parent, a slash (`/`), and its name. It's case
 sensitive.
 
-### POST /files/:folder-id
+### POST /files/:dir-id
 
-Create a new folder. The `folder-id` parameter is optional. When it's not
-given, the folder is created at the root of the virtual file system.
+Create a new directory. The `dir-id` parameter is optional. When it's not
+given, the directory is created at the root of the virtual file system.
 
 #### Query-String
 
 Parameter | Description
 ----------|------------------
-Type      | `io.cozy.folders`
-Name      | the folder name
+Type      | `directory`
+Name      | the directory name
 Tags      | an array of tags
 
 #### Request
 
 ```http
 POST
-/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=io.cozy.folders&Name=phone&Tags=bills,konnectors HTTP/1.1
+/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=directory&Name=phone&Tags=bills,konnectors HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
 #### Status codes
 
-* 201 Created, when the folder has been successfully created
-* 404 Not Found, when the parent folder does not exist
+* 201 Created, when the directory has been successfully created
+* 404 Not Found, when the parent directory does not exist
 * 409 Conflict, when a directory with the same name already exists
 * 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or invalid
 
@@ -86,7 +86,7 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 
 ### GET /files/:file-id
 
-Get a folder or a file informations. In the case of a folder, it contains the list of files and sub-folders inside it.
+Get a directory or a file informations. In the case of a directory, it contains the list of files and sub-directories inside it.
 Contents is paginated. By default, only the 100 first entries are given.
 
 ### Query-String
@@ -197,9 +197,9 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### DELETE /files/:folder-id
+### DELETE /files/:dir-id
 
-Put a folder and its subtree in the trash.
+Put a directory and its subtree in the trash.
 
 
 Files
@@ -207,7 +207,7 @@ Files
 
 A file is a binary content with some metadata.
 
-### POST /files/:folder-id
+### POST /files/:dir-id
 
 Upload a file
 
@@ -215,7 +215,7 @@ Upload a file
 
 Parameter | Description
 ----------|---------------------------------------------------
-Type      | `io.cozy.files`
+Type      | `file`
 Name      | the file name
 Tags      | an array of tags
 Executable| `true` if the file is executable (UNIX permission)
@@ -232,7 +232,7 @@ Date          | The modification date of the file
 #### Request
 
 ```http
-POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=io.cozy.files&Name=hello.txt HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=file&Name=hello.txt HTTP/1.1
 Accept: application/vnd.api+json
 Content-Length: 12
 Content-MD5: hvsmnRkNLIX24EaM7KQqIA==
@@ -245,7 +245,7 @@ Hello world!
 #### Status codes
 
 * 201 Created, when the file has been successfully created
-* 404 Not Found, when the parent folder does not exist
+* 404 Not Found, when the parent directory does not exist
 * 409 Conflict, when a file with the same name already exists
 * 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to the md5sum computed by the server
 * 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist, `Type` or `Name` parameter is missing or invalid, etc.)
@@ -469,16 +469,16 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 ### PATCH /files/:file-id and PATCH /files/metadata
 
-Both endpoints can be used to update the metadata of a file or folder, or to
+Both endpoints can be used to update the metadata of a file or directory, or to
 rename/move it. The difference is the first one uses an id to identify the
-file/folder to update, and the second one uses the path.
+file/directory to update, and the second one uses the path.
 
-The parent relationship can be updated to move a file or folder.
+The parent relationship can be updated to move a file or directory.
 
 #### HTTP headers
 
 It's possible to send the `If-Match` header, with the previous revision of the
-file/folder (optional).
+file/directory (optional).
 
 #### Request
 
@@ -512,10 +512,10 @@ Content-Type: application/vnd.api+json
 
 #### Status codes
 
-* 200 OK, when the file or folder metadata has been successfully updated
-* 400 Bad Request, when a the folder is asked to move to one of its sub-folders
-* 404 Not Found, when the file/folder wasn't existing
-* 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file/folder
+* 200 OK, when the file or directory metadata has been successfully updated
+* 400 Bad Request, when a the directory is asked to move to one of its sub-directories
+* 404 Not Found, when the file/directory wasn't existing
+* 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file/directory
 * 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist)
 
 #### Response
@@ -565,8 +565,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 ### POST /files/archive
 
 Create an archive and download it. The body of the request lists the files and
-folders that will be included in the archive. For folders, it includes all the
-files and sub-folders in the archive.
+directories that will be included in the archive. For directories, it includes all the files and sub-directories in the archive.
 
 #### Request
 
