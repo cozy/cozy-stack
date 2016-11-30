@@ -44,20 +44,20 @@ func printH(h H, str string, count int) string {
 	return str
 }
 
-func createTree(tree H, folderID string) (*DirDoc, error) {
+func createTree(tree H, dirID string) (*DirDoc, error) {
 	if tree == nil {
 		return nil, nil
 	}
 
-	if folderID == "" {
-		folderID = RootFolderID
+	if dirID == "" {
+		dirID = RootDirID
 	}
 
 	var err error
 	var dirdoc *DirDoc
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
-			dirdoc, err = NewDirDoc(name[:len(name)-1], folderID, nil, nil)
+			dirdoc, err = NewDirDoc(name[:len(name)-1], dirID, nil, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -68,7 +68,7 @@ func createTree(tree H, folderID string) (*DirDoc, error) {
 				return nil, err
 			}
 		} else {
-			filedoc, err := NewFileDoc(name, folderID, -1, nil, "", "", false, nil)
+			filedoc, err := NewFileDoc(name, dirID, -1, nil, "", "", false, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -186,7 +186,7 @@ func TestCreateAndGetFile(t *testing.T) {
 		},
 	}
 
-	olddoc, err := createTree(origtree, RootFolderID)
+	olddoc, err := createTree(origtree, RootDirID)
 
 	if !assert.NoError(t, err) {
 		return
@@ -224,7 +224,7 @@ func TestUpdateDir(t *testing.T) {
 		},
 	}
 
-	doc1, err := createTree(origtree, RootFolderID)
+	doc1, err := createTree(origtree, RootDirID)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -258,7 +258,7 @@ func TestUpdateDir(t *testing.T) {
 
 	newfolid := dirchild2.ID()
 	_, err = ModifyDirMetadata(vfsC, dirchild3, &DocPatch{
-		FolderID: &newfolid,
+		DirID: &newfolid,
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -301,7 +301,7 @@ func TestWalk(t *testing.T) {
 		},
 	}
 
-	_, err := createTree(walktree, RootFolderID)
+	_, err := createTree(walktree, RootDirID)
 	if !assert.NoError(t, err) {
 		return
 	}

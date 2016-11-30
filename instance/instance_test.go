@@ -57,10 +57,10 @@ func TestGetCorrectInstance(t *testing.T) {
 	}
 }
 
-func TestInstanceHasRootFolder(t *testing.T) {
+func TestInstanceHasRootDir(t *testing.T) {
 	var root vfs.DirDoc
 	prefix := getDB(t, "test.cozycloud.cc")
-	err := couchdb.GetDoc(prefix, vfs.FsDocType, vfs.RootFolderID, &root)
+	err := couchdb.GetDoc(prefix, vfs.FsDocType, vfs.RootDirID, &root)
 	if assert.NoError(t, err) {
 		assert.Equal(t, root.Fullpath, "/")
 	}

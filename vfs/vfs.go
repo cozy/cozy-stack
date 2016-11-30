@@ -1,7 +1,7 @@
 // Package vfs is for storing files on the cozy, including binary ones like
 // photos and movies. The range of possible operations with this endpoint goes
 // from simple ones, like uploading a file, to more complex ones, like renaming
-// a folder. It also ensure that an instance is not exceeding its quota, and
+// a directory. It also ensure that an instance is not exceeding its quota, and
 // keeps a trash to recover files recently deleted.
 package vfs
 
@@ -21,11 +21,11 @@ import (
 // Indexes is the list of required indexes by the VFS inside CouchDB.
 var Indexes = []mango.Index{
 	// Used to lookup a file given its parent
-	mango.IndexOnFields("folder_id", "name", "type"),
+	mango.IndexOnFields("dir_id", "name", "type"),
 	// Used to lookup a directory given its path
 	mango.IndexOnFields("path"),
 	// Used to lookup children of a directory
-	mango.IndexOnFields("folder_id"),
+	mango.IndexOnFields("dir_id"),
 }
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -37,10 +37,10 @@ const ForbiddenFilenameChars = "/\x00"
 const (
 	// FsDocType is document type
 	FsDocType = "io.cozy.files"
-	// RootFolderID is the identifier of the root directory
-	RootFolderID = "io.cozy.files.rootdir"
-	// TrashFolderID is the identifier of the trash directory
-	TrashFolderID = "io.cozy.files.trashdir"
+	// RootDirID is the identifier of the root directory
+	RootDirID = "io.cozy.files.root-dir"
+	// TrashDirID is the identifier of the trash directory
+	TrashDirID = "io.cozy.files.trash-dir"
 	// TrashDirName is the path of the trash directory
 	TrashDirName = "/.cozy_trash"
 	// AppsDirName is the path of the directory in which apps are stored
@@ -69,7 +69,7 @@ type Context interface {
 // directory documents.
 type DocPatch struct {
 	Name       *string    `json:"name,omitempty"`
-	FolderID   *string    `json:"folder_id,omitempty"`
+	DirID      *string    `json:"dir_id,omitempty"`
 	Tags       *[]string  `json:"tags,omitempty"`
 	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
 	Executable *bool      `json:"executable,omitempty"`
@@ -100,7 +100,7 @@ func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
 			DocID:      fd.DocID,
 			DocRev:     fd.DocRev,
 			Name:       fd.Name,
-			FolderID:   fd.FolderID,
+			DirID:      fd.DirID,
 			CreatedAt:  fd.CreatedAt,
 			UpdatedAt:  fd.UpdatedAt,
 			Size:       fd.Size,
@@ -180,7 +180,7 @@ func OpenFile(c Context, name string, flag int, perm os.FileMode) (*File, error)
 	}
 
 	var err error
-	var folderID string
+	var dirID string
 	var olddoc *FileDoc
 	var parent *DirDoc
 
@@ -188,22 +188,22 @@ func OpenFile(c Context, name string, flag int, perm os.FileMode) (*File, error)
 		if parent, err = GetDirDocFromPath(c, path.Dir(name), false); err != nil {
 			return nil, err
 		}
-		folderID = parent.ID()
+		dirID = parent.ID()
 	} else if flag&os.O_WRONLY != 0 {
 		if olddoc, err = GetFileDocFromPath(c, name); err != nil {
 			return nil, err
 		}
-		folderID = olddoc.FolderID
+		dirID = olddoc.DirID
 	}
 
-	if folderID == "" {
+	if dirID == "" {
 		return nil, os.ErrInvalid
 	}
 
 	filename := path.Base(name)
 	exec := false
 	mime, class := ExtractMimeAndClassFromFilename(filename)
-	newdoc, err := NewFileDoc(filename, folderID, -1, nil, mime, class, exec, []string{})
+	newdoc, err := NewFileDoc(filename, dirID, -1, nil, mime, class, exec, []string{})
 	if err != nil {
 		return nil, err
 	}
@@ -296,21 +296,21 @@ func Rename(c Context, oldpath, newpath string) error {
 
 	newname := path.Base(newpath)
 
-	var newfolderID *string
+	var newdirID *string
 	if path.Dir(oldpath) != path.Dir(newpath) {
 		var parent *DirDoc
 		parent, err = GetDirDocFromPath(c, path.Dir(newpath), false)
 		if err != nil {
 			return err
 		}
-		newfolderID = &parent.FolderID
+		newdirID = &parent.DirID
 	} else {
-		newfolderID = nil
+		newdirID = nil
 	}
 
 	patch := &DocPatch{
-		Name:     &newname,
-		FolderID: newfolderID,
+		Name:  &newname,
+		DirID: newdirID,
 	}
 
 	if dir != nil {
@@ -422,18 +422,18 @@ func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 }
 
 // getParentDir returns the parent directory document if nil.
-func getParentDir(c Context, parent *DirDoc, folderID string) (*DirDoc, error) {
+func getParentDir(c Context, parent *DirDoc, dirID string) (*DirDoc, error) {
 	if parent != nil {
 		return parent, nil
 	}
 	var err error
-	parent, err = GetDirDoc(c, folderID, false)
+	parent, err = GetDirDoc(c, dirID, false)
 	return parent, err
 }
 
 func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error) {
-	if patch.FolderID == nil {
-		patch.FolderID = data.FolderID
+	if patch.DirID == nil {
+		patch.DirID = data.DirID
 	}
 
 	if patch.Name == nil {

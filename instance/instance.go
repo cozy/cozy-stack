@@ -103,8 +103,8 @@ func (i *Instance) createInCouchdb() (err error) {
 	return couchdb.DefineIndex(couchdb.GlobalDB, InstanceType, byDomain)
 }
 
-// createRootFolder creates the root folder for this instance
-func (i *Instance) createRootFolder() error {
+// createRootDir creates the root directory for this instance
+func (i *Instance) createRootDir() error {
 	rootFsURL := config.BuildAbsFsURL("/")
 	domainURL := config.BuildRelFsURL(i.Domain)
 
@@ -181,7 +181,7 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, err
 	}
 
-	err = i.createRootFolder()
+	err = i.createRootDir()
 	if err != nil {
 		return nil, err
 	}

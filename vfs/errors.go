@@ -3,9 +3,9 @@ package vfs
 import "errors"
 
 var (
-	// ErrParentDoesNotExist is used when the parent folder does not
+	// ErrParentDoesNotExist is used when the parent directory does not
 	// exist
-	ErrParentDoesNotExist = errors.New("Parent folder with given FolderID does not exist")
+	ErrParentDoesNotExist = errors.New("Parent directory with given DirID does not exist")
 	// ErrForbiddenDocMove is used when trying to move a document in an
 	// illicit destination
 	ErrForbiddenDocMove = errors.New("Forbidden document move")
@@ -28,7 +28,7 @@ var (
 	// ErrNonAbsolutePath is used when the given path is not absolute
 	// while it is required to be
 	ErrNonAbsolutePath = errors.New("Path should be abolute")
-	// ErrDirectoryNotEmpty is used to inform that the directory is not
+	// ErrDirNotEmpty is used to inform that the directory is not
 	// empty
-	ErrDirectoryNotEmpty = errors.New("Directory is not empty")
+	ErrDirNotEmpty = errors.New("Directory is not empty")
 )

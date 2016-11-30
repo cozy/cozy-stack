@@ -25,8 +25,8 @@ type DirDoc struct {
 	DocRev string `json:"_rev,omitempty"`
 	// Directory name
 	Name string `json:"name"`
-	// Parent folder identifier
-	FolderID string `json:"folder_id"`
+	// Parent directory identifier
+	DirID string `json:"dir_id"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -73,7 +73,7 @@ func (d *DirDoc) Path(c Context) (string, error) {
 
 // Parent returns the parent directory document
 func (d *DirDoc) Parent(c Context) (*DirDoc, error) {
-	parent, err := getParentDir(c, d.parent, d.FolderID)
+	parent, err := getParentDir(c, d.parent, d.DirID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,13 +109,13 @@ func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
 	contents := jsonapi.Relationship{Data: data}
 
 	var parent jsonapi.Relationship
-	if d.ID() != RootFolderID {
+	if d.ID() != RootDirID {
 		parent = jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
-				Related: "/files/" + d.FolderID,
+				Related: "/files/" + d.DirID,
 			},
 			Data: jsonapi.ResourceIdentifier{
-				ID:   d.FolderID,
+				ID:   d.DirID,
 				Type: FsDocType,
 			},
 		}
@@ -148,22 +148,22 @@ func (d *DirDoc) FetchFiles(c Context) (err error) {
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
-func NewDirDoc(name, folderID string, tags []string, parent *DirDoc) (doc *DirDoc, err error) {
+func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (doc *DirDoc, err error) {
 	if err = checkFileName(name); err != nil {
 		return
 	}
 
-	if folderID == "" {
-		folderID = RootFolderID
+	if dirID == "" {
+		dirID = RootDirID
 	}
 
 	tags = uniqueTags(tags)
 
 	createDate := time.Now()
 	doc = &DirDoc{
-		Type:     DirType,
-		Name:     name,
-		FolderID: folderID,
+		Type:  DirType,
+		Name:  name,
+		DirID: dirID,
 
 		CreatedAt: createDate,
 		UpdatedAt: createDate,
@@ -184,8 +184,8 @@ func GetDirDoc(c Context, fileID string, withChildren bool) (*DirDoc, error) {
 		err = ErrParentDoesNotExist
 	}
 	if err != nil {
-		if fileID == RootFolderID {
-			panic("Root folder is not in database")
+		if fileID == RootDirID {
+			panic("Root directory is not in database")
 		}
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, erro
 	}
 	if len(docs) == 0 {
 		if name == "/" {
-			panic("Root folder is not in database")
+			panic("Root directory is not in database")
 		}
 		return nil, os.ErrNotExist
 	}
@@ -250,18 +250,18 @@ func CreateDir(c Context, doc *DirDoc) (err error) {
 	return couchdb.CreateDoc(c, doc)
 }
 
-// CreateRootDirDoc creates the root folder document for this context
+// CreateRootDirDoc creates the root directory document for this context
 func CreateRootDirDoc(c Context) error {
 	return couchdb.CreateNamedDocWithDB(c, &DirDoc{
 		Name:     "",
 		Type:     DirType,
-		DocID:    RootFolderID,
+		DocID:    RootDirID,
 		Fullpath: "/",
-		FolderID: "",
+		DirID:    "",
 	})
 }
 
-// CreateTrashDir creates the trash folder for this context
+// CreateTrashDir creates the trash directory for this context
 func CreateTrashDir(c Context) error {
 	err := c.FS().Mkdir(TrashDirName, 0755)
 	if err != nil && !os.IsExist(err) {
@@ -270,9 +270,9 @@ func CreateTrashDir(c Context) error {
 	err = couchdb.CreateNamedDocWithDB(c, &DirDoc{
 		Name:     path.Base(TrashDirName),
 		Type:     DirType,
-		DocID:    TrashFolderID,
+		DocID:    TrashDirID,
 		Fullpath: TrashDirName,
-		FolderID: RootFolderID,
+		DirID:    RootDirID,
 	})
 	if err != nil && !couchdb.IsConflictError(err) {
 		return err
@@ -284,14 +284,14 @@ func CreateTrashDir(c Context) error {
 // can be used to rename or move the directory in the VFS.
 func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
 	id := olddoc.ID()
-	if id == RootFolderID || id == TrashFolderID {
+	if id == RootDirID || id == TrashDirID {
 		return nil, os.ErrInvalid
 	}
 
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:      &olddoc.Name,
-		FolderID:  &olddoc.FolderID,
+		DirID:     &olddoc.DirID,
 		Tags:      &olddoc.Tags,
 		UpdatedAt: &olddoc.UpdatedAt,
 	}, patch, cdate)
@@ -300,13 +300,13 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirD
 		return
 	}
 
-	newdoc, err = NewDirDoc(*patch.Name, *patch.FolderID, *patch.Tags, nil)
+	newdoc, err = NewDirDoc(*patch.Name, *patch.DirID, *patch.Tags, nil)
 	if err != nil {
 		return
 	}
 
 	var parent *DirDoc
-	if newdoc.FolderID != olddoc.FolderID {
+	if newdoc.DirID != olddoc.DirID {
 		parent, err = newdoc.Parent(c)
 	} else {
 		parent = olddoc.parent
@@ -334,7 +334,7 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirD
 	}
 
 	if oldpath != newpath {
-		err = safeRenameDirectory(c, oldpath, newpath)
+		err = safeRenameDir(c, oldpath, newpath)
 		if err != nil {
 			return
 		}
@@ -389,11 +389,11 @@ func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 	if strings.HasPrefix(oldpath, TrashDirName) {
 		return nil, ErrFileInTrash
 	}
-	trashFolderID := TrashFolderID
+	trashDirID := TrashDirID
 	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
 		newdoc, err = ModifyDirMetadata(c, olddoc, &DocPatch{
-			FolderID: &trashFolderID,
-			Name:     &name,
+			DirID: &trashDirID,
+			Name:  &name,
 		})
 		return err
 	})
@@ -402,7 +402,7 @@ func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 
 func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc, err error) {
 	var docs []*DirOrFileDoc
-	sel := mango.Equal("folder_id", parent.ID())
+	sel := mango.Equal("dir_id", parent.ID())
 	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
 	err = couchdb.FindDocs(c, FsDocType, req, &docs)
 	if err != nil {
@@ -423,7 +423,7 @@ func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc,
 	return
 }
 
-func safeRenameDirectory(c Context, oldpath, newpath string) error {
+func safeRenameDir(c Context, oldpath, newpath string) error {
 	newpath = path.Clean(newpath)
 	oldpath = path.Clean(oldpath)
 

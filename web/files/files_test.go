@@ -214,25 +214,25 @@ func TestCreateDirWithNoType(t *testing.T) {
 }
 
 func TestCreateDirWithNoName(t *testing.T) {
-	res, _ := createDir(t, "/files/?Type=io.cozy.folders")
+	res, _ := createDir(t, "/files/?Type=directory")
 	assert.Equal(t, 422, res.StatusCode)
 }
 
 func TestCreateDirOnNonExistingParent(t *testing.T) {
-	res, _ := createDir(t, "/files/noooop?Name=foo&Type=io.cozy.folders")
+	res, _ := createDir(t, "/files/noooop?Name=foo&Type=directory")
 	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestCreateDirAlreadyExists(t *testing.T) {
-	res1, _ := createDir(t, "/files/?Name=iexist&Type=io.cozy.folders")
+	res1, _ := createDir(t, "/files/?Name=iexist&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	res2, _ := createDir(t, "/files/?Name=iexist&Type=io.cozy.folders")
+	res2, _ := createDir(t, "/files/?Name=iexist&Type=directory")
 	assert.Equal(t, 409, res2.StatusCode)
 }
 
 func TestCreateDirRootSuccess(t *testing.T) {
-	res, _ := createDir(t, "/files/?Name=coucou&Type=io.cozy.folders")
+	res, _ := createDir(t, "/files/?Name=coucou&Type=directory")
 	assert.Equal(t, 201, res.StatusCode)
 
 	storage := testInstance.FS()
@@ -242,7 +242,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 }
 
 func TestCreateDirWithParentSuccess(t *testing.T) {
-	res1, data1 := createDir(t, "/files/?Name=dirparent&Type=io.cozy.folders")
+	res1, data1 := createDir(t, "/files/?Name=dirparent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	var ok bool
@@ -252,7 +252,7 @@ func TestCreateDirWithParentSuccess(t *testing.T) {
 	parentID, ok := data1["id"].(string)
 	assert.True(t, ok)
 
-	res2, _ := createDir(t, "/files/"+parentID+"?Name=child&Type=io.cozy.folders")
+	res2, _ := createDir(t, "/files/"+parentID+"?Name=child&Type=directory")
 	assert.Equal(t, 201, res2.StatusCode)
 
 	storage := testInstance.FS()
@@ -262,10 +262,10 @@ func TestCreateDirWithParentSuccess(t *testing.T) {
 }
 
 func TestCreateDirWithIllegalCharacter(t *testing.T) {
-	res1, _ := createDir(t, "/files/?Name=coucou/les/copains!&Type=io.cozy.folders")
+	res1, _ := createDir(t, "/files/?Name=coucou/les/copains!&Type=directory")
 	assert.Equal(t, 422, res1.StatusCode)
 
-	res2, _ := createDir(t, "/files/?Name=j'ai\x00untrou!&Type=io.cozy.folders")
+	res2, _ := createDir(t, "/files/?Name=j'ai\x00untrou!&Type=directory")
 	assert.Equal(t, 422, res2.StatusCode)
 }
 
@@ -274,7 +274,7 @@ func TestCreateDirConcurrently(t *testing.T) {
 	errs := make(chan *http.Response)
 
 	doCreateDir := func(name string) {
-		res, _ := createDir(t, "/files/?Name="+name+"&Type=io.cozy.folders")
+		res, _ := createDir(t, "/files/?Name="+name+"&Type=directory")
 		if res.StatusCode == 201 {
 			done <- res
 		} else {
@@ -307,13 +307,13 @@ func TestUploadWithNoType(t *testing.T) {
 }
 
 func TestUploadWithNoName(t *testing.T) {
-	res, _ := upload(t, "/files/?Type=io.cozy.files", "text/plain", "foo", "")
+	res, _ := upload(t, "/files/?Type=file", "text/plain", "foo", "")
 	assert.Equal(t, 422, res.StatusCode)
 }
 
 func TestUploadBadHash(t *testing.T) {
 	body := "foo"
-	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
+	res, _ := upload(t, "/files/?Type=file&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")
 	assert.Equal(t, 412, res.StatusCode)
 
 	storage := testInstance.FS()
@@ -323,7 +323,7 @@ func TestUploadBadHash(t *testing.T) {
 
 func TestUploadAtRootSuccess(t *testing.T) {
 	body := "foo"
-	res, _ := upload(t, "/files/?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res, _ := upload(t, "/files/?Type=file&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
 
 	storage := testInstance.FS()
@@ -337,7 +337,7 @@ func TestUploadConcurrently(t *testing.T) {
 	errs := make(chan *http.Response)
 
 	doUpload := func(name, body string) {
-		res, _ := upload(t, "/files/?Type=io.cozy.files&Name="+name, "text/plain", body, "")
+		res, _ := upload(t, "/files/?Type=file&Name="+name, "text/plain", body, "")
 		if res.StatusCode == 201 {
 			done <- res
 		} else {
@@ -365,7 +365,7 @@ func TestUploadConcurrently(t *testing.T) {
 }
 
 func TestUploadWithParentSuccess(t *testing.T) {
-	res1, data1 := createDir(t, "/files/?Name=fileparent&Type=io.cozy.folders")
+	res1, data1 := createDir(t, "/files/?Name=fileparent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	var ok bool
@@ -376,7 +376,7 @@ func TestUploadWithParentSuccess(t *testing.T) {
 	assert.True(t, ok)
 
 	body := "foo"
-	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res2, _ := upload(t, "/files/"+parentID+"?Type=file&Name=goodhash", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res2.StatusCode)
 
 	storage := testInstance.FS()
@@ -387,15 +387,15 @@ func TestUploadWithParentSuccess(t *testing.T) {
 
 func TestUploadAtRootAlreadyExists(t *testing.T) {
 	body := "foo"
-	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res1, _ := upload(t, "/files/?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	res2, _ := upload(t, "/files/?Type=io.cozy.files&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res2, _ := upload(t, "/files/?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 409, res2.StatusCode)
 }
 
 func TestUploadWithParentAlreadyExists(t *testing.T) {
-	_, dirdata := createDir(t, "/files/?Type=io.cozy.folders&Name=container")
+	_, dirdata := createDir(t, "/files/?Type=directory&Name=container")
 
 	var ok bool
 	dirdata, ok = dirdata["data"].(map[string]interface{})
@@ -405,16 +405,16 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 	assert.True(t, ok)
 
 	body := "foo"
-	res1, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res1, _ := upload(t, "/files/"+parentID+"?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	res2, _ := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res2, _ := upload(t, "/files/"+parentID+"?Type=file&Name=iexistfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 409, res2.StatusCode)
 }
 
 func TestModifyMetadataFileMove(t *testing.T) {
 	body := "foo"
-	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res1, data1 := upload(t, "/files/?Type=file&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	var ok bool
@@ -424,23 +424,23 @@ func TestModifyMetadataFileMove(t *testing.T) {
 	fileID, ok := data1["id"].(string)
 	assert.True(t, ok)
 
-	res2, data2 := createDir(t, "/files/?Name=movemeinme&Type=io.cozy.folders")
+	res2, data2 := createDir(t, "/files/?Name=movemeinme&Type=directory")
 	assert.Equal(t, 201, res2.StatusCode)
 
 	data2, ok = data2["data"].(map[string]interface{})
 	assert.True(t, ok)
 
-	folderID, ok := data2["id"].(string)
+	dirID, ok := data2["id"].(string)
 	assert.True(t, ok)
 
 	attrs := map[string]interface{}{
 		"tags":       []string{"bar", "bar", "baz"},
 		"name":       "moved",
-		"folder_id":  folderID,
+		"dir_id":     dirID,
 		"executable": true,
 	}
 
-	res3, data3 := patchFile(t, "/files/"+fileID, "io.cozy.files", fileID, attrs, nil)
+	res3, data3 := patchFile(t, "/files/"+fileID, "file", fileID, attrs, nil)
 	assert.Equal(t, 200, res3.StatusCode)
 
 	data3, ok = data3["data"].(map[string]interface{})
@@ -460,10 +460,10 @@ func TestModifyMetadataFileMove(t *testing.T) {
 
 func TestModifyMetadataFileConflict(t *testing.T) {
 	body := "foo"
-	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=fmodme1&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res1, data1 := upload(t, "/files/?Type=file&Name=fmodme1&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	res2, _ := upload(t, "/files/?Type=io.cozy.files&Name=fmodme2&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res2, _ := upload(t, "/files/?Type=file&Name=fmodme2&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res2.StatusCode)
 
 	file1ID, _ := extractDirData(t, data1)
@@ -472,34 +472,34 @@ func TestModifyMetadataFileConflict(t *testing.T) {
 		"name": "fmodme2",
 	}
 
-	res3, _ := patchFile(t, "/files/"+file1ID, "io.cozy.files", file1ID, attrs, nil)
+	res3, _ := patchFile(t, "/files/"+file1ID, "file", file1ID, attrs, nil)
 	assert.Equal(t, 409, res3.StatusCode)
 }
 
 func TestModifyMetadataDirMove(t *testing.T) {
-	res1, data1 := createDir(t, "/files/?Name=dirmodme&Type=io.cozy.folders&Tags=foo,bar,bar")
+	res1, data1 := createDir(t, "/files/?Name=dirmodme&Type=directory&Tags=foo,bar,bar")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	folder1ID, _ := extractDirData(t, data1)
+	dir1ID, _ := extractDirData(t, data1)
 
-	reschild1, _ := createDir(t, "/files/"+folder1ID+"?Name=child1&Type=io.cozy.folders")
+	reschild1, _ := createDir(t, "/files/"+dir1ID+"?Name=child1&Type=directory")
 	assert.Equal(t, 201, reschild1.StatusCode)
 
-	reschild2, _ := createDir(t, "/files/"+folder1ID+"?Name=child2&Type=io.cozy.folders")
+	reschild2, _ := createDir(t, "/files/"+dir1ID+"?Name=child2&Type=directory")
 	assert.Equal(t, 201, reschild2.StatusCode)
 
-	res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinme&Type=io.cozy.folders")
+	res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinme&Type=directory")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	folder2ID, _ := extractDirData(t, data2)
+	dir2ID, _ := extractDirData(t, data2)
 
 	attrs1 := map[string]interface{}{
-		"tags":      []string{"bar", "baz"},
-		"name":      "renamed",
-		"folder_id": folder2ID,
+		"tags":   []string{"bar", "baz"},
+		"name":   "renamed",
+		"dir_id": dir2ID,
 	}
 
-	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs1, nil)
+	res3, _ := patchFile(t, "/files/"+dir1ID, "directory", dir1ID, attrs1, nil)
 	assert.Equal(t, 200, res3.StatusCode)
 
 	storage := testInstance.FS()
@@ -508,45 +508,45 @@ func TestModifyMetadataDirMove(t *testing.T) {
 	assert.True(t, exists)
 
 	attrs2 := map[string]interface{}{
-		"tags":      []string{"bar", "baz"},
-		"name":      "renamed",
-		"folder_id": folder1ID,
+		"tags":   []string{"bar", "baz"},
+		"name":   "renamed",
+		"dir_id": dir1ID,
 	}
 
-	res4, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs2, nil)
+	res4, _ := patchFile(t, "/files/"+dir2ID, "directory", dir2ID, attrs2, nil)
 	assert.Equal(t, 412, res4.StatusCode)
 
-	res5, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, attrs2, nil)
+	res5, _ := patchFile(t, "/files/"+dir1ID, "directory", dir1ID, attrs2, nil)
 	assert.Equal(t, 412, res5.StatusCode)
 }
 
 func TestModifyMetadataDirMoveWithRel(t *testing.T) {
-	res1, data1 := createDir(t, "/files/?Name=dirmodmewithrel&Type=io.cozy.folders&Tags=foo,bar,bar")
+	res1, data1 := createDir(t, "/files/?Name=dirmodmewithrel&Type=directory&Tags=foo,bar,bar")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	folder1ID, _ := extractDirData(t, data1)
+	dir1ID, _ := extractDirData(t, data1)
 
-	reschild1, datachild1 := createDir(t, "/files/"+folder1ID+"?Name=child1&Type=io.cozy.folders")
+	reschild1, datachild1 := createDir(t, "/files/"+dir1ID+"?Name=child1&Type=directory")
 	assert.Equal(t, 201, reschild1.StatusCode)
 
-	reschild2, datachild2 := createDir(t, "/files/"+folder1ID+"?Name=child2&Type=io.cozy.folders")
+	reschild2, datachild2 := createDir(t, "/files/"+dir1ID+"?Name=child2&Type=directory")
 	assert.Equal(t, 201, reschild2.StatusCode)
 
-	res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinmewithrel&Type=io.cozy.folders")
+	res2, data2 := createDir(t, "/files/?Name=dirmodmemoveinmewithrel&Type=directory")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	folder2ID, _ := extractDirData(t, data2)
+	dir2ID, _ := extractDirData(t, data2)
 	child1ID, _ := extractDirData(t, datachild1)
 	child2ID, _ := extractDirData(t, datachild2)
 
 	fmt.Println(child1ID, child2ID)
 
 	parent := &jsonData{
-		ID:   folder2ID,
+		ID:   dir2ID,
 		Type: "io.cozy.files",
 	}
 
-	res3, _ := patchFile(t, "/files/"+folder1ID, "io.cozy.folders", folder1ID, nil, parent)
+	res3, _ := patchFile(t, "/files/"+dir1ID, "directory", dir1ID, nil, parent)
 	assert.Equal(t, 200, res3.StatusCode)
 
 	storage := testInstance.FS()
@@ -556,20 +556,20 @@ func TestModifyMetadataDirMoveWithRel(t *testing.T) {
 }
 
 func TestModifyMetadataDirMoveConflict(t *testing.T) {
-	res1, _ := createDir(t, "/files/?Name=conflictmodme1&Type=io.cozy.folders&Tags=foo,bar,bar")
+	res1, _ := createDir(t, "/files/?Name=conflictmodme1&Type=directory&Tags=foo,bar,bar")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	res2, data2 := createDir(t, "/files/?Name=conflictmodme2&Type=io.cozy.folders")
+	res2, data2 := createDir(t, "/files/?Name=conflictmodme2&Type=directory")
 	assert.Equal(t, 201, res2.StatusCode)
 
-	folder2ID, _ := extractDirData(t, data2)
+	dir2ID, _ := extractDirData(t, data2)
 
 	attrs1 := map[string]interface{}{
 		"tags": []string{"bar", "baz"},
 		"name": "conflictmodme1",
 	}
 
-	res3, _ := patchFile(t, "/files/"+folder2ID, "io.cozy.folders", folder2ID, attrs1, nil)
+	res3, _ := patchFile(t, "/files/"+dir2ID, "directory", dir2ID, attrs1, nil)
 	assert.Equal(t, 409, res3.StatusCode)
 }
 
@@ -579,7 +579,7 @@ func TestModifyContentNoFileID(t *testing.T) {
 }
 
 func TestModifyContentBadRev(t *testing.T) {
-	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=modbadrev&Executable=true", "text/plain", "foo", "")
+	res1, data1 := upload(t, "/files/?Type=file&Name=modbadrev&Executable=true", "text/plain", "foo", "")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	var ok bool
@@ -617,7 +617,7 @@ func TestModifyContentSuccess(t *testing.T) {
 	var fileInfo os.FileInfo
 
 	storage := testInstance.FS()
-	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=willbemodified&Executable=true", "text/plain", "foo", "")
+	res1, data1 := upload(t, "/files/?Type=file&Name=willbemodified&Executable=true", "text/plain", "foo", "")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	buf, err = afero.ReadFile(storage, "/willbemodified")
@@ -692,7 +692,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 	done := make(chan *result)
 	errs := make(chan *http.Response)
 
-	res, data := upload(t, "/files/?Type=io.cozy.files&Name=willbemodifiedconcurrently&Executable=true", "text/plain", "foo", "")
+	res, data := upload(t, "/files/?Type=file&Name=willbemodifiedconcurrently&Executable=true", "text/plain", "foo", "")
 	if !assert.Equal(t, 201, res.StatusCode) {
 		return
 	}
@@ -767,7 +767,7 @@ func TestDownloadFileBadPath(t *testing.T) {
 
 func TestDownloadFileByIDSuccess(t *testing.T) {
 	body := "foo"
-	res1, filedata := upload(t, "/files/?Type=io.cozy.files&Name=downloadme1", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res1, filedata := upload(t, "/files/?Type=file&Name=downloadme1", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	var ok bool
@@ -790,7 +790,7 @@ func TestDownloadFileByIDSuccess(t *testing.T) {
 
 func TestDownloadFileByPathSuccess(t *testing.T) {
 	body := "foo"
-	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadme2", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res1, _ := upload(t, "/files/?Type=file&Name=downloadme2", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	res2, resbody := download(t, "/files/download?Path="+url.QueryEscape("/downloadme2"), "")
@@ -805,7 +805,7 @@ func TestDownloadFileByPathSuccess(t *testing.T) {
 
 func TestDownloadRangeSuccess(t *testing.T) {
 	body := "foo,bar"
-	res1, _ := upload(t, "/files/?Type=io.cozy.files&Name=downloadmebyrange", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	res1, _ := upload(t, "/files/?Type=file&Name=downloadmebyrange", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	res2, _ := download(t, "/files/download?Path="+url.QueryEscape("/downloadmebyrange"), "nimp")
@@ -825,15 +825,15 @@ func TestGetFileMetadataFromPath(t *testing.T) {
 	assert.Equal(t, 404, res1.StatusCode)
 
 	body := "foo,bar"
-	res2, _ := upload(t, "/files/?Type=io.cozy.files&Name=getmetadata", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	res2, _ := upload(t, "/files/?Type=file&Name=getmetadata", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	assert.Equal(t, 201, res2.StatusCode)
 
 	res3, _ := http.Get(ts.URL + "/files/metadata?Path=/getmetadata")
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
-func TestGetDirectoryMetadataFromPath(t *testing.T) {
-	res1, _ := createDir(t, "/files/?Name=getdirmeta&Type=io.cozy.folders")
+func TestGetDirMetadataFromPath(t *testing.T) {
+	res1, _ := createDir(t, "/files/?Name=getdirmeta&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	res2, _ := http.Get(ts.URL + "/files/metadata?Path=/getdirmeta")
@@ -845,7 +845,7 @@ func TestGetFileMetadataFromID(t *testing.T) {
 	assert.Equal(t, 404, res1.StatusCode)
 
 	body := "foo,bar"
-	res2, data2 := upload(t, "/files/?Type=io.cozy.files&Name=getmetadatafromid", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	res2, data2 := upload(t, "/files/?Type=file&Name=getmetadatafromid", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	assert.Equal(t, 201, res2.StatusCode)
 
 	fileID, _ := extractDirData(t, data2)
@@ -854,14 +854,14 @@ func TestGetFileMetadataFromID(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
-func TestGetDirectoryMetadataFromID(t *testing.T) {
-	res1, data1 := createDir(t, "/files/?Name=getdirmetafromid&Type=io.cozy.folders")
+func TestGetDirMetadataFromID(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=getdirmetafromid&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
 
 	parentID, _ := extractDirData(t, data1)
 
 	body := "foo"
-	res2, data2 := upload(t, "/files/"+parentID+"?Type=io.cozy.files&Name=firstfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	res2, data2 := upload(t, "/files/"+parentID+"?Type=file&Name=firstfile", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res2.StatusCode)
 
 	fileID, _ := extractDirData(t, data2)
@@ -870,19 +870,19 @@ func TestGetDirectoryMetadataFromID(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
-func TestDirectoryTrash(t *testing.T) {
-	res1, data1 := createDir(t, "/files/?Name=totrashdir&Type=io.cozy.folders")
+func TestDirTrash(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=totrashdir&Type=directory")
 	if !assert.Equal(t, 201, res1.StatusCode) {
 		return
 	}
 
 	dirID, _ := extractDirData(t, data1)
 
-	res2, _ := createDir(t, "/files/"+dirID+"?Name=child1&Type=io.cozy.files")
+	res2, _ := createDir(t, "/files/"+dirID+"?Name=child1&Type=file")
 	if !assert.Equal(t, 201, res2.StatusCode) {
 		return
 	}
-	res3, _ := createDir(t, "/files/"+dirID+"?Name=child2&Type=io.cozy.files")
+	res3, _ := createDir(t, "/files/"+dirID+"?Name=child2&Type=file")
 	if !assert.Equal(t, 201, res3.StatusCode) {
 		return
 	}
@@ -915,7 +915,7 @@ func TestDirectoryTrash(t *testing.T) {
 
 func TestFileTrash(t *testing.T) {
 	body := "foo,bar"
-	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	res1, data1 := upload(t, "/files/?Type=file&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	if !assert.Equal(t, 201, res1.StatusCode) {
 		return
 	}
@@ -940,12 +940,12 @@ func TestFileTrash(t *testing.T) {
 
 func TestTrashList(t *testing.T) {
 	body := "foo,bar"
-	res1, data1 := upload(t, "/files/?Type=io.cozy.files&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
 	if !assert.Equal(t, 201, res1.StatusCode) {
 		return
 	}
 
-	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=io.cozy.folders")
+	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
 	if !assert.Equal(t, 201, res2.StatusCode) {
 		return
 	}

@@ -48,32 +48,27 @@ and creates the proper databases ($PREFIX/$DOCTYPE) for these doctypes:
 - `io.cozy.apps`
 - `io.cozy.manifests`
 - `io.cozy.files`
-- `io.cozy.folders`
 - `io.cozy.notifications`
 - `io.cozy.settings`
 
 Then, it creates the following indexes for these doctypes :
 
-- `io.cozy.apps : ["slug"]`
-- `io.cozy.manifest : ["url"]`
-- `io.cozy.files & io.cozy.folders: ["FolderId", "name"], ["FolderId", "modifiedDate"]`
-- **TODO :** complete this list
+- **TODO :** complete this list of indexes
 
-Then, it creates some folders:
+Then, it creates some directories:
 
-- `/`, with the id `io.cozy.folders-root`
-- `/Apps`, with the id `io.cozy.folders-apps`
-- `/Documents`, with the id `io.cozy.folders-documents`
-- `/Documents/Downloads`, with the id `io.cozy.folders-downloads`
-- `/Documents/Pictures`, with the id `io.cozy.folders-pictures`
-- `/Documents/Music`, with the id `io.cozy.folders-music`
-- `/Documents/Videos`, with the id `io.cozy.folders-videos`
+- `/`, with the id `io.cozy.files.root-dir`
+- `/Apps`, with the id `io.cozy.files.apps-dir`
+- `/Documents`, with the id `io.cozy.files.documents-dir`
+- `/Documents/Downloads`, with the id `io.cozy.files.downloads-dir`
+- `/Documents/Pictures`, with the id `io.cozy.files.pictures-dir`
+- `/Documents/Music`, with the id `io.cozy.files.music-dir`
+- `/Documents/Videos`, with the id `io.cozy.files.videos-dir`
 
-**The ids are forced to known values:**  even if these folders are moved or
+**The ids are forced to known values:**  even if these directories are moved or
 renamed, they can still be found for the permissions.
 
-**The names are localized:** If a locale is provided through the CLI, the folders will be created with
-names in this locale. Otherwise, theses folders will be created in english and renamed to localized name the first time the locale is set (during onboarding).
+**The names are localized:** If a locale is provided through the CLI, the directories will be created with names in this locale. Otherwise, theses directories will be created in english and renamed to localized name the first time the locale is set (during onboarding).
 
 Then it creates the basic settings
 
