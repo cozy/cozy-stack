@@ -493,7 +493,7 @@ func mvCmd(c *instance.Instance, client *http.Client, from, to string) error {
 	}
 
 	q = url.Values{}
-	q.Add("Rev", doc.Data.Rev)
+	q.Add("rev", doc.Data.Rev)
 
 	body := &apiPatch{}
 	body.Data.Attrs = filePatch{
