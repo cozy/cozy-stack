@@ -53,10 +53,7 @@ and creates the proper databases ($PREFIX/$DOCTYPE) for these doctypes:
 
 Then, it creates the following indexes for these doctypes :
 
-- `io.cozy.apps : ["slug"]`
-- `io.cozy.manifest : ["url"]`
-- `io.cozy.files: ["dir_id", "name"], ["directory", "updated_at"]`
-- **TODO :** complete this list
+- **TODO :** complete this list of indexes
 
 Then, it creates some directories:
 
