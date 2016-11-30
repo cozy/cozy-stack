@@ -383,93 +383,6 @@ Cozy-desktop is a client for Linux, OSX and windows that allows to sync the
 files in a cozy instance with a laptop or desktop.
 
 
-Security
---------
-
-### Access Control in the Cozy Stack
-
-Authentication, authorizations and other things like that are simple for a
-personal cloud, right? Well, not really. Let's see why.
-
-First, authentication doesn't come only on the classical web flavour with a
-login+password form and cookies. The login is not necessary, as the cozy
-instance is already identified by its domain and has only one owner. But, more
-than that, the authentication can also happen from a remote application, like
-cozy-mobile or cozy-desktop. Oh, and 2 factor authentication (2FA) is
-mandatory for something as valuable as personal data.
-
-Then, authorizations are complicated. When the Cozy Stack receives a request
-for accessing a JSON document, it has to check if it's authorized and this
-control doesn't depend of only the user. The same document can be read in one
-application but not in another. And even inside an application, there is a
-notion of context. For example, in the photos application, the authenticated
-owner of the cozy can see all the photos and share an album with some photos
-to some of her friends. This album is a context and the cozy stack will allow
-the access to the photos of this album, and only those.
-
-More informations [here](apps.md).
-
-### Protection mechanisms for the client side applications
-
-This is mostly applying the state of the art:
-
-- Using HTTPS, with HSTS.
-- Using secure, httpOnly,
-  [sameSite](https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00)
-  cookies to avoid cookies theft or misuse.
-- Using a Content Security Policy (CSP).
-- Using X-frame-options http header to protect against click-jacking.
-
-But, it's more complicated than for a classical Single Page App. A cozy
-instance on a domain have many SPAs, and these apps have different
-permissions. Since they are in the same domain, separating them is not easy.
-We have to forbid embeding in iframes and set a very strict Content Security
-Policy. Even then, they share some ground, like localStorage, and we can't
-block two applications to communicate between them.
-
-That's why we want to have code review of the applications and a way to alert
-of suspect behaviours via the marketplace. This also serves another purpose:
-keeping the data inside the cozy space and avoid a malicious application to
-send data without the agreement of its owner.
-
-### Encrypted data
-
-Some data are encrypted before being saved in CouchDB (passwords for the
-accounts for example). Encrypting everything has some downsides:
-
-- It's not possible to index encryped documents or do computations on the
-  encrypted fields in reasonable time
-  ([homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption)
-  is still an open subject).
-- Having more encrypted data can globally weaken the encryption, if it's not handled properly.
-- If the encryption key is lost or a bug happen, the data is lost with no way
-  to recover them.
-
-So, we are more confortable to encrypt only some fields. And later, when we
-will have more experience and feedbacks from the user, extend the encryption
-to more fields.
-
-We are also working with [SMIS](https://project.inria.fr/smis/), a research
-lab, to find a way to securely store and backup the encryption keys.
-
-### Be open to external contributors
-
-Our code is Open Source, external contributors can review it. If they (you?)
-find a weakness, please contact us by sending an email to security AT
-cozycloud.cc. This is a mailing-list specially setup for responsible
-disclosure of security weaknesses in Cozy. We will respond in less than
-72 hours.
-
-When a security flaw is found, the process is the following:
-
-- Make a pull-request to fix (on our private git instance) and test it.
-- Deploy the fix on cozycloud.cc
-- Publish a new version, announce it on
-  [the forum](https://forum.cozy.io/c/latest-information-about-cozy-security)
-  as a security update and on the mailing-lists.
-- 15 days later, add the details on the forum.
-
-
 Guidelines
 ----------
 
@@ -503,12 +416,13 @@ So, we think that writing the Cozy Stack in Go is the right choice.
 
 ```
 ├── assets          The assets for the front-end
-│   ├── fonts       The webfonts
 │   ├── images      The images
 │   ├── scripts     The javascript files
-│   └── styles      The CSS files
+│   ├── styles      The CSS files
+│   └── templates   The HTML templates
 ├── cmd             One .go file for each command of the cozy executable
 ├── docs            Documentation, including this file
+├── scripts         Some shell scripts for developers and testing
 └── web             One sub-directory for each of the services listed above
 ```
 
