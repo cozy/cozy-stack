@@ -79,7 +79,10 @@ func SetupRoutes(router *gin.Engine, assetsPath string) error {
 			if err != nil {
 				return err
 			}
-			b, _ := ioutil.ReadAll(f)
+			b, err := ioutil.ReadAll(f)
+			if err != nil {
+				return err
+			}
 			template.Must(tmpl.Parse(string(b)))
 		}
 		router.SetHTMLTemplate(t)
