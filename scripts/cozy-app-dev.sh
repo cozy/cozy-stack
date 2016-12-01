@@ -6,6 +6,8 @@ set -e
 [ -z "${COZY_PROXY_PORT}" ] && COZY_PROXY_PORT="8080"
 [ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="localhost"
 [ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8081"
+[ -z "${COUCHDB_PORT}" ] && COUCHDB_PORT="5984"
+[ -z "${COUCHDB_HOST}" ] && COUCHDB_HOST="localhost"
 
 if [ -d ${COZY_STACK_PATH} ] && [ -f ${COZY_STACK_PATH}/cozy-stack ]; then
 	COZY_STACK_PATH="${COZY_STACK_PATH}/cozy-stack"
@@ -83,7 +85,7 @@ do_start() {
 
 	check_not_running ":${COZY_PROXY_PORT}" "proxy"
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
-	do_start_couchdb
+	do_check_couchdb
 	do_create_instance
 	do_start_proxy
 	check_hosts
@@ -102,71 +104,28 @@ do_start() {
 		--fs-url "file://localhost${vfsdir}"
 }
 
-cleanup() {
-	for tmpdir in "${TMPDIR}" "${TMP}" /var/tmp /tmp; do
-		test -d "${tmpdir}" && break
-	done
-
-	pids=`find ${tmpdir} -iname cozy-stack-dev.couch*`
-
-	for pidfile in ${pids}; do
-		pid=`cat "${pidfile}"`
-		if [ -n "${pid}" ]; then
-			echo "stopping couchdb"
-			kill -9 ${pid} 2>/dev/null || true
-		fi
-		rm "${pidfile}"
-	done
-}
-
-do_start_couchdb() {
-	# if COUCHDB_HOST or COUCHDB_PORT is non null, we do not try to start couchdb
-	# and only check if it is accessible on the given host:port.
-	if [ -n "${COUCHDB_HOST}" ] || [ -n "${COUCHDB_PORT}" ]; then
-		[ -z "${COUCHDB_PORT}" ] && COUCHDB_PORT="5984"
-		[ -z "${COUCHDB_HOST}" ] && COUCHDB_HOST="localhost"
-
-		couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
-
-		printf "checking couchdb on ${couchdb_addr}... "
-		couch_test=$(curl -s -XGET "${couchdb_addr}" || echo "")
-		couch_vers=$(echo "${couch_test}" | grep "\"version\":\s*\"2" || echo "")
-
-		if [ -z "${couch_test}" ]; then
-			echo "failed"
-			echo_err "could not reach couchdb on ${couchdb_addr}"
-			exit 1
-		elif [ -z "${couch_vers}" ]; then
-			echo "failed"
-			echo_err "couchdb v1 is running on ${couchdb_addr}"
-			echo_err "you need couchdb version >= 2"
-			exit 1
-		fi
-
-		echo "ok"
-		return
-	fi
-
-	COUCHDB_HOST="localhost"
-	COUCHDB_PORT="5984"
+do_check_couchdb() {
 	couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
 
-	check_not_running "${couchdb_addr}" "couchdb"
+	printf "waiting for couchdb..."
+	wait_for "${couchdb_addr}" "couchdb"
+	echo "ok"
 
-	printf "starting couchdb... "
+	printf "checking couchdb on ${couchdb_addr}... "
+	couch_test=$(curl -s -XGET "${couchdb_addr}" || echo "")
+	couch_vers=$(echo "${couch_test}" | grep "\"version\":\s*\"2" || echo "")
 
-	if [ -z `command -v couchdb` ]; then
+	if [ -z "${couch_test}" ]; then
 		echo "failed"
-		echo_err "executable \"couchdb\" not found in \$PATH"
+		echo_err "could not reach couchdb on ${couchdb_addr}"
+		exit 1
+	elif [ -z "${couch_vers}" ]; then
+		echo "failed"
+		echo_err "couchdb v1 is running on ${couchdb_addr}"
+		echo_err "you need couchdb version >= 2"
 		exit 1
 	fi
 
-	couch_pid=`mktemp -t cozy-stack-dev.couch.XXXX` || exit 1
-	trap cleanup EXIT
-
-	couchdb 2>/dev/null 1>/dev/null &
-	echo ${!} > ${couch_pid}
-	wait_for "${couchdb_addr}" "couchdb"
 	echo "ok"
 
 	for dbname in "_users" "_replicator" "_global_changes"; do

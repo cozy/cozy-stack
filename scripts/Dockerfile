@@ -83,5 +83,7 @@ RUN mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
 EXPOSE 8080 5984
 
-ENTRYPOINT ["/usr/bin/cozy-app-dev.sh"]
-CMD ["-d", "/data/cozy-app", "-f", "/data/cozy-storage"]
+CMD couchdb 2>/dev/null 1>/dev/null & \
+    /usr/bin/cozy-app-dev.sh \
+      -d /data/cozy-app \
+      -f /data/cozy-storage
