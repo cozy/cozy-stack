@@ -48,7 +48,7 @@ func SetupRoutes(router *gin.Engine, assetsPath string) {
 	// handle preflight requests with OPTIONS method, every route would have to
 	// have an empty OPTIONS handler in order to not get a 404 and actually
 	// entering the middleware.
-	router.Use(corsMiddleware("/apps", "/data", "/files"))
+	router.Use(corsMiddleware("/status", "/apps", "/data", "/files"))
 
 	router.LoadHTMLGlob(assetsPath + "/templates/*.html")
 	router.Static("/assets", assetsPath)
