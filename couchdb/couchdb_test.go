@@ -7,7 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb/mango"
-	"github.com/sourcegraph/checkup"
+	"github.com/cozy/checkup"
 	"github.com/stretchr/testify/assert"
 )
 
