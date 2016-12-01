@@ -90,6 +90,8 @@ do_release() {
 	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 	BUILD_MODE=${COZY_ENV}
 
+	go generate ./web
+
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/config.BuildTime=${BUILD_TIME} \
