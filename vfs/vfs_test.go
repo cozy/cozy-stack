@@ -12,7 +12,7 @@ import (
 
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/sourcegraph/checkup"
+	"github.com/cozy/cozy-stack/checkup"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )

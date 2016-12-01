@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/gin-gonic/gin"
-	"github.com/sourcegraph/checkup"
+	"github.com/cozy/cozy-stack/checkup"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
