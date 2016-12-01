@@ -74,6 +74,6 @@ func TestCORSMiddleware(t *testing.T) {
 	}
 
 	assert.Equal(t, "true", res4.Header.Get("Access-Control-Allow-Credentials"))
-	assert.Equal(t, "*", res4.Header.Get("Access-Control-Allow-Methods"))
+	assert.Equal(t, "GET,HEAD,PUT,PATCH,POST,DELETE", res4.Header.Get("Access-Control-Allow-Methods"))
 	assert.Equal(t, "Content-Type, X-Cozy", res4.Header.Get("Access-Control-Allow-Headers"))
 }

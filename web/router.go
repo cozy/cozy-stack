@@ -67,7 +67,7 @@ func corsMiddleware(routes ...string) gin.HandlerFunc {
 
 	preflightHeaders := make(http.Header)
 	preflightHeaders.Set("Access-Control-Allow-Credentials", "true")
-	preflightHeaders.Set("Access-Control-Allow-Methods", "*")
+	preflightHeaders.Set("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE")
 	preflightHeaders.Set("Access-Control-Max-Age", strconv.FormatInt(int64(12*time.Hour/time.Second), 10))
 
 	return func(c *gin.Context) {
