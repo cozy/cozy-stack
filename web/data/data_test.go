@@ -16,7 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/gin-gonic/gin"
-	"github.com/cozy/cozy-stack/checkup"
+	"github.com/cozy/checkup"
 	"github.com/stretchr/testify/assert"
 )
 

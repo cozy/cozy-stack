@@ -7,7 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/config"
 	"github.com/gin-gonic/gin"
-	"github.com/cozy/cozy-stack/checkup"
+	"github.com/cozy/checkup"
 )
 
 // Status responds with the status of the service

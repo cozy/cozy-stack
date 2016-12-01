@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/vfs"
-	"github.com/cozy/cozy-stack/checkup"
+	"github.com/cozy/checkup"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
