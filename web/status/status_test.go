@@ -8,7 +8,8 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/config"
-	"github.com/gin-gonic/gin"
+	"github.com/cozy/cozy-stack/web"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,14 +21,15 @@ func testRequest(t *testing.T, url string) {
 	body, ioerr := ioutil.ReadAll(res.Body)
 	assert.NoError(t, ioerr)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	assert.Equal(t, "{\"couchdb\":\"healthy\",\"message\":\"OK\"}\n", string(body), "res body should match")
+	assert.Equal(t, "{\"couchdb\":\"healthy\",\"message\":\"OK\"}", string(body), "res body should match")
 }
 
 func TestRoutes(t *testing.T) {
-	router := gin.New()
-	Routes(router.Group("/status"))
+	handler := echo.New()
+	handler.HTTPErrorHandler = web.ErrorHandler
+	Routes(handler.Group("/status"))
 
-	ts := httptest.NewServer(router)
+	ts := httptest.NewServer(handler)
 	defer ts.Close()
 
 	testRequest(t, ts.URL+"/status")
@@ -35,6 +37,5 @@ func TestRoutes(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	gin.SetMode(gin.TestMode)
 	os.Exit(m.Run())
 }

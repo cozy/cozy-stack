@@ -434,7 +434,7 @@ known standards make sense (caldav & carddav for example), use them. Else,
 [JSON API](http://jsonapi.org) is a good default.
 
 The golang web framework used for the cozy stack is
-[Gin](https://gin-gonic.github.io/gin/).
+[Echo](https://github.com/labstack/echo/).
 
 All the HTTP resources will be documented with
 [swagger-ui](https://github.com/swagger-api/swagger-ui).

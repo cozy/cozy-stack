@@ -30,6 +30,7 @@ type Config struct {
 	Mode    string
 	Host    string
 	Port    int
+	Domain  string
 	Assets  string
 	Fs      Fs
 	CouchDB CouchDB
@@ -134,11 +135,21 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	domain := v.GetString("domain")
+	if domain == "" && IsDevRelease() {
+		domain = "localhost"
+	}
+
+	if domain == "" {
+		return fmt.Errorf("missing domain name")
+	}
+
 	config = &Config{
 		Mode:   mode,
 		Host:   v.GetString("host"),
 		Port:   v.GetInt("port"),
 		Assets: v.GetString("assets"),
+		Domain: domain,
 		Fs: Fs{
 			URL: fsURL,
 		},

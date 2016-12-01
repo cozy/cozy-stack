@@ -4,71 +4,71 @@ package data
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
+	"github.com/labstack/echo"
 )
 
-func validDoctype(c *gin.Context) {
+func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	// TODO extends me to verificate characters allowed in db name.
-	doctype := c.Param("doctype")
-	if doctype == "" {
-		c.AbortWithError(http.StatusBadRequest, invalidDoctypeErr(doctype))
-	} else {
+	return func(c echo.Context) error {
+		doctype := c.Param("doctype")
+		if doctype == "" {
+			return jsonapi.BadRequest(fmt.Errorf("Invalid doctype '%s'", doctype))
+		}
 		c.Set("doctype", doctype)
+		return next(c)
 	}
 }
 
 // GetDoc get a doc by its type and id
-func getDoc(c *gin.Context) {
+func getDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.MustGet("doctype").(string)
+	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if !CheckReadable(c, doctype) {
-		return
+	if err := CheckReadable(c, doctype); err != nil {
+		return err
 	}
 
 	var out couchdb.JSONDoc
 	err := couchdb.GetDoc(instance, doctype, docid, &out)
 	if err != nil {
-		c.AbortWithError(HTTPStatus(err), err)
-		return
+		return wrapError(err)
 	}
+
 	out.Type = doctype
-	c.JSON(200, out.ToMapWithType())
+	return c.JSON(http.StatusOK, out.ToMapWithType())
 }
 
 // CreateDoc create doc from the json passed as body
-func createDoc(c *gin.Context) {
-	doctype := c.MustGet("doctype").(string)
+func createDoc(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
 	instance := middlewares.GetInstance(c)
 
 	var doc = couchdb.JSONDoc{Type: doctype}
-	if err := binding.JSON.Bind(c.Request, &doc.M); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+	if err := c.Bind(&doc.M); err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if !CheckWritable(c, doctype) {
-		return
+	if err := CheckWritable(c, doctype); err != nil {
+		return err
 	}
 
 	if doc.ID() != "" {
-		err := fmt.Errorf("Cannot create a document with _id")
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+		return jsonapi.NewError(http.StatusBadRequest,
+			"Cannot create a document with _id")
 	}
 
 	err := couchdb.CreateDoc(instance, doc)
 	if err != nil {
-		c.AbortWithError(HTTPStatus(err), err)
-		return
+		return wrapError(err)
 	}
 
-	c.JSON(201, gin.H{
+	return c.JSON(http.StatusCreated, echo.Map{
 		"ok":   true,
 		"id":   doc.ID(),
 		"rev":  doc.Rev(),
@@ -77,31 +77,27 @@ func createDoc(c *gin.Context) {
 	})
 }
 
-func updateDoc(c *gin.Context) {
+func updateDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	var doc couchdb.JSONDoc
-	if err := binding.JSON.Bind(c.Request, &doc); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+	if err := c.Bind(&doc); err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
 	doc.Type = c.Param("doctype")
 
-	if !CheckWritable(c, doc.Type) {
-		return
+	if err := CheckWritable(c, doc.Type); err != nil {
+		return err
 	}
 
 	if (doc.ID() == "") != (doc.Rev() == "") {
-		err := fmt.Errorf("You must either provide an _id and _rev in document (update) or neither (create with  fixed id).")
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+		return jsonapi.NewError(http.StatusBadRequest,
+			"You must either provide an _id and _rev in document (update) or neither (create with  fixed id).")
 	}
 
 	if doc.ID() != "" && doc.ID() != c.Param("docid") {
-		err := fmt.Errorf("document _id doesnt match url")
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+		return jsonapi.NewError(http.StatusBadRequest, "document _id doesnt match url")
 	}
 
 	var err error
@@ -113,11 +109,10 @@ func updateDoc(c *gin.Context) {
 	}
 
 	if err != nil {
-		c.AbortWithError(HTTPStatus(err), err)
-		return
+		return wrapError(err)
 	}
 
-	c.JSON(200, gin.H{
+	return c.JSON(http.StatusOK, echo.Map{
 		"ok":   true,
 		"id":   doc.ID(),
 		"rev":  doc.Rev(),
@@ -126,39 +121,35 @@ func updateDoc(c *gin.Context) {
 	})
 }
 
-func deleteDoc(c *gin.Context) {
+func deleteDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.MustGet("doctype").(string)
+	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
-	revHeader := c.Request.Header.Get("If-Match")
-	revQuery := c.Query("rev")
+	revHeader := c.Request().Header.Get("If-Match")
+	revQuery := c.QueryParam("rev")
 	rev := ""
 
 	if revHeader != "" && revQuery != "" && revQuery != revHeader {
-		err := fmt.Errorf("If-Match Header and rev query parameters mismatch")
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+		return jsonapi.NewError(http.StatusBadRequest,
+			"If-Match Header and rev query parameters mismatch")
 	} else if revHeader != "" {
 		rev = revHeader
 	} else if revQuery != "" {
 		rev = revQuery
 	} else {
-		err := fmt.Errorf("delete without revision")
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+		return jsonapi.NewError(http.StatusBadRequest, "delete without revision")
 	}
 
-	if !CheckWritable(c, doctype) {
-		return
+	if err := CheckWritable(c, doctype); err != nil {
+		return err
 	}
 
 	tombrev, err := couchdb.Delete(instance, doctype, docid, rev)
 	if err != nil {
-		c.AbortWithError(HTTPStatus(err), err)
-		return
+		return wrapError(err)
 	}
 
-	c.JSON(200, gin.H{
+	return c.JSON(http.StatusOK, echo.Map{
 		"ok":      true,
 		"id":      docid,
 		"rev":     tombrev,
@@ -168,18 +159,17 @@ func deleteDoc(c *gin.Context) {
 
 }
 
-func defineIndex(c *gin.Context) {
+func defineIndex(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.MustGet("doctype").(string)
+	doctype := c.Get("doctype").(string)
 	var definitionRequest map[string]interface{}
 
-	if err := binding.JSON.Bind(c.Request, &definitionRequest); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+	if err := c.Bind(&definitionRequest); err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if !CheckWritable(c, doctype) {
-		return
+	if err := CheckWritable(c, doctype); err != nil {
+		return err
 	}
 
 	result, err := couchdb.DefineIndexRaw(instance, doctype, &definitionRequest)
@@ -189,45 +179,52 @@ func defineIndex(c *gin.Context) {
 		}
 	}
 	if err != nil {
-		c.AbortWithError(HTTPStatus(err), err)
-		return
+		return wrapError(err)
 	}
 
-	c.JSON(200, result)
+	return c.JSON(http.StatusOK, result)
 }
 
-func findDocuments(c *gin.Context) {
+func findDocuments(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	doctype := c.MustGet("doctype").(string)
+	doctype := c.Get("doctype").(string)
 	var findRequest map[string]interface{}
 
-	if err := binding.JSON.Bind(c.Request, &findRequest); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+	if err := c.Bind(&findRequest); err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if !CheckReadable(c, doctype) {
-		return
+	if err := CheckReadable(c, doctype); err != nil {
+		return err
 	}
 
 	var results []couchdb.JSONDoc
 	err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
 	if err != nil {
-		c.AbortWithError(HTTPStatus(err), err)
-		return
+		return wrapError(err)
 	}
 
-	c.JSON(200, gin.H{"docs": results})
-
+	return c.JSON(http.StatusOK, echo.Map{"docs": results})
 }
 
 // Routes sets the routing for the status service
-func Routes(router *gin.RouterGroup) {
-	router.GET("/:doctype/:docid", validDoctype, getDoc)
-	router.PUT("/:doctype/:docid", validDoctype, updateDoc)
-	router.DELETE("/:doctype/:docid", validDoctype, deleteDoc)
-	router.POST("/:doctype/", validDoctype, createDoc)
-	router.POST("/:doctype/_index", validDoctype, defineIndex)
-	router.POST("/:doctype/_find", validDoctype, findDocuments)
+func Routes(router *echo.Group) {
+	router.Use(validDoctype)
+	router.GET("/:doctype/:docid", getDoc)
+	router.PUT("/:doctype/:docid", updateDoc)
+	router.DELETE("/:doctype/:docid", deleteDoc)
+	router.POST("/:doctype/", createDoc)
+	router.POST("/:doctype/_index", defineIndex)
+	router.POST("/:doctype/_find", findDocuments)
 	// router.DELETE("/:doctype/:docid", DeleteDoc)
+}
+
+func wrapError(err error) error {
+	if os.IsExist(err) {
+		return jsonapi.Conflict(err)
+	}
+	if os.IsNotExist(err) {
+		return jsonapi.NotFound(err)
+	}
+	return err
 }

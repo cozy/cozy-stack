@@ -31,6 +31,8 @@ var (
 	ErrMissingToken = errors.New("Empty register token")
 	// ErrInvalidToken is returned by RegisterPassphrase if token is invalid
 	ErrInvalidToken = errors.New("Invalid register token")
+	// ErrInvalidPassphrase is returned when the passphrase is invalid
+	ErrInvalidPassphrase = errors.New("Invalid passphrase")
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
@@ -309,6 +311,9 @@ func (i *Instance) Prefix() string {
 
 // RegisterPassphrase replace the instance registerToken by a passphrase
 func (i *Instance) RegisterPassphrase(pass []byte, tok []byte) error {
+	if len(pass) == 0 {
+		return ErrInvalidPassphrase
+	}
 	if len(i.RegisterToken) == 0 {
 		return ErrMissingToken
 	}

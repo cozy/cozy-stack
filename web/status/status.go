@@ -5,9 +5,9 @@ package status
 import (
 	"net/http"
 
-	"github.com/cozy/cozy-stack/config"
-	"github.com/gin-gonic/gin"
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/config"
+	"github.com/labstack/echo"
 )
 
 // Status responds with the status of the service
@@ -15,26 +15,29 @@ import (
 // swagger:route GET /status status showStatus
 //
 // It responds OK if the service is running
-func Status(c *gin.Context) {
-	message := "OK"
+func Status(c echo.Context) error {
 
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",
 		URL:      config.CouchURL(),
 		Attempts: 3,
 	}
+
+	var message string
 	couchdb, err := checker.Check()
 	if err != nil || couchdb.Status() != checkup.Healthy {
 		message = "KO"
+	} else {
+		message = "OK"
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	return c.JSON(http.StatusOK, echo.Map{
 		"message": message,
 		"couchdb": couchdb.Status(),
 	})
 }
 
 // Routes sets the routing for the status service
-func Routes(router *gin.RouterGroup) {
-	router.GET("/", Status)
+func Routes(router *echo.Group) {
+	router.GET("", Status)
 }

@@ -3,7 +3,6 @@
 package apps
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"path"
@@ -11,36 +10,35 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 const indexPage = "index.html"
 
 // Serve is an handler for serving files from the VFS for a client-side app
-func Serve(c *gin.Context) {
-	instance := middlewares.GetInstance(c)
+func Serve(c echo.Context, domain, slug string) error {
+	i, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 
-	slug := c.MustGet("app_slug").(string)
-	app, err := apps.GetBySlug(instance, slug)
+	app, err := apps.GetBySlug(i, slug)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
-			c.AbortWithError(http.StatusNotFound, err)
-		} else {
-			c.AbortWithError(http.StatusInternalServerError, err)
+			return echo.NewHTTPError(http.StatusNotFound, "Application not found")
 		}
-		return
+		return err
 	}
 
 	if app.State != apps.Ready {
-		err = fmt.Errorf("Application is not ready")
-		c.AbortWithError(http.StatusServiceUnavailable, err)
-		return
+		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
 
-	vpath := c.Request.URL.Path
+	vpath := c.Request().URL.Path
 	if vpath[len(vpath)-1] == '/' {
 		vpath = path.Join(vpath, indexPage)
 	}
@@ -48,13 +46,13 @@ func Serve(c *gin.Context) {
 	appdir := path.Join(vfs.AppsDirName, app.Slug)
 	vpath = path.Clean(vpath)
 	vpath = path.Join(appdir, vpath)
-	doc, err := vfs.GetFileDocFromPath(instance, vpath)
+	doc, err := vfs.GetFileDocFromPath(i, vpath)
 	if err != nil {
-		c.AbortWithError(http.StatusNotFound, err)
-		return
+		return echo.NewHTTPError(http.StatusNotFound)
 	}
 
-	vfs.ServeFileContent(instance, doc, "", c.Request, c.Writer)
+	vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
+	return nil
 }
 
 func wrapAppsError(err error) *jsonapi.Error {
@@ -80,22 +78,20 @@ func wrapAppsError(err error) *jsonapi.Error {
 
 // InstallHandler handles all POST /:slug request and tries to install
 // the application with the given Source.
-func InstallHandler(c *gin.Context) {
+func InstallHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	src := c.Query("Source")
+	src := c.QueryParam("Source")
 	slug := c.Param("slug")
 	inst, err := apps.NewInstaller(instance, slug, src)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapAppsError(err))
-		return
+		return wrapAppsError(err)
 	}
 
 	go inst.Install()
 
 	man, _, err := inst.WaitManifest()
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapAppsError(err))
-		return
+		return wrapAppsError(err)
 	}
 
 	jsonapi.Data(c, http.StatusAccepted, man, nil)
@@ -112,16 +108,17 @@ func InstallHandler(c *gin.Context) {
 			}
 		}
 	}()
+
+	return nil
 }
 
 // ListHandler handles all GET / requests which can be used to list
 // installed applications.
-func ListHandler(c *gin.Context) {
+func ListHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	docs, err := apps.List(instance)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapAppsError(err))
-		return
+		return wrapAppsError(err)
 	}
 
 	objs := make([]jsonapi.Object, len(docs))
@@ -129,11 +126,11 @@ func ListHandler(c *gin.Context) {
 		objs[i] = jsonapi.Object(d)
 	}
 
-	jsonapi.DataList(c, http.StatusOK, objs, nil)
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
 // Routes sets the routing for the apps service
-func Routes(router *gin.RouterGroup) {
+func Routes(router *echo.Group) {
 	router.GET("/", ListHandler)
 	router.POST("/:slug", InstallHandler)
 }

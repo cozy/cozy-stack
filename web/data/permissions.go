@@ -1,13 +1,13 @@
 package data
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/auth"
-	"github.com/gin-gonic/gin"
+	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/labstack/echo"
 )
 
 var readable = true
@@ -21,28 +21,24 @@ var blackList = map[string]bool{
 
 // CheckReadable will abort the context and returns false if the doctype
 // is unreadable
-func CheckReadable(c *gin.Context, doctype string) bool {
+func CheckReadable(c echo.Context, doctype string) error {
 	readable, inblacklist := blackList[doctype]
 	if !inblacklist || readable {
-		return true
+		return nil
 	}
 
-	err := fmt.Errorf("reserved doctype %v unreadable", doctype)
-	c.AbortWithError(http.StatusForbidden, err)
-
-	return false
+	return jsonapi.NewError(http.StatusForbidden,
+		"reserved doctype %v unreadable", doctype)
 }
 
 // CheckWritable will abort the gin context if the doctype
 // is unwritable
-func CheckWritable(c *gin.Context, doctype string) bool {
+func CheckWritable(c echo.Context, doctype string) error {
 	_, inblacklist := blackList[doctype]
 	if !inblacklist {
-		return true
+		return nil
 	}
 
-	err := fmt.Errorf("reserved doctype %v unwritable", doctype)
-	c.AbortWithError(http.StatusForbidden, err)
-
-	return false
+	return jsonapi.NewError(http.StatusForbidden,
+		"reserved doctype %v unwritable", doctype)
 }

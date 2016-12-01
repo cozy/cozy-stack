@@ -1,77 +1,29 @@
-// Package middlewares is a group of functions. They mutualize some actions
-// common to many gin handlers, like checking authentication or permissions.
 package middlewares
 
 import (
-	"errors"
-	"strings"
-
-	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
-
-func splitHost(host string) (instanceHost string, appSlug string) {
-	parts := strings.SplitN(host, ".", 2)
-	if len(parts) == 2 {
-		return parts[1], parts[0]
-	}
-	return parts[0], ""
-}
-
-// ParseHost creates a gin middleware to parse the host, find the associate
-// instance, and detect if we are on a sub-domain for an app
-func ParseHost() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		i, err := instance.Get(c.Request.Host)
-		if err == nil {
-			c.Set("instance", i)
-			return
-		}
-
-		parent, slug := splitHost(c.Request.Host)
-		i, errapp := instance.Get(parent)
-		if errapp == nil {
-			c.Set("instance", i)
-			c.Set("app_slug", slug)
-			return
-		}
-
-		c.Set("instance_error", err)
-	}
-}
 
 // NeedInstance is a gin middleware which will display an error
 // if there is no instance.
-func NeedInstance() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		errInterface, ok := c.Get("instance_error")
-		if ok {
-			err := errInterface.(error)
-			if couchdb.IsNotFoundError(err) {
-				jsonapi.AbortWithError(c, jsonapi.NotFound(err))
-			} else {
-				jsonapi.AbortWithError(c, jsonapi.InternalServerError(err))
-			}
-			return
+func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if c.Get("instance") != nil {
+			return next(c)
 		}
-
-		instInterface, ok := c.Get("instance")
-		if !ok {
-			jsonapi.AbortWithError(c, jsonapi.InternalServerError(errors.New("no instance")))
-			return
+		i, err := instance.Get(c.Request().Host)
+		if err != nil {
+			return jsonapi.InternalServerError(err)
 		}
-
-		_, ok = instInterface.(*instance.Instance)
-		if !ok {
-			jsonapi.AbortWithError(c, jsonapi.InternalServerError(errors.New("wrong instance type")))
-		}
+		c.Set("instance", i)
+		return next(c)
 	}
 }
 
-// GetInstance will return the instance linked to the given gin
+// GetInstance will return the instance linked to the given echo
 // context or panic if none exists
-func GetInstance(c *gin.Context) *instance.Instance {
-	return c.MustGet("instance").(*instance.Instance)
+func GetInstance(c echo.Context) *instance.Instance {
+	return c.Get("instance").(*instance.Instance)
 }

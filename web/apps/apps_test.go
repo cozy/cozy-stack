@@ -14,8 +14,8 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
-	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
+	"github.com/cozy/cozy-stack/web"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,13 +24,6 @@ const slug = "mini"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
-
-func injectInstanceAndSlug(i *instance.Instance, s string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set("instance", i)
-		c.Set("app_slug", s)
-	}
-}
 
 func createFile(dir, filename, content string) error {
 	abs := path.Join(dir, filename)
@@ -78,8 +71,17 @@ func installMiniApp() error {
 	return err
 }
 
+func doGet(path string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", ts.URL+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Host = slug + "." + domain
+	return http.DefaultClient.Do(req)
+}
+
 func assertGet(t *testing.T, path, contentType, content string) {
-	res, err := http.Get(ts.URL + path)
+	res, err := doGet(path)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, contentType, res.Header.Get("Content-Type"))
@@ -88,7 +90,7 @@ func assertGet(t *testing.T, path, contentType, content string) {
 }
 
 func assertNotFound(t *testing.T, path string) {
-	res, err := http.Get(ts.URL + path)
+	res, err := doGet(path)
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
 }
@@ -111,8 +113,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	gin.SetMode(gin.TestMode)
-
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
 	instance.Destroy(domain)
@@ -128,9 +128,15 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	router := gin.New()
-	router.Use(injectInstanceAndSlug(testInstance, slug))
-	router.Use(middlewares.ServeApp(Serve))
+	router, err := web.Create(&web.Config{
+		Domain:    "example.net",
+		Router:    echo.New(),
+		ServeApps: Serve,
+	})
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	ts = httptest.NewServer(router)
 

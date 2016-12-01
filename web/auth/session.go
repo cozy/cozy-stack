@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 // SessionsType : The couchdb type for a session
@@ -18,7 +18,7 @@ const SessionsType = "io.cozy.sessions"
 // SessionCookieName : name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
 
-// SessionContextKey name of the session in gin.Context
+// SessionContextKey name of the session inecho.Context
 const SessionContextKey = "session"
 
 // SessionMaxAge : duration of the session
@@ -78,11 +78,12 @@ func NewSession(i *instance.Instance) (*Session, error) {
 }
 
 // GetSession retrieves the session from a gin.Context
-func GetSession(c *gin.Context) (*Session, error) {
+func GetSession(c echo.Context) (*Session, error) {
 	var s Session
 	var err error
 	// check for cached session in context
-	if si, ok := c.Get(SessionContextKey); ok {
+	si := c.Get(SessionContextKey)
+	if si != nil {
 		if sp, ok := si.(*Session); ok {
 			return sp, nil
 		}
@@ -91,11 +92,11 @@ func GetSession(c *gin.Context) (*Session, error) {
 	i := middlewares.GetInstance(c)
 	sid, err := c.Cookie(SessionCookieName)
 	// no cookie
-	if err != nil || sid == "" {
+	if err != nil || sid.Value == "" {
 		return nil, ErrNoCookie
 	}
 
-	err = couchdb.GetDoc(i, SessionsType, sid, &s)
+	err = couchdb.GetDoc(i, SessionsType, sid.Value, &s)
 	// invalid session id
 	if couchdb.IsNotFoundError(err) {
 		return nil, ErrInvalidID

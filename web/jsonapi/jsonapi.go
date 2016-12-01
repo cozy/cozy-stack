@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 // ContentType is the official mime-type for JSON-API
@@ -24,51 +24,46 @@ type Document struct {
 
 // Data can be called to send an answer with a JSON-API document containing a
 // single object as data
-func Data(c *gin.Context, statusCode int, o Object, links *LinksList) {
+func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
 	var included []interface{}
 	for _, o := range o.Included() {
 		data, err := MarshalObject(o)
 		if err != nil {
-			AbortWithError(c, InternalServerError(err))
-			return
+			return InternalServerError(err)
 		}
 		included = append(included, &data)
 	}
 	data, err := MarshalObject(o)
 	if err != nil {
-		AbortWithError(c, InternalServerError(err))
-		return
+		return InternalServerError(err)
 	}
 	doc := Document{
 		Data:     &data,
 		Links:    links,
 		Included: included,
 	}
-	body, err := json.Marshal(doc)
-	if err != nil {
-		AbortWithError(c, InternalServerError(err))
-		return
-	}
-	c.Data(statusCode, ContentType, body)
+
+	resp := c.Response()
+	resp.Header().Set("Content-Type", ContentType)
+	resp.WriteHeader(statusCode)
+	return json.NewEncoder(resp).Encode(doc)
 }
 
 // DataList can be called to send an multiple-value answer with a
 // JSON-API document contains multiple objects.
-func DataList(c *gin.Context, statusCode int, objs []Object, links *LinksList) {
+func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) error {
 	objsMarshaled := make([]json.RawMessage, len(objs))
 	for i, o := range objs {
 		j, err := MarshalObject(o)
 		if err != nil {
-			AbortWithError(c, InternalServerError(err))
-			return
+			return InternalServerError(err)
 		}
 		objsMarshaled[i] = j
 	}
 
 	data, err := json.Marshal(objsMarshaled)
 	if err != nil {
-		AbortWithError(c, InternalServerError(err))
-		return
+		return InternalServerError(err)
 	}
 
 	doc := Document{
@@ -76,29 +71,10 @@ func DataList(c *gin.Context, statusCode int, objs []Object, links *LinksList) {
 		Links: links,
 	}
 
-	body, err := json.Marshal(doc)
-	if err != nil {
-		AbortWithError(c, InternalServerError(err))
-		return
-	}
-	c.Data(statusCode, ContentType, body)
-}
-
-// AbortWithError can be called to abort the current http request/response
-// processing, and send an error in the JSON-API format
-//
-// TODO could be nice to have AbortWithErrors(c *gin.Context, errors ErrorList)
-func AbortWithError(c *gin.Context, e *Error) {
-	doc := Document{
-		Errors: ErrorList{e},
-	}
-	body, err := json.Marshal(doc)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-	c.Data(e.Status, ContentType, body)
-	c.Abort()
+	resp := c.Response()
+	resp.Header().Set("Content-Type", ContentType)
+	resp.WriteHeader(statusCode)
+	return json.NewEncoder(resp).Encode(doc)
 }
 
 // Bind is used to unmarshal an input JSONApi document. It binds an

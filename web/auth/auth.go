@@ -5,95 +5,77 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/apps"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
+	"github.com/labstack/echo"
 )
 
-type registerForm struct {
-	Passphrase string `form:"passphrase"`
-	Token      string `form:"registerToken"`
-}
-
-func redirectSuccessLogin(c *gin.Context, slug string) {
+func redirectSuccessLogin(c echo.Context, slug string) error {
 	instance := middlewares.GetInstance(c)
 	session, err := NewSession(instance)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
+		return jsonapi.InternalServerError(err)
 	}
-	http.SetCookie(c.Writer, session.ToCookie())
-	c.Redirect(http.StatusSeeOther, instance.SubDomain(slug))
+	c.SetCookie(session.ToCookie())
+	return c.Redirect(http.StatusSeeOther, instance.SubDomain(slug))
 }
 
-func register(c *gin.Context) {
+func register(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-
-	var form registerForm
-	if err := binding.Form.Bind(c.Request, &form); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
+	// TODO: use ParseMultipartForm with a smaller maxMemory (default is 32Mo)
+	passphrase := []byte(c.FormValue("passphrase"))
+	registerToken := []byte(c.FormValue("registerToken"))
+	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
+		return jsonapi.BadRequest(err)
 	}
-
-	pass := []byte(form.Passphrase)
-	token := []byte(form.Token)
-
-	if err := instance.RegisterPassphrase(pass, token); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	redirectSuccessLogin(c, apps.OnboardingSlug)
+	return redirectSuccessLogin(c, apps.OnboardingSlug)
 }
 
-func loginForm(c *gin.Context) {
+func loginForm(c echo.Context) error {
 	if IsLoggedIn(c) {
 		instance := middlewares.GetInstance(c)
-		c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
-		return
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
 	}
-	c.HTML(http.StatusOK, "login.html", gin.H{})
+	return c.Render(http.StatusOK, "login.html", echo.Map{
+		"InvalidPassphrase": false,
+	})
 }
 
-func login(c *gin.Context) {
+func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	if IsLoggedIn(c) {
-		c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
-		return
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
 	}
-	pass := c.PostForm("passphrase")
+	pass := c.FormValue("passphrase")
 	if err := instance.CheckPassphrase([]byte(pass)); err != nil {
-		c.HTML(http.StatusUnauthorized, "login.html", gin.H{
+		return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
 			"InvalidPassphrase": true,
 		})
-		return
 	}
-
-	redirectSuccessLogin(c, apps.HomeSlug)
+	return redirectSuccessLogin(c, apps.HomeSlug)
 }
 
-func logout(c *gin.Context) {
+func logout(c echo.Context) error {
 	// TODO check that a valid CtxToken is given to protect against CSRF attacks
 	instance := middlewares.GetInstance(c)
 	session, err := GetSession(c)
 	if err == nil {
-		http.SetCookie(c.Writer, session.Delete(instance))
+		c.SetCookie(session.Delete(instance))
 	}
-	c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login"))
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login"))
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
-func IsLoggedIn(c *gin.Context) bool {
+func IsLoggedIn(c echo.Context) bool {
 	_, err := GetSession(c)
 	return err == nil
 }
 
 // Routes sets the routing for the status service
-func Routes(router *gin.Engine) {
-	router.POST("/register", middlewares.NeedInstance(), register)
+func Routes(group *echo.Group) {
+	group.POST("/register", register)
 
-	auth := router.Group("/auth", middlewares.NeedInstance())
-	auth.GET("/login", loginForm)
-	auth.POST("/login", login)
-	auth.DELETE("/login", logout)
+	group.GET("/auth/login", loginForm)
+	group.POST("/auth/login", login)
+	group.DELETE("/auth/login", logout)
 }

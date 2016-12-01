@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/cozy/cozy-stack/config"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 // Version responds with the git commit used at the build
@@ -14,8 +14,8 @@ import (
 // swagger:route GET /version version showVersion
 //
 // It responds with the git commit used at the build
-func Version(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+func Version(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{
 		"version":         config.Version,
 		"build_mode":      config.BuildMode,
 		"build_time":      config.BuildTime,
@@ -24,6 +24,6 @@ func Version(c *gin.Context) {
 }
 
 // Routes sets the routing for the version service
-func Routes(router *gin.RouterGroup) {
+func Routes(router *echo.Group) {
 	router.GET("/", Version)
 }

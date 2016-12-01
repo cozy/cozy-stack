@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/checkup"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
