@@ -90,6 +90,8 @@ do_release() {
 	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 	BUILD_MODE=${COZY_ENV}
 
+	go generate ./web
+
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/config.BuildTime=${BUILD_TIME} \
@@ -120,10 +122,8 @@ do_deploy() {
 
 	if [ -z ${COZY_DEPLOY_PROXY} ]; then
 		scp ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
-		scp -r ${ASSETS} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:~
 	else
 		scp -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
-		scp -r -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${ASSETS} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:~
 	fi
 
 	if [ -n ${COZY_DEPLOY_POSTSCRIPT} ]; then
