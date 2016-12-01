@@ -120,10 +120,8 @@ do_deploy() {
 
 	if [ -z ${COZY_DEPLOY_PROXY} ]; then
 		scp ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
-		scp -r ${ASSETS} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:~
 	else
 		scp -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
-		scp -r -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${ASSETS} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:~
 	fi
 
 	if [ -n ${COZY_DEPLOY_POSTSCRIPT} ]; then
