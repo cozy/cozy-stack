@@ -251,12 +251,12 @@ while getopts ":hud:f:v:" optname; do
 		;;
 	":")
 		echo_err "Option -${OPTARG} requires an argument"
-		echo_err "Type ${0} --help"
+		echo_err "Type ${0} -h"
 		exit 1
 		;;
 	"?")
 		echo_err "Invalid option ${OPTARG}"
-		echo_err "Type ${0} --help"
+		echo_err "Type ${0} -h"
 		exit 1
 		;;
 	esac
@@ -264,7 +264,7 @@ done
 
 if [ -z "${appdir}" ]; then
 	echo_err "Missing application directory argument -d"
-	echo_err "Type ${0} --help"
+	echo_err "Type ${0} -h"
 	exit 1
 fi
 
