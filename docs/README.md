@@ -6,6 +6,7 @@ Table of contents
 - [General overview](./architecture.md)
 - [Applications Management](./apps.md)
 - [Authentication & Oauth](./auth.md)
+- [Security](./security.md)
 
 ### Usage
 - [Configuration](./config.md)
