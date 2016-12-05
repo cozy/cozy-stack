@@ -17,13 +17,14 @@ Table of contents
 ### API
 - [Create, Read, Update, Delete](./crud.md)
 - [Virtual Filesystem](./files.md)
+- [Settings](./settings.md)
 
 ### In progress
 These pages are discussion for ideas not yet implemented
 - [Backups](./backup.md)
 - [Moving](./moving.md)
-- [Replication]('./replication.md')
+- [Replication](./replication.md)
 
 ### Archives
 These pages are the results of studies we made
-- [Golang Couchdb Plugins]('./couchdb-plugins.md')
+- [Golang Couchdb Plugins](./couchdb-plugins.md)
