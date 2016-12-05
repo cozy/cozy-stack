@@ -33,6 +33,8 @@ forcing him/her to do things. For example, forcing users to change regulary
 their password makes them choose passwords that are a lot weaker (but easier
 for them to remember).
 
+[![Security XKCD](https://imgs.xkcd.com/comics/security.png)](https://xkcd.com/538/)
+
 ### Defense in depth is still worthy
 
 Also known as layered defense, defense in depth is a security principle where
