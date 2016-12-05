@@ -37,6 +37,7 @@ import (
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/settings"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
 	"github.com/gin-gonic/gin"
@@ -59,7 +60,7 @@ func SetupRoutes(router *gin.Engine, assetsPath string) error {
 	// handle preflight requests with OPTIONS method, every route would have to
 	// have an empty OPTIONS handler in order to not get a 404 and actually
 	// entering the middleware.
-	router.Use(corsMiddleware("/status", "/apps", "/data", "/files"))
+	router.Use(corsMiddleware("/apps", "/data", "/files", "settings", "/status"))
 
 	// By default, use the assets packed in the binary
 	if assetsPath == "" {
@@ -96,6 +97,7 @@ func SetupRoutes(router *gin.Engine, assetsPath string) error {
 	apps.Routes(router.Group("/apps", middlewares.NeedInstance()))
 	data.Routes(router.Group("/data", middlewares.NeedInstance()))
 	files.Routes(router.Group("/files", middlewares.NeedInstance()))
+	settings.Routes(router.Group("/settings", middlewares.NeedInstance()))
 	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))
 
