@@ -6,6 +6,9 @@ mode: development
 host: localhost
 # server port - flags: --port -p
 port: 8080
+# domain served by the application - flags: --domain
+# mandatory in `production' mode
+domain: ""
 # path to the directory with the assets - flags: --assets
 # default is to use the assets packed in the binary
 assets: ""
