@@ -22,8 +22,12 @@ real_path() {
 }
 
 usage() {
-	echo -e "Usage: ${0} [-h] [-d <app path>] [–v <stack version>]"
-
+	echo -e "Usage: ${0} [-hu] [-d <app path>] [–f <fs directory>]"
+	echo -e ""
+	echo -e "  -d <app path> specify the application directory to serve"
+	echo -e "  -f <app path> specify the fs directory (optional)"
+	echo -e "  -u try to update cozy-stack on start"
+	echo -e "  -h show this usage message"
 	echo -e "\nEnvironment variables"
 	echo -e "\n  COZY_PROXY_HOST"
 	echo -e "    specify the hostname or domain on which the proxy is listening"
@@ -83,6 +87,12 @@ do_start() {
 		fi
 	fi
 
+	if [ "$update" = true ]; then
+		printf "updating cozy-stack... "
+		go get -u "github.com/cozy/cozy-stack"
+		echo "ok"
+	fi
+
 	check_not_running ":${COZY_PROXY_PORT}" "proxy"
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
@@ -97,10 +107,10 @@ do_start() {
 	echo ""
 
 	${COZY_STACK_PATH} serve \
-		--port ${COZY_STACK_PORT} \
-		--host ${COZY_STACK_HOST} \
-		--couchdb-host ${COUCHDB_HOST} \
-		--couchdb-port ${COUCHDB_PORT} \
+		--port "${COZY_STACK_PORT}" \
+		--host "${COZY_STACK_HOST}" \
+		--couchdb-host "${COUCHDB_HOST}" \
+		--couchdb-port "${COUCHDB_PORT}" \
 		--fs-url "file://localhost${vfsdir}"
 }
 
@@ -142,15 +152,20 @@ do_create_instance() {
 
 	printf "creating instance ${cozy_dev_addr}... "
 	set +e
-	add_instance_val=$(${COZY_STACK_PATH} instances add "${cozy_dev_addr}" 2>&1)
+	add_instance_val=$(
+		${COZY_STACK_PATH} instances add "${cozy_dev_addr}" \
+			--couchdb-host "${COUCHDB_HOST}" \
+			--couchdb-port "${COUCHDB_PORT}" \
+			--fs-url "file://localhost${vfsdir}" 2>&1
+	)
 	add_instance_ret="${?}"
 	set -e
 	if [ "${add_instance_ret}" = "0" ]; then
 		echo "ok"
 	else
-		add_instance_val=$(echo "${add_instance_val}" | grep -i "already exists" || echo "")
-		if [ -z "${add_instance_val}" ]; then
-			echo_err "${add_instance_val} ${add_instance_ret}"
+		exists_test=$(echo "${add_instance_val}" | grep -i "already exists" || echo "")
+		if [ -z "${exists_test}" ]; then
+			echo_err "\n${add_instance_val} ${add_instance_ret}"
 			exit 1
 		fi
 		echo "ok (already created)"
@@ -214,7 +229,9 @@ check_hosts() {
 	fi
 }
 
-while getopts ":hd:f:v:" optname; do
+update=false
+
+while getopts ":hud:f:v:" optname; do
 	case "${optname}" in
 	"h")
 		usage
@@ -222,6 +239,9 @@ while getopts ":hd:f:v:" optname; do
 		;;
 	"d")
 		appdir="${OPTARG}"
+		;;
+	"u")
+		update=true
 		;;
 	"f")
 		vfsdir="${OPTARG}"
@@ -231,12 +251,12 @@ while getopts ":hd:f:v:" optname; do
 		;;
 	":")
 		echo_err "Option -${OPTARG} requires an argument"
-		echo_err "Type ${0} --help"
+		echo_err "Type ${0} -h"
 		exit 1
 		;;
 	"?")
 		echo_err "Invalid option ${OPTARG}"
-		echo_err "Type ${0} --help"
+		echo_err "Type ${0} -h"
 		exit 1
 		;;
 	esac
@@ -244,7 +264,7 @@ done
 
 if [ -z "${appdir}" ]; then
 	echo_err "Missing application directory argument -d"
-	echo_err "Type ${0} --help"
+	echo_err "Type ${0} -h"
 	exit 1
 fi
 
