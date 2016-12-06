@@ -40,6 +40,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"github.com/rakyll/statik/fs"
 )
 
@@ -135,10 +136,15 @@ func Create(conf *Config) (*echo.Echo, error) {
 		return nil, err
 	}
 
-	apisRouter.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r)))
 	apisRouter.Renderer = r
 	apisRouter.HTTPErrorHandler = ErrorHandler
+	apisRouter.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
+		StackSize:         1 << 10, // 1 KB
+		DisableStackAll:   !config.IsDevRelease(),
+		DisablePrintStack: !config.IsDevRelease(),
+	}))
 
+	apisRouter.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r)))
 	appsRouter.Any("/*", func(c echo.Context) error {
 		req := c.Request()
 
