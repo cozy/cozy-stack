@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -54,12 +53,11 @@ func CreationHandler(c echo.Context) error {
 }
 
 func createFileHandler(c echo.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err error) {
-	doc, err = fileDocFromReq(
-		c,
-		c.QueryParam("Name"),
-		c.Param("dir-id"),
-		strings.Split(c.QueryParam("Tags"), TagSeparator),
-	)
+	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
+
+	dirID := c.Param("dir-id")
+	name := c.QueryParam("Name")
+	doc, err = fileDocFromReq(c, name, dirID, tags)
 	if err != nil {
 		return
 	}
@@ -80,8 +78,8 @@ func createFileHandler(c echo.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err 
 }
 
 func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
-	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 	path := c.QueryParam("Path")
+	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 
 	if path != "" {
 		if c.QueryParam("Recursive") == "true" {
@@ -90,7 +88,8 @@ func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
 		return vfs.Mkdir(vfsC, path, tags)
 	}
 
-	name, dirID := c.QueryParam("Name"), c.Param("dir-id")
+	dirID := c.Param("dir-id")
+	name := c.QueryParam("Name")
 	doc, err := vfs.NewDirDoc(name, dirID, tags, nil)
 	if err != nil {
 		return nil, err
@@ -370,18 +369,6 @@ func Routes(router *echo.Group) {
 
 // wrapVfsError returns a formatted error from a golang error emitted by the vfs
 func wrapVfsError(err error) error {
-	if _, ok := err.(*jsonapi.Error); ok {
-		return err
-	}
-	if _, ok := err.(*couchdb.Error); ok {
-		return err
-	}
-	if os.IsExist(err) || err == vfs.ErrConflict {
-		return jsonapi.Conflict(err)
-	}
-	if os.IsNotExist(err) {
-		return jsonapi.NotFound(err)
-	}
 	switch err {
 	case ErrDocTypeInvalid:
 		return jsonapi.InvalidAttribute("type", err)
@@ -397,6 +384,8 @@ func wrapVfsError(err error) error {
 		return jsonapi.PreconditionFailed("Content-MD5", err)
 	case vfs.ErrContentLengthMismatch:
 		return jsonapi.PreconditionFailed("Content-Length", err)
+	case vfs.ErrConflict:
+		return jsonapi.Conflict(err)
 	case vfs.ErrFileInTrash:
 		return jsonapi.BadRequest(err)
 	case vfs.ErrNonAbsolutePath:
@@ -404,7 +393,7 @@ func wrapVfsError(err error) error {
 	case vfs.ErrDirNotEmpty:
 		return jsonapi.BadRequest(err)
 	}
-	return jsonapi.InternalServerError(err)
+	return err
 }
 
 func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (doc *vfs.FileDoc, err error) {

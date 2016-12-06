@@ -60,11 +60,7 @@ func Serve(c echo.Context, domain, slug string) error {
 	return nil
 }
 
-func wrapAppsError(err error) *jsonapi.Error {
-	if urlErr, isURLErr := err.(*url.Error); isURLErr {
-		return jsonapi.InvalidParameter("Source", urlErr)
-	}
-
+func wrapAppsError(err error) error {
 	switch err {
 	case apps.ErrInvalidSlugName:
 		return jsonapi.InvalidParameter("slug", err)
@@ -76,9 +72,11 @@ func wrapAppsError(err error) *jsonapi.Error {
 		return jsonapi.BadRequest(err)
 	case apps.ErrBadManifest:
 		return jsonapi.BadRequest(err)
-
 	}
-	return jsonapi.InternalServerError(err)
+	if _, ok := err.(*url.Error); ok {
+		return jsonapi.InvalidParameter("Source", err)
+	}
+	return err
 }
 
 // InstallHandler handles all POST /:slug request and tries to install

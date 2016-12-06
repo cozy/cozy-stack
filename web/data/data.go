@@ -3,7 +3,6 @@ package data
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -36,7 +35,7 @@ func getDoc(c echo.Context) error {
 	var out couchdb.JSONDoc
 	err := couchdb.GetDoc(instance, doctype, docid, &out)
 	if err != nil {
-		return wrapError(err)
+		return err
 	}
 
 	out.Type = doctype
@@ -64,7 +63,7 @@ func createDoc(c echo.Context) error {
 
 	err := couchdb.CreateDoc(instance, doc)
 	if err != nil {
-		return wrapError(err)
+		return err
 	}
 
 	return c.JSON(http.StatusCreated, echo.Map{
@@ -108,7 +107,7 @@ func updateDoc(c echo.Context) error {
 	}
 
 	if err != nil {
-		return wrapError(err)
+		return err
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -145,7 +144,7 @@ func deleteDoc(c echo.Context) error {
 
 	tombrev, err := couchdb.Delete(instance, doctype, docid, rev)
 	if err != nil {
-		return wrapError(err)
+		return err
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -178,7 +177,7 @@ func defineIndex(c echo.Context) error {
 		}
 	}
 	if err != nil {
-		return wrapError(err)
+		return err
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -200,7 +199,7 @@ func findDocuments(c echo.Context) error {
 	var results []couchdb.JSONDoc
 	err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
 	if err != nil {
-		return wrapError(err)
+		return err
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{"docs": results})
@@ -216,14 +215,4 @@ func Routes(router *echo.Group) {
 	router.POST("/:doctype/_index", defineIndex)
 	router.POST("/:doctype/_find", findDocuments)
 	// router.DELETE("/:doctype/:docid", DeleteDoc)
-}
-
-func wrapError(err error) error {
-	if os.IsExist(err) {
-		return jsonapi.Conflict(err)
-	}
-	if os.IsNotExist(err) {
-		return jsonapi.NotFound(err)
-	}
-	return err
 }
