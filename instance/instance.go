@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/couchdb/mango"
 	"github.com/cozy/cozy-stack/crypto"
+	"github.com/cozy/cozy-stack/settings"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/spf13/afero"
 )
@@ -152,6 +153,16 @@ func (i *Instance) createAppsDB() error {
 	return couchdb.CreateDB(i, apps.ManifestDocType)
 }
 
+// createSettings creates the settings database and some documents like the
+// default theme
+func (i *Instance) createSettings() error {
+	err := couchdb.CreateDB(i, settings.SettingsDocType)
+	if err != nil {
+		return err
+	}
+	return settings.CreateDefaultTheme(i)
+}
+
 // Create build an instance and .Create it
 func Create(domain string, locale string, apps []string) (*Instance, error) {
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
@@ -188,12 +199,17 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, err
 	}
 
-	err = i.createFSIndexes()
+	err = i.createAppsDB()
 	if err != nil {
 		return nil, err
 	}
 
-	err = i.createAppsDB()
+	err = i.createSettings()
+	if err != nil {
+		return nil, err
+	}
+
+	err = i.createFSIndexes()
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   viewBox="0 0 72 72"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="cozy-dev.svg">
+  <metadata
+     id="metadata10">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="2560"
+     inkscape:window-height="1389"
+     id="namedview6"
+     showgrid="false"
+     inkscape:zoom="3.2777778"
+     inkscape:cx="16.932203"
+     inkscape:cy="36"
+     inkscape:window-x="0"
+     inkscape:window-y="26"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2" />
+  <path
+     d="M52.935 62.2h-33.87C8.55 62.2 0 53.583 0 42.99c0-5.05 1.93-9.82 5.437-13.432 3.073-3.16 7.052-5.126 11.358-5.638.508-4.338 2.458-8.348 5.597-11.443C25.976 8.942 30.71 7 35.724 7c5.013 0 9.75 1.942 13.332 5.476 3.126 3.08 5.07 7.07 5.592 11.385C64.36 24.74 72 32.984 72 42.994 72 53.583 63.444 62.2 52.934 62.2zM53 58.6h.146c8.412 0 15.254-6.934 15.254-15.456 0-8.52-6.842-15.453-15.254-15.453h-.153c-1.098 0-1.998-.884-2.023-2-.19-8.323-7.03-15.09-15.248-15.09-8.22 0-15.06 6.77-15.25 15.093-.024 1.095-.895 1.977-1.977 2.002-8.213.192-14.895 7.122-14.895 15.45 0 8.522 6.842 15.455 15.254 15.455h.124l.048-.003c.044 0 .088 0 .13.003H53zm-7.5-16.76c-1.2-.79-1.26-2.24-1.263-2.304-.01-.394-.33-.705-.72-.7-.392.01-.703.335-.696.726.004.052.024.733.347 1.536-4.28 4.082-11.008 4.088-15.297.025.33-.815.353-1.507.353-1.56.007-.39-.303-.714-.692-.724-.383-.013-.71.303-.723.694 0 .058-.058 1.515-1.263 2.305-.33.216-.42.658-.206.987.135.21.36.324.593.324.134 0 .268-.037.387-.115.31-.203.57-.435.787-.68 2.382 2.158 5.392 3.238 8.403 3.238 3.017 0 6.035-1.084 8.422-3.254.217.248.48.486.798.695.118.078.253.116.386.116.23 0 .457-.115.593-.324.214-.33.12-.774-.206-.988v.002z"
+     fill="#3AB4F0"
+     fill-rule="evenodd"
+     id="path4" />
+  <g
+     id="g3203"
+     transform="matrix(0.96592583,-0.25881905,0.25881905,0.96592583,-20.912632,11.610899)">
+    <text
+       transform="scale(1.0326051,0.96842439)"
+       sodipodi:linespacing="125%"
+       id="text3142"
+       y="46.274078"
+       x="28.015295"
+       style="font-style:normal;font-weight:normal;font-size:27.55645752px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:20.66734314px;font-family:'Source Code Pro for Powerline';-inkscape-font-specification:'Source Code Pro for Powerline Bold';fill:#ff3713;fill-opacity:1"
+         y="46.274078"
+         x="28.015295"
+         id="tspan3144"
+         sodipodi:role="line">DEV</tspan></text>
+    <rect
+       y="26.075741"
+       x="24.245232"
+       height="24.424789"
+       width="48.83157"
+       id="rect3201"
+       style="fill:none;fill-opacity:1;stroke:#ff3713;stroke-width:2.06673431;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+  </g>
+</svg>
