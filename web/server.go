@@ -141,8 +141,7 @@ func Create(conf *Config) (*echo.Echo, error) {
 		return nil, err
 	}
 
-	// apisRouter.Pre(middleware.AddTrailingSlash())
-	apisRouter.GET("/assets/*", echo.WrapHandler(r))
+	apisRouter.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r)))
 	apisRouter.Renderer = r
 	apisRouter.HTTPErrorHandler = ErrorHandler
 
@@ -168,6 +167,11 @@ func ErrorHandler(err error, c echo.Context) {
 	var je *jsonapi.Error
 	var ce *couchdb.Error
 	var ok bool
+
+	if he, ok := err.(*echo.HTTPError); ok {
+		c.String(he.Code, he.Message)
+		return
+	}
 
 	if ce, ok = err.(*couchdb.Error); ok {
 		je = &jsonapi.Error{
