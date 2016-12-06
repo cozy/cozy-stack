@@ -18,7 +18,7 @@ const SessionsType = "io.cozy.sessions"
 // SessionCookieName : name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
 
-// SessionContextKey name of the session inecho.Context
+// SessionContextKey name of the session in echo.Context
 const SessionContextKey = "session"
 
 // SessionMaxAge : duration of the session

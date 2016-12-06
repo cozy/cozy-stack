@@ -2,7 +2,6 @@
 package data
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
@@ -17,7 +16,7 @@ func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
 		if doctype == "" {
-			return jsonapi.BadRequest(fmt.Errorf("Invalid doctype '%s'", doctype))
+			return jsonapi.NewError(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
 		c.Set("doctype", doctype)
 		return next(c)
