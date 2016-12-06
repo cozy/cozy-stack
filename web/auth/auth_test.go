@@ -146,6 +146,14 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res4.Status)
 	assert.Equal(t, "text/plain; charset=utf-8", res4.Header.Get("Content-Type"))
+
+	req5, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("https://."+domain+"/foo/bar"), nil)
+	req5.Host = domain
+	res5, err := client.Do(req5)
+	defer res5.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res5.Status)
+	assert.Equal(t, "text/plain; charset=utf-8", res5.Header.Get("Content-Type"))
 }
 
 func TestShowLoginPageWithRedirectXSS(t *testing.T) {

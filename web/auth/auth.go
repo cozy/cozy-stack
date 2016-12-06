@@ -106,7 +106,7 @@ func checkRedirectParam(c echo.Context) (string, error) {
 
 	instance := middlewares.GetInstance(c)
 	parts := strings.SplitN(u.Host, ".", 2)
-	if len(parts) != 2 || parts[1] != instance.Domain {
+	if len(parts) != 2 || parts[1] != instance.Domain || parts[0] == "" {
 		return "", echo.NewHTTPError(http.StatusBadRequest,
 			"bad url: should be subdomain")
 	}
