@@ -31,7 +31,7 @@ func CheckReadable(c echo.Context, doctype string) error {
 		"reserved doctype %v unreadable", doctype)
 }
 
-// CheckWritable will abort the gin context if the doctype
+// CheckWritable will abort the echo context if the doctype
 // is unwritable
 func CheckWritable(c echo.Context, doctype string) error {
 	_, inblacklist := blackList[doctype]

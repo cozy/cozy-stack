@@ -77,7 +77,7 @@ func NewSession(i *instance.Instance) (*Session, error) {
 	return s, couchdb.CreateDoc(i, s)
 }
 
-// GetSession retrieves the session from a gin.Context
+// GetSession retrieves the session from a echo.Context
 func GetSession(c echo.Context) (*Session, error) {
 	var s Session
 	var err error

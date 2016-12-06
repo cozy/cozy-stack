@@ -77,6 +77,30 @@ func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) e
 	return json.NewEncoder(resp).Encode(doc)
 }
 
+// DataError can be called to send an error answer with a JSON-API document
+// containing a single value error.
+func DataError(c echo.Context, err *Error) error {
+	doc := Document{
+		Errors: ErrorList{err},
+	}
+	resp := c.Response()
+	resp.Header().Set("Content-Type", ContentType)
+	resp.WriteHeader(err.Status)
+	return json.NewEncoder(resp).Encode(doc)
+}
+
+// DataErrorList can be called to send an error answer with a JSON-API document
+// containing multiple errors.
+func DataErrorList(c echo.Context, errs ...*Error) error {
+	doc := Document{
+		Errors: errs,
+	}
+	resp := c.Response()
+	resp.Header().Set("Content-Type", ContentType)
+	resp.WriteHeader(errs[0].Status)
+	return json.NewEncoder(resp).Encode(doc)
+}
+
 // Bind is used to unmarshal an input JSONApi document. It binds an
 // incoming request to a attribute type.
 func Bind(req *http.Request, attrs interface{}) (*ObjectMarshalling, error) {

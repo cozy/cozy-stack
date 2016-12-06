@@ -25,7 +25,6 @@
 package web
 
 import (
-	"encoding/json"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -208,9 +207,11 @@ func ErrorHandler(err error, c echo.Context) {
 		if c.Request().Method == http.MethodHead {
 			c.NoContent(je.Status)
 		} else {
-			res.Header().Set("Content-Type", jsonapi.ContentType)
-			res.WriteHeader(je.Status)
-			json.NewEncoder(res).Encode(je)
+			// doc := jsonapi.Document{Errors: jsonapi.ErrorList{je}}
+			// res.Header().Set("Content-Type", jsonapi.ContentType)
+			// res.WriteHeader(je.Status)
+			// json.NewEncoder(res).Encode(doc)
+			jsonapi.DataErrorList(c, je)
 		}
 	}
 

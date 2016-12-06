@@ -20,7 +20,7 @@ func TestParseHost(t *testing.T) {
 
 	apis.GET("/", func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
-		assert.NotNil(t, instance, "the instance should have been set in the gin context")
+		assert.NotNil(t, instance, "the instance should have been set in the echo context")
 		return c.String(http.StatusOK, "OK")
 	}, middlewares.NeedInstance)
 
