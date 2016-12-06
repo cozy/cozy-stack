@@ -166,9 +166,10 @@ func Create(conf *Config) (*echo.Echo, error) {
 func ErrorHandler(err error, c echo.Context) {
 	var je *jsonapi.Error
 	var ce *couchdb.Error
+	var he *echo.HTTPError
 	var ok bool
 
-	if he, ok := err.(*echo.HTTPError); ok {
+	if he, ok = err.(*echo.HTTPError); ok {
 		c.String(he.Code, he.Message)
 		return
 	}
