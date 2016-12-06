@@ -26,7 +26,6 @@ package web
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -71,9 +70,6 @@ func (r *renderer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func createRenderer(conf *Config) (*renderer, error) {
 	// By default, use the assets packed in the binary
 	if conf.Assets != "" {
-		if !path.IsAbs(conf.Assets) {
-			return nil, fmt.Errorf("path %s is not absolute", conf.Assets)
-		}
 		list := make([]string, len(templatesList))
 		for i, name := range templatesList {
 			list[i] = path.Join(conf.Assets, "templates", name)
