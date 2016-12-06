@@ -129,7 +129,6 @@ func TestMain(m *testing.M) {
 	}
 
 	router, err := web.Create(&web.Config{
-		Domain:    "example.net",
 		Router:    echo.New(),
 		ServeApps: Serve,
 	})

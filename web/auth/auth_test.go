@@ -175,7 +175,6 @@ func TestMain(m *testing.M) {
 	}, middlewares.NeedInstance)
 
 	handler, err := web.Create(&web.Config{
-		Domain: "example.net",
 		Router: r,
 	})
 	if err != nil {

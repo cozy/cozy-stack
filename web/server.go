@@ -37,6 +37,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
 	"github.com/labstack/echo"
@@ -50,7 +51,6 @@ var templatesList = []string{
 // Config represents the configuration
 type Config struct {
 	Router    *echo.Echo
-	Domain    string
 	Assets    string
 	ServeApps func(c echo.Context, domain, slug string) error
 }
@@ -119,15 +119,12 @@ func createRenderer(conf *Config) (*renderer, error) {
 	return r, nil
 }
 
-func slugFromHost(host, domain string) (parent, slug string) {
-	parts := strings.SplitN(host, ".", 3)
-	if len(parts) != 3 {
-		return host, ""
+func splitHost(host string) (instanceHost string, appSlug string) {
+	parts := strings.SplitN(host, ".", 2)
+	if len(parts) == 2 {
+		return parts[1], parts[0]
 	}
-	if parts[2] != domain {
-		return host, ""
-	}
-	return parts[1] + "." + parts[2], parts[0]
+	return parts[0], ""
 }
 
 // Create returns a new web server that will handle that apps routing given the
@@ -148,15 +145,19 @@ func Create(conf *Config) (*echo.Echo, error) {
 
 	appsRouter.Any("/*", func(c echo.Context) error {
 		req := c.Request()
-		parent, slug := slugFromHost(req.Host, conf.Domain)
-		if slug == "" {
+
+		// TODO(optim): minimize the number of instance requests
+		if _, err := instance.Get(req.Host); err == nil {
 			apisRouter.ServeHTTP(c.Response(), req)
 			return nil
 		}
-		if conf.ServeApps != nil {
-			return conf.ServeApps(c, parent, slug)
+
+		if conf.ServeApps == nil {
+			return nil
 		}
-		return nil
+
+		parent, slug := splitHost(req.Host)
+		return conf.ServeApps(c, parent, slug)
 	})
 
 	return appsRouter, nil

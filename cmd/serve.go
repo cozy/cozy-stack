@@ -19,7 +19,6 @@ Use the --port and --host flags to change the listening option.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		r, err := web.Create(&web.Config{
 			Router:    router.Setup(echo.New()),
-			Domain:    config.GetConfig().Domain,
 			Assets:    config.GetConfig().Assets,
 			ServeApps: apps.Serve,
 		})

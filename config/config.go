@@ -30,7 +30,6 @@ type Config struct {
 	Mode    string
 	Host    string
 	Port    int
-	Domain  string
 	Assets  string
 	Fs      Fs
 	CouchDB CouchDB
@@ -149,7 +148,6 @@ func UseViper(v *viper.Viper) error {
 		Host:   v.GetString("host"),
 		Port:   v.GetInt("port"),
 		Assets: v.GetString("assets"),
-		Domain: domain,
 		Fs: Fs{
 			URL: fsURL,
 		},

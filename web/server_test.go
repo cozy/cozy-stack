@@ -26,7 +26,6 @@ func TestParseHost(t *testing.T) {
 
 	router, err := Create(&Config{
 		Router: apis,
-		Domain: "example.net",
 		ServeApps: func(c echo.Context, domain, slug string) error {
 			return c.String(200, "OK:"+slug)
 		},
