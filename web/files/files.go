@@ -141,7 +141,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 			err = cerr
 		}
 		if err != nil {
-			wrapVfsError(err)
+			err = wrapVfsError(err)
 			return
 		}
 		err = jsonapi.Data(c, http.StatusOK, newdoc, nil)
