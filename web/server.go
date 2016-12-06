@@ -34,12 +34,13 @@ import (
 	"path"
 	"strings"
 
-	"github.com/labstack/echo"
-	"github.com/rakyll/statik/fs"
-
+	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
+	"github.com/labstack/echo"
+	"github.com/rakyll/statik/fs"
 )
 
 var templatesList = []string{
@@ -169,8 +170,20 @@ func ErrorHandler(err error, c echo.Context) {
 	var he *echo.HTTPError
 	var ok bool
 
+	res := c.Response()
+	req := c.Request()
+
 	if he, ok = err.(*echo.HTTPError); ok {
-		c.String(he.Code, he.Message)
+		if !res.Committed {
+			if c.Request().Method == http.MethodHead {
+				c.NoContent(he.Code)
+			} else {
+				c.String(he.Code, he.Message)
+			}
+		}
+		if config.IsDevRelease() {
+			log.Errorf("[HTTP %s %s] %s", req.Method, req.URL.Path, err)
+		}
 		return
 	}
 
@@ -188,14 +201,17 @@ func ErrorHandler(err error, c echo.Context) {
 		}
 	}
 
-	resp := c.Response()
-	if !resp.Committed {
+	if !res.Committed {
 		if c.Request().Method == http.MethodHead {
 			c.NoContent(je.Status)
 		} else {
-			resp.Header().Set("Content-Type", jsonapi.ContentType)
-			resp.WriteHeader(je.Status)
-			json.NewEncoder(resp).Encode(je)
+			res.Header().Set("Content-Type", jsonapi.ContentType)
+			res.WriteHeader(je.Status)
+			json.NewEncoder(res).Encode(je)
 		}
+	}
+
+	if config.IsDevRelease() {
+		log.Errorf("[HTTP %s %s] %s", req.Method, req.URL.Path, err)
 	}
 }
