@@ -88,7 +88,7 @@ func logout(c echo.Context) error {
 // checkRedirectParam returns the optional redirect query parameter. If not
 // empty, we check that the redirect is a subdomain of the cozy-instance.
 func checkRedirectParam(c echo.Context) (string, error) {
-	redirect := c.QueryParam("redirect")
+	redirect := c.FormValue("redirect")
 	if redirect == "" {
 		return "", nil
 	}
