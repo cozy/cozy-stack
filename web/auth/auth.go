@@ -111,11 +111,14 @@ func checkRedirectParam(c echo.Context) (string, error) {
 			"bad url: should be subdomain")
 	}
 
-	// to protect against stealing authorization code with redirection, the
-	// fragment is always overriden.
+	// To protect against stealing authorization code with redirection, the
+	// fragment is always overriden. Most browsers keep URI fragments upon
+	// redirects, to make sure to override them, we put an empty one.
+	//
+	// see: oauthsecurity.com/#provider-in-the-middle
+	// see: 7.4.2 OAuth2 in Action
 	u.Fragment = ""
-
-	return u.String(), nil
+	return u.String() + "#", nil
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
