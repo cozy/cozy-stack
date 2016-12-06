@@ -3,6 +3,8 @@ package auth
 
 import (
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -22,12 +24,13 @@ func redirectSuccessLogin(c echo.Context, slug string) error {
 
 func register(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	// TODO: use ParseMultipartForm with a smaller maxMemory (default is 32Mo)
+
 	passphrase := []byte(c.FormValue("passphrase"))
 	registerToken := []byte(c.FormValue("registerToken"))
 	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
 		return jsonapi.BadRequest(err)
 	}
+
 	return redirectSuccessLogin(c, apps.OnboardingSlug)
 }
 
@@ -36,8 +39,16 @@ func loginForm(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
 	}
+
+	redirect, err := checkRedirectParam(c)
+	if err != nil {
+		return err
+	}
+
 	return c.Render(http.StatusOK, "login.html", echo.Map{
 		"InvalidPassphrase": false,
+		"HasRedirect":       redirect != "",
+		"Redirect":          redirect,
 	})
 }
 
@@ -46,12 +57,21 @@ func login(c echo.Context) error {
 	if IsLoggedIn(c) {
 		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
 	}
+
+	redirect, err := checkRedirectParam(c)
+	if err != nil {
+		return err
+	}
+
 	pass := c.FormValue("passphrase")
 	if err := instance.CheckPassphrase([]byte(pass)); err != nil {
 		return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
 			"InvalidPassphrase": true,
+			"HasRedirect":       redirect != "",
+			"Redirect":          redirect,
 		})
 	}
+
 	return redirectSuccessLogin(c, apps.HomeSlug)
 }
 
@@ -63,6 +83,39 @@ func logout(c echo.Context) error {
 		c.SetCookie(session.Delete(instance))
 	}
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login"))
+}
+
+// checkRedirectParam returns the optional redirect query parameter. If not
+// empty, we check that the redirect is a subdomain of the cozy-instance.
+func checkRedirectParam(c echo.Context) (string, error) {
+	redirect := c.QueryParam("redirect")
+	if redirect == "" {
+		return "", nil
+	}
+
+	u, err := url.Parse(redirect)
+	if err != nil {
+		return "", echo.NewHTTPError(http.StatusBadRequest,
+			"bad url: could not parse")
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", echo.NewHTTPError(http.StatusBadRequest,
+			"bad url: bad scheme")
+	}
+
+	instance := middlewares.GetInstance(c)
+	parts := strings.SplitN(u.Host, ".", 2)
+	if len(parts) != 2 || parts[1] != instance.Domain {
+		return "", echo.NewHTTPError(http.StatusBadRequest,
+			"bad url: should be subdomain")
+	}
+
+	// to protect against stealing authorization code with redirection, the
+	// fragment is always overriden.
+	u.Fragment = ""
+
+	return u.String(), nil
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
