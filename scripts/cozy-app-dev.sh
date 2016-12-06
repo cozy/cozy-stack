@@ -107,7 +107,6 @@ do_start() {
 	echo ""
 
 	${COZY_STACK_PATH} serve \
-		--domain "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
 		--host "${COZY_STACK_HOST}" \
 		--couchdb-host "${COUCHDB_HOST}" \

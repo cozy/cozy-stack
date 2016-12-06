@@ -134,15 +134,6 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
-	domain := v.GetString("domain")
-	if domain == "" && IsDevRelease() {
-		domain = "localhost"
-	}
-
-	if domain == "" {
-		return fmt.Errorf("missing domain name")
-	}
-
 	config = &Config{
 		Mode:   mode,
 		Host:   v.GetString("host"),
