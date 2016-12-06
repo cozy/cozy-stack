@@ -16,7 +16,6 @@ import (
 //
 // It responds OK if the service is running
 func Status(c echo.Context) error {
-
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",
 		URL:      config.CouchURL(),
@@ -40,4 +39,5 @@ func Status(c echo.Context) error {
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("", Status)
+	router.GET("/", Status)
 }

@@ -25,5 +25,6 @@ func Version(c echo.Context) error {
 
 // Routes sets the routing for the version service
 func Routes(router *echo.Group) {
+	router.GET("", Version)
 	router.GET("/", Version)
 }

@@ -72,10 +72,10 @@ func IsLoggedIn(c echo.Context) bool {
 }
 
 // Routes sets the routing for the status service
-func Routes(group *echo.Group) {
-	group.POST("/register", register)
+func Routes(router *echo.Group) {
+	router.POST("/register", register)
 
-	group.GET("/auth/login", loginForm)
-	group.POST("/auth/login", login)
-	group.DELETE("/auth/login", logout)
+	router.GET("/auth/login", loginForm)
+	router.POST("/auth/login", login)
+	router.DELETE("/auth/login", logout)
 }
