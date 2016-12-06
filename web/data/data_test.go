@@ -11,12 +11,12 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
-	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
-	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/web"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,14 +55,12 @@ func docURL(ts *httptest.Server, doc couchdb.JSONDoc) string {
 }
 
 func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface{}, res *http.Response, err error) {
-
 	res, err = client.Do(req)
 	if err != nil {
 		return
 	}
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
-	// fmt.Println("[result]", string(body))
 	if err != nil {
 		return
 	}
@@ -82,9 +80,12 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 
 }
 
-func injectInstance(instance *instance.Instance) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set("instance", instance)
+func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("instance", i)
+			return next(c)
+		}
 	}
 }
 
@@ -103,8 +104,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	gin.SetMode(gin.TestMode)
-
 	instance.Destroy(Host)
 
 	inst, err := instance.Create(Host, "en", nil)
@@ -113,11 +112,10 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	router := gin.New()
-	router.Use(middlewares.ErrorHandler())
-	router.Use(injectInstance(inst))
-	Routes(router.Group("/data"))
-	ts = httptest.NewServer(router)
+	handler := echo.New()
+	handler.HTTPErrorHandler = web.ErrorHandler
+	Routes(handler.Group("/data", injectInstance(inst)))
+	ts = httptest.NewServer(handler)
 
 	couchdb.ResetDB(testInstance, Type)
 	doc := couchdb.JSONDoc{Type: Type, M: map[string]interface{}{
@@ -154,11 +152,12 @@ func TestWrongDoctype(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-	if assert.Contains(t, out, "error") {
-		assert.Equal(t, "not_found", out["error"], "should give a json error")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
+	if assert.Contains(t, out, "title") {
+		assert.Equal(t, "not_found", out["title"], "should give a json title")
 	}
-	if assert.Contains(t, out, "reason") {
-		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
+	if assert.Contains(t, out, "detail") {
+		assert.Equal(t, "wrong_doctype", out["detail"], "should give a detail")
 	}
 
 }
@@ -170,11 +169,13 @@ func TestVFSDoctype(t *testing.T) {
 	})
 	req, _ := http.NewRequest("POST", ts.URL+"/data/io.cozy.files/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "403 Forbidden", res.Status, "should get a 403")
-	if assert.Contains(t, out, "error") {
-		assert.Contains(t, out["error"], "reserved", "should give a clear error")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
+	if assert.Contains(t, out, "detail") {
+		assert.Contains(t, out["detail"], "reserved", "should give a clear detail")
 	}
 }
 
@@ -184,11 +185,12 @@ func TestWrongID(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-	if assert.Contains(t, out, "error") {
-		assert.Equal(t, "not_found", out["error"], "should give a json error")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
+	if assert.Contains(t, out, "title") {
+		assert.Equal(t, "not_found", out["title"], "should give a json title")
 	}
-	if assert.Contains(t, out, "reason") {
-		assert.Equal(t, "missing", out["reason"], "should give a reason")
+	if assert.Contains(t, out, "detail") {
+		assert.Equal(t, "missing", out["detail"], "should give a detail")
 	}
 }
 
@@ -199,11 +201,12 @@ func TestWrongHost(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-	if assert.Contains(t, out, "error") {
-		assert.Equal(t, "not_found", out["error"], "should give a json error")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
+	if assert.Contains(t, out, "title") {
+		assert.Equal(t, "not_found", out["title"], "should give a json title")
 	}
-	if assert.Contains(t, out, "reason") {
-		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
+	if assert.Contains(t, out, "detail") {
+		assert.Equal(t, "wrong_doctype", out["detail"], "should give a detail")
 	}
 }
 
@@ -214,6 +217,7 @@ func TestSuccessCreateKnownDoctype(t *testing.T) {
 	var sur stackUpdateResponse
 	req, _ := http.NewRequest("POST", ts.URL+"/data/"+Type+"/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, &sur)
 	assert.NoError(t, err)
 	assert.Equal(t, "201 Created", res.Status, "should get a 201")
@@ -235,6 +239,7 @@ func TestSuccessCreateUnknownDoctype(t *testing.T) {
 	type2 := "io.cozy.anothertype"
 	req, _ := http.NewRequest("POST", ts.URL+"/data/"+type2+"/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, &sur)
 	assert.NoError(t, err)
 	assert.Equal(t, "201 Created", res.Status, "should get a 201")
@@ -255,6 +260,7 @@ func TestWrongCreateWithID(t *testing.T) {
 	})
 	req, _ := http.NewRequest("POST", ts.URL+"/data/"+Type+"/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
@@ -275,6 +281,7 @@ func TestSuccessUpdate(t *testing.T) {
 	})
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -304,6 +311,7 @@ func TestWrongIDInDocUpdate(t *testing.T) {
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 404")
@@ -319,6 +327,7 @@ func TestCreateDocWithAFixedID(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/specific-id"
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -346,6 +355,7 @@ func TestNoRevInDocUpdate(t *testing.T) {
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
@@ -365,6 +375,7 @@ func TestPreviousRevInDocUpdate(t *testing.T) {
 	})
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "first update should work")
@@ -377,6 +388,7 @@ func TestPreviousRevInDocUpdate(t *testing.T) {
 	})
 	req2, _ := http.NewRequest("PUT", url, in2)
 	req2.Header.Add("Host", Host)
+	req2.Header.Set("Content-Type", "application/json")
 	_, res2, err := doRequest(req2, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "409 Conflict", res2.Status, "should get a 409")
@@ -462,6 +474,7 @@ func TestDefineIndex(t *testing.T) {
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	var out indexCreationResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -478,6 +491,7 @@ func TestReDefineIndex(t *testing.T) {
 	def = M{"index": M{"fields": S{"foo"}}}
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("Host", Host)
 	var out indexCreationResponse
 	_, res, err := doRequest(req, &out)
@@ -499,6 +513,7 @@ func TestDefineIndexUnexistingDoctype(t *testing.T) {
 	var url = ts.URL + "/data/nottype/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	var out indexCreationResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -523,6 +538,7 @@ func TestFindDocuments(t *testing.T) {
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	var out indexCreationResponse
 	_, _, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -533,6 +549,7 @@ func TestFindDocuments(t *testing.T) {
 	var url2 = ts.URL + "/data/" + Type + "/_find"
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	var out2 struct {
 		Docs []couchdb.JSONDoc `json:"docs"`
 	}
@@ -548,13 +565,16 @@ func TestFindDocumentsWithoutIndex(t *testing.T) {
 	var url2 = ts.URL + "/data/" + Type + "/_find"
 	req, _ := http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Host", Host)
+	req.Header.Set("Content-Type", "application/json")
 	var out2 struct {
-		Error  string `json:"error"`
-		Reason string `json:"reason"`
+		Errors []struct {
+			Title  string `json:"title"`
+			Detail string `json:"detail"`
+		} `json:"errors"`
 	}
 	_, res, err := doRequest(req, &out2)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 200")
 	assert.NoError(t, err)
-	assert.Contains(t, out2.Error, "no_index")
-	assert.Contains(t, out2.Reason, "no matching index")
+	assert.Contains(t, out2.Errors[0].Title, "no_index")
+	assert.Contains(t, out2.Errors[0].Detail, "no matching index")
 }

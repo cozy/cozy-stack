@@ -1,10 +1,9 @@
 package jsonapi
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
-
-	"github.com/cozy/cozy-stack/couchdb"
 )
 
 // SourceError contains references to the source of the error
@@ -30,13 +29,16 @@ func (e *Error) Error() string {
 	return e.Title + "(" + strconv.Itoa(e.Status) + ")" + ": " + e.Detail
 }
 
-// WrapCouchError returns a formatted error from a couchdb error
-func WrapCouchError(err *couchdb.Error) *Error {
-	return &Error{
-		Status: err.StatusCode,
-		Title:  err.Name,
-		Detail: err.Reason,
+// NewError creates a new generic Error
+func NewError(status int, msg ...interface{}) *Error {
+	je := &Error{
+		Status: status,
+		Title:  http.StatusText(status),
 	}
+	if len(msg) > 0 {
+		je.Detail = fmt.Sprint(msg...)
+	}
+	return je
 }
 
 // NotFound returns a 404 formatted error
@@ -64,6 +66,15 @@ func BadJSON() *Error {
 		Status: http.StatusBadRequest,
 		Title:  "Bad request",
 		Detail: "JSON input is malformed or is missing mandatory fields",
+	}
+}
+
+// Conflict returns a 409 formatted error representing a conflict
+func Conflict(err error) *Error {
+	return &Error{
+		Status: http.StatusConflict,
+		Title:  "Conflict",
+		Detail: err.Error(),
 	}
 }
 

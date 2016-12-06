@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/config"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -144,11 +144,10 @@ func TestData(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-	router.GET("/foos/courge", func(c *gin.Context) {
+	router := echo.New()
+	router.GET("/foos/courge", func(c echo.Context) error {
 		courge := &Foo{FID: "courge", FRev: "1-abc", Bar: "baz"}
-		Data(c, 200, courge, nil)
+		return Data(c, 200, courge, nil)
 	})
 	ts = httptest.NewServer(router)
 	defer ts.Close()

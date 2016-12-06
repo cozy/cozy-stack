@@ -3,7 +3,9 @@ package cmd
 import (
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/web"
-	"github.com/gin-gonic/gin"
+	"github.com/cozy/cozy-stack/web/apps"
+	"github.com/cozy/cozy-stack/web/router"
+	"github.com/labstack/echo"
 	"github.com/spf13/cobra"
 )
 
@@ -15,25 +17,18 @@ var serveCmd = &cobra.Command{
 It will accept HTTP requests on localhost:8080 by default.
 Use the --port and --host flags to change the listening option.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		router := getGin()
-		err := web.SetupRoutes(router, config.GetConfig().Assets)
+		r, err := web.Create(&web.Config{
+			Router:    router.Setup(echo.New()),
+			Assets:    config.GetConfig().Assets,
+			ServeApps: apps.Serve,
+		})
 		if err != nil {
 			return err
 		}
-		return router.Run(config.ServerAddr())
+		return r.Start(config.ServerAddr())
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
-}
-
-func getGin() *gin.Engine {
-	if config.IsMode(config.Production) {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	engine := gin.New()
-	engine.Use(gin.Logger())
-	return engine
 }

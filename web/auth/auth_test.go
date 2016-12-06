@@ -2,6 +2,7 @@ package auth
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -12,8 +13,9 @@ import (
 
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/instance"
+	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -157,21 +159,30 @@ func TestMain(m *testing.M) {
 	instance.Destroy(domain)
 	i, _ := instance.Create(domain, "en", nil)
 	registerToken = i.RegisterToken
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-	router.LoadHTMLGlob("../../assets/templates/*.html")
-	router.Use(middlewares.ParseHost())
-	Routes(router)
-	router.GET("/test", func(c *gin.Context) {
+
+	r := echo.New()
+	r.HTTPErrorHandler = web.ErrorHandler
+	Routes(r.Group("", middlewares.NeedInstance))
+
+	r.GET("/test", func(c echo.Context) error {
 		var content string
 		if IsLoggedIn(c) {
 			content = "logged_in"
 		} else {
 			content = "who_are_you"
 		}
-		c.String(http.StatusOK, content)
+		return c.String(http.StatusOK, content)
+	}, middlewares.NeedInstance)
+
+	handler, err := web.Create(&web.Config{
+		Router: r,
 	})
-	ts = httptest.NewServer(router)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	ts = httptest.NewServer(handler)
 	res := m.Run()
 	ts.Close()
 	instance.Destroy(domain)

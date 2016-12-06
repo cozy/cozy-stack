@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb/mango"
-	"github.com/cozy/checkup"
 	"github.com/stretchr/testify/assert"
 )
 

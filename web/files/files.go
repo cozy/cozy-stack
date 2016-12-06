@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 )
 
 // TagSeparator is the character separating tags
@@ -33,11 +33,11 @@ var ErrDocTypeInvalid = errors.New("Invalid document type")
 // create a new directory.
 //
 // swagger:route POST /files/:dir-id files uploadFileOrCreateDir
-func CreationHandler(c *gin.Context) {
+func CreationHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	var doc jsonapi.Object
 	var err error
-	switch c.Query("Type") {
+	switch c.QueryParam("Type") {
 	case vfs.FileType:
 		doc, err = createFileHandler(c, instance)
 	case vfs.DirType:
@@ -47,19 +47,18 @@ func CreationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
-	jsonapi.Data(c, http.StatusCreated, doc, nil)
+	return jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
-func createFileHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err error) {
+func createFileHandler(c echo.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err error) {
 	doc, err = fileDocFromReq(
 		c,
-		c.Query("Name"),
+		c.QueryParam("Name"),
 		c.Param("dir-id"),
-		strings.Split(c.Query("Tags"), TagSeparator),
+		strings.Split(c.QueryParam("Tags"), TagSeparator),
 	)
 	if err != nil {
 		return
@@ -76,22 +75,22 @@ func createFileHandler(c *gin.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err 
 		}
 	}()
 
-	_, err = io.Copy(file, c.Request.Body)
+	_, err = io.Copy(file, c.Request().Body)
 	return
 }
 
-func createDirHandler(c *gin.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
-	tags := strings.Split(c.Query("Tags"), TagSeparator)
-	path := c.Query("Path")
+func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
+	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
+	path := c.QueryParam("Path")
 
 	if path != "" {
-		if c.Query("Recursive") == "true" {
+		if c.QueryParam("Recursive") == "true" {
 			return vfs.MkdirAll(vfsC, path, tags)
 		}
 		return vfs.Mkdir(vfsC, path, tags)
 	}
 
-	name, dirID := c.Query("Name"), c.Param("dir-id")
+	name, dirID := c.QueryParam("Name"), c.Param("dir-id")
 	doc, err := vfs.NewDirDoc(name, dirID, tags, nil)
 	if err != nil {
 		return nil, err
@@ -108,16 +107,14 @@ func createDirHandler(c *gin.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
 // to overwrite the content of a file given its identifier.
 //
 // swagger:route PUT /files/:file-id files overwriteFileContent
-func OverwriteFileContentHandler(c *gin.Context) {
-	var err error
+func OverwriteFileContentHandler(c echo.Context) (err error) {
 	var instance = middlewares.GetInstance(c)
 	var olddoc *vfs.FileDoc
 	var newdoc *vfs.FileDoc
 
 	olddoc, err = vfs.GetFileDoc(instance, c.Param("file-id"))
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	newdoc, err = fileDocFromReq(
@@ -127,19 +124,16 @@ func OverwriteFileContentHandler(c *gin.Context) {
 		olddoc.Tags,
 	)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	if err = checkIfMatch(c, olddoc.Rev()); err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	file, err := vfs.CreateFile(instance, newdoc, olddoc)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	defer func() {
@@ -147,13 +141,13 @@ func OverwriteFileContentHandler(c *gin.Context) {
 			err = cerr
 		}
 		if err != nil {
-			jsonapi.AbortWithError(c, wrapVfsError(err))
-		} else {
-			jsonapi.Data(c, http.StatusOK, newdoc, nil)
+			err = wrapVfsError(err)
+			return
 		}
+		err = jsonapi.Data(c, http.StatusOK, newdoc, nil)
 	}()
 
-	_, err = io.Copy(file, c.Request.Body)
+	_, err = io.Copy(file, c.Request().Body)
 	return
 }
 
@@ -162,7 +156,7 @@ func OverwriteFileContentHandler(c *gin.Context) {
 //
 // It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
-func ModificationHandler(c *gin.Context) {
+func ModificationHandler(c echo.Context) error {
 	var err error
 
 	instance := middlewares.GetInstance(c)
@@ -170,16 +164,14 @@ func ModificationHandler(c *gin.Context) {
 	patch := &vfs.DocPatch{}
 
 	var obj *jsonapi.ObjectMarshalling
-	if obj, err = jsonapi.Bind(c.Request, &patch); err != nil {
-		jsonapi.AbortWithError(c, jsonapi.BadJSON())
-		return
+	if obj, err = jsonapi.Bind(c.Request(), &patch); err != nil {
+		return jsonapi.BadJSON()
 	}
 
 	if rel, ok := obj.GetRelationship("parent"); ok {
 		rid, ok := rel.ResourceIdentifier()
 		if !ok {
-			jsonapi.AbortWithError(c, jsonapi.BadJSON())
-			return
+			return jsonapi.BadJSON()
 		}
 		patch.DirID = &rid.ID
 	}
@@ -190,14 +182,13 @@ func ModificationHandler(c *gin.Context) {
 	var dir *vfs.DirDoc
 
 	if fileID == "metadata" {
-		dir, file, err = vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), false)
+		dir, file, err = vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"), false)
 	} else {
 		dir, file, err = vfs.GetDirOrFileDoc(instance, fileID, false)
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	var doc couchdb.Doc
@@ -208,8 +199,7 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	if err = checkIfMatch(c, doc.Rev()); err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	var data jsonapi.Object
@@ -220,26 +210,24 @@ func ModificationHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
-	jsonapi.Data(c, http.StatusOK, data, nil)
+	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
 // id aiming at getting file metadata from its path.
 //
 // swagger:route GET /files/:file-id files getFileMetadata
-func ReadMetadataFromIDHandler(c *gin.Context, fileID string) {
-	var err error
-
+func ReadMetadataFromIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+
+	fileID := c.Param("file-id")
 
 	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	var data jsonapi.Object
@@ -249,22 +237,21 @@ func ReadMetadataFromIDHandler(c *gin.Context, fileID string) {
 		data = file
 	}
 
-	jsonapi.Data(c, http.StatusOK, data, nil)
+	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
 // ReadMetadataFromPathHandler handles all GET requests on
 // /files/metadata aiming at getting file metadata from its path.
 //
 // swagger:route GET /files/metadata files getFileMetadata
-func ReadMetadataFromPathHandler(c *gin.Context) {
+func ReadMetadataFromPathHandler(c echo.Context) error {
 	var err error
 
 	instance := middlewares.GetInstance(c)
 
-	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.Query("Path"), true)
+	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"), true)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	var data jsonapi.Object
@@ -274,48 +261,50 @@ func ReadMetadataFromPathHandler(c *gin.Context) {
 		data = file
 	}
 
-	jsonapi.Data(c, http.StatusOK, data, nil)
+	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
-// ReadFileContentHandler handles all GET requests on /files/:file-id
-// aiming at downloading a file. It serves two main purposes in this
-// regard:
-//  - downloading a file given its ID in inline mode
-//  - downloading a file given its path in attachment mode on the
-//    /files/download endpoint
+// ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
+// aiming at downloading a file given its ID. It serves the file in inline
+// mode.
 //
-// swagger:route GET /files/download files downloadFileByPath
 // swagger:route GET /files/:file-id files downloadFileByID
-func ReadFileContentHandler(c *gin.Context, fileID string) {
-	var err error
-
+func ReadFileContentFromIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	path := c.Query("Path")
-
-	// Path /files/download is handled specifically to download file
-	// form their path
-	var doc *vfs.FileDoc
-	var disposition string
-	if fileID == "" && path != "" {
-		disposition = "attachment"
-		doc, err = vfs.GetFileDocFromPath(instance, path)
-	} else {
-		disposition = "inline"
-		doc, err = vfs.GetFileDoc(instance, fileID)
-	}
-
+	doc, err := vfs.GetFileDoc(instance, c.Param("file-id"))
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
-	err = vfs.ServeFileContent(instance, doc, disposition, c.Request, c.Writer)
-
+	err = vfs.ServeFileContent(instance, doc, "inline", c.Request(), c.Response())
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
+
+	return nil
+}
+
+// ReadFileContentFromPathHandler handles all GET request on /files/download
+// aiming at downloading a file given its path. It serves the file in in
+// attachment mode.
+//
+// swagger:route GET /files/download files downloadFileByPath
+func ReadFileContentFromPathHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	path := c.QueryParam("Path")
+	doc, err := vfs.GetFileDocFromPath(instance, path)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	err = vfs.ServeFileContent(instance, doc, "attachment", c.Request(), c.Response())
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	return nil
 }
 
 // TrashHandler handles all DELETE requests on /files/:file-id and
@@ -323,15 +312,14 @@ func ReadFileContentHandler(c *gin.Context, fileID string) {
 // trash.
 //
 // swagger:route DELETE /files/:file-id files trashFileOrDirectory
-func TrashHandler(c *gin.Context) {
+func TrashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
 
 	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
 	var data jsonapi.Object
@@ -342,84 +330,54 @@ func TrashHandler(c *gin.Context) {
 	}
 
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
-	jsonapi.Data(c, http.StatusOK, data, nil)
+	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
 // ReadTrashFilesHandler handle GET requests on /files/trash and return the
 // list of trashed files and directories
-func ReadTrashFilesHandler(c *gin.Context) {
+func ReadTrashFilesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	trash, err := vfs.GetDirDoc(instance, vfs.TrashDirID, true)
 	if err != nil {
-		jsonapi.AbortWithError(c, wrapVfsError(err))
-		return
+		return wrapVfsError(err)
 	}
 
-	jsonapi.DataList(c, http.StatusOK, trash.Included(), nil)
+	return jsonapi.DataList(c, http.StatusOK, trash.Included(), nil)
 }
 
 // Routes sets the routing for the files service
-func Routes(router *gin.RouterGroup) {
-	// @TODO: get rid of this handler when switching to
-	// echo/httprouterv2. This should ideally be:
-	//
-	//     router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
-	//     router.HEAD("/download", ReadFileContentFromPathHandler)
-	//     router.GET("/download", ReadFileContentFromPathHandler)
-	//     router.GET("/download/:file-id", ReadFileContentFromIDHandler)
-	//     router.GET("/metadata", ReadMetadataFromPathHandler)
-	//     router.GET("/trash", ReadMetadataFromPathHandler)
-	//     router.GET("/:file-id", ReadMetadataFromIDHanler)
-	//
-	router.HEAD("/download/:file-id", func(c *gin.Context) {
-		ReadFileContentHandler(c, c.Param("file-id"))
-	})
-	router.GET("/:dl-meta-or-file-id/*file-id", func(c *gin.Context) {
-		fileID := c.Param("file-id")[1:]
-		ReadFileContentHandler(c, fileID)
-	})
-	router.GET("/:dl-meta-or-file-id", func(c *gin.Context) {
-		dlMeta := c.Param("dl-meta-or-file-id")
-		switch dlMeta {
-		case "download":
-			ReadFileContentHandler(c, "")
-		case "metadata":
-			ReadMetadataFromPathHandler(c)
-		case "trash":
-			ReadTrashFilesHandler(c)
-		default:
-			ReadMetadataFromIDHandler(c, dlMeta)
-		}
-	})
+func Routes(router *echo.Group) {
+	router.HEAD("/download", ReadFileContentFromPathHandler)
+	router.GET("/download", ReadFileContentFromPathHandler)
+	router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
+	router.GET("/download/:file-id", ReadFileContentFromIDHandler)
+
+	router.GET("/metadata", ReadMetadataFromPathHandler)
+	router.GET("/:file-id", ReadMetadataFromIDHandler)
 
 	router.POST("/", CreationHandler)
 	router.POST("/:dir-id", CreationHandler)
-
 	router.PATCH("/:file-id", ModificationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
+	router.GET("/trash", ReadTrashFilesHandler)
 	router.DELETE("/:file-id", TrashHandler)
 }
 
 // wrapVfsError returns a formatted error from a golang error emitted by the vfs
-func wrapVfsError(err error) *jsonapi.Error {
-	if jsonErr, isJSONApiError := err.(*jsonapi.Error); isJSONApiError {
-		return jsonErr
+func wrapVfsError(err error) error {
+	if _, ok := err.(*jsonapi.Error); ok {
+		return err
 	}
-	if couchErr, isCouchErr := err.(*couchdb.Error); isCouchErr {
-		return jsonapi.WrapCouchError(couchErr)
+	if _, ok := err.(*couchdb.Error); ok {
+		return err
 	}
 	if os.IsExist(err) || err == vfs.ErrConflict {
-		return &jsonapi.Error{
-			Status: http.StatusConflict,
-			Title:  "Conflict",
-			Detail: err.Error(),
-		}
+		return jsonapi.Conflict(err)
 	}
 	if os.IsNotExist(err) {
 		return jsonapi.NotFound(err)
@@ -449,12 +407,12 @@ func wrapVfsError(err error) *jsonapi.Error {
 	return jsonapi.InternalServerError(err)
 }
 
-func fileDocFromReq(c *gin.Context, name, dirID string, tags []string) (doc *vfs.FileDoc, err error) {
-	header := c.Request.Header
+func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (doc *vfs.FileDoc, err error) {
+	header := c.Request().Header
 
 	size, err := parseContentLength(header.Get("Content-Length"))
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-Length", err))
+		err = jsonapi.InvalidParameter("Content-Length", err)
 		return
 	}
 
@@ -463,12 +421,13 @@ func fileDocFromReq(c *gin.Context, name, dirID string, tags []string) (doc *vfs
 		md5Sum, err = parseMD5Hash(md5Str)
 	}
 	if err != nil {
-		jsonapi.AbortWithError(c, jsonapi.InvalidParameter("Content-MD5", err))
+		err = jsonapi.InvalidParameter("Content-MD5", err)
 		return
 	}
 
-	executable := c.Query("Executable") == "true"
-	mime, class := vfs.ExtractMimeAndClass(c.ContentType())
+	executable := c.QueryParam("Executable") == "true"
+	contentType := header.Get("Content-Type")
+	mime, class := vfs.ExtractMimeAndClass(contentType)
 	doc, err = vfs.NewFileDoc(
 		name,
 		dirID,
@@ -483,9 +442,9 @@ func fileDocFromReq(c *gin.Context, name, dirID string, tags []string) (doc *vfs
 	return
 }
 
-func checkIfMatch(c *gin.Context, rev string) error {
-	ifMatch := c.Request.Header.Get("If-Match")
-	revQuery := c.Query("rev")
+func checkIfMatch(c echo.Context, rev string) error {
+	ifMatch := c.Request().Header.Get("If-Match")
+	revQuery := c.QueryParam("rev")
 	var wantedRev string
 	if ifMatch != "" {
 		wantedRev = ifMatch

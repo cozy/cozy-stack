@@ -14,11 +14,12 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
-	"github.com/gin-gonic/gin"
-	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/web"
+	"github.com/labstack/echo"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,9 +27,12 @@ import (
 var ts *httptest.Server
 var testInstance *instance.Instance
 
-func injectInstance(i *instance.Instance) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set("instance", i)
+func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("instance", i)
+			return next(c)
+		}
 	}
 }
 
@@ -997,8 +1001,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	gin.SetMode(gin.TestMode)
-
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
 	instance.Destroy("test-files")
@@ -1008,11 +1010,12 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	router := gin.New()
-	router.Use(injectInstance(testInstance))
-	Routes(router.Group("/files"))
+	handler := echo.New()
+	handler.HTTPErrorHandler = web.ErrorHandler
+	handler.Use(injectInstance(testInstance))
+	Routes(handler.Group("/files"))
 
-	ts = httptest.NewServer(router)
+	ts = httptest.NewServer(handler)
 
 	res := m.Run()
 	ts.Close()
