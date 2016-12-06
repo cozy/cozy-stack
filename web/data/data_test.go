@@ -152,6 +152,7 @@ func TestWrongDoctype(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
 	if assert.Contains(t, out, "title") {
 		assert.Equal(t, "not_found", out["title"], "should give a json title")
 	}
@@ -172,6 +173,7 @@ func TestVFSDoctype(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "403 Forbidden", res.Status, "should get a 403")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
 	if assert.Contains(t, out, "detail") {
 		assert.Contains(t, out["detail"], "reserved", "should give a clear detail")
 	}
@@ -183,6 +185,7 @@ func TestWrongID(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
 	if assert.Contains(t, out, "title") {
 		assert.Equal(t, "not_found", out["title"], "should give a json title")
 	}
@@ -198,6 +201,7 @@ func TestWrongHost(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
+	out = out["errors"].([]interface{})[0].(map[string]interface{})
 	if assert.Contains(t, out, "title") {
 		assert.Equal(t, "not_found", out["title"], "should give a json title")
 	}
@@ -563,12 +567,14 @@ func TestFindDocumentsWithoutIndex(t *testing.T) {
 	req.Header.Add("Host", Host)
 	req.Header.Set("Content-Type", "application/json")
 	var out2 struct {
-		Title  string `json:"title"`
-		Detail string `json:"detail"`
+		Errors []struct {
+			Title  string `json:"title"`
+			Detail string `json:"detail"`
+		} `json:"errors"`
 	}
 	_, res, err := doRequest(req, &out2)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 200")
 	assert.NoError(t, err)
-	assert.Contains(t, out2.Title, "no_index")
-	assert.Contains(t, out2.Detail, "no matching index")
+	assert.Contains(t, out2.Errors[0].Title, "no_index")
+	assert.Contains(t, out2.Errors[0].Detail, "no matching index")
 }
