@@ -179,7 +179,7 @@ func TestShowLoginPageWithRedirectFragment(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
-	assert.Contains(t, string(body), `<input type="hidden" name="redirect" value="https://sub.cozy.example.net/" />`)
+	assert.Contains(t, string(body), `<input type="hidden" name="redirect" value="https://sub.cozy.example.net/#" />`)
 }
 
 func TestShowLoginPageWithRedirectSuccess(t *testing.T) {
@@ -192,7 +192,7 @@ func TestShowLoginPageWithRedirectSuccess(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
-	assert.Contains(t, string(body), `<input type="hidden" name="redirect" value="https://sub.cozy.example.net/foo/bar?query=foo" />`)
+	assert.Contains(t, string(body), `<input type="hidden" name="redirect" value="https://sub.cozy.example.net/foo/bar?query=foo#" />`)
 }
 
 func TestLoginWithBadPassphrase(t *testing.T) {
