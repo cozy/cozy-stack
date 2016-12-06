@@ -21,6 +21,11 @@ const indexPage = "index.html"
 
 // Serve is an handler for serving files from the VFS for a client-side app
 func Serve(c echo.Context, domain, slug string) error {
+	req := c.Request()
+	if req.Method != "GET" && req.Method != "HEAD" {
+		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", req.Method)
+	}
+
 	i, err := instance.Get(domain)
 	if err != nil {
 		return err
@@ -38,7 +43,7 @@ func Serve(c echo.Context, domain, slug string) error {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
 
-	vpath := c.Request().URL.Path
+	vpath := req.URL.Path
 	if vpath[len(vpath)-1] == '/' {
 		vpath = path.Join(vpath, indexPage)
 	}
@@ -51,7 +56,7 @@ func Serve(c echo.Context, domain, slug string) error {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
 
-	vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
+	vfs.ServeFileContent(i, doc, "", req, c.Response())
 	return nil
 }
 
