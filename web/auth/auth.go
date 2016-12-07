@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strings"
@@ -25,8 +26,12 @@ func redirectSuccessLogin(c echo.Context, slug string) error {
 func register(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
+	registerToken, err := hex.DecodeString(c.FormValue("registerToken"))
+	if err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
+	}
+
 	passphrase := []byte(c.FormValue("passphrase"))
-	registerToken := []byte(c.FormValue("registerToken"))
 	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
 		return jsonapi.BadRequest(err)
 	}

@@ -21,6 +21,9 @@ import (
 // InstanceType : The couchdb type for an Instance
 const InstanceType = "instances"
 
+// RegisterTokenLen is the number of bytes composing the register token
+const RegisterTokenLen = 16
+
 var (
 	// ErrNotFound is used when the seeked instance was not found
 	ErrNotFound = errors.New("Instance not found")
@@ -173,7 +176,7 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 
 	var err error
 
-	registerToken, err := crypto.GenerateRandomBytes(16)
+	registerToken, err := crypto.GenerateRandomBytes(RegisterTokenLen)
 	if err != nil {
 		return nil, err
 	}
