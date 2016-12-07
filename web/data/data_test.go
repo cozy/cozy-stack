@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
-	"github.com/cozy/cozy-stack/web"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -113,7 +113,7 @@ func TestMain(m *testing.M) {
 	}
 
 	handler := echo.New()
-	handler.HTTPErrorHandler = web.ErrorHandler
+	handler.HTTPErrorHandler = errors.ErrorHandler
 	Routes(handler.Group("/data", injectInstance(inst)))
 	ts = httptest.NewServer(handler)
 

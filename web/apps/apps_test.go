@@ -128,10 +128,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	router, err := web.Create(&web.Config{
-		Router:    echo.New(),
-		ServeApps: Serve,
-	})
+	router, err := web.Create(echo.New(), Serve)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

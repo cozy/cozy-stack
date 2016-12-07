@@ -3,6 +3,8 @@ package auth
 import (
 	"bytes"
 	"fmt"
+	"html/template"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -14,10 +16,20 @@ import (
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web"
+	"github.com/cozy/cozy-stack/web/apps"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
+
+type renderer struct {
+	t *template.Template
+}
+
+func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return r.t.ExecuteTemplate(w, name, data)
+}
 
 const domain = "cozy.example.net"
 
@@ -242,7 +254,10 @@ func TestMain(m *testing.M) {
 	registerToken = i.RegisterToken
 
 	r := echo.New()
-	r.HTTPErrorHandler = web.ErrorHandler
+	r.HTTPErrorHandler = errors.ErrorHandler
+	r.Renderer = &renderer{
+		t: template.Must(template.ParseGlob("../../assets/templates/*.html")),
+	}
 	Routes(r.Group("", middlewares.NeedInstance))
 
 	r.GET("/test", func(c echo.Context) error {
@@ -255,9 +270,7 @@ func TestMain(m *testing.M) {
 		return c.String(http.StatusOK, content)
 	}, middlewares.NeedInstance)
 
-	handler, err := web.Create(&web.Config{
-		Router: r,
-	})
+	handler, err := web.Create(r, apps.Serve)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
