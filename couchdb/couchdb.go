@@ -300,7 +300,7 @@ func DeleteDoc(db Database, doc Doc) (err error) {
 	return
 }
 
-// UpdateDoc update a document. The document ID and Rev should be fillled.
+// UpdateDoc update a document. The document ID and Rev should be filled.
 // The doc SetRev function will be called with the new rev.
 func UpdateDoc(db Database, doc Doc) (err error) {
 	doctype := doc.DocType()

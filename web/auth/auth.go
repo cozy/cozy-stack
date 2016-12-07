@@ -130,6 +130,19 @@ func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) 
 	return u.String() + "#", nil
 }
 
+func registerClient(c echo.Context) error {
+	// TODO add rate-limiting to prevent DOS attacks
+	instance := middlewares.GetInstance(c)
+	client := new(Client)
+	if err := c.Bind(client); err != nil {
+		return err
+	}
+	if err := client.Create(instance); err != nil {
+		return c.JSON(err.Code, err)
+	}
+	return c.JSON(http.StatusCreated, client)
+}
+
 // IsLoggedIn returns true if the context has a valid session cookie.
 func IsLoggedIn(c echo.Context) bool {
 	_, err := GetSession(c)
@@ -143,4 +156,6 @@ func Routes(router *echo.Group) {
 	router.GET("/auth/login", loginForm)
 	router.POST("/auth/login", login)
 	router.DELETE("/auth/login", logout)
+
+	router.POST("/auth/register", registerClient)
 }
