@@ -2,7 +2,6 @@
 package data
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -49,7 +48,7 @@ func createDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	instance := middlewares.GetInstance(c)
 
-	var doc = couchdb.JSONDoc{Type: doctype}
+	doc := couchdb.JSONDoc{Type: doctype}
 	if err := c.Bind(&doc.M); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
@@ -220,8 +219,7 @@ func changesFeed(c echo.Context) error {
 	// Drop a clear error for parameters not supported by stack
 	for key := range c.QueryParams() {
 		if !allowedChangesParams[key] {
-			err := fmt.Errorf("Unsuported query parameter '%s'", key)
-			return jsonapi.NewError(http.StatusBadRequest, err)
+			return jsonapi.NewError(http.StatusBadRequest, "Unsuported query parameter '%s'", key)
 		}
 	}
 
@@ -235,12 +233,11 @@ func changesFeed(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	var limitString = c.QueryParam("limit")
-	var limit = 0
+	limitString := c.QueryParam("limit")
+	limit := 0
 	if limitString != "" {
 		if limit, err = strconv.Atoi(limitString); err != nil {
-			err = fmt.Errorf("Invalid limit value '%s'", err.Error())
-			return jsonapi.NewError(http.StatusBadRequest, err)
+			return jsonapi.NewError(http.StatusBadRequest, "Invalid limit value '%s'", err.Error())
 		}
 	}
 
@@ -251,6 +248,10 @@ func changesFeed(c echo.Context) error {
 		Since:   c.QueryParam("since"),
 		Limit:   limit,
 	})
+
+	if err != nil {
+		return err
+	}
 
 	return c.JSON(http.StatusOK, results)
 }
