@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -151,46 +152,64 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 	return
 }
 
-// ModificationHandler handles PATCH requests on /files/:file-id and
-// /files/metadata.
+// ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
 //
 // It can be used to modify the file or directory metadata, as well as
 // moving and renaming it in the filesystem.
-func ModificationHandler(c echo.Context) error {
-	var err error
+func ModifyMetadataByIDHandler(c echo.Context) error {
+	patch, err := getPatch(c)
+	if err != nil {
+		return wrapVfsError(err)
+	}
 
 	instance := middlewares.GetInstance(c)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, c.Param("file-id"), false)
+	if err != nil {
+		return wrapVfsError(err)
+	}
 
-	patch := &vfs.DocPatch{}
+	return applyPatch(c, instance, patch, dir, file)
+}
 
-	var obj *jsonapi.ObjectMarshalling
-	if obj, err = jsonapi.Bind(c.Request(), &patch); err != nil {
-		return jsonapi.BadJSON()
+// ModifyMetadataByPathHandler handles PATCH requests on /files/:file-id
+//
+// It can be used to modify the file or directory metadata, as well as
+// moving and renaming it in the filesystem.
+func ModifyMetadataByPathHandler(c echo.Context) error {
+	patch, err := getPatch(c)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	instance := middlewares.GetInstance(c)
+	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"), false)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	return applyPatch(c, instance, patch, dir, file)
+}
+
+func getPatch(c echo.Context) (*vfs.DocPatch, error) {
+	var patch vfs.DocPatch
+
+	obj, err := jsonapi.Bind(c.Request(), &patch)
+	if err != nil {
+		return nil, jsonapi.BadJSON()
 	}
 
 	if rel, ok := obj.GetRelationship("parent"); ok {
 		rid, ok := rel.ResourceIdentifier()
 		if !ok {
-			return jsonapi.BadJSON()
+			return nil, jsonapi.BadJSON()
 		}
 		patch.DirID = &rid.ID
 	}
 
-	fileID := c.Param("file-id")
+	return &patch, nil
+}
 
-	var file *vfs.FileDoc
-	var dir *vfs.DirDoc
-
-	if fileID == "metadata" {
-		dir, file, err = vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"), false)
-	} else {
-		dir, file, err = vfs.GetDirOrFileDoc(instance, fileID, false)
-	}
-
-	if err != nil {
-		return wrapVfsError(err)
-	}
-
+func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch, dir *vfs.DirDoc, file *vfs.FileDoc) error {
 	var doc couchdb.Doc
 	if dir != nil {
 		doc = dir
@@ -198,11 +217,12 @@ func ModificationHandler(c echo.Context) error {
 		doc = file
 	}
 
-	if err = checkIfMatch(c, doc.Rev()); err != nil {
+	if err := checkIfMatch(c, doc.Rev()); err != nil {
 		return wrapVfsError(err)
 	}
 
 	var data jsonapi.Object
+	var err error
 	if fileDoc, ok := doc.(*vfs.FileDoc); ok {
 		data, err = vfs.ModifyFileMetadata(instance, fileDoc, patch)
 	} else if dirDoc, ok := doc.(*vfs.DirDoc); ok {
@@ -359,9 +379,11 @@ func Routes(router *echo.Group) {
 	router.GET("/metadata", ReadMetadataFromPathHandler)
 	router.GET("/:file-id", ReadMetadataFromIDHandler)
 
+	router.PATCH("/metadata", ModifyMetadataByPathHandler)
+	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
+
 	router.POST("/", CreationHandler)
 	router.POST("/:dir-id", CreationHandler)
-	router.PATCH("/:file-id", ModificationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
