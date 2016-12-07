@@ -49,24 +49,25 @@ func ValidChangesStyle(style string) (ChangesFeedStyle, error) {
 // A ChangesRequest are all parameters than can be passed to a changes feed
 type ChangesRequest struct {
 	DocType string `url:"-"`
+	// see Changes Feeds. Default is normal.
+	Feed ChangesFeedMode `url:"feed,omitempty"`
+	// Maximum period in milliseconds to wait for a change before the response
+	// is sent, even if there are no results. Only applicable for longpoll or
+	// continuous feeds. Default value is specified by httpd/changes_timeout
+	// configuration option. Note that 60000 value is also the default maximum
+	// timeout to prevent undetected dead connections.
+	Timeout int `url:"timeout,omitempty"`
+	// Period in milliseconds after which an empty line is sent in the results.
+	// Only applicable for longpoll, continuous, and eventsource feeds. Overrides
+	// any timeout to keep the feed alive indefinitely. Default is 60000. May be
+	// true to use default value.
+	Heartbeat int `url:"heartbeat,omitempty"`
 	// Includes conflicts information in response. Ignored if include_docs isn’t
 	// true. Default is false.
 	Conflicts bool `url:"conflicts,omitempty"`
 	// Return the change results in descending sequence order (most recent change
 	// first). Default is false.
 	Descending bool `url:"descending,omitempty"`
-	// see Changes Feeds. Default is normal.
-	Feed ChangesFeedMode `url:"feed,omitempty"`
-	// Reference to a filter function from a design document that will filter
-	// whole stream emitting only filtered events. See the section Change
-	// Notifications in the book CouchDB The Definitive Guide for more
-	// information.
-	Filter string `url:"filter,omitempty"`
-	// Period in milliseconds after which an empty line is sent in the results.
-	// Only applicable for longpoll, continuous, and eventsource feeds. Overrides
-	// any timeout to keep the feed alive indefinitely. Default is 60000. May be
-	// true to use default value.
-	Heartbeat int `url:"heartbeat,omitempty"`
 	// Include the associated document with each result. If there are conflicts,
 	// only the winning revision is returned. Default is false.
 	IncludeDocs bool `url:"include_docs,omitempty"`
@@ -91,12 +92,11 @@ type ChangesRequest struct {
 	// all_docs will return all leaf revisions (including conflicts and deleted
 	// former conflicts).
 	Style ChangesFeedStyle `url:"style,omitempty"`
-	// Maximum period in milliseconds to wait for a change before the response
-	// is sent, even if there are no results. Only applicable for longpoll or
-	// continuous feeds. Default value is specified by httpd/changes_timeout
-	// configuration option. Note that 60000 value is also the default maximum
-	// timeout to prevent undetected dead connections.
-	Timeout int `url:"timeout,omitempty"`
+	// Reference to a filter function from a design document that will filter
+	// whole stream emitting only filtered events. See the section Change
+	// Notifications in the book CouchDB The Definitive Guide for more
+	// information.
+	Filter string `url:"filter,omitempty"`
 	// Allows to use view functions as filters. Documents counted as “passed” for
 	// view filter in case if map function emits at least one record for them.
 	// See _view for more info.
