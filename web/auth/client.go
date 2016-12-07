@@ -57,7 +57,7 @@ func (c *Client) SetRev(rev string) { c.CouchRev = rev }
 // in the Client Dynamic Registration Protocol
 // See https://tools.ietf.org/html/rfc7591#section-3.2.2 for errors
 type ClientRegistrationError struct {
-	Code        int
+	Code        int    `json:"-"`
 	Error       string `json:"error"`
 	Description string `json:"error_description,omitempty"`
 }

@@ -132,11 +132,16 @@ func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) 
 
 func registerClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
-	instance := middlewares.GetInstance(c)
+	if c.Request().Header.Get("Content-Type") != "application/json" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "bad_content_type",
+		})
+	}
 	client := new(Client)
 	if err := c.Bind(client); err != nil {
 		return err
 	}
+	instance := middlewares.GetInstance(c)
 	if err := client.Create(instance); err != nil {
 		return c.JSON(err.Code, err)
 	}

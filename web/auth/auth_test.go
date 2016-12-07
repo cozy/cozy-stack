@@ -3,6 +3,7 @@ package auth
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -268,6 +269,125 @@ func TestIsLoggedInAfterLogin(t *testing.T) {
 	assert.Equal(t, "logged_in", content)
 }
 
+func TestRegisterClientNotJSON(t *testing.T) {
+	res, err := postForm("/auth/register", &url.Values{"foo": {"bar"}})
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	res.Body.Close()
+}
+
+func TestRegisterClientNoRedirectURI(t *testing.T) {
+	res, err := postJSON("/auth/register", echo.Map{
+		"client_name": "cozy-test",
+		"software_id": "github.com/cozy/cozy-test",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	var body map[string]string
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, err)
+	assert.Equal(t, "invalid_redirect_uri", body["error"])
+	assert.Equal(t, "redirect_uris is mandatory", body["error_description"])
+}
+
+func TestRegisterClientNoClientName(t *testing.T) {
+	res, err := postJSON("/auth/register", echo.Map{
+		"redirect_uris": []string{"https://example.org/oauth/callback"},
+		"software_id":   "github.com/cozy/cozy-test",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	var body map[string]string
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, err)
+	assert.Equal(t, "invalid_client_metadata", body["error"])
+	assert.Equal(t, "client_name is mandatory", body["error_description"])
+}
+
+func TestRegisterClientNoSoftwareID(t *testing.T) {
+	res, err := postJSON("/auth/register", echo.Map{
+		"redirect_uris": []string{"https://example.org/oauth/callback"},
+		"client_name":   "cozy-test",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	var body map[string]string
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, err)
+	assert.Equal(t, "invalid_client_metadata", body["error"])
+	assert.Equal(t, "software_id is mandatory", body["error_description"])
+}
+
+var clientOneID string
+
+func TestRegisterClientSuccessWithJustMandatoryFields(t *testing.T) {
+	res, err := postJSON("/auth/register", echo.Map{
+		"redirect_uris": []string{"https://example.org/oauth/callback"},
+		"client_name":   "cozy-test",
+		"software_id":   "github.com/cozy/cozy-test",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status)
+	var client Client
+	err = json.NewDecoder(res.Body).Decode(&client)
+	assert.NoError(t, err)
+	assert.NotEqual(t, client.ClientID, "")
+	assert.NotEqual(t, client.ClientID, "ignored")
+	assert.Equal(t, client.ClientSecret, "XXX")
+	assert.Equal(t, client.SecretExpiresAt, 0)
+	assert.Equal(t, client.RegistrationToken, "xxx")
+	assert.Equal(t, client.RedirectURIs, []string{"https://example.org/oauth/callback"})
+	assert.Equal(t, client.GrantTypes, []string{"authorization_code", "refresh_token"})
+	assert.Equal(t, client.ResponseTypes, []string{"code"})
+	assert.Equal(t, client.ClientName, "cozy-test")
+	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
+	clientOneID = client.ClientID
+}
+
+func TestRegisterClientSuccessWithAllFields(t *testing.T) {
+	res, err := postJSON("/auth/register", echo.Map{
+		"_id":                       "ignored",
+		"_rev":                      "ignored",
+		"client_id":                 "ignored",
+		"client_secret":             "ignored",
+		"client_secret_expires_at":  42,
+		"registration_access_token": "ignored",
+		"redirect_uris":             []string{"https://example.org/oauth/callback"},
+		"grant_types":               []string{"ignored"},
+		"response_types":            []string{"ignored"},
+		"client_name":               "cozy-test",
+		"client_kind":               "test",
+		"client_uri":                "https://github.com/cozy/cozy-test",
+		"logo_uri":                  "https://raw.github.com/cozy/cozy-setup/gh-pages/assets/images/happycloud.png",
+		"policy_uri":                "https://github/com/cozy/cozy-test/master/policy.md",
+		"software_id":               "github.com/cozy/cozy-test",
+		"software_version":          "v0.1.2",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status)
+	var client Client
+	err = json.NewDecoder(res.Body).Decode(&client)
+	assert.NoError(t, err)
+	assert.Equal(t, client.CouchID, "")
+	assert.Equal(t, client.CouchRev, "")
+	assert.NotEqual(t, client.ClientID, "")
+	assert.NotEqual(t, client.ClientID, "ignored")
+	assert.NotEqual(t, client.ClientID, clientOneID)
+	assert.Equal(t, client.ClientSecret, "XXX")
+	assert.Equal(t, client.SecretExpiresAt, 0)
+	assert.Equal(t, client.RegistrationToken, "xxx")
+	assert.Equal(t, client.RedirectURIs, []string{"https://example.org/oauth/callback"})
+	assert.Equal(t, client.GrantTypes, []string{"authorization_code", "refresh_token"})
+	assert.Equal(t, client.ResponseTypes, []string{"code"})
+	assert.Equal(t, client.ClientName, "cozy-test")
+	assert.Equal(t, client.ClientKind, "test")
+	assert.Equal(t, client.ClientURI, "https://github.com/cozy/cozy-test")
+	assert.Equal(t, client.LogoURI, "https://raw.github.com/cozy/cozy-setup/gh-pages/assets/images/happycloud.png")
+	assert.Equal(t, client.PolicyURI, "https://github/com/cozy/cozy-test/master/policy.md")
+	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
+	assert.Equal(t, client.SoftwareVersion, "v0.1.2")
+}
+
 func TestMain(m *testing.M) {
 	instanceURL, _ = url.Parse("https://" + domain + "/")
 	j, _ := cookiejar.New(nil)
@@ -321,6 +441,15 @@ func postForm(u string, v *url.Values) (*http.Response, error) {
 	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
 	req.Host = domain
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	return client.Do(req)
+}
+
+func postJSON(u string, v echo.Map) (*http.Response, error) {
+	body, _ := json.Marshal(v)
+	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBuffer(body))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
 	return client.Do(req)
 }
 
