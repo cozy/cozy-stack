@@ -2,7 +2,6 @@ package middlewares
 
 import (
 	"github.com/cozy/cozy-stack/instance"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
 
@@ -15,7 +14,7 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		i, err := instance.Get(c.Request().Host)
 		if err != nil {
-			return jsonapi.InternalServerError(err)
+			return err
 		}
 		c.Set("instance", i)
 		return next(c)

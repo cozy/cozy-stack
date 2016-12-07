@@ -16,7 +16,7 @@ func redirectSuccessLogin(c echo.Context, slug string) error {
 	instance := middlewares.GetInstance(c)
 	session, err := NewSession(instance)
 	if err != nil {
-		return jsonapi.InternalServerError(err)
+		return err
 	}
 	c.SetCookie(session.ToCookie())
 	return c.Redirect(http.StatusSeeOther, instance.SubDomain(slug))

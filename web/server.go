@@ -29,6 +29,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 
@@ -189,7 +190,11 @@ func ErrorHandler(err error, c echo.Context) {
 		return
 	}
 
-	if ce, ok = err.(*couchdb.Error); ok {
+	if os.IsExist(err) {
+		je = jsonapi.Conflict(err)
+	} else if os.IsNotExist(err) {
+		je = jsonapi.NotFound(err)
+	} else if ce, ok = err.(*couchdb.Error); ok {
 		je = &jsonapi.Error{
 			Status: ce.StatusCode,
 			Title:  ce.Name,
@@ -207,11 +212,7 @@ func ErrorHandler(err error, c echo.Context) {
 		if c.Request().Method == http.MethodHead {
 			c.NoContent(je.Status)
 		} else {
-			// doc := jsonapi.Document{Errors: jsonapi.ErrorList{je}}
-			// res.Header().Set("Content-Type", jsonapi.ContentType)
-			// res.WriteHeader(je.Status)
-			// json.NewEncoder(res).Encode(doc)
-			jsonapi.DataErrorList(c, je)
+			jsonapi.DataError(c, je)
 		}
 	}
 
