@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
@@ -53,12 +52,8 @@ given domain.
 			return err
 		}
 
-		params := url.Values{
-			"registerToken": {hex.EncodeToString(i.RegisterToken)},
-		}
-
 		log.Infof("Instance created with success for domain %s", i.Domain)
-		log.Infof("Owner registration link : onboarding.%s/?%s", i.Addr(), params.Encode())
+		log.Infof("Registration token: \"%s\"", hex.EncodeToString(i.RegisterToken))
 		log.Debugf("Instance created: %#v", i)
 		return nil
 	},

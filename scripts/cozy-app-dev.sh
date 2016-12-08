@@ -104,6 +104,7 @@ do_start() {
 
 	echo ""
 	echo "Go to http://app.${cozy_dev_addr}/"
+	[ -n "${reg_token}" ] && echo "Registration token: ${reg_token}"
 	echo ""
 
 	${COZY_STACK_PATH} serve \
@@ -162,6 +163,7 @@ do_create_instance() {
 	set -e
 	if [ "${add_instance_ret}" = "0" ]; then
 		echo "ok"
+		reg_token=$(echo "${add_instance_val}" | grep 'token' | sed 's/.*token: \\"\([A-Fa-f0-9]*\)\\".*/\1/g')
 	else
 		exists_test=$(echo "${add_instance_val}" | grep -i "already exists" || echo "")
 		if [ -z "${exists_test}" ]; then
