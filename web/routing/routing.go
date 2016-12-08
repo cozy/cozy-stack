@@ -26,6 +26,7 @@ import (
 )
 
 var templatesList = []string{
+	"error.html",
 	"login.html",
 }
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/apps"
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -148,6 +149,64 @@ func registerClient(c echo.Context) error {
 	return c.JSON(http.StatusCreated, client)
 }
 
+func authorizeForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	if c.QueryParam("response_type") != "code" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Invalid response type",
+		})
+	}
+	if c.QueryParam("state") == "" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "The state parameter is mandatory",
+		})
+	}
+	if c.QueryParam("client_id") == "" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "The client_id parameter is mandatory",
+		})
+	}
+	if c.QueryParam("redirect_uri") == "" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "The redirect_uri parameter is mandatory",
+		})
+	}
+	if c.QueryParam("scope") == "" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "The scope parameter is mandatory",
+		})
+	}
+
+	var client Client
+	if err := couchdb.GetDoc(instance, ClientDocType, c.QueryParam("client_id"), &client); err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "The client must be registered",
+		})
+	}
+	if !client.AcceptRedirectURI(c.QueryParam("redirect_uri")) {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "The redirect_uri parameter doesn't match the registered ones",
+		})
+	}
+
+	if !IsLoggedIn(c) {
+		redirect := url.Values{
+			"redirect": {c.Request().URL.String()},
+		}
+		u := url.URL{
+			Host:     instance.Domain,
+			Path:     "/auth/login",
+			RawQuery: redirect.Encode(),
+		}
+		return c.Redirect(http.StatusSeeOther, u.String())
+	}
+
+	// TODO Trust On First Use
+
+	return c.Render(http.StatusOK, "authorize.html", echo.Map{})
+}
+
 // IsLoggedIn returns true if the context has a valid session cookie.
 func IsLoggedIn(c echo.Context) bool {
 	_, err := GetSession(c)
@@ -163,4 +222,5 @@ func Routes(router *echo.Group) {
 	router.DELETE("/auth/login", logout)
 
 	router.POST("/auth/register", registerClient)
+	router.GET("/auth/authorize", authorizeForm)
 }

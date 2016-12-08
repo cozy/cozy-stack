@@ -154,3 +154,14 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.CouchRev = ""
 	return nil
 }
+
+// AcceptRedirectURI returns true if the given URI matches the registered
+// redirect_uris
+func (c *Client) AcceptRedirectURI(u string) bool {
+	for _, uri := range c.RedirectURIs {
+		if u == uri {
+			return true
+		}
+	}
+	return false
+}
