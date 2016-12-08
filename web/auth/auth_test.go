@@ -290,6 +290,21 @@ func TestRegisterClientNoRedirectURI(t *testing.T) {
 	assert.Equal(t, "redirect_uris is mandatory", body["error_description"])
 }
 
+func TestRegisterClientInvalidRedirectURI(t *testing.T) {
+	res, err := postJSON("/auth/register", echo.Map{
+		"redirect_uris": []string{"ftp://example.org/"},
+		"client_name":   "cozy-test",
+		"software_id":   "github.com/cozy/cozy-test",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	var body map[string]string
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, err)
+	assert.Equal(t, "invalid_redirect_uri", body["error"])
+	assert.Equal(t, "ftp://example.org/ is invalid", body["error_description"])
+}
+
 func TestRegisterClientNoClientName(t *testing.T) {
 	res, err := postJSON("/auth/register", echo.Map{
 		"redirect_uris": []string{"https://example.org/oauth/callback"},

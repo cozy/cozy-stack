@@ -1,7 +1,9 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
@@ -75,7 +77,19 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 			Description: "redirect_uris is mandatory",
 		}
 	}
-	// TODO check that redirect URIs are valids
+	for _, redirectURI := range c.RedirectURIs {
+		u, err := url.Parse(redirectURI)
+		if err != nil ||
+			(u.Scheme != "http" && u.Scheme != "https") ||
+			u.Host == i.Domain ||
+			u.Fragment != "" {
+			return &ClientRegistrationError{
+				Code:        http.StatusBadRequest,
+				Error:       "invalid_redirect_uri",
+				Description: fmt.Sprintf("%s is invalid", redirectURI),
+			}
+		}
+	}
 	if c.ClientName == "" {
 		return &ClientRegistrationError{
 			Code:        http.StatusBadRequest,
