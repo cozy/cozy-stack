@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/web"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ func testRequest(t *testing.T, url string) {
 
 func TestRoutes(t *testing.T) {
 	handler := echo.New()
-	handler.HTTPErrorHandler = web.ErrorHandler
+	handler.HTTPErrorHandler = errors.ErrorHandler
 	Routes(handler.Group("/status"))
 
 	ts := httptest.NewServer(handler)
