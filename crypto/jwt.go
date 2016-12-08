@@ -1,6 +1,6 @@
 package crypto
 
-import jwt "github.com/dgrijalva/jwt-go"
+import jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
 // SigningMethod is the algorithm choosed for signing JWT.
 // Currently, it is HMAC-SHA-512

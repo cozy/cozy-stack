@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // ClientDocType is the CouchDB document type for OAuth2 clients
