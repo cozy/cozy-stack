@@ -57,6 +57,15 @@ func TestGetCorrectInstance(t *testing.T) {
 	}
 }
 
+func TestInstancehasHmacSecret(t *testing.T) {
+	instance, err := Get("test.cozycloud.cc")
+	if assert.NoError(t, err) {
+		assert.NotNil(t, instance)
+		assert.NotNil(t, instance.HmacSecret)
+		assert.Equal(t, len(instance.HmacSecret), 64)
+	}
+}
+
 func TestInstanceHasRootDir(t *testing.T) {
 	var root vfs.DirDoc
 	prefix := getDB(t, "test.cozycloud.cc")

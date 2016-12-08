@@ -49,6 +49,7 @@ type Instance struct {
 	StorageURL     string `json:"storage"`        // Where the binaries are persisted
 	RegisterToken  []byte `json:"registerToken,omitempty"`
 	PassphraseHash []byte `json:"passphraseHash,omitempty"`
+	HmacSecret     []byte `json:"hmacSecret,omitempty"` // For signing JWT, in OAuth2 in particular
 	storage        afero.Fs
 }
 
@@ -181,10 +182,16 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, err
 	}
 
+	hmacSecret, err := crypto.GenerateRandomBytes(64)
+	if err != nil {
+		return nil, err
+	}
+
 	i := &Instance{
 		Domain:        domain,
 		StorageURL:    domainURL.String(),
 		RegisterToken: registerToken,
+		HmacSecret:    hmacSecret,
 	}
 
 	err = i.makeStorageFs()

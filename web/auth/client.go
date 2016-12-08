@@ -2,8 +2,12 @@ package auth
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/crypto"
+	"github.com/cozy/cozy-stack/instance"
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 // ClientDocType is the CouchDB document type for OAuth2 clients
@@ -63,7 +67,7 @@ type ClientRegistrationError struct {
 }
 
 // Create is a function that sets some fields, and then save it in Couch.
-func (c *Client) Create(db couchdb.Database) *ClientRegistrationError {
+func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	if len(c.RedirectURIs) == 0 {
 		return &ClientRegistrationError{
 			Code:        http.StatusBadRequest,
@@ -90,13 +94,38 @@ func (c *Client) Create(db couchdb.Database) *ClientRegistrationError {
 	c.CouchID = ""
 	c.CouchRev = ""
 	c.ClientID = ""
-	c.ClientSecret = "XXX" // TODO
+	c.ClientSecret = ""
 	c.SecretExpiresAt = 0
-	c.RegistrationToken = "xxx" // TODO
+	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
 
-	err := couchdb.CreateDoc(db, c)
+	if err := couchdb.CreateDoc(i, c); err != nil {
+		return &ClientRegistrationError{
+			Code:  http.StatusInternalServerError,
+			Error: "internal_server_error",
+		}
+	}
+
+	var err error
+	c.ClientSecret, err = crypto.NewJWT(i.HmacSecret, jwt.StandardClaims{
+		Audience: "client_secret",
+		Issuer:   i.Domain,
+		IssuedAt: time.Now().Unix(),
+		Subject:  c.CouchID,
+	})
+	if err != nil {
+		return &ClientRegistrationError{
+			Code:  http.StatusInternalServerError,
+			Error: "internal_server_error",
+		}
+	}
+	c.RegistrationToken, err = crypto.NewJWT(i.HmacSecret, jwt.StandardClaims{
+		Audience: "registration",
+		Issuer:   i.Domain,
+		IssuedAt: time.Now().Unix(),
+		Subject:  c.CouchID,
+	})
 	if err != nil {
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
