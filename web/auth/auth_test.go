@@ -2,6 +2,7 @@ package auth
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"io"
@@ -62,19 +63,27 @@ func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 }
 
 func TestRegisterWrongToken(t *testing.T) {
-	res, err := postForm("/register", &url.Values{
+	res1, err := postForm("/register", &url.Values{
 		"passphrase":    {"MyPassphrase"},
-		"registerToken": {"123"},
+		"registerToken": {"BADBEEF"},
 	})
 	assert.NoError(t, err)
-	defer res.Body.Close()
-	assert.Equal(t, "400 Bad Request", res.Status)
+	defer res1.Body.Close()
+	assert.Equal(t, "400 Bad Request", res1.Status)
+
+	res2, err := postForm("/register", &url.Values{
+		"passphrase":    {"MyPassphrase"},
+		"registerToken": {"XYZ"},
+	})
+	assert.NoError(t, err)
+	defer res2.Body.Close()
+	assert.Equal(t, "400 Bad Request", res2.Status)
 }
 
 func TestRegisterCorrectToken(t *testing.T) {
 	res, err := postForm("/register", &url.Values{
 		"passphrase":    {"MyPassphrase"},
-		"registerToken": {string(registerToken)},
+		"registerToken": {hex.EncodeToString(registerToken)},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()

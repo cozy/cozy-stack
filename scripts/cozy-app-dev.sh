@@ -104,6 +104,7 @@ do_start() {
 
 	echo ""
 	echo "Go to http://app.${cozy_dev_addr}/"
+	[ -n "${reg_token}" ] && echo "Registration token: ${reg_token}"
 	echo ""
 
 	${COZY_STACK_PATH} serve \
@@ -123,7 +124,7 @@ do_check_couchdb() {
 
 	printf "checking couchdb on ${couchdb_addr}... "
 	couch_test=$(curl -s -XGET "${couchdb_addr}" || echo "")
-	couch_vers=$(echo "${couch_test}" | grep "\"version\":\s*\"2" || echo "")
+	couch_vers=$(grep "\"version\":\s*\"2" <<< "${couch_test}" || echo "")
 
 	if [ -z "${couch_test}" ]; then
 		echo "failed"
@@ -162,8 +163,9 @@ do_create_instance() {
 	set -e
 	if [ "${add_instance_ret}" = "0" ]; then
 		echo "ok"
+		reg_token=$(grep 'token' <<< "${add_instance_val}" | sed 's/.*token: \\"\([A-Fa-f0-9]*\)\\".*/\1/g')
 	else
-		exists_test=$(echo "${add_instance_val}" | grep -i "already exists" || echo "")
+		exists_test=$(grep -i "already exists" <<< "${add_instance_val}" || echo "")
 		if [ -z "${exists_test}" ]; then
 			echo_err "\n${add_instance_val} ${add_instance_ret}"
 			exit 1
