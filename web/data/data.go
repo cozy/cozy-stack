@@ -3,6 +3,7 @@ package data
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -47,7 +48,7 @@ func createDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	instance := middlewares.GetInstance(c)
 
-	var doc = couchdb.JSONDoc{Type: doctype}
+	doc := couchdb.JSONDoc{Type: doctype}
 	if err := c.Bind(&doc.M); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
@@ -205,9 +206,62 @@ func findDocuments(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"docs": results})
 }
 
+var allowedChangesParams = map[string]bool{
+	"feed":  true,
+	"style": true,
+	"since": true,
+	"limit": true,
+}
+
+func changesFeed(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	// Drop a clear error for parameters not supported by stack
+	for key := range c.QueryParams() {
+		if !allowedChangesParams[key] {
+			return jsonapi.NewError(http.StatusBadRequest, "Unsuported query parameter '%s'", key)
+		}
+	}
+
+	feed, err := couchdb.ValidChangesMode(c.QueryParam("feed"))
+	if err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
+	}
+
+	feedStyle, err := couchdb.ValidChangesStyle(c.QueryParam("style"))
+	if err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
+	}
+
+	limitString := c.QueryParam("limit")
+	limit := 0
+	if limitString != "" {
+		if limit, err = strconv.Atoi(limitString); err != nil {
+			return jsonapi.NewError(http.StatusBadRequest, "Invalid limit value '%s'", err.Error())
+		}
+	}
+
+	results, err := couchdb.GetChanges(instance, &couchdb.ChangesRequest{
+		DocType: c.Get("doctype").(string),
+		Feed:    feed,
+		Style:   feedStyle,
+		Since:   c.QueryParam("since"),
+		Limit:   limit,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, results)
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.Use(validDoctype)
+	router.GET("/:doctype/_changes", changesFeed)
+	// POST=GET see http://docs.couchdb.org/en/2.0.0/api/database/changes.html#post--db-_changes)
+	router.POST("/:doctype/_changes", changesFeed)
 	router.GET("/:doctype/:docid", getDoc)
 	router.PUT("/:doctype/:docid", updateDoc)
 	router.DELETE("/:doctype/:docid", deleteDoc)

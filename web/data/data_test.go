@@ -578,3 +578,80 @@ func TestFindDocumentsWithoutIndex(t *testing.T) {
 	assert.Contains(t, out2.Errors[0].Title, "no_index")
 	assert.Contains(t, out2.Errors[0].Detail, "no matching index")
 }
+
+func TestGetChanges(t *testing.T) {
+
+	assert.NoError(t, couchdb.ResetDB(testInstance, Type))
+
+	url := ts.URL + "/data/" + Type + "/_changes?style=all_docs"
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("Host", Host)
+	out, res, err := doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+	var seqno = out["last_seq"].(string)
+
+	// creates 3 docs
+	_ = getDocForTest()
+	_ = getDocForTest()
+	_ = getDocForTest()
+
+	url = ts.URL + "/data/" + Type + "/_changes?limit=2&since=" + seqno
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Host", Host)
+	out, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Len(t, out["results"].([]interface{}), 2)
+
+	url = ts.URL + "/data/" + Type + "/_changes?since=" + seqno
+	req, _ = http.NewRequest("GET", url, nil)
+	req.Header.Add("Host", Host)
+	out, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Len(t, out["results"].([]interface{}), 3)
+}
+
+func TestPostChanges(t *testing.T) {
+	url := ts.URL + "/data/" + Type + "/_changes?style=all_docs"
+	req, _ := http.NewRequest("POST", url, nil)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.NoError(t, err)
+}
+
+func TestWrongFeedChanges(t *testing.T) {
+	url := ts.URL + "/data/" + Type + "/_changes?feed=continuous"
+	req, _ := http.NewRequest("POST", url, nil)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+	assert.NoError(t, err)
+}
+
+func TestWrongStyleChanges(t *testing.T) {
+	url := ts.URL + "/data/" + Type + "/_changes?style=not_a_valid_style"
+	req, _ := http.NewRequest("POST", url, nil)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+	assert.NoError(t, err)
+}
+
+func TestLimitIsNoNumber(t *testing.T) {
+	url := ts.URL + "/data/" + Type + "/_changes?limit=not_a_number"
+	req, _ := http.NewRequest("POST", url, nil)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+	assert.NoError(t, err)
+}
+
+func TestUnsupportedOption(t *testing.T) {
+	url := ts.URL + "/data/" + Type + "/_changes?inlude_docs=true"
+	req, _ := http.NewRequest("POST", url, nil)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+	assert.NoError(t, err)
+}

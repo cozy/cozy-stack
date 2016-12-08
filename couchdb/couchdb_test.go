@@ -177,6 +177,58 @@ func TestQuery(t *testing.T) {
 
 }
 
+func TestChangesSuccess(t *testing.T) {
+	err := ResetDB(TestPrefix, TestDoctype)
+	assert.NoError(t, err)
+
+	var request = &ChangesRequest{
+		DocType: TestDoctype,
+	}
+	response, err := GetChanges(TestPrefix, request)
+	var seqnoAfterCreates = response.LastSeq
+	assert.NoError(t, err)
+	assert.Len(t, response.Results, 0)
+
+	doc1 := makeTestDoc()
+	doc2 := makeTestDoc()
+	doc3 := makeTestDoc()
+	CreateDoc(TestPrefix, doc1)
+	CreateDoc(TestPrefix, doc2)
+	CreateDoc(TestPrefix, doc3)
+
+	request = &ChangesRequest{
+		DocType: TestDoctype,
+		Since:   seqnoAfterCreates,
+	}
+
+	response, err = GetChanges(TestPrefix, request)
+	assert.NoError(t, err)
+	assert.Len(t, response.Results, 3)
+
+	request = &ChangesRequest{
+		DocType: TestDoctype,
+		Since:   seqnoAfterCreates,
+		Limit:   2,
+	}
+
+	response, err = GetChanges(TestPrefix, request)
+	assert.NoError(t, err)
+	assert.Len(t, response.Results, 2)
+
+	seqnoAfterCreates = response.LastSeq
+
+	doc4 := makeTestDoc()
+	CreateDoc(TestPrefix, doc4)
+
+	request = &ChangesRequest{
+		DocType: TestDoctype,
+		Since:   seqnoAfterCreates,
+	}
+	response, err = GetChanges(TestPrefix, request)
+	assert.NoError(t, err)
+	assert.Len(t, response.Results, 2)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
