@@ -77,7 +77,7 @@ func (i *Instance) Addr() string {
 // usefull with apps slugs
 // TODO https is hardcoded
 func (i *Instance) SubDomain(s string) string {
-	return "https://" + s + "." + i.Addr()
+	return "https://" + s + "." + i.Addr() + "/"
 }
 
 // PageURL returns the full URL for a page on the cozy stack

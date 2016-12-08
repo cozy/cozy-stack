@@ -67,7 +67,7 @@ func TestRegisterCorrectToken(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://onboarding.cozy.example.net",
+		assert.Equal(t, "https://onboarding.cozy.example.net/",
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 1)
@@ -211,12 +211,33 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://home.cozy.example.net",
+		assert.Equal(t, "https://home.cozy.example.net/#",
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 1)
 		assert.Equal(t, cookies[0].Name, SessionCookieName)
 		assert.NotEmpty(t, cookies[0].Value)
+	}
+}
+
+func TestLoginWithRedirect(t *testing.T) {
+	res1, err := postForm("/auth/login", &url.Values{
+		"passphrase": {"MyPassphrase"},
+		"redirect":   {"foo.bar"},
+	})
+	assert.NoError(t, err)
+	defer res1.Body.Close()
+	assert.Equal(t, "400 Bad Request", res1.Status)
+
+	res2, err := postForm("/auth/login", &url.Values{
+		"passphrase": {"MyPassphrase"},
+		"redirect":   {"https://sub." + domain + "/#myfragment"},
+	})
+	assert.NoError(t, err)
+	defer res2.Body.Close()
+	if assert.Equal(t, "303 See Other", res2.Status) {
+		assert.Equal(t, "https://sub.cozy.example.net/#",
+			res2.Header.Get("Location"))
 	}
 }
 

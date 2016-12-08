@@ -12,14 +12,16 @@ import (
 	"github.com/labstack/echo"
 )
 
-func redirectSuccessLogin(c echo.Context, slug string) error {
+func redirectSuccessLogin(c echo.Context, redirect string) error {
 	instance := middlewares.GetInstance(c)
+
 	session, err := NewSession(instance)
 	if err != nil {
 		return err
 	}
+
 	c.SetCookie(session.ToCookie())
-	return c.Redirect(http.StatusSeeOther, instance.SubDomain(slug))
+	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
 func register(c echo.Context) error {
@@ -31,7 +33,7 @@ func register(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	return redirectSuccessLogin(c, apps.OnboardingSlug)
+	return redirectSuccessLogin(c, instance.SubDomain(apps.OnboardingSlug))
 }
 
 func loginForm(c echo.Context) error {
@@ -40,7 +42,7 @@ func loginForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
 	}
 
-	redirect, err := checkRedirectParam(c)
+	redirect, err := checkRedirectParam(c, "")
 	if err != nil {
 		return err
 	}
@@ -54,17 +56,18 @@ func loginForm(c echo.Context) error {
 
 func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if IsLoggedIn(c) {
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
-	}
 
-	redirect, err := checkRedirectParam(c)
+	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.HomeSlug))
 	if err != nil {
 		return err
 	}
 
-	pass := c.FormValue("passphrase")
-	if err := instance.CheckPassphrase([]byte(pass)); err != nil {
+	if IsLoggedIn(c) {
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+
+	passphrase := []byte(c.FormValue("passphrase"))
+	if err := instance.CheckPassphrase(passphrase); err != nil {
 		return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
 			"InvalidPassphrase": true,
 			"HasRedirect":       redirect != "",
@@ -72,7 +75,7 @@ func login(c echo.Context) error {
 		})
 	}
 
-	return redirectSuccessLogin(c, apps.HomeSlug)
+	return redirectSuccessLogin(c, redirect)
 }
 
 func logout(c echo.Context) error {
@@ -87,10 +90,13 @@ func logout(c echo.Context) error {
 
 // checkRedirectParam returns the optional redirect query parameter. If not
 // empty, we check that the redirect is a subdomain of the cozy-instance.
-func checkRedirectParam(c echo.Context) (string, error) {
+func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) {
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
-		return "", nil
+		if defaultRedirect == "" {
+			return "", nil
+		}
+		redirect = defaultRedirect
 	}
 
 	u, err := url.Parse(redirect)
