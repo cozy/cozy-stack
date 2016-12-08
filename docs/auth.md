@@ -333,6 +333,13 @@ Content-type: application/json
 
 The tokens are formatted as [JSON Web Tokens (JWT)](https://jwt.io/).
 
+Claim | Fullname  | What it identifies
+------|-----------|-------------------------------------------------------------------------
+`aud` | Audience  | Identify the recipient where the token can be used (like `registration`)
+`iss` | Issuer    | Identify the Cozy instance (its domain in fact)
+`iat` | Issued At | Identify when the token was issued (Unix timestamp)
+`sub` | Subject   | Identify the client that can use the token
+
 > What happens when the user has lost her password?
 
 She can reset it from the command-line, like this:
