@@ -24,6 +24,7 @@ func TestNewJWT(t *testing.T) {
 		assert.True(t, ok, "The signing method should be HMAC")
 		return secret, nil
 	})
+	assert.NoError(t, err)
 	assert.True(t, token.Valid)
 
 	claims, ok := token.Claims.(jwt.MapClaims)
