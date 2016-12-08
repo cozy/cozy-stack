@@ -37,19 +37,19 @@ func register(c echo.Context) error {
 }
 
 func loginForm(c echo.Context) error {
-	if IsLoggedIn(c) {
-		instance := middlewares.GetInstance(c)
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
-	}
+	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, "")
+	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.HomeSlug))
 	if err != nil {
 		return err
 	}
 
+	if IsLoggedIn(c) {
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+
 	return c.Render(http.StatusOK, "login.html", echo.Map{
 		"InvalidPassphrase": false,
-		"HasRedirect":       redirect != "",
 		"Redirect":          redirect,
 	})
 }
@@ -67,24 +67,25 @@ func login(c echo.Context) error {
 	}
 
 	passphrase := []byte(c.FormValue("passphrase"))
-	if err := instance.CheckPassphrase(passphrase); err != nil {
-		return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
-			"InvalidPassphrase": true,
-			"HasRedirect":       redirect != "",
-			"Redirect":          redirect,
-		})
+	if err := instance.CheckPassphrase(passphrase); err == nil {
+		return redirectSuccessLogin(c, redirect)
 	}
 
-	return redirectSuccessLogin(c, redirect)
+	return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
+		"InvalidPassphrase": true,
+		"Redirect":          redirect,
+	})
 }
 
 func logout(c echo.Context) error {
 	// TODO check that a valid CtxToken is given to protect against CSRF attacks
 	instance := middlewares.GetInstance(c)
+
 	session, err := GetSession(c)
 	if err == nil {
 		c.SetCookie(session.Delete(instance))
 	}
+
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login"))
 }
 
@@ -93,9 +94,6 @@ func logout(c echo.Context) error {
 func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) {
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
-		if defaultRedirect == "" {
-			return "", nil
-		}
 		redirect = defaultRedirect
 	}
 
