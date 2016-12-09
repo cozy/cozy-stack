@@ -159,7 +159,6 @@ Example and description of the attributes of a `io.cozy.jobs`:
 ```js
 {
   "worker": "sendmail",    // worker type name
-  "worker_id": "123123",   // worker id, if any
   "trigger": "@cron",     // "@cron", "@interval", "@event" or ""
   "trigger_id": "1234",   // trigger id, if any
   "options": {
@@ -170,7 +169,6 @@ Example and description of the attributes of a `io.cozy.jobs`:
     "arguments": {},        // arguments message
   },
   "state": "running",      // queued, running, errored
-  "worker_id": "123456",   // or unknown if in the queue
   "try_count": 1,          // number of time the job has been executed.
                            // increased at the start of new execution
   "queued_at": "2016-09-19T12:35:08Z",  // time of the queuing
@@ -219,7 +217,6 @@ Accept: application/vnd.api+json
     "rev": "1-12334",
     "attributes": {
       "worker": "sendmail",
-      "worker_id": "123123",
       "trigger": "@cron",
       "trigger_id": "4321",
       "options": {
@@ -230,7 +227,6 @@ Accept: application/vnd.api+json
         "arguments": {},
       },
       "state": "running",
-      "worker_id": "123456",
       "try_count": 1,
       "queued_at": "2016-09-19T12:35:08Z",
       "started_at": "2016-09-19T12:35:08Z",
@@ -271,7 +267,6 @@ Accept: application/vnd.api+json
     "rev": "1-12334",
     "attributes": {
       "worker": "sendmail",
-      "worker_id": "123123",
       "trigger": "@cron",
       "trigger_id": "4321",
       "options": {
@@ -282,7 +277,6 @@ Accept: application/vnd.api+json
         "arguments": {},
       },
       "state": "running",
-      "worker_id": "123456",
       "try_count": 1,
       "queued_at": "2016-09-19T12:35:08Z",
       "started_at": "2016-09-19T12:35:08Z",
