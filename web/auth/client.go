@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
-	"github.com/labstack/gommon/log"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
