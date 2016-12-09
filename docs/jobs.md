@@ -1,11 +1,11 @@
 Cozy Jobs
 =========
 
-Jobs are designed to represent asynchronous tasks that your cozy can execute. These tasks can be scheduled in advance, recurring or suddnn and provide various services.
+Jobs are designed to represent asynchronous tasks that your cozy can execute. These tasks can be scheduled in advance, recurring or sudden and provide various services.
 
 At the time, we do not provide "generic" and programmable tasks. This list of available workers is part of the defined API.
 
-The job queue can be either local to the cozy-stack when used as a monolitic instance (self-hosted for instance) or distributed via a redis server for distributed infrastructures.
+The job queue can be either local to the cozy-stack when used as a monolithic instance (self-hosted for instance) or distributed via a redis server for distributed infrastructures.
 
 This doc introduces two cozy types:
 
@@ -16,7 +16,7 @@ This doc introduces two cozy types:
 Triggers
 --------
 
-Jobs can be launched by three types of triggers:
+Jobs can be launched by three different types of triggers:
 
   - `@cron` to schedule recurring jobs scheduled at specific times
   - `@interval` to schedule periodic jobs executed at a given fix interval
@@ -89,7 +89,7 @@ Examples:
 
 ### `@interval` syntax
 
-The `@interval` trigger uses the same syntax as golang's `time.ParseDuration` (only supporting time units above seconds):
+The `@interval` trigger uses the same syntax as golang's `time.ParseDuration` (but only support time units above seconds):
 
 ```
 A duration string is a possibly signed sequence of decimal numbers, each with
@@ -112,7 +112,7 @@ The `@event` syntax is not determined yet. Its main purpose will be to describe 
 
 ### Launcher rate limitation
 
-Every trigger has a rate limitation policy to prevent triggers from spawning too many jobs at the same time. The specific rules are not yet decided, but they should work along these two properties:
+Every trigger has a rate limitation policy to prevent triggers from spawning too many jobs at the same time. The specific rules are not yet decided, but they should work along the two following properties.
 
 #### Parallel limitations
 
@@ -120,7 +120,7 @@ Each trigger will have a limited number of workers it is allowed to queue in par
 
 #### Back pressure
 
-Each trigger should have a backpressure policy to drop job spawning when not necessary. For instance: 
+Each trigger should have a back-pressure policy to drop job spawning when not necessary. For instance:
 
 * *throttling policy* (aka *debouncing*) to drop job actions given timings parameters. ie. a job scheduled after contact updates should only be triggered once after several contacts are updated in a given time lapse, or should be scheduled when the updates stopped for a given time
 * *side effect limitation* in the case of an `@event` trigger, a job doing an external API call should not be spawned if another one is already running for another close event
@@ -130,13 +130,13 @@ Each trigger should have a backpressure policy to drop job spawning when not nec
 Error Handling
 --------------
 
-Jobs can fail to execute their task. We have two ways to parametrize such cases.
+Jobs can fail to execute their task. We have two ways to parameterize such cases.
 
 ### Retry
 
-A retry count can be optionnaly specified to ask the worker to re-execute the task if it has failed.
+A retry count can be optionally specified to ask the worker to re-execute the task if it has failed.
 
-Each retry is executed after a configurable delay. The try count is part of the attributes of the job. Also, each occuring error is kept in the `errors` field containing all the errors that may have happened.
+Each retry is executed after a configurable delay. The try count is part of the attributes of the job. Also, each occurring error is kept in the `errors` field containing all the errors that may have happened.
 
 ### Timeout
 
@@ -146,7 +146,7 @@ If a job does not end after the specified amount of time, it will be aborted. A 
 
 ### Defaults
 
-By default, jobs are paramterized with a maximum of 3 tries with 1 minute timeout.
+By default, jobs are parameterized with a maximum of 3 tries with 1 minute timeout.
 
 These defaults may vary given the workload of the workers.
 
@@ -466,7 +466,7 @@ Worker pool
 
 The consuming side of the job queue is handled by a worker pool.
 
-On a monolithic cozy-stack, the worker pool has a parametrizable fixed size of workers. The default value is not yet determined. Each time a worker has finished a job, it check the queue and based on the priority and the queued date of the job, picks a new job to execute.
+On a monolithic cozy-stack, the worker pool has a configurable fixed size of workers. The default value is not yet determined. Each time a worker has finished a job, it check the queue and based on the priority and the queued date of the job, picks a new job to execute.
 
 
 Permissions
