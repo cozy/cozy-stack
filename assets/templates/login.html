@@ -15,12 +15,12 @@
         </header>
         <div class="container">
           <form method="POST" action="/auth/login" class="login auth">
+            <input type="hidden" name="redirect" value="{{.Redirect}}" />
             <div role="region">
               <h1>Welcome</h1>
               <p id="login-passphrase-tip" class="help">Please enter your passphrase to access to your Cozy</p>
               <label for="login-passphrase" aria-describedby="login-passphrase-tip" class="with-input">
                 <input id="login-passphrase" name="passphrase" placeholder="Passphrase" autofocus="" type="password">
-                <input type="hidden" name="redirect" value="{{.Redirect}}" />
               </label>
             </div>
             <footer>
