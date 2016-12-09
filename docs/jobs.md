@@ -114,10 +114,17 @@ The `@event` syntax is not determined yet. Its main purpose will be to describe 
 
 Every launcher has a rate limitation policy to prevent launchers from spawning too many jobs at the same time. The specific rules are not yet decided, but they should work along these two properties:
 
-  - *parallel limitations*: each launcher will have a limited number of workers it is allowed to queue in parallel
-  - *back pressure*: each launcher should have a backpressure policy to drop job spawning when not necessary. For instance: 
-    - in the case of an `@event` launcher, a job doing an external API call should not be spawned if another one is already running for another close event.
-    - when no worker is available, or the queue has too many elements, it can decide to drop the job action (given some informations)
+#### Parallel limitations
+
+Each launcher will have a limited number of workers it is allowed to queue in parallel.
+
+#### Back pressure
+
+Each launcher should have a backpressure policy to drop job spawning when not necessary. For instance: 
+
+* *throttling policy* (aka *debouncing*) to drop job actions given timings parameters. ie. a job scheduled after contact updates should only be triggered once after several contacts are updated in a given time lapse, or should be scheduled when the updates stopped for a given time
+* *side effect limitation* in the case of an `@event` launcher, a job doing an external API call should not be spawned if another one is already running for another close event
+* *full queue* when no worker is available, or the queue has too many elements, it can decide to drop the job action (given some informations)
 
 
 Error Handling
@@ -137,6 +144,11 @@ A worker may never end. To prevent this, a configurable timeout value is specifi
 
 If a job does not end after the specified amount of time, it will be aborted. A timeout is just like another error from the worker and can provoke a retry if specified.
 
+### Defaults
+
+By default, jobs are paramterized with a maximum of 3 tries with 1 minute timeout.
+
+These defaults may vary given the workload of the workers.
 
 Job Data
 --------
