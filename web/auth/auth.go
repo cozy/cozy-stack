@@ -207,7 +207,9 @@ func authorizeForm(c echo.Context) error {
 		}
 		return c.Redirect(http.StatusSeeOther, u.String())
 	}
+
 	// TODO Trust On First Use
+	// TODO CSRF token
 
 	permissions := strings.Split(scope, " ")
 	client.ClientID = client.CouchID
