@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
+	"github.com/labstack/gommon/log"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -80,7 +81,6 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	for _, redirectURI := range c.RedirectURIs {
 		u, err := url.Parse(redirectURI)
 		if err != nil ||
-			(u.Scheme != "http" && u.Scheme != "https") ||
 			u.Host == i.Domain ||
 			u.Fragment != "" {
 			return &ClientRegistrationError{
@@ -129,6 +129,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		Subject:  c.CouchID,
 	})
 	if err != nil {
+		log.Errorf("[oauth] Failed to create the client secret token: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
@@ -141,6 +142,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		Subject:  c.CouchID,
 	})
 	if err != nil {
+		log.Errorf("[oauth] Failed to create the registration access token: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
