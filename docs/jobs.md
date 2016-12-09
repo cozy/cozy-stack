@@ -10,25 +10,25 @@ The job queue can be either local to the cozy-stack when used as a monolitic ins
 This doc introduces two cozy types:
 
   - `io.cozy.jobs` for jobs
-  - `io.cozy.launchers` for launchers
+  - `io.cozy.triggers` for triggers
 
 
-Launchers
----------
+Triggers
+--------
 
-Jobs can be launched by three types of launchers:
+Jobs can be launched by three types of triggers:
 
   - `@cron` to schedule recurring jobs scheduled at specific times
   - `@interval` to schedule periodic jobs executed at a given fix interval
   - `@event` to launch a job after a change in the cozy
 
-These three launchers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
+These three triggers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
 
-Jobs can also be queued up programatically, without the help of a specific launcher directly via the `/jobs/queue` API. In this case the `launcher` name is empty.
+Jobs can also be queued up programatically, without the help of a specific trigger directly via the `/jobs/queue` API. In this case the `trigger` name is empty.
 
 ### `@cron` syntax
 
-In order to schedule recurring jobs, the `cron` launcher has the syntax using six fields:
+In order to schedule recurring jobs, the `@cron` trigger has the syntax using six fields:
 
 ```
 Field name   | Mandatory? | Allowed values  | Allowed special characters
@@ -89,7 +89,7 @@ Examples:
 
 ### `@interval` syntax
 
-The `@interval` launcher uses the same syntax as golang's `time.ParseDuration` (only supporting time units above seconds):
+The `@interval` trigger uses the same syntax as golang's `time.ParseDuration` (only supporting time units above seconds):
 
 ```
 A duration string is a possibly signed sequence of decimal numbers, each with
@@ -112,18 +112,18 @@ The `@event` syntax is not determined yet. Its main purpose will be to describe 
 
 ### Launcher rate limitation
 
-Every launcher has a rate limitation policy to prevent launchers from spawning too many jobs at the same time. The specific rules are not yet decided, but they should work along these two properties:
+Every trigger has a rate limitation policy to prevent triggers from spawning too many jobs at the same time. The specific rules are not yet decided, but they should work along these two properties:
 
 #### Parallel limitations
 
-Each launcher will have a limited number of workers it is allowed to queue in parallel.
+Each trigger will have a limited number of workers it is allowed to queue in parallel.
 
 #### Back pressure
 
-Each launcher should have a backpressure policy to drop job spawning when not necessary. For instance: 
+Each trigger should have a backpressure policy to drop job spawning when not necessary. For instance: 
 
 * *throttling policy* (aka *debouncing*) to drop job actions given timings parameters. ie. a job scheduled after contact updates should only be triggered once after several contacts are updated in a given time lapse, or should be scheduled when the updates stopped for a given time
-* *side effect limitation* in the case of an `@event` launcher, a job doing an external API call should not be spawned if another one is already running for another close event
+* *side effect limitation* in the case of an `@event` trigger, a job doing an external API call should not be spawned if another one is already running for another close event
 * *full queue* when no worker is available, or the queue has too many elements, it can decide to drop the job action (given some informations)
 
 
@@ -160,8 +160,8 @@ Example and description of the attributes of a `io.cozy.jobs`:
 {
   "worker": "sendmail",    // worker type name
   "worker_id": "123123",   // worker id, if any
-  "launcher": "@cron",     // "@cron", "@interval", "@event" or ""
-  "launcher_id": "1234",   // launcher id, if any
+  "trigger": "@cron",     // "@cron", "@interval", "@event" or ""
+  "trigger_id": "1234",   // trigger id, if any
   "options": {
     "priority": 3,         // priority from 1 to 100, higher number is higher priority
     "timeout": 60,         // timeout value in seconds
@@ -220,8 +220,8 @@ Accept: application/vnd.api+json
     "attributes": {
       "worker": "sendmail",
       "worker_id": "123123",
-      "launcher": "@cron",
-      "launcher_id": "4321",
+      "trigger": "@cron",
+      "trigger_id": "4321",
       "options": {
         "priority": 3,
         "timeout": 60,
@@ -272,8 +272,8 @@ Accept: application/vnd.api+json
     "attributes": {
       "worker": "sendmail",
       "worker_id": "123123",
-      "launcher": "@cron",
-      "launcher_id": "4321",
+      "trigger": "@cron",
+      "trigger_id": "4321",
       "options": {
         "priority": 3,
         "timeout": 60,
@@ -330,14 +330,14 @@ Accept: application/vnd.api+json
 ```
 
 
-### POST /jobs/launchers/:worker-name
+### POST /jobs/triggers/:worker-name
 
-Add a launcher of the worker. See [launchers' descriptions](#launchers) to see the types of launcher and their arguments syntax.
+Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 
 #### Request
 
 ```http
-POST /jobs/launchers/sendmail HTTP/1.1
+POST /jobs/triggers/sendmail HTTP/1.1
 Accept: application/vnd.api+json
 
 {
@@ -358,7 +358,7 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.launchers",
+    "type": "io.cozy.triggers",
     "id": "123123",
     "rev": "1-12334",
     "attributes": {
@@ -374,21 +374,21 @@ Accept: application/vnd.api+json
       }
     },
     "links": {
-      "self": "/jobs/launchers/123123"
+      "self": "/jobs/triggers/123123"
     }
   }
 }
 ```
 
 
-### GET /jobs/launchers/:launcher-id
+### GET /jobs/triggers/:trigger-id
 
-Get a launcher informations given its ID.
+Get a trigger informations given its ID.
 
 #### Request
 
 ```http
-GET /jobs/launchers/123123 HTTP/1.1
+GET /jobs/triggers/123123 HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -397,7 +397,7 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.launchers",
+    "type": "io.cozy.triggers",
     "id": "123123",
     "rev": "1-12334",
     "attributes": {
@@ -413,21 +413,21 @@ Accept: application/vnd.api+json
       }
     },
     "links": {
-      "self": "/jobs/launchers/123123"
+      "self": "/jobs/triggers/123123"
     }
   }
 }
 ```
 
 
-### GET /jobs/launchers/
+### GET /jobs/triggers/
 
-Get the list of launchers.
+Get the list of triggers.
 
 #### Request
 
 ```http
-GET /jobs/launchers/ HTTP/1.1
+GET /jobs/triggers/ HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -437,12 +437,12 @@ Accept: application/vnd.api+json
 {
   "data": [
     {
-      "type": "io.cozy.launchers",
+      "type": "io.cozy.triggers",
       "id": "123123",
       "rev": "1-12334",
       "attributes": {},
       "links": {
-        "self": "/jobs/launchers/123123"
+        "self": "/jobs/triggers/123123"
       }
     },
   ]
@@ -450,21 +450,21 @@ Accept: application/vnd.api+json
 ```
 
 
-### DELETE /jobs/launchers/:launcher-id
+### DELETE /jobs/triggers/:trigger-id
 
-Delete a launcher given its ID.
+Delete a trigger given its ID.
 
 #### Request
 
 ```http
-DELETE /jobs/launchers/123123 HTTP/1.1
+DELETE /jobs/triggers/123123 HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
 #### Status codes
 
-* 204 No Content, when the launcher has been successfully removed
-* 404 Not Found, when the launcher does not exist
+* 204 No Content, when the trigger has been successfully removed
+* 404 Not Found, when the trigger does not exist
 
 
 Worker pool
