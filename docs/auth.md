@@ -156,11 +156,73 @@ This route is used by OAuth2 clients to dynamically register them-selves.
 See [OAuth 2.0 Dynamic Client Registration
 Protocol](https://tools.ietf.org/html/rfc7591) for the details.
 
-It gives to the client these informations:
+The client must send a JSON request, with at least:
+
+- `redirect_uris`, an array of strings with the redirect URIs that the client
+  will use in the authorization flow
+- `client_name`, human-readable string name of the client to be presented to
+  the end-user during authorization
+- `software_id`, an identifier of the software used by the client (it should
+  remain the same for all instances of the client software, whereas
+  `client_id` varies between instances).
+
+It can also send the optional fields:
+
+- `client_kind` (possible values: web, desktop, mobile, browser, etc.)
+- `client_uri`, URL string of a web page providing information about the client
+- `logo_uri`, to display an icon to the user in the authorization flow
+- `policy_uri`, URL string that points to a human-readable privacy policy
+  document that describes how the deployment organization collects, uses,
+  retains, and discloses personal data
+- `software_version`, a version identifier string for the client software.
+
+The server gives to the client the previous fields and these informations:
 
 - `client_id`
 - `client_secret`
 - `registration_access_token`
+
+Example:
+
+```http
+POST /auth/register HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/json
+Accept: application/json
+
+{
+  "redirect_uris": ["https://client.example.org/oauth/callback"],
+  "client_name": "Client",
+  "software_id": "github.com/example/client",
+  "software_version": "2.0.1",
+  "client_kind": "web",
+  "client_uri": "https://client.example.org/",
+  "logo_uri": "https://client.example.org/logo.svg",
+  "policy_uri": "https://client/example.org/policy"
+}
+```
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+  "client_secret_expires_at": 0,
+  "registration_access_token": "J9l-ZhwP[...omitted for brevity...]",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "redirect_uris": ["https://client.example.org/oauth/callback"],
+  "client_name": "Client",
+  "software_id": "github.com/example/client",
+  "software_version": "2.0.1",
+  "client_kind": "web",
+  "client_uri": "https://client.example.org/",
+  "logo_uri": "https://client.example.org/logo.svg",
+  "policy_uri": "https://client/example.org/policy"
+}
+```
 
 ### GET /auth/register/:client-id
 ### PUT /auth/register/:client-id
@@ -270,6 +332,13 @@ Content-type: application/json
 > What format is used for tokens?
 
 The tokens are formatted as [JSON Web Tokens (JWT)](https://jwt.io/).
+
+Claim | Fullname  | What it identifies
+------|-----------|-------------------------------------------------------------------------
+`aud` | Audience  | Identify the recipient where the token can be used (like `registration`)
+`iss` | Issuer    | Identify the Cozy instance (its domain in fact)
+`iat` | Issued At | Identify when the token was issued (Unix timestamp)
+`sub` | Subject   | Identify the client that can use the token
 
 > What happens when the user has lost her password?
 
