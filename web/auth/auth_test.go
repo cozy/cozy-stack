@@ -153,7 +153,7 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	assert.Equal(t, "400 Bad Request", res2.Status)
 	assert.Equal(t, "text/plain; charset=utf-8", res2.Header.Get("Content-Type"))
 
-	req3, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("ftp://sub."+domain+"/foo/bar"), nil)
+	req3, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("ftp://sub."+domain+"/foo"), nil)
 	req3.Host = domain
 	res3, err := client.Do(req3)
 	defer res3.Body.Close()
@@ -292,7 +292,7 @@ func TestRegisterClientNoRedirectURI(t *testing.T) {
 
 func TestRegisterClientInvalidRedirectURI(t *testing.T) {
 	res, err := postJSON("/auth/register", echo.Map{
-		"redirect_uris": []string{"ftp://example.org/"},
+		"redirect_uris": []string{"http://example.org/foo#bar"},
 		"client_name":   "cozy-test",
 		"software_id":   "github.com/cozy/cozy-test",
 	})
@@ -302,7 +302,7 @@ func TestRegisterClientInvalidRedirectURI(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&body)
 	assert.NoError(t, err)
 	assert.Equal(t, "invalid_redirect_uri", body["error"])
-	assert.Equal(t, "ftp://example.org/ is invalid", body["error_description"])
+	assert.Equal(t, "http://example.org/foo#bar is invalid", body["error_description"])
 }
 
 func TestRegisterClientNoClientName(t *testing.T) {
