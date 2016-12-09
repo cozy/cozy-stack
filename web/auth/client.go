@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
-	"github.com/labstack/gommon/log"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -153,4 +153,15 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.CouchID = ""
 	c.CouchRev = ""
 	return nil
+}
+
+// AcceptRedirectURI returns true if the given URI matches the registered
+// redirect_uris
+func (c *Client) AcceptRedirectURI(u string) bool {
+	for _, uri := range c.RedirectURIs {
+		if u == uri {
+			return true
+		}
+	}
+	return false
 }

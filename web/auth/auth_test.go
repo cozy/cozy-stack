@@ -56,6 +56,7 @@ func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 
 var jar *testJar
 var client *http.Client
+var clientID string
 
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	content, err := getTestURL()
@@ -333,8 +334,6 @@ func TestRegisterClientNoSoftwareID(t *testing.T) {
 	assert.Equal(t, "software_id is mandatory", body["error_description"])
 }
 
-var clientOneID string
-
 func TestRegisterClientSuccessWithJustMandatoryFields(t *testing.T) {
 	res, err := postJSON("/auth/register", echo.Map{
 		"redirect_uris": []string{"https://example.org/oauth/callback"},
@@ -358,7 +357,7 @@ func TestRegisterClientSuccessWithJustMandatoryFields(t *testing.T) {
 	assert.Equal(t, client.ResponseTypes, []string{"code"})
 	assert.Equal(t, client.ClientName, "cozy-test")
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
-	clientOneID = client.ClientID
+	clientID = client.ClientID
 }
 
 func TestRegisterClientSuccessWithAllFields(t *testing.T) {
@@ -389,7 +388,7 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	assert.Equal(t, client.CouchRev, "")
 	assert.NotEqual(t, client.ClientID, "")
 	assert.NotEqual(t, client.ClientID, "ignored")
-	assert.NotEqual(t, client.ClientID, clientOneID)
+	assert.NotEqual(t, client.ClientID, clientID)
 	assert.NotEqual(t, client.ClientSecret, "")
 	assert.NotEqual(t, client.ClientSecret, "ignored")
 	assert.NotEqual(t, client.RegistrationToken, "")
@@ -405,6 +404,120 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	assert.Equal(t, client.PolicyURI, "https://github/com/cozy/cozy-test/master/policy.md")
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 	assert.Equal(t, client.SoftwareVersion, "v0.1.2")
+}
+
+func TestAuthorizeFormRedirectsWhenNotLoggedIn(t *testing.T) {
+	anonymousClient := &http.Client{CheckRedirect: noRedirect}
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := anonymousClient.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "303 See Other", res.Status)
+}
+
+func TestAuthorizeFormBadResponseType(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=token&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "Invalid response type")
+}
+
+func TestAuthorizeFormNoState(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The state parameter is mandatory")
+}
+
+func TestAuthorizeFormNoClientId(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The client_id parameter is mandatory")
+}
+
+func TestAuthorizeFormNoRedirectURI(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The redirect_uri parameter is mandatory")
+}
+
+func TestAuthorizeFormNoScope(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The scope parameter is mandatory")
+}
+
+func TestAuthorizeFormInvalidClient(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id=f00", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The client must be registered")
+}
+
+func TestAuthorizeFormInvalidRedirectURI(t *testing.T) {
+	u := url.QueryEscape("https://evil.com/")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The redirect_uri parameter doesn&#39;t match the registered ones")
+}
+
+func TestAuthorizeFormSuccess(t *testing.T) {
+	u := url.QueryEscape("https://example.org/oauth/callback")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "would like permission to access your Cozy")
 }
 
 func TestMain(m *testing.M) {

@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"os"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
-	"github.com/labstack/gommon/log"
 )
 
 // ErrorHandler is the default error handler of our server. It always write a

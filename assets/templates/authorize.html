@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <title>Cozy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/settings/theme.css">
+    <link rel="stylesheet" href="/assets/styles/stack.css">
+  </head>
+  <body>
+    <main role="application">
+      <section class="popup">
+        <header>
+          <a href="https://cozy.io" target="_blank" title="Cozy Website"></a>
+        </header>
+        <div class="container">
+          <form method="POST" action="/auth/authorize" class="login auth">
+            <input type="hidden" name="client_id" value="{{.Client.ClientID}}" />
+            <input type="hidden" name="response_type" value="{{.ResponseType}}" />
+            <input type="hidden" name="state" value="{{.State}}" />
+            <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
+            <input type="hidden" name="scope" value="{{.Scope}}" />
+            <div role="region">
+              <h1>Authorize application</h1>
+              {{if .Client.LogoURI}}
+              <img class="client-logo" src="{{.Client.LogoURI}}" />
+              {{end}}
+              <p class="help">
+                <strong>
+                {{if .Client.ClientURI}}
+                <a href="{{.Client.ClientURI}}">{{.Client.ClientName}}</a>
+                {{else}}
+                {{.Client.ClientName}}
+                {{end}}
+                </strong>
+                would like permission to access your Cozy.
+                {{if .Client.PolicyURI}}
+                You can read <a href="{{.Client.PolicyURI}}">its policy</a> about the usage it will make of your data.
+                {{end}}
+                This permission give access to:
+              </p>
+              <ul>
+                {{range $index, $perm := .Permissions}}
+                <li>{{$perm}}</li>
+                {{end}}
+              </ul>
+            </div>
+            <footer>
+              <div class="controls">
+                <button type="submit" class="btn btn-primary">Accept</button>
+              </div>
+            </footer>
+          </form>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

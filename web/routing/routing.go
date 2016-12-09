@@ -1,4 +1,4 @@
-//go:generate statik -src=../assets
+//go:generate statik -src=../../assets -dest=..
 
 package routing
 
@@ -26,6 +26,8 @@ import (
 )
 
 var templatesList = []string{
+	"authorize.html",
+	"error.html",
 	"login.html",
 }
 
