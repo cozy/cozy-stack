@@ -150,7 +150,8 @@ By default, jobs are paramterized with a maximum of 3 tries with 1 minute timeou
 
 These defaults may vary given the workload of the workers.
 
-Job Data
+
+Jobs API
 --------
 
 Example and description of the attributes of a `io.cozy.jobs`:
@@ -191,9 +192,6 @@ Example and description of a job creation options — as you can see, the option
 }
 ```
 
-
-Jobs API
---------
 
 ### GET /jobs/:job-id
 
@@ -450,6 +448,28 @@ Accept: application/vnd.api+json
   ]
 }
 ```
+
+
+### DELETE /jobs/launchers/:launcher-id
+
+Delete a launcher given its ID.
+
+#### Request
+
+```http
+DELETE /jobs/launchers/123123 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Status codes
+
+* 204 No Content, when the launcher has been successfully removed
+* 404 Not Found, when the launcher does not exist
+
+
+Worker pool
+-----------
+
 
 
 Permissions
