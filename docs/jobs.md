@@ -1,11 +1,11 @@
 Cozy Jobs
 =========
 
-Jobs are designed to represent asynchronous tasks that your cozy can execute. These tasks can be scheduled in advance, recurring or suddenn and provide various services.
+Jobs are designed to represent asynchronous tasks that your cozy can execute. These tasks can be scheduled in advance, recurring or suddnn and provide various services.
 
 At the time, we do not provide "generic" and programmable tasks. This list of available workers is part of the defined API.
 
-The job queue can be either local the cozy-stack when used as a monolitic instance (self-hosted for instance) or distributed via a redis server for distributed infrastructures.
+The job queue can be either local to the cozy-stack when used as a monolitic instance (self-hosted for instance) or distributed via a redis server for distributed infrastructures.
 
 This doc introduces two cozy types:
 
@@ -18,8 +18,8 @@ Launchers
 
 Jobs can be launched by three types of launchers:
 
-  - `@cron` to schedule recurring jobs, either periodic or scheduled at specific times
-  - `@interval` to schedule jobs executed at a given fix interval
+  - `@cron` to schedule recurring jobs scheduled at specific times
+  - `@interval` to schedule periodic jobs executed at a given fix interval
   - `@event` to launch a job after a change in the cozy
 
 These three launchers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
@@ -89,12 +89,12 @@ Examples:
 
 ### `@interval` syntax
 
-The `@interval` launcher uses the same syntax as golang's `time.ParseDuration`:
+The `@interval` launcher uses the same syntax as golang's `time.ParseDuration` (only supporting time units above seconds):
 
 ```
 A duration string is a possibly signed sequence of decimal numbers, each with
 optional fraction and a unit suffix, such as "300ms", "1.5h" or "2h45m". Valid
-time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+time units are "s", "m", "h".
 ```
 
 Examples
@@ -117,17 +117,17 @@ Every launcher has a rate limitation policy to prevent launchers from spawning t
   - *parallel limitations*: each launcher will have a limited number of workers it is allowed to queue in parallel
   - *back pressure*: each launcher should have a backpressure policy to drop job spawning when not necessary. For instance: 
     - in the case of an `@event` launcher, a job doing an external API call should not be spawned if another one is already running for another close event.
-    - when no worker is availabe, or the queue has too many elements, it can decide to drop the job action (given some informations)
+    - when no worker is available, or the queue has too many elements, it can decide to drop the job action (given some informations)
 
 
 Error Handling
 --------------
 
-Jbos can fail to execute their task. We have two ways to parametrize how they should behave in suche cases.
+Jobs can fail to execute their task. We have two ways to parametrize such cases.
 
 ### Retry
 
-A retry count can be optionnaly specified to ask the worker to re-exute the task if it has failed.
+A retry count can be optionnaly specified to ask the worker to re-execute the task if it has failed.
 
 Each retry is executed after a configurable delay. The try count is part of the attributes of the job. Also, each occuring error is kept in the `errors` field containing all the errors that may have happened.
 
@@ -154,7 +154,7 @@ Example and description of the attributes of a `io.cozy.jobs`:
     "timeout": 60,         // timeout value in seconds
     "retry_max_count": 3,  // maximum number of retry
     "retry_delay": 10,     // retry delay in seconds between each try
-    "argument": {},        // arguments message
+    "arguments": {},        // arguments message
   },
   "state": "running",      // queued, running, errored
   "worker_id": "123456",   // or unknown if in the queue
@@ -175,7 +175,7 @@ Example and description of a job creation options — as you can see, the option
   "timeout": 60,         // timeout value in seconds
   "retry_max_count": 3,  // maximum number of retry
   "retry_delay": 10,     // retry delay in seconds between each try
-  "argument": {},        // arguments message
+  "arguments": {},        // arguments message
 }
 ```
 
@@ -217,7 +217,7 @@ Accept: application/vnd.api+json
         "timeout": 60,
         "retry_max_count": 3,
         "retry_delay": 10,
-        "argument": {},
+        "arguments": {},
       },
       "state": "running",
       "worker_id": "123456",
@@ -247,7 +247,7 @@ Accept: application/vnd.api+json
   "timeout": 60,
   "retry_max_count": 3,
   "retry_delay": 10,
-  "argument": {},
+  "arguments": {},
 }
 ```
 
@@ -269,7 +269,7 @@ Accept: application/vnd.api+json
         "timeout": 60,
         "retry_max_count": 3,
         "retry_delay": 10,
-        "argument": {},
+        "arguments": {},
       },
       "state": "running",
       "worker_id": "123456",
@@ -322,13 +322,25 @@ Accept: application/vnd.api+json
 
 ### POST /jobs/launchers/:worker-name
 
-Add a launcher of the worker. See [launchers' descriptions](#launchers) to see the types of launcher and their argument syntax.
+Add a launcher of the worker. See [launchers' descriptions](#launchers) to see the types of launcher and their arguments syntax.
 
 #### Request
 
 ```http
 POST /jobs/launchers/sendmail HTTP/1.1
 Accept: application/vnd.api+json
+
+{
+  "type": "@interval",
+  "arguments": "30m10s",
+  "options": {
+    "priority": 3,
+    "timeout": 60,
+    "retry_max_count": 3,
+    "retry_delay": 10,
+    "arguments": {},
+  }
+}
 ```
 
 #### Response
@@ -341,14 +353,14 @@ Accept: application/vnd.api+json
     "rev": "1-12334",
     "attributes": {
       "type": "@interval",
-      "argument": "30m10s",
+      "arguments": "30m10s",
       "worker": "sendmail",
       "options": {
         "priority": 3,
         "timeout": 60,
         "retry_max_count": 3,
         "retry_delay": 10,
-        "argument": {},
+        "arguments": {},
       }
     },
     "links": {
@@ -380,14 +392,14 @@ Accept: application/vnd.api+json
     "rev": "1-12334",
     "attributes": {
       "type": "@interval",
-      "argument": "30m10s",
+      "arguments": "30m10s",
       "worker": "sendmail",
       "options": {
         "priority": 3,
         "timeout": 60,
         "retry_max_count": 3,
         "retry_delay": 10,
-        "argument": {},
+        "arguments": {},
       }
     },
     "links": {
