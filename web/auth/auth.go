@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -149,50 +150,68 @@ func registerClient(c echo.Context) error {
 	return c.JSON(http.StatusCreated, client)
 }
 
-func authorizeForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	responseType := c.QueryParam("response_type")
-	state := c.QueryParam("state")
-	clientID := c.QueryParam("client_id")
-	redirectURI := c.QueryParam("redirect_uri")
-	scope := c.QueryParam("scope")
+type authorizeParams struct {
+	instance    *instance.Instance
+	state       string
+	clientID    string
+	redirectURI string
+	scope       string
+	client      *Client
+}
 
-	if responseType != "code" {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Invalid response type",
-		})
-	}
-	if state == "" {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
+	if params.state == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The state parameter is mandatory",
 		})
 	}
-	if clientID == "" {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+	if params.clientID == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The client_id parameter is mandatory",
 		})
 	}
-	if redirectURI == "" {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+	if params.redirectURI == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The redirect_uri parameter is mandatory",
 		})
 	}
-	if scope == "" {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+	if params.scope == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The scope parameter is mandatory",
 		})
 	}
 
-	var client Client
-	if err := couchdb.GetDoc(instance, ClientDocType, clientID, &client); err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+	params.client = new(Client)
+	if err := couchdb.GetDoc(params.instance, ClientDocType, params.clientID, params.client); err != nil {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The client must be registered",
 		})
 	}
-	if !client.AcceptRedirectURI(c.QueryParam("redirect_uri")) {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+	if !params.client.AcceptRedirectURI(params.redirectURI) {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The redirect_uri parameter doesn't match the registered ones",
 		})
+	}
+
+	return false, nil
+}
+
+func authorizeForm(c echo.Context) error {
+	params := authorizeParams{
+		instance:    middlewares.GetInstance(c),
+		state:       c.QueryParam("state"),
+		clientID:    c.QueryParam("client_id"),
+		redirectURI: c.QueryParam("redirect_uri"),
+		scope:       c.QueryParam("scope"),
+	}
+
+	if c.QueryParam("response_type") != "code" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Invalid response type",
+		})
+	}
+	if hasError, err := checkAuthorizeParams(c, &params); hasError {
+		return err
 	}
 
 	if !IsLoggedIn(c) {
@@ -201,7 +220,7 @@ func authorizeForm(c echo.Context) error {
 		}
 		u := url.URL{
 			Scheme:   "https",
-			Host:     instance.Domain,
+			Host:     params.instance.Domain,
 			Path:     "/auth/login",
 			RawQuery: redirect.Encode(),
 		}
@@ -211,16 +230,55 @@ func authorizeForm(c echo.Context) error {
 	// TODO Trust On First Use
 	// TODO CSRF token
 
-	permissions := strings.Split(scope, " ")
-	client.ClientID = client.CouchID
+	permissions := strings.Split(params.scope, " ")
+	params.client.ClientID = params.client.CouchID
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"Client":       client,
-		"ResponseType": responseType,
-		"State":        state,
-		"RedirectURI":  redirectURI,
-		"Scope":        scope,
-		"Permissions":  permissions,
+		"Client":      params.client,
+		"State":       params.state,
+		"RedirectURI": params.redirectURI,
+		"Scope":       params.scope,
+		"Permissions": permissions,
 	})
+}
+
+func authorize(c echo.Context) error {
+	params := authorizeParams{
+		instance:    middlewares.GetInstance(c),
+		state:       c.QueryParam("state"),
+		clientID:    c.QueryParam("client_id"),
+		redirectURI: c.QueryParam("redirect_uri"),
+		scope:       c.QueryParam("scope"),
+	}
+
+	if !IsLoggedIn(c) {
+		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
+			"Error": "You must be authenticated",
+		})
+	}
+
+	u, err := url.ParseRequestURI(params.redirectURI)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "The redirect_uri parameter is invalid",
+		})
+	}
+
+	if hasError, err := checkAuthorizeParams(c, &params); hasError {
+		return err
+	}
+
+	// TODO check CSRF token
+	// TODO update docs
+	// TODO add tests
+	// TODO create access_code
+	code := "xxx"
+
+	q := u.Query()
+	q.Set("access_code", code)
+	q.Set("state", params.state)
+	u.RawQuery = q.Encode()
+
+	return c.Redirect(http.StatusFound, u.String())
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
@@ -239,4 +297,5 @@ func Routes(router *echo.Group) {
 
 	router.POST("/auth/register", registerClient)
 	router.GET("/auth/authorize", authorizeForm)
+	router.POST("/auth/authorize", authorize)
 }
