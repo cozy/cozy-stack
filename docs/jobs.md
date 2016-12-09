@@ -470,7 +470,14 @@ Accept: application/vnd.api+json
 Worker pool
 -----------
 
+The consuming side of the job queue is handled by a worker pool.
+
+On a monolithic cozy-stack, the worker pool has a parametrizable fixed size of workers. The default value is not yet determined. Each time a worker has finished a job, it check the queue and based on the priority and the queued date of the job, picks a new job to execute.
 
 
 Permissions
 -----------
+
+In order to prevent jobs from leaking informations between applications, we may need to add filtering per applications: for instance one queue per applications.
+
+We should also have an explicit check on the permissions of the applications before launching a job scheduled by an application. For more information, refer to our [permission document](./permissions).
