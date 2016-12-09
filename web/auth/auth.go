@@ -210,6 +210,7 @@ func authorizeForm(c echo.Context) error {
 	// TODO Trust On First Use
 
 	permissions := strings.Split(scope, " ")
+	client.ClientID = client.CouchID
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
 		"Client":       client,
 		"ResponseType": responseType,
