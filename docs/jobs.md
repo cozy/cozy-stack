@@ -163,7 +163,7 @@ Example and description of the attributes of a `io.cozy.jobs`:
   "launcher": "@cron",     // "@cron", "@interval", "@event" or ""
   "launcher_id": "1234",   // launcher id, if any
   "options": {
-    "priority": 3,         // priority from 1 to 100
+    "priority": 3,         // priority from 1 to 100, higher number is higher priority
     "timeout": 60,         // timeout value in seconds
     "retry_max_count": 3,  // maximum number of retry
     "retry_delay": 10,     // retry delay in seconds between each try
