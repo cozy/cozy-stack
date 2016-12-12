@@ -23,8 +23,8 @@ const InstanceType = "instances"
 
 const (
 	registerTokenLen = 16
-	sessionSecretLen = 16
-	oauthSecretLen   = 64
+	sessionSecretLen = 64
+	oauthSecretLen   = 128
 )
 
 var (
