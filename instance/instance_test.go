@@ -62,7 +62,7 @@ func TestInstancehasOAuthSecret(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.NotNil(t, instance)
 		assert.NotNil(t, instance.OAuthSecret)
-		assert.Equal(t, len(instance.OAuthSecret), 64)
+		assert.Equal(t, len(instance.OAuthSecret), oauthSecretLen)
 	}
 }
 

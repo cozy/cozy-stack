@@ -94,13 +94,12 @@ func GetSession(c echo.Context) (*Session, error) {
 		return nil, ErrNoCookie
 	}
 
-	var sessionID string
-	err = crypto.DecodeAuthMessage(cookieMACConfig(i), []byte(cookie.Value), &sessionID)
+	sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i), []byte(cookie.Value))
 	if err != nil {
 		return nil, err
 	}
 
-	err = couchdb.GetDoc(i, SessionsType, sessionID, &s)
+	err = couchdb.GetDoc(i, SessionsType, string(sessionID), &s)
 	// invalid session id
 	if couchdb.IsNotFoundError(err) {
 		return nil, ErrInvalidID
@@ -138,7 +137,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 
 // ToCookie returns an http.Cookie for this Session
 func (s *Session) ToCookie() (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), s.ID())
+	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()))
 	if err != nil {
 		return nil, err
 	}
@@ -168,13 +167,13 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 //   + base64 encoding (4*n/3 + 2 padding)
 //   < 200 bytes
 //
-// 2048 bytes should be sufficient enough to support any type of session.
+// 256 bytes should be sufficient enough to support any type of session.
 //
 func cookieMACConfig(i *instance.Instance) *crypto.MACConfig {
 	return &crypto.MACConfig{
 		Name:   SessionCookieName,
 		Key:    i.SessionSecret,
 		MaxAge: SessionMaxAge,
-		MaxLen: 2048,
+		MaxLen: 256,
 	}
 }

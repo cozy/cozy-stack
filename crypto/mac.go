@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
-	"encoding/json"
 	"errors"
 )
 
@@ -39,15 +38,15 @@ func assertMACConfig(c *MACConfig) {
 		panic("hash key is not set")
 	}
 	if len(c.Key) < 16 {
-		panic("hash key should not long enough")
+		panic("hash key is not long enough")
 	}
 }
 
-// EncodeAuthMessage encodes a value in JSON and associates it with a message
-// authentication code for integrity and authenticity.
+// EncodeAuthMessage associates the given value with a message authentication
+// code for integrity and authenticity.
 //
-// If the value, when JSON encoded and base64 encoded with a fixed size header
-// is shorter than the configured maximum length, it will panic.
+// If the value, when base64 encoded with a fixed size header is longer than
+// the configured maximum length, it will panic.
 //
 // Message format (name prefix is in MAC but removed from message):
 //
@@ -56,7 +55,7 @@ func assertMACConfig(c *MACConfig) {
 //  | name |    time |  blob  |     hmac |
 //  |      | 8 bytes |  ----  | 32 bytes |
 //
-func EncodeAuthMessage(c *MACConfig, value interface{}) ([]byte, error) {
+func EncodeAuthMessage(c *MACConfig, value []byte) ([]byte, error) {
 	assertMACConfig(c)
 
 	maxLength := c.MaxLen
@@ -64,20 +63,14 @@ func EncodeAuthMessage(c *MACConfig, value interface{}) ([]byte, error) {
 		maxLength = defaultMaxLen
 	}
 
-	// Marshal in JSON
-	blob, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-
 	time := Timestamp()
 
 	// Create message with MAC
-	size := len(c.Name) + binary.Size(time) + len(blob) + macLen
+	size := len(c.Name) + binary.Size(time) + len(value) + macLen
 	buf := bytes.NewBuffer(make([]byte, 0, size))
 	buf.Write([]byte(c.Name))
 	binary.Write(buf, binary.BigEndian, time)
-	buf.Write(blob)
+	buf.Write(value)
 
 	// Append mac
 	buf.Write(createMAC(c.Key, buf.Bytes()))
@@ -95,8 +88,9 @@ func EncodeAuthMessage(c *MACConfig, value interface{}) ([]byte, error) {
 }
 
 // DecodeAuthMessage verifies a message authentified with message
-// authentication code and unmarshal the message value into the dst argument.
-func DecodeAuthMessage(c *MACConfig, enc []byte, dst interface{}) error {
+// authentication code and returns the message value algon with the issued time
+// of the message.
+func DecodeAuthMessage(c *MACConfig, enc []byte) ([]byte, error) {
 	assertMACConfig(c)
 
 	maxLength := c.MaxLen
@@ -106,13 +100,13 @@ func DecodeAuthMessage(c *MACConfig, enc []byte, dst interface{}) error {
 
 	// Check length
 	if len(enc) > maxLength {
-		return errMACTooLong
+		return nil, errMACTooLong
 	}
 
 	// Decode from base64
 	dec, err := base64Decode(enc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Prepend name
@@ -121,13 +115,13 @@ func DecodeAuthMessage(c *MACConfig, enc []byte, dst interface{}) error {
 	// Verify message with MAC
 	{
 		if len(dec) < macLen {
-			return errMACInvalid
+			return nil, errMACInvalid
 		}
 		var mac []byte
 		mac = dec[len(dec)-macLen:]
 		dec = dec[:len(dec)-macLen]
 		if !verifyMAC(c.Key, dec, mac) {
-			return errMACInvalid
+			return nil, errMACInvalid
 		}
 	}
 
@@ -138,14 +132,14 @@ func DecodeAuthMessage(c *MACConfig, enc []byte, dst interface{}) error {
 	// Read time and verify time ranges
 	var time int64
 	if err = binary.Read(buf, binary.BigEndian, &time); err != nil {
-		return errMACInvalid
+		return nil, errMACInvalid
 	}
 	if c.MaxAge != 0 && time < Timestamp()-c.MaxAge {
-		return errMACExpired
+		return nil, errMACExpired
 	}
 
-	// Unmarshal JSON
-	return json.NewDecoder(buf).Decode(dst)
+	// Returns the value
+	return buf.Bytes(), nil
 }
 
 // createMAC creates a MAC with HMAC-SHA256
