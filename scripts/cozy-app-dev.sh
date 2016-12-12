@@ -93,26 +93,30 @@ do_start() {
 		echo "ok"
 	fi
 
+	trap "trap - SIGTERM && kill -- -${$}" SIGINT SIGTERM EXIT
+
 	check_not_running ":${COZY_PROXY_PORT}" "proxy"
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
-	do_create_instance
 	do_start_proxy
 	check_hosts
 
 	echo "starting cozy-stack with ${vfsdir}..."
 
+	${COZY_STACK_PATH} serve \
+		--host "${COZY_STACK_HOST}" \
+		--port "${COZY_STACK_PORT}" \
+		--couchdb-host "${COUCHDB_HOST}" \
+		--couchdb-port "${COUCHDB_PORT}" \
+		--fs-url "file://localhost${vfsdir}" &
+
+	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
+
+	do_create_instance
 	echo ""
 	echo "Go to http://app.${cozy_dev_addr}/"
 	[ -n "${reg_token}" ] && echo "Registration token: ${reg_token}"
-	echo ""
-
-	${COZY_STACK_PATH} serve \
-		--port "${COZY_STACK_PORT}" \
-		--host "${COZY_STACK_HOST}" \
-		--couchdb-host "${COUCHDB_HOST}" \
-		--couchdb-port "${COUCHDB_PORT}" \
-		--fs-url "file://localhost${vfsdir}"
+	cat
 }
 
 do_check_couchdb() {
@@ -201,10 +205,10 @@ app.${COZY_PROXY_HOST} {\n\
 
 wait_for() {
 	i="0"
-	while ! curl -s --max-time 1 -XGET ${1} > /dev/null; do
-		sleep 1
+	while ! curl -s --max-time 0.1 -XGET ${1} > /dev/null; do
+		sleep 0.1
 		i=$((i+1))
-		if [ "${i}" -gt "10" ]; then
+		if [ "${i}" -gt "50" ]; then
 			echo_err "could not listen to ${2} on ${1}"
 			exit 1
 		fi

@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/settings"
 	"github.com/cozy/cozy-stack/vfs"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
 
@@ -83,6 +84,21 @@ func (i *Instance) Rev() string { return i.DocRev }
 
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
+
+// SelfLink is used to generate a JSON-API link for the instance
+func (i *Instance) SelfLink() string {
+	return "/instances/" + i.DocID
+}
+
+// Relationships is used to generate the content relationship in JSON-API format
+func (i *Instance) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the jsonapi.Object interface
+func (i *Instance) Included() []jsonapi.Object {
+	return nil
+}
 
 // Addr returns the full address of the domain of the instance
 // TODO https is hardcoded

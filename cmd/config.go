@@ -1,15 +1,28 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/crypto"
+	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 )
 
-var configCmd = &cobra.Command{
-	Use:   "config",
+var configCmdGroup = &cobra.Command{
+	Use:   "config [command]",
+	Short: "Show and manage configuration elements",
+	Long: `
+cozy-stack config allows to print and generate some parts of the configuration
+`,
+}
+
+var configPrintCmd = &cobra.Command{
+	Use:   "print",
 	Short: "Display the configuration",
 	Long: `Read the environment variables, the config file and
 the given parameters to display the configuration.`,
@@ -24,6 +37,73 @@ the given parameters to display the configuration.`,
 	},
 }
 
+var adminPasswdCmd = &cobra.Command{
+	Use:   "passwd [directory]",
+	Short: "Generate an admin passphrase",
+	Long: `
+cozy-stack instances passphrase generate a passphrase hash and save it to a file in
+the specified directory. This passphrase is the one used to authenticate accesses
+to the /admin/* routes of the API.
+
+example: cozy-stack config passwd ~/.cozy
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		directory := filepath.Join(config.AbsPath(args[0]))
+		info, err := os.Stat(directory)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("%s is not a directory", directory)
+		}
+
+		fmt.Fprintf(os.Stdout, "Passphrase:")
+		pass1, err := gopass.GetPasswdMasked()
+		if err != nil {
+			return err
+		}
+
+		fmt.Fprintf(os.Stdout, "Confirmation:")
+		pass2, err := gopass.GetPasswdMasked()
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(pass1, pass2) {
+			return fmt.Errorf("Passphrase missmatch")
+		}
+
+		b, err := crypto.GenerateFromPassphrase(pass1)
+		if err != nil {
+			return err
+		}
+
+		filename := filepath.Join(directory, config.AdminSecretFileName)
+		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0444)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if err = os.Chmod(filename, 0444); err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintln(f, string(b))
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Hashed passphrase outputed in", filename)
+		return nil
+	},
+}
+
 func init() {
-	RootCmd.AddCommand(configCmd)
+	configCmdGroup.AddCommand(configPrintCmd)
+	configCmdGroup.AddCommand(adminPasswdCmd)
+	RootCmd.AddCommand(configCmdGroup)
 }

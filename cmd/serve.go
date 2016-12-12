@@ -32,7 +32,22 @@ Use the --port and --host flags to change the listening option.`,
 			return err
 		}
 
-		return main.Start(config.ServerAddr())
+		admin := echo.New()
+		if err := routing.SetupAdminRoutes(admin); err != nil {
+			return err
+		}
+
+		errs := make(chan error)
+
+		go func() {
+			errs <- admin.Start(config.AdminServerAddr())
+		}()
+
+		go func() {
+			errs <- main.Start(config.ServerAddr())
+		}()
+
+		return <-errs
 	},
 }
 
