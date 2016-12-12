@@ -98,6 +98,8 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 
 	router.Renderer = r
 	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r.h)))
+	router.GET("/favicon.ico", echo.WrapHandler(r.h))
+	router.GET("/robots.txt", echo.WrapHandler(r.h))
 	return nil
 }
 
