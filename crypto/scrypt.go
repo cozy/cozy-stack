@@ -122,11 +122,7 @@ func GenerateFromPassphrase(passphrase []byte) ([]byte, error) {
 	var h = &scryptHash{n: defaultN, r: defaultR, p: defaultP}
 	var err error
 
-	h.salt, err = GenerateRandomBytes(defaultSaltLen)
-	if err != nil {
-		// Random generator is broken
-		return nil, err
-	}
+	h.salt = GenerateRandomBytes(defaultSaltLen)
 
 	// scrypt.Key returns the raw scrypt derived key.
 	h.dk, err = scrypt.Key(passphrase, h.salt, h.n, h.r, h.p, defaultDkLen)

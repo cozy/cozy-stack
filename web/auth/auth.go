@@ -22,7 +22,12 @@ func redirectSuccessLogin(c echo.Context, redirect string) error {
 		return err
 	}
 
-	c.SetCookie(session.ToCookie())
+	cookie, err := session.ToCookie()
+	if err != nil {
+		return err
+	}
+
+	c.SetCookie(cookie)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
@@ -50,7 +55,7 @@ func loginForm(c echo.Context) error {
 		return err
 	}
 
-	if IsLoggedIn(c) {
+	if logged, _ := IsLoggedIn(c); logged {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
@@ -68,7 +73,7 @@ func login(c echo.Context) error {
 		return err
 	}
 
-	if IsLoggedIn(c) {
+	if logged, _ := IsLoggedIn(c); logged {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
@@ -195,7 +200,7 @@ func authorizeForm(c echo.Context) error {
 		})
 	}
 
-	if !IsLoggedIn(c) {
+	if logged, _ := IsLoggedIn(c); !logged {
 		redirect := url.Values{
 			"redirect": {c.Request().URL.String()},
 		}
@@ -224,9 +229,15 @@ func authorizeForm(c echo.Context) error {
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
-func IsLoggedIn(c echo.Context) bool {
+func IsLoggedIn(c echo.Context) (bool, error) {
 	_, err := GetSession(c)
-	return err == nil
+	if err != nil {
+		if err == ErrNoCookie {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // Routes sets the routing for the status service

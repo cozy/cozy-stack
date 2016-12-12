@@ -2,19 +2,17 @@ package crypto
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 func TestNewJWT(t *testing.T) {
-	secret, err := GenerateRandomBytes(64)
-	assert.NoError(t, err)
+	secret := GenerateRandomBytes(64)
 	tokenString, err := NewJWT(secret, jwt.StandardClaims{
 		Audience: "test",
 		Issuer:   "example.org",
-		IssuedAt: time.Now().Unix(),
+		IssuedAt: Timestamp(),
 		Subject:  "cozy.io",
 	})
 	assert.NoError(t, err)

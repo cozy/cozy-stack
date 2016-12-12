@@ -7,6 +7,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -30,8 +31,6 @@ var (
 	ErrNoCookie = errors.New("No session cookie")
 	// ErrInvalidID is returned by GetSession if the cookie contains wrong ID
 	ErrInvalidID = errors.New("Session cookie has wrong ID")
-	// ErrExpired is returned by GetSession if the cookie's session is old
-	ErrExpired = errors.New("Session cookie has wrong ID")
 )
 
 // A Session is an instance opened in a browser
@@ -90,25 +89,24 @@ func GetSession(c echo.Context) (*Session, error) {
 	}
 
 	i := middlewares.GetInstance(c)
-	sid, err := c.Cookie(SessionCookieName)
-	// no cookie
-	if err != nil || sid.Value == "" {
+	cookie, err := c.Cookie(SessionCookieName)
+	if err != nil || cookie.Value == "" {
 		return nil, ErrNoCookie
 	}
 
-	err = couchdb.GetDoc(i, SessionsType, sid.Value, &s)
-	// invalid session id
-	if couchdb.IsNotFoundError(err) {
-		return nil, ErrInvalidID
-	}
-
+	var sessionID string
+	err = crypto.DecodeAuthMessage(cookieMACConfig(i), []byte(cookie.Value), &sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	// expired session
-	if s.OlderThan(maxAgeDuration) {
-		return nil, ErrExpired
+	err = couchdb.GetDoc(i, SessionsType, sessionID, &s)
+	// invalid session id
+	if couchdb.IsNotFoundError(err) {
+		return nil, ErrInvalidID
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	// if the session is older than half its maxAgeDuration,
@@ -122,9 +120,7 @@ func GetSession(c echo.Context) (*Session, error) {
 	}
 
 	c.Set(SessionContextKey, &s)
-
 	return &s, nil
-
 }
 
 // Delete is a function to delete the session in couchdb,
@@ -141,17 +137,44 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 }
 
 // ToCookie returns an http.Cookie for this Session
-// TODO SECURITY figure out if we keep session in couchdb or not
-// if we do, check if ID is random enough on the whole server to use as a
-// sessionid
-func (s *Session) ToCookie() *http.Cookie {
+func (s *Session) ToCookie() (*http.Cookie, error) {
+	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), s.ID())
+	if err != nil {
+		return nil, err
+	}
+
 	return &http.Cookie{
 		Name:     SessionCookieName,
-		Value:    s.ID(),
+		Value:    string(encoded),
 		MaxAge:   SessionMaxAge,
 		Path:     "/",
 		Domain:   "." + s.Instance.Domain,
 		Secure:   true,
 		HttpOnly: true,
+	}, nil
+}
+
+// cookieMACConfig returns the options to authenticate the session cookie.
+//
+// We rely on a MACed cookie value, without additional encryption of the
+// message since it should not contain critical private informations and is
+// protected by HTTPs (secure cookie).
+//
+// About MaxLength, for a session of size 100 bytes
+//
+//       8 bytes time
+//   +  32 bytes HMAC-SHA256
+//   + 100 bytes session
+//   + base64 encoding (4*n/3 + 2 padding)
+//   < 200 bytes
+//
+// 2048 bytes should be sufficient enough to support any type of session.
+//
+func cookieMACConfig(i *instance.Instance) *crypto.MACConfig {
+	return &crypto.MACConfig{
+		Name:   SessionCookieName,
+		Key:    i.SessionSecret,
+		MaxAge: SessionMaxAge,
+		MaxLen: 2048,
 	}
 }
