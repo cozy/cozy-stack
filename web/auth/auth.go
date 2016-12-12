@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 )
 
 func redirectSuccessLogin(c echo.Context, redirect string) error {
@@ -228,7 +229,6 @@ func authorizeForm(c echo.Context) error {
 	}
 
 	// TODO Trust On First Use
-	// TODO CSRF token
 
 	permissions := strings.Split(params.scope, " ")
 	params.client.ClientID = params.client.CouchID
@@ -238,6 +238,7 @@ func authorizeForm(c echo.Context) error {
 		"RedirectURI": params.redirectURI,
 		"Scope":       params.scope,
 		"Permissions": permissions,
+		"CSRF":        c.Get("csrf"),
 	})
 }
 
@@ -267,9 +268,8 @@ func authorize(c echo.Context) error {
 		return err
 	}
 
-	// TODO check CSRF token
 	// TODO add tests
-	access, err := CreateAccessCode(params.instance, clientID)
+	access, err := CreateAccessCode(params.instance, params.clientID)
 	if err != nil {
 		return err
 	}
@@ -290,6 +290,13 @@ func IsLoggedIn(c echo.Context) bool {
 
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
+	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
+		TokenLookup:    "form:csrf_token",
+		CookieMaxAge:   3600, // 1 hour
+		CookieHTTPOnly: true,
+		CookieSecure:   true,
+	})
+
 	router.POST("/register", register)
 
 	router.GET("/auth/login", loginForm)
@@ -297,6 +304,8 @@ func Routes(router *echo.Group) {
 	router.DELETE("/auth/login", logout)
 
 	router.POST("/auth/register", registerClient)
-	router.GET("/auth/authorize", authorizeForm)
-	router.POST("/auth/authorize", authorize)
+
+	authorizeGroup := router.Group("/auth/authorize", noCSRF)
+	authorizeGroup.GET("", authorizeForm)
+	authorizeGroup.POST("", authorize)
 }
