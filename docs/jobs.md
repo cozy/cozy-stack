@@ -341,6 +341,9 @@ Accept: application/vnd.api+json
   "links": {
     "next": "/jobs/queue?page[cursor]=123123"
   },
+  "meta": {
+    "count": 12
+  },
   "data": [
     {
       "type": "io.cozy.jobs",
