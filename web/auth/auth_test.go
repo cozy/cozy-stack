@@ -544,8 +544,7 @@ func TestMain(m *testing.M) {
 
 	r.GET("/test", func(c echo.Context) error {
 		var content string
-		logged, _ := IsLoggedIn(c)
-		if logged {
+		if IsLoggedIn(c) {
 			content = "logged_in"
 		} else {
 			content = "who_are_you"
