@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -27,7 +28,7 @@ func ErrorHandler(err error, c echo.Context) {
 			if c.Request().Method == http.MethodHead {
 				c.NoContent(he.Code)
 			} else {
-				c.String(he.Code, he.Message)
+				c.String(he.Code, fmt.Sprintf("%v", he.Message))
 			}
 		}
 		if config.IsDevRelease() {
