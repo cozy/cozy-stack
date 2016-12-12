@@ -217,9 +217,9 @@ func fixErrorNoDatabaseIsWrongDoctype(err error) {
 }
 
 // DBStatus re
-func DBStatus(db Database, doctype string) (DBStatusResponse, error) {
+func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
 	var out DBStatusResponse
-	return out, makeRequest("GET", makeDBName(db, doctype), nil, &out)
+	return &out, makeRequest("GET", makeDBName(db, doctype), nil, &out)
 }
 
 // GetDoc fetch a document by its docType and ID, out is filled with
