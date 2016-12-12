@@ -1,12 +1,12 @@
 package data
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/vfs"
 	"github.com/cozy/cozy-stack/web/auth"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
 
@@ -27,8 +27,10 @@ func CheckReadable(c echo.Context, doctype string) error {
 		return nil
 	}
 
-	return jsonapi.NewError(http.StatusForbidden,
-		"reserved doctype %v unreadable", doctype)
+	return &echo.HTTPError{
+		Code:    http.StatusForbidden,
+		Message: fmt.Sprintf("reserved doctype %s unreadable", doctype),
+	}
 }
 
 // CheckWritable will abort the echo context if the doctype
@@ -39,6 +41,8 @@ func CheckWritable(c echo.Context, doctype string) error {
 		return nil
 	}
 
-	return jsonapi.NewError(http.StatusForbidden,
-		"reserved doctype %v unwritable", doctype)
+	return &echo.HTTPError{
+		Code:    http.StatusForbidden,
+		Message: fmt.Sprintf("reserved doctype %s unwritable", doctype),
+	}
 }

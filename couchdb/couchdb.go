@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 
@@ -213,6 +214,12 @@ func fixErrorNoDatabaseIsWrongDoctype(err error) {
 	if IsNoDatabaseError(err) {
 		err.(*Error).Reason = "wrong_doctype"
 	}
+}
+
+// DBStatus re
+func DBStatus(db Database, doctype string) (DBStatusResponse, error) {
+	var out DBStatusResponse
+	return out, makeRequest("GET", makeDBName(db, doctype), nil, &out)
 }
 
 // GetDoc fetch a document by its docType and ID, out is filled with
@@ -464,6 +471,24 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 	return json.Unmarshal(data, results)
 }
 
+// Proxy generate a httputil.ReverseProxy which forwards the request to the
+// correct route.
+func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
+	// discard error, it is checked in config
+	couchurl, _ := url.Parse(config.CouchURL())
+
+	director := func(req *http.Request) {
+		req.URL.Scheme = couchurl.Scheme
+		req.URL.Host = couchurl.Host
+		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
+		req.URL.Path, _ = url.QueryUnescape(req.URL.RawPath)
+	}
+
+	return &httputil.ReverseProxy{
+		Director: director,
+	}
+}
+
 // IndexCreationResponse is the response from couchdb when we create an Index
 type IndexCreationResponse struct {
 	Result string `json:"result,omitempty"`
@@ -511,4 +536,26 @@ type AllDocsRequest struct {
 	Skip       int      `url:"skip,omitempty"`
 	StartKey   string   `url:"start_key,omitempty"`
 	EndKey     string   `url:"end_key,omitempty"`
+}
+
+// DBStatusResponse is the response from DBStatus
+type DBStatusResponse struct {
+	DBName    string `json:"db_name"`
+	UpdateSeq string `json:"update_seq"`
+	Sizes     struct {
+		File     int `json:"file"`
+		External int `json:"external"`
+		Active   int `json:"active"`
+	} `json:"sizes"`
+	PurgeSeq int `json:"purge_seq"`
+	Other    struct {
+		DataSize int `json:"data_size"`
+	} `json:"other"`
+	DocDelCount       int    `json:"doc_del_count"`
+	DocCount          int    `json:"doc_count"`
+	DiskSize          int    `json:"disk_size"`
+	DiskFormatVersion int    `json:"disk_format_version"`
+	DataSize          int    `json:"data_size"`
+	CompactRunning    bool   `json:"compact_running"`
+	InstanceStartTime string `json:"instance_start_time"`
 }
