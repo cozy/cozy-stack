@@ -275,7 +275,7 @@ POST /auth/authorize
 Host: cozy.example.org
 Content-type: x-www-form-urlencoded
 
-approve=Approve&csrf-token=johw6Sho
+state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=files/images:read%20data/io.cozy.contacts:read&csrf-token=johw6Sho
 ```
 
 **Note**: this endpoint is protected against CSRF attacks.

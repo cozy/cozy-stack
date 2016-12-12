@@ -268,7 +268,6 @@ func authorize(c echo.Context) error {
 	}
 
 	// TODO check CSRF token
-	// TODO update docs
 	// TODO add tests
 	// TODO create access_code
 	code := "xxx"
