@@ -269,11 +269,13 @@ func authorize(c echo.Context) error {
 
 	// TODO check CSRF token
 	// TODO add tests
-	// TODO create access_code
-	code := "xxx"
+	access, err := CreateAccessCode(params.instance, clientID)
+	if err != nil {
+		return err
+	}
 
 	q := u.Query()
-	q.Set("access_code", code)
+	q.Set("access_code", access.Code)
 	q.Set("state", params.state)
 	u.RawQuery = q.Encode()
 
