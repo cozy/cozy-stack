@@ -20,7 +20,10 @@ Jobs can be launched by three different types of triggers:
 
   - `@cron` to schedule recurring jobs scheduled at specific times
   - `@interval` to schedule periodic jobs executed at a given fix interval
+  - `@at` to schedule a one-time job executed after at a specific time in the future
+  - `@in` to schedule a one-time job executed after a specific amount of time
   - `@event` to launch a job after a change in the cozy
+  - `@webhook` to launch a job by requesting an unguessable URL
 
 These three triggers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
 
@@ -105,9 +108,38 @@ Examples
 ```
 
 
+### `@at` syntax
+
+The `@at` trigger takes a ISO-8601 formatted string indicating a UTC time in the future. The date is of this form: `YYYY-MM-DDTHH:mm:ss.sssZ`
+
+Examples
+
+```
+@at 2016-12-12T15:36:25.507Z
+```
+
+### `@in` syntax
+
+The `@in` trigger takes the same duration syntax as `@interval`
+
+Examples
+
+```
+@in 10m
+@in 1h30m
+```
+
+
 ### `@event` syntax
 
 The `@event` syntax is not determined yet. Its main purpose will be to describe job scheduling after a filesystem or database modification.
+
+
+### `@webhook` syntax
+
+The `@webhook` syntax does not take any specific input. It is a specific trigger that generates a unique URL that can used by an external service to push a new job.
+
+For example, we could give a webhook URL to github to update on our cozy the app after each new release.
 
 
 ### Launcher rate limitation
