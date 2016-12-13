@@ -25,6 +25,8 @@ var (
 	ErrConflict = errors.New("Conflict access to same file or directory")
 	// ErrFileInTrash is used when the file is already in the trash
 	ErrFileInTrash = errors.New("File or directory is already in the trash")
+	// ErrFileNotInTrash is used when the file is not in the trash
+	ErrFileNotInTrash = errors.New("File or directory is not in the trash")
 	// ErrNonAbsolutePath is used when the given path is not absolute
 	// while it is required to be
 	ErrNonAbsolutePath = errors.New("Path should be abolute")

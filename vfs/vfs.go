@@ -54,6 +54,11 @@ const (
 	FileType = "file"
 )
 
+const (
+	conflictSuffix = " (__cozy__: "
+	conflictFormat = "%s (__cozy__: %s)"
+)
+
 // ErrSkipDir is used in WalkFn as an error to skip the current
 // directory. It is not returned by any function of the package.
 var ErrSkipDir = errors.New("skip directories")
@@ -68,11 +73,12 @@ type Context interface {
 // DocPatch is a struct containing modifiable fields from file and
 // directory documents.
 type DocPatch struct {
-	Name       *string    `json:"name,omitempty"`
-	DirID      *string    `json:"dir_id,omitempty"`
-	Tags       *[]string  `json:"tags,omitempty"`
-	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
-	Executable *bool      `json:"executable,omitempty"`
+	Name        *string    `json:"name,omitempty"`
+	DirID       *string    `json:"dir_id,omitempty"`
+	RestorePath *string    `json:"restore_path,omitempty"`
+	Tags        *[]string  `json:"tags,omitempty"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+	Executable  *bool      `json:"executable,omitempty"`
 }
 
 // DirOrFileDoc is a union struct of FileDoc and DirDoc. It is useful to
@@ -96,19 +102,20 @@ func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
 		dir = &fd.DirDoc
 	case FileType:
 		file = &FileDoc{
-			Type:       fd.Type,
-			DocID:      fd.DocID,
-			DocRev:     fd.DocRev,
-			Name:       fd.Name,
-			DirID:      fd.DirID,
-			CreatedAt:  fd.CreatedAt,
-			UpdatedAt:  fd.UpdatedAt,
-			Size:       fd.Size,
-			MD5Sum:     fd.MD5Sum,
-			Mime:       fd.Mime,
-			Class:      fd.Class,
-			Executable: fd.Executable,
-			Tags:       fd.Tags,
+			Type:        fd.Type,
+			DocID:       fd.DocID,
+			DocRev:      fd.DocRev,
+			Name:        fd.Name,
+			DirID:       fd.DirID,
+			RestorePath: fd.RestorePath,
+			CreatedAt:   fd.CreatedAt,
+			UpdatedAt:   fd.UpdatedAt,
+			Size:        fd.Size,
+			MD5Sum:      fd.MD5Sum,
+			Mime:        fd.Mime,
+			Class:       fd.Class,
+			Executable:  fd.Executable,
+			Tags:        fd.Tags,
 		}
 	}
 	return
@@ -431,9 +438,60 @@ func getParentDir(c Context, parent *DirDoc, dirID string) (*DirDoc, error) {
 	return parent, err
 }
 
+// getRestoreDir returns the restoration directory document from a file a
+// directory path. The specified file path should be part of the trash
+// directory.
+func getRestoreDir(c Context, name, restorePath string) (*DirDoc, error) {
+	if !strings.HasPrefix(name, TrashDirName) {
+		return nil, ErrFileNotInTrash
+	}
+
+	// If the restore path is set, it means that the file is part of a directory
+	// hierarchy which has been trashed. The parent directory at the root of the
+	// trash directory is the document which contains the information of
+	// the restore path.
+	//
+	// For instance, when trying the remove the baz file inside /foo/bar/baz,
+	// should be composed as follow: TrashDirName/foo/bar/baz. This code simply
+	// extract the TrashDirName/foo part of the path.
+	if restorePath == "" {
+		name = strings.TrimPrefix(name, TrashDirName+"/")
+		split := strings.Index(name, "/")
+		if split >= 0 {
+			parent, rest := name[:split], name[split+1:]
+			doc, err := GetDirDocFromPath(c, TrashDirName+"/"+parent, false)
+			if err != nil {
+				return nil, err
+			}
+			if doc.RestorePath != "" {
+				restorePath = path.Join(doc.RestorePath, doc.Name, rest)
+			}
+		}
+	}
+
+	// This should not happened but is here in case we could not resolve the
+	// restore path
+	if restorePath == "" {
+		restorePath = "/"
+	}
+
+	// If the restore directory does not exist anymore, we re-create the
+	// directory hierarchy to restore the file in.
+	restoreDir, err := GetDirDocFromPath(c, restorePath, false)
+	if os.IsNotExist(err) {
+		restoreDir, err = MkdirAll(c, restorePath, nil)
+	}
+
+	return restoreDir, err
+}
+
 func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error) {
 	if patch.DirID == nil {
 		patch.DirID = data.DirID
+	}
+
+	if patch.RestorePath == nil {
+		patch.RestorePath = data.RestorePath
 	}
 
 	if patch.Name == nil {

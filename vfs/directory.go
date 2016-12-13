@@ -26,14 +26,15 @@ type DirDoc struct {
 	// Directory name
 	Name string `json:"name"`
 	// Parent directory identifier
-	DirID string `json:"dir_id"`
+	DirID       string `json:"dir_id"`
+	RestorePath string `json:"restore_path,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Tags      []string  `json:"tags"`
 
 	// Directory path on VFS
-	Fullpath string   `json:"path"`
-	Tags     []string `json:"tags"`
+	Fullpath string `json:"path"`
 
 	parent *DirDoc
 	files  []*FileDoc
@@ -290,10 +291,11 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirD
 
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
-		Name:      &olddoc.Name,
-		DirID:     &olddoc.DirID,
-		Tags:      &olddoc.Tags,
-		UpdatedAt: &olddoc.UpdatedAt,
+		Name:        &olddoc.Name,
+		DirID:       &olddoc.DirID,
+		RestorePath: &olddoc.RestorePath,
+		Tags:        &olddoc.Tags,
+		UpdatedAt:   &olddoc.UpdatedAt,
 	}, patch, cdate)
 
 	if err != nil {
@@ -304,6 +306,8 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirD
 	if err != nil {
 		return
 	}
+
+	newdoc.RestorePath = *patch.RestorePath
 
 	var parent *DirDoc
 	if newdoc.DirID != olddoc.DirID {
@@ -389,11 +393,38 @@ func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 	if strings.HasPrefix(oldpath, TrashDirName) {
 		return nil, ErrFileInTrash
 	}
+
 	trashDirID := TrashDirID
-	tryOrUseSuffix(olddoc.Name, "%scozy__%s", func(name string) error {
+	restorePath := path.Dir(oldpath)
+
+	tryOrUseSuffix(olddoc.Name, conflictFormat, func(name string) error {
 		newdoc, err = ModifyDirMetadata(c, olddoc, &DocPatch{
-			DirID: &trashDirID,
-			Name:  &name,
+			DirID:       &trashDirID,
+			RestorePath: &restorePath,
+			Name:        &name,
+		})
+		return err
+	})
+	return
+}
+
+// RestoreDir is used to restore a trashed directory given its document
+func RestoreDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
+	oldpath, err := olddoc.Path(c)
+	if err != nil {
+		return nil, err
+	}
+	restoreDir, err := getRestoreDir(c, oldpath, olddoc.RestorePath)
+	if err != nil {
+		return
+	}
+	var emptyStr string
+	name := stripSuffix(olddoc.Name, conflictSuffix)
+	tryOrUseSuffix(name, "%s (%s)", func(name string) error {
+		newdoc, err = ModifyDirMetadata(c, olddoc, &DocPatch{
+			DirID:       &restoreDir.DocID,
+			RestorePath: &emptyStr,
+			Name:        &name,
 		})
 		return err
 	})

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -56,4 +57,12 @@ func tryOrUseSuffix(name, format string, do func(suffix string) error) (err erro
 		}
 	}
 	return
+}
+
+func stripSuffix(name, suffix string) string {
+	loc := strings.LastIndex(name, suffix)
+	if loc == -1 {
+		return name
+	}
+	return name[:loc]
 }
