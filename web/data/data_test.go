@@ -152,12 +152,11 @@ func TestWrongDoctype(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-	out = out["errors"].([]interface{})[0].(map[string]interface{})
-	if assert.Contains(t, out, "title") {
-		assert.Equal(t, "not_found", out["title"], "should give a json title")
+	if assert.Contains(t, out, "error") {
+		assert.Equal(t, "not_found", out["error"], "should give a json name")
 	}
-	if assert.Contains(t, out, "detail") {
-		assert.Equal(t, "wrong_doctype", out["detail"], "should give a detail")
+	if assert.Contains(t, out, "reason") {
+		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
 	}
 
 }
@@ -173,9 +172,8 @@ func TestVFSDoctype(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "403 Forbidden", res.Status, "should get a 403")
-	out = out["errors"].([]interface{})[0].(map[string]interface{})
-	if assert.Contains(t, out, "detail") {
-		assert.Contains(t, out["detail"], "reserved", "should give a clear detail")
+	if assert.Contains(t, out, "error") {
+		assert.Contains(t, out["error"], "reserved", "should give a clear reason")
 	}
 }
 
@@ -185,12 +183,11 @@ func TestWrongID(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-	out = out["errors"].([]interface{})[0].(map[string]interface{})
-	if assert.Contains(t, out, "title") {
-		assert.Equal(t, "not_found", out["title"], "should give a json title")
+	if assert.Contains(t, out, "error") {
+		assert.Equal(t, "not_found", out["error"], "should give a json name")
 	}
-	if assert.Contains(t, out, "detail") {
-		assert.Equal(t, "missing", out["detail"], "should give a detail")
+	if assert.Contains(t, out, "reason") {
+		assert.Equal(t, "missing", out["reason"], "should give a reason")
 	}
 }
 
@@ -201,12 +198,11 @@ func TestWrongHost(t *testing.T) {
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
-	out = out["errors"].([]interface{})[0].(map[string]interface{})
-	if assert.Contains(t, out, "title") {
-		assert.Equal(t, "not_found", out["title"], "should give a json title")
+	if assert.Contains(t, out, "error") {
+		assert.Equal(t, "not_found", out["error"], "should give a json name")
 	}
-	if assert.Contains(t, out, "detail") {
-		assert.Equal(t, "wrong_doctype", out["detail"], "should give a detail")
+	if assert.Contains(t, out, "reason") {
+		assert.Equal(t, "wrong_doctype", out["reason"], "should give a reason")
 	}
 }
 
@@ -567,16 +563,14 @@ func TestFindDocumentsWithoutIndex(t *testing.T) {
 	req.Header.Add("Host", Host)
 	req.Header.Set("Content-Type", "application/json")
 	var out2 struct {
-		Errors []struct {
-			Title  string `json:"title"`
-			Detail string `json:"detail"`
-		} `json:"errors"`
+		Error  string `json:"error"`
+		Reason string `json:"reason"`
 	}
 	_, res, err := doRequest(req, &out2)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 200")
 	assert.NoError(t, err)
-	assert.Contains(t, out2.Errors[0].Title, "no_index")
-	assert.Contains(t, out2.Errors[0].Detail, "no matching index")
+	assert.Contains(t, out2.Error, "no_index")
+	assert.Contains(t, out2.Reason, "no matching index")
 }
 
 func TestGetChanges(t *testing.T) {

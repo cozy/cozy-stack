@@ -2,6 +2,7 @@
 package data
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -31,6 +32,15 @@ func getDoc(c echo.Context) error {
 
 	if err := CheckReadable(c, doctype); err != nil {
 		return err
+	}
+
+	if docid[0] == '_' {
+		return fmt.Errorf("Unsuported couchdb operation %s", docid)
+	}
+
+	revs := c.QueryParam("revs")
+	if revs == "true" {
+		return proxy(c, docid)
 	}
 
 	var out couchdb.JSONDoc
@@ -207,10 +217,11 @@ func findDocuments(c echo.Context) error {
 }
 
 var allowedChangesParams = map[string]bool{
-	"feed":  true,
-	"style": true,
-	"since": true,
-	"limit": true,
+	"feed":    true,
+	"style":   true,
+	"since":   true,
+	"limit":   true,
+	"timeout": true,
 }
 
 func changesFeed(c echo.Context) error {
@@ -256,12 +267,39 @@ func changesFeed(c echo.Context) error {
 	return c.JSON(http.StatusOK, results)
 }
 
+func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		err := next(c)
+		if err == nil {
+			return nil
+		}
+
+		if ce, ok := err.(*couchdb.Error); ok {
+			return c.JSON(ce.StatusCode, ce.JSON())
+		}
+
+		if he, ok := err.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, echo.Map{"error": he.Error()})
+		}
+
+		if je, ok := err.(*jsonapi.Error); ok {
+			return c.JSON(je.Status, echo.Map{"error": je.Title})
+		}
+
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": err.Error(),
+		})
+	}
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.Use(validDoctype)
-	router.GET("/:doctype/_changes", changesFeed)
-	// POST=GET see http://docs.couchdb.org/en/2.0.0/api/database/changes.html#post--db-_changes)
-	router.POST("/:doctype/_changes", changesFeed)
+	router.Use(couchdbStyleErrorHandler)
+
+	replicationRoutes(router)
+
+	// API Routes
 	router.GET("/:doctype/:docid", getDoc)
 	router.PUT("/:doctype/:docid", updateDoc)
 	router.DELETE("/:doctype/:docid", deleteDoc)
