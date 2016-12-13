@@ -16,7 +16,7 @@ This doc introduces two cozy types:
 Triggers
 --------
 
-Jobs can be launched by three different types of triggers:
+Jobs can be launched by six different types of triggers:
 
   - `@cron` to schedule recurring jobs scheduled at specific times
   - `@interval` to schedule periodic jobs executed at a given fix interval
@@ -25,7 +25,7 @@ Jobs can be launched by three different types of triggers:
   - `@event` to launch a job after a change in the cozy
   - `@webhook` to launch a job by requesting an unguessable URL
 
-These three triggers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
+These six triggers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
 
 Jobs can also be queued up programatically, without the help of a specific trigger directly via the `/jobs/queue` API. In this case the `trigger` name is empty.
 
