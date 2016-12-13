@@ -13,9 +13,11 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -36,6 +38,7 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 const domain = "cozy.example.net"
 
 var ts *httptest.Server
+var db couchdb.Database
 var registerToken []byte
 var instanceURL *url.URL
 
@@ -57,6 +60,7 @@ func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 var jar *testJar
 var client *http.Client
 var clientID string
+var csrfToken string
 
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	content, err := getTestURL()
@@ -518,6 +522,159 @@ func TestAuthorizeFormSuccess(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "would like permission to access your Cozy")
+	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
+	matches := re.FindStringSubmatch(string(body))
+	if assert.Len(t, matches, 2) {
+		csrfToken = matches[1]
+	}
+}
+
+func TestAuthorizeWhenNotLoggedIn(t *testing.T) {
+	anonymousClient := &http.Client{CheckRedirect: noRedirect}
+	v := &url.Values{
+		"state":        {"123456"},
+		"client_id":    {clientID},
+		"redirect_uri": {"https://example.org/oauth/callback"},
+		"scope":        {"files:read"},
+		"csrf_token":   {csrfToken},
+	}
+	req, _ := http.NewRequest("POST", ts.URL+"/auth/authorize", bytes.NewBufferString(v.Encode()))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	res, err := anonymousClient.Do(req)
+	defer res.Body.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, "403 Forbidden", res.Status)
+}
+
+func TestAuthorizeWithInvalidCSRFToken(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":        {"123456"},
+		"client_id":    {clientID},
+		"redirect_uri": {"https://example.org/oauth/callback"},
+		"scope":        {"files:read"},
+		"csrf_token":   {"azertyuiop"},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "403 Forbidden", res.Status)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "csrf token is invalid")
+}
+
+func TestAuthorizeWithNoState(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"client_id":    {clientID},
+		"redirect_uri": {"https://example.org/oauth/callback"},
+		"scope":        {"files:read"},
+		"csrf_token":   {csrfToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The state parameter is mandatory")
+}
+
+func TestAuthorizeWithNoClientID(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":        {"123456"},
+		"redirect_uri": {"https://example.org/oauth/callback"},
+		"scope":        {"files:read"},
+		"csrf_token":   {csrfToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The client_id parameter is mandatory")
+}
+
+func TestAuthorizeWithInvalidClientID(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":        {"123456"},
+		"client_id":    {"987"},
+		"redirect_uri": {"https://example.org/oauth/callback"},
+		"scope":        {"files:read"},
+		"csrf_token":   {csrfToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The client must be registered")
+}
+
+func TestAuthorizeWithNoRedirectURI(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":      {"123456"},
+		"client_id":  {clientID},
+		"scope":      {"files:read"},
+		"csrf_token": {csrfToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The redirect_uri parameter is invalid")
+}
+
+func TestAuthorizeWithInvalidURI(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":        {"123456"},
+		"client_id":    {clientID},
+		"redirect_uri": {"/oauth/callback"},
+		"scope":        {"files:read"},
+		"csrf_token":   {csrfToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The redirect_uri parameter doesn&#39;t match the registered ones")
+}
+
+func TestAuthorizeWithNoScope(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":        {"123456"},
+		"client_id":    {clientID},
+		"redirect_uri": {"https://example.org/oauth/callback"},
+		"csrf_token":   {csrfToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "The scope parameter is mandatory")
+}
+
+func TestAuthorizeSuccess(t *testing.T) {
+	res, err := postForm("/auth/authorize", &url.Values{
+		"state":        {"123456"},
+		"client_id":    {clientID},
+		"redirect_uri": {"https://example.org/oauth/callback"},
+		"scope":        {"files:read"},
+		"csrf_token":   {csrfToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "302 Found", res.Status) {
+		var results []AccessCode
+		req := &couchdb.AllDocsRequest{}
+		couchdb.GetAllDocs(db, AccessCodeDocType, req, &results)
+		if assert.Len(t, results, 1) {
+			code := results[0].Code
+			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&state=123456#", code)
+			assert.Equal(t, expected, res.Header.Get("Location"))
+			assert.Equal(t, results[0].ClientID, clientID)
+		}
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -533,6 +690,7 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 	instance.Destroy(domain)
 	i, _ := instance.Create(domain, "en", nil)
+	db = i
 	registerToken = i.RegisterToken
 
 	r := echo.New()

@@ -245,10 +245,10 @@ func authorizeForm(c echo.Context) error {
 func authorize(c echo.Context) error {
 	params := authorizeParams{
 		instance:    middlewares.GetInstance(c),
-		state:       c.QueryParam("state"),
-		clientID:    c.QueryParam("client_id"),
-		redirectURI: c.QueryParam("redirect_uri"),
-		scope:       c.QueryParam("scope"),
+		state:       c.FormValue("state"),
+		clientID:    c.FormValue("client_id"),
+		redirectURI: c.FormValue("redirect_uri"),
+		scope:       c.FormValue("scope"),
 	}
 
 	if !IsLoggedIn(c) {
@@ -268,7 +268,6 @@ func authorize(c echo.Context) error {
 		return err
 	}
 
-	// TODO add tests
 	access, err := CreateAccessCode(params.instance, params.clientID)
 	if err != nil {
 		return err
@@ -278,8 +277,9 @@ func authorize(c echo.Context) error {
 	q.Set("access_code", access.Code)
 	q.Set("state", params.state)
 	u.RawQuery = q.Encode()
+	u.Fragment = ""
 
-	return c.Redirect(http.StatusFound, u.String())
+	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
