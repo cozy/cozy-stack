@@ -264,7 +264,8 @@ func authorize(c echo.Context) error {
 		})
 	}
 
-	if hasError, err := checkAuthorizeParams(c, &params); hasError {
+	hasError, err := checkAuthorizeParams(c, &params)
+	if hasError {
 		return err
 	}
 
