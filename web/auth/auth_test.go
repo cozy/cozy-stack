@@ -673,6 +673,7 @@ func TestAuthorizeSuccess(t *testing.T) {
 			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&state=123456#", code)
 			assert.Equal(t, expected, res.Header.Get("Location"))
 			assert.Equal(t, results[0].ClientID, clientID)
+			assert.Equal(t, results[0].Scope, "files:read")
 		}
 	}
 }

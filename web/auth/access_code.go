@@ -18,6 +18,7 @@ type AccessCode struct {
 	CouchRev string `json:"_rev,omitempty"`
 	ClientID string `json:"client_id"`
 	IssuedAt int64  `json:"issued_at"`
+	Scope    string `json:"scope"`
 }
 
 // ID returns the access code qualified identifier
@@ -36,10 +37,11 @@ func (ac *AccessCode) SetID(id string) { ac.Code = id }
 func (ac *AccessCode) SetRev(rev string) { ac.CouchRev = rev }
 
 // CreateAccessCode an access code for the given clientID, persisted in CouchDB
-func CreateAccessCode(i *instance.Instance, clientID string) (*AccessCode, error) {
+func CreateAccessCode(i *instance.Instance, clientID, scope string) (*AccessCode, error) {
 	ac := &AccessCode{
 		ClientID: clientID,
 		IssuedAt: time.Now().Unix(), // TODO crypto.Timestamp(),
+		Scope:    scope,
 	}
 	if err := couchdb.CreateDoc(i, ac); err != nil {
 		return nil, err

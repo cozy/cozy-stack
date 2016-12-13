@@ -6,14 +6,18 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"github.com/labstack/gommon/log"
 )
 
 func redirectSuccessLogin(c echo.Context, redirect string) error {
@@ -274,7 +278,7 @@ func authorize(c echo.Context) error {
 		return err
 	}
 
-	access, err := CreateAccessCode(params.instance, params.clientID)
+	access, err := CreateAccessCode(params.instance, params.clientID, params.scope)
 	if err != nil {
 		return err
 	}
@@ -286,6 +290,95 @@ func authorize(c echo.Context) error {
 	u.Fragment = ""
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
+}
+
+func accessToken(c echo.Context) error {
+	if c.FormValue("grant_type") != "authorization_code" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "only the authorization_code grant type is available",
+		})
+	}
+	code := c.FormValue("code")
+	clientID := c.FormValue("client_id")
+	clientSecret := c.FormValue("client_secret")
+
+	if code == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the code parameter is mandatory",
+		})
+	}
+	if clientID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client_id parameter is mandatory",
+		})
+	}
+	if clientSecret == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client_secret parameter is mandatory",
+		})
+	}
+
+	instance := middlewares.GetInstance(c)
+	client := &Client{}
+	if err := couchdb.GetDoc(instance, ClientDocType, clientID, client); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client must be registered",
+		})
+	}
+
+	// TODO check that clientSecret is valid
+	if clientSecret == "xxx" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid client_secret",
+		})
+	}
+
+	accessCode := &AccessCode{}
+	if err := couchdb.GetDoc(instance, AccessCodeDocType, code, accessCode); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid code",
+		})
+	}
+	scope := accessCode.Scope
+
+	// TODO move code to a method
+	accessToken, err := crypto.NewJWT(instance.HmacSecret, jwt.StandardClaims{
+		Audience: "access",
+		Issuer:   instance.Domain,
+		IssuedAt: time.Now().Unix(), // TODO crypto.Timestamp()
+		Subject:  client.ClientID,   // TODO add a test about it
+	})
+	if err != nil {
+		log.Errorf("[oauth] Failed to create the client access token: %s", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
+		})
+	}
+
+	refreshToken, err := crypto.NewJWT(instance.HmacSecret, jwt.StandardClaims{
+		Audience: "refresh",
+		Issuer:   instance.Domain,
+		IssuedAt: time.Now().Unix(), // TODO crypto.Timestamp()
+		Subject:  client.ClientID,   // TODO add a test about it
+	})
+	if err != nil {
+		log.Errorf("[oauth] Failed to create the client refresh token: %s", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate refresh token",
+		})
+	}
+
+	// Delete the access code, it can be used only once
+	couchdb.DeleteDoc(instance, accessCode)
+
+	// TODO add tests
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"token_type":    "bearer",
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"scope":         scope,
+	})
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
@@ -314,4 +407,6 @@ func Routes(router *echo.Group) {
 	authorizeGroup := router.Group("/auth/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)
 	authorizeGroup.POST("", authorize)
+
+	router.POST("/auth/access_token", accessToken)
 }
