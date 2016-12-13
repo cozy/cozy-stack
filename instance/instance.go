@@ -21,8 +21,11 @@ import (
 // InstanceType : The couchdb type for an Instance
 const InstanceType = "instances"
 
-// RegisterTokenLen is the number of bytes composing the register token
-const RegisterTokenLen = 16
+const (
+	registerTokenLen = 16
+	sessionSecretLen = 64
+	oauthSecretLen   = 128
+)
 
 var (
 	// ErrNotFound is used when the seeked instance was not found
@@ -43,14 +46,27 @@ var (
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID          string `json:"_id,omitempty"`  // couchdb _id
-	DocRev         string `json:"_rev,omitempty"` // couchdb _rev
-	Domain         string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	StorageURL     string `json:"storage"`        // Where the binaries are persisted
-	RegisterToken  []byte `json:"registerToken,omitempty"`
+	DocID      string `json:"_id,omitempty"`  // couchdb _id
+	DocRev     string `json:"_rev,omitempty"` // couchdb _rev
+	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	StorageURL string `json:"storage"`        // Where the binaries are persisted
+
+	// PassphraseHash is a hash of the user's passphrase. For more informations,
+	// see crypto.GenerateFromPassphrase.
 	PassphraseHash []byte `json:"passphraseHash,omitempty"`
-	HmacSecret     []byte `json:"hmacSecret,omitempty"` // For signing JWT, in OAuth2 in particular
-	storage        afero.Fs
+
+	// Secure assets
+
+	// Register token is used on registration to prevent from stealing instances
+	// waiting for registration. The registerToken secret is only shared (in
+	// clear) with the instance's user.
+	RegisterToken []byte `json:"registerToken,omitempty"`
+	// SessionSecret is used to authenticate session cookies
+	SessionSecret []byte `json:"sessionSecret,omitempty"`
+	// OAuthSecret is used to authenticate OAuth2 token
+	OAuthSecret []byte `json:"oauthSecret,omitempty"`
+
+	storage afero.Fs
 }
 
 // DocType implements couchdb.Doc
@@ -173,27 +189,17 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, ErrIllegalDomain
 	}
 
-	domainURL := config.BuildRelFsURL(domain)
+	i := new(Instance)
+
+	i.Domain = domain
+	i.StorageURL = config.BuildRelFsURL(domain).String()
+
+	i.PassphraseHash = nil
+	i.RegisterToken = crypto.GenerateRandomBytes(registerTokenLen)
+	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
+	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
 
 	var err error
-
-	registerToken, err := crypto.GenerateRandomBytes(RegisterTokenLen)
-	if err != nil {
-		return nil, err
-	}
-
-	hmacSecret, err := crypto.GenerateRandomBytes(64)
-	if err != nil {
-		return nil, err
-	}
-
-	i := &Instance{
-		Domain:        domain,
-		StorageURL:    domainURL.String(),
-		RegisterToken: registerToken,
-		HmacSecret:    hmacSecret,
-	}
-
 	err = i.makeStorageFs()
 	if err != nil {
 		return nil, err

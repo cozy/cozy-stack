@@ -22,7 +22,12 @@ func redirectSuccessLogin(c echo.Context, redirect string) error {
 		return err
 	}
 
-	c.SetCookie(session.ToCookie())
+	cookie, err := session.ToCookie()
+	if err != nil {
+		return err
+	}
+
+	c.SetCookie(cookie)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 

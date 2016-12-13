@@ -122,7 +122,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	}
 
 	var err error
-	c.ClientSecret, err = crypto.NewJWT(i.HmacSecret, jwt.StandardClaims{
+	c.ClientSecret, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
 		Audience: "client_secret",
 		Issuer:   i.Domain,
 		IssuedAt: time.Now().Unix(),
@@ -135,7 +135,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 			Error: "internal_server_error",
 		}
 	}
-	c.RegistrationToken, err = crypto.NewJWT(i.HmacSecret, jwt.StandardClaims{
+	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
 		Audience: "registration",
 		Issuer:   i.Domain,
 		IssuedAt: time.Now().Unix(),

@@ -57,12 +57,12 @@ func TestGetCorrectInstance(t *testing.T) {
 	}
 }
 
-func TestInstancehasHmacSecret(t *testing.T) {
+func TestInstancehasOAuthSecret(t *testing.T) {
 	instance, err := Get("test.cozycloud.cc")
 	if assert.NoError(t, err) {
 		assert.NotNil(t, instance)
-		assert.NotNil(t, instance.HmacSecret)
-		assert.Equal(t, len(instance.HmacSecret), 64)
+		assert.NotNil(t, instance.OAuthSecret)
+		assert.Equal(t, len(instance.OAuthSecret), oauthSecretLen)
 	}
 }
 
@@ -91,6 +91,12 @@ func TestRegisterPassphrase(t *testing.T) {
 	}
 	assert.NotNil(t, instance)
 	assert.NotEmpty(t, instance.RegisterToken)
+	assert.Len(t, instance.RegisterToken, registerTokenLen)
+	assert.NotEmpty(t, instance.OAuthSecret)
+	assert.Len(t, instance.OAuthSecret, oauthSecretLen)
+	assert.NotEmpty(t, instance.SessionSecret)
+	assert.Len(t, instance.SessionSecret, sessionSecretLen)
+
 	rtoken := instance.RegisterToken
 	pass := []byte("passphrase")
 	empty := []byte("")

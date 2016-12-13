@@ -7,8 +7,7 @@ import (
 )
 
 func TestGenerateRandomBytes(t *testing.T) {
-	val, err := GenerateRandomBytes(16)
-	assert.NoError(t, err)
+	val := GenerateRandomBytes(16)
 	assert.Len(t, val, 16)
 	assert.NotEmpty(t, string(val))
 }
