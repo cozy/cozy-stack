@@ -3,22 +3,24 @@ set -e
 
 COZY_ENV_DFL=production
 
-[ -z ${COZY_ENV} ] && COZY_ENV=${COZY_ENV_DFL}
-[ -z ${COZY_DEPLOY_USER} ] && COZY_DEPLOY_USER=${USER}
+[ -z "${COZY_ENV}" ] && COZY_ENV="${COZY_ENV_DFL}"
+[ -z "${COZY_DEPLOY_USER}" ] && COZY_DEPLOY_USER="${USER}"
 
 pushd `dirname $0` > /dev/null
 WORK_DIR=$(dirname "`pwd`")
 popd > /dev/null
 ASSETS=./assets
 
-if [ -r ${WORK_DIR}/local.env ]; then
-	. ${WORK_DIR}/local.env
+if [ -r "${WORK_DIR}/local.env" ]; then
+	. "${WORK_DIR}/local.env"
 fi
 
 usage() {
-	echo -e "Usage: ${1} [release]"
-	echo -e "\nCommands:"
-	echo -e "\n  release: builds a release of the current working-tree"
+	echo -e "Usage: ${1} [release] [deploy] [clean]"
+	echo -e "\nCommands:\n"
+	echo -e "  release  builds a release of the current working-tree"
+	echo -e "  deploy   builds a release of the current working-tree and deploys it"
+	echo -e "  clean    remove all generated files from the working-tree"
 
 	echo -e "\nEnvironment variables:"
 	echo -e "\n  COZY_ENV"
@@ -60,18 +62,17 @@ usage() {
 do_release() {
 	check_env
 
-	VERSION_STRING=`git --git-dir=${WORK_DIR}/.git --work-tree=${WORK_DIR} \
+	VERSION_STRING=`git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
 		describe --tags --dirty 2> /dev/null | \
 		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
 
-	if [ "$VERSION_STRING" == "" ]; then
+	if [ "${VERSION_STRING}" == "" ]; then
 		if [ "${COZY_ENV}" == production ]; then
 			>&2 echo "ERR: Can not build a production release without a tagged version"
 			exit 1
-		else
-			>&2 echo "WRN: No tag has been found to version the stack, using \"v0\" as version number"
 		fi
 		VERSION_STRING=v0-`git rev-parse --short HEAD`
+		>&2 echo "WRN: No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 	fi
 
 	if [ `git diff --shortstat HEAD 2> /dev/null | tail -n1 | wc -l` -gt 0 ]; then
@@ -86,9 +87,9 @@ do_release() {
 		VERSION_STRING="${VERSION_STRING}-dev"
 	fi
 
-	BINARY=cozy-stack-${VERSION_STRING}
+	BINARY="cozy-stack-${VERSION_STRING}"
 	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
-	BUILD_MODE=${COZY_ENV}
+	BUILD_MODE="${COZY_ENV}"
 
 	go generate ./web/routing
 
@@ -97,12 +98,12 @@ do_release() {
 		-X github.com/cozy/cozy-stack/config.BuildTime=${BUILD_TIME} \
 		-X github.com/cozy/cozy-stack/config.BuildMode=${BUILD_MODE}
 		" \
-		-o ${BINARY}
+		-o "${BINARY}"
 
-	openssl dgst -sha256 -hex ${BINARY} > ${BINARY}.sha256
+	openssl dgst -sha256 -hex "${BINARY}" > "${BINARY}.sha256"
 
 	printf "${BINARY}\t"
-	cat ${BINARY}.sha256 | sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g'
+	cat "${BINARY}.sha256" | sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g'
 }
 
 # The deploy command will build a new release and deploy it on a
@@ -120,23 +121,26 @@ do_deploy() {
 
 	do_release
 
-	if [ -z ${COZY_DEPLOY_PROXY} ]; then
-		scp ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
+	if [ -z "${COZY_DEPLOY_PROXY}" ]; then
+		scp "${BINARY}" "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack"
 	else
-		scp -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" ${BINARY} ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack
+		scp -oProxyCommand="ssh -W %h:%p ${COZY_DEPLOY_PROXY}" "${BINARY}" "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}:cozy-stack"
 	fi
 
-	if [ -n ${COZY_DEPLOY_POSTSCRIPT} ]; then
-		if [ -z ${COZY_DEPLOY_PROXY} ]; then
-			ssh ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER} ${COZY_DEPLOY_POSTSCRIPT}
+	if [ -n "${COZY_DEPLOY_POSTSCRIPT}" ]; then
+		if [ -z "${COZY_DEPLOY_PROXY}" ]; then
+			ssh "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}" "${COZY_DEPLOY_POSTSCRIPT}"
 		else
-			ssh ${COZY_DEPLOY_PROXY} ssh ${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER} ${COZY_DEPLOY_POSTSCRIPT}
+			ssh "${COZY_DEPLOY_PROXY}" ssh "${COZY_DEPLOY_USER}@${COZY_DEPLOY_SERVER}" "${COZY_DEPLOY_POSTSCRIPT}"
 		fi
 	fi
+
+	rm "${BINARY}"
+	rm "${BINARY}.sha256"
 }
 
 do_clean() {
-	find ${WORK_DIR} -name "cozy-stack-*" -print -delete
+	find "${WORK_DIR}" -name "cozy-stack-*" -print -delete
 }
 
 check_env() {
@@ -146,7 +150,7 @@ check_env() {
 	fi
 }
 
-case ${1} in
+case "${1}" in
 	release)
 		do_release
 		;;
@@ -160,7 +164,7 @@ case ${1} in
 		;;
 
 	*)
-		usage ${0}
+		usage "${0}"
 		exit 1
 esac
 
