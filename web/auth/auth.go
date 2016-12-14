@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/couchdb"
@@ -342,11 +341,11 @@ func accessToken(c echo.Context) error {
 	scope := accessCode.Scope
 
 	// TODO move code to a method
-	accessToken, err := crypto.NewJWT(instance.HmacSecret, jwt.StandardClaims{
+	accessToken, err := crypto.NewJWT(instance.OAuthSecret, jwt.StandardClaims{
 		Audience: "access",
 		Issuer:   instance.Domain,
-		IssuedAt: time.Now().Unix(), // TODO crypto.Timestamp()
-		Subject:  client.ClientID,   // TODO add a test about it
+		IssuedAt: crypto.Timestamp(),
+		Subject:  client.ClientID, // TODO add a test about it
 	})
 	if err != nil {
 		log.Errorf("[oauth] Failed to create the client access token: %s", err)
@@ -355,11 +354,11 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	refreshToken, err := crypto.NewJWT(instance.HmacSecret, jwt.StandardClaims{
+	refreshToken, err := crypto.NewJWT(instance.OAuthSecret, jwt.StandardClaims{
 		Audience: "refresh",
 		Issuer:   instance.Domain,
-		IssuedAt: time.Now().Unix(), // TODO crypto.Timestamp()
-		Subject:  client.ClientID,   // TODO add a test about it
+		IssuedAt: crypto.Timestamp(),
+		Subject:  client.ClientID, // TODO add a test about it
 	})
 	if err != nil {
 		log.Errorf("[oauth] Failed to create the client refresh token: %s", err)

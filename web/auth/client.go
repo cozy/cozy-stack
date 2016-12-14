@@ -13,8 +13,13 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
-// ClientDocType is the CouchDB document type for OAuth2 clients
-const ClientDocType = "io.cozy.oauth.clients"
+const (
+	// ClientDocType is the CouchDB document type for OAuth2 clients
+	ClientDocType = "io.cozy.oauth.clients"
+
+	// ClientSecretLen is the number of random bytes used for generating the client secret
+	ClientSecretLen = 24
+)
 
 // Client is a struct for OAuth2 client. Most of the fields are described in
 // the OAuth 2.0 Dynamic Client Registration Protocol. The exception is
@@ -108,7 +113,8 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.CouchID = ""
 	c.CouchRev = ""
 	c.ClientID = ""
-	c.ClientSecret = ""
+	secret := crypto.GenerateRandomBytes(ClientSecretLen)
+	c.ClientSecret = string(crypto.Base64Encode(secret))
 	c.SecretExpiresAt = 0
 	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
@@ -122,19 +128,6 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	}
 
 	var err error
-	c.ClientSecret, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
-		Audience: "client_secret",
-		Issuer:   i.Domain,
-		IssuedAt: time.Now().Unix(),
-		Subject:  c.CouchID,
-	})
-	if err != nil {
-		log.Errorf("[oauth] Failed to create the client secret token: %s", err)
-		return &ClientRegistrationError{
-			Code:  http.StatusInternalServerError,
-			Error: "internal_server_error",
-		}
-	}
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
 		Audience: "registration",
 		Issuer:   i.Domain,

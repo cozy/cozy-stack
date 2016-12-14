@@ -96,13 +96,13 @@ func TestMACWrongMessage(t *testing.T) {
 		return
 	}
 
-	buf2 := base64Encode(GenerateRandomBytes(32))
+	buf2 := Base64Encode(GenerateRandomBytes(32))
 	_, err2 := DecodeAuthMessage(o, buf2)
 	if !assert.Equal(t, errMACInvalid, err2) {
 		return
 	}
 
-	buf3 := base64Encode(createMAC(key, []byte("")))
+	buf3 := Base64Encode(createMAC(key, []byte("")))
 	_, err3 := DecodeAuthMessage(o, buf3)
 	if !assert.Equal(t, errMACInvalid, err3) {
 		return
@@ -122,19 +122,6 @@ func TestAuthentication(t *testing.T) {
 		}
 		ok2 := verifyMAC(hashKey, GenerateRandomBytes(32), mac)
 		if !assert.False(t, ok2) {
-			return
-		}
-	}
-}
-
-func TestEncoding(t *testing.T) {
-	for _, value := range testStrings {
-		encoded := base64Encode([]byte(value))
-		decoded, err := base64Decode(encoded)
-		if !assert.NoError(t, err) {
-			return
-		}
-		if !assert.Equal(t, value, string(decoded)) {
 			return
 		}
 	}

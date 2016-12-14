@@ -79,12 +79,12 @@ func EncodeAuthMessage(c *MACConfig, value []byte) ([]byte, error) {
 	buf.Next(len(c.Name))
 
 	// Check length
-	if base64.URLEncoding.EncodedLen(buf.Len()) > maxLength {
+	if base64.RawURLEncoding.EncodedLen(buf.Len()) > maxLength {
 		panic("the value is too long")
 	}
 
 	// Encode to base64
-	return base64Encode(buf.Bytes()), nil
+	return Base64Encode(buf.Bytes()), nil
 }
 
 // DecodeAuthMessage verifies a message authentified with message
@@ -104,7 +104,7 @@ func DecodeAuthMessage(c *MACConfig, enc []byte) ([]byte, error) {
 	}
 
 	// Decode from base64
-	dec, err := base64Decode(enc)
+	dec, err := Base64Decode(enc)
 	if err != nil {
 		return nil, err
 	}
@@ -153,21 +153,4 @@ func createMAC(key, value []byte) []byte {
 func verifyMAC(key, value []byte, mac []byte) bool {
 	expectedMAC := createMAC(key, value)
 	return hmac.Equal(mac, expectedMAC)
-}
-
-// base64Encode encodes a value using base64.
-func base64Encode(value []byte) []byte {
-	enc := make([]byte, base64.URLEncoding.EncodedLen(len(value)))
-	base64.URLEncoding.Encode(enc, value)
-	return enc
-}
-
-// base64Decode decodes a value using base64.
-func base64Decode(value []byte) ([]byte, error) {
-	dec := make([]byte, base64.URLEncoding.DecodedLen(len(value)))
-	b, err := base64.URLEncoding.Decode(dec, value)
-	if err != nil {
-		return nil, err
-	}
-	return dec[:b], nil
 }

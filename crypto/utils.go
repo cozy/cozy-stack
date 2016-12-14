@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"io"
 	"time"
 )
@@ -20,4 +21,21 @@ func GenerateRandomBytes(n int) []byte {
 // Timestamp returns the current timestamp, in seconds.
 func Timestamp() int64 {
 	return time.Now().UTC().Unix()
+}
+
+// Base64Encode encodes a value using base64.
+func Base64Encode(value []byte) []byte {
+	enc := make([]byte, base64.RawURLEncoding.EncodedLen(len(value)))
+	base64.RawURLEncoding.Encode(enc, value)
+	return enc
+}
+
+// Base64Decode decodes a value using base64.
+func Base64Decode(value []byte) ([]byte, error) {
+	dec := make([]byte, base64.RawURLEncoding.DecodedLen(len(value)))
+	b, err := base64.RawURLEncoding.Decode(dec, value)
+	if err != nil {
+		return nil, err
+	}
+	return dec[:b], nil
 }

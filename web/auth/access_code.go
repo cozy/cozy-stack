@@ -1,9 +1,8 @@
 package auth
 
 import (
-	"time"
-
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
 )
 
@@ -40,7 +39,7 @@ func (ac *AccessCode) SetRev(rev string) { ac.CouchRev = rev }
 func CreateAccessCode(i *instance.Instance, clientID, scope string) (*AccessCode, error) {
 	ac := &AccessCode{
 		ClientID: clientID,
-		IssuedAt: time.Now().Unix(), // TODO crypto.Timestamp(),
+		IssuedAt: crypto.Timestamp(),
 		Scope:    scope,
 	}
 	if err := couchdb.CreateDoc(i, ac); err != nil {
