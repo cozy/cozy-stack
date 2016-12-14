@@ -165,3 +165,7 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 	}
 	return false
 }
+
+var (
+	_ couchdb.Doc = &Client{}
+)

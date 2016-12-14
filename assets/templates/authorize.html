@@ -17,8 +17,8 @@
         </header>
         <div class="container">
           <form method="POST" action="/auth/authorize" class="login auth">
+            <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
             <input type="hidden" name="client_id" value="{{.Client.ClientID}}" />
-            <input type="hidden" name="response_type" value="{{.ResponseType}}" />
             <input type="hidden" name="state" value="{{.State}}" />
             <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
             <input type="hidden" name="scope" value="{{.Scope}}" />

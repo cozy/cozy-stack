@@ -87,3 +87,7 @@ func DefaultTheme(db couchdb.Database) (*Theme, error) {
 	err := couchdb.GetDoc(db, SettingsDocType, DefaultThemeID, theme)
 	return theme, err
 }
+
+var (
+	_ couchdb.Doc = &Theme{}
+)
