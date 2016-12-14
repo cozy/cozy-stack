@@ -159,6 +159,40 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 	return false
 }
 
+// Claims is used for JWT used in OAuth2 flow
+type Claims struct {
+	jwt.StandardClaims
+	Scope string `json:"scope,omitempty"`
+}
+
+// CreateJWT returns a new JSON Web Token for the given instance and audience
+func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
+	token, err := crypto.NewJWT(i.OAuthSecret, Claims{
+		jwt.StandardClaims{
+			Audience: audience,
+			Issuer:   i.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  c.CouchID,
+		},
+		scope,
+	})
+	if err != nil {
+		log.Errorf("[oauth] Failed to create the %s token: %s", audience, err)
+	}
+	return token, err
+}
+
+// ValidRefreshToken checks that the JWT is valid and returns the associate claims
+func ValidRefreshToken(i *instance.Instance, token string) (Claims, bool) {
+	claims := Claims{}
+	err := crypto.ParseJWT(token, i.OAuthSecret, &claims)
+	if err != nil {
+		log.Errorf("[oauth] Failed to verify the refresh token: %s", err)
+	}
+	// Note: the refresh token does not expire, no need to check its issue date
+	return claims, err == nil
+}
+
 var (
 	_ couchdb.Doc = &Client{}
 )

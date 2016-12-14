@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
 	"net/url"
@@ -9,14 +10,11 @@ import (
 
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
-	"github.com/labstack/gommon/log"
 )
 
 func redirectSuccessLogin(c echo.Context, redirect string) error {
@@ -291,19 +289,22 @@ func authorize(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
+type accessTokenReponse struct {
+	Type    string `json:"token_type"`
+	Scope   string `json:"scope"`
+	Access  string `json:"access_token"`
+	Refresh string `json:"refresh_token,omitempty"`
+}
+
 func accessToken(c echo.Context) error {
-	if c.FormValue("grant_type") != "authorization_code" {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "only the authorization_code grant type is available",
-		})
-	}
-	code := c.FormValue("code")
+	grant := c.FormValue("grant_type")
 	clientID := c.FormValue("client_id")
 	clientSecret := c.FormValue("client_secret")
+	instance := middlewares.GetInstance(c)
 
-	if code == "" {
+	if grant == "" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "the code parameter is mandatory",
+			"error": "the grant_type parameter is mandatory",
 		})
 	}
 	if clientID == "" {
@@ -317,67 +318,70 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	instance := middlewares.GetInstance(c)
 	client := &Client{}
 	if err := couchdb.GetDoc(instance, ClientDocType, clientID, client); err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the client must be registered",
 		})
 	}
-
-	// TODO check that clientSecret is valid
-	if clientSecret == "xxx" {
+	if subtle.ConstantTimeCompare([]byte(clientSecret), []byte(client.ClientSecret)) == 0 {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid client_secret",
 		})
 	}
 
-	accessCode := &AccessCode{}
-	if err := couchdb.GetDoc(instance, AccessCodeDocType, code, accessCode); err != nil {
+	var err error
+	out := accessTokenReponse{
+		Type: "bearer",
+	}
+
+	switch grant {
+	case "authorization_code":
+		code := c.FormValue("code")
+		if code == "" {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "the code parameter is mandatory",
+			})
+		}
+		accessCode := &AccessCode{}
+		if err := couchdb.GetDoc(instance, AccessCodeDocType, code, accessCode); err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid code",
+			})
+		}
+		out.Scope = accessCode.Scope
+		out.Refresh, err = client.CreateJWT(instance, "refresh", out.Scope)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "Can't generate refresh token",
+			})
+		}
+		// Delete the access code, it can be used only once
+		couchdb.DeleteDoc(instance, accessCode)
+
+	case "refresh_token":
+		claims, ok := ValidRefreshToken(instance, c.FormValue("refresh_token"))
+		if !ok {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "invalid refresh token",
+			})
+		}
+		out.Scope = claims.Scope
+
+	default:
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid code",
+			"error": "only the authorization_code grant type is available",
 		})
 	}
-	scope := accessCode.Scope
 
-	// TODO move code to a method
-	accessToken, err := crypto.NewJWT(instance.OAuthSecret, jwt.StandardClaims{
-		Audience: "access",
-		Issuer:   instance.Domain,
-		IssuedAt: crypto.Timestamp(),
-		Subject:  client.ClientID, // TODO add a test about it
-	})
+	out.Access, err = client.CreateJWT(instance, "access", out.Scope)
 	if err != nil {
-		log.Errorf("[oauth] Failed to create the client access token: %s", err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
 		})
 	}
 
-	refreshToken, err := crypto.NewJWT(instance.OAuthSecret, jwt.StandardClaims{
-		Audience: "refresh",
-		Issuer:   instance.Domain,
-		IssuedAt: crypto.Timestamp(),
-		Subject:  client.ClientID, // TODO add a test about it
-	})
-	if err != nil {
-		log.Errorf("[oauth] Failed to create the client refresh token: %s", err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "Can't generate refresh token",
-		})
-	}
-
-	// Delete the access code, it can be used only once
-	couchdb.DeleteDoc(instance, accessCode)
-
-	// TODO add tests
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"token_type":    "bearer",
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-		"scope":         scope,
-	})
+	return c.JSON(http.StatusOK, out)
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.

@@ -331,14 +331,19 @@ Content-type: application/json
 
 > What format is used for tokens?
 
-The tokens are formatted as [JSON Web Tokens (JWT)](https://jwt.io/).
+The access tokens are formatted as [JSON Web Tokens (JWT)](https://jwt.io/),
+like this:
 
-Claim | Fullname  | What it identifies
-------|-----------|-------------------------------------------------------------------------
-`aud` | Audience  | Identify the recipient where the token can be used (like `registration`)
-`iss` | Issuer    | Identify the Cozy instance (its domain in fact)
-`iat` | Issued At | Identify when the token was issued (Unix timestamp)
-`sub` | Subject   | Identify the client that can use the token
+Claim   | Fullname  | What it identifies
+--------|-----------|-------------------------------------------------------------------
+`aud`   | Audience  | Identify the recipient where the token can be used (like `access`)
+`iss`   | Issuer    | Identify the Cozy instance (its domain in fact)
+`iat`   | Issued At | Identify when the token was issued (Unix timestamp)
+`sub`   | Subject   | Identify the client that can use the token
+`scope` | Scope     | Identify the scope of actions that the client can accomplish
+
+Other tokens can be JWT with a similar formalism, or be a simple random value
+(when we want to have a clear revocation process).
 
 > What happens when the user has lost her password?
 
