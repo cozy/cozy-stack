@@ -362,7 +362,7 @@ func accessToken(c echo.Context) error {
 	case "refresh_token":
 		claims, ok := client.ValidRefreshToken(instance, c.FormValue("refresh_token"))
 		if !ok {
-			return c.JSON(http.StatusInternalServerError, echo.Map{
+			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",
 			})
 		}
@@ -370,7 +370,7 @@ func accessToken(c echo.Context) error {
 
 	default:
 		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "only the authorization_code grant type is available",
+			"error": "invalid grant type",
 		})
 	}
 

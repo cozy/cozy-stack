@@ -20,10 +20,10 @@ const (
 	// ClientSecretLen is the number of random bytes used for generating the client secret
 	ClientSecretLen = 24
 
-	// Audience field of JWT for access tokens
+	// AccessTokenAudience is the audience field of JWT for access tokens
 	AccessTokenAudience = "access"
 
-	// Audience field of JWT for refresh tokens
+	// RefreshTokenAudience is the audience field of JWT for refresh tokens
 	RefreshTokenAudience = "refresh"
 )
 
@@ -191,6 +191,9 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 // ValidRefreshToken checks that the JWT is valid and returns the associate claims
 func (c *Client) ValidRefreshToken(i *instance.Instance, token string) (Claims, bool) {
 	claims := Claims{}
+	if token == "" {
+		return claims, false
+	}
 	if err := crypto.ParseJWT(token, i.OAuthSecret, &claims); err != nil {
 		log.Errorf("[oauth] Failed to verify the refresh token: %s", err)
 		return claims, false
@@ -205,7 +208,7 @@ func (c *Client) ValidRefreshToken(i *instance.Instance, token string) (Claims, 
 		return claims, false
 	}
 	if claims.Subject != c.CouchID {
-		log.Errorf("[oauth] Expected %s subject for refresh token, but was: %s", clientID, claims.Subject)
+		log.Errorf("[oauth] Expected %s subject for refresh token, but was: %s", c.CouchID, claims.Subject)
 		return claims, false
 	}
 	return claims, true
