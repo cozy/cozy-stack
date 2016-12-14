@@ -35,7 +35,7 @@ const filesExecUsage = `Available commands:
   cat [name]                 Echo the file content in stdout
   mv [from] [to]             Rename a file or directory
   rm [-f] [-r] [name]        Move the file to trash, or delete it permanently with -f flag
-  restore [name]             Move the file to trash, or delete it permanently with -f flag
+  restore [name]             Restore a file or directory from trash
 `
 
 var flagImportFrom string

@@ -451,15 +451,16 @@ func getRestoreDir(c Context, name, restorePath string) (*DirDoc, error) {
 	// trash directory is the document which contains the information of
 	// the restore path.
 	//
-	// For instance, when trying the remove the baz file inside /foo/bar/baz,
-	// should be composed as follow: TrashDirName/foo/bar/baz. This code simply
-	// extract the "TrashDirName/foo" and "bar" parts of the path.
+	// For instance, when trying the restore the baz file inside
+	// TrashDirName/foo/bar/baz/quz, it should extract the "foo" (root) and
+	// "bar/baz" (rest) parts of the path.
 	if restorePath == "" {
 		name = strings.TrimPrefix(name, TrashDirName+"/")
 		split := strings.Index(name, "/")
 		if split >= 0 {
-			parent, rest := name[:split], path.Dir(name[split+1:])
-			doc, err := GetDirDocFromPath(c, TrashDirName+"/"+parent, false)
+			root := name[:split]
+			rest := path.Dir(name[split+1:])
+			doc, err := GetDirDocFromPath(c, TrashDirName+"/"+root, false)
 			if err != nil {
 				return nil, err
 			}
