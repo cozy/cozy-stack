@@ -350,7 +350,7 @@ func accessToken(c echo.Context) error {
 			})
 		}
 		out.Scope = accessCode.Scope
-		out.Refresh, err = client.CreateJWT(instance, "refresh", out.Scope)
+		out.Refresh, err = client.CreateJWT(instance, RefreshTokenAudience, out.Scope)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": "Can't generate refresh token",
@@ -360,7 +360,7 @@ func accessToken(c echo.Context) error {
 		couchdb.DeleteDoc(instance, accessCode)
 
 	case "refresh_token":
-		claims, ok := ValidRefreshToken(instance, c.FormValue("refresh_token"))
+		claims, ok := client.ValidRefreshToken(instance, c.FormValue("refresh_token"))
 		if !ok {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": "invalid refresh token",
@@ -374,7 +374,7 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	out.Access, err = client.CreateJWT(instance, "access", out.Scope)
+	out.Access, err = client.CreateJWT(instance, AccessTokenAudience, out.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
