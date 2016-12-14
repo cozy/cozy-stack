@@ -16,7 +16,7 @@ func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	// TODO extends me to verificate characters allowed in db name.
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
-		if doctype == "" {
+		if doctype == "" && c.Path() != "/data/" {
 			return jsonapi.NewError(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
 		c.Set("doctype", doctype)
@@ -32,6 +32,10 @@ func getDoc(c echo.Context) error {
 
 	if err := CheckReadable(c, doctype); err != nil {
 		return err
+	}
+
+	if docid == "" {
+		return dbStatus(c)
 	}
 
 	if docid[0] == '_' {
@@ -217,11 +221,12 @@ func findDocuments(c echo.Context) error {
 }
 
 var allowedChangesParams = map[string]bool{
-	"feed":    true,
-	"style":   true,
-	"since":   true,
-	"limit":   true,
-	"timeout": true,
+	"feed":      true,
+	"style":     true,
+	"since":     true,
+	"limit":     true,
+	"timeout":   true,
+	"heartbeat": true, // Pouchdb sends heartbeet even for non-continuous
 }
 
 func changesFeed(c echo.Context) error {
@@ -267,6 +272,17 @@ func changesFeed(c echo.Context) error {
 	return c.JSON(http.StatusOK, results)
 }
 
+func allDocs(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
+
+	if err := CheckReadable(c, doctype); err != nil {
+		return err
+	}
+
+	return proxy(c, "_all_docs")
+
+}
+
 func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		err := next(c)
@@ -304,6 +320,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:doctype/:docid", updateDoc)
 	router.DELETE("/:doctype/:docid", deleteDoc)
 	router.POST("/:doctype/", createDoc)
+	router.POST("/:doctype/_all_docs", allDocs)
 	router.POST("/:doctype/_index", defineIndex)
 	router.POST("/:doctype/_find", findDocuments)
 	// router.DELETE("/:doctype/:docid", DeleteDoc)

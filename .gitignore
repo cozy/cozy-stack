@@ -4,3 +4,5 @@ swagger-ui
 /.cozy
 *.log
 local.env
+integrations-tests/pouchdb/node_modules
+integrations-tests/pouchdb/replication-target

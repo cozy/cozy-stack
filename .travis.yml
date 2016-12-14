@@ -16,6 +16,7 @@ before_script:
 
 script:
   - ./scripts/coverage.sh
+  - ./scripts/integration.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
