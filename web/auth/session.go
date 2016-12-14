@@ -164,7 +164,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 //       8 bytes time
 //   +  32 bytes HMAC-SHA256
 //   + 100 bytes session
-//   + base64 encoding (4*n/3 + 2 padding)
+//   + base64 encoding (4*n/3)
 //   < 200 bytes
 //
 // 256 bytes should be sufficient enough to support any type of session.

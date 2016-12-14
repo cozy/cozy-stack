@@ -13,8 +13,19 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
-// ClientDocType is the CouchDB document type for OAuth2 clients
-const ClientDocType = "io.cozy.oauth.clients"
+const (
+	// ClientDocType is the CouchDB document type for OAuth2 clients
+	ClientDocType = "io.cozy.oauth.clients"
+
+	// ClientSecretLen is the number of random bytes used for generating the client secret
+	ClientSecretLen = 24
+
+	// AccessTokenAudience is the audience field of JWT for access tokens
+	AccessTokenAudience = "access"
+
+	// RefreshTokenAudience is the audience field of JWT for refresh tokens
+	RefreshTokenAudience = "refresh"
+)
 
 // Client is a struct for OAuth2 client. Most of the fields are described in
 // the OAuth 2.0 Dynamic Client Registration Protocol. The exception is
@@ -108,7 +119,8 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.CouchID = ""
 	c.CouchRev = ""
 	c.ClientID = ""
-	c.ClientSecret = ""
+	secret := crypto.GenerateRandomBytes(ClientSecretLen)
+	c.ClientSecret = string(crypto.Base64Encode(secret))
 	c.SecretExpiresAt = 0
 	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
@@ -122,19 +134,6 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	}
 
 	var err error
-	c.ClientSecret, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
-		Audience: "client_secret",
-		Issuer:   i.Domain,
-		IssuedAt: time.Now().Unix(),
-		Subject:  c.CouchID,
-	})
-	if err != nil {
-		log.Errorf("[oauth] Failed to create the client secret token: %s", err)
-		return &ClientRegistrationError{
-			Code:  http.StatusInternalServerError,
-			Error: "internal_server_error",
-		}
-	}
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
 		Audience: "registration",
 		Issuer:   i.Domain,
@@ -164,6 +163,55 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 		}
 	}
 	return false
+}
+
+// Claims is used for JWT used in OAuth2 flow
+type Claims struct {
+	jwt.StandardClaims
+	Scope string `json:"scope,omitempty"`
+}
+
+// CreateJWT returns a new JSON Web Token for the given instance and audience
+func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
+	token, err := crypto.NewJWT(i.OAuthSecret, Claims{
+		jwt.StandardClaims{
+			Audience: audience,
+			Issuer:   i.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  c.CouchID,
+		},
+		scope,
+	})
+	if err != nil {
+		log.Errorf("[oauth] Failed to create the %s token: %s", audience, err)
+	}
+	return token, err
+}
+
+// ValidRefreshToken checks that the JWT is valid and returns the associate claims
+func (c *Client) ValidRefreshToken(i *instance.Instance, token string) (Claims, bool) {
+	claims := Claims{}
+	if token == "" {
+		return claims, false
+	}
+	if err := crypto.ParseJWT(token, i.OAuthSecret, &claims); err != nil {
+		log.Errorf("[oauth] Failed to verify the refresh token: %s", err)
+		return claims, false
+	}
+	// Note: the refresh token does not expire, no need to check its issue date
+	if claims.Audience != RefreshTokenAudience {
+		log.Errorf("[oauth] Unexpected audience for refresh token: %s", claims.Audience)
+		return claims, false
+	}
+	if claims.Issuer != i.Domain {
+		log.Errorf("[oauth] Expected %s issuer for refresh token, but was: %s", i.Domain, claims.Issuer)
+		return claims, false
+	}
+	if claims.Subject != c.CouchID {
+		log.Errorf("[oauth] Expected %s subject for refresh token, but was: %s", c.CouchID, claims.Subject)
+		return claims, false
+	}
+	return claims, true
 }
 
 var (

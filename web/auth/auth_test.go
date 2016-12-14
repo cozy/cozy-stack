@@ -18,6 +18,7 @@ import (
 
 	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/crypto"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -25,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 type renderer struct {
@@ -39,6 +41,7 @@ const domain = "cozy.example.net"
 
 var ts *httptest.Server
 var db couchdb.Database
+var oauthSecret []byte
 var registerToken []byte
 var instanceURL *url.URL
 
@@ -60,7 +63,10 @@ func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 var jar *testJar
 var client *http.Client
 var clientID string
+var clientSecret string
 var csrfToken string
+var code string
+var refreshToken string
 
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	content, err := getTestURL()
@@ -362,6 +368,7 @@ func TestRegisterClientSuccessWithJustMandatoryFields(t *testing.T) {
 	assert.Equal(t, client.ClientName, "cozy-test")
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 	clientID = client.ClientID
+	clientSecret = client.ClientSecret
 }
 
 func TestRegisterClientSuccessWithAllFields(t *testing.T) {
@@ -669,12 +676,180 @@ func TestAuthorizeSuccess(t *testing.T) {
 		req := &couchdb.AllDocsRequest{}
 		couchdb.GetAllDocs(db, AccessCodeDocType, req, &results)
 		if assert.Len(t, results, 1) {
-			code := results[0].Code
+			code = results[0].Code
 			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&state=123456#", code)
 			assert.Equal(t, expected, res.Header.Get("Location"))
 			assert.Equal(t, results[0].ClientID, clientID)
+			assert.Equal(t, results[0].Scope, "files:read")
 		}
 	}
+}
+
+func TestAccessTokenNoGrantType(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"code":          {code},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "the grant_type parameter is mandatory")
+}
+
+func TestAccessTokenInvalidGrantType(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"token"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"code":          {code},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid grant type")
+}
+
+func TestAccessTokenNoClientID(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_secret": {clientSecret},
+		"code":          {code},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "the client_id parameter is mandatory")
+}
+
+func TestAccessTokenInvalidClientID(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {"foo"},
+		"client_secret": {clientSecret},
+		"code":          {code},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "the client must be registered")
+}
+
+func TestAccessTokenNoClientSecret(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type": {"authorization_code"},
+		"client_id":  {clientID},
+		"code":       {code},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "the client_secret parameter is mandatory")
+}
+
+func TestAccessTokenInvalidClientSecret(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {clientID},
+		"client_secret": {"foo"},
+		"code":          {code},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid client_secret")
+}
+
+func TestAccessTokenNoCode(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "the code parameter is mandatory")
+}
+
+func TestAccessTokenInvalidCode(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"code":          {"foo"},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid code")
+}
+
+func TestAccessTokenSuccess(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"authorization_code"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"code":          {code},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "200 OK", res.Status)
+	var response map[string]string
+	err = json.NewDecoder(res.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Equal(t, "bearer", response["token_type"])
+	assert.Equal(t, "files:read", response["scope"])
+	assertValidToken(t, response["access_token"], "access")
+	assertValidToken(t, response["refresh_token"], "refresh")
+	refreshToken = response["refresh_token"]
+}
+
+func TestRefreshTokenNoToken(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid refresh token")
+}
+
+func TestRefreshTokenInvalidToken(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"refresh_token": {"foo"},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid refresh token")
+}
+
+func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
+	claims := Claims{
+		jwt.StandardClaims{
+			Audience: "refresh",
+			Issuer:   domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  c.CouchID,
+		},
+		"files:write",
+	}
+	token := jwt.NewWithClaims(jwt.GetSigningMethod("none"), claims)
+	fakeToken, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	assert.NoError(t, err)
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"refresh_token": {fakeToken},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid refresh token")
+}
+
+func TestRefreshTokenSuccess(t *testing.T) {
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"refresh_token": {refreshToken},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "200 OK", res.Status)
+	var response map[string]string
+	err = json.NewDecoder(res.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Equal(t, "bearer", response["token_type"])
+	assert.Equal(t, "files:read", response["scope"])
+	assert.Equal(t, "", response["refresh_token"])
+	assertValidToken(t, response["access_token"], "access")
 }
 
 func TestMain(m *testing.M) {
@@ -692,6 +867,7 @@ func TestMain(m *testing.M) {
 	i, _ := instance.Create(domain, "en", nil)
 	db = i
 	registerToken = i.RegisterToken
+	oauthSecret = i.OAuthSecret
 
 	r := echo.New()
 	r.HTTPErrorHandler = errors.ErrorHandler
@@ -753,4 +929,23 @@ func getTestURL() (string, error) {
 	}
 	content, _ := ioutil.ReadAll(res.Body)
 	return string(content), nil
+}
+
+func assertValidToken(t *testing.T, token, audience string) {
+	claims := Claims{}
+	err := crypto.ParseJWT(token, oauthSecret, &claims)
+	assert.NoError(t, err)
+	assert.Equal(t, audience, claims.Audience)
+	assert.Equal(t, domain, claims.Issuer)
+	assert.Equal(t, clientID, claims.Subject)
+	assert.Equal(t, "files:read", claims.Scope)
+}
+
+func assertJSONError(t *testing.T, res *http.Response, message string) {
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	var response map[string]string
+	err := json.NewDecoder(res.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Equal(t, message, response["error"])
 }

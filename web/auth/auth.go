@@ -2,11 +2,13 @@
 package auth
 
 import (
+	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
@@ -274,7 +276,7 @@ func authorize(c echo.Context) error {
 		return err
 	}
 
-	access, err := CreateAccessCode(params.instance, params.clientID)
+	access, err := CreateAccessCode(params.instance, params.clientID, params.scope)
 	if err != nil {
 		return err
 	}
@@ -286,6 +288,104 @@ func authorize(c echo.Context) error {
 	u.Fragment = ""
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
+}
+
+type accessTokenReponse struct {
+	Type    string `json:"token_type"`
+	Scope   string `json:"scope"`
+	Access  string `json:"access_token"`
+	Refresh string `json:"refresh_token,omitempty"`
+}
+
+func accessToken(c echo.Context) error {
+	grant := c.FormValue("grant_type")
+	clientID := c.FormValue("client_id")
+	clientSecret := c.FormValue("client_secret")
+	instance := middlewares.GetInstance(c)
+
+	if grant == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the grant_type parameter is mandatory",
+		})
+	}
+	if clientID == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client_id parameter is mandatory",
+		})
+	}
+	if clientSecret == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client_secret parameter is mandatory",
+		})
+	}
+
+	client := &Client{}
+	if err := couchdb.GetDoc(instance, ClientDocType, clientID, client); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "the client must be registered",
+		})
+	}
+	if subtle.ConstantTimeCompare([]byte(clientSecret), []byte(client.ClientSecret)) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid client_secret",
+		})
+	}
+
+	var err error
+	out := accessTokenReponse{
+		Type: "bearer",
+	}
+
+	switch grant {
+	case "authorization_code":
+		code := c.FormValue("code")
+		if code == "" {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "the code parameter is mandatory",
+			})
+		}
+		accessCode := &AccessCode{}
+		if err = couchdb.GetDoc(instance, AccessCodeDocType, code, accessCode); err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid code",
+			})
+		}
+		out.Scope = accessCode.Scope
+		out.Refresh, err = client.CreateJWT(instance, RefreshTokenAudience, out.Scope)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "Can't generate refresh token",
+			})
+		}
+		// Delete the access code, it can be used only once
+		err = couchdb.DeleteDoc(instance, accessCode)
+		if err != nil {
+			log.Errorf("[oauth] Failed to delete the access code: %s", err)
+		}
+
+	case "refresh_token":
+		claims, ok := client.ValidRefreshToken(instance, c.FormValue("refresh_token"))
+		if !ok {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid refresh token",
+			})
+		}
+		out.Scope = claims.Scope
+
+	default:
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid grant type",
+		})
+	}
+
+	out.Access, err = client.CreateJWT(instance, AccessTokenAudience, out.Scope)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Can't generate access token",
+		})
+	}
+
+	return c.JSON(http.StatusOK, out)
 }
 
 // IsLoggedIn returns true if the context has a valid session cookie.
@@ -314,4 +414,6 @@ func Routes(router *echo.Group) {
 	authorizeGroup := router.Group("/auth/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)
 	authorizeGroup.POST("", authorize)
+
+	router.POST("/auth/access_token", accessToken)
 }

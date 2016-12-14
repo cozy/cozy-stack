@@ -7,6 +7,11 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
+type Claims struct {
+	jwt.StandardClaims
+	Foo string `json:"foo"`
+}
+
 func TestNewJWT(t *testing.T) {
 	secret := GenerateRandomBytes(64)
 	tokenString, err := NewJWT(secret, jwt.StandardClaims{
@@ -30,4 +35,47 @@ func TestNewJWT(t *testing.T) {
 	assert.Equal(t, "test", claims["aud"])
 	assert.Equal(t, "example.org", claims["iss"])
 	assert.Equal(t, "cozy.io", claims["sub"])
+}
+
+func TestParseJWT(t *testing.T) {
+	secret := GenerateRandomBytes(64)
+	tokenString, err := NewJWT(secret, Claims{
+		jwt.StandardClaims{
+			Audience: "test",
+			Issuer:   "example.org",
+			IssuedAt: Timestamp(),
+			Subject:  "cozy.io",
+		},
+		"bar",
+	})
+	assert.NoError(t, err)
+
+	claims := Claims{}
+	err = ParseJWT(tokenString, secret, &claims)
+	assert.NoError(t, err)
+	assert.Equal(t, "test", claims.Audience)
+	assert.Equal(t, "example.org", claims.Issuer)
+	assert.Equal(t, "cozy.io", claims.Subject)
+	assert.Equal(t, "bar", claims.Foo)
+}
+
+func TestParseInvalidJWT(t *testing.T) {
+	secret := GenerateRandomBytes(64)
+	tokenString, err := NewJWT(secret, Claims{
+		jwt.StandardClaims{
+			Audience: "test",
+			Issuer:   "example.org",
+			IssuedAt: Timestamp(),
+			Subject:  "cozy.io",
+		},
+		"bar",
+	})
+	assert.NoError(t, err)
+
+	err = ParseJWT("invalid-token", secret, &Claims{})
+	assert.Error(t, err)
+
+	invalidSecret := GenerateRandomBytes(64)
+	err = ParseJWT(tokenString, invalidSecret, &Claims{})
+	assert.Error(t, err)
 }
