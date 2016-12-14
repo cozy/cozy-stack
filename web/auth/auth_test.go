@@ -26,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 type renderer struct {
@@ -804,6 +805,28 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 		"client_id":     {clientID},
 		"client_secret": {clientSecret},
 		"refresh_token": {"foo"},
+	})
+	assert.NoError(t, err)
+	assertJSONError(t, res, "invalid refresh token")
+}
+
+func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
+	claims := Claims{
+		jwt.StandardClaims{
+			Audience: "refresh",
+			Issuer:   i.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  c.CouchID,
+		},
+		"files:write",
+	}
+	token := jwt.NewWithClaims(jwt.GetSigningMethod("none"), claims)
+	fakeToken, err := token.SignedString(secret)
+	res, err := postForm("/auth/access_token", &url.Values{
+		"grant_type":    {"refresh_token"},
+		"client_id":     {clientID},
+		"client_secret": {clientSecret},
+		"refresh_token": {fakeToken},
 	})
 	assert.NoError(t, err)
 	assertJSONError(t, res, "invalid refresh token")

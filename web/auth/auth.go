@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/apps"
 	"github.com/cozy/cozy-stack/couchdb"
 	"github.com/cozy/cozy-stack/instance"
@@ -357,7 +358,10 @@ func accessToken(c echo.Context) error {
 			})
 		}
 		// Delete the access code, it can be used only once
-		couchdb.DeleteDoc(instance, accessCode)
+		err = couchdb.DeleteDoc(instance, accessCode)
+		if err != nil {
+			log.Errorf("[oauth] Failed to delete the access code: %s", err)
+		}
 
 	case "refresh_token":
 		claims, ok := client.ValidRefreshToken(instance, c.FormValue("refresh_token"))
