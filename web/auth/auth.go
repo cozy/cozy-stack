@@ -344,7 +344,7 @@ func accessToken(c echo.Context) error {
 			})
 		}
 		accessCode := &AccessCode{}
-		if err := couchdb.GetDoc(instance, AccessCodeDocType, code, accessCode); err != nil {
+		if err = couchdb.GetDoc(instance, AccessCodeDocType, code, accessCode); err != nil {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
