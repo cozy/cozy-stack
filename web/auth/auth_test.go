@@ -814,14 +814,15 @@ func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
 	claims := Claims{
 		jwt.StandardClaims{
 			Audience: "refresh",
-			Issuer:   i.Domain,
+			Issuer:   domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  c.CouchID,
 		},
 		"files:write",
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("none"), claims)
-	fakeToken, err := token.SignedString(secret)
+	fakeToken, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+	assert.NoError(t, err)
 	res, err := postForm("/auth/access_token", &url.Values{
 		"grant_type":    {"refresh_token"},
 		"client_id":     {clientID},
