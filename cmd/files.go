@@ -144,7 +144,7 @@ type apiPatch struct {
 }
 
 func execCommand(c *instance.Instance, command string, w io.Writer) error {
-	args := strings.Fields(command)
+	args := splitArgs(command)
 	if len(args) == 0 {
 		return errFilesExec
 	}
@@ -639,6 +639,20 @@ func getInstance(domain string) (*instance.Instance, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+func splitArgs(command string) []string {
+	args := regexp.MustCompile("'.+'|\".+\"|\\S+").FindAllString(command, -1)
+	for i, a := range args {
+		l := len(a)
+		switch {
+		case a[0] == '\'' && a[l-1] == '\'':
+			args[i] = strings.Trim(a, "'")
+		case a[0] == '"' && a[l-1] == '"':
+			args[i] = strings.Trim(a, "\"")
+		}
+	}
+	return args
 }
 
 func init() {
