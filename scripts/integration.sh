@@ -3,7 +3,7 @@
 go run main.go instances add dev
 go run main.go serve &
 sleep 3
-cd integrations-tests/pouchdb
+cd integration-tests/pouchdb
 npm install
 npm run test
 
