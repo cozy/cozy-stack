@@ -180,22 +180,37 @@ func UseViper(v *viper.Viper) error {
 	return configureLogger()
 }
 
-// UseTestFile can be used in a test file to inject a configuration
-// from a cozy.test.* file. It should receive the relative path to the
-// root directory of the repository where the the default
-// cozy.test.yaml is installed.
-func UseTestFile() {
-	_, repo, _, _ := runtime.Caller(0)
-	repo = path.Join(repo, "../..")
+const defaultTestConfig = `
+mode: development
+host: localhost
+port: 8080
+assets: ./assets
 
+fs:
+  url: mem://test
+
+couchdb:
+    host: localhost
+    port: 5984
+
+log:
+    level: info
+`
+
+// UseTestFile can be used in a test file to inject a configuration
+// from a cozy.test.* file. If it can not find this file in your
+// $HOME/.cozy directory it will use the default one.
+func UseTestFile() {
 	v := viper.New()
 	v.SetConfigName("cozy.test")
-	v.AddConfigPath(path.Join(repo, ".cozy"))
 	v.AddConfigPath("$HOME/.cozy")
-	v.AddConfigPath(repo)
 
 	if err := v.ReadInConfig(); err != nil {
-		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+		}
+		UseTestYAML(defaultTestConfig)
+		return
 	}
 
 	if err := UseViper(v); err != nil {
@@ -209,6 +224,7 @@ func UseTestFile() {
 // from a YAML string.
 func UseTestYAML(yaml string) {
 	v := viper.New()
+	v.SetConfigType("yaml")
 
 	if err := v.ReadConfig(strings.NewReader(yaml)); err != nil {
 		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
@@ -241,7 +257,12 @@ func FindConfigFile(name string) (string, error) {
 func configureLogger() error {
 	loggerCfg := config.Logger
 
-	logLevel, err := log.ParseLevel(loggerCfg.Level)
+	level := loggerCfg.Level
+	if level == "" {
+		level = "info"
+	}
+
+	logLevel, err := log.ParseLevel(level)
 	if err != nil {
 		return err
 	}
