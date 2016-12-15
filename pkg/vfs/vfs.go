@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/spf13/afero"
 )
 

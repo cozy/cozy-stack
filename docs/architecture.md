@@ -422,6 +422,7 @@ So, we think that writing the Cozy Stack in Go is the right choice.
 │   └── templates   The HTML templates
 ├── cmd             One .go file for each command of the cozy executable
 ├── docs            Documentation, including this file
+├── pkg             One sub-directory for each golang package
 ├── scripts         Some shell scripts for developers and testing
 └── web             One sub-directory for each of the services listed above
 ```

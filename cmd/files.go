@@ -17,8 +17,8 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/instance"
-	"github.com/cozy/cozy-stack/vfs"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )

@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )

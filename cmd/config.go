@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/crypto"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 )

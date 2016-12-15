@@ -3,8 +3,8 @@ package auth
 import (
 	"testing"
 
-	"github.com/cozy/cozy-stack/crypto"
-	"github.com/cozy/cozy-stack/instance"
+	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
 )

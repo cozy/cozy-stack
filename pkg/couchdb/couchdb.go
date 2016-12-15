@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/google/go-querystring/query"
 )
 

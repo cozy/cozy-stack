@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/instance"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 )

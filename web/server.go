@@ -25,7 +25,7 @@ package web
 import (
 	"strings"
 
-	"github.com/cozy/cozy-stack/instance"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/labstack/echo"
 )
 

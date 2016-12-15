@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/instance"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"

@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/stretchr/testify/assert"
 )
 
