@@ -144,15 +144,6 @@ func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) 
 
 func registerClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
-	contentType := c.Request().Header.Get("Content-Type")
-	if contentType != "" {
-		contentType = strings.Split(contentType, ";")[0]
-	}
-	if contentType != "application/json" {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "bad_content_type",
-		})
-	}
 	client := new(Client)
 	if err := c.Bind(client); err != nil {
 		return err
@@ -415,7 +406,7 @@ func Routes(router *echo.Group) {
 	router.POST("/auth/login", login)
 	router.DELETE("/auth/login", logout)
 
-	router.POST("/auth/register", registerClient)
+	router.POST("/auth/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 
 	authorizeGroup := router.Group("/auth/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)

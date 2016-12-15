@@ -5,7 +5,7 @@ import (
 	"github.com/labstack/echo"
 )
 
-// NeedInstance is a echo middleware which will display an error
+// NeedInstance is an echo middleware which will display an error
 // if there is no instance.
 func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
