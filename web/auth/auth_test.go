@@ -914,7 +914,7 @@ func postJSON(u string, v echo.Map) (*http.Response, error) {
 	body, _ := json.Marshal(v)
 	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBuffer(body))
 	req.Host = domain
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
 	req.Header.Add("Accept", "application/json")
 	return client.Do(req)
 }
