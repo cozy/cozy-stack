@@ -11,7 +11,7 @@ var SOURCE = 'http://localhost:8080/data/' + DOCTYPE + '/'
 function stackRequest (method, path, body, expect, callback) {
   var opts = {
     'method': method,
-    'port': process.env.STACK_PORT || 8080,
+    'port': process.env.COZY_STACK_PORT || 8080,
     'path': path
   }
 
