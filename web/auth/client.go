@@ -20,6 +20,9 @@ const (
 	// ClientSecretLen is the number of random bytes used for generating the client secret
 	ClientSecretLen = 24
 
+	// RegistrationTokenAudience is the audience field of JWT for registration tokens
+	RegistrationTokenAudience = "registration"
+
 	// AccessTokenAudience is the audience field of JWT for access tokens
 	AccessTokenAudience = "access"
 
@@ -135,7 +138,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 
 	var err error
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
-		Audience: "registration",
+		Audience: RegistrationTokenAudience,
 		Issuer:   i.Domain,
 		IssuedAt: time.Now().Unix(),
 		Subject:  c.CouchID,
@@ -188,27 +191,27 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 	return token, err
 }
 
-// ValidRefreshToken checks that the JWT is valid and returns the associate claims
-func (c *Client) ValidRefreshToken(i *instance.Instance, token string) (Claims, bool) {
+// ValidToken checks that the JWT is valid and returns the associate claims
+func (c *Client) ValidToken(i *instance.Instance, audience, token string) (Claims, bool) {
 	claims := Claims{}
 	if token == "" {
 		return claims, false
 	}
 	if err := crypto.ParseJWT(token, i.OAuthSecret, &claims); err != nil {
-		log.Errorf("[oauth] Failed to verify the refresh token: %s", err)
+		log.Errorf("[oauth] Failed to verify the %s token: %s", audience, err)
 		return claims, false
 	}
-	// Note: the refresh token does not expire, no need to check its issue date
-	if claims.Audience != RefreshTokenAudience {
-		log.Errorf("[oauth] Unexpected audience for refresh token: %s", claims.Audience)
+	// Note: the refresh and registration tokens don't expire, no need to check its issue date
+	if claims.Audience != audience {
+		log.Errorf("[oauth] Unexpected audience for %s token: %s", audience, claims.Audience)
 		return claims, false
 	}
 	if claims.Issuer != i.Domain {
-		log.Errorf("[oauth] Expected %s issuer for refresh token, but was: %s", i.Domain, claims.Issuer)
+		log.Errorf("[oauth] Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
 		return claims, false
 	}
 	if claims.Subject != c.CouchID {
-		log.Errorf("[oauth] Expected %s subject for refresh token, but was: %s", c.CouchID, claims.Subject)
+		log.Errorf("[oauth] Expected %s subject for %s token, but was: %s", audience, c.CouchID, claims.Subject)
 		return claims, false
 	}
 	return claims, true

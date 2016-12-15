@@ -42,7 +42,7 @@ func TestParseJWT(t *testing.T) {
 	tokenString, err := c.CreateJWT(in, "refresh", "foo:read")
 	assert.NoError(t, err)
 
-	claims, ok := c.ValidRefreshToken(in, tokenString)
+	claims, ok := c.ValidToken(in, RefreshTokenAudience, tokenString)
 	assert.True(t, ok, "The token must be valid")
 	assert.Equal(t, "refresh", claims.Audience)
 	assert.Equal(t, "test-jwt.example.org", claims.Issuer)
@@ -53,7 +53,7 @@ func TestParseJWT(t *testing.T) {
 func TestParseJWTInvalidAudience(t *testing.T) {
 	tokenString, err := c.CreateJWT(in, "access", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidRefreshToken(in, tokenString)
+	_, ok := c.ValidToken(in, RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
 }
 
@@ -64,7 +64,7 @@ func TestParseJWTInvalidIssuer(t *testing.T) {
 	}
 	tokenString, err := c.CreateJWT(other, "refresh", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidRefreshToken(in, tokenString)
+	_, ok := c.ValidToken(in, RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
 }
 
@@ -74,6 +74,6 @@ func TestParseJWTInvalidSubject(t *testing.T) {
 	}
 	tokenString, err := other.CreateJWT(in, "refresh", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidRefreshToken(in, tokenString)
+	_, ok := c.ValidToken(in, RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
 }

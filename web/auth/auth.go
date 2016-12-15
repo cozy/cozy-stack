@@ -361,7 +361,7 @@ func accessToken(c echo.Context) error {
 		}
 
 	case "refresh_token":
-		claims, ok := client.ValidRefreshToken(instance, c.FormValue("refresh_token"))
+		claims, ok := client.ValidToken(instance, RefreshTokenAudience, c.FormValue("refresh_token"))
 		if !ok {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",
