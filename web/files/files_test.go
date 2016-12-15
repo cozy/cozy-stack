@@ -124,6 +124,23 @@ func trash(t *testing.T, path string) (res *http.Response, v map[string]interfac
 	return
 }
 
+func restore(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
+	req, err := http.NewRequest(http.MethodPost, ts.URL+path, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	res, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	err = extractJSONRes(res, &v)
+	assert.NoError(t, err)
+
+	return
+}
+
 func extractDirData(t *testing.T, data map[string]interface{}) (string, map[string]interface{}) {
 	var ok bool
 
@@ -940,6 +957,190 @@ func TestFileTrash(t *testing.T) {
 	if !assert.Equal(t, 400, res4.StatusCode) {
 		return
 	}
+}
+
+func TestFileRestore(t *testing.T) {
+	body := "foo,bar"
+	res1, data1 := upload(t, "/files/?Type=file&Name=torestorefile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	fileID, _ := extractDirData(t, data1)
+
+	res2, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res3, _ := restore(t, "/files/trash/"+fileID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	res4, err := http.Get(ts.URL + "/files/download?Path=" + url.QueryEscape("/torestorefile"))
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res4.StatusCode) {
+		return
+	}
+}
+
+func TestFileRestoreWithConflicts(t *testing.T) {
+	body := "foo,bar"
+	res1, data1 := upload(t, "/files/?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	fileID, _ := extractDirData(t, data1)
+
+	res2, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res1, _ = upload(t, "/files/?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	res3, data3 := restore(t, "/files/trash/"+fileID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	restoredID, restoredData := extractDirData(t, data3)
+	if !assert.Equal(t, fileID, restoredID) {
+		return
+	}
+	restoredData = restoredData["attributes"].(map[string]interface{})
+	assert.True(t, strings.HasPrefix(restoredData["name"].(string), "torestorefilewithconflict"))
+	assert.NotEqual(t, "torestorefilewithconflict", restoredData["name"].(string))
+}
+
+func TestFileRestoreWithWithoutParent(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestorein")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+
+	body := "foo,bar"
+	res1, data1 = upload(t, "/files/"+dirID+"?Type=file&Name=torestorefilewithconflict", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	fileID, _ := extractDirData(t, data1)
+
+	res2, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res2, _ = trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res3, data3 := restore(t, "/files/trash/"+fileID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	restoredID, restoredData := extractDirData(t, data3)
+	if !assert.Equal(t, fileID, restoredID) {
+		return
+	}
+	restoredData = restoredData["attributes"].(map[string]interface{})
+	assert.Equal(t, "torestorefilewithconflict", restoredData["name"].(string))
+	assert.NotEqual(t, vfs.RootDirID, restoredData["dir_id"].(string))
+}
+
+func TestFileRestoreWithWithoutParent2(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestorein2")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+
+	body := "foo,bar"
+	res1, data1 = upload(t, "/files/"+dirID+"?Type=file&Name=torestorefilewithconflict2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	fileID, _ := extractDirData(t, data1)
+
+	res2, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res3, data3 := restore(t, "/files/trash/"+fileID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	restoredID, restoredData := extractDirData(t, data3)
+	if !assert.Equal(t, fileID, restoredID) {
+		return
+	}
+	restoredData = restoredData["attributes"].(map[string]interface{})
+	assert.Equal(t, "torestorefilewithconflict2", restoredData["name"].(string))
+	assert.NotEqual(t, vfs.RootDirID, restoredData["dir_id"].(string))
+}
+
+func TestDirRestore(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestoredir")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+
+	res2, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res3, _ := restore(t, "/files/trash/"+dirID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+}
+
+func TestDirRestoreWithConflicts(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Type=directory&Name=torestoredirwithconflict")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+
+	res2, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res2.StatusCode) {
+		return
+	}
+
+	res1, _ = createDir(t, "/files/?Type=directory&Name=torestoredirwithconflict")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	res3, data3 := restore(t, "/files/trash/"+dirID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	restoredID, restoredData := extractDirData(t, data3)
+	if !assert.Equal(t, dirID, restoredID) {
+		return
+	}
+	restoredData = restoredData["attributes"].(map[string]interface{})
+	assert.True(t, strings.HasPrefix(restoredData["name"].(string), "torestoredirwithconflict"))
+	assert.NotEqual(t, "torestoredirwithconflict", restoredData["name"].(string))
 }
 
 func TestTrashList(t *testing.T) {

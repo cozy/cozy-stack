@@ -35,6 +35,7 @@ const filesExecUsage = `Available commands:
   cat [name]                 Echo the file content in stdout
   mv [from] [to]             Rename a file or directory
   rm [-f] [-r] [name]        Move the file to trash, or delete it permanently with -f flag
+  restore [name]             Restore a file or directory from trash
 `
 
 var flagImportFrom string
@@ -143,7 +144,7 @@ type apiPatch struct {
 }
 
 func execCommand(c *instance.Instance, command string, w io.Writer) error {
-	args := strings.Fields(command)
+	args := splitArgs(command)
 	if len(args) == 0 {
 		return errFilesExec
 	}
@@ -200,6 +201,8 @@ func execCommand(c *instance.Instance, command string, w io.Writer) error {
 		return mvCmd(c, client, args[0], args[1])
 	case "rm":
 		return rmCmd(c, client, args[0], flagRmForce, flagRmRecur)
+	case "restore":
+		return restoreCmd(c, client, args[0])
 	}
 
 	return errFilesExec
@@ -519,7 +522,19 @@ func rmCmd(c *instance.Instance, client *http.Client, name string, force, recur 
 	if !recur && len(doc.Included) > 0 {
 		return fmt.Errorf("Directory is not empty")
 	}
-	return vfsDoRequestAndClose(c, client, "DELETE", "/"+doc.Data.ID, q, nil)
+
+	return vfsDoRequestAndClose(c, client, "DELETE", "/"+doc.Data.ID, nil, nil)
+}
+
+func restoreCmd(c *instance.Instance, client *http.Client, name string) error {
+	q := url.Values{}
+	q.Add("Path", name)
+	doc, err := vfsRequestAndParse(c, client, "GET", "/metadata", q, nil)
+	if err != nil {
+		return err
+	}
+
+	return vfsDoRequestAndClose(c, client, "POST", "/trash/"+doc.Data.ID, nil, nil)
 }
 
 func importFiles(c *instance.Instance, client *http.Client, from, to string, match *regexp.Regexp) error {
@@ -624,6 +639,20 @@ func getInstance(domain string) (*instance.Instance, error) {
 		return nil, err
 	}
 	return c, nil
+}
+
+func splitArgs(command string) []string {
+	args := regexp.MustCompile("'.+'|\".+\"|\\S+").FindAllString(command, -1)
+	for i, a := range args {
+		l := len(a)
+		switch {
+		case a[0] == '\'' && a[l-1] == '\'':
+			args[i] = strings.Trim(a, "'")
+		case a[0] == '"' && a[l-1] == '"':
+			args[i] = strings.Trim(a, "\"")
+		}
+	}
+	return args
 }
 
 func init() {

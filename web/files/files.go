@@ -368,6 +368,32 @@ func ReadTrashFilesHandler(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, trash.Included(), nil)
 }
 
+// RestoreTrashFileHandler handle POST requests on /files/trash/file-id and
+// can be used to restore a file or directory from the trash.
+func RestoreTrashFileHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	fileID := c.Param("file-id")
+
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	var data jsonapi.Object
+	if dir != nil {
+		data, err = vfs.RestoreDir(instance, dir)
+	} else {
+		data, err = vfs.RestoreFile(instance, file)
+	}
+
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	return jsonapi.Data(c, http.StatusOK, data, nil)
+}
+
 // Routes sets the routing for the files service
 func Routes(router *echo.Group) {
 	router.HEAD("/download", ReadFileContentFromPathHandler)
@@ -386,6 +412,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
+	router.POST("/trash/:file-id", RestoreTrashFileHandler)
 	router.DELETE("/:file-id", TrashHandler)
 }
 
