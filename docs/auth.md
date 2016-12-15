@@ -123,7 +123,7 @@ this cozy instance.
 ```http
 POST /auth/login HTTP/1.1
 Host: cozy.example.org
-Content-type: application/x-www-form-urlencoded
+Content-Type: application/x-www-form-urlencoded
 
 password=p4ssw0rd&redirect=https%3A%2F%2Fcontacts.cozy.example.org
 ```
@@ -304,7 +304,7 @@ When the user accepts, her browser send a request to this endpoint:
 ```http
 POST /auth/authorize HTTP/1.1
 Host: cozy.example.org
-Content-type: application/x-www-form-urlencoded
+Content-Type: application/x-www-form-urlencoded
 
 state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=files/images:read%20data/io.cozy.contacts:read&csrf_token=johw6Sho
 ```
@@ -340,7 +340,7 @@ Example:
 ```http
 POST /auth/access_token HTTP/1.1
 Host: cozy.example.org
-Content-type: application/x-www-form-urlencoded
+Content-Type: application/x-www-form-urlencoded
 Accept: application/json
 
 grant_type=authorization_code&code=Aih7ohth&client_id=oauth-client-1&client_secret=Oung7oi5
