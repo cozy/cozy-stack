@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/routing"

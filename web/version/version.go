@@ -5,15 +5,11 @@ import (
 	"net/http"
 	"runtime"
 
-	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/labstack/echo"
 )
 
 // Version responds with the git commit used at the build
-//
-// swagger:route GET /version version showVersion
-//
-// It responds with the git commit used at the build
 func Version(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"version":         config.Version,

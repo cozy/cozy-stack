@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 )
 

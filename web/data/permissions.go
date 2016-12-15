@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cozy/cozy-stack/instance"
-	"github.com/cozy/cozy-stack/vfs"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/labstack/echo"
 )

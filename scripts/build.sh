@@ -94,9 +94,9 @@ do_release() {
 	go generate ./web/routing
 
 	go build -ldflags "\
-		-X github.com/cozy/cozy-stack/config.Version=${VERSION_STRING} \
-		-X github.com/cozy/cozy-stack/config.BuildTime=${BUILD_TIME} \
-		-X github.com/cozy/cozy-stack/config.BuildMode=${BUILD_MODE}
+		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
 		" \
 		-o "${BINARY}"
 

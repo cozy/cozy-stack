@@ -15,9 +15,9 @@ import (
 	"testing"
 
 	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/instance"
-	"github.com/cozy/cozy-stack/vfs"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
 	"github.com/spf13/afero"

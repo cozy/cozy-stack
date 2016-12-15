@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/apps"
-	"github.com/cozy/cozy-stack/couchdb"
-	"github.com/cozy/cozy-stack/instance"
+	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"

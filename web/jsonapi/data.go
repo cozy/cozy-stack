@@ -3,7 +3,7 @@ package jsonapi
 import (
 	"encoding/json"
 
-	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // Object is an interface to serialize something to a JSON-API Object

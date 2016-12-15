@@ -6,15 +6,11 @@ import (
 	"net/http"
 
 	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/labstack/echo"
 )
 
 // Status responds with the status of the service
-//
-// swagger:route GET /status status showStatus
-//
-// It responds OK if the service is running
 func Status(c echo.Context) error {
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",

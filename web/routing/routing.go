@@ -10,7 +10,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/cozy/cozy-stack/config"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"

@@ -6,8 +6,8 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )

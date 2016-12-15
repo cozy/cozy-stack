@@ -2,8 +2,8 @@
 package settings
 
 import (
-	"github.com/cozy/cozy-stack/config"
-	"github.com/cozy/cozy-stack/couchdb"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // SettingsDocType is the document type for CouchDB
