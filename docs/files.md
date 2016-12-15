@@ -31,8 +31,7 @@ Tags      | an array of tags
 #### Request
 
 ```http
-POST
-/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=directory&Name=phone&Tags=bills,konnectors HTTP/1.1
+POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=directory&Name=phone&Tags=bills,konnectors HTTP/1.1
 Accept: application/vnd.api+json
 ```
 

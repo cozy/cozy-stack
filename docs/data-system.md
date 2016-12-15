@@ -20,10 +20,10 @@ Where, `io.cozy.` is the developer specific prefix, `events` the actual type, an
 
 ### Request
 ```http
-GET /data/:type/:id
+GET /data/:type/:id HTTP/1.1
 ```
 ```http
-GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
 ```
 
 ### Response OK
@@ -42,7 +42,7 @@ Etag: "3-6494e0ac6494e0ac"
     "startdate": "20160823T150000Z",
     "enddate": "20160923T160000Z",
     "summary": "A long month",
-    "description": "I could go on and on and on ....",
+    "description": "I could go on and on and on ...."
 }
 ```
 
@@ -77,10 +77,10 @@ Content-Type: application/json
 
 ### Request
 ```http
-POST /data/:type/
+POST /data/:type/ HTTP/1.1
 ```
 ```http
-POST /data/io.cozy.events/
+POST /data/io.cozy.events/ HTTP/1.1
 Content-Length: ...
 Content-Type: application/json
 Accept: application/json
@@ -88,13 +88,13 @@ Accept: application/json
 ```json
 {
     "startdate": "20160712T150000",
-    "enddate": "20160712T150000",
+    "enddate": "20160712T150000"
 }
 ```
 
 ### Response OK
 ```http
-201 Created
+HTTP/1.1 201 Created
 Content-Length: ...
 Content-Type: application/json
 ```
@@ -132,10 +132,10 @@ Content-Type: application/json
 
 ### Request
 ```http
-PUT /data/:type/:id
+PUT /data/:type/:id HTTP/1.1
 ```
 ```http
-PUT /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+PUT /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
 Content-Length: ...
 Content-Type: application/json
 Accept: application/json
@@ -146,13 +146,13 @@ Accept: application/json
     "_type": "io.cozy.events",
     "_rev": "1-6494e0ac6494e0ac",
     "startdate": "20160712T150000",
-    "enddate": "20160712T200000",
+    "enddate": "20160712T200000"
 }
 ```
 
 ### Response OK
 ```http
-200 OK
+HTTP/1.1 200 OK
 Content-Length: ...
 Content-Type: application/json
 ```
@@ -167,7 +167,7 @@ Content-Type: application/json
         "_type": "io.cozy.events",
         "_rev": "2-056f5f44046ecafc08a2bc2b9c229e20",
         "startdate": "20160712T150000",
-        "enddate": "20160712T200000",
+        "enddate": "20160712T200000"
     }
 }
 ```
