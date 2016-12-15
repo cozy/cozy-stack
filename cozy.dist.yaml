@@ -10,6 +10,11 @@ port: 8080
 # default is to use the assets packed in the binary
 assets: ""
 
+admin:
+  # server host - flags: --admin-host
+  host: localhost
+  # server port - flags: --admin-port
+  port: 6060
 
 fs:
   # file system url - flags: --fs-url

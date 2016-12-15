@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -23,17 +25,35 @@ var (
 	BuildMode = "development"
 )
 
+// Filename is the default configuration filename that cozy
+// search for
+const Filename = "cozy"
+
+// Paths is the list of directories used to search for a
+// configuration file
+var Paths = []string{
+	".cozy",
+	"$HOME/.cozy",
+	"/etc/cozy",
+}
+
+// AdminSecretFileName is the name of the file containing the administration
+// hashed passphrase.
+const AdminSecretFileName = "cozy-admin-passphrase"
+
 var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Mode    string
-	Host    string
-	Port    int
-	Assets  string
-	Fs      Fs
-	CouchDB CouchDB
-	Logger  Logger
+	Mode      string
+	Host      string
+	Port      int
+	AdminHost string
+	AdminPort int
+	Assets    string
+	Fs        Fs
+	CouchDB   CouchDB
+	Logger    Logger
 }
 
 const (
@@ -91,6 +111,11 @@ func ServerAddr() string {
 	return config.Host + ":" + strconv.Itoa(config.Port)
 }
 
+// AdminServerAddr returns the address on which the administration is listening
+func AdminServerAddr() string {
+	return config.AdminHost + ":" + strconv.Itoa(config.AdminPort)
+}
+
 // CouchURL returns the CouchDB string url
 func CouchURL() string {
 	return config.CouchDB.URL
@@ -135,10 +160,12 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Mode:   mode,
-		Host:   v.GetString("host"),
-		Port:   v.GetInt("port"),
-		Assets: v.GetString("assets"),
+		Mode:      mode,
+		Host:      v.GetString("host"),
+		Port:      v.GetInt("port"),
+		AdminHost: v.GetString("admin.host"),
+		AdminPort: v.GetInt("admin.port"),
+		Assets:    v.GetString("assets"),
 		Fs: Fs{
 			URL: fsURL,
 		},
@@ -194,6 +221,23 @@ func UseTestYAML(yaml string) {
 	return
 }
 
+// FindConfigFile search in the Paths directories for the file with the given
+// name. It returns an error if it cannot find it or if an error occurs while
+// searching.
+func FindConfigFile(name string) (string, error) {
+	for _, cp := range Paths {
+		filename := filepath.Join(AbsPath(cp), name)
+		ok, err := exists(filename)
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			return filename, nil
+		}
+	}
+	return "", fmt.Errorf("Could not find config file %s", name)
+}
+
 func configureLogger() error {
 	loggerCfg := config.Logger
 
@@ -224,4 +268,51 @@ func parseMode(mode string) (string, error) {
 	}
 
 	return "", fmt.Errorf("Unknown mode %s", mode)
+}
+
+func exists(name string) (bool, error) {
+	_, err := os.Stat(name)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func userHomeDir() string {
+	if runtime.GOOS == "windows" {
+		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
+		if home == "" {
+			home = os.Getenv("USERPROFILE")
+		}
+		return home
+	}
+	return os.Getenv("HOME")
+}
+
+// AbsPath returns an absolute path relative.
+func AbsPath(inPath string) string {
+	if strings.HasPrefix(inPath, "~") {
+		inPath = userHomeDir() + inPath[len("~"):]
+	} else if strings.HasPrefix(inPath, "$HOME") {
+		inPath = userHomeDir() + inPath[len("$HOME"):]
+	}
+
+	if strings.HasPrefix(inPath, "$") {
+		end := strings.Index(inPath, string(os.PathSeparator))
+		inPath = os.Getenv(inPath[1:end]) + inPath[end:]
+	}
+
+	if filepath.IsAbs(inPath) {
+		return filepath.Clean(inPath)
+	}
+
+	p, err := filepath.Abs(inPath)
+	if err == nil {
+		return filepath.Clean(p)
+	}
+
+	return ""
 }

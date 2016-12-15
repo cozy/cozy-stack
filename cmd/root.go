@@ -11,18 +11,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// ConfigFilename is the default configuration filename that cozy
-// search for
-const ConfigFilename = "cozy"
-
-// ConfigPaths is the list of directories used to search for a
-// configuration file
-var ConfigPaths = []string{
-	".cozy",
-	"$HOME/.cozy",
-	"/etc/cozy",
-}
-
 // DefaultStorageDir is the default directory name in which data
 // is stored relatively to the cozy-stack binary.
 const DefaultStorageDir = "storage"
@@ -62,11 +50,17 @@ func init() {
 	flags.StringP("mode", "m", config.BuildMode, "server mode: development or production")
 	viper.BindPFlag("mode", flags.Lookup("mode"))
 
-	flags.StringP("host", "", "localhost", "server host")
+	flags.String("host", "localhost", "server host")
 	viper.BindPFlag("host", flags.Lookup("host"))
 
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
+
+	flags.String("admin-host", "localhost", "administration server host")
+	viper.BindPFlag("admin.host", flags.Lookup("admin-host"))
+
+	flags.Int("admin-port", 6060, "administration server port")
+	viper.BindPFlag("admin.port", flags.Lookup("admin-port"))
 
 	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
 	viper.BindPFlag("assets", flags.Lookup("assets"))
@@ -93,8 +87,8 @@ func Configure() error {
 		// Read given config file and skip other paths
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.SetConfigName(ConfigFilename)
-		for _, cfgPath := range ConfigPaths {
+		viper.SetConfigName(config.Filename)
+		for _, cfgPath := range config.Paths {
 			viper.AddConfigPath(cfgPath)
 		}
 	}

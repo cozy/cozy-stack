@@ -10,11 +10,13 @@ import (
 	"path"
 	"time"
 
+	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
+	"github.com/cozy/cozy-stack/web/instances"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/settings"
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
@@ -117,6 +119,32 @@ func SetupRoutes(router *echo.Echo) error {
 	status.Routes(router.Group("/status", cors))
 	version.Routes(router.Group("/version"))
 
+	setupRecover(router)
+
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil
+}
+
+// SetupAdminRoutes sets the routing for the administration HTTP endpoints
+func SetupAdminRoutes(router *echo.Echo) error {
+	if !config.IsDevRelease() {
+		router.Use(middlewares.BasicAuth(config.AdminSecretFileName))
+	}
+
+	instances.Routes(router.Group("/instances"))
+
+	setupRecover(router)
+
+	router.HTTPErrorHandler = errors.ErrorHandler
+	return nil
+}
+
+// setupRecover sets a recovering strategy of panics happening in handlers
+func setupRecover(router *echo.Echo) {
+	recoverMiddleware := middleware.RecoverWithConfig(middleware.RecoverConfig{
+		StackSize:         1 << 10, // 1 KB
+		DisableStackAll:   !config.IsDevRelease(),
+		DisablePrintStack: !config.IsDevRelease(),
+	})
+	router.Use(recoverMiddleware)
 }

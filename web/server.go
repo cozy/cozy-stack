@@ -25,10 +25,8 @@ package web
 import (
 	"strings"
 
-	"github.com/cozy/cozy-stack/config"
 	"github.com/cozy/cozy-stack/instance"
 	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
 )
 
 func splitHost(host string) (instanceHost string, appSlug string) {
@@ -42,14 +40,6 @@ func splitHost(host string) (instanceHost string, appSlug string) {
 // Create returns a new web server that will handle that apps routing given the
 // host of the request.
 func Create(router *echo.Echo, serveApps func(c echo.Context, domain, slug string) error) (*echo.Echo, error) {
-	recoverMiddleware := middleware.RecoverWithConfig(middleware.RecoverConfig{
-		StackSize:         1 << 10, // 1 KB
-		DisableStackAll:   !config.IsDevRelease(),
-		DisablePrintStack: !config.IsDevRelease(),
-	})
-
-	router.Use(recoverMiddleware)
-
 	main := echo.New()
 	main.Any("/*", func(c echo.Context) error {
 		// TODO(optim): minimize the number of instance requests
