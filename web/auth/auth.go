@@ -316,8 +316,8 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	client := &Client{}
-	if err := couchdb.GetDoc(instance, ClientDocType, clientID, client); err != nil {
+	client, err := FindClient(instance, clientID)
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the client must be registered",
 		})
@@ -327,8 +327,6 @@ func accessToken(c echo.Context) error {
 			"error": "invalid client_secret",
 		})
 	}
-
-	var err error
 	out := accessTokenReponse{
 		Type: "bearer",
 	}

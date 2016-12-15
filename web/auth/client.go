@@ -74,6 +74,22 @@ func (c *Client) SetID(id string) { c.CouchID = id }
 // SetRev changes the client revision
 func (c *Client) SetRev(rev string) { c.CouchRev = rev }
 
+func (c *Client) transformIDAndRev() {
+	c.ClientID = c.CouchID
+	c.CouchID = ""
+	c.CouchRev = ""
+}
+
+// FindClient loads a client from the database
+func FindClient(i *instance.Instance, id string) (Client, error) {
+	var c Client
+	if err := couchdb.GetDoc(i, ClientDocType, id, &c); err != nil {
+		log.Errorf("Impossible to find the client %s: %s", id, err)
+		return c, err
+	}
+	return c, nil
+}
+
 // ClientRegistrationError is a Client Registration Error Response, as described
 // in the Client Dynamic Registration Protocol
 // See https://tools.ietf.org/html/rfc7591#section-3.2.2 for errors
@@ -151,9 +167,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		}
 	}
 
-	c.ClientID = c.CouchID
-	c.CouchID = ""
-	c.CouchRev = ""
+	c.transformIDAndRev()
 	return nil
 }
 
