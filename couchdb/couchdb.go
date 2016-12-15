@@ -443,18 +443,20 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 // out the possible _design document.
 // TODO: pagination
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
+
 	v, err := query.Values(req)
 	if err != nil {
 		return err
 	}
 	v.Add("include_docs", "true")
 
-	var response allDocsResponse
+	var response AllDocsResponse
 	url := makeDBName(db, doctype) + "/_all_docs?" + v.Encode()
 	err = makeRequest("POST", url, &req, &response)
 	if err != nil {
 		return err
 	}
+
 	var docs []json.RawMessage
 	for _, row := range response.Rows {
 		if !strings.HasPrefix(row.ID, "_design") {
@@ -509,15 +511,6 @@ type findResponse struct {
 	Docs    json.RawMessage `json:"docs"`
 }
 
-type allDocsResponse struct {
-	Offset    int `json:"offset"`
-	TotalRows int `json:"total_rows"`
-	Rows      []struct {
-		ID  string          `json:"id"`
-		Doc json.RawMessage `json:"doc"`
-	} `json:"rows"`
-}
-
 // FindRequest is used to build a find request
 type FindRequest struct {
 	Selector mango.Filter  `json:"selector"`
@@ -536,6 +529,16 @@ type AllDocsRequest struct {
 	Skip       int      `url:"skip,omitempty"`
 	StartKey   string   `url:"start_key,omitempty"`
 	EndKey     string   `url:"end_key,omitempty"`
+}
+
+// AllDocsResponse is the response we receive from an _all_docs request
+type AllDocsResponse struct {
+	Offset    int `json:"offset"`
+	TotalRows int `json:"total_rows"`
+	Rows      []struct {
+		ID  string          `json:"id"`
+		Doc json.RawMessage `json:"doc"`
+	} `json:"rows"`
 }
 
 // DBStatusResponse is the response from DBStatus

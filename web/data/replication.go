@@ -76,8 +76,16 @@ func dbStatus(c echo.Context) error {
 	return c.JSON(http.StatusOK, status)
 }
 
+// mostly just to prevent couchdb creash
+func dataAPIWelcome(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "welcome to a cozy API",
+	})
+}
+
 func replicationRoutes(router *echo.Group) {
 	// Routes used only for replication
+	router.GET("/", dataAPIWelcome)
 	router.GET("/:doctype/", dbStatus)
 	router.GET("/:doctype/_changes", changesFeed)
 	// POST=GET see http://docs.couchdb.org/en/2.0.0/api/database/changes.html#post--db-_changes)
