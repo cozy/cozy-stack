@@ -31,8 +31,6 @@ var ErrDocTypeInvalid = errors.New("Invalid document type")
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
 // create a new directory.
-//
-// swagger:route POST /files/:dir-id files uploadFileOrCreateDir
 func CreationHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	var doc jsonapi.Object
@@ -105,8 +103,6 @@ func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
 
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
 // to overwrite the content of a file given its identifier.
-//
-// swagger:route PUT /files/:file-id files overwriteFileContent
 func OverwriteFileContentHandler(c echo.Context) (err error) {
 	var instance = middlewares.GetInstance(c)
 	var olddoc *vfs.FileDoc
@@ -237,8 +233,6 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
 // id aiming at getting file metadata from its path.
-//
-// swagger:route GET /files/:file-id files getFileMetadata
 func ReadMetadataFromIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -261,8 +255,6 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 
 // ReadMetadataFromPathHandler handles all GET requests on
 // /files/metadata aiming at getting file metadata from its path.
-//
-// swagger:route GET /files/metadata files getFileMetadata
 func ReadMetadataFromPathHandler(c echo.Context) error {
 	var err error
 
@@ -286,8 +278,6 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
 // aiming at downloading a file given its ID. It serves the file in inline
 // mode.
-//
-// swagger:route GET /files/:file-id files downloadFileByID
 func ReadFileContentFromIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -307,8 +297,6 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 // ReadFileContentFromPathHandler handles all GET request on /files/download
 // aiming at downloading a file given its path. It serves the file in in
 // attachment mode.
-//
-// swagger:route GET /files/download files downloadFileByPath
 func ReadFileContentFromPathHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -329,8 +317,6 @@ func ReadFileContentFromPathHandler(c echo.Context) error {
 // TrashHandler handles all DELETE requests on /files/:file-id and
 // moves the file or directory with the specified file-id to the
 // trash.
-//
-// swagger:route DELETE /files/:file-id files trashFileOrDirectory
 func TrashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 

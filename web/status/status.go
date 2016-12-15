@@ -11,10 +11,6 @@ import (
 )
 
 // Status responds with the status of the service
-//
-// swagger:route GET /status status showStatus
-//
-// It responds OK if the service is running
 func Status(c echo.Context) error {
 	checker := checkup.HTTPChecker{
 		Name:     "CouchDB",

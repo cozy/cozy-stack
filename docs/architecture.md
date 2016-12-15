@@ -437,9 +437,6 @@ known standards make sense (caldav & carddav for example), use them. Else,
 The golang web framework used for the cozy stack is
 [Echo](https://github.com/labstack/echo/).
 
-All the HTTP resources will be documented with
-[swagger-ui](https://github.com/swagger-api/swagger-ui).
-
 #### HTTP status codes
 
 There are some HTTP status codes that are generally used in the API:
