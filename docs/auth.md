@@ -225,6 +225,40 @@ Content-Type: application/json
 ```
 
 ### GET /auth/register/:client-id
+
+This route is used by the clients to get informations about them-selves.
+
+See [OAuth 2.0 Dynamic Client Registration Management
+Protocol](https://tools.ietf.org/html/rfc7592) for more details.
+
+```http
+GET /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3
+Host: cozy.example.org
+Accept: application/json
+Authorization: Bearer J9l-ZhwP...
+```
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
+  "client_secret": "eyJpc3Mi[...omitted for brevity...]",
+  "client_secret_expires_at": 0,
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "redirect_uris": ["https://client.example.org/oauth/callback"],
+  "client_name": "Client",
+  "software_id": "github.com/example/client",
+  "software_version": "2.0.1",
+  "client_kind": "web",
+  "client_uri": "https://client.example.org/",
+  "logo_uri": "https://client.example.org/logo.svg",
+  "policy_uri": "https://client/example.org/policy"
+}
+```
+
 ### PUT /auth/register/:client-id
 ### DELETE /auth/register/:client-id
 
