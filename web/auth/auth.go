@@ -124,10 +124,12 @@ func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) 
 	}
 
 	instance := middlewares.GetInstance(c)
-	parts := strings.SplitN(u.Host, ".", 2)
-	if len(parts) != 2 || parts[1] != instance.Domain || parts[0] == "" {
-		return "", echo.NewHTTPError(http.StatusBadRequest,
-			"bad url: should be subdomain")
+	if u.Host != instance.Domain {
+		parts := strings.SplitN(u.Host, ".", 2)
+		if len(parts) != 2 || parts[1] != instance.Domain || parts[0] == "" {
+			return "", echo.NewHTTPError(http.StatusBadRequest,
+				"bad url: should be subdomain")
+		}
 	}
 
 	// To protect against stealing authorization code with redirection, the
@@ -228,7 +230,7 @@ func authorizeForm(c echo.Context) error {
 
 	if !IsLoggedIn(c) {
 		redirect := url.Values{
-			"redirect": {c.Request().URL.String()},
+			"redirect": {params.instance.PageURL(c.Request().URL.String())},
 		}
 		u := url.URL{
 			Scheme:   "https",
