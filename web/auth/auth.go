@@ -142,7 +142,11 @@ func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) 
 
 func registerClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
-	if c.Request().Header.Get("Content-Type") != "application/json" {
+	contentType := c.Request().Header.Get("Content-Type")
+	if contentType != "" {
+		contentType = strings.Split(contentType, ";")[0]
+	}
+	if contentType != "application/json" {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "bad_content_type",
 		})
