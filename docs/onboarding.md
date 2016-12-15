@@ -156,3 +156,26 @@ The instance is created
   - add more informations to the instance document.
   - create `io.cozy.accounts` documents for external accounts.
 - When the onboarding application is satisfied, Alice is redirected to the `home` application
+
+### POST /register
+
+The onboarding application can send a request to this endpoint to register the
+passphrase of the user.
+
+#### Request
+
+```http
+POST /register HTTP/1.1
+Host: alice.example.com
+Content-Type: x-www-form-urlencoded
+
+registerToken=37cddf40d7724988860fa0e03efd30fe&passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo
+```
+
+#### Response
+
+```http
+HTTP/1.1 303 See Other
+Location: https://onboarding.alice.example.com/
+Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=test.bruno.fr; Max-Age=604800; HttpOnly; Secure
+```
