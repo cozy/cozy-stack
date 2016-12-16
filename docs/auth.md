@@ -232,7 +232,7 @@ See [OAuth 2.0 Dynamic Client Registration Management
 Protocol](https://tools.ietf.org/html/rfc7592) for more details.
 
 ```http
-GET /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3
+GET /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3 HTTP/1.1
 Host: cozy.example.org
 Accept: application/json
 Authorization: Bearer J9l-ZhwP...
@@ -260,6 +260,7 @@ Content-Type: application/json
 ```
 
 ### PUT /auth/register/:client-id
+
 ### DELETE /auth/register/:client-id
 
 These routes follow the [OAuth 2.0 Dynamic Client Registration Management
@@ -305,7 +306,7 @@ application which only the callback URI is guaranteed.
 When the user accepts, her browser send a request to this endpoint:
 
 ```http
-POST /auth/authorize
+POST /auth/authorize HTTP/1.1
 Host: cozy.example.org
 Content-type: x-www-form-urlencoded
 
@@ -341,7 +342,7 @@ The parameters are:
 Example:
 
 ```http
-POST /auth/access_token
+POST /auth/access_token HTTP/1.1
 Host: cozy.example.org
 Content-type: x-www-form-urlencoded
 Accept: application/json
@@ -432,8 +433,8 @@ with the HTTP `Referer` header.
 The token can be sent to the cozy-stack in the query-string, like this:
 
 ```http
-GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?CtxToken=e7af77ba2c2dbe2d
-HOST: cozy.example.org
+GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?CtxToken=e7af77ba2c2dbe2d HTTP/1.1
+Host: cozy.example.org
 ```
 
 If the user is authenticated, her cookies will be sent automatically. The
