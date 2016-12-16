@@ -144,15 +144,6 @@ func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) 
 
 func registerClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
-	contentType := c.Request().Header.Get("Content-Type")
-	if contentType != "" {
-		contentType = strings.Split(contentType, ";")[0]
-	}
-	if contentType != "application/json" {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "bad_content_type",
-		})
-	}
 	client := new(Client)
 	if err := c.Bind(client); err != nil {
 		return err
@@ -162,6 +153,12 @@ func registerClient(c echo.Context) error {
 		return c.JSON(err.Code, err)
 	}
 	return c.JSON(http.StatusCreated, client)
+}
+
+func readClient(c echo.Context) error {
+	client := c.Get("client").(Client)
+	client.transformIDAndRev()
+	return c.JSON(http.StatusOK, client)
 }
 
 type authorizeParams struct {
@@ -325,8 +322,8 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	client := &Client{}
-	if err := couchdb.GetDoc(instance, ClientDocType, clientID, client); err != nil {
+	client, err := FindClient(instance, clientID)
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the client must be registered",
 		})
@@ -336,8 +333,6 @@ func accessToken(c echo.Context) error {
 			"error": "invalid client_secret",
 		})
 	}
-
-	var err error
 	out := accessTokenReponse{
 		Type: "bearer",
 	}
@@ -370,7 +365,7 @@ func accessToken(c echo.Context) error {
 		}
 
 	case "refresh_token":
-		claims, ok := client.ValidRefreshToken(instance, c.FormValue("refresh_token"))
+		claims, ok := client.ValidToken(instance, RefreshTokenAudience, c.FormValue("refresh_token"))
 		if !ok {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",
@@ -400,6 +395,33 @@ func IsLoggedIn(c echo.Context) bool {
 	return err == nil
 }
 
+func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		header := c.Request().Header.Get("Authorization")
+		parts := strings.Split(header, " ")
+		if len(parts) != 2 || parts[0] != "bearer" {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": "invalid_token",
+			})
+		}
+		instance := middlewares.GetInstance(c)
+		client, err := FindClient(instance, c.Param("client-id"))
+		if err != nil {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "Client not found",
+			})
+		}
+		_, ok := client.ValidToken(instance, RegistrationTokenAudience, parts[1])
+		if !ok {
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": "invalid_token",
+			})
+		}
+		c.Set("client", client)
+		return next(c)
+	}
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -415,7 +437,8 @@ func Routes(router *echo.Group) {
 	router.POST("/auth/login", login)
 	router.DELETE("/auth/login", logout)
 
-	router.POST("/auth/register", registerClient)
+	router.POST("/auth/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
+	router.GET("/auth/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
 
 	authorizeGroup := router.Group("/auth/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)

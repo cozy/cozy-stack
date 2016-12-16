@@ -64,6 +64,8 @@ var jar *testJar
 var client *http.Client
 var clientID string
 var clientSecret string
+var registrationToken string
+var altRegistrationToken string
 var csrfToken string
 var code string
 var refreshToken string
@@ -353,6 +355,7 @@ func TestRegisterClientSuccessWithJustMandatoryFields(t *testing.T) {
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 	clientID = client.ClientID
 	clientSecret = client.ClientSecret
+	registrationToken = client.RegistrationToken
 }
 
 func TestRegisterClientSuccessWithAllFields(t *testing.T) {
@@ -399,6 +402,38 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	assert.Equal(t, client.PolicyURI, "https://github/com/cozy/cozy-test/master/policy.md")
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 	assert.Equal(t, client.SoftwareVersion, "v0.1.2")
+	altRegistrationToken = client.RegistrationToken
+}
+
+func TestReadClientInvalidToken(t *testing.T) {
+	res, err := getJSON("/auth/register/"+clientID, altRegistrationToken)
+	assert.NoError(t, err)
+	assert.Equal(t, "401 Unauthorized", res.Status)
+}
+
+// TODO test with a deleted client id
+func TestReadClientInvalidClientID(t *testing.T) {
+	res, err := getJSON("/auth/register/123456789", registrationToken)
+	assert.NoError(t, err)
+	assert.Equal(t, "404 Not Found", res.Status)
+}
+
+func TestReadClientSuccess(t *testing.T) {
+	res, err := getJSON("/auth/register/"+clientID, registrationToken)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	var client Client
+	err = json.NewDecoder(res.Body).Decode(&client)
+	assert.NoError(t, err)
+	assert.Equal(t, client.ClientID, clientID)
+	assert.Equal(t, client.ClientSecret, clientSecret)
+	assert.Equal(t, client.SecretExpiresAt, 0)
+	assert.Equal(t, client.RegistrationToken, "")
+	assert.Equal(t, client.RedirectURIs, []string{"https://example.org/oauth/callback"})
+	assert.Equal(t, client.GrantTypes, []string{"authorization_code", "refresh_token"})
+	assert.Equal(t, client.ResponseTypes, []string{"code"})
+	assert.Equal(t, client.ClientName, "cozy-test")
+	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 }
 
 func TestAuthorizeFormRedirectsWhenNotLoggedIn(t *testing.T) {
@@ -900,6 +935,14 @@ func postJSON(u string, v echo.Map) (*http.Response, error) {
 	req.Host = domain
 	req.Header.Add("Content-Type", "application/json; charset=utf-8")
 	req.Header.Add("Accept", "application/json")
+	return client.Do(req)
+}
+
+func getJSON(u, token string) (*http.Response, error) {
+	req, _ := http.NewRequest("GET", ts.URL+u, nil)
+	req.Host = domain
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", "bearer "+token)
 	return client.Do(req)
 }
 
