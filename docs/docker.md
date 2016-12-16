@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Docker
-======
+# Docker
 
 This page list various operations that can be automated *via* Docker.
 

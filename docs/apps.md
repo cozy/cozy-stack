@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Applications
-============
+# Applications
 
 It's possible to manage serverless applications from the cozy stack and serve
 them via cozy stack. The stack does the routing and serve the HTML and the
@@ -9,8 +8,7 @@ assets for the applications. The assets of the applications are installed in
 the virtual file system.
 
 
-Install an application
-----------------------
+## Install an application
 
 ### The manifest
 
@@ -302,8 +300,7 @@ Content-Type: application/vnd.api+json
 ```
 
 
-List installed applications
----------------------------
+## List installed applications
 
 ### GET /apps/
 
@@ -344,8 +341,7 @@ Content-Type: application/vnd.api+json
 ```
 
 
-Manage the marketplace
-----------------------
+## Manage the marketplace
 
 ### GET /apps/manifests
 
@@ -426,8 +422,7 @@ Update an application in the marketplace.
 Remove an application from the marketplace.
 
 
-Uninstall an application
-------------------------
+## Uninstall an application
 
 ### DELETE /apps/:slug
 
@@ -444,8 +439,7 @@ HTTP/1.1 204 No Content
 ```
 
 
-Access an application
----------------------
+## Access an application
 
 Each application will run on its sub-domain. The sub-domain is the slug used
 when installing the application (`calendar.cozy.example.org` if it was

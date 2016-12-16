@@ -15,8 +15,8 @@ Table of contents
 - [Build a release](./release.md)
 
 ### API
-- [Create, Read, Update, Delete](./crud.md)
-- [Virtual Filesystem](./files.md)
+- [Data System](./data-system.md)
+- [Virtual File System](./files.md)
 - [Jobs](./jobs.md)
 - [Settings](./settings.md)
 

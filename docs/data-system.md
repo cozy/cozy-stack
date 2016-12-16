@@ -1,6 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-# General
+# Data System
 
 ### Typing
 
@@ -16,9 +16,9 @@ Where, `io.cozy.` is the developer specific prefix, `events` the actual type, an
 
 ------------------------------------------------------------------------------
 
-# Access a document
+## Access a document
 
-#### Request
+### Request
 ```http
 GET /data/:type/:id
 ```
@@ -26,7 +26,7 @@ GET /data/:type/:id
 GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ```
 
-#### Response OK
+### Response OK
 ```http
 HTTP/1.1 200 OK
 Date: Mon, 27 Sept 2016 12:28:53 GMT
@@ -73,7 +73,7 @@ Content-Type: application/json
 
 --------------------------------------------------------------------------------
 
-# Create a document
+## Create a document
 
 ### Request
 ```http
@@ -128,7 +128,7 @@ Content-Type: application/json
 
 --------------------------------------------------------------------------------
 
-# Update an existing document
+## Update an existing document
 
 ### Request
 ```http
@@ -194,7 +194,7 @@ The client MUST give a `_rev` field in the document. If this field is different 
 --------------------------------------------------------------------------
 
 
-# Create a document with a fixed id
+## Create a document with a fixed id
 
 ### Request
 ```http
@@ -251,7 +251,7 @@ Content-Type: application/json
 
 --------------------------------------------------------------------------------
 
-# Delete a document
+## Delete a document
 
 ### Request
 ```http

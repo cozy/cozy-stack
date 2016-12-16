@@ -1,5 +1,6 @@
-Cozy Jobs
-=========
+[Table of contents](./README.md#table-of-contents)
+
+# Jobs
 
 Jobs are designed to represent asynchronous tasks that your cozy can execute. These tasks can be scheduled in advance, recurring or sudden and provide various services.
 
@@ -13,8 +14,7 @@ This doc introduces two cozy types:
   - `io.cozy.triggers` for triggers
 
 
-Triggers
---------
+## Triggers
 
 Jobs can be launched by six different types of triggers:
 
@@ -154,8 +154,7 @@ Each trigger should have a back-pressure policy to drop job spawning when not ne
 * *full queue* when no worker is available, or the queue has too many elements, it can decide to drop the job action (given some informations)
 
 
-Error Handling
---------------
+## Error Handling
 
 Jobs can fail to execute their task. We have two ways to parameterize such cases.
 
@@ -178,8 +177,7 @@ By default, jobs are parameterized with a maximum of 3 tries with 1 minute timeo
 These defaults may vary given the workload of the workers.
 
 
-Jobs API
---------
+## Jobs API
 
 Example and description of the attributes of a `io.cozy.jobs`:
 
@@ -491,16 +489,14 @@ Accept: application/vnd.api+json
 * 404 Not Found, when the trigger does not exist
 
 
-Worker pool
------------
+## Worker pool
 
 The consuming side of the job queue is handled by a worker pool.
 
 On a monolithic cozy-stack, the worker pool has a configurable fixed size of workers. The default value is not yet determined. Each time a worker has finished a job, it check the queue and based on the priority and the queued date of the job, picks a new job to execute.
 
 
-Permissions
------------
+## Permissions
 
 In order to prevent jobs from leaking informations between applications, we may need to add filtering per applications: for instance one queue per applications.
 

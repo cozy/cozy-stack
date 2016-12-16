@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Onboarding
-==========
+# Onboarding
 
 This document explains the architecture and process allowing a cozy instance owner to register to its cozy instance.
 
@@ -61,11 +60,13 @@ GET https://alice.example.com/instance
 ```
 
 If the user is logged in, display all instance information, except password
+
 #### Request
 ```http
 GET https://alice.example.com/instance
 Cookie sessionid=xxxx
 ```
+
 #### Response
 ```json
 {

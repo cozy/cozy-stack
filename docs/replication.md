@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Replication
-=========
+# Replication
 
 Replication is the ability of a cozy-stack to copy / move all or a subset of its data to another support. It should cover 2 use cases
 
@@ -12,7 +11,7 @@ Replication will not be used for Moving, nor Backup. See associated docs in this
 
 CouchDB replication is a well-understood, safe and stable algorithm ensuring replication between two couchdb databases. It is delta-based, and is stateful: we sync changes since a given checkpoint.
 
-# Files synchronization
+## Files synchronization
 
 Replication of too heavy database (with a lot of attachments) has been, in cozy experience, the source of some bugs. To avoid that (and some other issues), in cozy-stack, the attachments are stored outside of couchdb.
 
@@ -22,12 +21,12 @@ Rsync is a well-understood, safe and stable algorithm to replicate files hierarc
 
 **Useful golang package:** http://rclone.org/ sync folder in FS / Swift  (may be we can add a driver for cozy)
 
-# Couchdb replication & limitation
+## Couchdb replication & limitation
 
 Couchdb 2 replication protocol is described [in details here ](http://docs.couchdb.org/en/2.0.0/replication/protocol.html)
 
 
-## Quick summary
+### Quick summary
 
 1. The replicator figures out what was the last sequence number *lastseqno* which was correctly synced from the source database, using a `_local/:replicationid` document.
 2. The replicator `GET :source/changes?since=lastseqno&limit=batchsize` and identify which docs have changed (and their *open_revs*).
@@ -38,7 +37,7 @@ Couchdb 2 replication protocol is described [in details here ](http://docs.couch
 
 Repeat 2-5 until there is no more changes.
 
-## Details
+### Details
 
 - In step 5, the replicator can also attempt to `PUT :target/:docid` if doc are too heavy, but this should not happens in cozy-stack considering there wont be attachment in couchdb.
 - In step 4, the replicator can optimize by calling `GET `
@@ -48,7 +47,7 @@ Repeat 2-5 until there is no more changes.
 - Two way replication is simply two one way replications
 
 
-## Routes used by replication
+### Routes used by replication
 
 To be a source of replication, the stack only need to support the following route (and query parameters):
 
@@ -66,10 +65,10 @@ In both case, we need to support
 
 - `PUT    :both/_local/:revdocid` to store the current sequence number.
 
-# Stack Sync API exploration
+## Stack Sync API exploration
 
 
-## Easy part: 1 db/doctype on stack AND remote, no binaries
+### Easy part: 1 db/doctype on stack AND remote, no binaries
 We *just* need to implement the routes described above by proxying to the underlying couchdb database.
 
 ```javascript
@@ -87,7 +86,7 @@ To suport this we need to:
 This will cover documents part of the Devices use case.
 
 
-## Continuous replication
+### Continuous replication
 
 It is impossible to implement it by simply proxying to couchdb (see unlimited inactive users).
 
@@ -97,7 +96,7 @@ The big use case for which we might want it is Sharing. But, because Sharing wil
 
 **Conclusion:** Start with polling replication. Consider alternative notifications mechanism when the usecase appears and eventually use time-limited continuous replication for a few special case (collaborative edit).
 
-## Realtime
+### Realtime
 
 One of the cool feature of cozy apps was how changes are sent to the client in realtime through websocket. However this have a cost: every cozy and every apps open in a browser, even while not used keep one socket open on the server, this is not scalable to thousands of users.
 
@@ -111,7 +110,7 @@ To have some form of couchdb-to-stack continuous changes monitoring, we can moni
 
 **Conclusion:** We will use Websocket from the client to the stack. We will try to avoid using continuous changes feed from couchdb to the stack. We will optimize if proven needed by benchmarks, starting with "useless" changes and eventually some multiplexing.
 
-## Sharing
+### Sharing
 
 To be completed by discussing with Science team.
 

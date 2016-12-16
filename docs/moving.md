@@ -1,8 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Moving
-=========
-
+# Moving
 
 This document is a stub to hold information about moving one's cozy from an hosting provider to another.
 

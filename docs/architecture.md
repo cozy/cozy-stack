@@ -1,10 +1,8 @@
 [Table of contents](./README.md#table-of-contents)
 
-Cozy Architecture
-=================
+# Cozy Architecture
 
-What is Cozy?
--------------
+## What is Cozy?
 
 Cozy is a personal platform as a service with a focus on data.
 Cozy can be seen as 4 layers, from inside to outside:
@@ -25,8 +23,7 @@ for Cozy in all aspects. From an architectural point of view, it declines to:
   data to go elsewhere, you can.
 
 
-Overview
---------
+## Overview
 
 The architecture of Cozy is composed of:
 
@@ -130,8 +127,7 @@ Some technical terms have a special meaning in the cozy context. They are
 explained in [the glossary](glossary.md).
 
 
-Services
---------
+## Services
 
 The cozy stack came with several services. They run on the server, inside the
 golang process and have an HTTP interface.
@@ -262,8 +258,7 @@ It's here just to say that the API is up and that it can access the CouchDB
 databases, for debugging and monitoring purposes.
 
 
-Workers
--------
+## Workers
 
 The workers take jobs from the queues and process them.
 
@@ -308,8 +303,7 @@ good candidate for the indexing and full text search technology.
 Payload: the doctype and the document to index
 
 
-Serverless apps
----------------
+## Serverless apps
 
 ### Home `/apps/home`
 
@@ -368,8 +362,7 @@ A task manager to never forgot what you should do.
 Start your cozy and setup your accounts.
 
 
-Clients
--------
+## Clients
 
 ### Mobile
 
@@ -383,8 +376,7 @@ Cozy-desktop is a client for Linux, OSX and windows that allows to sync the
 files in a cozy instance with a laptop or desktop.
 
 
-Guidelines
-----------
+## Guidelines
 
 ### The Go Programming Language
 
@@ -530,8 +522,7 @@ translations are maintained on transifex by the community. Translating to a
 new language, or reviewing an existing one, is really appreciated.
 
 
-FAQ
----
+## FAQ
 
 > Does the current konnectors in nodejs will be lost?
 
