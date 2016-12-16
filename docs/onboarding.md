@@ -18,12 +18,12 @@ All cozy-instance fields are considered private unless explictly prefixed by `pu
 
 ## Onboarding steps
 
-This document and the cozy-stack are only concerned with login and password registering step which are important for security.
+This document and the cozy-stack are only concerned with login and passphrase registering step which are important for security.
 
 All other steps are handled by the `onboarding` application.
 
 The `onboarding` application SHOULD therefore provide the following features
-- When started with a `registerToken`, allow the user to create a password
+- When started with a `registerToken`, allow the user to create a passphrase
 - When started with a `contextToken` ([see auth doc](./auth.md#how-to-get-a-token)) use it to retrieve instance document.
   - If the instance document is complete **according to the `onboarding` app**, redirect to `home` application.
   - Otherwise, performs whatever steps it deems necessary to fill out the instance (ask for user email, help set up `myaccounts` accounts, say thank you...)
@@ -36,7 +36,7 @@ This makes it easier to add more onboarding steps and have them run on already-i
 
 When an user attempts to access the root of its instance (`https://example.cozycloud.cc`) or an application (`https://contacts.example.cozycloud.cc`), and she is not logged-in, she is redirected :
 
-- If the instance has a `password` set, to the `/login` page
+- If the instance has a `passphrase` set, to the `/login` page
 - If the instance has a `registerToken` set, to the `onboarding` application.
 
 After login, the user is always redirected to the `onboarding` application. It is the `onboarding` application responsibility to check if registering is complete and reredirect to home.
@@ -59,7 +59,7 @@ GET https://alice.example.com/instance
 }
 ```
 
-If the user is logged in, display all instance information, except password
+If the user is logged in, display all instance information, except passphrase
 
 #### Request
 ```http
@@ -80,14 +80,14 @@ Cookie sessionid=xxxx
 
 ### POST /instance
 
-If the user is not logged in, allow to set the password. This action requires the `registerToken` defined on instance creation.*
+If the user is not logged in, allow to set the passphrase. This action requires the `registerToken` defined on instance creation.*
 Once used, the `registerToken` is destroyed and cannot be used anymore.
 
 #### Request
 ```http
 POST https://alice.example.com/instance
 Content-type: application/x-www-form-urlencoded
-registerToken=4256595659594842&password=my-secret
+registerToken=4256595659594842&passphrase=my-secret
 ```
 
 #### Response
@@ -151,7 +151,7 @@ The instance is created
 - Alice navigates to `https://alice.cozycloud.cc?registerToken=42...42`
 - She is redirected to the `onboarding` application
 - The `onboarding` application receive the registerToken. It is the default onboarding application and therefore display the cozy cloud agreement and then ask for a Password.
-- The `onboarding` application use its `registerToken` to register the password. Registering the password automatically log Alice in and redirect her back to the `onboarding` app.
+- The `onboarding` application use its `registerToken` to register the passphrase. Registering the passphrase automatically log Alice in and redirect her back to the `onboarding` app.
 - Afterward, the `onboarding` app receive its token normally through the `data-cozy-token` body attribute, as described in [./auth.md](auth documentation). and can do whatever it needs to do :
   - read from the instance document to prefill/bypass form fields
   - add more informations to the instance document.

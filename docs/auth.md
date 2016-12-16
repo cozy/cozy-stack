@@ -113,7 +113,7 @@ it's very complicated to do it safely, and it is better to avoid this trap).
 
 ### POST /auth/login
 
-After the user has typed her password and clicked on `Login`, a request is
+After the user has typed her passphrase and clicked on `Login`, a request is
 made to this endpoint.
 
 The `redirect` parameter is passed inside the body. If it is missing, the
@@ -125,7 +125,7 @@ POST /auth/login HTTP/1.1
 Host: cozy.example.org
 Content-type: application/x-www-form-urlencoded
 
-password=p4ssw0rd&redirect=https%3A%2F%2Fcontacts.cozy.example.org
+passphrase=p4ssw0rd&redirect=https%3A%2F%2Fcontacts.cozy.example.org
 ```
 
 ```http
@@ -376,12 +376,12 @@ Claim   | Fullname  | What it identifies
 Other tokens can be JWT with a similar formalism, or be a simple random value
 (when we want to have a clear revocation process).
 
-> What happens when the user has lost her password?
+> What happens when the user has lost her passphrase?
 
 She can reset it from the command-line, like this:
 
 ```sh
-$ cozy-stack instances reset-password cozy.example.org
+$ cozy-stack instances reset-passphrase cozy.example.org
 ek0Jah1R
 ```
 
