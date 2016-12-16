@@ -17,6 +17,7 @@ Table of contents
 ### API
 - [Create, Read, Update, Delete](./crud.md)
 - [Virtual Filesystem](./files.md)
+- [Jobs](./jobs.md)
 - [Settings](./settings.md)
 
 ### In progress
