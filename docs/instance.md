@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Instances
-=========
+# Instances
 
 **TODO** it's still a work in progress that needs to be completed.
 
@@ -15,8 +14,7 @@ To simplify development, a `dev` instance name is used when no Host Header is pr
 - `curl -H "Host: alice.cozycloud.cc" localhost:8080` → `localhost:5984/alice-cozycloud.cc`
 - `curl localhost:8080` → `localhost:5984/dev` (in dev mode only)
 
-Creation
---------
+## Creation
 
 An instance is created on the command line:
 
@@ -91,8 +89,7 @@ Finally, default applications are installed in the following order :
 --------------------------------------
 
 
-Renaming
---------
+## Renaming
 
 An instance is renamed through the command line.
 
@@ -105,8 +102,7 @@ Renaming an instance only change the HostName in global/instances base.
 
 ---------------------------------------
 
-Destroying
-----------
+## Destroying
 
 An instance is destroyed through the command line.
 A confirmation is asked from the CLI user unless the --yes flag is passed

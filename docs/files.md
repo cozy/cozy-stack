@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Virtual File System
-===================
+# Virtual File System
 
 Cozy applications can use files for storing binary content, like photos or
 bills in PDF. This service offers a REST API to manipulate easily without
@@ -9,8 +8,7 @@ having to know the underlying storage layer. The metadata are kept in CouchDB,
 but the binaries can go to the local system, or a Swift instance.
 
 
-Directories
------------
+## Directories
 
 A directory is a container for files and sub-directories.
 
@@ -202,8 +200,7 @@ Content-Type: application/vnd.api+json
 Put a directory and its subtree in the trash.
 
 
-Files
------
+## Files
 
 A file is a binary content with some metadata.
 
@@ -410,8 +407,7 @@ Content-Type: application/vnd.api+json
 Put a file in the trash.
 
 
-Common
-------
+## Common
 
 ### GET /files/metadata
 
@@ -586,8 +582,7 @@ Content-Type: application/vnd.api+json
 ```
 
 
-Trash
------
+## Trash
 
 When a file is deleted, it is first moved to the trash. In the trash, it can
 be restored. Or, after some time, it will be removed from the trash and

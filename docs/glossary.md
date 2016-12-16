@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Glossary
-========
+# Glossary
 
 ## Instance
 

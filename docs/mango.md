@@ -1,10 +1,12 @@
+[Table of contents](./README.md#table-of-contents)
+
 # Mango
 
-# Create an index for some documents
+## Create an index for some documents
 
 The body should contain a `index` JSON field containing a `fields` which is an ordered array of fields to index.
 
-#### Request
+### Request
 ```http
 POST /data/:doctype/_index
 ```
@@ -20,7 +22,7 @@ Content-Type: application/json
 }
 ```
 
-#### Response OK
+### Response OK
 ```http
 HTTP/1.1 200 OK
 Date: Mon, 27 Sept 2016 12:28:53 GMT
@@ -52,13 +54,13 @@ Content-Type: application/json
 - 403 forbidden (the authentication does not provide permissions for this action)
 - 500 internal server error
 
-# Find documents
+
+## Find documents
 
 Find allows to find documents using a mango selector.
 You can read more about mango selectors [here](http://docs.couchdb.org/en/2.0.0/api/database/find.html#selector-syntax)
 
-
-#### Request
+### Request
 ```http
 POST /data/:doctype/_find
 ```
@@ -80,7 +82,7 @@ Content-Type: application/json
 }
 ```
 
-#### Response OK
+### Response OK
 ```http
 HTTP/1.1 200 OK
 Date: Mon, 27 Sept 2016 12:28:53 GMT

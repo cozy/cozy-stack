@@ -1,10 +1,8 @@
 [Table of contents](./README.md#table-of-contents)
 
-Security
-========
+# Security
 
-Checklist
----------
+## Checklist
 
 1. Strong security is centered on the user
 1. Defense in depth is still worthy
@@ -18,8 +16,7 @@ Checklist
 1. Be open to external contributors
 
 
-Rationale
----------
+## Rationale
 
 ### Strong security is centered on the user
 

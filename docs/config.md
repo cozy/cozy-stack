@@ -1,10 +1,8 @@
 [Table of contents](./README.md#table-of-contents)
 
-Configuration
-=============
+# Configuration
 
-Main Configuration file
------------------------
+## Main Configuration file
 
 You can configure your `cozy-stack` using a configuration file. This file
 should be named `cozy.yaml` or `cozy.json` depending on the format of your
@@ -29,8 +27,7 @@ This example's values represent the default values of the configuration. The
 equivalent cli flag are also filled in.
 
 
-Administration secrect
-----------------------
+## Administration secrect
 
 To access to the administration API (the `/admin/*` routes), a secret passphrase should be stored in a `cozy-admin-passphrase`. This file should be in one of the configuration directories, along with the main config file.
 

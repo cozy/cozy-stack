@@ -1,7 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Building a release
-==================
+# Building a release
 
 To build a release of cozy-stack, a `build.sh` script can automate the work. The `release` option of this script will generate a binary with a name containing the version of the file, along with a SHA-256 sum of the binary.
 

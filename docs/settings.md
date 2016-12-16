@@ -1,10 +1,8 @@
 [Table of contents](./README.md#table-of-contents)
 
-Settings
-========
+# Settings
 
-Theme
------
+## Theme
 
 ### GET /settings/theme.css
 

@@ -1,18 +1,15 @@
 [Table of contents](./README.md#table-of-contents)
 
-Authentication and access delegations
-=====================================
+# Authentication and access delegations
 
-Introduction
-------------
+## Introduction
 
 In this document, we will cover how to protect the usage of the cozy-stack.
 When the cozy-stack receives a request, it checks that the request is
 authorized, and if yes, it processes it and answers it.
 
 
-What about OAuth2?
-------------------
+## What about OAuth2?
 
 OAuth2 is about delegating an access to resources on a server to another
 party. It is a framework, not a strictly defined protocol, for organizing the
@@ -80,8 +77,7 @@ If you want to learn OAuth 2 in details, I recommend the [OAuth 2 in Action
 book](https://www.manning.com/books/oauth-2-in-action).
 
 
-The cozy stack as an authorization server
------------------------------------------
+## The cozy stack as an authorization server
 
 ### GET /auth/login
 
@@ -232,7 +228,7 @@ See [OAuth 2.0 Dynamic Client Registration Management
 Protocol](https://tools.ietf.org/html/rfc7592) for more details.
 
 ```http
-GET /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3
+GET /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3 HTTP/1.1
 Host: cozy.example.org
 Accept: application/json
 Authorization: Bearer J9l-ZhwP...
@@ -260,6 +256,7 @@ Content-Type: application/json
 ```
 
 ### PUT /auth/register/:client-id
+
 ### DELETE /auth/register/:client-id
 
 These routes follow the [OAuth 2.0 Dynamic Client Registration Management
@@ -305,7 +302,7 @@ application which only the callback URI is guaranteed.
 When the user accepts, her browser send a request to this endpoint:
 
 ```http
-POST /auth/authorize
+POST /auth/authorize HTTP/1.1
 Host: cozy.example.org
 Content-type: x-www-form-urlencoded
 
@@ -341,7 +338,7 @@ The parameters are:
 Example:
 
 ```http
-POST /auth/access_token
+POST /auth/access_token HTTP/1.1
 Host: cozy.example.org
 Content-type: x-www-form-urlencoded
 Accept: application/json
@@ -397,8 +394,7 @@ Yes, it's possible.
 **TODO:** explain how
 
 
-Client-side apps
-----------------
+## Client-side apps
 
 **Important**: OAuth2 is not used here! The steps looks similar (like obtaining
 a token), but when going in the details, it doesn't match.
@@ -432,8 +428,8 @@ with the HTTP `Referer` header.
 The token can be sent to the cozy-stack in the query-string, like this:
 
 ```http
-GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?CtxToken=e7af77ba2c2dbe2d
-HOST: cozy.example.org
+GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?CtxToken=e7af77ba2c2dbe2d HTTP/1.1
+Host: cozy.example.org
 ```
 
 If the user is authenticated, her cookies will be sent automatically. The
@@ -451,8 +447,7 @@ The app can know it's time to get a new token when the stack starts sending
 that it was loaded initially, parses it and extracts the new token.
 
 
-Third-party websites
---------------------
+## Third-party websites
 
 ### How to register the application?
 
@@ -491,8 +486,7 @@ token must be asked. To do that, just follow the refresh token flow, as
 explained [above](#post-authaccess_token).
 
 
-Devices and browser extensions
-------------------------------
+## Devices and browser extensions
 
 For devices and browser extensions, it is nearly the same than for third-party
 websites. The main difficulty is the redirect_uri. In OAuth2, the access code
@@ -530,8 +524,7 @@ oauth2](https://github.com/AdrianArroyoCalle/firefox-addons/blob/master/addon-go
 as an example.
 
 
-Security considerations
------------------------
+## Security considerations
 
 The password will be stored in a secure fashion, with a password hashing
 function. The hashing function and its parameter will be stored with the hash,
@@ -569,8 +562,7 @@ For more on this subject, here is a list of links:
 - http://www.oauthsecurity.com/
 
 
-Conclusion
-----------
+## Conclusion
 
 Security is hard. If you want to share some concerns with us, do not hesitate
 to send us an email to security AT cozycloud.cc.

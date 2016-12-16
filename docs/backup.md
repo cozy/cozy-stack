@@ -1,8 +1,6 @@
 [Table of contents](./README.md#table-of-contents)
 
-Backups
-=========
-
+# Backups
 
 This document is a stub about we will do backups of the stack v2.
 
