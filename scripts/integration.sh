@@ -5,8 +5,7 @@ sleep 5
 go run main.go instances add dev
 
 cd integration-tests/pouchdb
-npm install
-npm run test
+npm install && npm run test
 testresult=$?
 
 pidstack=$(jobs -pr)
