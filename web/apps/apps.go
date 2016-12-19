@@ -79,20 +79,22 @@ func wrapAppsError(err error) error {
 	return err
 }
 
-// InstallHandler handles all POST /:slug request and tries to install
-// the application with the given Source.
-func InstallHandler(c echo.Context) error {
+// InstallOrUpdateHandler handles all POST /:slug request and tries to install
+// or update the application with the given Source.
+func InstallOrUpdateHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	src := c.QueryParam("Source")
 	slug := c.Param("slug")
-	inst, err := apps.NewInstaller(instance, slug, src)
+	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
+		SourceURL: c.QueryParam("Source"),
+		Slug:      slug,
+	})
 	if err != nil {
 		return wrapAppsError(err)
 	}
 
-	go inst.Install()
+	go inst.InstallOrUpdate()
 
-	man, _, err := inst.WaitManifest()
+	man, _, err := inst.Poll()
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -101,7 +103,7 @@ func InstallHandler(c echo.Context) error {
 
 	go func() {
 		for {
-			_, done, err := inst.WaitManifest()
+			_, done, err := inst.Poll()
 			if err != nil {
 				log.Errorf("[apps] %s could not be installed: %v", slug, err)
 				break
@@ -135,5 +137,5 @@ func ListHandler(c echo.Context) error {
 // Routes sets the routing for the apps service
 func Routes(router *echo.Group) {
 	router.GET("/", ListHandler)
-	router.POST("/:slug", InstallHandler)
+	router.POST("/:slug", InstallOrUpdateHandler)
 }

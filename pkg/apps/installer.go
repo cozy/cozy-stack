@@ -15,204 +15,198 @@ var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 
 // Installer is used to install or update applications.
 type Installer struct {
-	cli Client
+	fetcher Fetcher
+	ctx     vfs.Context
 
-	vfsC vfs.Context
-
+	src  *url.URL
 	slug string
-	src  string
-	man  *Manifest
 
+	man  *Manifest
 	err  error
 	errc chan error
 	manc chan *Manifest
 }
 
+// InstallerOptions provides the slug name of the application along with the
+// source URL.
+type InstallerOptions struct {
+	Slug      string
+	SourceURL string
+}
+
+// Fetcher interface should be implemented by the underlying transport
+// used to fetch the application data.
+type Fetcher interface {
+	// FetchManifest should returns an io.ReadCloser to read the
+	// manifest data
+	FetchManifest(src *url.URL) (io.ReadCloser, error)
+	// Fetch should download the application and install it in the given
+	// directory.
+	Fetch(src *url.URL, appDir string) error
+}
+
 // NewInstaller creates a new Installer
-func NewInstaller(vfsC vfs.Context, slug, src string) (*Installer, error) {
+func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
+	slug := opts.Slug
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
 
-	parsedSrc, err := url.Parse(src)
-	if err != nil {
-		return nil, err
-	}
-
-	var cli Client
-	switch parsedSrc.Scheme {
-	case "git":
-		cli = newGitClient(vfsC, src)
-	default:
-		err = ErrNotSupportedSource
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	inst := &Installer{
-		cli:  cli,
-		vfsC: vfsC,
-
-		slug: slug,
-		src:  src,
-
-		errc: make(chan error),
-		manc: make(chan *Manifest),
-	}
-
-	return inst, err
-}
-
-// Install will install the application linked to the installer. It
-// will report its progress or error using the WaitManifest method.
-func (i *Installer) Install() (newman *Manifest, err error) {
-	if i.err != nil {
-		return nil, i.err
-	}
-
-	defer func() {
-		if err != nil {
-			err = i.handleErr(err)
-		}
-	}()
-
-	_, err = i.getOrCreateManifest(i.src, i.slug)
-	if err != nil {
-		return
-	}
-
-	oldman := i.man
-	if s := oldman.State; s != Available && s != Errored {
-		return nil, ErrBadState
-	}
-
-	newman = &(*oldman)
-	newman.State = Installing
-
-	defer func() {
-		if err != nil {
-			newman.State = Errored
-			i.updateManifest(newman)
-		}
-	}()
-
-	err = i.updateManifest(newman)
-	if err != nil {
-		return
-	}
-
-	appdir := path.Join(vfs.AppsDirName, newman.Slug)
-	_, err = vfs.MkdirAll(i.vfsC, appdir, nil)
-	if err != nil {
-		return
-	}
-
-	err = i.cli.Fetch(i.vfsC, appdir)
-	if err != nil {
-		return
-	}
-
-	newman.State = Ready
-	err = i.updateManifest(newman)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func (i *Installer) handleErr(err error) error {
-	if i.err == nil {
-		i.err = err
-		i.errc <- err
-	}
-	return i.err
-}
-
-func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err error) {
-	if i.err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err != nil {
-			err = i.handleErr(err)
-		} else {
-			i.man = man
-		}
-	}()
-
-	if i.man != nil {
-		panic("Manifest is already defined")
-	}
-
-	man, err = GetBySlug(i.vfsC, slug)
+	man, err := GetBySlug(ctx, slug)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return nil, err
 	}
-	if err == nil {
-		return man, nil
-	}
 
-	r, err := i.cli.FetchManifest()
+	var src *url.URL
+	if opts.SourceURL != "" {
+		src, err = url.Parse(opts.SourceURL)
+	} else if man != nil {
+		src, err = url.Parse(man.Source)
+	} else {
+		err = ErrNotSupportedSource
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	defer r.Close()
-	man = &Manifest{}
-	err = json.NewDecoder(io.LimitReader(r, ManifestMaxSize)).Decode(&man)
-	if err != nil {
-		return nil, ErrBadManifest
+	var fetcher Fetcher
+	switch src.Scheme {
+	case "git":
+		fetcher = newGitFetcher(ctx)
+	default:
+		return nil, ErrNotSupportedSource
 	}
 
-	man.Slug = slug
-	man.Source = src
-	man.State = Available
-
-	if man.Contexts == nil {
-		man.Contexts = make(Contexts)
-		man.Contexts["/"] = Context{
-			Folder: "/",
-			Index:  "index.html",
-			Public: false,
-		}
+	inst := &Installer{
+		fetcher: fetcher,
+		ctx:     ctx,
+		src:     src,
+		slug:    slug,
+		man:     man,
+		errc:    make(chan error),
+		manc:    make(chan *Manifest, 1),
 	}
 
-	err = couchdb.CreateNamedDoc(i.vfsC, man)
+	return inst, nil
+}
+
+// InstallOrUpdate will install the application linked to the installer. If the
+// application is already installed, it will try to upgrade it. It will report
+// its progress or error (see Poll method).
+func (i *Installer) InstallOrUpdate() {
+	defer i.endOfProc()
+
+	if i.man == nil {
+		i.man, i.err = i.install()
+		return
+	}
+
+	state := i.man.State
+	if state != Ready && state != Errored {
+		i.man, i.err = nil, ErrBadState
+		return
+	}
+
+	i.man, i.err = i.update()
 	return
 }
 
-func (i *Installer) updateManifest(newman *Manifest) (err error) {
-	if i.err != nil {
-		return err
+func (i *Installer) endOfProc() {
+	man, err := i.man, i.err
+	if man == nil || err == ErrBadState {
+		i.errc <- err
+		return
 	}
-
-	defer func() {
-		if err != nil {
-			err = i.handleErr(err)
-		} else {
-			i.man = newman
-			i.manc <- newman
-		}
-	}()
-
-	oldman := i.man
-	if oldman == nil {
-		panic("Manifest not defined")
+	if err != nil {
+		man.State = Errored
+		man.Error = err.Error()
+		updateManifest(i.ctx, man)
+		i.errc <- err
+		return
 	}
-
-	newman.SetID(oldman.ID())
-	newman.SetRev(oldman.Rev())
-
-	return couchdb.UpdateDoc(i.vfsC, newman)
+	man.State = Ready
+	updateManifest(i.ctx, man)
+	i.manc <- i.man
 }
 
-// WaitManifest should be used to monitor the progress of the
-// Installer.
-func (i *Installer) WaitManifest() (man *Manifest, done bool, err error) {
+func (i *Installer) install() (*Manifest, error) {
+	man := &Manifest{}
+	if err := i.ReadManifest(Installing, &man); err != nil {
+		return nil, err
+	}
+
+	if err := createManifest(i.ctx, man); err != nil {
+		return nil, err
+	}
+
+	i.manc <- man
+
+	appdir := i.appDir()
+	if _, err := vfs.MkdirAll(i.ctx, appdir, nil); err != nil {
+		return nil, err
+	}
+
+	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
+		return nil, err
+	}
+
+	return man, nil
+}
+
+func (i *Installer) update() (*Manifest, error) {
+	man := i.man
+	version := man.Version
+
+	if err := i.ReadManifest(Upgrading, &man); err != nil {
+		return nil, err
+	}
+
+	if man.Version == version {
+		return man, nil
+	}
+
+	if err := updateManifest(i.ctx, man); err != nil {
+		return nil, err
+	}
+
+	i.manc <- man
+
+	appdir := i.appDir()
+	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
+		return nil, err
+	}
+
+	return man, nil
+}
+
+// ReadManifest will fetch the manifest and read its JSON content into the
+// passed manifest pointer.
+//
+// The State field of the manifest will be set to the specified state.
+func (i *Installer) ReadManifest(state State, man **Manifest) error {
+	r, err := i.fetcher.FetchManifest(i.src)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	err = json.NewDecoder(io.LimitReader(r, ManifestMaxSize)).Decode(man)
+	if err != nil {
+		return ErrBadManifest
+	}
+
+	(*man).Slug = i.slug
+	(*man).Source = i.src.String()
+	(*man).State = state
+	return nil
+}
+
+func (i *Installer) appDir() string {
+	return path.Join(vfs.AppsDirName, i.slug)
+}
+
+// Poll should be used to monitor the progress of the Installer.
+func (i *Installer) Poll() (man *Manifest, done bool, err error) {
 	select {
 	case man = <-i.manc:
 		done = man.State == Ready
@@ -220,4 +214,12 @@ func (i *Installer) WaitManifest() (man *Manifest, done bool, err error) {
 	case err = <-i.errc:
 		return
 	}
+}
+
+func updateManifest(db couchdb.Database, man *Manifest) error {
+	return couchdb.UpdateDoc(db, man)
+}
+
+func createManifest(db couchdb.Database, man *Manifest) error {
+	return couchdb.CreateNamedDoc(db, man)
 }
