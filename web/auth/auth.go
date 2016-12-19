@@ -409,7 +409,7 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		header := c.Request().Header.Get("Authorization")
 		parts := strings.Split(header, " ")
-		if len(parts) != 2 || parts[0] != "bearer" {
+		if len(parts) != 2 || parts[0] != "Bearer" {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid_token",
 			})
