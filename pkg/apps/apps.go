@@ -1,11 +1,8 @@
 package apps
 
 import (
-	"encoding/json"
 	"io"
-	"net/url"
-	"path"
-	"regexp"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -47,17 +44,25 @@ const (
 	HomeSlug       = "home"
 )
 
-var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
-
 // Access is a string representing the access permission level. It can
 // either be read, write or readwrite.
 type Access string
 
 // Permissions is a map of key, a description and an access level.
-type Permissions map[string]*struct {
+type Permissions map[string]struct {
 	Description string `json:"description"`
 	Access      Access `json:"access"`
 }
+
+// Context is a struct to serve a folder inside an app
+type Context struct {
+	Folder string `json:"folder"`
+	Index  string `json:"index"`
+	Public bool   `json:"public"`
+}
+
+// Contexts are a map for routing inside an application.
+type Contexts map[string]Context
 
 // Developer is the name and url of a developer.
 type Developer struct {
@@ -78,13 +83,14 @@ type Manifest struct {
 	Developer   *Developer `json:"developer"`
 
 	DefaultLocal string `json:"default_locale"`
-	Locales      map[string]*struct {
+	Locales      map[string]struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 
 	Version     string       `json:"version"`
 	License     string       `json:"license"`
 	Permissions *Permissions `json:"permissions"`
+	Contexts    Contexts     `json:"contexts"`
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
@@ -155,202 +161,38 @@ func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 	return man, nil
 }
 
-// Installer is used to install or update applications.
-type Installer struct {
-	cli Client
+// FindContext takes a path, returns the context which matches the best,
+// and says if it is an exact match (in which case the index file should be served)
+func (m *Manifest) FindContext(path string) (Context, bool) {
+	parts := strings.Split(path, "/")
+	lenParts := len(parts)
 
-	vfsC vfs.Context
-
-	slug string
-	src  string
-	man  *Manifest
-
-	err  error
-	errc chan error
-	manc chan *Manifest
-}
-
-// NewInstaller creates a new Installer
-func NewInstaller(vfsC vfs.Context, slug, src string) (*Installer, error) {
-	if slug == "" || !slugReg.MatchString(slug) {
-		return nil, ErrInvalidSlugName
-	}
-
-	parsedSrc, err := url.Parse(src)
-	if err != nil {
-		return nil, err
-	}
-
-	var cli Client
-	switch parsedSrc.Scheme {
-	case "git":
-		cli = newGitClient(vfsC, src)
-	default:
-		err = ErrNotSupportedSource
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	inst := &Installer{
-		cli:  cli,
-		vfsC: vfsC,
-
-		slug: slug,
-		src:  src,
-
-		errc: make(chan error),
-		manc: make(chan *Manifest),
-	}
-
-	return inst, err
-}
-
-// Install will install the application linked to the installer. It
-// will report its progress or error using the WaitManifest method.
-func (i *Installer) Install() (newman *Manifest, err error) {
-	if i.err != nil {
-		return nil, i.err
-	}
-
-	defer func() {
-		if err != nil {
-			err = i.handleErr(err)
+	var best Context
+	specificity := 0
+	for key, ctx := range m.Contexts {
+		keys := strings.Split(key, "/")
+		count := len(keys)
+		if count > lenParts || count < specificity {
+			continue
 		}
-	}()
-
-	_, err = i.getOrCreateManifest(i.src, i.slug)
-	if err != nil {
-		return
-	}
-
-	oldman := i.man
-	if s := oldman.State; s != Available && s != Errored {
-		return nil, ErrBadState
-	}
-
-	newman = &(*oldman)
-	newman.State = Installing
-
-	defer func() {
-		if err != nil {
-			newman.State = Errored
-			i.updateManifest(newman)
+		if contextMatches(parts, keys) {
+			specificity = count
+			best = ctx
 		}
-	}()
-
-	err = i.updateManifest(newman)
-	if err != nil {
-		return
 	}
 
-	appdir := path.Join(vfs.AppsDirName, newman.Slug)
-	_, err = vfs.MkdirAll(i.vfsC, appdir, nil)
-	if err != nil {
-		return
+	if parts[len(parts)-1] == "" {
+		specificity++
 	}
 
-	err = i.cli.Fetch(i.vfsC, appdir)
-	if err != nil {
-		return
-	}
-
-	newman.State = Ready
-	err = i.updateManifest(newman)
-	if err != nil {
-		return
-	}
-
-	return
+	return best, specificity == len(parts)
 }
 
-func (i *Installer) handleErr(err error) error {
-	if i.err == nil {
-		i.err = err
-		i.errc <- err
-	}
-	return i.err
-}
-
-func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err error) {
-	if i.err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err != nil {
-			err = i.handleErr(err)
-		} else {
-			i.man = man
+func contextMatches(path, ctx []string) bool {
+	for i, part := range ctx {
+		if path[i] != part {
+			return false
 		}
-	}()
-
-	if i.man != nil {
-		panic("Manifest is already defined")
 	}
-
-	man, err = GetBySlug(i.vfsC, slug)
-	if err != nil && !couchdb.IsNotFoundError(err) {
-		return nil, err
-	}
-	if err == nil {
-		return man, nil
-	}
-
-	r, err := i.cli.FetchManifest()
-	if err != nil {
-		return nil, err
-	}
-
-	defer r.Close()
-	man = &Manifest{}
-	err = json.NewDecoder(io.LimitReader(r, ManifestMaxSize)).Decode(&man)
-	if err != nil {
-		return nil, ErrBadManifest
-	}
-
-	man.Slug = slug
-	man.Source = src
-	man.State = Available
-
-	err = couchdb.CreateNamedDoc(i.vfsC, man)
-	return
-}
-
-func (i *Installer) updateManifest(newman *Manifest) (err error) {
-	if i.err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			err = i.handleErr(err)
-		} else {
-			i.man = newman
-			i.manc <- newman
-		}
-	}()
-
-	oldman := i.man
-	if oldman == nil {
-		panic("Manifest not defined")
-	}
-
-	newman.SetID(oldman.ID())
-	newman.SetRev(oldman.Rev())
-
-	return couchdb.UpdateDoc(i.vfsC, newman)
-}
-
-// WaitManifest should be used to monitor the progress of the
-// Installer.
-func (i *Installer) WaitManifest() (man *Manifest, done bool, err error) {
-	select {
-	case man = <-i.manc:
-		done = man.State == Ready
-		return
-	case err = <-i.errc:
-		return
-	}
+	return true
 }
