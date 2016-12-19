@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -69,7 +70,7 @@ func TestInstancehasOAuthSecret(t *testing.T) {
 func TestInstanceHasRootDir(t *testing.T) {
 	var root vfs.DirDoc
 	prefix := getDB(t, "test.cozycloud.cc")
-	err := couchdb.GetDoc(prefix, vfs.FsDocType, vfs.RootDirID, &root)
+	err := couchdb.GetDoc(prefix, consts.Files, consts.RootDirID, &root)
 	if assert.NoError(t, err) {
 		assert.Equal(t, root.Fullpath, "/")
 	}
@@ -79,7 +80,7 @@ func TestInstanceHasIndexes(t *testing.T) {
 	var results []*vfs.DirDoc
 	prefix := getDB(t, "test.cozycloud.cc")
 	req := &couchdb.FindRequest{Selector: mango.Equal("path", "/")}
-	err := couchdb.FindDocs(prefix, vfs.FsDocType, req, &results)
+	err := couchdb.FindDocs(prefix, consts.Files, req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
 }

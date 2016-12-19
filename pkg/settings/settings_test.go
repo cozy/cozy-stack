@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,12 +24,12 @@ func TestTheme(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	err := couchdb.ResetDB(TestPrefix, SettingsDocType)
+	err := couchdb.ResetDB(TestPrefix, consts.Settings)
 	if err != nil {
-		fmt.Printf("Cant reset db (%s, %s) %s\n", TestPrefix, SettingsDocType, err.Error())
+		fmt.Printf("Cant reset db (%s, %s) %s\n", TestPrefix, consts.Settings, err.Error())
 		os.Exit(1)
 	}
 	res := m.Run()
-	couchdb.DeleteDB(TestPrefix, SettingsDocType)
+	couchdb.DeleteDB(TestPrefix, consts.Settings)
 	os.Exit(res)
 }

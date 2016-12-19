@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -54,7 +55,7 @@ func (f *FileDoc) ID() string { return f.DocID }
 func (f *FileDoc) Rev() string { return f.DocRev }
 
 // DocType returns the file document type
-func (f *FileDoc) DocType() string { return FsDocType }
+func (f *FileDoc) DocType() string { return consts.Files }
 
 // SetID changes the file qualified identifier
 func (f *FileDoc) SetID(id string) { f.DocID = id }
@@ -65,7 +66,7 @@ func (f *FileDoc) SetRev(rev string) { f.DocRev = rev }
 // Path is used to generate the file path
 func (f *FileDoc) Path(c Context) (string, error) {
 	var parentPath string
-	if f.DirID == RootDirID {
+	if f.DirID == consts.RootDirID {
 		parentPath = "/"
 	} else {
 		parent, err := f.Parent(c)
@@ -106,7 +107,7 @@ func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
 			},
 			Data: jsonapi.ResourceIdentifier{
 				ID:   f.DirID,
-				Type: FsDocType,
+				Type: consts.Files,
 			},
 		},
 	}
@@ -124,14 +125,14 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 	}
 
 	if dirID == "" {
-		dirID = RootDirID
+		dirID = consts.RootDirID
 	}
 
 	tags = uniqueTags(tags)
 
 	createDate := time.Now()
 	doc = &FileDoc{
-		Type:  FileType,
+		Type:  consts.FileType,
 		Name:  name,
 		DirID: dirID,
 
@@ -152,11 +153,11 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 // database.
 func GetFileDoc(c Context, fileID string) (*FileDoc, error) {
 	doc := &FileDoc{}
-	err := couchdb.GetDoc(c, FsDocType, fileID, doc)
+	err := couchdb.GetDoc(c, consts.Files, fileID, doc)
 	if err != nil {
 		return nil, err
 	}
-	if doc.Type != FileType {
+	if doc.Type != consts.FileType {
 		return nil, os.ErrNotExist
 	}
 	return doc, nil
@@ -182,7 +183,7 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 	selector := mango.Map{
 		"dir_id": dirID,
 		"name":   path.Base(name),
-		"type":   FileType,
+		"type":   consts.FileType,
 	}
 
 	var docs []*FileDoc
@@ -190,7 +191,7 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 		Selector: selector,
 		Limit:    1,
 	}
-	err = couchdb.FindDocs(c, FsDocType, req, &docs)
+	err = couchdb.FindDocs(c, consts.Files, req, &docs)
 	if err != nil {
 		return nil, err
 	}
@@ -527,7 +528,7 @@ func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
 		return nil, ErrFileInTrash
 	}
 
-	trashDirID := TrashDirID
+	trashDirID := consts.TrashDirID
 	restorePath := path.Dir(oldpath)
 
 	tryOrUseSuffix(olddoc.Name, conflictFormat, func(name string) error {

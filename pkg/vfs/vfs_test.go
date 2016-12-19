@@ -12,6 +12,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 	}
 
 	if dirID == "" {
-		dirID = RootDirID
+		dirID = consts.RootDirID
 	}
 
 	var err error
@@ -186,7 +187,7 @@ func TestCreateAndGetFile(t *testing.T) {
 		},
 	}
 
-	olddoc, err := createTree(origtree, RootDirID)
+	olddoc, err := createTree(origtree, consts.RootDirID)
 
 	if !assert.NoError(t, err) {
 		return
@@ -224,7 +225,7 @@ func TestUpdateDir(t *testing.T) {
 		},
 	}
 
-	doc1, err := createTree(origtree, RootDirID)
+	doc1, err := createTree(origtree, consts.RootDirID)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -301,7 +302,7 @@ func TestWalk(t *testing.T) {
 		},
 	}
 
-	_, err := createTree(walktree, RootDirID)
+	_, err := createTree(walktree, consts.RootDirID)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -357,14 +358,14 @@ func TestMain(m *testing.M) {
 	vfsC.prefix = "dev/"
 	vfsC.fs = afero.NewBasePathFs(afero.NewOsFs(), tempdir)
 
-	err = couchdb.ResetDB(vfsC, FsDocType)
+	err = couchdb.ResetDB(vfsC, consts.Files)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	for _, index := range Indexes {
-		err = couchdb.DefineIndex(vfsC, FsDocType, index)
+		err = couchdb.DefineIndex(vfsC, consts.Files, index)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -381,7 +382,7 @@ func TestMain(m *testing.M) {
 	res := m.Run()
 
 	os.RemoveAll(tempdir)
-	couchdb.DeleteDB(vfsC, FsDocType)
+	couchdb.DeleteDB(vfsC, consts.Files)
 
 	os.Exit(res)
 }

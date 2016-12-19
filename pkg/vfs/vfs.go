@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/spf13/afero"
@@ -35,23 +36,10 @@ const DefaultContentType = "application/octet-stream"
 const ForbiddenFilenameChars = "/\x00"
 
 const (
-	// FsDocType is document type
-	FsDocType = "io.cozy.files"
-	// RootDirID is the identifier of the root directory
-	RootDirID = "io.cozy.files.root-dir"
-	// TrashDirID is the identifier of the trash directory
-	TrashDirID = "io.cozy.files.trash-dir"
 	// TrashDirName is the path of the trash directory
 	TrashDirName = "/.cozy_trash"
 	// AppsDirName is the path of the directory in which apps are stored
 	AppsDirName = "/.cozy_apps"
-)
-
-const (
-	// DirType is the type attribute for directories
-	DirType = "directory"
-	// FileType is the type attribute for files
-	FileType = "file"
 )
 
 const (
@@ -98,9 +86,9 @@ type DirOrFileDoc struct {
 // the DirOrFileDoc
 func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
 	switch fd.Type {
-	case DirType:
+	case consts.DirType:
 		dir = &fd.DirDoc
-	case FileType:
+	case consts.FileType:
 		file = &FileDoc{
 			Type:        fd.Type,
 			DocID:       fd.DocID,
@@ -125,7 +113,7 @@ func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
 // without knowing in advance its type.
 func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (dirDoc *DirDoc, fileDoc *FileDoc, err error) {
 	dirOrFile := &DirOrFileDoc{}
-	err = couchdb.GetDoc(c, FsDocType, fileID, dirOrFile)
+	err = couchdb.GetDoc(c, consts.Files, fileID, dirOrFile)
 	if err != nil {
 		return
 	}

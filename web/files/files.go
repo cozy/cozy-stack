@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -36,9 +37,9 @@ func CreationHandler(c echo.Context) error {
 	var doc jsonapi.Object
 	var err error
 	switch c.QueryParam("Type") {
-	case vfs.FileType:
+	case consts.FileType:
 		doc, err = createFileHandler(c, instance)
-	case vfs.DirType:
+	case consts.DirType:
 		doc, err = createDirHandler(c, instance)
 	default:
 		err = ErrDocTypeInvalid
@@ -346,7 +347,7 @@ func TrashHandler(c echo.Context) error {
 func ReadTrashFilesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	trash, err := vfs.GetDirDoc(instance, vfs.TrashDirID, true)
+	trash, err := vfs.GetDirDoc(instance, consts.TrashDirID, true)
 	if err != nil {
 		return wrapVfsError(err)
 	}

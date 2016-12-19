@@ -3,20 +3,18 @@ package apps
 import (
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 const (
-	// ManifestDocType is manifest type
-	ManifestDocType = "io.cozy.manifests"
 	// ManifestMaxSize is the manifest maximum size
 	ManifestMaxSize = 2 << (2 * 10) // 2MB
+	// ManifestFilename is the name of the manifest at the root of the
+	// application directory
+	ManifestFilename = "manifest.webapp"
 )
-
-// ManifestFilename is the name of the manifest at the root of the
-// application directory
-const ManifestFilename = "manifest.webapp"
 
 // State is the state of the application
 type State string
@@ -94,14 +92,14 @@ type Manifest struct {
 
 // ID returns the manifest identifier - see couchdb.Doc interface
 func (m *Manifest) ID() string {
-	return ManifestDocType + "/" + m.Slug
+	return consts.Manifests + "/" + m.Slug
 }
 
 // Rev return the manifest revision - see couchdb.Doc interface
 func (m *Manifest) Rev() string { return m.ManRev }
 
 // DocType returns the manifest doctype - see couchdb.Doc interfaces
-func (m *Manifest) DocType() string { return ManifestDocType }
+func (m *Manifest) DocType() string { return consts.Manifests }
 
 // SetID is used to change the file identifier - see couchdb.Doc
 // interface
@@ -132,7 +130,7 @@ func (m *Manifest) Included() []jsonapi.Object {
 func List(db couchdb.Database) ([]*Manifest, error) {
 	var docs []*Manifest
 	req := &couchdb.AllDocsRequest{Limit: 100}
-	err := couchdb.GetAllDocs(db, ManifestDocType, req, &docs)
+	err := couchdb.GetAllDocs(db, consts.Manifests, req, &docs)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +140,7 @@ func List(db couchdb.Database) ([]*Manifest, error) {
 // GetBySlug returns an app identified by its slug
 func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 	man := &Manifest{}
-	err := couchdb.GetDoc(db, ManifestDocType, ManifestDocType+"/"+slug, man)
+	err := couchdb.GetDoc(db, consts.Manifests, consts.Manifests+"/"+slug, man)
 	if err != nil {
 		return nil, err
 	}

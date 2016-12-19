@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -48,7 +49,7 @@ func (d *DirDoc) ID() string { return d.DocID }
 func (d *DirDoc) Rev() string { return d.DocRev }
 
 // DocType returns the directory document type
-func (d *DirDoc) DocType() string { return FsDocType }
+func (d *DirDoc) DocType() string { return consts.Files }
 
 // SetID changes the directory qualified identifier
 func (d *DirDoc) SetID(id string) { d.DocID = id }
@@ -110,14 +111,14 @@ func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
 	contents := jsonapi.Relationship{Data: data}
 
 	var parent jsonapi.Relationship
-	if d.ID() != RootDirID {
+	if d.ID() != consts.RootDirID {
 		parent = jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
 				Related: "/files/" + d.DirID,
 			},
 			Data: jsonapi.ResourceIdentifier{
 				ID:   d.DirID,
-				Type: FsDocType,
+				Type: consts.Files,
 			},
 		}
 	}
@@ -155,14 +156,14 @@ func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (doc *DirDoc, 
 	}
 
 	if dirID == "" {
-		dirID = RootDirID
+		dirID = consts.RootDirID
 	}
 
 	tags = uniqueTags(tags)
 
 	createDate := time.Now()
 	doc = &DirDoc{
-		Type:  DirType,
+		Type:  consts.DirType,
 		Name:  name,
 		DirID: dirID,
 
@@ -180,20 +181,20 @@ func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (doc *DirDoc, 
 // form the database.
 func GetDirDoc(c Context, fileID string, withChildren bool) (*DirDoc, error) {
 	doc := &DirDoc{}
-	err := couchdb.GetDoc(c, FsDocType, fileID, doc)
+	err := couchdb.GetDoc(c, consts.Files, fileID, doc)
 	if couchdb.IsNotFoundError(err) {
 		err = ErrParentDoesNotExist
 	}
 	if err != nil {
-		if fileID == RootDirID {
+		if fileID == consts.RootDirID {
 			panic("Root directory is not in database")
 		}
-		if fileID == TrashDirID {
+		if fileID == consts.TrashDirID {
 			panic("Trash directory is not in database")
 		}
 		return nil, err
 	}
-	if doc.Type != DirType {
+	if doc.Type != consts.DirType {
 		return nil, os.ErrNotExist
 	}
 	if withChildren {
@@ -215,7 +216,7 @@ func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, erro
 	var docs []*DirDoc
 	sel := mango.Equal("path", path.Clean(name))
 	req := &couchdb.FindRequest{Selector: sel, Limit: 1}
-	err = couchdb.FindDocs(c, FsDocType, req, &docs)
+	err = couchdb.FindDocs(c, consts.Files, req, &docs)
 	if err != nil {
 		return nil, err
 	}
@@ -258,8 +259,8 @@ func CreateDir(c Context, doc *DirDoc) (err error) {
 func CreateRootDirDoc(c Context) error {
 	return couchdb.CreateNamedDocWithDB(c, &DirDoc{
 		Name:     "",
-		Type:     DirType,
-		DocID:    RootDirID,
+		Type:     consts.DirType,
+		DocID:    consts.RootDirID,
 		Fullpath: "/",
 		DirID:    "",
 	})
@@ -273,10 +274,10 @@ func CreateTrashDir(c Context) error {
 	}
 	err = couchdb.CreateNamedDocWithDB(c, &DirDoc{
 		Name:     path.Base(TrashDirName),
-		Type:     DirType,
-		DocID:    TrashDirID,
+		Type:     consts.DirType,
+		DocID:    consts.TrashDirID,
 		Fullpath: TrashDirName,
-		DirID:    RootDirID,
+		DirID:    consts.RootDirID,
 	})
 	if err != nil && !couchdb.IsConflictError(err) {
 		return err
@@ -288,7 +289,7 @@ func CreateTrashDir(c Context) error {
 // can be used to rename or move the directory in the VFS.
 func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
 	id := olddoc.ID()
-	if id == RootDirID || id == TrashDirID {
+	if id == consts.RootDirID || id == consts.TrashDirID {
 		return nil, os.ErrInvalid
 	}
 
@@ -360,7 +361,7 @@ func bulkUpdateDocsPath(c Context, oldpath, newpath string) error {
 	var children []*DirDoc
 	sel := mango.StartWith("path", oldpath+"/")
 	req := &couchdb.FindRequest{Selector: sel}
-	err := couchdb.FindDocs(c, FsDocType, req, &children)
+	err := couchdb.FindDocs(c, consts.Files, req, &children)
 	if err != nil || len(children) == 0 {
 		return err
 	}
@@ -397,7 +398,7 @@ func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 		return nil, ErrFileInTrash
 	}
 
-	trashDirID := TrashDirID
+	trashDirID := consts.TrashDirID
 	restorePath := path.Dir(oldpath)
 
 	tryOrUseSuffix(olddoc.Name, conflictFormat, func(name string) error {
@@ -438,7 +439,7 @@ func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc,
 	var docs []*DirOrFileDoc
 	sel := mango.Equal("dir_id", parent.ID())
 	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
-	err = couchdb.FindDocs(c, FsDocType, req, &docs)
+	err = couchdb.FindDocs(c, consts.Files, req, &docs)
 	if err != nil {
 		return
 	}

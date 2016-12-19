@@ -1,13 +1,11 @@
 package auth
 
 import (
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
-
-// AccessCodeDocType is the CouchRev document type for OAuth2 access codes
-const AccessCodeDocType = "io.cozy.oauth.access_codes"
 
 // AccessCode is struct used during the OAuth2 flow. It has to be persisted in
 // CouchDB, not just sent as a JSON Web Token, because it can be used only
@@ -27,7 +25,7 @@ func (ac *AccessCode) ID() string { return ac.Code }
 func (ac *AccessCode) Rev() string { return ac.CouchRev }
 
 // DocType returns the access code document type
-func (ac *AccessCode) DocType() string { return AccessCodeDocType }
+func (ac *AccessCode) DocType() string { return consts.OAuthAccessCodes }
 
 // SetID changes the access code qualified identifier
 func (ac *AccessCode) SetID(id string) { ac.Code = id }

@@ -15,6 +15,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/afero"
@@ -340,13 +341,13 @@ func TestMain(m *testing.M) {
 		Transport: &transport{},
 	}
 
-	err = couchdb.ResetDB(c, ManifestDocType)
+	err = couchdb.ResetDB(c, consts.Manifests)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.ResetDB(c, vfs.FsDocType)
+	err = couchdb.ResetDB(c, consts.Files)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -363,7 +364,7 @@ func TestMain(m *testing.M) {
 	time.Sleep(100 * time.Millisecond)
 
 	for _, index := range vfs.Indexes {
-		err = couchdb.DefineIndex(c, vfs.FsDocType, index)
+		err = couchdb.DefineIndex(c, consts.Files, index)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -377,8 +378,8 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
-	couchdb.DeleteDB(c, ManifestDocType)
-	couchdb.DeleteDB(c, vfs.FsDocType)
+	couchdb.DeleteDB(c, consts.Manifests)
+	couchdb.DeleteDB(c, consts.Files)
 	ts.Close()
 
 	localGitCmd.Process.Signal(os.Interrupt)

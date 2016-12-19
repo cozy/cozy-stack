@@ -7,6 +7,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -14,9 +15,6 @@ import (
 )
 
 const (
-	// ClientDocType is the CouchDB document type for OAuth2 clients
-	ClientDocType = "io.cozy.oauth.clients"
-
 	// ClientSecretLen is the number of random bytes used for generating the client secret
 	ClientSecretLen = 24
 
@@ -66,7 +64,7 @@ func (c *Client) ID() string { return c.CouchID }
 func (c *Client) Rev() string { return c.CouchRev }
 
 // DocType returns the client document type
-func (c *Client) DocType() string { return ClientDocType }
+func (c *Client) DocType() string { return consts.OAuthClients }
 
 // SetID changes the client qualified identifier
 func (c *Client) SetID(id string) { c.CouchID = id }
@@ -83,7 +81,7 @@ func (c *Client) transformIDAndRev() {
 // FindClient loads a client from the database
 func FindClient(i *instance.Instance, id string) (Client, error) {
 	var c Client
-	if err := couchdb.GetDoc(i, ClientDocType, id, &c); err != nil {
+	if err := couchdb.GetDoc(i, consts.OAuthClients, id, &c); err != nil {
 		log.Errorf("Impossible to find the client %s: %s", id, err)
 		return c, err
 	}

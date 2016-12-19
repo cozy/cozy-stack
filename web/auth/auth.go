@@ -10,6 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -205,7 +206,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	}
 
 	params.client = new(Client)
-	if err := couchdb.GetDoc(params.instance, ClientDocType, params.clientID, params.client); err != nil {
+	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The client must be registered",
 		})
@@ -356,7 +357,7 @@ func accessToken(c echo.Context) error {
 			})
 		}
 		accessCode := &AccessCode{}
-		if err = couchdb.GetDoc(instance, AccessCodeDocType, code, accessCode); err != nil {
+		if err = couchdb.GetDoc(instance, consts.OAuthAccessCodes, code, accessCode); err != nil {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})

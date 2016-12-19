@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -18,9 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 )
-
-// InstanceType : The couchdb type for an Instance
-const InstanceType = "instances"
 
 const (
 	registerTokenLen = 16
@@ -73,7 +70,7 @@ type Instance struct {
 }
 
 // DocType implements couchdb.Doc
-func (i *Instance) DocType() string { return InstanceType }
+func (i *Instance) DocType() string { return consts.Instances }
 
 // ID implements couchdb.Doc
 func (i *Instance) ID() string { return i.DocID }
@@ -141,7 +138,7 @@ func (i *Instance) createInCouchdb() (err error) {
 		return err
 	}
 	byDomain := mango.IndexOnFields("domain")
-	return couchdb.DefineIndex(couchdb.GlobalDB, InstanceType, byDomain)
+	return couchdb.DefineIndex(couchdb.GlobalDB, consts.Instances, byDomain)
 }
 
 // createRootDir creates the root directory for this instance
@@ -178,7 +175,7 @@ func (i *Instance) createRootDir() error {
 // createFSIndexes creates the index needed by VFS
 func (i *Instance) createFSIndexes() error {
 	for _, index := range vfs.Indexes {
-		err := couchdb.DefineIndex(i, vfs.FsDocType, index)
+		err := couchdb.DefineIndex(i, consts.Files, index)
 		if err != nil {
 			return err
 		}
@@ -188,13 +185,13 @@ func (i *Instance) createFSIndexes() error {
 
 // createAppsDB creates the database needed for Apps
 func (i *Instance) createAppsDB() error {
-	return couchdb.CreateDB(i, apps.ManifestDocType)
+	return couchdb.CreateDB(i, consts.Manifests)
 }
 
 // createSettings creates the settings database and some documents like the
 // default theme
 func (i *Instance) createSettings() error {
-	err := couchdb.CreateDB(i, settings.SettingsDocType)
+	err := couchdb.CreateDB(i, consts.Settings)
 	if err != nil {
 		return err
 	}
@@ -277,7 +274,7 @@ func Get(domain string) (*Instance, error) {
 		Selector: mango.Equal("domain", domain),
 		Limit:    1,
 	}
-	err := couchdb.FindDocs(couchdb.GlobalDB, InstanceType, req, &instances)
+	err := couchdb.FindDocs(couchdb.GlobalDB, consts.Instances, req, &instances)
 	if couchdb.IsNoDatabaseError(err) {
 		return nil, ErrNotFound
 	}
@@ -304,7 +301,7 @@ func Get(domain string) (*Instance, error) {
 func List() ([]*Instance, error) {
 	var docs []*Instance
 	req := &couchdb.AllDocsRequest{Limit: 100}
-	err := couchdb.GetAllDocs(couchdb.GlobalDB, InstanceType, req, &docs)
+	err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
 	if err != nil {
 		return nil, err
 	}

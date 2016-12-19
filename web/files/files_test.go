@@ -16,6 +16,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -1054,7 +1055,7 @@ func TestFileRestoreWithWithoutParent(t *testing.T) {
 	}
 	restoredData = restoredData["attributes"].(map[string]interface{})
 	assert.Equal(t, "torestorefilewithconflict", restoredData["name"].(string))
-	assert.NotEqual(t, vfs.RootDirID, restoredData["dir_id"].(string))
+	assert.NotEqual(t, consts.RootDirID, restoredData["dir_id"].(string))
 }
 
 func TestFileRestoreWithWithoutParent2(t *testing.T) {
@@ -1089,7 +1090,7 @@ func TestFileRestoreWithWithoutParent2(t *testing.T) {
 	}
 	restoredData = restoredData["attributes"].(map[string]interface{})
 	assert.Equal(t, "torestorefilewithconflict2", restoredData["name"].(string))
-	assert.NotEqual(t, vfs.RootDirID, restoredData["dir_id"].(string))
+	assert.NotEqual(t, consts.RootDirID, restoredData["dir_id"].(string))
 }
 
 func TestDirRestore(t *testing.T) {

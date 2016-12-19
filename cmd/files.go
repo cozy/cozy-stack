@@ -17,6 +17,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/dustin/go-humanize"
@@ -218,7 +219,7 @@ func lsCmd(c *instance.Instance, root string, w io.Writer, verbose, human, all b
 			mdate = attrs.UpdatedAt.Format("Jan 02 2015")
 		}
 
-		if f.Attrs.Type == vfs.DirType {
+		if f.Attrs.Type == consts.DirType {
 			typ = "d"
 			exec = "x"
 		} else {
@@ -287,7 +288,7 @@ func treeCmd(c *instance.Instance, root string, w io.Writer) error {
 		return err
 	}
 
-	if doc.Data.ID == vfs.RootDirID {
+	if doc.Data.ID == consts.RootDirID {
 		_, err = fmt.Fprintln(w, "/")
 	} else {
 		_, err = fmt.Fprintln(w, doc.Data.Attrs.Name)
@@ -319,7 +320,7 @@ func treeRecurs(c *instance.Instance, doc *fileAPIData, root string, level int, 
 			return
 		}
 
-		if f.Attrs.Type == vfs.DirType {
+		if f.Attrs.Type == consts.DirType {
 			var child *fileAPIData
 			child, err = filesRequest(c, "GET", "/files/"+f.ID, nil, nil)
 			if err != nil {
