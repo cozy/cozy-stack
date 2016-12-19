@@ -42,15 +42,63 @@ When an user attempts to access the root of its instance (`https://example.cozyc
 After login, the user is always redirected to the `onboarding` application. It is the `onboarding` application responsibility to check if registering is complete and reredirect to home.
 
 
-## Necessary new routes
+## Routes
+
+### POST /auth/passphrase
+
+The onboarding application can send a request to this endpoint to register the
+passphrase of the user. The `registrationToken` can only be used once.
+
+#### Request
+
+```http
+POST /auth/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: x-www-form-urlencoded
+
+registerToken=37cddf40d7724988860fa0e03efd30fe&passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo
+```
+
+#### Response
+
+```http
+HTTP/1.1 303 See Other
+Location: https://onboarding.alice.example.com/
+Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
+
+### PUT /auth/passphrase
+
+The user can change its passphrase with this route
+
+#### Request
+
+```http
+PUT /auth/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: x-www-form-urlencoded
+Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
+
+current-passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo&new-passphrase=Ee0vohChUQuohch5urahN9yuLeexex5a
+```
+
+#### Response
+
+```http
+HTTP/1.1 303 See Other
+Location: https://home.alice.example.com/
+Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
 
 ### GET /instance
 
 If the user is not logged in, display public instance information
+
 #### Request
 ```http
 GET https://alice.example.com/instance
 ```
+
 #### Response
 ```json
 {
@@ -80,28 +128,11 @@ Cookie sessionid=xxxx
 
 ### POST /instance
 
-If the user is not logged in, allow to set the passphrase. This action requires the `registerToken` defined on instance creation.*
-Once used, the `registerToken` is destroyed and cannot be used anymore.
-
-#### Request
-```http
-POST https://alice.example.com/instance
-Content-type: application/x-www-form-urlencoded
-registerToken=4256595659594842&passphrase=my-secret
-```
-
-#### Response
-```
-301 Redirect
-Set-Cookie: sessionid=xxxx .example.com
-Location: onboarding.alice.example.com
-```
-
 If the user is logged in, allow to set instance fields
 
 #### Request
 ```http
-POST https://alice.example.com/register
+POST https://alice.example.com/instance
 Content-type: application/json
 Cookie sessionid=xxxxx
 Authorization: base64(onboarding:onboardingapptoken)
@@ -157,26 +188,3 @@ The instance is created
   - add more informations to the instance document.
   - create `io.cozy.accounts` documents for external accounts.
 - When the onboarding application is satisfied, Alice is redirected to the `home` application
-
-### POST /register
-
-The onboarding application can send a request to this endpoint to register the
-passphrase of the user.
-
-#### Request
-
-```http
-POST /register HTTP/1.1
-Host: alice.example.com
-Content-Type: x-www-form-urlencoded
-
-registerToken=37cddf40d7724988860fa0e03efd30fe&passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo
-```
-
-#### Response
-
-```http
-HTTP/1.1 303 See Other
-Location: https://onboarding.alice.example.com/
-Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=test.bruno.fr; Max-Age=604800; HttpOnly; Secure
-```

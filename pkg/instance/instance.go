@@ -39,6 +39,8 @@ var (
 	ErrMissingToken = errors.New("Empty register token")
 	// ErrInvalidToken is returned by RegisterPassphrase if token is invalid
 	ErrInvalidToken = errors.New("Invalid register token")
+	// ErrMissingPassphrase is returned when the new passphrase is missing
+	ErrMissingPassphrase = errors.New("Missing new passphrase")
 	// ErrInvalidPassphrase is returned when the passphrase is invalid
 	ErrInvalidPassphrase = errors.New("Invalid passphrase")
 )
@@ -358,9 +360,9 @@ func (i *Instance) Prefix() string {
 }
 
 // RegisterPassphrase replace the instance registerToken by a passphrase
-func (i *Instance) RegisterPassphrase(pass []byte, tok []byte) error {
+func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	if len(pass) == 0 {
-		return ErrInvalidPassphrase
+		return ErrMissingPassphrase
 	}
 	if len(i.RegisterToken) == 0 {
 		return ErrMissingToken
@@ -375,9 +377,32 @@ func (i *Instance) RegisterPassphrase(pass []byte, tok []byte) error {
 	}
 
 	i.RegisterToken = nil
-	i.PassphraseHash = hash
+	i.setPassphraseAndSecret(hash)
 
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
+
+// UpdatePassphrase replace the passphrase
+func (i *Instance) UpdatePassphrase(pass, current []byte) error {
+	if len(pass) == 0 {
+		return ErrMissingPassphrase
+	}
+	if err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current); err != nil {
+		return ErrInvalidPassphrase
+	}
+
+	hash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		return err
+	}
+	i.setPassphraseAndSecret(hash)
+
+	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
+
+func (i *Instance) setPassphraseAndSecret(hash []byte) {
+	i.PassphraseHash = hash
+	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
 }
 
 // CheckPassphrase confirm an instance passport
