@@ -35,7 +35,7 @@ func redirectSuccessLogin(c echo.Context, redirect string) error {
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
-func register(c echo.Context) error {
+func registerPassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	registerToken, err := hex.DecodeString(c.FormValue("registerToken"))
@@ -431,18 +431,18 @@ func Routes(router *echo.Group) {
 		CookieSecure:   true,
 	})
 
-	router.POST("/register", register)
+	router.POST("/passphrase", registerPassphrase)
 
-	router.GET("/auth/login", loginForm)
-	router.POST("/auth/login", login)
-	router.DELETE("/auth/login", logout)
+	router.GET("/login", loginForm)
+	router.POST("/login", login)
+	router.DELETE("/login", logout)
 
-	router.POST("/auth/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
-	router.GET("/auth/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
+	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
+	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
 
-	authorizeGroup := router.Group("/auth/authorize", noCSRF)
+	authorizeGroup := router.Group("/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)
 	authorizeGroup.POST("", authorize)
 
-	router.POST("/auth/access_token", accessToken)
+	router.POST("/access_token", accessToken)
 }

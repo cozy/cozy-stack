@@ -77,7 +77,7 @@ func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 }
 
 func TestRegisterWrongToken(t *testing.T) {
-	res1, err := postForm("/register", &url.Values{
+	res1, err := postForm("/auth/passphrase", &url.Values{
 		"passphrase":    {"MyPassphrase"},
 		"registerToken": {"BADBEEF"},
 	})
@@ -85,7 +85,7 @@ func TestRegisterWrongToken(t *testing.T) {
 	defer res1.Body.Close()
 	assert.Equal(t, "400 Bad Request", res1.Status)
 
-	res2, err := postForm("/register", &url.Values{
+	res2, err := postForm("/auth/passphrase", &url.Values{
 		"passphrase":    {"MyPassphrase"},
 		"registerToken": {"XYZ"},
 	})
@@ -95,7 +95,7 @@ func TestRegisterWrongToken(t *testing.T) {
 }
 
 func TestRegisterCorrectToken(t *testing.T) {
-	res, err := postForm("/register", &url.Values{
+	res, err := postForm("/auth/passphrase", &url.Values{
 		"passphrase":    {"MyPassphrase"},
 		"registerToken": {hex.EncodeToString(registerToken)},
 	})
@@ -893,7 +893,7 @@ func TestMain(m *testing.M) {
 	r.Renderer = &renderer{
 		t: template.Must(template.ParseGlob("../../assets/templates/*.html")),
 	}
-	Routes(r.Group("", middlewares.NeedInstance))
+	Routes(r.Group("/auth", middlewares.NeedInstance))
 
 	r.GET("/test", func(c echo.Context) error {
 		var content string

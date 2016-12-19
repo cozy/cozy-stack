@@ -111,7 +111,7 @@ func SetupRoutes(router *echo.Echo) error {
 		MaxAge: int(12 * time.Hour / time.Second),
 	})
 
-	auth.Routes(router.Group("", middlewares.NeedInstance))
+	auth.Routes(router.Group("/auth", middlewares.NeedInstance))
 	apps.Routes(router.Group("/apps", cors, middlewares.NeedInstance))
 	data.Routes(router.Group("/data", cors, middlewares.NeedInstance))
 	files.Routes(router.Group("/files", cors, middlewares.NeedInstance))
