@@ -1,165 +1,61 @@
 package apps
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
-type TestContext struct {
-	prefix string
-	fs     afero.Fs
-}
+func TestFindContext(t *testing.T) {
+	manifest := &Manifest{}
+	manifest.Contexts = make(Contexts)
+	manifest.Contexts["/foo"] = Context{Folder: "/foo", Index: "index.html"}
+	manifest.Contexts["/foo/bar"] = Context{Folder: "/bar", Index: "index.html"}
+	manifest.Contexts["/foo/qux"] = Context{Folder: "/qux", Index: "index.html"}
+	manifest.Contexts["/public"] = Context{Folder: "/public", Index: "public.html", Public: true}
+	manifest.Contexts["/admin"] = Context{Folder: "/admin", Index: "admin.html"}
+	manifest.Contexts["/admin/special"] = Context{Folder: "/special", Index: "admin.html"}
 
-func (c TestContext) Prefix() string { return c.prefix }
-func (c TestContext) FS() afero.Fs   { return c.fs }
-
-var c = &TestContext{
-	prefix: "apps-test/",
-	fs:     afero.NewMemMapFs(),
-}
-
-func TestInstallBadSlug(t *testing.T) {
-	_, err := NewInstaller(c, "", "git://foo.bar")
-	if assert.Error(t, err) {
-		assert.Equal(t, ErrInvalidSlugName, err)
-	}
-
-	_, err = NewInstaller(c, "coucou/", "git://foo.bar")
-	if assert.Error(t, err) {
-		assert.Equal(t, ErrInvalidSlugName, err)
-	}
-}
-
-func TestInstallBadAppsSource(t *testing.T) {
-	_, err := NewInstaller(c, "app2", "")
-	if assert.Error(t, err) {
-		assert.Equal(t, ErrNotSupportedSource, err)
-	}
-
-	_, err = NewInstaller(c, "app3", "foo://bar.baz")
-	if assert.Error(t, err) {
-		assert.Equal(t, ErrNotSupportedSource, err)
-	}
-
-	_, err = NewInstaller(c, "app4", "git://bar  .baz")
-	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "invalid character")
-	}
-}
-
-func TestInstallSuccessful(t *testing.T) {
-	inst, err := NewInstaller(c, "cozy-mini", "git://github.com/nono/cozy-mini.git")
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	go inst.Install()
-
-	var state State
-	var manifest *Manifest
-	for {
-		man, done, err := inst.WaitManifest()
-		if !assert.NoError(t, err) {
-			return
-		}
-		if state == "" {
-			assert.EqualValues(t, Installing, man.State)
-		} else if state == Installing {
-			assert.EqualValues(t, Ready, man.State)
-			assert.True(t, done)
-			manifest = man
-			break
-		} else {
-			t.Fatalf("invalid state")
-			return
-		}
-		state = man.State
-	}
-
-	assert.Len(t, manifest.Contexts, 1)
-	ctx, ok := manifest.Contexts["/"]
-	assert.True(t, ok, "The manifest should have the default context")
-	assert.Equal(t, "/", ctx.Folder)
-	assert.Equal(t, "index.html", ctx.Index)
+	ctx, exact := manifest.FindContext("/admin")
+	assert.Equal(t, "/admin", ctx.Folder)
+	assert.Equal(t, "admin.html", ctx.Index)
 	assert.Equal(t, false, ctx.Public)
-}
+	assert.True(t, exact)
 
-func TestInstallAlreadyExist(t *testing.T) {
-	inst, err := NewInstaller(c, "conflictslug", "git://github.com/nono/cozy-mini.git")
-	if !assert.NoError(t, err) {
-		return
-	}
+	ctx, exact = manifest.FindContext("/public/")
+	assert.Equal(t, "/public", ctx.Folder)
+	assert.Equal(t, "public.html", ctx.Index)
+	assert.Equal(t, true, ctx.Public)
+	assert.True(t, exact)
 
-	go inst.Install()
+	ctx, exact = manifest.FindContext("/public")
+	assert.Equal(t, "/public", ctx.Folder)
+	assert.True(t, exact)
 
-	for {
-		var done bool
-		_, done, err = inst.WaitManifest()
-		if !assert.NoError(t, err) {
-			return
-		}
-		if done {
-			break
-		}
-	}
+	ctx, exact = manifest.FindContext("/public/app.js")
+	assert.Equal(t, "/public", ctx.Folder)
+	assert.False(t, exact)
 
-	inst, err = NewInstaller(c, "conflictslug", "git://github.com/nono/cozy-mini.git")
-	if !assert.NoError(t, err) {
-		return
-	}
+	ctx, exact = manifest.FindContext("/foo/admin/special")
+	assert.Equal(t, "/foo", ctx.Folder)
+	assert.False(t, exact)
 
-	go inst.Install()
+	ctx, exact = manifest.FindContext("/admin/special/foo")
+	assert.Equal(t, "/special", ctx.Folder)
+	assert.False(t, exact)
 
-	_, _, err = inst.WaitManifest()
-	assert.Error(t, err)
-}
+	ctx, exact = manifest.FindContext("/foo/bar.html")
+	assert.Equal(t, "/foo", ctx.Folder)
+	assert.False(t, exact)
 
-func TestMain(m *testing.M) {
-	config.UseTestFile()
+	ctx, exact = manifest.FindContext("/foo/baz")
+	assert.Equal(t, "/foo", ctx.Folder)
+	assert.False(t, exact)
 
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
+	ctx, exact = manifest.FindContext("/foo/bar")
+	assert.Equal(t, "/bar", ctx.Folder)
+	assert.True(t, exact)
 
-	err = couchdb.ResetDB(c, ManifestDocType)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(c, vfs.FsDocType)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	for _, index := range vfs.Indexes {
-		err = couchdb.DefineIndex(c, vfs.FsDocType, index)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
-	if err = vfs.CreateRootDirDoc(c); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	res := m.Run()
-
-	couchdb.DeleteDB(c, ManifestDocType)
-	couchdb.DeleteDB(c, vfs.FsDocType)
-
-	os.Exit(res)
+	ctx, _ = manifest.FindContext("/")
+	assert.Equal(t, "", ctx.Folder)
 }
