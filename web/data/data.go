@@ -2,7 +2,6 @@
 package data
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -39,7 +38,7 @@ func getDoc(c echo.Context) error {
 	}
 
 	if docid[0] == '_' {
-		return fmt.Errorf("Unsuported couchdb operation %s", docid)
+		return jsonapi.NewError(http.StatusBadRequest, "Unsuported couchdb operation %s", docid)
 	}
 
 	revs := c.QueryParam("revs")

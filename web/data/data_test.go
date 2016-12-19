@@ -161,6 +161,22 @@ func TestWrongDoctype(t *testing.T) {
 
 }
 
+func TestUnderscoreName(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/_foo", nil)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+}
+
+func TestGetDesign(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/_design/test", nil)
+	req.Header.Add("Host", Host)
+	_, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
+}
+
 func TestVFSDoctype(t *testing.T) {
 
 	var in = jsonReader(&map[string]interface{}{
