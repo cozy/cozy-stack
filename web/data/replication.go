@@ -16,6 +16,19 @@ func proxy(c echo.Context, path string) error {
 	return nil
 }
 
+func getDesignDoc(c echo.Context) error {
+	docid := c.Param("designdocid")
+
+	revs := c.QueryParam("revs")
+	if revs == "true" {
+		return proxy(c, "_design/"+docid)
+	}
+
+	return c.JSON(http.StatusBadRequest, echo.Map{
+		"error": "_design docs are only readable for replication",
+	})
+}
+
 func getLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
@@ -87,6 +100,7 @@ func replicationRoutes(router *echo.Group) {
 	// Routes used only for replication
 	router.GET("/", dataAPIWelcome)
 	router.GET("/:doctype/", dbStatus)
+	router.GET("/:doctype/_design/:designdocid", getDesignDoc)
 	router.GET("/:doctype/_changes", changesFeed)
 	// POST=GET see http://docs.couchdb.org/en/2.0.0/api/database/changes.html#post--db-_changes)
 	router.POST("/:doctype/_changes", changesFeed)
