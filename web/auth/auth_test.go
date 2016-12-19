@@ -953,7 +953,7 @@ func getJSON(u, token string) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", ts.URL+u, nil)
 	req.Host = domain
 	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Authorization", "bearer "+token)
+	req.Header.Add("Authorization", "Bearer "+token)
 	return client.Do(req)
 }
 
