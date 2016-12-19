@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	git "gopkg.in/src-d/go-git.v4"
+	gitObj "gopkg.in/src-d/go-git.v4/plumbing/object"
 	gitSt "gopkg.in/src-d/go-git.v4/storage/filesystem"
 	gitFS "gopkg.in/src-d/go-git.v4/utils/fs"
 )
@@ -127,7 +128,7 @@ func (g *gitClient) Fetch(vfsC vfs.Context, appdir string) error {
 		return err
 	}
 
-	return files.ForEach(func(f *git.File) (err error) {
+	return files.ForEach(func(f *gitObj.File) (err error) {
 		abs := path.Join(appdir, f.Name)
 		dir := path.Dir(abs)
 

@@ -186,20 +186,21 @@ func OpenFile(c Context, name string, flag int, perm os.FileMode) (*File, error)
 		return Open(c, doc)
 	}
 
-	var err error
 	var dirID string
-	var olddoc *FileDoc
-	var parent *DirDoc
-
-	if flag&os.O_CREATE != 0 {
-		if parent, err = GetDirDocFromPath(c, path.Dir(name), false); err != nil {
+	olddoc, err := GetFileDocFromPath(c, name)
+	if os.IsNotExist(err) && flag&os.O_CREATE != 0 {
+		var parent *DirDoc
+		parent, err = GetDirDocFromPath(c, path.Dir(name), false)
+		if err != nil {
 			return nil, err
 		}
 		dirID = parent.ID()
-	} else if flag&os.O_WRONLY != 0 {
-		if olddoc, err = GetFileDocFromPath(c, name); err != nil {
-			return nil, err
-		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if olddoc != nil {
 		dirID = olddoc.DirID
 	}
 
