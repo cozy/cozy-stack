@@ -11,6 +11,7 @@ You also have DNS and TLS certificates to change
 
 
 Once we start doing some intercozy communication, we might have issues with the transition period.
+
 - I export my "bob.cozycloud.cc" from host1 as a tarball
 - My friend A's cozy send me an update notification the message gets to host1
 - I trigger DNS change

@@ -185,7 +185,9 @@ POST /auth/register HTTP/1.1
 Host: cozy.example.org
 Content-Type: application/json
 Accept: application/json
+```
 
+```json
 {
   "redirect_uris": ["https://client.example.org/oauth/callback"],
   "client_name": "Client",
@@ -201,7 +203,9 @@ Accept: application/json
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/json
+```
 
+```json
 {
   "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
   "client_secret": "eyJpc3Mi[...omitted for brevity...]",
@@ -237,7 +241,9 @@ Authorization: Bearer J9l-ZhwP...
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/json
+```
 
+```json
 {
   "client_id": "64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3",
   "client_secret": "eyJpc3Mi[...omitted for brevity...]",

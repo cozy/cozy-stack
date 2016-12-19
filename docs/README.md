@@ -13,9 +13,11 @@ Table of contents
 - [Managing Instances](./instance.md)
 - [Docker](./docker.md)
 - [Build a release](./release.md)
+- [Develop a client-side app](./client-app-dev.md)
 
 ### API
 - [Data System](./data-system.md)
+- [Mango](./mango.md)
 - [Virtual File System](./files.md)
 - [Jobs](./jobs.md)
 - [Settings](./settings.md)

@@ -198,10 +198,10 @@ The client MUST give a `_rev` field in the document. If this field is different 
 
 ### Request
 ```http
-PUT /data/:type/:id
+PUT /data/:type/:id HTTP/1.1
 ```
 ```http
-PUT /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+PUT /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
 Content-Length: ...
 Content-Type: application/json
 Accept: application/json
@@ -209,7 +209,7 @@ Accept: application/json
 ```json
 {
     "startdate": "20160712T150000",
-    "enddate": "20160712T200000",
+    "enddate": "20160712T200000"
 }
 ```
 
@@ -230,7 +230,7 @@ Content-Type: application/json
         "_type": "io.cozy.events",
         "_rev": "1-056f5f44046ecafc08a2bc2b9c229e20",
         "startdate": "20160712T150000",
-        "enddate": "20160712T200000",
+        "enddate": "20160712T200000"
     }
 }
 ```
@@ -255,10 +255,10 @@ Content-Type: application/json
 
 ### Request
 ```http
-DELETE /data/:type/:id
+DELETE /data/:type/:id HTTP/1.1
 ```
 ```http
-DELETE /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
+DELETE /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
 Accept: application/json
 
 ```
@@ -278,7 +278,9 @@ Content-Type: application/json
     "_deleted": true
 }
 ```
+
 ### Possible errors :
+
 - 400 bad request
 - 401 unauthorized (no authentication has been provided)
 - 403 forbidden (the authentication does not provide permissions for this action)
@@ -291,6 +293,7 @@ Content-Type: application/json
 ### Conflict prevention
 
 It is possible to use either a `rev` query string parameter or a HTTP `If-Match` header to prevent conflict on deletion:
+
 - If none is passed or they are different, an error 400 is returned
 - If only one is passed or they are equals, the document will only be deleted if its `_rev` match the passed one. Otherwise, an error 409  is returned.
 
