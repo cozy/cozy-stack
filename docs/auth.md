@@ -289,11 +289,6 @@ GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=files/imag
 Host: cozy.example.org
 ```
 
-**Note** we follow the TOFU principle (Trust On First Use). It means that if
-the user has already said yes for this authorization and scopes, she will be
-redirected to the app directly. As for `/auth/login`, the fragment is
-overriden in the redirection with `#` (an empty fragment).
-
 **Note** we warn the user that he is about to share his data with an
 application which only the callback URI is guaranteed.
 
@@ -316,7 +311,7 @@ URL:
 
 ```http
 HTTP/1.1 302 Moved Temporarily
-Location: https://client.org/?state=Eh6ahshepei5Oojo&access_code=Aih7ohth
+Location: https://client.org/?state=Eh6ahshepei5Oojo&access_code=Aih7ohth#
 ```
 
 ### POST /auth/access_token
