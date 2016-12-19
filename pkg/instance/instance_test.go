@@ -106,7 +106,6 @@ func TestRegisterPassphrase(t *testing.T) {
 	assert.Error(t, err, "RegisterPassphrase requires token")
 
 	err = instance.RegisterPassphrase(pass, badtoken)
-	assert.Error(t, err)
 	assert.Error(t, err, "RegisterPassphrase requires proper token")
 
 	err = instance.RegisterPassphrase(pass, rtoken)
@@ -117,7 +116,40 @@ func TestRegisterPassphrase(t *testing.T) {
 
 	err = instance.RegisterPassphrase(pass, rtoken)
 	assert.Error(t, err, "RegisterPassphrase works only once")
+}
 
+func TestUpdatePassphrase(t *testing.T) {
+	instance, err := Get("test.cozycloud.cc")
+	if !assert.NoError(t, err, "cant fetch instance") {
+		return
+	}
+	assert.NotNil(t, instance)
+	assert.Empty(t, instance.RegisterToken)
+	assert.NotEmpty(t, instance.OAuthSecret)
+	assert.Len(t, instance.OAuthSecret, oauthSecretLen)
+	assert.NotEmpty(t, instance.SessionSecret)
+	assert.Len(t, instance.SessionSecret, sessionSecretLen)
+
+	oldHash := instance.PassphraseHash
+	oldSecret := instance.SessionSecret
+
+	currentPass := []byte("passphrase")
+	newPass := []byte("new-passphrase")
+	badPass := []byte("not-passphrase")
+	empty := []byte("")
+
+	err = instance.UpdatePassphrase(newPass, empty)
+	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
+
+	err = instance.UpdatePassphrase(newPass, badPass)
+	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
+
+	err = instance.UpdatePassphrase(newPass, currentPass)
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, instance.PassphraseHash, "PassphraseHash has not been saved")
+	assert.NotEqual(t, oldHash, instance.PassphraseHash)
+	assert.NotEqual(t, oldSecret, instance.SessionSecret)
 }
 
 func TestCheckPassphrase(t *testing.T) {
@@ -132,7 +164,7 @@ func TestCheckPassphrase(t *testing.T) {
 	err = instance.CheckPassphrase([]byte("not-passphrase"))
 	assert.Error(t, err)
 
-	err = instance.CheckPassphrase([]byte("passphrase"))
+	err = instance.CheckPassphrase([]byte("new-passphrase"))
 	assert.NoError(t, err)
 
 }

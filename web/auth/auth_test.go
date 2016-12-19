@@ -76,9 +76,9 @@ func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	assert.Equal(t, "who_are_you", content)
 }
 
-func TestRegisterWrongToken(t *testing.T) {
+func TestRegisterPassphraseWrongToken(t *testing.T) {
 	res1, err := postForm("/auth/passphrase", &url.Values{
-		"passphrase":    {"MyPassphrase"},
+		"passphrase":    {"MyFirstPassphrase"},
 		"registerToken": {"BADBEEF"},
 	})
 	assert.NoError(t, err)
@@ -86,7 +86,7 @@ func TestRegisterWrongToken(t *testing.T) {
 	assert.Equal(t, "400 Bad Request", res1.Status)
 
 	res2, err := postForm("/auth/passphrase", &url.Values{
-		"passphrase":    {"MyPassphrase"},
+		"passphrase":    {"MyFirstPassphrase"},
 		"registerToken": {"XYZ"},
 	})
 	assert.NoError(t, err)
@@ -94,15 +94,42 @@ func TestRegisterWrongToken(t *testing.T) {
 	assert.Equal(t, "400 Bad Request", res2.Status)
 }
 
-func TestRegisterCorrectToken(t *testing.T) {
+func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	res, err := postForm("/auth/passphrase", &url.Values{
-		"passphrase":    {"MyPassphrase"},
+		"passphrase":    {"MyFirstPassphrase"},
 		"registerToken": {hex.EncodeToString(registerToken)},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
 		assert.Equal(t, "https://onboarding.cozy.example.net/",
+			res.Header.Get("Location"))
+		cookies := res.Cookies()
+		assert.Len(t, cookies, 1)
+		assert.Equal(t, cookies[0].Name, SessionCookieName)
+		assert.NotEmpty(t, cookies[0].Value)
+	}
+}
+
+func TestUpdatePassphraseWithWrongPassphrase(t *testing.T) {
+	res, err := putForm("/auth/passphrase", &url.Values{
+		"new-passphrase":     {"MyPassphrase"},
+		"current-passphrase": {"BADBEEF"},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+}
+
+func TestUpdatePassphraseSuccess(t *testing.T) {
+	res, err := putForm("/auth/passphrase", &url.Values{
+		"new-passphrase":     {"MyPassphrase"},
+		"current-passphrase": {"MyFirstPassphrase"},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://home.cozy.example.net/",
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 1)
@@ -922,10 +949,11 @@ func noRedirect(*http.Request, []*http.Request) error {
 	return http.ErrUseLastResponse
 }
 
-func postForm(u string, v *url.Values) (*http.Response, error) {
-	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
+func getJSON(u, token string) (*http.Response, error) {
+	req, _ := http.NewRequest("GET", ts.URL+u, nil)
 	req.Host = domain
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", "bearer "+token)
 	return client.Do(req)
 }
 
@@ -938,11 +966,17 @@ func postJSON(u string, v echo.Map) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func getJSON(u, token string) (*http.Response, error) {
-	req, _ := http.NewRequest("GET", ts.URL+u, nil)
+func postForm(u string, v *url.Values) (*http.Response, error) {
+	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
 	req.Host = domain
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Authorization", "bearer "+token)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	return client.Do(req)
+}
+
+func putForm(u string, v *url.Values) (*http.Response, error) {
+	req, _ := http.NewRequest("PUT", ts.URL+u, bytes.NewBufferString(v.Encode()))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	return client.Do(req)
 }
 

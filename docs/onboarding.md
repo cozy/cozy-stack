@@ -52,7 +52,7 @@ passphrase of the user. The `registrationToken` can only be used once.
 #### Request
 
 ```http
-POST /register HTTP/1.1
+POST /auth/passphrase HTTP/1.1
 Host: alice.example.com
 Content-Type: x-www-form-urlencoded
 
@@ -64,7 +64,30 @@ registerToken=37cddf40d7724988860fa0e03efd30fe&passphrase=oGh2aek2Thoh8daeeoXohk
 ```http
 HTTP/1.1 303 See Other
 Location: https://onboarding.alice.example.com/
-Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=test.bruno.fr; Max-Age=604800; HttpOnly; Secure
+Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
+
+### PUT /auth/passphrase
+
+The user can change its passphrase with this route
+
+#### Request
+
+```http
+PUT /auth/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: x-www-form-urlencoded
+Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
+
+current-passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo&new-passphrase=Ee0vohChUQuohch5urahN9yuLeexex5a
+```
+
+#### Response
+
+```http
+HTTP/1.1 303 See Other
+Location: https://home.alice.example.com/
+Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
 ```
 
 ### GET /instance

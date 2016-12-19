@@ -51,6 +51,18 @@ func registerPassphrase(c echo.Context) error {
 	return redirectSuccessLogin(c, instance.SubDomain(apps.OnboardingSlug))
 }
 
+func updatePassphrase(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	newPassphrase := []byte(c.FormValue("new-passphrase"))
+	currentPassphrase := []byte(c.FormValue("current-passphrase"))
+	if err := instance.UpdatePassphrase(newPassphrase, currentPassphrase); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	return redirectSuccessLogin(c, instance.SubDomain(apps.HomeSlug))
+}
+
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -432,6 +444,7 @@ func Routes(router *echo.Group) {
 	})
 
 	router.POST("/passphrase", registerPassphrase)
+	router.PUT("/passphrase", updatePassphrase)
 
 	router.GET("/login", loginForm)
 	router.POST("/login", login)
