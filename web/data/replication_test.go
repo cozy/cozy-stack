@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,4 +42,24 @@ func TestReplicationFromcozy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, out["_id"], doc1.ID())
+
+	// add more docs, including a _design doc
+	var doc4 = getDocForTest()
+	err = couchdb.DefineIndex(testInstance, Type, mango.IndexOnFields("test"))
+	assert.NoError(t, err)
+
+	// replicate again
+	req, _ = http.NewRequest("POST", replicator, jsonReader(&map[string]interface{}{
+		"source": source,
+		"target": target,
+	}))
+	req.Header.Add("Content-Type", "application/json")
+	_, _, err = doRequest(req, nil)
+	assert.NoError(t, err)
+
+	req, _ = http.NewRequest("GET", target+"/"+doc4.ID(), nil)
+	out, res, err = doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	assert.Equal(t, out["_id"], doc4.ID())
 }

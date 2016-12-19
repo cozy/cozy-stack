@@ -2,10 +2,8 @@
 package data
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -39,8 +37,8 @@ func getDoc(c echo.Context) error {
 		return dbStatus(c)
 	}
 
-	if docid[0] == '_' && !strings.HasPrefix(docid, "_design") {
-		return fmt.Errorf("Unsuported couchdb operation %s", docid)
+	if docid[0] == '_' {
+		return jsonapi.NewError(http.StatusBadRequest, "Unsuported couchdb operation %s", docid)
 	}
 
 	revs := c.QueryParam("revs")
