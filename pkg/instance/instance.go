@@ -377,13 +377,12 @@ func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	}
 
 	i.RegisterToken = nil
-	i.PassphraseHash = hash
-	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
+	i.setPassphraseAndSecret(hash)
 
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
 }
 
-// UpdatePassphrase replace the instance registerToken by a passphrase
+// UpdatePassphrase replace the passphrase
 func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 	if len(pass) == 0 {
 		return ErrMissingPassphrase
@@ -396,11 +395,14 @@ func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 	if err != nil {
 		return err
 	}
-
-	i.PassphraseHash = hash
-	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
+	i.setPassphraseAndSecret(hash)
 
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
+
+func (i *Instance) setPassphraseAndSecret(hash []byte) {
+	i.PassphraseHash = hash
+	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
 }
 
 // CheckPassphrase confirm an instance passport
