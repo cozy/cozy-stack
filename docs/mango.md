@@ -8,10 +8,10 @@ The body should contain a `index` JSON field containing a `fields` which is an o
 
 ### Request
 ```http
-POST /data/:doctype/_index
+POST /data/:doctype/_index HTTP/1.1
 ```
 ```http
-POST /data/io.cozy.events/_index
+POST /data/io.cozy.events/_index HTTP/1.1
 Content-Type: application/json
 ```
 ```json
@@ -36,7 +36,9 @@ Content-Type: application/json
     "name": "a5f4711fc9448864a13c81dc71e660b524d7410c"
 }
 ```
+
 ### Details
+
 - if the doctype does not exist, the database is created.
 - if the index already exists, a `{result: "exists"}` is returned, but the response code is still 200
 - design doc & name can be provided in request. **This is not recommended**, let couchdb handle naming and deduplication.
@@ -50,6 +52,7 @@ Content-Type: application/json
 ```
 
 ### possible errors :
+
 - 401 unauthorized (no authentication has been provided)
 - 403 forbidden (the authentication does not provide permissions for this action)
 - 500 internal server error
@@ -62,10 +65,10 @@ You can read more about mango selectors [here](http://docs.couchdb.org/en/2.0.0/
 
 ### Request
 ```http
-POST /data/:doctype/_find
+POST /data/:doctype/_find HTTP/1.1
 ```
 ```http
-POST /data/io.cozy.events/_find
+POST /data/io.cozy.events/_find HTTP/1.1
 Content-Type: application/json
 ```
 ```json
@@ -95,18 +98,19 @@ Content-Type: application/json
       {
           "_id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
           "_type": "io.cozy.events",
-          "date": "20161023T160000Z",
+          "date": "20161023T160000Z"
       },
       {
           "_id": "6494e0ac-dfcb-472e84a9cbee",
           "_type": "io.cozy.events",
-          "date": "20161013T160000Z",
+          "date": "20161013T160000Z"
       }
   ]
 }
 ```
 
 ### Details
+
 - If an index does not exist for the selector, an error 400 is returned
 - The sort field must contains all fields used in selector
 - The sort field must match an existing index

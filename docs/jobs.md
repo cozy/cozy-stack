@@ -272,7 +272,9 @@ Enqueue programmatically a new job.
 ```http
 POST /jobs/queue/sendmail HTTP/1.1
 Accept: application/vnd.api+json
+```
 
+```json
 {
   "priority": 3,
   "timeout": 60,
@@ -361,7 +363,9 @@ Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the 
 ```http
 POST /jobs/triggers/sendmail HTTP/1.1
 Accept: application/vnd.api+json
+```
 
+```json
 {
   "type": "@interval",
   "arguments": "30m10s",

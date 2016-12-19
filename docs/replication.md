@@ -78,6 +78,7 @@ db.replicate.to('https://bob.cozycloud.cc/data/contacts')
 ```
 
 To suport this we need to:
+
 - Proxy `/data/:doctype/_changes` route with since, limit, feed=normal. Refuse all filter parameters with a clear error message. [(Doc)](http://docs.couchdb.org/en/2.0.0/api/database/changes.html)
 - Add support of `open_revs`, `revs`, `latest` query parameter to `GET /data/:doctype/:docid` [(Doc) ](http://docs.couchdb.org/en/2.0.0/api/document/common.html?highlight=open_revs#get--db-docid)
 - Proxy the `/data/:doctype/_revs_diff` [(Doc)](http://docs.couchdb.org/en/2.0.0/api/database/misc.html#db-revs-diff) and `/data/:doctype/_bulk_docs` routes [(Doc)](http://docs.couchdb.org/en/2.0.0/api/database/bulk-api.html) routes
@@ -126,7 +127,7 @@ Proposal by Romain, if we find `_selector` filter replication performances to be
 
 - No sharing database
 - A permission, for anything is a mango-style selector.
-- on every query, the Mango selector is checked at the stack or couchdb level ($and-ing for queries, testing output document, input document)
+- on every query, the Mango selector is checked at the stack or couchdb level (`$and`-ing for queries, testing output document, input document)
 - Sharing is a filtered replication between user's 1 doctypedb et user's 2 samedoctypedb
 - No continuous replication
 - Upon update, the stack trigger a PUSH replication to its remote or "ping" the remote, and the remote perform a normal PULL replication.
