@@ -64,6 +64,7 @@ func TestInstallSuccessful(t *testing.T) {
 	go inst.Install()
 
 	var state State
+	var manifest *Manifest
 	for {
 		man, done, err := inst.WaitManifest()
 		if !assert.NoError(t, err) {
@@ -74,6 +75,7 @@ func TestInstallSuccessful(t *testing.T) {
 		} else if state == Installing {
 			assert.EqualValues(t, Ready, man.State)
 			assert.True(t, done)
+			manifest = man
 			break
 		} else {
 			t.Fatalf("invalid state")
@@ -81,9 +83,16 @@ func TestInstallSuccessful(t *testing.T) {
 		}
 		state = man.State
 	}
+
+	assert.Len(t, manifest.Contexts, 1)
+	ctx, ok := manifest.Contexts["/"]
+	assert.True(t, ok, "The manifest should have the default context")
+	assert.Equal(t, "/", ctx.Folder)
+	assert.Equal(t, "index.html", ctx.Index)
+	assert.Equal(t, false, ctx.Public)
 }
 
-func TestInstallAldreadyExist(t *testing.T) {
+func TestInstallAlreadyExist(t *testing.T) {
 	inst, err := NewInstaller(c, "conflictslug", "git://github.com/nono/cozy-mini.git")
 	if !assert.NoError(t, err) {
 		return

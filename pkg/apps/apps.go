@@ -54,10 +54,20 @@ var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 type Access string
 
 // Permissions is a map of key, a description and an access level.
-type Permissions map[string]*struct {
+type Permissions map[string]struct {
 	Description string `json:"description"`
 	Access      Access `json:"access"`
 }
+
+// Context is a struct to serve a folder inside an app
+type Context struct {
+	Folder string `json:"folder"`
+	Index  string `json:"index"`
+	Public bool   `json:"public"`
+}
+
+// Contexts are a map for routing inside an application.
+type Contexts map[string]Context
 
 // Developer is the name and url of a developer.
 type Developer struct {
@@ -78,13 +88,14 @@ type Manifest struct {
 	Developer   *Developer `json:"developer"`
 
 	DefaultLocal string `json:"default_locale"`
-	Locales      map[string]*struct {
+	Locales      map[string]struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 
 	Version     string       `json:"version"`
 	License     string       `json:"license"`
 	Permissions *Permissions `json:"permissions"`
+	Contexts    Contexts     `json:"contexts"`
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
@@ -313,6 +324,15 @@ func (i *Installer) getOrCreateManifest(src, slug string) (man *Manifest, err er
 	man.Slug = slug
 	man.Source = src
 	man.State = Available
+
+	if man.Contexts == nil {
+		man.Contexts = make(Contexts)
+		man.Contexts["/"] = Context{
+			Folder: "/",
+			Index:  "index.html",
+			Public: false,
+		}
+	}
 
 	err = couchdb.CreateNamedDoc(i.vfsC, man)
 	return
