@@ -188,6 +188,9 @@ func GetDirDoc(c Context, fileID string, withChildren bool) (*DirDoc, error) {
 		if fileID == RootDirID {
 			panic("Root directory is not in database")
 		}
+		if fileID == TrashDirID {
+			panic("Trash directory is not in database")
+		}
 		return nil, err
 	}
 	if doc.Type != DirType {

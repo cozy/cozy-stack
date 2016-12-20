@@ -1,11 +1,9 @@
 package apps
 
 import (
-	"io"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
@@ -78,6 +76,7 @@ type Manifest struct {
 	Slug        string     `json:"slug"`
 	Source      string     `json:"source"`
 	State       State      `json:"state"`
+	Error       string     `json:"error,omitempty"`
 	Icon        string     `json:"icon"`
 	Description string     `json:"description"`
 	Developer   *Developer `json:"developer"`
@@ -125,17 +124,6 @@ func (m *Manifest) Relationships() jsonapi.RelationshipMap {
 // Included is part of the jsonapi.Object interface
 func (m *Manifest) Included() []jsonapi.Object {
 	return []jsonapi.Object{}
-}
-
-// Client interface should be implemented by the underlying transport
-// used to fetch the application data.
-type Client interface {
-	// FetchManifest should returns an io.ReadCloser to read the
-	// manifest data
-	FetchManifest() (io.ReadCloser, error)
-	// Fetch should download the application and install it in the given
-	// directory.
-	Fetch(vfsC vfs.Context, appdir string) error
 }
 
 // List returns the list of installed applications.
