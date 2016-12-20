@@ -119,7 +119,7 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 
 	// TODO: permanently remove application files instead of moving them to the
 	// trash
-	err = vfs.Walk(c, appdir, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+	err = vfs.Walk(ctx, appdir, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
@@ -132,9 +132,9 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 		}
 
 		if dir != nil {
-			_, err = vfs.TrashDir(c, dir)
+			_, err = vfs.TrashDir(ctx, dir)
 		} else {
-			_, err = vfs.TrashFile(c, file)
+			_, err = vfs.TrashFile(ctx, file)
 		}
 		if err != nil {
 			return err
