@@ -40,7 +40,7 @@ import (
 // 		{"error":"conflict","reason":"Document update conflict."}
 // 412 Precondition Failed : The request headers from the client and the
 // 		capabilities of the server do not match.
-// 415 Bad Content Type : The content consts.supported, and the content type of
+// 415 Bad Content Type : The content types supported, and the content type of
 // 		the information being requested or submitted indicate that the content
 // 		type is not supported.
 // 416 Requested Range Not Satisfiable : The range specified in the request
