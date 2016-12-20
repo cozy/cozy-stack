@@ -352,6 +352,12 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	err = vfs.CreateTrashDir(c)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	go serveGitRep()
 
 	time.Sleep(100 * time.Millisecond)

@@ -117,8 +117,36 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
-	// TODO: remove all files from the tree before copying new ones. or just try
-	// to remove/update only the modified files.
+	// TODO: permanently remove application files instead of moving them to the
+	// trash
+	err = vfs.Walk(c, appdir, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if name == appdir {
+			return nil
+		}
+		if name == gitdir {
+			return vfs.ErrSkipDir
+		}
+
+		if dir != nil {
+			_, err = vfs.TrashDir(c, dir)
+		} else {
+			_, err = vfs.TrashFile(c, file)
+		}
+		if err != nil {
+			return err
+		}
+		if dir != nil {
+			return vfs.ErrSkipDir
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
 	return g.copyFiles(appdir, rep)
 }
