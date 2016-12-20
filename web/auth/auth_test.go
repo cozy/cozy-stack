@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -720,7 +721,7 @@ func TestAuthorizeSuccess(t *testing.T) {
 	if assert.Equal(t, "302 Found", res.Status) {
 		var results []AccessCode
 		req := &couchdb.AllDocsRequest{}
-		couchdb.GetAllDocs(db, AccessCodeDocType, req, &results)
+		couchdb.GetAllDocs(db, consts.OAuthAccessCodes, req, &results)
 		if assert.Len(t, results, 1) {
 			code = results[0].Code
 			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&state=123456#", code)

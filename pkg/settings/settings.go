@@ -3,15 +3,13 @@ package settings
 
 import (
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
-// SettingsDocType is the document type for CouchDB
-const SettingsDocType = "io.cozy.settings"
-
 // DefaultThemeID is the ID of the document that contains the variables for the
 // default theme
-const DefaultThemeID = SettingsDocType + "-theme"
+const DefaultThemeID = consts.Settings + "-theme"
 
 // Theme is a struct that contains all the values for the CSS variables used
 // in the CSS called "theme.css". This stylesheet is ued by the client-side
@@ -45,7 +43,7 @@ func (t *Theme) ID() string { return t.ThemeID }
 func (t *Theme) Rev() string { return t.ThemeRev }
 
 // DocType returns the theme document type
-func (t *Theme) DocType() string { return SettingsDocType }
+func (t *Theme) DocType() string { return consts.Settings }
 
 // SetID changes the theme qualified identifier
 func (t *Theme) SetID(id string) { t.ThemeID = id }
@@ -84,7 +82,7 @@ func CreateDefaultTheme(db couchdb.Database) error {
 // DefaultTheme return the document for the default theme
 func DefaultTheme(db couchdb.Database) (*Theme, error) {
 	theme := &Theme{}
-	err := couchdb.GetDoc(db, SettingsDocType, DefaultThemeID, theme)
+	err := couchdb.GetDoc(db, consts.Settings, DefaultThemeID, theme)
 	return theme, err
 }
 

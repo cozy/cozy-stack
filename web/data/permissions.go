@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/labstack/echo"
 )
 
@@ -14,9 +12,9 @@ var readable = true
 var none = false
 
 var blackList = map[string]bool{
-	auth.SessionsType:     none,
-	vfs.FsDocType:         readable,
-	instance.InstanceType: readable,
+	consts.Sessions:  none,
+	consts.Files:     readable,
+	consts.Instances: readable,
 }
 
 // CheckReadable will abort the context and returns false if the doctype

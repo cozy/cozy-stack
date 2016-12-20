@@ -6,15 +6,13 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
-
-// SessionsType : The couchdb type for a session
-const SessionsType = "io.cozy.sessions"
 
 // SessionCookieName : name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
@@ -43,7 +41,7 @@ type Session struct {
 }
 
 // DocType implements couchdb.Doc
-func (s *Session) DocType() string { return SessionsType }
+func (s *Session) DocType() string { return consts.Sessions }
 
 // ID implements couchdb.Doc
 func (s *Session) ID() string { return s.DocID }
@@ -99,7 +97,7 @@ func GetSession(c echo.Context) (*Session, error) {
 		return nil, err
 	}
 
-	err = couchdb.GetDoc(i, SessionsType, string(sessionID), &s)
+	err = couchdb.GetDoc(i, consts.Sessions, string(sessionID), &s)
 	// invalid session id
 	if couchdb.IsNotFoundError(err) {
 		return nil, ErrInvalidID
