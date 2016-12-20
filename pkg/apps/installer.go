@@ -18,10 +18,10 @@ type Installer struct {
 	fetcher Fetcher
 	ctx     vfs.Context
 
+	man  *Manifest
 	src  *url.URL
 	slug string
 
-	man  *Manifest
 	err  error
 	errc chan error
 	manc chan *Manifest

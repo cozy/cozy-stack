@@ -16,7 +16,7 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 	gitObj "gopkg.in/src-d/go-git.v4/plumbing/object"
 	gitSt "gopkg.in/src-d/go-git.v4/storage/filesystem"
-	gitFS "gopkg.in/src-d/go-git.v4/utils/fs"
+	gitFS "srcd.works/go-billy.v1"
 )
 
 const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
