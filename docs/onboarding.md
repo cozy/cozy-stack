@@ -54,7 +54,7 @@ passphrase of the user. The `registrationToken` can only be used once.
 ```http
 POST /auth/passphrase HTTP/1.1
 Host: alice.example.com
-Content-Type: x-www-form-urlencoded
+Content-Type: application/x-www-form-urlencoded
 
 registerToken=37cddf40d7724988860fa0e03efd30fe&passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo
 ```
@@ -76,7 +76,7 @@ The user can change its passphrase with this route
 ```http
 PUT /auth/passphrase HTTP/1.1
 Host: alice.example.com
-Content-Type: x-www-form-urlencoded
+Content-Type: application/x-www-form-urlencoded
 Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
 
 current-passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo&new-passphrase=Ee0vohChUQuohch5urahN9yuLeexex5a
