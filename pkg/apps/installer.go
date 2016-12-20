@@ -129,6 +129,12 @@ func (i *Installer) endOfProc() {
 	i.manc <- i.man
 }
 
+// install will perform the installation of an application. It returns the
+// freshly fetched manifest from the source along with a possible error in case
+// the installation went wrong.
+//
+// Note that the fetched manifest is returned even if an error occured while
+// upgrading.
 func (i *Installer) install() (*Manifest, error) {
 	man := &Manifest{}
 	if err := i.ReadManifest(Installing, &man); err != nil {
@@ -136,29 +142,35 @@ func (i *Installer) install() (*Manifest, error) {
 	}
 
 	if err := createManifest(i.ctx, man); err != nil {
-		return nil, err
+		return man, err
 	}
 
 	i.manc <- man
 
 	appdir := i.appDir()
 	if _, err := vfs.MkdirAll(i.ctx, appdir, nil); err != nil {
-		return nil, err
+		return man, err
 	}
 
 	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
-		return nil, err
+		return man, err
 	}
 
 	return man, nil
 }
 
+// update will perform the update of an already installed application. It
+// returns the freshly fetched manifest from the source along with a possible
+// error in case the update went wrong.
+//
+// Note that the fetched manifest is returned even if an error occured while
+// upgrading.
 func (i *Installer) update() (*Manifest, error) {
 	man := i.man
 	version := man.Version
 
 	if err := i.ReadManifest(Upgrading, &man); err != nil {
-		return nil, err
+		return man, err
 	}
 
 	if man.Version == version {
@@ -166,14 +178,14 @@ func (i *Installer) update() (*Manifest, error) {
 	}
 
 	if err := updateManifest(i.ctx, man); err != nil {
-		return nil, err
+		return man, err
 	}
 
 	i.manc <- man
 
 	appdir := i.appDir()
 	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
-		return nil, err
+		return man, err
 	}
 
 	return man, nil
