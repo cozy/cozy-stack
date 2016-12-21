@@ -183,12 +183,8 @@ func (i *Installer) update() (*Manifest, error) {
 
 	i.manc <- man
 
-	appdir := i.appDir()
-	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
-		return man, err
-	}
-
-	return man, nil
+	err := i.fetcher.Fetch(i.src, i.appDir())
+	return man, err
 }
 
 // ReadManifest will fetch the manifest and read its JSON content into the
