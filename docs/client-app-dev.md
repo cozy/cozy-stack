@@ -56,7 +56,7 @@ $ docker run -d \
 
 To keep your data even when stopping the container, run the following command:
 
-```
+```sh
 $ docker run -d \
     -p 8080:8080 \
     -v "$HOME/myapp":/data/cozy-app \
