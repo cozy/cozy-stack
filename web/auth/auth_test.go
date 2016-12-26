@@ -172,7 +172,7 @@ func TestShowLoginPage(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Please enter your passphrase")
 }
@@ -184,7 +184,7 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	defer res1.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res1.Status)
-	assert.Equal(t, "text/plain; charset=utf-8", res1.Header.Get("Content-Type"))
+	assert.Equal(t, "text/plain; charset=UTF-8", res1.Header.Get("Content-Type"))
 
 	req2, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("foo.bar"), nil)
 	req2.Host = domain
@@ -192,7 +192,7 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	defer res2.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res2.Status)
-	assert.Equal(t, "text/plain; charset=utf-8", res2.Header.Get("Content-Type"))
+	assert.Equal(t, "text/plain; charset=UTF-8", res2.Header.Get("Content-Type"))
 
 	req3, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("ftp://sub."+domain+"/foo"), nil)
 	req3.Host = domain
@@ -200,7 +200,7 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	defer res3.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res3.Status)
-	assert.Equal(t, "text/plain; charset=utf-8", res3.Header.Get("Content-Type"))
+	assert.Equal(t, "text/plain; charset=UTF-8", res3.Header.Get("Content-Type"))
 }
 
 func TestShowLoginPageWithRedirectXSS(t *testing.T) {
@@ -210,7 +210,7 @@ func TestShowLoginPageWithRedirectXSS(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "<script>")
 	assert.Contains(t, string(body), "%3Cscript%3Ealert%28%27foo%27%29%3C/script%3E")
@@ -223,7 +223,7 @@ func TestShowLoginPageWithRedirectFragment(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
 	assert.Contains(t, string(body), `<input type="hidden" name="redirect" value="https://sub.cozy.example.net/#" />`)
@@ -236,7 +236,7 @@ func TestShowLoginPageWithRedirectSuccess(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
 	assert.Contains(t, string(body), `<input type="hidden" name="redirect" value="https://sub.cozy.example.net/foo/bar?query=foo#" />`)
@@ -483,7 +483,7 @@ func TestAuthorizeFormBadResponseType(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Invalid response type")
 }
@@ -496,7 +496,7 @@ func TestAuthorizeFormNoState(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The state parameter is mandatory")
 }
@@ -509,7 +509,7 @@ func TestAuthorizeFormNoClientId(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client_id parameter is mandatory")
 }
@@ -521,7 +521,7 @@ func TestAuthorizeFormNoRedirectURI(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter is mandatory")
 }
@@ -534,7 +534,7 @@ func TestAuthorizeFormNoScope(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The scope parameter is mandatory")
 }
@@ -547,7 +547,7 @@ func TestAuthorizeFormInvalidClient(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client must be registered")
 }
@@ -560,7 +560,7 @@ func TestAuthorizeFormInvalidRedirectURI(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter doesn&#39;t match the registered ones")
 }
@@ -573,7 +573,7 @@ func TestAuthorizeFormSuccess(t *testing.T) {
 	defer res.Body.Close()
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "would like permission to access your Cozy")
 	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
@@ -626,7 +626,7 @@ func TestAuthorizeWithNoState(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The state parameter is mandatory")
 }
@@ -641,7 +641,7 @@ func TestAuthorizeWithNoClientID(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client_id parameter is mandatory")
 }
@@ -657,7 +657,7 @@ func TestAuthorizeWithInvalidClientID(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The client must be registered")
 }
@@ -672,7 +672,7 @@ func TestAuthorizeWithNoRedirectURI(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter is invalid")
 }
@@ -688,7 +688,7 @@ func TestAuthorizeWithInvalidURI(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The redirect_uri parameter doesn&#39;t match the registered ones")
 }
@@ -703,7 +703,7 @@ func TestAuthorizeWithNoScope(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
-	assert.Equal(t, "text/html; charset=utf-8", res.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "The scope parameter is mandatory")
 }
