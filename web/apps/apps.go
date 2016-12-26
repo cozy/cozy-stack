@@ -19,6 +19,25 @@ import (
 
 const indexPage = "index.html"
 
+func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
+	ctx, file := app.FindContext(vpath)
+	if ctx.Folder == "" {
+		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
+	}
+	if file == "" {
+		file = ctx.Index
+	}
+	appdir := path.Join(vfs.AppsDirName, app.Slug)
+	filepath := path.Join(appdir, ctx.Folder, file)
+	doc, err := vfs.GetFileDocFromPath(i, filepath)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound)
+	}
+
+	vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
+	return nil
+}
+
 // Serve is an handler for serving files from the VFS for a client-side app
 func Serve(c echo.Context, domain, slug string) error {
 	req := c.Request()
@@ -30,7 +49,6 @@ func Serve(c echo.Context, domain, slug string) error {
 	if err != nil {
 		return err
 	}
-
 	app, err := apps.GetBySlug(i, slug)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
@@ -38,26 +56,11 @@ func Serve(c echo.Context, domain, slug string) error {
 		}
 		return err
 	}
-
 	if app.State != apps.Ready {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
 
-	vpath := req.URL.Path
-	if vpath[len(vpath)-1] == '/' {
-		vpath = path.Join(vpath, indexPage)
-	}
-
-	appdir := path.Join(vfs.AppsDirName, app.Slug)
-	vpath = path.Clean(vpath)
-	vpath = path.Join(appdir, vpath)
-	doc, err := vfs.GetFileDocFromPath(i, vpath)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound)
-	}
-
-	vfs.ServeFileContent(i, doc, "", req, c.Response())
-	return nil
+	return serveApp(c, i, app, path.Clean(req.URL.Path))
 }
 
 func wrapAppsError(err error) error {

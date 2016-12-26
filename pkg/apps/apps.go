@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"path"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -148,12 +149,13 @@ func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 }
 
 // FindContext takes a path, returns the context which matches the best,
-// and says if it is an exact match (in which case the index file should be served)
-func (m *Manifest) FindContext(path string) (Context, bool) {
-	parts := strings.Split(path, "/")
+// and the part that remains unmatched
+func (m *Manifest) FindContext(vpath string) (Context, string) {
+	parts := strings.Split(vpath, "/")
 	lenParts := len(parts)
 
 	var best Context
+	rest := ""
 	specificity := 0
 	for key, ctx := range m.Contexts {
 		keys := strings.Split(key, "/")
@@ -164,14 +166,11 @@ func (m *Manifest) FindContext(path string) (Context, bool) {
 		if contextMatches(parts, keys) {
 			specificity = count
 			best = ctx
+			rest = path.Join(parts[count:]...)
 		}
 	}
 
-	if parts[len(parts)-1] == "" {
-		specificity++
-	}
-
-	return best, specificity == len(parts)
+	return best, rest
 }
 
 func contextMatches(path, ctx []string) bool {

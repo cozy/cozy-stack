@@ -41,6 +41,18 @@ func installMiniApp() error {
 		Slug:   slug,
 		Source: "git://github.com/cozy/mini.git",
 		State:  apps.Ready,
+		Contexts: apps.Contexts{
+			"/foo": apps.Context{
+				Folder: "/",
+				Index:  "index.html",
+				Public: false,
+			},
+			"/public": apps.Context{
+				Folder: "/public",
+				Index:  "index.html",
+				Public: true,
+			},
+		},
 	}
 
 	err := couchdb.CreateNamedDoc(testInstance, man)
@@ -96,11 +108,13 @@ func assertNotFound(t *testing.T, path string) {
 }
 
 func TestServe(t *testing.T) {
-	assertGet(t, "/", "text/html", "this is index.html")
-	assertGet(t, "/index.html", "text/html", "this is index.html")
-	assertGet(t, "/hello.html", "text/html", "world")
+	assertGet(t, "/foo", "text/html", "this is index.html")
+	assertGet(t, "/foo/index.html", "text/html", "this is index.html")
+	assertGet(t, "/foo/hello.html", "text/html", "world")
 	assertGet(t, "/public/", "text/html", "this is a file in public/")
 	assertNotFound(t, "/404")
+	assertNotFound(t, "/")
+	assertNotFound(t, "/index.html")
 	assertNotFound(t, "/public/hello.html")
 }
 
