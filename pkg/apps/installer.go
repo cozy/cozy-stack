@@ -137,7 +137,7 @@ func (i *Installer) endOfProc() {
 // upgrading.
 func (i *Installer) install() (*Manifest, error) {
 	man := &Manifest{}
-	if err := i.ReadManifest(Installing, &man); err != nil {
+	if err := i.ReadManifest(Installing, man); err != nil {
 		return nil, err
 	}
 
@@ -169,7 +169,7 @@ func (i *Installer) update() (*Manifest, error) {
 	man := i.man
 	version := man.Version
 
-	if err := i.ReadManifest(Upgrading, &man); err != nil {
+	if err := i.ReadManifest(Upgrading, man); err != nil {
 		return man, err
 	}
 
@@ -191,7 +191,7 @@ func (i *Installer) update() (*Manifest, error) {
 // passed manifest pointer.
 //
 // The State field of the manifest will be set to the specified state.
-func (i *Installer) ReadManifest(state State, man **Manifest) error {
+func (i *Installer) ReadManifest(state State, man *Manifest) error {
 	r, err := i.fetcher.FetchManifest(i.src)
 	if err != nil {
 		return err
@@ -203,9 +203,19 @@ func (i *Installer) ReadManifest(state State, man **Manifest) error {
 		return ErrBadManifest
 	}
 
-	(*man).Slug = i.slug
-	(*man).Source = i.src.String()
-	(*man).State = state
+	man.Slug = i.slug
+	man.Source = i.src.String()
+	man.State = state
+
+	if man.Contexts == nil {
+		man.Contexts = make(Contexts)
+		man.Contexts["/"] = Context{
+			Folder: "/",
+			Index:  "index.html",
+			Public: false,
+		}
+	}
+
 	return nil
 }
 

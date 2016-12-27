@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,6 +25,7 @@ const slug = "mini"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var manifest *apps.Manifest
 
 func createFile(dir, filename, content string) error {
 	abs := path.Join(dir, filename)
@@ -37,13 +39,25 @@ func createFile(dir, filename, content string) error {
 }
 
 func installMiniApp() error {
-	man := &apps.Manifest{
+	manifest = &apps.Manifest{
 		Slug:   slug,
 		Source: "git://github.com/cozy/mini.git",
 		State:  apps.Ready,
+		Contexts: apps.Contexts{
+			"/foo": apps.Context{
+				Folder: "/",
+				Index:  "index.html",
+				Public: false,
+			},
+			"/public": apps.Context{
+				Folder: "/public",
+				Index:  "index.html",
+				Public: true,
+			},
+		},
 	}
 
-	err := couchdb.CreateNamedDoc(testInstance, man)
+	err := couchdb.CreateNamedDoc(testInstance, manifest)
 	if err != nil {
 		return err
 	}
@@ -59,11 +73,11 @@ func installMiniApp() error {
 		return err
 	}
 
-	err = createFile(appdir, "index.html", "this is index.html")
+	err = createFile(appdir, "index.html", `this is index.html. <a href="https://{{.Domain}}/status/">Status</a>`)
 	if err != nil {
 		return err
 	}
-	err = createFile(appdir, "hello.html", "world")
+	err = createFile(appdir, "hello.html", "world {{.CtxToken}}")
 	if err != nil {
 		return err
 	}
@@ -96,12 +110,32 @@ func assertNotFound(t *testing.T, path string) {
 }
 
 func TestServe(t *testing.T) {
-	assertGet(t, "/", "text/html", "this is index.html")
-	assertGet(t, "/index.html", "text/html", "this is index.html")
-	assertGet(t, "/hello.html", "text/html", "world")
-	assertGet(t, "/public/", "text/html", "this is a file in public/")
+	assertGet(t, "/foo/", "text/html", `this is index.html. <a href="https://cozy-with-apps.example.net/status/">Status</a>`)
+	assertGet(t, "/foo/hello.html", "text/html", "world {{.CtxToken}}")
+	assertGet(t, "/public", "text/html", "this is a file in public/")
+	assertGet(t, "/public/index.html", "text/html", "this is a file in public/")
 	assertNotFound(t, "/404")
+	assertNotFound(t, "/")
+	assertNotFound(t, "/index.html")
 	assertNotFound(t, "/public/hello.html")
+}
+
+func TestBuildCtxToken(t *testing.T) {
+	ctx := manifest.Contexts["/public"]
+	tokenString := buildCtxToken(testInstance, manifest, ctx)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		_, ok := token.Method.(*jwt.SigningMethodHMAC)
+		assert.True(t, ok, "The signing method should be HMAC")
+		return testInstance.SessionSecret, nil
+	})
+	assert.NoError(t, err)
+	assert.True(t, token.Valid)
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	assert.True(t, ok, "Claims can be parsed as standard claims")
+	assert.Equal(t, "context", claims["aud"])
+	assert.Equal(t, "https://mini.cozy-with-apps.example.net/", claims["iss"])
+	assert.Equal(t, "public", claims["sub"])
 }
 
 func TestMain(m *testing.M) {

@@ -3,6 +3,8 @@
 package apps
 
 import (
+	"html/template"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -10,14 +12,76 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 )
 
-const indexPage = "index.html"
+func buildCtxToken(i *instance.Instance, app *apps.Manifest, ctx apps.Context) string {
+	subject := "public"
+	if !ctx.Public {
+		subject = ctx.Folder
+	}
+	token, err := crypto.NewJWT(i.SessionSecret, jwt.StandardClaims{
+		Audience: "context",
+		Issuer:   i.SubDomain(app.Slug),
+		IssuedAt: crypto.Timestamp(),
+		Subject:  subject,
+	})
+	if err != nil {
+		return ""
+	}
+	return token
+}
+
+func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
+	ctx, file := app.FindContext(vpath)
+	if ctx.NotFound() {
+		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
+	}
+	if file == "" {
+		file = ctx.Index
+	}
+	filepath := path.Join(vfs.AppsDirName, app.Slug, ctx.Folder, file)
+	doc, err := vfs.GetFileDocFromPath(i, filepath)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusNotFound)
+	}
+	res := c.Response()
+	if file != ctx.Index {
+		return vfs.ServeFileContent(i, doc, "", c.Request(), res)
+	}
+
+	// For index file, we inject the stack domain and a context token
+	name, err := doc.Path(i)
+	if err != nil {
+		return err
+	}
+	content, err := i.FS().Open(name)
+	if err != nil {
+		return err
+	}
+	defer content.Close()
+	buf, err := ioutil.ReadAll(content)
+	if err != nil {
+		return err
+	}
+	tmpl, err := template.New(file).Parse(string(buf))
+	if err != nil {
+		log.Printf("%s cannot be parsed as a template: %s", vpath, err)
+		return vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
+	}
+	res.Header().Set("Content-Type", doc.Mime)
+	res.WriteHeader(http.StatusOK)
+	return tmpl.Execute(res, echo.Map{
+		"CtxToken": buildCtxToken(i, app, ctx),
+		"Domain":   i.Domain,
+	})
+}
 
 // Serve is an handler for serving files from the VFS for a client-side app
 func Serve(c echo.Context, domain, slug string) error {
@@ -30,7 +94,6 @@ func Serve(c echo.Context, domain, slug string) error {
 	if err != nil {
 		return err
 	}
-
 	app, err := apps.GetBySlug(i, slug)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
@@ -38,26 +101,11 @@ func Serve(c echo.Context, domain, slug string) error {
 		}
 		return err
 	}
-
 	if app.State != apps.Ready {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
 
-	vpath := req.URL.Path
-	if vpath[len(vpath)-1] == '/' {
-		vpath = path.Join(vpath, indexPage)
-	}
-
-	appdir := path.Join(vfs.AppsDirName, app.Slug)
-	vpath = path.Clean(vpath)
-	vpath = path.Join(appdir, vpath)
-	doc, err := vfs.GetFileDocFromPath(i, vpath)
-	if err != nil {
-		return echo.NewHTTPError(http.StatusNotFound)
-	}
-
-	vfs.ServeFileContent(i, doc, "", req, c.Response())
-	return nil
+	return serveApp(c, i, app, path.Clean(req.URL.Path))
 }
 
 func wrapAppsError(err error) error {

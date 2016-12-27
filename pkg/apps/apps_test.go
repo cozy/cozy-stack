@@ -16,45 +16,45 @@ func TestFindContext(t *testing.T) {
 	manifest.Contexts["/admin"] = Context{Folder: "/admin", Index: "admin.html"}
 	manifest.Contexts["/admin/special"] = Context{Folder: "/special", Index: "admin.html"}
 
-	ctx, exact := manifest.FindContext("/admin")
+	ctx, rest := manifest.FindContext("/admin")
 	assert.Equal(t, "/admin", ctx.Folder)
 	assert.Equal(t, "admin.html", ctx.Index)
 	assert.Equal(t, false, ctx.Public)
-	assert.True(t, exact)
+	assert.Equal(t, "", rest)
 
-	ctx, exact = manifest.FindContext("/public/")
+	ctx, rest = manifest.FindContext("/public/")
 	assert.Equal(t, "/public", ctx.Folder)
 	assert.Equal(t, "public.html", ctx.Index)
 	assert.Equal(t, true, ctx.Public)
-	assert.True(t, exact)
+	assert.Equal(t, "", rest)
 
-	ctx, exact = manifest.FindContext("/public")
+	ctx, rest = manifest.FindContext("/public")
 	assert.Equal(t, "/public", ctx.Folder)
-	assert.True(t, exact)
+	assert.Equal(t, "", rest)
 
-	ctx, exact = manifest.FindContext("/public/app.js")
+	ctx, rest = manifest.FindContext("/public/app.js")
 	assert.Equal(t, "/public", ctx.Folder)
-	assert.False(t, exact)
+	assert.Equal(t, "app.js", rest)
 
-	ctx, exact = manifest.FindContext("/foo/admin/special")
+	ctx, rest = manifest.FindContext("/foo/admin/special")
 	assert.Equal(t, "/foo", ctx.Folder)
-	assert.False(t, exact)
+	assert.Equal(t, "admin/special", rest)
 
-	ctx, exact = manifest.FindContext("/admin/special/foo")
+	ctx, rest = manifest.FindContext("/admin/special/foo")
 	assert.Equal(t, "/special", ctx.Folder)
-	assert.False(t, exact)
+	assert.Equal(t, "foo", rest)
 
-	ctx, exact = manifest.FindContext("/foo/bar.html")
+	ctx, rest = manifest.FindContext("/foo/bar.html")
 	assert.Equal(t, "/foo", ctx.Folder)
-	assert.False(t, exact)
+	assert.Equal(t, "bar.html", rest)
 
-	ctx, exact = manifest.FindContext("/foo/baz")
+	ctx, rest = manifest.FindContext("/foo/baz")
 	assert.Equal(t, "/foo", ctx.Folder)
-	assert.False(t, exact)
+	assert.Equal(t, "baz", rest)
 
-	ctx, exact = manifest.FindContext("/foo/bar")
+	ctx, rest = manifest.FindContext("/foo/bar")
 	assert.Equal(t, "/bar", ctx.Folder)
-	assert.True(t, exact)
+	assert.Equal(t, "", rest)
 
 	ctx, _ = manifest.FindContext("/")
 	assert.Equal(t, "", ctx.Folder)
