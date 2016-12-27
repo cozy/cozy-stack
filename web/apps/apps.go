@@ -12,14 +12,28 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 )
 
-const indexPage = "index.html"
+func buildCtxToken(i *instance.Instance, app *apps.Manifest, ctx apps.Context) string {
+	subject := "public"
+	if !ctx.Public {
+		subject = ctx.Folder
+	}
+	token, _ := crypto.NewJWT(i.SessionSecret, jwt.StandardClaims{
+		Audience: "context",
+		Issuer:   i.SubDomain(app.Slug),
+		IssuedAt: crypto.Timestamp(),
+		Subject:  subject,
+	})
+	return token
+}
 
 func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
 	ctx, file := app.FindContext(vpath)
@@ -61,7 +75,7 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 	res.Header().Set("Content-Type", doc.Mime)
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
-		"CtxToken": "XXX",
+		"CtxToken": buildCtxToken(i, app, ctx),
 		"Domain":   i.Domain,
 	})
 }

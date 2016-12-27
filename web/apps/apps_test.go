@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,6 +25,7 @@ const slug = "mini"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var manifest *apps.Manifest
 
 func createFile(dir, filename, content string) error {
 	abs := path.Join(dir, filename)
@@ -37,7 +39,7 @@ func createFile(dir, filename, content string) error {
 }
 
 func installMiniApp() error {
-	man := &apps.Manifest{
+	manifest = &apps.Manifest{
 		Slug:   slug,
 		Source: "git://github.com/cozy/mini.git",
 		State:  apps.Ready,
@@ -55,7 +57,7 @@ func installMiniApp() error {
 		},
 	}
 
-	err := couchdb.CreateNamedDoc(testInstance, man)
+	err := couchdb.CreateNamedDoc(testInstance, manifest)
 	if err != nil {
 		return err
 	}
@@ -116,6 +118,24 @@ func TestServe(t *testing.T) {
 	assertNotFound(t, "/")
 	assertNotFound(t, "/index.html")
 	assertNotFound(t, "/public/hello.html")
+}
+
+func TestBuildCtxToken(t *testing.T) {
+	ctx := manifest.Contexts["/public"]
+	tokenString := buildCtxToken(testInstance, manifest, ctx)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		_, ok := token.Method.(*jwt.SigningMethodHMAC)
+		assert.True(t, ok, "The signing method should be HMAC")
+		return testInstance.SessionSecret, nil
+	})
+	assert.NoError(t, err)
+	assert.True(t, token.Valid)
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	assert.True(t, ok, "Claims can be parsed as standard claims")
+	assert.Equal(t, "context", claims["aud"])
+	assert.Equal(t, "https://mini.cozy-with-apps.example.net/", claims["iss"])
+	assert.Equal(t, "public", claims["sub"])
 }
 
 func TestMain(m *testing.M) {
