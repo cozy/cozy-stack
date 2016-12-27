@@ -71,11 +71,11 @@ func installMiniApp() error {
 		return err
 	}
 
-	err = createFile(appdir, "index.html", "this is index.html")
+	err = createFile(appdir, "index.html", `this is index.html. <a href="https://{{.Domain}}/status/">Status</a>`)
 	if err != nil {
 		return err
 	}
-	err = createFile(appdir, "hello.html", "world")
+	err = createFile(appdir, "hello.html", "world {{.CtxToken}}")
 	if err != nil {
 		return err
 	}
@@ -108,10 +108,10 @@ func assertNotFound(t *testing.T, path string) {
 }
 
 func TestServe(t *testing.T) {
-	assertGet(t, "/foo", "text/html", "this is index.html")
-	assertGet(t, "/foo/index.html", "text/html", "this is index.html")
-	assertGet(t, "/foo/hello.html", "text/html", "world")
-	assertGet(t, "/public/", "text/html", "this is a file in public/")
+	assertGet(t, "/foo/", "text/html", `this is index.html. <a href="https://cozy-with-apps.example.net/status/">Status</a>`)
+	assertGet(t, "/foo/hello.html", "text/html", "world {{.CtxToken}}")
+	assertGet(t, "/public", "text/html", "this is a file in public/")
+	assertGet(t, "/public/index.html", "text/html", "this is a file in public/")
 	assertNotFound(t, "/404")
 	assertNotFound(t, "/")
 	assertNotFound(t, "/index.html")

@@ -58,6 +58,9 @@ type Context struct {
 	Public bool   `json:"public"`
 }
 
+// NotFound returns true for a blank context (ie not found by FindContext)
+func (c *Context) NotFound() bool { return c.Folder == "" }
+
 // Contexts are a map for routing inside an application.
 type Contexts map[string]Context
 

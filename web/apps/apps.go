@@ -3,6 +3,8 @@
 package apps
 
 import (
+	"html/template"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -21,21 +23,47 @@ const indexPage = "index.html"
 
 func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
 	ctx, file := app.FindContext(vpath)
-	if ctx.Folder == "" {
+	if ctx.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
 	if file == "" {
 		file = ctx.Index
 	}
-	appdir := path.Join(vfs.AppsDirName, app.Slug)
-	filepath := path.Join(appdir, ctx.Folder, file)
+	filepath := path.Join(vfs.AppsDirName, app.Slug, ctx.Folder, file)
 	doc, err := vfs.GetFileDocFromPath(i, filepath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
+	res := c.Response()
+	if file != ctx.Index {
+		return vfs.ServeFileContent(i, doc, "", c.Request(), res)
+	}
 
-	vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
-	return nil
+	// For index file, we inject the stack domain and a context token
+	name, err := doc.Path(i)
+	if err != nil {
+		return err
+	}
+	content, err := i.FS().Open(name)
+	if err != nil {
+		return err
+	}
+	defer content.Close()
+	buf, err := ioutil.ReadAll(content)
+	if err != nil {
+		return err
+	}
+	tmpl, err := template.New(file).Parse(string(buf))
+	if err != nil {
+		log.Printf("%s cannot be parsed as a template: %s", vpath, err)
+		return vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
+	}
+	res.Header().Set("Content-Type", doc.Mime)
+	res.WriteHeader(http.StatusOK)
+	return tmpl.Execute(res, echo.Map{
+		"CtxToken": "XXX",
+		"Domain":   i.Domain,
+	})
 }
 
 // Serve is an handler for serving files from the VFS for a client-side app
