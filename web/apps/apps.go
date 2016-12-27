@@ -26,12 +26,15 @@ func buildCtxToken(i *instance.Instance, app *apps.Manifest, ctx apps.Context) s
 	if !ctx.Public {
 		subject = ctx.Folder
 	}
-	token, _ := crypto.NewJWT(i.SessionSecret, jwt.StandardClaims{
+	token, err := crypto.NewJWT(i.SessionSecret, jwt.StandardClaims{
 		Audience: "context",
 		Issuer:   i.SubDomain(app.Slug),
 		IssuedAt: crypto.Timestamp(),
 		Subject:  subject,
 	})
+	if err != nil {
+		return ""
+	}
 	return token
 }
 
