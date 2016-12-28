@@ -34,7 +34,7 @@ Jobs can also be queued up programatically, without the help of a specific trigg
 In order to schedule recurring jobs, the `@cron` trigger has the syntax using six fields:
 
 Field name   | Mandatory? | Allowed values  | Allowed special characters
--------------+------------|-----------------|---------------------------
+-------------|------------|-----------------|---------------------------
 Seconds      | Yes        | 0-59            | * / , -
 Minutes      | Yes        | 0-59            | * / , -
 Hours        | Yes        | 0-23            | * / , -
