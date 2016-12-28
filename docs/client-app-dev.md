@@ -50,7 +50,7 @@ If you do not want to install the required dependencies, we provide a Docker ima
 To run a ephemeral instance, on the `$HOME/myapp` directory, use the following command (warning: all the data stored by your application in couchdb and the VFS won't remain after):
 
 ```sh
-$ docker run -it \
+$ docker run --rm -it \
     -p 8080:8080 \
     -v "$HOME/myapp":/data/cozy-app \
     cozy/cozy-app-dev
@@ -59,7 +59,7 @@ $ docker run -it \
 To keep your data even when stopping the container, run the following command:
 
 ```sh
-$ docker run -it \
+$ docker run --rm -it \
     -p 8080:8080 \
     -v "$HOME/myapp":/data/cozy-app \
     -v "$(pwd)":/usr/local/couchdb/data \
