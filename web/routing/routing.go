@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -26,6 +27,11 @@ import (
 	"github.com/labstack/echo/middleware"
 	"github.com/rakyll/statik/fs"
 )
+
+// corsBlackList list all routes prefix that are not eligible to CORS
+var corsBlackList = []string{
+	"/auth/",
+}
 
 var templatesList = []string{
 	"authorize.html",
@@ -107,16 +113,25 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
-	cors := middleware.CORSWithConfig(middleware.CORSConfig{
+	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		MaxAge: int(12 * time.Hour / time.Second),
-	})
+		Skipper: func(c echo.Context) bool {
+			path := c.Path()
+			for _, route := range corsBlackList {
+				if strings.HasPrefix(path, route) {
+					return true
+				}
+			}
+			return false
+		},
+	}))
 
 	auth.Routes(router.Group("/auth", middlewares.NeedInstance))
-	apps.Routes(router.Group("/apps", cors, middlewares.NeedInstance))
-	data.Routes(router.Group("/data", cors, middlewares.NeedInstance))
-	files.Routes(router.Group("/files", cors, middlewares.NeedInstance))
-	settings.Routes(router.Group("/settings", cors, middlewares.NeedInstance))
-	status.Routes(router.Group("/status", cors))
+	apps.Routes(router.Group("/apps", middlewares.NeedInstance))
+	data.Routes(router.Group("/data", middlewares.NeedInstance))
+	files.Routes(router.Group("/files", middlewares.NeedInstance))
+	settings.Routes(router.Group("/settings", middlewares.NeedInstance))
+	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))
 
 	setupRecover(router)
