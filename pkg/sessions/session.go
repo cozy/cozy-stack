@@ -1,4 +1,4 @@
-package auth
+package sessions
 
 import (
 	"errors"
@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
 
@@ -63,8 +62,8 @@ func (s *Session) OlderThan(t time.Duration) bool {
 	return time.Now().After(s.LastSeen.Add(t))
 }
 
-// NewSession creates a session in couchdb for the given instance
-func NewSession(i *instance.Instance) (*Session, error) {
+// New creates a session in couchdb for the given instance
+func New(i *instance.Instance) (*Session, error) {
 	var s = &Session{
 		Instance: i,
 		LastSeen: time.Now(),
@@ -75,7 +74,7 @@ func NewSession(i *instance.Instance) (*Session, error) {
 }
 
 // GetSession retrieves the session from a echo.Context
-func GetSession(c echo.Context) (*Session, error) {
+func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 	var s Session
 	var err error
 	// check for cached session in context
@@ -86,7 +85,6 @@ func GetSession(c echo.Context) (*Session, error) {
 		}
 	}
 
-	i := middlewares.GetInstance(c)
 	cookie, err := c.Cookie(SessionCookieName)
 	if err != nil || cookie.Value == "" {
 		return nil, ErrNoCookie
