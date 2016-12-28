@@ -67,6 +67,9 @@ RUN apt-get purge -y \
   && apt-get autoremove -y \
   && apt-get clean
 
+RUN echo "[chttpd]\nbind_address = 0.0.0.0" \
+  > /usr/local/couchdb/etc/local.ini
+
 COPY cozy-app-dev.sh /usr/bin
 RUN chmod +x /usr/bin/cozy-app-dev.sh
 
