@@ -1,3 +1,5 @@
+[Table of contents](./README.md#table-of-contents)
+
 # Develop a client-side application
 
 This document describe a tool to run an environment in order to develop client-side application on the cozy-stack.
