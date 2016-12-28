@@ -93,7 +93,7 @@ do_start() {
 		echo "ok"
 	fi
 
-	trap "trap - SIGTERM && kill -- -${$}" SIGINT SIGTERM EXIT
+	trap "trap - SIGTERM && kill 2> /dev/null -- -${$}" SIGINT SIGTERM EXIT
 
 	check_not_running ":${COZY_PROXY_PORT}" "proxy"
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
