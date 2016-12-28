@@ -109,10 +109,14 @@ func (i *Instance) Addr() string {
 }
 
 // SubDomain returns the full url for a subdomain of this instance
-// usefull with apps slugs
+// useful with apps slugs
 // TODO https is hardcoded
 func (i *Instance) SubDomain(s string) string {
-	return "https://" + s + "." + i.Addr() + "/"
+	if config.GetConfig().Subdomains == config.NestedSubdomains {
+		return "https://" + s + "." + i.Addr() + "/"
+	}
+	parts := strings.SplitN(i.Addr(), ".", 2)
+	return "https://" + parts[0] + "-" + s + "." + parts[1] + "/"
 }
 
 // PageURL returns the full URL for a page on the cozy stack

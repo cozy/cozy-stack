@@ -4,6 +4,13 @@
 host: localhost
 # server port - flags: --port -p
 port: 8080
+
+# how to structure the subdomains for apps - flags: --subdomains
+# values:
+#  - nested, like https://<app>.<user>.<domain>/ (well suited for self-hosted with Let's Encrypt)
+#  - flat, like https://<user>-<app>.<domain>/ (easier when using wildcard TLS certificate)
+subdomains: nested
+
 # path to the directory with the assets - flags: --assets
 # default is to use the assets packed in the binary
 assets: ""

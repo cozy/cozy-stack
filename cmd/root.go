@@ -53,14 +53,17 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	viper.BindPFlag("port", flags.Lookup("port"))
 
+	flags.String("subdomains", "nested", "hwo to structure the subdomains for apps (can be nested or flat)")
+	viper.BindPFlag("subdomains", flags.Lookup("subdomains"))
+
+	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
+	viper.BindPFlag("assets", flags.Lookup("assets"))
+
 	flags.String("admin-host", "localhost", "administration server host")
 	viper.BindPFlag("admin.host", flags.Lookup("admin-host"))
 
 	flags.Int("admin-port", 6060, "administration server port")
 	viper.BindPFlag("admin.port", flags.Lookup("admin-port"))
-
-	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
-	viper.BindPFlag("assets", flags.Lookup("assets"))
 
 	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
 	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))

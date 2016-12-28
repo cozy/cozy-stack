@@ -44,6 +44,13 @@ var Paths = []string{
 	"/etc/cozy",
 }
 
+const (
+	// FlatSubdomains is the value for apps subdomains like https://<user>-<app>.<domain>/
+	FlatSubdomains = "flat"
+	// NestedSubdomains is the value for apps subdomains like https://<app>.<user>.<domain>/
+	NestedSubdomains = "nested"
+)
+
 // AdminSecretFileName is the name of the file containing the administration
 // hashed passphrase.
 const AdminSecretFileName = "cozy-admin-passphrase"
@@ -52,14 +59,15 @@ var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host      string
-	Port      int
-	AdminHost string
-	AdminPort int
-	Assets    string
-	Fs        Fs
-	CouchDB   CouchDB
-	Logger    Logger
+	Host       string
+	Port       int
+	Assets     string
+	Subdomains string
+	AdminHost  string
+	AdminPort  int
+	Fs         Fs
+	CouchDB    CouchDB
+	Logger     Logger
 }
 
 // Fs contains the configuration values of the file-system
@@ -148,11 +156,12 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Host:      v.GetString("host"),
-		Port:      v.GetInt("port"),
-		AdminHost: v.GetString("admin.host"),
-		AdminPort: v.GetInt("admin.port"),
-		Assets:    v.GetString("assets"),
+		Host:       v.GetString("host"),
+		Port:       v.GetInt("port"),
+		Subdomains: v.GetString("subdomains"),
+		AdminHost:  v.GetString("admin.host"),
+		AdminPort:  v.GetInt("admin.port"),
+		Assets:     v.GetString("assets"),
 		Fs: Fs{
 			URL: fsURL,
 		},
@@ -171,6 +180,7 @@ const defaultTestConfig = `
 host: localhost
 port: 8080
 assets: ./assets
+subdomains: nested
 
 fs:
   url: mem://test
