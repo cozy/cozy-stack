@@ -24,7 +24,8 @@ func TestParseHost(t *testing.T) {
 		return c.String(http.StatusOK, "OK")
 	}, middlewares.NeedInstance)
 
-	router, err := Create(apis, func(c echo.Context, domain, slug string) error {
+	router, err := Create(apis, func(c echo.Context) error {
+		slug := c.Get("slug").(string)
 		return c.String(200, "OK:"+slug)
 	})
 
