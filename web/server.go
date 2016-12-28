@@ -22,6 +22,7 @@ func splitHost(host string) (instanceHost string, appSlug string) {
 // Create returns a new web server that will handle that apps routing given the
 // host of the request.
 func Create(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.Echo, error) {
+	appsHandler := middlewares.LoadSession(serveApps)
 	main := echo.New()
 	main.Any("/*", func(c echo.Context) error {
 		// TODO(optim): minimize the number of instance requests
@@ -30,8 +31,7 @@ func Create(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.Echo, error) {
 				if serveApps != nil {
 					c.Set("instance", i)
 					c.Set("slug", slug)
-					handler := middlewares.LoadSession(serveApps)
-					return handler(c)
+					return appsHandler(c)
 				}
 				return nil
 			}
