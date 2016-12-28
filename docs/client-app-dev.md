@@ -67,3 +67,5 @@ $ docker run --rm -it \
 ```
 
 You can also expose the couchdb port (listening in the container on 5984) in order to access its admin page. For instance add `-p 1234:5984` to access to the admin interface on `http://localhost:1234/_utils`.
+
+Make sure you application is built into `$HOME/myapp` (it should have an `index.html` file), otherwise it will not work. As an example, for the [Files application](https://github.com/cozy/cozy-files-v3/), it should be `$HOME/files/build`.
