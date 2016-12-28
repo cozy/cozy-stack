@@ -14,6 +14,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	// Production mode
+	Production string = "production"
+	// Development mode
+	Development string = "development"
+)
+
 var (
 	// Version of the release (see scripts/build.sh script)
 	Version string
@@ -22,7 +29,7 @@ var (
 	BuildTime string
 	// BuildMode is the build mode of the release. Should be either
 	// production or development.
-	BuildMode = "development"
+	BuildMode = Development
 )
 
 // Filename is the default configuration filename that cozy
@@ -45,7 +52,6 @@ var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Mode      string
 	Host      string
 	Port      int
 	AdminHost string
@@ -55,13 +61,6 @@ type Config struct {
 	CouchDB   CouchDB
 	Logger    Logger
 }
-
-const (
-	// Production mode
-	Production string = "production"
-	// Development mode
-	Development string = "development"
-)
 
 // Fs contains the configuration values of the file-system
 type Fs struct {
@@ -121,12 +120,6 @@ func CouchURL() string {
 	return config.CouchDB.URL
 }
 
-// IsMode returns whether or not the mode is equal to the specified
-// one
-func IsMode(mode string) bool {
-	return config.Mode == mode
-}
-
 // IsDevRelease returns whether or not the binary is a development
 // release
 func IsDevRelease() bool {
@@ -140,13 +133,8 @@ func GetConfig() *Config {
 
 // UseViper sets the configured instance of Config
 func UseViper(v *viper.Viper) error {
-	mode, err := parseMode(v.GetString("mode"))
-	if err != nil {
-		return err
-	}
-
 	fsURL := v.GetString("fs.url")
-	_, err = url.Parse(fsURL)
+	_, err := url.Parse(fsURL)
 	if err != nil {
 		return err
 	}
@@ -160,7 +148,6 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Mode:      mode,
 		Host:      v.GetString("host"),
 		Port:      v.GetInt("port"),
 		AdminHost: v.GetString("admin.host"),
@@ -181,7 +168,6 @@ func UseViper(v *viper.Viper) error {
 }
 
 const defaultTestConfig = `
-mode: development
 host: localhost
 port: 8080
 assets: ./assets
@@ -269,26 +255,6 @@ func configureLogger() error {
 
 	log.SetLevel(logLevel)
 	return nil
-}
-
-func parseMode(mode string) (string, error) {
-	if BuildMode == Production && mode != Production {
-		return "", fmt.Errorf("Only production mode is allowed in this version")
-	}
-
-	if BuildMode == Development && mode == "" {
-		mode = Development
-	}
-
-	if mode == Production {
-		return Production, nil
-	}
-
-	if mode == Development {
-		return Development, nil
-	}
-
-	return "", fmt.Errorf("Unknown mode %s", mode)
 }
 
 func exists(name string) (bool, error) {

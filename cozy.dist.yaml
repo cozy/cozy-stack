@@ -1,7 +1,5 @@
 # cozy-stack configuration file
 
-# server mode: development or production - flags: --mode -m
-mode: development
 # server host - flags: --host
 host: localhost
 # server port - flags: --port -p
