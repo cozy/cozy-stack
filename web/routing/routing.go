@@ -126,11 +126,15 @@ func SetupRoutes(router *echo.Echo) error {
 		},
 	}))
 
-	auth.Routes(router.Group("/auth", middlewares.NeedInstance))
-	apps.Routes(router.Group("/apps", middlewares.NeedInstance))
-	data.Routes(router.Group("/data", middlewares.NeedInstance))
-	files.Routes(router.Group("/files", middlewares.NeedInstance))
-	settings.Routes(router.Group("/settings", middlewares.NeedInstance))
+	mws := []echo.MiddlewareFunc{
+		middlewares.NeedInstance,
+		middlewares.LoadSession,
+	}
+	auth.Routes(router.Group("/auth", mws...))
+	apps.Routes(router.Group("/apps", mws...))
+	data.Routes(router.Group("/data", mws...))
+	files.Routes(router.Group("/files", mws...))
+	settings.Routes(router.Group("/settings", mws...))
 	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))
 

@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -107,7 +108,7 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, SessionCookieName)
+		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
 		assert.NotEmpty(t, cookies[0].Value)
 	}
 }
@@ -134,7 +135,7 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, SessionCookieName)
+		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
 		assert.NotEmpty(t, cookies[0].Value)
 	}
 }
@@ -262,7 +263,7 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, SessionCookieName)
+		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
 		assert.NotEmpty(t, cookies[0].Value)
 	}
 }
@@ -916,22 +917,26 @@ func TestMain(m *testing.M) {
 	registerToken = i.RegisterToken
 	oauthSecret = i.OAuthSecret
 
+	mws := []echo.MiddlewareFunc{
+		middlewares.NeedInstance,
+		middlewares.LoadSession,
+	}
 	r := echo.New()
 	r.HTTPErrorHandler = errors.ErrorHandler
 	r.Renderer = &renderer{
 		t: template.Must(template.ParseGlob("../../assets/templates/*.html")),
 	}
-	Routes(r.Group("/auth", middlewares.NeedInstance))
+	Routes(r.Group("/auth", mws...))
 
 	r.GET("/test", func(c echo.Context) error {
 		var content string
-		if IsLoggedIn(c) {
+		if middlewares.IsLoggedIn(c) {
 			content = "logged_in"
 		} else {
 			content = "who_are_you"
 		}
 		return c.String(http.StatusOK, content)
-	}, middlewares.NeedInstance)
+	}, mws...)
 
 	handler, err := web.Create(r, apps.Serve)
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -22,7 +23,7 @@ import (
 func redirectSuccessLogin(c echo.Context, redirect string) error {
 	instance := middlewares.GetInstance(c)
 
-	session, err := NewSession(instance)
+	session, err := sessions.New(instance)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func loginForm(c echo.Context) error {
 		return err
 	}
 
-	if IsLoggedIn(c) {
+	if middlewares.IsLoggedIn(c) {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
@@ -90,7 +91,7 @@ func login(c echo.Context) error {
 		return err
 	}
 
-	if IsLoggedIn(c) {
+	if middlewares.IsLoggedIn(c) {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
@@ -109,7 +110,7 @@ func logout(c echo.Context) error {
 	// TODO check that a valid CtxToken is given to protect against CSRF attacks
 	instance := middlewares.GetInstance(c)
 
-	session, err := GetSession(c)
+	session, err := sessions.GetSession(c, instance)
 	if err == nil {
 		c.SetCookie(session.Delete(instance))
 	}
@@ -238,7 +239,7 @@ func authorizeForm(c echo.Context) error {
 		return err
 	}
 
-	if !IsLoggedIn(c) {
+	if !middlewares.IsLoggedIn(c) {
 		redirect := url.Values{
 			"redirect": {params.instance.PageURL(c.Request().URL.String())},
 		}
@@ -272,7 +273,7 @@ func authorize(c echo.Context) error {
 		scope:       c.FormValue("scope"),
 	}
 
-	if !IsLoggedIn(c) {
+	if !middlewares.IsLoggedIn(c) {
 		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
 			"Error": "You must be authenticated",
 		})
@@ -398,12 +399,6 @@ func accessToken(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, out)
-}
-
-// IsLoggedIn returns true if the context has a valid session cookie.
-func IsLoggedIn(c echo.Context) bool {
-	_, err := GetSession(c)
-	return err == nil
 }
 
 func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {

@@ -43,6 +43,9 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 	if ctx.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
+	if !ctx.Public && !middlewares.IsLoggedIn(c) {
+		return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+	}
 	if file == "" {
 		file = ctx.Index
 	}
@@ -84,16 +87,14 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 }
 
 // Serve is an handler for serving files from the VFS for a client-side app
-func Serve(c echo.Context, domain, slug string) error {
+func Serve(c echo.Context) error {
 	req := c.Request()
 	if req.Method != "GET" && req.Method != "HEAD" {
 		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", req.Method)
 	}
 
-	i, err := instance.Get(domain)
-	if err != nil {
-		return err
-	}
+	slug := c.Get("slug").(string)
+	i := middlewares.GetInstance(c)
 	app, err := apps.GetBySlug(i, slug)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {

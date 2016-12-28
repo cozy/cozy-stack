@@ -1,10 +1,13 @@
 package apps
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path"
 	"testing"
@@ -12,7 +15,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -26,6 +31,25 @@ const slug = "mini"
 var ts *httptest.Server
 var testInstance *instance.Instance
 var manifest *apps.Manifest
+var instanceURL *url.URL
+
+// Stupid http.CookieJar which always returns all cookies.
+// NOTE golang stdlib uses cookies for the URL (ie the testserver),
+// not for the host (ie the instance), so we do it manually
+type testJar struct {
+	Jar *cookiejar.Jar
+}
+
+func (j *testJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
+	return j.Jar.Cookies(instanceURL)
+}
+
+func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
+	j.Jar.SetCookies(instanceURL, cookies)
+}
+
+var jar *testJar
+var client *http.Client
 
 func createFile(dir, filename, content string) error {
 	abs := path.Join(dir, filename)
@@ -85,35 +109,59 @@ func installMiniApp() error {
 	return err
 }
 
-func doGet(path string) (*http.Response, error) {
+func doGet(path string, auth bool) (*http.Response, error) {
+	c := http.DefaultClient
+	if auth {
+		c = client
+	}
 	req, err := http.NewRequest("GET", ts.URL+path, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Host = slug + "." + domain
-	return http.DefaultClient.Do(req)
+	return c.Do(req)
 }
 
-func assertGet(t *testing.T, path, contentType, content string) {
-	res, err := doGet(path)
-	assert.NoError(t, err)
+func assertGet(t *testing.T, contentType, content string, res *http.Response) {
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, contentType, res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, content, string(body))
 }
 
+func assertAuthGet(t *testing.T, path, contentType, content string) {
+	res, err := doGet(path, true)
+	assert.NoError(t, err)
+	assertGet(t, contentType, content, res)
+}
+
+func assertAnonGet(t *testing.T, path, contentType, content string) {
+	res, err := doGet(path, false)
+	assert.NoError(t, err)
+	assertGet(t, contentType, content, res)
+}
+
+func assertNotPublic(t *testing.T, path string) {
+	res, err := doGet(path, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+}
+
 func assertNotFound(t *testing.T, path string) {
-	res, err := doGet(path)
+	res, err := doGet(path, true)
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestServe(t *testing.T) {
-	assertGet(t, "/foo/", "text/html", `this is index.html. <a href="https://cozy-with-apps.example.net/status/">Status</a>`)
-	assertGet(t, "/foo/hello.html", "text/html", "world {{.CtxToken}}")
-	assertGet(t, "/public", "text/html", "this is a file in public/")
-	assertGet(t, "/public/index.html", "text/html", "this is a file in public/")
+	assertAuthGet(t, "/foo/", "text/html", `this is index.html. <a href="https://cozy-with-apps.example.net/status/">Status</a>`)
+	assertAuthGet(t, "/foo/hello.html", "text/html", "world {{.CtxToken}}")
+	assertAuthGet(t, "/public", "text/html", "this is a file in public/")
+	assertAuthGet(t, "/public/index.html", "text/html", "this is a file in public/")
+	assertAnonGet(t, "/public", "text/html", "this is a file in public/")
+	assertAnonGet(t, "/public/index.html", "text/html", "this is a file in public/")
+	assertNotPublic(t, "/foo")
+	assertNotPublic(t, "/foo/hello.tml")
 	assertNotFound(t, "/404")
 	assertNotFound(t, "/")
 	assertNotFound(t, "/index.html")
@@ -155,6 +203,11 @@ func TestMain(m *testing.M) {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
 	}
+	pass := "aephe2Ei"
+	hash, _ := crypto.GenerateFromPassphrase([]byte(pass))
+	testInstance.PassphraseHash = hash
+	testInstance.RegisterToken = nil
+	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
 
 	err = installMiniApp()
 	if err != nil {
@@ -162,13 +215,30 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	router, err := web.Create(echo.New(), Serve)
+	r := echo.New()
+	r.POST("/login", func(c echo.Context) error {
+		session, _ := sessions.New(testInstance)
+		cookie, _ := session.ToCookie()
+		c.SetCookie(cookie)
+		return c.HTML(http.StatusOK, "OK")
+	})
+	router, err := web.Create(r, Serve)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	ts = httptest.NewServer(router)
+
+	instanceURL, _ = url.Parse("https://" + domain + "/")
+	j, _ := cookiejar.New(nil)
+	jar = &testJar{Jar: j}
+	client = &http.Client{Jar: jar}
+
+	// Login
+	req, _ := http.NewRequest("POST", ts.URL+"/login", bytes.NewBufferString("passphrase="+pass))
+	req.Host = domain
+	client.Do(req)
 
 	res := m.Run()
 	ts.Close()
