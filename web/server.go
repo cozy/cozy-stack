@@ -6,6 +6,7 @@ package web
 import (
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -14,7 +15,14 @@ import (
 func splitHost(host string) (instanceHost string, appSlug string) {
 	parts := strings.SplitN(host, ".", 2)
 	if len(parts) == 2 {
-		return parts[1], parts[0]
+		if config.GetConfig().Subdomains == config.FlatSubdomains {
+			subs := strings.SplitN(parts[0], "-", 2)
+			if len(subs) == 2 {
+				return subs[0] + "." + parts[1], subs[1]
+			}
+		} else {
+			return parts[1], parts[0]
+		}
 	}
 	return parts[0], ""
 }

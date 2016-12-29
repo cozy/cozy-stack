@@ -31,21 +31,21 @@ const slug = "mini"
 var ts *httptest.Server
 var testInstance *instance.Instance
 var manifest *apps.Manifest
-var instanceURL *url.URL
 
 // Stupid http.CookieJar which always returns all cookies.
 // NOTE golang stdlib uses cookies for the URL (ie the testserver),
 // not for the host (ie the instance), so we do it manually
 type testJar struct {
 	Jar *cookiejar.Jar
+	URL *url.URL
 }
 
 func (j *testJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
-	return j.Jar.Cookies(instanceURL)
+	return j.Jar.Cookies(j.URL)
 }
 
 func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	j.Jar.SetCookies(instanceURL, cookies)
+	j.Jar.SetCookies(j.URL, cookies)
 }
 
 var jar *testJar
@@ -189,6 +189,55 @@ func TestBuildCtxToken(t *testing.T) {
 	assert.Equal(t, "public", claims["sub"])
 }
 
+func TestServeAppsWithACode(t *testing.T) {
+	config.GetConfig().Subdomains = config.FlatSubdomains
+	appHost := "cozywithapps-mini.example.net"
+
+	appURL, _ := url.Parse("https://" + appHost + "/")
+	j, _ := cookiejar.New(nil)
+	ja := &testJar{Jar: j, URL: appURL}
+	c := &http.Client{Jar: ja, CheckRedirect: noRedirect}
+
+	req, _ := http.NewRequest("GET", ts.URL+"/foo", nil)
+	req.Host = appHost
+	res, err := c.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
+	location, err := url.Parse(res.Header.Get("Location"))
+	assert.NoError(t, err)
+	assert.Equal(t, domain, location.Host)
+	assert.Equal(t, "/auth/login", location.Path)
+	assert.NotEmpty(t, location.Query().Get("redirect"))
+
+	session, _ := sessions.New(testInstance)
+	code := sessions.BuildCode(session.ID(), appHost)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/foo?code="+code.Value, nil)
+	req.Host = appHost
+	res, err = c.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
+	location, err = url.Parse(res.Header.Get("Location"))
+	assert.NoError(t, err)
+	assert.Equal(t, appHost, location.Host)
+	assert.Equal(t, "/foo", location.Path)
+	assert.Empty(t, location.Query().Get("redirect"))
+	assert.Empty(t, location.Query().Get("code"))
+	cookies := res.Cookies()
+	assert.Len(t, cookies, 1)
+	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.NotEmpty(t, cookies[0].Value)
+
+	req, _ = http.NewRequest("GET", ts.URL+"/foo", nil)
+	req.Host = appHost
+	res, err = c.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	expected := `this is index.html. <a href="https://cozywithapps.example.net/status/">Status</a>`
+	assert.Equal(t, expected, string(body))
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
@@ -201,8 +250,8 @@ func TestMain(m *testing.M) {
 	cfg := config.GetConfig()
 	cfg.Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 	was := cfg.Subdomains
-	defer func() { cfg.Subdomains = was }()
 	cfg.Subdomains = config.NestedSubdomains
+	defer func() { cfg.Subdomains = was }()
 
 	instance.Destroy(domain)
 	testInstance, err = instance.Create(domain, "en", nil)
@@ -237,9 +286,9 @@ func TestMain(m *testing.M) {
 
 	ts = httptest.NewServer(router)
 
-	instanceURL, _ = url.Parse("https://" + domain + "/")
+	instanceURL, _ := url.Parse("https://" + domain + "/")
 	j, _ := cookiejar.New(nil)
-	jar = &testJar{Jar: j}
+	jar = &testJar{Jar: j, URL: instanceURL}
 	client = &http.Client{Jar: jar}
 
 	// Login
