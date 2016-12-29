@@ -309,13 +309,13 @@ func TestLoginWithSessionCode(t *testing.T) {
 	assert.NoError(t, err)
 	res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		location, err := url.Parse(res.Header.Get("Location"))
-		assert.NoError(t, err)
+		location, err2 := url.Parse(res.Header.Get("Location"))
+		assert.NoError(t, err2)
 		assert.Equal(t, "app.cozy.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
 		fmt.Printf("location = %#v\n", location)
-		code := location.Query().Get("code")
-		assert.Len(t, code, 22)
+		code2 := location.Query().Get("code")
+		assert.Len(t, code2, 22)
 	}
 
 	// Already logged-in (GET)
@@ -325,13 +325,13 @@ func TestLoginWithSessionCode(t *testing.T) {
 	assert.NoError(t, err)
 	res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		location, err := url.Parse(res.Header.Get("Location"))
-		assert.NoError(t, err)
+		location, err2 := url.Parse(res.Header.Get("Location"))
+		assert.NoError(t, err2)
 		assert.Equal(t, "app.cozy.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
 		fmt.Printf("location = %#v\n", location)
-		code := location.Query().Get("code")
-		assert.Len(t, code, 22)
+		code2 := location.Query().Get("code")
+		assert.Len(t, code2, 22)
 	}
 
 	// Already logged-in (POST)
@@ -342,13 +342,13 @@ func TestLoginWithSessionCode(t *testing.T) {
 	assert.NoError(t, err)
 	res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		location, err := url.Parse(res.Header.Get("Location"))
-		assert.NoError(t, err)
+		location, err2 := url.Parse(res.Header.Get("Location"))
+		assert.NoError(t, err2)
 		assert.Equal(t, "app.cozy.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
 		fmt.Printf("location = %#v\n", location)
-		code := location.Query().Get("code")
-		assert.Len(t, code, 22)
+		code2 := location.Query().Get("code")
+		assert.Len(t, code2, 22)
 	}
 }
 
