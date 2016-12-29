@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -42,8 +43,13 @@ func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 
 			b = bytes.TrimSpace(b)
 
-			if err := crypto.CompareHashAndPassphrase(b, []byte(passphrase)); err != nil {
+			needUpdate, err := crypto.CompareHashAndPassphrase(b, []byte(passphrase))
+			if err != nil {
 				return echo.NewHTTPError(http.StatusForbidden, "bad passphrase")
+			}
+
+			if needUpdate {
+				return errors.New("Passphrase hash needs update and should be regenerated !")
 			}
 
 			return next(c)

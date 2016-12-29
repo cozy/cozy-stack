@@ -22,24 +22,23 @@ func TestGenerateFromPassphrase(t *testing.T) {
 }
 
 func TestCompareGoodHashAndPassphrase(t *testing.T) {
-	err := CompareHashAndPassphrase(goodhash, pass)
+	_, err := CompareHashAndPassphrase(goodhash, pass)
 	assert.NoError(t, err)
 }
 
 func TestCompareBadHashAndPassphrase(t *testing.T) {
-	err := CompareHashAndPassphrase(badhash, pass)
+	_, err := CompareHashAndPassphrase(badhash, pass)
 	assert.Error(t, err)
 }
 
 func TestUpdateHashNoUpdate(t *testing.T) {
-	newhash, err := UpdateHash(goodhash, pass)
-	assert.Error(t, err)
-	assert.Nil(t, newhash)
-	assert.Equal(t, err, ErrNoUpdateNeeded)
+	needUpdate, err := CompareHashAndPassphrase(goodhash, pass)
+	assert.NoError(t, err)
+	assert.False(t, needUpdate)
 }
 
 func TestUpdateHashNeedUpdate(t *testing.T) {
-	newhash, err := UpdateHash(oldhash, pass)
+	needUpdate, err := CompareHashAndPassphrase(oldhash, pass)
 	assert.NoError(t, err)
-	assert.NotEqual(t, len(oldhash), len(newhash))
+	assert.True(t, needUpdate)
 }
