@@ -205,7 +205,7 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		return nil, ErrIllegalDomain
 	}
 
-	if config.GetConfig().Subdomains == config.NestedSubdomains {
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		parts := strings.SplitN(domain, ".", 2)
 		if strings.Contains(parts[0], "-") {
 			return nil, ErrIllegalDomain

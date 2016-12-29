@@ -10,6 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -20,6 +21,25 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
+// With the nested subdomains structure, the cookie set on the main domain can
+// also be used to authentify the user on the apps subdomain. But with the flat
+// subdomains structure, a new cookie is needed. To transfer the session, we
+// add a code parameter to the redirect URL that can be exchanged to the
+// cookie. The code can be used only once, is valid only one minute, and is
+// specific to the app (it can't be used by another app).
+func addCodeToRedirect(redirect, domain, sessionID string) string {
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
+		u, err := url.Parse(redirect)
+		if err == nil && u.Host != domain {
+			q := u.Query()
+			q.Set("code", sessions.BuildCode(sessionID, u.Host).Value)
+			u.RawQuery = q.Encode()
+			return u.String()
+		}
+	}
+	return redirect
+}
+
 func redirectSuccessLogin(c echo.Context, redirect string) error {
 	instance := middlewares.GetInstance(c)
 
@@ -27,12 +47,12 @@ func redirectSuccessLogin(c echo.Context, redirect string) error {
 	if err != nil {
 		return err
 	}
-
 	cookie, err := session.ToCookie()
 	if err != nil {
 		return err
 	}
 
+	redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 	c.SetCookie(cookie)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
@@ -73,7 +93,9 @@ func loginForm(c echo.Context) error {
 		return err
 	}
 
-	if middlewares.IsLoggedIn(c) {
+	session, err := sessions.GetSession(c, instance)
+	if err == nil {
+		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
@@ -91,7 +113,9 @@ func login(c echo.Context) error {
 		return err
 	}
 
-	if middlewares.IsLoggedIn(c) {
+	session, err := sessions.GetSession(c, instance)
+	if err == nil {
+		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
