@@ -34,6 +34,9 @@ func TestFindCode(t *testing.T) {
 	found = FindCode(code.Value, appDomain)
 	assert.NotNil(t, found)
 	assert.Equal(t, sid, found.SessionID)
+	// Code can be used only once
+	found = FindCode(code.Value, appDomain)
+	assert.Nil(t, found)
 }
 
 func TestExpiredCode(t *testing.T) {

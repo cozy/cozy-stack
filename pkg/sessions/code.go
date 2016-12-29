@@ -53,9 +53,10 @@ func FindCode(value, app string) *Code {
 	now := time.Now().UTC().Unix()
 	for _, c := range codes {
 		if now < c.ExpiresAt {
-			validCodes = append(validCodes, c)
 			if c.Value == value && c.AppHost == app {
 				found = c
+			} else {
+				validCodes = append(validCodes, c)
 			}
 		}
 	}
