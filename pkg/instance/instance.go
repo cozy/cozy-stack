@@ -99,6 +99,23 @@ func (i *Instance) Included() []jsonapi.Object {
 	return nil
 }
 
+// FS returns the afero storage provider where the binaries for
+// the current instance are persisted
+func (i *Instance) FS() afero.Fs {
+	if i.storage == nil {
+		if err := i.makeStorageFs(); err != nil {
+			panic(err)
+		}
+	}
+	return i.storage
+}
+
+// Prefix returns the prefix to use in database naming for the
+// current instance
+func (i *Instance) Prefix() string {
+	return i.Domain + "/"
+}
+
 // Addr returns the full address of the domain of the instance
 // TODO https is hardcoded
 func (i *Instance) Addr() string {
@@ -121,11 +138,7 @@ func (i *Instance) PageURL(page string) string {
 	return "https://" + i.Domain + page
 }
 
-// ensure Instance implements couchdb.Doc & vfs.Context
-var _ couchdb.Doc = (*Instance)(nil)
-var _ vfs.Context = (*Instance)(nil)
-
-// CreateInCouchdb create the instance doc in the global database
+// createInCouchdb create the instance doc in the global database
 func (i *Instance) createInCouchdb() (err error) {
 	if _, err = Get(i.Domain); err == nil {
 		return ErrExists
@@ -339,23 +352,6 @@ func Destroy(domain string) (*Instance, error) {
 	return i, nil
 }
 
-// FS returns the afero storage provider where the binaries for
-// the current instance are persisted
-func (i *Instance) FS() afero.Fs {
-	if i.storage == nil {
-		if err := i.makeStorageFs(); err != nil {
-			panic(err)
-		}
-	}
-	return i.storage
-}
-
-// Prefix returns the prefix to use in database naming for the
-// current instance
-func (i *Instance) Prefix() string {
-	return i.Domain + "/"
-}
-
 // RegisterPassphrase replace the instance registerToken by a passphrase
 func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	if len(pass) == 0 {
@@ -384,7 +380,11 @@ func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 	if len(pass) == 0 {
 		return ErrMissingPassphrase
 	}
-	if err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current); err != nil {
+
+	// the needUpdate flag is not checked against since the passphrase will be
+	// regenerated with updated parameters just after, if the passphrase match.
+	_, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current)
+	if err != nil {
 		return ErrInvalidPassphrase
 	}
 
@@ -404,18 +404,28 @@ func (i *Instance) setPassphraseAndSecret(hash []byte) {
 
 // CheckPassphrase confirm an instance passport
 func (i *Instance) CheckPassphrase(pass []byte) error {
-	err := crypto.CompareHashAndPassphrase(i.PassphraseHash, pass)
+	if len(pass) == 0 {
+		return ErrMissingPassphrase
+	}
+
+	needUpdate, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, pass)
 	if err != nil {
 		return err
 	}
 
-	newhash, err := crypto.UpdateHash(i.PassphraseHash, pass)
-	if err == nil {
-		i.PassphraseHash = newhash
-		err := couchdb.UpdateDoc(couchdb.GlobalDB, i)
-		if err != nil {
-			log.Info("Failed to update hash in db", err)
-		}
+	if !needUpdate {
+		return nil
+	}
+
+	newHash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		return err
+	}
+
+	i.PassphraseHash = newHash
+	err = couchdb.UpdateDoc(couchdb.GlobalDB, i)
+	if err != nil {
+		log.Error("Failed to update hash in db", err)
 	}
 
 	return nil
@@ -432,3 +442,9 @@ func createFs(u *url.URL) (fs afero.Fs, err error) {
 	}
 	return
 }
+
+// ensure Instance implements couchdb.Doc & vfs.Context
+var (
+	_ couchdb.Doc = &Instance{}
+	_ vfs.Context = &Instance{}
+)

@@ -134,40 +134,19 @@ func GenerateFromPassphrase(passphrase []byte) ([]byte, error) {
 }
 
 // CompareHashAndPassphrase compares a derived key with the possible cleartext
-// equivalent. The parameters used in the provided derived key are used.
-// The comparison performed by this function is constant-time. It returns nil
-// on success, and an error if the derived keys do not match.
-func CompareHashAndPassphrase(hash []byte, passphrase []byte) error {
+// equivalent. The parameters used in the provided derived key are used. The
+// comparison performed by this function is constant-time.
+//
+// It returns an error if the derived keys do not match. It also returns a
+// needUpdate boolean indicating whether or not the passphrase hash has
+// outdated paramaters and should be recomputed.
+func CompareHashAndPassphrase(hash []byte, passphrase []byte) (needUpdate bool, err error) {
 	var h = &scryptHash{}
-	var err error
-
-	err = h.UnmarshalText(hash)
-	if err != nil {
-		return err
+	if err = h.UnmarshalText(hash); err != nil {
+		return false, err
 	}
-
-	return h.Compare(passphrase)
-}
-
-// UpdateHash returns a new hash for this passphrase to be stored in db only
-// if the parameters have changed.
-func UpdateHash(hash []byte, passphrase []byte) ([]byte, error) {
-	var h = &scryptHash{}
-	var err error
-
-	err = h.UnmarshalText(hash)
-	if err != nil {
-		return nil, err
+	if err = h.Compare(passphrase); err != nil {
+		return false, err
 	}
-
-	err = h.Compare(passphrase)
-	if err != nil {
-		return nil, err
-	}
-
-	if !h.NeedUpdate() {
-		return nil, ErrNoUpdateNeeded
-	}
-
-	return GenerateFromPassphrase(passphrase)
+	return h.NeedUpdate(), nil
 }
