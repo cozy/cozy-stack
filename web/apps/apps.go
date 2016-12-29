@@ -44,7 +44,19 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
 	if !ctx.Public && !middlewares.IsLoggedIn(c) {
-		return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+		if file != "" {
+			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+		}
+		redirect := url.Values{
+			"redirect": {i.SubDomain(app.Slug) + c.Request().URL.String()},
+		}
+		u := url.URL{
+			Scheme:   "https",
+			Host:     i.Domain,
+			Path:     "/auth/login",
+			RawQuery: redirect.Encode(),
+		}
+		return c.Redirect(http.StatusFound, u.String())
 	}
 	if file == "" {
 		file = ctx.Index
