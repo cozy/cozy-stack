@@ -270,6 +270,7 @@ func Create(opts *Options) (*Instance, error) {
 		}
 	}
 
+	locale := opts.Locale
 	if locale == "" {
 		locale = DefaultLocale
 	}
