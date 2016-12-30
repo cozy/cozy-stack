@@ -6,6 +6,7 @@ set -e
 [ -z "${COZY_PROXY_PORT}" ] && COZY_PROXY_PORT="8080"
 [ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="localhost"
 [ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8081"
+[ -z "${COZY_STACK_PASS}" ] && COZY_STACK_PASS="cozy"
 [ -z "${COUCHDB_PORT}" ] && COUCHDB_PORT="5984"
 [ -z "${COUCHDB_HOST}" ] && COUCHDB_HOST="localhost"
 
@@ -44,6 +45,9 @@ usage() {
 	echo -e "\n  COZY_STACK_PORT"
 	echo -e "    specify the port on which the cozy-stack is listening."
 	echo -e "    default: 8080."
+	echo -e "\n  COZY_STACK_PASS"
+	echo -e "    specify the password to register the instance with."
+	echo -e "    default: cozy."
 	echo -e "\n  COUCHDB_HOST"
 	echo -e "    specify the host of the couchdb database. if specified,"
 	echo -e "    the script won't try to start couchdb."
@@ -93,7 +97,7 @@ do_start() {
 		echo "ok"
 	fi
 
-	trap "trap - SIGTERM && kill 2> /dev/null -- -${$}" SIGINT SIGTERM EXIT
+	trap "trap - SIGTERM && kill 2>&1 > /dev/null -- -${$}" SIGINT SIGTERM EXIT
 
 	check_not_running ":${COZY_PROXY_PORT}" "proxy"
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
@@ -112,10 +116,18 @@ do_start() {
 
 	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
 
+	if [ "${COZY_PROXY_PORT}" = "80" ]; then
+		cozy_dev_addr="${COZY_PROXY_HOST}"
+	else
+		cozy_dev_addr="${COZY_PROXY_HOST}:${COZY_PROXY_PORT}"
+	fi
+
+
+	echo ""
 	do_create_instance
 	echo ""
-	echo "Go to http://app.${cozy_dev_addr}/"
-	[ -n "${reg_token}" ] && echo "Registration token: ${reg_token}"
+	echo "Everything is setup. Go to http://app.${cozy_dev_addr}/"
+	echo "To exit, press ^C"
 	cat
 }
 
@@ -149,16 +161,10 @@ do_check_couchdb() {
 }
 
 do_create_instance() {
-	if [ "${COZY_PROXY_PORT}" = "80" ]; then
-		cozy_dev_addr="${COZY_PROXY_HOST}"
-	else
-		cozy_dev_addr="${COZY_PROXY_HOST}:${COZY_PROXY_PORT}"
-	fi
-
 	printf "creating instance ${cozy_dev_addr}... "
 	set +e
 	add_instance_val=$(
-		${COZY_STACK_PATH} instances add "${cozy_dev_addr}" \
+		${COZY_STACK_PATH} instances add --dev="true" "${cozy_dev_addr}" \
 			--couchdb-host "${COUCHDB_HOST}" \
 			--couchdb-port "${COUCHDB_PORT}" \
 			--fs-url "file://localhost${vfsdir}" 2>&1
@@ -175,6 +181,13 @@ do_create_instance() {
 			exit 1
 		fi
 		echo "ok (already created)"
+	fi
+
+	if [ -n "${COZY_STACK_PASS}" ] && [ -n "${reg_token}" ]; then
+		printf "registering using passphrase ${COZY_STACK_PASS}... "
+		curl --fail -X POST -H 'Accept: application/json' \
+			"http://${cozy_dev_addr}/auth/passphrase?registerToken=${reg_token}&passphrase=${COZY_STACK_PASS}"
+		echo "ok"
 	fi
 }
 

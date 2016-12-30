@@ -563,7 +563,7 @@ type fileAPIPatch struct {
 }
 
 func filesClient(c *instance.Instance) *client {
-	return &client{addr: c.Addr()}
+	return &client{addr: c.Domain}
 }
 
 func filesRequest(c *instance.Instance, method, path string, q url.Values, body interface{}) (*fileAPIData, error) {

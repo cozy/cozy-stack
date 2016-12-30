@@ -17,6 +17,7 @@ import (
 
 var flagLocale string
 var flagApps []string
+var flagDev bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -49,9 +50,19 @@ given domain.
 
 		domain := args[0]
 
-		q := url.Values{}
-		q.Add("Domain", domain)
-		q.Add("Locale", "")
+		var dev string
+		if flagDev {
+			dev = "true"
+		} else {
+			dev = "false"
+		}
+
+		q := url.Values{
+			"Domain": {domain},
+			"Apps":   {strings.Join(flagApps, ",")},
+			"Locale": {flagLocale},
+			"Dev":    {dev},
+		}
 
 		i, err := instancesRequest("POST", "/instances/", q, nil)
 		if err != nil {
@@ -79,13 +90,14 @@ by this server.
 			return err
 		}
 
-		if len(doc.Data) == 0 {
-			log.Warnf("No instances")
-			return nil
-		}
-
 		for _, i := range doc.Data {
-			fmt.Printf("%s\t%s\n", i.Attrs.Domain, i.Attrs.StorageURL)
+			var dev string
+			if i.Attrs.Dev {
+				dev = "dev"
+			} else {
+				dev = "prod"
+			}
+			fmt.Printf("%s\t%s\t%s\n", i.Attrs.Domain, i.Attrs.StorageURL, dev)
 		}
 
 		return nil
@@ -185,5 +197,6 @@ func init() {
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
+	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	RootCmd.AddCommand(instanceCmdGroup)
 }

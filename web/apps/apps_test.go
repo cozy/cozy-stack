@@ -254,7 +254,10 @@ func TestMain(m *testing.M) {
 	defer func() { cfg.Subdomains = was }()
 
 	instance.Destroy(domain)
-	testInstance, err = instance.Create(domain, "en", nil)
+	testInstance, err = instance.Create(&instance.Options{
+		Domain: domain,
+		Locale: "en",
+	})
 	if err != nil {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)

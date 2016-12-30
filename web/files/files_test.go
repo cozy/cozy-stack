@@ -1206,7 +1206,10 @@ func TestMain(m *testing.M) {
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
 	instance.Destroy("test-files")
-	testInstance, err = instance.Create("test-files", "en", nil)
+	testInstance, err = instance.Create(&instance.Options{
+		Domain: "test-files",
+		Locale: "en",
+	})
 	if err != nil {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)

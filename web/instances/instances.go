@@ -2,6 +2,7 @@ package instances
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -9,9 +10,12 @@ import (
 )
 
 func createHandler(c echo.Context) error {
-	domain := c.QueryParam("Domain")
-	locale := c.QueryParam("Locale")
-	i, err := instance.Create(domain, locale, nil)
+	i, err := instance.Create(&instance.Options{
+		Domain: c.QueryParam("Domain"),
+		Locale: c.QueryParam("Locale"),
+		Apps:   strings.Split(c.QueryParam("Apps"), ","),
+		Dev:    (c.QueryParam("Dev") == "true"),
+	})
 	if err != nil {
 		return wrapError(err)
 	}

@@ -106,7 +106,10 @@ func TestMain(m *testing.M) {
 
 	instance.Destroy(Host)
 
-	inst, err := instance.Create(Host, "en", nil)
+	inst, err := instance.Create(&instance.Options{
+		Domain: Host,
+		Locale: "en",
+	})
 	if err != nil {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
