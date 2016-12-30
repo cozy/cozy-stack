@@ -40,8 +40,7 @@ Use the --port and --host flags to change the listening option.`,
 		}
 
 		if config.IsDevRelease() {
-			fmt.Println(`
-                      !! DEVELOPMENT RELEASE !!
+			fmt.Println(`                       !! DEVELOPMENT RELEASE !!
 You are running a development release which may deactivate some very important
 security features. Please do not use this binary as your production server.
 `)
