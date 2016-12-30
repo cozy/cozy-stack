@@ -28,6 +28,7 @@ import (
 // cookie. The code can be used only once, is valid only one minute, and is
 // specific to the app (it can't be used by another app).
 func addCodeToRedirect(redirect, domain, sessionID string) string {
+	// TODO add rate-limiting on the number of session codes generated
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		u, err := url.Parse(redirect)
 		if err == nil && u.Host != domain {
