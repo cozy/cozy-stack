@@ -2,6 +2,7 @@ package sessions
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -195,8 +196,11 @@ func cookieMACConfig(i *instance.Instance) *crypto.MACConfig {
 
 func stripPort(domain string) string {
 	if strings.Contains(domain, ":") {
-		parts := strings.SplitN(domain, ":", 2)
-		return parts[0]
+		cleaned, _, err := net.SplitHostPort(domain)
+		if err != nil {
+			return domain
+		}
+		return cleaned
 	}
 	return domain
 }
