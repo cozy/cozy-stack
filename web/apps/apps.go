@@ -125,6 +125,7 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 	return tmpl.Execute(res, echo.Map{
 		"CtxToken": buildCtxToken(i, app, ctx),
 		"Domain":   i.Domain,
+		"Locale":   i.Locale,
 	})
 }
 
