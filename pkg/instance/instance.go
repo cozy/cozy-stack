@@ -23,6 +23,9 @@ const (
 	registerTokenLen = 16
 	sessionSecretLen = 64
 	oauthSecretLen   = 128
+
+	// DefaultLocale is the default locale when creating an instance
+	DefaultLocale = "en"
 )
 
 var (
@@ -49,6 +52,7 @@ type Instance struct {
 	DocID      string `json:"_id,omitempty"`  // couchdb _id
 	DocRev     string `json:"_rev,omitempty"` // couchdb _rev
 	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	Locale     string `json:"locale"`         // The locale used on the server
 	StorageURL string `json:"storage"`        // Where the binaries are persisted
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
@@ -225,8 +229,13 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		}
 	}
 
+	if locale == "" {
+		locale = DefaultLocale
+	}
+
 	i := new(Instance)
 
+	i.Locale = locale
 	i.Domain = domain
 	i.StorageURL = config.BuildRelFsURL(domain).String()
 

@@ -83,8 +83,8 @@ type Manifest struct {
 	Description string     `json:"description"`
 	Developer   *Developer `json:"developer"`
 
-	DefaultLocal string `json:"default_locale"`
-	Locales      map[string]struct {
+	DefaultLocale string `json:"default_locale"`
+	Locales       map[string]struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 

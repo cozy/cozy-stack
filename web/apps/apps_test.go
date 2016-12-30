@@ -97,7 +97,7 @@ func installMiniApp() error {
 		return err
 	}
 
-	err = createFile(appdir, "index.html", `this is index.html. <a href="https://{{.Domain}}/status/">Status</a>`)
+	err = createFile(appdir, "index.html", `this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a>`)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func assertNotFound(t *testing.T, path string) {
 }
 
 func TestServe(t *testing.T) {
-	assertAuthGet(t, "/foo/", "text/html", `this is index.html. <a href="https://cozywithapps.example.net/status/">Status</a>`)
+	assertAuthGet(t, "/foo/", "text/html", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
 	assertAuthGet(t, "/foo/hello.html", "text/html", "world {{.CtxToken}}")
 	assertAuthGet(t, "/public", "text/html", "this is a file in public/")
 	assertAuthGet(t, "/public/index.html", "text/html", "this is a file in public/")
@@ -234,7 +234,7 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
-	expected := `this is index.html. <a href="https://cozywithapps.example.net/status/">Status</a>`
+	expected := `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`
 	assert.Equal(t, expected, string(body))
 }
 
