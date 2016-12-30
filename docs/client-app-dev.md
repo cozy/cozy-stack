@@ -2,6 +2,8 @@
 
 # Develop a client-side application
 
+## Using `cozy-app-dev`
+
 This document describe a tool to run an environment in order to develop client-side application on the cozy-stack.
 
 We provide two different ways to run this environment, either manually where you have to install part of the dependencies yourself or *via* a Docker image in which all dependencies are packed.
@@ -9,7 +11,7 @@ We provide two different ways to run this environment, either manually where you
 This environment will provide a running instance a http server serving both a specified directory of your application on `app.cozy.local:8080` and the `cozy-stack` on `cozy.local:8080` (you can change the hostname and port if you want, see below).
 
 
-## Manually
+### Manually
 
 To run the `scripts/cozy-app-dev.sh` directly on you system, you'll need to following dependencies:
 
@@ -43,7 +45,7 @@ $ ./scripts/cozy-app-dev.sh -h
 ```
 
 
-## With Docker
+### With Docker
 
 If you do not want to install the required dependencies, we provide a Docker image which encapsulates the dev script and all its dependencies.
 
@@ -69,3 +71,62 @@ $ docker run --rm -it \
 You can also expose the couchdb port (listening in the container on 5984) in order to access its admin page. For instance add `-p 1234:5984` to access to the admin interface on `http://localhost:1234/_utils`.
 
 Make sure you application is built into `$HOME/myapp` (it should have an `index.html` file), otherwise it will not work. As an example, for the [Files application](https://github.com/cozy/cozy-files-v3/), it should be `$HOME/files/build`.
+
+
+## Good practices for your application
+
+When an application makes a request to the stack, like loading a list of
+contacts, it sends two informations that will be used by the stack to allow or
+deny the access:
+
+- the user session cookie
+- a token that identifies the application and if it is a private or public
+  context.
+
+So, the application needs such a token. It also needs to know where to send
+the requests for the stack (it can be guessed, but with the nested vs flat
+subdomains structures, it's better to get the information from the stack). To
+do that, when the application loads its HTML index file, the stack will parse
+it as a template and will insert the relevant values.
+
+- `{{.CtxToken}}` will be replaced by the token for the application and its
+  context.
+- `{{.Domain}}` will be replaced by the stack hostname.
+
+So, the `index.html` should probably looks like:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>My Cozy v3 app</title>
+    <link rel="stylesheet" src="{{.Domain}}/settings/theme.css">
+    <link rel="stylesheet" src="my-app.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <main id="container" data-ctx-token="{{.CtxToken}}" data-cozy-stack="{{.Domain}}">
+    </main>
+    <script src="{{.Domain}}/assets/cozy-client.js"></script>
+    <script src="{{.Domain}}/assets/cozy-bar.js"></script>
+    <script src="{{.Domain}}/assets/cozy-ui.js"></script>
+    <script src="my-app.js"></script>
+  </body>
+</html>
+```
+
+And `my-app.js`:
+
+```js
+const main = document.getElementById("container")
+cozy.init({
+  url: main.data("cozy-stack"),
+  token: main.data("ctx-token")
+})
+cozy.bar(main)
+
+// ...
+```
+
+For the `theme.css` stylesheet, you can read the [settings documentation](./settings.md).
