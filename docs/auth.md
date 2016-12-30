@@ -424,6 +424,22 @@ application.
 token appears in the URL and is shown by the browser. It can also be leaked
 with the HTTP `Referer` header.
 
+For a private context, the token will be given only for the authenticated
+user. For nested subdomains (like `calendar.joe.example.net`), the session
+cookie from the stack is enough (it is for `.joe.example.net`).
+
+But for flat subdomains (like `joe-calendar.example.net`), it's more
+complicated. On the first try of the user, she will be redirected to the
+stack. As she is already logged-in, she will be redirected to the app with a
+session code (else she can login). This session code can be exchanged to a
+session cookie. A redirection will still happen to remove the code from the
+URL (it helps to avoid the code being saved in the browser history). For
+security reasons, the session code have the following properties:
+
+- It can only be used once.
+- It is tied to an application (`calendar` in our example).
+- It has a very short time span of validity (1 minute).
+
 ### How to use a token?
 
 The token can be sent to the cozy-stack in the query-string, like this:
