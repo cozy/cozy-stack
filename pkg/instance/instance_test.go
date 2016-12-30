@@ -41,7 +41,10 @@ func TestGetInstanceNoDB(t *testing.T) {
 }
 
 func TestCreateInstance(t *testing.T) {
-	instance, err := Create("test.cozycloud.cc", "en", nil)
+	instance, err := Create(&Options{
+		Domain: "test.cozycloud.cc",
+		Locale: "en",
+	})
 	if assert.NoError(t, err) {
 		assert.NotEmpty(t, instance.ID())
 		assert.Equal(t, instance.Domain, "test.cozycloud.cc")
@@ -49,13 +52,22 @@ func TestCreateInstance(t *testing.T) {
 }
 
 func TestCreateInstanceBadDomain(t *testing.T) {
-	_, err := Create("..", "en", nil)
+	_, err := Create(&Options{
+		Domain: "..",
+		Locale: "en",
+	})
 	assert.Error(t, err, "An error is expected")
 
-	_, err = Create(".", "en", nil)
+	_, err = Create(&Options{
+		Domain: ".",
+		Locale: "en",
+	})
 	assert.Error(t, err, "An error is expected")
 
-	_, err = Create("foo/bar", "en", nil)
+	_, err = Create(&Options{
+		Domain: "foo/bar",
+		Locale: "en",
+	})
 	assert.Error(t, err, "An error is expected")
 }
 
@@ -188,11 +200,17 @@ func TestCheckPassphrase(t *testing.T) {
 }
 
 func TestInstanceNoDuplicate(t *testing.T) {
-	_, err := Create("test.cozycloud.cc.duplicate", "en", nil)
+	_, err := Create(&Options{
+		Domain: "test.cozycloud.cc.duplicate",
+		Locale: "en",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
-	i, err := Create("test.cozycloud.cc.duplicate", "en", nil)
+	i, err := Create(&Options{
+		Domain: "test.cozycloud.cc.duplicate",
+		Locale: "en",
+	})
 	if assert.Error(t, err, "Should not be possible to create duplicate") {
 		assert.Nil(t, i)
 		assert.Contains(t, err.Error(), "Instance already exists", "the error is not explicit")
@@ -202,7 +220,10 @@ func TestInstanceNoDuplicate(t *testing.T) {
 func TestInstanceDestroy(t *testing.T) {
 	Destroy("test.cozycloud.cc")
 
-	_, err := Create("test.cozycloud.cc", "en", nil)
+	_, err := Create(&Options{
+		Domain: "test.cozycloud.cc",
+		Locale: "en",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}

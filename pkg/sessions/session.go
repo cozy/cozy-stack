@@ -2,7 +2,9 @@ package sessions
 
 import (
 	"errors"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -127,7 +129,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",
-		Domain: "." + i.Domain,
+		Domain: stripPort("." + i.Domain),
 	}
 }
 
@@ -143,8 +145,8 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		Value:    string(encoded),
 		MaxAge:   SessionMaxAge,
 		Path:     "/",
-		Domain:   "." + s.Instance.Domain,
-		Secure:   true,
+		Domain:   stripPort("." + s.Instance.Domain),
+		Secure:   !s.Instance.Dev,
 		HttpOnly: true,
 	}, nil
 }
@@ -161,8 +163,8 @@ func (s *Session) ToAppCookie(domain string) (*http.Cookie, error) {
 		Value:    string(encoded),
 		MaxAge:   86400, // 1 day
 		Path:     "/",
-		Domain:   domain,
-		Secure:   true,
+		Domain:   stripPort(domain),
+		Secure:   !s.Instance.Dev,
 		HttpOnly: true,
 	}, nil
 }
@@ -190,4 +192,15 @@ func cookieMACConfig(i *instance.Instance) *crypto.MACConfig {
 		MaxAge: SessionMaxAge,
 		MaxLen: 256,
 	}
+}
+
+func stripPort(domain string) string {
+	if strings.Contains(domain, ":") {
+		cleaned, _, err := net.SplitHostPort(domain)
+		if err != nil {
+			return domain
+		}
+		return cleaned
+	}
+	return domain
 }

@@ -54,6 +54,7 @@ type Instance struct {
 	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
 	Locale     string `json:"locale"`         // The locale used on the server
 	StorageURL string `json:"storage"`        // Where the binaries are persisted
+	Dev        bool   `json:"dev"`            // Whether or not the instance is for development
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
@@ -71,6 +72,14 @@ type Instance struct {
 	OAuthSecret []byte `json:"oauthSecret,omitempty"`
 
 	storage afero.Fs
+}
+
+// Options holds the parameters to create a new instance.
+type Options struct {
+	Domain string
+	Locale string
+	Apps   []string
+	Dev    bool
 }
 
 // DocType implements couchdb.Doc
@@ -120,30 +129,61 @@ func (i *Instance) Prefix() string {
 	return i.Domain + "/"
 }
 
-// Addr returns the full address of the domain of the instance
-func (i *Instance) Addr() string {
-	if config.IsDevRelease() && i.Domain == "dev" {
-		return "localhost:8080"
+// Scheme returns the scheme used for URLs. It is https by default and http
+// for development instances.
+func (i *Instance) Scheme() string {
+	if i.Dev {
+		return "http"
 	}
-	return i.Domain
+	return "https"
 }
 
 // SubDomain returns the full url for a subdomain of this instance
 // useful with apps slugs
 func (i *Instance) SubDomain(s string) string {
+	var domain string
 	if config.GetConfig().Subdomains == config.NestedSubdomains {
-		return "https://" + s + "." + i.Addr() + "/"
+		domain = s + "." + i.Domain
+	} else {
+		parts := strings.SplitN(i.Domain, ".", 2)
+		domain = parts[0] + "-" + s + "." + parts[1]
 	}
-	parts := strings.SplitN(i.Addr(), ".", 2)
-	return "https://" + parts[0] + "-" + s + "." + parts[1] + "/"
+	u := url.URL{
+		Scheme: i.Scheme(),
+		Host:   domain,
+		Path:   "/",
+	}
+	return u.String()
 }
 
-// PageURL returns the full URL for a page on the cozy stack
-func (i *Instance) PageURL(page string) string {
-	return "https://" + i.Domain + page
+// FromURL normalizes a given url with the scheme and domain of the instance.
+func (i *Instance) FromURL(u *url.URL) string {
+	u2 := url.URL{
+		Scheme:   i.Scheme(),
+		Host:     i.Domain,
+		Path:     u.Path,
+		RawQuery: u.RawQuery,
+		Fragment: u.Fragment,
+	}
+	return u2.String()
 }
 
-// createInCouchdb create the instance doc in the global database
+// PageURL returns the full URL for a path on the cozy stack
+func (i *Instance) PageURL(path string, queries url.Values) string {
+	var query string
+	if queries != nil {
+		query = queries.Encode()
+	}
+	u := url.URL{
+		Scheme:   i.Scheme(),
+		Host:     i.Domain,
+		Path:     path,
+		RawQuery: query,
+	}
+	return u.String()
+}
+
+// createInCouchdb creates the instance doc in the global database
 func (i *Instance) createInCouchdb() (err error) {
 	if _, err = Get(i.Domain); err == nil {
 		return ErrExists
@@ -217,7 +257,8 @@ func (i *Instance) createSettings() error {
 }
 
 // Create build an instance and .Create it
-func Create(domain string, locale string, apps []string) (*Instance, error) {
+func Create(opts *Options) (*Instance, error) {
+	domain := opts.Domain
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
 		return nil, ErrIllegalDomain
 	}
@@ -229,6 +270,7 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 		}
 	}
 
+	locale := opts.Locale
 	if locale == "" {
 		locale = DefaultLocale
 	}
@@ -238,6 +280,8 @@ func Create(domain string, locale string, apps []string) (*Instance, error) {
 	i.Locale = locale
 	i.Domain = domain
 	i.StorageURL = config.BuildRelFsURL(domain).String()
+
+	i.Dev = opts.Dev
 
 	i.PassphraseHash = nil
 	i.RegisterToken = crypto.GenerateRandomBytes(registerTokenLen)
@@ -293,12 +337,6 @@ func (i *Instance) makeStorageFs() error {
 
 // Get retrieves the instance for a request by its host.
 func Get(domain string) (*Instance, error) {
-	if config.IsDevRelease() {
-		if domain == "" || strings.Contains(domain, "127.0.0.1") || strings.Contains(domain, "localhost") {
-			domain = "dev"
-		}
-	}
-
 	var instances []*Instance
 	req := &couchdb.FindRequest{
 		Selector: mango.Equal("domain", domain),

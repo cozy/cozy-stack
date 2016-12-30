@@ -140,7 +140,7 @@ func logout(c echo.Context) error {
 		c.SetCookie(session.Delete(instance))
 	}
 
-	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login"))
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
 }
 
 // checkRedirectParam returns the optional redirect query parameter. If not
@@ -247,8 +247,9 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 }
 
 func authorizeForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
 	params := authorizeParams{
-		instance:    middlewares.GetInstance(c),
+		instance:    instance,
 		state:       c.QueryParam("state"),
 		clientID:    c.QueryParam("client_id"),
 		redirectURI: c.QueryParam("redirect_uri"),
@@ -265,16 +266,10 @@ func authorizeForm(c echo.Context) error {
 	}
 
 	if !middlewares.IsLoggedIn(c) {
-		redirect := url.Values{
-			"redirect": {params.instance.PageURL(c.Request().URL.String())},
-		}
-		u := url.URL{
-			Scheme:   "https",
-			Host:     params.instance.Domain,
-			Path:     "/auth/login",
-			RawQuery: redirect.Encode(),
-		}
-		return c.Redirect(http.StatusSeeOther, u.String())
+		u := instance.PageURL("/auth/login", url.Values{
+			"redirect": {instance.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
 	}
 
 	permissions := strings.Split(params.scope, " ")
@@ -459,7 +454,7 @@ func Routes(router *echo.Group) {
 		TokenLookup:    "form:csrf_token",
 		CookieMaxAge:   3600, // 1 hour
 		CookieHTTPOnly: true,
-		CookieSecure:   true,
+		CookieSecure:   !config.IsDevRelease(),
 	})
 
 	router.POST("/passphrase", registerPassphrase)

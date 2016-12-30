@@ -43,7 +43,7 @@ func buildCtxToken(i *instance.Instance, app *apps.Manifest, ctx apps.Context) s
 
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) error {
 	u := c.Request().URL
-	u.Scheme = "https"
+	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
 	if code := sessions.FindCode(value, u.Host); code != nil {
 		var session sessions.Session
@@ -80,13 +80,7 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 		redirect := url.Values{
 			"redirect": {i.SubDomain(app.Slug) + c.Request().URL.String()},
 		}
-		u := url.URL{
-			Scheme:   "https",
-			Host:     i.Domain,
-			Path:     "/auth/login",
-			RawQuery: redirect.Encode(),
-		}
-		return c.Redirect(http.StatusFound, u.String())
+		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
 	}
 	if file == "" {
 		file = ctx.Index

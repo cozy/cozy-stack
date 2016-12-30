@@ -2,7 +2,7 @@
 
 go run main.go serve &
 sleep 5
-go run main.go instances add dev
+go run main.go instances add --dev localhost:8080
 
 cd integration-tests/pouchdb
 npm install && npm run test

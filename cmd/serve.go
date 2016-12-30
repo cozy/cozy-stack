@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -35,6 +37,13 @@ Use the --port and --host flags to change the listening option.`,
 		admin := echo.New()
 		if err := routing.SetupAdminRoutes(admin); err != nil {
 			return err
+		}
+
+		if config.IsDevRelease() {
+			fmt.Println(`                       !! DEVELOPMENT RELEASE !!
+You are running a development release which may deactivate some very important
+security features. Please do not use this binary as your production server.
+`)
 		}
 
 		errs := make(chan error)

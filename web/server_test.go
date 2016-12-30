@@ -71,7 +71,10 @@ func TestParseHost(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	instance.Destroy(domain)
-	instance.Create(domain, "en", nil)
+	instance.Create(&instance.Options{
+		Domain: domain,
+		Locale: "en",
+	})
 	res := m.Run()
 	instance.Destroy(domain)
 	os.Exit(res)

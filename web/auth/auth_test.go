@@ -975,7 +975,10 @@ func TestMain(m *testing.M) {
 	}
 	config.UseTestFile()
 	instance.Destroy(domain)
-	i, _ := instance.Create(domain, "en", nil)
+	i, _ := instance.Create(&instance.Options{
+		Domain: domain,
+		Locale: "en",
+	})
 	db = i
 	registerToken = i.RegisterToken
 	oauthSecret = i.OAuthSecret
