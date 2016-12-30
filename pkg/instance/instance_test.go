@@ -15,6 +15,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestSubdomain(t *testing.T) {
+	instance := Instance{
+		Domain: "foo.example.com",
+	}
+	cfg := config.GetConfig()
+	was := cfg.Subdomains
+	defer func() { cfg.Subdomains = was }()
+
+	cfg.Subdomains = config.NestedSubdomains
+	u := instance.SubDomain("calendar")
+	assert.Equal(t, "https://calendar.foo.example.com/", u)
+
+	cfg.Subdomains = config.FlatSubdomains
+	u = instance.SubDomain("calendar")
+	assert.Equal(t, "https://foo-calendar.example.com/", u)
+}
+
 func TestGetInstanceNoDB(t *testing.T) {
 	instance, err := Get("no.instance.cozycloud.cc")
 	if assert.Error(t, err, "An error is expected") {

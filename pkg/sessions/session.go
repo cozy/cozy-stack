@@ -149,6 +149,24 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 	}, nil
 }
 
+// ToAppCookie returns an http.Cookie for this Session on an app subdomain
+func (s *Session) ToAppCookie(domain string) (*http.Cookie, error) {
+	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()))
+	if err != nil {
+		return nil, err
+	}
+
+	return &http.Cookie{
+		Name:     SessionCookieName,
+		Value:    string(encoded),
+		MaxAge:   86400, // 1 day
+		Path:     "/",
+		Domain:   domain,
+		Secure:   true,
+		HttpOnly: true,
+	}, nil
+}
+
 // cookieMACConfig returns the options to authenticate the session cookie.
 //
 // We rely on a MACed cookie value, without additional encryption of the

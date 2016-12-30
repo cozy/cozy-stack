@@ -117,7 +117,6 @@ func (i *Instance) Prefix() string {
 }
 
 // Addr returns the full address of the domain of the instance
-// TODO https is hardcoded
 func (i *Instance) Addr() string {
 	if config.IsDevRelease() && i.Domain == "dev" {
 		return "localhost:8080"
@@ -126,14 +125,16 @@ func (i *Instance) Addr() string {
 }
 
 // SubDomain returns the full url for a subdomain of this instance
-// usefull with apps slugs
-// TODO https is hardcoded
+// useful with apps slugs
 func (i *Instance) SubDomain(s string) string {
-	return "https://" + s + "." + i.Addr() + "/"
+	if config.GetConfig().Subdomains == config.NestedSubdomains {
+		return "https://" + s + "." + i.Addr() + "/"
+	}
+	parts := strings.SplitN(i.Addr(), ".", 2)
+	return "https://" + parts[0] + "-" + s + "." + parts[1] + "/"
 }
 
 // PageURL returns the full URL for a page on the cozy stack
-// TODO https is hardcoded
 func (i *Instance) PageURL(page string) string {
 	return "https://" + i.Domain + page
 }
@@ -215,6 +216,13 @@ func (i *Instance) createSettings() error {
 func Create(domain string, locale string, apps []string) (*Instance, error) {
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
 		return nil, ErrIllegalDomain
+	}
+
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
+		parts := strings.SplitN(domain, ".", 2)
+		if strings.Contains(parts[0], "-") {
+			return nil, ErrIllegalDomain
+		}
 	}
 
 	i := new(Instance)

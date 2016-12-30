@@ -289,6 +289,69 @@ func TestLoginWithRedirect(t *testing.T) {
 	}
 }
 
+func TestLoginWithSessionCode(t *testing.T) {
+	cfg := config.GetConfig()
+	cfg.Subdomains = config.FlatSubdomains
+	defer func() { cfg.Subdomains = config.NestedSubdomains }()
+
+	// Logout
+	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	res.Body.Close()
+
+	// Login
+	res, err = postForm("/auth/login", &url.Values{
+		"passphrase": {"MyPassphrase"},
+		"redirect":   {"https://app." + domain + "/private"},
+	})
+	assert.NoError(t, err)
+	res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		location, err2 := url.Parse(res.Header.Get("Location"))
+		assert.NoError(t, err2)
+		assert.Equal(t, "app.cozy.example.net", location.Host)
+		assert.Equal(t, "/private", location.Path)
+		fmt.Printf("location = %#v\n", location)
+		code2 := location.Query().Get("code")
+		assert.Len(t, code2, 22)
+	}
+
+	// Already logged-in (GET)
+	req, _ = http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("https://app."+domain+"/private"), nil)
+	req.Host = domain
+	res, err = client.Do(req)
+	assert.NoError(t, err)
+	res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		location, err2 := url.Parse(res.Header.Get("Location"))
+		assert.NoError(t, err2)
+		assert.Equal(t, "app.cozy.example.net", location.Host)
+		assert.Equal(t, "/private", location.Path)
+		fmt.Printf("location = %#v\n", location)
+		code2 := location.Query().Get("code")
+		assert.Len(t, code2, 22)
+	}
+
+	// Already logged-in (POST)
+	res, err = postForm("/auth/login", &url.Values{
+		"passphrase": {"MyPassphrase"},
+		"redirect":   {"https://app." + domain + "/private"},
+	})
+	assert.NoError(t, err)
+	res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		location, err2 := url.Parse(res.Header.Get("Location"))
+		assert.NoError(t, err2)
+		assert.Equal(t, "app.cozy.example.net", location.Host)
+		assert.Equal(t, "/private", location.Path)
+		fmt.Printf("location = %#v\n", location)
+		code2 := location.Query().Get("code")
+		assert.Len(t, code2, 22)
+	}
+}
+
 func TestIsLoggedInAfterLogin(t *testing.T) {
 	content, err := getTestURL()
 	assert.NoError(t, err)

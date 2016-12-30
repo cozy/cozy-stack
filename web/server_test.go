@@ -15,6 +15,26 @@ import (
 
 const domain = "cozy.example.net"
 
+func TestSplitHost(t *testing.T) {
+	cfg := config.GetConfig()
+	was := cfg.Subdomains
+	defer func() { cfg.Subdomains = was }()
+
+	host, app := splitHost("localhost")
+	assert.Equal(t, "localhost", host)
+	assert.Equal(t, "", app)
+
+	cfg.Subdomains = config.NestedSubdomains
+	host, app = splitHost("calendar.joe.example.net")
+	assert.Equal(t, "joe.example.net", host)
+	assert.Equal(t, "calendar", app)
+
+	cfg.Subdomains = config.FlatSubdomains
+	host, app = splitHost("joe-calendar.example.net")
+	assert.Equal(t, "joe.example.net", host)
+	assert.Equal(t, "calendar", app)
+}
+
 func TestParseHost(t *testing.T) {
 	apis := echo.New()
 

@@ -11,9 +11,12 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -38,13 +41,52 @@ func buildCtxToken(i *instance.Instance, app *apps.Manifest, ctx apps.Context) s
 	return token
 }
 
+func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) error {
+	u := c.Request().URL
+	u.Scheme = "https"
+	u.Host = c.Request().Host
+	if code := sessions.FindCode(value, u.Host); code != nil {
+		var session sessions.Session
+		err := couchdb.GetDoc(i, consts.Sessions, code.SessionID, &session)
+		if err == nil {
+			session.Instance = i
+			cookie, err := session.ToAppCookie(u.Host)
+			if err == nil {
+				c.SetCookie(cookie)
+			}
+		}
+	}
+	q := u.Query()
+	q.Del("code")
+	u.RawQuery = q.Encode()
+	return c.Redirect(http.StatusFound, u.String())
+}
+
 func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
 	ctx, file := app.FindContext(vpath)
+	cfg := config.GetConfig()
+	if cfg.Subdomains == config.FlatSubdomains && !middlewares.IsLoggedIn(c) {
+		if code := c.QueryParam("code"); code != "" {
+			return tryAuthWithSessionCode(c, i, code)
+		}
+	}
 	if ctx.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
 	if !ctx.Public && !middlewares.IsLoggedIn(c) {
-		return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+		if file != "" {
+			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
+		}
+		redirect := url.Values{
+			"redirect": {i.SubDomain(app.Slug) + c.Request().URL.String()},
+		}
+		u := url.URL{
+			Scheme:   "https",
+			Host:     i.Domain,
+			Path:     "/auth/login",
+			RawQuery: redirect.Encode(),
+		}
+		return c.Redirect(http.StatusFound, u.String())
 	}
 	if file == "" {
 		file = ctx.Index
