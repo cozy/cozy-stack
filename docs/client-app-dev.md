@@ -97,21 +97,20 @@ So, the `index.html` should probably looks like:
 
 ```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
-    <title>My Cozy v3 app</title>
+    <title>My Awesome App for Cozy</title>
     <link rel="stylesheet" src="{{.Domain}}/settings/theme.css">
     <link rel="stylesheet" src="my-app.css">
+    <script defer src="{{.Domain}}/assets/cozy-client.js"></script>
+    <script defer src="{{.Domain}}/assets/cozy-bar.js"></script>
+    <script defer src="my-app.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <main id="container" data-ctx-token="{{.CtxToken}}" data-cozy-stack="{{.Domain}}">
-    </main>
-    <script src="{{.Domain}}/assets/cozy-client.js"></script>
-    <script src="{{.Domain}}/assets/cozy-bar.js"></script>
-    <script src="{{.Domain}}/assets/cozy-ui.js"></script>
-    <script src="my-app.js"></script>
+    <div role="application" data-ctx-token="{{.CtxToken}}" data-cozy-stack="{{.Domain}}">
+    </div>
   </body>
 </html>
 ```
@@ -119,12 +118,16 @@ So, the `index.html` should probably looks like:
 And `my-app.js`:
 
 ```js
-const main = document.getElementById("container")
-cozy.init({
-  url: main.data("cozy-stack"),
-  token: main.data("ctx-token")
+'use strict'
+
+document.addEventListener('DOMContentLoaded', () => {
+  const app = document.querySelector('[role=application]')
+  cozy.init({
+    url: app.dataset.cozyStack,
+    token: app.dataset.ctxToken
+  })
+  cozy.bar(app)
 })
-cozy.bar(main)
 
 // ...
 ```
