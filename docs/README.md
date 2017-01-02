@@ -23,6 +23,7 @@ Table of contents
 - [Mango](./mango.md)
 - [Virtual File System](./files.md)
 - [Jobs](./jobs.md)
+- [Onboarding](./onboarding.md)
 - [Settings](./settings.md)
 
 ## In progress
