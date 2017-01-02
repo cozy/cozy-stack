@@ -224,6 +224,17 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	return nil
 }
 
+// Delete is a function that unregister a client
+func (c *Client) Delete(i *instance.Instance) *ClientRegistrationError {
+	if err := couchdb.DeleteDoc(i, c); err != nil {
+		return &ClientRegistrationError{
+			Code:  http.StatusInternalServerError,
+			Error: "internal_server_error",
+		}
+	}
+	return nil
+}
+
 // AcceptRedirectURI returns true if the given URI matches the registered
 // redirect_uris
 func (c *Client) AcceptRedirectURI(u string) bool {

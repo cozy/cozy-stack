@@ -214,6 +214,15 @@ func updateClient(c echo.Context) error {
 	return c.JSON(http.StatusOK, client)
 }
 
+func deleteClient(c echo.Context) error {
+	client := c.Get("client").(Client)
+	instance := middlewares.GetInstance(c)
+	if err := client.Delete(instance); err != nil {
+		return c.JSON(err.Code, err)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 type authorizeParams struct {
 	instance    *instance.Instance
 	state       string
@@ -481,6 +490,7 @@ func Routes(router *echo.Group) {
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
 	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON, checkRegistrationToken)
+	router.DELETE("/register/:client-id", deleteClient, checkRegistrationToken)
 
 	authorizeGroup := router.Group("/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)
