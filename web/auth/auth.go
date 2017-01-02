@@ -200,6 +200,20 @@ func readClient(c echo.Context) error {
 	return c.JSON(http.StatusOK, client)
 }
 
+func updateClient(c echo.Context) error {
+	// TODO add rate-limiting to prevent DOS attacks
+	client := new(Client)
+	if err := c.Bind(client); err != nil {
+		return err
+	}
+	oldClient := c.Get("client").(Client)
+	instance := middlewares.GetInstance(c)
+	if err := client.Update(instance, oldClient); err != nil {
+		return c.JSON(err.Code, err)
+	}
+	return c.JSON(http.StatusOK, client)
+}
+
 type authorizeParams struct {
 	instance    *instance.Instance
 	state       string
@@ -466,6 +480,7 @@ func Routes(router *echo.Group) {
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
+	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON, checkRegistrationToken)
 
 	authorizeGroup := router.Group("/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)

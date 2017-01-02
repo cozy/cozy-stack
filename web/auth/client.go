@@ -97,8 +97,7 @@ type ClientRegistrationError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-// Create is a function that sets some fields, and then save it in Couch.
-func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
+func (c *Client) checkMandatoryFields() error {
 	if len(c.RedirectURIs) == 0 {
 		return &ClientRegistrationError{
 			Code:        http.StatusBadRequest,
@@ -133,6 +132,15 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		}
 	}
 
+	return nil
+}
+
+// Create is a function that sets some fields, and then save it in Couch.
+func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
+	if err := c.checkMandatoryFields(); err != nil {
+		return err
+	}
+
 	c.CouchID = ""
 	c.CouchRev = ""
 	c.ClientID = ""
@@ -159,6 +167,53 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	})
 	if err != nil {
 		log.Errorf("[oauth] Failed to create the registration access token: %s", err)
+		return &ClientRegistrationError{
+			Code:  http.StatusInternalServerError,
+			Error: "internal_server_error",
+		}
+	}
+
+	c.transformIDAndRev()
+	return nil
+}
+
+// Update will update the client metadata
+func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationError {
+	if c.ClientID != old.CouchID {
+		return &ClientRegistrationError{
+			Code:        http.StatusBadRequest,
+			Error:       "invalid_client_id",
+			Description: "client_id is mandatory",
+		}
+	}
+
+	if err := c.checkMandatoryFields(); err != nil {
+		return err
+	}
+
+	switch c.ClientSecret {
+	case "":
+		c.ClientSecret = old.ClientSecret
+	case old.ClientSecret:
+		secret := crypto.GenerateRandomBytes(ClientSecretLen)
+		c.ClientSecret = string(crypto.Base64Encode(secret))
+	default:
+		return &ClientRegistrationError{
+			Code:        http.StatusBadRequest,
+			Error:       "invalid_client_secret",
+			Description: "client_secret is invalid",
+		}
+	}
+
+	c.CouchID = old.CouchID
+	c.CouchRev = old.CouchRev
+	c.ClientID = ""
+	c.SecretExpiresAt = 0
+	c.RegistrationToken = ""
+	c.GrantTypes = []string{"authorization_code", "refresh_token"}
+	c.ResponseTypes = []string{"code"}
+
+	if err := couchdb.UpdateDoc(i, c); err != nil {
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
