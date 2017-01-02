@@ -67,6 +67,7 @@ var client *http.Client
 var clientID string
 var clientSecret string
 var registrationToken string
+var altClientID string
 var altRegistrationToken string
 var csrfToken string
 var code string
@@ -494,7 +495,34 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	assert.Equal(t, client.PolicyURI, "https://github/com/cozy/cozy-test/master/policy.md")
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 	assert.Equal(t, client.SoftwareVersion, "v0.1.2")
+	altClientID = client.ClientID
 	altRegistrationToken = client.RegistrationToken
+}
+
+func TestDeleteClientInvalidClientID(t *testing.T) {
+	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/register/123456789", nil)
+	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+altRegistrationToken)
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "404 Not Found", res.Status)
+}
+
+func TestDeleteClientNoToken(t *testing.T) {
+	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/register/"+altClientID, nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+}
+
+func TestDeleteClientSuccess(t *testing.T) {
+	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/register/"+altClientID, nil)
+	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+altRegistrationToken)
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "204 No Content", res.Status)
 }
 
 func TestReadClientInvalidToken(t *testing.T) {
@@ -503,9 +531,8 @@ func TestReadClientInvalidToken(t *testing.T) {
 	assert.Equal(t, "401 Unauthorized", res.Status)
 }
 
-// TODO test with a deleted client id
 func TestReadClientInvalidClientID(t *testing.T) {
-	res, err := getJSON("/auth/register/123456789", registrationToken)
+	res, err := getJSON("/auth/register/"+altClientID, registrationToken)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status)
 }
@@ -528,10 +555,9 @@ func TestReadClientSuccess(t *testing.T) {
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 }
 
-// TODO test with a deleted client id
 func TestUpdateClientDeletedClientID(t *testing.T) {
-	res, err := putJSON("/auth/register/123456789", registrationToken, echo.Map{
-		"client_id": "123456789",
+	res, err := putJSON("/auth/register/"+altClientID, registrationToken, echo.Map{
+		"client_id": altClientID,
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status)
