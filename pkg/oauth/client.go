@@ -1,4 +1,4 @@
-package auth
+package oauth
 
 import (
 	"fmt"
@@ -72,7 +72,7 @@ func (c *Client) SetID(id string) { c.CouchID = id }
 // SetRev changes the client revision
 func (c *Client) SetRev(rev string) { c.CouchRev = rev }
 
-func (c *Client) transformIDAndRev() {
+func (c *Client) TransformIDAndRev() {
 	c.ClientID = c.CouchID
 	c.CouchID = ""
 	c.CouchRev = ""
@@ -173,7 +173,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		}
 	}
 
-	c.transformIDAndRev()
+	c.TransformIDAndRev()
 	return nil
 }
 
@@ -220,7 +220,7 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 		}
 	}
 
-	c.transformIDAndRev()
+	c.TransformIDAndRev()
 	return nil
 }
 

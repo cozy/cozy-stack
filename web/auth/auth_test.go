@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -431,7 +432,7 @@ func TestRegisterClientSuccessWithJustMandatoryFields(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, "201 Created", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.NotEqual(t, client.ClientID, "")
@@ -472,7 +473,7 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, "201 Created", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.CouchID, "")
@@ -541,7 +542,7 @@ func TestReadClientSuccess(t *testing.T) {
 	res, err := getJSON("/auth/register/"+clientID, registrationToken)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.ClientID, clientID)
@@ -602,7 +603,7 @@ func TestUpdateClientSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.ClientID, clientID)
@@ -629,7 +630,7 @@ func TestUpdateClientSecret(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.ClientID, clientID)
@@ -901,7 +902,7 @@ func TestAuthorizeSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "302 Found", res.Status) {
-		var results []AccessCode
+		var results []oauth.AccessCode
 		req := &couchdb.AllDocsRequest{}
 		couchdb.GetAllDocs(db, consts.OAuthAccessCodes, req, &results)
 		if assert.Len(t, results, 1) {
@@ -1040,7 +1041,7 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 }
 
 func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
-	claims := Claims{
+	claims := oauth.Claims{
 		jwt.StandardClaims{
 			Audience: "refresh",
 			Issuer:   domain,
