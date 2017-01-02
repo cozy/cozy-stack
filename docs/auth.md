@@ -227,7 +227,7 @@ Content-Type: application/json
 ### GET /auth/register/:client-id
 
 This route is used by the clients to get informations about them-selves.
-The client has to sent its registration access token to be able to use this
+The client has to send its registration access token to be able to use this
 endpoint.
 
 See [OAuth 2.0 Dynamic Client Registration Management
@@ -266,7 +266,7 @@ Content-Type: application/json
 ### PUT /auth/register/:client-id
 
 This route is used by the clients to update informations about them-selves.
-The client has to sent its registration access token to be able to use this
+The client has to send its registration access token to be able to use this
 endpoint.
 
 **Note:** the client can ask to change its `client_secret`. To do that, it
@@ -321,12 +321,19 @@ Content-Type: application/json
 
 ### DELETE /auth/register/:client-id
 
-These routes follow the [OAuth 2.0 Dynamic Client Registration Management
-Protocol RFC](https://tools.ietf.org/html/rfc7592). They allow an OAuth2
-client to get back its metadata, update them, and unregister itself.
+This route is used by the clients to unregister them-selves. The client has to
+send its registration access token to be able to use this endpoint.
 
-The client has to sent its registration access token to be able to use this
-endpoint.
+```http
+DELETE /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3 HTTP/1.1
+Host: cozy.example.org
+Authorization: Bearer J9l-ZhwP...
+```
+
+```http
+HTTP/1.1 204 No Content
+Content-Type: application/json
+```
 
 ### GET /auth/authorize
 
