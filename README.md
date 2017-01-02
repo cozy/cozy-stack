@@ -18,13 +18,10 @@ hardware where no one profiles you.
 
 ## And what about this repository?
 
-This repository contains thoughts for a new version of Cozy Cloud which aims
-to be simpler for hosting thousands of instances. It should also bring
-multi-users for self-hosted and improve many things, starting with security
-and reliability. You can find:
-
-- [some notes about the architecture](docs/architecture.md)
-- some code in Go to help me immerse in the new architecture.
+This repository contains the new version of Cozy Cloud which aims to be
+simpler for hosting thousands of instances. It should also bring for the
+self-hosted the possibility to host several instances on the same server,  and
+improve many things, starting with security and reliability.
 
 Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
 for questions and suggestions.
