@@ -208,7 +208,7 @@ func updateClient(c echo.Context) error {
 	}
 	oldClient := c.Get("client").(Client)
 	instance := middlewares.GetInstance(c)
-	if err := client.Update(instance, oldClient); err != nil {
+	if err := client.Update(instance, &oldClient); err != nil {
 		return c.JSON(err.Code, err)
 	}
 	return c.JSON(http.StatusOK, client)

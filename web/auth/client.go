@@ -97,7 +97,7 @@ type ClientRegistrationError struct {
 	Description string `json:"error_description,omitempty"`
 }
 
-func (c *Client) checkMandatoryFields() error {
+func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationError {
 	if len(c.RedirectURIs) == 0 {
 		return &ClientRegistrationError{
 			Code:        http.StatusBadRequest,
@@ -137,7 +137,7 @@ func (c *Client) checkMandatoryFields() error {
 
 // Create is a function that sets some fields, and then save it in Couch.
 func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
-	if err := c.checkMandatoryFields(); err != nil {
+	if err := c.checkMandatoryFields(i); err != nil {
 		return err
 	}
 
@@ -187,7 +187,7 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 		}
 	}
 
-	if err := c.checkMandatoryFields(); err != nil {
+	if err := c.checkMandatoryFields(i); err != nil {
 		return err
 	}
 

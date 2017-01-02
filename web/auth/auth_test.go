@@ -528,6 +528,98 @@ func TestReadClientSuccess(t *testing.T) {
 	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
 }
 
+// TODO test with a deleted client id
+func TestUpdateClientDeletedClientID(t *testing.T) {
+	res, err := putJSON("/auth/register/123456789", registrationToken, echo.Map{
+		"client_id": "123456789",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "404 Not Found", res.Status)
+}
+
+func TestUpdateClientInvalidClientID(t *testing.T) {
+	res, err := putJSON("/auth/register/"+clientID, registrationToken, echo.Map{
+		"client_id": "123456789",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	var body map[string]string
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, err)
+	assert.Equal(t, "invalid_client_id", body["error"])
+	assert.Equal(t, "client_id is mandatory", body["error_description"])
+}
+
+func TestUpdateClientNoRedirectURI(t *testing.T) {
+	res, err := putJSON("/auth/register/"+clientID, registrationToken, echo.Map{
+		"client_id":   clientID,
+		"client_name": "cozy-test",
+		"software_id": "github.com/cozy/cozy-test",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "400 Bad Request", res.Status)
+	var body map[string]string
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.NoError(t, err)
+	assert.Equal(t, "invalid_redirect_uri", body["error"])
+	assert.Equal(t, "redirect_uris is mandatory", body["error_description"])
+}
+
+func TestUpdateClientSuccess(t *testing.T) {
+	res, err := putJSON("/auth/register/"+clientID, registrationToken, echo.Map{
+		"client_id":        clientID,
+		"redirect_uris":    []string{"https://example.org/oauth/callback"},
+		"client_name":      "cozy-test",
+		"software_id":      "github.com/cozy/cozy-test",
+		"software_version": "v0.1.3",
+	})
+	assert.NoError(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	var client Client
+	err = json.NewDecoder(res.Body).Decode(&client)
+	assert.NoError(t, err)
+	assert.Equal(t, client.ClientID, clientID)
+	assert.Equal(t, client.ClientSecret, clientSecret)
+	assert.Equal(t, client.SecretExpiresAt, 0)
+	assert.Equal(t, client.RegistrationToken, "")
+	assert.Equal(t, client.RedirectURIs, []string{"https://example.org/oauth/callback"})
+	assert.Equal(t, client.GrantTypes, []string{"authorization_code", "refresh_token"})
+	assert.Equal(t, client.ResponseTypes, []string{"code"})
+	assert.Equal(t, client.ClientName, "cozy-test")
+	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
+	assert.Equal(t, client.SoftwareVersion, "v0.1.3")
+}
+
+func TestUpdateClientSecret(t *testing.T) {
+	res, err := putJSON("/auth/register/"+clientID, registrationToken, echo.Map{
+		"client_id":        clientID,
+		"client_secret":    clientSecret,
+		"redirect_uris":    []string{"https://example.org/oauth/callback"},
+		"client_name":      "cozy-test",
+		"software_id":      "github.com/cozy/cozy-test",
+		"software_version": "v0.1.4",
+	})
+	assert.NoError(t, err)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status)
+	var client Client
+	err = json.NewDecoder(res.Body).Decode(&client)
+	assert.NoError(t, err)
+	assert.Equal(t, client.ClientID, clientID)
+	assert.NotEqual(t, client.ClientSecret, "")
+	assert.NotEqual(t, client.ClientSecret, clientSecret)
+	assert.Equal(t, client.SecretExpiresAt, 0)
+	assert.Equal(t, client.RegistrationToken, "")
+	assert.Equal(t, client.RedirectURIs, []string{"https://example.org/oauth/callback"})
+	assert.Equal(t, client.GrantTypes, []string{"authorization_code", "refresh_token"})
+	assert.Equal(t, client.ResponseTypes, []string{"code"})
+	assert.Equal(t, client.ClientName, "cozy-test")
+	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-test")
+	assert.Equal(t, client.SoftwareVersion, "v0.1.4")
+	clientSecret = client.ClientSecret
+}
+
 func TestAuthorizeFormRedirectsWhenNotLoggedIn(t *testing.T) {
 	anonymousClient := &http.Client{CheckRedirect: noRedirect}
 	u := url.QueryEscape("https://example.org/oauth/callback")
@@ -1035,6 +1127,16 @@ func postJSON(u string, v echo.Map) (*http.Response, error) {
 	req.Host = domain
 	req.Header.Add("Content-Type", "application/json; charset=utf-8")
 	req.Header.Add("Accept", "application/json")
+	return client.Do(req)
+}
+
+func putJSON(u, token string, v echo.Map) (*http.Response, error) {
+	body, _ := json.Marshal(v)
+	req, _ := http.NewRequest("PUT", ts.URL+u, bytes.NewBuffer(body))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
 	return client.Do(req)
 }
 
