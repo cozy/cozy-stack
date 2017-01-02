@@ -56,16 +56,17 @@ export PATH="$GOPATH:$PATH"
 
 You can configure your `cozy-stack` using a configuration file or different comand line arguments. You can have more informations on our [Configuration page](docs/config.md).
 
-Assuming CouchDB is installed and running on default port `5984`, you can a *dev* instance:
-
-```bash
-cozy-stack instances add dev  # assuming couchdb is running
-```
-
-Then run the server with:
+Assuming CouchDB is installed and running on default port `5984`, you can
+start the server:
 
 ```bash
 cozy-stack serve
+```
+
+And then create an instance for development:
+
+```bash
+cozy-stack instances add --dev "localhost:8080"
 ```
 
 The cozy-stack server listens on http://localhost:8080/ by default. See `cozy-stack --help` for more informations.
