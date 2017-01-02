@@ -1194,7 +1194,9 @@ func getTestURL() (string, error) {
 
 func assertValidToken(t *testing.T, token, audience string) {
 	claims := Claims{}
-	err := crypto.ParseJWT(token, oauthSecret, &claims)
+	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
+		return oauthSecret, nil
+	}, &claims)
 	assert.NoError(t, err)
 	assert.Equal(t, audience, claims.Audience)
 	assert.Equal(t, domain, claims.Issuer)

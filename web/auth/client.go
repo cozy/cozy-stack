@@ -275,7 +275,10 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (Claim
 	if token == "" {
 		return claims, false
 	}
-	if err := crypto.ParseJWT(token, i.OAuthSecret, &claims); err != nil {
+	keyFunc := func(token *jwt.Token) (interface{}, error) {
+		return i.OAuthSecret, nil
+	}
+	if err := crypto.ParseJWT(token, keyFunc, &claims); err != nil {
 		log.Errorf("[oauth] Failed to verify the %s token: %s", audience, err)
 		return claims, false
 	}
