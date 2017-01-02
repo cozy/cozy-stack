@@ -3,5 +3,6 @@
 /.cozy
 *.log
 local.env
+web/statik/statik.go
 integration-tests/pouchdb/node_modules
 integration-tests/pouchdb/replication-target

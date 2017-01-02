@@ -91,6 +91,7 @@ do_release() {
 	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 	BUILD_MODE="${COZY_ENV}"
 
+	rm ./web/statik/statik.go
 	go generate ./web/routing
 
 	go build -ldflags "\
