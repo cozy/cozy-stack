@@ -83,6 +83,7 @@ RUN mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 EXPOSE 8080 5984
 
 CMD couchdb 2>/dev/null 1>/dev/null & \
+    echo "127.0.0.1 cozy.local app.cozy.local" >> /etc/hosts && \
     /usr/bin/cozy-app-dev.sh \
       -d /data/cozy-app \
       -f /data/cozy-storage
