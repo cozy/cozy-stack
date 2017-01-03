@@ -30,7 +30,9 @@ The architecture of Cozy is composed of:
 - A reverse proxy
 - The cozy stack
 - A CouchDB instance to persist the JSON documents
-- A space for storing files.
+- A space for storing files
+- Optionally, Redis for caching and synchronization
+- Optionally, a metrics server.
 
 All of this can run on a personal server, self-hosted at home, like a
 Raspberry Pi:
@@ -105,11 +107,10 @@ doctypes.
 There are downsides, mostly:
 
 1. It can be harder to manage more databases.
-2. We don't really know how well CouchDB will perform with so many databases.
-3. It's no longer possible to use a single view for documents from doctypes
+2. It's no longer possible to use a single view for documents from doctypes
 that are no longer in the same database.
 
-We think that we can work on that and the pros will outweight the cons.
+We think that we can work on that and the pros will outweigh the cons.
 
 ### Metrics
 
@@ -168,6 +169,8 @@ access it. For example, the owner of a cozy can create a photo album with a
 selection of photos. This album can then be associated to a context to be
 shared with friends of the owner. These friends can access the album and see
 the photos, but not anonymous people.
+
+More informations [here](data-system.md).
 
 ### Virtual File System `/files`
 
@@ -449,9 +452,8 @@ There are some HTTP status codes that are generally used in the API:
 
 Each JSON document saved in CouchDB has a field `docType` that identify the
 kind of thing it is. For example, a contact will have the docType
-`github.com/cozy/cozy-doctypes/contact`, and in the cozy-doctypes repository,
-there will be a contact folder with a JSON inside it that describes this
-doctype (a bit like the golang imports):
+`io.cozy.contacts`, and in the cozy-doctypes repository, there will be a
+contacts JSON file inside it that describes this doctype:
 
 - What are the mandatory and optional fields?
 - What is the type (string, integer, date) of the fields?
@@ -604,9 +606,11 @@ If you want to develop your own app, you can use the framework and the tools
 you like, nothing is mandatory. For the official apps, we will want to move
 to:
 
-- es6 (but converting the existing coffeescript code will take time)
+- es2017 (but converting the existing coffeescript code will take time)
 - npm scripts and webpack
-- react & redux (but probably keep backbone & marionette for basic apps)
+- preact & JSX.
+
+More about this [here](https://forum.cozy.io/t/a-propos-de-la-pile-technique-front-about-our-frontend-stack/3849/1)
 
 > When will this new architecture be available?
 
