@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -408,7 +409,7 @@ func accessToken(c echo.Context) error {
 			})
 		}
 		out.Scope = accessCode.Scope
-		out.Refresh, err = client.CreateJWT(instance, oauth.RefreshTokenAudience, out.Scope)
+		out.Refresh, err = client.CreateJWT(instance, permissions.RefreshTokenAudience, out.Scope)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": "Can't generate refresh token",
@@ -421,7 +422,7 @@ func accessToken(c echo.Context) error {
 		}
 
 	case "refresh_token":
-		claims, ok := client.ValidToken(instance, oauth.RefreshTokenAudience, c.FormValue("refresh_token"))
+		claims, ok := client.ValidToken(instance, permissions.RefreshTokenAudience, c.FormValue("refresh_token"))
 		if !ok {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",
@@ -435,7 +436,7 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	out.Access, err = client.CreateJWT(instance, oauth.AccessTokenAudience, out.Scope)
+	out.Access, err = client.CreateJWT(instance, permissions.AccessTokenAudience, out.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
@@ -461,7 +462,7 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 				"error": "Client not found",
 			})
 		}
-		_, ok := client.ValidToken(instance, RegistrationTokenAudience, parts[1])
+		_, ok := client.ValidToken(instance, permissions.RegistrationTokenAudience, parts[1])
 		if !ok {
 			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"error": "invalid_token",

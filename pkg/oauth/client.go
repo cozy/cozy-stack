@@ -11,22 +11,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
-const (
-	// ClientSecretLen is the number of random bytes used for generating the client secret
-	ClientSecretLen = 24
-
-	// RegistrationTokenAudience is the audience field of JWT for registration tokens
-	RegistrationTokenAudience = "registration"
-
-	// AccessTokenAudience is the audience field of JWT for access tokens
-	AccessTokenAudience = "access"
-
-	// RefreshTokenAudience is the audience field of JWT for refresh tokens
-	RefreshTokenAudience = "refresh"
-)
+// ClientSecretLen is the number of random bytes used for generating the client secret
+const ClientSecretLen = 24
 
 // Client is a struct for OAuth2 client. Most of the fields are described in
 // the OAuth 2.0 Dynamic Client Registration Protocol. The exception is
@@ -72,6 +62,8 @@ func (c *Client) SetID(id string) { c.CouchID = id }
 // SetRev changes the client revision
 func (c *Client) SetRev(rev string) { c.CouchRev = rev }
 
+// TransformIDAndRev makes the translation from the JSON of CouchDB to the
+// one used in the dynamic client registration protocol
 func (c *Client) TransformIDAndRev() {
 	c.ClientID = c.CouchID
 	c.CouchID = ""
@@ -160,7 +152,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 
 	var err error
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
-		Audience: RegistrationTokenAudience,
+		Audience: permissions.RegistrationTokenAudience,
 		Issuer:   i.Domain,
 		IssuedAt: time.Now().Unix(),
 		Subject:  c.CouchID,
@@ -246,15 +238,9 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 	return false
 }
 
-// Claims is used for JWT used in OAuth2 flow
-type Claims struct {
-	jwt.StandardClaims
-	Scope string `json:"scope,omitempty"`
-}
-
 // CreateJWT returns a new JSON Web Token for the given instance and audience
 func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
-	token, err := crypto.NewJWT(i.OAuthSecret, Claims{
+	token, err := crypto.NewJWT(i.OAuthSecret, permissions.Claims{
 		jwt.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,
@@ -270,8 +256,8 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 }
 
 // ValidToken checks that the JWT is valid and returns the associate claims
-func (c *Client) ValidToken(i *instance.Instance, audience, token string) (Claims, bool) {
-	claims := Claims{}
+func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permissions.Claims, bool) {
+	claims := permissions.Claims{}
 	if token == "" {
 		return claims, false
 	}

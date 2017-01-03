@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -1041,12 +1042,12 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 }
 
 func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
-	claims := oauth.Claims{
+	claims := permissions.Claims{
 		jwt.StandardClaims{
 			Audience: "refresh",
 			Issuer:   domain,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  c.CouchID,
+			Subject:  clientID,
 		},
 		"files:write",
 	}
@@ -1194,7 +1195,7 @@ func getTestURL() (string, error) {
 }
 
 func assertValidToken(t *testing.T, token, audience string) {
-	claims := Claims{}
+	claims := permissions.Claims{}
 	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		return oauthSecret, nil
 	}, &claims)
