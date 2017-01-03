@@ -134,8 +134,11 @@ func login(c echo.Context) error {
 }
 
 func logout(c echo.Context) error {
-	// TODO check that a valid CtxToken is given to protect against CSRF attacks
 	instance := middlewares.GetInstance(c)
+	claims, ok := c.Get("token_claims").(permissions.Claims)
+	if !ok || claims.Audience != permissions.ContextAudience {
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
+	}
 
 	session, err := sessions.GetSession(c, instance)
 	if err == nil {
@@ -487,7 +490,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/login", loginForm)
 	router.POST("/login", login)
-	router.DELETE("/login", logout)
+	router.DELETE("/login", logout, middlewares.ParseBearerAuth)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

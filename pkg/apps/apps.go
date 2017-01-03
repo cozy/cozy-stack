@@ -6,7 +6,11 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const (
@@ -183,4 +187,25 @@ func contextMatches(path, ctx []string) bool {
 		}
 	}
 	return true
+}
+
+// BuildCtxToken is used to build a context token to identify the app for
+// requests made to the stack
+func (m *Manifest) BuildCtxToken(i *instance.Instance, ctx Context) string {
+	if ctx.Public {
+		return ""
+	}
+	token, err := crypto.NewJWT(i.SessionSecret, permissions.Claims{
+		jwt.StandardClaims{
+			Audience: permissions.ContextAudience,
+			Issuer:   i.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  m.Slug,
+		},
+		"", // TODO scope
+	})
+	if err != nil {
+		return ""
+	}
+	return token
 }

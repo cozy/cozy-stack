@@ -14,33 +14,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
-
-func buildCtxToken(i *instance.Instance, app *apps.Manifest, ctx apps.Context) string {
-	subject := "public"
-	if !ctx.Public {
-		subject = ctx.Folder
-	}
-	token, err := crypto.NewJWT(i.SessionSecret, jwt.StandardClaims{
-		Audience: permissions.ContextAudience,
-		Issuer:   i.SubDomain(app.Slug),
-		IssuedAt: crypto.Timestamp(),
-		Subject:  subject,
-	})
-	if err != nil {
-		return ""
-	}
-	return token
-}
 
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) error {
 	u := c.Request().URL
@@ -118,7 +98,7 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 	res.Header().Set("Content-Type", doc.Mime)
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
-		"CtxToken": buildCtxToken(i, app, ctx),
+		"CtxToken": app.BuildCtxToken(i, ctx),
 		"Domain":   i.Domain,
 		"Locale":   i.Locale,
 	})

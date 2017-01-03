@@ -141,8 +141,9 @@ query-string, to protect against CSRF attack on this (this can part of bigger
 attacks like session fixation).
 
 ```http
-DELETE /auth/login?CtxToken=token-for-a-private-context HTTP/1.1
+DELETE /auth/login HTTP/1.1
 Host: cozy.example.org
+Authorization: Bearer token-for-a-private-context
 ```
 
 ### POST /auth/register
