@@ -1061,13 +1061,13 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 
 func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
 	claims := permissions.Claims{
-		jwt.StandardClaims{
+		StandardClaims: jwt.StandardClaims{
 			Audience: "refresh",
 			Issuer:   domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  clientID,
 		},
-		"files:write",
+		Scope: "files:write",
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("none"), claims)
 	fakeToken, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)

@@ -196,13 +196,13 @@ func (m *Manifest) BuildCtxToken(i *instance.Instance, ctx Context) string {
 		return ""
 	}
 	token, err := crypto.NewJWT(i.SessionSecret, permissions.Claims{
-		jwt.StandardClaims{
+		StandardClaims: jwt.StandardClaims{
 			Audience: permissions.ContextAudience,
 			Issuer:   i.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  m.Slug,
 		},
-		"", // TODO scope
+		Scope: "", // TODO scope
 	})
 	if err != nil {
 		return ""

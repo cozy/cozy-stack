@@ -241,13 +241,13 @@ func (c *Client) AcceptRedirectURI(u string) bool {
 // CreateJWT returns a new JSON Web Token for the given instance and audience
 func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string, error) {
 	token, err := crypto.NewJWT(i.OAuthSecret, permissions.Claims{
-		jwt.StandardClaims{
+		StandardClaims: jwt.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  c.CouchID,
 		},
-		scope,
+		Scope: scope,
 	})
 	if err != nil {
 		log.Errorf("[oauth] Failed to create the %s token: %s", audience, err)
