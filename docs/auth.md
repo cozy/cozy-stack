@@ -472,8 +472,8 @@ details.
 ### How to get a token?
 
 When a user access an application, she first loads the HTML page. Inside this
-page, the `<body>` tag has a `data-cozy-token` attribute with a token. This
-token is specific to a context, that can be either public or private.
+page, a token specific to this app is injected (only for private routes), via
+a templating method.
 
 We have prefered our custom solution to the implicit grant type of OAuth2 for
 2 reasons:
@@ -488,9 +488,9 @@ application.
 token appears in the URL and is shown by the browser. It can also be leaked
 with the HTTP `Referer` header.
 
-For a private context, the token will be given only for the authenticated
-user. For nested subdomains (like `calendar.joe.example.net`), the session
-cookie from the stack is enough (it is for `.joe.example.net`).
+The token will be given only for the authenticated user. For nested subdomains
+(like `calendar.joe.example.net`), the session cookie from the stack is enough
+(it is for `.joe.example.net`).
 
 But for flat subdomains (like `joe-calendar.example.net`), it's more
 complicated. On the first try of the user, she will be redirected to the
@@ -506,21 +506,23 @@ security reasons, the session code have the following properties:
 
 ### How to use a token?
 
-The token can be sent to the cozy-stack in the query-string, like this:
+The token can be sent to the cozy-stack as a `Bearer` token in the
+`Authorization` header, like this:
 
 ```http
-GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?CtxToken=e7af77ba2c2dbe2d HTTP/1.1
+GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
 Host: cozy.example.org
+Authorization: Bearer application-token
 ```
 
 If the user is authenticated, her cookies will be sent automatically. The
-cookies are needed for a token to a private context to be valid.
+cookies are needed for a token to be valid.
 
 ### How to refresh a token?
 
-The context token is valid only for 24 hours. If the application is opened for
-more than that, it will need to get a new token. But most applications won't
-be kept open for so long and it's okay if they don't try to refresh tokens. At
+The token is valid only for 24 hours. If the application is opened for more
+than that, it will need to get a new token. But most applications won't be
+kept open for so long and it's okay if they don't try to refresh tokens. At
 worst, the user just had to reload its page and it will work again.
 
 The app can know it's time to get a new token when the stack starts sending
