@@ -9,4 +9,6 @@ var (
 	ErrUnknownWorker = errors.New("Could not find worker")
 	// ErrUnknownMessageType is used for an unknown message encoding type
 	ErrUnknownMessageType = errors.New("Unknown message encoding type")
+	// ErrTimedOut is used by a worker function when it has timed out
+	ErrTimedOut = errors.New("Worker timed out")
 )
