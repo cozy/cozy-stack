@@ -14,6 +14,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -132,8 +134,11 @@ func login(c echo.Context) error {
 }
 
 func logout(c echo.Context) error {
-	// TODO check that a valid CtxToken is given to protect against CSRF attacks
 	instance := middlewares.GetInstance(c)
+	claims, ok := c.Get("token_claims").(permissions.Claims)
+	if !ok || claims.Audience != permissions.ContextAudience {
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
+	}
 
 	session, err := sessions.GetSession(c, instance)
 	if err == nil {
@@ -183,7 +188,7 @@ func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) 
 
 func registerClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
-	client := new(Client)
+	client := new(oauth.Client)
 	if err := c.Bind(client); err != nil {
 		return err
 	}
@@ -195,18 +200,18 @@ func registerClient(c echo.Context) error {
 }
 
 func readClient(c echo.Context) error {
-	client := c.Get("client").(Client)
-	client.transformIDAndRev()
+	client := c.Get("client").(oauth.Client)
+	client.TransformIDAndRev()
 	return c.JSON(http.StatusOK, client)
 }
 
 func updateClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
-	client := new(Client)
+	client := new(oauth.Client)
 	if err := c.Bind(client); err != nil {
 		return err
 	}
-	oldClient := c.Get("client").(Client)
+	oldClient := c.Get("client").(oauth.Client)
 	instance := middlewares.GetInstance(c)
 	if err := client.Update(instance, &oldClient); err != nil {
 		return c.JSON(err.Code, err)
@@ -215,7 +220,7 @@ func updateClient(c echo.Context) error {
 }
 
 func deleteClient(c echo.Context) error {
-	client := c.Get("client").(Client)
+	client := c.Get("client").(oauth.Client)
 	instance := middlewares.GetInstance(c)
 	if err := client.Delete(instance); err != nil {
 		return c.JSON(err.Code, err)
@@ -229,7 +234,7 @@ type authorizeParams struct {
 	clientID    string
 	redirectURI string
 	scope       string
-	client      *Client
+	client      *oauth.Client
 }
 
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
@@ -254,7 +259,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		})
 	}
 
-	params.client = new(Client)
+	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "The client must be registered",
@@ -334,7 +339,7 @@ func authorize(c echo.Context) error {
 		return err
 	}
 
-	access, err := CreateAccessCode(params.instance, params.clientID, params.scope)
+	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
 	if err != nil {
 		return err
 	}
@@ -377,7 +382,7 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	client, err := FindClient(instance, clientID)
+	client, err := oauth.FindClient(instance, clientID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the client must be registered",
@@ -400,14 +405,14 @@ func accessToken(c echo.Context) error {
 				"error": "the code parameter is mandatory",
 			})
 		}
-		accessCode := &AccessCode{}
+		accessCode := &oauth.AccessCode{}
 		if err = couchdb.GetDoc(instance, consts.OAuthAccessCodes, code, accessCode); err != nil {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid code",
 			})
 		}
 		out.Scope = accessCode.Scope
-		out.Refresh, err = client.CreateJWT(instance, RefreshTokenAudience, out.Scope)
+		out.Refresh, err = client.CreateJWT(instance, permissions.RefreshTokenAudience, out.Scope)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
 				"error": "Can't generate refresh token",
@@ -420,7 +425,7 @@ func accessToken(c echo.Context) error {
 		}
 
 	case "refresh_token":
-		claims, ok := client.ValidToken(instance, RefreshTokenAudience, c.FormValue("refresh_token"))
+		claims, ok := client.ValidToken(instance, permissions.RefreshTokenAudience, c.FormValue("refresh_token"))
 		if !ok {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid refresh token",
@@ -434,7 +439,7 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
-	out.Access, err = client.CreateJWT(instance, AccessTokenAudience, out.Scope)
+	out.Access, err = client.CreateJWT(instance, permissions.AccessTokenAudience, out.Scope)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Can't generate access token",
@@ -454,13 +459,13 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 		instance := middlewares.GetInstance(c)
-		client, err := FindClient(instance, c.Param("client-id"))
+		client, err := oauth.FindClient(instance, c.Param("client-id"))
 		if err != nil {
 			return c.JSON(http.StatusNotFound, echo.Map{
 				"error": "Client not found",
 			})
 		}
-		_, ok := client.ValidToken(instance, RegistrationTokenAudience, parts[1])
+		_, ok := client.ValidToken(instance, permissions.RegistrationTokenAudience, parts[1])
 		if !ok {
 			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"error": "invalid_token",
@@ -485,7 +490,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/login", loginForm)
 	router.POST("/login", login)
-	router.DELETE("/login", logout)
+	router.DELETE("/login", logout, middlewares.ParseBearerAuth)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

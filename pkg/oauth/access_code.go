@@ -1,4 +1,4 @@
-package auth
+package oauth
 
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"

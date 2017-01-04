@@ -19,12 +19,12 @@ func NewJWT(secret []byte, claims jwt.Claims) (string, error) {
 }
 
 // ParseJWT parses a string and checkes that is a valid JSON Web Token
-func ParseJWT(tokenString string, secret []byte, claims jwt.Claims) error {
+func ParseJWT(tokenString string, keyFunc jwt.Keyfunc, claims jwt.Claims) error {
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		return secret, nil
+		return keyFunc(token)
 	})
 
 	if err != nil {

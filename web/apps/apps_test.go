@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web"
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -169,24 +168,6 @@ func TestServe(t *testing.T) {
 	assertNotFound(t, "/")
 	assertNotFound(t, "/index.html")
 	assertNotFound(t, "/public/hello.html")
-}
-
-func TestBuildCtxToken(t *testing.T) {
-	ctx := manifest.Contexts["/public"]
-	tokenString := buildCtxToken(testInstance, manifest, ctx)
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		_, ok := token.Method.(*jwt.SigningMethodHMAC)
-		assert.True(t, ok, "The signing method should be HMAC")
-		return testInstance.SessionSecret, nil
-	})
-	assert.NoError(t, err)
-	assert.True(t, token.Valid)
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	assert.True(t, ok, "Claims can be parsed as standard claims")
-	assert.Equal(t, "context", claims["aud"])
-	assert.Equal(t, "https://mini.cozywithapps.example.net/", claims["iss"])
-	assert.Equal(t, "public", claims["sub"])
 }
 
 func TestServeAppsWithACode(t *testing.T) {

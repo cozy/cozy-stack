@@ -16,11 +16,14 @@ import (
 	"regexp"
 	"testing"
 
+	app "github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -42,9 +45,7 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 const domain = "cozy.example.net"
 
 var ts *httptest.Server
-var db couchdb.Database
-var oauthSecret []byte
-var registerToken []byte
+var testInstance *instance.Instance
 var instanceURL *url.URL
 
 // Stupid http.CookieJar which always returns all cookies.
@@ -100,7 +101,7 @@ func TestRegisterPassphraseWrongToken(t *testing.T) {
 func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	res, err := postForm("/auth/passphrase", &url.Values{
 		"passphrase":    {"MyFirstPassphrase"},
-		"registerToken": {hex.EncodeToString(registerToken)},
+		"registerToken": {hex.EncodeToString(testInstance.RegisterToken)},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -138,6 +139,10 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 		assert.Len(t, cookies, 1)
 		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
 		assert.NotEmpty(t, cookies[0].Value)
+
+		// Reload the testInstance to get the new secrets
+		err = couchdb.GetDoc(couchdb.GlobalDB, testInstance.DocType(), testInstance.ID(), testInstance)
+		assert.NoError(t, err)
 	}
 }
 
@@ -147,9 +152,27 @@ func TestIsLoggedInAfterRegister(t *testing.T) {
 	assert.Equal(t, "logged_in", content)
 }
 
-func TestLogout(t *testing.T) {
+func TestLogoutNoToken(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://home.cozy.example.net/",
+			res.Header.Get("Location"))
+		cookies := jar.Cookies(instanceURL)
+		assert.Len(t, cookies, 1)
+	}
+}
+
+func TestLogoutSuccess(t *testing.T) {
+	a := app.Manifest{Slug: "home"}
+	c := app.Context{Folder: "/", Index: "index.html", Public: false}
+	token := a.BuildCtxToken(testInstance, c)
+	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
+	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -314,7 +337,6 @@ func TestLoginWithSessionCode(t *testing.T) {
 		assert.NoError(t, err2)
 		assert.Equal(t, "app.cozy.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
-		fmt.Printf("location = %#v\n", location)
 		code2 := location.Query().Get("code")
 		assert.Len(t, code2, 22)
 	}
@@ -330,7 +352,6 @@ func TestLoginWithSessionCode(t *testing.T) {
 		assert.NoError(t, err2)
 		assert.Equal(t, "app.cozy.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
-		fmt.Printf("location = %#v\n", location)
 		code2 := location.Query().Get("code")
 		assert.Len(t, code2, 22)
 	}
@@ -347,7 +368,6 @@ func TestLoginWithSessionCode(t *testing.T) {
 		assert.NoError(t, err2)
 		assert.Equal(t, "app.cozy.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
-		fmt.Printf("location = %#v\n", location)
 		code2 := location.Query().Get("code")
 		assert.Len(t, code2, 22)
 	}
@@ -431,7 +451,7 @@ func TestRegisterClientSuccessWithJustMandatoryFields(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, "201 Created", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.NotEqual(t, client.ClientID, "")
@@ -472,7 +492,7 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, "201 Created", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.CouchID, "")
@@ -541,7 +561,7 @@ func TestReadClientSuccess(t *testing.T) {
 	res, err := getJSON("/auth/register/"+clientID, registrationToken)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.ClientID, clientID)
@@ -602,7 +622,7 @@ func TestUpdateClientSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.ClientID, clientID)
@@ -629,7 +649,7 @@ func TestUpdateClientSecret(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status)
-	var client Client
+	var client oauth.Client
 	err = json.NewDecoder(res.Body).Decode(&client)
 	assert.NoError(t, err)
 	assert.Equal(t, client.ClientID, clientID)
@@ -901,9 +921,9 @@ func TestAuthorizeSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "302 Found", res.Status) {
-		var results []AccessCode
+		var results []oauth.AccessCode
 		req := &couchdb.AllDocsRequest{}
-		couchdb.GetAllDocs(db, consts.OAuthAccessCodes, req, &results)
+		couchdb.GetAllDocs(testInstance, consts.OAuthAccessCodes, req, &results)
 		if assert.Len(t, results, 1) {
 			code = results[0].Code
 			expected := fmt.Sprintf("https://example.org/oauth/callback?access_code=%s&state=123456#", code)
@@ -1040,14 +1060,14 @@ func TestRefreshTokenInvalidToken(t *testing.T) {
 }
 
 func TestRefreshTokenInvalidSigningMethod(t *testing.T) {
-	claims := Claims{
-		jwt.StandardClaims{
+	claims := permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
 			Audience: "refresh",
 			Issuer:   domain,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  c.CouchID,
+			Subject:  clientID,
 		},
-		"files:write",
+		Scope: "files:write",
 	}
 	token := jwt.NewWithClaims(jwt.GetSigningMethod("none"), claims)
 	fakeToken, err := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
@@ -1093,13 +1113,10 @@ func TestMain(m *testing.M) {
 	}
 	config.UseTestFile()
 	instance.Destroy(domain)
-	i, _ := instance.Create(&instance.Options{
+	testInstance, _ = instance.Create(&instance.Options{
 		Domain: domain,
 		Locale: "en",
 	})
-	db = i
-	registerToken = i.RegisterToken
-	oauthSecret = i.OAuthSecret
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,
@@ -1193,8 +1210,10 @@ func getTestURL() (string, error) {
 }
 
 func assertValidToken(t *testing.T, token, audience string) {
-	claims := Claims{}
-	err := crypto.ParseJWT(token, oauthSecret, &claims)
+	claims := permissions.Claims{}
+	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
+		return testInstance.OAuthSecret, nil
+	}, &claims)
 	assert.NoError(t, err)
 	assert.Equal(t, audience, claims.Audience)
 	assert.Equal(t, domain, claims.Issuer)

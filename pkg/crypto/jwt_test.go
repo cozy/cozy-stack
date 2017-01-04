@@ -51,7 +51,9 @@ func TestParseJWT(t *testing.T) {
 	assert.NoError(t, err)
 
 	claims := Claims{}
-	err = ParseJWT(tokenString, secret, &claims)
+	err = ParseJWT(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return secret, nil
+	}, &claims)
 	assert.NoError(t, err)
 	assert.Equal(t, "test", claims.Audience)
 	assert.Equal(t, "example.org", claims.Issuer)
@@ -72,10 +74,14 @@ func TestParseInvalidJWT(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	err = ParseJWT("invalid-token", secret, &Claims{})
+	err = ParseJWT("invalid-token", func(token *jwt.Token) (interface{}, error) {
+		return secret, nil
+	}, &Claims{})
 	assert.Error(t, err)
 
 	invalidSecret := GenerateRandomBytes(64)
-	err = ParseJWT(tokenString, invalidSecret, &Claims{})
+	err = ParseJWT(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return invalidSecret, nil
+	}, &Claims{})
 	assert.Error(t, err)
 }
