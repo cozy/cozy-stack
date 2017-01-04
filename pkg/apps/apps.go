@@ -189,15 +189,12 @@ func contextMatches(path, ctx []string) bool {
 	return true
 }
 
-// BuildCtxToken is used to build a context token to identify the app for
-// requests made to the stack
-func (m *Manifest) BuildCtxToken(i *instance.Instance, ctx Context) string {
-	if ctx.Public {
-		return ""
-	}
+// BuildToken is used to build a token to identify the app for requests made to
+// the stack
+func (m *Manifest) BuildToken(i *instance.Instance) string {
 	token, err := crypto.NewJWT(i.SessionSecret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.ContextAudience,
+			Audience: permissions.AppAudience,
 			Issuer:   i.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  m.Slug,

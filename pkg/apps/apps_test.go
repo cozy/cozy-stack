@@ -63,35 +63,16 @@ func TestFindContext(t *testing.T) {
 	assert.Equal(t, "", ctx.Folder)
 }
 
-func TestBuildCtxTokenReturnsBlankForPublicContext(t *testing.T) {
+func TestBuildToken(t *testing.T) {
 	manifest := &Manifest{
 		Slug: "my-app",
 	}
-	manifest.Contexts = make(Contexts)
-	manifest.Contexts["/public"] = Context{Folder: "/public", Index: "index.html", Public: true}
-	ctx := manifest.Contexts["/public"]
 	i := &instance.Instance{
 		Domain:        "test-ctx-token.example.com",
 		SessionSecret: crypto.GenerateRandomBytes(64),
 	}
 
-	tokenString := manifest.BuildCtxToken(i, ctx)
-	assert.Equal(t, "", tokenString)
-}
-
-func TestBuildCtxToken(t *testing.T) {
-	manifest := &Manifest{
-		Slug: "my-app",
-	}
-	manifest.Contexts = make(Contexts)
-	manifest.Contexts["/foo"] = Context{Folder: "/foo", Index: "index.html", Public: false}
-	ctx := manifest.Contexts["/foo"]
-	i := &instance.Instance{
-		Domain:        "test-ctx-token.example.com",
-		SessionSecret: crypto.GenerateRandomBytes(64),
-	}
-
-	tokenString := manifest.BuildCtxToken(i, ctx)
+	tokenString := manifest.BuildToken(i)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		assert.True(t, ok, "The signing method should be HMAC")

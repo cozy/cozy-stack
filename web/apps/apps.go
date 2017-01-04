@@ -95,12 +95,16 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 		log.Printf("[apps] %s cannot be parsed as a template: %s", vpath, err)
 		return vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
 	}
+	token := ""
+	if middlewares.IsLoggedIn(c) {
+		token = app.BuildToken(i)
+	}
 	res.Header().Set("Content-Type", doc.Mime)
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
-		"CtxToken": app.BuildCtxToken(i, ctx),
-		"Domain":   i.Domain,
-		"Locale":   i.Locale,
+		"Token":  token,
+		"Domain": i.Domain,
+		"Locale": i.Locale,
 	})
 }
 

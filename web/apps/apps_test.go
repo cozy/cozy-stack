@@ -100,7 +100,7 @@ func installMiniApp() error {
 	if err != nil {
 		return err
 	}
-	err = createFile(appdir, "hello.html", "world {{.CtxToken}}")
+	err = createFile(appdir, "hello.html", "world {{.Token}}")
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func assertNotFound(t *testing.T, path string) {
 
 func TestServe(t *testing.T) {
 	assertAuthGet(t, "/foo/", "text/html", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
-	assertAuthGet(t, "/foo/hello.html", "text/html", "world {{.CtxToken}}")
+	assertAuthGet(t, "/foo/hello.html", "text/html", "world {{.Token}}")
 	assertAuthGet(t, "/public", "text/html", "this is a file in public/")
 	assertAuthGet(t, "/public/index.html", "text/html", "this is a file in public/")
 	assertAnonGet(t, "/public", "text/html", "this is a file in public/")
