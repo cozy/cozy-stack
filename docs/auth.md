@@ -438,6 +438,8 @@ Claim   | Fullname  | What it identifies
 `sub`   | Subject   | Identify the client that can use the token
 `scope` | Scope     | Identify the scope of actions that the client can accomplish
 
+The `scope` is used for [permissions](permissions.md).
+
 Other tokens can be JWT with a similar formalism, or be a simple random value
 (when we want to have a clear revocation process).
 

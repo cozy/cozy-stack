@@ -5,9 +5,10 @@ Table of contents
 
 - [Glossary](./glossary.md)
 - [General overview](./architecture.md)
-- [Applications Management](./apps.md)
-- [Authentication & Oauth](./auth.md)
 - [Security](./security.md)
+- [Applications Management](./apps.md)
+- [Authentication & OAuth](./auth.md)
+- [Permissions](./permissions.md)
 
 ## Usage
 
@@ -28,12 +29,14 @@ Table of contents
 
 ## In progress
 
-These pages are discussion for ideas not yet implemented
+These pages are discussion for ideas not yet implemented:
+
 - [Backups](./backup.md)
 - [Moving](./moving.md)
 - [Replication](./replication.md)
 
 ## Archives
 
-These pages are the results of studies we made
+These pages are the results of studies we made:
+
 - [Golang Couchdb Plugins](./couchdb-plugins.md)
