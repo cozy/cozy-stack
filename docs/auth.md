@@ -136,14 +136,14 @@ Location: https://contacts.cozy.example.org/foo
 
 ### DELETE /auth/login
 
-This can be used to log-out the user. A private context must be passed in the
-query-string, to protect against CSRF attack on this (this can part of bigger
-attacks like session fixation).
+This can be used to log-out the user. An app token must be passed in the
+`Authorization` header, to protect against CSRF attack on this (this can part
+of bigger attacks like session fixation).
 
 ```http
 DELETE /auth/login HTTP/1.1
 Host: cozy.example.org
-Authorization: Bearer token-for-a-private-context
+Authorization: Bearer app-token
 ```
 
 ### POST /auth/register

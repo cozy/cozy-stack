@@ -35,7 +35,7 @@ locales        | translations of the name and description fields in other locale
 version        | the current version number
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
 permissions    | a list of permissions needed by the app (see below for more details)
-contexts       | a list of contexts for the app (see below for more details)
+routes         | a list of routes for the app (see below for more details)
 
 **TODO** [CSP policy](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#csp)
 
@@ -107,15 +107,15 @@ Example:
 }
 ```
 
-### Contexts
+### Routes
 
-A context is a route that serves a folder. It can have an index, which is an
-HTML file, with a token injected on it that identify both the application and
-the context. This token must be used with the user cookies to use the services
-of the cozy-stack.
+A route make the mapping between the requested paths and the files. It can
+have an index, which is an HTML file, with a token injected on it that
+identify both the application. This token must be used with the user cookies
+to use the services of the cozy-stack.
 
 By default, a route can be only visited by the authenticated owner of the
-instance where the app is installed. But a context can be marked as public.
+instance where the app is installed. But a route can be marked as public.
 In that case, anybody can visit the route.
 
 For example, an application can offer an administration interface on `/admin`,
@@ -140,8 +140,8 @@ a public page on `/public`, and shared assets in `/assets`:
 }
 ```
 
-If an application has no contexts in its manifest, the stack will create one
-context, this default one:
+If an application has no routes in its manifest, the stack will create one
+route, this default one:
 
 ```json
 {
@@ -155,7 +155,7 @@ context, this default one:
 
 **TODO** later, it will be possible to associate an intent /
 [activity](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
-with a context. Probably something like:
+to a route. Probably something like:
 
 ```json
 {
@@ -496,18 +496,17 @@ way for that. Of course, it has the downside to be more complicated to deploy
 (DNS and TLS certificates). But, in the tradeoff between security and ease of
 administration, we definetively take the security first.
 
-### Contexts
+### Routes
 
-> Should we be concerned that all the contexts are on the same sub-domain?
+> Should we be concerned that all the routes are on the same sub-domain?
 
-No, it's not an issue. There are two types of contexts: the ones that are
-publics and those reserved to the authenticated user. Public contexts have a
-token can't be used for the services of the cozy-stack. So, even if another
-app can capture it, it can't be used for anything (except reading the public
-data).
+No, it's not an issue. There are two types of routes: the ones that are
+publics and those reserved to the authenticated user. Public routes have no
+token
 
-Private contexts are private, they can't be accessed. Another application
-can't use the user cookies to read the token, because of the same origin
+Private routes are private, they can be accessed only with a valid session
+cookie, ie by the owner of the instance. Another application can't use the
+user cookies to read the token, because of the restrictions of the same origin
 policy (they are on different domains). And the application can't use an open
-proxy to read the private context, because it doesn't have the user cookies
+proxy to read the private route, because it doesn't have the user cookies
 for that (the cookie is marked as `httpOnly`).

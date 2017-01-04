@@ -207,9 +207,9 @@ func (i *Installer) ReadManifest(state State, man *Manifest) error {
 	man.Source = i.src.String()
 	man.State = state
 
-	if man.Contexts == nil {
-		man.Contexts = make(Contexts)
-		man.Contexts["/"] = Context{
+	if man.Routes == nil {
+		man.Routes = make(Routes)
+		man.Routes["/"] = Route{
 			Folder: "/",
 			Index:  "index.html",
 			Public: false,

@@ -66,13 +66,13 @@ func installMiniApp() error {
 		Slug:   slug,
 		Source: "git://github.com/cozy/mini.git",
 		State:  apps.Ready,
-		Contexts: apps.Contexts{
-			"/foo": apps.Context{
+		Routes: apps.Routes{
+			"/foo": apps.Route{
 				Folder: "/",
 				Index:  "index.html",
 				Public: false,
 			},
-			"/public": apps.Context{
+			"/public": apps.Route{
 				Folder: "/public",
 				Index:  "index.html",
 				Public: true,
