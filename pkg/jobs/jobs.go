@@ -3,7 +3,6 @@ package jobs
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -92,8 +91,4 @@ func (m *Message) Unmarshal(msg interface{}) error {
 	default:
 		return ErrUnknownMessageType
 	}
-}
-
-func makeQueueName(domain, workerType string) string {
-	return fmt.Sprintf("%s/%s", domain, workerType)
 }
