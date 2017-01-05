@@ -55,7 +55,9 @@ directories inside your cozy instance, using the command line
 interface. It also provide an import command to import from your
 current filesystem into cozy.
 `,
-	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
 }
 
 var execFilesCmd = &cobra.Command{

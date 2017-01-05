@@ -16,7 +16,7 @@ import (
 )
 
 // ClientSecretLen is the number of random bytes used for generating the client secret
-const ClientSecretLen = 24
+const ClientSecretLen = 24 // #nosec
 
 // Client is a struct for OAuth2 client. Most of the fields are described in
 // the OAuth 2.0 Dynamic Client Registration Protocol. The exception is
@@ -74,7 +74,7 @@ func (c *Client) TransformIDAndRev() {
 func FindClient(i *instance.Instance, id string) (Client, error) {
 	var c Client
 	if err := couchdb.GetDoc(i, consts.OAuthClients, id, &c); err != nil {
-		log.Errorf("Impossible to find the client %s: %s", id, err)
+		log.Errorf("[oauth] Failed to find the client %s: %s", id, err)
 		return c, err
 	}
 	return c, nil

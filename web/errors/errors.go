@@ -24,6 +24,7 @@ func ErrorHandler(err error, c echo.Context) {
 	req := c.Request()
 
 	if he, ok = err.(*echo.HTTPError); ok {
+		// #nosec
 		if !res.Committed {
 			if c.Request().Method == http.MethodHead {
 				c.NoContent(he.Code)
@@ -32,7 +33,7 @@ func ErrorHandler(err error, c echo.Context) {
 			}
 		}
 		if config.IsDevRelease() {
-			log.Errorf("[HTTP %s %s] %s", req.Method, req.URL.Path, err)
+			log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
 		}
 		return
 	}
@@ -55,6 +56,7 @@ func ErrorHandler(err error, c echo.Context) {
 		}
 	}
 
+	// #nosec
 	if !res.Committed {
 		if c.Request().Method == http.MethodHead {
 			c.NoContent(je.Status)
@@ -64,6 +66,6 @@ func ErrorHandler(err error, c echo.Context) {
 	}
 
 	if config.IsDevRelease() {
-		log.Errorf("[HTTP %s %s] %s", req.Method, req.URL.Path, err)
+		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
 	}
 }

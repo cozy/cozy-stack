@@ -48,34 +48,34 @@ func init() {
 	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
 
 	flags.String("host", "localhost", "server host")
-	viper.BindPFlag("host", flags.Lookup("host"))
+	checkNoErr(viper.BindPFlag("host", flags.Lookup("host")))
 
 	flags.IntP("port", "p", 8080, "server port")
-	viper.BindPFlag("port", flags.Lookup("port"))
+	checkNoErr(viper.BindPFlag("port", flags.Lookup("port")))
 
 	flags.String("subdomains", "nested", "hwo to structure the subdomains for apps (can be nested or flat)")
-	viper.BindPFlag("subdomains", flags.Lookup("subdomains"))
+	checkNoErr(viper.BindPFlag("subdomains", flags.Lookup("subdomains")))
 
 	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
-	viper.BindPFlag("assets", flags.Lookup("assets"))
+	checkNoErr(viper.BindPFlag("assets", flags.Lookup("assets")))
 
 	flags.String("admin-host", "localhost", "administration server host")
-	viper.BindPFlag("admin.host", flags.Lookup("admin-host"))
+	checkNoErr(viper.BindPFlag("admin.host", flags.Lookup("admin-host")))
 
 	flags.Int("admin-port", 6060, "administration server port")
-	viper.BindPFlag("admin.port", flags.Lookup("admin-port"))
+	checkNoErr(viper.BindPFlag("admin.port", flags.Lookup("admin-port")))
 
 	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
-	viper.BindPFlag("fs.url", flags.Lookup("fs-url"))
+	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
 
 	flags.String("couchdb-host", "localhost", "couchdbdb host")
-	viper.BindPFlag("couchdb.host", flags.Lookup("couchdb-host"))
+	checkNoErr(viper.BindPFlag("couchdb.host", flags.Lookup("couchdb-host")))
 
 	flags.Int("couchdb-port", 5984, "couchdbdb port")
-	viper.BindPFlag("couchdb.port", flags.Lookup("couchdb-port"))
+	checkNoErr(viper.BindPFlag("couchdb.port", flags.Lookup("couchdb-port")))
 
 	flags.String("log-level", "info", "define the log level")
-	viper.BindPFlag("log.level", flags.Lookup("log-level"))
+	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
 }
 
 // Configure Viper to read the environment and the optional config file
@@ -95,12 +95,12 @@ func Configure() error {
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
-			log.Errorf("Error while reading cozy-stack configurations from %s", viper.ConfigFileUsed())
+			log.Errorf("Failed to read cozy-stack configurations from %s", viper.ConfigFileUsed())
 			return err
 		}
 
 		if cfgFile != "" {
-			return fmt.Errorf("Unable to locate config file: %s\n", cfgFile)
+			return fmt.Errorf("Could not locate config file: %s\n", cfgFile)
 		}
 	}
 
@@ -113,4 +113,10 @@ func Configure() error {
 	}
 
 	return nil
+}
+
+func checkNoErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

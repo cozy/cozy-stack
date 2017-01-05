@@ -2,6 +2,7 @@ package permissions
 
 import jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
+// #nosec
 const (
 	// ContextAudience is the audience for JWT used by apps
 	ContextAudience = "context"

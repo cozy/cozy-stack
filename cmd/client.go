@@ -89,8 +89,7 @@ func clientRequestAndClose(c *client, method, path string, q url.Values, body in
 	if err != nil {
 		return err
 	}
-	res.Body.Close()
-	return nil
+	return res.Body.Close()
 }
 
 func clientRequestParsed(c *client, method, path string, q url.Values, body interface{}, v interface{}) error {
