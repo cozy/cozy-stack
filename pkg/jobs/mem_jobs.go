@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"sync"
 	"time"
+
+	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 var (
@@ -159,7 +161,7 @@ func (b *MemBroker) PushJob(req *JobRequest) (*Job, error) {
 		return nil, ErrUnknownWorker
 	}
 	j := &Job{
-		ID:         makeID(),
+		ID:         utils.RandomString(16),
 		WorkerType: req.WorkerType,
 		Message:    req.Message,
 		State:      Queued,

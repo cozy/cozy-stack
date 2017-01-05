@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"time"
 )
 
@@ -21,12 +20,6 @@ const (
 	// JSONEncoding is a JSON encoding message type
 	JSONEncoding = "json"
 )
-
-var idRand *rand.Rand
-
-func init() {
-	idRand = rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
-}
 
 type (
 	// Queue interface is used to represent a asynchronous queue of jobs from
@@ -103,18 +96,4 @@ func (m *Message) Unmarshal(msg interface{}) error {
 
 func makeQueueName(domain, workerType string) string {
 	return fmt.Sprintf("%s/%s", domain, workerType)
-}
-
-func makeID() string {
-	const (
-		idLen   = 16
-		letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	)
-	b := make([]byte, idLen)
-	lenLetters := len(letters)
-	for i := 0; i < idLen; i++ {
-		idx := idRand.Intn(lenLetters)
-		b[i] = letters[idx]
-	}
-	return string(b)
 }
