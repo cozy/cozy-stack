@@ -435,6 +435,48 @@ func RestoreDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 	return
 }
 
+// DestroyDirContent destroy all directories and files contained in a directory.
+func DestroyDirContent(c Context, doc *DirDoc) error {
+	err := doc.FetchFiles(c)
+	if err != nil {
+		return err
+	}
+
+	for _, dir := range doc.dirs {
+		err = DestroyDirAndContent(c, dir)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, file := range doc.files {
+		err = DestroyFile(c, file)
+		if err != nil {
+			return err
+		}
+	}
+
+	return err
+}
+
+// DestroyDirAndContent destroy a directory and its content
+func DestroyDirAndContent(c Context, doc *DirDoc) error {
+	err := DestroyDirContent(c, doc)
+	if err != nil {
+		return err
+	}
+	dirpath, err := doc.Path(c)
+	if err != nil {
+		return err
+	}
+	err = c.FS().RemoveAll(dirpath)
+	if err != nil {
+		return err
+	}
+	err = couchdb.DeleteDoc(c, doc)
+	return err
+}
+
 func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc, err error) {
 	var docs []*DirOrFileDoc
 	sel := mango.Equal("dir_id", parent.ID())

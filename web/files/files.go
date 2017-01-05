@@ -381,6 +381,45 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
+// ClearTrashHandler handles DELETE request to clear the trash
+func ClearTrashHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	trash, err := vfs.GetDirDoc(instance, consts.TrashDirID, true)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+	err = vfs.DestroyDirContent(instance, trash)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	return c.NoContent(204)
+}
+
+// DestroyFileHandler handles DELETE request to clear one element from the trash
+func DestroyFileHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	fileID := c.Param("file-id")
+
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	if dir != nil {
+		err = vfs.DestroyDirAndContent(instance, dir)
+	} else {
+		err = vfs.DestroyFile(instance, file)
+	}
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	return c.NoContent(204)
+}
+
 // Routes sets the routing for the files service
 func Routes(router *echo.Group) {
 	router.HEAD("/download", ReadFileContentFromPathHandler)
@@ -399,7 +438,11 @@ func Routes(router *echo.Group) {
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
+	router.DELETE("/trash", ClearTrashHandler)
+
 	router.POST("/trash/:file-id", RestoreTrashFileHandler)
+	router.DELETE("/trash/:file-id", DestroyFileHandler)
+
 	router.DELETE("/:file-id", TrashHandler)
 }
 

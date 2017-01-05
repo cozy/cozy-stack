@@ -565,6 +565,21 @@ func RestoreFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
 	return
 }
 
+// DestroyFile definitively destroy a file from the trash.
+func DestroyFile(c Context, doc *FileDoc) error {
+	path, err := doc.Path(c)
+	if err != nil {
+		return err
+	}
+
+	err = c.FS().Remove(path)
+	if err != nil {
+		return err
+	}
+
+	return couchdb.DeleteDoc(c, doc)
+}
+
 func safeCreateFile(name string, executable bool, fs afero.Fs) (afero.File, error) {
 	// write only (O_WRONLY), try to create the file and check that it
 	// does not already exist (O_CREATE|O_EXCL).

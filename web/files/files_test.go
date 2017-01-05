@@ -1188,6 +1188,143 @@ func TestTrashList(t *testing.T) {
 	assert.True(t, len(v.Data) >= 2)
 }
 
+func TestTrashClear(t *testing.T) {
+	body := "foo,bar"
+	res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
+	if !assert.Equal(t, 201, res2.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+	fileID, _ := extractDirData(t, data2)
+
+	res3, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	res4, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res4.StatusCode) {
+		return
+	}
+
+	path := "/files/trash"
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	_, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	res5, err := http.Get(ts.URL + "/files/trash")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer res5.Body.Close()
+
+	var v struct {
+		Data []interface{} `json:"data"`
+	}
+
+	err = json.NewDecoder(res5.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.True(t, len(v.Data) == 0)
+
+}
+
+func TestDestroyFile(t *testing.T) {
+	body := "foo,bar"
+	res1, data1 := upload(t, "/files/?Type=file&Name=tolistfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	res2, data2 := createDir(t, "/files/?Name=tolistdir&Type=directory")
+	if !assert.Equal(t, 201, res2.StatusCode) {
+		return
+	}
+
+	dirID, _ := extractDirData(t, data1)
+	fileID, _ := extractDirData(t, data2)
+
+	res3, _ := trash(t, "/files/"+dirID)
+	if !assert.Equal(t, 200, res3.StatusCode) {
+		return
+	}
+
+	res4, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 200, res4.StatusCode) {
+		return
+	}
+
+	path := "/files/trash/" + fileID
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	_, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	res5, err := http.Get(ts.URL + "/files/trash")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer res5.Body.Close()
+
+	var v struct {
+		Data []interface{} `json:"data"`
+	}
+
+	err = json.NewDecoder(res5.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.True(t, len(v.Data) == 1)
+
+	path = "/files/trash/" + fileID
+	req, err = http.NewRequest(http.MethodDelete, ts.URL+path, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	_, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	res5, err = http.Get(ts.URL + "/files/trash")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer res5.Body.Close()
+
+	err = json.NewDecoder(res5.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.True(t, len(v.Data) == 0)
+
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
