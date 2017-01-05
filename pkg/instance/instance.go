@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -121,6 +122,11 @@ func (i *Instance) FS() afero.Fs {
 		}
 	}
 	return i.storage
+}
+
+// JobsBroker returns the jobs broker associated with the instance
+func (i *Instance) JobsBroker() jobs.Broker {
+	return jobs.NewMemBroker(i.Domain, jobs.GetWorkersList())
 }
 
 // Prefix returns the prefix to use in database naming for the

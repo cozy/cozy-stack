@@ -8,6 +8,8 @@ const (
 	Files = "io.cozy.files"
 	// Manifests doc type for application manifests
 	Manifests = "io.cozy.manifests"
+	// Jobs doc type for queued jobs
+	Jobs = "io.cozy.jobs"
 	// Settings doc type for settings to customize an instance
 	Settings = "io.cozy.settings"
 	// Sessions doc type for sessions identifying a connection

@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/instances"
+	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/settings"
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
@@ -134,6 +135,7 @@ func SetupRoutes(router *echo.Echo) error {
 	apps.Routes(router.Group("/apps", mws...))
 	data.Routes(router.Group("/data", mws...))
 	files.Routes(router.Group("/files", mws...))
+	jobs.Routes(router.Group("/jobs", mws...))
 	settings.Routes(router.Group("/settings", mws...))
 	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))
