@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 )
@@ -52,7 +53,7 @@ example: cozy-stack config passwd ~/.cozy
 			return cmd.Help()
 		}
 
-		directory := filepath.Join(config.AbsPath(args[0]))
+		directory := filepath.Join(utils.AbsPath(args[0]))
 		info, err := os.Stat(directory)
 		if err != nil {
 			return err
