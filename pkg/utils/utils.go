@@ -9,18 +9,22 @@ import (
 	"time"
 )
 
+func init() {
+	// So that we do not generate the same IDs upon restart
+	rand.Seed(time.Now().UTC().UnixNano())
+}
+
 // RandomString returns a string of random alpha characters of the specified
 // length.
+//
+// TODO(optim): check the usage of the global locked rng does not become a
+// bottleneck.
 func RandomString(n int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, n)
 	lenLetters := len(letters)
-	// The global random source is not used so that we do not generate the same
-	// strings upon restart of the stack. Also, we do not have a shared source
-	// for the package since a local source is not thread-safe.
-	rng := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 	for i := 0; i < n; i++ {
-		b[i] = letters[rng.Intn(lenLetters)]
+		b[i] = letters[rand.Intn(lenLetters)]
 	}
 	return string(b)
 }
