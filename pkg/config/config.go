@@ -3,14 +3,13 @@ package config
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/spf13/viper"
 )
 
@@ -238,8 +237,8 @@ func UseTestYAML(yaml string) {
 // searching.
 func FindConfigFile(name string) (string, error) {
 	for _, cp := range Paths {
-		filename := filepath.Join(AbsPath(cp), name)
-		ok, err := exists(filename)
+		filename := filepath.Join(utils.AbsPath(cp), name)
+		ok, err := utils.FileExists(filename)
 		if err != nil {
 			return "", err
 		}
@@ -265,51 +264,4 @@ func configureLogger() error {
 
 	log.SetLevel(logLevel)
 	return nil
-}
-
-func exists(name string) (bool, error) {
-	_, err := os.Stat(name)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-func userHomeDir() string {
-	if runtime.GOOS == "windows" {
-		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-		if home == "" {
-			home = os.Getenv("USERPROFILE")
-		}
-		return home
-	}
-	return os.Getenv("HOME")
-}
-
-// AbsPath returns an absolute path relative.
-func AbsPath(inPath string) string {
-	if strings.HasPrefix(inPath, "~") {
-		inPath = userHomeDir() + inPath[len("~"):]
-	} else if strings.HasPrefix(inPath, "$HOME") {
-		inPath = userHomeDir() + inPath[len("$HOME"):]
-	}
-
-	if strings.HasPrefix(inPath, "$") {
-		end := strings.Index(inPath, string(os.PathSeparator))
-		inPath = os.Getenv(inPath[1:end]) + inPath[end:]
-	}
-
-	if filepath.IsAbs(inPath) {
-		return filepath.Clean(inPath)
-	}
-
-	p, err := filepath.Abs(inPath)
-	if err == nil {
-		return filepath.Clean(p)
-	}
-
-	return ""
 }
