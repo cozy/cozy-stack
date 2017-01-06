@@ -146,6 +146,7 @@ func (b *MemBroker) PushJob(req *JobRequest) (*Job, error) {
 		ID:         utils.RandomString(16),
 		WorkerType: req.WorkerType,
 		Message:    req.Message,
+		Options:    req.Options,
 		State:      Queued,
 		QueuedAt:   time.Now(),
 	}

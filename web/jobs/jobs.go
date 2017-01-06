@@ -35,6 +35,7 @@ func (j *apiJob) MarshalJSON() ([]byte, error) {
 
 type apiJobRequest struct {
 	Arguments json.RawMessage
+	Options   *jobs.JobOptions
 }
 
 func pushJob(c echo.Context) error {
@@ -47,6 +48,7 @@ func pushJob(c echo.Context) error {
 
 	job, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
 		WorkerType: c.Param("worker-type"),
+		Options:    req.Options,
 		Message: &jobs.Message{
 			Type: jobs.JSONEncoding,
 			Data: req.Arguments,

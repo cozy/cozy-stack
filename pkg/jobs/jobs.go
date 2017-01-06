@@ -47,19 +47,41 @@ type (
 		Type string
 	}
 
-	// Job struct encapsulates all the parameters of a job.
+	// Job struct contains all the parameters of a job.
 	Job struct {
-		ID         string    `json:"id"`
-		WorkerType string    `json:"worker_type"`
-		Message    *Message  `json:"-"`
-		State      State     `json:"state"`
-		QueuedAt   time.Time `json:"queued_at"`
+		ID         string      `json:"id"`
+		WorkerType string      `json:"worker_type"`
+		Message    *Message    `json:"-"`
+		Options    *JobOptions `json:"options"`
+		State      State       `json:"state"`
+		QueuedAt   time.Time   `json:"queued_at"`
 	}
 
 	// JobRequest struct is used to represent a new job request.
 	JobRequest struct {
 		WorkerType string
 		Message    *Message
+		Options    *JobOptions
+		Done       <-chan *Job
+	}
+
+	// JobOptions struct contains the execution properties of the jobs.
+	JobOptions struct {
+		MaxExecCount uint          `json:"max_exec_count"`
+		MaxExecTime  time.Duration `json:"max_exec_time"`
+		Timeout      time.Duration `json:"timeout"`
+	}
+
+	// WorkerConfig is the configuration parameter of a worker defined by the job
+	// system. It contains parameters of the worker along with the worker main
+	// function that perform the work against a job's message.
+	WorkerConfig struct {
+		WorkerFunc   WorkerFunc    `json:"worker_func"`
+		Concurrency  uint          `json:"concurrency"`
+		MaxExecCount uint          `json:"max_exec_count"`
+		MaxExecTime  time.Duration `json:"max_exec_time"`
+		Timeout      time.Duration `json:"timeout"`
+		RetryDelay   time.Duration `json:"retry_delay"`
 	}
 )
 

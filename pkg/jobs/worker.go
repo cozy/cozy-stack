@@ -15,6 +15,10 @@ var (
 	defaultMaxExecTime  = 60 * time.Second
 	defaultRetryDelay   = 60 * time.Millisecond
 	defaultTimeout      = 10 * time.Second
+
+	maxMaxExecCount = 5
+	maxMaxExecTime  = 5 * time.Minute
+	maxTimeout      = 1 * time.Minute
 )
 
 type (
@@ -39,24 +43,7 @@ func (w *Worker) Start(q Queue) {
 		return
 	}
 	w.q = q
-	c := &(*w.Conf)
-	if c.Concurrency == 0 {
-		c.Concurrency = uint(defaultConcurrency)
-	}
-	if c.MaxExecCount == 0 {
-		c.MaxExecCount = uint(defaultMaxExecCount)
-	}
-	if c.MaxExecTime == 0 {
-		c.MaxExecTime = defaultMaxExecTime
-	}
-	if c.RetryDelay == 0 {
-		c.RetryDelay = defaultRetryDelay
-	}
-	if c.Timeout == 0 {
-		c.Timeout = defaultTimeout
-	}
-	w.Conf = c
-	for i := 0; i < int(c.Concurrency); i++ {
+	for i := 0; i < int(w.Conf.Concurrency); i++ {
 		name := fmt.Sprintf("%s/%s/%d", w.Domain, w.Type, i)
 		go w.work(name)
 	}
@@ -75,13 +62,50 @@ func (w *Worker) work(workerID string) {
 		}
 		t := &task{
 			job:  job,
-			conf: w.Conf,
+			conf: w.defaultedConf(job.Options),
 		}
 		if err = t.run(); err != nil {
 			log.Errorf("[job] %s: error while performing job %s (%s)",
 				workerID, job.ID, err.Error())
 		}
 	}
+}
+
+func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
+	c := &(*w.Conf)
+	if opts != nil {
+		if opts.MaxExecCount != 0 {
+			c.MaxExecCount = opts.MaxExecCount
+		}
+		if opts.MaxExecTime > 0 {
+			c.MaxExecTime = opts.MaxExecTime
+		}
+		if opts.Timeout > 0 {
+			c.Timeout = opts.Timeout
+		}
+	}
+	if c.Concurrency == 0 {
+		c.Concurrency = uint(defaultConcurrency)
+	}
+	if c.MaxExecCount == 0 {
+		c.MaxExecCount = uint(defaultMaxExecCount)
+	} else if c.MaxExecCount > uint(maxMaxExecCount) {
+		c.MaxExecCount = uint(maxMaxExecCount)
+	}
+	if c.MaxExecTime == 0 {
+		c.MaxExecTime = defaultMaxExecTime
+	} else if c.MaxExecTime > maxMaxExecTime {
+		c.MaxExecTime = maxMaxExecTime
+	}
+	if c.RetryDelay == 0 {
+		c.RetryDelay = defaultRetryDelay
+	}
+	if c.Timeout == 0 {
+		c.Timeout = defaultTimeout
+	} else if c.Timeout > maxTimeout {
+		c.Timeout = maxTimeout
+	}
+	return c
 }
 
 // Stop will stop the worker's consumption of its queue. It will also close the
