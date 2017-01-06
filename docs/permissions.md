@@ -2,6 +2,41 @@
 
 # Permissions
 
+## When the permissions are used?
+
+The permissions are used when a request is made to cozy stack. It allows to
+let the owner of the cozy instance controls the access to her data, files and
+actions on them. The permissions are given in several contexts. Let's see
+them!
+
+### Client-side apps
+
+When the user installs a new client-side app, she is asked to accept an
+initial set of permissions for this app. This set of permissions is described
+in the manifest of the app.
+
+Later, the application can gain more permissions via the intents and optional
+permissions. See below for more details.
+
+When the authentified user access a client-side app, the app receives a token
+from the stack that can be used in later requests to the stack as a proof of
+the permissions it owns.
+
+### External apps via OAuth2
+
+An external application can ask for permissions via the OAuth2 dance, and use
+them later with the access token. The permissions are in the `scope`
+parameter.
+
+### Sharing with other users
+
+The owner of a cozy instance can share some documents and files with other
+users. It can be done in two ways:
+
+- If the other user also has a cozy, it can be a cozy-to-cozy sharing.
+- Else, the owner can give to him a link with a code.
+
+
 ## What is a permission?
 
 A permission gives the right for a request having it to do something on the
@@ -65,14 +100,24 @@ And the other is for the events inside the calendar:
 {
   "type": "io.cozy.events",
   "verbs": "GET",
-  "selector": "calendar_id",
+  "selector": "calendar-id",
   "values": ["1355812c-d41e-11e6-8467-53be4648e3ad"]
 }
 ```
 
+
 ## What format for a permission?
 
 ### JSON
+
+The prefered format for permissions is JSON. Each permission is a map with the
+`type`, `verbs`, `values` and `selector` see above, plus a `description` that
+can be used to give more informations to the user. Only the `type` field is
+mandatory.
+
+In the manifest, the permissions are regrouped in a map. The key is not very
+relevant, it's just here for localization. The same key is used in the
+`locales` field to identify the permission.
 
 Example:
 
@@ -91,7 +136,7 @@ Example:
       "values": ["io.cozy.files.music-dir"]
     },
     "mail": {
-      "description": "Required to send a congratulations email to your friends"
+      "description": "Required to send a congratulations email to your friends",
       "type": "io.cozy.jobs",
       "selector": "worker",
       "values": ["sendmail"]
@@ -119,3 +164,97 @@ io.cozy.contacts io.cozy.files:GET:io.cozy.files.music-dir io.cozy.jobs:POST:sen
 ### Inspiration
 
 - [Access control on other similar platforms](https://news.ycombinator.com/item?id=12784999)
+
+
+## Routes
+
+### GET /permissions/self
+
+List the permissions for a given token
+
+#### Request
+
+```http
+GET /permissions/self HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.permissions",
+    "id": "5a9c1844-d427-11e6-ab36-2b684d437b0d",
+    "attributes": {
+      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "permissions": {
+        "contacts": {
+          "description": "Required for autocompletion on @name",
+          "type": "io.cozy.contacts",
+          "verbs": "GET"
+        },
+        "images": {
+          "description": "Required for the background",
+          "type": "io.cozy.files",
+          "access": "GET",
+          "values": ["io.cozy.files.music-dir"]
+        },
+        "mail": {
+          "description": "Required to send a congratulations email to your friends",
+          "type": "io.cozy.jobs",
+          "selector": "worker",
+          "values": ["sendmail"]
+        }
+      }
+    }
+  }
+}
+```
+
+### POST /permissions
+
+Create a new set of permissions, with one or several associated codes. This
+codes can then be sent to other people as a way to give these permissions
+(sharing by links).
+
+**Note**: it is only possible to create a strict subset of the permissions
+associated to the sent token.
+
+#### Request
+
+#### Reponse
+
+### GET /permissions/:id
+
+Return the informations about a set of permissions
+
+### PATCH /permissions/:id
+
+Add permissions in this permissions set. It can be used in inter-apps context
+as a way to give another app the permission for some data. For example, the
+contact application can send a `pick-a-photo` intent to the photos application
+with its permission id, and the photos app can then let the user choose a
+photo and give the contacts application the permissions to use it.
+
+#### Request
+
+#### Reponse
+
+### DELETE /permissions/:id
+
+Delete a set of permissions. For example, some permissions were used by a user
+to share a photo album with her friends, and then changed its mind and cancel
+the sharing.
+
+#### Request
+
+#### Reponse
+
