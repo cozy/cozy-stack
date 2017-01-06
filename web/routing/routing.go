@@ -8,8 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
-	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -28,11 +26,6 @@ import (
 	"github.com/labstack/echo/middleware"
 	"github.com/rakyll/statik/fs"
 )
-
-// corsBlackList list all routes prefix that are not eligible to CORS
-var corsBlackList = []string{
-	"/auth/",
-}
 
 var templatesList = []string{
 	"authorize.html",
@@ -114,18 +107,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
-	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		MaxAge: int(12 * time.Hour / time.Second),
-		Skipper: func(c echo.Context) bool {
-			path := c.Path()
-			for _, route := range corsBlackList {
-				if strings.HasPrefix(path, route) {
-					return true
-				}
-			}
-			return false
-		},
-	}))
+	router.Use(middlewares.CORS)
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,
