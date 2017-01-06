@@ -34,10 +34,8 @@ default_locale | the locale used for the name and description fields
 locales        | translations of the name and description fields in other locales
 version        | the current version number
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
-permissions    | a list of permissions needed by the app (see [here](permissions.md) for more details)
-routes         | a list of routes for the app (see below for more details)
-
-**TODO** [CSP policy](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#csp)
+permissions    | a map of permissions needed by the app (see [here](permissions.md) for more details)
+routes         | a map of routes for the app (see below for more details)
 
 ### Routes
 
@@ -150,7 +148,7 @@ Content-Type: application/vnd.api+json
         "fr": {
           "description": "Un client web pour les courriels",
           "permissions": {
-            "data/io.cozy.emails": {
+            "mails": {
               "description": "Requis pour lire et écrire des emails"
             }
           }
@@ -159,9 +157,9 @@ Content-Type: application/vnd.api+json
       "version": "1.2.3",
       "license": "AGPL-3.0",
       "permissions": {
-        "data/io.cozy.emails": {
+        "mails": {
           "description": "Required for reading and writing emails",
-          "access": "readwrite"
+          "type": "io.cozy.emails"
         }
       }
     }

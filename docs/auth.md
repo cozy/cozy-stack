@@ -351,11 +351,11 @@ The parameters are:
   with the authorization code. It can be used as a key in local storage for
   storing a state in a SPA).
 - `response_type`, only `code` is supported
-- `scope`, a space separated list of the permissions asked (a permission being
-  formatted as `key:access`, like `files/images:read`).
+- `scope`, a space separated list of the [permissions](./permissions.md) asked
+  (like `io.cozy.files:GET` for read-only access to files).
 
 ```http
-GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=files/images:read%20data/io.cozy.contacts:read&state=Eh6ahshepei5Oojo&redirect_uri=https%3A%2F%2Fclient.org%2F HTTP/1.1
+GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=io.cozy.files:GET%20io.cozy.contacts&state=Eh6ahshepei5Oojo&redirect_uri=https%3A%2F%2Fclient.org%2F HTTP/1.1
 Host: cozy.example.org
 ```
 
@@ -371,7 +371,7 @@ POST /auth/authorize HTTP/1.1
 Host: cozy.example.org
 Content-Type: application/x-www-form-urlencoded
 
-state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=files/images:read%20data/io.cozy.contacts:read&csrf_token=johw6Sho
+state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=io.cozy.files:GET%20io.cozy.contacts&csrf_token=johw6Sho
 ```
 
 **Note**: this endpoint is protected against CSRF attacks.
@@ -419,7 +419,7 @@ Content-type: application/json
   "access_token": "ooch1Yei",
   "token_type": "bearer",
   "refresh_token": "ui0Ohch8",
-  "scope": "files/images:read data/io.cozy.contacts:read"
+  "scope": "io.cozy.files:GET io.cozy.contacts"
 }
 ```
 
