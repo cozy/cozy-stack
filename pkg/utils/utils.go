@@ -9,20 +9,18 @@ import (
 	"time"
 )
 
-var urand *rand.Rand
-
-func init() {
-	urand = rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
-}
-
 // RandomString returns a string of random alpha characters of the specified
 // length.
 func RandomString(n int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, n)
 	lenLetters := len(letters)
+	// The global random source is not used so that we do not generate the same
+	// strings upon restart of the stack. Also, we do not have a shared source
+	// for the package since a local source is not thread-safe.
+	rng := rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 	for i := 0; i < n; i++ {
-		b[i] = letters[urand.Intn(lenLetters)]
+		b[i] = letters[rng.Intn(lenLetters)]
 	}
 	return string(b)
 }
