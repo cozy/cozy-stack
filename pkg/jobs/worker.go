@@ -32,7 +32,7 @@ type (
 		Type   string
 		Conf   *WorkerConfig
 
-		q       Queue
+		jobs    Queue
 		started int32
 	}
 )
@@ -42,7 +42,7 @@ func (w *Worker) Start(q Queue) {
 	if !atomic.CompareAndSwapInt32(&w.started, 0, 1) {
 		return
 	}
-	w.q = q
+	w.jobs = q
 	for i := 0; i < int(w.Conf.Concurrency); i++ {
 		name := fmt.Sprintf("%s/%s/%d", w.Domain, w.Type, i)
 		go w.work(name)
@@ -52,7 +52,7 @@ func (w *Worker) Start(q Queue) {
 func (w *Worker) work(workerID string) {
 	// TODO: err handling and persistence
 	for {
-		job, err := w.q.Consume()
+		job, err := w.jobs.Consume()
 		if err != nil {
 			if err != ErrQueueClosed {
 				log.Errorf("[job] %s: error while consuming queue (%s)",
@@ -60,13 +60,26 @@ func (w *Worker) work(workerID string) {
 			}
 			return
 		}
+		infos := job.Infos()
+		if err = job.AckConsumed(); err != nil {
+			log.Errorf("[job] %s: error acking consume job %s (%s)",
+				workerID, infos.ID, err.Error())
+			continue
+		}
 		t := &task{
-			job:  job,
-			conf: w.defaultedConf(job.Options),
+			infos: infos,
+			conf:  w.defaultedConf(infos.Options),
 		}
 		if err = t.run(); err != nil {
 			log.Errorf("[job] %s: error while performing job %s (%s)",
-				workerID, job.ID, err.Error())
+				workerID, infos.ID, err.Error())
+			err = job.Nack(err)
+		} else {
+			err = job.Ack()
+		}
+		if err != nil {
+			log.Errorf("[job] %s: error while acking job done %s (%s)",
+				workerID, infos.ID, err.Error())
 		}
 	}
 }
@@ -114,12 +127,12 @@ func (w *Worker) Stop() {
 	if !atomic.CompareAndSwapInt32(&w.started, 1, 0) {
 		return
 	}
-	w.q.Close()
+	w.jobs.Close()
 }
 
 type task struct {
-	job  *Job
-	conf *WorkerConfig
+	infos *JobInfos
+	conf  *WorkerConfig
 
 	startTime time.Time
 	execCount uint
@@ -134,13 +147,13 @@ func (t *task) run() (err error) {
 			return err
 		}
 		if err != nil {
-			log.Warnf("[job] %s: %s (retry in %s)", t.job.ID, err.Error(), delay)
+			log.Warnf("[job] %s: %s (retry in %s)", t.infos.ID, err.Error(), delay)
 		}
 		if delay > 0 {
 			time.Sleep(delay)
 		}
-		log.Debugf("[job] %s: run %d (timeout %s)", t.job.ID, t.execCount, timeout)
-		err = t.conf.WorkerFunc(t.job.Message, time.After(timeout))
+		log.Debugf("[job] %s: run %d (timeout %s)", t.infos.ID, t.execCount, timeout)
+		err = t.conf.WorkerFunc(t.infos.Message, time.After(timeout))
 		if err == nil {
 			break
 		}

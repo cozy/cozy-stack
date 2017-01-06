@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"time"
+
+	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 const (
@@ -11,6 +13,8 @@ const (
 	Queued State = "queued"
 	// Running state
 	Running = "running"
+	// Done state
+	Done = "done"
 	// Errored state
 	Errored = "errored"
 )
@@ -21,11 +25,11 @@ const (
 )
 
 type (
-	// Queue interface is used to represent a asynchronous queue of jobs from
+	// Queue interface is used to represent an asynchronous queue of jobs from
 	// which it is possible to enqueue and consume jobs.
 	Queue interface {
-		Enqueue(*Job) error
-		Consume() (*Job, error)
+		Enqueue(Job) error
+		Consume() (Job, error)
 		Len() int
 		Close()
 	}
@@ -35,7 +39,35 @@ type (
 	// the job system.
 	Broker interface {
 		Domain() string
-		PushJob(*JobRequest) (*Job, error)
+
+		// PushJob will push try to push a new job from the specified job request.
+		//
+		// This method is asynchronous and returns a chan of JobInfos to observe
+		// the job changing states. This channel does not need to be subscribed,
+		// messages will be dropped if no listeners.
+		PushJob(*JobRequest) (*JobInfos, <-chan *JobInfos, error)
+	}
+
+	// Job interface represents a job.
+	Job interface {
+		// Infos returns the JobInfos data associated with the job
+		Infos() *JobInfos
+		// AckConsumed should be used by the consumer of the job, ack-ing that
+		// it has well received the job and is processing it.
+		AckConsumed() error
+		// Ack should be used by the consumer after the job has been processed,
+		// ack-ing that the job was successfully executed.
+		Ack() error
+		// Nack should be used to tell that the job coult not be consumed or that
+		// an error has happened during its processing. The error passed will be
+		// used to inform in more detail about the error that happened.
+		Nack(error) error
+		// Marshal allows you to define how the job should be marshalled when put
+		// into the queue.
+		Marshal() ([]byte, error)
+		// Unmarshal allows you to define how the job should be unmarshalled when
+		// consumed from the queue.
+		Unmarshal() error
 	}
 
 	// State represent the state of a job.
@@ -47,14 +79,17 @@ type (
 		Type string
 	}
 
-	// Job struct contains all the parameters of a job.
-	Job struct {
+	// JobInfos contains all the metadata informations of a Job. It can be
+	// marshalled in JSON.
+	JobInfos struct {
 		ID         string      `json:"id"`
 		WorkerType string      `json:"worker_type"`
-		Message    *Message    `json:"-"`
+		Message    *Message    `json:"message"`
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
+		StartedAt  time.Time   `json:"started_at"`
+		Error      error       `json:"error"`
 	}
 
 	// JobRequest struct is used to represent a new job request.
@@ -62,7 +97,6 @@ type (
 		WorkerType string
 		Message    *Message
 		Options    *JobOptions
-		Done       <-chan *Job
 	}
 
 	// JobOptions struct contains the execution properties of the jobs.
@@ -84,6 +118,18 @@ type (
 		RetryDelay   time.Duration `json:"retry_delay"`
 	}
 )
+
+// NewJobInfos creates a new JobInfos instance from a job request.
+func NewJobInfos(req *JobRequest) *JobInfos {
+	return &JobInfos{
+		ID:         utils.RandomString(16),
+		WorkerType: req.WorkerType,
+		Message:    req.Message,
+		Options:    req.Options,
+		State:      Queued,
+		QueuedAt:   time.Now(),
+	}
+}
 
 // NewMessage returns a new Message encoded in the specified format.
 func NewMessage(enc string, data interface{}) (*Message, error) {

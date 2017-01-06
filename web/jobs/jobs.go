@@ -12,7 +12,7 @@ import (
 )
 
 type apiJob struct {
-	j *jobs.Job
+	j *jobs.JobInfos
 }
 
 func (j *apiJob) ID() string      { return j.j.ID }
@@ -46,7 +46,7 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
+	job, _, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
 		WorkerType: c.Param("worker-type"),
 		Options:    req.Options,
 		Message: &jobs.Message{
