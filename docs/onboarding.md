@@ -96,7 +96,7 @@ If the user is not logged in, display public instance information
 
 #### Request
 ```http
-GET https://alice.example.com/instance
+GET https://alice.example.com/instance HTTP/1.1
 ```
 
 #### Response
@@ -111,8 +111,8 @@ If the user is logged in, display all instance information, except passphrase
 
 #### Request
 ```http
-GET https://alice.example.com/instance
-Cookie sessionid=xxxx
+GET https://alice.example.com/instance HTTP/1.1
+Cookie: sessionid=xxxx
 ```
 
 #### Response
@@ -132,9 +132,9 @@ If the user is logged in, allow to set instance fields
 
 #### Request
 ```http
-POST https://alice.example.com/instance
+POST https://alice.example.com/instance HTTP/1.1
 Content-type: application/json
-Cookie sessionid=xxxxx
+Cookie: sessionid=xxxxx
 Authorization: base64(onboarding:onboardingapptoken)
 ```
 ```json
@@ -146,10 +146,9 @@ Authorization: base64(onboarding:onboardingapptoken)
 
 #### Response
 ```
-200 OK
+HTTP/1.1 200 OK
 Content-type: application/json
-Cookie sessionid=xxxxx
-Authorization: base64(onboarding:onboardingapptoken)
+Cookie: sessionid=xxxxx
 ```
 ```json
 {
