@@ -20,14 +20,15 @@ import (
 	"github.com/spf13/afero"
 )
 
+/* #nosec */
 const (
 	registerTokenLen = 16
 	sessionSecretLen = 64
 	oauthSecretLen   = 128
-
-	// DefaultLocale is the default locale when creating an instance
-	DefaultLocale = "en"
 )
+
+// DefaultLocale is the default locale when creating an instance
+const DefaultLocale = "en"
 
 var (
 	// ErrNotFound is used when the seeked instance was not found
@@ -221,7 +222,9 @@ func (i *Instance) createRootDir() error {
 
 	defer func() {
 		if err != nil {
-			rootFs.RemoveAll(domainURL.Path)
+			if rmerr := rootFs.RemoveAll(domainURL.Path); rmerr != nil {
+				log.Warn("[instance] Could not remove the instance directory")
+			}
 		}
 	}()
 
@@ -486,7 +489,7 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 	i.PassphraseHash = newHash
 	err = couchdb.UpdateDoc(couchdb.GlobalDB, i)
 	if err != nil {
-		log.Error("Failed to update hash in db", err)
+		log.Error("[instance] Failed to update hash in db", err)
 	}
 
 	return nil

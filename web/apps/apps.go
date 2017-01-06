@@ -92,7 +92,7 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 	}
 	tmpl, err := template.New(file).Parse(string(buf))
 	if err != nil {
-		log.Printf("%s cannot be parsed as a template: %s", vpath, err)
+		log.Printf("[apps] %s cannot be parsed as a template: %s", vpath, err)
 		return vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
 	}
 	res.Header().Set("Content-Type", doc.Mime)
@@ -166,8 +166,6 @@ func InstallOrUpdateHandler(c echo.Context) error {
 		return wrapAppsError(err)
 	}
 
-	jsonapi.Data(c, http.StatusAccepted, man, nil)
-
 	go func() {
 		for {
 			_, done, err := inst.Poll()
@@ -181,7 +179,7 @@ func InstallOrUpdateHandler(c echo.Context) error {
 		}
 	}()
 
-	return nil
+	return jsonapi.Data(c, http.StatusAccepted, man, nil)
 }
 
 // ListHandler handles all GET / requests which can be used to list

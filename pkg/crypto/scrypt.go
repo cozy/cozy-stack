@@ -74,13 +74,13 @@ func (h *scryptHash) UnmarshalText(hashbytes []byte) error {
 	}
 
 	h.salt = make([]byte, hex.DecodedLen(len(vals[4])))
-	hex.Decode(h.salt, vals[4])
+	_, err = hex.Decode(h.salt, vals[4])
 	if err != nil {
 		return ErrInvalidHash
 	}
 
 	h.dk = make([]byte, hex.DecodedLen(len(vals[5])))
-	hex.Decode(h.dk, vals[5])
+	_, err = hex.Decode(h.dk, vals[5])
 	if err != nil {
 		return ErrInvalidHash
 	}

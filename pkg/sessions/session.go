@@ -112,7 +112,7 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 		s.LastSeen = time.Now()
 		err := couchdb.UpdateDoc(i, &s)
 		if err != nil {
-			log.Warn("Failed to update session last seen.")
+			log.Warn("[session] Failed to update session last seen:", err)
 		}
 	}
 
@@ -123,7 +123,10 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 // Delete is a function to delete the session in couchdb,
 // and returns a cookie with a negative MaxAge to clear it
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
-	couchdb.DeleteDoc(i, s)
+	err := couchdb.DeleteDoc(i, s)
+	if err != nil {
+		log.Error("[session] Failed to delete session:", err)
+	}
 	return &http.Cookie{
 		Name:   SessionCookieName,
 		Value:  "",

@@ -9,9 +9,6 @@ import (
 )
 
 var (
-	memQueues   map[string]*MemQueue
-	memQueuesMu sync.Mutex
-
 	memBrokers   map[string]*MemBroker
 	memBrokersMu sync.Mutex
 )
@@ -38,23 +35,11 @@ type (
 
 // NewMemQueue creates and a new in-memory queue.
 func NewMemQueue(domain, workerType string) *MemQueue {
-	name := makeQueueName(domain, workerType)
-	memQueuesMu.Lock()
-	defer memQueuesMu.Unlock()
-	if memQueues == nil {
-		memQueues = make(map[string]*MemQueue)
-	}
-	q, ok := memQueues[name]
-	if ok {
-		return q
-	}
-	q = &MemQueue{
+	return &MemQueue{
 		jobs: list.New(),
 		ch:   make(chan *Job),
 		cl:   make(chan bool),
 	}
-	memQueues[name] = q
-	return q
 }
 
 // Enqueue into the queue
@@ -127,18 +112,15 @@ func NewMemBroker(domain string, ws WorkersList) Broker {
 		return b
 	}
 	queues := make(map[string]*MemQueue)
-	for workerType, wconf := range ws {
+	for workerType, conf := range ws {
 		q := NewMemQueue(domain, workerType)
 		queues[workerType] = q
 		w := &Worker{
-			Domain:      domain,
-			Type:        workerType,
-			Concurrency: wconf.Concurrency,
-			Func:        wconf.WorkerFunc,
-
-			q: q,
+			Domain: domain,
+			Type:   workerType,
+			Conf:   conf,
 		}
-		w.Start()
+		w.Start(q)
 	}
 	b = &MemBroker{
 		domain: domain,

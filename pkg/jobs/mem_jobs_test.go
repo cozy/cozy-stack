@@ -24,7 +24,7 @@ func TestInMemoryJobs(t *testing.T) {
 	var workersTestList = WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(m *Message) error {
+			WorkerFunc: func(m *Message, _ <-chan time.Time) error {
 				var msg string
 				err := m.Unmarshal(&msg)
 				if !assert.NoError(t, err) {
@@ -96,7 +96,7 @@ func TestUnknownMessageType(t *testing.T) {
 	broker := NewMemBroker("foo.bar", WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(m *Message) error {
+			WorkerFunc: func(m *Message, _ <-chan time.Time) error {
 				var msg string
 				err := m.Unmarshal(&msg)
 				assert.Error(t, err)
@@ -114,6 +114,69 @@ func TestUnknownMessageType(t *testing.T) {
 			Type: "unknown",
 			Data: nil,
 		},
+	})
+
+	assert.NoError(t, err)
+	w.Wait()
+}
+
+func TestTimeout(t *testing.T) {
+	var w sync.WaitGroup
+
+	broker := NewMemBroker("timeout.cozy", WorkersList{
+		"timeout": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(_ *Message, t <-chan time.Time) error {
+				<-t
+				w.Done()
+				return ErrTimedOut
+			},
+		},
+	})
+
+	w.Add(1)
+	_, err := broker.PushJob(&JobRequest{
+		WorkerType: "timeout",
+		Message: &Message{
+			Type: "timeout",
+			Data: nil,
+		},
+	})
+
+	assert.NoError(t, err)
+	w.Wait()
+}
+
+func TestRetry(t *testing.T) {
+	var w sync.WaitGroup
+
+	maxExecCount := 10
+
+	var count int
+	broker := NewMemBroker("retry", WorkersList{
+		"test": {
+			Concurrency:  1,
+			MaxExecCount: uint(maxExecCount),
+			Timeout:      1 * time.Millisecond,
+			RetryDelay:   1 * time.Millisecond,
+			WorkerFunc: func(_ *Message, t <-chan time.Time) error {
+				<-t
+				w.Done()
+				count++
+				if count < maxExecCount {
+					return ErrTimedOut
+				}
+				return nil
+			},
+		},
+	})
+
+	w.Add(maxExecCount)
+	_, err := broker.PushJob(&JobRequest{
+		WorkerType: "test",
+		Message:    nil,
 	})
 
 	assert.NoError(t, err)

@@ -53,7 +53,7 @@ const (
 
 // AdminSecretFileName is the name of the file containing the administration
 // hashed passphrase.
-const AdminSecretFileName = "cozy-admin-passphrase"
+const AdminSecretFileName = "cozy-admin-passphrase" // #nosec
 
 var config *Config
 

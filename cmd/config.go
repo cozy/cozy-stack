@@ -61,13 +61,19 @@ example: cozy-stack config passwd ~/.cozy
 			return fmt.Errorf("%s is not a directory", directory)
 		}
 
-		fmt.Fprintf(os.Stdout, "Passphrase:")
+		_, err = fmt.Fprintf(os.Stdout, "Passphrase:")
+		if err != nil {
+			return err
+		}
 		pass1, err := gopass.GetPasswdMasked()
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprintf(os.Stdout, "Confirmation:")
+		_, err = fmt.Fprintf(os.Stdout, "Confirmation:")
+		if err != nil {
+			return err
+		}
 		pass2, err := gopass.GetPasswdMasked()
 		if err != nil {
 			return err

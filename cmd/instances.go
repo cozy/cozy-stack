@@ -33,7 +33,9 @@ process can manage several instances.
 Each instance has a separate space for storing files and a prefix used to
 create its CouchDB databases.
 `,
-	Run: func(cmd *cobra.Command, args []string) { cmd.Help() },
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
 }
 
 var addInstanceCmd = &cobra.Command{
@@ -66,7 +68,7 @@ given domain.
 
 		i, err := instancesRequest("POST", "/instances/", q, nil)
 		if err != nil {
-			log.Errorf("Error while creating instance for domain %s", domain)
+			log.Errorf("Failed to create instance for domain %s", domain)
 			return err
 		}
 
@@ -136,7 +138,7 @@ All data associated with this domain will be permanently lost.
 
 		i, err := instancesRequest("DELETE", "/instances/"+url.QueryEscape(domain), nil, nil)
 		if err != nil {
-			log.Errorf("Error while removing instance for domain %s", domain)
+			log.Errorf("Failed to remove instance for domain %s", domain)
 			return err
 		}
 
