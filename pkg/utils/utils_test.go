@@ -31,10 +31,21 @@ func TestRandomStringConcurrentAccess(t *testing.T) {
 	n := 10000
 	var wg sync.WaitGroup
 	wg.Add(n)
+
+	ms := make(map[string]struct{})
+	var mu sync.Mutex
+
 	for i := 0; i < n; i++ {
 		go func() {
-			RandomString(10)
-			wg.Done()
+			s := RandomString(10)
+			defer wg.Done()
+			mu.Lock()
+			defer mu.Unlock()
+			if _, ok := ms[s]; ok {
+				t.Fatal("should be unique strings")
+			}
+			var q struct{}
+			ms[s] = q
 		}()
 	}
 	wg.Wait()
