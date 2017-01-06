@@ -189,9 +189,7 @@ Example and description of the attributes of a `io.cozy.jobs`:
   "options": {
     "priority": 3,         // priority from 1 to 100, higher number is higher priority
     "timeout": 60,         // timeout value in seconds
-    "retry_max_count": 3,  // maximum number of retry
-    "retry_delay": 10,     // retry delay in seconds between each try
-    "arguments": {}        // arguments message
+    "max_exec_count": 3,   // maximum number of time the job should be executed (including retries)
   },
   "state": "running",      // queued, running, errored
   "try_count": 1,          // number of time the job has been executed.
@@ -209,9 +207,7 @@ Example and description of a job creation options — as you can see, the option
 {
   "priority": 3,         // priority from 1 to 100
   "timeout": 60,         // timeout value in seconds
-  "retry_max_count": 3,  // maximum number of retry
-  "retry_delay": 10,     // retry delay in seconds between each try
-  "arguments": {}        // arguments message
+  "max_exec_count": 3,   // maximum number of retry
 }
 ```
 
@@ -246,10 +242,6 @@ Accept: application/vnd.api+json
       "trigger_id": "4321",
       "options": {
         "priority": 3,
-        "timeout": 60,
-        "retry_max_count": 3,
-        "retry_delay": 10,
-        "arguments": {}
       },
       "state": "running",
       "try_count": 1,
@@ -276,11 +268,12 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "priority": 3,
-  "timeout": 60,
-  "retry_max_count": 3,
-  "retry_delay": 10,
-  "arguments": {}
+  "options": {
+    "priority": 3,
+    "timeout": 60,
+    "max_exec_count": 3
+  },
+  "arguments": {} // any json value used as arguments for the job
 }
 ```
 
@@ -299,9 +292,7 @@ Accept: application/vnd.api+json
       "options": {
         "priority": 3,
         "timeout": 60,
-        "retry_max_count": 3,
-        "retry_delay": 10,
-        "arguments": {}
+        "max_exec_count": 3
       },
       "state": "running",
       "try_count": 1,
@@ -372,9 +363,7 @@ Accept: application/vnd.api+json
   "options": {
     "priority": 3,
     "timeout": 60,
-    "retry_max_count": 3,
-    "retry_delay": 10,
-    "arguments": {}
+    "max_exec_count": 3
   }
 }
 ```
@@ -394,9 +383,7 @@ Accept: application/vnd.api+json
       "options": {
         "priority": 3,
         "timeout": 60,
-        "retry_max_count": 3,
-        "retry_delay": 10,
-        "arguments": {}
+        "max_exec_count": 3
       }
     },
     "links": {
@@ -433,9 +420,7 @@ Accept: application/vnd.api+json
       "options": {
         "priority": 3,
         "timeout": 60,
-        "retry_max_count": 3,
-        "retry_delay": 10,
-        "arguments": {}
+        "max_exec_count": 3
       }
     },
     "links": {
