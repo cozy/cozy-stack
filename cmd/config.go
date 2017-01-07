@@ -44,7 +44,7 @@ var adminPasswdCmd = &cobra.Command{
 	Long: `
 cozy-stack instances passphrase generate a passphrase hash and save it to a file in
 the specified directory. This passphrase is the one used to authenticate accesses
-to the /admin/* routes of the API.
+to the administration API.
 
 example: cozy-stack config passwd ~/.cozy
 `,

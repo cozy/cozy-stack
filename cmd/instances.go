@@ -4,15 +4,12 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
-	"net/url"
 	"os"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/client"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 )
 
@@ -21,10 +18,6 @@ var flagTimezone string
 var flagEmail string
 var flagApps []string
 var flagDev bool
-
-func validDomain(domain string) bool {
-	return !strings.ContainsAny(domain, " /?#@\t\r\n")
-}
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -58,35 +51,23 @@ given domain.
 		}
 
 		domain := args[0]
-		if !validDomain(domain) {
-			return fmt.Errorf("Invalid domain: %s", domain)
-		}
-
-		var dev string
-		if flagDev {
-			dev = "true"
-		} else {
-			dev = "false"
-		}
-
-		q := url.Values{
-			"Domain":   {domain},
-			"Apps":     {strings.Join(flagApps, ",")},
-			"Locale":   {flagLocale},
-			"Timezone": {flagTimezone},
-			"Email":    {flagEmail},
-			"Dev":      {dev},
-		}
-
-		i, err := instancesRequest("POST", "/instances/", q, nil)
+		c := newAdminClient()
+		in, err := c.CreateInstance(&client.InstanceOptions{
+			Domain:   domain,
+			Apps:     flagApps,
+			Locale:   flagLocale,
+			Timezone: flagTimezone,
+			Email:    flagEmail,
+			Dev:      flagDev,
+		})
 		if err != nil {
 			log.Errorf("Failed to create instance for domain %s", domain)
 			return err
 		}
 
-		log.Infof("Instance created with success for domain %s", i.Attrs.Domain)
-		log.Infof("Registration token: \"%s\"", hex.EncodeToString(i.Attrs.RegisterToken))
-		log.Debugf("Instance created: %#v", i.Attrs)
+		log.Infof("Instance created with success for domain %s", in.Attrs.Domain)
+		log.Infof("Registration token: \"%s\"", hex.EncodeToString(in.Attrs.RegisterToken))
+		log.Debugf("Instance created: %#v", in.Attrs)
 		return nil
 	},
 }
@@ -99,12 +80,13 @@ cozy-stack instances ls allows to list all the instances that can be served
 by this server.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var doc instancesAPIData
-		if err := clientRequestParsed(instancesClient(), "GET", "/instances/", nil, nil, &doc); err != nil {
+		c := newAdminClient()
+		list, err := c.ListInstances()
+		if err != nil {
 			return err
 		}
 
-		for _, i := range doc.Data {
+		for _, i := range list {
 			var dev string
 			if i.Attrs.Dev {
 				dev = "dev"
@@ -132,9 +114,6 @@ and all its data.
 		}
 
 		domain := args[0]
-		if !validDomain(domain) {
-			return fmt.Errorf("Invalid domain: %s", domain)
-		}
 
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf(`
@@ -142,18 +121,19 @@ Are you sure you want to remove instance for domain %s ?
 All data associated with this domain will be permanently lost.
 [yes/NO]: `, domain)
 
-		in, err := reader.ReadString('\n')
+		str, err := reader.ReadString('\n')
 		if err != nil {
 			return err
 		}
 
-		if strings.ToLower(strings.TrimSpace(in)) != "yes" {
+		if strings.ToLower(strings.TrimSpace(str)) != "yes" {
 			return nil
 		}
 
 		fmt.Println()
 
-		i, err := instancesRequest("DELETE", "/instances/"+domain, nil, nil)
+		c := newAdminClient()
+		in, err := c.DestroyInstance(domain)
 		if err != nil {
 			log.Errorf("Failed to remove instance for domain %s", domain)
 			return err
@@ -161,7 +141,7 @@ All data associated with this domain will be permanently lost.
 
 		fmt.Println()
 
-		log.Infof("Instance for domain %s has been destroyed with success", i.Attrs.Domain)
+		log.Infof("Instance for domain %s has been destroyed with success", in.Attrs.Domain)
 		return nil
 	},
 }
@@ -173,10 +153,11 @@ var appTokenInstanceCmd = &cobra.Command{
 		if len(args) < 2 {
 			return cmd.Help()
 		}
-		token, err := tokenRequest(url.Values{
-			"Domain":   {args[0]},
-			"Subject":  {args[1]},
-			"Audience": {"app"},
+		c := newAdminClient()
+		token, err := c.GetToken(&client.TokenOptions{
+			Domain:   args[0],
+			Subject:  args[1],
+			Audience: "app",
 		})
 		if err != nil {
 			return err
@@ -193,11 +174,12 @@ var oauthTokenInstanceCmd = &cobra.Command{
 		if len(args) < 3 {
 			return cmd.Help()
 		}
-		token, err := tokenRequest(url.Values{
-			"Domain":   {args[0]},
-			"Subject":  {args[1]},
-			"Audience": {"access-token"},
-			"Scope":    {strings.Join(args[2:], " ")},
+		c := newAdminClient()
+		token, err := c.GetToken(&client.TokenOptions{
+			Domain:   args[0],
+			Subject:  args[1],
+			Audience: "access-token",
+			Scope:    args[2:],
 		})
 		if err != nil {
 			return err
@@ -205,63 +187,6 @@ var oauthTokenInstanceCmd = &cobra.Command{
 		_, err = fmt.Println(token)
 		return err
 	},
-}
-
-type instanceData struct {
-	ID    string             `json:"id"`
-	Rev   string             `json:"rev"`
-	Attrs *instance.Instance `json:"attributes"`
-}
-
-type instanceAPIData struct {
-	Data *instanceData `json:"data"`
-}
-
-type instancesAPIData struct {
-	Data []*instanceData `json:"data"`
-}
-
-func instancesClient() *client {
-	var pass []byte
-
-	if !config.IsDevRelease() {
-		pass = []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
-		if len(pass) == 0 {
-			var err error
-			fmt.Printf("Password:")
-			pass, err = gopass.GetPasswdMasked()
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	return &client{
-		addr: config.AdminServerAddr(),
-		pass: string(pass),
-	}
-}
-
-func instancesRequest(method, path string, q url.Values, body interface{}) (*instanceData, error) {
-	var doc instanceAPIData
-	err := clientRequestParsed(instancesClient(), method, path, q, body, &doc)
-	if err != nil {
-		return nil, err
-	}
-	return doc.Data, nil
-}
-
-func tokenRequest(q url.Values) (string, error) {
-	res, err := clientRequest(instancesClient(), "GET", "/instances/token", q, nil)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
-	}
-	return string(b), err
 }
 
 func init() {

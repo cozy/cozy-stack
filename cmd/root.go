@@ -1,12 +1,18 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/client"
+	"github.com/cozy/cozy-stack/pkg/client/auth"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -37,6 +43,45 @@ profiles you.`,
 }
 
 var cfgFile string
+
+func createClient(domain string) *client.Client {
+	return &client.Client{
+		Domain:        domain,
+		DisableSecure: config.IsDevRelease(),
+		AuthClient: &auth.Client{
+			RedirectURIs: []string{"http://foobar.com"},
+			ClientName:   "Client A",
+		},
+		AuthScopes: []string{},
+		AuthAccept: func(acceptURL string) (*url.URL, error) {
+			fmt.Println(">>>>", acceptURL)
+			return nil, errors.New("foo")
+		},
+	}
+}
+
+func newAdminClient() *client.Client {
+	var pass []byte
+	if !config.IsDevRelease() {
+		pass = []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
+		if len(pass) == 0 {
+			var err error
+			fmt.Printf("Password:")
+			pass, err = gopass.GetPasswdMasked()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+	c := createClient(config.AdminServerAddr())
+	c.IsAdmin = true
+	c.AdminPassword = string(pass)
+	return c
+}
+
+func newClient(i *instance.Instance) *client.Client {
+	return createClient(i.Domain)
+}
 
 func init() {
 	binDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
