@@ -136,8 +136,8 @@ func wrapError(err error) error {
 
 // Routes sets the routing for the instances service
 func Routes(router *echo.Group) {
-	router.GET("/", listHandler)
-	router.POST("/", createHandler)
+	router.GET("", listHandler)
+	router.POST("", createHandler)
 	router.DELETE("/:domain", deleteHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)

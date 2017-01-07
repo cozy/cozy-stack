@@ -133,7 +133,10 @@ do_create_instances() {
 		printf "creating instance %s... " "${host}"
 		set +e
 		add_instance_val=$(
-			${COZY_STACK_PATH} instances add --dev --email dev@cozy.io "${host}" 2>&1
+			${COZY_STACK_PATH} instances add \
+				--dev \
+				--email dev@cozy.io \
+				"${host}" 2>&1
 		)
 		add_instance_ret="${?}"
 		set -e
