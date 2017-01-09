@@ -12,7 +12,7 @@ import (
 	"github.com/labstack/echo"
 )
 
-const TypeTextEventStream = "text/event-stream"
+const typeTextEventStream = "text/event-stream"
 
 type (
 	apiJob struct {
@@ -89,12 +89,12 @@ func pushJob(c echo.Context) error {
 	}
 
 	accept := c.Request().Header.Get("Accept")
-	if accept != TypeTextEventStream {
+	if accept != typeTextEventStream {
 		return jsonapi.Data(c, http.StatusAccepted, &apiJob{job}, nil)
 	}
 
 	w := c.Response().Writer
-	w.Header().Set("Content-Type", TypeTextEventStream)
+	w.Header().Set("Content-Type", typeTextEventStream)
 	w.WriteHeader(200)
 	if err := streamJob(job, w); err != nil {
 		return nil

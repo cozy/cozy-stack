@@ -241,7 +241,6 @@ Accept: application/vnd.api+json
   "data": {
     "type": "io.cozy.jobs",
     "id": "123123",
-    "rev": "1-12334",
     "attributes": {
       "worker": "sendmail",
       "trigger": "@cron",
@@ -321,7 +320,6 @@ Accept: application/vnd.api+json
   "data": {
     "type": "io.cozy.triggers",
     "id": "123123",
-    "rev": "1-12334",
     "attributes": {
       "type": "@interval",
       "arguments": "30m10s",
@@ -358,7 +356,6 @@ Accept: application/vnd.api+json
   "data": {
     "type": "io.cozy.triggers",
     "id": "123123",
-    "rev": "1-12334",
     "attributes": {
       "type": "@interval",
       "arguments": "30m10s",
@@ -396,7 +393,6 @@ Accept: application/vnd.api+json
     {
       "type": "io.cozy.triggers",
       "id": "123123",
-      "rev": "1-12334",
       "attributes": {},
       "links": {
         "self": "/jobs/triggers/123123"
