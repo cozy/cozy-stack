@@ -33,6 +33,7 @@ type (
 	// MemJob struct contains all the parameters of a job.
 	MemJob struct {
 		infos *JobInfos
+		infmu sync.RWMutex
 		jobch chan *JobInfos
 	}
 )
@@ -147,46 +148,61 @@ func (b *MemBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error
 		return nil, nil, ErrUnknownWorker
 	}
 	jobch := make(chan *JobInfos, 2)
+	infos := NewJobInfos(req)
 	j := &MemJob{
-		infos: NewJobInfos(req),
+		infos: infos,
 		jobch: jobch,
 	}
 	if err := q.Enqueue(j); err != nil {
 		return nil, nil, err
 	}
-	return j.Infos(), jobch, nil
+	return infos, jobch, nil
 }
 
 // Infos returns the associated job infos
 func (j *MemJob) Infos() *JobInfos {
+	j.infmu.RLock()
+	defer j.infmu.RUnlock()
 	return j.infos
 }
 
 // AckConsumed sets the job infos state to Running an sends the new job infos
 // on the channel.
 func (j *MemJob) AckConsumed() error {
-	j.infos.State = Running
-	return j.asyncSend(false)
+	j.infmu.Lock()
+	job := *j.infos
+	job.State = Running
+	j.infos = &job
+	j.infmu.Unlock()
+	return j.asyncSend(job, false)
 }
 
 // Ack sets the job infos state to Done an sends the new job infos on the
 // channel.
 func (j *MemJob) Ack() error {
-	j.infos.State = Done
-	return j.asyncSend(true)
+	j.infmu.Lock()
+	job := *j.infos
+	job.State = Done
+	j.infos = &job
+	j.infmu.Unlock()
+	return j.asyncSend(job, true)
 }
 
 // Nack sets the job infos state to Errored, set the specified error has the
 // error field and sends the new job infos on the channel.
 func (j *MemJob) Nack(err error) error {
-	j.infos.State = Errored
-	j.infos.Error = err
-	return j.asyncSend(true)
+	j.infmu.Lock()
+	job := *j.infos
+	job.State = Errored
+	job.Error = err
+	j.infos = &job
+	j.infmu.Unlock()
+	return j.asyncSend(job, true)
 }
 
-func (j *MemJob) asyncSend(closed bool) error {
+func (j *MemJob) asyncSend(job JobInfos, closed bool) error {
 	select {
-	case j.jobch <- j.infos:
+	case j.jobch <- &job:
 	default:
 	}
 	if closed {
