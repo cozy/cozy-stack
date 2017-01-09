@@ -1298,7 +1298,7 @@ func TestDestroyFile(t *testing.T) {
 
 	assert.True(t, len(v.Data) == 1)
 
-	path = "/files/trash/" + fileID
+	path = "/files/trash/" + dirID
 	req, err = http.NewRequest(http.MethodDelete, ts.URL+path, nil)
 	if !assert.NoError(t, err) {
 		return
