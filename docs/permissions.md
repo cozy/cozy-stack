@@ -221,20 +221,118 @@ Content-Type: application/vnd.api+json
 
 ### POST /permissions
 
-Create a new set of permissions, with one or several associated codes. This
-codes can then be sent to other people as a way to give these permissions
-(sharing by links).
+Create a new set of permissions. It can also associates one or more codes to
+it, via the `codes` parameter in the query string. These codes can then be
+sent to other people as a way to give these permissions (sharing by links).
+The parameter is comma separed list of values. The role of these values is to
+identify the codes if you want to revoke some of them later. A `ttl` parameter
+can also be given to make the codes expires after a delay.
 
 **Note**: it is only possible to create a strict subset of the permissions
 associated to the sent token.
 
 #### Request
 
+```http
+POST /permissions?codes=bob,jane&ttl=1d HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.permissions",
+    "attributes": {
+      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "permissions": {
+        "images": {
+          "type": "io.cozy.files",
+          "access": "GET",
+          "values": ["io.cozy.files.music-dir"]
+        }
+      }
+    }
+  }
+}
+```
+
 #### Reponse
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+    "type": "io.cozy.permissions",
+    "attributes": {
+      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "codes": {
+        "yuot7NaiaeGugh8T": "bob",
+        "Yohyoo8BHahh1lie": "jane"
+      },
+      "expires_at": 1483951978,
+      "permissions": {
+        "images": {
+          "type": "io.cozy.files",
+          "access": "GET",
+          "values": ["io.cozy.files.music-dir"]
+        }
+      }
+    }
+  }
+}
+```
 
 ### GET /permissions/:id
 
 Return the informations about a set of permissions
+
+#### Request
+
+```http
+GET /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+    "type": "io.cozy.permissions",
+    "attributes": {
+      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "codes": {
+        "yuot7NaiaeGugh8T": "bob",
+        "Yohyoo8BHahh1lie": "jane"
+      },
+      "expires_at": 1483951978,
+      "permissions": {
+        "images": {
+          "type": "io.cozy.files",
+          "access": "GET",
+          "values": ["io.cozy.files.music-dir"]
+        }
+      }
+    }
+  }
+}
+```
 
 ### PATCH /permissions/:id
 
@@ -244,17 +342,78 @@ contact application can send a `pick-a-photo` intent to the photos application
 with its permission id, and the photos app can then let the user choose a
 photo and give the contacts application the permissions to use it.
 
+It can also be used to add or remove codes.
+
 #### Request
 
+```http
+PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+    "type": "io.cozy.permissions",
+    "attributes": {
+      "codes": {
+        "Yohyoo8BHahh1lie": "jane"
+      },
+    }
+  }
+}
+```
+
 #### Reponse
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+    "type": "io.cozy.permissions",
+    "attributes": {
+      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "codes": {
+        "yuot7NaiaeGugh8T": "bob",
+      },
+      "expires_at": 1483951978,
+      "permissions": {
+        "images": {
+          "type": "io.cozy.files",
+          "access": "GET",
+          "values": ["io.cozy.files.music-dir"]
+        }
+      }
+    }
+  }
+}
+```
 
 ### DELETE /permissions/:id
 
 Delete a set of permissions. For example, some permissions were used by a user
-to share a photo album with her friends, and then changed its mind and cancel
-the sharing.
+to share a photo album with her friends, and then she changed her mind and
+cancel the sharing.
 
 #### Request
 
+```http
+DELETE /permissions/fa11561c-d645-11e6-83df-cbf577804d55 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+```
+
 #### Reponse
 
+```http
+HTTP/1.1 204 No Content
+```
