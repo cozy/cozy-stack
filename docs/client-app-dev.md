@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Develop a client-side application
 
@@ -131,4 +131,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // ...
 ```
 
-For the `theme.css` stylesheet, you can read the [settings documentation](./settings.md).
+For the `theme.css` stylesheet, you can read the [settings documentation](settings.md).

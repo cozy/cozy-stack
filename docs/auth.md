@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Authentication and access delegations
 
@@ -351,7 +351,7 @@ The parameters are:
   with the authorization code. It can be used as a key in local storage for
   storing a state in a SPA).
 - `response_type`, only `code` is supported
-- `scope`, a space separated list of the [permissions](./permissions.md) asked
+- `scope`, a space separated list of the [permissions](permissions.md) asked
   (like `io.cozy.files:GET` for read-only access to files).
 
 ```http

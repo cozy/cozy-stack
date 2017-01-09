@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Onboarding
 
@@ -8,7 +8,7 @@ Compatibility with the current developments on cozy onboarding is a goal : [The 
 
 ## Instance creation
 
-Creating an instance is done through CLI or through the (future) partner farm manager system. Some **settings** can be pre-defined on instance creation. ([doc](./instance.md#creation)).
+Creating an instance is done through CLI or through the (future) partner farm manager system. Some **settings** can be pre-defined on instance creation. ([doc](instance.md#creation)).
 
 The CLI also allows to specify which source to use for `onboarding` and `home` applications. The defaults will be hosted on `github.com/cozy`.
 
@@ -24,7 +24,7 @@ All other steps are handled by the `onboarding` application.
 
 The `onboarding` application SHOULD therefore provide the following features
 - When started with a `registerToken`, allow the user to create a passphrase
-- When started with a `contextToken` ([see auth doc](./auth.md#how-to-get-a-token)) use it to retrieve instance document.
+- When started with a `contextToken` ([see auth doc](auth.md#how-to-get-a-token)) use it to retrieve instance document.
   - If the instance document is complete **according to the `onboarding` app**, redirect to `home` application.
   - Otherwise, performs whatever steps it deems necessary to fill out the instance (ask for user email, help set up `myaccounts` accounts, say thank you...)
 

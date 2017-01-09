@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Couchdb plugins analysis
 
@@ -48,7 +48,7 @@ ex:
 
 ## Considerations on how we will use it
 
-(see the docs/architecture.md for more info)
+(see the [architecture](architecture.md) for more info)
 
 - One stack instance communicate with one couchdb 2.x server or cluster. The couchdb server/cluster has a lot of databases (nb_users x nb_data_types). The pair stack+couch should handle as many active users as possible. Number of unactive users must not impact perfs too much.
   Note : definition of active user TBD (mobile app and 3rd party software are syncing using \*dav and some background jobs like fetching banks accounts and threshold alerts )
