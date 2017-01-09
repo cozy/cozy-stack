@@ -28,7 +28,7 @@ type (
 	// Queue interface is used to represent an asynchronous queue of jobs from
 	// which it is possible to enqueue and consume jobs.
 	Queue interface {
-		Enqueue(Job) error
+		Enqueue(job Job) error
 		Consume() (Job, error)
 		Len() int
 		Close()
@@ -45,7 +45,11 @@ type (
 		// This method is asynchronous and returns a chan of JobInfos to observe
 		// the job changing states. This channel does not need to be subscribed,
 		// messages will be dropped if no listeners.
-		PushJob(*JobRequest) (*JobInfos, <-chan *JobInfos, error)
+		PushJob(request *JobRequest) (*JobInfos, <-chan *JobInfos, error)
+
+		// QueueLen returns the total element in the queue of the specified worker
+		// type.
+		QueueLen(workerType string) (int, error)
 	}
 
 	// Job interface represents a job.

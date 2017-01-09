@@ -212,50 +212,7 @@ Example and description of a job creation options — as you can see, the option
 ```
 
 
-### GET /jobs/:job-id
-
-Get a job description given its ID.
-
-#### Status codes
-
-* 200 OK, when the job is found its description written
-* 404 Not Found, when the job has not been found (it either never existed or is finished)
-
-#### Request
-
-```http
-GET /jobs/123123 HTTP/1.1
-Accept: application/vnd.api+json
-```
-
-#### Response
-
-```json
-{
-  "data": {
-    "type": "io.cozy.jobs",
-    "id": "123123",
-    "rev": "1-12334",
-    "attributes": {
-      "worker": "sendmail",
-      "trigger": "@cron",
-      "trigger_id": "4321",
-      "options": {
-        "priority": 3,
-      },
-      "state": "running",
-      "try_count": 1,
-      "queued_at": "2016-09-19T12:35:08Z",
-      "started_at": "2016-09-19T12:35:08Z",
-      "errors": [],
-      "output": {}
-    }
-  }
-}
-```
-
-
-### POST /jobs/queue/:worker-name
+### POST /jobs/queue/:worker-type
 
 Enqueue programmatically a new job.
 
@@ -309,14 +266,14 @@ Accept: application/vnd.api+json
 ```
 
 
-### GET /jobs/queue
+### GET /jobs/queue/:worker-type
 
 List the jobs in the queue.
 
 #### Request
 
 ```http
-GET /jobs/queue HTTP/1.1
+GET /jobs/queue/sendmail HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -327,25 +284,14 @@ Accept: application/vnd.api+json
   "links": {
     "next": "/jobs/queue?page[cursor]=123123"
   },
-  "meta": {
+  "data": {
     "count": 12
-  },
-  "data": [
-    {
-      "type": "io.cozy.jobs",
-      "id": "123123",
-      "rev": "1-12334",
-      "attributes": {},
-      "links": {
-        "self": "/jobs/123123"
-      }
-    }
-  ]
+  }
 }
 ```
 
 
-### POST /jobs/triggers/:worker-name
+### POST /jobs/triggers/:trigger-name
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 

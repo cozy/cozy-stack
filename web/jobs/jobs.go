@@ -14,31 +14,58 @@ import (
 
 const TypeTextEventStream = "text/event-stream"
 
-type apiJob struct {
-	j *jobs.JobInfos
-}
+type (
+	apiJob struct {
+		j *jobs.JobInfos
+	}
+	apiJobRequest struct {
+		Arguments json.RawMessage  `json:"arguments"`
+		Options   *jobs.JobOptions `json:"options"`
+	}
 
-func (j *apiJob) ID() string      { return j.j.ID }
-func (j *apiJob) Rev() string     { return "" }
-func (j *apiJob) DocType() string { return consts.Jobs }
-func (j *apiJob) SetID(_ string)  {}
-func (j *apiJob) SetRev(_ string) {}
+	apiQueue struct {
+		Count      int `json:"count"`
+		workerType string
+	}
+)
+
+func (j *apiJob) ID() string                             { return j.j.ID }
+func (j *apiJob) Rev() string                            { return "" }
+func (j *apiJob) DocType() string                        { return consts.Jobs }
+func (j *apiJob) SetID(_ string)                         {}
+func (j *apiJob) SetRev(_ string)                        {}
+func (j *apiJob) Relationships() jsonapi.RelationshipMap { return nil }
+func (j *apiJob) Included() []jsonapi.Object             { return nil }
 func (j *apiJob) SelfLink() string {
 	return "/jobs/" + j.j.WorkerType + "/" + j.j.ID
-}
-func (j *apiJob) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{}
-}
-func (j *apiJob) Included() []jsonapi.Object {
-	return nil
 }
 func (j *apiJob) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.j)
 }
 
-type apiJobRequest struct {
-	Arguments json.RawMessage
-	Options   *jobs.JobOptions
+func (q *apiQueue) ID() string                             { return q.workerType }
+func (q *apiQueue) Rev() string                            { return "" }
+func (q *apiQueue) DocType() string                        { return consts.Queues }
+func (q *apiQueue) SetID(_ string)                         {}
+func (q *apiQueue) SetRev(_ string)                        {}
+func (q *apiQueue) Relationships() jsonapi.RelationshipMap { return nil }
+func (q *apiQueue) Included() []jsonapi.Object             { return nil }
+func (q *apiQueue) SelfLink() string {
+	return "/jobs/queue/" + q.workerType
+}
+
+func getQueue(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	workerType := c.Param("worker-type")
+	count, err := instance.JobsBroker().QueueLen(workerType)
+	if err != nil {
+		return err
+	}
+	o := &apiQueue{
+		workerType: workerType,
+		Count:      count,
+	}
+	return jsonapi.Data(c, http.StatusOK, o, nil)
 }
 
 func pushJob(c echo.Context) error {
@@ -69,18 +96,24 @@ func pushJob(c echo.Context) error {
 	w := c.Response().Writer
 	w.Header().Set("Content-Type", TypeTextEventStream)
 	w.WriteHeader(200)
-	if err := sendJob(job, w); err != nil {
+	if err := streamJob(job, w); err != nil {
 		return nil
 	}
 	for job = range ch {
-		if err := sendJob(job, w); err != nil {
+		if err := streamJob(job, w); err != nil {
 			return nil
 		}
 	}
 	return nil
 }
 
-func sendJob(job *jobs.JobInfos, w http.ResponseWriter) error {
+// Routes sets the routing for the jobs service
+func Routes(router *echo.Group) {
+	router.POST("/queue/:worker-type", pushJob)
+	router.GET("/queue/:worker-type", getQueue)
+}
+
+func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
 	b, err := json.Marshal(job)
 	if err != nil {
 		return err
@@ -94,11 +127,6 @@ func sendJob(job *jobs.JobInfos, w http.ResponseWriter) error {
 		f.Flush()
 	}
 	return nil
-}
-
-// Routes sets the routing for the jobs service
-func Routes(router *echo.Group) {
-	router.POST("/queue/:worker-type", pushJob)
 }
 
 func wrapJobsError(err error) error {

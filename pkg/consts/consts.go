@@ -10,6 +10,8 @@ const (
 	Manifests = "io.cozy.manifests"
 	// Jobs doc type for queued jobs
 	Jobs = "io.cozy.jobs"
+	// Queues doc type for jobs queues
+	Queues = "io.cozy.queues"
 	// Settings doc type for settings to customize an instance
 	Settings = "io.cozy.settings"
 	// Sessions doc type for sessions identifying a connection

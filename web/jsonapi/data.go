@@ -16,7 +16,7 @@ type Object interface {
 
 // Meta is a container for the couchdb revision, in JSON-API land
 type Meta struct {
-	Rev string `json:"rev"`
+	Rev string `json:"rev,omitempty"`
 }
 
 // LinksList is the common links used in JSON-API for the top-level or a

@@ -160,6 +160,16 @@ func (b *MemBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error
 	return infos, jobch, nil
 }
 
+// QueueLen returns the size of the number of elements in queue of the
+// specified worker type.
+func (b *MemBroker) QueueLen(workerType string) (int, error) {
+	q, ok := b.queues[workerType]
+	if !ok {
+		return 0, ErrUnknownWorker
+	}
+	return q.Len(), nil
+}
+
 // Infos returns the associated job infos
 func (j *MemJob) Infos() *JobInfos {
 	j.infmu.RLock()
