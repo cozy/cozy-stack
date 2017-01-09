@@ -15,6 +15,10 @@ if [ -r "${WORK_DIR}/local.env" ]; then
 	. "${WORK_DIR}/local.env"
 fi
 
+echo_err() {
+	>&2 echo -e "error: ${1}"
+}
+
 usage() {
 	echo -e "Usage: ${1} [release] [deploy] [clean]"
 	echo -e "\nCommands:\n"
@@ -91,7 +95,7 @@ do_release() {
 	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 	BUILD_MODE="${COZY_ENV}"
 
-	go generate ./web/routing
+	do_assets
 
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
@@ -139,6 +143,86 @@ do_deploy() {
 	rm "${BINARY}.sha256"
 }
 
+do_assets() {
+	prepare_assets
+	go generate ./web/routing
+}
+
+prepare_assets() {
+	assets_dst="${WORK_DIR}/.assets"
+	assets_src="${WORK_DIR}/assets"
+
+	rm -rf "${assets_dst}"
+	mkdir "${assets_dst}"
+
+	asset_name=""
+	asset_url=""
+	asset_sha=""
+	while IFS= read -r line; do
+		if [ "${line:0:1}" = "#" ]; then
+			continue
+		fi
+
+		if [ -z "${line}" ]; then
+			[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
+			asset_name=""
+			asset_url=""
+			asset_sha=""
+			continue
+		fi
+
+		line_split=(${line})
+		case "${line_split[0]}" in
+			name)
+				asset_name="${line_split[1]}"
+				;;
+			url)
+				asset_url="${line_split[1]}"
+				;;
+			sha256)
+				asset_sha="${line_split[1]}"
+				;;
+			*)
+				echo_err "Failed to parse ${assets_src}/externals file"
+				echo_err "Unknown field named \"${line_split[0]}\""
+				exit 1
+				;;
+		esac
+	done < "${assets_src}/externals"
+
+	[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
+
+	cp -r "${assets_src}/." "${assets_dst}"
+	rm -f "${assets_dst}/externals"
+}
+
+download_asset() {
+	echo "${1}:"
+	mkdir -p "${assets_dst}/${1%/*}"
+	printf "\tdownloading ${1}... "
+	set +e
+	curl -s --fail "${2}" > "${assets_dst}/${1}"
+	retc=${?}
+	set -e
+	if [ ${retc} -ne 0 ]; then
+		echo "failed"
+		echo_err "Could not fetch resource ${2}"
+		echo_err "curl failed with return code ${retc}"
+		exit 1
+	fi
+	echo "ok"
+	if [ -n "${3}" ]; then
+		printf "\tchecking sha256... "
+		dgst=`cat "${assets_dst}/${1}" | openssl dgst -sha256`
+		if [ "${3}" != "${dgst}" ]; then
+			echo "failed"
+			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}"
+			exit 1
+		fi
+		echo "ok"
+	fi
+}
+
 do_clean() {
 	find "${WORK_DIR}" -name "cozy-stack-*" -print -delete
 }
@@ -161,6 +245,10 @@ case "${1}" in
 
 	clean)
 		do_clean
+		;;
+
+	assets)
+		do_assets
 		;;
 
 	*)
