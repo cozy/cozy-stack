@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+{% raw %}
+
 # Develop a client-side application
 
 ## Using `cozy-app-dev`
@@ -132,3 +134,5 @@ document.addEventListener('DOMContentLoaded', () => {
 ```
 
 For the `theme.css` stylesheet, you can read the [settings documentation](settings.md).
+
+{% endraw %}
