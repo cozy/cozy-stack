@@ -205,6 +205,7 @@ app.${COZY_PROXY_HOST} {                          \n\
   root ${site_root}                               \n\
   header / Cache-Control \"no-store\"             \n\
   tls off                                         \n\
+  browse                                          \n\
 }                                                 \n\
 "
 
