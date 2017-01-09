@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"errors"
 	"sync"
+	"time"
 )
 
 var (
@@ -171,6 +172,7 @@ func (j *MemJob) Infos() *JobInfos {
 func (j *MemJob) AckConsumed() error {
 	j.infmu.Lock()
 	job := *j.infos
+	job.StartedAt = time.Now()
 	job.State = Running
 	j.infos = &job
 	j.infmu.Unlock()

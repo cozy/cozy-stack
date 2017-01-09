@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -10,6 +11,8 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
+
+const TypeTextEventStream = "text/event-stream"
 
 type apiJob struct {
 	j *jobs.JobInfos
@@ -46,7 +49,7 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, _, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
+	job, ch, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
 		WorkerType: c.Param("worker-type"),
 		Options:    req.Options,
 		Message: &jobs.Message{
@@ -58,7 +61,39 @@ func pushJob(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	return jsonapi.Data(c, http.StatusAccepted, &apiJob{job}, nil)
+	accept := c.Request().Header.Get("Accept")
+	if accept != TypeTextEventStream {
+		return jsonapi.Data(c, http.StatusAccepted, &apiJob{job}, nil)
+	}
+
+	w := c.Response().Writer
+	w.Header().Set("Content-Type", TypeTextEventStream)
+	w.WriteHeader(200)
+	if err := sendJob(job, w); err != nil {
+		return nil
+	}
+	for job = range ch {
+		if err := sendJob(job, w); err != nil {
+			return nil
+		}
+	}
+	return nil
+}
+
+func sendJob(job *jobs.JobInfos, w http.ResponseWriter) error {
+	b, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+	s := fmt.Sprintf("event: %s\r\ndata: %s\r\n\r\n", job.State, b)
+	_, err = w.Write([]byte(s))
+	if err != nil {
+		return err
+	}
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+	return nil
 }
 
 // Routes sets the routing for the jobs service
