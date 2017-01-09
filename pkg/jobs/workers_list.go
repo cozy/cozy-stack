@@ -9,18 +9,6 @@ import (
 // configuration.
 type WorkersList map[string]*WorkerConfig
 
-// WorkerConfig is the configuration parameter of a worker defined by the job
-// system. It contains parameters of the worker along with the worker main
-// function that perform the work against a job's message.
-type WorkerConfig struct {
-	WorkerFunc   WorkerFunc
-	Concurrency  uint
-	MaxExecCount uint
-	MaxExecTime  time.Duration
-	Timeout      time.Duration
-	RetryDelay   time.Duration
-}
-
 // WorkersList is the list of available workers with their associated Do
 // function.
 var workersList WorkersList

@@ -52,7 +52,7 @@ func TestInMemoryJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
-			_, err := broker.PushJob(&JobRequest{
+			_, _, err := broker.PushJob(&JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -67,7 +67,7 @@ func TestInMemoryJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
-			_, err := broker.PushJob(&JobRequest{
+			_, _, err := broker.PushJob(&JobRequest{
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -82,7 +82,7 @@ func TestInMemoryJobs(t *testing.T) {
 
 func TestUnknownWorkerError(t *testing.T) {
 	broker := NewMemBroker("baz.quz", WorkersList{})
-	_, err := broker.PushJob(&JobRequest{
+	_, _, err := broker.PushJob(&JobRequest{
 		WorkerType: "nope",
 		Message:    nil,
 	})
@@ -108,7 +108,7 @@ func TestUnknownMessageType(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, err := broker.PushJob(&JobRequest{
+	_, _, err := broker.PushJob(&JobRequest{
 		WorkerType: "test",
 		Message: &Message{
 			Type: "unknown",
@@ -137,7 +137,7 @@ func TestTimeout(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, err := broker.PushJob(&JobRequest{
+	_, _, err := broker.PushJob(&JobRequest{
 		WorkerType: "timeout",
 		Message: &Message{
 			Type: "timeout",
@@ -152,7 +152,7 @@ func TestTimeout(t *testing.T) {
 func TestRetry(t *testing.T) {
 	var w sync.WaitGroup
 
-	maxExecCount := 10
+	maxExecCount := 4
 
 	var count int
 	broker := NewMemBroker("retry", WorkersList{
@@ -174,10 +174,50 @@ func TestRetry(t *testing.T) {
 	})
 
 	w.Add(maxExecCount)
-	_, err := broker.PushJob(&JobRequest{
+	_, _, err := broker.PushJob(&JobRequest{
 		WorkerType: "test",
 		Message:    nil,
 	})
+
+	assert.NoError(t, err)
+	w.Wait()
+}
+
+func TestInfoChan(t *testing.T) {
+	var w sync.WaitGroup
+
+	broker := NewMemBroker("chan.cozy", WorkersList{
+		"timeout": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(_ *Message, t <-chan time.Time) error {
+				<-t
+				w.Done()
+				return ErrTimedOut
+			},
+		},
+	})
+
+	w.Add(1)
+	job, done, err := broker.PushJob(&JobRequest{
+		WorkerType: "timeout",
+		Message: &Message{
+			Type: "timeout",
+			Data: nil,
+		},
+	})
+
+	assert.Equal(t, Queued, job.State)
+
+	job = <-done
+	assert.Equal(t, string(Running), string(job.State))
+
+	job = <-done
+	assert.Equal(t, string(Errored), string(job.State))
+
+	job = <-done
+	assert.Nil(t, job)
 
 	assert.NoError(t, err)
 	w.Wait()
