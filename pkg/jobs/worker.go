@@ -15,10 +15,6 @@ var (
 	defaultMaxExecTime  = 60 * time.Second
 	defaultRetryDelay   = 60 * time.Millisecond
 	defaultTimeout      = 10 * time.Second
-
-	maxMaxExecCount = 5
-	maxMaxExecTime  = 5 * time.Minute
-	maxTimeout      = 1 * time.Minute
 )
 
 type (
