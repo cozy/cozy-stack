@@ -37,10 +37,6 @@ func getDoc(c echo.Context) error {
 		return dbStatus(c)
 	}
 
-	if docid[0] == '_' {
-		return jsonapi.NewError(http.StatusBadRequest, "Unsuported couchdb operation %s", docid)
-	}
-
 	revs := c.QueryParam("revs")
 	if revs == "true" {
 		return proxy(c, docid)
@@ -70,13 +66,7 @@ func createDoc(c echo.Context) error {
 		return err
 	}
 
-	if doc.ID() != "" {
-		return jsonapi.NewError(http.StatusBadRequest,
-			"Cannot create a document with _id")
-	}
-
-	err := couchdb.CreateDoc(instance, doc)
-	if err != nil {
+	if err := couchdb.CreateDoc(instance, doc); err != nil {
 		return err
 	}
 
@@ -279,7 +269,6 @@ func allDocs(c echo.Context) error {
 	}
 
 	return proxy(c, "_all_docs")
-
 }
 
 func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {

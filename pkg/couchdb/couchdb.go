@@ -210,10 +210,11 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 	return err
 }
 
-func fixErrorNoDatabaseIsWrongDoctype(err error) {
+func fixErrorNoDatabaseIsWrongDoctype(err error) error {
 	if IsNoDatabaseError(err) {
 		err.(*Error).Reason = "wrong_doctype"
 	}
+	return err
 }
 
 // DBStatus re
@@ -225,9 +226,16 @@ func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
 // GetDoc fetch a document by its docType and ID, out is filled with
 // the document by json.Unmarshal-ing
 func GetDoc(db Database, doctype, id string, out Doc) error {
-	err := makeRequest("GET", docURL(db, doctype, id), nil, out)
-	fixErrorNoDatabaseIsWrongDoctype(err)
-	return err
+	var err error
+	id, err = validateDocID(id)
+	if err != nil {
+		return err
+	}
+	err = makeRequest("GET", docURL(db, doctype, id), nil, out)
+	if err != nil {
+		return fixErrorNoDatabaseIsWrongDoctype(err)
+	}
+	return nil
 }
 
 // CreateDB creates the necessary database for a doctype
@@ -282,48 +290,55 @@ func ResetDB(db Database, doctype string) (err error) {
 // If the document's current rev does not match the one passed,
 // a CouchdbError(409 conflict) will be returned.
 // This functions returns the tombstone revision as string
-func Delete(db Database, doctype, id, rev string) (tombrev string, err error) {
+func Delete(db Database, doctype, id, rev string) (string, error) {
+	var err error
+	id, err = validateDocID(id)
+	if err != nil {
+		return "", err
+	}
 	var res updateResponse
 	qs := url.Values{"rev": []string{rev}}
 	url := docURL(db, doctype, id) + "?" + qs.Encode()
 	err = makeRequest("DELETE", url, nil, &res)
-	fixErrorNoDatabaseIsWrongDoctype(err)
-	if err == nil {
-		tombrev = res.Rev
+	if err != nil {
+		return "", fixErrorNoDatabaseIsWrongDoctype(err)
 	}
-	return
+	return res.Rev, nil
 }
 
 // DeleteDoc deletes a struct implementing the couchb.Doc interface
 // The document's SetRev will be called with tombstone revision
-func DeleteDoc(db Database, doc Doc) (err error) {
-	doctype := doc.DocType()
-	id := doc.ID()
-	rev := doc.Rev()
-	tombrev, err := Delete(db, doctype, id, rev)
-	if err == nil {
-		doc.SetRev(tombrev)
+func DeleteDoc(db Database, doc Doc) error {
+	id, err := validateDocID(doc.ID())
+	if err != nil {
+		return err
 	}
-	return
+	tombrev, err := Delete(db, doc.DocType(), id, doc.Rev())
+	if err != nil {
+		return err
+	}
+	doc.SetRev(tombrev)
+	return nil
 }
 
 // UpdateDoc update a document. The document ID and Rev should be filled.
 // The doc SetRev function will be called with the new rev.
-func UpdateDoc(db Database, doc Doc) (err error) {
+func UpdateDoc(db Database, doc Doc) error {
+	id, err := validateDocID(doc.ID())
+	if err != nil {
+		return err
+	}
 	doctype := doc.DocType()
-	id := doc.ID()
-	rev := doc.Rev()
-	if id == "" || rev == "" || doctype == "" {
+	if id == "" || doc.Rev() == "" || doctype == "" {
 		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
 	}
-
 	url := docURL(db, doctype, id)
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
-	fixErrorNoDatabaseIsWrongDoctype(err)
-	if err == nil {
-		doc.SetRev(res.Rev)
+	if err != nil {
+		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
+	doc.SetRev(res.Rev)
 	return err
 }
 
@@ -331,21 +346,22 @@ func UpdateDoc(db Database, doc Doc) (err error) {
 // if the document already exist, it will return a 409 error.
 // The document ID should be fillled.
 // The doc SetRev function will be called with the new rev.
-func CreateNamedDoc(db Database, doc Doc) (err error) {
+func CreateNamedDoc(db Database, doc Doc) error {
+	id, err := validateDocID(doc.ID())
+	if err != nil {
+		return err
+	}
 	doctype := doc.DocType()
-	id := doc.ID()
-
-	if doc.Rev() != "" || doc.ID() == "" || doctype == "" {
+	if doc.Rev() != "" || id == "" || doctype == "" {
 		return fmt.Errorf("CreateNamedDoc should have type and id but no rev")
 	}
-
 	url := docURL(db, doctype, id)
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
-	fixErrorNoDatabaseIsWrongDoctype(err)
-	if err == nil {
-		doc.SetRev(res.Rev)
+	if err != nil {
+		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
+	doc.SetRev(res.Rev)
 	return err
 }
 
@@ -386,8 +402,7 @@ func CreateDoc(db Database, doc Doc) (err error) {
 	var res *updateResponse
 
 	if doc.ID() != "" {
-		err = fmt.Errorf("Can not create document with a defined ID")
-		return
+		return newDefinedIDError()
 	}
 
 	err = createDocOrDb(db, doc, &res)
@@ -443,7 +458,6 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 // out the possible _design document.
 // TODO: pagination
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
-
 	v, err := query.Values(req)
 	if err != nil {
 		return err
@@ -489,6 +503,13 @@ func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
 	return &httputil.ReverseProxy{
 		Director: director,
 	}
+}
+
+func validateDocID(id string) (string, error) {
+	if len(id) > 0 && id[0] == '_' {
+		return "", newBadIDError(id)
+	}
+	return id, nil
 }
 
 // IndexCreationResponse is the response from couchdb when we create an Index

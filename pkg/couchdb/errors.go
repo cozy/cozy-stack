@@ -144,6 +144,22 @@ func newIOReadError(originalError error) error {
 	}
 }
 
+func newDefinedIDError() error {
+	return &Error{
+		StatusCode: http.StatusBadRequest,
+		Name:       "defined_id",
+		Reason:     "Document _id should be empty",
+	}
+}
+
+func newBadIDError(id string) error {
+	return &Error{
+		StatusCode: http.StatusBadRequest,
+		Name:       "bad_id",
+		Reason:     fmt.Sprintf("Unsuported couchdb operation %s", id),
+	}
+}
+
 func unoptimalError() error {
 	return &Error{
 		StatusCode: http.StatusBadRequest,
