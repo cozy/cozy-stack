@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -21,6 +22,13 @@ const domain = "cozysettings.example.net"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+
+func TestThemeCSS(t *testing.T) {
+	res, err := http.Get(ts.URL + "/settings/theme.css")
+	assert.NoError(t, err)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, []byte(":root"), body[:5])
+}
 
 func TestRegisterPassphraseWrongToken(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
