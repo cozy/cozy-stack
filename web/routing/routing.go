@@ -1,4 +1,4 @@
-//go:generate statik -src=../../assets -dest=..
+//go:generate statik -src=../../.assets -dest=..
 
 package routing
 

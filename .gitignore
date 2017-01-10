@@ -1,6 +1,7 @@
 /cozy-stack*
 /storage
 /.cozy
+/.assets
 *.log
 local.env
 integration-tests/pouchdb/node_modules
