@@ -113,6 +113,7 @@ var destroyInstanceCmd = &cobra.Command{
 cozy-stack instances destroy allows to remove an instance
 and all its data.
 `,
+	Aliases: []string{"rm"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Help()
