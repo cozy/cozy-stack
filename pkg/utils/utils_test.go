@@ -2,6 +2,7 @@ package utils
 
 import (
 	"math/rand"
+	"os"
 	"sync"
 	"testing"
 
@@ -49,4 +50,30 @@ func TestRandomStringConcurrentAccess(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestFileExists(t *testing.T) {
+	exists, err := FileExists("/no/such/file")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+	exists, err = FileExists("/etc/hosts")
+	assert.NoError(t, err)
+	assert.True(t, exists)
+}
+
+func TestAbsPath(t *testing.T) {
+	home := UserHomeDir()
+	assert.NotEmpty(t, home)
+	assert.Equal(t, home, AbsPath("~"))
+	foo := AbsPath("foo")
+	wd, _ := os.Getwd()
+	assert.Equal(t, wd+"/foo", foo)
+	bar := AbsPath("~/bar")
+	assert.Equal(t, home+"/bar", bar)
+	baz := AbsPath("$HOME/baz")
+	assert.Equal(t, home+"/baz", baz)
+	qux := AbsPath("/qux")
+	assert.Equal(t, "/qux", qux)
+	quux := AbsPath("////qux//quux/../quux")
+	assert.Equal(t, "/qux/quux", quux)
 }
