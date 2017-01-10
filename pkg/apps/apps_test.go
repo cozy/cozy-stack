@@ -9,89 +9,70 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFindContext(t *testing.T) {
+func TestFindRoute(t *testing.T) {
 	manifest := &Manifest{}
-	manifest.Contexts = make(Contexts)
-	manifest.Contexts["/foo"] = Context{Folder: "/foo", Index: "index.html"}
-	manifest.Contexts["/foo/bar"] = Context{Folder: "/bar", Index: "index.html"}
-	manifest.Contexts["/foo/qux"] = Context{Folder: "/qux", Index: "index.html"}
-	manifest.Contexts["/public"] = Context{Folder: "/public", Index: "public.html", Public: true}
-	manifest.Contexts["/admin"] = Context{Folder: "/admin", Index: "admin.html"}
-	manifest.Contexts["/admin/special"] = Context{Folder: "/special", Index: "admin.html"}
+	manifest.Routes = make(Routes)
+	manifest.Routes["/foo"] = Route{Folder: "/foo", Index: "index.html"}
+	manifest.Routes["/foo/bar"] = Route{Folder: "/bar", Index: "index.html"}
+	manifest.Routes["/foo/qux"] = Route{Folder: "/qux", Index: "index.html"}
+	manifest.Routes["/public"] = Route{Folder: "/public", Index: "public.html", Public: true}
+	manifest.Routes["/admin"] = Route{Folder: "/admin", Index: "admin.html"}
+	manifest.Routes["/admin/special"] = Route{Folder: "/special", Index: "admin.html"}
 
-	ctx, rest := manifest.FindContext("/admin")
+	ctx, rest := manifest.FindRoute("/admin")
 	assert.Equal(t, "/admin", ctx.Folder)
 	assert.Equal(t, "admin.html", ctx.Index)
 	assert.Equal(t, false, ctx.Public)
 	assert.Equal(t, "", rest)
 
-	ctx, rest = manifest.FindContext("/public/")
+	ctx, rest = manifest.FindRoute("/public/")
 	assert.Equal(t, "/public", ctx.Folder)
 	assert.Equal(t, "public.html", ctx.Index)
 	assert.Equal(t, true, ctx.Public)
 	assert.Equal(t, "", rest)
 
-	ctx, rest = manifest.FindContext("/public")
+	ctx, rest = manifest.FindRoute("/public")
 	assert.Equal(t, "/public", ctx.Folder)
 	assert.Equal(t, "", rest)
 
-	ctx, rest = manifest.FindContext("/public/app.js")
+	ctx, rest = manifest.FindRoute("/public/app.js")
 	assert.Equal(t, "/public", ctx.Folder)
 	assert.Equal(t, "app.js", rest)
 
-	ctx, rest = manifest.FindContext("/foo/admin/special")
+	ctx, rest = manifest.FindRoute("/foo/admin/special")
 	assert.Equal(t, "/foo", ctx.Folder)
 	assert.Equal(t, "admin/special", rest)
 
-	ctx, rest = manifest.FindContext("/admin/special/foo")
+	ctx, rest = manifest.FindRoute("/admin/special/foo")
 	assert.Equal(t, "/special", ctx.Folder)
 	assert.Equal(t, "foo", rest)
 
-	ctx, rest = manifest.FindContext("/foo/bar.html")
+	ctx, rest = manifest.FindRoute("/foo/bar.html")
 	assert.Equal(t, "/foo", ctx.Folder)
 	assert.Equal(t, "bar.html", rest)
 
-	ctx, rest = manifest.FindContext("/foo/baz")
+	ctx, rest = manifest.FindRoute("/foo/baz")
 	assert.Equal(t, "/foo", ctx.Folder)
 	assert.Equal(t, "baz", rest)
 
-	ctx, rest = manifest.FindContext("/foo/bar")
+	ctx, rest = manifest.FindRoute("/foo/bar")
 	assert.Equal(t, "/bar", ctx.Folder)
 	assert.Equal(t, "", rest)
 
-	ctx, _ = manifest.FindContext("/")
+	ctx, _ = manifest.FindRoute("/")
 	assert.Equal(t, "", ctx.Folder)
 }
 
-func TestBuildCtxTokenReturnsBlankForPublicContext(t *testing.T) {
+func TestBuildToken(t *testing.T) {
 	manifest := &Manifest{
 		Slug: "my-app",
 	}
-	manifest.Contexts = make(Contexts)
-	manifest.Contexts["/public"] = Context{Folder: "/public", Index: "index.html", Public: true}
-	ctx := manifest.Contexts["/public"]
 	i := &instance.Instance{
 		Domain:        "test-ctx-token.example.com",
 		SessionSecret: crypto.GenerateRandomBytes(64),
 	}
 
-	tokenString := manifest.BuildCtxToken(i, ctx)
-	assert.Equal(t, "", tokenString)
-}
-
-func TestBuildCtxToken(t *testing.T) {
-	manifest := &Manifest{
-		Slug: "my-app",
-	}
-	manifest.Contexts = make(Contexts)
-	manifest.Contexts["/foo"] = Context{Folder: "/foo", Index: "index.html", Public: false}
-	ctx := manifest.Contexts["/foo"]
-	i := &instance.Instance{
-		Domain:        "test-ctx-token.example.com",
-		SessionSecret: crypto.GenerateRandomBytes(64),
-	}
-
-	tokenString := manifest.BuildCtxToken(i, ctx)
+	tokenString := manifest.BuildToken(i)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		assert.True(t, ok, "The signing method should be HMAC")
@@ -102,7 +83,7 @@ func TestBuildCtxToken(t *testing.T) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	assert.True(t, ok, "Claims can be parsed as standard claims")
-	assert.Equal(t, "context", claims["aud"])
+	assert.Equal(t, "app", claims["aud"])
 	assert.Equal(t, "test-ctx-token.example.com", claims["iss"])
 	assert.Equal(t, "my-app", claims["sub"])
 }

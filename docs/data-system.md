@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Data System
 
@@ -300,3 +300,7 @@ It is possible to use either a `rev` query string parameter or a HTTP `If-Match`
 ### Details
 
 - If no id is provided in URL, an error 400 is returned
+
+## Mango
+
+The creation and usage of [Mango indexes](mango.md) is possible.

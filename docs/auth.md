@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Authentication and access delegations
 
@@ -136,14 +136,14 @@ Location: https://contacts.cozy.example.org/foo
 
 ### DELETE /auth/login
 
-This can be used to log-out the user. A private context must be passed in the
-query-string, to protect against CSRF attack on this (this can part of bigger
-attacks like session fixation).
+This can be used to log-out the user. An app token must be passed in the
+`Authorization` header, to protect against CSRF attack on this (this can part
+of bigger attacks like session fixation).
 
 ```http
 DELETE /auth/login HTTP/1.1
 Host: cozy.example.org
-Authorization: Bearer token-for-a-private-context
+Authorization: Bearer app-token
 ```
 
 ### POST /auth/register
@@ -351,11 +351,11 @@ The parameters are:
   with the authorization code. It can be used as a key in local storage for
   storing a state in a SPA).
 - `response_type`, only `code` is supported
-- `scope`, a space separated list of the permissions asked (a permission being
-  formatted as `key:access`, like `files/images:read`).
+- `scope`, a space separated list of the [permissions](permissions.md) asked
+  (like `io.cozy.files:GET` for read-only access to files).
 
 ```http
-GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=files/images:read%20data/io.cozy.contacts:read&state=Eh6ahshepei5Oojo&redirect_uri=https%3A%2F%2Fclient.org%2F HTTP/1.1
+GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=io.cozy.files:GET%20io.cozy.contacts&state=Eh6ahshepei5Oojo&redirect_uri=https%3A%2F%2Fclient.org%2F HTTP/1.1
 Host: cozy.example.org
 ```
 
@@ -371,7 +371,7 @@ POST /auth/authorize HTTP/1.1
 Host: cozy.example.org
 Content-Type: application/x-www-form-urlencoded
 
-state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=files/images:read%20data/io.cozy.contacts:read&csrf_token=johw6Sho
+state=Eh6ahshepei5Oojo&client_id=oauth-client-1&scope=io.cozy.files:GET%20io.cozy.contacts&csrf_token=johw6Sho
 ```
 
 **Note**: this endpoint is protected against CSRF attacks.
@@ -419,7 +419,7 @@ Content-type: application/json
   "access_token": "ooch1Yei",
   "token_type": "bearer",
   "refresh_token": "ui0Ohch8",
-  "scope": "files/images:read data/io.cozy.contacts:read"
+  "scope": "io.cozy.files:GET io.cozy.contacts"
 }
 ```
 
@@ -437,6 +437,8 @@ Claim   | Fullname  | What it identifies
 `iat`   | Issued At | Identify when the token was issued (Unix timestamp)
 `sub`   | Subject   | Identify the client that can use the token
 `scope` | Scope     | Identify the scope of actions that the client can accomplish
+
+The `scope` is used for [permissions](permissions.md).
 
 Other tokens can be JWT with a similar formalism, or be a simple random value
 (when we want to have a clear revocation process).
@@ -472,8 +474,8 @@ details.
 ### How to get a token?
 
 When a user access an application, she first loads the HTML page. Inside this
-page, the `<body>` tag has a `data-cozy-token` attribute with a token. This
-token is specific to a context, that can be either public or private.
+page, a token specific to this app is injected (only for private routes), via
+a templating method.
 
 We have prefered our custom solution to the implicit grant type of OAuth2 for
 2 reasons:
@@ -488,9 +490,9 @@ application.
 token appears in the URL and is shown by the browser. It can also be leaked
 with the HTTP `Referer` header.
 
-For a private context, the token will be given only for the authenticated
-user. For nested subdomains (like `calendar.joe.example.net`), the session
-cookie from the stack is enough (it is for `.joe.example.net`).
+The token will be given only for the authenticated user. For nested subdomains
+(like `calendar.joe.example.net`), the session cookie from the stack is enough
+(it is for `.joe.example.net`).
 
 But for flat subdomains (like `joe-calendar.example.net`), it's more
 complicated. On the first try of the user, she will be redirected to the
@@ -506,21 +508,23 @@ security reasons, the session code have the following properties:
 
 ### How to use a token?
 
-The token can be sent to the cozy-stack in the query-string, like this:
+The token can be sent to the cozy-stack as a `Bearer` token in the
+`Authorization` header, like this:
 
 ```http
-GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?CtxToken=e7af77ba2c2dbe2d HTTP/1.1
+GET /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
 Host: cozy.example.org
+Authorization: Bearer application-token
 ```
 
 If the user is authenticated, her cookies will be sent automatically. The
-cookies are needed for a token to a private context to be valid.
+cookies are needed for a token to be valid.
 
 ### How to refresh a token?
 
-The context token is valid only for 24 hours. If the application is opened for
-more than that, it will need to get a new token. But most applications won't
-be kept open for so long and it's okay if they don't try to refresh tokens. At
+The token is valid only for 24 hours. If the application is opened for more
+than that, it will need to get a new token. But most applications won't be
+kept open for so long and it's okay if they don't try to refresh tokens. At
 worst, the user just had to reload its page and it will work again.
 
 The app can know it's time to get a new token when the stack starts sending

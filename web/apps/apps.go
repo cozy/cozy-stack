@@ -44,17 +44,17 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) 
 }
 
 func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
-	ctx, file := app.FindContext(vpath)
+	route, file := app.FindRoute(vpath)
 	cfg := config.GetConfig()
 	if cfg.Subdomains == config.FlatSubdomains && !middlewares.IsLoggedIn(c) {
 		if code := c.QueryParam("code"); code != "" {
 			return tryAuthWithSessionCode(c, i, code)
 		}
 	}
-	if ctx.NotFound() {
+	if route.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
-	if !ctx.Public && !middlewares.IsLoggedIn(c) {
+	if !route.Public && !middlewares.IsLoggedIn(c) {
 		if file != "" {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
@@ -64,19 +64,19 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
 	}
 	if file == "" {
-		file = ctx.Index
+		file = route.Index
 	}
-	filepath := path.Join(vfs.AppsDirName, app.Slug, ctx.Folder, file)
+	filepath := path.Join(vfs.AppsDirName, app.Slug, route.Folder, file)
 	doc, err := vfs.GetFileDocFromPath(i, filepath)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
 	res := c.Response()
-	if file != ctx.Index {
+	if file != route.Index {
 		return vfs.ServeFileContent(i, doc, "", c.Request(), res)
 	}
 
-	// For index file, we inject the stack domain and a context token
+	// For index file, we inject the locale, the stack domain, and a token if the user is connected
 	name, err := doc.Path(i)
 	if err != nil {
 		return err
@@ -95,12 +95,16 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 		log.Printf("[apps] %s cannot be parsed as a template: %s", vpath, err)
 		return vfs.ServeFileContent(i, doc, "", c.Request(), c.Response())
 	}
+	token := "" // #nosec
+	if middlewares.IsLoggedIn(c) {
+		token = app.BuildToken(i)
+	}
 	res.Header().Set("Content-Type", doc.Mime)
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
-		"CtxToken": app.BuildCtxToken(i, ctx),
-		"Domain":   i.Domain,
-		"Locale":   i.Locale,
+		"Token":  token,
+		"Domain": i.Domain,
+		"Locale": i.Locale,
 	})
 }
 

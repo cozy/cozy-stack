@@ -55,18 +55,18 @@ type Permissions map[string]struct {
 	Access      Access `json:"access"`
 }
 
-// Context is a struct to serve a folder inside an app
-type Context struct {
+// Route is a struct to serve a folder inside an app
+type Route struct {
 	Folder string `json:"folder"`
 	Index  string `json:"index"`
 	Public bool   `json:"public"`
 }
 
-// NotFound returns true for a blank context (ie not found by FindContext)
-func (c *Context) NotFound() bool { return c.Folder == "" }
+// NotFound returns true for a blank route (ie not found by FindRoute)
+func (c *Route) NotFound() bool { return c.Folder == "" }
 
-// Contexts are a map for routing inside an application.
-type Contexts map[string]Context
+// Routes are a map for routing inside an application.
+type Routes map[string]Route
 
 // Developer is the name and url of a developer.
 type Developer struct {
@@ -95,7 +95,7 @@ type Manifest struct {
 	Version     string       `json:"version"`
 	License     string       `json:"license"`
 	Permissions *Permissions `json:"permissions"`
-	Contexts    Contexts     `json:"contexts"`
+	Routes    Routes     `json:"routes"`
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
@@ -155,22 +155,22 @@ func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 	return man, nil
 }
 
-// FindContext takes a path, returns the context which matches the best,
+// FindRoute takes a path, returns the route which matches the best,
 // and the part that remains unmatched
-func (m *Manifest) FindContext(vpath string) (Context, string) {
+func (m *Manifest) FindRoute(vpath string) (Route, string) {
 	parts := strings.Split(vpath, "/")
 	lenParts := len(parts)
 
-	var best Context
+	var best Route
 	rest := ""
 	specificity := 0
-	for key, ctx := range m.Contexts {
+	for key, ctx := range m.Routes {
 		keys := strings.Split(key, "/")
 		count := len(keys)
 		if count > lenParts || count < specificity {
 			continue
 		}
-		if contextMatches(parts, keys) {
+		if routeMatches(parts, keys) {
 			specificity = count
 			best = ctx
 			rest = path.Join(parts[count:]...)
@@ -180,7 +180,7 @@ func (m *Manifest) FindContext(vpath string) (Context, string) {
 	return best, rest
 }
 
-func contextMatches(path, ctx []string) bool {
+func routeMatches(path, ctx []string) bool {
 	for i, part := range ctx {
 		if path[i] != part {
 			return false
@@ -189,15 +189,12 @@ func contextMatches(path, ctx []string) bool {
 	return true
 }
 
-// BuildCtxToken is used to build a context token to identify the app for
-// requests made to the stack
-func (m *Manifest) BuildCtxToken(i *instance.Instance, ctx Context) string {
-	if ctx.Public {
-		return ""
-	}
+// BuildToken is used to build a token to identify the app for requests made to
+// the stack
+func (m *Manifest) BuildToken(i *instance.Instance) string {
 	token, err := crypto.NewJWT(i.SessionSecret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.ContextAudience,
+			Audience: permissions.AppAudience,
 			Issuer:   i.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  m.Slug,

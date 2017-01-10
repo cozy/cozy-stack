@@ -19,7 +19,7 @@ func ParseBearerAuth(next echo.HandlerFunc) echo.HandlerFunc {
 			var claims permissions.Claims
 			keyFunc := func(token *jwt.Token) (interface{}, error) {
 				switch token.Claims.(*permissions.Claims).Audience {
-				case permissions.ContextAudience:
+				case permissions.AppAudience:
 					return instance.SessionSecret, nil
 				case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
 					return instance.OAuthSecret, nil

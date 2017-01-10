@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Applications
 
@@ -34,88 +34,18 @@ default_locale | the locale used for the name and description fields
 locales        | translations of the name and description fields in other locales
 version        | the current version number
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
-permissions    | a list of permissions needed by the app (see below for more details)
-contexts       | a list of contexts for the app (see below for more details)
+permissions    | a map of permissions needed by the app (see [here](permissions.md) for more details)
+routes         | a map of routes for the app (see below for more details)
 
-**TODO** [CSP policy](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#csp)
+### Routes
 
-### Permissions
-
-An application has a list of permissions that the users has allowed. Each
-permission has a key, a description and an optional access level. The key is
-composed of two parts: the service that will perform the operation, and a
-subtype specific for each service. The description should explain why the
-permission is explained (the system can already gives a message on the "what"
-by using the key), and can be localized in the manifest.
-
-For data, the permission key is composed of `data/` and the doctype. The
-access can be `read`, `write` or `readwrite`.
-
-For files, the permission key is composed of `files/` and a type of files. The
-access can also be `read`, `write` or `readwrite`. The type can be :
-
-**Type**    | **Description**
-------------|---------------------------------------------------------
-`app`       | the folder `Apps/:app_name` and the files inside it
-`data`      | the folder `Documents/:app_name` and the files inside it
-`downloads` | the folder `Documents/downloads` and the file inside it
-`pictures`  | the folder `Documents/pictures` and the files inside it
-`music`     | the folder `Documents/music` and the files inside it
-`videos`    | the folder `Documents/videos` and the files inside it
-
-The `file/app` permission is powerful, it gives the app the possibility to
-modify itself. It can be dangerous, but it allows to create some static files
-for when JS is not an option. For example, a blog application can generate an
-RSS feed and upload it to this folder.
-
-For jobs, the permission key is composed of `jobs/` and the worker name. Some
-workers can use the `access` to restrict the permission (e.g. `konnectors` use
-the `access` to say which konnector can be used).
-
-For settings, the permission key is composed of `settings/` and a type. The
-access can be `read`, `write` and `readwrite`. The type can be:
-
-**Type**     | **Description**
--------------|--------------------------------------------
-`locale`     | the default locale for the cozy instance
-`background` | the background for the home
-`theme`      | the CSS theme
-`owner`      | the name of the owner of this cozy instance
-`all`        | all the things list above
-
-Example:
-
-```json
-{
-  "permissions": {
-    "data/io.cozy.contacts": {
-      "description": "Required for autocompletion on @name",
-      "access": "read"
-    },
-    "files/images": {
-      "description": "Required for the background",
-      "access": "read"
-    },
-    "jobs/sendmail": {
-      "description": "Required to send a congratulations email to your friends"
-    },
-    "settings/theme": {
-      "description": "Required to use the same colors as other cozy apps",
-      "access": "read"
-    }
-  }
-}
-```
-
-### Contexts
-
-A context is a route that serves a folder. It can have an index, which is an
-HTML file, with a token injected on it that identify both the application and
-the context. This token must be used with the user cookies to use the services
-of the cozy-stack.
+A route make the mapping between the requested paths and the files. It can
+have an index, which is an HTML file, with a token injected on it that
+identify both the application. This token must be used with the user cookies
+to use the services of the cozy-stack.
 
 By default, a route can be only visited by the authenticated owner of the
-instance where the app is installed. But a context can be marked as public.
+instance where the app is installed. But a route can be marked as public.
 In that case, anybody can visit the route.
 
 For example, an application can offer an administration interface on `/admin`,
@@ -140,8 +70,8 @@ a public page on `/public`, and shared assets in `/assets`:
 }
 ```
 
-If an application has no contexts in its manifest, the stack will create one
-context, this default one:
+If an application has no routes in its manifest, the stack will create one
+route, this default one:
 
 ```json
 {
@@ -155,7 +85,7 @@ context, this default one:
 
 **TODO** later, it will be possible to associate an intent /
 [activity](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
-with a context. Probably something like:
+to a route. Probably something like:
 
 ```json
 {
@@ -218,7 +148,7 @@ Content-Type: application/vnd.api+json
         "fr": {
           "description": "Un client web pour les courriels",
           "permissions": {
-            "data/io.cozy.emails": {
+            "mails": {
               "description": "Requis pour lire et écrire des emails"
             }
           }
@@ -227,9 +157,9 @@ Content-Type: application/vnd.api+json
       "version": "1.2.3",
       "license": "AGPL-3.0",
       "permissions": {
-        "data/io.cozy.emails": {
+        "mails": {
           "description": "Required for reading and writing emails",
-          "access": "readwrite"
+          "type": "io.cozy.emails"
         }
       }
     }
@@ -496,18 +426,17 @@ way for that. Of course, it has the downside to be more complicated to deploy
 (DNS and TLS certificates). But, in the tradeoff between security and ease of
 administration, we definetively take the security first.
 
-### Contexts
+### Routes
 
-> Should we be concerned that all the contexts are on the same sub-domain?
+> Should we be concerned that all the routes are on the same sub-domain?
 
-No, it's not an issue. There are two types of contexts: the ones that are
-publics and those reserved to the authenticated user. Public contexts have a
-token can't be used for the services of the cozy-stack. So, even if another
-app can capture it, it can't be used for anything (except reading the public
-data).
+No, it's not an issue. There are two types of routes: the ones that are
+publics and those reserved to the authenticated user. Public routes have no
+token
 
-Private contexts are private, they can't be accessed. Another application
-can't use the user cookies to read the token, because of the same origin
+Private routes are private, they can be accessed only with a valid session
+cookie, ie by the owner of the instance. Another application can't use the
+user cookies to read the token, because of the restrictions of the same origin
 policy (they are on different domains). And the application can't use an open
-proxy to read the private context, because it doesn't have the user cookies
+proxy to read the private route, because it doesn't have the user cookies
 for that (the cookie is marked as `httpOnly`).

@@ -4,8 +4,8 @@ import jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
 // #nosec
 const (
-	// ContextAudience is the audience for JWT used by apps
-	ContextAudience = "context"
+	// AppAudience is the audience for JWT used by client-side apps
+	AppAudience = "app"
 
 	// RegistrationTokenAudience is the audience field of JWT for registration tokens
 	RegistrationTokenAudience = "registration"

@@ -1,4 +1,4 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
 
 # Security
 
@@ -49,8 +49,8 @@ on several informations:
 - Is the user connected?
 - What is the application that makes this request?
 - What are the permissions for this application?
-- Which context is used, in particular for applications with public pages?
-- What are the permissions for this context?
+- Which grant is used, in particular for applications with public pages?
+- What are the permissions for this grant?
 
 More informations [here](apps.md).
 

@@ -1,4 +1,6 @@
-[Table of contents](./README.md#table-of-contents)
+[Table of contents](README.md#table-of-contents)
+
+{% raw %}
 
 # Develop a client-side application
 
@@ -80,8 +82,7 @@ contacts, it sends two informations that will be used by the stack to allow or
 deny the access:
 
 - the user session cookie
-- a token that identifies the application and if it is a private or public
-  context.
+- a token that identifies the application (only when the user is connected).
 
 So, the application needs such a token. It also needs to know where to send
 the requests for the stack (it can be guessed, but with the nested vs flat
@@ -89,9 +90,9 @@ subdomains structures, it's better to get the information from the stack). To
 do that, when the application loads its HTML index file, the stack will parse
 it as a template and will insert the relevant values.
 
-- `{{.CtxToken}}` will be replaced by the token for the application and its
-  context.
+- `{{.Token}}` will be replaced by the token for the application.
 - `{{.Domain}}` will be replaced by the stack hostname.
+- `{{.Locale}}` will be replaced by the locale for the instance.
 
 So, the `index.html` should probably looks like:
 
@@ -109,7 +110,7 @@ So, the `index.html` should probably looks like:
     <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <div role="application" data-ctx-token="{{.CtxToken}}" data-cozy-stack="{{.Domain}}">
+    <div role="application" data-token="{{.Token}}" data-cozy-stack="{{.Domain}}">
     </div>
   </body>
 </html>
@@ -124,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const app = document.querySelector('[role=application]')
   cozy.init({
     cozyURL: app.dataset.cozyStack,
-    token: app.dataset.ctxToken
+    token: app.dataset.token
   })
   cozy.bar(app)
 })
@@ -132,4 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // ...
 ```
 
-For the `theme.css` stylesheet, you can read the [settings documentation](./settings.md).
+For the `theme.css` stylesheet, you can read the [settings documentation](settings.md).
+
+{% endraw %}
