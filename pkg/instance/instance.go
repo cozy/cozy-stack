@@ -60,18 +60,18 @@ type Instance struct {
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
-	PassphraseHash []byte `json:"passphraseHash,omitempty"`
+	PassphraseHash []byte `json:"passphrase_hash,omitempty"`
 
 	// Secure assets
 
 	// Register token is used on registration to prevent from stealing instances
 	// waiting for registration. The registerToken secret is only shared (in
 	// clear) with the instance's user.
-	RegisterToken []byte `json:"registerToken,omitempty"`
+	RegisterToken []byte `json:"register_token,omitempty"`
 	// SessionSecret is used to authenticate session cookies
-	SessionSecret []byte `json:"sessionSecret,omitempty"`
+	SessionSecret []byte `json:"session_secret,omitempty"`
 	// OAuthSecret is used to authenticate OAuth2 token
-	OAuthSecret []byte `json:"oauthSecret,omitempty"`
+	OAuthSecret []byte `json:"oauth_secret,omitempty"`
 
 	storage afero.Fs
 }
