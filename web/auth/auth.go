@@ -41,21 +41,31 @@ func addCodeToRedirect(redirect, domain, sessionID string) string {
 	return redirect
 }
 
-// RedirectSuccessLogin sends a redirection to the browser after a successful login
-func RedirectSuccessLogin(c echo.Context, redirect string) error {
+// SetCookieForNewSession creates a new session and sets the cookie on echo context
+func SetCookieForNewSession(c echo.Context) (string, error) {
 	instance := middlewares.GetInstance(c)
 
 	session, err := sessions.New(instance)
 	if err != nil {
-		return err
+		return "", err
 	}
 	cookie, err := session.ToCookie()
+	if err != nil {
+		return "", err
+	}
+	c.SetCookie(cookie)
+	return session.ID(), nil
+}
+
+// redirectSuccessLogin sends a redirection to the browser after a successful login
+func redirectSuccessLogin(c echo.Context, redirect string) error {
+	sessID, err := SetCookieForNewSession(c)
 	if err != nil {
 		return err
 	}
 
-	redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
-	c.SetCookie(cookie)
+	instance := middlewares.GetInstance(c)
+	redirect = addCodeToRedirect(redirect, instance.Domain, sessID)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
@@ -95,7 +105,7 @@ func login(c echo.Context) error {
 
 	passphrase := []byte(c.FormValue("passphrase"))
 	if err := instance.CheckPassphrase(passphrase); err == nil {
-		return RedirectSuccessLogin(c, redirect)
+		return redirectSuccessLogin(c, redirect)
 	}
 
 	return c.Render(http.StatusUnauthorized, "login.html", echo.Map{

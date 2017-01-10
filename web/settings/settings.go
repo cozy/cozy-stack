@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -69,7 +68,10 @@ func registerPassphrase(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	return auth.RedirectSuccessLogin(c, instance.SubDomain(apps.OnboardingSlug))
+	if _, err := auth.SetCookieForNewSession(c); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 func updatePassphrase(c echo.Context) error {
@@ -81,7 +83,10 @@ func updatePassphrase(c echo.Context) error {
 		return jsonapi.BadRequest(err)
 	}
 
-	return auth.RedirectSuccessLogin(c, instance.SubDomain(apps.HomeSlug))
+	if _, err := auth.SetCookieForNewSession(c); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 // Routes sets the routing for the settings service

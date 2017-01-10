@@ -47,14 +47,11 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://onboarding.cozysettings.example.net/",
-			res.Header.Get("Location"))
-		cookies := res.Cookies()
-		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
-		assert.NotEmpty(t, cookies[0].Value)
-	}
+	assert.Equal(t, "204 No Content", res.Status)
+	cookies := res.Cookies()
+	assert.Len(t, cookies, 1)
+	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.NotEmpty(t, cookies[0].Value)
 }
 
 func TestUpdatePassphraseWithWrongPassphrase(t *testing.T) {
@@ -74,14 +71,11 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://home.cozysettings.example.net/",
-			res.Header.Get("Location"))
-		cookies := res.Cookies()
-		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
-		assert.NotEmpty(t, cookies[0].Value)
-	}
+	assert.Equal(t, "204 No Content", res.Status)
+	cookies := res.Cookies()
+	assert.Len(t, cookies, 1)
+	assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
+	assert.NotEmpty(t, cookies[0].Value)
 }
 
 func TestMain(m *testing.M) {
