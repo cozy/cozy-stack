@@ -2,7 +2,6 @@ package auth
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -75,115 +74,6 @@ var code string
 var refreshToken string
 
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
-	content, err := getTestURL()
-	assert.NoError(t, err)
-	assert.Equal(t, "who_are_you", content)
-}
-
-func TestRegisterPassphraseWrongToken(t *testing.T) {
-	res1, err := postForm("/auth/passphrase", &url.Values{
-		"passphrase":    {"MyFirstPassphrase"},
-		"registerToken": {"BADBEEF"},
-	})
-	assert.NoError(t, err)
-	defer res1.Body.Close()
-	assert.Equal(t, "400 Bad Request", res1.Status)
-
-	res2, err := postForm("/auth/passphrase", &url.Values{
-		"passphrase":    {"MyFirstPassphrase"},
-		"registerToken": {"XYZ"},
-	})
-	assert.NoError(t, err)
-	defer res2.Body.Close()
-	assert.Equal(t, "400 Bad Request", res2.Status)
-}
-
-func TestRegisterPassphraseCorrectToken(t *testing.T) {
-	res, err := postForm("/auth/passphrase", &url.Values{
-		"passphrase":    {"MyFirstPassphrase"},
-		"registerToken": {hex.EncodeToString(testInstance.RegisterToken)},
-	})
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://onboarding.cozy.example.net/",
-			res.Header.Get("Location"))
-		cookies := res.Cookies()
-		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
-		assert.NotEmpty(t, cookies[0].Value)
-	}
-}
-
-func TestUpdatePassphraseWithWrongPassphrase(t *testing.T) {
-	res, err := putForm("/auth/passphrase", &url.Values{
-		"new-passphrase":     {"MyPassphrase"},
-		"current-passphrase": {"BADBEEF"},
-	})
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	assert.Equal(t, "400 Bad Request", res.Status)
-}
-
-func TestUpdatePassphraseSuccess(t *testing.T) {
-	res, err := putForm("/auth/passphrase", &url.Values{
-		"new-passphrase":     {"MyPassphrase"},
-		"current-passphrase": {"MyFirstPassphrase"},
-	})
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://home.cozy.example.net/",
-			res.Header.Get("Location"))
-		cookies := res.Cookies()
-		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
-		assert.NotEmpty(t, cookies[0].Value)
-
-		// Reload the testInstance to get the new secrets
-		err = couchdb.GetDoc(couchdb.GlobalDB, testInstance.DocType(), testInstance.ID(), testInstance)
-		assert.NoError(t, err)
-	}
-}
-
-func TestIsLoggedInAfterRegister(t *testing.T) {
-	content, err := getTestURL()
-	assert.NoError(t, err)
-	assert.Equal(t, "logged_in", content)
-}
-
-func TestLogoutNoToken(t *testing.T) {
-	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
-	req.Host = domain
-	res, err := client.Do(req)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://home.cozy.example.net/",
-			res.Header.Get("Location"))
-		cookies := jar.Cookies(instanceURL)
-		assert.Len(t, cookies, 1)
-	}
-}
-
-func TestLogoutSuccess(t *testing.T) {
-	a := app.Manifest{Slug: "home"}
-	token := a.BuildToken(testInstance)
-	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
-	req.Host = domain
-	req.Header.Add("Authorization", "Bearer "+token)
-	res, err := client.Do(req)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://cozy.example.net/auth/login",
-			res.Header.Get("Location"))
-		cookies := jar.Cookies(instanceURL)
-		assert.Len(t, cookies, 0)
-	}
-}
-
-func TestIsLoggedOutAfterLogout(t *testing.T) {
 	content, err := getTestURL()
 	assert.NoError(t, err)
 	assert.Equal(t, "who_are_you", content)
@@ -1100,6 +990,44 @@ func TestRefreshTokenSuccess(t *testing.T) {
 	assertValidToken(t, response["access_token"], "access")
 }
 
+func TestLogoutNoToken(t *testing.T) {
+	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://home.cozy.example.net/",
+			res.Header.Get("Location"))
+		cookies := jar.Cookies(instanceURL)
+		assert.Len(t, cookies, 2) // cozysessid and _csrf
+	}
+}
+
+func TestLogoutSuccess(t *testing.T) {
+	a := app.Manifest{Slug: "home"}
+	token := a.BuildToken(testInstance)
+	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
+	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://cozy.example.net/auth/login",
+			res.Header.Get("Location"))
+		cookies := jar.Cookies(instanceURL)
+		assert.Len(t, cookies, 1) // _csrf
+		assert.Equal(t, "_csrf", cookies[0].Name)
+	}
+}
+
+func TestIsLoggedOutAfterLogout(t *testing.T) {
+	content, err := getTestURL()
+	assert.NoError(t, err)
+	assert.Equal(t, "who_are_you", content)
+}
+
 func TestMain(m *testing.M) {
 	instanceURL, _ = url.Parse("https://" + domain + "/")
 	j, _ := cookiejar.New(nil)
@@ -1116,6 +1044,7 @@ func TestMain(m *testing.M) {
 		Domain: domain,
 		Locale: "en",
 	})
+	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,
