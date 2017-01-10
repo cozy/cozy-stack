@@ -5,11 +5,14 @@ package settings
 
 import (
 	"bytes"
+	"encoding/hex"
 	"html/template"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/settings"
+	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
@@ -52,7 +55,60 @@ func ThemeCSS(c echo.Context) error {
 	return c.Blob(http.StatusOK, "text/css", buffer.Bytes())
 }
 
+func registerPassphrase(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	args := &struct {
+		Register   string `json:"register_token"`
+		Passphrase string `json:"passphrase"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	registerToken, err := hex.DecodeString(args.Register)
+	if err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
+	}
+
+	passphrase := []byte(args.Passphrase)
+	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	if _, err := auth.SetCookieForNewSession(c); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func updatePassphrase(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	args := &struct {
+		Current    string `json:"current_passphrase"`
+		Passphrase string `json:"new_passphrase"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	newPassphrase := []byte(args.Passphrase)
+	currentPassphrase := []byte(args.Current)
+	if err := instance.UpdatePassphrase(newPassphrase, currentPassphrase); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+
+	if _, err := auth.SetCookieForNewSession(c); err != nil {
+		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 // Routes sets the routing for the settings service
 func Routes(router *echo.Group) {
 	router.GET("/theme.css", ThemeCSS)
+
+	router.POST("/passphrase", registerPassphrase)
+	router.PUT("/passphrase", updatePassphrase)
 }

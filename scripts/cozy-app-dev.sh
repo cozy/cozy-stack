@@ -185,8 +185,9 @@ do_create_instance() {
 
 	if [ -n "${COZY_STACK_PASS}" ] && [ -n "${reg_token}" ]; then
 		printf "registering using passphrase ${COZY_STACK_PASS}... "
-		curl --fail -X POST -H 'Accept: application/json' \
-			"http://${cozy_dev_addr}/auth/passphrase?registerToken=${reg_token}&passphrase=${COZY_STACK_PASS}"
+		curl --fail -X POST -H 'Content-Type: application/json' \
+			"http://${cozy_dev_addr}/settings/passphrase" \
+			-d "{\"register_token\":\"${reg_token}\",\"passphrase\":\"${COZY_STACK_PASS}\"}"
 		echo "ok"
 	fi
 }

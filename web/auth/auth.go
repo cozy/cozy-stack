@@ -3,7 +3,6 @@ package auth
 
 import (
 	"crypto/subtle"
-	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -43,49 +41,32 @@ func addCodeToRedirect(redirect, domain, sessionID string) string {
 	return redirect
 }
 
-func redirectSuccessLogin(c echo.Context, redirect string) error {
+// SetCookieForNewSession creates a new session and sets the cookie on echo context
+func SetCookieForNewSession(c echo.Context) (string, error) {
 	instance := middlewares.GetInstance(c)
 
 	session, err := sessions.New(instance)
 	if err != nil {
-		return err
+		return "", err
 	}
 	cookie, err := session.ToCookie()
 	if err != nil {
+		return "", err
+	}
+	c.SetCookie(cookie)
+	return session.ID(), nil
+}
+
+// redirectSuccessLogin sends a redirection to the browser after a successful login
+func redirectSuccessLogin(c echo.Context, redirect string) error {
+	sessID, err := SetCookieForNewSession(c)
+	if err != nil {
 		return err
 	}
 
-	redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
-	c.SetCookie(cookie)
+	instance := middlewares.GetInstance(c)
+	redirect = addCodeToRedirect(redirect, instance.Domain, sessID)
 	return c.Redirect(http.StatusSeeOther, redirect)
-}
-
-func registerPassphrase(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	registerToken, err := hex.DecodeString(c.FormValue("registerToken"))
-	if err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
-	}
-
-	passphrase := []byte(c.FormValue("passphrase"))
-	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
-		return jsonapi.BadRequest(err)
-	}
-
-	return redirectSuccessLogin(c, instance.SubDomain(apps.OnboardingSlug))
-}
-
-func updatePassphrase(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	newPassphrase := []byte(c.FormValue("new-passphrase"))
-	currentPassphrase := []byte(c.FormValue("current-passphrase"))
-	if err := instance.UpdatePassphrase(newPassphrase, currentPassphrase); err != nil {
-		return jsonapi.BadRequest(err)
-	}
-
-	return redirectSuccessLogin(c, instance.SubDomain(apps.HomeSlug))
 }
 
 func loginForm(c echo.Context) error {
@@ -484,9 +465,6 @@ func Routes(router *echo.Group) {
 		CookieHTTPOnly: true,
 		CookieSecure:   !config.IsDevRelease(),
 	})
-
-	router.POST("/passphrase", registerPassphrase)
-	router.PUT("/passphrase", updatePassphrase)
 
 	router.GET("/login", loginForm)
 	router.POST("/login", login)

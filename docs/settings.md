@@ -44,3 +44,59 @@ Danger               | `--base08-color`
 
 If you want to know more about CSS variables, I recommend to view this video:
 [Lea Verou - CSS Variables: var(--subtitle);](https://www.youtube.com/watch?v=2an6-WVPuJU&app=desktop)
+
+## Passphrase
+
+### POST /settings/passphrase
+
+The onboarding application can send a request to this endpoint to register the
+passphrase of the user. The registration token can only be used once.
+
+#### Request
+
+```http
+POST /settings/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+```
+
+```json
+{
+  "register_token": "37cddf40d7724988860fa0e03efd30fe",
+  "passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
+
+### PUT /settings/passphrase
+
+The user can change its passphrase with this route
+
+#### Request
+
+```http
+PUT /settings/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
+```
+
+```
+{
+  "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice",
+  "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
