@@ -41,54 +41,9 @@ When an user attempts to access the root of its instance (`https://example.cozyc
 
 After login, the user is always redirected to the `onboarding` application. It is the `onboarding` application responsibility to check if registering is complete and reredirect to home.
 
-
 ## Routes
 
-### POST /auth/passphrase
-
-The onboarding application can send a request to this endpoint to register the
-passphrase of the user. The `registrationToken` can only be used once.
-
-#### Request
-
-```http
-POST /auth/passphrase HTTP/1.1
-Host: alice.example.com
-Content-Type: application/x-www-form-urlencoded
-
-registerToken=37cddf40d7724988860fa0e03efd30fe&passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo
-```
-
-#### Response
-
-```http
-HTTP/1.1 303 See Other
-Location: https://onboarding.alice.example.com/
-Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
-```
-
-### PUT /auth/passphrase
-
-The user can change its passphrase with this route
-
-#### Request
-
-```http
-PUT /auth/passphrase HTTP/1.1
-Host: alice.example.com
-Content-Type: application/x-www-form-urlencoded
-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
-
-current-passphrase=oGh2aek2Thoh8daeeoXohk9uOhz4aeSo&new-passphrase=Ee0vohChUQuohch5urahN9yuLeexex5a
-```
-
-#### Response
-
-```http
-HTTP/1.1 303 See Other
-Location: https://home.alice.example.com/
-Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
-```
+See [settings](settings.md) for setting a passphrase.
 
 ### GET /instance
 
