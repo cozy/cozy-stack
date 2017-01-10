@@ -67,10 +67,6 @@ func AbsPath(inPath string) string {
 		inPath = os.Getenv(inPath[1:end]) + inPath[end:]
 	}
 
-	if filepath.IsAbs(inPath) {
-		return filepath.Clean(inPath)
-	}
-
 	p, err := filepath.Abs(inPath)
 	if err == nil {
 		return filepath.Clean(p)
