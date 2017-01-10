@@ -232,7 +232,10 @@ func GetDoc(db Database, doctype, id string, out Doc) error {
 		return err
 	}
 	err = makeRequest("GET", docURL(db, doctype, id), nil, out)
-	return fixErrorNoDatabaseIsWrongDoctype(err)
+	if err != nil {
+		return fixErrorNoDatabaseIsWrongDoctype(err)
+	}
+	return nil
 }
 
 // CreateDB creates the necessary database for a doctype
