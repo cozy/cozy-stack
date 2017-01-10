@@ -58,12 +58,20 @@ func ThemeCSS(c echo.Context) error {
 func registerPassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	registerToken, err := hex.DecodeString(c.FormValue("registerToken"))
+	args := &struct {
+		Register   string `json:"register_token"`
+		Passphrase string `json:"passphrase"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	registerToken, err := hex.DecodeString(args.Register)
 	if err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	passphrase := []byte(c.FormValue("passphrase"))
+	passphrase := []byte(args.Passphrase)
 	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
 		return jsonapi.BadRequest(err)
 	}
@@ -77,8 +85,16 @@ func registerPassphrase(c echo.Context) error {
 func updatePassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	newPassphrase := []byte(c.FormValue("new-passphrase"))
-	currentPassphrase := []byte(c.FormValue("current-passphrase"))
+	args := &struct {
+		Current    string `json:"current_passphrase"`
+		Passphrase string `json:"new_passphrase"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	newPassphrase := []byte(args.Passphrase)
+	currentPassphrase := []byte(args.Current)
 	if err := instance.UpdatePassphrase(newPassphrase, currentPassphrase); err != nil {
 		return jsonapi.BadRequest(err)
 	}

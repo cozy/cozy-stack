@@ -3,9 +3,9 @@ package settings
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"testing"
 
@@ -23,28 +23,31 @@ var ts *httptest.Server
 var testInstance *instance.Instance
 
 func TestRegisterPassphraseWrongToken(t *testing.T) {
-	res1, err := postForm("/settings/passphrase", &url.Values{
-		"passphrase":    {"MyFirstPassphrase"},
-		"registerToken": {"BADBEEF"},
+	args, _ := json.Marshal(&echo.Map{
+		"passphrase":     "MyFirstPassphrase",
+		"register_token": "BADBEEF",
 	})
+	res1, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
 	assert.NoError(t, err)
 	defer res1.Body.Close()
 	assert.Equal(t, "400 Bad Request", res1.Status)
 
-	res2, err := postForm("/settings/passphrase", &url.Values{
-		"passphrase":    {"MyFirstPassphrase"},
-		"registerToken": {"XYZ"},
+	args, _ = json.Marshal(&echo.Map{
+		"passphrase":     "MyFirstPassphrase",
+		"register_token": "XYZ",
 	})
+	res2, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
 	assert.NoError(t, err)
 	defer res2.Body.Close()
 	assert.Equal(t, "400 Bad Request", res2.Status)
 }
 
 func TestRegisterPassphraseCorrectToken(t *testing.T) {
-	res, err := postForm("/settings/passphrase", &url.Values{
-		"passphrase":    {"MyFirstPassphrase"},
-		"registerToken": {hex.EncodeToString(testInstance.RegisterToken)},
+	args, _ := json.Marshal(&echo.Map{
+		"passphrase":     "MyFirstPassphrase",
+		"register_token": hex.EncodeToString(testInstance.RegisterToken),
 	})
+	res, err := http.Post(ts.URL+"/settings/passphrase", "application/json", bytes.NewReader(args))
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "204 No Content", res.Status)
@@ -55,20 +58,26 @@ func TestRegisterPassphraseCorrectToken(t *testing.T) {
 }
 
 func TestUpdatePassphraseWithWrongPassphrase(t *testing.T) {
-	res, err := putForm("/settings/passphrase", &url.Values{
-		"new-passphrase":     {"MyPassphrase"},
-		"current-passphrase": {"BADBEEF"},
+	args, _ := json.Marshal(&echo.Map{
+		"new_passphrase":     "MyPassphrase",
+		"current_passphrase": "BADBEEF",
 	})
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/passphrase", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 }
 
 func TestUpdatePassphraseSuccess(t *testing.T) {
-	res, err := putForm("/settings/passphrase", &url.Values{
-		"new-passphrase":     {"MyPassphrase"},
-		"current-passphrase": {"MyFirstPassphrase"},
+	args, _ := json.Marshal(&echo.Map{
+		"new_passphrase":     "MyPassphrase",
+		"current_passphrase": "MyFirstPassphrase",
 	})
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/passphrase", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "204 No Content", res.Status)
@@ -104,24 +113,4 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
-}
-
-func noRedirect(*http.Request, []*http.Request) error {
-	return http.ErrUseLastResponse
-}
-
-func postForm(u string, v *url.Values) (*http.Response, error) {
-	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
-	req.Host = domain
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	client := &http.Client{CheckRedirect: noRedirect}
-	return client.Do(req)
-}
-
-func putForm(u string, v *url.Values) (*http.Response, error) {
-	req, _ := http.NewRequest("PUT", ts.URL+u, bytes.NewBufferString(v.Encode()))
-	req.Host = domain
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	client := &http.Client{CheckRedirect: noRedirect}
-	return client.Do(req)
 }
