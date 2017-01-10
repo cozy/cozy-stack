@@ -32,7 +32,6 @@ type transport struct{}
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req2 := new(http.Request)
 	*req2 = *req
-	fmt.Println(req.URL.String())
 	req2.URL, _ = url.Parse(ts.URL)
 	return http.DefaultTransport.RoundTrip(req2)
 }
@@ -337,7 +336,7 @@ func TestMain(m *testing.M) {
 		io.WriteString(w, manifest())
 	}))
 
-	http.DefaultClient = &http.Client{
+	manifestClient = &http.Client{
 		Transport: &transport{},
 	}
 

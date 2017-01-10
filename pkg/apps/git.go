@@ -32,6 +32,10 @@ func newGitFetcher(ctx vfs.Context) *gitFetcher {
 	return &gitFetcher{ctx: ctx}
 }
 
+var manifestClient = &http.Client{
+	Timeout: 60 * time.Second,
+}
+
 func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	var err error
 
@@ -45,7 +49,7 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	res, err := http.Get(u)
+	res, err := manifestClient.Get(u)
 	if err != nil || res.StatusCode != 200 {
 		return nil, ErrManifestNotReachable
 	}
