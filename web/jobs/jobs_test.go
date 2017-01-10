@@ -45,6 +45,11 @@ func TestCreateJobNotExist(t *testing.T) {
 	assert.Equal(t, 404, res.StatusCode)
 }
 
+type event struct {
+	name string
+	data []byte
+}
+
 func TestCreateJobWithEventStream(t *testing.T) {
 	body, _ := json.Marshal(&jobRequest{Arguments: "foobar"})
 	req, err := http.NewRequest("POST", ts.URL+"/jobs/queue/print", bytes.NewReader(body))
@@ -64,37 +69,59 @@ func TestCreateJobWithEventStream(t *testing.T) {
 		"running",
 		"done",
 	}
+	evch := make(chan *event, 1)
+
+	go func() {
+		err := parseEventStream(r, evch)
+		assert.NoError(t, err)
+	}()
+
 	var i int
+	for ev := range evch {
+		var data *jobs.JobInfos
+		assert.Equal(t, events[i], ev.name)
+		if assert.NotNil(t, ev.data) {
+			assert.NoError(t, json.Unmarshal(ev.data, &data))
+		}
+		fmt.Println(ev.name, data)
+		i++
+	}
+	assert.Equal(t, i, len(events))
+}
+
+func parseEventStream(r *bufio.Reader, evch chan *event) error {
+	defer close(evch)
+	var ev *event
 	for {
 		bs, err := r.ReadBytes('\n')
 		if err == io.EOF {
-			break
+			return nil
 		}
-		if !assert.NoError(t, err) {
+		if err != nil {
+			return err
 		}
 		if bytes.Equal(bs, []byte("\r\n")) {
+			ev = nil
 			continue
 		}
 		spl := bytes.Split(bs, []byte(": "))
-		if !assert.Len(t, spl, 2) {
-			return
+		if len(spl) != 2 {
+			return fmt.Errorf("should be length 2")
 		}
 		k, v := string(spl[0]), bytes.TrimSpace(spl[1])
 		switch k {
 		case "event":
-			assert.Equal(t, events[i], string(v))
-			i++
+			ev = &event{name: string(v)}
 		case "data":
-			var data *jobs.JobInfos
-			assert.NoError(t, json.Unmarshal(v, &data))
+			if ev == nil {
+				return fmt.Errorf("could not parse event stream")
+			}
+			ev.data = v
+			evch <- ev
 		default:
-			assert.Fail(t, "should not be here")
-		}
-		if i == len(events) {
-			break
+			return fmt.Errorf("should not be here")
 		}
 	}
-	assert.Equal(t, i, len(events))
 }
 
 func TestMain(m *testing.M) {
