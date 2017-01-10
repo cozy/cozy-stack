@@ -123,7 +123,7 @@ And `my-app.js`:
 document.addEventListener('DOMContentLoaded', () => {
   const app = document.querySelector('[role=application]')
   cozy.init({
-    url: app.dataset.cozyStack,
+    cozyURL: app.dataset.cozyStack,
     token: app.dataset.ctxToken
   })
   cozy.bar(app)
