@@ -24,6 +24,7 @@ usage() {
 	echo -e "\nCommands:\n"
 	echo -e "  release  builds a release of the current working-tree"
 	echo -e "  deploy   builds a release of the current working-tree and deploys it"
+	echo -e "  assets   move and download all the required assets (see: ./assets/externals)"
 	echo -e "  clean    remove all generated files from the working-tree"
 
 	echo -e "\nEnvironment variables:"
@@ -144,15 +145,22 @@ do_deploy() {
 }
 
 do_assets() {
+	clean_assets
 	prepare_assets
+	printf "executing go generate... "
 	go generate ./web/routing
+	echo "ok"
+	clean_assets
+}
+
+clean_assets() {
+	rm -rf "${WORK_DIR}/.assets"
 }
 
 prepare_assets() {
 	assets_dst="${WORK_DIR}/.assets"
 	assets_src="${WORK_DIR}/assets"
 
-	rm -rf "${assets_dst}"
 	mkdir "${assets_dst}"
 
 	asset_name=""
@@ -225,6 +233,7 @@ download_asset() {
 
 do_clean() {
 	find "${WORK_DIR}" -name "cozy-stack-*" -print -delete
+	clean_assets
 }
 
 check_env() {
