@@ -15,10 +15,6 @@ var (
 	defaultMaxExecTime  = 60 * time.Second
 	defaultRetryDelay   = 60 * time.Millisecond
 	defaultTimeout      = 10 * time.Second
-
-	maxMaxExecCount = 5
-	maxMaxExecTime  = 5 * time.Minute
-	maxTimeout      = 1 * time.Minute
 )
 
 type (
@@ -86,37 +82,32 @@ func (w *Worker) work(workerID string) {
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 	c := &(*w.Conf)
-	if opts != nil {
-		if opts.MaxExecCount != 0 {
-			c.MaxExecCount = opts.MaxExecCount
-		}
-		if opts.MaxExecTime > 0 {
-			c.MaxExecTime = opts.MaxExecTime
-		}
-		if opts.Timeout > 0 {
-			c.Timeout = opts.Timeout
-		}
-	}
 	if c.Concurrency == 0 {
 		c.Concurrency = uint(defaultConcurrency)
 	}
 	if c.MaxExecCount == 0 {
 		c.MaxExecCount = uint(defaultMaxExecCount)
-	} else if c.MaxExecCount > uint(maxMaxExecCount) {
-		c.MaxExecCount = uint(maxMaxExecCount)
 	}
 	if c.MaxExecTime == 0 {
 		c.MaxExecTime = defaultMaxExecTime
-	} else if c.MaxExecTime > maxMaxExecTime {
-		c.MaxExecTime = maxMaxExecTime
 	}
 	if c.RetryDelay == 0 {
 		c.RetryDelay = defaultRetryDelay
 	}
 	if c.Timeout == 0 {
 		c.Timeout = defaultTimeout
-	} else if c.Timeout > maxTimeout {
-		c.Timeout = maxTimeout
+	}
+	if opts == nil {
+		return c
+	}
+	if opts.MaxExecCount != 0 && opts.MaxExecCount < c.MaxExecCount {
+		c.MaxExecCount = opts.MaxExecCount
+	}
+	if opts.MaxExecTime > 0 && opts.MaxExecTime < c.MaxExecTime {
+		c.MaxExecTime = opts.MaxExecTime
+	}
+	if opts.Timeout > 0 && opts.Timeout < c.Timeout {
+		c.Timeout = opts.Timeout
 	}
 	return c
 }
