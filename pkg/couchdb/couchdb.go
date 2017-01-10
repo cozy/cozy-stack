@@ -9,6 +9,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -122,7 +123,9 @@ func (j JSONDoc) Get(key string) interface{} {
 	return j.M[key]
 }
 
-var couchdbClient = &http.Client{}
+var couchdbClient = &http.Client{
+	Timeout: 5 * time.Second,
+}
 
 func escapeCouchdbName(name string) string {
 	name = strings.Replace(name, ".", "-", -1)
