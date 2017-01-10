@@ -42,7 +42,7 @@ users. It can be done in two ways:
 A permission gives the right for a request having it to do something on the
 stack. It is defined by four components.
 
-### `type`
+### Type
 
 `type` is the attribute used in JSON-API or the `docType` for the Data System.
 
@@ -60,7 +60,7 @@ Some known types:
 - `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
 - `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
 
-### `verbs`
+### Verbs
 
 It says which HTTP verbs can be used for requests to the cozy-stack. `GET`
 will gives read-only access, `DELETE` can be used for deletions, etc. You can
@@ -71,7 +71,7 @@ a shortcut for `GET,POST,PUT,PATCH,DELETE` (it is the default).
 Cross-Origin Resources Sharing is always allowed, the stack does not have the
 informations about the permission when it answers the request.
 
-### `values`
+### Values
 
 It's possible to restrict the permissions to only some documents of a docType,
 or to just some files and folders. You can give a list of ids in `values`.
@@ -79,7 +79,7 @@ or to just some files and folders. You can give a list of ids in `values`.
 **Note**: a permission for a folder also gives permissions with same verbs for
 files and folders inside it.
 
-### `selector`
+### Selector
 
 By default, the `values` are checked with the `id`. But it's possible to use a
 `selector` to filter on another `field`. In particular, it can be used for
@@ -362,7 +362,7 @@ Accept: application/vnd.api+json
     "attributes": {
       "codes": {
         "Yohyoo8BHahh1lie": "jane"
-      },
+      }
     }
   }
 }
@@ -383,7 +383,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
       "codes": {
-        "yuot7NaiaeGugh8T": "bob",
+        "yuot7NaiaeGugh8T": "bob"
       },
       "expires_at": 1483951978,
       "permissions": {
