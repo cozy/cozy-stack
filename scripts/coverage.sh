@@ -3,7 +3,7 @@
 set -e
 echo "" > coverage.txt
 
-for d in $(go list ./... | grep -v vendor); do
+for d in $(go list ./pkg/... ./web/...); do
 	go test -coverprofile=profile.out -covermode=count -coverpkg=./... $d
 	if [ -f profile.out ]; then
 		cat profile.out >> coverage.txt
