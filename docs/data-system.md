@@ -215,7 +215,7 @@ Accept: application/json
 
 ### Response OK
 ```http
-200 OK
+HTTP/1.1 200 OK
 Content-Length: ...
 Content-Type: application/json
 ```
@@ -265,7 +265,7 @@ Accept: application/json
 
 ### Response OK
 ```http
-200 OK
+HTTP/1.1 200 OK
 Content-Length: ...
 Content-Type: application/json
 ```
