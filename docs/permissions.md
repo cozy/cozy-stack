@@ -132,7 +132,7 @@ Example:
     "images": {
       "description": "Required for the background",
       "type": "io.cozy.files",
-      "access": "GET",
+      "verbs": "GET",
       "values": ["io.cozy.files.music-dir"]
     },
     "mail": {
@@ -204,7 +204,7 @@ Content-Type: application/vnd.api+json
         "images": {
           "description": "Required for the background",
           "type": "io.cozy.files",
-          "access": "GET",
+          "verbs": "GET",
           "values": ["io.cozy.files.music-dir"]
         },
         "mail": {
@@ -250,7 +250,7 @@ Accept: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "access": "GET",
+          "verbs": "GET",
           "values": ["io.cozy.files.music-dir"]
         }
       }
@@ -281,7 +281,7 @@ Content-Type: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "access": "GET",
+          "verbs": "GET",
           "values": ["io.cozy.files.music-dir"]
         }
       }
@@ -325,7 +325,7 @@ Content-Type: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "access": "GET",
+          "verbs": "GET",
           "values": ["io.cozy.files.music-dir"]
         }
       }
@@ -389,7 +389,7 @@ Content-Type: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "access": "GET",
+          "verbs": "GET",
           "values": ["io.cozy.files.music-dir"]
         }
       }
