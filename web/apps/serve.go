@@ -96,7 +96,8 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 		return vfs.ServeFileContent(i, doc, "", c.Request(), res)
 	}
 
-	// For index file, we inject the locale, the stack domain, and a token if the user is connected
+	// For index file, we inject the locale, the stack domain, and a token if the
+	// user is connected
 	name, err := doc.Path(i)
 	if err != nil {
 		return err
