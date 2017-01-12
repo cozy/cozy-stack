@@ -63,9 +63,10 @@ Some known types:
 ### Verbs
 
 It says which HTTP verbs can be used for requests to the cozy-stack. `GET`
-will gives read-only access, `DELETE` can be used for deletions, etc. You can
-put several verbs separed by commas, like `GET,POST,DELETE`, and use `ALL` as
-a shortcut for `GET,POST,PUT,PATCH,DELETE` (it is the default).
+will give read-only access, `DELETE` can be used for deletions, etc. Verbs
+should be declared in a list, like `["GET", "POST", "DELETE"]`, and use
+`["ALL"]` as a shortcut for `["GET", "POST", "PUT", "PATCH", "DELETE"]` (it is
+the default).
 
 **Note**: `HEAD` is implicitely implied when `GET` is allowed. `OPTIONS` for
 Cross-Origin Resources Sharing is always allowed, the stack does not have the
@@ -89,7 +90,7 @@ done with two permissions. The first one is for the calendar:
 ```json
 {
   "type": "io.cozy.calendars",
-  "verbs": "GET",
+  "verbs": ["GET"],
   "values": ["1355812c-d41e-11e6-8467-53be4648e3ad"]
 }
 ```
@@ -99,7 +100,7 @@ And the other is for the events inside the calendar:
 ```json
 {
   "type": "io.cozy.events",
-  "verbs": "GET",
+  "verbs": ["GET"],
   "selector": "calendar-id",
   "values": ["1355812c-d41e-11e6-8467-53be4648e3ad"]
 }
@@ -127,12 +128,12 @@ Example:
     "contacts": {
       "description": "Required for autocompletion on @name",
       "type": "io.cozy.contacts",
-      "verbs": "GET"
+      "verbs": ["GET"]
     },
     "images": {
       "description": "Required for the background",
       "type": "io.cozy.files",
-      "verbs": "GET",
+      "verbs": ["GET","POST"],
       "values": ["io.cozy.files.music-dir"]
     },
     "mail": {
@@ -199,12 +200,12 @@ Content-Type: application/vnd.api+json
         "contacts": {
           "description": "Required for autocompletion on @name",
           "type": "io.cozy.contacts",
-          "verbs": "GET"
+          "verbs": ["GET"]
         },
         "images": {
           "description": "Required for the background",
           "type": "io.cozy.files",
-          "verbs": "GET",
+          "verbs": ["GET"],
           "values": ["io.cozy.files.music-dir"]
         },
         "mail": {
@@ -250,7 +251,7 @@ Accept: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "verbs": "GET",
+          "verbs": ["GET"],
           "values": ["io.cozy.files.music-dir"]
         }
       }
@@ -281,7 +282,7 @@ Content-Type: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "verbs": "GET",
+          "verbs": ["GET"],
           "values": ["io.cozy.files.music-dir"]
         }
       }
@@ -325,7 +326,7 @@ Content-Type: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "verbs": "GET",
+          "verbs": ["GET"],
           "values": ["io.cozy.files.music-dir"]
         }
       }
@@ -389,7 +390,7 @@ Content-Type: application/vnd.api+json
       "permissions": {
         "images": {
           "type": "io.cozy.files",
-          "verbs": "GET",
+          "verbs": ["GET"],
           "values": ["io.cozy.files.music-dir"]
         }
       }
