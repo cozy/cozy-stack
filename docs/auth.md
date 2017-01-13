@@ -94,7 +94,7 @@ overriden:
 ```http
 GET /auth/login?redirect=https://contacts.cozy.example.org/foo?bar#baz HTTP/1.1
 Host: cozy.example.org
-Cookies: ...
+Cookie: ...
 ```
 
 **Note**: the redirect parameter should be URL-encoded. We haven't done that
@@ -143,6 +143,7 @@ of bigger attacks like session fixation).
 ```http
 DELETE /auth/login HTTP/1.1
 Host: cozy.example.org
+Cookie: seesioncookie....
 Authorization: Bearer app-token
 ```
 
