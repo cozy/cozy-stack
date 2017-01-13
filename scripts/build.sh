@@ -148,6 +148,7 @@ do_assets() {
 	clean_assets
 	prepare_assets
 	printf "executing go generate... "
+	go get -u github.com/rakyll/statik
 	go generate ./web/routing
 	echo "ok"
 	clean_assets
