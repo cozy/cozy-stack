@@ -221,7 +221,7 @@ download_asset() {
 	echo "ok"
 	if [ -n "${3}" ]; then
 		printf "\tchecking sha256... "
-		dgst=`cat "${assets_dst}/${1}" | openssl dgst -sha256`
+		dgst=`cat "${assets_dst}/${1}" | openssl dgst -sha256 | sed 's/^.* //'`
 		if [ "${3}" != "${dgst}" ]; then
 			echo "failed"
 			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}"
