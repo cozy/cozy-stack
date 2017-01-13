@@ -124,7 +124,7 @@ do_start() {
 
 
 	echo ""
-	do_create_instance
+	do_create_instances
 	echo ""
 	echo "Everything is setup. Go to http://app.${cozy_dev_addr}/"
 	echo "To exit, press ^C"
@@ -160,43 +160,46 @@ do_check_couchdb() {
 	done
 }
 
-do_create_instance() {
-	printf "creating instance ${cozy_dev_addr}... "
-	set +e
-	add_instance_val=$(
-		${COZY_STACK_PATH} instances add --dev="true" "${cozy_dev_addr}" \
-			--couchdb-host "${COUCHDB_HOST}" \
-			--couchdb-port "${COUCHDB_PORT}" \
-			--fs-url "file://localhost${vfsdir}" 2>&1
-	)
-	add_instance_ret="${?}"
-	set -e
-	if [ "${add_instance_ret}" = "0" ]; then
-		echo "ok"
-		reg_token=$(grep 'token' <<< "${add_instance_val}" | sed 's/.*token: \\"\([A-Fa-f0-9]*\)\\".*/\1/g')
-	else
-		exists_test=$(grep -i "already exists" <<< "${add_instance_val}" || echo "")
-		if [ -z "${exists_test}" ]; then
-			echo_err "\n${add_instance_val} ${add_instance_ret}"
-			exit 1
+do_create_instances() {
+	for host in "localhost:${COZY_PROXY_PORT}" "${cozy_dev_addr}"
+	do
+		printf "creating instance ${host}... "
+		set +e
+		add_instance_val=$(
+			${COZY_STACK_PATH} instances add --dev="true" "${host}" \
+				--couchdb-host "${COUCHDB_HOST}" \
+				--couchdb-port "${COUCHDB_PORT}" \
+				--fs-url "file://localhost${vfsdir}" 2>&1
+		)
+		add_instance_ret="${?}"
+		set -e
+		if [ "${add_instance_ret}" = "0" ]; then
+			echo "ok"
+			reg_token=$(grep 'token' <<< "${add_instance_val}" | sed 's/.*token: \\"\([A-Fa-f0-9]*\)\\".*/\1/g')
+		else
+			exists_test=$(grep -i "already exists" <<< "${add_instance_val}" || echo "")
+			if [ -z "${exists_test}" ]; then
+				echo_err "\n${add_instance_val} ${add_instance_ret}"
+				exit 1
+			fi
+			echo "ok (already created)"
 		fi
-		echo "ok (already created)"
-	fi
 
-	if [ -n "${COZY_STACK_PASS}" ] && [ -n "${reg_token}" ]; then
-		printf "registering using passphrase ${COZY_STACK_PASS}... "
-		curl --fail -X POST -H 'Content-Type: application/json' \
-			"http://${cozy_dev_addr}/settings/passphrase" \
-			-d "{\"register_token\":\"${reg_token}\",\"passphrase\":\"${COZY_STACK_PASS}\"}"
-		echo "ok"
-	fi
+		if [ -n "${COZY_STACK_PASS}" ] && [ -n "${reg_token}" ]; then
+			printf "registering using passphrase ${COZY_STACK_PASS}... "
+			curl --fail -X POST -H 'Content-Type: application/json' \
+				"http://${host}/settings/passphrase" \
+				-d "{\"register_token\":\"${reg_token}\",\"passphrase\":\"${COZY_STACK_PASS}\"}"
+			echo "ok"
+		fi
+	done
 }
 
 do_start_proxy() {
 	site_root=$(real_path ${appdir})
 
 	caddy_file="\n\
-${COZY_PROXY_HOST} {                              \n\
+localhost, ${COZY_PROXY_HOST} {                   \n\
   proxy / ${COZY_STACK_HOST}:${COZY_STACK_PORT} { \n\
     transparent                                   \n\
   }                                               \n\
