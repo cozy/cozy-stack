@@ -63,6 +63,20 @@ func TestFindRoute(t *testing.T) {
 	assert.Equal(t, "", ctx.Folder)
 }
 
+func TestNoRegression217(t *testing.T) {
+	var man Manifest
+	man.Routes = make(Routes)
+	man.Routes["/"] = Route{
+		Folder: "/",
+		Index:  "index.html",
+		Public: false,
+	}
+
+	ctx, rest := man.FindRoute("/any/path")
+	assert.Equal(t, "/", ctx.Folder)
+	assert.Equal(t, "any/path", rest)
+}
+
 func TestBuildToken(t *testing.T) {
 	manifest := &Manifest{
 		Slug: "my-app",

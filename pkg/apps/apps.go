@@ -95,7 +95,7 @@ type Manifest struct {
 	Version     string       `json:"version"`
 	License     string       `json:"license"`
 	Permissions *Permissions `json:"permissions"`
-	Routes    Routes     `json:"routes"`
+	Routes      Routes       `json:"routes"`
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
@@ -165,7 +165,12 @@ func (m *Manifest) FindRoute(vpath string) (Route, string) {
 	rest := ""
 	specificity := 0
 	for key, ctx := range m.Routes {
-		keys := strings.Split(key, "/")
+		var keys []string
+		if key == "/" {
+			keys = []string{""}
+		} else {
+			keys = strings.Split(key, "/")
+		}
 		count := len(keys)
 		if count > lenParts || count < specificity {
 			continue
