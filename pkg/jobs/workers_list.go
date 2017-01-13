@@ -28,7 +28,7 @@ func init() {
 		},
 		"timeout": {
 			Concurrency: 4,
-			Timeout:     1 * time.Second,
+			Timeout:     10 * time.Second,
 			WorkerFunc: func(_ *Message, timeout <-chan time.Time) error {
 				<-timeout
 				return ErrTimedOut
