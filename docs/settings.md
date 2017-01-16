@@ -45,6 +45,41 @@ Danger               | `--base08-color`
 If you want to know more about CSS variables, I recommend to view this video:
 [Lea Verou - CSS Variables: var(--subtitle);](https://www.youtube.com/watch?v=2an6-WVPuJU&app=desktop)
 
+
+## Disk usage
+
+### GET /settings/disk-usage
+
+Says how many bytes are used to store files.
+
+#### Request
+
+```http
+GET /settings/disk-usage HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.settings",
+    "id": "io.cozy.settings.disk-usage",
+    "attributes": {
+      "used": 12345678
+    }
+  }
+}
+```
+
 ## Passphrase
 
 ### POST /settings/passphrase
