@@ -261,7 +261,7 @@ func DeleteAllDBs(db Database) error {
 		return fmt.Errorf("You need to provide the database prefix name ending with /")
 	}
 
-	dbsList := make([]string, 0)
+	var dbsList []string
 	err := makeRequest("GET", "_all_dbs", nil, &dbsList)
 	if err != nil {
 		return err
@@ -418,6 +418,28 @@ func CreateDoc(db Database, doc Doc) (err error) {
 	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
 	return nil
+}
+
+// View is the map/reduce thing in CouchDB
+type View struct {
+	Map    string `json:"map"`
+	Reduce string `json:"reduce,omitempty"`
+}
+
+// Views is a map of name/views
+type Views map[string]View
+
+// DefineViews creates a design doc with some views
+func DefineViews(db Database, doctype, ddoc string, views Views) error {
+	url := makeDBName(db, doctype) + "/_design/" + ddoc
+	doc := struct {
+		Lang  string `json:"language"`
+		Views Views  `json:"views"`
+	}{
+		"javascript",
+		views,
+	}
+	return makeRequest("PUT", url, &doc, nil)
 }
 
 // DefineIndex define the index on the doctype database

@@ -29,6 +29,14 @@ var Indexes = []mango.Index{
 	mango.IndexOnFields("dir_id"),
 }
 
+// Views is the required couchdb views for computing the disk usage
+var Views = couchdb.Views{
+	"disk-usage": couchdb.View{
+		"function(doc) { if (doc.type === 'file') emit(doc._id, doc.size); }",
+		"_sum",
+	},
+}
+
 // DefaultContentType is used for files uploaded with no content-type
 const DefaultContentType = "application/octet-stream"
 
