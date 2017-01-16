@@ -170,7 +170,7 @@ func defineIndex(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := CheckWritable(c, doctype); err != nil {
+	if err := CheckReadable(c, doctype); err != nil {
 		return err
 	}
 
