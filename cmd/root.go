@@ -53,7 +53,7 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	checkNoErr(viper.BindPFlag("port", flags.Lookup("port")))
 
-	flags.String("subdomains", "nested", "hwo to structure the subdomains for apps (can be nested or flat)")
+	flags.String("subdomains", "nested", "how to structure the subdomains for apps (can be nested or flat)")
 	checkNoErr(viper.BindPFlag("subdomains", flags.Lookup("subdomains")))
 
 	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
