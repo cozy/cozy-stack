@@ -78,7 +78,9 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			hsts := true
-			if in := c.Get("instance"); in != nil && in.(*instance.Instance).Dev {
+			if !c.IsTLS() {
+				hsts = false
+			} else if in := c.Get("instance"); in != nil && in.(*instance.Instance).Dev {
 				hsts = false
 			}
 			h := c.Response().Header()
