@@ -10,8 +10,12 @@ import (
 )
 
 type (
+	// XFrameOption type for the values of the X-Frame-Options header.
 	XFrameOption string
-	CSPSource    int
+
+	// CSPSource type are the different types of CSP headers sources definitions.
+	// Each source type defines a different acess policy.
+	CSPSource int
 
 	// SecureConfig defines the config for Secure middleware.
 	SecureConfig struct {
@@ -25,16 +29,27 @@ type (
 )
 
 const (
-	XFrameDeny       XFrameOption = "DENY"
-	XFrameSameOrigin              = "SAMEORIGIN"
-	XFrameAllowFrom               = "ALLOW-FROM"
+	// XFrameDeny is the DENY option of the X-Frame-Options header.
+	XFrameDeny XFrameOption = "DENY"
+	// XFrameSameOrigin is the SAMEORIGIN option of the X-Frame-Options header.
+	XFrameSameOrigin = "SAMEORIGIN"
+	// XFrameAllowFrom is the ALLOW-FROM option of the X-Frame-Options header. It
+	// should be used along with the XFrameAllowed field of SecureConfig.
+	XFrameAllowFrom = "ALLOW-FROM"
 
+	// CSPSrcSelf is the 'self' option of a CSP source.
 	CSPSrcSelf CSPSource = iota
+	// CSPSrcParent adds the parent domain as an eligible CSP source.
 	CSPSrcParent
+	// CSPSrcParentSubdomains add all the parent's subdomains as eligibles CSP
+	// sources.
 	CSPSrcParentSubdomains
+	// CSPSrcAny is the '*' option. It allows any domain as an eligible source.
 	CSPSrcAny
 )
 
+// Secure returns a Middlefunc that can be used to define all the necessary
+// secure headers. It is configurable with a SecureConfig object.
 func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	var hstsHeader string
 	if conf.HSTSMaxAge > 0 {
@@ -91,22 +106,14 @@ func makeCSPHeader(host, header string, sources []CSPSource) string {
 		case CSPSrcSelf:
 			headers[i] = "'self'"
 		case CSPSrcParent:
-			headers[i] = parentHost(host)
+			parent, _ := SplitHost(host)
+			headers[i] = parent
 		case CSPSrcParentSubdomains:
-			if parent := parentHost(host); parent != "" {
-				headers[i] = "*." + parent
-			}
+			parent, _ := SplitHost(host)
+			headers[i] = "*." + parent
 		case CSPSrcAny:
 			headers[i] = "*"
 		}
 	}
 	return header + " " + strings.Join(headers, " ") + ";"
-}
-
-func parentHost(host string) string {
-	parts := strings.SplitN(host, ".", 2)
-	if len(parts) != 2 {
-		return ""
-	}
-	return parts[1]
 }
