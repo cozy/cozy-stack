@@ -49,6 +49,15 @@ func SimpleDatabasePrefix(prefix string) Database {
 // GlobalDB is the prefix used for stack-scoped db
 var GlobalDB = SimpleDatabasePrefix("global")
 
+// View is the map/reduce thing in CouchDB
+type View struct {
+	Map    string `json:"map"`
+	Reduce string `json:"reduce,omitempty"`
+}
+
+// Views is a map of name/views
+type Views map[string]View
+
 // JSONDoc is a map representing a simple json object that implements
 // the Doc interface.
 type JSONDoc struct {
@@ -261,7 +270,7 @@ func DeleteAllDBs(db Database) error {
 		return fmt.Errorf("You need to provide the database prefix name ending with /")
 	}
 
-	dbsList := make([]string, 0)
+	var dbsList []string
 	err := makeRequest("GET", "_all_dbs", nil, &dbsList)
 	if err != nil {
 		return err
@@ -420,6 +429,25 @@ func CreateDoc(db Database, doc Doc) (err error) {
 	return nil
 }
 
+// DefineViews creates a design doc with some views
+func DefineViews(db Database, doctype string, views Views) error {
+	url := makeDBName(db, doctype) + "/_design/" + doctype
+	doc := struct {
+		Lang  string `json:"language"`
+		Views Views  `json:"views"`
+	}{
+		"javascript",
+		views,
+	}
+	return makeRequest("PUT", url, &doc, nil)
+}
+
+// ExecView executes the specified view function
+func ExecView(db Database, doctype, view string, results interface{}) error {
+	url := makeDBName(db, doctype) + "/_design/" + doctype + "/_view/" + view
+	return makeRequest("GET", url, nil, &results)
+}
+
 // DefineIndex define the index on the doctype database
 // see query package on how to define an index
 func DefineIndex(db Database, doctype string, index mango.Index) error {
@@ -562,6 +590,15 @@ type AllDocsResponse struct {
 	Rows      []struct {
 		ID  string          `json:"id"`
 		Doc json.RawMessage `json:"doc"`
+	} `json:"rows"`
+}
+
+// ViewResponse is the response we receive when executing a view
+type ViewResponse struct {
+	Rows []struct {
+		ID    string `json:"id"`
+		Key   string `json:"key"`
+		Value int64  `json:"value"`
 	} `json:"rows"`
 }
 

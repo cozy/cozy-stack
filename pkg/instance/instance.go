@@ -239,7 +239,7 @@ func (i *Instance) createRootDir() error {
 	return nil
 }
 
-// createFSIndexes creates the index needed by VFS
+// createFSIndexes creates the indexes needed by VFS
 func (i *Instance) createFSIndexes() error {
 	for _, index := range vfs.Indexes {
 		err := couchdb.DefineIndex(i, consts.Files, index)
@@ -247,7 +247,7 @@ func (i *Instance) createFSIndexes() error {
 			return err
 		}
 	}
-	return nil
+	return couchdb.DefineViews(i, consts.Files, vfs.Views)
 }
 
 // createAppsDB creates the database needed for Apps
@@ -265,7 +265,7 @@ func (i *Instance) createSettings() error {
 	return settings.CreateDefaultTheme(i)
 }
 
-// Create build an instance and .Create it
+// Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
 	domain := opts.Domain
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
