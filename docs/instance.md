@@ -24,6 +24,7 @@ $ cozy-stack instances add <domain>
 With some possible additional options
 
 - `--locale <lang>`
+- `--tz <timezone>`
 - `--email <email>`
 - `--environment <dev/test/production>`
 - `--apps <app1,app2,app3>`
@@ -70,8 +71,9 @@ renamed, they can still be found for the permissions.
 
 Then it creates the basic settings
 
-- `owner_email` if an email was provided through the CLI
+- `email` if an email was provided through the CLI
 - `locale` if a locale was provided through the CLI
+- `tz` if a timezone was provided through the CLI
 - `home_app` slug of the app to use as home, `cozy-home` by default
 - `onboarding_app` slug of the app to use as onboarding, `cozy-onboarding` by default
 - `registry_url` URL of the registry place to fetch manifests of installable applications.
