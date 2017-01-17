@@ -122,7 +122,7 @@ type instanceSettings struct {
 	Email    string `json:"email,omitempty"`
 }
 
-func (s *instanceSettings) ID() string      { return consts.Settings + ".instance" }
+func (s *instanceSettings) ID() string      { return consts.InstanceSettingsID }
 func (s *instanceSettings) Rev() string     { return "" }
 func (s *instanceSettings) DocType() string { return consts.Settings }
 func (s *instanceSettings) SetID(_ string)  {}

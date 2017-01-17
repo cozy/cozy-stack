@@ -61,7 +61,7 @@ func TestCreateInstanceWithSettings(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, instance.Domain, "test2.cozycloud.cc")
 	var doc couchdb.JSONDoc
-	err = couchdb.GetDoc(instance, consts.Settings, "io.cozy.settings.instance", &doc)
+	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, &doc)
 	assert.NoError(t, err)
 	assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
 	assert.Equal(t, "alice@example.com", doc.M["email"].(string))

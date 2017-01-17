@@ -113,12 +113,35 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 	assert.NotEmpty(t, cookies[0].Value)
 }
 
+func TestGetInstance(t *testing.T) {
+	res, err := http.Get(ts.URL + "/settings/instance")
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, ok := result["data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "io.cozy.settings", data["type"].(string))
+	assert.Equal(t, "io.cozy.settings.instance", data["id"].(string))
+	attrs, ok := data["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+	email, ok := attrs["email"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "alice@example.com", email)
+	tz, ok := attrs["tz"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "Europe/Berlin", tz)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	instance.Destroy(domain)
 	testInstance, _ = instance.Create(&instance.Options{
-		Domain: domain,
-		Locale: "en",
+		Domain:   domain,
+		Locale:   "en",
+		Timezone: "Europe/Berlin",
+		Email:    "alice@example.com",
 	})
 
 	r := echo.New()

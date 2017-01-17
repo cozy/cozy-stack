@@ -6,6 +6,7 @@ package settings
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"html/template"
 	"net/http"
 
@@ -61,7 +62,7 @@ type apiDiskUsage struct {
 	Used int64 `json:"used,string"`
 }
 
-func (j *apiDiskUsage) ID() string                             { return consts.Settings + ".disk-usage" }
+func (j *apiDiskUsage) ID() string                             { return consts.DiskUsageID }
 func (j *apiDiskUsage) Rev() string                            { return "" }
 func (j *apiDiskUsage) DocType() string                        { return consts.Settings }
 func (j *apiDiskUsage) SetID(_ string)                         {}
@@ -129,6 +130,34 @@ func updatePassphrase(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+type apiInstance struct {
+	doc *couchdb.JSONDoc
+}
+
+func (i *apiInstance) ID() string                             { return i.doc.ID() }
+func (i *apiInstance) Rev() string                            { return i.doc.Rev() }
+func (i *apiInstance) DocType() string                        { return consts.Settings }
+func (i *apiInstance) SetID(_ string)                         {}
+func (i *apiInstance) SetRev(_ string)                        {}
+func (i *apiInstance) Relationships() jsonapi.RelationshipMap { return nil }
+func (i *apiInstance) Included() []jsonapi.Object             { return nil }
+func (i *apiInstance) SelfLink() string                       { return "/settings/instance" }
+func (i *apiInstance) MarshalJSON() ([]byte, error) {
+	return json.Marshal(i.doc)
+}
+
+func getInstance(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	doc := &couchdb.JSONDoc{}
+	err := couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return err
+	}
+
+	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
+}
+
 // Routes sets the routing for the settings service
 func Routes(router *echo.Group) {
 	router.GET("/theme.css", ThemeCSS)
@@ -136,4 +165,6 @@ func Routes(router *echo.Group) {
 
 	router.POST("/passphrase", registerPassphrase)
 	router.PUT("/passphrase", updatePassphrase)
+
+	router.GET("/instance", getInstance)
 }

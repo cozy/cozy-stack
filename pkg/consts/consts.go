@@ -36,3 +36,10 @@ const (
 	// TrashDirID is the trash directory identifier
 	TrashDirID = "io.cozy.files.trash-dir"
 )
+
+const (
+	// DiskUsageID is the id of the settings JSON-API response for disk-usage
+	DiskUsageID = "io.cozy.settings.disk-usage"
+	// InstanceSettingsID is the id of settings document for the instance
+	InstanceSettingsID = "io.cozy.settings.instance"
+)
