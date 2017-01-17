@@ -1,7 +1,7 @@
 // auth_test package is introduced to avoid circular dependencies since this
 // particular test requires to depend on routing directly to expose the API
 // and the APP server.
-package auth_func
+package authspec
 
 import (
 	"bytes"
