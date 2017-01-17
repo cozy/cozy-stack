@@ -126,6 +126,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
 			}
+			h.Set(echo.HeaderXContentTypeOptions, "nosniff")
 			return next(c)
 		}
 	}
