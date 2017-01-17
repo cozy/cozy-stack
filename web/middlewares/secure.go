@@ -61,7 +61,7 @@ const (
 func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	var hstsHeader string
 	if conf.HSTSMaxAge > 0 {
-		hstsHeader = fmt.Sprintf("max-age=%.f; includeSubdomains",
+		hstsHeader = fmt.Sprintf("max-age=%.f; includeSubDomains",
 			conf.HSTSMaxAge.Seconds())
 	}
 
