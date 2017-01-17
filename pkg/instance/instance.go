@@ -247,10 +247,7 @@ func (i *Instance) createFSIndexes() error {
 			return err
 		}
 	}
-	if err := couchdb.DefineViews(i, consts.Files, vfs.Views); err != nil {
-		return err
-	}
-	return nil
+	return couchdb.DefineViews(i, consts.Files, vfs.Views)
 }
 
 // createAppsDB creates the database needed for Apps

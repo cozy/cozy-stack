@@ -384,7 +384,7 @@ func TestMain(m *testing.M) {
 		}
 	}
 
-	if err := couchdb.DefineViews(vfsC, consts.Files, Views); err != nil {
+	if err = couchdb.DefineViews(vfsC, consts.Files, Views); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

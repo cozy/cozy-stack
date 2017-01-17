@@ -35,8 +35,8 @@ const DiskUsageView = "disk-usage"
 // Views is the required couchdb views for computing the disk usage
 var Views = couchdb.Views{
 	DiskUsageView: couchdb.View{
-		"function(doc) { if (doc.type === 'file') emit(doc._id, +doc.size); }",
-		"_sum",
+		Map:    "function(doc) { if (doc.type === 'file') emit(doc._id, +doc.size); }",
+		Reduce: "_sum",
 	},
 }
 
