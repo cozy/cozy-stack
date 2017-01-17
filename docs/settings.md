@@ -74,7 +74,7 @@ Content-type: application/vnd.api+json
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.disk-usage",
     "attributes": {
-      "used": 12345678
+      "used": "12345678"
     }
   }
 }

@@ -342,7 +342,7 @@ func Remove(c Context, name string) error {
 }
 
 // DiskUsage computes the total size of the files
-func DiskUsage(c Context) (int, error) {
+func DiskUsage(c Context) (int64, error) {
 	var doc couchdb.ViewResponse
 	err := couchdb.ExecView(c, consts.Files, DiskUsageView, &doc)
 	if err != nil {

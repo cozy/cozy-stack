@@ -598,7 +598,7 @@ type ViewResponse struct {
 	Rows []struct {
 		ID    string `json:"id"`
 		Key   string `json:"key"`
-		Value int    `json:"value"`
+		Value int64  `json:"value"`
 	} `json:"rows"`
 }
 

@@ -38,7 +38,7 @@ type FileDoc struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	Size       int64    `json:"size,string"`
+	Size       int64    `json:"size,string"` // Serialized in JSON as a string, because JS has some issues with big numbers
 	MD5Sum     []byte   `json:"md5sum"`
 	Mime       string   `json:"mime"`
 	Class      string   `json:"class"`

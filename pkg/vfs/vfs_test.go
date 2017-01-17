@@ -124,7 +124,7 @@ func recFetchTree(parent *DirDoc, name string) (H, error) {
 func TestDiskUsageIsInitiallyZero(t *testing.T) {
 	used, err := DiskUsage(vfsC)
 	assert.NoError(t, err)
-	assert.Equal(t, 0, used)
+	assert.Equal(t, int64(0), used)
 }
 
 func TestGetFileDocFromPathAtRoot(t *testing.T) {
@@ -153,7 +153,7 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 func TestDiskUsage(t *testing.T) {
 	used, err := DiskUsage(vfsC)
 	assert.NoError(t, err)
-	assert.Equal(t, len("hello !"), used)
+	assert.Equal(t, len("hello !"), int(used))
 }
 
 func TestGetFileDocFromPath(t *testing.T) {

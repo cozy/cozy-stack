@@ -9,8 +9,10 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/settings"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -53,6 +55,28 @@ func ThemeCSS(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 	return c.Blob(http.StatusOK, "text/css", buffer.Bytes())
+}
+
+type apiDiskUsage struct {
+	Used int64 `json:"used,string"`
+}
+
+func (j *apiDiskUsage) ID() string                             { return consts.Settings + ".disk-usage" }
+func (j *apiDiskUsage) Rev() string                            { return "" }
+func (j *apiDiskUsage) DocType() string                        { return consts.Settings }
+func (j *apiDiskUsage) SetID(_ string)                         {}
+func (j *apiDiskUsage) SetRev(_ string)                        {}
+func (j *apiDiskUsage) Relationships() jsonapi.RelationshipMap { return nil }
+func (j *apiDiskUsage) Included() []jsonapi.Object             { return nil }
+func (j *apiDiskUsage) SelfLink() string                       { return "/settings/disk-usage" }
+
+func diskUsage(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	used, err := vfs.DiskUsage(instance)
+	if err != nil {
+		return err
+	}
+	return jsonapi.Data(c, http.StatusOK, &apiDiskUsage{used}, nil)
 }
 
 func registerPassphrase(c echo.Context) error {
@@ -108,6 +132,7 @@ func updatePassphrase(c echo.Context) error {
 // Routes sets the routing for the settings service
 func Routes(router *echo.Group) {
 	router.GET("/theme.css", ThemeCSS)
+	router.GET("/disk-usage", diskUsage)
 
 	router.POST("/passphrase", registerPassphrase)
 	router.PUT("/passphrase", updatePassphrase)

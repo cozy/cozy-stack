@@ -30,6 +30,24 @@ func TestThemeCSS(t *testing.T) {
 	assert.Equal(t, []byte(":root"), body[:5])
 }
 
+func TestDiskUsage(t *testing.T) {
+	res, err := http.Get(ts.URL + "/settings/disk-usage")
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, ok := result["data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "io.cozy.settings", data["type"].(string))
+	assert.Equal(t, "io.cozy.settings.disk-usage", data["id"].(string))
+	attrs, ok := data["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+	used, ok := attrs["used"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "0", used)
+}
+
 func TestRegisterPassphraseWrongToken(t *testing.T) {
 	args, _ := json.Marshal(&echo.Map{
 		"passphrase":     "MyFirstPassphrase",
