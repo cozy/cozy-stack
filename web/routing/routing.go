@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -28,11 +29,15 @@ import (
 	"github.com/rakyll/statik/fs"
 )
 
-var templatesList = []string{
-	"authorize.html",
-	"error.html",
-	"login.html",
-}
+var (
+	hstsMaxAge = 365 * 24 * time.Hour // 1 year
+
+	templatesList = []string{
+		"authorize.html",
+		"error.html",
+		"login.html",
+	}
+)
 
 type renderer struct {
 	t *template.Template
@@ -91,6 +96,19 @@ func newRenderer(assetsPath string) (*renderer, error) {
 	return r, nil
 }
 
+// SetupAppsHandler adds all the necessary middlewares for the application
+// handler.
+func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
+	secure := middlewares.Secure(&middlewares.SecureConfig{
+		HSTSMaxAge:    hstsMaxAge,
+		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
+		CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcParent},
+		XFrameOptions: middlewares.XFrameDeny,
+	})
+
+	return middlewares.Compose(appsHandler, secure, middlewares.LoadSession)
+}
+
 // SetupAssets add assets routing and handling to the given router. It also
 // adds a Renderer to render templates.
 func SetupAssets(router *echo.Echo, assetsPath string) error {
@@ -108,7 +126,13 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
-	router.Use(middlewares.CORS)
+	secure := middlewares.Secure(&middlewares.SecureConfig{
+		HSTSMaxAge:    hstsMaxAge,
+		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
+		XFrameOptions: middlewares.XFrameDeny,
+	})
+
+	router.Use(secure, middlewares.CORS)
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,
