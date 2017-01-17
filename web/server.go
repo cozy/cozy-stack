@@ -18,8 +18,7 @@ func Create(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.Echo, error) {
 	appsHandler := middlewares.Compose(serveApps,
 		middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    365 * 24 * time.Hour, // 1 year
-			CSPScriptSrc:  []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
-			CSPConnectSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
+			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
 			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcParent},
 			XFrameOptions: middlewares.XFrameDeny,
 		}),
