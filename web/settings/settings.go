@@ -154,6 +154,7 @@ func getInstance(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	doc.M["locale"] = instance.Locale
 
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
@@ -166,6 +167,13 @@ func updateInstance(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	if locale, ok := doc.M["locale"].(string); ok {
+		delete(doc.M, "locale")
+		instance.Locale = locale
+		if err := couchdb.UpdateDoc(couchdb.GlobalDB, instance); err != nil {
+			return err
+		}
+	}
 	doc.Type = consts.Settings
 	doc.SetID(consts.InstanceSettingsID)
 	doc.SetRev(obj.Meta.Rev)
@@ -173,6 +181,7 @@ func updateInstance(c echo.Context) error {
 		return err
 	}
 
+	doc.M["locale"] = instance.Locale
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 

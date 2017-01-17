@@ -138,9 +138,39 @@ func TestGetInstance(t *testing.T) {
 	tz, ok := attrs["tz"].(string)
 	assert.True(t, ok)
 	assert.Equal(t, "Europe/Berlin", tz)
+	locale, ok := attrs["locale"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "en", locale)
 }
 
 func TestUpdateInstance(t *testing.T) {
+	checkResult := func(res *http.Response) {
+		assert.Equal(t, 200, res.StatusCode)
+		var result map[string]interface{}
+		err := json.NewDecoder(res.Body).Decode(&result)
+		assert.NoError(t, err)
+		data, ok := result["data"].(map[string]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, "io.cozy.settings", data["type"].(string))
+		assert.Equal(t, "io.cozy.settings.instance", data["id"].(string))
+		meta, ok := data["meta"].(map[string]interface{})
+		assert.True(t, ok)
+		rev := meta["rev"].(string)
+		assert.NotEmpty(t, rev)
+		assert.NotEqual(t, instanceRev, rev)
+		attrs, ok := data["attributes"].(map[string]interface{})
+		assert.True(t, ok)
+		email, ok := attrs["email"].(string)
+		assert.True(t, ok)
+		assert.Equal(t, "alice@example.org", email)
+		tz, ok := attrs["tz"].(string)
+		assert.True(t, ok)
+		assert.Equal(t, "Europe/London", tz)
+		locale, ok := attrs["locale"].(string)
+		assert.True(t, ok)
+		assert.Equal(t, "fr", locale)
+	}
+
 	body := `{
 		"data": {
 			"type": "io.cozy.settings",
@@ -150,7 +180,8 @@ func TestUpdateInstance(t *testing.T) {
 			},
 			"attributes": {
 				"tz": "Europe/London",
-				"email": "alice@example.org"
+				"email": "alice@example.org",
+				"locale": "fr"
 			}
 		}
 	}`
@@ -160,27 +191,11 @@ func TestUpdateInstance(t *testing.T) {
 	req.Header.Add("Accept", "application/vnd.api+json")
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	var result map[string]interface{}
-	err = json.NewDecoder(res.Body).Decode(&result)
+	checkResult(res)
+
+	res, err = http.Get(ts.URL + "/settings/instance")
 	assert.NoError(t, err)
-	data, ok := result["data"].(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, "io.cozy.settings", data["type"].(string))
-	assert.Equal(t, "io.cozy.settings.instance", data["id"].(string))
-	meta, ok := data["meta"].(map[string]interface{})
-	assert.True(t, ok)
-	rev := meta["rev"].(string)
-	assert.NotEmpty(t, rev)
-	assert.NotEqual(t, instanceRev, rev)
-	attrs, ok := data["attributes"].(map[string]interface{})
-	assert.True(t, ok)
-	email, ok := attrs["email"].(string)
-	assert.True(t, ok)
-	assert.Equal(t, "alice@example.org", email)
-	tz, ok := attrs["tz"].(string)
-	assert.True(t, ok)
-	assert.Equal(t, "Europe/London", tz)
+	checkResult(res)
 }
 
 func TestMain(m *testing.M) {
