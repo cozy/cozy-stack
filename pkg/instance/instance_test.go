@@ -51,6 +51,22 @@ func TestCreateInstance(t *testing.T) {
 	}
 }
 
+func TestCreateInstanceWithSettings(t *testing.T) {
+	instance, err := Create(&Options{
+		Domain:   "test2.cozycloud.cc",
+		Locale:   "en",
+		Timezone: "Europe/Berlin",
+		Email:    "alice@example.com",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, instance.Domain, "test2.cozycloud.cc")
+	var doc couchdb.JSONDoc
+	err = couchdb.GetDoc(instance, consts.Settings, "io.cozy.settings.instance", &doc)
+	assert.NoError(t, err)
+	assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
+	assert.Equal(t, "alice@example.com", doc.M["email"].(string))
+}
+
 func TestCreateInstanceBadDomain(t *testing.T) {
 	_, err := Create(&Options{
 		Domain: "..",
@@ -268,6 +284,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	Destroy("test.cozycloud.cc")
+	Destroy("test2.cozycloud.cc")
 	Destroy("test.cozycloud.cc.duplicate")
 
 	os.RemoveAll("/usr/local/var/cozy2/")
@@ -275,6 +292,7 @@ func TestMain(m *testing.M) {
 	res := m.Run()
 
 	Destroy("test.cozycloud.cc")
+	Destroy("test2.cozycloud.cc")
 	Destroy("test.cozycloud.cc.duplicate")
 
 	os.Exit(res)

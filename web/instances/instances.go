@@ -11,10 +11,12 @@ import (
 
 func createHandler(c echo.Context) error {
 	i, err := instance.Create(&instance.Options{
-		Domain: c.QueryParam("Domain"),
-		Locale: c.QueryParam("Locale"),
-		Apps:   strings.Split(c.QueryParam("Apps"), ","),
-		Dev:    (c.QueryParam("Dev") == "true"),
+		Domain:   c.QueryParam("Domain"),
+		Locale:   c.QueryParam("Locale"),
+		Timezone: c.QueryParam("Timezone"),
+		Email:    c.QueryParam("Email"),
+		Apps:     strings.Split(c.QueryParam("Apps"), ","),
+		Dev:      (c.QueryParam("Dev") == "true"),
 	})
 	if err != nil {
 		return wrapError(err)
