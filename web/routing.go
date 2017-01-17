@@ -1,6 +1,6 @@
 //go:generate statik -src=../../.assets -dest=..
 
-package routing
+package web
 
 import (
 	"html/template"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
@@ -167,6 +168,39 @@ func SetupAdminRoutes(router *echo.Echo) error {
 
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil
+}
+
+// CreateSubdomainProxy returns a new web server that will handle that apps
+// proxy routing if the host of the request match an application, and route to
+// the given router otherwise.
+func CreateSubdomainProxy(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.Echo, error) {
+	if err := SetupAssets(router, config.GetConfig().Assets); err != nil {
+		return nil, err
+	}
+
+	if err := SetupRoutes(router); err != nil {
+		return nil, err
+	}
+
+	serveApps = SetupAppsHandler(serveApps)
+
+	main := echo.New()
+	main.Any("/*", func(c echo.Context) error {
+		// TODO(optim): minimize the number of instance requests
+		if parent, slug := middlewares.SplitHost(c.Request().Host); slug != "" {
+			if i, err := instance.Get(parent); err == nil {
+				c.Set("instance", i)
+				c.Set("slug", slug)
+				return serveApps(c)
+			}
+		}
+
+		router.ServeHTTP(c.Response(), c.Request())
+		return nil
+	})
+
+	main.HTTPErrorHandler = errors.ErrorHandler
+	return main, nil
 }
 
 // setupRecover sets a recovering strategy of panics happening in handlers

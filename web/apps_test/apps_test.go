@@ -1,4 +1,7 @@
-package apps
+// apps_test package is introduced to avoid circular dependencies since this
+// particular test requires to depend on routing directly to expose the API
+// and the APP server.
+package apps_test
 
 import (
 	"bytes"
@@ -20,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web"
+	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -221,6 +225,7 @@ func TestServeAppsWithACode(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	config.GetConfig().Assets = "../../assets"
 
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
@@ -262,7 +267,7 @@ func TestMain(m *testing.M) {
 		c.SetCookie(cookie)
 		return c.HTML(http.StatusOK, "OK")
 	})
-	router, err := web.Create(r, Serve)
+	router, err := web.CreateSubdomainProxy(r, webApps.Serve)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

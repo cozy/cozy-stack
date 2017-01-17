@@ -15,6 +15,53 @@ import (
 
 const domain = "cozy.example.net"
 
+var ts *httptest.Server
+
+func TestSetupAssets(t *testing.T) {
+	e := echo.New()
+	err := SetupAssets(e, "../assets")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	ts := httptest.NewServer(e)
+	defer ts.Close()
+
+	res, _ := http.Get(ts.URL + "/assets/images/cozy.svg")
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestSetupAssetsStatik(t *testing.T) {
+	e := echo.New()
+	err := SetupAssets(e, "")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	ts := httptest.NewServer(e)
+	defer ts.Close()
+
+	res, _ := http.Get(ts.URL + "/assets/images/cozy.svg")
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestSetupRoutes(t *testing.T) {
+	e := echo.New()
+	err := SetupRoutes(e)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	ts := httptest.NewServer(e)
+	defer ts.Close()
+
+	res, _ := http.Get(ts.URL + "/version")
+	defer res.Body.Close()
+	assert.Equal(t, 200, res.StatusCode)
+}
+
 func TestParseHost(t *testing.T) {
 	apis := echo.New()
 
@@ -24,7 +71,7 @@ func TestParseHost(t *testing.T) {
 		return c.String(http.StatusOK, "OK")
 	}, middlewares.NeedInstance)
 
-	router, err := Create(apis, func(c echo.Context) error {
+	router, err := CreateSubdomainProxy(apis, func(c echo.Context) error {
 		slug := c.Get("slug").(string)
 		return c.String(200, "OK:"+slug)
 	})
@@ -50,6 +97,7 @@ func TestParseHost(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	config.GetConfig().Assets = "../assets"
 	instance.Destroy(domain)
 	instance.Create(&instance.Options{
 		Domain: domain,
