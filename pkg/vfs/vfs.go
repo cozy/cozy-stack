@@ -29,10 +29,13 @@ var Indexes = []mango.Index{
 	mango.IndexOnFields("dir_id"),
 }
 
+// DiskUsageView is the name of the view used for computing the disk usage
+const DiskUsageView = "disk-usage"
+
 // Views is the required couchdb views for computing the disk usage
 var Views = couchdb.Views{
-	"disk-usage": couchdb.View{
-		"function(doc) { if (doc.type === 'file') emit(doc._id, doc.size); }",
+	DiskUsageView: couchdb.View{
+		"function(doc) { if (doc.type === 'file') emit(doc._id, +doc.size); }",
 		"_sum",
 	},
 }
@@ -336,6 +339,19 @@ func Remove(c Context, name string) error {
 	// go-git. This method should also remove the document from
 	// database.
 	return c.FS().Remove(name)
+}
+
+// DiskUsage computes the total size of the files
+func DiskUsage(c Context) (int, error) {
+	var doc couchdb.ViewResponse
+	err := couchdb.ExecView(c, consts.Files, DiskUsageView, &doc)
+	if err != nil {
+		return 0, err
+	}
+	if len(doc.Rows) == 0 {
+		return 0, nil
+	}
+	return doc.Rows[0].Value, nil
 }
 
 // WalkFn type works like filepath.WalkFn type function. It receives

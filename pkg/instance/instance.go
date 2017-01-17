@@ -247,7 +247,7 @@ func (i *Instance) createFSIndexes() error {
 			return err
 		}
 	}
-	if err := couchdb.DefineViews(i, consts.Files, consts.Files, vfs.Views); err != nil {
+	if err := couchdb.DefineViews(i, consts.Files, vfs.Views); err != nil {
 		return err
 	}
 	return nil

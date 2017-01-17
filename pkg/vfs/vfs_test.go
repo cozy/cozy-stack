@@ -121,6 +121,12 @@ func recFetchTree(parent *DirDoc, name string) (H, error) {
 	return h, nil
 }
 
+func TestDiskUsageIsInitiallyZero(t *testing.T) {
+	used, err := DiskUsage(vfsC)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, used)
+}
+
 func TestGetFileDocFromPathAtRoot(t *testing.T) {
 	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", false, []string{})
 	assert.NoError(t, err)
@@ -142,6 +148,12 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 
 	_, err = GetFileDocFromPath(vfsC, "/noooo")
 	assert.Error(t, err)
+}
+
+func TestDiskUsage(t *testing.T) {
+	used, err := DiskUsage(vfsC)
+	assert.NoError(t, err)
+	assert.Equal(t, len("hello !"), used)
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
@@ -370,6 +382,11 @@ func TestMain(m *testing.M) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	}
+
+	if err := couchdb.DefineViews(vfsC, consts.Files, Views); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	CreateRootDirDoc(vfsC)
