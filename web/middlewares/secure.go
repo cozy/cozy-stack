@@ -19,12 +19,20 @@ type (
 
 	// SecureConfig defines the config for Secure middleware.
 	SecureConfig struct {
-		HSTSMaxAge    time.Duration
-		CSPScriptSrc  []CSPSource
-		CSPFrameSrc   []CSPSource
-		CSPConnectSrc []CSPSource
-		XFrameOptions XFrameOption
-		XFrameAllowed string
+		HSTSMaxAge     time.Duration
+		CSPDefaultSrc  []CSPSource
+		CSPScriptSrc   []CSPSource
+		CSPFrameSrc    []CSPSource
+		CSPConnectSrc  []CSPSource
+		CSPFontSrc     []CSPSource
+		CSPImgSrc      []CSPSource
+		CSPManifestSrc []CSPSource
+		CSPMediaSrc    []CSPSource
+		CSPObjectSrc   []CSPSource
+		CSPStyleSrc    []CSPSource
+		CSPWorkerSrc   []CSPSource
+		XFrameOptions  XFrameOption
+		XFrameAllowed  string
 	}
 )
 
@@ -81,15 +89,39 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 				h.Set(echo.HeaderXFrameOptions, xFrameHeader)
 			}
 			var cspHeader string
-			host := c.Request().Host
+			parent, _ := SplitHost(c.Request().Host)
+			if len(conf.CSPDefaultSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "default-src", conf.CSPDefaultSrc)
+			}
 			if len(conf.CSPScriptSrc) > 0 {
-				cspHeader += makeCSPHeader(host, "script-src", conf.CSPScriptSrc)
+				cspHeader += makeCSPHeader(parent, "script-src", conf.CSPScriptSrc)
 			}
 			if len(conf.CSPFrameSrc) > 0 {
-				cspHeader += makeCSPHeader(host, "frame-src", conf.CSPFrameSrc)
+				cspHeader += makeCSPHeader(parent, "frame-src", conf.CSPFrameSrc)
 			}
 			if len(conf.CSPConnectSrc) > 0 {
-				cspHeader += makeCSPHeader(host, "connect-src", conf.CSPConnectSrc)
+				cspHeader += makeCSPHeader(parent, "connect-src", conf.CSPConnectSrc)
+			}
+			if len(conf.CSPFontSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "font-src", conf.CSPFontSrc)
+			}
+			if len(conf.CSPImgSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "img-src", conf.CSPImgSrc)
+			}
+			if len(conf.CSPManifestSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "manifest-src", conf.CSPManifestSrc)
+			}
+			if len(conf.CSPMediaSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "media-src", conf.CSPMediaSrc)
+			}
+			if len(conf.CSPObjectSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "object-src", conf.CSPObjectSrc)
+			}
+			if len(conf.CSPStyleSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "style-src", conf.CSPStyleSrc)
+			}
+			if len(conf.CSPWorkerSrc) > 0 {
+				cspHeader += makeCSPHeader(parent, "worker-src", conf.CSPWorkerSrc)
 			}
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
@@ -99,17 +131,15 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	}
 }
 
-func makeCSPHeader(host, header string, sources []CSPSource) string {
+func makeCSPHeader(parent, header string, sources []CSPSource) string {
 	headers := make([]string, len(sources))
 	for i, src := range sources {
 		switch src {
 		case CSPSrcSelf:
 			headers[i] = "'self'"
 		case CSPSrcParent:
-			parent, _ := SplitHost(host)
 			headers[i] = parent
 		case CSPSrcParentSubdomains:
-			parent, _ := SplitHost(host)
 			headers[i] = "*." + parent
 		case CSPSrcAny:
 			headers[i] = "*"
