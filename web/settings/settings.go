@@ -137,8 +137,8 @@ type apiInstance struct {
 func (i *apiInstance) ID() string                             { return i.doc.ID() }
 func (i *apiInstance) Rev() string                            { return i.doc.Rev() }
 func (i *apiInstance) DocType() string                        { return consts.Settings }
-func (i *apiInstance) SetID(_ string)                         {}
-func (i *apiInstance) SetRev(_ string)                        {}
+func (i *apiInstance) SetID(id string)                        { i.doc.SetID(id) }
+func (i *apiInstance) SetRev(rev string)                      { i.doc.SetRev(rev) }
 func (i *apiInstance) Relationships() jsonapi.RelationshipMap { return nil }
 func (i *apiInstance) Included() []jsonapi.Object             { return nil }
 func (i *apiInstance) SelfLink() string                       { return "/settings/instance" }
@@ -158,6 +158,24 @@ func getInstance(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 
+func updateInstance(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	doc := &couchdb.JSONDoc{}
+	obj, err := jsonapi.Bind(c.Request(), doc)
+	if err != nil {
+		return err
+	}
+	doc.Type = consts.Settings
+	doc.SetID(consts.InstanceSettingsID)
+	doc.SetRev(obj.Meta.Rev)
+	if err := couchdb.UpdateDoc(instance, doc); err != nil {
+		return err
+	}
+
+	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
+}
+
 // Routes sets the routing for the settings service
 func Routes(router *echo.Group) {
 	router.GET("/theme.css", ThemeCSS)
@@ -167,4 +185,5 @@ func Routes(router *echo.Group) {
 	router.PUT("/passphrase", updatePassphrase)
 
 	router.GET("/instance", getInstance)
+	router.PUT("/instance", updateInstance)
 }

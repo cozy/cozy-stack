@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -22,6 +23,7 @@ const domain = "cozysettings.example.net"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var instanceRev string
 
 func TestThemeCSS(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/theme.css")
@@ -124,6 +126,10 @@ func TestGetInstance(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, "io.cozy.settings", data["type"].(string))
 	assert.Equal(t, "io.cozy.settings.instance", data["id"].(string))
+	meta, ok := data["meta"].(map[string]interface{})
+	assert.True(t, ok)
+	instanceRev = meta["rev"].(string)
+	assert.NotEmpty(t, instanceRev)
 	attrs, ok := data["attributes"].(map[string]interface{})
 	assert.True(t, ok)
 	email, ok := attrs["email"].(string)
@@ -132,6 +138,49 @@ func TestGetInstance(t *testing.T) {
 	tz, ok := attrs["tz"].(string)
 	assert.True(t, ok)
 	assert.Equal(t, "Europe/Berlin", tz)
+}
+
+func TestUpdateInstance(t *testing.T) {
+	body := `{
+		"data": {
+			"type": "io.cozy.settings",
+			"id": "io.cozy.settings.instance",
+			"meta": {
+				"rev": "%s"
+			},
+			"attributes": {
+				"tz": "Europe/London",
+				"email": "alice@example.org"
+			}
+		}
+	}`
+	body = fmt.Sprintf(body, instanceRev)
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, ok := result["data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "io.cozy.settings", data["type"].(string))
+	assert.Equal(t, "io.cozy.settings.instance", data["id"].(string))
+	meta, ok := data["meta"].(map[string]interface{})
+	assert.True(t, ok)
+	rev := meta["rev"].(string)
+	assert.NotEmpty(t, rev)
+	assert.NotEqual(t, instanceRev, rev)
+	attrs, ok := data["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+	email, ok := attrs["email"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "alice@example.org", email)
+	tz, ok := attrs["tz"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "Europe/London", tz)
 }
 
 func TestMain(m *testing.M) {

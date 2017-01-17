@@ -93,12 +93,20 @@ func (j JSONDoc) DocType() string {
 
 // SetID is used to set the identifier of the document
 func (j JSONDoc) SetID(id string) {
-	j.M["_id"] = id
+	if id == "" {
+		delete(j.M, "_id")
+	} else {
+		j.M["_id"] = id
+	}
 }
 
 // SetRev is used to set the revision of the document
 func (j JSONDoc) SetRev(rev string) {
-	j.M["_rev"] = rev
+	if rev == "" {
+		delete(j.M, "_rev")
+	} else {
+		j.M["_rev"] = rev
+	}
 }
 
 // MarshalJSON implements json.Marshaller by proxying to internal map
