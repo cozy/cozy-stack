@@ -1,7 +1,7 @@
 // auth_test package is introduced to avoid circular dependencies since this
 // particular test requires to depend on routing directly to expose the API
 // and the APP server.
-package authspec
+package spec
 
 import (
 	"bytes"
@@ -1034,7 +1034,7 @@ func TestIsLoggedOutAfterLogout(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	config.GetConfig().Assets = "../../assets"
+	config.GetConfig().Assets = "../../../assets"
 	instanceURL, _ = url.Parse("https://" + domain + "/")
 	j, _ := cookiejar.New(nil)
 	jar = &testJar{
@@ -1058,7 +1058,7 @@ func TestMain(m *testing.M) {
 	r := echo.New()
 	r.HTTPErrorHandler = errors.ErrorHandler
 	r.Renderer = &renderer{
-		t: template.Must(template.ParseGlob("../../assets/templates/*.html")),
+		t: template.Must(template.ParseGlob("../../../assets/templates/*.html")),
 	}
 	auth.Routes(r.Group("/auth", mws...))
 
