@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/web/instances"
 	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/settings"
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
 	"github.com/cozy/cozy-stack/web/status"
@@ -111,6 +112,7 @@ func SetupRoutes(router *echo.Echo) error {
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,
+		permissions.Extractor,
 		middlewares.LoadSession,
 	}
 	auth.Routes(router.Group("/auth", mws...))
@@ -118,6 +120,7 @@ func SetupRoutes(router *echo.Echo) error {
 	data.Routes(router.Group("/data", mws...))
 	files.Routes(router.Group("/files", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))
+	permissions.Routes(router.Group("/permissions", mws...))
 	settings.Routes(router.Group("/settings", mws...))
 	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))

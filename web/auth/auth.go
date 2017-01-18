@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
@@ -468,7 +469,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/login", loginForm)
 	router.POST("/login", login)
-	router.DELETE("/login", logout, middlewares.ParseBearerAuth)
+	router.DELETE("/login", logout, webpermissions.Extractor)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
