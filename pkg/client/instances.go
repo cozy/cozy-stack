@@ -21,12 +21,14 @@ type Instance struct {
 		Dev            bool   `json:"dev"`
 		PassphraseHash []byte `json:"passphraseHash,omitempty"`
 		RegisterToken  []byte `json:"registerToken,omitempty"`
-		SessionSecret  []byte `json:"sessionSecret,omitempty"`
-		OAuthSecret    []byte `json:"oauthSecret,omitempty"`
 	} `json:"attributes"`
 }
 
+<<<<<<< HEAD
 // InstanceOptions is a struct holding all the options for instance creation.
+=======
+// InstanceOptions contains the options passed on instance creation.
+>>>>>>> Remove secrets from returned instance fields
 type InstanceOptions struct {
 	Domain   string
 	Apps     []string
