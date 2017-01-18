@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sync/atomic"
@@ -19,7 +20,7 @@ var (
 
 type (
 	// WorkerFunc represent the work function that a worker should implement.
-	WorkerFunc func(msg *Message, timeout <-chan time.Time) error
+	WorkerFunc func(context context.Context, msg *Message) error
 
 	// Worker is a unit of work that will consume from a queue and execute the do
 	// method for each jobs it pulls.
@@ -144,10 +145,16 @@ func (t *task) run() (err error) {
 			time.Sleep(delay)
 		}
 		log.Debugf("[job] %s: run %d (timeout %s)", t.infos.ID, t.execCount, timeout)
-		err = t.conf.WorkerFunc(t.infos.Message, time.After(timeout))
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		err = t.conf.WorkerFunc(ctx, t.infos.Message)
 		if err == nil {
+			cancel()
 			break
 		}
+		// Even though ctx should have expired already, it is good practice to call
+		// its cancelation function in any case. Failure to do so may keep the
+		// context and its parent alive longer than necessary.
+		cancel()
 		t.execCount++
 	}
 	return nil

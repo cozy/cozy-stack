@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -24,7 +25,7 @@ func TestInMemoryJobs(t *testing.T) {
 	var workersTestList = WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(m *Message, _ <-chan time.Time) error {
+			WorkerFunc: func(ctx context.Context, m *Message) error {
 				var msg string
 				err := m.Unmarshal(&msg)
 				if !assert.NoError(t, err) {
@@ -96,7 +97,7 @@ func TestUnknownMessageType(t *testing.T) {
 	broker := NewMemBroker("foo.bar", WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(m *Message, _ <-chan time.Time) error {
+			WorkerFunc: func(ctx context.Context, m *Message) error {
 				var msg string
 				err := m.Unmarshal(&msg)
 				assert.Error(t, err)
@@ -128,10 +129,10 @@ func TestTimeout(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(_ *Message, t <-chan time.Time) error {
-				<-t
+			WorkerFunc: func(ctx context.Context, _ *Message) error {
+				<-ctx.Done()
 				w.Done()
-				return ErrTimedOut
+				return ctx.Err()
 			},
 		},
 	})
@@ -161,12 +162,12 @@ func TestRetry(t *testing.T) {
 			MaxExecCount: uint(maxExecCount),
 			Timeout:      1 * time.Millisecond,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(_ *Message, t <-chan time.Time) error {
-				<-t
+			WorkerFunc: func(ctx context.Context, _ *Message) error {
+				<-ctx.Done()
 				w.Done()
 				count++
 				if count < maxExecCount {
-					return ErrTimedOut
+					return ctx.Err()
 				}
 				return nil
 			},
@@ -191,10 +192,10 @@ func TestInfoChan(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(_ *Message, t <-chan time.Time) error {
-				<-t
+			WorkerFunc: func(ctx context.Context, _ *Message) error {
+				<-ctx.Done()
 				w.Done()
-				return ErrTimedOut
+				return ctx.Err()
 			},
 		},
 	})

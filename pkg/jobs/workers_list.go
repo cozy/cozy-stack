@@ -1,7 +1,9 @@
 package jobs
 
 import (
+	"context"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -12,12 +14,13 @@ type WorkersList map[string]*WorkerConfig
 // WorkersList is the list of available workers with their associated Do
 // function.
 var workersList WorkersList
+var workersMutex sync.Mutex
 
 func init() {
 	workersList = WorkersList{
 		"print": {
 			Concurrency: 4,
-			WorkerFunc: func(m *Message, _ <-chan time.Time) error {
+			WorkerFunc: func(ctx context.Context, m *Message) error {
 				var msg string
 				if err := m.Unmarshal(&msg); err != nil {
 					return err
@@ -29,15 +32,27 @@ func init() {
 		"timeout": {
 			Concurrency: 4,
 			Timeout:     10 * time.Second,
-			WorkerFunc: func(_ *Message, timeout <-chan time.Time) error {
-				<-timeout
-				return ErrTimedOut
+			WorkerFunc: func(ctx context.Context, _ *Message) error {
+				<-ctx.Done()
+				return ctx.Err()
 			},
 		},
 	}
 }
 
-// GetWorkersList returns a globally defined worker config list
+// GetWorkersList returns a globally defined worker config list.
 func GetWorkersList() WorkersList {
+	workersMutex.Lock()
+	defer workersMutex.Unlock()
 	return workersList
+}
+
+// AddWorker adds a new worker to global list of available workers.
+func AddWorker(name string, conf *WorkerConfig) {
+	workersMutex.Lock()
+	defer workersMutex.Unlock()
+	if _, ok := workersList[name]; ok {
+		panic(fmt.Errorf("A worker with the name %s is already defined", name))
+	}
+	workersList[name] = conf
 }
