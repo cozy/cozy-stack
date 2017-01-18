@@ -204,7 +204,7 @@ func (m *Manifest) BuildToken(i *instance.Instance) string {
 			IssuedAt: crypto.Timestamp(),
 			Subject:  m.Slug,
 		},
-		Scope: "", // TODO scope
+		Scope: "io.cozy._all", // TODO scope
 	})
 	if err != nil {
 		return ""
