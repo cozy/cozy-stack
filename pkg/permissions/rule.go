@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -51,10 +52,11 @@ func UnmarshalRuleString(in string) (Rule, error) {
 	parts := strings.Split(in, partSep)
 
 	switch len(parts) {
-	case 0:
-		return out, errors.New("empty rule string")
 
 	case 1:
+		if parts[0] == "" {
+			return out, errors.New("empty rule string")
+		}
 		out.Type = parts[0]
 
 	case 2:
@@ -71,6 +73,9 @@ func UnmarshalRuleString(in string) (Rule, error) {
 		out.Verbs = VerbSplit(parts[1])
 		out.Selector = parts[2]
 		out.Values = strings.Split(parts[3], valueSep)
+
+	default:
+		return out, fmt.Errorf("Too many parts in %s", in)
 
 	}
 
