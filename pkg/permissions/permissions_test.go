@@ -3,6 +3,7 @@ package permissions
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -161,9 +162,97 @@ func TestStringToSet(t *testing.T) {
 
 }
 
+func TestAllowType(t *testing.T) {
+	s := Set{Rule{Type: "io.cozy.contacts"}}
+	assert.True(t, s.Allow(GET, &validable{doctype: "io.cozy.contacts"}))
+	assert.True(t, s.Allow(DELETE, &validable{doctype: "io.cozy.contacts"}))
+	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.files"}))
+}
+
+func TestAllowVerbs(t *testing.T) {
+	s := Set{Rule{Type: "io.cozy.contacts", Verbs: Verbs(GET)}}
+	assert.True(t, s.Allow(GET, &validable{doctype: "io.cozy.contacts"}))
+	assert.False(t, s.Allow(DELETE, &validable{doctype: "io.cozy.contacts"}))
+	assert.False(t, s.Allow(GET, &validable{doctype: "io.cozy.files"}))
+}
+
+func TestAllowValues(t *testing.T) {
+	s := Set{Rule{
+		Type:   "io.cozy.contacts",
+		Values: []string{"id1"},
+	}}
+	assert.True(t, s.Allow(POST, &validable{doctype: "io.cozy.contacts", id: "id1"}))
+	assert.False(t, s.Allow(POST, &validable{doctype: "io.cozy.contacts", id: "id2"}))
+}
+
+func TestAllowValuesSelector(t *testing.T) {
+	s := Set{Rule{
+		Type:     "io.cozy.contacts",
+		Selector: "foo",
+		Values:   []string{"bar"},
+	}}
+	assert.True(t, s.Allow(GET, &validable{
+		doctype: "io.cozy.contacts",
+		values:  map[string]string{"foo": "bar"}}))
+
+	assert.False(t, s.Allow(GET, &validable{
+		doctype: "io.cozy.contacts",
+		values:  map[string]string{"foo": "baz"}}))
+}
+
+func TestAllowWholeType(t *testing.T) {
+	s := Set{Rule{Type: "io.cozy.contacts", Verbs: Verbs(GET)}}
+	assert.True(t, s.AllowWholeType(GET, "io.cozy.contacts"))
+
+	s2 := Set{Rule{Type: "io.cozy.contacts", Values: []string{"id1"}}}
+	assert.False(t, s2.AllowWholeType(GET, "io.cozy.contacts"))
+}
+
+func TestAllowID(t *testing.T) {
+	s := Set{Rule{Type: "io.cozy.contacts"}}
+	assert.True(t, s.AllowID(GET, "io.cozy.contacts", "id1"))
+
+	s2 := Set{Rule{Type: "io.cozy.contacts", Values: []string{"id1"}}}
+	assert.True(t, s2.AllowID(GET, "io.cozy.contacts", "id1"))
+
+	s3 := Set{Rule{Type: "io.cozy.contacts", Selector: "foo", Values: []string{"bar"}}}
+	assert.False(t, s3.AllowID(GET, "io.cozy.contacts", "id1"))
+}
+
+func TestAllowCustomType(t *testing.T) {
+
+	s := Set{Rule{Type: "io.cozy.files", Selector: "path", Values: []string{"/testp/"}}}
+
+	y := &validableFile{"/testp/test"}
+	n := &validableFile{"/not-testp/test"}
+
+	assert.True(t, s.Allow(GET, y))
+	assert.False(t, s.Allow(GET, n))
+}
+
 func assertEqualJSON(t *testing.T, value []byte, expected string) {
 	expectedBytes := new(bytes.Buffer)
 	err := json.Compact(expectedBytes, []byte(expected))
 	assert.NoError(t, err)
 	assert.Equal(t, expectedBytes.String(), string(value))
+}
+
+type validable struct {
+	id      string
+	doctype string
+	values  map[string]string
+}
+
+func (t *validable) ID() string             { return t.id }
+func (t *validable) DocType() string        { return t.doctype }
+func (t *validable) Valid(f, e string) bool { return t.values[f] == e }
+
+type validableFile struct {
+	path string
+}
+
+func (t *validableFile) ID() string      { return t.path }
+func (t *validableFile) DocType() string { return "io.cozy.files" }
+func (t *validableFile) Valid(f, e string) bool {
+	return f == "path" && strings.HasPrefix(t.path, e)
 }
