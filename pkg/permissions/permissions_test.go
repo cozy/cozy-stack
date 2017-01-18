@@ -12,8 +12,12 @@ func TestVerbToString(t *testing.T) {
 	vs := Verbs(GET, DELETE)
 	assert.Equal(t, "GET,DELETE", vs.String())
 
-	vs2 := Verbs()
-	assert.Equal(t, "", vs2.String())
+	vs3 := ALL
+	assert.Equal(t, "ALL", vs3.String())
+
+	vs4 := VerbSplit("ALL")
+	assert.Equal(t, "ALL", vs4.String())
+
 }
 
 func TestRuleToJSON(t *testing.T) {
@@ -114,11 +118,17 @@ func TestSetToString(t *testing.T) {
 			Verbs:       Verbs(GET),
 			Values:      []string{"io.cozy.files.music-dir"},
 		},
+		Rule{
+			Title:    "sendmail",
+			Type:     "io.cozy.jobs",
+			Selector: "worker",
+			Values:   []string{"sendmail"},
+		},
 	}
 
 	out, err := s.MarshalScopeString()
 	assert.NoError(t, err)
-	assert.Equal(t, out, "io.cozy.contacts io.cozy.files:GET:io.cozy.files.music-dir")
+	assert.Equal(t, out, "io.cozy.contacts io.cozy.files:GET:io.cozy.files.music-dir io.cozy.jobs:ALL:sendmail:worker")
 }
 
 func TestStringToSet(t *testing.T) {
@@ -140,12 +150,13 @@ func TestStringToSet(t *testing.T) {
 	assert.Len(t, s[1].Values, 1)
 	assert.Equal(t, "io.cozy.files.music-dir", s[1].Values[0])
 
-	rule, err := UnmarshalRuleString("io.cozy.events:GET:calendar-id:mygreatcalendar")
+	rule, err := UnmarshalRuleString("io.cozy.events:GET:mygreatcalendar,othercalendar:calendar-id")
 	assert.NoError(t, err)
 	assert.Equal(t, "io.cozy.events", rule.Type)
 	assert.Equal(t, GET, rule.Verbs[0])
-	assert.Len(t, rule.Values, 1)
+	assert.Len(t, rule.Values, 2)
 	assert.Equal(t, "mygreatcalendar", rule.Values[0])
+	assert.Equal(t, "othercalendar", rule.Values[1])
 	assert.Equal(t, "calendar-id", rule.Selector)
 
 }

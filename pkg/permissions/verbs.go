@@ -3,6 +3,8 @@ package permissions
 import "strings"
 
 const verbSep = ","
+const allVerbs = "ALL"
+const allVerbsLength = 5
 
 // Verb is one of GET,POST,PUT,PATCH,DELETE
 type Verb string
@@ -21,8 +23,8 @@ type VerbSet []Verb
 
 func (vs VerbSet) String() string {
 	out := ""
-	if len(vs) == 0 {
-		return out
+	if len(vs) == 0 || len(vs) == allVerbsLength {
+		return allVerbs
 	}
 	for _, v := range vs {
 		out += verbSep + string(v)
@@ -32,6 +34,9 @@ func (vs VerbSet) String() string {
 
 // VerbSplit parse a string into a VerbSet
 func VerbSplit(in string) VerbSet {
+	if in == allVerbs {
+		return ALL
+	}
 	verbs := strings.Split(in, verbSep)
 	out := make(VerbSet, len(verbs))
 	for i, v := range verbs {

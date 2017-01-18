@@ -34,15 +34,22 @@ type Rule struct {
 // io.cozy.files:GET:io.cozy.files.music-dir
 func (r Rule) MarshalScopeString() (string, error) {
 	out := r.Type
-	if len(r.Verbs) != 0 {
+	hasVerbs := len(r.Verbs) != 0
+	hasValues := len(r.Values) != 0
+	hasSelector := r.Selector != ""
+
+	if hasVerbs || hasValues || hasSelector {
 		out += partSep + r.Verbs.String()
 	}
-	if len(r.Selector) != 0 {
-		out += partSep + r.Selector
-	}
-	if len(r.Values) != 0 {
+
+	if hasValues {
 		out += partSep + strings.Join(r.Values, valueSep)
 	}
+
+	if hasSelector {
+		out += partSep + r.Selector
+	}
+
 	return out, nil
 }
 
@@ -50,33 +57,23 @@ func (r Rule) MarshalScopeString() (string, error) {
 func UnmarshalRuleString(in string) (Rule, error) {
 	var out Rule
 	parts := strings.Split(in, partSep)
-
 	switch len(parts) {
-
+	case 4:
+		out.Selector = parts[3]
+		fallthrough
+	case 3:
+		out.Values = strings.Split(parts[2], valueSep)
+		fallthrough
+	case 2:
+		out.Verbs = VerbSplit(parts[1])
+		fallthrough
 	case 1:
 		if parts[0] == "" {
-			return out, errors.New("empty rule string")
+			return out, errors.New("the type is mandatory for a permissions rule")
 		}
 		out.Type = parts[0]
-
-	case 2:
-		out.Type = parts[0]
-		out.Verbs = VerbSplit(parts[1])
-
-	case 3:
-		out.Type = parts[0]
-		out.Verbs = VerbSplit(parts[1])
-		out.Values = strings.Split(parts[2], valueSep)
-
-	case 4:
-		out.Type = parts[0]
-		out.Verbs = VerbSplit(parts[1])
-		out.Selector = parts[2]
-		out.Values = strings.Split(parts[3], valueSep)
-
 	default:
 		return out, fmt.Errorf("Too many parts in %s", in)
-
 	}
 
 	return out, nil
