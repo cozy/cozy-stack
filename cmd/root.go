@@ -74,6 +74,21 @@ func init() {
 	flags.Int("couchdb-port", 5984, "couchdbdb port")
 	checkNoErr(viper.BindPFlag("couchdb.port", flags.Lookup("couchdb-port")))
 
+	flags.String("mail-host", "", "mail smtp host")
+	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
+
+	flags.Int("mail-port", 465, "mail smtp port")
+	checkNoErr(viper.BindPFlag("mail.port", flags.Lookup("mail-port")))
+
+	flags.String("mail-username", "", "mail smtp username")
+	checkNoErr(viper.BindPFlag("mail.username", flags.Lookup("mail-username")))
+
+	flags.String("mail-password", "", "mail smtp password")
+	checkNoErr(viper.BindPFlag("mail.password", flags.Lookup("mail-password")))
+
+	flags.Bool("mail-disable-tls", false, "disable smtp over tls")
+	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
+
 	flags.String("log-level", "info", "define the log level")
 	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
 }

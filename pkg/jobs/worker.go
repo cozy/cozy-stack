@@ -82,7 +82,7 @@ func (w *Worker) work(workerID string) {
 }
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
-	c := &(*w.Conf)
+	c := w.Conf.clone()
 	if c.Concurrency == 0 {
 		c.Concurrency = uint(defaultConcurrency)
 	}

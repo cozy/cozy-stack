@@ -164,3 +164,14 @@ func (m *Message) Unmarshal(msg interface{}) error {
 		return ErrUnknownMessageType
 	}
 }
+
+func (w *WorkerConfig) clone() *WorkerConfig {
+	return &WorkerConfig{
+		WorkerFunc:   w.WorkerFunc,
+		Concurrency:  w.Concurrency,
+		MaxExecCount: w.MaxExecCount,
+		MaxExecTime:  w.MaxExecTime,
+		Timeout:      w.Timeout,
+		RetryDelay:   w.RetryDelay,
+	}
+}
