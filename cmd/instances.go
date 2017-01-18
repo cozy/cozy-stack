@@ -16,6 +16,8 @@ import (
 )
 
 var flagLocale string
+var flagTimezone string
+var flagEmail string
 var flagApps []string
 var flagDev bool
 
@@ -60,10 +62,12 @@ given domain.
 		}
 
 		q := url.Values{
-			"Domain": {domain},
-			"Apps":   {strings.Join(flagApps, ",")},
-			"Locale": {flagLocale},
-			"Dev":    {dev},
+			"Domain":   {domain},
+			"Apps":     {strings.Join(flagApps, ",")},
+			"Locale":   {flagLocale},
+			"Timezone": {flagTimezone},
+			"Email":    {flagEmail},
+			"Dev":      {dev},
 		}
 
 		i, err := instancesRequest("POST", "/instances/", q, nil)
@@ -199,6 +203,8 @@ func init() {
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
+	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
+	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	RootCmd.AddCommand(instanceCmdGroup)

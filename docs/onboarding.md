@@ -14,8 +14,6 @@ The CLI also allows to specify which source to use for `onboarding` and `home` a
 
 After creation, an instance has a `registerToken` generated randomly.
 
-All cozy-instance fields are considered private unless explictly prefixed by `public-`. Public instance field can be seen from the `instance` endpoint. Only public fields we can think of for now are `public-name`, `public-locale`.
-
 ## Onboarding steps
 
 This document and the cozy-stack are only concerned with login and passphrase registering step which are important for security.
@@ -43,92 +41,19 @@ After login, the user is always redirected to the `onboarding` application. It i
 
 ## Routes
 
-See [settings](settings.md) for setting a passphrase.
-
-### GET /instance
-
-If the user is not logged in, display public instance information
-
-#### Request
-```http
-GET https://alice.example.com/instance HTTP/1.1
-```
-
-#### Response
-```json
-{
-  "public-locale":"fr",
-  "public-name":"Alice Martin"
-}
-```
-
-If the user is logged in, display all instance information, except passphrase
-
-#### Request
-```http
-GET https://alice.example.com/instance HTTP/1.1
-Cookie: sessionid=xxxx
-```
-
-#### Response
-```json
-{
-  "_rev":"3-56521545485448482",
-  "domain": "alice.example.com",
-  "owner-email": "alice@example.com",
-  "public-locale":"fr",
-  "public-name":"Alice Martin"
-}
-```
-
-### POST /instance
-
-If the user is logged in, allow to set instance fields
-
-#### Request
-```http
-POST https://alice.example.com/instance HTTP/1.1
-Content-type: application/json
-Cookie: sessionid=xxxxx
-Authorization: base64(onboarding:onboardingapptoken)
-```
-```json
-{
-  "_rev":"3-56521545485448482",
-  "tz": "Europe/Berlin"
-}
-```
-
-#### Response
-```
-HTTP/1.1 200 OK
-Content-type: application/json
-Cookie: sessionid=xxxxx
-```
-```json
-{
-  "_rev":"4-15454854484828845221285",
-  "tz": "Europe/Berlin",
-  "domain": "alice.example.com",
-  "owner-email": "alice@example.com",
-  "public-locale":"fr",
-  "public-name":"Alice Martin"
-}
-```
+See [settings](settings.md).
 
 ## Flow Example
 
 - The server administrator Bob creates an instance through the CLI. He knows the instance should be in french for an user named `alice`.
 ```
-cozy-stack instances add alice.example.com --locale fr --public-name "Alice Martin" --tz Europe/Paris
+cozy-stack instances add alice.example.com --locale fr
 >> https://alice.cozycloud.cc?registerToken=42456565213125454842
 ```
 The instance is created
 ```json
 {
   "domain": "alice.example.com",
-  "publicName": "Alice Martin",
-  "tz": "Europe/Paris",
   "locale":"fr"
 }
 ```

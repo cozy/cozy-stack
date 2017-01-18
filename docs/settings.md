@@ -135,3 +135,86 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 HTTP/1.1 204 No Content
 Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
 ```
+
+## Instance
+
+### GET /settings/instance
+
+If the user is logged in, display all instance settings. If the user is not
+logged in, the register token can be used to read the informations.
+
+#### Request
+
+```http
+GET /settings/instance HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Cookie: sessionid=xxxx
+```
+
+#### Response
+```json
+{
+  "data": {
+    "type": "io.cozy.settings",
+    "id": "io.cozy.settings.instance",
+    "rev": "3-56521545485448482",
+    "attributes": {
+      "locale":"fr",
+      "email": "alice@example.com",
+      "public_name":"Alice Martin"
+    }
+  }
+}
+```
+
+### PUT /instance
+
+If the user is logged in, allow to set the instance fields
+
+#### Request
+```http
+POST /settings/instance HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Content-type: application/vnd.api+json
+Cookie: sessionid=xxxxx
+Authorization: Bearer settings-token
+```
+```json
+{
+  "data": {
+    "type": "io.cozy.settings",
+    "id": "io.cozy.settings.instance",
+    "rev": "3-56521545485448482",
+    "attributes": {
+      "locale":"fr",
+      "email": "alice@example.com",
+      "public_name":"Alice Martin",
+      "timezone": "Europe/Berlin"
+    }
+  }
+}
+```
+
+#### Response
+```
+HTTP/1.1 200 OK
+Content-type: application/json
+Cookie: sessionid=xxxxx
+```
+```json
+{
+  "data": {
+    "type": "io.cozy.settings",
+    "id": "io.cozy.settings.instance",
+    "rev": "4-5a3e315e",
+    "attributes": {
+      "locale":"fr",
+      "email": "alice@example.com",
+      "public_name":"Alice Martin",
+      "timezone": "Europe/Berlin"
+    }
+  }
+}
+```

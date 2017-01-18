@@ -78,10 +78,12 @@ type Instance struct {
 
 // Options holds the parameters to create a new instance.
 type Options struct {
-	Domain string
-	Locale string
-	Apps   []string
-	Dev    bool
+	Domain   string
+	Locale   string
+	Timezone string
+	Email    string
+	Apps     []string
+	Dev      bool
 }
 
 // DocType implements couchdb.Doc
@@ -113,6 +115,18 @@ func (i *Instance) Relationships() jsonapi.RelationshipMap {
 func (i *Instance) Included() []jsonapi.Object {
 	return nil
 }
+
+// settings is a struct used for the settings of an instance
+type instanceSettings struct {
+	Timezone string `json:"tz,omitempty"`
+	Email    string `json:"email,omitempty"`
+}
+
+func (s *instanceSettings) ID() string      { return consts.InstanceSettingsID }
+func (s *instanceSettings) Rev() string     { return "" }
+func (s *instanceSettings) DocType() string { return consts.Settings }
+func (s *instanceSettings) SetID(_ string)  {}
+func (s *instanceSettings) SetRev(_ string) {}
 
 // FS returns the afero storage provider where the binaries for
 // the current instance are persisted
@@ -326,6 +340,16 @@ func Create(opts *Options) (*Instance, error) {
 	err = i.createFSIndexes()
 	if err != nil {
 		return nil, err
+	}
+
+	if opts.Timezone != "" || opts.Email != "" {
+		doc := &instanceSettings{
+			Timezone: opts.Timezone,
+			Email:    opts.Email,
+		}
+		if err = couchdb.CreateNamedDoc(i, doc); err != nil {
+			return nil, err
+		}
 	}
 
 	// TODO atomicity with defer
