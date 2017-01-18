@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +13,6 @@ import (
 func TestSecureMiddlewareHSTS(t *testing.T) {
 	e := echo.New()
 	req, _ := http.NewRequest(echo.GET, "http://app.cozy.local/", nil)
-	req.TLS = &tls.ConnectionState{} // fors IsTls to return true
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	h := Secure(&SecureConfig{
