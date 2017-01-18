@@ -315,6 +315,45 @@ func ReadFileContentFromPathHandler(c echo.Context) error {
 	return nil
 }
 
+type apiArchiveData struct {
+	Name  string   `json:"name"`
+	Files []string `json:"files"`
+}
+
+type apiArchive struct {
+	doc *apiArchiveData
+}
+
+func (i *apiArchive) ID() string                             { return "" }
+func (i *apiArchive) Rev() string                            { return "" }
+func (i *apiArchive) DocType() string                        { return consts.Archives }
+func (i *apiArchive) SetID(id string)                        {}
+func (i *apiArchive) SetRev(rev string)                      {}
+func (i *apiArchive) Relationships() jsonapi.RelationshipMap { return nil }
+func (i *apiArchive) Included() []jsonapi.Object             { return nil }
+func (i *apiArchive) SelfLink() string                       { return "" }
+func (i *apiArchive) MarshalJSON() ([]byte, error) {
+	return nil, errors.New("Not implemented")
+}
+
+// ArchiveHandler handles requests to /files/archive and creates on the fly
+// zip archives with the given files and folders.
+func ArchiveHandler(c echo.Context) error {
+	doc := &apiArchiveData{}
+	if _, err := jsonapi.Bind(c.Request(), doc); err != nil {
+		return err
+	}
+	if len(doc.Files) == 0 {
+		return c.JSON(http.StatusNotFound, "Can't create an archive with no files")
+	}
+	if doc.Name == "" {
+		doc.Name = "archive" // TODO date
+	}
+
+	fmt.Printf("doc = %#v\n", doc)
+	return nil
+}
+
 // TrashHandler handles all DELETE requests on /files/:file-id and
 // moves the file or directory with the specified file-id to the
 // trash.
@@ -436,6 +475,8 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreationHandler)
 	router.POST("/:dir-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
+
+	router.POST("/archive", ArchiveHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
 	router.DELETE("/trash", ClearTrashHandler)

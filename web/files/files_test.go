@@ -892,6 +892,20 @@ func TestGetDirMetadataFromID(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
+func TestArchiveNoFiles(t *testing.T) {
+	body := `{
+		"data": {
+			"attributes": {}
+		}
+	}`
+	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", bytes.NewBufferString(body))
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+	msg, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, `"Can't create an archive with no files"`, string(msg))
+}
+
 func TestDirTrash(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=totrashdir&Type=directory")
 	if !assert.Equal(t, 201, res1.StatusCode) {
