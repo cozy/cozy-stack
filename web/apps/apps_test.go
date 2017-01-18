@@ -1,7 +1,7 @@
 // spec package is introduced to avoid circular dependencies since this
 // particular test requires to depend on routing directly to expose the API and
 // the APP server.
-package spec
+package apps_test
 
 import (
 	"bytes"
@@ -225,7 +225,7 @@ func TestServeAppsWithACode(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	config.GetConfig().Assets = "../../../assets"
+	config.GetConfig().Assets = "../../assets"
 
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
