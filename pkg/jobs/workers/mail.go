@@ -31,12 +31,12 @@ type MailAddress struct {
 // content: body and body content-type. It is used as the input of the
 // "sendmail" worker.
 type MailOptions struct {
-	From     *MailAddress          `json:"from"`
-	To       []*MailAddress        `json:"to"`
-	Subject  string                `json:"subject"`
-	Dialer   *gomail.DialerOptions `json:"dialer,omitempty"`
-	Date     *time.Time            `json:"date"`
-	Contents []*MailPart
+	From    *MailAddress          `json:"from"`
+	To      []*MailAddress        `json:"to"`
+	Subject string                `json:"subject"`
+	Dialer  *gomail.DialerOptions `json:"dialer,omitempty"`
+	Date    *time.Time            `json:"date"`
+	Parts   []*MailPart
 }
 
 // MailPart represent a part of the content of the mail. It has a type
@@ -81,7 +81,7 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 		"Subject": {opts.Subject},
 	})
 	mail.SetDateHeader("Date", date)
-	for _, part := range opts.Contents {
+	for _, part := range opts.Parts {
 		if err := addContent(mail, part); err != nil {
 			return err
 		}

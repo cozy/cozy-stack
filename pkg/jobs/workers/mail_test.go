@@ -62,7 +62,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Contents: []*MailPart{
+			Parts: []*MailPart{
 				&MailPart{
 					Body: "Hey !!!",
 					Type: "text/plain",
@@ -142,7 +142,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Contents: []*MailPart{
+			Parts: []*MailPart{
 				&MailPart{
 					Template: tpl,
 					Values:   data,
@@ -175,7 +175,7 @@ func TestMailBadBodyType(t *testing.T) {
 		From:    &MailAddress{Mail: "me@me"},
 		To:      []*MailAddress{&MailAddress{Mail: "you@you"}},
 		Subject: "Up?",
-		Contents: []*MailPart{
+		Parts: []*MailPart{
 			&MailPart{
 				Type: "text/qsdqsd",
 				Body: "foo",
@@ -261,7 +261,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Contents: []*MailPart{
+			Parts: []*MailPart{
 				&MailPart{
 					Type: "text/plain",
 					Body: "foo",
