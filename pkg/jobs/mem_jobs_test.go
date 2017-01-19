@@ -184,6 +184,70 @@ func TestRetry(t *testing.T) {
 	w.Wait()
 }
 
+func TestPanicRetried(t *testing.T) {
+	var w sync.WaitGroup
+
+	maxExecCount := 4
+
+	broker := NewMemBroker("panic", WorkersList{
+		"panic": {
+			Concurrency:  1,
+			MaxExecCount: uint(maxExecCount),
+			RetryDelay:   1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, _ *Message) error {
+				w.Done()
+				panic("oops")
+			},
+		},
+	})
+
+	w.Add(maxExecCount)
+	_, _, err := broker.PushJob(&JobRequest{
+		WorkerType: "panic",
+		Message:    nil,
+	})
+
+	assert.NoError(t, err)
+	w.Wait()
+}
+
+func TestPanic(t *testing.T) {
+	var w sync.WaitGroup
+
+	even, _ := NewMessage("json", 0)
+	odd, _ := NewMessage("json", 1)
+
+	broker := NewMemBroker("panic2", WorkersList{
+		"panic2": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			RetryDelay:   1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, m *Message) error {
+				var i int
+				if err := m.Unmarshal(&i); err != nil {
+					return err
+				}
+				if i%2 != 0 {
+					panic("oops")
+				}
+				w.Done()
+				return nil
+			},
+		},
+	})
+	w.Add(2)
+	var err error
+	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: odd})
+	assert.NoError(t, err)
+	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: even})
+	assert.NoError(t, err)
+	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: odd})
+	assert.NoError(t, err)
+	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: even})
+	assert.NoError(t, err)
+	w.Wait()
+}
+
 func TestInfoChan(t *testing.T) {
 	var w sync.WaitGroup
 

@@ -146,8 +146,7 @@ func (t *task) run() (err error) {
 		}
 		log.Debugf("[job] %s: run %d (timeout %s)", t.infos.ID, t.execCount, timeout)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		err = t.conf.WorkerFunc(ctx, t.infos.Message)
-		if err == nil {
+		if err = t.exec(ctx); err == nil {
 			cancel()
 			break
 		}
@@ -158,6 +157,19 @@ func (t *task) run() (err error) {
 		t.execCount++
 	}
 	return nil
+}
+
+func (t *task) exec(ctx context.Context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
+		}
+	}()
+	return t.conf.WorkerFunc(ctx, t.infos.Message)
 }
 
 func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
