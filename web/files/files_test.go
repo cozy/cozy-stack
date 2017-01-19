@@ -893,17 +893,36 @@ func TestGetDirMetadataFromID(t *testing.T) {
 }
 
 func TestArchiveNoFiles(t *testing.T) {
-	body := `{
+	body := bytes.NewBufferString(`{
 		"data": {
 			"attributes": {}
 		}
-	}`
-	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", bytes.NewBufferString(body))
+	}`)
+	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", body)
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
 	msg, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `"Can't create an archive with no files"`, string(msg))
+}
+
+func TestArchive(t *testing.T) {
+	body := bytes.NewBufferString(`{
+		"data": {
+			"attributes": {
+				"files": [
+					"/Documents/foo.jpg",
+					"/Documents/bar.jpg",
+					"/Documents/baz.jpg"
+				]
+			}
+		}
+	}`)
+	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", body)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	disposition := res.Header.Get("Content-Disposition")
+	assert.Equal(t, `attachment; filename=archive.zip`, disposition)
 }
 
 func TestDirTrash(t *testing.T) {

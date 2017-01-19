@@ -315,13 +315,8 @@ func ReadFileContentFromPathHandler(c echo.Context) error {
 	return nil
 }
 
-type apiArchiveData struct {
-	Name  string   `json:"name"`
-	Files []string `json:"files"`
-}
-
 type apiArchive struct {
-	doc *apiArchiveData
+	doc *vfs.Archive
 }
 
 func (i *apiArchive) ID() string                             { return "" }
@@ -339,19 +334,19 @@ func (i *apiArchive) MarshalJSON() ([]byte, error) {
 // ArchiveHandler handles requests to /files/archive and creates on the fly
 // zip archives with the given files and folders.
 func ArchiveHandler(c echo.Context) error {
-	doc := &apiArchiveData{}
-	if _, err := jsonapi.Bind(c.Request(), doc); err != nil {
+	archive := &vfs.Archive{}
+	if _, err := jsonapi.Bind(c.Request(), archive); err != nil {
 		return err
 	}
-	if len(doc.Files) == 0 {
+	if len(archive.Files) == 0 {
 		return c.JSON(http.StatusNotFound, "Can't create an archive with no files")
 	}
-	if doc.Name == "" {
-		doc.Name = "archive" // TODO date
+	if archive.Name == "" {
+		archive.Name = "archive"
 	}
 
-	fmt.Printf("doc = %#v\n", doc)
-	return nil
+	instance := middlewares.GetInstance(c)
+	return archive.Serve(instance, c.Response())
 }
 
 // TrashHandler handles all DELETE requests on /files/:file-id and
