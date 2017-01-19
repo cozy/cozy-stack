@@ -74,7 +74,7 @@ func init() {
 	flags.Int("couchdb-port", 5984, "couchdbdb port")
 	checkNoErr(viper.BindPFlag("couchdb.port", flags.Lookup("couchdb-port")))
 
-	flags.String("mail-host", "", "mail smtp host")
+	flags.String("mail-host", "localhost", "mail smtp host")
 	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
 
 	flags.Int("mail-port", 465, "mail smtp port")
