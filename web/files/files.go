@@ -315,22 +315,6 @@ func ReadFileContentFromPathHandler(c echo.Context) error {
 	return nil
 }
 
-type apiArchive struct {
-	doc *vfs.Archive
-}
-
-func (i *apiArchive) ID() string                             { return "" }
-func (i *apiArchive) Rev() string                            { return "" }
-func (i *apiArchive) DocType() string                        { return consts.Archives }
-func (i *apiArchive) SetID(id string)                        {}
-func (i *apiArchive) SetRev(rev string)                      {}
-func (i *apiArchive) Relationships() jsonapi.RelationshipMap { return nil }
-func (i *apiArchive) Included() []jsonapi.Object             { return nil }
-func (i *apiArchive) SelfLink() string                       { return "" }
-func (i *apiArchive) MarshalJSON() ([]byte, error) {
-	return nil, errors.New("Not implemented")
-}
-
 // ArchiveHandler handles requests to /files/archive and creates on the fly
 // zip archives with the given files and folders.
 func ArchiveHandler(c echo.Context) error {
