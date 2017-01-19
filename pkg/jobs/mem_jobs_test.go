@@ -184,6 +184,34 @@ func TestRetry(t *testing.T) {
 	w.Wait()
 }
 
+func TestPanic(t *testing.T) {
+	var w sync.WaitGroup
+
+	maxExecCount := 4
+
+	broker := NewMemBroker("panic", WorkersList{
+		"panic": {
+			Concurrency:  1,
+			MaxExecCount: uint(maxExecCount),
+			RetryDelay:   1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, _ *Message) error {
+				w.Done()
+				panic("oops")
+				return nil
+			},
+		},
+	})
+
+	w.Add(maxExecCount)
+	_, _, err := broker.PushJob(&JobRequest{
+		WorkerType: "panic",
+		Message:    nil,
+	})
+
+	assert.NoError(t, err)
+	w.Wait()
+}
+
 func TestInfoChan(t *testing.T) {
 	var w sync.WaitGroup
 
