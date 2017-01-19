@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -38,7 +39,12 @@ func getInstance(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	doc.Type = consts.Settings
 	doc.M["locale"] = instance.Locale
+
+	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
+		return err
+	}
 
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
@@ -51,6 +57,15 @@ func updateInstance(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
+	doc.Type = consts.Settings
+	doc.SetID(consts.InstanceSettingsID)
+	doc.SetRev(obj.Meta.Rev)
+
+	if err := permissions.Allow(c, permissions.PUT, doc); err != nil {
+		return err
+	}
+
 	if locale, ok := doc.M["locale"].(string); ok {
 		delete(doc.M, "locale")
 		instance.Locale = locale
@@ -58,9 +73,7 @@ func updateInstance(c echo.Context) error {
 			return err
 		}
 	}
-	doc.Type = consts.Settings
-	doc.SetID(consts.InstanceSettingsID)
-	doc.SetRev(obj.Meta.Rev)
+
 	if err := couchdb.UpdateDoc(instance, doc); err != nil {
 		return err
 	}

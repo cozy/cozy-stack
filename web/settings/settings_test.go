@@ -12,11 +12,15 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const domain = "cozysettings.example.net"
@@ -34,6 +38,13 @@ func TestThemeCSS(t *testing.T) {
 
 func TestDiskUsage(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/disk-usage")
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/disk-usage", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	assert.NoError(t, err)
+	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	var result map[string]interface{}
@@ -118,6 +129,13 @@ func TestUpdatePassphraseSuccess(t *testing.T) {
 func TestGetInstance(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/instance")
 	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/instance", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	assert.NoError(t, err)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
@@ -189,11 +207,14 @@ func TestUpdateInstance(t *testing.T) {
 	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	checkResult(res)
 
-	res, err = http.Get(ts.URL + "/settings/instance")
+	req, _ = http.NewRequest("GET", ts.URL+"/settings/instance", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	checkResult(res)
 }
@@ -226,4 +247,17 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+func testToken(i *instance.Instance) string {
+	t, _ := crypto.NewJWT(testInstance.SessionSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AppAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  "testapp",
+		},
+		Scope: consts.Settings,
+	})
+	return t
 }

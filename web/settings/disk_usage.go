@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -37,5 +38,11 @@ func diskUsage(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, &apiDiskUsage{used}, nil)
+	var result = &apiDiskUsage{used}
+
+	if err = permissions.Allow(c, permissions.GET, result); err != nil {
+		return err
+	}
+
+	return jsonapi.Data(c, http.StatusOK, result, nil)
 }
