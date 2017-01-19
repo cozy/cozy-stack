@@ -137,7 +137,6 @@ func SetupRoutes(router *echo.Echo) error {
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,
-		permissions.Extractor,
 		middlewares.LoadSession,
 	}
 	auth.Routes(router.Group("/auth", mws...))

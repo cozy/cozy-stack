@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -29,21 +27,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
-	"github.com/cozy/cozy-stack/web/auth"
-	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
-
-type renderer struct {
-	t *template.Template
-}
-
-func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return r.t.ExecuteTemplate(w, name, data)
-}
 
 const domain = "cozy.example.net"
 
@@ -1051,17 +1039,7 @@ func TestMain(m *testing.M) {
 	})
 	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
 
-	mws := []echo.MiddlewareFunc{
-		middlewares.NeedInstance,
-		middlewares.LoadSession,
-	}
 	r := echo.New()
-	r.HTTPErrorHandler = errors.ErrorHandler
-	r.Renderer = &renderer{
-		t: template.Must(template.ParseGlob("../../assets/templates/*.html")),
-	}
-	auth.Routes(r.Group("/auth", mws...))
-
 	r.GET("/test", func(c echo.Context) error {
 		var content string
 		if middlewares.IsLoggedIn(c) {
@@ -1070,7 +1048,7 @@ func TestMain(m *testing.M) {
 			content = "who_are_you"
 		}
 		return c.String(http.StatusOK, content)
-	}, mws...)
+	}, middlewares.NeedInstance, middlewares.LoadSession)
 
 	handler, err := web.CreateSubdomainProxy(r, apps.Serve)
 	if err != nil {
