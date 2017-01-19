@@ -308,6 +308,7 @@ func Routes(router *echo.Group) {
 	router.PUT("/:doctype/:docid", updateDoc)
 	router.DELETE("/:doctype/:docid", deleteDoc)
 	router.POST("/:doctype/", createDoc)
+	router.GET("/:doctype/_all_docs", allDocs)
 	router.POST("/:doctype/_all_docs", allDocs)
 	router.POST("/:doctype/_index", defineIndex)
 	router.POST("/:doctype/_find", findDocuments)

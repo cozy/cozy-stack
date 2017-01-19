@@ -301,6 +301,59 @@ It is possible to use either a `rev` query string parameter or a HTTP `If-Match`
 
 - If no id is provided in URL, an error 400 is returned
 
+--------------------------------------------------------------------------------
+
+## List all the documents
+
+### Request
+
+```http
+GET /data/io.cozy.events/_all_docs?include_docs=true HTTP/1.1
+Accept: application/json
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+    "offset": 0,
+    "rows": [
+        {
+            "id": "16e458537602f5ef2a710089dffd9453",
+            "key": "16e458537602f5ef2a710089dffd9453",
+            "value": {
+                "rev": "1-967a00dff5e02add41819138abb3284d"
+            },
+            "doc": {
+                "field": "value"
+            }
+        },
+        {
+            "id": "f4ca7773ddea715afebc4b4b15d4f0b3",
+            "key": "f4ca7773ddea715afebc4b4b15d4f0b3",
+            "value": {
+                "rev": "2-7051cbe5c8faecd085a3fa619e6e6337"
+            },
+            "doc": {
+                "field": "other-value"
+            }
+        }
+    ],
+    "total_rows": 2
+}
+```
+
+### Details
+
+See [`_all_docs` in couchdb docs](http://docs.couchdb.org/en/2.0.0/api/database/bulk-api.html#db-all-docs)
+
+--------------------------------------------------------------------------------
+
 ## Mango
 
 The creation and usage of [Mango indexes](mango.md) is possible.
