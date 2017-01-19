@@ -6,11 +6,13 @@ import (
 	"context"
 	"net"
 	"net/textproto"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/gomail"
 	"github.com/stretchr/testify/assert"
@@ -48,22 +50,24 @@ QUIT
 	}
 
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
-		msg, err := jobs.NewMessage("json", &MailManualOptions{
-			mailOptions: &mailOptions{
-				From: &MailAddress{Mail: "me@me"},
-				To: []*MailAddress{
-					&MailAddress{Mail: "you1@you"},
-				},
-				Date:    &time.Time{},
-				Subject: "Up?",
-				Dialer: &gomail.DialerOptions{
-					Host:       host,
-					Port:       port,
-					DisableTLS: true,
+		msg, err := jobs.NewMessage("json", &MailOptions{
+			From: &MailAddress{Mail: "me@me"},
+			To: []*MailAddress{
+				&MailAddress{Mail: "you1@you"},
+			},
+			Date:    &time.Time{},
+			Subject: "Up?",
+			Dialer: &gomail.DialerOptions{
+				Host:       host,
+				Port:       port,
+				DisableTLS: true,
+			},
+			Contents: []*MailPart{
+				&MailPart{
+					Body: "Hey !!!",
+					Type: "text/plain",
 				},
 			},
-			Body:     "Hey !!!",
-			BodyType: "text/plain",
 		})
 		if err != nil {
 			return err
@@ -126,36 +130,36 @@ QUIT
 	}
 
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
-		msg, err := jobs.NewMessage("json", &MailTemplateOptions{
-			mailOptions: &mailOptions{
-				From: &MailAddress{Mail: "me@me"},
-				To: []*MailAddress{
-					&MailAddress{Mail: "you1@you"},
-				},
-				Date:    &time.Time{},
-				Subject: "Up?",
-				Dialer: &gomail.DialerOptions{
-					Host:       host,
-					Port:       port,
-					DisableTLS: true,
+		msg, err := jobs.NewMessage("json", &MailOptions{
+			From: &MailAddress{Mail: "me@me"},
+			To: []*MailAddress{
+				&MailAddress{Mail: "you1@you"},
+			},
+			Date:    &time.Time{},
+			Subject: "Up?",
+			Dialer: &gomail.DialerOptions{
+				Host:       host,
+				Port:       port,
+				DisableTLS: true,
+			},
+			Contents: []*MailPart{
+				&MailPart{
+					Template: tpl,
+					Values:   data,
 				},
 			},
-			Template: tpl,
-			Values:   data,
 		})
 		if err != nil {
 			return err
 		}
-		return SendMailTemplate(context.Background(), msg)
+		return SendMail(context.Background(), msg)
 	})
 }
 
 func TestMailMissingSubject(t *testing.T) {
-	msg, err := jobs.NewMessage("json", &MailManualOptions{
-		mailOptions: &mailOptions{
-			From: &MailAddress{Mail: "me@me"},
-			To:   []*MailAddress{&MailAddress{Mail: "you@you"}},
-		},
+	msg, err := jobs.NewMessage("json", &MailOptions{
+		From: &MailAddress{Mail: "me@me"},
+		To:   []*MailAddress{&MailAddress{Mail: "you@you"}},
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -167,13 +171,113 @@ func TestMailMissingSubject(t *testing.T) {
 }
 
 func TestMailBadBodyType(t *testing.T) {
-	err := sendMail(context.Background(), &mailOptions{
-		From: &MailAddress{Mail: "me@me"},
-		To:   []*MailAddress{&MailAddress{Mail: "you@you"}},
-	}, "text/qsdqsd", "foo")
+	msg, err := jobs.NewMessage("json", &MailOptions{
+		From:    &MailAddress{Mail: "me@me"},
+		To:      []*MailAddress{&MailAddress{Mail: "you@you"}},
+		Subject: "Up?",
+		Contents: []*MailPart{
+			&MailPart{
+				Type: "text/qsdqsd",
+				Body: "foo",
+			},
+		},
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	err = SendMail(context.Background(), msg)
 	if assert.Error(t, err) {
 		assert.Equal(t, "Unknown body content-type text/qsdqsd", err.Error())
 	}
+}
+
+func TestMailMultiParts(t *testing.T) {
+	clientString := `EHLO localhost
+HELO localhost
+MAIL FROM:<me@me>
+RCPT TO:<you1@you>
+DATA
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=UTF-8
+foo
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=UTF-8
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset=3D"UTF-8">
+    <title>My page</title>
+  </head>
+  <body>
+    <div>My photos</div><div>My blog</div>
+  </body>
+</html>
+.
+QUIT
+`
+
+	expectedHeaders := map[string]string{
+		"From":         "me@me",
+		"To":           "you1@you",
+		"Subject":      "Up?",
+		"Date":         "Mon, 01 Jan 0001 00:00:00 +0000",
+		"Content-Type": "multipart/alternative;",
+		"Mime-Version": "1.0",
+	}
+
+	const tpl = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+  </head>
+  <body>
+    {{range .Items}}<div>{{ . }}</div>{{else}}<div><strong>no rows</strong></div>{{end}}
+  </body>
+</html>`
+
+	data := struct {
+		Title string
+		Items []string
+	}{
+		Title: "My page",
+		Items: []string{
+			"My photos",
+			"My blog",
+		},
+	}
+
+	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
+		msg, err := jobs.NewMessage("json", &MailOptions{
+			From: &MailAddress{Mail: "me@me"},
+			To: []*MailAddress{
+				&MailAddress{Mail: "you1@you"},
+			},
+			Date:    &time.Time{},
+			Subject: "Up?",
+			Dialer: &gomail.DialerOptions{
+				Host:       host,
+				Port:       port,
+				DisableTLS: true,
+			},
+			Contents: []*MailPart{
+				&MailPart{
+					Type: "text/plain",
+					Body: "foo",
+				},
+				&MailPart{
+					Type:     "text/html",
+					Template: tpl,
+					Values:   data,
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+		return SendMail(context.Background(), msg)
+	})
 }
 
 func mailServer(t *testing.T, serverString, clientString string, expectedHeader map[string]string, send func(string, int) error) {
@@ -223,14 +327,15 @@ func mailServer(t *testing.T, serverString, clientString string, expectedHeader 
 						read = true
 						continue
 					}
-					if readhead {
+					// skip multipart --boundaries
+					if readhead &&
+						(len(msg) <= 1 || msg[0] != '-' || msg[1] != '-') {
 						bcmdbuf.Write([]byte(msg + "\r\n"))
 					} else {
 						parts := strings.SplitN(msg, ": ", 2)
-						if len(parts) != 2 {
-							t.Fatal("Could not parse headers")
+						if len(parts) == 2 {
+							headers[parts[0]] = parts[1]
 						}
-						headers[parts[0]] = parts[1]
 					}
 				} else {
 					if msg == "." {
@@ -266,4 +371,9 @@ func mailServer(t *testing.T, serverString, clientString string, expectedHeader 
 		return
 	}
 	assert.EqualValues(t, expectedHeader, headers)
+}
+
+func TestMain(m *testing.M) {
+	config.UseTestFile()
+	os.Exit(m.Run())
 }
