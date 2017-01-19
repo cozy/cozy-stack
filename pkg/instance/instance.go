@@ -342,14 +342,12 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 
-	if opts.Timezone != "" || opts.Email != "" {
-		doc := &instanceSettings{
-			Timezone: opts.Timezone,
-			Email:    opts.Email,
-		}
-		if err = couchdb.CreateNamedDoc(i, doc); err != nil {
-			return nil, err
-		}
+	doc := &instanceSettings{
+		Timezone: opts.Timezone,
+		Email:    opts.Email,
+	}
+	if err = couchdb.CreateNamedDoc(i, doc); err != nil {
+		return nil, err
 	}
 
 	// TODO atomicity with defer
