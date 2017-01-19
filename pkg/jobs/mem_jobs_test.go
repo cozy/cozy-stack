@@ -238,8 +238,11 @@ func TestPanic(t *testing.T) {
 	w.Add(2)
 	var err error
 	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: odd})
+	assert.NoError(t, err)
 	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: even})
+	assert.NoError(t, err)
 	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: odd})
+	assert.NoError(t, err)
 	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
