@@ -1,6 +1,6 @@
 //go:generate statik -src=../../.assets -dest=..
 
-package routing
+package web
 
 import (
 	"html/template"
@@ -8,8 +8,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
@@ -28,11 +30,15 @@ import (
 	"github.com/rakyll/statik/fs"
 )
 
-var templatesList = []string{
-	"authorize.html",
-	"error.html",
-	"login.html",
-}
+var (
+	hstsMaxAge = 365 * 24 * time.Hour // 1 year
+
+	templatesList = []string{
+		"authorize.html",
+		"error.html",
+		"login.html",
+	}
+)
 
 type renderer struct {
 	t *template.Template
@@ -91,6 +97,19 @@ func newRenderer(assetsPath string) (*renderer, error) {
 	return r, nil
 }
 
+// SetupAppsHandler adds all the necessary middlewares for the application
+// handler.
+func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
+	secure := middlewares.Secure(&middlewares.SecureConfig{
+		HSTSMaxAge:    hstsMaxAge,
+		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
+		CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcParent},
+		XFrameOptions: middlewares.XFrameDeny,
+	})
+
+	return middlewares.Compose(appsHandler, secure, middlewares.LoadSession)
+}
+
 // SetupAssets add assets routing and handling to the given router. It also
 // adds a Renderer to render templates.
 func SetupAssets(router *echo.Echo, assetsPath string) error {
@@ -108,11 +127,16 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
-	router.Use(middlewares.CORS)
+	secure := middlewares.Secure(&middlewares.SecureConfig{
+		HSTSMaxAge:    hstsMaxAge,
+		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
+		XFrameOptions: middlewares.XFrameDeny,
+	})
+
+	router.Use(secure, middlewares.CORS)
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,
-		permissions.Extractor,
 		middlewares.LoadSession,
 	}
 	auth.Routes(router.Group("/auth", mws...))
@@ -143,6 +167,39 @@ func SetupAdminRoutes(router *echo.Echo) error {
 
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil
+}
+
+// CreateSubdomainProxy returns a new web server that will handle that apps
+// proxy routing if the host of the request match an application, and route to
+// the given router otherwise.
+func CreateSubdomainProxy(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.Echo, error) {
+	if err := SetupAssets(router, config.GetConfig().Assets); err != nil {
+		return nil, err
+	}
+
+	if err := SetupRoutes(router); err != nil {
+		return nil, err
+	}
+
+	serveApps = SetupAppsHandler(serveApps)
+
+	main := echo.New()
+	main.Any("/*", func(c echo.Context) error {
+		// TODO(optim): minimize the number of instance requests
+		if parent, slug := middlewares.SplitHost(c.Request().Host); slug != "" {
+			if i, err := instance.Get(parent); err == nil {
+				c.Set("instance", i)
+				c.Set("slug", slug)
+				return serveApps(c)
+			}
+		}
+
+		router.ServeHTTP(c.Response(), c.Request())
+		return nil
+	})
+
+	main.HTTPErrorHandler = errors.ErrorHandler
+	return main, nil
 }
 
 // setupRecover sets a recovering strategy of panics happening in handlers
