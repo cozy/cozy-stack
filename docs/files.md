@@ -15,6 +15,12 @@ A directory is a container for files and sub-directories.
 Its path is the path of its parent, a slash (`/`), and its name. It's case
 sensitive.
 
+### Root directory
+
+The root of the virtual file system is a special directory with id `io.cozy.files.root-dir`.
+
+You can use it in any request where you would use a directory, except you cannot delete it.
+
 ### POST /files/:dir-id
 
 Create a new directory. The `dir-id` parameter is optional. When it's not
