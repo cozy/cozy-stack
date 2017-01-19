@@ -197,7 +197,6 @@ func TestPanic(t *testing.T) {
 			WorkerFunc: func(ctx context.Context, _ *Message) error {
 				w.Done()
 				panic("oops")
-				return nil
 			},
 		},
 	})
