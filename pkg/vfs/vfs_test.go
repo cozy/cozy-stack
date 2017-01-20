@@ -1,10 +1,12 @@
 package vfs
 
 import (
+	"archive/zip"
 	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http/httptest"
 	"os"
 	"path"
 	"strings"
@@ -350,6 +352,67 @@ func TestWalk(t *testing.T) {
 `
 
 	assert.Equal(t, expectedWalk, walked)
+}
+
+func TestContentDisposition(t *testing.T) {
+	foo := ContentDisposition("inline", "foo.jpg")
+	assert.Equal(t, `inline; filename=foo.jpg`, foo)
+	space := ContentDisposition("inline", "foo bar.jpg")
+	assert.Equal(t, `inline; filename="foobar.jpg"; filename*=UTF-8''foo%20bar.jpg`, space)
+	accents := ContentDisposition("inline", "héçà")
+	assert.Equal(t, `inline; filename="h"; filename*=UTF-8''h%C3%A9%C3%A7%C3%A0`, accents)
+	tab := ContentDisposition("inline", "tab\t")
+	assert.Equal(t, `inline; filename="tab"; filename*=UTF-8''tab%09`, tab)
+	emoji := ContentDisposition("inline", "🐧")
+	assert.Equal(t, `inline; filename="download"; filename*=UTF-8''%F0%9F%90%A7`, emoji)
+}
+
+func TestArchive(t *testing.T) {
+	tree := H{
+		"archive/": H{
+			"foo.jpg":   nil,
+			"hello.jpg": nil,
+			"bar/": H{
+				"baz/": H{
+					"one.png": nil,
+					"two.png": nil,
+				},
+				"z.gif": nil,
+			},
+			"qux/": H{
+				"quux":   nil,
+				"courge": nil,
+			},
+		},
+	}
+	_, err := createTree(tree, consts.RootDirID)
+	assert.NoError(t, err)
+
+	a := &Archive{
+		Name: "test",
+		Files: []string{
+			"/archive/foo.jpg",
+			"/archive/bar",
+		},
+	}
+	w := httptest.NewRecorder()
+	err = a.Serve(vfsC, w)
+	assert.NoError(t, err)
+
+	res := w.Result()
+	disposition := res.Header.Get("Content-Disposition")
+	assert.Equal(t, `attachment; filename=test.zip`, disposition)
+	assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
+
+	b, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(z.File))
+	assert.Equal(t, "test/foo.jpg", z.File[0].Name)
+	assert.Equal(t, "test/bar/baz/one.png", z.File[1].Name)
+	assert.Equal(t, "test/bar/baz/two.png", z.File[2].Name)
+	assert.Equal(t, "test/bar/z.gif", z.File[3].Name)
 }
 
 func TestMain(m *testing.M) {

@@ -578,12 +578,29 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": [
-    "/Documents/bills",
-    "/Documents/images/sunset.jpg",
-    "/Documents/images/eiffel-tower.jpg"
-  ]
+  "data": {
+    "type": "io.cozy.files.archives",
+    "attributes": {
+      "name": "project-X",
+      "files": [
+        "/Documents/bills",
+        "/Documents/images/sunset.jpg",
+        "/Documents/images/eiffel-tower.jpg"
+      ]
+    }
+  }
 }
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Length: 12345
+Content-Disposition: attachment; filename="project-X.zip"
+Content-Type: application/zip
+
+...
 ```
 
 

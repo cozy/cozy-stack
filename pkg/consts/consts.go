@@ -6,6 +6,8 @@ const (
 
 	// Files doc type for type for files and directories
 	Files = "io.cozy.files"
+	// Archives doc type for zip archives with files and directories
+	Archives = "io.cozy.files.archives"
 	// Manifests doc type for application manifests
 	Manifests = "io.cozy.manifests"
 	// Jobs doc type for queued jobs

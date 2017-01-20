@@ -315,6 +315,27 @@ func ReadFileContentFromPathHandler(c echo.Context) error {
 	return nil
 }
 
+// ArchiveHandler handles requests to /files/archive and creates on the fly
+// zip archives with the given files and folders.
+func ArchiveHandler(c echo.Context) error {
+	archive := &vfs.Archive{}
+	if _, err := jsonapi.Bind(c.Request(), archive); err != nil {
+		return err
+	}
+	if len(archive.Files) == 0 {
+		return c.JSON(http.StatusBadRequest, "Can't create an archive with no files")
+	}
+	if strings.Contains(archive.Name, "/") {
+		return c.JSON(http.StatusBadRequest, "The archive filename can't contain a /")
+	}
+	if archive.Name == "" {
+		archive.Name = "archive"
+	}
+
+	instance := middlewares.GetInstance(c)
+	return archive.Serve(instance, c.Response())
+}
+
 // TrashHandler handles all DELETE requests on /files/:file-id and
 // moves the file or directory with the specified file-id to the
 // trash.
@@ -436,6 +457,8 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreationHandler)
 	router.POST("/:dir-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
+
+	router.POST("/archive", ArchiveHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
 	router.DELETE("/trash", ClearTrashHandler)

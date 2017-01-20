@@ -218,7 +218,7 @@ func ServeFileContent(c Context, doc *FileDoc, disposition string, req *http.Req
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
 	if disposition != "" {
-		header.Set("Content-Disposition", fmt.Sprintf("%s; filename=%s", disposition, doc.Name))
+		header.Set("Content-Disposition", ContentDisposition(disposition, doc.Name))
 	}
 
 	if header.Get("Range") == "" {
