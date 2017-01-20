@@ -900,7 +900,7 @@ func TestArchiveNoFiles(t *testing.T) {
 	}`)
 	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", body)
 	assert.NoError(t, err)
-	assert.Equal(t, 404, res.StatusCode)
+	assert.Equal(t, 400, res.StatusCode)
 	msg, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, `"Can't create an archive with no files"`, string(msg))
