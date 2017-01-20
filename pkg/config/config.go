@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/gomail"
 	"github.com/spf13/viper"
 )
 
@@ -66,6 +68,7 @@ type Config struct {
 	AdminPort  int
 	Fs         Fs
 	CouchDB    CouchDB
+	Mail       *gomail.DialerOptions
 	Logger     Logger
 }
 
@@ -114,12 +117,12 @@ func BuildAbsFsURL(abs string) *url.URL {
 
 // ServerAddr returns the address on which the stack is run
 func ServerAddr() string {
-	return config.Host + ":" + strconv.Itoa(config.Port)
+	return net.JoinHostPort(config.Host, strconv.Itoa(config.Port))
 }
 
 // AdminServerAddr returns the address on which the administration is listening
 func AdminServerAddr() string {
-	return config.AdminHost + ":" + strconv.Itoa(config.AdminPort)
+	return net.JoinHostPort(config.AdminHost, strconv.Itoa(config.AdminPort))
 }
 
 // CouchURL returns the CouchDB string url
@@ -166,6 +169,13 @@ func UseViper(v *viper.Viper) error {
 		},
 		CouchDB: CouchDB{
 			URL: couchURL,
+		},
+		Mail: &gomail.DialerOptions{
+			Host:       v.GetString("mail.host"),
+			Port:       v.GetInt("mail.port"),
+			Username:   v.GetString("mail.username"),
+			Password:   v.GetString("mail.password"),
+			DisableTLS: v.GetBool("mail.disable_tls"),
 		},
 		Logger: Logger{
 			Level: v.GetString("log.level"),

@@ -27,14 +27,24 @@ fs:
 
   # url: file://localhost/var/lib/cozy
 
-
 couchdb:
-    # couchdb host - flags: --couchdb-host
-    host: localhost
-    # couchdb port - flags: --couchdb-port
-    port: 5984
+  # couchdb host - flags: --couchdb-host
+  host: localhost
+  # couchdb port - flags: --couchdb-port
+  port: 5984
 
+mail:
+  # mail smtp host - flags: --mail-host
+  host: smtp.home
+  # mail smtp port - flags: --mail-port
+  port: 465
+  # mail smtp username - flags: --mail-username
+  username: user
+  # mail smtp password - flags: --mail-password
+  password: pass
+  # disable mail tls - flags: --mail-disable-tls
+  disable_tls: false
 
 log:
-    # logger level (debug, info, warning, panic, fatal) - flags: --log-level
-    level: info
+  # logger level (debug, info, warning, panic, fatal) - flags: --log-level
+  level: info
