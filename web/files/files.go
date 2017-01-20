@@ -325,6 +325,9 @@ func ArchiveHandler(c echo.Context) error {
 	if len(archive.Files) == 0 {
 		return c.JSON(http.StatusBadRequest, "Can't create an archive with no files")
 	}
+	if strings.Contains(archive.Name, "/") {
+		return c.JSON(http.StatusBadRequest, "The archive filename can't contain a /")
+	}
 	if archive.Name == "" {
 		archive.Name = "archive"
 	}

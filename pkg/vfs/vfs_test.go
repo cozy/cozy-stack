@@ -354,6 +354,19 @@ func TestWalk(t *testing.T) {
 	assert.Equal(t, expectedWalk, walked)
 }
 
+func TestContentDisposition(t *testing.T) {
+	foo := ContentDisposition("inline", "foo.jpg")
+	assert.Equal(t, `inline; filename=foo.jpg`, foo)
+	space := ContentDisposition("inline", "foo bar.jpg")
+	assert.Equal(t, `inline; filename="foobar.jpg"; filename*=UTF-8''foo%20bar.jpg`, space)
+	accents := ContentDisposition("inline", "héçà")
+	assert.Equal(t, `inline; filename="h"; filename*=UTF-8''h%C3%A9%C3%A7%C3%A0`, accents)
+	tab := ContentDisposition("inline", "tab\t")
+	assert.Equal(t, `inline; filename="tab"; filename*=UTF-8''tab%09`, tab)
+	emoji := ContentDisposition("inline", "🐧")
+	assert.Equal(t, `inline; filename="download"; filename*=UTF-8''%F0%9F%90%A7`, emoji)
+}
+
 func TestArchive(t *testing.T) {
 	tree := H{
 		"archive/": H{
