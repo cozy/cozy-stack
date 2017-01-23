@@ -353,7 +353,7 @@ func (s *MemScheduler) schedule(t Trigger) {
 	for req := range t.Schedule() {
 		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().ID)
 		if _, _, err := s.broker.PushJob(req); err != nil {
-			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job %s: %s", t.Type(), t.Infos().ID, err.Error())
+			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s", t.Type(), t.Infos().ID, err.Error())
 		}
 	}
 	log.Debugf("[jobs] trigger %s(%s): Closing trigger", t.Type(), t.Infos().ID)

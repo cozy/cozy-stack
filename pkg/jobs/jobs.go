@@ -160,8 +160,8 @@ type (
 		Type       string      `json:"type"`
 		WorkerType string      `json:"worker"`
 		Arguments  string      `json:"arguments"`
-		Message    *Message    `json:"message"`
 		Options    *JobOptions `json:"options"`
+		Message    *Message    `json:"message"`
 	}
 
 	// TriggerRequest struct contains the paramameters to create a new trigger.
@@ -178,6 +178,10 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 	switch infos.Type {
 	case "@at":
 		return NewAtTrigger(infos)
+	case "@in":
+		return NewInTrigger(infos)
+	case "@interval":
+		return NewIntervalTrigger(infos)
 	default:
 		return nil, errors.New("Unknown trigger type")
 	}

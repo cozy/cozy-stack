@@ -5,6 +5,7 @@ import "time"
 // AtTrigger implements the @at trigger type. It schedules a job at a specified
 // time in the future.
 type AtTrigger struct {
+	typ  string
 	at   time.Time
 	in   *TriggerInfos
 	done chan struct{}
@@ -12,21 +13,38 @@ type AtTrigger struct {
 
 // NewAtTrigger returns a new instance of AtTrigger given the specified
 // options.
-func NewAtTrigger(in *TriggerInfos) (*AtTrigger, error) {
-	at, err := time.Parse(time.RFC3339, in.Arguments)
+func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
+	at, err := time.Parse(time.RFC3339, infos.Arguments)
 	if err != nil {
 		return nil, err
 	}
 	return &AtTrigger{
+		typ:  "@at",
 		at:   at,
-		in:   in,
+		in:   infos,
+		done: make(chan struct{}),
+	}, nil
+}
+
+// NewInTrigger returns a new instance of InTrigger given the specified
+// options.
+func NewInTrigger(infos *TriggerInfos) (*AtTrigger, error) {
+	d, err := time.ParseDuration(infos.Arguments)
+	if err != nil {
+		return nil, err
+	}
+	at := time.Now().Add(d)
+	return &AtTrigger{
+		typ:  "@in",
+		at:   at,
+		in:   infos,
 		done: make(chan struct{}),
 	}, nil
 }
 
 // Type implements the Type method of the Trigger interface.
 func (a *AtTrigger) Type() string {
-	return "@at"
+	return a.typ
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
