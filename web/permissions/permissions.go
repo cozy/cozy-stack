@@ -1,6 +1,7 @@
 package permissions
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"net/http"
@@ -119,7 +120,8 @@ func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
 	} else if claims.Audience == permissions.AccessTokenAudience {
 		// Oauth token, extract permissions from JWT-encoded scope
 		pset, err = permissions.UnmarshalScopeString(claims.Scope)
-	} else if claims.Audience == permissions.RegistrationTokenAudience {
+	} else if registerToken := []byte(c.QueryParam("registerToken"));
+			subtle.ConstantTimeCompare(registerToken, instance.RegisterToken) == 1 {
 		pset = &registerTokenPermissions
 	} else {
 		err = fmt.Errorf("Unrecognized token audience %v", claims.Audience)
@@ -181,6 +183,10 @@ func displayPermissions(c echo.Context) error {
 		return err
 	}
 	return c.JSON(200, set)
+}
+
+func constantTimeEqual(a, b string) bool {
+	return 1 ==
 }
 
 // Routes sets the routing for the status service
