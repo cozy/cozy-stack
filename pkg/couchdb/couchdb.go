@@ -185,7 +185,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 	}
 
 	if log.GetLevel() == log.DebugLevel {
-		log.Debugf("[couchdb] request: %s %s %s", method, path, string(reqjson))
+		log.Debugf("[couchdb] request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
 
 	req, err := http.NewRequest(method, config.CouchURL()+path, bytes.NewReader(reqjson))
@@ -226,7 +226,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		if err != nil {
 			return err
 		}
-		log.Debugf("[couchdb] response: %s", string(data))
+		log.Debugf("[couchdb] response: %s", string(bytes.TrimSpace(data)))
 		err = json.Unmarshal(data, &resbody)
 	} else {
 		err = json.NewDecoder(resp.Body).Decode(&resbody)
