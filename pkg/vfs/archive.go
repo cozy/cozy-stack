@@ -19,6 +19,12 @@ type Archive struct {
 	Files []string `json:"files"`
 }
 
+type archiveEntry struct {
+	root string
+	dir  *DirDoc
+	file *FileDoc
+}
+
 var plusEscaper = strings.NewReplacer("+", "%20")
 
 // ContentDisposition creates an HTTP header value for Content-Disposition
@@ -48,6 +54,19 @@ func ContentDisposition(disposition, filename string) string {
 
 // Serve creates on the fly the zip archive and streams in a http response
 func (a *Archive) Serve(c Context, w http.ResponseWriter) error {
+	entries := make([]archiveEntry, len(a.Files))
+	for i, root := range a.Files {
+		d, f, err := GetDirOrFileDocFromPath(c, root, false)
+		if err != nil {
+			return err
+		}
+		entries[i] = archiveEntry{
+			root: root,
+			dir:  d,
+			file: f,
+		}
+	}
+
 	header := w.Header()
 	header.Set("Content-Type", ZipMime)
 	header.Set("Content-Disposition", ContentDisposition("attachment", a.Name+".zip"))
@@ -56,9 +75,9 @@ func (a *Archive) Serve(c Context, w http.ResponseWriter) error {
 	zw := zip.NewWriter(w)
 	defer zw.Close()
 
-	for _, root := range a.Files {
-		base := filepath.Dir(root)
-		Walk(c, root, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+	for _, entry := range entries {
+		base := filepath.Dir(entry.root)
+		walk(c, entry.root, entry.dir, entry.file, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 			if err != nil {
 				return err
 			}
