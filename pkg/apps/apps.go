@@ -49,12 +49,6 @@ const (
 // either be read, write or readwrite.
 type Access string
 
-// Permissions is a map of key, a description and an access level.
-type Permissions map[string]struct {
-	Description string `json:"description"`
-	Access      Access `json:"access"`
-}
-
 // Route is a struct to serve a folder inside an app
 type Route struct {
 	Folder string `json:"folder"`
@@ -92,10 +86,10 @@ type Manifest struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 
-	Version     string       `json:"version"`
-	License     string       `json:"license"`
-	Permissions *Permissions `json:"permissions"`
-	Routes      Routes       `json:"routes"`
+	Version     string           `json:"version"`
+	License     string           `json:"license"`
+	Permissions *permissions.Set `json:"permissions"`
+	Routes      Routes           `json:"routes"`
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface

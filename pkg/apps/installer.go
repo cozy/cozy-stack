@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -235,9 +236,24 @@ func (i *Installer) Poll() (man *Manifest, done bool, err error) {
 }
 
 func updateManifest(db couchdb.Database, man *Manifest) error {
-	return couchdb.UpdateDoc(db, man)
+
+	if err := permissions.Destoy(db, man.Slug); err != nil {
+		return err
+	}
+
+	if err := couchdb.UpdateDoc(db, man); err != nil {
+		return err
+	}
+
+	return permissions.Create(db, man.Slug)
 }
 
 func createManifest(db couchdb.Database, man *Manifest) error {
-	return couchdb.CreateNamedDoc(db, man)
+
+	if err := couchdb.CreateNamedDoc(db, man); err != nil {
+		return err
+	}
+
+	return permissions.Create(db, man.Slug)
+
 }

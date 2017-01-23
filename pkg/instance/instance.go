@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -279,6 +280,17 @@ func (i *Instance) createSettings() error {
 	return settings.CreateDefaultTheme(i)
 }
 
+func (i *Instance) createPermissionsDB() error {
+	err := couchdb.CreateDB(i, consts.Permissions)
+
+	if err != nil {
+		return err
+	}
+
+	return couchdb.DefineIndex(i, consts.Permissions, permissions.Index)
+
+}
+
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
 	domain := opts.Domain
@@ -338,6 +350,11 @@ func Create(opts *Options) (*Instance, error) {
 	}
 
 	err = i.createFSIndexes()
+	if err != nil {
+		return nil, err
+	}
+
+	err = i.createPermissionsDB()
 	if err != nil {
 		return nil, err
 	}
