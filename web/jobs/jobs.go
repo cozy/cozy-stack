@@ -168,6 +168,15 @@ func getTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
 }
 
+func deleteTrigger(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	if err := scheduler.Delete(c.Param("trigger-id")); err != nil {
+		return err
+	}
+	return nil
+}
+
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
@@ -187,9 +196,10 @@ func Routes(router *echo.Group) {
 	router.POST("/queue/:worker-type", pushJob)
 	router.GET("/queue/:worker-type", getQueue)
 
-	router.POST("/triggers/:worker-type", newTrigger)
+	router.GET("/triggers", getAllTriggers)
+	router.POST("/triggers", newTrigger)
 	router.GET("/triggers/:trigger-id", getTrigger)
-	router.GET("/triggers/", getAllTriggers)
+	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 }
 
 func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
