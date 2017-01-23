@@ -141,15 +141,16 @@ func TestStringToSet(t *testing.T) {
 	assert.Error(t, err)
 
 	s, err := UnmarshalScopeString("io.cozy.contacts io.cozy.files:GET:io.cozy.files.music-dir")
+	set := *s
 
 	assert.NoError(t, err)
-	assert.Len(t, s, 2)
-	assert.Equal(t, "io.cozy.contacts", s[0].Type)
-	assert.Equal(t, "io.cozy.files", s[1].Type)
-	assert.Len(t, s[1].Verbs, 1)
-	assert.Equal(t, Verbs(GET), s[1].Verbs)
-	assert.Len(t, s[1].Values, 1)
-	assert.Equal(t, "io.cozy.files.music-dir", s[1].Values[0])
+	assert.Len(t, set, 2)
+	assert.Equal(t, "io.cozy.contacts", set[0].Type)
+	assert.Equal(t, "io.cozy.files", set[1].Type)
+	assert.Len(t, set[1].Verbs, 1)
+	assert.Equal(t, Verbs(GET), set[1].Verbs)
+	assert.Len(t, set[1].Values, 1)
+	assert.Equal(t, "io.cozy.files.music-dir", set[1].Values[0])
 
 	rule, err := UnmarshalRuleString("io.cozy.events:GET:mygreatcalendar,othercalendar:calendar-id")
 	assert.NoError(t, err)

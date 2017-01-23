@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -106,18 +107,32 @@ func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
 		return nil, nil, permissions.ErrInvalidToken
 	}
 
-	var pset permissions.Set
-	if claims.Audience == permissions.RegistrationTokenAudience {
-		pset = registerTokenPermissions
-	} else if pset, err = claims.PermissionsSet(); err != nil {
-		// invalid scope in token
-		return nil, nil, permissions.ErrInvalidToken
+	var pdoc *permissions.Permission
+	var pset *permissions.Set
+	if claims.Audience == permissions.AppAudience {
+		// app token, fetch permissions from couchdb
+		pdoc, err = permissions.GetForApp(instance, claims.Subject)
+		if err != nil {
+			return nil, nil, err
+		}
+		pset = &pdoc.Permissions
+	} else if claims.Audience == permissions.AccessTokenAudience {
+		// Oauth token, extract permissions from JWT-encoded scope
+		pset, err = permissions.UnmarshalScopeString(claims.Scope)
+	} else if claims.Audience == permissions.RegistrationTokenAudience {
+		pset = &registerTokenPermissions
+	} else {
+		err = fmt.Errorf("Unrecognized token audience %v", claims.Audience)
+	}
+
+	if err != nil {
+		return nil, nil, err
 	}
 
 	c.Set(ContextClaims, claims)
 	c.Set(ContextPermissionSet, pset)
 
-	return &claims, &pset, err
+	return &claims, pset, err
 }
 
 func getPermission(c echo.Context) (*permissions.Set, error) {

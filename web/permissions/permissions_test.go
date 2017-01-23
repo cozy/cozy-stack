@@ -25,13 +25,13 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 
 	var testInstance = &instance.Instance{
-		SessionSecret: []byte("topsecret"),
-		Domain:        "example.com",
+		OAuthSecret: []byte("topsecret"),
+		Domain:      "example.com",
 	}
 
-	token, _ = crypto.NewJWT(testInstance.SessionSecret, permissions.Claims{
+	token, _ = crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AppAudience,
+			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  "fakeapp",
