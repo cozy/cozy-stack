@@ -349,16 +349,16 @@ func (s *MemScheduler) GetAll() ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	log.Debugf("[trigger] %s: Starting trigger with ID %s", t.Type(), t.Infos().ID)
+	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().ID)
 	for req := range t.Schedule() {
-		log.Debugf("[trigger] %s: Pushing new job", t.Type())
+		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().ID)
 		if _, _, err := s.broker.PushJob(req); err != nil {
-			log.Errorf("[trigger] %s: Could not schedule a new job %s: %s", t.Type(), t.Infos().ID, err.Error())
+			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job %s: %s", t.Type(), t.Infos().ID, err.Error())
 		}
 	}
-	log.Debugf("[trigger] %s: Closing trigger with ID %s", t.Type(), t.Infos().ID)
+	log.Debugf("[jobs] trigger %s(%s): Closing trigger", t.Type(), t.Infos().ID)
 	if err := s.Delete(t.Infos().ID); err != nil {
-		log.Errorf("[trigger] %s: Could not delete trigger with ID: %s", t.Infos().ID, err.Error())
+		log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s", t.Type(), t.Infos().ID, err.Error())
 	}
 }
 
