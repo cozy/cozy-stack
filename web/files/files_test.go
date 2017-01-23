@@ -907,13 +907,26 @@ func TestArchiveNoFiles(t *testing.T) {
 }
 
 func TestArchive(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=archive&Type=directory")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+	dirID, _ := extractDirData(t, data1)
+	names := []string{"foo", "bar", "baz"}
+	for _, name := range names {
+		res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
+		if !assert.Equal(t, 201, res2.StatusCode) {
+			return
+		}
+	}
+
 	body := bytes.NewBufferString(`{
 		"data": {
 			"attributes": {
 				"files": [
-					"/Documents/foo.jpg",
-					"/Documents/bar.jpg",
-					"/Documents/baz.jpg"
+					"/archive/foo.jpg",
+					"/archive/bar.jpg",
+					"/archive/baz.jpg"
 				]
 			}
 		}
@@ -923,6 +936,23 @@ func TestArchive(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	disposition := res.Header.Get("Content-Disposition")
 	assert.Equal(t, `attachment; filename=archive.zip`, disposition)
+}
+
+func TestArchiveNotFound(t *testing.T) {
+	body := bytes.NewBufferString(`{
+		"data": {
+			"attributes": {
+				"files": [
+					"/archive/foo.jpg",
+					"/no/such/file",
+					"/archive/baz.jpg"
+				]
+			}
+		}
+	}`)
+	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", body)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestDirTrash(t *testing.T) {
