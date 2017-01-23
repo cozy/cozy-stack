@@ -32,17 +32,17 @@ func (j *apiDiskUsage) Valid(k, f string) bool { return false }
 
 func diskUsage(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	var result apiDiskUsage
+
+	if err := permissions.Allow(c, permissions.GET, &result); err != nil {
+		return err
+	}
 
 	used, err := vfs.DiskUsage(instance)
 	if err != nil {
 		return err
 	}
 
-	var result = &apiDiskUsage{used}
-
-	if err = permissions.Allow(c, permissions.GET, result); err != nil {
-		return err
-	}
-
-	return jsonapi.Data(c, http.StatusOK, result, nil)
+	result.Used = used
+	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
