@@ -149,11 +149,21 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return jsonapi.Data(c, http.StatusCreated, &apiTrigger{t}, nil)
+	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
 }
 
 func getAllTriggers(c echo.Context) error {
-	return nil
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	ts, err := scheduler.GetAll()
+	if err != nil {
+		return err
+	}
+	objs := make([]jsonapi.Object, 0, len(ts))
+	for _, t := range ts {
+		objs = append(objs, &apiTrigger{t})
+	}
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
 // Routes sets the routing for the jobs service
