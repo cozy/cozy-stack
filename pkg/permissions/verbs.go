@@ -77,7 +77,7 @@ func (vs *VerbSet) UnmarshalJSON(b []byte) error {
 		delete(*vs, v)
 	}
 	for v := range *vs {
-		(*vs)[Verb(v)] = struct{}{}
+		(*vs)[v] = struct{}{}
 	}
 	return nil
 }
