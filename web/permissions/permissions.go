@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -40,6 +41,14 @@ const bearerAuthScheme = "Bearer "
 
 // ErrNoToken is returned whe the request has no token
 var ErrNoToken = errors.New("No token in request")
+
+var registerTokenPermissions = permissions.Set{
+	permissions.Rule{
+		Verbs:  permissions.Verbs(GET),
+		Type:   consts.Settings,
+		Values: []string{"instance"},
+	},
+}
 
 func getBearerToken(c echo.Context) string {
 	header := c.Request().Header.Get(echo.HeaderAuthorization)
@@ -98,7 +107,9 @@ func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
 	}
 
 	var pset permissions.Set
-	if pset, err = claims.PermissionsSet(); err != nil {
+	if claims.Audience == permissions.RegistrationTokenAudience {
+		pset = registerTokenPermissions
+	} else if pset, err = claims.PermissionsSet(); err != nil {
 		// invalid scope in token
 		return nil, nil, permissions.ErrInvalidToken
 	}
