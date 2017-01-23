@@ -61,7 +61,9 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
   "data": {
     "type": "io.cozy.files",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-    "rev": "1-ff3beeb456eb",
+    "meta": {
+      "rev": "1-ff3beeb456eb",
+    },
     "attributes": {
       "type": "directory",
       "name": "phone",
@@ -121,7 +123,9 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.files",
     "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
-    "rev": "1-e36ab092",
+    "meta": {
+      "rev": "1-e36ab092",
+    },
     "attributes": {
       "type": "directory",
       "name": "Documents",
@@ -144,7 +148,9 @@ Content-Type: application/vnd.api+json
   "included": [{
     "type": "io.cozy.files",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-    "rev": "1-ff3beeb456eb",
+    "meta": {
+      "rev": "1-ff3beeb456eb",
+    },
     "attributes": {
       "type": "directory",
       "name": "phone",
@@ -169,7 +175,9 @@ Content-Type: application/vnd.api+json
   }, {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "rev": "1-0e6d5b72",
+    "meta": {
+      "rev": "1-0e6d5b72",
+    },
     "attributes": {
       "type": "file",
       "name": "hello.txt",
@@ -265,7 +273,9 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "rev": "1-0e6d5b72",
+    "meta": {
+      "rev": "1-0e6d5b72",
+    },
     "attributes": {
       "type": "file",
       "name": "hello.txt",
@@ -376,7 +386,9 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "rev": "2-d903b54c",
+    "meta": {
+      "rev": "2-d903b54c",
+    },
     "attributes": {
       "type": "file",
       "name": "hello.txt",
@@ -437,7 +449,9 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "rev": "1-0e6d5b72",
+    "meta": {
+      "rev": "1-0e6d5b72",
+    },
     "attributes": {
       "type": "file",
       "name": "hello.txt",
@@ -532,7 +546,9 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
   "data": {
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "rev": "1-0e6d5b72",
+    "meta": {
+      "rev": "1-0e6d5b72",
+    },
     "attributes": {
       "type": "file",
       "name": "hi.txt",
@@ -640,7 +656,9 @@ Content-Type: application/vnd.api+json
   "data": [{
     "type": "io.cozy.files",
     "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
-    "rev": "1-3b75377c",
+    "meta": {
+      "rev": "1-3b75377c",
+    },
     "attributes": {
       "type": "file",
       "name": "foo.txt",
@@ -659,7 +677,9 @@ Content-Type: application/vnd.api+json
   }, {
     "type": "io.cozy.files",
     "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
-    "rev": "1-4a09030e",
+    "meta": {
+      "rev": "1-4a09030e",
+    },
     "attributes": {
       "type": "file",
       "name": "bar.txt",

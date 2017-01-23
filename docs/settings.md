@@ -158,7 +158,9 @@ Cookie: sessionid=xxxx
   "data": {
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.instance",
-    "rev": "3-56521545485448482",
+    "meta": {
+      "rev": "3-56521545485448482",
+    },
     "attributes": {
       "locale":"fr",
       "email": "alice@example.com",
@@ -186,7 +188,9 @@ Authorization: Bearer settings-token
   "data": {
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.instance",
-    "rev": "3-56521545485448482",
+    "meta": {
+      "rev": "3-56521545485448482",
+    },
     "attributes": {
       "locale":"fr",
       "email": "alice@example.com",
@@ -208,7 +212,9 @@ Cookie: sessionid=xxxxx
   "data": {
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.instance",
-    "rev": "4-5a3e315e",
+    "meta": {
+      "rev": "4-5a3e315e",
+    },
     "attributes": {
       "locale":"fr",
       "email": "alice@example.com",
