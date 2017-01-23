@@ -30,6 +30,13 @@ type (
 	apiTrigger struct {
 		t jobs.Trigger
 	}
+	apiTriggerRequest struct {
+		Type            string           `json:"type"`
+		Arguments       string           `json:"arguments"`
+		WorkerType      string           `json:"worker"`
+		WorkerArguments json.RawMessage  `json:"worker_arguments"`
+		Options         *jobs.JobOptions `json:"options"`
+	}
 )
 
 func (j *apiJob) ID() string                             { return j.j.ID }
@@ -127,12 +134,21 @@ func pushJob(c echo.Context) error {
 func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
-	infos := &jobs.TriggerInfos{}
-	if err := c.Bind(&infos); err != nil {
+	req := &apiTriggerRequest{}
+	if err := c.Bind(&req); err != nil {
 		return err
 	}
-	infos.WorkerType = c.Param("worker-type")
-	t, err := jobs.NewTrigger(infos)
+
+	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+		Type:       req.Type,
+		WorkerType: req.WorkerType,
+		Arguments:  req.Arguments,
+		Options:    req.Options,
+		Message: &jobs.Message{
+			Type: jobs.JSONEncoding,
+			Data: req.WorkerArguments,
+		},
+	})
 	if err != nil {
 		return err
 	}

@@ -38,7 +38,7 @@ func (s *CouchStorage) GetAll() ([]Trigger, error) {
 	var ts []Trigger
 	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
 	req := &couchdb.AllDocsRequest{Limit: 100}
-	if err := couchdb.GetAllDocs(s.db, consts.Triggers, req, infos); err != nil {
+	if err := couchdb.GetAllDocs(s.db, consts.Triggers, req, &infos); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return ts, nil
 		}
