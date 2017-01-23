@@ -290,7 +290,7 @@ Accept: application/vnd.api+json
 ```
 
 
-### POST /jobs/triggers/:trigger-name
+### POST /jobs/triggers/:worker-type
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 

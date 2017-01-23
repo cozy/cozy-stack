@@ -3,6 +3,7 @@ package jobs
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -121,7 +122,66 @@ type (
 		Timeout      time.Duration `json:"timeout"`
 		RetryDelay   time.Duration `json:"retry_delay"`
 	}
+
+	// Scheduler interface is used to represent a scheduler that is responsible
+	// to listen respond to triggers jobs requests and send them to the broker.
+	Scheduler interface {
+		Start(broker Broker) error
+		Add(trigger Trigger) error
+		Get(id string) (Trigger, error)
+		Delete(id string) error
+		GetAll() ([]Trigger, error)
+	}
+
+	// Trigger interface is used to represent a trigger.
+	Trigger interface {
+		Type() string
+		Infos() *TriggerInfos
+		// Schedule should return a channel on which the trigger can send job
+		// requests when it decides to.
+		Schedule() <-chan *JobRequest
+		// Unschedule should be used to clean the trigger states and should close
+		// the returns jobs channel.
+		Unschedule()
+	}
+
+	// TriggerStorage interface is used to represent a persistent layer on which
+	// triggers are stored.
+	TriggerStorage interface {
+		GetAll() ([]Trigger, error)
+		Add(trigger Trigger) error
+		Delete(trigger Trigger) error
+	}
+
+	// TriggerInfos is a struct containing all the options of a trigger.
+	TriggerInfos struct {
+		ID         string      `json:"_id,omitempty"`
+		Rev        string      `json:"_rev,omitempty"`
+		Type       string      `json:"type"`
+		WorkerType string      `json:"worker"`
+		Arguments  string      `json:"arguments"`
+		Message    *Message    `json:"message"`
+		Options    *JobOptions `json:"options"`
+	}
+
+	// TriggerRequest struct contains the paramameters to create a new trigger.
+	TriggerRequest struct {
+		Type      string          `json:"type"`
+		Arguments json.RawMessage `json:"arguments"`
+		Options   *WorkerConfig   `json:"options"`
+	}
 )
+
+// NewTrigger creates the trigger associates with the specified trigger
+// options.
+func NewTrigger(infos *TriggerInfos) (Trigger, error) {
+	switch infos.Type {
+	case "@at":
+		return NewAtTrigger(infos)
+	default:
+		return nil, errors.New("Unknown trigger type")
+	}
+}
 
 // NewJobInfos creates a new JobInfos instance from a job request.
 func NewJobInfos(req *JobRequest) *JobInfos {

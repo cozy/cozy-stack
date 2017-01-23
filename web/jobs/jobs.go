@@ -23,10 +23,12 @@ type (
 		Arguments json.RawMessage  `json:"arguments"`
 		Options   *jobs.JobOptions `json:"options"`
 	}
-
 	apiQueue struct {
 		Count      int `json:"count"`
 		workerType string
+	}
+	apiTrigger struct {
+		t jobs.Trigger
 	}
 )
 
@@ -53,6 +55,20 @@ func (q *apiQueue) Relationships() jsonapi.RelationshipMap { return nil }
 func (q *apiQueue) Included() []jsonapi.Object             { return nil }
 func (q *apiQueue) SelfLink() string {
 	return "/jobs/queue/" + q.workerType
+}
+
+func (t *apiTrigger) ID() string                             { return t.t.Infos().ID }
+func (t *apiTrigger) Rev() string                            { return "" }
+func (t *apiTrigger) DocType() string                        { return consts.Triggers }
+func (t *apiTrigger) SetID(_ string)                         {}
+func (t *apiTrigger) SetRev(_ string)                        {}
+func (t *apiTrigger) Relationships() jsonapi.RelationshipMap { return nil }
+func (t *apiTrigger) Included() []jsonapi.Object             { return nil }
+func (t *apiTrigger) SelfLink() string {
+	return "/jobs/triggers/" + t.ID()
+}
+func (t *apiTrigger) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.t.Infos())
 }
 
 func getQueue(c echo.Context) error {
@@ -108,10 +124,46 @@ func pushJob(c echo.Context) error {
 	return nil
 }
 
+func newTrigger(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	infos := &jobs.TriggerInfos{}
+	if err := c.Bind(&infos); err != nil {
+		return err
+	}
+	infos.WorkerType = c.Param("worker-type")
+	t, err := jobs.NewTrigger(infos)
+	if err != nil {
+		return err
+	}
+	if err = scheduler.Add(t); err != nil {
+		return err
+	}
+	return jsonapi.Data(c, http.StatusCreated, &apiTrigger{t}, nil)
+}
+
+func getTrigger(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	t, err := scheduler.Get(c.Param("trigger-id"))
+	if err != nil {
+		return err
+	}
+	return jsonapi.Data(c, http.StatusCreated, &apiTrigger{t}, nil)
+}
+
+func getAllTriggers(c echo.Context) error {
+	return nil
+}
+
 // Routes sets the routing for the jobs service
 func Routes(router *echo.Group) {
 	router.POST("/queue/:worker-type", pushJob)
 	router.GET("/queue/:worker-type", getQueue)
+
+	router.POST("/triggers/:worker-type", newTrigger)
+	router.GET("/triggers/:trigger-id", getTrigger)
+	router.GET("/triggers/", getAllTriggers)
 }
 
 func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
