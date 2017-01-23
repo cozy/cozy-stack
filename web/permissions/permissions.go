@@ -65,8 +65,9 @@ func Extractor(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
 		_, _, err := extract(c)
+		// if no token is provided, we call next anyway,
+		// hopefully the next handler does not need permissions
 		if err != nil && err != ErrNoToken {
-			// no token is provided, hopefully the next handler does not need one
 			return err
 		}
 
