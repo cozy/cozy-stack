@@ -162,13 +162,6 @@ type (
 		Options    *JobOptions `json:"options"`
 		Message    *Message    `json:"message"`
 	}
-
-	// TriggerRequest struct contains the paramameters to create a new trigger.
-	TriggerRequest struct {
-		Type      string          `json:"type"`
-		Arguments json.RawMessage `json:"arguments"`
-		Options   *WorkerConfig   `json:"options"`
-	}
 )
 
 // NewTrigger creates the trigger associates with the specified trigger
