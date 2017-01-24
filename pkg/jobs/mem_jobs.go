@@ -348,6 +348,8 @@ func (s *MemScheduler) Delete(id string) error {
 
 // GetAll returns all the running in-memory triggers.
 func (s *MemScheduler) GetAll() ([]Trigger, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	v := make([]Trigger, 0, len(s.ts))
 	for _, t := range s.ts {
 		v = append(v, t)
