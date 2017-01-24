@@ -284,17 +284,17 @@ func GetMemScheduler(domain string) Scheduler {
 // scheduler's storage and associate for each of them a go routine in which
 // they wait for the trigger send job requests.
 func (s *MemScheduler) Start(b Broker) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	ts, err := s.storage.GetAll()
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
 	s.broker = b
 	for _, t := range ts {
 		s.ts[t.Infos().ID] = t
 		go s.schedule(t)
 	}
-	s.mu.Unlock()
 	return nil
 }
 
