@@ -171,7 +171,10 @@ func getTrigger(c echo.Context) error {
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
-	return wrapJobsError(scheduler.Delete(c.Param("trigger-id")))
+	if err := scheduler.Delete(c.Param("trigger-id")); err != nil {
+		return wrapJobsError(err)
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 func getAllTriggers(c echo.Context) error {

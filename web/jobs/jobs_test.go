@@ -151,7 +151,7 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, http.StatusOK, res4.StatusCode)
+	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
 
 	res5, err := http.Get(ts.URL + "/jobs/triggers/" + triggerID)
 	if !assert.NoError(t, err) {
@@ -219,7 +219,7 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, http.StatusOK, res4.StatusCode)
+	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
 
 	res5, err := http.Get(ts.URL + "/jobs/triggers/" + triggerID)
 	if !assert.NoError(t, err) {
