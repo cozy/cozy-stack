@@ -184,9 +184,9 @@ func getAllTriggers(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	objs := make([]jsonapi.Object, 0, len(ts))
-	for _, t := range ts {
-		objs = append(objs, &apiTrigger{t})
+	objs := make([]jsonapi.Object, len(ts))
+	for i, t := range ts {
+		objs[i] = &apiTrigger{t}
 	}
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
