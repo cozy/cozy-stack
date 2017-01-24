@@ -251,8 +251,8 @@ func TestGetAllJobs(t *testing.T) {
 	assert.Len(t, v.Data, 0)
 
 	body, _ := json.Marshal(map[string]interface{}{
-		"type":             "@interval",
-		"arguments":        "1s",
+		"type":             "@in",
+		"arguments":        "10s",
 		"worker":           "print",
 		"worker_arguments": "foo",
 	})
@@ -274,8 +274,8 @@ func TestGetAllJobs(t *testing.T) {
 
 	if assert.Len(t, v.Data, 1) {
 		assert.Equal(t, consts.Triggers, v.Data[0].Type)
-		assert.Equal(t, "@interval", v.Data[0].Attributes.Type)
-		assert.Equal(t, "1s", v.Data[0].Attributes.Arguments)
+		assert.Equal(t, "@in", v.Data[0].Attributes.Type)
+		assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
 		assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
 	}
 }

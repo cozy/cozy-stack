@@ -172,8 +172,6 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 		return NewAtTrigger(infos)
 	case "@in":
 		return NewInTrigger(infos)
-	case "@interval":
-		return NewIntervalTrigger(infos)
 	default:
 		return nil, ErrUnknownTrigger
 	}

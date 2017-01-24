@@ -315,13 +315,6 @@ func TestTriggersBadArguments(t *testing.T) {
 
 	_, err = NewTrigger(&TriggerInfos{
 		ID:        utils.RandomString(10),
-		Type:      "@interval",
-		Arguments: "garbage",
-	})
-	assert.Error(t, err)
-
-	_, err = NewTrigger(&TriggerInfos{
-		ID:        utils.RandomString(10),
 		Type:      "@unknown",
 		Arguments: "",
 	})
@@ -333,7 +326,6 @@ func TestTriggersBadArguments(t *testing.T) {
 func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
-	var wInterval sync.WaitGroup
 	NewMemBroker("test.scheduler.io", WorkersList{
 		"worker": {
 			Concurrency:  1,
@@ -349,8 +341,6 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 					wAt.Done()
 				case "@in":
 					wIn.Done()
-				case "@interval":
-					wInterval.Done()
 				}
 				return nil
 			},
@@ -359,11 +349,9 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 
 	msg1, _ := NewMessage("json", "@at")
 	msg2, _ := NewMessage("json", "@in")
-	msg3, _ := NewMessage("json", "@interval")
 
-	wAt.Add(1)       // 1 time in @at
-	wIn.Add(1)       // 1 time in @in
-	wInterval.Add(2) // 2 times in @interval
+	wAt.Add(1) // 1 time in @at
+	wIn.Add(1) // 1 time in @in
 
 	atID := utils.RandomString(10)
 	at := &TriggerInfos{
@@ -381,16 +369,8 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 		WorkerType: "worker",
 		Message:    msg2,
 	}
-	intervalID := utils.RandomString(10)
-	interval := &TriggerInfos{
-		ID:         intervalID,
-		Type:       "@interval",
-		Arguments:  "1s",
-		WorkerType: "worker",
-		Message:    msg3,
-	}
 
-	triggers := []*TriggerInfos{at, in, interval}
+	triggers := []*TriggerInfos{at, in}
 	NewMemScheduler("test.scheduler.io", &storage{triggers})
 
 	bro := GetMemBroker("test.scheduler.io")
@@ -407,8 +387,6 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 			assert.Equal(t, at, trigger.Infos())
 		case inID:
 			assert.Equal(t, in, trigger.Infos())
-		case intervalID:
-			assert.Equal(t, interval, trigger.Infos())
 		default:
 			t.Fatalf("unknown trigger ID %s", trigger.Infos().ID)
 		}
@@ -425,11 +403,6 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 		done <- true
 	}()
 
-	go func() {
-		wInterval.Wait()
-		done <- true
-	}()
-
 	for i := 0; i < len(ts); i++ {
 		<-done
 	}
@@ -439,17 +412,6 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	assert.Equal(t, ErrNotFoundTrigger, err)
 
 	_, err = sch.Get(inID)
-	assert.Error(t, err)
-	assert.Equal(t, ErrNotFoundTrigger, err)
-
-	interval2, err := sch.Get(intervalID)
-	assert.NoError(t, err)
-	assert.Equal(t, interval, interval2.Infos())
-
-	err = sch.Delete(intervalID)
-	assert.NoError(t, err)
-
-	_, err = sch.Get(intervalID)
 	assert.Error(t, err)
 	assert.Equal(t, ErrNotFoundTrigger, err)
 }
