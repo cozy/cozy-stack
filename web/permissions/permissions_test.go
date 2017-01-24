@@ -81,6 +81,17 @@ func TestGetPermissions(t *testing.T) {
 	}
 }
 
+func TestBadPermissionsBearer(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req.Header.Add("Authorization", "Bearer garbage")
+	res, err := http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+}
+
 func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
