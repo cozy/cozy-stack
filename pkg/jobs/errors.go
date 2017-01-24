@@ -9,4 +9,8 @@ var (
 	ErrUnknownWorker = errors.New("Could not find worker")
 	// ErrUnknownMessageType is used for an unknown message encoding type
 	ErrUnknownMessageType = errors.New("Unknown message encoding type")
+	// ErrUnknownTrigger is used when the trigger type is not recognized
+	ErrUnknownTrigger = errors.New("Unknown trigger type")
+	// ErrNotFoundTrigger is used when the trigger was not found
+	ErrNotFoundTrigger = errors.New("Trigger with specified ID does not exist")
 )

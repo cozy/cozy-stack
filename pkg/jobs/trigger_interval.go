@@ -3,6 +3,8 @@ package jobs
 import (
 	"errors"
 	"time"
+
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // IntervalTrigger implements the @interval trigger. It triggers a job on a
@@ -18,10 +20,10 @@ type IntervalTrigger struct {
 func NewIntervalTrigger(infos *TriggerInfos) (*IntervalTrigger, error) {
 	d, err := time.ParseDuration(infos.Arguments)
 	if err != nil {
-		return nil, err
+		return nil, jsonapi.BadRequest(err)
 	}
 	if d < 1*time.Second {
-		return nil, errors.New("Invalid interval duration")
+		return nil, jsonapi.BadRequest(errors.New("Invalid interval duration"))
 	}
 	return &IntervalTrigger{
 		du:   d,

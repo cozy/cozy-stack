@@ -317,7 +317,7 @@ func (s *MemScheduler) Get(id string) (Trigger, error) {
 	defer s.mu.RUnlock()
 	t, ok := s.ts[id]
 	if !ok {
-		return nil, errors.New("Trigger with specified ID does not exist")
+		return nil, ErrNotFoundTrigger
 	}
 	return t, nil
 }
@@ -329,7 +329,7 @@ func (s *MemScheduler) Delete(id string) error {
 	defer s.mu.Unlock()
 	t, ok := s.ts[id]
 	if !ok {
-		return errors.New("Trigger with specified ID does not exist")
+		return ErrNotFoundTrigger
 	}
 	if err := s.storage.Delete(t); err != nil {
 		return err

@@ -3,7 +3,6 @@ package jobs
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -183,7 +182,7 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 	case "@interval":
 		return NewIntervalTrigger(infos)
 	default:
-		return nil, errors.New("Unknown trigger type")
+		return nil, ErrUnknownTrigger
 	}
 }
 

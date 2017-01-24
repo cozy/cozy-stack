@@ -219,6 +219,10 @@ func wrapJobsError(err error) error {
 	switch err {
 	case jobs.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
+	case jobs.ErrNotFoundTrigger:
+		return jsonapi.NotFound(err)
+	case jobs.ErrUnknownTrigger:
+		return jsonapi.InvalidAttribute("Type", err)
 	}
 	return err
 }

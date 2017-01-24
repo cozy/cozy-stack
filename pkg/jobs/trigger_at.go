@@ -1,6 +1,10 @@
 package jobs
 
-import "time"
+import (
+	"time"
+
+	"github.com/cozy/cozy-stack/web/jsonapi"
+)
 
 // AtTrigger implements the @at trigger type. It schedules a job at a specified
 // time in the future.
@@ -16,7 +20,7 @@ type AtTrigger struct {
 func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	at, err := time.Parse(time.RFC3339, infos.Arguments)
 	if err != nil {
-		return nil, err
+		return nil, jsonapi.BadRequest(err)
 	}
 	return &AtTrigger{
 		typ:  "@at",
@@ -31,7 +35,7 @@ func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 func NewInTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	d, err := time.ParseDuration(infos.Arguments)
 	if err != nil {
-		return nil, err
+		return nil, jsonapi.BadRequest(err)
 	}
 	at := time.Now().Add(d)
 	return &AtTrigger{
