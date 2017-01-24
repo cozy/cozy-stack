@@ -290,14 +290,14 @@ Accept: application/vnd.api+json
 ```
 
 
-### POST /jobs/triggers/:trigger-name
+### POST /jobs/triggers
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 
 #### Request
 
 ```http
-POST /jobs/triggers/sendmail HTTP/1.1
+POST /jobs/triggers HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -305,6 +305,8 @@ Accept: application/vnd.api+json
 {
   "type": "@interval",
   "arguments": "30m10s",
+  "worker": "sendmail",
+  "worker_arguments": {},
   "options": {
     "priority": 3,
     "timeout": 60,
@@ -374,14 +376,14 @@ Accept: application/vnd.api+json
 ```
 
 
-### GET /jobs/triggers/
+### GET /jobs/triggers
 
 Get the list of triggers.
 
 #### Request
 
 ```http
-GET /jobs/triggers/ HTTP/1.1
+GET /jobs/triggers HTTP/1.1
 Accept: application/vnd.api+json
 ```
 

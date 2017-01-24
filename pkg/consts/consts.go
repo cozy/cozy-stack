@@ -18,6 +18,8 @@ const (
 	Settings = "io.cozy.settings"
 	// Sessions doc type for sessions identifying a connection
 	Sessions = "io.cozy.sessions"
+	// Triggers doc type for triggers, jobs launchers
+	Triggers = "io.cozy.triggers"
 
 	// OAuthClients doc type for OAuth2 clients
 	OAuthClients = "io.cozy.oauth.clients"

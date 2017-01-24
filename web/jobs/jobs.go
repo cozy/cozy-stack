@@ -23,10 +23,19 @@ type (
 		Arguments json.RawMessage  `json:"arguments"`
 		Options   *jobs.JobOptions `json:"options"`
 	}
-
 	apiQueue struct {
 		Count      int `json:"count"`
 		workerType string
+	}
+	apiTrigger struct {
+		t jobs.Trigger
+	}
+	apiTriggerRequest struct {
+		Type            string           `json:"type"`
+		Arguments       string           `json:"arguments"`
+		WorkerType      string           `json:"worker"`
+		WorkerArguments json.RawMessage  `json:"worker_arguments"`
+		Options         *jobs.JobOptions `json:"options"`
 	}
 )
 
@@ -55,12 +64,26 @@ func (q *apiQueue) SelfLink() string {
 	return "/jobs/queue/" + q.workerType
 }
 
+func (t *apiTrigger) ID() string                             { return t.t.Infos().ID }
+func (t *apiTrigger) Rev() string                            { return "" }
+func (t *apiTrigger) DocType() string                        { return consts.Triggers }
+func (t *apiTrigger) SetID(_ string)                         {}
+func (t *apiTrigger) SetRev(_ string)                        {}
+func (t *apiTrigger) Relationships() jsonapi.RelationshipMap { return nil }
+func (t *apiTrigger) Included() []jsonapi.Object             { return nil }
+func (t *apiTrigger) SelfLink() string {
+	return "/jobs/triggers/" + t.ID()
+}
+func (t *apiTrigger) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.t.Infos())
+}
+
 func getQueue(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.Param("worker-type")
 	count, err := instance.JobsBroker().QueueLen(workerType)
 	if err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 	o := &apiQueue{
 		workerType: workerType,
@@ -74,7 +97,7 @@ func pushJob(c echo.Context) error {
 
 	req := &apiJobRequest{}
 	if err := c.Bind(&req); err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 
 	job, ch, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
@@ -108,10 +131,72 @@ func pushJob(c echo.Context) error {
 	return nil
 }
 
+func newTrigger(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	req := &apiTriggerRequest{}
+	if err := c.Bind(&req); err != nil {
+		return wrapJobsError(err)
+	}
+
+	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+		Type:       req.Type,
+		WorkerType: req.WorkerType,
+		Arguments:  req.Arguments,
+		Options:    req.Options,
+		Message: &jobs.Message{
+			Type: jobs.JSONEncoding,
+			Data: req.WorkerArguments,
+		},
+	})
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if err = scheduler.Add(t); err != nil {
+		return wrapJobsError(err)
+	}
+	return jsonapi.Data(c, http.StatusCreated, &apiTrigger{t}, nil)
+}
+
+func getTrigger(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	t, err := scheduler.Get(c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
+}
+
+func deleteTrigger(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	return wrapJobsError(scheduler.Delete(c.Param("trigger-id")))
+}
+
+func getAllTriggers(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	scheduler := instance.JobsScheduler()
+	ts, err := scheduler.GetAll()
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	objs := make([]jsonapi.Object, 0, len(ts))
+	for _, t := range ts {
+		objs = append(objs, &apiTrigger{t})
+	}
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
 // Routes sets the routing for the jobs service
 func Routes(router *echo.Group) {
 	router.POST("/queue/:worker-type", pushJob)
 	router.GET("/queue/:worker-type", getQueue)
+
+	router.GET("/triggers", getAllTriggers)
+	router.POST("/triggers", newTrigger)
+	router.GET("/triggers/:trigger-id", getTrigger)
+	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 }
 
 func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
@@ -134,6 +219,10 @@ func wrapJobsError(err error) error {
 	switch err {
 	case jobs.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
+	case jobs.ErrNotFoundTrigger:
+		return jsonapi.NotFound(err)
+	case jobs.ErrUnknownTrigger:
+		return jsonapi.InvalidAttribute("Type", err)
 	}
 	return err
 }

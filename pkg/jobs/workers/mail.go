@@ -36,7 +36,7 @@ type MailOptions struct {
 	Subject string                `json:"subject"`
 	Dialer  *gomail.DialerOptions `json:"dialer,omitempty"`
 	Date    *time.Time            `json:"date"`
-	Parts   []*MailPart
+	Parts   []*MailPart           `json:"parts"`
 }
 
 // MailPart represent a part of the content of the mail. It has a type

@@ -139,9 +139,29 @@ func (i *Instance) FS() afero.Fs {
 	return i.storage
 }
 
+// StartJobSystem creates all the resources necessary for the instance's job
+// system to work properly.
+func (i *Instance) StartJobSystem() error {
+	broker := jobs.NewMemBroker(i.Domain, jobs.GetWorkersList())
+	scheduler := jobs.NewMemScheduler(i.Domain, jobs.NewTriggerCouchStorage(i))
+	return scheduler.Start(broker)
+}
+
+// StopJobSystem stops all the resources used by the job system associated with
+// the instance.
+func (i *Instance) StopJobSystem() error {
+	// TODO
+	return nil
+}
+
 // JobsBroker returns the jobs broker associated with the instance
 func (i *Instance) JobsBroker() jobs.Broker {
-	return jobs.NewMemBroker(i.Domain, jobs.GetWorkersList())
+	return jobs.GetMemBroker(i.Domain)
+}
+
+// JobsScheduler returns the jobs scheduler associated with the instance
+func (i *Instance) JobsScheduler() jobs.Scheduler {
+	return jobs.GetMemScheduler(i.Domain)
 }
 
 // Prefix returns the prefix to use in database naming for the
@@ -342,6 +362,11 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 
+	err = i.StartJobSystem()
+	if err != nil {
+		return nil, err
+	}
+
 	doc := &instanceSettings{
 		Timezone: opts.Timezone,
 		Email:    opts.Email,
@@ -420,6 +445,10 @@ func Destroy(domain string) (*Instance, error) {
 	}
 
 	if err = couchdb.DeleteAllDBs(i); err != nil {
+		return nil, err
+	}
+
+	if err = i.StopJobSystem(); err != nil {
 		return nil, err
 	}
 
