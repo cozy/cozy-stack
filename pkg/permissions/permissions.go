@@ -12,12 +12,12 @@ import (
 // Permission is a storable object containing a set of rules and
 // several codes
 type Permission struct {
-	pID           string
-	pRev          string
+	PID           string            `json:"_id,omitempty"`
+	PRev          string            `json:"_rev,omitempty"`
 	ApplicationID string            `json:"application_id"`
-	Permissions   Set               `json:"permissions, omitempty"`
-	ExpiresAt     int               `json:"expires_at, omitempty"`
-	Codes         map[string]string `json:"codes, omitempty"`
+	Permissions   Set               `json:"permissions,omitempty"`
+	ExpiresAt     int               `json:"expires_at,omitempty"`
+	Codes         map[string]string `json:"codes,omitempty"`
 }
 
 // Index is the necessary index for this package
@@ -25,54 +25,42 @@ type Permission struct {
 var Index = mango.IndexOnFields("application_id")
 
 // ID implements jsonapi.Doc
-func (p *Permission) ID() string { return p.pID }
+func (p *Permission) ID() string { return p.PID }
 
 // Rev implements jsonapi.Doc
-func (p *Permission) Rev() string { return p.pRev }
+func (p *Permission) Rev() string { return p.PRev }
 
 // DocType implements jsonapi.Doc
 func (p *Permission) DocType() string { return consts.Permissions }
 
 // SetID implements jsonapi.Doc
-func (p *Permission) SetID(id string) { p.pID = id }
+func (p *Permission) SetID(id string) { p.PID = id }
 
 // SetRev implements jsonapi.Doc
-func (p *Permission) SetRev(rev string) { p.pRev = rev }
+func (p *Permission) SetRev(rev string) { p.PRev = rev }
 
 // Relationships implements jsonapi.Doc
-func (p *Permission) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{
-		"application": jsonapi.Relationship{
-			Links: &jsonapi.LinksList{
-				Related: "/apps/" + p.ApplicationID,
-			},
-			Data: jsonapi.ResourceIdentifier{
-				ID:   p.ApplicationID,
-				Type: consts.Manifests,
-			},
-		},
-	}
-}
+func (p *Permission) Relationships() jsonapi.RelationshipMap { return nil }
 
 // Included implements jsonapi.Doc
 func (p *Permission) Included() []jsonapi.Object { return nil }
 
 // SelfLink implements jsonapi.Doc
-func (p *Permission) SelfLink() string { return "/permissions/" + p.pID }
+func (p *Permission) SelfLink() string { return "/permissions/" + p.PID }
 
 // GetForApp retrieves the Permission doc for a given app
 func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
-	var res []*Permission
+	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		Selector: mango.Equal("application_id", consts.Manifests+"/"+slug),
-	}, res)
+	}, &res)
 	if err != nil {
 		return nil, err
 	}
 	if len(res) == 0 {
 		return nil, fmt.Errorf("no permission doc for %v", slug)
 	}
-	return res[0], nil
+	return &res[0], nil
 }
 
 // Create creates a Permission doc for a given app
