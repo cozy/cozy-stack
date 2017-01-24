@@ -140,6 +140,11 @@ func (j JSONDoc) Get(key string) interface{} {
 	return j.M[key]
 }
 
+// Valid implements permissions.Validable on JSONDoc
+func (j JSONDoc) Valid(field, value string) bool {
+	return fmt.Sprintf("%v", j.Get(field)) == value
+}
+
 var couchdbClient = &http.Client{
 	Timeout: 5 * time.Second,
 }

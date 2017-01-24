@@ -78,3 +78,23 @@ func UnmarshalRuleString(in string) (Rule, error) {
 
 	return out, nil
 }
+
+// SomeValue returns true if any value statisfy the predicate
+func (r Rule) SomeValue(predicate func(v string) bool) bool {
+	for _, v := range r.Values {
+		if predicate(v) {
+			return true
+		}
+	}
+	return false
+}
+
+// ValuesContain returns true if the value is in r.Values
+func (r Rule) ValuesContain(value string) bool {
+	for _, v := range r.Values {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}

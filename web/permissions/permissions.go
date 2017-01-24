@@ -2,14 +2,26 @@ package permissions
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+)
+
+// exports all constants from pkg/permissions to avoid double imports
+var (
+	ALL    = permissions.ALL
+	GET    = permissions.GET
+	PUT    = permissions.PUT
+	POST   = permissions.POST
+	PATCH  = permissions.PATCH
+	DELETE = permissions.DELETE
 )
 
 // keyPicker choose the proper instance key depending on token audience
@@ -26,6 +38,17 @@ func keyPicker(i *instance.Instance) jwt.Keyfunc {
 }
 
 const bearerAuthScheme = "Bearer "
+
+// ErrNoToken is returned whe the request has no token
+var ErrNoToken = errors.New("No token in request")
+
+var registerTokenPermissions = permissions.Set{
+	permissions.Rule{
+		Verbs:  permissions.Verbs(GET),
+		Type:   consts.Settings,
+		Values: []string{"instance"},
+	},
+}
 
 func getBearerToken(c echo.Context) string {
 	header := c.Request().Header.Get(echo.HeaderAuthorization)
@@ -49,46 +72,98 @@ const ContextClaims = "token_claims"
 // Extractor extracts the permission set from the context
 func Extractor(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		instance := middlewares.GetInstance(c)
-		var claims permissions.Claims
-		var err error
 
-		if token := getBearerToken(c); token != "" {
-			err = crypto.ParseJWT(token, keyPicker(instance), &claims)
-		} else if token := getQueryToken(c); token != "" {
-			err = crypto.ParseJWT(token, keyPicker(instance), &claims)
-		} else {
-			// no token is provided, hopefully the next handler does not need one
-			return next(c)
-		}
-
-		if err != nil {
+		_, _, err := extract(c)
+		// if no token is provided, we call next anyway,
+		// hopefully the next handler does not need permissions
+		if err != nil && err != ErrNoToken {
 			return err
 		}
-
-		if claims.Issuer != instance.Domain {
-			// invalid issuer in token
-			return permissions.ErrInvalidToken
-		}
-
-		var pset permissions.Set
-		if pset, err = claims.PermissionsSet(); err != nil {
-			// invalid scope in token
-			return permissions.ErrInvalidToken
-		}
-
-		c.Set(ContextClaims, claims)
-		c.Set(ContextPermissionSet, pset)
 
 		return next(c)
 	}
 }
 
+func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
+	instance := middlewares.GetInstance(c)
+	var claims permissions.Claims
+	var err error
+
+	if token := getBearerToken(c); token != "" {
+		err = crypto.ParseJWT(token, keyPicker(instance), &claims)
+	} else if token := getQueryToken(c); token != "" {
+		err = crypto.ParseJWT(token, keyPicker(instance), &claims)
+	} else {
+		return nil, nil, ErrNoToken
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if claims.Issuer != instance.Domain {
+		// invalid issuer in token
+		return nil, nil, permissions.ErrInvalidToken
+	}
+
+	var pset permissions.Set
+	if claims.Audience == permissions.RegistrationTokenAudience {
+		pset = registerTokenPermissions
+	} else if pset, err = claims.PermissionsSet(); err != nil {
+		// invalid scope in token
+		return nil, nil, permissions.ErrInvalidToken
+	}
+
+	c.Set(ContextClaims, claims)
+	c.Set(ContextPermissionSet, pset)
+
+	return &claims, &pset, err
+}
+
+func getPermission(c echo.Context) (*permissions.Set, error) {
+
+	s, ok := c.Get(ContextPermissionSet).(permissions.Set)
+	if ok {
+		return &s, nil
+	}
+
+	_, set, err := extract(c)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusUnauthorized)
+	}
+
+	return set, nil
+}
+
+// Allow validate the validable object against the context permission set
+func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
+	pset, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+
+	if !pset.Allow(v, o) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
+}
+
+// AllowTypeAndID validate a type & ID against the context permission set
+func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) error {
+	pset, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+	if !pset.AllowID(v, doctype, id) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
+}
+
 func displayPermissions(c echo.Context) error {
-	setInterface := c.Get(ContextPermissionSet)
-	set, ok := setInterface.(permissions.Set)
-	if !ok {
-		return errors.New("no permission set in context")
+	set, err := getPermission(c)
+	if err != nil {
+		return err
 	}
 	return c.JSON(200, set)
 }

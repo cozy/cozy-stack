@@ -90,3 +90,13 @@ func UnmarshalScopeString(in string) (Set, error) {
 
 	return out, nil
 }
+
+// Some returns true if the predicate return true for any of the rule.
+func (ps Set) Some(predicate func(Rule) bool) bool {
+	for _, r := range ps {
+		if predicate(r) {
+			return true
+		}
+	}
+	return false
+}
