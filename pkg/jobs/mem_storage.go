@@ -33,26 +33,17 @@ func NewTriggerCouchStorage(db couchdb.Database) *CouchStorage {
 }
 
 // GetAll implements the GetAll method of the TriggerStorage.
-func (s *CouchStorage) GetAll() ([]Trigger, error) {
+func (s *CouchStorage) GetAll() ([]*TriggerInfos, error) {
 	var infos []*TriggerInfos
-	var ts []Trigger
 	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
 	req := &couchdb.AllDocsRequest{Limit: 100}
 	if err := couchdb.GetAllDocs(s.db, consts.Triggers, req, &infos); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
-			return ts, nil
+			return infos, nil
 		}
 		return nil, err
 	}
-	ts = make([]Trigger, 0, len(infos))
-	for _, info := range infos {
-		t, err := NewTrigger(info)
-		if err != nil {
-			return nil, err
-		}
-		ts = append(ts, t)
-	}
-	return ts, nil
+	return infos, nil
 }
 
 // Add implements the Add method of the TriggerStorage.

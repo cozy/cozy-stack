@@ -291,8 +291,15 @@ func (s *MemScheduler) Start(b Broker) error {
 		return err
 	}
 	s.broker = b
-	for _, t := range ts {
-		s.ts[t.Infos().ID] = t
+	for _, infos := range ts {
+		t, err := NewTrigger(infos)
+		if err != nil {
+			log.Errorln(
+				"[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
+				infos.Type, infos.ID, err.Error())
+			continue
+		}
+		s.ts[infos.ID] = t
 		go s.schedule(t)
 	}
 	return nil

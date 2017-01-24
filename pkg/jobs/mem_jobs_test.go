@@ -290,12 +290,12 @@ func TestInfoChan(t *testing.T) {
 }
 
 type storage struct {
-	ts []Trigger
+	ts []*TriggerInfos
 }
 
-func (s *storage) GetAll() ([]Trigger, error)   { return s.ts, nil }
-func (s *storage) Add(trigger Trigger) error    { return nil }
-func (s *storage) Delete(trigger Trigger) error { return nil }
+func (s *storage) GetAll() ([]*TriggerInfos, error) { return s.ts, nil }
+func (s *storage) Add(trigger Trigger) error        { return nil }
+func (s *storage) Delete(trigger Trigger) error     { return nil }
 
 func TestTriggersBadArguments(t *testing.T) {
 	var err error
@@ -366,40 +366,31 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	wInterval.Add(2) // 2 times in @interval
 
 	atID := utils.RandomString(10)
-	at, err := NewTrigger(&TriggerInfos{
+	at := &TriggerInfos{
 		ID:         atID,
 		Type:       "@at",
 		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
 		WorkerType: "worker",
 		Message:    msg1,
-	})
-	if !assert.NoError(t, err) {
-		return
 	}
 	inID := utils.RandomString(10)
-	in, err := NewTrigger(&TriggerInfos{
+	in := &TriggerInfos{
 		ID:         inID,
 		Type:       "@in",
 		Arguments:  "1s",
 		WorkerType: "worker",
 		Message:    msg2,
-	})
-	if !assert.NoError(t, err) {
-		return
 	}
 	intervalID := utils.RandomString(10)
-	interval, err := NewTrigger(&TriggerInfos{
+	interval := &TriggerInfos{
 		ID:         intervalID,
 		Type:       "@interval",
 		Arguments:  "1s",
 		WorkerType: "worker",
 		Message:    msg3,
-	})
-	if !assert.NoError(t, err) {
-		return
 	}
 
-	triggers := []Trigger{at, in, interval}
+	triggers := []*TriggerInfos{at, in, interval}
 	NewMemScheduler("test.scheduler.io", &storage{triggers})
 
 	bro := GetMemBroker("test.scheduler.io")
@@ -413,11 +404,11 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	for _, trigger := range ts {
 		switch trigger.Infos().ID {
 		case atID:
-			assert.Equal(t, at.Infos(), trigger.Infos())
+			assert.Equal(t, at, trigger.Infos())
 		case inID:
-			assert.Equal(t, in.Infos(), trigger.Infos())
+			assert.Equal(t, in, trigger.Infos())
 		case intervalID:
-			assert.Equal(t, interval.Infos(), trigger.Infos())
+			assert.Equal(t, interval, trigger.Infos())
 		default:
 			t.Fatalf("unknown trigger ID %s", trigger.Infos().ID)
 		}
@@ -453,7 +444,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 
 	interval2, err := sch.Get(intervalID)
 	assert.NoError(t, err)
-	assert.Equal(t, interval, interval2)
+	assert.Equal(t, interval, interval2.Infos())
 
 	err = sch.Delete(intervalID)
 	assert.NoError(t, err)

@@ -6,6 +6,10 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
+// maxPastTriggerTime is the maximum duration in the past for which the at
+// triggers are executed immediatly instead of discarded.
+var maxPastTriggerTime = 24 * time.Hour
+
 // AtTrigger implements the @at trigger type. It schedules a job at a specified
 // time in the future.
 type AtTrigger struct {
@@ -50,27 +54,32 @@ func (a *AtTrigger) Type() string {
 
 // Schedule implements the Schedule method of the Trigger interface.
 func (a *AtTrigger) Schedule() <-chan *JobRequest {
-	ch := make(chan *JobRequest)
 	at := a.at
+	ch := make(chan *JobRequest)
 	duration := time.Since(at)
-	if duration >= 0 {
-		close(ch)
-		return ch
-	}
 	go func() {
+		if duration >= 0 {
+			if duration < maxPastTriggerTime {
+				a.trigger(ch)
+			}
+			return
+		}
 		select {
 		case <-time.After(-duration):
-			req := &JobRequest{
-				WorkerType: a.in.WorkerType,
-				Message:    a.in.Message,
-				Options:    a.in.Options,
-			}
-			ch <- req
-			close(ch)
+			a.trigger(ch)
 		case <-a.done:
 		}
 	}()
 	return ch
+}
+
+func (a *AtTrigger) trigger(ch chan *JobRequest) {
+	ch <- &JobRequest{
+		WorkerType: a.in.WorkerType,
+		Message:    a.in.Message,
+		Options:    a.in.Options,
+	}
+	close(ch)
 }
 
 // Unschedule implements the Unschedule method of the Trigger interface.

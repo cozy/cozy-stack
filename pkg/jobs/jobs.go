@@ -147,7 +147,7 @@ type (
 	// TriggerStorage interface is used to represent a persistent layer on which
 	// triggers are stored.
 	TriggerStorage interface {
-		GetAll() ([]Trigger, error)
+		GetAll() ([]*TriggerInfos, error)
 		Add(trigger Trigger) error
 		Delete(trigger Trigger) error
 	}
