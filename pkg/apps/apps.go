@@ -198,7 +198,7 @@ func (m *Manifest) BuildToken(i *instance.Instance) string {
 			IssuedAt: crypto.Timestamp(),
 			Subject:  m.Slug,
 		},
-		Scope: "io.cozy._all", // TODO scope
+		Scope: "", // apps token doesnt have a scope
 	})
 	if err != nil {
 		return ""

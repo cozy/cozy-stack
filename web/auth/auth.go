@@ -117,7 +117,7 @@ func login(c echo.Context) error {
 
 func logout(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	claims, ok := c.Get("token_claims").(permissions.Claims)
+	claims, ok := c.Get("token_claims").(*permissions.Claims)
 	if !ok || claims.Audience != permissions.AppAudience {
 		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
 	}
