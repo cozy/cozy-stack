@@ -48,7 +48,7 @@ var registerTokenPermissions = permissions.Set{
 	permissions.Rule{
 		Verbs:  permissions.Verbs(GET),
 		Type:   consts.Settings,
-		Values: []string{"instance"},
+		Values: []string{consts.InstanceSettingsID},
 	},
 }
 
@@ -86,47 +86,62 @@ func Extractor(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
-	instance := middlewares.GetInstance(c)
+func extractJWTClaims(c echo.Context, instance *instance.Instance) (*permissions.Claims, error) {
 	var claims permissions.Claims
 	var err error
-
 	if token := getBearerToken(c); token != "" {
 		err = crypto.ParseJWT(token, keyPicker(instance), &claims)
 	} else if token := getQueryToken(c); token != "" {
 		err = crypto.ParseJWT(token, keyPicker(instance), &claims)
 	} else {
-		return nil, nil, ErrNoToken
-	}
-
-	if err != nil {
-		return nil, nil, err
+		return nil, ErrNoToken
 	}
 
 	if claims.Issuer != instance.Domain {
 		// invalid issuer in token
-		return nil, nil, permissions.ErrInvalidToken
+		return nil, permissions.ErrInvalidToken
 	}
 
-	var pdoc *permissions.Permission
-	var pset *permissions.Set
+	return &claims, err
+}
+
+func extractPermissionSet(c echo.Context, instance *instance.Instance, claims *permissions.Claims) (*permissions.Set, error) {
+
+	if claims == nil && hasRegisterToken(c, instance) {
+		return &registerTokenPermissions, nil
+	}
+
+	if claims == nil {
+		return nil, ErrNoToken
+	}
+
 	if claims.Audience == permissions.AppAudience {
 		// app token, fetch permissions from couchdb
-		pdoc, err = permissions.GetForApp(instance, claims.Subject)
+		pdoc, err := permissions.GetForApp(instance, claims.Subject)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		pset = &pdoc.Permissions
-	} else if claims.Audience == permissions.AccessTokenAudience {
-		// Oauth token, extract permissions from JWT-encoded scope
-		pset, err = permissions.UnmarshalScopeString(claims.Scope)
-	} else if registerToken := []byte(c.QueryParam("registerToken"));
-			subtle.ConstantTimeCompare(registerToken, instance.RegisterToken) == 1 {
-		pset = &registerTokenPermissions
-	} else {
-		err = fmt.Errorf("Unrecognized token audience %v", claims.Audience)
+		return &pdoc.Permissions, nil
 	}
 
+	if claims.Audience == permissions.AccessTokenAudience {
+		// Oauth token, extract permissions from JWT-encoded scope
+		return permissions.UnmarshalScopeString(claims.Scope)
+	}
+
+	return nil, fmt.Errorf("Unrecognized token audience %v", claims.Audience)
+
+}
+
+func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
+	instance := middlewares.GetInstance(c)
+
+	claims, err := extractJWTClaims(c, instance)
+	if err != nil && err != ErrNoToken {
+		return nil, nil, err
+	}
+
+	pset, err := extractPermissionSet(c, instance, claims)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -134,7 +149,7 @@ func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
 	c.Set(ContextClaims, claims)
 	c.Set(ContextPermissionSet, pset)
 
-	return &claims, pset, err
+	return claims, pset, err
 }
 
 func getPermission(c echo.Context) (*permissions.Set, error) {
@@ -185,8 +200,15 @@ func displayPermissions(c echo.Context) error {
 	return c.JSON(200, set)
 }
 
-func constantTimeEqual(a, b string) bool {
-	return 1 ==
+func hasRegisterToken(c echo.Context, i *instance.Instance) bool {
+	tok := c.QueryParam("registerToken")
+	expectedTok := i.RegisterToken
+
+	if tok == "" || len(expectedTok) == 0 {
+		return false
+	}
+
+	return subtle.ConstantTimeCompare([]byte(tok), expectedTok) == 1
 }
 
 // Routes sets the routing for the status service

@@ -131,6 +131,12 @@ func TestGetInstance(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 401, res.StatusCode)
 
+	testInstance.RegisterToken = []byte("test")
+	res, err = http.Get(ts.URL + "/settings/instance?registerToken=test")
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	testInstance.RegisterToken = []byte{}
+
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/instance", nil)
 	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	assert.NoError(t, err)
@@ -250,9 +256,9 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 }
 
 func testToken(i *instance.Instance) string {
-	t, _ := crypto.NewJWT(testInstance.SessionSecret, permissions.Claims{
+	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AppAudience,
+			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  "testapp",
