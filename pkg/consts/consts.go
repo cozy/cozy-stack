@@ -19,6 +19,9 @@ const (
 	// Sessions doc type for sessions identifying a connection
 	Sessions = "io.cozy.sessions"
 
+	// Permissions doc type for permissions identifying a connection
+	Permissions = "io.cozy.permissions"
+
 	// OAuthClients doc type for OAuth2 clients
 	OAuthClients = "io.cozy.oauth.clients"
 	// OAuthAccessCodes doc type for OAuth2 access codes

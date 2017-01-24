@@ -1,57 +1,93 @@
 package permissions
 
-// Validable is an interface for a object than can be validated by a Set
-type Validable interface {
-	ID() string
-	DocType() string
-	Valid(field, expected string) bool
+import (
+	"fmt"
+
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/web/jsonapi"
+)
+
+// Permission is a storable object containing a set of rules and
+// several codes
+type Permission struct {
+	PID           string            `json:"_id,omitempty"`
+	PRev          string            `json:"_rev,omitempty"`
+	ApplicationID string            `json:"application_id"`
+	Permissions   Set               `json:"permissions,omitempty"`
+	ExpiresAt     int               `json:"expires_at,omitempty"`
+	Codes         map[string]string `json:"codes,omitempty"`
 }
 
-func validValues(r Rule, o Validable) bool {
-	// empty r.Values = any value
-	if len(r.Values) == 0 {
-		return true
+// Index is the necessary index for this package
+// used in instance creation
+var Index = mango.IndexOnFields("application_id")
+
+// ID implements jsonapi.Doc
+func (p *Permission) ID() string { return p.PID }
+
+// Rev implements jsonapi.Doc
+func (p *Permission) Rev() string { return p.PRev }
+
+// DocType implements jsonapi.Doc
+func (p *Permission) DocType() string { return consts.Permissions }
+
+// SetID implements jsonapi.Doc
+func (p *Permission) SetID(id string) { p.PID = id }
+
+// SetRev implements jsonapi.Doc
+func (p *Permission) SetRev(rev string) { p.PRev = rev }
+
+// Relationships implements jsonapi.Doc
+func (p *Permission) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Included implements jsonapi.Doc
+func (p *Permission) Included() []jsonapi.Object { return nil }
+
+// SelfLink implements jsonapi.Doc
+func (p *Permission) SelfLink() string { return "/permissions/" + p.PID }
+
+// GetForApp retrieves the Permission doc for a given app
+func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
+	var res []Permission
+	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
+		Selector: mango.Equal("application_id", consts.Manifests+"/"+slug),
+	}, &res)
+	if err != nil {
+		return nil, err
+	}
+	if len(res) == 0 {
+		return nil, fmt.Errorf("no permission doc for %v", slug)
+	}
+	return &res[0], nil
+}
+
+// Create creates a Permission doc for a given app
+func Create(db couchdb.Database, slug string, set Set) (*Permission, error) {
+	existing, _ := GetForApp(db, slug)
+	if existing != nil {
+		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
 	}
 
-	if r.Selector == "" {
-		return r.ValuesContain(o.ID())
+	doc := &Permission{
+		ApplicationID: consts.Manifests + "/" + slug,
+		Permissions:   set, // @TODO some validation?
 	}
 
-	return r.SomeValue(func(value string) bool {
-		return o.Valid(r.Selector, value)
-	})
+	err := couchdb.CreateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
+
+	return doc, nil
 }
 
-func validVerbAndType(r Rule, v Verb, doctype string) bool {
-	return r.Verbs.Contains(v) && r.Type == doctype
-}
-
-func validWholeType(r Rule) bool {
-	return len(r.Values) == 0
-}
-
-func validID(r Rule, id string) bool {
-	return r.Selector == "" && r.ValuesContain(id)
-}
-
-// AllowWholeType returns true if the set allows to apply verb to every
-// document from the given doctypes (ie. r.values == 0)
-func (s Set) AllowWholeType(v Verb, doctype string) bool {
-	return s.Some(func(r Rule) bool {
-		return validVerbAndType(r, v, doctype) && validWholeType(r)
-	})
-}
-
-// AllowID returns true if the set allows to apply verb to given type & id
-func (s Set) AllowID(v Verb, doctype, id string) bool {
-	return s.Some(func(r Rule) bool {
-		return validVerbAndType(r, v, doctype) && (validWholeType(r) || validID(r, id))
-	})
-}
-
-// Allow returns true if the set allows to apply verb to given doc
-func (s Set) Allow(v Verb, o Validable) bool {
-	return s.Some(func(r Rule) bool {
-		return validVerbAndType(r, v, o.DocType()) && validValues(r, o)
-	})
+// Destroy removes Permission doc for a given app
+func Destroy(db couchdb.Database, slug string) error {
+	existing, err := GetForApp(db, slug)
+	if err != nil {
+		return err
+	}
+	return couchdb.DeleteDoc(db, existing)
 }

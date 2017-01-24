@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -368,6 +369,18 @@ func TestMain(m *testing.M) {
 			fmt.Println(err)
 			os.Exit(1)
 		}
+	}
+
+	err = couchdb.ResetDB(c, consts.Permissions)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.DefineIndex(c, consts.Permissions, permissions.Index)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	if err = vfs.CreateRootDirDoc(c); err != nil {
