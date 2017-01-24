@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -286,4 +287,178 @@ func TestInfoChan(t *testing.T) {
 
 	assert.NoError(t, err)
 	w.Wait()
+}
+
+type storage struct {
+	ts []Trigger
+}
+
+func (s *storage) GetAll() ([]Trigger, error)   { return s.ts, nil }
+func (s *storage) Add(trigger Trigger) error    { return nil }
+func (s *storage) Delete(trigger Trigger) error { return nil }
+
+func TestTriggersBadArguments(t *testing.T) {
+	var err error
+	_, err = NewTrigger(&TriggerInfos{
+		ID:        utils.RandomString(10),
+		Type:      "@at",
+		Arguments: "garbage",
+	})
+	assert.Error(t, err)
+
+	_, err = NewTrigger(&TriggerInfos{
+		ID:        utils.RandomString(10),
+		Type:      "@in",
+		Arguments: "garbage",
+	})
+	assert.Error(t, err)
+
+	_, err = NewTrigger(&TriggerInfos{
+		ID:        utils.RandomString(10),
+		Type:      "@interval",
+		Arguments: "garbage",
+	})
+	assert.Error(t, err)
+
+	_, err = NewTrigger(&TriggerInfos{
+		ID:        utils.RandomString(10),
+		Type:      "@unknown",
+		Arguments: "",
+	})
+	if assert.Error(t, err) {
+		assert.Equal(t, ErrUnknownTrigger, err)
+	}
+}
+
+func TestMemSchedulerWithTimeTriggers(t *testing.T) {
+	var wAt sync.WaitGroup
+	var wIn sync.WaitGroup
+	var wInterval sync.WaitGroup
+	NewMemBroker("test.scheduler.io", WorkersList{
+		"worker": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, m *Message) error {
+				var msg string
+				if err := m.Unmarshal(&msg); err != nil {
+					return err
+				}
+				switch msg {
+				case "@at":
+					wAt.Done()
+				case "@in":
+					wIn.Done()
+				case "@interval":
+					wInterval.Done()
+				}
+				return nil
+			},
+		},
+	})
+
+	msg1, _ := NewMessage("json", "@at")
+	msg2, _ := NewMessage("json", "@in")
+	msg3, _ := NewMessage("json", "@interval")
+
+	wAt.Add(1)       // 1 time in @at
+	wIn.Add(1)       // 1 time in @in
+	wInterval.Add(2) // 2 times in @interval
+
+	atID := utils.RandomString(10)
+	at, err := NewTrigger(&TriggerInfos{
+		ID:         atID,
+		Type:       "@at",
+		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
+		WorkerType: "worker",
+		Message:    msg1,
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	inID := utils.RandomString(10)
+	in, err := NewTrigger(&TriggerInfos{
+		ID:         inID,
+		Type:       "@in",
+		Arguments:  "1s",
+		WorkerType: "worker",
+		Message:    msg2,
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	intervalID := utils.RandomString(10)
+	interval, err := NewTrigger(&TriggerInfos{
+		ID:         intervalID,
+		Type:       "@interval",
+		Arguments:  "1s",
+		WorkerType: "worker",
+		Message:    msg3,
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	triggers := []Trigger{at, in, interval}
+	NewMemScheduler("test.scheduler.io", &storage{triggers})
+
+	bro := GetMemBroker("test.scheduler.io")
+	sch := GetMemScheduler("test.scheduler.io")
+	sch.Start(bro)
+
+	ts, err := sch.GetAll()
+	assert.NoError(t, err)
+	assert.Len(t, ts, len(triggers))
+
+	for _, trigger := range ts {
+		switch trigger.Infos().ID {
+		case atID:
+			assert.Equal(t, at.Infos(), trigger.Infos())
+		case inID:
+			assert.Equal(t, in.Infos(), trigger.Infos())
+		case intervalID:
+			assert.Equal(t, interval.Infos(), trigger.Infos())
+		default:
+			t.Fatalf("unknown trigger ID %s", trigger.Infos().ID)
+		}
+	}
+
+	done := make(chan bool)
+	go func() {
+		wAt.Wait()
+		done <- true
+	}()
+
+	go func() {
+		wIn.Wait()
+		done <- true
+	}()
+
+	go func() {
+		wInterval.Wait()
+		done <- true
+	}()
+
+	for i := 0; i < len(ts); i++ {
+		<-done
+	}
+
+	_, err = sch.Get(atID)
+	assert.Error(t, err)
+	assert.Equal(t, ErrNotFoundTrigger, err)
+
+	_, err = sch.Get(inID)
+	assert.Error(t, err)
+	assert.Equal(t, ErrNotFoundTrigger, err)
+
+	interval2, err := sch.Get(intervalID)
+	assert.NoError(t, err)
+	assert.Equal(t, interval, interval2)
+
+	err = sch.Delete(intervalID)
+	assert.NoError(t, err)
+
+	_, err = sch.Get(intervalID)
+	assert.Error(t, err)
+	assert.Equal(t, ErrNotFoundTrigger, err)
 }

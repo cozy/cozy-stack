@@ -83,7 +83,7 @@ func getQueue(c echo.Context) error {
 	workerType := c.Param("worker-type")
 	count, err := instance.JobsBroker().QueueLen(workerType)
 	if err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 	o := &apiQueue{
 		workerType: workerType,
@@ -97,7 +97,7 @@ func pushJob(c echo.Context) error {
 
 	req := &apiJobRequest{}
 	if err := c.Bind(&req); err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 
 	job, ch, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
@@ -136,7 +136,7 @@ func newTrigger(c echo.Context) error {
 	scheduler := instance.JobsScheduler()
 	req := &apiTriggerRequest{}
 	if err := c.Bind(&req); err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 
 	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
@@ -150,10 +150,10 @@ func newTrigger(c echo.Context) error {
 		},
 	})
 	if err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 	if err = scheduler.Add(t); err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 	return jsonapi.Data(c, http.StatusCreated, &apiTrigger{t}, nil)
 }
@@ -163,7 +163,7 @@ func getTrigger(c echo.Context) error {
 	scheduler := instance.JobsScheduler()
 	t, err := scheduler.Get(c.Param("trigger-id"))
 	if err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
 }
@@ -171,7 +171,7 @@ func getTrigger(c echo.Context) error {
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
-	return scheduler.Delete(c.Param("trigger-id"))
+	return wrapJobsError(scheduler.Delete(c.Param("trigger-id")))
 }
 
 func getAllTriggers(c echo.Context) error {
@@ -179,7 +179,7 @@ func getAllTriggers(c echo.Context) error {
 	scheduler := instance.JobsScheduler()
 	ts, err := scheduler.GetAll()
 	if err != nil {
-		return err
+		return wrapJobsError(err)
 	}
 	objs := make([]jsonapi.Object, 0, len(ts))
 	for _, t := range ts {
