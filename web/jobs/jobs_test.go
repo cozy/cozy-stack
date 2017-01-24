@@ -29,8 +29,20 @@ type jobRequest struct {
 	Arguments interface{} `json:"arguments"`
 }
 
+type jsonapiReq struct {
+	Data *jsonapiData `json:"data"`
+}
+
+type jsonapiData struct {
+	Attributes interface{} `json:"attributes"`
+}
+
 func TestCreateJob(t *testing.T) {
-	body, _ := json.Marshal(&jobRequest{Arguments: "foobar"})
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &jobRequest{Arguments: "foobar"},
+		},
+	})
 	res, err := http.Post(ts.URL+"/jobs/queue/print", "application/json", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
 		return
@@ -39,7 +51,11 @@ func TestCreateJob(t *testing.T) {
 }
 
 func TestCreateJobNotExist(t *testing.T) {
-	body, _ := json.Marshal(&jobRequest{Arguments: "foobar"})
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &jobRequest{Arguments: "foobar"},
+		},
+	})
 	res, err := http.Post(ts.URL+"/jobs/queue/none", "application/json", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
 		return
@@ -53,7 +69,11 @@ type event struct {
 }
 
 func TestCreateJobWithEventStream(t *testing.T) {
-	body, _ := json.Marshal(&jobRequest{Arguments: "foobar"})
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &jobRequest{Arguments: "foobar"},
+		},
+	})
 	req, err := http.NewRequest("POST", ts.URL+"/jobs/queue/print", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
 		return
@@ -93,11 +113,15 @@ func TestCreateJobWithEventStream(t *testing.T) {
 
 func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	at := time.Now().Add(1 * time.Second).Format(time.RFC3339)
-	body, _ := json.Marshal(map[string]interface{}{
-		"type":             "@at",
-		"arguments":        at,
-		"worker":           "print",
-		"worker_arguments": "foo",
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: &map[string]interface{}{
+				"type":             "@at",
+				"arguments":        at,
+				"worker":           "print",
+				"worker_arguments": "foo",
+			},
+		},
 	})
 	res1, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
@@ -117,18 +141,24 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
+	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
+		return
+	}
 	triggerID := v.Data.ID
 	assert.Equal(t, consts.Triggers, v.Data.Type)
 	assert.Equal(t, "@at", v.Data.Attributes.Type)
 	assert.Equal(t, at, v.Data.Attributes.Arguments)
 	assert.Equal(t, "print", v.Data.Attributes.WorkerType)
 
-	body, _ = json.Marshal(map[string]interface{}{
-		"type":             "@at",
-		"arguments":        "garbage",
-		"worker":           "print",
-		"worker_arguments": "foo",
+	body, _ = json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: map[string]interface{}{
+				"type":             "@at",
+				"arguments":        "garbage",
+				"worker":           "print",
+				"worker_arguments": "foo",
+			},
+		},
 	})
 	res2, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
@@ -161,11 +191,15 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 }
 
 func TestAddGetAndDeleteTriggerIn(t *testing.T) {
-	body, _ := json.Marshal(map[string]interface{}{
-		"type":             "@in",
-		"arguments":        "1s",
-		"worker":           "print",
-		"worker_arguments": "foo",
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: map[string]interface{}{
+				"type":             "@in",
+				"arguments":        "1s",
+				"worker":           "print",
+				"worker_arguments": "foo",
+			},
+		},
 	})
 	res1, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
@@ -185,18 +219,24 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
+	if !assert.NotNil(t, v.Data) || !assert.NotNil(t, v.Data.Attributes) {
+		return
+	}
 	triggerID := v.Data.ID
 	assert.Equal(t, consts.Triggers, v.Data.Type)
 	assert.Equal(t, "@in", v.Data.Attributes.Type)
 	assert.Equal(t, "1s", v.Data.Attributes.Arguments)
 	assert.Equal(t, "print", v.Data.Attributes.WorkerType)
 
-	body, _ = json.Marshal(map[string]interface{}{
-		"type":             "@in",
-		"arguments":        "garbage",
-		"worker":           "print",
-		"worker_arguments": "foo",
+	body, _ = json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: map[string]interface{}{
+				"type":             "@in",
+				"arguments":        "garbage",
+				"worker":           "print",
+				"worker_arguments": "foo",
+			},
+		},
 	})
 	res2, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
@@ -250,16 +290,21 @@ func TestGetAllJobs(t *testing.T) {
 
 	assert.Len(t, v.Data, 0)
 
-	body, _ := json.Marshal(map[string]interface{}{
-		"type":             "@in",
-		"arguments":        "10s",
-		"worker":           "print",
-		"worker_arguments": "foo",
+	body, _ := json.Marshal(&jsonapiReq{
+		Data: &jsonapiData{
+			Attributes: map[string]interface{}{
+				"type":             "@in",
+				"arguments":        "10s",
+				"worker":           "print",
+				"worker_arguments": "foo",
+			},
+		},
 	})
-	_, err = http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
+	res2, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
 	if !assert.NoError(t, err) {
 		return
 	}
+	assert.Equal(t, http.StatusCreated, res2.StatusCode)
 
 	res3, err := http.Get(ts.URL + "/jobs/triggers")
 	if !assert.NoError(t, err) {

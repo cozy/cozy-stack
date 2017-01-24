@@ -225,12 +225,16 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "options": {
-    "priority": 3,
-    "timeout": 60,
-    "max_exec_count": 3
-  },
-  "arguments": {} // any json value used as arguments for the job
+  "data": {
+    "attributes": {
+      "options": {
+        "priority": 3,
+        "timeout": 60,
+        "max_exec_count": 3
+      },
+      "arguments": {} // any json value used as arguments for the job
+    }
+  }
 }
 ```
 
@@ -303,14 +307,18 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "type": "@interval",
-  "arguments": "30m10s",
-  "worker": "sendmail",
-  "worker_arguments": {},
-  "options": {
-    "priority": 3,
-    "timeout": 60,
-    "max_exec_count": 3
+  "data": {
+    "attributes": {
+      "type": "@interval",
+      "arguments": "30m10s",
+      "worker": "sendmail",
+      "worker_arguments": {},
+      "options": {
+        "priority": 3,
+        "timeout": 60,
+        "max_exec_count": 3
+      }
+    }
   }
 }
 ```
