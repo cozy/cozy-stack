@@ -59,6 +59,14 @@ The references of a file are listed in its JSON-API representation in the
           "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
+      },
+      "references": {
+        "links": {
+          "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+        },
+        "data": [
+          { "type": "io.cozy.playlists", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+        ]
       }
     },
     "links": {
@@ -160,7 +168,7 @@ HTTP/1.1 204 No Content
 Content-Type: application/vnd.api+json
 ```
 
-### GET /files/:type/:doc-id/relationships/references
+### GET /data/:type/:doc-id/relationships/references
 
 Returns all the files associated to an album or playlist.
 
@@ -190,7 +198,7 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### POST /files/:type/:doc-id/relationships/references
+### POST /data/:type/:doc-id/relationships/references
 
 When creating an album or a playlist, it's tedious to add the references to it
 for each file individually. This route allows to make it in bulk.
@@ -221,9 +229,12 @@ HTTP/1.1 204 No Content
 Content-Type: application/vnd.api+json
 ```
 
-### DELETE /files/:type/:doc-id/relationships/references
+**Note**: if one of the id is a directory, the response will be a 400 Bad
+Request. References are only for files.
 
-This bulk deletion of refences on many files can be useful when an album or
+### DELETE /data/:type/:doc-id/relationships/references
+
+This bulk deletion of references on many files can be useful when an album or
 playlist is deleted.
 
 #### Request
