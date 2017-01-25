@@ -2,6 +2,7 @@ package instances
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
