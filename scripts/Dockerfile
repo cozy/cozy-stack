@@ -56,7 +56,11 @@ ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
 RUN go get github.com/mholt/caddy/caddy
-RUN go get github.com/cozy/cozy-stack
+
+ENV COZY_ENV development
+RUN go get -d github.com/cozy/cozy-stack
+RUN cd "$GOPATH/src/github.com/cozy/cozy-stack" \
+  && ./scripts/build.sh install
 
 
 # Cleanup
