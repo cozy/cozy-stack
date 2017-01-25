@@ -225,12 +225,16 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "options": {
-    "priority": 3,
-    "timeout": 60,
-    "max_exec_count": 3
-  },
-  "arguments": {} // any json value used as arguments for the job
+  "data": {
+    "attributes": {
+      "options": {
+        "priority": 3,
+        "timeout": 60,
+        "max_exec_count": 3
+      },
+      "arguments": {} // any json value used as arguments for the job
+    }
+  }
 }
 ```
 
@@ -290,25 +294,31 @@ Accept: application/vnd.api+json
 ```
 
 
-### POST /jobs/triggers/:trigger-name
+### POST /jobs/triggers
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 
 #### Request
 
 ```http
-POST /jobs/triggers/sendmail HTTP/1.1
+POST /jobs/triggers HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
 ```json
 {
-  "type": "@interval",
-  "arguments": "30m10s",
-  "options": {
-    "priority": 3,
-    "timeout": 60,
-    "max_exec_count": 3
+  "data": {
+    "attributes": {
+      "type": "@interval",
+      "arguments": "30m10s",
+      "worker": "sendmail",
+      "worker_arguments": {},
+      "options": {
+        "priority": 3,
+        "timeout": 60,
+        "max_exec_count": 3
+      }
+    }
   }
 }
 ```
@@ -374,14 +384,14 @@ Accept: application/vnd.api+json
 ```
 
 
-### GET /jobs/triggers/
+### GET /jobs/triggers
 
 Get the list of triggers.
 
 #### Request
 
 ```http
-GET /jobs/triggers/ HTTP/1.1
+GET /jobs/triggers HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
