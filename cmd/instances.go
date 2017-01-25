@@ -141,7 +141,7 @@ All data associated with this domain will be permanently lost.
 
 		fmt.Println()
 
-		i, err := instancesRequest("DELETE", "/instances/"+url.QueryEscape(domain), nil, nil)
+		i, err := instancesRequest("DELETE", "/instances/"+domain, nil, nil)
 		if err != nil {
 			log.Errorf("Failed to remove instance for domain %s", domain)
 			return err
