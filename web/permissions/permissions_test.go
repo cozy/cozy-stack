@@ -25,13 +25,13 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 
 	var testInstance = &instance.Instance{
-		SessionSecret: []byte("topsecret"),
-		Domain:        "example.com",
+		OAuthSecret: []byte("topsecret"),
+		Domain:      "example.com",
 	}
 
-	token, _ = crypto.NewJWT(testInstance.SessionSecret, permissions.Claims{
+	token, _ = crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AppAudience,
+			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
 			Subject:  "fakeapp",
@@ -79,6 +79,17 @@ func TestGetPermissions(t *testing.T) {
 			assert.Equal(t, []interface{}{"GET"}, rule["verbs"])
 		}
 	}
+}
+
+func TestBadPermissionsBearer(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req.Header.Add("Authorization", "Bearer garbage")
+	res, err := http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
 }
 
 func injectInstance(i *instance.Instance) echo.MiddlewareFunc {

@@ -1,12 +1,18 @@
 package permissions
 
-import "errors"
+import (
+	"net/http"
+
+	"github.com/labstack/echo"
+)
 
 var (
 	// ErrInvalidToken is used when the token is invalid (the signature is not
 	// correct, the domain is not the good one, etc.)
-	ErrInvalidToken = errors.New("Invalid JWT token")
+	ErrInvalidToken = echo.NewHTTPError(http.StatusBadRequest,
+		"Invalid JWT token")
 
 	// ErrInvalidAudience is used when the audience is not expected
-	ErrInvalidAudience = errors.New("Invalid audience for JWT token")
+	ErrInvalidAudience = echo.NewHTTPError(http.StatusBadRequest,
+		"Invalid audience for JWT token")
 )
