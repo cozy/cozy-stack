@@ -285,4 +285,17 @@ Accept: application/vnd.api+json
 
 ## Implementation
 
-**TODO**
+The references are persisted in the `io.cozy.files` documents in CouchDB. A
+mango index is used to fetch all the files that are associated to a given
+document (for `GET /files/:type/:doc-id/relationships/references`).
+
+For request to update or move to trash a file, it is easy to fetch its
+CouchDB document to see if it has a reference. But it is more difficult when
+moving a folder to trash. To do that, we will add on each folder a counter of
+the number of referenced files inside it. A folder can be moved to trash only
+when this counter is zero. The counter is updated when:
+
+- a reference is created on a file that had no references before
+- a reference is deleted on a file and it has no longer any references
+- a file with references is moved
+- a folder with references is moved.
