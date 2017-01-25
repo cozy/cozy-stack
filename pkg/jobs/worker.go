@@ -48,6 +48,7 @@ func (w *Worker) Start(q Queue) {
 
 func (w *Worker) work(workerID string) {
 	// TODO: err handling and persistence
+	parentCtx := context.WithValue(context.Background(), "domain", w.Domain)
 	for {
 		job, err := w.jobs.Consume()
 		if err != nil {
@@ -64,8 +65,10 @@ func (w *Worker) work(workerID string) {
 			continue
 		}
 		t := &task{
-			infos: infos,
-			conf:  w.defaultedConf(infos.Options),
+			ctx:    parentCtx,
+			infos:  infos,
+			conf:   w.defaultedConf(infos.Options),
+			domain: w.Domain,
 		}
 		if err = t.run(); err != nil {
 			log.Errorf("[job] %s: error while performing job %s (%s)",
@@ -123,8 +126,10 @@ func (w *Worker) Stop() {
 }
 
 type task struct {
-	infos *JobInfos
-	conf  *WorkerConfig
+	ctx    context.Context
+	infos  *JobInfos
+	conf   *WorkerConfig
+	domain string
 
 	startTime time.Time
 	execCount uint
@@ -145,7 +150,7 @@ func (t *task) run() (err error) {
 			time.Sleep(delay)
 		}
 		log.Debugf("[job] %s: run %d (timeout %s)", t.infos.ID, t.execCount, timeout)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(t.ctx, timeout)
 		if err = t.exec(ctx); err == nil {
 			cancel()
 			break

@@ -3,11 +3,15 @@ package workers
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"html/template"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/gomail"
 )
@@ -23,14 +27,15 @@ func init() {
 
 // MailAddress contains the name and mail of a mail recipient.
 type MailAddress struct {
-	Name string `json:"name"`
-	Mail string `json:"mail"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 // MailOptions should be used as the options of a mail with manually defined
 // content: body and body content-type. It is used as the input of the
 // "sendmail" worker.
 type MailOptions struct {
+	Mode    string                `json:"mode"`
 	From    *MailAddress          `json:"from"`
 	To      []*MailAddress        `json:"to"`
 	Subject string                `json:"subject"`
@@ -51,14 +56,63 @@ type MailPart struct {
 	Values   interface{} `json:"values"`
 }
 
-// SendMail is the sendmail worker function.
 func SendMail(ctx context.Context, m *jobs.Message) error {
-	var opts MailOptions
-	if err := m.Unmarshal(&opts); err != nil {
+	opts := &MailOptions{}
+	err := m.Unmarshal(&opts)
+	if err != nil {
 		return err
 	}
+	domain := ctx.Value("domain").(string)
+	switch opts.Mode {
+	case "noreply":
+		toAddr, err := addressFromDomain(domain)
+		if err != nil {
+			return err
+		}
+		opts.To = []*MailAddress{toAddr}
+		opts.From = &MailAddress{Email: "noreply@" + domain}
+	case "from":
+		fromAddr, err := addressFromDomain(domain)
+		if err != nil {
+			return err
+		}
+		opts.To = opts.To
+		opts.From = fromAddr
+	default:
+		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
+	}
+	return sendMail(ctx, opts)
+}
+
+func addressFromDomain(domain string) (*MailAddress, error) {
+	in, err := instance.Get(domain)
+	if err != nil {
+		return nil, err
+	}
+	doc := &couchdb.JSONDoc{}
+	err = couchdb.GetDoc(in, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return nil, err
+	}
+	email, ok := doc.M["email"].(string)
+	if !ok {
+		return nil, fmt.Errorf("Domain %s has no email in its settings", domain)
+	}
+	return &MailAddress{
+		Name:  "", // TODO: no name settings for an instance ?
+		Email: email,
+	}, nil
+}
+
+func doSendMail(ctx context.Context, opts *MailOptions) error {
 	if opts.Subject == "" {
-		return fmt.Errorf("Missing mail subject")
+		return errors.New("Missing mail subject")
+	}
+	if len(opts.To) == 0 {
+		return errors.New("Missing mail recipient")
+	}
+	if opts.From == nil {
+		return errors.New("Missing mail sender")
 	}
 	mail := gomail.NewMessage()
 	dialerOptions := opts.Dialer
@@ -73,16 +127,16 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 	}
 	toAddresses := make([]string, len(opts.To))
 	for i, to := range opts.To {
-		toAddresses[i] = mail.FormatAddress(to.Mail, to.Name)
+		toAddresses[i] = mail.FormatAddress(to.Email, to.Name)
 	}
 	mail.SetHeaders(map[string][]string{
-		"From":    {mail.FormatAddress(opts.From.Mail, opts.From.Name)},
+		"From":    {mail.FormatAddress(opts.From.Email, opts.From.Name)},
 		"To":      toAddresses,
 		"Subject": {opts.Subject},
 	})
 	mail.SetDateHeader("Date", date)
 	for _, part := range opts.Parts {
-		if err := addContent(mail, part); err != nil {
+		if err := addPart(mail, part); err != nil {
 			return err
 		}
 	}
@@ -93,7 +147,7 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 	return dialer.DialAndSend(mail)
 }
 
-func addContent(mail *gomail.Message, part *MailPart) error {
+func addPart(mail *gomail.Message, part *MailPart) error {
 	contentType := part.Type
 	var body string
 	if part.Template != "" {
@@ -119,3 +173,6 @@ func addContent(mail *gomail.Message, part *MailPart) error {
 	mail.AddAlternative(contentType, body)
 	return nil
 }
+
+// var for testability
+var sendMail = doSendMail

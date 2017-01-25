@@ -169,6 +169,7 @@ do_create_instances() {
 			${COZY_STACK_PATH} instances add --dev="true" "${host}" \
 				--couchdb-host "${COUCHDB_HOST}" \
 				--couchdb-port "${COUCHDB_PORT}" \
+				--email dev@cozy.io \
 				--fs-url "file://localhost${vfsdir}" 2>&1
 		)
 		add_instance_ret="${?}"
