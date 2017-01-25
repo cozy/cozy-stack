@@ -297,6 +297,14 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
+      },
+      "references": {
+        "links": {
+          "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+        },
+        "data": [
+          { "type": "io.cozy.playlists", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+        ]
       }
     },
     "links": {
@@ -308,6 +316,9 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 **Note**: for an image, the links section will also include a link called
 `thumbnail` to the thumbnail URL of the image.
+
+**Note**: see [references of documents in VFS](references-docs-in-vfs.md) for
+more informations about the references field.
 
 ### GET /files/download/:file-id
 

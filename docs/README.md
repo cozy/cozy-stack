@@ -22,7 +22,7 @@ Table of contents
 ## API
 
 - [Data System](data-system.md) & [Mango](mango.md)
-- [Virtual File System](files.md) & [Links between files and data](links-files-data.md)
+- [Virtual File System](files.md) & [References of documents in VFS](references-docs-in-vfs.md)
 - [Jobs](jobs.md)
 - [Settings](settings.md)
 

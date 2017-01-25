@@ -159,7 +159,7 @@ Cookie: sessionid=xxxx
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.instance",
     "meta": {
-      "rev": "3-56521545485448482",
+      "rev": "3-56521545485448482"
     },
     "attributes": {
       "locale":"fr",
@@ -170,7 +170,7 @@ Cookie: sessionid=xxxx
 }
 ```
 
-### PUT /instance
+### PUT /settings/instance
 
 If the user is logged in, allow to set the instance fields
 
@@ -189,7 +189,7 @@ Authorization: Bearer settings-token
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.instance",
     "meta": {
-      "rev": "3-56521545485448482",
+      "rev": "3-56521545485448482"
     },
     "attributes": {
       "locale":"fr",
@@ -213,7 +213,7 @@ Cookie: sessionid=xxxxx
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.instance",
     "meta": {
-      "rev": "4-5a3e315e",
+      "rev": "4-5a3e315e"
     },
     "attributes": {
       "locale":"fr",
