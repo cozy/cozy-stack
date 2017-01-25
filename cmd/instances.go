@@ -21,6 +21,10 @@ var flagEmail string
 var flagApps []string
 var flagDev bool
 
+func validDomain(domain string) bool {
+	return !strings.ContainsAny(domain, " /?#@\t\r\n")
+}
+
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
 	Use:   "instances [command]",
@@ -53,6 +57,9 @@ given domain.
 		}
 
 		domain := args[0]
+		if !validDomain(domain) {
+			return fmt.Errorf("Invalid domain: %s", domain)
+		}
 
 		var dev string
 		if flagDev {
@@ -124,6 +131,10 @@ and all its data.
 		}
 
 		domain := args[0]
+		if !validDomain(domain) {
+			return fmt.Errorf("Invalid domain: %s", domain)
+		}
+
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Printf(`
 Are you sure you want to remove instance for domain %s ?
@@ -141,7 +152,7 @@ All data associated with this domain will be permanently lost.
 
 		fmt.Println()
 
-		i, err := instancesRequest("DELETE", "/instances/"+url.QueryEscape(domain), nil, nil)
+		i, err := instancesRequest("DELETE", "/instances/"+domain, nil, nil)
 		if err != nil {
 			log.Errorf("Failed to remove instance for domain %s", domain)
 			return err

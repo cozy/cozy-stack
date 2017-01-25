@@ -318,6 +318,10 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, ErrIllegalDomain
 	}
 
+	if strings.ContainsAny(domain, " /?#@\t\r\n") {
+		return nil, ErrIllegalDomain
+	}
+
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		parts := strings.SplitN(domain, ".", 2)
 		if strings.Contains(parts[0], "-") {
