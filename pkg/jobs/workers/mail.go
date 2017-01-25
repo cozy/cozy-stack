@@ -56,13 +56,14 @@ type MailPart struct {
 	Values   interface{} `json:"values"`
 }
 
+// SendMail is the sendmail worker function.
 func SendMail(ctx context.Context, m *jobs.Message) error {
 	opts := &MailOptions{}
 	err := m.Unmarshal(&opts)
 	if err != nil {
 		return err
 	}
-	domain := ctx.Value("domain").(string)
+	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	switch opts.Mode {
 	case "noreply":
 		toAddr, err := addressFromDomain(domain)
@@ -76,7 +77,6 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 		if err != nil {
 			return err
 		}
-		opts.To = opts.To
 		opts.From = fromAddr
 	default:
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)

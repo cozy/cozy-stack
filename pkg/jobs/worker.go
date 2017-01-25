@@ -10,6 +10,14 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// WorkerContextKey are the keys used in the worker context
+type WorkerContextKey int
+
+const (
+	// ContextDomainKey is the used to store the domain string name
+	ContextDomainKey WorkerContextKey = iota
+)
+
 var (
 	defaultConcurrency  = 1
 	defaultMaxExecCount = 3
@@ -34,6 +42,11 @@ type (
 	}
 )
 
+// NewWorkerContext returns a context.Context usable by a worker.
+func NewWorkerContext(domain string) context.Context {
+	return context.WithValue(context.Background(), ContextDomainKey, domain)
+}
+
 // Start is used to start the worker consumption of messages from its queue.
 func (w *Worker) Start(q Queue) {
 	if !atomic.CompareAndSwapInt32(&w.started, 0, 1) {
@@ -48,7 +61,7 @@ func (w *Worker) Start(q Queue) {
 
 func (w *Worker) work(workerID string) {
 	// TODO: err handling and persistence
-	parentCtx := context.WithValue(context.Background(), "domain", w.Domain)
+	parentCtx := NewWorkerContext(w.Domain)
 	for {
 		job, err := w.jobs.Consume()
 		if err != nil {

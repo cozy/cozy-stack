@@ -367,7 +367,7 @@ func TestSendMailNoReply(t *testing.T) {
 		assert.Len(t, opts.To, 1)
 		assert.Equal(t, "me@me", opts.To[0].Email)
 		assert.Equal(t, "noreply@noreply.triggers", opts.From.Email)
-		return errors.New("yes !")
+		return errors.New("yes")
 	}
 	_, err := instance.Create(&instance.Options{
 		Domain: "noreply.triggers",
@@ -390,12 +390,9 @@ func TestSendMailNoReply(t *testing.T) {
 			},
 		},
 	})
-	err = SendMail(
-		context.WithValue(context.Background(), "domain", "noreply.triggers"),
-		msg,
-	)
+	err = SendMail(jobs.NewWorkerContext("noreply.triggers"), msg)
 	if assert.Error(t, err) {
-		assert.Equal(t, "yes !", err.Error())
+		assert.Equal(t, "yes", err.Error())
 	}
 }
 
@@ -406,7 +403,7 @@ func TestSendMailFrom(t *testing.T) {
 		assert.Len(t, opts.To, 1)
 		assert.Equal(t, "you@you", opts.To[0].Email)
 		assert.Equal(t, "me@me", opts.From.Email)
-		return errors.New("yes !")
+		return errors.New("yes")
 	}
 	_, err := instance.Create(&instance.Options{
 		Domain: "from.triggers",
@@ -430,12 +427,9 @@ func TestSendMailFrom(t *testing.T) {
 			},
 		},
 	})
-	err = SendMail(
-		context.WithValue(context.Background(), "domain", "from.triggers"),
-		msg,
-	)
+	err = SendMail(jobs.NewWorkerContext("from.triggers"), msg)
 	if assert.Error(t, err) {
-		assert.Equal(t, "yes !", err.Error())
+		assert.Equal(t, "yes", err.Error())
 	}
 }
 
