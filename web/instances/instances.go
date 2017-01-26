@@ -4,13 +4,16 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 func createHandler(c echo.Context) error {
-	i, err := instance.Create(&instance.Options{
+	in, err := instance.Create(&instance.Options{
 		Domain:   c.QueryParam("Domain"),
 		Locale:   c.QueryParam("Locale"),
 		Timezone: c.QueryParam("Timezone"),
@@ -21,7 +24,10 @@ func createHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	return jsonapi.Data(c, http.StatusCreated, i, nil)
+	in.OAuthSecret = nil
+	in.SessionSecret = nil
+	in.PassphraseHash = nil
+	return jsonapi.Data(c, http.StatusCreated, in, nil)
 }
 
 func listHandler(c echo.Context) error {
@@ -32,6 +38,10 @@ func listHandler(c echo.Context) error {
 
 	objs := make([]jsonapi.Object, len(is))
 	for i, in := range is {
+		in.OAuthSecret = nil
+		in.SessionSecret = nil
+		in.RegisterToken = nil
+		in.PassphraseHash = nil
 		objs[i] = in
 	}
 
@@ -45,6 +55,28 @@ func deleteHandler(c echo.Context) error {
 		return wrapError(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, i, nil)
+}
+
+func getAppToken(c echo.Context) error {
+	domain := c.QueryParam("Domain")
+	slug := c.QueryParam("Slug")
+	in, err := instance.Get(domain)
+	if err != nil {
+		return wrapError(err)
+	}
+	token, err := crypto.NewJWT(in.SessionSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AppAudience,
+			Issuer:   in.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  slug,
+		},
+		Scope: "", // apps token doesnt have a scope
+	})
+	if err != nil {
+		return err
+	}
+	return c.String(http.StatusOK, token)
 }
 
 func wrapError(err error) error {
@@ -68,4 +100,5 @@ func Routes(router *echo.Group) {
 	router.GET("/", listHandler)
 	router.POST("/", createHandler)
 	router.DELETE("/:domain", deleteHandler)
+	router.GET("/token", getAppToken)
 }
