@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -165,6 +166,31 @@ All data associated with this domain will be permanently lost.
 	},
 }
 
+var tokenInstanceCmd = &cobra.Command{
+	Use:   "token [domain] [slug]",
+	Short: "Generate a new application token",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 2 {
+			return cmd.Help()
+		}
+		q := url.Values{
+			"Domain": {args[0]},
+			"Slug":   {args[1]},
+		}
+		res, err := clientRequest(instancesClient(), "GET", "/instances/token", q, nil)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		b, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(string(b))
+		return err
+	},
+}
+
 type instanceData struct {
 	ID    string             `json:"id"`
 	Rev   string             `json:"rev"`
@@ -213,6 +239,7 @@ func init() {
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
+	instanceCmdGroup.AddCommand(tokenInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
