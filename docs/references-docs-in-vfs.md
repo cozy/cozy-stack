@@ -60,7 +60,7 @@ The references of a file are listed in its JSON-API representation in the
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       },
-      "references": {
+      "referenced_by": {
         "links": {
           "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
         },
@@ -78,14 +78,14 @@ The references of a file are listed in its JSON-API representation in the
 
 ## Routes
 
-### PATCH /files/:file-id/relationships/references
+### PATCH /files/:file-id/relationships/referenced_by
 
 Replace the references for a file with the new ones.
 
 #### Request
 
 ```http
-PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/references HTTP/1.1
+PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/referenced_by HTTP/1.1
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
@@ -105,14 +105,14 @@ HTTP/1.1 204 No Content
 Content-Type: application/vnd.api+json
 ```
 
-### POST /files/:file-id/relationships/references
+### POST /files/:file-id/relationships/referenced_by
 
 Add on a file one or more references to documents
 
 #### Request
 
 ```http
-POST /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/references HTTP/1.1
+POST /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/referenced_by HTTP/1.1
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
@@ -141,14 +141,14 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### DELETE /files/:file-id/relationships/references
+### DELETE /files/:file-id/relationships/referenced_by
 
 Remove one or more references to documents on a file
 
 #### Request
 
 ```http
-DELETE /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/references HTTP/1.1
+DELETE /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/referenced_by HTTP/1.1
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
@@ -298,7 +298,7 @@ Accept: application/vnd.api+json
 
 The references are persisted in the `io.cozy.files` documents in CouchDB. A
 mango index is used to fetch all the files that are associated to a given
-document (for `GET /files/:type/:doc-id/relationships/references`).
+document (for `GET /data/:type/:doc-id/relationships/references`).
 
 For request to update or move to trash a file, it is easy to fetch its
 CouchDB document to see if it has a reference. But it is more difficult when

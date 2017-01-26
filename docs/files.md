@@ -298,7 +298,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
       },
-      "references": {
+      "referenced_by": {
         "links": {
           "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
         },
