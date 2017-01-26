@@ -57,21 +57,34 @@ func deleteHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, i, nil)
 }
 
-func getAppToken(c echo.Context) error {
+func getToken(c echo.Context) error {
 	domain := c.QueryParam("Domain")
-	slug := c.QueryParam("Slug")
+	audience := c.QueryParam("Audience")
+	scope := c.QueryParam("Scope")
+	subject := c.QueryParam("Subject")
 	in, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
 	}
-	token, err := crypto.NewJWT(in.SessionSecret, permissions.Claims{
+	var secret []byte
+	switch audience {
+	case "app":
+		secret = in.SessionSecret
+		audience = permissions.AppAudience
+	case "access-token":
+		secret = in.OAuthSecret
+		audience = permissions.AccessTokenAudience
+	default:
+		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
+	}
+	token, err := crypto.NewJWT(secret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AppAudience,
-			Issuer:   in.Domain,
+			Audience: audience,
+			Issuer:   domain,
+			Subject:  subject,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  slug,
 		},
-		Scope: "", // apps token doesnt have a scope
+		Scope: scope,
 	})
 	if err != nil {
 		return err
@@ -100,5 +113,5 @@ func Routes(router *echo.Group) {
 	router.GET("/", listHandler)
 	router.POST("/", createHandler)
 	router.DELETE("/:domain", deleteHandler)
-	router.GET("/token", getAppToken)
+	router.GET("/token", getToken)
 }
