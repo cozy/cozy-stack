@@ -78,10 +78,9 @@ func (w *Worker) work(workerID string) {
 			continue
 		}
 		t := &task{
-			ctx:    parentCtx,
-			infos:  infos,
-			conf:   w.defaultedConf(infos.Options),
-			domain: w.Domain,
+			ctx:   parentCtx,
+			infos: infos,
+			conf:  w.defaultedConf(infos.Options),
 		}
 		if err = t.run(); err != nil {
 			log.Errorf("[job] %s: error while performing job %s (%s)",
@@ -139,10 +138,9 @@ func (w *Worker) Stop() {
 }
 
 type task struct {
-	ctx    context.Context
-	infos  *JobInfos
-	conf   *WorkerConfig
-	domain string
+	ctx   context.Context
+	infos *JobInfos
+	conf  *WorkerConfig
 
 	startTime time.Time
 	execCount uint
