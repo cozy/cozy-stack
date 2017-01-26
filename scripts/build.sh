@@ -50,10 +50,6 @@ do_prepare_ldflags() {
 		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
 
 	if [ "${VERSION_STRING}" == "" ]; then
-		if [ "${COZY_ENV}" == production ]; then
-			>&2 echo "ERR: Can not build a production release without a tagged version"
-			exit 1
-		fi
 		VERSION_STRING=v0-`git rev-parse --short HEAD`
 		>&2 echo "WRN: No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 	fi
