@@ -10,12 +10,12 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-// WorkerContextKey are the keys used in the worker context
-type WorkerContextKey int
+// contextKey are the keys used in the worker context
+type contextKey int
 
 const (
 	// ContextDomainKey is the used to store the domain string name
-	ContextDomainKey WorkerContextKey = iota
+	ContextDomainKey contextKey = iota
 )
 
 var (
