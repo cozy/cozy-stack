@@ -31,7 +31,7 @@ import (
 
 func main() {
 	if err := cmd.RootCmd.Execute(); err != nil {
-		log.Errorf(err.Error())
+		log.Error(err.Error())
 		os.Exit(1)
 	}
 }
