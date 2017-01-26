@@ -11,5 +11,5 @@
 #
 
 name    ./js/cozy-client.js
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/0a253f9ab27d3f0a24226be411f98535dddb7e83/dist/cozy-client.js
-sha256  9cf064f0af53fab7f67fef3bb16624f6376c1986a09c72cd5cb408bd4454f0b3
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.0.4/dist/cozy-client.js
+sha256  c5ff7a39ba3f716137a35538b08b794fdbc573ddd4241236a1583243f2aa61e1

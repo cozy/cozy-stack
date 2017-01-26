@@ -202,7 +202,7 @@ prepare_assets() {
 
 	[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
 
-	cp -r "${assets_src}/." "${assets_dst}"
+	cp -a "${assets_src}/." "${assets_dst}"
 	rm -f "${assets_dst}/externals"
 }
 
