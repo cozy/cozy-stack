@@ -302,11 +302,24 @@ document (for `GET /data/:type/:doc-id/relationships/references`).
 
 For request to update or move to trash a file, it is easy to fetch its
 CouchDB document to see if it has a reference. But it is more difficult when
-moving a folder to trash. To do that, we will add on each folder a counter of
-the number of referenced files inside it. A folder can be moved to trash only
-when this counter is zero. The counter is updated when:
+moving a folder to trash. To do that, we need two requests to fetch the number
+of references in a folder.
 
-- a reference is created on a file that had no references before
-- a reference is deleted on a file and it has no longer any references
-- a file with references is moved
-- a folder with references is moved.
+1. Get all descendant folders from a given folder, with a CouchDB View:
+
+```js
+map = function(doc) { if(doc.type === "folder") emit(doc.path) }
+query = {
+    starkey: parent_folder_path + "/",
+    endkey: parent_folder_path +"/\uFFFF"
+}
+```
+
+2. Get the total number of "referenced" file for this folders list, with a
+map/reduce CouchDB view:
+
+```js
+map = function(doc) { if(doc.referenced != null) emit(doc.parentID) }
+reduce = count
+query = {keys: [list from above]}
+```
