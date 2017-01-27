@@ -22,8 +22,42 @@ type fileRef struct {
 
 // downloadStoreTTL is the time an Archive stay alive
 const downloadStoreTTL = 1 * time.Hour
+const downloadStoreCleanInterval = 1 * time.Hour
 
 var storeStore map[string]*memStore
+
+func init() {
+	go cleanDownloadStoreInterval()
+}
+
+func cleanDownloadStoreInterval() {
+	for _ = range time.Tick(downloadStoreCleanInterval) {
+		cleanDownloadStore()
+	}
+}
+
+func cleanStore(s *memStore) {
+	now := time.Now()
+	for k, f := range s.Files {
+		if now.After(f.ExpiresAt) {
+			delete(s.Files, k)
+		}
+	}
+	for k, a := range s.Archives {
+		if now.After(a.ExpiresAt) {
+			delete(s.Archives, k)
+		}
+	}
+}
+
+func cleanDownloadStore() {
+	for i, s := range storeStore {
+		cleanStore(s)
+		if len(s.Files) == 0 && len(s.Archives) == 0 {
+			delete(storeStore, i)
+		}
+	}
+}
 
 // GetStore returns the DownloadStore for the given Instance
 func GetStore(domain string) DownloadStore {
@@ -46,25 +80,6 @@ type memStore struct {
 	Files    map[string]*fileRef
 }
 
-func cleanDownloadStore() {
-	now := time.Now()
-	for i, s := range storeStore {
-		for k, f := range s.Files {
-			if now.After(f.ExpiresAt) {
-				delete(s.Files, k)
-			}
-		}
-		for k, a := range s.Archives {
-			if now.After(a.ExpiresAt) {
-				delete(s.Archives, k)
-			}
-		}
-		if len(s.Files) == 0 && len(s.Archives) == 0 {
-			delete(storeStore, i)
-		}
-	}
-}
-
 func (s *memStore) makeSecret() string {
 	return hex.EncodeToString(crypto.GenerateRandomBytes(16))
 }
@@ -74,6 +89,7 @@ func (s *memStore) AddFile(f string) (string, error) {
 		Path:      f,
 		ExpiresAt: time.Now().Add(downloadStoreTTL),
 	}
+	cleanStore(s)
 	key := s.makeSecret()
 	s.Files[key] = fref
 	return key, nil
@@ -81,6 +97,7 @@ func (s *memStore) AddFile(f string) (string, error) {
 
 func (s *memStore) AddArchive(a *Archive) (string, error) {
 	a.ExpiresAt = time.Now().Add(downloadStoreTTL)
+	cleanStore(s)
 	key := s.makeSecret()
 	s.Archives[key] = a
 	return key, nil
