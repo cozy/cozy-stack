@@ -107,10 +107,12 @@ do_install() {
 
 	do_prepare_ldflags
 
+	printf "installing cozy-stack in ${GOPATH}... "
 	go install -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}"
+	echo "ok"
 }
 
 do_build() {
@@ -125,12 +127,14 @@ do_build() {
 		BINARY="${1}"
 	fi
 
+	printf "building cozy-stack in ${BINARY}... "
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
 		" \
 		-o "${BINARY}"
+	echo "ok"
 }
 
 # The deploy command will build a new release and deploy it on a

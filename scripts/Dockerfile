@@ -62,11 +62,6 @@ RUN curl -fsSL "$CADDY_DOWNLOAD_URL" -o caddy.tar.gz \
   && rm caddy.tar.gz
 
 
-# cozy-stack
-COPY cozy-stack /usr/bin
-RUN chmod +x /usr/bin/cozy-stack
-COPY cozy-app-dev.sh /usr/bin
-RUN chmod +x /usr/bin/cozy-app-dev.sh
 
 ENV COZY_PROXY_HOST cozy.local
 ENV COZY_PROXY_PORT 8080
@@ -76,6 +71,12 @@ ENV COZY_PROXY_PATH caddy
 ENV COZY_STACK_PATH cozy-stack
 
 RUN mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
+
+# cozy-stack
+COPY cozy-app-dev.sh /usr/bin
+RUN chmod +x /usr/bin/cozy-app-dev.sh
+COPY cozy-stack /usr/bin
+RUN chmod +x /usr/bin/cozy-stack
 
 EXPOSE 8080 5984
 
