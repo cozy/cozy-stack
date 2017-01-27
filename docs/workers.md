@@ -63,8 +63,9 @@ the root of this repository.
     ],
     "subject": "Hey !",
     "parts": [
-        {"template":"<h1>{{.Title}}</h1>", "values": {"Title": "Hello!"}},
-        {"type":"text/plain", "body": "Hey !"}
-    ]
+        {"text": "text/html", "body":"<h1>{{.Title}}</h1>"},
+        {"type": "text/plain", "body": "{{.Title}}"}
+    ],
+    "template_values": {"Title": "Hello!"}
 }
 ```
