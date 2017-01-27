@@ -20,9 +20,10 @@ echo_err() {
 }
 
 usage() {
-	echo -e "Usage: ${1} [release] [deploy] [clean]"
+	echo -e "Usage: ${1} [release] [install] [deploy] [assets] [clean]"
 	echo -e "\nCommands:\n"
 	echo -e "  release  builds a release of the current working-tree"
+	echo -e "  install  builds a release and install it the GOPATH"
 	echo -e "  deploy   builds a release of the current working-tree and deploys it"
 	echo -e "  assets   move and download all the required assets (see: ./assets/externals)"
 	echo -e "  clean    remove all generated files from the working-tree"
@@ -41,6 +42,32 @@ usage() {
 	echo -e "\n  COZY_DEPLOY_POSTSCRIPT"
 	echo -e "    with deploy command, specify an optional script to execute"
 	echo -e "    on the deploy server after deploying."
+}
+
+do_prepare_ldflags() {
+	VERSION_STRING=`git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
+		describe --tags --dirty 2> /dev/null | \
+		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
+
+	if [ "${VERSION_STRING}" == "" ]; then
+		VERSION_STRING=v0-`git rev-parse --short HEAD`
+		>&2 echo "WRN: No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
+	fi
+
+	if [ `git diff --shortstat HEAD 2> /dev/null | tail -n1 | wc -l` -gt 0 ]; then
+		if [ "${COZY_ENV}" == production ]; then
+			>&2 echo "ERR: Can not build a production release in a dirty work-tree"
+			exit 1
+		fi
+		VERSION_STRING="${VERSION_STRING}-dirty"
+	fi
+
+	if [ "${COZY_ENV}" == development ]; then
+		VERSION_STRING="${VERSION_STRING}-dev"
+	fi
+
+	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+	BUILD_MODE="${COZY_ENV}"
 }
 
 # The version string is deterministic and reflects entirely the state
@@ -67,36 +94,11 @@ usage() {
 do_release() {
 	check_env
 
-	VERSION_STRING=`git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
-		describe --tags --dirty 2> /dev/null | \
-		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
-
-	if [ "${VERSION_STRING}" == "" ]; then
-		if [ "${COZY_ENV}" == production ]; then
-			>&2 echo "ERR: Can not build a production release without a tagged version"
-			exit 1
-		fi
-		VERSION_STRING=v0-`git rev-parse --short HEAD`
-		>&2 echo "WRN: No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
-	fi
-
-	if [ `git diff --shortstat HEAD 2> /dev/null | tail -n1 | wc -l` -gt 0 ]; then
-		if [ "${COZY_ENV}" == production ]; then
-			>&2 echo "ERR: Can not build a production release in a dirty work-tree"
-			exit 1
-		fi
-		VERSION_STRING="${VERSION_STRING}-dirty"
-	fi
-
-	if [ "${COZY_ENV}" == development ]; then
-		VERSION_STRING="${VERSION_STRING}-dev"
-	fi
-
-	BINARY="cozy-stack-${VERSION_STRING}"
-	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
-	BUILD_MODE="${COZY_ENV}"
+	do_prepare_ldflags
 
 	do_assets
+
+	BINARY="cozy-stack-${VERSION_STRING}"
 
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
@@ -109,6 +111,17 @@ do_release() {
 
 	printf "${BINARY}\t"
 	cat "${BINARY}.sha256" | sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g'
+}
+
+do_install() {
+	check_env
+
+	do_prepare_ldflags
+
+	go install -ldflags "\
+		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}"
 }
 
 # The deploy command will build a new release and deploy it on a
@@ -248,6 +261,10 @@ check_env() {
 case "${1}" in
 	release)
 		do_release
+		;;
+
+	install)
+		do_install
 		;;
 
 	deploy)
