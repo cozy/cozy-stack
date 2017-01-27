@@ -13,3 +13,7 @@
 name    ./js/cozy-client.js
 url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.0.4/dist/cozy-client.js
 sha256  c5ff7a39ba3f716137a35538b08b794fdbc573ddd4241236a1583243f2aa61e1
+
+name    ./js/cozy-bar.js
+url     https://raw.githubusercontent.com/cozy/cozy-bar/3.0.0-beta3/dist/cozy-bar.min.js
+sha256  a8a1fa9f9e1a18ae7e1f23cbc66d45c4f8a54858ae8a385314291768b50eaa7e
