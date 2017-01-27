@@ -95,8 +95,9 @@ func addressFromDomain(domain string) (*MailAddress, error) {
 	if !ok {
 		return nil, fmt.Errorf("Domain %s has no email in its settings", domain)
 	}
+	publicName, _ := doc.M["public_name"].(string)
 	return &MailAddress{
-		Name:  "", // TODO: no name settings for an instance ?
+		Name:  publicName,
 		Email: email,
 	}, nil
 }
