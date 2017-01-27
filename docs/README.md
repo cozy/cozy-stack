@@ -14,18 +14,17 @@ Table of contents
 
 - [Configuration](config.md)
 - [Managing Instances](instance.md)
+- [Onboarding](onboarding.md)
 - [Docker](docker.md)
 - [Build a release](release.md)
 - [Develop a client-side app](client-app-dev.md)
 
 ## API
 
-- [Data System](data-system.md)
-- [Mango](mango.md)
-- [Virtual File System](files.md)
+- [Data System](data-system.md) & [Mango](mango.md)
+- [Virtual File System](files.md) & [References of documents in VFS](references-docs-in-vfs.md)
 - [Jobs](jobs.md)
 - [Workers](workers.md)
-- [Onboarding](onboarding.md)
 - [Settings](settings.md)
 
 ## In progress

@@ -62,7 +62,7 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
     "type": "io.cozy.files",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "meta": {
-      "rev": "1-ff3beeb456eb",
+      "rev": "1-ff3beeb456eb"
     },
     "attributes": {
       "type": "directory",
@@ -124,7 +124,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files",
     "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81",
     "meta": {
-      "rev": "1-e36ab092",
+      "rev": "1-e36ab092"
     },
     "attributes": {
       "type": "directory",
@@ -149,7 +149,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files",
     "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
     "meta": {
-      "rev": "1-ff3beeb456eb",
+      "rev": "1-ff3beeb456eb"
     },
     "attributes": {
       "type": "directory",
@@ -176,7 +176,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "1-0e6d5b72",
+      "rev": "1-0e6d5b72"
     },
     "attributes": {
       "type": "file",
@@ -274,7 +274,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "1-0e6d5b72",
+      "rev": "1-0e6d5b72"
     },
     "attributes": {
       "type": "file",
@@ -297,6 +297,14 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "type": "io.cozy.files",
           "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
         }
+      },
+      "referenced_by": {
+        "links": {
+          "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+        },
+        "data": [
+          { "type": "io.cozy.playlists", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+        ]
       }
     },
     "links": {
@@ -308,6 +316,9 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 **Note**: for an image, the links section will also include a link called
 `thumbnail` to the thumbnail URL of the image.
+
+**Note**: see [references of documents in VFS](references-docs-in-vfs.md) for
+more informations about the references field.
 
 ### GET /files/download/:file-id
 
@@ -387,7 +398,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "2-d903b54c",
+      "rev": "2-d903b54c"
     },
     "attributes": {
       "type": "file",
@@ -450,7 +461,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "1-0e6d5b72",
+      "rev": "1-0e6d5b72"
     },
     "attributes": {
       "type": "file",
@@ -547,7 +558,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "1-0e6d5b72",
+      "rev": "1-0e6d5b72"
     },
     "attributes": {
       "type": "file",
@@ -657,7 +668,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files",
     "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
     "meta": {
-      "rev": "1-3b75377c",
+      "rev": "1-3b75377c"
     },
     "attributes": {
       "type": "file",
@@ -678,7 +689,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files",
     "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
     "meta": {
-      "rev": "1-4a09030e",
+      "rev": "1-4a09030e"
     },
     "attributes": {
       "type": "file",

@@ -66,7 +66,8 @@ To keep your data even when stopping the container, run the following command:
 $ docker run --rm -it \
     -p 8080:8080 \
     -v "$HOME/myapp":/data/cozy-app \
-    -v "$(pwd)":/usr/local/couchdb/data \
+    -v "$(pwd)/db":/usr/local/couchdb/data \
+    -v "$(pwd)/storage":/data/cozy-storage \
     cozy/cozy-app-dev
 ```
 
