@@ -19,7 +19,7 @@ func Compose(handler echo.HandlerFunc, mws ...echo.MiddlewareFunc) echo.HandlerF
 
 // SplitHost returns a splitted host domain taking into account the subdomains
 // configuration mode used.
-func SplitHost(host string) (instanceHost string, appSlug string) {
+func SplitHost(host string) (instanceHost, appSlug string) {
 	parts := strings.SplitN(host, ".", 2)
 	if len(parts) == 2 {
 		if config.GetConfig().Subdomains == config.FlatSubdomains {

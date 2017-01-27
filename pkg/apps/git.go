@@ -173,18 +173,18 @@ func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
 		return err
 	}
 
-	return files.ForEach(func(f *gitObj.File) (err error) {
+	return files.ForEach(func(f *gitObj.File) error {
 		abs := path.Join(appdir, f.Name)
 		dir := path.Dir(abs)
 
-		_, err = vfs.MkdirAll(ctx, dir, nil)
+		_, err := vfs.MkdirAll(ctx, dir, nil)
 		if err != nil {
-			return
+			return err
 		}
 
 		file, err := vfs.Create(ctx, abs)
 		if err != nil {
-			return
+			return err
 		}
 
 		defer func() {
@@ -195,13 +195,13 @@ func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
 
 		r, err := f.Reader()
 		if err != nil {
-			return
+			return err
 		}
 
 		defer r.Close()
 		_, err = io.Copy(file, r)
 
-		return
+		return err
 	})
 }
 
@@ -265,11 +265,11 @@ func (f *gfile) IsClosed() bool {
 	return f.closed
 }
 
-func (f *gfile) Read(p []byte) (n int, err error) {
+func (f *gfile) Read(p []byte) (int, error) {
 	return f.f.Read(p)
 }
 
-func (f *gfile) Write(p []byte) (n int, err error) {
+func (f *gfile) Write(p []byte) (int, error) {
 	return f.f.Write(p)
 }
 

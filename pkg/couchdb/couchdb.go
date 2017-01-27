@@ -303,8 +303,8 @@ func DeleteAllDBs(db Database) error {
 }
 
 // ResetDB destroy and recreate the database for a doctype
-func ResetDB(db Database, doctype string) (err error) {
-	err = DeleteDB(db, doctype)
+func ResetDB(db Database, doctype string) error {
+	err := DeleteDB(db, doctype)
 	if err != nil && !IsNoDatabaseError(err) {
 		return err
 	}
@@ -392,8 +392,8 @@ func CreateNamedDoc(db Database, doc Doc) error {
 
 // CreateNamedDocWithDB is equivalent to CreateNamedDoc but creates the database
 // if it does not exist
-func CreateNamedDocWithDB(db Database, doc Doc) (err error) {
-	err = CreateNamedDoc(db, doc)
+func CreateNamedDocWithDB(db Database, doc Doc) error {
+	err := CreateNamedDoc(db, doc)
 	if coucherr, ok := err.(*Error); ok && coucherr.Reason == "wrong_doctype" {
 		err = CreateDB(db, doc.DocType())
 		if err != nil {
@@ -404,33 +404,33 @@ func CreateNamedDocWithDB(db Database, doc Doc) (err error) {
 	return err
 }
 
-func createDocOrDb(db Database, doc Doc, response interface{}) (err error) {
+func createDocOrDb(db Database, doc Doc, response interface{}) error {
 	doctype := doc.DocType()
 	dbname := makeDBName(db, doctype)
-	err = makeRequest("POST", dbname, doc, response)
+	err := makeRequest("POST", dbname, doc, response)
 	if err == nil || !IsNoDatabaseError(err) {
-		return
+		return err
 	}
 
 	err = CreateDB(db, doctype)
 	if err == nil {
 		err = makeRequest("POST", dbname, doc, response)
 	}
-	return
+	return err
 }
 
 // CreateDoc is used to persist the given document in the couchdb
 // database. The document's SetRev and SetID function will be called
 // with the document's new ID and Rev.
 // This function creates a database if this is the first document of its type
-func CreateDoc(db Database, doc Doc) (err error) {
+func CreateDoc(db Database, doc Doc) error {
 	var res *updateResponse
 
 	if doc.ID() != "" {
 		return newDefinedIDError()
 	}
 
-	err = createDocOrDb(db, doc, &res)
+	err := createDocOrDb(db, doc, &res)
 	if err != nil {
 		return err
 	} else if !res.Ok {

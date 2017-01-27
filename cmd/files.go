@@ -303,39 +303,40 @@ func treeCmd(c *instance.Instance, root string, w io.Writer) error {
 	return treeRecurs(c, doc, root, 2, w)
 }
 
-func treeRecurs(c *instance.Instance, doc *fileAPIData, root string, level int, w io.Writer) (err error) {
+func treeRecurs(c *instance.Instance, doc *fileAPIData, root string, level int, w io.Writer) error {
 	for _, f := range doc.Included {
 		for i := 0; i < level-1; i++ {
+			var err error
 			if i == level-2 {
 				_, err = fmt.Fprintf(w, "└── ")
 			} else {
 				_, err = fmt.Fprintf(w, "|  ")
 			}
 			if err != nil {
-				return
+				return err
 			}
 		}
 
 		name := f.Attrs.Name
-		_, err = fmt.Fprintln(w, name)
+		_, err := fmt.Fprintln(w, name)
 		if err != nil {
-			return
+			return err
 		}
 
 		if f.Attrs.Type == consts.DirType {
 			var child *fileAPIData
 			child, err = filesRequest(c, "GET", "/files/"+f.ID, nil, nil)
 			if err != nil {
-				return
+				return err
 			}
 			err = treeRecurs(c, child, path.Join(root, name), level+1, w)
 			if err != nil {
-				return
+				return err
 			}
 		}
 	}
 
-	return
+	return nil
 }
 
 func attrsCmd(c *instance.Instance, name string, w io.Writer) error {
