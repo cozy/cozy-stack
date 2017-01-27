@@ -22,18 +22,10 @@ the root of this repository.
 - `to`: list of object `{name, email}` representing the addresses of the
   recipients. (should not be used in `noreply` mode)
 - `subject`: string specifying the subject of the mail
-- `parts`: list of part objects listing representing the content parts of the
-  mail's body
-
-A part can be represented by two different object types:
-
-  - `type` string of the content type: either `text/html` or `text/plain`
-  - `body` string of the actual body content of the part
-
-or
-
-  - `template` string of the [html template](https://golang.org/pkg/html/template/)
-  - `values` object containing the key/values to fill the template with
+- `parts`: list of part objects `{type, body}` listing representing the content parts of the
+    - `type` string of the content type: either `text/html` or `text/plain`
+    - `body` string of the actual body content of the part
+- `template_values` any key/value object or null. if defined, the parts body will be interpreted as [html](https://golang.org/pkg/html/template/) or [text](https://golang.org/pkg/text/template/) templates and this object will be used to fill the template with
 
 ### Examples
 

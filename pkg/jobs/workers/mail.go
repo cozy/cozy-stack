@@ -5,7 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"html/template"
+	htmlTemplate "html/template"
+	textTemplate "text/template"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -35,25 +36,21 @@ type MailAddress struct {
 // content: body and body content-type. It is used as the input of the
 // "sendmail" worker.
 type MailOptions struct {
-	Mode    string                `json:"mode"`
-	From    *MailAddress          `json:"from"`
-	To      []*MailAddress        `json:"to"`
-	Subject string                `json:"subject"`
-	Dialer  *gomail.DialerOptions `json:"dialer,omitempty"`
-	Date    *time.Time            `json:"date"`
-	Parts   []*MailPart           `json:"parts"`
+	Mode           string                `json:"mode"`
+	From           *MailAddress          `json:"from"`
+	To             []*MailAddress        `json:"to"`
+	Subject        string                `json:"subject"`
+	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
+	Date           *time.Time            `json:"date"`
+	Parts          []*MailPart           `json:"parts"`
+	TemplateValues interface{}           `json:"template_values"`
 }
 
 // MailPart represent a part of the content of the mail. It has a type
-// specifying the content type of the part, and can used with:
-//   - Template field as a html template parsed and executed with the specified
-//     Values field
-//   - Body field used directly as body of the part.
+// specifying the content type of the part, and a body.
 type MailPart struct {
-	Type     string      `json:"body_type"`
-	Body     string      `json:"body"`
-	Template string      `json:"template"`
-	Values   interface{} `json:"values"`
+	Type string `json:"body_type"`
+	Body string `json:"body"`
 }
 
 // SendMail is the sendmail worker function.
@@ -136,7 +133,7 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 	})
 	mail.SetDateHeader("Date", date)
 	for _, part := range opts.Parts {
-		if err := addPart(mail, part); err != nil {
+		if err := addPart(mail, part, opts.TemplateValues); err != nil {
 			return err
 		}
 	}
@@ -147,28 +144,35 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 	return dialer.DialAndSend(mail)
 }
 
-func addPart(mail *gomail.Message, part *MailPart) error {
+func addPart(mail *gomail.Message, part *MailPart, templateValues interface{}) error {
 	contentType := part.Type
 	var body string
-	if part.Template != "" {
-		contentType = "text/html"
-		t, err := template.New("mail").Parse(part.Template)
-		if err != nil {
-			return err
-		}
+	if contentType != "text/plain" && contentType != "text/html" {
+		return fmt.Errorf("Unknown body content-type %s", contentType)
+	}
+	if templateValues != nil {
 		b := new(bytes.Buffer)
-		if err = t.Execute(b, part.Values); err != nil {
-			return err
+		switch contentType {
+		case "text/html":
+			t, err := htmlTemplate.New("mail").Parse(part.Body)
+			if err != nil {
+				return err
+			}
+			if err = t.Execute(b, templateValues); err != nil {
+				return err
+			}
+		case "text/plain":
+			t, err := textTemplate.New("mail").Parse(part.Body)
+			if err != nil {
+				return err
+			}
+			if err = t.Execute(b, templateValues); err != nil {
+				return err
+			}
 		}
 		body = b.String()
 	} else {
 		body = part.Body
-	}
-	if contentType == "" {
-		contentType = "text/plain"
-	}
-	if contentType != "text/plain" && contentType != "text/html" {
-		return fmt.Errorf("Unknown body content-type %s", contentType)
 	}
 	mail.AddAlternative(contentType, body)
 	return nil

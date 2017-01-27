@@ -142,11 +142,9 @@ QUIT
 				DisableTLS: true,
 			},
 			Parts: []*MailPart{
-				&MailPart{
-					Template: tpl,
-					Values:   data,
-				},
+				&MailPart{Type: "text/html", Body: tpl},
 			},
+			TemplateValues: data,
 		}
 		return sendMail(context.Background(), msg)
 	})
@@ -189,7 +187,9 @@ RCPT TO:<you1@you>
 DATA
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/plain; charset=UTF-8
-foo
+My page
+My photos
+My blog
 Content-Transfer-Encoding: quoted-printable
 Content-Type: text/html; charset=UTF-8
 <!DOCTYPE html>
@@ -215,7 +215,7 @@ QUIT
 		"Mime-Version": "1.0",
 	}
 
-	const tpl = `
+	const htmlTpl = `
 <!DOCTYPE html>
 <html>
   <head>
@@ -238,6 +238,16 @@ QUIT
 		},
 	}
 
+	const textTpl = `
+{{.Title}}
+
+{{range .Items}}
+{{ . }}
+{{else}}
+**no rows**
+{{end}}
+`
+
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
 		msg := &MailOptions{
 			From: &MailAddress{Email: "me@me"},
@@ -254,14 +264,14 @@ QUIT
 			Parts: []*MailPart{
 				&MailPart{
 					Type: "text/plain",
-					Body: "foo",
+					Body: textTpl,
 				},
 				&MailPart{
-					Type:     "text/html",
-					Template: tpl,
-					Values:   data,
+					Type: "text/html",
+					Body: htmlTpl,
 				},
 			},
+			TemplateValues: data,
 		}
 		return sendMail(context.Background(), msg)
 	})
