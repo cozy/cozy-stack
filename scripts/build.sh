@@ -203,6 +203,7 @@ clean_assets() {
 prepare_assets() {
 	assets_dst="${WORK_DIR}/.assets"
 	assets_src="${WORK_DIR}/assets"
+	assets_externals="${assets_src}/externals"
 
 	mkdir "${assets_dst}"
 
@@ -215,7 +216,7 @@ prepare_assets() {
 		fi
 
 		if [ -z "${line}" ]; then
-			[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
+			[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}" "${assets_externals}"
 			asset_name=""
 			asset_url=""
 			asset_sha=""
@@ -239,9 +240,9 @@ prepare_assets() {
 				exit 1
 				;;
 		esac
-	done < "${assets_src}/externals"
+	done < "${assets_externals}"
 
-	[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
+	[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}" "${assets_externals}"
 
 	cp -a "${assets_src}/." "${assets_dst}"
 	rm -f "${assets_dst}/externals"
@@ -272,6 +273,9 @@ download_asset() {
 		fi
 		echo "ok"
 	fi
+	# reuse the same mod time properties as the externals files so have
+	# reproductible output
+	touch -r ${4} "${assets_dst}/${1}"
 }
 
 do_clean() {
