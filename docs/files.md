@@ -592,7 +592,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 ### POST /files/archive
 
-Create an archive and download it. The body of the request lists the files and
+Create an archive. The body of the request lists the files and
 directories that will be included in the archive. For directories, it includes all the files and sub-directories in the archive.
 
 #### Request
@@ -623,12 +623,51 @@ Content-Type: application/vnd.api+json
 
 ```http
 HTTP/1.1 200 OK
-Content-Length: 12345
+Content-Type: application/vnd.api+json
+```
+```json
+{
+  "links": {
+    "related": "/files/archive/4521DC87/project-X.zip"
+  },
+  "data": {
+    "type": "io.cozy.files.archives",
+    "id": "4521DC87",
+    "attributes": {
+      "href": "/files/archive/4521DC87/project-X.zip"
+    }
+  }
+}
+```
+
+### GET /files/archive/:key/:name?
+
+Download a previously created archive. The name parameter is not used in
+the stack but aims to allow setting a name even for browser / downloader that do not support Content-Disposition filename.
+
+**This route does not require Basic Authentification**
+
+
+```http
+GET /files/archive/4521DC87 HTTP/1.1
+Accept: application/zip
 Content-Disposition: attachment; filename="project-X.zip"
 Content-Type: application/zip
-
-...
 ```
+
+### POST /files/downloads/?Path=file_path
+
+Create a file download. The Path query parameter specifies the file to download.
+The response json API links contains a `related` link for downloading the file, see below.
+
+### GET /files/downloads/:secret/:name?
+
+Allows to download a file with a secret created from the route above.
+
+The name parameter is not used in the stack but aims to allow setting a name even for browser / downloader that do not support Content-Disposition filename.
+
+**This route does not require Basic Authentification**
+
 
 
 ## Trash

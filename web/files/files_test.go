@@ -943,7 +943,15 @@ func TestArchive(t *testing.T) {
 	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", body)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
-	disposition := res.Header.Get("Content-Disposition")
+	var data map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&data)
+	assert.NoError(t, err)
+
+	downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
+	res2, err := http.Get(downloadURL)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res2.StatusCode)
+	disposition := res2.Header.Get("Content-Disposition")
 	assert.Equal(t, `attachment; filename=archive.zip`, disposition)
 }
 
@@ -961,7 +969,14 @@ func TestArchiveNotFound(t *testing.T) {
 	}`)
 	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", body)
 	assert.NoError(t, err)
-	assert.Equal(t, 404, res.StatusCode)
+	var data map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&data)
+	assert.NoError(t, err)
+
+	downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
+	res2, err := http.Get(downloadURL)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res2.StatusCode)
 }
 
 func TestDirTrash(t *testing.T) {

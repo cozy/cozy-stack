@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -296,13 +297,9 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	return nil
 }
 
-// ReadFileContentFromPathHandler handles all GET request on /files/download
-// aiming at downloading a file given its path. It serves the file in in
-// attachment mode.
-func ReadFileContentFromPathHandler(c echo.Context) error {
+func sendFileFromPath(c echo.Context, path string) error {
 	instance := middlewares.GetInstance(c)
 
-	path := c.QueryParam("Path")
 	doc, err := vfs.GetFileDocFromPath(instance, path)
 	if err != nil {
 		return wrapVfsError(err)
@@ -316,9 +313,16 @@ func ReadFileContentFromPathHandler(c echo.Context) error {
 	return nil
 }
 
-// ArchiveHandler handles requests to /files/archive and creates on the fly
-// zip archives with the given files and folders.
-func ArchiveHandler(c echo.Context) error {
+// ReadFileContentFromPathHandler handles all GET request on /files/download
+// aiming at downloading a file given its path. It serves the file in in
+// attachment mode.
+func ReadFileContentFromPathHandler(c echo.Context) error {
+	return sendFileFromPath(c, c.QueryParam("Path"))
+}
+
+// ArchiveDownloadCreateHandler handles requests to /files/archive and stores the
+// paremeters with a secret to be used in download handler below.s
+func ArchiveDownloadCreateHandler(c echo.Context) error {
 	archive := &vfs.Archive{}
 	if _, err := jsonapi.Bind(c.Request(), archive); err != nil {
 		return err
@@ -332,9 +336,74 @@ func ArchiveHandler(c echo.Context) error {
 	if archive.Name == "" {
 		archive.Name = "archive"
 	}
+	instance := middlewares.GetInstance(c)
+	secret, err := vfs.GetStore(instance.Domain).AddArchive(archive)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+	archive.Secret = secret
+
+	fakeName := url.QueryEscape(archive.Name)
+
+	links := &jsonapi.LinksList{
+		Related: "/files/archive/" + secret + "/" + fakeName + ".zip",
+	}
+
+	return jsonapi.Data(c, http.StatusOK, archive, links)
+}
+
+// FileDownloadCreateHandler stores the required path into a secret
+// usable for download handler below.
+func FileDownloadCreateHandler(c echo.Context) error {
 
 	instance := middlewares.GetInstance(c)
+	path := c.QueryParam("Path")
+
+	doc, err := vfs.GetFileDocFromPath(instance, path)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	secret, err := vfs.GetStore(instance.Domain).AddFile(path)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	links := &jsonapi.LinksList{
+		Related: "/files/downloads/" + secret + "/" + doc.Name,
+	}
+
+	return jsonapi.Data(c, http.StatusOK, doc, links)
+}
+
+// ArchiveDownloadHandler handles requests to /files/archive/:secret/whatever.zip
+// and creates on the fly zip archive from the parameters linked to secret.
+func ArchiveDownloadHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	secret := c.Param("secret")
+	archive, err := vfs.GetStore(instance.Domain).GetArchive(secret)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+	if archive == nil {
+		return jsonapi.NewError(400, "Wrong download token")
+	}
 	return archive.Serve(instance, c.Response())
+}
+
+// FileDownloadHandler send a file that have previously be defined
+// through FileDownloadCreateHandler
+func FileDownloadHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	secret := c.Param("secret")
+	path, err := vfs.GetStore(instance.Domain).GetFile(secret)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+	if path == "" {
+		return jsonapi.NewError(400, "Wrong download token")
+	}
+	return sendFileFromPath(c, path)
 }
 
 // TrashHandler handles all DELETE requests on /files/:file-id and
@@ -459,7 +528,11 @@ func Routes(router *echo.Group) {
 	router.POST("/:dir-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
-	router.POST("/archive", ArchiveHandler)
+	router.POST("/archive", ArchiveDownloadCreateHandler)
+	router.GET("/archive/:secret/:fake-name", ArchiveDownloadHandler)
+
+	router.POST("/downloads", FileDownloadCreateHandler)
+	router.GET("/downloads/:secret/:fake-name", FileDownloadHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
 	router.DELETE("/trash", ClearTrashHandler)
