@@ -150,9 +150,9 @@ func (d *DirDoc) FetchFiles(c Context) (err error) {
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
-func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (doc *DirDoc, err error) {
-	if err = checkFileName(name); err != nil {
-		return
+func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (*DirDoc, error) {
+	if err := checkFileName(name); err != nil {
+		return nil, err
 	}
 
 	if dirID == "" {
@@ -162,7 +162,7 @@ func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (doc *DirDoc, 
 	tags = uniqueTags(tags)
 
 	createDate := time.Now()
-	doc = &DirDoc{
+	doc := &DirDoc{
 		Type:  consts.DirType,
 		Name:  name,
 		DirID: dirID,
@@ -174,7 +174,7 @@ func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (doc *DirDoc, 
 		parent: parent,
 	}
 
-	return
+	return doc, nil
 }
 
 // GetDirDoc is used to fetch directory document information
@@ -235,7 +235,7 @@ func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, erro
 }
 
 // CreateDir is the method for creating a new directory
-func CreateDir(c Context, doc *DirDoc) (err error) {
+func CreateDir(c Context, doc *DirDoc) error {
 	pth, err := doc.Path(c)
 	if err != nil {
 		return err
@@ -246,13 +246,11 @@ func CreateDir(c Context, doc *DirDoc) (err error) {
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			c.FS().Remove(pth)
-		}
-	}()
-
-	return couchdb.CreateDoc(c, doc)
+	err = couchdb.CreateDoc(c, doc)
+	if err != nil {
+		c.FS().Remove(pth)
+	}
+	return err
 }
 
 // CreateRootDirDoc creates the root directory document for this context
@@ -287,12 +285,13 @@ func CreateTrashDir(c Context) error {
 
 // ModifyDirMetadata modify the metadata associated to a directory. It
 // can be used to rename or move the directory in the VFS.
-func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirDoc, err error) {
+func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error) {
 	id := olddoc.ID()
 	if id == consts.RootDirID || id == consts.TrashDirID {
 		return nil, os.ErrInvalid
 	}
 
+	var err error
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:        &olddoc.Name,
@@ -303,12 +302,12 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirD
 	}, patch, cdate)
 
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	newdoc, err = NewDirDoc(*patch.Name, *patch.DirID, *patch.Tags, nil)
+	newdoc, err := NewDirDoc(*patch.Name, *patch.DirID, *patch.Tags, nil)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	newdoc.RestorePath = *patch.RestorePath
@@ -316,12 +315,11 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirD
 	var parent *DirDoc
 	if newdoc.DirID != olddoc.DirID {
 		parent, err = newdoc.Parent(c)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		parent = olddoc.parent
-	}
-
-	if err != nil {
-		return
 	}
 
 	newdoc.SetID(olddoc.ID())
@@ -334,26 +332,26 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (newdoc *DirD
 
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
-		return
+		return nil, err
 	}
 	newpath, err := newdoc.Path(c)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if oldpath != newpath {
 		err = safeRenameDir(c, oldpath, newpath)
 		if err != nil {
-			return
+			return nil, err
 		}
 		err = bulkUpdateDocsPath(c, oldpath, newpath)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
 	err = couchdb.UpdateDoc(c, newdoc)
-	return
+	return newdoc, err
 }
 
 // @TODO remove this method and use couchdb bulk updates instead
@@ -389,7 +387,7 @@ func bulkUpdateDocsPath(c Context, oldpath, newpath string) error {
 }
 
 // TrashDir is used to delete a directory given its document
-func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
+func TrashDir(c Context, olddoc *DirDoc) (*DirDoc, error) {
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
 		return nil, err
@@ -401,6 +399,7 @@ func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 	trashDirID := consts.TrashDirID
 	restorePath := path.Dir(oldpath)
 
+	var newdoc *DirDoc
 	tryOrUseSuffix(olddoc.Name, conflictFormat, func(name string) error {
 		newdoc, err = ModifyDirMetadata(c, olddoc, &DocPatch{
 			DirID:       &trashDirID,
@@ -409,19 +408,20 @@ func TrashDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 		})
 		return err
 	})
-	return
+	return newdoc, err
 }
 
 // RestoreDir is used to restore a trashed directory given its document
-func RestoreDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
+func RestoreDir(c Context, olddoc *DirDoc) (*DirDoc, error) {
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
 		return nil, err
 	}
 	restoreDir, err := getRestoreDir(c, oldpath, olddoc.RestorePath)
 	if err != nil {
-		return
+		return nil, err
 	}
+	var newdoc *DirDoc
 	var emptyStr string
 	name := stripSuffix(olddoc.Name, conflictSuffix)
 	tryOrUseSuffix(name, "%s (%s)", func(name string) error {
@@ -432,7 +432,7 @@ func RestoreDir(c Context, olddoc *DirDoc) (newdoc *DirDoc, err error) {
 		})
 		return err
 	})
-	return
+	return newdoc, err
 }
 
 // DestroyDirContent destroy all directories and files contained in a directory.
@@ -477,13 +477,15 @@ func DestroyDirAndContent(c Context, doc *DirDoc) error {
 	return err
 }
 
-func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc, err error) {
+func fetchChildren(c Context, parent *DirDoc) ([]*FileDoc, []*DirDoc, error) {
+	var files []*FileDoc
+	var dirs []*DirDoc
 	var docs []*DirOrFileDoc
 	sel := mango.Equal("dir_id", parent.ID())
 	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
-	err = couchdb.FindDocs(c, consts.Files, req, &docs)
+	err := couchdb.FindDocs(c, consts.Files, req, &docs)
 	if err != nil {
-		return
+		return files, dirs, err
 	}
 
 	for _, doc := range docs {
@@ -497,7 +499,7 @@ func fetchChildren(c Context, parent *DirDoc) (files []*FileDoc, dirs []*DirDoc,
 		}
 	}
 
-	return
+	return files, dirs, nil
 }
 
 func safeRenameDir(c Context, oldpath, newpath string) error {

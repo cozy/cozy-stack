@@ -95,12 +95,12 @@ type DirOrFileDoc struct {
 
 // Refine returns either a DirDoc or FileDoc pointer depending on the type of
 // the DirOrFileDoc
-func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
+func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 	switch fd.Type {
 	case consts.DirType:
-		dir = &fd.DirDoc
+		return &fd.DirDoc, nil
 	case consts.FileType:
-		file = &FileDoc{
+		return nil, &FileDoc{
 			Type:        fd.Type,
 			DocID:       fd.DocID,
 			DocRev:      fd.DocRev,
@@ -117,45 +117,45 @@ func (fd *DirOrFileDoc) Refine() (dir *DirDoc, file *FileDoc) {
 			Tags:        fd.Tags,
 		}
 	}
-	return
+	return nil, nil
 }
 
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
-func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (dirDoc *DirDoc, fileDoc *FileDoc, err error) {
+func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (*DirDoc, *FileDoc, error) {
 	dirOrFile := &DirOrFileDoc{}
-	err = couchdb.GetDoc(c, consts.Files, fileID, dirOrFile)
+	err := couchdb.GetDoc(c, consts.Files, fileID, dirOrFile)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
-	dirDoc, fileDoc = dirOrFile.Refine()
+	dirDoc, fileDoc := dirOrFile.Refine()
 	if dirDoc != nil && withChildren {
 		dirDoc.FetchFiles(c)
 	}
-	return
+	return dirDoc, fileDoc, nil
 }
 
 // GetDirOrFileDocFromPath is used to fetch a document from its path
 // without knowning in advance its type.
-func GetDirOrFileDocFromPath(c Context, name string, withChildren bool) (dirDoc *DirDoc, fileDoc *FileDoc, err error) {
-	dirDoc, err = GetDirDocFromPath(c, name, withChildren)
+func GetDirOrFileDocFromPath(c Context, name string, withChildren bool) (*DirDoc, *FileDoc, error) {
+	dirDoc, err := GetDirDocFromPath(c, name, withChildren)
 	if err != nil && !os.IsNotExist(err) {
-		return
+		return nil, nil, err
 	}
 	if err == nil {
-		return
+		return dirDoc, nil, nil
 	}
 
-	fileDoc, err = GetFileDocFromPath(c, name)
+	fileDoc, err := GetFileDocFromPath(c, name)
 	if err != nil && !os.IsNotExist(err) {
-		return
+		return nil, nil, err
 	}
 	if err == nil {
-		return
+		return nil, fileDoc, nil
 	}
 
-	return
+	return nil, nil, err
 }
 
 // Stat returns the FileInfo of the specified file or directory.
@@ -430,7 +430,7 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 		class = contentType
 	}
 
-	return
+	return mime, class
 }
 
 // ExtractMimeAndClassFromFilename is a shortcut of

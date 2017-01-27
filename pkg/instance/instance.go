@@ -226,11 +226,12 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 }
 
 // createInCouchdb creates the instance doc in the global database
-func (i *Instance) createInCouchdb() (err error) {
-	if _, err = Get(i.Domain); err == nil {
+func (i *Instance) createInCouchdb() error {
+	_, err := Get(i.Domain)
+	if err == nil {
 		return ErrExists
 	}
-	if err != nil && err != ErrNotFound {
+	if err != ErrNotFound {
 		return err
 	}
 	err = couchdb.CreateDoc(couchdb.GlobalDB, i)
@@ -382,8 +383,8 @@ func Create(opts *Options) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-  
-  err = i.createPermissionsDB()
+
+	err = i.createPermissionsDB()
 	if err != nil {
 		return nil, err
 	}

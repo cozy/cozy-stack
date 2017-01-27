@@ -498,13 +498,13 @@ func wrapVfsError(err error) error {
 	return err
 }
 
-func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (doc *vfs.FileDoc, err error) {
+func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
 	header := c.Request().Header
 
 	size, err := parseContentLength(header.Get("Content-Length"))
 	if err != nil {
 		err = jsonapi.InvalidParameter("Content-Length", err)
-		return
+		return nil, err
 	}
 
 	var md5Sum []byte
@@ -513,13 +513,13 @@ func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (doc *vfs
 	}
 	if err != nil {
 		err = jsonapi.InvalidParameter("Content-MD5", err)
-		return
+		return nil, err
 	}
 
 	executable := c.QueryParam("Executable") == "true"
 	contentType := header.Get("Content-Type")
 	mime, class := vfs.ExtractMimeAndClass(contentType)
-	doc, err = vfs.NewFileDoc(
+	return vfs.NewFileDoc(
 		name,
 		dirID,
 		size,
@@ -529,8 +529,6 @@ func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (doc *vfs
 		executable,
 		tags,
 	)
-
-	return
 }
 
 func checkIfMatch(c echo.Context, rev string) error {
@@ -568,15 +566,14 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	return md5Sum, nil
 }
 
-func parseContentLength(contentLength string) (size int64, err error) {
+func parseContentLength(contentLength string) (int64, error) {
 	if contentLength == "" {
-		size = -1
-		return
+		return -1, nil
 	}
 
-	size, err = strconv.ParseInt(contentLength, 10, 64)
+	size, err := strconv.ParseInt(contentLength, 10, 64)
 	if err != nil {
 		err = fmt.Errorf("Invalid content length")
 	}
-	return
+	return size, err
 }

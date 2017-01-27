@@ -119,9 +119,9 @@ func (f *FileDoc) Included() []jsonapi.Object {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (doc *FileDoc, err error) {
-	if err = checkFileName(name); err != nil {
-		return
+func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (*FileDoc, error) {
+	if err := checkFileName(name); err != nil {
+		return nil, err
 	}
 
 	if dirID == "" {
@@ -131,7 +131,7 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 	tags = uniqueTags(tags)
 
 	createDate := time.Now()
-	doc = &FileDoc{
+	doc := &FileDoc{
 		Type:  consts.FileType,
 		Name:  name,
 		DirID: dirID,
@@ -146,7 +146,7 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 		Tags:       tags,
 	}
 
-	return
+	return doc, nil
 }
 
 // GetFileDoc is used to fetch file document information form the
@@ -214,7 +214,7 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 // non-ranged requests
 //
 // The content disposition is inlined.
-func ServeFileContent(c Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) (err error) {
+func ServeFileContent(c Context, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) error {
 	header := w.Header()
 	header.Set("Content-Type", doc.Mime)
 	if disposition != "" {
@@ -228,17 +228,17 @@ func ServeFileContent(c Context, doc *FileDoc, disposition string, req *http.Req
 
 	name, err := doc.Path(c)
 	if err != nil {
-		return
+		return err
 	}
 
 	content, err := c.FS().Open(name)
 	if err != nil {
-		return
+		return err
 	}
 	defer content.Close()
 
 	http.ServeContent(w, req, doc.Name, doc.UpdatedAt, content)
-	return
+	return nil
 }
 
 // File represents a file handle. It can be used either for writing OR
@@ -345,7 +345,7 @@ func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
 
 // Read bytes from the file into given buffer - part of io.Reader
 // This method can be called on read mode only
-func (f *File) Read(p []byte) (n int, err error) {
+func (f *File) Read(p []byte) (int, error) {
 	if f.fc != nil {
 		return 0, os.ErrInvalid
 	}
@@ -363,21 +363,21 @@ func (f *File) Seek(offset int64, whence int) (int64, error) {
 
 // Write bytes to the file - part of io.WriteCloser
 // This method can be called in write mode only
-func (f *File) Write(p []byte) (n int, err error) {
+func (f *File) Write(p []byte) (int, error) {
 	if f.fc == nil {
 		return 0, os.ErrInvalid
 	}
 
-	n, err = f.f.Write(p)
+	n, err := f.f.Write(p)
 	if err != nil {
 		f.fc.err = err
-		return
+		return n, err
 	}
 
 	f.fc.w += int64(n)
 
 	_, err = f.fc.hash.Write(p)
-	return
+	return n, err
 }
 
 // Close the handle and commit the document in database if all checks
@@ -443,7 +443,8 @@ func (f *File) Close() error {
 
 // ModifyFileMetadata modify the metadata associated to a file. It can
 // be used to rename or move the file in the VFS.
-func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *FileDoc, err error) {
+func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (*FileDoc, error) {
+	var err error
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:        &olddoc.Name,
@@ -455,10 +456,10 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 	}, patch, cdate)
 
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	newdoc, err = NewFileDoc(
+	newdoc, err := NewFileDoc(
 		*patch.Name,
 		*patch.DirID,
 		olddoc.Size,
@@ -469,7 +470,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 		*patch.Tags,
 	)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	newdoc.RestorePath = *patch.RestorePath
@@ -482,7 +483,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 	}
 
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	newdoc.SetID(olddoc.ID())
@@ -493,33 +494,33 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (newdoc *Fi
 
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
-		return
+		return nil, err
 	}
 	newpath, err := newdoc.Path(c)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if newpath != oldpath {
 		err = safeRenameFile(c, oldpath, newpath)
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
 	if newdoc.Executable != olddoc.Executable {
 		err = c.FS().Chmod(newpath, getFileMode(newdoc.Executable))
 		if err != nil {
-			return
+			return nil, err
 		}
 	}
 
 	err = couchdb.UpdateDoc(c, newdoc)
-	return
+	return newdoc, err
 }
 
 // TrashFile is used to delete a file given its document
-func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
+func TrashFile(c Context, olddoc *FileDoc) (*FileDoc, error) {
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
 		return nil, err
@@ -531,6 +532,7 @@ func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
 	trashDirID := consts.TrashDirID
 	restorePath := path.Dir(oldpath)
 
+	var newdoc *FileDoc
 	tryOrUseSuffix(olddoc.Name, conflictFormat, func(name string) error {
 		newdoc, err = ModifyFileMetadata(c, olddoc, &DocPatch{
 			DirID:       &trashDirID,
@@ -539,19 +541,20 @@ func TrashFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
 		})
 		return err
 	})
-	return
+	return newdoc, err
 }
 
 // RestoreFile is used to restore a trashed file given its document
-func RestoreFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
+func RestoreFile(c Context, olddoc *FileDoc) (*FileDoc, error) {
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
 		return nil, err
 	}
 	restoreDir, err := getRestoreDir(c, oldpath, olddoc.RestorePath)
 	if err != nil {
-		return
+		return nil, err
 	}
+	var newdoc *FileDoc
 	var emptyStr string
 	name := stripSuffix(olddoc.Name, conflictSuffix)
 	tryOrUseSuffix(name, "%s (%s)", func(name string) error {
@@ -562,7 +565,7 @@ func RestoreFile(c Context, olddoc *FileDoc) (newdoc *FileDoc, err error) {
 		})
 		return err
 	})
-	return
+	return newdoc, err
 }
 
 // DestroyFile definitively destroy a file from the trash.
@@ -607,13 +610,11 @@ func safeRenameFile(c Context, oldpath, newpath string) error {
 	return c.FS().Rename(oldpath, newpath)
 }
 
-func getFileMode(executable bool) (mode os.FileMode) {
+func getFileMode(executable bool) os.FileMode {
 	if executable {
-		mode = 0755 // -rwxr-xr-x
-	} else {
-		mode = 0644 // -rw-r--r--
+		return 0755 // -rwxr-xr-x
 	}
-	return
+	return 0644 // -rw-r--r--
 }
 
 var (

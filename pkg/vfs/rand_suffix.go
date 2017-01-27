@@ -37,7 +37,8 @@ func reseed() uint32 {
 // tryOrUseSuffix will try the given function until it succeed without
 // an os.ErrExist error. It is used for renaming safely a file without
 // collision.
-func tryOrUseSuffix(name, format string, do func(suffix string) error) (err error) {
+func tryOrUseSuffix(name, format string, do func(suffix string) error) error {
+	var err error
 	nconflict := 0
 	for i := 0; i < 1000; i++ {
 		var newname string
@@ -56,7 +57,7 @@ func tryOrUseSuffix(name, format string, do func(suffix string) error) (err erro
 			randmu.Unlock()
 		}
 	}
-	return
+	return err
 }
 
 func stripSuffix(name, suffix string) string {

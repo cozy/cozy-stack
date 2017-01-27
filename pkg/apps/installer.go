@@ -225,13 +225,13 @@ func (i *Installer) appDir() string {
 }
 
 // Poll should be used to monitor the progress of the Installer.
-func (i *Installer) Poll() (man *Manifest, done bool, err error) {
+func (i *Installer) Poll() (*Manifest, bool, error) {
 	select {
-	case man = <-i.manc:
-		done = man.State == Ready
-		return
-	case err = <-i.errc:
-		return
+	case man := <-i.manc:
+		done := man.State == Ready
+		return man, done, nil
+	case err := <-i.errc:
+		return nil, false, err
 	}
 }
 
