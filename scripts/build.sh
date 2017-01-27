@@ -22,11 +22,12 @@ echo_err() {
 usage() {
 	echo -e "Usage: ${1} [release] [install] [deploy] [assets] [clean]"
 	echo -e "\nCommands:\n"
-	echo -e "  release  builds a release of the current working-tree"
-	echo -e "  install  builds a release and install it the GOPATH"
-	echo -e "  deploy   builds a release of the current working-tree and deploys it"
-	echo -e "  assets   move and download all the required assets (see: ./assets/externals)"
-	echo -e "  clean    remove all generated files from the working-tree"
+	echo -e "  release     builds a release of the current working-tree"
+	echo -e "  install     builds a release and install it the GOPATH"
+	echo -e "  deploy      builds a release of the current working-tree and deploys it"
+	echo -e "  docker-dev  builds a cozy-app-dev docker image"
+	echo -e "  assets      move and download all the required assets (see: ./assets/externals)"
+	echo -e "  clean       remove all generated files from the working-tree"
 
 	echo -e "\nEnvironment variables:"
 	echo -e "\n  COZY_ENV"
@@ -94,19 +95,7 @@ do_prepare_ldflags() {
 do_release() {
 	check_env
 
-	do_prepare_ldflags
-
-	do_assets
-
-	BINARY="cozy-stack-${VERSION_STRING}"
-
-	go build -ldflags "\
-		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
-		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
-		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
-		" \
-		-o "${BINARY}"
-
+	do_build
 	openssl dgst -sha256 -hex "${BINARY}" > "${BINARY}.sha256"
 
 	printf "${BINARY}\t"
@@ -122,6 +111,26 @@ do_install() {
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}"
+}
+
+do_build() {
+	check_env
+
+	do_prepare_ldflags
+	do_assets
+
+	if [ -z "${1}" ]; then
+		BINARY="cozy-stack-${VERSION_STRING}"
+	else
+		BINARY="${1}"
+	fi
+
+	go build -ldflags "\
+		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
+		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
+		" \
+		-o "${BINARY}"
 }
 
 # The deploy command will build a new release and deploy it on a
@@ -166,6 +175,25 @@ do_assets() {
 	go generate ./web
 	echo "ok"
 	clean_assets
+}
+
+do_docker_dev_image() {
+	docker_work_dir="${WORK_DIR}/.docker-work"
+	mkdir "${docker_work_dir}"
+
+	trap "trap - SIGTERM && rm -rf "${docker_work_dir}" > /dev/null -- -${$}" SIGINT SIGTERM EXIT
+
+	cp "${WORK_DIR}/scripts/Dockerfile" "${docker_work_dir}"
+	cp "${WORK_DIR}/scripts/cozy-app-dev.sh" "${docker_work_dir}"
+
+	export GOOS=linux
+	export GOARCH=386
+	export COZY_ENV=development
+	do_build "${docker_work_dir}/cozy-stack"
+
+	docker build -t cozy/cozy-app-dev "${docker_work_dir}"
+
+	rm -rf "${docker_work_dir}"
 }
 
 clean_assets() {
@@ -277,6 +305,10 @@ case "${1}" in
 
 	assets)
 		do_assets
+		;;
+
+	docker-dev)
+		do_docker_dev_image
 		;;
 
 	*)

@@ -4,31 +4,26 @@
 
 FROM debian:jessie
 
-# CouchDB and CGo dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    git \
-    ca-certificates \
-    curl \
-    libicu52 \
-    libmozjs185-1.0 \
-    erlang \
-    libicu-dev \
-    libmozjs185-dev \
-    openssl \
-    g++ \
-    gcc \
-    libc6-dev \
-    make \
-    pkg-config \
-  && rm -rf /var/lib/apt/lists/*
-
 
 # CouchDB
 ENV COUCHDB_VERSION 2.0.0
 ENV COUCHDB_SRC_URL https://dist.apache.org/repos/dist/release/couchdb/source/$COUCHDB_VERSION/apache-couchdb-$COUCHDB_VERSION.tar.gz
 ENV COUCHDB_SRC_SHA256 ccaf3ce9cb06c50a73e091696e557e2a57c5ba02c5b299e1ac2f5b959ee96eca
-RUN mkdir /usr/src/couchdb \
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    libicu52 \
+    libmozjs185-1.0 \
+    erlang-nox \
+    erlang-reltool \
+    erlang-dev \
+    libicu-dev \
+    libmozjs185-dev \
+    openssl \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir /usr/src/couchdb \
   && curl -fsSL "$COUCHDB_SRC_URL" -o couchdb.tar.gz \
   && echo "$COUCHDB_SRC_SHA256  couchdb.tar.gz" | sha256sum -c - \
   && tar -xzf couchdb.tar.gz -C /usr/src/couchdb --strip-components=1 \
@@ -37,43 +32,39 @@ RUN mkdir /usr/src/couchdb \
   && ./configure --disable-docs \
   && make release \
   && mv ./rel/couchdb /usr/local \
-  && rm -rf /usr/src/couchdb
-ENV PATH $PATH:/usr/local/couchdb/bin
-
-
-# Golang
-ENV GOLANG_VERSION 1.7.4
-ENV GOLANG_DOWNLOAD_URL https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz
-ENV GOLANG_DOWNLOAD_SHA256 47fda42e46b4c3ec93fa5d4d4cc6a748aa3f9411a2a2b7e08e3a6d80d753ec8b
-RUN curl -fsSL "$GOLANG_DOWNLOAD_URL" -o golang.tar.gz \
-  && echo "$GOLANG_DOWNLOAD_SHA256  golang.tar.gz" | sha256sum -c - \
-  && tar -xzf golang.tar.gz -C /usr/local \
-  && rm golang.tar.gz
-
-ENV GOPATH /go
-ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
-
-RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
-
-RUN go get github.com/mholt/caddy/caddy
-
-ENV COZY_ENV development
-RUN go get -d github.com/cozy/cozy-stack
-RUN cd "$GOPATH/src/github.com/cozy/cozy-stack" \
-  && ./scripts/build.sh install
-
-
-# Cleanup
-RUN apt-get purge -y \
+  && rm -rf /usr/src/couchdb \
+  # Cleanup
+  && apt-get purge -y \
+    binutils \
+    build-essential \
+    cpp \
     erlang-dev \
     libicu-dev \
     libmozjs185-dev \
-  && apt-get autoremove -y \
-  && apt-get clean
+    make \
+    perl \
+  && echo "[chttpd]\nbind_address = 0.0.0.0" \
+    > /usr/local/couchdb/etc/local.ini \
+  && apt-get autoremove -y && apt-get clean \
+  && apt-get install -y libicu52 --no-install-recommends
 
-RUN echo "[chttpd]\nbind_address = 0.0.0.0" \
-  > /usr/local/couchdb/etc/local.ini
+ENV PATH $PATH:/usr/local/couchdb/bin
 
+
+# Caddy
+ENV CADDY_VERSION v0.9.5
+ENV CADDY_DOWNLOAD_URL https://github.com/mholt/caddy/releases/download/$CADDY_VERSION/caddy_linux_amd64.tar.gz
+ENV CADDY_DOWNLOAD_SHA256 c759640c9f56f7c4bb9fa828c0fa81a6e45f0f607e68677d56471bba53ad1777
+RUN curl -fsSL "$CADDY_DOWNLOAD_URL" -o caddy.tar.gz \
+  && echo "$CADDY_DOWNLOAD_SHA256  caddy.tar.gz" | sha256sum -c - \
+  && tar -xz -C "$GOPATH/bin" -f caddy.tar.gz caddy_linux_amd64 \
+  && mv $GOPATH/bin/caddy_linux_amd64 $GOPATH/bin/caddy \
+  && rm caddy.tar.gz
+
+
+# cozy-stack
+COPY cozy-stack /usr/bin
+RUN chmod +x /usr/bin/cozy-stack
 COPY cozy-app-dev.sh /usr/bin
 RUN chmod +x /usr/bin/cozy-app-dev.sh
 
@@ -81,6 +72,8 @@ ENV COZY_PROXY_HOST cozy.local
 ENV COZY_PROXY_PORT 8080
 ENV COZY_STACK_HOST localhost
 ENV COZY_STACK_PORT 8081
+ENV COZY_PROXY_PATH caddy
+ENV COZY_STACK_PATH cozy-stack
 
 RUN mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
