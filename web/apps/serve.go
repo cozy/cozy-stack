@@ -71,11 +71,14 @@ var barTemplate = template.Must(template.New("cozy-bar").Parse(`` +
 
 func cozybar(i *instance.Instance, app *apps.Manifest) template.HTML {
 	buf := new(bytes.Buffer)
-	barTemplate.Execute(buf, echo.Map{
+	err := barTemplate.Execute(buf, echo.Map{
 		"Domain": i.Domain,
 		"Slug":   app.Slug,
 	})
-	return template.HTML(buf.String())
+	if err != nil {
+		return template.HTML("")
+	}
+	return template.HTML(buf.String()) // #nosec
 }
 
 func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
