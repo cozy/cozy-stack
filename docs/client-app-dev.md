@@ -94,6 +94,7 @@ it as a template and will insert the relevant values.
 - `{{.Token}}` will be replaced by the token for the application.
 - `{{.Domain}}` will be replaced by the stack hostname.
 - `{{.Locale}}` will be replaced by the locale for the instance.
+- `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
 
 So, the `index.html` should probably looks like:
 
@@ -103,10 +104,10 @@ So, the `index.html` should probably looks like:
   <head>
     <meta charset="utf-8">
     <title>My Awesome App for Cozy</title>
-    <link rel="stylesheet" src="{{.Domain}}/settings/theme.css">
+    <link rel="stylesheet" src="//{{.Domain}}/settings/theme.css">
     <link rel="stylesheet" src="my-app.css">
-    <script defer src="{{.Domain}}/assets/js/cozy-client.js"></script>
-    <script defer src="{{.Domain}}/assets/js/cozy-bar.js"></script>
+    <script defer src="//{{.Domain}}/assets/js/cozy-client.js"></script>
+    {{.CozyBar}}
     <script defer src="my-app.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
@@ -128,7 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cozyURL: app.dataset.cozyStack,
     token: app.dataset.token
   })
-  cozy.bar(app)
 })
 
 // ...
