@@ -67,12 +67,19 @@ func createFile(dir, filename, content string) error {
 
 func installMiniApp() error {
 	manifest = &apps.Manifest{
+		Name:   "Mini",
+		Icon:   "icon.png",
 		Slug:   slug,
 		Source: "git://github.com/cozy/mini.git",
 		State:  apps.Ready,
 		Routes: apps.Routes{
 			"/foo": apps.Route{
 				Folder: "/",
+				Index:  "index.html",
+				Public: false,
+			},
+			"/bar": apps.Route{
+				Folder: "/bar",
 				Index:  "index.html",
 				Public: false,
 			},
@@ -94,6 +101,11 @@ func installMiniApp() error {
 	if err != nil {
 		return err
 	}
+	bardir := path.Join(appdir, "bar")
+	_, err = vfs.Mkdir(testInstance, bardir, nil)
+	if err != nil {
+		return err
+	}
 	pubdir := path.Join(appdir, "public")
 	_, err = vfs.Mkdir(testInstance, pubdir, nil)
 	if err != nil {
@@ -101,6 +113,10 @@ func installMiniApp() error {
 	}
 
 	err = createFile(appdir, "index.html", `this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a>`)
+	if err != nil {
+		return err
+	}
+	err = createFile(bardir, "index.html", "{{.CozyBar}}")
 	if err != nil {
 		return err
 	}
@@ -172,6 +188,28 @@ func TestServe(t *testing.T) {
 	assertNotFound(t, "/")
 	assertNotFound(t, "/index.html")
 	assertNotFound(t, "/public/hello.html")
+}
+
+func TestCozyBar(t *testing.T) {
+	assertAuthGet(t, "/bar/", "text/html", ``+
+		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`+
+		`<script defer src="//cozywithapps.example.net/apps/mini/init-cozy-bar.js"></script>`)
+
+	expected := `document.addEventListener('DOMContentLoaded', () => {
+	cozy.bar.init({
+		appName: 'Mini',
+		iconPath: 'icon.png',
+		lang: 'en'
+	})
+})`
+	req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/init-cozy-bar.js", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	assert.Equal(t, "application/javascript", res.Header.Get("Content-Type"))
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, expected, string(body))
 }
 
 func TestServeAppsWithACode(t *testing.T) {
@@ -267,6 +305,7 @@ func TestMain(m *testing.M) {
 		c.SetCookie(cookie)
 		return c.HTML(http.StatusOK, "OK")
 	})
+	r.GET("/apps/:slug/init-cozy-bar.js", webApps.InitCozyBarJS)
 	router, err := web.CreateSubdomainProxy(r, webApps.Serve)
 	if err != nil {
 		fmt.Println(err)

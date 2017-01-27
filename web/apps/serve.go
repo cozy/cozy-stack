@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"bytes"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -63,6 +64,20 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) 
 	return c.Redirect(http.StatusFound, u.String())
 }
 
+var barTemplate = template.Must(template.New("cozy-bar").Parse(`` +
+	`<script defer src="//{{.Domain}}/assets/js/cozy-bar.js"></script>` +
+	`<script defer src="//{{.Domain}}/apps/{{.Slug}}/init-cozy-bar.js"></script>`,
+))
+
+func cozybar(i *instance.Instance, app *apps.Manifest) template.HTML {
+	buf := new(bytes.Buffer)
+	barTemplate.Execute(buf, echo.Map{
+		"Domain": i.Domain,
+		"Slug":   app.Slug,
+	})
+	return template.HTML(buf.String())
+}
+
 func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath string) error {
 	route, file := app.FindRoute(vpath)
 	cfg := config.GetConfig()
@@ -123,8 +138,9 @@ func serveApp(c echo.Context, i *instance.Instance, app *apps.Manifest, vpath st
 	res.Header().Set("Content-Type", doc.Mime)
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
-		"Token":  token,
-		"Domain": i.Domain,
-		"Locale": i.Locale,
+		"Token":   token,
+		"Domain":  i.Domain,
+		"Locale":  i.Locale,
+		"CozyBar": cozybar(i, app),
 	})
 }
