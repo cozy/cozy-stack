@@ -55,7 +55,7 @@ do_prepare_ldflags() {
 		>&2 echo "WRN: No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 	fi
 
-	if [ `git diff --shortstat HEAD 2> /dev/null | tail -n1 | wc -l` -gt 0 ]; then
+	if [ `git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD | wc -l` -gt 0 ]; then
 		if [ "${COZY_ENV}" == production ]; then
 			>&2 echo "ERR: Can not build a production release in a dirty work-tree"
 			exit 1
@@ -209,7 +209,7 @@ prepare_assets() {
 	assets_src="${WORK_DIR}/assets"
 	assets_externals="${assets_src}/externals"
 
-	if [ `git diff --shortstat HEAD -- "${assets_externals}" | wc -l` -gt 0 ]; then
+	if [ `git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD -- "${assets_externals}" | wc -l` -gt 0 ]; then
 		echo_err "file ${assets_externals} is dirty."
 		echo_err "it should be commited into git in order to generate the asset file."
 		exit 1
