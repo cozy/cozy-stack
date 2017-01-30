@@ -36,7 +36,7 @@ The references of a file are listed in its JSON-API representation in the
     "type": "io.cozy.files",
     "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
     "meta": {
-      "rev": "1-0e6d5b72",
+      "rev": "1-0e6d5b72"
     },
     "attributes": {
       "type": "file",
@@ -305,7 +305,7 @@ CouchDB document to see if it has a reference. But it is more difficult when
 moving a folder to trash. To do that, we need two requests to fetch the number
 of references in a folder.
 
-1. Get all descendant folders from a given folder, with a CouchDB View:
+1/ Get all descendant folders from a given folder, with a CouchDB View:
 
 ```js
 map = function(doc) { if(doc.type === "folder") emit(doc.path) }
@@ -315,7 +315,7 @@ query = {
 }
 ```
 
-2. Get the total number of "referenced" file for this folders list, with a
+2/ Get the total number of "referenced" file for this folders list, with a
 map/reduce CouchDB view:
 
 ```js
