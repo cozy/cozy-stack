@@ -209,6 +209,15 @@ prepare_assets() {
 	assets_src="${WORK_DIR}/assets"
 	assets_externals="${assets_src}/externals"
 
+	if [ `git diff --shortstat HEAD -- "${assets_externals}" | wc -l` -gt 0 ]; then
+		echo_err "file ${assets_externals} is dirty."
+		echo_err "it should be commited into git in order to generate the asset file."
+		exit 1
+	fi
+
+	assets_mod_time=`git log --pretty=format:%cd -n 1 --date=iso "${assets_externals}"`
+	assets_mod_time=`date -j -f '%Y-%m-%d %H:%M:%S %z' "${assets_mod_time}" +%Y%m%d%H%M.%S`
+
 	mkdir "${assets_dst}"
 
 	asset_name=""
@@ -220,7 +229,7 @@ prepare_assets() {
 		fi
 
 		if [ -z "${line}" ]; then
-			[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}" "${assets_externals}"
+			[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
 			asset_name=""
 			asset_url=""
 			asset_sha=""
@@ -246,7 +255,7 @@ prepare_assets() {
 		esac
 	done < "${assets_externals}"
 
-	[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}" "${assets_externals}"
+	[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
 
 	cp -a "${assets_src}/." "${assets_dst}"
 	rm -f "${assets_dst}/externals"
@@ -279,7 +288,7 @@ download_asset() {
 	fi
 	# reuse the same mod time properties as the externals files so have
 	# reproductible output
-	touch -r ${4} "${assets_dst}/${1}"
+	touch -m -t "${assets_mod_time}" "${assets_dst}/${1}"
 }
 
 do_clean() {
