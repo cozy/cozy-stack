@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/client/auth"
-	"github.com/cozy/cozy-stack/pkg/client/request"
+	"github.com/cozy/cozy-stack/client/auth"
+	"github.com/cozy/cozy-stack/client/request"
 )
 
 // ErrWrongPassphrase is used when the passphrase is wrong

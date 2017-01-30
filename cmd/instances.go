@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/client"
+	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/spf13/cobra"
 )

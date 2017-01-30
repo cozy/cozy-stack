@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/client"
-	"github.com/cozy/cozy-stack/pkg/client/auth"
-	"github.com/cozy/cozy-stack/pkg/client/request"
+	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/auth"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/howeyc/gopass"

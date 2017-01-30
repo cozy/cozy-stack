@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/client/request"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/nightlyone/lockfile"
 )

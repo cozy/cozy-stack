@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/client/request"
+	"github.com/cozy/cozy-stack/client/request"
 )
 
 // Instance is a struct holding the representation of an instance on the API.
