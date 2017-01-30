@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -165,6 +166,47 @@ All data associated with this domain will be permanently lost.
 	},
 }
 
+var appTokenInstanceCmd = &cobra.Command{
+	Use:   "token-app [domain] [slug]",
+	Short: "Generate a new application token",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 2 {
+			return cmd.Help()
+		}
+		token, err := tokenRequest(url.Values{
+			"Domain":   {args[0]},
+			"Subject":  {args[1]},
+			"Audience": {"app"},
+		})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(token)
+		return err
+	},
+}
+
+var oauthTokenInstanceCmd = &cobra.Command{
+	Use:   "token-oauth [domain] [clientid] [scopes]",
+	Short: "Generate a new OAuth access token",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 3 {
+			return cmd.Help()
+		}
+		token, err := tokenRequest(url.Values{
+			"Domain":   {args[0]},
+			"Subject":  {args[1]},
+			"Audience": {"access-token"},
+			"Scope":    {strings.Join(args[2:], " ")},
+		})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(token)
+		return err
+	},
+}
+
 type instanceData struct {
 	ID    string             `json:"id"`
 	Rev   string             `json:"rev"`
@@ -209,10 +251,25 @@ func instancesRequest(method, path string, q url.Values, body interface{}) (*ins
 	return doc.Data, nil
 }
 
+func tokenRequest(q url.Values) (string, error) {
+	res, err := clientRequest(instancesClient(), "GET", "/instances/token", q, nil)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), err
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
+	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
+	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
