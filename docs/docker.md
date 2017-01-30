@@ -35,5 +35,5 @@ docker run -it --rm --name cozy-stack \
 ## Building the cozy-app-dev image
 
 ```bash
-docker build -t cozy/cozy-app-dev scripts/
+./scripts/build.sh docker-dev
 ```

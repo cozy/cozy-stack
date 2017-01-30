@@ -56,39 +56,41 @@ usage() {
 	echo -e "    the script won't try to start couchdb."
 }
 
-if [ -n "${COZY_STACK_PATH}" ] && [ ! -f "${COZY_STACK_PATH}" ]; then
-	echo_err "COZY_STACK_PATH=${COZY_STACK_PATH} file does not exist"
-	exit 1
-fi
-
 if [ "${COZY_STACK_PORT}" = "${COZY_PROXY_PORT}" ]; then
 	echo_err "COZY_STACK_HOST and COZY_PROXY_PORT are equal"
 	exit 1
 fi
 
 do_start() {
-	if [ ! -f "${GOPATH}/bin/caddy" ]; then
-		if [ -z `command -v go` ]; then
-			echo_err "executable \"go\" not found in \$PATH"
-			exit 1
+	if [ -z "${COZY_PROXY_PATH}" ]; then
+		COZY_PROXY_PATH="${GOPATH}/bin/caddy"
+		if [ ! -f "${COZY_PROXY_PATH}" ]; then
+			if [ -z `command -v go` ]; then
+				echo_err "executable \"go\" not found in \$PATH"
+				exit 1
+			fi
+			printf "installing http server (caddy)... "
+			go get "github.com/mholt/caddy/caddy"
+			echo "ok"
 		fi
-		printf "installing http server (caddy)... "
-		go get "github.com/mholt/caddy/caddy"
-		echo "ok"
-	fi
-
-	if [ -n "${cozy_stack_version}" ]; then
-		echo_err "not implemented... we do not have a release yet"
-		exit 1
 	fi
 
 	if [ -z "${COZY_STACK_PATH}" ]; then
 		COZY_STACK_PATH="${GOPATH}/bin/cozy-stack"
 		if [ ! -f "${COZY_STACK_PATH}" ]; then
+			if [ -z `command -v go` ]; then
+				echo_err "executable \"go\" not found in \$PATH"
+				exit 1
+			fi
 			printf "installing cozy-stack... "
 			go get "github.com/cozy/cozy-stack"
 			echo "ok"
 		fi
+	fi
+
+	if [ -n "${cozy_stack_version}" ]; then
+		echo_err "not implemented... we do not have a release yet"
+		exit 1
 	fi
 
 	if [ "$update" = true ]; then
@@ -214,7 +216,7 @@ app.${COZY_PROXY_HOST} {                          \n\
 "
 
 	printf "starting caddy on \"${site_root}\"... "
-	echo -e ${caddy_file} | ${GOPATH}/bin/caddy \
+	echo -e ${caddy_file} | ${COZY_PROXY_PATH} \
 		-quiet \
 		-conf stdin \
 		-port ${COZY_PROXY_PORT} &
