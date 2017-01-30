@@ -168,11 +168,10 @@ do_create_instances() {
 		printf "creating instance ${host}... "
 		set +e
 		add_instance_val=$(
-			${COZY_STACK_PATH} instances add --dev="true" "${host}" \
-				--couchdb-host "${COUCHDB_HOST}" \
-				--couchdb-port "${COUCHDB_PORT}" \
+			${COZY_STACK_PATH} instances add \
+				--dev="true" \
 				--email dev@cozy.io \
-				--fs-url "file://localhost${vfsdir}" 2>&1
+				"${host}" 2>&1
 		)
 		add_instance_ret="${?}"
 		set -e

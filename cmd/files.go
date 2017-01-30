@@ -36,6 +36,7 @@ const filesExecUsage = `Available commands:
   restore [name]             Restore a file or directory from trash
 `
 
+var flagDomain string
 var flagImportFrom string
 var flagImportTo string
 var flagImportDryRun bool
@@ -59,16 +60,20 @@ current filesystem into cozy.
 }
 
 var execFilesCmd = &cobra.Command{
-	Use:   "exec [domain] [command]",
+	Use:   "exec [command]",
 	Short: "Execute the given command on the specified domain and leave",
 	Long:  "Execute a command on the VFS of the specified domain.\n" + filesExecUsage,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 2 {
+		if len(args) != 1 {
 			return cmd.Help()
 		}
 
-		domain, command := args[0], args[1]
-		c, err := getInstance(domain)
+		if flagDomain == "" {
+			return fmt.Errorf("Missing --domain flag")
+		}
+
+		command := args[0]
+		c, err := getInstance(flagDomain)
 		if err != nil {
 			return err
 		}
@@ -83,19 +88,18 @@ var execFilesCmd = &cobra.Command{
 }
 
 var importFilesCmd = &cobra.Command{
-	Use:   "import [domain] [--from name] [--to name] [--match pattern]",
+	Use:   "import [--from name] [--to name] [--match pattern]",
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Help()
+		if flagDomain == "" {
+			return fmt.Errorf("Missing --domain flag")
 		}
 
 		if flagImportFrom == "" || flagImportTo == "" {
 			return cmd.Help()
 		}
 
-		domain := args[0]
-		in, err := getInstance(domain)
+		in, err := getInstance(flagDomain)
 		if err != nil {
 			return err
 		}
@@ -478,10 +482,12 @@ func splitArgs(command string) []string {
 }
 
 func init() {
-	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "Directory to import from in cozy")
-	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "Directory to import to in cozy")
-	importFilesCmd.Flags().BoolVar(&flagImportDryRun, "dry-run", false, "Do not actually import the files")
-	importFilesCmd.Flags().StringVar(&flagImportMatch, "match", "", "Pattern that the imported files must match")
+	filesCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", "", "specify the domain name of the instance")
+
+	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
+	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "directory to import to in cozy")
+	importFilesCmd.Flags().BoolVar(&flagImportDryRun, "dry-run", false, "do not actually import the files")
+	importFilesCmd.Flags().StringVar(&flagImportMatch, "match", "", "pattern that the imported files must match")
 
 	filesCmdGroup.AddCommand(execFilesCmd)
 	filesCmdGroup.AddCommand(importFilesCmd)

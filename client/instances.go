@@ -24,17 +24,13 @@ type Instance struct {
 	} `json:"attributes"`
 }
 
-<<<<<<< HEAD
-// InstanceOptions is a struct holding all the options for instance creation.
-=======
 // InstanceOptions contains the options passed on instance creation.
->>>>>>> Remove secrets from returned instance fields
 type InstanceOptions struct {
 	Domain   string
-	Apps     []string
 	Locale   string
 	Timezone string
 	Email    string
+	Apps     []string
 	Dev      bool
 }
 
@@ -63,10 +59,10 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		Path:   "/instances",
 		Queries: url.Values{
 			"Domain":   {opts.Domain},
-			"Apps":     {strings.Join(opts.Apps, ",")},
 			"Locale":   {opts.Locale},
 			"Timezone": {opts.Timezone},
 			"Email":    {opts.Email},
+			"Apps":     {strings.Join(opts.Apps, ",")},
 			"Dev":      {dev},
 		},
 	})
@@ -108,6 +104,7 @@ func (c *Client) DestroyInstance(domain string) (*Instance, error) {
 	return readInstance(res)
 }
 
+// GetToken is used to generate a toke with the specified options.
 func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 	q := url.Values{
 		"Domain":   {opts.Domain},
