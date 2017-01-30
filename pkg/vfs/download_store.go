@@ -31,7 +31,7 @@ func init() {
 }
 
 func cleanDownloadStoreInterval() {
-	for _ = range time.Tick(downloadStoreCleanInterval) {
+	for range time.Tick(downloadStoreCleanInterval) {
 		cleanDownloadStore()
 	}
 }

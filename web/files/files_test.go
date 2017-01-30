@@ -915,8 +915,49 @@ func TestArchiveNoFiles(t *testing.T) {
 	assert.Equal(t, `"Can't create an archive with no files"`, string(msg))
 }
 
-func TestArchive(t *testing.T) {
+func TestArchiveDirectDownload(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=archive&Type=directory")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+	dirID, _ := extractDirData(t, data1)
+	names := []string{"foo", "bar", "baz"}
+	for _, name := range names {
+		res2, _ := createDir(t, "/files/"+dirID+"?Name="+name+".jpg&Type=file")
+		if !assert.Equal(t, 201, res2.StatusCode) {
+			return
+		}
+	}
+
+	// direct download
+	body := bytes.NewBufferString(`{
+		"data": {
+			"attributes": {
+				"files": [
+					"/archive/foo.jpg",
+					"/archive/bar.jpg",
+					"/archive/baz.jpg"
+				]
+			}
+		}
+	}`)
+
+	req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
+	req.Header.Add("Content-Type", "application/zip")
+	req.Header.Add("Accept", "application/zip")
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	if !assert.Equal(t, 200, res.StatusCode) {
+		b, err2 := ioutil.ReadAll(res.Body)
+		fmt.Println(err2, string(b))
+	}
+	assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
+
+}
+
+func TestArchiveCreateAndDownload(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=archive2&Type=directory")
 	if !assert.Equal(t, 201, res1.StatusCode) {
 		return
 	}
@@ -940,6 +981,7 @@ func TestArchive(t *testing.T) {
 			}
 		}
 	}`)
+
 	res, err := http.Post(ts.URL+"/files/archive", "application/vnd.api+json", body)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)

@@ -337,6 +337,12 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 		archive.Name = "archive"
 	}
 	instance := middlewares.GetInstance(c)
+
+	// if accept header is application/zip, send the archive immediately
+	if c.Request().Header.Get("Accept") == "application/zip" {
+		return archive.Serve(instance, c.Response())
+	}
+
 	secret, err := vfs.GetStore(instance.Domain).AddArchive(archive)
 	if err != nil {
 		return wrapVfsError(err)
