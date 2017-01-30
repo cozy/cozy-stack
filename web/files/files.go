@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -516,6 +517,13 @@ func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		return nil, err
 	}
 
+	cdate := time.Now()
+	if date := header.Get("Date"); date != "" {
+		if t, err := time.Parse(time.RFC1123, date); err == nil {
+			cdate = t
+		}
+	}
+
 	executable := c.QueryParam("Executable") == "true"
 	contentType := header.Get("Content-Type")
 	mime, class := vfs.ExtractMimeAndClass(contentType)
@@ -526,6 +534,7 @@ func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		md5Sum,
 		mime,
 		class,
+		cdate,
 		executable,
 		tags,
 	)

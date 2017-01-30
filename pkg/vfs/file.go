@@ -119,7 +119,7 @@ func (f *FileDoc) Included() []jsonapi.Object {
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
-func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class string, executable bool, tags []string) (*FileDoc, error) {
+func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class string, cdate time.Time, executable bool, tags []string) (*FileDoc, error) {
 	if err := checkFileName(name); err != nil {
 		return nil, err
 	}
@@ -130,14 +130,13 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 
 	tags = uniqueTags(tags)
 
-	createDate := time.Now()
 	doc := &FileDoc{
 		Type:  consts.FileType,
 		Name:  name,
 		DirID: dirID,
 
-		CreatedAt:  createDate,
-		UpdatedAt:  createDate,
+		CreatedAt:  cdate,
+		UpdatedAt:  cdate,
 		Size:       size,
 		MD5Sum:     md5Sum,
 		Mime:       mime,
@@ -289,8 +288,6 @@ func Open(c Context, doc *FileDoc) (*File, error) {
 // The Close() method will actually create or update the document in
 // couchdb. It will also check the md5 hash if required.
 func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
-	now := time.Now()
-
 	newpath, err := newdoc.Path(c)
 	if err != nil {
 		return nil, err
@@ -315,11 +312,8 @@ func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
 		newdoc.SetID(olddoc.ID())
 		newdoc.SetRev(olddoc.Rev())
 		newdoc.CreatedAt = olddoc.CreatedAt
-	} else {
-		newdoc.CreatedAt = now
+		newdoc.UpdatedAt = time.Now()
 	}
-
-	newdoc.UpdatedAt = now
 
 	f, err := safeCreateFile(newpath, newdoc.Executable, c.FS())
 	if err != nil {
@@ -466,6 +460,7 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (*FileDoc, 
 		olddoc.MD5Sum,
 		olddoc.Mime,
 		olddoc.Class,
+		cdate,
 		*patch.Executable,
 		*patch.Tags,
 	)
@@ -488,7 +483,6 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (*FileDoc, 
 
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
-	newdoc.CreatedAt = cdate
 	newdoc.UpdatedAt = *patch.UpdatedAt
 	newdoc.parent = parent
 

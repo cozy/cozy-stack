@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -71,7 +72,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 				return nil, err
 			}
 		} else {
-			filedoc, err := NewFileDoc(name, dirID, -1, nil, "", "", false, nil)
+			filedoc, err := NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -130,7 +131,7 @@ func TestDiskUsageIsInitiallyZero(t *testing.T) {
 }
 
 func TestGetFileDocFromPathAtRoot(t *testing.T) {
-	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", false, []string{})
+	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", time.Now(), false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
@@ -163,7 +164,7 @@ func TestGetFileDocFromPath(t *testing.T) {
 	err := CreateDir(vfsC, dir)
 	assert.NoError(t, err)
 
-	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", false, []string{})
+	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", time.Now(), false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
