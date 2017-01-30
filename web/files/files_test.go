@@ -997,6 +997,32 @@ func TestArchiveCreateAndDownload(t *testing.T) {
 	assert.Equal(t, `attachment; filename=archive.zip`, disposition)
 }
 
+func TestFileCreateAndDownload(t *testing.T) {
+
+	body := "foo,bar"
+	res1, _ := upload(t, "/files/?Type=file&Name=todownload2steps", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res1.StatusCode) {
+		return
+	}
+
+	path := "/todownload2steps"
+
+	res, err := http.Post(ts.URL+"/files/downloads?Path="+path, "", nil)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var data map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&data)
+	fmt.Println(&data, err)
+	assert.NoError(t, err)
+
+	downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
+	res2, err := http.Get(downloadURL)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res2.StatusCode)
+	disposition := res2.Header.Get("Content-Disposition")
+	assert.Equal(t, `attachment; filename=todownload2steps`, disposition)
+}
+
 func TestArchiveNotFound(t *testing.T) {
 	body := bytes.NewBufferString(`{
 		"data": {

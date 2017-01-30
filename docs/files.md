@@ -655,7 +655,7 @@ Content-Disposition: attachment; filename="project-X.zip"
 Content-Type: application/zip
 ```
 
-### POST /files/downloads/?Path=file_path
+### POST /files/downloads?Path=file_path
 
 Create a file download. The Path query parameter specifies the file to download.
 The response json API links contains a `related` link for downloading the file, see below.
