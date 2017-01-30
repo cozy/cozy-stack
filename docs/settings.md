@@ -122,7 +122,7 @@ Content-Type: application/json
 Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
 ```
 
-```
+```json
 {
   "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice",
   "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase"
@@ -153,6 +153,7 @@ Cookie: sessionid=xxxx
 ```
 
 #### Response
+
 ```json
 {
   "data": {
@@ -175,6 +176,7 @@ Cookie: sessionid=xxxx
 If the user is logged in, allow to set the instance fields
 
 #### Request
+
 ```http
 POST /settings/instance HTTP/1.1
 Host: alice.example.com
@@ -183,6 +185,7 @@ Content-type: application/vnd.api+json
 Cookie: sessionid=xxxxx
 Authorization: Bearer settings-token
 ```
+
 ```json
 {
   "data": {
@@ -202,11 +205,12 @@ Authorization: Bearer settings-token
 ```
 
 #### Response
+
 ```
 HTTP/1.1 200 OK
 Content-type: application/json
-Cookie: sessionid=xxxxx
 ```
+
 ```json
 {
   "data": {
@@ -223,4 +227,65 @@ Cookie: sessionid=xxxxx
     }
   }
 }
+```
+
+## OAuth 2 clients
+
+### GET /settings/clients
+
+Get the list of the registered clients
+
+#### Request
+
+```http
+GET /settings/clients HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Cookie: sessionid=xxxxx
+Authorization: Bearer oauth2-clients-token
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-type: application/json
+```
+
+```json
+{
+  "data": [{
+    "type": "io.cozy.oauth.clients",
+    "id": "30e84c10-e6cf-11e6-9bfd-a7106972de51",
+    "attributes": {
+      "redirect_uris": ["http://localhost:4000/oauth/callback"],
+      "client_name": "Cozy-Desktop on my-new-laptop",
+      "client_kind": "desktop",
+      "client_uri": "https://docs.cozy.io/en/mobile/desktop.html",
+      "logo_uri": "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
+      "policy_uri": "https://cozy.io/policy",
+      "software_id": "/github.com/cozy-labs/cozy-desktop",
+      "software_version": "0.16.0"
+    },
+    "links": {
+      "self": "/settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51"
+    }
+  }]
+}
+```
+
+### DELETE /settings/clients/:client-id
+
+#### Request
+
+```http
+DELETE /settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51 HTTP/1.1
+Host: alice.example.com
+Authorization: Bearer oauth2-clients-token
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
 ```

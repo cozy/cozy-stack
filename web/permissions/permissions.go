@@ -167,7 +167,21 @@ func getPermission(c echo.Context) (*permissions.Set, error) {
 	return set, nil
 }
 
-// Allow validate the validable object against the context permission set
+// AllowWholeType validates that the context permission set can use a verb on
+// the whold doctype
+func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
+	pset, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+
+	if !pset.AllowWholeType(v, doctype) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
+}
+
+// Allow validates the validable object against the context permission set
 func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
 	pset, err := getPermission(c)
 	if err != nil {
@@ -180,7 +194,7 @@ func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
 	return nil
 }
 
-// AllowTypeAndID validate a type & ID against the context permission set
+// AllowTypeAndID validates a type & ID against the context permission set
 func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) error {
 	pset, err := getPermission(c)
 	if err != nil {
