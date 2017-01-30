@@ -28,6 +28,7 @@ for questions and suggestions.
 
 ## Dependencies
 
+* A SMTP server
 * CouchDB 2.0.0
 
 To install CouchDB 2.0.0 through Docker, take a look at our [Docker specific documentation](docs/docker.md).
