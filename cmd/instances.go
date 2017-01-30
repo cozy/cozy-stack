@@ -116,8 +116,7 @@ and all its data.
 		domain := args[0]
 
 		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf(`
-Are you sure you want to remove instance for domain %s ?
+		fmt.Printf(`Are you sure you want to remove instance for domain %s ?
 All data associated with this domain will be permanently lost.
 [yes/NO]: `, domain)
 
@@ -126,7 +125,8 @@ All data associated with this domain will be permanently lost.
 			return err
 		}
 
-		if strings.ToLower(strings.TrimSpace(str)) != "yes" {
+		str = strings.ToLower(strings.TrimSpace(str))
+		if str != "yes" && str != "y" {
 			return nil
 		}
 

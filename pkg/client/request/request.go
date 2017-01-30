@@ -2,6 +2,7 @@ package request
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -59,6 +60,17 @@ func (e *Error) Error() string {
 		return e.Title
 	}
 	return fmt.Sprintf("%s: %s", e.Title, e.Detail)
+}
+
+// BasicAuthorizer implements the HTTP basic auth for authorization.
+type BasicAuthorizer struct {
+	Username string
+	Password string
+}
+
+func (b *BasicAuthorizer) AuthHeader() string {
+	auth := b.Username + ":" + b.Password
+	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
 // Req performs a request with the specified request options.

@@ -37,18 +37,17 @@ type jsonAPIDocument struct {
 type Client struct {
 	Domain string
 
-	AdminPassword string
-	AuthClient    *auth.Client
-	AuthScopes    []string
-	AuthAccept    auth.UserAcceptFunc
-	AuthStorage   auth.Storage
+	AuthClient  *auth.Client
+	AuthScopes  []string
+	AuthAccept  auth.UserAcceptFunc
+	AuthStorage auth.Storage
+	Authorizer  request.Authorizer
 
 	UserAgent     string
 	Retries       int
 	Timeout       time.Duration
 	Transport     http.RoundTripper
 	DisableSecure bool
-	IsAdmin       bool
 
 	authed bool
 	inited int32
@@ -118,8 +117,8 @@ func (c *Client) Authenticate() (request.Authorizer, error) {
 func (c *Client) Req(opts *request.Options) (*http.Response, error) {
 	c.init()
 	var err error
-	if c.IsAdmin {
-		opts.BasicPassword = c.AdminPassword
+	if c.Authorizer != nil {
+		opts.Authorizer = c.Authorizer
 	} else {
 		opts.Authorizer, err = c.Authenticate()
 	}

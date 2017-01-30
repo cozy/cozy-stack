@@ -10,6 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/client"
 	"github.com/cozy/cozy-stack/pkg/client/auth"
+	"github.com/cozy/cozy-stack/pkg/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/howeyc/gopass"
@@ -49,8 +50,7 @@ func createClient(domain string) *client.Client {
 		Domain:        domain,
 		DisableSecure: config.IsDevRelease(),
 		AuthClient: &auth.Client{
-			RedirectURIs: []string{"http://foobar.com"},
-			ClientName:   "Client A",
+			RedirectURIs: []string{"http://localhost:3333"},
 		},
 		AuthScopes: []string{},
 		AuthAccept: func(acceptURL string) (*url.URL, error) {
@@ -74,8 +74,10 @@ func newAdminClient() *client.Client {
 		}
 	}
 	c := createClient(config.AdminServerAddr())
-	c.IsAdmin = true
-	c.AdminPassword = string(pass)
+	c.Authorizer = &request.BasicAuthorizer{
+		Username: "",
+		Password: string(pass),
+	}
 	return c
 }
 
