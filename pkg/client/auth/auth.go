@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/client/request"
+	"github.com/cozy/cozy-stack/pkg/config"
 )
 
 type (
@@ -93,9 +94,9 @@ func (r *Request) AuthHeader() string {
 // defaultClient defaults some values of the given client
 func defaultClient(c *Client) *Client {
 	c.SoftwareID = "github.com/cozy/cozy-stack"
-	c.SoftwareVersion = "0.0"
+	c.SoftwareVersion = config.Version
 	if c.ClientName == "" {
-		c.ClientName = "Go Official Client"
+		c.ClientName = "Cozy Go client"
 	}
 	if c.ClientKind == "" {
 		c.ClientKind = "desktop"
