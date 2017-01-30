@@ -61,6 +61,8 @@ func (a *AtTrigger) Schedule() <-chan *JobRequest {
 		if duration >= 0 {
 			if duration < maxPastTriggerTime {
 				a.trigger(ch)
+			} else {
+				close(ch)
 			}
 			return
 		}

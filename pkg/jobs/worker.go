@@ -10,6 +10,14 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// contextKey are the keys used in the worker context
+type contextKey int
+
+const (
+	// ContextDomainKey is the used to store the domain string name
+	ContextDomainKey contextKey = iota
+)
+
 var (
 	defaultConcurrency  = 1
 	defaultMaxExecCount = 3
@@ -34,6 +42,11 @@ type (
 	}
 )
 
+// NewWorkerContext returns a context.Context usable by a worker.
+func NewWorkerContext(domain string) context.Context {
+	return context.WithValue(context.Background(), ContextDomainKey, domain)
+}
+
 // Start is used to start the worker consumption of messages from its queue.
 func (w *Worker) Start(q Queue) {
 	if !atomic.CompareAndSwapInt32(&w.started, 0, 1) {
@@ -48,6 +61,7 @@ func (w *Worker) Start(q Queue) {
 
 func (w *Worker) work(workerID string) {
 	// TODO: err handling and persistence
+	parentCtx := NewWorkerContext(w.Domain)
 	for {
 		job, err := w.jobs.Consume()
 		if err != nil {
@@ -64,6 +78,7 @@ func (w *Worker) work(workerID string) {
 			continue
 		}
 		t := &task{
+			ctx:   parentCtx,
 			infos: infos,
 			conf:  w.defaultedConf(infos.Options),
 		}
@@ -123,6 +138,7 @@ func (w *Worker) Stop() {
 }
 
 type task struct {
+	ctx   context.Context
 	infos *JobInfos
 	conf  *WorkerConfig
 
@@ -145,7 +161,7 @@ func (t *task) run() (err error) {
 			time.Sleep(delay)
 		}
 		log.Debugf("[job] %s: run %d (timeout %s)", t.infos.ID, t.execCount, timeout)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(t.ctx, timeout)
 		if err = t.exec(ctx); err == nil {
 			cancel()
 			break

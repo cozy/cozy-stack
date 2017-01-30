@@ -24,6 +24,7 @@ Table of contents
 - [Data System](data-system.md) & [Mango](mango.md)
 - [Virtual File System](files.md) & [References of documents in VFS](references-docs-in-vfs.md)
 - [Jobs](jobs.md)
+- [Workers](workers.md)
 - [Settings](settings.md)
 
 ## In progress
