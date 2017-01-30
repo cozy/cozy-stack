@@ -37,20 +37,11 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 	}
 }
 
-func extractJSONRes(res *http.Response, mp *map[string]interface{}) (err error) {
+func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
 	if res.StatusCode >= 300 {
-		return
+		return nil
 	}
-
-	var b []byte
-
-	b, err = ioutil.ReadAll(res.Body)
-	if err != nil {
-		return
-	}
-
-	err = json.Unmarshal(b, mp)
-	return
+	return json.NewDecoder(res.Body).Decode(mp)
 }
 
 func createDir(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
@@ -66,7 +57,7 @@ func createDir(t *testing.T, path string) (res *http.Response, v map[string]inte
 	return
 }
 
-func doUploadOrMod(t *testing.T, req *http.Request, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
+func doUploadOrMod(t *testing.T, req *http.Request, contentType, hash string) (res *http.Response, v map[string]interface{}) {
 	var err error
 
 	if contentType != "" {
@@ -96,7 +87,7 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 	if !assert.NoError(t, err) {
 		return
 	}
-	return doUploadOrMod(t, req, contentType, body, hash)
+	return doUploadOrMod(t, req, contentType, hash)
 }
 
 func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
@@ -105,7 +96,7 @@ func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Re
 	if !assert.NoError(t, err) {
 		return
 	}
-	return doUploadOrMod(t, req, contentType, body, hash)
+	return doUploadOrMod(t, req, contentType, hash)
 }
 
 func trash(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
@@ -434,6 +425,24 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 	assert.Equal(t, 409, res2.StatusCode)
 }
 
+func TestUploadWithDate(t *testing.T) {
+	buf := strings.NewReader("foo")
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=withcdate", buf)
+	assert.NoError(t, err)
+	req.Header.Add("Date", "Mon, 19 Sep 2016 12:38:04 GMT")
+	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
+	assert.Equal(t, 201, res.StatusCode)
+	fmt.Printf("obj = %#v\n", obj)
+	data := obj["data"].(map[string]interface{})
+	fmt.Printf("data = %#v\n", data)
+	attrs := data["attributes"].(map[string]interface{})
+	fmt.Printf("attrs = %#v\n", attrs)
+	createdAt := attrs["created_at"].(string)
+	assert.Equal(t, "2016-09-19T12:38:04Z", createdAt)
+	updatedAt := attrs["updated_at"].(string)
+	assert.Equal(t, createdAt, updatedAt)
+}
+
 func TestModifyMetadataFileMove(t *testing.T) {
 	body := "foo"
 	res1, data1 := upload(t, "/files/?Type=file&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
@@ -622,14 +631,14 @@ func TestModifyContentBadRev(t *testing.T) {
 	assert.NoError(t, err)
 
 	req2.Header.Add("If-Match", "badrev")
-	res2, _ := doUploadOrMod(t, req2, "text/plain", newcontent, "")
+	res2, _ := doUploadOrMod(t, req2, "text/plain", "")
 	assert.Equal(t, 412, res2.StatusCode)
 
 	req3, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
 	assert.NoError(t, err)
 
 	req3.Header.Add("If-Match", fileRev)
-	res3, _ := doUploadOrMod(t, req3, "text/plain", newcontent, "")
+	res3, _ := doUploadOrMod(t, req3, "text/plain", "")
 	assert.Equal(t, 200, res3.StatusCode)
 }
 
