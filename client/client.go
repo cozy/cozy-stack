@@ -68,8 +68,7 @@ func (c *Client) init() {
 	}
 	if c.Transport == nil {
 		c.Transport = &http.Transport{
-			Proxy:               http.ProxyFromEnvironment,
-			MaxIdleConnsPerHost: 1024,
+			Proxy: http.ProxyFromEnvironment,
 		}
 	}
 	if c.AuthStorage == nil {
