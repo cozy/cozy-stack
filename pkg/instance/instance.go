@@ -193,7 +193,7 @@ func (i *Instance) SubDomain(s string) string {
 	u := url.URL{
 		Scheme: i.Scheme(),
 		Host:   domain,
-		Path:   "/",
+		Path:   "",
 	}
 	return u.String()
 }
