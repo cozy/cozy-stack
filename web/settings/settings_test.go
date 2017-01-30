@@ -29,6 +29,7 @@ const domain = "cozysettings.example.net"
 var ts *httptest.Server
 var testInstance *instance.Instance
 var instanceRev string
+var oauthClientID string
 
 func TestThemeCSS(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/theme.css")
@@ -243,10 +244,11 @@ func TestListClients(t *testing.T) {
 	}
 	regErr := client.Create(testInstance)
 	assert.Nil(t, regErr)
+	oauthClientID = client.ClientID
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/clients", nil)
-	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
 	assert.NoError(t, err)
+	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -273,6 +275,33 @@ func TestListClients(t *testing.T) {
 	assert.Equal(t, client.SoftwareID, attrs["software_id"].(string))
 	assert.Equal(t, client.SoftwareVersion, attrs["software_version"].(string))
 	assert.Equal(t, "", attrs["client_secret"].(string))
+}
+
+func TestRevokeClient(t *testing.T) {
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+"/settings/clients/"+oauthClientID, nil)
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	req, err = http.NewRequest(http.MethodDelete, ts.URL+"/settings/clients/"+oauthClientID, nil)
+	assert.NoError(t, err)
+	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+
+	req, err = http.NewRequest(http.MethodGet, ts.URL+"/settings/clients", nil)
+	assert.NoError(t, err)
+	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data := result["data"].([]interface{})
+	assert.Len(t, data, 0)
 }
 
 func TestMain(m *testing.M) {

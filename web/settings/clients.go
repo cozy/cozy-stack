@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -28,4 +29,22 @@ func listClients(c echo.Context) error {
 		objs[i] = jsonapi.Object(d)
 	}
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
+func revokeClient(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	if err := permissions.AllowWholeType(c, permissions.DELETE, consts.OAuthClients); err != nil {
+		return err
+	}
+
+	client, err := oauth.FindClient(instance, c.Param("id"))
+	if err != nil {
+		return err
+	}
+
+	if err := client.Delete(instance); err != nil {
+		return errors.New(err.Error)
+	}
+	return c.NoContent(http.StatusNoContent)
 }
