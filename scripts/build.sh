@@ -16,7 +16,11 @@ if [ -r "${WORK_DIR}/local.env" ]; then
 fi
 
 echo_err() {
-	>&2 echo -e "error: ${1}"
+	>&2 echo -e "ERR: ${1}"
+}
+
+echo_wrn() {
+	>&2 echo -e "WRN: ${1}"
 }
 
 usage() {
@@ -52,12 +56,12 @@ do_prepare_ldflags() {
 
 	if [ "${VERSION_STRING}" == "" ]; then
 		VERSION_STRING=v0-`git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD`
-		>&2 echo "WRN: No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
+		echo_wrn "No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 	fi
 
 	if [ `git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD | wc -l` -gt 0 ]; then
 		if [ "${COZY_ENV}" == production ]; then
-			>&2 echo "ERR: Can not build a production release in a dirty work-tree"
+			echo_err "Can not build a production release in a dirty work-tree"
 			exit 1
 		fi
 		VERSION_STRING="${VERSION_STRING}-dirty"
@@ -298,7 +302,7 @@ do_clean() {
 
 check_env() {
 	if [ "${COZY_ENV}" != "production" ] && [ "${COZY_ENV}" != "development" ]; then
-		>&2 echo "ERR: COZY_ENV should either be production or development"
+		echo_err "ERR: COZY_ENV should either be production or development"
 		exit 1
 	fi
 }
