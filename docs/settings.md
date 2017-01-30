@@ -242,7 +242,7 @@ GET /settings/clients HTTP/1.1
 Host: alice.example.com
 Accept: application/vnd.api+json
 Cookie: sessionid=xxxxx
-Authorization: Bearer settings-token
+Authorization: Bearer oauth2-clients-token
 ```
 
 #### Response
@@ -266,7 +266,7 @@ Content-type: application/json
       "policy_uri": "https://cozy.io/policy",
       "software_id": "/github.com/cozy-labs/cozy-desktop",
       "software_version": "0.16.0"
-    }
+    },
     "links": {
       "self": "/settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51"
     }
@@ -281,6 +281,7 @@ Content-type: application/json
 ```http
 DELETE /settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51 HTTP/1.1
 Host: alice.example.com
+Authorization: Bearer oauth2-clients-token
 ```
 
 #### Response

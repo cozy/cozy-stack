@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -62,12 +63,40 @@ func (c *Client) SetID(id string) { c.CouchID = id }
 // SetRev changes the client revision
 func (c *Client) SetRev(rev string) { c.CouchRev = rev }
 
+// SelfLink is used to generate a JSON-API link for the client - see
+// jsonapi.Object interface
+func (c *Client) SelfLink() string { return "/settings/clients/" + c.ID() }
+
+// Relationships is used to generate the parent relationship in JSON-API format
+// - see jsonapi.Object interface
+func (c *Client) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the jsonapi.Object interface
+func (c *Client) Included() []jsonapi.Object {
+	return []jsonapi.Object{}
+}
+
 // TransformIDAndRev makes the translation from the JSON of CouchDB to the
 // one used in the dynamic client registration protocol
 func (c *Client) TransformIDAndRev() {
 	c.ClientID = c.CouchID
 	c.CouchID = ""
 	c.CouchRev = ""
+}
+
+// GetAll loads all the clients from the database, without the secrets
+func GetAll(i *instance.Instance) ([]*Client, error) {
+	var clients []*Client
+	req := &couchdb.AllDocsRequest{Limit: 100}
+	if err := couchdb.GetAllDocs(i, consts.OAuthClients, req, &clients); err != nil {
+		return nil, err
+	}
+	for _, client := range clients {
+		client.ClientSecret = ""
+	}
+	return clients, nil
 }
 
 // FindClient loads a client from the database

@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -225,6 +226,55 @@ func TestUpdateInstance(t *testing.T) {
 	checkResult(res)
 }
 
+func TestListClients(t *testing.T) {
+	res, err := http.Get(ts.URL + "/settings/clients")
+	assert.NoError(t, err)
+	assert.Equal(t, 401, res.StatusCode)
+
+	client := &oauth.Client{
+		RedirectURIs:    []string{"http:/localhost:4000/oauth/callback"},
+		ClientName:      "Cozy-desktop on my-new-laptop",
+		ClientKind:      "desktop",
+		ClientURI:       "https://docs.cozy.io/en/mobile/desktop.html",
+		LogoURI:         "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
+		PolicyURI:       "https://cozy.io/policy",
+		SoftwareID:      "/github.com/cozy-labs/cozy-desktop",
+		SoftwareVersion: "0.16.0",
+	}
+	regErr := client.Create(testInstance)
+	assert.Nil(t, regErr)
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/clients", nil)
+	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
+	assert.NoError(t, err)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data := result["data"].([]interface{})
+	assert.Len(t, data, 1)
+	obj := data[0].(map[string]interface{})
+	assert.Equal(t, "io.cozy.oauth.clients", obj["type"].(string))
+	assert.Equal(t, client.ClientID, obj["id"].(string))
+	links := obj["links"].(map[string]interface{})
+	self := links["self"].(string)
+	assert.Equal(t, "/settings/clients/"+client.ClientID, self)
+	attrs := obj["attributes"].(map[string]interface{})
+	redirectURIs := attrs["redirect_uris"].([]interface{})
+	assert.Len(t, redirectURIs, 1)
+	assert.Equal(t, client.RedirectURIs[0], redirectURIs[0].(string))
+	assert.Equal(t, client.ClientName, attrs["client_name"].(string))
+	assert.Equal(t, client.ClientKind, attrs["client_kind"].(string))
+	assert.Equal(t, client.ClientURI, attrs["client_uri"].(string))
+	assert.Equal(t, client.LogoURI, attrs["logo_uri"].(string))
+	assert.Equal(t, client.PolicyURI, attrs["policy_uri"].(string))
+	assert.Equal(t, client.SoftwareID, attrs["software_id"].(string))
+	assert.Equal(t, client.SoftwareVersion, attrs["software_version"].(string))
+	assert.Equal(t, "", attrs["client_secret"].(string))
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	instance.Destroy(domain)
@@ -264,6 +314,19 @@ func testToken(i *instance.Instance) string {
 			Subject:  "testapp",
 		},
 		Scope: consts.Settings,
+	})
+	return t
+}
+
+func testClientsToken(i *instance.Instance) string {
+	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  "testapp",
+		},
+		Scope: consts.OAuthClients,
 	})
 	return t
 }

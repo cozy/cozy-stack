@@ -15,4 +15,6 @@ func Routes(router *echo.Group) {
 
 	router.GET("/instance", getInstance)
 	router.PUT("/instance", updateInstance)
+
+	router.GET("/clients", listClients)
 }

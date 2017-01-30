@@ -12,10 +12,12 @@ var readable = true
 var none = false
 
 var blackList = map[string]bool{
-	consts.Sessions:    none,
-	consts.Permissions: none,
-	consts.Files:       readable,
-	consts.Instances:   readable,
+	consts.Sessions:         none,
+	consts.Permissions:      none,
+	consts.OAuthClients:     none,
+	consts.OAuthAccessCodes: none,
+	consts.Files:            readable,
+	consts.Instances:        readable,
 }
 
 // CheckReadable will abort the context and returns false if the doctype
