@@ -51,7 +51,7 @@ do_prepare_ldflags() {
 		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
 
 	if [ "${VERSION_STRING}" == "" ]; then
-		VERSION_STRING=v0-`git rev-parse --short HEAD`
+		VERSION_STRING=v0-`git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD`
 		>&2 echo "WRN: No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 	fi
 
