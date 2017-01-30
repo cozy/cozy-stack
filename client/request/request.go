@@ -68,6 +68,7 @@ type BasicAuthorizer struct {
 	Password string
 }
 
+// AuthHeader implemented the interface Authorizer.
 func (b *BasicAuthorizer) AuthHeader() string {
 	auth := b.Username + ":" + b.Password
 	return base64.StdEncoding.EncodeToString([]byte(auth))
