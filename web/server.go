@@ -40,6 +40,12 @@ func ListenAndServeWithAppDir(dir string) error {
 	if !exists {
 		return fmt.Errorf("Directory %s does not exist", dir)
 	}
+	if err = checkExists(path.Join(dir, apps.ManifestFilename)); err != nil {
+		return err
+	}
+	if err = checkExists(path.Join(dir, "index.html")); err != nil {
+		return err
+	}
 	return listenAndServe(func(c echo.Context) error {
 		method := c.Request().Method
 		if method != "GET" && method != "HEAD" {
@@ -65,6 +71,18 @@ func ListenAndServeWithAppDir(dir string) error {
 		})
 		return webapps.ServeAppFile(c, i, f, app)
 	})
+}
+
+func checkExists(filepath string) error {
+	exists, err := utils.FileExists(filepath)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("Directory %s does should contain a %s file",
+			path.Dir(filepath), path.Base(filepath))
+	}
+	return nil
 }
 
 func listenAndServe(appsHandler echo.HandlerFunc) error {
