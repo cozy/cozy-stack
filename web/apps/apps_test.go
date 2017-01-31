@@ -192,24 +192,7 @@ func TestServe(t *testing.T) {
 
 func TestCozyBar(t *testing.T) {
 	assertAuthGet(t, "/bar/", "text/html; charset=utf-8", ``+
-		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`+
-		`<script defer src="//cozywithapps.example.net/apps/mini/init-cozy-bar.js"></script>`)
-
-	expected := `document.addEventListener('DOMContentLoaded', () => {
-	cozy.bar.init({
-		appName: 'Mini',
-		iconPath: 'icon.png',
-		lang: 'en'
-	})
-})`
-	req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/init-cozy-bar.js", nil)
-	req.Host = domain
-	res, err := client.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	assert.Equal(t, "application/javascript", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
-	assert.Equal(t, expected, string(body))
+		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`)
 }
 
 func TestServeAppsWithACode(t *testing.T) {
@@ -305,7 +288,6 @@ func TestMain(m *testing.M) {
 		c.SetCookie(cookie)
 		return c.HTML(http.StatusOK, "OK")
 	})
-	r.GET("/apps/:slug/init-cozy-bar.js", webApps.InitCozyBarJS)
 	router, err := web.CreateSubdomainProxy(r, webApps.Serve)
 	if err != nil {
 		fmt.Println(err)
