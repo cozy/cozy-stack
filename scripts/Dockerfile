@@ -51,23 +51,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH $PATH:/usr/local/couchdb/bin
 
 
-# Caddy
-ENV CADDY_VERSION v0.9.5
-ENV CADDY_DOWNLOAD_URL https://github.com/mholt/caddy/releases/download/$CADDY_VERSION/caddy_linux_amd64.tar.gz
-ENV CADDY_DOWNLOAD_SHA256 c759640c9f56f7c4bb9fa828c0fa81a6e45f0f607e68677d56471bba53ad1777
-RUN curl -fsSL "$CADDY_DOWNLOAD_URL" -o caddy.tar.gz \
-  && echo "$CADDY_DOWNLOAD_SHA256  caddy.tar.gz" | sha256sum -c - \
-  && tar -xz -C "$GOPATH/bin" -f caddy.tar.gz caddy_linux_amd64 \
-  && mv $GOPATH/bin/caddy_linux_amd64 $GOPATH/bin/caddy \
-  && rm caddy.tar.gz
-
-
-
-ENV COZY_PROXY_HOST cozy.local
-ENV COZY_PROXY_PORT 8080
-ENV COZY_STACK_HOST localhost
-ENV COZY_STACK_PORT 8081
-ENV COZY_PROXY_PATH caddy
+ENV COZY_STACK_HOST cozy.local
+ENV COZY_STACK_PORT 8080
 ENV COZY_STACK_PATH cozy-stack
 
 RUN mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
