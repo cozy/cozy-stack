@@ -199,8 +199,8 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) 
 }
 
 var barTemplate = template.Must(template.New("cozy-bar").Parse(`` +
-	`<script defer src="//{{.Domain}}/assets/js/cozy-bar.js"></script>` +
-	`<script defer src="//{{.Domain}}/apps/{{.Slug}}/init-cozy-bar.js"></script>`,
+	`<script defer src="//{{.Domain}}/assets/js/cozy-client.js"></script>` +
+	`<script defer src="//{{.Domain}}/assets/js/cozy-bar.js"></script>`,
 ))
 
 func cozybar(i *instance.Instance, app *apps.Manifest) template.HTML {
