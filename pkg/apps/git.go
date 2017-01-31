@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	git "gopkg.in/src-d/go-git.v4"
-	gitObj "gopkg.in/src-d/go-git.v4/plumbing/object"
-	gitSt "gopkg.in/src-d/go-git.v4/storage/filesystem"
 	gitFS "srcd.works/go-billy.v1"
+	git "srcd.works/go-git.v4"
+	gitObj "srcd.works/go-git.v4/plumbing/object"
+	gitSt "srcd.works/go-git.v4/storage/filesystem"
 )
 
 const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
@@ -82,12 +82,7 @@ func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
-	rep, err := git.NewRepository(storage)
-	if err != nil {
-		return err
-	}
-
-	err = rep.Clone(&git.CloneOptions{
+	rep, err := git.Clone(storage, nil, &git.CloneOptions{
 		URL:   src.String(),
 		Depth: 1,
 	})
@@ -108,7 +103,7 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
-	rep, err := git.NewRepository(storage)
+	rep, err := git.Open(storage, nil)
 	if err != nil {
 		return err
 	}
