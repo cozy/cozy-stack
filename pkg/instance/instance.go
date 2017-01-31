@@ -182,7 +182,7 @@ func (i *Instance) Scheme() string {
 
 // SubDomain returns the full url for a subdomain of this instance
 // useful with apps slugs
-func (i *Instance) SubDomain(s string) string {
+func (i *Instance) SubDomain(s string) *url.URL {
 	var domain string
 	if config.GetConfig().Subdomains == config.NestedSubdomains {
 		domain = s + "." + i.Domain
@@ -190,12 +190,11 @@ func (i *Instance) SubDomain(s string) string {
 		parts := strings.SplitN(i.Domain, ".", 2)
 		domain = parts[0] + "-" + s + "." + parts[1]
 	}
-	u := url.URL{
+	return &url.URL{
 		Scheme: i.Scheme(),
 		Host:   domain,
-		Path:   "",
+		Path:   "/",
 	}
-	return u.String()
 }
 
 // FromURL normalizes a given url with the scheme and domain of the instance.

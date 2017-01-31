@@ -119,7 +119,7 @@ func logout(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	claims, ok := c.Get("token_claims").(*permissions.Claims)
 	if !ok || claims.Audience != permissions.AppAudience {
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug))
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug).String())
 	}
 
 	session, err := sessions.GetSession(c, instance)
@@ -132,10 +132,10 @@ func logout(c echo.Context) error {
 
 // checkRedirectParam returns the optional redirect query parameter. If not
 // empty, we check that the redirect is a subdomain of the cozy-instance.
-func checkRedirectParam(c echo.Context, defaultRedirect string) (string, error) {
+func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error) {
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
-		redirect = defaultRedirect
+		redirect = defaultRedirect.String()
 	}
 
 	u, err := url.Parse(redirect)

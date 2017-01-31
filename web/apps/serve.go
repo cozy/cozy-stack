@@ -67,8 +67,10 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 		if file != "" {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
+		subdomain := i.SubDomain(app.Slug)
+		subdomain.Path = c.Request().URL.String()
 		redirect := url.Values{
-			"redirect": {i.SubDomain(app.Slug) + c.Request().URL.String()},
+			"redirect": {subdomain.String()},
 		}
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
 	}
@@ -107,7 +109,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 		token = app.BuildToken(i)
 	}
 	res := c.Response()
-	res.Header().Set("Content-Type", "text/html")
+	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
 		"Token":   token,

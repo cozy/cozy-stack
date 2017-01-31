@@ -177,13 +177,13 @@ func assertNotFound(t *testing.T, path string) {
 }
 
 func TestServe(t *testing.T) {
-	assertAuthGet(t, "/foo/", "text/html", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
-	assertAuthGet(t, "/foo/hello.html", "text/html", "world {{.Token}}")
-	assertAuthGet(t, "/public", "text/html", "this is a file in public/")
-	assertAuthGet(t, "/public/index.html", "text/html", "this is a file in public/")
-	assertAnonGet(t, "/public", "text/html", "this is a file in public/")
-	assertAnonGet(t, "/public/index.html", "text/html", "this is a file in public/")
-	assertNotPublic(t, "/foo", 302, "https://cozywithapps.example.net/auth/login?redirect=https%3A%2F%2Fmini.cozywithapps.example.net%2F%2Ffoo")
+	assertAuthGet(t, "/foo/", "text/html; charset=utf-8", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
+	assertAuthGet(t, "/foo/hello.html", "text/html; charset=utf-8", "world {{.Token}}")
+	assertAuthGet(t, "/public", "text/html; charset=utf-8", "this is a file in public/")
+	assertAuthGet(t, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
+	assertAnonGet(t, "/public", "text/html; charset=utf-8", "this is a file in public/")
+	assertAnonGet(t, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
+	assertNotPublic(t, "/foo", 302, "https://cozywithapps.example.net/auth/login?redirect=https%3A%2F%2Fmini.cozywithapps.example.net%2Ffoo")
 	assertNotPublic(t, "/foo/hello.tml", 401, "")
 	assertNotFound(t, "/404")
 	assertNotFound(t, "/")
@@ -192,7 +192,7 @@ func TestServe(t *testing.T) {
 }
 
 func TestCozyBar(t *testing.T) {
-	assertAuthGet(t, "/bar/", "text/html", ``+
+	assertAuthGet(t, "/bar/", "text/html; charset=utf-8", ``+
 		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`+
 		`<script defer src="//cozywithapps.example.net/apps/mini/init-cozy-bar.js"></script>`)
 
