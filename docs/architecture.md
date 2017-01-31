@@ -529,10 +529,8 @@ new language, or reviewing an existing one, is really appreciated.
 > Does the current konnectors in nodejs will be lost?
 
 No, they won't. The business logic to scrap data from the many sources will be
-kept and they will be adapted to fit in this new architecture. It won't be a
-daemonized http server anymore, just some node scripts. The Cozy Stack will
-listen for jobs for them and, then, will launch these nodejs scripts with the
-right parameters.
+kept and they will be adapted to fit in this new architecture. It is explained
+how we will do that [here](konnectors.md).
 
 > So, it's not possible to have a custom application with a server part, like
 the lounge IRC client?
