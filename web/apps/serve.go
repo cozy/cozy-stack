@@ -5,13 +5,13 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -101,7 +101,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	}
 	tmpl, err := template.New(file).Parse(string(buf))
 	if err != nil {
-		log.Printf("[apps] %s cannot be parsed as a template: %s", file, err)
+		log.Warnf("[apps] %s cannot be parsed as a template: %s", file, err)
 		return fs.ServeFileContent(c.Response(), c.Request(), modtime, app.Slug, route.Folder, file)
 	}
 	token := "" // #nosec
