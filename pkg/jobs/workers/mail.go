@@ -49,7 +49,7 @@ type MailOptions struct {
 // MailPart represent a part of the content of the mail. It has a type
 // specifying the content type of the part, and a body.
 type MailPart struct {
-	Type string `json:"body_type"`
+	Type string `json:"type"`
 	Body string `json:"body"`
 }
 
