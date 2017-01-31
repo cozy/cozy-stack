@@ -3,11 +3,11 @@
 # Workers
 
 This page list all the currently available workers on the cozy-stack. It
-describes their input arguments object. See the [jobs document](./jobs.md) to
+describes their input arguments object. See the [jobs document](jobs.md) to
 know more about the API context in which you can see how to use these
 arguments.
 
-## `sendmail` worker
+## sendmail worker
 
 The `sendmail` worker can be used to send mail from the stack. It implies that
 the stack has properly configured an access to an SMTP server. You can see an

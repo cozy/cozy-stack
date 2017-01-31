@@ -614,8 +614,5 @@ More about this [here](https://forum.cozy.io/t/a-propos-de-la-pile-technique-fro
 
 > When will this new architecture be available?
 
-The development has just started. We wanted to hear the community feedbacks
-before starting to code. It will take several months to have a first alpha
-version, and some time after to go in production with it. During all the time,
-the development will be open and you can see the code in
-[this repository](https://github.com/cozy/cozy-stack).
+The roadmap for Cozy v3 has been explained on our blog:
+https://blog.cozycloud.cc/post/2016/11/21/On-the-road-to-Cozy-version-3
