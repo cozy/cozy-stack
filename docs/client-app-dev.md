@@ -94,7 +94,10 @@ it as a template and will insert the relevant values.
 - `{{.Token}}` will be replaced by the token for the application.
 - `{{.Domain}}` will be replaced by the stack hostname.
 - `{{.Locale}}` will be replaced by the locale for the instance.
+- `{{.AppName}}`: will be replaced by the application name.
+- `{{.IconPath}}`: will be replaced by the application's icon path.
 - `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
+- `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the cozy-client-js.
 
 So, the `index.html` should probably looks like:
 
