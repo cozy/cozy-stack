@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -215,14 +216,19 @@ func displayPermissions(c echo.Context) error {
 }
 
 func hasRegisterToken(c echo.Context, i *instance.Instance) bool {
-	tok := c.QueryParam("registerToken")
+	hexToken := c.QueryParam("registerToken")
 	expectedTok := i.RegisterToken
 
-	if tok == "" || len(expectedTok) == 0 {
+	if hexToken == "" || len(expectedTok) == 0 {
 		return false
 	}
 
-	return subtle.ConstantTimeCompare([]byte(tok), expectedTok) == 1
+	tok, err := hex.DecodeString(hexToken)
+	if err != nil {
+		return false
+	}
+
+	return subtle.ConstantTimeCompare(tok, expectedTok) == 1
 }
 
 // Routes sets the routing for the status service
