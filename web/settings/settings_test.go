@@ -134,7 +134,7 @@ func TestGetInstance(t *testing.T) {
 	assert.Equal(t, 401, res.StatusCode)
 
 	testInstance.RegisterToken = []byte("test")
-	res, err = http.Get(ts.URL + "/settings/instance?registerToken=test")
+	res, err = http.Get(ts.URL + "/settings/instance?registerToken=74657374")
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	testInstance.RegisterToken = []byte{}
