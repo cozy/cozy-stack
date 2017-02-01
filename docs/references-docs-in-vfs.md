@@ -41,7 +41,7 @@ The references of a file are listed in its JSON-API representation in the
     "attributes": {
       "type": "file",
       "name": "hello.txt",
-      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],

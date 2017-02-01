@@ -181,7 +181,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "hello.txt",
-      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
@@ -279,7 +279,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "attributes": {
       "type": "file",
       "name": "hello.txt",
-      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
@@ -403,7 +403,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "hello.txt",
-      "md5sum": "b59bc37d6441d96785bda7ab2ae98f75",
+      "md5sum": "YjU5YmMzN2Q2NDQxZDk2Nwo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
@@ -466,7 +466,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "attributes": {
       "type": "file",
       "name": "hello.txt",
-      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
@@ -563,7 +563,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "attributes": {
       "type": "file",
       "name": "hi.txt",
-      "md5sum": "86fb269d190d2c85f6e0468ceca42a20",
+      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": ["poem"],
@@ -673,7 +673,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "foo.txt",
-      "md5sum": "b01341e7803c800cc8db4de46f377a87",
+      "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
@@ -694,7 +694,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "bar.txt",
-      "md5sum": "aeab87eb49d3f4e0e5625ada9b49f8e1",
+      "md5sum": "YWVhYjg3ZWI0OWQzZjRlMAo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
