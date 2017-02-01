@@ -94,11 +94,21 @@ precompiled modules.
 #### Chroot
 
 [Chroot](https://en.wikipedia.org/wiki/Chroot) is a UNIX syscall that makes an
-application see only a part of the file-system.
+application see only a part of the file-system. In particular, we can remove
+access to `/proc` and `/sys` by not mounting them, and limit access to `/dev`
+to just `/dev/null`, `/dev/zero`, and `/dev/random` by symlinks them.
+
+### Executing as another user
+
+We can create UNIX users that will just serve to execute the konnectors, and
+nothing else. It's a nice way to give more isolation, but it means that we
+have to find a way to execute the konnectors: either run the cozy-stack as
+root, or have a daemon that launches the konnectors.
 
 #### Timeout
 
-If a konnector takes too long, after a timeout, it should be killed.
+If a konnector takes too long, after a timeout, it should be killed. It
+implies that the cozy-stacks supervises the konnectors.
 
 #### vm/sandbox for Nodejs
 
@@ -112,8 +122,31 @@ do. For example, we can check that it does only http/https, and blacklist
 connection to localhost:6060. It is only effective if the konnector has no way
 to start a new node processus.
 
+#### Ulimit
+
+[ulimit](http://ss64.com/bash/ulimit.html) provides control over the resources
+available to the shell and to processes started by it, on systems that allow
+such control. It can be used to linit the number of processes (protection
+against fork bombs), or the memory that can be used.
+
+#### Seccomp BPF
+
+Seccomp BPF is an extension to seccomp that allows filtering of system calls
+using a configurable policy implemented using Berkeley Packet Filter rules.
+
 #### Isolation in a docker
 
 [Isode](https://github.com/tjanczuk/isode) is a 3 years old project that aims
 to isolate nodejs apps in docker containers. A possibility would be to follow
-this path and isolate the konnectors inside docker.
+this path and isolate the konnectors inside docker. It's a real burden for
+administrators, so we will try to avoid it.
+
+#### NaCl / ZeroVM
+
+[ZeroVM](http://www.zerovm.org/) is an open source virtualization technology
+that is based on the Chromium [Native
+Client](https://en.wikipedia.org/wiki/Google_Native_Client) (NaCl) project.
+ZeroVM creates a secure and isolated execution environment which can run a
+single thread or application. But NaCl is [no longer
+maintained](https://bugs.chromium.org/p/chromium/issues/detail?id=239656#c160)
+and ZeroVM has some severe limitations, so, it won't be used.
