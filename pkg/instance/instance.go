@@ -291,6 +291,11 @@ func (i *Instance) createAppsDB() error {
 	return couchdb.CreateDB(i, consts.Manifests)
 }
 
+// createClientsDB creates the database needed for OAuth 2 clients
+func (i *Instance) createClientsDB() error {
+	return couchdb.CreateDB(i, consts.OAuthClients)
+}
+
 // createSettings creates the settings database and some documents like the
 // default theme
 func (i *Instance) createSettings() error {
@@ -365,6 +370,11 @@ func Create(opts *Options) (*Instance, error) {
 	}
 
 	err = i.createAppsDB()
+	if err != nil {
+		return nil, err
+	}
+
+	err = i.createClientsDB()
 	if err != nil {
 		return nil, err
 	}
