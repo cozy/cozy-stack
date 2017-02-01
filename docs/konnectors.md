@@ -40,7 +40,7 @@ couchdb.
 
 #### Access to the stack
 
-An attackant can try to profit of konnectors for accessing the stack. It can
+An attacker can try to profit of konnectors for accessing the stack. It can
 target the port 6060, used by the stack to manage the cozy instances. Or, it
 can use its privileged position for timing attacks on passwords.
 
@@ -80,7 +80,7 @@ nodejs dependencies. We can use the
 [`ignore-scripts`](https://docs.npmjs.com/misc/config#ignore-scripts) option
 to disable this behaviour.
 
-### Forbid addons in nodejs
+#### Forbid addons in nodejs
 
 Nodejs can require [addons](https://nodejs.org/api/addons.html), ie C/C++
 compiled libraries. I've found no flag to disable the install of such modules
@@ -98,7 +98,7 @@ application see only a part of the file-system. In particular, we can remove
 access to `/proc` and `/sys` by not mounting them, and limit access to `/dev`
 to just `/dev/null`, `/dev/zero`, and `/dev/random` by symlinks them.
 
-### Executing as another user
+#### Executing as another user
 
 We can create UNIX users that will just serve to execute the konnectors, and
 nothing else. It's a nice way to give more isolation, but it means that we
