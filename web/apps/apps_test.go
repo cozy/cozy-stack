@@ -193,6 +193,7 @@ func TestServe(t *testing.T) {
 
 func TestCozyBar(t *testing.T) {
 	assertAuthGet(t, "/bar/", "text/html; charset=utf-8", ``+
+		`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar.css">`+
 		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`)
 }
 

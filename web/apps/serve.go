@@ -206,6 +206,7 @@ var clientTemplate = template.Must(template.New("cozy-client-js").Parse(`` +
 ))
 
 var barTemplate = template.Must(template.New("cozy-bar").Parse(`` +
+	`<link rel="stylesheet" type="text/css" href="//{{.Domain}}/assets/css/cozy-bar.css">` +
 	`<script defer src="//{{.Domain}}/assets/js/cozy-bar.js"></script>`,
 ))
 
