@@ -220,7 +220,14 @@ prepare_assets() {
 	fi
 
 	assets_mod_time=`git log --pretty=format:%cd -n 1 --date=iso "${assets_externals}"`
-	assets_mod_time=`date -j -f '%Y-%m-%d %H:%M:%S %z' "${assets_mod_time}" +%Y%m%d%H%M.%S`
+	case "`uname -s`" in
+		Darwin)
+			assets_mod_time=`date -j -f '%Y-%m-%d %H:%M:%S %z' "${assets_mod_time}" +%Y%m%d%H%M.%S`
+			;;
+		*)
+			assets_mod_time=`date -d "${assets_mod_time}" +%Y%m%d%H%M.%S`
+			;;
+	esac
 
 	mkdir "${assets_dst}"
 
