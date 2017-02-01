@@ -272,7 +272,7 @@ func TestListClients(t *testing.T) {
 	assert.Equal(t, client.PolicyURI, attrs["policy_uri"].(string))
 	assert.Equal(t, client.SoftwareID, attrs["software_id"].(string))
 	assert.Equal(t, client.SoftwareVersion, attrs["software_version"].(string))
-	assert.Equal(t, "", attrs["client_secret"].(string))
+	assert.Nil(t, attrs["client_secret"])
 }
 
 func TestMain(m *testing.M) {
