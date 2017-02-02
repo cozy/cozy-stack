@@ -10,7 +10,9 @@ into a Cozy. The 50+ connectors represent a lot of work from the community.
 So, we want to port it to Cozy v3. There will be 2 parts:
 
 - My Accounts, a client-side app, that will offer the possibility for the user
-  to configure her accounts, and choose when to start the import of data.
+  to configure her accounts, and choose when to start the import of data
+  (see [the architecture
+  doc](https://github.com/cozy-labs/konnectors/blob/development/docs/client-side-architecture.md)).
 - Konnectors, a worker for the [job service](jobs.md), with the code to import
   data from the web sites.
 
@@ -173,11 +175,14 @@ using a configurable policy implemented using Berkeley Packet Filter rules.
 
 [Isode](https://github.com/tjanczuk/isode) is a 3 years old project that aims
 to isolate nodejs apps in docker containers. A possibility would be to follow
-this path and isolate the konnectors inside docker. It's a real burden for
-administrators, so we will try to avoid it.
+this path and isolate the konnectors inside docker.
+
+It's a real burden for administrators. And its command line options often
+changes from one version to another, making difficult to deploy something
+reliable for self-hosted users. So we will try to avoid it.
 
 Isolation in docker contains is mostly a combination of Linux Namespaces,
-Cgroups, and Seccomp BPF.
+Cgroups, and Seccomp BPF. There are other options with those (see below).
 
 #### Rkt
 
@@ -202,3 +207,32 @@ ZeroVM creates a secure and isolated execution environment which can run a
 single thread or application. But NaCl is [no longer
 maintained](https://bugs.chromium.org/p/chromium/issues/detail?id=239656#c160)
 and ZeroVM has some severe limitations, so, it won't be used.
+
+
+## TODO
+
+- [ ] How to install and update the konnectors?
+- [ ] Are the konnectors installed once per server or per instance (in the VFS
+  like client-side apps)?
+- [ ] One git repository with all the konnectors (like now), or one repos per
+  konnector? Same question for package.json
+- [ ] What API to list the konnectors for My Accounts?
+- [ ] What workflow for developing a konnector?
+- [ ] How are manager the locales?
+- [ ] What about weboob?
+- [ ] What roadmap for transforming the konnectors-v2 in konnectors-v3?
+- [ ] What format for the konnectors manifest?
+- [ ] What permissions for a konnector?
+- [ ] For konnectors that import files, how can we let the user select a
+  folder and have an associated permission for the konnector in this folder
+  (and not anywhere else on the virtual file system)?
+- [ ] Can we associate the data retrieved by a konnector to a "profile"? The
+  goal is to allow a client-side to have a permission on this profile and be
+  able to read all the data fetched by a given konnector (or is tied to an
+  account)?
+- [ ] Analyze the konnectors node_modules
+    - no compiled modules currently
+    - xx modules that takes xxx MB
+- [ ] How are persisted the accounts?
+- [ ] How is executed a konnector? In particular, how the credentials are
+  given to the konnector?
