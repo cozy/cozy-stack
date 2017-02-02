@@ -5,6 +5,7 @@ package apps_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -261,6 +262,39 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Equal(t, expected, string(body))
 }
 
+func TestListApps(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/apps/", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+
+	var results map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&results)
+	assert.NoError(t, err)
+	objs := results["data"].([]interface{})
+	assert.Len(t, objs, 1)
+	data := objs[0].(map[string]interface{})
+	id := data["id"].(string)
+	assert.NotEmpty(t, id)
+	typ := data["type"].(string)
+	assert.Equal(t, "io.cozy.manifests", typ)
+
+	attrs := data["attributes"].(map[string]interface{})
+	name := attrs["name"].(string)
+	assert.Equal(t, "Mini", name)
+	slug := attrs["slug"].(string)
+	assert.Equal(t, "mini", slug)
+
+	links := data["links"].(map[string]interface{})
+	self := links["self"].(string)
+	assert.Equal(t, "/apps/mini", self)
+	related := links["related"].(string)
+	assert.Equal(t, "https://cozywithapps-mini.example.net/", related)
+	icon := links["icon"].(string)
+	assert.Equal(t, "https://cozywithapps-mini.example.net/icon.png", icon)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
@@ -305,7 +339,7 @@ func TestMain(m *testing.M) {
 		c.SetCookie(cookie)
 		return c.HTML(http.StatusOK, "OK")
 	})
-	r.GET("/apps/:slug/init-cozy-bar.js", webApps.InitCozyBarJS)
+	webApps.Routes(r.Group("/apps"))
 	router, err := web.CreateSubdomainProxy(r, webApps.Serve)
 	if err != nil {
 		fmt.Println(err)
