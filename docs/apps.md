@@ -220,10 +220,17 @@ Content-Type: application/vnd.api+json
   "data": [{
     "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
     "type": "io.cozy.applications",
+    "meta": {
+      "rev": "1-7a1f918147df94580c92b47275e4604a"
+    },
     "attributes": {
       "name": "calendar",
       "state": "installing",
+      "slug": "calendar",
       ...
+    },
+    "links": {
+      "self": "/apps/calendar"
     }
   }]
 }
@@ -261,10 +268,19 @@ Content-Type: application/vnd.api+json
   "data": [{
     "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
     "type": "io.cozy.applications",
+    "meta": {
+      "rev": "2-bbfb0fc32dfcdb5333b28934f195b96a"
+    },
     "attributes": {
       "name": "calendar",
       "state": "ready",
+      "slug": "calendar",
       ...
+    },
+    "links": {
+      "self": "/apps/calendar",
+      "related": "https://calendar.alice.example.com/",
+      "icon": "https://calendar.alice.example.com/icon.svg"
     }
   }]
 }

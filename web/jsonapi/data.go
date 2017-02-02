@@ -27,6 +27,7 @@ type LinksList struct {
 	Related string `json:"related,omitempty"`
 	Prev    string `json:"prev,omitempty"`
 	Next    string `json:"next,omitempty"`
+	Icon    string `json:"icon,omitempty"`
 }
 
 // ResourceIdentifier is an object, used in relationships, to identify an
