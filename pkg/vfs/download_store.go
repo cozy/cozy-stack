@@ -25,7 +25,7 @@ type fileRef struct {
 const downloadStoreTTL = 1 * time.Hour
 const downloadStoreCleanInterval = 1 * time.Hour
 
-var storeStoreMutex = &sync.Mutex{}
+var storeStoreMutex sync.Mutex
 var storeStore map[string]*memStore
 
 func init() {
