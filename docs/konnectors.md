@@ -73,6 +73,12 @@ root access on a server.
 
 ### Possible measures
 
+#### Permissions
+
+We can forbid the konnectors to speak directly with couchdb, and pass by the
+stack for that. And use the [permissions](permissions.md) to restrict what
+each konnectors can do with the cozy-stack.
+
 #### ignore-scripts for npm/yarn
 
 Npm and yarn can execute scripts defined in package.json when installing
@@ -172,6 +178,12 @@ administrators, so we will try to avoid it.
 
 Isolation in docker contains is mostly a combination of Linux Namespaces,
 Cgroups, and Seccomp BPF.
+
+#### Rkt
+
+[Rkt](https://coreos.com/rkt/) is a security-minded, standard-based container
+engine. It is similar to Docker, but Docker needs running a daemon whereas rkt
+can be launched from command-line with no daemon.
 
 #### NsJail / FireJail
 
