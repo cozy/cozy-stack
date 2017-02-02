@@ -83,10 +83,10 @@ func (d *DirDoc) Parent(c Context) (*DirDoc, error) {
 	return parent, nil
 }
 
-// SelfLink is used to generate a JSON-API link for the directory (part of
+// Links is used to generate a JSON-API link for the directory (part of
 // jsonapi.Object interface)
-func (d *DirDoc) SelfLink() string {
-	return "/files/" + d.DocID
+func (d *DirDoc) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/files/" + d.DocID}
 }
 
 // Relationships is used to generate the content relationship in JSON-API format

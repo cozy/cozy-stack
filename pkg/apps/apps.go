@@ -111,9 +111,11 @@ func (m *Manifest) SetID(id string) {}
 // interface
 func (m *Manifest) SetRev(rev string) { m.ManRev = rev }
 
-// SelfLink is used to generate a JSON-API link for the file - see
+// Links is used to generate a JSON-API link for the file - see
 // jsonapi.Object interface
-func (m *Manifest) SelfLink() string { return "/apps/" + m.Slug }
+func (m *Manifest) Liniks() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/apps/" + m.Slug}
+}
 
 // Relationships is used to generate the parent relationship in JSON-API format
 // - see jsonapi.Object interface

@@ -45,8 +45,10 @@ func (p *Permission) Relationships() jsonapi.RelationshipMap { return nil }
 // Included implements jsonapi.Doc
 func (p *Permission) Included() []jsonapi.Object { return nil }
 
-// SelfLink implements jsonapi.Doc
-func (p *Permission) SelfLink() string { return "/permissions/" + p.PID }
+// Links implements jsonapi.Doc
+func (p *Permission) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
+}
 
 // GetForApp retrieves the Permission doc for a given app
 func GetForApp(db couchdb.Database, slug string) (*Permission, error) {

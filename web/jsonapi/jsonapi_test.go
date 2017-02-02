@@ -40,8 +40,8 @@ func (f *Foo) SetRev(rev string) {
 	f.FRev = rev
 }
 
-func (f *Foo) SelfLink() string {
-	return "/foos/" + f.FID
+func (f *Foo) Links() *LinksList {
+	return &LinksList{Self: "/foos/" + f.FID}
 }
 
 func (f *Foo) Relationships() RelationshipMap {

@@ -91,10 +91,10 @@ func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
 	return parent, nil
 }
 
-// SelfLink is used to generate a JSON-API link for the file (part of
+// Links is used to generate a JSON-API link for the file (part of
 // jsonapi.Object interface)
-func (f *FileDoc) SelfLink() string {
-	return "/files/" + f.DocID
+func (f *FileDoc) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/files/" + f.DocID}
 }
 
 // Relationships is used to generate the parent relationship in JSON-API format

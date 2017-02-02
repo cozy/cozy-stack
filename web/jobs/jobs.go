@@ -46,8 +46,8 @@ func (j *apiJob) SetID(_ string)                         {}
 func (j *apiJob) SetRev(_ string)                        {}
 func (j *apiJob) Relationships() jsonapi.RelationshipMap { return nil }
 func (j *apiJob) Included() []jsonapi.Object             { return nil }
-func (j *apiJob) SelfLink() string {
-	return "/jobs/" + j.j.WorkerType + "/" + j.j.ID
+func (j *apiJob) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/jobs/" + j.j.WorkerType + "/" + j.j.ID}
 }
 func (j *apiJob) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.j)
@@ -60,8 +60,8 @@ func (q *apiQueue) SetID(_ string)                         {}
 func (q *apiQueue) SetRev(_ string)                        {}
 func (q *apiQueue) Relationships() jsonapi.RelationshipMap { return nil }
 func (q *apiQueue) Included() []jsonapi.Object             { return nil }
-func (q *apiQueue) SelfLink() string {
-	return "/jobs/queue/" + q.workerType
+func (q *apiQueue) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/jobs/queue/" + q.workerType}
 }
 
 func (t *apiTrigger) ID() string                             { return t.t.Infos().ID }
@@ -71,8 +71,8 @@ func (t *apiTrigger) SetID(_ string)                         {}
 func (t *apiTrigger) SetRev(_ string)                        {}
 func (t *apiTrigger) Relationships() jsonapi.RelationshipMap { return nil }
 func (t *apiTrigger) Included() []jsonapi.Object             { return nil }
-func (t *apiTrigger) SelfLink() string {
-	return "/jobs/triggers/" + t.ID()
+func (t *apiTrigger) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID()}
 }
 func (t *apiTrigger) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.t.Infos())
