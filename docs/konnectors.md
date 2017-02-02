@@ -91,6 +91,23 @@ They should have a `.node` extension.
 **Note**: not having a compiler on the server is not enough. Npm can install
 precompiled modules.
 
+#### vm/sandbox for Nodejs
+
+[vm2](https://github.com/patriksimek/vm2) is a sandbox that can run untrusted
+code with whitelisted Node's built-in modules.
+
+#### Mock net
+
+We can mock the net module of nodejs to add some restrictions on what it can
+do. For example, we can check that it does only http/https, and blacklist
+connection to localhost:6060. It is only effective if the konnector has no way
+to start a new node processus.
+
+#### Timeout
+
+If a konnector takes too long, after a timeout, it should be killed. It
+implies that the cozy-stacks supervises the konnectors.
+
 #### Chroot
 
 [Chroot](https://en.wikipedia.org/wiki/Chroot) is a UNIX syscall that makes an
@@ -105,29 +122,41 @@ nothing else. It's a nice way to give more isolation, but it means that we
 have to find a way to execute the konnectors: either run the cozy-stack as
 root, or have a daemon that launches the konnectors.
 
-#### Timeout
-
-If a konnector takes too long, after a timeout, it should be killed. It
-implies that the cozy-stacks supervises the konnectors.
-
-#### vm/sandbox for Nodejs
-
-[vm2](https://github.com/patriksimek/vm2) is a sandbox that can run untrusted
-code with whitelisted Node's built-in modules.
-
-#### Mock net
-
-We can mock the net module of nodejs to add some restrictions on what it can
-do. For example, we can check that it does only http/https, and blacklist
-connection to localhost:6060. It is only effective if the konnector has no way
-to start a new node processus.
-
-#### Ulimit
+#### Ulimit & Prlimit
 
 [ulimit](http://ss64.com/bash/ulimit.html) provides control over the resources
 available to the shell and to processes started by it, on systems that allow
 such control. It can be used to linit the number of processes (protection
 against fork bombs), or the memory that can be used.
+
+[prlimit](http://man7.org/linux/man-pages/man1/prlimit.1.html) can do the same
+for just one command (technically, for a new session, not the current one).
+
+#### Linux namespaces
+
+One feature Linux provides here is namespaces. There are a bunch of different
+kinds:
+
+- in a pid namespace you become PID 1 and then your children are other
+  processes. All the other programs are gone
+- in a networking namespace you can run programs on any port you want without
+  it conflicting with what’s already running
+- in a mount namespace you can mount and unmount filesystems without it
+  affecting the host filesystem. So you can have a totally different set of
+  devices mounted (usually less).
+
+It turns out that making namespaces is totally easy! You can just run a
+program called [unshare](http://man7.org/linux/man-pages/man1/unshare.1.html).
+
+Source: [What even is a container, by Julia
+Evans](https://jvns.ca/blog/2016/10/10/what-even-is-a-container/)
+
+#### Cgroups
+
+[cgroups](https://en.wikipedia.org/wiki/Cgroups) (abbreviated from control
+groups) is a Linux kernel feature that limits, accounts for, and isolates the
+resource usage (CPU, memory, disk I/O, network, etc.) of a collection of
+processes.
 
 #### Seccomp BPF
 
@@ -140,6 +169,17 @@ using a configurable policy implemented using Berkeley Packet Filter rules.
 to isolate nodejs apps in docker containers. A possibility would be to follow
 this path and isolate the konnectors inside docker. It's a real burden for
 administrators, so we will try to avoid it.
+
+Isolation in docker contains is mostly a combination of Linux Namespaces,
+Cgroups, and Seccomp BPF.
+
+#### NsJail / FireJail
+
+[NsJail](https://google.github.io/nsjail/) and
+[FireJail](https://firejail.wordpress.com/) are two tools that use Linux
+Namespaces and Seccomp BPF to reduce the risks to run untrusted applications
+on Linux. FireJail seems to be more suited for graphical apps, and NsJail for
+networking services.
 
 #### NaCl / ZeroVM
 
