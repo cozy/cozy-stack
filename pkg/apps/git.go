@@ -225,7 +225,7 @@ func resolveGithubURL(src *url.URL) (string, error) {
 func resolveManifestURL(src *url.URL) (string, error) {
 	srccopy, _ := url.Parse(src.String())
 	srccopy.Scheme = "http"
-	if srccopy.Path[len(srccopy.Path)-1] != '/' {
+	if srccopy.Path == "" || srccopy.Path[len(srccopy.Path)-1] != '/' {
 		srccopy.Path += "/"
 	}
 	srccopy.Path = srccopy.Path + ManifestFilename

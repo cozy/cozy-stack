@@ -2,10 +2,8 @@
 
 set -e
 
-[ -z "${COZY_PROXY_HOST}" ] && COZY_PROXY_HOST="cozy.local"
-[ -z "${COZY_PROXY_PORT}" ] && COZY_PROXY_PORT="8080"
-[ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="localhost"
-[ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8081"
+[ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="cozy.local"
+[ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8080"
 [ -z "${COZY_STACK_PASS}" ] && COZY_STACK_PASS="cozy"
 [ -z "${COUCHDB_PORT}" ] && COUCHDB_PORT="5984"
 [ -z "${COUCHDB_HOST}" ] && COUCHDB_HOST="localhost"
@@ -19,7 +17,7 @@ echo_err() {
 }
 
 real_path() {
-	[[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+	[[ "${1}" = /* ]] && echo "${1}" || echo "${PWD}/${1#./}"
 }
 
 usage() {
@@ -30,12 +28,6 @@ usage() {
 	echo -e "  -u try to update cozy-stack on start"
 	echo -e "  -h show this usage message"
 	echo -e "\nEnvironment variables"
-	echo -e "\n  COZY_PROXY_HOST"
-	echo -e "    specify the hostname or domain on which the proxy is listening"
-	echo -e "    to incoming requests. default: cozy.local"
-	echo -e "\n  COZY_PROXY_PORT"
-	echo -e "    specify the port on which the proxy is listening."
-	echo -e "    default: 8080."
 	echo -e "\n  COZY_STACK_PATH"
 	echo -e "    specify the path of the cozy-stack binary folder or the binary"
 	echo -e "    itself. default: \"\$GOPATH/bin\"."
@@ -56,25 +48,7 @@ usage() {
 	echo -e "    the script won't try to start couchdb."
 }
 
-if [ "${COZY_STACK_PORT}" = "${COZY_PROXY_PORT}" ]; then
-	echo_err "COZY_STACK_HOST and COZY_PROXY_PORT are equal"
-	exit 1
-fi
-
 do_start() {
-	if [ -z "${COZY_PROXY_PATH}" ]; then
-		COZY_PROXY_PATH="${GOPATH}/bin/caddy"
-		if [ ! -f "${COZY_PROXY_PATH}" ]; then
-			if [ -z `command -v go` ]; then
-				echo_err "executable \"go\" not found in \$PATH"
-				exit 1
-			fi
-			printf "installing http server (caddy)... "
-			go get "github.com/mholt/caddy/caddy"
-			echo "ok"
-		fi
-	fi
-
 	if [ -z "${COZY_STACK_PATH}" ]; then
 		COZY_STACK_PATH="${GOPATH}/bin/cozy-stack"
 		if [ ! -f "${COZY_STACK_PATH}" ]; then
@@ -101,15 +75,13 @@ do_start() {
 
 	trap "trap - SIGTERM && kill 2>&1 > /dev/null -- -${$}" SIGINT SIGTERM EXIT
 
-	check_not_running ":${COZY_PROXY_PORT}" "proxy"
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
-	do_start_proxy
 	check_hosts
 
 	echo "starting cozy-stack with ${vfsdir}..."
 
-	${COZY_STACK_PATH} serve \
+	${COZY_STACK_PATH} serve-appdir "${appdir}" \
 		--host "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
 		--couchdb-host "${COUCHDB_HOST}" \
@@ -118,12 +90,11 @@ do_start() {
 
 	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
 
-	if [ "${COZY_PROXY_PORT}" = "80" ]; then
-		cozy_dev_addr="${COZY_PROXY_HOST}"
+	if [ "${COZY_STACK_PORT}" = "80" ]; then
+		cozy_dev_addr="${COZY_STACK_HOST}"
 	else
-		cozy_dev_addr="${COZY_PROXY_HOST}:${COZY_PROXY_PORT}"
+		cozy_dev_addr="${COZY_STACK_HOST}:${COZY_STACK_PORT}"
 	fi
-
 
 	echo ""
 	do_create_instances
@@ -163,7 +134,7 @@ do_check_couchdb() {
 }
 
 do_create_instances() {
-	for host in "localhost:${COZY_PROXY_PORT}" "${cozy_dev_addr}"
+	for host in "${cozy_dev_addr}"
 	do
 		printf "creating instance ${host}... "
 		set +e
@@ -198,33 +169,6 @@ do_create_instances() {
 	done
 }
 
-do_start_proxy() {
-	site_root=$(real_path ${appdir})
-
-	caddy_file="\n\
-localhost, ${COZY_PROXY_HOST} {                   \n\
-  proxy / ${COZY_STACK_HOST}:${COZY_STACK_PORT} { \n\
-    transparent                                   \n\
-  }                                               \n\
-  tls off                                         \n\
-}                                                 \n\
-app.${COZY_PROXY_HOST} {                          \n\
-  root ${site_root}                               \n\
-  header / Cache-Control \"no-store\"             \n\
-  tls off                                         \n\
-  browse                                          \n\
-}                                                 \n\
-"
-
-	printf "starting caddy on \"${site_root}\"... "
-	echo -e ${caddy_file} | ${COZY_PROXY_PATH} \
-		-quiet \
-		-conf stdin \
-		-port ${COZY_PROXY_PORT} &
-	wait_for "${COZY_STACK_HOST}:${COZY_PROXY_PORT}" "caddy"
-	echo "ok"
-}
-
 wait_for() {
 	i="0"
 	while ! curl -s --max-time 0.1 -XGET ${1} > /dev/null; do
@@ -248,12 +192,12 @@ check_not_running() {
 }
 
 check_hosts() {
-	devhost=$(cat /etc/hosts | grep ${COZY_PROXY_HOST} || echo "")
-	apphost=$(cat /etc/hosts | grep app.${COZY_PROXY_HOST} || echo "")
+	devhost=$(cat /etc/hosts | grep ${COZY_STACK_HOST} || echo "")
+	apphost=$(cat /etc/hosts | grep app.${COZY_STACK_HOST} || echo "")
 	if [ -z "${devhost}" ] || [ -z "${apphost}" ]; then
 		echo -e ""
 		echo -e "You should have the following line in your /etc/hosts file:"
-		echo -e "127.0.0.1\t${COZY_PROXY_HOST} app.${COZY_PROXY_HOST}"
+		echo -e "127.0.0.1\t${COZY_STACK_HOST} app.${COZY_STACK_HOST}"
 		echo -e ""
 	fi
 }
