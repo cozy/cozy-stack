@@ -123,3 +123,26 @@ func Bind(req *http.Request, attrs interface{}) (*ObjectMarshalling, error) {
 	}
 	return obj, nil
 }
+
+// BindRelations extracts a Relationships request ( a list of ResourceIdentifier)
+func BindRelations(req *http.Request) ([]ResourceIdentifier, error) {
+	var out []ResourceIdentifier
+	decoder := json.NewDecoder(req.Body)
+	var doc *Document
+	if err := decoder.Decode(&doc); err != nil {
+		return nil, err
+	}
+	if doc.Data == nil {
+		return nil, BadJSON()
+	}
+	// Attempt Unmarshaling either as ResourceIdentifier or []ResourceIdentifier
+	if err := json.Unmarshal(*doc.Data, &out); err != nil {
+		var ri ResourceIdentifier
+		if err = json.Unmarshal(*doc.Data, &ri); err != nil {
+			return nil, err
+		}
+		out = []ResourceIdentifier{ri}
+		return out, nil
+	}
+	return out, nil
+}

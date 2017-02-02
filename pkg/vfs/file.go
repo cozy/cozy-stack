@@ -32,7 +32,7 @@ type FileDoc struct {
 	// File name
 	Name string `json:"name"`
 	// Parent directory identifier
-	DirID       string `json:"dir_id"`
+	DirID       string `json:"dir_id,omitempty"`
 	RestorePath string `json:"restore_path,omitempty"`
 
 	CreatedAt time.Time `json:"created_at"`
@@ -44,6 +44,8 @@ type FileDoc struct {
 	Class      string   `json:"class"`
 	Executable bool     `json:"executable"`
 	Tags       []string `json:"tags"`
+
+	ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
 
 	parent *DirDoc
 }
@@ -97,25 +99,56 @@ func (f *FileDoc) SelfLink() string {
 	return "/files/" + f.DocID
 }
 
+func (f *FileDoc) parentRelationShip() jsonapi.Relationship {
+	return jsonapi.Relationship{
+		Links: &jsonapi.LinksList{
+			Related: "/files/" + f.DirID,
+		},
+		Data: jsonapi.ResourceIdentifier{
+			ID:   f.DirID,
+			Type: consts.Files,
+		},
+	}
+}
+
+func (f *FileDoc) referencedByRelationShip() jsonapi.Relationship {
+	return jsonapi.Relationship{
+		Links: &jsonapi.LinksList{
+			Self: "/files/" + f.ID() + "/relationships/references",
+		},
+		Data: f.ReferencedBy,
+	}
+}
+
 // Relationships is used to generate the parent relationship in JSON-API format
 // (part of the jsonapi.Object interface)
 func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
 	return jsonapi.RelationshipMap{
-		"parent": jsonapi.Relationship{
-			Links: &jsonapi.LinksList{
-				Related: "/files/" + f.DirID,
-			},
-			Data: jsonapi.ResourceIdentifier{
-				ID:   f.DirID,
-				Type: consts.Files,
-			},
-		},
+		"parent":        f.parentRelationShip(),
+		"referenced_by": f.referencedByRelationShip(),
+	}
+}
+
+// HideFields returns a jsonapi.Object which serialize like the original
+// file but without the ReferencedBy field
+func (f *FileDoc) HideFields() jsonapi.Object {
+	return &struct {
+		ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
+		*FileDoc
+	}{
+		FileDoc:      f,
+		ReferencedBy: nil,
 	}
 }
 
 // Included is part of the jsonapi.Object interface
 func (f *FileDoc) Included() []jsonapi.Object {
 	return []jsonapi.Object{}
+}
+
+// AddReferencedBy adds referenced_by to the file
+func (f *FileDoc) AddReferencedBy(ri ...jsonapi.ResourceIdentifier) {
+	f.ReferencedBy = append(f.ReferencedBy, ri...)
 }
 
 // NewFileDoc is the FileDoc constructor. The given name is validated.
