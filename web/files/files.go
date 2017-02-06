@@ -630,7 +630,7 @@ func checkIfMatch(c echo.Context, rev string) error {
 		wantedRev = revQuery
 	}
 	if wantedRev != "" && rev != wantedRev {
-		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match."))
+		return jsonapi.PreconditionFailed("If-Match", fmt.Errorf("Revision does not match"))
 	}
 	return nil
 }

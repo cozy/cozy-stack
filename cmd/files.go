@@ -522,7 +522,7 @@ func getInstance(domain string) (*instance.Instance, error) {
 	c, err := instance.Get(domain)
 	if err != nil {
 		if err == instance.ErrNotFound {
-			err = fmt.Errorf("Could not find the cozy instance. Please use `instances add` command.")
+			err = fmt.Errorf("Could not find the cozy instance, please use `instances add` command")
 		}
 		return nil, err
 	}

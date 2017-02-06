@@ -49,7 +49,7 @@ func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 			}
 
 			if needUpdate {
-				return errors.New("Passphrase hash needs update and should be regenerated !")
+				return errors.New("Passphrase hash needs update and should be regenerated")
 			}
 
 			return next(c)
