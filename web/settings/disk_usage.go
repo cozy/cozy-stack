@@ -25,7 +25,9 @@ func (j *apiDiskUsage) SetID(_ string)                         {}
 func (j *apiDiskUsage) SetRev(_ string)                        {}
 func (j *apiDiskUsage) Relationships() jsonapi.RelationshipMap { return nil }
 func (j *apiDiskUsage) Included() []jsonapi.Object             { return nil }
-func (j *apiDiskUsage) SelfLink() string                       { return "/settings/disk-usage" }
+func (j *apiDiskUsage) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/settings/disk-usage"}
+}
 
 // Settings objects permissions are only on ID
 func (j *apiDiskUsage) Valid(k, f string) bool { return false }

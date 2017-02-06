@@ -26,7 +26,9 @@ func (i *apiInstance) SetID(id string)                        { i.doc.SetID(id) 
 func (i *apiInstance) SetRev(rev string)                      { i.doc.SetRev(rev) }
 func (i *apiInstance) Relationships() jsonapi.RelationshipMap { return nil }
 func (i *apiInstance) Included() []jsonapi.Object             { return nil }
-func (i *apiInstance) SelfLink() string                       { return "/settings/instance" }
+func (i *apiInstance) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/settings/instance"}
+}
 func (i *apiInstance) MarshalJSON() ([]byte, error) {
 	return json.Marshal(i.doc)
 }

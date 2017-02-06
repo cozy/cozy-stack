@@ -91,7 +91,7 @@ type Logger struct {
 func FsURL() *url.URL {
 	u, err := url.Parse(config.Fs.URL)
 	if err != nil {
-		panic(fmt.Errorf("Malformed configuration fs url %s.", config.Fs.URL))
+		panic(fmt.Errorf("malformed configuration fs url %s", config.Fs.URL))
 	}
 	return u
 }
@@ -212,14 +212,14 @@ func UseTestFile() {
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+			panic(fmt.Errorf("fatal error test config file: %s", err))
 		}
 		UseTestYAML(defaultTestConfig)
 		return
 	}
 
 	if err := UseViper(v); err != nil {
-		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+		panic(fmt.Errorf("fatal error test config file: %s", err))
 	}
 
 	return
@@ -232,11 +232,11 @@ func UseTestYAML(yaml string) {
 	v.SetConfigType("yaml")
 
 	if err := v.ReadConfig(strings.NewReader(yaml)); err != nil {
-		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+		panic(fmt.Errorf("fatal error test config file: %s", err))
 	}
 
 	if err := UseViper(v); err != nil {
-		panic(fmt.Errorf("Fatal error test config file: %s\n", err))
+		panic(fmt.Errorf("fatal error test config file: %s", err))
 	}
 
 	return

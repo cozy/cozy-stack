@@ -115,7 +115,7 @@ func Configure() error {
 		}
 
 		if cfgFile != "" {
-			return fmt.Errorf("Could not locate config file: %s\n", cfgFile)
+			return fmt.Errorf("Could not locate config file: %s", cfgFile)
 		}
 	}
 

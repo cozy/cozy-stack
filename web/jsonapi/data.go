@@ -9,7 +9,7 @@ import (
 // Object is an interface to serialize something to a JSON-API Object
 type Object interface {
 	couchdb.Doc
-	SelfLink() string
+	Links() *LinksList
 	Relationships() RelationshipMap
 	Included() []Object
 }
@@ -27,6 +27,7 @@ type LinksList struct {
 	Related string `json:"related,omitempty"`
 	Prev    string `json:"prev,omitempty"`
 	Next    string `json:"next,omitempty"`
+	Icon    string `json:"icon,omitempty"`
 }
 
 // ResourceIdentifier is an object, used in relationships, to identify an
@@ -68,7 +69,7 @@ type ObjectMarshalling struct {
 	ID            string           `json:"id"`
 	Attributes    *json.RawMessage `json:"attributes"`
 	Meta          Meta             `json:"meta"`
-	Links         LinksList        `json:"links,omitempty"`
+	Links         *LinksList       `json:"links,omitempty"`
 	Relationships RelationshipMap  `json:"relationships,omitempty"`
 }
 
@@ -87,7 +88,7 @@ func (o *ObjectMarshalling) GetRelationship(name string) (*Relationship, bool) {
 func MarshalObject(o Object) (json.RawMessage, error) {
 	id := o.ID()
 	rev := o.Rev()
-	self := o.SelfLink()
+	links := o.Links()
 	rels := o.Relationships()
 
 	o.SetID("")
@@ -107,7 +108,7 @@ func MarshalObject(o Object) (json.RawMessage, error) {
 		ID:            id,
 		Attributes:    (*json.RawMessage)(&b),
 		Meta:          Meta{Rev: rev},
-		Links:         LinksList{Self: self},
+		Links:         links,
 		Relationships: rels,
 	}
 	return json.Marshal(data)

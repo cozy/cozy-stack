@@ -92,6 +92,7 @@ func ListHandler(c echo.Context) error {
 
 	objs := make([]jsonapi.Object, len(docs))
 	for i, d := range docs {
+		d.Instance = instance
 		objs[i] = jsonapi.Object(d)
 	}
 

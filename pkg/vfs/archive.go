@@ -92,19 +92,19 @@ func (a *Archive) Serve(c Context, w http.ResponseWriter) error {
 			}
 			name, err = filepath.Rel(base, name)
 			if err != nil {
-				return fmt.Errorf("Invalid filepath <%s>: %s\n", name, err)
+				return fmt.Errorf("Invalid filepath <%s>: %s", name, err)
 			}
 			ze, err := zw.Create(a.Name + "/" + name)
 			if err != nil {
-				return fmt.Errorf("Can't create zip entry <%s>: %s\n", name, err)
+				return fmt.Errorf("Can't create zip entry <%s>: %s", name, err)
 			}
 			path, err := file.Path(c)
 			if err != nil {
-				return fmt.Errorf("Can't find file <%s>: %s\n", name, err)
+				return fmt.Errorf("Can't find file <%s>: %s", name, err)
 			}
 			f, err := fs.Open(path)
 			if err != nil {
-				return fmt.Errorf("Can't open file <%s>: %s\n", name, err)
+				return fmt.Errorf("Can't open file <%s>: %s", name, err)
 			}
 			defer f.Close()
 			_, err = io.Copy(ze, f)
@@ -136,5 +136,11 @@ func (a *Archive) Relationships() jsonapi.RelationshipMap { return nil }
 // Included makes Archive a jsonapi.Object
 func (a *Archive) Included() []jsonapi.Object { return nil }
 
-// SelfLink makes Archive a jsonapi.Object
-func (a *Archive) SelfLink() string { return "/files/archive/" + a.Secret }
+// Links makes Archive a jsonapi.Object
+func (a *Archive) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/files/archive/" + a.Secret}
+}
+
+var (
+	_ jsonapi.Object = &Archive{}
+)

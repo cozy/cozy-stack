@@ -102,9 +102,9 @@ func (i *Instance) Rev() string { return i.DocRev }
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
 
-// SelfLink is used to generate a JSON-API link for the instance
-func (i *Instance) SelfLink() string {
-	return "/instances/" + i.DocID
+// Links is used to generate a JSON-API link for the instance
+func (i *Instance) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/instances/" + i.DocID}
 }
 
 // Relationships is used to generate the content relationship in JSON-API format

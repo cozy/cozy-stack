@@ -90,6 +90,8 @@ type Manifest struct {
 	License     string           `json:"license"`
 	Permissions *permissions.Set `json:"permissions"`
 	Routes      Routes           `json:"routes"`
+
+	Instance *instance.Instance `json:"-"` // Used for JSON-API links
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
@@ -111,9 +113,19 @@ func (m *Manifest) SetID(id string) {}
 // interface
 func (m *Manifest) SetRev(rev string) { m.ManRev = rev }
 
-// SelfLink is used to generate a JSON-API link for the file - see
+// Links is used to generate a JSON-API link for the file - see
 // jsonapi.Object interface
-func (m *Manifest) SelfLink() string { return "/apps/" + m.Slug }
+func (m *Manifest) Links() *jsonapi.LinksList {
+	links := jsonapi.LinksList{
+		Self: "/apps/" + m.Slug,
+	}
+	if m.State == Ready && m.Instance != nil {
+		sub := m.Instance.SubDomain(m.Slug)
+		links.Related = sub
+		links.Icon = sub + m.Icon
+	}
+	return &links
+}
 
 // Relationships is used to generate the parent relationship in JSON-API format
 // - see jsonapi.Object interface

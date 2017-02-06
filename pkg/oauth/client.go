@@ -63,9 +63,11 @@ func (c *Client) SetID(id string) { c.CouchID = id }
 // SetRev changes the client revision
 func (c *Client) SetRev(rev string) { c.CouchRev = rev }
 
-// SelfLink is used to generate a JSON-API link for the client - see
+// Links is used to generate a JSON-API link for the client - see
 // jsonapi.Object interface
-func (c *Client) SelfLink() string { return "/settings/clients/" + c.ID() }
+func (c *Client) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/settings/clients/" + c.ID()}
+}
 
 // Relationships is used to generate the parent relationship in JSON-API format
 // - see jsonapi.Object interface
