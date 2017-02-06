@@ -30,6 +30,13 @@ const TagSeparator = ","
 // recognized
 var ErrDocTypeInvalid = errors.New("Invalid document type")
 
+func hideFields(doc jsonapi.Object) jsonapi.Object {
+	if f, ok := doc.(*vfs.FileDoc); ok {
+		return f.HideFields()
+	}
+	return doc
+}
+
 // CreationHandler handle all POST requests on /files/:dir-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
@@ -51,6 +58,7 @@ func CreationHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
+	hideFields(doc)
 	return jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
@@ -126,6 +134,8 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return wrapVfsError(err)
 	}
 
+	newdoc.ReferencedBy = olddoc.ReferencedBy
+
 	if err = checkIfMatch(c, olddoc.Rev()); err != nil {
 		return wrapVfsError(err)
 	}
@@ -143,7 +153,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 			err = wrapVfsError(err)
 			return
 		}
-		err = jsonapi.Data(c, http.StatusOK, newdoc, nil)
+		err = jsonapi.Data(c, http.StatusOK, hideFields(newdoc), nil)
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
@@ -231,6 +241,7 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 		return wrapVfsError(err)
 	}
 
+	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -253,6 +264,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 		data = file
 	}
 
+	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -275,6 +287,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 		data = file
 	}
 
+	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -436,6 +449,7 @@ func TrashHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
+	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -475,6 +489,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
+	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -539,6 +554,8 @@ func Routes(router *echo.Group) {
 
 	router.POST("/downloads", FileDownloadCreateHandler)
 	router.GET("/downloads/:secret/:fake-name", FileDownloadHandler)
+
+	router.POST("/:file-id/relationships/referenced_by", AddReferencedHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
 	router.DELETE("/trash", ClearTrashHandler)

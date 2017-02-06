@@ -27,7 +27,7 @@ const Type = "io.cozy.events"
 const ID = "4521C325F6478E45"
 const ExpectedDBName = "example-com%2Fio-cozy-events"
 
-var testInstance = &instance.Instance{Domain: "example.com"}
+var testInstance *instance.Instance
 
 var ts *httptest.Server
 
@@ -45,7 +45,7 @@ type stackUpdateResponse struct {
 	Data    couchdb.JSONDoc `json:"data"`
 }
 
-func jsonReader(data *map[string]interface{}) io.Reader {
+func jsonReader(data interface{}) io.Reader {
 	bs, _ := json.Marshal(&data)
 	return bytes.NewReader(bs)
 }
@@ -105,7 +105,6 @@ func TestMain(m *testing.M) {
 	}
 
 	instance.Destroy(Host)
-
 	inst, err := instance.Create(&instance.Options{
 		Domain: Host,
 		Locale: "en",
@@ -114,6 +113,7 @@ func TestMain(m *testing.M) {
 		fmt.Println("Could not create test instance.", err)
 		os.Exit(1)
 	}
+	testInstance = inst
 
 	handler := echo.New()
 	handler.HTTPErrorHandler = errors.ErrorHandler
