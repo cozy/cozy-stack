@@ -218,7 +218,12 @@ and ZeroVM has some severe limitations, so, it won't be used.
   konnector? Same question for package.json
 - [ ] What API to list the konnectors for My Accounts?
 - [ ] What workflow for developing a konnector?
+- [ ] How to test konnectors?
 - [ ] How are manager the locales?
+- [ ] Which version of nodejs?
+- [ ] Do you keep coffeescript? Or move every konnector to ES2017?
+  - 28 konnectors in coffee
+  - 22 konnectors in JS
 - [ ] What about weboob?
 - [ ] What roadmap for transforming the konnectors-v2 in konnectors-v3?
 - [ ] What format for the konnectors manifest?
@@ -230,9 +235,11 @@ and ZeroVM has some severe limitations, so, it won't be used.
   goal is to allow a client-side to have a permission on this profile and be
   able to read all the data fetched by a given konnector (or is tied to an
   account)?
-- [ ] Analyze the konnectors node_modules
+- [ ] How are logged the data exported/synchronized by a "push" konnector?
+- [X] Analyze the konnectors node_modules
     - no compiled modules currently
-    - xx modules that takes xxx MB
+    - 28 dependencies that install 65 MB for 271 modules in production
+    - 71 dependencies that install 611 MB for 858 modules with dev dependencies
 - [ ] How are persisted the accounts?
 - [ ] How is executed a konnector? In particular, how the credentials are
   given to the konnector?
