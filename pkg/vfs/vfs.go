@@ -32,11 +32,22 @@ var Indexes = []mango.Index{
 // DiskUsageView is the name of the view used for computing the disk usage
 const DiskUsageView = "disk-usage"
 
+// FilesReferencedByView is the name of the view used for fetching files
+// referenced by a given document
+const FilesReferencedByView = "referenced-by"
+
 // Views is the required couchdb views for computing the disk usage
 var Views = couchdb.Views{
 	DiskUsageView: couchdb.View{
 		Map:    "function(doc) { if (doc.type === 'file') emit(doc._id, +doc.size); }",
 		Reduce: "_sum",
+	},
+	FilesReferencedByView: couchdb.View{
+		Map: "function(doc){" +
+			" if(doc.type==='file' && isArray(doc.referenced_by)) " +
+			" for(var i=0; i<doc.referenced_by.length; i++) " +
+			" emit([doc.referenced_by[i].type, doc.referenced_by[i].id])" +
+			"}",
 	},
 }
 

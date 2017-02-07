@@ -77,6 +77,22 @@ func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) e
 	return json.NewEncoder(resp).Encode(doc)
 }
 
+// DataRelations can be called to send a Relations page,
+// a list of ResourceIdentifier
+func DataRelations(c echo.Context, statusCode int, refs []ResourceIdentifier) error {
+	data, err := json.Marshal(refs)
+	if err != nil {
+		return InternalServerError(err)
+	}
+	doc := Document{
+		Data: (*json.RawMessage)(&data),
+	}
+	resp := c.Response()
+	resp.Header().Set("Content-Type", ContentType)
+	resp.WriteHeader(statusCode)
+	return json.NewEncoder(resp).Encode(doc)
+}
+
 // DataError can be called to send an error answer with a JSON-API document
 // containing a single value error.
 func DataError(c echo.Context, err *Error) error {
