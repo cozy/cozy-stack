@@ -79,7 +79,7 @@ func checkExists(filepath string) error {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("Directory %s does should contain a %s file",
+		return fmt.Errorf("Directory %s should contain a %s file",
 			path.Dir(filepath), path.Base(filepath))
 	}
 	return nil
