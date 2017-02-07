@@ -344,14 +344,25 @@ func Remove(c Context, name string) error {
 // DiskUsage computes the total size of the files
 func DiskUsage(c Context) (int64, error) {
 	var doc couchdb.ViewResponse
-	err := couchdb.ExecView(c, consts.Files, DiskUsageView, &doc)
+	err := couchdb.ExecView(c, &couchdb.ViewRequest{
+		Doctype:  consts.Files,
+		ViewName: DiskUsageView,
+		Reduce:   true,
+	}, &doc)
 	if err != nil {
 		return 0, err
 	}
 	if len(doc.Rows) == 0 {
 		return 0, nil
 	}
-	return doc.Rows[0].Value, nil
+
+	// Reduce of _count should give us a number value
+	f64, ok := doc.Rows[0].Value.(float64)
+	if !ok {
+		return 0, ErrWrongCouchdbState
+	}
+
+	return int64(f64), nil
 }
 
 // WalkFn type works like filepath.WalkFn type function. It receives
