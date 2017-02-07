@@ -625,10 +625,9 @@ type ViewRequest struct {
 	Doctype  string `json:"-" url:"-"`
 	ViewName string `json:"-" url:"-"`
 
-	Key          interface{} `json:"key,omitempty" url:"key,omitempty"`
-	StartKey     interface{} `json:"start_key,omitempty" url:"start_key,omitempty"`
-	EndKey       interface{} `json:"end_key,omitempty" url:"end_key,omitempty"`
-	InclusiveEnd bool        `json:"inclusive_end,omitempty" url:"inclusive_end,omitempty"`
+	Key      interface{} `json:"key,omitempty" url:"key,omitempty"`
+	StartKey interface{} `json:"start_key,omitempty" url:"start_key,omitempty"`
+	EndKey   interface{} `json:"end_key,omitempty" url:"end_key,omitempty"`
 
 	// Keys cannot be used in url mode
 	Keys []interface{} `json:"keys,omitempty" url:"-"`
@@ -637,6 +636,8 @@ type ViewRequest struct {
 	Skip        int  `json:"skip,omitempty" url:"skip,omitempty"`
 	Descending  bool `json:"descending,omitempty" url:"descending,omitempty"`
 	IncludeDocs bool `json:"include_docs,omitempty" url:"include_docs,omitempty"`
+
+	InclusiveEnd bool `json:"inclusive_end,omitempty" url:"inclusive_end,omitempty"`
 
 	Reduce     bool `json:"reduce" url:"reduce"`
 	GroupLevel int  `json:"group_level,omitempty" url:"group_level,omitempty"`
