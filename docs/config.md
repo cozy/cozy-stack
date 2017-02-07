@@ -27,7 +27,7 @@ This example's values represent the default values of the configuration. The
 equivalent cli flag are also filled in.
 
 
-## Administration secrect
+## Administration secret
 
 To access to the administration API (the `/admin/*` routes), a secret passphrase should be stored in a `cozy-admin-passphrase`. This file should be in one of the configuration directories, along with the main config file.
 
