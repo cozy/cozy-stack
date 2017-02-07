@@ -15,9 +15,9 @@ url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.0.8/dist/cozy-c
 sha256  e33de014eb3fa35b5b14921b98b734dbc8db7f8052d0a42be306fbe30507cd66
 
 name    ./js/cozy-bar.js
-url     https://raw.githubusercontent.com/cozy/cozy-bar/3.0.0-beta3/dist/cozy-bar.min.js
-sha256  a8a1fa9f9e1a18ae7e1f23cbc66d45c4f8a54858ae8a385314291768b50eaa7e
+url     https://raw.githubusercontent.com/cozy/cozy-bar/3.0.0-beta4/dist/cozy-bar.min.js
+sha256  1a32d594b44fe32acb585649fb4765a61380be6b2b66d36a153fa86663f988f5
 
-# name    ./css/cozy-bar.css
-# url     https://raw.githubusercontent.com/cozy/cozy-bar/3.0.0-beta3/dist/cozy-bar.min.css
-# sha256  a8a1fa9f9e1a18ae7e1f23cbc66d45c4f8a54858ae8a385314291768b50eaa7e
+name    ./css/cozy-bar.css
+url     https://raw.githubusercontent.com/cozy/cozy-bar/3.0.0-beta4/dist/cozy-bar.min.css
+sha256  7af0d9aefff6e073c2aa133e4cfa95d3bbb2eaa0e6a4d8ac195d8ecf1bd38247
