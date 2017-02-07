@@ -33,6 +33,9 @@ To access to the administration API (the `/admin/*` routes), a secret passphrase
 
 The passphrase is stored in a salted-hashed representation using scrypt. To generate this file, you can use the `cozy-stack config passwd [config directory]` command. This command will ask you for a passphrase and will create the `cozy-admin-passphrase` in the specified directory.
 
+You can use the `COZY_ADMIN_PASSWORD` env variable if you do not want to type
+the passphrase each time you call `cozy-stack`.
+
 ### Example
 
 ```sh
