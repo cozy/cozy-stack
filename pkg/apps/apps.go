@@ -121,8 +121,9 @@ func (m *Manifest) Links() *jsonapi.LinksList {
 	}
 	if m.State == Ready && m.Instance != nil {
 		sub := m.Instance.SubDomain(m.Slug)
-		links.Related = sub
-		links.Icon = sub + m.Icon
+		links.Related = sub.String()
+		sub.Path = m.Icon
+		links.Icon = sub.String()
 	}
 	return &links
 }
