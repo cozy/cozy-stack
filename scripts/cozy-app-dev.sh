@@ -8,7 +8,7 @@ set -e
 [ -z "${COUCHDB_PORT}" ] && COUCHDB_PORT="5984"
 [ -z "${COUCHDB_HOST}" ] && COUCHDB_HOST="localhost"
 
-if [ -d ${COZY_STACK_PATH} ] && [ -f ${COZY_STACK_PATH}/cozy-stack ]; then
+if [ -d "${COZY_STACK_PATH}" ] && [ -f "${COZY_STACK_PATH}/cozy-stack" ]; then
 	COZY_STACK_PATH="${COZY_STACK_PATH}/cozy-stack"
 fi
 
@@ -52,7 +52,7 @@ do_start() {
 	if [ -z "${COZY_STACK_PATH}" ]; then
 		COZY_STACK_PATH="${GOPATH}/bin/cozy-stack"
 		if [ ! -f "${COZY_STACK_PATH}" ]; then
-			if [ -z `command -v go` ]; then
+			if [ -z "$(command -v go)" ]; then
 				echo_err "executable \"go\" not found in \$PATH"
 				exit 1
 			fi
@@ -111,7 +111,7 @@ do_check_couchdb() {
 	wait_for "${couchdb_addr}" "couchdb"
 	echo "ok"
 
-	printf "checking couchdb on ${couchdb_addr}... "
+	printf "checking couchdb on %s... " "${couchdb_addr}"
 	couch_test=$(curl -s -XGET "${couchdb_addr}" || echo "")
 	couch_vers=$(grep "\"version\":\s*\"2" <<< "${couch_test}" || echo "")
 
@@ -134,9 +134,9 @@ do_check_couchdb() {
 }
 
 do_create_instances() {
-	for host in "${cozy_dev_addr}"
+	for host in "${cozy_dev_addr}" "localhost:${COZY_STACK_PORT}"
 	do
-		printf "creating instance ${host}... "
+		printf "creating instance %s... " "${host}"
 		set +e
 		add_instance_val=$(
 			${COZY_STACK_PATH} instances add --dev="true" "${host}" \
@@ -160,7 +160,7 @@ do_create_instances() {
 		fi
 
 		if [ -n "${COZY_STACK_PASS}" ] && [ -n "${reg_token}" ]; then
-			printf "registering using passphrase ${COZY_STACK_PASS}... "
+			printf "registering using passphrase %s... " "${COZY_STACK_PASS}"
 			curl --fail -X POST -H 'Content-Type: application/json' \
 				"http://${host}/settings/passphrase" \
 				-d "{\"register_token\":\"${reg_token}\",\"passphrase\":\"${COZY_STACK_PASS}\"}"
@@ -171,7 +171,7 @@ do_create_instances() {
 
 wait_for() {
 	i="0"
-	while ! curl -s --max-time 0.1 -XGET ${1} > /dev/null; do
+	while ! LC_NUMERIC=C curl -s --max-time 0.1 -XGET "${1}" > /dev/null; do
 		sleep 0.1
 		i=$((i+1))
 		if [ "${i}" -gt "50" ]; then
@@ -182,8 +182,8 @@ wait_for() {
 }
 
 check_not_running() {
-	printf "checking ${2} on ${1}... "
-	if curl -s --max-time 1 -XGET ${1} > /dev/null; then
+	printf "checking %s on %s... " "${2}" "${1}"
+	if curl -s --max-time 1 -XGET "${1}" > /dev/null; then
 		printf "\n"
 		echo_err "${2} is already running on ${1}"
 		exit 1
@@ -192,8 +192,8 @@ check_not_running() {
 }
 
 check_hosts() {
-	devhost=$(cat /etc/hosts | grep ${COZY_STACK_HOST} || echo "")
-	apphost=$(cat /etc/hosts | grep app.${COZY_STACK_HOST} || echo "")
+	devhost=$(grep ${COZY_STACK_HOST} /etc/hosts || echo "")
+	apphost=$(grep app.${COZY_STACK_HOST} /etc/hosts || echo "")
 	if [ -z "${devhost}" ] || [ -z "${apphost}" ]; then
 		echo -e ""
 		echo -e "You should have the following line in your /etc/hosts file:"
@@ -241,7 +241,7 @@ if [ -z "${appdir}" ]; then
 	exit 1
 fi
 
-if [ ! -d ${appdir} ]; then
+if [ ! -d "${appdir}" ]; then
 	echo_err "Application directory ${1} does not exit"
 	exit 1
 fi
