@@ -25,11 +25,11 @@ func TestSubdomain(t *testing.T) {
 
 	cfg.Subdomains = config.NestedSubdomains
 	u := instance.SubDomain("calendar")
-	assert.Equal(t, "https://calendar.foo.example.com/", u)
+	assert.Equal(t, "https://calendar.foo.example.com/", u.String())
 
 	cfg.Subdomains = config.FlatSubdomains
 	u = instance.SubDomain("calendar")
-	assert.Equal(t, "https://foo-calendar.example.com/", u)
+	assert.Equal(t, "https://foo-calendar.example.com/", u.String())
 }
 
 func TestGetInstanceNoDB(t *testing.T) {

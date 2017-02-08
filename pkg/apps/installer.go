@@ -207,15 +207,7 @@ func (i *Installer) ReadManifest(state State, man *Manifest) error {
 	man.Slug = i.slug
 	man.Source = i.src.String()
 	man.State = state
-
-	if man.Routes == nil {
-		man.Routes = make(Routes)
-		man.Routes["/"] = Route{
-			Folder: "/",
-			Index:  "index.html",
-			Public: false,
-		}
-	}
+	man.CreateDefaultRoute()
 
 	return nil
 }

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -32,14 +33,33 @@ func RandomString(n int) string {
 // FileExists returns whether or not the file exists on the current file
 // system.
 func FileExists(name string) (bool, error) {
-	_, err := os.Stat(name)
-	if err == nil {
-		return true, nil
+	infos, err := os.Stat(name)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
 	}
-	if os.IsNotExist(err) {
-		return false, nil
+	if infos.IsDir() {
+		return false, fmt.Errorf("Path %s is a directory", name)
 	}
-	return false, err
+	return true, nil
+}
+
+// DirExists returns whether or not the directory exists on the current file
+// system.
+func DirExists(name string) (bool, error) {
+	infos, err := os.Stat(name)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	if !infos.IsDir() {
+		return false, fmt.Errorf("Path %s is not a directory", name)
+	}
+	return true, nil
 }
 
 // UserHomeDir returns the user's home directory

@@ -121,8 +121,9 @@ func (m *Manifest) Links() *jsonapi.LinksList {
 	}
 	if m.State == Ready && m.Instance != nil {
 		sub := m.Instance.SubDomain(m.Slug)
-		links.Related = sub
-		links.Icon = sub + m.Icon
+		links.Related = sub.String()
+		sub.Path = m.Icon
+		links.Icon = sub.String()
 	}
 	return &links
 }
@@ -159,6 +160,18 @@ func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 		return nil, err
 	}
 	return man, nil
+}
+
+// CreateDefaultRoute creates a default route if the manifest has no routes
+func (m *Manifest) CreateDefaultRoute() {
+	if m.Routes == nil {
+		m.Routes = make(Routes)
+		m.Routes["/"] = Route{
+			Folder: "/",
+			Index:  "index.html",
+			Public: false,
+		}
+	}
 }
 
 // FindRoute takes a path, returns the route which matches the best,

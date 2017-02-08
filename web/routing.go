@@ -103,6 +103,8 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	secure := middlewares.Secure(&middlewares.SecureConfig{
 		HSTSMaxAge:    hstsMaxAge,
 		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
+		CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
+		CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
 		CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcParent},
 		XFrameOptions: middlewares.XFrameDeny,
 	})

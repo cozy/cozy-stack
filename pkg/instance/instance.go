@@ -129,6 +129,12 @@ func (s *instanceSettings) DocType() string { return consts.Settings }
 func (s *instanceSettings) SetID(_ string)  {}
 func (s *instanceSettings) SetRev(_ string) {}
 
+// Prefix returns the prefix to use in database naming for the
+// current instance
+func (i *Instance) Prefix() string {
+	return i.Domain + "/"
+}
+
 // FS returns the afero storage provider where the binaries for
 // the current instance are persisted
 func (i *Instance) FS() afero.Fs {
@@ -138,6 +144,23 @@ func (i *Instance) FS() afero.Fs {
 		}
 	}
 	return i.storage
+}
+
+// StartJobs is used to start the job system for all the instances.
+//
+// TODO: on distributed stacks, we should not have to iterate over all
+// instances on each startup
+func StartJobs() error {
+	instances, err := List()
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
+		return err
+	}
+	for _, in := range instances {
+		if err := in.StartJobSystem(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // StartJobSystem creates all the resources necessary for the instance's job
@@ -165,12 +188,6 @@ func (i *Instance) JobsScheduler() jobs.Scheduler {
 	return jobs.GetMemScheduler(i.Domain)
 }
 
-// Prefix returns the prefix to use in database naming for the
-// current instance
-func (i *Instance) Prefix() string {
-	return i.Domain + "/"
-}
-
 // Scheme returns the scheme used for URLs. It is https by default and http
 // for development instances.
 func (i *Instance) Scheme() string {
@@ -182,7 +199,7 @@ func (i *Instance) Scheme() string {
 
 // SubDomain returns the full url for a subdomain of this instance
 // useful with apps slugs
-func (i *Instance) SubDomain(s string) string {
+func (i *Instance) SubDomain(s string) *url.URL {
 	var domain string
 	if config.GetConfig().Subdomains == config.NestedSubdomains {
 		domain = s + "." + i.Domain
@@ -190,12 +207,11 @@ func (i *Instance) SubDomain(s string) string {
 		parts := strings.SplitN(i.Domain, ".", 2)
 		domain = parts[0] + "-" + s + "." + parts[1]
 	}
-	u := url.URL{
+	return &url.URL{
 		Scheme: i.Scheme(),
 		Host:   domain,
 		Path:   "/",
 	}
-	return u.String()
 }
 
 // FromURL normalizes a given url with the scheme and domain of the instance.

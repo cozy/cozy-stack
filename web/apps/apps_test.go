@@ -177,13 +177,13 @@ func assertNotFound(t *testing.T, path string) {
 }
 
 func TestServe(t *testing.T) {
-	assertAuthGet(t, "/foo/", "text/html", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
-	assertAuthGet(t, "/foo/hello.html", "text/html", "world {{.Token}}")
-	assertAuthGet(t, "/public", "text/html", "this is a file in public/")
-	assertAuthGet(t, "/public/index.html", "text/html", "this is a file in public/")
-	assertAnonGet(t, "/public", "text/html", "this is a file in public/")
-	assertAnonGet(t, "/public/index.html", "text/html", "this is a file in public/")
-	assertNotPublic(t, "/foo", 302, "https://cozywithapps.example.net/auth/login?redirect=https%3A%2F%2Fmini.cozywithapps.example.net%2F%2Ffoo")
+	assertAuthGet(t, "/foo/", "text/html; charset=utf-8", `this is index.html. <a lang="en" href="https://cozywithapps.example.net/status/">Status</a>`)
+	assertAuthGet(t, "/foo/hello.html", "text/html; charset=utf-8", "world {{.Token}}")
+	assertAuthGet(t, "/public", "text/html; charset=utf-8", "this is a file in public/")
+	assertAuthGet(t, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
+	assertAnonGet(t, "/public", "text/html; charset=utf-8", "this is a file in public/")
+	assertAnonGet(t, "/public/index.html", "text/html; charset=utf-8", "this is a file in public/")
+	assertNotPublic(t, "/foo", 302, "https://cozywithapps.example.net/auth/login?redirect=https%3A%2F%2Fmini.cozywithapps.example.net%2Ffoo")
 	assertNotPublic(t, "/foo/hello.tml", 401, "")
 	assertNotFound(t, "/404")
 	assertNotFound(t, "/")
@@ -192,25 +192,9 @@ func TestServe(t *testing.T) {
 }
 
 func TestCozyBar(t *testing.T) {
-	assertAuthGet(t, "/bar/", "text/html", ``+
-		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`+
-		`<script defer src="//cozywithapps.example.net/apps/mini/init-cozy-bar.js"></script>`)
-
-	expected := `document.addEventListener('DOMContentLoaded', () => {
-	cozy.bar.init({
-		appName: 'Mini',
-		iconPath: 'icon.png',
-		lang: 'en'
-	})
-})`
-	req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/init-cozy-bar.js", nil)
-	req.Host = domain
-	res, err := client.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-	assert.Equal(t, "application/javascript", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
-	assert.Equal(t, expected, string(body))
+	assertAuthGet(t, "/bar/", "text/html; charset=utf-8", ``+
+		`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar.css">`+
+		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`)
 }
 
 func TestServeAppsWithACode(t *testing.T) {
