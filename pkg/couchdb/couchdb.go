@@ -456,9 +456,21 @@ func DefineViews(db Database, doctype string, views Views) error {
 }
 
 // ExecView executes the specified view function
-func ExecView(db Database, doctype, view string, results interface{}) error {
-	url := makeDBName(db, doctype) + "/_design/" + doctype + "/_view/" + view
-	return makeRequest("GET", url, nil, &results)
+func ExecView(db Database, req *ViewRequest, results interface{}) error {
+	viewurl := makeDBName(db, req.Doctype) + "/_design/" + req.Doctype + "/_view/" + req.ViewName
+
+	// Keys request
+	if req.Keys != nil {
+		return makeRequest("POST", viewurl, req, &results)
+	}
+
+	v, err := req.Values()
+	if err != nil {
+		return err
+	}
+	viewurl += "?" + v.Encode()
+	return makeRequest("GET", viewurl, nil, &results)
+
 }
 
 // DefineIndex define the index on the doctype database
@@ -606,12 +618,37 @@ type AllDocsResponse struct {
 	} `json:"rows"`
 }
 
+// ViewRequest are all params that can be passed to a view
+// It can be encoded either as a POST-json or a GET-url.
+type ViewRequest struct {
+	Doctype  string `json:"-" url:"-"`
+	ViewName string `json:"-" url:"-"`
+
+	Key      interface{} `json:"key,omitempty" url:"key,omitempty"`
+	StartKey interface{} `json:"start_key,omitempty" url:"start_key,omitempty"`
+	EndKey   interface{} `json:"end_key,omitempty" url:"end_key,omitempty"`
+
+	// Keys cannot be used in url mode
+	Keys []interface{} `json:"keys,omitempty" url:"-"`
+
+	Limit       int  `json:"limit,omitempty" url:"limit,omitempty"`
+	Skip        int  `json:"skip,omitempty" url:"skip,omitempty"`
+	Descending  bool `json:"descending,omitempty" url:"descending,omitempty"`
+	IncludeDocs bool `json:"include_docs,omitempty" url:"include_docs,omitempty"`
+
+	InclusiveEnd bool `json:"inclusive_end,omitempty" url:"inclusive_end,omitempty"`
+
+	Reduce     bool `json:"reduce" url:"reduce"`
+	GroupLevel int  `json:"group_level,omitempty" url:"group_level,omitempty"`
+}
+
 // ViewResponse is the response we receive when executing a view
 type ViewResponse struct {
 	Rows []struct {
-		ID    string `json:"id"`
-		Key   string `json:"key"`
-		Value int64  `json:"value"`
+		ID    string           `json:"id"`
+		Key   interface{}      `json:"key"`
+		Value interface{}      `json:"value"`
+		Doc   *json.RawMessage `json:"doc"`
 	} `json:"rows"`
 }
 

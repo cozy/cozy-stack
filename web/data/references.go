@@ -1,6 +1,8 @@
 package data
 
 import (
+	"net/http"
+
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -34,4 +36,17 @@ func addReferencesHandler(c echo.Context) error {
 	}
 
 	return c.NoContent(204)
+}
+
+func listReferencesHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Get("doctype").(string)
+	id := c.Param("docid")
+
+	refs, err := vfs.FilesReferencedBy(instance, doctype, id)
+	if err != nil {
+		return err
+	}
+
+	return jsonapi.DataRelations(c, http.StatusOK, refs)
 }

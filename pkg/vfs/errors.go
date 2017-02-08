@@ -33,4 +33,6 @@ var (
 	// ErrDirNotEmpty is used to inform that the directory is not
 	// empty
 	ErrDirNotEmpty = errors.New("Directory is not empty")
+	// ErrWrongCouchdbState is given when couchdb gives us an unexpected value
+	ErrWrongCouchdbState = errors.New("Wrong couchdb reduce value")
 )
