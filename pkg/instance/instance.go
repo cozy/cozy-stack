@@ -129,6 +129,12 @@ func (s *instanceSettings) DocType() string { return consts.Settings }
 func (s *instanceSettings) SetID(_ string)  {}
 func (s *instanceSettings) SetRev(_ string) {}
 
+// Prefix returns the prefix to use in database naming for the
+// current instance
+func (i *Instance) Prefix() string {
+	return i.Domain + "/"
+}
+
 // FS returns the afero storage provider where the binaries for
 // the current instance are persisted
 func (i *Instance) FS() afero.Fs {
@@ -138,6 +144,23 @@ func (i *Instance) FS() afero.Fs {
 		}
 	}
 	return i.storage
+}
+
+// StartJobs is used to start the job system for all the instances.
+//
+// TODO: on distributed stacks, we should not have to iterate over all
+// instances on each startup
+func StartJobs() error {
+	instances, err := List()
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
+		return err
+	}
+	for _, in := range instances {
+		if err := in.StartJobSystem(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // StartJobSystem creates all the resources necessary for the instance's job
@@ -163,12 +186,6 @@ func (i *Instance) JobsBroker() jobs.Broker {
 // JobsScheduler returns the jobs scheduler associated with the instance
 func (i *Instance) JobsScheduler() jobs.Scheduler {
 	return jobs.GetMemScheduler(i.Domain)
-}
-
-// Prefix returns the prefix to use in database naming for the
-// current instance
-func (i *Instance) Prefix() string {
-	return i.Domain + "/"
 }
 
 // Scheme returns the scheme used for URLs. It is https by default and http
