@@ -2,7 +2,6 @@ package couchdb
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 
 	"github.com/google/go-querystring/query"
@@ -32,8 +31,6 @@ func (vr *ViewRequest) Values() (url.Values, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("BEFORE", v.Encode())
 
 	if err := maybeSet(v, "key", vr.Key); err != nil {
 		return nil, err

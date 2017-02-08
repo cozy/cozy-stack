@@ -469,7 +469,6 @@ func ExecView(db Database, req *ViewRequest, results interface{}) error {
 		return err
 	}
 	viewurl += "?" + v.Encode()
-	fmt.Println("RESULT", viewurl)
 	return makeRequest("GET", viewurl, nil, &results)
 
 }
