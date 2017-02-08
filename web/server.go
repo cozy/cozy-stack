@@ -65,6 +65,7 @@ func ListenAndServeWithAppDir(dir string) error {
 			return fmt.Errorf("Could not parse the %s file: %s",
 				apps.ManifestFilename, err.Error())
 		}
+		app.CreateDefaultRoute()
 		i := middlewares.GetInstance(c)
 		f := webapps.NewAferoServer(fs, func(_, folder, file string) string {
 			return path.Join(folder, file)

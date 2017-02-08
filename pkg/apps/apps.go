@@ -162,6 +162,18 @@ func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 	return man, nil
 }
 
+// CreateDefaultRoute creates a default route if the manifest has no routes
+func (m *Manifest) CreateDefaultRoute() {
+	if m.Routes == nil {
+		m.Routes = make(Routes)
+		m.Routes["/"] = Route{
+			Folder: "/",
+			Index:  "index.html",
+			Public: false,
+		}
+	}
+}
+
 // FindRoute takes a path, returns the route which matches the best,
 // and the part that remains unmatched
 func (m *Manifest) FindRoute(vpath string) (Route, string) {
