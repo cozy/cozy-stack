@@ -85,6 +85,22 @@ func Create(db couchdb.Database, slug string, set Set) (*Permission, error) {
 	return doc, nil
 }
 
+// Force creates or updates a Permission doc for a given app
+func Force(db couchdb.Database, slug string, set Set) error {
+	existing, _ := GetForApp(db, slug)
+	doc := &Permission{
+		ApplicationID: consts.Manifests + "/" + slug,
+		Permissions:   set, // @TODO some validation?
+	}
+	if existing == nil {
+		return couchdb.CreateDoc(db, doc)
+	}
+
+	doc.SetID(existing.ID())
+	doc.SetRev(existing.Rev())
+	return couchdb.UpdateDoc(db, doc)
+}
+
 // Destroy removes Permission doc for a given app
 func Destroy(db couchdb.Database, slug string) error {
 	existing, err := GetForApp(db, slug)

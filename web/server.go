@@ -12,6 +12,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -66,10 +67,17 @@ func ListenAndServeWithAppDir(dir string) error {
 				apps.ManifestFilename, err.Error())
 		}
 		app.CreateDefaultRoute()
+		app.Slug = c.Get("slug").(string)
 		i := middlewares.GetInstance(c)
 		f := webapps.NewAferoServer(fs, func(_, folder, file string) string {
 			return path.Join(folder, file)
 		})
+		// Save permissions in couchdb before loading an index page
+		if _, file := app.FindRoute(path.Clean(c.Request().URL.Path)); file == "" {
+			if err := permissions.Force(i, app.Slug, *app.Permissions); err != nil {
+				return err
+			}
+		}
 		return webapps.ServeAppFile(c, i, f, app)
 	})
 }
