@@ -648,7 +648,7 @@ the stack but aims to allow setting a name even for browser / downloader that do
 
 
 ```http
-GET /files/archive/4521DC87 HTTP/1.1
+GET /files/archive/4521DC87/project-X.zip HTTP/1.1
 Accept: application/zip
 Content-Length: 12345
 Content-Disposition: attachment; filename="project-X.zip"
