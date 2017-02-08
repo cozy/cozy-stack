@@ -109,6 +109,7 @@ So, the `index.html` should probably looks like:
     <title>My Awesome App for Cozy</title>
     <link rel="stylesheet" src="//{{.Domain}}/settings/theme.css">
     <link rel="stylesheet" src="my-app.css">
+    {{.CozyClientJS}}
     {{.CozyBar}}
     <script defer src="my-app.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
