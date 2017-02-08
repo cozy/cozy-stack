@@ -16,8 +16,7 @@ func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	// TODO extends me to verificate characters allowed in db name.
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
-		// TODO refactor me!
-		if doctype == "" && c.Path() != "/data/" && c.Path() != "/data/_all_doctypes" {
+		if doctype == "" {
 			return jsonapi.NewError(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
 		c.Set("doctype", doctype)
@@ -286,6 +285,13 @@ func allDocs(c echo.Context) error {
 	return proxy(c, "_all_docs")
 }
 
+// mostly just to prevent couchdb crash on replications
+func dataAPIWelcome(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "welcome to a cozy API",
+	})
+}
+
 func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		err := next(c)
@@ -313,23 +319,26 @@ func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
-	router.GET("/_all_doctypes", allDoctypes)
-
-	router.Use(validDoctype)
 	router.Use(couchdbStyleErrorHandler)
 
-	replicationRoutes(router)
+	// API Routes that don't depend on a doctype
+	router.GET("/", dataAPIWelcome)
+	router.GET("/_all_doctypes", allDoctypes)
 
-	// API Routes
-	router.GET("/:doctype/:docid", getDoc)
-	router.PUT("/:doctype/:docid", updateDoc)
-	router.DELETE("/:doctype/:docid", deleteDoc)
-	router.POST("/:doctype/:docid/relationships/references", addReferencesHandler)
-	router.GET("/:doctype/:docid/relationships/references", listReferencesHandler)
-	router.POST("/:doctype/", createDoc)
-	router.GET("/:doctype/_all_docs", allDocs)
-	router.POST("/:doctype/_all_docs", allDocs)
-	router.POST("/:doctype/_index", defineIndex)
-	router.POST("/:doctype/_find", findDocuments)
-	// router.DELETE("/:doctype/:docid", DeleteDoc)
+	group := router.Group("/:doctype", validDoctype)
+
+	replicationRoutes(group)
+
+	// API Routes under /:doctype
+	group.GET("/:docid", getDoc)
+	group.PUT("/:docid", updateDoc)
+	group.DELETE("/:docid", deleteDoc)
+	group.POST("/:docid/relationships/references", addReferencesHandler)
+	group.GET("/:docid/relationships/references", listReferencesHandler)
+	group.POST("/", createDoc)
+	group.GET("/_all_docs", allDocs)
+	group.POST("/_all_docs", allDocs)
+	group.POST("/_index", defineIndex)
+	group.POST("/_find", findDocuments)
+	// group.DELETE("/:docid", DeleteDoc)
 }
