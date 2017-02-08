@@ -33,7 +33,7 @@ func getLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -45,7 +45,7 @@ func setLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -55,7 +55,7 @@ func setLocalDoc(c echo.Context) error {
 func bulkGet(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -65,7 +65,7 @@ func bulkGet(c echo.Context) error {
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -77,7 +77,7 @@ func dbStatus(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
