@@ -30,6 +30,7 @@ Table of contents
 
 These pages are discussion for ideas not yet implemented:
 
+- [Konnectors](konnectors.md)
 - [Backups](backup.md)
 - [Moving](moving.md)
 - [Replication](replication.md)
