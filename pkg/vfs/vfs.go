@@ -43,11 +43,12 @@ var Views = couchdb.Views{
 		Reduce: "_sum",
 	},
 	FilesReferencedByView: couchdb.View{
-		Map: "function(doc){" +
-			" if(doc.type==='file' && isArray(doc.referenced_by)) " +
-			" for(var i=0; i<doc.referenced_by.length; i++) " +
-			" emit([doc.referenced_by[i].type, doc.referenced_by[i].id])" +
-			"}",
+		Map: `
+function(doc){
+	if(doc.type==='file' && isArray(doc.referenced_by))
+		for(var i=0; i<doc.referenced_by.length; i++)
+	 		emit([doc.referenced_by[i].type, doc.referenced_by[i].id])
+}`,
 	},
 }
 
