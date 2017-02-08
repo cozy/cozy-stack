@@ -2,6 +2,7 @@
 package data
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -15,12 +16,26 @@ func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	// TODO extends me to verificate characters allowed in db name.
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
-		if doctype == "" && c.Path() != "/data/" {
+		// TODO refactor me!
+		if doctype == "" && c.Path() != "/data/" && c.Path() != "/data/_all_doctypes" {
 			return jsonapi.NewError(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
 		c.Set("doctype", doctype)
 		return next(c)
 	}
+}
+
+func allDoctypes(c echo.Context) error {
+	// TODO permissions
+
+	fmt.Printf("All DocTypes \n")
+	instance := middlewares.GetInstance(c)
+	types, err := couchdb.AllDoctypes(instance)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, types)
 }
 
 // GetDoc get a doc by its type and id
@@ -298,6 +313,8 @@ func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
+	router.GET("/_all_doctypes", allDoctypes)
+
 	router.Use(validDoctype)
 	router.Use(couchdbStyleErrorHandler)
 

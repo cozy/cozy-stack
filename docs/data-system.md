@@ -2,7 +2,7 @@
 
 # Data System
 
-### Typing
+## Typing
 
 The notion of document type does not exist in Couchdb.
 
@@ -14,7 +14,6 @@ All CozyCloud types will be prefixed by io.cozy and be pluralized.
 Example : `/data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee`
 Where, `io.cozy.` is the developer specific prefix, `events` the actual type, and `6494e0ac-dfcb-11e5-88c1-472e84a9cbee` the document's unique id .
 
-------------------------------------------------------------------------------
 
 ## Access a document
 
@@ -71,7 +70,6 @@ Content-Type: application/json
   - reason: deleted
 - 500 internal server error
 
---------------------------------------------------------------------------------
 
 ## Create a document
 
@@ -125,8 +123,6 @@ Content-Type: application/json
 - A doc cannot contain an `_id` field, if so an error 400 is returned
 - A doc cannot contain any field starting with `_`, those are reserved for future cozy & couchdb api evolution
 
-
---------------------------------------------------------------------------------
 
 ## Update an existing document
 
@@ -191,8 +187,6 @@ The client MUST give a `_rev` field in the document. If this field is different 
 - If no id is provided in URL, an error 400 is returned
 - If the id provided in URL is not the same than the one in document, an error 400 is returned.
 
---------------------------------------------------------------------------
-
 
 ## Create a document with a fixed id
 
@@ -249,7 +243,6 @@ Content-Type: application/json
 
 - No id should be provide in the document itself
 
---------------------------------------------------------------------------------
 
 ## Delete a document
 
@@ -301,7 +294,6 @@ It is possible to use either a `rev` query string parameter or a HTTP `If-Match`
 
 - If no id is provided in URL, an error 400 is returned
 
---------------------------------------------------------------------------------
 
 ## List all the documents
 
@@ -352,7 +344,31 @@ Content-Type: application/json
 
 See [`_all_docs` in couchdb docs](http://docs.couchdb.org/en/2.0.0/api/database/bulk-api.html#db-all-docs)
 
---------------------------------------------------------------------------------
+
+## List the known doctypes
+
+### Request
+
+```http
+GET /data/_all_doctypes HTTP/1.1
+Accept: application/json
+```
+
+### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+[
+  "io.cozy.files",
+  "io.cozy.jobs",
+  "io.cozy.triggers",
+  "io.cozy.settings"
+]
+```
 
 ## Mango
 
