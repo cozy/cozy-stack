@@ -148,8 +148,6 @@ func TestAllDoctypes(t *testing.T) {
 		"io.cozy.events",
 		"io.cozy.files",
 		"io.cozy.manifests",
-		"io.cozy.oauth.clients",
-		"io.cozy.permissions",
 		"io.cozy.settings",
 	}
 	assert.Equal(t, expected, dbs)

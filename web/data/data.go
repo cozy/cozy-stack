@@ -29,7 +29,13 @@ func allDoctypes(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, types)
+	var doctypes []string
+	for _, typ := range types {
+		if CheckReadable(typ) == nil {
+			doctypes = append(doctypes, typ)
+		}
+	}
+	return c.JSON(http.StatusOK, doctypes)
 }
 
 // GetDoc get a doc by its type and id
