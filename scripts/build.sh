@@ -195,7 +195,7 @@ do_docker_dev_image() {
 	cp "${WORK_DIR}/scripts/cozy-app-dev.sh" "${docker_work_dir}"
 
 	export GOOS=linux
-	export GOARCH=386
+	export GOARCH=amd64
 	export COZY_ENV=development
 	do_build "${docker_work_dir}/cozy-stack"
 
