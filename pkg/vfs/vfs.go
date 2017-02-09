@@ -21,12 +21,10 @@ import (
 
 // Indexes is the list of required indexes by the VFS inside CouchDB.
 var Indexes = []mango.Index{
-	// Used to lookup a file given its parent
-	mango.IndexOnFields("dir_id", "name", "type"),
+	// Used to lookup a file given its parent, and the children of a directory
+	mango.IndexOnFields("dir_id", "name"),
 	// Used to lookup a directory given its path
 	mango.IndexOnFields("path"),
-	// Used to lookup children of a directory
-	mango.IndexOnFields("dir_id"),
 }
 
 // DiskUsageView is the name of the view used for computing the disk usage
