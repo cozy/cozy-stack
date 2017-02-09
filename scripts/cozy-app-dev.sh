@@ -33,7 +33,7 @@ usage() {
 	echo -e "    itself. default: \"\$GOPATH/bin\"."
 	echo -e "\n  COZY_STACK_HOST"
 	echo -e "    specify the hostname on which the cozy-stack is launched."
-	echo -e "    default: localhost."
+	echo -e "    default: cozy.local."
 	echo -e "\n  COZY_STACK_PORT"
 	echo -e "    specify the port on which the cozy-stack is listening."
 	echo -e "    default: 8080."

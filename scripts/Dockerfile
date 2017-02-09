@@ -63,7 +63,7 @@ RUN chmod +x /usr/bin/cozy-app-dev.sh /usr/bin/cozy-stack && \
 EXPOSE 8080 5984
 
 CMD couchdb 2>/dev/null 1>/dev/null & \
-    echo "127.0.0.1 cozy.local app.cozy.local" >> /etc/hosts && \
+    echo "0.0.0.0 cozy.local app.cozy.local" >> /etc/hosts && \
     /usr/bin/cozy-app-dev.sh \
       -d /data/cozy-app \
       -f /data/cozy-storage
