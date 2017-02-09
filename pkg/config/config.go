@@ -143,18 +143,17 @@ func GetConfig() *Config {
 
 // UseViper sets the configured instance of Config
 func UseViper(v *viper.Viper) error {
-	fsURL := v.GetString("fs.url")
-	_, err := url.Parse(fsURL)
+	fsURL, err := url.Parse(v.GetString("fs.url"))
 	if err != nil {
 		return err
 	}
 
-	couchHost := v.GetString("couchdb.host")
-	couchPort := strconv.Itoa(v.GetInt("couchdb.port"))
-	couchURL := "http://" + couchHost + ":" + couchPort + "/"
-	_, err = url.Parse(couchURL)
+	couchURL, err := url.Parse(v.GetString("couchdb.url"))
 	if err != nil {
 		return err
+	}
+	if couchURL.Path == "" {
+		couchURL.Path = "/"
 	}
 
 	config = &Config{
@@ -165,10 +164,10 @@ func UseViper(v *viper.Viper) error {
 		AdminPort:  v.GetInt("admin.port"),
 		Assets:     v.GetString("assets"),
 		Fs: Fs{
-			URL: fsURL,
+			URL: fsURL.String(),
 		},
 		CouchDB: CouchDB{
-			URL: couchURL,
+			URL: couchURL.String(),
 		},
 		Mail: &gomail.DialerOptions{
 			Host:       v.GetString("mail.host"),
@@ -195,8 +194,7 @@ fs:
   url: mem://test
 
 couchdb:
-    host: localhost
-    port: 5984
+    url: http://localhost:5984/
 
 log:
     level: info

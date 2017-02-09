@@ -5,8 +5,7 @@ set -e
 [ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="cozy.local"
 [ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8080"
 [ -z "${COZY_STACK_PASS}" ] && COZY_STACK_PASS="cozy"
-[ -z "${COUCHDB_PORT}" ] && COUCHDB_PORT="5984"
-[ -z "${COUCHDB_HOST}" ] && COUCHDB_HOST="localhost"
+[ -z "${COUCHDB_URL}" ] && COUCHDB_URL="http://localhost:5984/"
 
 if [ -d "${COZY_STACK_PATH}" ] && [ -f "${COZY_STACK_PATH}/cozy-stack" ]; then
 	COZY_STACK_PATH="${COZY_STACK_PATH}/cozy-stack"
@@ -40,11 +39,8 @@ usage() {
 	echo -e "\n  COZY_STACK_PASS"
 	echo -e "    specify the password to register the instance with."
 	echo -e "    default: cozy."
-	echo -e "\n  COUCHDB_HOST"
-	echo -e "    specify the host of the couchdb database. if specified,"
-	echo -e "    the script won't try to start couchdb."
-	echo -e "\n  COUCHDB_PORT"
-	echo -e "    specify the port of the couchdb database. if specified,"
+	echo -e "\n  COUCHDB_URL"
+	echo -e "    specify the URL of the CouchDB database. If specified,"
 	echo -e "    the script won't try to start couchdb."
 }
 
@@ -84,8 +80,7 @@ do_start() {
 	${COZY_STACK_PATH} serve-appdir "${appdir}" \
 		--host "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
-		--couchdb-host "${COUCHDB_HOST}" \
-		--couchdb-port "${COUCHDB_PORT}" \
+		--couchdb-url "${COUCHDB_URL}" \
 		--fs-url "file://localhost${vfsdir}" &
 
 	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
@@ -105,23 +100,21 @@ do_start() {
 }
 
 do_check_couchdb() {
-	couchdb_addr="${COUCHDB_HOST}:${COUCHDB_PORT}"
-
 	printf "waiting for couchdb..."
-	wait_for "${couchdb_addr}" "couchdb"
+	wait_for "${COUCHDB_URL}" "couchdb"
 	echo "ok"
 
-	printf "checking couchdb on %s... " "${couchdb_addr}"
-	couch_test=$(curl -s -XGET "${couchdb_addr}" || echo "")
+	printf "checking couchdb on %s... " "${COUCHDB_URL}"
+	couch_test=$(curl -s -XGET "${COUCHDB_URL}" || echo "")
 	couch_vers=$(grep "\"version\":\s*\"2" <<< "${couch_test}" || echo "")
 
 	if [ -z "${couch_test}" ]; then
 		echo "failed"
-		echo_err "could not reach couchdb on ${couchdb_addr}"
+		echo_err "could not reach couchdb on ${COUCHDB_URL}"
 		exit 1
 	elif [ -z "${couch_vers}" ]; then
 		echo "failed"
-		echo_err "couchdb v1 is running on ${couchdb_addr}"
+		echo_err "couchdb v1 is running on ${COUCHDB_URL}"
 		echo_err "you need couchdb version >= 2"
 		exit 1
 	fi
@@ -129,7 +122,7 @@ do_check_couchdb() {
 	echo "ok"
 
 	for dbname in "_users" "_replicator" "_global_changes"; do
-		curl -s -XPUT "${couchdb_addr}/${dbname}" > /dev/null
+		curl -s -XPUT "${COUCHDB_URL}/${dbname}" > /dev/null
 	done
 }
 
@@ -139,11 +132,7 @@ do_create_instances() {
 		printf "creating instance %s... " "${host}"
 		set +e
 		add_instance_val=$(
-			${COZY_STACK_PATH} instances add --dev="true" "${host}" \
-				--couchdb-host "${COUCHDB_HOST}" \
-				--couchdb-port "${COUCHDB_PORT}" \
-				--email dev@cozy.io \
-				--fs-url "file://localhost${vfsdir}" 2>&1
+			${COZY_STACK_PATH} instances add --dev="true" "${host}" --email dev@cozy.io 2>&1
 		)
 		add_instance_ret="${?}"
 		set -e

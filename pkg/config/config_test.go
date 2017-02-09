@@ -9,10 +9,7 @@ import (
 
 func TestUseViper(t *testing.T) {
 	cfg := viper.New()
-	cfg.Set("couchdb.host", "db")
-	cfg.Set("couchdb.port", 1234)
-
+	cfg.Set("couchdb.url", "http://db:1234")
 	UseViper(cfg)
-
 	assert.Equal(t, "http://db:1234/", CouchURL())
 }

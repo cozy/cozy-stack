@@ -28,10 +28,8 @@ fs:
   # url: file://localhost/var/lib/cozy
 
 couchdb:
-  # couchdb host - flags: --couchdb-host
-  host: localhost
-  # couchdb port - flags: --couchdb-port
-  port: 5984
+  # CouchDB URL - flags: --couchdb-url
+  url: http://localhost:5984/
 
 mail:
   # mail smtp host - flags: --mail-host

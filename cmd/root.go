@@ -68,11 +68,8 @@ func init() {
 	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
 	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
 
-	flags.String("couchdb-host", "localhost", "couchdbdb host")
-	checkNoErr(viper.BindPFlag("couchdb.host", flags.Lookup("couchdb-host")))
-
-	flags.Int("couchdb-port", 5984, "couchdbdb port")
-	checkNoErr(viper.BindPFlag("couchdb.port", flags.Lookup("couchdb-port")))
+	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
+	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
 
 	flags.String("mail-host", "localhost", "mail smtp host")
 	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
