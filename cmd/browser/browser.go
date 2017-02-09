@@ -39,7 +39,7 @@ func Commands() [][]string {
 // Open tries to open url in a browser and reports whether it succeeded.
 func Open(url string) bool {
 	for _, args := range Commands() {
-		cmd := exec.Command(args[0], append(args[1:], url)...)
+		cmd := exec.Command(args[0], append(args[1:], url)...) // #nosec
 		if cmd.Start() == nil {
 			return true
 		}

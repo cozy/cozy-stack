@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os/exec"
 	"runtime"
@@ -30,6 +29,22 @@ If possible, provide a recipe for reproducing the error.
 
 `
 
+type body struct {
+	buf bytes.Buffer
+	err error
+}
+
+func (b *body) Append(format string, args ...interface{}) {
+	if b.err != nil {
+		return
+	}
+	_, b.err = fmt.Fprintf(&b.buf, format+"\n", args...)
+}
+
+func (b *body) String() string {
+	return b.buf.String()
+}
+
 // bugCmd represents the `cozy-stack bug` command, inspired from go bug.
 // Cf https://tip.golang.org/src/cmd/go/internal/bug/bug.go
 var bugCmd = &cobra.Command{
@@ -40,20 +55,23 @@ Bug opens the default browser and starts a new bug report.
 The report includes useful system information.
 	`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var buf bytes.Buffer
-		buf.WriteString(bugHeader)
-		fmt.Fprint(&buf, "#### System details\n\n")
-		fmt.Fprintln(&buf, "```")
-		fmt.Fprintf(&buf, "cozy-stack %s\n", config.Version)
-		fmt.Fprintf(&buf, "build in mode %s - %s\n\n", config.BuildMode, config.BuildTime)
-		fmt.Fprintf(&buf, "go version %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
-		printOSDetails(&buf)
-		fmt.Fprintln(&buf, "```")
-		body := buf.String()
-		url := "https://github.com/cozy/cozy-stack/issues/new?body=" + url.QueryEscape(body)
+		var b body
+		b.Append("%s", bugHeader)
+		b.Append("#### System details\n")
+		b.Append("```")
+		b.Append("cozy-stack %s", config.Version)
+		b.Append("build in mode %s - %s\n", config.BuildMode, config.BuildTime)
+		b.Append("go version %s %s/%s", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+		printOSDetails(&b.buf)
+		b.Append("```")
+		if b.err != nil {
+			return b.err
+		}
+		param := url.QueryEscape(b.String())
+		url := "https://github.com/cozy/cozy-stack/issues/new?body=" + param
 		if !browser.Open(url) {
 			fmt.Print("Please file a new issue at golang.org/issue/new using this template:\n\n")
-			fmt.Print(body)
+			fmt.Print(b.String())
 		}
 		return nil
 	},
@@ -75,19 +93,13 @@ func printOSDetails(w io.Writer) {
 
 	case "openbsd", "netbsd", "freebsd", "dragonfly":
 		printCmdOut(w, "uname -v: ", "uname", "-v")
-
-	case "solaris":
-		out, err := ioutil.ReadFile("/etc/release")
-		if err == nil {
-			fmt.Fprintf(w, "/etc/release: %s\n", out)
-		}
 	}
 }
 
 // printCmdOut prints the output of running the given command.
 // It ignores failures; 'go bug' is best effort.
 func printCmdOut(w io.Writer, prefix, path string, args ...string) {
-	cmd := exec.Command(path, args...)
+	cmd := exec.Command(path, args...) // #nosec
 	out, err := cmd.Output()
 	if err != nil {
 		return
