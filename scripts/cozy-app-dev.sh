@@ -171,7 +171,7 @@ wait_for() {
 }
 
 check_not_running() {
-	printf "checking %s on %s... " "${2}" "${1}"
+	printf "checking that %s is free... " "${1}"
 	if curl -s --max-time 1 -XGET "${1}" > /dev/null; then
 		printf "\n"
 		echo_err "${2} is already running on ${1}"
