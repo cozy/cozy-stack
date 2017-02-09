@@ -33,7 +33,7 @@ func getLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -45,7 +45,7 @@ func setLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -55,7 +55,7 @@ func setLocalDoc(c echo.Context) error {
 func bulkGet(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -65,7 +65,7 @@ func bulkGet(c echo.Context) error {
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -77,7 +77,7 @@ func dbStatus(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -89,29 +89,20 @@ func dbStatus(c echo.Context) error {
 	return c.JSON(http.StatusOK, status)
 }
 
-// mostly just to prevent couchdb creash
-func dataAPIWelcome(c echo.Context) error {
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": "welcome to a cozy API",
-	})
-}
-
-func replicationRoutes(router *echo.Group) {
+func replicationRoutes(group *echo.Group) {
 	// Routes used only for replication
-	router.GET("/", dataAPIWelcome)
-	router.GET("/:doctype/", dbStatus)
-	router.GET("/:doctype/_design/:designdocid", getDesignDoc)
-	router.GET("/:doctype/_changes", changesFeed)
+	group.GET("/", dbStatus)
+	group.GET("/_design/:designdocid", getDesignDoc)
+	group.GET("/_changes", changesFeed)
 	// POST=GET see http://docs.couchdb.org/en/2.0.0/api/database/changes.html#post--db-_changes)
-	router.POST("/:doctype/_changes", changesFeed)
+	group.POST("/_changes", changesFeed)
 
-	router.POST("/:doctype/_ensure_full_commit", fullCommit)
+	group.POST("/_ensure_full_commit", fullCommit)
 
 	// useful for Pouchdb replication
-	router.GET("/:doctype/_bulk_get", bulkGet)
+	group.GET("/_bulk_get", bulkGet)
 
 	// for storing checkpoints
-	router.GET("/:doctype/_local/:docid", getLocalDoc)
-	router.PUT("/:doctype/_local/:docid", setLocalDoc)
-
+	group.GET("/_local/:docid", getLocalDoc)
+	group.PUT("/_local/:docid", setLocalDoc)
 }

@@ -15,12 +15,27 @@ func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	// TODO extends me to verificate characters allowed in db name.
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
-		if doctype == "" && c.Path() != "/data/" {
+		if doctype == "" {
 			return jsonapi.NewError(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
 		c.Set("doctype", doctype)
 		return next(c)
 	}
+}
+
+func allDoctypes(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	types, err := couchdb.AllDoctypes(instance)
+	if err != nil {
+		return err
+	}
+	var doctypes []string
+	for _, typ := range types {
+		if CheckReadable(typ) == nil {
+			doctypes = append(doctypes, typ)
+		}
+	}
+	return c.JSON(http.StatusOK, doctypes)
 }
 
 // GetDoc get a doc by its type and id
@@ -29,7 +44,7 @@ func getDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -62,7 +77,7 @@ func createDoc(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := CheckWritable(c, doctype); err != nil {
+	if err := CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -89,7 +104,7 @@ func updateDoc(c echo.Context) error {
 
 	doc.Type = c.Param("doctype")
 
-	if err := CheckWritable(c, doc.Type); err != nil {
+	if err := CheckWritable(doc.Type); err != nil {
 		return err
 	}
 
@@ -142,7 +157,7 @@ func deleteDoc(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, "delete without revision")
 	}
 
-	if err := CheckWritable(c, doctype); err != nil {
+	if err := CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -170,7 +185,7 @@ func defineIndex(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -196,7 +211,7 @@ func findDocuments(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -264,11 +279,18 @@ func changesFeed(c echo.Context) error {
 func allDocs(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(c, doctype); err != nil {
+	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
 
 	return proxy(c, "_all_docs")
+}
+
+// mostly just to prevent couchdb crash on replications
+func dataAPIWelcome(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "welcome to a cozy API",
+	})
 }
 
 func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
@@ -298,21 +320,26 @@ func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
-	router.Use(validDoctype)
 	router.Use(couchdbStyleErrorHandler)
 
-	replicationRoutes(router)
+	// API Routes that don't depend on a doctype
+	router.GET("/", dataAPIWelcome)
+	router.GET("/_all_doctypes", allDoctypes)
 
-	// API Routes
-	router.GET("/:doctype/:docid", getDoc)
-	router.PUT("/:doctype/:docid", updateDoc)
-	router.DELETE("/:doctype/:docid", deleteDoc)
-	router.POST("/:doctype/:docid/relationships/references", addReferencesHandler)
-	router.GET("/:doctype/:docid/relationships/references", listReferencesHandler)
-	router.POST("/:doctype/", createDoc)
-	router.GET("/:doctype/_all_docs", allDocs)
-	router.POST("/:doctype/_all_docs", allDocs)
-	router.POST("/:doctype/_index", defineIndex)
-	router.POST("/:doctype/_find", findDocuments)
-	// router.DELETE("/:doctype/:docid", DeleteDoc)
+	group := router.Group("/:doctype", validDoctype)
+
+	replicationRoutes(group)
+
+	// API Routes under /:doctype
+	group.GET("/:docid", getDoc)
+	group.PUT("/:docid", updateDoc)
+	group.DELETE("/:docid", deleteDoc)
+	group.POST("/:docid/relationships/references", addReferencesHandler)
+	group.GET("/:docid/relationships/references", listReferencesHandler)
+	group.POST("/", createDoc)
+	group.GET("/_all_docs", allDocs)
+	group.POST("/_all_docs", allDocs)
+	group.POST("/_index", defineIndex)
+	group.POST("/_find", findDocuments)
+	// group.DELETE("/:docid", DeleteDoc)
 }

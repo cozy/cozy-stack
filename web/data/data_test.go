@@ -135,6 +135,24 @@ func TestMain(m *testing.M) {
 	os.Exit(res)
 }
 
+func TestAllDoctypes(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/data/_all_doctypes", nil)
+	req.Header.Add("Host", Host)
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	var dbs []string
+	err = json.NewDecoder(res.Body).Decode(&dbs)
+	assert.NoError(t, err)
+	expected := []string{
+		"io.cozy.events",
+		"io.cozy.files",
+		"io.cozy.manifests",
+		"io.cozy.settings",
+	}
+	assert.Equal(t, expected, dbs)
+}
+
 func TestSuccessGet(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
 	req.Header.Add("Host", Host)

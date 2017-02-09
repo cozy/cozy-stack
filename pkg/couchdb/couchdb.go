@@ -149,6 +149,10 @@ var couchdbClient = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
+func unescapeCouchdbName(name string) string {
+	return strings.Replace(name, "-", ".", -1)
+}
+
 func escapeCouchdbName(name string) string {
 	name = strings.Replace(name, ".", "-", -1)
 	name = strings.Replace(name, ":", "-", -1)
@@ -242,10 +246,30 @@ func fixErrorNoDatabaseIsWrongDoctype(err error) error {
 	return err
 }
 
-// DBStatus re
+// DBStatus responds with informations on the database: size, number of
+// documents, sequence numbers, etc.
 func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
 	var out DBStatusResponse
 	return &out, makeRequest("GET", makeDBName(db, doctype), nil, &out)
+}
+
+// AllDoctypes returns a list of all the doctypes that have a database
+// on a given instance
+func AllDoctypes(db Database) ([]string, error) {
+	var dbs []string
+	if err := makeRequest("GET", "/_all_dbs", nil, &dbs); err != nil {
+		return nil, err
+	}
+	prefix := escapeCouchdbName(db.Prefix())
+	var doctypes []string
+	for _, dbname := range dbs {
+		parts := strings.SplitAfter(dbname, "/")
+		if len(parts) == 2 && parts[0] == prefix {
+			doctype := unescapeCouchdbName(parts[1])
+			doctypes = append(doctypes, doctype)
+		}
+	}
+	return doctypes, nil
 }
 
 // GetDoc fetch a document by its docType and ID, out is filled with

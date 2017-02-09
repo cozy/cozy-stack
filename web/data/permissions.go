@@ -22,7 +22,7 @@ var blackList = map[string]bool{
 
 // CheckReadable will abort the context and returns false if the doctype
 // is unreadable
-func CheckReadable(c echo.Context, doctype string) error {
+func CheckReadable(doctype string) error {
 	readable, inblacklist := blackList[doctype]
 	if !inblacklist || readable {
 		return nil
@@ -36,7 +36,7 @@ func CheckReadable(c echo.Context, doctype string) error {
 
 // CheckWritable will abort the echo context if the doctype
 // is unwritable
-func CheckWritable(c echo.Context, doctype string) error {
+func CheckWritable(doctype string) error {
 	_, inblacklist := blackList[doctype]
 	if !inblacklist {
 		return nil
