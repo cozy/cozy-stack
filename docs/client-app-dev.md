@@ -34,10 +34,11 @@ You'll need to add the following line to your `/etc/hosts` file:
 127.0.0.1  app.cozy.local cozy.local
 ```
 
-If your CouchDB 2 instance is not running on `localhost:5984`, you can specify another host and port with the variables `COUCHDB_HOST` and `COUCHDB_PORT` like so:
+If your CouchDB 2 instance is not running on `localhost:5984`, you can specify
+another host and port with the variable `COUCHDB_URL` like so:
 
 ```sh
-$ COUCHDB_HOST=couchdb.local COUCHDB_PORT=1234 ./scripts/cozy-app-dev.sh -d ~/code/myapp
+$ COUCHDB_URL=http://couchdb.local:1234/ ./scripts/cozy-app-dev.sh -d ~/code/myapp
 ```
 
 You can have more informations about the usage of this script with the following command:
