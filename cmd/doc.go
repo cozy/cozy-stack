@@ -14,6 +14,7 @@ var docCmdGroup = &cobra.Command{
 		return cmd.Help()
 	},
 }
+
 var manDocCmd = &cobra.Command{
 	Use:   "man [directory]",
 	Short: "Print the manpages of cozy-stack",
@@ -30,7 +31,20 @@ var manDocCmd = &cobra.Command{
 	},
 }
 
+var markdownDocCmd = &cobra.Command{
+	Use:   "markdown [directory]",
+	Short: "Print the documentation of cozy-stack as markdown",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		directory := "./docs/cli/"
+		if len(args) == 1 {
+			directory = args[0]
+		}
+		return doc.GenMarkdownTree(RootCmd, directory)
+	},
+}
+
 func init() {
 	docCmdGroup.AddCommand(manDocCmd)
+	docCmdGroup.AddCommand(markdownDocCmd)
 	RootCmd.AddCommand(docCmdGroup)
 }

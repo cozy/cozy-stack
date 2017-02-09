@@ -12,6 +12,7 @@ Table of contents
 
 ## Usage
 
+- [CLI](cli/cozy-stack.md)
 - [Configuration](config.md)
 - [Managing Instances](instance.md)
 - [Onboarding](onboarding.md)
