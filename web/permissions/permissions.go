@@ -107,7 +107,6 @@ func extractJWTClaims(c echo.Context, instance *instance.Instance) (*permissions
 }
 
 func extractPermissionSet(c echo.Context, instance *instance.Instance, claims *permissions.Claims) (*permissions.Set, error) {
-
 	if claims == nil && hasRegisterToken(c, instance) {
 		return &registerTokenPermissions, nil
 	}
@@ -131,7 +130,6 @@ func extractPermissionSet(c echo.Context, instance *instance.Instance, claims *p
 	}
 
 	return nil, fmt.Errorf("Unrecognized token audience %v", claims.Audience)
-
 }
 
 func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
@@ -150,7 +148,7 @@ func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
 	c.Set(ContextClaims, claims)
 	c.Set(ContextPermissionSet, pset)
 
-	return claims, pset, err
+	return claims, pset, nil
 }
 
 func getPermission(c echo.Context) (*permissions.Set, error) {
