@@ -19,7 +19,7 @@ cozy-stack status
       --assets string          path to the directory with the assets (use the packed assets by default)
   -c, --config string          configuration file (default "$HOME/.cozy.yaml")
       --couchdb-url string     CouchDB URL (default "http://localhost:5984/")
-      --fs-url string          filesystem url (default "file://localhost/tmp/go-build506427885/command-line-arguments/_obj/exe/storage")
+      --fs-url string          filesystem url (default "file://localhost//storage")
       --host string            server host (default "localhost")
       --log-level string       define the log level (default "info")
       --mail-disable-tls       disable smtp over tls

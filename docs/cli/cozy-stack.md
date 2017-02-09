@@ -22,7 +22,7 @@ cozy-stack
       --assets string          path to the directory with the assets (use the packed assets by default)
   -c, --config string          configuration file (default "$HOME/.cozy.yaml")
       --couchdb-url string     CouchDB URL (default "http://localhost:5984/")
-      --fs-url string          filesystem url (default "file://localhost/tmp/go-build506427885/command-line-arguments/_obj/exe/storage")
+      --fs-url string          filesystem url (default "file://localhost//storage")
       --host string            server host (default "localhost")
       --log-level string       define the log level (default "info")
       --mail-disable-tls       disable smtp over tls
@@ -35,6 +35,7 @@ cozy-stack
 ```
 
 ### SEE ALSO
+* [cozy-stack completion](cozy-stack_completion.md)	 - Output shell completion code for the specified shell
 * [cozy-stack config](cozy-stack_config.md)	 - Show and manage configuration elements
 * [cozy-stack doc](cozy-stack_doc.md)	 - Print the documentation
 * [cozy-stack files](cozy-stack_files.md)	 - Interact with the cozy filesystem
