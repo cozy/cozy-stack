@@ -1,5 +1,5 @@
-# This Dockerfile should be used to create an development environment to
-# develop applications for cozy-stack. It installs go and couchdb 2.
+# This Dockerfile should be used to create an environment to develop
+# applications for cozy-stack. It installs couchdb 2 and the cozy-stack.
 # It should not be used for hosting your cozy cloud in production.
 
 FROM debian:jessie
@@ -51,17 +51,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH $PATH:/usr/local/couchdb/bin
 
 
+# cozy-stack
 ENV COZY_STACK_HOST cozy.local
 ENV COZY_STACK_PORT 8080
 ENV COZY_STACK_PATH cozy-stack
 
-RUN mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
-
-# cozy-stack
-COPY cozy-app-dev.sh /usr/bin
-RUN chmod +x /usr/bin/cozy-app-dev.sh
-COPY cozy-stack /usr/bin
-RUN chmod +x /usr/bin/cozy-stack
+COPY cozy-app-dev.sh cozy-stack /usr/bin/
+RUN chmod +x /usr/bin/cozy-app-dev.sh /usr/bin/cozy-stack && \
+    mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
 EXPOSE 8080 5984
 
