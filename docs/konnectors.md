@@ -243,3 +243,5 @@ and ZeroVM has some severe limitations, so, it won't be used.
 - [ ] How are persisted the accounts?
 - [ ] How is executed a konnector? In particular, how the credentials are
   given to the konnector?
+- [ ] what should expose a konnector (data, functions, etc)?
+    - https://github.com/cozy-labs/konnectors/issues/695
