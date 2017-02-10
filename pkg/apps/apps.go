@@ -119,11 +119,11 @@ func (m *Manifest) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{
 		Self: "/apps/" + m.Slug,
 	}
+	if m.Icon != "" {
+		links.Icon = "/apps/" + m.Slug + "/icon"
+	}
 	if m.State == Ready && m.Instance != nil {
-		sub := m.Instance.SubDomain(m.Slug)
-		links.Related = sub.String()
-		sub.Path = m.Icon
-		links.Icon = sub.String()
+		links.Related = m.Instance.SubDomain(m.Slug).String()
 	}
 	return &links
 }
