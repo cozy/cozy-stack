@@ -70,7 +70,7 @@ The report includes useful system information.
 		param := url.QueryEscape(b.String())
 		url := "https://github.com/cozy/cozy-stack/issues/new?body=" + param
 		if !browser.Open(url) {
-			fmt.Print("Please file a new issue at golang.org/issue/new using this template:\n\n")
+			fmt.Print("Please file a new issue at https://github.com/cozy/cozy-stack/issues/new using this template:\n\n")
 			fmt.Print(b.String())
 		}
 		return nil
