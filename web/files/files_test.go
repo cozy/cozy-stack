@@ -254,6 +254,24 @@ func TestCreateDirRootSuccess(t *testing.T) {
 	assert.True(t, exists)
 }
 
+func TestCreateDirWithDateSuccess(t *testing.T) {
+	req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date", strings.NewReader(""))
+	req.Header.Add("Date", "Mon, 19 Sep 2016 12:35:08 GMT")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
+
+	var obj map[string]interface{}
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	data := obj["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	createdAt := attrs["created_at"].(string)
+	assert.Equal(t, "2016-09-19T12:35:08Z", createdAt)
+	updatedAt := attrs["updated_at"].(string)
+	assert.Equal(t, createdAt, updatedAt)
+}
+
 func TestCreateDirWithParentSuccess(t *testing.T) {
 	res1, data1 := createDir(t, "/files/?Name=dirparent&Type=directory")
 	assert.Equal(t, 201, res1.StatusCode)
@@ -432,11 +450,8 @@ func TestUploadWithDate(t *testing.T) {
 	req.Header.Add("Date", "Mon, 19 Sep 2016 12:38:04 GMT")
 	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
 	assert.Equal(t, 201, res.StatusCode)
-	fmt.Printf("obj = %#v\n", obj)
 	data := obj["data"].(map[string]interface{})
-	fmt.Printf("data = %#v\n", data)
 	attrs := data["attributes"].(map[string]interface{})
-	fmt.Printf("attrs = %#v\n", attrs)
 	createdAt := attrs["created_at"].(string)
 	assert.Equal(t, "2016-09-19T12:38:04Z", createdAt)
 	updatedAt := attrs["updated_at"].(string)
@@ -948,10 +963,7 @@ func TestArchiveDirectDownload(t *testing.T) {
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	if !assert.Equal(t, 200, res.StatusCode) {
-		b, err2 := ioutil.ReadAll(res.Body)
-		fmt.Println(err2, string(b))
-	}
+	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
 
 }
@@ -1012,7 +1024,6 @@ func TestFileCreateAndDownload(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	var data map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&data)
-	fmt.Println(&data, err)
 	assert.NoError(t, err)
 
 	downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
