@@ -29,16 +29,23 @@ given, the directory is created at the root of the virtual file system.
 #### Query-String
 
 Parameter | Description
-----------|------------------
+----------|-------------------
 Type      | `directory`
 Name      | the directory name
 Tags      | an array of tags
+
+#### HTTP headers
+
+Parameter | Description
+----------|---------------------------------------
+Date      | The modification date of the directory
 
 #### Request
 
 ```http
 POST /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Type=directory&Name=phone&Tags=bills,konnectors HTTP/1.1
 Accept: application/vnd.api+json
+Date: Mon, 19 Sep 2016 12:35:08 GMT
 ```
 
 #### Status codes

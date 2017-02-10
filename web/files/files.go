@@ -104,6 +104,12 @@ func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
 	if err != nil {
 		return nil, err
 	}
+	if date := c.Request().Header.Get("Date"); date != "" {
+		if t, err2 := time.Parse(time.RFC1123, date); err2 == nil {
+			doc.CreatedAt = t
+			doc.UpdatedAt = t
+		}
+	}
 
 	if err = vfs.CreateDir(vfsC, doc); err != nil {
 		return nil, err
