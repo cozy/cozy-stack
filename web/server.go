@@ -17,6 +17,7 @@ import (
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"github.com/spf13/afero"
 )
 
@@ -110,6 +111,9 @@ func listenAndServe(appsHandler echo.HandlerFunc) error {
 You are running a development release which may deactivate some very important
 security features. Please do not use this binary as your production server.
 `)
+		main.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
+		}))
 	}
 
 	errs := make(chan error)
