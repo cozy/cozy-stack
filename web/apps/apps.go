@@ -5,9 +5,12 @@ package apps
 import (
 	"net/http"
 	"net/url"
+	"path"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -70,10 +73,29 @@ func ListHandler(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+// IconHandler gives the icon of an application
+func IconHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	slug := c.Param("slug")
+	app, err := apps.GetBySlug(instance, slug)
+	if err != nil {
+		return err
+	}
+	filepath := path.Join(vfs.AppsDirName, slug, app.Icon)
+	r, err := instance.FS().Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	http.ServeContent(c.Response(), c.Request(), filepath, time.Time{}, r)
+	return nil
+}
+
 // Routes sets the routing for the apps service
 func Routes(router *echo.Group) {
 	router.GET("/", ListHandler)
 	router.POST("/:slug", InstallOrUpdateHandler)
+	router.GET("/:slug/icon", IconHandler)
 }
 
 func wrapAppsError(err error) error {

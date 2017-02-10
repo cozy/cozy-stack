@@ -36,8 +36,12 @@ func diskUsage(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	var result apiDiskUsage
 
+	// Check permissions, but also allow every request from the logged-in user
+	// as this route is used by the cozy-bar from all the client-side apps
 	if err := permissions.Allow(c, permissions.GET, &result); err != nil {
-		return err
+		if !middlewares.IsLoggedIn(c) {
+			return err
+		}
 	}
 
 	used, err := vfs.DiskUsage(instance)

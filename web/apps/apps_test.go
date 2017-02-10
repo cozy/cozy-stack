@@ -69,7 +69,7 @@ func createFile(dir, filename, content string) error {
 func installMiniApp() error {
 	manifest = &apps.Manifest{
 		Name:   "Mini",
-		Icon:   "icon.png",
+		Icon:   "icon.svg",
 		Slug:   slug,
 		Source: "git://github.com/cozy/mini.git",
 		State:  apps.Ready,
@@ -113,6 +113,10 @@ func installMiniApp() error {
 		return err
 	}
 
+	err = createFile(appdir, "icon.svg", "<svg>...</svg>")
+	if err != nil {
+		return err
+	}
 	err = createFile(appdir, "index.html", `this is index.html. <a lang="{{.Locale}}" href="https://{{.Domain}}/status/">Status</a>`)
 	if err != nil {
 		return err
@@ -276,7 +280,17 @@ func TestListApps(t *testing.T) {
 	related := links["related"].(string)
 	assert.Equal(t, "https://cozywithapps-mini.example.net/", related)
 	icon := links["icon"].(string)
-	assert.Equal(t, "https://cozywithapps-mini.example.net/icon.png", icon)
+	assert.Equal(t, "/apps/mini/icon", icon)
+}
+
+func TestIconForApp(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/icon", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Equal(t, "<svg>...</svg>", string(body))
 }
 
 func TestMain(m *testing.M) {
