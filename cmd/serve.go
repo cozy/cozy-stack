@@ -11,6 +11,7 @@ import (
 )
 
 var flagAllowRoot bool
+var flagAppdir string
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -18,7 +19,11 @@ var serveCmd = &cobra.Command{
 	Short: "Starts the stack and listens for HTTP calls",
 	Long: `Starts the stack and listens for HTTP calls
 It will accept HTTP requests on localhost:8080 by default.
-Use the --port and --host flags to change the listening option.`,
+Use the --port and --host flags to change the listening option.
+
+If you are the developer of a client-side app, you can use --appdir
+to mount a directory as the application with the 'app' slug.
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !flagAllowRoot && os.Getuid() == 0 {
 			log.Errorf("Use --allow-root if you really want to start with the root user")
@@ -27,26 +32,15 @@ Use the --port and --host flags to change the listening option.`,
 		if err := instance.StartJobs(); err != nil {
 			return err
 		}
+		if flagAppdir != "" {
+			return web.ListenAndServeWithAppDir(flagAppdir)
+		}
 		return web.ListenAndServe()
-	},
-}
-
-var serveAppDir = &cobra.Command{
-	Use:   "serve-appdir [directory]",
-	Short: "Starts the stack along with a ",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return cmd.Help()
-		}
-		if err := instance.StartJobs(); err != nil {
-			return err
-		}
-		return web.ListenAndServeWithAppDir(args[0])
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
-	RootCmd.AddCommand(serveAppDir)
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
+	serveCmd.Flags().StringVar(&flagAppdir, "appdir", "", "Mount a directory as the 'app' application")
 }
