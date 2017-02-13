@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -92,6 +93,7 @@ func init() {
 
 // Configure Viper to read the environment and the optional config file
 func Configure() error {
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetEnvPrefix("cozy")
 	viper.AutomaticEnv()
 
