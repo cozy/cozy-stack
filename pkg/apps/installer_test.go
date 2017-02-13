@@ -62,7 +62,12 @@ func serveGitRep() {
 echo '` + manifest() + `' > manifest.webapp && \
 git init . && \
 git add . && \
-git commit -m "Initial commit"`
+git commit -m 'Initial commit' && \
+git checkout -b branch && \
+echo 'branch' > branch && \
+git add . && \
+git commit -m 'Create a branch' && \
+git checkout -`
 	cmd := exec.Command("sh", "-c", args)
 	cmd.Dir = localGitDir
 	if err := cmd.Run(); err != nil {
@@ -181,6 +186,10 @@ func TestInstallSuccessful(t *testing.T) {
 		}
 		state = man.State
 	}
+
+	ok, err := afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini/manifest.webapp")
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest is present")
 }
 
 func TestInstallAldreadyExist(t *testing.T) {
@@ -225,6 +234,50 @@ func TestInstallAldreadyExist(t *testing.T) {
 	if !assert.True(t, done) {
 		return
 	}
+}
+
+func TestInstallWithBranch(t *testing.T) {
+	inst, err := NewInstaller(c, &InstallerOptions{
+		Slug:      "local-cozy-mini-branch",
+		SourceURL: "git://localhost/#branch",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	go inst.InstallOrUpdate()
+
+	var state State
+	for {
+		man, done, err := inst.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if state == "" {
+			if !assert.EqualValues(t, Installing, man.State) {
+				return
+			}
+		} else if state == Installing {
+			if !assert.EqualValues(t, Ready, man.State) {
+				return
+			}
+			if !assert.True(t, done) {
+				return
+			}
+			break
+		} else {
+			t.Fatalf("invalid state")
+			return
+		}
+		state = man.State
+	}
+
+	ok, err := afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini-branch/manifest.webapp")
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest is present")
+	ok, err = afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini-branch/branch")
+	assert.NoError(t, err)
+	assert.True(t, ok, "The good branch was checked out")
 }
 
 func TestInstallWithUpgrade(t *testing.T) {

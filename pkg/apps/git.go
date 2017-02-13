@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	gitFS "srcd.works/go-billy.v1"
 	git "srcd.works/go-git.v4"
+	gitPl "srcd.works/go-git.v4/plumbing"
 	gitObj "srcd.works/go-git.v4/plumbing/object"
 	gitSt "srcd.works/go-git.v4/storage/filesystem"
 )
@@ -82,9 +83,16 @@ func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
+	branch := "HEAD"
+	if src.Fragment != "" {
+		branch = "refs/heads/" + src.Fragment
+	}
+
 	rep, err := git.Clone(storage, nil, &git.CloneOptions{
-		URL:   src.String(),
-		Depth: 1,
+		URL:           src.String(),
+		Depth:         1,
+		SingleBranch:  true,
+		ReferenceName: gitPl.ReferenceName(branch),
 	})
 	if err != nil {
 		return err
@@ -211,11 +219,9 @@ func resolveGithubURL(src *url.URL) (string, error) {
 	}
 
 	user, project := match[1], match[2]
-	var branch string
+	branch := "HEAD"
 	if src.Fragment != "" {
 		branch = src.Fragment
-	} else {
-		branch = "master"
 	}
 
 	u := fmt.Sprintf(ghRawManifestURL, user, project, branch, ManifestFilename)
@@ -223,6 +229,7 @@ func resolveGithubURL(src *url.URL) (string, error) {
 }
 
 func resolveManifestURL(src *url.URL) (string, error) {
+	// TODO check that it works with a branch
 	srccopy, _ := url.Parse(src.String())
 	srccopy.Scheme = "http"
 	if srccopy.Path == "" || srccopy.Path[len(srccopy.Path)-1] != '/' {
