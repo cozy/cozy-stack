@@ -27,7 +27,7 @@ const (
 	// Doctypes doc type for doctype list
 	Doctypes = "io.cozy.doctypes"
 
-	// Sharings doc type for sharing descriptors
+	// Sharings doc type for document and file sharing
 	Sharings = "io.cozy.sharings"
 	// Recipients doc type for sharing recipients
 	Recipients = "io.cozy.recipients"
@@ -63,7 +63,16 @@ const (
 	// OneShotSharing is a sharing with no continuous updates
 	OneShotSharing = "one-shot"
 	// MasterSlaveSharing is a sharing with unilateral continuous updates
-	MasterSlaveSharing = ""
+	MasterSlaveSharing = "master-slave"
 	// MasterMasterSharing is a sharing with bilateral continuous updates
-	MasterMasterSharing = ""
+	MasterMasterSharing = "master-master"
+)
+
+const (
+	// PendingStatus is the sharing pending status
+	PendingStatus = "pending"
+	// RefusedStatus is the sharing refused status
+	RefusedStatus = "refused"
+	// AcceptedStatus is the sharing accepted status
+	AcceptedStatus = "accepted"
 )
