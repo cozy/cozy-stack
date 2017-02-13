@@ -7,11 +7,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
 func addReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	doctype := c.Get("doctype").(string)
+	id := c.Param("docid")
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
@@ -19,8 +22,12 @@ func addReferencesHandler(c echo.Context) error {
 	}
 
 	docRef := jsonapi.ResourceIdentifier{
-		Type: c.Get("doctype").(string),
-		ID:   c.Param("docid"),
+		Type: doctype,
+		ID:   id,
+	}
+
+	if err := permissions.AllowTypeAndID(c, permissions.PUT, doctype, id); err != nil {
+		return err
 	}
 
 	for _, fRef := range references {
@@ -42,6 +49,10 @@ func listReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
 	id := c.Param("docid")
+
+	if err := permissions.AllowTypeAndID(c, permissions.GET, doctype, id); err != nil {
+		return err
+	}
 
 	refs, err := vfs.FilesReferencedBy(instance, doctype, id)
 	if err != nil {

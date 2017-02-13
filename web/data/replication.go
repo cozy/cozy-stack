@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -18,6 +19,11 @@ func proxy(c echo.Context, path string) error {
 
 func getDesignDoc(c echo.Context) error {
 	docid := c.Param("designdocid")
+	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
 
 	revs := c.QueryParam("revs")
 	if revs == "true" {
@@ -33,6 +39,10 @@ func getLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
+
 	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
@@ -45,6 +55,10 @@ func setLocalDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
 
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
+
 	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
@@ -54,6 +68,10 @@ func setLocalDoc(c echo.Context) error {
 
 func bulkGet(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
 
 	if err := CheckReadable(doctype); err != nil {
 		return err
@@ -65,6 +83,10 @@ func bulkGet(c echo.Context) error {
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
+
 	if err := CheckReadable(doctype); err != nil {
 		return err
 	}
@@ -72,10 +94,13 @@ func fullCommit(c echo.Context) error {
 	return proxy(c, "_ensure_full_commit")
 }
 
-// GetDoc get a doc by its type and id
 func dbStatus(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
 
 	if err := CheckReadable(doctype); err != nil {
 		return err
