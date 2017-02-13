@@ -49,6 +49,10 @@ func ListenAndServeWithAppDir(dir string) error {
 		return err
 	}
 	return listenAndServe(func(c echo.Context) error {
+		slug := c.Get("slug").(string)
+		if slug != "app" {
+			return webapps.Serve(c)
+		}
 		method := c.Request().Method
 		if method != "GET" && method != "HEAD" {
 			return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
@@ -68,7 +72,7 @@ func ListenAndServeWithAppDir(dir string) error {
 				apps.ManifestFilename, err.Error())
 		}
 		app.CreateDefaultRoute()
-		app.Slug = c.Get("slug").(string)
+		app.Slug = slug
 		i := middlewares.GetInstance(c)
 		f := webapps.NewAferoServer(fs, func(_, folder, file string) string {
 			return path.Join(folder, file)
