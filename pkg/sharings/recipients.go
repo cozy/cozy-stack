@@ -1,15 +1,42 @@
 package sharings
 
-import "github.com/cozy/cozy-stack/pkg/oauth"
+import (
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/web/jsonapi"
+)
 
 // Recipient is a struct describing a sharing recipient
 type Recipient struct {
-	RID      string `json:"_id,omitempty"`
-	RRev     string `json:"_rev,omitempty"`
-	Mail     string `json:"mail"`
-	Url      string `json:"url"`
-	ClientID oauth.Client
+	RID    string `json:"_id,omitempty"`
+	RRev   string `json:"_rev,omitempty"`
+	Mail   string `json:"mail"`
+	URL    string `json:"url"`
+	Client *oauth.Client
 }
 
-// Recipients is a set of recipient
-type Recipients []Recipient
+// ID returns the recipient qualified identifier
+func (r *Recipient) ID() string { return r.RID }
+
+// Rev returns the recipient revision
+func (r *Recipient) Rev() string { return r.RRev }
+
+// DocType returns the recipient document type
+func (r *Recipient) DocType() string { return consts.Recipients }
+
+// SetID changes the recipient qualified identifier
+func (r *Recipient) SetID(id string) { r.RID = id }
+
+// SetRev changes the recipient revision
+func (r *Recipient) SetRev(rev string) { r.RRev = rev }
+
+// Relationships implements jsonapi.Doc
+func (r *Recipient) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Included implements jsonapi.Doc
+func (r *Recipient) Included() []jsonapi.Object { return nil }
+
+// Links implements jsonapi.Doc
+func (r *Recipient) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
+}
