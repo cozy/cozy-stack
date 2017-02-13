@@ -164,8 +164,8 @@ func TestInstallSuccessful(t *testing.T) {
 
 	var state State
 	for {
-		man, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
+		man, done, err2 := inst.Poll()
+		if !assert.NoError(t, err2) {
 			return
 		}
 		if state == "" {
@@ -249,8 +249,8 @@ func TestInstallWithBranch(t *testing.T) {
 
 	var state State
 	for {
-		man, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
+		man, done, err2 := inst.Poll()
+		if !assert.NoError(t, err2) {
 			return
 		}
 		if state == "" {
