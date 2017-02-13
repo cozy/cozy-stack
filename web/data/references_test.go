@@ -45,6 +45,7 @@ func TestAddReferencesHandler(t *testing.T) {
 	})
 	req, _ := http.NewRequest("POST", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/vnd.api+json")
 
 	res, err := http.DefaultClient.Do(req)
@@ -68,6 +69,7 @@ func TestListReferencesHandler(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 
 	var result struct {
 		Data []jsonapi.ResourceIdentifier `json:"data"`
