@@ -1,7 +1,9 @@
 package permissions
 
 import (
+	"bytes"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -41,6 +43,7 @@ func keyPicker(i *instance.Instance) jwt.Keyfunc {
 }
 
 const bearerAuthScheme = "Bearer "
+const basicAuthScheme = "Basic "
 
 // ErrNoToken is returned whe the request has no token
 var ErrNoToken = errors.New("No token in request")
@@ -57,6 +60,16 @@ func getBearerToken(c echo.Context) string {
 	header := c.Request().Header.Get(echo.HeaderAuthorization)
 	if strings.HasPrefix(header, bearerAuthScheme) {
 		return header[len(bearerAuthScheme):]
+	} else if strings.HasPrefix(header, basicAuthScheme) {
+		b, err := base64.StdEncoding.DecodeString(header[len(basicAuthScheme):])
+		if err != nil {
+			return ""
+		}
+		parts := bytes.Split(b, []byte{':'})
+		if len(parts) != 2 {
+			return ""
+		}
+		return string(parts[1])
 	}
 	return ""
 }

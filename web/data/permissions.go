@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	permpkg "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
@@ -23,7 +24,7 @@ var blackList = map[string]bool{
 	consts.Instances:        readable,
 }
 
-func fetchOldAndCheckPerm(c echo.Context, verb permissions.Verb, doctype, id string) error {
+func fetchOldAndCheckPerm(c echo.Context, verb permpkg.Verb, doctype, id string) error {
 	instance := middlewares.GetInstance(c)
 
 	// we cant apply to whole type, let's fetch old doc and see if it applies there
