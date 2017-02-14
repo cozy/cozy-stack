@@ -77,7 +77,7 @@ do_start() {
 
 	echo "starting cozy-stack with ${vfsdir}..."
 
-	${COZY_STACK_PATH} serve \
+	${COZY_STACK_PATH} serve --allow-root \
 		--appdir "${appdir}" \
 		--host "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
