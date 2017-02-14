@@ -25,6 +25,7 @@ type client struct {
 
 	addr string
 	pass string
+	mime string
 }
 
 func clientCreateRequest(c *client, method, path string, q url.Values, r io.Reader) (*http.Request, error) {
@@ -40,6 +41,9 @@ func clientCreateRequest(c *client, method, path string, q url.Values, r io.Read
 	req, err := http.NewRequest(method, u.String(), r)
 	if err != nil {
 		return nil, err
+	}
+	if c.mime != "" {
+		req.Header.Set("Content-Type", c.mime)
 	}
 	if c.pass != "" {
 		req.SetBasicAuth("", c.pass)

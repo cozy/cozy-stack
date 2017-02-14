@@ -12,7 +12,7 @@ import (
 )
 
 var flagAllowRoot bool
-var flagAppdir string
+var flagAppdirs []string
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -42,9 +42,9 @@ example), you can use the --appsdir flag like this:
 		if err := instance.StartJobs(); err != nil {
 			return err
 		}
-		if flagAppdir != "" {
+		if len(flagAppdirs) > 0 {
 			apps := make(map[string]string)
-			for _, app := range strings.Split(flagAppdir, ",") {
+			for _, app := range flagAppdirs {
 				parts := strings.Split(app, ":")
 				switch len(parts) {
 				case 1:
@@ -64,5 +64,5 @@ example), you can use the --appsdir flag like this:
 func init() {
 	RootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
-	serveCmd.Flags().StringVar(&flagAppdir, "appdir", "", "Mount a directory as the 'app' application")
+	serveCmd.Flags().StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
 }
