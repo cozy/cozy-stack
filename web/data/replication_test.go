@@ -2,6 +2,7 @@ package data
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -20,6 +21,10 @@ func TestReplicationFromcozy(t *testing.T) {
 	var source = ts.URL + "/data/" + Type
 	var target = config.CouchURL() + "replication-target"
 	var replicator = config.CouchURL() + "_replicate"
+
+	var token = testToken(testInstance)
+
+	source = strings.Replace(source, "http://", "http://user:"+token+"@", 1)
 
 	req, _ := http.NewRequest("DELETE", target, nil)
 	doRequest(req, nil)

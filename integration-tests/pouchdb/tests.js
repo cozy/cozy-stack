@@ -5,17 +5,23 @@ var Pouchdb = require('pouchdb')
 
 require('longjohn')
 
+var TOKEN = 'test:' + process.env.TEST_TOKEN
 var DOCTYPE = 'io.cozy.pouchtestobject'
-var SOURCE = 'http://localhost:8080/data/' + DOCTYPE + '/'
+var SOURCE = 'http://' + TOKEN + '@localhost:8080/data/' + DOCTYPE + '/'
+
+var auth = new Buffer(TOKEN, 'binary').toString('base64')
 
 function stackRequest (method, path, body, expect, callback) {
   var opts = {
     'method': method,
     'port': process.env.COZY_STACK_PORT || 8080,
-    'path': path
+    'path': path,
+    'headers': {
+      'Authorization': 'Basic ' + auth
+    }
   }
 
-  if (body) opts.headers = {'Content-Type': 'application/json'}
+  if (body) opts.headers['Content-Type'] = 'application/json'
 
   var req = http.request(opts, function (res) {
     var buffers = []

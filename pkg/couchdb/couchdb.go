@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/google/go-querystring/query"
+	"github.com/labstack/echo"
 )
 
 // Doc is the interface that encapsulate a couchdb document, of any
@@ -576,6 +577,7 @@ func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
 	director := func(req *http.Request) {
 		req.URL.Scheme = couchurl.Scheme
 		req.URL.Host = couchurl.Host
+		req.Header.Del(echo.HeaderAuthorization) // drop stack auth
 		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
 		req.URL.Path, _ = url.QueryUnescape(req.URL.RawPath)
 	}

@@ -9,15 +9,20 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 var client = &http.Client{}
@@ -95,6 +100,29 @@ func getDocForTest() couchdb.JSONDoc {
 	return doc
 }
 
+func testToken(i *instance.Instance) string {
+
+	var scope = strings.Join([]string{
+		consts.Doctypes,
+		Type,
+		"io.cozy.files",
+		"io.cozy.events",
+		"io.cozy.anothertype",
+		"io.cozy.nottype",
+	}, " ")
+
+	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  "testapp",
+		},
+		Scope: scope,
+	})
+	return t
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
@@ -138,6 +166,7 @@ func TestMain(m *testing.M) {
 func TestAllDoctypes(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/_all_doctypes", nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
@@ -156,6 +185,7 @@ func TestAllDoctypes(t *testing.T) {
 func TestSuccessGet(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/"+ID, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
@@ -166,10 +196,11 @@ func TestSuccessGet(t *testing.T) {
 
 func TestWrongDoctype(t *testing.T) {
 
-	couchdb.DeleteDB(testInstance, "nottype")
+	couchdb.DeleteDB(testInstance, "io.cozy.nottype")
 
-	req, _ := http.NewRequest("GET", ts.URL+"/data/nottype/"+ID, nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/data/io.cozy.nottype/"+ID, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
@@ -185,6 +216,7 @@ func TestWrongDoctype(t *testing.T) {
 func TestUnderscoreName(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/_foo", nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
@@ -193,6 +225,7 @@ func TestUnderscoreName(t *testing.T) {
 func TestGetDesign(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/_design/test", nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
@@ -205,6 +238,7 @@ func TestVFSDoctype(t *testing.T) {
 	})
 	req, _ := http.NewRequest("POST", ts.URL+"/data/io.cozy.files/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
@@ -217,6 +251,7 @@ func TestVFSDoctype(t *testing.T) {
 func TestWrongID(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/NOTID", nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	out, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "404 Not Found", res.Status, "should get a 404")
@@ -250,6 +285,7 @@ func TestSuccessCreateKnownDoctype(t *testing.T) {
 	var sur stackUpdateResponse
 	req, _ := http.NewRequest("POST", ts.URL+"/data/"+Type+"/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, &sur)
 	assert.NoError(t, err)
@@ -272,6 +308,7 @@ func TestSuccessCreateUnknownDoctype(t *testing.T) {
 	type2 := "io.cozy.anothertype"
 	req, _ := http.NewRequest("POST", ts.URL+"/data/"+type2+"/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, &sur)
 	assert.NoError(t, err)
@@ -293,6 +330,7 @@ func TestWrongCreateWithID(t *testing.T) {
 	})
 	req, _ := http.NewRequest("POST", ts.URL+"/data/"+Type+"/", in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
@@ -314,6 +352,7 @@ func TestSuccessUpdate(t *testing.T) {
 	})
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
@@ -344,6 +383,7 @@ func TestWrongIDInDocUpdate(t *testing.T) {
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
@@ -360,6 +400,7 @@ func TestCreateDocWithAFixedID(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/specific-id"
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
@@ -388,6 +429,7 @@ func TestNoRevInDocUpdate(t *testing.T) {
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
@@ -408,6 +450,7 @@ func TestPreviousRevInDocUpdate(t *testing.T) {
 	})
 	req, _ := http.NewRequest("PUT", url, in)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	_, res, err := doRequest(req, nil)
 	assert.NoError(t, err)
@@ -421,6 +464,7 @@ func TestPreviousRevInDocUpdate(t *testing.T) {
 	})
 	req2, _ := http.NewRequest("PUT", url, in2)
 	req2.Header.Add("Host", Host)
+	req2.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req2.Header.Set("Content-Type", "application/json")
 	_, res2, err := doRequest(req2, nil)
 	assert.NoError(t, err)
@@ -437,6 +481,7 @@ func TestSuccessDeleteIfMatch(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", url, nil)
 	req.Header.Add("If-Match", rev)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -456,6 +501,7 @@ func TestFailDeleteIfNotMatch(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", url, nil)
 	req.Header.Add("If-Match", "1-238238232322121") // not correct rev
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -471,6 +517,7 @@ func TestFailDeleteIfHeaderAndRevMismatch(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", url, nil)
 	req.Header.Add("If-Match", "1-23823823231") // not same rev
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -485,6 +532,7 @@ func TestFailDeleteIfNoRev(t *testing.T) {
 	url := ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
 	req, _ := http.NewRequest("DELETE", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	var out stackUpdateResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -507,6 +555,7 @@ func TestDefineIndex(t *testing.T) {
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	var out indexCreationResponse
 	_, res, err := doRequest(req, &out)
@@ -526,6 +575,7 @@ func TestReDefineIndex(t *testing.T) {
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	var out indexCreationResponse
 	_, res, err := doRequest(req, &out)
 	assert.NoError(t, err)
@@ -539,13 +589,14 @@ func TestReDefineIndex(t *testing.T) {
 
 func TestDefineIndexUnexistingDoctype(t *testing.T) {
 
-	couchdb.DeleteDB(testInstance, "nottype")
+	couchdb.DeleteDB(testInstance, "io.cozy.nottype")
 
 	var def map[string]interface{}
 	def = M{"index": M{"fields": S{"foo"}}}
-	var url = ts.URL + "/data/nottype/_index"
+	var url = ts.URL + "/data/io.cozy.nottype/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	var out indexCreationResponse
 	_, res, err := doRequest(req, &out)
@@ -571,6 +622,7 @@ func TestFindDocuments(t *testing.T) {
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	var out indexCreationResponse
 	_, _, err := doRequest(req, &out)
@@ -582,6 +634,7 @@ func TestFindDocuments(t *testing.T) {
 	var url2 = ts.URL + "/data/" + Type + "/_find"
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	var out2 struct {
 		Docs []couchdb.JSONDoc `json:"docs"`
@@ -598,6 +651,7 @@ func TestFindDocumentsWithoutIndex(t *testing.T) {
 	var url2 = ts.URL + "/data/" + Type + "/_find"
 	req, _ := http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Set("Content-Type", "application/json")
 	var out2 struct {
 		Error  string `json:"error"`
@@ -617,6 +671,7 @@ func TestGetChanges(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_changes?style=all_docs"
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	out, res, err := doRequest(req, nil)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	assert.NoError(t, err)
@@ -630,6 +685,7 @@ func TestGetChanges(t *testing.T) {
 	url = ts.URL + "/data/" + Type + "/_changes?limit=2&since=" + seqno
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	out, res, err = doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Len(t, out["results"].([]interface{}), 2)
@@ -637,6 +693,7 @@ func TestGetChanges(t *testing.T) {
 	url = ts.URL + "/data/" + Type + "/_changes?since=" + seqno
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	out, res, err = doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Len(t, out["results"].([]interface{}), 3)
@@ -646,6 +703,7 @@ func TestPostChanges(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_changes?style=all_docs"
 	req, _ := http.NewRequest("POST", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	_, res, err := doRequest(req, nil)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	assert.NoError(t, err)
@@ -655,6 +713,7 @@ func TestWrongFeedChanges(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_changes?feed=continuous"
 	req, _ := http.NewRequest("POST", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	_, res, err := doRequest(req, nil)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
 	assert.NoError(t, err)
@@ -664,6 +723,7 @@ func TestWrongStyleChanges(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_changes?style=not_a_valid_style"
 	req, _ := http.NewRequest("POST", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	_, res, err := doRequest(req, nil)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
 	assert.NoError(t, err)
@@ -673,6 +733,7 @@ func TestLimitIsNoNumber(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_changes?limit=not_a_number"
 	req, _ := http.NewRequest("POST", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	_, res, err := doRequest(req, nil)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
 	assert.NoError(t, err)
@@ -682,6 +743,7 @@ func TestUnsupportedOption(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_changes?inlude_docs=true"
 	req, _ := http.NewRequest("POST", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	_, res, err := doRequest(req, nil)
 	assert.Equal(t, "400 Bad Request", res.Status, "should get a 400")
 	assert.NoError(t, err)
@@ -691,6 +753,7 @@ func TestGetAllDocs(t *testing.T) {
 	url := ts.URL + "/data/" + Type + "/_all_docs?include_docs=true"
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Host", Host)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	out, res, err := doRequest(req, nil)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	assert.NoError(t, err)
