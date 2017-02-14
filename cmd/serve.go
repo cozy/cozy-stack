@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"os"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -11,6 +12,7 @@ import (
 )
 
 var flagAllowRoot bool
+var flagAppdir string
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -18,7 +20,20 @@ var serveCmd = &cobra.Command{
 	Short: "Starts the stack and listens for HTTP calls",
 	Long: `Starts the stack and listens for HTTP calls
 It will accept HTTP requests on localhost:8080 by default.
-Use the --port and --host flags to change the listening option.`,
+Use the --port and --host flags to change the listening option.
+
+If you are the developer of a client-side app, you can use --appdir
+to mount a directory as the application with the 'app' slug.
+`,
+	Example: `The most often, this command is used in its simple form:
+
+	$ cozy-stack serve
+
+But if you want to develop two apps in local (to test their interactions for
+example), you can use the --appsdir flag like this:
+
+	$ cozy-stack serve --appsdir appone:/path/to/app_one,apptwo:/path/to/app_two
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !flagAllowRoot && os.Getuid() == 0 {
 			log.Errorf("Use --allow-root if you really want to start with the root user")
@@ -27,26 +42,27 @@ Use the --port and --host flags to change the listening option.`,
 		if err := instance.StartJobs(); err != nil {
 			return err
 		}
+		if flagAppdir != "" {
+			apps := make(map[string]string)
+			for _, app := range strings.Split(flagAppdir, ",") {
+				parts := strings.Split(app, ":")
+				switch len(parts) {
+				case 1:
+					apps["app"] = parts[0]
+				case 2:
+					apps[parts[0]] = parts[1]
+				default:
+					return errors.New("Invalid appdir value")
+				}
+			}
+			return web.ListenAndServeWithAppDir(apps)
+		}
 		return web.ListenAndServe()
-	},
-}
-
-var serveAppDir = &cobra.Command{
-	Use:   "serve-appdir [directory]",
-	Short: "Starts the stack along with a ",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return cmd.Help()
-		}
-		if err := instance.StartJobs(); err != nil {
-			return err
-		}
-		return web.ListenAndServeWithAppDir(args[0])
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
-	RootCmd.AddCommand(serveAppDir)
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
+	serveCmd.Flags().StringVar(&flagAppdir, "appdir", "", "Mount a directory as the 'app' application")
 }

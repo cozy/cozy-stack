@@ -204,7 +204,7 @@ Source    | URL from where the app can be downloaded (only for install)
 #### Request
 
 ```http
-POST /apps/emails?Source=git://github.com/cozy/cozy-emails HTTP/1.1
+POST /apps/emails?Source=git://github.com/cozy/cozy-emails.git HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -234,6 +234,13 @@ Content-Type: application/vnd.api+json
     }
   }]
 }
+```
+
+**Note**: it's possible to choose a git branch by passing it in the fragment
+like this:
+
+```http
+POST /apps/emails-dev?Source=git://github.com/cozy/cozy-emails.git%23dev HTTP/1.1
 ```
 
 

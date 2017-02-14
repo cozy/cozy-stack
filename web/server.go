@@ -33,22 +33,30 @@ func ListenAndServe() error {
 // In order to serve the application, the specified directory should provide
 // a manifest.webapp file that will be used to parameterize the application
 // permissions.
-func ListenAndServeWithAppDir(dir string) error {
-	dir = utils.AbsPath(dir)
-	exists, err := utils.DirExists(dir)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("Directory %s does not exist", dir)
-	}
-	if err = checkExists(path.Join(dir, apps.ManifestFilename)); err != nil {
-		return err
-	}
-	if err = checkExists(path.Join(dir, "index.html")); err != nil {
-		return err
+func ListenAndServeWithAppDir(appsdir map[string]string) error {
+	for slug, dir := range appsdir {
+		dir = utils.AbsPath(dir)
+		appsdir[slug] = dir
+		exists, err := utils.DirExists(dir)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("Directory %s does not exist", dir)
+		}
+		if err = checkExists(path.Join(dir, apps.ManifestFilename)); err != nil {
+			return err
+		}
+		if err = checkExists(path.Join(dir, "index.html")); err != nil {
+			return err
+		}
 	}
 	return listenAndServe(func(c echo.Context) error {
+		slug := c.Get("slug").(string)
+		dir, ok := appsdir[slug]
+		if !ok {
+			return webapps.Serve(c)
+		}
 		method := c.Request().Method
 		if method != "GET" && method != "HEAD" {
 			return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
@@ -68,7 +76,7 @@ func ListenAndServeWithAppDir(dir string) error {
 				apps.ManifestFilename, err.Error())
 		}
 		app.CreateDefaultRoute()
-		app.Slug = c.Get("slug").(string)
+		app.Slug = slug
 		i := middlewares.GetInstance(c)
 		f := webapps.NewAferoServer(fs, func(_, folder, file string) string {
 			return path.Join(folder, file)

@@ -77,7 +77,8 @@ do_start() {
 
 	echo "starting cozy-stack with ${vfsdir}..."
 
-	${COZY_STACK_PATH} serve-appdir "${appdir}" \
+	${COZY_STACK_PATH} serve \
+		--appdir "${appdir}" \
 		--host "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
 		--couchdb-url "${COUCHDB_URL}" \
@@ -132,7 +133,7 @@ do_create_instances() {
 		printf "creating instance %s... " "${host}"
 		set +e
 		add_instance_val=$(
-			${COZY_STACK_PATH} instances add --dev="true" "${host}" --email dev@cozy.io 2>&1
+			${COZY_STACK_PATH} instances add --dev --email dev@cozy.io "${host}" 2>&1
 		)
 		add_instance_ret="${?}"
 		set -e
