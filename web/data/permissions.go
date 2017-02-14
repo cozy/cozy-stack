@@ -35,12 +35,7 @@ func fetchOldAndCheckPerm(c echo.Context, verb permpkg.Verb, doctype, id string)
 	}
 
 	// check if permissions set allows manipulating old doc
-	errOld := permissions.Allow(c, verb, &old)
-	if errOld != nil {
-		return errOld
-	}
-
-	return nil
+	return permissions.Allow(c, verb, &old)
 }
 
 // CheckReadable will abort the context and returns false if the doctype
