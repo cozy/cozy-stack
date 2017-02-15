@@ -80,7 +80,7 @@ func TestShowLoginPage(t *testing.T) {
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), "Please enter your passphrase")
+	assert.Contains(t, string(body), "Enter your password to access your Cozy")
 }
 
 func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
