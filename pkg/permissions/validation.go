@@ -17,9 +17,7 @@ func validValues(r Rule, o Validable) bool {
 		return r.ValuesContain(o.ID())
 	}
 
-	return r.SomeValue(func(value string) bool {
-		return o.Valid(r.Selector, value)
-	})
+	return r.ValuesValid(o)
 }
 
 func validVerbAndType(r Rule, v Verb, doctype string) bool {
