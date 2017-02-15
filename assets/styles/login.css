@@ -1,0 +1,343 @@
+/*! normalize.css v4.0.0 | MIT License | github.com/necolas/normalize.css */
+
+html {
+    font-family: sans-serif;
+    -ms-text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%
+}
+body {
+    margin: 0
+}
+figure,
+footer,
+header,
+main,
+section,
+    display: block
+}
+a {
+    background-color: transparent
+}
+a:active,
+a:hover {
+    outline-width: 0
+}
+b,
+strong {
+    font-weight: inherit
+}
+b,
+strong {
+    font-weight: bolder
+}
+h1 {
+    font-size: 2em;
+    margin: .67em 0
+}
+img {
+    border-style: none
+}
+svg:not(:root) {
+    overflow: hidden
+}
+figure {
+    margin: 1em 40px
+}
+button,
+input {
+    font: inherit
+}
+button,
+input {
+    overflow: visible
+}
+button,
+input {
+    margin: 0
+}
+button {
+    text-transform: none
+}
+[type=button],
+[type=reset],
+[type=submit],
+button {
+    cursor: pointer
+}
+[disabled] {
+    cursor: default
+}
+[type=reset],
+[type=submit],
+button,
+html [type=button] {
+    -webkit-appearance: button
+}
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+    border: 0;
+    padding: 0
+}
+button:-moz-focusring,
+input:-moz-focusring {
+    outline: 1px dotted ButtonText
+}
+/*# sourceMappingURL=common.c66d7c112967074b1398.css.map*/
+
+[role=button][aria-busy=true]:after,
+button[aria-busy=true]:after {
+    content: "";
+    display: inline-block;
+    vertical-align: middle;
+    background-position: 50%;
+    background-repeat: no-repeat;
+    background-size: cover
+}
+[role=button][aria-busy=true]:after,
+button[aria-busy=true]:after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    animation: 1s linear infinite spin
+}
+[role=button][aria-busy=true]:after,
+button[aria-busy=true]:after {
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='12' height='12' fill='white'><path opacity='.25' d='M16 0a16 16 0 0 0 0 32 16 16 0 0 0 0-32m0 4a12 12 0 0 1 0 24 12 12 0 0 1 0-24'/><path d='M16 0a16 16 0 0 1 16 16h-4a12 12 0 0 0-12-12z'/></svg>")
+}
+body > svg {
+    height: 0;
+    width:  0;
+    float: left;
+}
+
+[role=application] {
+    min-height: 100vh;
+    font-family: Source Sans Pro, sans-serif
+}
+main {
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-direction: column;
+    flex-direction: column
+}
+main>div {
+    display: -ms-flexbox;
+    display: flex;
+    min-height: 100vh
+}
+.main-wrapper {
+    -ms-flex: 0 1 30em;
+    flex: 0 1 30em;
+    margin: auto;
+    padding: 3em 1em
+}
+header figure {
+    margin: 0 auto 2em;
+    text-align: center
+}
+header figure a {
+    display: block
+}
+header figure svg {
+    max-width: 4.5em;
+    height: 4.5em
+}
+header figure .svg-wrapper {
+    margin: auto;
+    max-width: 4.5em;
+    height: 4.5em;
+    border-radius: 50%;
+    padding: 1em;
+    box-shadow: 0 1px 3px rgba(50, 54, 63, .19), 0 4px 12px rgba(50, 54, 63, .12)
+}
+header h1 {
+    margin: 0
+}
+header p {
+    color: #788195
+}
+.svg-wrapper {
+    background-color: #33a6ff
+}
+footer {
+    margin-top: 2em
+}
+footer ol {
+    margin: .3em 0 0;
+    padding: 0
+}
+a {
+    color: #33a6ff;
+    text-decoration: none
+}
+form .line {
+    position: relative;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-direction: column;
+    flex-direction: column
+}
+form .line button[action=password-visibility] {
+    position: absolute;
+    top: 0;
+    right: 0
+}
+form .line button.icon {
+    background-color: transparent;
+    background-repeat: no-repeat;
+    padding: 0;
+    padding-top: .7em;
+    width: 1.3em;
+    height: 1.3em;
+    display: block
+}
+form .line button.icon svg {
+    width: 1.3em;
+    height: 1.3em
+}
+label {
+    display: block;
+    text-transform: uppercase;
+    color: #92a0b2;
+    font-size: .9em;
+    padding: .55em 0
+}
+.error-label {
+    display: none;
+    color: #ff3713
+}
+input[type=number],
+input[type=password],
+input[type=text],
+select {
+    display: inline-block;
+    padding: .75em .75em .9em;
+    border-radius: 4px;
+    box-sizing: border-box;
+    border: 1px solid #c8d5df;
+    background: #f5f5f5;
+    color: #000
+}
+input[type=number]::-webkit-input-placeholder,
+input[type=password]::-webkit-input-placeholder,
+input[type=text]::-webkit-input-placeholder,
+select::-webkit-input-placeholder {
+    color: #4f5b69;
+    font-size: 1.05em
+}
+input[type=number]::-moz-placeholder,
+input[type=password]::-moz-placeholder,
+input[type=text]::-moz-placeholder,
+select::-moz-placeholder {
+    color: #4f5b69;
+    font-size: 1.05em
+}
+input[type=number]:-ms-input-placeholder,
+input[type=password]:-ms-input-placeholder,
+input[type=text]:-ms-input-placeholder,
+select:-ms-input-placeholder {
+    color: #4f5b69;
+    font-size: 1.05em
+}
+input[type=number]::placeholder,
+input[type=password]::placeholder,
+input[type=text]::placeholder,
+select::placeholder {
+    color: #4f5b69;
+    font-size: 1.05em
+}
+input[type=number]:focus,
+input[type=password]:focus,
+input[type=text]:focus,
+select:focus {
+    border: 1px solid #33a6ff;
+    background: none
+}
+input[type=number].error,
+input[type=password].error,
+input[type=text].error,
+select.error {
+    border: 1px solid #ff3713;
+    background: none
+}
+input[type=number] {
+    width: 100%
+}
+[role=button],
+button {
+    box-sizing: border-box;
+    border: 0;
+    display: block;
+    padding: .55em 2em;
+    min-height: 2.5em;
+    border-radius: 4px;
+    background-color: #33a6ff;
+    text-align: center;
+    text-transform: uppercase;
+    color: #fff
+}
+[role=button][aria-disabled=true],
+[role=button][disabled],
+button[aria-disabled=true],
+button[disabled] {
+    opacity: .5;
+    cursor: default
+}
+[role=button][aria-busy=true],
+button[aria-busy=true] {
+    position: relative
+}
+[role=button][aria-busy=true]:after,
+button[aria-busy=true]:after {
+    position: static;
+    width: 1em;
+    height: 1em;
+    margin-left: .5em;
+    margin-right: -1.5em
+}
+.errors {
+    color: #ff3713
+}
+
+footer button {
+    width: 100%
+}
+footer ol {
+    display: -ms-flexbox;
+    display: flex;
+    list-style-type: none
+}
+footer li {
+    -ms-flex: 1 1 1em;
+    flex: 1 1 1em;
+    margin: 3px;
+    height: 3px;
+    border-radius: 3px;
+    background-color: #33a6ff;
+    text-indent: -9999em
+}
+footer li:first-child {
+    margin-left: 0
+}
+footer li:last-child {
+    margin-right: 0
+}
+footer li[aria-selected=true]~li {
+    background-color: #dde6ef
+}
+.password-visibility-icon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-height: 2em;
+    background-position: 50%;
+    background-image: url("../sprites/icon-eye-open.svg")
+}
+.password-visibility-icon[aria-pressed=true] {
+    background-image: url("../sprites/icon-eye-closed.svg")
+}
+.forgot[aria-disabled=true] {
+    cursor: default;
+    opacity: .5
+}
