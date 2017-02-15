@@ -219,7 +219,7 @@ and ZeroVM has some severe limitations, so, it won't be used.
 - [ ] What API to list the konnectors for My Accounts?
 - [ ] What workflow for developing a konnector?
 - [ ] How to test konnectors?
-- [ ] How are manager the locales?
+- [ ] How are managed the locales?
 - [ ] Which version of nodejs?
 - [ ] Do you keep coffeescript? Or move every konnector to ES2017?
   - 28 konnectors in coffee
@@ -245,3 +245,4 @@ and ZeroVM has some severe limitations, so, it won't be used.
   given to the konnector?
 - [ ] what should expose a konnector (data, functions, etc)?
     - https://github.com/cozy-labs/konnectors/issues/695
+- [ ] How can we support konnectors with OAuth?
