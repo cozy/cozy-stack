@@ -21,6 +21,7 @@ var flagTimezone string
 var flagEmail string
 var flagApps []string
 var flagDev bool
+var flagPassphrase string
 
 func validDomain(domain string) bool {
 	return !strings.ContainsAny(domain, " /?#@\t\r\n")
@@ -84,9 +85,31 @@ given domain.
 			return err
 		}
 
-		log.Infof("Instance created with success for domain %s", i.Attrs.Domain)
-		log.Infof("Registration token: \"%s\"", hex.EncodeToString(i.Attrs.RegisterToken))
-		log.Debugf("Instance created: %#v", i.Attrs)
+		token := hex.EncodeToString(i.Attrs.RegisterToken)
+
+		if flagPassphrase == "" {
+			log.Infof("Instance created with success for domain %s", i.Attrs.Domain)
+			log.Infof("Registration token: \"%s\"", token)
+			log.Debugf("Instance created: %#v", i.Attrs)
+			return nil
+		}
+
+		body := struct {
+			Token string `json:"register_token"`
+			Pass  string `json:"passphrase"`
+		}{
+			Token: token,
+			Pass:  flagPassphrase,
+		}
+		client := &client{addr: i.Attrs.Domain, mime: "application/json"}
+		res, err := clientRequest(client, "POST", "/settings/passphrase", nil, body)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		if res.StatusCode != 204 {
+			log.Errorf("Error while setting the passphrase: %d", res.StatusCode)
+		}
 		return nil
 	},
 }
@@ -275,5 +298,6 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
+	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	RootCmd.AddCommand(instanceCmdGroup)
 }
