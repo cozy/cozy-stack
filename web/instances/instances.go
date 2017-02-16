@@ -7,6 +7,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
@@ -59,7 +60,7 @@ func deleteHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, i, nil)
 }
 
-func getToken(c echo.Context) error {
+func createToken(c echo.Context) error {
 	domain := c.QueryParam("Domain")
 	audience := c.QueryParam("Audience")
 	scope := c.QueryParam("Scope")
@@ -102,6 +103,22 @@ func getToken(c echo.Context) error {
 	return c.String(http.StatusOK, token)
 }
 
+func registerClient(c echo.Context) error {
+	in, err := instance.Get(c.QueryParam("Domain"))
+	if err != nil {
+		return wrapError(err)
+	}
+	client := oauth.Client{
+		RedirectURIs: []string{c.QueryParam("RedirectURI")},
+		ClientName:   c.QueryParam("ClientName"),
+		SoftwareID:   c.QueryParam("SoftwareID"),
+	}
+	if regErr := client.Create(in); regErr != nil {
+		return c.String(http.StatusBadRequest, regErr.Description)
+	}
+	return c.String(http.StatusOK, client.ClientID)
+}
+
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -123,5 +140,6 @@ func Routes(router *echo.Group) {
 	router.GET("/", listHandler)
 	router.POST("/", createHandler)
 	router.DELETE("/:domain", deleteHandler)
-	router.GET("/token", getToken)
+	router.POST("/token", createToken)
+	router.POST("/oauth_client", registerClient)
 }

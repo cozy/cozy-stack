@@ -234,6 +234,28 @@ var oauthTokenInstanceCmd = &cobra.Command{
 	},
 }
 
+var oauthClientInstanceCmd = &cobra.Command{
+	Use:   "client-oauth [domain] [redirect_uri] [client_name] [software_id]",
+	Short: "Register a new OAuth client",
+	Long:  `It registers a new OAuth client and returns its client_id`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 4 {
+			return cmd.Help()
+		}
+		clientID, err := oauthClientRequest(url.Values{
+			"Domain":      {args[0]},
+			"RedirectURI": {args[1]},
+			"ClientName":  {args[2]},
+			"SoftwareID":  {args[3]},
+		})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(clientID)
+		return err
+	},
+}
+
 type instanceData struct {
 	ID    string             `json:"id"`
 	Rev   string             `json:"rev"`
@@ -279,7 +301,7 @@ func instancesRequest(method, path string, q url.Values, body interface{}) (*ins
 }
 
 func tokenRequest(q url.Values) (string, error) {
-	res, err := clientRequest(instancesClient(), "GET", "/instances/token", q, nil)
+	res, err := clientRequest(instancesClient(), "POST", "/instances/token", q, nil)
 	if err != nil {
 		return "", err
 	}
@@ -288,7 +310,20 @@ func tokenRequest(q url.Values) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(b), err
+	return string(b), nil
+}
+
+func oauthClientRequest(q url.Values) (string, error) {
+	res, err := clientRequest(instancesClient(), "POST", "/instances/oauth_client", q, nil)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func init() {
@@ -297,6 +332,7 @@ func init() {
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
+	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
