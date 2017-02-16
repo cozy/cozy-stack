@@ -6,6 +6,6 @@
     event.preventDefault()
     passwordVisibility = !passwordVisibility
     passwordInput.type = passwordVisibility ? 'text' : 'password'
-    passwordVisibilityButton.attributes['aria-pressed'] = passwordVisibility
+    passwordVisibilityButton.setAttribute('aria-pressed', passwordVisibility)
   })
 })(window.document)
