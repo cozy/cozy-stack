@@ -44,6 +44,7 @@ var markdownDocCmd = &cobra.Command{
 		if len(args) == 1 {
 			directory = args[0]
 		}
+		RootCmd.DisableAutoGenTag = true
 		return doc.GenMarkdownTree(RootCmd, directory)
 	},
 }
