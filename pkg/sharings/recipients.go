@@ -10,7 +10,7 @@ import (
 type Recipient struct {
 	RID    string `json:"_id,omitempty"`
 	RRev   string `json:"_rev,omitempty"`
-	Mail   string `json:"mail"`
+	Email  string `json:"email"`
 	URL    string `json:"url"`
 	Client *oauth.Client
 }

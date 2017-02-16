@@ -27,7 +27,13 @@ func CreateSharing(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, doc, nil)
+	return jsonapi.Data(c, http.StatusCreated, doc, nil)
+}
+
+// Routes sets the routing for the sharing service
+func Routes(router *echo.Group) {
+	// API Routes
+	router.POST("/", CreateSharing)
 }
 
 // wrapErrors returns a formatted error
@@ -39,10 +45,4 @@ func wrapErrors(err error) error {
 		return jsonapi.NotFound(err)
 	}
 	return err
-}
-
-// Routes sets the routing for the sharing service
-func Routes(router *echo.Group) {
-	// API Routes
-	router.POST("/", CreateSharing)
 }
