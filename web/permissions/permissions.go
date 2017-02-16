@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -51,7 +51,7 @@ const bearerAuthScheme = "Bearer "
 const basicAuthScheme = "Basic "
 
 // ErrNoToken is returned whe the request has no token
-var ErrNoToken = errors.New("No token in request")
+var ErrNoToken = echo.NewHTTPError(http.StatusUnauthorized, "No token in request")
 
 var registerTokenPermissions = permissions.Set{
 	permissions.Rule{
@@ -239,6 +239,20 @@ func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) erro
 		return err
 	}
 	if !pset.AllowID(v, doctype, id) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
+}
+
+// AllowVFS validates a vfs.Validable against the context permission set
+func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
+	instance := middlewares.GetInstance(c)
+	pset, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+	err = vfs.Allows(instance, *pset, v, o)
+	if err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil

@@ -8,17 +8,22 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
-type vfsValidable interface {
+// Validable extends on permissions.validable with hierarchy functions
+type Validable interface {
 	permissions.Validable
 	parentID() string
 	Path(c Context) (string, error)
 	Parent(c Context) (*DirDoc, error)
 }
 
+// FileDoc & DirDoc are vfs.Validable
+var _ Validable = (*FileDoc)(nil)
+var _ Validable = (*DirDoc)(nil)
+
 // Allows check if a permSet allows verb on given file
 // µoptim : we can probably make this function iterate less on pset.Rules, but
 //  it will lower readability ...
-func Allows(c Context, pset permissions.Set, v permissions.Verb, fd vfsValidable) error {
+func Allows(c Context, pset permissions.Set, v permissions.Verb, fd Validable) error {
 
 	allowedIDs := []string{}
 	otherRules := []permissions.Rule{}
