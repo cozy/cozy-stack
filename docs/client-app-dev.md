@@ -12,6 +12,8 @@ We provide two different ways to run this environment, either manually where you
 
 This environment will provide a running instance a http server serving both a specified directory of your application on `app.cozy.local:8080` and the `cozy-stack` on `cozy.local:8080` (you can change the hostname and port if you want, see below).
 
+The default passphrase will be "cozy"
+
 
 ### Manually
 
