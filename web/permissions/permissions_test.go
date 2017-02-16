@@ -100,6 +100,7 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 		},
 		Scope: "io.cozy.contacts io.cozy.files:GET",
 	})
+	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
 	res, err := http.DefaultClient.Do(req)
@@ -121,6 +122,7 @@ func TestGetPermissionsForExpiredToken(t *testing.T) {
 		},
 		Scope: "io.cozy.contacts io.cozy.files:GET",
 	})
+	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
 	res, err := http.DefaultClient.Do(req)

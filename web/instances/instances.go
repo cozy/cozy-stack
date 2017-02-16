@@ -82,7 +82,8 @@ func getToken(c echo.Context) error {
 	}
 	issuedAt := crypto.Timestamp()
 	if expire != "" && expire != "0s" {
-		if duration, err := time.ParseDuration(expire); err == nil {
+		var duration time.Duration
+		if duration, err = time.ParseDuration(expire); err == nil {
 			issuedAt += webpermissions.TokenValidityDuration - int64(duration/time.Second)
 		}
 	}
