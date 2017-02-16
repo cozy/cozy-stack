@@ -36,6 +36,7 @@ example), you can use the --appsdir flag like this:
 ```
       --allow-root           Allow to start as root (disabled by default)
       --appdir stringSlice   Mount a directory as the 'app' application
+      --no-admin             Start without the admin interface
 ```
 
 ### Options inherited from parent commands

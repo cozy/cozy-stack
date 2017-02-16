@@ -23,8 +23,8 @@ import (
 
 // ListenAndServe creates and setups all the necessary http endpoints and start
 // them.
-func ListenAndServe() error {
-	return listenAndServe(webapps.Serve)
+func ListenAndServe(noAdmin bool) error {
+	return listenAndServe(noAdmin, webapps.Serve)
 }
 
 // ListenAndServeWithAppDir creates and setup all the necessary http endpoints
@@ -51,7 +51,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 			return err
 		}
 	}
-	return listenAndServe(func(c echo.Context) error {
+	return listenAndServe(false, func(c echo.Context) error {
 		slug := c.Get("slug").(string)
 		dir, ok := appsdir[slug]
 		if !ok {
@@ -105,14 +105,9 @@ func checkExists(filepath string) error {
 	return nil
 }
 
-func listenAndServe(appsHandler echo.HandlerFunc) error {
+func listenAndServe(noAdmin bool, appsHandler echo.HandlerFunc) error {
 	main, err := CreateSubdomainProxy(echo.New(), appsHandler)
 	if err != nil {
-		return err
-	}
-
-	admin := echo.New()
-	if err = SetupAdminRoutes(admin); err != nil {
 		return err
 	}
 
@@ -127,7 +122,15 @@ security features. Please do not use this binary as your production server.
 	}
 
 	errs := make(chan error)
-	go func() { errs <- admin.Start(config.AdminServerAddr()) }()
+
+	if !noAdmin {
+		admin := echo.New()
+		if err = SetupAdminRoutes(admin); err != nil {
+			return err
+		}
+		go func() { errs <- admin.Start(config.AdminServerAddr()) }()
+	}
+
 	go func() { errs <- main.Start(config.ServerAddr()) }()
 	return <-errs
 }
