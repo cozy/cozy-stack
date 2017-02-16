@@ -400,6 +400,18 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 	}
 	instance := middlewares.GetInstance(c)
 
+	entries, err := archive.GetEntries(instance)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	for _, e := range entries {
+		err = checkPerm(c, permissions.GET, e.Dir, e.File)
+		if err != nil {
+			return err
+		}
+	}
+
 	// if accept header is application/zip, send the archive immediately
 	if c.Request().Header.Get("Accept") == "application/zip" {
 		return archive.Serve(instance, c.Response())

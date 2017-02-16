@@ -23,12 +23,17 @@ type Archive struct {
 	Secret    string    `json:"-"`
 	ExpiresAt time.Time `json:"expires_at"`
 	Files     []string  `json:"files"`
+
+	// archiveEntries cache
+	entries []ArchiveEntry
 }
 
-type archiveEntry struct {
+// ArchiveEntry is an utility struct to store a file or doc to be placed
+// in the archive.
+type ArchiveEntry struct {
 	root string
-	dir  *DirDoc
-	file *FileDoc
+	Dir  *DirDoc
+	File *FileDoc
 }
 
 var plusEscaper = strings.NewReplacer("+", "%20")
@@ -58,20 +63,30 @@ func ContentDisposition(disposition, filename string) string {
 	return fmt.Sprintf(`%s; filename="%s"; filename*=UTF-8''%s`, disposition, escaped, encoded)
 }
 
+// GetEntries returns all files and folders in the archive as ArchiveEntry.
+func (a *Archive) GetEntries(c Context) ([]ArchiveEntry, error) {
+	if a.entries == nil {
+		entries := make([]ArchiveEntry, len(a.Files))
+		for i, root := range a.Files {
+			d, f, err := GetDirOrFileDocFromPath(c, root, false)
+			if err != nil {
+				return nil, err
+			}
+			entries[i] = ArchiveEntry{
+				root: root,
+				Dir:  d,
+				File: f,
+			}
+		}
+
+		a.entries = entries
+	}
+
+	return a.entries, nil
+}
+
 // Serve creates on the fly the zip archive and streams in a http response
 func (a *Archive) Serve(c Context, w http.ResponseWriter) error {
-	entries := make([]archiveEntry, len(a.Files))
-	for i, root := range a.Files {
-		d, f, err := GetDirOrFileDocFromPath(c, root, false)
-		if err != nil {
-			return err
-		}
-		entries[i] = archiveEntry{
-			root: root,
-			dir:  d,
-			file: f,
-		}
-	}
 
 	header := w.Header()
 	header.Set("Content-Type", ZipMime)
@@ -81,9 +96,14 @@ func (a *Archive) Serve(c Context, w http.ResponseWriter) error {
 	zw := zip.NewWriter(w)
 	defer zw.Close()
 
+	entries, err := a.GetEntries(c)
+	if err != nil {
+		return err
+	}
+
 	for _, entry := range entries {
 		base := filepath.Dir(entry.root)
-		walk(c, entry.root, entry.dir, entry.file, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+		walk(c, entry.root, entry.Dir, entry.File, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 			if err != nil {
 				return err
 			}

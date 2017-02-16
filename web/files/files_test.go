@@ -1122,16 +1122,7 @@ func TestArchiveNotFound(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
-	assert.NoError(t, err)
-	var data map[string]interface{}
-	err = json.NewDecoder(res.Body).Decode(&data)
-	assert.NoError(t, err)
-
-	downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
-	res2, err := httpGet(downloadURL)
-	assert.NoError(t, err)
-	assert.Equal(t, 404, res2.StatusCode)
+	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestDirTrash(t *testing.T) {
