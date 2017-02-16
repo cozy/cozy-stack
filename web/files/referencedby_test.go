@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,6 +35,8 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
 
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
@@ -69,6 +72,8 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
 
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
