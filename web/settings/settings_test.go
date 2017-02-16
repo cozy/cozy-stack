@@ -321,7 +321,7 @@ func TestMain(m *testing.M) {
 		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
 	}
 	client.Create(testInstance)
-	clientID = client.CouchID
+	clientID = client.ClientID
 
 	r := echo.New()
 	r.HTTPErrorHandler = errors.ErrorHandler

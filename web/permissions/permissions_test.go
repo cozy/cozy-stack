@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
 	}
 	client.Create(testInstance)
-	clientID = client.CouchID
+	clientID = client.ClientID
 
 	token, _ = crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{

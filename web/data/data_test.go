@@ -151,7 +151,7 @@ func TestMain(m *testing.M) {
 		SoftwareID:   "github.com/cozy/cozy-stack/web/data",
 	}
 	client.Create(testInstance)
-	clientID = client.CouchID
+	clientID = client.ClientID
 
 	handler := echo.New()
 	handler.HTTPErrorHandler = errors.ErrorHandler
