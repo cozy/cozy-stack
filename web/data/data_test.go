@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
@@ -33,6 +34,7 @@ const ID = "4521C325F6478E45"
 const ExpectedDBName = "example-com%2Fio-cozy-events"
 
 var testInstance *instance.Instance
+var clientID string
 
 var ts *httptest.Server
 
@@ -116,7 +118,7 @@ func testToken(i *instance.Instance) string {
 			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  "testapp",
+			Subject:  clientID,
 		},
 		Scope: scope,
 	})
@@ -142,6 +144,14 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	testInstance = inst
+
+	client := oauth.Client{
+		RedirectURIs: []string{"http://localhost/oauth/callback"},
+		ClientName:   "test-permissions",
+		SoftwareID:   "github.com/cozy/cozy-stack/web/data",
+	}
+	client.Create(testInstance)
+	clientID = client.ClientID
 
 	handler := echo.New()
 	handler.HTTPErrorHandler = errors.ErrorHandler

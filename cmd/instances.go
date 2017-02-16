@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -22,6 +23,7 @@ var flagEmail string
 var flagApps []string
 var flagDev bool
 var flagPassphrase string
+var flagExpire time.Duration
 
 func validDomain(domain string) bool {
 	return !strings.ContainsAny(domain, " /?#@\t\r\n")
@@ -200,6 +202,7 @@ var appTokenInstanceCmd = &cobra.Command{
 			"Domain":   {args[0]},
 			"Subject":  {args[1]},
 			"Audience": {"app"},
+			"Expire":   {flagExpire.String()},
 		})
 		if err != nil {
 			return err
@@ -221,11 +224,34 @@ var oauthTokenInstanceCmd = &cobra.Command{
 			"Subject":  {args[1]},
 			"Audience": {"access-token"},
 			"Scope":    {strings.Join(args[2:], " ")},
+			"Expire":   {flagExpire.String()},
 		})
 		if err != nil {
 			return err
 		}
 		_, err = fmt.Println(token)
+		return err
+	},
+}
+
+var oauthClientInstanceCmd = &cobra.Command{
+	Use:   "client-oauth [domain] [redirect_uri] [client_name] [software_id]",
+	Short: "Register a new OAuth client",
+	Long:  `It registers a new OAuth client and returns its client_id`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 4 {
+			return cmd.Help()
+		}
+		clientID, err := oauthClientRequest(url.Values{
+			"Domain":      {args[0]},
+			"RedirectURI": {args[1]},
+			"ClientName":  {args[2]},
+			"SoftwareID":  {args[3]},
+		})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(clientID)
 		return err
 	},
 }
@@ -275,7 +301,7 @@ func instancesRequest(method, path string, q url.Values, body interface{}) (*ins
 }
 
 func tokenRequest(q url.Values) (string, error) {
-	res, err := clientRequest(instancesClient(), "GET", "/instances/token", q, nil)
+	res, err := clientRequest(instancesClient(), "POST", "/instances/token", q, nil)
 	if err != nil {
 		return "", err
 	}
@@ -284,7 +310,20 @@ func tokenRequest(q url.Values) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(b), err
+	return string(b), nil
+}
+
+func oauthClientRequest(q url.Values) (string, error) {
+	res, err := clientRequest(instancesClient(), "POST", "/instances/oauth_client", q, nil)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func init() {
@@ -293,11 +332,14 @@ func init() {
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
+	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
+	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	RootCmd.AddCommand(instanceCmdGroup)
 }

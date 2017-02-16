@@ -15,4 +15,9 @@ var (
 	// ErrInvalidAudience is used when the audience is not expected
 	ErrInvalidAudience = echo.NewHTTPError(http.StatusBadRequest,
 		"Invalid audience for JWT token")
+
+	// ErrExpiredToken is used when the token has expired and the client should
+	// refresh it
+	ErrExpiredToken = echo.NewHTTPError(http.StatusBadRequest,
+		"Expired token")
 )

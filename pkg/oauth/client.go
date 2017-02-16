@@ -287,6 +287,8 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 }
 
 // ValidToken checks that the JWT is valid and returns the associate claims
+// It is expected to be used for registration token and refresh token, and
+// it doesn't check when they were issued as they don't expire.
 func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permissions.Claims, bool) {
 	claims := permissions.Claims{}
 	if token == "" {

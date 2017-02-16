@@ -29,6 +29,7 @@ const domain = "cozysettings.example.net"
 var ts *httptest.Server
 var testInstance *instance.Instance
 var instanceRev string
+var clientID string
 var oauthClientID string
 
 func TestThemeCSS(t *testing.T) {
@@ -256,8 +257,8 @@ func TestListClients(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 	data := result["data"].([]interface{})
-	assert.Len(t, data, 1)
-	obj := data[0].(map[string]interface{})
+	assert.Len(t, data, 2)
+	obj := data[1].(map[string]interface{})
 	assert.Equal(t, "io.cozy.oauth.clients", obj["type"].(string))
 	assert.Equal(t, client.ClientID, obj["id"].(string))
 	links := obj["links"].(map[string]interface{})
@@ -301,7 +302,7 @@ func TestRevokeClient(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 	data := result["data"].([]interface{})
-	assert.Len(t, data, 0)
+	assert.Len(t, data, 1)
 }
 
 func TestMain(m *testing.M) {
@@ -313,6 +314,14 @@ func TestMain(m *testing.M) {
 		Timezone: "Europe/Berlin",
 		Email:    "alice@example.com",
 	})
+
+	client := oauth.Client{
+		RedirectURIs: []string{"http://localhost/oauth/callback"},
+		ClientName:   "test-permissions",
+		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
+	}
+	client.Create(testInstance)
+	clientID = client.ClientID
 
 	r := echo.New()
 	r.HTTPErrorHandler = errors.ErrorHandler
@@ -340,7 +349,7 @@ func testToken(i *instance.Instance) string {
 			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  "testapp",
+			Subject:  clientID,
 		},
 		Scope: consts.Settings,
 	})
@@ -353,7 +362,7 @@ func testClientsToken(i *instance.Instance) string {
 			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  "testapp",
+			Subject:  clientID,
 		},
 		Scope: consts.OAuthClients,
 	})

@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
@@ -20,21 +21,30 @@ import (
 var ts *httptest.Server
 var token string
 var testInstance *instance.Instance
+var clientID string
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	var testInstance = &instance.Instance{
+	testInstance = &instance.Instance{
 		OAuthSecret: []byte("topsecret"),
 		Domain:      "example.com",
 	}
+
+	client := oauth.Client{
+		RedirectURIs: []string{"http://localhost/oauth/callback"},
+		ClientName:   "test-permissions",
+		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
+	}
+	client.Create(testInstance)
+	clientID = client.ClientID
 
 	token, _ = crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  "fakeapp",
+			Subject:  clientID,
 		},
 		Scope: "io.cozy.contacts io.cozy.files:GET",
 	})
@@ -53,7 +63,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetPermissions(t *testing.T) {
-
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
@@ -79,6 +88,49 @@ func TestGetPermissions(t *testing.T) {
 			assert.Equal(t, []interface{}{"GET"}, rule["verbs"])
 		}
 	}
+}
+
+func TestGetPermissionsForRevokedClient(t *testing.T) {
+	tok, err := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  "revoked-client",
+		},
+		Scope: "io.cozy.contacts io.cozy.files:GET",
+	})
+	assert.NoError(t, err)
+	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req.Header.Add("Authorization", "Bearer "+tok)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, `{"message":"Invalid JWT token"}`, string(body))
+}
+
+func TestGetPermissionsForExpiredToken(t *testing.T) {
+	pastTimestamp := crypto.Timestamp() - 30*24*3600 // in seconds
+	tok, err := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: pastTimestamp,
+			Subject:  clientID,
+		},
+		Scope: "io.cozy.contacts io.cozy.files:GET",
+	})
+	assert.NoError(t, err)
+	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req.Header.Add("Authorization", "Bearer "+tok)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, `{"message":"Expired token"}`, string(body))
 }
 
 func TestBadPermissionsBearer(t *testing.T) {

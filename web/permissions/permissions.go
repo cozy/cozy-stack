@@ -9,15 +9,20 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
+
+// TokenValidityDuration is the duration where a token is valid in seconds (1 week)
+const TokenValidityDuration = int64(7 * 24 * time.Hour / time.Second)
 
 // exports all constants from pkg/permissions to avoid double imports
 var (
@@ -78,6 +83,13 @@ func getQueryToken(c echo.Context) string {
 	return c.QueryParam("bearer_token")
 }
 
+// hasExpired checks if a token has expired
+func hasExpired(claims *permissions.Claims) bool {
+	now := crypto.Timestamp()
+	validUntil := claims.IssuedAt + TokenValidityDuration
+	return validUntil < now
+}
+
 // ContextPermissionSet is the key used in echo context to store permissions set
 const ContextPermissionSet = "permissions_set"
 
@@ -101,14 +113,24 @@ func Extractor(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func extractJWTClaims(c echo.Context, instance *instance.Instance) (*permissions.Claims, error) {
+	var token string
+	if token = getBearerToken(c); token == "" {
+		if token = getQueryToken(c); token == "" {
+			return nil, ErrNoToken
+		}
+	}
+
 	var claims permissions.Claims
-	var err error
-	if token := getBearerToken(c); token != "" {
-		err = crypto.ParseJWT(token, keyPicker(instance), &claims)
-	} else if token := getQueryToken(c); token != "" {
-		err = crypto.ParseJWT(token, keyPicker(instance), &claims)
-	} else {
-		return nil, ErrNoToken
+	if err := crypto.ParseJWT(token, keyPicker(instance), &claims); err != nil {
+		return nil, permissions.ErrInvalidToken
+	}
+
+	switch claims.Audience {
+	case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
+		// An OAuth2 token is only valid if the client has not been revoked
+		if _, err := oauth.FindClient(instance, claims.Subject); err != nil {
+			return nil, permissions.ErrInvalidToken
+		}
 	}
 
 	if claims.Issuer != instance.Domain {
@@ -116,7 +138,11 @@ func extractJWTClaims(c echo.Context, instance *instance.Instance) (*permissions
 		return nil, permissions.ErrInvalidToken
 	}
 
-	return &claims, err
+	if hasExpired(&claims) {
+		return nil, permissions.ErrExpiredToken
+	}
+
+	return &claims, nil
 }
 
 func extractPermissionSet(c echo.Context, instance *instance.Instance, claims *permissions.Claims) (*permissions.Set, error) {
