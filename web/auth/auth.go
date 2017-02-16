@@ -84,7 +84,20 @@ func loginForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
+	doc := &couchdb.JSONDoc{}
+	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return err
+	}
+
+	publicName, ok := doc.M["public_name"].(string)
+
+	if !ok {
+		publicName = ""
+	}
+
 	return c.Render(http.StatusOK, "login.html", echo.Map{
+		"PublicName":        publicName,
 		"InvalidPassphrase": false,
 		"Redirect":          redirect,
 	})
