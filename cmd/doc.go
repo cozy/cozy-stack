@@ -19,6 +19,10 @@ var manDocCmd = &cobra.Command{
 	Use:   "man [directory]",
 	Short: "Print the manpages of cozy-stack",
 	Long:  `Print the manual pages for using cozy-stack in command-line`,
+	Example: `$ mkdir -p ~/share/man
+$ export MANPATH=~/share/man:$MANPATH
+$ cozy-stack doc man ~/share/man
+$ man cozy-stack`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Help()
@@ -32,8 +36,9 @@ var manDocCmd = &cobra.Command{
 }
 
 var markdownDocCmd = &cobra.Command{
-	Use:   "markdown [directory]",
-	Short: "Print the documentation of cozy-stack as markdown",
+	Use:     "markdown [directory]",
+	Short:   "Print the documentation of cozy-stack as markdown",
+	Example: `$ cozy-stack doc markdown docs/cli`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		directory := "./docs/cli/"
 		if len(args) == 1 {

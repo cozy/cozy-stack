@@ -26,6 +26,7 @@ Once installed, bash_completion must be evaluated.  This can be done by adding t
 following line to the .bash_profile
 
     $ source $(brew --prefix)/etc/bash_completion`,
+	Example:   `# cozy-stack completion bash > /etc/bash_completion.d/cozy-stack`,
 	ValidArgs: []string{"bash"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
