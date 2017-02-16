@@ -332,10 +332,10 @@ footer li[aria-selected=true]~li {
     right: 0;
     min-height: 2em;
     background-position: 50%;
-    background-image: url("../sprites/icon-eye-open.svg")
+    background-image: url("../images/icon-eye-open.svg")
 }
 .password-visibility-icon[aria-pressed=true] {
-    background-image: url("../sprites/icon-eye-closed.svg")
+    background-image: url("../images/icon-eye-closed.svg")
 }
 .forgot[aria-disabled=true] {
     cursor: default;
