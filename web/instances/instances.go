@@ -3,11 +3,13 @@ package instances
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -62,6 +64,7 @@ func getToken(c echo.Context) error {
 	audience := c.QueryParam("Audience")
 	scope := c.QueryParam("Scope")
 	subject := c.QueryParam("Subject")
+	expire := c.QueryParam("Expire")
 	in, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
@@ -77,12 +80,18 @@ func getToken(c echo.Context) error {
 	default:
 		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
 	}
+	issuedAt := crypto.Timestamp()
+	if expire != "" && expire != "0s" {
+		if duration, err := time.ParseDuration(expire); err == nil {
+			issuedAt += webpermissions.TokenValidityDuration - int64(duration/time.Second)
+		}
+	}
 	token, err := crypto.NewJWT(secret, permissions.Claims{
 		StandardClaims: jwt.StandardClaims{
 			Audience: audience,
 			Issuer:   domain,
 			Subject:  subject,
-			IssuedAt: crypto.Timestamp(),
+			IssuedAt: issuedAt,
 		},
 		Scope: scope,
 	})

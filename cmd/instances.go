@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -22,6 +23,7 @@ var flagEmail string
 var flagApps []string
 var flagDev bool
 var flagPassphrase string
+var flagExpire time.Duration
 
 func validDomain(domain string) bool {
 	return !strings.ContainsAny(domain, " /?#@\t\r\n")
@@ -200,6 +202,7 @@ var appTokenInstanceCmd = &cobra.Command{
 			"Domain":   {args[0]},
 			"Subject":  {args[1]},
 			"Audience": {"app"},
+			"Expire":   {flagExpire.String()},
 		})
 		if err != nil {
 			return err
@@ -221,6 +224,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 			"Subject":  {args[1]},
 			"Audience": {"access-token"},
 			"Scope":    {strings.Join(args[2:], " ")},
+			"Expire":   {flagExpire.String()},
 		})
 		if err != nil {
 			return err
@@ -299,5 +303,7 @@ func init() {
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
+	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	RootCmd.AddCommand(instanceCmdGroup)
 }
