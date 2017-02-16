@@ -41,11 +41,6 @@ func keyPicker(i *instance.Instance) jwt.Keyfunc {
 		case permissions.AppAudience:
 			return i.SessionSecret, nil
 		case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
-			// An OAuth2 token is only valid if the client has not been revoked
-			clientID := token.Claims.(*permissions.Claims).Subject
-			if _, err := oauth.FindClient(i, clientID); err != nil {
-				return nil, permissions.ErrInvalidToken
-			}
 			return i.OAuthSecret, nil
 		}
 		return nil, permissions.ErrInvalidAudience
@@ -128,6 +123,14 @@ func extractJWTClaims(c echo.Context, instance *instance.Instance) (*permissions
 	var claims permissions.Claims
 	if err := crypto.ParseJWT(token, keyPicker(instance), &claims); err != nil {
 		return nil, permissions.ErrInvalidToken
+	}
+
+	switch claims.Audience {
+	case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
+		// An OAuth2 token is only valid if the client has not been revoked
+		if _, err := oauth.FindClient(instance, claims.Subject); err != nil {
+			return nil, permissions.ErrInvalidToken
+		}
 	}
 
 	if claims.Issuer != instance.Domain {
