@@ -99,11 +99,13 @@ button[aria-busy=true]:after {
     top: 50%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
-    animation: 1s linear infinite spin
+    animation: 1s linear infinite fa-spin
 }
 [role=button][aria-busy=true]:after,
 button[aria-busy=true]:after {
-    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='12' height='12' fill='white'><path opacity='.25' d='M16 0a16 16 0 0 0 0 32 16 16 0 0 0 0-32m0 4a12 12 0 0 1 0 24 12 12 0 0 1 0-24'/><path d='M16 0a16 16 0 0 1 16 16h-4a12 12 0 0 0-12-12z'/></svg>")
+    border: 0.2em solid rgba(255,255,255,0.4);
+    border-radius: 1em;
+    border-bottom-color: white;
 }
 body > svg {
     height: 0;
@@ -340,4 +342,11 @@ footer li[aria-selected=true]~li {
 .forgot[aria-disabled=true] {
     cursor: default;
     opacity: .5
+}
+
+.btn-success {
+    background-color: #16D943;
+}
+.btn-success[disabled] {
+  opacity: 1;
 }
