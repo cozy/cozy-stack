@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var flagNoAdmin bool
 var flagAllowRoot bool
 var flagAppdirs []string
 
@@ -57,12 +58,13 @@ example), you can use the --appsdir flag like this:
 			}
 			return web.ListenAndServeWithAppDir(apps)
 		}
-		return web.ListenAndServe()
+		return web.ListenAndServe(flagNoAdmin)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(serveCmd)
+	serveCmd.Flags().BoolVar(&flagNoAdmin, "no-admin", false, "Start without the admin interface")
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	serveCmd.Flags().StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
 }

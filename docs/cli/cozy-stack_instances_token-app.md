@@ -11,6 +11,12 @@ Generate a new application token
 cozy-stack instances token-app [domain] [slug]
 ```
 
+### Options
+
+```
+      --expire duration   Make the token expires in this amount of time
+```
+
 ### Options inherited from parent commands
 
 ```

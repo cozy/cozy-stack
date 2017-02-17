@@ -11,6 +11,12 @@ Generate a new OAuth access token
 cozy-stack instances token-oauth [domain] [clientid] [scopes]
 ```
 
+### Options
+
+```
+      --expire duration   Make the token expires in this amount of time
+```
+
 ### Options inherited from parent commands
 
 ```
