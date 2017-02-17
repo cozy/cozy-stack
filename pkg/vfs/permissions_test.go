@@ -83,6 +83,47 @@ func TestPermissions(t *testing.T) {
 	}
 	assert.NoError(t, Allows(vfsC, psetSelfAttributes, permissions.GET, f))
 
+	psetOnlyFiles := permissions.Set{
+		permissions.Rule{
+			Type:     consts.Files,
+			Verbs:    permissions.ALL,
+			Selector: "type",
+			Values:   []string{"file"},
+		},
+	}
+	assert.NoError(t, Allows(vfsC, psetOnlyFiles, permissions.GET, f))
+
+	psetOnlyDirs := permissions.Set{
+		permissions.Rule{
+			Type:     consts.Files,
+			Verbs:    permissions.ALL,
+			Selector: "type",
+			Values:   []string{"directory"},
+		},
+	}
+	assert.NoError(t, Allows(vfsC, psetOnlyDirs, permissions.GET, B))
+
+	psetMime := permissions.Set{
+		permissions.Rule{
+			Type:     consts.Files,
+			Verbs:    permissions.ALL,
+			Selector: "mime",
+			Values:   []string{"text/plain"},
+		},
+	}
+	f.Mime = "text/plain"
+	assert.NoError(t, Allows(vfsC, psetMime, permissions.GET, f))
+
+	psetName := permissions.Set{
+		permissions.Rule{
+			Type:     consts.Files,
+			Verbs:    permissions.ALL,
+			Selector: "name",
+			Values:   []string{"b1.txt"},
+		},
+	}
+	assert.NoError(t, Allows(vfsC, psetName, permissions.GET, f))
+
 	psetSelfTag := permissions.Set{
 		permissions.Rule{
 			Type:     consts.Files,
@@ -111,6 +152,24 @@ func TestPermissions(t *testing.T) {
 		},
 	}
 	assert.NoError(t, Allows(vfsC, psetSelfParentTag, permissions.GET, f))
+
+	psetWrongType := permissions.Set{
+		permissions.Rule{
+			Type:   "io.cozy.not-files",
+			Verbs:  permissions.ALL,
+			Values: []string{A.ID()},
+		},
+	}
+	assert.Error(t, Allows(vfsC, psetWrongType, permissions.GET, f))
+
+	psetWrongVerb := permissions.Set{
+		permissions.Rule{
+			Type:   consts.Files,
+			Verbs:  permissions.Verbs(permissions.POST),
+			Values: []string{A.ID()},
+		},
+	}
+	assert.Error(t, Allows(vfsC, psetWrongVerb, permissions.GET, f))
 
 	psetUncleID := permissions.Set{
 		permissions.Rule{
