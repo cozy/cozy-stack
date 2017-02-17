@@ -19,7 +19,6 @@ import (
 )
 
 var ts *httptest.Server
-var client *http.Client
 var testInstance *instance.Instance
 
 func TestCreateSharingWithBadType(t *testing.T) {
