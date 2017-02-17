@@ -49,9 +49,8 @@ func TestAddReferencesHandler(t *testing.T) {
 	req.Header.Set("Content-Type", "application/vnd.api+json")
 
 	res, err := http.DefaultClient.Do(req)
-	defer res.Body.Close()
-
 	assert.NoError(t, err)
+	defer res.Body.Close()
 	assert.Equal(t, 204, res.StatusCode)
 }
 
