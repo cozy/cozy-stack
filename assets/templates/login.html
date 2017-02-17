@@ -37,7 +37,7 @@
             </header>
             <div role="region">
               <form id="login-form" method="POST" action="/auth/login" class="login auth">
-                <input type="hidden" name="redirect" value="{{.Redirect}}" />
+                <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
                 <p class="help" id="login-password-tip">Enter your password to access your Cozy</p>
                 <p class="line">
                   <label for="password" aria-describedby="login-password-tip">password</label>
@@ -56,7 +56,7 @@
             </div>
             <footer>
               <div class="controls">
-                <button form="login-form" type="submit">Log in</button>
+                <button id="login-submit" form="login-form" type="submit">Log in</button>
               </div>
             </footer>
           </div>
@@ -64,5 +64,6 @@
       </main>
     </div>
     <script src="/assets/scripts/password-visibility.js"></script>
+    <script src="/assets/scripts/async-submit.js"></script>
   </body>
 </html>
