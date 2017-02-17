@@ -43,6 +43,7 @@ const (
 const (
 	OnboardingSlug = "onboarding"
 	HomeSlug       = "home"
+	FilesSlug       = "files"
 )
 
 // Access is a string representing the access permission level. It can

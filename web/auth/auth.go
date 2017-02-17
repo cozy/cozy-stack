@@ -73,7 +73,7 @@ func redirectSuccessLogin(c echo.Context, redirect string) error {
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.HomeSlug))
+	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func loginForm(c echo.Context) error {
 func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.HomeSlug))
+	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func logout(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	claims, ok := c.Get("token_claims").(*permissions.Claims)
 	if !ok || claims.Audience != permissions.AppAudience {
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug).String())
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.FilesSlug).String())
 	}
 
 	session, err := sessions.GetSession(c, instance)
