@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -30,6 +31,7 @@ import (
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var clientID string
 
 func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -1588,6 +1590,14 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	client := oauth.Client{
+		RedirectURIs: []string{"http://localhost/oauth/callback"},
+		ClientName:   "test-permissions",
+		SoftwareID:   "github.com/cozy/cozy-stack/web/data",
+	}
+	client.Create(testInstance)
+	clientID = client.ClientID
+
 	handler := echo.New()
 	handler.HTTPErrorHandler = errors.ErrorHandler
 	handler.Use(injectInstance(testInstance))
@@ -1609,7 +1619,7 @@ func testToken(i *instance.Instance) string {
 			Audience: permissions.AccessTokenAudience,
 			Issuer:   testInstance.Domain,
 			IssuedAt: crypto.Timestamp(),
-			Subject:  "testapp",
+			Subject:  clientID,
 		},
 		Scope: "io.cozy.files",
 	})
