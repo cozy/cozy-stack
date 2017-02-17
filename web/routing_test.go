@@ -27,7 +27,8 @@ func TestSetupAssets(t *testing.T) {
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 
-	res, _ := http.Get(ts.URL + "/assets/images/cozy.svg")
+	res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
+	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, 200, res.StatusCode)
 }
@@ -42,7 +43,8 @@ func TestSetupAssetsStatik(t *testing.T) {
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 
-	res, _ := http.Get(ts.URL + "/assets/images/cozy.svg")
+	res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
+	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, 200, res.StatusCode)
 }
@@ -57,7 +59,8 @@ func TestSetupRoutes(t *testing.T) {
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 
-	res, _ := http.Get(ts.URL + "/version")
+	res, err := http.Get(ts.URL + "/version")
+	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, 200, res.StatusCode)
 }
