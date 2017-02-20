@@ -205,7 +205,7 @@ func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
 
 	var nextDelay time.Duration
 	if t.execCount == 0 {
-		// on first execution, execute immediatly
+		// on first execution, execute immediately
 		nextDelay = 0
 	} else {
 		nextDelay = c.RetryDelay << (t.execCount - 1)

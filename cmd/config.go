@@ -104,7 +104,7 @@ example: cozy-stack config passwd ~/.cozy
 			return err
 		}
 
-		fmt.Println("Hashed passphrase outputed in", filename)
+		fmt.Println("Hashed passphrase outputted in", filename)
 		return nil
 	},
 }
