@@ -22,6 +22,9 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
+// CredentialsErrorMessage is the message showed to the user when he/she enters incorrect credentials
+const CredentialsErrorMessage = "The credentials you entered are incorrect, please try again."
+
 // With the nested subdomains structure, the cookie set on the main domain can
 // also be used to authentify the user on the apps subdomain. But with the flat
 // subdomains structure, a new cookie is needed. To transfer the session, we
@@ -60,13 +63,7 @@ func SetCookieForNewSession(c echo.Context) (string, error) {
 
 // redirectSuccessLogin sends a redirection to the browser after a successful login
 func redirectSuccessLogin(c echo.Context, redirect string) error {
-	sessID, err := SetCookieForNewSession(c)
-	if err != nil {
-		return err
-	}
 
-	instance := middlewares.GetInstance(c)
-	redirect = addCodeToRedirect(redirect, instance.Domain, sessID)
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
@@ -97,34 +94,50 @@ func loginForm(c echo.Context) error {
 	}
 
 	return c.Render(http.StatusOK, "login.html", echo.Map{
-		"PublicName":        publicName,
-		"InvalidPassphrase": false,
-		"Redirect":          redirect,
+		"PublicName":       publicName,
+		"CredentialsError": nil,
+		"Redirect":         redirect,
 	})
 }
 
 func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
 	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
 	if err != nil {
 		return err
 	}
 
+	var sessionID string
 	session, err := sessions.GetSession(c, instance)
 	if err == nil {
-		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
-		return c.Redirect(http.StatusSeeOther, redirect)
+		sessionID = session.ID()
+	} else {
+		passphrase := []byte(c.FormValue("passphrase"))
+		if err := instance.CheckPassphrase(passphrase); err == nil {
+			if sessionID, err = SetCookieForNewSession(c); err != nil {
+				return err
+			}
+		}
 	}
 
-	passphrase := []byte(c.FormValue("passphrase"))
-	if err := instance.CheckPassphrase(passphrase); err == nil {
+	if sessionID != "" {
+		redirect = addCodeToRedirect(redirect, instance.Domain, sessionID)
+		if wantsJSON {
+			return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
+		}
 		return redirectSuccessLogin(c, redirect)
 	}
 
+	if wantsJSON {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": CredentialsErrorMessage,
+		})
+	}
 	return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
-		"InvalidPassphrase": true,
-		"Redirect":          redirect,
+		"CredentialsError": CredentialsErrorMessage,
+		"Redirect":         redirect,
 	})
 }
 

@@ -11,7 +11,7 @@
   let errorPanel = form.querySelector('.errors')
 
   const showError = function (error) {
-    error = error.message ? error.message : error
+    error = error || 'The Cozy server is unavailable. Do you have network?'
 
     if (!errorPanel) {
       errorPanel = d.createElement('div')
@@ -31,25 +31,27 @@
     const redirect = redirectInput.value
     let headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
+    headers.append('Accept', 'application/json')
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
       body: `passphrase=${passphrase}&redirect=${redirect}`,
-      redirect: 'manual'
+      credentials: 'same-origin'
     }).then((response) => {
-      // Redirected so passphrase was ok ... I guess.
-      const loginSuccess = response.status === 0
-
-      if (loginSuccess) {
-        submitButton.innerHTML = '<i class="fa fa-check"></i>'
-        submitButton.classList.add('btn-success')
-        // Really hackish : The call to POST /auth/login via fetch does not log
-        // the user, so if we are here the passphrase seems correct, we submit
-        // the form. A second time, yes, but it will actually log the user.
-        form.submit()
-      } else {
-        throw new Error('The credentials you entered are incorrect, please try again.')
-      }
+      const loginSuccess = response.status < 400
+      response.json().then((body) => {
+        if (loginSuccess) {
+          submitButton.innerHTML = '<i class="fa fa-check"></i>'
+          submitButton.classList.add('btn-success')
+          if (body.redirect) {
+            window.location = body.redirect
+          } else {
+            form.submit()
+          }
+        } else {
+          showError(body.error)
+        }
+      }).catch(showError)
     }).catch(showError)
   })
 

@@ -47,9 +47,9 @@
                       name="password-visibility"></button>
                   <input id="password" name="passphrase" placeholder="Password" type="password" autofocus="true" />
                 </p>
-                {{if .InvalidPassphrase}}
+                {{if .CredentialsError}}
                 <div class="errors">
-                  <p>The credentials you entered are incorrect, please try again.</p>
+                  <p>{{.CredentialsError}}</p>
                 </div>
                 {{end}}
               </form>
