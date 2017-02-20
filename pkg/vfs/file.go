@@ -307,14 +307,13 @@ type File struct {
 //
 // fileCreation implements io.WriteCloser.
 type fileCreation struct {
-	w         int64     // total size written
-	newdoc    *FileDoc  // new document
-	olddoc    *FileDoc  // old document if any
-	newpath   string    // file new path
-	bakpath   string    // backup file path in case of modifying an existing file
-	checkHash bool      // whether or not we need the assert the hash is good
-	hash      hash.Hash // hash we build up along the file
-	err       error     // write error
+	w       int64     // total size written
+	newdoc  *FileDoc  // new document
+	olddoc  *FileDoc  // old document if any
+	newpath string    // file new path
+	bakpath string    // backup file path in case of modifying an existing file
+	hash    hash.Hash // hash we build up along the file
+	err     error     // write error
 }
 
 // Open returns a file handle that can be used to read form the file
@@ -383,8 +382,7 @@ func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
 		bakpath: bakpath,
 		newpath: newpath,
 
-		checkHash: newdoc.MD5Sum != nil,
-		hash:      hash,
+		hash: hash,
 	}
 
 	return &File{c, f, fc}, nil
@@ -461,22 +459,20 @@ func (f *File) Close() error {
 	newdoc, olddoc, written := fc.newdoc, fc.olddoc, fc.w
 
 	md5sum := fc.hash.Sum(nil)
-	if fc.checkHash && !bytes.Equal(newdoc.MD5Sum, md5sum) {
-		err = ErrInvalidHash
-		return err
+	if newdoc.MD5Sum == nil {
+		newdoc.MD5Sum = md5sum
+	}
+
+	if !bytes.Equal(newdoc.MD5Sum, md5sum) {
+		return ErrInvalidHash
 	}
 
 	if newdoc.Size < 0 {
 		newdoc.Size = written
 	}
 
-	if newdoc.MD5Sum == nil {
-		newdoc.MD5Sum = md5sum
-	}
-
 	if newdoc.Size != written {
-		err = ErrContentLengthMismatch
-		return err
+		return ErrContentLengthMismatch
 	}
 
 	if olddoc != nil {
