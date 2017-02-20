@@ -55,7 +55,7 @@ QUIT
 		msg := &MailOptions{
 			From: &MailAddress{Email: "me@me"},
 			To: []*MailAddress{
-				&MailAddress{Email: "you1@you"},
+				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
 			Subject: "Up?",
@@ -65,7 +65,7 @@ QUIT
 				DisableTLS: true,
 			},
 			Parts: []*MailPart{
-				&MailPart{
+				{
 					Body: "Hey !!!",
 					Type: "text/plain",
 				},
@@ -132,7 +132,7 @@ QUIT
 		msg := &MailOptions{
 			From: &MailAddress{Email: "me@me"},
 			To: []*MailAddress{
-				&MailAddress{Email: "you1@you"},
+				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
 			Subject: "Up?",
@@ -142,7 +142,7 @@ QUIT
 				DisableTLS: true,
 			},
 			Parts: []*MailPart{
-				&MailPart{Type: "text/html", Body: tpl},
+				{Type: "text/html", Body: tpl},
 			},
 			TemplateValues: data,
 		}
@@ -153,7 +153,7 @@ QUIT
 func TestMailMissingSubject(t *testing.T) {
 	msg := &MailOptions{
 		From: &MailAddress{Email: "me@me"},
-		To:   []*MailAddress{&MailAddress{Email: "you@you"}},
+		To:   []*MailAddress{{Email: "you@you"}},
 	}
 	err := sendMail(context.Background(), msg)
 	if assert.Error(t, err) {
@@ -164,10 +164,10 @@ func TestMailMissingSubject(t *testing.T) {
 func TestMailBadBodyType(t *testing.T) {
 	msg := &MailOptions{
 		From:    &MailAddress{Email: "me@me"},
-		To:      []*MailAddress{&MailAddress{Email: "you@you"}},
+		To:      []*MailAddress{{Email: "you@you"}},
 		Subject: "Up?",
 		Parts: []*MailPart{
-			&MailPart{
+			{
 				Type: "text/qsdqsd",
 				Body: "foo",
 			},
@@ -252,7 +252,7 @@ QUIT
 		msg := &MailOptions{
 			From: &MailAddress{Email: "me@me"},
 			To: []*MailAddress{
-				&MailAddress{Email: "you1@you"},
+				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
 			Subject: "Up?",
@@ -262,11 +262,11 @@ QUIT
 				DisableTLS: true,
 			},
 			Parts: []*MailPart{
-				&MailPart{
+				{
 					Type: "text/plain",
 					Body: textTpl,
 				},
-				&MailPart{
+				{
 					Type: "text/html",
 					Body: htmlTpl,
 				},
@@ -394,7 +394,7 @@ func TestSendMailNoReply(t *testing.T) {
 		Mode:    "noreply",
 		Subject: "Up?",
 		Parts: []*MailPart{
-			&MailPart{
+			{
 				Type: "text/plain",
 				Body: "foo",
 			},
@@ -429,9 +429,9 @@ func TestSendMailFrom(t *testing.T) {
 	msg, _ := jobs.NewMessage("json", &MailOptions{
 		Mode:    "from",
 		Subject: "Up?",
-		To:      []*MailAddress{&MailAddress{Email: "you@you"}},
+		To:      []*MailAddress{{Email: "you@you"}},
 		Parts: []*MailPart{
-			&MailPart{
+			{
 				Type: "text/plain",
 				Body: "foo",
 			},
