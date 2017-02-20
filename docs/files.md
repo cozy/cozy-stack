@@ -285,11 +285,14 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     },
     "attributes": {
       "type": "file",
-      "name": "hello.txt",
+      "name": "hello.mp3",
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
+      "metadata": {
+        "artist": "Adele"
+      }
       "size": 12,
       "executable": false,
       "class": "document",
