@@ -61,10 +61,18 @@ func SetCookieForNewSession(c echo.Context) (string, error) {
 	return session.ID(), nil
 }
 
-// redirectSuccessLogin sends a redirection to the browser after a successful login
-func redirectSuccessLogin(c echo.Context, redirect string) error {
+func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect string) error {
+	doc := &couchdb.JSONDoc{}
+	err := couchdb.GetDoc(i, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return err
+	}
 
-	return c.Redirect(http.StatusSeeOther, redirect)
+	return c.Render(code, "login.html", echo.Map{
+		"PublicName":       doc.M["public_name"],
+		"CredentialsError": nil,
+		"Redirect":         redirect,
+	})
 }
 
 func loginForm(c echo.Context) error {
@@ -81,23 +89,7 @@ func loginForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
-	doc := &couchdb.JSONDoc{}
-	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
-	if err != nil {
-		return err
-	}
-
-	publicName, ok := doc.M["public_name"].(string)
-
-	if !ok {
-		publicName = ""
-	}
-
-	return c.Render(http.StatusOK, "login.html", echo.Map{
-		"PublicName":       publicName,
-		"CredentialsError": nil,
-		"Redirect":         redirect,
-	})
+	return renderLoginForm(c, instance, http.StatusOK, redirect)
 }
 
 func login(c echo.Context) error {
@@ -127,7 +119,7 @@ func login(c echo.Context) error {
 		if wantsJSON {
 			return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
 		}
-		return redirectSuccessLogin(c, redirect)
+		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
 	if wantsJSON {
@@ -135,10 +127,8 @@ func login(c echo.Context) error {
 			"error": CredentialsErrorMessage,
 		})
 	}
-	return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
-		"CredentialsError": CredentialsErrorMessage,
-		"Redirect":         redirect,
-	})
+
+	return renderLoginForm(c, instance, http.StatusUnauthorized, redirect)
 }
 
 func logout(c echo.Context) error {
