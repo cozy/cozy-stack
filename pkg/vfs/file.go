@@ -345,7 +345,6 @@ func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
 		newdoc.SetID(olddoc.ID())
 		newdoc.SetRev(olddoc.Rev())
 		newdoc.CreatedAt = olddoc.CreatedAt
-		newdoc.UpdatedAt = time.Now()
 	}
 
 	f, err := safeCreateFile(newpath, newdoc.Executable, c.FS())
