@@ -22,6 +22,9 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
+// CredentialsErrorMessage is the message showed to the user when he/she enters incorrect credentials
+const CredentialsErrorMessage = "The credentials you entered are incorrect, please try again."
+
 // With the nested subdomains structure, the cookie set on the main domain can
 // also be used to authentify the user on the apps subdomain. But with the flat
 // subdomains structure, a new cookie is needed. To transfer the session, we
@@ -58,22 +61,24 @@ func SetCookieForNewSession(c echo.Context) (string, error) {
 	return session.ID(), nil
 }
 
-// redirectSuccessLogin sends a redirection to the browser after a successful login
-func redirectSuccessLogin(c echo.Context, redirect string) error {
-	sessID, err := SetCookieForNewSession(c)
+func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect string) error {
+	doc := &couchdb.JSONDoc{}
+	err := couchdb.GetDoc(i, consts.Settings, consts.InstanceSettingsID, doc)
 	if err != nil {
 		return err
 	}
 
-	instance := middlewares.GetInstance(c)
-	redirect = addCodeToRedirect(redirect, instance.Domain, sessID)
-	return c.Redirect(http.StatusSeeOther, redirect)
+	return c.Render(code, "login.html", echo.Map{
+		"PublicName":       doc.M["public_name"],
+		"CredentialsError": nil,
+		"Redirect":         redirect,
+	})
 }
 
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.HomeSlug))
+	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
 	if err != nil {
 		return err
 	}
@@ -84,55 +89,53 @@ func loginForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
-	doc := &couchdb.JSONDoc{}
-	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
-	if err != nil {
-		return err
-	}
-
-	publicName, ok := doc.M["public_name"].(string)
-
-	if !ok {
-		publicName = ""
-	}
-
-	return c.Render(http.StatusOK, "login.html", echo.Map{
-		"PublicName":        publicName,
-		"InvalidPassphrase": false,
-		"Redirect":          redirect,
-	})
+	return renderLoginForm(c, instance, http.StatusOK, redirect)
 }
 
 func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.HomeSlug))
+	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
 	if err != nil {
 		return err
 	}
 
+	var sessionID string
 	session, err := sessions.GetSession(c, instance)
 	if err == nil {
-		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
+		sessionID = session.ID()
+	} else {
+		passphrase := []byte(c.FormValue("passphrase"))
+		if err := instance.CheckPassphrase(passphrase); err == nil {
+			if sessionID, err = SetCookieForNewSession(c); err != nil {
+				return err
+			}
+		}
+	}
+
+	if sessionID != "" {
+		redirect = addCodeToRedirect(redirect, instance.Domain, sessionID)
+		if wantsJSON {
+			return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
+		}
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
-	passphrase := []byte(c.FormValue("passphrase"))
-	if err := instance.CheckPassphrase(passphrase); err == nil {
-		return redirectSuccessLogin(c, redirect)
+	if wantsJSON {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": CredentialsErrorMessage,
+		})
 	}
 
-	return c.Render(http.StatusUnauthorized, "login.html", echo.Map{
-		"InvalidPassphrase": true,
-		"Redirect":          redirect,
-	})
+	return renderLoginForm(c, instance, http.StatusUnauthorized, redirect)
 }
 
 func logout(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	claims, ok := c.Get("token_claims").(*permissions.Claims)
 	if !ok || claims.Audience != permissions.AppAudience {
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug).String())
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.FilesSlug).String())
 	}
 
 	session, err := sessions.GetSession(c, instance)
