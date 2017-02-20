@@ -20,6 +20,7 @@
     }
 
     errorPanel.innerHTML = `<p>${error}</p>`
+    submitButton.removeAttribute('disabled')
   }
 
   form.addEventListener('submit', (event) => {
@@ -47,7 +48,6 @@
         // the form. A second time, yes, but it will actually log the user.
         form.submit()
       } else {
-        submitButton.removeAttribute('disabled')
         throw new Error('The credentials you entered are incorrect, please try again.')
       }
     }).catch(showError)
