@@ -24,9 +24,9 @@ type Sharing struct {
 
 // SharingRecipient contains the information about a recipient for a sharing
 type SharingRecipient struct {
-	Status       string
-	AccessToken  string
-	RefreshToken string
+	Status       string `json:"status,omitempty"`
+	AccessToken  string `json:"status,omitempty"`
+	RefreshToken string `json:"status,omitempty"`
 
 	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
 
