@@ -69,10 +69,10 @@ const (
 )
 
 const (
-	// PendingStatus is the sharing pending status
-	PendingStatus = "pending"
-	// RefusedStatus is the sharing refused status
-	RefusedStatus = "refused"
-	// AcceptedStatus is the sharing accepted status
-	AcceptedStatus = "accepted"
+	// PendingSharingStatus is the sharing pending status
+	PendingSharingStatus = "pending"
+	// RefusedSharingStatus is the sharing refused status
+	RefusedSharingStatus = "refused"
+	// AcceptedSharingStatus is the sharing accepted status
+	AcceptedSharingStatus = "accepted"
 )

@@ -121,7 +121,7 @@ func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
 		return err
 	}
 	for _, sRec := range sRecipients {
-		sRec.Status = consts.PendingStatus
+		sRec.Status = consts.PendingSharingStatus
 	}
 
 	sharing.Owner = true
@@ -131,10 +131,10 @@ func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
 }
 
 // Create inserts a Sharing document in database
-func Create(db couchdb.Database, doc *Sharing) (*Sharing, error) {
+func Create(db couchdb.Database, doc *Sharing) error {
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return doc, nil
+	return nil
 }

@@ -34,7 +34,7 @@ func TestCreate(t *testing.T) {
 	sharing := &Sharing{
 		SharingType: consts.OneShotSharing,
 	}
-	_, err := Create(TestPrefix, sharing)
+	err := Create(TestPrefix, sharing)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, sharing.ID())
 	assert.NotEmpty(t, sharing.Rev())
@@ -77,7 +77,7 @@ func TestCheckSharingCreation(t *testing.T) {
 
 	sRecipients := sharing.SRecipients
 	for _, sRec := range sRecipients {
-		assert.Equal(t, consts.PendingStatus, sRec.Status)
+		assert.Equal(t, consts.PendingSharingStatus, sRec.Status)
 	}
 }
 

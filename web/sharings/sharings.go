@@ -22,12 +22,12 @@ func CreateSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	doc, err := sharings.Create(instance, sharing)
+	err := sharings.Create(instance, sharing)
 	if err != nil {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusCreated, doc, nil)
+	return jsonapi.Data(c, http.StatusCreated, sharing, nil)
 }
 
 // Routes sets the routing for the sharing service
