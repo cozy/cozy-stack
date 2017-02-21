@@ -727,6 +727,22 @@ func TestModifyContentSuccess(t *testing.T) {
 	fileInfo, err = storage.Stat("/willbemodified")
 	assert.NoError(t, err)
 	assert.Equal(t, fileInfo.Mode().String(), "-rw-r--r--")
+
+	req, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(""))
+	assert.NoError(t, err)
+
+	req.Header.Add("Date", "Mon, 02 Jan 2006 15:04:05 MST")
+
+	res3, data3 := doUploadOrMod(t, req, "what/ever", "")
+	assert.Equal(t, 200, res3.StatusCode)
+
+	data3, ok = data3["data"].(map[string]interface{})
+	assert.True(t, ok)
+
+	attrs3, ok := data3["attributes"].(map[string]interface{})
+	assert.True(t, ok)
+
+	assert.Equal(t, "2006-01-02T15:04:05Z", attrs3["updated_at"])
 }
 
 func TestModifyContentConcurrently(t *testing.T) {
