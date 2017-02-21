@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
@@ -40,3 +41,8 @@ func (r *Recipient) Included() []jsonapi.Object { return nil }
 func (r *Recipient) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
 }
+
+var (
+	_ couchdb.Doc    = &Recipient{}
+	_ jsonapi.Object = &Recipient{}
+)

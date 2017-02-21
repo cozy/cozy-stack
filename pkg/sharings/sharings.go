@@ -138,3 +138,8 @@ func Create(db couchdb.Database, doc *Sharing) error {
 	}
 	return nil
 }
+
+var (
+	_ couchdb.Doc    = &Sharing{}
+	_ jsonapi.Object = &Sharing{}
+)
