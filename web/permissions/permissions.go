@@ -251,8 +251,8 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
 	if err != nil {
 		return err
 	}
-	err = vfs.Allows(instance, *pset, v, o)
-	if err != nil {
+
+	if err = vfs.Allows(instance, *pset, v, o); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil
