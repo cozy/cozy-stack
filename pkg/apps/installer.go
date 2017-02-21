@@ -134,7 +134,7 @@ func (i *Installer) endOfProc() {
 // freshly fetched manifest from the source along with a possible error in case
 // the installation went wrong.
 //
-// Note that the fetched manifest is returned even if an error occured while
+// Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) install() (*Manifest, error) {
 	man := &Manifest{}
@@ -164,7 +164,7 @@ func (i *Installer) install() (*Manifest, error) {
 // returns the freshly fetched manifest from the source along with a possible
 // error in case the update went wrong.
 //
-// Note that the fetched manifest is returned even if an error occured while
+// Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) update() (*Manifest, error) {
 	man := i.man

@@ -664,7 +664,7 @@ func parseMD5Hash(md5B64 string) ([]byte, error) {
 	//
 	// The padding may add up to 2 characters (non useful). If we are
 	// out of these boundaries we know we don't have a good hash and we
-	// can bail immediatly.
+	// can bail immediately.
 	if len(md5B64) < 22 || len(md5B64) > 24 {
 		return nil, fmt.Errorf("Given Content-MD5 is invalid")
 	}

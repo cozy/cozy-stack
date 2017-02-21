@@ -7,7 +7,7 @@ import (
 )
 
 // maxPastTriggerTime is the maximum duration in the past for which the at
-// triggers are executed immediatly instead of discarded.
+// triggers are executed immediately instead of discarded.
 var maxPastTriggerTime = 24 * time.Hour
 
 // AtTrigger implements the @at trigger type. It schedules a job at a specified

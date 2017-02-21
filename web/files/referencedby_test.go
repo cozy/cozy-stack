@@ -55,7 +55,7 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 	path := "/files/" + fileID + "/relationships/referenced_by"
 	content, err := json.Marshal(&jsonapi.Relationship{
 		Data: []jsonapi.ResourceIdentifier{
-			jsonapi.ResourceIdentifier{
+			{
 				ID:   "fooalbumid",
 				Type: "io.cozy.photos.albums",
 			},

@@ -139,7 +139,7 @@ func GenerateFromPassphrase(passphrase []byte) ([]byte, error) {
 //
 // It returns an error if the derived keys do not match. It also returns a
 // needUpdate boolean indicating whether or not the passphrase hash has
-// outdated paramaters and should be recomputed.
+// outdated parameters and should be recomputed.
 func CompareHashAndPassphrase(hash []byte, passphrase []byte) (needUpdate bool, err error) {
 	var h = &scryptHash{}
 	if err = h.UnmarshalText(hash); err != nil {

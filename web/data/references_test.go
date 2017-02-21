@@ -37,7 +37,7 @@ func TestAddReferencesHandler(t *testing.T) {
 	// update it
 	var in = jsonReader(jsonapi.Relationship{
 		Data: []jsonapi.ResourceIdentifier{
-			jsonapi.ResourceIdentifier{
+			{
 				ID:   filedoc.ID(),
 				Type: filedoc.DocType(),
 			},
@@ -90,7 +90,7 @@ func makeReferencedTestFile(t *testing.T, doc couchdb.Doc, name string) {
 	}
 
 	filedoc.ReferencedBy = []jsonapi.ResourceIdentifier{
-		jsonapi.ResourceIdentifier{
+		{
 			ID:   doc.ID(),
 			Type: doc.DocType(),
 		},

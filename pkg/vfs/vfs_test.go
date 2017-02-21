@@ -468,7 +468,7 @@ func TestFileSerialization(t *testing.T) {
 		Type: consts.FileType,
 		Name: "test/foo/bar.jpg",
 		ReferencedBy: []jsonapi.ResourceIdentifier{
-			jsonapi.ResourceIdentifier{Type: "io.cozy.photo.album", ID: "foorefid"},
+			{Type: "io.cozy.photo.album", ID: "foorefid"},
 		},
 	}
 

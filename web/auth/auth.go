@@ -175,7 +175,7 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error
 	}
 
 	// To protect against stealing authorization code with redirection, the
-	// fragment is always overriden. Most browsers keep URI fragments upon
+	// fragment is always overridden. Most browsers keep URI fragments upon
 	// redirects, to make sure to override them, we put an empty one.
 	//
 	// see: oauthsecurity.com/#provider-in-the-middle
