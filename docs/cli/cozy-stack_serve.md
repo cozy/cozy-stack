@@ -25,9 +25,9 @@ The most often, this command is used in its simple form:
 	$ cozy-stack serve
 
 But if you want to develop two apps in local (to test their interactions for
-example), you can use the --appsdir flag like this:
+example), you can use the --appdir flag like this:
 
-	$ cozy-stack serve --appsdir appone:/path/to/app_one,apptwo:/path/to/app_two
+	$ cozy-stack serve --appdir appone:/path/to/app_one,apptwo:/path/to/app_two
 
 ```
 
