@@ -5,5 +5,5 @@
 /.assets
 *.log
 local.env
-integration-tests/pouchdb/node_modules
-integration-tests/pouchdb/replication-target
+tests/pouchdb-integration/node_modules
+tests/pouchdb-integration/replication-target
