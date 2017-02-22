@@ -1,16 +1,29 @@
 package vfs
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/cozy/goexif2/exif"
 )
+
+// MetadataExtractorVersion is the version number of the metadata extractor.
+// It will be used later to know which files can be re-examined to get more
+// metadata when the extractor is improved.
+const MetadataExtractorVersion = 1
 
 // TODO add tests
 
 // Metadata is a list of metadata specific to each mimetype:
 // id3 for music, exif for jpegs, etc.
 type Metadata map[string]interface{}
+
+// NewMetadata returns a new metadata object, with the version field set
+func NewMetadata() Metadata {
+	m := Metadata{}
+	m["extractor_version"] = MetadataExtractorVersion
+	return m
+}
 
 // MetaExtractor is an interface for extracting metadata from a file
 type MetaExtractor interface {
@@ -74,14 +87,33 @@ func (e *ExifExtractor) Abort(err error) {
 
 // Result is called to get the extracted metadata
 func (e *ExifExtractor) Result() Metadata {
-	m := Metadata{}
+	m := NewMetadata()
 	x := <-e.ch
 	switch x := x.(type) {
 	case *exif.Exif:
 		if dt, err := x.DateTime(); err == nil {
 			m["datetime"] = dt
 		}
-		// TODO add other metadata
+		fmt.Printf(x.String())
+		if flash, err := x.Flash(); err == nil {
+			m["flash"] = flash
+		}
+		if lat, long, err := x.LatLong(); err == nil {
+			m["gps"] = map[string]float64{
+				"lat":  lat,
+				"long": long,
+			}
+		}
+		if iw, err := x.Get(exif.ImageWidth); err == nil && iw.Count > 0 {
+			if w, err := iw.Int(0); err != nil {
+				m["width"] = w
+			}
+		}
+		if ih, err := x.Get(exif.ImageLength); err == nil && ih.Count > 0 {
+			if h, err := ih.Int(0); err != nil {
+				m["height"] = h
+			}
+		}
 	}
 	return m
 }

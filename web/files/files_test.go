@@ -477,6 +477,23 @@ func TestUploadWithDate(t *testing.T) {
 	assert.Equal(t, createdAt, updatedAt)
 }
 
+func TestUploadImage(t *testing.T) {
+	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__©M4Dz.jpg")
+	assert.NoError(t, err)
+	defer f.Close()
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg", f)
+	assert.NoError(t, err)
+	res, obj := doUploadOrMod(t, req, "image/jpg", "tHWYYuXBBflJ8wXgJ2c2yg==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	meta := attrs["metadata"].(map[string]interface{})
+	v := meta["extractor_version"].(float64)
+	assert.Equal(t, float64(vfs.MetadataExtractorVersion), v)
+	flash := meta["flash"].(string)
+	assert.Equal(t, "Off, Did not fire", flash)
+}
+
 func TestModifyMetadataFileMove(t *testing.T) {
 	body := "foo"
 	res1, data1 := upload(t, "/files/?Type=file&Name=filemoveme&Tags=foo,bar", "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")

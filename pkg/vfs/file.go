@@ -481,7 +481,8 @@ func (f *File) Close() error {
 	}
 
 	if !bytes.Equal(newdoc.MD5Sum, md5sum) {
-		return ErrInvalidHash
+		err = ErrInvalidHash
+		return err
 	}
 
 	if newdoc.Size < 0 {
@@ -489,7 +490,8 @@ func (f *File) Close() error {
 	}
 
 	if newdoc.Size != written {
-		return ErrContentLengthMismatch
+		err = ErrContentLengthMismatch
+		return err
 	}
 
 	if olddoc != nil {
