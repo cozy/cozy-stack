@@ -208,6 +208,117 @@ single thread or application. But NaCl is [no longer
 maintained](https://bugs.chromium.org/p/chromium/issues/detail?id=239656#c160)
 and ZeroVM has some severe limitations, so, it won't be used.
 
+## Konnector isolation study
+
+The short list of tools which will be tested to isolate connectors is Rkt and NsJail which on paper better fullfill our needs.
+
+### NsJail
+
+NsJail is a lightweight process isolation tool, making use of Linux namespaces and seccomp-bpf syscall filters. It is not a container tool like docker. Its features are quite extensive regarding isolation. The [README](https://github.com/google/nsjail) gives the full list of available options. Although available in the google github, it is not an official google tool.
+
+NsJail is:
+
+- easy to install : just a make away with standard build tools
+- offers a full list or isolation tools
+- lightly documented the only documentation is nsjail -h (also available in the main github page) and it is quite cryptic for a non-sysadmin         
+like me. I could not find any help in any search engine. Some examples are available to run a back in an isolated process and work but I could not run a full nodejs (only nodejs -v worked)
+- The konnectors will need a full nodejs installed on the host
+- Is still actively maintained
+
+### Rkt
+
+Rkt is very similar to docker. It can even directly run docker images from the docker registry, which gives us a lot of existing images to use, even if we want to be able to use other languages than node. For example, we could have also a container dedicated to weboob, another container could use phantomjs or casper and without forcing self-hosted users to do complicated installation procedures.
+
+Rkt is :
+- easy to install : debian, rpm package available, archlinux community package : https://github.com/coreos/rkt/releases
+- has network isolation like docker
+- offers CPU, memory limitation, seccomp isolation (but the set of rules to use is out of my understanding)
+- is well [documented](https://coreos.com/rkt/docs/latest/), complete man pages, but not as well known as docker, then there is not a lot of things to find outside the official documentation.
+- can use docker image directly or can convert them to one runnable aci file with one simple cli command (rkt export)
+- is in active developpement but relatively stable regarding core features.
+- container images can be easily signed and the signature is checked by default when running a container.
+
+I managed to run a nodejs container with just the following commands :
+
+    rkt run --insecure-options=image --interactive docker://node:slim --name nodeslim -- -v
+    rkt list   # to get the container uuid
+    rkt export --app=nodeslim <uuid> nodeslim.aci
+    rkt run --insecure-options=image --interactive nodeslim.aci -- -v  # to run node -v in the new container
+    
+Note: the --insecure-options param is to avoid the check of the image signature to ease the demonstration
+
+### Choice
+
+The best choice would be Rkt for it's ease of use (which is good for contribution) and wide range of isolation features + access to the big docker ecosystem without beeing a burden for the host administrator.
+Note : the limitation of NsJail I saw might be due to my lack of knowledge regarding system administration.
+
+### Proposed use of rkt regarding connectors
+
+#### Installation
+
+As stated before, rkt is easy to install. It may also be possible to make it available in the cozy-stack docker image but I did not test it (TODO)
+
+#### Image creation
+
+To create an ACI file image, you just need to run a docker image one time :
+    
+    rkt run  --uuid-file-save=$PWD/uuid --insecure-options=image --interactive docker://node:slim --name nodeslim -- -v
+    rkt export --app=nodeslim `cat uuid` nodeslim.aci && rm uuid
+
+
+The node:slim image weights 84M at this time. The node:alpine image also exists and is way lighter (19M) but I had problems with DNS with this, and alpine can cause some nasty bugs that are difficult to track.
+
+#### Running a connector
+
+A path dedicated to run the konnectors with a predefined list of node packages available (the net module could be mocked with special limitations to blacklist some urls)
+
+A script will run the node container giving as option the script to launch. The path is mounted inside the container. The following script does just that
+
+    #!/usr/bin/env bash
+    rm -rf ./container_dir
+    cp -r ./container_dir_template ./container_dir
+    rkt run --net=host --environment=CREDENTIAL=value;COZY_URL=url --uuid-file-save=$PWD/uuid --volume data,kind=host,source=$PWD/container_dir --insecure-options=image nodeslim.aci --cpu=100m --memory=128M --name rktnode --mount volume=data,target=/usr/src/app --exec node -- /usr/src/app/$1 $2 &
+    # the container will handle itself the communication with the stack
+    sleep 60
+    rkt stop --force --uuid-file=uuid
+    rkt rm --uuid-file=uuid
+    rm -rf ./container_dir
+
+This script can be run like this :
+
+    ./rkt.sh mynewkonnector.js
+
+If the mynewkonnector.js file is available in the container_dir_template directory.
+
+Cons : must forbid access to port 5984 and 6060 + SMTP server
+
+The limitation of time, CPU and memory will avoid most DOS attacks (to my knowledge). For memory use, I still don't see a way to prevent the excessive use of swap from the container.
+To prevent the connectors from listening to each other, they should be run in containers with different uid, avoiding them to listen to each other.
+
+#### Solution to limit access of the container to 5984 and 6060 ports + SMTP
+
+The container must be started in bridged mode. With that, the container still has access to localhost but through a specific IP address visible with ifconfig. That way, the host can have iptable rules to forbid access to specified ports to the bridge.
+
+To connect a container in bridge mode : 
+
+On the host create the file /etc/rkt/net.d/10-containers.conf
+
+    {
+        "name": "bridge",
+        "type": "bridge",
+        "bridge": "rkt-bridge-nat",
+        "ipMasq": true,
+        "isGateway": true,
+        "ipam": {
+            "type": "host-local",
+            "subnet": "10.2.0.0/24",
+            "routes": [
+                   { "dst": "0.0.0.0/0" }
+            ]
+        }
+    }
+
+and run your container with the "--net=bridge" option. That way, a new interface is available in the container and gives you access to the host.
 
 ## TODO
 
