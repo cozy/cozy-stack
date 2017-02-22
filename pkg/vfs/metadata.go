@@ -3,7 +3,7 @@ package vfs
 import (
 	"io"
 
-	"github.com/xor-gate/goexif2/exif"
+	"github.com/cozy/goexif2/exif"
 )
 
 // TODO add tests
@@ -32,17 +32,28 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 
 // ExifExtractor is used to extract EXIF metadata from jpegs
 type ExifExtractor struct {
-	w *io.PipeWriter
-	r *io.PipeReader
+	w  *io.PipeWriter
+	r  *io.PipeReader
+	ch chan interface{}
 }
 
 // NewExifExtractor returns an extractor for EXIF metadata
-// TODO first, make it works
-// TODO then, use a goroutine to avoid having the whole file in memory
 func NewExifExtractor() *ExifExtractor {
 	e := &ExifExtractor{}
 	e.r, e.w = io.Pipe()
+	e.ch = make(chan interface{})
+	go e.Start()
 	return e
+}
+
+// Start is used in a goroutine to start the metadata extraction
+func (e *ExifExtractor) Start() {
+	x, err := exif.Decode(e.r)
+	if err != nil {
+		e.ch <- err
+	} else {
+		e.ch <- x
+	}
 }
 
 // Write is called to push some bytes to the extractor
@@ -58,18 +69,19 @@ func (e *ExifExtractor) Close() error {
 // Abort is called when the extractor can be discarded
 func (e *ExifExtractor) Abort(err error) {
 	e.w.CloseWithError(err)
+	<-e.ch
 }
 
 // Result is called to get the extracted metadata
 func (e *ExifExtractor) Result() Metadata {
 	m := Metadata{}
-	x, err := exif.Decode(e.r)
-	if err != nil {
-		return m
-	}
-	// TODO add other metadata
-	if dt, err := x.DateTime(); err == nil {
-		m["datetime"] = dt
+	x := <-e.ch
+	switch x := x.(type) {
+	case *exif.Exif:
+		if dt, err := x.DateTime(); err == nil {
+			m["datetime"] = dt
+		}
+		// TODO add other metadata
 	}
 	return m
 }
