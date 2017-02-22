@@ -11,6 +11,23 @@ import (
 	"github.com/labstack/echo"
 )
 
+func listReferencesHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Get("doctype").(string)
+	id := c.Param("docid")
+
+	if err := permissions.AllowTypeAndID(c, permissions.GET, doctype, id); err != nil {
+		return err
+	}
+
+	refs, err := vfs.FilesReferencedBy(instance, doctype, id)
+	if err != nil {
+		return err
+	}
+
+	return jsonapi.DataRelations(c, http.StatusOK, refs)
+}
+
 func addReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
@@ -45,19 +62,36 @@ func addReferencesHandler(c echo.Context) error {
 	return c.NoContent(204)
 }
 
-func listReferencesHandler(c echo.Context) error {
+func removeReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
 	id := c.Param("docid")
 
-	if err := permissions.AllowTypeAndID(c, permissions.GET, doctype, id); err != nil {
-		return err
-	}
-
-	refs, err := vfs.FilesReferencedBy(instance, doctype, id)
+	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
 		return err
 	}
 
-	return jsonapi.DataRelations(c, http.StatusOK, refs)
+	docRef := jsonapi.ResourceIdentifier{
+		Type: doctype,
+		ID:   id,
+	}
+
+	if err := permissions.AllowTypeAndID(c, permissions.DELETE, doctype, id); err != nil {
+		return err
+	}
+
+	for _, fRef := range references {
+		file, err := vfs.GetFileDoc(instance, fRef.ID)
+		if err != nil {
+			return err
+		}
+		file.RemoveReferencedBy(docRef)
+		err = couchdb.UpdateDoc(instance, file)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.NoContent(204)
 }
