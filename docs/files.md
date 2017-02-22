@@ -292,7 +292,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
       "tags": [],
       "metadata": {
         "artist": "Adele"
-      }
+      },
       "size": 12,
       "executable": false,
       "class": "document",
