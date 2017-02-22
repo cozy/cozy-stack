@@ -35,6 +35,21 @@ func (vs VerbSet) Contains(v Verb) bool {
 	return has
 }
 
+// ContainsAll check if VerbSet contains all passed verbs
+func (vs VerbSet) ContainsAll(verbs VerbSet) bool {
+	if len(vs) == 0 {
+		return true // empty set = ALL
+	}
+
+	for v := range verbs {
+		_, has := vs[v]
+		if !has {
+			return false
+		}
+	}
+	return true
+}
+
 func (vs VerbSet) String() string {
 	out := ""
 	if len(vs) == 0 || len(vs) == allVerbsLength {

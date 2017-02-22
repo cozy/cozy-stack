@@ -229,7 +229,7 @@ func (i *Installer) Poll() (*Manifest, bool, error) {
 
 func updateManifest(db couchdb.Database, man *Manifest) error {
 
-	err := permissions.Destroy(db, man.Slug)
+	err := permissions.DestroyApp(db, man.Slug)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}
@@ -239,7 +239,7 @@ func updateManifest(db couchdb.Database, man *Manifest) error {
 		return err
 	}
 
-	_, err = permissions.Create(db, man.Slug, *man.Permissions)
+	_, err = permissions.CreateAppSet(db, man.Slug, *man.Permissions)
 	return err
 }
 
@@ -249,7 +249,7 @@ func createManifest(db couchdb.Database, man *Manifest) error {
 		return err
 	}
 
-	_, err := permissions.Create(db, man.Slug, *man.Permissions)
+	_, err := permissions.CreateAppSet(db, man.Slug, *man.Permissions)
 	return err
 
 }

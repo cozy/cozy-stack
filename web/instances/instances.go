@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -85,7 +84,7 @@ func createToken(c echo.Context) error {
 	if expire != "" && expire != "0s" {
 		var duration time.Duration
 		if duration, err = time.ParseDuration(expire); err == nil {
-			issuedAt += webpermissions.TokenValidityDuration - int64(duration/time.Second)
+			issuedAt += permissions.TokenValidityDuration - int64(duration/time.Second)
 		}
 	}
 	token, err := crypto.NewJWT(secret, permissions.Claims{

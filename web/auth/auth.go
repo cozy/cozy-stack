@@ -148,9 +148,8 @@ func login(c echo.Context) error {
 
 func logout(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	claims, ok := c.Get("token_claims").(*permissions.Claims)
-	if !ok || claims.Audience != permissions.AppAudience {
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.FilesSlug).String())
+	if !webpermissions.AllowLogout(c) {
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug).String())
 	}
 
 	session, err := sessions.GetSession(c, instance)
@@ -500,7 +499,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/login", loginForm)
 	router.POST("/login", login)
-	router.DELETE("/login", logout, webpermissions.Extractor)
+	router.DELETE("/login", logout)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

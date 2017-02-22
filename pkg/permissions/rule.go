@@ -99,12 +99,18 @@ func (r Rule) ValuesValid(o Validable) bool {
 	return false
 }
 
-// ValuesContain returns true if the value is in r.Values
-func (r Rule) ValuesContain(value string) bool {
-	for _, v := range r.Values {
-		if v == value {
-			return true
+// ValuesContain returns true if all the values are in r.Values
+func (r Rule) ValuesContain(values ...string) bool {
+	for _, value := range values {
+		valueOK := false
+		for _, v := range r.Values {
+			if v == value {
+				valueOK = true
+			}
+		}
+		if !valueOK {
+			return false
 		}
 	}
-	return false
+	return true
 }
