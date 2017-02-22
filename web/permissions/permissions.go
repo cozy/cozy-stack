@@ -34,13 +34,6 @@ var (
 	DELETE = permissions.DELETE
 )
 
-// keyPicker choose the proper instance key depending on token audience
-func keyPicker(i *instance.Instance) jwt.Keyfunc {
-	return func(token *jwt.Token) (interface{}, error) {
-		return i.PickKey(token.Claims.(*permissions.Claims).Audience)
-	}
-}
-
 const bearerAuthScheme = "Bearer "
 const basicAuthScheme = "Basic "
 
