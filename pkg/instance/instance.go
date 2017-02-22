@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 /* #nosec */
@@ -73,6 +74,8 @@ type Instance struct {
 	SessionSecret []byte `json:"session_secret,omitempty"`
 	// OAuthSecret is used to authenticate OAuth2 token
 	OAuthSecret []byte `json:"oauth_secret,omitempty"`
+	// CLISecret is used to authenticate request from the CLI
+	CLISecret []byte `json:"cli_secret,omitempty"`
 
 	storage afero.Fs
 }
@@ -368,6 +371,7 @@ func Create(opts *Options) (*Instance, error) {
 	i.RegisterToken = crypto.GenerateRandomBytes(registerTokenLen)
 	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
+	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
 
 	var err error
 	err = i.makeStorageFs()
@@ -592,6 +596,36 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 	}
 
 	return nil
+}
+
+// PickKey choose wich of the Instance keys to use depending on token audience
+func (i *Instance) PickKey(audience string) ([]byte, error) {
+	switch audience {
+	case permissions.AppAudience:
+		return i.SessionSecret, nil
+	case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
+		return i.OAuthSecret, nil
+	case permissions.CLIAudience:
+		return i.CLISecret, nil
+	}
+	return nil, permissions.ErrInvalidAudience
+}
+
+// MakeJWT is a shortcut to create a JWT
+func (i *Instance) MakeJWT(audience, subject, scope string) (string, error) {
+	secret, err := i.PickKey(audience)
+	if err != nil {
+		return "", err
+	}
+	return crypto.NewJWT(secret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: audience,
+			Issuer:   i.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  subject,
+		},
+		Scope: scope,
+	})
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -21,6 +22,11 @@ func AddReferencedHandler(c echo.Context) error {
 	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
 	if err != nil {
 		return wrapVfsError(err)
+	}
+
+	err = checkPerm(c, permissions.PATCH, dir, file)
+	if err != nil {
+		return err
 	}
 
 	if dir != nil {

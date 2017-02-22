@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -34,24 +34,11 @@ var (
 	DELETE = permissions.DELETE
 )
 
-// keyPicker choose the proper instance key depending on token audience
-func keyPicker(i *instance.Instance) jwt.Keyfunc {
-	return func(token *jwt.Token) (interface{}, error) {
-		switch token.Claims.(*permissions.Claims).Audience {
-		case permissions.AppAudience:
-			return i.SessionSecret, nil
-		case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
-			return i.OAuthSecret, nil
-		}
-		return nil, permissions.ErrInvalidAudience
-	}
-}
-
 const bearerAuthScheme = "Bearer "
 const basicAuthScheme = "Basic "
 
 // ErrNoToken is returned whe the request has no token
-var ErrNoToken = errors.New("No token in request")
+var ErrNoToken = echo.NewHTTPError(http.StatusUnauthorized, "No token in request")
 
 var registerTokenPermissions = permissions.Set{
 	permissions.Rule{
@@ -121,7 +108,11 @@ func extractJWTClaims(c echo.Context, instance *instance.Instance) (*permissions
 	}
 
 	var claims permissions.Claims
-	if err := crypto.ParseJWT(token, keyPicker(instance), &claims); err != nil {
+	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
+		return instance.PickKey(token.Claims.(*permissions.Claims).Audience)
+	}, &claims)
+
+	if err != nil {
 		return nil, permissions.ErrInvalidToken
 	}
 
@@ -154,21 +145,23 @@ func extractPermissionSet(c echo.Context, instance *instance.Instance, claims *p
 		return nil, ErrNoToken
 	}
 
-	if claims.Audience == permissions.AppAudience {
+	switch claims.Audience {
+
+	case permissions.AppAudience:
 		// app token, fetch permissions from couchdb
 		pdoc, err := permissions.GetForApp(instance, claims.Subject)
 		if err != nil {
 			return nil, err
 		}
 		return &pdoc.Permissions, nil
-	}
 
-	if claims.Audience == permissions.AccessTokenAudience {
+	case permissions.AccessTokenAudience, permissions.CLIAudience:
 		// Oauth token, extract permissions from JWT-encoded scope
 		return permissions.UnmarshalScopeString(claims.Scope)
-	}
 
-	return nil, fmt.Errorf("Unrecognized token audience %v", claims.Audience)
+	default:
+		return nil, fmt.Errorf("Unrecognized token audience %v", claims.Audience)
+	}
 }
 
 func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {
@@ -239,6 +232,20 @@ func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) erro
 		return err
 	}
 	if !pset.AllowID(v, doctype, id) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
+}
+
+// AllowVFS validates a vfs.Validable against the context permission set
+func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
+	instance := middlewares.GetInstance(c)
+	pset, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+
+	if err = vfs.Allows(instance, *pset, v, o); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil

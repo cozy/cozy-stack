@@ -19,6 +19,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -566,7 +567,12 @@ type fileAPIPatch struct {
 }
 
 func filesClient(c *instance.Instance) *client {
-	return &client{addr: c.Domain}
+	token, err := c.MakeJWT(permissions.CLIAudience, "CLI", "io.cozy.files")
+	if err != nil {
+		panic(err)
+	}
+
+	return &client{addr: c.Domain, pass: token}
 }
 
 func filesRequest(c *instance.Instance, method, path string, q url.Values, body interface{}) (*fileAPIData, error) {
