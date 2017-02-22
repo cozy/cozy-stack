@@ -648,6 +648,7 @@ func Routes(router *echo.Group) {
 	router.GET("/downloads/:secret/:fake-name", FileDownloadHandler)
 
 	router.POST("/:file-id/relationships/referenced_by", AddReferencedHandler)
+	router.DELETE("/:file-id/relationships/referenced_by", RemoveReferencedHandler)
 
 	router.GET("/trash", ReadTrashFilesHandler)
 	router.DELETE("/trash", ClearTrashHandler)

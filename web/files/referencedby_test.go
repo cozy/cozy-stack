@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
+
+var fileID1, fileID2 string
 
 func TestAddReferencedByOneRelation(t *testing.T) {
 	body := "foo,bar"
@@ -18,9 +21,9 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 		return
 	}
 
-	fileID, _ := extractDirData(t, data1)
+	fileID1, _ = extractDirData(t, data1)
 
-	path := "/files/" + fileID + "/relationships/referenced_by"
+	path := "/files/" + fileID1 + "/relationships/referenced_by"
 	content, err := json.Marshal(&jsonapi.Relationship{
 		Data: jsonapi.ResourceIdentifier{
 			ID:   "fooalbumid",
@@ -44,6 +47,9 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 	}
 	assert.Equal(t, 200, res.StatusCode)
 
+	doc, err := vfs.GetFileDoc(testInstance, fileID1)
+	assert.NoError(t, err)
+	assert.Len(t, doc.ReferencedBy, 1)
 }
 
 func TestAddReferencedByMultipleRelation(t *testing.T) {
@@ -53,15 +59,14 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 		return
 	}
 
-	fileID, _ := extractDirData(t, data1)
+	fileID2, _ = extractDirData(t, data1)
 
-	path := "/files/" + fileID + "/relationships/referenced_by"
+	path := "/files/" + fileID2 + "/relationships/referenced_by"
 	content, err := json.Marshal(&jsonapi.Relationship{
 		Data: []jsonapi.ResourceIdentifier{
-			{
-				ID:   "fooalbumid",
-				Type: "io.cozy.photos.albums",
-			},
+			{ID: "fooalbumid1", Type: "io.cozy.photos.albums"},
+			{ID: "fooalbumid2", Type: "io.cozy.photos.albums"},
+			{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
 		},
 	})
 	if !assert.NoError(t, err) {
@@ -81,4 +86,51 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 	}
 	assert.Equal(t, 200, res.StatusCode)
 
+	doc, err := vfs.GetFileDoc(testInstance, fileID2)
+	assert.NoError(t, err)
+	assert.Len(t, doc.ReferencedBy, 3)
+}
+
+func TestRemoveReferencedByOneRelation(t *testing.T) {
+	path := "/files/" + fileID1 + "/relationships/referenced_by"
+	content, err := json.Marshal(&jsonapi.Relationship{
+		Data: jsonapi.ResourceIdentifier{
+			ID:   "fooalbumid",
+			Type: "io.cozy.photos.albums",
+		},
+	})
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+
+	doc, err := vfs.GetFileDoc(testInstance, fileID1)
+	assert.NoError(t, err)
+	assert.Len(t, doc.ReferencedBy, 0)
+}
+
+func TestRemoveReferencedByMultipleRelation(t *testing.T) {
+	path := "/files/" + fileID2 + "/relationships/referenced_by"
+	content, err := json.Marshal(&jsonapi.Relationship{
+		Data: []jsonapi.ResourceIdentifier{
+			{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
+			{ID: "fooalbumid5", Type: "io.cozy.photos.albums"},
+			{ID: "fooalbumid1", Type: "io.cozy.photos.albums"},
+		},
+	})
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 204, res.StatusCode)
+
+	doc, err := vfs.GetFileDoc(testInstance, fileID2)
+	assert.NoError(t, err)
+	assert.Len(t, doc.ReferencedBy, 1)
+	assert.Equal(t, "fooalbumid2", doc.ReferencedBy[0].ID)
 }
