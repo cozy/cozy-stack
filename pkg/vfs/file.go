@@ -151,6 +151,27 @@ func (f *FileDoc) AddReferencedBy(ri ...jsonapi.ResourceIdentifier) {
 	f.ReferencedBy = append(f.ReferencedBy, ri...)
 }
 
+func containsReferencedBy(haystack []jsonapi.ResourceIdentifier, needle jsonapi.ResourceIdentifier) bool {
+	for _, ref := range haystack {
+		if ref.ID == needle.ID && ref.Type == needle.Type {
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveReferencedBy adds referenced_by to the file
+func (f *FileDoc) RemoveReferencedBy(ri ...jsonapi.ResourceIdentifier) {
+	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+	referenced := f.ReferencedBy[:0]
+	for _, ref := range f.ReferencedBy {
+		if !containsReferencedBy(ri, ref) {
+			referenced = append(referenced, ref)
+		}
+	}
+	f.ReferencedBy = referenced
+}
+
 // NewFileDoc is the FileDoc constructor. The given name is validated.
 func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class string, cdate time.Time, executable bool, tags []string) (*FileDoc, error) {
 	if err := checkFileName(name); err != nil {

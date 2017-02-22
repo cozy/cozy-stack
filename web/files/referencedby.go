@@ -32,6 +32,9 @@ func AddReferencedHandler(c echo.Context) error {
 	if dir != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Cant add references to a folder")
 	}
+	if file == nil {
+		return echo.NewHTTPError(http.StatusNotFound, "File not found")
+	}
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
@@ -46,4 +49,37 @@ func AddReferencedHandler(c echo.Context) error {
 	}
 
 	return nil
+}
+
+// RemoveReferencedHandler is the echo.handler for removing referenced_by to
+// a file
+// DELETE /files/:file-id/relationships/referenced_by
+func RemoveReferencedHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	fileID := c.Param("file-id")
+
+	file, err := vfs.GetFileDoc(instance, fileID)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	err = checkPerm(c, permissions.DELETE, nil, file)
+	if err != nil {
+		return err
+	}
+
+	references, err := jsonapi.BindRelations(c.Request())
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	file.RemoveReferencedBy(references...)
+
+	err = couchdb.UpdateDoc(instance, file)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	return c.NoContent(204)
 }
