@@ -292,8 +292,33 @@ If the mynewkonnector.js file is available in the container_dir_template directo
 
 Cons : must forbid access to port 5984 and 6060 + SMTP server
 
-For both solutions, the limitation of time, CPU and memory will avoid most DOS attacks (to my knowledge). For memory use, I still don't see a way to prevent the excessive use of swap from the container.
-To prevent the connectors from listening to each other, they should be run one by one in their own container and not at the same time.
+The limitation of time, CPU and memory will avoid most DOS attacks (to my knowledge). For memory use, I still don't see a way to prevent the excessive use of swap from the container.
+To prevent the connectors from listening to each other, they should be run in containers with different uid, avoiding them to listen to each other.
+
+#### Solution to limit access of the container to 5984 and 6060 ports + SMTP
+
+The container must be started in bridged mode. With that, the container still has access to localhost but through a specific IP address visible with ifconfig. That way, the host can have iptable rules to forbid access to specified ports to the bridge.
+
+To connect a container in bridge mode : 
+
+On the host create the file /etc/rkt/net.d/10-containers.conf
+
+    {
+        "name": "bridge",
+        "type": "bridge",
+        "bridge": "rkt-bridge-nat",
+        "ipMasq": true,
+        "isGateway": true,
+        "ipam": {
+            "type": "host-local",
+            "subnet": "10.2.0.0/24",
+            "routes": [
+                   { "dst": "0.0.0.0/0" }
+            ]
+        }
+    }
+
+and run your container with the "--net=bridge" option. That way, a new interface is available in the container and gives you access to the host.
 
 ## TODO
 
