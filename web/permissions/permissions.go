@@ -37,13 +37,7 @@ var (
 // keyPicker choose the proper instance key depending on token audience
 func keyPicker(i *instance.Instance) jwt.Keyfunc {
 	return func(token *jwt.Token) (interface{}, error) {
-		switch token.Claims.(*permissions.Claims).Audience {
-		case permissions.AppAudience:
-			return i.SessionSecret, nil
-		case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
-			return i.OAuthSecret, nil
-		}
-		return nil, permissions.ErrInvalidAudience
+		return i.PickKey(token.Claims.(*permissions.Claims).Audience)
 	}
 }
 
@@ -121,7 +115,11 @@ func extractJWTClaims(c echo.Context, instance *instance.Instance) (*permissions
 	}
 
 	var claims permissions.Claims
-	if err := crypto.ParseJWT(token, keyPicker(instance), &claims); err != nil {
+	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
+		return instance.PickKey(token.Claims.(*permissions.Claims).Audience)
+	}, &claims)
+
+	if err != nil {
 		return nil, permissions.ErrInvalidToken
 	}
 
@@ -154,21 +152,23 @@ func extractPermissionSet(c echo.Context, instance *instance.Instance, claims *p
 		return nil, ErrNoToken
 	}
 
-	if claims.Audience == permissions.AppAudience {
+	switch claims.Audience {
+
+	case permissions.AppAudience:
 		// app token, fetch permissions from couchdb
 		pdoc, err := permissions.GetForApp(instance, claims.Subject)
 		if err != nil {
 			return nil, err
 		}
 		return &pdoc.Permissions, nil
-	}
 
-	if claims.Audience == permissions.AccessTokenAudience {
+	case permissions.AccessTokenAudience, permissions.CLIAudience:
 		// Oauth token, extract permissions from JWT-encoded scope
 		return permissions.UnmarshalScopeString(claims.Scope)
-	}
 
-	return nil, fmt.Errorf("Unrecognized token audience %v", claims.Audience)
+	default:
+		return nil, fmt.Errorf("Unrecognized token audience %v", claims.Audience)
+	}
 }
 
 func extract(c echo.Context) (*permissions.Claims, *permissions.Set, error) {

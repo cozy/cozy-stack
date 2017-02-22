@@ -7,6 +7,9 @@ const (
 	// AppAudience is the audience for JWT used by client-side apps
 	AppAudience = "app"
 
+	// CliAudience is the audience for JWT used by command line interface
+	CLIAudience = "cli"
+
 	// RegistrationTokenAudience is the audience field of JWT for registration tokens
 	RegistrationTokenAudience = "registration"
 
