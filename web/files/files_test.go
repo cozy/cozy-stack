@@ -753,6 +753,7 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	req.Header.Add("Date", "Mon, 02 Jan 2006 15:04:05 MST")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
 
 	res3, data3 := doUploadOrMod(t, req, "what/ever", "")
 	assert.Equal(t, 200, res3.StatusCode)
