@@ -214,13 +214,13 @@ The short list of tools which will be tested to isolate connectors is Rkt and Ns
 
 ### NsJail
 
-NsJail is a lightweight process isolation tool, making use of Linux namespaces and seccomp-bpf syscall filters. It is not a container tool like docker. Its features are quiet extensive regarding isolation. The [README](https://github.com/google/nsjail) gives the full list of options available. Although available in the google github, it is not an official google tool.
+NsJail is a lightweight process isolation tool, making use of Linux namespaces and seccomp-bpf syscall filters. It is not a container tool like docker. Its features are quite extensive regarding isolation. The [README](https://github.com/google/nsjail) gives the full list of available options. Although available in the google github, it is not an official google tool.
 
 NsJail is:
 
-- easy to install : juste a make away with standard build tools
+- easy to install : just a make away with standard build tools
 - offers a full list or isolation tools
-- lightly documented the only documentation is nsjail -h (also available in the main github page) and it is quiet cryptic for a non-sysadmin         
+- lightly documented the only documentation is nsjail -h (also available in the main github page) and it is quite cryptic for a non-sysadmin         
 like me. I could not find any help in any search engine. Some examples are available to run a back in an isolated process and work but I could not run a full nodejs (only nodejs -v worked)
 - The konnectors will need a full nodejs installed on the host
 - Is still actively maintained
@@ -249,7 +249,7 @@ Note: the --insecure-options param is to avoid the check of the image signature 
 
 ### Choice
 
-The best choice would be Rkt for it's ease of use (which is good for contribution) and wide range of isolation features + access to the big docker echosystem without beeing a burden for the host administrator.
+The best choice would be Rkt for it's ease of use (which is good for contribution) and wide range of isolation features + access to the big docker ecosystem without beeing a burden for the host administrator.
 Note : the limitation of NsJail I saw might be due to my lack of knowledge regarding system administration.
 
 ### Proposed use of rkt regarding connectors
@@ -266,7 +266,7 @@ To create an ACI file image, you just need to run a docker image one time :
     rkt export --app=nodeslim `cat uuid` nodeslim.aci && rm uuid
 
 
-The node:slim image weights 84M at this time. The node:alpine image also exists and is way lighter (19M) but I had problems with DNS with this, which could be solved with more time.
+The node:slim image weights 84M at this time. The node:alpine image also exists and is way lighter (19M) but I had problems with DNS with this, and alpine can cause some nasty bugs that are difficult to track.
 
 #### Running a connector
 
@@ -277,28 +277,7 @@ A script will run the node container giving as option the script to launch. The 
     #!/usr/bin/env bash
     rm -rf ./container_dir
     cp -r ./container_dir_template ./container_dir
-    rkt run --uuid-file-save=$PWD/uuid --volume data,kind=host,source=$PWD/container_dir --insecure-options=image nodeslim.aci --cpu=100m --memory=128M --name rktnode --mount volume=data,target=/usr/src/app --exec node -- /usr/src/app/$1 &
-    sleep 60   # 1 min seems enough to run a connector
-    rkt stop --force --uuid-file=uuid
-    rkt rm --uuid-file=uuid
-    # read needed information in the container_dir directory : new documents, logs, etc
-    rm -rf ./container_dir
-
-This script can be run like this :
-
-    ./rkt.sh mynewkonnector.js
-
-If the mynewkonnector.js file is available in the container_dir_template directory.
-
-Pros : no breach regarding localhost network, more secure
-Cons: a file communication protocol with the stack need to be defined (any other idea ?), it may be more difficult to migrate the existing connectors.
-
-If we choose to give access to the host network to the container (but with a limited mocked net module maybe), the solution will be slightly modified : 
-
-    #!/usr/bin/env bash
-    rm -rf ./container_dir
-    cp -r ./container_dir_template ./container_dir
-    rkt run --net=host --uuid-file-save=$PWD/uuid --volume data,kind=host,source=$PWD/container_dir --insecure-options=image nodeslim.aci --cpu=100m --memory=128M --name rktnode --mount volume=data,target=/usr/src/app --exec node -- /usr/src/app/$1 $2 &
+    rkt run --net=host --environment=CREDENTIAL=value;COZY_URL=url --uuid-file-save=$PWD/uuid --volume data,kind=host,source=$PWD/container_dir --insecure-options=image nodeslim.aci --cpu=100m --memory=128M --name rktnode --mount volume=data,target=/usr/src/app --exec node -- /usr/src/app/$1 $2 &
     # the container will handle itself the communication with the stack
     sleep 60
     rkt stop --force --uuid-file=uuid
@@ -307,12 +286,11 @@ If we choose to give access to the host network to the container (but with a lim
 
 This script can be run like this :
 
-    ./rkt.sh mynewkonnector.js COZY_STACK_CREDENTIALS
+    ./rkt.sh mynewkonnector.js
 
 If the mynewkonnector.js file is available in the container_dir_template directory.
 
-Pros: the container can directly the stack to make its own updates, like before-> less work on migrating konnectors
-Cons : must forbid acces to port 5984 and 6060 + SMTP server
+Cons : must forbid access to port 5984 and 6060 + SMTP server
 
 For both solutions, the limitation of time, CPU and memory will avoid most DOS attacks (to my knowledge). For memory use, I still don't see a way to prevent the excessive use of swap from the container.
 To prevent the connectors from listening to each other, they should be run one by one in their own container and not at the same time.
