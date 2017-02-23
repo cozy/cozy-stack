@@ -25,8 +25,8 @@ type Sharing struct {
 // SharingRecipient contains the information about a recipient for a sharing
 type SharingRecipient struct {
 	Status       string `json:"status,omitempty"`
-	AccessToken  string `json:"status,omitempty"`
-	RefreshToken string `json:"status,omitempty"`
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
 
 	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
 
@@ -133,10 +133,7 @@ func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
 // Create inserts a Sharing document in database
 func Create(db couchdb.Database, doc *Sharing) error {
 	err := couchdb.CreateDoc(db, doc)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 var (
