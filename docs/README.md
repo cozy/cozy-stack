@@ -6,9 +6,6 @@ Table of contents
 - [Glossary](glossary.md)
 - [General overview](architecture.md)
 - [Security](security.md)
-- [Applications Management](apps.md)
-- [Authentication & OAuth](auth.md)
-- [Permissions](permissions.md)
 
 ## Usage
 
@@ -16,33 +13,32 @@ Table of contents
 - [Configuration](config.md)
 - [Managing Instances](instance.md)
 - [Onboarding](onboarding.md)
-- [Docker](docker.md)
 - [Build a release](release.md)
 
 ## For developpers
 
-- [The contributing guide](CONTRIBUTING.md)
 - [Develop a client-side app](client-app-dev.md)
+- [Docker](docker.md)
+- [The contributing guide](CONTRIBUTING.md)
 
 ## Services
 
-- [Data System](data-system.md) & [Mango](mango.md)
-- [Virtual File System](files.md) & [References of documents in VFS](references-docs-in-vfs.md)
-- [Jobs](jobs.md) & [Workers](workers.md)
-- [Settings](settings.md)
-
-## In progress
-
-These pages are discussion for ideas not yet implemented:
-
-- [Konnectors](konnectors.md)
-- [Backups](backup.md)
-- [Moving](moving.md)
-- [Replication](replication.md)
-- [Sharing](sharing.md)
+- `/auth` - [Authentication & OAuth](auth.md)
+  - [Permissions](permissions.md)
+- `/apps` - [Applications Management](apps.md)
+- `/data` - [Data System](data-system.md)
+  - [Mango](mango.md)
+  - [Replication](replication.md)
+- `/files` - [Virtual File System](files.md)
+  - [References of documents in VFS](references-docs-in-vfs.md)
+- `/jobs` - [Jobs](jobs.md) & [Workers](workers.md)
+  - [Konnectors](konnectors.md)
+- `/settings` - [Settings](settings.md)
+- `/sharings` - [Sharing](sharing.md)
 
 ## Archives
 
 These pages are the results of studies we made:
 
+- [Moving](moving.md)
 - [Golang Couchdb Plugins](couchdb-plugins.md)
