@@ -71,6 +71,18 @@ func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	assert.Equal(t, "who_are_you", content)
 }
 
+func TestHomeWhenNotLoggedIn(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://cozy.example.net/auth/login",
+			res.Header.Get("Location"))
+	}
+}
+
 func TestShowLoginPage(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
 	req.Host = domain
@@ -209,21 +221,21 @@ func TestLoginWithSessionCode(t *testing.T) {
 	// Login
 	res, err = postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
-		"redirect":   {"https://app." + domain + "/private"},
+		"redirect":   {"https://cozy-app.example.net/private"},
 	})
 	assert.NoError(t, err)
 	res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
 		location, err2 := url.Parse(res.Header.Get("Location"))
 		assert.NoError(t, err2)
-		assert.Equal(t, "app.cozy.example.net", location.Host)
+		assert.Equal(t, "cozy-app.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
 		code2 := location.Query().Get("code")
 		assert.Len(t, code2, 22)
 	}
 
 	// Already logged-in (GET)
-	req, _ = http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("https://app."+domain+"/private"), nil)
+	req, _ = http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("https://cozy-app.example.net/private"), nil)
 	req.Host = domain
 	res, err = client.Do(req)
 	assert.NoError(t, err)
@@ -231,7 +243,7 @@ func TestLoginWithSessionCode(t *testing.T) {
 	if assert.Equal(t, "303 See Other", res.Status) {
 		location, err2 := url.Parse(res.Header.Get("Location"))
 		assert.NoError(t, err2)
-		assert.Equal(t, "app.cozy.example.net", location.Host)
+		assert.Equal(t, "cozy-app.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
 		code2 := location.Query().Get("code")
 		assert.Len(t, code2, 22)
@@ -240,14 +252,14 @@ func TestLoginWithSessionCode(t *testing.T) {
 	// Already logged-in (POST)
 	res, err = postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
-		"redirect":   {"https://app." + domain + "/private"},
+		"redirect":   {"https://cozy-app.example.net/private"},
 	})
 	assert.NoError(t, err)
 	res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
 		location, err2 := url.Parse(res.Header.Get("Location"))
 		assert.NoError(t, err2)
-		assert.Equal(t, "app.cozy.example.net", location.Host)
+		assert.Equal(t, "cozy-app.example.net", location.Host)
 		assert.Equal(t, "/private", location.Path)
 		code2 := location.Query().Get("code")
 		assert.Len(t, code2, 22)
@@ -258,6 +270,18 @@ func TestIsLoggedInAfterLogin(t *testing.T) {
 	content, err := getTestURL()
 	assert.NoError(t, err)
 	assert.Equal(t, "logged_in", content)
+}
+
+func TestHomeWhenLoggedIn(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://files.cozy.example.net/",
+			res.Header.Get("Location"))
+	}
 }
 
 func TestRegisterClientNotJSON(t *testing.T) {

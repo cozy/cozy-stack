@@ -26,4 +26,8 @@ func TestSplitHost(t *testing.T) {
 	host, app = SplitHost("joe-calendar.example.net")
 	assert.Equal(t, "joe.example.net", host)
 	assert.Equal(t, "calendar", app)
+
+	host, app = SplitHost("joe.example.net")
+	assert.Equal(t, "joe.example.net", host)
+	assert.Equal(t, "", app)
 }

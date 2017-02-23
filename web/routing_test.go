@@ -68,7 +68,7 @@ func TestSetupRoutes(t *testing.T) {
 func TestParseHost(t *testing.T) {
 	apis := echo.New()
 
-	apis.GET("/", func(c echo.Context) error {
+	apis.GET("/test", func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		assert.NotNil(t, instance, "the instance should have been set in the echo context")
 		return c.String(http.StatusOK, "OK")
@@ -84,7 +84,7 @@ func TestParseHost(t *testing.T) {
 	}
 
 	urls := map[string]string{
-		"https://" + domain + "/":        "OK",
+		"https://" + domain + "/test":    "OK",
 		"https://foo." + domain + "/app": "OK:foo",
 		"https://bar." + domain + "/app": "OK:bar",
 	}
