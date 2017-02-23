@@ -22,14 +22,14 @@ func Compose(handler echo.HandlerFunc, mws ...echo.MiddlewareFunc) echo.HandlerF
 func SplitHost(host string) (instanceHost, appSlug string) {
 	parts := strings.SplitN(host, ".", 2)
 	if len(parts) == 2 {
-		if config.GetConfig().Subdomains == config.FlatSubdomains {
-			subs := strings.SplitN(parts[0], "-", 2)
-			if len(subs) == 2 {
-				return subs[0] + "." + parts[1], subs[1]
-			}
-		} else {
+		if config.GetConfig().Subdomains == config.NestedSubdomains {
 			return parts[1], parts[0]
 		}
+		subs := strings.SplitN(parts[0], "-", 2)
+		if len(subs) == 2 {
+			return subs[0] + "." + parts[1], subs[1]
+		}
+		return host, ""
 	}
 	return parts[0], ""
 }

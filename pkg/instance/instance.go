@@ -428,7 +428,6 @@ func Create(opts *Options) (*Instance, error) {
 	}
 
 	// TODO atomicity with defer
-	// TODO figure out what to do with locale
 	// TODO install apps
 
 	return i, nil
