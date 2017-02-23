@@ -87,7 +87,7 @@ See [configuration documentation](/docs/config.md).
 
 We are eager for contributions and very happy when we receive them! It can
 code, of course, but it can also take other forms. The workflow is explained
-in [the contributing guide](CONTRIBUTING.md).
+in [the contributing guide](docs/CONTRIBUTING.md).
 
 There are some useful commands to know in order to develop with the go code of cozy-stack:
 
