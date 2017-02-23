@@ -116,7 +116,15 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
-	err = rep.Pull(&git.PullOptions{})
+	branch := "HEAD"
+	if src.Fragment != "" {
+		branch = "refs/heads/" + src.Fragment
+	}
+
+	err = rep.Pull(&git.PullOptions{
+		SingleBranch:  true,
+		ReferenceName: gitPl.ReferenceName(branch),
+	})
 	if err == git.NoErrAlreadyUpToDate {
 		return nil
 	}

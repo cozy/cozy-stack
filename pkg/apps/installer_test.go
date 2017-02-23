@@ -83,11 +83,15 @@ git checkout -`
 	}
 }
 
-func doUpgrade() {
-	localVersion = "2.0.0"
+func doUpgrade(major int) {
+	localVersion = fmt.Sprintf("%d.0.0", major)
 	args := `
 echo '` + manifest() + `' > manifest.webapp && \
-git commit -am "Upgrade commit"`
+git commit -am "Upgrade commit" && \
+git checkout - && \
+echo '` + manifest() + `' > manifest.webapp && \
+git commit -am "Upgrade commit" && \
+git checkout -`
 	cmd := exec.Command("sh", "-c", args)
 	cmd.Dir = localGitDir
 	if err := cmd.Run(); err != nil {
@@ -190,6 +194,9 @@ func TestInstallSuccessful(t *testing.T) {
 	ok, err := afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini/manifest.webapp")
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
+	ok, err = afero.FileContainsBytes(c.FS(), "/.cozy_apps/local-cozy-mini/manifest.webapp", []byte("1.0.0"))
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest has the right version")
 }
 
 func TestInstallAldreadyExist(t *testing.T) {
@@ -236,7 +243,83 @@ func TestInstallAldreadyExist(t *testing.T) {
 	}
 }
 
-func TestInstallWithBranch(t *testing.T) {
+func TestInstallWithUpgrade(t *testing.T) {
+	inst, err := NewInstaller(c, &InstallerOptions{
+		Slug:      "cozy-app-b",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	go inst.InstallOrUpdate()
+
+	for {
+		var done bool
+		_, done, err = inst.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if done {
+			break
+		}
+	}
+
+	ok, err := afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini/manifest.webapp")
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest is present")
+	ok, err = afero.FileContainsBytes(c.FS(), "/.cozy_apps/local-cozy-mini/manifest.webapp", []byte("1.0.0"))
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest has the right version")
+
+	doUpgrade(2)
+
+	inst, err = NewInstaller(c, &InstallerOptions{
+		Slug:      "cozy-app-b",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	go inst.InstallOrUpdate()
+
+	var state State
+	for {
+		man, done, err := inst.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if state == "" {
+			if !assert.EqualValues(t, Upgrading, man.State) {
+				return
+			}
+		} else if state == Upgrading {
+			if !assert.EqualValues(t, Ready, man.State) {
+				return
+			}
+			if !assert.True(t, done) {
+				return
+			}
+			break
+		} else {
+			t.Fatalf("invalid state")
+			return
+		}
+		state = man.State
+	}
+
+	ok, err = afero.Exists(c.FS(), "/.cozy_apps/cozy-app-b/manifest.webapp")
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest is present")
+	ok, err = afero.FileContainsBytes(c.FS(), "/.cozy_apps/cozy-app-b/manifest.webapp", []byte("2.0.0"))
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest has the right version")
+}
+
+func TestInstallAndUpgradeWithBranch(t *testing.T) {
+	doUpgrade(3)
+
 	inst, err := NewInstaller(c, &InstallerOptions{
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
@@ -275,38 +358,18 @@ func TestInstallWithBranch(t *testing.T) {
 	ok, err := afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini-branch/manifest.webapp")
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
+	ok, err = afero.FileContainsBytes(c.FS(), "/.cozy_apps/local-cozy-mini-branch/manifest.webapp", []byte("3.0.0"))
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest has the right version")
 	ok, err = afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini-branch/branch")
 	assert.NoError(t, err)
 	assert.True(t, ok, "The good branch was checked out")
-}
 
-func TestInstallWithUpgrade(t *testing.T) {
-	inst, err := NewInstaller(c, &InstallerOptions{
-		Slug:      "cozy-app-b",
-		SourceURL: "git://localhost/",
-	})
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	go inst.InstallOrUpdate()
-
-	for {
-		var done bool
-		_, done, err = inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
-		if done {
-			break
-		}
-	}
-
-	doUpgrade()
+	doUpgrade(4)
 
 	inst, err = NewInstaller(c, &InstallerOptions{
-		Slug:      "cozy-app-b",
-		SourceURL: "git://localhost/",
+		Slug:      "local-cozy-mini-branch",
+		SourceURL: "git://localhost/#branch",
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -314,7 +377,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 
 	go inst.InstallOrUpdate()
 
-	var state State
+	state = ""
 	for {
 		man, done, err := inst.Poll()
 		if !assert.NoError(t, err) {
@@ -338,6 +401,16 @@ func TestInstallWithUpgrade(t *testing.T) {
 		}
 		state = man.State
 	}
+
+	ok, err = afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini-branch/manifest.webapp")
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest is present")
+	ok, err = afero.FileContainsBytes(c.FS(), "/.cozy_apps/local-cozy-mini-branch/manifest.webapp", []byte("4.0.0"))
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest has the right version")
+	ok, err = afero.Exists(c.FS(), "/.cozy_apps/local-cozy-mini-branch/branch")
+	assert.NoError(t, err)
+	assert.True(t, ok, "The good branch was checked out")
 }
 
 func TestInstallFromGithub(t *testing.T) {
