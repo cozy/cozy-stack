@@ -46,7 +46,7 @@ func init() {
 	}
 
 	flags := RootCmd.PersistentFlags()
-	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
+	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy/cozy.yaml\")")
 
 	flags.String("host", "localhost", "server host")
 	checkNoErr(viper.BindPFlag("host", flags.Lookup("host")))

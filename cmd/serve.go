@@ -31,9 +31,9 @@ to mount a directory as the application with the 'app' slug.
 	$ cozy-stack serve
 
 But if you want to develop two apps in local (to test their interactions for
-example), you can use the --appsdir flag like this:
+example), you can use the --appdir flag like this:
 
-	$ cozy-stack serve --appsdir appone:/path/to/app_one,apptwo:/path/to/app_two
+	$ cozy-stack serve --appdir appone:/path/to/app_one,apptwo:/path/to/app_two
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !flagAllowRoot && os.Getuid() == 0 {
