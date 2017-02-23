@@ -233,7 +233,7 @@ imported by the applications.
 The applications can put some notifications for the user. That goes from a
 reminder for a meeting in 10 minutes to a suggestion to update your app.
 
-### Real-time `/real-time`
+### Real-time `/realtime`
 
 This endpoint can be used to subscribe for real-time events. An application
 that shows items of a specific doctype can listen for this doctype to be

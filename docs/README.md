@@ -33,6 +33,7 @@ Table of contents
   - [References of documents in VFS](references-docs-in-vfs.md)
 - `/jobs` - [Jobs](jobs.md) & [Workers](workers.md)
   - [Konnectors](konnectors.md)
+- `/realtime` - [Realtime](realtime.md)
 - `/settings` - [Settings](settings.md)
 - `/sharings` - [Sharing](sharing.md)
 
