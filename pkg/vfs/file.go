@@ -45,7 +45,7 @@ type FileDoc struct {
 	Executable bool     `json:"executable"`
 	Tags       []string `json:"tags"`
 
-	Metadata Metadata `json:"metadata"`
+	Metadata Metadata `json:"metadata,omitempty"`
 
 	ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
 
