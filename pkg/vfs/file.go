@@ -45,6 +45,8 @@ type FileDoc struct {
 	Executable bool     `json:"executable"`
 	Tags       []string `json:"tags"`
 
+	Metadata Metadata `json:"metadata"`
+
 	ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
 
 	parent *DirDoc
@@ -307,14 +309,14 @@ type File struct {
 //
 // fileCreation implements io.WriteCloser.
 type fileCreation struct {
-	w         int64     // total size written
-	newdoc    *FileDoc  // new document
-	olddoc    *FileDoc  // old document if any
-	newpath   string    // file new path
-	bakpath   string    // backup file path in case of modifying an existing file
-	checkHash bool      // whether or not we need the assert the hash is good
-	hash      hash.Hash // hash we build up along the file
-	err       error     // write error
+	w       int64          // total size written
+	newdoc  *FileDoc       // new document
+	olddoc  *FileDoc       // old document if any
+	newpath string         // file new path
+	bakpath string         // backup file path in case of modifying an existing file
+	hash    hash.Hash      // hash we build up along the file
+	meta    *MetaExtractor // extracts metadata from the content
+	err     error          // write error
 }
 
 // Open returns a file handle that can be used to read form the file
@@ -374,6 +376,7 @@ func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
 	}
 
 	hash := md5.New() // #nosec
+	extractor := NewMetaExtractor(newdoc)
 
 	fc := &fileCreation{
 		w: 0,
@@ -383,8 +386,8 @@ func CreateFile(c Context, newdoc, olddoc *FileDoc) (*File, error) {
 		bakpath: bakpath,
 		newpath: newpath,
 
-		checkHash: newdoc.MD5Sum != nil,
-		hash:      hash,
+		hash: hash,
+		meta: extractor,
 	}
 
 	return &File{c, f, fc}, nil
@@ -423,6 +426,10 @@ func (f *File) Write(p []byte) (int, error) {
 
 	f.fc.w += int64(n)
 
+	if f.fc.meta != nil {
+		(*f.fc.meta).Write(p)
+	}
+
 	_, err = f.fc.hash.Write(p)
 	return n, err
 }
@@ -455,23 +462,31 @@ func (f *File) Close() error {
 
 	err = f.f.Close()
 	if err != nil {
+		if f.fc.meta != nil {
+			(*f.fc.meta).Abort(err)
+		}
 		return err
 	}
 
 	newdoc, olddoc, written := fc.newdoc, fc.olddoc, fc.w
 
+	if f.fc.meta != nil {
+		(*f.fc.meta).Close()
+		newdoc.Metadata = (*f.fc.meta).Result()
+	}
+
 	md5sum := fc.hash.Sum(nil)
-	if fc.checkHash && !bytes.Equal(newdoc.MD5Sum, md5sum) {
+	if newdoc.MD5Sum == nil {
+		newdoc.MD5Sum = md5sum
+	}
+
+	if !bytes.Equal(newdoc.MD5Sum, md5sum) {
 		err = ErrInvalidHash
 		return err
 	}
 
 	if newdoc.Size < 0 {
 		newdoc.Size = written
-	}
-
-	if newdoc.MD5Sum == nil {
-		newdoc.MD5Sum = md5sum
 	}
 
 	if newdoc.Size != written {
