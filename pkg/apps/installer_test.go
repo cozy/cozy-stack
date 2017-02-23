@@ -286,8 +286,8 @@ func TestInstallWithUpgrade(t *testing.T) {
 
 	var state State
 	for {
-		man, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
+		man, done, err2 := inst.Poll()
+		if !assert.NoError(t, err2) {
 			return
 		}
 		if state == "" {
@@ -379,8 +379,8 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 
 	state = ""
 	for {
-		man, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
+		man, done, err2 := inst.Poll()
+		if !assert.NoError(t, err2) {
 			return
 		}
 		if state == "" {
