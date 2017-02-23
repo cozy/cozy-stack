@@ -31,7 +31,7 @@ func Serve(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
 	}
 	i := middlewares.GetInstance(c)
-	if config.GetConfig().Subdomains == config.FlatSubdomains && !middlewares.IsLoggedIn(c) {
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		if code := c.QueryParam("code"); code != "" {
 			return tryAuthWithSessionCode(c, i, code)
 		}
@@ -184,14 +184,16 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) 
 	u := c.Request().URL
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
-	if code := sessions.FindCode(value, u.Host); code != nil {
-		var session sessions.Session
-		err := couchdb.GetDoc(i, consts.Sessions, code.SessionID, &session)
-		if err == nil {
-			session.Instance = i
-			cookie, err := session.ToAppCookie(u.Host)
+	if !middlewares.IsLoggedIn(c) {
+		if code := sessions.FindCode(value, u.Host); code != nil {
+			var session sessions.Session
+			err := couchdb.GetDoc(i, consts.Sessions, code.SessionID, &session)
 			if err == nil {
-				c.SetCookie(cookie)
+				session.Instance = i
+				cookie, err := session.ToAppCookie(u.Host)
+				if err == nil {
+					c.SetCookie(cookie)
+				}
 			}
 		}
 	}
