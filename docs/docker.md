@@ -32,8 +32,9 @@ docker run -it --rm --name cozy-stack \
     go get -v github.com/cozy/cozy-stack
 ```
 
-## Building the cozy-app-dev image
+## Publishing a new cozy-app-dev image
 
 ```bash
 ./scripts/build.sh docker-dev
+docker push cozy/cozy-app-dev
 ```

@@ -37,6 +37,8 @@ const filesExecUsage = `Available commands:
     mv [from] [to]             Rename a file or directory
     rm [-f] [-r] [name]        Move the file to trash, or delete it permanently with -f flag
     restore [name]             Restore a file or directory from trash
+
+	Don't forget to put quotes around the command!
 `
 
 var flagImportFrom string
@@ -76,12 +78,7 @@ var execFilesCmd = &cobra.Command{
 			return err
 		}
 
-		err = execCommand(c, command, os.Stdout)
-		if err == errFilesExec {
-			return err
-		}
-
-		return err
+		return execCommand(c, command, os.Stdout)
 	},
 }
 

@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+{% raw %}
+
 # Sharing
 
 The owner of a cozy instance can share access to her documents to other users.
@@ -165,3 +167,5 @@ Answer a sharing request.
 ### DELETE /sharings/:id
 
 Delete the specified sharing (both the sharing document and the associated permission).
+
+{% endraw %}

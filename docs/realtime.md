@@ -24,7 +24,7 @@ Other events will be generated from the stack itself, such as session close or j
 
 ### Performance limitation
 
-**We cannot have a continuous _changes feed open to every databases**
+**We cannot have a continuous `_changes` feed open to every databases**
 
 ## Use cases for inverval events feeds
 
@@ -108,7 +108,7 @@ Websockets include a protocol description in handshake, the protocol described b
 Changes to the websocket protocol should be given versions, support for older version should be maintained when reasonable.
 
 ```http
-GET /websocket HTTP/1.1
+GET /realtime HTTP/1.1
 Host: mycozy.example.com
 Upgrade: websocket
 Connection: Upgrade
