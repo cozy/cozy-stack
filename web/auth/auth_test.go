@@ -71,6 +71,18 @@ func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	assert.Equal(t, "who_are_you", content)
 }
 
+func TestHomeWhenNotLoggedIn(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://cozy.example.net/auth/login",
+			res.Header.Get("Location"))
+	}
+}
+
 func TestShowLoginPage(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
 	req.Host = domain
@@ -258,6 +270,18 @@ func TestIsLoggedInAfterLogin(t *testing.T) {
 	content, err := getTestURL()
 	assert.NoError(t, err)
 	assert.Equal(t, "logged_in", content)
+}
+
+func TestHomeWhenLoggedIn(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://files.cozy.example.net/",
+			res.Header.Get("Location"))
+	}
 }
 
 func TestRegisterClientNotJSON(t *testing.T) {

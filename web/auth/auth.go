@@ -25,6 +25,21 @@ import (
 // CredentialsErrorMessage is the message showed to the user when he/she enters incorrect credentials
 const CredentialsErrorMessage = "The credentials you entered are incorrect, please try again."
 
+// Home is the handler for /
+// It redirects to the login page is the user is not yet authentified
+// Else, it redirects to its home application
+func Home(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	if session, err := sessions.GetSession(c, instance); err == nil {
+		redirect := instance.SubDomain(apps.FilesSlug).String()
+		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+}
+
 // With the nested subdomains structure, the cookie set on the main domain can
 // also be used to authentify the user on the apps subdomain. But with the flat
 // subdomains structure, a new cookie is needed. To transfer the session, we

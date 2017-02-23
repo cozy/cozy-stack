@@ -141,6 +141,7 @@ func SetupRoutes(router *echo.Echo) error {
 		middlewares.NeedInstance,
 		middlewares.LoadSession,
 	}
+	router.GET("/", auth.Home, mws...)
 	auth.Routes(router.Group("/auth", mws...))
 	apps.Routes(router.Group("/apps", mws...))
 	data.Routes(router.Group("/data", mws...))
