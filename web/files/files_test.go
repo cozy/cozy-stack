@@ -1114,7 +1114,7 @@ func TestFileCreateAndDownload(t *testing.T) {
 	assert.NoError(t, err)
 
 	downloadURL := ts.URL + data["links"].(map[string]interface{})["related"].(string)
-	res2, err := httpGet(downloadURL)
+	res2, err := http.Get(downloadURL)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res2.StatusCode)
 	disposition := res2.Header.Get("Content-Disposition")

@@ -354,7 +354,7 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	return nil
 }
 
-func sendFileFromPath(c echo.Context, path string) error {
+func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	instance := middlewares.GetInstance(c)
 
 	doc, err := vfs.GetFileDocFromPath(instance, path)
@@ -362,9 +362,11 @@ func sendFileFromPath(c echo.Context, path string) error {
 		return wrapVfsError(err)
 	}
 
-	err = permissions.Allow(c, "GET", doc)
-	if err != nil {
-		return err
+	if checkPermission {
+		err = permissions.Allow(c, "GET", doc)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = vfs.ServeFileContent(instance, doc, "attachment", c.Request(), c.Response())
@@ -379,7 +381,7 @@ func sendFileFromPath(c echo.Context, path string) error {
 // aiming at downloading a file given its path. It serves the file in in
 // attachment mode.
 func ReadFileContentFromPathHandler(c echo.Context) error {
-	return sendFileFromPath(c, c.QueryParam("Path"))
+	return sendFileFromPath(c, c.QueryParam("Path"), true)
 }
 
 // ArchiveDownloadCreateHandler handles requests to /files/archive and stores the
@@ -488,7 +490,7 @@ func FileDownloadHandler(c echo.Context) error {
 	if path == "" {
 		return jsonapi.NewError(400, "Wrong download token")
 	}
-	return sendFileFromPath(c, path)
+	return sendFileFromPath(c, path, false)
 }
 
 // TrashHandler handles all DELETE requests on /files/:file-id and
