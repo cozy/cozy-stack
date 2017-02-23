@@ -18,9 +18,13 @@ Table of contents
 - [Onboarding](onboarding.md)
 - [Docker](docker.md)
 - [Build a release](release.md)
+
+## For developpers
+
+- [The contributing guide](CONTRIBUTING.md)
 - [Develop a client-side app](client-app-dev.md)
 
-## API
+## Services
 
 - [Data System](data-system.md) & [Mango](mango.md)
 - [Virtual File System](files.md) & [References of documents in VFS](references-docs-in-vfs.md)
