@@ -3,7 +3,6 @@ Table of contents
 
 ## Architecture
 
-- [Glossary](glossary.md)
 - [General overview](architecture.md)
 - [Security](security.md)
 
