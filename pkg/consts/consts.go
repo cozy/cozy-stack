@@ -27,6 +27,11 @@ const (
 	// Doctypes doc type for doctype list
 	Doctypes = "io.cozy.doctypes"
 
+	// Sharings doc type for document and file sharing
+	Sharings = "io.cozy.sharings"
+	// Recipients doc type for sharing recipients
+	Recipients = "io.cozy.recipients"
+
 	// OAuthClients doc type for OAuth2 clients
 	OAuthClients = "io.cozy.oauth.clients"
 	// OAuthAccessCodes doc type for OAuth2 access codes
@@ -52,4 +57,22 @@ const (
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
+)
+
+const (
+	// OneShotSharing is a sharing with no continuous updates
+	OneShotSharing = "one-shot"
+	// MasterSlaveSharing is a sharing with unilateral continuous updates
+	MasterSlaveSharing = "master-slave"
+	// MasterMasterSharing is a sharing with bilateral continuous updates
+	MasterMasterSharing = "master-master"
+)
+
+const (
+	// PendingSharingStatus is the sharing pending status
+	PendingSharingStatus = "pending"
+	// RefusedSharingStatus is the sharing refused status
+	RefusedSharingStatus = "refused"
+	// AcceptedSharingStatus is the sharing accepted status
+	AcceptedSharingStatus = "accepted"
 )

@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/settings"
+	"github.com/cozy/cozy-stack/web/sharings"
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
@@ -149,6 +150,7 @@ func SetupRoutes(router *echo.Echo) error {
 	jobs.Routes(router.Group("/jobs", mws...))
 	permissions.Routes(router.Group("/permissions", mws...))
 	settings.Routes(router.Group("/settings", mws...))
+	sharings.Routes(router.Group("/sharings", mws...))
 	status.Routes(router.Group("/status"))
 	version.Routes(router.Group("/version"))
 
