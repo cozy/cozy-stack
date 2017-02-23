@@ -297,6 +297,7 @@ download_asset() {
 		fi
 		echo "ok"
 	fi
+	du -h "${assets_dst}/${1}"
 	# reuse the same mod time properties as the externals files so have
 	# reproductible output
 	touch -m -t "${assets_mod_time}" "${assets_dst}/${1}"
