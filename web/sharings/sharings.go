@@ -1,10 +1,8 @@
 package sharings
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -16,40 +14,15 @@ import (
 func SharingRequest(c echo.Context) error {
 	//Get the permissions and sharing id
 	scope := c.QueryParam("scope")
-	if scope == "" {
-		return wrapErrors(sharings.ErrMissingScope)
-	}
 	state := c.QueryParam("state")
-	if state == "" {
-		return wrapErrors(sharings.ErrMissingState)
-	}
 	sharingType := c.QueryParam("sharing_type")
-	//TODO : Check sharing type integrity
-	if sharingType == "" {
-		return wrapErrors(sharings.ErrBadSharingType)
-	}
-	fmt.Printf("scope : %v\n", scope)
-	permissions, err := permissions.UnmarshalScopeString(scope)
-	if err != nil {
-		fmt.Println("error...")
-		return err
-	}
-	fmt.Printf("perm : %+v", permissions)
-
-	sharing := &sharings.Sharing{
-		SharingType: sharingType,
-		SharingID:   state,
-		Permissions: permissions,
-		Owner:       false,
-	}
 
 	instance := middlewares.GetInstance(c)
-	_, err = sharings.Create(instance, sharing)
-	if err != nil {
-		return err
-	}
 
-	fmt.Printf("state : %v", sharing.SharingID)
+	sharing, err := sharings.CreateSharingRequest(instance, state, sharingType, scope)
+	if err != nil {
+		return wrapErrors(err)
+	}
 
 	//TODO call the OAuth authorize to display the permissions
 	//TODO return the permission html

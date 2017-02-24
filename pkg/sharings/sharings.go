@@ -106,14 +106,51 @@ func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 	return doc, err
 }
 
-// CheckSharingCreation initializes and check some sharing fields at creation
-func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
-
-	sharingType := sharing.SharingType
+//CheckSharingType returns an error if the sharing type is incorrect
+func CheckSharingType(sharingType string) error {
 	if sharingType != consts.OneShotSharing &&
 		sharingType != consts.MasterSlaveSharing &&
 		sharingType != consts.MasterMasterSharing {
 		return ErrBadSharingType
+	}
+	return nil
+}
+
+// CreateSharingRequest checks fields integrity and creates a sharing document
+// for an incoming sharing request
+func CreateSharingRequest(db couchdb.Database, state, sharingType, scope string) (*Sharing, error) {
+	if scope == "" {
+		return nil, ErrMissingScope
+	}
+	if state == "" {
+		return nil, ErrMissingState
+	}
+	if err := CheckSharingType(sharingType); err != nil {
+		return nil, err
+	}
+	permissions, err := permissions.UnmarshalScopeString(scope)
+	if err != nil {
+		return nil, err
+	}
+
+	sharing := &Sharing{
+		SharingType: sharingType,
+		SharingID:   state,
+		Permissions: permissions,
+		Owner:       false,
+	}
+
+	err = Create(db, sharing)
+
+	return sharing, err
+}
+
+// CheckSharingCreation initializes and check some sharing fields at creation
+func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
+
+	sharingType := sharing.SharingType
+	if err := CheckSharingType(sharingType); err != nil {
+		return err
 	}
 
 	sRecipients, err := sharing.Recipients(db)
