@@ -35,5 +35,5 @@ url     https://raw.githubusercontent.com/cozy/cozy-bar/3.0.0-beta8/dist/cozy-ba
 sha256  461ce5ccc61564581b897a7c38290ee19a72c3044232da54d32edbd45ccf11dc
 
 name    ./fonts/fontawesome-webfont.woff2
-url     https://github.com/FortAwesome/Font-Awesome/raw/master/fonts/fontawesome-webfont.woff2
+url     https://raw.githubusercontent.com/FortAwesome/Font-Awesome/master/fonts/fontawesome-webfont.woff2
 sha256  2adefcbc041e7d18fcf2d417879dc5a09997aa64d675b7a3c4b6ce33da13f3fe

@@ -12,7 +12,7 @@ figure,
 footer,
 header,
 main,
-section,
+section {
     display: block
 }
 a {
@@ -82,7 +82,6 @@ button:-moz-focusring,
 input:-moz-focusring {
     outline: 1px dotted ButtonText
 }
-/*# sourceMappingURL=common.c66d7c112967074b1398.css.map*/
 
 [role=button][aria-busy=true]:after,
 button[aria-busy=true]:after {
