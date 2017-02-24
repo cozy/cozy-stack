@@ -12,7 +12,6 @@ import (
 // SharingRequest handles a sharing request from the recipient side
 // It creates a tempory sharing document, waiting for the recipient answer
 func SharingRequest(c echo.Context) error {
-	//Get the permissions and sharing id
 	scope := c.QueryParam("scope")
 	state := c.QueryParam("state")
 	sharingType := c.QueryParam("sharing_type")

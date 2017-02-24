@@ -119,14 +119,14 @@ func CheckSharingType(sharingType string) error {
 // CreateSharingRequest checks fields integrity and creates a sharing document
 // for an incoming sharing request
 func CreateSharingRequest(db couchdb.Database, state, sharingType, scope string) (*Sharing, error) {
-	if scope == "" {
-		return nil, ErrMissingScope
-	}
 	if state == "" {
 		return nil, ErrMissingState
 	}
 	if err := CheckSharingType(sharingType); err != nil {
 		return nil, err
+	}
+	if scope == "" {
+		return nil, ErrMissingScope
 	}
 	permissions, err := permissions.UnmarshalScopeString(scope)
 	if err != nil {
