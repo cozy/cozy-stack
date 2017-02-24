@@ -73,6 +73,13 @@ func (g *gitFetcher) Fetch(src *url.URL, appdir string) error {
 	return g.clone(appdir, gitdir, src)
 }
 
+func getBranch(src *url.URL) string {
+	if src.Fragment != "" {
+		return "refs/heads/" + src.Fragment
+	}
+	return "HEAD"
+}
+
 // clone creates a new bare git repository and install all the files of the
 // last commit in the application tree.
 func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
@@ -83,10 +90,7 @@ func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
-	branch := "HEAD"
-	if src.Fragment != "" {
-		branch = "refs/heads/" + src.Fragment
-	}
+	branch := getBranch(src)
 
 	rep, err := git.Clone(storage, nil, &git.CloneOptions{
 		URL:           src.String(),
@@ -116,7 +120,12 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
-	err = rep.Pull(&git.PullOptions{})
+	branch := getBranch(src)
+
+	err = rep.Pull(&git.PullOptions{
+		SingleBranch:  true,
+		ReferenceName: gitPl.ReferenceName(branch),
+	})
 	if err == git.NoErrAlreadyUpToDate {
 		return nil
 	}
