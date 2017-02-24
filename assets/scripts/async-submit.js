@@ -56,4 +56,5 @@
   })
 
   passphraseInput.focus()
+  submitButton.removeAttribute('disabled')
 })(window)
