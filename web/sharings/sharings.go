@@ -15,16 +15,14 @@ func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
 	state := c.QueryParam("state")
 	sharingType := c.QueryParam("sharing_type")
+	desc := c.QueryParam("desc")
 
 	instance := middlewares.GetInstance(c)
 
-	sharing, err := sharings.CreateSharingRequest(instance, state, sharingType, scope)
+	sharing, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope)
 	if err != nil {
 		return wrapErrors(err)
 	}
-
-	//TODO call the OAuth authorize to display the permissions
-	//TODO return the permission html
 
 	return jsonapi.Data(c, http.StatusCreated, sharing, nil)
 }

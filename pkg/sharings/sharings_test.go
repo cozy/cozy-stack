@@ -44,15 +44,15 @@ func TestCheckSharingTypeSuccess(t *testing.T) {
 }
 
 func TestCreateSharingRequestBadParams(t *testing.T) {
-	_, err := CreateSharingRequest(TestPrefix, "", "", "")
+	_, err := CreateSharingRequest(TestPrefix, "", "", "", "")
 	assert.Error(t, err)
 
 	state := "1234"
-	_, err = CreateSharingRequest(TestPrefix, state, "", "")
+	_, err = CreateSharingRequest(TestPrefix, "", state, "", "")
 	assert.Error(t, err)
 
 	sharingType := consts.OneShotSharing
-	_, err = CreateSharingRequest(TestPrefix, state, sharingType, "")
+	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, "")
 	assert.Error(t, err)
 
 }
@@ -60,6 +60,7 @@ func TestCreateSharingRequestBadParams(t *testing.T) {
 func TestCreateSharingRequestSuccess(t *testing.T) {
 	state := "1234"
 	sharingType := consts.OneShotSharing
+	desc := "share cher"
 
 	rule := permissions.Rule{
 		Type:   "io.cozy.events",
@@ -71,7 +72,7 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 	scope, err := set.MarshalScopeString()
 	assert.NoError(t, err)
 
-	sharing, err := CreateSharingRequest(TestPrefix, state, sharingType, scope)
+	sharing, err := CreateSharingRequest(TestPrefix, desc, state, sharingType, scope)
 	assert.NoError(t, err)
 	assert.Equal(t, state, sharing.SharingID)
 	assert.Equal(t, sharingType, sharing.SharingType)

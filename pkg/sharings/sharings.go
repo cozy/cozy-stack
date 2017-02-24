@@ -118,7 +118,7 @@ func CheckSharingType(sharingType string) error {
 
 // CreateSharingRequest checks fields integrity and creates a sharing document
 // for an incoming sharing request
-func CreateSharingRequest(db couchdb.Database, state, sharingType, scope string) (*Sharing, error) {
+func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope string) (*Sharing, error) {
 	if state == "" {
 		return nil, ErrMissingState
 	}
@@ -138,6 +138,7 @@ func CreateSharingRequest(db couchdb.Database, state, sharingType, scope string)
 		SharingID:   state,
 		Permissions: permissions,
 		Owner:       false,
+		Desc:        desc,
 	}
 
 	err = Create(db, sharing)

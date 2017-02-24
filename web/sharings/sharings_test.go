@@ -79,8 +79,10 @@ func TestSharingRequestSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	state := "sharing_id"
+	desc := "share cher"
 
 	urlVal := url.Values{
+		"desc":         []string{desc},
 		"state":        []string{state},
 		"scope":        []string{scope},
 		"sharing_type": []string{consts.OneShotSharing},
@@ -100,6 +102,8 @@ func TestSharingRequestSuccess(t *testing.T) {
 	assert.Equal(t, consts.OneShotSharing, sharingType)
 	sharingID := attrs["sharing_id"].(string)
 	assert.Equal(t, state, sharingID)
+	description := attrs["desc"].(string)
+	assert.Equal(t, desc, description)
 
 }
 
