@@ -35,7 +35,7 @@
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
-      body: `passphrase=${passphrase}&redirect=${encodeURIComponent(redirect)}`,
+      body: `passphrase=${encodeURIComponent(passphrase)}&redirect=${encodeURIComponent(redirect)}`,
       credentials: 'same-origin'
     }).then((response) => {
       const loginSuccess = response.status < 400
