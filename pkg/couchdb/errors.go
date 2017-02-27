@@ -61,7 +61,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("CouchDB: %d %s (%s)", e.StatusCode, e.Name, e.Reason)
+	return fmt.Sprintf("CouchDB(%s): %s", e.Name, e.Reason)
 }
 
 // JSON returns the json representation of this error
@@ -78,13 +78,18 @@ func (e *Error) JSON() map[string]interface{} {
 	return jsonMap
 }
 
+func IsCouchError(err error) (*Error, bool) {
+	if err == nil {
+		return nil, false
+	}
+	couchErr, isCouchErr := err.(*Error)
+	return couchErr, isCouchErr
+}
+
 // IsNoDatabaseError checks if the given error is a couch no_db_file
 // error
 func IsNoDatabaseError(err error) bool {
-	if err == nil {
-		return false
-	}
-	couchErr, isCouchErr := err.(*Error)
+	couchErr, isCouchErr := IsCouchError(err)
 	if !isCouchErr {
 		return false
 	}
@@ -95,10 +100,7 @@ func IsNoDatabaseError(err error) bool {
 // IsNotFoundError checks if the given error is a couch not_found
 // error
 func IsNotFoundError(err error) bool {
-	if err == nil {
-		return false
-	}
-	couchErr, isCouchErr := err.(*Error)
+	couchErr, isCouchErr := IsCouchError(err)
 	if !isCouchErr {
 		return false
 	}
@@ -107,21 +109,18 @@ func IsNotFoundError(err error) bool {
 
 // IsConflictError checks if the given error is a couch conflict error
 func IsConflictError(err error) bool {
-	if err == nil {
-		return false
-	}
-	couchErr, isCouchErr := err.(*Error)
+	couchErr, isCouchErr := IsCouchError(err)
 	if !isCouchErr {
 		return false
 	}
-	return couchErr.StatusCode == 409
+	return couchErr.StatusCode == http.StatusConflict
 }
 
 func newRequestError(originalError error) error {
 	return &Error{
 		StatusCode: http.StatusServiceUnavailable,
 		Name:       "no_couch",
-		Reason:     "wrong_config",
+		Reason:     "could not create a request to the server",
 		Original:   originalError,
 	}
 }
@@ -130,7 +129,7 @@ func newConnectionError(originalError error) error {
 	return &Error{
 		StatusCode: http.StatusServiceUnavailable,
 		Name:       "no_couch",
-		Reason:     "cant_connect",
+		Reason:     "could not create connection with the server",
 		Original:   originalError,
 	}
 }
@@ -139,7 +138,7 @@ func newIOReadError(originalError error) error {
 	return &Error{
 		StatusCode: http.StatusServiceUnavailable,
 		Name:       "no_couch",
-		Reason:     "hangup",
+		Reason:     "could not read data from the server",
 		Original:   originalError,
 	}
 }
@@ -148,7 +147,7 @@ func newDefinedIDError() error {
 	return &Error{
 		StatusCode: http.StatusBadRequest,
 		Name:       "defined_id",
-		Reason:     "Document _id should be empty",
+		Reason:     "document _id should be empty",
 	}
 }
 
