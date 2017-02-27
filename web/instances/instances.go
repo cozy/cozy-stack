@@ -85,7 +85,7 @@ func createToken(c echo.Context) error {
 	if expire != "" && expire != "0s" {
 		var duration time.Duration
 		if duration, err = time.ParseDuration(expire); err == nil {
-			issuedAt += webpermissions.TokenValidityDuration - int64(duration/time.Second)
+			issuedAt += int64(duration/time.Second) - webpermissions.TokenValidityDuration
 		}
 	}
 	token, err := crypto.NewJWT(secret, permissions.Claims{
