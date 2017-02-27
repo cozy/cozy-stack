@@ -149,7 +149,7 @@ func login(c echo.Context) error {
 func logout(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	if !webpermissions.AllowLogout(c) {
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.HomeSlug).String())
+		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.FilesSlug).String())
 	}
 
 	session, err := sessions.GetSession(c, instance)

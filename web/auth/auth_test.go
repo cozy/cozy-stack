@@ -1013,7 +1013,7 @@ func TestLogoutNoToken(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://home.cozy.example.net/",
+		assert.Equal(t, "https://files.cozy.example.net/",
 			res.Header.Get("Location"))
 		cookies := jar.Cookies(instanceURL)
 		assert.Len(t, cookies, 2) // cozysessid and _csrf
