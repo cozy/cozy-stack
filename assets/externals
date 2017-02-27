@@ -33,3 +33,7 @@ sha256  4299bf7758f36d996c0c58db2b3ad651d9966bf254ea5dc466afabe13dfec0cf
 name    ./css/cozy-bar.min.css.map
 url     https://raw.githubusercontent.com/cozy/cozy-bar/3.0.0-beta8/dist/cozy-bar.min.css.map
 sha256  461ce5ccc61564581b897a7c38290ee19a72c3044232da54d32edbd45ccf11dc
+
+name    ./fonts/fontawesome-webfont.woff2
+url     https://raw.githubusercontent.com/FortAwesome/Font-Awesome/master/fonts/fontawesome-webfont.woff2
+sha256  2adefcbc041e7d18fcf2d417879dc5a09997aa64d675b7a3c4b6ce33da13f3fe

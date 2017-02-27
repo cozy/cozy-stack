@@ -35,7 +35,7 @@
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
-      body: `passphrase=${passphrase}&redirect=${redirect}`,
+      body: `passphrase=${encodeURIComponent(passphrase)}&redirect=${encodeURIComponent(redirect)}`,
       credentials: 'same-origin'
     }).then((response) => {
       const loginSuccess = response.status < 400
@@ -56,4 +56,8 @@
   })
 
   passphraseInput.focus()
+  submitButton.removeAttribute('disabled')
+
+  // Preload font awesome
+  try { document.fonts.load('14px FontAwesome') } catch (e) {}
 })(window)
