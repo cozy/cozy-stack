@@ -231,6 +231,25 @@ func TestAllowCustomType(t *testing.T) {
 	assert.False(t, s.Allow(GET, n))
 }
 
+func TestSubset(t *testing.T) {
+	s := Set{Rule{Type: "io.cozy.events"}}
+
+	s2 := Set{Rule{Type: "io.cozy.events"}}
+	assert.True(t, s2.IsSubSetOf(&s))
+
+	s3 := Set{Rule{Type: "io.cozy.events", Values: []string{"foo", "bar"}}}
+	assert.True(t, s3.IsSubSetOf(&s))
+
+	s4 := Set{Rule{Type: "io.cozy.events", Values: []string{"foo"}}}
+	assert.True(t, s4.IsSubSetOf(&s3))
+	assert.False(t, s3.IsSubSetOf(&s4))
+
+	s5 := Set{Rule{Type: "io.cozy.events", Selector: "calendar", Values: []string{"foo", "bar"}}}
+	s6 := Set{Rule{Type: "io.cozy.events", Selector: "calendar", Values: []string{"foo"}}}
+	assert.True(t, s6.IsSubSetOf(&s5))
+	assert.False(t, s5.IsSubSetOf(&s6))
+}
+
 func assertEqualJSON(t *testing.T, value []byte, expected string) {
 	expectedBytes := new(bytes.Buffer)
 	err := json.Compact(expectedBytes, []byte(expected))

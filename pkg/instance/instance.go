@@ -327,12 +327,16 @@ func (i *Instance) createSettings() error {
 
 func (i *Instance) createPermissionsDB() error {
 	err := couchdb.CreateDB(i, consts.Permissions)
-
 	if err != nil {
 		return err
 	}
 
-	return couchdb.DefineIndex(i, consts.Permissions, permissions.Index)
+	err = couchdb.DefineIndex(i, consts.Permissions, permissions.Index)
+	if err != nil {
+		return err
+	}
+
+	return couchdb.DefineViews(i, consts.Permissions, permissions.Views)
 
 }
 
@@ -602,7 +606,7 @@ func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
 	case permissions.AppAudience:
 		return i.SessionSecret, nil
-	case permissions.RefreshTokenAudience, permissions.AccessTokenAudience:
+	case permissions.RefreshTokenAudience, permissions.AccessTokenAudience, permissions.ShareAudience:
 		return i.OAuthSecret, nil
 	case permissions.CLIAudience:
 		return i.CLISecret, nil

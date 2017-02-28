@@ -5,8 +5,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 func TestFindRoute(t *testing.T) {

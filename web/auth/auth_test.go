@@ -1023,14 +1023,14 @@ func TestLogoutNoToken(t *testing.T) {
 func TestLogoutSuccess(t *testing.T) {
 	a := app.Manifest{Slug: "home"}
 	token := a.BuildToken(testInstance)
-	permissions.Create(testInstance, a.Slug, permissions.Set{})
+	permissions.CreateAppSet(testInstance, a.Slug, permissions.Set{})
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	permissions.Destroy(testInstance, "home")
+	permissions.DestroyApp(testInstance, "home")
 
 	if assert.Equal(t, "303 See Other", res.Status) {
 		assert.Equal(t, "https://cozy.example.net/auth/login",

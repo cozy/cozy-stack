@@ -2,13 +2,17 @@ package permissions
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
@@ -29,6 +33,22 @@ func TestMain(m *testing.M) {
 	testInstance = &instance.Instance{
 		OAuthSecret: []byte("topsecret"),
 		Domain:      "example.com",
+	}
+
+	err := couchdb.ResetDB(testInstance, consts.Permissions)
+	if err != nil {
+		fmt.Println("Cant reset db", err)
+		os.Exit(1)
+	}
+	err = couchdb.DefineIndex(testInstance, consts.Permissions, permissions.Index)
+	if err != nil {
+		fmt.Println("Cant define index", err)
+		os.Exit(1)
+	}
+	err = couchdb.DefineViews(testInstance, consts.Permissions, permissions.Views)
+	if err != nil {
+		fmt.Println("cant define views", err)
+		os.Exit(1)
 	}
 
 	client := oauth.Client{
@@ -53,7 +73,6 @@ func TestMain(m *testing.M) {
 
 	group := handler.Group("/permissions")
 	group.Use(injectInstance(testInstance))
-	group.Use(Extractor)
 	Routes(group)
 
 	ts = httptest.NewServer(handler)
@@ -142,6 +161,71 @@ func TestBadPermissionsBearer(t *testing.T) {
 	}
 	defer res.Body.Close()
 	assert.Equal(t, res.StatusCode, http.StatusBadRequest)
+}
+
+func TestCreateSubPermission(t *testing.T) {
+	reqbody := strings.NewReader(`{
+"data": {
+	"type": "io.cozy.permissions",
+	"attributes": {
+		"permissions": {
+			"whatever": {
+				"type":   "io.cozy.files",
+				"verbs":  ["GET"],
+				"values": ["io.cozy.music"]
+			}
+		}
+	}
+}
+	}`)
+	req, _ := http.NewRequest("POST", ts.URL+"/permissions?codes=bob,alice", reqbody)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+	var out map[string]interface{}
+	err = json.Unmarshal(body, &out)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	data := out["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	codes := attrs["codes"].(map[string]interface{})
+
+	aCode := codes["alice"].(string)
+	bCode := codes["bob"].(string)
+
+	assert.NotEqual(t, aCode, token)
+	assert.NotEqual(t, bCode, token)
+	assert.NotEqual(t, aCode, bCode)
+
+	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req2.Header.Add("Authorization", "Bearer "+aCode)
+	res2, err := http.DefaultClient.Do(req2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	body2, err := ioutil.ReadAll(res2.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+	var out2 map[string]interface{}
+	err = json.Unmarshal(body2, &out2)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res2.Status, "should get a 200")
+	assert.Len(t, out2, 1)
+	assert.Equal(t, "io.cozy.files", out2["whatever"].(map[string]interface{})["type"])
+
 }
 
 func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
