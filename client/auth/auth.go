@@ -93,8 +93,15 @@ func (r *Request) AuthHeader() string {
 
 // defaultClient defaults some values of the given client
 func defaultClient(c *Client) *Client {
-	c.SoftwareID = "github.com/cozy/cozy-stack"
-	c.SoftwareVersion = config.Version
+	if c == nil {
+		c = &Client{}
+	}
+	if c.SoftwareID == "" {
+		c.SoftwareID = "github.com/cozy/cozy-stack"
+	}
+	if c.SoftwareVersion == "" {
+		c.SoftwareVersion = config.Version
+	}
 	if c.ClientName == "" {
 		c.ClientName = "Cozy Go client"
 	}
@@ -190,9 +197,8 @@ func (r *Request) RegisterClient(c *Client) (*Client, error) {
 		return nil, err
 	}
 	res, err := r.req(&request.Options{
-		Method:     "POST",
-		Path:       "/auth/register",
-		Authorizer: c,
+		Method: "POST",
+		Path:   "/auth/register",
 		Headers: request.Headers{
 			"Content-Type": "application/json",
 			"Accept":       "application/json",

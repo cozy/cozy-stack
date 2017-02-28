@@ -44,7 +44,6 @@ type (
 		Client        *http.Client
 		UserAgent     string
 		ParseError    func(res *http.Response, b []byte) error
-		BasicPassword string
 	}
 
 	// Error is the typical JSON-API error returned by the API
@@ -135,10 +134,6 @@ func Req(opts *Options) (*http.Response, error) {
 	}
 
 	req.Header.Add("User-Agent", ua)
-
-	if opts.BasicPassword != "" {
-		req.SetBasicAuth("", opts.BasicPassword)
-	}
 
 	client := opts.Client
 	if client == nil {

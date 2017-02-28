@@ -36,6 +36,7 @@ type jsonAPIDocument struct {
 // used for all the calls to the stack.
 type Client struct {
 	Domain string
+	Client *http.Client
 
 	AuthClient  *auth.Client
 	AuthScopes  []string
@@ -53,7 +54,6 @@ type Client struct {
 	inited int32
 	authMu sync.Mutex
 	auth   *auth.Request
-	client *http.Client
 }
 
 func (c *Client) init() {
@@ -74,8 +74,8 @@ func (c *Client) init() {
 	if c.AuthStorage == nil {
 		c.AuthStorage = auth.NewFileStorage()
 	}
-	if c.client == nil {
-		c.client = &http.Client{
+	if c.Client == nil {
+		c.Client = &http.Client{
 			Transport: c.Transport,
 			Timeout:   c.Timeout,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -85,7 +85,7 @@ func (c *Client) init() {
 	}
 }
 
-// Authenticate is used to authenticate a user.
+// Authenticate is used to authenticate a client via OAuth.
 func (c *Client) Authenticate() (request.Authorizer, error) {
 	c.init()
 	c.authMu.Lock()
@@ -99,7 +99,7 @@ func (c *Client) Authenticate() (request.Authorizer, error) {
 			Scopes:        c.AuthScopes,
 			Domain:        c.Domain,
 			DisableSecure: c.DisableSecure,
-			HTTPClient:    c.client,
+			HTTPClient:    c.Client,
 			UserAgent:     c.UserAgent,
 			UserAccept:    c.AuthAccept,
 			Storage:       c.AuthStorage,
@@ -125,7 +125,7 @@ func (c *Client) Req(opts *request.Options) (*http.Response, error) {
 		return nil, err
 	}
 	opts.Domain = c.Domain
-	opts.Client = c.client
+	opts.Client = c.Client
 	opts.UserAgent = c.UserAgent
 	opts.DisableSecure = c.DisableSecure
 	opts.ParseError = parseJSONAPIError
