@@ -1,7 +1,6 @@
 package client
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -21,8 +20,8 @@ type Instance struct {
 		Locale         string `json:"locale"`
 		StorageURL     string `json:"storage"`
 		Dev            bool   `json:"dev"`
-		PassphraseHash []byte `json:"passphraseHash,omitempty"`
-		RegisterToken  []byte `json:"registerToken,omitempty"`
+		PassphraseHash []byte `json:"passphrase_hash,omitempty"`
+		RegisterToken  []byte `json:"register_token,omitempty"`
 	} `json:"attributes"`
 }
 
@@ -71,44 +70,19 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 		Method: "POST",
 		Path:   "/instances",
 		Queries: url.Values{
-			"Domain":   {opts.Domain},
-			"Locale":   {opts.Locale},
-			"Timezone": {opts.Timezone},
-			"Email":    {opts.Email},
-			"Apps":     {strings.Join(opts.Apps, ",")},
-			"Dev":      {dev},
+			"Domain":     {opts.Domain},
+			"Locale":     {opts.Locale},
+			"Timezone":   {opts.Timezone},
+			"Email":      {opts.Email},
+			"Apps":       {strings.Join(opts.Apps, ",")},
+			"Dev":        {dev},
+			"Passphrase": {opts.Passphrase},
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
 	i, err := readInstance(res)
-	if err != nil {
-		return nil, err
-	}
-	if opts.Passphrase == "" {
-		return i, nil
-	}
-	body, err := request.WriteJSON(struct {
-		Token string `json:"register_token"`
-		Pass  string `json:"passphrase"`
-	}{
-		Token: hex.EncodeToString(i.Attrs.RegisterToken),
-		Pass:  opts.Passphrase,
-	})
-	if err != nil {
-		return nil, err
-	}
-	_, err = c.Req(&request.Options{
-		Method: "POST",
-		Path:   "/settings/passphrase",
-		Headers: request.Headers{
-			"Content-Type": "application/json",
-			"Accept":       "application/json",
-		},
-		Body:       body,
-		NoResponse: true,
-	})
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +131,7 @@ func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 		"Expire":   {opts.Expire.String()},
 	}
 	res, err := c.Req(&request.Options{
-		Method:  "GET",
+		Method:  "POST",
 		Path:    "/instances/token",
 		Queries: q,
 	})

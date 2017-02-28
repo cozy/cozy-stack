@@ -17,7 +17,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
@@ -69,22 +68,15 @@ var execFilesCmd = &cobra.Command{
 		if len(args) != 1 {
 			return cmd.Help()
 		}
-
 		if flagDomain == "" {
 			return fmt.Errorf("Missing --domain flag")
 		}
-
+		c := newClient(flagDomain, consts.Files)
 		command := args[0]
-		c, err := getInstance(flagDomain)
-		if err != nil {
-			return err
-		}
-
-		err = execCommand(c, command, os.Stdout)
+		err := execCommand(c, command, os.Stdout)
 		if err == errFilesExec {
 			return cmd.Help()
 		}
-
 		return err
 	},
 }
@@ -101,24 +93,21 @@ var importFilesCmd = &cobra.Command{
 			return cmd.Help()
 		}
 
-		in, err := getInstance(flagDomain)
-		if err != nil {
-			return err
-		}
-
 		var match *regexp.Regexp
 		if flagImportMatch != "" {
+			var err error
 			match, err = regexp.Compile(flagImportMatch)
 			if err != nil {
 				return err
 			}
 		}
 
-		return importFiles(newClient(in), flagImportFrom, flagImportTo, match)
+		c := newClient(flagDomain, consts.Files)
+		return importFiles(c, flagImportFrom, flagImportTo, match)
 	},
 }
 
-func execCommand(in *instance.Instance, command string, w io.Writer) error {
+func execCommand(c *client.Client, command string, w io.Writer) error {
 	args := splitArgs(command)
 	if len(args) == 0 {
 		return errFilesExec
@@ -156,7 +145,6 @@ func execCommand(in *instance.Instance, command string, w io.Writer) error {
 		return errFilesExec
 	}
 
-	c := newClient(in)
 	switch cmdname {
 	case "mkdir":
 		return mkdirCmd(c, args[0], flagMkdirP)
@@ -456,17 +444,6 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 
 		return nil
 	})
-}
-
-func getInstance(domain string) (*instance.Instance, error) {
-	c, err := instance.Get(domain)
-	if err != nil {
-		if err == instance.ErrNotFound {
-			err = fmt.Errorf("Could not find the cozy instance, please use `instances add` command")
-		}
-		return nil, err
-	}
-	return c, nil
 }
 
 func splitArgs(command string) []string {

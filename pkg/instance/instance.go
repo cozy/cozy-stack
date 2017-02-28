@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -615,7 +616,7 @@ func (i *Instance) PickKey(audience string) ([]byte, error) {
 }
 
 // MakeJWT is a shortcut to create a JWT
-func (i *Instance) MakeJWT(audience, subject, scope string) (string, error) {
+func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) (string, error) {
 	secret, err := i.PickKey(audience)
 	if err != nil {
 		return "", err
@@ -624,7 +625,7 @@ func (i *Instance) MakeJWT(audience, subject, scope string) (string, error) {
 		StandardClaims: jwt.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,
-			IssuedAt: crypto.Timestamp(),
+			IssuedAt: issuedAt.Unix(),
 			Subject:  subject,
 		},
 		Scope: scope,

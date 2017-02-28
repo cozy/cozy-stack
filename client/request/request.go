@@ -56,7 +56,7 @@ type (
 )
 
 func (e *Error) Error() string {
-	if e.Detail == "" {
+	if e.Detail == "" || e.Title == e.Detail {
 		return e.Title
 	}
 	return fmt.Sprintf("%s: %s", e.Title, e.Detail)
@@ -71,7 +71,18 @@ type BasicAuthorizer struct {
 // AuthHeader implemented the interface Authorizer.
 func (b *BasicAuthorizer) AuthHeader() string {
 	auth := b.Username + ":" + b.Password
-	return base64.StdEncoding.EncodeToString([]byte(auth))
+	return "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
+// BearerAuthorizer implements a placeholder authorizer if the token is already
+// known.
+type BearerAuthorizer struct {
+	Token string
+}
+
+// AuthHeader implemented the interface Authorizer.
+func (b *BearerAuthorizer) AuthHeader() string {
+	return "Bearer " + b.Token
 }
 
 // Req performs a request with the specified request options.

@@ -2,16 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client"
-	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -44,24 +42,27 @@ profiles you.`,
 
 var cfgFile string
 
-func createClient(domain string) *client.Client {
+func newClient(domain, scope string) *client.Client {
+	// For the CLI client, we rely on the admin APIs to generate a CLI token.
+	// We may want in the future rely on OAuth to handle the permissions with
+	// more granularity.
+	c := newAdminClient()
+	token, err := c.GetToken(&client.TokenOptions{
+		Domain:   domain,
+		Subject:  "CLI",
+		Audience: permissions.CLIAudience,
+		Scope:    []string{scope},
+	})
+	if err != nil {
+		log.Errorf("Could not generate access to domain %s", domain)
+		log.Error(err)
+		os.Exit(1)
+	}
 	return &client.Client{
 		Domain:        domain,
 		DisableSecure: config.IsDevRelease(),
-		AuthClient: &auth.Client{
-			RedirectURIs: []string{"http://localhost:3333"},
-			ClientName:   "CLI",
-			ClientKind:   "desktop",
-		},
-		AuthScopes: []string{},
-		AuthAccept: func(acceptURL string) (*url.URL, error) {
-			return nil, nil
-		},
+		Authorizer:    &request.BearerAuthorizer{Token: token},
 	}
-}
-
-func newClient(i *instance.Instance) *client.Client {
-	return createClient(i.Domain)
 }
 
 func newAdminClient() *client.Client {
@@ -77,12 +78,11 @@ func newAdminClient() *client.Client {
 			}
 		}
 	}
-	c := createClient(config.AdminServerAddr())
-	c.Authorizer = &request.BasicAuthorizer{
-		Username: "",
-		Password: string(pass),
+	return &client.Client{
+		Domain:        config.AdminServerAddr(),
+		DisableSecure: config.IsDevRelease(),
+		Authorizer:    &request.BasicAuthorizer{Password: string(pass)},
 	}
-	return c
 }
 
 func init() {
