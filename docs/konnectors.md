@@ -220,7 +220,7 @@ NsJail is:
 
 - easy to install : just a make away with standard build tools
 - offers a full list or isolation tools
-- lightly documented the only documentation is nsjail -h (also available in the main github page) and it is quite cryptic for a non-sysadmin         
+- lightly documented the only documentation is nsjail -h (also available in the main github page) and it is quite cryptic for a non-sysadmin
 like me. I could not find any help in any search engine. Some examples are available to run a back in an isolated process and work but I could not run a full nodejs (only nodejs -v worked)
 - The konnectors will need a full nodejs installed on the host
 - Is still actively maintained
@@ -244,7 +244,7 @@ I managed to run a nodejs container with just the following commands :
     rkt list   # to get the container uuid
     rkt export --app=nodeslim <uuid> nodeslim.aci
     rkt run --insecure-options=image --interactive nodeslim.aci -- -v  # to run node -v in the new container
-    
+
 Note: the --insecure-options param is to avoid the check of the image signature to ease the demonstration
 
 ### Choice
@@ -261,7 +261,7 @@ As stated before, rkt is easy to install. It may also be possible to make it ava
 #### Image creation
 
 To create an ACI file image, you just need to run a docker image one time :
-    
+
     rkt run  --uuid-file-save=$PWD/uuid --insecure-options=image --interactive docker://node:slim --name nodeslim -- -v
     rkt export --app=nodeslim `cat uuid` nodeslim.aci && rm uuid
 
@@ -299,7 +299,7 @@ To prevent the connectors from listening to each other, they should be run in co
 
 The container must be started in bridged mode. With that, the container still has access to localhost but through a specific IP address visible with ifconfig. That way, the host can have iptable rules to forbid access to specified ports to the bridge.
 
-To connect a container in bridge mode : 
+To connect a container in bridge mode :
 
 On the host create the file /etc/rkt/net.d/10-containers.conf
 
@@ -320,18 +320,40 @@ On the host create the file /etc/rkt/net.d/10-containers.conf
 
 and run your container with the "--net=bridge" option. That way, a new interface is available in the container and gives you access to the host.
 
+## Konnector install and run details
+
+### Install
+
+The konnectors will be installed in the .cozy_konnectors directory (not in VFS ?) using npm install
+(with the ```--ignore-scripts``` option). This command will give the possibility to install konnectors
+from npm, github, gitlab, bitbucket, tar.gz url. The stack will have to check that the given package
+does not use a "file:" path.
+
+In the .cozy_konnectors directory, a ```npm ls -depth 0``` will be able to give the list of installed
+konnectors (npm outdated can also be used) or yarn equivalent.
+
+### Details about running a konnector
+
+To run a given konnector, the stack will create a run directory which will be given to the
+container as cwd and will have read/write access on it. The konnector will be able to put its logs
+inside it and any temp files as needed. The konnector will also have read access to a path with
+shared libs and also cozy-client-js (named /shared inside the container).
+
+In the end of the konnector execution, the logs are read in the log.txt file and added to the konnector own log file
+and the run directory is destroyed.
+
 ## TODO
 
 - [ ] How to install and update the konnectors?
 - [ ] Are the konnectors installed once per server or per instance (in the VFS
   like client-side apps)?
-- [ ] One git repository with all the konnectors (like now), or one repos per
+- [X] One git repository with all the konnectors (like now), or one repos per
   konnector? Same question for package.json
 - [ ] What API to list the konnectors for My Accounts?
 - [ ] What workflow for developing a konnector?
 - [ ] How to test konnectors?
-- [ ] How are managed the locales?
-- [ ] Which version of nodejs?
+- [X] How are managed the locales? : declared in manfiest.konnector
+- [X] Which version of nodejs? Last LTS version bundled in a rocket container
 - [ ] Do you keep coffeescript? Or move every konnector to ES2017?
   - 28 konnectors in coffee
   - 22 konnectors in JS
@@ -352,7 +374,7 @@ and run your container with the "--net=bridge" option. That way, a new interface
     - 28 dependencies that install 65 MB for 271 modules in production
     - 71 dependencies that install 611 MB for 858 modules with dev dependencies
 - [ ] How are persisted the accounts?
-- [ ] How is executed a konnector? In particular, how the credentials are
+- [X] How is executed a konnector? In particular, how the credentials are
   given to the konnector?
 - [ ] what should expose a konnector (data, functions, etc)?
     - https://github.com/cozy-labs/konnectors/issues/695
