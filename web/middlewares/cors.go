@@ -14,7 +14,8 @@ var corsBlackList = []string{
 	"/auth/",
 }
 
-var maxAge = strconv.Itoa(int(12 * time.Hour / time.Second))
+// MaxAgeCORS is used to cache the CORS header for 12 hours
+var MaxAgeCORS = strconv.Itoa(int(12 * time.Hour / time.Second))
 var allowMethods = strings.Join([]string{echo.GET, echo.HEAD, echo.PUT, echo.PATCH, echo.POST, echo.DELETE}, ",")
 
 // CORS returns a Cross-Origin Resource Sharing (CORS) middleware.
@@ -59,7 +60,7 @@ func CORS(next echo.HandlerFunc) echo.HandlerFunc {
 			res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
 		}
 
-		res.Header().Set(echo.HeaderAccessControlMaxAge, maxAge)
+		res.Header().Set(echo.HeaderAccessControlMaxAge, MaxAgeCORS)
 
 		return c.NoContent(http.StatusNoContent)
 	}
