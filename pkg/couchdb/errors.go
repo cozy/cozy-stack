@@ -78,6 +78,8 @@ func (e *Error) JSON() map[string]interface{} {
 	return jsonMap
 }
 
+// IsCouchError returns whether or not the given error is of type
+// couchdb.Error.
 func IsCouchError(err error) (*Error, bool) {
 	if err == nil {
 		return nil, false
