@@ -1012,12 +1012,9 @@ func TestLogoutNoToken(t *testing.T) {
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://files.cozy.example.net/",
-			res.Header.Get("Location"))
-		cookies := jar.Cookies(instanceURL)
-		assert.Len(t, cookies, 2) // cozysessid and _csrf
-	}
+	assert.Equal(t, "401 Unauthorized", res.Status)
+	cookies := jar.Cookies(instanceURL)
+	assert.Len(t, cookies, 2) // cozysessid and _csrf
 }
 
 func TestLogoutSuccess(t *testing.T) {
@@ -1032,13 +1029,10 @@ func TestLogoutSuccess(t *testing.T) {
 	defer res.Body.Close()
 	permissions.DestroyApp(testInstance, "home")
 
-	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://cozy.example.net/auth/login",
-			res.Header.Get("Location"))
-		cookies := jar.Cookies(instanceURL)
-		assert.Len(t, cookies, 1) // _csrf
-		assert.Equal(t, "_csrf", cookies[0].Name)
-	}
+	assert.Equal(t, "204 No Content", res.Status)
+	cookies := jar.Cookies(instanceURL)
+	assert.Len(t, cookies, 1) // _csrf
+	assert.Equal(t, "_csrf", cookies[0].Name)
 }
 
 func TestIsLoggedOutAfterLogout(t *testing.T) {
