@@ -133,6 +133,8 @@ func SetupRoutes(router *echo.Echo) error {
 	secure := middlewares.Secure(&middlewares.SecureConfig{
 		HSTSMaxAge:    hstsMaxAge,
 		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
+		// Display logos of OAuth clients on the authorize page
+		CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcAny},
 		XFrameOptions: middlewares.XFrameDeny,
 	})
 
