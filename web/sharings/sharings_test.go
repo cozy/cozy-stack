@@ -181,7 +181,6 @@ func postJSON(u string, v echo.Map) (*http.Response, error) {
 
 func requestGET(v url.Values, u string) (*http.Response, error) {
 	reqURL := v.Encode()
-	fmt.Printf("url : %v\n", reqURL)
 	return http.Get(ts.URL + u + "?" + reqURL)
 }
 
