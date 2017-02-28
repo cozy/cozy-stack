@@ -147,9 +147,16 @@ func login(c echo.Context) error {
 }
 
 func logout(c echo.Context) error {
+	res := c.Response()
+	origin := c.Request().Header.Get(echo.HeaderOrigin)
+	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
+
 	instance := middlewares.GetInstance(c)
 	if !webpermissions.AllowLogout(c) {
-		return c.Redirect(http.StatusSeeOther, instance.SubDomain(apps.FilesSlug).String())
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "The user can logout only from client-side apps",
+		})
 	}
 
 	session, err := sessions.GetSession(c, instance)
@@ -157,7 +164,26 @@ func logout(c echo.Context) error {
 		c.SetCookie(session.Delete(instance))
 	}
 
-	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+	return c.NoContent(http.StatusNoContent)
+}
+
+func logoutPreflight(c echo.Context) error {
+	req := c.Request()
+	res := c.Response()
+	origin := req.Header.Get(echo.HeaderOrigin)
+
+	res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
+	res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
+	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+	res.Header().Set(echo.HeaderAccessControlAllowMethods, echo.DELETE)
+	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
+	res.Header().Set(echo.HeaderAccessControlMaxAge, middlewares.MaxAgeCORS)
+	if h := req.Header.Get(echo.HeaderAccessControlRequestHeaders); h != "" {
+		res.Header().Set(echo.HeaderAccessControlAllowHeaders, h)
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 // checkRedirectParam returns the optional redirect query parameter. If not
@@ -500,6 +526,7 @@ func Routes(router *echo.Group) {
 	router.GET("/login", loginForm)
 	router.POST("/login", login)
 	router.DELETE("/login", logout)
+	router.OPTIONS("/login", logoutPreflight)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
