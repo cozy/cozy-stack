@@ -17,11 +17,9 @@ type testTransport struct {
 	assertFn testAssertReq
 }
 
-var noError = errors.New("ok")
-
 func (t *testTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.assertFn(req)
-	return nil, noError
+	return nil, errors.New("ok")
 }
 
 func testClient(assertFn testAssertReq) *http.Client {
@@ -72,7 +70,7 @@ func TestClientWithoutOAuth(t *testing.T) {
 	c := &Client{
 		Domain:     "foobar",
 		UserAgent:  "user/agent",
-		Authorizer: &request.BearerAuthorizer{"token"},
+		Authorizer: &request.BearerAuthorizer{Token: "token"},
 		Client: testClient(func(req *http.Request) {
 			header := req.Header
 			assert.Equal(t, "Bearer token", header.Get("Authorization"))
