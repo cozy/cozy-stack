@@ -164,7 +164,7 @@ func TestInstallSuccessful(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -208,7 +208,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	for {
 		var done bool
@@ -229,7 +229,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	man, done, err := inst.Poll()
 	if !assert.NoError(t, err) {
@@ -252,7 +252,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	for {
 		var done bool
@@ -282,7 +282,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	var state State
 	for {
@@ -328,7 +328,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -375,7 +375,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	state = ""
 	for {
@@ -422,7 +422,7 @@ func TestInstallFromGithub(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
