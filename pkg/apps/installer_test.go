@@ -131,14 +131,6 @@ func TestInstallBadSlug(t *testing.T) {
 
 func TestInstallBadAppsSource(t *testing.T) {
 	_, err := NewInstaller(c, &InstallerOptions{
-		Slug:      "app2",
-		SourceURL: "",
-	})
-	if assert.Error(t, err) {
-		assert.Equal(t, ErrNotSupportedSource, err)
-	}
-
-	_, err = NewInstaller(c, &InstallerOptions{
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
 	})
