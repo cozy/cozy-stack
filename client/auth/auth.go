@@ -106,7 +106,7 @@ func defaultClient(c *Client) *Client {
 		c.ClientName = "Cozy Go client"
 	}
 	if c.ClientKind == "" {
-		c.ClientKind = "desktop"
+		c.ClientKind = "unknown"
 	}
 	return c
 }
