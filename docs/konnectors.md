@@ -329,6 +329,10 @@ The konnectors will be installed in the .cozy_konnectors directory (not in VFS ?
 from npm, github, gitlab, bitbucket, tar.gz url. The stack will have to check that the given package
 does not use a "file:" path.
 
+The konnectors installation may be triggered when the user says he wants to use it. The resulting
+repository is then kept for each run of the konnector. It may then be given to user the possibility
+to upgrade the konnector to the latest version if any.
+
 In the .cozy_konnectors directory, a ```npm ls -depth 0``` will be able to give the list of installed
 konnectors (npm outdated can also be used) or yarn equivalent.
 
