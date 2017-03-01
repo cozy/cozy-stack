@@ -1,9 +1,11 @@
 package request
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -177,6 +179,67 @@ func parseError(opts *Options, res *http.Response) (err error) {
 		}
 	}
 	return opts.ParseError(res, b)
+}
+
+// ErrSSEParse is used when an error occured while parsing the SSE stream.
+var ErrSSEParse = errors.New("could not parse event stream")
+
+// SSEEvent holds the data of a single SSE event.
+type SSEEvent struct {
+	Name  string
+	Data  []byte
+	Error error
+}
+
+// ReadSSE reads and parse a SSE source from a bufio.Reader into a channel of
+// SSEEvent.
+func ReadSSE(r io.ReadCloser, ch chan *SSEEvent) {
+	var err error
+	defer func() {
+		if err != nil {
+			ch <- &SSEEvent{Error: err}
+		}
+		if errc := r.Close(); errc != nil && err == nil {
+			ch <- &SSEEvent{Error: errc}
+		}
+		close(ch)
+	}()
+	rb := bufio.NewReader(r)
+	var ev *SSEEvent
+	for {
+		var bs []byte
+		bs, err = rb.ReadBytes('\n')
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			return
+		}
+		if bytes.Equal(bs, []byte("\r\n")) {
+			ev = nil
+			continue
+		}
+		spl := bytes.Split(bs, []byte(": "))
+		if len(spl) != 2 {
+			err = ErrSSEParse
+			return
+		}
+		k, v := string(spl[0]), bytes.TrimSpace(spl[1])
+		switch k {
+		case "event":
+			ev = &SSEEvent{Name: string(v)}
+		case "data":
+			if ev == nil {
+				err = ErrSSEParse
+				return
+			}
+			ev.Data = v
+			ch <- ev
+		default:
+			err = ErrSSEParse
+			return
+		}
+	}
 }
 
 // ReadJSON reads the content of the specified ReadCloser and closes it.
