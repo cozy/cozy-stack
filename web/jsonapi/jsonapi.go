@@ -4,6 +4,7 @@ package jsonapi
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/labstack/echo"
@@ -22,31 +23,36 @@ type Document struct {
 	Included []interface{}    `json:"included,omitempty"`
 }
 
-// Data can be called to send an answer with a JSON-API document containing a
-// single object as data
-func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
+// WriteData can be called to write an answer with a JSON-API document
+// containing a single object as data into an io.Writer.
+func WriteData(w io.Writer, o Object, links *LinksList) error {
 	var included []interface{}
 	for _, o := range o.Included() {
 		data, err := MarshalObject(o)
 		if err != nil {
-			return InternalServerError(err)
+			return err
 		}
 		included = append(included, &data)
 	}
 	data, err := MarshalObject(o)
 	if err != nil {
-		return InternalServerError(err)
+		return err
 	}
 	doc := Document{
 		Data:     &data,
 		Links:    links,
 		Included: included,
 	}
+	return json.NewEncoder(w).Encode(doc)
+}
 
+// Data can be called to send an answer with a JSON-API document containing a
+// single object as data
+func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
 	resp := c.Response()
 	resp.Header().Set("Content-Type", ContentType)
 	resp.WriteHeader(statusCode)
-	return json.NewEncoder(resp).Encode(doc)
+	return WriteData(resp, o, links)
 }
 
 // DataList can be called to send an multiple-value answer with a
