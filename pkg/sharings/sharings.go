@@ -50,7 +50,7 @@ func (s *Sharing) SetRev(rev string) { s.SRev = rev }
 
 // Links implements jsonapi.Doc
 func (s *Sharing) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/sharing/" + s.SID}
+	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
 }
 
 // Recipients returns the sharing recipients
