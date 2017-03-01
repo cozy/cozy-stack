@@ -36,13 +36,14 @@ type Claims struct {
 	Scope string `json:"scope,omitempty"`
 }
 
-// IssuedAtTime returns a time.Time struct of the IssuedAt field
-func (claims *Claims) IssuedAtTime() time.Time {
-	return time.Unix(claims.IssuedAt, 0)
+// IssuedAtUTC returns a time.Time struct of the IssuedAt field in UTC
+// location.
+func (claims *Claims) IssuedAtUTC() time.Time {
+	return time.Unix(claims.IssuedAt, 0).UTC()
 }
 
 // Expired returns true if a Claim is expired
 func (claims *Claims) Expired() bool {
-	validUntil := claims.IssuedAtTime().Add(TokenValidityDuration)
-	return validUntil.Before(time.Now())
+	validUntil := claims.IssuedAtUTC().Add(TokenValidityDuration)
+	return validUntil.Before(time.Now().UTC())
 }
