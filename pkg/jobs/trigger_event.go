@@ -29,13 +29,13 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 		c := realtime.MainHub().Subscribe(t.infos.Arguments)
 		for {
 			select {
-			case _ = <-c.Read():
+			case <-c.Read():
 				ch <- &JobRequest{
 					WorkerType: t.infos.WorkerType,
 					Message:    t.infos.Message,
 					Options:    t.infos.Options,
 				}
-			case _ = <-t.unscheduled:
+			case <-t.unscheduled:
 				return
 			}
 		}

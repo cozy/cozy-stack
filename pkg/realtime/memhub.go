@@ -2,8 +2,6 @@ package realtime
 
 import "sync"
 
-var centralMemoryHub Hub
-
 type hub struct {
 	sync.Mutex
 
