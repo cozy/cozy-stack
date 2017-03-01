@@ -131,7 +131,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.manifests",
+    "type": "io.cozy.apps",
     "id": "git://github.com/cozy/cozy-emails",
     "attributes": {
       "name": "cozy-emails",
@@ -182,7 +182,7 @@ Content-Type: application/vnd.api+json
 
 ### POST /apps/:slug
 
-Install an application, ie download the files and put them in `/apps/:slug` in the virtual file system of the user, create an `io.cozy.manifest` document, register the permissions, etc.
+Install an application, ie download the files and put them in `/apps/:slug` in the virtual file system of the user, create an `io.cozy.apps` document, register the permissions, etc.
 
 This endpoint is asynchronous and returns a successful return as soon as the application installation has started, meaning we have successfully reached the manifest and started to fetch application data.
 
@@ -219,7 +219,7 @@ Content-Type: application/vnd.api+json
 {
   "data": [{
     "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
-    "type": "io.cozy.applications",
+    "type": "io.cozy.apps",
     "meta": {
       "rev": "1-7a1f918147df94580c92b47275e4604a"
     },
@@ -269,7 +269,7 @@ Content-Type: application/vnd.api+json
 {
   "data": [{
     "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
-    "type": "io.cozy.manifest",
+    "type": "io.cozy.apps",
     "meta": {
       "rev": "1-7a1f918147df94580c92b47275e4604a"
     },
@@ -323,7 +323,7 @@ Content-Type: application/vnd.api+json
 {
   "data": [{
     "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
-    "type": "io.cozy.applications",
+    "type": "io.cozy.apps",
     "meta": {
       "rev": "2-bbfb0fc32dfcdb5333b28934f195b96a"
     },
@@ -392,7 +392,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.manifests",
+    "type": "io.cozy.apps",
     "attributes": {
       "name": "cozy-emails",
       "slug": "emails",
@@ -422,7 +422,7 @@ Content-Type: application/vnd.api+json
 {
   "data": {
     "id": "4f6436ce-8967-11e6-b174-ab83adac69f2",
-    "type": "io.cozy.manifests",
+    "type": "io.cozy.apps",
     "attributes": {
       "name": "cozy-emails",
       "slug": "emails",

@@ -186,7 +186,7 @@ func TestAllDoctypes(t *testing.T) {
 	expected := []string{
 		"io.cozy.events",
 		"io.cozy.files",
-		"io.cozy.manifests",
+		"io.cozy.apps",
 		"io.cozy.settings",
 	}
 	assert.Equal(t, expected, dbs)

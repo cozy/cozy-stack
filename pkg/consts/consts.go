@@ -8,8 +8,8 @@ const (
 	Files = "io.cozy.files"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
-	// Manifests doc type for application manifests
-	Manifests = "io.cozy.manifests"
+	// Apps doc type for application manifests
+	Apps = "io.cozy.apps"
 	// Jobs doc type for queued jobs
 	Jobs = "io.cozy.jobs"
 	// Queues doc type for jobs queues

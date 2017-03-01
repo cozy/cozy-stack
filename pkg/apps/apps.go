@@ -97,14 +97,14 @@ type Manifest struct {
 
 // ID returns the manifest identifier - see couchdb.Doc interface
 func (m *Manifest) ID() string {
-	return consts.Manifests + "/" + m.Slug
+	return consts.Apps + "/" + m.Slug
 }
 
 // Rev return the manifest revision - see couchdb.Doc interface
 func (m *Manifest) Rev() string { return m.ManRev }
 
 // DocType returns the manifest doctype - see couchdb.Doc interfaces
-func (m *Manifest) DocType() string { return consts.Manifests }
+func (m *Manifest) DocType() string { return consts.Apps }
 
 // SetID is used to change the file identifier - see couchdb.Doc
 // interface
@@ -146,7 +146,7 @@ func (m *Manifest) Included() []jsonapi.Object {
 func List(db couchdb.Database) ([]*Manifest, error) {
 	var docs []*Manifest
 	req := &couchdb.AllDocsRequest{Limit: 100}
-	err := couchdb.GetAllDocs(db, consts.Manifests, req, &docs)
+	err := couchdb.GetAllDocs(db, consts.Apps, req, &docs)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func List(db couchdb.Database) ([]*Manifest, error) {
 // GetBySlug returns an app identified by its slug
 func GetBySlug(db couchdb.Database, slug string) (*Manifest, error) {
 	man := &Manifest{}
-	err := couchdb.GetDoc(db, consts.Manifests, consts.Manifests+"/"+slug, man)
+	err := couchdb.GetDoc(db, consts.Apps, consts.Apps+"/"+slug, man)
 	if err != nil {
 		return nil, err
 	}

@@ -308,7 +308,7 @@ func (i *Instance) createFSIndexes() error {
 
 // createAppsDB creates the database needed for Apps
 func (i *Instance) createAppsDB() error {
-	return couchdb.CreateDB(i, consts.Manifests)
+	return couchdb.CreateDB(i, consts.Apps)
 }
 
 // createClientsDB creates the database needed for OAuth 2 clients

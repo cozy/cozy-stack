@@ -82,11 +82,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	i, err := readInstance(res)
-	if err != nil {
-		return nil, err
-	}
-	return i, nil
+	return readInstance(res)
 }
 
 // ListInstances returns the list of instances recorded on the stack.

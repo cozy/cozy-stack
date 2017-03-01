@@ -467,7 +467,7 @@ func TestMain(m *testing.M) {
 		Transport: &transport{},
 	}
 
-	err = couchdb.ResetDB(c, consts.Manifests)
+	err = couchdb.ResetDB(c, consts.Apps)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -516,7 +516,7 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
-	couchdb.DeleteDB(c, consts.Manifests)
+	couchdb.DeleteDB(c, consts.Apps)
 	couchdb.DeleteDB(c, consts.Files)
 	ts.Close()
 
