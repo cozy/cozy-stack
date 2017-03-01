@@ -13,7 +13,7 @@ import (
 
 func TestErrors(t *testing.T) {
 	err := Error{StatusCode: 404, Name: "not_found", Reason: "missing"}
-	assert.Contains(t, err.Error(), "404")
+	assert.Contains(t, err.Error(), "not_found")
 	assert.Contains(t, err.Error(), "missing")
 }
 
