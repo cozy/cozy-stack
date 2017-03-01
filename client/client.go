@@ -145,10 +145,12 @@ func parseJSONAPIError(res *http.Response, b []byte) error {
 	return errs.Errors[0]
 }
 
-func readJSONAPI(r io.ReadCloser, data interface{}, included interface{}) (err error) {
+func readJSONAPI(r io.Reader, data interface{}, included interface{}) (err error) {
 	defer func() {
-		if cerr := r.Close(); err == nil && cerr != nil {
-			err = cerr
+		if rc, ok := r.(io.ReadCloser); ok {
+			if cerr := rc.Close(); err == nil && cerr != nil {
+				err = cerr
+			}
 		}
 	}()
 	var doc jsonAPIDocument
