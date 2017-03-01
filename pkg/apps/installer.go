@@ -64,18 +64,20 @@ func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
 	} else if opts.SourceURL != "" {
 		src, err = url.Parse(opts.SourceURL)
 	} else {
-		err = ErrNotSupportedSource
+		err = nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	var fetcher Fetcher
-	switch src.Scheme {
-	case "git":
-		fetcher = newGitFetcher(ctx)
-	default:
-		return nil, ErrNotSupportedSource
+	if src != nil {
+		switch src.Scheme {
+		case "git":
+			fetcher = newGitFetcher(ctx)
+		default:
+			return nil, ErrNotSupportedSource
+		}
 	}
 
 	inst := &Installer{
@@ -160,11 +162,8 @@ func (i *Installer) install() (*Manifest, error) {
 		return man, err
 	}
 
-	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
-		return man, err
-	}
-
-	return man, nil
+	err := i.fetcher.Fetch(i.src, appdir)
+	return man, err
 }
 
 // update will perform the update of an already installed application. It

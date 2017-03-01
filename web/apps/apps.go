@@ -155,6 +155,10 @@ func wrapAppsError(err error) error {
 	switch err {
 	case apps.ErrInvalidSlugName:
 		return jsonapi.InvalidParameter("slug", err)
+	case apps.ErrAlreadyExists:
+		return jsonapi.Conflict(err)
+	case apps.ErrNotFound:
+		return jsonapi.NotFound(err)
 	case apps.ErrNotSupportedSource:
 		return jsonapi.InvalidParameter("Source", err)
 	case apps.ErrManifestNotReachable:

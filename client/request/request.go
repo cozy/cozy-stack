@@ -210,6 +210,7 @@ func ReadSSE(r io.ReadCloser, ch chan *SSEEvent) {
 		var bs []byte
 		bs, err = rb.ReadBytes('\n')
 		if err == io.EOF {
+			err = nil
 			return
 		}
 		if err != nil {
