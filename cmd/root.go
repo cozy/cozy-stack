@@ -95,6 +95,12 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	checkNoErr(viper.BindPFlag("port", flags.Lookup("port")))
 
+	flags.String("admin-host", "localhost", "administration server host")
+	checkNoErr(viper.BindPFlag("admin.host", flags.Lookup("admin-host")))
+
+	flags.Int("admin-port", 6060, "administration server port")
+	checkNoErr(viper.BindPFlag("admin.port", flags.Lookup("admin-port")))
+
 	flags.String("log-level", "info", "define the log level")
 	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
 }

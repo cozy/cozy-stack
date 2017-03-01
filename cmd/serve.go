@@ -78,12 +78,6 @@ func init() {
 	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
 	checkNoErr(viper.BindPFlag("assets", flags.Lookup("assets")))
 
-	flags.String("admin-host", "localhost", "administration server host")
-	checkNoErr(viper.BindPFlag("admin.host", flags.Lookup("admin-host")))
-
-	flags.Int("admin-port", 6060, "administration server port")
-	checkNoErr(viper.BindPFlag("admin.port", flags.Lookup("admin-port")))
-
 	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
 	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
 
