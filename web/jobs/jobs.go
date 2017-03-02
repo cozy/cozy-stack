@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -203,11 +204,12 @@ func Routes(router *echo.Group) {
 }
 
 func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
-	b, err := json.Marshal(job)
+	b := new(bytes.Buffer)
+	err := jsonapi.WriteData(b, &apiJob{job}, nil)
 	if err != nil {
 		return err
 	}
-	s := fmt.Sprintf("event: %s\r\ndata: %s\r\n\r\n", job.State, b)
+	s := fmt.Sprintf("event: %s\r\ndata: %s\r\n\r\n", job.State, b.String())
 	_, err = w.Write([]byte(s))
 	if err != nil {
 		return err

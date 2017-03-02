@@ -266,7 +266,7 @@ func TestListApps(t *testing.T) {
 	id := data["id"].(string)
 	assert.NotEmpty(t, id)
 	typ := data["type"].(string)
-	assert.Equal(t, "io.cozy.manifests", typ)
+	assert.Equal(t, "io.cozy.apps", typ)
 
 	attrs := data["attributes"].(map[string]interface{})
 	name := attrs["name"].(string)

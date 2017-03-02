@@ -59,23 +59,25 @@ func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
 	}
 
 	var src *url.URL
-	if opts.SourceURL != "" {
-		src, err = url.Parse(opts.SourceURL)
-	} else if man != nil {
+	if man != nil {
 		src, err = url.Parse(man.Source)
+	} else if opts.SourceURL != "" {
+		src, err = url.Parse(opts.SourceURL)
 	} else {
-		err = ErrNotSupportedSource
+		err = nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	var fetcher Fetcher
-	switch src.Scheme {
-	case "git":
-		fetcher = newGitFetcher(ctx)
-	default:
-		return nil, ErrNotSupportedSource
+	if src != nil {
+		switch src.Scheme {
+		case "git":
+			fetcher = newGitFetcher(ctx)
+		default:
+			return nil, ErrNotSupportedSource
+		}
 	}
 
 	inst := &Installer{
@@ -91,24 +93,31 @@ func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
 	return inst, nil
 }
 
-// InstallOrUpdate will install the application linked to the installer. If the
-// application is already installed, it will try to upgrade it. It will report
-// its progress or error (see Poll method).
-func (i *Installer) InstallOrUpdate() {
+// Install will install the application linked to the installer. It will
+// report its progress or error (see Poll method).
+func (i *Installer) Install() {
 	defer i.endOfProc()
-
-	if i.man == nil {
+	if i.man != nil {
+		i.man, i.err = nil, ErrAlreadyExists
+	} else {
 		i.man, i.err = i.install()
+	}
+	return
+}
+
+// Update will update the application linked to the installer. It will
+// report its progress or error (see Poll method).
+func (i *Installer) Update() {
+	defer i.endOfProc()
+	if i.man == nil {
+		i.err = ErrNotFound
 		return
 	}
-
-	state := i.man.State
-	if state != Ready && state != Errored {
+	if state := i.man.State; state != Ready && state != Errored {
 		i.man, i.err = nil, ErrBadState
-		return
+	} else {
+		i.man, i.err = i.update()
 	}
-
-	i.man, i.err = i.update()
 	return
 }
 
@@ -153,11 +162,8 @@ func (i *Installer) install() (*Manifest, error) {
 		return man, err
 	}
 
-	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
-		return man, err
-	}
-
-	return man, nil
+	err := i.fetcher.Fetch(i.src, appdir)
+	return man, err
 }
 
 // update will perform the update of an already installed application. It

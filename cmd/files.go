@@ -22,6 +22,7 @@ import (
 )
 
 var errFilesExec = errors.New("Bad usage of files exec")
+var errFilesMissingDomain = errors.New("Missing --domain flag")
 
 const filesExecUsage = `Available commands:
 
@@ -37,7 +38,7 @@ const filesExecUsage = `Available commands:
 	Don't forget to put quotes around the command!
 `
 
-var flagDomain string
+var flagFilesDomain string
 var flagImportFrom string
 var flagImportTo string
 var flagImportDryRun bool
@@ -61,17 +62,18 @@ current filesystem into cozy.
 }
 
 var execFilesCmd = &cobra.Command{
-	Use:   "exec [command]",
+	Use:   "exec [--domain domain] [command]",
 	Short: "Execute the given command on the specified domain and leave",
 	Long:  "Execute a command on the VFS of the specified domain.\n" + filesExecUsage,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Help()
 		}
-		if flagDomain == "" {
-			return fmt.Errorf("Missing --domain flag")
+		if flagFilesDomain == "" {
+			log.Error(errFilesMissingDomain)
+			return cmd.Help()
 		}
-		c := newClient(flagDomain, consts.Files)
+		c := newClient(flagFilesDomain, consts.Files)
 		command := args[0]
 		err := execCommand(c, command, os.Stdout)
 		if err == errFilesExec {
@@ -82,13 +84,13 @@ var execFilesCmd = &cobra.Command{
 }
 
 var importFilesCmd = &cobra.Command{
-	Use:   "import [--from name] [--to name] [--match pattern]",
+	Use:   "import [--domain domain] [--from name] [--to name] [--match pattern]",
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flagDomain == "" {
-			return fmt.Errorf("Missing --domain flag")
+		if flagFilesDomain == "" {
+			log.Error(errFilesMissingDomain)
+			return cmd.Help()
 		}
-
 		if flagImportFrom == "" || flagImportTo == "" {
 			return cmd.Help()
 		}
@@ -102,7 +104,7 @@ var importFilesCmd = &cobra.Command{
 			}
 		}
 
-		c := newClient(flagDomain, consts.Files)
+		c := newClient(flagFilesDomain, consts.Files)
 		return importFiles(c, flagImportFrom, flagImportTo, match)
 	},
 }
@@ -461,7 +463,7 @@ func splitArgs(command string) []string {
 }
 
 func init() {
-	filesCmdGroup.PersistentFlags().StringVar(&flagDomain, "domain", "", "specify the domain name of the instance")
+	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", "", "specify the domain name of the instance")
 
 	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
 	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "directory to import to in cozy")

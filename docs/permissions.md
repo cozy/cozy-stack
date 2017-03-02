@@ -55,7 +55,7 @@ allow to access and modify any file or directory.
 Some known types:
 
 - `io.cozy.files`, for files and folder in the [VFS](files.md)
-- `io.cozy.manifests` and `io.cozy.applications`, for [apps](apps.md)
+- `io.cozy.apps`, for [apps](apps.md)
 - `io.cozy.settings`, for the [settings](settings.md)
 - `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
 - `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
