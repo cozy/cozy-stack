@@ -1,20 +1,14 @@
-## cozy-stack doc markdown
+## cozy-stack apps update
 
-Print the documentation of cozy-stack as markdown
+Update the application with the specified slug name.
 
 ### Synopsis
 
 
-Print the documentation of cozy-stack as markdown
+Update the application with the specified slug name.
 
 ```
-cozy-stack doc markdown [directory]
-```
-
-### Examples
-
-```
-$ cozy-stack doc markdown docs/cli
+cozy-stack apps update [--domain domain] [slug]
 ```
 
 ### Options inherited from parent commands
@@ -23,11 +17,12 @@ $ cozy-stack doc markdown docs/cli
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
+      --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
       --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 
 ### SEE ALSO
-* [cozy-stack doc](cozy-stack_doc.md)	 - Print the documentation
+* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
 

@@ -1,14 +1,25 @@
-## cozy-stack version
+## cozy-stack apps
 
-Print the version number
+Interact with the cozy applications
 
 ### Synopsis
 
 
-Print the current version number of the binary
+
+cozy-stack apps allows to interact with the cozy applications.
+
+It provides commands to install or update applications from
+a cozy.
+
 
 ```
-cozy-stack version
+cozy-stack apps [command]
+```
+
+### Options
+
+```
+      --domain string   specify the domain name of the instance
 ```
 
 ### Options inherited from parent commands
@@ -24,4 +35,6 @@ cozy-stack version
 
 ### SEE ALSO
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack apps install](cozy-stack_apps_install.md)	 - Install an application with the specified slug name from the given source URL.
+* [cozy-stack apps update](cozy-stack_apps_update.md)	 - Update the application with the specified slug name.
 
