@@ -12,8 +12,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 )
 
@@ -25,6 +25,11 @@ func init() {
 		WorkerFunc:   SendMail,
 	})
 }
+
+const (
+	MailModeNoReply = "noreply"
+	MailModeFrom    = "from"
+)
 
 // MailAddress contains the name and mail of a mail recipient.
 type MailAddress struct {
@@ -62,14 +67,14 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	switch opts.Mode {
-	case "noreply":
+	case MailModeNoReply:
 		toAddr, err := addressFromDomain(domain)
 		if err != nil {
 			return err
 		}
 		opts.To = []*MailAddress{toAddr}
-		opts.From = &MailAddress{Email: "noreply@" + domain}
-	case "from":
+		opts.From = &MailAddress{Email: "noreply@" + utils.StripPort(domain)}
+	case MailModeFrom:
 		fromAddr, err := addressFromDomain(domain)
 		if err != nil {
 			return err
@@ -82,12 +87,10 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 }
 
 func addressFromDomain(domain string) (*MailAddress, error) {
-	in, err := instance.Get(domain)
-	if err != nil {
-		return nil, err
-	}
+	// TODO: cleanup this settings fetching
+	db := couchdb.SimpleDatabasePrefix(domain)
 	doc := &couchdb.JSONDoc{}
-	err = couchdb.GetDoc(in, consts.Settings, consts.InstanceSettingsID, doc)
+	err := couchdb.GetDoc(db, consts.Settings, consts.InstanceSettingsID, doc)
 	if err != nil {
 		return nil, err
 	}

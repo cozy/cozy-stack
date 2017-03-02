@@ -29,42 +29,20 @@
                   </svg>
                 </div>
               </figure>
-              {{if .PublicName}}
-                <h1>{{t "Login Welcome name" .PublicName}}</h1>
-              {{else}}
-                <h1>{{t "Login Welcome"}}</h1>
-              {{end}}
             </header>
             <div role="region">
-              <form id="login-form" method="POST" action="/auth/login" class="login auth">
-                <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
-                <p class="help" id="login-password-tip">{{t "Login Password help"}}</p>
-                <p class="line">
-                  <label for="password" aria-describedby="login-password-tip">{{t "Login Password field"}}</label>
-                  <button id="password-visibility-button" class="icon password-visibility-icon masked"
-                      type="button"
-                      title="{{t "Login Password show"}}"
-                      name="password-visibility"></button>
-                  <input id="password" name="passphrase" placeholder="{{t "Login Password field"}}" type="password" autofocus="true" />
-                </p>
-                {{if .CredentialsError}}
-                <div class="errors">
-                  <p>{{.CredentialsError}}</p>
-                </div>
-                {{end}}
+              <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset" class="login auth">
+                <p class="help" id="login-password-tip">Are you sure you want to reset your password ?</p>
               </form>
             </div>
             <footer>
               <div class="controls">
-                <button id="login-submit" form="login-form" type="submit">{{t "Login Submit"}}</button>
+                <button id="reset-submit" form="reset-passphrase-form" type="submit">Reset password</button>
               </div>
-              <a href="/auth/passphrase_reset">Forgot your password ?</a>
             </footer>
           </div>
         </div>
       </main>
     </div>
-    <script src="/assets/scripts/password-visibility.js"></script>
-    <script src="/assets/scripts/async-submit.js"></script>
   </body>
 </html>
