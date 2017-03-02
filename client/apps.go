@@ -52,8 +52,9 @@ type AppOptions struct {
 // InstallApp is used to install an application.
 func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
-		Method:  "POST",
-		Path:    "/apps/" + url.PathEscape(opts.Slug),
+		Method: "POST",
+		// TODO replace QueryEscape with PathEscape when we will no longer support go 1.7
+		Path:    "/apps/" + url.QueryEscape(opts.Slug),
 		Queries: url.Values{"Source": {opts.SourceURL}},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
@@ -69,7 +70,7 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method: "PUT",
-		Path:   "/apps/" + url.PathEscape(opts.Slug),
+		Path:   "/apps/" + url.QueryEscape(opts.Slug),
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
 		},
