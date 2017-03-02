@@ -5,13 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 func createHandler(c echo.Context) error {
@@ -29,6 +27,12 @@ func createHandler(c echo.Context) error {
 	in.OAuthSecret = nil
 	in.SessionSecret = nil
 	in.PassphraseHash = nil
+	pass := c.QueryParam("Passphrase")
+	if pass != "" {
+		if err = in.RegisterPassphrase([]byte(pass), in.RegisterToken); err != nil {
+			return err
+		}
+	}
 	return jsonapi.Data(c, http.StatusCreated, in, nil)
 }
 
@@ -69,33 +73,24 @@ func createToken(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	var secret []byte
 	switch audience {
 	case "app":
-		secret = in.SessionSecret
 		audience = permissions.AppAudience
 	case "access-token":
-		secret = in.OAuthSecret
 		audience = permissions.AccessTokenAudience
+	case "cli":
+		audience = permissions.CLIAudience
 	default:
 		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
 	}
-	issuedAt := crypto.Timestamp()
+	issuedAt := time.Now()
 	if expire != "" && expire != "0s" {
 		var duration time.Duration
 		if duration, err = time.ParseDuration(expire); err == nil {
-			issuedAt += int64(duration/time.Second) - permissions.TokenValidityDuration
+			issuedAt = issuedAt.Add(duration - permissions.TokenValidityDuration)
 		}
 	}
-	token, err := crypto.NewJWT(secret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: audience,
-			Issuer:   domain,
-			Subject:  subject,
-			IssuedAt: issuedAt,
-		},
-		Scope: scope,
-	})
+	token, err := in.MakeJWT(audience, subject, scope, issuedAt)
 	if err != nil {
 		return err
 	}
@@ -136,8 +131,8 @@ func wrapError(err error) error {
 
 // Routes sets the routing for the instances service
 func Routes(router *echo.Group) {
-	router.GET("/", listHandler)
-	router.POST("/", createHandler)
+	router.GET("", listHandler)
+	router.POST("", createHandler)
 	router.DELETE("/:domain", deleteHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
