@@ -324,32 +324,37 @@ and run your container with the "--net=bridge" option. That way, a new interface
 
 ### Install
 
-The konnectors will be installed in the .cozy_konnectors directory (not in VFS ?) using npm install
-(with the ```--ignore-scripts``` option). This command will give the possibility to install konnectors
-from npm, github, gitlab, bitbucket, tar.gz url. The stack will have to check that the given package
-does not use a "file:" path.
+The konnectors will be installed in the .cozy_konnectors directory which is in the VFS using git clone
+(like the apps at the moment).
 
 The konnectors installation may be triggered when the user says he wants to use it. The resulting
-repository is then kept for each run of the konnector. It may then be given to user the possibility
-to upgrade the konnector to the latest version if any.
+repository is then kept for each run of the konnector. It may then be given to the user the
+possibility to upgrade the konnector to the latest version if any.
 
-In the .cozy_konnectors directory, a ```npm ls -depth 0``` will be able to give the list of installed
-konnectors (npm outdated can also be used) or yarn equivalent.
+To update a given konnector, a ```git pull``` command is run on the konnector.
 
 ### Details about running a konnector
 
-To run a given konnector, the stack will create a run directory which will be given to the
-container as cwd and will have read/write access on it. The konnector will be able to put its logs
-inside it and any temp files as needed. The konnector will also have read access to a path with
-shared libs and also cozy-client-js (named /shared inside the container).
+To run a given konnector, the stack will copy this connector in a "run" directory, which is not in
+the VFS. This directory will be given to the rocket container as the current working directory
+with full read and write access on it. This is where the container will put its logs and any temp
+file needed. There will be also cozy-client.js and the shared libraries in a lib directory inside
+this directory.
 
-In the end of the konnector execution, the logs are read in the log.txt file and added to the konnector own log file
-and the run directory is destroyed.
+The konnector will be run with the following environment variables :
+
+- COZY_CREDENTIALS
+- COZY_URL : to know what instance is running the konnector
+- KONNECTOR_CREDENTIALS : as a json string with all the values from the account associated to the
+konnector.
+
+In the end of the konnector execution (or timeout), the logs are read in the log.txt file and added
+to the konnector own log file (in VFS) and the run directory is then destroyed.
 
 ## TODO
 
-- [ ] How to install and update the konnectors?
-- [ ] Are the konnectors installed once per server or per instance (in the VFS
+- [X] How to install and update the konnectors?
+- [X] Are the konnectors installed once per server or per instance (in the VFS
   like client-side apps)?
 - [X] One git repository with all the konnectors (like now), or one repos per
   konnector? Same question for package.json
@@ -363,8 +368,8 @@ and the run directory is destroyed.
   - 22 konnectors in JS
 - [ ] What about weboob?
 - [ ] What roadmap for transforming the konnectors-v2 in konnectors-v3?
-- [ ] What format for the konnectors manifest?
-- [ ] What permissions for a konnector?
+- [X] What format for the konnectors manifest?
+- [X] What permissions for a konnector?
 - [ ] For konnectors that import files, how can we let the user select a
   folder and have an associated permission for the konnector in this folder
   (and not anywhere else on the virtual file system)?
