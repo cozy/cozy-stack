@@ -70,7 +70,9 @@ given domain.
 		}
 
 		log.Infof("Instance created with success for domain %s", in.Attrs.Domain)
-		log.Infof("Registration token: \"%s\"", hex.EncodeToString(in.Attrs.RegisterToken))
+		if in.Attrs.RegisterToken != nil {
+			log.Infof("Registration token: \"%s\"", hex.EncodeToString(in.Attrs.RegisterToken))
+		}
 		log.Debugf("Instance created: %#v", in.Attrs)
 		return nil
 	},
@@ -133,8 +135,6 @@ All data associated with this domain will be permanently lost.
 		if str != "yes" && str != "y" {
 			return nil
 		}
-
-		fmt.Println()
 
 		c := newAdminClient()
 		in, err := c.DestroyInstance(domain)
