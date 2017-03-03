@@ -107,9 +107,8 @@ func (c *Client) DestroyInstance(domain string) (*Instance, error) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
 	res, err := c.Req(&request.Options{
-		Method:     "DELETE",
-		Path:       "/instances/" + domain,
-		NoResponse: true,
+		Method: "DELETE",
+		Path:   "/instances/" + domain,
 	})
 	if err != nil {
 		return nil, err
