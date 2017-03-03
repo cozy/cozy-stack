@@ -1044,6 +1044,7 @@ func TestIsLoggedOutAfterLogout(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
+	web.LoadSupportedLocales()
 	instanceURL, _ = url.Parse("https://" + domain + "/")
 	j, _ := cookiejar.New(nil)
 	jar = &testJar{

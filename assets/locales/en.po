@@ -60,8 +60,11 @@ msgstr "The scope parameter is mandatory"
 msgid "Error No registered client"
 msgstr "The client must be registered"
 
-msgid "Error Invalid redirect_uri"
+msgid "Error Incorrect redirect_uri"
 msgstr "The redirect_uri parameter doesn't match the registered ones"
+
+msgid "Error Invalid redirect_uri"
+msgstr "The redirect_uri parameter is invalid"
 
 msgid "Error Invalid response type"
 msgstr "Invalid response type"

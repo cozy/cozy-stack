@@ -311,7 +311,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	}
 	if !params.client.AcceptRedirectURI(params.redirectURI) {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid redirect_uri",
+			"Error": "Error Incorrect redirect_uri",
 		})
 	}
 
