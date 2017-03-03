@@ -39,6 +39,11 @@ const (
 )
 
 const (
+	// FilesSlug is the slug of the default app, files
+	FilesSlug = "files"
+)
+
+const (
 	// DirType is the type attribute for directories
 	DirType = "directory"
 	// FileType is the type attribute for files
