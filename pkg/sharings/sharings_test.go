@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +31,55 @@ func TestGetRecipient(t *testing.T) {
 	assert.Equal(t, recipient, doc)
 }
 
-func TestCreate(t *testing.T) {
+func TestCheckSharingTypeBadType(t *testing.T) {
+	sharingType := "mybad"
+	err := CheckSharingType(sharingType)
+	assert.Error(t, err)
+}
+
+func TestCheckSharingTypeSuccess(t *testing.T) {
+	sharingType := consts.OneShotSharing
+	err := CheckSharingType(sharingType)
+	assert.NoError(t, err)
+}
+
+func TestCreateSharingRequestBadParams(t *testing.T) {
+	_, err := CreateSharingRequest(TestPrefix, "", "", "", "")
+	assert.Error(t, err)
+
+	state := "1234"
+	_, err = CreateSharingRequest(TestPrefix, "", state, "", "")
+	assert.Error(t, err)
+
+	sharingType := consts.OneShotSharing
+	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, "")
+	assert.Error(t, err)
+
+}
+
+func TestCreateSharingRequestSuccess(t *testing.T) {
+	state := "1234"
+	sharingType := consts.OneShotSharing
+	desc := "share cher"
+
+	rule := permissions.Rule{
+		Type:   "io.cozy.events",
+		Verbs:  permissions.Verbs(permissions.POST),
+		Values: []string{"1234"},
+	}
+
+	set := permissions.Set{rule}
+	scope, err := set.MarshalScopeString()
+	assert.NoError(t, err)
+
+	sharing, err := CreateSharingRequest(TestPrefix, desc, state, sharingType, scope)
+	assert.NoError(t, err)
+	assert.Equal(t, state, sharing.SharingID)
+	assert.Equal(t, sharingType, sharing.SharingType)
+	assert.Equal(t, &set, sharing.Permissions)
+}
+
+func TestCreateSuccess(t *testing.T) {
 	sharing := &Sharing{
 		SharingType: consts.OneShotSharing,
 	}
