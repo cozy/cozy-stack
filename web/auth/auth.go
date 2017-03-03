@@ -284,22 +284,22 @@ type authorizeParams struct {
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
 	if params.state == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The state parameter is mandatory",
+			"Error": "Error No state parameter",
 		})
 	}
 	if params.clientID == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The client_id parameter is mandatory",
+			"Error": "Error No client_id parameter",
 		})
 	}
 	if params.redirectURI == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter is mandatory",
+			"Error": "Error No redirect_uri parameter",
 		})
 	}
 	if params.scope == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The scope parameter is mandatory",
+			"Error": "Error No scope parameter",
 		})
 	}
 

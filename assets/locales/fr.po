@@ -23,3 +23,30 @@ msgstr "Afficher le mot de passe"
 
 msgid "Login Submit"
 msgstr "Se connecter"
+
+msgid "Error Title"
+msgstr "Désolé"
+
+msgid "Error Message"
+msgstr "Nous avons rencontré une erreur."
+
+msgid "Error No state parameter"
+msgstr "Le paramètre state est obligatoire"
+
+msgid "Error No client_id parameter"
+msgstr "Le paramètre client_id est obligatoire"
+
+msgid "Error No redirect_uri parameter"
+msgstr "Le paramètre redirect_uri est obligatoire"
+
+msgid "Error No scope parameter"
+msgstr "Le paramètre scope est obligatoire"
+
+msgid "Error No registered client"
+msgstr "Le client doit être enregistré"
+
+msgid "Error Invalid redirect_uri"
+msgstr "Le paramètre redirect_uri ne correspond pas à ceux enregistrés"
+
+msgid "Error Invalid response type"
+msgstr "Le type de réponse est invalide"

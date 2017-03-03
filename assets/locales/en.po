@@ -23,3 +23,9 @@ msgstr "Show password"
 
 msgid "Login Submit"
 msgstr "Log in"
+
+msgid "Error Title"
+msgstr "Sorry"
+
+msgid "Error Message"
+msgstr "An error occurred."
