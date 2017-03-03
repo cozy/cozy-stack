@@ -34,6 +34,9 @@ fields. Here are some things you can write about your bug:
 - What did happen instead?
 - What is the version of the Cozy Stack?
 
+You can also use the [`cozy-stack bug`](cli/cozy-stack_bug.md) command to open
+the form to report issue prefilled with some useful system informations.
+
 
 Pull Requests
 -------------
@@ -126,6 +129,10 @@ The Cozy Stack is translated on a platform called
 tutorial](http://docs.transifex.com/getting-started/translators/) can help you
 to learn how to make your first steps here. If you have any question, don't
 hesitate to ask us!
+
+The translations are imported from transifex with `tx pull -a` in the
+`assets/locales` directory, and packed in the go code with `scripts/build.sh
+assets`.
 
 
 Community
