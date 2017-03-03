@@ -485,14 +485,14 @@ func LoadLocale(identifier, rawPO string) {
 }
 
 // Translate is used to translate a string to the locale used on this instance
-func (i *Instance) Translate(key string, a ...interface{}) string {
+func (i *Instance) Translate(key string, vars ...interface{}) string {
 	if po, ok := translations[i.Locale]; ok {
-		return po.Get(key)
+		return po.Get(key, vars...)
 	}
 	if po, ok := translations[DefaultLocale]; ok {
-		return po.Get(key)
+		return po.Get(key, vars...)
 	}
-	return key
+	return fmt.Sprintf(key, vars...)
 }
 
 // List returns the list of declared instances.

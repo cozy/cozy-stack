@@ -22,8 +22,9 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
-// CredentialsErrorMessage is the message showed to the user when he/she enters incorrect credentials
-const CredentialsErrorMessage = "The credentials you entered are incorrect, please try again."
+// CredentialsErrorKey is the key for translating the message showed to the
+// user when he/she enters incorrect credentials
+const CredentialsErrorKey = "Login Credentials error"
 
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
@@ -85,7 +86,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 
 	var credsErrors string
 	if code == http.StatusUnauthorized {
-		credsErrors = i.Translate(CredentialsErrorMessage)
+		credsErrors = i.Translate(CredentialsErrorKey)
 	}
 
 	return c.Render(code, "login.html", echo.Map{
@@ -144,7 +145,7 @@ func login(c echo.Context) error {
 
 	if wantsJSON {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": instance.Translate(CredentialsErrorMessage),
+			"error": instance.Translate(CredentialsErrorKey),
 		})
 	}
 

@@ -3,8 +3,23 @@ msgstr ""
 
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-msgid "The credentials you entered are incorrect, please try again."
+msgid "Login Credentials error"
 msgstr "The credentials you entered are incorrect, please try again."
 
-msgid "Welcome!"
+msgid "Login Welcome"
 msgstr "Welcome!"
+
+msgid "Login Welcome name"
+msgstr "Welcome %s!"
+
+msgid "Login Password help"
+msgstr "Enter your password to access your Cozy"
+
+msgid "Login Password field"
+msgstr "Password"
+
+msgid "Login Password show"
+msgstr "Show password"
+
+msgid "Login Submit"
+msgstr "Log in"
