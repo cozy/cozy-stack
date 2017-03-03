@@ -83,9 +83,14 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 		return err
 	}
 
+	var credsErrors string
+	if code == http.StatusUnauthorized {
+		credsErrors = CredentialsErrorMessage
+	}
+
 	return c.Render(code, "login.html", echo.Map{
 		"PublicName":       doc.M["public_name"],
-		"CredentialsError": nil,
+		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
 	})
 }
