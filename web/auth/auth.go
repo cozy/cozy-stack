@@ -306,12 +306,12 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The client must be registered",
+			"Error": "Error No registered client",
 		})
 	}
 	if !params.client.AcceptRedirectURI(params.redirectURI) {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter doesn't match the registered ones",
+			"Error": "Error Invalid redirect_uri",
 		})
 	}
 
@@ -330,7 +330,7 @@ func authorizeForm(c echo.Context) error {
 
 	if c.QueryParam("response_type") != "code" {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Invalid response type",
+			"Error": "Error Invalid response type",
 		})
 	}
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
@@ -367,14 +367,14 @@ func authorize(c echo.Context) error {
 
 	if !middlewares.IsLoggedIn(c) {
 		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Error": "You must be authenticated",
+			"Error": "Error Must be authenticated",
 		})
 	}
 
 	u, err := url.ParseRequestURI(params.redirectURI)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter is invalid",
+			"Error": "Error Invalid redirect_uri",
 		})
 	}
 

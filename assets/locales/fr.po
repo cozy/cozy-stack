@@ -1,10 +1,15 @@
+# Translators:
+# Bruno Michel <brmichel@free.fr>, 2017
 msgid ""
 msgstr ""
-
-"Plural-Forms: nplurals=2; plural=n>1;\n"
+"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
+"Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 msgid "Login Credentials error"
-msgstr "Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
+msgstr ""
+"Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
 
 msgid "Login Welcome"
 msgstr "Bienvenue !"
@@ -23,6 +28,22 @@ msgstr "Afficher le mot de passe"
 
 msgid "Login Submit"
 msgstr "Se connecter"
+
+msgid "Authorize Title"
+msgstr "Autoriser une application distante"
+
+msgid "Authorize Client presentation"
+msgstr "souhaite accéder à votre Cozy."
+
+msgid "Authorize Policy sentence"
+msgstr ""
+"Vous pouvez lire la politique d'utilisation des données à cette adresse :"
+
+msgid "Authorize Give permission"
+msgstr "Cet accord donnera accès à l'application pour :"
+
+msgid "Authorize Submit"
+msgstr "Accepter"
 
 msgid "Error Title"
 msgstr "Désolé"
@@ -50,3 +71,6 @@ msgstr "Le paramètre redirect_uri ne correspond pas à ceux enregistrés"
 
 msgid "Error Invalid response type"
 msgstr "Le type de réponse est invalide"
+
+msgid "Error Must be authenticated"
+msgstr "Vous devez être connecté"
