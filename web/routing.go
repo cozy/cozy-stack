@@ -48,7 +48,12 @@ type renderer struct {
 }
 
 func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return r.t.ExecuteTemplate(w, name, data)
+	i := middlewares.GetInstance(c)
+	t, err := r.t.Clone()
+	if err != nil {
+		return err
+	}
+	return t.Funcs(template.FuncMap{"t": i.Translate}).ExecuteTemplate(w, name, data)
 }
 
 func newRenderer(assetsPath string) (*renderer, error) {
@@ -58,8 +63,9 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		for i, name := range templatesList {
 			list[i] = path.Join(assetsPath, "templates", name)
 		}
-		t, err := template.ParseFiles(list...)
-		if err != nil {
+		var err error
+		t := template.New("stub").Funcs(template.FuncMap{"t": fmt.Sprintf})
+		if t, err = t.ParseFiles(list...); err != nil {
 			return nil, fmt.Errorf("Can't load the assets from %s", assetsPath)
 		}
 		h := http.FileServer(http.Dir(assetsPath))
@@ -80,6 +86,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		} else {
 			tmpl = t.New(name)
 		}
+		tmpl = tmpl.Funcs(template.FuncMap{"t": fmt.Sprintf})
 		f, err := statikFS.Open("/templates/" + name)
 		if err != nil {
 			return nil, fmt.Errorf("Can't load asset %s", name)

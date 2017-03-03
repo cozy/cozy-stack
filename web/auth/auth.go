@@ -85,7 +85,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 
 	var credsErrors string
 	if code == http.StatusUnauthorized {
-		credsErrors = i.T(CredentialsErrorMessage)
+		credsErrors = i.Translate(CredentialsErrorMessage)
 	}
 
 	return c.Render(code, "login.html", echo.Map{
@@ -144,7 +144,7 @@ func login(c echo.Context) error {
 
 	if wantsJSON {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": instance.T(CredentialsErrorMessage),
+			"error": instance.Translate(CredentialsErrorMessage),
 		})
 	}
 

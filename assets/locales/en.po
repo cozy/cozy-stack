@@ -5,3 +5,6 @@ msgstr ""
 
 msgid "The credentials you entered are incorrect, please try again."
 msgstr "The credentials you entered are incorrect, please try again."
+
+msgid "Welcome!"
+msgstr "Welcome!"

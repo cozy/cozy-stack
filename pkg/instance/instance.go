@@ -484,8 +484,8 @@ func LoadLocale(identifier, rawPO string) {
 	translations[identifier] = po
 }
 
-// T is used to translate a string to the locale used on this instance
-func (i *Instance) T(key string) string {
+// Translate is used to translate a string to the locale used on this instance
+func (i *Instance) Translate(key string, a ...interface{}) string {
 	if po, ok := translations[i.Locale]; ok {
 		return po.Get(key)
 	}
