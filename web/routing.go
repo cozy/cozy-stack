@@ -3,6 +3,7 @@
 package web
 
 import (
+	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -59,7 +60,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		}
 		t, err := template.ParseFiles(list...)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Can't load the assets from %s", assetsPath)
 		}
 		h := http.FileServer(http.Dir(assetsPath))
 		r := &renderer{t, h}
@@ -81,14 +82,13 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		}
 		f, err := statikFS.Open("/templates/" + name)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Can't load asset %s", name)
 		}
 		b, err := ioutil.ReadAll(f)
 		if err != nil {
 			return nil, err
 		}
-		_, err = tmpl.Parse(string(b))
-		if err != nil {
+		if _, err = tmpl.Parse(string(b)); err != nil {
 			return nil, err
 		}
 	}

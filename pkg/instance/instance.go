@@ -477,19 +477,6 @@ func Get(domain string) (*Instance, error) {
 
 var translations = make(map[string]*gotext.Po)
 
-func init() {
-	LoadLocale("en", `
-msgid "The credentials you entered are incorrect, please try again."
-msgstr "The credentials you entered are incorrect, please try again."
-`)
-
-	LoadLocale("fr", `
-msgid "The credentials you entered are incorrect, please try again."
-msgstr "Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
-`)
-
-}
-
 // LoadLocale creates the translation object for a locale from the content of a .po file
 func LoadLocale(identifier, rawPO string) {
 	po := &gotext.Po{Language: identifier}
