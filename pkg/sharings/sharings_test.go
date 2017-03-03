@@ -96,7 +96,7 @@ func TestCheckSharingCreation(t *testing.T) {
 		Email: "test@test.fr",
 	}
 
-	sRec := &SharingRecipient{
+	recStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{
 			ID:   "123",
 			Type: consts.Recipients,
@@ -104,8 +104,8 @@ func TestCheckSharingCreation(t *testing.T) {
 	}
 
 	sharing := &Sharing{
-		SharingType: "shotmedown",
-		SRecipients: []*SharingRecipient{sRec},
+		SharingType:      "shotmedown",
+		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
 
 	err := CheckSharingCreation(TestPrefix, sharing)
@@ -118,15 +118,15 @@ func TestCheckSharingCreation(t *testing.T) {
 	err = couchdb.CreateDoc(TestPrefix, rec)
 	assert.NoError(t, err)
 
-	sRec.RefRecipient.ID = rec.RID
+	recStatus.RefRecipient.ID = rec.RID
 	err = CheckSharingCreation(TestPrefix, sharing)
 	assert.NoError(t, err)
 	assert.Equal(t, true, sharing.Owner)
 	assert.NotEmpty(t, sharing.SharingID)
 
-	sRecipients := sharing.SRecipients
-	for _, sRec := range sRecipients {
-		assert.Equal(t, consts.PendingSharingStatus, sRec.Status)
+	rStatus := sharing.RecipientsStatus
+	for _, rec := range rStatus {
+		assert.Equal(t, consts.PendingStatus, rec.Status)
 	}
 }
 
