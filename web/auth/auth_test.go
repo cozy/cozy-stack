@@ -5,6 +5,7 @@ package auth_test
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -1035,6 +1036,112 @@ func TestLogoutSuccess(t *testing.T) {
 	assert.Equal(t, "_csrf", cookies[0].Name)
 }
 
+func TestPassphraseResetLoggedIn(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_reset", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	assert.Equal(t, "200 OK", res.Status)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), `Are you sure`)
+}
+
+func TestPassphraseReset(t *testing.T) {
+	res, err := postForm("/auth/passphrase_reset", &url.Values{})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	if assert.Equal(t, "303 See Other", res.Status) {
+		assert.Equal(t, "https://cozy.example.net/auth/login",
+			res.Header.Get("Location"))
+	}
+}
+
+func TestPassphraseRenewFormNoToken(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_renew", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), `{"error":"invalid_token"}`)
+}
+
+func TestPassphraseRenewFormBadToken(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_renew?token=zzzz", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), `{"error":"invalid_token"}`)
+}
+
+func TestPassphraseRenewFormWithToken(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_renew?token=badbee", nil)
+	req.Host = domain
+	res, err := client.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	assert.Equal(t, "200 OK", res.Status)
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), `type="hidden" name="passphrase-reset-token" value="badbee" />`)
+}
+
+func TestPassphraseRenew(t *testing.T) {
+	d := "test.cozycloud.cc.web_reset_form"
+	instance.Destroy(d)
+	in1, err := instance.Create(&instance.Options{
+		Domain: d,
+		Locale: "en",
+		Email:  "coucou@coucou.com",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer func() {
+		instance.Destroy(d)
+	}()
+	err = in1.RegisterPassphrase([]byte("MyPass"), in1.RegisterToken)
+	if !assert.NoError(t, err) {
+		return
+	}
+	res1, err := postFormDomain(d, "/auth/passphrase_reset", &url.Values{})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res1.Body.Close()
+	assert.Equal(t, "303 See Other", res1.Status)
+	in2, err := instance.Get(d)
+	if !assert.NoError(t, err) {
+		return
+	}
+	res2, err := postFormDomain(d, "/auth/passphrase_renew", &url.Values{
+		"passphrase-reset-token": {hex.EncodeToString(in2.PassphraseResetToken)},
+		"passphrase":             {"NewPassphrase"},
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res2.Body.Close()
+	if assert.Equal(t, "303 See Other", res2.Status) {
+		assert.Equal(t, "https://test.cozycloud.cc.web_reset_form/auth/login",
+			res2.Header.Get("Location"))
+	}
+}
+
 func TestIsLoggedOutAfterLogout(t *testing.T) {
 	content, err := getTestURL()
 	assert.NoError(t, err)
@@ -1117,6 +1224,13 @@ func putJSON(u, token string, v echo.Map) (*http.Response, error) {
 }
 
 func postForm(u string, v *url.Values) (*http.Response, error) {
+	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	return client.Do(req)
+}
+
+func postFormDomain(domain, u string, v *url.Values) (*http.Response, error) {
 	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
 	req.Host = domain
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
