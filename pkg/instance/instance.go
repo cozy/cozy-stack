@@ -343,7 +343,10 @@ func (i *Instance) createPermissionsDB() error {
 
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
-	domain := opts.Domain
+	domain := strings.TrimSpace(opts.Domain)
+	if domain == "" {
+		return nil, ErrIllegalDomain
+	}
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
 		return nil, ErrIllegalDomain
 	}
