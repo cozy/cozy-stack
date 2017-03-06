@@ -155,7 +155,10 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 			},
 		},
 	})
-	res1, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
+	req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req1.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -192,7 +195,10 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 			},
 		},
 	})
-	res2, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
+	req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req2.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res2, err := http.DefaultClient.Do(req2)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -233,7 +239,10 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 			},
 		},
 	})
-	res1, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
+	req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req1.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -270,7 +279,10 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 			},
 		},
 	})
-	res2, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
+	req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req2.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res2, err := http.DefaultClient.Do(req2)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -332,7 +344,10 @@ func TestGetAllJobs(t *testing.T) {
 			},
 		},
 	})
-	res2, err := http.Post(ts.URL+"/jobs/triggers", "application/json", bytes.NewReader(body))
+	req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
+	assert.NoError(t, err)
+	req2.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res2, err := http.DefaultClient.Do(req2)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -451,7 +466,7 @@ func testToken(i *instance.Instance) string {
 			IssuedAt: crypto.Timestamp(),
 			Subject:  clientID,
 		},
-		Scope: consts.Queues + " " + consts.Jobs,
+		Scope: consts.Queues + " " + consts.Jobs + " " + consts.Triggers,
 	})
 	return t
 }

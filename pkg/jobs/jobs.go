@@ -136,6 +136,7 @@ type (
 
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
+		permissions.Validable
 		Type() string
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
