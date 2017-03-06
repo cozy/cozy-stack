@@ -59,9 +59,8 @@ func newClient(domain, scope string) *client.Client {
 		os.Exit(1)
 	}
 	return &client.Client{
-		Domain:        domain,
-		DisableSecure: config.IsDevRelease(),
-		Authorizer:    &request.BearerAuthorizer{Token: token},
+		Domain:     domain,
+		Authorizer: &request.BearerAuthorizer{Token: token},
 	}
 }
 
@@ -79,9 +78,8 @@ func newAdminClient() *client.Client {
 		}
 	}
 	return &client.Client{
-		Domain:        config.AdminServerAddr(),
-		DisableSecure: config.IsDevRelease(),
-		Authorizer:    &request.BasicAuthorizer{Password: string(pass)},
+		Domain:     config.AdminServerAddr(),
+		Authorizer: &request.BasicAuthorizer{Password: string(pass)},
 	}
 }
 
