@@ -6,19 +6,11 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
 )
-
-var instanceSecret = crypto.GenerateRandomBytes(64)
-var in = &instance.Instance{
-	OAuthSecret: instanceSecret,
-	Domain:      "test-sharing.sparta",
-}
 
 var rec = &Recipient{
 	URL: "",

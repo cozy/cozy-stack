@@ -9,12 +9,19 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
 )
 
 var TestPrefix = couchdb.SimpleDatabasePrefix("couchdb-tests")
+var instanceSecret = crypto.GenerateRandomBytes(64)
+var in = &instance.Instance{
+	OAuthSecret: instanceSecret,
+	Domain:      "test-sharing.sparta",
+}
 
 func TestGetRecipient(t *testing.T) {
 	recipient := &Recipient{}
@@ -145,7 +152,25 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	err = couchdb.ResetDB(in, consts.InstanceSettingsID)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	settingsDoc := &couchdb.JSONDoc{
+		Type: consts.Settings,
+		M:    make(map[string]interface{}),
+	}
+	settingsDoc.SetID(consts.InstanceSettingsID)
+	err = couchdb.CreateNamedDocWithDB(in, settingsDoc)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
+	couchdb.DeleteDB(in, consts.Settings)
 	os.Exit(res)
 }
