@@ -214,9 +214,8 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 
 	req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	assert.NoError(t, err)
+	req4.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	res4, err := http.DefaultClient.Do(req4)
 	if !assert.NoError(t, err) {
 		return
@@ -303,9 +302,8 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res3.StatusCode)
 
 	req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
+	assert.NoError(t, err)
+	req4.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	res4, err := http.DefaultClient.Do(req4)
 	if !assert.NoError(t, err) {
 		return

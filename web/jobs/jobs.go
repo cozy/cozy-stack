@@ -198,6 +198,13 @@ func getTrigger(c echo.Context) error {
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
+	t, err := scheduler.Get(c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if err := permissions.Allow(c, permissions.DELETE, t); err != nil {
+		return err
+	}
 	if err := scheduler.Delete(c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
 	}
