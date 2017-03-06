@@ -36,6 +36,7 @@ type jsonAPIDocument struct {
 // used for all the calls to the stack.
 type Client struct {
 	Domain string
+	Scheme string
 	Client *http.Client
 
 	AuthClient  *auth.Client
@@ -123,6 +124,7 @@ func (c *Client) Req(opts *request.Options) (*http.Response, error) {
 		return nil, err
 	}
 	opts.Domain = c.Domain
+	opts.Scheme = c.Scheme
 	opts.Client = c.Client
 	opts.UserAgent = c.UserAgent
 	opts.ParseError = parseJSONAPIError
