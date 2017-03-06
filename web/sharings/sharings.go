@@ -3,6 +3,8 @@ package sharings
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -45,13 +47,41 @@ func CreateSharing(c echo.Context) error {
 		return err
 	}
 
+	err = sharings.SendSharingMails(instance, sharing)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
 	return jsonapi.Data(c, http.StatusCreated, sharing, nil)
+}
+
+// SendSharingMails sends the mails requests for the provided sharing.
+func SendSharingMails(c echo.Context) error {
+	// Fetch the instance.
+	instance := middlewares.GetInstance(c)
+
+	// Fetch the document id and then the sharing document.
+	docID := c.Param("id")
+	sharing := &sharings.Sharing{}
+	err := couchdb.GetDoc(instance, consts.Sharings, docID, sharing)
+	if err != nil {
+		err = sharings.ErrSharingDoesNotExist
+		return wrapErrors(err)
+	}
+
+	// Send the mails.
+	err = sharings.SendSharingMails(instance, sharing)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return nil
 }
 
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
-	// API Routes
 	router.POST("/", CreateSharing)
+	router.PUT("/:id/sendMails", SendSharingMails)
 	router.GET("/request", SharingRequest)
 }
 
@@ -66,6 +96,10 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharings.ErrMissingState:
 		return jsonapi.BadRequest(err)
+	case sharings.ErrSharingDoesNotExist:
+		return jsonapi.NotFound(err)
+	case sharings.ErrMailCouldNotBeSent:
+		return jsonapi.InternalServerError(err)
 	}
 	return err
 }

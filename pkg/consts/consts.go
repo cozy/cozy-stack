@@ -82,4 +82,6 @@ const (
 	RefusedSharingStatus = "refused"
 	// AcceptedSharingStatus is the sharing accepted status
 	AcceptedSharingStatus = "accepted"
+	// ErrorSharingStatus is when the request could not be sent
+	ErrorSharingStatus = "error"
 )

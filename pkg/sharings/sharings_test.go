@@ -9,12 +9,19 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
 )
 
 var TestPrefix = couchdb.SimpleDatabasePrefix("couchdb-tests")
+var instanceSecret = crypto.GenerateRandomBytes(64)
+var in = &instance.Instance{
+	OAuthSecret: instanceSecret,
+	Domain:      "test-sharing.sparta",
+}
 
 func TestGetRecipient(t *testing.T) {
 	recipient := &Recipient{}
@@ -96,7 +103,7 @@ func TestCheckSharingCreation(t *testing.T) {
 		Email: "test@test.fr",
 	}
 
-	sRec := &SharingRecipient{
+	recStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{
 			ID:   "123",
 			Type: consts.Recipients,
@@ -104,8 +111,8 @@ func TestCheckSharingCreation(t *testing.T) {
 	}
 
 	sharing := &Sharing{
-		SharingType: "shotmedown",
-		SRecipients: []*SharingRecipient{sRec},
+		SharingType:      "shotmedown",
+		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
 
 	err := CheckSharingCreation(TestPrefix, sharing)
@@ -118,15 +125,15 @@ func TestCheckSharingCreation(t *testing.T) {
 	err = couchdb.CreateDoc(TestPrefix, rec)
 	assert.NoError(t, err)
 
-	sRec.RefRecipient.ID = rec.RID
+	recStatus.RefRecipient.ID = rec.RID
 	err = CheckSharingCreation(TestPrefix, sharing)
 	assert.NoError(t, err)
 	assert.Equal(t, true, sharing.Owner)
 	assert.NotEmpty(t, sharing.SharingID)
 
-	sRecipients := sharing.SRecipients
-	for _, sRec := range sRecipients {
-		assert.Equal(t, consts.PendingSharingStatus, sRec.Status)
+	rStatus := sharing.RecipientsStatus
+	for _, rec := range rStatus {
+		assert.Equal(t, consts.PendingSharingStatus, rec.Status)
 	}
 }
 
@@ -145,7 +152,24 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	err = couchdb.ResetDB(in, consts.InstanceSettingsID)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	settingsDoc := &couchdb.JSONDoc{
+		Type: consts.Settings,
+		M:    make(map[string]interface{}),
+	}
+	settingsDoc.SetID(consts.InstanceSettingsID)
+	err = couchdb.CreateNamedDocWithDB(in, settingsDoc)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
+	couchdb.DeleteDB(in, consts.Settings)
 	os.Exit(res)
 }

@@ -11,4 +11,16 @@ var (
 	ErrMissingScope = errors.New("The scope parameter is mandatory")
 	//ErrMissingState is used when a request is missing the mandatory state
 	ErrMissingState = errors.New("The state parameter is mandatory")
+	// ErrSharingDoesNotExist is used when the given sharing does not exist.
+	ErrSharingDoesNotExist = errors.New("Sharing does not exist")
+	// ErrRecipientHasNoEmail is used to signal that a recipient has no email.
+	ErrRecipientHasNoEmail = errors.New("Recipient has no email")
+	// ErrRecipientHasNoURL is used to signal that a recipient has no URL.
+	ErrRecipientHasNoURL = errors.New("Recipient has no URL")
+	// ErrMailCouldNotBeSent is used when an error ocurred while trying to send
+	// an email.
+	ErrMailCouldNotBeSent = errors.New("Mail could not be sent")
+	// ErrNoOAuthClient is used when the owner of the Cozy has not yet
+	// registered to the recipient as an OAuth client.
+	ErrNoOAuthClient = errors.New("No OAuth client was found")
 )
