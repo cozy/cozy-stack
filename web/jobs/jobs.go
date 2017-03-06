@@ -172,7 +172,7 @@ func newTrigger(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	if err := permissions.Allow(c, permissions.GET, t); err != nil {
+	if err = permissions.Allow(c, permissions.GET, t); err != nil {
 		return err
 	}
 

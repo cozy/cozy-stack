@@ -52,6 +52,7 @@ func TestGetQueue(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
 	data := result["data"].(map[string]interface{})
 	typ := data["type"].(string)
 	assert.Equal(t, "io.cozy.queues", typ)

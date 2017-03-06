@@ -167,8 +167,13 @@ type (
 	}
 )
 
-func (jr *JobRequest) ID() string      { return "" }
+// ID implements the permissions.Validable interface
+func (jr *JobRequest) ID() string { return "" }
+
+// DocType implements the permissions.Validable interface
 func (jr *JobRequest) DocType() string { return consts.Jobs }
+
+// Valid implements the permissions.Validable interface
 func (jr *JobRequest) Valid(key, value string) bool {
 	switch key {
 	case "worker-type":
