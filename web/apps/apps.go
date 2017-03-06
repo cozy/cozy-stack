@@ -151,7 +151,7 @@ func IconHandler(c echo.Context) error {
 		return err
 	}
 
-	if err := permissions.Allow(c, permissions.GET, app); err != nil {
+	if err = permissions.Allow(c, permissions.GET, app); err != nil {
 		return err
 	}
 
