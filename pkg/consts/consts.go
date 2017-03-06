@@ -39,8 +39,10 @@ const (
 )
 
 const (
-	// FilesSlug is the slug of the default app, files
+	// FilesSlug is the slug of the default app, files, where the user is redirected after login
 	FilesSlug = "files"
+	// StoreSlug is the slug of the only app that can install other apps
+	StoreSlug = "store"
 )
 
 const (

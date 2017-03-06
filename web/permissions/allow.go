@@ -3,6 +3,7 @@ package permissions
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -57,6 +58,23 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
 	}
 	err = vfs.Allows(instance, *pdoc.Permissions, v, o)
 	if err != nil {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
+}
+
+// AllowInstallApp checks that the current context is tied to the store app,
+// which is the only app authorized to install or update other apps
+func AllowInstallApp(c echo.Context, v permissions.Verb) error {
+	pdoc, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+	sourceID := consts.Apps + "/" + consts.StoreSlug
+	if pdoc.Type != permissions.TypeApplication || pdoc.SourceID != sourceID {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if !pdoc.Permissions.AllowWholeType(v, consts.Apps) {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil

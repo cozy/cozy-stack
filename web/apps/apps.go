@@ -30,6 +30,11 @@ const typeTextEventStream = "text/event-stream"
 func InstallHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
+
+	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+		return err
+	}
+
 	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
 		SourceURL: c.QueryParam("Source"),
 		Slug:      slug,
@@ -46,6 +51,11 @@ func InstallHandler(c echo.Context) error {
 func UpdateHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
+
+	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+		return err
+	}
+
 	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
 		Slug: slug,
 	})

@@ -255,6 +255,24 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Equal(t, expected, string(body))
 }
 
+func TestOauthAppCantInstallApp(t *testing.T) {
+	req, _ := http.NewRequest("POST", ts.URL+"/apps/mini-bis?Source=git://github.com/nono/cozy-mini.git", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+}
+
+func TestOauthAppCantUpdateApp(t *testing.T) {
+	req, _ := http.NewRequest("PUT", ts.URL+"/apps/mini", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+}
+
 func TestListApps(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/apps/", nil)
 	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
