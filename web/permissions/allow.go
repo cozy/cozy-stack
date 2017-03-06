@@ -64,14 +64,22 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
 }
 
 // AllowInstallApp checks that the current context is tied to the store app,
-// which is the only app authorized to install or update other apps
+// which is the only app authorized to install or update other apps.
+// It also allow the cozy-stack apps commands to work (CLI).
 func AllowInstallApp(c echo.Context, v permissions.Verb) error {
 	pdoc, err := getPermission(c)
 	if err != nil {
 		return err
 	}
 	sourceID := consts.Apps + "/" + consts.StoreSlug
-	if pdoc.Type != permissions.TypeApplication || pdoc.SourceID != sourceID {
+	switch pdoc.Type {
+	case permissions.TypeCLI:
+		// OK
+	case permissions.TypeApplication:
+		if pdoc.SourceID != sourceID {
+			return echo.NewHTTPError(http.StatusForbidden)
+		}
+	default:
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	if !pdoc.Permissions.AllowWholeType(v, consts.Apps) {
