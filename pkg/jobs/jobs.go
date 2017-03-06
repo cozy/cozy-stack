@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
@@ -134,6 +136,7 @@ type (
 
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
+		permissions.Validable
 		Type() string
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
@@ -163,6 +166,23 @@ type (
 		Message    *Message    `json:"message"`
 	}
 )
+
+// ID implements the permissions.Validable interface
+func (jr *JobRequest) ID() string { return "" }
+
+// DocType implements the permissions.Validable interface
+func (jr *JobRequest) DocType() string { return consts.Jobs }
+
+// Valid implements the permissions.Validable interface
+func (jr *JobRequest) Valid(key, value string) bool {
+	switch key {
+	case "worker-type":
+		return jr.WorkerType == value
+	}
+	return false
+}
+
+var _ permissions.Validable = (*JobRequest)(nil)
 
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
