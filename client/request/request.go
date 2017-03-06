@@ -36,6 +36,7 @@ type (
 	// such cases, the response body is automatically closed.
 	Options struct {
 		Domain     string
+		Scheme     string
 		Method     string
 		Path       string
 		Queries    url.Values
@@ -94,11 +95,13 @@ func (b *BearerAuthorizer) AuthHeader() string {
 
 // Req performs a request with the specified request options.
 func Req(opts *Options) (*http.Response, error) {
-	var scheme string
-	if atomic.LoadInt32(&httpFallback) == 1 {
-		scheme = "http"
-	} else {
-		scheme = "https"
+	scheme := opts.Scheme
+	if scheme == "" {
+		if atomic.LoadInt32(&httpFallback) == 1 {
+			scheme = "http"
+		} else {
+			scheme = "https"
+		}
 	}
 	u := url.URL{
 		Scheme: scheme,

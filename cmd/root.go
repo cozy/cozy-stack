@@ -79,6 +79,7 @@ func newAdminClient() *client.Client {
 	}
 	return &client.Client{
 		Domain:     config.AdminServerAddr(),
+		Scheme:     "http",
 		Authorizer: &request.BasicAuthorizer{Password: string(pass)},
 	}
 }

@@ -54,12 +54,9 @@ example: cozy-stack config passwd ~/.cozy
 		}
 
 		directory := filepath.Join(utils.AbsPath(args[0]))
-		info, err := os.Stat(directory)
+		err := os.MkdirAll(directory, 0700)
 		if err != nil {
 			return err
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("%s is not a directory", directory)
 		}
 
 		_, err = fmt.Fprintf(os.Stdout, "Passphrase:")
