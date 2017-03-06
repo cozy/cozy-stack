@@ -14,16 +14,22 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const host = "cozy.io"
 
 var ts *httptest.Server
+var testInstance *instance.Instance
+var clientID string
 
 type jobRequest struct {
 	Arguments interface{} `json:"arguments"`
@@ -35,6 +41,25 @@ type jsonapiReq struct {
 
 type jsonapiData struct {
 	Attributes interface{} `json:"attributes"`
+}
+
+func TestGetQueue(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/queue/print", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	data := result["data"].(map[string]interface{})
+	typ := data["type"].(string)
+	assert.Equal(t, "io.cozy.queues", typ)
+	id := data["id"].(string)
+	assert.Equal(t, "print", id)
+	attrs := data["attributes"].(map[string]interface{})
+	count := attrs["count"].(float64)
+	assert.Equal(t, 0, int(count))
 }
 
 func TestCreateJob(t *testing.T) {
@@ -365,7 +390,8 @@ func TestMain(m *testing.M) {
 
 	instance.Destroy(host)
 
-	inst, err := instance.Create(&instance.Options{
+	var err error
+	testInstance, err = instance.Create(&instance.Options{
 		Domain: host,
 		Locale: "en",
 	})
@@ -374,14 +400,22 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if err = inst.StartJobSystem(); err != nil {
+	if err = testInstance.StartJobSystem(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
+	client := oauth.Client{
+		RedirectURIs: []string{"http://localhost/oauth/callback"},
+		ClientName:   "test-permissions",
+		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
+	}
+	client.Create(testInstance)
+	clientID = client.ClientID
+
 	handler := echo.New()
 	handler.HTTPErrorHandler = errors.ErrorHandler
-	group := handler.Group("/jobs", injectInstance(inst))
+	group := handler.Group("/jobs", injectInstance(testInstance))
 	Routes(group)
 	ts = httptest.NewServer(handler)
 
@@ -400,4 +434,17 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+func testToken(i *instance.Instance) string {
+	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  clientID,
+		},
+		Scope: consts.Queues,
+	})
+	return t
 }

@@ -11,6 +11,7 @@ import (
 	_ "github.com/cozy/cozy-stack/pkg/jobs/workers" // import all workers
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -64,6 +65,13 @@ func (q *apiQueue) Included() []jsonapi.Object             { return nil }
 func (q *apiQueue) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/queue/" + q.workerType}
 }
+func (q *apiQueue) Valid(key, value string) bool {
+	switch key {
+	case "worker-type":
+		return q.workerType == value
+	}
+	return false
+}
 
 func (t *apiTrigger) ID() string                             { return t.t.Infos().ID }
 func (t *apiTrigger) Rev() string                            { return "" }
@@ -90,6 +98,11 @@ func getQueue(c echo.Context) error {
 		workerType: workerType,
 		Count:      count,
 	}
+
+	if err := permissions.Allow(c, permissions.GET, o); err != nil {
+		return err
+	}
+
 	return jsonapi.Data(c, http.StatusOK, o, nil)
 }
 
@@ -194,8 +207,8 @@ func getAllTriggers(c echo.Context) error {
 
 // Routes sets the routing for the jobs service
 func Routes(router *echo.Group) {
-	router.POST("/queue/:worker-type", pushJob)
 	router.GET("/queue/:worker-type", getQueue)
+	router.POST("/queue/:worker-type", pushJob)
 
 	router.GET("/triggers", getAllTriggers)
 	router.POST("/triggers", newTrigger)
