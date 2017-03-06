@@ -1,12 +1,9 @@
 package workers
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	htmlTemplate "html/template"
-	textTemplate "text/template"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -65,20 +62,6 @@ type MailOptions struct {
 type MailPart struct {
 	Type string `json:"type"`
 	Body string `json:"body"`
-}
-
-// MailTemplate is a struct to define a mail template with HTML and text parts.
-type MailTemplate struct {
-	Name     string
-	BodyHTML string
-	BodyText string
-}
-
-// MailTemplater contains HTML and text templates to be used with the
-// TemplateName field of the MailOptions.
-type MailTemplater struct {
-	thtml *htmlTemplate.Template
-	ttext *textTemplate.Template
 }
 
 // SendMail is the sendmail worker function.
@@ -189,51 +172,4 @@ func addPart(mail *gomail.Message, part *MailPart) error {
 	}
 	mail.AddAlternative(contentType, part.Body)
 	return nil
-}
-
-func newMailTemplater(tmpls []*MailTemplate) (*MailTemplater, error) {
-	var thtml *htmlTemplate.Template
-	var ttext *textTemplate.Template
-	var tmpthtml *htmlTemplate.Template
-	var tmpttext *textTemplate.Template
-	for i, t := range tmpls {
-		name := t.Name
-		if i == 0 {
-			tmpthtml = htmlTemplate.New(name)
-			tmpttext = textTemplate.New(name)
-			thtml = tmpthtml
-			ttext = tmpttext
-		} else {
-			thtml = tmpthtml.New(name)
-			ttext = tmpttext.New(name)
-		}
-		if _, err := thtml.Parse(t.BodyHTML); err != nil {
-			return nil, err
-		}
-		if _, err := ttext.Parse(t.BodyText); err != nil {
-			return nil, err
-		}
-	}
-	return &MailTemplater{
-		thtml: thtml,
-		ttext: ttext,
-	}, nil
-}
-
-// Execute will execute the HTML and text temlates for the template with the
-// specified name. It returns the mail parts that should be added to the sent
-// mail.
-func (m *MailTemplater) Execute(name string, data interface{}) ([]*MailPart, error) {
-	bhtml := new(bytes.Buffer)
-	btext := new(bytes.Buffer)
-	if err := m.thtml.ExecuteTemplate(bhtml, name, data); err != nil {
-		return nil, err
-	}
-	if err := m.ttext.ExecuteTemplate(btext, name, data); err != nil {
-		return nil, err
-	}
-	return []*MailPart{
-		{Body: btext.String(), Type: "text/plain"},
-		{Body: bhtml.String(), Type: "text/html"},
-	}, nil
 }
