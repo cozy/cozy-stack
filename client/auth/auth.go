@@ -52,14 +52,13 @@ type (
 	// Request represents an OAuth request with client parameters (*Client) and
 	// list of scopes that the application wants to access.
 	Request struct {
-		ClientParams  *Client
-		Scopes        []string
-		Domain        string
-		DisableSecure bool
-		HTTPClient    *http.Client
-		UserAgent     string
-		UserAccept    UserAcceptFunc
-		Storage       Storage
+		ClientParams *Client
+		Scopes       []string
+		Domain       string
+		HTTPClient   *http.Client
+		UserAgent    string
+		UserAccept   UserAcceptFunc
+		Storage      Storage
 
 		token  *AccessToken
 		client *Client
@@ -185,7 +184,6 @@ func (r *Request) AuthCodeURL(c *Client, state string) (string, error) {
 func (r *Request) req(opts *request.Options) (*http.Response, error) {
 	opts.Domain = r.Domain
 	opts.Client = r.HTTPClient
-	opts.DisableSecure = r.DisableSecure
 	opts.ParseError = parseError
 	return request.Req(opts)
 }

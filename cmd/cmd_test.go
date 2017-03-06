@@ -70,9 +70,8 @@ func TestMain(m *testing.M) {
 	}
 
 	testClient = &client.Client{
-		Domain:        domain,
-		DisableSecure: true,
-		Authorizer:    &request.BearerAuthorizer{Token: token},
+		Domain:     domain,
+		Authorizer: &request.BearerAuthorizer{Token: token},
 	}
 
 	res := m.Run()

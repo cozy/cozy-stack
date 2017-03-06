@@ -44,11 +44,10 @@ type Client struct {
 	AuthStorage auth.Storage
 	Authorizer  request.Authorizer
 
-	UserAgent     string
-	Retries       int
-	Timeout       time.Duration
-	Transport     http.RoundTripper
-	DisableSecure bool
+	UserAgent string
+	Retries   int
+	Timeout   time.Duration
+	Transport http.RoundTripper
 
 	authed bool
 	inited int32
@@ -95,14 +94,13 @@ func (c *Client) Authenticate() (request.Authorizer, error) {
 	}
 	if c.auth == nil {
 		c.auth = &auth.Request{
-			ClientParams:  c.AuthClient,
-			Scopes:        c.AuthScopes,
-			Domain:        c.Domain,
-			DisableSecure: c.DisableSecure,
-			HTTPClient:    c.Client,
-			UserAgent:     c.UserAgent,
-			UserAccept:    c.AuthAccept,
-			Storage:       c.AuthStorage,
+			ClientParams: c.AuthClient,
+			Scopes:       c.AuthScopes,
+			Domain:       c.Domain,
+			HTTPClient:   c.Client,
+			UserAgent:    c.UserAgent,
+			UserAccept:   c.AuthAccept,
+			Storage:      c.AuthStorage,
 		}
 	}
 	if err := c.auth.Authenticate(); err != nil {
@@ -127,7 +125,6 @@ func (c *Client) Req(opts *request.Options) (*http.Response, error) {
 	opts.Domain = c.Domain
 	opts.Client = c.Client
 	opts.UserAgent = c.UserAgent
-	opts.DisableSecure = c.DisableSecure
 	opts.ParseError = parseJSONAPIError
 	return request.Req(opts)
 }

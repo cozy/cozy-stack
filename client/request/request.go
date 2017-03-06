@@ -12,7 +12,9 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync/atomic"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 )
 
@@ -56,6 +58,10 @@ type (
 	}
 )
 
+// httpFallback can be used to fallback on a non-secure http request if the
+// https one has failed to open. This should happend only on dev binaries.
+var httpFallback int32
+
 func (e *Error) Error() string {
 	if e.Detail == "" || e.Title == e.Detail {
 		return e.Title
@@ -89,10 +95,7 @@ func (b *BearerAuthorizer) AuthHeader() string {
 // Req performs a request with the specified request options.
 func Req(opts *Options) (*http.Response, error) {
 	var scheme string
-	if opts.DisableSecure {
-		if !config.IsDevRelease() {
-			panic("Should not disable HTTPs")
-		}
+	if atomic.LoadInt32(&httpFallback) == 1 {
 		scheme = "http"
 	} else {
 		scheme = "https"
@@ -144,6 +147,14 @@ func Req(opts *Options) (*http.Response, error) {
 
 	res, err := client.Do(req)
 	if err != nil {
+		// for a development release, we fallback on http mode if the https request
+		// is not successful.
+		// TODO: better identify the error (cross-platform)
+		if config.IsDevRelease() && scheme == "https" {
+			logrus.Debug("[request] fallback on http transport since https request has failed", err)
+			atomic.StoreInt32(&httpFallback, 1)
+			return Req(opts)
+		}
 		return nil, err
 	}
 
