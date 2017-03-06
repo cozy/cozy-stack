@@ -544,7 +544,7 @@ func passphraseReset(c echo.Context) error {
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
 	// (maybe by accident) asks for a passphrase reset while logged in, we log
-	// him out for him de re-go through the process of logging back-in. It is
+	// him out to be able to  re-go through the process of logging back-in. It is
 	// more a UX choice than a "security" one.
 	if middlewares.IsLoggedIn(c) {
 		session, err := sessions.GetSession(c, instance)
