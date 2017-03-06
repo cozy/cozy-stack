@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -32,7 +31,7 @@ func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if session, err := sessions.GetSession(c, instance); err == nil {
-		redirect := instance.SubDomain(apps.FilesSlug).String()
+		redirect := instance.SubDomain(consts.FilesSlug).String()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
@@ -93,7 +92,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
+	redirect, err := checkRedirectParam(c, instance.SubDomain(consts.FilesSlug))
 	if err != nil {
 		return err
 	}
@@ -111,7 +110,7 @@ func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
+	redirect, err := checkRedirectParam(c, instance.SubDomain(consts.FilesSlug))
 	if err != nil {
 		return err
 	}

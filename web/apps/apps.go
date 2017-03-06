@@ -12,9 +12,11 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -28,6 +30,11 @@ const typeTextEventStream = "text/event-stream"
 func InstallHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
+
+	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+		return err
+	}
+
 	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
 		SourceURL: c.QueryParam("Source"),
 		Slug:      slug,
@@ -44,6 +51,11 @@ func InstallHandler(c echo.Context) error {
 func UpdateHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
+
+	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+		return err
+	}
+
 	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
 		Slug: slug,
 	})
@@ -111,6 +123,11 @@ func writeStream(w http.ResponseWriter, event string, b []byte) {
 // installed applications.
 func ListHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Apps); err != nil {
+		return err
+	}
+
 	docs, err := apps.List(instance)
 	if err != nil {
 		return wrapAppsError(err)
@@ -133,6 +150,11 @@ func IconHandler(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
+	if err = permissions.Allow(c, permissions.GET, app); err != nil {
+		return err
+	}
+
 	filepath := path.Join(vfs.AppsDirName, slug, app.Icon)
 	r, err := instance.FS().Open(filepath)
 	if err != nil {

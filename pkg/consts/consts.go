@@ -39,6 +39,13 @@ const (
 )
 
 const (
+	// FilesSlug is the slug of the default app, files, where the user is redirected after login
+	FilesSlug = "files"
+	// StoreSlug is the slug of the only app that can install other apps
+	StoreSlug = "store"
+)
+
+const (
 	// DirType is the type attribute for directories
 	DirType = "directory"
 	// FileType is the type attribute for files

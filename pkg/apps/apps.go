@@ -39,13 +39,6 @@ const (
 	Ready = "ready"
 )
 
-// Some well known slugs
-const (
-	OnboardingSlug = "onboarding"
-	HomeSlug       = "home"
-	FilesSlug      = "files"
-)
-
 // Access is a string representing the access permission level. It can
 // either be read, write or readwrite.
 type Access string
@@ -139,6 +132,22 @@ func (m *Manifest) Relationships() jsonapi.RelationshipMap {
 func (m *Manifest) Included() []jsonapi.Object {
 	return []jsonapi.Object{}
 }
+
+// Valid implements permissions.Validable on Manifest
+func (m *Manifest) Valid(field, value string) bool {
+	switch field {
+	case "slug":
+		return m.Slug == value
+	case "state":
+		return m.State == State(value)
+	}
+	return false
+}
+
+var (
+	_ jsonapi.Object        = (*Manifest)(nil)
+	_ permissions.Validable = (*Manifest)(nil)
+)
 
 // List returns the list of installed applications.
 //
