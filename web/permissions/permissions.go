@@ -1,6 +1,7 @@
 package permissions
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -82,9 +83,56 @@ func createPermission(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, pdoc, nil)
 }
 
+type refAndVerb struct {
+	ID      string               `json:"id"`
+	DocType string               `json:"type"`
+	Verbs   *permissions.VerbSet `json:"verbs"`
+}
+
+func listPermissions(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	references, err := jsonapi.BindRelations(c.Request())
+	if err != nil {
+		return err
+	}
+	ids := make(map[string][]string)
+	for _, ref := range references {
+		idSlice, ok := ids[ref.Type]
+		if !ok {
+			idSlice = []string{}
+		}
+		ids[ref.Type] = append(idSlice, ref.ID)
+	}
+
+	var out []refAndVerb
+	for doctype, idSlice := range ids {
+		result, err2 := permissions.GetPermissionsForIDs(instance, doctype, idSlice)
+		if err2 != nil {
+			return err2
+		}
+		for id, verbs := range result {
+			out = append(out, refAndVerb{id, doctype, verbs})
+		}
+	}
+
+	data, err := json.Marshal(out)
+	if err != nil {
+		return err
+	}
+	doc := jsonapi.Document{
+		Data: (*json.RawMessage)(&data),
+	}
+	resp := c.Response()
+	resp.Header().Set("Content-Type", jsonapi.ContentType)
+	resp.WriteHeader(http.StatusOK)
+	return json.NewEncoder(resp).Encode(doc)
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
 	router.GET("/self", displayPermissions)
+	router.POST("/exists", listPermissions)
 }

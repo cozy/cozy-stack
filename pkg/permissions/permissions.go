@@ -46,6 +46,7 @@ const (
 var Index = mango.IndexOnFields("source_id", "type")
 
 const shareByCView = "byToken"
+const shareByDocView = "byDoc"
 
 // Views are athe necessary views for this package
 // used in instance creation
@@ -55,6 +56,20 @@ var Views = couchdb.Views{
 function(doc){
 	if(doc.type === "share" && doc.codes)
 		Object.keys(doc.codes).forEach(function(k){ emit(doc.codes[k]) })
+}`,
+	},
+	shareByDocView: couchdb.View{
+		Map: `
+function(doc){
+	if(doc.type === "share" && doc.permissions) {
+		Object.keys(doc.permissions).forEach(function(k){
+			var p = doc.permissions[k];
+			var selector = p.selector || "_id";
+			for(var i=0; i<p.values.length; i++) {
+				emit([p.type, selector, p.values[i]], p.verbs);
+			}
+		});
+	}
 }`,
 	},
 }
@@ -265,4 +280,42 @@ func DestroyApp(db couchdb.Database, slug string) error {
 		}
 	}
 	return nil
+}
+
+// GetPermissionsForIDs gets permissions for several IDs
+// returns for every id the combined allowed verbset
+func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (map[string]*VerbSet, error) {
+
+	var res struct {
+		Rows []struct {
+			ID    string   `json:"id"`
+			Key   []string `json:"key"`
+			Value *VerbSet `json:"value"`
+		} `json:"rows"`
+	}
+
+	keys := make([]interface{}, len(ids))
+	for i, id := range ids {
+		keys[i] = []string{doctype, "_id", id}
+	}
+
+	err := couchdb.ExecView(db, &couchdb.ViewRequest{
+		Doctype:  consts.Permissions,
+		ViewName: shareByDocView,
+		Keys:     keys,
+	}, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*VerbSet)
+	for _, row := range res.Rows {
+		if _, ok := result[row.Key[2]]; ok {
+			result[row.Key[2]].Merge(row.Value)
+		} else {
+			result[row.Key[2]] = row.Value
+		}
+	}
+
+	return result, nil
 }

@@ -91,10 +91,17 @@ func (vs *VerbSet) UnmarshalJSON(b []byte) error {
 	for v := range ALL {
 		delete(*vs, v)
 	}
-	for v := range *vs {
-		(*vs)[v] = struct{}{}
+	for _, v := range s {
+		(*vs)[Verb(v)] = struct{}{}
 	}
 	return nil
+}
+
+// Merge add verbs to the set
+func (vs *VerbSet) Merge(verbs *VerbSet) {
+	for v := range *verbs {
+		(*vs)[v] = struct{}{}
+	}
 }
 
 // VerbSplit parse a string into a VerbSet
