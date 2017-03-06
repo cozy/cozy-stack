@@ -339,11 +339,12 @@ To run a given konnector, the stack will copy this connector in a "run" director
 the VFS. This directory will be given to the rocket container as the current working directory
 with full read and write access on it. This is where the container will put its logs and any temp
 file needed. There will be also cozy-client.js and the shared libraries in a lib directory inside
-this directory.
+this directory. The lib directory will be the content of the [actual server lib
+directory](https://github.com/cozy-labs/konnectors/tree/master/server/lib).
 
 The konnector will be run with the following environment variables :
 
-- COZY_CREDENTIALS
+- COZY_TOKEN
 - COZY_URL : to know what instance is running the konnector
 - KONNECTOR_CREDENTIALS : as a json string with all the values from the account associated to the
 konnector.
