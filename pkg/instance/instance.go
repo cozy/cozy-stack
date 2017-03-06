@@ -620,6 +620,8 @@ func (i *Instance) RequestPassphraseReset() error {
 	return err
 }
 
+// PassphraseRenew changes the passphrase to the specified one if the given
+// token matches the `PassphraseResetToken` field.
 func (i *Instance) PassphraseRenew(pass, tok []byte) error {
 	if i.PassphraseResetToken == nil {
 		return ErrMissingToken

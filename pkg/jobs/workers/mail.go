@@ -27,8 +27,12 @@ func init() {
 }
 
 const (
+	// MailModeNoReply is the no-reply mode of a mail, to send mail "to" the
+	// user's mail, as a noreply@
 	MailModeNoReply = "noreply"
-	MailModeFrom    = "from"
+	// MailModeFrom is the "from" mode of a mail, to send mail "from" the user's
+	// mail.
+	MailModeFrom = "from"
 )
 
 // var for testability
@@ -63,12 +67,15 @@ type MailPart struct {
 	Body string `json:"body"`
 }
 
+// MailTemplate is a struct to define a mail template with HTML and text parts.
 type MailTemplate struct {
 	Name     string
 	BodyHTML string
 	BodyText string
 }
 
+// MailTemplater contains HTML and text templates to be used with the
+// TemplateName field of the MailOptions.
 type MailTemplater struct {
 	thtml *htmlTemplate.Template
 	ttext *textTemplate.Template
@@ -213,6 +220,9 @@ func newMailTemplater(tmpls []*MailTemplate) (*MailTemplater, error) {
 	}, nil
 }
 
+// Execute will execute the HTML and text temlates for the template with the
+// specified name. It returns the mail parts that should be added to the sent
+// mail.
 func (m *MailTemplater) Execute(name string, data interface{}) ([]*MailPart, error) {
 	bhtml := new(bytes.Buffer)
 	btext := new(bytes.Buffer)
