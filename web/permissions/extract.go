@@ -81,7 +81,7 @@ func parseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 
 	case permissions.CLIAudience:
 		// do not check client existence
-		return permissions.GetForOauth(&claims)
+		return permissions.GetForCLI(&claims)
 
 	case permissions.AppAudience:
 		pdoc, err := permissions.GetForApp(instance, claims.Subject)

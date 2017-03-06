@@ -36,6 +36,9 @@ const (
 
 	// TypeOauth if the value of Permission.Type for a oauth permission doc
 	TypeOauth = "oauth"
+
+	// TypeCLI if the value of Permission.Type for a command-line permission doc
+	TypeCLI = "cli"
 )
 
 // Index is the necessary index for this package
@@ -115,6 +118,19 @@ func GetForOauth(claims *Claims) (*Permission, error) {
 	}
 	pdoc := &Permission{
 		Type:        TypeOauth,
+		Permissions: set,
+	}
+	return pdoc, nil
+}
+
+// GetForCLI create a non-persisted permissions doc for the command-line
+func GetForCLI(claims *Claims) (*Permission, error) {
+	set, err := UnmarshalScopeString(claims.Scope)
+	if err != nil {
+		return nil, err
+	}
+	pdoc := &Permission{
+		Type:        TypeCLI,
 		Permissions: set,
 	}
 	return pdoc, nil
