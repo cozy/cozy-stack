@@ -2,40 +2,47 @@ package realtime
 
 import "sync"
 
-type hub struct {
-	sync.Mutex
+const global = "io.cozy.realtime.global.instance"
 
+type hub struct {
+	sync.RWMutex
 	// topics should only be manipulated by the hub loop
 	// it is a Map(instance + type -> Topic)
-	instanceTopics map[string]*topic
-
-	// Map(domain -> Topic)
-	globalTopics map[string]*topic
+	topics map[string]*topic
 }
 
 func (h *hub) Publish(e *Event) {
 	panic("Wrong usage : you should not publish on central hub.")
 }
 
-func (h *hub) Subscribe(t string) EventChannel {
-	h.Lock()
-	defer h.Unlock()
-	gt, ok := h.globalTopics[t]
-	if !ok {
-		h.globalTopics[t] = makeTopic(h, t)
-		gt = h.globalTopics[t]
+func (h *hub) getTopic(instance, t string, createIfNone bool) *topic {
+	if !createIfNone {
+		h.RLock()
+		defer h.RUnlock()
+	} else {
+		h.Lock()
+		defer h.Unlock()
 	}
+	key := topicKey(instance, t)
+	it, exists := h.topics[key]
+	if !exists && createIfNone {
+		h.topics[key] = makeTopic(h, key)
+		it = h.topics[key]
+	}
+	return it
+}
+
+func (h *hub) Subscribe(t string) EventChannel {
+	gt := h.getTopic(global, t, true)
 	sub := makeSub([]*topic{gt})
 	go func() { gt.subscribe <- sub }()
-
 	return sub
 }
 
 func (h *hub) remove(t *topic) {
 	h.Lock()
 	defer h.Unlock()
-	delete(h.globalTopics, t.key)
-	delete(h.instanceTopics, t.key)
+	delete(h.topics, t.key)
 }
 
 type instancehub struct {
@@ -44,28 +51,19 @@ type instancehub struct {
 }
 
 func (ih *instancehub) Publish(e *Event) {
-	ih.mainHub.Lock()
-	defer ih.mainHub.Unlock()
-	it, ok := ih.mainHub.instanceTopics[topicKey(ih.instance, e.DocType)]
-	if ok {
+	it := ih.mainHub.getTopic(ih.instance, e.DocType, false)
+	if it != nil {
 		it.publish(e)
 	}
 	e.Instance = ih.instance
-	gt, ok := ih.mainHub.globalTopics[e.DocType]
-	if ok {
+	gt := ih.mainHub.getTopic(global, e.DocType, false)
+	if gt != nil {
 		gt.publish(e)
 	}
 }
 
 func (ih *instancehub) Subscribe(t string) EventChannel {
-	ih.mainHub.Lock()
-	defer ih.mainHub.Unlock()
-	key := topicKey(ih.instance, t)
-	it, ok := ih.mainHub.instanceTopics[key]
-	if !ok {
-		ih.mainHub.instanceTopics[key] = makeTopic(ih.mainHub, key)
-		it = ih.mainHub.instanceTopics[key]
-	}
+	it := ih.mainHub.getTopic(ih.instance, t, true)
 	sub := makeSub([]*topic{it})
 	go func() { it.subscribe <- sub }()
 
@@ -76,8 +74,7 @@ var mainHub *hub
 
 func init() {
 	mainHub = &hub{
-		instanceTopics: make(map[string]*topic),
-		globalTopics:   make(map[string]*topic),
+		topics: make(map[string]*topic),
 	}
 }
 

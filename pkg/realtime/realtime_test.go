@@ -44,7 +44,7 @@ func TestRealtime(t *testing.T) {
 		wg.Done()
 	}()
 
-	time.AfterFunc(1*time.Nanosecond, func() {
+	time.AfterFunc(1*time.Millisecond, func() {
 		h.Publish(&Event{
 			DocType: "io.cozy.testobject",
 			DocID:   "foo",

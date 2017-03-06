@@ -36,6 +36,7 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 					Options:    t.infos.Options,
 				}
 			case <-t.unscheduled:
+				close(ch)
 				return
 			}
 		}
@@ -45,7 +46,7 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 
 // Unschedule implements the Unschedule method of the Trigger interface.
 func (t *EventTrigger) Unschedule() {
-	go func() { t.unscheduled <- struct{}{} }()
+	close(t.unscheduled)
 }
 
 // Infos implements the Infos method of the Trigger interface.
