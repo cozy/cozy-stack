@@ -329,7 +329,10 @@ func TestGetAllJobs(t *testing.T) {
 		}
 	}
 
-	res1, err := http.Get(ts.URL + "/jobs/triggers")
+	req1, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
+	assert.NoError(t, err)
+	req1.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -361,7 +364,10 @@ func TestGetAllJobs(t *testing.T) {
 	}
 	assert.Equal(t, http.StatusCreated, res2.StatusCode)
 
-	res3, err := http.Get(ts.URL + "/jobs/triggers")
+	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
+	assert.NoError(t, err)
+	req3.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res3, err := http.DefaultClient.Do(req3)
 	if !assert.NoError(t, err) {
 		return
 	}

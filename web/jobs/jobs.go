@@ -214,6 +214,9 @@ func deleteTrigger(c echo.Context) error {
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+		return err
+	}
 	ts, err := scheduler.GetAll()
 	if err != nil {
 		return wrapJobsError(err)
