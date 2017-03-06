@@ -36,7 +36,7 @@ const (
 
 // passwordResetValidityDuration is the validity duration of the passphrase
 // reset token.
-var passwordResetValidityDuration = 1 * 24 * time.Hour
+var passwordResetValidityDuration = 15 * time.Minute
 
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
