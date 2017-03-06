@@ -189,6 +189,9 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+	if err := permissions.Allow(c, permissions.GET, t); err != nil {
+		return err
+	}
 	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
 }
 

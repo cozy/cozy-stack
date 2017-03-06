@@ -204,7 +204,10 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	}
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 
-	res3, err := http.Get(ts.URL + "/jobs/triggers/" + triggerID)
+	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req3.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res3, err := http.DefaultClient.Do(req3)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -214,14 +217,16 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	res4, err := http.DefaultClient.Do(req4)
 	if !assert.NoError(t, err) {
 		return
 	}
 	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
 
-	res5, err := http.Get(ts.URL + "/jobs/triggers/" + triggerID)
+	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req5.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res5, err := http.DefaultClient.Do(req5)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -288,7 +293,10 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	}
 	assert.Equal(t, http.StatusBadRequest, res2.StatusCode)
 
-	res3, err := http.Get(ts.URL + "/jobs/triggers/" + triggerID)
+	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req3.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res3, err := http.DefaultClient.Do(req3)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -298,14 +306,16 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	res4, err := http.DefaultClient.Do(req4)
 	if !assert.NoError(t, err) {
 		return
 	}
 	assert.Equal(t, http.StatusNoContent, res4.StatusCode)
 
-	res5, err := http.Get(ts.URL + "/jobs/triggers/" + triggerID)
+	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
+	assert.NoError(t, err)
+	req5.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	res5, err := http.DefaultClient.Do(req5)
 	if !assert.NoError(t, err) {
 		return
 	}
