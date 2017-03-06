@@ -31,6 +31,10 @@ const (
 	MailModeFrom    = "from"
 )
 
+// var for testability
+var mailTemplater *MailTemplater
+var sendMail = doSendMail
+
 // MailAddress contains the name and mail of a mail recipient.
 type MailAddress struct {
 	Name  string `json:"name"`
@@ -48,6 +52,7 @@ type MailOptions struct {
 	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
 	Date           *time.Time            `json:"date"`
 	Parts          []*MailPart           `json:"parts"`
+	TemplateName   string                `json:"template_name"`
 	TemplateValues interface{}           `json:"template_values"`
 }
 
@@ -56,6 +61,17 @@ type MailOptions struct {
 type MailPart struct {
 	Type string `json:"type"`
 	Body string `json:"body"`
+}
+
+type MailTemplate struct {
+	Name     string
+	BodyHTML string
+	BodyText string
+}
+
+type MailTemplater struct {
+	thtml *htmlTemplate.Template
+	ttext *textTemplate.Template
 }
 
 // SendMail is the sendmail worker function.
@@ -136,8 +152,19 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 		"Subject": {opts.Subject},
 	})
 	mail.SetDateHeader("Date", date)
-	for _, part := range opts.Parts {
-		if err := addPart(mail, part, opts.TemplateValues); err != nil {
+
+	var parts []*MailPart
+	var err error
+	if opts.TemplateName != "" {
+		parts, err = mailTemplater.Execute(opts.TemplateName, opts.TemplateValues)
+		if err != nil {
+			return err
+		}
+	} else {
+		parts = opts.Parts
+	}
+	for _, part := range parts {
+		if err = addPart(mail, part); err != nil {
 			return err
 		}
 	}
@@ -148,39 +175,55 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 	return dialer.DialAndSend(mail)
 }
 
-func addPart(mail *gomail.Message, part *MailPart, templateValues interface{}) error {
+func addPart(mail *gomail.Message, part *MailPart) error {
 	contentType := part.Type
-	var body string
 	if contentType != "text/plain" && contentType != "text/html" {
 		return fmt.Errorf("Unknown body content-type %s", contentType)
 	}
-	if templateValues != nil {
-		b := new(bytes.Buffer)
-		switch contentType {
-		case "text/html":
-			t, err := htmlTemplate.New("mail").Parse(part.Body)
-			if err != nil {
-				return err
-			}
-			if err = t.Execute(b, templateValues); err != nil {
-				return err
-			}
-		case "text/plain":
-			t, err := textTemplate.New("mail").Parse(part.Body)
-			if err != nil {
-				return err
-			}
-			if err = t.Execute(b, templateValues); err != nil {
-				return err
-			}
-		}
-		body = b.String()
-	} else {
-		body = part.Body
-	}
-	mail.AddAlternative(contentType, body)
+	mail.AddAlternative(contentType, part.Body)
 	return nil
 }
 
-// var for testability
-var sendMail = doSendMail
+func newMailTemplater(tmpls []*MailTemplate) (*MailTemplater, error) {
+	var thtml *htmlTemplate.Template
+	var ttext *textTemplate.Template
+	var tmpthtml *htmlTemplate.Template
+	var tmpttext *textTemplate.Template
+	for i, t := range tmpls {
+		name := t.Name
+		if i == 0 {
+			tmpthtml = htmlTemplate.New(name)
+			tmpttext = textTemplate.New(name)
+			thtml = tmpthtml
+			ttext = tmpttext
+		} else {
+			thtml = tmpthtml.New(name)
+			ttext = tmpttext.New(name)
+		}
+		if _, err := thtml.Parse(t.BodyHTML); err != nil {
+			return nil, err
+		}
+		if _, err := ttext.Parse(t.BodyText); err != nil {
+			return nil, err
+		}
+	}
+	return &MailTemplater{
+		thtml: thtml,
+		ttext: ttext,
+	}, nil
+}
+
+func (m *MailTemplater) Execute(name string, data interface{}) ([]*MailPart, error) {
+	bhtml := new(bytes.Buffer)
+	btext := new(bytes.Buffer)
+	if err := m.thtml.ExecuteTemplate(bhtml, name, data); err != nil {
+		return nil, err
+	}
+	if err := m.ttext.ExecuteTemplate(btext, name, data); err != nil {
+		return nil, err
+	}
+	return []*MailPart{
+		{Body: btext.String(), Type: "text/plain"},
+		{Body: bhtml.String(), Type: "text/html"},
+	}, nil
+}

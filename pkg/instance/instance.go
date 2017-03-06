@@ -2,6 +2,7 @@ package instance
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -596,17 +597,17 @@ func (i *Instance) RequestPassphraseReset() error {
 	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
 		return err
 	}
+	// Send a mail containing the reset url for the user to actually reset its
+	// passphrase.
+	resetURL := i.PageURL("/passphrase_renew", url.Values{
+		"token": {hex.EncodeToString(i.PassphraseResetToken)},
+	})
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, &workers.MailOptions{
-		Mode:    workers.MailModeNoReply,
-		Subject: "Password reset",
-		Parts: []*workers.MailPart{
-			{Type: "text/html", Body: ""},
-			{Type: "text/plain", Body: ""},
-		},
-		TemplateValues: struct {
-			Token string
-		}{
-			Token: string(i.RegisterToken),
+		Mode:         workers.MailModeNoReply,
+		Subject:      "Password reset",
+		TemplateName: "passphrase_reset",
+		TemplateValues: struct{ PassphraseResetLink string }{
+			PassphraseResetLink: resetURL,
 		},
 	})
 	if err != nil {
