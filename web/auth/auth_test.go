@@ -1047,17 +1047,30 @@ func TestPassphraseResetLoggedIn(t *testing.T) {
 	assert.Equal(t, "200 OK", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), `Are you sure`)
+	assert.Contains(t, string(body), `<input type="hidden" name="csrf_token"`)
 }
 
 func TestPassphraseReset(t *testing.T) {
-	res, err := postForm("/auth/passphrase_reset", &url.Values{})
+	req1, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_reset", nil)
+	req1.Host = domain
+	res1, err := client.Do(req1)
 	if !assert.NoError(t, err) {
 		return
 	}
-	defer res.Body.Close()
-	if assert.Equal(t, "303 See Other", res.Status) {
+	defer res1.Body.Close()
+	assert.Equal(t, "200 OK", res1.Status)
+	csrfCookie := res1.Cookies()[0]
+	assert.Equal(t, "_csrf", csrfCookie.Name)
+	res2, err := postForm("/auth/passphrase_reset", &url.Values{
+		"csrf_token": {csrfCookie.Value},
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res2.Body.Close()
+	if assert.Equal(t, "303 See Other", res2.Status) {
 		assert.Equal(t, "https://cozy.example.net/auth/login",
-			res.Header.Get("Location"))
+			res2.Header.Get("Location"))
 	}
 }
 
@@ -1118,27 +1131,39 @@ func TestPassphraseRenew(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	res1, err := postFormDomain(d, "/auth/passphrase_reset", &url.Values{})
+	req1, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_reset", nil)
+	req1.Host = domain
+	res1, err := client.Do(req1)
 	if !assert.NoError(t, err) {
 		return
 	}
 	defer res1.Body.Close()
-	assert.Equal(t, "303 See Other", res1.Status)
-	in2, err := instance.Get(d)
-	if !assert.NoError(t, err) {
-		return
-	}
-	res2, err := postFormDomain(d, "/auth/passphrase_renew", &url.Values{
-		"passphrase-reset-token": {hex.EncodeToString(in2.PassphraseResetToken)},
-		"passphrase":             {"NewPassphrase"},
+	csrfCookie := res1.Cookies()[0]
+	assert.Equal(t, "_csrf", csrfCookie.Name)
+	res2, err := postFormDomain(d, "/auth/passphrase_reset", &url.Values{
+		"csrf_token": {csrfCookie.Value},
 	})
 	if !assert.NoError(t, err) {
 		return
 	}
 	defer res2.Body.Close()
-	if assert.Equal(t, "303 See Other", res2.Status) {
+	assert.Equal(t, "303 See Other", res2.Status)
+	in2, err := instance.Get(d)
+	if !assert.NoError(t, err) {
+		return
+	}
+	res3, err := postFormDomain(d, "/auth/passphrase_renew", &url.Values{
+		"passphrase-reset-token": {hex.EncodeToString(in2.PassphraseResetToken)},
+		"passphrase":             {"NewPassphrase"},
+		"csrf_token":             {csrfCookie.Value},
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res3.Body.Close()
+	if assert.Equal(t, "303 See Other", res3.Status) {
 		assert.Equal(t, "https://test.cozycloud.cc.web_reset_form/auth/login",
-			res2.Header.Get("Location"))
+			res3.Header.Get("Location"))
 	}
 }
 

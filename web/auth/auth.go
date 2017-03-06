@@ -532,7 +532,9 @@ func passphraseResetForm(c echo.Context) error {
 		redirect := defaultRedirectDomain(instance).String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
-	return c.Render(http.StatusOK, "passphrase_reset.html", nil)
+	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
+		"CSRF": c.Get("csrf"),
+	})
 }
 
 func passphraseReset(c echo.Context) error {
@@ -571,6 +573,7 @@ func passphraseRenewForm(c echo.Context) error {
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
 		"PassphraseResetToken": token,
+		"CSRF":                 c.Get("csrf"),
 	})
 }
 
@@ -609,10 +612,10 @@ func Routes(router *echo.Group) {
 	router.DELETE("/login", logout)
 	router.OPTIONS("/login", logoutPreflight)
 
-	router.GET("/passphrase_reset", passphraseResetForm)
-	router.POST("/passphrase_reset", passphraseReset)
-	router.GET("/passphrase_renew", passphraseRenewForm)
-	router.POST("/passphrase_renew", passphraseRenew)
+	router.GET("/passphrase_reset", passphraseResetForm, noCSRF)
+	router.POST("/passphrase_reset", passphraseReset, noCSRF)
+	router.GET("/passphrase_renew", passphraseRenewForm, noCSRF)
+	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

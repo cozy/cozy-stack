@@ -32,6 +32,7 @@
             </header>
             <div role="region">
               <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="login auth">
+              <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
               <input id="passphrase-reset-token" type="hidden" name="passphrase-reset-token" value="{{.PassphraseResetToken}}" />
                 <p class="help" id="login-password-tip">Enter a new password</p>
                 <p class="line">
