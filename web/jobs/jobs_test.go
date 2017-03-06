@@ -68,7 +68,10 @@ func TestCreateJob(t *testing.T) {
 			Attributes: &jobRequest{Arguments: "foobar"},
 		},
 	})
-	res, err := http.Post(ts.URL+"/jobs/queue/print", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/print", bytes.NewReader(body))
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -81,7 +84,10 @@ func TestCreateJobNotExist(t *testing.T) {
 			Attributes: &jobRequest{Arguments: "foobar"},
 		},
 	})
-	res, err := http.Post(ts.URL+"/jobs/queue/none", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/none", bytes.NewReader(body))
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -103,6 +109,7 @@ func TestCreateJobWithEventStream(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "text/event-stream")
 	res, err := http.DefaultClient.Do(req)
@@ -444,7 +451,7 @@ func testToken(i *instance.Instance) string {
 			IssuedAt: crypto.Timestamp(),
 			Subject:  clientID,
 		},
-		Scope: consts.Queues,
+		Scope: consts.Queues + " " + consts.Jobs,
 	})
 	return t
 }

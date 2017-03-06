@@ -114,14 +114,19 @@ func pushJob(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	job, ch, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
+	jr := &jobs.JobRequest{
 		WorkerType: c.Param("worker-type"),
 		Options:    req.Options,
 		Message: &jobs.Message{
 			Type: jobs.JSONEncoding,
 			Data: req.Arguments,
 		},
-	})
+	}
+	if err := permissions.Allow(c, permissions.GET, jr); err != nil {
+		return err
+	}
+
+	job, ch, err := instance.JobsBroker().PushJob(jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}

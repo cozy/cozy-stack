@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
@@ -163,6 +165,18 @@ type (
 		Message    *Message    `json:"message"`
 	}
 )
+
+func (jr *JobRequest) ID() string      { return "" }
+func (jr *JobRequest) DocType() string { return consts.Jobs }
+func (jr *JobRequest) Valid(key, value string) bool {
+	switch key {
+	case "worker-type":
+		return jr.WorkerType == value
+	}
+	return false
+}
+
+var _ permissions.Validable = (*JobRequest)(nil)
 
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
