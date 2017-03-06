@@ -174,7 +174,7 @@ func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
 		return err
 	}
 	for _, rec := range recStatus {
-		rec.Status = consts.PendingStatus
+		rec.Status = consts.PendingSharingStatus
 	}
 
 	sharing.Owner = true

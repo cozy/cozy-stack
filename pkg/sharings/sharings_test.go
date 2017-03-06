@@ -133,7 +133,7 @@ func TestCheckSharingCreation(t *testing.T) {
 
 	rStatus := sharing.RecipientsStatus
 	for _, rec := range rStatus {
-		assert.Equal(t, consts.PendingStatus, rec.Status)
+		assert.Equal(t, consts.PendingSharingStatus, rec.Status)
 	}
 }
 
@@ -166,7 +166,6 @@ func TestMain(m *testing.M) {
 	err = couchdb.CreateNamedDocWithDB(in, settingsDoc)
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
 	}
 
 	res := m.Run()

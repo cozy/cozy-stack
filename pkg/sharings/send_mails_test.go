@@ -40,7 +40,7 @@ func TestLogErrorAndSetRecipientStatus(t *testing.T) {
 	res := logErrorAndSetRecipientStatus(recStatus, err)
 
 	assert.Equal(t, true, res)
-	assert.Equal(t, consts.ErrorStatus, recStatus.Status)
+	assert.Equal(t, consts.ErrorSharingStatus, recStatus.Status)
 }
 
 func TestGenerateMailMessageWhenRecipientHasNoEmail(t *testing.T) {
@@ -51,7 +51,7 @@ func TestGenerateMailMessageWhenRecipientHasNoEmail(t *testing.T) {
 }
 
 func TestGenerateMailMessageSuccess(t *testing.T) {
-	rec.Email = "this@is.mail"
+	rec.Email = "this@mail.com"
 	_, err := generateMailMessage(sharing, rec, mailValues)
 	assert.NoError(t, err)
 }
@@ -112,7 +112,7 @@ func TestSendSharingMails(t *testing.T) {
 	rec.Email = ""
 	err = couchdb.UpdateDoc(in, rec)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Printf("(send_mails_test:123) %v\n", err)
 		t.Fail()
 	}
 

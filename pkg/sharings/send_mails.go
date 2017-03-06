@@ -22,7 +22,7 @@ const (
         <p>The description given is: {{.Description}}.</p>
 
         <form action="{{.OAuthQueryString}}">
-            <input type="submit" value="See this document" />
+            <input type="submit" value="Accept this sharing" />
         </form>
         </p>
     `
@@ -34,12 +34,12 @@ const (
         <p>La description associée est : {{.Description}}.</p>
 
         <form action="{{.OAuthQueryString}}">
-            <input type="submit" value="Voir le document" />
+            <input type="submit" value="Accepter le partage" />
         </form>
     `
 )
 
-// The sharing-dependent information: the recipient's name, the sharer's public
+// The sharing-dependant information: the recipient's name, the sharer's public
 // name, the description of the sharing, and the OAuth query string.
 type mailTemplateValues struct {
 	RecipientName    string
@@ -89,7 +89,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		recipientOAuthQueryString, err := generateOAuthQueryString(s, recipient)
 		if err != nil {
 			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
-			break
+			continue
 		}
 
 		// Augment base values with recipient specific information.
@@ -99,11 +99,14 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		sharingMessage, err := generateMailMessage(s, recipient, mailValues)
 		if err != nil {
 			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
-			break
+			continue
 		}
 
 		// We ask to queue a new mail job.
-		// XXX Do we have to do something with the returned values?
+		// The returned values (other than the error) are ignored because they
+		// are of no use in this situation.
+		// FI: they correspond to the job information and to a channel with
+		// which we can check the advancement of said job.
 		_, _, err = instance.JobsBroker().PushJob(&jobs.JobRequest{
 			WorkerType: "sendmail",
 			Options:    nil,
@@ -111,7 +114,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		})
 		if err != nil {
 			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
-			break
+			continue
 		}
 	}
 
@@ -128,13 +131,13 @@ func logErrorAndSetRecipientStatus(rs *RecipientStatus, err error) bool {
 	log.Error(`[Sharing] An error occurred while trying to send
         the email invitation`, err)
 
-	rs.Status = consts.ErrorStatus
+	rs.Status = consts.ErrorSharingStatus
 	return true
 }
 
-// generatemailMessage will extract and compute the relevant information
-// from the sharing to generate the mail we will send to the recipient
-// specified.
+// generateMailMessage will extract and compute the relevant information
+// from the sharing to generate the mail we will send to the specified
+// recipient.
 func generateMailMessage(s *Sharing, r *Recipient,
 	mailValues *mailTemplateValues) (*jobs.Message, error) {
 
@@ -150,9 +153,6 @@ func generateMailMessage(s *Sharing, r *Recipient,
 	mailParts := []*workers.MailPart{&mailPartEn, &mailPartFr}
 
 	// The address of the recipient.
-	// XXX In addition to testing if the email was provided, do we test if it
-	// actually corresponds to an email or do we "wait" for the error triggered
-	// by the mail job?
 	if r.Email == "" {
 		return nil, ErrRecipientHasNoEmail
 	}
@@ -195,8 +195,9 @@ func generateOAuthQueryString(s *Sharing, r *Recipient) (string, error) {
 	// `permissions.Set`. We need to convert them in a proper format to be able
 	// to incorporate them in the OAuth query string.
 	//
-	// XXX Optimization: the next four lines of code could be outside of this
-	// function and also outside of the for loop on the recipients.
+	// Optimization: the next four lines of code could be outside of this
+	// function and also outside of the for loop that iterates on the
+	// recipients in `SendSharingMails`.
 	// I found it was clearer to leave it here, at the price of being less
 	// optimized.
 	permissionsScope, err := s.Permissions.MarshalScopeString()
