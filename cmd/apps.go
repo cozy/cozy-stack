@@ -15,6 +15,7 @@ import (
 var errAppsMissingDomain = errors.New("Missing --domain flag")
 
 var flagAppsDomain string
+var flagAllDomains bool
 
 var appsCmdGroup = &cobra.Command{
 	Use:   "apps [command]",
@@ -31,11 +32,21 @@ a cozy.
 }
 
 var installAppCmd = &cobra.Command{
-	Use:   "install [--domain domain] [slug] [sourceurl]",
+	Use:   "install [slug] [sourceurl]",
 	Short: "Install an application with the specified slug name from the given source URL.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 2 {
 			return cmd.Help()
+		}
+		if flagAllDomains {
+			return foreachDomains(func(in *client.Instance) error {
+				c := newClient(in.Attrs.Domain, consts.Apps)
+				_, err := c.InstallApp(&client.AppOptions{
+					Slug:      args[0],
+					SourceURL: args[1],
+				})
+				return err
+			})
 		}
 		if flagAppsDomain == "" {
 			log.Error(errAppsMissingDomain)
@@ -59,11 +70,18 @@ var installAppCmd = &cobra.Command{
 }
 
 var updateAppCmd = &cobra.Command{
-	Use:   "update [--domain domain] [slug]",
+	Use:   "update [slug]",
 	Short: "Update the application with the specified slug name.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Help()
+		}
+		if flagAllDomains {
+			return foreachDomains(func(in *client.Instance) error {
+				c := newClient(in.Attrs.Domain, consts.Apps)
+				_, err := c.UpdateApp(&client.AppOptions{Slug: args[0]})
+				return err
+			})
 		}
 		if flagAppsDomain == "" {
 			log.Error(errAppsMissingDomain)
@@ -83,8 +101,29 @@ var updateAppCmd = &cobra.Command{
 	},
 }
 
+func foreachDomains(predicate func(*client.Instance) error) error {
+	c := newAdminClient()
+	// TODO(pagination): Make this iteration more robust
+	list, err := c.ListInstances()
+	if err != nil {
+		return nil
+	}
+	var hasErr bool
+	for _, i := range list {
+		if err = predicate(i); err != nil {
+			log.Warnf("%s: %s", i.Attrs.Domain, err)
+			hasErr = true
+		}
+	}
+	if hasErr {
+		return errors.New("At least one error occured while executing this command")
+	}
+	return nil
+}
+
 func init() {
 	appsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
+	appsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 
 	appsCmdGroup.AddCommand(installAppCmd)
 	appsCmdGroup.AddCommand(updateAppCmd)
