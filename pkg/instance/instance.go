@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -475,6 +476,26 @@ func Get(domain string) (*Instance, error) {
 	}
 
 	return instances[0], nil
+}
+
+var translations = make(map[string]*gotext.Po)
+
+// LoadLocale creates the translation object for a locale from the content of a .po file
+func LoadLocale(identifier, rawPO string) {
+	po := &gotext.Po{Language: identifier}
+	po.Parse(rawPO)
+	translations[identifier] = po
+}
+
+// Translate is used to translate a string to the locale used on this instance
+func (i *Instance) Translate(key string, vars ...interface{}) string {
+	if po, ok := translations[i.Locale]; ok {
+		return po.Get(key, vars...)
+	}
+	if po, ok := translations[DefaultLocale]; ok {
+		return po.Get(key, vars...)
+	}
+	return fmt.Sprintf(key, vars...)
 }
 
 // List returns the list of declared instances.

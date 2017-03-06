@@ -275,6 +275,28 @@ func TestGetFs(t *testing.T) {
 	assert.Equal(t, content, buf, "the storage should have persist the content of the foo file")
 }
 
+func TestTranslate(t *testing.T) {
+	LoadLocale("fr", `
+msgid "english"
+msgstr "french"
+
+msgid "hello %s"
+msgstr "bonjour %s"
+`)
+
+	fr := Instance{Locale: "fr"}
+	s := fr.Translate("english")
+	assert.Equal(t, "french", s)
+	s = fr.Translate("hello %s", "toto")
+	assert.Equal(t, "bonjour toto", s)
+
+	no := Instance{Locale: "it"}
+	s = no.Translate("english")
+	assert.Equal(t, "english", s)
+	s = no.Translate("hello %s", "toto")
+	assert.Equal(t, "hello toto", s)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 

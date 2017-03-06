@@ -112,7 +112,7 @@ func TestCreateJobWithEventStream(t *testing.T) {
 }
 
 func TestAddGetAndDeleteTriggerAt(t *testing.T) {
-	at := time.Now().Add(1 * time.Second).Format(time.RFC3339)
+	at := time.Now().Add(1100 * time.Millisecond).Format(time.RFC3339)
 	body, _ := json.Marshal(&jsonapiReq{
 		Data: &jsonapiData{
 			Attributes: &map[string]interface{}{

@@ -21,8 +21,9 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
-// CredentialsErrorMessage is the message showed to the user when he/she enters incorrect credentials
-const CredentialsErrorMessage = "The credentials you entered are incorrect, please try again."
+// CredentialsErrorKey is the key for translating the message showed to the
+// user when he/she enters incorrect credentials
+const CredentialsErrorKey = "Login Credentials error"
 
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
@@ -82,9 +83,14 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 		return err
 	}
 
+	var credsErrors string
+	if code == http.StatusUnauthorized {
+		credsErrors = i.Translate(CredentialsErrorKey)
+	}
+
 	return c.Render(code, "login.html", echo.Map{
 		"PublicName":       doc.M["public_name"],
-		"CredentialsError": nil,
+		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
 	})
 }
@@ -138,7 +144,7 @@ func login(c echo.Context) error {
 
 	if wantsJSON {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": CredentialsErrorMessage,
+			"error": instance.Translate(CredentialsErrorKey),
 		})
 	}
 
@@ -277,34 +283,34 @@ type authorizeParams struct {
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
 	if params.state == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The state parameter is mandatory",
+			"Error": "Error No state parameter",
 		})
 	}
 	if params.clientID == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The client_id parameter is mandatory",
+			"Error": "Error No client_id parameter",
 		})
 	}
 	if params.redirectURI == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter is mandatory",
+			"Error": "Error No redirect_uri parameter",
 		})
 	}
 	if params.scope == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The scope parameter is mandatory",
+			"Error": "Error No scope parameter",
 		})
 	}
 
 	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The client must be registered",
+			"Error": "Error No registered client",
 		})
 	}
 	if !params.client.AcceptRedirectURI(params.redirectURI) {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter doesn't match the registered ones",
+			"Error": "Error Incorrect redirect_uri",
 		})
 	}
 
@@ -323,7 +329,7 @@ func authorizeForm(c echo.Context) error {
 
 	if c.QueryParam("response_type") != "code" {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Invalid response type",
+			"Error": "Error Invalid response type",
 		})
 	}
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
@@ -360,14 +366,14 @@ func authorize(c echo.Context) error {
 
 	if !middlewares.IsLoggedIn(c) {
 		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Error": "You must be authenticated",
+			"Error": "Error Must be authenticated",
 		})
 	}
 
 	u, err := url.ParseRequestURI(params.redirectURI)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter is invalid",
+			"Error": "Error Invalid redirect_uri",
 		})
 	}
 
