@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
     <title>Cozy</title>
@@ -34,9 +34,9 @@
               <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="login auth">
               <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
               <input id="passphrase-reset-token" type="hidden" name="passphrase-reset-token" value="{{.PassphraseResetToken}}" />
-                <p class="help" id="login-password-tip">Enter a new password</p>
+                <p class="help" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
                 <p class="line">
-                  <label for="password" aria-describedby="login-password-tip">password</label>
+                  <label for="password" aria-describedby="login-password-tip">{{t "Passphrase renew Field"}}</label>
                   <button id="password-visibility-button" class="icon password-visibility-icon masked"
                       type="button"
                       title="Show password"
@@ -47,7 +47,7 @@
             </div>
             <footer>
               <div class="controls">
-                <button id="login-submit" form="renew-passphrase-form" type="submit">Renew password</button>
+                <button id="login-submit" form="renew-passphrase-form" type="submit">{{t "Passphrase renew Submit"}}</button>
               </div>
             </footer>
           </div>

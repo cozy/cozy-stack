@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
     <title>Cozy</title>
@@ -33,12 +33,12 @@
             <div role="region">
               <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset" class="login auth">
                 <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-                <p class="help" id="login-password-tip">Are you sure you want to reset your password?</p>
+                <p class="help" id="login-password-tip">{{t "Passphrase reset Help"}}</p>
               </form>
             </div>
             <footer>
               <div class="controls">
-                <button id="reset-submit" form="reset-passphrase-form" type="submit">Reset password</button>
+                <button id="reset-submit" form="reset-passphrase-form" type="submit">{{t "Passphrase reset Submit"}}</button>
               </div>
             </footer>
           </div>
