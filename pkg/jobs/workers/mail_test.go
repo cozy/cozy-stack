@@ -226,17 +226,13 @@ QUIT
 {{end}}
 `
 
-	var err error
-	mailTemplater, err = newMailTemplater([]*MailTemplate{
+	mailTemplater = newMailTemplater([]*MailTemplate{
 		{
 			Name:     "test",
 			BodyHTML: htmlTpl,
 			BodyText: textTpl,
 		},
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
 
 	data := struct {
 		Title string
