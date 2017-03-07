@@ -2,6 +2,7 @@ package instances
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -55,7 +56,10 @@ func listHandler(c echo.Context) error {
 }
 
 func deleteHandler(c echo.Context) error {
-	domain := c.Param("domain")
+	domain, err := url.QueryUnescape(c.Param("domain"))
+	if err != nil {
+		return wrapError(err)
+	}
 	i, err := instance.Destroy(domain)
 	if err != nil {
 		return wrapError(err)
