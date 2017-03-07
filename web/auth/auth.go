@@ -588,7 +588,7 @@ func passphraseRenew(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))
-	token, err := hex.DecodeString(c.FormValue("passphrase-reset-token"))
+	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
