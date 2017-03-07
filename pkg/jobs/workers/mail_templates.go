@@ -7,6 +7,13 @@ import (
 )
 
 const (
+	// TODOs:
+	// Mail templates are directly written as const for now. We could benefit
+	// from and asset loader to add them inside the binary from our assets/
+	// folder.
+	// Also we have connect these templates with our i18n system - using
+	// transifex.
+
 	// --- reset_passphrase ---
 	mailResetPassHTML = `` +
 		`<p>To renew your passphrase, please follow
