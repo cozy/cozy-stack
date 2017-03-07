@@ -352,6 +352,31 @@ func (i *Instance) createPermissionsDB() error {
 
 }
 
+func (i *Instance) installApp(slug string) error {
+	source, ok := consts.AppsRegistry[slug]
+	if !ok {
+		return errors.New("Unknown app")
+	}
+	inst, err := apps.NewInstaller(i, &apps.InstallerOptions{
+		SourceURL: source,
+		Slug:      slug,
+	})
+	if err != nil {
+		return err
+	}
+	go inst.Install()
+	for {
+		_, done, err := inst.Poll()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+	}
+	return nil
+}
+
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
 	domain := strings.TrimSpace(opts.Domain)
@@ -448,8 +473,13 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 
+	for _, app := range opts.Apps {
+		if err := i.installApp(app); err != nil {
+			log.Error("[instance] Failed to install "+app, err)
+		}
+	}
+
 	// TODO atomicity with defer
-	// TODO install apps
 
 	return i, nil
 }
