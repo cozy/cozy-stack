@@ -1,6 +1,9 @@
 package jobs
 
-import "github.com/cozy/cozy-stack/pkg/realtime"
+import (
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/realtime"
+)
 
 // EventTrigger implements Trigger for realtime triggered events
 type EventTrigger struct {
@@ -20,6 +23,25 @@ func NewEventTrigger(infos *TriggerInfos) (*EventTrigger, error) {
 // Type implements the Type method of the Trigger interface.
 func (t *EventTrigger) Type() string {
 	return "@event"
+}
+
+// DocType implements the permissions.Validable interface
+func (t *EventTrigger) DocType() string {
+	return consts.Triggers
+}
+
+// ID implements the permissions.Validable interface
+func (t *EventTrigger) ID() string {
+	return ""
+}
+
+// Valid implements the permissions.Validable interface
+func (t *EventTrigger) Valid(key, value string) bool {
+	switch key {
+	case "worker-type":
+		return t.infos.WorkerType == value
+	}
+	return false
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
