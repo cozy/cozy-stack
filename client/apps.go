@@ -63,7 +63,7 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readAppManifest(res)
+	return readAppManifestStream(res)
 }
 
 // UpdateApp is used to update an application.
@@ -78,10 +78,22 @@ func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	return readAppManifestStream(res)
+}
+
+// UninstallApp is used to uninstall an application.
+func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
+	res, err := c.Req(&request.Options{
+		Method: "DELETE",
+		Path:   "/apps/" + url.QueryEscape(opts.Slug),
+	})
+	if err != nil {
+		return nil, err
+	}
 	return readAppManifest(res)
 }
 
-func readAppManifest(res *http.Response) (*AppManifest, error) {
+func readAppManifestStream(res *http.Response) (*AppManifest, error) {
 	evtch := make(chan *request.SSEEvent)
 	go request.ReadSSE(res.Body, evtch)
 	var lastevt *request.SSEEvent
@@ -100,6 +112,14 @@ func readAppManifest(res *http.Response) (*AppManifest, error) {
 	}
 	app := &AppManifest{}
 	if err := readJSONAPI(bytes.NewReader(lastevt.Data), &app, nil); err != nil {
+		return nil, err
+	}
+	return app, nil
+}
+
+func readAppManifest(res *http.Response) (*AppManifest, error) {
+	app := &AppManifest{}
+	if err := readJSONAPI(res.Body, &app, nil); err != nil {
 		return nil, err
 	}
 	return app, nil
