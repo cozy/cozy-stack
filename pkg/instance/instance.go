@@ -10,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -556,6 +557,24 @@ func Destroy(domain string) (*Instance, error) {
 	}
 
 	return i, nil
+}
+
+// BuildAppToken is used to build a token to identify the app for requests made
+// to the stack
+func (i *Instance) BuildAppToken(m *apps.Manifest) string {
+	token, err := crypto.NewJWT(i.SessionSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AppAudience,
+			Issuer:   i.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  m.Slug,
+		},
+		Scope: "", // apps token doesnt have a scope
+	})
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 // RegisterPassphrase replace the instance registerToken by a passphrase

@@ -1,16 +1,14 @@
 package apps
 
 import (
+	"net/url"
 	"path"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const (
@@ -62,6 +60,11 @@ type Developer struct {
 	URL  string `json:"url,omitempty"`
 }
 
+// SubDomainer is an interface with a single method to build an URL from a slug
+type SubDomainer interface {
+	SubDomain(s string) *url.URL
+}
+
 // Manifest contains all the informations about an application.
 type Manifest struct {
 	ManRev string `json:"_rev,omitempty"` // Manifest revision
@@ -85,7 +88,7 @@ type Manifest struct {
 	Permissions *permissions.Set `json:"permissions"`
 	Routes      Routes           `json:"routes"`
 
-	Instance *instance.Instance `json:"-"` // Used for JSON-API links
+	Instance SubDomainer `json:"-"` // Used for JSON-API links
 }
 
 // ID returns the manifest identifier - see couchdb.Doc interface
@@ -221,22 +224,4 @@ func routeMatches(path, ctx []string) bool {
 		}
 	}
 	return true
-}
-
-// BuildToken is used to build a token to identify the app for requests made to
-// the stack
-func (m *Manifest) BuildToken(i *instance.Instance) string {
-	token, err := crypto.NewJWT(i.SessionSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AppAudience,
-			Issuer:   i.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  m.Slug,
-		},
-		Scope: "", // apps token doesnt have a scope
-	})
-	if err != nil {
-		return ""
-	}
-	return token
 }

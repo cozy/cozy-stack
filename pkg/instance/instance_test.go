@@ -8,11 +8,14 @@ import (
 	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -130,6 +133,31 @@ func TestInstanceHasIndexes(t *testing.T) {
 	err := couchdb.FindDocs(prefix, consts.Files, req, &results)
 	assert.NoError(t, err)
 	assert.Len(t, results, 1)
+}
+
+func TestBuildAppToken(t *testing.T) {
+	manifest := &apps.Manifest{
+		Slug: "my-app",
+	}
+	i := &Instance{
+		Domain:        "test-ctx-token.example.com",
+		SessionSecret: crypto.GenerateRandomBytes(64),
+	}
+
+	tokenString := i.BuildAppToken(manifest)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		_, ok := token.Method.(*jwt.SigningMethodHMAC)
+		assert.True(t, ok, "The signing method should be HMAC")
+		return i.SessionSecret, nil
+	})
+	assert.NoError(t, err)
+	assert.True(t, token.Valid)
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	assert.True(t, ok, "Claims can be parsed as standard claims")
+	assert.Equal(t, "app", claims["aud"])
+	assert.Equal(t, "test-ctx-token.example.com", claims["iss"])
+	assert.Equal(t, "my-app", claims["sub"])
 }
 
 func TestRegisterPassphrase(t *testing.T) {

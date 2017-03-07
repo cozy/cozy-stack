@@ -1020,7 +1020,7 @@ func TestLogoutNoToken(t *testing.T) {
 
 func TestLogoutSuccess(t *testing.T) {
 	a := app.Manifest{Slug: "home"}
-	token := a.BuildToken(testInstance)
+	token := testInstance.BuildAppToken(&a)
 	permissions.CreateAppSet(testInstance, a.Slug, permissions.Set{})
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
