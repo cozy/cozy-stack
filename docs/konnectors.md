@@ -320,6 +320,56 @@ On the host create the file /etc/rkt/net.d/10-containers.conf
 
 and run your container with the "--net=bridge" option. That way, a new interface is available in the container and gives you access to the host.
 
+## Multi-account handling
+
+This section is devoted to allow the user to use one account for multiple konnectors. It will
+follow the following constraints in mind:
+
+- The migration path must be as easy as possible
+- The developpement and maintainance of konnector must also be as easy as possible
+
+### New doctype : io.cozy.konnector_account or io.cozy.account
+
+A new doctype will have to be create to allow to keep konnector accounts independently from each
+konnector.
+
+Maybe the existing io.cozy.account doctype, used by the email application, could also be used. Or
+is it deprecated ?
+
+Here is an example document with this doctype :
+
+```
+{
+    _id: "ojpiojpoij",
+    name: "user decided name for the account",
+    accountType: "google",
+    login: "mylogin",
+    password: "123456"
+}
+```
+
+Any attribute needed for the account may be added : email, etc...
+
+### Updates needed in existing application and konnectors
+
+The link between the accounts and the konnector should be handled by the "my accounts" client
+application, and also the CRUD of this new doctype.
+
+Each konnector need also to declare a new field in the "fields" attribute which will be the type of
+account, related to the accountType field in the new account docType.
+
+With this new field, which will appear also in the io.cozy.konnector docType, the "my account"
+client appliction will be able to propose existing accounts of the good type for activating a new
+konnector.
+
+### Migration path
+
+For the migration of existing, activated konnectors in V2, the type of account for each konnector
+will have to be indicated in a V2 "my account" application update. After that, it will be possible
+to create the accounts associated to each activated konnectors an link the konnectors to these
+accounts in a migration script.
+
+
 ## TODO
 
 - [ ] How to install and update the konnectors?
