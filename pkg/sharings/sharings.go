@@ -122,7 +122,7 @@ func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 	return doc, err
 }
 
-//CheckSharingType returns an error if the sharing type is incorrect
+// CheckSharingType returns an error if the sharing type is incorrect
 func CheckSharingType(sharingType string) error {
 	switch sharingType {
 	case consts.OneShotSharing, consts.MasterSlaveSharing, consts.MasterMasterSharing:
