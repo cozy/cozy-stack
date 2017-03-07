@@ -85,3 +85,12 @@ const (
 	// ErrorSharingStatus is when the request could not be sent
 	ErrorSharingStatus = "error"
 )
+
+// AppsRegistry is an hard-coded list of known apps, with their source URLs
+// TODO remove it when we will have a true registry
+var AppsRegistry = map[string]string{
+	"onboarding": "git://github.com/cozy/cozy-onboarding-v3.git#build",
+	"files":      "git://github.com/cozy/cozy-files-v3.git#build",
+	"photos":     "git://github.com/cozy/cozy-photos-v3.git#build",
+	"settings":   "git://github.com/cozy/cozy-settings.git#build",
+}
