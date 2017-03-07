@@ -391,9 +391,13 @@ func Create(opts *Options) (*Instance, error) {
 	if err := couchdb.CreateDB(i, consts.Permissions); err != nil {
 		return nil, err
 	}
+	if err := couchdb.CreateDB(i, consts.Sharings); err != nil {
+		return nil, err
+	}
 	if err := settings.CreateDefaultTheme(i); err != nil {
 		return nil, err
 	}
+
 	settingsDoc := &instanceSettings{
 		Timezone: opts.Timezone,
 		Email:    opts.Email,
