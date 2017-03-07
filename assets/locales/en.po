@@ -24,6 +24,24 @@ msgstr "Show password"
 msgid "Login Submit"
 msgstr "Log in"
 
+msgid "Passphrase reset Help"
+msgstr "Are you sure you want to reset your password?"
+
+msgid "Passphrase reset Submit"
+msgstr "Reset password"
+
+msgid "Passphrase renew Help"
+msgstr "Enter a new password"
+
+msgid "Passphrase renew Field"
+msgstr "password"
+
+msgid "Passphrase renew Submit"
+msgstr "Renew password"
+
+msgid "Login Forgot password"
+msgstr "Forgot your password?"
+
 msgid "Authorize Title"
 msgstr "Authorize remote application"
 

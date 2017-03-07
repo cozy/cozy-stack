@@ -29,6 +29,24 @@ msgstr "Afficher le mot de passe"
 msgid "Login Submit"
 msgstr "Se connecter"
 
+msgid "Passphrase reset Help"
+msgstr "Êtes-vous sûr de vouloir réinitialiser votre mot de passe ?"
+
+msgid "Passphrase reset Submit"
+msgstr "Réinitialiser le mot de passe"
+
+msgid "Passphrase renew Help"
+msgstr "Saisir un nouveau mot de passe"
+
+msgid "Passphrase renew Field"
+msgstr "mot de passe"
+
+msgid "Passphrase renew Submit"
+msgstr "Enregistrer le nouveau mot de passe"
+
+msgid "Login Forgot password"
+msgstr "Mot de passe oublié ?"
+
 msgid "Authorize Title"
 msgstr "Autoriser une application distante"
 
