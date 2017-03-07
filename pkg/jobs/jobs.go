@@ -192,6 +192,8 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 		return NewAtTrigger(infos)
 	case "@in":
 		return NewInTrigger(infos)
+	case "@event":
+		return NewEventTrigger(infos)
 	default:
 		return nil, ErrUnknownTrigger
 	}
