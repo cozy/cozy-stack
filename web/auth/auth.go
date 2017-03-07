@@ -96,6 +96,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 	}
 
 	return c.Render(code, "login.html", echo.Map{
+		"Locale":           i.Locale,
 		"PublicName":       doc.M["public_name"],
 		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
@@ -353,6 +354,7 @@ func authorizeForm(c echo.Context) error {
 	permissions := strings.Split(params.scope, " ")
 	params.client.ClientID = params.client.CouchID
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
+		"Locale":      instance.Locale,
 		"Client":      params.client,
 		"State":       params.state,
 		"RedirectURI": params.redirectURI,
@@ -527,13 +529,14 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func passphraseResetForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
 	if middlewares.IsLoggedIn(c) {
-		instance := middlewares.GetInstance(c)
 		redirect := defaultRedirectDomain(instance).String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
-		"CSRF": c.Get("csrf"),
+		"Locale": instance.Locale,
+		"CSRF":   c.Get("csrf"),
 	})
 }
 
@@ -572,6 +575,7 @@ func passphraseRenewForm(c echo.Context) error {
 		})
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
+		"Locale":               instance.Locale,
 		"PassphraseResetToken": token,
 		"CSRF":                 c.Get("csrf"),
 	})
