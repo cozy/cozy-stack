@@ -12,33 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs/workers"
 )
 
-// The skeleton of the mail we will send. The values between "{{ }}" will be
-// filled through the `mailTemplateValues` structure.
-const (
-	mailTemplateEn = `
-        <h2>Hey {{.RecipientName}}!</h2>
-        <p>{{.SharerPublicName}} wants to share a document with you! You will only be able to view it.</p>
-
-        <p>The description given is: {{.Description}}.</p>
-
-        <form action="{{.OAuthQueryString}}">
-            <input type="submit" value="Accept this sharing" />
-        </form>
-        </p>
-    `
-
-	mailTemplateFr = `
-        <h2>Bonjour {{.RecipientName}} !</h2>
-        <p>{{.SharerPublicName}} veut partager un document avec vous ! Vous pourrez seulement le consulter.</p>
-
-        <p>La description associée est : {{.Description}}.</p>
-
-        <form action="{{.OAuthQueryString}}">
-            <input type="submit" value="Accepter le partage" />
-        </form>
-    `
-)
-
 // The sharing-dependant information: the recipient's name, the sharer's public
 // name, the description of the sharing, and the OAuth query string.
 type mailTemplateValues struct {
@@ -51,27 +24,21 @@ type mailTemplateValues struct {
 // SendSharingMails will generate the mail containing the details
 // regarding this sharing, and will then send it to all the recipients.
 func SendSharingMails(instance *instance.Instance, s *Sharing) error {
-
-	// Generate the base values of the email to send, common to all recipients:
-	// the description and the sharer's public name.
-	mailValues := &mailTemplateValues{}
-
 	// We get the Couchdb document describing the instance to get the sharer's
 	// public name.
 	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(instance, consts.Settings,
-		consts.InstanceSettingsID, doc)
+	err := couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
 	if err != nil {
 		return err
 	}
-	sharerPublicName, _ := doc.M["public_name"].(string)
-	mailValues.SharerPublicName = sharerPublicName
 
+	sharerPublicName, _ := doc.M["public_name"].(string)
 	// Fill in the description.
+	var desc string
 	if s.Desc == "" {
-		mailValues.Description = "[No description provided]"
+		desc = "[No description provided]"
 	} else {
-		mailValues.Description = s.Desc
+		desc = s.Desc
 	}
 
 	// For each recipient we send the email and update the status if an error
@@ -92,11 +59,14 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			continue
 		}
 
-		// Augment base values with recipient specific information.
-		mailValues.RecipientName = recipient.Email
-		mailValues.OAuthQueryString = recipientOAuthQueryString
-
-		sharingMessage, err := generateMailMessage(s, recipient, mailValues)
+		// Generate the base values of the email to send, common to all recipients:
+		// the description and the sharer's public name.
+		sharingMessage, err := generateMailMessage(s, recipient, &mailTemplateValues{
+			RecipientName:    recipient.Email,
+			SharerPublicName: sharerPublicName,
+			Description:      desc,
+			OAuthQueryString: recipientOAuthQueryString,
+		})
 		if err != nil {
 			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
 			continue
@@ -130,7 +100,6 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 func logErrorAndSetRecipientStatus(rs *RecipientStatus, err error) bool {
 	log.Error(`[Sharing] An error occurred while trying to send
         the email invitation`, err)
-
 	rs.Status = consts.ErrorSharingStatus
 	return true
 }
@@ -140,41 +109,21 @@ func logErrorAndSetRecipientStatus(rs *RecipientStatus, err error) bool {
 // recipient.
 func generateMailMessage(s *Sharing, r *Recipient,
 	mailValues *mailTemplateValues) (*jobs.Message, error) {
-
-	// We create the mail parts: its content.
-	mailPartEn := workers.MailPart{
-		Type: "text/html",
-		Body: mailTemplateEn}
-
-	mailPartFr := workers.MailPart{
-		Type: "text/html",
-		Body: mailTemplateFr}
-
-	mailParts := []*workers.MailPart{&mailPartEn, &mailPartFr}
-
 	// The address of the recipient.
 	if r.Email == "" {
 		return nil, ErrRecipientHasNoEmail
 	}
-	mailAddresses := []*workers.MailAddress{&workers.MailAddress{Name: r.Email,
-		Email: r.Email}}
-
-	mailOpts := workers.MailOptions{
+	mailAddresses := []*workers.MailAddress{&workers.MailAddress{
+		Name:  r.Email,
+		Email: r.Email,
+	}}
+	return jobs.NewMessage(jobs.JSONEncoding, workers.MailOptions{
 		Mode:           "from",
-		From:           nil, // Will be filled by the stack.
 		To:             mailAddresses,
 		Subject:        "New sharing request / Nouvelle demande de partage",
-		Dialer:         nil, // Will be filled by the stack.
-		Date:           nil, // Will be filled by the stack.
-		Parts:          mailParts,
-		TemplateValues: mailValues}
-
-	message, err := jobs.NewMessage(jobs.JSONEncoding, mailOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	return message, nil
+		TemplateName:   "sharing_request",
+		TemplateValues: mailValues,
+	})
 }
 
 // generateOAuthQueryString takes care of creating a correct OAuth request for
@@ -206,13 +155,14 @@ func generateOAuthQueryString(s *Sharing, r *Recipient) (string, error) {
 	}
 
 	// We use url.encode to safely escape the query string.
-	mapParamQueryString := url.Values{}
-	mapParamQueryString["client_id"] = []string{r.Client.ClientID}
-	mapParamQueryString["redirect_uri"] = []string{r.Client.RedirectURIs[0]}
-	mapParamQueryString["response_type"] = []string{"code"}
-	mapParamQueryString["scope"] = []string{permissionsScope}
-	mapParamQueryString["sharing_type"] = []string{s.SharingType}
-	mapParamQueryString["state"] = []string{s.SharingID}
+	mapParamQueryString := url.Values{
+		"client_id":     {r.Client.ClientID},
+		"redirect_uri":  {r.Client.RedirectURIs[0]},
+		"response_type": {"code"},
+		"scope":         {permissionsScope},
+		"sharing_type":  {s.SharingType},
+		"state":         {s.SharingID},
+	}
 
 	paramQueryString := mapParamQueryString.Encode()
 

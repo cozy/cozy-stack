@@ -7,11 +7,34 @@ import (
 )
 
 const (
-	mailResetPassHTML = `<p>To renew your passphrase, please follow` +
-		`<a href="{{.PassphraseResetLink}}">this link</a></p>`
+	// --- reset_passphrase ---
+	mailResetPassHTML = `` +
+		`<p>To renew your passphrase, please follow
+<a href="{{.PassphraseResetLink}}">this link</a></p>`
 
-	mailResetPassText = `To renew your passphrase, please go to this URL:` +
-		`{{.PassphraseResetLink}}`
+	mailResetPassText = `` +
+		`To renew your passphrase, please go to this URL:
+{{.PassphraseResetLink}}`
+
+	//  --- sharing_request ---
+	mailSharingRequestHTML = `` +
+		`<h2>Hey {{.RecipientName}}!</h2>
+<p>{{.SharerPublicName}} wants to share a document with you! You will only be able to view it.</p>
+
+<p>The description given is: {{.Description}}.</p>
+
+<form action="{{.OAuthQueryString}}">
+	<input type="submit" value="Accept this sharing" />
+</form>
+</p>`
+
+	mailSharingRequestText = `` +
+		`Hey {{.RecipientName}}!
+{{.SharerPublicName}} wants to share a document with you! You will only be able to view it.
+
+The description given is: {{.Description}}.
+
+{{.OAuthQueryString}}`
 )
 
 // MailTemplate is a struct to define a mail template with HTML and text parts.
@@ -77,6 +100,11 @@ func init() {
 			Name:     "passphrase_reset",
 			BodyHTML: mailResetPassHTML,
 			BodyText: mailResetPassText,
+		},
+		{
+			Name:     "sharing_request",
+			BodyHTML: mailSharingRequestHTML,
+			BodyText: mailSharingRequestText,
 		},
 	})
 }
