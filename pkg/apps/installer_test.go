@@ -442,6 +442,42 @@ func TestInstallFromGithub(t *testing.T) {
 	}
 }
 
+func TestUninstall(t *testing.T) {
+	inst1, err := NewInstaller(c, &InstallerOptions{
+		Slug:      "github-cozy-delete",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	go inst1.Install()
+	for {
+		var done bool
+		_, done, err = inst1.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if done {
+			break
+		}
+	}
+	inst2, err := NewInstaller(c, &InstallerOptions{Slug: "github-cozy-delete"})
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = inst2.Delete()
+	if !assert.NoError(t, err) {
+		return
+	}
+	inst3, err := NewInstaller(c, &InstallerOptions{Slug: "github-cozy-delete"})
+	if !assert.NoError(t, err) {
+		return
+	}
+	go inst3.Update()
+	_, _, err = inst3.Poll()
+	assert.Error(t, err)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 

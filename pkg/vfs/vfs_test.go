@@ -155,6 +155,51 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRemove(t *testing.T) {
+	err := Remove(vfsC, "foo/bar")
+	assert.Error(t, err)
+	assert.Equal(t, ErrNonAbsolutePath, err)
+
+	err = Remove(vfsC, "/foo")
+	assert.Error(t, err)
+	assert.Equal(t, "file does not exist", err.Error())
+
+	_, err = Mkdir(vfsC, "/removeme", nil)
+	if !assert.NoError(t, err) {
+		err = Remove(vfsC, "/removeme")
+		assert.NoError(t, err)
+	}
+}
+
+func TestRemoveAll(t *testing.T) {
+	origtree := H{
+		"removemeall/": H{
+			"dirchild1/": H{
+				"food/": H{},
+				"bard/": H{},
+			},
+			"dirchild2/": H{
+				"foof": nil,
+				"barf": nil,
+			},
+			"dirchild3/": H{},
+			"filechild1": nil,
+		},
+	}
+	_, err := createTree(origtree, consts.RootDirID)
+	if !assert.NoError(t, err) {
+		return
+	}
+	err = RemoveAll(vfsC, "/removemeall")
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = Stat(vfsC, "/removemeall/dirchild1")
+	assert.Error(t, err)
+	_, err = Stat(vfsC, "/removemeall")
+	assert.Error(t, err)
+}
+
 func TestDiskUsage(t *testing.T) {
 	used, err := DiskUsage(vfsC)
 	assert.NoError(t, err)
