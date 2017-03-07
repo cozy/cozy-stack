@@ -125,6 +125,10 @@ func wrapError(err error) error {
 		return jsonapi.BadRequest(err)
 	case instance.ErrInvalidToken:
 		return jsonapi.BadRequest(err)
+	case instance.ErrMissingPassphrase:
+		return jsonapi.BadRequest(err)
+	case instance.ErrInvalidPassphrase:
+		return jsonapi.BadRequest(err)
 	}
 	return err
 }

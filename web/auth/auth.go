@@ -3,6 +3,7 @@ package auth
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strings"
@@ -32,7 +33,7 @@ func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if session, err := sessions.GetSession(c, instance); err == nil {
-		redirect := instance.SubDomain(consts.FilesSlug).String()
+		redirect := defaultRedirectDomain(instance).String()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
@@ -58,6 +59,12 @@ func addCodeToRedirect(redirect, domain, sessionID string) string {
 		}
 	}
 	return redirect
+}
+
+// defaultRedirectDomain returns the default URL used for redirection after
+// login actions.
+func defaultRedirectDomain(in *instance.Instance) *url.URL {
+	return in.SubDomain(consts.FilesSlug)
 }
 
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
@@ -98,7 +105,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(consts.FilesSlug))
+	redirect, err := checkRedirectParam(c, defaultRedirectDomain(instance))
 	if err != nil {
 		return err
 	}
@@ -116,7 +123,7 @@ func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(consts.FilesSlug))
+	redirect, err := checkRedirectParam(c, defaultRedirectDomain(instance))
 	if err != nil {
 		return err
 	}
@@ -519,6 +526,78 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func passphraseResetForm(c echo.Context) error {
+	if middlewares.IsLoggedIn(c) {
+		instance := middlewares.GetInstance(c)
+		redirect := defaultRedirectDomain(instance).String()
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
+		"CSRF": c.Get("csrf"),
+	})
+}
+
+func passphraseReset(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	// TODO: check user informations to allow the reset of the passphrase since
+	// this route is of course not protected by authentication/permission check.
+	if err := instance.RequestPassphraseReset(); err != nil {
+		return err
+	}
+	// Disconnect the user if it is logged in. The idea is that if the user
+	// (maybe by accident) asks for a passphrase reset while logged in, we log
+	// him out to be able to  re-go through the process of logging back-in. It is
+	// more a UX choice than a "security" one.
+	if middlewares.IsLoggedIn(c) {
+		session, err := sessions.GetSession(c, instance)
+		if err == nil {
+			c.SetCookie(session.Delete(instance))
+		}
+	}
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+}
+
+func passphraseRenewForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	if middlewares.IsLoggedIn(c) {
+		redirect := defaultRedirectDomain(instance).String()
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+	token := c.QueryParam("token")
+	// Check that the token is actually defined and well encoded. The actual
+	// token value checking is done on the passphraseRenew handler.
+	if _, err := hex.DecodeString(token); err != nil || token == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
+		"PassphraseResetToken": token,
+		"CSRF":                 c.Get("csrf"),
+	})
+}
+
+func passphraseRenew(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	if middlewares.IsLoggedIn(c) {
+		redirect := defaultRedirectDomain(instance).String()
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+	pass := []byte(c.FormValue("passphrase"))
+	token, err := hex.DecodeString(c.FormValue("passphrase-reset-token"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	if err := instance.PassphraseRenew(pass, token); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -532,6 +611,11 @@ func Routes(router *echo.Group) {
 	router.POST("/login", login)
 	router.DELETE("/login", logout)
 	router.OPTIONS("/login", logoutPreflight)
+
+	router.GET("/passphrase_reset", passphraseResetForm, noCSRF)
+	router.POST("/passphrase_reset", passphraseReset, noCSRF)
+	router.GET("/passphrase_renew", passphraseRenewForm, noCSRF)
+	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

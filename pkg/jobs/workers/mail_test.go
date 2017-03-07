@@ -14,7 +14,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/gomail"
 	"github.com/stretchr/testify/assert"
@@ -105,28 +106,17 @@ QUIT
 		"Mime-Version":              "1.0",
 	}
 
-	const tpl = `
-<!DOCTYPE html>
+	mailBody := `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>{{.Title}}</title>
+    <title>My page</title>
   </head>
   <body>
-    {{range .Items}}<div>{{ . }}</div>{{else}}<div><strong>no rows</strong></div>{{end}}
+    <div>My photos</div><div>My blog</div>
   </body>
-</html>`
-
-	data := struct {
-		Title string
-		Items []string
-	}{
-		Title: "My page",
-		Items: []string{
-			"My photos",
-			"My blog",
-		},
-	}
+</html>
+`
 
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
 		msg := &MailOptions{
@@ -142,9 +132,8 @@ QUIT
 				DisableTLS: true,
 			},
 			Parts: []*MailPart{
-				{Type: "text/html", Body: tpl},
+				{Body: mailBody, Type: "text/html"},
 			},
-			TemplateValues: data,
 		}
 		return sendMail(context.Background(), msg)
 	})
@@ -227,6 +216,24 @@ QUIT
   </body>
 </html>`
 
+	const textTpl = `
+{{.Title}}
+
+{{range .Items}}
+{{ . }}
+{{else}}
+**no rows**
+{{end}}
+`
+
+	mailTemplater = newMailTemplater([]*MailTemplate{
+		{
+			Name:     "test",
+			BodyHTML: htmlTpl,
+			BodyText: textTpl,
+		},
+	})
+
 	data := struct {
 		Title string
 		Items []string
@@ -237,16 +244,6 @@ QUIT
 			"My blog",
 		},
 	}
-
-	const textTpl = `
-{{.Title}}
-
-{{range .Items}}
-{{ . }}
-{{else}}
-**no rows**
-{{end}}
-`
 
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
 		msg := &MailOptions{
@@ -261,16 +258,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Parts: []*MailPart{
-				{
-					Type: "text/plain",
-					Body: textTpl,
-				},
-				{
-					Type: "text/html",
-					Body: htmlTpl,
-				},
-			},
+			TemplateName:   "test",
 			TemplateValues: data,
 		}
 		return sendMail(context.Background(), msg)
@@ -379,15 +367,18 @@ func TestSendMailNoReply(t *testing.T) {
 		assert.Equal(t, "noreply@noreply.triggers", opts.From.Email)
 		return errors.New("yes")
 	}
-	_, err := instance.Create(&instance.Options{
-		Domain: "noreply.triggers",
-		Email:  "me@me",
-	})
+	db := couchdb.SimpleDatabasePrefix("noreply.triggers")
+	doc := &couchdb.JSONDoc{
+		M:    map[string]interface{}{"email": "me@me"},
+		Type: consts.Settings,
+	}
+	doc.SetID(consts.InstanceSettingsID)
+	err := couchdb.CreateNamedDocWithDB(db, doc)
 	if !assert.NoError(t, err) {
 		return
 	}
 	defer func() {
-		instance.Destroy("noreply.triggers")
+		couchdb.DeleteDoc(db, doc)
 		sendMail = doSendMail
 	}()
 	msg, _ := jobs.NewMessage("json", &MailOptions{
@@ -415,15 +406,18 @@ func TestSendMailFrom(t *testing.T) {
 		assert.Equal(t, "me@me", opts.From.Email)
 		return errors.New("yes")
 	}
-	_, err := instance.Create(&instance.Options{
-		Domain: "from.triggers",
-		Email:  "me@me",
-	})
+	db := couchdb.SimpleDatabasePrefix("from.triggers")
+	doc := &couchdb.JSONDoc{
+		M:    map[string]interface{}{"email": "me@me"},
+		Type: consts.Settings,
+	}
+	doc.SetID(consts.InstanceSettingsID)
+	err := couchdb.CreateNamedDocWithDB(db, doc)
 	if !assert.NoError(t, err) {
 		return
 	}
 	defer func() {
-		instance.Destroy("from.triggers")
+		couchdb.DeleteDoc(db, doc)
 		sendMail = doSendMail
 	}()
 	msg, _ := jobs.NewMessage("json", &MailOptions{

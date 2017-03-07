@@ -29,36 +29,26 @@
                   </svg>
                 </div>
               </figure>
-              {{if .PublicName}}
-                <h1>{{t "Login Welcome name" .PublicName}}</h1>
-              {{else}}
-                <h1>{{t "Login Welcome"}}</h1>
-              {{end}}
             </header>
             <div role="region">
-              <form id="login-form" method="POST" action="/auth/login" class="login auth">
-                <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
-                <p class="help" id="login-password-tip">{{t "Login Password help"}}</p>
+              <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="login auth">
+              <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+              <input id="passphrase-reset-token" type="hidden" name="passphrase-reset-token" value="{{.PassphraseResetToken}}" />
+                <p class="help" id="login-password-tip">Enter a new password</p>
                 <p class="line">
-                  <label for="password" aria-describedby="login-password-tip">{{t "Login Password field"}}</label>
+                  <label for="password" aria-describedby="login-password-tip">password</label>
                   <button id="password-visibility-button" class="icon password-visibility-icon masked"
                       type="button"
-                      title="{{t "Login Password show"}}"
+                      title="Show password"
                       name="password-visibility"></button>
-                  <input id="password" name="passphrase" placeholder="{{t "Login Password field"}}" type="password" autofocus="true" />
+                  <input id="password" name="passphrase" placeholder="Password" type="password" autofocus="true" />
                 </p>
-                {{if .CredentialsError}}
-                <div class="errors">
-                  <p>{{.CredentialsError}}</p>
-                </div>
-                {{end}}
               </form>
             </div>
             <footer>
               <div class="controls">
-                <button id="login-submit" form="login-form" type="submit">{{t "Login Submit"}}</button>
+                <button id="login-submit" form="renew-passphrase-form" type="submit">Renew password</button>
               </div>
-              <a href="/auth/passphrase_reset">Forgot your password?</a>
             </footer>
           </div>
         </div>

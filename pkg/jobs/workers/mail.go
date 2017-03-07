@@ -1,19 +1,16 @@
 package workers
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	htmlTemplate "html/template"
-	textTemplate "text/template"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 )
 
@@ -25,6 +22,19 @@ func init() {
 		WorkerFunc:   SendMail,
 	})
 }
+
+const (
+	// MailModeNoReply is the no-reply mode of a mail, to send mail "to" the
+	// user's mail, as a noreply@
+	MailModeNoReply = "noreply"
+	// MailModeFrom is the "from" mode of a mail, to send mail "from" the user's
+	// mail.
+	MailModeFrom = "from"
+)
+
+// var for testability
+var mailTemplater *MailTemplater
+var sendMail = doSendMail
 
 // MailAddress contains the name and mail of a mail recipient.
 type MailAddress struct {
@@ -43,6 +53,7 @@ type MailOptions struct {
 	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
 	Date           *time.Time            `json:"date"`
 	Parts          []*MailPart           `json:"parts"`
+	TemplateName   string                `json:"template_name"`
 	TemplateValues interface{}           `json:"template_values"`
 }
 
@@ -62,14 +73,14 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	switch opts.Mode {
-	case "noreply":
+	case MailModeNoReply:
 		toAddr, err := addressFromDomain(domain)
 		if err != nil {
 			return err
 		}
 		opts.To = []*MailAddress{toAddr}
-		opts.From = &MailAddress{Email: "noreply@" + domain}
-	case "from":
+		opts.From = &MailAddress{Email: "noreply@" + utils.StripPort(domain)}
+	case MailModeFrom:
 		fromAddr, err := addressFromDomain(domain)
 		if err != nil {
 			return err
@@ -82,12 +93,10 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 }
 
 func addressFromDomain(domain string) (*MailAddress, error) {
-	in, err := instance.Get(domain)
-	if err != nil {
-		return nil, err
-	}
+	// TODO: cleanup this settings fetching
+	db := couchdb.SimpleDatabasePrefix(domain)
 	doc := &couchdb.JSONDoc{}
-	err = couchdb.GetDoc(in, consts.Settings, consts.InstanceSettingsID, doc)
+	err := couchdb.GetDoc(db, consts.Settings, consts.InstanceSettingsID, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +142,19 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 		"Subject": {opts.Subject},
 	})
 	mail.SetDateHeader("Date", date)
-	for _, part := range opts.Parts {
-		if err := addPart(mail, part, opts.TemplateValues); err != nil {
+
+	var parts []*MailPart
+	var err error
+	if opts.TemplateName != "" {
+		parts, err = mailTemplater.Execute(opts.TemplateName, opts.TemplateValues)
+		if err != nil {
+			return err
+		}
+	} else {
+		parts = opts.Parts
+	}
+	for _, part := range parts {
+		if err = addPart(mail, part); err != nil {
 			return err
 		}
 	}
@@ -145,39 +165,11 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 	return dialer.DialAndSend(mail)
 }
 
-func addPart(mail *gomail.Message, part *MailPart, templateValues interface{}) error {
+func addPart(mail *gomail.Message, part *MailPart) error {
 	contentType := part.Type
-	var body string
 	if contentType != "text/plain" && contentType != "text/html" {
 		return fmt.Errorf("Unknown body content-type %s", contentType)
 	}
-	if templateValues != nil {
-		b := new(bytes.Buffer)
-		switch contentType {
-		case "text/html":
-			t, err := htmlTemplate.New("mail").Parse(part.Body)
-			if err != nil {
-				return err
-			}
-			if err = t.Execute(b, templateValues); err != nil {
-				return err
-			}
-		case "text/plain":
-			t, err := textTemplate.New("mail").Parse(part.Body)
-			if err != nil {
-				return err
-			}
-			if err = t.Execute(b, templateValues); err != nil {
-				return err
-			}
-		}
-		body = b.String()
-	} else {
-		body = part.Body
-	}
-	mail.AddAlternative(contentType, body)
+	mail.AddAlternative(contentType, part.Body)
 	return nil
 }
-
-// var for testability
-var sendMail = doSendMail

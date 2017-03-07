@@ -2,6 +2,7 @@ package instance
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -15,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/jobs/workers"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -26,10 +28,15 @@ import (
 
 /* #nosec */
 const (
-	registerTokenLen = 16
-	sessionSecretLen = 64
-	oauthSecretLen   = 128
+	registerTokenLen      = 16
+	passwordResetTokenLen = 16
+	sessionSecretLen      = 64
+	oauthSecretLen        = 128
 )
+
+// passwordResetValidityDuration is the validity duration of the passphrase
+// reset token.
+var passwordResetValidityDuration = 15 * time.Minute
 
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
@@ -64,7 +71,9 @@ type Instance struct {
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
-	PassphraseHash []byte `json:"passphrase_hash,omitempty"`
+	PassphraseHash       []byte    `json:"passphrase_hash,omitempty"`
+	PassphraseResetToken []byte    `json:"passphrase_reset_token"`
+	PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
 
 	// Secure assets
 
@@ -377,6 +386,8 @@ func Create(opts *Options) (*Instance, error) {
 	i.Dev = opts.Dev
 
 	i.PassphraseHash = nil
+	i.PassphraseResetToken = nil
+	i.PassphraseResetTime = time.Time{}
 	i.RegisterToken = crypto.GenerateRandomBytes(registerTokenLen)
 	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
@@ -558,15 +569,76 @@ func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	if subtle.ConstantTimeCompare(i.RegisterToken, tok) != 1 {
 		return ErrInvalidToken
 	}
-
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
-
 	i.RegisterToken = nil
 	i.setPassphraseAndSecret(hash)
+	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
 
+// RequestPassphraseReset generates a new registration token for the user to
+// renew its password.
+func (i *Instance) RequestPassphraseReset() error {
+	// If a registration token is set, we do not generate another token than the
+	// registration one, and bail.
+	if i.RegisterToken != nil {
+		return nil
+	}
+	// If a passphrase reset token is set and valid, we do not generate new one,
+	// and bail.
+	if i.PassphraseResetToken != nil &&
+		time.Now().UTC().Before(i.PassphraseResetTime) {
+		return nil
+	}
+	i.PassphraseResetToken = crypto.GenerateRandomBytes(passwordResetTokenLen)
+	i.PassphraseResetTime = time.Now().UTC().Add(passwordResetValidityDuration)
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
+		return err
+	}
+	// Send a mail containing the reset url for the user to actually reset its
+	// passphrase.
+	resetURL := i.PageURL("/passphrase_renew", url.Values{
+		"token": {hex.EncodeToString(i.PassphraseResetToken)},
+	})
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, &workers.MailOptions{
+		Mode:         workers.MailModeNoReply,
+		Subject:      "Password reset",
+		TemplateName: "passphrase_reset",
+		TemplateValues: struct{ PassphraseResetLink string }{
+			PassphraseResetLink: resetURL,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	_, _, err = i.JobsBroker().PushJob(&jobs.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
+}
+
+// PassphraseRenew changes the passphrase to the specified one if the given
+// token matches the `PassphraseResetToken` field.
+func (i *Instance) PassphraseRenew(pass, tok []byte) error {
+	if i.PassphraseResetToken == nil {
+		return ErrMissingToken
+	}
+	if !time.Now().UTC().Before(i.PassphraseResetTime) {
+		return ErrMissingToken
+	}
+	if subtle.ConstantTimeCompare(i.PassphraseResetToken, tok) != 1 {
+		return ErrInvalidToken
+	}
+	hash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		return err
+	}
+	i.PassphraseResetToken = nil
+	i.PassphraseResetTime = time.Time{}
+	i.setPassphraseAndSecret(hash)
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
 }
 
@@ -575,20 +647,17 @@ func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 	if len(pass) == 0 {
 		return ErrMissingPassphrase
 	}
-
 	// the needUpdate flag is not checked against since the passphrase will be
 	// regenerated with updated parameters just after, if the passphrase match.
 	_, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current)
 	if err != nil {
 		return ErrInvalidPassphrase
 	}
-
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
 	i.setPassphraseAndSecret(hash)
-
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
 }
 

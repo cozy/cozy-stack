@@ -39,6 +39,8 @@ var (
 		"authorize.html",
 		"error.html",
 		"login.html",
+		"passphrase_reset.html",
+		"passphrase_renew.html",
 	}
 )
 
