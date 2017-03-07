@@ -188,7 +188,7 @@ func TestGetFileDocFromPath(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCreateAndGetFile(t *testing.T) {
+func TestCreateGetAndModifyFile(t *testing.T) {
 	origtree := H{
 		"createandget1/": H{
 			"dirchild1/": H{
@@ -224,6 +224,26 @@ func TestCreateAndGetFile(t *testing.T) {
 	}
 
 	assert.EqualValues(t, origtree["createandget1/"], tree["createandget2/"], "should have same tree")
+
+	fileBefore, err := GetFileDocFromPath(vfsC, "/createandget2/dirchild2/foof")
+	if !assert.NoError(t, err) {
+		return
+	}
+	newfilename := "foof.jpg"
+	_, err = ModifyFileMetadata(vfsC, fileBefore, &DocPatch{
+		Name: &newfilename,
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	fileAfter, err := GetFileDocFromPath(vfsC, "/createandget2/dirchild2/foof.jpg")
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, "", fileBefore.Class)
+	assert.Equal(t, "", fileBefore.Mime)
+	assert.Equal(t, "image", fileAfter.Class)
+	assert.Equal(t, "image/jpeg", fileAfter.Mime)
 }
 
 func TestUpdateDir(t *testing.T) {
