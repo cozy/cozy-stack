@@ -1110,7 +1110,7 @@ func TestPassphraseRenewFormWithToken(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "200 OK", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), `type="hidden" name="passphrase-reset-token" value="badbee" />`)
+	assert.Contains(t, string(body), `type="hidden" name="passphrase_reset_token" value="badbee" />`)
 }
 
 func TestPassphraseRenew(t *testing.T) {
@@ -1153,7 +1153,7 @@ func TestPassphraseRenew(t *testing.T) {
 		return
 	}
 	res3, err := postFormDomain(d, "/auth/passphrase_renew", &url.Values{
-		"passphrase-reset-token": {hex.EncodeToString(in2.PassphraseResetToken)},
+		"passphrase_reset_token": {hex.EncodeToString(in2.PassphraseResetToken)},
 		"passphrase":             {"NewPassphrase"},
 		"csrf_token":             {csrfCookie.Value},
 	})
