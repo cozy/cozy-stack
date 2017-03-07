@@ -38,7 +38,7 @@ func (t *EventTrigger) ID() string {
 // Valid implements the permissions.Validable interface
 func (t *EventTrigger) Valid(key, value string) bool {
 	switch key {
-	case "worker-type":
+	case WorkerType:
 		return t.infos.WorkerType == value
 	}
 	return false

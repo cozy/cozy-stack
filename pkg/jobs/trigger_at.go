@@ -66,7 +66,7 @@ func (a *AtTrigger) ID() string {
 // Valid implements the permissions.Validable interface
 func (a *AtTrigger) Valid(key, value string) bool {
 	switch key {
-	case "worker-type":
+	case WorkerType:
 		return a.in.WorkerType == value
 	}
 	return false

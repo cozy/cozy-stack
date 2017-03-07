@@ -26,6 +26,11 @@ const (
 	JSONEncoding = "json"
 )
 
+const (
+	// WorkerType is the key in JSON for the type of worker
+	WorkerType = "worker-type"
+)
+
 type (
 	// Queue interface is used to represent an asynchronous queue of jobs from
 	// which it is possible to enqueue and consume jobs.
@@ -176,7 +181,7 @@ func (jr *JobRequest) DocType() string { return consts.Jobs }
 // Valid implements the permissions.Validable interface
 func (jr *JobRequest) Valid(key, value string) bool {
 	switch key {
-	case "worker-type":
+	case WorkerType:
 		return jr.WorkerType == value
 	}
 	return false
