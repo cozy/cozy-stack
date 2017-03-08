@@ -445,13 +445,22 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 // FileDownloadCreateHandler stores the required path into a secret
 // usable for download handler below.
 func FileDownloadCreateHandler(c echo.Context) error {
-
 	instance := middlewares.GetInstance(c)
-	path := c.QueryParam("Path")
+	var doc *vfs.FileDoc
+	var err error
+	var path string
 
-	doc, err := vfs.GetFileDocFromPath(instance, path)
-	if err != nil {
-		return wrapVfsError(err)
+	if path = c.QueryParam("Path"); path != "" {
+		if doc, err = vfs.GetFileDocFromPath(instance, path); err != nil {
+			return wrapVfsError(err)
+		}
+	} else if id := c.QueryParam("Id"); id != "" {
+		if doc, err = vfs.GetFileDoc(instance, id); err != nil {
+			return wrapVfsError(err)
+		}
+		if path, err = doc.Path(instance); err != nil {
+			return wrapVfsError(err)
+		}
 	}
 
 	err = permissions.Allow(c, "GET", doc)

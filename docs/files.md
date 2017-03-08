@@ -677,6 +677,10 @@ Content-Type: application/zip
 Create a file download. The Path query parameter specifies the file to download.
 The response json API links contains a `related` link for downloading the file, see below.
 
+### POST /files/downloads?Id=file_id
+
+Also create a file download. But it takes the id of the file and not its path.
+
 ### GET /files/downloads/:secret/:name
 
 Allows to download a file with a secret created from the route above.
