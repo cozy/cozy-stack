@@ -328,13 +328,11 @@ follow the following constraints in mind:
 - The migration path must be as easy as possible
 - The developpement and maintainance of konnector must also be as easy as possible
 
-### New doctype : io.cozy.konnector_account or io.cozy.account
+### New doctype : io.cozy.accounts
 
-A new doctype will have to be create to allow to keep konnector accounts independently from each
-konnector.
-
-Maybe the existing io.cozy.account doctype, used by the email application, could also be used. Or
-is it deprecated ?
+A new doctype will have to be created to allow to keep konnector accounts independently from each
+konnector. The one once used by the email application seems to be a good candidate :
+io.cozy.accounts
 
 Here is an example document with this doctype :
 
@@ -358,7 +356,7 @@ application, and also the CRUD of this new doctype.
 Each konnector need also to declare a new field in the "fields" attribute which will be the type of
 account, related to the accountType field in the new account docType.
 
-With this new field, which will appear also in the io.cozy.konnector docType, the "my account"
+With this new field, which will appear also in the io.cozy.konnectors docType, the "my account"
 client appliction will be able to propose existing accounts of the good type for activating a new
 konnector.
 
