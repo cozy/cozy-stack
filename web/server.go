@@ -6,20 +6,61 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"github.com/rakyll/statik/fs"
 	"github.com/spf13/afero"
 )
+
+var supportedLocales = []string{"en", "fr"}
+
+// LoadSupportedLocales reads the po files packed in go or from the assets directory
+// and loads them for translations
+func LoadSupportedLocales() error {
+	// By default, use the po files packed in the binary
+	// but use assets from the disk is assets option is filled in config
+	assetsPath := config.GetConfig().Assets
+	if assetsPath != "" {
+		for _, locale := range supportedLocales {
+			pofile := path.Join(assetsPath, "locales", locale+".po")
+			po, err := ioutil.ReadFile(pofile)
+			if err != nil {
+				return fmt.Errorf("Can't load the po file for %s", locale)
+			}
+			instance.LoadLocale(locale, string(po))
+		}
+		return nil
+	}
+
+	statikFS, err := fs.New()
+	if err != nil {
+		return err
+	}
+	for _, locale := range supportedLocales {
+		f, err := statikFS.Open("/locales/" + locale + ".po")
+		if err != nil {
+			return fmt.Errorf("Can't load the po file for %s", locale)
+		}
+		po, err := ioutil.ReadAll(f)
+		if err != nil {
+			return err
+		}
+		instance.LoadLocale(locale, string(po))
+	}
+	return nil
+}
 
 // ListenAndServe creates and setups all the necessary http endpoints and start
 // them.
@@ -108,6 +149,9 @@ func checkExists(filepath string) error {
 func listenAndServe(noAdmin bool, appsHandler echo.HandlerFunc) error {
 	main, err := CreateSubdomainProxy(echo.New(), appsHandler)
 	if err != nil {
+		return err
+	}
+	if err = LoadSupportedLocales(); err != nil {
 		return err
 	}
 

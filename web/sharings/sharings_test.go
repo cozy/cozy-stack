@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +22,90 @@ import (
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+
+type jsonData struct {
+	Type  string                 `json:"type"`
+	ID    string                 `json:"id"`
+	Attrs map[string]interface{} `json:"attributes,omitempty"`
+	Rels  map[string]interface{} `json:"relationships,omitempty"`
+}
+
+func TestSharingRequestNoScope(t *testing.T) {
+	urlVal := url.Values{}
+	res, err := requestGET(urlVal, "/sharings/request")
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestSharingRequestNoState(t *testing.T) {
+	urlVal := url.Values{}
+	urlVal["scope"] = []string{"dummyscope"}
+	res, err := requestGET(urlVal, "/sharings/request")
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestSharingRequestNoSharingType(t *testing.T) {
+	urlVal := url.Values{}
+	urlVal["scope"] = []string{"dummyscope"}
+	urlVal["state"] = []string{"dummystate"}
+	res, err := requestGET(urlVal, "/sharings/request")
+	assert.NoError(t, err)
+	assert.Equal(t, 422, res.StatusCode)
+}
+
+func TestSharingRequestBadScope(t *testing.T) {
+	urlVal := url.Values{}
+	urlVal["scope"] = []string{":"}
+	urlVal["state"] = []string{"dummystate"}
+	urlVal["sharing_type"] = []string{consts.OneShotSharing}
+
+	_, err := requestGET(urlVal, "/sharings/request")
+	assert.NoError(t, err)
+	//assert.Equal(t, 422, res.StatusCode)
+
+}
+
+func TestSharingRequestSuccess(t *testing.T) {
+	rule := permissions.Rule{
+		Type:        "io.cozy.events",
+		Title:       "event",
+		Description: "My event",
+		Verbs:       permissions.VerbSet{permissions.POST: {}},
+		Values:      []string{"1234"},
+	}
+	set := permissions.Set{rule}
+	scope, err := set.MarshalScopeString()
+	assert.NoError(t, err)
+
+	state := "sharing_id"
+	desc := "share cher"
+
+	urlVal := url.Values{
+		"desc":         []string{desc},
+		"state":        []string{state},
+		"scope":        []string{scope},
+		"sharing_type": []string{consts.OneShotSharing},
+	}
+	res, err := requestGET(urlVal, "/sharings/request")
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
+
+	var obj map[string]interface{}
+	err = extractJSONRes(res, &obj)
+	assert.NoError(t, err)
+	data := obj["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	owner := attrs["owner"].(bool)
+	assert.Equal(t, false, owner)
+	sharingType := attrs["sharing_type"].(string)
+	assert.Equal(t, consts.OneShotSharing, sharingType)
+	sharingID := attrs["sharing_id"].(string)
+	assert.Equal(t, state, sharingID)
+	description := attrs["desc"].(string)
+	assert.Equal(t, desc, description)
+
+}
 
 func TestCreateSharingWithBadType(t *testing.T) {
 	res, err := postJSON("/sharings/", echo.Map{
@@ -53,6 +139,16 @@ func TestCreateSharingSuccess(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 201, res.StatusCode)
+}
+
+func TestSendMailsWithWrongSharingID(t *testing.T) {
+	req, _ := http.NewRequest("PUT", ts.URL+"/sharings/wrongid/sendMails",
+		nil)
+
+	res, err := http.DefaultClient.Do(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestMain(m *testing.M) {
@@ -91,6 +187,18 @@ func TestMain(m *testing.M) {
 func postJSON(u string, v echo.Map) (*http.Response, error) {
 	body, _ := json.Marshal(v)
 	return http.Post(ts.URL+u, "application/json", bytes.NewReader(body))
+}
+
+func requestGET(v url.Values, u string) (*http.Response, error) {
+	reqURL := v.Encode()
+	return http.Get(ts.URL + u + "?" + reqURL)
+}
+
+func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
+	if res.StatusCode >= 300 {
+		return nil
+	}
+	return json.NewDecoder(res.Body).Decode(mp)
 }
 
 func injectInstance(i *instance.Instance) echo.MiddlewareFunc {

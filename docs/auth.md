@@ -147,6 +147,67 @@ Cookie: seesioncookie....
 Authorization: Bearer app-token
 ```
 
+### GET /auth/passphrase_reset
+
+Display a form for the user to reset its password, in case he has forgotten it
+for example. If the user is connected, he won't be shown this form and he will
+be directly redirected to his cozy.
+
+```http
+GET /auth/passphrase_reset HTTP/1.1
+Host: cozy.example.org
+Content-Type: text/html
+Cookie: ...
+```
+
+### POST /auth/passphrase_reset
+
+After the user has clicked on the reset button of the passphrase reset form,
+it will execute a request to this endpoint.
+
+This endpoint will create a token for the user to actually renew his
+passphrase. The token has a short-live duration of about 15 minutes. After the
+token is created, it is sent to the user on its mailbox.
+
+This endpoint will redirect the user on the login form page.
+
+```http
+POST /auth/passphrase_reset HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/x-www-form-urlencoded
+
+csrf_token=123456890
+```
+
+### GET /auth/passphrase_renew
+
+Display a form for the user to enter a new password. This endpoint should be
+used with a `token` query parameter. This token makes sure that the user has
+actually reset its passphrase and should have been sent via its mailbox.
+
+```http
+GET /auth/passphrase_renew?token=123456789 HTTP/1.1
+Host: cozy.example.org
+Content-Type: text/html
+Cookie: ...
+```
+
+### POST /auth/passphrase_renew
+
+After the user has entered its new passphrase in the renew passphrase form, a
+request is made to this endpoint to renew the passphrase.
+
+This endpoint requires a valid token to actually work. In case of a success,
+the user is redirected to the login form.
+
+```http
+POST /auth/passphrase_reset HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/x-www-form-urlencoded
+
+csrf_token=123456890&passphrase_reset_token=123456789&passphrase=mynewpassphrase
+```
+
 ### POST /auth/register
 
 This route is used by OAuth2 clients to dynamically register them-selves.

@@ -131,14 +131,6 @@ func TestInstallBadSlug(t *testing.T) {
 
 func TestInstallBadAppsSource(t *testing.T) {
 	_, err := NewInstaller(c, &InstallerOptions{
-		Slug:      "app2",
-		SourceURL: "",
-	})
-	if assert.Error(t, err) {
-		assert.Equal(t, ErrNotSupportedSource, err)
-	}
-
-	_, err = NewInstaller(c, &InstallerOptions{
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
 	})
@@ -164,7 +156,7 @@ func TestInstallSuccessful(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -208,7 +200,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	for {
 		var done bool
@@ -229,7 +221,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	man, done, err := inst.Poll()
 	if !assert.NoError(t, err) {
@@ -252,7 +244,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	for {
 		var done bool
@@ -282,7 +274,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	var state State
 	for {
@@ -328,7 +320,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -375,7 +367,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	state = ""
 	for {
@@ -422,7 +414,7 @@ func TestInstallFromGithub(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -467,7 +459,7 @@ func TestMain(m *testing.M) {
 		Transport: &transport{},
 	}
 
-	err = couchdb.ResetDB(c, consts.Manifests)
+	err = couchdb.ResetDB(c, consts.Apps)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -516,7 +508,7 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
-	couchdb.DeleteDB(c, consts.Manifests)
+	couchdb.DeleteDB(c, consts.Apps)
 	couchdb.DeleteDB(c, consts.Files)
 	ts.Close()
 

@@ -9,16 +9,22 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
 var testInstance *instance.Instance
+var testClient *client.Client
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
@@ -57,6 +63,17 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	token, err := testInstance.MakeJWT(permissions.CLIAudience, "CLI", consts.Files, time.Now())
+	if err != nil {
+		fmt.Println("Could not get test instance token.", err)
+		os.Exit(1)
+	}
+
+	testClient = &client.Client{
+		Domain:     domain,
+		Authorizer: &request.BearerAuthorizer{Token: token},
+	}
+
 	res := m.Run()
 	instance.Destroy("test-files")
 	os.RemoveAll(tempdir)
@@ -67,11 +84,11 @@ func TestMain(m *testing.M) {
 
 func TestExecCommand(t *testing.T) {
 	buf := new(bytes.Buffer)
-	err := execCommand(testInstance, "mkdir /hello-test", buf)
+	err := execCommand(testClient, "mkdir /hello-test", buf)
 	assert.NoError(t, err)
 
 	buf = new(bytes.Buffer)
-	err = execCommand(testInstance, "ls /", buf)
+	err = execCommand(testClient, "ls /", buf)
 	assert.NoError(t, err)
 	assert.True(t, bytes.Contains(buf.Bytes(), []byte("hello-test")))
 }

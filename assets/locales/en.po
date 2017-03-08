@@ -1,0 +1,91 @@
+msgid ""
+msgstr ""
+
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Login Credentials error"
+msgstr "The credentials you entered are incorrect, please try again."
+
+msgid "Login Welcome"
+msgstr "Welcome!"
+
+msgid "Login Welcome name"
+msgstr "Welcome %s!"
+
+msgid "Login Password help"
+msgstr "Enter your password to access your Cozy"
+
+msgid "Login Password field"
+msgstr "Password"
+
+msgid "Login Password show"
+msgstr "Show password"
+
+msgid "Login Submit"
+msgstr "Log in"
+
+msgid "Passphrase reset Help"
+msgstr "Are you sure you want to reset your password?"
+
+msgid "Passphrase reset Submit"
+msgstr "Reset password"
+
+msgid "Passphrase renew Help"
+msgstr "Enter a new password"
+
+msgid "Passphrase renew Field"
+msgstr "password"
+
+msgid "Passphrase renew Submit"
+msgstr "Renew password"
+
+msgid "Login Forgot password"
+msgstr "Forgot your password?"
+
+msgid "Authorize Title"
+msgstr "Authorize remote application"
+
+msgid "Authorize Client presentation"
+msgstr "would like permission to access your Cozy."
+
+msgid "Authorize Policy sentence"
+msgstr "You can read its policy about the usage it will make of your data here:"
+
+msgid "Authorize Give permission"
+msgstr "This permission give access to:"
+
+msgid "Authorize Submit"
+msgstr "Accept"
+
+msgid "Error Title"
+msgstr "Sorry"
+
+msgid "Error Message"
+msgstr "An error occurred."
+
+msgid "Error No state parameter"
+msgstr "The state parameter is mandatory"
+
+msgid "Error No client_id parameter"
+msgstr "The client_id parameter is mandatory"
+
+msgid "Error No redirect_uri parameter"
+msgstr "The redirect_uri parameter is mandatory"
+
+msgid "Error No scope parameter"
+msgstr "The scope parameter is mandatory"
+
+msgid "Error No registered client"
+msgstr "The client must be registered"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "The redirect_uri parameter doesn't match the registered ones"
+
+msgid "Error Invalid redirect_uri"
+msgstr "The redirect_uri parameter is invalid"
+
+msgid "Error Invalid response type"
+msgstr "Invalid response type"
+
+msgid "Error Must be authenticated"
+msgstr "You must be authenticated"

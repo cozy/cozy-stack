@@ -507,6 +507,7 @@ func (f *File) Close() error {
 // be used to rename or move the file in the VFS.
 func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (*FileDoc, error) {
 	var err error
+	rename := patch.Name != nil
 	cdate := olddoc.CreatedAt
 	patch, err = normalizeDocPatch(&DocPatch{
 		Name:        &olddoc.Name,
@@ -516,18 +517,29 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (*FileDoc, 
 		UpdatedAt:   &olddoc.UpdatedAt,
 		Executable:  &olddoc.Executable,
 	}, patch, cdate)
-
 	if err != nil {
 		return nil, err
 	}
 
+	// in case of a renaming of the file, if the extension of the file has
+	// changed, we consider recalculating the mime and class attributes, using
+	// the new extension.
+	newname := *patch.Name
+	oldname := olddoc.Name
+	var mime, class string
+	if rename && path.Ext(newname) != path.Ext(oldname) {
+		mime, class = ExtractMimeAndClassFromFilename(newname)
+	} else {
+		mime, class = olddoc.Mime, olddoc.Class
+	}
+
 	newdoc, err := NewFileDoc(
-		*patch.Name,
+		newname,
 		*patch.DirID,
 		olddoc.Size,
 		olddoc.MD5Sum,
-		olddoc.Mime,
-		olddoc.Class,
+		mime,
+		class,
 		cdate,
 		*patch.Executable,
 		*patch.Tags,

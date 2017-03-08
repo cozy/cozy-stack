@@ -346,7 +346,11 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 		return err
 	}
 
-	err = vfs.ServeFileContent(instance, doc, "inline", c.Request(), c.Response())
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	}
+	err = vfs.ServeFileContent(instance, doc, disposition, c.Request(), c.Response())
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -369,7 +373,11 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 		}
 	}
 
-	err = vfs.ServeFileContent(instance, doc, "attachment", c.Request(), c.Response())
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	}
+	err = vfs.ServeFileContent(instance, doc, disposition, c.Request(), c.Response())
 	if err != nil {
 		return wrapVfsError(err)
 	}

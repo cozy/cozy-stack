@@ -19,6 +19,10 @@ func TestPermissions(t *testing.T) {
 				"b1.txt": nil,
 				"c1.txt": nil,
 			},
+			"B2/": H{
+				"b1.txt": nil,
+				"c1.txt": nil,
+			},
 			"C/":    H{},
 			"d.txt": nil,
 		},
@@ -40,6 +44,11 @@ func TestPermissions(t *testing.T) {
 	ModifyDirMetadata(vfsC, B, &DocPatch{
 		Tags: &[]string{"testtagparent"},
 	})
+
+	B2, err := GetDirDocFromPath(vfsC, "/O/B2", false)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	f, err := GetFileDocFromPath(vfsC, "/O/B/b1.txt")
 	if !assert.NoError(t, err) {
@@ -175,9 +184,18 @@ func TestPermissions(t *testing.T) {
 		permissions.Rule{
 			Type:   consts.Files,
 			Verbs:  permissions.ALL,
+			Values: []string{B.ID()},
+		},
+	}
+	assert.Error(t, Allows(vfsC, psetUncleID, permissions.GET, B2))
+
+	psetUnclePrefixID := permissions.Set{
+		permissions.Rule{
+			Type:   consts.Files,
+			Verbs:  permissions.ALL,
 			Values: []string{A.ID()},
 		},
 	}
-	assert.Error(t, Allows(vfsC, psetUncleID, permissions.GET, f))
+	assert.Error(t, Allows(vfsC, psetUnclePrefixID, permissions.GET, f))
 
 }

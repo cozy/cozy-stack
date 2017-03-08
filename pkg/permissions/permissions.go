@@ -36,6 +36,9 @@ const (
 
 	// TypeOauth if the value of Permission.Type for a oauth permission doc
 	TypeOauth = "oauth"
+
+	// TypeCLI if the value of Permission.Type for a command-line permission doc
+	TypeCLI = "cli"
 )
 
 // Index is the necessary index for this package
@@ -120,13 +123,26 @@ func GetForOauth(claims *Claims) (*Permission, error) {
 	return pdoc, nil
 }
 
+// GetForCLI create a non-persisted permissions doc for the command-line
+func GetForCLI(claims *Claims) (*Permission, error) {
+	set, err := UnmarshalScopeString(claims.Scope)
+	if err != nil {
+		return nil, err
+	}
+	pdoc := &Permission{
+		Type:        TypeCLI,
+		Permissions: set,
+	}
+	return pdoc, nil
+}
+
 // GetForApp retrieves the Permission doc for a given app
 func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		Selector: mango.And(
 			mango.Equal("type", TypeApplication),
-			mango.Equal("source_id", consts.Manifests+"/"+slug),
+			mango.Equal("source_id", consts.Apps+"/"+slug),
 		),
 	}, &res)
 	if err != nil {
@@ -177,7 +193,7 @@ func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error
 
 	doc := &Permission{
 		Type:        "app",
-		SourceID:    consts.Manifests + "/" + slug,
+		SourceID:    consts.Apps + "/" + slug,
 		Permissions: &set, // @TODO some validation?
 	}
 
@@ -221,7 +237,7 @@ func Force(db couchdb.Database, slug string, set Set) error {
 	existing, _ := GetForApp(db, slug)
 	doc := &Permission{
 		Type:        TypeApplication,
-		SourceID:    consts.Manifests + "/" + slug,
+		SourceID:    consts.Apps + "/" + slug,
 		Permissions: &set, // @TODO some validation?
 	}
 	if existing == nil {
@@ -237,7 +253,7 @@ func Force(db couchdb.Database, slug string, set Set) error {
 func DestroyApp(db couchdb.Database, slug string) error {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
-		Selector: mango.Equal("source_id", consts.Manifests+"/"+slug),
+		Selector: mango.Equal("source_id", consts.Apps+"/"+slug),
 	}, &res)
 	if err != nil {
 		return err

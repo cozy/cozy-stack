@@ -184,9 +184,9 @@ func TestAllDoctypes(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&dbs)
 	assert.NoError(t, err)
 	expected := []string{
+		"io.cozy.apps",
 		"io.cozy.events",
 		"io.cozy.files",
-		"io.cozy.manifests",
 		"io.cozy.settings",
 	}
 	assert.Equal(t, expected, dbs)

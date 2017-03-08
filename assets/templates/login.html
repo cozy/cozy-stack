@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
     <title>Cozy</title>
@@ -30,22 +30,22 @@
                 </div>
               </figure>
               {{if .PublicName}}
-                <h1>Welcome {{.PublicName}}!</h1>
+                <h1>{{t "Login Welcome name" .PublicName}}</h1>
               {{else}}
-                <h1>Welcome!</h1>
+                <h1>{{t "Login Welcome"}}</h1>
               {{end}}
             </header>
             <div role="region">
               <form id="login-form" method="POST" action="/auth/login" class="login auth">
                 <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
-                <p class="help" id="login-password-tip">Enter your password to access your Cozy</p>
+                <p class="help" id="login-password-tip">{{t "Login Password help"}}</p>
                 <p class="line">
-                  <label for="password" aria-describedby="login-password-tip">password</label>
+                  <label for="password" aria-describedby="login-password-tip">{{t "Login Password field"}}</label>
                   <button id="password-visibility-button" class="icon password-visibility-icon masked"
                       type="button"
-                      title="Show password"
+                      title="{{t "Login Password show"}}"
                       name="password-visibility"></button>
-                  <input id="password" name="passphrase" placeholder="Password" type="password" autofocus="true" />
+                  <input id="password" name="passphrase" placeholder="{{t "Login Password field"}}" type="password" autofocus="true" />
                 </p>
                 {{if .CredentialsError}}
                 <div class="errors">
@@ -56,8 +56,9 @@
             </div>
             <footer>
               <div class="controls">
-                <button id="login-submit" form="login-form" type="submit">Log in</button>
+                <button id="login-submit" form="login-form" type="submit">{{t "Login Submit"}}</button>
               </div>
+              <a href="/auth/passphrase_reset">{{t "Login forgot password"}}</a>
             </footer>
           </div>
         </div>

@@ -8,36 +8,28 @@ Import the specified file or directory into cozy
 Import the specified file or directory into cozy
 
 ```
-cozy-stack files import [domain] [--from name] [--to name] [--match pattern]
+cozy-stack files import [--domain domain] [--from name] [--to name] [--match pattern]
 ```
 
 ### Options
 
 ```
-      --dry-run        Do not actually import the files
-      --from string    Directory to import from in cozy
-      --match string   Pattern that the imported files must match
-      --to string      Directory to import to in cozy (default "/")
+      --dry-run        do not actually import the files
+      --from string    directory to import from in cozy
+      --match string   pattern that the imported files must match
+      --to string      directory to import to in cozy (default "/")
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --admin-host string      administration server host (default "localhost")
-      --admin-port int         administration server port (default 6060)
-      --assets string          path to the directory with the assets (use the packed assets by default)
-  -c, --config string          configuration file (default "$HOME/.cozy.yaml")
-      --couchdb-url string     CouchDB URL (default "http://localhost:5984/")
-      --fs-url string          filesystem url (default "file://localhost//storage")
-      --host string            server host (default "localhost")
-      --log-level string       define the log level (default "info")
-      --mail-disable-tls       disable smtp over tls
-      --mail-host string       mail smtp host (default "localhost")
-      --mail-password string   mail smtp password
-      --mail-port int          mail smtp port (default 465)
-      --mail-username string   mail smtp username
-  -p, --port int               server port (default 8080)
-      --subdomains string      how to structure the subdomains for apps (can be nested or flat) (default "nested")
+      --admin-host string   administration server host (default "localhost")
+      --admin-port int      administration server port (default 6060)
+  -c, --config string       configuration file (default "$HOME/.cozy.yaml")
+      --domain string       specify the domain name of the instance
+      --host string         server host (default "localhost")
+      --log-level string    define the log level (default "info")
+  -p, --port int            server port (default 8080)
 ```
 
 ### SEE ALSO

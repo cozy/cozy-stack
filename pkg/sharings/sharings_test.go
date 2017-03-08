@@ -9,11 +9,19 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
 )
 
 var TestPrefix = couchdb.SimpleDatabasePrefix("couchdb-tests")
+var instanceSecret = crypto.GenerateRandomBytes(64)
+var in = &instance.Instance{
+	OAuthSecret: instanceSecret,
+	Domain:      "test-sharing.sparta",
+}
 
 func TestGetRecipient(t *testing.T) {
 	recipient := &Recipient{}
@@ -30,7 +38,55 @@ func TestGetRecipient(t *testing.T) {
 	assert.Equal(t, recipient, doc)
 }
 
-func TestCreate(t *testing.T) {
+func TestCheckSharingTypeBadType(t *testing.T) {
+	sharingType := "mybad"
+	err := CheckSharingType(sharingType)
+	assert.Error(t, err)
+}
+
+func TestCheckSharingTypeSuccess(t *testing.T) {
+	sharingType := consts.OneShotSharing
+	err := CheckSharingType(sharingType)
+	assert.NoError(t, err)
+}
+
+func TestCreateSharingRequestBadParams(t *testing.T) {
+	_, err := CreateSharingRequest(TestPrefix, "", "", "", "")
+	assert.Error(t, err)
+
+	state := "1234"
+	_, err = CreateSharingRequest(TestPrefix, "", state, "", "")
+	assert.Error(t, err)
+
+	sharingType := consts.OneShotSharing
+	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, "")
+	assert.Error(t, err)
+
+}
+
+func TestCreateSharingRequestSuccess(t *testing.T) {
+	state := "1234"
+	sharingType := consts.OneShotSharing
+	desc := "share cher"
+
+	rule := permissions.Rule{
+		Type:   "io.cozy.events",
+		Verbs:  permissions.Verbs(permissions.POST),
+		Values: []string{"1234"},
+	}
+
+	set := permissions.Set{rule}
+	scope, err := set.MarshalScopeString()
+	assert.NoError(t, err)
+
+	sharing, err := CreateSharingRequest(TestPrefix, desc, state, sharingType, scope)
+	assert.NoError(t, err)
+	assert.Equal(t, state, sharing.SharingID)
+	assert.Equal(t, sharingType, sharing.SharingType)
+	assert.Equal(t, &set, sharing.Permissions)
+}
+
+func TestCreateSuccess(t *testing.T) {
 	sharing := &Sharing{
 		SharingType: consts.OneShotSharing,
 	}
@@ -47,7 +103,7 @@ func TestCheckSharingCreation(t *testing.T) {
 		Email: "test@test.fr",
 	}
 
-	sRec := &SharingRecipient{
+	recStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{
 			ID:   "123",
 			Type: consts.Recipients,
@@ -55,8 +111,8 @@ func TestCheckSharingCreation(t *testing.T) {
 	}
 
 	sharing := &Sharing{
-		SharingType: "shotmedown",
-		SRecipients: []*SharingRecipient{sRec},
+		SharingType:      "shotmedown",
+		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
 
 	err := CheckSharingCreation(TestPrefix, sharing)
@@ -69,15 +125,15 @@ func TestCheckSharingCreation(t *testing.T) {
 	err = couchdb.CreateDoc(TestPrefix, rec)
 	assert.NoError(t, err)
 
-	sRec.RefRecipient.ID = rec.RID
+	recStatus.RefRecipient.ID = rec.RID
 	err = CheckSharingCreation(TestPrefix, sharing)
 	assert.NoError(t, err)
 	assert.Equal(t, true, sharing.Owner)
 	assert.NotEmpty(t, sharing.SharingID)
 
-	sRecipients := sharing.SRecipients
-	for _, sRec := range sRecipients {
-		assert.Equal(t, consts.PendingSharingStatus, sRec.Status)
+	rStatus := sharing.RecipientsStatus
+	for _, rec := range rStatus {
+		assert.Equal(t, consts.PendingSharingStatus, rec.Status)
 	}
 }
 
@@ -96,7 +152,24 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	err = couchdb.ResetDB(in, consts.InstanceSettingsID)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	settingsDoc := &couchdb.JSONDoc{
+		Type: consts.Settings,
+		M:    make(map[string]interface{}),
+	}
+	settingsDoc.SetID(consts.InstanceSettingsID)
+	err = couchdb.CreateNamedDocWithDB(in, settingsDoc)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
+	couchdb.DeleteDB(in, consts.Settings)
 	os.Exit(res)
 }

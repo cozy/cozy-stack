@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -28,6 +29,18 @@ func RandomString(n int) string {
 		b[i] = letters[rand.Intn(lenLetters)]
 	}
 	return string(b)
+}
+
+// StripPort extract the domain name from a domain:port string.
+func StripPort(domain string) string {
+	if strings.Contains(domain, ":") {
+		cleaned, _, err := net.SplitHostPort(domain)
+		if err != nil {
+			return domain
+		}
+		return cleaned
+	}
+	return domain
 }
 
 // FileExists returns whether or not the file exists on the current file
