@@ -15,4 +15,7 @@ testresult=$?
 pidstack=$(jobs -pr)
 [ -n "$pidstack" ] && kill -9 $pidstack
 
-exit $testresult
+if git grep -l -e 'github.com/labstack/gommon/log' -e 'github.com/dgrijalva/jwt-go' -- '*.go'
+then exit 1
+else exit $testresult
+fi
