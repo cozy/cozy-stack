@@ -47,12 +47,12 @@ func TestMain(m *testing.M) {
 		fmt.Println("Cant reset db", err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineIndexes(testInstance, consts.Indexes)
+	err = couchdb.DefineIndexes(testInstance, consts.IndexesByDoctype(consts.Permissions))
 	if err != nil {
 		fmt.Println("Cant define index", err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineViews(testInstance, consts.Views)
+	err = couchdb.DefineViews(testInstance, consts.ViewsByDoctype(consts.Permissions))
 	if err != nil {
 		fmt.Println("cant define views", err)
 		os.Exit(1)
