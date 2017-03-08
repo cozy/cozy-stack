@@ -350,11 +350,44 @@ Any attribute needed for the account may be added : email, etc...
 
 ### Updates needed in existing application and konnectors
 
-The link between the accounts and the konnector should be handled by the "my accounts" client
-application, and also the CRUD of this new doctype.
+CRUD manipulation of io.cozy.accounts and linking them with konnectors will be handled by the
+"my accounts" client application.
 
 Each konnector need also to declare a new field in the "fields" attribute which will be the type of
 account, related to the accountType field in the new account docType.
+
+Ex:
+
+```
+module.exports = baseKonnector.createNew({
+  name: 'Trainline',
+  vendorLink: 'www.captaintrain.com',
+  category: 'transport',
+  color: {
+    hex: '#48D5B5',
+    css: '#48D5B5'
+  },
+  fields: {
+    login: {
+      type: 'text'
+    },
+    password: {
+      type: 'password'
+    },
+    folderPath: {
+      type: 'folder',
+      advanced: true
+    },
+    accountType: "trainline"
+  },
+  dataType: ['bill'],
+  models: [Bill],
+  fetchOperations: [
+    ...
+  ]
+})
+```
+
 
 With this new field, which will appear also in the io.cozy.konnectors docType, the "my account"
 client appliction will be able to propose existing accounts of the good type for activating a new
