@@ -25,16 +25,14 @@ const JSMimeType = "application/javascript"
 
 const typeTextEventStream = "text/event-stream"
 
-// InstallHandler handles all POST /:slug request and tries to install
+// installHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
-func InstallHandler(c echo.Context) error {
+func installHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
-
 	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
 		return err
 	}
-
 	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
 		SourceURL: c.QueryParam("Source"),
 		Slug:      slug,
@@ -46,16 +44,14 @@ func InstallHandler(c echo.Context) error {
 	return pollInstaller(c, slug, inst)
 }
 
-// UpdateHandler handles all POST /:slug request and tries to install
+// updateHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
-func UpdateHandler(c echo.Context) error {
+func updateHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
-
 	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
 		return err
 	}
-
 	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
 		Slug: slug,
 	})
@@ -64,6 +60,25 @@ func UpdateHandler(c echo.Context) error {
 	}
 	go inst.Update()
 	return pollInstaller(c, slug, inst)
+}
+
+// deleteHandler handles all DELETE /:slug used to delete an application with
+// the specified slug.
+func deleteHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	slug := c.Param("slug")
+	if err := permissions.AllowInstallApp(c, permissions.DELETE); err != nil {
+		return err
+	}
+	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{Slug: slug})
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	man, err := inst.Delete()
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, man, nil)
 }
 
 func pollInstaller(c echo.Context, slug string, inst *apps.Installer) error {
@@ -119,9 +134,9 @@ func writeStream(w http.ResponseWriter, event string, b []byte) {
 	}
 }
 
-// ListHandler handles all GET / requests which can be used to list
+// listHandler handles all GET / requests which can be used to list
 // installed applications.
-func ListHandler(c echo.Context) error {
+func listHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Apps); err != nil {
@@ -142,8 +157,8 @@ func ListHandler(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
-// IconHandler gives the icon of an application
-func IconHandler(c echo.Context) error {
+// iconHandler gives the icon of an application
+func iconHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
 	app, err := apps.GetBySlug(instance, slug)
@@ -167,10 +182,11 @@ func IconHandler(c echo.Context) error {
 
 // Routes sets the routing for the apps service
 func Routes(router *echo.Group) {
-	router.GET("/", ListHandler)
-	router.POST("/:slug", InstallHandler)
-	router.PUT("/:slug", UpdateHandler)
-	router.GET("/:slug/icon", IconHandler)
+	router.GET("/", listHandler)
+	router.POST("/:slug", installHandler)
+	router.PUT("/:slug", updateHandler)
+	router.DELETE("/:slug", deleteHandler)
+	router.GET("/:slug/icon", iconHandler)
 }
 
 func wrapAppsError(err error) error {

@@ -344,11 +344,32 @@ func Remove(c Context, name string) error {
 	if !path.IsAbs(name) {
 		return ErrNonAbsolutePath
 	}
+	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
+	if err != nil {
+		return err
+	}
+	if dir != nil {
+		if len(dir.files) > 0 {
+			return ErrDirNotEmpty
+		}
+		return DestroyDirAndContent(c, dir)
+	}
+	return DestroyFile(c, file)
+}
 
-	// TODO: fix this remove method implemented for now only to support
-	// go-git. This method should also remove the document from
-	// database.
-	return c.FS().Remove(name)
+// RemoveAll removes the specified name file or directory and its content.
+func RemoveAll(c Context, name string) error {
+	if !path.IsAbs(name) {
+		return ErrNonAbsolutePath
+	}
+	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
+	if err != nil {
+		return err
+	}
+	if dir != nil {
+		return DestroyDirAndContent(c, dir)
+	}
+	return DestroyFile(c, file)
 }
 
 // DiskUsage computes the total size of the files

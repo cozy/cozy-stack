@@ -121,6 +121,23 @@ func (i *Installer) Update() {
 	return
 }
 
+// Delete will remove the application linked to the installer.
+func (i *Installer) Delete() (*Manifest, error) {
+	if i.man == nil {
+		return nil, ErrNotFound
+	}
+	if state := i.man.State; state != Ready && state != Errored {
+		return nil, ErrBadState
+	}
+	if err := deleteManifest(i.ctx, i.man); err != nil {
+		return nil, err
+	}
+	if err := vfs.RemoveAll(i.ctx, i.appDir()); err != nil {
+		return nil, err
+	}
+	return i.man, nil
+}
+
 func (i *Installer) endOfProc() {
 	man, err := i.man, i.err
 	if man == nil || err == ErrBadState {
@@ -229,28 +246,30 @@ func (i *Installer) Poll() (*Manifest, bool, error) {
 }
 
 func updateManifest(db couchdb.Database, man *Manifest) error {
-
 	err := permissions.DestroyApp(db, man.Slug)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}
-
 	err = couchdb.UpdateDoc(db, man)
 	if err != nil {
 		return err
 	}
-
 	_, err = permissions.CreateAppSet(db, man.Slug, *man.Permissions)
 	return err
 }
 
 func createManifest(db couchdb.Database, man *Manifest) error {
-
 	if err := couchdb.CreateNamedDoc(db, man); err != nil {
 		return err
 	}
-
 	_, err := permissions.CreateAppSet(db, man.Slug, *man.Permissions)
 	return err
+}
 
+func deleteManifest(db couchdb.Database, man *Manifest) error {
+	err := permissions.DestroyApp(db, man.Slug)
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return err
+	}
+	return couchdb.DeleteDoc(db, man)
 }

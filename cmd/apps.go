@@ -70,8 +70,9 @@ var installAppCmd = &cobra.Command{
 }
 
 var updateAppCmd = &cobra.Command{
-	Use:   "update [slug]",
-	Short: "Update the application with the specified slug name.",
+	Use:     "update [slug]",
+	Short:   "Update the application with the specified slug name.",
+	Aliases: []string{"upgrade"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return cmd.Help()
@@ -89,6 +90,32 @@ var updateAppCmd = &cobra.Command{
 		}
 		c := newClient(flagAppsDomain, consts.Apps)
 		app, err := c.UpdateApp(&client.AppOptions{Slug: args[0]})
+		if err != nil {
+			return err
+		}
+		json, err := json.MarshalIndent(app.Attrs, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(json))
+		return nil
+	},
+}
+
+var uninstallAppCmd = &cobra.Command{
+	Use:     "uninstall [slug]",
+	Short:   "Uninstall the application with the specified slug name.",
+	Aliases: []string{"rm"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Help()
+		}
+		if flagAppsDomain == "" {
+			log.Error(errAppsMissingDomain)
+			return cmd.Help()
+		}
+		c := newClient(flagAppsDomain, consts.Apps)
+		app, err := c.UninstallApp(&client.AppOptions{Slug: args[0]})
 		if err != nil {
 			return err
 		}
@@ -127,6 +154,7 @@ func init() {
 
 	appsCmdGroup.AddCommand(installAppCmd)
 	appsCmdGroup.AddCommand(updateAppCmd)
+	appsCmdGroup.AddCommand(uninstallAppCmd)
 
 	RootCmd.AddCommand(appsCmdGroup)
 }
