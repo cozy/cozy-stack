@@ -52,12 +52,11 @@ var GlobalDB = SimpleDatabasePrefix("global")
 
 // View is the map/reduce thing in CouchDB
 type View struct {
-	Map    string `json:"map"`
-	Reduce string `json:"reduce,omitempty"`
+	Name    string `json:"-"`
+	Doctype string `json:"-"`
+	Map     string `json:"map"`
+	Reduce  string `json:"reduce,omitempty"`
 }
-
-// Views is a map of name/views
-type Views map[string]View
 
 // JSONDoc is a map representing a simple json object that implements
 // the Doc interface.
@@ -468,40 +467,53 @@ func CreateDoc(db Database, doc Doc) error {
 }
 
 // DefineViews creates a design doc with some views
-func DefineViews(db Database, doctype string, views Views) error {
-	url := makeDBName(db, doctype) + "/_design/" + doctype
-	doc := struct {
-		Lang  string `json:"language"`
-		Views Views  `json:"views"`
-	}{
-		"javascript",
-		views,
+func DefineViews(db Database, views []*View) error {
+	// group views by doctype
+	grouped := make(map[string]map[string]*View)
+	for _, v := range views {
+		g, ok := grouped[v.Doctype]
+		if !ok {
+			g = make(map[string]*View)
+			grouped[v.Doctype] = g
+		}
+		g[v.Name] = v
 	}
-	return makeRequest("PUT", url, &doc, nil)
+	for doctype, views := range grouped {
+		url := makeDBName(db, doctype) + "/_design/" + doctype
+		doc := struct {
+			Lang  string           `json:"language"`
+			Views map[string]*View `json:"views"`
+		}{
+			"javascript",
+			views,
+		}
+		err := makeRequest("PUT", url, &doc, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ExecView executes the specified view function
-func ExecView(db Database, req *ViewRequest, results interface{}) error {
-	viewurl := makeDBName(db, req.Doctype) + "/_design/" + req.Doctype + "/_view/" + req.ViewName
-
+func ExecView(db Database, view *View, req *ViewRequest, results interface{}) error {
+	viewurl := fmt.Sprintf("%s/_design/%s/_view/%s", makeDBName(db, view.Doctype), view.Doctype, view.Name)
 	// Keys request
 	if req.Keys != nil {
 		return makeRequest("POST", viewurl, req, &results)
 	}
-
 	v, err := req.Values()
 	if err != nil {
 		return err
 	}
 	viewurl += "?" + v.Encode()
 	return makeRequest("GET", viewurl, nil, &results)
-
 }
 
 // DefineIndex define the index on the doctype database
 // see query package on how to define an index
-func DefineIndex(db Database, doctype string, index mango.Index) error {
-	_, err := DefineIndexRaw(db, doctype, &index)
+func DefineIndex(db Database, index *mango.Index) error {
+	_, err := DefineIndexRaw(db, index.Doctype, index.Request)
 	return err
 }
 
@@ -510,6 +522,16 @@ func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreat
 	url := makeDBName(db, doctype) + "/_index"
 	var response IndexCreationResponse
 	return &response, makeRequest("POST", url, &index, &response)
+}
+
+// DefineIndexes defines a list of indexes
+func DefineIndexes(db Database, indexes []*mango.Index) error {
+	for _, index := range indexes {
+		if err := DefineIndex(db, index); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // FindDocs returns all documents matching the passed FindRequest
@@ -647,9 +669,6 @@ type AllDocsResponse struct {
 // ViewRequest are all params that can be passed to a view
 // It can be encoded either as a POST-json or a GET-url.
 type ViewRequest struct {
-	Doctype  string `json:"-" url:"-"`
-	ViewName string `json:"-" url:"-"`
-
 	Key      interface{} `json:"key,omitempty" url:"key,omitempty"`
 	StartKey interface{} `json:"start_key,omitempty" url:"start_key,omitempty"`
 	EndKey   interface{} `json:"end_key,omitempty" url:"end_key,omitempty"`

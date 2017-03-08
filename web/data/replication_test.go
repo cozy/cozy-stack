@@ -50,7 +50,7 @@ func TestReplicationFromcozy(t *testing.T) {
 
 	// add more docs, including a _design doc
 	var doc4 = getDocForTest()
-	err = couchdb.DefineIndex(testInstance, Type, mango.IndexOnFields("test"))
+	err = couchdb.DefineIndex(testInstance, mango.IndexOnFields(Type, "test"))
 	assert.NoError(t, err)
 
 	// replicate again

@@ -576,15 +576,13 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	for _, index := range Indexes {
-		err = couchdb.DefineIndex(vfsC, consts.Files, index)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	err = couchdb.DefineIndexes(vfsC, consts.IndexesByDoctype(consts.Files))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if err = couchdb.DefineViews(vfsC, consts.Files, Views); err != nil {
+	if err = couchdb.DefineViews(vfsC, consts.ViewsByDoctype(consts.Files)); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

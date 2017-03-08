@@ -124,11 +124,11 @@ func TestGetAllDocs(t *testing.T) {
 }
 
 func TestDefineIndex(t *testing.T) {
-	err := DefineIndex(TestPrefix, TestDoctype, mango.IndexOnFields("fieldA", "fieldB"))
+	err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "fieldA", "fieldB"))
 	assert.NoError(t, err)
 
 	// if I try to define the same index several time
-	err2 := DefineIndex(TestPrefix, TestDoctype, mango.IndexOnFields("fieldA", "fieldB"))
+	err2 := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "fieldA", "fieldB"))
 	assert.NoError(t, err2)
 }
 
@@ -148,7 +148,7 @@ func TestQuery(t *testing.T) {
 		}
 	}
 
-	err := DefineIndex(TestPrefix, TestDoctype, mango.IndexOnFields("fieldA", "fieldB"))
+	err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "fieldA", "fieldB"))
 	if !assert.NoError(t, err) {
 		t.FailNow()
 		return

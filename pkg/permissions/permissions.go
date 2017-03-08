@@ -41,39 +41,6 @@ const (
 	TypeCLI = "cli"
 )
 
-// Index is the necessary index for this package
-// used in instance creation
-var Index = mango.IndexOnFields("source_id", "type")
-
-const shareByCView = "byToken"
-const shareByDocView = "byDoc"
-
-// Views are athe necessary views for this package
-// used in instance creation
-var Views = couchdb.Views{
-	shareByCView: couchdb.View{
-		Map: `
-function(doc){
-	if(doc.type === "share" && doc.codes)
-		Object.keys(doc.codes).forEach(function(k){ emit(doc.codes[k]) })
-}`,
-	},
-	shareByDocView: couchdb.View{
-		Map: `
-function(doc){
-	if(doc.type === "share" && doc.permissions) {
-		Object.keys(doc.permissions).forEach(function(k){
-			var p = doc.permissions[k];
-			var selector = p.selector || "_id";
-			for(var i=0; i<p.values.length; i++) {
-				emit([p.type, selector, p.values[i]], p.verbs);
-			}
-		});
-	}
-}`,
-	},
-}
-
 var (
 	// ErrNotSubset is returned on requests attempting to create a Set of
 	// permissions which is not a subset of the request's own token.
@@ -172,9 +139,7 @@ func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
 // GetForShareCode retrieves the Permission doc for a given sharing code
 func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error) {
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, &couchdb.ViewRequest{
-		Doctype:     consts.Permissions,
-		ViewName:    shareByCView,
+	err := couchdb.ExecView(db, consts.PermissionsShareByCView, &couchdb.ViewRequest{
 		Key:         tokenCode,
 		IncludeDocs: true,
 	}, &res)
@@ -299,10 +264,8 @@ func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (ma
 		keys[i] = []string{doctype, "_id", id}
 	}
 
-	err := couchdb.ExecView(db, &couchdb.ViewRequest{
-		Doctype:  consts.Permissions,
-		ViewName: shareByDocView,
-		Keys:     keys,
+	err := couchdb.ExecView(db, consts.PermissionsShareByDocView, &couchdb.ViewRequest{
+		Keys: keys,
 	}, &res)
 	if err != nil {
 		return nil, err
