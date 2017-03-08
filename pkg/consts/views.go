@@ -22,7 +22,7 @@ var Indexes = []*mango.Index{
 	mango.IndexOnFields(Files, "path"),
 }
 
-// DiskUsageView is the name of the view used for computing the disk usage
+// DiskUsageView is the view used for computing the disk usage
 var DiskUsageView = &couchdb.View{
 	Name:    "disk-usage",
 	Doctype: Files,
@@ -36,8 +36,8 @@ function(doc) {
 	Reduce: "_sum",
 }
 
-// FilesReferencedByView is the name of the view used for fetching files
-// referenced by a given document
+// FilesReferencedByView is the view used for fetching files referenced by a
+// given document
 var FilesReferencedByView = &couchdb.View{
 	Name:    "referenced-by",
 	Doctype: Files,
@@ -51,6 +51,8 @@ function(doc) {
 }`,
 }
 
+// PermissionsShareByCView is the view for fetching the permissions associated
+// to a document via a token code.
 var PermissionsShareByCView = &couchdb.View{
 	Name:    "byToken",
 	Doctype: Permissions,
@@ -64,6 +66,8 @@ function(doc) {
 }`,
 }
 
+// PermissionsShareByDocView is the view for fetching a list of permissions
+// associated to a list of IDs.
 var PermissionsShareByDocView = &couchdb.View{
 	Name:    "byDoc",
 	Doctype: Permissions,
