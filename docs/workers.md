@@ -26,10 +26,6 @@ the root of this repository.
   content parts of the
     - `type` string of the content type: either `text/html` or `text/plain`
     - `body` string of the actual body content of the part
-- `template_values` any key/value object or null. if defined, the parts body
-  will be interpreted as [html](https://golang.org/pkg/html/template/) or
-  [text](https://golang.org/pkg/text/template/) templates and this object will
-  be used to fill the template with
 
 ### Examples
 
@@ -56,20 +52,5 @@ the root of this repository.
         {"type":"text/html", "body": "<h1>Hey !</h1>"},
         {"type":"text/plain", "body": "Hey !"}
     ]
-}
-
-// from with a template
-{
-    "mode": "from",
-    "to": [
-        {"name": "John Doe 1", "email":"john1@doe"},
-        {"name": "John Doe 2", "email":"john2@doe"}
-    ],
-    "subject": "Hey !",
-    "parts": [
-        {"text": "text/html", "body":"<h1>{{.Title}}</h1>"},
-        {"type": "text/plain", "body": "{{.Title}}"}
-    ],
-    "template_values": {"Title": "Hello!"}
 }
 ```

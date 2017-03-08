@@ -2,9 +2,7 @@ package sessions
 
 import (
 	"errors"
-	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -12,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/labstack/echo"
 )
 
@@ -132,7 +131,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 		Value:  "",
 		MaxAge: -1,
 		Path:   "/",
-		Domain: stripPort("." + i.Domain),
+		Domain: utils.StripPort("." + i.Domain),
 	}
 }
 
@@ -148,7 +147,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 		Value:    string(encoded),
 		MaxAge:   SessionMaxAge,
 		Path:     "/",
-		Domain:   stripPort("." + s.Instance.Domain),
+		Domain:   utils.StripPort("." + s.Instance.Domain),
 		Secure:   !s.Instance.Dev,
 		HttpOnly: true,
 	}, nil
@@ -166,7 +165,7 @@ func (s *Session) ToAppCookie(domain string) (*http.Cookie, error) {
 		Value:    string(encoded),
 		MaxAge:   86400, // 1 day
 		Path:     "/",
-		Domain:   stripPort(domain),
+		Domain:   utils.StripPort(domain),
 		Secure:   !s.Instance.Dev,
 		HttpOnly: true,
 	}, nil
@@ -195,15 +194,4 @@ func cookieMACConfig(i *instance.Instance) *crypto.MACConfig {
 		MaxAge: SessionMaxAge,
 		MaxLen: 256,
 	}
-}
-
-func stripPort(domain string) string {
-	if strings.Contains(domain, ":") {
-		cleaned, _, err := net.SplitHostPort(domain)
-		if err != nil {
-			return domain
-		}
-		return cleaned
-	}
-	return domain
 }

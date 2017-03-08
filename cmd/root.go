@@ -3,11 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -39,14 +42,51 @@ profiles you.`,
 
 var cfgFile string
 
-func init() {
-	binDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+func newClient(domain, scope string) *client.Client {
+	// For the CLI client, we rely on the admin APIs to generate a CLI token.
+	// We may want in the future rely on OAuth to handle the permissions with
+	// more granularity.
+	c := newAdminClient()
+	token, err := c.GetToken(&client.TokenOptions{
+		Domain:   domain,
+		Subject:  "CLI",
+		Audience: permissions.CLIAudience,
+		Scope:    []string{scope},
+	})
 	if err != nil {
-		panic(err)
+		log.Errorf("Could not generate access to domain %s", domain)
+		log.Error(err)
+		os.Exit(1)
 	}
+	return &client.Client{
+		Domain:     domain,
+		Authorizer: &request.BearerAuthorizer{Token: token},
+	}
+}
 
+func newAdminClient() *client.Client {
+	var pass []byte
+	if !config.IsDevRelease() {
+		pass = []byte(os.Getenv("COZY_ADMIN_PASSWORD"))
+		if len(pass) == 0 {
+			var err error
+			fmt.Printf("Password:")
+			pass, err = gopass.GetPasswdMasked()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+	return &client.Client{
+		Domain:     config.AdminServerAddr(),
+		Scheme:     "http",
+		Authorizer: &request.BasicAuthorizer{Password: string(pass)},
+	}
+}
+
+func init() {
 	flags := RootCmd.PersistentFlags()
-	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy/cozy.yaml\")")
+	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
 
 	flags.String("host", "localhost", "server host")
 	checkNoErr(viper.BindPFlag("host", flags.Lookup("host")))
@@ -54,38 +94,11 @@ func init() {
 	flags.IntP("port", "p", 8080, "server port")
 	checkNoErr(viper.BindPFlag("port", flags.Lookup("port")))
 
-	flags.String("subdomains", "nested", "how to structure the subdomains for apps (can be nested or flat)")
-	checkNoErr(viper.BindPFlag("subdomains", flags.Lookup("subdomains")))
-
-	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
-	checkNoErr(viper.BindPFlag("assets", flags.Lookup("assets")))
-
 	flags.String("admin-host", "localhost", "administration server host")
 	checkNoErr(viper.BindPFlag("admin.host", flags.Lookup("admin-host")))
 
 	flags.Int("admin-port", 6060, "administration server port")
 	checkNoErr(viper.BindPFlag("admin.port", flags.Lookup("admin-port")))
-
-	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
-	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
-
-	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
-	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
-
-	flags.String("mail-host", "localhost", "mail smtp host")
-	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
-
-	flags.Int("mail-port", 465, "mail smtp port")
-	checkNoErr(viper.BindPFlag("mail.port", flags.Lookup("mail-port")))
-
-	flags.String("mail-username", "", "mail smtp username")
-	checkNoErr(viper.BindPFlag("mail.username", flags.Lookup("mail-username")))
-
-	flags.String("mail-password", "", "mail smtp password")
-	checkNoErr(viper.BindPFlag("mail.password", flags.Lookup("mail-password")))
-
-	flags.Bool("mail-disable-tls", false, "disable smtp over tls")
-	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
 
 	flags.String("log-level", "info", "define the log level")
 	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))

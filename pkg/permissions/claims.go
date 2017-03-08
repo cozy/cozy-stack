@@ -3,7 +3,6 @@ package permissions
 import (
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -26,10 +25,10 @@ const (
 
 	// RefreshTokenAudience is the audience field of JWT for refresh tokens
 	RefreshTokenAudience = "refresh"
-
-	// TokenValidityDuration is the duration where a token is valid in seconds (1 week)
-	TokenValidityDuration = int64(7 * 24 * time.Hour / time.Second)
 )
+
+// TokenValidityDuration is the duration where a token is valid in seconds (1 week)
+var TokenValidityDuration = 7 * 24 * time.Hour
 
 // Claims is used for JWT used in OAuth2 flow and applications token
 type Claims struct {
@@ -37,9 +36,14 @@ type Claims struct {
 	Scope string `json:"scope,omitempty"`
 }
 
+// IssuedAtUTC returns a time.Time struct of the IssuedAt field in UTC
+// location.
+func (claims *Claims) IssuedAtUTC() time.Time {
+	return time.Unix(claims.IssuedAt, 0).UTC()
+}
+
 // Expired returns true if a Claim is expired
 func (claims *Claims) Expired() bool {
-	now := crypto.Timestamp()
-	validUntil := claims.IssuedAt + TokenValidityDuration
-	return validUntil < now
+	validUntil := claims.IssuedAtUTC().Add(TokenValidityDuration)
+	return validUntil.Before(time.Now().UTC())
 }

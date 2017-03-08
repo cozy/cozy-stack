@@ -2,10 +2,12 @@ package instance
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -14,20 +16,27 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/jobs/workers"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 /* #nosec */
 const (
-	registerTokenLen = 16
-	sessionSecretLen = 64
-	oauthSecretLen   = 128
+	registerTokenLen      = 16
+	passwordResetTokenLen = 16
+	sessionSecretLen      = 64
+	oauthSecretLen        = 128
 )
+
+// passwordResetValidityDuration is the validity duration of the passphrase
+// reset token.
+var passwordResetValidityDuration = 15 * time.Minute
 
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
@@ -62,7 +71,9 @@ type Instance struct {
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
-	PassphraseHash []byte `json:"passphrase_hash,omitempty"`
+	PassphraseHash       []byte    `json:"passphrase_hash,omitempty"`
+	PassphraseResetToken []byte    `json:"passphrase_reset_token"`
+	PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
 
 	// Secure assets
 
@@ -307,7 +318,7 @@ func (i *Instance) createFSIndexes() error {
 
 // createAppsDB creates the database needed for Apps
 func (i *Instance) createAppsDB() error {
-	return couchdb.CreateDB(i, consts.Manifests)
+	return couchdb.CreateDB(i, consts.Apps)
 }
 
 // createClientsDB creates the database needed for OAuth 2 clients
@@ -342,7 +353,10 @@ func (i *Instance) createPermissionsDB() error {
 
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
-	domain := opts.Domain
+	domain := strings.TrimSpace(opts.Domain)
+	if domain == "" {
+		return nil, ErrIllegalDomain
+	}
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
 		return nil, ErrIllegalDomain
 	}
@@ -372,6 +386,8 @@ func Create(opts *Options) (*Instance, error) {
 	i.Dev = opts.Dev
 
 	i.PassphraseHash = nil
+	i.PassphraseResetToken = nil
+	i.PassphraseResetTime = time.Time{}
 	i.RegisterToken = crypto.GenerateRandomBytes(registerTokenLen)
 	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
@@ -473,6 +489,26 @@ func Get(domain string) (*Instance, error) {
 	return instances[0], nil
 }
 
+var translations = make(map[string]*gotext.Po)
+
+// LoadLocale creates the translation object for a locale from the content of a .po file
+func LoadLocale(identifier, rawPO string) {
+	po := &gotext.Po{Language: identifier}
+	po.Parse(rawPO)
+	translations[identifier] = po
+}
+
+// Translate is used to translate a string to the locale used on this instance
+func (i *Instance) Translate(key string, vars ...interface{}) string {
+	if po, ok := translations[i.Locale]; ok {
+		return po.Get(key, vars...)
+	}
+	if po, ok := translations[DefaultLocale]; ok {
+		return po.Get(key, vars...)
+	}
+	return fmt.Sprintf(key, vars...)
+}
+
 // List returns the list of declared instances.
 //
 // TODO: pagination
@@ -533,15 +569,76 @@ func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	if subtle.ConstantTimeCompare(i.RegisterToken, tok) != 1 {
 		return ErrInvalidToken
 	}
-
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
-
 	i.RegisterToken = nil
 	i.setPassphraseAndSecret(hash)
+	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
 
+// RequestPassphraseReset generates a new registration token for the user to
+// renew its password.
+func (i *Instance) RequestPassphraseReset() error {
+	// If a registration token is set, we do not generate another token than the
+	// registration one, and bail.
+	if i.RegisterToken != nil {
+		return nil
+	}
+	// If a passphrase reset token is set and valid, we do not generate new one,
+	// and bail.
+	if i.PassphraseResetToken != nil &&
+		time.Now().UTC().Before(i.PassphraseResetTime) {
+		return nil
+	}
+	i.PassphraseResetToken = crypto.GenerateRandomBytes(passwordResetTokenLen)
+	i.PassphraseResetTime = time.Now().UTC().Add(passwordResetValidityDuration)
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
+		return err
+	}
+	// Send a mail containing the reset url for the user to actually reset its
+	// passphrase.
+	resetURL := i.PageURL("/passphrase_renew", url.Values{
+		"token": {hex.EncodeToString(i.PassphraseResetToken)},
+	})
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, &workers.MailOptions{
+		Mode:         workers.MailModeNoReply,
+		Subject:      "Password reset",
+		TemplateName: "passphrase_reset",
+		TemplateValues: struct{ PassphraseResetLink string }{
+			PassphraseResetLink: resetURL,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	_, _, err = i.JobsBroker().PushJob(&jobs.JobRequest{
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
+}
+
+// PassphraseRenew changes the passphrase to the specified one if the given
+// token matches the `PassphraseResetToken` field.
+func (i *Instance) PassphraseRenew(pass, tok []byte) error {
+	if i.PassphraseResetToken == nil {
+		return ErrMissingToken
+	}
+	if !time.Now().UTC().Before(i.PassphraseResetTime) {
+		return ErrMissingToken
+	}
+	if subtle.ConstantTimeCompare(i.PassphraseResetToken, tok) != 1 {
+		return ErrInvalidToken
+	}
+	hash, err := crypto.GenerateFromPassphrase(pass)
+	if err != nil {
+		return err
+	}
+	i.PassphraseResetToken = nil
+	i.PassphraseResetTime = time.Time{}
+	i.setPassphraseAndSecret(hash)
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
 }
 
@@ -550,20 +647,17 @@ func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 	if len(pass) == 0 {
 		return ErrMissingPassphrase
 	}
-
 	// the needUpdate flag is not checked against since the passphrase will be
 	// regenerated with updated parameters just after, if the passphrase match.
 	_, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current)
 	if err != nil {
 		return ErrInvalidPassphrase
 	}
-
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
 		return err
 	}
 	i.setPassphraseAndSecret(hash)
-
 	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
 }
 
@@ -615,7 +709,7 @@ func (i *Instance) PickKey(audience string) ([]byte, error) {
 }
 
 // MakeJWT is a shortcut to create a JWT
-func (i *Instance) MakeJWT(audience, subject, scope string) (string, error) {
+func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) (string, error) {
 	secret, err := i.PickKey(audience)
 	if err != nil {
 		return "", err
@@ -624,7 +718,7 @@ func (i *Instance) MakeJWT(audience, subject, scope string) (string, error) {
 		StandardClaims: jwt.StandardClaims{
 			Audience: audience,
 			Issuer:   i.Domain,
-			IssuedAt: crypto.Timestamp(),
+			IssuedAt: issuedAt.Unix(),
 			Subject:  subject,
 		},
 		Scope: scope,

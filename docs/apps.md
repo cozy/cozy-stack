@@ -131,7 +131,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.manifests",
+    "type": "io.cozy.apps",
     "id": "git://github.com/cozy/cozy-emails",
     "attributes": {
       "name": "cozy-emails",
@@ -182,11 +182,11 @@ Content-Type: application/vnd.api+json
 
 ### POST /apps/:slug
 
-Install or update an application, ie download the files and put them in
-`/apps/:slug` in the virtual file system of the user, create an `io.cozy/apps`
-document, register the permissions, etc.
+Install an application, ie download the files and put them in `/apps/:slug` in the virtual file system of the user, create an `io.cozy.apps` document, register the permissions, etc.
 
 This endpoint is asynchronous and returns a successful return as soon as the application installation has started, meaning we have successfully reached the manifest and started to fetch application data.
+
+To make this endpoint synchronous, use the header `Accept: text/event-stream`. This will make a eventsource stream sending the manifest and returning when the application has been installed or failed.
 
 #### Status codes
 
@@ -219,7 +219,7 @@ Content-Type: application/vnd.api+json
 {
   "data": [{
     "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
-    "type": "io.cozy.applications",
+    "type": "io.cozy.apps",
     "meta": {
       "rev": "1-7a1f918147df94580c92b47275e4604a"
     },
@@ -243,6 +243,55 @@ like this:
 POST /apps/emails-dev?Source=git://github.com/cozy/cozy-emails.git%23dev HTTP/1.1
 ```
 
+### PUT /apps/:slug
+
+Update an application with the specified slug name.
+
+This endpoint is asynchronous and returns a successful return as soon as the application installation has started, meaning we have successfully reached the manifest and started to fetch application data.
+
+To make this endpoint synchronous, use the header `Accept: text/event-stream`. This will make a eventsource stream sending the manifest and returning when the application has been updated or failed.
+
+#### Request
+
+```http
+PUT /apps/emails HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [{
+    "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+    "type": "io.cozy.apps",
+    "meta": {
+      "rev": "1-7a1f918147df94580c92b47275e4604a"
+    },
+    "attributes": {
+      "name": "calendar",
+      "state": "installing",
+      "slug": "calendar",
+      ...
+    },
+    "links": {
+      "self": "/apps/calendar"
+    }
+  }]
+}
+```
+
+#### Status codes
+
+* 202 Accepted, when the application installation has been accepted.
+* 400 Bad-Request, when the manifest of the application could not be processed (for instance, it is not valid JSON).
+* 404 Not Found, when the application with the specified slug was not found or when the manifest or the source of the application is not reachable.
+* 422 Unprocessable Entity, when the sent data is invalid (for example, the slug is invalid or the Source parameter is not a proper or supported url)
 
 ## List installed applications
 
@@ -274,7 +323,7 @@ Content-Type: application/vnd.api+json
 {
   "data": [{
     "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
-    "type": "io.cozy.applications",
+    "type": "io.cozy.apps",
     "meta": {
       "rev": "2-bbfb0fc32dfcdb5333b28934f195b96a"
     },
@@ -343,7 +392,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.manifests",
+    "type": "io.cozy.apps",
     "attributes": {
       "name": "cozy-emails",
       "slug": "emails",
@@ -373,7 +422,7 @@ Content-Type: application/vnd.api+json
 {
   "data": {
     "id": "4f6436ce-8967-11e6-b174-ab83adac69f2",
-    "type": "io.cozy.manifests",
+    "type": "io.cozy.apps",
     "attributes": {
       "name": "cozy-emails",
       "slug": "emails",

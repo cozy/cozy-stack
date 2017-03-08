@@ -45,7 +45,6 @@ It registers the instance in a global couchdb database `global/instances`
 and creates the proper databases ($PREFIX/$DOCTYPE) for these doctypes:
 
 - `io.cozy.apps`
-- `io.cozy.manifests`
 - `io.cozy.files`
 - `io.cozy.notifications`
 - `io.cozy.settings`
