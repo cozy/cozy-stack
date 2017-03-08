@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web"
-	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

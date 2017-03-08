@@ -221,18 +221,10 @@ func TestInstallAldreadyExist(t *testing.T) {
 		return
 	}
 
-	go inst.Update()
+	go inst.Install()
 
-	man, done, err := inst.Poll()
-	if !assert.NoError(t, err) {
-		return
-	}
-	if !assert.EqualValues(t, Ready, man.State) {
-		return
-	}
-	if !assert.True(t, done) {
-		return
-	}
+	_, _, err = inst.Poll()
+	assert.Equal(t, ErrAlreadyExists, err)
 }
 
 func TestInstallWithUpgrade(t *testing.T) {

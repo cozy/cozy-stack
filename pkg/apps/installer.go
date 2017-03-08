@@ -174,14 +174,9 @@ func (i *Installer) install() (*Manifest, error) {
 // upgrading.
 func (i *Installer) update() (*Manifest, error) {
 	man := i.man
-	version := man.Version
 
 	if err := i.ReadManifest(Upgrading, man); err != nil {
 		return man, err
-	}
-
-	if man.Version == version {
-		return man, nil
 	}
 
 	if err := updateManifest(i.ctx, man); err != nil {
