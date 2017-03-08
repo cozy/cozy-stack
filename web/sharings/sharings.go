@@ -2,36 +2,14 @@ package sharings
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
-
-// sendAuthorize retrieve the OAuth authorize parameters from the query string
-// and redirect to the authorize page
-func sendAuthorize(c echo.Context, instance *instance.Instance, state, scope string) error {
-	clientID := c.QueryParam("client_id")
-	redirectURI := c.QueryParam("redirect_uri")
-	responseType := c.QueryParam("response_type")
-
-	values := url.Values{
-		"state":         {state},
-		"client_id":     {clientID},
-		"redirect_uri":  {redirectURI},
-		"scope":         {scope},
-		"response_type": {responseType},
-	}
-
-	redirectAuthorize := instance.PageURL("/auth/authorize", values)
-
-	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
-}
 
 // SharingRequest handles a sharing request from the recipient side
 // It creates a tempory sharing document and redirect to the authorize page
@@ -47,7 +25,9 @@ func SharingRequest(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	return sendAuthorize(c, instance, state, scope)
+
+	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
+	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
 }
 
 // CreateSharing initializes a sharing by creating the associated document
