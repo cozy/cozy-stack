@@ -77,6 +77,38 @@ func (p *Permission) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
 }
 
+// AddRules add some rules to the permission doc
+func (p *Permission) AddRules(rules ...Rule) {
+	newperms := append(*p.Permissions, rules...)
+	p.Permissions = &newperms
+}
+
+// PatchCodes replace the permission docs codes
+func (p *Permission) PatchCodes(codes map[string]string) {
+	p.Codes = codes
+}
+
+// Revoke destroy a Permission
+func (p *Permission) Revoke(db couchdb.Database) error {
+	return couchdb.DeleteDoc(db, p)
+}
+
+// ParentOf check if child has been created by p
+func (p *Permission) ParentOf(child *Permission) bool {
+
+	canBeParent := p.Type == TypeApplication || p.Type == TypeOauth
+
+	return child.Type == TypeSharing && canBeParent &&
+		child.SourceID == p.SourceID
+}
+
+// GetByID fetch a permission by its ID
+func GetByID(db couchdb.Database, id string) (*Permission, error) {
+	var perm Permission
+	err := couchdb.GetDoc(db, consts.Permissions, id, &perm)
+	return &perm, err
+}
+
 // GetForRegisterToken create a non-persisted permissions doc with hard coded
 // registerToken permissions set
 func GetForRegisterToken() *Permission {
@@ -210,6 +242,18 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 	}
 
 	return doc, nil
+}
+
+// DeleteShareSet revokes all the code in a permission set
+func DeleteShareSet(db couchdb.Database, permID string) error {
+
+	var doc *Permission
+	err := couchdb.GetDoc(db, consts.Permissions, permID, doc)
+	if err != nil {
+		return err
+	}
+
+	return couchdb.DeleteDoc(db, doc)
 }
 
 // Force creates or updates a Permission doc for a given app
