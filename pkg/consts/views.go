@@ -90,6 +90,7 @@ var Views = []*couchdb.View{
 	DiskUsageView,
 	FilesReferencedByView,
 	PermissionsShareByCView,
+	PermissionsShareByDocView,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.
