@@ -153,7 +153,7 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	var res []Sharing
 
 	err := couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
-		Selector: mango.Equal(consts.IndexSharing, sharingID),
+		Selector: mango.Equal("sharing_id", sharingID),
 	}, &res)
 	if err != nil {
 		return nil, nil, err

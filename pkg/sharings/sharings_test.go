@@ -282,8 +282,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	mangoIndex := mango.IndexOnFields(consts.IndexSharing)
-	err = couchdb.DefineIndex(TestPrefix, consts.Sharings, mangoIndex)
+	err = couchdb.DefineIndex(TestPrefix, mango.IndexOnFields(consts.Sharings, "sharing_id"))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
