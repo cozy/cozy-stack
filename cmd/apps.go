@@ -35,15 +35,26 @@ var installAppCmd = &cobra.Command{
 	Use:   "install [slug] [sourceurl]",
 	Short: "Install an application with the specified slug name from the given source URL.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 2 {
+		if len(args) < 1 {
 			return cmd.Help()
+		}
+		slug := args[0]
+		var source string
+		if len(args) == 1 {
+			s, ok := consts.AppsRegistry[slug]
+			if !ok {
+				return cmd.Help()
+			}
+			source = s
+		} else {
+			source = args[1]
 		}
 		if flagAllDomains {
 			return foreachDomains(func(in *client.Instance) error {
 				c := newClient(in.Attrs.Domain, consts.Apps)
 				_, err := c.InstallApp(&client.AppOptions{
-					Slug:      args[0],
-					SourceURL: args[1],
+					Slug:      slug,
+					SourceURL: source,
 				})
 				return err
 			})
@@ -54,8 +65,8 @@ var installAppCmd = &cobra.Command{
 		}
 		c := newClient(flagAppsDomain, consts.Apps)
 		app, err := c.InstallApp(&client.AppOptions{
-			Slug:      args[0],
-			SourceURL: args[1],
+			Slug:      slug,
+			SourceURL: source,
 		})
 		if err != nil {
 			return err

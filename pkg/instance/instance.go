@@ -10,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -351,6 +352,31 @@ func (i *Instance) createPermissionsDB() error {
 
 }
 
+func (i *Instance) installApp(slug string) error {
+	source, ok := consts.AppsRegistry[slug]
+	if !ok {
+		return errors.New("Unknown app")
+	}
+	inst, err := apps.NewInstaller(i, &apps.InstallerOptions{
+		SourceURL: source,
+		Slug:      slug,
+	})
+	if err != nil {
+		return err
+	}
+	go inst.Install()
+	for {
+		_, done, err := inst.Poll()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+	}
+	return nil
+}
+
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
 	domain := strings.TrimSpace(opts.Domain)
@@ -447,8 +473,13 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 
+	for _, app := range opts.Apps {
+		if err := i.installApp(app); err != nil {
+			log.Error("[instance] Failed to install "+app, err)
+		}
+	}
+
 	// TODO atomicity with defer
-	// TODO install apps
 
 	return i, nil
 }
@@ -723,6 +754,17 @@ func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) 
 		},
 		Scope: scope,
 	})
+}
+
+// BuildAppToken is used to build a token to identify the app for requests made
+// to the stack
+func (i *Instance) BuildAppToken(m *apps.Manifest) string {
+	scope := "" // apps tokens don't have a scope
+	token, err := i.MakeJWT(permissions.AppAudience, m.Slug, scope, time.Now())
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {

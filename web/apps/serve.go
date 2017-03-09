@@ -106,7 +106,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	}
 	token := "" // #nosec
 	if middlewares.IsLoggedIn(c) {
-		token = app.BuildToken(i)
+		token = i.BuildAppToken(app)
 	}
 	res := c.Response()
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
