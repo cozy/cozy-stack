@@ -11,10 +11,8 @@ import (
 // @TODO pagination
 func FilesReferencedBy(db couchdb.Database, doctype, id string) ([]jsonapi.ResourceIdentifier, error) {
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, &couchdb.ViewRequest{
-		Doctype:  consts.Files,
-		ViewName: FilesReferencedByView,
-		Key:      []string{doctype, id},
+	err := couchdb.ExecView(db, consts.FilesReferencedByView, &couchdb.ViewRequest{
+		Key: []string{doctype, id},
 	}, &res)
 	if err != nil {
 		return nil, err

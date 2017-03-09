@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -509,21 +508,13 @@ func TestMain(m *testing.M) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	for _, index := range vfs.Indexes {
-		err = couchdb.DefineIndex(c, consts.Files, index)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
 	err = couchdb.ResetDB(c, consts.Permissions)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndex(c, consts.Permissions, permissions.Index)
+	err = couchdb.DefineIndexes(c, consts.Indexes)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

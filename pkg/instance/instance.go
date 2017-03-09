@@ -269,8 +269,7 @@ func (i *Instance) createInCouchdb() error {
 	if err != nil {
 		return err
 	}
-	byDomain := mango.IndexOnFields("domain")
-	return couchdb.DefineIndex(couchdb.GlobalDB, consts.Instances, byDomain)
+	return couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes)
 }
 
 // createRootDir creates the root directory for this instance
@@ -304,52 +303,6 @@ func (i *Instance) createRootDir() error {
 	}
 
 	return nil
-}
-
-// createFSIndexes creates the indexes needed by VFS
-func (i *Instance) createFSIndexes() error {
-	for _, index := range vfs.Indexes {
-		err := couchdb.DefineIndex(i, consts.Files, index)
-		if err != nil {
-			return err
-		}
-	}
-	return couchdb.DefineViews(i, consts.Files, vfs.Views)
-}
-
-// createAppsDB creates the database needed for Apps
-func (i *Instance) createAppsDB() error {
-	return couchdb.CreateDB(i, consts.Apps)
-}
-
-// createClientsDB creates the database needed for OAuth 2 clients
-func (i *Instance) createClientsDB() error {
-	return couchdb.CreateDB(i, consts.OAuthClients)
-}
-
-// createSettings creates the settings database and some documents like the
-// default theme
-func (i *Instance) createSettings() error {
-	err := couchdb.CreateDB(i, consts.Settings)
-	if err != nil {
-		return err
-	}
-	return settings.CreateDefaultTheme(i)
-}
-
-func (i *Instance) createPermissionsDB() error {
-	err := couchdb.CreateDB(i, consts.Permissions)
-	if err != nil {
-		return err
-	}
-
-	err = couchdb.DefineIndex(i, consts.Permissions, permissions.Index)
-	if err != nil {
-		return err
-	}
-
-	return couchdb.DefineViews(i, consts.Permissions, permissions.Views)
-
 }
 
 func (i *Instance) installApp(slug string) error {
@@ -386,11 +339,9 @@ func Create(opts *Options) (*Instance, error) {
 	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
 		return nil, ErrIllegalDomain
 	}
-
-	if strings.ContainsAny(domain, " /?#@\t\r\n") {
+	if strings.ContainsAny(domain, " /?#@\t\r\n\x00") {
 		return nil, ErrIllegalDomain
 	}
-
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		parts := strings.SplitN(domain, ".", 2)
 		if strings.Contains(parts[0], "-") {
@@ -419,68 +370,52 @@ func Create(opts *Options) (*Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
 
-	var err error
-	err = i.makeStorageFs()
-	if err != nil {
+	if err := i.makeStorageFs(); err != nil {
 		return nil, err
 	}
-
-	err = i.createInCouchdb()
-	if err != nil {
+	if err := i.createInCouchdb(); err != nil {
 		return nil, err
 	}
-
-	err = i.createRootDir()
-	if err != nil {
+	if err := i.createRootDir(); err != nil {
 		return nil, err
 	}
-
-	err = i.createAppsDB()
-	if err != nil {
+	if err := couchdb.CreateDB(i, consts.Apps); err != nil {
 		return nil, err
 	}
-
-	err = i.createClientsDB()
-	if err != nil {
+	if err := couchdb.CreateDB(i, consts.OAuthClients); err != nil {
 		return nil, err
 	}
-
-	err = i.createSettings()
-	if err != nil {
+	if err := couchdb.CreateDB(i, consts.Settings); err != nil {
 		return nil, err
 	}
-
-	err = i.createFSIndexes()
-	if err != nil {
+	if err := couchdb.CreateDB(i, consts.Permissions); err != nil {
 		return nil, err
 	}
-
-	err = i.StartJobSystem()
-	if err != nil {
+	if err := settings.CreateDefaultTheme(i); err != nil {
 		return nil, err
 	}
-
-	err = i.createPermissionsDB()
-	if err != nil {
-		return nil, err
-	}
-
-	doc := &instanceSettings{
+	settingsDoc := &instanceSettings{
 		Timezone: opts.Timezone,
 		Email:    opts.Email,
 	}
-	if err = couchdb.CreateNamedDoc(i, doc); err != nil {
+	if err := couchdb.CreateNamedDoc(i, settingsDoc); err != nil {
 		return nil, err
 	}
-
+	if err := couchdb.DefineIndexes(i, consts.Indexes); err != nil {
+		return nil, err
+	}
+	if err := couchdb.DefineViews(i, consts.Views); err != nil {
+		return nil, err
+	}
+	if err := i.StartJobSystem(); err != nil {
+		return nil, err
+	}
 	for _, app := range opts.Apps {
 		if err := i.installApp(app); err != nil {
 			log.Error("[instance] Failed to install "+app, err)
 		}
 	}
-
 	// TODO atomicity with defer
-
 	return i, nil
 }
 
