@@ -43,6 +43,23 @@ func StripPort(domain string) string {
 	return domain
 }
 
+// SplitTrimString slices s into all substrings a s separated by sep, like
+// strings.Split. In addition it will trim all those substrings and filter out
+// the empty ones.
+func SplitTrimString(s, sep string) []string {
+	if s == "" {
+		return nil
+	}
+	var parts []string
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	return parts
+}
+
 // FileExists returns whether or not the file exists on the current file
 // system.
 func FileExists(name string) (bool, error) {

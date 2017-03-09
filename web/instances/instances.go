@@ -2,12 +2,12 @@ package instances
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
@@ -18,7 +18,7 @@ func createHandler(c echo.Context) error {
 		Locale:   c.QueryParam("Locale"),
 		Timezone: c.QueryParam("Timezone"),
 		Email:    c.QueryParam("Email"),
-		Apps:     strings.Split(c.QueryParam("Apps"), ","),
+		Apps:     utils.SplitTrimString(c.QueryParam("Apps"), ","),
 		Dev:      (c.QueryParam("Dev") == "true"),
 	})
 	if err != nil {
