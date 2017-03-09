@@ -12,7 +12,7 @@ import (
 )
 
 // SharingRequest handles a sharing request from the recipient side
-// It creates a tempory sharing document, waiting for the recipient answer
+// It creates a tempory sharing document and redirect to the authorize page
 func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
 	state := c.QueryParam("state")
@@ -21,12 +21,13 @@ func SharingRequest(c echo.Context) error {
 
 	instance := middlewares.GetInstance(c)
 
-	sharing, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope)
+	_, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope)
 	if err != nil {
 		return wrapErrors(err)
 	}
 
-	return jsonapi.Data(c, http.StatusCreated, sharing, nil)
+	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
+	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
 }
 
 // CreateSharing initializes a sharing by creating the associated document
