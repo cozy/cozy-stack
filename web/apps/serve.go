@@ -204,12 +204,12 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) 
 }
 
 var clientTemplate = template.Must(template.New("cozy-client-js").Parse(`` +
-	`<script defer src="//{{.Domain}}/assets/js/cozy-client.js"></script>`,
+	`<script defer src="//{{.Domain}}/assets/js/cozy-client.min.js"></script>`,
 ))
 
 var barTemplate = template.Must(template.New("cozy-bar").Parse(`` +
-	`<link rel="stylesheet" type="text/css" href="//{{.Domain}}/assets/css/cozy-bar.css">` +
-	`<script defer src="//{{.Domain}}/assets/js/cozy-bar.js"></script>`,
+	`<link rel="stylesheet" type="text/css" href="//{{.Domain}}/assets/css/cozy-bar.min.css">` +
+	`<script defer src="//{{.Domain}}/assets/js/cozy-bar.min.js"></script>`,
 ))
 
 func cozyclientjs(i *instance.Instance) template.HTML {

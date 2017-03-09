@@ -10,15 +10,15 @@
 #  sha256   ad414b6b70f583168d2de14c0b7479e1a4ddda3427ea17064ace9e5fbf1b42be
 #
 
-name    ./js/cozy-client.js
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.5/dist/cozy-client.js
-sha256  4bea47c121a358ba7246226575d18efba84a4ccd2875093d29e741fde814151e
+name    ./js/cozy-client.min.js
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.7/dist/cozy-client.min.js
+sha256  82675f13a39ff27d316df79f845c9ae8cd5bdd71ffadfe69ef11e9a1c2b1e0b5
 
-name    ./js/cozy-client.js.map
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.5/dist/cozy-client.js.map
-sha256  ef7c8f9f7c745d33ea14a3079b88c04cfcd006bb402fe813530dc82170f83cd2
+name    ./js/cozy-client.min.js.map
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.7/dist/cozy-client.min.js.map
+sha256  66855aece415dad94a0be86df7cf69e6fd274c437085d17dcda82cfc8ec64234
 
-name    ./js/cozy-bar.js
+name    ./js/cozy-bar.min.js
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta11/dist/cozy-bar.min.js
 sha256  4e2b707ce1c0bb0b8532d3109f5ef41fd18ea7815319cd80bfa730be69b886fb
 
@@ -26,7 +26,7 @@ name    ./js/cozy-bar.min.js.map
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta11/dist/cozy-bar.min.js.map
 sha256  ce15a1774686878dbe5ee6a4012c60b53545bac98e19b63e6cd85e7ad6148347
 
-name    ./css/cozy-bar.css
+name    ./css/cozy-bar.min.css
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta11/dist/cozy-bar.min.css
 sha256  70d89b2a75cbbd51f16fcee2c3dc5b155bcb2fc2a90cbff01e89495df9aba8e7
 
