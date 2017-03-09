@@ -28,7 +28,7 @@ const CredentialsErrorKey = "Login Credentials error"
 
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
-// Else, it redirects to its home application
+// Else, it redirects to its home application (or onboarding)
 func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -36,6 +36,12 @@ func Home(c echo.Context) error {
 		redirect := defaultRedirectDomain(instance).String()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+
+	if len(instance.RegisterToken) > 0 {
+		sub := instance.SubDomain(consts.OnboardingSlug)
+		sub.RawQuery = c.Request().URL.RawQuery
+		return c.Redirect(http.StatusSeeOther, sub.String())
 	}
 
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
