@@ -514,7 +514,13 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndexes(c, consts.Indexes)
+	err = couchdb.DefineIndexes(c, consts.IndexesByDoctype(consts.Files))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.DefineIndexes(c, consts.IndexesByDoctype(consts.Permissions))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
