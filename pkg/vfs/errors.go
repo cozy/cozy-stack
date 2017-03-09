@@ -29,7 +29,7 @@ var (
 	ErrFileNotInTrash = errors.New("File or directory is not in the trash")
 	// ErrNonAbsolutePath is used when the given path is not absolute
 	// while it is required to be
-	ErrNonAbsolutePath = errors.New("Path should be abolute")
+	ErrNonAbsolutePath = errors.New("Path should be absolute")
 	// ErrDirNotEmpty is used to inform that the directory is not
 	// empty
 	ErrDirNotEmpty = errors.New("Directory is not empty")
