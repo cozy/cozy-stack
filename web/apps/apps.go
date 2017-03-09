@@ -4,6 +4,7 @@ package apps
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -109,12 +110,15 @@ func pollInstaller(c echo.Context, slug string, inst *apps.Installer) error {
 	for {
 		man, done, err := inst.Poll()
 		if err != nil {
-			writeStream(w, "error", []byte(err.Error()))
+			var b []byte
+			if b, err = json.Marshal(err.Error()); err == nil {
+				writeStream(w, "error", string(b))
+			}
 			break
 		}
-		b := new(bytes.Buffer)
-		if err := jsonapi.WriteData(b, man, nil); err == nil {
-			writeStream(w, "state", b.Bytes())
+		buf := new(bytes.Buffer)
+		if err := jsonapi.WriteData(buf, man, nil); err == nil {
+			writeStream(w, "state", buf.String())
 		}
 		if done {
 			break
@@ -123,7 +127,7 @@ func pollInstaller(c echo.Context, slug string, inst *apps.Installer) error {
 	return nil
 }
 
-func writeStream(w http.ResponseWriter, event string, b []byte) {
+func writeStream(w http.ResponseWriter, event string, b string) {
 	s := fmt.Sprintf("event: %s\r\ndata: %s\r\n\r\n", event, b)
 	_, err := w.Write([]byte(s))
 	if err != nil {
