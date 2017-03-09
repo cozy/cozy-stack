@@ -482,7 +482,7 @@ func fetchChildren(c Context, parent *DirDoc) ([]*FileDoc, []*DirDoc, error) {
 	var dirs []*DirDoc
 	var docs []*DirOrFileDoc
 	sel := mango.Equal("dir_id", parent.ID())
-	req := &couchdb.FindRequest{Selector: sel, Limit: 10}
+	req := &couchdb.FindRequest{Selector: sel, Limit: 100}
 	err := couchdb.FindDocs(c, consts.Files, req, &docs)
 	if err != nil {
 		return files, dirs, err
