@@ -41,6 +41,8 @@ const (
 const (
 	// FilesSlug is the slug of the default app, files, where the user is redirected after login
 	FilesSlug = "files"
+	// OnboardingSlug is the slug of the onboarding app, where the user is redirected when he has no passphrase
+	OnboardingSlug = "onboarding"
 	// StoreSlug is the slug of the only app that can install other apps
 	StoreSlug = "store"
 )
