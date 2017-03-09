@@ -9,12 +9,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"sync/atomic"
-	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -154,23 +152,11 @@ func Req(opts *Options) (*http.Response, error) {
 	if err != nil {
 		// for a development release, we fallback on http mode if the https request
 		// is not successful.
+		// TODO: better identify the error (cross-platform)
 		if config.IsDevRelease() && scheme == "https" {
-			var isConnRefused bool
-			switch t := err.(type) {
-			case *net.OpError:
-				if t.Op == "read" {
-					isConnRefused = true
-				}
-			case syscall.Errno:
-				if t == syscall.ECONNREFUSED {
-					isConnRefused = true
-				}
-			}
-			if isConnRefused {
-				logrus.Debug("[request] fallback on http transport since https request has failed", err)
-				atomic.StoreInt32(&httpFallback, 1)
-				return Req(opts)
-			}
+			logrus.Debug("[request] fallback on http transport since https request has failed", err)
+			atomic.StoreInt32(&httpFallback, 1)
+			return Req(opts)
 		}
 		return nil, err
 	}
