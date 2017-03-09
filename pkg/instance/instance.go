@@ -589,24 +589,6 @@ func Destroy(domain string) (*Instance, error) {
 	return i, nil
 }
 
-// BuildAppToken is used to build a token to identify the app for requests made
-// to the stack
-func (i *Instance) BuildAppToken(m *apps.Manifest) string {
-	token, err := crypto.NewJWT(i.SessionSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AppAudience,
-			Issuer:   i.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  m.Slug,
-		},
-		Scope: "", // apps token doesnt have a scope
-	})
-	if err != nil {
-		return ""
-	}
-	return token
-}
-
 // RegisterPassphrase replace the instance registerToken by a passphrase
 func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	if len(pass) == 0 {
@@ -772,6 +754,17 @@ func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) 
 		},
 		Scope: scope,
 	})
+}
+
+// BuildAppToken is used to build a token to identify the app for requests made
+// to the stack
+func (i *Instance) BuildAppToken(m *apps.Manifest) string {
+	scope := "" // apps tokens don't have a scope
+	token, err := i.MakeJWT(permissions.AppAudience, m.Slug, scope, time.Now())
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 func createFs(u *url.URL) (fs afero.Fs, err error) {
