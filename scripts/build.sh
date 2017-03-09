@@ -24,7 +24,7 @@ echo_wrn() {
 }
 
 usage() {
-	echo -e "Usage: ${1} [release] [install] [deploy] [assets] [clean]"
+	echo -e "Usage: ${1} [release] [install] [deploy] [docker-dev] [assets] [clean]"
 	echo -e "\nCommands:\n"
 	echo -e "  release     builds a release of the current working-tree"
 	echo -e "  install     builds a release and install it the GOPATH"
