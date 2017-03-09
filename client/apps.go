@@ -2,7 +2,9 @@ package client
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -103,7 +105,11 @@ func readAppManifestStream(res *http.Response) (*AppManifest, error) {
 			return nil, evt.Error
 		}
 		if evt.Name == "error" {
-			return nil, errors.New(string(evt.Data))
+			var stringError string
+			if err := json.Unmarshal(evt.Data, &stringError); err != nil {
+				return nil, fmt.Errorf("Could not parse error from event-stream: %s", err.Error())
+			}
+			return nil, errors.New(stringError)
 		}
 		lastevt = evt
 	}
