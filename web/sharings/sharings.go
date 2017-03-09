@@ -11,6 +11,40 @@ import (
 	"github.com/labstack/echo"
 )
 
+// SharingAnswer handles a sharing answer from the sharer side
+func SharingAnswer(c echo.Context) error {
+
+	var err error
+	var sharingAccepted bool
+
+	state := c.FormValue("state")
+	clientID := c.FormValue("client_id")
+	scope := c.FormValue("scope")
+	accessCode := c.FormValue("access_code")
+
+	instance := middlewares.GetInstance(c)
+
+	// The sharing is refused if there is no access code or scope
+	if scope == "" || accessCode == "" {
+		sharingAccepted = false
+	} else {
+		sharingAccepted = true
+	}
+
+	if sharingAccepted {
+		//TODO: handle the acceptation
+	} else {
+		err = sharings.SharingRefused(instance, state, clientID)
+	}
+
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "Answer received",
+	})
+}
+
 // SharingRequest handles a sharing request from the recipient side
 // It creates a tempory sharing document and redirect to the authorize page
 func SharingRequest(c echo.Context) error {
@@ -84,6 +118,7 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
 	router.PUT("/:id/sendMails", SendSharingMails)
 	router.GET("/request", SharingRequest)
+	router.POST("/answer", SharingAnswer)
 }
 
 // wrapErrors returns a formatted error
