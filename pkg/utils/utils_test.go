@@ -61,6 +61,17 @@ func TestStripPort(t *testing.T) {
 	assert.Equal(t, "localhost:8080:8081", d3)
 }
 
+func TestSplitTrimString(t *testing.T) {
+	parts1 := SplitTrimString("", ",")
+	assert.EqualValues(t, []string(nil), parts1)
+	parts2 := SplitTrimString("foo,bar,baz,", ",")
+	assert.EqualValues(t, []string{"foo", "bar", "baz"}, parts2)
+	parts3 := SplitTrimString(",,,,", ",")
+	assert.EqualValues(t, []string(nil), parts3)
+	parts4 := SplitTrimString("foo  ,, bar,  baz  ,", ",")
+	assert.EqualValues(t, []string{"foo", "bar", "baz"}, parts4)
+}
+
 func TestFileExists(t *testing.T) {
 	exists, err := FileExists("/no/such/file")
 	assert.NoError(t, err)
