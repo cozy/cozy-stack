@@ -17,7 +17,7 @@ Table of contents
 ## For developpers
 
 - [Develop a client-side app](client-app-dev.md)
-- [Docker](docker.md)
+- [Running and building Docker images](docker.md)
 - [The contributing guide](CONTRIBUTING.md)
 
 ## Services
