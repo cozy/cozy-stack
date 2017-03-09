@@ -85,7 +85,7 @@ function(doc){
 }`,
 }
 
-// Views is the required couchdb views for computing the disk usage
+// Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
 	FilesReferencedByView,
