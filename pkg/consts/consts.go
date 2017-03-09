@@ -1,41 +1,37 @@
 package consts
 
-const (
-	// Instances doc type for User's instance document
-	Instances = "instances"
+// Instances doc type for User's instance document
+const Instances = "instances"
 
-	// Files doc type for type for files and directories
-	Files = "io.cozy.files"
-	// Archives doc type for zip archives with files and directories
-	Archives = "io.cozy.files.archives"
+const (
 	// Apps doc type for application manifests
 	Apps = "io.cozy.apps"
-	// Jobs doc type for queued jobs
-	Jobs = "io.cozy.jobs"
-	// Queues doc type for jobs queues
-	Queues = "io.cozy.queues"
-	// Settings doc type for settings to customize an instance
-	Settings = "io.cozy.settings"
-	// Sessions doc type for sessions identifying a connection
-	Sessions = "io.cozy.sessions"
-	// Triggers doc type for triggers, jobs launchers
-	Triggers = "io.cozy.triggers"
-
-	// Permissions doc type for permissions identifying a connection
-	Permissions = "io.cozy.permissions"
-
+	// Archives doc type for zip archives with files and directories
+	Archives = "io.cozy.files.archives"
 	// Doctypes doc type for doctype list
 	Doctypes = "io.cozy.doctypes"
-
-	// Sharings doc type for document and file sharing
-	Sharings = "io.cozy.sharings"
-	// Recipients doc type for sharing recipients
-	Recipients = "io.cozy.recipients"
-
-	// OAuthClients doc type for OAuth2 clients
-	OAuthClients = "io.cozy.oauth.clients"
+	// Files doc type for type for files and directories
+	Files = "io.cozy.files"
+	// Jobs doc type for queued jobs
+	Jobs = "io.cozy.jobs"
 	// OAuthAccessCodes doc type for OAuth2 access codes
 	OAuthAccessCodes = "io.cozy.oauth.access_codes"
+	// OAuthClients doc type for OAuth2 clients
+	OAuthClients = "io.cozy.oauth.clients"
+	// Permissions doc type for permissions identifying a connection
+	Permissions = "io.cozy.permissions"
+	// Queues doc type for jobs queues
+	Queues = "io.cozy.queues"
+	// Recipients doc type for sharing recipients
+	Recipients = "io.cozy.recipients"
+	// Sessions doc type for sessions identifying a connection
+	Sessions = "io.cozy.sessions"
+	// Settings doc type for settings to customize an instance
+	Settings = "io.cozy.settings"
+	// Sharings doc type for document and file sharing
+	Sharings = "io.cozy.sharings"
+	// Triggers doc type for triggers, jobs launchers
+	Triggers = "io.cozy.triggers"
 )
 
 const (
