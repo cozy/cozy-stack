@@ -14,11 +14,11 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	gitFS "srcd.works/go-billy.v1"
-	git "srcd.works/go-git.v4"
-	gitPl "srcd.works/go-git.v4/plumbing"
-	gitObj "srcd.works/go-git.v4/plumbing/object"
-	gitSt "srcd.works/go-git.v4/storage/filesystem"
+	gitFS "gopkg.in/src-d/go-billy.v2"
+	git "gopkg.in/src-d/go-git.v4"
+	gitPl "gopkg.in/src-d/go-git.v4/plumbing"
+	gitObj "gopkg.in/src-d/go-git.v4/plumbing/object"
+	gitSt "gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
 const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
@@ -363,6 +363,11 @@ func (fs *gfs) ReadDir(name string) ([]gitFS.FileInfo, error) {
 	}
 
 	return s, nil
+}
+
+func (fs *gfs) MkdirAll(path string, perm os.FileMode) error {
+	_, err := vfs.MkdirAll(fs.ctx, fs.Join(fs.base, path), nil)
+	return err
 }
 
 func (fs *gfs) TempFile(dirname, prefix string) (gitFS.File, error) {
