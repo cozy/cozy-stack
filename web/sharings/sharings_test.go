@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -22,23 +21,9 @@ import (
 
 var ts *httptest.Server
 var testInstance *instance.Instance
-var jar *testJar
 var clientOAuth *oauth.Client
 var clientID string
 var instanceURL *url.URL
-var domain string
-
-type testJar struct {
-	Jar *cookiejar.Jar
-}
-
-func (j *testJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
-	return j.Jar.Cookies(instanceURL)
-}
-
-func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	j.Jar.SetCookies(instanceURL, cookies)
-}
 
 func TestSharingAnswerBadState(t *testing.T) {
 	state := ""
@@ -179,7 +164,6 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "sharing_test")
-	domain = "test-sharings"
 	testInstance = setup.GetTestInstance()
 	instanceURL, _ = url.Parse("https://" + testInstance.Domain + "/")
 

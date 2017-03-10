@@ -20,8 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const host = "cozy.io"
-
 var ts *httptest.Server
 var testInstance *instance.Instance
 var token string

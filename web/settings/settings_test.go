@@ -21,8 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const domain = "cozysettings.example.net"
-
 var ts *httptest.Server
 var testInstance *instance.Instance
 var instanceRev string
