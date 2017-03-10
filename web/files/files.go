@@ -732,9 +732,15 @@ func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		}
 	}
 
-	executable := c.QueryParam("Executable") == "true"
+	var mime, class string
 	contentType := header.Get("Content-Type")
-	mime, class := vfs.ExtractMimeAndClass(contentType)
+	if contentType == "" {
+		mime, class = vfs.ExtractMimeAndClassFromFilename(name)
+	} else {
+		mime, class = vfs.ExtractMimeAndClass(contentType)
+	}
+
+	executable := c.QueryParam("Executable") == "true"
 	return vfs.NewFileDoc(
 		name,
 		dirID,
