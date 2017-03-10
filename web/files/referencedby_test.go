@@ -38,7 +38,7 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
@@ -76,7 +76,7 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
@@ -101,7 +101,7 @@ func TestRemoveReferencedByOneRelation(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
 	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 204, res.StatusCode)
@@ -124,7 +124,7 @@ func TestRemoveReferencedByMultipleRelation(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, bytes.NewReader(content))
 	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 204, res.StatusCode)

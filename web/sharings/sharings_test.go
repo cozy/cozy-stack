@@ -3,7 +3,6 @@ package sharings
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -11,15 +10,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/web/auth"
-	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,8 +23,7 @@ import (
 var ts *httptest.Server
 var testInstance *instance.Instance
 var jar *testJar
-var client *http.Client
-var clientOAuth oauth.Client
+var clientOAuth *oauth.Client
 var clientID string
 var instanceURL *url.URL
 var domain string
@@ -129,8 +124,8 @@ func TestSharingRequestSuccess(t *testing.T) {
 	}
 
 	req, _ := http.NewRequest("GET", ts.URL+"/sharings/request?"+urlVal.Encode(), nil)
-	req.Host = domain
-	res, err := client.Do(req)
+	noRedirectClient := http.Client{CheckRedirect: noRedirect}
+	res, err := noRedirectClient.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
@@ -182,69 +177,17 @@ func TestCreateSharingSuccess(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test needs couchdb to run.")
-		os.Exit(1)
-	}
-
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "sharing_test")
 	domain = "test-sharings"
+	testInstance = setup.GetTestInstance()
+	instanceURL, _ = url.Parse("https://" + testInstance.Domain + "/")
 
-	instance.Destroy(domain)
-	testInstance, err = instance.Create(&instance.Options{
-		Domain: domain,
-		Locale: "en",
-	})
-	if err != nil {
-		fmt.Println("Could not create test instance.", err)
-		os.Exit(1)
-	}
-
-	instanceURL, _ = url.Parse("https://" + domain + "/")
-	j, _ := cookiejar.New(nil)
-	jar = &testJar{
-		Jar: j,
-	}
-	client = &http.Client{
-		CheckRedirect: noRedirect,
-		Jar:           jar,
-	}
-
-	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
-
-	r := echo.New()
-	r.GET("/test", func(c echo.Context) error {
-		var content string
-		if middlewares.IsLoggedIn(c) {
-			content = "logged_in"
-		} else {
-			content = "who_are_you"
-		}
-		return c.String(http.StatusOK, content)
-	}, middlewares.NeedInstance, middlewares.LoadSession)
-
-	clientOAuth = oauth.Client{
-		RedirectURIs: []string{"http://localhost/oauth/callback"},
-		ClientName:   "test-permissions",
-		SoftwareID:   "github.com/cozy/cozy-stack/web/data",
-	}
-	clientOAuth.Create(testInstance)
+	clientOAuth, _ = setup.GetTestClient("")
 	clientID = clientOAuth.ClientID
 
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	handler.Use(injectInstance(testInstance))
-	auth.Routes(handler.Group("/auth"))
-	Routes(handler.Group("/sharings"))
-
-	ts = httptest.NewServer(handler)
-
-	res := m.Run()
-	ts.Close()
-	instance.Destroy(domain)
-
-	os.Exit(res)
+	ts = setup.GetTestServer("/sharings", Routes)
+	os.Exit(setup.Run())
 }
 
 func postJSON(u string, v echo.Map) (*http.Response, error) {

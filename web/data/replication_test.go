@@ -22,8 +22,6 @@ func TestReplicationFromcozy(t *testing.T) {
 	var target = config.CouchURL() + "replication-target"
 	var replicator = config.CouchURL() + "_replicate"
 
-	var token = testToken(testInstance)
-
 	source = strings.Replace(source, "http://", "http://user:"+token+"@", 1)
 
 	req, _ := http.NewRequest("DELETE", target, nil)
