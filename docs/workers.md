@@ -54,3 +54,22 @@ at the root of this repository.
     ]
 }
 ```
+
+### Permissions
+
+To use this worker from a client-side application, you will need to ask the
+permission. It is done by adding this to the manifest:
+
+```json
+{
+  "permissions": {
+    "mail-from-the-user": {
+      "description": "Required to send mails from the user to his/her friends",
+      "type": "io.cozy.jobs",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["sendmail"]
+    }
+  }
+}
+```

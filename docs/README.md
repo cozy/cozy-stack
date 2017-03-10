@@ -8,16 +8,16 @@ Table of contents
 
 ## Usage
 
-- [CLI](cli/cozy-stack.md)
-- [Configuration](config.md)
+- [Manpages of the command-line tool](cli/cozy-stack.md)
+- [Configuration file](config.md)
 - [Managing Instances](instance.md)
 - [Onboarding](onboarding.md)
-- [Build a release](release.md)
 
 ## For developpers
 
 - [Develop a client-side app](client-app-dev.md)
 - [Running and building Docker images](docker.md)
+- [Build a release](release.md)
 - [The contributing guide](CONTRIBUTING.md)
 
 ## Services
@@ -30,8 +30,9 @@ Table of contents
   - [Replication](replication.md)
 - `/files` - [Virtual File System](files.md)
   - [References of documents in VFS](references-docs-in-vfs.md)
-- `/jobs` - [Jobs](jobs.md) & [Workers](workers.md)
+- `/jobs` - [Jobs](jobs.md)
   - [Konnectors](konnectors.md)
+  - [Workers](workers.md)
 - `/realtime` - [Realtime](realtime.md)
 - `/settings` - [Settings](settings.md)
 - `/sharings` - [Sharing](sharing.md)
