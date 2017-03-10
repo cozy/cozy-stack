@@ -15,7 +15,6 @@ import (
 func SharingAnswer(c echo.Context) error {
 
 	var err error
-	var sharingAccepted bool
 
 	state := c.FormValue("state")
 	clientID := c.FormValue("client_id")
@@ -25,11 +24,7 @@ func SharingAnswer(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	// The sharing is refused if there is no access code or scope
-	if scope == "" || accessCode == "" {
-		sharingAccepted = false
-	} else {
-		sharingAccepted = true
-	}
+	sharingAccepted := scope != "" && accessCode != ""
 
 	if sharingAccepted {
 		//TODO: handle the acceptation
