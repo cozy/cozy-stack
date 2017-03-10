@@ -48,14 +48,13 @@ func (t *topic) loop() {
 			for s := range t.subs {
 				s.send <- e
 			}
-
 		case s := <-t.subscribe:
 			t.subs[s] = struct{}{}
-
 		case s := <-t.unsubscribe:
 			delete(t.subs, s)
 			if len(t.subs) == 0 {
 				t.hub.remove(t)
+				break
 			}
 		}
 	}
