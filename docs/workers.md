@@ -11,8 +11,8 @@ arguments.
 
 The `sendmail` worker can be used to send mail from the stack. It implies that
 the stack has properly configured an access to an SMTP server. You can see an
-example of configuration in the [cozy.dist.yaml](../cozy.dist.yaml) file at
-the root of this repository.
+example of configuration in the [cozy.example.yaml](../cozy.example.yaml) file
+at the root of this repository.
 
 `sendmail` options fields are the following:
 
