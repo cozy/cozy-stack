@@ -18,12 +18,12 @@ type Sharing struct {
 	SharingID   string `json:"sharing_id,omitempty"`
 	SharingType string `json:"sharing_type"`
 
-	Permissions *permissions.Set    `json:"permissions,omitempty"`
-	SRecipients []*SharingRecipient `json:"recipients,omitempty"`
+	Permissions      *permissions.Set   `json:"permissions,omitempty"`
+	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
 }
 
-// SharingRecipient contains the information about a recipient for a sharing
-type SharingRecipient struct {
+// RecipientStatus contains the information about a recipient for a sharing
+type RecipientStatus struct {
 	Status       string `json:"status,omitempty"`
 	AccessToken  string `json:"access_token,omitempty"`
 	RefreshToken string `json:"refresh_token,omitempty"`
@@ -50,34 +50,50 @@ func (s *Sharing) SetRev(rev string) { s.SRev = rev }
 
 // Links implements jsonapi.Doc
 func (s *Sharing) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/sharing/" + s.SID}
+	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
 }
 
-// Recipients returns the sharing recipients
-func (s *Sharing) Recipients(db couchdb.Database) ([]*SharingRecipient, error) {
-	var sRecipients []*SharingRecipient
+// RecStatus returns the sharing recipients status
+func (s *Sharing) RecStatus(db couchdb.Database) ([]*RecipientStatus, error) {
+	var rStatus []*RecipientStatus
 
-	for _, sRec := range s.SRecipients {
-		recipient, err := GetRecipient(db, sRec.RefRecipient.ID)
+	for _, rec := range s.RecipientsStatus {
+		recipient, err := GetRecipient(db, rec.RefRecipient.ID)
 		if err != nil {
 			return nil, err
 		}
-		sRec.recipient = recipient
-		sRecipients = append(sRecipients, sRec)
+		rec.recipient = recipient
+		rStatus = append(rStatus, rec)
 	}
 
-	s.SRecipients = sRecipients
-	return sRecipients, nil
+	s.RecipientsStatus = rStatus
+	return rStatus, nil
+}
+
+// Recipients returns the sharing recipients
+func (s *Sharing) Recipients(db couchdb.Database) ([]*Recipient, error) {
+	var recipients []*Recipient
+
+	for _, rec := range s.RecipientsStatus {
+		recipient, err := GetRecipient(db, rec.RefRecipient.ID)
+		if err != nil {
+			return nil, err
+		}
+		rec.recipient = recipient
+		recipients = append(recipients, recipient)
+	}
+
+	return recipients, nil
 }
 
 // Relationships is part of the jsonapi.Object interface
 // It is used to generate the recipients relationships
 func (s *Sharing) Relationships() jsonapi.RelationshipMap {
-	l := len(s.SRecipients)
+	l := len(s.RecipientsStatus)
 	i := 0
 
 	data := make([]jsonapi.ResourceIdentifier, l)
-	for _, rec := range s.SRecipients {
+	for _, rec := range s.RecipientsStatus {
 		r := rec.recipient
 		data[i] = jsonapi.ResourceIdentifier{ID: r.ID(), Type: r.DocType()}
 		i++
@@ -89,7 +105,7 @@ func (s *Sharing) Relationships() jsonapi.RelationshipMap {
 // Included is part of the jsonapi.Object interface
 func (s *Sharing) Included() []jsonapi.Object {
 	var included []jsonapi.Object
-	for _, rec := range s.SRecipients {
+	for _, rec := range s.RecipientsStatus {
 		r := rec.recipient
 		included = append(included, r)
 	}
@@ -106,22 +122,59 @@ func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 	return doc, err
 }
 
+// CheckSharingType returns an error if the sharing type is incorrect
+func CheckSharingType(sharingType string) error {
+	switch sharingType {
+	case consts.OneShotSharing, consts.MasterSlaveSharing, consts.MasterMasterSharing:
+		return nil
+	}
+	return ErrBadSharingType
+}
+
+// CreateSharingRequest checks fields integrity and creates a sharing document
+// for an incoming sharing request
+func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope string) (*Sharing, error) {
+	if state == "" {
+		return nil, ErrMissingState
+	}
+	if err := CheckSharingType(sharingType); err != nil {
+		return nil, err
+	}
+	if scope == "" {
+		return nil, ErrMissingScope
+	}
+	permissions, err := permissions.UnmarshalScopeString(scope)
+	if err != nil {
+		return nil, err
+	}
+
+	sharing := &Sharing{
+		SharingType: sharingType,
+		SharingID:   state,
+		Permissions: permissions,
+		Owner:       false,
+		Desc:        desc,
+	}
+
+	err = Create(db, sharing)
+
+	return sharing, err
+}
+
 // CheckSharingCreation initializes and check some sharing fields at creation
 func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
 
 	sharingType := sharing.SharingType
-	if sharingType != consts.OneShotSharing &&
-		sharingType != consts.MasterSlaveSharing &&
-		sharingType != consts.MasterMasterSharing {
-		return ErrBadSharingType
+	if err := CheckSharingType(sharingType); err != nil {
+		return err
 	}
 
-	sRecipients, err := sharing.Recipients(db)
+	recStatus, err := sharing.RecStatus(db)
 	if err != nil {
 		return err
 	}
-	for _, sRec := range sRecipients {
-		sRec.Status = consts.PendingSharingStatus
+	for _, rec := range recStatus {
+		rec.Status = consts.PendingSharingStatus
 	}
 
 	sharing.Owner = true

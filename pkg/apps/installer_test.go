@@ -17,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -131,14 +130,6 @@ func TestInstallBadSlug(t *testing.T) {
 
 func TestInstallBadAppsSource(t *testing.T) {
 	_, err := NewInstaller(c, &InstallerOptions{
-		Slug:      "app2",
-		SourceURL: "",
-	})
-	if assert.Error(t, err) {
-		assert.Equal(t, ErrNotSupportedSource, err)
-	}
-
-	_, err = NewInstaller(c, &InstallerOptions{
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
 	})
@@ -164,7 +155,7 @@ func TestInstallSuccessful(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -208,7 +199,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	for {
 		var done bool
@@ -229,18 +220,10 @@ func TestInstallAldreadyExist(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
-	man, done, err := inst.Poll()
-	if !assert.NoError(t, err) {
-		return
-	}
-	if !assert.EqualValues(t, Ready, man.State) {
-		return
-	}
-	if !assert.True(t, done) {
-		return
-	}
+	_, _, err = inst.Poll()
+	assert.Equal(t, ErrAlreadyExists, err)
 }
 
 func TestInstallWithUpgrade(t *testing.T) {
@@ -252,7 +235,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	for {
 		var done bool
@@ -282,7 +265,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	var state State
 	for {
@@ -328,7 +311,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -375,7 +358,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Update()
 
 	state = ""
 	for {
@@ -422,7 +405,7 @@ func TestInstallFromGithub(t *testing.T) {
 		return
 	}
 
-	go inst.InstallOrUpdate()
+	go inst.Install()
 
 	var state State
 	for {
@@ -450,6 +433,42 @@ func TestInstallFromGithub(t *testing.T) {
 	}
 }
 
+func TestUninstall(t *testing.T) {
+	inst1, err := NewInstaller(c, &InstallerOptions{
+		Slug:      "github-cozy-delete",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	go inst1.Install()
+	for {
+		var done bool
+		_, done, err = inst1.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if done {
+			break
+		}
+	}
+	inst2, err := NewInstaller(c, &InstallerOptions{Slug: "github-cozy-delete"})
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = inst2.Delete()
+	if !assert.NoError(t, err) {
+		return
+	}
+	inst3, err := NewInstaller(c, &InstallerOptions{Slug: "github-cozy-delete"})
+	if !assert.NoError(t, err) {
+		return
+	}
+	go inst3.Update()
+	_, _, err = inst3.Poll()
+	assert.Error(t, err)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
@@ -467,7 +486,7 @@ func TestMain(m *testing.M) {
 		Transport: &transport{},
 	}
 
-	err = couchdb.ResetDB(c, consts.Manifests)
+	err = couchdb.ResetDB(c, consts.Apps)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -489,21 +508,13 @@ func TestMain(m *testing.M) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	for _, index := range vfs.Indexes {
-		err = couchdb.DefineIndex(c, consts.Files, index)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
 	err = couchdb.ResetDB(c, consts.Permissions)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndex(c, consts.Permissions, permissions.Index)
+	err = couchdb.DefineIndexes(c, consts.Indexes)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -516,7 +527,7 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
-	couchdb.DeleteDB(c, consts.Manifests)
+	couchdb.DeleteDB(c, consts.Apps)
 	couchdb.DeleteDB(c, consts.Files)
 	ts.Close()
 

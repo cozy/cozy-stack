@@ -75,7 +75,7 @@ func Allows(c Context, pset permissions.Set, v permissions.Verb, fd Validable) e
 			// tested is children of allowed
 			// err is ignored, it most probably means a permissions on a
 			// deleted directory. @TODO We will want to clean this up.
-			if err == nil && strings.HasPrefix(selfPath, allowedPath) {
+			if err == nil && strings.HasPrefix(selfPath, allowedPath+"/") {
 				return nil
 			}
 		}

@@ -82,6 +82,9 @@ do_start() {
 		--host "${COZY_STACK_HOST}" \
 		--port "${COZY_STACK_PORT}" \
 		--couchdb-url "${COUCHDB_URL}" \
+		--mail-host "${COZY_STACK_HOST}" \
+		--mail-port 1025 \
+		--mail-disable-tls \
 		--fs-url "file://localhost${vfsdir}" &
 
 	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
@@ -130,16 +133,24 @@ do_check_couchdb() {
 do_create_instances() {
 	for host in "${cozy_dev_addr}" "localhost:${COZY_STACK_PORT}"
 	do
-		printf "creating instance %s... " "${host}"
+		printf "creating instance %s" "${host}"
+		if [ -n "${COZY_STACK_PASS}" ]; then
+			printf " using passphrase \"%s\"" "${COZY_STACK_PASS}"
+		fi
+		printf "... "
+
 		set +e
 		add_instance_val=$(
-			${COZY_STACK_PATH} instances add --dev --email dev@cozy.io "${host}" 2>&1
+			${COZY_STACK_PATH} instances add \
+				--dev \
+				--email dev@cozy.io \
+				--passphrase ${COZY_STACK_PASS} \
+				"${host}" 2>&1
 		)
 		add_instance_ret="${?}"
 		set -e
 		if [ "${add_instance_ret}" = "0" ]; then
 			echo "ok"
-			reg_token=$(grep 'token' <<< "${add_instance_val}" | sed 's/.*token: \\"\([A-Fa-f0-9]*\)\\".*/\1/g')
 		else
 			exists_test=$(grep -i "already exists" <<< "${add_instance_val}" || echo "")
 			if [ -z "${exists_test}" ]; then
@@ -147,14 +158,6 @@ do_create_instances() {
 				exit 1
 			fi
 			echo "ok (already created)"
-		fi
-
-		if [ -n "${COZY_STACK_PASS}" ] && [ -n "${reg_token}" ]; then
-			printf "registering using passphrase %s... " "${COZY_STACK_PASS}"
-			curl --fail -X POST -H 'Content-Type: application/json' \
-				"http://${host}/settings/passphrase" \
-				-d "{\"register_token\":\"${reg_token}\",\"passphrase\":\"${COZY_STACK_PASS}\"}"
-			echo "ok"
 		fi
 	done
 }

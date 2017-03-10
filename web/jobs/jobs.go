@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	_ "github.com/cozy/cozy-stack/pkg/jobs/workers" // import all workers
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -63,6 +65,13 @@ func (q *apiQueue) Included() []jsonapi.Object             { return nil }
 func (q *apiQueue) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/queue/" + q.workerType}
 }
+func (q *apiQueue) Valid(key, value string) bool {
+	switch key {
+	case "worker":
+		return q.workerType == value
+	}
+	return false
+}
 
 func (t *apiTrigger) ID() string                             { return t.t.Infos().ID }
 func (t *apiTrigger) Rev() string                            { return "" }
@@ -89,6 +98,11 @@ func getQueue(c echo.Context) error {
 		workerType: workerType,
 		Count:      count,
 	}
+
+	if err := permissions.Allow(c, permissions.GET, o); err != nil {
+		return err
+	}
+
 	return jsonapi.Data(c, http.StatusOK, o, nil)
 }
 
@@ -100,14 +114,19 @@ func pushJob(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	job, ch, err := instance.JobsBroker().PushJob(&jobs.JobRequest{
+	jr := &jobs.JobRequest{
 		WorkerType: c.Param("worker-type"),
 		Options:    req.Options,
 		Message: &jobs.Message{
 			Type: jobs.JSONEncoding,
 			Data: req.Arguments,
 		},
-	})
+	}
+	if err := permissions.Allow(c, permissions.GET, jr); err != nil {
+		return err
+	}
+
+	job, ch, err := instance.JobsBroker().PushJob(jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -152,6 +171,11 @@ func newTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+
+	if err = permissions.Allow(c, permissions.POST, t); err != nil {
+		return err
+	}
+
 	if err = scheduler.Add(t); err != nil {
 		return wrapJobsError(err)
 	}
@@ -165,12 +189,22 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+	if err := permissions.Allow(c, permissions.GET, t); err != nil {
+		return err
+	}
 	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
 }
 
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
+	t, err := scheduler.Get(c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if err := permissions.Allow(c, permissions.DELETE, t); err != nil {
+		return err
+	}
 	if err := scheduler.Delete(c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
 	}
@@ -180,6 +214,9 @@ func deleteTrigger(c echo.Context) error {
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	scheduler := instance.JobsScheduler()
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+		return err
+	}
 	ts, err := scheduler.GetAll()
 	if err != nil {
 		return wrapJobsError(err)
@@ -193,8 +230,8 @@ func getAllTriggers(c echo.Context) error {
 
 // Routes sets the routing for the jobs service
 func Routes(router *echo.Group) {
-	router.POST("/queue/:worker-type", pushJob)
 	router.GET("/queue/:worker-type", getQueue)
+	router.POST("/queue/:worker-type", pushJob)
 
 	router.GET("/triggers", getAllTriggers)
 	router.POST("/triggers", newTrigger)
@@ -203,11 +240,12 @@ func Routes(router *echo.Group) {
 }
 
 func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
-	b, err := json.Marshal(job)
+	b := new(bytes.Buffer)
+	err := jsonapi.WriteData(b, &apiJob{job}, nil)
 	if err != nil {
 		return err
 	}
-	s := fmt.Sprintf("event: %s\r\ndata: %s\r\n\r\n", job.State, b)
+	s := fmt.Sprintf("event: %s\r\ndata: %s\r\n\r\n", job.State, b.String())
 	_, err = w.Write([]byte(s))
 	if err != nil {
 		return err

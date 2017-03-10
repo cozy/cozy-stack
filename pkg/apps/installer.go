@@ -59,23 +59,25 @@ func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
 	}
 
 	var src *url.URL
-	if opts.SourceURL != "" {
-		src, err = url.Parse(opts.SourceURL)
-	} else if man != nil {
+	if man != nil {
 		src, err = url.Parse(man.Source)
+	} else if opts.SourceURL != "" {
+		src, err = url.Parse(opts.SourceURL)
 	} else {
-		err = ErrNotSupportedSource
+		err = nil
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	var fetcher Fetcher
-	switch src.Scheme {
-	case "git":
-		fetcher = newGitFetcher(ctx)
-	default:
-		return nil, ErrNotSupportedSource
+	if src != nil {
+		switch src.Scheme {
+		case "git":
+			fetcher = newGitFetcher(ctx)
+		default:
+			return nil, ErrNotSupportedSource
+		}
 	}
 
 	inst := &Installer{
@@ -91,25 +93,49 @@ func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
 	return inst, nil
 }
 
-// InstallOrUpdate will install the application linked to the installer. If the
-// application is already installed, it will try to upgrade it. It will report
-// its progress or error (see Poll method).
-func (i *Installer) InstallOrUpdate() {
+// Install will install the application linked to the installer. It will
+// report its progress or error (see Poll method).
+func (i *Installer) Install() {
 	defer i.endOfProc()
-
-	if i.man == nil {
+	if i.man != nil {
+		i.man, i.err = nil, ErrAlreadyExists
+	} else {
 		i.man, i.err = i.install()
-		return
 	}
-
-	state := i.man.State
-	if state != Ready && state != Errored {
-		i.man, i.err = nil, ErrBadState
-		return
-	}
-
-	i.man, i.err = i.update()
 	return
+}
+
+// Update will update the application linked to the installer. It will
+// report its progress or error (see Poll method).
+func (i *Installer) Update() {
+	defer i.endOfProc()
+	if i.man == nil {
+		i.err = ErrNotFound
+		return
+	}
+	if state := i.man.State; state != Ready && state != Errored {
+		i.man, i.err = nil, ErrBadState
+	} else {
+		i.man, i.err = i.update()
+	}
+	return
+}
+
+// Delete will remove the application linked to the installer.
+func (i *Installer) Delete() (*Manifest, error) {
+	if i.man == nil {
+		return nil, ErrNotFound
+	}
+	if state := i.man.State; state != Ready && state != Errored {
+		return nil, ErrBadState
+	}
+	if err := deleteManifest(i.ctx, i.man); err != nil {
+		return nil, err
+	}
+	if err := vfs.RemoveAll(i.ctx, i.appDir()); err != nil {
+		return nil, err
+	}
+	return i.man, nil
 }
 
 func (i *Installer) endOfProc() {
@@ -153,11 +179,8 @@ func (i *Installer) install() (*Manifest, error) {
 		return man, err
 	}
 
-	if err := i.fetcher.Fetch(i.src, appdir); err != nil {
-		return man, err
-	}
-
-	return man, nil
+	err := i.fetcher.Fetch(i.src, appdir)
+	return man, err
 }
 
 // update will perform the update of an already installed application. It
@@ -168,14 +191,9 @@ func (i *Installer) install() (*Manifest, error) {
 // upgrading.
 func (i *Installer) update() (*Manifest, error) {
 	man := i.man
-	version := man.Version
 
 	if err := i.ReadManifest(Upgrading, man); err != nil {
 		return man, err
-	}
-
-	if man.Version == version {
-		return man, nil
 	}
 
 	if err := updateManifest(i.ctx, man); err != nil {
@@ -228,28 +246,30 @@ func (i *Installer) Poll() (*Manifest, bool, error) {
 }
 
 func updateManifest(db couchdb.Database, man *Manifest) error {
-
 	err := permissions.DestroyApp(db, man.Slug)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}
-
 	err = couchdb.UpdateDoc(db, man)
 	if err != nil {
 		return err
 	}
-
 	_, err = permissions.CreateAppSet(db, man.Slug, *man.Permissions)
 	return err
 }
 
 func createManifest(db couchdb.Database, man *Manifest) error {
-
 	if err := couchdb.CreateNamedDoc(db, man); err != nil {
 		return err
 	}
-
 	_, err := permissions.CreateAppSet(db, man.Slug, *man.Permissions)
 	return err
+}
 
+func deleteManifest(db couchdb.Database, man *Manifest) error {
+	err := permissions.DestroyApp(db, man.Slug)
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return err
+	}
+	return couchdb.DeleteDoc(db, man)
 }

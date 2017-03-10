@@ -8,8 +8,8 @@ const (
 	Files = "io.cozy.files"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
-	// Manifests doc type for application manifests
-	Manifests = "io.cozy.manifests"
+	// Apps doc type for application manifests
+	Apps = "io.cozy.apps"
 	// Jobs doc type for queued jobs
 	Jobs = "io.cozy.jobs"
 	// Queues doc type for jobs queues
@@ -36,6 +36,15 @@ const (
 	OAuthClients = "io.cozy.oauth.clients"
 	// OAuthAccessCodes doc type for OAuth2 access codes
 	OAuthAccessCodes = "io.cozy.oauth.access_codes"
+)
+
+const (
+	// FilesSlug is the slug of the default app, files, where the user is redirected after login
+	FilesSlug = "files"
+	// OnboardingSlug is the slug of the onboarding app, where the user is redirected when he has no passphrase
+	OnboardingSlug = "onboarding"
+	// StoreSlug is the slug of the only app that can install other apps
+	StoreSlug = "store"
 )
 
 const (
@@ -75,4 +84,15 @@ const (
 	RefusedSharingStatus = "refused"
 	// AcceptedSharingStatus is the sharing accepted status
 	AcceptedSharingStatus = "accepted"
+	// ErrorSharingStatus is when the request could not be sent
+	ErrorSharingStatus = "error"
 )
+
+// AppsRegistry is an hard-coded list of known apps, with their source URLs
+// TODO remove it when we will have a true registry
+var AppsRegistry = map[string]string{
+	"onboarding": "git://github.com/cozy/cozy-onboarding-v3.git#build",
+	"files":      "git://github.com/cozy/cozy-files-v3.git#build",
+	"photos":     "git://github.com/cozy/cozy-photos-v3.git#build",
+	"settings":   "git://github.com/cozy/cozy-settings.git#build",
+}

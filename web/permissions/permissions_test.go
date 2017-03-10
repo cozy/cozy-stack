@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -35,17 +36,23 @@ func TestMain(m *testing.M) {
 		Domain:      "example.com",
 	}
 
-	err := couchdb.ResetDB(testInstance, consts.Permissions)
+	err := couchdb.ResetDB(testInstance, "io.cozy.events")
 	if err != nil {
 		fmt.Println("Cant reset db", err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineIndex(testInstance, consts.Permissions, permissions.Index)
+
+	err = couchdb.ResetDB(testInstance, consts.Permissions)
+	if err != nil {
+		fmt.Println("Cant reset db", err)
+		os.Exit(1)
+	}
+	err = couchdb.DefineIndexes(testInstance, consts.IndexesByDoctype(consts.Permissions))
 	if err != nil {
 		fmt.Println("Cant define index", err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineViews(testInstance, consts.Permissions, permissions.Views)
+	err = couchdb.DefineViews(testInstance, consts.ViewsByDoctype(consts.Permissions))
 	if err != nil {
 		fmt.Println("cant define views", err)
 		os.Exit(1)
@@ -228,6 +235,83 @@ func TestCreateSubPermission(t *testing.T) {
 
 }
 
+func TestListPermission(t *testing.T) {
+
+	ev1, _ := createTestEvent(testInstance)
+	ev2, _ := createTestEvent(testInstance)
+	ev3, _ := createTestEvent(testInstance)
+
+	parent, _ := permissions.GetForOauth(&permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  clientID,
+		},
+		Scope: "io.cozy.events",
+	})
+	p1 := permissions.Set{
+		permissions.Rule{
+			Type:   "io.cozy.events",
+			Verbs:  permissions.Verbs(permissions.DELETE, permissions.PATCH),
+			Values: []string{ev1.ID()},
+		}}
+	p2 := permissions.Set{
+		permissions.Rule{
+			Type:   "io.cozy.events",
+			Verbs:  permissions.Verbs(permissions.GET),
+			Values: []string{ev2.ID()},
+		}}
+
+	codes := map[string]string{"bob": "secret"}
+	permissions.CreateShareSet(testInstance, parent, codes, &p1)
+	permissions.CreateShareSet(testInstance, parent, codes, &p2)
+
+	reqbody := strings.NewReader(`{
+"data": [
+{ "type": "io.cozy.events", "id": "` + ev1.ID() + `" },
+{ "type": "io.cozy.events", "id": "` + ev2.ID() + `" },
+{ "type": "io.cozy.events", "id": "non-existing-id" },
+{ "type": "io.cozy.events", "id": "another-fake-id" },
+{ "type": "io.cozy.events", "id": "` + ev3.ID() + `" }
+]	}`)
+
+	req, _ := http.NewRequest("POST", ts.URL+"/permissions/exists", reqbody)
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+	var out jsonapi.Document
+	err = json.Unmarshal(body, &out)
+	if !assert.NoError(t, err) {
+		return
+	}
+	var results []refAndVerb
+	err = json.Unmarshal(*out.Data, &results)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Len(t, results, 2)
+	for _, result := range results {
+		assert.Equal(t, "io.cozy.events", result.DocType)
+		if result.ID == ev1.ID() {
+			assert.Equal(t, "PATCH,DELETE", result.Verbs.String())
+		} else {
+			assert.Equal(t, ev2.ID(), result.ID)
+			assert.Equal(t, "GET", result.Verbs.String())
+		}
+	}
+
+}
+
 func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -235,4 +319,13 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {
+	e := &couchdb.JSONDoc{
+		Type: "io.cozy.events",
+		M:    map[string]interface{}{"test": "value"},
+	}
+	err := couchdb.CreateDoc(i, e)
+	return e, err
 }

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
@@ -22,6 +24,11 @@ const (
 const (
 	// JSONEncoding is a JSON encoding message type
 	JSONEncoding = "json"
+)
+
+const (
+	// WorkerType is the key in JSON for the type of worker
+	WorkerType = "worker"
 )
 
 type (
@@ -87,7 +94,7 @@ type (
 	// marshalled in JSON.
 	JobInfos struct {
 		ID         string      `json:"id"`
-		WorkerType string      `json:"worker_type"`
+		WorkerType string      `json:"worker"`
 		Message    *Message    `json:"message"`
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
@@ -134,6 +141,7 @@ type (
 
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
+		permissions.Validable
 		Type() string
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
@@ -164,6 +172,23 @@ type (
 	}
 )
 
+// ID implements the permissions.Validable interface
+func (jr *JobRequest) ID() string { return "" }
+
+// DocType implements the permissions.Validable interface
+func (jr *JobRequest) DocType() string { return consts.Jobs }
+
+// Valid implements the permissions.Validable interface
+func (jr *JobRequest) Valid(key, value string) bool {
+	switch key {
+	case WorkerType:
+		return jr.WorkerType == value
+	}
+	return false
+}
+
+var _ permissions.Validable = (*JobRequest)(nil)
+
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
 func NewTrigger(infos *TriggerInfos) (Trigger, error) {
@@ -172,6 +197,8 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 		return NewAtTrigger(infos)
 	case "@in":
 		return NewInTrigger(infos)
+	case "@event":
+		return NewEventTrigger(infos)
 	default:
 		return nil, ErrUnknownTrigger
 	}

@@ -21,7 +21,7 @@ See the example to check what contains the configuration.
 ### Example
 
 You can see an example of configuration in the
-[cozy.dist.yaml](../cozy.dist.yaml) file at the root of this repository.
+[cozy.example.yaml](../cozy.example.yaml) file at the root of this repository.
 
 This example's values represent the default values of the configuration. The
 equivalent cli flag are also filled in.

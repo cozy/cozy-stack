@@ -155,6 +155,51 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRemove(t *testing.T) {
+	err := Remove(vfsC, "foo/bar")
+	assert.Error(t, err)
+	assert.Equal(t, ErrNonAbsolutePath, err)
+
+	err = Remove(vfsC, "/foo")
+	assert.Error(t, err)
+	assert.Equal(t, "file does not exist", err.Error())
+
+	_, err = Mkdir(vfsC, "/removeme", nil)
+	if !assert.NoError(t, err) {
+		err = Remove(vfsC, "/removeme")
+		assert.NoError(t, err)
+	}
+}
+
+func TestRemoveAll(t *testing.T) {
+	origtree := H{
+		"removemeall/": H{
+			"dirchild1/": H{
+				"food/": H{},
+				"bard/": H{},
+			},
+			"dirchild2/": H{
+				"foof": nil,
+				"barf": nil,
+			},
+			"dirchild3/": H{},
+			"filechild1": nil,
+		},
+	}
+	_, err := createTree(origtree, consts.RootDirID)
+	if !assert.NoError(t, err) {
+		return
+	}
+	err = RemoveAll(vfsC, "/removemeall")
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = Stat(vfsC, "/removemeall/dirchild1")
+	assert.Error(t, err)
+	_, err = Stat(vfsC, "/removemeall")
+	assert.Error(t, err)
+}
+
 func TestDiskUsage(t *testing.T) {
 	used, err := DiskUsage(vfsC)
 	assert.NoError(t, err)
@@ -188,7 +233,7 @@ func TestGetFileDocFromPath(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCreateAndGetFile(t *testing.T) {
+func TestCreateGetAndModifyFile(t *testing.T) {
 	origtree := H{
 		"createandget1/": H{
 			"dirchild1/": H{
@@ -224,6 +269,26 @@ func TestCreateAndGetFile(t *testing.T) {
 	}
 
 	assert.EqualValues(t, origtree["createandget1/"], tree["createandget2/"], "should have same tree")
+
+	fileBefore, err := GetFileDocFromPath(vfsC, "/createandget2/dirchild2/foof")
+	if !assert.NoError(t, err) {
+		return
+	}
+	newfilename := "foof.jpg"
+	_, err = ModifyFileMetadata(vfsC, fileBefore, &DocPatch{
+		Name: &newfilename,
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	fileAfter, err := GetFileDocFromPath(vfsC, "/createandget2/dirchild2/foof.jpg")
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, "", fileBefore.Class)
+	assert.Equal(t, "", fileBefore.Mime)
+	assert.Equal(t, "image", fileAfter.Class)
+	assert.Equal(t, "image/jpeg", fileAfter.Mime)
 }
 
 func TestUpdateDir(t *testing.T) {
@@ -511,15 +576,13 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	for _, index := range Indexes {
-		err = couchdb.DefineIndex(vfsC, consts.Files, index)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	err = couchdb.DefineIndexes(vfsC, consts.IndexesByDoctype(consts.Files))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if err = couchdb.DefineViews(vfsC, consts.Files, Views); err != nil {
+	if err = couchdb.DefineViews(vfsC, consts.ViewsByDoctype(consts.Files)); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

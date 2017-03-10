@@ -15,40 +15,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/spf13/afero"
 )
-
-// Indexes is the list of required indexes by the VFS inside CouchDB.
-var Indexes = []mango.Index{
-	// Used to lookup a file given its parent, and the children of a directory
-	mango.IndexOnFields("dir_id", "name"),
-	// Used to lookup a directory given its path
-	mango.IndexOnFields("path"),
-}
-
-// DiskUsageView is the name of the view used for computing the disk usage
-const DiskUsageView = "disk-usage"
-
-// FilesReferencedByView is the name of the view used for fetching files
-// referenced by a given document
-const FilesReferencedByView = "referenced-by"
-
-// Views is the required couchdb views for computing the disk usage
-var Views = couchdb.Views{
-	DiskUsageView: couchdb.View{
-		Map:    "function(doc) { if (doc.type === 'file') emit(doc._id, +doc.size); }",
-		Reduce: "_sum",
-	},
-	FilesReferencedByView: couchdb.View{
-		Map: `
-function(doc){
-	if(doc.type==='file' && isArray(doc.referenced_by))
-		for(var i=0; i<doc.referenced_by.length; i++)
-	 		emit([doc.referenced_by[i].type, doc.referenced_by[i].id])
-}`,
-	},
-}
 
 // DefaultContentType is used for files uploaded with no content-type
 const DefaultContentType = "application/octet-stream"
@@ -344,20 +312,39 @@ func Remove(c Context, name string) error {
 	if !path.IsAbs(name) {
 		return ErrNonAbsolutePath
 	}
+	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
+	if err != nil {
+		return err
+	}
+	if dir != nil {
+		if len(dir.files) > 0 {
+			return ErrDirNotEmpty
+		}
+		return DestroyDirAndContent(c, dir)
+	}
+	return DestroyFile(c, file)
+}
 
-	// TODO: fix this remove method implemented for now only to support
-	// go-git. This method should also remove the document from
-	// database.
-	return c.FS().Remove(name)
+// RemoveAll removes the specified name file or directory and its content.
+func RemoveAll(c Context, name string) error {
+	if !path.IsAbs(name) {
+		return ErrNonAbsolutePath
+	}
+	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
+	if err != nil {
+		return err
+	}
+	if dir != nil {
+		return DestroyDirAndContent(c, dir)
+	}
+	return DestroyFile(c, file)
 }
 
 // DiskUsage computes the total size of the files
 func DiskUsage(c Context) (int64, error) {
 	var doc couchdb.ViewResponse
-	err := couchdb.ExecView(c, &couchdb.ViewRequest{
-		Doctype:  consts.Files,
-		ViewName: DiskUsageView,
-		Reduce:   true,
+	err := couchdb.ExecView(c, consts.DiskUsageView, &couchdb.ViewRequest{
+		Reduce: true,
 	}, &doc)
 	if err != nil {
 		return 0, err

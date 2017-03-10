@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var flagNoAdmin bool
@@ -63,6 +66,39 @@ example), you can use the --appdir flag like this:
 }
 
 func init() {
+	binDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		panic(err)
+	}
+
+	flags := serveCmd.PersistentFlags()
+	flags.String("subdomains", "nested", "how to structure the subdomains for apps (can be nested or flat)")
+	checkNoErr(viper.BindPFlag("subdomains", flags.Lookup("subdomains")))
+
+	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
+	checkNoErr(viper.BindPFlag("assets", flags.Lookup("assets")))
+
+	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
+	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
+
+	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
+	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
+
+	flags.String("mail-host", "localhost", "mail smtp host")
+	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
+
+	flags.Int("mail-port", 465, "mail smtp port")
+	checkNoErr(viper.BindPFlag("mail.port", flags.Lookup("mail-port")))
+
+	flags.String("mail-username", "", "mail smtp username")
+	checkNoErr(viper.BindPFlag("mail.username", flags.Lookup("mail-username")))
+
+	flags.String("mail-password", "", "mail smtp password")
+	checkNoErr(viper.BindPFlag("mail.password", flags.Lookup("mail-password")))
+
+	flags.Bool("mail-disable-tls", false, "disable smtp over tls")
+	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
+
 	RootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().BoolVar(&flagNoAdmin, "no-admin", false, "Start without the admin interface")
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")

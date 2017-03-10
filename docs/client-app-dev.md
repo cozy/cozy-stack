@@ -59,6 +59,7 @@ To run a ephemeral instance, on the `$HOME/myapp` directory, use the following c
 ```sh
 $ docker run --rm -it \
     -p 8080:8080 \
+    -p 8025:8025 \
     -v "$HOME/myapp":/data/cozy-app \
     cozy/cozy-app-dev
 ```
@@ -68,11 +69,16 @@ To keep your data even when stopping the container, run the following command:
 ```sh
 $ docker run --rm -it \
     -p 8080:8080 \
+    -p 8025:8025 \
     -v "$HOME/myapp":/data/cozy-app \
     -v "$(pwd)/db":/usr/local/couchdb/data \
     -v "$(pwd)/storage":/data/cozy-storage \
     cozy/cozy-app-dev
 ```
+
+A [MailHog](https://github.com/mailhog/MailHog) is running inside docker to
+catch emails. You can view the emails sent by the stack in a web interface on
+http://cozy.local:8025/
 
 You can also expose the couchdb port (listening in the container on 5984) in order to access its admin page. For instance add `-p 1234:5984` to access to the admin interface on `http://localhost:1234/_utils`.
 

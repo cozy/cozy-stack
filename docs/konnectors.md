@@ -220,7 +220,7 @@ NsJail is:
 
 - easy to install : just a make away with standard build tools
 - offers a full list or isolation tools
-- lightly documented the only documentation is nsjail -h (also available in the main github page) and it is quite cryptic for a non-sysadmin         
+- lightly documented the only documentation is nsjail -h (also available in the main github page) and it is quite cryptic for a non-sysadmin
 like me. I could not find any help in any search engine. Some examples are available to run a back in an isolated process and work but I could not run a full nodejs (only nodejs -v worked)
 - The konnectors will need a full nodejs installed on the host
 - Is still actively maintained
@@ -244,7 +244,7 @@ I managed to run a nodejs container with just the following commands :
     rkt list   # to get the container uuid
     rkt export --app=nodeslim <uuid> nodeslim.aci
     rkt run --insecure-options=image --interactive nodeslim.aci -- -v  # to run node -v in the new container
-    
+
 Note: the --insecure-options param is to avoid the check of the image signature to ease the demonstration
 
 ### Choice
@@ -261,7 +261,7 @@ As stated before, rkt is easy to install. It may also be possible to make it ava
 #### Image creation
 
 To create an ACI file image, you just need to run a docker image one time :
-    
+
     rkt run  --uuid-file-save=$PWD/uuid --insecure-options=image --interactive docker://node:slim --name nodeslim -- -v
     rkt export --app=nodeslim `cat uuid` nodeslim.aci && rm uuid
 
@@ -299,7 +299,7 @@ To prevent the connectors from listening to each other, they should be run in co
 
 The container must be started in bridged mode. With that, the container still has access to localhost but through a specific IP address visible with ifconfig. That way, the host can have iptable rules to forbid access to specified ports to the bridge.
 
-To connect a container in bridge mode : 
+To connect a container in bridge mode :
 
 On the host create the file /etc/rkt/net.d/10-containers.conf
 
@@ -319,6 +319,121 @@ On the host create the file /etc/rkt/net.d/10-containers.conf
     }
 
 and run your container with the "--net=bridge" option. That way, a new interface is available in the container and gives you access to the host.
+
+
+## Konnector install and run details
+
+### Install
+
+The konnectors will be installed in the .cozy_konnectors directory which is in the VFS using git clone
+(like the apps at the moment).
+
+The konnectors installation may be triggered when the user says he wants to use it. The resulting
+repository is then kept for each run of the konnector. It may then be given to the user the
+possibility to upgrade the konnector to the latest version if any.
+
+To update a given konnector, a ```git pull``` command is run on the konnector.
+
+### Details about running a konnector
+
+To run a given konnector, the stack will copy this connector in a "run" directory, which is not in
+the VFS. This directory will be given to the rocket container as the current working directory
+with full read and write access on it. This is where the container will put its logs and any temp
+file needed. There will be also cozy-client.js and the shared libraries in a lib directory inside
+this directory. The lib directory will be the content of the [actual server lib
+directory](https://github.com/cozy-labs/konnectors/tree/master/server/lib).
+
+The konnector will be run with the following environment variables :
+
+- COZY_TOKEN
+- COZY_URL : to know what instance is running the konnector
+- KONNECTOR_CREDENTIALS : as a json string with all the values from the account associated to the
+konnector.
+
+In the end of the konnector execution (or timeout), the logs are read in the log.txt file and added
+to the konnector own log file (in VFS) and the run directory is then destroyed.
+
+## Multi-account handling
+
+This section is devoted to allow the user to use one account for multiple konnectors. It will
+follow the following constraints in mind:
+
+- The migration path must be as easy as possible
+- The developpement and maintainance of konnector must also be as easy as possible
+
+### New doctype : io.cozy.accounts
+
+A new doctype will have to be created to allow to keep konnector accounts independently from each
+konnector. The one once used by the email application seems to be a good candidate :
+io.cozy.accounts
+
+Here is an example document with this doctype :
+
+```
+{
+    _id: "ojpiojpoij",
+    name: "user decided name for the account",
+    accountType: "google",
+    login: "mylogin",
+    password: "123456"
+}
+```
+
+Any attribute needed for the account may be added : email, etc...
+
+### Updates needed in existing application and konnectors
+
+CRUD manipulation of io.cozy.accounts and linking them with konnectors will be handled by the
+"my accounts" client application.
+
+Each konnector need also to declare a new field in the "fields" attribute which will be the type of
+account, related to the accountType field in the new account docType.
+
+Ex:
+
+```
+module.exports = baseKonnector.createNew({
+  name: 'Trainline',
+  vendorLink: 'www.captaintrain.com',
+  category: 'transport',
+  color: {
+    hex: '#48D5B5',
+    css: '#48D5B5'
+  },
+  fields: {
+    login: {
+      type: 'text'
+    },
+    password: {
+      type: 'password'
+    },
+    folderPath: {
+      type: 'folder',
+      advanced: true
+    },
+    accountType: "trainline"
+  },
+  dataType: ['bill'],
+  models: [Bill],
+  fetchOperations: [
+    ...
+  ]
+})
+```
+
+
+With this new field, which will appear also in the io.cozy.konnectors docType, the "my account"
+client appliction will be able to propose existing accounts of the good type for activating a new
+konnector.
+
+### Migration path
+
+For the migration of existing, activated konnectors in V2, the type of account for each konnector
+will have to be indicated in a V2 "my account" application update. After that, it will be possible
+to create the accounts associated to each activated konnectors an link the konnectors to these
+accounts in a migration script.
+
+
 
 ## Study on konnectors installation on VFS
 
@@ -346,23 +461,23 @@ We found 3 possible solutions :
 
 ## TODO
 
-- [ ] How to install and update the konnectors?
-- [ ] Are the konnectors installed once per server or per instance (in the VFS
+- [X] How to install and update the konnectors?
+- [X] Are the konnectors installed once per server or per instance (in the VFS
   like client-side apps)?
-- [ ] One git repository with all the konnectors (like now), or one repos per
+- [X] One git repository with all the konnectors (like now), or one repos per
   konnector? Same question for package.json
 - [ ] What API to list the konnectors for My Accounts?
 - [ ] What workflow for developing a konnector?
 - [ ] How to test konnectors?
-- [ ] How are managed the locales?
-- [ ] Which version of nodejs?
+- [X] How are managed the locales? : declared in manfiest.konnector
+- [X] Which version of nodejs? Last LTS version bundled in a rocket container
 - [ ] Do you keep coffeescript? Or move every konnector to ES2017?
   - 28 konnectors in coffee
   - 22 konnectors in JS
 - [ ] What about weboob?
 - [ ] What roadmap for transforming the konnectors-v2 in konnectors-v3?
-- [ ] What format for the konnectors manifest?
-- [ ] What permissions for a konnector?
+- [X] What format for the konnectors manifest?
+- [X] What permissions for a konnector?
 - [ ] For konnectors that import files, how can we let the user select a
   folder and have an associated permission for the konnector in this folder
   (and not anywhere else on the virtual file system)?
@@ -376,7 +491,7 @@ We found 3 possible solutions :
     - 28 dependencies that install 65 MB for 271 modules in production
     - 71 dependencies that install 611 MB for 858 modules with dev dependencies
 - [ ] How are persisted the accounts?
-- [ ] How is executed a konnector? In particular, how the credentials are
+- [X] How is executed a konnector? In particular, how the credentials are
   given to the konnector?
 - [ ] what should expose a konnector (data, functions, etc)?
     - https://github.com/cozy-labs/konnectors/issues/695

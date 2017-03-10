@@ -55,7 +55,7 @@ allow to access and modify any file or directory.
 Some known types:
 
 - `io.cozy.files`, for files and folder in the [VFS](files.md)
-- `io.cozy.manifests` and `io.cozy.applications`, for [apps](apps.md)
+- `io.cozy.apps`, for [apps](apps.md)
 - `io.cozy.settings`, for the [settings](settings.md)
 - `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
 - `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
@@ -417,4 +417,47 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 
 ```http
 HTTP/1.1 204 No Content
+```
+
+### POST /permissions/exists
+
+List permissions for some documents
+
+#### Request
+
+```http
+POST /permissions/exists HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+    { "type": "io.cozy.files", "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863" }
+    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6" }
+    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+  ]
+}
+```
+
+#### Reponse
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4",
+      "verbs":["GET"] }
+    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+      "verbs":["GET", "POST"] }
+  ]
+}
 ```

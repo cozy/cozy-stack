@@ -1,0 +1,97 @@
+# Translators:
+# Bruno Michel <brmichel@free.fr>, 2017
+msgid ""
+msgstr ""
+"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
+"Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Login Credentials error"
+msgstr ""
+"Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
+
+msgid "Login Welcome"
+msgstr "Bienvenue !"
+
+msgid "Login Welcome name"
+msgstr "Bienvenue %s!"
+
+msgid "Login Password help"
+msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"
+
+msgid "Login Password field"
+msgstr "Mot de passe"
+
+msgid "Login Password show"
+msgstr "Afficher le mot de passe"
+
+msgid "Login Submit"
+msgstr "Se connecter"
+
+msgid "Passphrase reset Help"
+msgstr "Êtes-vous sûr de vouloir réinitialiser votre mot de passe ?"
+
+msgid "Passphrase reset Submit"
+msgstr "Réinitialiser le mot de passe"
+
+msgid "Passphrase renew Help"
+msgstr "Saisir un nouveau mot de passe"
+
+msgid "Passphrase renew Field"
+msgstr "mot de passe"
+
+msgid "Passphrase renew Submit"
+msgstr "Enregistrer le nouveau mot de passe"
+
+msgid "Login Forgot password"
+msgstr "Mot de passe oublié ?"
+
+msgid "Authorize Title"
+msgstr "Autoriser une application distante"
+
+msgid "Authorize Client presentation"
+msgstr "souhaite accéder à votre Cozy."
+
+msgid "Authorize Policy sentence"
+msgstr ""
+"Vous pouvez lire la politique d'utilisation des données à cette adresse :"
+
+msgid "Authorize Give permission"
+msgstr "Cet accord donnera accès à l'application pour :"
+
+msgid "Authorize Submit"
+msgstr "Accepter"
+
+msgid "Error Title"
+msgstr "Désolé"
+
+msgid "Error Message"
+msgstr "Nous avons rencontré une erreur."
+
+msgid "Error No state parameter"
+msgstr "Le paramètre state est obligatoire"
+
+msgid "Error No client_id parameter"
+msgstr "Le paramètre client_id est obligatoire"
+
+msgid "Error No redirect_uri parameter"
+msgstr "Le paramètre redirect_uri est obligatoire"
+
+msgid "Error No scope parameter"
+msgstr "Le paramètre scope est obligatoire"
+
+msgid "Error No registered client"
+msgstr "Le client doit être enregistré"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "Le paramètre redirect_uri ne correspond pas à ceux enregistrés"
+
+msgid "Error Invalid redirect_uri"
+msgstr "Le paramètre redirect_uri est invalide"
+
+msgid "Error Invalid response type"
+msgstr "Le type de réponse est invalide"
+
+msgid "Error Must be authenticated"
+msgstr "Vous devez être connecté"

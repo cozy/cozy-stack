@@ -18,15 +18,19 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const domain = "cozywithapps.example.net"
@@ -34,6 +38,7 @@ const slug = "mini"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var clientID string
 var manifest *apps.Manifest
 
 // Stupid http.CookieJar which always returns all cookies.
@@ -197,8 +202,8 @@ func TestServe(t *testing.T) {
 
 func TestCozyBar(t *testing.T) {
 	assertAuthGet(t, "/bar/", "text/html; charset=utf-8", ``+
-		`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar.css">`+
-		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.js"></script>`)
+		`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar.min.css">`+
+		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.min.js"></script>`)
 }
 
 func TestServeAppsWithACode(t *testing.T) {
@@ -250,8 +255,27 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Equal(t, expected, string(body))
 }
 
+func TestOauthAppCantInstallApp(t *testing.T) {
+	req, _ := http.NewRequest("POST", ts.URL+"/apps/mini-bis?Source=git://github.com/nono/cozy-mini.git", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+}
+
+func TestOauthAppCantUpdateApp(t *testing.T) {
+	req, _ := http.NewRequest("PUT", ts.URL+"/apps/mini", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Host = domain
+	res, err := client.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+}
+
 func TestListApps(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/apps/", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Host = domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
@@ -266,7 +290,7 @@ func TestListApps(t *testing.T) {
 	id := data["id"].(string)
 	assert.NotEmpty(t, id)
 	typ := data["type"].(string)
-	assert.Equal(t, "io.cozy.manifests", typ)
+	assert.Equal(t, "io.cozy.apps", typ)
 
 	attrs := data["attributes"].(map[string]interface{})
 	name := attrs["name"].(string)
@@ -285,6 +309,7 @@ func TestListApps(t *testing.T) {
 
 func TestIconForApp(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/icon", nil)
+	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
 	req.Host = domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
@@ -356,6 +381,14 @@ func TestMain(m *testing.M) {
 	req.Host = domain
 	client.Do(req)
 
+	client := oauth.Client{
+		RedirectURIs: []string{"http://localhost/oauth/callback"},
+		ClientName:   "test-permissions",
+		SoftwareID:   "github.com/cozy/cozy-stack/web/data",
+	}
+	client.Create(testInstance)
+	clientID = client.ClientID
+
 	res := m.Run()
 	ts.Close()
 	instance.Destroy(domain)
@@ -366,4 +399,17 @@ func TestMain(m *testing.M) {
 
 func noRedirect(*http.Request, []*http.Request) error {
 	return http.ErrUseLastResponse
+}
+
+func testToken(i *instance.Instance) string {
+	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Audience: permissions.AccessTokenAudience,
+			Issuer:   testInstance.Domain,
+			IssuedAt: crypto.Timestamp(),
+			Subject:  clientID,
+		},
+		Scope: consts.Apps,
+	})
+	return t
 }

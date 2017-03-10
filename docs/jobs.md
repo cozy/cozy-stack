@@ -268,6 +268,27 @@ Accept: application/vnd.api+json
 }
 ```
 
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.jobs` for the verb `POST`. In most cases, the application will
+restrict its permission to only one worker, like this:
+
+```json
+{
+  "permissions": {
+    "mail-from-the-user": {
+      "description": "Required to send mails from the user to his/her friends",
+      "type": "io.cozy.jobs",
+      "selector": "worker",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["sendmail"]
+    }
+  }
+}
+```
+
 
 ### GET /jobs/queue/:worker-type
 
@@ -289,6 +310,26 @@ Accept: application/vnd.api+json
   },
   "data": {
     "count": 12
+  }
+}
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.queues` for the verb `GET`. In most cases, the application will
+restrict its permission to only one worker, like this:
+
+```json
+{
+  "permissions": {
+    "mail-from-the-user": {
+      "description": "Required to know the number of jobs in the sendmail queues",
+      "type": "io.cozy.queues",
+      "verbs": ["GET"],
+      "selector": "worker",
+      "values": ["sendmail"]
+    }
   }
 }
 ```
@@ -347,6 +388,26 @@ Accept: application/vnd.api+json
 }
 ```
 
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `POST`. In most cases, the application will
+restrict its permission to only one worker, like this:
+
+```json
+{
+  "permissions": {
+    "mail-from-the-user": {
+      "description": "Required to send regularly mails from the user to his/her friends",
+      "type": "io.cozy.triggers",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["sendmail"]
+    }
+  }
+}
+```
+
 
 ### GET /jobs/triggers/:trigger-id
 
@@ -383,6 +444,11 @@ Accept: application/vnd.api+json
 }
 ```
 
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `GET`.
+
 
 ### GET /jobs/triggers
 
@@ -412,6 +478,11 @@ Accept: application/vnd.api+json
 }
 ```
 
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `GET`.
+
 
 ### DELETE /jobs/triggers/:trigger-id
 
@@ -423,6 +494,11 @@ Delete a trigger given its ID.
 DELETE /jobs/triggers/123123 HTTP/1.1
 Accept: application/vnd.api+json
 ```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `DELETE`.
 
 #### Status codes
 

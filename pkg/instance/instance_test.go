@@ -1,16 +1,21 @@
 package instance
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -130,6 +135,31 @@ func TestInstanceHasIndexes(t *testing.T) {
 	assert.Len(t, results, 1)
 }
 
+func TestBuildAppToken(t *testing.T) {
+	manifest := &apps.Manifest{
+		Slug: "my-app",
+	}
+	i := &Instance{
+		Domain:        "test-ctx-token.example.com",
+		SessionSecret: crypto.GenerateRandomBytes(64),
+	}
+
+	tokenString := i.BuildAppToken(manifest)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		_, ok := token.Method.(*jwt.SigningMethodHMAC)
+		assert.True(t, ok, "The signing method should be HMAC")
+		return i.SessionSecret, nil
+	})
+	assert.NoError(t, err)
+	assert.True(t, token.Valid)
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	assert.True(t, ok, "Claims can be parsed as standard claims")
+	assert.Equal(t, "app", claims["aud"])
+	assert.Equal(t, "test-ctx-token.example.com", claims["iss"])
+	assert.Equal(t, "my-app", claims["sub"])
+}
+
 func TestRegisterPassphrase(t *testing.T) {
 	instance, err := Get("test.cozycloud.cc")
 	if !assert.NoError(t, err, "cant fetch instance") {
@@ -212,7 +242,86 @@ func TestCheckPassphrase(t *testing.T) {
 
 	err = instance.CheckPassphrase([]byte("new-passphrase"))
 	assert.NoError(t, err)
+}
 
+func TestRequestPassphraseReset(t *testing.T) {
+	Destroy("test.cozycloud.cc.pass_reset")
+	in, err := Create(&Options{
+		Domain: "test.cozycloud.cc.pass_reset",
+		Locale: "en",
+		Email:  "coucou@coucou.com",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer func() {
+		Destroy("test.cozycloud.cc.pass_reset")
+	}()
+	err = in.RequestPassphraseReset()
+	if !assert.NoError(t, err) {
+		return
+	}
+	// token should not have been generated since we have not set a passphrase
+	// yet
+	if !assert.Nil(t, in.PassphraseResetToken) {
+		return
+	}
+	err = in.RegisterPassphrase([]byte("MyPassphrase"), in.RegisterToken)
+	if !assert.NoError(t, err) {
+		return
+	}
+	err = in.RequestPassphraseReset()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	regToken := in.PassphraseResetToken
+	regTime := in.PassphraseResetTime
+	assert.NotNil(t, in.PassphraseResetToken)
+	assert.True(t, !in.PassphraseResetTime.Before(time.Now().UTC()))
+
+	err = in.RequestPassphraseReset()
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.EqualValues(t, regToken, in.PassphraseResetToken)
+	assert.EqualValues(t, regTime, in.PassphraseResetTime)
+}
+
+func TestPassphraseRenew(t *testing.T) {
+	Destroy("test.cozycloud.cc.pass_renew")
+	in, err := Create(&Options{
+		Domain: "test.cozycloud.cc.pass_renew",
+		Locale: "en",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer func() {
+		Destroy("test.cozycloud.cc.pass_renew")
+	}()
+	err = in.RegisterPassphrase([]byte("MyPassphrase"), in.RegisterToken)
+	if !assert.NoError(t, err) {
+		return
+	}
+	passHash := in.PassphraseHash
+	err = in.PassphraseRenew([]byte("NewPass"), nil)
+	if !assert.Error(t, err) {
+		return
+	}
+	err = in.RequestPassphraseReset()
+	if !assert.NoError(t, err) {
+		return
+	}
+	err = in.PassphraseRenew([]byte("NewPass"), []byte("token"))
+	if !assert.Error(t, err) {
+		return
+	}
+	err = in.PassphraseRenew([]byte("NewPass"), in.PassphraseResetToken)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.False(t, bytes.Equal(passHash, in.PassphraseHash))
 }
 
 func TestInstanceNoDuplicate(t *testing.T) {
@@ -273,6 +382,28 @@ func TestGetFs(t *testing.T) {
 	buf, err := afero.ReadFile(storage, "foo")
 	assert.NoError(t, err)
 	assert.Equal(t, content, buf, "the storage should have persist the content of the foo file")
+}
+
+func TestTranslate(t *testing.T) {
+	LoadLocale("fr", `
+msgid "english"
+msgstr "french"
+
+msgid "hello %s"
+msgstr "bonjour %s"
+`)
+
+	fr := Instance{Locale: "fr"}
+	s := fr.Translate("english")
+	assert.Equal(t, "french", s)
+	s = fr.Translate("hello %s", "toto")
+	assert.Equal(t, "bonjour toto", s)
+
+	no := Instance{Locale: "it"}
+	s = no.Translate("english")
+	assert.Equal(t, "english", s)
+	s = no.Translate("hello %s", "toto")
+	assert.Equal(t, "hello toto", s)
 }
 
 func TestMain(m *testing.M) {

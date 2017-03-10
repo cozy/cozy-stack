@@ -334,6 +334,9 @@ more informations about the references field.
 
 Download the file content.
 
+By default the `content-disposition` will be `inline`, but it will be
+`attachment` if the query string contains the parameter `Dl=1`
+
 #### Request
 
 ```http
@@ -355,10 +358,13 @@ Hello world!
 
 Download the file content from its path.
 
+By default the `content-disposition` will be `inline`, but it will be
+`attachment` if the query string contains the parameter `Dl=1`
+
 #### Request
 
 ```http
-GET /files/download?Path=/Documents/hello.txt HTTP/1.1
+GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
 
 ### GET /files/:file-id/thumbnail
@@ -651,8 +657,9 @@ Content-Type: application/vnd.api+json
 
 ### GET /files/archive/:key/:name
 
-Download a previously created archive. The name parameter is not used in
-the stack but aims to allow setting a name even for browser / downloader that do not support Content-Disposition filename.
+Download a previously created archive. The name parameter is not used in the
+stack but aims to allow setting a name even for browser / downloader that do
+not support Content-Disposition filename.
 
 **This route does not require Basic Authentification**
 
@@ -670,11 +677,20 @@ Content-Type: application/zip
 Create a file download. The Path query parameter specifies the file to download.
 The response json API links contains a `related` link for downloading the file, see below.
 
+### POST /files/downloads?Id=file_id
+
+Also create a file download. But it takes the id of the file and not its path.
+
 ### GET /files/downloads/:secret/:name
 
 Allows to download a file with a secret created from the route above.
 
-The name parameter is not used in the stack but aims to allow setting a name even for browser / downloader that do not support Content-Disposition filename.
+The name parameter is not used in the stack but aims to allow setting a name
+even for browser / downloader that do not support Content-Disposition
+filename.
+
+By default the `content-disposition` will be `inline`, but it will be
+`attachment` if the query string contains the parameter `Dl=1`
 
 **This route does not require Basic Authentification**
 

@@ -6,8 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,15 +15,14 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
 
 var errFilesExec = errors.New("Bad usage of files exec")
+var errFilesMissingDomain = errors.New("Missing --domain flag")
 
 const filesExecUsage = `Available commands:
 
@@ -41,6 +38,7 @@ const filesExecUsage = `Available commands:
 	Don't forget to put quotes around the command!
 `
 
+var flagFilesDomain string
 var flagImportFrom string
 var flagImportTo string
 var flagImportDryRun bool
@@ -64,55 +62,54 @@ current filesystem into cozy.
 }
 
 var execFilesCmd = &cobra.Command{
-	Use:   "exec [domain] [command]",
+	Use:   "exec [--domain domain] [command]",
 	Short: "Execute the given command on the specified domain and leave",
 	Long:  "Execute a command on the VFS of the specified domain.\n" + filesExecUsage,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 2 {
+		if len(args) != 1 {
 			return cmd.Help()
 		}
-
-		domain, command := args[0], args[1]
-		c, err := getInstance(domain)
-		if err != nil {
-			return err
+		if flagFilesDomain == "" {
+			log.Error(errFilesMissingDomain)
+			return cmd.Help()
 		}
-
-		return execCommand(c, command, os.Stdout)
+		c := newClient(flagFilesDomain, consts.Files)
+		command := args[0]
+		err := execCommand(c, command, os.Stdout)
+		if err == errFilesExec {
+			return cmd.Help()
+		}
+		return err
 	},
 }
 
 var importFilesCmd = &cobra.Command{
-	Use:   "import [domain] [--from name] [--to name] [--match pattern]",
+	Use:   "import [--domain domain] [--from name] [--to name] [--match pattern]",
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
+		if flagFilesDomain == "" {
+			log.Error(errFilesMissingDomain)
 			return cmd.Help()
 		}
-
 		if flagImportFrom == "" || flagImportTo == "" {
 			return cmd.Help()
 		}
 
-		domain := args[0]
-		c, err := getInstance(domain)
-		if err != nil {
-			return err
-		}
-
 		var match *regexp.Regexp
 		if flagImportMatch != "" {
+			var err error
 			match, err = regexp.Compile(flagImportMatch)
 			if err != nil {
 				return err
 			}
 		}
 
+		c := newClient(flagFilesDomain, consts.Files)
 		return importFiles(c, flagImportFrom, flagImportTo, match)
 	},
 }
 
-func execCommand(c *instance.Instance, command string, w io.Writer) error {
+func execCommand(c *client.Client, command string, w io.Writer) error {
 	args := splitArgs(command)
 	if len(args) == 0 {
 		return errFilesExec
@@ -175,24 +172,17 @@ func execCommand(c *instance.Instance, command string, w io.Writer) error {
 	return errFilesExec
 }
 
-func mkdirCmd(c *instance.Instance, name string, mkdirP bool) error {
-	q := url.Values{}
-	q.Add("Path", name)
-	q.Add("Type", "directory")
+func mkdirCmd(c *client.Client, name string, mkdirP bool) error {
+	var err error
 	if mkdirP {
-		q.Add("Recursive", "true")
+		_, err = c.Mkdirall(name)
+	} else {
+		_, err = c.Mkdir(name)
 	}
-	return clientRequestAndClose(filesClient(c), "POST", "/files/", q, nil)
+	return err
 }
 
-func lsCmd(c *instance.Instance, root string, w io.Writer, verbose, human, all bool) error {
-	q := url.Values{}
-	q.Add("Path", root)
-	doc, err := filesRequest(c, "GET", "/files/metadata", q, nil)
-	if err != nil {
-		return err
-	}
-
+func lsCmd(c *client.Client, root string, w io.Writer, verbose, human, all bool) error {
 	type filePrint struct {
 		typ   string
 		name  string
@@ -207,8 +197,17 @@ func lsCmd(c *instance.Instance, root string, w io.Writer, verbose, human, all b
 	var maxnamelen int
 	var maxsizelen int
 
-	for _, f := range doc.Included {
-		attrs := f.Attrs
+	root = path.Clean(root)
+
+	err := c.WalkByPath(root, func(n string, doc *client.DirOrFile, err error) error {
+		if err != nil {
+			return err
+		}
+		if n == root {
+			return nil
+		}
+
+		attrs := doc.Attrs
 		var typ, name, size, mdate, exec string
 
 		name = attrs.Name
@@ -219,7 +218,7 @@ func lsCmd(c *instance.Instance, root string, w io.Writer, verbose, human, all b
 			mdate = attrs.UpdatedAt.Format("Jan 02 2015")
 		}
 
-		if f.Attrs.Type == consts.DirType {
+		if attrs.Type == consts.DirType {
 			typ = "d"
 			exec = "x"
 		} else {
@@ -253,6 +252,14 @@ func lsCmd(c *instance.Instance, root string, w io.Writer, verbose, human, all b
 				exec:  exec,
 			})
 		}
+		if doc.Attrs.Type == client.DirType {
+			return filepath.SkipDir
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
 	if !verbose {
@@ -279,33 +286,23 @@ func lsCmd(c *instance.Instance, root string, w io.Writer, verbose, human, all b
 	return nil
 }
 
-func treeCmd(c *instance.Instance, root string, w io.Writer) error {
-	q := url.Values{}
-	q.Add("Path", root)
+func treeCmd(c *client.Client, root string, w io.Writer) error {
+	root = path.Clean(root)
 
-	doc, err := filesRequest(c, "GET", "/files/metadata", q, nil)
-	if err != nil {
-		return err
-	}
+	return c.WalkByPath(root, func(name string, doc *client.DirOrFile, err error) error {
+		if err != nil {
+			return err
+		}
 
-	if doc.Data.ID == consts.RootDirID {
-		_, err = fmt.Fprintln(w, "/")
-	} else {
-		_, err = fmt.Fprintln(w, doc.Data.Attrs.Name)
-	}
+		attrs := doc.Attrs
+		if name == root {
+			_, err = fmt.Fprintln(w, name)
+			return err
+		}
 
-	if err != nil {
-		return err
-	}
-
-	return treeRecurs(c, doc, root, 2, w)
-}
-
-func treeRecurs(c *instance.Instance, doc *fileAPIData, root string, level int, w io.Writer) error {
-	for _, f := range doc.Included {
-		for i := 0; i < level-1; i++ {
-			var err error
-			if i == level-2 {
+		level := strings.Count(strings.TrimPrefix(name, root)[1:], "/") + 1
+		for i := 0; i < level; i++ {
+			if i == level-1 {
 				_, err = fmt.Fprintf(w, "└── ")
 			} else {
 				_, err = fmt.Fprintf(w, "|  ")
@@ -314,174 +311,107 @@ func treeRecurs(c *instance.Instance, doc *fileAPIData, root string, level int, 
 				return err
 			}
 		}
-
-		name := f.Attrs.Name
-		_, err := fmt.Fprintln(w, name)
-		if err != nil {
-			return err
-		}
-
-		if f.Attrs.Type == consts.DirType {
-			var child *fileAPIData
-			child, err = filesRequest(c, "GET", "/files/"+f.ID, nil, nil)
-			if err != nil {
-				return err
-			}
-			err = treeRecurs(c, child, path.Join(root, name), level+1, w)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+		_, err = fmt.Fprintln(w, attrs.Name)
+		return err
+	})
 }
 
-func attrsCmd(c *instance.Instance, name string, w io.Writer) error {
-	q := url.Values{}
-	q.Add("Path", name)
-
-	doc, err := filesRequest(c, "GET", "/files/metadata", q, nil)
+func attrsCmd(c *client.Client, name string, w io.Writer) error {
+	doc, err := c.GetDirOrFileByPath(name)
 	if err != nil {
 		return err
 	}
-
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "\t")
 	return enc.Encode(doc)
 }
 
-func catCmd(c *instance.Instance, name string, w io.Writer) error {
-	q := url.Values{}
-	q.Add("Path", name)
-
-	res, err := clientRequest(filesClient(c), "GET", "/files/download", q, nil)
+func catCmd(c *client.Client, name string, w io.Writer) error {
+	r, err := c.DownloadByPath(name)
 	if err != nil {
 		return err
 	}
 
-	defer res.Body.Close()
-	_, err = io.Copy(w, res.Body)
+	defer r.Close()
+	_, err = io.Copy(w, r)
 
 	return err
 }
 
-func mvCmd(c *instance.Instance, from, to string) error {
-	q := url.Values{}
-	q.Add("Path", from)
-	doc, err := filesRequest(c, "GET", "/files/metadata", q, nil)
-	if err != nil {
-		return err
-	}
-
-	q = url.Values{}
-	q.Add("Path", path.Dir(to))
-	parent, err := filesRequest(c, "GET", "/files/metadata", q, nil)
-	if err != nil {
-		return err
-	}
-
-	q = url.Values{}
-	q.Add("rev", doc.Data.Rev)
-
-	body := &fileAPIPatch{}
-	body.Data.Attrs = filePatch{
-		Name:  path.Base(to),
-		DirID: parent.Data.ID,
-	}
-
-	return clientRequestAndClose(filesClient(c), "PATCH", "/files/"+doc.Data.ID, q, body)
+func mvCmd(c *client.Client, from, to string) error {
+	return c.Move(from, to)
 }
 
-func rmCmd(c *instance.Instance, name string, force, recur bool) error {
-	q := url.Values{}
-	q.Add("Path", name)
-	doc, err := filesRequest(c, "GET", "/files/metadata", q, nil)
-	if err != nil {
-		return err
-	}
-
+func rmCmd(c *client.Client, name string, force, recur bool) error {
 	if force {
 		return fmt.Errorf("not implemented")
 	}
-
-	if !recur && len(doc.Included) > 0 {
-		return fmt.Errorf("Directory is not empty")
-	}
-
-	return clientRequestAndClose(filesClient(c), "DELETE", "/files/"+doc.Data.ID, nil, nil)
+	return c.TrashByPath(name)
 }
 
-func restoreCmd(c *instance.Instance, name string) error {
-	q := url.Values{}
-	q.Add("Path", name)
-	doc, err := filesRequest(c, "GET", "/metadata", q, nil)
+func restoreCmd(c *client.Client, name string) error {
+	return c.RestoreByPath(name)
+}
+
+type importer struct {
+	c     *client.Client
+	paths map[string]string
+}
+
+func (i *importer) mkdir(name string) error {
+	doc, err := i.c.Mkdirall(name)
 	if err != nil {
 		return err
 	}
-
-	return clientRequestAndClose(filesClient(c), "POST", "/trash/"+doc.Data.ID, nil, nil)
+	i.paths[name] = doc.ID
+	return nil
 }
 
-func importFiles(c *instance.Instance, from, to string, match *regexp.Regexp) error {
+func (i *importer) upload(localname, distname string) error {
+	var err error
+
+	dirname := path.Dir(distname)
+	if dirname != string(os.PathSeparator) {
+		err = i.mkdir(dirname)
+		if err != nil {
+			return err
+		}
+	}
+
+	r, err := os.Open(localname)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	dirID, ok := i.paths[dirname]
+	if !ok {
+		var dir *client.Dir
+		dir, err = i.c.GetDirByPath(dirname)
+		if err != nil {
+			return err
+		}
+		dirID = dir.ID
+		i.paths[dirID] = dir.Attrs.Fullpath
+	}
+
+	_, err = i.c.Upload(&client.Upload{
+		Name:     path.Base(distname),
+		DirID:    dirID,
+		Contents: r,
+	})
+	return err
+}
+
+func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error {
 	from = path.Clean(from)
 	to = path.Clean(to)
 
 	log.Infof("Importing from %s to cozy://%s", from, to)
 
-	paths := make(map[string]string)
-
-	mkdir := func(name string) error {
-		q := url.Values{}
-		q.Add("Path", name)
-		q.Add("Type", "directory")
-		q.Add("Recursive", "true")
-		doc, err := filesRequest(c, "POST", "/files/", q, nil)
-		if err != nil {
-			return err
-		}
-		paths[name] = doc.Data.ID
-		return nil
-	}
-
-	upload := func(localname, distname string) error {
-		var err error
-
-		dirname := path.Dir(distname)
-		if dirname != string(os.PathSeparator) {
-			err = mkdir(dirname)
-			if err != nil {
-				return err
-			}
-		}
-
-		r, err := os.Open(localname)
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-
-		q := url.Values{}
-		q.Add("Type", "file")
-		q.Add("Name", path.Base(distname))
-
-		dirID := paths[dirname]
-		if dirID == "" {
-			panic(fmt.Errorf("Missing directory %s", dirname))
-		}
-
-		req, err := clientCreateRequest(filesClient(c), "POST", "/files/"+dirID, q, r)
-		if err != nil {
-			return err
-		}
-
-		res, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-
-		return clientErrCheck(res)
+	i := &importer{
+		c:     c,
+		paths: make(map[string]string),
 	}
 
 	// TODO: symlinks ?
@@ -490,41 +420,32 @@ func importFiles(c *instance.Instance, from, to string, match *regexp.Regexp) er
 			return err
 		}
 
-		isDir := f.IsDir()
-		if localname == from && isDir {
-			return nil
-		}
-
 		if match != nil && !match.MatchString(localname) {
 			return nil
 		}
 
-		distname := path.Join(to, strings.Replace(localname, from, "", 1))
+		if localname == from {
+			if f.IsDir() {
+				return nil
+			}
+			return fmt.Errorf("Not a directory")
+		}
+
+		distname := path.Join(to, strings.TrimPrefix(localname, from))
 		if f.IsDir() {
-			log.Debugln("create dir", distname)
+			log.Infoln("create dir", distname)
 			if !flagImportDryRun {
-				return mkdir(distname)
+				return i.mkdir(distname)
 			}
 		} else {
-			log.Debugf("copying file %s to %s", localname, distname)
+			log.Infof("copying file %s to %s", localname, distname)
 			if !flagImportDryRun {
-				return upload(localname, distname)
+				return i.upload(localname, distname)
 			}
 		}
 
 		return nil
 	})
-}
-
-func getInstance(domain string) (*instance.Instance, error) {
-	c, err := instance.Get(domain)
-	if err != nil {
-		if err == instance.ErrNotFound {
-			err = fmt.Errorf("Could not find the cozy instance, please use `instances add` command")
-		}
-		return nil, err
-	}
-	return c, nil
 }
 
 func splitArgs(command string) []string {
@@ -541,51 +462,13 @@ func splitArgs(command string) []string {
 	return args
 }
 
-type fileData struct {
-	ID    string            `json:"id"`
-	Rev   string            `json:"rev"`
-	Attrs *vfs.DirOrFileDoc `json:"attributes"`
-}
-
-type fileAPIData struct {
-	Data     *fileData  `json:"data"`
-	Included []fileData `json:"included"`
-}
-
-type filePatch struct {
-	Name  string `json:"name"`
-	DirID string `json:"dir_id"`
-}
-
-type fileAPIPatch struct {
-	Data struct {
-		Attrs filePatch `json:"attributes"`
-	} `json:"data"`
-}
-
-func filesClient(c *instance.Instance) *client {
-	token, err := c.MakeJWT(permissions.CLIAudience, "CLI", "io.cozy.files")
-	if err != nil {
-		panic(err)
-	}
-
-	return &client{addr: c.Domain, pass: token}
-}
-
-func filesRequest(c *instance.Instance, method, path string, q url.Values, body interface{}) (*fileAPIData, error) {
-	var doc fileAPIData
-	err := clientRequestParsed(filesClient(c), method, path, q, body, &doc)
-	if err != nil {
-		return nil, err
-	}
-	return &doc, nil
-}
-
 func init() {
-	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "Directory to import from in cozy")
-	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "Directory to import to in cozy")
-	importFilesCmd.Flags().BoolVar(&flagImportDryRun, "dry-run", false, "Do not actually import the files")
-	importFilesCmd.Flags().StringVar(&flagImportMatch, "match", "", "Pattern that the imported files must match")
+	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", "", "specify the domain name of the instance")
+
+	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
+	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "directory to import to in cozy")
+	importFilesCmd.Flags().BoolVar(&flagImportDryRun, "dry-run", false, "do not actually import the files")
+	importFilesCmd.Flags().StringVar(&flagImportMatch, "match", "", "pattern that the imported files must match")
 
 	filesCmdGroup.AddCommand(execFilesCmd)
 	filesCmdGroup.AddCommand(importFilesCmd)

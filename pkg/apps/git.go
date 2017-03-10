@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	gitFS "srcd.works/go-billy.v1"
 	git "srcd.works/go-git.v4"
@@ -59,6 +60,7 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 }
 
 func (g *gitFetcher) Fetch(src *url.URL, appdir string) error {
+	log.Debugf("[git] Fetch %s", src.String())
 	ctx := g.ctx
 
 	gitdir := path.Join(appdir, ".git")
@@ -91,6 +93,7 @@ func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
 	}
 
 	branch := getBranch(src)
+	log.Debugf("[git] Clone %s %s", src.String(), branch)
 
 	rep, err := git.Clone(storage, nil, &git.CloneOptions{
 		URL:           src.String(),
@@ -121,6 +124,7 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 	}
 
 	branch := getBranch(src)
+	log.Debugf("[git] Pull %s %s", src.String(), branch)
 
 	err = rep.Pull(&git.PullOptions{
 		SingleBranch:  true,

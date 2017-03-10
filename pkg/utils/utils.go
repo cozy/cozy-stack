@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -28,6 +29,35 @@ func RandomString(n int) string {
 		b[i] = letters[rand.Intn(lenLetters)]
 	}
 	return string(b)
+}
+
+// StripPort extract the domain name from a domain:port string.
+func StripPort(domain string) string {
+	if strings.Contains(domain, ":") {
+		cleaned, _, err := net.SplitHostPort(domain)
+		if err != nil {
+			return domain
+		}
+		return cleaned
+	}
+	return domain
+}
+
+// SplitTrimString slices s into all substrings a s separated by sep, like
+// strings.Split. In addition it will trim all those substrings and filter out
+// the empty ones.
+func SplitTrimString(s, sep string) []string {
+	if s == "" {
+		return nil
+	}
+	var parts []string
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	return parts
 }
 
 // FileExists returns whether or not the file exists on the current file

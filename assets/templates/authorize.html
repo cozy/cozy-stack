@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{.Locale}}">
   <head>
     <meta charset="utf-8">
     <title>Cozy</title>
@@ -23,7 +23,7 @@
             <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
             <input type="hidden" name="scope" value="{{.Scope}}" />
             <div role="region">
-              <h1>Authorize application</h1>
+              <h1>{{t "Authorize Title"}}</h1>
               {{if .Client.LogoURI}}
               <img class="client-logo" src="{{.Client.LogoURI}}" />
               {{end}}
@@ -35,11 +35,12 @@
                 {{.Client.ClientName}}
                 {{end}}
                 </strong>
-                would like permission to access your Cozy.
+                {{t "Authorize Client presentation"}}
                 {{if .Client.PolicyURI}}
-                You can read <a href="{{.Client.PolicyURI}}">its policy</a> about the usage it will make of your data.
+                {{t "Authorize Policy sentence"}}
+                <a href="{{.Client.PolicyURI}}">{{.Client.PolicyURI}}</a>
                 {{end}}
-                This permission give access to:
+                {{t "Authorize Give permission"}}
               </p>
               <ul>
                 {{range $index, $perm := .Permissions}}
@@ -49,7 +50,7 @@
             </div>
             <footer>
               <div class="controls">
-                <button type="submit" class="btn btn-primary">Accept</button>
+                <button type="submit" class="btn btn-primary">{{t "Authorize Submit"}}</button>
               </div>
             </footer>
           </form>

@@ -36,25 +36,10 @@ const (
 
 	// TypeOauth if the value of Permission.Type for a oauth permission doc
 	TypeOauth = "oauth"
+
+	// TypeCLI if the value of Permission.Type for a command-line permission doc
+	TypeCLI = "cli"
 )
-
-// Index is the necessary index for this package
-// used in instance creation
-var Index = mango.IndexOnFields("source_id", "type")
-
-const shareByCView = "byToken"
-
-// Views are athe necessary views for this package
-// used in instance creation
-var Views = couchdb.Views{
-	shareByCView: couchdb.View{
-		Map: `
-function(doc){
-	if(doc.type === "share" && doc.codes)
-		Object.keys(doc.codes).forEach(function(k){ emit(doc.codes[k]) })
-}`,
-	},
-}
 
 var (
 	// ErrNotSubset is returned on requests attempting to create a Set of
@@ -120,13 +105,26 @@ func GetForOauth(claims *Claims) (*Permission, error) {
 	return pdoc, nil
 }
 
+// GetForCLI create a non-persisted permissions doc for the command-line
+func GetForCLI(claims *Claims) (*Permission, error) {
+	set, err := UnmarshalScopeString(claims.Scope)
+	if err != nil {
+		return nil, err
+	}
+	pdoc := &Permission{
+		Type:        TypeCLI,
+		Permissions: set,
+	}
+	return pdoc, nil
+}
+
 // GetForApp retrieves the Permission doc for a given app
 func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		Selector: mango.And(
 			mango.Equal("type", TypeApplication),
-			mango.Equal("source_id", consts.Manifests+"/"+slug),
+			mango.Equal("source_id", consts.Apps+"/"+slug),
 		),
 	}, &res)
 	if err != nil {
@@ -141,9 +139,7 @@ func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
 // GetForShareCode retrieves the Permission doc for a given sharing code
 func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error) {
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, &couchdb.ViewRequest{
-		Doctype:     consts.Permissions,
-		ViewName:    shareByCView,
+	err := couchdb.ExecView(db, consts.PermissionsShareByCView, &couchdb.ViewRequest{
 		Key:         tokenCode,
 		IncludeDocs: true,
 	}, &res)
@@ -177,7 +173,7 @@ func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error
 
 	doc := &Permission{
 		Type:        "app",
-		SourceID:    consts.Manifests + "/" + slug,
+		SourceID:    consts.Apps + "/" + slug,
 		Permissions: &set, // @TODO some validation?
 	}
 
@@ -221,7 +217,7 @@ func Force(db couchdb.Database, slug string, set Set) error {
 	existing, _ := GetForApp(db, slug)
 	doc := &Permission{
 		Type:        TypeApplication,
-		SourceID:    consts.Manifests + "/" + slug,
+		SourceID:    consts.Apps + "/" + slug,
 		Permissions: &set, // @TODO some validation?
 	}
 	if existing == nil {
@@ -237,7 +233,7 @@ func Force(db couchdb.Database, slug string, set Set) error {
 func DestroyApp(db couchdb.Database, slug string) error {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
-		Selector: mango.Equal("source_id", consts.Manifests+"/"+slug),
+		Selector: mango.Equal("source_id", consts.Apps+"/"+slug),
 	}, &res)
 	if err != nil {
 		return err
@@ -249,4 +245,40 @@ func DestroyApp(db couchdb.Database, slug string) error {
 		}
 	}
 	return nil
+}
+
+// GetPermissionsForIDs gets permissions for several IDs
+// returns for every id the combined allowed verbset
+func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (map[string]*VerbSet, error) {
+
+	var res struct {
+		Rows []struct {
+			ID    string   `json:"id"`
+			Key   []string `json:"key"`
+			Value *VerbSet `json:"value"`
+		} `json:"rows"`
+	}
+
+	keys := make([]interface{}, len(ids))
+	for i, id := range ids {
+		keys[i] = []string{doctype, "_id", id}
+	}
+
+	err := couchdb.ExecView(db, consts.PermissionsShareByDocView, &couchdb.ViewRequest{
+		Keys: keys,
+	}, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*VerbSet)
+	for _, row := range res.Rows {
+		if _, ok := result[row.Key[2]]; ok {
+			result[row.Key[2]].Merge(row.Value)
+		} else {
+			result[row.Key[2]] = row.Value
+		}
+	}
+
+	return result, nil
 }

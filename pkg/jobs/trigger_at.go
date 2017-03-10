@@ -3,6 +3,7 @@ package jobs
 import (
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
@@ -50,6 +51,25 @@ func NewInTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 // Type implements the Type method of the Trigger interface.
 func (a *AtTrigger) Type() string {
 	return a.in.Type
+}
+
+// DocType implements the permissions.Validable interface
+func (a *AtTrigger) DocType() string {
+	return consts.Triggers
+}
+
+// ID implements the permissions.Validable interface
+func (a *AtTrigger) ID() string {
+	return ""
+}
+
+// Valid implements the permissions.Validable interface
+func (a *AtTrigger) Valid(key, value string) bool {
+	switch key {
+	case WorkerType:
+		return a.in.WorkerType == value
+	}
+	return false
 }
 
 // Schedule implements the Schedule method of the Trigger interface.

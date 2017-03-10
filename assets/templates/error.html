@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <title>Cozy</title>
@@ -16,12 +16,12 @@
           <a href="https://cozy.io" target="_blank" title="Cozy Website"></a>
         </header>
         <div class="container">
-          <h1>Sorry</h1>
+          <h1>{{t "Error Title"}}</h1>
           <footer>
             <div class="error">
               <div class="alert">
-                <h2>An error occurred.</h2>
-                <p>{{.Error}}</p>
+                <h2>{{t "Error Message"}}</h2>
+                <p>{{t .Error}}</p>
               </div>
             </div>
           </footer>

@@ -35,5 +35,7 @@ func Status(c echo.Context) error {
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	router.GET("", Status)
+	router.HEAD("", Status)
 	router.GET("/", Status)
+	router.HEAD("/", Status)
 }

@@ -3,12 +3,12 @@ package auth
 
 import (
 	"crypto/subtle"
+	"encoding/hex"
 	"net/http"
 	"net/url"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -22,19 +22,26 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
-// CredentialsErrorMessage is the message showed to the user when he/she enters incorrect credentials
-const CredentialsErrorMessage = "The credentials you entered are incorrect, please try again."
+// CredentialsErrorKey is the key for translating the message showed to the
+// user when he/she enters incorrect credentials
+const CredentialsErrorKey = "Login Credentials error"
 
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
-// Else, it redirects to its home application
+// Else, it redirects to its home application (or onboarding)
 func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if session, err := sessions.GetSession(c, instance); err == nil {
-		redirect := instance.SubDomain(apps.FilesSlug).String()
+		redirect := defaultRedirectDomain(instance).String()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+
+	if len(instance.RegisterToken) > 0 {
+		sub := instance.SubDomain(consts.OnboardingSlug)
+		sub.RawQuery = c.Request().URL.RawQuery
+		return c.Redirect(http.StatusSeeOther, sub.String())
 	}
 
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
@@ -60,6 +67,12 @@ func addCodeToRedirect(redirect, domain, sessionID string) string {
 	return redirect
 }
 
+// defaultRedirectDomain returns the default URL used for redirection after
+// login actions.
+func defaultRedirectDomain(in *instance.Instance) *url.URL {
+	return in.SubDomain(consts.FilesSlug)
+}
+
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
 func SetCookieForNewSession(c echo.Context) (string, error) {
 	instance := middlewares.GetInstance(c)
@@ -83,9 +96,15 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 		return err
 	}
 
+	var credsErrors string
+	if code == http.StatusUnauthorized {
+		credsErrors = i.Translate(CredentialsErrorKey)
+	}
+
 	return c.Render(code, "login.html", echo.Map{
+		"Locale":           i.Locale,
 		"PublicName":       doc.M["public_name"],
-		"CredentialsError": nil,
+		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
 	})
 }
@@ -93,7 +112,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
+	redirect, err := checkRedirectParam(c, defaultRedirectDomain(instance))
 	if err != nil {
 		return err
 	}
@@ -111,7 +130,7 @@ func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
-	redirect, err := checkRedirectParam(c, instance.SubDomain(apps.FilesSlug))
+	redirect, err := checkRedirectParam(c, defaultRedirectDomain(instance))
 	if err != nil {
 		return err
 	}
@@ -139,7 +158,7 @@ func login(c echo.Context) error {
 
 	if wantsJSON {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": CredentialsErrorMessage,
+			"error": instance.Translate(CredentialsErrorKey),
 		})
 	}
 
@@ -278,34 +297,34 @@ type authorizeParams struct {
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
 	if params.state == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The state parameter is mandatory",
+			"Error": "Error No state parameter",
 		})
 	}
 	if params.clientID == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The client_id parameter is mandatory",
+			"Error": "Error No client_id parameter",
 		})
 	}
 	if params.redirectURI == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter is mandatory",
+			"Error": "Error No redirect_uri parameter",
 		})
 	}
 	if params.scope == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The scope parameter is mandatory",
+			"Error": "Error No scope parameter",
 		})
 	}
 
 	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The client must be registered",
+			"Error": "Error No registered client",
 		})
 	}
 	if !params.client.AcceptRedirectURI(params.redirectURI) {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter doesn't match the registered ones",
+			"Error": "Error Incorrect redirect_uri",
 		})
 	}
 
@@ -324,7 +343,7 @@ func authorizeForm(c echo.Context) error {
 
 	if c.QueryParam("response_type") != "code" {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Invalid response type",
+			"Error": "Error Invalid response type",
 		})
 	}
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
@@ -341,6 +360,7 @@ func authorizeForm(c echo.Context) error {
 	permissions := strings.Split(params.scope, " ")
 	params.client.ClientID = params.client.CouchID
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
+		"Locale":      instance.Locale,
 		"Client":      params.client,
 		"State":       params.state,
 		"RedirectURI": params.redirectURI,
@@ -361,14 +381,14 @@ func authorize(c echo.Context) error {
 
 	if !middlewares.IsLoggedIn(c) {
 		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Error": "You must be authenticated",
+			"Error": "Error Must be authenticated",
 		})
 	}
 
 	u, err := url.ParseRequestURI(params.redirectURI)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "The redirect_uri parameter is invalid",
+			"Error": "Error Invalid redirect_uri",
 		})
 	}
 
@@ -514,6 +534,80 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func passphraseResetForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	if middlewares.IsLoggedIn(c) {
+		redirect := defaultRedirectDomain(instance).String()
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
+		"Locale": instance.Locale,
+		"CSRF":   c.Get("csrf"),
+	})
+}
+
+func passphraseReset(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	// TODO: check user informations to allow the reset of the passphrase since
+	// this route is of course not protected by authentication/permission check.
+	if err := instance.RequestPassphraseReset(); err != nil {
+		return err
+	}
+	// Disconnect the user if it is logged in. The idea is that if the user
+	// (maybe by accident) asks for a passphrase reset while logged in, we log
+	// him out to be able to  re-go through the process of logging back-in. It is
+	// more a UX choice than a "security" one.
+	if middlewares.IsLoggedIn(c) {
+		session, err := sessions.GetSession(c, instance)
+		if err == nil {
+			c.SetCookie(session.Delete(instance))
+		}
+	}
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+}
+
+func passphraseRenewForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	if middlewares.IsLoggedIn(c) {
+		redirect := defaultRedirectDomain(instance).String()
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+	token := c.QueryParam("token")
+	// Check that the token is actually defined and well encoded. The actual
+	// token value checking is done on the passphraseRenew handler.
+	if _, err := hex.DecodeString(token); err != nil || token == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
+		"Locale":               instance.Locale,
+		"PassphraseResetToken": token,
+		"CSRF":                 c.Get("csrf"),
+	})
+}
+
+func passphraseRenew(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	if middlewares.IsLoggedIn(c) {
+		redirect := defaultRedirectDomain(instance).String()
+		return c.Redirect(http.StatusSeeOther, redirect)
+	}
+	pass := []byte(c.FormValue("passphrase"))
+	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	if err := instance.PassphraseRenew(pass, token); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -527,6 +621,11 @@ func Routes(router *echo.Group) {
 	router.POST("/login", login)
 	router.DELETE("/login", logout)
 	router.OPTIONS("/login", logoutPreflight)
+
+	router.GET("/passphrase_reset", passphraseResetForm, noCSRF)
+	router.POST("/passphrase_reset", passphraseReset, noCSRF)
+	router.GET("/passphrase_renew", passphraseRenewForm, noCSRF)
+	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)

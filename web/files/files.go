@@ -346,7 +346,11 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 		return err
 	}
 
-	err = vfs.ServeFileContent(instance, doc, "inline", c.Request(), c.Response())
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	}
+	err = vfs.ServeFileContent(instance, doc, disposition, c.Request(), c.Response())
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -369,7 +373,11 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 		}
 	}
 
-	err = vfs.ServeFileContent(instance, doc, "attachment", c.Request(), c.Response())
+	disposition := "inline"
+	if c.QueryParam("Dl") == "1" {
+		disposition = "attachment"
+	}
+	err = vfs.ServeFileContent(instance, doc, disposition, c.Request(), c.Response())
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -437,13 +445,22 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 // FileDownloadCreateHandler stores the required path into a secret
 // usable for download handler below.
 func FileDownloadCreateHandler(c echo.Context) error {
-
 	instance := middlewares.GetInstance(c)
-	path := c.QueryParam("Path")
+	var doc *vfs.FileDoc
+	var err error
+	var path string
 
-	doc, err := vfs.GetFileDocFromPath(instance, path)
-	if err != nil {
-		return wrapVfsError(err)
+	if path = c.QueryParam("Path"); path != "" {
+		if doc, err = vfs.GetFileDocFromPath(instance, path); err != nil {
+			return wrapVfsError(err)
+		}
+	} else if id := c.QueryParam("Id"); id != "" {
+		if doc, err = vfs.GetFileDoc(instance, id); err != nil {
+			return wrapVfsError(err)
+		}
+		if path, err = doc.Path(instance); err != nil {
+			return wrapVfsError(err)
+		}
 	}
 
 	err = permissions.Allow(c, "GET", doc)
@@ -715,9 +732,15 @@ func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		}
 	}
 
-	executable := c.QueryParam("Executable") == "true"
+	var mime, class string
 	contentType := header.Get("Content-Type")
-	mime, class := vfs.ExtractMimeAndClass(contentType)
+	if contentType == "" {
+		mime, class = vfs.ExtractMimeAndClassFromFilename(name)
+	} else {
+		mime, class = vfs.ExtractMimeAndClass(contentType)
+	}
+
+	executable := c.QueryParam("Executable") == "true"
 	return vfs.NewFileDoc(
 		name,
 		dirID,
