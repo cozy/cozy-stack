@@ -8,7 +8,7 @@ Install an application with the specified slug name from the given source URL.
 Install an application with the specified slug name from the given source URL.
 
 ```
-cozy-stack apps install [--domain domain] [slug] [sourceurl]
+cozy-stack apps install [slug] [sourceurl]
 ```
 
 ### Options inherited from parent commands
@@ -16,6 +16,7 @@ cozy-stack apps install [--domain domain] [slug] [sourceurl]
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
+      --all-domains         work on all domains iterativelly
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
