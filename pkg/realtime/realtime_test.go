@@ -53,8 +53,13 @@ func TestRealtime(t *testing.T) {
 
 	wg.Wait()
 
-	c.Close()
-	c2.Close()
+	err := c.Close()
+	assert.NoError(t, err)
+	err = c2.Close()
+	assert.NoError(t, err)
+
+	err = c.Close()
+	assert.Error(t, err)
 
 	h.Publish(&Event{
 		DocType: "io.cozy.testobject",
