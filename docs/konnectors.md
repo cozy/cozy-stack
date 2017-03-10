@@ -352,6 +352,87 @@ konnector.
 In the end of the konnector execution (or timeout), the logs are read in the log.txt file and added
 to the konnector own log file (in VFS) and the run directory is then destroyed.
 
+## Multi-account handling
+
+This section is devoted to allow the user to use one account for multiple konnectors. It will
+follow the following constraints in mind:
+
+- The migration path must be as easy as possible
+- The developpement and maintainance of konnector must also be as easy as possible
+
+### New doctype : io.cozy.accounts
+
+A new doctype will have to be created to allow to keep konnector accounts independently from each
+konnector. The one once used by the email application seems to be a good candidate :
+io.cozy.accounts
+
+Here is an example document with this doctype :
+
+```
+{
+    _id: "ojpiojpoij",
+    name: "user decided name for the account",
+    accountType: "google",
+    login: "mylogin",
+    password: "123456"
+}
+```
+
+Any attribute needed for the account may be added : email, etc...
+
+### Updates needed in existing application and konnectors
+
+CRUD manipulation of io.cozy.accounts and linking them with konnectors will be handled by the
+"my accounts" client application.
+
+Each konnector need also to declare a new field in the "fields" attribute which will be the type of
+account, related to the accountType field in the new account docType.
+
+Ex:
+
+```
+module.exports = baseKonnector.createNew({
+  name: 'Trainline',
+  vendorLink: 'www.captaintrain.com',
+  category: 'transport',
+  color: {
+    hex: '#48D5B5',
+    css: '#48D5B5'
+  },
+  fields: {
+    login: {
+      type: 'text'
+    },
+    password: {
+      type: 'password'
+    },
+    folderPath: {
+      type: 'folder',
+      advanced: true
+    },
+    accountType: "trainline"
+  },
+  dataType: ['bill'],
+  models: [Bill],
+  fetchOperations: [
+    ...
+  ]
+})
+```
+
+
+With this new field, which will appear also in the io.cozy.konnectors docType, the "my account"
+client appliction will be able to propose existing accounts of the good type for activating a new
+konnector.
+
+### Migration path
+
+For the migration of existing, activated konnectors in V2, the type of account for each konnector
+will have to be indicated in a V2 "my account" application update. After that, it will be possible
+to create the accounts associated to each activated konnectors an link the konnectors to these
+accounts in a migration script.
+
+
 ## TODO
 
 - [X] How to install and update the konnectors?
