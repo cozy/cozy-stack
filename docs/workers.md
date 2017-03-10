@@ -11,8 +11,8 @@ arguments.
 
 The `sendmail` worker can be used to send mail from the stack. It implies that
 the stack has properly configured an access to an SMTP server. You can see an
-example of configuration in the [cozy.dist.yaml](../cozy.dist.yaml) file at
-the root of this repository.
+example of configuration in the [cozy.example.yaml](../cozy.example.yaml) file
+at the root of this repository.
 
 `sendmail` options fields are the following:
 
@@ -52,5 +52,24 @@ the root of this repository.
         {"type":"text/html", "body": "<h1>Hey !</h1>"},
         {"type":"text/plain", "body": "Hey !"}
     ]
+}
+```
+
+### Permissions
+
+To use this worker from a client-side application, you will need to ask the
+permission. It is done by adding this to the manifest:
+
+```json
+{
+  "permissions": {
+    "mail-from-the-user": {
+      "description": "Required to send mails from the user to his/her friends",
+      "type": "io.cozy.jobs",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["sendmail"]
+    }
+  }
 }
 ```

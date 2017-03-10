@@ -1,14 +1,14 @@
-## cozy-stack apps update
+## cozy-stack apps uninstall
 
-Update the application with the specified slug name.
+Uninstall the application with the specified slug name.
 
 ### Synopsis
 
 
-Update the application with the specified slug name.
+Uninstall the application with the specified slug name.
 
 ```
-cozy-stack apps update [slug]
+cozy-stack apps uninstall [slug]
 ```
 
 ### Options inherited from parent commands

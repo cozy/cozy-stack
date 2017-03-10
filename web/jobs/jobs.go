@@ -67,7 +67,7 @@ func (q *apiQueue) Links() *jsonapi.LinksList {
 }
 func (q *apiQueue) Valid(key, value string) bool {
 	switch key {
-	case "worker-type":
+	case "worker":
 		return q.workerType == value
 	}
 	return false

@@ -28,7 +28,7 @@ const (
 
 const (
 	// WorkerType is the key in JSON for the type of worker
-	WorkerType = "worker-type"
+	WorkerType = "worker"
 )
 
 type (
@@ -94,7 +94,7 @@ type (
 	// marshalled in JSON.
 	JobInfos struct {
 		ID         string      `json:"id"`
-		WorkerType string      `json:"worker_type"`
+		WorkerType string      `json:"worker"`
 		Message    *Message    `json:"message"`
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`

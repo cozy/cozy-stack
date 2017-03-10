@@ -171,6 +171,11 @@ Cookie: sessionid=xxxx
 }
 ```
 
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.settings` for the verb `GET`.
+
 ### PUT /settings/instance
 
 If the user is logged in, allow to set the instance fields
@@ -229,6 +234,11 @@ Content-type: application/json
 }
 ```
 
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.settings` for the verb `PUT`.
+
 ## OAuth 2 clients
 
 ### GET /settings/clients
@@ -274,6 +284,11 @@ Content-type: application/json
 }
 ```
 
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.oauth.clients` for the verb `GET` (only client-side apps).
+
 ### DELETE /settings/clients/:client-id
 
 #### Request
@@ -289,3 +304,8 @@ Authorization: Bearer oauth2-clients-token
 ```http
 HTTP/1.1 204 No Content
 ```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.oauth.clients` for the verb `DELETE` (only client-side apps).
