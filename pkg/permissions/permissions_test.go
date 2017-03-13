@@ -103,6 +103,10 @@ func TestJSON2Set(t *testing.T) {
 	var s Set
 	err := json.Unmarshal(jsonSet, &s)
 	assert.NoError(t, err)
+	assert.Len(t, s, 3)
+	assert.Contains(t, []string{"contacts", "images", "mail"}, s[0].Title)
+	assert.Contains(t, []string{"contacts", "images", "mail"}, s[1].Title)
+	assert.Contains(t, []string{"contacts", "images", "mail"}, s[2].Title)
 }
 
 func TestSetToString(t *testing.T) {
@@ -140,8 +144,7 @@ func TestStringToSet(t *testing.T) {
 	_, err = UnmarshalRuleString("type:verb:selec:value:wtf")
 	assert.Error(t, err)
 
-	s, err := UnmarshalScopeString("io.cozy.contacts io.cozy.files:GET:io.cozy.files.music-dir")
-	set := *s
+	set, err := UnmarshalScopeString("io.cozy.contacts io.cozy.files:GET:io.cozy.files.music-dir")
 
 	assert.NoError(t, err)
 	assert.Len(t, set, 2)
@@ -235,19 +238,19 @@ func TestSubset(t *testing.T) {
 	s := Set{Rule{Type: "io.cozy.events"}}
 
 	s2 := Set{Rule{Type: "io.cozy.events"}}
-	assert.True(t, s2.IsSubSetOf(&s))
+	assert.True(t, s2.IsSubSetOf(s))
 
 	s3 := Set{Rule{Type: "io.cozy.events", Values: []string{"foo", "bar"}}}
-	assert.True(t, s3.IsSubSetOf(&s))
+	assert.True(t, s3.IsSubSetOf(s))
 
 	s4 := Set{Rule{Type: "io.cozy.events", Values: []string{"foo"}}}
-	assert.True(t, s4.IsSubSetOf(&s3))
-	assert.False(t, s3.IsSubSetOf(&s4))
+	assert.True(t, s4.IsSubSetOf(s3))
+	assert.False(t, s3.IsSubSetOf(s4))
 
 	s5 := Set{Rule{Type: "io.cozy.events", Selector: "calendar", Values: []string{"foo", "bar"}}}
 	s6 := Set{Rule{Type: "io.cozy.events", Selector: "calendar", Values: []string{"foo"}}}
-	assert.True(t, s6.IsSubSetOf(&s5))
-	assert.False(t, s5.IsSubSetOf(&s6))
+	assert.True(t, s6.IsSubSetOf(s5))
+	assert.False(t, s5.IsSubSetOf(s6))
 }
 
 func assertEqualJSON(t *testing.T, value []byte, expected string) {

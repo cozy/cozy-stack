@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -22,6 +23,14 @@ var (
 	PATCH  = permissions.PATCH
 	DELETE = permissions.DELETE
 )
+
+// ErrPatchCodeOrSet is returned when an attempt is made to patch both
+// code & set in one request
+var ErrPatchCodeOrSet = echo.NewHTTPError(http.StatusBadRequest,
+	"The patch doc should have property 'codes' or 'permissions', not both")
+
+// ErrForbidden is returned when a bad operation is attempted on permissions
+var ErrForbidden = echo.NewHTTPError(http.StatusForbidden)
 
 // ContextPermissionSet is the key used in echo context to store permissions set
 const ContextPermissionSet = "permissions_set"
@@ -129,10 +138,86 @@ func listPermissions(c echo.Context) error {
 	return json.NewEncoder(resp).Encode(doc)
 }
 
+func patchPermission(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	current, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+
+	var patch permissions.Permission
+	if _, err = jsonapi.Bind(c.Request(), &patch); err != nil {
+		return err
+	}
+
+	patchSet := patch.Permissions != nil && len(patch.Permissions) > 0
+	patchCodes := len(patch.Codes) > 0
+
+	if patchCodes == patchSet {
+		return ErrPatchCodeOrSet
+	}
+
+	toPatch, err := permissions.GetByID(instance, c.Param("permdocid"))
+	if err != nil {
+		return err
+	}
+
+	if patchCodes {
+		// a permission can be updated only by its parent
+		if !current.ParentOf(toPatch) {
+			return ErrForbidden
+		}
+		toPatch.PatchCodes(patch.Codes)
+	}
+
+	if patchSet {
+		// I can only add my own permissions to another permission doc
+		if !patch.Permissions.IsSubSetOf(current.Permissions) {
+			return ErrForbidden
+		}
+		toPatch.AddRules(patch.Permissions...)
+	}
+
+	if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
+		return err
+	}
+
+	return jsonapi.Data(c, http.StatusOK, toPatch, nil)
+}
+
+func revokePermission(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	current, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+
+	toRevoke, err := permissions.GetByID(instance, c.Param("permdocid"))
+	if err != nil {
+		return err
+	}
+
+	// a permission can be revoked only by its parent
+	if !current.ParentOf(toRevoke) {
+		return ErrForbidden
+	}
+
+	err = toRevoke.Revoke(instance)
+	if err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusNoContent)
+
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
+	router.PATCH("/:permdocid", patchPermission)
+	router.DELETE("/:permdocid", revokePermission)
 }

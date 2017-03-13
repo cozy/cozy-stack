@@ -83,7 +83,7 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, state, sharing.SharingID)
 	assert.Equal(t, sharingType, sharing.SharingType)
-	assert.Equal(t, &set, sharing.Permissions)
+	assert.Equal(t, set, sharing.Permissions)
 }
 
 func TestCreateSuccess(t *testing.T) {

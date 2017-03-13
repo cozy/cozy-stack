@@ -171,7 +171,187 @@ func TestBadPermissionsBearer(t *testing.T) {
 }
 
 func TestCreateSubPermission(t *testing.T) {
-	reqbody := strings.NewReader(`{
+	_, codes, err := createTestSubPermissions(token, "alice,bob")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	aCode := codes["alice"].(string)
+	bCode := codes["bob"].(string)
+
+	assert.NotEqual(t, aCode, token)
+	assert.NotEqual(t, bCode, token)
+	assert.NotEqual(t, aCode, bCode)
+
+	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
+	req.Header.Add("Authorization", "Bearer "+aCode)
+	res, err := http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+	var out map[string]interface{}
+	err = json.Unmarshal(body, &out)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	assert.Len(t, out, 1)
+	assert.Equal(t, "io.cozy.files", out["whatever"].(map[string]interface{})["type"])
+
+}
+
+func TestCreateSubSubFail(t *testing.T) {
+	_, codes, err := createTestSubPermissions(token, "eve")
+	if !assert.NoError(t, err) {
+		return
+	}
+	eveCode := codes["eve"].(string)
+	_, _, err = createTestSubPermissions(eveCode, "eve")
+	if !assert.Error(t, err) {
+		return
+	}
+}
+
+func TestPatchNoopFail(t *testing.T) {
+	id, _, err := createTestSubPermissions(token, "pierre")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
+	  "data": {
+	    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+	    "type": "io.cozy.permissions",
+	    "attributes": { }
+	    }
+	  }
+	}
+`)
+
+	assert.Error(t, err)
+}
+
+func TestBadPatchAddRuleForbidden(t *testing.T) {
+	id, _, err := createTestSubPermissions(token, "jacque")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
+	  "data": {
+	    "attributes": {
+					"permissions": {
+						"otherperm": {
+							"type":"io.cozy.token-cant-do-this"
+						}
+					}
+				}
+	    }
+	  }
+`)
+
+	assert.Error(t, err)
+}
+
+func TestPatchAddRule(t *testing.T) {
+	id, _, err := createTestSubPermissions(token, "paul")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
+	  "data": {
+	    "attributes": {
+					"permissions": {
+						"otherperm": {
+							"type":"io.cozy.contacts"
+						}
+					}
+				}
+	    }
+	  }
+`)
+
+	data := out["data"].(map[string]interface{})
+	assert.Equal(t, id, data["id"])
+	attrs := data["attributes"].(map[string]interface{})
+	perms := attrs["permissions"].(map[string]interface{})
+
+	assert.NoError(t, err)
+	assert.Len(t, perms, 2)
+	assert.Equal(t, "io.cozy.files", perms["whatever"].(map[string]interface{})["type"])
+	assert.Equal(t, "io.cozy.contacts", perms["otherperm"].(map[string]interface{})["type"])
+}
+
+func TestPatchChangesCodes(t *testing.T) {
+	id, codes, err := createTestSubPermissions(token, "john,jane")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.NotEmpty(t, codes["john"])
+	janeToken := codes["jane"].(string)
+	assert.NotEmpty(t, janeToken)
+
+	_, err = doRequest("PATCH", ts.URL+"/permissions/"+id, janeToken, `{
+		"data": {
+			"attributes": {
+					"codes": {
+						"john": "set-token"
+					}
+				}
+			}
+		}
+`)
+	assert.Error(t, err)
+
+	out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
+	  "data": {
+	    "attributes": {
+					"codes": {
+						"john": "set-token"
+					}
+				}
+	    }
+	  }
+`)
+
+	if !assert.NoError(t, err) {
+		return
+	}
+	data := out["data"].(map[string]interface{})
+	assert.Equal(t, id, data["id"])
+	attrs := data["attributes"].(map[string]interface{})
+	newcodes := attrs["codes"].(map[string]interface{})
+	assert.NotEmpty(t, newcodes["john"])
+	assert.Nil(t, newcodes["jane"])
+
+}
+
+func TestRevoke(t *testing.T) {
+	id, codes, err := createTestSubPermissions(token, "igor")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	igorToken := codes["igor"].(string)
+	assert.NotEmpty(t, igorToken)
+
+	_, err = doRequest("DELETE", ts.URL+"/permissions/"+id, igorToken, "")
+	assert.Error(t, err)
+
+	out, err := doRequest("DELETE", ts.URL+"/permissions/"+id, token, "")
+	assert.NoError(t, err)
+	assert.Nil(t, out)
+
+}
+
+func createTestSubPermissions(tok string, codes string) (string, map[string]interface{}, error) {
+	out, err := doRequest("POST", ts.URL+"/permissions?codes="+codes, tok, `{
 "data": {
 	"type": "io.cozy.permissions",
 	"attributes": {
@@ -185,54 +365,46 @@ func TestCreateSubPermission(t *testing.T) {
 	}
 }
 	}`)
-	req, _ := http.NewRequest("POST", ts.URL+"/permissions?codes=bob,alice", reqbody)
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Content-Type", "application/json")
-	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if !assert.NoError(t, err) {
-		return
-	}
-	var out map[string]interface{}
-	err = json.Unmarshal(body, &out)
-	if !assert.NoError(t, err) {
-		return
+
+	if err != nil {
+		return "", nil, err
 	}
 
 	data := out["data"].(map[string]interface{})
+	id := data["id"].(string)
 	attrs := data["attributes"].(map[string]interface{})
-	codes := attrs["codes"].(map[string]interface{})
+	result := attrs["codes"].(map[string]interface{})
+	return id, result, nil
+}
 
-	aCode := codes["alice"].(string)
-	bCode := codes["bob"].(string)
-
-	assert.NotEqual(t, aCode, token)
-	assert.NotEqual(t, bCode, token)
-	assert.NotEqual(t, aCode, bCode)
-
-	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
-	req2.Header.Add("Authorization", "Bearer "+aCode)
-	res2, err := http.DefaultClient.Do(req2)
-	if !assert.NoError(t, err) {
-		return
+func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
+	reqbody := strings.NewReader(body)
+	req, _ := http.NewRequest(method, url, reqbody)
+	req.Header.Add("Authorization", "Bearer "+tok)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
 	}
 	defer res.Body.Close()
-	body2, err := ioutil.ReadAll(res2.Body)
-	if !assert.NoError(t, err) {
-		return
+	resbody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
 	}
-	var out2 map[string]interface{}
-	err = json.Unmarshal(body2, &out2)
+	if len(resbody) == 0 {
+		return nil, nil
+	}
+	var out map[string]interface{}
+	err = json.Unmarshal(resbody, &out)
+	if err != nil {
+		return nil, err
+	}
 
-	assert.NoError(t, err)
-	assert.Equal(t, "200 OK", res2.Status, "should get a 200")
-	assert.Len(t, out2, 1)
-	assert.Equal(t, "io.cozy.files", out2["whatever"].(map[string]interface{})["type"])
+	if errstr := out["message"]; errstr != nil {
+		return nil, fmt.Errorf("%s", errstr)
+	}
 
+	return out, nil
 }
 
 func TestListPermission(t *testing.T) {
@@ -264,8 +436,8 @@ func TestListPermission(t *testing.T) {
 		}}
 
 	codes := map[string]string{"bob": "secret"}
-	permissions.CreateShareSet(testInstance, parent, codes, &p1)
-	permissions.CreateShareSet(testInstance, parent, codes, &p2)
+	permissions.CreateShareSet(testInstance, parent, codes, p1)
+	permissions.CreateShareSet(testInstance, parent, codes, p2)
 
 	reqbody := strings.NewReader(`{
 "data": [

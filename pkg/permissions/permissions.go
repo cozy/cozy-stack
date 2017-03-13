@@ -18,7 +18,7 @@ type Permission struct {
 	PRev        string            `json:"_rev,omitempty"`
 	Type        string            `json:"type,omitempty"`
 	SourceID    string            `json:"source_id,omitempty"`
-	Permissions *Set              `json:"permissions,omitempty"`
+	Permissions Set               `json:"permissions,omitempty"`
 	ExpiresAt   int               `json:"expires_at,omitempty"`
 	Codes       map[string]string `json:"codes,omitempty"`
 }
@@ -77,12 +77,44 @@ func (p *Permission) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
 }
 
+// AddRules add some rules to the permission doc
+func (p *Permission) AddRules(rules ...Rule) {
+	newperms := append(p.Permissions, rules...)
+	p.Permissions = newperms
+}
+
+// PatchCodes replace the permission docs codes
+func (p *Permission) PatchCodes(codes map[string]string) {
+	p.Codes = codes
+}
+
+// Revoke destroy a Permission
+func (p *Permission) Revoke(db couchdb.Database) error {
+	return couchdb.DeleteDoc(db, p)
+}
+
+// ParentOf check if child has been created by p
+func (p *Permission) ParentOf(child *Permission) bool {
+
+	canBeParent := p.Type == TypeApplication || p.Type == TypeOauth
+
+	return child.Type == TypeSharing && canBeParent &&
+		child.SourceID == p.SourceID
+}
+
+// GetByID fetch a permission by its ID
+func GetByID(db couchdb.Database, id string) (*Permission, error) {
+	var perm Permission
+	err := couchdb.GetDoc(db, consts.Permissions, id, &perm)
+	return &perm, err
+}
+
 // GetForRegisterToken create a non-persisted permissions doc with hard coded
 // registerToken permissions set
 func GetForRegisterToken() *Permission {
 	return &Permission{
 		Type: TypeRegister,
-		Permissions: &Set{
+		Permissions: Set{
 			Rule{
 				Verbs:  Verbs(GET),
 				Type:   consts.Settings,
@@ -174,7 +206,7 @@ func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error
 	doc := &Permission{
 		Type:        "app",
 		SourceID:    consts.Apps + "/" + slug,
-		Permissions: &set, // @TODO some validation?
+		Permissions: set, // @TODO some validation?
 	}
 
 	err := couchdb.CreateDoc(db, doc)
@@ -186,7 +218,7 @@ func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error
 }
 
 // CreateShareSet creates a Permission doc for sharing
-func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set *Set) (*Permission, error) {
+func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set) (*Permission, error) {
 
 	if parent.Type == TypeRegister || parent.Type == TypeSharing {
 		return nil, ErrOnlyAppCanCreateSubSet
@@ -212,13 +244,25 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 	return doc, nil
 }
 
+// DeleteShareSet revokes all the code in a permission set
+func DeleteShareSet(db couchdb.Database, permID string) error {
+
+	var doc *Permission
+	err := couchdb.GetDoc(db, consts.Permissions, permID, doc)
+	if err != nil {
+		return err
+	}
+
+	return couchdb.DeleteDoc(db, doc)
+}
+
 // Force creates or updates a Permission doc for a given app
 func Force(db couchdb.Database, slug string, set Set) error {
 	existing, _ := GetForApp(db, slug)
 	doc := &Permission{
 		Type:        TypeApplication,
 		SourceID:    consts.Apps + "/" + slug,
-		Permissions: &set, // @TODO some validation?
+		Permissions: set, // @TODO some validation?
 	}
 	if existing == nil {
 		return couchdb.CreateDoc(db, doc)

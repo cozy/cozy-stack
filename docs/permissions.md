@@ -345,7 +345,7 @@ photo and give the contacts application the permissions to use it.
 
 It can also be used to add or remove codes.
 
-#### Request
+#### Request to add / remove codes
 
 ```http
 PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
@@ -363,6 +363,32 @@ Accept: application/vnd.api+json
     "attributes": {
       "codes": {
         "Yohyoo8BHahh1lie": "jane"
+      }
+    }
+  }
+}
+```
+
+#### Request to add permisisons
+
+```http
+PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+    "type": "io.cozy.permissions",
+    "permissions": {
+      "add-this": {
+        "type": "io.cozy.files",
+        "verbs": ["GET"],
+        "values": ["some-picture-id"]
       }
     }
   }
