@@ -45,11 +45,24 @@ func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	j.Jar.SetCookies(instanceURL, cookies)
 }
 
-type jsonData struct {
-	Type  string                 `json:"type"`
-	ID    string                 `json:"id"`
-	Attrs map[string]interface{} `json:"attributes,omitempty"`
-	Rels  map[string]interface{} `json:"relationships,omitempty"`
+func TestSharingAnswerBadState(t *testing.T) {
+	state := ""
+	res, err := postJSON("/sharings/answer", echo.Map{
+		"state": state,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestSharingAnswerBadClientID(t *testing.T) {
+	state := "stateoftheart"
+	clientID2 := "myclient"
+	res, err := postJSON("/sharings/answer", echo.Map{
+		"state":     state,
+		"client_id": clientID2,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestSharingRequestNoScope(t *testing.T) {

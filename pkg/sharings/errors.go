@@ -23,4 +23,6 @@ var (
 	// ErrNoOAuthClient is used when the owner of the Cozy has not yet
 	// registered to the recipient as an OAuth client.
 	ErrNoOAuthClient = errors.New("No OAuth client was found")
+	//ErrSharingIDNotUnique is used when several occurences of the same sharing id are found
+	ErrSharingIDNotUnique = errors.New("Several sharings with this id found")
 )

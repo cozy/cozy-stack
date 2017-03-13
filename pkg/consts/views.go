@@ -15,6 +15,8 @@ var GlobalIndexes = []*mango.Index{
 var Indexes = []*mango.Index{
 	// Permissions
 	mango.IndexOnFields(Permissions, "source_id", "type"),
+	// Sharings
+	mango.IndexOnFields(Sharings, "sharing_id"),
 
 	// Used to lookup a file given its parent, and the children of a directory
 	mango.IndexOnFields(Files, "dir_id", "name"),

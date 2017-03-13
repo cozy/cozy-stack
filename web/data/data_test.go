@@ -188,6 +188,7 @@ func TestAllDoctypes(t *testing.T) {
 		"io.cozy.events",
 		"io.cozy.files",
 		"io.cozy.settings",
+		"io.cozy.sharings",
 	}
 	assert.Equal(t, expected, dbs)
 }

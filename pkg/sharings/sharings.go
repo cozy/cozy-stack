@@ -3,6 +3,7 @@ package sharings
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -122,13 +123,69 @@ func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 	return doc, err
 }
 
-// CheckSharingType returns an error if the sharing type is incorrect
+// GetSharingRecipientFromClientID returns the Recipient associated with the given clientID
+func (s *Sharing) GetSharingRecipientFromClientID(db couchdb.Database, clientID string) (*RecipientStatus, error) {
+	for _, recStatus := range s.RecipientsStatus {
+		recipient, err := GetRecipient(db, recStatus.RefRecipient.ID)
+		if err != nil {
+			return nil, err
+		}
+		recStatus.recipient = recipient
+
+		if recipient.Client.ClientID == clientID {
+			return recStatus, nil
+		}
+	}
+	return nil, nil
+}
+
+//CheckSharingType returns an error if the sharing type is incorrect
 func CheckSharingType(sharingType string) error {
 	switch sharingType {
 	case consts.OneShotSharing, consts.MasterSlaveSharing, consts.MasterMasterSharing:
 		return nil
 	}
 	return ErrBadSharingType
+}
+
+// findSharingRecipient retrieve a sharing recipient from its clientID and sharingID
+func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sharing, *RecipientStatus, error) {
+	var res []Sharing
+
+	err := couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
+		Selector: mango.Equal("sharing_id", sharingID),
+	}, &res)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(res) < 1 {
+		return nil, nil, ErrSharingDoesNotExist
+	} else if len(res) > 2 {
+		return nil, nil, ErrSharingIDNotUnique
+	}
+
+	sharing := &res[0]
+
+	sRec, err := sharing.GetSharingRecipientFromClientID(db, clientID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if sRec == nil {
+		return nil, nil, ErrRecipientDoesNotExist
+	}
+
+	return sharing, sRec, nil
+}
+
+// SharingRefused handles a rejectedsharing on the sharer side
+func SharingRefused(db couchdb.Database, state, clientID string) error {
+	sharing, recStatus, err := findSharingRecipient(db, state, clientID)
+	if err != nil {
+		return err
+	}
+	recStatus.Status = consts.RefusedSharingStatus
+	err = couchdb.UpdateDoc(db, sharing)
+	return err
 }
 
 // CreateSharingRequest checks fields integrity and creates a sharing document

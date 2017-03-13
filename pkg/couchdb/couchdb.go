@@ -435,7 +435,6 @@ func createDocOrDb(db Database, doc Doc, response interface{}) error {
 	if err == nil || !IsNoDatabaseError(err) {
 		return err
 	}
-
 	err = CreateDB(db, doctype)
 	if err == nil {
 		err = makeRequest("POST", dbname, doc, response)

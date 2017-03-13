@@ -9,8 +9,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
@@ -48,6 +50,117 @@ func TestCheckSharingTypeSuccess(t *testing.T) {
 	sharingType := consts.OneShotSharing
 	err := CheckSharingType(sharingType)
 	assert.NoError(t, err)
+}
+
+func TestGetSharingRecipientFromClientIDNoRecipient(t *testing.T) {
+	var rStatus *RecipientStatus
+	sharing := &Sharing{}
+	rec, err := sharing.GetSharingRecipientFromClientID(TestPrefix, "")
+	assert.NoError(t, err)
+	assert.Equal(t, rStatus, rec)
+}
+
+func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
+	clientID := "fake client"
+
+	rStatus := &RecipientStatus{
+		RefRecipient: jsonapi.ResourceIdentifier{ID: "id", Type: "type"},
+	}
+	sharing := &Sharing{
+		RecipientsStatus: []*RecipientStatus{rStatus},
+	}
+	_, err := sharing.GetSharingRecipientFromClientID(TestPrefix, clientID)
+	assert.Error(t, err)
+}
+
+func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
+	clientID := "fake client"
+
+	client := &oauth.Client{
+		ClientID: clientID,
+	}
+	recipient := &Recipient{
+		Client: client,
+	}
+
+	couchdb.CreateDoc(TestPrefix, recipient)
+	rStatus := &RecipientStatus{
+		RefRecipient: jsonapi.ResourceIdentifier{ID: recipient.RID},
+	}
+
+	sharing := &Sharing{
+		RecipientsStatus: []*RecipientStatus{rStatus},
+	}
+
+	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix, clientID)
+	assert.NoError(t, err)
+	assert.Equal(t, rStatus, recStatus)
+
+}
+
+func TestSharingRefusedNoSharing(t *testing.T) {
+	state := "fake state"
+	clientID := "fake client"
+	err := SharingRefused(TestPrefix, state, clientID)
+	assert.Error(t, err)
+}
+
+func TestSharingRefusedNoClient(t *testing.T) {
+	state := "stateoftheart"
+	clientID := "fake client"
+
+	sharing := &Sharing{
+		SharingID: state,
+	}
+	err := couchdb.CreateDoc(TestPrefix, sharing)
+	assert.NoError(t, err)
+	err = SharingRefused(TestPrefix, state, clientID)
+	assert.Error(t, err)
+}
+
+func TestSharingRefusedStateNotUnique(t *testing.T) {
+	state := "stateoftheart"
+	clientID := "fake client"
+	sharing1 := &Sharing{
+		SharingID: state,
+	}
+	sharing2 := &Sharing{
+		SharingID: state,
+	}
+	err := couchdb.CreateDoc(TestPrefix, sharing1)
+	assert.NoError(t, err)
+	err = couchdb.CreateDoc(TestPrefix, sharing2)
+	assert.NoError(t, err)
+
+	err = SharingRefused(TestPrefix, state, clientID)
+	assert.Error(t, err)
+}
+
+func TestSharingRefusedSuccess(t *testing.T) {
+
+	state := "stateoftheart2"
+	clientID := "thriftshopclient"
+
+	client := &oauth.Client{
+		ClientID: clientID,
+	}
+	recipient := &Recipient{
+		Client: client,
+	}
+	err := couchdb.CreateDoc(TestPrefix, recipient)
+	assert.NoError(t, err)
+	rStatus := &RecipientStatus{
+		RefRecipient: jsonapi.ResourceIdentifier{ID: recipient.RID},
+	}
+	sharing := &Sharing{
+		SharingID:        state,
+		RecipientsStatus: []*RecipientStatus{rStatus},
+	}
+	err = couchdb.CreateDoc(TestPrefix, sharing)
+	assert.NoError(t, err)
+	err = SharingRefused(TestPrefix, state, clientID)
+	assert.NoError(t, err)
+
 }
 
 func TestCreateSharingRequestBadParams(t *testing.T) {
@@ -166,6 +279,13 @@ func TestMain(m *testing.M) {
 	err = couchdb.CreateNamedDocWithDB(in, settingsDoc)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.DefineIndex(TestPrefix, mango.IndexOnFields(consts.Sharings, "sharing_id"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	res := m.Run()
