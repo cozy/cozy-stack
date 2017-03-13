@@ -3,7 +3,10 @@ package testutils
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
@@ -58,7 +61,8 @@ func NewSetup(testingM *testing.M, name string) *TestSetup {
 	return &setup
 }
 
-func (c *TestSetup) cleanupAndDie(msg ...interface{}) {
+// CleanupAndDie cleanup the TestSetup, prints a message and 	close the process
+func (c *TestSetup) CleanupAndDie(msg ...interface{}) {
 	c.cleanup()
 	Fatal(msg...)
 }
@@ -72,11 +76,16 @@ func (c *TestSetup) AddCleanup(f func()) {
 	}
 }
 
-// GetTestDatabase creates an instance with a random host
-// The instance will be removed on container cleanup
-
-// GetTestVFSContext creates an instance with a random host
-// The instance will be removed on container cleanup
+// GetTmpDirectory creates a temporary directory
+// The directory will be removed on container cleanup
+func (c *TestSetup) GetTmpDirectory() string {
+	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	if err != nil {
+		c.CleanupAndDie("Could not create temporary directory.", err)
+	}
+	c.AddCleanup(func() { os.RemoveAll(tempdir) })
+	return tempdir
+}
 
 // GetTestInstance creates an instance with a random host
 // The instance will be removed on container cleanup
@@ -87,11 +96,16 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if len(opts) == 0 {
 		opts = []*instance.Options{{}}
 	}
-	opts[0].Domain = c.host
+	if opts[0].Domain == "" {
+		opts[0].Domain = c.host
+	} else {
+		c.host = opts[0].Domain
+	}
+	instance.Destroy(c.host)
 	i, err := instance.Create(opts[0])
 
 	if err != nil {
-		c.cleanupAndDie("Cannot create test instance", err)
+		c.CleanupAndDie("Cannot create test instance", err)
 	}
 	c.AddCleanup(func() { instance.Destroy(i.Domain) })
 	c.inst = i
@@ -111,7 +125,7 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 		client.ClientID, scopes, time.Now())
 
 	if err != nil {
-		c.cleanupAndDie("Cannot create oauth token", err)
+		c.CleanupAndDie("Cannot create oauth token", err)
 	}
 
 	return &client, token
@@ -119,16 +133,20 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 
 // GetTestServer start a testServer with a single group on prefix
 // The server will be closed on container cleanup
-func (c *TestSetup) GetTestServer(prefix string, Routes func(*echo.Group)) *httptest.Server {
+func (c *TestSetup) GetTestServer(prefix string, routes func(*echo.Group),
+	mws ...func(*echo.Echo) *echo.Echo) *httptest.Server {
 	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
 	group := handler.Group(prefix, func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(context echo.Context) error {
 			context.Set("instance", c.inst)
 			return next(context)
 		}
 	})
-	Routes(group)
+	routes(group)
+	for _, mw := range mws {
+		handler = mw(handler)
+	}
+	handler.HTTPErrorHandler = errors.ErrorHandler
 	ts := httptest.NewServer(handler)
 	c.AddCleanup(func() { ts.Close() })
 	c.ts = ts
@@ -140,6 +158,37 @@ func (c *TestSetup) Run() int {
 	value := c.testingM.Run()
 	c.cleanup()
 	return value
+}
+
+// CookieJar is a http.CookieJar which always returns all cookies.
+// NOTE golang stdlib uses cookies for the URL (ie the testserver),
+// not for the host (ie the instance), so we do it manually
+type CookieJar struct {
+	Jar *cookiejar.Jar
+	URL *url.URL
+}
+
+// Cookies implements http.CookieJar interface
+func (j *CookieJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
+	return j.Jar.Cookies(j.URL)
+}
+
+// SetCookies implements http.CookieJar interface
+func (j *CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
+	j.Jar.SetCookies(j.URL, cookies)
+}
+
+// GetCookieJar returns a cookie jar valable for test
+// the jar discard the url passed to Cookies and SetCookies and always use
+// the setup instance URL instead.
+func (c *TestSetup) GetCookieJar() http.CookieJar {
+	instance := c.GetTestInstance()
+	instanceURL, _ := url.Parse("https://" + instance.Domain + "/")
+	j, _ := cookiejar.New(nil)
+	return &CookieJar{
+		Jar: j,
+		URL: instanceURL,
+	}
 }
 
 // VFSContext implements vfs.Context
@@ -157,15 +206,10 @@ func (c VFSContext) FS() afero.Fs { return c.fs }
 // GetVFSContext gives a tmp dir backed vfs.Context
 // The temporary folder will be erased on container cleanup
 func (c *TestSetup) GetVFSContext() VFSContext {
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
-	if err != nil {
-		c.cleanupAndDie("Could not create temporary directory.")
-	}
-
+	tempdir := c.GetTmpDirectory()
 	var vfsC VFSContext
 	vfsC.prefix = "dev/"
 	vfsC.fs = afero.NewBasePathFs(afero.NewOsFs(), tempdir)
-	c.AddCleanup(func() { os.RemoveAll(tempdir) })
 	return vfsC
 }
 
@@ -188,7 +232,7 @@ func (c *TestSetup) GetVFSContext() VFSContext {
 // func (c *TestSetup) GetCleanDB(db couchdb.Database, doctype string) {
 // 	err := resetDBAndViews()
 // 	if err != nil {
-// 		c.cleanupAndDie(err)
+// 		c.CleanupAndDie(err)
 // 	}
 // 	c.addCleanup(func() { couchdb.DeleteDB(db, doctype) })
 //

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -26,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -40,22 +40,7 @@ var ts *httptest.Server
 var testInstance *instance.Instance
 var instanceURL *url.URL
 
-// Stupid http.CookieJar which always returns all cookies.
-// NOTE golang stdlib uses cookies for the URL (ie the testserver),
-// not for the host (ie the instance), so we do it manually
-type testJar struct {
-	Jar *cookiejar.Jar
-}
-
-func (j *testJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
-	return j.Jar.Cookies(instanceURL)
-}
-
-func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	j.Jar.SetCookies(instanceURL, cookies)
-}
-
-var jar *testJar
+var jar http.CookieJar
 var client *http.Client
 var clientID string
 var clientSecret string
@@ -1015,7 +1000,7 @@ func TestLogoutNoToken(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "401 Unauthorized", res.Status)
-	cookies := jar.Cookies(instanceURL)
+	cookies := jar.Cookies(nil)
 	assert.Len(t, cookies, 2) // cozysessid and _csrf
 }
 
@@ -1032,7 +1017,7 @@ func TestLogoutSuccess(t *testing.T) {
 	permissions.DestroyApp(testInstance, "home")
 
 	assert.Equal(t, "204 No Content", res.Status)
-	cookies := jar.Cookies(instanceURL)
+	cookies := jar.Cookies(nil)
 	assert.Len(t, cookies, 1) // _csrf
 	assert.Equal(t, "_csrf", cookies[0].Name)
 }
@@ -1178,24 +1163,32 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
 	web.LoadSupportedLocales()
-	instanceURL, _ = url.Parse("https://" + domain + "/")
-	j, _ := cookiejar.New(nil)
-	jar = &testJar{
-		Jar: j,
-	}
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "auth_test")
+
+	testInstance = setup.GetTestInstance(&instance.Options{Domain: domain})
+	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
+
+	jar = setup.GetCookieJar()
 	client = &http.Client{
 		CheckRedirect: noRedirect,
 		Jar:           jar,
 	}
-	instance.Destroy(domain)
-	testInstance, _ = instance.Create(&instance.Options{
-		Domain: domain,
-		Locale: "en",
-	})
-	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
 
-	r := echo.New()
-	r.GET("/test", func(c echo.Context) error {
+	ts = setup.GetTestServer("/test", fakeAPI, func(r *echo.Echo) *echo.Echo {
+		handler, err := web.CreateSubdomainProxy(r, apps.Serve)
+		if err != nil {
+			setup.CleanupAndDie("Cant start subdomain proxy", err)
+		}
+		return handler
+	})
+
+	os.Exit(setup.Run())
+}
+
+func fakeAPI(g *echo.Group) {
+	g.Use(middlewares.NeedInstance, middlewares.LoadSession)
+	g.GET("", func(c echo.Context) error {
 		var content string
 		if middlewares.IsLoggedIn(c) {
 			content = "logged_in"
@@ -1203,19 +1196,7 @@ func TestMain(m *testing.M) {
 			content = "who_are_you"
 		}
 		return c.String(http.StatusOK, content)
-	}, middlewares.NeedInstance, middlewares.LoadSession)
-
-	handler, err := web.CreateSubdomainProxy(r, apps.Serve)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	ts = httptest.NewServer(handler)
-	res := m.Run()
-	ts.Close()
-	instance.Destroy(domain)
-	os.Exit(res)
+	})
 }
 
 func noRedirect(*http.Request, []*http.Request) error {

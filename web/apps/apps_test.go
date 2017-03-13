@@ -22,15 +22,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	webApps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 const domain = "cozywithapps.example.net"
@@ -38,26 +36,10 @@ const slug = "mini"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
-var clientID string
+var token string
 var manifest *apps.Manifest
 
-// Stupid http.CookieJar which always returns all cookies.
-// NOTE golang stdlib uses cookies for the URL (ie the testserver),
-// not for the host (ie the instance), so we do it manually
-type testJar struct {
-	Jar *cookiejar.Jar
-	URL *url.URL
-}
-
-func (j *testJar) Cookies(u *url.URL) (cookies []*http.Cookie) {
-	return j.Jar.Cookies(j.URL)
-}
-
-func (j *testJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
-	j.Jar.SetCookies(j.URL, cookies)
-}
-
-var jar *testJar
+var jar http.CookieJar
 var client *http.Client
 
 func createFile(dir, filename, content string) error {
@@ -147,7 +129,7 @@ func doGet(path string, auth bool) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Host = slug + "." + domain
+	req.Host = slug + "." + testInstance.Domain
 	return c.Do(req)
 }
 
@@ -212,7 +194,7 @@ func TestServeAppsWithACode(t *testing.T) {
 
 	appURL, _ := url.Parse("https://" + appHost + "/")
 	j, _ := cookiejar.New(nil)
-	ja := &testJar{Jar: j, URL: appURL}
+	ja := &testutils.CookieJar{Jar: j, URL: appURL}
 	c := &http.Client{Jar: ja, CheckRedirect: noRedirect}
 
 	req, _ := http.NewRequest("GET", ts.URL+"/foo", nil)
@@ -222,7 +204,7 @@ func TestServeAppsWithACode(t *testing.T) {
 	assert.Equal(t, 302, res.StatusCode)
 	location, err := url.Parse(res.Header.Get("Location"))
 	assert.NoError(t, err)
-	assert.Equal(t, domain, location.Host)
+	assert.Equal(t, testInstance.Domain, location.Host)
 	assert.Equal(t, "/auth/login", location.Path)
 	assert.NotEmpty(t, location.Query().Get("redirect"))
 
@@ -257,8 +239,8 @@ func TestServeAppsWithACode(t *testing.T) {
 
 func TestOauthAppCantInstallApp(t *testing.T) {
 	req, _ := http.NewRequest("POST", ts.URL+"/apps/mini-bis?Source=git://github.com/nono/cozy-mini.git", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
-	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Host = testInstance.Domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 403, res.StatusCode)
@@ -266,8 +248,8 @@ func TestOauthAppCantInstallApp(t *testing.T) {
 
 func TestOauthAppCantUpdateApp(t *testing.T) {
 	req, _ := http.NewRequest("PUT", ts.URL+"/apps/mini", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
-	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Host = testInstance.Domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 403, res.StatusCode)
@@ -275,8 +257,8 @@ func TestOauthAppCantUpdateApp(t *testing.T) {
 
 func TestListApps(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/apps/", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
-	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Host = testInstance.Domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -309,8 +291,8 @@ func TestListApps(t *testing.T) {
 
 func TestIconForApp(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/apps/mini/icon", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
-	req.Host = domain
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Host = testInstance.Domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -321,12 +303,9 @@ func TestIconForApp(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
-
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
-	if err != nil {
-		fmt.Println("Could not create temporary directory.")
-		os.Exit(1)
-	}
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "apps_test")
+	tempdir := setup.GetTmpDirectory()
 
 	cfg := config.GetConfig()
 	cfg.Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
@@ -334,82 +313,45 @@ func TestMain(m *testing.M) {
 	cfg.Subdomains = config.NestedSubdomains
 	defer func() { cfg.Subdomains = was }()
 
-	instance.Destroy(domain)
-	testInstance, err = instance.Create(&instance.Options{
-		Domain: domain,
-		Locale: "en",
-	})
-	if err != nil {
-		fmt.Println("Could not create test instance.", err)
-		os.Exit(1)
-	}
+	testInstance = setup.GetTestInstance(&instance.Options{Domain: domain})
 	pass := "aephe2Ei"
 	hash, _ := crypto.GenerateFromPassphrase([]byte(pass))
 	testInstance.PassphraseHash = hash
 	testInstance.RegisterToken = nil
 	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
 
-	err = installMiniApp()
+	err := installMiniApp()
 	if err != nil {
-		fmt.Println("Could not install mini app.", err)
-		os.Exit(1)
+		setup.CleanupAndDie("Could not install mini app.", err)
 	}
 
-	r := echo.New()
-	r.POST("/login", func(c echo.Context) error {
-		session, _ := sessions.New(testInstance)
-		cookie, _ := session.ToCookie()
-		c.SetCookie(cookie)
-		return c.HTML(http.StatusOK, "OK")
+	ts = setup.GetTestServer("/apps", webApps.Routes, func(r *echo.Echo) *echo.Echo {
+		r.POST("/login", func(c echo.Context) error {
+			session, _ := sessions.New(testInstance)
+			cookie, _ := session.ToCookie()
+			c.SetCookie(cookie)
+			return c.HTML(http.StatusOK, "OK")
+		})
+		router, err := web.CreateSubdomainProxy(r, webApps.Serve)
+		if err != nil {
+			setup.CleanupAndDie("Cant start subdoman proxy", err)
+		}
+		return router
 	})
-	webApps.Routes(r.Group("/apps"))
-	router, err := web.CreateSubdomainProxy(r, webApps.Serve)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
 
-	ts = httptest.NewServer(router)
-
-	instanceURL, _ := url.Parse("https://" + domain + "/")
-	j, _ := cookiejar.New(nil)
-	jar = &testJar{Jar: j, URL: instanceURL}
+	jar = setup.GetCookieJar()
 	client = &http.Client{Jar: jar}
 
 	// Login
 	req, _ := http.NewRequest("POST", ts.URL+"/login", bytes.NewBufferString("passphrase="+pass))
-	req.Host = domain
+	req.Host = testInstance.Domain
 	client.Do(req)
 
-	client := oauth.Client{
-		RedirectURIs: []string{"http://localhost/oauth/callback"},
-		ClientName:   "test-permissions",
-		SoftwareID:   "github.com/cozy/cozy-stack/web/data",
-	}
-	client.Create(testInstance)
-	clientID = client.ClientID
+	_, token = setup.GetTestClient(consts.Apps)
 
-	res := m.Run()
-	ts.Close()
-	instance.Destroy(domain)
-	os.RemoveAll(tempdir)
-
-	os.Exit(res)
+	os.Exit(setup.Run())
 }
 
 func noRedirect(*http.Request, []*http.Request) error {
 	return http.ErrUseLastResponse
-}
-
-func testToken(i *instance.Instance) string {
-	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  clientID,
-		},
-		Scope: consts.Apps,
-	})
-	return t
 }
