@@ -16,6 +16,13 @@ func TestRealtime(t *testing.T) {
 	c3 := main.Subscribe("io.cozy.testobject")
 	wg := sync.WaitGroup{}
 
+	assert.Panics(t, func() {
+		main.Publish(&Event{
+			DocType: "io.cozy.testobject",
+			DocID:   "foo",
+		})
+	})
+
 	wg.Add(1)
 	go func() {
 		for e := range c.Read() {

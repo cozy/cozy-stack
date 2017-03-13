@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo"
 )
@@ -45,6 +46,15 @@ func (sdb *simpleDB) Prefix() string { return sdb.prefix + "/" }
 // SimpleDatabasePrefix returns a Database from a prefix, useful for test
 func SimpleDatabasePrefix(prefix string) Database {
 	return &simpleDB{prefix}
+}
+
+func rtevent(db Database, evtype, doctype, id, rev string) {
+	realtime.InstanceHub(db.Prefix()).Publish(&realtime.Event{
+		Type:    evtype,
+		DocType: doctype,
+		DocID:   id,
+		DocRev:  rev,
+	})
 }
 
 // GlobalDB is the prefix used for stack-scoped db
@@ -352,6 +362,7 @@ func Delete(db Database, doctype, id, rev string) (string, error) {
 	if err != nil {
 		return "", fixErrorNoDatabaseIsWrongDoctype(err)
 	}
+	rtevent(db, realtime.EventDelete, doctype, id, res.Rev)
 	return res.Rev, nil
 }
 
@@ -367,6 +378,7 @@ func DeleteDoc(db Database, doc Doc) error {
 		return err
 	}
 	doc.SetRev(tombrev)
+	rtevent(db, realtime.EventDelete, doc.DocType(), id, tombrev)
 	return nil
 }
 
@@ -388,7 +400,8 @@ func UpdateDoc(db Database, doc Doc) error {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 	doc.SetRev(res.Rev)
-	return err
+	rtevent(db, realtime.EventUpdate, doctype, id, res.Rev)
+	return nil
 }
 
 // CreateNamedDoc persist a document with an ID.
@@ -411,7 +424,8 @@ func CreateNamedDoc(db Database, doc Doc) error {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 	doc.SetRev(res.Rev)
-	return err
+	rtevent(db, realtime.EventCreate, doctype, id, res.Rev)
+	return nil
 }
 
 // CreateNamedDocWithDB is equivalent to CreateNamedDoc but creates the database
@@ -462,6 +476,7 @@ func CreateDoc(db Database, doc Doc) error {
 
 	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
+	rtevent(db, realtime.EventCreate, doc.DocType(), doc.ID(), doc.Rev())
 	return nil
 }
 
