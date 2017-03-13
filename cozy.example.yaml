@@ -42,6 +42,8 @@ mail:
   password: pass
   # disable mail tls - flags: --mail-disable-tls
   disable_tls: false
+  # skip the certificate validation (may be useful on localhost)
+  skip_certificate_validation: false
 
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level
