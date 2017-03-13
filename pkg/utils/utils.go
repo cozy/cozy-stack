@@ -48,16 +48,17 @@ func StripPort(domain string) string {
 // the empty ones.
 func SplitTrimString(s, sep string) []string {
 	if s == "" {
-		return nil
+		return []string{}
 	}
-	var parts []string
-	for _, part := range strings.Split(s, ",") {
+	parts := strings.Split(s, ",")
+	filteredParts := parts[:0]
+	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part != "" {
-			parts = append(parts, part)
+			filteredParts = append(filteredParts, part)
 		}
 	}
-	return parts
+	return filteredParts
 }
 
 // FileExists returns whether or not the file exists on the current file

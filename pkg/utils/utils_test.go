@@ -69,13 +69,15 @@ func TestStripPort(t *testing.T) {
 
 func TestSplitTrimString(t *testing.T) {
 	parts1 := SplitTrimString("", ",")
-	assert.EqualValues(t, []string(nil), parts1)
+	assert.EqualValues(t, []string{}, parts1)
 	parts2 := SplitTrimString("foo,bar,baz,", ",")
 	assert.EqualValues(t, []string{"foo", "bar", "baz"}, parts2)
 	parts3 := SplitTrimString(",,,,", ",")
-	assert.EqualValues(t, []string(nil), parts3)
+	assert.EqualValues(t, []string{}, parts3)
 	parts4 := SplitTrimString("foo  ,, bar,  baz  ,", ",")
 	assert.EqualValues(t, []string{"foo", "bar", "baz"}, parts4)
+	parts5 := SplitTrimString("    ", ",")
+	assert.EqualValues(t, []string{}, parts5)
 }
 
 func TestFileExists(t *testing.T) {
