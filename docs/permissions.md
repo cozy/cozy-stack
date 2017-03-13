@@ -388,7 +388,7 @@ Accept: application/vnd.api+json
       "add-this": {
         "type": "io.cozy.files",
         "verbs": ["GET"],
-        "values": ["some-picture-id"],
+        "values": ["some-picture-id"]
       }
     }
   }
