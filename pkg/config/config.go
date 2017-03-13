@@ -170,11 +170,12 @@ func UseViper(v *viper.Viper) error {
 			URL: couchURL.String(),
 		},
 		Mail: &gomail.DialerOptions{
-			Host:       v.GetString("mail.host"),
-			Port:       v.GetInt("mail.port"),
-			Username:   v.GetString("mail.username"),
-			Password:   v.GetString("mail.password"),
-			DisableTLS: v.GetBool("mail.disable_tls"),
+			Host:                      v.GetString("mail.host"),
+			Port:                      v.GetInt("mail.port"),
+			Username:                  v.GetString("mail.username"),
+			Password:                  v.GetString("mail.password"),
+			DisableTLS:                v.GetBool("mail.disable_tls"),
+			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
 		},
 		Logger: Logger{
 			Level: v.GetString("log.level"),
