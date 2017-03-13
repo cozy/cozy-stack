@@ -15,27 +15,28 @@ func (h *hub) Publish(e *Event) {
 	panic("Wrong usage : you should not publish on central hub.")
 }
 
-func (h *hub) getTopic(instance, t string, createIfNone bool) *topic {
-	if !createIfNone {
-		h.RLock()
-		defer h.RUnlock()
-	} else {
-		h.Lock()
-		defer h.Unlock()
-	}
+func (h *hub) getTopic(instance, t string) *topic {
+	h.RLock()
+	defer h.RUnlock()
+	return h.topics[topicKey(instance, t)]
+}
+
+func (h *hub) getTopicOrCreate(instance, t string) *topic {
+	h.Lock()
+	defer h.Unlock()
 	key := topicKey(instance, t)
 	it, exists := h.topics[key]
-	if !exists && createIfNone {
-		h.topics[key] = makeTopic(h, key)
-		it = h.topics[key]
+	if !exists {
+		it = makeTopic(h, key)
+		h.topics[key] = it
 	}
 	return it
 }
 
 func (h *hub) Subscribe(t string) EventChannel {
-	gt := h.getTopic(global, t, true)
+	gt := h.getTopicOrCreate(global, t)
 	sub := makeSub([]*topic{gt})
-	go func() { gt.subscribe <- sub }()
+	gt.subscribe <- sub
 	return sub
 }
 
@@ -51,22 +52,21 @@ type instancehub struct {
 }
 
 func (ih *instancehub) Publish(e *Event) {
-	it := ih.mainHub.getTopic(ih.instance, e.DocType, false)
+	it := ih.mainHub.getTopic(ih.instance, e.DocType)
 	if it != nil {
-		it.publish(e)
+		it.broadcast <- e
 	}
 	e.Instance = ih.instance
-	gt := ih.mainHub.getTopic(global, e.DocType, false)
+	gt := ih.mainHub.getTopic(global, e.DocType)
 	if gt != nil {
-		gt.publish(e)
+		gt.broadcast <- e
 	}
 }
 
 func (ih *instancehub) Subscribe(t string) EventChannel {
-	it := ih.mainHub.getTopic(ih.instance, t, true)
+	it := ih.mainHub.getTopicOrCreate(ih.instance, t)
 	sub := makeSub([]*topic{it})
-	go func() { it.subscribe <- sub }()
-
+	it.subscribe <- sub
 	return sub
 }
 

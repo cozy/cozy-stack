@@ -35,6 +35,4 @@ type EventChannel interface {
 	Read() <-chan *Event
 	// Close closes the channel
 	Close() error
-	// Close returns a
-	CloseNotify() <-chan bool
 }

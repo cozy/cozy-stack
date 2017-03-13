@@ -9,15 +9,9 @@ type topic struct {
 	unsubscribe chan *sub
 	broadcast   chan *Event
 
-	empty chan bool
-
 	// set of this topic subs, it should only be manipulated by the topic
 	// loop goroutine
 	subs map[*sub]struct{}
-}
-
-func (t *topic) publish(e *Event) {
-	go func() { t.broadcast <- e }()
 }
 
 func topicKey(instance, doctype string) string {
@@ -30,13 +24,11 @@ func makeTopic(h *hub, key string) *topic {
 	topic := &topic{
 		hub:         h,
 		key:         key,
-		subscribe:   make(chan *sub),
-		unsubscribe: make(chan *sub),
-		broadcast:   make(chan *Event),
-		empty:       make(chan bool),
+		subscribe:   make(chan *sub, 1), // 1-sized buffer to be async
+		unsubscribe: make(chan *sub, 1), // 1-sized buffer to be async
+		broadcast:   make(chan *Event, 10),
 		subs:        make(map[*sub]struct{}),
 	}
-
 	go topic.loop()
 	return topic
 }
@@ -46,16 +38,17 @@ func (t *topic) loop() {
 		select {
 		case e := <-t.broadcast:
 			for s := range t.subs {
-				s.send <- e
+				if !s.closed() {
+					s.send <- e
+				}
 			}
-
 		case s := <-t.subscribe:
 			t.subs[s] = struct{}{}
-
 		case s := <-t.unsubscribe:
 			delete(t.subs, s)
 			if len(t.subs) == 0 {
 				t.hub.remove(t)
+				return
 			}
 		}
 	}

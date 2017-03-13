@@ -1,16 +1,20 @@
 package realtime
 
+import (
+	"errors"
+	"sync/atomic"
+)
+
 // Subscription to multiple hub channels.
 type sub struct {
 	topics []*topic
-	closed chan bool
 	send   chan *Event
+	c      uint32 // mark whether or not the sub is closed
 }
 
 func makeSub(topics []*topic) *sub {
 	return &sub{
 		topics: topics,
-		closed: make(chan bool, 1),
 		send:   make(chan *Event),
 	}
 }
@@ -20,21 +24,18 @@ func (s *sub) Read() <-chan *Event {
 	return s.send
 }
 
-// Close removes subscriber from channel.
-func (s *sub) Close() error {
-	go func() {
-		for _, t := range s.topics {
-			t.unsubscribe <- s
-		}
-	}()
-	go func() {
-		s.closed <- true
-		close(s.send)
-	}()
-	return nil
+func (s *sub) closed() bool {
+	return atomic.LoadUint32(&s.c) == 1
 }
 
-// CloseNotify returns channel to handle close event.
-func (s *sub) CloseNotify() <-chan bool {
-	return s.closed
+// Close removes subscriber from channel.
+func (s *sub) Close() error {
+	if !atomic.CompareAndSwapUint32(&s.c, 0, 1) {
+		return errors.New("closing a closed subscription")
+	}
+	for _, t := range s.topics {
+		t.unsubscribe <- s
+	}
+	close(s.send)
+	return nil
 }
