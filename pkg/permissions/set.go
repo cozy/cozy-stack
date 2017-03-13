@@ -72,7 +72,7 @@ func (ps *Set) UnmarshalJSON(j []byte) error {
 }
 
 // UnmarshalScopeString parse a Scope string into a permission Set
-func UnmarshalScopeString(in string) (*Set, error) {
+func UnmarshalScopeString(in string) (Set, error) {
 	parts := strings.Split(in, ruleSep)
 	out := make(Set, len(parts))
 
@@ -88,7 +88,7 @@ func UnmarshalScopeString(in string) (*Set, error) {
 		out[i] = s
 	}
 
-	return &out, nil
+	return out, nil
 }
 
 // Some returns true if the predicate return true for any of the rule.
@@ -131,7 +131,7 @@ func (ps *Set) RuleInSubset(r2 Rule) bool {
 
 // IsSubSetOf returns true if any document allowed by the set
 // would have been allowed by parent.
-func (ps *Set) IsSubSetOf(parent *Set) bool {
+func (ps *Set) IsSubSetOf(parent Set) bool {
 	for _, r := range *ps {
 		if !parent.RuleInSubset(r) {
 			return false

@@ -18,7 +18,7 @@ type Permission struct {
 	PRev        string            `json:"_rev,omitempty"`
 	Type        string            `json:"type,omitempty"`
 	SourceID    string            `json:"source_id,omitempty"`
-	Permissions *Set              `json:"permissions,omitempty"`
+	Permissions Set               `json:"permissions,omitempty"`
 	ExpiresAt   int               `json:"expires_at,omitempty"`
 	Codes       map[string]string `json:"codes,omitempty"`
 }
@@ -79,8 +79,8 @@ func (p *Permission) Links() *jsonapi.LinksList {
 
 // AddRules add some rules to the permission doc
 func (p *Permission) AddRules(rules ...Rule) {
-	newperms := append(*p.Permissions, rules...)
-	p.Permissions = &newperms
+	newperms := append(p.Permissions, rules...)
+	p.Permissions = newperms
 }
 
 // PatchCodes replace the permission docs codes
@@ -114,7 +114,7 @@ func GetByID(db couchdb.Database, id string) (*Permission, error) {
 func GetForRegisterToken() *Permission {
 	return &Permission{
 		Type: TypeRegister,
-		Permissions: &Set{
+		Permissions: Set{
 			Rule{
 				Verbs:  Verbs(GET),
 				Type:   consts.Settings,
@@ -206,7 +206,7 @@ func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error
 	doc := &Permission{
 		Type:        "app",
 		SourceID:    consts.Apps + "/" + slug,
-		Permissions: &set, // @TODO some validation?
+		Permissions: set, // @TODO some validation?
 	}
 
 	err := couchdb.CreateDoc(db, doc)
@@ -218,7 +218,7 @@ func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error
 }
 
 // CreateShareSet creates a Permission doc for sharing
-func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set *Set) (*Permission, error) {
+func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set) (*Permission, error) {
 
 	if parent.Type == TypeRegister || parent.Type == TypeSharing {
 		return nil, ErrOnlyAppCanCreateSubSet
@@ -262,7 +262,7 @@ func Force(db couchdb.Database, slug string, set Set) error {
 	doc := &Permission{
 		Type:        TypeApplication,
 		SourceID:    consts.Apps + "/" + slug,
-		Permissions: &set, // @TODO some validation?
+		Permissions: set, // @TODO some validation?
 	}
 	if existing == nil {
 		return couchdb.CreateDoc(db, doc)

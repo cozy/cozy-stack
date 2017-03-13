@@ -18,7 +18,7 @@ type Sharing struct {
 	SharingID   string `json:"sharing_id,omitempty"`
 	SharingType string `json:"sharing_type"`
 
-	Permissions      *permissions.Set   `json:"permissions,omitempty"`
+	Permissions      permissions.Set    `json:"permissions,omitempty"`
 	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
 }
 

@@ -32,7 +32,7 @@ var sharing = &Sharing{
 	SharingType:      consts.OneShotSharing,
 	RecipientsStatus: []*RecipientStatus{recStatus},
 	SharingID:        "sparta-id",
-	Permissions:      &permissions.Set{},
+	Permissions:      permissions.Set{},
 }
 
 func TestLogErrorAndSetRecipientStatus(t *testing.T) {

@@ -436,8 +436,8 @@ func TestListPermission(t *testing.T) {
 		}}
 
 	codes := map[string]string{"bob": "secret"}
-	permissions.CreateShareSet(testInstance, parent, codes, &p1)
-	permissions.CreateShareSet(testInstance, parent, codes, &p2)
+	permissions.CreateShareSet(testInstance, parent, codes, p1)
+	permissions.CreateShareSet(testInstance, parent, codes, p2)
 
 	reqbody := strings.NewReader(`{
 "data": [

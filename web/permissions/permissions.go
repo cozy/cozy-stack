@@ -150,7 +150,7 @@ func patchPermission(c echo.Context) error {
 		return err
 	}
 
-	patchSet := patch.Permissions != nil && len(*patch.Permissions) > 0
+	patchSet := patch.Permissions != nil && len(patch.Permissions) > 0
 	patchCodes := len(patch.Codes) > 0
 
 	if patchCodes == patchSet {
@@ -175,7 +175,7 @@ func patchPermission(c echo.Context) error {
 		if !patch.Permissions.IsSubSetOf(current.Permissions) {
 			return ErrForbidden
 		}
-		toPatch.AddRules(*patch.Permissions...)
+		toPatch.AddRules(patch.Permissions...)
 	}
 
 	if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
