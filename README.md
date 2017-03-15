@@ -21,86 +21,24 @@ hardware where no one profiles you.
 
 This repository contains the new version of Cozy Cloud which aims to be
 simpler for hosting thousands of instances. It should also bring for the
-self-hosted the possibility to host several instances on the same server,  and
+self-hosted the possibility to host several instances on the same server, and
 improve many things, starting with security and reliability.
 
 Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
 for questions and suggestions.
 
-## Dependencies
-
-* A SMTP server
-* CouchDB 2.0.0
-
-To install CouchDB 2.0.0 through Docker, take a look at our [Docker specific documentation](docs/docker.md).
 
 ## Installing a `cozy-stack`
 
-We do not yet provide releases binaries, but we will soon and you won't have to install go in order to run `cozy-stack`
+You can follow the [Install guide](docs/INSTALL.md) and the [configuration
+documentation](docs/config.md).
 
-### Using `go`
-
-[Install go](https://golang.org/doc/install), version >= 1.7. With `go` installed and configured, you can run the following command:
-
-```
-go get github.com/cozy/cozy-stack
-```
-
-This will fetch the sources in `$GOPATH/src/github.com/cozy/cozy-stack` and build a binary in `$GOPATH/bin/cozy-stack`.
-
-Don't forget to add your `$GOPATH` to your `$PATH` in your `*rc` file so that you can execute the binary without entering its full path.
-
-```
-export PATH="$GOPATH:$PATH"
-```
-
-### Add an instance and run
-
-You can configure your `cozy-stack` using a configuration file or different comand line arguments. You can have more informations on our [Configuration page](docs/config.md).
-
-Assuming CouchDB is installed and running on default port `5984`, you can
-start the server:
-
-```bash
-cozy-stack serve
-```
-
-And then create an instance for development:
-
-```bash
-cozy-stack instances add --dev "localhost:8080"
-```
-
-The cozy-stack server listens on http://localhost:8080/ by default. See `cozy-stack --help` for more informations.
-
-Make sure the full stack is up with:
-
-```bash
-curl -H 'Accept: application/json' 'http://localhost:8080/status/'
-```
-
-## Configuration
-
-See [configuration documentation](/docs/config.md).
 
 ## How to contribute?
 
 We are eager for contributions and very happy when we receive them! It can
 code, of course, but it can also take other forms. The workflow is explained
 in [the contributing guide](docs/CONTRIBUTING.md).
-
-There are some useful commands to know in order to develop with the go code of cozy-stack:
-
-```bash
-go get -u github.com/cozy/cozy-stack
-cd $GOPATH/src/github.com/cozy/cozy-stack
-
-go get -t -u ./...      # To install or update the go dependencies
-go test -v ./...        # To launch the tests
-go run main.go serve    # To start the API server
-godoc -http=:6060       # To start the documentation server
-                        # Open http://127.0.0.1:6060/pkg/github.com/cozy/cozy-stack/
-```
 
 
 ## Community

@@ -32,8 +32,9 @@ a cozy.
 }
 
 var installAppCmd = &cobra.Command{
-	Use:   "install [slug] [sourceurl]",
-	Short: "Install an application with the specified slug name from the given source URL.",
+	Use:     "install [slug] [sourceurl]",
+	Short:   "Install an application with the specified slug name from the given source URL.",
+	Example: "$ cozy-stack apps install --domain cozy.local:8080 files 'git://github.com/cozy-files-v3.git#build'",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
 			return cmd.Help()

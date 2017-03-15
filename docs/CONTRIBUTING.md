@@ -112,6 +112,23 @@ Post a comment in the pull request afterwards; GitHub does not send out
 notifications when you add commits.
 
 
+Useful commands
+---------------
+
+There are some useful commands to know in order to develop with the go code of cozy-stack:
+
+```bash
+go get -u github.com/cozy/cozy-stack
+cd $(go env GOPATH)/src/github.com/cozy/cozy-stack
+
+go get -t -u ./...      # To install or update the go dependencies
+go test -v ./...        # To launch the tests
+go run main.go serve    # To start the API server
+godoc -http=:6060       # To start the documentation server
+                        # Open http://127.0.0.1:6060/pkg/github.com/cozy/cozy-stack/
+```
+
+
 Writing documentation
 ---------------------
 

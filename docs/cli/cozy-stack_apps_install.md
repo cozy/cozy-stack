@@ -11,6 +11,12 @@ Install an application with the specified slug name from the given source URL.
 cozy-stack apps install [slug] [sourceurl]
 ```
 
+### Examples
+
+```
+$ cozy-stack apps install --domain cozy.local:8080 files 'git://github.com/cozy-files-v3.git#build'
+```
+
 ### Options inherited from parent commands
 
 ```
