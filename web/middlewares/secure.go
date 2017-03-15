@@ -49,6 +49,8 @@ const (
 	CSPSrcSelf CSPSource = iota
 	// CSPSrcData is the 'data:' option of a CSP source.
 	CSPSrcData
+	// CSPSrcBlob is the 'blob:' option of a CSP source.
+	CSPSrcBlob
 	// CSPSrcParent adds the parent domain as an eligible CSP source.
 	CSPSrcParent
 	// CSPSrcParentSubdomains add all the parent's subdomains as eligibles CSP
@@ -142,6 +144,8 @@ func makeCSPHeader(parent, header string, sources []CSPSource) string {
 			headers[i] = "'self'"
 		case CSPSrcData:
 			headers[i] = "data:"
+		case CSPSrcBlob:
+			headers[i] = "blob:"
 		case CSPSrcParent:
 			headers[i] = parent
 		case CSPSrcParentSubdomains:
