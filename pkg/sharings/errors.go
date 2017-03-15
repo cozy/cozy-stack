@@ -25,4 +25,8 @@ var (
 	ErrNoOAuthClient = errors.New("No OAuth client was found")
 	//ErrSharingIDNotUnique is used when several occurences of the same sharing id are found
 	ErrSharingIDNotUnique = errors.New("Several sharings with this id found")
+	// ErrSharerDidNotReceiveAnswer is used when a recipient has not received a
+	// http.StatusOK after sending her answer to the sharer.
+	ErrSharerDidNotReceiveAnswer = errors.New(`Sharer did not receive the
+        answer`)
 )

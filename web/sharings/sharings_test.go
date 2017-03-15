@@ -25,6 +25,25 @@ var clientOAuth *oauth.Client
 var clientID string
 var instanceURL *url.URL
 
+func TestRecipientRefusedSharingWithNoState(t *testing.T) {
+	res, err := postForm("/sharings/formRefuse", &url.Values{
+		"state": {""},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+}
+
+func TestRecipientRefusedSharingWithNoClientID(t *testing.T) {
+	res, err := postForm("/sharings/formRefuse", &url.Values{
+		"state":     {"dummystate"},
+		"client_id": {""},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+}
+
 func TestSharingAnswerBadState(t *testing.T) {
 	state := ""
 	res, err := postJSON("/sharings/answer", echo.Map{
@@ -46,7 +65,10 @@ func TestSharingAnswerBadClientID(t *testing.T) {
 }
 
 func TestSharingRequestNoScope(t *testing.T) {
-	urlVal := url.Values{}
+	urlVal := url.Values{
+		"state":        {"dummystate"},
+		"sharing_type": {consts.OneShotSharing},
+	}
 	res, err := requestGET("/sharings/request", urlVal)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
@@ -185,6 +207,13 @@ func requestGET(u string, v url.Values) (*http.Response, error) {
 		return http.Get(ts.URL + u + "?" + reqURL)
 	}
 	return http.Get(ts.URL + u)
+}
+
+func postForm(u string, v *url.Values) (*http.Response, error) {
+	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	return client.Do(req)
 }
 
 func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
