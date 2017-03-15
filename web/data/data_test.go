@@ -561,8 +561,7 @@ type indexCreationResponse struct {
 }
 
 func TestDefineIndex(t *testing.T) {
-	var def map[string]interface{}
-	def = M{"index": M{"fields": S{"foo"}}}
+	var def = M{"index": M{"fields": S{"foo"}}}
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
@@ -580,8 +579,7 @@ func TestDefineIndex(t *testing.T) {
 }
 
 func TestReDefineIndex(t *testing.T) {
-	var def map[string]interface{}
-	def = M{"index": M{"fields": S{"foo"}}}
+	var def = M{"index": M{"fields": S{"foo"}}}
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Set("Content-Type", "application/json")
@@ -602,8 +600,7 @@ func TestDefineIndexUnexistingDoctype(t *testing.T) {
 
 	couchdb.DeleteDB(testInstance, "io.cozy.nottype")
 
-	var def map[string]interface{}
-	def = M{"index": M{"fields": S{"foo"}}}
+	var def = M{"index": M{"fields": S{"foo"}}}
 	var url = ts.URL + "/data/io.cozy.nottype/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
@@ -628,8 +625,7 @@ func TestFindDocuments(t *testing.T) {
 	_ = getDocForTest()
 	_ = getDocForTest()
 
-	var def map[string]interface{}
-	def = M{"index": M{"fields": S{"test"}}}
+	var def = M{"index": M{"fields": S{"test"}}}
 	var url = ts.URL + "/data/" + Type + "/_index"
 	req, _ := http.NewRequest("POST", url, jsonReader(&def))
 	req.Header.Add("Host", Host)
@@ -640,8 +636,7 @@ func TestFindDocuments(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, out.Error, "should have no error")
 
-	var query map[string]interface{}
-	query = M{"selector": M{"test": "value"}}
+	var query = M{"selector": M{"test": "value"}}
 	var url2 = ts.URL + "/data/" + Type + "/_find"
 	req, _ = http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Host", Host)
@@ -657,8 +652,7 @@ func TestFindDocuments(t *testing.T) {
 }
 
 func TestFindDocumentsWithoutIndex(t *testing.T) {
-	var query map[string]interface{}
-	query = M{"selector": M{"no-index-for-this-field": "value"}}
+	var query = M{"selector": M{"no-index-for-this-field": "value"}}
 	var url2 = ts.URL + "/data/" + Type + "/_find"
 	req, _ := http.NewRequest("POST", url2, jsonReader(&query))
 	req.Header.Add("Host", Host)
@@ -697,7 +691,7 @@ func TestGetChanges(t *testing.T) {
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Host", Host)
 	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
-	out, res, err = doRequest(req, nil)
+	out, _, err = doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Len(t, out["results"].([]interface{}), 2)
 
@@ -705,7 +699,7 @@ func TestGetChanges(t *testing.T) {
 	req, _ = http.NewRequest("GET", url, nil)
 	req.Header.Add("Host", Host)
 	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
-	out, res, err = doRequest(req, nil)
+	out, _, err = doRequest(req, nil)
 	assert.NoError(t, err)
 	assert.Len(t, out["results"].([]interface{}), 3)
 }

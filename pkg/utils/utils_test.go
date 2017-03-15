@@ -36,6 +36,8 @@ func TestRandomStringConcurrentAccess(t *testing.T) {
 	ms := make(map[string]struct{})
 	var mu sync.Mutex
 
+	var gotDup = false
+
 	for i := 0; i < n; i++ {
 		go func() {
 			s := RandomString(10)
@@ -43,13 +45,17 @@ func TestRandomStringConcurrentAccess(t *testing.T) {
 			mu.Lock()
 			defer mu.Unlock()
 			if _, ok := ms[s]; ok {
-				t.Fatal("should be unique strings")
+				gotDup = true
 			}
 			var q struct{}
 			ms[s] = q
 		}()
 	}
 	wg.Wait()
+
+	if gotDup {
+		t.Fatal("should be unique strings")
+	}
 }
 
 func TestStripPort(t *testing.T) {
