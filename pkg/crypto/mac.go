@@ -117,8 +117,7 @@ func DecodeAuthMessage(c *MACConfig, enc []byte) ([]byte, error) {
 		if len(dec) < macLen {
 			return nil, errMACInvalid
 		}
-		var mac []byte
-		mac = dec[len(dec)-macLen:]
+		var mac = dec[len(dec)-macLen:]
 		dec = dec[:len(dec)-macLen]
 		if !verifyMAC(c.Key, dec, mac) {
 			return nil, errMACInvalid
