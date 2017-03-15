@@ -568,7 +568,7 @@ func (i *Instance) RequestPassphraseReset() error {
 	}
 	// Send a mail containing the reset url for the user to actually reset its
 	// passphrase.
-	resetURL := i.PageURL("/passphrase_renew", url.Values{
+	resetURL := i.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(i.PassphraseResetToken)},
 	})
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, &workers.MailOptions{
