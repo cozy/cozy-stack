@@ -50,6 +50,9 @@ usage() {
 }
 
 do_prepare_ldflags() {
+	eval "$(go env)"
+
+	VERSION_OS_ARCH="${GOOS}-${GOARCH}"
 	VERSION_STRING=`git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
 		describe --tags --dirty 2> /dev/null | \
 		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
@@ -126,7 +129,7 @@ do_build() {
 	do_assets
 
 	if [ -z "${1}" ]; then
-		BINARY="cozy-stack-${VERSION_STRING}"
+		BINARY="cozy-stack-${VERSION_OS_ARCH}-${VERSION_STRING}"
 	else
 		BINARY="${1}"
 	fi
