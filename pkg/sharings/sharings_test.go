@@ -272,7 +272,7 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 				SharingID string `json:"state"`
 				ClientID  string `json:"client_id"`
 			}{}
-			err = json.Unmarshal(body, &data)
+			_ = json.Unmarshal(body, &data)
 			assert.Equal(t, testSharingID, data.SharingID)
 			assert.Equal(t, testClientID, data.ClientID)
 
@@ -288,6 +288,9 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 	}
 
 	docSharingTestID, err := insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID)
+	if err != nil {
+		t.Fail()
+	}
 
 	err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
 	assert.NoError(t, err)
