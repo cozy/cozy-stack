@@ -8,6 +8,7 @@ Table of contents
 
 ## Usage
 
+- [Install the cozy-stack](INSTALL.md)
 - [Manpages of the command-line tool](cli/cozy-stack.md)
 - [Configuration file](config.md)
 - [Managing Instances](instance.md)
