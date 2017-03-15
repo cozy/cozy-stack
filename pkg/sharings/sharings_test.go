@@ -10,13 +10,13 @@ import (
 	"testing"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
@@ -80,7 +80,7 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 	clientID := "fake client"
 
-	client := &oauth.Client{
+	client := &auth.Client{
 		ClientID: clientID,
 	}
 	recipient := &Recipient{
@@ -145,7 +145,7 @@ func TestSharingRefusedSuccess(t *testing.T) {
 	state := "stateoftheart2"
 	clientID := "thriftshopclient"
 
-	client := &oauth.Client{
+	client := &auth.Client{
 		ClientID: clientID,
 	}
 	recipient := &Recipient{

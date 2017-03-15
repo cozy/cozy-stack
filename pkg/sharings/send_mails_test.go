@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +14,7 @@ import (
 
 var rec = &Recipient{
 	URL: "",
-	Client: &oauth.Client{
+	Client: &auth.Client{
 		ClientID:     "",
 		RedirectURIs: []string{},
 	},

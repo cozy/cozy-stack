@@ -1,9 +1,9 @@
 package sharings
 
 import (
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
@@ -13,7 +13,7 @@ type Recipient struct {
 	RRev   string `json:"_rev,omitempty"`
 	Email  string `json:"email"`
 	URL    string `json:"url"`
-	Client *oauth.Client
+	Client *auth.Client
 }
 
 // ID returns the recipient qualified identifier
