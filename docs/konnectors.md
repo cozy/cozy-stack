@@ -320,6 +320,7 @@ On the host create the file /etc/rkt/net.d/10-containers.conf
 
 and run your container with the "--net=bridge" option. That way, a new interface is available in the container and gives you access to the host.
 
+
 ## Konnector install and run details
 
 ### Install
@@ -432,6 +433,31 @@ will have to be indicated in a V2 "my account" application update. After that, i
 to create the accounts associated to each activated konnectors an link the konnectors to these
 accounts in a migration script.
 
+
+
+## Study on konnectors installation on VFS
+
+The VFS is slow and installing npm packages on it will cause some performance problem. We are
+trying to find solution to handle that.
+
+We found 3 possible solutions :
+
+- Install the konnector on VFS as tar.gz files with all the dependencies included by the konnector
+  developper
+  * advantages : easy for the konnector developper, as performant as a cp, no nedd for a compiled
+    version of the konnector source, no duplication of code in the repo
+  * drawbacks : The source are not readable in files application then more complicated to study the
+    konnector source, not really nice... , still could take a lot of space on VFS
+- Use webpack with ```target: node``` option to make a node bundle of the dependencies
+  * advantages : the konnector itself stays in clear on the VFS
+  * drawbacks : forces a compilation of the sources and then a sync between the source and bundle in
+    the git repo by the konnector developper, forces konnector developpers to use webpack.
+- Install the npm dependencies with yarn in an immutable cache (--cache-folder option) in a
+  directory like deps-${konnector-git-sha1} not in VFS.
+  * advantages : easier for the konnector developper, no particular dependency handling, no
+    mandatory compilation, just a package.json in the git repository, the cache can be shared by
+    instances
+  * drawbacks : node only solution, maybe more work on the cozy-stack side
 
 ## TODO
 
