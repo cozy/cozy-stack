@@ -442,7 +442,7 @@ func insertSharingDocumentInDB(db couchdb.Database, sharingID, clientID string) 
 	}
 	sharing.M["sharing_id"] = sharingID
 	sharing.M["client_id"] = clientID
-	err := couchdb.CreateDoc(TestPrefix, sharing)
+	err := couchdb.CreateDoc(db, sharing)
 	if err != nil {
 		fmt.Printf("Error occurred while trying to insert document: %v\n", err)
 		return "", err
@@ -459,5 +459,5 @@ func insertClientDocumentInDB(db couchdb.Database, clientID, url string) error {
 	client.SetID(clientID)
 	client.M["client_uri"] = url
 
-	return couchdb.CreateNamedDocWithDB(TestPrefix, client)
+	return couchdb.CreateNamedDocWithDB(db, client)
 }
