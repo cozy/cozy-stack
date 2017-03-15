@@ -38,7 +38,6 @@ const domain = "cozy.example.net"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
-var instanceURL *url.URL
 
 var jar http.CookieJar
 var client *http.Client

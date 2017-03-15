@@ -1618,7 +1618,7 @@ func TestMain(m *testing.M) {
 		fmt.Println("Could not create temporary directory.")
 		os.Exit(1)
 	}
-	setup.AddCleanup(func() { os.RemoveAll(tempdir) })
+	setup.AddCleanup(func() error { return os.RemoveAll(tempdir) })
 
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 

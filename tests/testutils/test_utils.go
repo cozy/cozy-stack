@@ -68,10 +68,13 @@ func (c *TestSetup) CleanupAndDie(msg ...interface{}) {
 }
 
 // AddCleanup adds a function to be run when the test is finished.
-func (c *TestSetup) AddCleanup(f func()) {
+func (c *TestSetup) AddCleanup(f func() error) {
 	next := c.cleanup
 	c.cleanup = func() {
-		f()
+		err := f()
+		if err != nil {
+			fmt.Println("Error while cleanup", err)
+		}
 		next()
 	}
 }
@@ -83,7 +86,7 @@ func (c *TestSetup) GetTmpDirectory() string {
 	if err != nil {
 		c.CleanupAndDie("Could not create temporary directory.", err)
 	}
-	c.AddCleanup(func() { os.RemoveAll(tempdir) })
+	c.AddCleanup(func() error { return os.RemoveAll(tempdir) })
 	return tempdir
 }
 
@@ -101,13 +104,16 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	} else {
 		c.host = opts[0].Domain
 	}
-	instance.Destroy(c.host)
+	_, err := instance.Destroy(c.host)
+	if err != nil && err != instance.ErrNotFound {
+		c.CleanupAndDie("Error while destroying instance", err)
+	}
 	i, err := instance.Create(opts[0])
 
 	if err != nil {
 		c.CleanupAndDie("Cannot create test instance", err)
 	}
-	c.AddCleanup(func() { instance.Destroy(i.Domain) })
+	c.AddCleanup(func() error { _, err := instance.Destroy(i.Domain); return err })
 	c.inst = i
 	return i
 }
@@ -148,7 +154,7 @@ func (c *TestSetup) GetTestServer(prefix string, routes func(*echo.Group),
 	}
 	handler.HTTPErrorHandler = errors.ErrorHandler
 	ts := httptest.NewServer(handler)
-	c.AddCleanup(func() { ts.Close() })
+	c.AddCleanup(func() error { ts.Close(); return nil })
 	c.ts = ts
 	return ts
 }
@@ -183,8 +189,14 @@ func (j *CookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 // the setup instance URL instead.
 func (c *TestSetup) GetCookieJar() http.CookieJar {
 	instance := c.GetTestInstance()
-	instanceURL, _ := url.Parse("https://" + instance.Domain + "/")
-	j, _ := cookiejar.New(nil)
+	instanceURL, err := url.Parse("https://" + instance.Domain + "/")
+	if err != nil {
+		c.CleanupAndDie("Cant create cookie jar url", err)
+	}
+	j, err := cookiejar.New(nil)
+	if err != nil {
+		c.CleanupAndDie("Cant create cookie jar", err)
+	}
 	return &CookieJar{
 		Jar: j,
 		URL: instanceURL,

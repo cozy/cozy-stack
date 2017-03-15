@@ -606,6 +606,7 @@ func TestGetChanges(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	out, res, err = doRequest(req, nil)
 	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
 	assert.Len(t, out["results"].([]interface{}), 2)
 
 	url = ts.URL + "/data/" + Type + "/_changes?since=" + seqno
@@ -613,6 +614,7 @@ func TestGetChanges(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 	out, res, err = doRequest(req, nil)
 	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
 	assert.Len(t, out["results"].([]interface{}), 3)
 }
 
