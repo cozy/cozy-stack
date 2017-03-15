@@ -21,20 +21,21 @@ hardware where no one profiles you.
 
 This repository contains the new version of Cozy Cloud which aims to be
 simpler for hosting thousands of instances. It should also bring for the
-self-hosted the possibility to host several instances on the same server,  and
+self-hosted the possibility to host several instances on the same server, and
 improve many things, starting with security and reliability.
 
 Feel free to [open an issue](https://github.com/cozy/cozy-stack/issues/new)
 for questions and suggestions.
 
-## Dependencies
+
+## Installing a `cozy-stack`
+
+### Dependencies
 
 * A SMTP server
 * CouchDB 2.0.0
 
 To install CouchDB 2.0.0 through Docker, take a look at our [Docker specific documentation](docs/docker.md).
-
-## Installing a `cozy-stack`
 
 ### Download an official release
 
@@ -87,28 +88,16 @@ curl -H 'Accept: application/json' 'http://localhost:8080/status/'
 You are now ready for doing the [onboarding](docs/onboarding.md) of your
 instance.
 
-## Configuration
+### Configuration
 
 See [configuration documentation](docs/config.md).
+
 
 ## How to contribute?
 
 We are eager for contributions and very happy when we receive them! It can
 code, of course, but it can also take other forms. The workflow is explained
 in [the contributing guide](docs/CONTRIBUTING.md).
-
-There are some useful commands to know in order to develop with the go code of cozy-stack:
-
-```bash
-go get -u github.com/cozy/cozy-stack
-cd $GOPATH/src/github.com/cozy/cozy-stack
-
-go get -t -u ./...      # To install or update the go dependencies
-go test -v ./...        # To launch the tests
-go run main.go serve    # To start the API server
-godoc -http=:6060       # To start the documentation server
-                        # Open http://127.0.0.1:6060/pkg/github.com/cozy/cozy-stack/
-```
 
 
 ## Community
