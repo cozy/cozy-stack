@@ -213,8 +213,10 @@ func (r *Request) RegisterClient(c *Client) (*Client, error) {
 // code.
 func (r *Request) GetAccessToken(c *Client, code string) (*AccessToken, error) {
 	q := url.Values{
-		"grant_type": {"authorization_code"},
-		"code":       {code},
+		"grant_type":    {"authorization_code"},
+		"code":          {code},
+		"client_id":     {c.ClientID},
+		"client_secret": {c.ClientSecret},
 	}
 	return r.retrieveToken(c, nil, q)
 }
@@ -223,23 +225,30 @@ func (r *Request) GetAccessToken(c *Client, code string) (*AccessToken, error) {
 // access token.
 func (r *Request) RefreshToken(c *Client, t *AccessToken) (*AccessToken, error) {
 	q := url.Values{
-		"grant_type": {"refresh_token"},
-		"code":       {t.RefreshToken},
+		"grant_type":    {"refresh_token"},
+		"code":          {t.RefreshToken},
+		"client_id":     {c.ClientID},
+		"client_secret": {c.ClientSecret},
 	}
 	return r.retrieveToken(c, t, q)
 }
 
 func (r *Request) retrieveToken(c *Client, t *AccessToken, q url.Values) (*AccessToken, error) {
-	res, err := r.req(&request.Options{
-		Method:     "GET",
-		Path:       "/auth/access_token",
-		Authorizer: t,
-		Body:       strings.NewReader(q.Encode()),
+	opts := &request.Options{
+		Method: "POST",
+		Path:   "/auth/access_token",
+		Body:   strings.NewReader(q.Encode()),
 		Headers: request.Headers{
 			"Content-Type": "application/x-www-form-urlencoded",
 			"Accept":       "application/json",
 		},
-	})
+	}
+	if t != nil {
+		opts.Authorizer = t
+	}
+
+	res, err := r.req(opts)
+
 	if err != nil {
 		return nil, err
 	}
