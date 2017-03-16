@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -15,11 +16,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
 var ts *httptest.Server
+var ts2 *httptest.Server
 var testInstance *instance.Instance
 var clientOAuth *oauth.Client
 var clientID string
@@ -53,6 +56,27 @@ func TestSharingAnswerBadState(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestAddRecipientNoURL(t *testing.T) {
+	email := "mailme@maybe"
+	res, err := postJSON("/sharings/recipient", echo.Map{
+		"email": email,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestAddRecipientSuccess(t *testing.T) {
+	email := "mailme@maybe"
+	url := strings.Split(ts2.URL, "http://")[1]
+	res, err := postJSON("/sharings/recipient", echo.Map{
+		"url":   url,
+		"email": email,
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, 201, res.StatusCode)
 }
 
 func TestSharingAnswerBadClientID(t *testing.T) {
@@ -187,21 +211,29 @@ func TestCreateSharingSuccess(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	setup := testutils.NewSetup(m, "sharing_test")
-	testInstance = setup.GetTestInstance()
-	instanceURL, _ = url.Parse("https://" + testInstance.Domain + "/")
+
+	setup := testutils.NewSetup(m, "sharing_test_alice")
+	setup2 := testutils.NewSetup(m, "sharing_test_bob")
+	testInstance = setup.GetTestInstance(&instance.Options{
+		PublicName: "Alice",
+	})
+	_ = setup2.GetTestInstance(&instance.Options{
+		PublicName: "Bob",
+	})
 
 	jar = setup.GetCookieJar()
 	client = &http.Client{
 		CheckRedirect: noRedirect,
 		Jar:           jar,
 	}
-
 	clientOAuth, _ = setup.GetTestClient("")
 	clientID = clientOAuth.ClientID
 
 	ts = setup.GetTestServer("/sharings", Routes)
+	ts2 = setup2.GetTestServer("/auth", auth.Routes)
+
 	os.Exit(setup.Run())
+	os.Exit(setup2.Run())
 }
 
 func postJSON(u string, v echo.Map) (*http.Response, error) {

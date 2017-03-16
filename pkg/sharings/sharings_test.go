@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cozy/checkup"
@@ -18,7 +19,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	webAuth "github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,6 +31,109 @@ var instanceSecret = crypto.GenerateRandomBytes(64)
 var in = &instance.Instance{
 	OAuthSecret: instanceSecret,
 	Domain:      "test-sharing.sparta",
+}
+
+var ts *httptest.Server
+
+func createInstance(domain string) *instance.Instance {
+	instance.Destroy(domain)
+	testInstance, err := instance.Create(&instance.Options{
+		Domain: domain,
+		Locale: "en",
+	})
+	if err != nil {
+		fmt.Println("Could not create test instance.", err)
+		os.Exit(1)
+	}
+	return testInstance
+}
+
+func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Set("instance", i)
+			return next(c)
+		}
+	}
+}
+
+func createSettings(instance *instance.Instance) {
+	settingsDoc := &couchdb.JSONDoc{
+		Type: consts.Settings,
+		M:    make(map[string]interface{}),
+	}
+	settingsDoc.SetID(consts.InstanceSettingsID)
+	err := couchdb.CreateNamedDocWithDB(instance, settingsDoc)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func addPublicName(t *testing.T) {
+	publicName := "El Shareto"
+	doc := &couchdb.JSONDoc{
+		Type: consts.Settings,
+		M:    make(map[string]interface{}),
+	}
+
+	err := couchdb.GetDoc(in, consts.Settings, consts.InstanceSettingsID, doc)
+	assert.NoError(t, err)
+	doc.M["public_name"] = publicName
+
+	err = couchdb.UpdateDoc(in, doc)
+	assert.NoError(t, err)
+}
+
+func TestRegisterNoURL(t *testing.T) {
+	recipient := &Recipient{}
+	err := recipient.Register(in)
+	assert.Error(t, err)
+	assert.Equal(t, ErrRecipientHasNoURL, err)
+}
+
+func TestRegisterNoPublicName(t *testing.T) {
+	recipient := &Recipient{
+		URL: "toto.fr",
+	}
+	err := recipient.Register(in)
+	assert.Error(t, err)
+	assert.Equal(t, ErrPublicNameNotDefined, err)
+}
+
+func TestRegisterRecipientNotFound(t *testing.T) {
+	recipient := &Recipient{
+		URL: "toto.fr",
+	}
+	addPublicName(t)
+
+	err := recipient.Register(in)
+	assert.Error(t, err)
+}
+
+func TestRegisterSuccess(t *testing.T) {
+	domain := "test-sharing.xerxes"
+	testInstance := createInstance(domain)
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	handler.Use(injectInstance(testInstance))
+	webAuth.Routes(handler.Group("/auth"))
+	ts = httptest.NewServer(handler)
+
+	url := strings.Split(ts.URL, "http://")[1]
+
+	recipient := &Recipient{
+		URL:   url,
+		Email: "xerxes@fr",
+	}
+
+	err := CreateRecipient(in, recipient)
+	assert.NoError(t, err)
+
+	err = recipient.Register(in)
+	assert.NoError(t, err)
+	assert.NotNil(t, recipient.Client)
+
 }
 
 func TestGetRecipient(t *testing.T) {
@@ -232,7 +339,7 @@ func TestRecipientRefusedSharingWhenResponseStatusCodeIsNotOK(t *testing.T) {
 	testSharingID := "SharingStatusNotOK"
 	testClientID := "ClientStatusNotOK"
 
-	ts := httptest.NewServer(http.HandlerFunc(
+	ts = httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusAlreadyReported)
@@ -259,7 +366,7 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 	testSharingID := "SharingSuccess"
 	testClientID := "ClientSucess"
 
-	ts := httptest.NewServer(http.HandlerFunc(
+	ts = httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -392,7 +499,7 @@ func TestMain(m *testing.M) {
 
 	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test need couchdb to run.")
+		fmt.Println("This test needs couchdb to run.")
 		os.Exit(1)
 	}
 
@@ -401,29 +508,23 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 	err = couchdb.ResetDB(in, consts.Settings)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 	err = couchdb.ResetDB(TestPrefix, consts.OAuthClients)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	settingsDoc := &couchdb.JSONDoc{
-		Type: consts.Settings,
-		M:    make(map[string]interface{}),
-	}
-	settingsDoc.SetID(consts.InstanceSettingsID)
-	err = couchdb.CreateNamedDocWithDB(in, settingsDoc)
+	err = couchdb.ResetDB(TestPrefix, consts.Recipients)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	createSettings(in)
 
 	err = couchdb.DefineIndex(TestPrefix, mango.IndexOnFields(consts.Sharings, "sharing_id"))
 	if err != nil {
@@ -433,7 +534,10 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
+	couchdb.DeleteDB(TestPrefix, consts.Recipients)
 	couchdb.DeleteDB(in, consts.Settings)
+	ts.Close()
+
 	os.Exit(res)
 }
 
