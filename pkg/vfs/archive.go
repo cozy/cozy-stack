@@ -68,7 +68,7 @@ func (a *Archive) GetEntries(c Context) ([]ArchiveEntry, error) {
 	if a.entries == nil {
 		entries := make([]ArchiveEntry, len(a.Files))
 		for i, root := range a.Files {
-			d, f, err := GetDirOrFileDocFromPath(c, root, false)
+			d, f, err := GetDirOrFileDocFromPath(c, root)
 			if err != nil {
 				return nil, err
 			}

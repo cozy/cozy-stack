@@ -36,10 +36,6 @@ type DirDoc struct {
 
 	// Directory path on VFS
 	Fullpath string `json:"path"`
-
-	parent *DirDoc
-	files  []*FileDoc
-	dirs   []*DirDoc
 }
 
 // ID returns the directory qualified identifier
@@ -75,44 +71,18 @@ func (d *DirDoc) Path(c Context) (string, error) {
 
 // Parent returns the parent directory document
 func (d *DirDoc) Parent(c Context) (*DirDoc, error) {
-	parent, err := getParentDir(c, d.parent, d.DirID)
-	if err != nil {
-		return nil, err
-	}
-	d.parent = parent
-	return parent, nil
+	return getParentDir(c, d.DirID)
 }
 
-// Links is used to generate a JSON-API link for the directory (part of
-// jsonapi.Object interface)
+// Links is part of the jsonapi.Object interface
 func (d *DirDoc) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + d.DocID}
 }
 
-// Relationships is used to generate the content relationship in JSON-API format
-// (part of the jsonapi.Object interface)
-//
-// TODO: pagination
+// Relationships is part of the jsonapi.Object interface
 func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
-	l := len(d.files) + len(d.dirs)
-	i := 0
-
-	data := make([]jsonapi.ResourceIdentifier, l)
-	for _, child := range d.dirs {
-		data[i] = jsonapi.ResourceIdentifier{ID: child.ID(), Type: child.DocType()}
-		i++
-	}
-
-	for _, child := range d.files {
-		data[i] = jsonapi.ResourceIdentifier{ID: child.ID(), Type: child.DocType()}
-		i++
-	}
-
-	contents := jsonapi.Relationship{Data: data}
-
-	var parent jsonapi.Relationship
-	if d.ID() != consts.RootDirID {
-		parent = jsonapi.Relationship{
+	return jsonapi.RelationshipMap{
+		"parent": jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
 				Related: "/files/" + d.DirID,
 			},
@@ -120,37 +90,30 @@ func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
 				ID:   d.DirID,
 				Type: consts.Files,
 			},
-		}
-	}
-
-	return jsonapi.RelationshipMap{
-		"parent":   parent,
-		"contents": contents,
+		},
 	}
 }
 
 // Included is part of the jsonapi.Object interface
 func (d *DirDoc) Included() []jsonapi.Object {
-	var included []jsonapi.Object
-	for _, child := range d.dirs {
-		included = append(included, child)
-	}
-	for _, child := range d.files {
-		included = append(included, child)
-	}
-	return included
+	return []jsonapi.Object{}
 }
 
-// FetchFiles is used to fetch direct children of the directory.
-//
-// @TODO: add pagination control
-func (d *DirDoc) FetchFiles(c Context) (err error) {
-	d.files, d.dirs, err = fetchChildren(c, d)
-	return err
+func (d *DirDoc) ChildrenIterator(c Context, opts *IteratorOptions) *Iterator {
+	return NewIterator(c, mango.Equal("dir_id", d.DocID), opts)
+}
+
+func (d *DirDoc) IsEmpty(c Context) (bool, error) {
+	iter := d.ChildrenIterator(c, &IteratorOptions{ByFetch: 1})
+	_, _, err := iter.Next()
+	if err == ErrIteratorDone {
+		return true, nil
+	}
+	return false, err
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
-func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (*DirDoc, error) {
+func NewDirDoc(name, dirID string, tags []string) (*DirDoc, error) {
 	if err := checkFileName(name); err != nil {
 		return nil, err
 	}
@@ -170,8 +133,6 @@ func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (*DirDoc, erro
 		CreatedAt: createDate,
 		UpdatedAt: createDate,
 		Tags:      tags,
-
-		parent: parent,
 	}
 
 	return doc, nil
@@ -179,7 +140,7 @@ func NewDirDoc(name, dirID string, tags []string, parent *DirDoc) (*DirDoc, erro
 
 // GetDirDoc is used to fetch directory document information
 // form the database.
-func GetDirDoc(c Context, fileID string, withChildren bool) (*DirDoc, error) {
+func GetDirDoc(c Context, fileID string) (*DirDoc, error) {
 	doc := &DirDoc{}
 	err := couchdb.GetDoc(c, consts.Files, fileID, doc)
 	if couchdb.IsNotFoundError(err) {
@@ -197,15 +158,12 @@ func GetDirDoc(c Context, fileID string, withChildren bool) (*DirDoc, error) {
 	if doc.Type != consts.DirType {
 		return nil, os.ErrNotExist
 	}
-	if withChildren {
-		err = doc.FetchFiles(c)
-	}
 	return doc, err
 }
 
 // GetDirDocFromPath is used to fetch directory document information from
 // the database from its path.
-func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, error) {
+func GetDirDocFromPath(c Context, name string) (*DirDoc, error) {
 	if !path.IsAbs(name) {
 		return nil, ErrNonAbsolutePath
 	}
@@ -227,10 +185,6 @@ func GetDirDocFromPath(c Context, name string, withChildren bool) (*DirDoc, erro
 		return nil, os.ErrNotExist
 	}
 	doc = docs[0]
-
-	if withChildren {
-		err = doc.FetchFiles(c)
-	}
 	return doc, err
 }
 
@@ -305,30 +259,17 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (*DirDoc, err
 		return nil, err
 	}
 
-	newdoc, err := NewDirDoc(*patch.Name, *patch.DirID, *patch.Tags, nil)
+	newdoc, err := NewDirDoc(*patch.Name, *patch.DirID, *patch.Tags)
 	if err != nil {
 		return nil, err
 	}
 
 	newdoc.RestorePath = *patch.RestorePath
 
-	var parent *DirDoc
-	if newdoc.DirID != olddoc.DirID {
-		parent, err = newdoc.Parent(c)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		parent = olddoc.parent
-	}
-
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	newdoc.CreatedAt = cdate
 	newdoc.UpdatedAt = *patch.UpdatedAt
-	newdoc.parent = parent
-	newdoc.files = olddoc.files
-	newdoc.dirs = olddoc.dirs
 
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
@@ -437,26 +378,22 @@ func RestoreDir(c Context, olddoc *DirDoc) (*DirDoc, error) {
 
 // DestroyDirContent destroy all directories and files contained in a directory.
 func DestroyDirContent(c Context, doc *DirDoc) error {
-	err := doc.FetchFiles(c)
-	if err != nil {
-		return err
-	}
-
-	for _, dir := range doc.dirs {
-		err = DestroyDirAndContent(c, dir)
+	iter := doc.ChildrenIterator(c, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == ErrIteratorDone {
+			break
+		}
+		if d != nil {
+			err = DestroyDirAndContent(c, d)
+		} else {
+			err = DestroyFile(c, f)
+		}
 		if err != nil {
 			return err
 		}
 	}
-
-	for _, file := range doc.files {
-		err = DestroyFile(c, file)
-		if err != nil {
-			return err
-		}
-	}
-
-	return err
+	return nil
 }
 
 // DestroyDirAndContent destroy a directory and its content
@@ -475,31 +412,6 @@ func DestroyDirAndContent(c Context, doc *DirDoc) error {
 	}
 	err = couchdb.DeleteDoc(c, doc)
 	return err
-}
-
-func fetchChildren(c Context, parent *DirDoc) ([]*FileDoc, []*DirDoc, error) {
-	var files []*FileDoc
-	var dirs []*DirDoc
-	var docs []*DirOrFileDoc
-	sel := mango.Equal("dir_id", parent.ID())
-	req := &couchdb.FindRequest{Selector: sel, Limit: 100}
-	err := couchdb.FindDocs(c, consts.Files, req, &docs)
-	if err != nil {
-		return files, dirs, err
-	}
-
-	for _, doc := range docs {
-		dir, file := doc.Refine()
-		if dir != nil {
-			dir.parent = parent
-			dirs = append(dirs, dir)
-		} else {
-			file.parent = parent
-			files = append(files, file)
-		}
-	}
-
-	return files, dirs, nil
 }
 
 func safeRenameDir(c Context, oldpath, newpath string) error {

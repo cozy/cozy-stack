@@ -31,13 +31,6 @@ const TagSeparator = ","
 // recognized
 var ErrDocTypeInvalid = errors.New("Invalid document type")
 
-func hideFields(doc jsonapi.Object) jsonapi.Object {
-	if f, ok := doc.(*vfs.FileDoc); ok {
-		return f.HideFields()
-	}
-	return doc
-}
-
 // CreationHandler handle all POST requests on /files/:dir-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
@@ -59,7 +52,6 @@ func CreationHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	hideFields(doc)
 	return jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
@@ -106,7 +98,7 @@ func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
 
 	dirID := c.Param("dir-id")
 	name := c.QueryParam("Name")
-	doc, err := vfs.NewDirDoc(name, dirID, tags, nil)
+	doc, err := vfs.NewDirDoc(name, dirID, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +172,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 			err = wrapVfsError(err)
 			return
 		}
-		err = jsonapi.Data(c, http.StatusOK, hideFields(newdoc), nil)
+		err = jsonapi.Data(c, http.StatusOK, newdoc, nil)
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
@@ -198,7 +190,7 @@ func ModifyMetadataByIDHandler(c echo.Context) error {
 	}
 
 	instance := middlewares.GetInstance(c)
-	dir, file, err := vfs.GetDirOrFileDoc(instance, c.Param("file-id"), false)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, c.Param("file-id"))
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -217,7 +209,7 @@ func ModifyMetadataByPathHandler(c echo.Context) error {
 	}
 
 	instance := middlewares.GetInstance(c)
-	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"), false)
+	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"))
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -272,7 +264,6 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 		return wrapVfsError(err)
 	}
 
-	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -283,24 +274,19 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
 
-	if err := checkPerm(c, permissions.GET, dir, file); err != nil {
-		return err
-	}
+	// if err := checkPerm(c, permissions.GET, dir, file); err != nil {
+	// 	return err
+	// }
 
-	var data jsonapi.Object
 	if dir != nil {
-		data = dir
-	} else {
-		data = file
+		return dirData(c, http.StatusOK, dir)
 	}
-
-	data = hideFields(data)
-	return jsonapi.Data(c, http.StatusOK, data, nil)
+	return jsonapi.Data(c, http.StatusOK, file, nil)
 }
 
 // ReadMetadataFromPathHandler handles all GET requests on
@@ -310,7 +296,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 
 	instance := middlewares.GetInstance(c)
 
-	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"), true)
+	dir, file, err := vfs.GetDirOrFileDocFromPath(instance, c.QueryParam("Path"))
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -319,15 +305,10 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 		return err
 	}
 
-	var data jsonapi.Object
 	if dir != nil {
-		data = dir
-	} else {
-		data = file
+		return dirData(c, http.StatusOK, dir)
 	}
-
-	data = hideFields(data)
-	return jsonapi.Data(c, http.StatusOK, data, nil)
+	return jsonapi.Data(c, http.StatusOK, file, nil)
 }
 
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
@@ -518,7 +499,7 @@ func TrashHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -539,7 +520,6 @@ func TrashHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -548,7 +528,7 @@ func TrashHandler(c echo.Context) error {
 func ReadTrashFilesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	trash, err := vfs.GetDirDoc(instance, consts.TrashDirID, true)
+	trash, err := vfs.GetDirDoc(instance, consts.TrashDirID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -558,7 +538,7 @@ func ReadTrashFilesHandler(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.DataList(c, http.StatusOK, trash.Included(), nil)
+	return dirDataList(c, http.StatusOK, trash)
 }
 
 // RestoreTrashFileHandler handle POST requests on /files/trash/file-id and
@@ -568,7 +548,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -589,7 +569,6 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	data = hideFields(data)
 	return jsonapi.Data(c, http.StatusOK, data, nil)
 }
 
@@ -597,7 +576,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 func ClearTrashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	trash, err := vfs.GetDirDoc(instance, consts.TrashDirID, true)
+	trash, err := vfs.GetDirDoc(instance, consts.TrashDirID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -621,7 +600,7 @@ func DestroyFileHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}

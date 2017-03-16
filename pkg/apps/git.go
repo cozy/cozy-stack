@@ -298,7 +298,7 @@ func (f *gfile) Close() error {
 }
 
 func newGFS(ctx vfs.Context, base string) *gfs {
-	dir, err := vfs.GetDirDocFromPath(ctx, base, false)
+	dir, err := vfs.GetDirDocFromPath(ctx, base)
 	if err != nil {
 		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
 		// With a cluster of couchdb, we can have a race condition where we

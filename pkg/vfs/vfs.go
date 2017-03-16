@@ -102,24 +102,20 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 
 // GetDirOrFileDoc is used to fetch a document from its identifier
 // without knowing in advance its type.
-func GetDirOrFileDoc(c Context, fileID string, withChildren bool) (*DirDoc, *FileDoc, error) {
+func GetDirOrFileDoc(c Context, fileID string) (*DirDoc, *FileDoc, error) {
 	dirOrFile := &DirOrFileDoc{}
 	err := couchdb.GetDoc(c, consts.Files, fileID, dirOrFile)
 	if err != nil {
 		return nil, nil, err
 	}
-
 	dirDoc, fileDoc := dirOrFile.Refine()
-	if dirDoc != nil && withChildren {
-		dirDoc.FetchFiles(c)
-	}
 	return dirDoc, fileDoc, nil
 }
 
 // GetDirOrFileDocFromPath is used to fetch a document from its path
 // without knowning in advance its type.
-func GetDirOrFileDocFromPath(c Context, name string, withChildren bool) (*DirDoc, *FileDoc, error) {
-	dirDoc, err := GetDirDocFromPath(c, name, withChildren)
+func GetDirOrFileDocFromPath(c Context, name string) (*DirDoc, *FileDoc, error) {
+	dirDoc, err := GetDirDocFromPath(c, name)
 	if err != nil && !os.IsNotExist(err) {
 		return nil, nil, err
 	}
@@ -169,7 +165,7 @@ func OpenFile(c Context, name string, flag int, perm os.FileMode) (*File, error)
 	olddoc, err := GetFileDocFromPath(c, name)
 	if os.IsNotExist(err) && flag&os.O_CREATE != 0 {
 		var parent *DirDoc
-		parent, err = GetDirDocFromPath(c, path.Dir(name), false)
+		parent, err = GetDirDocFromPath(c, path.Dir(name))
 		if err != nil {
 			return nil, err
 		}
@@ -221,12 +217,12 @@ func Mkdir(c Context, name string, tags []string) (*DirDoc, error) {
 	}
 
 	dirname, dirpath := path.Base(name), path.Dir(name)
-	parent, err := GetDirDocFromPath(c, dirpath, false)
+	parent, err := GetDirDocFromPath(c, dirpath)
 	if err != nil {
 		return nil, err
 	}
 
-	dir, err := NewDirDoc(dirname, parent.ID(), tags, nil)
+	dir, err := NewDirDoc(dirname, parent.ID(), tags)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +244,7 @@ func MkdirAll(c Context, name string, tags []string) (*DirDoc, error) {
 
 	base = name
 	for {
-		parent, err = GetDirDocFromPath(c, base, false)
+		parent, err = GetDirDocFromPath(c, base)
 		if os.IsNotExist(err) {
 			base, file = path.Dir(base), path.Base(base)
 			dirs = append(dirs, file)
@@ -261,7 +257,7 @@ func MkdirAll(c Context, name string, tags []string) (*DirDoc, error) {
 	}
 
 	for i := len(dirs) - 1; i >= 0; i-- {
-		parent, err = NewDirDoc(dirs[i], parent.ID(), nil, parent)
+		parent, err = NewDirDoc(dirs[i], parent.ID(), nil)
 		if err == nil {
 			err = CreateDir(c, parent)
 		}
@@ -276,7 +272,7 @@ func MkdirAll(c Context, name string, tags []string) (*DirDoc, error) {
 // Rename will rename a file or directory from a specified path to
 // another.
 func Rename(c Context, oldpath, newpath string) error {
-	dir, file, err := GetDirOrFileDocFromPath(c, oldpath, false)
+	dir, file, err := GetDirOrFileDocFromPath(c, oldpath)
 	if err != nil {
 		return err
 	}
@@ -286,7 +282,7 @@ func Rename(c Context, oldpath, newpath string) error {
 	var newdirID *string
 	if path.Dir(oldpath) != path.Dir(newpath) {
 		var parent *DirDoc
-		parent, err = GetDirDocFromPath(c, path.Dir(newpath), false)
+		parent, err = GetDirDocFromPath(c, path.Dir(newpath))
 		if err != nil {
 			return err
 		}
@@ -314,17 +310,21 @@ func Remove(c Context, name string) error {
 	if !path.IsAbs(name) {
 		return ErrNonAbsolutePath
 	}
-	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
+	dir, file, err := GetDirOrFileDocFromPath(c, name)
 	if err != nil {
 		return err
 	}
-	if dir != nil {
-		if len(dir.files) > 0 {
-			return ErrDirNotEmpty
-		}
-		return DestroyDirAndContent(c, dir)
+	if file != nil {
+		return DestroyFile(c, file)
 	}
-	return DestroyFile(c, file)
+	empty, err := dir.IsEmpty(c)
+	if err != nil {
+		return err
+	}
+	if !empty {
+		return ErrDirNotEmpty
+	}
+	return DestroyDirAndContent(c, dir)
 }
 
 // RemoveAll removes the specified name file or directory and its content.
@@ -332,7 +332,7 @@ func RemoveAll(c Context, name string) error {
 	if !path.IsAbs(name) {
 		return ErrNonAbsolutePath
 	}
-	dir, file, err := GetDirOrFileDocFromPath(c, name, true)
+	dir, file, err := GetDirOrFileDocFromPath(c, name)
 	if err != nil {
 		return err
 	}
@@ -373,7 +373,7 @@ type WalkFn func(name string, dir *DirDoc, file *FileDoc, err error) error
 // Walk walks the file tree document rooted at root. It should work
 // like filepath.Walk.
 func Walk(c Context, root string, walkFn WalkFn) error {
-	dir, file, err := GetDirOrFileDocFromPath(c, root, false)
+	dir, file, err := GetDirOrFileDocFromPath(c, root)
 	if err != nil {
 		return walkFn(root, dir, file, err)
 	}
@@ -388,32 +388,28 @@ func walk(c Context, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn) err
 		}
 		return err
 	}
-
 	if file != nil {
 		return nil
 	}
-
-	err = dir.FetchFiles(c)
-	if err != nil {
-		return walkFn(name, dir, nil, err)
-	}
-
-	for _, d := range dir.dirs {
-		fullpath := path.Join(name, d.Name)
-		err = walk(c, fullpath, d, nil, walkFn)
-		if err != nil && err != ErrSkipDir {
-			return err
+	iter := dir.ChildrenIterator(c, nil)
+	for {
+		f, d, err := iter.Next()
+		if err == ErrIteratorDone {
+			break
 		}
-	}
-
-	for _, f := range dir.files {
-		fullpath := path.Join(name, f.Name)
-		err = walk(c, fullpath, nil, f, walkFn)
 		if err != nil {
+			return walkFn(name, nil, nil, err)
+		}
+		var fullpath string
+		if f != nil {
+			fullpath = path.Join(name, f.Name)
+		} else {
+			fullpath = path.Join(name, d.Name)
+		}
+		if err = walk(c, fullpath, f, d, walkFn); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -452,13 +448,8 @@ func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 }
 
 // getParentDir returns the parent directory document if nil.
-func getParentDir(c Context, parent *DirDoc, dirID string) (*DirDoc, error) {
-	if parent != nil {
-		return parent, nil
-	}
-	var err error
-	parent, err = GetDirDoc(c, dirID, false)
-	return parent, err
+func getParentDir(c Context, dirID string) (*DirDoc, error) {
+	return GetDirDoc(c, dirID)
 }
 
 // getRestoreDir returns the restoration directory document from a file a
@@ -483,7 +474,7 @@ func getRestoreDir(c Context, name, restorePath string) (*DirDoc, error) {
 		if split >= 0 {
 			root := name[:split]
 			rest := path.Dir(name[split+1:])
-			doc, err := GetDirDocFromPath(c, TrashDirName+"/"+root, false)
+			doc, err := GetDirDocFromPath(c, TrashDirName+"/"+root)
 			if err != nil {
 				return nil, err
 			}
@@ -501,7 +492,7 @@ func getRestoreDir(c Context, name, restorePath string) (*DirDoc, error) {
 
 	// If the restore directory does not exist anymore, we re-create the
 	// directory hierarchy to restore the file in.
-	restoreDir, err := GetDirDocFromPath(c, restorePath, false)
+	restoreDir, err := GetDirDocFromPath(c, restorePath)
 	if os.IsNotExist(err) {
 		restoreDir, err = MkdirAll(c, restorePath, nil)
 	}

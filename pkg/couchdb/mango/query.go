@@ -152,11 +152,23 @@ func Between(field string, v1 interface{}, v2 interface{}) Filter {
 	}}
 }
 
+// Between returns a filter that check if v1 < field < v2
+func Inside(field string, v1 interface{}, v2 interface{}) Filter {
+	return &logicFilter{op: and, filters: []Filter{
+		&valueFilter{field, gt, v1},
+		&valueFilter{field, lt, v2},
+	}}
+}
+
 const uFFFF = string(unicode.MaxRune)
 
 // StartWith returns a filter that check if field's string value start with prefix
 func StartWith(field string, prefix string) Filter {
 	return Between(field, prefix, prefix+uFFFF)
+}
+
+func AfterID(id string) Filter {
+	return Inside("_id", id, uFFFF)
 }
 
 ////////////////////////////////////////////////////////////////

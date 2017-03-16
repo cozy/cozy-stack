@@ -63,7 +63,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 	var dirdoc *DirDoc
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
-			dirdoc, err = NewDirDoc(name[:len(name)-1], dirID, nil, nil)
+			dirdoc, err = NewDirDoc(name[:len(name)-1], dirID, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -91,7 +91,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 }
 
 func fetchTree(root string) (H, error) {
-	parent, err := GetDirDocFromPath(vfsC, root, false)
+	parent, err := GetDirDocFromPath(vfsC, root)
 	if err != nil {
 		return nil, err
 	}
@@ -106,22 +106,27 @@ func fetchTree(root string) (H, error) {
 
 func recFetchTree(parent *DirDoc, name string) (H, error) {
 	h := make(H)
-	err := parent.FetchFiles(vfsC)
-	if err != nil {
-		return nil, err
-	}
-	for _, d := range parent.dirs {
-		if path.Join(name, d.Name) != d.Fullpath {
-			return nil, fmt.Errorf("Bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.Name))
+	iter := parent.ChildrenIterator(vfsC, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == ErrIteratorDone {
+			break
 		}
-		children, err := recFetchTree(d, d.Fullpath)
 		if err != nil {
 			return nil, err
 		}
-		h[d.Name+"/"] = children
-	}
-	for _, f := range parent.files {
-		h[f.Name] = nil
+		if d != nil {
+			if path.Join(name, d.Name) != d.Fullpath {
+				return nil, fmt.Errorf("Bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.Name))
+			}
+			children, err := recFetchTree(d, d.Fullpath)
+			if err != nil {
+				return nil, err
+			}
+			h[d.Name+"/"] = children
+		} else {
+			h[f.Name] = nil
+		}
 	}
 	return h, nil
 }
@@ -207,7 +212,7 @@ func TestDiskUsage(t *testing.T) {
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := NewDirDoc("container", "", nil, nil)
+	dir, _ := NewDirDoc("container", "", nil)
 	err := CreateDir(vfsC, dir)
 	assert.NoError(t, err)
 
@@ -329,12 +334,12 @@ func TestUpdateDir(t *testing.T) {
 		return
 	}
 
-	dirchild2, err := GetDirDocFromPath(vfsC, "/update2/dirchild2", false)
+	dirchild2, err := GetDirDocFromPath(vfsC, "/update2/dirchild2")
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	dirchild3, err := GetDirDocFromPath(vfsC, "/update2/dirchild3", false)
+	dirchild3, err := GetDirDocFromPath(vfsC, "/update2/dirchild3")
 	if !assert.NoError(t, err) {
 		return
 	}
