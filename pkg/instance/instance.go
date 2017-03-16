@@ -94,12 +94,13 @@ type Instance struct {
 
 // Options holds the parameters to create a new instance.
 type Options struct {
-	Domain   string
-	Locale   string
-	Timezone string
-	Email    string
-	Apps     []string
-	Dev      bool
+	Domain     string
+	Locale     string
+	Timezone   string
+	Email      string
+	PublicName string
+	Apps       []string
+	Dev        bool
 }
 
 // DocType implements couchdb.Doc
@@ -134,8 +135,9 @@ func (i *Instance) Included() []jsonapi.Object {
 
 // settings is a struct used for the settings of an instance
 type instanceSettings struct {
-	Timezone string `json:"tz,omitempty"`
-	Email    string `json:"email,omitempty"`
+	Timezone   string `json:"tz,omitempty"`
+	Email      string `json:"email,omitempty"`
+	PublicName string `json:"public_name,omitempty"`
 }
 
 func (s *instanceSettings) ID() string      { return consts.InstanceSettingsID }
@@ -398,8 +400,9 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 	settingsDoc := &instanceSettings{
-		Timezone: opts.Timezone,
-		Email:    opts.Email,
+		Timezone:   opts.Timezone,
+		Email:      opts.Email,
+		PublicName: opts.PublicName,
 	}
 	if err := couchdb.CreateNamedDoc(i, settingsDoc); err != nil {
 		return nil, err
