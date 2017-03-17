@@ -9,16 +9,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -30,62 +29,18 @@ var clientID string
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	testutils.NeedCouchdb()
+	testSetup := testutils.NewSetup(m, "permissions_test")
 
-	testInstance = &instance.Instance{
-		OAuthSecret: []byte("topsecret"),
-		Domain:      "example.com",
-	}
-
-	err := couchdb.ResetDB(testInstance, "io.cozy.events")
-	if err != nil {
-		fmt.Println("Cant reset db", err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(testInstance, consts.Permissions)
-	if err != nil {
-		fmt.Println("Cant reset db", err)
-		os.Exit(1)
-	}
-	err = couchdb.DefineIndexes(testInstance, consts.IndexesByDoctype(consts.Permissions))
-	if err != nil {
-		fmt.Println("Cant define index", err)
-		os.Exit(1)
-	}
-	err = couchdb.DefineViews(testInstance, consts.ViewsByDoctype(consts.Permissions))
-	if err != nil {
-		fmt.Println("cant define views", err)
-		os.Exit(1)
-	}
-
-	client := oauth.Client{
-		RedirectURIs: []string{"http://localhost/oauth/callback"},
-		ClientName:   "test-permissions",
-		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
-	}
-	client.Create(testInstance)
+	testInstance = testSetup.GetTestInstance()
+	scopes := "io.cozy.contacts io.cozy.files:GET"
+	client, tok := testSetup.GetTestClient(scopes)
 	clientID = client.ClientID
+	token = tok
 
-	token, _ = crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  clientID,
-		},
-		Scope: "io.cozy.contacts io.cozy.files:GET",
-	})
+	ts = testSetup.GetTestServer("/permissions", Routes)
 
-	handler := echo.New()
-
-	group := handler.Group("/permissions")
-	group.Use(injectInstance(testInstance))
-	Routes(group)
-
-	ts = httptest.NewServer(handler)
-	res := m.Run()
-	ts.Close()
-	os.Exit(res)
+	os.Exit(testSetup.Run())
 }
 
 func TestGetPermissions(t *testing.T) {
@@ -117,15 +72,10 @@ func TestGetPermissions(t *testing.T) {
 }
 
 func TestGetPermissionsForRevokedClient(t *testing.T) {
-	tok, err := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  "revoked-client",
-		},
-		Scope: "io.cozy.contacts io.cozy.files:GET",
-	})
+	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+		"revoked-client",
+		"io.cozy.contacts io.cozy.files:GET",
+		time.Now())
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
@@ -134,20 +84,13 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 	assert.Equal(t, 400, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, `{"message":"Invalid JWT token"}`, string(body))
+	assert.Equal(t, `Invalid JWT token`, string(body))
 }
 
 func TestGetPermissionsForExpiredToken(t *testing.T) {
-	pastTimestamp := crypto.Timestamp() - 30*24*3600 // in seconds
-	tok, err := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: pastTimestamp,
-			Subject:  clientID,
-		},
-		Scope: "io.cozy.contacts io.cozy.files:GET",
-	})
+	pastTimestamp := time.Now().Add(-30 * 24 * time.Hour) // in seconds
+	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
+		clientID, "io.cozy.contacts io.cozy.files:GET", pastTimestamp)
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
@@ -156,7 +99,7 @@ func TestGetPermissionsForExpiredToken(t *testing.T) {
 	assert.Equal(t, 400, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, `{"message":"Expired token"}`, string(body))
+	assert.Equal(t, `Expired token`, string(body))
 }
 
 func TestBadPermissionsBearer(t *testing.T) {
@@ -482,15 +425,6 @@ func TestListPermission(t *testing.T) {
 		}
 	}
 
-}
-
-func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("instance", i)
-			return next(c)
-		}
-	}
 }
 
 func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {

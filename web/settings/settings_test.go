@@ -13,23 +13,18 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
-	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
-
-const domain = "cozysettings.example.net"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
 var instanceRev string
-var clientID string
+var token string
 var oauthClientID string
 
 func TestThemeCSS(t *testing.T) {
@@ -45,7 +40,7 @@ func TestDiskUsage(t *testing.T) {
 	assert.Equal(t, 401, res.StatusCode)
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/disk-usage", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -141,7 +136,7 @@ func TestGetInstance(t *testing.T) {
 	testInstance.RegisterToken = []byte{}
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/instance", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -216,13 +211,13 @@ func TestUpdateInstance(t *testing.T) {
 	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/vnd.api+json")
 	req.Header.Add("Accept", "application/vnd.api+json")
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	checkResult(res)
 
 	req, _ = http.NewRequest("GET", ts.URL+"/settings/instance", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	checkResult(res)
@@ -249,7 +244,7 @@ func TestListClients(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/settings/clients", nil)
 	assert.NoError(t, err)
-	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -287,14 +282,14 @@ func TestRevokeClient(t *testing.T) {
 
 	req, err = http.NewRequest(http.MethodDelete, ts.URL+"/settings/clients/"+oauthClientID, nil)
 	assert.NoError(t, err)
-	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 204, res.StatusCode)
 
 	req, err = http.NewRequest(http.MethodGet, ts.URL+"/settings/clients", nil)
 	assert.NoError(t, err)
-	req.Header.Add("Authorization", "Bearer "+testClientsToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -307,64 +302,16 @@ func TestRevokeClient(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-	instance.Destroy(domain)
-	testInstance, _ = instance.Create(&instance.Options{
-		Domain:   domain,
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "settings_test")
+	testInstance = setup.GetTestInstance(&instance.Options{
 		Locale:   "en",
 		Timezone: "Europe/Berlin",
 		Email:    "alice@example.com",
 	})
+	scope := consts.Settings + " " + consts.OAuthClients
+	_, token = setup.GetTestClient(scope)
 
-	client := oauth.Client{
-		RedirectURIs: []string{"http://localhost/oauth/callback"},
-		ClientName:   "test-permissions",
-		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
-	}
-	client.Create(testInstance)
-	clientID = client.ClientID
-
-	r := echo.New()
-	r.HTTPErrorHandler = errors.ErrorHandler
-	Routes(r.Group("/settings", injectInstance(testInstance)))
-
-	ts = httptest.NewServer(r)
-	res := m.Run()
-	ts.Close()
-	instance.Destroy(domain)
-	os.Exit(res)
-}
-
-func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("instance", i)
-			return next(c)
-		}
-	}
-}
-
-func testToken(i *instance.Instance) string {
-	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  clientID,
-		},
-		Scope: consts.Settings,
-	})
-	return t
-}
-
-func testClientsToken(i *instance.Instance) string {
-	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  clientID,
-		},
-		Scope: consts.OAuthClients,
-	})
-	return t
+	ts = setup.GetTestServer("/settings", Routes)
+	os.Exit(setup.Run())
 }

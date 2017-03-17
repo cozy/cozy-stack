@@ -7,14 +7,13 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
-const domain = "cozy.example.net"
-
+var domain string
 var ts *httptest.Server
 
 func TestSetupAssets(t *testing.T) {
@@ -101,12 +100,9 @@ func TestParseHost(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../assets"
-	instance.Destroy(domain)
-	instance.Create(&instance.Options{
-		Domain: domain,
-		Locale: "en",
-	})
-	res := m.Run()
-	instance.Destroy(domain)
-	os.Exit(res)
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "routing_test")
+	inst := setup.GetTestInstance()
+	domain = inst.Domain
+	os.Exit(setup.Run())
 }

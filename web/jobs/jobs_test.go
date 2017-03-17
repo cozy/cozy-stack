@@ -14,22 +14,15 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/labstack/echo"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
-
-const host = "cozy.io"
 
 var ts *httptest.Server
 var testInstance *instance.Instance
-var clientID string
+var token string
 
 type jobRequest struct {
 	Arguments interface{} `json:"arguments"`
@@ -45,7 +38,7 @@ type jsonapiData struct {
 
 func TestGetQueue(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/queue/print", nil)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -70,7 +63,7 @@ func TestCreateJob(t *testing.T) {
 		},
 	})
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/print", bytes.NewReader(body))
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
@@ -86,7 +79,7 @@ func TestCreateJobNotExist(t *testing.T) {
 		},
 	})
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/none", bytes.NewReader(body))
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
@@ -110,7 +103,7 @@ func TestCreateJobWithEventStream(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "text/event-stream")
 	res, err := http.DefaultClient.Do(req)
@@ -158,7 +151,7 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	})
 	req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
 	assert.NoError(t, err)
-	req1.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req1.Header.Add("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
 		return
@@ -198,7 +191,7 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 	})
 	req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
 	assert.NoError(t, err)
-	req2.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
 	if !assert.NoError(t, err) {
 		return
@@ -207,7 +200,7 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
-	req3.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req3.Header.Add("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(req3)
 	if !assert.NoError(t, err) {
 		return
@@ -216,7 +209,7 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 
 	req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
-	req4.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req4.Header.Add("Authorization", "Bearer "+token)
 	res4, err := http.DefaultClient.Do(req4)
 	if !assert.NoError(t, err) {
 		return
@@ -225,7 +218,7 @@ func TestAddGetAndDeleteTriggerAt(t *testing.T) {
 
 	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
-	req5.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req5.Header.Add("Authorization", "Bearer "+token)
 	res5, err := http.DefaultClient.Do(req5)
 	if !assert.NoError(t, err) {
 		return
@@ -246,7 +239,7 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	})
 	req1, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
 	assert.NoError(t, err)
-	req1.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req1.Header.Add("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
 		return
@@ -286,7 +279,7 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 	})
 	req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
 	assert.NoError(t, err)
-	req2.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
 	if !assert.NoError(t, err) {
 		return
@@ -295,7 +288,7 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
-	req3.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req3.Header.Add("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(req3)
 	if !assert.NoError(t, err) {
 		return
@@ -304,7 +297,7 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 
 	req4, err := http.NewRequest("DELETE", ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
-	req4.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req4.Header.Add("Authorization", "Bearer "+token)
 	res4, err := http.DefaultClient.Do(req4)
 	if !assert.NoError(t, err) {
 		return
@@ -313,7 +306,7 @@ func TestAddGetAndDeleteTriggerIn(t *testing.T) {
 
 	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers/"+triggerID, nil)
 	assert.NoError(t, err)
-	req5.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req5.Header.Add("Authorization", "Bearer "+token)
 	res5, err := http.DefaultClient.Do(req5)
 	if !assert.NoError(t, err) {
 		return
@@ -332,7 +325,7 @@ func TestGetAllJobs(t *testing.T) {
 
 	req1, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
 	assert.NoError(t, err)
-	req1.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req1.Header.Add("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
 		return
@@ -358,7 +351,7 @@ func TestGetAllJobs(t *testing.T) {
 	})
 	req2, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/triggers", bytes.NewReader(body))
 	assert.NoError(t, err)
-	req2.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req2.Header.Add("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
 	if !assert.NoError(t, err) {
 		return
@@ -367,7 +360,7 @@ func TestGetAllJobs(t *testing.T) {
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
 	assert.NoError(t, err)
-	req3.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req3.Header.Add("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(req3)
 	if !assert.NoError(t, err) {
 		return
@@ -424,64 +417,17 @@ func parseEventStream(r *bufio.Reader, evch chan *event) error {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "jobs_test")
+	testInstance = setup.GetTestInstance()
 
-	instance.Destroy(host)
-
-	var err error
-	testInstance, err = instance.Create(&instance.Options{
-		Domain: host,
-		Locale: "en",
-	})
-	if err != nil {
-		fmt.Println("Could not create test instance.", err)
-		os.Exit(1)
+	if err := testInstance.StartJobSystem(); err != nil {
+		testutils.Fatal(err)
 	}
 
-	if err = testInstance.StartJobSystem(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	scope := consts.Queues + " " + consts.Jobs + " " + consts.Triggers
+	_, token = setup.GetTestClient(scope)
 
-	client := oauth.Client{
-		RedirectURIs: []string{"http://localhost/oauth/callback"},
-		ClientName:   "test-permissions",
-		SoftwareID:   "github.com/cozy/cozy-stack/web/permissions",
-	}
-	client.Create(testInstance)
-	clientID = client.ClientID
-
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	group := handler.Group("/jobs", injectInstance(testInstance))
-	Routes(group)
-	ts = httptest.NewServer(handler)
-
-	res := m.Run()
-
-	ts.Close()
-	instance.Destroy(host)
-
-	os.Exit(res)
-}
-
-func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("instance", i)
-			return next(c)
-		}
-	}
-}
-
-func testToken(i *instance.Instance) string {
-	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  clientID,
-		},
-		Scope: consts.Queues + " " + consts.Jobs + " " + consts.Triggers,
-	})
-	return t
+	ts = setup.GetTestServer("/jobs", Routes)
+	os.Exit(setup.Run())
 }

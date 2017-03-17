@@ -14,33 +14,20 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/oauth"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var token string
 var clientID string
-
-func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("instance", i)
-			return next(c)
-		}
-	}
-}
 
 func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
 	if res.StatusCode >= 300 {
@@ -55,7 +42,7 @@ func createDir(t *testing.T, path string) (res *http.Response, v map[string]inte
 		return
 	}
 	req.Header.Add("Content-Type", "text/plain")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err = http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
@@ -95,7 +82,7 @@ func doUploadOrMod(t *testing.T, req *http.Request, contentType, hash string) (r
 func upload(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
 	buf := strings.NewReader(body)
 	req, err := http.NewRequest("POST", ts.URL+path, buf)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -105,7 +92,7 @@ func upload(t *testing.T, path, contentType, body, hash string) (res *http.Respo
 func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Response, v map[string]interface{}) {
 	buf := strings.NewReader(body)
 	req, err := http.NewRequest("PUT", ts.URL+path, buf)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -114,7 +101,7 @@ func uploadMod(t *testing.T, path, contentType, body, hash string) (res *http.Re
 
 func trash(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -132,7 +119,7 @@ func trash(t *testing.T, path string) (res *http.Response, v map[string]interfac
 
 func restore(t *testing.T, path string) (res *http.Response, v map[string]interface{}) {
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -196,7 +183,7 @@ func patchFile(t *testing.T, path, docType, id string, attrs map[string]interfac
 	}
 
 	req, err := http.NewRequest("PATCH", ts.URL+path, bytes.NewReader(b))
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -216,7 +203,7 @@ func patchFile(t *testing.T, path, docType, id string, attrs map[string]interfac
 
 func download(t *testing.T, path, byteRange string) (res *http.Response, body []byte) {
 	req, err := http.NewRequest("GET", ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -273,7 +260,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 
 func TestCreateDirWithDateSuccess(t *testing.T) {
 	req, _ := http.NewRequest("POST", ts.URL+"/files/?Type=directory&Name=dir-with-date", strings.NewReader(""))
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add("Date", "Mon, 19 Sep 2016 12:35:08 GMT")
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
@@ -464,7 +451,7 @@ func TestUploadWithParentAlreadyExists(t *testing.T) {
 func TestUploadWithDate(t *testing.T) {
 	buf := strings.NewReader("foo")
 	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=withcdate", buf)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	assert.NoError(t, err)
 	req.Header.Add("Date", "Mon, 19 Sep 2016 12:38:04 GMT")
 	res, obj := doUploadOrMod(t, req, "text/plain", "rL0Y20zC+Fzt72VPzMSk2A==")
@@ -483,7 +470,7 @@ func TestUploadImage(t *testing.T) {
 	defer f.Close()
 	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg", f)
 	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, obj := doUploadOrMod(t, req, "image/jpg", "tHWYYuXBBflJ8wXgJ2c2yg==")
 	assert.Equal(t, 201, res.StatusCode)
 	data := obj["data"].(map[string]interface{})
@@ -680,7 +667,7 @@ func TestModifyContentBadRev(t *testing.T) {
 	newcontent := "newcontent :)"
 
 	req2, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
-	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req2.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	assert.NoError(t, err)
 
 	req2.Header.Add("If-Match", "badrev")
@@ -688,7 +675,7 @@ func TestModifyContentBadRev(t *testing.T) {
 	assert.Equal(t, 412, res2.StatusCode)
 
 	req3, err := http.NewRequest("PUT", ts.URL+"/files/"+fileID, strings.NewReader(newcontent))
-	req3.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req3.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	assert.NoError(t, err)
 
 	req3.Header.Add("If-Match", fileRev)
@@ -771,7 +758,7 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	req.Header.Add("Date", "Mon, 02 Jan 2006 15:04:05 MST")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	res3, data3 := doUploadOrMod(t, req, "what/ever", "")
 	assert.Equal(t, 200, res3.StatusCode)
@@ -983,7 +970,7 @@ func TestArchiveNoFiles(t *testing.T) {
 		return
 	}
 	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
@@ -1024,7 +1011,7 @@ func TestArchiveDirectDownload(t *testing.T) {
 	}`)
 
 	req, err := http.NewRequest("POST", ts.URL+"/files/archive", body)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add("Content-Type", "application/zip")
 	req.Header.Add("Accept", "application/zip")
 	assert.NoError(t, err)
@@ -1066,7 +1053,7 @@ func TestArchiveCreateAndDownload(t *testing.T) {
 		return
 	}
 	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
@@ -1100,7 +1087,7 @@ func TestFileCreateAndDownloadByPath(t *testing.T) {
 		return
 	}
 	req.Header.Add("Content-Type", "")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
@@ -1140,7 +1127,7 @@ func TestFileCreateAndDownloadByID(t *testing.T) {
 		return
 	}
 	req.Header.Add("Content-Type", "")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
@@ -1177,7 +1164,7 @@ func TestArchiveNotFound(t *testing.T) {
 		return
 	}
 	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
 		return
@@ -1508,7 +1495,7 @@ func TestTrashClear(t *testing.T) {
 
 	path := "/files/trash"
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -1565,7 +1552,7 @@ func TestDestroyFile(t *testing.T) {
 
 	path := "/files/trash/" + fileID
 	req, err := http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -1595,7 +1582,7 @@ func TestDestroyFile(t *testing.T) {
 
 	path = "/files/trash/" + dirID
 	req, err = http.NewRequest(http.MethodDelete, ts.URL+path, nil)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -1623,65 +1610,25 @@ func TestDestroyFile(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
+	testutils.NeedCouchdb()
+	setup := testutils.NewSetup(m, "files_test")
 
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
 		fmt.Println("Could not create temporary directory.")
 		os.Exit(1)
 	}
+	setup.AddCleanup(func() error { return os.RemoveAll(tempdir) })
 
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
-	instance.Destroy("test-files")
-	testInstance, err = instance.Create(&instance.Options{
-		Domain: "test-files",
-		Locale: "en",
-	})
-	if err != nil {
-		fmt.Println("Could not create test instance.", err)
-		os.Exit(1)
-	}
-
-	client := oauth.Client{
-		RedirectURIs: []string{"http://localhost/oauth/callback"},
-		ClientName:   "test-permissions",
-		SoftwareID:   "github.com/cozy/cozy-stack/web/data",
-	}
-	client.Create(testInstance)
+	testInstance = setup.GetTestInstance()
+	client, tok := setup.GetTestClient(consts.Files)
 	clientID = client.ClientID
+	token = tok
+	ts = setup.GetTestServer("/files", Routes)
 
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	handler.Use(injectInstance(testInstance))
-	Routes(handler.Group("/files"))
-
-	ts = httptest.NewServer(handler)
-
-	res := m.Run()
-	ts.Close()
-	instance.Destroy("test-files")
-	os.RemoveAll(tempdir)
-
-	os.Exit(res)
-}
-
-func testToken(i *instance.Instance) string {
-	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  clientID,
-		},
-		Scope: "io.cozy.files",
-	})
-	return t
+	os.Exit(setup.Run())
 }
 
 func httpGet(url string) (*http.Response, error) {
@@ -1689,6 +1636,6 @@ func httpGet(url string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+testToken(testInstance))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	return http.DefaultClient.Do(req)
 }

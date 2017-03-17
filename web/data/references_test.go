@@ -24,8 +24,7 @@ func TestListReferencesHandler(t *testing.T) {
 	makeReferencedTestFile(t, doc, "testtoref5.txt")
 
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Add("Host", Host)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 
 	var result struct {
 		Data []jsonapi.ResourceIdentifier `json:"data"`
@@ -69,8 +68,7 @@ func TestAddReferencesHandler(t *testing.T) {
 		},
 	})
 	req, _ := http.NewRequest("POST", url, in)
-	req.Header.Add("Host", Host)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/vnd.api+json")
 
 	res, err := http.DefaultClient.Do(req)
@@ -102,8 +100,7 @@ func TestRemoveReferencesHandler(t *testing.T) {
 		},
 	})
 	req, _ := http.NewRequest("DELETE", url, in)
-	req.Header.Add("Host", Host)
-	req.Header.Add("Authorization", "Bearer "+testToken(testInstance))
+	req.Header.Add("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/vnd.api+json")
 
 	res, err := http.DefaultClient.Do(req)

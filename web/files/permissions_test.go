@@ -5,12 +5,11 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 func TestCreateDirNoToken(t *testing.T) {
@@ -21,8 +20,8 @@ func TestCreateDirNoToken(t *testing.T) {
 }
 
 func TestCreateDirBadType(t *testing.T) {
-	token := makeBadToken("io.cozy.events")
-	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", token, strings.NewReader(""))
+	badtok, _ := testInstance.MakeJWT(permissions.AccessTokenAudience, clientID, "io.cozy.events", time.Now())
+	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", badtok, strings.NewReader(""))
 	assert.NoError(t, err)
 	assert.Equal(t, 403, res.StatusCode)
 }
@@ -31,10 +30,10 @@ func TestCreateDirLimitedScope(t *testing.T) {
 	res, data := createDir(t, "/files/?Name=permissionholder&Type=directory")
 	assert.Equal(t, 201, res.StatusCode)
 	id := data["data"].(map[string]interface{})["id"].(string)
-	token := makeBadToken("io.cozy.files:ALL:" + id)
+	badtok, _ := testInstance.MakeJWT(permissions.AccessTokenAudience, clientID, "io.cozy.files:ALL:"+id, time.Now())
 
 	// not in authorized dir
-	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", token, strings.NewReader(""))
+	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", badtok, strings.NewReader(""))
 	assert.NoError(t, err)
 	assert.Equal(t, 403, res.StatusCode)
 
@@ -45,8 +44,8 @@ func TestCreateDirLimitedScope(t *testing.T) {
 }
 
 func TestCreateDirBadVerb(t *testing.T) {
-	token := makeBadToken("io.cozy.files:GET")
-	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", token, strings.NewReader(""))
+	badtok, _ := testInstance.MakeJWT(permissions.AccessTokenAudience, clientID, "io.cozy.files:GET", time.Now())
+	res, err := request("POST", "/files/?Name=icantcreateyou&Type=directory", badtok, strings.NewReader(""))
 	assert.NoError(t, err)
 	assert.Equal(t, 403, res.StatusCode)
 }
@@ -61,17 +60,4 @@ func request(m, path, token string, body io.Reader) (*http.Response, error) {
 		req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	}
 	return http.DefaultClient.Do(req)
-}
-
-func makeBadToken(scope string) string {
-	t, _ := crypto.NewJWT(testInstance.OAuthSecret, permissions.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Audience: permissions.AccessTokenAudience,
-			Issuer:   testInstance.Domain,
-			IssuedAt: crypto.Timestamp(),
-			Subject:  clientID,
-		},
-		Scope: scope,
-	})
-	return t
 }
