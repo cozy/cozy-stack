@@ -24,6 +24,8 @@ var testInstance *instance.Instance
 var clientOAuth *oauth.Client
 var clientID string
 var instanceURL *url.URL
+var jar http.CookieJar
+var client *http.Client
 
 func TestRecipientRefusedSharingWithNoState(t *testing.T) {
 	res, err := postForm("/sharings/formRefuse", &url.Values{
@@ -189,6 +191,12 @@ func TestMain(m *testing.M) {
 	testInstance = setup.GetTestInstance()
 	instanceURL, _ = url.Parse("https://" + testInstance.Domain + "/")
 
+	jar = setup.GetCookieJar()
+	client = &http.Client{
+		CheckRedirect: noRedirect,
+		Jar:           jar,
+	}
+
 	clientOAuth, _ = setup.GetTestClient("")
 	clientID = clientOAuth.ClientID
 
@@ -211,7 +219,7 @@ func requestGET(u string, v url.Values) (*http.Response, error) {
 
 func postForm(u string, v *url.Values) (*http.Response, error) {
 	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
-	req.Host = domain
+	req.Host = testInstance.Domain
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	return client.Do(req)
 }
