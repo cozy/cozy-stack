@@ -22,8 +22,13 @@ func TestTriggerEvent(t *testing.T) {
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
 			WorkerFunc: func(ctx context.Context, m *Message) error {
-				var msg string
+				var msg struct {
+					Message *string
+					Event   realtime.Event
+				}
 				if err := m.Unmarshal(&msg); err != nil {
+					assert.Equal(t, "test-id", msg.Event.DocID)
+					assert.Equal(t, "message-for-worker-event", msg.Message)
 					return err
 				}
 				wg.Done()
@@ -38,7 +43,7 @@ func TestTriggerEvent(t *testing.T) {
 	trigger := &TriggerInfos{
 		ID:         id,
 		Type:       "@event",
-		Arguments:  "io.cozy.testobject",
+		Arguments:  "io.cozy.testeventobject",
 		WorkerType: "worker_event",
 		Message:    msg,
 	}
@@ -54,7 +59,7 @@ func TestTriggerEvent(t *testing.T) {
 	time.AfterFunc(1*time.Millisecond, func() {
 		realtime.InstanceHub("test2.scheduler.io").Publish(&realtime.Event{
 			Type:    realtime.EventCreate,
-			DocType: "io.cozy.testobject",
+			DocType: "io.cozy.testeventobject",
 			DocID:   "test-id",
 			DocRev:  "1-xxabxx",
 		})

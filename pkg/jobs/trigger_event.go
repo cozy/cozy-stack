@@ -3,6 +3,7 @@ package jobs
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/labstack/gommon/log"
 )
 
 // EventTrigger implements Trigger for realtime triggered events
@@ -51,10 +52,21 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 		c := realtime.MainHub().Subscribe(t.infos.Arguments)
 		for {
 			select {
-			case <-c.Read():
+			case e := <-c.Read():
+
+				var basemsg interface{}
+				t.infos.Message.Unmarshal(&basemsg)
+				msg, err := NewMessage(JSONEncoding, map[string]interface{}{
+					"message": basemsg,
+					"event":   e,
+				})
+				if err != nil {
+					log.Error(err)
+				}
+
 				ch <- &JobRequest{
 					WorkerType: t.infos.WorkerType,
-					Message:    t.infos.Message,
+					Message:    msg,
 					Options:    t.infos.Options,
 				}
 			case <-t.unscheduled:
