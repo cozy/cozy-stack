@@ -153,9 +153,9 @@ func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, 
 		return "", err
 	}
 
-	oAuthQuery, err := url.Parse(r.URL)
-	if err != nil {
-		return "", err
+	oAuthQuery := url.URL{
+		Host: r.URL,
+		Path: "/sharings/request",
 	}
 
 	// The link/button we put in the email has to have an http:// or https://
