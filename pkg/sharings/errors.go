@@ -27,6 +27,5 @@ var (
 	ErrSharingIDNotUnique = errors.New("Several sharings with this id found")
 	// ErrSharerDidNotReceiveAnswer is used when a recipient has not received a
 	// http.StatusOK after sending her answer to the sharer.
-	ErrSharerDidNotReceiveAnswer = errors.New(`Sharer did not receive the
-        answer`)
+	ErrSharerDidNotReceiveAnswer = errors.New("Sharer did not receive the answer")
 )

@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/labstack/echo"
 )
 
 // Sharing contains all the information about a sharing
@@ -40,6 +39,17 @@ type RecipientStatus struct {
 	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
 
 	recipient *Recipient
+}
+
+// SharingAnswer contains the necessary information to answer a sharing
+// request, be it accepted or refused.
+// A refusal only contains the mandatory fields: SharingID and ClientID.
+// An acceptance contains **everything**.
+type SharingAnswer struct {
+	SharingID    string `json:"state"`
+	ClientID     string `json:"client_id"`
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
 }
 
 // ID returns the sharing qualified identifier
@@ -228,9 +238,9 @@ func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) er
 	}
 
 	// We send the refusal.
-	bodyRaw := echo.Map{
-		"client_id": clientID,
-		"state":     sharingID,
+	bodyRaw := &SharingAnswer{
+		ClientID:  clientID,
+		SharingID: sharingID,
 	}
 	body, _ := json.Marshal(bodyRaw)
 
@@ -242,8 +252,7 @@ func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) er
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Errorf(`[Sharing] The sharer might not have received the answer,
-            she replied with: %s`, resp.Status)
+		log.Errorf("[Sharing] The sharer might not have received the answer, she replied with: %s", resp.Status)
 		return ErrSharerDidNotReceiveAnswer
 	}
 

@@ -268,13 +268,12 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 				t.Fail()
 			}
 			defer r.Body.Close()
-			data := struct {
-				SharingID string `json:"state"`
-				ClientID  string `json:"client_id"`
-			}{}
+			data := SharingAnswer{}
 			_ = json.Unmarshal(body, &data)
 			assert.Equal(t, testSharingID, data.SharingID)
 			assert.Equal(t, testClientID, data.ClientID)
+			assert.Empty(t, data.AccessToken)
+			assert.Empty(t, data.RefreshToken)
 
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusOK)
