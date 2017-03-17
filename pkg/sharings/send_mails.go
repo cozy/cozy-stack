@@ -1,7 +1,6 @@
 package sharings
 
 import (
-	"fmt"
 	"net/url"
 
 	log "github.com/Sirupsen/logrus"
@@ -53,7 +52,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		recipient := rs.recipient
 
 		// Generate recipient specific OAuth query string.
-		recipientOAuthQueryString, err := generateOAuthQueryString(s, recipient)
+		recipientOAuthQueryString, err := generateOAuthQueryString(s, recipient, instance.Scheme())
 		if err != nil {
 			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
 			continue
@@ -128,7 +127,7 @@ func generateMailMessage(s *Sharing, r *Recipient,
 
 // generateOAuthQueryString takes care of creating a correct OAuth request for
 // the given sharing and recipient.
-func generateOAuthQueryString(s *Sharing, r *Recipient) (string, error) {
+func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, error) {
 
 	// Check if an oauth client exists for the owner at the recipient's.
 	if r.Client.ClientID == "" || len(r.Client.RedirectURIs) < 1 {
@@ -154,8 +153,19 @@ func generateOAuthQueryString(s *Sharing, r *Recipient) (string, error) {
 		return "", err
 	}
 
-	// We use url.encode to safely escape the query string.
-	mapParamQueryString := url.Values{
+	oAuthQuery, err := url.Parse(r.URL)
+	if err != nil {
+		return "", err
+	}
+
+	// The link/button we put in the email has to have an http:// or https://
+	// prefix, otherwise it cannot be open in the browser.
+	if oAuthQuery.Scheme != "http" && oAuthQuery.Scheme != "https" {
+		oAuthQuery.Scheme = scheme
+	}
+
+	// We use url.encode to safely escape the query parameters.
+	mapParamOAuthQuery := url.Values{
 		"client_id":     {r.Client.ClientID},
 		"redirect_uri":  {r.Client.RedirectURIs[0]},
 		"response_type": {"code"},
@@ -163,11 +173,7 @@ func generateOAuthQueryString(s *Sharing, r *Recipient) (string, error) {
 		"sharing_type":  {s.SharingType},
 		"state":         {s.SharingID},
 	}
+	oAuthQuery.RawQuery = mapParamOAuthQuery.Encode()
 
-	paramQueryString := mapParamQueryString.Encode()
-
-	queryString := fmt.Sprintf("%s/sharings/request?%s", r.URL,
-		paramQueryString)
-
-	return queryString, nil
+	return oAuthQuery.String(), nil
 }

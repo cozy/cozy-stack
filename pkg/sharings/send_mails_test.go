@@ -35,6 +35,8 @@ var sharing = &Sharing{
 	Permissions:      permissions.Set{},
 }
 
+var instanceScheme = "http"
+
 func TestLogErrorAndSetRecipientStatus(t *testing.T) {
 	err := ErrMailCouldNotBeSent
 	res := logErrorAndSetRecipientStatus(recStatus, err)
@@ -58,7 +60,7 @@ func TestGenerateMailMessageSuccess(t *testing.T) {
 
 func TestGenerateOAuthQueryStringWhenThereIsNoOAuthClient(t *testing.T) {
 	// Without client id.
-	oauthQueryString, err := generateOAuthQueryString(sharing, rec)
+	oauthQueryString, err := generateOAuthQueryString(sharing, rec, instanceScheme)
 	assert.Error(t, err)
 	assert.Equal(t, ErrNoOAuthClient, err)
 	assert.Equal(t, oauthQueryString, "")
@@ -66,7 +68,7 @@ func TestGenerateOAuthQueryStringWhenThereIsNoOAuthClient(t *testing.T) {
 	// Without redirect uri.
 	rec.Client.ClientID = "sparta"
 	rec.Client.RedirectURIs = []string{}
-	oauthQueryString, err = generateOAuthQueryString(sharing, rec)
+	oauthQueryString, err = generateOAuthQueryString(sharing, rec, instanceScheme)
 	assert.Error(t, err)
 	assert.Equal(t, ErrNoOAuthClient, err)
 	assert.Equal(t, oauthQueryString, "")
@@ -76,7 +78,7 @@ func TestGenerateOAuthQueryStringWhenThereIsNoOAuthClient(t *testing.T) {
 func TestGenerateOAuthQueryStringWhenRecipientHasNoURL(t *testing.T) {
 	rec.Client.RedirectURIs = []string{"redirect.me.to.sparta"}
 
-	oauthQueryString, err := generateOAuthQueryString(sharing, rec)
+	oauthQueryString, err := generateOAuthQueryString(sharing, rec, "http")
 	assert.Error(t, err)
 	assert.Equal(t, ErrRecipientHasNoURL, err)
 	assert.Equal(t, "", oauthQueryString)
@@ -85,7 +87,7 @@ func TestGenerateOAuthQueryStringWhenRecipientHasNoURL(t *testing.T) {
 func TestGenerateOAuthQueryStringSuccess(t *testing.T) {
 	rec.URL = "this.is.url"
 
-	_, err := generateOAuthQueryString(sharing, rec)
+	_, err := generateOAuthQueryString(sharing, rec, instanceScheme)
 	assert.NoError(t, err)
 }
 
