@@ -91,33 +91,6 @@ func TestGenerateOAuthQueryStringSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestSetHTTPPrefixToURLWhenURLAlreadyHasAPrefix(t *testing.T) {
-	url := "https://correct.url.fr"
-	res := setHTTPPrefixToURL(url, "https")
-	assert.Equal(t, url, res)
-
-	res = setHTTPPrefixToURL(url, "http")
-	assert.Equal(t, url, res)
-
-	url = "http://correct.url.fr"
-	res = setHTTPPrefixToURL(url, "https")
-	assert.Equal(t, url, res)
-
-	res = setHTTPPrefixToURL(url, "http")
-	assert.Equal(t, url, res)
-}
-
-func TestSetHTTPPrefixToURLWhenURLDoesNotHaveOne(t *testing.T) {
-	url := "incomplete.url.fr"
-	urlExpected := "https://" + url
-	res := setHTTPPrefixToURL(url, "https")
-	assert.Equal(t, urlExpected, res)
-
-	urlExpected = "http://" + url
-	res = setHTTPPrefixToURL(url, "http")
-	assert.Equal(t, urlExpected, res)
-}
-
 func TestSendSharingMails(t *testing.T) {
 	// We provoke the error that occurrs when a recipient has no URL or no
 	// OAuth client by creating an incomplete recipient document.

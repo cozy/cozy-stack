@@ -2,7 +2,6 @@ package sharings
 
 import (
 	"net/url"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -154,15 +153,17 @@ func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, 
 		return "", err
 	}
 
-	baseURL := r.URL + "/sharings/request"
-	// The link/button we put in the email has to have an http:// or https://
-	// prefix, otherwise it cannot be open in the browser.
-	baseURL = setHTTPPrefixToURL(baseURL, scheme)
-
-	oAuthQuery, err := url.Parse(baseURL)
+	oAuthQuery, err := url.Parse(r.URL)
 	if err != nil {
 		return "", err
 	}
+
+	// The link/button we put in the email has to have an http:// or https://
+	// prefix, otherwise it cannot be open in the browser.
+	if oAuthQuery.Scheme != "http" && oAuthQuery.Scheme != "https" {
+		oAuthQuery.Scheme = scheme
+	}
+
 	// We use url.encode to safely escape the query parameters.
 	mapParamOAuthQuery := url.Values{
 		"client_id":     {r.Client.ClientID},
@@ -175,21 +176,4 @@ func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, 
 	oAuthQuery.RawQuery = mapParamOAuthQuery.Encode()
 
 	return oAuthQuery.String(), nil
-}
-
-// setHTTPPrefixToURL will add "http://" or "https://" in front of the url
-// depending on the scheme given.
-func setHTTPPrefixToURL(baseURL, scheme string) string {
-	httpStr := "http://"
-	httpSecureStr := "https://"
-
-	if strings.HasPrefix(baseURL, httpStr) || strings.HasPrefix(baseURL, httpSecureStr) {
-		return baseURL
-	}
-
-	if scheme == "http" {
-		return httpStr + baseURL
-	}
-
-	return httpSecureStr + baseURL
 }
