@@ -127,7 +127,14 @@ Examples
 
 ### `@event` syntax
 
-The `@event` syntax is not determined yet. Its main purpose will be to describe job scheduling after a filesystem or database modification.
+
+The `@event` trigger starts an event every time any event occurs on the doctype.
+
+Examples
+
+```
+@event io.cozy.files
+```
 
 
 ### `@webhook` syntax
