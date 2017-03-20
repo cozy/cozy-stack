@@ -41,7 +41,7 @@ func NewIterator(c Context, sel mango.Filter, opt *IteratorOptions) *Iterator {
 }
 
 func (i *Iterator) Next() (*DirDoc, *FileDoc, error) {
-	if len(i.list) == 0 || i.index >= len(i.list) {
+	if i.index >= len(i.list) {
 		if err := i.fetch(); err != nil {
 			return nil, nil, err
 		}
@@ -51,6 +51,7 @@ func (i *Iterator) Next() (*DirDoc, *FileDoc, error) {
 	return d, f, nil
 }
 
+// fetch should be called when the index is out of the list boundary.
 func (i *Iterator) fetch() error {
 	l := len(i.list)
 	if l > 0 && l < i.opt.ByFetch {
@@ -62,13 +63,12 @@ func (i *Iterator) fetch() error {
 	i.list = i.list[:0]
 
 	var skip int
-	var sel mango.Filter
+	sel := i.sel
 	if i.opt.StartKey != "" {
 		// TODO: adapt this code when filtering and sorting are added to the
 		// iterator
-		sel = mango.And(i.sel, mango.AfterID(i.opt.StartKey))
+		sel = mango.And(sel, mango.AfterID(i.opt.StartKey))
 	} else {
-		sel = i.sel
 		skip = i.offset
 	}
 

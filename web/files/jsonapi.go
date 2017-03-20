@@ -113,11 +113,15 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	var included []jsonapi.Object
+
+	count, iterOpts, err := paginationConfig(c)
+	if err != nil {
+		return err
+	}
+
 	i := middlewares.GetInstance(c)
-	iter := doc.ChildrenIterator(i, &vfs.IteratorOptions{
-		ByFetch: 10,
-	})
-	for {
+	iter := doc.ChildrenIterator(i, iterOpts)
+	for i := 0; i < count; i++ {
 		d, f, err := iter.Next()
 		if err == vfs.ErrIteratorDone {
 			break
