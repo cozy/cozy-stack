@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -45,12 +46,30 @@ func (r *Recipient) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
 }
 
+// ExtractDomain returns the recipient's domain without the scheme
+func (r *Recipient) ExtractDomain() (string, error) {
+	var rUrl string
+	if r.URL == "" {
+		return "", ErrRecipientHasNoURL
+	}
+	tokens := strings.Split(r.URL, "://")
+	rUrl = r.URL
+	if len(tokens) > 1 {
+		rUrl = tokens[1]
+	}
+	return rUrl, nil
+}
+
 // GetAccessToken sends an access_token requests to the recipient, using the
 // given authorization code
 func (r *Recipient) GetAccessToken(code string) (*auth.AccessToken, error) {
 	client := new(http.Client)
+	rUrl, err := r.ExtractDomain()
+	if err != nil {
+		return nil, err
+	}
 	req := &auth.Request{
-		Domain:     r.URL,
+		Domain:     rUrl,
 		HTTPClient: client,
 	}
 	return req.GetAccessToken(r.Client, code)
@@ -58,19 +77,20 @@ func (r *Recipient) GetAccessToken(code string) (*auth.AccessToken, error) {
 
 // Register creates a OAuth request and register to the Recipient
 func (r *Recipient) Register(instance *instance.Instance) error {
-	if r.URL == "" {
-		return ErrRecipientHasNoURL
+	rUrl, err := r.ExtractDomain()
+	if err != nil {
+		return err
 	}
 	client := new(http.Client)
 	req := &auth.Request{
-		Domain:     r.URL,
+		Domain:     rUrl,
 		HTTPClient: client,
 	}
 	redirectURI := instance.Scheme() + "://" + instance.Domain + "/sharings/answer"
 
 	// Get the Cozy's public name
 	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
 	if err != nil {
 		return err
 	}

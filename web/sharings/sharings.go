@@ -14,6 +14,7 @@ import (
 // SharingAnswer handles a sharing answer from the sharer side
 func SharingAnswer(c echo.Context) error {
 	var err error
+	var u string
 
 	state := c.QueryParam("state")
 	clientID := c.QueryParam("client_id")
@@ -25,16 +26,14 @@ func SharingAnswer(c echo.Context) error {
 	sharingAccepted := accessCode != ""
 
 	if sharingAccepted {
-		err = sharings.SharingAccepted(instance, state, clientID, accessCode)
+		u, err = sharings.SharingAccepted(instance, state, clientID, accessCode)
 	} else {
-		err = sharings.SharingRefused(instance, state, clientID)
+		u, err = sharings.SharingRefused(instance, state, clientID)
 	}
 	if err != nil {
 		return wrapErrors(err)
 	}
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": "Answer received",
-	})
+	return c.Redirect(http.StatusFound, u)
 }
 
 // AddRecipient adds a sharing Recipient and register to its server
