@@ -153,11 +153,17 @@ func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, 
 		return "", err
 	}
 
-	oAuthQuery := url.URL{
-		Host: r.URL,
-		Path: "/sharings/request",
+	oAuthQuery, err := url.Parse(r.URL)
+	if err != nil {
+		return "", err
 	}
-
+	// Special scenario: if r.URL doesn't have an "http://" or "https://" prefix
+	// then `url.Parse` doesn't set any host.
+	if oAuthQuery.Host == "" {
+		oAuthQuery.Host = r.URL
+	}
+	// Where to send the answer.
+	oAuthQuery.Path = "/sharings/request"
 	// The link/button we put in the email has to have an http:// or https://
 	// prefix, otherwise it cannot be open in the browser.
 	if oAuthQuery.Scheme != "http" && oAuthQuery.Scheme != "https" {
