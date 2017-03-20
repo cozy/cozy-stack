@@ -64,11 +64,12 @@ type DirOrFileDoc struct {
 	DirDoc
 
 	// fields from FileDoc not contained in DirDoc
-	Size       int64  `json:"size,string"`
-	MD5Sum     []byte `json:"md5sum"`
-	Mime       string `json:"mime"`
-	Class      string `json:"class"`
-	Executable bool   `json:"executable"`
+	Size       int64    `json:"size,string"`
+	MD5Sum     []byte   `json:"md5sum"`
+	Mime       string   `json:"mime"`
+	Class      string   `json:"class"`
+	Executable bool     `json:"executable"`
+	Metadata   Metadata `json:"metadata,omitempty"`
 }
 
 // Refine returns either a DirDoc or FileDoc pointer depending on the type of
@@ -93,6 +94,7 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 			Class:       fd.Class,
 			Executable:  fd.Executable,
 			Tags:        fd.Tags,
+			Metadata:    fd.Metadata,
 		}
 	}
 	return nil, nil
