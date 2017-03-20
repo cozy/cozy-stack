@@ -44,7 +44,7 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, 200, res.StatusCode)
+	assert.Equal(t, 204, res.StatusCode)
 
 	doc, err := vfs.GetFileDoc(testInstance, fileID1)
 	assert.NoError(t, err)
@@ -82,7 +82,7 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	assert.Equal(t, 200, res.StatusCode)
+	assert.Equal(t, 204, res.StatusCode)
 
 	doc, err := vfs.GetFileDoc(testInstance, fileID2)
 	assert.NoError(t, err)

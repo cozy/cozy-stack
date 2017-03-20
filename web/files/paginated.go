@@ -154,15 +154,14 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	return jsonapi.DataList(c, statusCode, included, nil)
 }
 
-// newFile creates an instance of file struct from a copy of a vfs.FileDoc
-// document. The ReferencedBy field is nilified so that it not dumped in the
-// json document.
+// newFile creates an instance of file struct from a vfs.FileDoc document.
+// Warning: the given document is mutated, the ReferencedBy field is nilified
+// so that it not dumped in the json document.
 func newFile(doc *vfs.FileDoc) *file {
-	cop := *doc
-	ref := cop.ReferencedBy
-	cop.ReferencedBy = nil
+	ref := doc.ReferencedBy
+	doc.ReferencedBy = nil
 	return &file{
-		doc: &cop,
+		doc: doc,
 		ref: ref,
 	}
 }

@@ -83,6 +83,9 @@ func createFileHandler(c echo.Context, vfsC vfs.Context) (f *file, err error) {
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
+	if err != nil {
+		return
+	}
 	f = newFile(doc)
 	return
 }
@@ -261,18 +264,19 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 		return err
 	}
 
-	if file != nil {
-		doc, err := vfs.ModifyFileMetadata(instance, file, patch)
+	if dir != nil {
+		doc, err := vfs.ModifyDirMetadata(instance, dir, patch)
 		if err != nil {
 			return wrapVfsError(err)
 		}
-		return fileData(c, http.StatusOK, doc, nil)
+		return dirData(c, http.StatusOK, doc)
 	}
-	doc, err := vfs.ModifyDirMetadata(instance, dir, patch)
+
+	doc, err := vfs.ModifyFileMetadata(instance, file, patch)
 	if err != nil {
 		return wrapVfsError(err)
 	}
-	return dirData(c, http.StatusOK, doc)
+	return fileData(c, http.StatusOK, doc, nil)
 }
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
