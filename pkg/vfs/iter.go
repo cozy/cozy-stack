@@ -77,20 +77,17 @@ func (i *Iterator) fetch() error {
 	i.index = 0
 	i.list = i.list[:0]
 
-	var skip int
 	sel := i.sel
 	if i.opt.StartKey != "" {
 		// TODO: adapt this code when filtering and sorting are added to the
 		// iterator
 		sel = mango.And(sel, mango.AfterID(i.opt.StartKey))
-	} else {
-		skip = i.offset
 	}
 
 	req := &couchdb.FindRequest{
 		Selector: sel,
 		Limit:    i.opt.ByFetch,
-		Skip:     skip,
+		Skip:     i.offset,
 	}
 	err := couchdb.FindDocs(i.ctx, consts.Files, req, &i.list)
 	if err != nil {
