@@ -148,8 +148,12 @@ func (s *Sharing) GetSharingRecipientFromClientID(db couchdb.Database, clientID 
 		if err != nil {
 			return nil, err
 		}
+
 		recStatus.recipient = recipient
 
+		if recipient.Client == nil {
+			return nil, nil
+		}
 		if recipient.Client.ClientID == clientID {
 			return recStatus, nil
 		}
@@ -184,7 +188,6 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	}
 
 	sharing := &res[0]
-
 	sRec, err := sharing.GetSharingRecipientFromClientID(db, clientID)
 	if err != nil {
 		return nil, nil, err
@@ -192,11 +195,28 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	if sRec == nil {
 		return nil, nil, ErrRecipientDoesNotExist
 	}
-
 	return sharing, sRec, nil
 }
 
-// SharingRefused handles a rejectedsharing on the sharer side
+// SharingAccepted handles an accepted sharing on the sharer side
+func SharingAccepted(db couchdb.Database, state, clientID, accessCode string) error {
+	sharing, recStatus, err := findSharingRecipient(db, state, clientID)
+	if err != nil {
+		return err
+	}
+	recStatus.Status = consts.AcceptedSharingStatus
+
+	access, err := recStatus.recipient.GetAccessToken(accessCode)
+	if err != nil {
+		return err
+	}
+	recStatus.AccessToken = access.AccessToken
+	recStatus.RefreshToken = access.RefreshToken
+	err = couchdb.UpdateDoc(db, sharing)
+	return err
+}
+
+// SharingRefused handles a rejected sharing on the sharer side
 func SharingRefused(db couchdb.Database, state, clientID string) error {
 	sharing, recStatus, err := findSharingRecipient(db, state, clientID)
 	if err != nil {

@@ -13,25 +13,22 @@ import (
 
 // SharingAnswer handles a sharing answer from the sharer side
 func SharingAnswer(c echo.Context) error {
-
 	var err error
 
-	state := c.FormValue("state")
-	clientID := c.FormValue("client_id")
-	scope := c.FormValue("scope")
-	accessCode := c.FormValue("access_code")
+	state := c.QueryParam("state")
+	clientID := c.QueryParam("client_id")
+	accessCode := c.QueryParam("access_code")
 
 	instance := middlewares.GetInstance(c)
 
-	// The sharing is refused if there is no access code or scope
-	sharingAccepted := scope != "" && accessCode != ""
+	// The sharing is refused if there is no access code
+	sharingAccepted := accessCode != ""
 
 	if sharingAccepted {
-		//TODO: handle the acceptation
+		err = sharings.SharingAccepted(instance, state, clientID, accessCode)
 	} else {
 		err = sharings.SharingRefused(instance, state, clientID)
 	}
-
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -158,6 +155,7 @@ func Routes(router *echo.Group) {
 	router.GET("/request", SharingRequest)
 	router.POST("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
+	router.GET("/answer", SharingAnswer)
 	router.POST("/recipient", AddRecipient)
 }
 

@@ -45,6 +45,17 @@ func (r *Recipient) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
 }
 
+// GetAccessToken sends an access_token requests to the recipient, using the
+// given authorization code
+func (r *Recipient) GetAccessToken(code string) (*auth.AccessToken, error) {
+	client := new(http.Client)
+	req := &auth.Request{
+		Domain:     r.URL,
+		HTTPClient: client,
+	}
+	return req.GetAccessToken(r.Client, code)
+}
+
 // Register creates a OAuth request and register to the Recipient
 func (r *Recipient) Register(instance *instance.Instance) error {
 	if r.URL == "" {
@@ -55,7 +66,7 @@ func (r *Recipient) Register(instance *instance.Instance) error {
 		Domain:     r.URL,
 		HTTPClient: client,
 	}
-	redirectURI := instance.Domain + "/sharings/answer"
+	redirectURI := instance.Scheme() + "://" + instance.Domain + "/sharings/answer"
 
 	// Get the Cozy's public name
 	doc := &couchdb.JSONDoc{}
