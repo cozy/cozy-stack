@@ -108,12 +108,34 @@ func SendSharingMails(c echo.Context) error {
 	return nil
 }
 
+// RecipientRefusedSharing is called when the recipient refused the sharing.
+// This function will delete the sharing document and inform the sharer by
+// returning her the sharing id, the client id (oauth) and nothing else (more
+// especially no scope and no access code).
+func RecipientRefusedSharing(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	// We collect the information we need to send to the sharer: the client id,
+	// the sharing id.
+	sharingID := c.FormValue("state")
+	if sharingID == "" {
+		return wrapErrors(sharings.ErrMissingState)
+	}
+	clientID := c.FormValue("client_id")
+	if clientID == "" {
+		return wrapErrors(sharings.ErrNoOAuthClient)
+	}
+
+	return sharings.RecipientRefusedSharing(instance, sharingID, clientID)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
 	router.PUT("/:id/sendMails", SendSharingMails)
 	router.GET("/request", SharingRequest)
 	router.POST("/answer", SharingAnswer)
+	router.POST("/formRefuse", RecipientRefusedSharing)
 }
 
 // wrapErrors returns a formatted error
@@ -131,6 +153,8 @@ func wrapErrors(err error) error {
 		return jsonapi.NotFound(err)
 	case sharings.ErrMailCouldNotBeSent:
 		return jsonapi.InternalServerError(err)
+	case sharings.ErrNoOAuthClient:
+		return jsonapi.BadRequest(err)
 	}
 	return err
 }

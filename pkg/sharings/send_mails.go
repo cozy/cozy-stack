@@ -97,8 +97,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 // logErrorAndSetRecipientStatus will log an error in the stack and set the
 // status of the impacted recipient to "error".
 func logErrorAndSetRecipientStatus(rs *RecipientStatus, err error) bool {
-	log.Error(`[Sharing] An error occurred while trying to send
-        the email invitation`, err)
+	log.Error("[Sharing] An error occurred while trying to send the email invitation: ", err)
 	rs.Status = consts.ErrorSharingStatus
 	return true
 }
