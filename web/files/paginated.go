@@ -24,6 +24,11 @@ type dir struct {
 	included []jsonapi.Object
 }
 
+type file struct {
+	doc *vfs.FileDoc
+	ref []jsonapi.ResourceIdentifier
+}
+
 func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 	var count int64
 	var err error
@@ -50,6 +55,10 @@ func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 	}, nil
 }
 
+func newDir(doc *vfs.DirDoc) *dir {
+	return &dir{doc: doc}
+}
+
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	var relsData []jsonapi.ResourceIdentifier
 	var included []jsonapi.Object
@@ -73,9 +82,9 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 			return err
 		}
 		if d != nil {
-			included = append(included, d)
+			included = append(included, newDir(d))
 		} else {
-			included = append(included, f)
+			included = append(included, newFile(f))
 		}
 		var ri jsonapi.ResourceIdentifier
 		if d != nil {
@@ -137,31 +146,71 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 			return err
 		}
 		if d != nil {
-			included = append(included, d)
+			included = append(included, newDir(d))
 		} else {
-			included = append(included, f)
+			included = append(included, newFile(f))
 		}
 	}
 	return jsonapi.DataList(c, statusCode, included, nil)
 }
 
-func (d *dir) ID() string      { return d.doc.ID() }
-func (d *dir) Rev() string     { return d.doc.Rev() }
-func (d *dir) SetID(string)    {}
-func (d *dir) SetRev(string)   {}
-func (d *dir) DocType() string { return d.doc.DocType() }
-func (d *dir) MarshalJSON() ([]byte, error) {
-	return json.Marshal(d.doc)
+// newFile creates an instance of file struct from a copy of a vfs.FileDoc
+// document. The ReferencedBy field is nilified so that it not dumped in the
+// json document.
+func newFile(doc *vfs.FileDoc) *file {
+	cop := *doc
+	ref := cop.ReferencedBy
+	cop.ReferencedBy = nil
+	return &file{
+		doc: &cop,
+		ref: ref,
+	}
 }
 
+func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.LinksList) error {
+	return jsonapi.Data(c, statusCode, newFile(doc), links)
+}
+
+func (d *dir) ID() string                             { return d.doc.ID() }
+func (d *dir) Rev() string                            { return d.doc.Rev() }
+func (d *dir) SetID(string)                           {}
+func (d *dir) SetRev(string)                          {}
+func (d *dir) DocType() string                        { return d.doc.DocType() }
+func (d *dir) Relationships() jsonapi.RelationshipMap { return d.rel }
+func (d *dir) Included() []jsonapi.Object             { return d.included }
+func (d *dir) MarshalJSON() ([]byte, error)           { return json.Marshal(d.doc) }
 func (d *dir) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
 }
 
-func (d *dir) Relationships() jsonapi.RelationshipMap {
-	return d.rel
+func (f *file) ID() string      { return f.doc.ID() }
+func (f *file) Rev() string     { return f.doc.Rev() }
+func (f *file) SetID(string)    {}
+func (f *file) SetRev(string)   {}
+func (f *file) DocType() string { return f.doc.DocType() }
+func (f *file) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{
+		"parent": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Related: "/files/" + f.doc.DirID,
+			},
+			Data: jsonapi.ResourceIdentifier{
+				ID:   f.doc.DirID,
+				Type: consts.Files,
+			},
+		},
+		"referenced_by": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Self: "/files/" + f.doc.ID() + "/relationships/references",
+			},
+			Data: f.ref,
+		},
+	}
 }
-
-func (d *dir) Included() []jsonapi.Object {
-	return d.included
+func (f *file) Included() []jsonapi.Object { return []jsonapi.Object{} }
+func (f *file) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.doc)
+}
+func (f *file) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
 }

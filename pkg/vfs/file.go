@@ -88,31 +88,6 @@ func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
 	return getParentDir(c, f.DirID)
 }
 
-// Links is part of the jsonapi.Object interface
-func (f *FileDoc) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/files/" + f.DocID}
-}
-
-// Relationships is part of the jsonapi.Object interface
-func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{
-		"parent": jsonapi.Relationship{
-			Links: &jsonapi.LinksList{
-				Related: "/files/" + f.DirID,
-			},
-			Data: jsonapi.ResourceIdentifier{
-				ID:   f.DirID,
-				Type: consts.Files,
-			},
-		},
-	}
-}
-
-// Included is part of the jsonapi.Object interface
-func (f *FileDoc) Included() []jsonapi.Object {
-	return []jsonapi.Object{}
-}
-
 // AddReferencedBy adds referenced_by to the file
 func (f *FileDoc) AddReferencedBy(ri ...jsonapi.ResourceIdentifier) {
 	f.ReferencedBy = append(f.ReferencedBy, ri...)
@@ -642,6 +617,5 @@ func getFileMode(executable bool) os.FileMode {
 }
 
 var (
-	_ couchdb.Doc    = &FileDoc{}
-	_ jsonapi.Object = &FileDoc{}
+	_ couchdb.Doc = &FileDoc{}
 )

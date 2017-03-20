@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // DirDoc is a struct containing all the informations about a
@@ -72,31 +71,6 @@ func (d *DirDoc) Path(c Context) (string, error) {
 // Parent returns the parent directory document
 func (d *DirDoc) Parent(c Context) (*DirDoc, error) {
 	return getParentDir(c, d.DirID)
-}
-
-// Links is part of the jsonapi.Object interface
-func (d *DirDoc) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/files/" + d.DocID}
-}
-
-// Relationships is part of the jsonapi.Object interface
-func (d *DirDoc) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{
-		"parent": jsonapi.Relationship{
-			Links: &jsonapi.LinksList{
-				Related: "/files/" + d.DirID,
-			},
-			Data: jsonapi.ResourceIdentifier{
-				ID:   d.DirID,
-				Type: consts.Files,
-			},
-		},
-	}
-}
-
-// Included is part of the jsonapi.Object interface
-func (d *DirDoc) Included() []jsonapi.Object {
-	return []jsonapi.Object{}
 }
 
 // ChildrenIterator returns an iterator to iterate over the children of
@@ -441,6 +415,5 @@ func safeRenameDir(c Context, oldpath, newpath string) error {
 }
 
 var (
-	_ couchdb.Doc    = &DirDoc{}
-	_ jsonapi.Object = &DirDoc{}
+	_ couchdb.Doc = &DirDoc{}
 )

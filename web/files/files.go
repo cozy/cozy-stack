@@ -55,11 +55,12 @@ func CreationHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
-func createFileHandler(c echo.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err error) {
+func createFileHandler(c echo.Context, vfsC vfs.Context) (f *file, err error) {
 	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 
 	dirID := c.Param("dir-id")
 	name := c.QueryParam("Name")
+	var doc *vfs.FileDoc
 	doc, err = fileDocFromReq(c, name, dirID, tags)
 	if err != nil {
 		return
@@ -82,23 +83,31 @@ func createFileHandler(c echo.Context, vfsC vfs.Context) (doc *vfs.FileDoc, err 
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
+	f = newFile(doc)
 	return
 }
 
-func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
+func createDirHandler(c echo.Context, vfsC vfs.Context) (*dir, error) {
 	path := c.QueryParam("Path")
 	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 
+	var doc *vfs.DirDoc
+	var err error
 	if path != "" {
 		if c.QueryParam("Recursive") == "true" {
-			return vfs.MkdirAll(vfsC, path, tags)
+			doc, err = vfs.MkdirAll(vfsC, path, tags)
+		} else {
+			doc, err = vfs.Mkdir(vfsC, path, tags)
 		}
-		return vfs.Mkdir(vfsC, path, tags)
+		if err != nil {
+			return nil, err
+		}
+		return newDir(doc), nil
 	}
 
 	dirID := c.Param("dir-id")
 	name := c.QueryParam("Name")
-	doc, err := vfs.NewDirDoc(name, dirID, tags)
+	doc, err = vfs.NewDirDoc(name, dirID, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +127,7 @@ func createDirHandler(c echo.Context, vfsC vfs.Context) (*vfs.DirDoc, error) {
 		return nil, err
 	}
 
-	return doc, nil
+	return newDir(doc), nil
 }
 
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
@@ -172,7 +181,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 			err = wrapVfsError(err)
 			return
 		}
-		err = jsonapi.Data(c, http.StatusOK, newdoc, nil)
+		err = fileData(c, http.StatusOK, newdoc, nil)
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
@@ -252,19 +261,18 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 		return err
 	}
 
-	var data jsonapi.Object
-	var err error
 	if file != nil {
-		data, err = vfs.ModifyFileMetadata(instance, file, patch)
-	} else if dir != nil {
-		data, err = vfs.ModifyDirMetadata(instance, dir, patch)
+		doc, err := vfs.ModifyFileMetadata(instance, file, patch)
+		if err != nil {
+			return wrapVfsError(err)
+		}
+		return fileData(c, http.StatusOK, doc, nil)
 	}
-
+	doc, err := vfs.ModifyDirMetadata(instance, dir, patch)
 	if err != nil {
 		return wrapVfsError(err)
 	}
-
-	return jsonapi.Data(c, http.StatusOK, data, nil)
+	return dirData(c, http.StatusOK, doc)
 }
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
@@ -279,14 +287,14 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	// if err := checkPerm(c, permissions.GET, dir, file); err != nil {
-	// 	return err
-	// }
+	if err := checkPerm(c, permissions.GET, dir, file); err != nil {
+		return err
+	}
 
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return jsonapi.Data(c, http.StatusOK, file, nil)
+	return fileData(c, http.StatusOK, file, nil)
 }
 
 // ReadMetadataFromPathHandler handles all GET requests on
@@ -308,7 +316,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 	if dir != nil {
 		return dirData(c, http.StatusOK, dir)
 	}
-	return jsonapi.Data(c, http.StatusOK, file, nil)
+	return fileData(c, http.StatusOK, file, nil)
 }
 
 // ReadFileContentFromIDHandler handles all GET requests on /files/:file-id
@@ -458,7 +466,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		Related: "/files/downloads/" + secret + "/" + doc.Name,
 	}
 
-	return jsonapi.Data(c, http.StatusOK, doc, links)
+	return fileData(c, http.StatusOK, doc, links)
 }
 
 // ArchiveDownloadHandler handles requests to /files/archive/:secret/whatever.zip
@@ -509,18 +517,19 @@ func TrashHandler(c echo.Context) error {
 		return err
 	}
 
-	var data jsonapi.Object
 	if dir != nil {
-		data, err = vfs.TrashDir(instance, dir)
-	} else {
-		data, err = vfs.TrashFile(instance, file)
+		doc, err := vfs.TrashDir(instance, dir)
+		if err != nil {
+			return wrapVfsError(err)
+		}
+		return dirData(c, http.StatusOK, doc)
 	}
 
+	doc, err := vfs.TrashFile(instance, file)
 	if err != nil {
 		return wrapVfsError(err)
 	}
-
-	return jsonapi.Data(c, http.StatusOK, data, nil)
+	return fileData(c, http.StatusOK, doc, nil)
 }
 
 // ReadTrashFilesHandler handle GET requests on /files/trash and return the
@@ -558,18 +567,19 @@ func RestoreTrashFileHandler(c echo.Context) error {
 		return err
 	}
 
-	var data jsonapi.Object
 	if dir != nil {
-		data, err = vfs.RestoreDir(instance, dir)
-	} else {
-		data, err = vfs.RestoreFile(instance, file)
+		doc, err := vfs.RestoreDir(instance, dir)
+		if err != nil {
+			return wrapVfsError(err)
+		}
+		return dirData(c, http.StatusOK, doc)
 	}
 
+	doc, err := vfs.RestoreFile(instance, file)
 	if err != nil {
 		return wrapVfsError(err)
 	}
-
-	return jsonapi.Data(c, http.StatusOK, data, nil)
+	return fileData(c, http.StatusOK, doc, nil)
 }
 
 // ClearTrashHandler handles DELETE request to clear the trash
