@@ -99,14 +99,14 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ### GET /files/:file-id
 
 Get a directory or a file informations. In the case of a directory, it contains the list of files and sub-directories inside it.
-Contents is paginated. By default, only the 100 first entries are given.
+Contents is paginated. By default, only the 30 first entries are given.
 
 ### Query-String
 
 Parameter    | Description
--------------|---------------------------------------
-page[cursor] | the last id of the results
-page[limit]  | the number of entries (100 by default)
+-------------|--------------------------------------
+Page[cursor] | the last id of the results
+Page[limit]  | the number of entries (30 by default)
 
 #### Request
 
@@ -125,7 +125,7 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "links": {
-    "next": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
+    "next": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?Page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
   },
   "data": {
     "type": "io.cozy.files",
@@ -709,8 +709,8 @@ List the files inside the trash. It's paginated.
 
 Parameter    | Description
 -------------|---------------------------------------
-page[cursor] | the last id of the results
-page[limit]  | the number of entries (100 by default)
+Page[cursor] | the last id of the results
+Page[limit]  | the number of entries (100 by default)
 
 #### Request
 

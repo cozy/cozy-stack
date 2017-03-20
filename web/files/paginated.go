@@ -3,6 +3,7 @@ package files
 // Links is used to generate a JSON-API link for the directory (part of
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -17,11 +18,6 @@ const (
 	maxPerPage = 100
 )
 
-// type file struct {
-// 	doc *vfs.FileDoc
-// 	rel jsonapi.RelationshipMap
-// }
-
 type dir struct {
 	doc      *vfs.DirDoc
 	rel      jsonapi.RelationshipMap
@@ -31,10 +27,10 @@ type dir struct {
 func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 	var count int64
 	var err error
-	afterQuery := c.QueryParam("After")
-	countQuery := c.QueryParam("Count")
-	if countQuery != "" {
-		count, err = strconv.ParseInt(countQuery, 10, 32)
+	cursorQuery := c.QueryParam("Page[cursor]")
+	limitQuery := c.QueryParam("Page[limit]")
+	if limitQuery != "" {
+		count, err = strconv.ParseInt(limitQuery, 10, 32)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -50,7 +46,7 @@ func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 	}
 	return int(count), &vfs.IteratorOptions{
 		ByFetch:  byFetch,
-		StartKey: afterQuery,
+		StartKey: cursorQuery,
 	}, nil
 }
 
@@ -63,11 +59,14 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		return err
 	}
 
+	hasNext := true
+
 	i := middlewares.GetInstance(c)
 	iter := doc.ChildrenIterator(i, iterOpts)
 	for i := 0; i < count; i++ {
 		d, f, err := iter.Next()
 		if err == vfs.ErrIteratorDone {
+			hasNext = false
 			break
 		}
 		if err != nil {
@@ -103,12 +102,20 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		"parent":   parent,
 		"contents": jsonapi.Relationship{Data: relsData},
 	}
+
+	var links *jsonapi.LinksList
+	if hasNext && len(included) > 0 {
+		next := fmt.Sprintf("/files/%s?Page[cursor]=%s&Page[limit]=%d",
+			doc.DocID, included[len(included)-1].ID(), count)
+		links = &jsonapi.LinksList{Next: next}
+	}
+
 	dir := &dir{
 		doc:      doc,
 		rel:      rel,
 		included: included,
 	}
-	return jsonapi.Data(c, statusCode, dir, nil)
+	return jsonapi.Data(c, statusCode, dir, links)
 }
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
@@ -147,18 +154,14 @@ func (d *dir) MarshalJSON() ([]byte, error) {
 	return json.Marshal(d.doc)
 }
 
-// jsonapi.Object interface)
 func (d *dir) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
 }
 
-// Relationships is used to generate the content relationship in JSON-API format
-// (part of the jsonapi.Object interface)
 func (d *dir) Relationships() jsonapi.RelationshipMap {
 	return d.rel
 }
 
-// Included is part of the jsonapi.Object interface
 func (d *dir) Included() []jsonapi.Object {
 	return d.included
 }
