@@ -3,7 +3,6 @@ package vfs
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -531,30 +529,6 @@ func TestDonwloadStore(t *testing.T) {
 	a3, err := storeA.GetArchive(key2)
 	assert.NoError(t, err)
 	assert.Nil(t, a3, "no expiration")
-}
-
-func TestFileSerialization(t *testing.T) {
-	var f = &FileDoc{
-		Type: consts.FileType,
-		Name: "test/foo/bar.jpg",
-		ReferencedBy: []jsonapi.ResourceIdentifier{
-			{Type: "io.cozy.photo.album", ID: "foorefid"},
-		},
-	}
-
-	f2 := f.HideFields()
-
-	b, err := json.Marshal(f)
-	assert.NoError(t, err)
-	assert.Contains(t, string(b), "referenced_by")
-
-	b2, err := json.Marshal(f2)
-	assert.NoError(t, err)
-	assert.NotContains(t, string(b2), "referenced_by")
-
-	b3, err := jsonapi.MarshalObject(f2)
-	assert.NoError(t, err)
-	assert.Contains(t, string(b3), "foorefid")
 }
 
 func TestMain(m *testing.M) {

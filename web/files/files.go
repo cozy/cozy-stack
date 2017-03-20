@@ -518,16 +518,16 @@ func TrashHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		doc, err := vfs.TrashDir(instance, dir)
-		if err != nil {
-			return wrapVfsError(err)
+		doc, errt := vfs.TrashDir(instance, dir)
+		if errt != nil {
+			return wrapVfsError(errt)
 		}
 		return dirData(c, http.StatusOK, doc)
 	}
 
-	doc, err := vfs.TrashFile(instance, file)
-	if err != nil {
-		return wrapVfsError(err)
+	doc, errt := vfs.TrashFile(instance, file)
+	if errt != nil {
+		return wrapVfsError(errt)
 	}
 	return fileData(c, http.StatusOK, doc, nil)
 }
@@ -568,16 +568,16 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
-		doc, err := vfs.RestoreDir(instance, dir)
-		if err != nil {
-			return wrapVfsError(err)
+		doc, errt := vfs.RestoreDir(instance, dir)
+		if errt != nil {
+			return wrapVfsError(errt)
 		}
 		return dirData(c, http.StatusOK, doc)
 	}
 
-	doc, err := vfs.RestoreFile(instance, file)
-	if err != nil {
-		return wrapVfsError(err)
+	doc, errt := vfs.RestoreFile(instance, file)
+	if errt != nil {
+		return wrapVfsError(errt)
 	}
 	return fileData(c, http.StatusOK, doc, nil)
 }
