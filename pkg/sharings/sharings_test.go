@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	webAuth "github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -33,6 +34,8 @@ var in = &instance.Instance{
 }
 
 var ts *httptest.Server
+var recipientURL string
+var recipientIn *instance.Instance
 
 func createInstance(domain string) *instance.Instance {
 	instance.Destroy(domain)
@@ -45,6 +48,16 @@ func createInstance(domain string) *instance.Instance {
 		os.Exit(1)
 	}
 	return testInstance
+}
+
+func createServer() *httptest.Server {
+	recipientIn = createInstance("test-sharing.xerxes")
+	handler := echo.New()
+	handler.HTTPErrorHandler = errors.ErrorHandler
+	handler.Use(injectInstance(recipientIn))
+	webAuth.Routes(handler.Group("/auth"))
+	ts = httptest.NewServer(handler)
+	return ts
 }
 
 func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
@@ -69,6 +82,42 @@ func createSettings(instance *instance.Instance) {
 	}
 }
 
+func createRecipient(t *testing.T) (*Recipient, error) {
+	recipient := &Recipient{
+		Email: "test.fr",
+		URL:   recipientURL,
+	}
+	err := CreateRecipient(in, recipient)
+	assert.NoError(t, err)
+	err = recipient.Register(in)
+	assert.NoError(t, err)
+	return recipient, err
+}
+
+func createSharing(t *testing.T, recipient *Recipient) (*Sharing, error) {
+	recStatus := &RecipientStatus{
+		RefRecipient: jsonapi.ResourceIdentifier{
+			ID:   recipient.RID,
+			Type: consts.Recipients,
+		},
+	}
+	sharing := &Sharing{
+		SharingType:      consts.OneShotSharing,
+		RecipientsStatus: []*RecipientStatus{recStatus},
+	}
+	err := CheckSharingCreation(in, sharing)
+	assert.NoError(t, err)
+	err = Create(in, sharing)
+	assert.NoError(t, err)
+	return sharing, err
+}
+
+func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode, error) {
+	access, err := oauth.CreateAccessCode(recipientIn, clientID, scope)
+	assert.NoError(t, err)
+	return access, err
+}
+
 func addPublicName(t *testing.T) {
 	publicName := "El Shareto"
 	doc := &couchdb.JSONDoc{
@@ -82,6 +131,15 @@ func addPublicName(t *testing.T) {
 
 	err = couchdb.UpdateDoc(in, doc)
 	assert.NoError(t, err)
+}
+
+func GetAccessTokenNoAuth(t *testing.T) {
+	code := "sesame"
+	rec := &Recipient{
+		URL: recipientURL,
+	}
+	_, err := rec.GetAccessToken(code)
+	assert.Error(t, err)
 }
 
 func TestRegisterNoURL(t *testing.T) {
@@ -111,18 +169,8 @@ func TestRegisterRecipientNotFound(t *testing.T) {
 }
 
 func TestRegisterSuccess(t *testing.T) {
-	domain := "test-sharing.xerxes"
-	testInstance := createInstance(domain)
-	handler := echo.New()
-	handler.HTTPErrorHandler = errors.ErrorHandler
-	handler.Use(injectInstance(testInstance))
-	webAuth.Routes(handler.Group("/auth"))
-	ts = httptest.NewServer(handler)
-
-	url := strings.Split(ts.URL, "http://")[1]
-
 	recipient := &Recipient{
-		URL:   url,
+		URL:   recipientURL,
 		Email: "xerxes@fr",
 	}
 
@@ -206,6 +254,89 @@ func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, rStatus, recStatus)
 
+}
+
+func TestSharingAcceptedNoSharing(t *testing.T) {
+	state := "fake state"
+	clientID := "fake client"
+	accessCode := "fake code"
+	err := SharingAccepted(TestPrefix, state, clientID, accessCode)
+	assert.Error(t, err)
+}
+
+func TestSharingAcceptedNoClient(t *testing.T) {
+	state := "stateoftheart"
+	clientID := "fake client"
+	accessCode := "fake code"
+
+	sharing := &Sharing{
+		SharingID: state,
+	}
+	err := couchdb.CreateDoc(TestPrefix, sharing)
+	assert.NoError(t, err)
+	err = SharingAccepted(TestPrefix, state, clientID, accessCode)
+	assert.Error(t, err)
+}
+
+func TestSharingAcceptedStateNotUnique(t *testing.T) {
+	state := "stateoftheart"
+	clientID := "fake client"
+	accessCode := "fake code"
+	sharing1 := &Sharing{
+		SharingID: state,
+	}
+	sharing2 := &Sharing{
+		SharingID: state,
+	}
+	err := couchdb.CreateDoc(TestPrefix, sharing1)
+	assert.NoError(t, err)
+	err = couchdb.CreateDoc(TestPrefix, sharing2)
+	assert.NoError(t, err)
+
+	err = SharingAccepted(TestPrefix, state, clientID, accessCode)
+	assert.Error(t, err)
+}
+
+func TestSharingAcceptedBadCode(t *testing.T) {
+	recipient, err := createRecipient(t)
+	assert.NoError(t, err)
+	assert.NotNil(t, recipient)
+	assert.NotNil(t, recipient.Client.ClientID)
+
+	sharing, err := createSharing(t, recipient)
+	assert.NoError(t, err)
+	assert.NotNil(t, sharing)
+
+	err = SharingAccepted(in, sharing.SharingID, recipient.Client.ClientID, "fakeaccessCode")
+	assert.Error(t, err)
+}
+
+func TestSharingAcceptedSuccess(t *testing.T) {
+	recipient, err := createRecipient(t)
+	assert.NoError(t, err)
+	assert.NotNil(t, recipient)
+	assert.NotNil(t, recipient.Client.ClientID)
+	clientID := recipient.Client.ClientID
+	sharing, err := createSharing(t, recipient)
+	assert.NoError(t, err)
+	assert.NotNil(t, sharing)
+
+	access, err := generateAccessCode(t, clientID, "")
+	assert.NoError(t, err)
+
+	err = SharingAccepted(in, sharing.SharingID, clientID, access.Code)
+	assert.NoError(t, err)
+
+	doc := &Sharing{}
+	err = couchdb.GetDoc(in, consts.Sharings, sharing.SID, doc)
+	assert.NoError(t, err)
+
+	recStatuses, err := doc.RecStatus(in)
+	assert.NoError(t, err)
+	recStatus := recStatuses[0]
+	assert.Equal(t, consts.AcceptedSharingStatus, recStatus.Status)
+	assert.NotNil(t, recStatus.AccessToken)
+	assert.NotNil(t, recStatus.RefreshToken)
 }
 
 func TestSharingRefusedNoSharing(t *testing.T) {
@@ -524,13 +655,19 @@ func TestMain(m *testing.M) {
 	}
 
 	createSettings(in)
+	ts = createServer()
+	recipientURL = strings.Split(ts.URL, "http://")[1]
 
 	err = couchdb.DefineIndexes(TestPrefix, consts.IndexesByDoctype(consts.Sharings))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
+	err = couchdb.DefineIndex(in, mango.IndexOnFields(consts.Sharings, "sharing_id"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
 	couchdb.DeleteDB(TestPrefix, consts.Recipients)
