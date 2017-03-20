@@ -8,15 +8,22 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 )
 
+// ErrIteratorDone is returned by the Next() merthod of the iterator when
+// the iterator is actually done.
 var ErrIteratorDone = errors.New("No more element in the iterator")
 
-const IteratorDefaultFetchSize = 30
+// IteratorDefaultFetchSize is the default number of elements fetched from
+// couchdb on each iteration.
+const IteratorDefaultFetchSize = 100
 
+// IteratorOptions contains the options of the iterator.
 type IteratorOptions struct {
 	StartKey string
 	ByFetch  int
 }
 
+// Iterator is a struct allowing to iterate over the children of a directory.
+// The iterator is not thread-safe.
 type Iterator struct {
 	ctx    Context
 	sel    mango.Filter
@@ -24,8 +31,10 @@ type Iterator struct {
 	list   []*DirOrFileDoc
 	offset int
 	index  int
+	done   bool
 }
 
+// NewIterator return a new iterator.
 func NewIterator(c Context, sel mango.Filter, opt *IteratorOptions) *Iterator {
 	if opt == nil {
 		opt = &IteratorOptions{ByFetch: IteratorDefaultFetchSize}
@@ -40,7 +49,12 @@ func NewIterator(c Context, sel mango.Filter, opt *IteratorOptions) *Iterator {
 	}
 }
 
+// Next should be called to get the next directory or file children of the
+// parent directory. If the error is ErrIteratorDone
 func (i *Iterator) Next() (*DirDoc, *FileDoc, error) {
+	if i.done {
+		return nil, nil, ErrIteratorDone
+	}
 	if i.index >= len(i.list) {
 		if err := i.fetch(); err != nil {
 			return nil, nil, err
@@ -55,6 +69,7 @@ func (i *Iterator) Next() (*DirDoc, *FileDoc, error) {
 func (i *Iterator) fetch() error {
 	l := len(i.list)
 	if l > 0 && l < i.opt.ByFetch {
+		i.done = true
 		return ErrIteratorDone
 	}
 

@@ -152,7 +152,7 @@ func Between(field string, v1 interface{}, v2 interface{}) Filter {
 	}}
 }
 
-// Between returns a filter that check if v1 < field < v2
+// Inside returns a filter that check if v1 < field < v2
 func Inside(field string, v1 interface{}, v2 interface{}) Filter {
 	return &logicFilter{op: and, filters: []Filter{
 		&valueFilter{field, gt, v1},
@@ -167,6 +167,8 @@ func StartWith(field string, prefix string) Filter {
 	return Between(field, prefix, prefix+uFFFF)
 }
 
+// AfterID returns a filter that can be used to get the elements after a
+// specific id.
 func AfterID(id string) Filter {
 	return Inside("_id", id, uFFFF)
 }

@@ -99,10 +99,13 @@ func (d *DirDoc) Included() []jsonapi.Object {
 	return []jsonapi.Object{}
 }
 
+// ChildrenIterator returns an iterator to iterate over the children of
+// the directory.
 func (d *DirDoc) ChildrenIterator(c Context, opts *IteratorOptions) *Iterator {
 	return NewIterator(c, mango.Equal("dir_id", d.DocID), opts)
 }
 
+// IsEmpty returns whether or not the directory has at least one child.
 func (d *DirDoc) IsEmpty(c Context) (bool, error) {
 	iter := d.ChildrenIterator(c, &IteratorOptions{ByFetch: 1})
 	_, _, err := iter.Next()
