@@ -152,9 +152,9 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
 	router.PUT("/:id/sendMails", SendSharingMails)
 	router.GET("/request", SharingRequest)
+	router.GET("/answer", SharingAnswer)
 	router.POST("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
-	router.GET("/answer", SharingAnswer)
 	router.POST("/recipient", AddRecipient)
 }
 

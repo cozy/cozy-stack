@@ -116,6 +116,7 @@ func TestSharingAnswerBadCode(t *testing.T) {
 	assert.NotNil(t, recipient)
 	assert.NotNil(t, recipient.Client.ClientID)
 	sharing, err := createSharing(t, recipient)
+	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
 
 	urlVal := url.Values{
@@ -134,6 +135,7 @@ func TestSharingAnswerSuccess(t *testing.T) {
 	assert.NotNil(t, recipient)
 	assert.NotNil(t, recipient.Client.ClientID)
 	sharing, err := createSharing(t, recipient)
+	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
 
 	access, err := generateAccessCode(t, recipient.Client.ClientID, "")

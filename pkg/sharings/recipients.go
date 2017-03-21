@@ -48,28 +48,28 @@ func (r *Recipient) Links() *jsonapi.LinksList {
 
 // ExtractDomain returns the recipient's domain without the scheme
 func (r *Recipient) ExtractDomain() (string, error) {
-	var rUrl string
+	var rURL string
 	if r.URL == "" {
 		return "", ErrRecipientHasNoURL
 	}
 	tokens := strings.Split(r.URL, "://")
-	rUrl = r.URL
+	rURL = r.URL
 	if len(tokens) > 1 {
-		rUrl = tokens[1]
+		rURL = tokens[1]
 	}
-	return rUrl, nil
+	return rURL, nil
 }
 
 // GetAccessToken sends an access_token requests to the recipient, using the
 // given authorization code
 func (r *Recipient) GetAccessToken(code string) (*auth.AccessToken, error) {
 	client := new(http.Client)
-	rUrl, err := r.ExtractDomain()
+	rURL, err := r.ExtractDomain()
 	if err != nil {
 		return nil, err
 	}
 	req := &auth.Request{
-		Domain:     rUrl,
+		Domain:     rURL,
 		HTTPClient: client,
 	}
 	return req.GetAccessToken(r.Client, code)
@@ -77,13 +77,13 @@ func (r *Recipient) GetAccessToken(code string) (*auth.AccessToken, error) {
 
 // Register creates a OAuth request and register to the Recipient
 func (r *Recipient) Register(instance *instance.Instance) error {
-	rUrl, err := r.ExtractDomain()
+	rURL, err := r.ExtractDomain()
 	if err != nil {
 		return err
 	}
 	client := new(http.Client)
 	req := &auth.Request{
-		Domain:     rUrl,
+		Domain:     rURL,
 		HTTPClient: client,
 	}
 	redirectURI := instance.Scheme() + "://" + instance.Domain + "/sharings/answer"

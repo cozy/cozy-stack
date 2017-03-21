@@ -133,10 +133,12 @@ func addPublicName(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func GetAccessTokenNoAuth(t *testing.T) {
+func TestGetAccessTokenNoAuth(t *testing.T) {
 	code := "sesame"
+	client := &auth.Client{}
 	rec := &Recipient{
-		URL: recipientURL,
+		URL:    recipientURL,
+		Client: client,
 	}
 	_, err := rec.GetAccessToken(code)
 	assert.Error(t, err)
@@ -180,7 +182,6 @@ func TestRegisterSuccess(t *testing.T) {
 	err = recipient.Register(in)
 	assert.NoError(t, err)
 	assert.NotNil(t, recipient.Client)
-
 }
 
 func TestGetRecipient(t *testing.T) {
@@ -260,7 +261,7 @@ func TestSharingAcceptedNoSharing(t *testing.T) {
 	state := "fake state"
 	clientID := "fake client"
 	accessCode := "fake code"
-	err := SharingAccepted(TestPrefix, state, clientID, accessCode)
+	_, err := SharingAccepted(TestPrefix, state, clientID, accessCode)
 	assert.Error(t, err)
 }
 
@@ -274,7 +275,7 @@ func TestSharingAcceptedNoClient(t *testing.T) {
 	}
 	err := couchdb.CreateDoc(TestPrefix, sharing)
 	assert.NoError(t, err)
-	err = SharingAccepted(TestPrefix, state, clientID, accessCode)
+	_, err = SharingAccepted(TestPrefix, state, clientID, accessCode)
 	assert.Error(t, err)
 }
 
@@ -293,7 +294,7 @@ func TestSharingAcceptedStateNotUnique(t *testing.T) {
 	err = couchdb.CreateDoc(TestPrefix, sharing2)
 	assert.NoError(t, err)
 
-	err = SharingAccepted(TestPrefix, state, clientID, accessCode)
+	_, err = SharingAccepted(TestPrefix, state, clientID, accessCode)
 	assert.Error(t, err)
 }
 
@@ -307,7 +308,7 @@ func TestSharingAcceptedBadCode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
 
-	err = SharingAccepted(in, sharing.SharingID, recipient.Client.ClientID, "fakeaccessCode")
+	_, err = SharingAccepted(in, sharing.SharingID, recipient.Client.ClientID, "fakeaccessCode")
 	assert.Error(t, err)
 }
 
@@ -324,8 +325,9 @@ func TestSharingAcceptedSuccess(t *testing.T) {
 	access, err := generateAccessCode(t, clientID, "")
 	assert.NoError(t, err)
 
-	err = SharingAccepted(in, sharing.SharingID, clientID, access.Code)
+	domain, err := SharingAccepted(in, sharing.SharingID, clientID, access.Code)
 	assert.NoError(t, err)
+	assert.NotNil(t, domain)
 
 	doc := &Sharing{}
 	err = couchdb.GetDoc(in, consts.Sharings, sharing.SID, doc)
@@ -342,7 +344,7 @@ func TestSharingAcceptedSuccess(t *testing.T) {
 func TestSharingRefusedNoSharing(t *testing.T) {
 	state := "fake state"
 	clientID := "fake client"
-	err := SharingRefused(TestPrefix, state, clientID)
+	_, err := SharingRefused(TestPrefix, state, clientID)
 	assert.Error(t, err)
 }
 
@@ -355,7 +357,7 @@ func TestSharingRefusedNoClient(t *testing.T) {
 	}
 	err := couchdb.CreateDoc(TestPrefix, sharing)
 	assert.NoError(t, err)
-	err = SharingRefused(TestPrefix, state, clientID)
+	_, err = SharingRefused(TestPrefix, state, clientID)
 	assert.Error(t, err)
 }
 
@@ -373,7 +375,7 @@ func TestSharingRefusedStateNotUnique(t *testing.T) {
 	err = couchdb.CreateDoc(TestPrefix, sharing2)
 	assert.NoError(t, err)
 
-	err = SharingRefused(TestPrefix, state, clientID)
+	_, err = SharingRefused(TestPrefix, state, clientID)
 	assert.Error(t, err)
 }
 
@@ -399,7 +401,7 @@ func TestSharingRefusedSuccess(t *testing.T) {
 	}
 	err = couchdb.CreateDoc(TestPrefix, sharing)
 	assert.NoError(t, err)
-	err = SharingRefused(TestPrefix, state, clientID)
+	_, err = SharingRefused(TestPrefix, state, clientID)
 	assert.NoError(t, err)
 
 }
@@ -469,15 +471,15 @@ func TestRecipientRefusedSharingWhenResponseStatusCodeIsNotOK(t *testing.T) {
 	testSharingID := "SharingStatusNotOK"
 	testClientID := "ClientStatusNotOK"
 
-	ts = httptest.NewServer(http.HandlerFunc(
+	tsLocal := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.WriteHeader(http.StatusAlreadyReported)
 		},
 	))
-	defer ts.Close()
+	defer tsLocal.Close()
 
-	err := insertClientDocumentInDB(TestPrefix, testClientID, ts.URL)
+	err := insertClientDocumentInDB(TestPrefix, testClientID, tsLocal.URL)
 	if err != nil {
 		t.Fail()
 	}
@@ -496,7 +498,7 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 	testSharingID := "SharingSuccess"
 	testClientID := "ClientSucess"
 
-	ts = httptest.NewServer(http.HandlerFunc(
+	tsLocal := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -516,9 +518,9 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		},
 	))
-	defer ts.Close()
+	defer tsLocal.Close()
 
-	err := insertClientDocumentInDB(TestPrefix, testClientID, ts.URL)
+	err := insertClientDocumentInDB(TestPrefix, testClientID, tsLocal.URL)
 	if err != nil {
 		t.Fail()
 	}
@@ -668,6 +670,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
 	couchdb.DeleteDB(TestPrefix, consts.Recipients)
