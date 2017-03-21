@@ -183,6 +183,7 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 
 	var docs []*FileDoc
 	req := &couchdb.FindRequest{
+		UseIndex: "dir-file-child",
 		Selector: selector,
 		Limit:    1,
 	}

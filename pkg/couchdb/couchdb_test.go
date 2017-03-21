@@ -124,11 +124,11 @@ func TestGetAllDocs(t *testing.T) {
 }
 
 func TestDefineIndex(t *testing.T) {
-	err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "fieldA", "fieldB"))
+	err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "my-index", []string{"fieldA", "fieldB"}))
 	assert.NoError(t, err)
 
 	// if I try to define the same index several time
-	err2 := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "fieldA", "fieldB"))
+	err2 := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "my-index", []string{"fieldA", "fieldB"}))
 	assert.NoError(t, err2)
 }
 
@@ -148,13 +148,16 @@ func TestQuery(t *testing.T) {
 		}
 	}
 
-	err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "fieldA", "fieldB"))
+	err := DefineIndex(TestPrefix, mango.IndexOnFields(TestDoctype, "my-index", []string{"fieldA", "fieldB"}))
 	if !assert.NoError(t, err) {
 		t.FailNow()
 		return
 	}
 	var out []testDoc
-	req := &FindRequest{Selector: mango.Equal("fieldA", "value2")}
+	req := &FindRequest{
+		UseIndex: "my-index",
+		Selector: mango.Equal("fieldA", "value2"),
+	}
 	err = FindDocs(TestPrefix, TestDoctype, req, &out)
 	if assert.NoError(t, err) {
 		assert.Len(t, out, 2, "should get 2 results")

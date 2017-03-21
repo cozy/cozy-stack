@@ -413,16 +413,98 @@ func TestWalk(t *testing.T) {
 
 	expectedWalk := `/walk
 /walk/dirchild1
-/walk/dirchild1/bard
 /walk/dirchild1/food
+/walk/dirchild1/bard
 /walk/dirchild2
-/walk/dirchild2/barf
 /walk/dirchild2/foof
+/walk/dirchild2/barf
 /walk/dirchild3
 /walk/filechild1
 `
 
 	assert.Equal(t, expectedWalk, walked)
+}
+
+func TestIterator(t *testing.T) {
+	iterTree := H{
+		"iter/": H{
+			"dirchild1/":  H{},
+			"dirchild2/":  H{},
+			"dirchild3/":  H{},
+			"filechild1":  nil,
+			"filechild2":  nil,
+			"filechild3":  nil,
+			"filechild4":  nil,
+			"filechild5":  nil,
+			"filechild6":  nil,
+			"filechild7":  nil,
+			"filechild8":  nil,
+			"filechild9":  nil,
+			"filechild10": nil,
+			"filechild11": nil,
+			"filechild12": nil,
+			"filechild13": nil,
+			"filechild14": nil,
+			"filechild15": nil,
+		},
+	}
+
+	iterDir, err := createTree(iterTree, consts.RootDirID)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	iter1 := iterDir.ChildrenIterator(vfsC, &IteratorOptions{ByFetch: 4})
+	iterTree2 := H{}
+	var children1 []string
+	var nextKey string
+	for {
+		d, f, err := iter1.Next()
+		if err == ErrIteratorDone {
+			break
+		}
+		if !assert.NoError(t, err) {
+			return
+		}
+		if nextKey != "" {
+			if d != nil {
+				children1 = append(children1, d.Name)
+			} else {
+				children1 = append(children1, f.Name)
+			}
+		}
+		if d != nil {
+			iterTree2[d.Name+"/"] = H{}
+		} else {
+			iterTree2[f.Name] = nil
+			if f.Name == "filechild4" {
+				nextKey = f.ID()
+			}
+		}
+	}
+	assert.EqualValues(t, iterTree["iter/"], iterTree2)
+
+	iter2 := iterDir.ChildrenIterator(vfsC, &IteratorOptions{
+		ByFetch: 4,
+		AfterID: nextKey,
+	})
+	var children2 []string
+	for {
+		d, f, err := iter2.Next()
+		if err == ErrIteratorDone {
+			break
+		}
+		if !assert.NoError(t, err) {
+			return
+		}
+		if d != nil {
+			children2 = append(children2, d.Name)
+		} else {
+			children2 = append(children2, f.Name)
+		}
+	}
+
+	assert.EqualValues(t, children1, children2)
 }
 
 func TestContentDisposition(t *testing.T) {

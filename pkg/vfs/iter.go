@@ -18,8 +18,8 @@ const IteratorDefaultFetchSize = 100
 
 // IteratorOptions contains the options of the iterator.
 type IteratorOptions struct {
-	StartKey string
-	ByFetch  int
+	AfterID string
+	ByFetch int
 }
 
 // Iterator is a struct allowing to iterate over the children of a directory.
@@ -78,13 +78,14 @@ func (i *Iterator) fetch() error {
 	i.list = i.list[:0]
 
 	sel := i.sel
-	if i.opt.StartKey != "" {
+	if i.opt.AfterID != "" {
 		// TODO: adapt this code when filtering and sorting are added to the
 		// iterator
-		sel = mango.And(sel, mango.AfterID(i.opt.StartKey))
+		sel = mango.And(sel, mango.Gt("_id", i.opt.AfterID))
 	}
 
 	req := &couchdb.FindRequest{
+		UseIndex: "dir-children",
 		Selector: sel,
 		Limit:    i.opt.ByFetch,
 		Skip:     i.offset,

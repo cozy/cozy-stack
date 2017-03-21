@@ -420,6 +420,11 @@ func TestMain(m *testing.M) {
 
 	os.RemoveAll("/usr/local/var/cozy2/")
 
+	err = couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	res := m.Run()
 
 	Destroy("test.cozycloud.cc")

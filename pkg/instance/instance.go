@@ -438,6 +438,7 @@ func (i *Instance) makeStorageFs() error {
 func Get(domain string) (*Instance, error) {
 	var instances []*Instance
 	req := &couchdb.FindRequest{
+		UseIndex: "by-domain",
 		Selector: mango.Equal("domain", domain),
 		Limit:    1,
 	}

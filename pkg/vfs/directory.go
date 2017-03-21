@@ -150,7 +150,11 @@ func GetDirDocFromPath(c Context, name string) (*DirDoc, error) {
 
 	var docs []*DirDoc
 	sel := mango.Equal("path", path.Clean(name))
-	req := &couchdb.FindRequest{Selector: sel, Limit: 1}
+	req := &couchdb.FindRequest{
+		UseIndex: "dir-by-path",
+		Selector: sel,
+		Limit:    1,
+	}
 	err = couchdb.FindDocs(c, consts.Files, req, &docs)
 	if err != nil {
 		return nil, err
@@ -276,7 +280,10 @@ func ModifyDirMetadata(c Context, olddoc *DirDoc, patch *DocPatch) (*DirDoc, err
 func bulkUpdateDocsPath(c Context, oldpath, newpath string) error {
 	var children []*DirDoc
 	sel := mango.StartWith("path", oldpath+"/")
-	req := &couchdb.FindRequest{Selector: sel}
+	req := &couchdb.FindRequest{
+		UseIndex: "dir-by-path",
+		Selector: sel,
+	}
 	err := couchdb.FindDocs(c, consts.Files, req, &children)
 	if err != nil || len(children) == 0 {
 		return err

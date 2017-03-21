@@ -50,8 +50,8 @@ func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 		count = maxPerPage
 	}
 	return int(count), &vfs.IteratorOptions{
-		ByFetch:  byFetch,
-		StartKey: cursorQuery,
+		ByFetch: byFetch,
+		AfterID: cursorQuery,
 	}, nil
 }
 
