@@ -298,6 +298,7 @@ var allowedChangesParams = map[string]bool{
 	"limit":     true,
 	"timeout":   true,
 	"heartbeat": true, // Pouchdb sends heartbeet even for non-continuous
+	"_nonce": true, // Pouchdb sends a request hash for cache purpose
 }
 
 func changesFeed(c echo.Context) error {
