@@ -231,8 +231,8 @@ func TestMain(m *testing.M) {
 	ts = setup.GetTestServer("/sharings", Routes)
 	ts2 = setup2.GetTestServer("/auth", auth.Routes)
 
+	setup.AddCleanup(func() error { setup2.Cleanup(); return nil })
 	os.Exit(setup.Run())
-	os.Exit(setup2.Run())
 }
 
 func postJSON(u string, v echo.Map) (*http.Response, error) {
