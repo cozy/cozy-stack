@@ -40,6 +40,28 @@ func SharingAnswer(c echo.Context) error {
 	})
 }
 
+// AddRecipient adds a sharing Recipient and register to its server
+func AddRecipient(c echo.Context) error {
+
+	recipient := new(sharings.Recipient)
+	if err := c.Bind(recipient); err != nil {
+		return err
+	}
+	instance := middlewares.GetInstance(c)
+
+	err := sharings.CreateRecipient(instance, recipient)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	err = recipient.Register(instance)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return jsonapi.Data(c, http.StatusCreated, recipient, nil)
+}
+
 // SharingRequest handles a sharing request from the recipient side
 // It creates a tempory sharing document and redirect to the authorize page
 func SharingRequest(c echo.Context) error {
@@ -136,6 +158,7 @@ func Routes(router *echo.Group) {
 	router.GET("/request", SharingRequest)
 	router.POST("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
+	router.POST("/recipient", AddRecipient)
 }
 
 // wrapErrors returns a formatted error
@@ -145,11 +168,10 @@ func wrapErrors(err error) error {
 		return jsonapi.InvalidParameter("sharing_type", err)
 	case sharings.ErrRecipientDoesNotExist:
 		return jsonapi.NotFound(err)
-	case sharings.ErrMissingScope:
+	case sharings.ErrMissingScope, sharings.ErrMissingState, sharings.ErrRecipientHasNoURL,
+		sharings.ErrRecipientHasNoEmail:
 		return jsonapi.BadRequest(err)
-	case sharings.ErrMissingState:
-		return jsonapi.BadRequest(err)
-	case sharings.ErrSharingDoesNotExist:
+	case sharings.ErrSharingDoesNotExist, sharings.ErrPublicNameNotDefined:
 		return jsonapi.NotFound(err)
 	case sharings.ErrMailCouldNotBeSent:
 		return jsonapi.InternalServerError(err)

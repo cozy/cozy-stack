@@ -67,6 +67,11 @@ func (c *TestSetup) CleanupAndDie(msg ...interface{}) {
 	Fatal(msg...)
 }
 
+// Cleanup cleanup the TestSetup
+func (c *TestSetup) Cleanup() {
+	c.cleanup()
+}
+
 // AddCleanup adds a function to be run when the test is finished.
 func (c *TestSetup) AddCleanup(f func() error) {
 	next := c.cleanup

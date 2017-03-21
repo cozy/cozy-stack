@@ -1,9 +1,12 @@
 package sharings
 
 import (
+	"net/http"
+
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
@@ -13,7 +16,7 @@ type Recipient struct {
 	RRev   string `json:"_rev,omitempty"`
 	Email  string `json:"email"`
 	URL    string `json:"url"`
-	Client *oauth.Client
+	Client *auth.Client
 }
 
 // ID returns the recipient qualified identifier
@@ -40,6 +43,52 @@ func (r *Recipient) Included() []jsonapi.Object { return nil }
 // Links implements jsonapi.Doc
 func (r *Recipient) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
+}
+
+// Register creates a OAuth request and register to the Recipient
+func (r *Recipient) Register(instance *instance.Instance) error {
+	if r.URL == "" {
+		return ErrRecipientHasNoURL
+	}
+	client := new(http.Client)
+	req := &auth.Request{
+		Domain:     r.URL,
+		HTTPClient: client,
+	}
+	redirectURI := instance.Domain + "/sharings/answer"
+
+	// Get the Cozy's public name
+	doc := &couchdb.JSONDoc{}
+	err := couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return err
+	}
+	sharerPublicName, _ := doc.M["public_name"].(string)
+	if sharerPublicName == "" {
+		return ErrPublicNameNotDefined
+	}
+
+	authClient := &auth.Client{
+		RedirectURIs: []string{redirectURI},
+		ClientName:   sharerPublicName,
+		ClientKind:   "sharing",
+		SoftwareID:   "github.com/cozy/cozy-stack",
+		ClientURI:    instance.Domain,
+	}
+
+	resClient, err := req.RegisterClient(authClient)
+	if err != nil {
+		return err
+	}
+
+	r.Client = resClient
+	return couchdb.UpdateDoc(instance, r)
+}
+
+// CreateRecipient inserts a Recipient document in database
+func CreateRecipient(db couchdb.Database, doc *Recipient) error {
+	err := couchdb.CreateDoc(db, doc)
+	return err
 }
 
 var (

@@ -28,4 +28,6 @@ var (
 	// ErrSharerDidNotReceiveAnswer is used when a recipient has not received a
 	// http.StatusOK after sending her answer to the sharer.
 	ErrSharerDidNotReceiveAnswer = errors.New("Sharer did not receive the answer")
+	//ErrPublicNameNotDefined is used when a sharer wants to register to a recipient
+	ErrPublicNameNotDefined = errors.New("The Cozy's public name must be defined")
 )
