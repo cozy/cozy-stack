@@ -392,7 +392,7 @@ func TestWalk(t *testing.T) {
 		return
 	}
 
-	walked := ""
+	walked := H{}
 	Walk(vfsC, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if !assert.NoError(t, err) {
 			return err
@@ -406,21 +406,21 @@ func TestWalk(t *testing.T) {
 			return fmt.Errorf("Bad fullpath")
 		}
 
-		walked += name + "\n"
-
+		walked[name] = nil
 		return nil
 	})
 
-	expectedWalk := `/walk
-/walk/dirchild1
-/walk/dirchild1/food
-/walk/dirchild1/bard
-/walk/dirchild2
-/walk/dirchild2/foof
-/walk/dirchild2/barf
-/walk/dirchild3
-/walk/filechild1
-`
+	expectedWalk := H{
+		"/walk":                nil,
+		"/walk/dirchild1":      nil,
+		"/walk/dirchild1/food": nil,
+		"/walk/dirchild1/bard": nil,
+		"/walk/dirchild2":      nil,
+		"/walk/dirchild2/foof": nil,
+		"/walk/dirchild2/barf": nil,
+		"/walk/dirchild3":      nil,
+		"/walk/filechild1":     nil,
+	}
 
 	assert.Equal(t, expectedWalk, walked)
 }
