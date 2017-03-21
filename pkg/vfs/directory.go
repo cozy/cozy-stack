@@ -70,7 +70,7 @@ func (d *DirDoc) Path(c Context) (string, error) {
 
 // Parent returns the parent directory document
 func (d *DirDoc) Parent(c Context) (*DirDoc, error) {
-	return getParentDir(c, d.DirID)
+	return GetDirDoc(c, d.DirID)
 }
 
 // ChildrenIterator returns an iterator to iterate over the children of

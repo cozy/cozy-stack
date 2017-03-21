@@ -85,7 +85,7 @@ func (f *FileDoc) Path(c Context) (string, error) {
 
 // Parent returns the parent directory document
 func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
-	return getParentDir(c, f.DirID)
+	return GetDirDoc(c, f.DirID)
 }
 
 // AddReferencedBy adds referenced_by to the file

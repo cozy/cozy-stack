@@ -447,11 +447,6 @@ func ExtractMimeAndClassFromFilename(name string) (mime, class string) {
 	return ExtractMimeAndClass(mimetype.TypeByExtension(ext))
 }
 
-// getParentDir returns the parent directory document if nil.
-func getParentDir(c Context, dirID string) (*DirDoc, error) {
-	return GetDirDoc(c, dirID)
-}
-
 // getRestoreDir returns the restoration directory document from a file a
 // directory path. The specified file path should be part of the trash
 // directory.
