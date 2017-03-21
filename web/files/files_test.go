@@ -471,7 +471,7 @@ func TestUploadImage(t *testing.T) {
 	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg", f)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, obj := doUploadOrMod(t, req, "image/jpg", "tHWYYuXBBflJ8wXgJ2c2yg==")
+	res, obj := doUploadOrMod(t, req, "image/jpeg", "tHWYYuXBBflJ8wXgJ2c2yg==")
 	assert.Equal(t, 201, res.StatusCode)
 	data := obj["data"].(map[string]interface{})
 	attrs := data["attributes"].(map[string]interface{})
