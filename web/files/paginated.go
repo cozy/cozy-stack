@@ -32,8 +32,8 @@ type file struct {
 func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 	var count int64
 	var err error
-	cursorQuery := c.QueryParam("Page[cursor]")
-	limitQuery := c.QueryParam("Page[limit]")
+	cursorQuery := c.QueryParam("page[cursor]")
+	limitQuery := c.QueryParam("page[limit]")
 	if limitQuery != "" {
 		count, err = strconv.ParseInt(limitQuery, 10, 32)
 		if err != nil {
