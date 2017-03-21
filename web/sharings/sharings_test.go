@@ -26,7 +26,6 @@ var ts2 *httptest.Server
 var testInstance *instance.Instance
 var clientOAuth *oauth.Client
 var clientID string
-var instanceURL *url.URL
 var jar http.CookieJar
 var client *http.Client
 
