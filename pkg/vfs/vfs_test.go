@@ -562,10 +562,16 @@ func TestArchive(t *testing.T) {
 	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(z.File))
-	assert.Equal(t, "test/foo.jpg", z.File[0].Name)
-	assert.Equal(t, "test/bar/baz/one.png", z.File[1].Name)
-	assert.Equal(t, "test/bar/baz/two.png", z.File[2].Name)
-	assert.Equal(t, "test/bar/z.gif", z.File[3].Name)
+	zipfiles := H{}
+	for _, f := range z.File {
+		zipfiles[f.Name] = nil
+	}
+	assert.EqualValues(t, H{
+		"test/foo.jpg":         nil,
+		"test/bar/baz/one.png": nil,
+		"test/bar/baz/two.png": nil,
+		"test/bar/z.gif":       nil,
+	}, zipfiles)
 }
 
 func TestDonwloadStore(t *testing.T) {
