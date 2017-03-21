@@ -36,7 +36,7 @@ var recipientURL string
 func createRecipient(t *testing.T) (*sharings.Recipient, error) {
 	recipient := &sharings.Recipient{
 		Email: "test.fr",
-		URL:   recipientURL,
+		URL:   "http://" + recipientURL,
 	}
 	err := sharings.CreateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
