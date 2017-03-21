@@ -708,9 +708,9 @@ List the files inside the trash. It's paginated.
 ### Query-String
 
 Parameter    | Description
--------------|---------------------------------------
+-------------|--------------------------------------
 page[cursor] | the last id of the results
-page[limit]  | the number of entries (100 by default)
+page[limit]  | the number of entries (30 by default)
 
 #### Request
 

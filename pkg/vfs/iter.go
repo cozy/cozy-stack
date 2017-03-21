@@ -8,7 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 )
 
-// ErrIteratorDone is returned by the Next() merthod of the iterator when
+// ErrIteratorDone is returned by the Next() method of the iterator when
 // the iterator is actually done.
 var ErrIteratorDone = errors.New("No more element in the iterator")
 
