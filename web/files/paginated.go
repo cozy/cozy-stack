@@ -114,7 +114,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 	var links *jsonapi.LinksList
 	if hasNext && len(included) > 0 {
-		next := fmt.Sprintf("/files/%s?Page[cursor]=%s&Page[limit]=%d",
+		next := fmt.Sprintf("/files/%s?page[cursor]=%s&page[limit]=%d",
 			doc.DocID, included[len(included)-1].ID(), count)
 		links = &jsonapi.LinksList{Next: next}
 	}
