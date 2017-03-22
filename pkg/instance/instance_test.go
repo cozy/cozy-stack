@@ -373,11 +373,11 @@ func TestGetFs(t *testing.T) {
 	content := []byte{'b', 'a', 'r'}
 	err := instance.makeStorageFs()
 	assert.NoError(t, err)
-	storage := instance.FS()
+	storage := instance.VFS()
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
 	err = afero.WriteFile(storage, "foo", content, 0644)
 	assert.NoError(t, err)
-	storage = instance.FS()
+	storage = instance.VFS()
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
 	buf, err := afero.ReadFile(storage, "foo")
 	assert.NoError(t, err)

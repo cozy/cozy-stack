@@ -5,7 +5,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -19,7 +18,7 @@ func AddReferencedHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID)
+	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -59,7 +58,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	file, err := vfs.GetFileDoc(instance, fileID)
+	file, err := instance.VFS().FileByID(fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}

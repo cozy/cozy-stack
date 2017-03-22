@@ -23,7 +23,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/leonelquinteros/gotext"
-	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -89,7 +88,7 @@ type Instance struct {
 	// CLISecret is used to authenticate request from the CLI
 	CLISecret []byte `json:"cli_secret,omitempty"`
 
-	storage afero.Fs
+	storage vfs.VFS
 }
 
 // Options holds the parameters to create a new instance.
@@ -152,11 +151,23 @@ func (i *Instance) Prefix() string {
 	return i.Domain + "/"
 }
 
-// FS returns the afero storage provider where the binaries for
-// the current instance are persisted
-func (i *Instance) FS() afero.Fs {
+// VFS returns the storage provider where the binaries for the current instance
+// are persisted
+func (i *Instance) VFS() vfs.VFS {
 	if i.storage == nil {
-		if err := i.makeStorageFs(); err != nil {
+		u, err := url.Parse(i.StorageURL)
+		if err != nil {
+			panic(fmt.Errorf("storage provider: could not parse storage url %s", err.Error()))
+		}
+		switch u.Scheme {
+		case "file", "mem":
+			i.storage, err = vfs.NewAferoVFS(i, i.StorageURL)
+		case "swift":
+			err = errors.New("instance: storage provider swift not implemened")
+		default:
+			err = fmt.Errorf("instance: unknown storage provider %s", u.Scheme)
+		}
+		if err != nil {
 			panic(err)
 		}
 	}
@@ -274,45 +285,12 @@ func (i *Instance) createInCouchdb() error {
 	return couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes)
 }
 
-// createRootDir creates the root directory for this instance
-func (i *Instance) createRootDir() error {
-	rootFsURL := config.BuildAbsFsURL("/")
-	domainURL := config.BuildRelFsURL(i.Domain)
-
-	rootFs, err := createFs(rootFsURL)
-	if err != nil {
-		return err
-	}
-
-	if err = rootFs.MkdirAll(domainURL.Path, 0755); err != nil {
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			if rmerr := rootFs.RemoveAll(domainURL.Path); rmerr != nil {
-				log.Warn("[instance] Could not remove the instance directory")
-			}
-		}
-	}()
-
-	if err = vfs.CreateRootDirDoc(i); err != nil {
-		return err
-	}
-
-	if err = vfs.CreateTrashDir(i); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (i *Instance) installApp(slug string) error {
 	source, ok := consts.AppsRegistry[slug]
 	if !ok {
 		return errors.New("Unknown app")
 	}
-	inst, err := apps.NewInstaller(i, &apps.InstallerOptions{
+	inst, err := apps.NewInstaller(i, i.VFS(), &apps.InstallerOptions{
 		SourceURL: source,
 		Slug:      slug,
 	})
@@ -335,10 +313,7 @@ func (i *Instance) installApp(slug string) error {
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
 	domain := strings.TrimSpace(opts.Domain)
-	if domain == "" {
-		return nil, ErrIllegalDomain
-	}
-	if strings.ContainsAny(domain, vfs.ForbiddenFilenameChars) || domain == ".." || domain == "." {
+	if domain == "" || domain == ".." || domain == "." {
 		return nil, ErrIllegalDomain
 	}
 	if strings.ContainsAny(domain, " /?#@\t\r\n\x00") {
@@ -372,13 +347,10 @@ func Create(opts *Options) (*Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
 
-	if err := i.makeStorageFs(); err != nil {
-		return nil, err
-	}
 	if err := i.createInCouchdb(); err != nil {
 		return nil, err
 	}
-	if err := i.createRootDir(); err != nil {
+	if err := couchdb.CreateDB(i, consts.Files); err != nil {
 		return nil, err
 	}
 	if err := couchdb.CreateDB(i, consts.Apps); err != nil {
@@ -394,6 +366,9 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 	if err := couchdb.CreateDB(i, consts.Sharings); err != nil {
+		return nil, err
+	}
+	if err := i.VFS().Init(); err != nil {
 		return nil, err
 	}
 	if err := settings.CreateDefaultTheme(i); err != nil {
@@ -425,15 +400,6 @@ func Create(opts *Options) (*Instance, error) {
 	return i, nil
 }
 
-func (i *Instance) makeStorageFs() error {
-	u, err := url.Parse(i.StorageURL)
-	if err != nil {
-		return err
-	}
-	i.storage, err = createFs(u)
-	return err
-}
-
 // Get retrieves the instance for a request by its host.
 func Get(domain string) (*Instance, error) {
 	var instances []*Instance
@@ -449,16 +415,9 @@ func Get(domain string) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if len(instances) == 0 {
 		return nil, ErrNotFound
 	}
-
-	err = instances[0].makeStorageFs()
-	if err != nil {
-		return nil, err
-	}
-
 	return instances[0], nil
 }
 
@@ -514,9 +473,6 @@ func Destroy(domain string) (*Instance, error) {
 			return nil, ErrNotFound
 		}
 		i = instances[0]
-		if err = i.makeStorageFs(); err != nil {
-			return nil, err
-		}
 	}
 
 	if err = couchdb.DeleteDoc(couchdb.GlobalDB, i); err != nil {
@@ -531,15 +487,7 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
-	rootFsURL := config.BuildAbsFsURL("/")
-	domainURL := config.BuildRelFsURL(i.Domain)
-
-	rootFs, err := createFs(rootFsURL)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = rootFs.RemoveAll(domainURL.Path); err != nil {
+	if err = i.VFS().Destroy(); err != nil {
 		return nil, err
 	}
 
@@ -724,20 +672,7 @@ func (i *Instance) BuildAppToken(m *apps.Manifest) string {
 	return token
 }
 
-func createFs(u *url.URL) (fs afero.Fs, err error) {
-	switch u.Scheme {
-	case "file":
-		fs = afero.NewBasePathFs(afero.NewOsFs(), u.Path)
-	case "mem":
-		fs = afero.NewMemMapFs()
-	default:
-		err = fmt.Errorf("Unknown storage provider: %v", u.Scheme)
-	}
-	return
-}
-
-// ensure Instance implements couchdb.Doc & vfs.Context
+// ensure Instance implements couchdb.Doc
 var (
 	_ couchdb.Doc = &Instance{}
-	_ vfs.Context = &Instance{}
 )

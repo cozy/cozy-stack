@@ -3,7 +3,6 @@ package apps
 import (
 	"bytes"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -47,7 +46,7 @@ func Serve(c echo.Context) error {
 	if app.State != apps.Ready {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
-	return ServeAppFile(c, i, NewAferoServer(i.FS(), nil), app)
+	return ServeAppFile(c, i, NewServer(i.VFS()), app)
 }
 
 // ServeAppFile will serve the requested file using the specified application
@@ -126,11 +125,49 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 // data files.
 type AppFileServer interface {
 	Stat(slug, folder, file string) (os.FileInfo, error)
-	Open(slug, folder, file string) (io.ReadCloser, error)
+	Open(slug, folder, file string) (vfs.File, error)
 	ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error
 }
 
-// NewAferoServer returns a simple wrapper of the afero.Fs interface that
+func NewServer(fs vfs.VFS) *Server {
+	return &Server{fs: fs}
+}
+
+type Server struct {
+	fs vfs.VFS
+}
+
+// Stat returns the underlying afero.Fs Stat.
+func (a *Server) Stat(slug, folder, file string) (os.FileInfo, error) {
+	return a.fs.DirByPath(a.path(slug, folder, file))
+}
+
+// Open returns the underlying afero.Fs Open.
+func (a *Server) Open(slug, folder, file string) (vfs.File, error) {
+	doc, err := a.fs.FileByPath(a.path(slug, folder, file))
+	if err != nil {
+		return nil, err
+	}
+	return a.fs.OpenFile(doc)
+}
+
+// ServeFileContent uses the standard http.ServeContent method to serve the
+// application file data.
+func (a *Server) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error {
+	f, err := a.Open(slug, folder, file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	http.ServeContent(w, req, a.path(slug, folder, file), modtime, f)
+	return nil
+}
+
+func (a *Server) path(slug, folder, file string) string {
+	return path.Join(vfs.AppsDirName, slug, folder, file)
+}
+
+// NewServer returns a simple wrapper of the afero.Fs interface that
 // provides the AppFileServer interface.
 //
 // You can provide a makePath method to define how the file name should be
@@ -138,8 +175,8 @@ type AppFileServer interface {
 // the standard VFS concatenation (starting with vfs.AppsDirName) is used.
 func NewAferoServer(fs afero.Fs, makePath func(slug, folder, file string) string) *AferoServer {
 	return &AferoServer{
-		fs:     fs,
 		mkPath: makePath,
+		fs:     fs,
 	}
 }
 
@@ -152,18 +189,18 @@ type AferoServer struct {
 
 // Stat returns the underlying afero.Fs Stat.
 func (a *AferoServer) Stat(slug, folder, file string) (os.FileInfo, error) {
-	return a.fs.Stat(a.path(slug, folder, file))
+	return a.fs.Stat(a.mkPath(slug, folder, file))
 }
 
 // Open returns the underlying afero.Fs Open.
-func (a *AferoServer) Open(slug, folder, file string) (io.ReadCloser, error) {
-	return a.fs.Open(a.path(slug, folder, file))
+func (a *AferoServer) Open(slug, folder, file string) (vfs.File, error) {
+	return a.fs.Open(a.mkPath(slug, folder, file))
 }
 
 // ServeFileContent uses the standard http.ServeContent method to serve the
 // application file data.
 func (a *AferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error {
-	filepath := a.path(slug, folder, file)
+	filepath := a.mkPath(slug, folder, file)
 	r, err := a.fs.Open(filepath)
 	if err != nil {
 		return err
@@ -171,13 +208,6 @@ func (a *AferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	defer r.Close()
 	http.ServeContent(w, req, filepath, modtime, r)
 	return nil
-}
-
-func (a *AferoServer) path(slug, folder, file string) string {
-	if a.mkPath != nil {
-		return a.mkPath(slug, folder, file)
-	}
-	return path.Join(vfs.AppsDirName, slug, folder, file)
 }
 
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) error {

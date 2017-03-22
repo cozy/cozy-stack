@@ -17,7 +17,8 @@ var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 // Installer is used to install or update applications.
 type Installer struct {
 	fetcher Fetcher
-	ctx     vfs.Context
+	fs      vfs.VFS
+	db      couchdb.Database
 
 	man  *Manifest
 	src  *url.URL
@@ -47,13 +48,13 @@ type Fetcher interface {
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
+func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Installer, error) {
 	slug := opts.Slug
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
 
-	man, err := GetBySlug(ctx, slug)
+	man, err := GetBySlug(db, slug)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
 	if src != nil {
 		switch src.Scheme {
 		case "git":
-			fetcher = newGitFetcher(ctx)
+			fetcher = newGitFetcher(fs)
 		default:
 			return nil, ErrNotSupportedSource
 		}
@@ -82,7 +83,8 @@ func NewInstaller(ctx vfs.Context, opts *InstallerOptions) (*Installer, error) {
 
 	inst := &Installer{
 		fetcher: fetcher,
-		ctx:     ctx,
+		db:      db,
+		fs:      fs,
 		src:     src,
 		slug:    slug,
 		man:     man,
@@ -129,10 +131,10 @@ func (i *Installer) Delete() (*Manifest, error) {
 	if state := i.man.State; state != Ready && state != Errored {
 		return nil, ErrBadState
 	}
-	if err := deleteManifest(i.ctx, i.man); err != nil {
+	if err := deleteManifest(i.db, i.man); err != nil {
 		return nil, err
 	}
-	if err := vfs.RemoveAll(i.ctx, i.appDir()); err != nil {
+	if err := vfs.RemoveAll(i.fs, i.appDir()); err != nil {
 		return nil, err
 	}
 	return i.man, nil
@@ -147,12 +149,12 @@ func (i *Installer) endOfProc() {
 	if err != nil {
 		man.State = Errored
 		man.Error = err.Error()
-		updateManifest(i.ctx, man)
+		updateManifest(i.db, man)
 		i.errc <- err
 		return
 	}
 	man.State = Ready
-	updateManifest(i.ctx, man)
+	updateManifest(i.db, man)
 	i.manc <- i.man
 }
 
@@ -168,14 +170,14 @@ func (i *Installer) install() (*Manifest, error) {
 		return nil, err
 	}
 
-	if err := createManifest(i.ctx, man); err != nil {
+	if err := createManifest(i.db, man); err != nil {
 		return man, err
 	}
 
 	i.manc <- man
 
 	appdir := i.appDir()
-	if _, err := vfs.MkdirAll(i.ctx, appdir, nil); err != nil {
+	if _, err := vfs.MkdirAll(i.fs, appdir, nil); err != nil {
 		return man, err
 	}
 
@@ -196,7 +198,7 @@ func (i *Installer) update() (*Manifest, error) {
 		return man, err
 	}
 
-	if err := updateManifest(i.ctx, man); err != nil {
+	if err := updateManifest(i.db, man); err != nil {
 		return man, err
 	}
 

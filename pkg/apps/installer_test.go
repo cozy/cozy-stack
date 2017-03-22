@@ -98,14 +98,6 @@ git checkout -`
 	}
 }
 
-type TestContext struct {
-	prefix string
-	fs     afero.Fs
-}
-
-func (c TestContext) Prefix() string { return c.prefix }
-func (c TestContext) FS() afero.Fs   { return c.fs }
-
 var c = &TestContext{
 	prefix: "apps-test/",
 	fs:     afero.NewMemMapFs(),

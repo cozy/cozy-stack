@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
-	"github.com/spf13/afero"
 )
 
 // Fatal prints a message and immediately exit the process
@@ -206,28 +205,6 @@ func (c *TestSetup) GetCookieJar() http.CookieJar {
 		Jar: j,
 		URL: instanceURL,
 	}
-}
-
-// VFSContext implements vfs.Context
-type VFSContext struct {
-	prefix string
-	fs     afero.Fs
-}
-
-// Prefix implements vfs.Context
-func (c VFSContext) Prefix() string { return c.prefix }
-
-// FS implements vfs.Context
-func (c VFSContext) FS() afero.Fs { return c.fs }
-
-// GetVFSContext gives a tmp dir backed vfs.Context
-// The temporary folder will be erased on container cleanup
-func (c *TestSetup) GetVFSContext() VFSContext {
-	tempdir := c.GetTmpDirectory()
-	var vfsC VFSContext
-	vfsC.prefix = "dev/"
-	vfsC.fs = afero.NewBasePathFs(afero.NewOsFs(), tempdir)
-	return vfsC
 }
 
 // func resetDBAndViews(db couchdb.Database, doctype string) error {

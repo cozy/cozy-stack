@@ -104,7 +104,7 @@ func fetchTree(root string) (H, error) {
 
 func recFetchTree(parent *DirDoc, name string) (H, error) {
 	h := make(H)
-	iter := parent.ChildrenIterator(vfsC, nil)
+	iter := vfsC.DirIterator(parent, nil)
 	for {
 		d, f, err := iter.Next()
 		if err == ErrIteratorDone {
@@ -454,7 +454,7 @@ func TestIterator(t *testing.T) {
 		return
 	}
 
-	iter1 := iterDir.ChildrenIterator(vfsC, &IteratorOptions{ByFetch: 4})
+	iter1 := vfsC.DirIterator(iterDir, &IteratorOptions{ByFetch: 4})
 	iterTree2 := H{}
 	var children1 []string
 	var nextKey string
@@ -484,7 +484,7 @@ func TestIterator(t *testing.T) {
 	}
 	assert.EqualValues(t, iterTree["iter/"], iterTree2)
 
-	iter2 := iterDir.ChildrenIterator(vfsC, &IteratorOptions{
+	iter2 := vfsC.DirIterator(iterDir, &IteratorOptions{
 		ByFetch: 4,
 		AfterID: nextKey,
 	})

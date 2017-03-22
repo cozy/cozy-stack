@@ -1,31 +1,15 @@
 package vfs
 
 import (
-	"errors"
-
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 )
 
-// ErrIteratorDone is returned by the Next() method of the iterator when
-// the iterator is actually done.
-var ErrIteratorDone = errors.New("No more element in the iterator")
-
-// IteratorDefaultFetchSize is the default number of elements fetched from
-// couchdb on each iteration.
-const IteratorDefaultFetchSize = 100
-
-// IteratorOptions contains the options of the iterator.
-type IteratorOptions struct {
-	AfterID string
-	ByFetch int
-}
-
-// Iterator is a struct allowing to iterate over the children of a directory.
-// The iterator is not thread-safe.
-type Iterator struct {
-	ctx    Context
+// LocalIterator is a struct allowing to iterate over the children of a
+// directory. The iterator is not thread-safe.
+type LocalIterator struct {
+	db     couchdb.Database
 	sel    mango.Filter
 	opt    *IteratorOptions
 	list   []*DirOrFileDoc
@@ -34,16 +18,22 @@ type Iterator struct {
 	done   bool
 }
 
-// NewIterator return a new iterator.
-func NewIterator(c Context, sel mango.Filter, opt *IteratorOptions) *Iterator {
+// NewLocalIterator return a new iterator.
+func NewLocalIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) DirIterator {
 	if opt == nil {
 		opt = &IteratorOptions{ByFetch: IteratorDefaultFetchSize}
 	}
 	if opt.ByFetch == 0 {
 		opt.ByFetch = IteratorDefaultFetchSize
 	}
-	return &Iterator{
-		ctx: c,
+	sel := mango.Equal("dir_id", dir.DocID)
+	if opt.AfterID != "" {
+		// TODO: adapt this code when filtering and sorting are added to the
+		// iterator
+		sel = mango.And(sel, mango.Gt("_id", opt.AfterID))
+	}
+	return &LocalIterator{
+		db:  db,
 		sel: sel,
 		opt: opt,
 	}
@@ -51,7 +41,7 @@ func NewIterator(c Context, sel mango.Filter, opt *IteratorOptions) *Iterator {
 
 // Next should be called to get the next directory or file children of the
 // parent directory. If the error is ErrIteratorDone
-func (i *Iterator) Next() (*DirDoc, *FileDoc, error) {
+func (i *LocalIterator) Next() (*DirDoc, *FileDoc, error) {
 	if i.done {
 		return nil, nil, ErrIteratorDone
 	}
@@ -66,7 +56,7 @@ func (i *Iterator) Next() (*DirDoc, *FileDoc, error) {
 }
 
 // fetch should be called when the index is out of the list boundary.
-func (i *Iterator) fetch() error {
+func (i *LocalIterator) fetch() error {
 	l := len(i.list)
 	if l > 0 && l < i.opt.ByFetch {
 		i.done = true
@@ -77,20 +67,13 @@ func (i *Iterator) fetch() error {
 	i.index = 0
 	i.list = i.list[:0]
 
-	sel := i.sel
-	if i.opt.AfterID != "" {
-		// TODO: adapt this code when filtering and sorting are added to the
-		// iterator
-		sel = mango.And(sel, mango.Gt("_id", i.opt.AfterID))
-	}
-
 	req := &couchdb.FindRequest{
 		UseIndex: "dir-children",
-		Selector: sel,
+		Selector: i.sel,
 		Limit:    i.opt.ByFetch,
 		Skip:     i.offset,
 	}
-	err := couchdb.FindDocs(i.ctx, consts.Files, req, &i.list)
+	err := couchdb.FindDocs(i.db, consts.Files, req, &i.list)
 	if err != nil {
 		return err
 	}

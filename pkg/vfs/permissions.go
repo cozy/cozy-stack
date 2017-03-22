@@ -12,8 +12,8 @@ import (
 type Validable interface {
 	permissions.Validable
 	parentID() string
-	Path(c Context) (string, error)
-	Parent(c Context) (*DirDoc, error)
+	Path(fs VFS) (string, error)
+	Parent(fs VFS) (*DirDoc, error)
 }
 
 // FileDoc & DirDoc are vfs.Validable
@@ -23,8 +23,7 @@ var _ Validable = (*DirDoc)(nil)
 // Allows check if a permSet allows verb on given file
 // µoptim : we can probably make this function iterate less on pset.Rules, but
 //  it will lower readability ...
-func Allows(c Context, pset permissions.Set, v permissions.Verb, fd Validable) error {
-
+func Allows(fs VFS, pset permissions.Set, v permissions.Verb, fd Validable) error {
 	allowedIDs := []string{}
 	otherRules := []permissions.Rule{}
 
@@ -65,13 +64,13 @@ func Allows(c Context, pset permissions.Set, v permissions.Verb, fd Validable) e
 	// We have some rules on IDs, let's fetch their paths and check if they are
 	// ancestors of current object
 	if len(allowedIDs) > 0 {
-		var selfPath, err = fd.Path(c)
+		var selfPath, err = fd.Path(fs)
 		if err != nil {
 			return err
 		}
 
 		for _, id := range allowedIDs {
-			allowedPath, err := pathFromID(c, id)
+			allowedPath, err := pathFromID(fs, id)
 			// tested is children of allowed
 			// err is ignored, it most probably means a permissions on a
 			// deleted directory. @TODO We will want to clean this up.
@@ -85,7 +84,7 @@ func Allows(c Context, pset permissions.Set, v permissions.Verb, fd Validable) e
 	// We have some rules on attributes, let's iterate over the current object
 	// ancestors and check if any match the rules
 	if len(otherRules) > 0 {
-		cur, err := fd.Parent(c)
+		cur, err := fd.Parent(fs)
 		if err != nil {
 			return err
 		}
@@ -94,7 +93,7 @@ func Allows(c Context, pset permissions.Set, v permissions.Verb, fd Validable) e
 				if rule.ValuesValid(cur) {
 					return nil
 				}
-				cur, err = cur.Parent(c)
+				cur, err = cur.Parent(fs)
 				if err != nil {
 					return err
 				}
@@ -106,7 +105,7 @@ func Allows(c Context, pset permissions.Set, v permissions.Verb, fd Validable) e
 	return errors.New("no permission")
 }
 
-func pathFromID(c Context, id string) (string, error) {
+func pathFromID(fs VFS, id string) (string, error) {
 	if id == consts.RootDirID {
 		return "", nil
 	}
@@ -115,12 +114,12 @@ func pathFromID(c Context, id string) (string, error) {
 		return TrashDirName, nil
 	}
 
-	dir, err := GetDirDoc(c, id)
+	dir, err := fs.DirByID(id)
 	if err != nil {
 		return "", err
 	}
 
-	return dir.Path(c)
+	return dir.Path(fs)
 }
 
 func contains(haystack []string, needle string) bool {
@@ -141,7 +140,7 @@ func (f *FileDoc) Valid(field, expected string) bool {
 	case "type":
 		return f.Type == expected
 	case "name":
-		return f.Name == expected
+		return f.DocName == expected
 	case "mime":
 		return f.Mime == expected
 	case "class":
@@ -159,7 +158,7 @@ func (d *DirDoc) Valid(field, expected string) bool {
 	case "type":
 		return d.Type == expected
 	case "name":
-		return d.Name == expected
+		return d.DocName == expected
 	case "tags":
 		return contains(d.Tags, expected)
 	default:

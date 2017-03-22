@@ -34,7 +34,7 @@ func installHandler(c echo.Context) error {
 	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
 		return err
 	}
-	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
+	inst, err := apps.NewInstaller(instance, instance.VFS(), &apps.InstallerOptions{
 		SourceURL: c.QueryParam("Source"),
 		Slug:      slug,
 	})
@@ -53,7 +53,7 @@ func updateHandler(c echo.Context) error {
 	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
 		return err
 	}
-	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{
+	inst, err := apps.NewInstaller(instance, instance.VFS(), &apps.InstallerOptions{
 		Slug: slug,
 	})
 	if err != nil {
@@ -71,7 +71,7 @@ func deleteHandler(c echo.Context) error {
 	if err := permissions.AllowInstallApp(c, permissions.DELETE); err != nil {
 		return err
 	}
-	inst, err := apps.NewInstaller(instance, &apps.InstallerOptions{Slug: slug})
+	inst, err := apps.NewInstaller(instance, instance.VFS(), &apps.InstallerOptions{Slug: slug})
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -175,7 +175,12 @@ func iconHandler(c echo.Context) error {
 	}
 
 	filepath := path.Join(vfs.AppsDirName, slug, app.Icon)
-	r, err := instance.FS().Open(filepath)
+	file, err := instance.VFS().FileByPath(filepath)
+	if err != nil {
+		return err
+	}
+
+	r, err := instance.VFS().OpenFile(file)
 	if err != nil {
 		return err
 	}

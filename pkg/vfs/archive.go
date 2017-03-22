@@ -64,11 +64,11 @@ func ContentDisposition(disposition, filename string) string {
 }
 
 // GetEntries returns all files and folders in the archive as ArchiveEntry.
-func (a *Archive) GetEntries(c Context) ([]ArchiveEntry, error) {
+func (a *Archive) GetEntries(fs VFS) ([]ArchiveEntry, error) {
 	if a.entries == nil {
 		entries := make([]ArchiveEntry, len(a.Files))
 		for i, root := range a.Files {
-			d, f, err := GetDirOrFileDocFromPath(c, root)
+			d, f, err := fs.DirOrFileByPath(root)
 			if err != nil {
 				return nil, err
 			}
@@ -86,24 +86,22 @@ func (a *Archive) GetEntries(c Context) ([]ArchiveEntry, error) {
 }
 
 // Serve creates on the fly the zip archive and streams in a http response
-func (a *Archive) Serve(c Context, w http.ResponseWriter) error {
-
+func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 	header := w.Header()
 	header.Set("Content-Type", ZipMime)
 	header.Set("Content-Disposition", ContentDisposition("attachment", a.Name+".zip"))
 
-	fs := c.FS()
 	zw := zip.NewWriter(w)
 	defer zw.Close()
 
-	entries, err := a.GetEntries(c)
+	entries, err := a.GetEntries(fs)
 	if err != nil {
 		return err
 	}
 
 	for _, entry := range entries {
 		base := filepath.Dir(entry.root)
-		walk(c, entry.root, entry.Dir, entry.File, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+		walk(fs, entry.root, entry.Dir, entry.File, func(name string, dir *DirDoc, file *FileDoc, err error) error {
 			if err != nil {
 				return err
 			}
@@ -118,11 +116,7 @@ func (a *Archive) Serve(c Context, w http.ResponseWriter) error {
 			if err != nil {
 				return fmt.Errorf("Can't create zip entry <%s>: %s", name, err)
 			}
-			path, err := file.Path(c)
-			if err != nil {
-				return fmt.Errorf("Can't find file <%s>: %s", name, err)
-			}
-			f, err := fs.Open(path)
+			f, err := fs.OpenFile(file)
 			if err != nil {
 				return fmt.Errorf("Can't open file <%s>: %s", name, err)
 			}

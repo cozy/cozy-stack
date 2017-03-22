@@ -48,7 +48,7 @@ func addReferencesHandler(c echo.Context) error {
 	}
 
 	for _, fRef := range references {
-		file, err := vfs.GetFileDoc(instance, fRef.ID)
+		file, err := instance.VFS().FileByID(fRef.ID)
 		if err != nil {
 			return err
 		}
@@ -82,7 +82,7 @@ func removeReferencesHandler(c echo.Context) error {
 	}
 
 	for _, fRef := range references {
-		file, err := vfs.GetFileDoc(instance, fRef.ID)
+		file, err := instance.VFS().FileByID(fRef.ID)
 		if err != nil {
 			return err
 		}

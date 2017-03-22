@@ -70,7 +70,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	hasNext := true
 
 	i := middlewares.GetInstance(c)
-	iter := doc.ChildrenIterator(i, iterOpts)
+	iter := i.VFS().DirIterator(doc, iterOpts)
 	for i := 0; i < count; i++ {
 		d, f, err := iter.Next()
 		if err == vfs.ErrIteratorDone {
@@ -135,7 +135,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	}
 
 	i := middlewares.GetInstance(c)
-	iter := doc.ChildrenIterator(i, iterOpts)
+	iter := i.VFS().DirIterator(doc, iterOpts)
 	for i := 0; i < count; i++ {
 		d, f, err := iter.Next()
 		if err == vfs.ErrIteratorDone {
