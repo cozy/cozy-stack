@@ -20,6 +20,9 @@ import (
 	"github.com/spf13/afero"
 )
 
+// AferoVFS is a struct implementing the vfs.VFS interface associated with
+// an afero.Fs filesystem. The indexing of the elements of the filesystem is
+// done in couchdb.
 type AferoVFS struct {
 	db  couchdb.Database
 	fs  afero.Fs
@@ -30,6 +33,9 @@ type AferoVFS struct {
 	rootInit bool
 }
 
+// NewAferoVFS returns a AferoVFS instance associated with the specified
+// couchdb database and storage url. The supported scheme of the storage url
+// are file://, for an OS-FS store, and mem:// for an in-memory store.
 func NewAferoVFS(db couchdb.Database, storageURL string) (*AferoVFS, error) {
 	u, err := url.Parse(storageURL)
 	if err != nil {
@@ -113,6 +119,7 @@ func (afs *AferoVFS) Init() error {
 	return nil
 }
 
+// Destroy removes all the elements associated with the filesystem.
 func (afs *AferoVFS) Destroy() error {
 	if !afs.rootInit {
 		return nil
@@ -124,6 +131,30 @@ func (afs *AferoVFS) Destroy() error {
 	}
 	return rootFs.RemoveAll(afs.url.Path)
 }
+
+// DiskUsage computes the total size of the files
+func (afs *AferoVFS) DiskUsage() (int64, error) {
+	var doc couchdb.ViewResponse
+	err := couchdb.ExecView(afs.db, consts.DiskUsageView, &couchdb.ViewRequest{
+		Reduce: true,
+	}, &doc)
+	if err != nil {
+		return 0, err
+	}
+	if len(doc.Rows) == 0 {
+		return 0, nil
+	}
+
+	// Reduce of _count should give us a number value
+	f64, ok := doc.Rows[0].Value.(float64)
+	if !ok {
+		return 0, ErrWrongCouchdbState
+	}
+
+	return int64(f64), nil
+}
+
+// -- Directories
 
 // CreateDir is the method for creating a new directory
 func (afs *AferoVFS) CreateDir(doc *DirDoc) error {
@@ -142,7 +173,9 @@ func (afs *AferoVFS) CreateDir(doc *DirDoc) error {
 	return err
 }
 
-// UpdateDir
+// UpdateDir updates the specified old directory document with the new
+// document. It handles renaming of a directory in case the document name or
+// path has changed.
 func (afs *AferoVFS) UpdateDir(olddoc, newdoc *DirDoc) error {
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
@@ -254,6 +287,8 @@ func (afs *AferoVFS) DirByPath(name string) (*DirDoc, error) {
 	return docs[0], nil
 }
 
+// DirIterator returns an iterator over the children of the specified
+// directory.
 func (afs *AferoVFS) DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator {
 	return NewLocalIterator(afs.db, doc, opts)
 }
@@ -320,6 +355,8 @@ func (afs *AferoVFS) CreateFile(newdoc, olddoc *FileDoc) (File, error) {
 	return &localFile{afs: afs, f: f, fc: fc}, nil
 }
 
+// OpenFile return a file handler for reading associated with the given file
+// document.
 func (afs *AferoVFS) OpenFile(doc *FileDoc) (File, error) {
 	name, err := doc.Path(afs)
 	if err != nil {
@@ -345,6 +382,9 @@ func (afs *AferoVFS) DestroyFile(doc *FileDoc) error {
 	return couchdb.DeleteDoc(afs.db, doc)
 }
 
+// UpdateFile updates the specified old file document with the new document. It
+// handles renaming of a file in case the document name or directory has
+// changed.
 func (afs *AferoVFS) UpdateFile(olddoc, newdoc *FileDoc) error {
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
@@ -373,8 +413,7 @@ func (afs *AferoVFS) UpdateFile(olddoc, newdoc *FileDoc) error {
 	return couchdb.UpdateDoc(afs.db, newdoc)
 }
 
-// GetFileDoc is used to fetch file document information form the
-// database.
+// FileByID is used to fetch file document information form the database.
 func (afs *AferoVFS) FileByID(fileID string) (*FileDoc, error) {
 	doc := &FileDoc{}
 	err := couchdb.GetDoc(afs.db, consts.Files, fileID, doc)
@@ -387,8 +426,8 @@ func (afs *AferoVFS) FileByID(fileID string) (*FileDoc, error) {
 	return doc, nil
 }
 
-// GetFileDocFromPath is used to fetch file document information from
-// the database from its path.
+// FileByPath is used to fetch file document information from the database from
+// its path.
 func (afs *AferoVFS) FileByPath(name string) (*FileDoc, error) {
 	if !path.IsAbs(name) {
 		return nil, ErrNonAbsolutePath
@@ -418,8 +457,8 @@ func (afs *AferoVFS) FileByPath(name string) (*FileDoc, error) {
 	return docs[0], nil
 }
 
-// GetDirOrFileDoc is used to fetch a document from its identifier
-// without knowing in advance its type.
+// DirOrFileByID is used to fetch a document from its identifier without
+// knowing in advance its type.
 func (afs *AferoVFS) DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error) {
 	dirOrFile := &DirOrFileDoc{}
 	err := couchdb.GetDoc(afs.db, consts.Files, fileID, dirOrFile)
@@ -430,8 +469,8 @@ func (afs *AferoVFS) DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error) {
 	return dirDoc, fileDoc, nil
 }
 
-// GetDirOrFileDocFromPath is used to fetch a document from its path
-// without knowning in advance its type.
+// DirOrFileByPath is used to fetch a document from its path without knowning
+// in advance its type.
 func (afs *AferoVFS) DirOrFileByPath(name string) (*DirDoc, *FileDoc, error) {
 	dirDoc, err := afs.DirByPath(name)
 	if err != nil && !os.IsNotExist(err) {

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -51,6 +50,7 @@ var ErrSkipDir = errors.New("skip directories")
 type VFS interface {
 	Init() error
 	Destroy() error
+	DiskUsage() (int64, error)
 
 	CreateDir(doc *DirDoc) error
 	UpdateDir(olddoc, newdoc *DirDoc) error
@@ -61,7 +61,7 @@ type VFS interface {
 	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
 
 	CreateFile(newdoc, olddoc *FileDoc) (File, error)
-	OpenFile(*FileDoc) (File, error)
+	OpenFile(doc *FileDoc) (File, error)
 	UpdateFile(olddoc, newdoc *FileDoc) error
 	DestroyFile(doc *FileDoc) error
 	FileByID(fileID string) (*FileDoc, error)
@@ -71,6 +71,8 @@ type VFS interface {
 	DirOrFileByPath(name string) (*DirDoc, *FileDoc, error)
 }
 
+// File is a reader, writer, seeker, closer iterface reprsenting an opened
+// file for reading or writing.
 type File interface {
 	io.Reader
 	io.Seeker
@@ -92,6 +94,9 @@ type IteratorOptions struct {
 	ByFetch int
 }
 
+// DirIterator is the interface that an iterator over a specific directory
+// should implement. The Next method will return a ErrIteratorDone when the
+// iterator is over and does not have element anymore.
 type DirIterator interface {
 	Next() (*DirDoc, *FileDoc, error)
 }
@@ -348,26 +353,29 @@ func RemoveAll(fs VFS, name string) error {
 	return fs.DestroyFile(file)
 }
 
-// DiskUsage computes the total size of the files
-func DiskUsage(db couchdb.Database) (int64, error) {
-	var doc couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.DiskUsageView, &couchdb.ViewRequest{
-		Reduce: true,
-	}, &doc)
+// Exists returns wether or not the specified path exist in the file system.
+func Exists(fs VFS, name string) (bool, error) {
+	_, _, err := fs.DirOrFileByPath(name)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	if len(doc.Rows) == 0 {
-		return 0, nil
-	}
+	return true, nil
+}
 
-	// Reduce of _count should give us a number value
-	f64, ok := doc.Rows[0].Value.(float64)
-	if !ok {
-		return 0, ErrWrongCouchdbState
+// DirExists returns wether or not the specified path exist in the file system
+// and is associated with a directory.
+func DirExists(fs VFS, name string) (bool, error) {
+	_, err := fs.DirByPath(name)
+	if os.IsNotExist(err) {
+		return false, nil
 	}
-
-	return int64(f64), nil
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // WalkFn type works like filepath.WalkFn type function. It receives

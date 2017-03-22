@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -44,7 +43,7 @@ func diskUsage(c echo.Context) error {
 		}
 	}
 
-	used, err := vfs.DiskUsage(instance)
+	used, err := instance.VFS().DiskUsage()
 	if err != nil {
 		return err
 	}

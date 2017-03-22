@@ -20,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,6 +27,19 @@ var ts *httptest.Server
 var testInstance *instance.Instance
 var token string
 var clientID string
+
+func readFile(fs vfs.VFS, name string) ([]byte, error) {
+	doc, err := fs.FileByPath(name)
+	if err != nil {
+		return nil, err
+	}
+	f, err := fs.OpenFile(doc)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ioutil.ReadAll(f)
+}
 
 func extractJSONRes(res *http.Response, mp *map[string]interface{}) error {
 	if res.StatusCode >= 300 {
@@ -253,7 +265,7 @@ func TestCreateDirRootSuccess(t *testing.T) {
 	assert.Equal(t, 201, res.StatusCode)
 
 	storage := testInstance.VFS()
-	exists, err := afero.DirExists(storage, "/coucou")
+	exists, err := vfs.DirExists(storage, "/coucou")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
@@ -292,7 +304,7 @@ func TestCreateDirWithParentSuccess(t *testing.T) {
 	assert.Equal(t, 201, res2.StatusCode)
 
 	storage := testInstance.VFS()
-	exists, err := afero.DirExists(storage, "/dirparent/child")
+	exists, err := vfs.DirExists(storage, "/dirparent/child")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
@@ -353,7 +365,7 @@ func TestUploadBadHash(t *testing.T) {
 	assert.Equal(t, 412, res.StatusCode)
 
 	storage := testInstance.VFS()
-	_, err := afero.ReadFile(storage, "/badhash")
+	_, err := readFile(storage, "/badhash")
 	assert.Error(t, err)
 }
 
@@ -363,7 +375,7 @@ func TestUploadAtRootSuccess(t *testing.T) {
 	assert.Equal(t, 201, res.StatusCode)
 
 	storage := testInstance.VFS()
-	buf, err := afero.ReadFile(storage, "/goodhash")
+	buf, err := readFile(storage, "/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
 }
@@ -416,7 +428,7 @@ func TestUploadWithParentSuccess(t *testing.T) {
 	assert.Equal(t, 201, res2.StatusCode)
 
 	storage := testInstance.VFS()
-	buf, err := afero.ReadFile(storage, "/fileparent/goodhash")
+	buf, err := readFile(storage, "/fileparent/goodhash")
 	assert.NoError(t, err)
 	assert.Equal(t, body, string(buf))
 }
@@ -573,7 +585,7 @@ func TestModifyMetadataDirMove(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 
 	storage := testInstance.VFS()
-	exists, err := afero.DirExists(storage, "/dirmodmemoveinme/renamed")
+	exists, err := vfs.DirExists(storage, "/dirmodmemoveinme/renamed")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 
@@ -620,7 +632,7 @@ func TestModifyMetadataDirMoveWithRel(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 
 	storage := testInstance.VFS()
-	exists, err := afero.DirExists(storage, "/dirmodmemoveinmewithrel/dirmodmewithrel")
+	exists, err := vfs.DirExists(storage, "/dirmodmemoveinmewithrel/dirmodmewithrel")
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
@@ -692,10 +704,10 @@ func TestModifyContentSuccess(t *testing.T) {
 	res1, data1 := upload(t, "/files/?Type=file&Name=willbemodified&Executable=true", "text/plain", "foo", "")
 	assert.Equal(t, 201, res1.StatusCode)
 
-	buf, err = afero.ReadFile(storage, "/willbemodified")
+	buf, err = readFile(storage, "/willbemodified")
 	assert.NoError(t, err)
 	assert.Equal(t, "foo", string(buf))
-	fileInfo, err = storage.Stat("/willbemodified")
+	fileInfo, err = storage.FileByPath("/willbemodified")
 	assert.NoError(t, err)
 	assert.Equal(t, fileInfo.Mode().String(), "-rwxr-xr-x")
 
@@ -747,10 +759,10 @@ func TestModifyContentSuccess(t *testing.T) {
 	assert.Equal(t, attrs2["mime"], "audio/mp3")
 	assert.Equal(t, attrs2["executable"], false)
 
-	buf, err = afero.ReadFile(storage, "/willbemodified")
+	buf, err = readFile(storage, "/willbemodified")
 	assert.NoError(t, err)
 	assert.Equal(t, newcontent, string(buf))
-	fileInfo, err = storage.Stat("/willbemodified")
+	fileInfo, err = storage.FileByPath("/willbemodified")
 	assert.NoError(t, err)
 	assert.Equal(t, fileInfo.Mode().String(), "-rw-r--r--")
 
@@ -830,7 +842,7 @@ func TestModifyContentConcurrently(t *testing.T) {
 	}
 
 	storage := testInstance.VFS()
-	buf, err := afero.ReadFile(storage, "/willbemodifiedconcurrently")
+	buf, err := readFile(storage, "/willbemodifiedconcurrently")
 	assert.NoError(t, err)
 
 	found := false

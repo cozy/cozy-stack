@@ -50,7 +50,7 @@ func TestAddReferencesHandler(t *testing.T) {
 		return
 	}
 
-	f, err := vfs.CreateFile(testInstance, filedoc, nil)
+	f, err := testInstance.VFS().CreateFile(filedoc, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -76,7 +76,7 @@ func TestAddReferencesHandler(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, 204, res.StatusCode)
 
-	fdoc, err := vfs.GetFileDoc(testInstance, filedoc.ID())
+	fdoc, err := testInstance.VFS().FileByID(filedoc.ID())
 	assert.NoError(t, err)
 	assert.Len(t, fdoc.ReferencedBy, 1)
 }
@@ -108,17 +108,17 @@ func TestRemoveReferencesHandler(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, 204, res.StatusCode)
 
-	fdoc6, err := vfs.GetFileDoc(testInstance, f6)
+	fdoc6, err := testInstance.VFS().FileByID(f6)
 	assert.NoError(t, err)
 	assert.Len(t, fdoc6.ReferencedBy, 0)
-	fdoc8, err := vfs.GetFileDoc(testInstance, f8)
+	fdoc8, err := testInstance.VFS().FileByID(f8)
 	assert.NoError(t, err)
 	assert.Len(t, fdoc8.ReferencedBy, 0)
 
-	fdoc7, err := vfs.GetFileDoc(testInstance, f7)
+	fdoc7, err := testInstance.VFS().FileByID(f7)
 	assert.NoError(t, err)
 	assert.Len(t, fdoc7.ReferencedBy, 1)
-	fdoc9, err := vfs.GetFileDoc(testInstance, f9)
+	fdoc9, err := testInstance.VFS().FileByID(f9)
 	assert.NoError(t, err)
 	assert.Len(t, fdoc9.ReferencedBy, 1)
 }
@@ -137,7 +137,7 @@ func makeReferencedTestFile(t *testing.T, doc couchdb.Doc, name string) string {
 		},
 	}
 
-	f, err := vfs.CreateFile(testInstance, filedoc, nil)
+	f, err := testInstance.VFS().CreateFile(filedoc, nil)
 	if !assert.NoError(t, err) {
 		return ""
 	}

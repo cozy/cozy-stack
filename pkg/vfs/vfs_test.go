@@ -17,19 +17,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
-type TestContext struct {
-	prefix string
-	fs     afero.Fs
-}
-
-func (c TestContext) Prefix() string { return c.prefix }
-func (c TestContext) FS() afero.Fs   { return c.fs }
-
-var vfsC TestContext
+var fs VFS
 
 type H map[string]H
 
@@ -65,7 +56,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 			if err != nil {
 				return nil, err
 			}
-			if err = CreateDir(vfsC, dirdoc); err != nil {
+			if err = fs.CreateDir(dirdoc); err != nil {
 				return nil, err
 			}
 			if _, err = createTree(children, dirdoc.ID()); err != nil {
@@ -76,7 +67,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 			if err != nil {
 				return nil, err
 			}
-			f, err := CreateFile(vfsC, filedoc, nil)
+			f, err := fs.CreateFile(filedoc, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -89,7 +80,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 }
 
 func fetchTree(root string) (H, error) {
-	parent, err := GetDirDocFromPath(vfsC, root)
+	parent, err := fs.DirByPath(root)
 	if err != nil {
 		return nil, err
 	}
@@ -98,13 +89,13 @@ func fetchTree(root string) (H, error) {
 		return nil, err
 	}
 	hh := make(H)
-	hh[parent.Name+"/"] = h
+	hh[parent.DocName+"/"] = h
 	return hh, nil
 }
 
 func recFetchTree(parent *DirDoc, name string) (H, error) {
 	h := make(H)
-	iter := vfsC.DirIterator(parent, nil)
+	iter := fs.DirIterator(parent, nil)
 	for {
 		d, f, err := iter.Next()
 		if err == ErrIteratorDone {
@@ -114,23 +105,23 @@ func recFetchTree(parent *DirDoc, name string) (H, error) {
 			return nil, err
 		}
 		if d != nil {
-			if path.Join(name, d.Name) != d.Fullpath {
-				return nil, fmt.Errorf("Bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.Name))
+			if path.Join(name, d.DocName) != d.Fullpath {
+				return nil, fmt.Errorf("Bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.DocName))
 			}
 			children, err := recFetchTree(d, d.Fullpath)
 			if err != nil {
 				return nil, err
 			}
-			h[d.Name+"/"] = children
+			h[d.DocName+"/"] = children
 		} else {
-			h[f.Name] = nil
+			h[f.DocName] = nil
 		}
 	}
 	return h, nil
 }
 
 func TestDiskUsageIsInitiallyZero(t *testing.T) {
-	used, err := DiskUsage(vfsC)
+	used, err := fs.DiskUsage()
 	assert.NoError(t, err)
 	assert.Equal(t, int64(0), used)
 }
@@ -141,7 +132,7 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 
 	body := bytes.NewReader([]byte("hello !"))
 
-	file, err := CreateFile(vfsC, doc, nil)
+	file, err := fs.CreateFile(doc, nil)
 	assert.NoError(t, err)
 
 	n, err := io.Copy(file, body)
@@ -151,25 +142,25 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 	err = file.Close()
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/toto")
+	_, err = fs.FileByPath("/toto")
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/noooo")
+	_, err = fs.FileByPath("/noooo")
 	assert.Error(t, err)
 }
 
 func TestRemove(t *testing.T) {
-	err := Remove(vfsC, "foo/bar")
+	err := Remove(fs, "foo/bar")
 	assert.Error(t, err)
 	assert.Equal(t, ErrNonAbsolutePath, err)
 
-	err = Remove(vfsC, "/foo")
+	err = Remove(fs, "/foo")
 	assert.Error(t, err)
 	assert.Equal(t, "file does not exist", err.Error())
 
-	_, err = Mkdir(vfsC, "/removeme", nil)
+	_, err = Mkdir(fs, "/removeme", nil)
 	if !assert.NoError(t, err) {
-		err = Remove(vfsC, "/removeme")
+		err = Remove(fs, "/removeme")
 		assert.NoError(t, err)
 	}
 }
@@ -193,25 +184,25 @@ func TestRemoveAll(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = RemoveAll(vfsC, "/removemeall")
+	err = RemoveAll(fs, "/removemeall")
 	if !assert.NoError(t, err) {
 		return
 	}
-	_, err = Stat(vfsC, "/removemeall/dirchild1")
+	_, err = fs.DirByPath("/removemeall/dirchild1")
 	assert.Error(t, err)
-	_, err = Stat(vfsC, "/removemeall")
+	_, err = fs.DirByPath("/removemeall")
 	assert.Error(t, err)
 }
 
 func TestDiskUsage(t *testing.T) {
-	used, err := DiskUsage(vfsC)
+	used, err := fs.DiskUsage()
 	assert.NoError(t, err)
 	assert.Equal(t, len("hello !"), int(used))
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
 	dir, _ := NewDirDoc("container", "", nil)
-	err := CreateDir(vfsC, dir)
+	err := fs.CreateDir(dir)
 	assert.NoError(t, err)
 
 	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", time.Now(), false, []string{})
@@ -219,7 +210,7 @@ func TestGetFileDocFromPath(t *testing.T) {
 
 	body := bytes.NewReader([]byte("hello !"))
 
-	file, err := CreateFile(vfsC, doc, nil)
+	file, err := fs.CreateFile(doc, nil)
 	assert.NoError(t, err)
 
 	n, err := io.Copy(file, body)
@@ -229,10 +220,10 @@ func TestGetFileDocFromPath(t *testing.T) {
 	err = file.Close()
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/container/toto")
+	_, err = fs.FileByPath("/container/toto")
 	assert.NoError(t, err)
 
-	_, err = GetFileDocFromPath(vfsC, "/container/noooo")
+	_, err = fs.FileByPath("/container/noooo")
 	assert.Error(t, err)
 }
 
@@ -259,7 +250,7 @@ func TestCreateGetAndModifyFile(t *testing.T) {
 	}
 
 	newname := "createandget2"
-	_, err = ModifyDirMetadata(vfsC, olddoc, &DocPatch{
+	_, err = ModifyDirMetadata(fs, olddoc, &DocPatch{
 		Name: &newname,
 	})
 	if !assert.NoError(t, err) {
@@ -273,18 +264,18 @@ func TestCreateGetAndModifyFile(t *testing.T) {
 
 	assert.EqualValues(t, origtree["createandget1/"], tree["createandget2/"], "should have same tree")
 
-	fileBefore, err := GetFileDocFromPath(vfsC, "/createandget2/dirchild2/foof")
+	fileBefore, err := fs.FileByPath("/createandget2/dirchild2/foof")
 	if !assert.NoError(t, err) {
 		return
 	}
 	newfilename := "foof.jpg"
-	_, err = ModifyFileMetadata(vfsC, fileBefore, &DocPatch{
+	_, err = ModifyFileMetadata(fs, fileBefore, &DocPatch{
 		Name: &newfilename,
 	})
 	if !assert.NoError(t, err) {
 		return
 	}
-	fileAfter, err := GetFileDocFromPath(vfsC, "/createandget2/dirchild2/foof.jpg")
+	fileAfter, err := fs.FileByPath("/createandget2/dirchild2/foof.jpg")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -316,7 +307,7 @@ func TestUpdateDir(t *testing.T) {
 	}
 
 	newname := "update2"
-	_, err = ModifyDirMetadata(vfsC, doc1, &DocPatch{
+	_, err = ModifyDirMetadata(fs, doc1, &DocPatch{
 		Name: &newname,
 	})
 	if !assert.NoError(t, err) {
@@ -332,18 +323,18 @@ func TestUpdateDir(t *testing.T) {
 		return
 	}
 
-	dirchild2, err := GetDirDocFromPath(vfsC, "/update2/dirchild2")
+	dirchild2, err := fs.DirByPath("/update2/dirchild2")
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	dirchild3, err := GetDirDocFromPath(vfsC, "/update2/dirchild3")
+	dirchild3, err := fs.DirByPath("/update2/dirchild3")
 	if !assert.NoError(t, err) {
 		return
 	}
 
 	newfolid := dirchild2.ID()
-	_, err = ModifyDirMetadata(vfsC, dirchild3, &DocPatch{
+	_, err = ModifyDirMetadata(fs, dirchild3, &DocPatch{
 		DirID: &newfolid,
 	})
 	if !assert.NoError(t, err) {
@@ -393,7 +384,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	walked := H{}
-	Walk(vfsC, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
+	Walk(fs, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if !assert.NoError(t, err) {
 			return err
 		}
@@ -402,7 +393,7 @@ func TestWalk(t *testing.T) {
 			return fmt.Errorf("Bad fullpath")
 		}
 
-		if file != nil && !assert.True(t, strings.HasSuffix(name, file.Name)) {
+		if file != nil && !assert.True(t, strings.HasSuffix(name, file.DocName)) {
 			return fmt.Errorf("Bad fullpath")
 		}
 
@@ -454,7 +445,7 @@ func TestIterator(t *testing.T) {
 		return
 	}
 
-	iter1 := vfsC.DirIterator(iterDir, &IteratorOptions{ByFetch: 4})
+	iter1 := fs.DirIterator(iterDir, &IteratorOptions{ByFetch: 4})
 	iterTree2 := H{}
 	var children1 []string
 	var nextKey string
@@ -468,23 +459,23 @@ func TestIterator(t *testing.T) {
 		}
 		if nextKey != "" {
 			if d != nil {
-				children1 = append(children1, d.Name)
+				children1 = append(children1, d.DocName)
 			} else {
-				children1 = append(children1, f.Name)
+				children1 = append(children1, f.DocName)
 			}
 		}
 		if d != nil {
-			iterTree2[d.Name+"/"] = H{}
+			iterTree2[d.DocName+"/"] = H{}
 		} else {
-			iterTree2[f.Name] = nil
-			if f.Name == "filechild4" {
+			iterTree2[f.DocName] = nil
+			if f.DocName == "filechild4" {
 				nextKey = f.ID()
 			}
 		}
 	}
 	assert.EqualValues(t, iterTree["iter/"], iterTree2)
 
-	iter2 := vfsC.DirIterator(iterDir, &IteratorOptions{
+	iter2 := fs.DirIterator(iterDir, &IteratorOptions{
 		ByFetch: 4,
 		AfterID: nextKey,
 	})
@@ -498,9 +489,9 @@ func TestIterator(t *testing.T) {
 			return
 		}
 		if d != nil {
-			children2 = append(children2, d.Name)
+			children2 = append(children2, d.DocName)
 		} else {
-			children2 = append(children2, f.Name)
+			children2 = append(children2, f.DocName)
 		}
 	}
 
@@ -549,7 +540,7 @@ func TestArchive(t *testing.T) {
 		},
 	}
 	w := httptest.NewRecorder()
-	err = a.Serve(vfsC, w)
+	err = a.Serve(fs, w)
 	assert.NoError(t, err)
 
 	res := w.Result()
@@ -622,8 +613,8 @@ func TestDonwloadStore(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
+	check, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
+	if err != nil || check.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
@@ -634,28 +625,31 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	vfsC.prefix = "dev/"
-	vfsC.fs = afero.NewBasePathFs(afero.NewOsFs(), tempdir)
-
-	err = couchdb.ResetDB(vfsC, consts.Files)
+	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
+	fs, err = NewAferoVFS(db, "file://localhost"+tempdir)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = couchdb.DefineIndexes(vfsC, consts.IndexesByDoctype(consts.Files))
+	err = couchdb.ResetDB(db, consts.Files)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	if err = couchdb.DefineViews(vfsC, consts.ViewsByDoctype(consts.Files)); err != nil {
+	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
+	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	CreateRootDirDoc(vfsC)
+	if err = couchdb.DefineViews(db, consts.ViewsByDoctype(consts.Files)); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
+	err = fs.Init()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -664,7 +658,7 @@ func TestMain(m *testing.M) {
 	res := m.Run()
 
 	os.RemoveAll(tempdir)
-	couchdb.DeleteDB(vfsC, consts.Files)
+	couchdb.DeleteDB(db, consts.Files)
 
 	os.Exit(res)
 }

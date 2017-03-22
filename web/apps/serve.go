@@ -129,17 +129,27 @@ type AppFileServer interface {
 	ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error
 }
 
+// NewServer returns an implementation of AppFileServer given a vfs.VFS
+// instance.
 func NewServer(fs vfs.VFS) *Server {
 	return &Server{fs: fs}
 }
 
+// Server implements the AppFileServer interface for a vfs.VFS handler.
 type Server struct {
 	fs vfs.VFS
 }
 
 // Stat returns the underlying afero.Fs Stat.
 func (a *Server) Stat(slug, folder, file string) (os.FileInfo, error) {
-	return a.fs.DirByPath(a.path(slug, folder, file))
+	d, f, err := a.fs.DirOrFileByPath(a.path(slug, folder, file))
+	if err != nil {
+		return nil, err
+	}
+	if d != nil {
+		return d, nil
+	}
+	return f, nil
 }
 
 // Open returns the underlying afero.Fs Open.
@@ -167,7 +177,7 @@ func (a *Server) path(slug, folder, file string) string {
 	return path.Join(vfs.AppsDirName, slug, folder, file)
 }
 
-// NewServer returns a simple wrapper of the afero.Fs interface that
+// NewAferoServer returns a simple wrapper of the afero.Fs interface that
 // provides the AppFileServer interface.
 //
 // You can provide a makePath method to define how the file name should be
