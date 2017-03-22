@@ -305,7 +305,7 @@ func newGFS(ctx vfs.Context, base string) *gfs {
 		// query an index before it has been updated for a directory that has
 		// just been created.
 		time.Sleep(1 * time.Second)
-		dir, err = vfs.GetDirDocFromPath(ctx, base, false)
+		dir, err = vfs.GetDirDocFromPath(ctx, base)
 		if err != nil {
 			panic(err)
 		}
