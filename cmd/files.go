@@ -428,7 +428,7 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 			if f.IsDir() {
 				return nil
 			}
-			return fmt.Errorf("Not a directory")
+			return fmt.Errorf("Not a directory: %s", localname)
 		}
 
 		distname := path.Join(to, strings.TrimPrefix(localname, from))

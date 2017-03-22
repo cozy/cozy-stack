@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -526,7 +525,7 @@ func TestMain(m *testing.M) {
 
 	createSettings(in)
 
-	err = couchdb.DefineIndex(TestPrefix, mango.IndexOnFields(consts.Sharings, "sharing_id"))
+	err = couchdb.DefineIndexes(TestPrefix, consts.IndexesByDoctype(consts.Sharings))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

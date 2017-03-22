@@ -32,12 +32,12 @@ func TestPermissions(t *testing.T) {
 		return
 	}
 
-	A, err := GetDirDocFromPath(vfsC, "/O/A", false)
+	A, err := GetDirDocFromPath(vfsC, "/O/A")
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	B, err := GetDirDocFromPath(vfsC, "/O/B", false)
+	B, err := GetDirDocFromPath(vfsC, "/O/B")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -45,7 +45,7 @@ func TestPermissions(t *testing.T) {
 		Tags: &[]string{"testtagparent"},
 	})
 
-	B2, err := GetDirDocFromPath(vfsC, "/O/B2", false)
+	B2, err := GetDirDocFromPath(vfsC, "/O/B2")
 	if !assert.NoError(t, err) {
 		return
 	}

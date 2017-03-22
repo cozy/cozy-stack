@@ -99,14 +99,14 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ### GET /files/:file-id
 
 Get a directory or a file informations. In the case of a directory, it contains the list of files and sub-directories inside it.
-Contents is paginated. By default, only the 100 first entries are given.
+Contents is paginated. By default, only the 30 first entries are given.
 
 ### Query-String
 
 Parameter    | Description
--------------|---------------------------------------
+-------------|--------------------------------------
 page[cursor] | the last id of the results
-page[limit]  | the number of entries (100 by default)
+page[limit]  | the number of entries (30 by default)
 
 #### Request
 
@@ -708,9 +708,9 @@ List the files inside the trash. It's paginated.
 ### Query-String
 
 Parameter    | Description
--------------|---------------------------------------
+-------------|--------------------------------------
 page[cursor] | the last id of the results
-page[limit]  | the number of entries (100 by default)
+page[limit]  | the number of entries (30 by default)
 
 #### Request
 

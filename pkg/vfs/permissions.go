@@ -115,7 +115,7 @@ func pathFromID(c Context, id string) (string, error) {
 		return TrashDirName, nil
 	}
 
-	dir, err := GetDirDoc(c, id, false)
+	dir, err := GetDirDoc(c, id)
 	if err != nil {
 		return "", err
 	}

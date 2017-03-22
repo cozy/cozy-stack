@@ -3,7 +3,6 @@ package vfs
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,7 +17,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,7 +61,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 	var dirdoc *DirDoc
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
-			dirdoc, err = NewDirDoc(name[:len(name)-1], dirID, nil, nil)
+			dirdoc, err = NewDirDoc(name[:len(name)-1], dirID, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -91,7 +89,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 }
 
 func fetchTree(root string) (H, error) {
-	parent, err := GetDirDocFromPath(vfsC, root, false)
+	parent, err := GetDirDocFromPath(vfsC, root)
 	if err != nil {
 		return nil, err
 	}
@@ -106,22 +104,27 @@ func fetchTree(root string) (H, error) {
 
 func recFetchTree(parent *DirDoc, name string) (H, error) {
 	h := make(H)
-	err := parent.FetchFiles(vfsC)
-	if err != nil {
-		return nil, err
-	}
-	for _, d := range parent.dirs {
-		if path.Join(name, d.Name) != d.Fullpath {
-			return nil, fmt.Errorf("Bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.Name))
+	iter := parent.ChildrenIterator(vfsC, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == ErrIteratorDone {
+			break
 		}
-		children, err := recFetchTree(d, d.Fullpath)
 		if err != nil {
 			return nil, err
 		}
-		h[d.Name+"/"] = children
-	}
-	for _, f := range parent.files {
-		h[f.Name] = nil
+		if d != nil {
+			if path.Join(name, d.Name) != d.Fullpath {
+				return nil, fmt.Errorf("Bad fullpath: %s instead of %s", d.Fullpath, path.Join(name, d.Name))
+			}
+			children, err := recFetchTree(d, d.Fullpath)
+			if err != nil {
+				return nil, err
+			}
+			h[d.Name+"/"] = children
+		} else {
+			h[f.Name] = nil
+		}
 	}
 	return h, nil
 }
@@ -207,7 +210,7 @@ func TestDiskUsage(t *testing.T) {
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := NewDirDoc("container", "", nil, nil)
+	dir, _ := NewDirDoc("container", "", nil)
 	err := CreateDir(vfsC, dir)
 	assert.NoError(t, err)
 
@@ -329,12 +332,12 @@ func TestUpdateDir(t *testing.T) {
 		return
 	}
 
-	dirchild2, err := GetDirDocFromPath(vfsC, "/update2/dirchild2", false)
+	dirchild2, err := GetDirDocFromPath(vfsC, "/update2/dirchild2")
 	if !assert.NoError(t, err) {
 		return
 	}
 
-	dirchild3, err := GetDirDocFromPath(vfsC, "/update2/dirchild3", false)
+	dirchild3, err := GetDirDocFromPath(vfsC, "/update2/dirchild3")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -389,7 +392,7 @@ func TestWalk(t *testing.T) {
 		return
 	}
 
-	walked := ""
+	walked := H{}
 	Walk(vfsC, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
 		if !assert.NoError(t, err) {
 			return err
@@ -403,23 +406,105 @@ func TestWalk(t *testing.T) {
 			return fmt.Errorf("Bad fullpath")
 		}
 
-		walked += name + "\n"
-
+		walked[name] = nil
 		return nil
 	})
 
-	expectedWalk := `/walk
-/walk/dirchild1
-/walk/dirchild1/bard
-/walk/dirchild1/food
-/walk/dirchild2
-/walk/dirchild2/barf
-/walk/dirchild2/foof
-/walk/dirchild3
-/walk/filechild1
-`
+	expectedWalk := H{
+		"/walk":                nil,
+		"/walk/dirchild1":      nil,
+		"/walk/dirchild1/food": nil,
+		"/walk/dirchild1/bard": nil,
+		"/walk/dirchild2":      nil,
+		"/walk/dirchild2/foof": nil,
+		"/walk/dirchild2/barf": nil,
+		"/walk/dirchild3":      nil,
+		"/walk/filechild1":     nil,
+	}
 
 	assert.Equal(t, expectedWalk, walked)
+}
+
+func TestIterator(t *testing.T) {
+	iterTree := H{
+		"iter/": H{
+			"dirchild1/":  H{},
+			"dirchild2/":  H{},
+			"dirchild3/":  H{},
+			"filechild1":  nil,
+			"filechild2":  nil,
+			"filechild3":  nil,
+			"filechild4":  nil,
+			"filechild5":  nil,
+			"filechild6":  nil,
+			"filechild7":  nil,
+			"filechild8":  nil,
+			"filechild9":  nil,
+			"filechild10": nil,
+			"filechild11": nil,
+			"filechild12": nil,
+			"filechild13": nil,
+			"filechild14": nil,
+			"filechild15": nil,
+		},
+	}
+
+	iterDir, err := createTree(iterTree, consts.RootDirID)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	iter1 := iterDir.ChildrenIterator(vfsC, &IteratorOptions{ByFetch: 4})
+	iterTree2 := H{}
+	var children1 []string
+	var nextKey string
+	for {
+		d, f, err := iter1.Next()
+		if err == ErrIteratorDone {
+			break
+		}
+		if !assert.NoError(t, err) {
+			return
+		}
+		if nextKey != "" {
+			if d != nil {
+				children1 = append(children1, d.Name)
+			} else {
+				children1 = append(children1, f.Name)
+			}
+		}
+		if d != nil {
+			iterTree2[d.Name+"/"] = H{}
+		} else {
+			iterTree2[f.Name] = nil
+			if f.Name == "filechild4" {
+				nextKey = f.ID()
+			}
+		}
+	}
+	assert.EqualValues(t, iterTree["iter/"], iterTree2)
+
+	iter2 := iterDir.ChildrenIterator(vfsC, &IteratorOptions{
+		ByFetch: 4,
+		AfterID: nextKey,
+	})
+	var children2 []string
+	for {
+		d, f, err := iter2.Next()
+		if err == ErrIteratorDone {
+			break
+		}
+		if !assert.NoError(t, err) {
+			return
+		}
+		if d != nil {
+			children2 = append(children2, d.Name)
+		} else {
+			children2 = append(children2, f.Name)
+		}
+	}
+
+	assert.EqualValues(t, children1, children2)
 }
 
 func TestContentDisposition(t *testing.T) {
@@ -477,10 +562,16 @@ func TestArchive(t *testing.T) {
 	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	assert.NoError(t, err)
 	assert.Equal(t, 4, len(z.File))
-	assert.Equal(t, "test/foo.jpg", z.File[0].Name)
-	assert.Equal(t, "test/bar/baz/one.png", z.File[1].Name)
-	assert.Equal(t, "test/bar/baz/two.png", z.File[2].Name)
-	assert.Equal(t, "test/bar/z.gif", z.File[3].Name)
+	zipfiles := H{}
+	for _, f := range z.File {
+		zipfiles[f.Name] = nil
+	}
+	assert.EqualValues(t, H{
+		"test/foo.jpg":         nil,
+		"test/bar/baz/one.png": nil,
+		"test/bar/baz/two.png": nil,
+		"test/bar/z.gif":       nil,
+	}, zipfiles)
 }
 
 func TestDonwloadStore(t *testing.T) {
@@ -526,30 +617,6 @@ func TestDonwloadStore(t *testing.T) {
 	a3, err := storeA.GetArchive(key2)
 	assert.NoError(t, err)
 	assert.Nil(t, a3, "no expiration")
-}
-
-func TestFileSerialization(t *testing.T) {
-	var f = &FileDoc{
-		Type: consts.FileType,
-		Name: "test/foo/bar.jpg",
-		ReferencedBy: []jsonapi.ResourceIdentifier{
-			{Type: "io.cozy.photo.album", ID: "foorefid"},
-		},
-	}
-
-	f2 := f.HideFields()
-
-	b, err := json.Marshal(f)
-	assert.NoError(t, err)
-	assert.Contains(t, string(b), "referenced_by")
-
-	b2, err := json.Marshal(f2)
-	assert.NoError(t, err)
-	assert.NotContains(t, string(b2), "referenced_by")
-
-	b3, err := jsonapi.MarshalObject(f2)
-	assert.NoError(t, err)
-	assert.Contains(t, string(b3), "foorefid")
 }
 
 func TestMain(m *testing.M) {

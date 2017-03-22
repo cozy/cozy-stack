@@ -298,14 +298,14 @@ func (f *gfile) Close() error {
 }
 
 func newGFS(ctx vfs.Context, base string) *gfs {
-	dir, err := vfs.GetDirDocFromPath(ctx, base, false)
+	dir, err := vfs.GetDirDocFromPath(ctx, base)
 	if err != nil {
 		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
 		// With a cluster of couchdb, we can have a race condition where we
 		// query an index before it has been updated for a directory that has
 		// just been created.
 		time.Sleep(1 * time.Second)
-		dir, err = vfs.GetDirDocFromPath(ctx, base, false)
+		dir, err = vfs.GetDirDocFromPath(ctx, base)
 		if err != nil {
 			panic(err)
 		}

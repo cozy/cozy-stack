@@ -26,9 +26,12 @@ type Index struct {
 
 // IndexOnFields constructs a new Index
 // it lets couchdb defaults for index & designdoc names.
-func IndexOnFields(doctype string, fields ...string) *Index {
+func IndexOnFields(doctype, name string, fields []string) *Index {
 	return &Index{
 		Doctype: doctype,
-		Request: &IndexRequest{Index: IndexFields(fields)},
+		Request: &IndexRequest{
+			DDoc:  name,
+			Index: IndexFields(fields),
+		},
 	}
 }

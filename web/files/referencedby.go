@@ -19,7 +19,7 @@ func AddReferencedHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID, true)
+	dir, file, err := vfs.GetDirOrFileDoc(instance, fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -48,7 +48,7 @@ func AddReferencedHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	return nil
+	return c.NoContent(http.StatusNoContent)
 }
 
 // RemoveReferencedHandler is the echo.handler for removing referenced_by to
@@ -81,5 +81,5 @@ func RemoveReferencedHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	return c.NoContent(204)
+	return c.NoContent(http.StatusNoContent)
 }

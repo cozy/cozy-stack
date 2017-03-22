@@ -519,8 +519,11 @@ func DefineIndex(db Database, index *mango.Index) error {
 // DefineIndexRaw defines a index
 func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreationResponse, error) {
 	url := makeDBName(db, doctype) + "/_index"
-	var response IndexCreationResponse
-	return &response, makeRequest("POST", url, &index, &response)
+	response := &IndexCreationResponse{}
+	if err := makeRequest("POST", url, &index, &response); err != nil {
+		return nil, err
+	}
+	return response, nil
 }
 
 // DefineIndexes defines a list of indexes

@@ -48,8 +48,6 @@ type FileDoc struct {
 	Metadata Metadata `json:"metadata,omitempty"`
 
 	ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
-
-	parent *DirDoc
 }
 
 // ID returns the file qualified identifier
@@ -87,65 +85,7 @@ func (f *FileDoc) Path(c Context) (string, error) {
 
 // Parent returns the parent directory document
 func (f *FileDoc) Parent(c Context) (*DirDoc, error) {
-	parent, err := getParentDir(c, f.parent, f.DirID)
-	if err != nil {
-		return nil, err
-	}
-	f.parent = parent
-	return parent, nil
-}
-
-// Links is used to generate a JSON-API link for the file (part of
-// jsonapi.Object interface)
-func (f *FileDoc) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/files/" + f.DocID}
-}
-
-func (f *FileDoc) parentRelationShip() jsonapi.Relationship {
-	return jsonapi.Relationship{
-		Links: &jsonapi.LinksList{
-			Related: "/files/" + f.DirID,
-		},
-		Data: jsonapi.ResourceIdentifier{
-			ID:   f.DirID,
-			Type: consts.Files,
-		},
-	}
-}
-
-func (f *FileDoc) referencedByRelationShip() jsonapi.Relationship {
-	return jsonapi.Relationship{
-		Links: &jsonapi.LinksList{
-			Self: "/files/" + f.ID() + "/relationships/references",
-		},
-		Data: f.ReferencedBy,
-	}
-}
-
-// Relationships is used to generate the parent relationship in JSON-API format
-// (part of the jsonapi.Object interface)
-func (f *FileDoc) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{
-		"parent":        f.parentRelationShip(),
-		"referenced_by": f.referencedByRelationShip(),
-	}
-}
-
-// HideFields returns a jsonapi.Object which serialize like the original
-// file but without the ReferencedBy field
-func (f *FileDoc) HideFields() jsonapi.Object {
-	return &struct {
-		ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
-		*FileDoc
-	}{
-		FileDoc:      f,
-		ReferencedBy: nil,
-	}
-}
-
-// Included is part of the jsonapi.Object interface
-func (f *FileDoc) Included() []jsonapi.Object {
-	return []jsonapi.Object{}
+	return GetDirDoc(c, f.DirID)
 }
 
 // AddReferencedBy adds referenced_by to the file
@@ -228,7 +168,7 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 	var err error
 	dirpath := path.Dir(name)
 	var parent *DirDoc
-	parent, err = GetDirDocFromPath(c, dirpath, false)
+	parent, err = GetDirDocFromPath(c, dirpath)
 
 	if err != nil {
 		return nil, err
@@ -243,6 +183,7 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 
 	var docs []*FileDoc
 	req := &couchdb.FindRequest{
+		UseIndex: "dir-file-child",
 		Selector: selector,
 		Limit:    1,
 	}
@@ -255,8 +196,6 @@ func GetFileDocFromPath(c Context, name string) (*FileDoc, error) {
 	}
 
 	fileDoc := docs[0]
-	fileDoc.parent = parent
-
 	return fileDoc, nil
 }
 
@@ -549,22 +488,9 @@ func ModifyFileMetadata(c Context, olddoc *FileDoc, patch *DocPatch) (*FileDoc, 
 	}
 
 	newdoc.RestorePath = *patch.RestorePath
-
-	var parent *DirDoc
-	if newdoc.DirID != olddoc.DirID {
-		parent, err = newdoc.Parent(c)
-	} else {
-		parent = olddoc.parent
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	newdoc.UpdatedAt = *patch.UpdatedAt
-	newdoc.parent = parent
 
 	oldpath, err := olddoc.Path(c)
 	if err != nil {
@@ -692,6 +618,5 @@ func getFileMode(executable bool) os.FileMode {
 }
 
 var (
-	_ couchdb.Doc    = &FileDoc{}
-	_ jsonapi.Object = &FileDoc{}
+	_ couchdb.Doc = &FileDoc{}
 )

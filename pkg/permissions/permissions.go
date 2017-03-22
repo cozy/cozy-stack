@@ -154,6 +154,7 @@ func GetForCLI(claims *Claims) (*Permission, error) {
 func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
+		UseIndex: "by-source-and-type",
 		Selector: mango.And(
 			mango.Equal("type", TypeApplication),
 			mango.Equal("source_id", consts.Apps+"/"+slug),
@@ -277,6 +278,7 @@ func Force(db couchdb.Database, slug string, set Set) error {
 func DestroyApp(db couchdb.Database, slug string) error {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
+		UseIndex: "by-source-and-type",
 		Selector: mango.Equal("source_id", consts.Apps+"/"+slug),
 	}, &res)
 	if err != nil {

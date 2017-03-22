@@ -8,20 +8,22 @@ import (
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
 var GlobalIndexes = []*mango.Index{
-	mango.IndexOnFields(Instances, "domain"),
+	mango.IndexOnFields(Instances, "by-domain", []string{"domain"}),
 }
 
 // Indexes is the index list required by an instance to run properly.
 var Indexes = []*mango.Index{
 	// Permissions
-	mango.IndexOnFields(Permissions, "source_id", "type"),
+	mango.IndexOnFields(Permissions, "by-source-and-type", []string{"source_id", "type"}),
 	// Sharings
-	mango.IndexOnFields(Sharings, "sharing_id"),
+	mango.IndexOnFields(Sharings, "by-sharing-id", []string{"sharing_id"}),
 
 	// Used to lookup a file given its parent, and the children of a directory
-	mango.IndexOnFields(Files, "dir_id", "name"),
+	mango.IndexOnFields(Files, "dir-file-child", []string{"dir_id", "name", "type"}),
+	// Used to lookup over the children of a directory
+	mango.IndexOnFields(Files, "dir-children", []string{"dir_id", "_id"}),
 	// Used to lookup a directory given its path
-	mango.IndexOnFields(Files, "path"),
+	mango.IndexOnFields(Files, "dir-by-path", []string{"path"}),
 }
 
 // DiskUsageView is the view used for computing the disk usage
