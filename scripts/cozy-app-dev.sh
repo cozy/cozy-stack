@@ -75,6 +75,26 @@ do_start() {
 	do_check_couchdb
 	check_hosts
 
+	if [ -f "${appdir}/manifest.webapp" ]; then
+		slug="app"
+	else
+		appsdir=""
+		for i in ${appdir}/*; do
+			if [ -f "${i}/manifest.webapp" ]; then
+				appsdir="${appsdir},$(basename "$i"):${i}"
+			fi
+			if [ -z "$slug" ]; then
+				slug=$(basename "$i")
+			fi
+		done
+		if [ -z "${appsdir}" ]; then
+			echo_err "No manifest found in ${appdir}"
+			exit 1
+		fi
+		appdir=${appsdir:1}
+	fi
+
+
 	echo "starting cozy-stack with ${vfsdir}..."
 
 	${COZY_STACK_PATH} serve --allow-root \
@@ -98,7 +118,7 @@ do_start() {
 	echo ""
 	do_create_instances
 	echo ""
-	echo "Everything is setup. Go to http://app.${cozy_dev_addr}/"
+	echo "Everything is setup. Go to http://${slug}.${cozy_dev_addr}/"
 	echo "To exit, press ^C"
 	cat
 }
