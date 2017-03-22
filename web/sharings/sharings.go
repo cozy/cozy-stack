@@ -23,9 +23,7 @@ func SharingAnswer(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	// The sharing is refused if there is no access code
-	sharingAccepted := accessCode != ""
-
-	if sharingAccepted {
+	if accessCode != "" {
 		u, err = sharings.SharingAccepted(instance, state, clientID, accessCode)
 	} else {
 		u, err = sharings.SharingRefused(instance, state, clientID)

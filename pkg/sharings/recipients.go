@@ -48,16 +48,13 @@ func (r *Recipient) Links() *jsonapi.LinksList {
 
 // ExtractDomain returns the recipient's domain without the scheme
 func (r *Recipient) ExtractDomain() (string, error) {
-	var rURL string
 	if r.URL == "" {
 		return "", ErrRecipientHasNoURL
 	}
-	tokens := strings.Split(r.URL, "://")
-	rURL = r.URL
-	if len(tokens) > 1 {
-		rURL = tokens[1]
+	if tokens := strings.Split(r.URL, "://"); len(tokens) > 1 {
+		return tokens[1], nil
 	}
-	return rURL, nil
+	return r.URL, nil
 }
 
 // GetAccessToken sends an access_token requests to the recipient, using the
