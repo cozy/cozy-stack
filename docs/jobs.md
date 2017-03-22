@@ -127,7 +127,24 @@ Examples
 
 ### `@event` syntax
 
-The `@event` syntax is not determined yet. Its main purpose will be to describe job scheduling after a filesystem or database modification.
+The `@event` syntax allows to trigger a job when something occurs in the stack.
+It follow the same syntax than permissions scope string :
+
+`type[:verb][:values][:selector]`
+
+Unlike for permissions string, the verb should be one of `CREATED`, `DELETED`, `UPDATED`.
+
+It is a work in progress, for now only events on couchdb package triggers it.
+
+The job worker will receive a compound message including original trigger_infos messages and the event which has triggered it.
+
+Examples
+
+```
+@event io.cozy.files // anything happens on files
+@event io.cozy.files:CREATED // a file was created
+@event io.cozy.files:DELETED:image/jpg:mime // an image was deleted
+```
 
 
 ### `@webhook` syntax
