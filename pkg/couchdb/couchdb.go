@@ -345,40 +345,25 @@ func ResetDB(db Database, doctype string) error {
 	return CreateDB(db, doctype)
 }
 
-// Delete destroy a document by its doctype and ID .
+// DeleteDoc deletes a struct implementing the couchb.Doc interface
 // If the document's current rev does not match the one passed,
 // a CouchdbError(409 conflict) will be returned.
-// This functions returns the tombstone revision as string
-func Delete(db Database, doctype, id, rev string) (string, error) {
-	var err error
-	id, err = validateDocID(id)
-	if err != nil {
-		return "", err
-	}
-	var res updateResponse
-	qs := url.Values{"rev": []string{rev}}
-	url := docURL(db, doctype, id) + "?" + qs.Encode()
-	err = makeRequest("DELETE", url, nil, &res)
-	if err != nil {
-		return "", fixErrorNoDatabaseIsWrongDoctype(err)
-	}
-	rtevent(db, realtime.EventDelete, doctype, id, res.Rev)
-	return res.Rev, nil
-}
-
-// DeleteDoc deletes a struct implementing the couchb.Doc interface
 // The document's SetRev will be called with tombstone revision
 func DeleteDoc(db Database, doc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
 	}
-	tombrev, err := Delete(db, doc.DocType(), id, doc.Rev())
+
+	var res updateResponse
+	qs := url.Values{"rev": []string{doc.Rev()}}
+	url := docURL(db, doc.DocType(), id) + "?" + qs.Encode()
+	err = makeRequest("DELETE", url, nil, &res)
 	if err != nil {
-		return err
+		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
-	doc.SetRev(tombrev)
-	rtevent(db, realtime.EventDelete, doc.DocType(), id, tombrev)
+	doc.SetRev(res.Rev)
+	rtevent(db, realtime.EventDelete, doc)
 	return nil
 }
 
