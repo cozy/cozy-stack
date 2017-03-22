@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
@@ -32,26 +33,15 @@ var in = &instance.Instance{
 	OAuthSecret: instanceSecret,
 	Domain:      "test-sharing.sparta",
 }
-
+var recipientIn = &instance.Instance{
+	OAuthSecret: instanceSecret,
+	Domain:      "test-sharing.xerxes",
+}
 var ts *httptest.Server
 var recipientURL string
-var recipientIn *instance.Instance
-
-func createInstance(domain string) *instance.Instance {
-	instance.Destroy(domain)
-	testInstance, err := instance.Create(&instance.Options{
-		Domain: domain,
-		Locale: "en",
-	})
-	if err != nil {
-		fmt.Println("Could not create test instance.", err)
-		os.Exit(1)
-	}
-	return testInstance
-}
 
 func createServer() *httptest.Server {
-	recipientIn = createInstance("test-sharing.xerxes")
+	createSettings(recipientIn)
 	handler := echo.New()
 	handler.HTTPErrorHandler = errors.ErrorHandler
 	handler.Use(injectInstance(recipientIn))
@@ -645,6 +635,21 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	err = couchdb.ResetDB(in, consts.Sharings)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = couchdb.ResetDB(recipientIn, consts.Settings)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = couchdb.ResetDB(recipientIn, consts.Sharings)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	err = couchdb.ResetDB(TestPrefix, consts.OAuthClients)
 	if err != nil {
 		fmt.Println(err)
@@ -655,17 +660,16 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 	createSettings(in)
 	ts = createServer()
 	recipientURL = strings.Split(ts.URL, "http://")[1]
 
-	err = couchdb.DefineIndexes(TestPrefix, consts.IndexesByDoctype(consts.Sharings))
+	err = couchdb.DefineIndex(TestPrefix, mango.IndexOnFields(consts.Sharings, "by-sharing-id", []string{"sharing_id"}))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = couchdb.DefineIndex(in, mango.IndexOnFields(consts.Sharings, "sharing_id"))
+	err = couchdb.DefineIndex(in, mango.IndexOnFields(consts.Sharings, "by-sharing-id", []string{"sharing_id"}))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -674,7 +678,6 @@ func TestMain(m *testing.M) {
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
 	couchdb.DeleteDB(TestPrefix, consts.Recipients)
-	couchdb.DeleteDB(in, consts.Settings)
 	ts.Close()
 
 	os.Exit(res)
