@@ -48,12 +48,10 @@ func SimpleDatabasePrefix(prefix string) Database {
 	return &simpleDB{prefix}
 }
 
-func rtevent(db Database, evtype, doctype, id, rev string) {
+func rtevent(db Database, evtype string, doc realtime.Doc) {
 	realtime.InstanceHub(db.Prefix()).Publish(&realtime.Event{
-		Type:    evtype,
-		DocType: doctype,
-		DocID:   id,
-		DocRev:  rev,
+		Type: evtype,
+		Doc:  doc,
 	})
 }
 
@@ -385,7 +383,7 @@ func UpdateDoc(db Database, doc Doc) error {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventUpdate, doctype, id, res.Rev)
+	rtevent(db, realtime.EventUpdate, doc)
 	return nil
 }
 
@@ -409,7 +407,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventCreate, doctype, id, res.Rev)
+	rtevent(db, realtime.EventCreate, doc)
 	return nil
 }
 
@@ -461,7 +459,7 @@ func CreateDoc(db Database, doc Doc) error {
 
 	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventCreate, doc.DocType(), doc.ID(), doc.Rev())
+	rtevent(db, realtime.EventCreate, doc)
 	return nil
 }
 

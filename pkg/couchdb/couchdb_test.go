@@ -258,7 +258,7 @@ func TestMain(m *testing.M) {
 	go func() {
 		for ev := range eventChan.Read() {
 			receivedEventsMutex.Lock()
-			receivedEvents[ev.Type+ev.DocID] = struct{}{}
+			receivedEvents[ev.Type+ev.Doc.ID()] = struct{}{}
 			receivedEventsMutex.Unlock()
 		}
 	}()

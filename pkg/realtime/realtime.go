@@ -2,18 +2,23 @@ package realtime
 
 // Basic data events
 const (
-	EventCreate = "data.create"
-	EventUpdate = "data.update"
-	EventDelete = "data.delete"
+	EventCreate = "CREATED"
+	EventUpdate = "UPDATED"
+	EventDelete = "DELETED"
 )
+
+// Doc is an interface for a object with DocType, ID, Rev
+type Doc interface {
+	ID() string
+	Rev() string
+	DocType() string
+}
 
 // Event is the basic message structure manipulated by the realtime package
 type Event struct {
 	Instance string
 	Type     string
-	DocType  string
-	DocID    string
-	DocRev   string
+	Doc      Doc
 }
 
 // The following API is inspired by https://github.com/gocontrib/pubsub

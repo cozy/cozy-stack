@@ -52,12 +52,12 @@ type instancehub struct {
 }
 
 func (ih *instancehub) Publish(e *Event) {
-	it := ih.mainHub.getTopic(ih.prefix, e.DocType)
+	it := ih.mainHub.getTopic(ih.prefix, e.Doc.DocType())
 	if it != nil {
 		it.broadcast <- e
 	}
 	e.Instance = ih.prefix
-	gt := ih.mainHub.getTopic(global, e.DocType)
+	gt := ih.mainHub.getTopic(global, e.Doc.DocType())
 	if gt != nil {
 		gt.broadcast <- e
 	}
