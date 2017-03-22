@@ -26,7 +26,6 @@ type dir struct {
 
 type file struct {
 	doc *vfs.FileDoc
-	ref []jsonapi.ResourceIdentifier
 }
 
 func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
@@ -155,15 +154,8 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 }
 
 // newFile creates an instance of file struct from a vfs.FileDoc document.
-// Warning: the given document is mutated, the ReferencedBy field is nilified
-// so that it not dumped in the json document.
 func newFile(doc *vfs.FileDoc) *file {
-	ref := doc.ReferencedBy
-	doc.ReferencedBy = nil
-	return &file{
-		doc: doc,
-		ref: ref,
-	}
+	return &file{doc}
 }
 
 func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.LinksList) error {
@@ -202,13 +194,17 @@ func (f *file) Relationships() jsonapi.RelationshipMap {
 			Links: &jsonapi.LinksList{
 				Self: "/files/" + f.doc.ID() + "/relationships/references",
 			},
-			Data: f.ref,
+			Data: f.doc.ReferencedBy,
 		},
 	}
 }
 func (f *file) Included() []jsonapi.Object { return []jsonapi.Object{} }
 func (f *file) MarshalJSON() ([]byte, error) {
-	return json.Marshal(f.doc)
+	ref := f.doc.ReferencedBy
+	f.doc.ReferencedBy = nil
+	res, err := json.Marshal(f.doc)
+	f.doc.ReferencedBy = ref
+	return res, err
 }
 func (f *file) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
