@@ -83,9 +83,7 @@ route, this default one:
 }
 ```
 
-**TODO** later, it will be possible to associate an intent /
-[activity](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
-to a route. Probably something like:
+It is also possible to attach one or more [intents](intents.md) to a route:
 
 ```json
 {
@@ -93,10 +91,12 @@ to a route. Probably something like:
     "folder": "/",
     "index": "picker.html",
     "public": false,
-    "intent": {
-      "action": "pick",
-      "type": "io.cozy.contacts"
-    }
+    "intents": [
+      {
+        "action": "pick",
+        "type": ["io.cozy.contacts"]
+      }
+    ]
   }
 }
 ```

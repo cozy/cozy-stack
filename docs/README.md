@@ -24,6 +24,7 @@ Table of contents
 ## Services
 
 - `/auth` - [Authentication & OAuth](auth.md)
+  - [Intents](intents.md)
   - [Permissions](permissions.md)
 - `/apps` - [Applications Management](apps.md)
 - `/data` - [Data System](data-system.md)
