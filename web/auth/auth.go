@@ -405,6 +405,7 @@ func authorize(c echo.Context) error {
 	q := u.Query()
 	q.Set("access_code", access.Code)
 	q.Set("state", params.state)
+	q.Set("client_id", params.clientID)
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 
