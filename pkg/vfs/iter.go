@@ -1,10 +1,9 @@
-package vfsafero
+package vfs
 
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 const iterMaxFetchSize = 100
@@ -14,17 +13,17 @@ const iterMaxFetchSize = 100
 type iter struct {
 	db     couchdb.Database
 	sel    mango.Filter
-	opt    *vfs.IteratorOptions
-	list   []*vfs.DirOrFileDoc
+	opt    *IteratorOptions
+	list   []*DirOrFileDoc
 	offset int
 	index  int
 	done   bool
 }
 
-// newIterator return a new iterator.
-func newIterator(db couchdb.Database, dir *vfs.DirDoc, opt *vfs.IteratorOptions) vfs.DirIterator {
+// NewIterator return a new iterator.
+func NewIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) DirIterator {
 	if opt == nil {
-		opt = &vfs.IteratorOptions{ByFetch: iterMaxFetchSize}
+		opt = &IteratorOptions{ByFetch: iterMaxFetchSize}
 	}
 	if opt.ByFetch == 0 || opt.ByFetch > iterMaxFetchSize {
 		opt.ByFetch = iterMaxFetchSize
@@ -43,10 +42,10 @@ func newIterator(db couchdb.Database, dir *vfs.DirDoc, opt *vfs.IteratorOptions)
 }
 
 // Next should be called to get the next directory or file children of the
-// parent directory. If the error is vfs.ErrIteratorDone
-func (i *iter) Next() (*vfs.DirDoc, *vfs.FileDoc, error) {
+// parent directory. If the error is ErrIteratorDone
+func (i *iter) Next() (*DirDoc, *FileDoc, error) {
 	if i.done {
-		return nil, nil, vfs.ErrIteratorDone
+		return nil, nil, ErrIteratorDone
 	}
 	if i.index >= len(i.list) {
 		if err := i.fetch(); err != nil {
@@ -63,7 +62,7 @@ func (i *iter) fetch() error {
 	l := len(i.list)
 	if l > 0 && l < i.opt.ByFetch {
 		i.done = true
-		return vfs.ErrIteratorDone
+		return ErrIteratorDone
 	}
 
 	i.offset += l
@@ -81,7 +80,7 @@ func (i *iter) fetch() error {
 		return err
 	}
 	if len(i.list) == 0 {
-		return vfs.ErrIteratorDone
+		return ErrIteratorDone
 	}
 	return nil
 }

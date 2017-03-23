@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
+	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/leonelquinteros/gotext"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -89,7 +90,7 @@ type Instance struct {
 	// CLISecret is used to authenticate request from the CLI
 	CLISecret []byte `json:"cli_secret,omitempty"`
 
-	storage vfs.VFS
+	vfs vfs.VFS
 }
 
 // Options holds the parameters to create a new instance.
@@ -155,24 +156,27 @@ func (i *Instance) Prefix() string {
 // VFS returns the storage provider where the binaries for the current instance
 // are persisted
 func (i *Instance) VFS() vfs.VFS {
-	if i.storage == nil {
-		u, err := url.Parse(i.StorageURL)
-		if err != nil {
-			panic(fmt.Errorf("storage provider: could not parse storage url %s", err.Error()))
-		}
-		switch u.Scheme {
-		case "file", "mem":
-			i.storage, err = vfsafero.New(i, i.StorageURL)
-		case "swift":
-			err = errors.New("instance: storage provider swift not implemened")
-		default:
-			err = fmt.Errorf("instance: unknown storage provider %s", u.Scheme)
-		}
-		if err != nil {
-			panic(err)
-		}
+	if i.vfs == nil {
+		panic("instance: VFS() but nil")
 	}
-	return i.storage
+	return i.vfs
+}
+
+func (i *Instance) makeVFS() error {
+	u, err := url.Parse(i.StorageURL)
+	if err != nil {
+		return fmt.Errorf("instance: could not parse storage url %s (%s)",
+			i.StorageURL, err.Error())
+	}
+	switch u.Scheme {
+	case "file", "mem":
+		i.vfs, err = vfsafero.New(i, i.StorageURL)
+	case "swift":
+		i.vfs, err = vfsswift.New(i, i.StorageURL)
+	default:
+		err = fmt.Errorf("instance: unknown storage provider %s", u.Scheme)
+	}
+	return err
 }
 
 // StartJobs is used to start the job system for all the instances.
@@ -270,22 +274,6 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 	return u.String()
 }
 
-// createInCouchdb creates the instance doc in the global database
-func (i *Instance) createInCouchdb() error {
-	_, err := Get(i.Domain)
-	if err == nil {
-		return ErrExists
-	}
-	if err != ErrNotFound {
-		return err
-	}
-	err = couchdb.CreateDoc(couchdb.GlobalDB, i)
-	if err != nil {
-		return err
-	}
-	return couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes)
-}
-
 func (i *Instance) installApp(slug string) error {
 	source, ok := consts.AppsRegistry[slug]
 	if !ok {
@@ -348,7 +336,19 @@ func Create(opts *Options) (*Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
 
-	if err := i.createInCouchdb(); err != nil {
+	if err := couchdb.CreateDB(couchdb.GlobalDB, consts.Instances); err != nil {
+		return nil, err
+	}
+	if err := couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes); err != nil {
+		return nil, err
+	}
+	if _, err := Get(i.Domain); err != ErrNotFound {
+		if err == nil {
+			err = ErrExists
+		}
+		return nil, err
+	}
+	if err := couchdb.CreateDoc(couchdb.GlobalDB, i); err != nil {
 		return nil, err
 	}
 	if err := couchdb.CreateDB(i, consts.Files); err != nil {
@@ -367,6 +367,9 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 	if err := couchdb.CreateDB(i, consts.Sharings); err != nil {
+		return nil, err
+	}
+	if err := i.makeVFS(); err != nil {
 		return nil, err
 	}
 	if err := i.VFS().Init(); err != nil {
@@ -397,7 +400,6 @@ func Create(opts *Options) (*Instance, error) {
 			log.Error("[instance] Failed to install "+app, err)
 		}
 	}
-	// TODO atomicity with defer
 	return i, nil
 }
 
@@ -426,7 +428,11 @@ func Get(domain string) (*Instance, error) {
 	if len(instances) == 0 {
 		return nil, ErrNotFound
 	}
-	return instances[0], nil
+	i := instances[0]
+	if err = i.makeVFS(); err != nil {
+		return nil, err
+	}
+	return i, nil
 }
 
 var translations = make(map[string]*gotext.Po)
@@ -468,19 +474,7 @@ func List() ([]*Instance, error) {
 func Destroy(domain string) (*Instance, error) {
 	i, err := Get(domain)
 	if err != nil {
-		// FIXME temporary workaround to delete instances with no named indexes
-		var instances []*Instance
-		req := &couchdb.FindRequest{
-			Selector: mango.Equal("domain", domain),
-			Limit:    1,
-		}
-		if err = couchdb.FindDocs(couchdb.GlobalDB, consts.Instances, req, &instances); err != nil {
-			return nil, err
-		}
-		if len(instances) == 0 {
-			return nil, ErrNotFound
-		}
-		i = instances[0]
+		return nil, err
 	}
 
 	if err = couchdb.DeleteDoc(couchdb.GlobalDB, i); err != nil {
@@ -644,7 +638,9 @@ func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
 	case permissions.AppAudience:
 		return i.SessionSecret, nil
-	case permissions.RefreshTokenAudience, permissions.AccessTokenAudience, permissions.ShareAudience:
+	case permissions.RefreshTokenAudience,
+		permissions.AccessTokenAudience,
+		permissions.ShareAudience:
 		return i.OAuthSecret, nil
 	case permissions.CLIAudience:
 		return i.CLISecret, nil

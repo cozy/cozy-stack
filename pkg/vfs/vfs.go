@@ -51,23 +51,56 @@ type VFS interface {
 	Init() error
 	Delete() error
 
+	// DiskUsage computes the total size of the files contained in the VFS.
 	DiskUsage() (int64, error)
 
+	// DirByID returns the directory document information associated with the
+	// specified identifier.
 	DirByID(fileID string) (*DirDoc, error)
+	// DirByPath returns the directory document information associated with the
+	// specified path.
 	DirByPath(name string) (*DirDoc, error)
+	// FileByID returns the file document information associated with the
+	// specified identifier.
 	FileByID(fileID string) (*FileDoc, error)
+	// FileByPath returns the file document information associated with the
+	// specified path.
 	FileByPath(name string) (*FileDoc, error)
+	// DirOrFileByID returns the document from its identifier without knowing in
+	// advance its type. One of the returned argument is not nil.
 	DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error)
+	// DirOrFileByID returns the document from its path without knowing in
+	// advance its type. One of the returned argument is not nil.
 	DirOrFileByPath(name string) (*DirDoc, *FileDoc, error)
+	// DirIterator returns an iterator over the children of the specified
+	// directory.
 	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
 
+	// CreateDir is used to create a new directory from its document.
 	CreateDir(doc *DirDoc) error
+	// UpdateDir is used to update the document of a directory. It takes the new
+	// file document that you want to create. It can also take the old document,
+	// representing the current revision of the file. In this case it will try to
+	// modify the file, otherwise it will create it.
+	//
+	// Warning: you MUST call the Close() method and check for its error.
 	CreateFile(newdoc, olddoc *FileDoc) (File, error)
+	// UpdateDir is used to update the document of a directory. The old document
+	// is specified as the first argument and the new docuemnt as the last.
 	UpdateDir(olddoc, newdoc *DirDoc) error
+	// UpdateDir is used to update the document of a file. The old document
+	// is specified as the first argument and the new docuemnt as the last.
 	UpdateFile(olddoc, newdoc *FileDoc) error
+	// DestroyDirContent destroys all directories and files contained in a
+	// directory.
 	DestroyDirContent(doc *DirDoc) error
+	// DestroyDirAndContent destroys all directories and files contained in a
+	// directory and the directory itself.
 	DestroyDirAndContent(doc *DirDoc) error
+	// DestroyFile  destroys a file from the trash.
 	DestroyFile(doc *FileDoc) error
+	// OpenFile return a file handler for reading associated with the given file
+	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
 }
 
