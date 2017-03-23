@@ -113,16 +113,9 @@ To start an intent, it must specify the following information:
 - `action` : an action verb, which will be matched against the actions declared in services manifest files.
 - `type` : a **single** data type, which will be matched against the types declared in services manifest files.
 
-Based on the `type`, a data format to use for communications between the client and the service is inferred.
-
-If `type` is a MIME type, than communications must be done using that MIME type.
-When `type` is a Cozy Document Type, the inferred MIME type is `application/json` and that format must be used for inter-apps communications.
-
-Whenever files are to be transfered between the client and the service, it is recommend to send them as a base64 encoded [Data URL](http://dataurl.net/#about). This applies whether `type` is a MIME type and only the file is sent, or when the file is part of a wider document. See the examples below for an example of this.
-
 There are also two optional fields that can be defined at the start of the intent:
 
-- `data` : Any data that the client want to makes available to the service. This data must be represented in the inferred data format.
+- `data`: Any data that the client wants to make available to the service. `data` must be a JSON object but its structure is left to the discretion of the client. The only exception is when `type` is a MIME type and the client wishes to send a file to the service. In that case, the file should be represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and must be named `content`. This convention is also recomended when dealing with other intent `type`s. See the examples below for an example of this.
 - `permissions` : When `type` is a Cozy Document Type and the client expects to receive one or more documents as part of the reply from the service, the `permissions` field allows the client to request permissions for these documents. `permissions` is a list of HTTP Verbs. Refer [to this section](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md#verbs) of the permission documentation for more information.
 
 **Note**: if the intent's subject is a Cozy Doctype that holds references to other Cozy Documents (such as an album referencing photos or a playlist referencing music files), the permissions should be granted for the referenced documents too, whenever possible.
@@ -170,7 +163,11 @@ cozy.intents.start('CREATE', 'io.cozy.events', {
 });
 
 // "Crop this picture"
-cozy.intents.start('EDIT', 'image/png', 'data:image/png;base64,iVBORw...'})
+cozy.intents.start('EDIT', 'image/png', {
+    content: 'data:image/png;base64,iVBORw...',
+    width: 50,
+    height: 50
+})
 .then(image => {
     //image is the edited version of the image provided above.
 })
@@ -240,7 +237,8 @@ After this handshake, there is a confirmed communication channel between the cli
 
 If the service is going to grant extra permissions to the client app, it is strongly recommended to make this clear to the user.
 
-When the service has finished his task, it sends a "completed" message to the client. Permissions extensions should have been done before that. Along with the completed message, the service should send any relevant data.
+When the service has finished his task, it sends a "completed" message to the client. Permissions extensions should have been done before that. Along with the completed message, the service should send any data it deems relevant.
+This data should be a JSON object. Again, the structure of that object is left to the discretion of the service, except when `type` is a MIME type. In that case, the file should be represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and must be named `content`. This convention is also recomended when dealing with other intent `type`s.
 
 After the client receives a "completed" message, it can close the service's iframe and resume operations as usual.
 
