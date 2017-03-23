@@ -200,7 +200,7 @@ Finally, the service URL is sent to the client.
 
 If more than one service match the intent's criteria, the stack returns the list of all matching service URLs to the client (and stores it in the service URL version of the intent it keeps in memory). The client is then free to pick one arbitrarily.
 
-The client may also decide to let the user chose one of the services. To do this, it should start another intent with a `PICK` action and a `io.cozy.apps` `type`. This intent should be resolved by the stack to a special page, in order to avoid having multiple services trying to handle it and ending up in a loop.
+The client may also decide to let the user choose one of the services. To do this, it should start another intent with a `PICK` action and a `io.cozy.apps` `type`. This intent should be resolved by the stack to a special page, in order to avoid having multiple services trying to handle it and ending up in a loop.
 
 This special page is a service like any other; it expects the list of services to pick from as input data, and will return the one that has been picked to the client. The client can than proceed with the first intent.
 
