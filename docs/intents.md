@@ -59,6 +59,20 @@ Here is a very simple example:
 ]
 ```
 
+Notice that we didn't include a `{{.Intent}}` marker in the `href`, which we really should have:
+
+```
+"intents": [
+    {
+        "action": "PICK",
+        "type": "io.cozy.files",
+        "href": "/pick?id={{.Intent}}"
+    }
+]
+```
+
+When this service is called, it will load the page `https://service.domain.example.com/pick?id=123abc`.
+
 Here is an example of an app that supports multiple data types:
 
 ```
@@ -101,8 +115,10 @@ To start an intent, it must specify the following information:
 
 Based on the `type`, a data format to use for communications between the client and the service is inferred.
 
-If `type` is a MIME type, than communications must be done using that MIME type.  
+If `type` is a MIME type, than communications must be done using that MIME type.
 When `type` is a Cozy Document Type, the inferred MIME type is `application/json` and that format must be used for inter-apps communications.
+
+Whenever files are to be transfered between the client and the service, it is recommend to send them as a base64 encoded [Data URL](http://dataurl.net/#about). This applies whether `type` is a MIME type and only the file is sent, or when the file is part of a wider document. See the examples below for an example of this.
 
 There are also two optional fields that can be defined at the start of the intent:
 
@@ -128,6 +144,12 @@ cozy.startIntent('CREATE', 'io.cozy.contacts', {
 })
 .then(document => {
     // document is a JSON representation of the contact that was created
+});
+
+// "Save this file somewhere"
+cozy.startIntent('CREATE', 'io.cozy.files', {
+    content: 'data:application/zip;base64,UEsDB...',
+    name: 'photos.zip'
 });
 
 // "Create a new note, and give me read-only access to it"
@@ -201,7 +223,7 @@ When the client receives the service URL from the stack, it starts to listen for
 
 At this point, the service app is opened on the route that it provided in the `href` part of it's manifest. This route now also contains the intent's id.
 
-The service queries the stack to find out information about the intent, passing along the intent id. In response, the stack sends the client's URL, the `action`, the `type` and the `permissions`.
+The service queries the stack to find out information about the intent, passing along the intent id. In response, the stack sends the client's URL, the `action`, and the `type`. If the intent includes `permissions`, the stack sends them too, as well as the client's permission id.
 
 It then starts to listen for messages coming from the client's URL. Eventually, it sends a message to the client, as a mean to inform it that the service is now ready.
 
@@ -209,7 +231,7 @@ It then starts to listen for messages coming from the client's URL. Eventually, 
 
 After the client receives the "ready" message from the service, it sends a message to the service acknowledging the "ready" state.
 
-Along with this message, it should send the `data` and `permissions` if they were provided at  the start of the intent.
+Along with this message, it should send the `data` that was provided at  the start of the intent, if any.
 
 ### 5. Processing & Terminating
 
