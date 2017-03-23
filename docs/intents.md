@@ -19,13 +19,13 @@
 
 A typical Cozy Cloud runs multiple applications, but most of these applications are focused on one task and interact with one particular type of data.
 
-However, Cozy Cloud especially shines when data is combined accross apps to provided an integrated experience. This is made difficult by the fact that apps have no dedicated back-end and that they are restricted to using certain documents.
+However, Cozy Cloud especially shines when data is combined across apps to provided an integrated experience. This is made difficult by the fact that apps have no dedicated back-end and that they are restricted to using certain documents.
 
 This document outlines a proposal for apps to rely on each other to accomplish certain tasks and gain access to new documents, in a way that hopefully is neither painful for the users or the developers.
 
 ## Glossary
 
-- **Intent** : Intents, sometimes also called Activities, is a pattern used in environements where multiple apps with different purposes co-exists. The idea is that any app can express the need to do *something* that it can't do itself, and an app that *can* do itwill take over from there.
+- **Intent** : Intents, sometimes also called Activities, is a pattern used in environments where multiple apps with different purposes coexist. The idea is that any app can express the need to do *something* that it can't do itself, and an app that *can* do it will take over from there.
 - **Stack** : refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the server-side part of the Cozy infrastructure.
 - **Client** : the client is the application that *starts* an intent.
 - **Service** : the service is the application that *handles* an intent started by a client.
@@ -38,7 +38,7 @@ In this proposal, services declare themselves through their manifest. When a cli
 
 Every app can register itself as a potential handler for one or more intents. To do so, it must provide the following information for each intent it wishes to handle:
 
-- `action` : A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `VIEW`, `PICK`, and `SHARE`. While we recommend using on eof these verbs, the list is not exhaustive and may be extended by any app.
+- `action` : A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `VIEW`, `PICK`, and `SHARE`. While we recommend using one of these verbs, the list is not exhaustive and may be extended by any app.
 - `type` : One or more types of data on which the service knows how to operate the `action`. A `type` can be expressed as a [MIME type](https://en.wikipedia.org/wiki/Media_type) or a [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing). The application must have permissions for any Cozy Document Type listed here.
 - `href` : the relative url of the route designed to handle this intent.
 
@@ -94,17 +94,17 @@ Any app can start a new intent whenever it wants. When it does, the app becomes 
 To start an intent, it must specify the following information:
 
 - `action` : an action verb, which will be matched against the actions declared in services manifest files.
-- `type` : a **single** data type, which will be matched against the types declared in services mainfest files.
+- `type` : a **single** data type, which will be matched against the types declared in services manifest files.
 
-Based on the `type`, a data format to use for communications between the client and the service is infered.
+Based on the `type`, a data format to use for communications between the client and the service is inferred.
 
 If `type` is a MIME type, than communications must be done using that MIME type.  
-When `type` is a Cozy Document Type, the infered MIME type is `application/json` and that format must be used for inter-apps communications.
+When `type` is a Cozy Document Type, the inferred MIME type is `application/json` and that format must be used for inter-apps communications.
 
 There are also two optional fields that can be defined at the start of the intent:
 
-- `data` : Any data that the client want to makes available to the service. This data must be represented in the infered data format.
-- `permissions` : When `type` is a Cozy Document Type and the client expects to receive one or more documents as part of the reply from the service, the `permissions` field allows the client to resquest permissions for these documents. `permissions` is a list of HTTP Verbs. Refer [to this section](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md#verbs) of the permission documentation for more information.
+- `data` : Any data that the client want to makes available to the service. This data must be represented in the inferred data format.
+- `permissions` : When `type` is a Cozy Document Type and the client expects to receive one or more documents as part of the reply from the service, the `permissions` field allows the client to request permissions for these documents. `permissions` is a list of HTTP Verbs. Refer [to this section](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md#verbs) of the permission documentation for more information.
 
 **Note**: if the intent's subject is a Cozy Doctype that holds references to other Cozy Documents (such as an album referencing photos or a playlist referencing music files), the permissions should be granted for the referenced documents too, whenever possible.
 
@@ -182,7 +182,7 @@ At a later phase of this project, the stack may traverse the applications regist
 
 ### 4. Handshake
 
-The next phase consist of the client and the service estabishing a communication channel between them. The communication will be done using the [window.postMessage](https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage) API.
+The next phase consist of the client and the service establishing a communication channel between them. The communication will be done using the [window.postMessage](https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage) API.
 
 #### Service Initialization
 
@@ -206,14 +206,14 @@ Along with this message, it should send the `data` and `permissions` if they wer
 
 After this handshake, there is a confirmed communication channel between the client and the service, and the service knows what it has to do. This is the phase where the user interacts with the service.
 
-if the service is going to grant extra permissions to the client app, it is strongly recomended to make this clear to the user.
+If the service is going to grant extra permissions to the client app, it is strongly recommended to make this clear to the user.
 
 When the service has finished his task, it sends a "completed" message to the client. Permissions extensions should have been done before that. Along with the completed message, the service should send any relevant data.
 
 After the client receives a "completed" message, it can close the service's iframe and resume operations as usual.
 
-If, for whatever reason, the service can not fullfil the intent, it can send an "error" message to the client.  
-When the client receives an "eeror" message, the intent is aborted and the iframe can be closed.
+If, for whatever reason, the service can not fulfill the intent, it can send an "error" message to the client.
+When the client receives an "error" message, the intent is aborted and the iframe can be closed.
 
 ## Annex
 
@@ -237,18 +237,18 @@ Here is a non exhaustive list of situations that *may* use intents:
 
 ### Bibliography & Prior Art
 
-- Prior art : https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287
-- Web intents : http://webintents.org/
-- WebActivities : https://wiki.mozilla.org/WebAPI/WebActivities and https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities
-- Siri Intents : https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
-- Android Intents : https://developer.android.com/reference/android/content/Intent.html
-- iOS extensions : https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html
+- Prior art: https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287
+- Web intents: http://webintents.org/
+- WebActivities: https://wiki.mozilla.org/WebAPI/WebActivities and https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities
+- Siri Intents: https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
+- Android Intents: https://developer.android.com/reference/android/content/Intent.html
+- iOS extensions: https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html
 
 ### Discarded Ideas
 
 #### Disposition
 
-Some specifications include a `disposition` field in the manifests, that gives a hint to the client about how to display the service (inlined or in a new window).  
+Some specifications include a `disposition` field in the manifests, that gives a hint to the client about how to display the service (inlined or in a new window).
 Since we were unable to find a use case where a new window is required, we decided not to include the `disposition` in this specification. It might be added later if the need arises.
 
 #### Client / Server architecture
@@ -260,4 +260,4 @@ However, this approach has also severe drawbacks, notably the fact that the stac
 
 #### Data representation
 
-The client could explicitly request a data format to be used in the communication. However, this idea was abandonned because the format is *always* json, except when then intent's `type` is a MIME type, in which case the data format *also* uses this type.
+The client could explicitly request a data format to be used in the communication. However, this idea was abandoned because the format is *always* json, except when then intent's `type` is a MIME type, in which case the data format *also* uses this type.
