@@ -52,7 +52,7 @@ cozy-stack serve
 And then create an instance for development:
 
 ```bash
-cozy-stack instances add --dev --files files,settings,onboarding "localhost:8080"
+cozy-stack instances add --dev --apps files,settings,onboarding "localhost:8080"
 ```
 
 The cozy-stack server listens on http://localhost:8080/ by default. See `cozy-stack --help` for more informations.
