@@ -17,6 +17,7 @@ import (
 var flagLocale string
 var flagTimezone string
 var flagEmail string
+var flagPublicName string
 var flagApps []string
 var flagDev bool
 var flagPassphrase string
@@ -62,6 +63,7 @@ given domain.
 			Locale:     flagLocale,
 			Timezone:   flagTimezone,
 			Email:      flagEmail,
+			PublicName: flagPublicName,
 			Dev:        flagDev,
 			Passphrase: flagPassphrase,
 		})
@@ -229,6 +231,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
+	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
