@@ -1,4 +1,4 @@
-package vfs
+package vfs_test
 
 import (
 	"archive/zip"
@@ -17,10 +17,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/stretchr/testify/assert"
 )
 
-var fs VFS
+var fs vfs.VFS
 
 type H map[string]H
 
@@ -39,7 +41,7 @@ func printH(h H, str string, count int) string {
 	return str
 }
 
-func createTree(tree H, dirID string) (*DirDoc, error) {
+func createTree(tree H, dirID string) (*vfs.DirDoc, error) {
 	if tree == nil {
 		return nil, nil
 	}
@@ -49,10 +51,10 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 	}
 
 	var err error
-	var dirdoc *DirDoc
+	var dirdoc *vfs.DirDoc
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
-			dirdoc, err = NewDirDoc(name[:len(name)-1], dirID, nil)
+			dirdoc, err = vfs.NewDirDoc(name[:len(name)-1], dirID, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -63,7 +65,7 @@ func createTree(tree H, dirID string) (*DirDoc, error) {
 				return nil, err
 			}
 		} else {
-			filedoc, err := NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, nil)
+			filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -93,12 +95,12 @@ func fetchTree(root string) (H, error) {
 	return hh, nil
 }
 
-func recFetchTree(parent *DirDoc, name string) (H, error) {
+func recFetchTree(parent *vfs.DirDoc, name string) (H, error) {
 	h := make(H)
 	iter := fs.DirIterator(parent, nil)
 	for {
 		d, f, err := iter.Next()
-		if err == ErrIteratorDone {
+		if err == vfs.ErrIteratorDone {
 			break
 		}
 		if err != nil {
@@ -127,7 +129,7 @@ func TestDiskUsageIsInitiallyZero(t *testing.T) {
 }
 
 func TestGetFileDocFromPathAtRoot(t *testing.T) {
-	doc, err := NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", time.Now(), false, []string{})
+	doc, err := vfs.NewFileDoc("toto", "", -1, nil, "foo/bar", "foo", time.Now(), false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
@@ -150,17 +152,17 @@ func TestGetFileDocFromPathAtRoot(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	err := Remove(fs, "foo/bar")
+	err := vfs.Remove(fs, "foo/bar")
 	assert.Error(t, err)
-	assert.Equal(t, ErrNonAbsolutePath, err)
+	assert.Equal(t, vfs.ErrNonAbsolutePath, err)
 
-	err = Remove(fs, "/foo")
+	err = vfs.Remove(fs, "/foo")
 	assert.Error(t, err)
 	assert.Equal(t, "file does not exist", err.Error())
 
-	_, err = Mkdir(fs, "/removeme", nil)
+	_, err = vfs.Mkdir(fs, "/removeme", nil)
 	if !assert.NoError(t, err) {
-		err = Remove(fs, "/removeme")
+		err = vfs.Remove(fs, "/removeme")
 		assert.NoError(t, err)
 	}
 }
@@ -184,7 +186,7 @@ func TestRemoveAll(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	err = RemoveAll(fs, "/removemeall")
+	err = vfs.RemoveAll(fs, "/removemeall")
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -201,11 +203,11 @@ func TestDiskUsage(t *testing.T) {
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := NewDirDoc("container", "", nil)
+	dir, _ := vfs.NewDirDoc("container", "", nil)
 	err := fs.CreateDir(dir)
 	assert.NoError(t, err)
 
-	doc, err := NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", time.Now(), false, []string{})
+	doc, err := vfs.NewFileDoc("toto", dir.ID(), -1, nil, "foo/bar", "foo", time.Now(), false, []string{})
 	assert.NoError(t, err)
 
 	body := bytes.NewReader([]byte("hello !"))
@@ -250,7 +252,7 @@ func TestCreateGetAndModifyFile(t *testing.T) {
 	}
 
 	newname := "createandget2"
-	_, err = ModifyDirMetadata(fs, olddoc, &DocPatch{
+	_, err = vfs.ModifyDirMetadata(fs, olddoc, &vfs.DocPatch{
 		Name: &newname,
 	})
 	if !assert.NoError(t, err) {
@@ -269,7 +271,7 @@ func TestCreateGetAndModifyFile(t *testing.T) {
 		return
 	}
 	newfilename := "foof.jpg"
-	_, err = ModifyFileMetadata(fs, fileBefore, &DocPatch{
+	_, err = vfs.ModifyFileMetadata(fs, fileBefore, &vfs.DocPatch{
 		Name: &newfilename,
 	})
 	if !assert.NoError(t, err) {
@@ -307,7 +309,7 @@ func TestUpdateDir(t *testing.T) {
 	}
 
 	newname := "update2"
-	_, err = ModifyDirMetadata(fs, doc1, &DocPatch{
+	_, err = vfs.ModifyDirMetadata(fs, doc1, &vfs.DocPatch{
 		Name: &newname,
 	})
 	if !assert.NoError(t, err) {
@@ -334,7 +336,7 @@ func TestUpdateDir(t *testing.T) {
 	}
 
 	newfolid := dirchild2.ID()
-	_, err = ModifyDirMetadata(fs, dirchild3, &DocPatch{
+	_, err = vfs.ModifyDirMetadata(fs, dirchild3, &vfs.DocPatch{
 		DirID: &newfolid,
 	})
 	if !assert.NoError(t, err) {
@@ -384,7 +386,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	walked := H{}
-	Walk(fs, "/walk", func(name string, dir *DirDoc, file *FileDoc, err error) error {
+	vfs.Walk(fs, "/walk", func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 		if !assert.NoError(t, err) {
 			return err
 		}
@@ -445,13 +447,13 @@ func TestIterator(t *testing.T) {
 		return
 	}
 
-	iter1 := fs.DirIterator(iterDir, &IteratorOptions{ByFetch: 4})
+	iter1 := fs.DirIterator(iterDir, &vfs.IteratorOptions{ByFetch: 4})
 	iterTree2 := H{}
 	var children1 []string
 	var nextKey string
 	for {
 		d, f, err := iter1.Next()
-		if err == ErrIteratorDone {
+		if err == vfs.ErrIteratorDone {
 			break
 		}
 		if !assert.NoError(t, err) {
@@ -475,14 +477,14 @@ func TestIterator(t *testing.T) {
 	}
 	assert.EqualValues(t, iterTree["iter/"], iterTree2)
 
-	iter2 := fs.DirIterator(iterDir, &IteratorOptions{
+	iter2 := fs.DirIterator(iterDir, &vfs.IteratorOptions{
 		ByFetch: 4,
 		AfterID: nextKey,
 	})
 	var children2 []string
 	for {
 		d, f, err := iter2.Next()
-		if err == ErrIteratorDone {
+		if err == vfs.ErrIteratorDone {
 			break
 		}
 		if !assert.NoError(t, err) {
@@ -499,15 +501,15 @@ func TestIterator(t *testing.T) {
 }
 
 func TestContentDisposition(t *testing.T) {
-	foo := ContentDisposition("inline", "foo.jpg")
+	foo := vfs.ContentDisposition("inline", "foo.jpg")
 	assert.Equal(t, `inline; filename=foo.jpg`, foo)
-	space := ContentDisposition("inline", "foo bar.jpg")
+	space := vfs.ContentDisposition("inline", "foo bar.jpg")
 	assert.Equal(t, `inline; filename="foobar.jpg"; filename*=UTF-8''foo%20bar.jpg`, space)
-	accents := ContentDisposition("inline", "héçà")
+	accents := vfs.ContentDisposition("inline", "héçà")
 	assert.Equal(t, `inline; filename="h"; filename*=UTF-8''h%C3%A9%C3%A7%C3%A0`, accents)
-	tab := ContentDisposition("inline", "tab\t")
+	tab := vfs.ContentDisposition("inline", "tab\t")
 	assert.Equal(t, `inline; filename="tab"; filename*=UTF-8''tab%09`, tab)
-	emoji := ContentDisposition("inline", "🐧")
+	emoji := vfs.ContentDisposition("inline", "🐧")
 	assert.Equal(t, `inline; filename="download"; filename*=UTF-8''%F0%9F%90%A7`, emoji)
 }
 
@@ -532,7 +534,7 @@ func TestArchive(t *testing.T) {
 	_, err := createTree(tree, consts.RootDirID)
 	assert.NoError(t, err)
 
-	a := &Archive{
+	a := &vfs.Archive{
 		Name: "test",
 		Files: []string{
 			"/archive/foo.jpg",
@@ -565,51 +567,6 @@ func TestArchive(t *testing.T) {
 	}, zipfiles)
 }
 
-func TestDonwloadStore(t *testing.T) {
-	domainA := "alice.cozycloud.local"
-	domainB := "bob.cozycloud.local"
-	storeA := GetStore(domainA)
-	storeB := GetStore(domainB)
-
-	path := "/test/random/path.txt"
-	key1, err := storeA.AddFile(path)
-	assert.NoError(t, err)
-
-	path2, err := storeB.GetFile(key1)
-	assert.NoError(t, err)
-	assert.Zero(t, path2, "Inter-instances store leaking")
-
-	path3, err := storeA.GetFile(key1)
-	assert.NoError(t, err)
-	assert.Equal(t, path, path3)
-
-	storeStore[domainA].Files[key1].ExpiresAt = time.Now().Add(-2 * downloadStoreTTL)
-
-	path4, err := storeA.GetFile(key1)
-	assert.NoError(t, err)
-	assert.Zero(t, path4, "no expiration")
-
-	a := &Archive{
-		Name: "test",
-		Files: []string{
-			"/archive/foo.jpg",
-			"/archive/bar",
-		},
-	}
-	key2, err := storeA.AddArchive(a)
-	assert.NoError(t, err)
-
-	a2, err := storeA.GetArchive(key2)
-	assert.NoError(t, err)
-	assert.Equal(t, a, a2)
-
-	storeStore[domainA].Archives[key2].ExpiresAt = time.Now().Add(-2 * downloadStoreTTL)
-
-	a3, err := storeA.GetArchive(key2)
-	assert.NoError(t, err)
-	assert.Nil(t, a3, "no expiration")
-}
-
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
@@ -626,7 +583,7 @@ func TestMain(m *testing.M) {
 	}
 
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
-	fs, err = NewAferoVFS(db, "file://localhost"+tempdir)
+	fs, err = vfsafero.New(db, "file://localhost"+tempdir)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

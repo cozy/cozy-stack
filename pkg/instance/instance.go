@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/leonelquinteros/gotext"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -161,7 +162,7 @@ func (i *Instance) VFS() vfs.VFS {
 		}
 		switch u.Scheme {
 		case "file", "mem":
-			i.storage, err = vfs.NewAferoVFS(i, i.StorageURL)
+			i.storage, err = vfsafero.New(i, i.StorageURL)
 		case "swift":
 			err = errors.New("instance: storage provider swift not implemened")
 		default:
@@ -487,7 +488,7 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
-	if err = i.VFS().Destroy(); err != nil {
+	if err = i.VFS().Delete(); err != nil {
 		return nil, err
 	}
 

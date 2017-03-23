@@ -80,7 +80,13 @@ func (f *FileDoc) Path(fs VFS) (string, error) {
 }
 
 // Parent returns the parent directory document
-func (f *FileDoc) Parent(fs VFS) (*DirDoc, error) { return fs.DirByID(f.DirID) }
+func (f *FileDoc) Parent(fs VFS) (*DirDoc, error) {
+	parent, err := fs.DirByID(f.DirID)
+	if os.IsNotExist(err) {
+		err = ErrParentDoesNotExist
+	}
+	return parent, err
+}
 
 // Name returns base name of the file
 func (f *FileDoc) Name() string { return f.DocName }

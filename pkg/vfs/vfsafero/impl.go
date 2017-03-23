@@ -1,4 +1,4 @@
-package vfs
+package vfsafero
 
 // #nosec
 import (
@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/labstack/gommon/log"
 	"github.com/spf13/afero"
 )
@@ -33,10 +34,10 @@ type AferoVFS struct {
 	rootInit bool
 }
 
-// NewAferoVFS returns a AferoVFS instance associated with the specified
-// couchdb database and storage url. The supported scheme of the storage url
-// are file://, for an OS-FS store, and mem:// for an in-memory store.
-func NewAferoVFS(db couchdb.Database, storageURL string) (*AferoVFS, error) {
+// New returns a AferoVFS instance associated with the specified couchdb
+// database and storage url. The supported scheme of the storage url are
+// file://, for an OS-FS store, and mem:// for an in-memory store.
+func New(db couchdb.Database, storageURL string) (*AferoVFS, error) {
 	u, err := url.Parse(storageURL)
 	if err != nil {
 		return nil, err
@@ -90,7 +91,7 @@ func (afs *AferoVFS) Init() error {
 		}()
 	}
 
-	err = couchdb.CreateNamedDocWithDB(afs.db, &DirDoc{
+	err = couchdb.CreateNamedDocWithDB(afs.db, &vfs.DirDoc{
 		DocName:  "",
 		Type:     consts.DirType,
 		DocID:    consts.RootDirID,
@@ -101,26 +102,26 @@ func (afs *AferoVFS) Init() error {
 		return err
 	}
 
-	err = couchdb.CreateNamedDocWithDB(afs.db, &DirDoc{
-		DocName:  path.Base(TrashDirName),
+	err = couchdb.CreateNamedDocWithDB(afs.db, &vfs.DirDoc{
+		DocName:  path.Base(vfs.TrashDirName),
 		Type:     consts.DirType,
 		DocID:    consts.TrashDirID,
-		Fullpath: TrashDirName,
+		Fullpath: vfs.TrashDirName,
 		DirID:    consts.RootDirID,
 	})
 	if err != nil && !couchdb.IsConflictError(err) {
 		return err
 	}
 
-	err = afs.fs.Mkdir(TrashDirName, 0755)
+	err = afs.fs.Mkdir(vfs.TrashDirName, 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
 	return nil
 }
 
-// Destroy removes all the elements associated with the filesystem.
-func (afs *AferoVFS) Destroy() error {
+// Delete removes all the elements associated with the filesystem.
+func (afs *AferoVFS) Delete() error {
 	if !afs.rootInit {
 		return nil
 	}
@@ -148,16 +149,149 @@ func (afs *AferoVFS) DiskUsage() (int64, error) {
 	// Reduce of _count should give us a number value
 	f64, ok := doc.Rows[0].Value.(float64)
 	if !ok {
-		return 0, ErrWrongCouchdbState
+		return 0, vfs.ErrWrongCouchdbState
 	}
 
 	return int64(f64), nil
 }
 
-// -- Directories
+// DirByID is used to fetch directory document information form the database.
+func (afs *AferoVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
+	doc := &vfs.DirDoc{}
+	err := couchdb.GetDoc(afs.db, consts.Files, fileID, doc)
+	if couchdb.IsNotFoundError(err) {
+		err = os.ErrNotExist
+	}
+	if err != nil {
+		if fileID == consts.RootDirID {
+			panic("Root directory is not in database")
+		}
+		if fileID == consts.TrashDirID {
+			panic("Trash directory is not in database")
+		}
+		return nil, err
+	}
+	if doc.Type != consts.DirType {
+		return nil, os.ErrNotExist
+	}
+	return doc, err
+}
+
+// DirByPath is used to fetch directory document information from the database
+// from its path.
+func (afs *AferoVFS) DirByPath(name string) (*vfs.DirDoc, error) {
+	if !path.IsAbs(name) {
+		return nil, vfs.ErrNonAbsolutePath
+	}
+	var docs []*vfs.DirDoc
+	sel := mango.Equal("path", path.Clean(name))
+	req := &couchdb.FindRequest{
+		UseIndex: "dir-by-path",
+		Selector: sel,
+		Limit:    1,
+	}
+	err := couchdb.FindDocs(afs.db, consts.Files, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		if name == "/" {
+			panic("Root directory is not in database")
+		}
+		return nil, os.ErrNotExist
+	}
+	return docs[0], nil
+}
+
+// FileByID is used to fetch file document information form the database.
+func (afs *AferoVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
+	doc := &vfs.FileDoc{}
+	err := couchdb.GetDoc(afs.db, consts.Files, fileID, doc)
+	if couchdb.IsNotFoundError(err) {
+		return nil, os.ErrNotExist
+	}
+	if err != nil {
+		return nil, err
+	}
+	if doc.Type != consts.FileType {
+		return nil, os.ErrNotExist
+	}
+	return doc, nil
+}
+
+// FileByPath is used to fetch file document information from the database from
+// its path.
+func (afs *AferoVFS) FileByPath(name string) (*vfs.FileDoc, error) {
+	if !path.IsAbs(name) {
+		return nil, vfs.ErrNonAbsolutePath
+	}
+	parent, err := afs.DirByPath(path.Dir(name))
+	if err != nil {
+		return nil, err
+	}
+	selector := mango.Map{
+		"dir_id": parent.DocID,
+		"name":   path.Base(name),
+		"type":   consts.FileType,
+	}
+	var docs []*vfs.FileDoc
+	req := &couchdb.FindRequest{
+		UseIndex: "dir-file-child",
+		Selector: selector,
+		Limit:    1,
+	}
+	err = couchdb.FindDocs(afs.db, consts.Files, req, &docs)
+	if err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, os.ErrNotExist
+	}
+	return docs[0], nil
+}
+
+// DirOrFileByID is used to fetch a document from its identifier without
+// knowing in advance its type.
+func (afs *AferoVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
+	dirOrFile := &vfs.DirOrFileDoc{}
+	err := couchdb.GetDoc(afs.db, consts.Files, fileID, dirOrFile)
+	if err != nil {
+		return nil, nil, err
+	}
+	dirDoc, fileDoc := dirOrFile.Refine()
+	return dirDoc, fileDoc, nil
+}
+
+// DirOrFileByPath is used to fetch a document from its path without knowning
+// in advance its type.
+func (afs *AferoVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
+	dirDoc, err := afs.DirByPath(name)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, nil, err
+	}
+	if err == nil {
+		return dirDoc, nil, nil
+	}
+
+	fileDoc, err := afs.FileByPath(name)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, nil, err
+	}
+	if err == nil {
+		return nil, fileDoc, nil
+	}
+
+	return nil, nil, err
+}
+
+// DirIterator returns an iterator over the children of the specified
+// directory.
+func (afs *AferoVFS) DirIterator(doc *vfs.DirDoc, opts *vfs.IteratorOptions) vfs.DirIterator {
+	return newIterator(afs.db, doc, opts)
+}
 
 // CreateDir is the method for creating a new directory
-func (afs *AferoVFS) CreateDir(doc *DirDoc) error {
+func (afs *AferoVFS) CreateDir(doc *vfs.DirDoc) error {
 	pth, err := doc.Path(afs)
 	if err != nil {
 		return err
@@ -173,10 +307,70 @@ func (afs *AferoVFS) CreateDir(doc *DirDoc) error {
 	return err
 }
 
+// CreateFile is used to create file or modify an existing file
+// content. It returns a aferoFileCreation handle. Along with the vfs
+// context, it receives the new file document that you want to create.
+// It can also receive the old document, representing the current
+// revision of the file. In this case it will try to modify the file,
+// otherwise it will create it.
+//
+// Warning: you MUST call the Close() method and check for its error.
+// The Close() method will actually create or update the document in
+// couchdb. It will also check the md5 hash if required.
+func (afs *AferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
+	newpath, err := newdoc.Path(afs)
+	if err != nil {
+		return nil, err
+	}
+
+	var bakpath string
+	if olddoc != nil {
+		bakpath = fmt.Sprintf("/.%s_%s", olddoc.ID(), olddoc.Rev())
+		if err = safeRenameFile(afs, newpath, bakpath); err != nil {
+			// in case of a concurrent access to this method, it can happened
+			// that the file has already been renamed. In this case the
+			// safeRenameFile will return an os.ErrNotExist error. But this
+			// error is misleading since it does not reflect the conflict.
+			if os.IsNotExist(err) {
+				err = vfs.ErrConflict
+			}
+			return nil, err
+		}
+	}
+
+	if olddoc != nil {
+		newdoc.SetID(olddoc.ID())
+		newdoc.SetRev(olddoc.Rev())
+		newdoc.CreatedAt = olddoc.CreatedAt
+	}
+
+	f, err := safeCreateFile(newpath, newdoc.Mode(), afs.fs)
+	if err != nil {
+		return nil, err
+	}
+
+	hash := md5.New() // #nosec
+	extractor := vfs.NewMetaExtractor(newdoc)
+
+	fc := &aferoFileCreation{
+		w: 0,
+
+		newdoc:  newdoc,
+		olddoc:  olddoc,
+		bakpath: bakpath,
+		newpath: newpath,
+
+		hash: hash,
+		meta: extractor,
+	}
+
+	return &aferoFile{afs: afs, f: f, fc: fc}, nil
+}
+
 // UpdateDir updates the specified old directory document with the new
 // document. It handles renaming of a directory in case the document name or
 // path has changed.
-func (afs *AferoVFS) UpdateDir(olddoc, newdoc *DirDoc) error {
+func (afs *AferoVFS) UpdateDir(olddoc, newdoc *vfs.DirDoc) error {
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	oldpath, err := olddoc.Path(afs)
@@ -200,192 +394,10 @@ func (afs *AferoVFS) UpdateDir(olddoc, newdoc *DirDoc) error {
 	return couchdb.UpdateDoc(afs.db, newdoc)
 }
 
-// DestroyDirContent destroy all directories and files contained in a directory.
-func (afs *AferoVFS) DestroyDirContent(doc *DirDoc) error {
-	iter := afs.DirIterator(doc, nil)
-	for {
-		d, f, err := iter.Next()
-		if err == ErrIteratorDone {
-			break
-		}
-		if d != nil {
-			err = afs.DestroyDirAndContent(d)
-		} else {
-			err = afs.DestroyFile(f)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// DestroyDirAndContent destroy all directories and files contained in a
-// directory and the directory itself.
-func (afs *AferoVFS) DestroyDirAndContent(doc *DirDoc) error {
-	err := afs.DestroyDirContent(doc)
-	if err != nil {
-		return err
-	}
-	dirpath, err := doc.Path(afs)
-	if err != nil {
-		return err
-	}
-	err = afs.fs.RemoveAll(dirpath)
-	if err != nil {
-		return err
-	}
-	err = couchdb.DeleteDoc(afs.db, doc)
-	return err
-}
-
-// DirByID is used to fetch directory document information form the database.
-func (afs *AferoVFS) DirByID(fileID string) (*DirDoc, error) {
-	doc := &DirDoc{}
-	err := couchdb.GetDoc(afs.db, consts.Files, fileID, doc)
-	if couchdb.IsNotFoundError(err) {
-		err = ErrParentDoesNotExist
-	}
-	if err != nil {
-		if fileID == consts.RootDirID {
-			panic("Root directory is not in database")
-		}
-		if fileID == consts.TrashDirID {
-			panic("Trash directory is not in database")
-		}
-		return nil, err
-	}
-	if doc.Type != consts.DirType {
-		return nil, os.ErrNotExist
-	}
-	return doc, err
-}
-
-// DirByPath is used to fetch directory document information from the database
-// from its path.
-func (afs *AferoVFS) DirByPath(name string) (*DirDoc, error) {
-	if !path.IsAbs(name) {
-		return nil, ErrNonAbsolutePath
-	}
-	var docs []*DirDoc
-	sel := mango.Equal("path", path.Clean(name))
-	req := &couchdb.FindRequest{
-		UseIndex: "dir-by-path",
-		Selector: sel,
-		Limit:    1,
-	}
-	err := couchdb.FindDocs(afs.db, consts.Files, req, &docs)
-	if err != nil {
-		return nil, err
-	}
-	if len(docs) == 0 {
-		if name == "/" {
-			panic("Root directory is not in database")
-		}
-		return nil, os.ErrNotExist
-	}
-	return docs[0], nil
-}
-
-// DirIterator returns an iterator over the children of the specified
-// directory.
-func (afs *AferoVFS) DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator {
-	return NewLocalIterator(afs.db, doc, opts)
-}
-
-// -- Files
-
-// CreateFile is used to create file or modify an existing file
-// content. It returns a localFileCreation handle. Along with the vfs
-// context, it receives the new file document that you want to create.
-// It can also receive the old document, representing the current
-// revision of the file. In this case it will try to modify the file,
-// otherwise it will create it.
-//
-// Warning: you MUST call the Close() method and check for its error.
-// The Close() method will actually create or update the document in
-// couchdb. It will also check the md5 hash if required.
-func (afs *AferoVFS) CreateFile(newdoc, olddoc *FileDoc) (File, error) {
-	newpath, err := newdoc.Path(afs)
-	if err != nil {
-		return nil, err
-	}
-
-	var bakpath string
-	if olddoc != nil {
-		bakpath = fmt.Sprintf("/.%s_%s", olddoc.ID(), olddoc.Rev())
-		if err = safeRenameFile(afs, newpath, bakpath); err != nil {
-			// in case of a concurrent access to this method, it can happened
-			// that the file has already been renamed. In this case the
-			// safeRenameFile will return an os.ErrNotExist error. But this
-			// error is misleading since it does not reflect the conflict.
-			if os.IsNotExist(err) {
-				err = ErrConflict
-			}
-			return nil, err
-		}
-	}
-
-	if olddoc != nil {
-		newdoc.SetID(olddoc.ID())
-		newdoc.SetRev(olddoc.Rev())
-		newdoc.CreatedAt = olddoc.CreatedAt
-	}
-
-	f, err := safeCreateFile(newpath, newdoc.Executable, afs.fs)
-	if err != nil {
-		return nil, err
-	}
-
-	hash := md5.New() // #nosec
-	extractor := NewMetaExtractor(newdoc)
-
-	fc := &localFileCreation{
-		w: 0,
-
-		newdoc:  newdoc,
-		olddoc:  olddoc,
-		bakpath: bakpath,
-		newpath: newpath,
-
-		hash: hash,
-		meta: extractor,
-	}
-
-	return &localFile{afs: afs, f: f, fc: fc}, nil
-}
-
-// OpenFile return a file handler for reading associated with the given file
-// document.
-func (afs *AferoVFS) OpenFile(doc *FileDoc) (File, error) {
-	name, err := doc.Path(afs)
-	if err != nil {
-		return nil, err
-	}
-	f, err := afs.fs.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	return &localFile{afs: afs, f: f, fc: nil}, nil
-}
-
-// DestroyFile definitively destroy a file from the trash.
-func (afs *AferoVFS) DestroyFile(doc *FileDoc) error {
-	path, err := doc.Path(afs)
-	if err != nil {
-		return err
-	}
-	err = afs.fs.Remove(path)
-	if err != nil {
-		return err
-	}
-	return couchdb.DeleteDoc(afs.db, doc)
-}
-
 // UpdateFile updates the specified old file document with the new document. It
 // handles renaming of a file in case the document name or directory has
 // changed.
-func (afs *AferoVFS) UpdateFile(olddoc, newdoc *FileDoc) error {
+func (afs *AferoVFS) UpdateFile(olddoc, newdoc *vfs.FileDoc) error {
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 
@@ -405,7 +417,7 @@ func (afs *AferoVFS) UpdateFile(olddoc, newdoc *FileDoc) error {
 	}
 
 	if newdoc.Executable != olddoc.Executable {
-		err = afs.fs.Chmod(newpath, getFileMode(newdoc.Executable))
+		err = afs.fs.Chmod(newpath, newdoc.Mode())
 		if err != nil {
 			return err
 		}
@@ -413,110 +425,99 @@ func (afs *AferoVFS) UpdateFile(olddoc, newdoc *FileDoc) error {
 	return couchdb.UpdateDoc(afs.db, newdoc)
 }
 
-// FileByID is used to fetch file document information form the database.
-func (afs *AferoVFS) FileByID(fileID string) (*FileDoc, error) {
-	doc := &FileDoc{}
-	err := couchdb.GetDoc(afs.db, consts.Files, fileID, doc)
+// DestroyDirContent destroy all directories and files contained in a
+// directory.
+func (afs *AferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
+	iter := afs.DirIterator(doc, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if d != nil {
+			err = afs.DestroyDirAndContent(d)
+		} else {
+			err = afs.DestroyFile(f)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DestroyDirAndContent destroy all directories and files contained in a
+// directory and the directory itself.
+func (afs *AferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
+	err := afs.DestroyDirContent(doc)
+	if err != nil {
+		return err
+	}
+	dirpath, err := doc.Path(afs)
+	if err != nil {
+		return err
+	}
+	err = afs.fs.RemoveAll(dirpath)
+	if err != nil {
+		return err
+	}
+	err = couchdb.DeleteDoc(afs.db, doc)
+	return err
+}
+
+// DestroyFile definitively destroy a file from the trash.
+func (afs *AferoVFS) DestroyFile(doc *vfs.FileDoc) error {
+	path, err := doc.Path(afs)
+	if err != nil {
+		return err
+	}
+	err = afs.fs.Remove(path)
+	if err != nil {
+		return err
+	}
+	return couchdb.DeleteDoc(afs.db, doc)
+}
+
+// OpenFile return a file handler for reading associated with the given file
+// document.
+func (afs *AferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
+	name, err := doc.Path(afs)
 	if err != nil {
 		return nil, err
 	}
-	if doc.Type != consts.FileType {
-		return nil, os.ErrNotExist
-	}
-	return doc, nil
-}
-
-// FileByPath is used to fetch file document information from the database from
-// its path.
-func (afs *AferoVFS) FileByPath(name string) (*FileDoc, error) {
-	if !path.IsAbs(name) {
-		return nil, ErrNonAbsolutePath
-	}
-	parent, err := afs.DirByPath(path.Dir(name))
+	f, err := afs.fs.Open(name)
 	if err != nil {
 		return nil, err
 	}
-	selector := mango.Map{
-		"dir_id": parent.DocID,
-		"name":   path.Base(name),
-		"type":   consts.FileType,
-	}
-	var docs []*FileDoc
-	req := &couchdb.FindRequest{
-		UseIndex: "dir-file-child",
-		Selector: selector,
-		Limit:    1,
-	}
-	err = couchdb.FindDocs(afs.db, consts.Files, req, &docs)
-	if err != nil {
-		return nil, err
-	}
-	if len(docs) == 0 {
-		return nil, os.ErrNotExist
-	}
-	return docs[0], nil
+	return &aferoFile{afs: afs, f: f, fc: nil}, nil
 }
 
-// DirOrFileByID is used to fetch a document from its identifier without
-// knowing in advance its type.
-func (afs *AferoVFS) DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error) {
-	dirOrFile := &DirOrFileDoc{}
-	err := couchdb.GetDoc(afs.db, consts.Files, fileID, dirOrFile)
-	if err != nil {
-		return nil, nil, err
-	}
-	dirDoc, fileDoc := dirOrFile.Refine()
-	return dirDoc, fileDoc, nil
-}
-
-// DirOrFileByPath is used to fetch a document from its path without knowning
-// in advance its type.
-func (afs *AferoVFS) DirOrFileByPath(name string) (*DirDoc, *FileDoc, error) {
-	dirDoc, err := afs.DirByPath(name)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, nil, err
-	}
-	if err == nil {
-		return dirDoc, nil, nil
-	}
-
-	fileDoc, err := afs.FileByPath(name)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, nil, err
-	}
-	if err == nil {
-		return nil, fileDoc, nil
-	}
-
-	return nil, nil, err
-}
-
-// localFile represents a file handle. It can be used either for writing OR
+// aferoFile represents a file handle. It can be used either for writing OR
 // reading, but not both at the same time.
-type localFile struct {
+type aferoFile struct {
 	afs *AferoVFS          // afero file system
 	f   afero.File         // file handle
-	fc  *localFileCreation // file creation handle
+	fc  *aferoFileCreation // file creation handle
 }
 
-// localFileCreation represents a file open for writing. It is used to
+// aferoFileCreation represents a file open for writing. It is used to
 // create of file or to modify the content of a file.
 //
-// localFileCreation implements io.WriteCloser.
-type localFileCreation struct {
-	w       int64          // total size written
-	newdoc  *FileDoc       // new document
-	olddoc  *FileDoc       // old document if any
-	newpath string         // file new path
-	bakpath string         // backup file path in case of modifying an existing file
-	hash    hash.Hash      // hash we build up along the file
-	meta    *MetaExtractor // extracts metadata from the content
-	err     error          // write error
+// aferoFileCreation implements io.WriteCloser.
+type aferoFileCreation struct {
+	w       int64              // total size written
+	newdoc  *vfs.FileDoc       // new document
+	olddoc  *vfs.FileDoc       // old document if any
+	newpath string             // file new path
+	bakpath string             // backup file path in case of modifying an existing file
+	hash    hash.Hash          // hash we build up along the file
+	meta    *vfs.MetaExtractor // extracts metadata from the content
+	err     error              // write error
 }
 
 // Read bytes from the file into given buffer - part of io.Reader
 // This method can be called on read mode only
-func (f *localFile) Read(p []byte) (int, error) {
+func (f *aferoFile) Read(p []byte) (int, error) {
 	if f.fc != nil {
 		return 0, os.ErrInvalid
 	}
@@ -525,7 +526,7 @@ func (f *localFile) Read(p []byte) (int, error) {
 
 // Seek into the file - part of io.Reader
 // This method can be called on read mode only
-func (f *localFile) Seek(offset int64, whence int) (int64, error) {
+func (f *aferoFile) Seek(offset int64, whence int) (int64, error) {
 	if f.fc != nil {
 		return 0, os.ErrInvalid
 	}
@@ -534,7 +535,7 @@ func (f *localFile) Seek(offset int64, whence int) (int64, error) {
 
 // Write bytes to the file - part of io.WriteCloser
 // This method can be called in write mode only
-func (f *localFile) Write(p []byte) (int, error) {
+func (f *aferoFile) Write(p []byte) (int, error) {
 	if f.fc == nil {
 		return 0, os.ErrInvalid
 	}
@@ -557,7 +558,7 @@ func (f *localFile) Write(p []byte) (int, error) {
 
 // Close the handle and commit the document in database if all checks
 // are OK. It is important to check errors returned by this method.
-func (f *localFile) Close() error {
+func (f *aferoFile) Close() error {
 	if f.fc == nil {
 		return f.f.Close()
 	}
@@ -602,7 +603,7 @@ func (f *localFile) Close() error {
 	}
 
 	if !bytes.Equal(newdoc.MD5Sum, md5sum) {
-		err = ErrInvalidHash
+		err = vfs.ErrInvalidHash
 		return err
 	}
 
@@ -611,7 +612,7 @@ func (f *localFile) Close() error {
 	}
 
 	if newdoc.ByteSize != written {
-		err = ErrContentLengthMismatch
+		err = vfs.ErrContentLengthMismatch
 		return err
 	}
 
@@ -623,11 +624,10 @@ func (f *localFile) Close() error {
 	return err
 }
 
-func safeCreateFile(name string, executable bool, fs afero.Fs) (afero.File, error) {
+func safeCreateFile(name string, mode os.FileMode, fs afero.Fs) (afero.File, error) {
 	// write only (O_WRONLY), try to create the file and check that it
 	// does not already exist (O_CREATE|O_EXCL).
 	flag := os.O_WRONLY | os.O_CREATE | os.O_EXCL
-	mode := getFileMode(executable)
 	return fs.OpenFile(name, flag, mode)
 }
 
@@ -636,7 +636,7 @@ func safeRenameFile(afs *AferoVFS, oldpath, newpath string) error {
 	oldpath = path.Clean(oldpath)
 
 	if !path.IsAbs(newpath) || !path.IsAbs(oldpath) {
-		return ErrNonAbsolutePath
+		return vfs.ErrNonAbsolutePath
 	}
 
 	_, err := afs.fs.Stat(newpath)
@@ -655,11 +655,11 @@ func safeRenameDir(afs *AferoVFS, oldpath, newpath string) error {
 	oldpath = path.Clean(oldpath)
 
 	if !path.IsAbs(newpath) || !path.IsAbs(oldpath) {
-		return ErrNonAbsolutePath
+		return vfs.ErrNonAbsolutePath
 	}
 
 	if strings.HasPrefix(newpath, oldpath+"/") {
-		return ErrForbiddenDocMove
+		return vfs.ErrForbiddenDocMove
 	}
 
 	_, err := afs.fs.Stat(newpath)
@@ -675,7 +675,7 @@ func safeRenameDir(afs *AferoVFS, oldpath, newpath string) error {
 
 // @TODO remove this method and use couchdb bulk updates instead
 func bulkUpdateDocsPath(db couchdb.Database, oldpath, newpath string) error {
-	var children []*DirDoc
+	var children []*vfs.DirDoc
 	sel := mango.StartWith("path", oldpath+"/")
 	req := &couchdb.FindRequest{
 		UseIndex: "dir-by-path",
@@ -689,7 +689,7 @@ func bulkUpdateDocsPath(db couchdb.Database, oldpath, newpath string) error {
 	errc := make(chan error)
 
 	for _, child := range children {
-		go func(child *DirDoc) {
+		go func(child *vfs.DirDoc) {
 			if !strings.HasPrefix(child.Fullpath, oldpath+"/") {
 				errc <- fmt.Errorf("Child has wrong base directory")
 			} else {
@@ -709,5 +709,6 @@ func bulkUpdateDocsPath(db couchdb.Database, oldpath, newpath string) error {
 }
 
 var (
-	_ VFS = &AferoVFS{}
+	_ vfs.VFS  = &AferoVFS{}
+	_ vfs.File = &aferoFile{}
 )

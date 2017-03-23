@@ -49,26 +49,26 @@ var ErrSkipDir = errors.New("skip directories")
 // architecture.
 type VFS interface {
 	Init() error
-	Destroy() error
+	Delete() error
+
 	DiskUsage() (int64, error)
 
-	CreateDir(doc *DirDoc) error
-	UpdateDir(olddoc, newdoc *DirDoc) error
-	DestroyDirContent(doc *DirDoc) error
-	DestroyDirAndContent(doc *DirDoc) error
 	DirByID(fileID string) (*DirDoc, error)
 	DirByPath(name string) (*DirDoc, error)
-	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
-
-	CreateFile(newdoc, olddoc *FileDoc) (File, error)
-	OpenFile(doc *FileDoc) (File, error)
-	UpdateFile(olddoc, newdoc *FileDoc) error
-	DestroyFile(doc *FileDoc) error
 	FileByID(fileID string) (*FileDoc, error)
 	FileByPath(name string) (*FileDoc, error)
-
 	DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error)
 	DirOrFileByPath(name string) (*DirDoc, *FileDoc, error)
+	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
+
+	CreateDir(doc *DirDoc) error
+	CreateFile(newdoc, olddoc *FileDoc) (File, error)
+	UpdateDir(olddoc, newdoc *DirDoc) error
+	UpdateFile(olddoc, newdoc *FileDoc) error
+	DestroyDirContent(doc *DirDoc) error
+	DestroyDirAndContent(doc *DirDoc) error
+	DestroyFile(doc *FileDoc) error
+	OpenFile(doc *FileDoc) (File, error)
 }
 
 // File is a reader, writer, seeker, closer iterface reprsenting an opened
@@ -83,10 +83,6 @@ type File interface {
 // ErrIteratorDone is returned by the Next() method of the iterator when
 // the iterator is actually done.
 var ErrIteratorDone = errors.New("No more element in the iterator")
-
-// IteratorDefaultFetchSize is the default number of elements fetched from
-// couchdb on each iteration.
-const IteratorDefaultFetchSize = 100
 
 // IteratorOptions contains the options of the iterator.
 type IteratorOptions struct {

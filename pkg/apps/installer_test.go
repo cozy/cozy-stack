@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -507,7 +508,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	fs, err = vfs.NewAferoVFS(db, "mem://")
+	fs, err = vfsafero.New(db, "mem://")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

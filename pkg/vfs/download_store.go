@@ -23,6 +23,9 @@ type fileRef struct {
 
 // downloadStoreTTL is the time an Archive stay alive
 const downloadStoreTTL = 1 * time.Hour
+
+// downloadStoreCleanInterval is the time interval between each download
+// cleanup.
 const downloadStoreCleanInterval = 1 * time.Hour
 
 var storeStoreMutex sync.Mutex

@@ -1,30 +1,33 @@
-package vfs
+package vfsafero
 
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
-// LocalIterator is a struct allowing to iterate over the children of a
+const iterMaxFetchSize = 100
+
+// iter is a struct allowing to iterate over the children of a
 // directory. The iterator is not thread-safe.
-type LocalIterator struct {
+type iter struct {
 	db     couchdb.Database
 	sel    mango.Filter
-	opt    *IteratorOptions
-	list   []*DirOrFileDoc
+	opt    *vfs.IteratorOptions
+	list   []*vfs.DirOrFileDoc
 	offset int
 	index  int
 	done   bool
 }
 
-// NewLocalIterator return a new iterator.
-func NewLocalIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) DirIterator {
+// newIterator return a new iterator.
+func newIterator(db couchdb.Database, dir *vfs.DirDoc, opt *vfs.IteratorOptions) vfs.DirIterator {
 	if opt == nil {
-		opt = &IteratorOptions{ByFetch: IteratorDefaultFetchSize}
+		opt = &vfs.IteratorOptions{ByFetch: iterMaxFetchSize}
 	}
-	if opt.ByFetch == 0 {
-		opt.ByFetch = IteratorDefaultFetchSize
+	if opt.ByFetch == 0 || opt.ByFetch > iterMaxFetchSize {
+		opt.ByFetch = iterMaxFetchSize
 	}
 	sel := mango.Equal("dir_id", dir.DocID)
 	if opt.AfterID != "" {
@@ -32,7 +35,7 @@ func NewLocalIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) Di
 		// iterator
 		sel = mango.And(sel, mango.Gt("_id", opt.AfterID))
 	}
-	return &LocalIterator{
+	return &iter{
 		db:  db,
 		sel: sel,
 		opt: opt,
@@ -40,10 +43,10 @@ func NewLocalIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) Di
 }
 
 // Next should be called to get the next directory or file children of the
-// parent directory. If the error is ErrIteratorDone
-func (i *LocalIterator) Next() (*DirDoc, *FileDoc, error) {
+// parent directory. If the error is vfs.ErrIteratorDone
+func (i *iter) Next() (*vfs.DirDoc, *vfs.FileDoc, error) {
 	if i.done {
-		return nil, nil, ErrIteratorDone
+		return nil, nil, vfs.ErrIteratorDone
 	}
 	if i.index >= len(i.list) {
 		if err := i.fetch(); err != nil {
@@ -56,11 +59,11 @@ func (i *LocalIterator) Next() (*DirDoc, *FileDoc, error) {
 }
 
 // fetch should be called when the index is out of the list boundary.
-func (i *LocalIterator) fetch() error {
+func (i *iter) fetch() error {
 	l := len(i.list)
 	if l > 0 && l < i.opt.ByFetch {
 		i.done = true
-		return ErrIteratorDone
+		return vfs.ErrIteratorDone
 	}
 
 	i.offset += l
@@ -78,7 +81,7 @@ func (i *LocalIterator) fetch() error {
 		return err
 	}
 	if len(i.list) == 0 {
-		return ErrIteratorDone
+		return vfs.ErrIteratorDone
 	}
 	return nil
 }
