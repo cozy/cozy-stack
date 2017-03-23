@@ -20,6 +20,7 @@ var flagEmail string
 var flagApps []string
 var flagDev bool
 var flagPassphrase string
+var flagForce bool
 var flagExpire time.Duration
 
 // instanceCmdGroup represents the instances command
@@ -122,19 +123,21 @@ and all its data.
 
 		domain := args[0]
 
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Printf(`Are you sure you want to remove instance for domain %s ?
-All data associated with this domain will be permanently lost.
-[yes/NO]: `, domain)
+		if !flagForce {
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Printf(`Are you sure you want to remove instance for domain %s ?
+	All data associated with this domain will be permanently lost.
+	[yes/NO]: `, domain)
 
-		str, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
+			str, err := reader.ReadString('\n')
+			if err != nil {
+				return err
+			}
 
-		str = strings.ToLower(strings.TrimSpace(str))
-		if str != "yes" && str != "y" {
-			return nil
+			str = strings.ToLower(strings.TrimSpace(str))
+			if str != "yes" && str != "y" {
+				return nil
+			}
 		}
 
 		c := newAdminClient()
@@ -232,6 +235,7 @@ func init() {
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
+	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	RootCmd.AddCommand(instanceCmdGroup)

@@ -14,6 +14,12 @@ and all its data.
 cozy-stack instances destroy [domain]
 ```
 
+### Options
+
+```
+      --force   Force the deletion without asking for confirmation
+```
+
 ### Options inherited from parent commands
 
 ```
