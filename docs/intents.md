@@ -15,6 +15,7 @@
     - [Bibliography & Prior Art](#bibliography--prior-art)
     - [Discarded Ideas](#discarded-ideas)
 
+
 ## Overview
 
 A typical Cozy Cloud runs multiple applications, but most of these applications are focused on one task and interact with one particular type of data.
@@ -23,12 +24,14 @@ However, Cozy Cloud especially shines when data is combined across apps to provi
 
 This document outlines a proposal for apps to rely on each other to accomplish certain tasks and gain access to new documents, in a way that hopefully is neither painful for the users or the developers.
 
+
 ## Glossary
 
 - **Intent**: Intents, sometimes also called Activities, is a pattern used in environments where multiple apps with different purposes coexist. The idea is that any app can express the need to do *something* that it can't do itself, and an app that *can* do it will take over from there.
 - **Stack**: refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the server-side part of the Cozy infrastructure.
 - **Client**: the client is the application that *starts* an intent.
 - **Service**: the service is the application that *handles* an intent started by a client.
+
 
 ## Proposal
 
@@ -220,6 +223,117 @@ After the client receives a "completed" message, it can close the service's ifra
 
 If, for whatever reason, the service can not fulfill the intent, it can send an "error" message to the client.
 When the client receives an "error" message, the intent is aborted and the iframe can be closed.
+
+
+## Routes
+
+### POST /intents
+
+The client app can ask to start an intent via this route.
+
+#### Request
+
+```
+POST /intents HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbG...
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.intents",
+    "attributes": {
+      "action": "PICK",
+      "type": "io.cozy.files",
+      "permissions": ["GET"]
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+    "type": "io.cozy.intents",
+    "attributes": {
+      "action": "PICK",
+      "type": "io.cozy.files",
+      "permissions": ["GET"],
+      "client": "",
+      "services": [
+        {
+          "slug": "files",
+          "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+        }
+      ]
+    },
+    "links": {
+      "self": "/intents/77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+      "permissions": "/permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6"
+    }
+  }
+}
+```
+
+### GET /intents/:id
+
+Get all the informations about the intent
+
+**Note**: only the service can access this route.
+
+#### Request
+
+```http
+GET /intents/77bcc42c-0fd8-11e7-ac95-8f605f6e8338 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer J9l-ZhwP...
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+    "type": "io.cozy.intents",
+    "attributes": {
+      "action": "PICK",
+      "type": "io.cozy.files",
+      "permissions": ["GET"],
+      "client": "",
+      "services": [
+        {
+          "slug": "files",
+          "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+        }
+      ]
+    },
+    "links": {
+      "self": "/intents/77bcc42c-0fd8-11e7-ac95-8f605f6e8338",
+      "permissions": "/permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6"
+    }
+  }
+}
+```
+
 
 ## Annex
 
