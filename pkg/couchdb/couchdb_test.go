@@ -3,11 +3,14 @@ package couchdb
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,6 +23,8 @@ func TestErrors(t *testing.T) {
 const TestDoctype = "io.cozy.testobject"
 
 var TestPrefix = SimpleDatabasePrefix("couchdb-tests")
+var receivedEventsMutex sync.Mutex
+var receivedEvents map[string]struct{}
 
 type testDoc struct {
 	TestID  string `json:"_id,omitempty"`
@@ -67,6 +72,7 @@ func TestCreateDoc(t *testing.T) {
 	assert.NotEmpty(t, doc.Rev(), doc.ID())
 
 	docType, id := doc.DocType(), doc.ID()
+	assertGotEvent(t, realtime.EventCreate, doc.ID())
 
 	// Fetch it and see if its match
 	fetched := &testDoc{}
@@ -85,6 +91,7 @@ func TestCreateDoc(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEqual(t, revBackup, updated.Rev())
 	assert.Equal(t, "changedvalue", updated.Test)
+	assertGotEvent(t, realtime.EventUpdate, doc.ID())
 
 	// Refetch it and see if its match
 	fetched2 := &testDoc{}
@@ -97,6 +104,7 @@ func TestCreateDoc(t *testing.T) {
 	// Delete it
 	err = DeleteDoc(TestPrefix, updated)
 	assert.NoError(t, err)
+	assertGotEvent(t, realtime.EventDelete, doc.ID())
 
 	fetched3 := &testDoc{}
 	err = GetDoc(TestPrefix, docType, id, fetched3)
@@ -248,9 +256,39 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	receivedEvents = make(map[string]struct{})
+	eventChan := realtime.InstanceHub(TestPrefix.Prefix()).Subscribe(TestDoctype)
+	go func() {
+		for ev := range eventChan.Read() {
+			receivedEventsMutex.Lock()
+			receivedEvents[ev.Type+ev.Doc.ID()] = struct{}{}
+			receivedEventsMutex.Unlock()
+		}
+	}()
+
 	res := m.Run()
+
+	eventChan.Close()
 
 	DeleteDB(TestPrefix, TestDoctype)
 
 	os.Exit(res)
+}
+
+func assertGotEvent(t *testing.T, eventType, id string) bool {
+	receivedEventsMutex.Lock()
+	_, ok := receivedEvents[eventType+id]
+	if !ok {
+		receivedEventsMutex.Unlock()
+		time.Sleep(time.Millisecond)
+		receivedEventsMutex.Lock()
+		_, ok = receivedEvents[eventType+id]
+	}
+
+	if ok {
+		delete(receivedEvents, eventType+id)
+	}
+	receivedEventsMutex.Unlock()
+
+	return assert.True(t, ok, "Expected event %s:%s", eventType, id)
 }

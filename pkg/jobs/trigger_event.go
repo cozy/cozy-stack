@@ -1,7 +1,9 @@
 package jobs
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
@@ -9,14 +11,21 @@ import (
 type EventTrigger struct {
 	unscheduled chan struct{}
 	infos       *TriggerInfos
+	mask        permissions.Rule
 }
 
-// NewEventTrigger returns a new instance of AtTrigger given the specified
+// NewEventTrigger returns a new instance of EventTrigger given the specified
 // options.
 func NewEventTrigger(infos *TriggerInfos) (*EventTrigger, error) {
+	rule, err := permissions.UnmarshalRuleString(infos.Arguments)
+	if err != nil {
+		return nil, err
+	}
+
 	return &EventTrigger{
 		unscheduled: make(chan struct{}),
 		infos:       infos,
+		mask:        rule,
 	}, nil
 }
 
@@ -44,18 +53,56 @@ func (t *EventTrigger) Valid(key, value string) bool {
 	return false
 }
 
+func (t *EventTrigger) interestedBy(e *realtime.Event) bool {
+
+	if !t.mask.Verbs.Contains(permissions.Verb(e.Type)) {
+		return false
+	}
+
+	if len(t.mask.Values) == 0 {
+		return true
+	}
+
+	if t.mask.Selector == "" {
+		return t.mask.ValuesContain(e.Doc.ID())
+	}
+
+	if v, ok := e.Doc.(permissions.Validable); ok {
+		return t.mask.ValuesValid(v)
+	}
+
+	return false
+}
+
+func addEventToMessage(e *realtime.Event, base *Message) (*Message, error) {
+	var basemsg interface{}
+	base.Unmarshal(&basemsg)
+	return NewMessage(JSONEncoding, map[string]interface{}{
+		"message": basemsg,
+		"event":   e,
+	})
+}
+
 // Schedule implements the Schedule method of the Trigger interface.
 func (t *EventTrigger) Schedule() <-chan *JobRequest {
 	ch := make(chan *JobRequest)
 	go func() {
-		c := realtime.MainHub().Subscribe(t.infos.Arguments)
+		c := realtime.MainHub().Subscribe(t.mask.Type)
 		for {
 			select {
-			case <-c.Read():
-				ch <- &JobRequest{
-					WorkerType: t.infos.WorkerType,
-					Message:    t.infos.Message,
-					Options:    t.infos.Options,
+			case e := <-c.Read():
+				if t.interestedBy(e) {
+					msg, err := addEventToMessage(e, t.infos.Message)
+					if err != nil {
+						log.Error(err)
+						continue
+					}
+
+					ch <- &JobRequest{
+						WorkerType: t.infos.WorkerType,
+						Message:    msg,
+						Options:    t.infos.Options,
+					}
 				}
 			case <-t.unscheduled:
 				close(ch)

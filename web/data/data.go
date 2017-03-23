@@ -163,7 +163,15 @@ func updateDoc(c echo.Context) error {
 	errWhole := permissions.AllowWholeType(c, permissions.PUT, doc.DocType())
 	if errWhole != nil {
 
-		errOld := fetchOldAndCheckPerm(c, permissions.PUT, doc.DocType(), doc.ID())
+		// we cant apply to whole type, let's fetch old doc and see if it applies there
+		var old couchdb.JSONDoc
+		errFetch := couchdb.GetDoc(instance, doc.DocType(), doc.ID(), &old)
+		if errFetch != nil {
+			return errFetch
+		}
+
+		// check if permissions set allows manipulating old doc
+		errOld := permissions.Allow(c, permissions.PUT, &old)
 		if errOld != nil {
 			return errOld
 		}
@@ -212,24 +220,29 @@ func deleteDoc(c echo.Context) error {
 		return err
 	}
 
-	errID := permissions.AllowTypeAndID(c, permissions.DELETE, doctype, docid)
-	if errID != nil {
-		errOld := fetchOldAndCheckPerm(c, permissions.DELETE, doctype, docid)
-		if errOld != nil {
-			return errOld
-		}
+	var doc couchdb.JSONDoc
+	err := couchdb.GetDoc(instance, doctype, docid, &doc)
+	if err != nil {
+		return err
+	}
+	doc.Type = doctype
+	doc.SetRev(rev)
+
+	err = permissions.Allow(c, permissions.DELETE, &doc)
+	if err != nil {
+		return err
 	}
 
-	tombrev, err := couchdb.Delete(instance, doctype, docid, rev)
+	err = couchdb.DeleteDoc(instance, &doc)
 	if err != nil {
 		return err
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
 		"ok":      true,
-		"id":      docid,
-		"rev":     tombrev,
-		"type":    doctype,
+		"id":      doc.ID(),
+		"rev":     doc.Rev(),
+		"type":    doc.DocType(),
 		"deleted": true,
 	})
 

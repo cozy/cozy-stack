@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo"
 )
@@ -45,6 +46,13 @@ func (sdb *simpleDB) Prefix() string { return sdb.prefix + "/" }
 // SimpleDatabasePrefix returns a Database from a prefix, useful for test
 func SimpleDatabasePrefix(prefix string) Database {
 	return &simpleDB{prefix}
+}
+
+func rtevent(db Database, evtype string, doc realtime.Doc) {
+	realtime.InstanceHub(db.Prefix()).Publish(&realtime.Event{
+		Type: evtype,
+		Doc:  doc,
+	})
 }
 
 // GlobalDB is the prefix used for stack-scoped db
@@ -335,38 +343,25 @@ func ResetDB(db Database, doctype string) error {
 	return CreateDB(db, doctype)
 }
 
-// Delete destroy a document by its doctype and ID .
+// DeleteDoc deletes a struct implementing the couchb.Doc interface
 // If the document's current rev does not match the one passed,
 // a CouchdbError(409 conflict) will be returned.
-// This functions returns the tombstone revision as string
-func Delete(db Database, doctype, id, rev string) (string, error) {
-	var err error
-	id, err = validateDocID(id)
-	if err != nil {
-		return "", err
-	}
-	var res updateResponse
-	qs := url.Values{"rev": []string{rev}}
-	url := docURL(db, doctype, id) + "?" + qs.Encode()
-	err = makeRequest("DELETE", url, nil, &res)
-	if err != nil {
-		return "", fixErrorNoDatabaseIsWrongDoctype(err)
-	}
-	return res.Rev, nil
-}
-
-// DeleteDoc deletes a struct implementing the couchb.Doc interface
 // The document's SetRev will be called with tombstone revision
 func DeleteDoc(db Database, doc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
 	}
-	tombrev, err := Delete(db, doc.DocType(), id, doc.Rev())
+
+	var res updateResponse
+	qs := url.Values{"rev": []string{doc.Rev()}}
+	url := docURL(db, doc.DocType(), id) + "?" + qs.Encode()
+	err = makeRequest("DELETE", url, nil, &res)
 	if err != nil {
-		return err
+		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
-	doc.SetRev(tombrev)
+	doc.SetRev(res.Rev)
+	rtevent(db, realtime.EventDelete, doc)
 	return nil
 }
 
@@ -388,7 +383,8 @@ func UpdateDoc(db Database, doc Doc) error {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 	doc.SetRev(res.Rev)
-	return err
+	rtevent(db, realtime.EventUpdate, doc)
+	return nil
 }
 
 // CreateNamedDoc persist a document with an ID.
@@ -411,7 +407,8 @@ func CreateNamedDoc(db Database, doc Doc) error {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 	doc.SetRev(res.Rev)
-	return err
+	rtevent(db, realtime.EventCreate, doc)
+	return nil
 }
 
 // CreateNamedDocWithDB is equivalent to CreateNamedDoc but creates the database
@@ -462,6 +459,7 @@ func CreateDoc(db Database, doc Doc) error {
 
 	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
+	rtevent(db, realtime.EventCreate, doc)
 	return nil
 }
 

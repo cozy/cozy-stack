@@ -15,16 +15,16 @@ func (h *hub) Publish(e *Event) {
 	panic("Wrong usage : you should not publish on central hub.")
 }
 
-func (h *hub) getTopic(instance, t string) *topic {
+func (h *hub) getTopic(prefix, t string) *topic {
 	h.RLock()
 	defer h.RUnlock()
-	return h.topics[topicKey(instance, t)]
+	return h.topics[topicKey(prefix, t)]
 }
 
-func (h *hub) getTopicOrCreate(instance, t string) *topic {
+func (h *hub) getTopicOrCreate(prefix, t string) *topic {
 	h.Lock()
 	defer h.Unlock()
-	key := topicKey(instance, t)
+	key := topicKey(prefix, t)
 	it, exists := h.topics[key]
 	if !exists {
 		it = makeTopic(h, key)
@@ -47,24 +47,24 @@ func (h *hub) remove(t *topic) {
 }
 
 type instancehub struct {
-	instance string
-	mainHub  *hub
+	prefix  string
+	mainHub *hub
 }
 
 func (ih *instancehub) Publish(e *Event) {
-	it := ih.mainHub.getTopic(ih.instance, e.DocType)
+	it := ih.mainHub.getTopic(ih.prefix, e.Doc.DocType())
 	if it != nil {
 		it.broadcast <- e
 	}
-	e.Instance = ih.instance
-	gt := ih.mainHub.getTopic(global, e.DocType)
+	e.Instance = ih.prefix
+	gt := ih.mainHub.getTopic(global, e.Doc.DocType())
 	if gt != nil {
 		gt.broadcast <- e
 	}
 }
 
 func (ih *instancehub) Subscribe(t string) EventChannel {
-	it := ih.mainHub.getTopicOrCreate(ih.instance, t)
+	it := ih.mainHub.getTopicOrCreate(ih.prefix, t)
 	sub := makeSub([]*topic{it})
 	it.subscribe <- sub
 	return sub
@@ -86,7 +86,7 @@ func MainHub() Hub {
 // InstanceHub returns a memory hub for an Instance
 func InstanceHub(domain string) Hub {
 	return &instancehub{
-		instance: domain,
-		mainHub:  mainHub,
+		prefix:  domain,
+		mainHub: mainHub,
 	}
 }

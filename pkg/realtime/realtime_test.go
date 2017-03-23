@@ -8,6 +8,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type testDoc struct {
+	id      string
+	rev     string
+	doctype string
+}
+
+func (t *testDoc) ID() string      { return t.id }
+func (t *testDoc) Rev() string     { return t.rev }
+func (t *testDoc) DocType() string { return t.doctype }
+
 func TestRealtime(t *testing.T) {
 	h := InstanceHub("testing")
 	main := MainHub()
@@ -16,10 +26,17 @@ func TestRealtime(t *testing.T) {
 	c3 := main.Subscribe("io.cozy.testobject")
 	wg := sync.WaitGroup{}
 
+	assert.Panics(t, func() {
+		main.Publish(&Event{Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "foo",
+		}})
+	})
+
 	wg.Add(1)
 	go func() {
 		for e := range c.Read() {
-			assert.Equal(t, "foo", e.DocID)
+			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
 		wg.Done()
@@ -28,7 +45,7 @@ func TestRealtime(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for e := range c2.Read() {
-			assert.Equal(t, "foo", e.DocID)
+			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
 		wg.Done()
@@ -38,17 +55,17 @@ func TestRealtime(t *testing.T) {
 	go func() {
 		for e := range c3.Read() {
 			assert.Equal(t, "testing", e.Instance)
-			assert.Equal(t, "foo", e.DocID)
+			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
 		wg.Done()
 	}()
 
 	time.AfterFunc(1*time.Millisecond, func() {
-		h.Publish(&Event{
-			DocType: "io.cozy.testobject",
-			DocID:   "foo",
-		})
+		h.Publish(&Event{Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "foo",
+		}})
 	})
 
 	wg.Wait()
@@ -61,14 +78,14 @@ func TestRealtime(t *testing.T) {
 	err = c.Close()
 	assert.Error(t, err)
 
-	h.Publish(&Event{
-		DocType: "io.cozy.testobject",
-		DocID:   "nobodywillseeme",
-	})
+	h.Publish(&Event{Doc: &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "nobodywillseeme",
+	}})
 
-	h.Publish(&Event{
-		DocType: "io.cozy.testobject",
-		DocID:   "meneither",
-	})
+	h.Publish(&Event{Doc: &testDoc{
+		doctype: "io.cozy.testobject",
+		id:      "meneither",
+	}})
 
 }
