@@ -105,7 +105,7 @@ func (vs *VerbSet) Merge(verbs *VerbSet) {
 }
 
 // VerbSplit parse a string into a VerbSet
-// Note : this does not check if Verbs are proper HTTP Verbs
+// Note: this does not check if Verbs are proper HTTP Verbs
 // This behaviour is used in @event trigger
 func VerbSplit(in string) VerbSet {
 	if in == allVerbs {

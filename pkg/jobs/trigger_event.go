@@ -1,10 +1,10 @@
 package jobs
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/labstack/gommon/log"
 )
 
 // EventTrigger implements Trigger for realtime triggered events
@@ -95,6 +95,7 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 					msg, err := addEventToMessage(e, t.infos.Message)
 					if err != nil {
 						log.Error(err)
+						continue
 					}
 
 					ch <- &JobRequest{
