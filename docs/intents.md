@@ -49,7 +49,7 @@ These informations must be provided in the manifest of the application, inside t
 
 Here is a very simple example:
 
-```
+```json
 "intents": [
     {
         "action": "PICK",
@@ -61,7 +61,7 @@ Here is a very simple example:
 
 Notice that we didn't include a `{{.Intent}}` marker in the `href`, which we really should have:
 
-```
+```json
 "intents": [
     {
         "action": "PICK",
@@ -75,7 +75,7 @@ When this service is called, it will load the page `https://service.domain.examp
 
 Here is an example of an app that supports multiple data types:
 
-```
+```json
 "intents": [
     {
         "action": "PICK",
@@ -87,7 +87,7 @@ Here is an example of an app that supports multiple data types:
 
 Finally, here is an example of an app that supports several intent types:
 
-```
+```json
 "intents": [
     {
         "action": "PICK",
@@ -131,13 +131,13 @@ Here is an example of what the API could look like:
 
 ```js
 // "Let the user pick a file"
-cozy.startIntent('PICK', 'io.cozy.files')
+cozy.intents.start('PICK', 'io.cozy.files')
 .then(document => {
     // document is a JSON representation of the picked file
 });
 
 // "Create a contact, with some information already filled out"
-cozy.startIntent('CREATE', 'io.cozy.contacts', {
+cozy.intents.start('CREATE', 'io.cozy.contacts', {
     name: 'John Johnsons',
     tel: '+12345678'
     email: 'john@johnsons.com'
@@ -147,20 +147,20 @@ cozy.startIntent('CREATE', 'io.cozy.contacts', {
 });
 
 // "Save this file somewhere"
-cozy.startIntent('CREATE', 'io.cozy.files', {
+cozy.intents.start('CREATE', 'io.cozy.files', {
     content: 'data:application/zip;base64,UEsDB...',
     name: 'photos.zip'
 });
 
 // "Create a new note, and give me read-only access to it"
-cozy.startIntent('CREATE', 'io.cozy.notes', {}, ['GET'])
+cozy.intents.start('CREATE', 'io.cozy.notes', {}, ['GET'])
 .then(document => {
     // document is a JSON representation of the note that was created.
     // Additionally, this note can now be retrieved through the API since we have read access on it.
 });
 
 // "Create an event based on the provided data, and give me full access to it"
-cozy.startIntent('CREATE', 'io.cozy.events', {
+cozy.intents.start('CREATE', 'io.cozy.events', {
     date: '2017/06/24',
     title: 'Beach day'
 }, ['ALL'])
@@ -170,7 +170,7 @@ cozy.startIntent('CREATE', 'io.cozy.events', {
 });
 
 // "Crop this picture"
-cozy.startIntent('EDIT', 'image/png', 'data:image/png;base64,iVBORw...'})
+cozy.intents.start('EDIT', 'image/png', 'data:image/png;base64,iVBORw...'})
 .then(image => {
     //image is the edited version of the image provided above.
 })
