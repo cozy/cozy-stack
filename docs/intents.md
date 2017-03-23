@@ -19,16 +19,16 @@
 
 A typical Cozy Cloud runs multiple applications, but most of these applications are focused on one task and interact with one particular type of data.
 
-However, Cozy Cloud especially shines when data is combined across apps to provided an integrated experience. This is made difficult by the fact that apps have no dedicated back-end and that they are restricted to using certain documents.
+However, Cozy Cloud especially shines when data is combined across apps to provide an integrated experience. This is made difficult by the fact that apps have no dedicated back-end and that they have restricted access to documents.
 
 This document outlines a proposal for apps to rely on each other to accomplish certain tasks and gain access to new documents, in a way that hopefully is neither painful for the users or the developers.
 
 ## Glossary
 
-- **Intent** : Intents, sometimes also called Activities, is a pattern used in environments where multiple apps with different purposes coexist. The idea is that any app can express the need to do *something* that it can't do itself, and an app that *can* do it will take over from there.
-- **Stack** : refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the server-side part of the Cozy infrastructure.
-- **Client** : the client is the application that *starts* an intent.
-- **Service** : the service is the application that *handles* an intent started by a client.
+- **Intent**: Intents, sometimes also called Activities, is a pattern used in environments where multiple apps with different purposes coexist. The idea is that any app can express the need to do *something* that it can't do itself, and an app that *can* do it will take over from there.
+- **Stack**: refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the server-side part of the Cozy infrastructure.
+- **Client**: the client is the application that *starts* an intent.
+- **Service**: the service is the application that *handles* an intent started by a client.
 
 ## Proposal
 
@@ -38,9 +38,9 @@ In this proposal, services declare themselves through their manifest. When a cli
 
 Every app can register itself as a potential handler for one or more intents. To do so, it must provide the following information for each intent it wishes to handle:
 
-- `action` : A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `VIEW`, `PICK`, and `SHARE`. While we recommend using one of these verbs, the list is not exhaustive and may be extended by any app.
-- `type` : One or more types of data on which the service knows how to operate the `action`. A `type` can be expressed as a [MIME type](https://en.wikipedia.org/wiki/Media_type) or a [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing). The application must have permissions for any Cozy Document Type listed here.
-- `href` : the relative url of the route designed to handle this intent.
+- `action`: A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `VIEW`, `PICK`, and `SHARE`. While we recommend using one of these verbs, the list is not exhaustive and may be extended by any app.
+- `type`: One or more types of data on which the service knows how to operate the `action`. A `type` can be expressed as a [MIME type](https://en.wikipedia.org/wiki/Media_type) or a [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing). The application must have permissions for any Cozy Document Type listed here. You can also think of the `type` as the intent's subject.
+- `href`: the relative url of the route designed to handle this intent.
 
 These informations must be provided in the manifest of the application, inside the `intents` key.
 
@@ -51,7 +51,7 @@ Here is a very simple example:
     {
         "action": "PICK",
         "type": "io.cozy.files",
-        "url": "/pick"
+        "href": "/pick"
     }
 ]
 ```
@@ -63,7 +63,7 @@ Here is an example of an app that supports multiple data types:
     {
         "action": "PICK",
         "type": ["io.cozy.files", "image/*"],
-        "url": "/pick"
+        "href": "/pick"
     }
 ]
 ```
@@ -75,12 +75,12 @@ Finally, here is an example of an app that supports several intent types:
     {
         "action": "PICK",
         "type": ["io.cozy.files", "image/*"],
-        "url": "/pick"
+        "href": "/pick"
     },
     {
         "action": "VIEW",
         "type": "image/gif",
-        "url": "/viewer"
+        "href": "/viewer"
     }
 ]
 ```
@@ -118,7 +118,7 @@ cozy.startIntent('PICK', 'io.cozy.files')
 });
 
 // "Create a contact, with some information already filled out"
-cozy.startIntent('CREATE', 'Io.cozy.contacts', {
+cozy.startIntent('CREATE', 'io.cozy.contacts', {
     name: 'John Johnsons',
     tel: '+12345678'
     email: 'john@johnsons.com'
@@ -170,9 +170,10 @@ Finally, it replies to the client's request with the service's URL.
 
 If more than one service match the `action` and `type`, the stack returns a special URL instead of the service's URL. This URL will display a page (the "choice page") where the user is invited to chose between one of the available services, and where he/she can persist that choice as a preference.
 
-After that choice is made, this choice page will redirect itself to the chosen service's URL and the flow resumes as normal.
+After a service is selected, this choice page will redirect itself to the chosen service's URL and the flow resumes as normal.
+**Note: this part needs to be discussed further.**
 
-The user may decide to abort the intent at that stage. If that is the case, the choice page will need to inform the client that the intent was aborted.
+The user may decide to abort the intent before picking a service. If that is the case, the choice page will need to inform the client that the intent was aborted.
 
 #### No available service
 
@@ -190,7 +191,7 @@ When the client receives the service URL from the stack, it starts to listen for
 
 #### Service to Client
 
-At this point, the service app is opened, on the view that it provided in the `href` part of it's manifest.
+At this point, the service app is opened on the view that it provided in the `href` part of it's manifest.
 
 The service queries the stack to find out information about the intent that it should handle. This includes the client's URL, the `action` and the `type`.
 
@@ -253,7 +254,7 @@ Since we were unable to find a use case where a new window is required, we decid
 
 #### Client / Server architecture
 
-Instead of letting the two applications communicate with each other, they could me made  to talk through the stack.
+Instead of letting the two applications communicate with each other, they could be made to talk through the stack.
 This would be useful as the stack could act as a middleware, transforming data on the fly or granting permissions where appropriate.
 
 However, this approach has also severe drawbacks, notably the fact that the stack must hold a copy of all the data that the apps want to transfer (which can include large files). It also makes it significantly harder for the client to know when the intent has been processed.
