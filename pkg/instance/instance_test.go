@@ -16,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -370,18 +369,8 @@ func TestGetFs(t *testing.T) {
 		Domain:     "test-provider.cozycloud.cc",
 		StorageURL: "mem://test",
 	}
-	content := []byte{'b', 'a', 'r'}
-	err := instance.makeStorageFs()
-	assert.NoError(t, err)
-	storage := instance.FS()
+	storage := instance.VFS()
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-	err = afero.WriteFile(storage, "foo", content, 0644)
-	assert.NoError(t, err)
-	storage = instance.FS()
-	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-	buf, err := afero.ReadFile(storage, "foo")
-	assert.NoError(t, err)
-	assert.Equal(t, content, buf, "the storage should have persist the content of the foo file")
 }
 
 func TestTranslate(t *testing.T) {

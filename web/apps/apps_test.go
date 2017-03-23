@@ -44,7 +44,7 @@ var client *http.Client
 
 func createFile(dir, filename, content string) error {
 	abs := path.Join(dir, filename)
-	file, err := vfs.Create(testInstance, abs)
+	file, err := vfs.Create(testInstance.VFS(), abs)
 	if err != nil {
 		return err
 	}
@@ -85,17 +85,17 @@ func installMiniApp() error {
 	}
 
 	appdir := path.Join(vfs.AppsDirName, slug)
-	_, err = vfs.MkdirAll(testInstance, appdir, nil)
+	_, err = vfs.MkdirAll(testInstance.VFS(), appdir, nil)
 	if err != nil {
 		return err
 	}
 	bardir := path.Join(appdir, "bar")
-	_, err = vfs.Mkdir(testInstance, bardir, nil)
+	_, err = vfs.Mkdir(testInstance.VFS(), bardir, nil)
 	if err != nil {
 		return err
 	}
 	pubdir := path.Join(appdir, "public")
-	_, err = vfs.Mkdir(testInstance, pubdir, nil)
+	_, err = vfs.Mkdir(testInstance.VFS(), pubdir, nil)
 	if err != nil {
 		return err
 	}

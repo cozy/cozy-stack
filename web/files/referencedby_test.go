@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +45,7 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 	}
 	assert.Equal(t, 204, res.StatusCode)
 
-	doc, err := vfs.GetFileDoc(testInstance, fileID1)
+	doc, err := testInstance.VFS().FileByID(fileID1)
 	assert.NoError(t, err)
 	assert.Len(t, doc.ReferencedBy, 1)
 }
@@ -84,7 +83,7 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 	}
 	assert.Equal(t, 204, res.StatusCode)
 
-	doc, err := vfs.GetFileDoc(testInstance, fileID2)
+	doc, err := testInstance.VFS().FileByID(fileID2)
 	assert.NoError(t, err)
 	assert.Len(t, doc.ReferencedBy, 3)
 }
@@ -106,7 +105,7 @@ func TestRemoveReferencedByOneRelation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 204, res.StatusCode)
 
-	doc, err := vfs.GetFileDoc(testInstance, fileID1)
+	doc, err := testInstance.VFS().FileByID(fileID1)
 	assert.NoError(t, err)
 	assert.Len(t, doc.ReferencedBy, 0)
 }
@@ -129,7 +128,7 @@ func TestRemoveReferencedByMultipleRelation(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 204, res.StatusCode)
 
-	doc, err := vfs.GetFileDoc(testInstance, fileID2)
+	doc, err := testInstance.VFS().FileByID(fileID2)
 	assert.NoError(t, err)
 	assert.Len(t, doc.ReferencedBy, 1)
 	assert.Equal(t, "fooalbumid2", doc.ReferencedBy[0].ID)

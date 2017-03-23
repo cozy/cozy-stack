@@ -27,11 +27,11 @@ const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
 var ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 
 type gitFetcher struct {
-	ctx vfs.Context
+	fs vfs.VFS
 }
 
-func newGitFetcher(ctx vfs.Context) *gitFetcher {
-	return &gitFetcher{ctx: ctx}
+func newGitFetcher(fs vfs.VFS) *gitFetcher {
+	return &gitFetcher{fs: fs}
 }
 
 var manifestClient = &http.Client{
@@ -61,10 +61,10 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 
 func (g *gitFetcher) Fetch(src *url.URL, appdir string) error {
 	log.Debugf("[git] Fetch %s", src.String())
-	ctx := g.ctx
+	fs := g.fs
 
 	gitdir := path.Join(appdir, ".git")
-	_, err := vfs.Mkdir(ctx, gitdir, nil)
+	_, err := vfs.Mkdir(fs, gitdir, nil)
 	if os.IsExist(err) {
 		return g.pull(appdir, gitdir, src)
 	}
@@ -85,9 +85,9 @@ func getBranch(src *url.URL) string {
 // clone creates a new bare git repository and install all the files of the
 // last commit in the application tree.
 func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
-	ctx := g.ctx
+	fs := g.fs
 
-	storage, err := gitSt.NewStorage(newGFS(ctx, gitdir))
+	storage, err := gitSt.NewStorage(newGFS(fs, gitdir))
 	if err != nil {
 		return err
 	}
@@ -111,9 +111,9 @@ func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
 // pull will fetch the latest objects from the default remote and if updates
 // are available, it will update the application tree files.
 func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
-	ctx := g.ctx
+	fs := g.fs
 
-	storage, err := gitSt.NewStorage(newGFS(ctx, gitdir))
+	storage, err := gitSt.NewStorage(newGFS(fs, gitdir))
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 
 	// TODO: permanently remove application files instead of moving them to the
 	// trash
-	err = vfs.Walk(ctx, appdir, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+	err = vfs.Walk(fs, appdir, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
@@ -152,9 +152,9 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 		}
 
 		if dir != nil {
-			_, err = vfs.TrashDir(ctx, dir)
+			_, err = vfs.TrashDir(fs, dir)
 		} else {
-			_, err = vfs.TrashFile(ctx, file)
+			_, err = vfs.TrashFile(fs, file)
 		}
 		if err != nil {
 			return err
@@ -172,7 +172,7 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 }
 
 func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
-	ctx := g.ctx
+	fs := g.fs
 
 	ref, err := rep.Head()
 	if err != nil {
@@ -193,12 +193,12 @@ func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
 		abs := path.Join(appdir, f.Name)
 		dir := path.Dir(abs)
 
-		_, err := vfs.MkdirAll(ctx, dir, nil)
+		_, err := vfs.MkdirAll(fs, dir, nil)
 		if err != nil {
 			return err
 		}
 
-		file, err := vfs.Create(ctx, abs)
+		file, err := vfs.Create(fs, abs)
 		if err != nil {
 			return err
 		}
@@ -253,18 +253,18 @@ func resolveManifestURL(src *url.URL) (string, error) {
 }
 
 type gfs struct {
-	ctx  vfs.Context
+	fs   vfs.VFS
 	base string
 	dir  *vfs.DirDoc
 }
 
 type gfile struct {
-	f      *vfs.File
+	f      vfs.File
 	name   string
 	closed bool
 }
 
-func newGFile(f *vfs.File, name string) *gfile {
+func newGFile(f vfs.File, name string) *gfile {
 	return &gfile{
 		f:      f,
 		name:   name,
@@ -297,22 +297,22 @@ func (f *gfile) Close() error {
 	return f.f.Close()
 }
 
-func newGFS(ctx vfs.Context, base string) *gfs {
-	dir, err := vfs.GetDirDocFromPath(ctx, base)
+func newGFS(fs vfs.VFS, base string) *gfs {
+	dir, err := fs.DirByPath(base)
 	if err != nil {
 		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
 		// With a cluster of couchdb, we can have a race condition where we
 		// query an index before it has been updated for a directory that has
 		// just been created.
 		time.Sleep(1 * time.Second)
-		dir, err = vfs.GetDirDocFromPath(ctx, base)
+		dir, err = fs.DirByPath(base)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	return &gfs{
-		ctx:  ctx,
+		fs:   fs,
 		base: path.Clean(base),
 		dir:  dir,
 	}
@@ -325,12 +325,12 @@ func (fs *gfs) OpenFile(name string, flag int, perm os.FileMode) (gitFS.File, er
 	dirbase := path.Dir(fullpath)
 
 	if flag&os.O_CREATE != 0 {
-		if _, err = vfs.MkdirAll(fs.ctx, dirbase, nil); err != nil {
+		if _, err = vfs.MkdirAll(fs.fs, dirbase, nil); err != nil {
 			return nil, err
 		}
 	}
 
-	file, err := vfs.OpenFile(fs.ctx, fullpath, flag, perm)
+	file, err := vfs.OpenFile(fs.fs, fullpath, flag, perm)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +344,7 @@ func (fs *gfs) Create(name string) (gitFS.File, error) {
 
 func (fs *gfs) Open(name string) (gitFS.File, error) {
 	fullpath := fs.Join(fs.base, name)
-	f, err := vfs.OpenFile(fs.ctx, fullpath, os.O_RDONLY, 0)
+	f, err := vfs.OpenFile(fs.fs, fullpath, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -352,29 +352,39 @@ func (fs *gfs) Open(name string) (gitFS.File, error) {
 }
 
 func (fs *gfs) Remove(name string) error {
-	return vfs.Remove(fs.ctx, fs.Join(fs.base, name))
+	return vfs.Remove(fs.fs, fs.Join(fs.base, name))
 }
 
 func (fs *gfs) Stat(name string) (gitFS.FileInfo, error) {
-	return vfs.Stat(fs.ctx, fs.Join(fs.base, name))
+	return vfs.Stat(fs.fs, fs.Join(fs.base, name))
 }
 
 func (fs *gfs) ReadDir(name string) ([]gitFS.FileInfo, error) {
-	l, err := vfs.ReadDir(fs.ctx, fs.Join(fs.base, name))
+	var s []gitFS.FileInfo
+	dir, err := fs.fs.DirByPath(fs.Join(fs.base, name))
 	if err != nil {
 		return nil, err
 	}
-
-	var s = make([]gitFS.FileInfo, len(l))
-	for i, f := range l {
-		s[i] = f
+	iter := fs.fs.DirIterator(dir, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if d != nil {
+			s = append(s, d)
+		} else {
+			s = append(s, f)
+		}
 	}
-
 	return s, nil
 }
 
 func (fs *gfs) MkdirAll(path string, perm os.FileMode) error {
-	_, err := vfs.MkdirAll(fs.ctx, fs.Join(fs.base, path), nil)
+	_, err := vfs.MkdirAll(fs.fs, fs.Join(fs.base, path), nil)
 	return err
 }
 
@@ -392,7 +402,7 @@ func (fs *gfs) TempFile(dirname, prefix string) (gitFS.File, error) {
 }
 
 func (fs *gfs) Rename(from, to string) error {
-	return vfs.Rename(fs.ctx, fs.Join(fs.base, from), fs.Join(fs.base, to))
+	return vfs.Rename(fs.fs, fs.Join(fs.base, from), fs.Join(fs.base, to))
 }
 
 func (fs *gfs) Join(elem ...string) string {
@@ -400,7 +410,7 @@ func (fs *gfs) Join(elem ...string) string {
 }
 
 func (fs *gfs) Dir(name string) gitFS.Filesystem {
-	return newGFS(fs.ctx, fs.Join(fs.base, name))
+	return newGFS(fs.fs, fs.Join(fs.base, name))
 }
 
 func (fs *gfs) Base() string {

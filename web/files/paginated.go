@@ -41,15 +41,11 @@ func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 	} else {
 		count = defPerPage
 	}
-	var byFetch int
-	if count < vfs.IteratorDefaultFetchSize {
-		byFetch = int(count)
-	}
 	if count > maxPerPage {
 		count = maxPerPage
 	}
 	return int(count), &vfs.IteratorOptions{
-		ByFetch: byFetch,
+		ByFetch: int(count),
 		AfterID: cursorQuery,
 	}, nil
 }
@@ -70,7 +66,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	hasNext := true
 
 	i := middlewares.GetInstance(c)
-	iter := doc.ChildrenIterator(i, iterOpts)
+	iter := i.VFS().DirIterator(doc, iterOpts)
 	for i := 0; i < count; i++ {
 		d, f, err := iter.Next()
 		if err == vfs.ErrIteratorDone {
@@ -135,7 +131,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	}
 
 	i := middlewares.GetInstance(c)
-	iter := doc.ChildrenIterator(i, iterOpts)
+	iter := i.VFS().DirIterator(doc, iterOpts)
 	for i := 0; i < count; i++ {
 		d, f, err := iter.Next()
 		if err == vfs.ErrIteratorDone {
