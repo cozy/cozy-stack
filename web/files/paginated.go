@@ -59,8 +59,8 @@ func newDir(doc *vfs.DirDoc) *dir {
 }
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-	var relsData []jsonapi.ResourceIdentifier
-	var included []jsonapi.Object
+	relsData := make([]jsonapi.ResourceIdentifier, 0)
+	included := make([]jsonapi.Object, 0)
 
 	count, iterOpts, err := paginationConfig(c)
 	if err != nil {
@@ -127,7 +127,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 }
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-	var included []jsonapi.Object
+	included := make([]jsonapi.Object, 0)
 
 	count, iterOpts, err := paginationConfig(c)
 	if err != nil {
