@@ -11,27 +11,27 @@
 #
 
 name    ./js/cozy-client.min.js
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.7/dist/cozy-client.min.js
-sha256  82675f13a39ff27d316df79f845c9ae8cd5bdd71ffadfe69ef11e9a1c2b1e0b5
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.8/dist/cozy-client.min.js
+sha256  5a6d85ab29406abe3c286f4577f837d9cb4d9130d22226cca6607ddc43244583
 
 name    ./js/cozy-client.min.js.map
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.7/dist/cozy-client.min.js.map
-sha256  66855aece415dad94a0be86df7cf69e6fd274c437085d17dcda82cfc8ec64234
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.1.8/dist/cozy-client.min.js.map
+sha256  ad5ff88c5d6551197fd00470f0de7a2865c5b7821faf515f9e8425b9bb65be6f
 
 name    ./js/cozy-bar.min.js
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta13/dist/cozy-bar.min.js
-sha256  66c3931e407b9b1f41b278de625e8993d1554c68590effc00b79e40e4a5a87d1
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.js
+sha256  7008353f061ebef54ef196f7ca480b9603f140d6aaba03f504cf3e50fc8a2af4
 
 name    ./js/cozy-bar.min.js.map
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta13/dist/cozy-bar.min.js.map
-sha256  a7383609c658dd4e781411f30bb089cf149064fb21ccb77394799f7093426a4c
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.js.map
+sha256  8af7c7a89f3756594c90bac8be4f92fef72ca4d838792e3ef0894aaab0db37f1
 
 name    ./css/cozy-bar.min.css
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta13/dist/cozy-bar.min.css
-sha256  1ecd41512ff7cbc2b8cad62cad4fa0a90e88576b7cbed7af116d8f07e44f9894
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.css
+sha256  466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f
 
 name    ./css/cozy-bar.min.css.map
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta13/dist/cozy-bar.min.css.map
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.css.map
 sha256  461ce5ccc61564581b897a7c38290ee19a72c3044232da54d32edbd45ccf11dc
 
 name    ./fonts/fontawesome-webfont.woff2
