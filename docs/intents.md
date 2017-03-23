@@ -38,9 +38,9 @@ In this proposal, services declare themselves through their manifest. When a cli
 
 Every app can register itself as a potential handler for one or more intents. To do so, it must provide the following information for each intent it wishes to handle:
 
-- `action`: A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `VIEW`, `PICK`, and `SHARE`. While we recommend using one of these verbs, the list is not exhaustive and may be extended by any app.
+- `action`: A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `OPEN`, `PICK`, and `SHARE`. While we recommend using one of these verbs, the list is not exhaustive and may be extended by any app.
 - `type`: One or more types of data on which the service knows how to operate the `action`. A `type` can be expressed as a [MIME type](https://en.wikipedia.org/wiki/Media_type) or a [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing). The application must have permissions for any Cozy Document Type listed here. You can also think of the `type` as the intent's subject.
-- `href`: the relative url of the route designed to handle this intent.
+- `href`: the relative url of the route designed to handle this intent. Similar to how [certain variables are injected in the applications HTML](https://github.com/cozy/cozy-stack/blob/master/docs/client-app-dev.md#good-practices-for-your-application), this URL will be parsed and the `{{.Intent}}` marker will be replaced with the current intents id. 
 
 These informations must be provided in the manifest of the application, inside the `intents` key.
 
@@ -63,7 +63,7 @@ Here is an example of an app that supports multiple data types:
     {
         "action": "PICK",
         "type": ["io.cozy.files", "image/*"],
-        "href": "/pick"
+        "href": "/pick?id={{.Intent}}"
     }
 ]
 ```
@@ -75,12 +75,12 @@ Finally, here is an example of an app that supports several intent types:
     {
         "action": "PICK",
         "type": ["io.cozy.files", "image/*"],
-        "href": "/pick"
+        "href": "/pick?id={{.Intent}}"
     },
     {
         "action": "VIEW",
         "type": "image/gif",
-        "href": "/viewer"
+        "href": "/viewer?id={{.Intent}}"
     }
 ]
 ```
@@ -155,16 +155,21 @@ cozy.startIntent('EDIT', 'image/png', 'data:image/png;base64,iVBORw...'})
 
 The service resolution is the phase where a service is chosen to handle an intent. This phase is handled by the stack.
 
-After the client has started it's intent, it sends the `action` and `type` to the stack. The stack will then traverse the list of installed apps and find all the apps that can handle that specific combination of `action` and `type`.
+After the client has started it's intent, it sends the `action`, the `type` and the `permissions` to the stack. The stack will then traverse the list of installed apps and find all the apps that can handle that specific combination.
+Note that if the intent request `GET` permissions on a certain Cozy Document Type, but the service does not have this permission itself, it can not handle the intent.
 
 The stack then stores the information for that intent:
 
+- A unique id for that intent
 - Client URL
 - Service URL
 - `action`
 - `type`
+- `permissions`
 
-Finally, it replies to the client's request with the service's URL.
+The service URL is parsed and the `{{.Intent}}` marker is replaced with the intent's id. If no `{{.Intent}}` marker is found, the URL is suffixed with `?intent=` followed by the intent's id, as a fallback.
+
+Finally, the service URL is sent to the client.
 
 #### Service choice
 
@@ -191,9 +196,9 @@ When the client receives the service URL from the stack, it starts to listen for
 
 #### Service to Client
 
-At this point, the service app is opened on the view that it provided in the `href` part of it's manifest.
+At this point, the service app is opened on the route that it provided in the `href` part of it's manifest. This route now also contains the intent's id.
 
-The service queries the stack to find out information about the intent that it should handle. This includes the client's URL, the `action` and the `type`.
+The service queries the stack to find out information about the intent, passing along the intent id. In response, the stack sends the client's URL, the `action`, the `type` and the `permissions`.
 
 It then starts to listen for messages coming from the client's URL. Eventually, it sends a message to the client, as a mean to inform it that the service is now ready.
 
