@@ -10,7 +10,7 @@
     - [3. Service Resolution](#3-service-resolution)
     - [4. Handshake](#4-handshake)
     - [5. Processing & Terminating](#5-processing--terminating)
-- [Annex](#annex)
+- [Annexes](#annexes)
     - [Use cases](#use-cases)
     - [Bibliography & Prior Art](#bibliography--prior-art)
     - [Discarded Ideas](#discarded-ideas)
@@ -22,7 +22,7 @@ A typical Cozy Cloud runs multiple applications, but most of these applications 
 
 However, Cozy Cloud especially shines when data is combined across apps to provide an integrated experience. This is made difficult by the fact that apps have no dedicated back-end and that they have restricted access to documents.
 
-This document outlines a proposal for apps to rely on each other to accomplish certain tasks and gain access to new documents, in a way that hopefully is neither painful for the users or the developers.
+This document outlines a proposal for apps to rely on each other to accomplish certain tasks and gain access to new documents, in a way that hopefully is neither painful for the users nor the developers.
 
 
 ## Glossary
@@ -356,7 +356,7 @@ Content-Type: application/vnd.api+json
 ```
 
 
-## Annex
+## Annexes
 
 ### Use Cases
 
