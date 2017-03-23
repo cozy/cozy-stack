@@ -438,7 +438,7 @@ func (i *Instance) makeStorageFs() error {
 func Get(domain string) (*Instance, error) {
 	// FIXME temporary workaround to delete instances with no named indexes
 	errindex := couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes)
-	if errindex != nil {
+	if errindex != nil && !couchdb.IsNotFoundError(errindex) {
 		log.Error("[instance] could not define global indexes:", errindex)
 	}
 	// ---
