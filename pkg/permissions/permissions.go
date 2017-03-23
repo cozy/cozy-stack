@@ -159,6 +159,7 @@ func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
 			mango.Equal("type", TypeApplication),
 			mango.Equal("source_id", consts.Apps+"/"+slug),
 		),
+		Limit: 1,
 	}, &res)
 	if err != nil {
 		return nil, err
