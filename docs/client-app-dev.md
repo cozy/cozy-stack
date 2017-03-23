@@ -82,7 +82,28 @@ http://cozy.local:8025/
 
 You can also expose the couchdb port (listening in the container on 5984) in order to access its admin page. For instance add `-p 1234:5984` to access to the admin interface on `http://localhost:1234/_utils`.
 
-Make sure you application is built into `$HOME/myapp` (it should have an `index.html` file), otherwise it will not work. As an example, for the [Files application](https://github.com/cozy/cozy-files-v3/), it should be `$HOME/files/build`.
+Make sure you application is built into `$HOME/myapp` (it should have an
+`index.html` and a `manifest.webapp` files), otherwise it will not work. As an
+example, for the [Files application](https://github.com/cozy/cozy-files-v3/),
+it should be `$HOME/files/build`.
+
+If you want to use several applications (for testing the intents for example),
+you can mount several directories inside `/data/cozy-app` like this:
+
+```sh
+$ docker run --rm -it \
+    -p 8080:8080 \
+    -p 8025:8025 \
+    -v "$HOME/appone":/data/cozy-app/appone \
+    -v "$HOME/apptwo":/data/cozy-app/apptwo \
+    cozy/cozy-app-dev
+```
+
+Don't forget to add their subdomains to the `/etc/hosts` file:
+
+```
+127.0.0.1  appone.cozy.local apptwo.cozy.local cozy.local
+```
 
 
 ## Good practices for your application
