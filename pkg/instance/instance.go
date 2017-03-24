@@ -64,12 +64,11 @@ var (
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID      string `json:"_id,omitempty"`  // couchdb _id
-	DocRev     string `json:"_rev,omitempty"` // couchdb _rev
-	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	Locale     string `json:"locale"`         // The locale used on the server
-	StorageURL string `json:"storage"`        // Where the binaries are persisted
-	Dev        bool   `json:"dev"`            // Whether or not the instance is for development
+	DocID  string `json:"_id,omitempty"`  // couchdb _id
+	DocRev string `json:"_rev,omitempty"` // couchdb _rev
+	Domain string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	Locale string `json:"locale"`         // The locale used on the server
+	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
@@ -157,43 +156,23 @@ func (i *Instance) Prefix() string {
 // are persisted
 func (i *Instance) VFS() vfs.VFS {
 	if i.vfs == nil {
-		panic("instance: VFS() but nil")
+		panic("instance: calling VFS() before makeVFS()")
 	}
 	return i.vfs
 }
 
 func (i *Instance) makeVFS() error {
-	u, err := url.Parse(i.StorageURL)
-	if err != nil {
-		return fmt.Errorf("instance: could not parse storage url %s (%s)",
-			i.StorageURL, err.Error())
-	}
-	switch u.Scheme {
+	fsURL := config.FsURL()
+	var err error
+	switch fsURL.Scheme {
 	case "file", "mem":
-		i.vfs, err = vfsafero.New(i, i.StorageURL)
+		i.vfs, err = vfsafero.New(i, fsURL, i.Domain)
 	case "swift":
-		i.vfs, err = vfsswift.New(i, i.StorageURL)
+		i.vfs, err = vfsswift.New(i, fsURL, i.Domain)
 	default:
-		err = fmt.Errorf("instance: unknown storage provider %s", u.Scheme)
+		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
 	return err
-}
-
-// StartJobs is used to start the job system for all the instances.
-//
-// TODO: on distributed stacks, we should not have to iterate over all
-// instances on each startup
-func StartJobs() error {
-	instances, err := List()
-	if err != nil && !couchdb.IsNoDatabaseError(err) {
-		return err
-	}
-	for _, in := range instances {
-		if err := in.StartJobSystem(); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // StartJobSystem creates all the resources necessary for the instance's job
@@ -324,7 +303,6 @@ func Create(opts *Options) (*Instance, error) {
 
 	i.Locale = locale
 	i.Domain = domain
-	i.StorageURL = config.BuildRelFsURL(domain).String()
 
 	i.Dev = opts.Dev
 

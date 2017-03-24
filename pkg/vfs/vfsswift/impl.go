@@ -2,12 +2,14 @@ package vfsswift
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"path"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -15,29 +17,26 @@ import (
 	"github.com/ncw/swift"
 )
 
+var conn *swift.Connection
+
 type swiftVFS struct {
 	db     couchdb.Database
 	c      *swift.Connection
 	domain string
 }
 
-// New returns a vfs.VFS instance associated with the specified couchdb
-// database and the swift storage url.
-func New(db couchdb.Database, storageURL string) (vfs.VFS, error) {
-	u, err := url.Parse(storageURL)
-	if err != nil {
-		return nil, err
-	}
-
+// InitConnection should be used to initialize the connection to the
+// OpenStack Swift server.
+//
+// This function is not thread-safe.
+func InitConnection(fsURL *url.URL) error {
 	auth := &url.URL{
 		Scheme: "http",
-		Host:   u.Host,
+		Host:   fsURL.Host,
 		Path:   "/identity/v3",
 	}
 
-	domain := u.Path
-
-	q := u.Query()
+	q := fsURL.Query()
 	var username, password string
 	if q.Get("UserName") != "" {
 		username = confOrEnv(q.Get("UserName"))
@@ -46,26 +45,42 @@ func New(db couchdb.Database, storageURL string) (vfs.VFS, error) {
 		password = confOrEnv(q.Get("Token"))
 	}
 
-	c := &swift.Connection{
+	conn = &swift.Connection{
 		UserName:       username,
 		ApiKey:         password,
 		AuthUrl:        auth.String(),
+		Domain:         confOrEnv(q.Get("UserDomainName")),
 		Tenant:         confOrEnv(q.Get("ProjectName")),
 		TenantId:       confOrEnv(q.Get("ProjectID")),
 		TenantDomain:   confOrEnv(q.Get("ProjectDomain")),
 		TenantDomainId: confOrEnv(q.Get("ProjectDomainID")),
 	}
-	if err = c.Authenticate(); err != nil {
-		return nil, err
+	if err := conn.Authenticate(); err != nil {
+		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
+			auth.String())
+		return err
 	}
-	return &swiftVFS{db: db, c: c, domain: domain}, nil
+	return nil
+}
+
+// New returns a vfs.VFS instance associated with the specified couchdb
+// database and the swift storage url.
+func New(db couchdb.Database, fsURL *url.URL, domain string) (vfs.VFS, error) {
+	if conn == nil {
+		return nil, errors.New("vfsswift: global connection is not initialized")
+	}
+	return &swiftVFS{
+		db:     db,
+		c:      conn,
+		domain: domain,
+	}, nil
 }
 
 func confOrEnv(val string) string {
 	if val == "" || val[0] != '$' {
 		return val
 	}
-	return os.Getenv(val)
+	return os.Getenv(strings.TrimSpace(val[1:]))
 }
 
 func (sfs *swiftVFS) Init() error {
@@ -95,7 +110,14 @@ func (sfs *swiftVFS) Init() error {
 }
 
 func (sfs *swiftVFS) Delete() error {
-	return nil
+	return sfs.c.ObjectsWalk(sfs.domain, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
+		objNames, err := sfs.c.ObjectNames(sfs.domain, opts)
+		if err != nil {
+			return nil, err
+		}
+		_, err = sfs.c.BulkDelete(sfs.domain, objNames)
+		return objNames, err
+	})
 }
 
 func (sfs *swiftVFS) DiskUsage() (int64, error) {

@@ -366,8 +366,7 @@ func TestInstanceDestroy(t *testing.T) {
 
 func TestGetFs(t *testing.T) {
 	instance := Instance{
-		Domain:     "test-provider.cozycloud.cc",
-		StorageURL: "mem://test",
+		Domain: "test-provider.cozycloud.cc",
 	}
 	storage := instance.VFS()
 	assert.NotNil(t, storage, "the instance should have a memory storage provider")

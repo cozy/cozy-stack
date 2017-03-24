@@ -4,7 +4,6 @@ package vfsafero
 import (
 	"bytes"
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"hash"
 	"net/url"
@@ -12,7 +11,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -27,11 +25,11 @@ import (
 type aferoVFS struct {
 	db  couchdb.Database
 	fs  afero.Fs
-	url *url.URL
+	pth string
 
 	// whether or not the localfilesystem requires an initialisation of its root
 	// directory
-	rootInit bool
+	osFS bool
 }
 
 // New returns a vfs.VFS instance associated with the specified couchdb
@@ -39,33 +37,33 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(db couchdb.Database, storageURL string) (vfs.VFS, error) {
-	u, err := url.Parse(storageURL)
-	if err != nil {
-		return nil, err
+func New(db couchdb.Database, fsURL *url.URL, domain string) (vfs.VFS, error) {
+	pth := fsURL.Path
+	if pth == "" {
+		pth = "/"
 	}
-	fs, err := createFS(u)
-	if err != nil {
-		return nil, err
+	pth = path.Join(pth, domain)
+	if domain == "" || pth == "/" {
+		panic(fmt.Errorf("vfsafero: please check the supplied fs url (%s) or domain (%s)",
+			fsURL.String(), domain))
+	}
+	var fs afero.Fs
+	switch fsURL.Scheme {
+	case "file":
+		fs = afero.NewBasePathFs(afero.NewOsFs(), pth)
+	case "mem":
+		fs = afero.NewMemMapFs()
+	default:
+		return nil, fmt.Errorf("vfsafero: non supported scheme %s", fsURL.Scheme)
 	}
 	return &aferoVFS{
 		db:  db,
 		fs:  fs,
-		url: u,
+		pth: pth,
 		// for now, only the file:// scheme needs a specific initialisation of its
 		// root directory.
-		rootInit: u.Scheme == "file",
+		osFS: fsURL.Scheme == "file",
 	}, nil
-}
-
-func createFS(u *url.URL) (afero.Fs, error) {
-	switch u.Scheme {
-	case "file":
-		return afero.NewBasePathFs(afero.NewOsFs(), u.Path), nil
-	case "mem":
-		return afero.NewMemMapFs(), nil
-	}
-	return nil, errors.New("vfs_afero: non supported type")
 }
 
 // Init creates the root directory document and the trash directory for this
@@ -73,20 +71,14 @@ func createFS(u *url.URL) (afero.Fs, error) {
 func (afs *aferoVFS) Init() error {
 	var err error
 	// for a file:// fs, we need to create the root directory container
-	if afs.rootInit {
-		var rootFs afero.Fs
-		rootFsURL := config.BuildAbsFsURL("/")
-		rootFs, err = createFS(rootFsURL)
-		if err != nil {
+	if afs.osFS {
+		rootFs := afero.NewOsFs()
+		if err = rootFs.MkdirAll(afs.pth, 0755); err != nil {
 			return err
 		}
-		if err = rootFs.MkdirAll(afs.url.Path, 0755); err != nil {
-			return err
-		}
-
 		defer func() {
 			if err != nil {
-				if rmerr := rootFs.RemoveAll(afs.url.Path); rmerr != nil {
+				if rmerr := rootFs.RemoveAll(afs.pth); rmerr != nil {
 					log.Warn("[instance] Could not remove the instance directory")
 				}
 			}
@@ -124,15 +116,10 @@ func (afs *aferoVFS) Init() error {
 
 // Delete removes all the elements associated with the filesystem.
 func (afs *aferoVFS) Delete() error {
-	if !afs.rootInit {
-		return nil
+	if afs.osFS {
+		return afero.NewOsFs().RemoveAll(afs.pth)
 	}
-	rootFsURL := config.BuildAbsFsURL("/")
-	rootFs, err := createFS(rootFsURL)
-	if err != nil {
-		return err
-	}
-	return rootFs.RemoveAll(afs.url.Path)
+	return nil
 }
 
 func (afs *aferoVFS) DiskUsage() (int64, error) {

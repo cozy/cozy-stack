@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -93,25 +92,6 @@ func FsURL() *url.URL {
 	if err != nil {
 		panic(fmt.Errorf("malformed configuration fs url %s", config.Fs.URL))
 	}
-	return u
-}
-
-// BuildRelFsURL build a new url from the filesystem URL by adding the
-// specified relative path.
-func BuildRelFsURL(rel string) *url.URL {
-	u := FsURL()
-	if u.Path == "" {
-		u.Path = "/"
-	}
-	u.Path = path.Join(u.Path, rel)
-	return u
-}
-
-// BuildAbsFsURL build a new url from the filesystem URL by changing
-// the path to the specified absolute one.
-func BuildAbsFsURL(abs string) *url.URL {
-	u := FsURL()
-	u.Path = path.Join("/", abs)
 	return u
 }
 

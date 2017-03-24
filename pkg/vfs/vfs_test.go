@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -583,7 +584,7 @@ func TestMain(m *testing.M) {
 	}
 
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
-	fs, err = vfsafero.New(db, "file://localhost"+tempdir)
+	fs, err = vfsafero.New(db, &url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

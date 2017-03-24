@@ -508,7 +508,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	fs, err = vfsafero.New(db, "mem://")
+	fs, err = vfsafero.New(db, &url.URL{Scheme: "mem"}, "cozy.local")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
