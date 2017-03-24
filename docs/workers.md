@@ -7,6 +7,11 @@ describes their input arguments object. See the [jobs document](jobs.md) to
 know more about the API context in which you can see how to use these
 arguments.
 
+## log worker
+
+The `log` worker will just print in the log file the job sent to it. It can
+useful for debugging for example.
+
 ## sendmail worker
 
 The `sendmail` worker can be used to send mail from the stack. It implies that
