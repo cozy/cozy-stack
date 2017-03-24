@@ -55,7 +55,7 @@ func createTree(tree H, dirID string) (*vfs.DirDoc, error) {
 	var dirdoc *vfs.DirDoc
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
-			dirdoc, err = vfs.NewDirDoc(name[:len(name)-1], dirID, nil)
+			dirdoc, err = vfs.NewDirDoc(fs, name[:len(name)-1], dirID, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -204,7 +204,7 @@ func TestDiskUsage(t *testing.T) {
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := vfs.NewDirDoc("container", "", nil)
+	dir, _ := vfs.NewDirDoc(fs, "container", "", nil)
 	err := fs.CreateDir(dir)
 	assert.NoError(t, err)
 
@@ -584,7 +584,8 @@ func TestMain(m *testing.M) {
 	}
 
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
-	fs, err = vfsafero.New(db, &url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
+	index := vfs.NewCouchdbIndexer(db)
+	fs, err = vfsafero.New(index, &url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -607,7 +608,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = fs.Init()
+	err = fs.InitFs()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

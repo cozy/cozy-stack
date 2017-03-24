@@ -110,7 +110,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 
 	dirID := c.Param("dir-id")
 	name := c.QueryParam("Name")
-	doc, err = vfs.NewDirDoc(name, dirID, tags)
+	doc, err = vfs.NewDirDoc(fs, name, dirID, tags)
 	if err != nil {
 		return nil, err
 	}

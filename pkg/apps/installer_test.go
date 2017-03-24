@@ -495,6 +495,7 @@ func TestMain(m *testing.M) {
 	}
 
 	db = couchdb.SimpleDatabasePrefix("apps-test")
+	index := vfs.NewCouchdbIndexer(db)
 
 	err = couchdb.ResetDB(db, consts.Apps)
 	if err != nil {
@@ -508,7 +509,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	fs, err = vfsafero.New(db, &url.URL{Scheme: "mem"}, "cozy.local")
+	fs, err = vfsafero.New(index, &url.URL{Scheme: "mem"}, "cozy.local")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -536,7 +537,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = fs.Init()
+	err = fs.InitFs()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -163,12 +163,13 @@ func (i *Instance) VFS() vfs.VFS {
 
 func (i *Instance) makeVFS() error {
 	fsURL := config.FsURL()
+	index := vfs.NewCouchdbIndexer(i)
 	var err error
 	switch fsURL.Scheme {
 	case "file", "mem":
-		i.vfs, err = vfsafero.New(i, fsURL, i.Domain)
+		i.vfs, err = vfsafero.New(index, fsURL, i.Domain)
 	case "swift":
-		i.vfs, err = vfsswift.New(i, fsURL, i.Domain)
+		i.vfs, err = vfsswift.New(index, fsURL, i.Domain)
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
@@ -314,12 +315,15 @@ func Create(opts *Options) (*Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
 
-	if err := couchdb.CreateDB(couchdb.GlobalDB, consts.Instances); err != nil {
-		return nil, err
+	if err := couchdb.CreateDB(couchdb.GlobalDB, consts.Instances); !couchdb.IsFileExists(err) {
+		if err != nil {
+			return nil, err
+		}
+		if err := couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes); err != nil {
+			return nil, err
+		}
 	}
-	if err := couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes); err != nil {
-		return nil, err
-	}
+
 	if _, err := Get(i.Domain); err != ErrNotFound {
 		if err == nil {
 			err = ErrExists
@@ -350,7 +354,7 @@ func Create(opts *Options) (*Instance, error) {
 	if err := i.makeVFS(); err != nil {
 		return nil, err
 	}
-	if err := i.VFS().Init(); err != nil {
+	if err := i.VFS().InitFs(); err != nil {
 		return nil, err
 	}
 	if err := settings.CreateDefaultTheme(i); err != nil {

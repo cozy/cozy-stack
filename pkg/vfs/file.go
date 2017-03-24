@@ -44,6 +44,10 @@ type FileDoc struct {
 	Metadata Metadata `json:"metadata,omitempty"`
 
 	ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
+
+	// Cache of the fullpath of the file. Should not have to be invalidated since
+	// we use FileDoc as immutable data-structures.
+	fullpath string
 }
 
 // ID returns the file qualified identifier
@@ -62,26 +66,32 @@ func (f *FileDoc) SetID(id string) { f.DocID = id }
 func (f *FileDoc) SetRev(rev string) { f.DocRev = rev }
 
 // Path is used to generate the file path
-func (f *FileDoc) Path(fs VFS) (string, error) {
+func (f *FileDoc) Path(index Indexer) (string, error) {
 	var parentPath string
+	if f.fullpath != "" {
+		return f.fullpath, nil
+	}
 	if f.DirID == consts.RootDirID {
 		parentPath = "/"
+	} else if f.DirID == consts.TrashDirID {
+		parentPath = TrashDirName
 	} else {
-		parent, err := f.Parent(fs)
+		parent, err := f.Parent(index)
 		if err != nil {
 			return "", err
 		}
-		parentPath, err = parent.Path(fs)
+		parentPath, err = parent.Path(index)
 		if err != nil {
 			return "", err
 		}
 	}
-	return path.Join(parentPath, f.DocName), nil
+	f.fullpath = path.Join(parentPath, f.DocName)
+	return f.fullpath, nil
 }
 
 // Parent returns the parent directory document
-func (f *FileDoc) Parent(fs VFS) (*DirDoc, error) {
-	parent, err := fs.DirByID(f.DirID)
+func (f *FileDoc) Parent(index Indexer) (*DirDoc, error) {
+	parent, err := index.DirByID(f.DirID)
 	if os.IsNotExist(err) {
 		err = ErrParentDoesNotExist
 	}
@@ -241,7 +251,8 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 
 	newdoc.RestorePath = *patch.RestorePath
 	newdoc.UpdatedAt = *patch.UpdatedAt
-	if err = fs.UpdateFile(olddoc, newdoc); err != nil {
+
+	if err = fs.UpdateFileDoc(olddoc, newdoc); err != nil {
 		return nil, err
 	}
 	return newdoc, nil

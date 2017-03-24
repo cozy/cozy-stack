@@ -51,24 +51,13 @@ func (d *DirDoc) SetID(id string) { d.DocID = id }
 func (d *DirDoc) SetRev(rev string) { d.DocRev = rev }
 
 // Path is used to generate the file path
-func (d *DirDoc) Path(fs VFS) (string, error) {
-	if d.Fullpath == "" {
-		parent, err := d.Parent(fs)
-		if err != nil {
-			return "", err
-		}
-		parentPath, err := parent.Path(fs)
-		if err != nil {
-			return "", err
-		}
-		d.Fullpath = path.Join(parentPath, d.DocName)
-	}
+func (d *DirDoc) Path(index Indexer) (string, error) {
 	return d.Fullpath, nil
 }
 
 // Parent returns the parent directory document
-func (d *DirDoc) Parent(fs VFS) (*DirDoc, error) {
-	parent, err := fs.DirByID(d.DirID)
+func (d *DirDoc) Parent(index Indexer) (*DirDoc, error) {
+	parent, err := index.DirByID(d.DirID)
 	if os.IsNotExist(err) {
 		err = ErrParentDoesNotExist
 	}
@@ -104,7 +93,7 @@ func (d *DirDoc) IsEmpty(fs VFS) (bool, error) {
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
-func NewDirDoc(name, dirID string, tags []string) (*DirDoc, error) {
+func NewDirDoc(index Indexer, name, dirID string, tags []string) (*DirDoc, error) {
 	if err := checkFileName(name); err != nil {
 		return nil, err
 	}
@@ -113,20 +102,58 @@ func NewDirDoc(name, dirID string, tags []string) (*DirDoc, error) {
 		dirID = consts.RootDirID
 	}
 
-	tags = uniqueTags(tags)
+	var dirPath string
+	if dirID == consts.RootDirID {
+		dirPath = "/"
+	} else {
+		parent, err := index.DirByID(dirID)
+		if err != nil {
+			return nil, err
+		}
+		dirPath = parent.Fullpath
+	}
+
+	return NewDirDocWithPath(name, dirID, dirPath, tags)
+}
+
+// NewDirDocWithParent returns an instance of DirDoc from a parent document.
+// The given name is validated.
+func NewDirDocWithParent(name string, parent *DirDoc, tags []string) (*DirDoc, error) {
+	if err := checkFileName(name); err != nil {
+		return nil, err
+	}
 
 	createDate := time.Now()
-	doc := &DirDoc{
+	return &DirDoc{
+		Type:    consts.DirType,
+		DocName: name,
+		DirID:   parent.DocID,
+
+		CreatedAt: createDate,
+		UpdatedAt: createDate,
+		Tags:      uniqueTags(tags),
+		Fullpath:  path.Join(parent.Fullpath, name),
+	}, nil
+}
+
+// NewDirDocWithParent returns an instance of DirDoc its directory ID and path.
+// The given name is validated.
+func NewDirDocWithPath(name, dirID, dirPath string, tags []string) (*DirDoc, error) {
+	if err := checkFileName(name); err != nil {
+		return nil, err
+	}
+
+	createDate := time.Now()
+	return &DirDoc{
 		Type:    consts.DirType,
 		DocName: name,
 		DirID:   dirID,
 
 		CreatedAt: createDate,
 		UpdatedAt: createDate,
-		Tags:      tags,
-	}
-
-	return doc, nil
+		Tags:      uniqueTags(tags),
+		Fullpath:  path.Join(dirPath, name),
+	}, nil
 }
 
 // ModifyDirMetadata modify the metadata associated to a directory. It
@@ -151,7 +178,12 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 		return nil, err
 	}
 
-	newdoc, err := NewDirDoc(*patch.Name, *patch.DirID, *patch.Tags)
+	var newdoc *DirDoc
+	if *patch.DirID != olddoc.DirID {
+		newdoc, err = NewDirDoc(fs, *patch.Name, *patch.DirID, *patch.Tags)
+	} else {
+		newdoc, err = NewDirDocWithPath(*patch.Name, olddoc.DirID, path.Dir(olddoc.Fullpath), *patch.Tags)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +191,8 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	newdoc.RestorePath = *patch.RestorePath
 	newdoc.CreatedAt = cdate
 	newdoc.UpdatedAt = *patch.UpdatedAt
-	if err = fs.UpdateDir(olddoc, newdoc); err != nil {
+
+	if err = fs.UpdateDirDoc(olddoc, newdoc); err != nil {
 		return nil, err
 	}
 	return newdoc, nil

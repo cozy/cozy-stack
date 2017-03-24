@@ -6,13 +6,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/ncw/swift"
 )
@@ -20,7 +16,7 @@ import (
 var conn *swift.Connection
 
 type swiftVFS struct {
-	db     couchdb.Database
+	vfs.Indexer
 	c      *swift.Connection
 	domain string
 }
@@ -63,9 +59,9 @@ func InitConnection(fsURL *url.URL) error {
 	return nil
 }
 
-// New returns a vfs.VFS instance associated with the specified couchdb
-// database and the swift storage url.
-func New(db couchdb.Database, fsURL *url.URL, domain string) (vfs.VFS, error) {
+// New returns a vfs.VFS instance associated with the specified indexer and the
+// swift storage url.
+func New(index vfs.Indexer, fsURL *url.URL, domain string) (vfs.VFS, error) {
 	if conn == nil {
 		return nil, errors.New("vfsswift: global connection is not initialized")
 	}
@@ -73,9 +69,9 @@ func New(db couchdb.Database, fsURL *url.URL, domain string) (vfs.VFS, error) {
 		return nil, fmt.Errorf("vfsswift: specified domain is empty")
 	}
 	return &swiftVFS{
-		db:     db,
-		c:      conn,
-		domain: domain,
+		Indexer: index,
+		c:       conn,
+		domain:  domain,
 	}, nil
 }
 
@@ -86,29 +82,10 @@ func confOrEnv(val string) string {
 	return os.Getenv(strings.TrimSpace(val[1:]))
 }
 
-func (sfs *swiftVFS) Init() error {
-	err := couchdb.CreateNamedDocWithDB(sfs.db, &vfs.DirDoc{
-		DocName:  "",
-		Type:     consts.DirType,
-		DocID:    consts.RootDirID,
-		Fullpath: "/",
-		DirID:    "",
-	})
-	if err != nil {
+func (sfs *swiftVFS) InitFs() error {
+	if err := sfs.Indexer.InitIndex(); err != nil {
 		return err
 	}
-
-	err = couchdb.CreateNamedDocWithDB(sfs.db, &vfs.DirDoc{
-		DocName:  path.Base(vfs.TrashDirName),
-		Type:     consts.DirType,
-		DocID:    consts.TrashDirID,
-		Fullpath: vfs.TrashDirName,
-		DirID:    consts.RootDirID,
-	})
-	if err != nil && !couchdb.IsConflictError(err) {
-		return err
-	}
-
 	return sfs.c.ContainerCreate(sfs.domain, nil)
 }
 
@@ -123,148 +100,8 @@ func (sfs *swiftVFS) Delete() error {
 	})
 }
 
-func (sfs *swiftVFS) DiskUsage() (int64, error) {
-	var doc couchdb.ViewResponse
-	err := couchdb.ExecView(sfs.db, consts.DiskUsageView, &couchdb.ViewRequest{
-		Reduce: true,
-	}, &doc)
-	if err != nil {
-		return 0, err
-	}
-	if len(doc.Rows) == 0 {
-		return 0, nil
-	}
-	// Reduce of _count should give us a number value
-	f64, ok := doc.Rows[0].Value.(float64)
-	if !ok {
-		return 0, vfs.ErrWrongCouchdbState
-	}
-	return int64(f64), nil
-}
-
-func (sfs *swiftVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
-	doc := &vfs.DirDoc{}
-	err := couchdb.GetDoc(sfs.db, consts.Files, fileID, doc)
-	if couchdb.IsNotFoundError(err) {
-		err = os.ErrNotExist
-	}
-	if err != nil {
-		if fileID == consts.RootDirID {
-			panic("Root directory is not in database")
-		}
-		if fileID == consts.TrashDirID {
-			panic("Trash directory is not in database")
-		}
-		return nil, err
-	}
-	if doc.Type != consts.DirType {
-		return nil, os.ErrNotExist
-	}
-	return doc, err
-}
-
-func (sfs *swiftVFS) DirByPath(name string) (*vfs.DirDoc, error) {
-	if !path.IsAbs(name) {
-		return nil, vfs.ErrNonAbsolutePath
-	}
-	var docs []*vfs.DirDoc
-	sel := mango.Equal("path", path.Clean(name))
-	req := &couchdb.FindRequest{
-		UseIndex: "dir-by-path",
-		Selector: sel,
-		Limit:    1,
-	}
-	err := couchdb.FindDocs(sfs.db, consts.Files, req, &docs)
-	if err != nil {
-		return nil, err
-	}
-	if len(docs) == 0 {
-		if name == "/" {
-			panic("Root directory is not in database")
-		}
-		return nil, os.ErrNotExist
-	}
-	return docs[0], nil
-}
-
-func (sfs *swiftVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
-	doc := &vfs.FileDoc{}
-	err := couchdb.GetDoc(sfs.db, consts.Files, fileID, doc)
-	if couchdb.IsNotFoundError(err) {
-		return nil, os.ErrNotExist
-	}
-	if err != nil {
-		return nil, err
-	}
-	if doc.Type != consts.FileType {
-		return nil, os.ErrNotExist
-	}
-	return doc, nil
-}
-
-func (sfs *swiftVFS) FileByPath(name string) (*vfs.FileDoc, error) {
-	if !path.IsAbs(name) {
-		return nil, vfs.ErrNonAbsolutePath
-	}
-	parent, err := sfs.DirByPath(path.Dir(name))
-	if err != nil {
-		return nil, err
-	}
-	selector := mango.Map{
-		"dir_id": parent.DocID,
-		"name":   path.Base(name),
-		"type":   consts.FileType,
-	}
-	var docs []*vfs.FileDoc
-	req := &couchdb.FindRequest{
-		UseIndex: "dir-file-child",
-		Selector: selector,
-		Limit:    1,
-	}
-	err = couchdb.FindDocs(sfs.db, consts.Files, req, &docs)
-	if err != nil {
-		return nil, err
-	}
-	if len(docs) == 0 {
-		return nil, os.ErrNotExist
-	}
-	return docs[0], nil
-}
-
-func (sfs *swiftVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	dirOrFile := &vfs.DirOrFileDoc{}
-	err := couchdb.GetDoc(sfs.db, consts.Files, fileID, dirOrFile)
-	if err != nil {
-		return nil, nil, err
-	}
-	dirDoc, fileDoc := dirOrFile.Refine()
-	return dirDoc, fileDoc, nil
-}
-
-func (sfs *swiftVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	dirDoc, err := sfs.DirByPath(name)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, nil, err
-	}
-	if err == nil {
-		return dirDoc, nil, nil
-	}
-	fileDoc, err := sfs.FileByPath(name)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, nil, err
-	}
-	if err == nil {
-		return nil, fileDoc, nil
-	}
-	return nil, nil, err
-}
-
-func (sfs *swiftVFS) DirIterator(doc *vfs.DirDoc, opts *vfs.IteratorOptions) vfs.DirIterator {
-	return vfs.NewIterator(sfs.db, doc, opts)
-}
-
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
-	return couchdb.CreateDoc(sfs.db, doc)
+	return sfs.Indexer.CreateDirDoc(doc)
 }
 
 func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
@@ -272,7 +109,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		newdoc.SetID(olddoc.ID())
 		newdoc.SetRev(olddoc.Rev())
 		newdoc.CreatedAt = olddoc.CreatedAt
-	} else if err := couchdb.CreateDoc(sfs.db, newdoc); err != nil {
+	} else if err := sfs.Indexer.CreateFileDoc(newdoc); err != nil {
 		return nil, err
 	}
 
@@ -290,37 +127,11 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}
 	return &swiftFileCreation{
 		f:      fw,
-		db:     sfs.db,
+		index:  sfs.Indexer,
 		meta:   vfs.NewMetaExtractor(newdoc),
 		newdoc: newdoc,
 		olddoc: olddoc,
 	}, nil
-}
-
-func (sfs *swiftVFS) UpdateDir(olddoc, newdoc *vfs.DirDoc) error {
-	newdoc.SetID(olddoc.ID())
-	newdoc.SetRev(olddoc.Rev())
-	oldpath, err := olddoc.Path(sfs)
-	if err != nil {
-		return err
-	}
-	newpath, err := newdoc.Path(sfs)
-	if err != nil {
-		return err
-	}
-	if oldpath != newpath {
-		err = bulkUpdateDocsPath(sfs.db, oldpath, newpath)
-		if err != nil {
-			return err
-		}
-	}
-	return couchdb.UpdateDoc(sfs.db, newdoc)
-}
-
-func (sfs *swiftVFS) UpdateFile(olddoc, newdoc *vfs.FileDoc) error {
-	newdoc.SetID(olddoc.ID())
-	newdoc.SetRev(olddoc.Rev())
-	return couchdb.UpdateDoc(sfs.db, newdoc)
 }
 
 func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
@@ -347,7 +158,7 @@ func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	if err != nil {
 		return err
 	}
-	return couchdb.DeleteDoc(sfs.db, doc)
+	return sfs.Indexer.DeleteDirDoc(doc)
 }
 
 func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
@@ -355,7 +166,7 @@ func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
 	if err != nil {
 		return err
 	}
-	return couchdb.DeleteDoc(sfs.db, doc)
+	return sfs.Indexer.DeleteFileDoc(doc)
 }
 
 func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
@@ -372,8 +183,8 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 type swiftFileCreation struct {
 	f      *swift.ObjectCreateFile
 	w      int64
-	db     couchdb.Database
 	err    error
+	index  vfs.Indexer
 	meta   *vfs.MetaExtractor
 	newdoc *vfs.FileDoc
 	olddoc *vfs.FileDoc
@@ -407,7 +218,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		// part of an overwriting of an existing file (olddoc == nil), we delete
 		// the created document.
 		if err != nil && f.olddoc == nil {
-			couchdb.DeleteDoc(f.db, f.newdoc)
+			f.index.DeleteFileDoc(f.newdoc)
 		}
 	}()
 
@@ -422,7 +233,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		return f.err
 	}
 
-	newdoc, written := f.newdoc, f.w
+	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
 	if f.meta != nil {
 		(*f.meta).Close()
 		newdoc.Metadata = (*f.meta).Result()
@@ -436,7 +247,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
-	return couchdb.UpdateDoc(f.db, newdoc)
+	return f.index.UpdateFileDoc(olddoc, newdoc)
 }
 
 type swiftFileOpen struct {
@@ -457,41 +268,6 @@ func (f *swiftFileOpen) Write(p []byte) (int, error) {
 
 func (f *swiftFileOpen) Close() error {
 	return f.f.Close()
-}
-
-// @TODO remove this method and use couchdb bulk updates instead
-func bulkUpdateDocsPath(db couchdb.Database, oldpath, newpath string) error {
-	var children []*vfs.DirDoc
-	sel := mango.StartWith("path", oldpath+"/")
-	req := &couchdb.FindRequest{
-		UseIndex: "dir-by-path",
-		Selector: sel,
-	}
-	err := couchdb.FindDocs(db, consts.Files, req, &children)
-	if err != nil || len(children) == 0 {
-		return err
-	}
-
-	errc := make(chan error)
-
-	for _, child := range children {
-		go func(child *vfs.DirDoc) {
-			if !strings.HasPrefix(child.Fullpath, oldpath+"/") {
-				errc <- fmt.Errorf("Child has wrong base directory")
-			} else {
-				child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
-				errc <- couchdb.UpdateDoc(db, child)
-			}
-		}(child)
-	}
-
-	for range children {
-		if e := <-errc; e != nil {
-			err = e
-		}
-	}
-
-	return err
 }
 
 var (
