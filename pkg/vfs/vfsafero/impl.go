@@ -100,7 +100,7 @@ func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
 	}
 	err = afs.Indexer.CreateDirDoc(doc)
 	if err != nil {
-		afs.fs.Remove(pth)
+		afs.fs.Remove(pth) // #nosec
 	}
 	return err
 }
@@ -321,7 +321,10 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	f.w += int64(n)
 
 	if f.meta != nil {
-		(*f.meta).Write(p)
+		if _, err = (*f.meta).Write(p); err != nil {
+			(*f.meta).Abort(err)
+			f.meta = nil
+		}
 	}
 
 	_, err = f.hash.Write(p)
@@ -332,13 +335,13 @@ func (f *aferoFileCreation) Close() (err error) {
 	defer func() {
 		if err == nil && f.olddoc != nil {
 			// remove the backup if no error occured
-			f.afs.fs.Remove(f.bakpath)
+			f.afs.fs.Remove(f.bakpath) // #nosec
 		} else if err != nil && f.olddoc != nil {
 			// put back backup file revision in case on error occurred
-			f.afs.fs.Rename(f.bakpath, f.newpath)
+			f.afs.fs.Rename(f.bakpath, f.newpath) // #nosec
 		} else if err != nil {
 			// remove the new file if an error occured
-			f.afs.fs.Remove(f.newpath)
+			f.afs.fs.Remove(f.newpath) // #nosec
 		}
 	}()
 
@@ -356,7 +359,7 @@ func (f *aferoFileCreation) Close() (err error) {
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
 
 	if f.meta != nil {
-		(*f.meta).Close()
+		(*f.meta).Close() // #nosec
 		newdoc.Metadata = (*f.meta).Result()
 	}
 

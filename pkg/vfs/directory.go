@@ -136,7 +136,7 @@ func NewDirDocWithParent(name string, parent *DirDoc, tags []string) (*DirDoc, e
 	}, nil
 }
 
-// NewDirDocWithParent returns an instance of DirDoc its directory ID and path.
+// NewDirDocWithPath returns an instance of DirDoc its directory ID and path.
 // The given name is validated.
 func NewDirDocWithPath(name, dirID, dirPath string, tags []string) (*DirDoc, error) {
 	if err := checkFileName(name); err != nil {

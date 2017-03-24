@@ -200,7 +200,10 @@ func (f *swiftFileCreation) Seek(offset int64, whence int) (int64, error) {
 
 func (f *swiftFileCreation) Write(p []byte) (int, error) {
 	if f.meta != nil {
-		(*f.meta).Write(p)
+		if _, err := (*f.meta).Write(p); err != nil {
+			(*f.meta).Abort(err)
+			f.meta = nil
+		}
 	}
 	n, err := f.f.Write(p)
 	if err != nil {
@@ -218,7 +221,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		// part of an overwriting of an existing file (olddoc == nil), we delete
 		// the created document.
 		if err != nil && f.olddoc == nil {
-			f.index.DeleteFileDoc(f.newdoc)
+			f.index.DeleteFileDoc(f.newdoc) // #nosec
 		}
 	}()
 
@@ -235,7 +238,7 @@ func (f *swiftFileCreation) Close() (err error) {
 
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
 	if f.meta != nil {
-		(*f.meta).Close()
+		(*f.meta).Close() // #nosec
 		newdoc.Metadata = (*f.meta).Result()
 	}
 
