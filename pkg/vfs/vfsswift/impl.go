@@ -69,6 +69,9 @@ func New(db couchdb.Database, fsURL *url.URL, domain string) (vfs.VFS, error) {
 	if conn == nil {
 		return nil, errors.New("vfsswift: global connection is not initialized")
 	}
+	if domain == "" {
+		return nil, fmt.Errorf("vfsswift: specified domain is empty")
+	}
 	return &swiftVFS{
 		db:     db,
 		c:      conn,
