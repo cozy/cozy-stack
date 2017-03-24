@@ -34,6 +34,7 @@ default_locale | the locale used for the name and description fields
 locales        | translations of the name and description fields in other locales
 version        | the current version number
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
+intents        | a list of intents provided by this app (see [here](intents.md) for more details)
 permissions    | a map of permissions needed by the app (see [here](permissions.md) for more details)
 routes         | a map of routes for the app (see below for more details)
 
@@ -79,24 +80,6 @@ route, this default one:
     "folder": "/",
     "index": "index.html",
     "public": false
-  }
-}
-```
-
-**TODO** later, it will be possible to associate an intent /
-[activity](https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/Firefox_OS_apps/Building_apps_for_Firefox_OS/Manifest#activities)
-to a route. Probably something like:
-
-```json
-{
-  "/picker": {
-    "folder": "/",
-    "index": "picker.html",
-    "public": false,
-    "intent": {
-      "action": "pick",
-      "type": "io.cozy.contacts"
-    }
   }
 }
 ```
@@ -156,6 +139,13 @@ Content-Type: application/vnd.api+json
       },
       "version": "1.2.3",
       "license": "AGPL-3.0",
+      "intents": [
+        {
+          "action": "CREATE",
+          "type": "io.cozy.emails",
+          "href": "/#compose?intent={{.Intent}}"
+        }
+      ],
       "permissions": {
         "mails": {
           "description": "Required for reading and writing emails",

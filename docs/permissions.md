@@ -15,8 +15,8 @@ When the user installs a new client-side app, she is asked to accept an
 initial set of permissions for this app. This set of permissions is described
 in the manifest of the app.
 
-Later, the application can gain more permissions via the intents and optional
-permissions. See below for more details.
+Later, the application can gain more permissions via the [intents](intents.md)
+and optional permissions. See below for more details.
 
 When the authentified user access a client-side app, the app receives a token
 from the stack that can be used in later requests to the stack as a proof of
@@ -339,7 +339,7 @@ Content-Type: application/vnd.api+json
 
 Add permissions in this permissions set. It can be used in inter-apps context
 as a way to give another app the permission for some data. For example, the
-contact application can send a `pick-a-photo` intent to the photos application
+contact application can send a "_pick a photo_" intent to the photos application
 with its permission id, and the photos app can then let the user choose a
 photo and give the contacts application the permissions to use it.
 

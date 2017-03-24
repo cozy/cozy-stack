@@ -24,16 +24,17 @@ Table of contents
 ## Services
 
 - `/auth` - [Authentication & OAuth](auth.md)
-  - [Permissions](permissions.md)
 - `/apps` - [Applications Management](apps.md)
 - `/data` - [Data System](data-system.md)
   - [Mango](mango.md)
   - [Replication](replication.md)
 - `/files` - [Virtual File System](files.md)
   - [References of documents in VFS](references-docs-in-vfs.md)
+- `/intents` - [Intents](intents.md)
 - `/jobs` - [Jobs](jobs.md)
   - [Konnectors](konnectors.md)
   - [Workers](workers.md)
+- `/permissions` - [Permissions](permissions.md)
 - `/realtime` - [Realtime](realtime.md)
 - `/settings` - [Settings](settings.md)
 - `/sharings` - [Sharing](sharing.md)
