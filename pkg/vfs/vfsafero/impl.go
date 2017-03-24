@@ -316,9 +316,11 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	hash := md5.New() // #nosec
 	extractor := vfs.NewMetaExtractor(newdoc)
 
-	fc := &aferoFileCreation{
+	return &aferoFileCreation{
 		w: 0,
+		f: f,
 
+		afs:     afs,
 		newdoc:  newdoc,
 		olddoc:  olddoc,
 		bakpath: bakpath,
@@ -326,9 +328,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 		hash: hash,
 		meta: extractor,
-	}
-
-	return &aferoFile{afs: afs, f: f, fc: fc}, nil
+	}, nil
 }
 
 func (afs *aferoVFS) UpdateDir(olddoc, newdoc *vfs.DirDoc) error {
@@ -439,15 +439,28 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &aferoFile{afs: afs, f: f, fc: nil}, nil
+	return &aferoFileOpen{f}, nil
 }
 
-// aferoFile represents a file handle. It can be used either for writing OR
-// reading, but not both at the same time.
-type aferoFile struct {
-	afs *aferoVFS          // afero file system
-	f   afero.File         // file handle
-	fc  *aferoFileCreation // file creation handle
+// aferoFileOpen represents a file handle opened for reading.
+type aferoFileOpen struct {
+	f afero.File
+}
+
+func (f *aferoFileOpen) Read(p []byte) (int, error) {
+	return f.f.Read(p)
+}
+
+func (f *aferoFileOpen) Seek(offset int64, whence int) (int64, error) {
+	return f.f.Seek(offset, whence)
+}
+
+func (f *aferoFileOpen) Write(p []byte) (int, error) {
+	return 0, os.ErrInvalid
+}
+
+func (f *aferoFileOpen) Close() error {
+	return f.f.Close()
 }
 
 // aferoFileCreation represents a file open for writing. It is used to
@@ -455,7 +468,9 @@ type aferoFile struct {
 //
 // aferoFileCreation implements io.WriteCloser.
 type aferoFileCreation struct {
+	f       afero.File         // file handle
 	w       int64              // total size written
+	afs     *aferoVFS          // parent vfs
 	newdoc  *vfs.FileDoc       // new document
 	olddoc  *vfs.FileDoc       // old document if any
 	newpath string             // file new path
@@ -465,81 +480,66 @@ type aferoFileCreation struct {
 	err     error              // write error
 }
 
-func (f *aferoFile) Read(p []byte) (int, error) {
-	if f.fc != nil {
-		return 0, os.ErrInvalid
-	}
-	return f.f.Read(p)
+func (f *aferoFileCreation) Read(p []byte) (int, error) {
+	return 0, os.ErrInvalid
 }
 
-func (f *aferoFile) Seek(offset int64, whence int) (int64, error) {
-	if f.fc != nil {
-		return 0, os.ErrInvalid
-	}
-	return f.f.Seek(offset, whence)
+func (f *aferoFileCreation) Seek(offset int64, whence int) (int64, error) {
+	return 0, os.ErrInvalid
 }
 
-func (f *aferoFile) Write(p []byte) (int, error) {
-	if f.fc == nil {
-		return 0, os.ErrInvalid
-	}
-
+func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	n, err := f.f.Write(p)
 	if err != nil {
-		f.fc.err = err
+		f.err = err
 		return n, err
 	}
 
-	f.fc.w += int64(n)
+	f.w += int64(n)
 
-	if f.fc.meta != nil {
-		(*f.fc.meta).Write(p)
+	if f.meta != nil {
+		(*f.meta).Write(p)
 	}
 
-	_, err = f.fc.hash.Write(p)
+	_, err = f.hash.Write(p)
 	return n, err
 }
 
-func (f *aferoFile) Close() error {
-	if f.fc == nil {
-		return f.f.Close()
-	}
-
+func (f *aferoFileCreation) Close() error {
 	var err error
-	fc := f.fc
 
 	defer func() {
-		werr := fc.err
-		if fc.olddoc != nil {
+		werr := f.err
+		if f.olddoc != nil {
 			// put back backup file revision in case on error occurred while
 			// modifying file content or remove the backup file otherwise
 			if err != nil || werr != nil {
-				f.afs.fs.Rename(fc.bakpath, fc.newpath)
+				f.afs.fs.Rename(f.bakpath, f.newpath)
 			} else {
-				f.afs.fs.Remove(fc.bakpath)
+				f.afs.fs.Remove(f.bakpath)
 			}
 		} else if err != nil || werr != nil {
 			// remove file if an error occurred while file creation
-			f.afs.fs.Remove(fc.newpath)
+			f.afs.fs.Remove(f.newpath)
 		}
 	}()
 
 	err = f.f.Close()
 	if err != nil {
-		if f.fc.meta != nil {
-			(*f.fc.meta).Abort(err)
+		if f.meta != nil {
+			(*f.meta).Abort(err)
 		}
 		return err
 	}
 
-	newdoc, olddoc, written := fc.newdoc, fc.olddoc, fc.w
+	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
 
-	if f.fc.meta != nil {
-		(*f.fc.meta).Close()
-		newdoc.Metadata = (*f.fc.meta).Result()
+	if f.meta != nil {
+		(*f.meta).Close()
+		newdoc.Metadata = (*f.meta).Result()
 	}
 
-	md5sum := fc.hash.Sum(nil)
+	md5sum := f.hash.Sum(nil)
 	if newdoc.MD5Sum == nil {
 		newdoc.MD5Sum = md5sum
 	}
@@ -652,5 +652,6 @@ func bulkUpdateDocsPath(db couchdb.Database, oldpath, newpath string) error {
 
 var (
 	_ vfs.VFS  = &aferoVFS{}
-	_ vfs.File = &aferoFile{}
+	_ vfs.File = &aferoFileOpen{}
+	_ vfs.File = &aferoFileCreation{}
 )
