@@ -293,6 +293,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		db:     sfs.db,
 		meta:   vfs.NewMetaExtractor(newdoc),
 		newdoc: newdoc,
+		olddoc: olddoc,
 	}, nil
 }
 
@@ -372,8 +373,10 @@ type swiftFileCreation struct {
 	f      *swift.ObjectCreateFile
 	w      int64
 	db     couchdb.Database
+	err    error
 	meta   *vfs.MetaExtractor
 	newdoc *vfs.FileDoc
+	olddoc *vfs.FileDoc
 }
 
 func (f *swiftFileCreation) Read(p []byte) (int, error) {
@@ -390,18 +393,33 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 	}
 	n, err := f.f.Write(p)
 	if err != nil {
+		f.err = err
 		return n, err
 	}
 	f.w += int64(n)
 	return n, nil
 }
 
-func (f *swiftFileCreation) Close() error {
-	if err := f.f.Close(); err != nil {
+func (f *swiftFileCreation) Close() (err error) {
+	defer func() {
+		// if an error has occured while writing to the file (meaning that the file
+		// is not fully committed on the server), and the file creation was not
+		// part of an overwriting of an existing file (olddoc == nil), we delete
+		// the created document.
+		if err != nil && f.olddoc == nil {
+			couchdb.DeleteDoc(f.db, f.newdoc)
+		}
+	}()
+
+	if err = f.f.Close(); err != nil {
 		if f.meta != nil {
 			(*f.meta).Abort(err)
 		}
 		return err
+	}
+
+	if f.err != nil {
+		return f.err
 	}
 
 	newdoc, written := f.newdoc, f.w

@@ -505,31 +505,29 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (f *aferoFileCreation) Close() error {
-	var err error
-
+func (f *aferoFileCreation) Close() (err error) {
 	defer func() {
-		werr := f.err
-		if f.olddoc != nil {
-			// put back backup file revision in case on error occurred while
-			// modifying file content or remove the backup file otherwise
-			if err != nil || werr != nil {
-				f.afs.fs.Rename(f.bakpath, f.newpath)
-			} else {
-				f.afs.fs.Remove(f.bakpath)
-			}
-		} else if err != nil || werr != nil {
-			// remove file if an error occurred while file creation
+		if err == nil && f.olddoc != nil {
+			// remove the backup if no error occured
+			f.afs.fs.Remove(f.bakpath)
+		} else if err != nil && f.olddoc != nil {
+			// put back backup file revision in case on error occurred
+			f.afs.fs.Rename(f.bakpath, f.newpath)
+		} else if err != nil {
+			// remove the new file if an error occured
 			f.afs.fs.Remove(f.newpath)
 		}
 	}()
 
-	err = f.f.Close()
-	if err != nil {
+	if err = f.f.Close(); err != nil {
 		if f.meta != nil {
 			(*f.meta).Abort(err)
 		}
 		return err
+	}
+
+	if f.err != nil {
+		return f.err
 	}
 
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
