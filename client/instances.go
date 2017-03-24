@@ -31,6 +31,7 @@ type InstanceOptions struct {
 	Locale     string
 	Timezone   string
 	Email      string
+	PublicName string
 	Apps       []string
 	Dev        bool
 	Passphrase string
@@ -74,6 +75,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 			"Locale":     {opts.Locale},
 			"Timezone":   {opts.Timezone},
 			"Email":      {opts.Email},
+			"PublicName": {opts.PublicName},
 			"Apps":       {strings.Join(opts.Apps, ",")},
 			"Dev":        {dev},
 			"Passphrase": {opts.Passphrase},

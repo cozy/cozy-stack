@@ -23,12 +23,13 @@ $ cozy-stack instances add --dev --passphrase cozy --apps files,photos,settings 
 ### Options
 
 ```
-      --apps stringSlice    Apps to be preinstalled
-      --dev                 To create a development instance
-      --email string        The email of the owner
-      --locale string       Locale of the new cozy instance (default "en")
-      --passphrase string   Register the instance with this passphrase (useful for tests)
-      --tz string           The timezone for the user
+      --apps stringSlice     Apps to be preinstalled
+      --dev                  To create a development instance
+      --email string         The email of the owner
+      --locale string        Locale of the new cozy instance (default "en")
+      --passphrase string    Register the instance with this passphrase (useful for tests)
+      --public-name string   The public name of the owner
+      --tz string            The timezone for the user
 ```
 
 ### Options inherited from parent commands

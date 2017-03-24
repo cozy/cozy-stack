@@ -14,12 +14,13 @@ import (
 
 func createHandler(c echo.Context) error {
 	in, err := instance.Create(&instance.Options{
-		Domain:   c.QueryParam("Domain"),
-		Locale:   c.QueryParam("Locale"),
-		Timezone: c.QueryParam("Timezone"),
-		Email:    c.QueryParam("Email"),
-		Apps:     utils.SplitTrimString(c.QueryParam("Apps"), ","),
-		Dev:      (c.QueryParam("Dev") == "true"),
+		Domain:     c.QueryParam("Domain"),
+		Locale:     c.QueryParam("Locale"),
+		Timezone:   c.QueryParam("Timezone"),
+		Email:      c.QueryParam("Email"),
+		PublicName: c.QueryParam("PublicName"),
+		Apps:       utils.SplitTrimString(c.QueryParam("Apps"), ","),
+		Dev:        (c.QueryParam("Dev") == "true"),
 	})
 	if err != nil {
 		return wrapError(err)
