@@ -161,8 +161,6 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 //
 // @override Indexer.UpdateFileDoc
 func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
-	newdoc.SetID(olddoc.ID())
-	newdoc.SetRev(olddoc.Rev())
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
 		oldpath, err := olddoc.Path(afs)
 		if err != nil {
@@ -196,8 +194,6 @@ func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 //
 // @override Indexer.UpdateDirDoc
 func (afs *aferoVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
-	newdoc.SetID(olddoc.ID())
-	newdoc.SetRev(olddoc.Rev())
 	if newdoc.Fullpath != olddoc.Fullpath {
 		if err := safeRenameDir(afs, olddoc.Fullpath, newdoc.Fullpath); err != nil {
 			return err

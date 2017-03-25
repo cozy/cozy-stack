@@ -90,7 +90,7 @@ func (sfs *swiftVFS) InitFs() error {
 }
 
 func (sfs *swiftVFS) Delete() error {
-	return sfs.c.ObjectsWalk(sfs.domain, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
+	err := sfs.c.ObjectsWalk(sfs.domain, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		objNames, err := sfs.c.ObjectNames(sfs.domain, opts)
 		if err != nil {
 			return nil, err
@@ -98,9 +98,34 @@ func (sfs *swiftVFS) Delete() error {
 		_, err = sfs.c.BulkDelete(sfs.domain, objNames)
 		return objNames, err
 	})
+	if err != nil {
+		return err
+	}
+	return sfs.c.ContainerDelete(sfs.domain)
 }
 
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
+	objName := doc.DirID + "/" + doc.DocName
+	_, _, err := sfs.c.Object(sfs.domain, objName)
+	if err != swift.ObjectNotFound {
+		if err != nil {
+			return err
+		}
+		return os.ErrExist
+	}
+	f, err := sfs.c.ObjectCreate(sfs.domain,
+		objName,
+		false,
+		"",
+		"directory",
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
 	return sfs.Indexer.CreateDirDoc(doc)
 }
 
@@ -109,14 +134,19 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		newdoc.SetID(olddoc.ID())
 		newdoc.SetRev(olddoc.Rev())
 		newdoc.CreatedAt = olddoc.CreatedAt
-	} else if err := sfs.Indexer.CreateFileDoc(newdoc); err != nil {
-		return nil, err
 	}
-
+	objName := newdoc.DirID + "/" + newdoc.DocName
+	_, _, err := sfs.c.Object(sfs.domain, objName)
+	if err != swift.ObjectNotFound {
+		if err != nil {
+			return nil, err
+		}
+		return nil, os.ErrExist
+	}
 	hash := hex.EncodeToString(newdoc.MD5Sum)
-	fw, err := sfs.c.ObjectCreate(
+	f, err := sfs.c.ObjectCreate(
 		sfs.domain,
-		newdoc.ID(),
+		objName,
 		hash != "",
 		hash,
 		newdoc.Mime,
@@ -126,7 +156,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &swiftFileCreation{
-		f:      fw,
+		f:      f,
 		index:  sfs.Indexer,
 		meta:   vfs.NewMetaExtractor(newdoc),
 		newdoc: newdoc,
@@ -158,6 +188,9 @@ func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 	if err != nil {
 		return err
 	}
+	if err := sfs.c.ObjectDelete(sfs.domain, doc.DirID+"/"+doc.DocName); err != nil {
+		return err
+	}
 	return sfs.Indexer.DeleteDirDoc(doc)
 }
 
@@ -170,7 +203,7 @@ func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
 }
 
 func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
-	f, _, err := sfs.c.ObjectOpen(sfs.domain, doc.ID(), false, nil)
+	f, _, err := sfs.c.ObjectOpen(sfs.domain, doc.DirID+"/"+doc.DocName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
@@ -178,6 +211,40 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &swiftFileOpen{f}, nil
+}
+
+// UpdateFileDoc overrides the indexer's one since the swift fs indexes files
+// using their DirID + Name value to preserve atomicity of the hierarchy.
+//
+// @override Indexer.UpdateFileDoc
+func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
+	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
+		err := sfs.c.ObjectMove(
+			sfs.domain, olddoc.DirID+"/"+olddoc.DocName,
+			sfs.domain, newdoc.DirID+"/"+newdoc.DocName,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return sfs.Indexer.UpdateFileDoc(olddoc, newdoc)
+}
+
+// UpdateDirDoc overrides the indexer's one since the swift fs indexes files
+// using their DirID + Name value to preserve atomicity of the hierarchy.
+//
+// @override Indexer.UpdateDirDoc
+func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
+	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
+		err := sfs.c.ObjectMove(
+			sfs.domain, olddoc.DirID+"/"+olddoc.DocName,
+			sfs.domain, newdoc.DirID+"/"+newdoc.DocName,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return sfs.Indexer.UpdateDirDoc(olddoc, newdoc)
 }
 
 type swiftFileCreation struct {
@@ -215,16 +282,6 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 }
 
 func (f *swiftFileCreation) Close() (err error) {
-	defer func() {
-		// if an error has occured while writing to the file (meaning that the file
-		// is not fully committed on the server), and the file creation was not
-		// part of an overwriting of an existing file (olddoc == nil), we delete
-		// the created document.
-		if err != nil && f.olddoc == nil {
-			f.index.DeleteFileDoc(f.newdoc) // #nosec
-		}
-	}()
-
 	if err = f.f.Close(); err != nil {
 		if f.meta != nil {
 			(*f.meta).Abort(err)
@@ -250,6 +307,9 @@ func (f *swiftFileCreation) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
+	if olddoc == nil {
+		return f.index.CreateFileDoc(newdoc)
+	}
 	return f.index.UpdateFileDoc(olddoc, newdoc)
 }
 
