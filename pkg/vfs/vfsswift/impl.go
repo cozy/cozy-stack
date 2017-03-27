@@ -26,17 +26,17 @@ type swiftVFS struct {
 // OpenStack Swift server.
 //
 // This function is not thread-safe.
-func InitConnection(fsURL *url.URL) error {
-	c, err := config.NewSwiftConnection(fsURL)
+func InitConnection(fsURL *url.URL) (err error) {
+	conn, err = config.NewSwiftConnection(fsURL)
 	if err != nil {
 		return err
 	}
+	log.Debugf("[vfsswift] Starting authentication with server %s", conn.AuthUrl)
 	if err = conn.Authenticate(); err != nil {
 		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
 			conn.AuthUrl)
 		return err
 	}
-	conn = c
 	return nil
 }
 

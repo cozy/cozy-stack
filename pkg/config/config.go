@@ -1,12 +1,15 @@
 package config
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/template"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -119,6 +122,69 @@ func IsDevRelease() bool {
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
+}
+
+// Setup Viper to read the environment and the optional config file
+func Setup(cfgFile string) (err error) {
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.SetEnvPrefix("cozy")
+	viper.AutomaticEnv()
+
+	if cfgFile == "" {
+		for _, ext := range viper.SupportedExts {
+			var file string
+			file, err = FindConfigFile(Filename + "." + ext)
+			if file != "" && err == nil {
+				cfgFile = file
+				break
+			}
+		}
+	}
+
+	if cfgFile == "" {
+		return UseViper(viper.GetViper())
+	}
+
+	tmpl := template.New(filepath.Base(cfgFile))
+	tmpl = tmpl.Option("missingkey=zero")
+	tmpl, err = tmpl.ParseFiles(cfgFile)
+	if err != nil {
+		return fmt.Errorf("Unable to parse configuration file template %s: %s", cfgFile, err)
+	}
+
+	dest := new(bytes.Buffer)
+	ctxt := &struct{ Env map[string]string }{Env: envMap()}
+	err = tmpl.ExecuteTemplate(dest, filepath.Base(cfgFile), ctxt)
+	if err != nil {
+		return fmt.Errorf("Template error for config file %s: %s", cfgFile, err)
+	}
+	fmt.Println(dest.String())
+
+	if err := viper.ReadConfig(dest); err != nil {
+		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
+			log.Errorf("Failed to read cozy-stack configurations from %s", viper.ConfigFileUsed())
+			return err
+		}
+
+		if cfgFile != "" {
+			return fmt.Errorf("Could not locate config file: %s", cfgFile)
+		}
+	}
+
+	if viper.ConfigFileUsed() != "" {
+		log.Debugf("Using config file: %s", viper.ConfigFileUsed())
+	}
+
+	return UseViper(viper.GetViper())
+}
+
+func envMap() map[string]string {
+	env := make(map[string]string)
+	for _, i := range os.Environ() {
+		sep := strings.Index(i, "=")
+		env[i[0:sep]] = i[sep+1:]
+	}
+	return env
 }
 
 // UseViper sets the configured instance of Config
