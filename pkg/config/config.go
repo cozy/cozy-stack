@@ -149,7 +149,7 @@ func Setup(cfgFile string) (err error) {
 	tmpl = tmpl.Option("missingkey=zero")
 	tmpl, err = tmpl.ParseFiles(cfgFile)
 	if err != nil {
-		return fmt.Errorf("Unable to parse configuration file template %s: %s", cfgFile, err)
+		return fmt.Errorf("Unable to open and parse configuration file template %s: %s", cfgFile, err)
 	}
 
 	dest := new(bytes.Buffer)
@@ -158,16 +158,12 @@ func Setup(cfgFile string) (err error) {
 	if err != nil {
 		return fmt.Errorf("Template error for config file %s: %s", cfgFile, err)
 	}
-	fmt.Println(dest.String())
 
 	if err := viper.ReadConfig(dest); err != nil {
 		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
 			log.Errorf("Failed to read cozy-stack configurations from %s", viper.ConfigFileUsed())
+			log.Errorf(dest.String())
 			return err
-		}
-
-		if cfgFile != "" {
-			return fmt.Errorf("Could not locate config file: %s", cfgFile)
 		}
 	}
 
