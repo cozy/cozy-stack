@@ -217,10 +217,8 @@ func sendDoc(docType, id string, doc *couchdb.JSONDoc, recStatus *RecipientStatu
 		return err
 	}
 
-	client := new(http.Client)
 	_, err = request.Req(&request.Options{
 		Domain: domain,
-		Client: client,
 		Method: "PUT",
 		Path:   path,
 		Headers: request.Headers{
