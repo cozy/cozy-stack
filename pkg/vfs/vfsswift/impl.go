@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/ncw/swift"
 )
@@ -27,47 +27,16 @@ type swiftVFS struct {
 //
 // This function is not thread-safe.
 func InitConnection(fsURL *url.URL) error {
-	var err error
-	q := fsURL.Query()
-
-	var authURL *url.URL
-	auth := confOrEnv(q.Get("AuthURL"))
-	if auth == "" {
-		authURL = &url.URL{
-			Scheme: "http",
-			Host:   fsURL.Host,
-			Path:   "/identity/v3",
-		}
-	} else {
-		authURL, err = url.Parse(auth)
-		if err != nil {
-			return fmt.Errorf("vfsswift: could not parse AuthURL %s", err)
-		}
-	}
-
-	var username, password string
-	if q.Get("UserName") != "" {
-		username = confOrEnv(q.Get("UserName"))
-		password = confOrEnv(q.Get("Password"))
-	} else {
-		password = confOrEnv(q.Get("Token"))
-	}
-
-	conn = &swift.Connection{
-		UserName:       username,
-		ApiKey:         password,
-		AuthUrl:        authURL.String(),
-		Domain:         confOrEnv(q.Get("UserDomainName")),
-		Tenant:         confOrEnv(q.Get("ProjectName")),
-		TenantId:       confOrEnv(q.Get("ProjectID")),
-		TenantDomain:   confOrEnv(q.Get("ProjectDomain")),
-		TenantDomainId: confOrEnv(q.Get("ProjectDomainID")),
-	}
-	if err := conn.Authenticate(); err != nil {
-		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
-			authURL.String())
+	c, err := config.NewSwiftConnection(fsURL)
+	if err != nil {
 		return err
 	}
+	if err = conn.Authenticate(); err != nil {
+		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
+			conn.AuthUrl)
+		return err
+	}
+	conn = c
 	return nil
 }
 
@@ -85,13 +54,6 @@ func New(index vfs.Indexer, domain string) (vfs.VFS, error) {
 		c:       conn,
 		domain:  domain,
 	}, nil
-}
-
-func confOrEnv(val string) string {
-	if val == "" || val[0] != '$' {
-		return val
-	}
-	return os.Getenv(strings.TrimSpace(val[1:]))
 }
 
 func (sfs *swiftVFS) InitFs() error {
