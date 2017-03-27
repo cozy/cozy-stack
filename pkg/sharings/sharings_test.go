@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	webAuth "github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
@@ -39,6 +40,7 @@ var recipientIn = &instance.Instance{
 }
 var ts *httptest.Server
 var recipientURL string
+var testDocType = "io.cozy.tests"
 
 func createServer() *httptest.Server {
 	createSettings(recipientIn)
@@ -46,6 +48,7 @@ func createServer() *httptest.Server {
 	handler.HTTPErrorHandler = errors.ErrorHandler
 	handler.Use(injectInstance(recipientIn))
 	webAuth.Routes(handler.Group("/auth"))
+	data.Routes(handler.Group("/data"))
 	ts = httptest.NewServer(handler)
 	return ts
 }
@@ -75,7 +78,7 @@ func createSettings(instance *instance.Instance) {
 func createRecipient(t *testing.T) (*Recipient, error) {
 	recipient := &Recipient{
 		Email: "test.fr",
-		URL:   recipientURL,
+		URL:   "http://" + recipientURL,
 	}
 	err := CreateRecipient(in, recipient)
 	assert.NoError(t, err)
@@ -84,15 +87,37 @@ func createRecipient(t *testing.T) (*Recipient, error) {
 	return recipient, err
 }
 
-func createSharing(t *testing.T, recipient *Recipient) (*Sharing, error) {
+func createTestDoc(t *testing.T) (*couchdb.JSONDoc, error) {
+	doc := &couchdb.JSONDoc{
+		Type: testDocType,
+		M:    make(map[string]interface{}),
+	}
+	doc.M["test"] = "hello there"
+	err := couchdb.CreateDoc(in, doc)
+	assert.NoError(t, err)
+	return doc, err
+}
+
+func createSharing(t *testing.T, recipient *Recipient, doc *couchdb.JSONDoc) (*Sharing, error) {
 	recStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{
 			ID:   recipient.RID,
 			Type: consts.Recipients,
 		},
 	}
+	var set permissions.Set
+	if doc != nil {
+		rule := permissions.Rule{
+			Type:   "io.cozy.tests",
+			Verbs:  permissions.Verbs(permissions.POST, permissions.PUT),
+			Values: []string{doc.ID()},
+		}
+		set = permissions.Set{rule}
+	}
+
 	sharing := &Sharing{
 		SharingType:      consts.OneShotSharing,
+		Permissions:      set,
 		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
 	err := CheckSharingCreation(in, sharing)
@@ -294,7 +319,7 @@ func TestSharingAcceptedBadCode(t *testing.T) {
 	assert.NotNil(t, recipient)
 	assert.NotNil(t, recipient.Client.ClientID)
 
-	sharing, err := createSharing(t, recipient)
+	sharing, err := createSharing(t, recipient, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
 
@@ -308,11 +333,20 @@ func TestSharingAcceptedSuccess(t *testing.T) {
 	assert.NotNil(t, recipient)
 	assert.NotNil(t, recipient.Client.ClientID)
 	clientID := recipient.Client.ClientID
-	sharing, err := createSharing(t, recipient)
+
+	testDoc, err := createTestDoc(t)
+	assert.NoError(t, err)
+	assert.NotNil(t, testDoc)
+
+	sharing, err := createSharing(t, recipient, testDoc)
 	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
 
-	access, err := generateAccessCode(t, clientID, "")
+	set := sharing.Permissions
+	scope, err := set.MarshalScopeString()
+	assert.NoError(t, err)
+
+	access, err := generateAccessCode(t, clientID, scope)
 	assert.NoError(t, err)
 
 	domain, err := SharingAccepted(in, sharing.SharingID, clientID, access.Code)
@@ -640,12 +674,22 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	err = couchdb.ResetDB(in, testDocType)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	err = couchdb.ResetDB(recipientIn, consts.Settings)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	err = couchdb.ResetDB(recipientIn, consts.Sharings)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = couchdb.ResetDB(recipientIn, testDocType)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
