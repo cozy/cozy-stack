@@ -223,8 +223,8 @@ func setupRecover(router *echo.Echo) {
 	if !config.IsDevRelease() {
 		recoverMiddleware := middleware.RecoverWithConfig(middleware.RecoverConfig{
 			StackSize:         1 << 10, // 1 KB
-			DisableStackAll:   !config.IsDevRelease(),
-			DisablePrintStack: !config.IsDevRelease(),
+			DisableStackAll:   true,
+			DisablePrintStack: true,
 		})
 		router.Use(recoverMiddleware)
 	}
