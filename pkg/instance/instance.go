@@ -169,7 +169,7 @@ func (i *Instance) makeVFS() error {
 	case "file", "mem":
 		i.vfs, err = vfsafero.New(index, fsURL, i.Domain)
 	case "swift":
-		i.vfs, err = vfsswift.New(index, fsURL, i.Domain)
+		i.vfs, err = vfsswift.New(index, i.Domain)
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}

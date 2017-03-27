@@ -26,13 +26,24 @@ type swiftVFS struct {
 //
 // This function is not thread-safe.
 func InitConnection(fsURL *url.URL) error {
-	auth := &url.URL{
-		Scheme: "http",
-		Host:   fsURL.Host,
-		Path:   "/identity/v3",
+	var err error
+	q := fsURL.Query()
+
+	var authURL *url.URL
+	auth := confOrEnv(q.Get("AuthURL"))
+	if auth == "" {
+		authURL = &url.URL{
+			Scheme: "http",
+			Host:   fsURL.Host,
+			Path:   "/identity/v3",
+		}
+	} else {
+		authURL, err = url.Parse(auth)
+		if err != nil {
+			return fmt.Errorf("vfsswift: could not parse AuthURL %s", err)
+		}
 	}
 
-	q := fsURL.Query()
 	var username, password string
 	if q.Get("UserName") != "" {
 		username = confOrEnv(q.Get("UserName"))
@@ -44,7 +55,7 @@ func InitConnection(fsURL *url.URL) error {
 	conn = &swift.Connection{
 		UserName:       username,
 		ApiKey:         password,
-		AuthUrl:        auth.String(),
+		AuthUrl:        authURL.String(),
 		Domain:         confOrEnv(q.Get("UserDomainName")),
 		Tenant:         confOrEnv(q.Get("ProjectName")),
 		TenantId:       confOrEnv(q.Get("ProjectID")),
@@ -53,7 +64,7 @@ func InitConnection(fsURL *url.URL) error {
 	}
 	if err := conn.Authenticate(); err != nil {
 		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
-			auth.String())
+			authURL.String())
 		return err
 	}
 	return nil
@@ -61,7 +72,7 @@ func InitConnection(fsURL *url.URL) error {
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
-func New(index vfs.Indexer, fsURL *url.URL, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, domain string) (vfs.VFS, error) {
 	if conn == nil {
 		return nil, errors.New("vfsswift: global connection is not initialized")
 	}
@@ -195,7 +206,7 @@ func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 }
 
 func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
-	err := sfs.c.ObjectDelete(sfs.domain, doc.ID())
+	err := sfs.c.ObjectDelete(sfs.domain, doc.DirID+"/"+doc.DocName)
 	if err != nil {
 		return err
 	}
