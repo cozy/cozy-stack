@@ -109,6 +109,15 @@ func IsNotFoundError(err error) bool {
 	return couchErr.Name == "not_found"
 }
 
+// IsFileExists checks if the given error is a couch conflict error
+func IsFileExists(err error) bool {
+	couchErr, isCouchErr := IsCouchError(err)
+	if !isCouchErr {
+		return false
+	}
+	return couchErr.Name == "file_exists"
+}
+
 // IsConflictError checks if the given error is a couch conflict error
 func IsConflictError(err error) bool {
 	couchErr, isCouchErr := IsCouchError(err)

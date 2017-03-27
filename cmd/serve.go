@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -43,7 +43,7 @@ example), you can use the --appdir flag like this:
 			log.Errorf("Use --allow-root if you really want to start with the root user")
 			return errors.New("Starting cozy-stack serve as root not allowed")
 		}
-		if err := instance.StartJobs(); err != nil {
+		if err := stack.Start(); err != nil {
 			return err
 		}
 		if len(flagAppdirs) > 0 {

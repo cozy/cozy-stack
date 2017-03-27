@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
+	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/leonelquinteros/gotext"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -63,12 +64,11 @@ var (
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID      string `json:"_id,omitempty"`  // couchdb _id
-	DocRev     string `json:"_rev,omitempty"` // couchdb _rev
-	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	Locale     string `json:"locale"`         // The locale used on the server
-	StorageURL string `json:"storage"`        // Where the binaries are persisted
-	Dev        bool   `json:"dev"`            // Whether or not the instance is for development
+	DocID  string `json:"_id,omitempty"`  // couchdb _id
+	DocRev string `json:"_rev,omitempty"` // couchdb _rev
+	Domain string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	Locale string `json:"locale"`         // The locale used on the server
+	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
@@ -89,7 +89,7 @@ type Instance struct {
 	// CLISecret is used to authenticate request from the CLI
 	CLISecret []byte `json:"cli_secret,omitempty"`
 
-	storage vfs.VFS
+	vfs vfs.VFS
 }
 
 // Options holds the parameters to create a new instance.
@@ -155,41 +155,25 @@ func (i *Instance) Prefix() string {
 // VFS returns the storage provider where the binaries for the current instance
 // are persisted
 func (i *Instance) VFS() vfs.VFS {
-	if i.storage == nil {
-		u, err := url.Parse(i.StorageURL)
-		if err != nil {
-			panic(fmt.Errorf("storage provider: could not parse storage url %s", err.Error()))
-		}
-		switch u.Scheme {
-		case "file", "mem":
-			i.storage, err = vfsafero.New(i, i.StorageURL)
-		case "swift":
-			err = errors.New("instance: storage provider swift not implemened")
-		default:
-			err = fmt.Errorf("instance: unknown storage provider %s", u.Scheme)
-		}
-		if err != nil {
-			panic(err)
-		}
+	if i.vfs == nil {
+		panic("instance: calling VFS() before makeVFS()")
 	}
-	return i.storage
+	return i.vfs
 }
 
-// StartJobs is used to start the job system for all the instances.
-//
-// TODO: on distributed stacks, we should not have to iterate over all
-// instances on each startup
-func StartJobs() error {
-	instances, err := List()
-	if err != nil && !couchdb.IsNoDatabaseError(err) {
-		return err
+func (i *Instance) makeVFS() error {
+	fsURL := config.FsURL()
+	index := vfs.NewCouchdbIndexer(i)
+	var err error
+	switch fsURL.Scheme {
+	case "file", "mem":
+		i.vfs, err = vfsafero.New(index, fsURL, i.Domain)
+	case "swift":
+		i.vfs, err = vfsswift.New(index, i.Domain)
+	default:
+		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
-	for _, in := range instances {
-		if err := in.StartJobSystem(); err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }
 
 // StartJobSystem creates all the resources necessary for the instance's job
@@ -270,22 +254,6 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 	return u.String()
 }
 
-// createInCouchdb creates the instance doc in the global database
-func (i *Instance) createInCouchdb() error {
-	_, err := Get(i.Domain)
-	if err == nil {
-		return ErrExists
-	}
-	if err != ErrNotFound {
-		return err
-	}
-	err = couchdb.CreateDoc(couchdb.GlobalDB, i)
-	if err != nil {
-		return err
-	}
-	return couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes)
-}
-
 func (i *Instance) installApp(slug string) error {
 	source, ok := consts.AppsRegistry[slug]
 	if !ok {
@@ -336,7 +304,6 @@ func Create(opts *Options) (*Instance, error) {
 
 	i.Locale = locale
 	i.Domain = domain
-	i.StorageURL = config.BuildRelFsURL(domain).String()
 
 	i.Dev = opts.Dev
 
@@ -348,7 +315,22 @@ func Create(opts *Options) (*Instance, error) {
 	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
 	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
 
-	if err := i.createInCouchdb(); err != nil {
+	if err := couchdb.CreateDB(couchdb.GlobalDB, consts.Instances); !couchdb.IsFileExists(err) {
+		if err != nil {
+			return nil, err
+		}
+		if err := couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := Get(i.Domain); err != ErrNotFound {
+		if err == nil {
+			err = ErrExists
+		}
+		return nil, err
+	}
+	if err := couchdb.CreateDoc(couchdb.GlobalDB, i); err != nil {
 		return nil, err
 	}
 	if err := couchdb.CreateDB(i, consts.Files); err != nil {
@@ -369,7 +351,10 @@ func Create(opts *Options) (*Instance, error) {
 	if err := couchdb.CreateDB(i, consts.Sharings); err != nil {
 		return nil, err
 	}
-	if err := i.VFS().Init(); err != nil {
+	if err := i.makeVFS(); err != nil {
+		return nil, err
+	}
+	if err := i.VFS().InitFs(); err != nil {
 		return nil, err
 	}
 	if err := settings.CreateDefaultTheme(i); err != nil {
@@ -397,7 +382,6 @@ func Create(opts *Options) (*Instance, error) {
 			log.Error("[instance] Failed to install "+app, err)
 		}
 	}
-	// TODO atomicity with defer
 	return i, nil
 }
 
@@ -426,7 +410,11 @@ func Get(domain string) (*Instance, error) {
 	if len(instances) == 0 {
 		return nil, ErrNotFound
 	}
-	return instances[0], nil
+	i := instances[0]
+	if err = i.makeVFS(); err != nil {
+		return nil, err
+	}
+	return i, nil
 }
 
 var translations = make(map[string]*gotext.Po)
@@ -644,7 +632,9 @@ func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
 	case permissions.AppAudience:
 		return i.SessionSecret, nil
-	case permissions.RefreshTokenAudience, permissions.AccessTokenAudience, permissions.ShareAudience:
+	case permissions.RefreshTokenAudience,
+		permissions.AccessTokenAudience,
+		permissions.ShareAudience:
 		return i.OAuthSecret, nil
 	case permissions.CLIAudience:
 		return i.CLISecret, nil

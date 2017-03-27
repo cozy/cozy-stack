@@ -39,35 +39,28 @@ const (
 // directory. It is not returned by any function of the package.
 var ErrSkipDir = errors.New("skip directories")
 
-// VFS is a type used to provide a common interface for VFS data
-// layer. The VFS will always go through the specified cache to access
-// file or directory attributes.
-//
-// It can implement a simple local wrapper of the CouchDB package, a
-// simple abstraction to avoid using CouchDB or a more complex package
-// to handle VFS synchronization in a horizontally scaled
-// architecture.
-type VFS interface {
-	Init() error
+// Fs is an interface providing a set of high-level methods to interact with
+// the file-system binaries and metadata.
+type Fs interface {
+	InitFs() error
 	Delete() error
 
-	DiskUsage() (int64, error)
-
-	DirByID(fileID string) (*DirDoc, error)
-	DirByPath(name string) (*DirDoc, error)
-	FileByID(fileID string) (*FileDoc, error)
-	FileByPath(name string) (*FileDoc, error)
-	DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error)
-	DirOrFileByPath(name string) (*DirDoc, *FileDoc, error)
-	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
-
+	// CreateDir is used to create a new directory from its document.
 	CreateDir(doc *DirDoc) error
+	//
+	//
+	// Warning: you MUST call the Close() method and check for its error.
 	CreateFile(newdoc, olddoc *FileDoc) (File, error)
-	UpdateDir(olddoc, newdoc *DirDoc) error
-	UpdateFile(olddoc, newdoc *FileDoc) error
+	// DestroyDirContent destroys all directories and files contained in a
+	// directory.
 	DestroyDirContent(doc *DirDoc) error
+	// DestroyDirAndContent destroys all directories and files contained in a
+	// directory and the directory itself.
 	DestroyDirAndContent(doc *DirDoc) error
+	// DestroyFile  destroys a file from the trash.
 	DestroyFile(doc *FileDoc) error
+	// OpenFile return a file handler for reading associated with the given file
+	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
 }
 
@@ -78,6 +71,68 @@ type File interface {
 	io.Seeker
 	io.Writer
 	io.Closer
+}
+
+// Indexer is an interface providing a common set of method for indexing layer
+// of our VFS.
+//
+// An indexer is typically responsible for storing and indexing the files and
+// directories metadata, as well as caching them if necessary.
+type Indexer interface {
+	InitIndex() error
+
+	// DiskUsage computes the total size of the files contained in the VFS.
+	DiskUsage() (int64, error)
+
+	// CreateFileDoc creates and add in the index a new file document.
+	CreateFileDoc(doc *FileDoc) error
+	// UpdateFileDocx is used to update the document of a file. It takes the
+	// new file document that you want to create and the old document,
+	// representing the current revision of the file.
+	UpdateFileDoc(olddoc, newdoc *FileDoc) error
+	// DeleteFileDoc removes from the index the specified file document.
+	DeleteFileDoc(doc *FileDoc) error
+
+	// CreateDirDoc creates and add in the index a new directory document.
+	CreateDirDoc(doc *DirDoc) error
+	// UpdateDirDoc is used to update the document of a directory. It takes the new
+	// directory document that you want to create and the old document,
+	// representing the current revision of the directory.
+	UpdateDirDoc(olddoc, newdoc *DirDoc) error
+	// DeleteDirDoc removes from the index the specified directory document.
+	DeleteDirDoc(doc *DirDoc) error
+
+	// DirByID returns the directory document information associated with the
+	// specified identifier.
+	DirByID(fileID string) (*DirDoc, error)
+	// DirByPath returns the directory document information associated with the
+	// specified path.
+	DirByPath(name string) (*DirDoc, error)
+
+	// FileByID returns the file document information associated with the
+	// specified identifier.
+	FileByID(fileID string) (*FileDoc, error)
+	// FileByPath returns the file document information associated with the
+	// specified path.
+	FileByPath(name string) (*FileDoc, error)
+
+	// DirOrFileByID returns the document from its identifier without knowing in
+	// advance its type. One of the returned argument is not nil.
+	DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error)
+	// DirOrFileByID returns the document from its path without knowing in
+	// advance its type. One of the returned argument is not nil.
+	DirOrFileByPath(name string) (*DirDoc, *FileDoc, error)
+
+	// DirIterator returns an iterator over the children of the specified
+	// directory.
+	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
+}
+
+// VFS is composed of the Indexer and Fs interface. It is the common interface
+// used thoughout the stack to access the VFS.
+type VFS interface {
+	Indexer
+	Fs
 }
 
 // ErrIteratorDone is returned by the Next() method of the iterator when
@@ -235,7 +290,7 @@ func Mkdir(fs VFS, name string, tags []string) (*DirDoc, error) {
 		return nil, err
 	}
 
-	dir, err := NewDirDoc(dirname, parent.ID(), tags)
+	dir, err := NewDirDocWithParent(dirname, parent, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +325,7 @@ func MkdirAll(fs VFS, name string, tags []string) (*DirDoc, error) {
 	}
 
 	for i := len(dirs) - 1; i >= 0; i-- {
-		parent, err = NewDirDoc(dirs[i], parent.ID(), nil)
+		parent, err = NewDirDocWithParent(dirs[i], parent, nil)
 		if err == nil {
 			err = fs.CreateDir(parent)
 		}

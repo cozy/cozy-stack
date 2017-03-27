@@ -3,10 +3,12 @@ package vfs_test
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -19,6 +21,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
+	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
+	"github.com/ncw/swift/swifttest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,7 +58,7 @@ func createTree(tree H, dirID string) (*vfs.DirDoc, error) {
 	var dirdoc *vfs.DirDoc
 	for name, children := range tree {
 		if name[len(name)-1] == '/' {
-			dirdoc, err = vfs.NewDirDoc(name[:len(name)-1], dirID, nil)
+			dirdoc, err = vfs.NewDirDoc(fs, name[:len(name)-1], dirID, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -203,7 +207,7 @@ func TestDiskUsage(t *testing.T) {
 }
 
 func TestGetFileDocFromPath(t *testing.T) {
-	dir, _ := vfs.NewDirDoc("container", "", nil)
+	dir, _ := vfs.NewDirDoc(fs, "container", "", nil)
 	err := fs.CreateDir(dir)
 	assert.NoError(t, err)
 
@@ -576,46 +580,109 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
-	if err != nil {
-		fmt.Println("Could not create temporary directory.")
-		os.Exit(1)
-	}
-
-	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
-	fs, err = vfsafero.New(db, "file://localhost"+tempdir)
+	var rollback func()
+	fs, rollback, err = makeAferoFS()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+	res1 := m.Run()
+	rollback()
+
+	fs, rollback, err = makeSwiftFS()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	res2 := m.Run()
+	rollback()
+
+	os.Exit(res1 + res2)
+}
+
+func makeAferoFS() (vfs.VFS, func(), error) {
+	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	if err != nil {
+		return nil, nil, errors.New("Could not create temporary directory.")
+	}
+
+	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
+	index := vfs.NewCouchdbIndexer(db)
+	aferoFs, err := vfsafero.New(index, &url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
+	if err != nil {
+		return nil, nil, err
 	}
 
 	err = couchdb.ResetDB(db, consts.Files)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, nil, err
 	}
 
 	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, nil, err
 	}
 
 	if err = couchdb.DefineViews(db, consts.ViewsByDoctype(consts.Files)); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, nil, err
 	}
 
-	err = fs.Init()
+	err = aferoFs.InitFs()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		return nil, nil, err
 	}
 
-	res := m.Run()
+	return aferoFs, func() {
+		os.RemoveAll(tempdir)
+		couchdb.DeleteDB(db, consts.Files)
+	}, nil
+}
 
-	os.RemoveAll(tempdir)
-	couchdb.DeleteDB(db, consts.Files)
+func makeSwiftFS() (vfs.VFS, func(), error) {
+	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
+	index := vfs.NewCouchdbIndexer(db)
+	swiftSrv, err := swifttest.NewSwiftServer("localhost")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create swift server %s", err)
+	}
 
-	os.Exit(res)
+	err = vfsswift.InitConnection(&url.URL{
+		Scheme:   "swift",
+		Host:     "localhost",
+		RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	swiftFs, err := vfsswift.New(index, db.Prefix())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = couchdb.ResetDB(db, consts.Files)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = couchdb.DefineViews(db, consts.ViewsByDoctype(consts.Files)); err != nil {
+		return nil, nil, err
+	}
+
+	err = swiftFs.InitFs()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return swiftFs, func() {
+		couchdb.DeleteDB(db, consts.Files)
+		if swiftSrv != nil {
+			swiftSrv.Close()
+		}
+	}, nil
 }
