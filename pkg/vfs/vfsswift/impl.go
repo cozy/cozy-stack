@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -154,6 +155,10 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		}
 		return nil, os.ErrExist
 	}
+	var h swift.Headers
+	if newdoc.ByteSize >= 0 {
+		h = swift.Headers{"Content-Length": strconv.FormatInt(newdoc.ByteSize, 10)}
+	}
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
 		sfs.domain,
@@ -161,7 +166,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		hash != "",
 		hash,
 		newdoc.Mime,
-		nil,
+		h,
 	)
 	if err != nil {
 		return nil, err
