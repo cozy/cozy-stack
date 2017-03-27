@@ -53,7 +53,7 @@ Here is a very simple example:
 "intents": [
     {
         "action": "PICK",
-        "type": "io.cozy.files",
+        "type": ["io.cozy.files"],
         "href": "/pick"
     }
 ]
@@ -65,7 +65,7 @@ Notice that we didn't include a `{{.Intent}}` marker in the `href`, which we rea
 "intents": [
     {
         "action": "PICK",
-        "type": "io.cozy.files",
+        "type": ["io.cozy.files"],
         "href": "/pick?id={{.Intent}}"
     }
 ]
@@ -96,7 +96,7 @@ Finally, here is an example of an app that supports several intent types:
     },
     {
         "action": "VIEW",
-        "type": "image/gif",
+        "type": ["image/gif"],
         "href": "/viewer?id={{.Intent}}"
     }
 ]
