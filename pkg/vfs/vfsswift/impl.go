@@ -295,8 +295,9 @@ func (f *swiftFileCreation) Close() (err error) {
 
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
 	if f.meta != nil {
-		(*f.meta).Close() // #nosec
-		newdoc.Metadata = (*f.meta).Result()
+		if errc := (*f.meta).Close(); errc == nil {
+			newdoc.Metadata = (*f.meta).Result()
+		}
 	}
 
 	if newdoc.ByteSize < 0 {
