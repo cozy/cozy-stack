@@ -145,6 +145,8 @@ func Setup(cfgFile string) (err error) {
 		return UseViper(viper.GetViper())
 	}
 
+	log.Debugf("Using config file: %s", cfgFile)
+
 	tmpl := template.New(filepath.Base(cfgFile))
 	tmpl = tmpl.Option("missingkey=zero")
 	tmpl, err = tmpl.ParseFiles(cfgFile)
@@ -161,14 +163,10 @@ func Setup(cfgFile string) (err error) {
 
 	if err := viper.ReadConfig(dest); err != nil {
 		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
-			log.Errorf("Failed to read cozy-stack configurations from %s", viper.ConfigFileUsed())
+			log.Errorf("Failed to read cozy-stack configurations from %s", cfgFile)
 			log.Errorf(dest.String())
 			return err
 		}
-	}
-
-	if viper.ConfigFileUsed() != "" {
-		log.Debugf("Using config file: %s", viper.ConfigFileUsed())
 	}
 
 	return UseViper(viper.GetViper())
