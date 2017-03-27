@@ -47,10 +47,7 @@ type Fs interface {
 
 	// CreateDir is used to create a new directory from its document.
 	CreateDir(doc *DirDoc) error
-	// UpdateDir is used to update the document of a directory. It takes the new
-	// file document that you want to create. It can also take the old document,
-	// representing the current revision of the file. In this case it will try to
-	// modify the file, otherwise it will create it.
+	//
 	//
 	// Warning: you MUST call the Close() method and check for its error.
 	CreateFile(newdoc, olddoc *FileDoc) (File, error)
@@ -87,12 +84,22 @@ type Indexer interface {
 	// DiskUsage computes the total size of the files contained in the VFS.
 	DiskUsage() (int64, error)
 
+	// CreateFileDoc creates and add in the index a new file document.
 	CreateFileDoc(doc *FileDoc) error
+	// UpdateFileDocx is used to update the document of a file. It takes the
+	// new file document that you want to create and the old document,
+	// representing the current revision of the file.
 	UpdateFileDoc(olddoc, newdoc *FileDoc) error
+	// DeleteFileDoc removes from the index the specified file document.
 	DeleteFileDoc(doc *FileDoc) error
 
+	// CreateDirDoc creates and add in the index a new directory document.
 	CreateDirDoc(doc *DirDoc) error
+	// UpdateDirDoc is used to update the document of a directory. It takes the new
+	// directory document that you want to create and the old document,
+	// representing the current revision of the directory.
 	UpdateDirDoc(olddoc, newdoc *DirDoc) error
+	// DeleteDirDoc removes from the index the specified directory document.
 	DeleteDirDoc(doc *DirDoc) error
 
 	// DirByID returns the directory document information associated with the
