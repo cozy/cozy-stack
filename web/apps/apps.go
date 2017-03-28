@@ -5,6 +5,7 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -34,10 +35,17 @@ func installHandler(c echo.Context) error {
 	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
 		return err
 	}
-	inst, err := apps.NewInstaller(instance, instance.VFS(), &apps.InstallerOptions{
-		SourceURL: c.QueryParam("Source"),
-		Slug:      slug,
-	})
+	installerType, err := getInstallerType(c)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	inst, err := apps.NewInstaller(instance, instance.VFS(),
+		&apps.InstallerOptions{
+			Type:      installerType,
+			SourceURL: c.QueryParam("Source"),
+			Slug:      slug,
+		},
+	)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -53,9 +61,16 @@ func updateHandler(c echo.Context) error {
 	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
 		return err
 	}
-	inst, err := apps.NewInstaller(instance, instance.VFS(), &apps.InstallerOptions{
-		Slug: slug,
-	})
+	installerType, err := getInstallerType(c)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	inst, err := apps.NewInstaller(instance, instance.VFS(),
+		&apps.InstallerOptions{
+			Type: installerType,
+			Slug: slug,
+		},
+	)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -71,7 +86,16 @@ func deleteHandler(c echo.Context) error {
 	if err := permissions.AllowInstallApp(c, permissions.DELETE); err != nil {
 		return err
 	}
-	inst, err := apps.NewInstaller(instance, instance.VFS(), &apps.InstallerOptions{Slug: slug})
+	installerType, err := getInstallerType(c)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	inst, err := apps.NewInstaller(instance, instance.VFS(),
+		&apps.InstallerOptions{
+			Type: installerType,
+			Slug: slug,
+		},
+	)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -174,7 +198,7 @@ func iconHandler(c echo.Context) error {
 		return err
 	}
 
-	filepath := path.Join(vfs.AppsDirName, slug, app.Icon)
+	filepath := path.Join(vfs.WebappsDirName, slug, app.Icon)
 	file, err := instance.VFS().FileByPath(filepath)
 	if err != nil {
 		return err
@@ -196,6 +220,17 @@ func Routes(router *echo.Group) {
 	router.PUT("/:slug", updateHandler)
 	router.DELETE("/:slug", deleteHandler)
 	router.GET("/:slug/icon", iconHandler)
+}
+
+func getInstallerType(c echo.Context) (apps.InstallerType, error) {
+	switch c.QueryParam("Type") {
+	case "", "webapp":
+		return apps.Webapp, nil
+	case "konnector":
+		return apps.Konnector, nil
+	}
+	return 0,
+		jsonapi.InvalidParameter("Type", errors.New("unknown installer type"))
 }
 
 func wrapAppsError(err error) error {

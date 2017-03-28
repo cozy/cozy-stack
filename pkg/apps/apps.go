@@ -14,9 +14,12 @@ import (
 const (
 	// ManifestMaxSize is the manifest maximum size
 	ManifestMaxSize = 2 << (2 * 10) // 2MB
-	// ManifestFilename is the name of the manifest at the root of the
-	// application directory
-	ManifestFilename = "manifest.webapp"
+	// WebappManifest is the name of the manifest at the root of the
+	// client-side application directory
+	WebappManifest = "manifest.webapp"
+	// KonnectorManifest is the name of the manifest at the root of the
+	// konnector application directory
+	KonnectorManifest = "manifest.konnectors"
 )
 
 // State is the state of the application
@@ -71,6 +74,7 @@ type Manifest struct {
 
 	Name        string     `json:"name"`
 	Slug        string     `json:"slug"`
+	Type        string     `json:"type,omitempty"`
 	Source      string     `json:"source"`
 	State       State      `json:"state"`
 	Error       string     `json:"error,omitempty"`
@@ -147,11 +151,6 @@ func (m *Manifest) Valid(field, value string) bool {
 	return false
 }
 
-var (
-	_ jsonapi.Object        = (*Manifest)(nil)
-	_ permissions.Validable = (*Manifest)(nil)
-)
-
 // List returns the list of installed applications.
 //
 // TODO: pagination
@@ -225,3 +224,8 @@ func routeMatches(path, ctx []string) bool {
 	}
 	return true
 }
+
+var (
+	_ jsonapi.Object        = &Manifest{}
+	_ permissions.Validable = &Manifest{}
+)

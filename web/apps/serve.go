@@ -174,7 +174,7 @@ func (a *Server) ServeFileContent(w http.ResponseWriter, req *http.Request, modt
 }
 
 func (a *Server) path(slug, folder, file string) string {
-	return path.Join(vfs.AppsDirName, slug, folder, file)
+	return path.Join(vfs.WebappsDirName, slug, folder, file)
 }
 
 // NewAferoServer returns a simple wrapper of the afero.Fs interface that
@@ -182,7 +182,7 @@ func (a *Server) path(slug, folder, file string) string {
 //
 // You can provide a makePath method to define how the file name should be
 // created from the application's slug, folder and file name. If not provided,
-// the standard VFS concatenation (starting with vfs.AppsDirName) is used.
+// the standard VFS concatenation (starting with vfs.WebappsDirName) is used.
 func NewAferoServer(fs afero.Fs, makePath func(slug, folder, file string) string) *AferoServer {
 	return &AferoServer{
 		mkPath: makePath,

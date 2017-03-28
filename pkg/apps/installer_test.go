@@ -121,6 +121,7 @@ var fs vfs.VFS
 
 func TestInstallBadSlug(t *testing.T) {
 	_, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		SourceURL: "git://foo.bar",
 	})
 	if assert.Error(t, err) {
@@ -128,6 +129,7 @@ func TestInstallBadSlug(t *testing.T) {
 	}
 
 	_, err = NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "coucou/",
 		SourceURL: "git://foo.bar",
 	})
@@ -138,6 +140,7 @@ func TestInstallBadSlug(t *testing.T) {
 
 func TestInstallBadAppsSource(t *testing.T) {
 	_, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
 	})
@@ -146,6 +149,7 @@ func TestInstallBadAppsSource(t *testing.T) {
 	}
 
 	_, err = NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "app4",
 		SourceURL: "git://bar  .baz",
 	})
@@ -156,6 +160,7 @@ func TestInstallBadAppsSource(t *testing.T) {
 
 func TestInstallSuccessful(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
 	})
@@ -200,6 +205,7 @@ func TestInstallSuccessful(t *testing.T) {
 
 func TestInstallAldreadyExist(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "cozy-app-a",
 		SourceURL: "git://localhost/",
 	})
@@ -221,6 +227,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 	}
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "cozy-app-a",
 		SourceURL: "git://localhost/",
 	})
@@ -236,6 +243,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 
 func TestInstallWithUpgrade(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
 	})
@@ -266,6 +274,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 	doUpgrade(2)
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
 	})
@@ -312,6 +321,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 	doUpgrade(3)
 
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
 	})
@@ -359,6 +369,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 	doUpgrade(4)
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
 	})
@@ -406,6 +417,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 
 func TestInstallFromGithub(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "github-cozy-mini",
 		SourceURL: "git://github.com/nono/cozy-mini.git",
 	})
@@ -443,6 +455,7 @@ func TestInstallFromGithub(t *testing.T) {
 
 func TestUninstall(t *testing.T) {
 	inst1, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
 	})
@@ -460,7 +473,10 @@ func TestUninstall(t *testing.T) {
 			break
 		}
 	}
-	inst2, err := NewInstaller(db, fs, &InstallerOptions{Slug: "github-cozy-delete"})
+	inst2, err := NewInstaller(db, fs, &InstallerOptions{
+		Type: Webapp,
+		Slug: "github-cozy-delete",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -469,6 +485,7 @@ func TestUninstall(t *testing.T) {
 		return
 	}
 	inst3, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      Webapp,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
 	})

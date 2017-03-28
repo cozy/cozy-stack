@@ -27,11 +27,12 @@ const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
 var ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 
 type gitFetcher struct {
-	fs vfs.VFS
+	fs          vfs.VFS
+	manFilename string
 }
 
-func newGitFetcher(fs vfs.VFS) *gitFetcher {
-	return &gitFetcher{fs: fs}
+func newGitFetcher(fs vfs.VFS, manFilename string) *gitFetcher {
+	return &gitFetcher{fs: fs, manFilename: manFilename}
 }
 
 var manifestClient = &http.Client{
@@ -43,9 +44,9 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 
 	var u string
 	if src.Host == "github.com" {
-		u, err = resolveGithubURL(src)
+		u, err = resolveGithubURL(src, g.manFilename)
 	} else {
-		u, err = resolveManifestURL(src)
+		u, err = resolveManifestURL(src, g.manFilename)
 	}
 	if err != nil {
 		return nil, err
@@ -215,7 +216,7 @@ func (g *gitFetcher) copyFiles(baseDir *vfs.DirDoc, rep *git.Repository) error {
 	})
 }
 
-func resolveGithubURL(src *url.URL) (string, error) {
+func resolveGithubURL(src *url.URL, filename string) (string, error) {
 	match := ghURLRegex.FindStringSubmatch(src.Path)
 	if len(match) != 3 {
 		return "", &url.Error{
@@ -231,18 +232,18 @@ func resolveGithubURL(src *url.URL) (string, error) {
 		branch = src.Fragment
 	}
 
-	u := fmt.Sprintf(ghRawManifestURL, user, project, branch, ManifestFilename)
+	u := fmt.Sprintf(ghRawManifestURL, user, project, branch, filename)
 	return u, nil
 }
 
-func resolveManifestURL(src *url.URL) (string, error) {
+func resolveManifestURL(src *url.URL, filename string) (string, error) {
 	// TODO check that it works with a branch
 	srccopy, _ := url.Parse(src.String())
 	srccopy.Scheme = "http"
 	if srccopy.Path == "" || srccopy.Path[len(srccopy.Path)-1] != '/' {
 		srccopy.Path += "/"
 	}
-	srccopy.Path = srccopy.Path + ManifestFilename
+	srccopy.Path = srccopy.Path + filename
 	return srccopy.String(), nil
 }
 

@@ -2,6 +2,7 @@ package apps
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/url"
 	"path"
@@ -23,15 +24,24 @@ type Installer struct {
 	man  *Manifest
 	src  *url.URL
 	slug string
+	base string
 
 	err  error
 	errc chan error
 	manc chan *Manifest
 }
 
+type InstallerType int
+
+const (
+	Webapp InstallerType = iota
+	Konnector
+)
+
 // InstallerOptions provides the slug name of the application along with the
 // source URL.
 type InstallerOptions struct {
+	Type      InstallerType
 	Slug      string
 	SourceURL string
 }
@@ -49,6 +59,16 @@ type Fetcher interface {
 
 // NewInstaller creates a new Installer
 func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Installer, error) {
+	var base, manFilename string
+	switch opts.Type {
+	case Webapp:
+		base, manFilename = vfs.WebappsDirName, WebappManifest
+	case Konnector:
+		base, manFilename = vfs.KonnectorsDirName, KonnectorManifest
+	default:
+		return nil, fmt.Errorf("unknown installer type %s", opts.Type)
+	}
+
 	slug := opts.Slug
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
@@ -74,23 +94,24 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 	var fetcher Fetcher
 	switch src.Scheme {
 	case "git":
-		fetcher = newGitFetcher(fs)
+		fetcher = newGitFetcher(fs, manFilename)
 	default:
 		return nil, ErrNotSupportedSource
 	}
 
-	inst := &Installer{
+	return &Installer{
 		fetcher: fetcher,
 		db:      db,
 		fs:      fs,
-		src:     src,
-		slug:    slug,
-		man:     man,
-		errc:    make(chan error),
-		manc:    make(chan *Manifest, 1),
-	}
 
-	return inst, nil
+		man:  man,
+		src:  src,
+		slug: slug,
+		base: base,
+
+		errc: make(chan error, 1),
+		manc: make(chan *Manifest, 2),
+	}, nil
 }
 
 // Install will install the application linked to the installer. It will
@@ -132,7 +153,7 @@ func (i *Installer) Delete() (*Manifest, error) {
 	if err := deleteManifest(i.db, i.man); err != nil {
 		return nil, err
 	}
-	if err := vfs.RemoveAll(i.fs, i.appDirName()); err != nil {
+	if err := vfs.RemoveAll(i.fs, i.baseDirName()); err != nil {
 		return nil, err
 	}
 	return i.man, nil
@@ -174,7 +195,7 @@ func (i *Installer) install() (*Manifest, error) {
 
 	i.manc <- man
 
-	appdir, err := vfs.MkdirAll(i.fs, i.appDirName(), nil)
+	appdir, err := vfs.MkdirAll(i.fs, i.baseDirName(), nil)
 	if err != nil {
 		return man, err
 	}
@@ -202,13 +223,17 @@ func (i *Installer) update() (*Manifest, error) {
 
 	i.manc <- man
 
-	appdir, err := i.fs.DirByPath(i.appDirName())
+	appdir, err := i.fs.DirByPath(i.baseDirName())
 	if err != nil {
 		return man, err
 	}
 
 	err = i.fetcher.Fetch(i.src, appdir)
 	return man, err
+}
+
+func (i *Installer) baseDirName() string {
+	return path.Join(i.base, i.slug)
 }
 
 // ReadManifest will fetch the manifest and read its JSON content into the
@@ -233,10 +258,6 @@ func (i *Installer) ReadManifest(state State, man *Manifest) error {
 	man.CreateDefaultRoute()
 
 	return nil
-}
-
-func (i *Installer) appDirName() string {
-	return path.Join(vfs.AppsDirName, i.slug)
 }
 
 // Poll should be used to monitor the progress of the Installer.

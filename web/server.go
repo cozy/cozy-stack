@@ -85,7 +85,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 		if !exists {
 			return fmt.Errorf("Directory %s does not exist", dir)
 		}
-		if err = checkExists(path.Join(dir, apps.ManifestFilename)); err != nil {
+		if err = checkExists(path.Join(dir, apps.WebappManifest)); err != nil {
 			return err
 		}
 		if err = checkExists(path.Join(dir, "index.html")); err != nil {
@@ -103,18 +103,18 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 			return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
 		}
 		fs := afero.NewBasePathFs(afero.NewOsFs(), dir)
-		manFile, err := fs.Open(apps.ManifestFilename)
+		manFile, err := fs.Open(apps.WebappManifest)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return fmt.Errorf("Could not find the %s file in your application directory %s",
-					apps.ManifestFilename, dir)
+					apps.WebappManifest, dir)
 			}
 			return err
 		}
 		app := &apps.Manifest{}
 		if err = json.NewDecoder(manFile).Decode(&app); err != nil {
 			return fmt.Errorf("Could not parse the %s file: %s",
-				apps.ManifestFilename, err.Error())
+				apps.WebappManifest, err.Error())
 		}
 		app.CreateDefaultRoute()
 		app.Slug = slug
