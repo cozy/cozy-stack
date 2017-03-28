@@ -29,6 +29,7 @@ type Sharing struct {
 
 	Permissions      permissions.Set    `json:"permissions,omitempty"`
 	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
+	Sharer           *Sharer            `json:"sharer,omitempty"`
 }
 
 // RecipientStatus contains the information about a recipient for a sharing
@@ -40,6 +41,17 @@ type RecipientStatus struct {
 	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
 
 	recipient *Recipient
+}
+
+// Sharer contains the information about the sharer from the recipient's
+// perspective.
+//
+// ATTENTION: This structure will only be filled by the recipients as it is
+// recipient specific. The `ClientID` is different for each recipient and only
+// known by them.
+type Sharer struct {
+	ClientID string `json:"client_id"`
+	URL      string `json:"url"`
 }
 
 // SharingAnswer contains the necessary information to answer a sharing
@@ -297,7 +309,7 @@ func SharingRefused(db couchdb.Database, state, clientID string) (string, error)
 
 // RecipientRefusedSharing executes all the actions induced by a refusal from
 // the recipient: the sharing document is deleted and the sharer is informed.
-func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) error {
+func RecipientRefusedSharing(db couchdb.Database, sharingID string) error {
 	// We get the sharing document through its sharing id…
 	var res []Sharing
 	err := couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
@@ -318,22 +330,14 @@ func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) er
 		return err
 	}
 
-	// We get the sharer's oauth client so that we can get her Cozy's url
-	// through the `ClientURI`.
-	sharer := &oauth.Client{}
-	err = couchdb.GetDoc(db, consts.OAuthClients, clientID, sharer)
-	if err != nil {
-		return ErrNoOAuthClient
-	}
-
 	// We send the refusal.
 	bodyRaw := &SharingAnswer{
-		ClientID:  clientID,
+		ClientID:  sharing.Sharer.ClientID,
 		SharingID: sharingID,
 	}
 	body, _ := json.Marshal(bodyRaw)
 
-	url := fmt.Sprintf("%s/sharings/answer", sharer.ClientURI)
+	url := fmt.Sprintf("%s/sharings/answer", sharing.Sharer.URL)
 	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -350,7 +354,7 @@ func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) er
 
 // CreateSharingRequest checks fields integrity and creates a sharing document
 // for an incoming sharing request
-func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope string) (*Sharing, error) {
+func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, clientID string) (*Sharing, error) {
 	if state == "" {
 		return nil, ErrMissingState
 	}
@@ -360,9 +364,23 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope s
 	if scope == "" {
 		return nil, ErrMissingScope
 	}
+	if clientID == "" {
+		return nil, ErrNoOAuthClient
+	}
 	permissions, err := permissions.UnmarshalScopeString(scope)
 	if err != nil {
 		return nil, err
+	}
+
+	sharerClient := &oauth.Client{}
+	err = couchdb.GetDoc(db, consts.OAuthClients, clientID, sharerClient)
+	if err != nil {
+		return nil, ErrNoOAuthClient
+	}
+
+	sharer := &Sharer{
+		ClientID: clientID,
+		URL:      sharerClient.ClientURI,
 	}
 
 	sharing := &Sharing{
@@ -371,6 +389,7 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope s
 		Permissions: permissions,
 		Owner:       false,
 		Desc:        desc,
+		Sharer:      sharer,
 	}
 
 	err = Create(db, sharing)

@@ -431,59 +431,42 @@ func TestSharingRefusedSuccess(t *testing.T) {
 }
 
 func TestRecipientRefusedSharingWhenSharingDoesNotExist(t *testing.T) {
-	err := RecipientRefusedSharing(TestPrefix, "fakesharingid", "fakeclientid")
+	err := RecipientRefusedSharing(TestPrefix, "fakesharingid")
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingDoesNotExist, err)
 }
 
 func TestRecipientRefusedSharingWhenSharingIDIsNotUnique(t *testing.T) {
 	testSharingID := "sameid"
-	testClientID := "notused"
+	testClientID := "notUsedClientID"
+	testURL := "notUsedURL"
 
-	_, err := insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID)
+	_, err := insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID, testURL)
 	if err != nil {
 		t.FailNow()
 	}
-	_, err = insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID)
+	_, err = insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID, testURL)
 	if err != nil {
 		t.FailNow()
 	}
 
-	err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
+	err = RecipientRefusedSharing(TestPrefix, testSharingID)
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingIDNotUnique, err)
-}
-
-func TestRecipientRefusedSharingWhenOAuthClientDoesNotExist(t *testing.T) {
-	testSharingID := "SharingNoOAuthClient"
-	testClientID := "ClientNoOAuthClient"
-
-	_, err := insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID)
-	if err != nil {
-		t.Fail()
-	}
-
-	err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
-	assert.Error(t, err)
-	assert.Equal(t, ErrNoOAuthClient, err)
 }
 
 func TestRecipientRefusedSharingWhenPostFails(t *testing.T) {
 	testSharingID := "testPostFails"
 	testClientID := "clientPostFails"
+	testURL := "urlPostFails"
 
 	docSharingTestID, err := insertSharingDocumentInDB(TestPrefix,
-		testSharingID, testClientID)
+		testSharingID, testClientID, testURL)
 	if err != nil {
 		t.Fail()
 	}
 
-	err = insertClientDocumentInDB(TestPrefix, testClientID, "nourl")
-	if err != nil {
-		t.Fail()
-	}
-
-	err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
+	err = RecipientRefusedSharing(TestPrefix, testSharingID)
 	assert.Error(t, err)
 
 	out := couchdb.JSONDoc{}
@@ -503,24 +486,20 @@ func TestRecipientRefusedSharingWhenResponseStatusCodeIsNotOK(t *testing.T) {
 	))
 	defer tsLocal.Close()
 
-	err := insertClientDocumentInDB(TestPrefix, testClientID, tsLocal.URL)
+	_, err := insertSharingDocumentInDB(TestPrefix,
+		testSharingID, testClientID, tsLocal.URL)
 	if err != nil {
 		t.Fail()
 	}
 
-	_, err = insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID)
-	if err != nil {
-		t.Fail()
-	}
-
-	err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
+	err = RecipientRefusedSharing(TestPrefix, testSharingID)
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharerDidNotReceiveAnswer, err)
 }
 
 func TestRecipientRefusedSharingSuccess(t *testing.T) {
 	testSharingID := "SharingSuccess"
-	testClientID := "ClientSucess"
+	testClientID := "ClientSuccess"
 
 	tsLocal := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -544,37 +523,38 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 	))
 	defer tsLocal.Close()
 
-	err := insertClientDocumentInDB(TestPrefix, testClientID, tsLocal.URL)
+	docSharingTestID, err := insertSharingDocumentInDB(TestPrefix,
+		testSharingID, testClientID, tsLocal.URL)
 	if err != nil {
 		t.Fail()
 	}
 
-	docSharingTestID, err := insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID)
-	if err != nil {
-		t.Fail()
-	}
-
-	err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
+	err = RecipientRefusedSharing(TestPrefix, testSharingID)
 	assert.NoError(t, err)
 
 	// We also test that the sharing document is actually deleted.
 	sharing := couchdb.JSONDoc{}
-	err = couchdb.GetDoc(TestPrefix, consts.Sharings, docSharingTestID, &sharing)
+	err = couchdb.GetDoc(TestPrefix,
+		consts.Sharings, docSharingTestID, &sharing)
 	assert.Error(t, err)
 }
 
 func TestCreateSharingRequestBadParams(t *testing.T) {
-	_, err := CreateSharingRequest(TestPrefix, "", "", "", "")
+	_, err := CreateSharingRequest(TestPrefix, "", "", "", "", "")
 	assert.Error(t, err)
 
 	state := "1234"
-	_, err = CreateSharingRequest(TestPrefix, "", state, "", "")
+	_, err = CreateSharingRequest(TestPrefix, "", state, "", "", "")
 	assert.Error(t, err)
 
 	sharingType := consts.OneShotSharing
-	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, "")
+	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, "", "")
 	assert.Error(t, err)
 
+	scope := "io.cozy.sharings"
+	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, scope, "")
+	assert.Error(t, err)
+	assert.Equal(t, ErrNoOAuthClient, err)
 }
 
 func TestCreateSharingRequestSuccess(t *testing.T) {
@@ -588,11 +568,18 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 		Values: []string{"1234"},
 	}
 
+	// TODO insert a client document in the database.
+	clientID := "clientIDTestCreateSharingRequestSuccess"
+	err := insertClientDocumentInDB(TestPrefix, clientID, "https://cozy.rocks")
+	if err != nil {
+		t.FailNow()
+	}
+
 	set := permissions.Set{rule}
 	scope, err := set.MarshalScopeString()
 	assert.NoError(t, err)
 
-	sharing, err := CreateSharingRequest(TestPrefix, desc, state, sharingType, scope)
+	sharing, err := CreateSharingRequest(TestPrefix, desc, state, sharingType, scope, clientID)
 	assert.NoError(t, err)
 	assert.Equal(t, state, sharing.SharingID)
 	assert.Equal(t, sharingType, sharing.SharingType)
@@ -727,13 +714,17 @@ func TestMain(m *testing.M) {
 	os.Exit(res)
 }
 
-func insertSharingDocumentInDB(db couchdb.Database, sharingID, clientID string) (string, error) {
+func insertSharingDocumentInDB(db couchdb.Database, sharingID, clientID, URL string) (string, error) {
 	sharing := couchdb.JSONDoc{
 		Type: consts.Sharings,
-		M:    make(map[string]interface{}),
+		M: map[string]interface{}{
+			"sharing_id": sharingID,
+			"sharer": map[string]interface{}{
+				"client_id": clientID,
+				"url":       URL,
+			},
+		},
 	}
-	sharing.M["sharing_id"] = sharingID
-	sharing.M["client_id"] = clientID
 	err := couchdb.CreateDoc(db, sharing)
 	if err != nil {
 		fmt.Printf("Error occurred while trying to insert document: %v\n", err)
@@ -746,10 +737,11 @@ func insertSharingDocumentInDB(db couchdb.Database, sharingID, clientID string) 
 func insertClientDocumentInDB(db couchdb.Database, clientID, url string) error {
 	client := couchdb.JSONDoc{
 		Type: consts.OAuthClients,
-		M:    make(map[string]interface{}),
+		M: map[string]interface{}{
+			"_id":        clientID,
+			"client_uri": url,
+		},
 	}
-	client.SetID(clientID)
-	client.M["client_uri"] = url
 
 	return couchdb.CreateNamedDocWithDB(db, client)
 }

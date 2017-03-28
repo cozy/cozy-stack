@@ -57,16 +57,17 @@ func AddRecipient(c echo.Context) error {
 }
 
 // SharingRequest handles a sharing request from the recipient side
-// It creates a tempory sharing document and redirect to the authorize page
+// It creates a temporary sharing document and redirects to the authorize page
 func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
 	state := c.QueryParam("state")
 	sharingType := c.QueryParam("sharing_type")
 	desc := c.QueryParam("desc")
+	clientID := c.QueryParam("client_id")
 
 	instance := middlewares.GetInstance(c)
 
-	_, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope)
+	_, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope, clientID)
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -125,6 +126,7 @@ func SendSharingMails(c echo.Context) error {
 }
 
 // RecipientRefusedSharing is called when the recipient refused the sharing.
+//
 // This function will delete the sharing document and inform the sharer by
 // returning her the sharing id, the client id (oauth) and nothing else (more
 // especially no scope and no access code).
@@ -137,12 +139,8 @@ func RecipientRefusedSharing(c echo.Context) error {
 	if sharingID == "" {
 		return wrapErrors(sharings.ErrMissingState)
 	}
-	clientID := c.FormValue("client_id")
-	if clientID == "" {
-		return wrapErrors(sharings.ErrNoOAuthClient)
-	}
 
-	return sharings.RecipientRefusedSharing(instance, sharingID, clientID)
+	return sharings.RecipientRefusedSharing(instance, sharingID)
 }
 
 // Routes sets the routing for the sharing service
