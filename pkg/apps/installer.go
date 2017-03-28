@@ -44,7 +44,7 @@ type Fetcher interface {
 	FetchManifest(src *url.URL) (io.ReadCloser, error)
 	// Fetch should download the application and install it in the given
 	// directory.
-	Fetch(src *url.URL, appDir string) error
+	Fetch(src *url.URL, appDir *vfs.DirDoc) error
 }
 
 // NewInstaller creates a new Installer
@@ -132,7 +132,7 @@ func (i *Installer) Delete() (*Manifest, error) {
 	if err := deleteManifest(i.db, i.man); err != nil {
 		return nil, err
 	}
-	if err := vfs.RemoveAll(i.fs, i.appDir()); err != nil {
+	if err := vfs.RemoveAll(i.fs, i.appDirName()); err != nil {
 		return nil, err
 	}
 	return i.man, nil
@@ -174,12 +174,12 @@ func (i *Installer) install() (*Manifest, error) {
 
 	i.manc <- man
 
-	appdir := i.appDir()
-	if _, err := vfs.MkdirAll(i.fs, appdir, nil); err != nil {
+	appdir, err := vfs.MkdirAll(i.fs, i.appDirName(), nil)
+	if err != nil {
 		return man, err
 	}
 
-	err := i.fetcher.Fetch(i.src, appdir)
+	err = i.fetcher.Fetch(i.src, appdir)
 	return man, err
 }
 
@@ -202,7 +202,12 @@ func (i *Installer) update() (*Manifest, error) {
 
 	i.manc <- man
 
-	err := i.fetcher.Fetch(i.src, i.appDir())
+	appdir, err := i.fs.DirByPath(i.appDirName())
+	if err != nil {
+		return man, err
+	}
+
+	err = i.fetcher.Fetch(i.src, appdir)
 	return man, err
 }
 
@@ -230,7 +235,7 @@ func (i *Installer) ReadManifest(state State, man *Manifest) error {
 	return nil
 }
 
-func (i *Installer) appDir() string {
+func (i *Installer) appDirName() string {
 	return path.Join(vfs.AppsDirName, i.slug)
 }
 
