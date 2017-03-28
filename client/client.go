@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -47,7 +46,6 @@ type Client struct {
 
 	UserAgent string
 	Retries   int
-	Timeout   time.Duration
 	Transport http.RoundTripper
 
 	authed bool
@@ -63,9 +61,6 @@ func (c *Client) init() {
 	if c.Retries == 0 {
 		c.Retries = 3
 	}
-	if c.Timeout == 0 {
-		c.Timeout = 30 * time.Second
-	}
 	if c.Transport == nil {
 		c.Transport = &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -77,7 +72,6 @@ func (c *Client) init() {
 	if c.Client == nil {
 		c.Client = &http.Client{
 			Transport: c.Transport,
-			Timeout:   c.Timeout,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
