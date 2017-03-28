@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/instances"
+	"github.com/cozy/cozy-stack/web/intents"
 	"github.com/cozy/cozy-stack/web/jobs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -159,6 +160,7 @@ func SetupRoutes(router *echo.Echo) error {
 	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 	data.Routes(router.Group("/data", mws...))
 	files.Routes(router.Group("/files", mws...))
+	intents.Routes(router.Group("/intents", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))
 	permissions.Routes(router.Group("/permissions", mws...))
 	settings.Routes(router.Group("/settings", mws...))

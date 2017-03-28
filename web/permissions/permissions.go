@@ -212,7 +212,7 @@ func revokePermission(c echo.Context) error {
 
 }
 
-// Routes sets the routing for the status service
+// Routes sets the routing for the permissions service
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
