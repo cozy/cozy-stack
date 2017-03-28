@@ -25,4 +25,7 @@ var (
 	// ErrBadState is used when trying to use the application while in a
 	// state that is not appropriate for the given operation.
 	ErrBadState = errors.New("Application is not in valid state to perform this operation")
+	// ErrMissingSource is used when installing an application, but there is no
+	// source URL
+	ErrMissingSource = errors.New("The source URL for the app is missing")
 )
