@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -198,6 +199,64 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	return sharing, sRec, nil
 }
 
+// sendDoc sends a JSON document to a recipient
+func sendDoc(docType, id string, doc *couchdb.JSONDoc, recStatus *RecipientStatus) error {
+	// Get the recipient info
+	token := recStatus.AccessToken
+	rec := recStatus.recipient
+	domain, err := rec.ExtractDomain()
+	if err != nil {
+		return err
+	}
+	path := fmt.Sprintf("/data/%s/%s", docType, id)
+	// A new doc will be created on the recipient side
+	delete(doc.M, "_id")
+	delete(doc.M, "_rev")
+	body, err := request.WriteJSON(doc.M)
+	if err != nil {
+		return err
+	}
+
+	_, err = request.Req(&request.Options{
+		Domain: domain,
+		Method: "PUT",
+		Path:   path,
+		Headers: request.Headers{
+			"Content-Type":  "application/json",
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + token,
+		},
+		Body: body,
+	})
+	return err
+}
+
+// ShareDoc shares the documents specified in the Sharing structure to the
+// specified recipient
+func ShareDoc(db couchdb.Database, sharing *Sharing, recStatus *RecipientStatus) error {
+	// Lookup all the sharing permissions
+	for _, rule := range sharing.Permissions {
+		// Only static values are supported yet
+		if len(rule.Values) == 0 {
+			return nil
+		}
+		docType := rule.Type
+		// Get each document referenced in Values and sent it to the recipient
+		for _, val := range rule.Values {
+			doc := &couchdb.JSONDoc{}
+			err := couchdb.GetDoc(db, docType, val, doc)
+			if err != nil {
+				return err
+			}
+			err = sendDoc(docType, val, doc, recStatus)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // SharingAccepted handles an accepted sharing on the sharer side
 func SharingAccepted(db couchdb.Database, state, clientID, accessCode string) (string, error) {
 	sharing, recStatus, err := findSharingRecipient(db, state, clientID)
@@ -213,6 +272,13 @@ func SharingAccepted(db couchdb.Database, state, clientID, accessCode string) (s
 	recStatus.AccessToken = access.AccessToken
 	recStatus.RefreshToken = access.RefreshToken
 	err = couchdb.UpdateDoc(db, sharing)
+	if err != nil {
+		return "", err
+	}
+	// Share all the documents with the recipient
+	err = ShareDoc(db, sharing, recStatus)
+
+	// Redirect the recipient after acceptation
 	redirect := recStatus.recipient.URL
 	return redirect, err
 }
