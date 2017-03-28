@@ -179,7 +179,7 @@ func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
 		return err
 	}
 
-	commit, err := rep.Commit(ref.Hash())
+	commit, err := rep.CommitObject(ref.Hash())
 	if err != nil {
 		return err
 	}

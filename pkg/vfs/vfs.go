@@ -21,7 +21,7 @@ import (
 const DefaultContentType = "application/octet-stream"
 
 // ForbiddenFilenameChars is the list of forbidden characters in a filename.
-const ForbiddenFilenameChars = "/\x00"
+const ForbiddenFilenameChars = "/\x00\n\r"
 
 const (
 	// TrashDirName is the path of the trash directory
