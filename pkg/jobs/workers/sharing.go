@@ -21,9 +21,6 @@ func init() {
 func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	doc := &couchdb.JSONDoc{}
 	err := doc.UnmarshalJSON(m.Data)
-	if err != nil {
-		return err
-	}
 	//TODO : call a senddoc worker to send updated files
-	return nil
+	return err
 }
