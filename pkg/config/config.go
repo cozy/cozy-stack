@@ -161,6 +161,9 @@ func Setup(cfgFile string) (err error) {
 		return fmt.Errorf("Template error for config file %s: %s", cfgFile, err)
 	}
 
+	if ext := filepath.Ext(cfgFile); len(ext) > 0 {
+		viper.SetConfigType(ext[1:])
+	}
 	if err := viper.ReadConfig(dest); err != nil {
 		if _, isParseErr := err.(viper.ConfigParseError); isParseErr {
 			log.Errorf("Failed to read cozy-stack configurations from %s", cfgFile)
