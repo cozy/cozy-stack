@@ -72,13 +72,11 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 	}
 
 	var fetcher Fetcher
-	if src != nil {
-		switch src.Scheme {
-		case "git":
-			fetcher = newGitFetcher(fs)
-		default:
-			return nil, ErrNotSupportedSource
-		}
+	switch src.Scheme {
+	case "git":
+		fetcher = newGitFetcher(fs)
+	default:
+		return nil, ErrNotSupportedSource
 	}
 
 	inst := &Installer{
