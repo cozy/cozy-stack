@@ -673,6 +673,9 @@ type ViewRequest struct {
 	StartKey interface{} `json:"start_key,omitempty" url:"start_key,omitempty"`
 	EndKey   interface{} `json:"end_key,omitempty" url:"end_key,omitempty"`
 
+	StartKeyDocID string `json:"startkey_docid,omitempty" url:"startkey_docid,omitempty"`
+	EndKeyDocID   string `json:"endkey_docid,omitempty" url:"endkey_docid,omitempty"`
+
 	// Keys cannot be used in url mode
 	Keys []interface{} `json:"keys,omitempty" url:"-"`
 
@@ -689,7 +692,8 @@ type ViewRequest struct {
 
 // ViewResponse is the response we receive when executing a view
 type ViewResponse struct {
-	Rows []struct {
+	Total int `json:"total_rows"`
+	Rows  []struct {
 		ID    string           `json:"id"`
 		Key   interface{}      `json:"key"`
 		Value interface{}      `json:"value"`

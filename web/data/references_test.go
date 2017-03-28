@@ -27,14 +27,41 @@ func TestListReferencesHandler(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+token)
 
 	var result struct {
-		Data []jsonapi.ResourceIdentifier `json:"data"`
+		Links jsonapi.LinksList
+		Data  []jsonapi.ResourceIdentifier `json:"data"`
 	}
-
 	_, res, err := doRequest(req, &result)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Len(t, result.Data, 4)
+	assert.Empty(t, result.Links.Next)
+
+	var result2 struct {
+		Links jsonapi.LinksList
+		Data  []jsonapi.ResourceIdentifier `json:"data"`
+	}
+	req2, _ := http.NewRequest("GET", url+"?page[limit]=3", nil)
+	req2.Header.Add("Authorization", "Bearer "+token)
+	_, res2, err := doRequest(req2, &result2)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res2.StatusCode)
+	assert.Len(t, result2.Data, 3)
+	assert.NotEmpty(t, result2.Links.Next)
+
+	var result3 struct {
+		Links jsonapi.LinksList
+		Data  []jsonapi.ResourceIdentifier `json:"data"`
+	}
+	req3, _ := http.NewRequest("GET", ts.URL+result2.Links.Next, nil)
+	req3.Header.Add("Authorization", "Bearer "+token)
+	_, res3, err := doRequest(req3, &result3)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res3.StatusCode)
+	assert.Len(t, result3.Data, 1)
+	assert.Empty(t, result3.Links.Next)
 }
 
 func TestAddReferencesHandler(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -142,12 +143,66 @@ func TestData(t *testing.T) {
 	assert.Equal(t, qux["id"], "qux")
 }
 
+func TestPagination(t *testing.T) {
+	res, err := http.Get(ts.URL + "/paginated")
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	var c couchdb.Cursor
+	json.NewDecoder(res.Body).Decode(&c)
+	assert.Equal(t, 13, c.Limit)
+}
+
+func TestPaginationCustomLimit(t *testing.T) {
+	res, err := http.Get(ts.URL + "/paginated?page[limit]=7")
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	var c couchdb.Cursor
+	json.NewDecoder(res.Body).Decode(&c)
+	assert.Equal(t, 7, c.Limit)
+}
+
+func TestPaginationBadNumber(t *testing.T) {
+	res, err := http.Get(ts.URL + "/paginated?page[limit]=notnumber")
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, 400, res.StatusCode, "should give an error")
+}
+
+func TestPaginationWithCursor(t *testing.T) {
+	res, err := http.Get(ts.URL + "/paginated?page[cursor]=somekey")
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	var c couchdb.Cursor
+	json.NewDecoder(res.Body).Decode(&c)
+	assert.Equal(t, 13, c.Limit)
+	assert.Equal(t, "somekey", c.NextKey)
+	assert.Equal(t, "", c.NextDocID)
+}
+
+func TestPaginationWithCursorID(t *testing.T) {
+	res, err := http.Get(ts.URL + "/paginated?page[cursor]=somekey/someid")
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	var c couchdb.Cursor
+	json.NewDecoder(res.Body).Decode(&c)
+	assert.Equal(t, 13, c.Limit)
+	assert.Equal(t, "somekey", c.NextKey)
+	assert.Equal(t, "someid", c.NextDocID)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	router := echo.New()
 	router.GET("/foos/courge", func(c echo.Context) error {
 		courge := &Foo{FID: "courge", FRev: "1-abc", Bar: "baz"}
 		return Data(c, 200, courge, nil)
+	})
+	router.GET("/paginated", func(c echo.Context) error {
+		p, err := ExtractPagination(c, 13)
+		if err != nil {
+			return err
+		}
+		return c.JSON(200, p.ViewCursor())
 	})
 	ts = httptest.NewServer(router)
 	defer ts.Close()
