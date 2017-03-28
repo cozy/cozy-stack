@@ -152,7 +152,10 @@ func TestSharingAnswerSuccess(t *testing.T) {
 }
 
 func TestSharingRequestNoScope(t *testing.T) {
-	urlVal := url.Values{}
+	urlVal := url.Values{
+		"state":        {"dummystate"},
+		"sharing_type": {consts.OneShotSharing},
+	}
 	res, err := requestGET("/sharings/request", urlVal)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
@@ -160,7 +163,9 @@ func TestSharingRequestNoScope(t *testing.T) {
 
 func TestSharingRequestNoState(t *testing.T) {
 	urlVal := url.Values{
-		"scope": {"dummyscope"},
+		"scope":        {"dummyscope"},
+		"sharing_type": {consts.OneShotSharing},
+		"client_id":    {"dummyclientid"},
 	}
 	res, err := requestGET("/sharings/request", urlVal)
 	assert.NoError(t, err)
@@ -169,8 +174,9 @@ func TestSharingRequestNoState(t *testing.T) {
 
 func TestSharingRequestNoSharingType(t *testing.T) {
 	urlVal := url.Values{
-		"scope": {"dummyscope"},
-		"state": {"dummystate"},
+		"scope":     {"dummyscope"},
+		"state":     {"dummystate"},
+		"client_id": {"dummyclientid"},
 	}
 	res, err := requestGET("/sharings/request", urlVal)
 	assert.NoError(t, err)
@@ -182,10 +188,34 @@ func TestSharingRequestBadScope(t *testing.T) {
 		"scope":        []string{":"},
 		"state":        {"dummystate"},
 		"sharing_type": {consts.OneShotSharing},
+		"client_id":    {"dummyclientid"},
 	}
 	res, err := requestGET("/sharings/request", urlVal)
 	assert.NoError(t, err)
 	assert.Equal(t, 500, res.StatusCode)
+}
+
+func TestSharingRequestNoClientID(t *testing.T) {
+	urlVal := url.Values{
+		"scope":        {"dummyscope"},
+		"state":        {"dummystate"},
+		"sharing_type": {consts.OneShotSharing},
+	}
+	res, err := requestGET("/sharings/request", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestSharingRequestBadClientID(t *testing.T) {
+	urlVal := url.Values{
+		"scope":        {"dummyscope"},
+		"state":        {"dummystate"},
+		"sharing_type": {consts.OneShotSharing},
+		"client_id":    {"badclientid"},
+	}
+	res, err := requestGET("/sharings/request", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
 }
 
 func TestSharingRequestSuccess(t *testing.T) {
