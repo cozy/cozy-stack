@@ -468,7 +468,10 @@ func TestUninstall(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	inst3, err := NewInstaller(db, fs, &InstallerOptions{Slug: "github-cozy-delete"})
+	inst3, err := NewInstaller(db, fs, &InstallerOptions{
+		Slug:      "github-cozy-delete",
+		SourceURL: "git://localhost/",
+	})
 	if !assert.NoError(t, err) {
 		return
 	}

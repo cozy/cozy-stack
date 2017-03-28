@@ -65,20 +65,18 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 	} else if opts.SourceURL != "" {
 		src, err = url.Parse(opts.SourceURL)
 	} else {
-		err = nil
+		err = ErrMissingSource
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	var fetcher Fetcher
-	if src != nil {
-		switch src.Scheme {
-		case "git":
-			fetcher = newGitFetcher(fs)
-		default:
-			return nil, ErrNotSupportedSource
-		}
+	switch src.Scheme {
+	case "git":
+		fetcher = newGitFetcher(fs)
+	default:
+		return nil, ErrNotSupportedSource
 	}
 
 	inst := &Installer{

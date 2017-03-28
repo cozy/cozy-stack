@@ -214,6 +214,8 @@ func wrapAppsError(err error) error {
 		return jsonapi.BadRequest(err)
 	case apps.ErrBadManifest:
 		return jsonapi.BadRequest(err)
+	case apps.ErrMissingSource:
+		return jsonapi.BadRequest(err)
 	}
 	if _, ok := err.(*url.Error); ok {
 		return jsonapi.InvalidParameter("Source", err)
