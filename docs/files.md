@@ -188,6 +188,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "hello.txt",
+      "hidden": false,
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
@@ -286,6 +287,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "attributes": {
       "type": "file",
       "name": "hello.mp3",
+      "hidden": false,
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
@@ -419,6 +421,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "hello.txt",
+      "hidden": false,
       "md5sum": "YjU5YmMzN2Q2NDQxZDk2Nwo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
@@ -482,6 +485,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "attributes": {
       "type": "file",
       "name": "hello.txt",
+      "hidden": false,
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
@@ -538,6 +542,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "hi.txt",
+      "hidden": false,
       "tags": ["poem"]
     },
     "relationships": {
@@ -579,6 +584,7 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "attributes": {
       "type": "file",
       "name": "hi.txt",
+      "hidden": false,
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
@@ -701,6 +707,8 @@ When a file is deleted, it is first moved to the trash. In the trash, it can
 be restored. Or, after some time, it will be removed from the trash and
 permanently destroyed.
 
+The file `hidden` attribute will be set to true.
+
 ### GET /files/trash
 
 List the files inside the trash. It's paginated.
@@ -737,6 +745,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "foo.txt",
+      "hidden": true,
       "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
@@ -758,6 +767,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "bar.txt",
+      "hidden": true,
       "md5sum": "YWVhYjg3ZWI0OWQzZjRlMAo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
@@ -778,6 +788,8 @@ Content-Type: application/vnd.api+json
 
 Restore the file with the `file-id` identifiant.
 
+The file's `hidden` attributes will be set to false.
+
 ### DELETE /files/trash/:file-id
 
 Destroy the file and make it unrecoverable (it will still be available in
@@ -786,3 +798,11 @@ backups).
 ### DELETE /files/trash
 
 Clear out the trash.
+
+
+## Hidden attribute
+
+All files that are inside a hidden folder will have a `hidden: true` attribute.
+This attribute can be used in mango queries to only get "interesting" files, for instance avoid applications icons poping up in Photo app.
+
+For now, only hidden folders are `.cozy_apps` & `trash`.
