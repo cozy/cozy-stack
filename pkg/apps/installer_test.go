@@ -177,11 +177,11 @@ func TestInstallSuccessful(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Installing, man.State) {
+			if !assert.EqualValues(t, Installing, man.State()) {
 				return
 			}
 		} else if state == Installing {
-			if !assert.EqualValues(t, Ready, man.State) {
+			if !assert.EqualValues(t, Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -192,7 +192,7 @@ func TestInstallSuccessful(t *testing.T) {
 			t.Fatalf("invalid state")
 			return
 		}
-		state = man.State
+		state = man.State()
 	}
 
 	ok, err := vfs.Exists(fs, "/.cozy_apps/local-cozy-mini/manifest.webapp")
@@ -291,11 +291,11 @@ func TestInstallWithUpgrade(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Upgrading, man.State) {
+			if !assert.EqualValues(t, Upgrading, man.State()) {
 				return
 			}
 		} else if state == Upgrading {
-			if !assert.EqualValues(t, Ready, man.State) {
+			if !assert.EqualValues(t, Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -306,7 +306,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 			t.Fatalf("invalid state")
 			return
 		}
-		state = man.State
+		state = man.State()
 	}
 
 	ok, err = vfs.Exists(fs, "/.cozy_apps/cozy-app-b/manifest.webapp")
@@ -338,11 +338,11 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Installing, man.State) {
+			if !assert.EqualValues(t, Installing, man.State()) {
 				return
 			}
 		} else if state == Installing {
-			if !assert.EqualValues(t, Ready, man.State) {
+			if !assert.EqualValues(t, Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -353,7 +353,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 			t.Fatalf("invalid state")
 			return
 		}
-		state = man.State
+		state = man.State()
 	}
 
 	ok, err := vfs.Exists(fs, "/.cozy_apps/local-cozy-mini-branch/manifest.webapp")
@@ -386,11 +386,11 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Upgrading, man.State) {
+			if !assert.EqualValues(t, Upgrading, man.State()) {
 				return
 			}
 		} else if state == Upgrading {
-			if !assert.EqualValues(t, Ready, man.State) {
+			if !assert.EqualValues(t, Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -401,7 +401,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 			t.Fatalf("invalid state")
 			return
 		}
-		state = man.State
+		state = man.State()
 	}
 
 	ok, err = vfs.Exists(fs, "/.cozy_apps/local-cozy-mini-branch/manifest.webapp")
@@ -434,11 +434,11 @@ func TestInstallFromGithub(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Installing, man.State) {
+			if !assert.EqualValues(t, Installing, man.State()) {
 				return
 			}
 		} else if state == Installing {
-			if !assert.EqualValues(t, Ready, man.State) {
+			if !assert.EqualValues(t, Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -449,7 +449,7 @@ func TestInstallFromGithub(t *testing.T) {
 			t.Fatalf("invalid state")
 			return
 		}
-		state = man.State
+		state = man.State()
 	}
 }
 

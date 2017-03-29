@@ -5,7 +5,6 @@ package apps
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -29,81 +28,75 @@ const typeTextEventStream = "text/event-stream"
 
 // installHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
-func installHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	slug := c.Param("slug")
-	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
-		return err
+func installHandler(installerType apps.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		instance := middlewares.GetInstance(c)
+		slug := c.Param("slug")
+		if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+			return err
+		}
+		inst, err := apps.NewInstaller(instance, instance.VFS(),
+			&apps.InstallerOptions{
+				Type:      installerType,
+				SourceURL: c.QueryParam("Source"),
+				Slug:      slug,
+			},
+		)
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		go inst.Install()
+		return pollInstaller(c, slug, inst)
 	}
-	installerType, err := getInstallerType(c)
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	inst, err := apps.NewInstaller(instance, instance.VFS(),
-		&apps.InstallerOptions{
-			Type:      installerType,
-			SourceURL: c.QueryParam("Source"),
-			Slug:      slug,
-		},
-	)
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	go inst.Install()
-	return pollInstaller(c, slug, inst)
 }
 
 // updateHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
-func updateHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	slug := c.Param("slug")
-	if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
-		return err
+func updateHandler(installerType apps.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		instance := middlewares.GetInstance(c)
+		slug := c.Param("slug")
+		if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+			return err
+		}
+		inst, err := apps.NewInstaller(instance, instance.VFS(),
+			&apps.InstallerOptions{
+				Type: installerType,
+				Slug: slug,
+			},
+		)
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		go inst.Update()
+		return pollInstaller(c, slug, inst)
 	}
-	installerType, err := getInstallerType(c)
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	inst, err := apps.NewInstaller(instance, instance.VFS(),
-		&apps.InstallerOptions{
-			Type: installerType,
-			Slug: slug,
-		},
-	)
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	go inst.Update()
-	return pollInstaller(c, slug, inst)
 }
 
 // deleteHandler handles all DELETE /:slug used to delete an application with
 // the specified slug.
-func deleteHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	slug := c.Param("slug")
-	if err := permissions.AllowInstallApp(c, permissions.DELETE); err != nil {
-		return err
+func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		instance := middlewares.GetInstance(c)
+		slug := c.Param("slug")
+		if err := permissions.AllowInstallApp(c, permissions.DELETE); err != nil {
+			return err
+		}
+		inst, err := apps.NewInstaller(instance, instance.VFS(),
+			&apps.InstallerOptions{
+				Type: installerType,
+				Slug: slug,
+			},
+		)
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		man, err := inst.Delete()
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		return jsonapi.Data(c, http.StatusOK, man, nil)
 	}
-	installerType, err := getInstallerType(c)
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	inst, err := apps.NewInstaller(instance, instance.VFS(),
-		&apps.InstallerOptions{
-			Type: installerType,
-			Slug: slug,
-		},
-	)
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	man, err := inst.Delete()
-	if err != nil {
-		return wrapAppsError(err)
-	}
-	return jsonapi.Data(c, http.StatusOK, man, nil)
 }
 
 func pollInstaller(c echo.Context, slug string, inst *apps.Installer) error {
@@ -171,7 +164,7 @@ func listHandler(c echo.Context) error {
 		return err
 	}
 
-	docs, err := apps.List(instance)
+	docs, err := apps.ListWebapps(instance)
 	if err != nil {
 		return wrapAppsError(err)
 	}
@@ -189,7 +182,7 @@ func listHandler(c echo.Context) error {
 func iconHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	slug := c.Param("slug")
-	app, err := apps.GetBySlug(instance, slug)
+	app, err := apps.GetWebappBySlug(instance, slug)
 	if err != nil {
 		return err
 	}
@@ -213,24 +206,20 @@ func iconHandler(c echo.Context) error {
 	return nil
 }
 
-// Routes sets the routing for the apps service
-func Routes(router *echo.Group) {
+// WebappsRoutes sets the routing for the web apps service
+func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listHandler)
-	router.POST("/:slug", installHandler)
-	router.PUT("/:slug", updateHandler)
-	router.DELETE("/:slug", deleteHandler)
+	router.POST("/:slug", installHandler(apps.Webapp))
+	router.PUT("/:slug", updateHandler(apps.Webapp))
+	router.DELETE("/:slug", deleteHandler(apps.Webapp))
 	router.GET("/:slug/icon", iconHandler)
 }
 
-func getInstallerType(c echo.Context) (apps.InstallerType, error) {
-	switch c.QueryParam("Type") {
-	case "", "webapp":
-		return apps.Webapp, nil
-	case "konnector":
-		return apps.Konnector, nil
-	}
-	return 0,
-		jsonapi.InvalidParameter("Type", errors.New("unknown installer type"))
+// KonnectorRoutes sets the routing for the konnectors service
+func KonnectorRoutes(router *echo.Group) {
+	router.POST("/:slug", installHandler(apps.Konnector))
+	router.POST("/:slug", updateHandler(apps.Konnector))
+	router.POST("/:slug", deleteHandler(apps.Konnector))
 }
 
 func wrapAppsError(err error) error {

@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -21,27 +20,21 @@ type Installer struct {
 	fs      vfs.VFS
 	db      couchdb.Database
 
-	man  *Manifest
-	src  *url.URL
-	slug string
-	base string
+	appType AppType
+	man     Manifest
+	src     *url.URL
+	slug    string
+	base    string
 
 	err  error
 	errc chan error
-	manc chan *Manifest
+	manc chan Manifest
 }
-
-type InstallerType int
-
-const (
-	Webapp InstallerType = iota
-	Konnector
-)
 
 // InstallerOptions provides the slug name of the application along with the
 // source URL.
 type InstallerOptions struct {
-	Type      InstallerType
+	Type      AppType
 	Slug      string
 	SourceURL string
 }
@@ -59,29 +52,29 @@ type Fetcher interface {
 
 // NewInstaller creates a new Installer
 func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Installer, error) {
-	var base, manFilename string
-	switch opts.Type {
-	case Webapp:
-		base, manFilename = vfs.WebappsDirName, WebappManifest
-	case Konnector:
-		base, manFilename = vfs.KonnectorsDirName, KonnectorManifest
-	default:
-		return nil, fmt.Errorf("unknown installer type %s", opts.Type)
-	}
-
 	slug := opts.Slug
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
 
-	man, err := GetBySlug(db, slug)
+	var base, manFilename string
+	switch opts.Type {
+	case Webapp:
+		base, manFilename = vfs.WebappsDirName, WebappManifestName
+	case Konnector:
+		base, manFilename = vfs.KonnectorsDirName, KonnectorManifestName
+	default:
+		return nil, fmt.Errorf("unknown installer type %s", string(opts.Type))
+	}
+
+	man, err := GetBySlug(db, slug, opts.Type)
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return nil, err
 	}
 
 	var src *url.URL
 	if man != nil {
-		src, err = url.Parse(man.Source)
+		src, err = url.Parse(man.Source())
 	} else if opts.SourceURL != "" {
 		src, err = url.Parse(opts.SourceURL)
 	} else {
@@ -104,13 +97,14 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 		db:      db,
 		fs:      fs,
 
-		man:  man,
-		src:  src,
-		slug: slug,
-		base: base,
+		appType: opts.Type,
+		man:     man,
+		src:     src,
+		slug:    slug,
+		base:    base,
 
 		errc: make(chan error, 1),
-		manc: make(chan *Manifest, 2),
+		manc: make(chan Manifest, 2),
 	}, nil
 }
 
@@ -134,7 +128,7 @@ func (i *Installer) Update() {
 		i.err = ErrNotFound
 		return
 	}
-	if state := i.man.State; state != Ready && state != Errored {
+	if state := i.man.State(); state != Ready && state != Errored {
 		i.man, i.err = nil, ErrBadState
 	} else {
 		i.man, i.err = i.update()
@@ -143,11 +137,11 @@ func (i *Installer) Update() {
 }
 
 // Delete will remove the application linked to the installer.
-func (i *Installer) Delete() (*Manifest, error) {
+func (i *Installer) Delete() (Manifest, error) {
 	if i.man == nil {
 		return nil, ErrNotFound
 	}
-	if state := i.man.State; state != Ready && state != Errored {
+	if state := i.man.State(); state != Ready && state != Errored {
 		return nil, ErrBadState
 	}
 	if err := deleteManifest(i.db, i.man); err != nil {
@@ -166,13 +160,13 @@ func (i *Installer) endOfProc() {
 		return
 	}
 	if err != nil {
-		man.State = Errored
-		man.Error = err.Error()
+		man.SetState(Errored)
+		man.SetError(err)
 		updateManifest(i.db, man)
 		i.errc <- err
 		return
 	}
-	man.State = Ready
+	man.SetState(Ready)
 	updateManifest(i.db, man)
 	i.manc <- i.man
 }
@@ -183,8 +177,8 @@ func (i *Installer) endOfProc() {
 //
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
-func (i *Installer) install() (*Manifest, error) {
-	man := &Manifest{}
+func (i *Installer) install() (Manifest, error) {
+	man := i.createManifest()
 	if err := i.ReadManifest(Installing, man); err != nil {
 		return nil, err
 	}
@@ -210,7 +204,7 @@ func (i *Installer) install() (*Manifest, error) {
 //
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
-func (i *Installer) update() (*Manifest, error) {
+func (i *Installer) update() (Manifest, error) {
 	man := i.man
 
 	if err := i.ReadManifest(Upgrading, man); err != nil {
@@ -240,39 +234,39 @@ func (i *Installer) baseDirName() string {
 // passed manifest pointer.
 //
 // The State field of the manifest will be set to the specified state.
-func (i *Installer) ReadManifest(state State, man *Manifest) error {
+func (i *Installer) ReadManifest(state State, man Manifest) error {
 	r, err := i.fetcher.FetchManifest(i.src)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
+	man.SetState(state)
+	return man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
+}
 
-	err = json.NewDecoder(io.LimitReader(r, ManifestMaxSize)).Decode(man)
-	if err != nil {
-		return ErrBadManifest
+func (i *Installer) createManifest() Manifest {
+	switch i.appType {
+	case Webapp:
+		return &WebappManifest{}
+	case Konnector:
+		return &konnManifest{}
 	}
-
-	man.Slug = i.slug
-	man.Source = i.src.String()
-	man.State = state
-	man.CreateDefaultRoute()
-
 	return nil
 }
 
 // Poll should be used to monitor the progress of the Installer.
-func (i *Installer) Poll() (*Manifest, bool, error) {
+func (i *Installer) Poll() (Manifest, bool, error) {
 	select {
 	case man := <-i.manc:
-		done := man.State == Ready
+		done := man.State() == Ready
 		return man, done, nil
 	case err := <-i.errc:
 		return nil, false, err
 	}
 }
 
-func updateManifest(db couchdb.Database, man *Manifest) error {
-	err := permissions.DestroyApp(db, man.Slug)
+func updateManifest(db couchdb.Database, man Manifest) error {
+	err := permissions.DestroyApp(db, man.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}
@@ -280,20 +274,20 @@ func updateManifest(db couchdb.Database, man *Manifest) error {
 	if err != nil {
 		return err
 	}
-	_, err = permissions.CreateAppSet(db, man.Slug, *man.Permissions)
+	_, err = permissions.CreateAppSet(db, man.Slug(), man.Permissions())
 	return err
 }
 
-func createManifest(db couchdb.Database, man *Manifest) error {
+func createManifest(db couchdb.Database, man Manifest) error {
 	if err := couchdb.CreateNamedDoc(db, man); err != nil {
 		return err
 	}
-	_, err := permissions.CreateAppSet(db, man.Slug, *man.Permissions)
+	_, err := permissions.CreateAppSet(db, man.Slug(), man.Permissions())
 	return err
 }
 
-func deleteManifest(db couchdb.Database, man *Manifest) error {
-	err := permissions.DestroyApp(db, man.Slug)
+func deleteManifest(db couchdb.Database, man Manifest) error {
+	err := permissions.DestroyApp(db, man.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}

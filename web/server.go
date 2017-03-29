@@ -4,7 +4,6 @@
 package web
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -85,7 +84,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 		if !exists {
 			return fmt.Errorf("Directory %s does not exist", dir)
 		}
-		if err = checkExists(path.Join(dir, apps.WebappManifest)); err != nil {
+		if err = checkExists(path.Join(dir, apps.WebappManifestName)); err != nil {
 			return err
 		}
 		if err = checkExists(path.Join(dir, "index.html")); err != nil {
@@ -103,29 +102,27 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 			return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
 		}
 		fs := afero.NewBasePathFs(afero.NewOsFs(), dir)
-		manFile, err := fs.Open(apps.WebappManifest)
+		manFile, err := fs.Open(apps.WebappManifestName)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return fmt.Errorf("Could not find the %s file in your application directory %s",
-					apps.WebappManifest, dir)
+					apps.WebappManifestName, dir)
 			}
 			return err
 		}
-		app := &apps.Manifest{}
-		if err = json.NewDecoder(manFile).Decode(&app); err != nil {
+		app := &apps.WebappManifest{}
+		if err = app.ReadManifest(manFile, slug, "file://localhost"+dir); err != nil {
 			return fmt.Errorf("Could not parse the %s file: %s",
-				apps.WebappManifest, err.Error())
+				apps.WebappManifestName, err.Error())
 		}
-		app.CreateDefaultRoute()
-		app.Slug = slug
 		i := middlewares.GetInstance(c)
 		f := webapps.NewAferoServer(fs, func(_, folder, file string) string {
 			return path.Join(folder, file)
 		})
 		// Save permissions in couchdb before loading an index page
 		if _, file := app.FindRoute(path.Clean(c.Request().URL.Path)); file == "" {
-			if app.Permissions != nil {
-				if err := permissions.Force(i, app.Slug, *app.Permissions); err != nil {
+			if app.Permissions() != nil {
+				if err := permissions.Force(i, app.Slug(), app.Permissions()); err != nil {
 					return err
 				}
 			}

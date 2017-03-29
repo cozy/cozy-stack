@@ -662,9 +662,9 @@ func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) 
 
 // BuildAppToken is used to build a token to identify the app for requests made
 // to the stack
-func (i *Instance) BuildAppToken(m *apps.Manifest) string {
+func (i *Instance) BuildAppToken(m *apps.WebappManifest) string {
 	scope := "" // apps tokens don't have a scope
-	token, err := i.MakeJWT(permissions.AppAudience, m.Slug, scope, time.Now())
+	token, err := i.MakeJWT(permissions.AppAudience, m.Slug(), scope, time.Now())
 	if err != nil {
 		return ""
 	}

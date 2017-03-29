@@ -37,7 +37,7 @@ const slug = "mini"
 var ts *httptest.Server
 var testInstance *instance.Instance
 var token string
-var manifest *apps.Manifest
+var manifest *apps.WebappManifest
 
 var jar http.CookieJar
 var client *http.Client
@@ -54,12 +54,12 @@ func createFile(dir, filename, content string) error {
 }
 
 func installMiniApp() error {
-	manifest = &apps.Manifest{
-		Name:   "Mini",
-		Icon:   "icon.svg",
-		Slug:   slug,
-		Source: "git://github.com/cozy/mini.git",
-		State:  apps.Ready,
+	manifest = &apps.WebappManifest{
+		Name:      "Mini",
+		Icon:      "icon.svg",
+		DocSlug:   slug,
+		DocSource: "git://github.com/cozy/mini.git",
+		DocState:  apps.Ready,
 		Routes: apps.Routes{
 			"/foo": apps.Route{
 				Folder: "/",
@@ -325,7 +325,7 @@ func TestMain(m *testing.M) {
 		setup.CleanupAndDie("Could not install mini app.", err)
 	}
 
-	ts = setup.GetTestServer("/apps", webApps.Routes, func(r *echo.Echo) *echo.Echo {
+	ts = setup.GetTestServer("/apps", webApps.WebappsRoutes, func(r *echo.Echo) *echo.Echo {
 		r.POST("/login", func(c echo.Context) error {
 			session, _ := sessions.New(testInstance)
 			cookie, _ := session.ToCookie()

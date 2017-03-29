@@ -36,14 +36,14 @@ func Serve(c echo.Context) error {
 		}
 	}
 	slug := c.Get("slug").(string)
-	app, err := apps.GetBySlug(i, slug)
+	app, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return echo.NewHTTPError(http.StatusNotFound, "Application not found")
 		}
 		return err
 	}
-	if app.State != apps.Ready {
+	if app.State() != apps.Ready {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
 	return ServeAppFile(c, i, NewServer(i.VFS()), app)
@@ -57,7 +57,8 @@ func Serve(c echo.Context) error {
 // application that is not installed on the user's instance. However this
 // procedure should not be used for standard applications, use the Serve method
 // for that.
-func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *apps.Manifest) error {
+func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *apps.WebappManifest) error {
+	slug := app.Slug()
 	route, file := app.FindRoute(path.Clean(c.Request().URL.Path))
 	if route.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
@@ -66,7 +67,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 		if file != "" {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
-		subdomain := i.SubDomain(app.Slug)
+		subdomain := i.SubDomain(slug)
 		subdomain.Path = c.Request().URL.String()
 		redirect := url.Values{
 			"redirect": {subdomain.String()},
@@ -76,7 +77,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	if file == "" {
 		file = route.Index
 	}
-	infos, err := fs.Stat(app.Slug, route.Folder, file)
+	infos, err := fs.Stat(slug, route.Folder, file)
 	if os.IsNotExist(err) {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
@@ -85,11 +86,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	}
 	modtime := infos.ModTime()
 	if file != route.Index {
-		return fs.ServeFileContent(c.Response(), c.Request(), modtime, app.Slug, route.Folder, file)
+		return fs.ServeFileContent(c.Response(), c.Request(), modtime, slug, route.Folder, file)
 	}
 	// For index file, we inject the locale, the stack domain, and a token if the
 	// user is connected
-	content, err := fs.Open(app.Slug, route.Folder, file)
+	content, err := fs.Open(slug, route.Folder, file)
 	if err != nil {
 		return err
 	}
@@ -101,7 +102,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	tmpl, err := template.New(file).Parse(string(buf))
 	if err != nil {
 		log.Warnf("[apps] %s cannot be parsed as a template: %s", file, err)
-		return fs.ServeFileContent(c.Response(), c.Request(), modtime, app.Slug, route.Folder, file)
+		return fs.ServeFileContent(c.Response(), c.Request(), modtime, slug, route.Folder, file)
 	}
 	token := "" // #nosec
 	if middlewares.IsLoggedIn(c) {
