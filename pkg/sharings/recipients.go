@@ -83,7 +83,8 @@ func (r *Recipient) Register(instance *instance.Instance) error {
 		Domain:     rURL,
 		HTTPClient: client,
 	}
-	redirectURI := instance.Scheme() + "://" + instance.Domain + "/sharings/answer"
+	clientURI := instance.PageURL("", nil)
+	redirectURI := instance.PageURL("/sharings/answer", nil)
 
 	// Get the Cozy's public name
 	doc := &couchdb.JSONDoc{}
@@ -101,7 +102,7 @@ func (r *Recipient) Register(instance *instance.Instance) error {
 		ClientName:   sharerPublicName,
 		ClientKind:   "sharing",
 		SoftwareID:   "github.com/cozy/cozy-stack",
-		ClientURI:    instance.Domain,
+		ClientURI:    clientURI,
 	}
 
 	resClient, err := req.RegisterClient(authClient)

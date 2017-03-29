@@ -1,12 +1,8 @@
 package sharings
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -309,47 +305,36 @@ func SharingRefused(db couchdb.Database, state, clientID string) (string, error)
 
 // RecipientRefusedSharing executes all the actions induced by a refusal from
 // the recipient: the sharing document is deleted and the sharer is informed.
-func RecipientRefusedSharing(db couchdb.Database, sharingID string) error {
+func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) (string, error) {
 	// We get the sharing document through its sharing id…
 	var res []Sharing
 	err := couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
 		Selector: mango.Equal("sharing_id", sharingID),
 	}, &res)
 	if err != nil {
-		return err
+		return "", err
 	} else if len(res) < 1 {
-		return ErrSharingDoesNotExist
+		return "", ErrSharingDoesNotExist
 	} else if len(res) > 1 {
-		return ErrSharingIDNotUnique
+		return "", ErrSharingIDNotUnique
 	}
 	sharing := &res[0]
 
 	// … and we delete it because it is no longer needed.
 	err = couchdb.DeleteDoc(db, sharing)
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	// We send the refusal.
-	bodyRaw := &SharingAnswer{
-		ClientID:  sharing.Sharer.ClientID,
-		SharingID: sharingID,
-	}
-	body, _ := json.Marshal(bodyRaw)
-
-	url := fmt.Sprintf("%s/sharings/answer", sharing.Sharer.URL)
-	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	// We get the sharer's oauth client so that we can get her Cozy's url
+	// through the `ClientURI`.
+	sharer := &oauth.Client{}
+	err = couchdb.GetDoc(db, consts.OAuthClients, clientID, sharer)
 	if err != nil {
-		return err
+		return "", ErrNoOAuthClient
 	}
 
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		log.Errorf("[Sharing] The sharer might not have received the answer, she replied with: %s", resp.Status)
-		return ErrSharerDidNotReceiveAnswer
-	}
-
-	return nil
+	u := fmt.Sprintf("%s/sharings/answer", sharer.ClientURI)
+	return u, nil
 }
 
 // CreateSharingRequest checks fields integrity and creates a sharing document

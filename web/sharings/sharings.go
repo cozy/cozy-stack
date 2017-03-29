@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -132,15 +133,31 @@ func SendSharingMails(c echo.Context) error {
 // especially no scope and no access code).
 func RecipientRefusedSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-
 	// We collect the information we need to send to the sharer: the client id,
 	// the sharing id.
 	sharingID := c.FormValue("state")
 	if sharingID == "" {
 		return wrapErrors(sharings.ErrMissingState)
 	}
+	clientID := c.FormValue("client_id")
+	if clientID == "" {
+		return wrapErrors(sharings.ErrNoOAuthClient)
+	}
+	redirect, err := sharings.RecipientRefusedSharing(instance, sharingID, clientID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	u, err := url.ParseRequestURI(redirect)
+	if err != nil {
+		return err
+	}
+	q := u.Query()
+	q.Set("state", sharingID)
+	q.Set("client_id", clientID)
+	u.RawQuery = q.Encode()
+	u.Fragment = ""
 
-	return sharings.RecipientRefusedSharing(instance, sharingID)
+	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
 // Routes sets the routing for the sharing service
@@ -149,7 +166,6 @@ func Routes(router *echo.Group) {
 	router.PUT("/:id/sendMails", SendSharingMails)
 	router.GET("/request", SharingRequest)
 	router.GET("/answer", SharingAnswer)
-	router.POST("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", AddRecipient)
 }
