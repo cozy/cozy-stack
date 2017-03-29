@@ -1,12 +1,16 @@
 package sharings
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -207,6 +211,37 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	return sharing, sRec, nil
 }
 
+// addTrigger creates a new trigger on the updates of the shared documents
+func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string) error {
+	scheduler := instance.JobsScheduler()
+
+	eventArgs := rule.Type + ":UPDATED:" + strings.Join(rule.Values, ",")
+	type TriggerMessage struct {
+		SharingID string `json:"sharing_id"`
+	}
+	m := struct {
+		SharingID string `json:"sharing_id"`
+	}{sharingID}
+
+	workerArgs, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+		Type:       "@event",
+		WorkerType: "sharing",
+		Arguments:  eventArgs,
+		Message: &jobs.Message{
+			Type: jobs.JSONEncoding,
+			Data: workerArgs,
+		},
+	})
+	if err != nil {
+		return err
+	}
+	return scheduler.Add(t)
+}
+
 // sendDoc sends a JSON document to a recipient
 func sendDoc(docType, id string, doc *couchdb.JSONDoc, recStatus *RecipientStatus) error {
 	// Get the recipient info
@@ -241,7 +276,7 @@ func sendDoc(docType, id string, doc *couchdb.JSONDoc, recStatus *RecipientStatu
 
 // ShareDoc shares the documents specified in the Sharing structure to the
 // specified recipient
-func ShareDoc(db couchdb.Database, sharing *Sharing, recStatus *RecipientStatus) error {
+func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus) error {
 	// Lookup all the sharing permissions
 	for _, rule := range sharing.Permissions {
 		// Only static values are supported yet
@@ -249,25 +284,28 @@ func ShareDoc(db couchdb.Database, sharing *Sharing, recStatus *RecipientStatus)
 			return nil
 		}
 		docType := rule.Type
+		// Create a trigger for the updates on the rule
+		if err := addTrigger(instance, rule, sharing.SharingID); err != nil {
+			return err
+		}
 		// Get each document referenced in Values and sent it to the recipient
 		for _, val := range rule.Values {
 			doc := &couchdb.JSONDoc{}
-			err := couchdb.GetDoc(db, docType, val, doc)
-			if err != nil {
+			if err := couchdb.GetDoc(instance, docType, val, doc); err != nil {
 				return err
 			}
-			err = sendDoc(docType, val, doc, recStatus)
-			if err != nil {
+			if err := sendDoc(docType, val, doc, recStatus); err != nil {
 				return err
 			}
+
 		}
 	}
 	return nil
 }
 
 // SharingAccepted handles an accepted sharing on the sharer side
-func SharingAccepted(db couchdb.Database, state, clientID, accessCode string) (string, error) {
-	sharing, recStatus, err := findSharingRecipient(db, state, clientID)
+func SharingAccepted(instance *instance.Instance, state, clientID, accessCode string) (string, error) {
+	sharing, recStatus, err := findSharingRecipient(instance, state, clientID)
 	if err != nil {
 		return "", err
 	}
@@ -279,12 +317,12 @@ func SharingAccepted(db couchdb.Database, state, clientID, accessCode string) (s
 	}
 	recStatus.AccessToken = access.AccessToken
 	recStatus.RefreshToken = access.RefreshToken
-	err = couchdb.UpdateDoc(db, sharing)
+	err = couchdb.UpdateDoc(instance, sharing)
 	if err != nil {
 		return "", err
 	}
 	// Share all the documents with the recipient
-	err = ShareDoc(db, sharing, recStatus)
+	err = ShareDoc(instance, sharing, recStatus)
 
 	// Redirect the recipient after acceptation
 	redirect := recStatus.recipient.URL

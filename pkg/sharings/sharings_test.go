@@ -98,6 +98,13 @@ func createTestDoc(t *testing.T) (*couchdb.JSONDoc, error) {
 	return doc, err
 }
 
+func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc) error {
+	doc.M["test"] = "oh it's you again?"
+	err := couchdb.UpdateDoc(in, doc)
+	assert.NoError(t, err)
+	return err
+}
+
 func createSharing(t *testing.T, recipient *Recipient, doc *couchdb.JSONDoc) (*Sharing, error) {
 	recStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{
@@ -276,7 +283,7 @@ func TestSharingAcceptedNoSharing(t *testing.T) {
 	state := "fake state"
 	clientID := "fake client"
 	accessCode := "fake code"
-	_, err := SharingAccepted(TestPrefix, state, clientID, accessCode)
+	_, err := SharingAccepted(in, state, clientID, accessCode)
 	assert.Error(t, err)
 }
 
@@ -288,9 +295,9 @@ func TestSharingAcceptedNoClient(t *testing.T) {
 	sharing := &Sharing{
 		SharingID: state,
 	}
-	err := couchdb.CreateDoc(TestPrefix, sharing)
+	err := couchdb.CreateDoc(in, sharing)
 	assert.NoError(t, err)
-	_, err = SharingAccepted(TestPrefix, state, clientID, accessCode)
+	_, err = SharingAccepted(in, state, clientID, accessCode)
 	assert.Error(t, err)
 }
 
@@ -304,12 +311,12 @@ func TestSharingAcceptedStateNotUnique(t *testing.T) {
 	sharing2 := &Sharing{
 		SharingID: state,
 	}
-	err := couchdb.CreateDoc(TestPrefix, sharing1)
+	err := couchdb.CreateDoc(in, sharing1)
 	assert.NoError(t, err)
-	err = couchdb.CreateDoc(TestPrefix, sharing2)
+	err = couchdb.CreateDoc(in, sharing2)
 	assert.NoError(t, err)
 
-	_, err = SharingAccepted(TestPrefix, state, clientID, accessCode)
+	_, err = SharingAccepted(in, state, clientID, accessCode)
 	assert.Error(t, err)
 }
 
@@ -363,6 +370,14 @@ func TestSharingAcceptedSuccess(t *testing.T) {
 	assert.Equal(t, consts.AcceptedSharingStatus, recStatus.Status)
 	assert.NotNil(t, recStatus.AccessToken)
 	assert.NotNil(t, recStatus.RefreshToken)
+
+	err = updateTestDoc(t, testDoc)
+	assert.NoError(t, err)
+
+	testDoc2, err := createTestDoc(t)
+	assert.NoError(t, err)
+	assert.NotNil(t, testDoc2)
+
 }
 
 func TestSharingRefusedNoSharing(t *testing.T) {
@@ -697,7 +712,19 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	err = couchdb.ResetDB(in, consts.Triggers)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	createSettings(in)
+	err = in.StartJobSystem()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	ts = createServer()
 	recipientURL = strings.Split(ts.URL, "http://")[1]
 
