@@ -14,6 +14,8 @@ const (
 	Doctypes = "io.cozy.doctypes"
 	// Files doc type for type for files and directories
 	Files = "io.cozy.files"
+	// Intents doc type for intents persisted in couchdb
+	Intents = "io.cozy.intents"
 	// Jobs doc type for queued jobs
 	Jobs = "io.cozy.jobs"
 	// OAuthAccessCodes doc type for OAuth2 access codes

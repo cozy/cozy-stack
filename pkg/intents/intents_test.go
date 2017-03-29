@@ -16,7 +16,7 @@ import (
 var ins *instance.Instance
 
 func TestGenerateHref(t *testing.T) {
-	intent := &Intent{ID: "6fba9dd6-1487-11e7-b90d-130a5dedd6d6"}
+	intent := &Intent{IID: "6fba9dd6-1487-11e7-b90d-130a5dedd6d6"}
 
 	href := intent.GenerateHref(ins, "files", "/pick?id={{.Intent}}")
 	assert.Equal(t, "https://files.cozy.example.net/pick?id=6fba9dd6-1487-11e7-b90d-130a5dedd6d6", href)
@@ -57,7 +57,7 @@ func TestFillServices(t *testing.T) {
 	assert.NoError(t, err)
 
 	intent := &Intent{
-		ID:     "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
+		IID:    "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
 		Action: "PICK",
 		Type:   "io.cozy.files",
 	}
@@ -69,7 +69,7 @@ func TestFillServices(t *testing.T) {
 	assert.Equal(t, "https://files.cozy.example.net/pick?intent=6b44d8d0-148b-11e7-a1cf-a38d75a77df6", service.Href)
 
 	intent = &Intent{
-		ID:     "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
+		IID:    "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
 		Action: "view",
 		Type:   "io.cozy.files",
 	}
@@ -81,7 +81,7 @@ func TestFillServices(t *testing.T) {
 	assert.Equal(t, "https://photos.cozy.example.net/viewer#id=6b44d8d0-148b-11e7-a1cf-a38d75a77df6", service.Href)
 
 	intent = &Intent{
-		ID:     "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
+		IID:    "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
 		Action: "PICK",
 		Type:   "image/gif",
 	}
@@ -96,7 +96,7 @@ func TestFillServices(t *testing.T) {
 	assert.Equal(t, "https://photos.cozy.example.net/picker#id=6b44d8d0-148b-11e7-a1cf-a38d75a77df6", service.Href)
 
 	intent = &Intent{
-		ID:     "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
+		IID:    "6b44d8d0-148b-11e7-a1cf-a38d75a77df6",
 		Action: "VIEW",
 		Type:   "image/gif",
 	}
