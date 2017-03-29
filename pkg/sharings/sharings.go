@@ -219,7 +219,10 @@ func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	type TriggerMessage struct {
 		SharingID string `json:"sharing_id"`
 	}
-	m := TriggerMessage{sharingID}
+	m := struct {
+		SharingID string `json:"sharing_id"`
+	}{sharingID}
+
 	workerArgs, err := json.Marshal(m)
 	if err != nil {
 		return err
