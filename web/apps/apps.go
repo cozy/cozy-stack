@@ -218,8 +218,8 @@ func WebappsRoutes(router *echo.Group) {
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
 	router.POST("/:slug", installHandler(apps.Konnector))
-	router.POST("/:slug", updateHandler(apps.Konnector))
-	router.POST("/:slug", deleteHandler(apps.Konnector))
+	router.PUT("/:slug", updateHandler(apps.Konnector))
+	router.DELETE("/:slug", deleteHandler(apps.Konnector))
 }
 
 func wrapAppsError(err error) error {
