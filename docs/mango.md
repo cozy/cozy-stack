@@ -123,8 +123,10 @@ Content-Type: application/json
 Pagination of mango query should be handled by the client.
 The stack will always limit query results to maximum 100 docs.
 
+The limit applied to a query is visible in the HTTP response.
+
 If the limit cause some docs to not be returned, the response will have a
-limit & next values.
+`next=true` top level values.
 
 ```json
 {
@@ -134,17 +136,21 @@ limit & next values.
 }
 ```
 
-If there is the number of docs is lower or equal to the limit, these fields are not present
+If the number of docs is lower or equal to the limit, next will be false
 
 ```json
 {
+    "limit": 100,
+    "next": false,
     "docs": [ "... less than a hundred docs ..."],
 }
 ```
 
 To paginate, the client should keep track of the value of the last index field.
 
-Exemple : Index on io.cozy.events with fields `["calendar", "date"]`
+### Exemple :
+
+Index on io.cozy.events with fields `["calendar", "date"]`
 
 Try to get all events for a month :
 ```
@@ -153,7 +159,7 @@ selector: {"calendar": "my-calendar",
 }
 ```
 
-If there is less than 100 results, the response `next` field will be undefined and there is nothing more to do. If there is more than 100 events for this month, we have a `limit` & `next`.
+If there is less than 100 events, the response `next` field will be false and there is nothing more to do. If there is more than 100 events for this month, we have a `next=true` in the response.
 
 To keep iterating, we can take the date from the last item we received in the results and use it as next request $gte
 

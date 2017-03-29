@@ -311,10 +311,13 @@ func findDocuments(c echo.Context) error {
 		return err
 	}
 
-	out := echo.Map{"docs": results}
+	out := echo.Map{
+		"docs":  results,
+		"limit": limit,
+		"next":  false,
+	}
 	if len(results) > int(limit) {
 		out["docs"] = results[:len(results)-1]
-		out["limit"] = limit
 		out["next"] = true
 	}
 

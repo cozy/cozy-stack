@@ -36,6 +36,9 @@ func (c *Cursor) ApplyTo(req *ViewRequest) *ViewRequest {
 // GetNextCursor returns a cursor to the end of a ViewResponse
 // it removes the last item from the response to create a Cursor
 func GetNextCursor(res *ViewResponse) *Cursor {
+	if len(res.Rows) == 0 {
+		return &Cursor{}
+	}
 	next := res.Rows[len(res.Rows)-1]
 	res.Rows = res.Rows[:len(res.Rows)-1]
 
