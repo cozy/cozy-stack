@@ -252,6 +252,8 @@ When the client receives an "error" message, the intent is aborted and the ifram
 
 The client app can ask to start an intent via this route.
 
+Any client-side app can call this route, no permission is needed.
+
 #### Request
 
 ```
@@ -311,7 +313,7 @@ Content-Type: application/vnd.api+json
 
 Get all the informations about the intent
 
-**Note**: only the service can access this route.
+**Note**: only the service can access this route (no permission involved).
 
 #### Request
 
