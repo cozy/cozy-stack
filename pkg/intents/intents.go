@@ -79,15 +79,15 @@ func (in *Intent) GenerateHref(instance *instance.Instance, slug, target string)
 // FillServices looks at all the application that can answer this intent
 // and save them in the services field
 func (in *Intent) FillServices(instance *instance.Instance) error {
-	var res []apps.Manifest
+	var res []apps.WebappManifest
 	err := couchdb.GetAllDocs(instance, consts.Apps, &couchdb.AllDocsRequest{}, &res)
 	if err != nil {
 		return err
 	}
 	for _, man := range res {
 		if intent := man.FindIntent(in.Action, in.Type); intent != nil {
-			href := in.GenerateHref(instance, man.Slug, intent.Href)
-			service := Service{Slug: man.Slug, Href: href}
+			href := in.GenerateHref(instance, man.Slug(), intent.Href)
+			service := Service{Slug: man.Slug(), Href: href}
 			in.Services = append(in.Services, service)
 		}
 	}

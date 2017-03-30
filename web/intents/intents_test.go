@@ -118,24 +118,24 @@ func TestMain(m *testing.M) {
 	})
 	_, token = setup.GetTestClient(consts.Settings)
 
-	app := &apps.Manifest{
-		Slug:        "app",
-		Permissions: &permissions.Set{},
+	app := &apps.WebappManifest{
+		DocSlug:        "app",
+		DocPermissions: permissions.Set{},
 	}
 	err := couchdb.CreateNamedDoc(ins, app)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	appPerms, err = permissions.CreateAppSet(ins, app.Slug, *app.Permissions)
+	appPerms, err = permissions.CreateAppSet(ins, app.Slug(), app.Permissions())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	appToken = ins.BuildAppToken(app)
-	files := &apps.Manifest{
-		Slug:        "files",
-		Permissions: &permissions.Set{},
+	files := &apps.WebappManifest{
+		DocSlug:        "files",
+		DocPermissions: permissions.Set{},
 		Intents: []apps.Intent{
 			apps.Intent{
 				Action: "PICK",
@@ -148,7 +148,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if _, err := permissions.CreateAppSet(ins, files.Slug, *files.Permissions); err != nil {
+	if _, err := permissions.CreateAppSet(ins, files.Slug(), files.Permissions()); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

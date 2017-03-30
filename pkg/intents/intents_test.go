@@ -26,8 +26,8 @@ func TestGenerateHref(t *testing.T) {
 }
 
 func TestFillServices(t *testing.T) {
-	files := &apps.Manifest{
-		Slug: "files",
+	files := &apps.WebappManifest{
+		DocSlug: "files",
 		Intents: []apps.Intent{
 			apps.Intent{
 				Action: "PICK",
@@ -38,8 +38,8 @@ func TestFillServices(t *testing.T) {
 	}
 	err := couchdb.CreateNamedDoc(ins, files)
 	assert.NoError(t, err)
-	photos := &apps.Manifest{
-		Slug: "photos",
+	photos := &apps.WebappManifest{
+		DocSlug: "photos",
 		Intents: []apps.Intent{
 			apps.Intent{
 				Action: "PICK",
