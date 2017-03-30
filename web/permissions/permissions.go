@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -96,6 +97,48 @@ type refAndVerb struct {
 	ID      string               `json:"id"`
 	DocType string               `json:"type"`
 	Verbs   *permissions.VerbSet `json:"verbs"`
+}
+
+const limitPermissionsByDoctype = 30
+
+func listPermissionsByDoctype(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Param("doctype")
+	current, err := GetPermission(c)
+	if err != nil {
+		return err
+	}
+
+	if !current.Permissions.AllowWholeType("GET", doctype) {
+		return jsonapi.NewError(http.StatusForbidden,
+			"you need GET permission on whole type to list its permissions")
+	}
+
+	cursor, err := jsonapi.ExtractPaginationCursor(c, limitPermissionsByDoctype)
+	if err != nil {
+		return err
+	}
+
+	perms, err := permissions.GetPermissionsByType(instance, doctype, cursor)
+	if err != nil {
+		return err
+	}
+
+	links := &jsonapi.LinksList{}
+	if !cursor.Done {
+		params, err := jsonapi.PaginationCursorToParams(cursor)
+		if err != nil {
+			return err
+		}
+		links.Next = fmt.Sprintf("/permissions/doctype/%s?%s", doctype, params.Encode())
+	}
+
+	out := make([]jsonapi.Object, len(perms))
+	for i := range perms {
+		out[i] = perms[i]
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, out, links)
 }
 
 func listPermissions(c echo.Context) error {
@@ -216,6 +259,7 @@ func revokePermission(c echo.Context) error {
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
+	router.POST("/doctype/:doctype", listPermissionsByDoctype)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
 	router.PATCH("/:permdocid", patchPermission)

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -18,6 +19,10 @@ import (
 	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo"
 )
+
+// InfiniteString is the unicode character "\uFFFF", useful in query as
+// a upperbound for string.
+const InfiniteString = string(unicode.MaxRune)
 
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
