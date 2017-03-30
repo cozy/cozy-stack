@@ -90,6 +90,9 @@ func (m *konnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	if err := json.NewDecoder(r).Decode(&m); err != nil {
 		return ErrBadManifest
 	}
+	if m.Type != "node" {
+		return ErrBadManifest
+	}
 	m.DocSlug = slug
 	m.DocSource = sourceURL
 	return nil

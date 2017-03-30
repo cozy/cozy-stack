@@ -32,7 +32,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
-		if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+		if err := permissions.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
 		inst, err := apps.NewInstaller(instance, instance.VFS(),
@@ -56,7 +56,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
-		if err := permissions.AllowInstallApp(c, permissions.POST); err != nil {
+		if err := permissions.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
 		inst, err := apps.NewInstaller(instance, instance.VFS(),
@@ -79,7 +79,7 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		instance := middlewares.GetInstance(c)
 		slug := c.Param("slug")
-		if err := permissions.AllowInstallApp(c, permissions.DELETE); err != nil {
+		if err := permissions.AllowInstallApp(c, installerType, permissions.DELETE); err != nil {
 			return err
 		}
 		inst, err := apps.NewInstaller(instance, instance.VFS(),

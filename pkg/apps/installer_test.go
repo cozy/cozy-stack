@@ -25,8 +25,12 @@ import (
 
 var localGitCmd *exec.Cmd
 var localGitDir string
-var localVersion = "1.0.0"
+var localVersion string
 var ts *httptest.Server
+
+var installerType AppType
+var installDir string
+var manifestName string
 
 type transport struct{}
 
@@ -54,7 +58,7 @@ func fileContainsBytes(fs vfs.VFS, name string, data []byte) (bool, error) {
 	return bytes.Contains(b, data), nil
 }
 
-func manifest() string {
+func manifestWebapp() string {
 	return strings.Replace(`{
   "description": "A mini app to test cozy-stack-v2",
   "developer": {
@@ -69,14 +73,30 @@ func manifest() string {
 }`, "\n", "", -1)
 }
 
-func serveGitRep() {
+func manifestKonnector() string {
+	return strings.Replace(`{
+  "description": "A mini konnector to test cozy-stack-v2",
+  "type": "node",
+  "developer": {
+    "name": "Bruno",
+    "url": "cozy.io"
+  },
+  "license": "MIT",
+  "name": "mini-app",
+  "permissions": {},
+  "slug": "mini",
+  "version": "`+localVersion+`"
+}`, "\n", "", -1)
+}
+
+func serveGitRep(manName string, manGen func() string) {
 	dir, err := ioutil.TempDir("", "cozy-app")
 	if err != nil {
 		panic(err)
 	}
 	localGitDir = dir
 	args := `
-echo '` + manifest() + `' > manifest.webapp && \
+echo '` + manGen() + `' > ` + manName + ` && \
 git init . && \
 git add . && \
 git commit -m 'Initial commit' && \
@@ -96,17 +116,16 @@ git checkout -`
 	localGitCmd.Dir = localGitDir
 	if out, err := localGitCmd.CombinedOutput(); err != nil {
 		fmt.Println(string(out))
-		panic(err)
 	}
 }
 
 func doUpgrade(major int) {
 	localVersion = fmt.Sprintf("%d.0.0", major)
 	args := `
-echo '` + manifest() + `' > manifest.webapp && \
+echo '` + manifestWebapp() + `' > ` + manifestName + ` && \
 git commit -am "Upgrade commit" && \
 git checkout - && \
-echo '` + manifest() + `' > manifest.webapp && \
+echo '` + manifestWebapp() + `' > ` + manifestName + ` && \
 git commit -am "Upgrade commit" && \
 git checkout -`
 	cmd := exec.Command("sh", "-c", args)
@@ -121,7 +140,7 @@ var fs vfs.VFS
 
 func TestInstallBadSlug(t *testing.T) {
 	_, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		SourceURL: "git://foo.bar",
 	})
 	if assert.Error(t, err) {
@@ -129,7 +148,7 @@ func TestInstallBadSlug(t *testing.T) {
 	}
 
 	_, err = NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "coucou/",
 		SourceURL: "git://foo.bar",
 	})
@@ -140,7 +159,7 @@ func TestInstallBadSlug(t *testing.T) {
 
 func TestInstallBadAppsSource(t *testing.T) {
 	_, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
 	})
@@ -149,7 +168,7 @@ func TestInstallBadAppsSource(t *testing.T) {
 	}
 
 	_, err = NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "app4",
 		SourceURL: "git://bar  .baz",
 	})
@@ -160,7 +179,7 @@ func TestInstallBadAppsSource(t *testing.T) {
 
 func TestInstallSuccessful(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
 	})
@@ -195,17 +214,17 @@ func TestInstallSuccessful(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := vfs.Exists(fs, "/.cozy_apps/local-cozy-mini/manifest.webapp")
+	ok, err := vfs.Exists(fs, installDir+"/local-cozy-mini/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, "/.cozy_apps/local-cozy-mini/manifest.webapp", []byte("1.0.0"))
+	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini/"+manifestName, []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 }
 
 func TestInstallAldreadyExist(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "cozy-app-a",
 		SourceURL: "git://localhost/",
 	})
@@ -227,7 +246,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 	}
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "cozy-app-a",
 		SourceURL: "git://localhost/",
 	})
@@ -243,7 +262,7 @@ func TestInstallAldreadyExist(t *testing.T) {
 
 func TestInstallWithUpgrade(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
 	})
@@ -264,17 +283,17 @@ func TestInstallWithUpgrade(t *testing.T) {
 		}
 	}
 
-	ok, err := vfs.Exists(fs, "/.cozy_apps/local-cozy-mini/manifest.webapp")
+	ok, err := vfs.Exists(fs, installDir+"/local-cozy-mini/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, "/.cozy_apps/local-cozy-mini/manifest.webapp", []byte("1.0.0"))
+	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini/"+manifestName, []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
 	doUpgrade(2)
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
 	})
@@ -309,10 +328,10 @@ func TestInstallWithUpgrade(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err = vfs.Exists(fs, "/.cozy_apps/cozy-app-b/manifest.webapp")
+	ok, err = vfs.Exists(fs, installDir+"/cozy-app-b/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, "/.cozy_apps/cozy-app-b/manifest.webapp", []byte("2.0.0"))
+	ok, err = fileContainsBytes(fs, installDir+"/cozy-app-b/"+manifestName, []byte("2.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 }
@@ -321,7 +340,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 	doUpgrade(3)
 
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
 	})
@@ -356,20 +375,20 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := vfs.Exists(fs, "/.cozy_apps/local-cozy-mini-branch/manifest.webapp")
+	ok, err := vfs.Exists(fs, installDir+"/local-cozy-mini-branch/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, "/.cozy_apps/local-cozy-mini-branch/manifest.webapp", []byte("3.0.0"))
+	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini-branch/"+manifestName, []byte("3.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
-	ok, err = vfs.Exists(fs, "/.cozy_apps/local-cozy-mini-branch/branch")
+	ok, err = vfs.Exists(fs, installDir+"/local-cozy-mini-branch/branch")
 	assert.NoError(t, err)
 	assert.True(t, ok, "The good branch was checked out")
 
 	doUpgrade(4)
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
 	})
@@ -404,20 +423,20 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err = vfs.Exists(fs, "/.cozy_apps/local-cozy-mini-branch/manifest.webapp")
+	ok, err = vfs.Exists(fs, installDir+"/local-cozy-mini-branch/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, "/.cozy_apps/local-cozy-mini-branch/manifest.webapp", []byte("4.0.0"))
+	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini-branch/"+manifestName, []byte("4.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
-	ok, err = vfs.Exists(fs, "/.cozy_apps/local-cozy-mini-branch/branch")
+	ok, err = vfs.Exists(fs, installDir+"/local-cozy-mini-branch/branch")
 	assert.NoError(t, err)
 	assert.True(t, ok, "The good branch was checked out")
 }
 
 func TestInstallFromGithub(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "github-cozy-mini",
 		SourceURL: "git://github.com/nono/cozy-mini.git",
 	})
@@ -455,7 +474,7 @@ func TestInstallFromGithub(t *testing.T) {
 
 func TestUninstall(t *testing.T) {
 	inst1, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
 	})
@@ -474,7 +493,7 @@ func TestUninstall(t *testing.T) {
 		}
 	}
 	inst2, err := NewInstaller(db, fs, &InstallerOptions{
-		Type: Webapp,
+		Type: installerType,
 		Slug: "github-cozy-delete",
 	})
 	if !assert.NoError(t, err) {
@@ -485,7 +504,7 @@ func TestUninstall(t *testing.T) {
 		return
 	}
 	inst3, err := NewInstaller(db, fs, &InstallerOptions{
-		Type:      Webapp,
+		Type:      installerType,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
 	})
@@ -506,18 +525,45 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, manifest())
-	}))
-
 	manifestClient = &http.Client{
 		Transport: &transport{},
 	}
 
+	res1 := RunTest(
+		m,
+		Webapp,
+		consts.Apps,
+		vfs.WebappsDirName,
+		WebappManifestName,
+		manifestWebapp,
+	)
+
+	res2 := RunTest(
+		m,
+		Konnector,
+		consts.Konnectors,
+		vfs.KonnectorsDirName,
+		KonnectorManifestName,
+		manifestKonnector,
+	)
+
+	os.Exit(res1 + res2)
+}
+
+func RunTest(m *testing.M, appType AppType, dbName, instDir, manName string, manGen func() string) int {
+	localVersion = "1.0.0"
+	installDir = instDir
+	manifestName = manName
+	installerType = appType
+
+	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, manGen())
+	}))
+
 	db = couchdb.SimpleDatabasePrefix("apps-test")
 	index := vfs.NewCouchdbIndexer(db)
 
-	err = couchdb.ResetDB(db, consts.Apps)
+	err := couchdb.ResetDB(db, dbName)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -535,7 +581,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	go serveGitRep()
+	go serveGitRep(manName, manGen)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -565,11 +611,11 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 
-	couchdb.DeleteDB(db, consts.Apps)
+	couchdb.DeleteDB(db, dbName)
 	couchdb.DeleteDB(db, consts.Files)
+	couchdb.DeleteDB(db, consts.Permissions)
 	ts.Close()
 
 	localGitCmd.Process.Signal(os.Interrupt)
-
-	os.Exit(res)
+	return res
 }

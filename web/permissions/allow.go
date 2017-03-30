@@ -1,8 +1,10 @@
 package permissions
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -66,10 +68,20 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
 // AllowInstallApp checks that the current context is tied to the store app,
 // which is the only app authorized to install or update other apps.
 // It also allow the cozy-stack apps commands to work (CLI).
-func AllowInstallApp(c echo.Context, v permissions.Verb) error {
+func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) error {
 	pdoc, err := getPermission(c)
 	if err != nil {
 		return err
+	}
+	var docType string
+	switch appType {
+	case apps.Konnector:
+		docType = consts.Konnectors
+	case apps.Webapp:
+		docType = consts.Apps
+	}
+	if docType == "" {
+		return fmt.Errorf("unknown application type %s", string(appType))
 	}
 	sourceID := consts.Apps + "/" + consts.StoreSlug
 	switch pdoc.Type {
