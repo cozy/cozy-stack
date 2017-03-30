@@ -32,8 +32,6 @@ type konnManifest struct {
 	Version        string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
-
-	Instance SubDomainer `json:"-"` // Used for JSON-API links
 }
 
 func (m *konnManifest) ID() string        { return m.DocType() + "/" + m.DocSlug }
@@ -59,13 +57,9 @@ func (m *konnManifest) Permissions() permissions.Set {
 }
 
 func (m *konnManifest) Links() *jsonapi.LinksList {
-	links := jsonapi.LinksList{
+	return &jsonapi.LinksList{
 		Self: "/konnectors/" + m.DocSlug,
 	}
-	if m.DocSlug == Ready && m.Instance != nil {
-		links.Related = m.Instance.SubDomain(m.DocSlug).String()
-	}
-	return &links
 }
 
 func (m *konnManifest) Relationships() jsonapi.RelationshipMap {

@@ -21,7 +21,6 @@ default_locale | the locale used for the name and description fields
 locales        | translations of the name and description fields in other locales
 version        | the current version number
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
-intents        | a list of intents provided by this app (see [here](intents.md) for more details)
 permissions    | a map of permissions needed by the app (see [here](permissions.md) for more details)
 
 ### POST /konnectors/:slug
@@ -48,7 +47,7 @@ Source    | URL from where the app can be downloaded (only for install)
 #### Request
 
 ```http
-POST /konnectors/emails?Source=git://github.com/cozy/cozy-emails.git HTTP/1.1
+POST /konnectors/bank101?Source=git://github.com/cozy/cozy-bank101.git HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -84,7 +83,7 @@ Content-Type: application/vnd.api+json
 like this:
 
 ```http
-POST /konnectors/emails-dev?Source=git://github.com/cozy/cozy-emails.git%23dev HTTP/1.1
+POST /konnectors/bank101-dev?Source=git://github.com/cozy/cozy-bank101.git%23dev HTTP/1.1
 ```
 
 ### PUT /konnectors/:slug
@@ -98,7 +97,7 @@ To make this endpoint synchronous, use the header `Accept: text/event-stream`. T
 #### Request
 
 ```http
-PUT /konnectors/emails HTTP/1.1
+PUT /konnectors/bank101 HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
