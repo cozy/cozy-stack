@@ -64,7 +64,7 @@ func createIntent(c echo.Context) error {
 	}
 	instance := middlewares.GetInstance(c)
 	intent := &intents.Intent{}
-	if _, err := jsonapi.Bind(c.Request(), intent); err != nil {
+	if _, err = jsonapi.Bind(c.Request(), intent); err != nil {
 		return jsonapi.BadRequest(err)
 	}
 	if intent.Action == "" {

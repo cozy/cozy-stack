@@ -28,7 +28,7 @@ type Routes map[string]Route
 
 // Intent is a declaration of a service for other client-side apps
 type Intent struct {
-	Action string   `"json:"action`
+	Action string   `json:"action"`
 	Types  []string `json:"type"`
 	Href   string   `json:"href"`
 }
