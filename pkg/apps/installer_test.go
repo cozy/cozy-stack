@@ -472,6 +472,44 @@ func TestInstallFromGithub(t *testing.T) {
 	}
 }
 
+func TestInstallFromGitlab(t *testing.T) {
+	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Type:      installerType,
+		Slug:      "gitlab-cozy-mini",
+		SourceURL: "git://framagit.org/nono/cozy-mini.git",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	go inst.Install()
+
+	var state State
+	for {
+		man, done, err := inst.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if state == "" {
+			if !assert.EqualValues(t, Installing, man.State()) {
+				return
+			}
+		} else if state == Installing {
+			if !assert.EqualValues(t, Ready, man.State()) {
+				return
+			}
+			if !assert.True(t, done) {
+				return
+			}
+			break
+		} else {
+			t.Fatalf("invalid state")
+			return
+		}
+		state = man.State()
+	}
+}
+
 func TestUninstall(t *testing.T) {
 	inst1, err := NewInstaller(db, fs, &InstallerOptions{
 		Type:      installerType,

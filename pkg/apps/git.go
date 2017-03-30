@@ -10,6 +10,7 @@ import (
 	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -21,10 +22,15 @@ import (
 	gitStorage "gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
-const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
-
 // ghURLRegex is used to identify github
 var ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+
+const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
+
+// glURLRegex is used to identify gitlab
+var glURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+
+const glRawManifestURL = "https://%s/%s/%s/raw/%s/%s"
 
 type gitFetcher struct {
 	fs          vfs.VFS
@@ -39,12 +45,22 @@ var manifestClient = &http.Client{
 	Timeout: 60 * time.Second,
 }
 
+func isGithub(src *url.URL) bool {
+	return src.Host == "github.com"
+}
+
+func isGitlab(src *url.URL) bool {
+	return src.Host == "framagit.org" || strings.Contains(src.Host, "gitlab")
+}
+
 func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	var err error
 
 	var u string
-	if src.Host == "github.com" {
+	if isGithub(src) {
 		u, err = resolveGithubURL(src, g.manFilename)
+	} else if isGitlab(src) {
+		u, err = resolveGitlabURL(src, g.manFilename)
 	} else {
 		u, err = resolveManifestURL(src, g.manFilename)
 	}
@@ -94,6 +110,11 @@ func (g *gitFetcher) clone(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 	storage, err := gitStorage.NewStorage(newGFS(fs, gitDir))
 	if err != nil {
 		return err
+	}
+
+	// XXX Gitlab doesn't support the git protocol
+	if isGitlab(src) {
+		src.Scheme = "https"
 	}
 
 	branch := getBranch(src)
@@ -233,6 +254,26 @@ func resolveGithubURL(src *url.URL, filename string) (string, error) {
 	}
 
 	u := fmt.Sprintf(ghRawManifestURL, user, project, branch, filename)
+	return u, nil
+}
+
+func resolveGitlabURL(src *url.URL, filename string) (string, error) {
+	match := glURLRegex.FindStringSubmatch(src.Path)
+	if len(match) != 3 {
+		return "", &url.Error{
+			Op:  "parsepath",
+			URL: src.String(),
+			Err: errors.New("Could not parse url git path"),
+		}
+	}
+
+	user, project := match[1], match[2]
+	branch := "HEAD"
+	if src.Fragment != "" {
+		branch = src.Fragment
+	}
+
+	u := fmt.Sprintf(glRawManifestURL, src.Host, user, project, branch, filename)
 	return u, nil
 }
 
