@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -28,8 +29,18 @@ func (i *apiIntent) SetRev(rev string)                      { i.doc.SetRev(rev) 
 func (i *apiIntent) Relationships() jsonapi.RelationshipMap { return nil }
 func (i *apiIntent) Included() []jsonapi.Object             { return nil }
 func (i *apiIntent) Links() *jsonapi.LinksList {
-	// TODO permissions link
-	return &jsonapi.LinksList{Self: "/intents/" + i.ID()}
+	parts := strings.SplitN(i.doc.Client, "/", 2)
+	if len(parts) < 2 {
+		return nil
+	}
+	perms, err := permissions.GetForApp(i.ins, parts[1])
+	if err != nil {
+		return nil
+	}
+	return &jsonapi.LinksList{
+		Self:  "/intents/" + i.ID(),
+		Perms: "/permissions/" + perms.ID(),
+	}
 }
 func (i *apiIntent) MarshalJSON() ([]byte, error) {
 	// In the JSON-API, the client is the domain of the client-side app that
@@ -72,7 +83,32 @@ func createIntent(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, api, nil)
 }
 
+func getIntent(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	intent := &intents.Intent{}
+	id := c.Param("id")
+	pdoc, err := webpermissions.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeApplication {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	if err = couchdb.GetDoc(instance, consts.Intents, id, intent); err != nil {
+		return err // TODO wrap err
+	}
+	allowed := false
+	for _, service := range intent.Services {
+		if pdoc.SourceID == consts.Apps+"/"+service.Slug {
+			allowed = true
+		}
+	}
+	if !allowed {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	api := &apiIntent{intent, instance}
+	return jsonapi.Data(c, http.StatusOK, api, nil)
+}
+
 // Routes sets the routing for the intents service
 func Routes(router *echo.Group) {
 	router.POST("", createIntent)
+	router.GET("/:id", getIntent)
 }

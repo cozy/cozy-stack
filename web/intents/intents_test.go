@@ -25,6 +25,29 @@ var token string
 var appToken string
 var filesToken string
 var intentID string
+var appPerms *permissions.Permission
+
+func checkIntentResult(t *testing.T, res *http.Response) {
+	assert.Equal(t, 200, res.StatusCode)
+	var result map[string]interface{}
+	err := json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+	data, ok := result["data"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "io.cozy.intents", data["type"].(string))
+	intentID = data["id"].(string)
+	assert.NotEmpty(t, intentID)
+	attrs := data["attributes"].(map[string]interface{})
+	assert.Equal(t, "PICK", attrs["action"].(string))
+	assert.Equal(t, "io.cozy.files", attrs["type"].(string))
+	assert.Equal(t, "app.cozy.example.net", attrs["client"].(string))
+	perms := attrs["permissions"].([]interface{})
+	assert.Len(t, perms, 1)
+	assert.Equal(t, "GET", perms[0].(string))
+	links := data["links"].(map[string]interface{})
+	assert.Equal(t, "/intents/"+intentID, links["self"].(string))
+	assert.Equal(t, "/permissions/"+appPerms.ID(), links["permissions"].(string))
+}
 
 func TestCreateIntent(t *testing.T) {
 	body := `{
@@ -43,23 +66,7 @@ func TestCreateIntent(t *testing.T) {
 	req.Header.Add("Authorization", "Bearer "+appToken)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 200, res.StatusCode)
-
-	var result map[string]interface{}
-	err = json.NewDecoder(res.Body).Decode(&result)
-	assert.NoError(t, err)
-	data, ok := result["data"].(map[string]interface{})
-	assert.True(t, ok)
-	assert.Equal(t, "io.cozy.intents", data["type"].(string))
-	intentID = data["id"].(string)
-	assert.NotEmpty(t, intentID)
-	attrs := data["attributes"].(map[string]interface{})
-	assert.Equal(t, "PICK", attrs["action"].(string))
-	assert.Equal(t, "io.cozy.files", attrs["type"].(string))
-	assert.Equal(t, "app.cozy.example.net", attrs["client"].(string))
-	perms := attrs["permissions"].([]interface{})
-	assert.Len(t, perms, 1)
-	assert.Equal(t, "GET", perms[0].(string))
+	checkIntentResult(t, res)
 }
 
 func TestCreateIntentIsRejectedForOAuthClients(t *testing.T) {
@@ -82,6 +89,26 @@ func TestCreateIntentIsRejectedForOAuthClients(t *testing.T) {
 	assert.Equal(t, 403, res.StatusCode)
 }
 
+func TestGetIntent(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/intents/"+intentID, nil)
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+filesToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	checkIntentResult(t, res)
+}
+
+func TestGetIntentNotFromTheService(t *testing.T) {
+	req, _ := http.NewRequest("GET", ts.URL+"/intents/"+intentID, nil)
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 403, res.StatusCode)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
@@ -95,11 +122,13 @@ func TestMain(m *testing.M) {
 		Slug:        "app",
 		Permissions: &permissions.Set{},
 	}
-	if err := couchdb.CreateNamedDoc(ins, app); err != nil {
+	err := couchdb.CreateNamedDoc(ins, app)
+	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if _, err := permissions.CreateAppSet(ins, app.Slug, *app.Permissions); err != nil {
+	appPerms, err = permissions.CreateAppSet(ins, app.Slug, *app.Permissions)
+	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -123,7 +152,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	filesToken = ins.BuildAppToken(app)
+	filesToken = ins.BuildAppToken(files)
 
 	ts = setup.GetTestServer("/intents", Routes)
 	os.Exit(setup.Run())
