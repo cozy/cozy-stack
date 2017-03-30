@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo"
 )
 
@@ -85,13 +88,14 @@ func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) e
 
 // DataRelations can be called to send a Relations page,
 // a list of ResourceIdentifier
-func DataRelations(c echo.Context, statusCode int, refs []ResourceIdentifier) error {
+func DataRelations(c echo.Context, statusCode int, refs []ResourceIdentifier, links *LinksList) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return InternalServerError(err)
 	}
 	doc := Document{
-		Data: (*json.RawMessage)(&data),
+		Data:  (*json.RawMessage)(&data),
+		Links: links,
 	}
 	resp := c.Response()
 	resp.Header().Set("Content-Type", ContentType)
@@ -166,5 +170,49 @@ func BindRelations(req *http.Request) ([]ResourceIdentifier, error) {
 		out = []ResourceIdentifier{ri}
 		return out, nil
 	}
+	return out, nil
+}
+
+// Pagination contains pagination options defined by
+// http://jsonapi.org/format/#fetching-pagination
+type Pagination struct {
+	Limit  int
+	Cursor string
+}
+
+// ViewCursor transforms the pagination into a couchdb.Cursor
+func (p *Pagination) ViewCursor() *couchdb.Cursor {
+	parts := strings.Split(p.Cursor, "/")
+	key := strings.Join(parts[:len(parts)-1], "/")
+	id := parts[len(parts)-1]
+	if key == "" {
+		key = id
+		id = ""
+	}
+
+	return &couchdb.Cursor{
+		Limit:     p.Limit,
+		NextKey:   key,
+		NextDocID: id,
+	}
+}
+
+// ExtractPagination retrives the Pagination from context Query.
+func ExtractPagination(c echo.Context, defaultLimit int) (*Pagination, error) {
+	var out = &Pagination{
+		Cursor: c.QueryParam("page[cursor]"),
+		Limit:  defaultLimit,
+	}
+
+	if limit := c.QueryParam("page[limit]"); limit != "" {
+		reqLimit, err := strconv.ParseInt(limit, 10, 32)
+		if err != nil {
+			return nil, echo.NewHTTPError(400, "page limit is not a number")
+		}
+		if int(reqLimit) < defaultLimit {
+			out.Limit = int(reqLimit)
+		}
+	}
+
 	return out, nil
 }

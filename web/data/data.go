@@ -278,6 +278,8 @@ func defineIndex(c echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+const maxMangoLimit = 100
+
 func findDocuments(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
@@ -295,13 +297,31 @@ func findDocuments(c echo.Context) error {
 		return err
 	}
 
+	limit, hasLimit := findRequest["limit"].(float64)
+	if !hasLimit || limit > maxMangoLimit {
+		limit = 100
+	}
+
+	// add 1 so we know if there is more.
+	findRequest["limit"] = limit + 1
+
 	var results []couchdb.JSONDoc
 	err := couchdb.FindDocsRaw(instance, doctype, &findRequest, &results)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"docs": results})
+	out := echo.Map{
+		"docs":  results,
+		"limit": limit,
+		"next":  false,
+	}
+	if len(results) > int(limit) {
+		out["docs"] = results[:len(results)-1]
+		out["next"] = true
+	}
+
+	return c.JSON(http.StatusOK, out)
 }
 
 var allowedChangesParams = map[string]bool{

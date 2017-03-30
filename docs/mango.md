@@ -116,3 +116,55 @@ Content-Type: application/json
 - The sort field must match an existing index
 - It is possible to sort in reverse direction `sort:[{"calendar":"desc"}, {"date": "desc"}]` but **all fields** must be sorted in same direction.
 - `use_index` is optional but recommended.
+
+
+## Pagination cookbook
+
+Pagination of mango query should be handled by the client.
+The stack will always limit query results to maximum 100 docs.
+
+The limit applied to a query is visible in the HTTP response.
+
+If the limit cause some docs to not be returned, the response will have a
+`next=true` top level values.
+
+```json
+{
+    "limit": 100,
+    "next": true,
+    "docs": [ "... first hundred docs ..."],
+}
+```
+
+If the number of docs is lower or equal to the limit, next will be false
+
+```json
+{
+    "limit": 100,
+    "next": false,
+    "docs": [ "... less than a hundred docs ..."],
+}
+```
+
+To paginate, the client should keep track of the value of the last index field.
+
+### Exemple :
+
+Index on io.cozy.events with fields `["calendar", "date"]`
+
+Try to get all events for a month :
+```
+selector: {"calendar": "my-calendar",
+ "date": {$gt:"20161001", $lt:"20161030"}
+}
+```
+
+If there is less than 100 events, the response `next` field will be false and there is nothing more to do. If there is more than 100 events for this month, we have a `next=true` in the response.
+
+To keep iterating, we can take the date from the last item we received in the results and use it as next request $gte
+
+```
+selector: {"calendar": "my-calendar",
+ "date": {$gte:"20161023", $lt:"20161030"}
+}
+```
