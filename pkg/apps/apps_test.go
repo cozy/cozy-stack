@@ -7,7 +7,7 @@ import (
 )
 
 func TestFindRoute(t *testing.T) {
-	manifest := &Manifest{}
+	manifest := &WebappManifest{}
 	manifest.Routes = make(Routes)
 	manifest.Routes["/foo"] = Route{Folder: "/foo", Index: "index.html"}
 	manifest.Routes["/foo/bar"] = Route{Folder: "/bar", Index: "index.html"}
@@ -61,7 +61,7 @@ func TestFindRoute(t *testing.T) {
 }
 
 func TestNoRegression217(t *testing.T) {
-	var man Manifest
+	var man WebappManifest
 	man.Routes = make(Routes)
 	man.Routes["/"] = Route{
 		Folder: "/",

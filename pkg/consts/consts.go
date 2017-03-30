@@ -4,8 +4,10 @@ package consts
 const Instances = "instances"
 
 const (
-	// Apps doc type for application manifests
+	// Apps doc type for client-side application manifests
 	Apps = "io.cozy.apps"
+	// Konnectors doc type for konnector application manifests
+	Konnectors = "io.cozy.konnectors"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
 	// Doctypes doc type for doctype list

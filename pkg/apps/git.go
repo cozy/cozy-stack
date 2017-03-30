@@ -16,9 +16,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	gitFS "gopkg.in/src-d/go-billy.v2"
 	git "gopkg.in/src-d/go-git.v4"
-	gitPl "gopkg.in/src-d/go-git.v4/plumbing"
-	gitObj "gopkg.in/src-d/go-git.v4/plumbing/object"
-	gitSt "gopkg.in/src-d/go-git.v4/storage/filesystem"
+	gitPlumbing "gopkg.in/src-d/go-git.v4/plumbing"
+	gitObject "gopkg.in/src-d/go-git.v4/plumbing/object"
+	gitStorage "gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
 const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
@@ -27,11 +27,12 @@ const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
 var ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 
 type gitFetcher struct {
-	fs vfs.VFS
+	fs          vfs.VFS
+	manFilename string
 }
 
-func newGitFetcher(fs vfs.VFS) *gitFetcher {
-	return &gitFetcher{fs: fs}
+func newGitFetcher(fs vfs.VFS, manFilename string) *gitFetcher {
+	return &gitFetcher{fs: fs, manFilename: manFilename}
 }
 
 var manifestClient = &http.Client{
@@ -43,9 +44,9 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 
 	var u string
 	if src.Host == "github.com" {
-		u, err = resolveGithubURL(src)
+		u, err = resolveGithubURL(src, g.manFilename)
 	} else {
-		u, err = resolveManifestURL(src)
+		u, err = resolveManifestURL(src, g.manFilename)
 	}
 	if err != nil {
 		return nil, err
@@ -59,20 +60,23 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func (g *gitFetcher) Fetch(src *url.URL, appdir string) error {
+func (g *gitFetcher) Fetch(src *url.URL, baseDir *vfs.DirDoc) error {
 	log.Debugf("[git] Fetch %s", src.String())
 	fs := g.fs
 
-	gitdir := path.Join(appdir, ".git")
-	_, err := vfs.Mkdir(fs, gitdir, nil)
-	if os.IsExist(err) {
-		return g.pull(appdir, gitdir, src)
+	gitDirName := path.Join(baseDir.Fullpath, ".git")
+	gitDir, err := fs.DirByPath(gitDirName)
+	if err == nil {
+		return g.pull(baseDir, gitDir, src)
 	}
+	if !os.IsNotExist(err) {
+		return err
+	}
+	gitDir, err = vfs.Mkdir(fs, gitDirName, nil)
 	if err != nil {
 		return err
 	}
-
-	return g.clone(appdir, gitdir, src)
+	return g.clone(baseDir, gitDir, src)
 }
 
 func getBranch(src *url.URL) string {
@@ -84,10 +88,10 @@ func getBranch(src *url.URL) string {
 
 // clone creates a new bare git repository and install all the files of the
 // last commit in the application tree.
-func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
+func (g *gitFetcher) clone(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 	fs := g.fs
 
-	storage, err := gitSt.NewStorage(newGFS(fs, gitdir))
+	storage, err := gitStorage.NewStorage(newGFS(fs, gitDir))
 	if err != nil {
 		return err
 	}
@@ -99,21 +103,21 @@ func (g *gitFetcher) clone(appdir, gitdir string, src *url.URL) error {
 		URL:           src.String(),
 		Depth:         1,
 		SingleBranch:  true,
-		ReferenceName: gitPl.ReferenceName(branch),
+		ReferenceName: gitPlumbing.ReferenceName(branch),
 	})
 	if err != nil {
 		return err
 	}
 
-	return g.copyFiles(appdir, rep)
+	return g.copyFiles(baseDir, rep)
 }
 
 // pull will fetch the latest objects from the default remote and if updates
 // are available, it will update the application tree files.
-func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
+func (g *gitFetcher) pull(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 	fs := g.fs
 
-	storage, err := gitSt.NewStorage(newGFS(fs, gitdir))
+	storage, err := gitStorage.NewStorage(newGFS(fs, gitDir))
 	if err != nil {
 		return err
 	}
@@ -128,7 +132,7 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 
 	err = rep.Pull(&git.PullOptions{
 		SingleBranch:  true,
-		ReferenceName: gitPl.ReferenceName(branch),
+		ReferenceName: gitPlumbing.ReferenceName(branch),
 	})
 	if err == git.NoErrAlreadyUpToDate {
 		return nil
@@ -137,41 +141,32 @@ func (g *gitFetcher) pull(appdir, gitdir string, src *url.URL) error {
 		return err
 	}
 
-	// TODO: permanently remove application files instead of moving them to the
-	// trash
-	err = vfs.Walk(fs, appdir, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+	iter := fs.DirIterator(baseDir, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
 		if err != nil {
 			return err
 		}
-
-		if name == appdir {
-			return nil
+		if d != nil && d.DocName == ".git" {
+			continue
 		}
-		if name == gitdir {
-			return vfs.ErrSkipDir
-		}
-
-		if dir != nil {
-			_, err = vfs.TrashDir(fs, dir)
+		if d != nil {
+			err = fs.DestroyDirAndContent(d)
 		} else {
-			_, err = vfs.TrashFile(fs, file)
+			err = fs.DestroyFile(f)
 		}
 		if err != nil {
 			return err
 		}
-		if dir != nil {
-			return vfs.ErrSkipDir
-		}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
-	return g.copyFiles(appdir, rep)
+	return g.copyFiles(baseDir, rep)
 }
 
-func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
+func (g *gitFetcher) copyFiles(baseDir *vfs.DirDoc, rep *git.Repository) error {
 	fs := g.fs
 
 	ref, err := rep.Head()
@@ -189,8 +184,8 @@ func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
 		return err
 	}
 
-	return files.ForEach(func(f *gitObj.File) error {
-		abs := path.Join(appdir, f.Name)
+	return files.ForEach(func(f *gitObject.File) error {
+		abs := path.Join(baseDir.Fullpath, f.Name)
 		dir := path.Dir(abs)
 
 		_, err := vfs.MkdirAll(fs, dir, nil)
@@ -221,7 +216,7 @@ func (g *gitFetcher) copyFiles(appdir string, rep *git.Repository) error {
 	})
 }
 
-func resolveGithubURL(src *url.URL) (string, error) {
+func resolveGithubURL(src *url.URL, filename string) (string, error) {
 	match := ghURLRegex.FindStringSubmatch(src.Path)
 	if len(match) != 3 {
 		return "", &url.Error{
@@ -237,18 +232,18 @@ func resolveGithubURL(src *url.URL) (string, error) {
 		branch = src.Fragment
 	}
 
-	u := fmt.Sprintf(ghRawManifestURL, user, project, branch, ManifestFilename)
+	u := fmt.Sprintf(ghRawManifestURL, user, project, branch, filename)
 	return u, nil
 }
 
-func resolveManifestURL(src *url.URL) (string, error) {
+func resolveManifestURL(src *url.URL, filename string) (string, error) {
 	// TODO check that it works with a branch
 	srccopy, _ := url.Parse(src.String())
 	srccopy.Scheme = "http"
 	if srccopy.Path == "" || srccopy.Path[len(srccopy.Path)-1] != '/' {
 		srccopy.Path += "/"
 	}
-	srccopy.Path = srccopy.Path + ManifestFilename
+	srccopy.Path = srccopy.Path + filename
 	return srccopy.String(), nil
 }
 
@@ -297,24 +292,11 @@ func (f *gfile) Close() error {
 	return f.f.Close()
 }
 
-func newGFS(fs vfs.VFS, base string) *gfs {
-	dir, err := fs.DirByPath(base)
-	if err != nil {
-		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
-		// With a cluster of couchdb, we can have a race condition where we
-		// query an index before it has been updated for a directory that has
-		// just been created.
-		time.Sleep(1 * time.Second)
-		dir, err = fs.DirByPath(base)
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func newGFS(fs vfs.VFS, base *vfs.DirDoc) *gfs {
 	return &gfs{
 		fs:   fs,
-		base: path.Clean(base),
-		dir:  dir,
+		base: path.Clean(base.Fullpath),
+		dir:  base,
 	}
 }
 
@@ -410,7 +392,20 @@ func (fs *gfs) Join(elem ...string) string {
 }
 
 func (fs *gfs) Dir(name string) gitFS.Filesystem {
-	return newGFS(fs.fs, fs.Join(fs.base, name))
+	name = fs.Join(fs.base, name)
+	dir, err := fs.fs.DirByPath(name)
+	if err != nil {
+		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
+		// With a cluster of couchdb, we can have a race condition where we
+		// query an index before it has been updated for a directory that has
+		// just been created.
+		time.Sleep(1 * time.Second)
+		dir, err = fs.fs.DirByPath(name)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return newGFS(fs.fs, dir)
 }
 
 func (fs *gfs) Base() string {

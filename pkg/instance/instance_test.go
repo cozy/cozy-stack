@@ -135,8 +135,8 @@ func TestInstanceHasIndexes(t *testing.T) {
 }
 
 func TestBuildAppToken(t *testing.T) {
-	manifest := &apps.Manifest{
-		Slug: "my-app",
+	manifest := &apps.WebappManifest{
+		DocSlug: "my-app",
 	}
 	i := &Instance{
 		Domain:        "test-ctx-token.example.com",

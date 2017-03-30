@@ -155,7 +155,8 @@ func SetupRoutes(router *echo.Echo) error {
 	}
 	router.GET("/", auth.Home, mws...)
 	auth.Routes(router.Group("/auth", mws...))
-	apps.Routes(router.Group("/apps", mws...))
+	apps.WebappsRoutes(router.Group("/apps", mws...))
+	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 	data.Routes(router.Group("/data", mws...))
 	files.Routes(router.Group("/files", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))

@@ -16,7 +16,7 @@ var (
 	ErrNotSupportedSource = errors.New("Invalid or not supported source scheme")
 	// ErrManifestNotReachable is used when the manifest of the
 	// application is not reachable
-	ErrManifestNotReachable = errors.New("Application manifest " + ManifestFilename + " is not reachable")
+	ErrManifestNotReachable = errors.New("Application manifest is not reachable")
 	// ErrSourceNotReachable is used when the given source for
 	// application is not reachable
 	ErrSourceNotReachable = errors.New("Application source is not reachable")

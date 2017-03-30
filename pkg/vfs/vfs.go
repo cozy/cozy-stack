@@ -26,8 +26,11 @@ const ForbiddenFilenameChars = "/\x00\n\r"
 const (
 	// TrashDirName is the path of the trash directory
 	TrashDirName = "/.cozy_trash"
-	// AppsDirName is the path of the directory in which apps are stored
-	AppsDirName = "/.cozy_apps"
+	// WebappsDirName is the path of the directory in which apps are stored
+	WebappsDirName = "/.cozy_apps"
+	// KonnectorsDirName is the path of the directory in which konnectors source
+	// are stored
+	KonnectorsDirName = "/.cozy_konnectors"
 )
 
 const (
