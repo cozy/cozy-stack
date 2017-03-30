@@ -184,7 +184,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 
 	recipientURL, err := url.Parse(rs.recipient.URL)
 	if err != nil {
-		return ErrRecipientHasNoURL
+		return err
 	} else if recipientURL.Host == "" {
 		// Caveat: if the URL does not have a scheme then url.Parse returns an
 		// empty url object. If that is the case we will assume that the URL

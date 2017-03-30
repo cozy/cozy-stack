@@ -201,9 +201,18 @@ func TestRegisterNoPublicName(t *testing.T) {
 }
 
 func TestRegisterSuccess(t *testing.T) {
+	// In Go 1.8 url.Parse returns the following error if we try to parse an
+	// url that looks like "127.0.0.1:46473": "first path segment in URL cannot
+	// contain colon".
+	// Adding a scheme fixes this.
+	rURL := recipientURL
+	if !strings.HasPrefix(rURL, "http://") {
+		rURL = "http://" + rURL
+	}
+
 	rs := &RecipientStatus{
 		recipient: &Recipient{
-			URL:   recipientURL,
+			URL:   rURL,
 			Email: "xerxes@fr",
 			RID:   "dummyid",
 		},
