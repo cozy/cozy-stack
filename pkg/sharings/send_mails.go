@@ -1,6 +1,7 @@
 package sharings
 
 import (
+	"fmt"
 	"net/url"
 
 	log "github.com/Sirupsen/logrus"
@@ -40,34 +41,30 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		desc = s.Desc
 	}
 
-	// For each recipient we send the email and update the status if an error
-	// occurred.
-	recipientsStatus, err := s.RecStatus(instance)
-	if err != nil {
-		return err
-	}
-
 	errorOccurred := false
-	for _, rs := range recipientsStatus {
+	for _, rs := range s.RecipientsStatus {
 		recipient := rs.recipient
 
 		// Generate recipient specific OAuth query string.
-		recipientOAuthQueryString, err := generateOAuthQueryString(s, recipient, instance.Scheme())
-		if err != nil {
-			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
+		recipientOAuthQueryString, errGenOAuth := generateOAuthQueryString(s,
+			rs, instance.Scheme())
+		if errGenOAuth != nil {
+			errorOccurred = logError(errGenOAuth)
 			continue
 		}
 
-		// Generate the base values of the email to send, common to all recipients:
-		// the description and the sharer's public name.
-		sharingMessage, err := generateMailMessage(s, recipient, &mailTemplateValues{
-			RecipientName:    recipient.Email,
-			SharerPublicName: sharerPublicName,
-			Description:      desc,
-			OAuthQueryString: recipientOAuthQueryString,
-		})
-		if err != nil {
-			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
+		// Generate the base values of the email to send, common to all
+		// recipients: the description and the sharer's public name.
+		sharingMessage, errGenMail := generateMailMessage(s, recipient,
+			&mailTemplateValues{
+				RecipientName:    recipient.Email,
+				SharerPublicName: sharerPublicName,
+				Description:      desc,
+				OAuthQueryString: recipientOAuthQueryString,
+			},
+		)
+		if errGenMail != nil {
+			errorOccurred = logError(errGenMail)
 			continue
 		}
 
@@ -76,15 +73,30 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		// are of no use in this situation.
 		// FI: they correspond to the job information and to a channel with
 		// which we can check the advancement of said job.
-		_, _, err = instance.JobsBroker().PushJob(&jobs.JobRequest{
+		_, _, errJobs := instance.JobsBroker().PushJob(&jobs.JobRequest{
 			WorkerType: "sendmail",
 			Options:    nil,
 			Message:    sharingMessage,
 		})
-		if err != nil {
-			errorOccurred = logErrorAndSetRecipientStatus(rs, err)
+		if errJobs != nil {
+			errorOccurred = logError(errJobs)
 			continue
 		}
+
+		// Job was created, we set the status to "pending".
+		rs.Status = consts.PendingSharingStatus
+	}
+
+	// Persist the modifications in the database.
+	err = couchdb.UpdateDoc(instance, s)
+	if err != nil {
+		if errorOccurred {
+			return fmt.Errorf("[sharing] Error updating the document (%v) "+
+				"and sending the email invitation (%v)", err,
+				ErrMailCouldNotBeSent)
+		}
+
+		return err
 	}
 
 	if errorOccurred {
@@ -94,11 +106,10 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 	return nil
 }
 
-// logErrorAndSetRecipientStatus will log an error in the stack and set the
-// status of the impacted recipient to "error".
-func logErrorAndSetRecipientStatus(rs *RecipientStatus, err error) bool {
-	log.Error("[Sharing] An error occurred while trying to send the email invitation: ", err)
-	rs.Status = consts.ErrorSharingStatus
+// logError will log an error in the stack.
+func logError(err error) bool {
+	log.Error("[sharing] An error occurred while trying to send the email "+
+		"invitation: ", err)
 	return true
 }
 
@@ -126,15 +137,15 @@ func generateMailMessage(s *Sharing, r *Recipient,
 
 // generateOAuthQueryString takes care of creating a correct OAuth request for
 // the given sharing and recipient.
-func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, error) {
+func generateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (string, error) {
 
 	// Check if an oauth client exists for the owner at the recipient's.
-	if r.Client.ClientID == "" || len(r.Client.RedirectURIs) < 1 {
+	if rs.Client.ClientID == "" || len(rs.Client.RedirectURIs) < 1 {
 		return "", ErrNoOAuthClient
 	}
 
 	// Check if the recipient has an URL.
-	if r.URL == "" {
+	if rs.recipient.URL == "" {
 		return "", ErrRecipientHasNoURL
 	}
 
@@ -152,14 +163,14 @@ func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, 
 		return "", err
 	}
 
-	oAuthQuery, err := url.Parse(r.URL)
+	oAuthQuery, err := url.Parse(rs.recipient.URL)
 	if err != nil {
 		return "", err
 	}
 	// Special scenario: if r.URL doesn't have an "http://" or "https://" prefix
 	// then `url.Parse` doesn't set any host.
 	if oAuthQuery.Host == "" {
-		oAuthQuery.Host = r.URL
+		oAuthQuery.Host = rs.recipient.URL
 	}
 	// Where to send the answer.
 	oAuthQuery.Path = "/sharings/request"
@@ -171,8 +182,8 @@ func generateOAuthQueryString(s *Sharing, r *Recipient, scheme string) (string, 
 
 	// We use url.encode to safely escape the query parameters.
 	mapParamOAuthQuery := url.Values{
-		"client_id":     {r.Client.ClientID},
-		"redirect_uri":  {r.Client.RedirectURIs[0]},
+		"client_id":     {rs.Client.ClientID},
+		"redirect_uri":  {rs.Client.RedirectURIs[0]},
 		"response_type": {"code"},
 		"scope":         {permissionsScope},
 		"sharing_type":  {s.SharingType},

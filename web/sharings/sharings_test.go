@@ -40,8 +40,6 @@ func createRecipient(t *testing.T) (*sharings.Recipient, error) {
 	}
 	err := sharings.CreateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
-	err = recipient.Register(testInstance)
-	assert.NoError(t, err)
 	return recipient, err
 }
 
@@ -57,9 +55,7 @@ func createSharing(t *testing.T, recipient *sharings.Recipient) (*sharings.Shari
 		SharingType:      consts.OneShotSharing,
 		RecipientsStatus: []*sharings.RecipientStatus{recStatus},
 	}
-	err := sharings.CheckSharingCreation(testInstance, sharing)
-	assert.NoError(t, err)
-	err = sharings.Create(testInstance, sharing)
+	err := sharings.CreateSharingAndRegisterSharer(testInstance, sharing)
 	assert.NoError(t, err)
 	return sharing, err
 }
@@ -68,6 +64,70 @@ func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode
 	access, err := oauth.CreateAccessCode(recipientIn, clientID, scope)
 	assert.NoError(t, err)
 	return access, err
+}
+
+func TestRecipientRefusedSharingWhenThereIsNoState(t *testing.T) {
+	urlVal := url.Values{
+		"state":     {""},
+		"client_id": {"randomclientid"},
+	}
+
+	resp, err := formPOST("/sharings/formRefuse", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, resp.StatusCode, 400)
+}
+
+func TestRecipientRefusedSharingWhenThereIsNoClientID(t *testing.T) {
+	urlVal := url.Values{
+		"state":     {"randomsharingid"},
+		"client_id": {""},
+	}
+
+	resp, err := formPOST("/sharings/formRefuse", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, resp.StatusCode, 400)
+}
+
+func TestRecipientRefusedSharingSuccess(t *testing.T) {
+	// To be able to refuse a sharing we first need to receive a sharing
+	// request… This is a copy/paste of the code found in the test:
+	// TestSharingRequestSuccess.
+	rule := permissions.Rule{
+		Type:        "io.cozy.events",
+		Title:       "event",
+		Description: "My event",
+		Verbs:       permissions.VerbSet{permissions.POST: {}},
+		Values:      []string{"1234"},
+	}
+	set := permissions.Set{rule}
+	scope, err := set.MarshalScopeString()
+	assert.NoError(t, err)
+
+	state := "sharing_id"
+	desc := "share cher"
+
+	urlVal := url.Values{
+		"desc":          {desc},
+		"state":         {state},
+		"scope":         {scope},
+		"sharing_type":  {consts.OneShotSharing},
+		"client_id":     {clientID},
+		"redirect_uri":  {clientOAuth.RedirectURIs[0]},
+		"response_type": {"code"},
+	}
+
+	req, _ := http.NewRequest("GET", ts.URL+"/sharings/request?"+urlVal.Encode(), nil)
+	noRedirectClient := http.Client{CheckRedirect: noRedirect}
+	res, err := noRedirectClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+
+	resp, err := formPOST("/sharings/formRefuse", url.Values{
+		"state":     {state},
+		"client_id": {clientID},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusFound, resp.StatusCode)
 }
 
 func TestSharingAnswerBadState(t *testing.T) {
@@ -114,14 +174,13 @@ func TestSharingAnswerBadCode(t *testing.T) {
 	recipient, err := createRecipient(t)
 	assert.NoError(t, err)
 	assert.NotNil(t, recipient)
-	assert.NotNil(t, recipient.Client.ClientID)
 	sharing, err := createSharing(t, recipient)
 	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
 
 	urlVal := url.Values{
 		"state":       {sharing.SharingID},
-		"client_id":   {recipient.Client.ClientID},
+		"client_id":   {sharing.RecipientsStatus[0].Client.ClientID},
 		"access_code": {"fakeaccess"},
 	}
 	res, err := requestGET("/sharings/answer", urlVal)
@@ -133,18 +192,19 @@ func TestSharingAnswerSuccess(t *testing.T) {
 	recipient, err := createRecipient(t)
 	assert.NoError(t, err)
 	assert.NotNil(t, recipient)
-	assert.NotNil(t, recipient.Client.ClientID)
 	sharing, err := createSharing(t, recipient)
 	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
 
-	access, err := generateAccessCode(t, recipient.Client.ClientID, "")
+	cID := sharing.RecipientsStatus[0].Client.ClientID
+
+	access, err := generateAccessCode(t, cID, "")
 	assert.NoError(t, err)
 	assert.NotNil(t, access)
 
 	urlVal := url.Values{
 		"state":       {sharing.SharingID},
-		"client_id":   {recipient.Client.ClientID},
+		"client_id":   {cID},
 		"access_code": {access.Code},
 	}
 	_, err = requestGET("/sharings/answer", urlVal)
@@ -343,7 +403,8 @@ func requestGET(u string, v url.Values) (*http.Response, error) {
 }
 
 func formPOST(u string, v url.Values) (*http.Response, error) {
-	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
+	req, _ := http.NewRequest("POST", ts.URL+u, strings.NewReader(v.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Host = testInstance.Domain
 	noRedirectClient := http.Client{CheckRedirect: noRedirect}
 	return noRedirectClient.Do(req)

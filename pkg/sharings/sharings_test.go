@@ -1,10 +1,7 @@
 package sharings
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -82,8 +79,6 @@ func createRecipient(t *testing.T) (*Recipient, error) {
 	}
 	err := CreateRecipient(in, recipient)
 	assert.NoError(t, err)
-	err = recipient.Register(in)
-	assert.NoError(t, err)
 	return recipient, err
 }
 
@@ -105,13 +100,18 @@ func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc) error {
 	return err
 }
 
-func createSharing(t *testing.T, recipient *Recipient, doc *couchdb.JSONDoc) (*Sharing, error) {
+func createSharing(t *testing.T, doc *couchdb.JSONDoc) (*Sharing, error) {
+	recipient, err := createRecipient(t)
+	assert.NoError(t, err)
+
 	recStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{
 			ID:   recipient.RID,
 			Type: consts.Recipients,
 		},
+		recipient: recipient,
 	}
+
 	var set permissions.Set
 	if doc != nil {
 		rule := permissions.Rule{
@@ -127,10 +127,10 @@ func createSharing(t *testing.T, recipient *Recipient, doc *couchdb.JSONDoc) (*S
 		Permissions:      set,
 		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
-	err := CheckSharingCreation(in, sharing)
+
+	err = CreateSharingAndRegisterSharer(in, sharing)
 	assert.NoError(t, err)
-	err = Create(in, sharing)
-	assert.NoError(t, err)
+
 	return sharing, err
 }
 
@@ -140,16 +140,18 @@ func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode
 	return access, err
 }
 
-func addPublicName(t *testing.T) {
+func addPublicName(t *testing.T, instance *instance.Instance) {
 	publicName := "El Shareto"
-	doc := &couchdb.JSONDoc{
-		Type: consts.Settings,
-		M:    make(map[string]interface{}),
-	}
+	doc := &couchdb.JSONDoc{}
 
-	err := couchdb.GetDoc(in, consts.Settings, consts.InstanceSettingsID, doc)
+	err := couchdb.GetDoc(instance, consts.Settings,
+		consts.InstanceSettingsID, doc)
 	assert.NoError(t, err)
+
 	doc.M["public_name"] = publicName
+	doc.SetID(doc.M["_id"].(string))
+	doc.SetRev(doc.M["_rev"].(string))
+	doc.Type = consts.Settings
 
 	err = couchdb.UpdateDoc(in, doc)
 	assert.NoError(t, err)
@@ -157,53 +159,61 @@ func addPublicName(t *testing.T) {
 
 func TestGetAccessTokenNoAuth(t *testing.T) {
 	code := "sesame"
-	client := &auth.Client{}
-	rec := &Recipient{
-		URL:    recipientURL,
-		Client: client,
+	rs := &RecipientStatus{
+		recipient: &Recipient{URL: recipientURL},
+		Client:    &auth.Client{},
 	}
-	_, err := rec.GetAccessToken(code)
+	_, err := rs.getAccessToken(in, code)
 	assert.Error(t, err)
 }
 
+func TestGetAccessTokenNoURL(t *testing.T) {
+	code := "dummy"
+	rs := &RecipientStatus{
+		recipient: &Recipient{},
+		Client:    &auth.Client{},
+	}
+
+	_, err := rs.getAccessToken(in, code)
+	assert.Equal(t, ErrRecipientHasNoURL, err)
+}
+
 func TestRegisterNoURL(t *testing.T) {
-	recipient := &Recipient{}
-	err := recipient.Register(in)
+	rs := &RecipientStatus{
+		recipient: &Recipient{
+			RID: "dummyid",
+		},
+	}
+	err := rs.Register(in)
 	assert.Error(t, err)
 	assert.Equal(t, ErrRecipientHasNoURL, err)
 }
 
 func TestRegisterNoPublicName(t *testing.T) {
-	recipient := &Recipient{
-		URL: "toto.fr",
+	rs := &RecipientStatus{
+		recipient: &Recipient{
+			URL: "http://toto.fr",
+			RID: "dummyid",
+		},
 	}
-	err := recipient.Register(in)
-	assert.Error(t, err)
+	err := rs.Register(in)
 	assert.Equal(t, ErrPublicNameNotDefined, err)
 }
 
-func TestRegisterRecipientNotFound(t *testing.T) {
-	recipient := &Recipient{
-		URL: "toto.fr",
-	}
-	addPublicName(t)
-
-	err := recipient.Register(in)
-	assert.Error(t, err)
-}
-
 func TestRegisterSuccess(t *testing.T) {
-	recipient := &Recipient{
-		URL:   recipientURL,
-		Email: "xerxes@fr",
+	rs := &RecipientStatus{
+		recipient: &Recipient{
+			URL:   recipientURL,
+			Email: "xerxes@fr",
+			RID:   "dummyid",
+		},
 	}
 
-	err := CreateRecipient(in, recipient)
-	assert.NoError(t, err)
+	addPublicName(t, in)
 
-	err = recipient.Register(in)
+	err := rs.Register(in)
 	assert.NoError(t, err)
-	assert.NotNil(t, recipient.Client)
+	assert.NotNil(t, rs.Client)
 }
 
 func TestGetRecipient(t *testing.T) {
@@ -234,11 +244,9 @@ func TestCheckSharingTypeSuccess(t *testing.T) {
 }
 
 func TestGetSharingRecipientFromClientIDNoRecipient(t *testing.T) {
-	var rStatus *RecipientStatus
 	sharing := &Sharing{}
-	rec, err := sharing.GetSharingRecipientFromClientID(TestPrefix, "")
-	assert.NoError(t, err)
-	assert.Equal(t, rStatus, rec)
+	_, err := sharing.GetSharingRecipientFromClientID(TestPrefix, "")
+	assert.Equal(t, ErrRecipientDoesNotExist, err)
 }
 
 func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
@@ -246,37 +254,36 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 
 	rStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{ID: "id", Type: "type"},
+		Client: &auth.Client{
+			ClientID: "fakeid",
+		},
 	}
 	sharing := &Sharing{
 		RecipientsStatus: []*RecipientStatus{rStatus},
 	}
-	_, err := sharing.GetSharingRecipientFromClientID(TestPrefix, clientID)
-	assert.Error(t, err)
+	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix,
+		clientID)
+
+	assert.Equal(t, ErrRecipientDoesNotExist, err)
+	assert.Nil(t, recStatus)
 }
 
 func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 	clientID := "fake client"
-
-	client := &auth.Client{
-		ClientID: clientID,
-	}
-	recipient := &Recipient{
-		Client: client,
-	}
-
-	couchdb.CreateDoc(TestPrefix, recipient)
-	rStatus := &RecipientStatus{
-		RefRecipient: jsonapi.ResourceIdentifier{ID: recipient.RID},
+	rs := &RecipientStatus{
+		Client: &auth.Client{
+			ClientID: clientID,
+		},
 	}
 
 	sharing := &Sharing{
-		RecipientsStatus: []*RecipientStatus{rStatus},
+		RecipientsStatus: []*RecipientStatus{rs},
 	}
 
-	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix, clientID)
+	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix,
+		clientID)
 	assert.NoError(t, err)
-	assert.Equal(t, rStatus, recStatus)
-
+	assert.Equal(t, rs, recStatus)
 }
 
 func TestSharingAcceptedNoSharing(t *testing.T) {
@@ -321,33 +328,28 @@ func TestSharingAcceptedStateNotUnique(t *testing.T) {
 }
 
 func TestSharingAcceptedBadCode(t *testing.T) {
-	recipient, err := createRecipient(t)
+	s, err := createSharing(t, nil)
 	assert.NoError(t, err)
-	assert.NotNil(t, recipient)
-	assert.NotNil(t, recipient.Client.ClientID)
+	assert.NotNil(t, s)
 
-	sharing, err := createSharing(t, recipient, nil)
-	assert.NoError(t, err)
-	assert.NotNil(t, sharing)
+	// `createSharing` creates only one recipient.
+	clientID := s.RecipientsStatus[0].Client.ClientID
 
-	_, err = SharingAccepted(in, sharing.SharingID, recipient.Client.ClientID, "fakeaccessCode")
+	_, err = SharingAccepted(in, s.SharingID, clientID, "fakeaccessCode")
 	assert.Error(t, err)
 }
 
 func TestSharingAcceptedSuccess(t *testing.T) {
-	recipient, err := createRecipient(t)
-	assert.NoError(t, err)
-	assert.NotNil(t, recipient)
-	assert.NotNil(t, recipient.Client.ClientID)
-	clientID := recipient.Client.ClientID
-
 	testDoc, err := createTestDoc(t)
 	assert.NoError(t, err)
 	assert.NotNil(t, testDoc)
 
-	sharing, err := createSharing(t, recipient, testDoc)
+	sharing, err := createSharing(t, testDoc)
 	assert.NoError(t, err)
 	assert.NotNil(t, sharing)
+
+	// `createSharing` only creates one recipient.
+	clientID := sharing.RecipientsStatus[0].Client.ClientID
 
 	set := sharing.Permissions
 	scope, err := set.MarshalScopeString()
@@ -368,8 +370,8 @@ func TestSharingAcceptedSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	recStatus := recStatuses[0]
 	assert.Equal(t, consts.AcceptedSharingStatus, recStatus.Status)
-	assert.NotNil(t, recStatus.AccessToken)
-	assert.NotNil(t, recStatus.RefreshToken)
+	assert.NotNil(t, recStatus.AccessToken.AccessToken)
+	assert.NotNil(t, recStatus.AccessToken.RefreshToken)
 
 	err = updateTestDoc(t, testDoc)
 	assert.NoError(t, err)
@@ -377,7 +379,6 @@ func TestSharingAcceptedSuccess(t *testing.T) {
 	testDoc2, err := createTestDoc(t)
 	assert.NoError(t, err)
 	assert.NotNil(t, testDoc2)
-
 }
 
 func TestSharingRefusedNoSharing(t *testing.T) {
@@ -419,20 +420,21 @@ func TestSharingRefusedStateNotUnique(t *testing.T) {
 }
 
 func TestSharingRefusedSuccess(t *testing.T) {
-
 	state := "stateoftheart2"
 	clientID := "thriftshopclient"
 
-	client := &auth.Client{
-		ClientID: clientID,
-	}
 	recipient := &Recipient{
-		Client: client,
+		URL:   "https://toto.fr",
+		Email: "cpasbien@mail.fr",
 	}
 	err := couchdb.CreateDoc(TestPrefix, recipient)
 	assert.NoError(t, err)
+
 	rStatus := &RecipientStatus{
 		RefRecipient: jsonapi.ResourceIdentifier{ID: recipient.RID},
+		Client: &auth.Client{
+			ClientID: clientID,
+		},
 	}
 	sharing := &Sharing{
 		SharingID:        state,
@@ -440,13 +442,14 @@ func TestSharingRefusedSuccess(t *testing.T) {
 	}
 	err = couchdb.CreateDoc(TestPrefix, sharing)
 	assert.NoError(t, err)
-	_, err = SharingRefused(TestPrefix, state, clientID)
-	assert.NoError(t, err)
 
+	redirect, err := SharingRefused(TestPrefix, state, clientID)
+	assert.NoError(t, err)
+	assert.Equal(t, recipient.URL, redirect)
 }
 
 func TestRecipientRefusedSharingWhenSharingDoesNotExist(t *testing.T) {
-	_, err := RecipientRefusedSharing(TestPrefix, "fakesharingid", "fakeclientid")
+	_, err := RecipientRefusedSharing(TestPrefix, "fakesharingid")
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingDoesNotExist, err)
 }
@@ -465,93 +468,22 @@ func TestRecipientRefusedSharingWhenSharingIDIsNotUnique(t *testing.T) {
 		t.FailNow()
 	}
 
-	_, err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
+	_, err = RecipientRefusedSharing(TestPrefix, testSharingID)
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingIDNotUnique, err)
-}
-
-func TestRecipientRefusedSharingWhenPostFails(t *testing.T) {
-	testSharingID := "testPostFails"
-	testClientID := "clientPostFails"
-	testURL := "urlPostFails"
-
-	docSharingTestID, err := insertSharingDocumentInDB(TestPrefix,
-		testSharingID, testClientID, testURL)
-
-	if err != nil {
-		t.Fail()
-	}
-
-	_, err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
-	assert.Error(t, err)
-
-	out := couchdb.JSONDoc{}
-	err = couchdb.GetDoc(TestPrefix, docSharingTestID, consts.Sharings, out)
-	assert.Error(t, err)
-}
-
-func TestRecipientRefusedSharingWhenResponseStatusCodeIsNotOK(t *testing.T) {
-	testSharingID := "SharingStatusNotOK"
-	testClientID := "ClientStatusNotOK"
-
-	tsLocal := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusAlreadyReported)
-		},
-	))
-	defer tsLocal.Close()
-
-	_, err := insertSharingDocumentInDB(TestPrefix,
-		testSharingID, testClientID, tsLocal.URL)
-	if err != nil {
-		t.Fail()
-	}
-
-	_, err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
-	assert.Error(t, err)
-	//assert.Equal(t, ErrSharerDidNotReceiveAnswer, err)
-
 }
 
 func TestRecipientRefusedSharingSuccess(t *testing.T) {
 	testSharingID := "SharingSuccess"
 	testClientID := "ClientSuccess"
 
-	tsLocal := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			body, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				fmt.Printf(`Error occurred while trying to read request body:
-					%v\n`, err)
-				t.Fail()
-			}
-			defer r.Body.Close()
-			data := SharingAnswer{}
-			_ = json.Unmarshal(body, &data)
-			assert.Equal(t, testSharingID, data.SharingID)
-			assert.Equal(t, testClientID, data.ClientID)
-			assert.Empty(t, data.AccessToken)
-			assert.Empty(t, data.RefreshToken)
-
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(http.StatusOK)
-		},
-	))
-	defer tsLocal.Close()
-
-	err := insertClientDocumentInDB(TestPrefix, testClientID, tsLocal.URL)
-	if err != nil {
-		t.Fail()
-	}
-
 	docSharingTestID, err := insertSharingDocumentInDB(TestPrefix,
-		testSharingID, testClientID, tsLocal.URL)
+		testSharingID, testClientID, "randomurl")
 	if err != nil {
 		t.Fail()
 	}
 
-	_, err = RecipientRefusedSharing(TestPrefix, testSharingID, testClientID)
+	_, err = RecipientRefusedSharing(TestPrefix, testSharingID)
 	assert.NoError(t, err)
 
 	// We also test that the sharing document is actually deleted.
@@ -607,19 +539,7 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 	assert.Equal(t, set, sharing.Permissions)
 }
 
-func TestCreateSuccess(t *testing.T) {
-	sharing := &Sharing{
-		SharingType: consts.OneShotSharing,
-	}
-	err := Create(TestPrefix, sharing)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, sharing.ID())
-	assert.NotEmpty(t, sharing.Rev())
-	assert.NotEmpty(t, sharing.DocType())
-}
-
-func TestCheckSharingCreation(t *testing.T) {
-
+func TestCreateSharingAndRegisterSharer(t *testing.T) {
 	rec := &Recipient{
 		Email: "test@test.fr",
 	}
@@ -629,6 +549,7 @@ func TestCheckSharingCreation(t *testing.T) {
 			ID:   "123",
 			Type: consts.Recipients,
 		},
+		recipient: rec,
 	}
 
 	sharing := &Sharing{
@@ -636,26 +557,18 @@ func TestCheckSharingCreation(t *testing.T) {
 		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
 
-	err := CheckSharingCreation(TestPrefix, sharing)
-	assert.Error(t, err)
+	// `SharingType` is wrong.
+	err := CreateSharingAndRegisterSharer(in, sharing)
+	assert.Equal(t, ErrBadSharingType, err)
 
+	// `SharingType` is correct.
 	sharing.SharingType = consts.OneShotSharing
-	err = CheckSharingCreation(TestPrefix, sharing)
-	assert.Error(t, err)
+	// However the recipient is not persisted in the database.
+	err = CreateSharingAndRegisterSharer(in, sharing)
+	assert.Equal(t, ErrRecipientDoesNotExist, err)
 
-	err = couchdb.CreateDoc(TestPrefix, rec)
-	assert.NoError(t, err)
-
-	recStatus.RefRecipient.ID = rec.RID
-	err = CheckSharingCreation(TestPrefix, sharing)
-	assert.NoError(t, err)
-	assert.Equal(t, true, sharing.Owner)
-	assert.NotEmpty(t, sharing.SharingID)
-
-	rStatus := sharing.RecipientsStatus
-	for _, rec := range rStatus {
-		assert.Equal(t, consts.PendingSharingStatus, rec.Status)
-	}
+	// The CreateSharingAndRegisterSharer scenario that succeeds is already
+	// tested in `createSharing`.
 }
 
 func TestMain(m *testing.M) {
