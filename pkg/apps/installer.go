@@ -279,7 +279,7 @@ func updateManifest(db couchdb.Database, man Manifest) error {
 }
 
 func createManifest(db couchdb.Database, man Manifest) error {
-	if err := couchdb.CreateNamedDoc(db, man); err != nil {
+	if err := couchdb.CreateNamedDocWithDB(db, man); err != nil {
 		return err
 	}
 	_, err := permissions.CreateAppSet(db, man.Slug(), man.Permissions())

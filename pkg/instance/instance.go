@@ -340,6 +340,9 @@ func Create(opts *Options) (*Instance, error) {
 	if err := couchdb.CreateDB(i, consts.Apps); err != nil {
 		return nil, err
 	}
+	if err := couchdb.CreateDB(i, consts.Konnectors); err != nil {
+		return nil, err
+	}
 	if err := couchdb.CreateDB(i, consts.OAuthClients); err != nil {
 		return nil, err
 	}

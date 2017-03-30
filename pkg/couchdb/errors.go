@@ -106,7 +106,9 @@ func IsNotFoundError(err error) bool {
 	if !isCouchErr {
 		return false
 	}
-	return couchErr.Name == "not_found"
+	return (couchErr.Name == "not_found" ||
+		couchErr.Reason == "no_db_file" ||
+		couchErr.Reason == "Database does not exist.")
 }
 
 // IsFileExists checks if the given error is a couch conflict error

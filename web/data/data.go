@@ -25,6 +25,13 @@ func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+func fixErrorNoDatabaseIsWrongDoctype(err error) error {
+	if couchdb.IsNoDatabaseError(err) {
+		err.(*couchdb.Error).Reason = "wrong_doctype"
+	}
+	return err
+}
+
 func allDoctypes(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -67,7 +74,7 @@ func getDoc(c echo.Context) error {
 	var out couchdb.JSONDoc
 	err := couchdb.GetDoc(instance, doctype, docid, &out)
 	if err != nil {
-		return err
+		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 
 	out.Type = doctype
@@ -120,7 +127,7 @@ func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 
 	err = couchdb.CreateNamedDoc(instance, doc)
 	if err != nil {
-		return err
+		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -185,7 +192,7 @@ func updateDoc(c echo.Context) error {
 
 	errUpdate := couchdb.UpdateDoc(instance, doc)
 	if errUpdate != nil {
-		return errUpdate
+		return fixErrorNoDatabaseIsWrongDoctype(errUpdate)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
@@ -235,7 +242,7 @@ func deleteDoc(c echo.Context) error {
 
 	err = couchdb.DeleteDoc(instance, &doc)
 	if err != nil {
-		return err
+		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
