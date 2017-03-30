@@ -119,7 +119,8 @@ func extract(c echo.Context) (*permissions.Permission, error) {
 
 }
 
-func getPermission(c echo.Context) (*permissions.Permission, error) {
+// GetPermission extracts the permission from the echo context and checks their validity
+func GetPermission(c echo.Context) (*permissions.Permission, error) {
 
 	pdoc, ok := c.Get(contextPermissionDoc).(*permissions.Permission)
 	if ok && pdoc != nil {

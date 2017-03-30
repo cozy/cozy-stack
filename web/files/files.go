@@ -483,7 +483,7 @@ func ArchiveDownloadHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 	if archive == nil {
-		return jsonapi.NewError(400, "Wrong download token")
+		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 	return archive.Serve(instance.VFS(), c.Response())
 }
@@ -498,7 +498,7 @@ func FileDownloadHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 	if path == "" {
-		return jsonapi.NewError(400, "Wrong download token")
+		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 	return sendFileFromPath(c, path, false)
 }

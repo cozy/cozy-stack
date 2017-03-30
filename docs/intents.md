@@ -53,7 +53,7 @@ Here is a very simple example:
 "intents": [
     {
         "action": "PICK",
-        "type": "io.cozy.files",
+        "type": ["io.cozy.files"],
         "href": "/pick"
     }
 ]
@@ -65,7 +65,7 @@ Notice that we didn't include a `{{.Intent}}` marker in the `href`, which we rea
 "intents": [
     {
         "action": "PICK",
-        "type": "io.cozy.files",
+        "type": ["io.cozy.files"],
         "href": "/pick?id={{.Intent}}"
     }
 ]
@@ -96,7 +96,7 @@ Finally, here is an example of an app that supports several intent types:
     },
     {
         "action": "VIEW",
-        "type": "image/gif",
+        "type": ["image/gif"],
         "href": "/viewer?id={{.Intent}}"
     }
 ]
@@ -252,6 +252,8 @@ When the client receives an "error" message, the intent is aborted and the ifram
 
 The client app can ask to start an intent via this route.
 
+Any client-side app can call this route, no permission is needed.
+
 #### Request
 
 ```
@@ -311,7 +313,7 @@ Content-Type: application/vnd.api+json
 
 Get all the informations about the intent
 
-**Note**: only the service can access this route.
+**Note**: only the service can access this route (no permission involved).
 
 #### Request
 

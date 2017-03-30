@@ -73,3 +73,56 @@ func TestNoRegression217(t *testing.T) {
 	assert.Equal(t, "/", ctx.Folder)
 	assert.Equal(t, "any/path", rest)
 }
+
+func TestFindIntent(t *testing.T) {
+	var man WebappManifest
+	found := man.FindIntent("PICK", "io.cozy.files")
+	assert.Nil(t, found)
+
+	man.Intents = []Intent{
+		Intent{
+			Action: "PICK",
+			Types:  []string{"io.cozy.contacts", "io.cozy.calendars"},
+			Href:   "/pick?intent={{.Intent}}",
+		},
+		Intent{
+			Action: "OPEN",
+			Types:  []string{"io.cozy.files", "image/gif"},
+			Href:   "/open?intent={{.Intent}}",
+		},
+		Intent{
+			Action: "EDIT",
+			Types:  []string{"image/*"},
+			Href:   "/open?intent={{.Intent}}",
+		},
+	}
+	found = man.FindIntent("PICK", "io.cozy.files")
+	assert.Nil(t, found)
+	found = man.FindIntent("OPEN", "io.cozy.contacts")
+	assert.Nil(t, found)
+	found = man.FindIntent("PICK", "io.cozy.contacts")
+	assert.NotNil(t, found)
+	assert.Equal(t, "PICK", found.Action)
+	found = man.FindIntent("OPEN", "io.cozy.files")
+	assert.NotNil(t, found)
+	assert.Equal(t, "OPEN", found.Action)
+	found = man.FindIntent("open", "io.cozy.files")
+	assert.NotNil(t, found)
+	assert.Equal(t, "OPEN", found.Action)
+
+	found = man.FindIntent("OPEN", "image/gif")
+	assert.NotNil(t, found)
+	assert.Equal(t, "OPEN", found.Action)
+	found = man.FindIntent("EDIT", "image/gif")
+	assert.NotNil(t, found)
+	assert.Equal(t, "EDIT", found.Action)
+
+	man.Intents = []Intent{
+		Intent{
+			Action: "PICK",
+			Href:   "/pick?intent={{.Intent}}",
+		},
+	}
+	found = man.FindIntent("PICK", "io.cozy.files")
+	assert.Nil(t, found)
+}

@@ -15,7 +15,7 @@ import (
 // AllowWholeType validates that the context permission set can use a verb on
 // the whold doctype
 func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
-	pdoc, err := getPermission(c)
+	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -28,7 +28,7 @@ func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
 
 // Allow validates the validable object against the context permission set
 func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
-	pdoc, err := getPermission(c)
+	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
 
 // AllowTypeAndID validates a type & ID against the context permission set
 func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) error {
-	pdoc, err := getPermission(c)
+	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) erro
 // AllowVFS validates a vfs.Validable against the context permission set
 func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
 	instance := middlewares.GetInstance(c)
-	pdoc, err := getPermission(c)
+	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
 // which is the only app authorized to install or update other apps.
 // It also allow the cozy-stack apps commands to work (CLI).
 func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) error {
-	pdoc, err := getPermission(c)
+	pdoc, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 // AllowLogout checks if the current permission allows loging out.
 // all apps can trigger a logout.
 func AllowLogout(c echo.Context) bool {
-	pdoc, err := getPermission(c)
+	pdoc, err := GetPermission(c)
 	if err != nil {
 		return false
 	}

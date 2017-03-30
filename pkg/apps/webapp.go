@@ -26,6 +26,13 @@ func (c *Route) NotFound() bool { return c.Folder == "" }
 // Routes are a map for routing inside an application.
 type Routes map[string]Route
 
+// Intent is a declaration of a service for other client-side apps
+type Intent struct {
+	Action string   `json:"action"`
+	Types  []string `json:"type"`
+	Href   string   `json:"href"`
+}
+
 // WebappManifest contains all the informations associated with an installed web
 // application.
 type WebappManifest struct {
@@ -50,6 +57,7 @@ type WebappManifest struct {
 	Version        string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
+	Intents        []Intent        `json:"intents"`
 	Routes         Routes          `json:"routes"`
 
 	Instance SubDomainer `json:"-"` // Used for JSON-API links
@@ -181,6 +189,27 @@ func (m *WebappManifest) FindRoute(vpath string) (Route, string) {
 	}
 
 	return best, rest
+}
+
+// FindIntent returns an intent for the given action and type if the manifest has one
+func (m *WebappManifest) FindIntent(action, typ string) *Intent {
+	for _, intent := range m.Intents {
+		if strings.ToUpper(action) != strings.ToUpper(intent.Action) {
+			continue
+		}
+		for _, t := range intent.Types {
+			if t == typ {
+				return &intent
+			}
+			// Allow a joker for mime-types like image/*
+			if strings.HasSuffix(t, "/*") {
+				if strings.SplitN(t, "/", 2)[0] == strings.SplitN(typ, "/", 2)[0] {
+					return &intent
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // GetWebappBySlug fetch the WebappManifest from the database given a slug.

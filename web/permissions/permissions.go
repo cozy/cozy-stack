@@ -40,7 +40,7 @@ const ContextPermissionSet = "permissions_set"
 const ContextClaims = "token_claims"
 
 func displayPermissions(c echo.Context) error {
-	doc, err := getPermission(c)
+	doc, err := GetPermission(c)
 
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func displayPermissions(c echo.Context) error {
 func createPermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	names := strings.Split(c.QueryParam("codes"), ",")
-	parent, err := getPermission(c)
+	parent, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func listPermissions(c echo.Context) error {
 
 func patchPermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	current, err := getPermission(c)
+	current, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func patchPermission(c echo.Context) error {
 func revokePermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	current, err := getPermission(c)
+	current, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func revokePermission(c echo.Context) error {
 
 }
 
-// Routes sets the routing for the status service
+// Routes sets the routing for the permissions service
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
