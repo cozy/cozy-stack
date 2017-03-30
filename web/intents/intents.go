@@ -2,6 +2,7 @@ package intents
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -57,27 +58,33 @@ func (i *apiIntent) MarshalJSON() ([]byte, error) {
 }
 
 func createIntent(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	intent := &intents.Intent{}
-	if _, err := jsonapi.Bind(c.Request(), intent); err != nil {
-		return err // TODO wrap err
-	}
 	pdoc, err := webpermissions.GetPermission(c)
 	if err != nil || pdoc.Type != permissions.TypeApplication {
 		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	instance := middlewares.GetInstance(c)
+	intent := &intents.Intent{}
+	if _, err := jsonapi.Bind(c.Request(), intent); err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	if intent.Action == "" {
+		return jsonapi.InvalidParameter("action", errors.New("Action is missing"))
+	}
+	if intent.Type == "" {
+		return jsonapi.InvalidParameter("type", errors.New("Type is missing"))
 	}
 	intent.Client = pdoc.SourceID
 	intent.SetID("")
 	intent.SetRev("")
 	intent.Services = nil
 	if err = intent.Save(instance); err != nil {
-		return err // TODO wrap err
+		return wrapIntentsError(err)
 	}
 	if err = intent.FillServices(instance); err != nil {
-		return err // TODO wrap err
+		return wrapIntentsError(err)
 	}
 	if err = intent.Save(instance); err != nil {
-		return err // TODO wrap err
+		return wrapIntentsError(err)
 	}
 	api := &apiIntent{intent, instance}
 	return jsonapi.Data(c, http.StatusOK, api, nil)
@@ -92,7 +99,7 @@ func getIntent(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	if err = couchdb.GetDoc(instance, consts.Intents, id, intent); err != nil {
-		return err // TODO wrap err
+		return wrapIntentsError(err)
 	}
 	allowed := false
 	for _, service := range intent.Services {
@@ -105,6 +112,13 @@ func getIntent(c echo.Context) error {
 	}
 	api := &apiIntent{intent, instance}
 	return jsonapi.Data(c, http.StatusOK, api, nil)
+}
+
+func wrapIntentsError(err error) error {
+	if couchdb.IsNotFoundError(err) {
+		return jsonapi.NotFound(err)
+	}
+	return jsonapi.InternalServerError(err)
 }
 
 // Routes sets the routing for the intents service
