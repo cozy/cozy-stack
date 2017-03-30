@@ -60,7 +60,7 @@ func (m *konnManifest) Permissions() permissions.Set {
 
 func (m *konnManifest) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{
-		Self: "/apps/" + m.DocSlug,
+		Self: "/konnectors/" + m.DocSlug,
 	}
 	if m.DocSlug == Ready && m.Instance != nil {
 		links.Related = m.Instance.SubDomain(m.DocSlug).String()
