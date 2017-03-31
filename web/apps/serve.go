@@ -49,6 +49,14 @@ func Serve(c echo.Context) error {
 	return ServeAppFile(c, i, NewServer(i.VFS()), app)
 }
 
+func onboarding(c echo.Context) bool {
+	i := middlewares.GetInstance(c)
+	if len(i.RegisterToken) == 0 {
+		return false
+	}
+	return c.QueryParam("registerToken") != ""
+}
+
 // ServeAppFile will serve the requested file using the specified application
 // manifest and AppFileServer context.
 //
@@ -63,7 +71,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	if route.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
-	if !route.Public && !middlewares.IsLoggedIn(c) {
+	needAuth := !route.Public
+	if slug == consts.OnboardingSlug && file == "" && !onboarding(c) {
+		needAuth = true
+	}
+	if needAuth && !middlewares.IsLoggedIn(c) {
 		if file != "" {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
