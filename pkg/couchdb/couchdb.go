@@ -247,13 +247,6 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 	return err
 }
 
-func fixErrorNoDatabaseIsWrongDoctype(err error) error {
-	if IsNoDatabaseError(err) {
-		err.(*Error).Reason = "wrong_doctype"
-	}
-	return err
-}
-
 // DBStatus responds with informations on the database: size, number of
 // documents, sequence numbers, etc.
 func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
@@ -288,11 +281,7 @@ func GetDoc(db Database, doctype, id string, out Doc) error {
 	if err != nil {
 		return err
 	}
-	err = makeRequest("GET", docURL(db, doctype, id), nil, out)
-	if err != nil {
-		return fixErrorNoDatabaseIsWrongDoctype(err)
-	}
-	return nil
+	return makeRequest("GET", docURL(db, doctype, id), nil, out)
 }
 
 // CreateDB creates the necessary database for a doctype
@@ -358,7 +347,7 @@ func DeleteDoc(db Database, doc Doc) error {
 	url := docURL(db, doc.DocType(), id) + "?" + qs.Encode()
 	err = makeRequest("DELETE", url, nil, &res)
 	if err != nil {
-		return fixErrorNoDatabaseIsWrongDoctype(err)
+		return err
 	}
 	doc.SetRev(res.Rev)
 	rtevent(db, realtime.EventDelete, doc)
@@ -380,7 +369,7 @@ func UpdateDoc(db Database, doc Doc) error {
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
 	if err != nil {
-		return fixErrorNoDatabaseIsWrongDoctype(err)
+		return err
 	}
 	doc.SetRev(res.Rev)
 	rtevent(db, realtime.EventUpdate, doc)
@@ -404,7 +393,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
 	if err != nil {
-		return fixErrorNoDatabaseIsWrongDoctype(err)
+		return err
 	}
 	doc.SetRev(res.Rev)
 	rtevent(db, realtime.EventCreate, doc)
@@ -415,7 +404,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 // if it does not exist
 func CreateNamedDocWithDB(db Database, doc Doc) error {
 	err := CreateNamedDoc(db, doc)
-	if coucherr, ok := err.(*Error); ok && coucherr.Reason == "wrong_doctype" {
+	if IsNoDatabaseError(err) {
 		err = CreateDB(db, doc.DocType())
 		if err != nil {
 			return err

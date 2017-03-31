@@ -128,6 +128,7 @@ func TestAllDoctypes(t *testing.T) {
 		"io.cozy.apps",
 		"io.cozy.events",
 		"io.cozy.files",
+		"io.cozy.konnectors",
 		"io.cozy.settings",
 		"io.cozy.sharings",
 	}
