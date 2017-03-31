@@ -358,21 +358,22 @@ type importer struct {
 	paths map[string]string
 }
 
-func (i *importer) mkdir(name string) error {
+func (i *importer) mkdir(name string) (string, error) {
 	doc, err := i.c.Mkdirall(name)
 	if err != nil {
-		return err
+		return "", err
 	}
 	i.paths[name] = doc.ID
-	return nil
+	return doc.ID, nil
 }
 
 func (i *importer) upload(localname, distname string) error {
 	var err error
 
 	dirname := path.Dir(distname)
-	if dirname != string(os.PathSeparator) {
-		err = i.mkdir(dirname)
+	dirID, ok := i.paths[dirname]
+	if !ok && dirname != string(os.PathSeparator) {
+		dirID, err = i.mkdir(dirname)
 		if err != nil {
 			return err
 		}
@@ -381,18 +382,6 @@ func (i *importer) upload(localname, distname string) error {
 	r, err := os.Open(localname)
 	if err != nil {
 		return err
-	}
-	defer r.Close()
-
-	dirID, ok := i.paths[dirname]
-	if !ok {
-		var dir *client.Dir
-		dir, err = i.c.GetDirByPath(dirname)
-		if err != nil {
-			return err
-		}
-		dirID = dir.ID
-		i.paths[dirID] = dir.Attrs.Fullpath
 	}
 
 	_, err = i.c.Upload(&client.Upload{
@@ -435,7 +424,9 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 		if f.IsDir() {
 			log.Infoln("create dir", distname)
 			if !flagImportDryRun {
-				return i.mkdir(distname)
+				if _, err = i.mkdir(distname); err != nil {
+					return err
+				}
 			}
 		} else {
 			log.Infof("copying file %s to %s", localname, distname)
