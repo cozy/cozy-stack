@@ -2,7 +2,6 @@ package sharings
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/auth"
@@ -119,18 +118,13 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 
 	// The structure `auth.Request` expects a domain WITHOUT a scheme (i.e.
 	// without "http://" or "https://") so we parse it.
-	recipientURL, err := url.Parse(rs.recipient.URL)
+	recipientURL, err := rs.recipient.ExtractDomain()
 	if err != nil {
 		return nil, err
-	} else if recipientURL.Host == "" {
-		// Caveat: if the URL does not have a scheme then url.Parse returns an
-		// empty url object. If that is the case we will assume that the URL
-		// declared in the Recipient structure is ok…
-		recipientURL.Host = rs.recipient.URL
 	}
 
 	req := &auth.Request{
-		Domain:     recipientURL.Host,
+		Domain:     recipientURL,
 		HTTPClient: new(http.Client),
 	}
 
@@ -182,19 +176,13 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		ClientURI:    clientURI,
 	}
 
-	recipientURL, err := url.Parse(rs.recipient.URL)
+	recipientURL, err := rs.recipient.ExtractDomain()
 	if err != nil {
 		return err
-	} else if recipientURL.Host == "" {
-		// Caveat: if the URL does not have a scheme then url.Parse returns an
-		// empty url object. If that is the case we will assume that the URL
-		// declared in the Recipient structure is ok…
-		recipientURL.Host = rs.recipient.URL
 	}
 
 	req := &auth.Request{
-		// Caveat: the domain must not contain the scheme.
-		Domain:     recipientURL.Host,
+		Domain:     recipientURL,
 		HTTPClient: new(http.Client),
 	}
 

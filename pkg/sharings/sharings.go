@@ -300,7 +300,6 @@ func SharingAccepted(instance *instance.Instance, state, clientID, accessCode st
 	}
 
 	// Share all the documents with the recipient
-	// err = ShareDoc(instance, sharing, recStatus)
 	err = ShareDoc(instance, sharing, recStatus)
 
 	// Redirect the recipient after acceptation
