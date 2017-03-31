@@ -51,13 +51,13 @@ func (d *DirDoc) SetID(id string) { d.DocID = id }
 func (d *DirDoc) SetRev(rev string) { d.DocRev = rev }
 
 // Path is used to generate the file path
-func (d *DirDoc) Path(index Indexer) (string, error) {
+func (d *DirDoc) Path(fs VFS) (string, error) {
 	return d.Fullpath, nil
 }
 
 // Parent returns the parent directory document
-func (d *DirDoc) Parent(index Indexer) (*DirDoc, error) {
-	parent, err := index.DirByID(d.DirID)
+func (d *DirDoc) Parent(fs VFS) (*DirDoc, error) {
+	parent, err := fs.DirByID(d.DirID)
 	if os.IsNotExist(err) {
 		err = ErrParentDoesNotExist
 	}

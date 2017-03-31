@@ -163,13 +163,14 @@ func (i *Instance) VFS() vfs.VFS {
 
 func (i *Instance) makeVFS() error {
 	fsURL := config.FsURL()
+	mutex := vfs.NewMemLock()
 	index := vfs.NewCouchdbIndexer(i)
 	var err error
 	switch fsURL.Scheme {
 	case "file", "mem":
-		i.vfs, err = vfsafero.New(index, fsURL, i.Domain)
+		i.vfs, err = vfsafero.New(index, mutex, fsURL, i.Domain)
 	case "swift":
-		i.vfs, err = vfsswift.New(index, i.Domain)
+		i.vfs, err = vfsswift.New(index, mutex, i.Domain)
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}

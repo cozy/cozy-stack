@@ -66,32 +66,18 @@ func (f *FileDoc) SetID(id string) { f.DocID = id }
 func (f *FileDoc) SetRev(rev string) { f.DocRev = rev }
 
 // Path is used to generate the file path
-func (f *FileDoc) Path(index Indexer) (string, error) {
-	var parentPath string
+func (f *FileDoc) Path(fs VFS) (string, error) {
 	if f.fullpath != "" {
 		return f.fullpath, nil
 	}
-	if f.DirID == consts.RootDirID {
-		parentPath = "/"
-	} else if f.DirID == consts.TrashDirID {
-		parentPath = TrashDirName
-	} else {
-		parent, err := f.Parent(index)
-		if err != nil {
-			return "", err
-		}
-		parentPath, err = parent.Path(index)
-		if err != nil {
-			return "", err
-		}
-	}
-	f.fullpath = path.Join(parentPath, f.DocName)
-	return f.fullpath, nil
+	var err error
+	f.fullpath, err = fs.FilePath(f)
+	return f.fullpath, err
 }
 
 // Parent returns the parent directory document
-func (f *FileDoc) Parent(index Indexer) (*DirDoc, error) {
-	parent, err := index.DirByID(f.DirID)
+func (f *FileDoc) Parent(fs VFS) (*DirDoc, error) {
+	parent, err := fs.DirByID(f.DirID)
 	if os.IsNotExist(err) {
 		err = ErrParentDoesNotExist
 	}

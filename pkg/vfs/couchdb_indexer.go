@@ -18,7 +18,9 @@ type couchdbIndexer struct {
 // NewCouchdbIndexer creates an Indexer instance based on couchdb to store
 // files and directories metadata and index them.
 func NewCouchdbIndexer(db couchdb.Database) Indexer {
-	return &couchdbIndexer{db}
+	return &couchdbIndexer{
+		db: db,
+	}
 }
 
 func (c *couchdbIndexer) InitIndex() error {
@@ -220,6 +222,22 @@ func (c *couchdbIndexer) FileByPath(name string) (*FileDoc, error) {
 		return nil, os.ErrNotExist
 	}
 	return docs[0], nil
+}
+
+func (c *couchdbIndexer) FilePath(doc *FileDoc) (string, error) {
+	var parentPath string
+	if doc.DirID == consts.RootDirID {
+		parentPath = "/"
+	} else if doc.DirID == consts.TrashDirID {
+		parentPath = TrashDirName
+	} else {
+		parent, err := c.DirByID(doc.DirID)
+		if err != nil {
+			return "", ErrParentDoesNotExist
+		}
+		parentPath = parent.Fullpath
+	}
+	return path.Join(parentPath, doc.DocName), nil
 }
 
 func (c *couchdbIndexer) DirOrFileByID(fileID string) (*DirDoc, *FileDoc, error) {

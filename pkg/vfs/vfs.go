@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -50,7 +51,10 @@ type Fs interface {
 
 	// CreateDir is used to create a new directory from its document.
 	CreateDir(doc *DirDoc) error
-	//
+	// CreateFile creates a new file or update the content of an existing file.
+	// The first argument contains the document of the new or update version of
+	// the file. The second argument is the optional old document of the old
+	// version of the file.
 	//
 	// Warning: you MUST call the Close() method and check for its error.
 	CreateFile(newdoc, olddoc *FileDoc) (File, error)
@@ -89,7 +93,7 @@ type Indexer interface {
 
 	// CreateFileDoc creates and add in the index a new file document.
 	CreateFileDoc(doc *FileDoc) error
-	// UpdateFileDocx is used to update the document of a file. It takes the
+	// UpdateFileDoc is used to update the document of a file. It takes the
 	// new file document that you want to create and the old document,
 	// representing the current revision of the file.
 	UpdateFileDoc(olddoc, newdoc *FileDoc) error
@@ -98,8 +102,8 @@ type Indexer interface {
 
 	// CreateDirDoc creates and add in the index a new directory document.
 	CreateDirDoc(doc *DirDoc) error
-	// UpdateDirDoc is used to update the document of a directory. It takes the new
-	// directory document that you want to create and the old document,
+	// UpdateDirDoc is used to update the document of a directory. It takes the
+	// new directory document that you want to create and the old document,
 	// representing the current revision of the directory.
 	UpdateDirDoc(olddoc, newdoc *DirDoc) error
 	// DeleteDirDoc removes from the index the specified directory document.
@@ -118,6 +122,7 @@ type Indexer interface {
 	// FileByPath returns the file document information associated with the
 	// specified path.
 	FileByPath(name string) (*FileDoc, error)
+	FilePath(doc *FileDoc) (string, error)
 
 	// DirOrFileByID returns the document from its identifier without knowing in
 	// advance its type. One of the returned argument is not nil.
@@ -129,6 +134,20 @@ type Indexer interface {
 	// DirIterator returns an iterator over the children of the specified
 	// directory.
 	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
+}
+
+// Locker interface provides a Read/Write mutex interface that can be used
+// to represent a global locker for a VFS.
+type Locker interface {
+	RLock()
+	RUnlock()
+	Lock()
+	Unlock()
+}
+
+// NewMemLock returns a sync.RWMutex.
+func NewMemLock() Locker {
+	return &sync.RWMutex{}
 }
 
 // VFS is composed of the Indexer and Fs interface. It is the common interface
