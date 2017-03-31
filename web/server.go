@@ -99,7 +99,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 		}
 		method := c.Request().Method
 		if method != "GET" && method != "HEAD" {
-			return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
+			return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method not allowed")
 		}
 		fs := afero.NewBasePathFs(afero.NewOsFs(), dir)
 		manFile, err := fs.Open(apps.WebappManifestName)

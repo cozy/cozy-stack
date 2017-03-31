@@ -94,7 +94,7 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	default:
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
-	if !pdoc.Permissions.AllowWholeType(v, consts.Apps) {
+	if !pdoc.Permissions.AllowWholeType(v, docType) {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil
