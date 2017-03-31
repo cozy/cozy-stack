@@ -119,13 +119,14 @@ func (g *gitFetcher) clone(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 		return err
 	}
 
+	branch := getGitBranch(src)
+	log.Debugf("[git] Clone %s %s", src.String(), branch)
+
 	// XXX Gitlab doesn't support the git protocol
 	if isGitlab(src) {
 		src.Scheme = "https"
+		src.Fragment = ""
 	}
-
-	branch := getGitBranch(src)
-	log.Debugf("[git] Clone %s %s", src.String(), branch)
 
 	rep, err := git.Clone(storage, nil, &git.CloneOptions{
 		URL:           src.String(),
