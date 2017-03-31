@@ -99,14 +99,8 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 ### GET /files/:file-id
 
 Get a directory or a file informations. In the case of a directory, it contains the list of files and sub-directories inside it.
-Contents is paginated. By default, only the 30 first entries are given.
 
-### Query-String
-
-Parameter    | Description
--------------|--------------------------------------
-page[cursor] | the last id of the results
-page[limit]  | the number of entries (30 by default)
+Contents is paginated following [jsonapi conventions](jsonapi.md#pagination). The default limit is 30 entries.
 
 #### Request
 
