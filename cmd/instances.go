@@ -128,8 +128,8 @@ and all its data.
 		if !flagForce {
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Printf(`Are you sure you want to remove instance for domain %s ?
-	All data associated with this domain will be permanently lost.
-	[yes/NO]: `, domain)
+All data associated with this domain will be permanently lost.
+[yes/NO]: `, domain)
 
 			str, err := reader.ReadString('\n')
 			if err != nil {
