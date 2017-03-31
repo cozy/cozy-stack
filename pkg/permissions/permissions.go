@@ -3,6 +3,7 @@ package permissions
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -162,7 +163,22 @@ func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
 		Limit: 1,
 	}, &res)
 	if err != nil {
-		return nil, err
+		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
+		// With a cluster of couchdb, we can have a race condition where we
+		// query an index before it has been updated for an app that has
+		// just been created.
+		time.Sleep(1 * time.Second)
+		err = couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
+			UseIndex: "by-source-and-type",
+			Selector: mango.And(
+				mango.Equal("type", TypeApplication),
+				mango.Equal("source_id", consts.Apps+"/"+slug),
+			),
+			Limit: 1,
+		}, &res)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if len(res) == 0 {
 		return nil, fmt.Errorf("no permission doc for %v", slug)
