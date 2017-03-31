@@ -95,9 +95,16 @@ func (g *gitFetcher) Fetch(src *url.URL, baseDir *vfs.DirDoc) error {
 	return g.clone(baseDir, gitDir, src)
 }
 
-func getBranch(src *url.URL) string {
+func getGitBranch(src *url.URL) string {
 	if src.Fragment != "" {
 		return "refs/heads/" + src.Fragment
+	}
+	return "HEAD"
+}
+
+func getWebBranch(src *url.URL) string {
+	if src.Fragment != "" {
+		return src.Fragment
 	}
 	return "HEAD"
 }
@@ -117,7 +124,7 @@ func (g *gitFetcher) clone(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 		src.Scheme = "https"
 	}
 
-	branch := getBranch(src)
+	branch := getGitBranch(src)
 	log.Debugf("[git] Clone %s %s", src.String(), branch)
 
 	rep, err := git.Clone(storage, nil, &git.CloneOptions{
@@ -148,7 +155,7 @@ func (g *gitFetcher) pull(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 		return err
 	}
 
-	branch := getBranch(src)
+	branch := getGitBranch(src)
 	log.Debugf("[git] Pull %s %s", src.String(), branch)
 
 	err = rep.Pull(&git.PullOptions{
@@ -248,10 +255,7 @@ func resolveGithubURL(src *url.URL, filename string) (string, error) {
 	}
 
 	user, project := match[1], match[2]
-	branch := "HEAD"
-	if src.Fragment != "" {
-		branch = src.Fragment
-	}
+	branch := getWebBranch(src)
 
 	u := fmt.Sprintf(ghRawManifestURL, user, project, branch, filename)
 	return u, nil
@@ -268,10 +272,7 @@ func resolveGitlabURL(src *url.URL, filename string) (string, error) {
 	}
 
 	user, project := match[1], match[2]
-	branch := "HEAD"
-	if src.Fragment != "" {
-		branch = src.Fragment
-	}
+	branch := getWebBranch(src)
 
 	u := fmt.Sprintf(glRawManifestURL, src.Host, user, project, branch, filename)
 	return u, nil
