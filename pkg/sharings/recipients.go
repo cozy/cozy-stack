@@ -70,13 +70,12 @@ func (r *Recipient) ExtractDomain() (string, error) {
 	return r.URL, nil
 }
 
-// CreateRecipient inserts a Recipient document in database
+// CreateRecipient inserts a Recipient document in database. Email and URL must
+// not be empty.
 func CreateRecipient(db couchdb.Database, doc *Recipient) error {
-	// Sanity check: we need an URL…
 	if doc.Email == "" {
 		return ErrRecipientHasNoEmail
 	}
-	// …and an E-mail.
 	if doc.URL == "" {
 		return ErrRecipientHasNoURL
 	}
@@ -108,7 +107,6 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 		rs.recipient = recipient
 	}
 
-	// Other sanity check: the recipient has to have an URL and an email.
 	if rs.recipient.URL == "" {
 		return nil, ErrRecipientHasNoURL
 	}
@@ -118,13 +116,13 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 
 	// The structure `auth.Request` expects a domain WITHOUT a scheme (i.e.
 	// without "http://" or "https://") so we parse it.
-	recipientURL, err := rs.recipient.ExtractDomain()
+	recipientDomain, err := rs.recipient.ExtractDomain()
 	if err != nil {
 		return nil, err
 	}
 
 	req := &auth.Request{
-		Domain:     recipientURL,
+		Domain:     recipientDomain,
 		HTTPClient: new(http.Client),
 	}
 

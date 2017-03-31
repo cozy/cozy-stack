@@ -46,10 +46,9 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		recipient := rs.recipient
 
 		// Generate recipient specific OAuth query string.
-		recipientOAuthQueryString, errGenOAuth := generateOAuthQueryString(s,
-			rs, instance.Scheme())
-		if errGenOAuth != nil {
-			errorOccurred = logError(errGenOAuth)
+		oAuthStr, errOAuth := generateOAuthQueryString(s, rs, instance.Scheme())
+		if errOAuth != nil {
+			errorOccurred = logError(errOAuth)
 			continue
 		}
 
@@ -60,7 +59,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 				RecipientName:    recipient.Email,
 				SharerPublicName: sharerPublicName,
 				Description:      desc,
-				OAuthQueryString: recipientOAuthQueryString,
+				OAuthQueryString: oAuthStr,
 			},
 		)
 		if errGenMail != nil {
@@ -116,9 +115,7 @@ func logError(err error) bool {
 // generateMailMessage will extract and compute the relevant information
 // from the sharing to generate the mail we will send to the specified
 // recipient.
-func generateMailMessage(s *Sharing, r *Recipient,
-	mailValues *mailTemplateValues) (*jobs.Message, error) {
-	// The address of the recipient.
+func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValues) (*jobs.Message, error) {
 	if r.Email == "" {
 		return nil, ErrRecipientHasNoEmail
 	}
@@ -172,7 +169,6 @@ func generateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 	if oAuthQuery.Host == "" {
 		oAuthQuery.Host = rs.recipient.URL
 	}
-	// Where to send the answer.
 	oAuthQuery.Path = "/sharings/request"
 	// The link/button we put in the email has to have an http:// or https://
 	// prefix, otherwise it cannot be open in the browser.
@@ -180,7 +176,6 @@ func generateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 		oAuthQuery.Scheme = scheme
 	}
 
-	// We use url.encode to safely escape the query parameters.
 	mapParamOAuthQuery := url.Values{
 		"client_id":     {rs.Client.ClientID},
 		"redirect_uri":  {rs.Client.RedirectURIs[0]},
