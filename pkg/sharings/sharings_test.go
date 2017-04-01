@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/client/auth"
@@ -93,14 +94,14 @@ func createTestDoc(t *testing.T) (*couchdb.JSONDoc, error) {
 	return doc, err
 }
 
-func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc) error {
-	doc.M["test"] = "oh it's you again?"
+func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc, k, v string) error {
+	doc.M[k] = v
 	err := couchdb.UpdateDoc(in, doc)
 	assert.NoError(t, err)
 	return err
 }
 
-func createSharing(t *testing.T, doc *couchdb.JSONDoc) (*Sharing, error) {
+func createSharing(t *testing.T, sharingType string, doc *couchdb.JSONDoc) (*Sharing, error) {
 	recipient, err := createRecipient(t)
 	assert.NoError(t, err)
 
@@ -116,14 +117,14 @@ func createSharing(t *testing.T, doc *couchdb.JSONDoc) (*Sharing, error) {
 	if doc != nil {
 		rule := permissions.Rule{
 			Type:   "io.cozy.tests",
-			Verbs:  permissions.Verbs(permissions.POST, permissions.PUT),
+			Verbs:  permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
 			Values: []string{doc.ID()},
 		}
 		set = permissions.Set{rule}
 	}
 
 	sharing := &Sharing{
-		SharingType:      consts.OneShotSharing,
+		SharingType:      sharingType,
 		Permissions:      set,
 		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
@@ -155,6 +156,57 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 
 	err = couchdb.UpdateDoc(in, doc)
 	assert.NoError(t, err)
+}
+
+func acceptedSharing(t *testing.T, sharingType string) {
+	testDoc, err := createTestDoc(t)
+	assert.NoError(t, err)
+	assert.NotNil(t, testDoc)
+
+	sharing, err := createSharing(t, sharingType, testDoc)
+	assert.NoError(t, err)
+	assert.NotNil(t, sharing)
+
+	// `createSharing` only creates one recipient.
+	clientID := sharing.RecipientsStatus[0].Client.ClientID
+
+	set := sharing.Permissions
+	scope, err := set.MarshalScopeString()
+	assert.NoError(t, err)
+
+	access, err := generateAccessCode(t, clientID, scope)
+	assert.NoError(t, err)
+
+	domain, err := SharingAccepted(in, sharing.SharingID, clientID, access.Code)
+	assert.NoError(t, err)
+	assert.NotNil(t, domain)
+
+	// Check sharing status on the sharer side
+	doc := &Sharing{}
+	err = couchdb.GetDoc(in, consts.Sharings, sharing.SID, doc)
+	assert.NoError(t, err)
+	recStatuses, err := doc.RecStatus(in)
+	assert.NoError(t, err)
+	recStatus := recStatuses[0]
+	assert.Equal(t, consts.AcceptedSharingStatus, recStatus.Status)
+	assert.NotNil(t, recStatus.AccessToken.AccessToken)
+	assert.NotNil(t, recStatus.AccessToken.RefreshToken)
+
+	if sharingType == consts.MasterSlaveSharing ||
+		sharingType == consts.MasterMasterSharing {
+
+		updKey := "test"
+		updVal := "update me!"
+		err = updateTestDoc(t, testDoc, updKey, updVal)
+		assert.NoError(t, err)
+
+		// Wait for the document to arrive and check it
+		time.Sleep(2000 * time.Millisecond)
+		recDoc := &couchdb.JSONDoc{}
+		err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
+		assert.NoError(t, err)
+		assert.Equal(t, updVal, recDoc.M[updKey])
+	}
 }
 
 func TestGetAccessTokenNoAuth(t *testing.T) {
@@ -337,7 +389,7 @@ func TestSharingAcceptedStateNotUnique(t *testing.T) {
 }
 
 func TestSharingAcceptedBadCode(t *testing.T) {
-	s, err := createSharing(t, nil)
+	s, err := createSharing(t, consts.OneShotSharing, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -348,46 +400,13 @@ func TestSharingAcceptedBadCode(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestSharingAcceptedSuccess(t *testing.T) {
-	testDoc, err := createTestDoc(t)
-	assert.NoError(t, err)
-	assert.NotNil(t, testDoc)
+func TestOneShotSharingAcceptedSuccess(t *testing.T) {
+	acceptedSharing(t, consts.OneShotSharing)
+}
 
-	sharing, err := createSharing(t, testDoc)
-	assert.NoError(t, err)
-	assert.NotNil(t, sharing)
+func TestMasterSlaveSharingAcceptedSuccess(t *testing.T) {
+	acceptedSharing(t, consts.MasterSlaveSharing)
 
-	// `createSharing` only creates one recipient.
-	clientID := sharing.RecipientsStatus[0].Client.ClientID
-
-	set := sharing.Permissions
-	scope, err := set.MarshalScopeString()
-	assert.NoError(t, err)
-
-	access, err := generateAccessCode(t, clientID, scope)
-	assert.NoError(t, err)
-
-	domain, err := SharingAccepted(in, sharing.SharingID, clientID, access.Code)
-	assert.NoError(t, err)
-	assert.NotNil(t, domain)
-
-	doc := &Sharing{}
-	err = couchdb.GetDoc(in, consts.Sharings, sharing.SID, doc)
-	assert.NoError(t, err)
-
-	recStatuses, err := doc.RecStatus(in)
-	assert.NoError(t, err)
-	recStatus := recStatuses[0]
-	assert.Equal(t, consts.AcceptedSharingStatus, recStatus.Status)
-	assert.NotNil(t, recStatus.AccessToken.AccessToken)
-	assert.NotNil(t, recStatus.AccessToken.RefreshToken)
-
-	err = updateTestDoc(t, testDoc)
-	assert.NoError(t, err)
-
-	testDoc2, err := createTestDoc(t)
-	assert.NoError(t, err)
-	assert.NotNil(t, testDoc2)
 }
 
 func TestSharingRefusedNoSharing(t *testing.T) {
