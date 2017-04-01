@@ -1,7 +1,8 @@
 package workers
 
 import (
-	"net/http/httptest"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -11,20 +12,26 @@ import (
 
 var testDocType = "io.cozy.tests"
 var testDocID = "aydiayda"
-var ts *httptest.Server
-var recipientURL string
 
-func TestSendDataBadDocType(t *testing.T) {
+func TestSendDataMissingDocType(t *testing.T) {
+	domain := "baddatabase.triggers"
+	db := couchdb.SimpleDatabasePrefix(domain)
+	docType := "fakedoctype"
+	err := couchdb.ResetDB(db, docType)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
 		DocID:      "fakeid",
-		DocType:    "fakedoctype",
+		DocType:    docType,
 		Recipients: []*RecipientInfo{},
 	})
 	assert.NoError(t, err)
 
-	err = SendData(jobs.NewWorkerContext("baddoctype.triggers"), msg)
+	err = SendData(jobs.NewWorkerContext(domain), msg)
 	assert.Error(t, err)
-	assert.Equal(t, "CouchDB(not_found): wrong_doctype", err.Error())
+	assert.Equal(t, "CouchDB(not_found): missing", err.Error())
 }
 
 func TestSendDataBadID(t *testing.T) {

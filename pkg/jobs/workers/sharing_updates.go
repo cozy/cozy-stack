@@ -67,14 +67,7 @@ type Sharing struct {
 type RecipientStatus struct {
 	Status       string                     `json:"status,omitempty"`
 	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
-	recipient    *Recipient
 	AccessToken  *auth.AccessToken
-}
-
-// Recipient describes a sharing recipient
-type Recipient struct {
-	Email string `json:"email"`
-	URL   string `json:"url"`
 }
 
 // SharingUpdates handles shared document updates
