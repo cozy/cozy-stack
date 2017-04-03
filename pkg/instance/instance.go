@@ -261,6 +261,7 @@ func (i *Instance) installApp(slug string) error {
 		return errors.New("Unknown app")
 	}
 	inst, err := apps.NewInstaller(i, i.VFS(), &apps.InstallerOptions{
+		Operation: apps.Install,
 		Type:      apps.Webapp,
 		SourceURL: source,
 		Slug:      slug,

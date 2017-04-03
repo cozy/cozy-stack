@@ -140,6 +140,7 @@ var fs vfs.VFS
 
 func TestInstallBadSlug(t *testing.T) {
 	_, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		SourceURL: "git://foo.bar",
 	})
@@ -148,6 +149,7 @@ func TestInstallBadSlug(t *testing.T) {
 	}
 
 	_, err = NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "coucou/",
 		SourceURL: "git://foo.bar",
@@ -159,6 +161,7 @@ func TestInstallBadSlug(t *testing.T) {
 
 func TestInstallBadAppsSource(t *testing.T) {
 	_, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "app3",
 		SourceURL: "foo://bar.baz",
@@ -168,6 +171,7 @@ func TestInstallBadAppsSource(t *testing.T) {
 	}
 
 	_, err = NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "app4",
 		SourceURL: "git://bar  .baz",
@@ -179,6 +183,7 @@ func TestInstallBadAppsSource(t *testing.T) {
 
 func TestInstallSuccessful(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "local-cozy-mini",
 		SourceURL: "git://localhost/",
@@ -220,48 +225,40 @@ func TestInstallSuccessful(t *testing.T) {
 	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini/"+manifestName, []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
+
+	inst2, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
+		Type:      installerType,
+		Slug:      "local-cozy-mini",
+		SourceURL: "git://localhost/",
+	})
+	assert.Nil(t, inst2)
+	assert.Equal(t, ErrAlreadyExists, err)
 }
 
-func TestInstallAldreadyExist(t *testing.T) {
+func TestUpgradeNotExist(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Update,
 		Type:      installerType,
-		Slug:      "cozy-app-a",
+		Slug:      "cozy-app-not-exist",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	go inst.Install()
-
-	for {
-		var done bool
-		_, done, err = inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
-		if done {
-			break
-		}
-	}
+	assert.Nil(t, inst)
+	assert.Equal(t, ErrNotFound, err)
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
+		Operation: Delete,
 		Type:      installerType,
-		Slug:      "cozy-app-a",
+		Slug:      "cozy-app-not-exist",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	go inst.Install()
-
-	_, _, err = inst.Poll()
-	assert.Equal(t, ErrAlreadyExists, err)
+	assert.Nil(t, inst)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestInstallWithUpgrade(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
@@ -293,6 +290,7 @@ func TestInstallWithUpgrade(t *testing.T) {
 	doUpgrade(2)
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
+		Operation: Update,
 		Type:      installerType,
 		Slug:      "cozy-app-b",
 		SourceURL: "git://localhost/",
@@ -340,6 +338,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 	doUpgrade(3)
 
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
@@ -388,6 +387,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 	doUpgrade(4)
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
+		Operation: Update,
 		Type:      installerType,
 		Slug:      "local-cozy-mini-branch",
 		SourceURL: "git://localhost/#branch",
@@ -436,6 +436,7 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 
 func TestInstallFromGithub(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "github-cozy-mini",
 		SourceURL: "git://github.com/nono/cozy-mini.git",
@@ -474,6 +475,7 @@ func TestInstallFromGithub(t *testing.T) {
 
 func TestInstallFromGitlab(t *testing.T) {
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "gitlab-cozy-mini",
 		SourceURL: "git://framagit.org/nono/cozy-mini.git",
@@ -512,6 +514,7 @@ func TestInstallFromGitlab(t *testing.T) {
 
 func TestUninstall(t *testing.T) {
 	inst1, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
 		Type:      installerType,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
@@ -531,8 +534,9 @@ func TestUninstall(t *testing.T) {
 		}
 	}
 	inst2, err := NewInstaller(db, fs, &InstallerOptions{
-		Type: installerType,
-		Slug: "github-cozy-delete",
+		Operation: Delete,
+		Type:      installerType,
+		Slug:      "github-cozy-delete",
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -542,16 +546,13 @@ func TestUninstall(t *testing.T) {
 		return
 	}
 	inst3, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Delete,
 		Type:      installerType,
 		Slug:      "github-cozy-delete",
 		SourceURL: "git://localhost/",
 	})
-	if !assert.NoError(t, err) {
-		return
-	}
-	go inst3.Update()
-	_, _, err = inst3.Poll()
-	assert.Error(t, err)
+	assert.Nil(t, inst3)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestMain(m *testing.M) {
