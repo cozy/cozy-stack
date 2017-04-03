@@ -179,6 +179,16 @@ func TestInstallBadAppsSource(t *testing.T) {
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "invalid character")
 	}
+
+	_, err = NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
+		Type:      installerType,
+		Slug:      "app5",
+		SourceURL: "",
+	})
+	if assert.Error(t, err) {
+		assert.Equal(t, ErrMissingSource, err)
+	}
 }
 
 func TestInstallSuccessful(t *testing.T) {

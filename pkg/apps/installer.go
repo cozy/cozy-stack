@@ -14,11 +14,15 @@ import (
 
 var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 
+// Operation is the type of operation the installer is created for.
 type Operation int
 
 const (
+	// Install operation for installing an application
 	Install Operation = iota + 1
+	// Update operation for updating an application
 	Update
+	// Delete operation for deleting an application
 	Delete
 )
 
@@ -28,11 +32,10 @@ type Installer struct {
 	fs      vfs.VFS
 	db      couchdb.Database
 
-	appType AppType
-	man     Manifest
-	src     *url.URL
-	slug    string
-	base    string
+	man  Manifest
+	src  *url.URL
+	slug string
+	base string
 
 	err  error
 	errc chan error
