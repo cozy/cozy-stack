@@ -35,7 +35,7 @@ func SharingAnswer(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u)
 }
 
-// AddRecipient adds a sharing Recipient and register to its server
+// AddRecipient adds a sharing Recipient.
 func AddRecipient(c echo.Context) error {
 
 	recipient := new(sharings.Recipient)
@@ -49,16 +49,12 @@ func AddRecipient(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	err = recipient.Register(instance)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
 	return jsonapi.Data(c, http.StatusCreated, recipient, nil)
 }
 
-// SharingRequest handles a sharing request from the recipient side
-// It creates a temporary sharing document and redirects to the authorize page
+// SharingRequest handles a sharing request from the recipient side.
+//
+// It creates a temporary sharing document and redirects to the authorize page.
 func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
 	state := c.QueryParam("state")
@@ -77,7 +73,9 @@ func SharingRequest(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
 }
 
-// CreateSharing initializes a sharing by creating the associated document
+// CreateSharing initializes a sharing by creating the associated document,
+// registering the sharer as a new OAuth client at each recipient as well as
+// sending them a mail invitation.
 func CreateSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -86,13 +84,9 @@ func CreateSharing(c echo.Context) error {
 		return err
 	}
 
-	if err := sharings.CheckSharingCreation(instance, sharing); err != nil {
-		return wrapErrors(err)
-	}
-
-	err := sharings.Create(instance, sharing)
+	err := sharings.CreateSharingAndRegisterSharer(instance, sharing)
 	if err != nil {
-		return err
+		return wrapErrors(err)
 	}
 
 	err = sharings.SendSharingMails(instance, sharing)
@@ -133,6 +127,7 @@ func SendSharingMails(c echo.Context) error {
 // especially no scope and no access code).
 func RecipientRefusedSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+
 	// We collect the information we need to send to the sharer: the client id,
 	// the sharing id.
 	sharingID := c.FormValue("state")
@@ -143,7 +138,8 @@ func RecipientRefusedSharing(c echo.Context) error {
 	if clientID == "" {
 		return wrapErrors(sharings.ErrNoOAuthClient)
 	}
-	redirect, err := sharings.RecipientRefusedSharing(instance, sharingID, clientID)
+
+	redirect, err := sharings.RecipientRefusedSharing(instance, sharingID)
 	if err != nil {
 		return wrapErrors(err)
 	}

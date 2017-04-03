@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -30,17 +31,6 @@ type Sharing struct {
 	Permissions      permissions.Set    `json:"permissions,omitempty"`
 	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
 	Sharer           *Sharer            `json:"sharer,omitempty"`
-}
-
-// RecipientStatus contains the information about a recipient for a sharing
-type RecipientStatus struct {
-	Status       string `json:"status,omitempty"`
-	AccessToken  string `json:"access_token,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-
-	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
-
-	recipient *Recipient
 }
 
 // Sharer contains the information about the sharer from the recipient's
@@ -144,37 +134,18 @@ func (s *Sharing) Included() []jsonapi.Object {
 	return included
 }
 
-// GetRecipient returns the Recipient stored in database from a given ID
-func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
-	doc := &Recipient{}
-	err := couchdb.GetDoc(db, consts.Recipients, recID, doc)
-	if couchdb.IsNotFoundError(err) {
-		err = ErrRecipientDoesNotExist
-	}
-	return doc, err
-}
-
-// GetSharingRecipientFromClientID returns the Recipient associated with the given clientID
+// GetSharingRecipientFromClientID returns the Recipient associated with the
+// given clientID.
 func (s *Sharing) GetSharingRecipientFromClientID(db couchdb.Database, clientID string) (*RecipientStatus, error) {
 	for _, recStatus := range s.RecipientsStatus {
-		recipient, err := GetRecipient(db, recStatus.RefRecipient.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		recStatus.recipient = recipient
-
-		if recipient.Client == nil {
-			return nil, nil
-		}
-		if recipient.Client.ClientID == clientID {
+		if recStatus.Client.ClientID == clientID {
 			return recStatus, nil
 		}
 	}
-	return nil, nil
+	return nil, ErrRecipientDoesNotExist
 }
 
-//CheckSharingType returns an error if the sharing type is incorrect
+// CheckSharingType returns an error if the sharing type is incorrect
 func CheckSharingType(sharingType string) error {
 	switch sharingType {
 	case consts.OneShotSharing, consts.MasterSlaveSharing, consts.MasterMasterSharing:
@@ -245,7 +216,8 @@ func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 // sendDoc sends a JSON document to a recipient
 func sendDoc(docType, id string, doc *couchdb.JSONDoc, recStatus *RecipientStatus) error {
 	// Get the recipient info
-	token := recStatus.AccessToken
+	// token := recStatus.AccessToken
+	token := recStatus.AccessToken.AccessToken
 	rec := recStatus.recipient
 	domain, err := rec.ExtractDomain()
 	if err != nil {
@@ -303,24 +275,30 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 	return nil
 }
 
-// SharingAccepted handles an accepted sharing on the sharer side
+// SharingAccepted handles an accepted sharing on the sharer side and returns
+// the redirect url.
 func SharingAccepted(instance *instance.Instance, state, clientID, accessCode string) (string, error) {
 	sharing, recStatus, err := findSharingRecipient(instance, state, clientID)
 	if err != nil {
 		return "", err
 	}
+
+	// Update the status to "accepted".
 	recStatus.Status = consts.AcceptedSharingStatus
 
-	access, err := recStatus.recipient.GetAccessToken(accessCode)
+	// Fetch the access and refresh tokens.
+	access, err := recStatus.getAccessToken(instance, accessCode)
 	if err != nil {
 		return "", err
 	}
-	recStatus.AccessToken = access.AccessToken
-	recStatus.RefreshToken = access.RefreshToken
+	recStatus.AccessToken = access
+
+	// Update the document for later usage.
 	err = couchdb.UpdateDoc(instance, sharing)
 	if err != nil {
 		return "", err
 	}
+
 	// Share all the documents with the recipient
 	err = ShareDoc(instance, sharing, recStatus)
 
@@ -329,21 +307,39 @@ func SharingAccepted(instance *instance.Instance, state, clientID, accessCode st
 	return redirect, err
 }
 
-// SharingRefused handles a rejected sharing on the sharer side
+// SharingRefused handles a rejected sharing on the sharer side and returns the
+// redirect url.
 func SharingRefused(db couchdb.Database, state, clientID string) (string, error) {
-	sharing, recStatus, err := findSharingRecipient(db, state, clientID)
+	sharing, recStatus, errFind := findSharingRecipient(db, state, clientID)
+	if errFind != nil {
+		return "", errFind
+	}
+	recStatus.Status = consts.RefusedSharingStatus
+
+	// Persists the changes in the database.
+	err := couchdb.UpdateDoc(db, sharing)
 	if err != nil {
 		return "", err
 	}
-	recStatus.Status = consts.RefusedSharingStatus
-	err = couchdb.UpdateDoc(db, sharing)
+
+	// Sanity check: as the `recipient` is private if the document is fetched
+	// from the database it is nil.
+	if recStatus.recipient == nil {
+		recipient, errGet := GetRecipient(db, recStatus.RefRecipient.ID)
+		if errGet != nil {
+			return "", nil
+		}
+
+		recStatus.recipient = recipient
+	}
+
 	redirect := recStatus.recipient.URL
 	return redirect, err
 }
 
-// RecipientRefusedSharing executes all the actions induced by a refusal from
-// the recipient: the sharing document is deleted and the sharer is informed.
-func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) (string, error) {
+// RecipientRefusedSharing deletes the sharing document and returns the address
+// at which the sharer can be informed for the refusal.
+func RecipientRefusedSharing(db couchdb.Database, sharingID string) (string, error) {
 	// We get the sharing document through its sharing id…
 	var res []Sharing
 	err := couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
@@ -363,15 +359,9 @@ func RecipientRefusedSharing(db couchdb.Database, sharingID, clientID string) (s
 	if err != nil {
 		return "", err
 	}
-	// We get the sharer's oauth client so that we can get her Cozy's url
-	// through the `ClientURI`.
-	sharer := &oauth.Client{}
-	err = couchdb.GetDoc(db, consts.OAuthClients, clientID, sharer)
-	if err != nil {
-		return "", ErrNoOAuthClient
-	}
 
-	u := fmt.Sprintf("%s/sharings/answer", sharer.ClientURI)
+	// We return where to send the refusal.
+	u := fmt.Sprintf("%s/sharings/answer", sharing.Sharer.URL)
 	return u, nil
 }
 
@@ -415,37 +405,41 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 		Sharer:      sharer,
 	}
 
-	err = Create(db, sharing)
-
+	err = couchdb.CreateDoc(db, sharing)
 	return sharing, err
 }
 
-// CheckSharingCreation initializes and check some sharing fields at creation
-func CheckSharingCreation(db couchdb.Database, sharing *Sharing) error {
-
+// CreateSharingAndRegisterSharer checks the sharing, creates the document in
+// base and starts the sharing process by registering the sharer at each
+// recipient as a new OAuth client.
+func CreateSharingAndRegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	sharingType := sharing.SharingType
 	if err := CheckSharingType(sharingType); err != nil {
 		return err
 	}
 
-	recStatus, err := sharing.RecStatus(db)
+	// Fetch the recipients in the database and populate RecipientsStatus.
+	recStatus, err := sharing.RecStatus(instance)
 	if err != nil {
 		return err
 	}
-	for _, rec := range recStatus {
-		rec.Status = consts.PendingSharingStatus
+
+	// Register the sharer at each recipient and set the status accordingly.
+	for _, rs := range recStatus {
+		err = rs.Register(instance)
+		if err != nil {
+			log.Error("[sharing] Could not register at "+
+				rs.recipient.URL+" ", err)
+			rs.Status = consts.UnregisteredSharingStatus
+		} else {
+			rs.Status = consts.MailNotSentSharingStatus
+		}
 	}
 
 	sharing.Owner = true
 	sharing.SharingID = utils.RandomString(32)
 
-	return nil
-}
-
-// Create inserts a Sharing document in database
-func Create(db couchdb.Database, doc *Sharing) error {
-	err := couchdb.CreateDoc(db, doc)
-	return err
+	return couchdb.CreateDoc(instance, sharing)
 }
 
 var (

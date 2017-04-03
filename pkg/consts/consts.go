@@ -87,6 +87,11 @@ const (
 	AcceptedSharingStatus = "accepted"
 	// ErrorSharingStatus is when the request could not be sent
 	ErrorSharingStatus = "error"
+	// UnregisteredSharingStatus is when the sharer could not register herself
+	// as an OAuth client at the recipient's
+	UnregisteredSharingStatus = "unregistered"
+	// MailNotSentSharingStatus is when the mail invitation was not sent
+	MailNotSentSharingStatus = "mail-not-sent"
 )
 
 // AppsRegistry is an hard-coded list of known apps, with their source URLs
