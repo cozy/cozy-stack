@@ -2,6 +2,7 @@ package apps
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -55,6 +57,27 @@ func onboarding(c echo.Context) bool {
 		return false
 	}
 	return c.QueryParam("registerToken") != ""
+}
+
+// handleIntent will allow iframes from another app if the current app is
+// opened as an intent
+func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
+	intent := &intents.Intent{}
+	if err := couchdb.GetDoc(i, consts.Intents, intentID, intent); err != nil {
+		return
+	}
+	allowed := false
+	for _, service := range intent.Services {
+		if slug == service.Slug {
+			allowed = true
+		}
+	}
+	if !allowed {
+		return
+	}
+	from := i.SubDomain(intent.Client).Host
+	hdr := fmt.Sprintf("%s %s", middlewares.XFrameAllowFrom, from)
+	c.Response().Header().Set(echo.HeaderXFrameOptions, hdr)
 }
 
 // ServeAppFile will serve the requested file using the specified application
@@ -99,6 +122,9 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	modtime := infos.ModTime()
 	if file != route.Index {
 		return fs.ServeFileContent(c.Response(), c.Request(), modtime, slug, route.Folder, file)
+	}
+	if intentID := c.QueryParam("intent"); intentID != "" {
+		handleIntent(c, i, slug, intentID)
 	}
 	// For index file, we inject the locale, the stack domain, and a token if the
 	// user is connected
