@@ -84,6 +84,9 @@ func init() {
 	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
 	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
 
+	flags.String("konnectors-cmd", "", "konnectors command to be executed")
+	checkNoErr(viper.BindPFlag("konnectors.cmd", flags.Lookup("konnectors-cmd")))
+
 	flags.String("mail-host", "localhost", "mail smtp host")
 	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
 

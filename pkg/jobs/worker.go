@@ -200,7 +200,7 @@ func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
 	// allowed to the task
 	timeout := c.Timeout
 	if execTime+timeout > c.MaxExecTime {
-		timeout = execTime - c.MaxExecTime
+		timeout = c.MaxExecTime - execTime
 	}
 
 	var nextDelay time.Duration

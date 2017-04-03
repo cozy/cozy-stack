@@ -70,6 +70,7 @@ type Config struct {
 	AdminPort  int
 	Fs         Fs
 	CouchDB    CouchDB
+	Konnectors Konnectors
 	Mail       *gomail.DialerOptions
 	Logger     Logger
 }
@@ -82,6 +83,11 @@ type Fs struct {
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
 	URL string
+}
+
+// Konnectors contains the configuration values for the konnectors.
+type Konnectors struct {
+	Cmd string
 }
 
 // Logger contains the configuration values of the logger system
@@ -211,6 +217,9 @@ func UseViper(v *viper.Viper) error {
 		},
 		CouchDB: CouchDB{
 			URL: couchURL.String(),
+		},
+		Konnectors: Konnectors{
+			Cmd: v.GetString("konnectors.cmd"),
 		},
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
