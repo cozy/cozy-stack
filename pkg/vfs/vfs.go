@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -143,11 +142,6 @@ type Locker interface {
 	RUnlock()
 	Lock()
 	Unlock()
-}
-
-// NewMemLock returns a sync.RWMutex.
-func NewMemLock() Locker {
-	return &sync.RWMutex{}
 }
 
 // VFS is composed of the Indexer and Fs interface. It is the common interface
