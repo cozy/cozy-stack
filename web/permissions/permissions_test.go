@@ -443,6 +443,24 @@ func TestListPermission(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, resBody.Data, 2)
 
+	req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events?page[limit]=1", nil)
+	req3.Header.Add("Authorization", "Bearer "+token)
+	req3.Header.Add("Content-Type", "application/json")
+	res3, err := http.DefaultClient.Do(req3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res3.Body.Close()
+
+	var resBody3 struct {
+		Data  []*permissions.Permission
+		Links *jsonapi.LinksList
+	}
+	err = json.NewDecoder(res3.Body).Decode(&resBody3)
+	assert.NoError(t, err)
+	assert.Len(t, resBody3.Data, 1)
+	assert.NotEmpty(t, resBody3.Links.Next)
+
 }
 
 func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {
