@@ -43,7 +43,7 @@ Every app can register itself as a potential handler for one or more intents. To
 
 - `action`: A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `OPEN`, `PICK`, and `SHARE`. While we recommend using one of these verbs, the list is not exhaustive and may be extended by any app.
 - `type`: One or more types of data on which the service knows how to operate the `action`. A `type` can be expressed as a [MIME type](https://en.wikipedia.org/wiki/Media_type) or a [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing). The application must have permissions for any Cozy Document Type listed here. You can also think of the `type` as the intent's subject.
-- `href`: the relative url of the route designed to handle this intent. Similar to how [certain variables are injected in the applications HTML](https://github.com/cozy/cozy-stack/blob/master/docs/client-app-dev.md#good-practices-for-your-application), this URL will be parsed and the `{{.Intent}}` marker will be replaced with the current intents id. 
+- `href`: the relative URL of the route designed to handle this intent. A query-string with the intent id will be added to this URL.
 
 These informations must be provided in the manifest of the application, inside the `intents` key.
 
@@ -59,19 +59,7 @@ Here is a very simple example:
 ]
 ```
 
-Notice that we didn't include a `{{.Intent}}` marker in the `href`, which we really should have:
-
-```json
-"intents": [
-    {
-        "action": "PICK",
-        "type": ["io.cozy.files"],
-        "href": "/pick?id={{.Intent}}"
-    }
-]
-```
-
-When this service is called, it will load the page `https://service.domain.example.com/pick?id=123abc`.
+When this service is called, it will load the page `https://service.domain.example.com/pick?intent=123abc`.
 
 Here is an example of an app that supports multiple data types:
 
@@ -80,7 +68,7 @@ Here is an example of an app that supports multiple data types:
     {
         "action": "PICK",
         "type": ["io.cozy.files", "image/*"],
-        "href": "/pick?id={{.Intent}}"
+        "href": "/pick"
     }
 ]
 ```
@@ -92,12 +80,12 @@ Finally, here is an example of an app that supports several intent types:
     {
         "action": "PICK",
         "type": ["io.cozy.files", "image/*"],
-        "href": "/pick?id={{.Intent}}"
+        "href": "/pick"
     },
     {
         "action": "VIEW",
         "type": ["image/gif"],
-        "href": "/viewer?id={{.Intent}}"
+        "href": "/viewer"
     }
 ]
 ```
@@ -189,9 +177,7 @@ The stack then stores the information for that intent:
 - `type`
 - `permissions`
 
-The service URL is parsed and the `{{.Intent}}` marker is replaced with the intent's id. If no `{{.Intent}}` marker is found, the URL is suffixed with `?intent=` followed by the intent's id, as a fallback.
-
-Finally, the service URL is sent to the client.
+Finally, the service URL is suffixed with `?intent=` followed by the intent's id, and then sent to the client.
 
 #### Service choice
 
