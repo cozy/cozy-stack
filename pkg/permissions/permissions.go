@@ -352,7 +352,7 @@ func GetPermissionsByType(db couchdb.Database, doctype string, cursor *couchdb.C
 
 	var req = &couchdb.ViewRequest{
 		StartKey:    []string{doctype},
-		EndKey:      []string{doctype, couchdb.InfiniteString},
+		EndKey:      []string{doctype, couchdb.MaxString},
 		IncludeDocs: true,
 	}
 

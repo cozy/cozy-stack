@@ -152,11 +152,13 @@ func Between(field string, v1 interface{}, v2 interface{}) Filter {
 	}}
 }
 
-const uFFFF = string(unicode.MaxRune)
+// MaxString is the unicode character \uFFFF, useful as an upperbound for
+// queryies
+const MaxString = string(unicode.MaxRune)
 
 // StartWith returns a filter that check if field's string value start with prefix
 func StartWith(field string, prefix string) Filter {
-	return Between(field, prefix, prefix+uFFFF)
+	return Between(field, prefix, prefix+MaxString)
 }
 
 ////////////////////////////////////////////////////////////////
