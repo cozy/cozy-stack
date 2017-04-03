@@ -98,6 +98,37 @@ type refAndVerb struct {
 	Verbs   *permissions.VerbSet `json:"verbs"`
 }
 
+func listPermissionsByDoctype(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	doctype := c.Param("doctype")
+	current, err := getPermission(c)
+	if err != nil {
+		return err
+	}
+
+	if current.Permissions.AllowWholeType("GET", doctype) {
+		return jsonapi.NewError(http.StatusForbidden,
+			"you need GET permission on whole type to list its permissions")
+	}
+
+	perms, err := permissions.GetPermissionsByType(instance, doctype)
+	if err != nil {
+		return err
+	}
+
+	data, err := json.Marshal(perms)
+	if err != nil {
+		return err
+	}
+	doc := jsonapi.Document{
+		Data: (*json.RawMessage)(&data),
+	}
+	resp := c.Response()
+	resp.Header().Set("Content-Type", jsonapi.ContentType)
+	resp.WriteHeader(http.StatusOK)
+	return json.NewEncoder(resp).Encode(doc)
+}
+
 func listPermissions(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -216,6 +247,7 @@ func revokePermission(c echo.Context) error {
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
+	router.POST("/doctype/:doctype", listPermissionsByDoctype)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
 	router.PATCH("/:permdocid", patchPermission)

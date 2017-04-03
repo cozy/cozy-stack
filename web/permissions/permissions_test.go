@@ -425,6 +425,22 @@ func TestListPermission(t *testing.T) {
 		}
 	}
 
+	req2, _ := http.NewRequest("POST", ts.URL+"/permissions/doctype/io.cozy.events", reqbody)
+	req2.Header.Add("Authorization", "Bearer "+token)
+	req2.Header.Add("Content-Type", "application/json")
+	res2, err := http.DefaultClient.Do(req2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res2.Body.Close()
+
+	var resBody struct {
+		Data []*permissions.Permission
+	}
+	err = json.NewDecoder(res2.Body).Decode(&resBody)
+	assert.NoError(t, err)
+	assert.Len(t, resBody.Data, 2)
+
 }
 
 func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {

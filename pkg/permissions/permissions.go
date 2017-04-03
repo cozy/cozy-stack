@@ -345,3 +345,30 @@ func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (ma
 
 	return result, nil
 }
+
+// GetPermissionsByType gets all share permissions for a given doctype.
+func GetPermissionsByType(db couchdb.Database, doctype string) ([]*Permission, error) {
+
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(db, consts.PermissionsShareByDocView, &couchdb.ViewRequest{
+		StartKey:    []string{doctype},
+		EndKey:      []string{doctype, couchdb.InfiniteString},
+		IncludeDocs: true,
+	}, &res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*Permission, len(res.Rows))
+	for i, row := range res.Rows {
+		var pdoc Permission
+		err := json.Unmarshal(*row.Doc, &pdoc)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = &pdoc
+	}
+
+	return result, nil
+}
