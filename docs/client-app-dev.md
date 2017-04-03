@@ -10,7 +10,7 @@ This document describe a tool to run an environment in order to develop client-s
 
 We provide two different ways to run this environment, either manually where you have to install part of the dependencies yourself or *via* a Docker image in which all dependencies are packed.
 
-This environment will provide a running instance a http server serving both a specified directory of your application on `app.cozy.local:8080` and the `cozy-stack` on `cozy.local:8080` (you can change the hostname and port if you want, see below).
+This environment will provide a running instance a http server serving both a specified directory of your application on `app.cozy.tools:8080` and the `cozy-stack` on `cozy.tools:8080` (you can change the hostname and port if you want, see below).
 
 The default passphrase will be "cozy"
 
@@ -28,12 +28,6 @@ Examples:
 
 ```sh
 $ ./scripts/cozy-app-dev.sh -d ~/code/myapp
-```
-
-You'll need to add the following line to your `/etc/hosts` file:
-
-```
-127.0.0.1  app.cozy.local cozy.local
 ```
 
 If your CouchDB 2 instance is not running on `localhost:5984`, you can specify
@@ -78,7 +72,7 @@ $ docker run --rm -it \
 
 A [MailHog](https://github.com/mailhog/MailHog) is running inside docker to
 catch emails. You can view the emails sent by the stack in a web interface on
-http://cozy.local:8025/
+http://cozy.tools:8025/
 
 You can also expose the couchdb port (listening in the container on 5984) in order to access its admin page. For instance add `-p 1234:5984` to access to the admin interface on `http://localhost:1234/_utils`.
 
@@ -97,12 +91,6 @@ $ docker run --rm -it \
     -v "$HOME/appone":/data/cozy-app/appone \
     -v "$HOME/apptwo":/data/cozy-app/apptwo \
     cozy/cozy-app-dev
-```
-
-Don't forget to add their subdomains to the `/etc/hosts` file:
-
-```
-127.0.0.1  appone.cozy.local apptwo.cozy.local cozy.local
 ```
 
 

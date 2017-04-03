@@ -56,7 +56,7 @@ ENV MAILHOG_SRC_URL https://github.com/mailhog/MailHog/releases/download/v$MAILH
 ENV MAILHOG_SRC_SHA256 25b3cd56e7a1042b695fed8b32808eef778eafa8fb6bd583dde90a8fc2877e0e
 
 # cozy-stack
-ENV COZY_STACK_HOST cozy.local
+ENV COZY_STACK_HOST cozy.tools
 ENV COZY_STACK_PORT 8080
 ENV COZY_STACK_PATH cozy-stack
 
@@ -70,7 +70,6 @@ EXPOSE 8080 8025 5984
 
 CMD couchdb 2>/dev/null 1>/dev/null & \
     MailHog 2>/dev/null 1>/dev/null & \
-    echo "0.0.0.0 cozy.local app.cozy.local" >> /etc/hosts && \
     /usr/bin/cozy-app-dev.sh \
       -d /data/cozy-app \
       -f /data/cozy-storage

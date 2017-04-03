@@ -17,7 +17,7 @@ cozy-stack instances add [domain]
 ### Examples
 
 ```
-$ cozy-stack instances add --dev --passphrase cozy --apps files,photos,settings cozy.local:8080
+$ cozy-stack instances add --dev --passphrase cozy --apps files,photos,settings cozy.tools:8080
 ```
 
 ### Options

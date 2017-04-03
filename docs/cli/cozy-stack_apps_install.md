@@ -14,7 +14,7 @@ cozy-stack apps install [slug] [sourceurl]
 ### Examples
 
 ```
-$ cozy-stack apps install --domain cozy.local:8080 files 'git://github.com/cozy-files-v3.git#build'
+$ cozy-stack apps install --domain cozy.tools:8080 files 'git://github.com/cozy-files-v3.git#build'
 ```
 
 ### Options inherited from parent commands
