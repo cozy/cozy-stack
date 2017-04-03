@@ -73,7 +73,6 @@ do_start() {
 
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
-	check_hosts
 
 	if [ -f "${appdir}/manifest.webapp" ]; then
 		slug="app"
@@ -202,17 +201,6 @@ check_not_running() {
 		exit 1
 	fi
 	echo "ok"
-}
-
-check_hosts() {
-	devhost=$(grep ${COZY_STACK_HOST} /etc/hosts || echo "")
-	apphost=$(grep app.${COZY_STACK_HOST} /etc/hosts || echo "")
-	if [ -z "${devhost}" ] || [ -z "${apphost}" ]; then
-		echo -e ""
-		echo -e "You should have the following line in your /etc/hosts file:"
-		echo -e "127.0.0.1\t${COZY_STACK_HOST} app.${COZY_STACK_HOST}"
-		echo -e ""
-	fi
 }
 
 update=false
