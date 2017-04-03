@@ -165,29 +165,18 @@ func TestPaginationBadNumber(t *testing.T) {
 	res, err := http.Get(ts.URL + "/paginated?page[limit]=notnumber")
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	assert.Equal(t, 400, res.StatusCode, "should give an error")
+	assert.NotEqual(t, http.StatusOK, res.StatusCode, "should give an error")
 }
 
 func TestPaginationWithCursor(t *testing.T) {
-	res, err := http.Get(ts.URL + "/paginated?page[cursor]=somekey")
+	res, err := http.Get(ts.URL + "/paginated?page[cursor]=%5B%5B%22a%22%2C%20%22b%22%5D%2C%20%22c%22%5D")
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	var c couchdb.Cursor
 	json.NewDecoder(res.Body).Decode(&c)
 	assert.Equal(t, 13, c.Limit)
-	assert.Equal(t, "somekey", c.NextKey)
-	assert.Equal(t, "", c.NextDocID)
-}
-
-func TestPaginationWithCursorID(t *testing.T) {
-	res, err := http.Get(ts.URL + "/paginated?page[cursor]=somekey/someid")
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	var c couchdb.Cursor
-	json.NewDecoder(res.Body).Decode(&c)
-	assert.Equal(t, 13, c.Limit)
-	assert.Equal(t, "somekey", c.NextKey)
-	assert.Equal(t, "someid", c.NextDocID)
+	assert.Equal(t, []interface{}{"a", "b"}, c.NextKey)
+	assert.Equal(t, "c", c.NextDocID)
 }
 
 func TestMain(m *testing.M) {
@@ -198,11 +187,11 @@ func TestMain(m *testing.M) {
 		return Data(c, 200, courge, nil)
 	})
 	router.GET("/paginated", func(c echo.Context) error {
-		p, err := ExtractPagination(c, 13)
+		cursor, err := ExtractPaginationCursor(c, 13)
 		if err != nil {
 			return err
 		}
-		return c.JSON(200, p.ViewCursor())
+		return c.JSON(200, cursor)
 	})
 	ts = httptest.NewServer(router)
 	defer ts.Close()

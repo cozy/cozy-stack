@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/labstack/echo"
@@ -173,45 +173,59 @@ func BindRelations(req *http.Request) ([]ResourceIdentifier, error) {
 	return out, nil
 }
 
-// Pagination contains pagination options defined by
-// http://jsonapi.org/format/#fetching-pagination
-type Pagination struct {
-	Limit  int
-	Cursor string
-}
+// PaginationCursorToParams transforms a Cursor into url.Values
+// the url.Values contains only keys page[limit] & page[cursor]
+// if the cursor is Done, the values will be empty.
+func PaginationCursorToParams(cursor *couchdb.Cursor) (url.Values, error) {
 
-// ViewCursor transforms the pagination into a couchdb.Cursor
-func (p *Pagination) ViewCursor() *couchdb.Cursor {
-	parts := strings.Split(p.Cursor, "/")
-	key := strings.Join(parts[:len(parts)-1], "/")
-	id := parts[len(parts)-1]
-	if key == "" {
-		key = id
-		id = ""
+	v := url.Values{}
+
+	v.Set("page[limit]", strconv.Itoa(cursor.Limit))
+
+	if !cursor.Done {
+		cursorObj := []interface{}{cursor.NextKey, cursor.NextDocID}
+		cursorBytes, err := json.Marshal(cursorObj)
+		if err != nil {
+			return nil, err
+		}
+		v.Set("page[cursor]", string(cursorBytes))
 	}
 
-	return &couchdb.Cursor{
-		Limit:     p.Limit,
-		NextKey:   key,
-		NextDocID: id,
-	}
+	return v, nil
 }
 
-// ExtractPagination retrives the Pagination from context Query.
-func ExtractPagination(c echo.Context, defaultLimit int) (*Pagination, error) {
-	var out = &Pagination{
-		Cursor: c.QueryParam("page[cursor]"),
-		Limit:  defaultLimit,
+// ExtractPaginationCursor creates a Cursor from context Query.
+func ExtractPaginationCursor(c echo.Context, defaultLimit int) (*couchdb.Cursor, error) {
+
+	var out = &couchdb.Cursor{
+		Limit: defaultLimit,
+	}
+
+	if cursor := c.QueryParam("page[cursor]"); cursor != "" {
+		var parts []interface{}
+		err := json.Unmarshal([]byte(cursor), &parts)
+		if err != nil {
+			return nil, NewError(http.StatusBadRequest, "bad json cursor %s", cursor)
+		}
+
+		if len(parts) != 2 {
+			return nil, NewError(http.StatusBadRequest, "bad cursor length %s", cursor)
+		}
+		var ok bool
+		out.NextKey = parts[0]
+		out.NextDocID, ok = parts[1].(string)
+		if !ok {
+			return nil, NewError(http.StatusBadRequest, "bad cursor id %s", cursor)
+		}
+
 	}
 
 	if limit := c.QueryParam("page[limit]"); limit != "" {
 		reqLimit, err := strconv.ParseInt(limit, 10, 32)
 		if err != nil {
-			return nil, echo.NewHTTPError(400, "page limit is not a number")
+			return nil, NewError(http.StatusBadRequest, "page limit is not a number")
 		}
-		if int(reqLimit) < defaultLimit {
-			out.Limit = int(reqLimit)
-		}
+		out.Limit = int(reqLimit)
 	}
 
 	return out, nil

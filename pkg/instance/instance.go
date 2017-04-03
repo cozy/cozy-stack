@@ -467,6 +467,9 @@ func Destroy(domain string) (*Instance, error) {
 			Limit:    1,
 		}
 		if err = couchdb.FindDocs(couchdb.GlobalDB, consts.Instances, req, &instances); err != nil {
+			if couchdb.IsNoDatabaseError(err) {
+				return nil, ErrNotFound
+			}
 			return nil, err
 		}
 		if len(instances) == 0 {

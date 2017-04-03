@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 	testSetup := testutils.NewSetup(m, "permissions_test")
 
 	testInstance = testSetup.GetTestInstance()
-	scopes := "io.cozy.contacts io.cozy.files:GET"
+	scopes := "io.cozy.contacts io.cozy.files:GET io.cozy.events"
 	client, tok := testSetup.GetTestClient(scopes)
 	clientID = client.ClientID
 	token = tok
@@ -62,11 +62,13 @@ func TestGetPermissions(t *testing.T) {
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
 	for key, r := range out {
 		rule := r.(map[string]interface{})
-		if key == "rule0" {
-			assert.Equal(t, "io.cozy.contacts", rule["type"])
-		} else {
+		if key == "rule1" {
 			assert.Equal(t, "io.cozy.files", rule["type"])
 			assert.Equal(t, []interface{}{"GET"}, rule["verbs"])
+		} else if key == "rule0" {
+			assert.Equal(t, "io.cozy.contacts", rule["type"])
+		} else {
+			assert.Equal(t, "io.cozy.events", rule["type"])
 		}
 	}
 }
@@ -424,6 +426,40 @@ func TestListPermission(t *testing.T) {
 			assert.Equal(t, "GET", result.Verbs.String())
 		}
 	}
+
+	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events", nil)
+	req2.Header.Add("Authorization", "Bearer "+token)
+	req2.Header.Add("Content-Type", "application/json")
+	res2, err := http.DefaultClient.Do(req2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res2.Body.Close()
+
+	var resBody struct {
+		Data []*permissions.Permission
+	}
+	err = json.NewDecoder(res2.Body).Decode(&resBody)
+	assert.NoError(t, err)
+	assert.Len(t, resBody.Data, 2)
+
+	req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events?page[limit]=1", nil)
+	req3.Header.Add("Authorization", "Bearer "+token)
+	req3.Header.Add("Content-Type", "application/json")
+	res3, err := http.DefaultClient.Do(req3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res3.Body.Close()
+
+	var resBody3 struct {
+		Data  []*permissions.Permission
+		Links *jsonapi.LinksList
+	}
+	err = json.NewDecoder(res3.Body).Decode(&resBody3)
+	assert.NoError(t, err)
+	assert.Len(t, resBody3.Data, 1)
+	assert.NotEmpty(t, resBody3.Links.Next)
 
 }
 
