@@ -115,8 +115,8 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
 		CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
 		CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent},
-		CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcParent},
-		XFrameOptions: middlewares.XFrameDeny,
+		CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcParentSubdomains},
+		XFrameOptions: middlewares.XFrameSameOrigin,
 	})
 
 	return middlewares.Compose(appsHandler, secure, middlewares.LoadSession)
