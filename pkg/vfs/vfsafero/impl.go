@@ -22,6 +22,7 @@ type aferoVFS struct {
 	vfs.Indexer
 
 	fs  afero.Fs
+	mu  vfs.Locker
 	pth string
 
 	// whether or not the localfilesystem requires an initialisation of its root
@@ -34,7 +35,7 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(index vfs.Indexer, fsURL *url.URL, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
@@ -56,6 +57,7 @@ func New(index vfs.Indexer, fsURL *url.URL, domain string) (vfs.VFS, error) {
 		Indexer: index,
 
 		fs:  fs,
+		mu:  mu,
 		pth: pth,
 		// for now, only the file:// scheme needs a specific initialisation of its
 		// root directory.
@@ -66,6 +68,8 @@ func New(index vfs.Indexer, fsURL *url.URL, domain string) (vfs.VFS, error) {
 // Init creates the root directory document and the trash directory for this
 // file system.
 func (afs *aferoVFS) InitFs() error {
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
 	if err := afs.Indexer.InitIndex(); err != nil {
 		return err
 	}
@@ -83,6 +87,8 @@ func (afs *aferoVFS) InitFs() error {
 
 // Delete removes all the elements associated with the filesystem.
 func (afs *aferoVFS) Delete() error {
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
 	if afs.osFS {
 		return afero.NewOsFs().RemoveAll(afs.pth)
 	}
@@ -90,23 +96,24 @@ func (afs *aferoVFS) Delete() error {
 }
 
 func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
-	pth, err := doc.Path(afs)
-	if err != nil {
-		return err
-	}
-	err = afs.fs.Mkdir(pth, 0755)
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
+	err := afs.fs.Mkdir(doc.Fullpath, 0755)
 	if err != nil {
 		return err
 	}
 	err = afs.Indexer.CreateDirDoc(doc)
 	if err != nil {
-		afs.fs.Remove(pth) // #nosec
+		afs.fs.Remove(doc.Fullpath) // #nosec
 	}
 	return err
 }
 
 func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
-	newpath, err := newdoc.Path(afs)
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
+
+	newpath, err := afs.Indexer.FilePath(newdoc)
 	if err != nil {
 		return nil, err
 	}
@@ -155,18 +162,95 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}, nil
 }
 
+func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
+	return afs.destroyDirContent(doc)
+}
+
+func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
+	return afs.destroyDirAndContent(doc)
+}
+
+func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
+	return afs.destroyFile(doc)
+}
+
+func (afs *aferoVFS) destroyDirContent(doc *vfs.DirDoc) error {
+	iter := afs.Indexer.DirIterator(doc, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if d != nil {
+			err = afs.destroyDirAndContent(d)
+		} else {
+			err = afs.destroyFile(f)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (afs *aferoVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
+	err := afs.destroyDirContent(doc)
+	if err != nil {
+		return err
+	}
+	err = afs.fs.RemoveAll(doc.Fullpath)
+	if err != nil {
+		return err
+	}
+	return afs.Indexer.DeleteDirDoc(doc)
+}
+
+func (afs *aferoVFS) destroyFile(doc *vfs.FileDoc) error {
+	path, err := afs.Indexer.FilePath(doc)
+	if err != nil {
+		return err
+	}
+	err = afs.fs.Remove(path)
+	if err != nil {
+		return err
+	}
+	return afs.Indexer.DeleteFileDoc(doc)
+}
+
+func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	name, err := afs.Indexer.FilePath(doc)
+	if err != nil {
+		return nil, err
+	}
+	f, err := afs.fs.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return &aferoFileOpen{f}, nil
+}
+
 // UpdateFileDoc overrides the indexer's one since the afero.Fs is by essence
 // also indexed by path. When moving a file, the index has to be moved and the
 // filesystem should also be updated.
 //
 // @override Indexer.UpdateFileDoc
 func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
-		oldpath, err := olddoc.Path(afs)
+		oldpath, err := afs.Indexer.FilePath(olddoc)
 		if err != nil {
 			return err
 		}
-		newpath, err := newdoc.Path(afs)
+		newpath, err := afs.Indexer.FilePath(newdoc)
 		if err != nil {
 			return err
 		}
@@ -176,7 +260,7 @@ func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 		}
 	}
 	if newdoc.Executable != olddoc.Executable {
-		newpath, err := newdoc.Path(afs)
+		newpath, err := afs.Indexer.FilePath(newdoc)
 		if err != nil {
 			return err
 		}
@@ -194,6 +278,8 @@ func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 //
 // @override Indexer.UpdateDirDoc
 func (afs *aferoVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
+	afs.mu.Lock()
+	defer afs.mu.Unlock()
 	if newdoc.Fullpath != olddoc.Fullpath {
 		if err := safeRenameDir(afs, olddoc.Fullpath, newdoc.Fullpath); err != nil {
 			return err
@@ -202,63 +288,46 @@ func (afs *aferoVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 	return afs.Indexer.UpdateDirDoc(olddoc, newdoc)
 }
 
-func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
-	iter := afs.Indexer.DirIterator(doc, nil)
-	for {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
-		}
-		if d != nil {
-			err = afs.DestroyDirAndContent(d)
-		} else {
-			err = afs.DestroyFile(f)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (afs *aferoVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	return afs.Indexer.DirByID(fileID)
 }
 
-func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
-	err := afs.DestroyDirContent(doc)
-	if err != nil {
-		return err
-	}
-	dirpath, err := doc.Path(afs)
-	if err != nil {
-		return err
-	}
-	err = afs.fs.RemoveAll(dirpath)
-	if err != nil {
-		return err
-	}
-	return afs.Indexer.DeleteDirDoc(doc)
+func (afs *aferoVFS) DirByPath(name string) (*vfs.DirDoc, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	return afs.Indexer.DirByPath(name)
 }
 
-func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
-	path, err := doc.Path(afs)
-	if err != nil {
-		return err
-	}
-	err = afs.fs.Remove(path)
-	if err != nil {
-		return err
-	}
-	return afs.Indexer.DeleteFileDoc(doc)
+func (afs *aferoVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	return afs.Indexer.FileByID(fileID)
 }
 
-func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
-	name, err := doc.Path(afs)
-	if err != nil {
-		return nil, err
-	}
-	f, err := afs.fs.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	return &aferoFileOpen{f}, nil
+func (afs *aferoVFS) FileByPath(name string) (*vfs.FileDoc, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	return afs.Indexer.FileByPath(name)
+}
+
+func (afs *aferoVFS) FilePath(doc *vfs.FileDoc) (string, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	return afs.Indexer.FilePath(doc)
+}
+
+func (afs *aferoVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	return afs.Indexer.DirOrFileByID(fileID)
+}
+
+func (afs *aferoVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
+	afs.mu.RLock()
+	defer afs.mu.RUnlock()
+	return afs.Indexer.DirOrFileByPath(name)
 }
 
 // aferoFileOpen represents a file handle opened for reading.
@@ -291,7 +360,7 @@ type aferoFileCreation struct {
 	w       int64              // total size written
 	afs     *aferoVFS          // parent vfs
 	newdoc  *vfs.FileDoc       // new document
-	olddoc  *vfs.FileDoc       // old document if any
+	olddoc  *vfs.FileDoc       // old document
 	newpath string             // file new path
 	bakpath string             // backup file path in case of modifying an existing file
 	hash    hash.Hash          // hash we build up along the file
@@ -379,12 +448,12 @@ func (f *aferoFileCreation) Close() (err error) {
 		return err
 	}
 
-	if olddoc != nil {
-		err = f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
-	} else {
-		err = f.afs.Indexer.CreateFileDoc(newdoc)
+	f.afs.mu.Lock()
+	defer f.afs.mu.Unlock()
+	if olddoc == nil {
+		return f.afs.Indexer.CreateFileDoc(newdoc)
 	}
-	return err
+	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
 }
 
 func safeCreateFile(name string, mode os.FileMode, fs afero.Fs) (afero.File, error) {

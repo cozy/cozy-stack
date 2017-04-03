@@ -613,7 +613,7 @@ func RunTest(m *testing.M, appType AppType, dbName, instDir, manName string, man
 		os.Exit(1)
 	}
 
-	fs, err = vfsafero.New(index, &url.URL{Scheme: "mem"}, "cozy.local")
+	fs, err = vfsafero.New(index, vfs.NewMemLock("cozy.local"), &url.URL{Scheme: "mem"}, "cozy.local")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

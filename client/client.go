@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"sync"
-	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -49,14 +48,17 @@ type Client struct {
 	Transport http.RoundTripper
 
 	authed bool
-	inited int32
+	inited bool
+	initMu sync.Mutex
 	authMu sync.Mutex
 	auth   *auth.Request
 }
 
-func (c *Client) init() {
-	if !atomic.CompareAndSwapInt32(&c.inited, 0, 1) {
-		return
+func (c *Client) init() error {
+	c.initMu.Lock()
+	defer c.initMu.Unlock()
+	if c.inited {
+		return nil
 	}
 	if c.Retries == 0 {
 		c.Retries = 3
@@ -77,11 +79,20 @@ func (c *Client) init() {
 			},
 		}
 	}
+	_, err := request.Req(&request.Options{
+		Method:    "GET",
+		Path:      "/version",
+		Domain:    c.Domain,
+		Scheme:    c.Scheme,
+		Client:    c.Client,
+		UserAgent: c.UserAgent,
+	})
+	c.inited = err == nil
+	return err
 }
 
 // Authenticate is used to authenticate a client via OAuth.
 func (c *Client) Authenticate() (request.Authorizer, error) {
-	c.init()
 	c.authMu.Lock()
 	defer c.authMu.Unlock()
 	if c.authed {
@@ -107,8 +118,10 @@ func (c *Client) Authenticate() (request.Authorizer, error) {
 
 // Req is used to perform a request to the stack given the ReqOptions passed.
 func (c *Client) Req(opts *request.Options) (*http.Response, error) {
-	c.init()
-	var err error
+	err := c.init()
+	if err != nil {
+		return nil, err
+	}
 	if c.Authorizer != nil {
 		opts.Authorizer = c.Authorizer
 	} else {

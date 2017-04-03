@@ -12,8 +12,8 @@ import (
 type Validable interface {
 	permissions.Validable
 	parentID() string
-	Path(fs Indexer) (string, error)
-	Parent(fs Indexer) (*DirDoc, error)
+	Path(fs VFS) (string, error)
+	Parent(fs VFS) (*DirDoc, error)
 }
 
 // FileDoc & DirDoc are vfs.Validable
