@@ -205,7 +205,7 @@ func CreateSubdomainProxy(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.
 	main := echo.New()
 	main.Any("/*", func(c echo.Context) error {
 		// TODO(optim): minimize the number of instance requests
-		if parent, slug := middlewares.SplitHost(c.Request().Host); slug != "" {
+		if parent, slug, _ := middlewares.SplitHost(c.Request().Host); slug != "" {
 			if i, err := instance.Get(parent); err == nil {
 				c.Set("instance", i)
 				c.Set("slug", slug)
