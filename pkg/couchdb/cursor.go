@@ -44,8 +44,8 @@ func (c *Cursor) UpdateFrom(res *ViewResponse) {
 		c.NextDocID = ""
 	} else {
 		c.Done = false
-		next := res.Rows[len(res.Rows)-1]
-		res.Rows = res.Rows[:len(res.Rows)-1]
+		next := res.Rows[lrows-1]
+		res.Rows = res.Rows[:lrows-1]
 		c.NextKey = next.Key
 		c.NextDocID = next.ID
 	}
