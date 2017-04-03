@@ -90,6 +90,7 @@ func (a *AtTrigger) Schedule() <-chan *JobRequest {
 		case <-time.After(-duration):
 			a.trigger(ch)
 		case <-a.done:
+			close(ch)
 		}
 	}()
 	return ch
