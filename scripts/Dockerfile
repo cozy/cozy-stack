@@ -70,6 +70,7 @@ EXPOSE 8080 8025 5984
 
 CMD couchdb 2>/dev/null 1>/dev/null & \
     MailHog 2>/dev/null 1>/dev/null & \
+    echo "0.0.0.0 cozy.tools" >> /etc/hosts && \
     /usr/bin/cozy-app-dev.sh \
       -d /data/cozy-app \
       -f /data/cozy-storage
