@@ -25,6 +25,10 @@ func TestCursor(t *testing.T) {
 	assert.Equal(t, "last-result-id", req2.StartKeyDocID)
 	assert.Equal(t, 11, req2.Limit)
 
+	c2 := &Cursor{
+		Limit: 3,
+	}
+
 	res := &ViewResponse{
 		Rows: []struct {
 			ID    string           `json:"id"`
@@ -39,7 +43,7 @@ func TestCursor(t *testing.T) {
 		},
 	}
 
-	c2 := GetNextCursor(res)
+	c2.UpdateFrom(res)
 	assert.Len(t, res.Rows, 3)
 	assert.Equal(t, []string{"A", "B"}, c2.NextKey)
 	assert.Equal(t, "resultD", c2.NextDocID)

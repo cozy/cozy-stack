@@ -23,7 +23,7 @@ func listReferencesHandler(c echo.Context) error {
 		return err
 	}
 
-	page, err := jsonapi.ExtractPagination(c, maxRefLimit)
+	cursor, err := jsonapi.ExtractPaginationCursor(c, maxRefLimit)
 	if err != nil {
 		return err
 	}
@@ -32,11 +32,7 @@ func listReferencesHandler(c echo.Context) error {
 		Key: []string{doctype, id},
 	}
 
-	req = (&couchdb.Cursor{
-		Limit:     page.Limit,
-		NextKey:   req.Key,
-		NextDocID: page.Cursor,
-	}).ApplyTo(req)
+	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
 	err = couchdb.ExecView(instance, consts.FilesReferencedByView, req, &res)
@@ -44,12 +40,16 @@ func listReferencesHandler(c echo.Context) error {
 		return err
 	}
 
-	var links *jsonapi.LinksList
-	if len(res.Rows) > page.Limit {
-		cursor := couchdb.GetNextCursor(&res)
-		nextLink := fmt.Sprintf("%s?page[cursor]=%s&page[limit]=%d",
-			c.Request().URL.Path, cursor.NextDocID, page.Limit)
-		links = &jsonapi.LinksList{Next: nextLink}
+	cursor.UpdateFrom(&res)
+
+	var links = &jsonapi.LinksList{}
+	if !cursor.Done {
+		params, err := jsonapi.PaginationCursorToParams(cursor)
+		if err != nil {
+			return err
+		}
+		links.Next = fmt.Sprintf("%s?%s",
+			c.Request().URL.Path, params.Encode())
 	}
 
 	var out = make([]jsonapi.ResourceIdentifier, len(res.Rows))

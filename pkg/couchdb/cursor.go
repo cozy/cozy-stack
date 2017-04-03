@@ -3,6 +3,7 @@ package couchdb
 // Cursor holds a pointer in a couchdb map reduce results
 type Cursor struct {
 	Limit     int
+	Done      bool
 	NextKey   interface{}
 	NextDocID string
 }
@@ -31,6 +32,23 @@ func (c *Cursor) ApplyTo(req *ViewRequest) *ViewRequest {
 	}
 
 	return req
+}
+
+// UpdateFrom change the cursor status depending on information from
+// the view's response
+func (c *Cursor) UpdateFrom(res *ViewResponse) {
+	lrows := len(res.Rows)
+	if lrows <= c.Limit {
+		c.Done = true
+		c.NextKey = nil
+		c.NextDocID = ""
+	} else {
+		c.Done = false
+		next := res.Rows[len(res.Rows)-1]
+		res.Rows = res.Rows[:len(res.Rows)-1]
+		c.NextKey = next.Key
+		c.NextDocID = next.ID
+	}
 }
 
 // GetNextCursor returns a cursor to the end of a ViewResponse
