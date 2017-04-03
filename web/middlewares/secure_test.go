@@ -52,7 +52,7 @@ func TestSecureMiddlewareCSP(t *testing.T) {
 	h3 := Secure(&SecureConfig{
 		CSPConnectSrc: []CSPSource{CSPSrcParent, CSPSrcSelf},
 		CSPFrameSrc:   []CSPSource{CSPSrcAny},
-		CSPScriptSrc:  []CSPSource{CSPSrcParentSubdomains},
+		CSPScriptSrc:  []CSPSource{CSPSrcSiblings},
 	})(echo.NotFoundHandler)
 	h3(c3)
 

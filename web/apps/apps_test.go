@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -22,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -60,6 +62,13 @@ func installMiniApp() error {
 		DocSlug:   slug,
 		DocSource: "git://github.com/cozy/mini.git",
 		DocState:  apps.Ready,
+		Intents: []apps.Intent{
+			apps.Intent{
+				Action: "PICK",
+				Types:  []string{"io.cozy.foos"},
+				Href:   "/foo",
+			},
+		},
 		Routes: apps.Routes{
 			"/foo": apps.Route{
 				Folder: "/",
@@ -186,6 +195,28 @@ func TestCozyBar(t *testing.T) {
 	assertAuthGet(t, "/bar/", "text/html; charset=utf-8", ``+
 		`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar.min.css">`+
 		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.min.js"></script>`)
+}
+
+func TestServeWithAnIntents(t *testing.T) {
+	intent := &intents.Intent{
+		Action: "PICK",
+		Type:   "io.cozy.foos",
+		Client: "test-app",
+	}
+	err := intent.Save(testInstance)
+	assert.NoError(t, err)
+	err = intent.FillServices(testInstance)
+	assert.NoError(t, err)
+	assert.Len(t, intent.Services, 1)
+	err = intent.Save(testInstance)
+	assert.NoError(t, err)
+
+	path := strings.Replace(intent.Services[0].Href, "https://mini.cozywithapps.example.net", "", 1)
+	res, err := doGet(path, true)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	h := res.Header.Get(echo.HeaderXFrameOptions)
+	assert.Equal(t, "ALLOW-FROM test-app.cozywithapps.example.net", h)
 }
 
 func TestServeAppsWithACode(t *testing.T) {

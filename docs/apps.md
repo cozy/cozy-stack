@@ -143,7 +143,7 @@ Content-Type: application/vnd.api+json
         {
           "action": "CREATE",
           "type": "io.cozy.emails",
-          "href": "/#compose?intent={{.Intent}}"
+          "href": "/compose"
         }
       ],
       "permissions": {

@@ -83,17 +83,17 @@ func TestFindIntent(t *testing.T) {
 		Intent{
 			Action: "PICK",
 			Types:  []string{"io.cozy.contacts", "io.cozy.calendars"},
-			Href:   "/pick?intent={{.Intent}}",
+			Href:   "/pick",
 		},
 		Intent{
 			Action: "OPEN",
 			Types:  []string{"io.cozy.files", "image/gif"},
-			Href:   "/open?intent={{.Intent}}",
+			Href:   "/open",
 		},
 		Intent{
 			Action: "EDIT",
 			Types:  []string{"image/*"},
-			Href:   "/open?intent={{.Intent}}",
+			Href:   "/open",
 		},
 	}
 	found = man.FindIntent("PICK", "io.cozy.files")
@@ -120,7 +120,7 @@ func TestFindIntent(t *testing.T) {
 	man.Intents = []Intent{
 		Intent{
 			Action: "PICK",
-			Href:   "/pick?intent={{.Intent}}",
+			Href:   "/pick",
 		},
 	}
 	found = man.FindIntent("PICK", "io.cozy.files")

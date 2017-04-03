@@ -1,10 +1,6 @@
 package intents
 
 import (
-	"bytes"
-	"html/template"
-	"strings"
-
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -55,25 +51,11 @@ func (in *Intent) Save(instance *instance.Instance) error {
 // GenerateHref creates the href where the service can be called for an intent
 func (in *Intent) GenerateHref(instance *instance.Instance, slug, target string) string {
 	u := instance.SubDomain(slug)
-	if len(target) > 0 && target[0] == '/' {
-		u.Path = ""
+	if len(target) > 0 {
+		u.Path = target
 	}
-	ret := u.String() + target
-	if !strings.Contains(target, "{{") {
-		target += "?intent={{.Intent}}"
-	}
-	tmpl := template.New("intent-" + target)
-	if _, err := tmpl.Parse(target); err != nil {
-		return ret
-	}
-	buf := new(bytes.Buffer)
-	err := tmpl.Execute(buf, struct {
-		Intent string
-	}{in.ID()})
-	if err != nil {
-		return ret
-	}
-	return u.String() + buf.String()
+	u.RawQuery = "intent=" + in.ID()
+	return u.String()
 }
 
 // FillServices looks at all the application that can answer this intent
