@@ -180,7 +180,7 @@ func PaginationCursorToParams(cursor *couchdb.Cursor) (url.Values, error) {
 
 	v := url.Values{}
 
-	v.Set("page[limit]", strconv.FormatInt(int64(cursor.Limit), 10))
+	v.Set("page[limit]", strconv.Itoa(cursor.Limit))
 
 	if !cursor.Done {
 		cursorObj := []interface{}{cursor.NextKey, cursor.NextDocID}
