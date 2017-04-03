@@ -259,7 +259,7 @@ func revokePermission(c echo.Context) error {
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
-	router.POST("/doctype/:doctype", listPermissionsByDoctype)
+	router.GET("/doctype/:doctype", listPermissionsByDoctype)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
 	router.PATCH("/:permdocid", patchPermission)

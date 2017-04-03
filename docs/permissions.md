@@ -445,6 +445,69 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 HTTP/1.1 204 No Content
 ```
 
+### GET /permissions/doctype/:doctype
+
+List permissions for a doctype
+
+#### Request
+
+```http
+GET /permissions/doctype/io.cozy.events HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+#### Reponse
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.permissions",
+      "id": "c47f82396d09bfcd270343c5855b30a0",
+      "attributes": {
+        "type": "share",
+        "permissions": {
+          "rule0": {
+            "type": "io.cozy.events",
+            "verbs": ["PATCH", "DELETE"],
+            "values": ["c47f82396d09bfcd270343c5855b0eea"]
+          }
+        },
+        "codes": { "bob": "secret" }
+      },
+      "meta": { "rev": "1-d46b6358683b80c8d59fc55d6de54127" },
+      "links": { "self": "/permissions/c47f82396d09bfcd270343c5855b30a0" }
+    },
+    {
+      "type": "io.cozy.permissions",
+      "id": "c47f82396d09bfcd270343c5855b351a",
+      "attributes": {
+        "type": "share",
+        "permissions": {
+          "rule0": {
+            "type": "io.cozy.events",
+            "verbs": [ "GET" ],
+            "values": [ "c47f82396d09bfcd270343c5855b169b" ]
+          }
+        },
+        "codes": { "bob": "secret" }
+      },
+      "meta": { "rev": "1-920af658575a56e9e84685f1b09e5c23" },
+      "links": { "self": "/permissions/c47f82396d09bfcd270343c5855b351a" }
+    }
+  ]
+}
+```
+
+Permissions required : GET on whole type
+
 ### POST /permissions/exists
 
 List permissions for some documents

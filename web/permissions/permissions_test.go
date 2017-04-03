@@ -427,7 +427,7 @@ func TestListPermission(t *testing.T) {
 		}
 	}
 
-	req2, _ := http.NewRequest("POST", ts.URL+"/permissions/doctype/io.cozy.events", reqbody)
+	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events", nil)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	req2.Header.Add("Content-Type", "application/json")
 	res2, err := http.DefaultClient.Do(req2)
