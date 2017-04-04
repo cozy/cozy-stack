@@ -31,7 +31,8 @@ For the "fields" field here is an example :
     "login": "string",
     "password": "password",
     "folderPath": "path"
-  } 
+  }
+}
 ```
 
 This will allow the "My accounts" application to get the list of fields to display and their type. The list of possible types still needs to be defined.

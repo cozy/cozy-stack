@@ -80,12 +80,13 @@ func (c *Client) init() error {
 		}
 	}
 	_, err := request.Req(&request.Options{
-		Method:    "GET",
-		Path:      "/version",
-		Domain:    c.Domain,
-		Scheme:    c.Scheme,
-		Client:    c.Client,
-		UserAgent: c.UserAgent,
+		Method:     "GET",
+		Path:       "/version",
+		Domain:     c.Domain,
+		Scheme:     c.Scheme,
+		Client:     c.Client,
+		UserAgent:  c.UserAgent,
+		Authorizer: c.Authorizer,
 	})
 	c.inited = err == nil
 	return err
