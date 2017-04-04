@@ -14,7 +14,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -222,7 +221,7 @@ func iconHandler(c echo.Context) error {
 		return err
 	}
 
-	filepath := path.Join(vfs.WebappsDirName, slug, app.Icon)
+	filepath := path.Join("/", slug, app.Icon)
 	fs := instance.AppsFS(apps.Webapp)
 	s, err := fs.Stat(filepath)
 	if err != nil {
