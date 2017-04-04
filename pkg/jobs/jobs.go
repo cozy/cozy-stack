@@ -197,6 +197,10 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 		return NewAtTrigger(infos)
 	case "@in":
 		return NewInTrigger(infos)
+	case "@cron":
+		return NewCronTrigger(infos)
+	case "@every":
+		return NewEveryTrigger(infos)
 	case "@event":
 		return NewEventTrigger(infos)
 	default:

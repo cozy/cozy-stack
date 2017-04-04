@@ -33,8 +33,8 @@ func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	}, nil
 }
 
-// NewInTrigger returns a new instance of InTrigger given the specified
-// options.
+// NewInTrigger returns a new instance of AtTrigger given the specified
+// options as @in.
 func NewInTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	d, err := time.ParseDuration(infos.Arguments)
 	if err != nil {
@@ -90,6 +90,7 @@ func (a *AtTrigger) Schedule() <-chan *JobRequest {
 		case <-time.After(-duration):
 			a.trigger(ch)
 		case <-a.done:
+			close(ch)
 		}
 	}()
 	return ch

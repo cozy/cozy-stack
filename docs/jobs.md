@@ -19,7 +19,7 @@ This doc introduces two cozy types:
 Jobs can be launched by six different types of triggers:
 
   - `@cron` to schedule recurring jobs scheduled at specific times
-  - `@interval` to schedule periodic jobs executed at a given fix interval
+  - `@every` to schedule periodic jobs executed at a given fix interval
   - `@at` to schedule a one-time job executed after at a specific time in the future
   - `@in` to schedule a one-time job executed after a specific amount of time
   - `@event` to launch a job after a change in the cozy
@@ -78,18 +78,18 @@ To schedule jobs given an interval:
 Examples:
 
 ```
-@cron 0 0 0 1 1 * # Run once a year, midnight, Jan. 1st
-@cron 0 0 0 1 1 * # Run once a year, midnight, Jan. 1st
-@cron 0 0 0 1 * * # Run once a month, midnight, first of month
-@cron 0 0 0 * * 0 # Run once a week, midnight on Sunday
-@cron 0 0 0 * * * # Run once a day, midnight
-@cron 0 0 * * * * # Run once an hour, beginning of hour
+@cron 0 0 0 1 1 *  # Run once a year, midnight, Jan. 1st
+@cron 0 0 0 1 1 *  # Run once a year, midnight, Jan. 1st
+@cron 0 0 0 1 * *  # Run once a month, midnight, first of month
+@cron 0 0 0 * * 0  # Run once a week, midnight on Sunday
+@cron 0 0 0 * * *  # Run once a day, midnight
+@cron 0 0 * * * *  # Run once an hour, beginning of hour
 ```
 
 
-### `@interval` syntax
+### `@every` syntax
 
-The `@interval` trigger uses the same syntax as golang's `time.ParseDuration` (but only support time units above seconds):
+The `@every` trigger uses the same syntax as golang's `time.ParseDuration` (but only support time units above seconds):
 
 A duration string is a possibly signed sequence of decimal numbers, each with
 optional fraction and a unit suffix, such as "300ms", "1.5h" or "2h45m". Valid
@@ -98,8 +98,8 @@ time units are "s", "m", "h".
 Examples
 
 ```
-@interval 1.5h   # schedules every 1 and a half hours
-@interval 30m10s # schedules every 30 minutes and 10 seconds
+@every 1.5h   # schedules every 1 and a half hours
+@every 30m10s # schedules every 30 minutes and 10 seconds
 ```
 
 
@@ -115,7 +115,7 @@ Examples
 
 ### `@in` syntax
 
-The `@in` trigger takes the same duration syntax as `@interval`
+The `@in` trigger takes the same duration syntax as `@every`
 
 Examples
 
@@ -201,7 +201,7 @@ Example and description of the attributes of a `io.cozy.jobs`:
 ```js
 {
   "worker": "sendmail",    // worker type name
-  "trigger": "@cron",      // "@cron", "@interval", "@event" or ""
+  "trigger": "@cron",      // "@cron", "@every", "@event" or ""
   "trigger_id": "1234",    // trigger id, if any
   "options": {
     "priority": 3,         // priority from 1 to 100, higher number is higher priority
@@ -367,7 +367,7 @@ Accept: application/vnd.api+json
 {
   "data": {
     "attributes": {
-      "type": "@interval",
+      "type": "@every",
       "arguments": "30m10s",
       "worker": "sendmail",
       "worker_arguments": {},
@@ -389,7 +389,7 @@ Accept: application/vnd.api+json
     "type": "io.cozy.triggers",
     "id": "123123",
     "attributes": {
-      "type": "@interval",
+      "type": "@every",
       "arguments": "30m10s",
       "worker": "sendmail",
       "options": {
@@ -445,7 +445,7 @@ Accept: application/vnd.api+json
     "type": "io.cozy.triggers",
     "id": "123123",
     "attributes": {
-      "type": "@interval",
+      "type": "@every",
       "arguments": "30m10s",
       "worker": "sendmail",
       "options": {
