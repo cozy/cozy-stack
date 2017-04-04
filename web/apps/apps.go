@@ -35,18 +35,34 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
+		var w http.ResponseWriter
+		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
+		if isEventStream {
+			w = c.Response().Writer
+			w.Header().Set("Content-Type", typeTextEventStream)
+			w.WriteHeader(200)
+		}
+
 		inst, err := apps.NewInstaller(instance, instance.VFS(),
 			&apps.InstallerOptions{
+				Operation: apps.Install,
 				Type:      installerType,
 				SourceURL: c.QueryParam("Source"),
 				Slug:      slug,
 			},
 		)
 		if err != nil {
+			if isEventStream {
+				var b []byte
+				if b, err = json.Marshal(err.Error()); err == nil {
+					writeStream(w, "error", string(b))
+				}
+			}
 			return wrapAppsError(err)
 		}
+
 		go inst.Install()
-		return pollInstaller(c, slug, inst)
+		return pollInstaller(c, isEventStream, w, slug, inst)
 	}
 }
 
@@ -59,17 +75,35 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
+
+		var w http.ResponseWriter
+		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
+		if isEventStream {
+			w = c.Response().Writer
+			w.Header().Set("Content-Type", typeTextEventStream)
+			w.WriteHeader(200)
+		}
+
 		inst, err := apps.NewInstaller(instance, instance.VFS(),
 			&apps.InstallerOptions{
-				Type: installerType,
-				Slug: slug,
+				Operation: apps.Update,
+				Type:      installerType,
+				Slug:      slug,
 			},
 		)
 		if err != nil {
+			if isEventStream {
+				var b []byte
+				if b, err = json.Marshal(err.Error()); err == nil {
+					writeStream(w, "error", string(b))
+				}
+				return nil
+			}
 			return wrapAppsError(err)
 		}
+
 		go inst.Update()
-		return pollInstaller(c, slug, inst)
+		return pollInstaller(c, isEventStream, w, slug, inst)
 	}
 }
 
@@ -84,8 +118,9 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		}
 		inst, err := apps.NewInstaller(instance, instance.VFS(),
 			&apps.InstallerOptions{
-				Type: installerType,
-				Slug: slug,
+				Operation: apps.Delete,
+				Type:      installerType,
+				Slug:      slug,
 			},
 		)
 		if err != nil {
@@ -99,9 +134,8 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 	}
 }
 
-func pollInstaller(c echo.Context, slug string, inst *apps.Installer) error {
-	accept := c.Request().Header.Get("Accept")
-	if accept != typeTextEventStream {
+func pollInstaller(c echo.Context, isEventStream bool, w http.ResponseWriter, slug string, inst *apps.Installer) error {
+	if !isEventStream {
 		man, _, err := inst.Poll()
 		if err != nil {
 			return wrapAppsError(err)
@@ -121,9 +155,6 @@ func pollInstaller(c echo.Context, slug string, inst *apps.Installer) error {
 		return jsonapi.Data(c, http.StatusAccepted, man, nil)
 	}
 
-	w := c.Response().Writer
-	w.Header().Set("Content-Type", typeTextEventStream)
-	w.WriteHeader(200)
 	for {
 		man, done, err := inst.Poll()
 		if err != nil {

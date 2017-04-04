@@ -57,7 +57,14 @@ var installAppCmd = &cobra.Command{
 					Slug:      slug,
 					SourceURL: source,
 				})
-				return err
+				if err != nil {
+					if err.Error() == "Application with same slug already exists" {
+						return nil
+					}
+					return err
+				}
+				log.Infof("Application installed successfully on %s", in.Attrs.Domain)
+				return nil
 			})
 		}
 		if flagAppsDomain == "" {
@@ -93,7 +100,14 @@ var updateAppCmd = &cobra.Command{
 			return foreachDomains(func(in *client.Instance) error {
 				c := newClient(in.Attrs.Domain, consts.Apps)
 				_, err := c.UpdateApp(&client.AppOptions{Slug: args[0]})
-				return err
+				if err != nil {
+					if err.Error() == "Application is not installed" {
+						return nil
+					}
+					return err
+				}
+				log.Infof("Application updated successfully on %s", in.Attrs.Domain)
+				return nil
 			})
 		}
 		if flagAppsDomain == "" {

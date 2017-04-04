@@ -14,17 +14,28 @@ import (
 
 var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
 
+// Operation is the type of operation the installer is created for.
+type Operation int
+
+const (
+	// Install operation for installing an application
+	Install Operation = iota + 1
+	// Update operation for updating an application
+	Update
+	// Delete operation for deleting an application
+	Delete
+)
+
 // Installer is used to install or update applications.
 type Installer struct {
 	fetcher Fetcher
 	fs      vfs.VFS
 	db      couchdb.Database
 
-	appType AppType
-	man     Manifest
-	src     *url.URL
-	slug    string
-	base    string
+	man  Manifest
+	src  *url.URL
+	slug string
+	base string
 
 	err  error
 	errc chan error
@@ -35,6 +46,7 @@ type Installer struct {
 // source URL.
 type InstallerOptions struct {
 	Type      AppType
+	Operation Operation
 	Slug      string
 	SourceURL string
 }
@@ -52,6 +64,10 @@ type Fetcher interface {
 
 // NewInstaller creates a new Installer
 func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Installer, error) {
+	if opts.Operation == 0 {
+		panic("Missing installer operation")
+	}
+
 	slug := opts.Slug
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
@@ -68,17 +84,35 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 	}
 
 	man, err := GetBySlug(db, slug, opts.Type)
-	if err != nil && !couchdb.IsNotFoundError(err) {
+	if opts.Operation == Install {
+		if err == nil {
+			return nil, ErrAlreadyExists
+		}
+		if !couchdb.IsNotFoundError(err) {
+			return nil, err
+		}
+		err = nil
+		switch opts.Type {
+		case Webapp:
+			man = &WebappManifest{}
+		case Konnector:
+			man = &konnManifest{}
+		}
+	} else if couchdb.IsNotFoundError(err) {
+		return nil, ErrNotFound
+	} else if err != nil {
 		return nil, err
 	}
 
 	var src *url.URL
-	if man != nil {
-		src, err = url.Parse(man.Source())
-	} else if opts.SourceURL != "" {
+	switch opts.Operation {
+	case Install:
+		if opts.SourceURL == "" {
+			return nil, ErrMissingSource
+		}
 		src, err = url.Parse(opts.SourceURL)
-	} else {
-		err = ErrMissingSource
+	case Update, Delete:
+		src, err = url.Parse(man.Source())
 	}
 	if err != nil {
 		return nil, err
@@ -97,11 +131,10 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 		db:      db,
 		fs:      fs,
 
-		appType: opts.Type,
-		man:     man,
-		src:     src,
-		slug:    slug,
-		base:    base,
+		man:  man,
+		src:  src,
+		slug: slug,
+		base: base,
 
 		errc: make(chan error, 1),
 		manc: make(chan Manifest, 2),
@@ -112,11 +145,7 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 // report its progress or error (see Poll method).
 func (i *Installer) Install() {
 	defer i.endOfProc()
-	if i.man != nil {
-		i.man, i.err = nil, ErrAlreadyExists
-	} else {
-		i.man, i.err = i.install()
-	}
+	i.man, i.err = i.install()
 	return
 }
 
@@ -124,10 +153,6 @@ func (i *Installer) Install() {
 // report its progress or error (see Poll method).
 func (i *Installer) Update() {
 	defer i.endOfProc()
-	if i.man == nil {
-		i.err = ErrNotFound
-		return
-	}
 	if state := i.man.State(); state != Ready && state != Errored {
 		i.man, i.err = nil, ErrBadState
 	} else {
@@ -138,9 +163,6 @@ func (i *Installer) Update() {
 
 // Delete will remove the application linked to the installer.
 func (i *Installer) Delete() (Manifest, error) {
-	if i.man == nil {
-		return nil, ErrNotFound
-	}
 	if state := i.man.State(); state != Ready && state != Errored {
 		return nil, ErrBadState
 	}
@@ -178,7 +200,7 @@ func (i *Installer) endOfProc() {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) install() (Manifest, error) {
-	man := i.createManifest()
+	man := i.man
 	if err := i.ReadManifest(Installing, man); err != nil {
 		return nil, err
 	}
@@ -242,16 +264,6 @@ func (i *Installer) ReadManifest(state State, man Manifest) error {
 	defer r.Close()
 	man.SetState(state)
 	return man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
-}
-
-func (i *Installer) createManifest() Manifest {
-	switch i.appType {
-	case Webapp:
-		return &WebappManifest{}
-	case Konnector:
-		return &konnManifest{}
-	}
-	return nil
 }
 
 // Poll should be used to monitor the progress of the Installer.
