@@ -234,7 +234,7 @@ func ReadSSE(r io.ReadCloser, ch chan *SSEEvent) {
 			ev = nil
 			continue
 		}
-		spl := bytes.Split(bs, []byte(": "))
+		spl := bytes.SplitN(bs, []byte(": "), 2)
 		if len(spl) != 2 {
 			err = ErrSSEParse
 			return
