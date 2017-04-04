@@ -29,6 +29,20 @@ func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	}, nil
 }
 
+// NewEveryTrigger returns an new instance of CronTrigger given the specified
+// options as @every.
+func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
+	schedule, err := cron.Parse("@every " + infos.Arguments)
+	if err != nil {
+		return nil, jsonapi.BadRequest(err)
+	}
+	return &CronTrigger{
+		sched: schedule,
+		infos: infos,
+		done:  make(chan struct{}),
+	}, nil
+}
+
 // Type implements the Type method of the Trigger interface.
 func (c *CronTrigger) Type() string {
 	return c.infos.Type
