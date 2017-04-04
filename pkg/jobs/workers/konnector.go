@@ -1,7 +1,8 @@
-package konnector
+package workers
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"os/exec"
 	"time"
@@ -19,9 +20,10 @@ func init() {
 	})
 }
 
-// Options contains the option
+// Options contains the options to execute a konnector.
 type Options struct {
-	Name string `json:"name"`
+	Slug   string          `json:"slug"`
+	Fields json.RawMessage `json:"fields"`
 }
 
 // Worker is the worker that runs a konnector by executing an external process.
@@ -32,16 +34,19 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	}
 
 	credentials := ""
+	fields := string(opts.Fields)
+	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	cozyURL := url.URL{
 		Scheme: "https",
-		Host:   ctx.Value(jobs.ContextDomainKey).(string),
+		Host:   domain,
 	}
 
-	cmd := exec.CommandContext(ctx,
-		config.GetConfig().Konnectors.Cmd, opts.Name,
-	)
+	konnCmd := config.GetConfig().Konnectors.Cmd
+	cmd := exec.CommandContext(ctx, konnCmd, opts.Slug) // #nosec
 	cmd.Env = []string{
-		"CREDENTIALS=" + credentials,
+		"COZY_CREDENTIALS=" + credentials,
+		"COZY_FIELDS=" + fields,
+		"COZY_DOMAIN=" + domain,
 		"COZY_URL=" + cozyURL.String(),
 	}
 	if err := cmd.Run(); err != nil {

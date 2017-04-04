@@ -1,5 +1,7 @@
 #!/bin/bash
 
 echo "COZY_URL=${COZY_URL}"
-echo "CREDENTIALS=${CREDENTIALS}"
-echo "APP_DIR=${1}"
+echo "COZY_DOMAIN=${COZY_DOMAIN}"
+echo "COZY_FIELDS=${COZY_FIELDS}"
+echo "COZY_CREDENTIALS=${COZY_CREDENTIALS}"
+echo "SLUG=${1}"
