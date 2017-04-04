@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
+	"github.com/go-redis/redis"
 	"github.com/spf13/viper"
 )
 
@@ -71,6 +72,7 @@ type Config struct {
 	Fs         Fs
 	CouchDB    CouchDB
 	Konnectors Konnectors
+	Cache      Cache
 	Mail       *gomail.DialerOptions
 	Logger     Logger
 }
@@ -88,6 +90,11 @@ type CouchDB struct {
 // Konnectors contains the configuration values for the konnectors.
 type Konnectors struct {
 	Cmd string
+}
+
+// Cache contains the configuration values of the caching layer
+type Cache struct {
+	URL string
 }
 
 // Logger contains the configuration values of the logger system
@@ -117,6 +124,19 @@ func AdminServerAddr() string {
 // CouchURL returns the CouchDB string url
 func CouchURL() string {
 	return config.CouchDB.URL
+}
+
+// CacheOptions returns the options for caching redis
+func CacheOptions() *redis.Options {
+	if config.Cache.URL == "" {
+		return nil
+	}
+	opts, err := redis.ParseURL(config.Cache.URL)
+	if err != nil {
+		log.Errorf("cant parse cache.URL(%s), ignoring", config.Cache.URL)
+		return nil
+	}
+	return opts
 }
 
 // IsDevRelease returns whether or not the binary is a development
@@ -221,6 +241,9 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
+		Cache: Cache{
+			URL: v.GetString("cache.url"),
+		},
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
 			Port:                      v.GetInt("mail.port"),
@@ -248,6 +271,9 @@ fs:
 
 couchdb:
     url: http://localhost:5984/
+
+cache:
+    url: redis://localhost:6379
 
 log:
     level: info
