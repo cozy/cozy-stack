@@ -200,6 +200,7 @@ func (i *Instance) hiddenFS(dirname string) afero.Fs {
 	case "swift":
 		panic("Not implemented")
 	}
+	return nil
 }
 
 // StartJobSystem creates all the resources necessary for the instance's job
