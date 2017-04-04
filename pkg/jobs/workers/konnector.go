@@ -16,19 +16,19 @@ func init() {
 		Concurrency:  4,
 		MaxExecCount: 2,
 		Timeout:      30 * time.Second,
-		WorkerFunc:   Worker,
+		WorkerFunc:   KonnectorWorker,
 	})
 }
 
-// Options contains the options to execute a konnector.
-type Options struct {
+// KonnectorOptions contains the options to execute a konnector.
+type KonnectorOptions struct {
 	Slug   string          `json:"slug"`
 	Fields json.RawMessage `json:"fields"`
 }
 
-// Worker is the worker that runs a konnector by executing an external process.
-func Worker(ctx context.Context, m *jobs.Message) error {
-	opts := &Options{}
+// KonnectorWorker is the worker that runs a konnector by executing an external process.
+func KonnectorWorker(ctx context.Context, m *jobs.Message) error {
+	opts := &KonnectorOptions{}
 	if err := m.Unmarshal(&opts); err != nil {
 		return err
 	}
