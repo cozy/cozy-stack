@@ -63,7 +63,7 @@ var installAppCmd = &cobra.Command{
 					}
 					return err
 				}
-				log.Infof("Application installed successfuly on %s", in.Attrs.Domain)
+				log.Infof("Application installed successfully on %s", in.Attrs.Domain)
 				return nil
 			})
 		}
@@ -106,7 +106,7 @@ var updateAppCmd = &cobra.Command{
 					}
 					return err
 				}
-				log.Infof("Application updated successfuly on %s", in.Attrs.Domain)
+				log.Infof("Application updated successfully on %s", in.Attrs.Domain)
 				return nil
 			})
 		}
