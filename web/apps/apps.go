@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -43,7 +43,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.WriteHeader(200)
 		}
 
-		inst, err := apps.NewInstaller(instance, instance.VFS(),
+		inst, err := apps.NewInstaller(instance, instance.AppsFS(installerType),
 			&apps.InstallerOptions{
 				Operation: apps.Install,
 				Type:      installerType,
@@ -84,7 +84,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.WriteHeader(200)
 		}
 
-		inst, err := apps.NewInstaller(instance, instance.VFS(),
+		inst, err := apps.NewInstaller(instance, instance.AppsFS(installerType),
 			&apps.InstallerOptions{
 				Operation: apps.Update,
 				Type:      installerType,
@@ -116,7 +116,7 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowInstallApp(c, installerType, permissions.DELETE); err != nil {
 			return err
 		}
-		inst, err := apps.NewInstaller(instance, instance.VFS(),
+		inst, err := apps.NewInstaller(instance, instance.AppsFS(installerType),
 			&apps.InstallerOptions{
 				Operation: apps.Delete,
 				Type:      installerType,
@@ -223,17 +223,21 @@ func iconHandler(c echo.Context) error {
 	}
 
 	filepath := path.Join(vfs.WebappsDirName, slug, app.Icon)
-	file, err := instance.VFS().FileByPath(filepath)
+	fs := instance.AppsFS(apps.Webapp)
+	s, err := fs.Stat(filepath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return echo.NewHTTPError(http.StatusNotFound, err)
+		}
 		return err
 	}
 
-	r, err := instance.VFS().OpenFile(file)
+	r, err := fs.Open(filepath)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
-	http.ServeContent(c.Response(), c.Request(), filepath, time.Time{}, r)
+	http.ServeContent(c.Response(), c.Request(), filepath, s.ModTime(), r)
 	return nil
 }
 

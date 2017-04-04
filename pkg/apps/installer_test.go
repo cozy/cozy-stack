@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +28,6 @@ var localVersion string
 var ts *httptest.Server
 
 var installerType AppType
-var installDir string
 var manifestName string
 
 type transport struct{}
@@ -39,23 +37,6 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	*req2 = *req
 	req2.URL, _ = url.Parse(ts.URL)
 	return http.DefaultTransport.RoundTrip(req2)
-}
-
-func fileContainsBytes(fs vfs.VFS, name string, data []byte) (bool, error) {
-	doc, err := fs.FileByPath(name)
-	if err != nil {
-		return false, err
-	}
-	f, err := fs.OpenFile(doc)
-	if err != nil {
-		return false, err
-	}
-	defer f.Close()
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		return false, err
-	}
-	return bytes.Contains(b, data), nil
 }
 
 func manifestWebapp() string {
@@ -136,7 +117,7 @@ git checkout -`
 }
 
 var db couchdb.Database
-var fs vfs.VFS
+var fs afero.Fs
 
 func TestInstallBadSlug(t *testing.T) {
 	_, err := NewInstaller(db, fs, &InstallerOptions{
@@ -229,10 +210,10 @@ func TestInstallSuccessful(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := vfs.Exists(fs, installDir+"/local-cozy-mini/"+manifestName)
+	ok, err := afero.Exists(fs, "/local-cozy-mini/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini/"+manifestName, []byte("1.0.0"))
+	ok, err = afero.FileContainsBytes(fs, "/local-cozy-mini/"+manifestName, []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
@@ -251,7 +232,6 @@ func TestUpgradeNotExist(t *testing.T) {
 		Operation: Update,
 		Type:      installerType,
 		Slug:      "cozy-app-not-exist",
-		SourceURL: "git://localhost/",
 	})
 	assert.Nil(t, inst)
 	assert.Equal(t, ErrNotFound, err)
@@ -260,7 +240,6 @@ func TestUpgradeNotExist(t *testing.T) {
 		Operation: Delete,
 		Type:      installerType,
 		Slug:      "cozy-app-not-exist",
-		SourceURL: "git://localhost/",
 	})
 	assert.Nil(t, inst)
 	assert.Equal(t, ErrNotFound, err)
@@ -290,10 +269,10 @@ func TestInstallWithUpgrade(t *testing.T) {
 		}
 	}
 
-	ok, err := vfs.Exists(fs, installDir+"/local-cozy-mini/"+manifestName)
+	ok, err := afero.Exists(fs, "/local-cozy-mini/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini/"+manifestName, []byte("1.0.0"))
+	ok, err = afero.FileContainsBytes(fs, "/local-cozy-mini/"+manifestName, []byte("1.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
@@ -303,7 +282,6 @@ func TestInstallWithUpgrade(t *testing.T) {
 		Operation: Update,
 		Type:      installerType,
 		Slug:      "cozy-app-b",
-		SourceURL: "git://localhost/",
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -336,10 +314,10 @@ func TestInstallWithUpgrade(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err = vfs.Exists(fs, installDir+"/cozy-app-b/"+manifestName)
+	ok, err = afero.Exists(fs, "/cozy-app-b/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, installDir+"/cozy-app-b/"+manifestName, []byte("2.0.0"))
+	ok, err = afero.FileContainsBytes(fs, "/cozy-app-b/"+manifestName, []byte("2.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 }
@@ -384,13 +362,13 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err := vfs.Exists(fs, installDir+"/local-cozy-mini-branch/"+manifestName)
+	ok, err := afero.Exists(fs, "/local-cozy-mini-branch/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini-branch/"+manifestName, []byte("3.0.0"))
+	ok, err = afero.FileContainsBytes(fs, "/local-cozy-mini-branch/"+manifestName, []byte("3.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
-	ok, err = vfs.Exists(fs, installDir+"/local-cozy-mini-branch/branch")
+	ok, err = afero.Exists(fs, "/local-cozy-mini-branch/branch")
 	assert.NoError(t, err)
 	assert.True(t, ok, "The good branch was checked out")
 
@@ -400,7 +378,6 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		Operation: Update,
 		Type:      installerType,
 		Slug:      "local-cozy-mini-branch",
-		SourceURL: "git://localhost/#branch",
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -433,13 +410,13 @@ func TestInstallAndUpgradeWithBranch(t *testing.T) {
 		state = man.State()
 	}
 
-	ok, err = vfs.Exists(fs, installDir+"/local-cozy-mini-branch/"+manifestName)
+	ok, err = afero.Exists(fs, "/local-cozy-mini-branch/"+manifestName)
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest is present")
-	ok, err = fileContainsBytes(fs, installDir+"/local-cozy-mini-branch/"+manifestName, []byte("4.0.0"))
+	ok, err = afero.FileContainsBytes(fs, "/local-cozy-mini-branch/"+manifestName, []byte("4.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
-	ok, err = vfs.Exists(fs, installDir+"/local-cozy-mini-branch/branch")
+	ok, err = afero.Exists(fs, "/local-cozy-mini-branch/branch")
 	assert.NoError(t, err)
 	assert.True(t, ok, "The good branch was checked out")
 }
@@ -559,7 +536,6 @@ func TestUninstall(t *testing.T) {
 		Operation: Delete,
 		Type:      installerType,
 		Slug:      "github-cozy-delete",
-		SourceURL: "git://localhost/",
 	})
 	assert.Nil(t, inst3)
 	assert.Equal(t, ErrNotFound, err)
@@ -601,7 +577,6 @@ func TestMain(m *testing.M) {
 
 func RunTest(m *testing.M, appType AppType, dbName, instDir, manName string, manGen func() string) int {
 	localVersion = "1.0.0"
-	installDir = instDir
 	manifestName = manName
 	installerType = appType
 
@@ -610,7 +585,6 @@ func RunTest(m *testing.M, appType AppType, dbName, instDir, manName string, man
 	}))
 
 	db = couchdb.SimpleDatabasePrefix("apps-test")
-	index := vfs.NewCouchdbIndexer(db)
 
 	err := couchdb.ResetDB(db, dbName)
 	if err != nil {
@@ -624,11 +598,7 @@ func RunTest(m *testing.M, appType AppType, dbName, instDir, manName string, man
 		os.Exit(1)
 	}
 
-	fs, err = vfsafero.New(index, vfs.NewMemLock("cozy.local"), &url.URL{Scheme: "mem"}, "cozy.local")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	fs = afero.NewMemMapFs()
 
 	go serveGitRep(manName, manGen)
 
@@ -647,12 +617,6 @@ func RunTest(m *testing.M, appType AppType, dbName, instDir, manName string, man
 	}
 
 	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Permissions))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = fs.InitFs()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -48,7 +48,7 @@ func Serve(c echo.Context) error {
 	if app.State() != apps.Ready {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
-	return ServeAppFile(c, i, NewServer(i.VFS()), app)
+	return ServeAppFile(c, i, NewServer(i.AppsFS(apps.Webapp), nil), app)
 }
 
 func onboarding(c echo.Context) bool {
@@ -168,89 +168,48 @@ type AppFileServer interface {
 	ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error
 }
 
-// NewServer returns an implementation of AppFileServer given a vfs.VFS
-// instance.
-func NewServer(fs vfs.VFS) *Server {
-	return &Server{fs: fs}
-}
-
-// Server implements the AppFileServer interface for a vfs.VFS handler.
-type Server struct {
-	fs vfs.VFS
-}
-
-// Stat returns the underlying afero.Fs Stat.
-func (a *Server) Stat(slug, folder, file string) (os.FileInfo, error) {
-	d, f, err := a.fs.DirOrFileByPath(a.path(slug, folder, file))
-	if err != nil {
-		return nil, err
-	}
-	if d != nil {
-		return d, nil
-	}
-	return f, nil
-}
-
-// Open returns the underlying afero.Fs Open.
-func (a *Server) Open(slug, folder, file string) (vfs.File, error) {
-	doc, err := a.fs.FileByPath(a.path(slug, folder, file))
-	if err != nil {
-		return nil, err
-	}
-	return a.fs.OpenFile(doc)
-}
-
-// ServeFileContent uses the standard http.ServeContent method to serve the
-// application file data.
-func (a *Server) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error {
-	f, err := a.Open(slug, folder, file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	http.ServeContent(w, req, a.path(slug, folder, file), modtime, f)
-	return nil
-}
-
-func (a *Server) path(slug, folder, file string) string {
-	return path.Join(vfs.WebappsDirName, slug, folder, file)
-}
-
-// NewAferoServer returns a simple wrapper of the afero.Fs interface that
+// NewServer returns a simple wrapper of the afero.Fs interface that
 // provides the AppFileServer interface.
 //
 // You can provide a makePath method to define how the file name should be
 // created from the application's slug, folder and file name. If not provided,
 // the standard VFS concatenation (starting with vfs.WebappsDirName) is used.
-func NewAferoServer(fs afero.Fs, makePath func(slug, folder, file string) string) *AferoServer {
-	return &AferoServer{
+func NewServer(fs afero.Fs, makePath func(slug, folder, file string) string) *Server {
+	if makePath == nil {
+		makePath = defaultMakePath
+	}
+	return &Server{
 		mkPath: makePath,
 		fs:     fs,
 	}
 }
 
-// AferoServer is a simple wrapper of a afero.Fs that provides the
+// Server is a simple wrapper of a afero.Fs that provides the
 // AppFileServer interface.
-type AferoServer struct {
+type Server struct {
 	mkPath func(slug, folder, file string) string
 	fs     afero.Fs
 }
 
 // Stat returns the underlying afero.Fs Stat.
-func (a *AferoServer) Stat(slug, folder, file string) (os.FileInfo, error) {
-	return a.fs.Stat(a.mkPath(slug, folder, file))
+func (s *Server) Stat(slug, folder, file string) (os.FileInfo, error) {
+	return s.fs.Stat(s.mkPath(slug, folder, file))
 }
 
 // Open returns the underlying afero.Fs Open.
-func (a *AferoServer) Open(slug, folder, file string) (vfs.File, error) {
-	return a.fs.Open(a.mkPath(slug, folder, file))
+func (s *Server) Open(slug, folder, file string) (vfs.File, error) {
+	return s.fs.Open(s.mkPath(slug, folder, file))
+}
+
+func defaultMakePath(slug, folder, file string) string {
+	return path.Join("/", slug, folder, file)
 }
 
 // ServeFileContent uses the standard http.ServeContent method to serve the
 // application file data.
-func (a *AferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error {
-	filepath := a.mkPath(slug, folder, file)
-	r, err := a.fs.Open(filepath)
+func (s *Server) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error {
+	filepath := s.mkPath(slug, folder, file)
+	r, err := s.fs.Open(filepath)
 	if err != nil {
 		return err
 	}

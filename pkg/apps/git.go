@@ -8,13 +8,13 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/spf13/afero"
 	gitFS "gopkg.in/src-d/go-billy.v2"
 	git "gopkg.in/src-d/go-git.v4"
 	gitPlumbing "gopkg.in/src-d/go-git.v4/plumbing"
@@ -33,11 +33,11 @@ var glURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 const glRawManifestURL = "https://%s/%s/%s/raw/%s/%s"
 
 type gitFetcher struct {
-	fs          vfs.VFS
+	fs          afero.Fs
 	manFilename string
 }
 
-func newGitFetcher(fs vfs.VFS, manFilename string) *gitFetcher {
+func newGitFetcher(fs afero.Fs, manFilename string) *gitFetcher {
 	return &gitFetcher{fs: fs, manFilename: manFilename}
 }
 
@@ -76,20 +76,19 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func (g *gitFetcher) Fetch(src *url.URL, baseDir *vfs.DirDoc) error {
+func (g *gitFetcher) Fetch(src *url.URL, baseDir string) error {
 	log.Debugf("[git] Fetch %s", src.String())
 	fs := g.fs
 
-	gitDirName := path.Join(baseDir.Fullpath, ".git")
-	gitDir, err := fs.DirByPath(gitDirName)
-	if err == nil {
-		return g.pull(baseDir, gitDir, src)
-	}
-	if !os.IsNotExist(err) {
+	gitDir := path.Join(baseDir, ".git")
+	exists, err := afero.DirExists(fs, gitDir)
+	if err != nil {
 		return err
 	}
-	gitDir, err = vfs.Mkdir(fs, gitDirName, nil)
-	if err != nil {
+	if exists {
+		return g.pull(baseDir, gitDir, src)
+	}
+	if err = fs.Mkdir(gitDir, 0755); err != nil {
 		return err
 	}
 	return g.clone(baseDir, gitDir, src)
@@ -111,7 +110,7 @@ func getWebBranch(src *url.URL) string {
 
 // clone creates a new bare git repository and install all the files of the
 // last commit in the application tree.
-func (g *gitFetcher) clone(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
+func (g *gitFetcher) clone(baseDir, gitDir string, src *url.URL) error {
 	fs := g.fs
 
 	storage, err := gitStorage.NewStorage(newGFS(fs, gitDir))
@@ -143,7 +142,7 @@ func (g *gitFetcher) clone(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 
 // pull will fetch the latest objects from the default remote and if updates
 // are available, it will update the application tree files.
-func (g *gitFetcher) pull(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
+func (g *gitFetcher) pull(baseDir, gitDir string, src *url.URL) error {
 	fs := g.fs
 
 	storage, err := gitStorage.NewStorage(newGFS(fs, gitDir))
@@ -170,32 +169,39 @@ func (g *gitFetcher) pull(baseDir, gitDir *vfs.DirDoc, src *url.URL) error {
 		return err
 	}
 
-	iter := fs.DirIterator(baseDir, nil)
-	for {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
-		}
+	err = afero.Walk(fs, baseDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if d != nil && d.DocName == ".git" {
-			continue
+		if path == baseDir {
+			return nil
 		}
-		if d != nil {
-			err = fs.DestroyDirAndContent(d)
+		if filepath.Base(path) == ".git" {
+			return filepath.SkipDir
+		}
+
+		if info.IsDir() {
+			err = fs.RemoveAll(path)
 		} else {
-			err = fs.DestroyFile(f)
+			err = fs.Remove(path)
 		}
 		if err != nil {
 			return err
 		}
+
+		if info.IsDir() {
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return g.copyFiles(baseDir, rep)
 }
 
-func (g *gitFetcher) copyFiles(baseDir *vfs.DirDoc, rep *git.Repository) error {
+func (g *gitFetcher) copyFiles(baseDir string, rep *git.Repository) error {
 	fs := g.fs
 
 	ref, err := rep.Head()
@@ -214,15 +220,14 @@ func (g *gitFetcher) copyFiles(baseDir *vfs.DirDoc, rep *git.Repository) error {
 	}
 
 	return files.ForEach(func(f *gitObject.File) error {
-		abs := path.Join(baseDir.Fullpath, f.Name)
+		abs := path.Join(baseDir, f.Name)
 		dir := path.Dir(abs)
 
-		_, err := vfs.MkdirAll(fs, dir, nil)
-		if err != nil {
+		if err := fs.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
 
-		file, err := vfs.Create(fs, abs)
+		file, err := fs.Create(abs)
 		if err != nil {
 			return err
 		}
@@ -291,18 +296,17 @@ func resolveManifestURL(src *url.URL, filename string) (string, error) {
 }
 
 type gfs struct {
-	fs   vfs.VFS
+	fs   afero.Fs
 	base string
-	dir  *vfs.DirDoc
 }
 
 type gfile struct {
-	f      vfs.File
+	f      afero.File
 	name   string
 	closed bool
 }
 
-func newGFile(f vfs.File, name string) *gfile {
+func newGFile(f afero.File, name string) *gfile {
 	return &gfile{
 		f:      f,
 		name:   name,
@@ -335,99 +339,84 @@ func (f *gfile) Close() error {
 	return f.f.Close()
 }
 
-func newGFS(fs vfs.VFS, base *vfs.DirDoc) *gfs {
+func newGFS(fs afero.Fs, base string) *gfs {
 	return &gfs{
 		fs:   fs,
-		base: path.Clean(base.Fullpath),
-		dir:  base,
+		base: path.Clean(base),
 	}
 }
 
 func (fs *gfs) OpenFile(name string, flag int, perm os.FileMode) (gitFS.File, error) {
-	var err error
-
 	fullpath := path.Join(fs.base, name)
-	dirbase := path.Dir(fullpath)
-
 	if flag&os.O_CREATE != 0 {
-		if _, err = vfs.MkdirAll(fs.fs, dirbase, nil); err != nil {
+		if err := fs.createDir(fullpath); err != nil {
 			return nil, err
 		}
 	}
-
-	file, err := vfs.OpenFile(fs.fs, fullpath, flag, perm)
+	file, err := fs.fs.OpenFile(fullpath, flag, perm)
 	if err != nil {
 		return nil, err
 	}
-
-	return newGFile(file, name), nil
+	return newGFile(file, fullpath[len(fs.base):]), nil
 }
 
 func (fs *gfs) Create(name string) (gitFS.File, error) {
-	return fs.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_TRUNC, 0666)
+	return fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 }
 
 func (fs *gfs) Open(name string) (gitFS.File, error) {
 	fullpath := fs.Join(fs.base, name)
-	f, err := vfs.OpenFile(fs.fs, fullpath, os.O_RDONLY, 0)
+	f, err := fs.fs.OpenFile(fullpath, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
-	return newGFile(f, fullpath[len(fs.base)+1:]), nil
+	return newGFile(f, fullpath[len(fs.base):]), nil
 }
 
 func (fs *gfs) Remove(name string) error {
-	return vfs.Remove(fs.fs, fs.Join(fs.base, name))
+	return fs.fs.Remove(fs.Join(fs.base, name))
 }
 
 func (fs *gfs) Stat(name string) (gitFS.FileInfo, error) {
-	return vfs.Stat(fs.fs, fs.Join(fs.base, name))
+	return fs.fs.Stat(fs.Join(fs.base, name))
 }
 
 func (fs *gfs) ReadDir(name string) ([]gitFS.FileInfo, error) {
-	var s []gitFS.FileInfo
-	dir, err := fs.fs.DirByPath(fs.Join(fs.base, name))
+	is, err := afero.ReadDir(fs.fs, fs.Join(fs.base, name))
 	if err != nil {
 		return nil, err
 	}
-	iter := fs.fs.DirIterator(dir, nil)
-	for {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
-		}
-		if err != nil {
-			return nil, err
-		}
-		if d != nil {
-			s = append(s, d)
-		} else {
-			s = append(s, f)
-		}
+	infos := make([]gitFS.FileInfo, len(is))
+	for i := range is {
+		infos[i] = is[i]
 	}
-	return s, nil
+	return infos, nil
 }
 
 func (fs *gfs) MkdirAll(path string, perm os.FileMode) error {
-	_, err := vfs.MkdirAll(fs.fs, fs.Join(fs.base, path), nil)
-	return err
+	return fs.fs.MkdirAll(fs.Join(fs.base, path), perm)
 }
 
 func (fs *gfs) TempFile(dirname, prefix string) (gitFS.File, error) {
-	// TODO: not really robust tempfile...
-	name := fs.Join("/", dirname, prefix+"_"+strconv.Itoa(int(time.Now().UnixNano())))
-	file, err := fs.Create(name)
+	fullpath := fs.Join(fs.base, dirname)
+	if err := fs.createDir(fullpath + "/"); err != nil {
+		return nil, err
+	}
+	file, err := afero.TempFile(fs.fs, fullpath, prefix)
 	if err != nil {
 		return nil, err
 	}
-	if err := file.Close(); err != nil {
-		return nil, err
-	}
-	return fs.OpenFile(name, os.O_WRONLY|os.O_TRUNC, 0666)
+	filename := path.Join(fullpath[len(fs.base):], path.Base(file.Name()))
+	return newGFile(file, filename), nil
 }
 
 func (fs *gfs) Rename(from, to string) error {
-	return vfs.Rename(fs.fs, fs.Join(fs.base, from), fs.Join(fs.base, to))
+	from = fs.Join(fs.base, from)
+	to = fs.Join(fs.base, to)
+	if err := fs.createDir(to); err != nil {
+		return err
+	}
+	return fs.fs.Rename(from, to)
 }
 
 func (fs *gfs) Join(elem ...string) string {
@@ -435,20 +424,17 @@ func (fs *gfs) Join(elem ...string) string {
 }
 
 func (fs *gfs) Dir(name string) gitFS.Filesystem {
-	name = fs.Join(fs.base, name)
-	dir, err := fs.fs.DirByPath(name)
-	if err != nil {
-		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
-		// With a cluster of couchdb, we can have a race condition where we
-		// query an index before it has been updated for a directory that has
-		// just been created.
-		time.Sleep(1 * time.Second)
-		dir, err = fs.fs.DirByPath(name)
-		if err != nil {
-			panic(err)
+	return newGFS(fs.fs, fs.Join(fs.base, name))
+}
+
+func (fs *gfs) createDir(fullpath string) error {
+	dir := filepath.Dir(fullpath)
+	if dir != "." {
+		if err := fs.fs.MkdirAll(dir, 0755); err != nil {
+			return err
 		}
 	}
-	return newGFS(fs.fs, dir)
+	return nil
 }
 
 func (fs *gfs) Base() string {

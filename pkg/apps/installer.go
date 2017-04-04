@@ -9,7 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/spf13/afero"
 )
 
 var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
@@ -29,13 +29,12 @@ const (
 // Installer is used to install or update applications.
 type Installer struct {
 	fetcher Fetcher
-	fs      vfs.VFS
+	fs      afero.Fs
 	db      couchdb.Database
 
 	man  Manifest
 	src  *url.URL
 	slug string
-	base string
 
 	err  error
 	errc chan error
@@ -59,11 +58,11 @@ type Fetcher interface {
 	FetchManifest(src *url.URL) (io.ReadCloser, error)
 	// Fetch should download the application and install it in the given
 	// directory.
-	Fetch(src *url.URL, appDir *vfs.DirDoc) error
+	Fetch(src *url.URL, appDir string) error
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Installer, error) {
+func NewInstaller(db couchdb.Database, fs afero.Fs, opts *InstallerOptions) (*Installer, error) {
 	if opts.Operation == 0 {
 		panic("Missing installer operation")
 	}
@@ -73,12 +72,12 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 		return nil, ErrInvalidSlugName
 	}
 
-	var base, manFilename string
+	var manFilename string
 	switch opts.Type {
 	case Webapp:
-		base, manFilename = vfs.WebappsDirName, WebappManifestName
+		manFilename = WebappManifestName
 	case Konnector:
-		base, manFilename = vfs.KonnectorsDirName, KonnectorManifestName
+		manFilename = KonnectorManifestName
 	default:
 		return nil, fmt.Errorf("unknown installer type %s", string(opts.Type))
 	}
@@ -134,7 +133,6 @@ func NewInstaller(db couchdb.Database, fs vfs.VFS, opts *InstallerOptions) (*Ins
 		man:  man,
 		src:  src,
 		slug: slug,
-		base: base,
 
 		errc: make(chan error, 1),
 		manc: make(chan Manifest, 2),
@@ -169,7 +167,7 @@ func (i *Installer) Delete() (Manifest, error) {
 	if err := deleteManifest(i.db, i.man); err != nil {
 		return nil, err
 	}
-	if err := vfs.RemoveAll(i.fs, i.baseDirName()); err != nil {
+	if err := i.fs.RemoveAll(i.baseDirName()); err != nil {
 		return nil, err
 	}
 	return i.man, nil
@@ -211,12 +209,12 @@ func (i *Installer) install() (Manifest, error) {
 
 	i.manc <- man
 
-	appdir, err := vfs.MkdirAll(i.fs, i.baseDirName(), nil)
+	err := i.fs.MkdirAll(i.baseDirName(), 0755)
 	if err != nil {
 		return man, err
 	}
 
-	err = i.fetcher.Fetch(i.src, appdir)
+	err = i.fetcher.Fetch(i.src, i.baseDirName())
 	return man, err
 }
 
@@ -239,17 +237,12 @@ func (i *Installer) update() (Manifest, error) {
 
 	i.manc <- man
 
-	appdir, err := i.fs.DirByPath(i.baseDirName())
-	if err != nil {
-		return man, err
-	}
-
-	err = i.fetcher.Fetch(i.src, appdir)
+	err := i.fetcher.Fetch(i.src, i.baseDirName())
 	return man, err
 }
 
 func (i *Installer) baseDirName() string {
-	return path.Join(i.base, i.slug)
+	return path.Join("/", i.slug)
 }
 
 // ReadManifest will fetch the manifest and read its JSON content into the
