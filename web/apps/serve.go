@@ -133,6 +133,12 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 		return err
 	}
 	defer content.Close()
+
+	ext := path.Ext(file)
+	if ext != ".html" && ext != ".htm" {
+		return fs.ServeFileContent(c.Response(), c.Request(), modtime, slug, route.Folder, file)
+	}
+
 	buf, err := ioutil.ReadAll(content)
 	if err != nil {
 		return err
