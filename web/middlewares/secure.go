@@ -58,6 +58,9 @@ const (
 	CSPSrcSiblings
 	// CSPSrcAny is the '*' option. It allows any domain as an eligible source.
 	CSPSrcAny
+	// CSPUnsafeInline is the  'unsafe-inline' option. It allows to have inline
+	// styles or scripts to be injected in the page.
+	CSPUnsafeInline
 )
 
 // Secure returns a Middlefunc that can be used to define all the necessary
@@ -152,6 +155,8 @@ func makeCSPHeader(parent, siblings, header string, sources []CSPSource) string 
 			headers[i] = siblings
 		case CSPSrcAny:
 			headers[i] = "*"
+		case CSPUnsafeInline:
+			headers[i] = "'unsafe-inline'"
 		}
 	}
 	return header + " " + strings.Join(headers, " ") + ";"
