@@ -56,7 +56,7 @@ func (c *jsonCache) Del(d string) {
 	}
 }
 
-// Create crea a cache
+// Create creates a cache
 func Create(namespace string, expiration time.Duration) Cache {
 
 	client := getClient()
