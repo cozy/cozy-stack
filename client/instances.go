@@ -32,7 +32,7 @@ type InstanceOptions struct {
 	Timezone   string
 	Email      string
 	PublicName string
-	DiskSpace  int64
+	DiskQuota  int64
 	Apps       []string
 	Dev        bool
 	Passphrase string

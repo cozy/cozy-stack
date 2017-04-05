@@ -20,7 +20,7 @@ import (
 // done in couchdb.
 type aferoVFS struct {
 	vfs.Indexer
-	vfs.Disker
+	vfs.DiskThresholder
 
 	fs  afero.Fs
 	mu  vfs.Locker
@@ -36,7 +36,7 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(index vfs.Indexer, disk vfs.Disker, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
@@ -55,8 +55,8 @@ func New(index vfs.Indexer, disk vfs.Disker, mu vfs.Locker, fsURL *url.URL, doma
 		return nil, fmt.Errorf("vfsafero: non supported scheme %s", fsURL.Scheme)
 	}
 	return &aferoVFS{
-		Indexer: index,
-		Disker:  disk,
+		Indexer:         index,
+		DiskThresholder: disk,
 
 		fs:  fs,
 		mu:  mu,
@@ -115,14 +115,14 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	afs.mu.Lock()
 	defer afs.mu.Unlock()
 
-	diskSpace, err := afs.DiskSpace()
+	diskQuota, err := afs.DiskQuota()
 	if err != nil {
 		return nil, err
 	}
 
 	var maxsize, newsize int64
 	newsize = newdoc.ByteSize
-	if diskSpace > 0 {
+	if diskQuota > 0 {
 		diskUsage, err := afs.DiskUsage()
 		if err != nil {
 			return nil, err
@@ -132,7 +132,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		if olddoc != nil {
 			oldsize = olddoc.Size()
 		}
-		maxsize = diskSpace - diskUsage
+		maxsize = diskQuota - diskUsage
 		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
 			return nil, vfs.ErrFileTooBig
 		}

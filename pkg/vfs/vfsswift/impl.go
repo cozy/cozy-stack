@@ -21,7 +21,7 @@ var conn *swift.Connection
 
 type swiftVFS struct {
 	vfs.Indexer
-	vfs.Disker
+	vfs.DiskThresholder
 	c         *swift.Connection
 	container string
 	version   string
@@ -48,7 +48,7 @@ func InitConnection(fsURL *url.URL) (err error) {
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
-func New(index vfs.Indexer, disk vfs.Disker, mu vfs.Locker, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, domain string) (vfs.VFS, error) {
 	if conn == nil {
 		return nil, errors.New("vfsswift: global connection is not initialized")
 	}
@@ -56,8 +56,9 @@ func New(index vfs.Indexer, disk vfs.Disker, mu vfs.Locker, domain string) (vfs.
 		return nil, fmt.Errorf("vfsswift: specified domain is empty")
 	}
 	return &swiftVFS{
-		Indexer:   index,
-		Disker:    disk,
+		Indexer:         index,
+		DiskThresholder: disk,
+
 		c:         conn,
 		container: domain,
 		version:   domain + versionSuffix,
@@ -122,14 +123,14 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	sfs.mu.Lock()
 	defer sfs.mu.Unlock()
 
-	diskSpace, err := sfs.DiskSpace()
+	diskQuota, err := sfs.DiskQuota()
 	if err != nil {
 		return nil, err
 	}
 
 	var maxsize, newsize int64
 	newsize = newdoc.ByteSize
-	if diskSpace > 0 {
+	if diskQuota > 0 {
 		diskUsage, err := sfs.DiskUsage()
 		if err != nil {
 			return nil, err
@@ -139,7 +140,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		if olddoc != nil {
 			oldsize = olddoc.Size()
 		}
-		maxsize = diskSpace - diskUsage
+		maxsize = diskQuota - diskUsage
 		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
 			return nil, vfs.ErrFileTooBig
 		}

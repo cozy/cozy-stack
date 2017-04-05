@@ -38,10 +38,10 @@ func (i *apiInstance) Included() []jsonapi.Object {
 }
 
 func createHandler(c echo.Context) error {
-	var diskSpace int64
-	if c.QueryParam("DiskSpace") != "" {
+	var diskQuota int64
+	if c.QueryParam("DiskQuota") != "" {
 		var err error
-		diskSpace, err = strconv.ParseInt(c.QueryParam("DiskSpace"), 10, 64)
+		diskQuota, err = strconv.ParseInt(c.QueryParam("DiskQuota"), 10, 64)
 		if err != nil {
 			return wrapError(err)
 		}
@@ -52,7 +52,7 @@ func createHandler(c echo.Context) error {
 		Timezone:   c.QueryParam("Timezone"),
 		Email:      c.QueryParam("Email"),
 		PublicName: c.QueryParam("PublicName"),
-		DiskSpace:  diskSpace,
+		DiskQuota:  diskQuota,
 		Apps:       utils.SplitTrimString(c.QueryParam("Apps"), ","),
 		Dev:        (c.QueryParam("Dev") == "true"),
 	})

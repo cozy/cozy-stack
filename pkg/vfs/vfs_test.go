@@ -27,12 +27,12 @@ import (
 )
 
 var fs vfs.VFS
-var diskSpace int64
+var diskQuota int64
 
 type diskImpl struct{}
 
-func (d *diskImpl) DiskSpace() (int64, error) {
-	return diskSpace, nil
+func (d *diskImpl) DiskQuota() (int64, error) {
+	return diskQuota, nil
 }
 
 type H map[string]H
@@ -608,7 +608,7 @@ func TestMain(m *testing.M) {
 }
 
 func makeAferoFS() (vfs.VFS, func(), error) {
-	diskSpace = 3 << (3 * 10)
+	diskQuota = 3 << (3 * 10)
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
 		return nil, nil, errors.New("Could not create temporary directory.")
@@ -650,7 +650,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 func makeSwiftFS() (vfs.VFS, func(), error) {
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
-	diskSpace = 3 << (3 * 10)
+	diskQuota = 3 << (3 * 10)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create swift server %s", err)

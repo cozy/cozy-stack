@@ -144,19 +144,19 @@ type Locker interface {
 	Unlock()
 }
 
-// Disker it an interface that can be implemeted to known how many space is
-// available on the disk.
-type Disker interface {
-	// DiskSpace returns the total number of bytes allowed to be stored in the
+// DiskThresholder it an interface that can be implemeted to known how many space
+// is available on the disk.
+type DiskThresholder interface {
+	// DiskQuota returns the total number of bytes allowed to be stored in the
 	// VFS. If minus or equal to zero, it is considered without limit.
-	DiskSpace() (int64, error)
+	DiskQuota() (int64, error)
 }
 
 // VFS is composed of the Indexer and Fs interface. It is the common interface
 // used thoughout the stack to access the VFS.
 type VFS interface {
 	Indexer
-	Disker
+	DiskThresholder
 	Fs
 }
 
