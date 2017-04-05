@@ -18,7 +18,7 @@ type CronTrigger struct {
 
 // NewCronTrigger returns a new instance of CronTrigger given the specified options.
 func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
-	schedule, err := cron.ParseStandard(infos.Arguments)
+	schedule, err := cron.Parse(infos.Arguments)
 	if err != nil {
 		return nil, jsonapi.BadRequest(err)
 	}
