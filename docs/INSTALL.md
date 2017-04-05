@@ -52,21 +52,23 @@ cozy-stack serve
 And then create an instance for development:
 
 ```bash
-cozy-stack instances add --dev --apps files,settings,onboarding "localhost:8080"
+cozy-stack instances add --dev --apps files,settings,onboarding --passphrase cozy "cozy.tools:8080"
 ```
 
-The cozy-stack server listens on http://localhost:8080/ by default. See `cozy-stack --help` for more informations.
+The cozy-stack server listens on http://cozy.tools:8080/ by default. See `cozy-stack --help` for more informations.
+
+The above command will create an instance on http://cozy.tools:8080/ with the passphrase `cozy`.
 
 Make sure the full stack is up with:
 
 ```bash
-curl -H 'Accept: application/json' 'http://localhost:8080/status/'
+curl -H 'Accept: application/json' 'http://cozy.tools:8080/status/'
 ```
 
 You can then remove your test instance:
 
 ```bash
-cozy-stack instances rm localhost:8080
+cozy-stack instances rm cozy.tools:8080
 ```
 
 
