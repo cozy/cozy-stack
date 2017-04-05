@@ -385,6 +385,12 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 
 	f.w += int64(n)
 
+	size := f.newdoc.ByteSize
+	if size >= 0 && f.w > size {
+		f.err = vfs.ErrContentLengthMismatch
+		return n, f.err
+	}
+
 	if f.meta != nil {
 		if _, err = (*f.meta).Write(p); err != nil {
 			(*f.meta).Abort(err)
@@ -414,7 +420,9 @@ func (f *aferoFileCreation) Close() (err error) {
 		if f.meta != nil {
 			(*f.meta).Abort(err)
 		}
-		return err
+		if f.err == nil {
+			f.err = err
+		}
 	}
 
 	if f.err != nil {
@@ -435,8 +443,7 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	if !bytes.Equal(newdoc.MD5Sum, md5sum) {
-		err = vfs.ErrInvalidHash
-		return err
+		return vfs.ErrInvalidHash
 	}
 
 	if newdoc.ByteSize < 0 {
@@ -444,8 +451,7 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	if newdoc.ByteSize != written {
-		err = vfs.ErrContentLengthMismatch
-		return err
+		return vfs.ErrContentLengthMismatch
 	}
 
 	f.afs.mu.Lock()
