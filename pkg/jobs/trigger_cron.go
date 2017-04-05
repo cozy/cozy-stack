@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/robfig/cron"
 )
 
@@ -20,7 +19,7 @@ type CronTrigger struct {
 func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	schedule, err := cron.Parse(infos.Arguments)
 	if err != nil {
-		return nil, jsonapi.BadRequest(err)
+		return nil, ErrMalformedTigger
 	}
 	return &CronTrigger{
 		sched: schedule,
@@ -34,7 +33,7 @@ func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	schedule, err := cron.Parse("@every " + infos.Arguments)
 	if err != nil {
-		return nil, jsonapi.BadRequest(err)
+		return nil, ErrMalformedTigger
 	}
 	return &CronTrigger{
 		sched: schedule,

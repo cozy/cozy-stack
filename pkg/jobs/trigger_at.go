@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // maxPastTriggerTime is the maximum duration in the past for which the at
@@ -24,7 +23,7 @@ type AtTrigger struct {
 func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	at, err := time.Parse(time.RFC3339, infos.Arguments)
 	if err != nil {
-		return nil, jsonapi.BadRequest(err)
+		return nil, ErrMalformedTigger
 	}
 	return &AtTrigger{
 		at:   at,
@@ -38,7 +37,7 @@ func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 func NewInTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	d, err := time.ParseDuration(infos.Arguments)
 	if err != nil {
-		return nil, jsonapi.BadRequest(err)
+		return nil, ErrMalformedTigger
 	}
 	at := time.Now().Add(d)
 	return &AtTrigger{
