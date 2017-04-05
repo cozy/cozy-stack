@@ -3,7 +3,7 @@ package workers
 import (
 	"context"
 	"errors"
-	"strings"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
@@ -134,7 +134,7 @@ func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docT
 		if err != nil {
 			return err
 		}
-		u, err := ExtractDomain(recDoc.M["url"].(string))
+		u, err := ExtractHost(recDoc.M["url"].(string))
 		if err != nil {
 			return err
 		}
@@ -167,13 +167,14 @@ func GetRecipient(db couchdb.Database, recID string) (*couchdb.JSONDoc, error) {
 	return doc, err
 }
 
-// ExtractDomain returns the recipient's domain without the scheme
-func ExtractDomain(u string) (string, error) {
-	if u == "" {
+// ExtractHost returns the recipient's host, without the scheme
+func ExtractHost(fullURL string) (string, error) {
+	if fullURL == "" {
 		return "", ErrRecipientHasNoURL
 	}
-	if tokens := strings.Split(u, "://"); len(tokens) > 1 {
-		return tokens[1], nil
+	u, err := url.Parse(fullURL)
+	if err != nil {
+		return "", err
 	}
-	return u, nil
+	return u.Host, nil
 }

@@ -82,6 +82,8 @@ func SendDoc(domain string, opts *SendOptions) error {
 			return err
 		}
 
+		// Send the document to the recipient
+		// TODO : handle send failures
 		_, errSend := request.Req(&request.Options{
 			Domain: rec.URL,
 			Method: "PUT",
@@ -91,12 +93,14 @@ func SendDoc(domain string, opts *SendOptions) error {
 				"Accept":        "application/json",
 				"Authorization": "Bearer " + rec.Token,
 			},
-			Body: body,
+			Body:       body,
+			NoResponse: true,
 		})
 		if errSend != nil {
 			log.Error("[sharing] An error occurred while trying to share "+
 				"data : ", errSend)
 		}
+
 	}
 	return nil
 }
