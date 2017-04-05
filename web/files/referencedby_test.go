@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ func TestAddReferencedByOneRelation(t *testing.T) {
 
 	path := "/files/" + fileID1 + "/relationships/referenced_by"
 	content, err := json.Marshal(&jsonapi.Relationship{
-		Data: jsonapi.ResourceIdentifier{
+		Data: couchdb.DocReference{
 			ID:   "fooalbumid",
 			Type: "io.cozy.photos.albums",
 		},
@@ -61,7 +62,7 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 
 	path := "/files/" + fileID2 + "/relationships/referenced_by"
 	content, err := json.Marshal(&jsonapi.Relationship{
-		Data: []jsonapi.ResourceIdentifier{
+		Data: []couchdb.DocReference{
 			{ID: "fooalbumid1", Type: "io.cozy.photos.albums"},
 			{ID: "fooalbumid2", Type: "io.cozy.photos.albums"},
 			{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
@@ -91,7 +92,7 @@ func TestAddReferencedByMultipleRelation(t *testing.T) {
 func TestRemoveReferencedByOneRelation(t *testing.T) {
 	path := "/files/" + fileID1 + "/relationships/referenced_by"
 	content, err := json.Marshal(&jsonapi.Relationship{
-		Data: jsonapi.ResourceIdentifier{
+		Data: couchdb.DocReference{
 			ID:   "fooalbumid",
 			Type: "io.cozy.photos.albums",
 		},
@@ -113,7 +114,7 @@ func TestRemoveReferencedByOneRelation(t *testing.T) {
 func TestRemoveReferencedByMultipleRelation(t *testing.T) {
 	path := "/files/" + fileID2 + "/relationships/referenced_by"
 	content, err := json.Marshal(&jsonapi.Relationship{
-		Data: []jsonapi.ResourceIdentifier{
+		Data: []couchdb.DocReference{
 			{ID: "fooalbumid3", Type: "io.cozy.photos.albums"},
 			{ID: "fooalbumid5", Type: "io.cozy.photos.albums"},
 			{ID: "fooalbumid1", Type: "io.cozy.photos.albums"},

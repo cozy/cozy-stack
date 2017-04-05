@@ -52,9 +52,9 @@ func listReferencesHandler(c echo.Context) error {
 			c.Request().URL.Path, params.Encode())
 	}
 
-	var out = make([]jsonapi.ResourceIdentifier, len(res.Rows))
+	var out = make([]couchdb.DocReference, len(res.Rows))
 	for i, row := range res.Rows {
-		out[i] = jsonapi.ResourceIdentifier{
+		out[i] = couchdb.DocReference{
 			ID:   row.ID,
 			Type: consts.Files,
 		}
@@ -73,7 +73,7 @@ func addReferencesHandler(c echo.Context) error {
 		return err
 	}
 
-	docRef := jsonapi.ResourceIdentifier{
+	docRef := couchdb.DocReference{
 		Type: doctype,
 		ID:   id,
 	}
@@ -107,7 +107,7 @@ func removeReferencesHandler(c echo.Context) error {
 		return err
 	}
 
-	docRef := jsonapi.ResourceIdentifier{
+	docRef := couchdb.DocReference{
 		Type: doctype,
 		ID:   id,
 	}

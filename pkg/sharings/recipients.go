@@ -8,7 +8,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // Recipient is a struct describing a sharing recipient
@@ -24,7 +23,7 @@ type RecipientStatus struct {
 	Status string `json:"status,omitempty"`
 
 	// Reference on the recipient.
-	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
+	RefRecipient couchdb.DocReference `json:"recipient,omitempty"`
 	recipient    *Recipient
 
 	// The sharer is the "client", in the OAuth2 protocol, we keep here the
@@ -47,17 +46,6 @@ func (r *Recipient) SetID(id string) { r.RID = id }
 
 // SetRev changes the recipient revision
 func (r *Recipient) SetRev(rev string) { r.RRev = rev }
-
-// Relationships implements jsonapi.Doc
-func (r *Recipient) Relationships() jsonapi.RelationshipMap { return nil }
-
-// Included implements jsonapi.Doc
-func (r *Recipient) Included() []jsonapi.Object { return nil }
-
-// Links implements jsonapi.Doc
-func (r *Recipient) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
-}
 
 // ExtractDomain returns the recipient's domain without the scheme
 func (r *Recipient) ExtractDomain() (string, error) {
@@ -92,6 +80,12 @@ func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 		err = ErrRecipientDoesNotExist
 	}
 	return doc, err
+}
+
+// GetCachedRecipient returns the recipient cached in memory within
+// the RecipientStatus. CAN BE NIL, Used by jsonapi
+func (rs *RecipientStatus) GetCachedRecipient() *Recipient {
+	return rs.recipient
 }
 
 // getAccessToken sends an "access_token" request to the recipient using the
@@ -195,6 +189,5 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 }
 
 var (
-	_ couchdb.Doc    = &Recipient{}
-	_ jsonapi.Object = &Recipient{}
+	_ couchdb.Doc = &Recipient{}
 )

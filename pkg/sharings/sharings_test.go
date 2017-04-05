@@ -20,7 +20,6 @@ import (
 	webAuth "github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -105,7 +104,7 @@ func createSharing(t *testing.T, doc *couchdb.JSONDoc) (*Sharing, error) {
 	assert.NoError(t, err)
 
 	recStatus := &RecipientStatus{
-		RefRecipient: jsonapi.ResourceIdentifier{
+		RefRecipient: couchdb.DocReference{
 			ID:   recipient.RID,
 			Type: consts.Recipients,
 		},
@@ -262,7 +261,7 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 	clientID := "fake client"
 
 	rStatus := &RecipientStatus{
-		RefRecipient: jsonapi.ResourceIdentifier{ID: "id", Type: "type"},
+		RefRecipient: couchdb.DocReference{ID: "id", Type: "type"},
 		Client: &auth.Client{
 			ClientID: "fakeid",
 		},
@@ -440,7 +439,7 @@ func TestSharingRefusedSuccess(t *testing.T) {
 	assert.NoError(t, err)
 
 	rStatus := &RecipientStatus{
-		RefRecipient: jsonapi.ResourceIdentifier{ID: recipient.RID},
+		RefRecipient: couchdb.DocReference{ID: recipient.RID},
 		Client: &auth.Client{
 			ClientID: clientID,
 		},
@@ -554,7 +553,7 @@ func TestCreateSharingAndRegisterSharer(t *testing.T) {
 	}
 
 	recStatus := &RecipientStatus{
-		RefRecipient: jsonapi.ResourceIdentifier{
+		RefRecipient: couchdb.DocReference{
 			ID:   "123",
 			Type: consts.Recipients,
 		},

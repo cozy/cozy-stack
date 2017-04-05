@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -55,7 +56,7 @@ func newDir(doc *vfs.DirDoc) *dir {
 }
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-	relsData := make([]jsonapi.ResourceIdentifier, 0)
+	relsData := make([]couchdb.DocReference, 0)
 	included := make([]jsonapi.Object, 0)
 
 	count, iterOpts, err := paginationConfig(c)
@@ -81,11 +82,11 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		} else {
 			included = append(included, newFile(f))
 		}
-		var ri jsonapi.ResourceIdentifier
+		var ri couchdb.DocReference
 		if d != nil {
-			ri = jsonapi.ResourceIdentifier{ID: d.ID(), Type: d.DocType()}
+			ri = couchdb.DocReference{ID: d.ID(), Type: d.DocType()}
 		} else {
-			ri = jsonapi.ResourceIdentifier{ID: f.ID(), Type: f.DocType()}
+			ri = couchdb.DocReference{ID: f.ID(), Type: f.DocType()}
 		}
 		relsData = append(relsData, ri)
 	}
@@ -96,7 +97,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 			Links: &jsonapi.LinksList{
 				Related: "/files/" + doc.DirID,
 			},
-			Data: jsonapi.ResourceIdentifier{
+			Data: couchdb.DocReference{
 				ID:   doc.DirID,
 				Type: consts.Files,
 			},
@@ -181,7 +182,7 @@ func (f *file) Relationships() jsonapi.RelationshipMap {
 			Links: &jsonapi.LinksList{
 				Related: "/files/" + f.doc.DirID,
 			},
-			Data: jsonapi.ResourceIdentifier{
+			Data: couchdb.DocReference{
 				ID:   f.doc.DirID,
 				Type: consts.Files,
 			},

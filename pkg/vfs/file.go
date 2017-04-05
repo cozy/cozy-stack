@@ -12,7 +12,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // FileDoc is a struct containing all the informations about a file.
@@ -43,7 +42,7 @@ type FileDoc struct {
 
 	Metadata Metadata `json:"metadata,omitempty"`
 
-	ReferencedBy []jsonapi.ResourceIdentifier `json:"referenced_by,omitempty"`
+	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
 
 	// Cache of the fullpath of the file. Should not have to be invalidated since
 	// we use FileDoc as immutable data-structures.
@@ -103,11 +102,11 @@ func (f *FileDoc) IsDir() bool { return false }
 func (f *FileDoc) Sys() interface{} { return nil }
 
 // AddReferencedBy adds referenced_by to the file
-func (f *FileDoc) AddReferencedBy(ri ...jsonapi.ResourceIdentifier) {
+func (f *FileDoc) AddReferencedBy(ri ...couchdb.DocReference) {
 	f.ReferencedBy = append(f.ReferencedBy, ri...)
 }
 
-func containsReferencedBy(haystack []jsonapi.ResourceIdentifier, needle jsonapi.ResourceIdentifier) bool {
+func containsReferencedBy(haystack []couchdb.DocReference, needle couchdb.DocReference) bool {
 	for _, ref := range haystack {
 		if ref.ID == needle.ID && ref.Type == needle.Type {
 			return true
@@ -117,7 +116,7 @@ func containsReferencedBy(haystack []jsonapi.ResourceIdentifier, needle jsonapi.
 }
 
 // RemoveReferencedBy adds referenced_by to the file
-func (f *FileDoc) RemoveReferencedBy(ri ...jsonapi.ResourceIdentifier) {
+func (f *FileDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
 	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
 	referenced := f.ReferencedBy[:0]
 	for _, ref := range f.ReferencedBy {

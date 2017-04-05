@@ -12,13 +12,13 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,7 +45,7 @@ func createRecipient(t *testing.T) (*sharings.Recipient, error) {
 
 func createSharing(t *testing.T, recipient *sharings.Recipient) (*sharings.Sharing, error) {
 	recStatus := &sharings.RecipientStatus{
-		RefRecipient: jsonapi.ResourceIdentifier{
+		RefRecipient: couchdb.DocReference{
 			ID:   recipient.RID,
 			Type: consts.Recipients,
 		},
