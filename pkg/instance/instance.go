@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/leonelquinteros/gotext"
+	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -177,6 +179,30 @@ func (i *Instance) makeVFS() error {
 	return err
 }
 
+// AppsFS returns the hidden filesystem associated with the specified
+// application type
+func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
+	switch appsType {
+	case apps.Webapp:
+		return i.hiddenFS(vfs.WebappsDirName)
+	case apps.Konnector:
+		return i.hiddenFS(vfs.KonnectorsDirName)
+	}
+	panic(fmt.Errorf("Unknown application type %s", string(appsType)))
+}
+
+func (i *Instance) hiddenFS(dirname string) afero.Fs {
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case "file", "mem":
+		return afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.Domain, dirname))
+	case "swift":
+		panic("Not implemented")
+	}
+	return nil
+}
+
 // StartJobSystem creates all the resources necessary for the instance's job
 // system to work properly.
 func (i *Instance) StartJobSystem() error {
@@ -260,7 +286,7 @@ func (i *Instance) installApp(slug string) error {
 	if !ok {
 		return errors.New("Unknown app")
 	}
-	inst, err := apps.NewInstaller(i, i.VFS(), &apps.InstallerOptions{
+	inst, err := apps.NewInstaller(i, i.AppsFS(apps.Webapp), &apps.InstallerOptions{
 		Operation: apps.Install,
 		Type:      apps.Webapp,
 		SourceURL: source,
