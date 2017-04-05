@@ -537,10 +537,6 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if middlewares.IsLoggedIn(c) {
-		redirect := defaultRedirectDomain(instance).String()
-		return c.Redirect(http.StatusSeeOther, redirect)
-	}
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
 		"Locale": instance.Locale,
 		"CSRF":   c.Get("csrf"),
@@ -556,7 +552,7 @@ func passphraseReset(c echo.Context) error {
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
 	// (maybe by accident) asks for a passphrase reset while logged in, we log
-	// him out to be able to  re-go through the process of logging back-in. It is
+	// him out to be able to re-go through the process of logging back-in. It is
 	// more a UX choice than a "security" one.
 	if middlewares.IsLoggedIn(c) {
 		session, err := sessions.GetSession(c, instance)
