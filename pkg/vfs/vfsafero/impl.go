@@ -20,6 +20,7 @@ import (
 // done in couchdb.
 type aferoVFS struct {
 	vfs.Indexer
+	vfs.Disker
 
 	fs  afero.Fs
 	mu  vfs.Locker
@@ -35,7 +36,7 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(index vfs.Indexer, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.Disker, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
@@ -55,6 +56,7 @@ func New(index vfs.Indexer, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.V
 	}
 	return &aferoVFS{
 		Indexer: index,
+		Disker:  disk,
 
 		fs:  fs,
 		mu:  mu,
@@ -113,6 +115,22 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	afs.mu.Lock()
 	defer afs.mu.Unlock()
 
+	diskUsage, err := afs.DiskUsage()
+	if err != nil {
+		return nil, err
+	}
+
+	diskSpace, err := afs.DiskSpace()
+	if err != nil {
+		return nil, err
+	}
+
+	size := newdoc.ByteSize
+	maxsize := diskSpace - diskUsage
+	if maxsize <= 0 || (size >= 0 && size > maxsize) {
+		return nil, vfs.ErrFileTooBig
+	}
+
 	newpath, err := afs.Indexer.FilePath(newdoc)
 	if err != nil {
 		return nil, err
@@ -156,6 +174,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		olddoc:  olddoc,
 		bakpath: bakpath,
 		newpath: newpath,
+		maxsize: maxsize,
 
 		hash: hash,
 		meta: extractor,
@@ -363,6 +382,7 @@ type aferoFileCreation struct {
 	olddoc  *vfs.FileDoc       // old document
 	newpath string             // file new path
 	bakpath string             // backup file path in case of modifying an existing file
+	maxsize int64              // maximum size allowed for the file
 	hash    hash.Hash          // hash we build up along the file
 	meta    *vfs.MetaExtractor // extracts metadata from the content
 	err     error              // write error
@@ -384,6 +404,10 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	}
 
 	f.w += int64(n)
+	if f.w > f.maxsize {
+		f.err = vfs.ErrFileTooBig
+		return n, f.err
+	}
 
 	size := f.newdoc.ByteSize
 	if size >= 0 && f.w > size {

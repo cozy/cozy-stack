@@ -37,6 +37,10 @@ const (
 	oauthSecretLen        = 128
 )
 
+// DefaultDiskSpace is the default disk space allowed to the user if none is
+// informed.
+const DefaultDiskSpace int64 = 3 << (3 * 10) // 3GB
+
 // passwordResetValidityDuration is the validity duration of the passphrase
 // reset token.
 var passwordResetValidityDuration = 15 * time.Minute
@@ -71,6 +75,8 @@ type Instance struct {
 	Locale string `json:"locale"`         // The locale used on the server
 	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
 
+	BytesDiskSpace int64 `json:"disk_space,string"` // The total size in bytes allowed to the user
+
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
 	PassphraseHash       []byte    `json:"passphrase_hash,omitempty"`
@@ -100,6 +106,7 @@ type Options struct {
 	Timezone   string
 	Email      string
 	PublicName string
+	DiskSpace  int64
 	Apps       []string
 	Dev        bool
 }
@@ -151,12 +158,13 @@ func (i *Instance) makeVFS() error {
 	fsURL := config.FsURL()
 	mutex := vfs.NewMemLock(i.Domain)
 	index := vfs.NewCouchdbIndexer(i)
+	disk := vfs.Disker(i)
 	var err error
 	switch fsURL.Scheme {
 	case "file", "mem":
-		i.vfs, err = vfsafero.New(index, mutex, fsURL, i.Domain)
+		i.vfs, err = vfsafero.New(index, disk, mutex, fsURL, i.Domain)
 	case "swift":
-		i.vfs, err = vfsswift.New(index, mutex, i.Domain)
+		i.vfs, err = vfsswift.New(index, disk, mutex, i.Domain)
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
@@ -173,6 +181,14 @@ func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
 		return i.hiddenFS(vfs.KonnectorsDirName)
 	}
 	panic(fmt.Errorf("Unknown application type %s", string(appsType)))
+}
+
+// DiskSpace returns the number of bytes allowed on the disk to the user.
+func (i *Instance) DiskSpace() (int64, error) {
+	if i.BytesDiskSpace <= 0 {
+		return DefaultDiskSpace, nil
+	}
+	return i.BytesDiskSpace, nil
 }
 
 func (i *Instance) hiddenFS(dirname string) afero.Fs {
@@ -317,6 +333,11 @@ func Create(opts *Options) (*Instance, error) {
 
 	i.Locale = locale
 	i.Domain = domain
+
+	i.BytesDiskSpace = opts.DiskSpace
+	if i.BytesDiskSpace == 0 {
+		i.BytesDiskSpace = DefaultDiskSpace
+	}
 
 	i.Dev = opts.Dev
 

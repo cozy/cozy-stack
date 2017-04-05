@@ -21,6 +21,7 @@ var conn *swift.Connection
 
 type swiftVFS struct {
 	vfs.Indexer
+	vfs.Disker
 	c         *swift.Connection
 	container string
 	version   string
@@ -47,7 +48,7 @@ func InitConnection(fsURL *url.URL) (err error) {
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
-func New(index vfs.Indexer, mu vfs.Locker, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.Disker, mu vfs.Locker, domain string) (vfs.VFS, error) {
 	if conn == nil {
 		return nil, errors.New("vfsswift: global connection is not initialized")
 	}
@@ -56,6 +57,7 @@ func New(index vfs.Indexer, mu vfs.Locker, domain string) (vfs.VFS, error) {
 	}
 	return &swiftVFS{
 		Indexer:   index,
+		Disker:    disk,
 		c:         conn,
 		container: domain,
 		version:   domain + versionSuffix,
@@ -120,6 +122,22 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	sfs.mu.Lock()
 	defer sfs.mu.Unlock()
 
+	diskUsage, err := sfs.DiskUsage()
+	if err != nil {
+		return nil, err
+	}
+
+	diskSpace, err := sfs.DiskSpace()
+	if err != nil {
+		return nil, err
+	}
+
+	size := newdoc.ByteSize
+	maxsize := diskSpace - diskUsage
+	if maxsize <= 0 || (size >= 0 && size > maxsize) {
+		return nil, vfs.ErrFileTooBig
+	}
+
 	if olddoc != nil {
 		newdoc.SetID(olddoc.ID())
 		newdoc.SetRev(olddoc.Rev())
@@ -128,7 +146,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	objName := newdoc.DirID + "/" + newdoc.DocName
 	if olddoc == nil {
-		_, _, err := sfs.c.Object(sfs.container, objName)
+		_, _, err = sfs.c.Object(sfs.container, objName)
 		if err != swift.ObjectNotFound {
 			if err != nil {
 				return nil, err
@@ -138,8 +156,8 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}
 
 	var h swift.Headers
-	if newdoc.ByteSize >= 0 {
-		h = swift.Headers{"Content-Length": strconv.FormatInt(newdoc.ByteSize, 10)}
+	if size >= 0 {
+		h = swift.Headers{"Content-Length": strconv.FormatInt(size, 10)}
 	}
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
@@ -154,11 +172,13 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &swiftFileCreation{
-		f:      f,
-		fs:     sfs,
-		name:   objName,
-		meta:   vfs.NewMetaExtractor(newdoc),
-		newdoc: newdoc,
+		f:       f,
+		fs:      sfs,
+		name:    objName,
+		meta:    vfs.NewMetaExtractor(newdoc),
+		newdoc:  newdoc,
+		olddoc:  olddoc,
+		maxsize: maxsize,
 	}, nil
 }
 
@@ -321,14 +341,15 @@ func (sfs *swiftVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, er
 }
 
 type swiftFileCreation struct {
-	f      *swift.ObjectCreateFile
-	w      int64
-	fs     *swiftVFS
-	name   string
-	err    error
-	meta   *vfs.MetaExtractor
-	newdoc *vfs.FileDoc
-	olddoc *vfs.FileDoc
+	f       *swift.ObjectCreateFile
+	w       int64
+	fs      *swiftVFS
+	name    string
+	err     error
+	meta    *vfs.MetaExtractor
+	newdoc  *vfs.FileDoc
+	olddoc  *vfs.FileDoc
+	maxsize int64
 }
 
 func (f *swiftFileCreation) Read(p []byte) (int, error) {
@@ -354,6 +375,11 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 	}
 
 	f.w += int64(n)
+	if f.w > f.maxsize {
+		f.err = vfs.ErrFileTooBig
+		return n, f.err
+	}
+
 	size := f.newdoc.ByteSize
 	if size >= 0 && f.w > size {
 		f.err = vfs.ErrContentLengthMismatch

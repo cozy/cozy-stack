@@ -27,6 +27,13 @@ import (
 )
 
 var fs vfs.VFS
+var diskSpace int64
+
+type diskImpl struct{}
+
+func (d *diskImpl) DiskSpace() (int64, error) {
+	return diskSpace, nil
+}
 
 type H map[string]H
 
@@ -601,6 +608,7 @@ func TestMain(m *testing.M) {
 }
 
 func makeAferoFS() (vfs.VFS, func(), error) {
+	diskSpace = 3 << (3 * 10)
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
 		return nil, nil, errors.New("Could not create temporary directory.")
@@ -608,7 +616,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
-	aferoFs, err := vfsafero.New(index, vfs.NewMemLock("io.cozy.vfs.test"),
+	aferoFs, err := vfsafero.New(index, &diskImpl{}, vfs.NewMemLock("io.cozy.vfs.test"),
 		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
 	if err != nil {
 		return nil, nil, err
@@ -642,6 +650,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 func makeSwiftFS() (vfs.VFS, func(), error) {
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
+	diskSpace = 3 << (3 * 10)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create swift server %s", err)
@@ -656,7 +665,7 @@ func makeSwiftFS() (vfs.VFS, func(), error) {
 		return nil, nil, err
 	}
 
-	swiftFs, err := vfsswift.New(index, vfs.NewMemLock("io.cozy.vfs.test"), db.Prefix())
+	swiftFs, err := vfsswift.New(index, &diskImpl{}, vfs.NewMemLock("io.cozy.vfs.test"), db.Prefix())
 	if err != nil {
 		return nil, nil, err
 	}
