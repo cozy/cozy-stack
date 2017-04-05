@@ -148,7 +148,7 @@ type Locker interface {
 // available on the disk.
 type Disker interface {
 	// DiskSpace returns the total number of bytes allowed to be stored in the
-	// VFS.
+	// VFS. If minus or equal to zero, it is considered without limit.
 	DiskSpace() (int64, error)
 }
 

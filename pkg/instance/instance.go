@@ -37,10 +37,6 @@ const (
 	oauthSecretLen        = 128
 )
 
-// DefaultDiskSpace is the default disk space allowed to the user if none is
-// informed.
-const DefaultDiskSpace int64 = 3 << (3 * 10) // 3GB
-
 // passwordResetValidityDuration is the validity duration of the passphrase
 // reset token.
 var passwordResetValidityDuration = 15 * time.Minute
@@ -185,9 +181,6 @@ func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
 
 // DiskSpace returns the number of bytes allowed on the disk to the user.
 func (i *Instance) DiskSpace() (int64, error) {
-	if i.BytesDiskSpace <= 0 {
-		return DefaultDiskSpace, nil
-	}
 	return i.BytesDiskSpace, nil
 }
 
@@ -335,9 +328,6 @@ func Create(opts *Options) (*Instance, error) {
 	i.Domain = domain
 
 	i.BytesDiskSpace = opts.DiskSpace
-	if i.BytesDiskSpace == 0 {
-		i.BytesDiskSpace = DefaultDiskSpace
-	}
 
 	i.Dev = opts.Dev
 

@@ -122,24 +122,29 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	sfs.mu.Lock()
 	defer sfs.mu.Unlock()
 
-	diskUsage, err := sfs.DiskUsage()
-	if err != nil {
-		return nil, err
-	}
-
 	diskSpace, err := sfs.DiskSpace()
 	if err != nil {
 		return nil, err
 	}
 
-	var oldsize int64
-	if olddoc != nil {
-		oldsize = olddoc.Size()
-	}
-	newsize := newdoc.ByteSize
-	maxsize := diskSpace - diskUsage
-	if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
-		return nil, vfs.ErrFileTooBig
+	var maxsize, newsize int64
+	newsize = newdoc.ByteSize
+	if diskSpace > 0 {
+		diskUsage, err := sfs.DiskUsage()
+		if err != nil {
+			return nil, err
+		}
+
+		var oldsize int64
+		if olddoc != nil {
+			oldsize = olddoc.Size()
+		}
+		maxsize = diskSpace - diskUsage
+		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
+			return nil, vfs.ErrFileTooBig
+		}
+	} else {
+		maxsize = -1 // no limit
 	}
 
 	if olddoc != nil {
@@ -379,7 +384,7 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 	}
 
 	f.w += int64(n)
-	if f.w > f.maxsize {
+	if f.maxsize >= 0 && f.w > f.maxsize {
 		f.err = vfs.ErrFileTooBig
 		return n, f.err
 	}
