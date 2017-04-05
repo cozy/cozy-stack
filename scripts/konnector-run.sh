@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo "COZY_URL=${COZY_URL}"
+echo "COZY_DOMAIN=${COZY_DOMAIN}"
+echo "COZY_FIELDS=${COZY_FIELDS}"
+echo "COZY_CREDENTIALS=${COZY_CREDENTIALS}"
+echo "SLUG=${1}"

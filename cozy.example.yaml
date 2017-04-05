@@ -31,6 +31,9 @@ couchdb:
   # CouchDB URL - flags: --couchdb-url
   url: http://localhost:5984/
 
+konnectors:
+  cmd: ./scripts/konnector-run.sh
+
 mail:
   # mail smtp host - flags: --mail-host
   host: smtp.home
