@@ -125,9 +125,13 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 
-	size := newdoc.ByteSize
+	var oldsize int64
+	if olddoc != nil {
+		oldsize = olddoc.Size()
+	}
+	newsize := newdoc.ByteSize
 	maxsize := diskSpace - diskUsage
-	if maxsize <= 0 || (size >= 0 && size > maxsize) {
+	if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
 		return nil, vfs.ErrFileTooBig
 	}
 

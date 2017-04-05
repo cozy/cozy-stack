@@ -132,9 +132,13 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 
-	size := newdoc.ByteSize
+	var oldsize int64
+	if olddoc != nil {
+		oldsize = olddoc.Size()
+	}
+	newsize := newdoc.ByteSize
 	maxsize := diskSpace - diskUsage
-	if maxsize <= 0 || (size >= 0 && size > maxsize) {
+	if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
 		return nil, vfs.ErrFileTooBig
 	}
 
@@ -156,8 +160,8 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}
 
 	var h swift.Headers
-	if size >= 0 {
-		h = swift.Headers{"Content-Length": strconv.FormatInt(size, 10)}
+	if newsize >= 0 {
+		h = swift.Headers{"Content-Length": strconv.FormatInt(newsize, 10)}
 	}
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
