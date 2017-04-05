@@ -16,7 +16,7 @@ const (
 
 	// --- reset_passphrase ---
 	mailResetPassHTML = `` +
-		`<h1><img src="../../../assets/images/icon-cozy-mail.png" alt="Cozy Cloud" width="52" height="52" /></h1>
+		`<h1><img src="{{.BaseURL}}assets/images/icon-cozy-mail.png" alt="Cozy Cloud" width="52" height="52" /></h1>
 
 <h2>Reset you Cozy password</h2>
 
