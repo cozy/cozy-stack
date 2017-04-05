@@ -16,7 +16,9 @@ const (
 
 	// --- reset_passphrase ---
 	mailResetPassHTML = `` +
-		`<h2>Reset you Cozy password</h2>
+		`<h1><img src="" alt="Cozy Cloud"/></h1>
+
+<h2>Reset you Cozy password</h2>
 
 <p>Hello {{.RecipientName}}.<br/> Forgot your password? No worries, let's get you a new one! Click on the link below to safely change it.</p>
 
@@ -31,7 +33,9 @@ const (
 <p>You never asked for a new password? In this case you can forget this email.<br/> Just so you know, you have 24 hours to choose a new password, then this email will self-destruct.</p>`
 
 	mailResetPassText = `` +
-		`Reset you Cozy password
+		`Cozy Cloud
+
+Reset you Cozy password
 
 Hello {{.RecipientName}}.
 Forgot your password? No worries, let's get you a new one! Click on the link below to safely change it.
