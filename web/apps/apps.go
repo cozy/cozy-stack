@@ -25,6 +25,55 @@ const JSMimeType = "application/javascript"
 
 const typeTextEventStream = "text/event-stream"
 
+type apiApp struct {
+	apps.Manifest
+}
+
+func (man *apiApp) MarshalJSON() ([]byte, error) {
+	return json.Marshal(man.Manifest)
+}
+
+// Links is part of the Manifest interface
+func (man *apiApp) Links() *jsonapi.LinksList {
+
+	var route string
+	links := jsonapi.LinksList{}
+	switch man.DocType() {
+	case consts.Apps:
+		var app = man.Manifest.(*apps.WebappManifest)
+		route = "/apps/"
+		if app.Icon != "" {
+			links.Icon = "/apps/" + app.Slug() + "/icon"
+		}
+		if app.State() == apps.Ready && app.Instance != nil {
+			links.Related = app.Instance.SubDomain(man.Manifest.Slug()).String()
+		}
+
+	case consts.Konnectors:
+		route = "konnectors"
+	}
+
+	if route != "" {
+		links.Self = route + man.Manifest.Slug()
+	}
+	return &links
+}
+
+// Relationships is part of the Manifest interface
+func (man *apiApp) Relationships() jsonapi.RelationshipMap {
+	//TODO include permissions doc
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the Manifest interface
+func (man *apiApp) Included() []jsonapi.Object {
+	//TODO include permissions doc
+	return []jsonapi.Object{}
+}
+
+// apiApp is a jsonapi.Object
+var _ jsonapi.Object = (*apiApp)(nil)
+
 // installHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
 func installHandler(installerType apps.AppType) echo.HandlerFunc {
@@ -129,7 +178,7 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err != nil {
 			return wrapAppsError(err)
 		}
-		return jsonapi.Data(c, http.StatusOK, man, nil)
+		return jsonapi.Data(c, http.StatusOK, &apiApp{man}, nil)
 	}
 }
 
@@ -151,7 +200,7 @@ func pollInstaller(c echo.Context, isEventStream bool, w http.ResponseWriter, sl
 				}
 			}
 		}()
-		return jsonapi.Data(c, http.StatusAccepted, man, nil)
+		return jsonapi.Data(c, http.StatusAccepted, &apiApp{man}, nil)
 	}
 
 	for {
@@ -164,7 +213,7 @@ func pollInstaller(c echo.Context, isEventStream bool, w http.ResponseWriter, sl
 			break
 		}
 		buf := new(bytes.Buffer)
-		if err := jsonapi.WriteData(buf, man, nil); err == nil {
+		if err := jsonapi.WriteData(buf, &apiApp{man}, nil); err == nil {
 			writeStream(w, "state", buf.String())
 		}
 		if done {
@@ -202,7 +251,7 @@ func listHandler(c echo.Context) error {
 	objs := make([]jsonapi.Object, len(docs))
 	for i, d := range docs {
 		d.Instance = instance
-		objs[i] = jsonapi.Object(d)
+		objs[i] = &apiApp{d}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)

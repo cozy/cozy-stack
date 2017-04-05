@@ -10,7 +10,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // Route is a struct to serve a folder inside an app
@@ -104,30 +103,6 @@ func (m *WebappManifest) SetError(err error) { m.DocError = err.Error() }
 // Permissions is part of the Manifest interface
 func (m *WebappManifest) Permissions() permissions.Set {
 	return m.DocPermissions
-}
-
-// Links is part of the Manifest interface
-func (m *WebappManifest) Links() *jsonapi.LinksList {
-	links := jsonapi.LinksList{
-		Self: "/apps/" + m.DocSlug,
-	}
-	if m.Icon != "" {
-		links.Icon = "/apps/" + m.DocSlug + "/icon"
-	}
-	if m.DocState == Ready && m.Instance != nil {
-		links.Related = m.Instance.SubDomain(m.DocSlug).String()
-	}
-	return &links
-}
-
-// Relationships is part of the Manifest interface
-func (m *WebappManifest) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{}
-}
-
-// Included is part of the Manifest interface
-func (m *WebappManifest) Included() []jsonapi.Object {
-	return []jsonapi.Object{}
 }
 
 // Valid is part of the Manifest interface

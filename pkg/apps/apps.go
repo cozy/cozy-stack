@@ -6,7 +6,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 const (
@@ -63,7 +62,7 @@ type SubDomainer interface {
 // Manifest interface is used by installer to encapsulate the manifest metadata
 // that can represent either a webapp or konnector manifest
 type Manifest interface {
-	jsonapi.Object
+	couchdb.Doc
 	Valid(field, expected string) bool
 	ReadManifest(i io.Reader, slug, sourceURL string) error
 	Permissions() permissions.Set

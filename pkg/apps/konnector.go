@@ -8,7 +8,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 type konnManifest struct {
@@ -54,20 +53,6 @@ func (m *konnManifest) SetState(state State) { m.DocState = state }
 func (m *konnManifest) SetError(err error)   { m.DocError = err.Error() }
 func (m *konnManifest) Permissions() permissions.Set {
 	return m.DocPermissions
-}
-
-func (m *konnManifest) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{
-		Self: "/konnectors/" + m.DocSlug,
-	}
-}
-
-func (m *konnManifest) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{}
-}
-
-func (m *konnManifest) Included() []jsonapi.Object {
-	return []jsonapi.Object{}
 }
 
 func (m *konnManifest) Valid(field, value string) bool {
