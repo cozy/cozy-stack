@@ -3,8 +3,6 @@
 var http = require('http')
 var Pouchdb = require('pouchdb')
 
-require('longjohn')
-
 var TOKEN = 'test:' + process.env.TEST_TOKEN
 var DOCTYPE = 'io.cozy.pouchtestobject'
 var SOURCE = 'http://' + TOKEN + '@localhost:8080/data/' + DOCTYPE + '/'

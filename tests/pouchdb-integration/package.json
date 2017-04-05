@@ -21,8 +21,6 @@
   },
   "homepage": "https://github.com/cozy/cozy-stack",
   "dependencies": {
-    "cozy-client-js": "0.0.1",
-    "longjohn": "^0.2.11",
     "mocha": "3.2.0",
     "pouchdb": "6.1.0"
   }
