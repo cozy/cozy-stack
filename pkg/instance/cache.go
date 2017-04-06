@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"sync"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/cache"
@@ -12,11 +13,10 @@ type instanceCache struct {
 
 func (ic *instanceCache) Get(d string) *Instance {
 	var out Instance
-	ic.base.Get(d, &out)
-	if out.DocID == "" {
-		return nil
+	if ok := ic.base.Get(d, &out); ok {
+		return &out
 	}
-	return &out
+	return nil
 }
 func (ic *instanceCache) Set(d string, i *Instance) {
 	ic.base.Set(d, i)
@@ -25,9 +25,12 @@ func (ic *instanceCache) Revoke(d string) {
 	ic.base.Del(d)
 }
 
+var mu sync.Mutex
 var globalCache *instanceCache
 
 func getCache() *instanceCache {
+	mu.Lock()
+	defer mu.Unlock()
 
 	if globalCache == nil {
 		globalCache = &instanceCache{

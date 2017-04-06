@@ -421,7 +421,7 @@ func Create(opts *Options) (*Instance, error) {
 func Get(domain string) (*Instance, error) {
 	cache := getCache()
 	var err error
-	var i = cache.Get(domain)
+	i := cache.Get(domain)
 	if i == nil {
 		i, err = getFromCouch(domain)
 		if err != nil {

@@ -9,16 +9,16 @@ import (
 
 // Cache is an interface for a structure susceptible of caching
 type Cache interface {
-	Get(string, interface{})
+	Get(string, interface{}) bool
 	Set(string, interface{})
 	Del(string)
 }
 
 type noCache struct{}
 
-func (*noCache) Get(string, interface{}) {}
-func (*noCache) Set(string, interface{}) {}
-func (*noCache) Del(string)              {}
+func (*noCache) Get(string, interface{}) bool { return false }
+func (*noCache) Set(string, interface{})      {}
+func (*noCache) Del(string)                   {}
 
 type jsonCache struct {
 	namespace  string
@@ -26,15 +26,16 @@ type jsonCache struct {
 	client     subRedisInterface
 }
 
-func (c *jsonCache) Get(d string, out interface{}) {
+func (c *jsonCache) Get(d string, out interface{}) bool {
 	bytes, err := c.client.Get(c.namespace + d).Bytes()
 	if err != nil {
-		return
+		return false
 	}
 	if err := json.Unmarshal(bytes, &out); err != nil {
 		log.Error("bad value in redis", err)
-		return
+		return false
 	}
+	return true
 }
 
 func (c *jsonCache) Set(d string, i interface{}) {

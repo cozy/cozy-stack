@@ -133,7 +133,7 @@ func CacheOptions() *redis.Options {
 	}
 	opts, err := redis.ParseURL(config.Cache.URL)
 	if err != nil {
-		log.Errorf("cant parse cache.URL(%s), ignoring", config.Cache.URL)
+		log.Errorf("can't parse cache.URL(%s), ignoring", config.Cache.URL)
 		return nil
 	}
 	return opts
@@ -273,7 +273,7 @@ couchdb:
     url: http://localhost:5984/
 
 cache:
-    url: redis://localhost:6379
+    url: redis://localhost:6379/0
 
 log:
     level: info
