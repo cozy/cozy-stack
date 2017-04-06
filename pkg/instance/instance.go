@@ -573,7 +573,11 @@ func (i *Instance) RequestPassphraseReset() error {
 		Mode:         workers.MailModeNoReply,
 		Subject:      "Password reset",
 		TemplateName: "passphrase_reset",
-		TemplateValues: struct{ PassphraseResetLink string }{
+		TemplateValues: struct {
+			BaseURL             string
+			PassphraseResetLink string
+		}{
+			BaseURL:             i.PageURL("/", nil),
 			PassphraseResetLink: resetURL,
 		},
 	})

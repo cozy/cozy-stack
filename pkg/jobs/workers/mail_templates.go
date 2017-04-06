@@ -16,12 +16,35 @@ const (
 
 	// --- reset_passphrase ---
 	mailResetPassHTML = `` +
-		`<p>To renew your passphrase, please follow
-<a href="{{.PassphraseResetLink}}">this link</a></p>`
+		`<h1><img src="{{.BaseURL}}assets/images/icon-cozy-mail.png" alt="Cozy Cloud" width="52" height="52" /></h1>
+
+<h2>Reset you Cozy password</h2>
+
+<p>Hello {{.RecipientName}}.<br/> Forgot your password? No worries, let's get you a new one! Click on the link below to safely change it.</p>
+
+<a href="{{.PassphraseResetLink}}" style="color:white; text-decoration:none; text-transform:uppercase; font-weight: bold;">
+<table cellspacing="0" cellpadding="0" style="background-color:#297EF2; border-radius: 3px;">
+<tr><td colspan="3">&nbsp;</td></tr>
+<tr><td width="25">&nbsp;</td><td>Reset my password</td><td width="25">&nbsp;</td></tr>
+<tr><td colspan="3">&nbsp;</td></tr>
+</table>
+</a>
+
+<p>You never asked for a new password? In this case you can forget this email.<br/> Just so you know, you have 24 hours to choose a new password, then this email will self-destruct.</p>`
 
 	mailResetPassText = `` +
-		`To renew your passphrase, please go to this URL:
-{{.PassphraseResetLink}}`
+		`Cozy Cloud
+
+Reset you Cozy password
+
+Hello {{.RecipientName}}.
+Forgot your password? No worries, let's get you a new one! Click on the link below to safely change it.
+
+To reset your password, please go to this URL:
+{{.PassphraseResetLink}}
+
+You never asked for a new password? In this case you can forget this email.
+Just so you know, you have 24 hours to choose a new password, then this email will self-destruct.`
 
 	//  --- sharing_request ---
 	mailSharingRequestHTML = `` +
