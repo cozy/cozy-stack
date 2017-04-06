@@ -30,7 +30,7 @@ const (
 </table>
 </a>
 
-<p>You never asked for a new password? In this case you can forget this email.<br/> Just so you know, you have 24 hours to choose a new password, then this email will self-destruct.</p>`
+<p>You never asked for a new password? In this case you can forget this email.<br/> Just so you know, you have 15 minutes to choose a new password, then this email will self-destruct.</p>`
 
 	mailResetPassText = `` +
 		`Cozy Cloud
@@ -44,7 +44,7 @@ To reset your password, please go to this URL:
 {{.PassphraseResetLink}}
 
 You never asked for a new password? In this case you can forget this email.
-Just so you know, you have 24 hours to choose a new password, then this email will self-destruct.`
+Just so you know, you have 15 minutes to choose a new password, then this email will self-destruct.`
 
 	//  --- sharing_request ---
 	mailSharingRequestHTML = `` +
