@@ -178,9 +178,10 @@ func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
 	panic(fmt.Errorf("Unknown application type %s", string(appsType)))
 }
 
-// DiskQuota returns the number of bytes allowed on the disk to the user.
-func (i *Instance) DiskQuota() int64 {
-	return i.BytesDiskQuota
+// ThumbsFS returns the hidden filesystem for storing the thumbnails of the
+// photos/image
+func (i *Instance) ThumbsFS() afero.Fs {
+	return i.hiddenFS(vfs.ThumbsDirName)
 }
 
 func (i *Instance) hiddenFS(dirname string) afero.Fs {
@@ -193,6 +194,11 @@ func (i *Instance) hiddenFS(dirname string) afero.Fs {
 		panic("Not implemented")
 	}
 	return nil
+}
+
+// DiskQuota returns the number of bytes allowed on the disk to the user.
+func (i *Instance) DiskQuota() int64 {
+	return i.BytesDiskQuota
 }
 
 // StartJobSystem creates all the resources necessary for the instance's job

@@ -3,11 +3,22 @@ package workers
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
+
+var formats = map[string]string{
+	"small":  "640x480",
+	"medium": "1280x720",
+	"large":  "1920x1080",
+}
 
 type imageMessage struct {
 	Event struct {
@@ -27,30 +38,93 @@ func init() {
 
 // ThumbnailWorker is a worker that creates thumbnails for photos and images.
 func ThumbnailWorker(ctx context.Context, m *jobs.Message) error {
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	msg := &imageMessage{}
 	if err := m.Unmarshal(msg); err != nil {
 		return err
 	}
-	fmt.Printf("[jobs] thumbnails %s: %#v", domain, msg)
+	domain := ctx.Value(jobs.ContextDomainKey).(string)
+	i, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 	switch msg.Event.Type {
 	case "CREATED":
-		return generateThumbnails(domain, msg.Event.Doc)
+		return generateThumbnails(ctx, i, msg.Event.Doc)
 	case "UPDATED":
-		if err := removeThumbnails(domain, msg.Event.Doc); err != nil {
+		if err = removeThumbnails(i, msg.Event.Doc); err != nil {
 			return err
 		}
-		return generateThumbnails(domain, msg.Event.Doc)
+		return generateThumbnails(ctx, i, msg.Event.Doc)
 	case "DELETED":
-		return removeThumbnails(domain, msg.Event.Doc)
+		return removeThumbnails(i, msg.Event.Doc)
 	}
 	return fmt.Errorf("Unknown type %s for image event", msg.Event.Type)
 }
 
-func generateThumbnails(domain string, image vfs.FileDoc) error {
-	return nil
+func generateThumbnails(ctx context.Context, i *instance.Instance, img vfs.FileDoc) error {
+	fs := i.ThumbsFS()
+	if err := fs.MkdirAll(thumbDir(img), 0755); err != nil {
+		return err
+	}
+	flags := os.O_RDWR | os.O_CREATE
+	in, err := i.VFS().OpenFile(&img)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	largeName := thumbName(img, "large")
+	large, err := fs.OpenFile(largeName, flags, 0640)
+	if err != nil {
+		return err
+	}
+	defer large.Close()
+	if err = generateThumb(ctx, in, large, formats["large"]); err != nil {
+		return err
+	}
+	mediumName := thumbName(img, "medium")
+	medium, err := fs.OpenFile(mediumName, flags, 0640)
+	if err != nil {
+		return err
+	}
+	defer medium.Close()
+	large.Seek(0, 0)
+	if err = generateThumb(ctx, large, medium, formats["medium"]); err != nil {
+		return err
+	}
+	smallName := thumbName(img, "small")
+	small, err := fs.OpenFile(smallName, flags, 0640)
+	if err != nil {
+		return err
+	}
+	defer small.Close()
+	medium.Seek(0, 0)
+	return generateThumb(ctx, medium, small, formats["small"])
 }
 
-func removeThumbnails(domain string, image vfs.FileDoc) error {
-	return nil
+func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string) error {
+	args := []string{"-", "-limit", "Memory", "2GB", "-thumbnail", format, "jpg:-"}
+	cmd := exec.CommandContext(ctx, "convert", args...)
+	cmd.Stdin = in
+	cmd.Stdout = out
+	return cmd.Run()
+}
+
+func removeThumbnails(i *instance.Instance, img vfs.FileDoc) error {
+	var e error
+	for format := range formats {
+		if err := i.ThumbsFS().Remove(thumbName(img, format)); err != nil {
+			e = err
+		}
+	}
+	return e
+}
+
+func thumbName(img vfs.FileDoc, format string) string {
+	dir := thumbDir(img)
+	name := fmt.Sprintf("%s-%s.jpg", img.ID(), format)
+	return path.Join(dir, name)
+}
+
+func thumbDir(img vfs.FileDoc) string {
+	return img.ID()[:4]
 }
