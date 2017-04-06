@@ -201,7 +201,7 @@ func TestServeWithAnIntents(t *testing.T) {
 	intent := &intents.Intent{
 		Action: "PICK",
 		Type:   "io.cozy.foos",
-		Client: "test-app",
+		Client: "io.cozy.apps/test-app",
 	}
 	err := intent.Save(testInstance)
 	assert.NoError(t, err)
