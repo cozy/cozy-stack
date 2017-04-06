@@ -23,7 +23,7 @@ const (
 <a href="{{.PassphraseResetLink}}" style="color:white; text-decoration:none; text-transform:uppercase; font-weight: bold;">
 <table cellspacing="0" cellpadding="0" style="background-color:#297EF2; border-radius: 3px;">
 <tr><td colspan="3">&nbsp;</td></tr>
-<tr><td width="25">&nbsp;</td><td>Reset my password</td><td width="25">&nbsp;</td></tr>
+<tr><td width="25">&nbsp;</td><td style="color:white;">Reset my password</td><td width="25">&nbsp;</td></tr>
 <tr><td colspan="3">&nbsp;</td></tr>
 </table>
 </a>
@@ -50,7 +50,7 @@ Just so you know, you have 15 minutes to choose a new password, then this email 
 <a href="{{.PassphraseResetLink}}" style="color:white; text-decoration:none; text-transform:uppercase; font-weight: bold;">
 <table cellspacing="0" cellpadding="0" style="background-color:#297EF2; border-radius: 3px;">
 <tr><td colspan="3">&nbsp;</td></tr>
-<tr><td width="25">&nbsp;</td><td>Je réinitialise mon mot de passe</td><td width="25">&nbsp;</td></tr>
+<tr><td width="25">&nbsp;</td><td style="color:white;">Je réinitialise mon mot de passe</td><td width="25">&nbsp;</td></tr>
 <tr><td colspan="3">&nbsp;</td></tr>
 </table>
 </a>
