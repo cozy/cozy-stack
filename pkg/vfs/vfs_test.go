@@ -632,6 +632,9 @@ func TestCreateFileTooBig(t *testing.T) {
 		false,
 		nil,
 	)
+	if !assert.NoError(t, err) {
+		return
+	}
 	f, err = fs.CreateFile(doc3, nil)
 	assert.NoError(t, err)
 	_, err = io.Copy(f, bytes.NewReader(crypto.GenerateRandomBytes(int(doc3.ByteSize))))
@@ -654,6 +657,9 @@ func TestCreateFileTooBig(t *testing.T) {
 		false,
 		nil,
 	)
+	if !assert.NoError(t, err) {
+		return
+	}
 	f, err = fs.CreateFile(doc4, nil)
 	assert.NoError(t, err)
 	_, err = io.Copy(f, bytes.NewReader(crypto.GenerateRandomBytes(int(diskQuota/2+1))))

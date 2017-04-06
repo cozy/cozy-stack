@@ -14,7 +14,9 @@ import (
 )
 
 type apiDiskUsage struct {
-	Used int64 `json:"used,string"`
+	Used      int64 `json:"used,string"`
+	TotalSize int64 `json:"total_size,string"`
+	IsLimited bool  `json:"is_limited"`
 }
 
 func (j *apiDiskUsage) ID() string                             { return consts.DiskUsageID }
@@ -43,11 +45,19 @@ func diskUsage(c echo.Context) error {
 		}
 	}
 
-	used, err := instance.VFS().DiskUsage()
+	fs := instance.VFS()
+	used, err := fs.DiskUsage()
+	if err != nil {
+		return err
+	}
+
+	quota, err := fs.DiskQuota()
 	if err != nil {
 		return err
 	}
 
 	result.Used = used
+	result.TotalSize = quota
+	result.IsLimited = quota > 0
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }
