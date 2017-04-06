@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -75,7 +76,11 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 	if !allowed {
 		return
 	}
-	from := i.SubDomain(intent.Client).Host
+	parts := strings.SplitN(intent.Client, "/", 2)
+	if len(parts) < 2 || parts[0] != consts.Apps {
+		return
+	}
+	from := i.SubDomain(parts[1]).String()
 	hdr := fmt.Sprintf("%s %s", middlewares.XFrameAllowFrom, from)
 	c.Response().Header().Set(echo.HeaderXFrameOptions, hdr)
 }
