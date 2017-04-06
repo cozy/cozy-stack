@@ -69,7 +69,7 @@ do_start() {
 		echo "ok"
 	fi
 
-	trap "trap - SIGTERM && kill 2>&1 > /dev/null -- -${$}" SIGINT SIGTERM EXIT
+	trap 'trap - SIGTERM && kill 2>&1 > /dev/null -- -${$}' SIGINT SIGTERM EXIT
 
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb

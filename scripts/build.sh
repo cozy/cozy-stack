@@ -6,10 +6,9 @@ COZY_ENV_DFL=production
 [ -z "${COZY_ENV}" ] && COZY_ENV="${COZY_ENV_DFL}"
 [ -z "${COZY_DEPLOY_USER}" ] && COZY_DEPLOY_USER="${USER}"
 
-pushd `dirname $0` > /dev/null
-WORK_DIR=$(dirname "`pwd`")
+pushd "$(dirname "$0")" > /dev/null
+WORK_DIR=$(dirname "$(pwd)")
 popd > /dev/null
-ASSETS=./assets
 
 if [ -r "${WORK_DIR}/local.env" ]; then
 	. "${WORK_DIR}/local.env"
@@ -53,16 +52,16 @@ do_prepare_ldflags() {
 	eval "$(go env)"
 
 	VERSION_OS_ARCH="${GOOS}-${GOARCH}"
-	VERSION_STRING=`git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
+	VERSION_STRING=$(git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
 		describe --tags --dirty 2> /dev/null | \
-		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g'`
+		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g')
 
 	if [ "${VERSION_STRING}" == "" ]; then
-		VERSION_STRING=v0-`git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD`
+		VERSION_STRING="v0-$(git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD)"
 		echo_wrn "No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 	fi
 
-	if [ `git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD | wc -l` -gt 0 ]; then
+	if [ "$(git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD | wc -l)" -gt 0 ]; then
 		if [ "${COZY_ENV}" == production ]; then
 			echo_err "Can not build a production release in a dirty work-tree"
 			exit 1
@@ -74,7 +73,7 @@ do_prepare_ldflags() {
 		VERSION_STRING="${VERSION_STRING}-dev"
 	fi
 
-	BUILD_TIME=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+	BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 	BUILD_MODE="${COZY_ENV}"
 }
 
@@ -105,8 +104,8 @@ do_release() {
 	do_build
 	openssl dgst -sha256 -hex "${BINARY}" > "${BINARY}.sha256"
 
-	printf "${BINARY}\t"
-	cat "${BINARY}.sha256" | sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g'
+	printf "%s\t" "${BINARY}"
+	sed -E 's/SHA256\((.*)\)= ([a-f0-9]+)$/\2/g' < "${BINARY}.sha256"
 }
 
 do_install() {
@@ -114,7 +113,7 @@ do_install() {
 
 	do_prepare_ldflags
 
-	printf "installing cozy-stack in ${GOPATH}... "
+	printf "installing cozy-stack in %s... " "${GOPATH}"
 	go install -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
@@ -134,7 +133,7 @@ do_build() {
 		BINARY="${1}"
 	fi
 
-	printf "building cozy-stack in ${BINARY}... "
+	printf "building cozy-stack in %s... " "${BINARY}"
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
@@ -193,7 +192,7 @@ do_docker_dev_image() {
 	docker_work_dir="${WORK_DIR}/.docker-work"
 	mkdir "${docker_work_dir}"
 
-	trap "trap - SIGTERM && rm -rf "${docker_work_dir}" > /dev/null -- -${$}" SIGINT SIGTERM EXIT
+	trap 'trap - SIGTERM && rm -rf "${docker_work_dir}" > /dev/null -- -${$}' SIGINT SIGTERM EXIT
 
 	cp "${WORK_DIR}/scripts/Dockerfile" "${docker_work_dir}"
 	cp "${WORK_DIR}/scripts/cozy-app-dev.sh" "${docker_work_dir}"
@@ -217,19 +216,19 @@ prepare_assets() {
 	assets_src="${WORK_DIR}/assets"
 	assets_externals="${assets_src}/externals"
 
-	if [ `git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD -- "${assets_externals}" | wc -l` -gt 0 ]; then
+	if [ "$(git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD -- "${assets_externals}" | wc -l)" -gt 0 ]; then
 		echo_err "file ${assets_externals} is dirty."
 		echo_err "it should be commited into git in order to generate the asset file."
 		exit 1
 	fi
 
-	assets_mod_time=`git log --pretty=format:%cd -n 1 --date=iso "${assets_externals}"`
-	case "`uname -s`" in
+	assets_mod_time=$(git log --pretty=format:%cd -n 1 --date=iso "${assets_externals}")
+	case "$(uname -s)" in
 		Darwin)
-			assets_mod_time=`date -j -f '%Y-%m-%d %H:%M:%S %z' "${assets_mod_time}" +%Y%m%d%H%M.%S`
+			assets_mod_time=$(date -j -f '%Y-%m-%d %H:%M:%S %z' "${assets_mod_time}" +%Y%m%d%H%M.%S)
 			;;
 		*)
-			assets_mod_time=`date -d "${assets_mod_time}" +%Y%m%d%H%M.%S`
+			assets_mod_time=$(date -d "${assets_mod_time}" +%Y%m%d%H%M.%S)
 			;;
 	esac
 
@@ -251,7 +250,7 @@ prepare_assets() {
 			continue
 		fi
 
-		line_split=(${line})
+		IFS=" " read -r -a line_split <<< "${line}"
 		case "${line_split[0]}" in
 			name)
 				asset_name="${line_split[1]}"
@@ -279,7 +278,7 @@ prepare_assets() {
 download_asset() {
 	echo "${1}:"
 	mkdir -p "${assets_dst}/${1%/*}"
-	printf "\tdownloading ${1}... "
+	printf "\tdownloading %s... " "${1}"
 	set +e
 	curl -s --fail "${2}" > "${assets_dst}/${1}"
 	retc=${?}
@@ -293,7 +292,7 @@ download_asset() {
 	echo "ok"
 	if [ -n "${3}" ]; then
 		printf "\tchecking sha256... "
-		dgst=`cat "${assets_dst}/${1}" | openssl dgst -sha256 | sed 's/^.* //'`
+		dgst=$(openssl dgst -sha256 < "${assets_dst}/${1}" | sed 's/^.* //')
 		if [ "${3}" != "${dgst}" ]; then
 			echo "failed"
 			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}"
