@@ -414,13 +414,30 @@ func Create(opts *Options) (*Instance, error) {
 
 // Get retrieves the instance for a request by its host.
 func Get(domain string) (*Instance, error) {
+	cache := getCache()
+	var err error
+	i := cache.Get(domain)
+	if i == nil {
+		i, err = getFromCouch(domain)
+		if err != nil {
+			return nil, err
+		}
+		cache.Set(domain, i)
+	}
+
+	if err = i.makeVFS(); err != nil {
+		return nil, err
+	}
+	return i, nil
+}
+
+func getFromCouch(domain string) (*Instance, error) {
 	// FIXME temporary workaround to delete instances with no named indexes
 	errindex := couchdb.DefineIndexes(couchdb.GlobalDB, consts.GlobalIndexes)
 	if errindex != nil && !couchdb.IsNotFoundError(errindex) {
 		log.Error("[instance] could not define global indexes:", errindex)
 	}
 	// ---
-
 	var instances []*Instance
 	req := &couchdb.FindRequest{
 		UseIndex: "by-domain",
@@ -437,11 +454,8 @@ func Get(domain string) (*Instance, error) {
 	if len(instances) == 0 {
 		return nil, ErrNotFound
 	}
-	i := instances[0]
-	if err = i.makeVFS(); err != nil {
-		return nil, err
-	}
-	return i, nil
+
+	return instances[0], nil
 }
 
 var translations = make(map[string]*gotext.Po)
@@ -478,9 +492,17 @@ func List() ([]*Instance, error) {
 	return docs, nil
 }
 
+// Update is used to save changes made to an instance, it will invalidate
+// caching
+func Update(i *Instance) error {
+	getCache().Revoke(i.Domain)
+	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+}
+
 // Destroy is used to remove the instance. All the data linked to this
 // instance will be permanently deleted.
 func Destroy(domain string) (*Instance, error) {
+	defer getCache().Revoke(domain)
 	i, err := Get(domain)
 	if err != nil {
 		// FIXME temporary workaround to delete instances with no named indexes
@@ -537,7 +559,7 @@ func (i *Instance) RegisterPassphrase(pass, tok []byte) error {
 	}
 	i.RegisterToken = nil
 	i.setPassphraseAndSecret(hash)
-	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+	return Update(i)
 }
 
 // RequestPassphraseReset generates a new registration token for the user to
@@ -556,7 +578,7 @@ func (i *Instance) RequestPassphraseReset() error {
 	}
 	i.PassphraseResetToken = crypto.GenerateRandomBytes(passwordResetTokenLen)
 	i.PassphraseResetTime = time.Now().UTC().Add(passwordResetValidityDuration)
-	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
+	if err := Update(i); err != nil {
 		return err
 	}
 	// Send a mail containing the reset url for the user to actually reset its
@@ -605,7 +627,7 @@ func (i *Instance) PassphraseRenew(pass, tok []byte) error {
 	i.PassphraseResetToken = nil
 	i.PassphraseResetTime = time.Time{}
 	i.setPassphraseAndSecret(hash)
-	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+	return Update(i)
 }
 
 // UpdatePassphrase replace the passphrase
@@ -624,7 +646,7 @@ func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 		return err
 	}
 	i.setPassphraseAndSecret(hash)
-	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+	return Update(i)
 }
 
 func (i *Instance) setPassphraseAndSecret(hash []byte) {
@@ -653,7 +675,7 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 	}
 
 	i.PassphraseHash = newHash
-	err = couchdb.UpdateDoc(couchdb.GlobalDB, i)
+	err = Update(i)
 	if err != nil {
 		log.Error("[instance] Failed to update hash in db", err)
 	}

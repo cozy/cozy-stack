@@ -398,6 +398,32 @@ msgstr "bonjour %s"
 	assert.Equal(t, "hello toto", s)
 }
 
+func TestCache(t *testing.T) {
+	globalCache = nil
+	defer func() {
+		globalCache = nil
+	}()
+
+	i := &Instance{
+		DocID:  "fake-instance",
+		Domain: "cached.cozy.tools",
+		Locale: "zh",
+	}
+	getCache().Set("cached.cozy.tools", i)
+
+	i2, err := Get("cached.cozy.tools")
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, i2.Locale, "zh")
+
+	globalCache.Revoke("cached.cozy.tools")
+
+	_, err = Get("cached.cozy.tools")
+	assert.Error(t, err)
+
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
