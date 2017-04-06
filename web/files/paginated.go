@@ -29,6 +29,10 @@ type file struct {
 	doc *vfs.FileDoc
 }
 
+type apiArchive struct {
+	*vfs.Archive
+}
+
 func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
 	var count int64
 	var err error
@@ -159,6 +163,12 @@ func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.L
 	return jsonapi.Data(c, statusCode, newFile(doc), links)
 }
 
+var (
+	_ jsonapi.Object = (*apiArchive)(nil)
+	_ jsonapi.Object = (*dir)(nil)
+	_ jsonapi.Object = (*file)(nil)
+)
+
 func (d *dir) ID() string                             { return d.doc.ID() }
 func (d *dir) Rev() string                            { return d.doc.Rev() }
 func (d *dir) SetID(id string)                        { d.doc.SetID(id) }
@@ -169,6 +179,13 @@ func (d *dir) Included() []jsonapi.Object             { return d.included }
 func (d *dir) MarshalJSON() ([]byte, error)           { return json.Marshal(d.doc) }
 func (d *dir) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
+}
+
+func (a *apiArchive) Relationships() jsonapi.RelationshipMap { return nil }
+func (a *apiArchive) Included() []jsonapi.Object             { return nil }
+func (a *apiArchive) MarshalJSON() ([]byte, error)           { return json.Marshal(a.Archive) }
+func (a *apiArchive) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/files/archive/" + a.Secret}
 }
 
 func (f *file) ID() string        { return f.doc.ID() }
