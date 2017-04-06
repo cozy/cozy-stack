@@ -23,7 +23,7 @@ type AtTrigger struct {
 func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	at, err := time.Parse(time.RFC3339, infos.Arguments)
 	if err != nil {
-		return nil, ErrMalformedTigger
+		return nil, ErrMalformedTrigger
 	}
 	return &AtTrigger{
 		at:   at,
@@ -37,7 +37,7 @@ func NewAtTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 func NewInTrigger(infos *TriggerInfos) (*AtTrigger, error) {
 	d, err := time.ParseDuration(infos.Arguments)
 	if err != nil {
-		return nil, ErrMalformedTigger
+		return nil, ErrMalformedTrigger
 	}
 	at := time.Now().Add(d)
 	return &AtTrigger{

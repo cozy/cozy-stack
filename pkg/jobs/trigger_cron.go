@@ -19,7 +19,7 @@ type CronTrigger struct {
 func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	schedule, err := cron.Parse(infos.Arguments)
 	if err != nil {
-		return nil, ErrMalformedTigger
+		return nil, ErrMalformedTrigger
 	}
 	return &CronTrigger{
 		sched: schedule,
@@ -33,7 +33,7 @@ func NewCronTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 func NewEveryTrigger(infos *TriggerInfos) (*CronTrigger, error) {
 	schedule, err := cron.Parse("@every " + infos.Arguments)
 	if err != nil {
-		return nil, ErrMalformedTigger
+		return nil, ErrMalformedTrigger
 	}
 	return &CronTrigger{
 		sched: schedule,
