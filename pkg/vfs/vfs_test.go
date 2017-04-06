@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -578,6 +579,94 @@ func TestArchive(t *testing.T) {
 	}, zipfiles)
 }
 
+func TestCreateFileTooBig(t *testing.T) {
+	diskQuota = 1 << (1 * 10) // 1KB
+	defer func() { diskQuota = 0 }()
+
+	doc1, err := vfs.NewFileDoc(
+		"too-big",
+		consts.RootDirID,
+		diskQuota+1,
+		nil,
+		"",
+		"",
+		time.Now(),
+		false,
+		nil,
+	)
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = fs.CreateFile(doc1, nil)
+	assert.Equal(t, vfs.ErrFileTooBig, err)
+
+	doc2, err := vfs.NewFileDoc(
+		"too-big",
+		consts.RootDirID,
+		diskQuota/2,
+		nil,
+		"",
+		"",
+		time.Now(),
+		false,
+		nil,
+	)
+	if !assert.NoError(t, err) {
+		return
+	}
+	f, err := fs.CreateFile(doc2, nil)
+	assert.NoError(t, err)
+	assert.Error(t, f.Close())
+
+	_, err = fs.FileByPath("/too-big")
+	assert.True(t, os.IsNotExist(err))
+
+	doc3, err := vfs.NewFileDoc(
+		"too-big",
+		consts.RootDirID,
+		diskQuota/2,
+		nil,
+		"",
+		"",
+		time.Now(),
+		false,
+		nil,
+	)
+	f, err = fs.CreateFile(doc3, nil)
+	assert.NoError(t, err)
+	_, err = io.Copy(f, bytes.NewReader(crypto.GenerateRandomBytes(int(doc3.ByteSize))))
+	assert.NoError(t, err)
+	err = f.Close()
+	assert.NoError(t, err)
+
+	diskUsage, err := fs.DiskUsage()
+	assert.NoError(t, err)
+	assert.Equal(t, int64(diskQuota/2), diskUsage)
+
+	doc4, err := vfs.NewFileDoc(
+		"too-big2",
+		consts.RootDirID,
+		-1,
+		nil,
+		"",
+		"",
+		time.Now(),
+		false,
+		nil,
+	)
+	f, err = fs.CreateFile(doc4, nil)
+	assert.NoError(t, err)
+	_, err = io.Copy(f, bytes.NewReader(crypto.GenerateRandomBytes(int(diskQuota/2+1))))
+	assert.Error(t, err)
+	assert.Equal(t, vfs.ErrFileTooBig, err)
+	err = f.Close()
+	assert.Error(t, err)
+	assert.Equal(t, vfs.ErrFileTooBig, err)
+
+	_, err = fs.FileByPath("/too-big2")
+	assert.True(t, os.IsNotExist(err))
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
@@ -608,7 +697,6 @@ func TestMain(m *testing.M) {
 }
 
 func makeAferoFS() (vfs.VFS, func(), error) {
-	diskQuota = 3 << (3 * 10)
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
 		return nil, nil, errors.New("Could not create temporary directory.")
@@ -650,7 +738,6 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 func makeSwiftFS() (vfs.VFS, func(), error) {
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
-	diskQuota = 3 << (3 * 10)
 	swiftSrv, err := swifttest.NewSwiftServer("localhost")
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create swift server %s", err)
