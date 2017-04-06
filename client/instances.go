@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -77,6 +78,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 			"Timezone":   {opts.Timezone},
 			"Email":      {opts.Email},
 			"PublicName": {opts.PublicName},
+			"DiskQuota":  {strconv.FormatInt(opts.DiskQuota, 10)},
 			"Apps":       {strings.Join(opts.Apps, ",")},
 			"Dev":        {dev},
 			"Passphrase": {opts.Passphrase},
