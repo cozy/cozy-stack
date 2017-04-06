@@ -108,6 +108,7 @@ func TestSendSharingMails(t *testing.T) {
 	// OAuth client by creating an incomplete recipient document.
 	rec.URL = ""
 	// Add the recipient in the database.
+
 	err := couchdb.CreateDoc(in, rec)
 	if err != nil {
 		fmt.Printf("%v\n", err)

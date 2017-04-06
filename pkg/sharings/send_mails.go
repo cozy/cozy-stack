@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/jobs/workers"
+	"github.com/cozy/cozy-stack/pkg/jobs/workers/mails"
 )
 
 // The sharing-dependant information: the recipient's name, the sharer's public

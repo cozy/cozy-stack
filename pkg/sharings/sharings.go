@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/jobs/workers"
+	"github.com/cozy/cozy-stack/pkg/jobs/workers/sharings"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -208,6 +208,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 				URL:   domain,
 				Token: recStatus.AccessToken.AccessToken,
 			}
+
 			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, workers.SendOptions{
 				DocID:      val,
 				Update:     false,
