@@ -71,7 +71,7 @@ type Instance struct {
 	Locale string `json:"locale"`         // The locale used on the server
 	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
 
-	BytesDiskQuota int64 `json:"disk_quota,string"` // The total size in bytes allowed to the user
+	BytesDiskQuota int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
