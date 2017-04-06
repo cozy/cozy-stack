@@ -383,6 +383,7 @@ func (i *importer) upload(localname, distname string) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 
 	_, err = i.c.Upload(&client.Upload{
 		Name:     path.Base(distname),
