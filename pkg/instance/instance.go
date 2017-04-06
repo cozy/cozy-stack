@@ -555,8 +555,8 @@ func (i *Instance) RequestPassphraseReset() error {
 	})
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, &workers.MailOptions{
 		Mode:         workers.MailModeNoReply,
-		Subject:      "Password reset",
-		TemplateName: "passphrase_reset",
+		Subject:      i.Translate("Mail Password reset"),
+		TemplateName: "passphrase_reset_" + i.Locale,
 		TemplateValues: struct {
 			BaseURL             string
 			PassphraseResetLink string

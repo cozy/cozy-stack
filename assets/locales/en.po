@@ -24,6 +24,9 @@ msgstr "Show password"
 msgid "Login Submit"
 msgstr "Log in"
 
+msgid "Mail Password reset"
+msgstr "Reset you Cozy password"
+
 msgid "Passphrase reset Help"
 msgstr "Are you sure you want to reset your password?"
 
