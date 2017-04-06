@@ -216,7 +216,7 @@ func TestServeWithAnIntents(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	h := res.Header.Get(echo.HeaderXFrameOptions)
-	assert.Equal(t, "ALLOW-FROM test-app.cozywithapps.example.net", h)
+	assert.Equal(t, "ALLOW-FROM https://test-app.cozywithapps.example.net/", h)
 }
 
 func TestServeAppsWithACode(t *testing.T) {

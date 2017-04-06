@@ -75,7 +75,7 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 	if !allowed {
 		return
 	}
-	from := i.SubDomain(intent.Client).Host
+	from := i.SubDomain(intent.Client).String()
 	hdr := fmt.Sprintf("%s %s", middlewares.XFrameAllowFrom, from)
 	c.Response().Header().Set(echo.HeaderXFrameOptions, hdr)
 }
