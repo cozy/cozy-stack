@@ -128,10 +128,10 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 
-	var maxsize, newsize int64
+	var diskUsage, maxsize, newsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
-		diskUsage, err := sfs.DiskUsage()
+		diskUsage, err = sfs.DiskUsage()
 		if err != nil {
 			return nil, err
 		}

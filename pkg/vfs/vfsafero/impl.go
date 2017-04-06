@@ -120,10 +120,10 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 
-	var maxsize, newsize int64
+	var diskUsage, maxsize, newsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
-		diskUsage, err := afs.DiskUsage()
+		diskUsage, err = afs.DiskUsage()
 		if err != nil {
 			return nil, err
 		}
