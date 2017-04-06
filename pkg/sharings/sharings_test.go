@@ -1,8 +1,12 @@
 package sharings
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -18,23 +22,32 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	webAuth "github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
 var TestPrefix = couchdb.SimpleDatabasePrefix("couchdb-tests")
 var instanceSecret = crypto.GenerateRandomBytes(64)
-var in = &instance.Instance{
+var domainSharer = "test-sharing.sparta"
+var domainRecipient = "test-sharing.xerxes"
+
+/*var in = &instance.Instance{
 	OAuthSecret: instanceSecret,
-	Domain:      "test-sharing.sparta",
-}
-var recipientIn = &instance.Instance{
+	Domain:      domainSharer,
+}*/
+
+/*var recipientIn = &instance.Instance{
 	OAuthSecret: instanceSecret,
-	Domain:      "test-sharing.xerxes",
-}
+	Domain:      ,
+}*/
+var in *instance.Instance
+var recipientIn *instance.Instance
 var ts *httptest.Server
 var recipientURL string
 var testDocType = "io.cozy.tests"
@@ -46,6 +59,7 @@ func createServer() *httptest.Server {
 	handler.Use(injectInstance(recipientIn))
 	webAuth.Routes(handler.Group("/auth"))
 	data.Routes(handler.Group("/data"))
+	files.Routes(handler.Group("/files"))
 	ts = httptest.NewServer(handler)
 	return ts
 }
@@ -57,6 +71,53 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 			return next(c)
 		}
 	}
+}
+
+func createInstance(domain, publicName string) (*instance.Instance, error) {
+	opts := &instance.Options{
+		Domain:     domain,
+		PublicName: publicName,
+	}
+	return instance.Create(opts)
+
+}
+
+func makeAferoFS() (vfs.VFS, func(), error) {
+	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
+	index := vfs.NewCouchdbIndexer(db)
+	aferoFs, err := vfsafero.New(index, &url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = couchdb.ResetDB(db, consts.Files)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = couchdb.DefineViews(db, consts.ViewsByDoctype(consts.Files)); err != nil {
+		return nil, nil, err
+	}
+
+	err = aferoFs.InitFs()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return aferoFs, func() {
+		os.RemoveAll(tempdir)
+		couchdb.DeleteDB(db, consts.Files)
+	}, nil
 }
 
 func createSettings(instance *instance.Instance) {
@@ -93,14 +154,44 @@ func createTestDoc(t *testing.T) (*couchdb.JSONDoc, error) {
 	return doc, err
 }
 
-func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc, k, v string) error {
+func createTestFile(t *testing.T) (*vfs.FileDoc, *vfs.File, error) {
+	fileContent := "hello !"
+	fs := in.VFS()
+
+	fileDoc, err := vfs.NewFileDoc("testfile", "", -1, nil, "", "", time.Now(), false, []string{})
+	if err != nil {
+		return nil, nil, err
+	}
+	body := bytes.NewReader([]byte(fileContent))
+
+	f, err := fs.CreateFile(fileDoc, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	n, err := io.Copy(f, body)
+	assert.NoError(t, err)
+	assert.Equal(t, len(fileContent), int(n))
+
+	if err = f.Close(); err != nil {
+		return nil, nil, err
+	}
+	return fileDoc, &f, nil
+}
+
+func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc, k, v string) {
 	doc.M[k] = v
 	err := couchdb.UpdateDoc(in, doc)
 	assert.NoError(t, err)
-	return err
 }
 
-func createSharing(t *testing.T, sharingType string, doc *couchdb.JSONDoc) (*Sharing, error) {
+func updateTestFile(t *testing.T, fileDoc *vfs.FileDoc, patch *vfs.DocPatch) {
+	fs := in.VFS()
+	_, err := vfs.ModifyFileMetadata(fs, fileDoc, patch)
+	assert.NoError(t, err)
+}
+
+func createSharing(t *testing.T, sharingType string, docID string, withFile bool) (*Sharing, error) {
 	recipient, err := createRecipient(t)
 	assert.NoError(t, err)
 
@@ -113,11 +204,19 @@ func createSharing(t *testing.T, sharingType string, doc *couchdb.JSONDoc) (*Sha
 	}
 
 	var set permissions.Set
-	if doc != nil {
-		rule := permissions.Rule{
+	var rule permissions.Rule
+	if docID != "" && !withFile {
+		rule = permissions.Rule{
 			Type:   "io.cozy.tests",
 			Verbs:  permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
-			Values: []string{doc.ID()},
+			Values: []string{docID},
+		}
+		set = permissions.Set{rule}
+	} else if docID != "" && withFile {
+		rule = permissions.Rule{
+			Type:   consts.Files,
+			Verbs:  permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
+			Values: []string{docID, consts.RootDirID},
 		}
 		set = permissions.Set{rule}
 	}
@@ -157,14 +256,30 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 	assert.NoError(t, err)
 }
 
-func acceptedSharing(t *testing.T, sharingType string) {
-	testDoc, err := createTestDoc(t)
-	assert.NoError(t, err)
-	assert.NotNil(t, testDoc)
+func acceptedSharing(t *testing.T, sharingType string, isFile bool) {
+	var err error
+	var testDocFile *vfs.FileDoc
+	var testDoc *couchdb.JSONDoc
+	var sharing *Sharing
 
-	sharing, err := createSharing(t, sharingType, testDoc)
-	assert.NoError(t, err)
-	assert.NotNil(t, sharing)
+	// share doc
+	if !isFile {
+		testDoc, err = createTestDoc(t)
+		assert.NoError(t, err)
+		assert.NotNil(t, testDoc)
+		sharing, err = createSharing(t, sharingType, testDoc.ID(), false)
+		assert.NoError(t, err)
+		assert.NotNil(t, sharing)
+
+		// share file
+	} else {
+		testDocFile, _, err = createTestFile(t)
+		assert.NoError(t, err)
+		assert.NotNil(t, testDocFile)
+		sharing, err = createSharing(t, sharingType, testDocFile.ID(), true)
+		assert.NoError(t, err)
+		assert.NotNil(t, sharing)
+	}
 
 	// `createSharing` only creates one recipient.
 	clientID := sharing.RecipientsStatus[0].Client.ClientID
@@ -191,20 +306,37 @@ func acceptedSharing(t *testing.T, sharingType string) {
 	assert.NotNil(t, recStatus.AccessToken.AccessToken)
 	assert.NotNil(t, recStatus.AccessToken.RefreshToken)
 
+	// Check updates in case of master-* sharing
 	if sharingType == consts.MasterSlaveSharing ||
 		sharingType == consts.MasterMasterSharing {
 
-		updKey := "test"
-		updVal := "update me!"
-		err = updateTestDoc(t, testDoc, updKey, updVal)
-		assert.NoError(t, err)
-
 		// Wait for the document to arrive and check it
 		time.Sleep(2000 * time.Millisecond)
-		recDoc := &couchdb.JSONDoc{}
-		err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
-		assert.NoError(t, err)
-		assert.Equal(t, updVal, recDoc.M[updKey])
+
+		if !isFile {
+			updKey := "test"
+			updVal := "update me!"
+			updateTestDoc(t, testDoc, updKey, updVal)
+			assert.NoError(t, err)
+			time.Sleep(1000 * time.Millisecond)
+
+			recDoc := &couchdb.JSONDoc{}
+			err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
+			assert.NoError(t, err)
+			assert.Equal(t, updVal, recDoc.M[updKey])
+
+		} else {
+			newFileName := "mamajustchangedmyname"
+			patch := &vfs.DocPatch{
+				Name: &newFileName,
+			}
+			updateTestFile(t, testDocFile, patch)
+			assert.NoError(t, err)
+
+			// TODO check the file on the recipient side when we'll be able
+			// to create files with fixed id
+		}
+
 	}
 }
 
@@ -388,7 +520,7 @@ func TestSharingAcceptedStateNotUnique(t *testing.T) {
 }
 
 func TestSharingAcceptedBadCode(t *testing.T) {
-	s, err := createSharing(t, consts.OneShotSharing, nil)
+	s, err := createSharing(t, consts.OneShotSharing, "", false)
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -400,12 +532,15 @@ func TestSharingAcceptedBadCode(t *testing.T) {
 }
 
 func TestOneShotSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.OneShotSharing)
+	acceptedSharing(t, consts.OneShotSharing, false)
 }
 
 func TestMasterSlaveSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.MasterSlaveSharing)
+	acceptedSharing(t, consts.MasterSlaveSharing, false)
+}
 
+func TestOneShotFileSharingAcceptedSuccess(t *testing.T) {
+	acceptedSharing(t, consts.OneShotSharing, true)
 }
 
 func TestSharingRefusedNoSharing(t *testing.T) {
@@ -604,6 +739,29 @@ func TestMain(m *testing.M) {
 	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test needs couchdb to run.")
+		os.Exit(1)
+	}
+
+	// Change the default config to persist the vfs
+	tempdir, err := ioutil.TempDir("", "cozy-stack")
+	if err != nil {
+		fmt.Println("Could not create temporary directory.")
+		os.Exit(1)
+	}
+	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
+
+	// The instance must be created in db in order to retrieve it from
+	// the share_data worker
+	_, _ = instance.Destroy(domainSharer)
+	in, err = createInstance(domainSharer, "Alice")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	_, _ = instance.Destroy(domainRecipient)
+	recipientIn, err = createInstance(domainRecipient, "Bob")
+	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
