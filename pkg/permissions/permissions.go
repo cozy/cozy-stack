@@ -8,7 +8,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
 
@@ -66,17 +65,6 @@ func (p *Permission) SetID(id string) { p.PID = id }
 
 // SetRev implements jsonapi.Doc
 func (p *Permission) SetRev(rev string) { p.PRev = rev }
-
-// Relationships implements jsonapi.Doc
-func (p *Permission) Relationships() jsonapi.RelationshipMap { return nil }
-
-// Included implements jsonapi.Doc
-func (p *Permission) Included() []jsonapi.Object { return nil }
-
-// Links implements jsonapi.Doc
-func (p *Permission) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
-}
 
 // AddRules add some rules to the permission doc
 func (p *Permission) AddRules(rules ...Rule) {

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -26,6 +27,10 @@ type dir struct {
 
 type file struct {
 	doc *vfs.FileDoc
+}
+
+type apiArchive struct {
+	*vfs.Archive
 }
 
 func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
@@ -55,7 +60,7 @@ func newDir(doc *vfs.DirDoc) *dir {
 }
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-	relsData := make([]jsonapi.ResourceIdentifier, 0)
+	relsData := make([]couchdb.DocReference, 0)
 	included := make([]jsonapi.Object, 0)
 
 	count, iterOpts, err := paginationConfig(c)
@@ -81,11 +86,11 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		} else {
 			included = append(included, newFile(f))
 		}
-		var ri jsonapi.ResourceIdentifier
+		var ri couchdb.DocReference
 		if d != nil {
-			ri = jsonapi.ResourceIdentifier{ID: d.ID(), Type: d.DocType()}
+			ri = couchdb.DocReference{ID: d.ID(), Type: d.DocType()}
 		} else {
-			ri = jsonapi.ResourceIdentifier{ID: f.ID(), Type: f.DocType()}
+			ri = couchdb.DocReference{ID: f.ID(), Type: f.DocType()}
 		}
 		relsData = append(relsData, ri)
 	}
@@ -96,7 +101,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 			Links: &jsonapi.LinksList{
 				Related: "/files/" + doc.DirID,
 			},
-			Data: jsonapi.ResourceIdentifier{
+			Data: couchdb.DocReference{
 				ID:   doc.DirID,
 				Type: consts.Files,
 			},
@@ -158,6 +163,12 @@ func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.L
 	return jsonapi.Data(c, statusCode, newFile(doc), links)
 }
 
+var (
+	_ jsonapi.Object = (*apiArchive)(nil)
+	_ jsonapi.Object = (*dir)(nil)
+	_ jsonapi.Object = (*file)(nil)
+)
+
 func (d *dir) ID() string                             { return d.doc.ID() }
 func (d *dir) Rev() string                            { return d.doc.Rev() }
 func (d *dir) SetID(id string)                        { d.doc.SetID(id) }
@@ -168,6 +179,13 @@ func (d *dir) Included() []jsonapi.Object             { return d.included }
 func (d *dir) MarshalJSON() ([]byte, error)           { return json.Marshal(d.doc) }
 func (d *dir) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/" + d.doc.DocID}
+}
+
+func (a *apiArchive) Relationships() jsonapi.RelationshipMap { return nil }
+func (a *apiArchive) Included() []jsonapi.Object             { return nil }
+func (a *apiArchive) MarshalJSON() ([]byte, error)           { return json.Marshal(a.Archive) }
+func (a *apiArchive) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/files/archive/" + a.Secret}
 }
 
 func (f *file) ID() string        { return f.doc.ID() }
@@ -181,7 +199,7 @@ func (f *file) Relationships() jsonapi.RelationshipMap {
 			Links: &jsonapi.LinksList{
 				Related: "/files/" + f.doc.DirID,
 			},
-			Data: jsonapi.ResourceIdentifier{
+			Data: couchdb.DocReference{
 				ID:   f.doc.DirID,
 				Type: consts.Files,
 			},

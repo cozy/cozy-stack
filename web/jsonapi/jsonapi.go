@@ -88,7 +88,7 @@ func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) e
 
 // DataRelations can be called to send a Relations page,
 // a list of ResourceIdentifier
-func DataRelations(c echo.Context, statusCode int, refs []ResourceIdentifier, links *LinksList) error {
+func DataRelations(c echo.Context, statusCode int, refs []couchdb.DocReference, links *LinksList) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return InternalServerError(err)
@@ -151,8 +151,8 @@ func Bind(req *http.Request, attrs interface{}) (*ObjectMarshalling, error) {
 }
 
 // BindRelations extracts a Relationships request ( a list of ResourceIdentifier)
-func BindRelations(req *http.Request) ([]ResourceIdentifier, error) {
-	var out []ResourceIdentifier
+func BindRelations(req *http.Request) ([]couchdb.DocReference, error) {
+	var out []couchdb.DocReference
 	decoder := json.NewDecoder(req.Body)
 	var doc *Document
 	if err := decoder.Decode(&doc); err != nil {
@@ -163,11 +163,11 @@ func BindRelations(req *http.Request) ([]ResourceIdentifier, error) {
 	}
 	// Attempt Unmarshaling either as ResourceIdentifier or []ResourceIdentifier
 	if err := json.Unmarshal(*doc.Data, &out); err != nil {
-		var ri ResourceIdentifier
+		var ri couchdb.DocReference
 		if err = json.Unmarshal(*doc.Data, &ri); err != nil {
 			return nil, err
 		}
-		out = []ResourceIdentifier{ri}
+		out = []couchdb.DocReference{ri}
 		return out, nil
 	}
 	return out, nil

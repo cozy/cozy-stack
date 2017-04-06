@@ -1,6 +1,7 @@
 package instances
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -11,6 +12,29 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
+
+type apiInstance struct {
+	*instance.Instance
+}
+
+func (i *apiInstance) MarshalJSON() ([]byte, error) {
+	return json.Marshal(i.Instance)
+}
+
+// Links is used to generate a JSON-API link for the instance
+func (i *apiInstance) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/instances/" + i.Instance.DocID}
+}
+
+// Relationships is used to generate the content relationship in JSON-API format
+func (i *apiInstance) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the jsonapi.Object interface
+func (i *apiInstance) Included() []jsonapi.Object {
+	return nil
+}
 
 func createHandler(c echo.Context) error {
 	in, err := instance.Create(&instance.Options{
@@ -34,7 +58,7 @@ func createHandler(c echo.Context) error {
 			return err
 		}
 	}
-	return jsonapi.Data(c, http.StatusCreated, in, nil)
+	return jsonapi.Data(c, http.StatusCreated, &apiInstance{in}, nil)
 }
 
 func listHandler(c echo.Context) error {
@@ -49,7 +73,7 @@ func listHandler(c echo.Context) error {
 		in.SessionSecret = nil
 		in.RegisterToken = nil
 		in.PassphraseHash = nil
-		objs[i] = in
+		objs[i] = &apiInstance{in}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
@@ -61,7 +85,7 @@ func deleteHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, i, nil)
+	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
 }
 
 func createToken(c echo.Context) error {

@@ -28,7 +28,7 @@ func TestListReferencesHandler(t *testing.T) {
 
 	var result struct {
 		Links jsonapi.LinksList
-		Data  []jsonapi.ResourceIdentifier `json:"data"`
+		Data  []couchdb.DocReference `json:"data"`
 	}
 	_, res, err := doRequest(req, &result)
 
@@ -39,7 +39,7 @@ func TestListReferencesHandler(t *testing.T) {
 
 	var result2 struct {
 		Links jsonapi.LinksList
-		Data  []jsonapi.ResourceIdentifier `json:"data"`
+		Data  []couchdb.DocReference `json:"data"`
 	}
 	req2, _ := http.NewRequest("GET", url+"?page[limit]=3", nil)
 	req2.Header.Add("Authorization", "Bearer "+token)
@@ -52,7 +52,7 @@ func TestListReferencesHandler(t *testing.T) {
 
 	var result3 struct {
 		Links jsonapi.LinksList
-		Data  []jsonapi.ResourceIdentifier `json:"data"`
+		Data  []couchdb.DocReference `json:"data"`
 	}
 	req3, _ := http.NewRequest("GET", ts.URL+result2.Links.Next, nil)
 	req3.Header.Add("Authorization", "Bearer "+token)
@@ -87,7 +87,7 @@ func TestAddReferencesHandler(t *testing.T) {
 
 	// update it
 	var in = jsonReader(jsonapi.Relationship{
-		Data: []jsonapi.ResourceIdentifier{
+		Data: []couchdb.DocReference{
 			{
 				ID:   filedoc.ID(),
 				Type: filedoc.DocType(),
@@ -121,7 +121,7 @@ func TestRemoveReferencesHandler(t *testing.T) {
 
 	// update it
 	var in = jsonReader(jsonapi.Relationship{
-		Data: []jsonapi.ResourceIdentifier{
+		Data: []couchdb.DocReference{
 			{ID: f8, Type: consts.Files},
 			{ID: f6, Type: consts.Files},
 		},
@@ -157,7 +157,7 @@ func makeReferencedTestFile(t *testing.T, doc couchdb.Doc, name string) string {
 		return ""
 	}
 
-	filedoc.ReferencedBy = []jsonapi.ResourceIdentifier{
+	filedoc.ReferencedBy = []couchdb.DocReference{
 		{
 			ID:   doc.ID(),
 			Type: doc.DocType(),

@@ -1,6 +1,7 @@
 package sharings
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 
@@ -11,6 +12,60 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
+
+type apiSharing struct {
+	*sharings.Sharing
+}
+
+func (s *apiSharing) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Sharing)
+}
+func (s *apiSharing) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
+}
+
+// Relationships is part of the jsonapi.Object interface
+// It is used to generate the recipients relationships
+func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
+	l := len(s.RecipientsStatus)
+	i := 0
+
+	data := make([]couchdb.DocReference, l)
+	for _, rec := range s.RecipientsStatus {
+		r := rec.RefRecipient
+		data[i] = couchdb.DocReference{ID: r.ID, Type: r.Type}
+		i++
+	}
+	contents := jsonapi.Relationship{Data: data}
+	return jsonapi.RelationshipMap{"recipients": contents}
+}
+
+// Included is part of the jsonapi.Object interface
+func (s *apiSharing) Included() []jsonapi.Object {
+	var included []jsonapi.Object
+	for _, rec := range s.RecipientsStatus {
+		r := rec.GetCachedRecipient()
+		included = append(included, &apiRecipient{r})
+	}
+	return included
+}
+
+type apiRecipient struct {
+	*sharings.Recipient
+}
+
+func (r *apiRecipient) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.Recipient)
+}
+
+func (r *apiRecipient) Relationships() jsonapi.RelationshipMap { return nil }
+func (r *apiRecipient) Included() []jsonapi.Object             { return nil }
+func (r *apiRecipient) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
+}
+
+var _ jsonapi.Object = (*apiSharing)(nil)
+var _ jsonapi.Object = (*apiRecipient)(nil)
 
 // SharingAnswer handles a sharing answer from the sharer side
 func SharingAnswer(c echo.Context) error {
@@ -49,7 +104,7 @@ func AddRecipient(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	return jsonapi.Data(c, http.StatusCreated, recipient, nil)
+	return jsonapi.Data(c, http.StatusCreated, &apiRecipient{recipient}, nil)
 }
 
 // SharingRequest handles a sharing request from the recipient side.
@@ -94,7 +149,7 @@ func CreateSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	return jsonapi.Data(c, http.StatusCreated, sharing, nil)
+	return jsonapi.Data(c, http.StatusCreated, &apiSharing{sharing}, nil)
 }
 
 // SendSharingMails sends the mails requests for the provided sharing.

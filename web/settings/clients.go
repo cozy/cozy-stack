@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -11,6 +12,29 @@ import (
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
+
+type apiOauthClient struct{ *oauth.Client }
+
+func (c *apiOauthClient) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.Client)
+}
+
+// Links is used to generate a JSON-API link for the client - see
+// jsonapi.Object interface
+func (c *apiOauthClient) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/settings/clients/" + c.ID()}
+}
+
+// Relationships is used to generate the parent relationship in JSON-API format
+// - see jsonapi.Object interface
+func (c *apiOauthClient) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the jsonapi.Object interface
+func (c *apiOauthClient) Included() []jsonapi.Object {
+	return []jsonapi.Object{}
+}
 
 func listClients(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -26,7 +50,7 @@ func listClients(c echo.Context) error {
 
 	objs := make([]jsonapi.Object, len(clients))
 	for i, d := range clients {
-		objs[i] = jsonapi.Object(d)
+		objs[i] = jsonapi.Object(&apiOauthClient{d})
 	}
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }

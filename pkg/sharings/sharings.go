@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // Sharing contains all the information about a sharing
@@ -70,11 +69,6 @@ func (s *Sharing) SetID(id string) { s.SID = id }
 // SetRev changes the sharing revision
 func (s *Sharing) SetRev(rev string) { s.SRev = rev }
 
-// Links implements jsonapi.Doc
-func (s *Sharing) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
-}
-
 // RecStatus returns the sharing recipients status
 func (s *Sharing) RecStatus(db couchdb.Database) ([]*RecipientStatus, error) {
 	var rStatus []*RecipientStatus
@@ -106,32 +100,6 @@ func (s *Sharing) Recipients(db couchdb.Database) ([]*Recipient, error) {
 	}
 
 	return recipients, nil
-}
-
-// Relationships is part of the jsonapi.Object interface
-// It is used to generate the recipients relationships
-func (s *Sharing) Relationships() jsonapi.RelationshipMap {
-	l := len(s.RecipientsStatus)
-	i := 0
-
-	data := make([]jsonapi.ResourceIdentifier, l)
-	for _, rec := range s.RecipientsStatus {
-		r := rec.recipient
-		data[i] = jsonapi.ResourceIdentifier{ID: r.ID(), Type: r.DocType()}
-		i++
-	}
-	contents := jsonapi.Relationship{Data: data}
-	return jsonapi.RelationshipMap{"recipients": contents}
-}
-
-// Included is part of the jsonapi.Object interface
-func (s *Sharing) Included() []jsonapi.Object {
-	var included []jsonapi.Object
-	for _, rec := range s.RecipientsStatus {
-		r := rec.recipient
-		included = append(included, r)
-	}
-	return included
 }
 
 // GetSharingRecipientFromClientID returns the Recipient associated with the
@@ -443,6 +411,5 @@ func CreateSharingAndRegisterSharer(instance *instance.Instance, sharing *Sharin
 }
 
 var (
-	_ couchdb.Doc    = &Sharing{}
-	_ jsonapi.Object = &Sharing{}
+	_ couchdb.Doc = &Sharing{}
 )

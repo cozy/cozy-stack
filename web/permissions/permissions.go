@@ -40,6 +40,25 @@ const ContextPermissionSet = "permissions_set"
 // #nosec
 const ContextClaims = "token_claims"
 
+type apiPermission struct {
+	*permissions.Permission
+}
+
+func (p *apiPermission) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.Permission)
+}
+
+// Relationships implements jsonapi.Doc
+func (p *apiPermission) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Included implements jsonapi.Doc
+func (p *apiPermission) Included() []jsonapi.Object { return nil }
+
+// Links implements jsonapi.Doc
+func (p *apiPermission) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
+}
+
 func displayPermissions(c echo.Context) error {
 	doc, err := GetPermission(c)
 
@@ -90,7 +109,7 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, pdoc, nil)
+	return jsonapi.Data(c, http.StatusOK, &apiPermission{pdoc}, nil)
 }
 
 type refAndVerb struct {
@@ -134,8 +153,8 @@ func listPermissionsByDoctype(c echo.Context) error {
 	}
 
 	out := make([]jsonapi.Object, len(perms))
-	for i := range perms {
-		out[i] = perms[i]
+	for i, p := range perms {
+		out[i] = &apiPermission{p}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, out, links)
@@ -225,7 +244,7 @@ func patchPermission(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, toPatch, nil)
+	return jsonapi.Data(c, http.StatusOK, &apiPermission{toPatch}, nil)
 }
 
 func revokePermission(c echo.Context) error {

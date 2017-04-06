@@ -8,7 +8,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +17,7 @@ var rec = &Recipient{
 }
 
 var recStatus = &RecipientStatus{
-	RefRecipient: jsonapi.ResourceIdentifier{
+	RefRecipient: couchdb.DocReference{
 		Type: consts.Recipients,
 	},
 	Client: &auth.Client{

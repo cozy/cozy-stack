@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 // ZipMime is the content-type for zip archives
@@ -143,18 +142,3 @@ func (a *Archive) SetID(_ string) {}
 
 // SetRev makes Archive a jsonapi.Object
 func (a *Archive) SetRev(_ string) {}
-
-// Relationships makes Archive a jsonapi.Object
-func (a *Archive) Relationships() jsonapi.RelationshipMap { return nil }
-
-// Included makes Archive a jsonapi.Object
-func (a *Archive) Included() []jsonapi.Object { return nil }
-
-// Links makes Archive a jsonapi.Object
-func (a *Archive) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/files/archive/" + a.Secret}
-}
-
-var (
-	_ jsonapi.Object = &Archive{}
-)

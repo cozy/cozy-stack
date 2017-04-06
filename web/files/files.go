@@ -432,7 +432,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 		Related: "/files/archive/" + secret + "/" + fakeName + ".zip",
 	}
 
-	return jsonapi.Data(c, http.StatusOK, archive, links)
+	return jsonapi.Data(c, http.StatusOK, &apiArchive{archive}, links)
 }
 
 // FileDownloadCreateHandler stores the required path into a secret
