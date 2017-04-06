@@ -15,7 +15,7 @@ import (
 
 type apiDiskUsage struct {
 	Used      int64 `json:"used,string"`
-	TotalSize int64 `json:"total_size,string"`
+	Quota     int64 `json:"quota,string"`
 	IsLimited bool  `json:"is_limited"`
 }
 
@@ -57,7 +57,7 @@ func diskUsage(c echo.Context) error {
 	}
 
 	result.Used = used
-	result.TotalSize = quota
+	result.Quota = quota
 	result.IsLimited = quota > 0
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }

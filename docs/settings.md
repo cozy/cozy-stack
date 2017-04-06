@@ -52,7 +52,7 @@ If you want to know more about CSS variables, I recommend to view this video:
 
 Says how many bytes are available and used to store files. The `is_limited`
 field informs whether or not the total size is limited or not. When not
-limited the `total_size` is 0.
+limited the `quota` is 0.
 
 #### Request
 
@@ -77,7 +77,7 @@ Content-type: application/vnd.api+json
     "id": "io.cozy.settings.disk-usage",
     "attributes": {
       "is_limited": true,
-      "total_size": "123456789",
+      "quota": "123456789",
       "used": "12345678"
     }
   }
