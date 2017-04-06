@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/stretchr/testify/assert"
@@ -90,4 +91,9 @@ func TestSendDataBadRecipient(t *testing.T) {
 
 	err = SendData(jobs.NewWorkerContext(domain), msg)
 	assert.NoError(t, err)
+}
+
+func TestMain(m *testing.M) {
+	config.UseTestFile()
+	os.Exit(m.Run())
 }
