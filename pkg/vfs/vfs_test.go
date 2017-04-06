@@ -617,7 +617,7 @@ func makeAferoFS() (vfs.VFS, func(), error) {
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
 	aferoFs, err := vfsafero.New(index, &diskImpl{}, vfs.NewMemLock("io.cozy.vfs.test"),
-		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
+		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, "io.cozy.vfs.test")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -665,7 +665,8 @@ func makeSwiftFS() (vfs.VFS, func(), error) {
 		return nil, nil, err
 	}
 
-	swiftFs, err := vfsswift.New(index, &diskImpl{}, vfs.NewMemLock("io.cozy.vfs.test"), db.Prefix())
+	swiftFs, err := vfsswift.New(index, &diskImpl{}, vfs.NewMemLock("io.cozy.vfs.test"),
+		"io.cozy.vfs.test")
 	if err != nil {
 		return nil, nil, err
 	}
