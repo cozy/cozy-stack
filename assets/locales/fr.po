@@ -29,6 +29,9 @@ msgstr "Afficher le mot de passe"
 msgid "Login Submit"
 msgstr "Se connecter"
 
+msgid "Mail Password reset"
+msgstr "Réinitialiser votre mot de passe Cozy"
+
 msgid "Passphrase reset Help"
 msgstr "Êtes-vous sûr de vouloir réinitialiser votre mot de passe ?"
 
