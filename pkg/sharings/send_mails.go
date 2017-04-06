@@ -43,7 +43,13 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 
 	errorOccurred := false
 	for _, rs := range s.RecipientsStatus {
-		recipient := rs.recipient
+		// Sanity check: recipient is private.
+		if rs.recipient == nil {
+			rs.recipient, err = GetRecipient(instance, rs.RefRecipient.ID)
+			if err != nil {
+				return err
+			}
+		}
 
 		// Generate recipient specific OAuth query string.
 		oAuthStr, errOAuth := generateOAuthQueryString(s, rs, instance.Scheme())
@@ -54,9 +60,9 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 
 		// Generate the base values of the email to send, common to all
 		// recipients: the description and the sharer's public name.
-		sharingMessage, errGenMail := generateMailMessage(s, recipient,
+		sharingMessage, errGenMail := generateMailMessage(s, rs.recipient,
 			&mailTemplateValues{
-				RecipientName:    recipient.Email,
+				RecipientName:    rs.recipient.Email,
 				SharerPublicName: sharerPublicName,
 				Description:      desc,
 				OAuthQueryString: oAuthStr,
