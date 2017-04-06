@@ -690,12 +690,11 @@ func wrapVfsError(err error) error {
 		return jsonapi.PreconditionFailed("Content-Length", err)
 	case vfs.ErrConflict:
 		return jsonapi.Conflict(err)
-	case vfs.ErrFileInTrash:
+	case vfs.ErrFileInTrash, vfs.ErrNonAbsolutePath,
+		vfs.ErrDirNotEmpty:
 		return jsonapi.BadRequest(err)
-	case vfs.ErrNonAbsolutePath:
-		return jsonapi.BadRequest(err)
-	case vfs.ErrDirNotEmpty:
-		return jsonapi.BadRequest(err)
+	case vfs.ErrFileTooBig:
+		return jsonapi.NewError(http.StatusRequestEntityTooLarge, err)
 	}
 	return err
 }

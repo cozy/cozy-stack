@@ -50,7 +50,8 @@ If you want to know more about CSS variables, I recommend to view this video:
 
 ### GET /settings/disk-usage
 
-Says how many bytes are used to store files.
+Says how many bytes are available and used to store files. When not
+limited the `quota` field is omitted.
 
 #### Request
 
@@ -74,6 +75,8 @@ Content-type: application/vnd.api+json
     "type": "io.cozy.settings",
     "id": "io.cozy.settings.disk-usage",
     "attributes": {
+      "is_limited": true,
+      "quota": "123456789",
       "used": "12345678"
     }
   }

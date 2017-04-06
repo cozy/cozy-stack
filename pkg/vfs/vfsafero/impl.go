@@ -20,6 +20,7 @@ import (
 // done in couchdb.
 type aferoVFS struct {
 	vfs.Indexer
+	vfs.DiskThresholder
 
 	fs  afero.Fs
 	mu  vfs.Locker
@@ -35,7 +36,7 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(index vfs.Indexer, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
@@ -54,7 +55,8 @@ func New(index vfs.Indexer, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.V
 		return nil, fmt.Errorf("vfsafero: non supported scheme %s", fsURL.Scheme)
 	}
 	return &aferoVFS{
-		Indexer: index,
+		Indexer:         index,
+		DiskThresholder: disk,
 
 		fs:  fs,
 		mu:  mu,
@@ -113,6 +115,28 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	afs.mu.Lock()
 	defer afs.mu.Unlock()
 
+	diskQuota := afs.DiskQuota()
+
+	var maxsize, newsize int64
+	newsize = newdoc.ByteSize
+	if diskQuota > 0 {
+		diskUsage, err := afs.DiskUsage()
+		if err != nil {
+			return nil, err
+		}
+
+		var oldsize int64
+		if olddoc != nil {
+			oldsize = olddoc.Size()
+		}
+		maxsize = diskQuota - diskUsage
+		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
+			return nil, vfs.ErrFileTooBig
+		}
+	} else {
+		maxsize = -1 // no limit
+	}
+
 	newpath, err := afs.Indexer.FilePath(newdoc)
 	if err != nil {
 		return nil, err
@@ -156,6 +180,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		olddoc:  olddoc,
 		bakpath: bakpath,
 		newpath: newpath,
+		maxsize: maxsize,
 
 		hash: hash,
 		meta: extractor,
@@ -363,6 +388,7 @@ type aferoFileCreation struct {
 	olddoc  *vfs.FileDoc       // old document
 	newpath string             // file new path
 	bakpath string             // backup file path in case of modifying an existing file
+	maxsize int64              // maximum size allowed for the file
 	hash    hash.Hash          // hash we build up along the file
 	meta    *vfs.MetaExtractor // extracts metadata from the content
 	err     error              // write error
@@ -384,6 +410,16 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	}
 
 	f.w += int64(n)
+	if f.maxsize >= 0 && f.w > f.maxsize {
+		f.err = vfs.ErrFileTooBig
+		return n, f.err
+	}
+
+	size := f.newdoc.ByteSize
+	if size >= 0 && f.w > size {
+		f.err = vfs.ErrContentLengthMismatch
+		return n, f.err
+	}
 
 	if f.meta != nil {
 		if _, err = (*f.meta).Write(p); err != nil {
@@ -414,7 +450,9 @@ func (f *aferoFileCreation) Close() (err error) {
 		if f.meta != nil {
 			(*f.meta).Abort(err)
 		}
-		return err
+		if f.err == nil {
+			f.err = err
+		}
 	}
 
 	if f.err != nil {
@@ -435,8 +473,7 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	if !bytes.Equal(newdoc.MD5Sum, md5sum) {
-		err = vfs.ErrInvalidHash
-		return err
+		return vfs.ErrInvalidHash
 	}
 
 	if newdoc.ByteSize < 0 {
@@ -444,8 +481,7 @@ func (f *aferoFileCreation) Close() (err error) {
 	}
 
 	if newdoc.ByteSize != written {
-		err = vfs.ErrContentLengthMismatch
-		return err
+		return vfs.ErrContentLengthMismatch
 	}
 
 	f.afs.mu.Lock()

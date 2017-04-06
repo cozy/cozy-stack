@@ -71,6 +71,8 @@ type Instance struct {
 	Locale string `json:"locale"`         // The locale used on the server
 	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
 
+	BytesDiskQuota int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
+
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
 	PassphraseHash       []byte    `json:"passphrase_hash,omitempty"`
@@ -100,6 +102,7 @@ type Options struct {
 	Timezone   string
 	Email      string
 	PublicName string
+	DiskQuota  int64
 	Apps       []string
 	Dev        bool
 }
@@ -151,12 +154,13 @@ func (i *Instance) makeVFS() error {
 	fsURL := config.FsURL()
 	mutex := vfs.NewMemLock(i.Domain)
 	index := vfs.NewCouchdbIndexer(i)
+	disk := vfs.DiskThresholder(i)
 	var err error
 	switch fsURL.Scheme {
 	case "file", "mem":
-		i.vfs, err = vfsafero.New(index, mutex, fsURL, i.Domain)
+		i.vfs, err = vfsafero.New(index, disk, mutex, fsURL, i.Domain)
 	case "swift":
-		i.vfs, err = vfsswift.New(index, mutex, i.Domain)
+		i.vfs, err = vfsswift.New(index, disk, mutex, i.Domain)
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
@@ -173,6 +177,11 @@ func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
 		return i.hiddenFS(vfs.KonnectorsDirName)
 	}
 	panic(fmt.Errorf("Unknown application type %s", string(appsType)))
+}
+
+// DiskQuota returns the number of bytes allowed on the disk to the user.
+func (i *Instance) DiskQuota() int64 {
+	return i.BytesDiskQuota
 }
 
 func (i *Instance) hiddenFS(dirname string) afero.Fs {
@@ -317,6 +326,8 @@ func Create(opts *Options) (*Instance, error) {
 
 	i.Locale = locale
 	i.Domain = domain
+
+	i.BytesDiskQuota = opts.DiskQuota
 
 	i.Dev = opts.Dev
 

@@ -35,4 +35,6 @@ var (
 	ErrDirNotEmpty = errors.New("Directory is not empty")
 	// ErrWrongCouchdbState is given when couchdb gives us an unexpected value
 	ErrWrongCouchdbState = errors.New("Wrong couchdb reduce value")
+	// ErrFileTooBig is used when there is no more space left on the filesystem
+	ErrFileTooBig = errors.New("The file is too big and exceeds the disk quota")
 )

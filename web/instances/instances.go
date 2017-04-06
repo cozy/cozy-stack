@@ -3,6 +3,7 @@ package instances
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -37,12 +38,21 @@ func (i *apiInstance) Included() []jsonapi.Object {
 }
 
 func createHandler(c echo.Context) error {
+	var diskQuota int64
+	if c.QueryParam("DiskQuota") != "" {
+		var err error
+		diskQuota, err = strconv.ParseInt(c.QueryParam("DiskQuota"), 10, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+	}
 	in, err := instance.Create(&instance.Options{
 		Domain:     c.QueryParam("Domain"),
 		Locale:     c.QueryParam("Locale"),
 		Timezone:   c.QueryParam("Timezone"),
 		Email:      c.QueryParam("Email"),
 		PublicName: c.QueryParam("PublicName"),
+		DiskQuota:  diskQuota,
 		Apps:       utils.SplitTrimString(c.QueryParam("Apps"), ","),
 		Dev:        (c.QueryParam("Dev") == "true"),
 	})
