@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -49,30 +48,30 @@ func ThumbnailWorker(ctx context.Context, m *jobs.Message) error {
 	}
 	switch msg.Event.Type {
 	case "CREATED":
-		return generateThumbnails(ctx, i, msg.Event.Doc)
+		return generateThumbnails(ctx, i, &msg.Event.Doc)
 	case "UPDATED":
-		if err = removeThumbnails(i, msg.Event.Doc); err != nil {
+		if err = removeThumbnails(i, &msg.Event.Doc); err != nil {
 			return err
 		}
-		return generateThumbnails(ctx, i, msg.Event.Doc)
+		return generateThumbnails(ctx, i, &msg.Event.Doc)
 	case "DELETED":
-		return removeThumbnails(i, msg.Event.Doc)
+		return removeThumbnails(i, &msg.Event.Doc)
 	}
 	return fmt.Errorf("Unknown type %s for image event", msg.Event.Type)
 }
 
-func generateThumbnails(ctx context.Context, i *instance.Instance, img vfs.FileDoc) error {
+func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.FileDoc) error {
 	fs := i.ThumbsFS()
-	if err := fs.MkdirAll(thumbDir(img), 0755); err != nil {
+	if err := fs.MkdirAll(vfs.ThumbDir(img), 0755); err != nil {
 		return err
 	}
 	flags := os.O_RDWR | os.O_CREATE
-	in, err := i.VFS().OpenFile(&img)
+	in, err := i.VFS().OpenFile(img)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
-	largeName := thumbName(img, "large")
+	largeName := vfs.ThumbPath(img, "large")
 	large, err := fs.OpenFile(largeName, flags, 0640)
 	if err != nil {
 		return err
@@ -81,7 +80,7 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img vfs.FileD
 	if err = generateThumb(ctx, in, large, formats["large"]); err != nil {
 		return err
 	}
-	mediumName := thumbName(img, "medium")
+	mediumName := vfs.ThumbPath(img, "medium")
 	medium, err := fs.OpenFile(mediumName, flags, 0640)
 	if err != nil {
 		return err
@@ -91,7 +90,7 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img vfs.FileD
 	if err = generateThumb(ctx, large, medium, formats["medium"]); err != nil {
 		return err
 	}
-	smallName := thumbName(img, "small")
+	smallName := vfs.ThumbPath(img, "small")
 	small, err := fs.OpenFile(smallName, flags, 0640)
 	if err != nil {
 		return err
@@ -109,22 +108,13 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 	return cmd.Run()
 }
 
-func removeThumbnails(i *instance.Instance, img vfs.FileDoc) error {
+func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
 	var e error
 	for format := range formats {
-		if err := i.ThumbsFS().Remove(thumbName(img, format)); err != nil {
+		filepath := vfs.ThumbPath(img, format)
+		if err := i.ThumbsFS().Remove(filepath); err != nil {
 			e = err
 		}
 	}
 	return e
-}
-
-func thumbName(img vfs.FileDoc, format string) string {
-	dir := thumbDir(img)
-	name := fmt.Sprintf("%s-%s.jpg", img.ID(), format)
-	return path.Join(dir, name)
-}
-
-func thumbDir(img vfs.FileDoc) string {
-	return img.ID()[:4]
 }

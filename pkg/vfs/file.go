@@ -4,6 +4,7 @@ import (
 
 	// #nosec
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -297,6 +298,19 @@ func getFileMode(executable bool) os.FileMode {
 		return 0755 // -rwxr-xr-x
 	}
 	return 0644 // -rw-r--r--
+}
+
+// ThumbPath gives the path to a thumbnail in the Thumbs hidden FS
+func ThumbPath(img *FileDoc, format string) string {
+	dir := ThumbDir(img)
+	name := fmt.Sprintf("%s-%s.jpg", img.ID(), format)
+	return path.Join(dir, name)
+}
+
+// ThumbDir gives the path to the parent directory of a thumbnail in the
+// Thumbs hidden FS
+func ThumbDir(img *FileDoc) string {
+	return img.ID()[:4]
 }
 
 var (
