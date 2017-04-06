@@ -583,6 +583,11 @@ func TestCreateFileTooBig(t *testing.T) {
 	diskQuota = 1 << (1 * 10) // 1KB
 	defer func() { diskQuota = 0 }()
 
+	diskUsage1, err := fs.DiskUsage()
+	if !assert.NoError(t, err) {
+		return
+	}
+
 	doc1, err := vfs.NewFileDoc(
 		"too-big",
 		consts.RootDirID,
@@ -642,9 +647,9 @@ func TestCreateFileTooBig(t *testing.T) {
 	err = f.Close()
 	assert.NoError(t, err)
 
-	diskUsage, err := fs.DiskUsage()
+	diskUsage2, err := fs.DiskUsage()
 	assert.NoError(t, err)
-	assert.Equal(t, int64(diskQuota/2), diskUsage)
+	assert.Equal(t, int64(diskUsage1+diskQuota/2), diskUsage2)
 
 	doc4, err := vfs.NewFileDoc(
 		"too-big2",
