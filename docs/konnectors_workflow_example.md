@@ -22,7 +22,7 @@ accounts are manipulated through the `/data/` API.
 
 #### Accounts fields  
 - **name** User defined name for the account ("Perso", "Pro")
-- **accountType**  
+- **accountType** A type of account, like "google" or "trainlines", a list will be published by Cozy Cloud for current konnectors and most commons one. It's recommended to use the associated website domain otherwise.  
 - **status** one of "NoAttempt" "Connected" or "Errored"
 - **error** the (optional) error for last connection to this account
 - **auth** An object defining auth method for this account. For now only        {login, password} is suppoted.
@@ -31,7 +31,7 @@ accounts are manipulated through the `/data/` API.
 OAuth accounts will be explored later.
 The auth fields will be encrypted on disk.
 
-Account permission should appears different in permission modal.
+Account permissions should appear different in permission modal.
 
 
 ### Konnectors
@@ -41,7 +41,7 @@ Account permission should appears different in permission modal.
 
 ### Permissions
 
-Like client-side applications, each konnectors has an associated `io.cozy.permissions` with `type=app` doc.
+Like client-side applications, each konnector has an associated `io.cozy.permissions` with `type=app` doc.
 
 ### Triggers
 
@@ -59,9 +59,9 @@ See https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
 - [ ] `GET    /konnectors`             Lists installed konnectors    
 
 **triggers**
-- [ ] `GET    /jobs/triggers?worker=konnector` Lists active konnectors       
-- [x] `POST   /jobs/triggers`                  Enables a konnector recurrence            
-- [x] `DELETE /jobs/triggers/:triggerid` Disables a konnector recurrence            
+- [ ] `GET    /jobs/triggers?worker=konnector` Lists konnectors with a configured recurrence.
+- [x] `POST   /jobs/triggers`                  Enables a konnector recurrence.
+- [x] `DELETE /jobs/triggers/:triggerid`       Disables a konnector recurrence
 
 **jobs**
 - [x] `POST   /jobs/queue/konnector` Starts a konnector now        
@@ -76,6 +76,7 @@ See https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
 As a user, From the expenses management app, I have clean flow to configure a connector to retrieve my travel expenses
 
 1 - User is in **my-expenses** and clicks on [configure travels]
+
 2 - **my-expenses** triggers an intent
 
 ```javascript
@@ -193,7 +194,7 @@ HTTP/1.1 200 OK
 }
 ```
 
-8 - SettingsApp change the konnector permissions doc to include save folder
+8 - SettingsApp changes the konnector permissions doc to include save folder
 
 ```http
 PATCH /permissions/456-permission-doc-id-456
@@ -363,6 +364,10 @@ If the user wants to use several account, Settings can setup several triggers fo
 
 ## Konnector Worker specs
 
-- Start the konnector through Rkt, passing token as ENV variable
-- Pass the rest of worker_arguments to the konnector (ENV / stdin ?)
-- Use realtime to send konnector status back (stdout / http) ?
+- Start the konnector through Rkt, passing as ENV variables :
+    - COZY_CREDENTIALS  security token to communicate with Cozy
+    - COZY_FIELDS       JSON-encoded worker_arguments
+    - COZY_DOMAIN       the starting instance domain
+
+- Read konnector status from process stdout and emit them as
+  `io.cozy.jobs.event` on the realtime hub.
