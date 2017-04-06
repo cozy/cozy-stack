@@ -149,7 +149,7 @@ type Locker interface {
 type DiskThresholder interface {
 	// DiskQuota returns the total number of bytes allowed to be stored in the
 	// VFS. If minus or equal to zero, it is considered without limit.
-	DiskQuota() (int64, error)
+	DiskQuota() int64
 }
 
 // VFS is composed of the Indexer and Fs interface. It is the common interface

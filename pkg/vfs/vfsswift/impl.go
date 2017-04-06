@@ -136,15 +136,12 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	sfs.mu.Lock()
 	defer sfs.mu.Unlock()
 
-	diskQuota, err := sfs.DiskQuota()
-	if err != nil {
-		return nil, err
-	}
+	diskQuota := sfs.DiskQuota()
 
-	var diskUsage, maxsize, newsize int64
+	var maxsize, newsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
-		diskUsage, err = sfs.DiskUsage()
+		diskUsage, err := sfs.DiskUsage()
 		if err != nil {
 			return nil, err
 		}
@@ -169,7 +166,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	objName := newdoc.DirID + "/" + newdoc.DocName
 	if olddoc == nil {
-		_, _, err = sfs.c.Object(sfs.container, objName)
+		_, _, err := sfs.c.Object(sfs.container, objName)
 		if err != swift.ObjectNotFound {
 			if err != nil {
 				return nil, err

@@ -180,8 +180,8 @@ func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.
-func (i *Instance) DiskQuota() (int64, error) {
-	return i.BytesDiskQuota, nil
+func (i *Instance) DiskQuota() int64 {
+	return i.BytesDiskQuota
 }
 
 func (i *Instance) hiddenFS(dirname string) afero.Fs {

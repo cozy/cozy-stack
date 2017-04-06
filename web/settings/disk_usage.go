@@ -50,10 +50,7 @@ func diskUsage(c echo.Context) error {
 		return err
 	}
 
-	quota, err := fs.DiskQuota()
-	if err != nil {
-		return err
-	}
+	quota := fs.DiskQuota()
 
 	result.Used = used
 	result.Quota = quota

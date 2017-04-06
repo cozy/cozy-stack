@@ -115,15 +115,12 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	afs.mu.Lock()
 	defer afs.mu.Unlock()
 
-	diskQuota, err := afs.DiskQuota()
-	if err != nil {
-		return nil, err
-	}
+	diskQuota := afs.DiskQuota()
 
-	var diskUsage, maxsize, newsize int64
+	var maxsize, newsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
-		diskUsage, err = afs.DiskUsage()
+		diskUsage, err := afs.DiskUsage()
 		if err != nil {
 			return nil, err
 		}

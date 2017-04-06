@@ -32,8 +32,8 @@ var diskQuota int64
 
 type diskImpl struct{}
 
-func (d *diskImpl) DiskQuota() (int64, error) {
-	return diskQuota, nil
+func (d *diskImpl) DiskQuota() int64 {
+	return diskQuota
 }
 
 type H map[string]H
