@@ -66,7 +66,7 @@ type MailPart struct {
 
 // SendMail is the sendmail worker function.
 func SendMail(ctx context.Context, m *jobs.Message) error {
-	opts := &MailOptions{}
+	opts := MailOptions{}
 	err := m.Unmarshal(&opts)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 	default:
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
 	}
-	return sendMail(ctx, opts)
+	return sendMail(ctx, &opts)
 }
 
 func addressFromDomain(domain string) (*MailAddress, error) {

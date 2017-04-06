@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/jobs/workers"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -586,16 +585,13 @@ func (i *Instance) RequestPassphraseReset() error {
 	resetURL := i.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(i.PassphraseResetToken)},
 	})
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, &workers.MailOptions{
-		Mode:         workers.MailModeNoReply,
-		Subject:      i.Translate("Mail Password reset"),
-		TemplateName: "passphrase_reset_" + i.Locale,
-		TemplateValues: struct {
-			BaseURL             string
-			PassphraseResetLink string
-		}{
-			BaseURL:             i.PageURL("/", nil),
-			PassphraseResetLink: resetURL,
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+		"mode":          "noreply",
+		"subject":       i.Translate("Mail Password reset"),
+		"template_name": "passphrase_reset_" + i.Locale,
+		"template_values": map[string]string{
+			"BaseURL":             i.PageURL("/", nil),
+			"PassphraseResetLink": resetURL,
 		},
 	})
 	if err != nil {
