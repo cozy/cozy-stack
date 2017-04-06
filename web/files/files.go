@@ -691,8 +691,10 @@ func wrapVfsError(err error) error {
 	case vfs.ErrConflict:
 		return jsonapi.Conflict(err)
 	case vfs.ErrFileInTrash, vfs.ErrNonAbsolutePath,
-		vfs.ErrDirNotEmpty, vfs.ErrFileTooBig:
+		vfs.ErrDirNotEmpty:
 		return jsonapi.BadRequest(err)
+	case vfs.ErrFileTooBig:
+		return jsonapi.NewError(http.StatusRequestEntityTooLarge, err)
 	}
 	return err
 }
