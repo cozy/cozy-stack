@@ -14,9 +14,8 @@ import (
 )
 
 type apiDiskUsage struct {
-	Used      int64 `json:"used,string"`
-	Quota     int64 `json:"quota,string"`
-	IsLimited bool  `json:"is_limited"`
+	Used  int64 `json:"used,string"`
+	Quota int64 `json:"quota,string,omitempty"`
 }
 
 func (j *apiDiskUsage) ID() string                             { return consts.DiskUsageID }
@@ -58,6 +57,5 @@ func diskUsage(c echo.Context) error {
 
 	result.Used = used
 	result.Quota = quota
-	result.IsLimited = quota > 0
 	return jsonapi.Data(c, http.StatusOK, &result, nil)
 }

@@ -50,9 +50,8 @@ If you want to know more about CSS variables, I recommend to view this video:
 
 ### GET /settings/disk-usage
 
-Says how many bytes are available and used to store files. The `is_limited`
-field informs whether or not the total size is limited or not. When not
-limited the `quota` is 0.
+Says how many bytes are available and used to store files. When not
+limited the `quota` field is omitted.
 
 #### Request
 
