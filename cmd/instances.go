@@ -247,7 +247,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
-	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-space", "", "The size of the allowed")
+	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "The quota allowed to the instance's VFS")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
