@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -18,12 +17,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	webAuth "github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -33,19 +30,9 @@ import (
 )
 
 var TestPrefix = couchdb.SimpleDatabasePrefix("couchdb-tests")
-var instanceSecret = crypto.GenerateRandomBytes(64)
 var domainSharer = "test-sharing.sparta"
 var domainRecipient = "test-sharing.xerxes"
 
-/*var in = &instance.Instance{
-	OAuthSecret: instanceSecret,
-	Domain:      domainSharer,
-}*/
-
-/*var recipientIn = &instance.Instance{
-	OAuthSecret: instanceSecret,
-	Domain:      ,
-}*/
 var in *instance.Instance
 var recipientIn *instance.Instance
 var ts *httptest.Server
@@ -80,44 +67,6 @@ func createInstance(domain, publicName string) (*instance.Instance, error) {
 	}
 	return instance.Create(opts)
 
-}
-
-func makeAferoFS() (vfs.VFS, func(), error) {
-	tempdir, err := ioutil.TempDir("", "cozy-stack")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
-	index := vfs.NewCouchdbIndexer(db)
-	aferoFs, err := vfsafero.New(index, &url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, db.Prefix())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = couchdb.ResetDB(db, consts.Files)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = couchdb.DefineIndexes(db, consts.IndexesByDoctype(consts.Files))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err = couchdb.DefineViews(db, consts.ViewsByDoctype(consts.Files)); err != nil {
-		return nil, nil, err
-	}
-
-	err = aferoFs.InitFs()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return aferoFs, func() {
-		os.RemoveAll(tempdir)
-		couchdb.DeleteDB(db, consts.Files)
-	}, nil
 }
 
 func createSettings(instance *instance.Instance) {
