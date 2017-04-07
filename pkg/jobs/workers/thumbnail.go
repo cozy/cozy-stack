@@ -86,7 +86,7 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 		return err
 	}
 	defer medium.Close()
-	if _, err := large.Seek(0, 0); err != nil {
+	if _, err = large.Seek(0, 0); err != nil {
 		return err
 	}
 	if err = generateThumb(ctx, large, medium, formats["medium"]); err != nil {
@@ -98,7 +98,7 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 		return err
 	}
 	defer small.Close()
-	if _, err := medium.Seek(0, 0); err != nil {
+	if _, err = medium.Seek(0, 0); err != nil {
 		return err
 	}
 	return generateThumb(ctx, medium, small, formats["small"])

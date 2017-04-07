@@ -409,6 +409,16 @@ func Create(opts *Options) (*Instance, error) {
 	if err := i.StartJobSystem(); err != nil {
 		return nil, err
 	}
+	scheduler := i.JobsScheduler()
+	for _, trigger := range Triggers {
+		t, err := jobs.NewTrigger(trigger)
+		if err != nil {
+			return nil, err
+		}
+		if err = scheduler.Add(t); err != nil {
+			return nil, err
+		}
+	}
 	for _, app := range opts.Apps {
 		if err := i.installApp(app); err != nil {
 			log.Error("[instance] Failed to install "+app, err)
