@@ -44,7 +44,6 @@ func ThumbnailWorker(ctx context.Context, m *jobs.Message) error {
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	log.Debugf("[jobs] thumbnail %s: %#v", domain, msg.Event)
-	fmt.Printf("[jobs] thumbnail %s: %#v", domain, msg.Event.Doc)
 	i, err := instance.Get(domain)
 	if err != nil {
 		return err

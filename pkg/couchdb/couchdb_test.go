@@ -47,6 +47,10 @@ func (t *testDoc) DocType() string {
 	return TestDoctype
 }
 
+func (t *testDoc) Clone() Doc {
+	return t
+}
+
 func (t *testDoc) SetID(id string) {
 	t.TestID = id
 }
