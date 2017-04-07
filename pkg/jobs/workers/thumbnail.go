@@ -106,8 +106,25 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 	return generateThumb(ctx, medium, small, formats["small"])
 }
 
+// The thumbnails are generated with ImageMagick, because it has the better
+// compromise for speed, quality and ease of deployment.
+// See https://github.com/fawick/speedtest-resize
+//
+// We are using some complicated ImageMagick options to optimize the speed and
+// quality of the generated thumbnails.
+// See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
 func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string) error {
-	args := []string{"-", "-limit", "Memory", "2GB", "-thumbnail", format, "jpg:-"}
+	args := []string{
+		"-limit", "Memory", "2GB",
+		"-limit", "Map", "3GB",
+		"-",              // Takes the input from stdin
+		"-strip",         // Strip the EXIF metadata
+		"-quality", "82", // A good compromise between file size and quality
+		"-interlace", "none", // Don't use progressive JPEGs, they are heavier
+		"-thumbnail", format, // Makes a thumbnail that fits inside the given format
+		"-colorspace", "sRGB", // Use the colorspace recommended for web, sRGB
+		"jpg:-", // Send the output on stdout, in JPEG format
+	}
 	cmd := exec.CommandContext(ctx, "convert", args...) // #nosec
 	cmd.Stdin = in
 	cmd.Stdout = out
