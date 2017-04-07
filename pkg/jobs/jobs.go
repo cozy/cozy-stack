@@ -146,7 +146,7 @@ type (
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
 		// requests when it decides to.
-		Schedule() <-chan *JobRequest
+		Schedule(domain string) <-chan *JobRequest
 		// Unschedule should be used to clean the trigger states and should close
 		// the returns jobs channel.
 		Unschedule()

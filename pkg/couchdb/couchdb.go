@@ -53,7 +53,9 @@ func SimpleDatabasePrefix(prefix string) Database {
 }
 
 func rtevent(db Database, evtype string, doc realtime.Doc) {
-	realtime.InstanceHub(db.Prefix()).Publish(&realtime.Event{
+	prefix := db.Prefix()
+	prefix = prefix[:len(prefix)-1] // Strip the final '/'
+	realtime.InstanceHub(prefix).Publish(&realtime.Event{
 		Type: evtype,
 		Doc:  doc,
 	})

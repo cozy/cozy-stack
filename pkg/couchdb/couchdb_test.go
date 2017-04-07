@@ -3,6 +3,7 @@ package couchdb
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -257,7 +258,8 @@ func TestMain(m *testing.M) {
 	}
 
 	receivedEvents = make(map[string]struct{})
-	eventChan := realtime.InstanceHub(TestPrefix.Prefix()).Subscribe(TestDoctype)
+	prefix := strings.TrimSuffix(TestPrefix.Prefix(), "/")
+	eventChan := realtime.InstanceHub(prefix).Subscribe(TestDoctype)
 	go func() {
 		for ev := range eventChan.Read() {
 			receivedEventsMutex.Lock()
