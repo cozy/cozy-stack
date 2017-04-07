@@ -34,6 +34,9 @@ func (in *Intent) Rev() string { return in.IRev }
 // DocType is used to implement the couchdb.Doc interface
 func (in *Intent) DocType() string { return consts.Intents }
 
+// Clone implements couchdb.Doc
+func (in *Intent) Clone() couchdb.Doc { cloned := *in; return &cloned }
+
 // SetID is used to implement the couchdb.Doc interface
 func (in *Intent) SetID(id string) { in.IID = id }
 

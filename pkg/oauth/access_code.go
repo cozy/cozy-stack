@@ -27,6 +27,9 @@ func (ac *AccessCode) Rev() string { return ac.CouchRev }
 // DocType returns the access code document type
 func (ac *AccessCode) DocType() string { return consts.OAuthAccessCodes }
 
+// Clone implements couchdb.Doc
+func (ac *AccessCode) Clone() couchdb.Doc { cloned := *ac; return &cloned }
+
 // SetID changes the access code qualified identifier
 func (ac *AccessCode) SetID(id string) { ac.Code = id }
 

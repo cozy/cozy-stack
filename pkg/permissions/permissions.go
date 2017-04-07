@@ -60,6 +60,9 @@ func (p *Permission) Rev() string { return p.PRev }
 // DocType implements jsonapi.Doc
 func (p *Permission) DocType() string { return consts.Permissions }
 
+// Clone implements couchdb.Doc
+func (p *Permission) Clone() couchdb.Doc { cloned := *p; return &cloned }
+
 // SetID implements jsonapi.Doc
 func (p *Permission) SetID(id string) { p.PID = id }
 

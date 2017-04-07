@@ -121,6 +121,9 @@ func (i *Instance) Rev() string { return i.DocRev }
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
 
+// Clone implements couchdb.Doc
+func (i *Instance) Clone() couchdb.Doc { cloned := *i; return &cloned }
+
 // settings is a struct used for the settings of an instance
 type instanceSettings struct {
 	Timezone   string `json:"tz,omitempty"`
@@ -128,11 +131,12 @@ type instanceSettings struct {
 	PublicName string `json:"public_name,omitempty"`
 }
 
-func (s *instanceSettings) ID() string      { return consts.InstanceSettingsID }
-func (s *instanceSettings) Rev() string     { return "" }
-func (s *instanceSettings) DocType() string { return consts.Settings }
-func (s *instanceSettings) SetID(_ string)  {}
-func (s *instanceSettings) SetRev(_ string) {}
+func (s *instanceSettings) ID() string         { return consts.InstanceSettingsID }
+func (s *instanceSettings) Rev() string        { return "" }
+func (s *instanceSettings) DocType() string    { return consts.Settings }
+func (s *instanceSettings) Clone() couchdb.Doc { cloned := *s; return &cloned }
+func (s *instanceSettings) SetID(_ string)     {}
+func (s *instanceSettings) SetRev(_ string)    {}
 
 // Prefix returns the prefix to use in database naming for the
 // current instance

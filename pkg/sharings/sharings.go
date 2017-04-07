@@ -63,6 +63,9 @@ func (s *Sharing) Rev() string { return s.SRev }
 // DocType returns the sharing document type
 func (s *Sharing) DocType() string { return consts.Sharings }
 
+// Clone implements couchdb.Doc
+func (s *Sharing) Clone() couchdb.Doc { cloned := *s; return &cloned }
+
 // SetID changes the sharing qualified identifier
 func (s *Sharing) SetID(id string) { s.SID = id }
 

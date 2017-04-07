@@ -59,6 +59,9 @@ func (f *FileDoc) Rev() string { return f.DocRev }
 // DocType returns the file document type
 func (f *FileDoc) DocType() string { return consts.Files }
 
+// Clone implements couchdb.Doc
+func (f *FileDoc) Clone() couchdb.Doc { cloned := *f; return &cloned }
+
 // SetID changes the file qualified identifier
 func (f *FileDoc) SetID(id string) { f.DocID = id }
 

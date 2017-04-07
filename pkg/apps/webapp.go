@@ -71,6 +71,9 @@ func (m *WebappManifest) Rev() string { return m.DocRev }
 // DocType is part of the Manifest interface
 func (m *WebappManifest) DocType() string { return consts.Apps }
 
+// Clone implements couchdb.Doc
+func (m *WebappManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
+
 // SetID is part of the Manifest interface
 func (m *WebappManifest) SetID(id string) {}
 

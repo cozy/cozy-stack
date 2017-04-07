@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // ZipMime is the content-type for zip archives
@@ -136,6 +137,9 @@ func (a *Archive) Rev() string { return "" }
 
 // DocType makes Archive a jsonapi.Object
 func (a *Archive) DocType() string { return consts.Archives }
+
+// Clone implements couchdb.Doc
+func (a *Archive) Clone() couchdb.Doc { cloned := *a; return &cloned }
 
 // SetID makes Archive a jsonapi.Object
 func (a *Archive) SetID(_ string) {}

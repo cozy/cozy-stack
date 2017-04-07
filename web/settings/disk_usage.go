@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -21,6 +22,7 @@ type apiDiskUsage struct {
 func (j *apiDiskUsage) ID() string                             { return consts.DiskUsageID }
 func (j *apiDiskUsage) Rev() string                            { return "" }
 func (j *apiDiskUsage) DocType() string                        { return consts.Settings }
+func (j *apiDiskUsage) Clone() couchdb.Doc                     { return j }
 func (j *apiDiskUsage) SetID(_ string)                         {}
 func (j *apiDiskUsage) SetRev(_ string)                        {}
 func (j *apiDiskUsage) Relationships() jsonapi.RelationshipMap { return nil }

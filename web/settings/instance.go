@@ -23,6 +23,7 @@ type apiInstance struct {
 func (i *apiInstance) ID() string                             { return i.doc.ID() }
 func (i *apiInstance) Rev() string                            { return i.doc.Rev() }
 func (i *apiInstance) DocType() string                        { return consts.Settings }
+func (i *apiInstance) Clone() couchdb.Doc                     { return i }
 func (i *apiInstance) SetID(id string)                        { i.doc.SetID(id) }
 func (i *apiInstance) SetRev(rev string)                      { i.doc.SetRev(rev) }
 func (i *apiInstance) Relationships() jsonapi.RelationshipMap { return nil }
