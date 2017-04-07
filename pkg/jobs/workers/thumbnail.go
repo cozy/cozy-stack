@@ -86,7 +86,9 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 		return err
 	}
 	defer medium.Close()
-	large.Seek(0, 0)
+	if _, err := large.Seek(0, 0); err != nil {
+		return err
+	}
 	if err = generateThumb(ctx, large, medium, formats["medium"]); err != nil {
 		return err
 	}
@@ -96,13 +98,15 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 		return err
 	}
 	defer small.Close()
-	medium.Seek(0, 0)
+	if _, err := medium.Seek(0, 0); err != nil {
+		return err
+	}
 	return generateThumb(ctx, medium, small, formats["small"])
 }
 
 func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string) error {
 	args := []string{"-", "-limit", "Memory", "2GB", "-thumbnail", format, "jpg:-"}
-	cmd := exec.CommandContext(ctx, "convert", args...)
+	cmd := exec.CommandContext(ctx, "convert", args...) // #nosec
 	cmd.Stdin = in
 	cmd.Stdout = out
 	return cmd.Run()
