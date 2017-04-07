@@ -25,6 +25,7 @@ $ cozy-stack instances add --dev --passphrase cozy --apps files,photos,settings 
 ```
       --apps stringSlice     Apps to be preinstalled
       --dev                  To create a development instance
+      --disk-quota string    The quota allowed to the instance's VFS
       --email string         The email of the owner
       --locale string        Locale of the new cozy instance (default "en")
       --passphrase string    Register the instance with this passphrase (useful for tests)
