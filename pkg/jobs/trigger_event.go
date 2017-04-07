@@ -76,7 +76,9 @@ func (t *EventTrigger) interestedBy(e *realtime.Event) bool {
 
 func addEventToMessage(e *realtime.Event, base *Message) (*Message, error) {
 	var basemsg interface{}
-	base.Unmarshal(&basemsg)
+	if base != nil {
+		base.Unmarshal(&basemsg)
+	}
 	return NewMessage(JSONEncoding, map[string]interface{}{
 		"message": basemsg,
 		"event":   e,

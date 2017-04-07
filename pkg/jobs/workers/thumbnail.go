@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -42,6 +43,7 @@ func ThumbnailWorker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
+	log.Debugf("[jobs] thumbnail %s: %#v", domain, msg)
 	i, err := instance.Get(domain)
 	if err != nil {
 		return err
