@@ -30,10 +30,10 @@ import (
 
 /* #nosec */
 const (
-	registerTokenLen      = 16
-	passwordResetTokenLen = 16
-	sessionSecretLen      = 64
-	oauthSecretLen        = 128
+	RegisterTokenLen      = 16
+	PasswordResetTokenLen = 16
+	SessionSecretLen      = 64
+	OauthSecretLen        = 128
 )
 
 // passwordResetValidityDuration is the validity duration of the passphrase
@@ -339,10 +339,10 @@ func Create(opts *Options) (*Instance, error) {
 	i.PassphraseHash = nil
 	i.PassphraseResetToken = nil
 	i.PassphraseResetTime = time.Time{}
-	i.RegisterToken = crypto.GenerateRandomBytes(registerTokenLen)
-	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
-	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
-	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
+	i.RegisterToken = crypto.GenerateRandomBytes(RegisterTokenLen)
+	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
+	i.OAuthSecret = crypto.GenerateRandomBytes(OauthSecretLen)
+	i.CLISecret = crypto.GenerateRandomBytes(OauthSecretLen)
 
 	if err := couchdb.CreateDB(couchdb.GlobalDB, consts.Instances); !couchdb.IsFileExists(err) {
 		if err != nil {
@@ -411,7 +411,7 @@ func Create(opts *Options) (*Instance, error) {
 	}
 	scheduler := i.JobsScheduler()
 	for _, trigger := range Triggers {
-		t, err := jobs.NewTrigger(trigger)
+		t, err := jobs.NewTrigger(&trigger)
 		if err != nil {
 			return nil, err
 		}
@@ -591,7 +591,7 @@ func (i *Instance) RequestPassphraseReset() error {
 		time.Now().UTC().Before(i.PassphraseResetTime) {
 		return nil
 	}
-	i.PassphraseResetToken = crypto.GenerateRandomBytes(passwordResetTokenLen)
+	i.PassphraseResetToken = crypto.GenerateRandomBytes(PasswordResetTokenLen)
 	i.PassphraseResetTime = time.Now().UTC().Add(passwordResetValidityDuration)
 	if err := Update(i); err != nil {
 		return err
@@ -663,7 +663,7 @@ func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 
 func (i *Instance) setPassphraseAndSecret(hash []byte) {
 	i.PassphraseHash = hash
-	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
+	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
 }
 
 // CheckPassphrase confirm an instance passport
