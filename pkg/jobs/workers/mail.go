@@ -80,6 +80,9 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 		}
 		opts.To = []*MailAddress{toAddr}
 		opts.From = &MailAddress{Email: "noreply@" + utils.StripPort(domain)}
+		if tmpl, ok := opts.TemplateValues.(map[string]interface{}); ok {
+			tmpl["RecipientName"] = toAddr.Name
+		}
 	case MailModeFrom:
 		fromAddr, err := addressFromDomain(domain)
 		if err != nil {
