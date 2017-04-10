@@ -9,7 +9,7 @@
 ```json
 {
     "name" : "Gmail Perso",
-    "accountType": "google",
+    "account_type": "google",
     "status": "connected",
     "auth": {
       "user": "my-personal-account@gmail.com",
@@ -22,10 +22,10 @@ accounts are manipulated through the `/data/` API.
 
 #### Accounts fields  
 - **name** User defined name for the account ("Perso", "Pro")
-- **accountType** A type of account, like "google" or "trainlines", a list will be published by Cozy Cloud for current konnectors and most commons one. It's recommended to use the associated website domain otherwise.  
+- **account_type** A type of account, like "google" or "trainlines", a list will be published by Cozy Cloud for current konnectors and most commons one. It's recommended to use the associated website domain otherwise.  
 - **status** one of "NoAttempt" "Connected" or "Errored"
 - **error** the (optional) error for last connection to this account
-- **auth** An object defining auth method for this account. For now only        {login, password} is suppoted.
+- **auth** An object defining auth method for this account. For now only        {login, password} is supported.
 
 
 OAuth accounts will be explored later.
@@ -73,7 +73,7 @@ See https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
 
 ## Complete flow example
 
-As a user, From the expenses management app, I have clean flow to configure a connector to retrieve my travel expenses
+As a user, from the expenses management app, I have a clean flow to configure a connector to retrieve my travel expenses
 
 1 - User is in **my-expenses** and clicks on [configure travels]
 
@@ -118,7 +118,7 @@ GET /konnectors/manifests?Source=git://github.com/konnectors/trainlines.git
     },
     "account": {
       "doctype": "io.cozy.accounts",
-      "accountType": "trainlines",
+      "account_type": "trainlines",
       "accountFormat": "login,password",
     }
   },
@@ -141,7 +141,7 @@ POST /data/io.cozy.accounts
 ```
 ```json
 {
-  "accountType": "google",
+  "account_type": "google",
   "status": "PENDING",
   "auth": {
     "login": "xxxx",
@@ -156,7 +156,7 @@ HTTP/1.1 200 OK
 {
   "_id":"123-account-id-123",
   "_rev":"1-asasasasa",
-  "accountType": "google",
+  "account_type": "google",
   "status": "PENDING",
   "auth": {
     "login": "xxxx",
@@ -280,7 +280,7 @@ POST /jobs/queue/konnector
     "arguments": {
       "konnector": "io.cozy.konnectors/trainlines",
       "account": "123-account-id-123",
-      "folderToSave": "123-selected-folder-id-123"
+      "folder_to_save": "123-selected-folder-id-123"
     }
   }
 }
@@ -303,7 +303,7 @@ HTTP/1.1 200 OK
       "arguments": {
         "konnector": "io.cozy.konnectors/trainlines",
         "account": "123-account-id-123",
-        "folderToSave": "123-selected-folder-id-123"
+        "folder_to_save": "123-selected-folder-id-123"
       },
       "state": "running",
       "try_count": 1,
@@ -343,7 +343,7 @@ POST /jobs/io.cozy.triggers
       "worker_arguments": {
         "konnector": "trainlines",
         "account": "5165621628784562148955",
-        "folderToSave": "877854878455",
+        "folder_to_save": "877854878455",
       }
     }
   }
@@ -364,10 +364,14 @@ If the user wants to use several account, Settings can setup several triggers fo
 
 ## Konnector Worker specs
 
-- Start the konnector through Rkt, passing as ENV variables :
+Start the konnector through Rkt, passing as ENV variables :
     - COZY_CREDENTIALS  security token to communicate with Cozy
     - COZY_FIELDS       JSON-encoded worker_arguments
     - COZY_DOMAIN       the starting instance domain
 
-- Read konnector status from process stdout and emit them as
-  `io.cozy.jobs.event` on the realtime hub.
+The konnector proces can send events trough it's stdout (newline separated JSON object), 
+the konnector worker pass these events to the realtime hub as `io.cozy.jobs.events`.
+  - Only JSON formatted events are forwarded to the client-side throught realtime
+  - Otherwise formatted lines (such as node Error) will be kept in some system logs.
+
+Konnectors should NOT log the received account login values in production.
