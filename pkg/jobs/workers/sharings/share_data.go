@@ -57,9 +57,12 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 // SendDoc sends a JSON document to the recipients
 func SendDoc(domain string, opts *SendOptions) error {
 	// Get the doc
-	db := couchdb.SimpleDatabasePrefix(domain)
+	i, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 	doc := &couchdb.JSONDoc{}
-	if err := couchdb.GetDoc(db, opts.DocType, opts.DocID, doc); err != nil {
+	if err := couchdb.GetDoc(i, opts.DocType, opts.DocID, doc); err != nil {
 		return err
 	}
 	// A new doc will be created on the recipient side
@@ -104,7 +107,6 @@ func SendDoc(domain string, opts *SendOptions) error {
 			log.Error("[sharing] An error occurred while trying to share "+
 				"data : ", errSend)
 		}
-
 	}
 	return nil
 }
