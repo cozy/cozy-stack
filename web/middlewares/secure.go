@@ -61,6 +61,13 @@ const (
 	// CSPUnsafeInline is the  'unsafe-inline' option. It allows to have inline
 	// styles or scripts to be injected in the page.
 	CSPUnsafeInline
+	// CSPSrcWhitelist enables the whitelist just below in CSP.
+	CSPSrcWhitelist
+
+	// CSPWhitelist is a whitelist of domains that are allowed in CSP. It's not
+	// permanent, this whitelist will be removed when we will have a more
+	// generic way to enable client-side apps to access some domains (proxy).
+	CSPWhitelist = "*.tile.openstreetmap.org *.tile.osm.org *.tiles.mapbox.com api.mapbox.com"
 )
 
 // Secure returns a Middlefunc that can be used to define all the necessary
@@ -157,6 +164,8 @@ func makeCSPHeader(parent, siblings, header string, sources []CSPSource) string 
 			headers[i] = "*"
 		case CSPUnsafeInline:
 			headers[i] = "'unsafe-inline'"
+		case CSPSrcWhitelist:
+			headers[i] = CSPWhitelist
 		}
 	}
 	return header + " " + strings.Join(headers, " ") + ";"
