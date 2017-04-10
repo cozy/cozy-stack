@@ -12,7 +12,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 func init() {
@@ -65,8 +64,8 @@ type Sharing struct {
 
 // RecipientStatus contains the information about a recipient for a sharing
 type RecipientStatus struct {
-	Status       string                     `json:"status,omitempty"`
-	RefRecipient jsonapi.ResourceIdentifier `json:"recipient,omitempty"`
+	Status       string               `json:"status,omitempty"`
+	RefRecipient couchdb.DocReference `json:"recipient,omitempty"`
 	AccessToken  *auth.AccessToken
 }
 
