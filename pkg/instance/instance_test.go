@@ -58,11 +58,15 @@ func TestCreateInstance(t *testing.T) {
 }
 
 func TestCreateInstanceWithSettings(t *testing.T) {
+	var settings couchdb.JSONDoc
+	settings.M = make(map[string]interface{})
+	settings.M["tz"] = "Europe/Berlin"
+	settings.M["email"] = "alice@example.com"
+	settings.M["offer"] = "freemium"
 	instance, err := instance.Create(&instance.Options{
 		Domain:   "test2.cozycloud.cc",
 		Locale:   "en",
-		Timezone: "Europe/Berlin",
-		Email:    "alice@example.com",
+		Settings: settings,
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, instance.Domain, "test2.cozycloud.cc")
@@ -71,6 +75,7 @@ func TestCreateInstanceWithSettings(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "Europe/Berlin", doc.M["tz"].(string))
 	assert.Equal(t, "alice@example.com", doc.M["email"].(string))
+	assert.Equal(t, "freemium", doc.M["offer"].(string))
 }
 
 func TestCreateInstanceBadDomain(t *testing.T) {
@@ -250,7 +255,6 @@ func TestRequestPassphraseReset(t *testing.T) {
 	in, err := instance.Create(&instance.Options{
 		Domain: "test.cozycloud.cc.pass_reset",
 		Locale: "en",
-		Email:  "coucou@coucou.com",
 	})
 	if !assert.NoError(t, err) {
 		return

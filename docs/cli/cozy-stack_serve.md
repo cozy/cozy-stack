@@ -38,7 +38,7 @@ example), you can use the --appdir flag like this:
       --appdir stringSlice      Mount a directory as the 'app' application
       --assets string           path to the directory with the assets (use the packed assets by default)
       --couchdb-url string      CouchDB URL (default "http://localhost:5984/")
-      --fs-url string           filesystem url (default "file://localhost/Users/pierre/go/src/github.com/cozy/cozy-stack/storage")
+      --fs-url string           filesystem url (default "file://localhost//storage")
       --konnectors-cmd string   konnectors command to be executed
       --mail-disable-tls        disable smtp over tls
       --mail-host string        mail smtp host (default "localhost")

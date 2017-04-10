@@ -96,14 +96,12 @@ type Instance struct {
 
 // Options holds the parameters to create a new instance.
 type Options struct {
-	Domain     string
-	Locale     string
-	Timezone   string
-	Email      string
-	PublicName string
-	DiskQuota  int64
-	Apps       []string
-	Dev        bool
+	Domain    string
+	Locale    string
+	DiskQuota int64
+	Apps      []string
+	Dev       bool
+	Settings  couchdb.JSONDoc
 }
 
 // DocType implements couchdb.Doc
@@ -123,20 +121,6 @@ func (i *Instance) SetRev(v string) { i.DocRev = v }
 
 // Clone implements couchdb.Doc
 func (i *Instance) Clone() couchdb.Doc { cloned := *i; return &cloned }
-
-// settings is a struct used for the settings of an instance
-type instanceSettings struct {
-	Timezone   string `json:"tz,omitempty"`
-	Email      string `json:"email,omitempty"`
-	PublicName string `json:"public_name,omitempty"`
-}
-
-func (s *instanceSettings) ID() string         { return consts.InstanceSettingsID }
-func (s *instanceSettings) Rev() string        { return "" }
-func (s *instanceSettings) DocType() string    { return consts.Settings }
-func (s *instanceSettings) Clone() couchdb.Doc { cloned := *s; return &cloned }
-func (s *instanceSettings) SetID(_ string)     {}
-func (s *instanceSettings) SetRev(_ string)    {}
 
 // Prefix returns the prefix to use in database naming for the
 // current instance
@@ -332,12 +316,9 @@ func Create(opts *Options) (*Instance, error) {
 	}
 
 	i := new(Instance)
-
 	i.Locale = locale
 	i.Domain = domain
-
 	i.BytesDiskQuota = opts.DiskQuota
-
 	i.Dev = opts.Dev
 
 	i.PassphraseHash = nil
@@ -396,12 +377,12 @@ func Create(opts *Options) (*Instance, error) {
 	if err := settings.CreateDefaultTheme(i); err != nil {
 		return nil, err
 	}
-	settingsDoc := &instanceSettings{
-		Timezone:   opts.Timezone,
-		Email:      opts.Email,
-		PublicName: opts.PublicName,
+	if opts.Settings.M == nil {
+		opts.Settings.M = make(map[string]interface{})
 	}
-	if err := couchdb.CreateNamedDoc(i, settingsDoc); err != nil {
+	opts.Settings.M["_id"] = consts.InstanceSettingsID
+	opts.Settings.Type = consts.Settings
+	if err := couchdb.CreateNamedDoc(i, opts.Settings); err != nil {
 		return nil, err
 	}
 	if err := couchdb.DefineIndexes(i, consts.Indexes); err != nil {

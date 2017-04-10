@@ -30,6 +30,7 @@ $ cozy-stack instances add --dev --passphrase cozy --apps files,photos,settings 
       --locale string        Locale of the new cozy instance (default "en")
       --passphrase string    Register the instance with this passphrase (useful for tests)
       --public-name string   The public name of the owner
+      --settings string      A list of settings (eg context:foo,offer:premium)
       --tz string            The timezone for the user
 ```
 
