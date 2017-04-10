@@ -176,7 +176,7 @@ func updateDoc(c echo.Context) error {
 		if errFetch != nil {
 			return errFetch
 		}
-
+		old.Type = doc.DocType()
 		// check if permissions set allows manipulating old doc
 		errOld := permissions.Allow(c, permissions.PUT, &old)
 		if errOld != nil {
