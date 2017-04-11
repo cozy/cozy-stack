@@ -20,10 +20,11 @@ const ContentType = "application/vnd.api+json"
 // application/vnd.api+json
 // See http://jsonapi.org/format/#document-structure
 type Document struct {
-	Data     *json.RawMessage `json:"data,omitempty"`
-	Errors   ErrorList        `json:"errors,omitempty"`
-	Links    *LinksList       `json:"links,omitempty"`
-	Included []interface{}    `json:"included,omitempty"`
+	Data     *json.RawMessage  `json:"data,omitempty"`
+	Errors   ErrorList         `json:"errors,omitempty"`
+	Links    *LinksList        `json:"links,omitempty"`
+	Meta     *RelationshipMeta `json:"meta,omitempty"`
+	Included []interface{}     `json:"included,omitempty"`
 }
 
 // WriteData can be called to write an answer with a JSON-API document
@@ -61,6 +62,12 @@ func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
 // DataList can be called to send an multiple-value answer with a
 // JSON-API document contains multiple objects.
 func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) error {
+	return DataListWithTotal(c, statusCode, len(objs), objs, links)
+}
+
+// DataListWithTotal can be called to send a list of Object with a different
+// meta:count, useful to indicate total number of results with pagination.
+func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, links *LinksList) error {
 	objsMarshaled := make([]json.RawMessage, len(objs))
 	for i, o := range objs {
 		j, err := MarshalObject(o)
@@ -77,6 +84,7 @@ func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) e
 
 	doc := Document{
 		Data:  (*json.RawMessage)(&data),
+		Meta:  &RelationshipMeta{Count: total},
 		Links: links,
 	}
 
