@@ -696,15 +696,18 @@ type ViewRequest struct {
 	GroupLevel int  `json:"group_level,omitempty" url:"group_level,omitempty"`
 }
 
+// ViewResponseRow is a row in a ViewResponse
+type ViewResponseRow struct {
+	ID    string           `json:"id"`
+	Key   interface{}      `json:"key"`
+	Value interface{}      `json:"value"`
+	Doc   *json.RawMessage `json:"doc"`
+}
+
 // ViewResponse is the response we receive when executing a view
 type ViewResponse struct {
-	Total int `json:"total_rows"`
-	Rows  []struct {
-		ID    string           `json:"id"`
-		Key   interface{}      `json:"key"`
-		Value interface{}      `json:"value"`
-		Doc   *json.RawMessage `json:"doc"`
-	} `json:"rows"`
+	Total int                `json:"total_rows"`
+	Rows  []*ViewResponseRow `json:"rows"`
 }
 
 // DBStatusResponse is the response from DBStatus

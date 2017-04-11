@@ -1479,7 +1479,7 @@ func TestTrashList(t *testing.T) {
 		return
 	}
 
-	assert.True(t, len(v.Data) >= 2)
+	assert.True(t, len(v.Data) >= 2, "response should contains at least 2 items")
 }
 
 func TestTrashClear(t *testing.T) {

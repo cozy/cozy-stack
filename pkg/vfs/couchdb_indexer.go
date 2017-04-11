@@ -1,6 +1,7 @@
 package vfs
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -270,4 +271,61 @@ func (c *couchdbIndexer) DirOrFileByPath(name string) (*DirDoc, *FileDoc, error)
 
 func (c *couchdbIndexer) DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator {
 	return NewIterator(c.db, doc, opts)
+}
+
+func (c *couchdbIndexer) DirBatch(doc *DirDoc, cursor couchdb.Cursor) ([]DirOrFileDoc, error) {
+
+	// consts.FilesByParentView keys are [parentID, type, name]
+	// TODO change me for flag hidden, depending if doc is Trash
+	req := couchdb.ViewRequest{
+		StartKey:    []string{doc.DocID, ""},
+		EndKey:      []string{doc.DocID, couchdb.MaxString},
+		IncludeDocs: true,
+	}
+	var res couchdb.ViewResponse
+	cursor.ApplyTo(&req)
+	err := couchdb.ExecView(c.db, consts.FilesByParentView, &req, &res)
+	if err != nil {
+		return nil, err
+	}
+	cursor.UpdateFrom(&res)
+
+	docs := make([]DirOrFileDoc, len(res.Rows))
+	for i, row := range res.Rows {
+		var doc DirOrFileDoc
+		err := json.Unmarshal(*row.Doc, &doc)
+		if err != nil {
+			return nil, err
+		}
+		docs[i] = doc
+	}
+
+	return docs, nil
+}
+
+func (c *couchdbIndexer) DirLength(doc *DirDoc) (int, error) {
+
+	// TODO change me for flag hidden, depending if doc is Trash
+	req := couchdb.ViewRequest{
+		StartKey:   []string{doc.DocID, ""},
+		EndKey:     []string{doc.DocID, couchdb.MaxString},
+		Reduce:     true,
+		GroupLevel: 1,
+	}
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(c.db, consts.FilesByParentView, &req, &res)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(res.Rows) == 0 {
+		return 0, nil
+	}
+
+	// Reduce of _count should give us a number value
+	f64, ok := res.Rows[0].Value.(float64)
+	if !ok {
+		return 0, ErrWrongCouchdbState
+	}
+	return int(f64), nil
 }

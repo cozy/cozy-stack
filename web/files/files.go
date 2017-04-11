@@ -302,6 +302,24 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 	return fileData(c, http.StatusOK, file, nil)
 }
 
+// GetChildrenHandler returns a list of children of a folder
+func GetChildrenHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	fileID := c.Param("file-id")
+
+	dir, file, err := instance.VFS().DirOrFileByID(fileID)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	if file != nil {
+		return jsonapi.NewError(400, "cant read children of file "+fileID)
+	}
+
+	return dirDataList(c, http.StatusOK, dir)
+}
+
 // ReadMetadataFromPathHandler handles all GET requests on
 // /files/metadata aiming at getting file metadata from its path.
 func ReadMetadataFromPathHandler(c echo.Context) error {
@@ -679,6 +697,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/metadata", ReadMetadataFromPathHandler)
 	router.GET("/:file-id", ReadMetadataFromIDHandler)
+	router.GET("/:file-id/relationships/contents", GetChildrenHandler)
 
 	router.PATCH("/metadata", ModifyMetadataByPathHandler)
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)

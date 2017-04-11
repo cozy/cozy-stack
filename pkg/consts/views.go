@@ -55,6 +55,19 @@ function(doc) {
 }`,
 }
 
+// FilesByParentView is the view used for fetching files referenced by a
+// given document
+// TODO change me for flag hidden
+var FilesByParentView = &couchdb.View{
+	Name:    "by-parent-type-name",
+	Doctype: Files,
+	Map: `
+function(doc) {
+  emit([doc.dir_id, doc.type, doc.name])
+}`,
+	Reduce: "_count",
+}
+
 // PermissionsShareByCView is the view for fetching the permissions associated
 // to a document via a token code.
 var PermissionsShareByCView = &couchdb.View{
@@ -93,6 +106,7 @@ function(doc){
 var Views = []*couchdb.View{
 	DiskUsageView,
 	FilesReferencedByView,
+	FilesByParentView,
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
 }
