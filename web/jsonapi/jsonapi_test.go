@@ -2,6 +2,7 @@ package jsonapi
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -151,18 +152,18 @@ func TestPagination(t *testing.T) {
 	res, err := http.Get(ts.URL + "/paginated")
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	var c couchdb.Cursor
+	var c string
 	json.NewDecoder(res.Body).Decode(&c)
-	assert.Equal(t, 13, c.Limit)
+	assert.Equal(t, "key 13 %!s(<nil>) ", c)
 }
 
 func TestPaginationCustomLimit(t *testing.T) {
 	res, err := http.Get(ts.URL + "/paginated?page[limit]=7")
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	var c couchdb.Cursor
+	var c string
 	json.NewDecoder(res.Body).Decode(&c)
-	assert.Equal(t, 7, c.Limit)
+	assert.Equal(t, "key 7 %!s(<nil>) ", c)
 }
 
 func TestPaginationBadNumber(t *testing.T) {
@@ -176,11 +177,10 @@ func TestPaginationWithCursor(t *testing.T) {
 	res, err := http.Get(ts.URL + "/paginated?page[cursor]=%5B%5B%22a%22%2C%20%22b%22%5D%2C%20%22c%22%5D")
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	var c couchdb.Cursor
+	var c string
 	json.NewDecoder(res.Body).Decode(&c)
-	assert.Equal(t, 13, c.Limit)
-	assert.Equal(t, []interface{}{"a", "b"}, c.NextKey)
-	assert.Equal(t, "c", c.NextDocID)
+	assert.Equal(t, "key 13 [a b] c", c)
+
 }
 
 func TestMain(m *testing.M) {
@@ -195,8 +195,19 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			return err
 		}
-		return c.JSON(200, cursor)
+
+		if c2, ok := cursor.(*couchdb.SkipCursor); ok {
+			return c.JSON(200, fmt.Sprintf("key %d %d", c2.Limit, c2.Skip))
+		}
+
+		if c3, ok := cursor.(*couchdb.StartKeyCursor); ok {
+			return c.JSON(200, fmt.Sprintf("key %d %s %s", c3.Limit, c3.NextKey, c3.NextDocID))
+		}
+
+		return fmt.Errorf("Wrong cursor type")
+
 	})
+
 	ts = httptest.NewServer(router)
 	defer ts.Close()
 	os.Exit(m.Run())

@@ -43,7 +43,7 @@ func listReferencesHandler(c echo.Context) error {
 	cursor.UpdateFrom(&res)
 
 	var links = &jsonapi.LinksList{}
-	if !cursor.Done {
+	if cursor.HasMore() {
 		params, err := jsonapi.PaginationCursorToParams(cursor)
 		if err != nil {
 			return err
