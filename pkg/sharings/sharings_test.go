@@ -277,7 +277,7 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 
 		if !isFile {
 			if withSelector {
-				testDoc2 := &couchdb.JSONDoc{}
+				var testDoc2 *couchdb.JSONDoc
 				testDoc2, err = createTestDoc(t)
 				assert.NoError(t, err)
 				assert.NotNil(t, testDoc2)
@@ -286,6 +286,8 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 				recDoc := &couchdb.JSONDoc{}
 				err = couchdb.GetDoc(recipientIn, testDocType, testDoc2.ID(), recDoc)
 				assert.NoError(t, err)
+				recDoc.Type = testDocType
+				assert.Equal(t, testDoc2, recDoc)
 			} else {
 				updKey := "test"
 				updVal := "update me!"
