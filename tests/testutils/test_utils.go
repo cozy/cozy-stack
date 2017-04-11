@@ -145,7 +145,7 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 // The server will be closed on container cleanup
 func (c *TestSetup) GetTestServer(prefix string, routes func(*echo.Group),
 	mws ...func(*echo.Echo) *echo.Echo) *httptest.Server {
-	return c.GetTestServerMultipleRoutes(map[string]func(*echo.Group){prefix: routes})
+	return c.GetTestServerMultipleRoutes(map[string]func(*echo.Group){prefix: routes}, mws...)
 }
 
 // GetTestServerMultipleRoutes starts a testServer and creates a group for each
