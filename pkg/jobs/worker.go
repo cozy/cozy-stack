@@ -33,9 +33,8 @@ type (
 	// Worker is a unit of work that will consume from a queue and execute the do
 	// method for each jobs it pulls.
 	Worker struct {
-		Domain string
-		Type   string
-		Conf   *WorkerConfig
+		Type string
+		Conf *WorkerConfig
 
 		jobs    Queue
 		started int32
@@ -54,14 +53,13 @@ func (w *Worker) Start(q Queue) {
 	}
 	w.jobs = q
 	for i := 0; i < int(w.Conf.Concurrency); i++ {
-		name := fmt.Sprintf("%s/%s/%d", w.Domain, w.Type, i)
+		name := fmt.Sprintf("%s/%d", w.Type, i)
 		go w.work(name)
 	}
 }
 
 func (w *Worker) work(workerID string) {
 	// TODO: err handling and persistence
-	parentCtx := NewWorkerContext(w.Domain)
 	for {
 		job, err := w.jobs.Consume()
 		if err != nil {
@@ -71,6 +69,11 @@ func (w *Worker) work(workerID string) {
 			}
 			return
 		}
+		domain := job.Domain()
+		if domain == "" {
+			log.Errorf("[job] %s: missing domain from job request", workerID)
+		}
+		parentCtx := NewWorkerContext(domain)
 		infos := job.Infos()
 		if err = job.AckConsumed(); err != nil {
 			log.Errorf("[job] %s: error acking consume job %s (%s)",

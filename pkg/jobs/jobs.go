@@ -31,6 +31,11 @@ const (
 	WorkerType = "worker"
 )
 
+var (
+	broker    Broker
+	scheduler Scheduler
+)
+
 type (
 	// Queue interface is used to represent an asynchronous queue of jobs from
 	// which it is possible to enqueue and consume jobs.
@@ -45,8 +50,6 @@ type (
 	// particular domain. A broker can be used to create jobs that are pushed in
 	// the job system.
 	Broker interface {
-		Domain() string
-
 		// PushJob will push try to push a new job from the specified job request.
 		//
 		// This method is asynchronous and returns a chan of JobInfos to observe
@@ -61,6 +64,8 @@ type (
 
 	// Job interface represents a job.
 	Job interface {
+		// Domain returns the domain name from which the job has been sent.
+		Domain() string
 		// Infos returns the JobInfos data associated with the job
 		Infos() *JobInfos
 		// AckConsumed should be used by the consumer of the job, ack-ing that
@@ -94,6 +99,7 @@ type (
 	// marshalled in JSON.
 	JobInfos struct {
 		ID         string      `json:"id"`
+		Domain     string      `json:"domain"`
 		WorkerType string      `json:"worker"`
 		Message    *Message    `json:"message"`
 		Options    *JobOptions `json:"options"`
@@ -105,6 +111,7 @@ type (
 
 	// JobRequest struct is used to represent a new job request.
 	JobRequest struct {
+		Domain     string
 		WorkerType string
 		Message    *Message
 		Options    *JobOptions
@@ -134,9 +141,9 @@ type (
 	Scheduler interface {
 		Start(broker Broker) error
 		Add(trigger Trigger) error
-		Get(id string) (Trigger, error)
-		Delete(id string) error
-		GetAll() ([]Trigger, error)
+		Get(domain, id string) (Trigger, error)
+		Delete(domain, id string) error
+		GetAll(domain string) ([]Trigger, error)
 	}
 
 	// Trigger interface is used to represent a trigger.
@@ -146,7 +153,7 @@ type (
 		Infos() *TriggerInfos
 		// Schedule should return a channel on which the trigger can send job
 		// requests when it decides to.
-		Schedule(domain string) <-chan *JobRequest
+		Schedule() <-chan *JobRequest
 		// Unschedule should be used to clean the trigger states and should close
 		// the returns jobs channel.
 		Unschedule()
@@ -164,6 +171,7 @@ type (
 	TriggerInfos struct {
 		ID         string      `json:"_id,omitempty"`
 		Rev        string      `json:"_rev,omitempty"`
+		Domain     string      `json:"domain"`
 		Type       string      `json:"type"`
 		WorkerType string      `json:"worker"`
 		Arguments  string      `json:"arguments"`
@@ -189,6 +197,24 @@ func (jr *JobRequest) Valid(key, value string) bool {
 
 var _ permissions.Validable = (*JobRequest)(nil)
 
+// StartSystem starts the job system, and instantiate the the broker and
+// scheduler globals.
+func StartSystem() error {
+	broker = newMemBroker(GetWorkersList())
+	scheduler = newMemScheduler(NewTriggerCouchStorage())
+	return scheduler.Start(broker)
+}
+
+// GetScheduler returns the global job scheduler.
+func GetScheduler() Scheduler {
+	return scheduler
+}
+
+// GetBroker returns the global job broker.
+func GetBroker() Broker {
+	return broker
+}
+
 // NewTrigger creates the trigger associates with the specified trigger
 // options.
 func NewTrigger(infos *TriggerInfos) (Trigger, error) {
@@ -212,6 +238,7 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 func NewJobInfos(req *JobRequest) *JobInfos {
 	return &JobInfos{
 		ID:         utils.RandomString(16),
+		Domain:     req.Domain,
 		WorkerType: req.WorkerType,
 		Message:    req.Message,
 		Options:    req.Options,

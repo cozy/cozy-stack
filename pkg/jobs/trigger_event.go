@@ -86,10 +86,10 @@ func addEventToMessage(e *realtime.Event, base *Message) (*Message, error) {
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (t *EventTrigger) Schedule(domain string) <-chan *JobRequest {
+func (t *EventTrigger) Schedule() <-chan *JobRequest {
 	ch := make(chan *JobRequest)
 	go func() {
-		c := realtime.InstanceHub(domain).Subscribe(t.mask.Type)
+		c := realtime.InstanceHub(t.infos.Domain).Subscribe(t.mask.Type)
 		for {
 			select {
 			case e := <-c.Read():

@@ -422,7 +422,7 @@ func TestMain(m *testing.M) {
 	setup := testutils.NewSetup(m, "jobs_test")
 	testInstance = setup.GetTestInstance()
 
-	if err := testInstance.StartJobSystem(); err != nil {
+	if err := jobs.StartSystem(); err != nil {
 		testutils.Fatal(err)
 	}
 

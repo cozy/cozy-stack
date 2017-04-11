@@ -189,31 +189,6 @@ func (i *Instance) DiskQuota() int64 {
 	return i.BytesDiskQuota
 }
 
-// StartJobSystem creates all the resources necessary for the instance's job
-// system to work properly.
-func (i *Instance) StartJobSystem() error {
-	broker := jobs.NewMemBroker(i.Domain, jobs.GetWorkersList())
-	scheduler := jobs.NewMemScheduler(i.Domain, jobs.NewTriggerCouchStorage(i))
-	return scheduler.Start(broker)
-}
-
-// StopJobSystem stops all the resources used by the job system associated with
-// the instance.
-func (i *Instance) StopJobSystem() error {
-	// TODO
-	return nil
-}
-
-// JobsBroker returns the jobs broker associated with the instance
-func (i *Instance) JobsBroker() jobs.Broker {
-	return jobs.GetMemBroker(i.Domain)
-}
-
-// JobsScheduler returns the jobs scheduler associated with the instance
-func (i *Instance) JobsScheduler() jobs.Scheduler {
-	return jobs.GetMemScheduler(i.Domain)
-}
-
 // Scheme returns the scheme used for URLs. It is https by default and http
 // for development instances.
 func (i *Instance) Scheme() string {
@@ -391,10 +366,7 @@ func Create(opts *Options) (*Instance, error) {
 	if err := couchdb.DefineViews(i, consts.Views); err != nil {
 		return nil, err
 	}
-	if err := i.StartJobSystem(); err != nil {
-		return nil, err
-	}
-	scheduler := i.JobsScheduler()
+	scheduler := jobs.GetScheduler()
 	for _, trigger := range Triggers {
 		t, err := jobs.NewTrigger(&trigger)
 		if err != nil {
@@ -531,10 +503,6 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
-	if err = i.StopJobSystem(); err != nil {
-		return nil, err
-	}
-
 	if err = i.VFS().Delete(); err != nil {
 		return nil, err
 	}
@@ -598,7 +566,8 @@ func (i *Instance) RequestPassphraseReset() error {
 	if err != nil {
 		return err
 	}
-	_, _, err = i.JobsBroker().PushJob(&jobs.JobRequest{
+	_, _, err = jobs.GetBroker().PushJob(&jobs.JobRequest{
+		Domain:     i.Domain,
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

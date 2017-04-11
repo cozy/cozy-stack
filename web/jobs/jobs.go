@@ -95,9 +95,8 @@ func (t *apiTrigger) MarshalJSON() ([]byte, error) {
 }
 
 func getQueue(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
 	workerType := c.Param("worker-type")
-	count, err := instance.JobsBroker().QueueLen(workerType)
+	count, err := jobs.GetBroker().QueueLen(workerType)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -122,6 +121,7 @@ func pushJob(c echo.Context) error {
 	}
 
 	jr := &jobs.JobRequest{
+		Domain:     instance.Domain,
 		WorkerType: c.Param("worker-type"),
 		Options:    req.Options,
 		Message: &jobs.Message{
@@ -133,7 +133,7 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, ch, err := instance.JobsBroker().PushJob(jr)
+	job, ch, err := jobs.GetBroker().PushJob(jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -159,7 +159,7 @@ func pushJob(c echo.Context) error {
 
 func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := instance.JobsScheduler()
+	scheduler := jobs.GetScheduler()
 	req := &apiTriggerRequest{}
 	if _, err := jsonapi.Bind(c.Request(), &req); err != nil {
 		return wrapJobsError(err)
@@ -168,6 +168,7 @@ func newTrigger(c echo.Context) error {
 	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
 		Type:       req.Type,
 		WorkerType: req.WorkerType,
+		Domain:     instance.Domain,
 		Arguments:  req.Arguments,
 		Options:    req.Options,
 		Message: &jobs.Message{
@@ -191,8 +192,8 @@ func newTrigger(c echo.Context) error {
 
 func getTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := instance.JobsScheduler()
-	t, err := scheduler.Get(c.Param("trigger-id"))
+	scheduler := jobs.GetScheduler()
+	t, err := scheduler.Get(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -204,15 +205,15 @@ func getTrigger(c echo.Context) error {
 
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := instance.JobsScheduler()
-	t, err := scheduler.Get(c.Param("trigger-id"))
+	scheduler := jobs.GetScheduler()
+	t, err := scheduler.Get(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
 	if err := permissions.Allow(c, permissions.DELETE, t); err != nil {
 		return err
 	}
-	if err := scheduler.Delete(c.Param("trigger-id")); err != nil {
+	if err := scheduler.Delete(instance.Domain, c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -220,11 +221,11 @@ func deleteTrigger(c echo.Context) error {
 
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := instance.JobsScheduler()
+	scheduler := jobs.GetScheduler()
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
 		return err
 	}
-	ts, err := scheduler.GetAll()
+	ts, err := scheduler.GetAll(instance.Domain)
 	if err != nil {
 		return wrapJobsError(err)
 	}

@@ -21,24 +21,22 @@ func (t triggerDoc) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.t.Infos())
 }
 
-// CouchStorage implements the TriggerStorage interface and uses CouchDB as the
+// CouchStorage cmplements the TriggerStorage interface and uses CouchDB as the
 // underlying storage for triggers.
-type CouchStorage struct {
-	db couchdb.Database
+type couchStorage struct {
 }
 
-// NewTriggerCouchStorage returns a new instance of CouchStorage using the
+// NewTriggerCouchStorage ceturns a new instance of CouchStorage using the
 // specified database.
-func NewTriggerCouchStorage(db couchdb.Database) *CouchStorage {
-	return &CouchStorage{db}
+func NewTriggerCouchStorage() TriggerStorage {
+	return &couchStorage{}
 }
 
-// GetAll implements the GetAll method of the TriggerStorage.
-func (s *CouchStorage) GetAll() ([]*TriggerInfos, error) {
+func (s *couchStorage) GetAll() ([]*TriggerInfos, error) {
 	var infos []*TriggerInfos
 	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
-	req := &couchdb.AllDocsRequest{Limit: 100}
-	if err := couchdb.GetAllDocs(s.db, consts.Triggers, req, &infos); err != nil {
+	req := &couchdb.AllDocsRequest{Limit: 1000}
+	if err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Triggers, req, &infos); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return infos, nil
 		}
@@ -47,12 +45,10 @@ func (s *CouchStorage) GetAll() ([]*TriggerInfos, error) {
 	return infos, nil
 }
 
-// Add implements the Add method of the TriggerStorage.
-func (s *CouchStorage) Add(trigger Trigger) error {
-	return couchdb.CreateDoc(s.db, &triggerDoc{trigger})
+func (s *couchStorage) Add(trigger Trigger) error {
+	return couchdb.CreateDoc(couchdb.GlobalDB, &triggerDoc{trigger})
 }
 
-// Delete implements the Delete method of the TriggerStorage.
-func (s *CouchStorage) Delete(trigger Trigger) error {
-	return couchdb.DeleteDoc(s.db, &triggerDoc{trigger})
+func (s *couchStorage) Delete(trigger Trigger) error {
+	return couchdb.DeleteDoc(couchdb.GlobalDB, &triggerDoc{trigger})
 }
