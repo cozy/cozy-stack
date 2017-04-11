@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	_ "github.com/cozy/cozy-stack/pkg/jobs/workers"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
@@ -27,6 +28,7 @@ var ts *httptest.Server
 var testInstance *instance.Instance
 var token string
 var clientID string
+var imgID string
 
 func readFile(fs vfs.VFS, name string) ([]byte, error) {
 	doc, err := fs.FileByPath(name)
@@ -380,6 +382,25 @@ func TestUploadAtRootSuccess(t *testing.T) {
 	assert.Equal(t, body, string(buf))
 }
 
+func TestUploadImage(t *testing.T) {
+	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__©M4Dz.jpg")
+	assert.NoError(t, err)
+	defer f.Close()
+	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg", f)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, obj := doUploadOrMod(t, req, "image/jpeg", "tHWYYuXBBflJ8wXgJ2c2yg==")
+	assert.Equal(t, 201, res.StatusCode)
+	data := obj["data"].(map[string]interface{})
+	imgID = data["id"].(string)
+	attrs := data["attributes"].(map[string]interface{})
+	meta := attrs["metadata"].(map[string]interface{})
+	v := meta["extractor_version"].(float64)
+	assert.Equal(t, float64(vfs.MetadataExtractorVersion), v)
+	flash := meta["flash"].(string)
+	assert.Equal(t, "Off, Did not fire", flash)
+}
+
 func TestUploadConcurrently(t *testing.T) {
 	done := make(chan *http.Response)
 	errs := make(chan *http.Response)
@@ -474,24 +495,6 @@ func TestUploadWithDate(t *testing.T) {
 	assert.Equal(t, "2016-09-19T12:38:04Z", createdAt)
 	updatedAt := attrs["updated_at"].(string)
 	assert.Equal(t, createdAt, updatedAt)
-}
-
-func TestUploadImage(t *testing.T) {
-	f, err := os.Open("../../tests/fixtures/wet-cozy_20160910__©M4Dz.jpg")
-	assert.NoError(t, err)
-	defer f.Close()
-	req, err := http.NewRequest("POST", ts.URL+"/files/?Type=file&Name=wet.jpg", f)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	res, obj := doUploadOrMod(t, req, "image/jpeg", "tHWYYuXBBflJ8wXgJ2c2yg==")
-	assert.Equal(t, 201, res.StatusCode)
-	data := obj["data"].(map[string]interface{})
-	attrs := data["attributes"].(map[string]interface{})
-	meta := attrs["metadata"].(map[string]interface{})
-	v := meta["extractor_version"].(float64)
-	assert.Equal(t, float64(vfs.MetadataExtractorVersion), v)
-	flash := meta["flash"].(string)
-	assert.Equal(t, "Off, Did not fire", flash)
 }
 
 func TestModifyMetadataFileMove(t *testing.T) {
@@ -1465,7 +1468,6 @@ func TestTrashList(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	defer res5.Body.Close()
 
 	var v struct {
@@ -1521,7 +1523,6 @@ func TestTrashClear(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	defer res5.Body.Close()
 
 	var v struct {
@@ -1534,7 +1535,6 @@ func TestTrashClear(t *testing.T) {
 	}
 
 	assert.True(t, len(v.Data) == 0)
-
 }
 
 func TestDestroyFile(t *testing.T) {
@@ -1578,7 +1578,6 @@ func TestDestroyFile(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	defer res5.Body.Close()
 
 	var v struct {
@@ -1589,7 +1588,6 @@ func TestDestroyFile(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	assert.True(t, len(v.Data) == 1)
 
 	path = "/files/trash/" + dirID
@@ -1608,16 +1606,25 @@ func TestDestroyFile(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	defer res5.Body.Close()
 
 	err = json.NewDecoder(res5.Body).Decode(&v)
 	if !assert.NoError(t, err) {
 		return
 	}
-
 	assert.True(t, len(v.Data) == 0)
+}
 
+func TestThumbnail(t *testing.T) {
+	res1, _ := download(t, "/files/"+imgID+"/thumbnail/large", "")
+	assert.Equal(t, 200, res1.StatusCode)
+	assert.True(t, strings.HasPrefix(res1.Header.Get("Content-Type"), "image/jpeg"))
+	res2, _ := download(t, "/files/"+imgID+"/thumbnail/medium", "")
+	assert.Equal(t, 200, res2.StatusCode)
+	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "image/jpeg"))
+	res3, _ := download(t, "/files/"+imgID+"/thumbnail/small", "")
+	assert.Equal(t, 200, res3.StatusCode)
+	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Type"), "image/jpeg"))
 }
 
 func TestMain(m *testing.M) {

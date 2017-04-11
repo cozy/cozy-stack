@@ -30,6 +30,7 @@ type Doc interface {
 	ID() string
 	Rev() string
 	DocType() string
+	Clone() Doc
 
 	SetID(id string)
 	SetRev(rev string)
@@ -52,10 +53,12 @@ func SimpleDatabasePrefix(prefix string) Database {
 	return &simpleDB{prefix}
 }
 
-func rtevent(db Database, evtype string, doc realtime.Doc) {
-	realtime.InstanceHub(db.Prefix()).Publish(&realtime.Event{
+func rtevent(db Database, evtype string, doc Doc) {
+	prefix := db.Prefix()
+	prefix = prefix[:len(prefix)-1] // Strip the final '/'
+	realtime.InstanceHub(prefix).Publish(&realtime.Event{
 		Type: evtype,
-		Doc:  doc,
+		Doc:  doc.Clone(),
 	})
 }
 
@@ -119,6 +122,16 @@ func (j JSONDoc) SetRev(rev string) {
 	} else {
 		j.M["_rev"] = rev
 	}
+}
+
+// Clone is used to create a copy of the document
+func (j JSONDoc) Clone() Doc {
+	cloned := JSONDoc{Type: j.Type}
+	cloned.M = make(map[string]interface{})
+	for k, v := range j.M {
+		cloned.M[k] = v
+	}
+	return cloned
 }
 
 // MarshalJSON implements json.Marshaller by proxying to internal map

@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/jobs/workers"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -31,10 +30,10 @@ import (
 
 /* #nosec */
 const (
-	registerTokenLen      = 16
-	passwordResetTokenLen = 16
-	sessionSecretLen      = 64
-	oauthSecretLen        = 128
+	RegisterTokenLen      = 16
+	PasswordResetTokenLen = 16
+	SessionSecretLen      = 64
+	OauthSecretLen        = 128
 )
 
 // passwordResetValidityDuration is the validity duration of the passphrase
@@ -122,6 +121,9 @@ func (i *Instance) Rev() string { return i.DocRev }
 // SetRev implements couchdb.Doc
 func (i *Instance) SetRev(v string) { i.DocRev = v }
 
+// Clone implements couchdb.Doc
+func (i *Instance) Clone() couchdb.Doc { cloned := *i; return &cloned }
+
 // settings is a struct used for the settings of an instance
 type instanceSettings struct {
 	Timezone   string `json:"tz,omitempty"`
@@ -129,11 +131,12 @@ type instanceSettings struct {
 	PublicName string `json:"public_name,omitempty"`
 }
 
-func (s *instanceSettings) ID() string      { return consts.InstanceSettingsID }
-func (s *instanceSettings) Rev() string     { return "" }
-func (s *instanceSettings) DocType() string { return consts.Settings }
-func (s *instanceSettings) SetID(_ string)  {}
-func (s *instanceSettings) SetRev(_ string) {}
+func (s *instanceSettings) ID() string         { return consts.InstanceSettingsID }
+func (s *instanceSettings) Rev() string        { return "" }
+func (s *instanceSettings) DocType() string    { return consts.Settings }
+func (s *instanceSettings) Clone() couchdb.Doc { cloned := *s; return &cloned }
+func (s *instanceSettings) SetID(_ string)     {}
+func (s *instanceSettings) SetRev(_ string)    {}
 
 // Prefix returns the prefix to use in database naming for the
 // current instance
@@ -179,9 +182,10 @@ func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
 	panic(fmt.Errorf("Unknown application type %s", string(appsType)))
 }
 
-// DiskQuota returns the number of bytes allowed on the disk to the user.
-func (i *Instance) DiskQuota() int64 {
-	return i.BytesDiskQuota
+// ThumbsFS returns the hidden filesystem for storing the thumbnails of the
+// photos/image
+func (i *Instance) ThumbsFS() afero.Fs {
+	return i.hiddenFS(vfs.ThumbsDirName)
 }
 
 func (i *Instance) hiddenFS(dirname string) afero.Fs {
@@ -194,6 +198,11 @@ func (i *Instance) hiddenFS(dirname string) afero.Fs {
 		panic("Not implemented")
 	}
 	return nil
+}
+
+// DiskQuota returns the number of bytes allowed on the disk to the user.
+func (i *Instance) DiskQuota() int64 {
+	return i.BytesDiskQuota
 }
 
 // StartJobSystem creates all the resources necessary for the instance's job
@@ -334,10 +343,10 @@ func Create(opts *Options) (*Instance, error) {
 	i.PassphraseHash = nil
 	i.PassphraseResetToken = nil
 	i.PassphraseResetTime = time.Time{}
-	i.RegisterToken = crypto.GenerateRandomBytes(registerTokenLen)
-	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
-	i.OAuthSecret = crypto.GenerateRandomBytes(oauthSecretLen)
-	i.CLISecret = crypto.GenerateRandomBytes(oauthSecretLen)
+	i.RegisterToken = crypto.GenerateRandomBytes(RegisterTokenLen)
+	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
+	i.OAuthSecret = crypto.GenerateRandomBytes(OauthSecretLen)
+	i.CLISecret = crypto.GenerateRandomBytes(OauthSecretLen)
 
 	if err := couchdb.CreateDB(couchdb.GlobalDB, consts.Instances); !couchdb.IsFileExists(err) {
 		if err != nil {
@@ -403,6 +412,16 @@ func Create(opts *Options) (*Instance, error) {
 	}
 	if err := i.StartJobSystem(); err != nil {
 		return nil, err
+	}
+	scheduler := i.JobsScheduler()
+	for _, trigger := range Triggers {
+		t, err := jobs.NewTrigger(&trigger)
+		if err != nil {
+			return nil, err
+		}
+		if err = scheduler.Add(t); err != nil {
+			return nil, err
+		}
 	}
 	for _, app := range opts.Apps {
 		if err := i.installApp(app); err != nil {
@@ -576,7 +595,7 @@ func (i *Instance) RequestPassphraseReset() error {
 		time.Now().UTC().Before(i.PassphraseResetTime) {
 		return nil
 	}
-	i.PassphraseResetToken = crypto.GenerateRandomBytes(passwordResetTokenLen)
+	i.PassphraseResetToken = crypto.GenerateRandomBytes(PasswordResetTokenLen)
 	i.PassphraseResetTime = time.Now().UTC().Add(passwordResetValidityDuration)
 	if err := Update(i); err != nil {
 		return err
@@ -586,16 +605,13 @@ func (i *Instance) RequestPassphraseReset() error {
 	resetURL := i.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(i.PassphraseResetToken)},
 	})
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, &workers.MailOptions{
-		Mode:         workers.MailModeNoReply,
-		Subject:      i.Translate("Mail Password reset"),
-		TemplateName: "passphrase_reset_" + i.Locale,
-		TemplateValues: struct {
-			BaseURL             string
-			PassphraseResetLink string
-		}{
-			BaseURL:             i.PageURL("/", nil),
-			PassphraseResetLink: resetURL,
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+		"mode":          "noreply",
+		"subject":       i.Translate("Mail Password reset"),
+		"template_name": "passphrase_reset_" + i.Locale,
+		"template_values": map[string]string{
+			"BaseURL":             i.PageURL("/", nil),
+			"PassphraseResetLink": resetURL,
 		},
 	})
 	if err != nil {
@@ -651,7 +667,7 @@ func (i *Instance) UpdatePassphrase(pass, current []byte) error {
 
 func (i *Instance) setPassphraseAndSecret(hash []byte) {
 	i.PassphraseHash = hash
-	i.SessionSecret = crypto.GenerateRandomBytes(sessionSecretLen)
+	i.SessionSecret = crypto.GenerateRandomBytes(SessionSecretLen)
 }
 
 // CheckPassphrase confirm an instance passport

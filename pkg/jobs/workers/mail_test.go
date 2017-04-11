@@ -381,7 +381,7 @@ func TestSendMailNoReply(t *testing.T) {
 		couchdb.DeleteDoc(db, doc)
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage("json", &MailOptions{
+	msg, _ := jobs.NewMessage("json", MailOptions{
 		Mode:    "noreply",
 		Subject: "Up?",
 		Parts: []*MailPart{
@@ -420,7 +420,7 @@ func TestSendMailFrom(t *testing.T) {
 		couchdb.DeleteDoc(db, doc)
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage("json", &MailOptions{
+	msg, _ := jobs.NewMessage("json", MailOptions{
 		Mode:    "from",
 		Subject: "Up?",
 		To:      []*MailAddress{{Email: "you@you"}},

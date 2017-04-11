@@ -72,7 +72,7 @@ func (a *AtTrigger) Valid(key, value string) bool {
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (a *AtTrigger) Schedule() <-chan *JobRequest {
+func (a *AtTrigger) Schedule(domain string) <-chan *JobRequest {
 	at := a.at
 	ch := make(chan *JobRequest)
 	duration := time.Since(at)

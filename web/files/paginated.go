@@ -174,6 +174,7 @@ func (d *dir) Rev() string                            { return d.doc.Rev() }
 func (d *dir) SetID(id string)                        { d.doc.SetID(id) }
 func (d *dir) SetRev(rev string)                      { d.doc.SetRev(rev) }
 func (d *dir) DocType() string                        { return d.doc.DocType() }
+func (d *dir) Clone() couchdb.Doc                     { cloned := *d; return &cloned }
 func (d *dir) Relationships() jsonapi.RelationshipMap { return d.rel }
 func (d *dir) Included() []jsonapi.Object             { return d.included }
 func (d *dir) MarshalJSON() ([]byte, error)           { return json.Marshal(d.doc) }
@@ -188,11 +189,12 @@ func (a *apiArchive) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/files/archive/" + a.Secret}
 }
 
-func (f *file) ID() string        { return f.doc.ID() }
-func (f *file) Rev() string       { return f.doc.Rev() }
-func (f *file) SetID(id string)   { f.doc.SetID(id) }
-func (f *file) SetRev(rev string) { f.doc.SetRev(rev) }
-func (f *file) DocType() string   { return f.doc.DocType() }
+func (f *file) ID() string         { return f.doc.ID() }
+func (f *file) Rev() string        { return f.doc.Rev() }
+func (f *file) SetID(id string)    { f.doc.SetID(id) }
+func (f *file) SetRev(rev string)  { f.doc.SetRev(rev) }
+func (f *file) DocType() string    { return f.doc.DocType() }
+func (f *file) Clone() couchdb.Doc { cloned := *f; return &cloned }
 func (f *file) Relationships() jsonapi.RelationshipMap {
 	return jsonapi.RelationshipMap{
 		"parent": jsonapi.Relationship{

@@ -33,13 +33,14 @@ type konnManifest struct {
 	DocPermissions permissions.Set `json:"permissions"`
 }
 
-func (m *konnManifest) ID() string        { return m.DocType() + "/" + m.DocSlug }
-func (m *konnManifest) Rev() string       { return m.DocRev }
-func (m *konnManifest) DocType() string   { return consts.Konnectors }
-func (m *konnManifest) SetID(id string)   {}
-func (m *konnManifest) SetRev(rev string) { m.DocRev = rev }
-func (m *konnManifest) Source() string    { return m.DocSource }
-func (m *konnManifest) Slug() string      { return m.DocSlug }
+func (m *konnManifest) ID() string         { return m.DocType() + "/" + m.DocSlug }
+func (m *konnManifest) Rev() string        { return m.DocRev }
+func (m *konnManifest) DocType() string    { return consts.Konnectors }
+func (m *konnManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
+func (m *konnManifest) SetID(id string)    {}
+func (m *konnManifest) SetRev(rev string)  { m.DocRev = rev }
+func (m *konnManifest) Source() string     { return m.DocSource }
+func (m *konnManifest) Slug() string       { return m.DocSlug }
 
 func (m *konnManifest) State() State { return m.DocState }
 func (m *konnManifest) Error() error {

@@ -11,11 +11,12 @@ type triggerDoc struct {
 	t Trigger
 }
 
-func (t triggerDoc) ID() string        { return t.t.Infos().ID }
-func (t triggerDoc) Rev() string       { return t.t.Infos().Rev }
-func (t triggerDoc) DocType() string   { return consts.Triggers }
-func (t triggerDoc) SetID(id string)   { t.t.Infos().ID = id }
-func (t triggerDoc) SetRev(rev string) { t.t.Infos().Rev = rev }
+func (t triggerDoc) ID() string         { return t.t.Infos().ID }
+func (t triggerDoc) Rev() string        { return t.t.Infos().Rev }
+func (t triggerDoc) DocType() string    { return consts.Triggers }
+func (t triggerDoc) Clone() couchdb.Doc { return t }
+func (t triggerDoc) SetID(id string)    { t.t.Infos().ID = id }
+func (t triggerDoc) SetRev(rev string)  { t.t.Infos().Rev = rev }
 func (t triggerDoc) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.t.Infos())
 }

@@ -1,4 +1,4 @@
-package instance
+package instance_test
 
 import (
 	"bytes"
@@ -14,13 +14,15 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	_ "github.com/cozy/cozy-stack/pkg/jobs/workers"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSubdomain(t *testing.T) {
-	instance := Instance{
+	instance := &instance.Instance{
 		Domain: "foo.example.com",
 	}
 	cfg := config.GetConfig()
@@ -37,7 +39,7 @@ func TestSubdomain(t *testing.T) {
 }
 
 func TestGetInstanceNoDB(t *testing.T) {
-	instance, err := Get("no.instance.cozycloud.cc")
+	instance, err := instance.Get("no.instance.cozycloud.cc")
 	if assert.Error(t, err, "An error is expected") {
 		assert.Nil(t, instance)
 		assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
@@ -45,7 +47,7 @@ func TestGetInstanceNoDB(t *testing.T) {
 }
 
 func TestCreateInstance(t *testing.T) {
-	instance, err := Create(&Options{
+	instance, err := instance.Create(&instance.Options{
 		Domain: "test.cozycloud.cc",
 		Locale: "en",
 	})
@@ -56,7 +58,7 @@ func TestCreateInstance(t *testing.T) {
 }
 
 func TestCreateInstanceWithSettings(t *testing.T) {
-	instance, err := Create(&Options{
+	instance, err := instance.Create(&instance.Options{
 		Domain:   "test2.cozycloud.cc",
 		Locale:   "en",
 		Timezone: "Europe/Berlin",
@@ -72,19 +74,19 @@ func TestCreateInstanceWithSettings(t *testing.T) {
 }
 
 func TestCreateInstanceBadDomain(t *testing.T) {
-	_, err := Create(&Options{
+	_, err := instance.Create(&instance.Options{
 		Domain: "..",
 		Locale: "en",
 	})
 	assert.Error(t, err, "An error is expected")
 
-	_, err = Create(&Options{
+	_, err = instance.Create(&instance.Options{
 		Domain: ".",
 		Locale: "en",
 	})
 	assert.Error(t, err, "An error is expected")
 
-	_, err = Create(&Options{
+	_, err = instance.Create(&instance.Options{
 		Domain: "foo/bar",
 		Locale: "en",
 	})
@@ -92,7 +94,7 @@ func TestCreateInstanceBadDomain(t *testing.T) {
 }
 
 func TestGetWrongInstance(t *testing.T) {
-	instance, err := Get("no.instance.cozycloud.cc")
+	instance, err := instance.Get("no.instance.cozycloud.cc")
 	if assert.Error(t, err, "An error is expected") {
 		assert.Nil(t, instance)
 		assert.Contains(t, err.Error(), "Instance not found", "the error is not explicit")
@@ -100,7 +102,7 @@ func TestGetWrongInstance(t *testing.T) {
 }
 
 func TestGetCorrectInstance(t *testing.T) {
-	instance, err := Get("test.cozycloud.cc")
+	instance, err := instance.Get("test.cozycloud.cc")
 	if assert.NoError(t, err) {
 		assert.NotNil(t, instance)
 		assert.Equal(t, instance.Domain, "test.cozycloud.cc")
@@ -108,11 +110,11 @@ func TestGetCorrectInstance(t *testing.T) {
 }
 
 func TestInstancehasOAuthSecret(t *testing.T) {
-	instance, err := Get("test.cozycloud.cc")
+	i, err := instance.Get("test.cozycloud.cc")
 	if assert.NoError(t, err) {
-		assert.NotNil(t, instance)
-		assert.NotNil(t, instance.OAuthSecret)
-		assert.Equal(t, len(instance.OAuthSecret), oauthSecretLen)
+		assert.NotNil(t, i)
+		assert.NotNil(t, i.OAuthSecret)
+		assert.Equal(t, len(i.OAuthSecret), instance.OauthSecretLen)
 	}
 }
 
@@ -138,7 +140,7 @@ func TestBuildAppToken(t *testing.T) {
 	manifest := &apps.WebappManifest{
 		DocSlug: "my-app",
 	}
-	i := &Instance{
+	i := &instance.Instance{
 		Domain:        "test-ctx-token.example.com",
 		SessionSecret: crypto.GenerateRandomBytes(64),
 	}
@@ -160,75 +162,75 @@ func TestBuildAppToken(t *testing.T) {
 }
 
 func TestRegisterPassphrase(t *testing.T) {
-	instance, err := Get("test.cozycloud.cc")
-	if !assert.NoError(t, err, "cant fetch instance") {
+	i, err := instance.Get("test.cozycloud.cc")
+	if !assert.NoError(t, err, "cant fetch i") {
 		return
 	}
-	assert.NotNil(t, instance)
-	assert.NotEmpty(t, instance.RegisterToken)
-	assert.Len(t, instance.RegisterToken, registerTokenLen)
-	assert.NotEmpty(t, instance.OAuthSecret)
-	assert.Len(t, instance.OAuthSecret, oauthSecretLen)
-	assert.NotEmpty(t, instance.SessionSecret)
-	assert.Len(t, instance.SessionSecret, sessionSecretLen)
+	assert.NotNil(t, i)
+	assert.NotEmpty(t, i.RegisterToken)
+	assert.Len(t, i.RegisterToken, instance.RegisterTokenLen)
+	assert.NotEmpty(t, i.OAuthSecret)
+	assert.Len(t, i.OAuthSecret, instance.OauthSecretLen)
+	assert.NotEmpty(t, i.SessionSecret)
+	assert.Len(t, i.SessionSecret, instance.SessionSecretLen)
 
-	rtoken := instance.RegisterToken
+	rtoken := i.RegisterToken
 	pass := []byte("passphrase")
 	empty := []byte("")
 	badtoken := []byte("not-token")
 
-	err = instance.RegisterPassphrase(pass, empty)
+	err = i.RegisterPassphrase(pass, empty)
 	assert.Error(t, err, "RegisterPassphrase requires token")
 
-	err = instance.RegisterPassphrase(pass, badtoken)
+	err = i.RegisterPassphrase(pass, badtoken)
 	assert.Error(t, err, "RegisterPassphrase requires proper token")
 
-	err = instance.RegisterPassphrase(pass, rtoken)
+	err = i.RegisterPassphrase(pass, rtoken)
 	assert.NoError(t, err)
 
-	assert.Empty(t, instance.RegisterToken, "RegisterToken has not been removed")
-	assert.NotEmpty(t, instance.PassphraseHash, "PassphraseHash has not been saved")
+	assert.Empty(t, i.RegisterToken, "RegisterToken has not been removed")
+	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
 
-	err = instance.RegisterPassphrase(pass, rtoken)
+	err = i.RegisterPassphrase(pass, rtoken)
 	assert.Error(t, err, "RegisterPassphrase works only once")
 }
 
 func TestUpdatePassphrase(t *testing.T) {
-	instance, err := Get("test.cozycloud.cc")
-	if !assert.NoError(t, err, "cant fetch instance") {
+	i, err := instance.Get("test.cozycloud.cc")
+	if !assert.NoError(t, err, "cant fetch i") {
 		return
 	}
-	assert.NotNil(t, instance)
-	assert.Empty(t, instance.RegisterToken)
-	assert.NotEmpty(t, instance.OAuthSecret)
-	assert.Len(t, instance.OAuthSecret, oauthSecretLen)
-	assert.NotEmpty(t, instance.SessionSecret)
-	assert.Len(t, instance.SessionSecret, sessionSecretLen)
+	assert.NotNil(t, i)
+	assert.Empty(t, i.RegisterToken)
+	assert.NotEmpty(t, i.OAuthSecret)
+	assert.Len(t, i.OAuthSecret, instance.OauthSecretLen)
+	assert.NotEmpty(t, i.SessionSecret)
+	assert.Len(t, i.SessionSecret, instance.SessionSecretLen)
 
-	oldHash := instance.PassphraseHash
-	oldSecret := instance.SessionSecret
+	oldHash := i.PassphraseHash
+	oldSecret := i.SessionSecret
 
 	currentPass := []byte("passphrase")
 	newPass := []byte("new-passphrase")
 	badPass := []byte("not-passphrase")
 	empty := []byte("")
 
-	err = instance.UpdatePassphrase(newPass, empty)
+	err = i.UpdatePassphrase(newPass, empty)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = instance.UpdatePassphrase(newPass, badPass)
+	err = i.UpdatePassphrase(newPass, badPass)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = instance.UpdatePassphrase(newPass, currentPass)
+	err = i.UpdatePassphrase(newPass, currentPass)
 	assert.NoError(t, err)
 
-	assert.NotEmpty(t, instance.PassphraseHash, "PassphraseHash has not been saved")
-	assert.NotEqual(t, oldHash, instance.PassphraseHash)
-	assert.NotEqual(t, oldSecret, instance.SessionSecret)
+	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")
+	assert.NotEqual(t, oldHash, i.PassphraseHash)
+	assert.NotEqual(t, oldSecret, i.SessionSecret)
 }
 
 func TestCheckPassphrase(t *testing.T) {
-	instance, err := Get("test.cozycloud.cc")
+	instance, err := instance.Get("test.cozycloud.cc")
 	if !assert.NoError(t, err, "cant fetch instance") {
 		return
 	}
@@ -244,8 +246,8 @@ func TestCheckPassphrase(t *testing.T) {
 }
 
 func TestRequestPassphraseReset(t *testing.T) {
-	Destroy("test.cozycloud.cc.pass_reset")
-	in, err := Create(&Options{
+	instance.Destroy("test.cozycloud.cc.pass_reset")
+	in, err := instance.Create(&instance.Options{
 		Domain: "test.cozycloud.cc.pass_reset",
 		Locale: "en",
 		Email:  "coucou@coucou.com",
@@ -254,7 +256,7 @@ func TestRequestPassphraseReset(t *testing.T) {
 		return
 	}
 	defer func() {
-		Destroy("test.cozycloud.cc.pass_reset")
+		instance.Destroy("test.cozycloud.cc.pass_reset")
 	}()
 	err = in.RequestPassphraseReset()
 	if !assert.NoError(t, err) {
@@ -288,8 +290,8 @@ func TestRequestPassphraseReset(t *testing.T) {
 }
 
 func TestPassphraseRenew(t *testing.T) {
-	Destroy("test.cozycloud.cc.pass_renew")
-	in, err := Create(&Options{
+	instance.Destroy("test.cozycloud.cc.pass_renew")
+	in, err := instance.Create(&instance.Options{
 		Domain: "test.cozycloud.cc.pass_renew",
 		Locale: "en",
 	})
@@ -297,7 +299,7 @@ func TestPassphraseRenew(t *testing.T) {
 		return
 	}
 	defer func() {
-		Destroy("test.cozycloud.cc.pass_renew")
+		instance.Destroy("test.cozycloud.cc.pass_renew")
 	}()
 	err = in.RegisterPassphrase([]byte("MyPassphrase"), in.RegisterToken)
 	if !assert.NoError(t, err) {
@@ -324,14 +326,14 @@ func TestPassphraseRenew(t *testing.T) {
 }
 
 func TestInstanceNoDuplicate(t *testing.T) {
-	_, err := Create(&Options{
+	_, err := instance.Create(&instance.Options{
 		Domain: "test.cozycloud.cc.duplicate",
 		Locale: "en",
 	})
 	if !assert.NoError(t, err) {
 		return
 	}
-	i, err := Create(&Options{
+	i, err := instance.Create(&instance.Options{
 		Domain: "test.cozycloud.cc.duplicate",
 		Locale: "en",
 	})
@@ -342,9 +344,9 @@ func TestInstanceNoDuplicate(t *testing.T) {
 }
 
 func TestInstanceDestroy(t *testing.T) {
-	Destroy("test.cozycloud.cc")
+	instance.Destroy("test.cozycloud.cc")
 
-	_, err := Create(&Options{
+	_, err := instance.Create(&instance.Options{
 		Domain: "test.cozycloud.cc",
 		Locale: "en",
 	})
@@ -352,32 +354,20 @@ func TestInstanceDestroy(t *testing.T) {
 		return
 	}
 
-	inst, err := Destroy("test.cozycloud.cc")
+	inst, err := instance.Destroy("test.cozycloud.cc")
 	if assert.NoError(t, err) {
 		assert.NotNil(t, inst)
 	}
 
-	inst, err = Destroy("test.cozycloud.cc")
+	inst, err = instance.Destroy("test.cozycloud.cc")
 	if assert.Error(t, err) {
-		assert.Equal(t, ErrNotFound, err)
+		assert.Equal(t, instance.ErrNotFound, err)
 		assert.Nil(t, inst)
 	}
 }
 
-func TestGetFs(t *testing.T) {
-	instance := Instance{
-		Domain: "test-provider.cozycloud.cc",
-	}
-	err := instance.makeVFS()
-	if !assert.NoError(t, err) {
-		return
-	}
-	storage := instance.VFS()
-	assert.NotNil(t, storage, "the instance should have a memory storage provider")
-}
-
 func TestTranslate(t *testing.T) {
-	LoadLocale("fr", `
+	instance.LoadLocale("fr", `
 msgid "english"
 msgstr "french"
 
@@ -385,43 +375,17 @@ msgid "hello %s"
 msgstr "bonjour %s"
 `)
 
-	fr := Instance{Locale: "fr"}
+	fr := &instance.Instance{Locale: "fr"}
 	s := fr.Translate("english")
 	assert.Equal(t, "french", s)
 	s = fr.Translate("hello %s", "toto")
 	assert.Equal(t, "bonjour toto", s)
 
-	no := Instance{Locale: "it"}
+	no := &instance.Instance{Locale: "it"}
 	s = no.Translate("english")
 	assert.Equal(t, "english", s)
 	s = no.Translate("hello %s", "toto")
 	assert.Equal(t, "hello toto", s)
-}
-
-func TestCache(t *testing.T) {
-	globalCache = nil
-	defer func() {
-		globalCache = nil
-	}()
-
-	i := &Instance{
-		DocID:  "fake-instance",
-		Domain: "cached.cozy.tools",
-		Locale: "zh",
-	}
-	getCache().Set("cached.cozy.tools", i)
-
-	i2, err := Get("cached.cozy.tools")
-	if !assert.NoError(t, err) {
-		return
-	}
-	assert.Equal(t, i2.Locale, "zh")
-
-	globalCache.Revoke("cached.cozy.tools")
-
-	_, err = Get("cached.cozy.tools")
-	assert.Error(t, err)
-
 }
 
 func TestMain(m *testing.M) {
@@ -432,23 +396,23 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	Destroy("test.cozycloud.cc")
-	Destroy("test2.cozycloud.cc")
-	Destroy("test.cozycloud.cc.duplicate")
+	instance.Destroy("test.cozycloud.cc")
+	instance.Destroy("test2.cozycloud.cc")
+	instance.Destroy("test.cozycloud.cc.duplicate")
 
 	os.RemoveAll("/usr/local/var/cozy2/")
 
 	res := m.Run()
 
-	Destroy("test.cozycloud.cc")
-	Destroy("test2.cozycloud.cc")
-	Destroy("test.cozycloud.cc.duplicate")
+	instance.Destroy("test.cozycloud.cc")
+	instance.Destroy("test2.cozycloud.cc")
+	instance.Destroy("test.cozycloud.cc.duplicate")
 
 	os.Exit(res)
 }
 
 func getDB(t *testing.T, domain string) couchdb.Database {
-	instance, err := Get(domain)
+	instance, err := instance.Get(domain)
 	if !assert.NoError(t, err, "Should get instance %v", domain) {
 		t.FailNow()
 	}

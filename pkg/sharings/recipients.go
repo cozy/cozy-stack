@@ -41,6 +41,9 @@ func (r *Recipient) Rev() string { return r.RRev }
 // DocType returns the recipient document type
 func (r *Recipient) DocType() string { return consts.Recipients }
 
+// Clone implements couchdb.Doc
+func (r *Recipient) Clone() couchdb.Doc { cloned := *r; return &cloned }
+
 // SetID changes the recipient qualified identifier
 func (r *Recipient) SetID(id string) { r.RID = id }
 

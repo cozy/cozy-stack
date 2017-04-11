@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	_ "github.com/cozy/cozy-stack/pkg/jobs/workers" // import all workers
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -44,6 +45,7 @@ type (
 func (j *apiJob) ID() string                             { return j.j.ID }
 func (j *apiJob) Rev() string                            { return "" }
 func (j *apiJob) DocType() string                        { return consts.Jobs }
+func (j *apiJob) Clone() couchdb.Doc                     { return j }
 func (j *apiJob) SetID(_ string)                         {}
 func (j *apiJob) SetRev(_ string)                        {}
 func (j *apiJob) Relationships() jsonapi.RelationshipMap { return nil }
@@ -58,6 +60,7 @@ func (j *apiJob) MarshalJSON() ([]byte, error) {
 func (q *apiQueue) ID() string                             { return q.workerType }
 func (q *apiQueue) Rev() string                            { return "" }
 func (q *apiQueue) DocType() string                        { return consts.Queues }
+func (q *apiQueue) Clone() couchdb.Doc                     { return q }
 func (q *apiQueue) SetID(_ string)                         {}
 func (q *apiQueue) SetRev(_ string)                        {}
 func (q *apiQueue) Relationships() jsonapi.RelationshipMap { return nil }
@@ -76,6 +79,7 @@ func (q *apiQueue) Valid(key, value string) bool {
 func (t *apiTrigger) ID() string                             { return t.t.Infos().ID }
 func (t *apiTrigger) Rev() string                            { return "" }
 func (t *apiTrigger) DocType() string                        { return consts.Triggers }
+func (t *apiTrigger) Clone() couchdb.Doc                     { return t }
 func (t *apiTrigger) SetID(_ string)                         {}
 func (t *apiTrigger) SetRev(_ string)                        {}
 func (t *apiTrigger) Relationships() jsonapi.RelationshipMap { return nil }

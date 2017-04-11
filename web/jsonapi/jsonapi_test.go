@@ -33,6 +33,10 @@ func (f *Foo) DocType() string {
 	return "io.cozy.foos"
 }
 
+func (f *Foo) Clone() couchdb.Doc {
+	return f
+}
+
 func (f *Foo) SetID(id string) {
 	f.FID = id
 }

@@ -67,7 +67,7 @@ func (c *CronTrigger) Valid(key, value string) bool {
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (c *CronTrigger) Schedule() <-chan *JobRequest {
+func (c *CronTrigger) Schedule(domain string) <-chan *JobRequest {
 	ch := make(chan *JobRequest)
 	go func() {
 		for next := time.Now(); true; next = c.sched.Next(next) {

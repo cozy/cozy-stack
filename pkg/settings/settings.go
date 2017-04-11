@@ -45,6 +45,12 @@ func (t *Theme) Rev() string { return t.ThemeRev }
 // DocType returns the theme document type
 func (t *Theme) DocType() string { return consts.Settings }
 
+// Clone returns a new theme with the same values
+func (t *Theme) Clone() couchdb.Doc {
+	cloned := *t
+	return &cloned
+}
+
 // SetID changes the theme qualified identifier
 func (t *Theme) SetID(id string) { t.ThemeID = id }
 

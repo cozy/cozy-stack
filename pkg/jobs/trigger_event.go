@@ -76,7 +76,9 @@ func (t *EventTrigger) interestedBy(e *realtime.Event) bool {
 
 func addEventToMessage(e *realtime.Event, base *Message) (*Message, error) {
 	var basemsg interface{}
-	base.Unmarshal(&basemsg)
+	if base != nil {
+		base.Unmarshal(&basemsg)
+	}
 	return NewMessage(JSONEncoding, map[string]interface{}{
 		"message": basemsg,
 		"event":   e,
@@ -84,10 +86,10 @@ func addEventToMessage(e *realtime.Event, base *Message) (*Message, error) {
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (t *EventTrigger) Schedule() <-chan *JobRequest {
+func (t *EventTrigger) Schedule(domain string) <-chan *JobRequest {
 	ch := make(chan *JobRequest)
 	go func() {
-		c := realtime.MainHub().Subscribe(t.mask.Type)
+		c := realtime.InstanceHub(domain).Subscribe(t.mask.Type)
 		for {
 			select {
 			case e := <-c.Read():

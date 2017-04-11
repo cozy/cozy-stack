@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -351,6 +352,39 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	return nil
 }
 
+// ThumbnailHandler serves thumbnails of the images/photos
+func ThumbnailHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	doc, err := instance.VFS().FileByID(c.Param("file-id"))
+	if err != nil {
+		return wrapVfsError(err)
+	}
+
+	err = checkPerm(c, permissions.GET, nil, doc)
+	if err != nil {
+		return err
+	}
+
+	filepath := vfs.ThumbPath(doc, c.Param("format"))
+	fs := instance.ThumbsFS()
+	s, err := fs.Stat(filepath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return echo.NewHTTPError(http.StatusNotFound, err)
+		}
+		return err
+	}
+
+	r, err := fs.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	http.ServeContent(c.Response(), c.Request(), filepath, s.ModTime(), r)
+	return nil
+}
+
 func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	instance := middlewares.GetInstance(c)
 
@@ -652,6 +686,8 @@ func Routes(router *echo.Group) {
 	router.POST("/", CreationHandler)
 	router.POST("/:dir-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
+
+	router.GET("/:file-id/thumbnail/:format", ThumbnailHandler)
 
 	router.POST("/archive", ArchiveDownloadCreateHandler)
 	router.GET("/archive/:secret/:fake-name", ArchiveDownloadHandler)

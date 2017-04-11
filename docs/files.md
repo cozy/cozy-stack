@@ -320,9 +320,6 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 }
 ```
 
-**Note**: for an image, the links section will also include a link called
-`thumbnail` to the thumbnail URL of the image.
-
 **Note**: see [references of documents in VFS](references-docs-in-vfs.md) for
 more informations about the references field.
 
@@ -363,9 +360,10 @@ By default the `content-disposition` will be `inline`, but it will be
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
 
-### GET /files/:file-id/thumbnail
+### GET /files/:file-id/thumbnail/:format
 
-Get a thumbnail of a file (for an image only).
+Get a thumbnail of a file (for an image only). `:format` can be `small`
+(640x480), `medium` (1280x720), or `large` (1920x1080).
 
 ### PUT /files/:file-id
 

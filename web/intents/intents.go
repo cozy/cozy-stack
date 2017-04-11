@@ -25,6 +25,7 @@ type apiIntent struct {
 func (i *apiIntent) ID() string                             { return i.doc.ID() }
 func (i *apiIntent) Rev() string                            { return i.doc.Rev() }
 func (i *apiIntent) DocType() string                        { return consts.Intents }
+func (i *apiIntent) Clone() couchdb.Doc                     { return i }
 func (i *apiIntent) SetID(id string)                        { i.doc.SetID(id) }
 func (i *apiIntent) SetRev(rev string)                      { i.doc.SetRev(rev) }
 func (i *apiIntent) Relationships() jsonapi.RelationshipMap { return nil }
