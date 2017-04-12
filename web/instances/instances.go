@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -46,15 +48,29 @@ func createHandler(c echo.Context) error {
 			return wrapError(err)
 		}
 	}
+	var settings couchdb.JSONDoc
+	settings.M = make(map[string]interface{})
+	for _, setting := range strings.Split(c.QueryParam("Settings"), ",") {
+		if parts := strings.SplitN(setting, ":", 2); len(parts) == 2 {
+			settings.M[parts[0]] = parts[1]
+		}
+	}
+	if tz := c.QueryParam("Timezone"); tz != "" {
+		settings.M["tz"] = tz
+	}
+	if email := c.QueryParam("Email"); email != "" {
+		settings.M["email"] = email
+	}
+	if name := c.QueryParam("PublicName"); name != "" {
+		settings.M["public_name"] = name
+	}
 	in, err := instance.Create(&instance.Options{
-		Domain:     c.QueryParam("Domain"),
-		Locale:     c.QueryParam("Locale"),
-		Timezone:   c.QueryParam("Timezone"),
-		Email:      c.QueryParam("Email"),
-		PublicName: c.QueryParam("PublicName"),
-		DiskQuota:  diskQuota,
-		Apps:       utils.SplitTrimString(c.QueryParam("Apps"), ","),
-		Dev:        (c.QueryParam("Dev") == "true"),
+		Domain:    c.QueryParam("Domain"),
+		Locale:    c.QueryParam("Locale"),
+		DiskQuota: diskQuota,
+		Settings:  settings,
+		Apps:      utils.SplitTrimString(c.QueryParam("Apps"), ","),
+		Dev:       (c.QueryParam("Dev") == "true"),
 	})
 	if err != nil {
 		return wrapError(err)

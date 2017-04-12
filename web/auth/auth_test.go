@@ -1101,10 +1101,13 @@ func TestPassphraseRenewFormWithToken(t *testing.T) {
 func TestPassphraseRenew(t *testing.T) {
 	d := "test.cozycloud.cc.web_reset_form"
 	instance.Destroy(d)
+	var settings couchdb.JSONDoc
+	settings.M = make(map[string]interface{})
+	settings.M["email"] = "alice@example.com"
 	in1, err := instance.Create(&instance.Options{
-		Domain: d,
-		Locale: "en",
-		Email:  "coucou@coucou.com",
+		Domain:   d,
+		Locale:   "en",
+		Settings: settings,
 	})
 	if !assert.NoError(t, err) {
 		return

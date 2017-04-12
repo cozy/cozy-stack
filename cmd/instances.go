@@ -19,6 +19,7 @@ var flagLocale string
 var flagTimezone string
 var flagEmail string
 var flagPublicName string
+var flagSettings string
 var flagDiskQuota string
 var flagApps []string
 var flagDev bool
@@ -76,6 +77,7 @@ given domain.
 			Timezone:   flagTimezone,
 			Email:      flagEmail,
 			PublicName: flagPublicName,
+			Settings:   flagSettings,
 			DiskQuota:  int64(diskQuota),
 			Dev:        flagDev,
 			Passphrase: flagPassphrase,
@@ -247,6 +249,7 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
 	addInstanceCmd.Flags().StringVar(&flagPublicName, "public-name", "", "The public name of the owner")
+	addInstanceCmd.Flags().StringVar(&flagSettings, "settings", "", "A list of settings (eg context:foo,offer:premium)")
 	addInstanceCmd.Flags().StringVar(&flagDiskQuota, "disk-quota", "", "The quota allowed to the instance's VFS")
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")

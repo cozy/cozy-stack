@@ -33,6 +33,7 @@ type InstanceOptions struct {
 	Timezone   string
 	Email      string
 	PublicName string
+	Settings   string
 	DiskQuota  int64
 	Apps       []string
 	Dev        bool
@@ -78,6 +79,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 			"Timezone":   {opts.Timezone},
 			"Email":      {opts.Email},
 			"PublicName": {opts.PublicName},
+			"Settings":   {opts.Settings},
 			"DiskQuota":  {strconv.FormatInt(opts.DiskQuota, 10)},
 			"Apps":       {strings.Join(opts.Apps, ",")},
 			"Dev":        {dev},

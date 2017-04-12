@@ -361,11 +361,17 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "sharing_test_alice")
 	setup2 := testutils.NewSetup(m, "sharing_test_bob")
+	var settings couchdb.JSONDoc
+	settings.M = make(map[string]interface{})
+	settings.M["public_name"] = "Alice"
 	testInstance = setup.GetTestInstance(&instance.Options{
-		PublicName: "Alice",
+		Settings: settings,
 	})
-	_ = setup2.GetTestInstance(&instance.Options{
-		PublicName: "Bob",
+	var settings2 couchdb.JSONDoc
+	settings2.M = make(map[string]interface{})
+	settings2.M["public_name"] = "Bob"
+	recipientIn = setup2.GetTestInstance(&instance.Options{
+		Settings: settings2,
 	})
 
 	jar = setup.GetCookieJar()
@@ -373,9 +379,6 @@ func TestMain(m *testing.M) {
 		CheckRedirect: noRedirect,
 		Jar:           jar,
 	}
-	recipientIn = setup2.GetTestInstance(&instance.Options{
-		PublicName: "Bob",
-	})
 
 	clientOAuth, _ = setup.GetTestClient("")
 	clientID = clientOAuth.ClientID
