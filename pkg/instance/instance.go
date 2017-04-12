@@ -158,52 +158,33 @@ func (i *Instance) makeVFS() error {
 // application type
 func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case "file", "mem":
-		var baseDirName string
-		switch appsType {
-		case apps.Webapp:
-			baseDirName = vfs.WebappsDirName
-		case apps.Konnector:
-			baseDirName = vfs.KonnectorsDirName
-		}
-		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, baseDirName))
-		return apps.NewAferoCopier(baseFS)
+	var baseDirName string
+	switch appsType {
+	case apps.Webapp:
+		baseDirName = vfs.WebappsDirName
+	case apps.Konnector:
+		baseDirName = vfs.KonnectorsDirName
 	}
-	panic("unreachable")
+	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+		path.Join(fsURL.Path, i.Domain, baseDirName))
+	return apps.NewAferoCopier(baseFS)
 }
 
-func (i *Instance) AppsFileServer(appsType apps.AppType) apps.FileServer {
+// AppsFileServer returns the web-application file server associated to this
+// instance.
+func (i *Instance) AppsFileServer() apps.FileServer {
 	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case "file", "mem":
-		var baseDirName string
-		switch appsType {
-		case apps.Webapp:
-			baseDirName = vfs.WebappsDirName
-		case apps.Konnector:
-			baseDirName = vfs.KonnectorsDirName
-		}
-		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, baseDirName))
-		return apps.NewAferoFileServer(baseFS, nil)
-	}
-	panic("unreachable")
+	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+		path.Join(fsURL.Path, i.Domain, vfs.WebappsDirName))
+	return apps.NewAferoFileServer(baseFS, nil)
 }
 
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the
 // photos/image
 func (i *Instance) ThumbsFS() afero.Fs {
 	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case "file", "mem":
-		return afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, vfs.ThumbsDirName))
-	case "swift":
-		panic("Not implemented")
-	}
-	return nil
+	return afero.NewBasePathFs(afero.NewOsFs(),
+		path.Join(fsURL.Path, i.Domain, vfs.ThumbsDirName))
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.

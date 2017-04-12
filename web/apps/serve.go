@@ -46,7 +46,7 @@ func Serve(c echo.Context) error {
 	if app.State() != apps.Ready {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
-	return ServeAppFile(c, i, i.AppsFileServer(apps.Webapp), app)
+	return ServeAppFile(c, i, i.AppsFileServer(), app)
 }
 
 func onboarding(c echo.Context) bool {

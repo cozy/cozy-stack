@@ -166,6 +166,7 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	}
 
 	man, err := inst.RunSync()
+	assert.NoError(t, err)
 
 	ok, err := afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), WebappManifestName))
 	assert.NoError(t, err)

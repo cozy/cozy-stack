@@ -222,7 +222,7 @@ func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error
 	return createAppSet(db, TypeApplication, consts.Apps, slug, set)
 }
 
-// CreateAppSet creates a Permission doc for a konnector
+// CreateKonnectorSet creates a Permission doc for a konnector
 func CreateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
 	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set)
 }
@@ -308,7 +308,7 @@ func DestroyApp(db couchdb.Database, slug string) error {
 	return destroyApp(db, consts.Apps, slug)
 }
 
-// DestroyApp remove all Permission docs for a given konnector
+// DestroyKonnector remove all Permission docs for a given konnector
 func DestroyKonnector(db couchdb.Database, slug string) error {
 	return destroyApp(db, consts.Konnectors, slug)
 }

@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/afero"
 )
 
+// Copier is an interface defining a common set of functions for the installer
+// to copy the application into an unknown storage.
 type Copier interface {
 	Start(slug, version string) (exists bool, err error)
 	Copy(name string, src io.Reader) error
@@ -28,6 +30,7 @@ type aferoCopier struct {
 	started bool
 }
 
+// NewSwiftCopier defines a Copier storing data into a swift container.
 func NewSwiftCopier(conn *swift.Connection, container string) (Copier, error) {
 	if container[0] == '/' {
 		container = container[1:]
@@ -76,6 +79,8 @@ func (f *swiftCopier) Copy(name string, src io.Reader) (err error) {
 	return err
 }
 
+// NewAferoCopier defines a copier using an afero.Fs filesystem to store the
+// application data.
 func NewAferoCopier(fs afero.Fs) Copier {
 	return &aferoCopier{fs: fs}
 }

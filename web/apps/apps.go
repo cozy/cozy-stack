@@ -271,7 +271,7 @@ func iconHandler(c echo.Context) error {
 	}
 
 	filepath := path.Join("/", app.Icon)
-	fs := instance.AppsFileServer(apps.Webapp)
+	fs := instance.AppsFileServer()
 	err = fs.ServeFileContent(c.Response(), c.Request(), app.Slug(), app.Version(), filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
