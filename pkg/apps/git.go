@@ -7,16 +7,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/spf13/afero"
-	gitFS "gopkg.in/src-d/go-billy.v2"
+	gitOsFS "gopkg.in/src-d/go-billy.v2/osfs"
 	git "gopkg.in/src-d/go-git.v4"
 	gitPlumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	gitObject "gopkg.in/src-d/go-git.v4/plumbing/object"
@@ -80,20 +77,19 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func (g *gitFetcher) Fetch(src *url.URL, fs Copier, slug, version string) error {
+func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, error) {
 	log.Debugf("[git] Fetch %s", src.String())
 
-	localFs := afero.NewOsFs()
-	gitDir, err := afero.TempDir(localFs, "", "cozy-app-"+slug)
+	osFs := afero.NewOsFs()
+	gitDir, err := afero.TempDir(osFs, "", "cozy-app-"+man.Slug())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer localFs.RemoveAll(gitDir)
+	defer osFs.RemoveAll(gitDir)
 
-	localFs = afero.NewBasePathFs(localFs, gitDir)
-	storage, err := gitStorage.NewStorage(newGFS(localFs))
+	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	branch := getGitBranch(src)
@@ -112,10 +108,44 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, slug, version string) error 
 		ReferenceName: gitPlumbing.ReferenceName(branch),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return g.copyFiles(fs, localFs, rep, slug, version)
+	ref, err := rep.Head()
+	if err != nil {
+		return nil, err
+	}
+
+	slug := man.Slug()
+	version := man.Version() + "-" + ref.Hash().String()
+
+	// The git fetcher needs to update the actual version of the application to
+	// reflect the git version of the repository.
+	man.SetVersion(version)
+
+	// If the application folder already exists, we can bail early.
+	exists, err := fs.Start(slug, version)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return man, nil
+	}
+
+	commit, err := rep.CommitObject(ref.Hash())
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := commit.Files()
+	if err != nil {
+		return nil, err
+	}
+
+	if err = g.copyFiles(fs, files); err != nil {
+		return nil, err
+	}
+	return man, nil
 }
 
 func getGitBranch(src *url.URL) string {
@@ -132,84 +162,55 @@ func getWebBranch(src *url.URL) string {
 	return "HEAD"
 }
 
-func (g *gitFetcher) copyFiles(fs Copier, localFs afero.Fs, rep *git.Repository, slug, version string) error {
-	ref, err := rep.Head()
-	if err != nil {
-		return err
-	}
-
-	version = version + "_" + ref.Hash().String()
-
-	exists, err := fs.Start(slug, version)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-
-	commit, err := rep.CommitObject(ref.Hash())
-	if err != nil {
-		return err
-	}
-	files, err := commit.Files()
-	if err != nil {
-		return err
-	}
-
+func (g *gitFetcher) copyFiles(fs Copier, files *gitObject.FileIter) error {
 	if !g.createTar {
-		err = files.ForEach(func(f *gitObject.File) error {
+		return files.ForEach(func(f *gitObject.File) error {
 			r, err := f.Reader()
 			if err != nil {
 				return err
 			}
 			defer r.Close()
-			return fs.Copy(slug, version, f.Name, r)
+			return fs.Copy(f.Name, r)
 		})
-		if err != nil {
-			return err
-		}
-	} else {
-		tmp, err := afero.TempFile(localFs, "", "")
-		if err != nil {
-			return err
-		}
-		defer localFs.Remove(tmp.Name())
-
-		tw := tar.NewWriter(tmp)
-
-		err = files.ForEach(func(f *gitObject.File) error {
-			r, err := f.Reader()
-			if err != nil {
-				return err
-			}
-			defer r.Close()
-			hdr := &tar.Header{
-				Name: f.Name,
-				Mode: 0600,
-				Size: f.Size,
-			}
-			if err = tw.WriteHeader(hdr); err != nil {
-				return err
-			}
-			_, err = io.Copy(tw, r)
-			return err
-		})
-		if err != nil {
-			return err
-		}
-
-		if err = tw.Flush(); err != nil {
-			return err
-		}
-
-		tmp.Seek(0, 0)
-		if err = fs.Copy(slug, version, "", tmp); err != nil {
-			return err
-		}
 	}
 
-	return fs.Close()
+	osFs := afero.NewOsFs()
+	tmp, err := afero.TempFile(afero.NewOsFs(), "", "")
+	if err != nil {
+		return err
+	}
+	defer osFs.Remove(tmp.Name())
+
+	tw := tar.NewWriter(tmp)
+
+	err = files.ForEach(func(f *gitObject.File) error {
+		var r io.ReadCloser
+		r, err = f.Reader()
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+		hdr := &tar.Header{
+			Name: f.Name,
+			Mode: 0600,
+			Size: f.Size,
+		}
+		if err = tw.WriteHeader(hdr); err != nil {
+			return err
+		}
+		_, err = io.Copy(tw, r)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	if err = tw.Flush(); err != nil {
+		return err
+	}
+
+	tmp.Seek(0, 0)
+	return fs.Copy("app.tar", tmp)
 }
 
 func resolveGithubURL(src *url.URL, filename string) (string, error) {
@@ -257,144 +258,6 @@ func resolveManifestURL(src *url.URL, filename string) (string, error) {
 	return srccopy.String(), nil
 }
 
-type gfs struct {
-	fs afero.Fs
-}
-
-type gfile struct {
-	f      afero.File
-	name   string
-	closed bool
-}
-
-func newGFile(f afero.File, name string) *gfile {
-	return &gfile{
-		f:      f,
-		name:   name,
-		closed: false,
-	}
-}
-
-func (f *gfile) Filename() string {
-	return f.name
-}
-
-func (f *gfile) IsClosed() bool {
-	return f.closed
-}
-
-func (f *gfile) Read(p []byte) (int, error) {
-	return f.f.Read(p)
-}
-
-func (f *gfile) Write(p []byte) (int, error) {
-	return f.f.Write(p)
-}
-
-func (f *gfile) Seek(offset int64, whence int) (int64, error) {
-	return f.f.Seek(offset, whence)
-}
-
-func (f *gfile) Close() error {
-	f.closed = true
-	return f.f.Close()
-}
-
-func newGFS(fs afero.Fs) *gfs {
-	return &gfs{fs: fs}
-}
-
-func (fs *gfs) OpenFile(name string, flag int, perm os.FileMode) (gitFS.File, error) {
-	if flag&os.O_CREATE != 0 {
-		if err := fs.createDir(name); err != nil {
-			return nil, err
-		}
-	}
-	file, err := fs.fs.OpenFile(name, flag, perm)
-	if err != nil {
-		return nil, err
-	}
-	return newGFile(file, name), nil
-}
-
-func (fs *gfs) Create(name string) (gitFS.File, error) {
-	return fs.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-}
-
-func (fs *gfs) Open(name string) (gitFS.File, error) {
-	f, err := fs.fs.OpenFile(name, os.O_RDONLY, 0)
-	if err != nil {
-		return nil, err
-	}
-	return newGFile(f, name), nil
-}
-
-func (fs *gfs) Remove(name string) error {
-	return fs.fs.Remove(name)
-}
-
-func (fs *gfs) Stat(name string) (gitFS.FileInfo, error) {
-	return fs.fs.Stat(name)
-}
-
-func (fs *gfs) ReadDir(name string) ([]gitFS.FileInfo, error) {
-	is, err := afero.ReadDir(fs.fs, name)
-	if err != nil {
-		return nil, err
-	}
-	infos := make([]gitFS.FileInfo, len(is))
-	for i := range is {
-		infos[i] = is[i]
-	}
-	return infos, nil
-}
-
-func (fs *gfs) MkdirAll(path string, perm os.FileMode) error {
-	return fs.fs.MkdirAll(path, perm)
-}
-
-func (fs *gfs) TempFile(dirname, prefix string) (gitFS.File, error) {
-	if err := fs.createDir(dirname + "/"); err != nil {
-		return nil, err
-	}
-	file, err := afero.TempFile(fs.fs, dirname, prefix)
-	if err != nil {
-		return nil, err
-	}
-	return newGFile(file, file.Name()), nil
-}
-
-func (fs *gfs) Rename(from, to string) error {
-	if err := fs.createDir(to); err != nil {
-		return err
-	}
-	return fs.fs.Rename(from, to)
-}
-
-func (fs *gfs) Join(elem ...string) string {
-	return path.Join(elem...)
-}
-
-func (fs *gfs) Dir(name string) gitFS.Filesystem {
-	return newGFS(afero.NewBasePathFs(fs.fs, name))
-}
-
-func (fs *gfs) createDir(fullpath string) error {
-	dir := filepath.Dir(fullpath)
-	if dir != "." {
-		if err := fs.fs.MkdirAll(dir, 0755); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (fs *gfs) Base() string {
-	return "/"
-}
-
 var (
-	_ Fetcher          = &gitFetcher{}
-	_ gitFS.Filesystem = &gfs{}
-	_ gitFS.File       = &gfile{}
+	_ Fetcher = &gitFetcher{}
 )

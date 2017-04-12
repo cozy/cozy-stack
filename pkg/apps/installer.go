@@ -7,7 +7,6 @@ import (
 	"regexp"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
 var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
@@ -57,7 +56,7 @@ type Fetcher interface {
 	FetchManifest(src *url.URL) (io.ReadCloser, error)
 	// Fetch should download the application and install it in the given
 	// directory.
-	Fetch(src *url.URL, fs Copier, slug, version string) error
+	Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, error)
 }
 
 // NewInstaller creates a new Installer
@@ -167,8 +166,6 @@ func (i *Installer) RunSync() (Manifest, error) {
 			return man, nil
 		}
 	}
-	// unreachable
-	return nil, nil
 }
 
 func (i *Installer) endOfProc() {
@@ -180,12 +177,12 @@ func (i *Installer) endOfProc() {
 	if err != nil {
 		man.SetState(Errored)
 		man.SetError(err)
-		updateManifest(i.db, man)
+		man.Update(i.db)
 		i.errc <- err
 		return
 	}
 	man.SetState(Ready)
-	updateManifest(i.db, man)
+	man.Update(i.db)
 	i.manc <- i.man
 }
 
@@ -200,11 +197,11 @@ func (i *Installer) install() (Manifest, error) {
 	if err := i.ReadManifest(Installing, man); err != nil {
 		return nil, err
 	}
-	if err := createManifest(i.db, man); err != nil {
+	if err := man.Create(i.db); err != nil {
 		return man, err
 	}
 	i.manc <- man
-	return man, i.fetcher.Fetch(i.src, i.fs, i.slug, man.Version())
+	return i.fetcher.Fetch(i.src, i.fs, man)
 }
 
 // update will perform the update of an already installed application. It
@@ -221,19 +218,19 @@ func (i *Installer) update() (Manifest, error) {
 	if err := i.ReadManifest(Upgrading, man); err != nil {
 		return man, err
 	}
-	if err := updateManifest(i.db, man); err != nil {
+	if err := man.Update(i.db); err != nil {
 		return man, err
 	}
 	i.manc <- man
-	return man, i.fetcher.Fetch(i.src, i.fs, i.slug, man.Version())
+	return i.fetcher.Fetch(i.src, i.fs, man)
 }
 
 func (i *Installer) delete() (Manifest, error) {
-	if state := i.man.State(); state != Ready && state != Errored {
+	man := i.man
+	if state := man.State(); state != Ready && state != Errored {
 		return nil, ErrBadState
 	}
-	i.manc <- i.man
-	return i.man, deleteManifest(i.db, i.man)
+	return man, i.man.Delete(i.db)
 }
 
 // ReadManifest will fetch the manifest and read its JSON content into the
@@ -259,33 +256,4 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 	case err := <-i.errc:
 		return nil, false, err
 	}
-}
-
-func updateManifest(db couchdb.Database, man Manifest) error {
-	err := permissions.DestroyApp(db, man.Slug())
-	if err != nil && !couchdb.IsNotFoundError(err) {
-		return err
-	}
-	err = couchdb.UpdateDoc(db, man)
-	if err != nil {
-		return err
-	}
-	_, err = permissions.CreateAppSet(db, man.Slug(), man.Permissions())
-	return err
-}
-
-func createManifest(db couchdb.Database, man Manifest) error {
-	if err := couchdb.CreateNamedDocWithDB(db, man); err != nil {
-		return err
-	}
-	_, err := permissions.CreateAppSet(db, man.Slug(), man.Permissions())
-	return err
-}
-
-func deleteManifest(db couchdb.Database, man Manifest) error {
-	err := permissions.DestroyApp(db, man.Slug())
-	if err != nil && !couchdb.IsNotFoundError(err) {
-		return err
-	}
-	return couchdb.DeleteDoc(db, man)
 }

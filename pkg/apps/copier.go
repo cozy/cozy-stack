@@ -12,18 +12,19 @@ import (
 
 type Copier interface {
 	Start(slug, version string) (exists bool, err error)
-	Copy(slug, version, name string, src io.Reader) error
-	Close() error
+	Copy(name string, src io.Reader) error
 }
 
 type swiftCopier struct {
 	c         *swift.Connection
+	rootObj   string
 	container string
 	started   bool
 }
 
 type aferoCopier struct {
 	fs      afero.Fs
+	appDir  string
 	started bool
 }
 
@@ -38,12 +39,12 @@ func NewSwiftCopier(conn *swift.Connection, container string) (Copier, error) {
 }
 
 func (f *swiftCopier) Start(slug, version string) (bool, error) {
-	objName := path.Join(slug, version)
-	_, _, err := f.c.Object(f.container, objName)
+	f.rootObj = path.Join(slug, version)
+	_, _, err := f.c.Object(f.container, f.rootObj)
 	if err == nil {
 		return true, nil
 	}
-	o, err := f.c.ObjectCreate(f.container, objName, false, "", "", nil)
+	o, err := f.c.ObjectCreate(f.container, f.rootObj, false, "", "", nil)
 	if err != nil {
 		return false, err
 	}
@@ -52,17 +53,16 @@ func (f *swiftCopier) Start(slug, version string) (bool, error) {
 	return false, err
 }
 
-func (f *swiftCopier) Copy(slug, version, name string, src io.Reader) (err error) {
+func (f *swiftCopier) Copy(name string, src io.Reader) (err error) {
 	if !f.started {
 		return errors.New("copier should call Start() before Copy()")
 	}
 	defer func() {
 		if err != nil {
-			// TODO: retries on this important delete
-			f.c.ObjectDelete(f.container, path.Join(slug, version)) // #nosec
+			f.c.ObjectDelete(f.container, f.rootObj) // #nosec
 		}
 	}()
-	objName := path.Join(slug, version, name)
+	objName := path.Join(f.rootObj, name)
 	file, err := f.c.ObjectCreate(f.container, objName, false, "", "", nil)
 	if err != nil {
 		return err
@@ -76,37 +76,39 @@ func (f *swiftCopier) Copy(slug, version, name string, src io.Reader) (err error
 	return err
 }
 
-func (f *swiftCopier) Close() error {
-	return nil
-}
-
 func NewAferoCopier(fs afero.Fs) Copier {
 	return &aferoCopier{fs: fs}
 }
 
 func (f *aferoCopier) Start(slug, version string) (bool, error) {
-	appDir := path.Join("/", slug, version)
-	exists, err := afero.DirExists(f.fs, appDir)
+	f.appDir = path.Join("/", slug, version)
+	exists, err := afero.DirExists(f.fs, f.appDir)
 	if err != nil {
 		return false, err
 	}
 	if exists {
 		return true, nil
 	}
-	err = f.fs.MkdirAll(appDir, 0755)
+	err = f.fs.MkdirAll(f.appDir, 0755)
 	f.started = err == nil
 	return false, err
 }
 
-func (f *aferoCopier) Copy(slug, version, name string, src io.Reader) (err error) {
+func (f *aferoCopier) Copy(name string, src io.Reader) (err error) {
 	if !f.started {
 		return errors.New("copier should call Start() before Copy()")
 	}
-	dir := path.Dir(name)
+	fullpath := path.Join(f.appDir, name)
+	dir := path.Dir(fullpath)
 	if err = f.fs.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	dst, err := f.fs.Create(name)
+	defer func() {
+		if err != nil {
+			f.fs.RemoveAll(f.appDir) // #nosec
+		}
+	}()
+	dst, err := f.fs.Create(fullpath)
 	if err != nil {
 		return err
 	}
@@ -117,10 +119,6 @@ func (f *aferoCopier) Copy(slug, version, name string, src io.Reader) (err error
 	}()
 	_, err = io.Copy(dst, src)
 	return err
-}
-
-func (f *aferoCopier) Close() error {
-	return nil
 }
 
 func wrapSwiftErr(err error) error {
