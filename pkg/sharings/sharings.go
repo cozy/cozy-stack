@@ -157,7 +157,13 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string) error {
 	scheduler := instance.JobsScheduler()
 
-	eventArgs := rule.Type + ":UPDATED:" + strings.Join(rule.Values, ",")
+	var eventArgs string
+	if rule.Selector != "" {
+		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" + strings.Join(rule.Values, ",") + ":" + rule.Selector
+	} else {
+		eventArgs = rule.Type + ":UPDATED,DELETED:" + strings.Join(rule.Values, ",")
+	}
+
 	msg := sharingWorker.SharingMessage{
 		SharingID: sharingID,
 		DocType:   rule.Type,
