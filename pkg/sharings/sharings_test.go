@@ -61,12 +61,14 @@ func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
 }
 
 func createInstance(domain, publicName string) (*instance.Instance, error) {
+	var settings couchdb.JSONDoc
+	settings.M = make(map[string]interface{})
+	settings.M["public_name"] = publicName
 	opts := &instance.Options{
-		Domain:     domain,
-		PublicName: publicName,
+		Domain:   domain,
+		Settings: settings,
 	}
 	return instance.Create(opts)
-
 }
 
 func createSettings(instance *instance.Instance) {
