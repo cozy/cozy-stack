@@ -116,16 +116,15 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	}
 	filepath := path.Join(route.Folder, file)
 	version := app.Version()
-	infos, err := fs.Stat(slug, version, filepath)
-	if os.IsNotExist(err) {
-		return echo.NewHTTPError(http.StatusNotFound)
-	}
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err)
-	}
-	modtime := infos.ModTime()
 	if file != route.Index {
-		return fs.ServeFileContent(c.Response(), c.Request(), modtime, slug, route.Folder, file)
+		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
+		if os.IsNotExist(err) {
+			return echo.NewHTTPError(http.StatusNotFound)
+		}
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err)
+		}
+		return nil
 	}
 	if intentID := c.QueryParam("intent"); intentID != "" {
 		handleIntent(c, i, slug, intentID)
@@ -144,7 +143,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	tmpl, err := template.New(file).Parse(string(buf))
 	if err != nil {
 		log.Warnf("[apps] %s cannot be parsed as a template: %s", file, err)
-		return fs.ServeFileContent(c.Response(), c.Request(), modtime, slug, route.Folder, file)
+		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 	}
 	token := "" // #nosec
 	if middlewares.IsLoggedIn(c) {

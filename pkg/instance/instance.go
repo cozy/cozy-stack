@@ -157,18 +157,39 @@ func (i *Instance) makeVFS() error {
 // AppsCopier returns the application copier associated with the specified
 // application type
 func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
-	// switch appsType {
-	// case apps.Webapp:
-	// 	return i.hiddenFS(vfs.WebappsDirName)
-	// case apps.Konnector:
-	// 	return i.hiddenFS(vfs.KonnectorsDirName)
-	// }
-	// panic(fmt.Errorf("Unknown application type %s", string(appsType)))
-	return nil
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case "file", "mem":
+		var baseDirName string
+		switch appsType {
+		case apps.Webapp:
+			baseDirName = vfs.WebappsDirName
+		case apps.Konnector:
+			baseDirName = vfs.KonnectorsDirName
+		}
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.Domain, baseDirName))
+		return apps.NewAferoCopier(baseFS)
+	}
+	panic("unreachable")
 }
 
 func (i *Instance) AppsFileServer(appsType apps.AppType) apps.FileServer {
-	return nil
+	fsURL := config.FsURL()
+	switch fsURL.Scheme {
+	case "file", "mem":
+		var baseDirName string
+		switch appsType {
+		case apps.Webapp:
+			baseDirName = vfs.WebappsDirName
+		case apps.Konnector:
+			baseDirName = vfs.KonnectorsDirName
+		}
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.Domain, baseDirName))
+		return apps.NewAferoFileServer(baseFS, nil)
+	}
+	panic("unreachable")
 }
 
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the

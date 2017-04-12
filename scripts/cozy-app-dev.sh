@@ -103,8 +103,8 @@ do_start() {
 		--couchdb-url "${COUCHDB_URL}" \
 		--mail-host "${COZY_STACK_HOST}" \
 		--mail-port 1025 \
-		--mail-disable-tls & # \
-		# --fs-url "file://localhost${vfsdir}" &
+		--mail-disable-tls \
+		--fs-url "file://localhost${vfsdir}" &
 
 	wait_for "${COZY_STACK_HOST}:${COZY_STACK_PORT}/version/" "cozy-stack"
 

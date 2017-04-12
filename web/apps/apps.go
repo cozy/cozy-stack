@@ -270,22 +270,15 @@ func iconHandler(c echo.Context) error {
 		return err
 	}
 
-	filepath := path.Join("/", slug, app.Icon)
+	filepath := path.Join("/", app.Icon)
 	fs := instance.AppsFileServer(apps.Webapp)
-	s, err := fs.Stat(app.Slug(), app.Version(), filepath)
+	err = fs.ServeFileContent(c.Response(), c.Request(), app.Slug(), app.Version(), filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return echo.NewHTTPError(http.StatusNotFound, err)
 		}
 		return err
 	}
-
-	r, err := fs.Open(app.Slug(), app.Version(), filepath)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	http.ServeContent(c.Response(), c.Request(), filepath, s.ModTime(), r)
 	return nil
 }
 

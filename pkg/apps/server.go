@@ -3,7 +3,6 @@ package apps
 import (
 	"io"
 	"net/http"
-	"os"
 	"path"
 	"time"
 
@@ -14,15 +13,9 @@ import (
 // FileServer interface defines a way to access and serve the application's
 // data files.
 type FileServer interface {
-	Stat(slug, version, file string) (os.FileInfo, error)
-	Open(slug, version, file string) (File, error)
+	Open(slug, version, file string) (io.ReadCloser, error)
 	ServeFileContent(w http.ResponseWriter, req *http.Request,
-		modtime time.Time, slug, version, file string) error
-}
-
-type File interface {
-	io.ReadCloser
-	io.Seeker
+		slug, version, file string) error
 }
 
 type swiftServer struct {
@@ -35,13 +28,6 @@ type aferoServer struct {
 	fs     afero.Fs
 }
 
-type fileStat struct {
-	name    string
-	size    int64
-	modtime time.Time
-	isDir   bool
-}
-
 // NewSwiftFileServer returns provides the apps.FileServer implementation
 // using the swift backend as file server.
 func NewSwiftFileServer(conn *swift.Connection) FileServer {
@@ -50,21 +36,7 @@ func NewSwiftFileServer(conn *swift.Connection) FileServer {
 	}
 }
 
-func (s *swiftServer) Stat(slug, version, file string) (os.FileInfo, error) {
-	objName := s.makeObjectName(slug, version, file)
-	o, _, err := s.c.Object(s.container, objName)
-	if err != nil {
-		return nil, wrapSwiftErr(err)
-	}
-	return &fileStat{
-		name:    objName,
-		size:    o.Bytes,
-		modtime: o.LastModified,
-		isDir:   false,
-	}, nil
-}
-
-func (s *swiftServer) Open(slug, version, file string) (File, error) {
+func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
 	objName := s.makeObjectName(slug, version, file)
 	f, _, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
@@ -73,7 +45,7 @@ func (s *swiftServer) Open(slug, version, file string) (File, error) {
 	return f, nil
 }
 
-func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, version, file string) error {
+func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
 	objName := s.makeObjectName(slug, version, file)
 	f, o, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
@@ -106,32 +78,26 @@ func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, file string) s
 	}
 }
 
-func (s *aferoServer) Stat(slug, version, file string) (os.FileInfo, error) {
-	return s.fs.Stat(s.mkPath(slug, version, file))
-}
-
-func (s *aferoServer) Open(slug, version, file string) (File, error) {
+func (s *aferoServer) Open(slug, version, file string) (io.ReadCloser, error) {
 	return s.fs.Open(s.mkPath(slug, version, file))
 }
 
-func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, version, file string) error {
+func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
 	filepath := s.mkPath(slug, version, file)
+	infos, err := s.fs.Stat(filepath)
+	if err != nil {
+		return err
+	}
 	r, err := s.fs.Open(filepath)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
-	http.ServeContent(w, req, filepath, modtime, r)
+	w.Header().Set("Etag", version)
+	http.ServeContent(w, req, filepath, infos.ModTime(), r)
 	return nil
 }
 
 func defaultMakePath(slug, version, file string) string {
 	return path.Join("/", slug, version, file)
 }
-
-func (f *fileStat) IsDir() bool        { return f.isDir }
-func (f *fileStat) ModTime() time.Time { return f.modtime }
-func (f *fileStat) Mode() os.FileMode  { return 0 }
-func (f *fileStat) Name() string       { return f.name }
-func (f *fileStat) Size() int64        { return f.size }
-func (f *fileStat) Sys() interface{}   { return nil }
