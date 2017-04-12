@@ -192,6 +192,28 @@ var appTokenInstanceCmd = &cobra.Command{
 	},
 }
 
+var cliTokenInstanceCmd = &cobra.Command{
+	Use:   "token-cli [domain] [scopes]",
+	Short: "Generate a new CLI access token (global access)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 2 {
+			return cmd.Help()
+		}
+		c := newAdminClient()
+		token, err := c.GetToken(&client.TokenOptions{
+			Domain:   args[0],
+			Scope:    args[1:],
+			Audience: "cli",
+			Expire:   flagExpire,
+		})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(token)
+		return err
+	},
+}
+
 var oauthTokenInstanceCmd = &cobra.Command{
 	Use:   "token-oauth [domain] [clientid] [scopes]",
 	Short: "Generate a new OAuth access token",
@@ -243,6 +265,7 @@ func init() {
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
+	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
