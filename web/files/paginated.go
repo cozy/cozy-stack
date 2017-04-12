@@ -14,7 +14,6 @@ import (
 
 const (
 	defPerPage = 30
-	maxPerPage = 100
 )
 
 type dir struct {
