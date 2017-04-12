@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/jobs/workers/sharings"
+	sharingWorker "github.com/cozy/cozy-stack/pkg/jobs/workers/sharings"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -158,7 +158,7 @@ func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	scheduler := instance.JobsScheduler()
 
 	eventArgs := rule.Type + ":UPDATED:" + strings.Join(rule.Values, ",")
-	msg := workers.SharingMessage{
+	msg := sharingWorker.SharingMessage{
 		SharingID: sharingID,
 		DocType:   rule.Type,
 	}
@@ -204,16 +204,16 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			if err != nil {
 				return err
 			}
-			rec := &workers.RecipientInfo{
+			rec := &sharingWorker.RecipientInfo{
 				URL:   domain,
 				Token: recStatus.AccessToken.AccessToken,
 			}
 
-			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, workers.SendOptions{
+			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, sharingWorker.SendOptions{
 				DocID:      val,
 				Update:     false,
 				DocType:    docType,
-				Recipients: []*workers.RecipientInfo{rec},
+				Recipients: []*sharingWorker.RecipientInfo{rec},
 			})
 			if err != nil {
 				return err
