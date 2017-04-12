@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -211,6 +212,51 @@ func RecipientRefusedSharing(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
+// receiveDocument stores a shared document in the Cozy.
+//
+// If the document to store is a "io.cozy.files" our custom handler will be
+// called, otherwise we will redirect the request to PUT /data/:doctype/:id.
+func receiveDocument(c echo.Context) error {
+	var err error
+	doctype := c.Param("doctype")
+	id := c.Param("id")
+
+	switch c.Param("doctype") {
+	case "":
+		err = echo.NewHTTPError(http.StatusBadRequest,
+			"Missing parameter: doctype")
+	case consts.Files:
+		err = creationWithIDHandler(c)
+	default:
+		// We call PUT /data/:doctype/:docid
+		url := &url.URL{
+			Host:     c.Request().Host,
+			Path:     fmt.Sprintf("/data/%s/%s", doctype, id),
+			RawQuery: c.QueryParams().Encode(),
+			// TODO When we have a reverse-proxy see if we should force https.
+			Scheme: c.Scheme(),
+		}
+		req, _ := http.NewRequest("PUT", url.String(), c.Request().Body)
+		req.Header = c.Request().Header
+
+		resp, errh := http.DefaultClient.Do(req)
+		if errh != nil {
+			return errh
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return c.JSON(resp.StatusCode, resp.Body)
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
@@ -219,6 +265,7 @@ func Routes(router *echo.Group) {
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", AddRecipient)
+	router.POST("/doc/:doctype/:id", receiveDocument)
 }
 
 // wrapErrors returns a formatted error

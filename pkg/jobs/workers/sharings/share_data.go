@@ -71,7 +71,7 @@ func SendDoc(domain string, opts *SendOptions) error {
 		delete(doc.M, "_rev")
 	}
 
-	path := fmt.Sprintf("/data/%s/%s", opts.DocType, opts.DocID)
+	path := fmt.Sprintf("/sharings/doc/%s/%s", opts.DocType, opts.DocID)
 
 	for _, rec := range opts.Recipients {
 		// A doc update requires to set the doc revision from each recipient
@@ -137,8 +137,7 @@ func SendFile(domain string, opts *SendOptions) error {
 		return err
 	}
 
-	// TODO: change this path when the dedicated sharing route will be available
-	path := "/files/"
+	path := fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, opts.DocID)
 	query := url.Values{
 		"Type": []string{consts.FileType},
 		"Name": []string{doc.DocName},

@@ -62,7 +62,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 	dirID := c.Param("dir-id")
 	name := c.QueryParam("Name")
 	var doc *vfs.FileDoc
-	doc, err = fileDocFromReq(c, name, dirID, tags)
+	doc, err = FileDocFromReq(c, name, dirID, tags)
 	if err != nil {
 		return
 	}
@@ -146,7 +146,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return wrapVfsError(err)
 	}
 
-	newdoc, err = fileDocFromReq(
+	newdoc, err = FileDocFromReq(
 		c,
 		olddoc.DocName,
 		olddoc.DirID,
@@ -735,7 +735,8 @@ func wrapVfsError(err error) error {
 	return err
 }
 
-func fileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
+// FileDocFromReq creates a FileDoc from an incoming request.
+func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
 	header := c.Request().Header
 
 	size, err := parseContentLength(header.Get("Content-Length"))

@@ -71,6 +71,10 @@ func (c *couchdbIndexer) CreateFileDoc(doc *FileDoc) error {
 	return couchdb.CreateDoc(c.db, doc)
 }
 
+func (c *couchdbIndexer) CreateNamedFileDoc(doc *FileDoc) error {
+	return couchdb.CreateNamedDoc(c.db, doc)
+}
+
 func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
@@ -83,6 +87,10 @@ func (c *couchdbIndexer) DeleteFileDoc(doc *FileDoc) error {
 
 func (c *couchdbIndexer) CreateDirDoc(doc *DirDoc) error {
 	return couchdb.CreateDoc(c.db, doc)
+}
+
+func (c *couchdbIndexer) CreateNamedDirDoc(doc *DirDoc) error {
+	return couchdb.CreateNamedDoc(c.db, doc)
 }
 
 func (c *couchdbIndexer) UpdateDirDoc(olddoc, newdoc *DirDoc) error {

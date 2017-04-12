@@ -129,7 +129,10 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 	if err = f.Close(); err != nil {
 		return err
 	}
-	return sfs.Indexer.CreateDirDoc(doc)
+	if doc.ID() == "" {
+		return sfs.Indexer.CreateDirDoc(doc)
+	}
+	return sfs.Indexer.CreateNamedDirDoc(doc)
 }
 
 func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
@@ -449,7 +452,10 @@ func (f *swiftFileCreation) Close() (err error) {
 	}
 
 	if olddoc == nil {
-		return f.fs.Indexer.CreateFileDoc(newdoc)
+		if newdoc.ID() == "" {
+			return f.fs.Indexer.CreateFileDoc(newdoc)
+		}
+		return f.fs.Indexer.CreateNamedFileDoc(newdoc)
 	}
 
 	f.fs.mu.Lock()
