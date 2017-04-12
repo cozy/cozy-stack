@@ -107,8 +107,7 @@ func TestSendDataBadRecipient(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	var err error
-	err = jobs.StartSystem()
+	err := jobs.StartSystem()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
