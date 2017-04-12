@@ -3,6 +3,7 @@ package apps
 import (
 	"io"
 	"net/http"
+	"os"
 	"path"
 	"time"
 
@@ -79,11 +80,26 @@ func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, file string) s
 }
 
 func (s *aferoServer) Open(slug, version, file string) (io.ReadCloser, error) {
-	return s.fs.Open(s.mkPath(slug, version, file))
+	filepath := s.mkPath(slug, version, file)
+	f, err := s.open(filepath)
+	if os.IsNotExist(err) {
+		return s.open(retroCompatMakePath(slug, version, file))
+	}
+	return f, err
+}
+func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
+	return s.fs.Open(filepath)
 }
 
 func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
 	filepath := s.mkPath(slug, version, file)
+	err := s.serveFileContent(w, req, filepath)
+	if os.IsNotExist(err) {
+		return s.serveFileContent(w, req, retroCompatMakePath(slug, version, file))
+	}
+	return err
+}
+func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
 	infos, err := s.fs.Stat(filepath)
 	if err != nil {
 		return err
@@ -93,11 +109,14 @@ func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 		return err
 	}
 	defer r.Close()
-	w.Header().Set("Etag", version)
 	http.ServeContent(w, req, filepath, infos.ModTime(), r)
 	return nil
 }
 
 func defaultMakePath(slug, version, file string) string {
 	return path.Join("/", slug, version, file)
+}
+
+func retroCompatMakePath(slug, version, file string) string {
+	return path.Join("/", slug, file)
 }
