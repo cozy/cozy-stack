@@ -28,7 +28,7 @@ type konnManifest struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 
-	Version        string          `json:"version"`
+	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
 }
@@ -40,6 +40,7 @@ func (m *konnManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
 func (m *konnManifest) SetID(id string)    {}
 func (m *konnManifest) SetRev(rev string)  { m.DocRev = rev }
 func (m *konnManifest) Source() string     { return m.DocSource }
+func (m *konnManifest) Version() string    { return m.DocVersion }
 func (m *konnManifest) Slug() string       { return m.DocSlug }
 
 func (m *konnManifest) State() State { return m.DocState }

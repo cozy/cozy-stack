@@ -91,7 +91,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.WriteHeader(200)
 		}
 
-		inst, err := apps.NewInstaller(instance, instance.AppsFS(installerType),
+		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation: apps.Install,
 				Type:      installerType,
@@ -109,7 +109,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 			return wrapAppsError(err)
 		}
 
-		go inst.Install()
+		go inst.Run()
 		return pollInstaller(c, isEventStream, w, slug, inst)
 	}
 }
@@ -132,7 +132,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.WriteHeader(200)
 		}
 
-		inst, err := apps.NewInstaller(instance, instance.AppsFS(installerType),
+		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation: apps.Update,
 				Type:      installerType,
@@ -150,7 +150,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			return wrapAppsError(err)
 		}
 
-		go inst.Update()
+		go inst.Run()
 		return pollInstaller(c, isEventStream, w, slug, inst)
 	}
 }
@@ -164,7 +164,7 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowInstallApp(c, installerType, permissions.DELETE); err != nil {
 			return err
 		}
-		inst, err := apps.NewInstaller(instance, instance.AppsFS(installerType),
+		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation: apps.Delete,
 				Type:      installerType,
@@ -174,7 +174,7 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err != nil {
 			return wrapAppsError(err)
 		}
-		man, err := inst.Delete()
+		man, err := inst.RunSync()
 		if err != nil {
 			return wrapAppsError(err)
 		}
@@ -271,8 +271,8 @@ func iconHandler(c echo.Context) error {
 	}
 
 	filepath := path.Join("/", slug, app.Icon)
-	fs := instance.AppsFS(apps.Webapp)
-	s, err := fs.Stat(filepath)
+	fs := instance.AppsFileServer(apps.Webapp)
+	s, err := fs.Stat(app.Slug(), app.Version(), filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return echo.NewHTTPError(http.StatusNotFound, err)
@@ -280,7 +280,7 @@ func iconHandler(c echo.Context) error {
 		return err
 	}
 
-	r, err := fs.Open(filepath)
+	r, err := fs.Open(app.Slug(), app.Version(), filepath)
 	if err != nil {
 		return err
 	}

@@ -17,7 +17,7 @@ import (
 
 const versionSuffix = "-version"
 
-var conn *swift.Connection
+var Conn *swift.Connection
 
 type swiftVFS struct {
 	vfs.Indexer
@@ -34,14 +34,14 @@ type swiftVFS struct {
 //
 // This function is not thread-safe.
 func InitConnection(fsURL *url.URL) (err error) {
-	conn, err = config.NewSwiftConnection(fsURL)
+	Conn, err = config.NewSwiftConnection(fsURL)
 	if err != nil {
 		return err
 	}
-	log.Debugf("[vfsswift] Starting authentication with server %s", conn.AuthUrl)
-	if err = conn.Authenticate(); err != nil {
+	log.Debugf("[vfsswift] Starting authentication with server %s", Conn.AuthUrl)
+	if err = Conn.Authenticate(); err != nil {
 		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
-			conn.AuthUrl)
+			Conn.AuthUrl)
 		return err
 	}
 	return nil
@@ -50,7 +50,7 @@ func InitConnection(fsURL *url.URL) (err error) {
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
 func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, domain string) (vfs.VFS, error) {
-	if conn == nil {
+	if Conn == nil {
 		return nil, errors.New("vfsswift: global connection is not initialized")
 	}
 	if domain == "" {
@@ -60,7 +60,7 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, domain stri
 		Indexer:         index,
 		DiskThresholder: disk,
 
-		c:         conn,
+		c:         Conn,
 		container: domain,
 		version:   domain + versionSuffix,
 		versionOk: true,

@@ -67,6 +67,7 @@ type Manifest interface {
 	ReadManifest(i io.Reader, slug, sourceURL string) error
 	Permissions() permissions.Set
 	Source() string
+	Version() string
 	Slug() string
 	State() State
 	Error() error

@@ -154,30 +154,31 @@ func (i *Instance) makeVFS() error {
 	return err
 }
 
-// AppsFS returns the hidden filesystem associated with the specified
+// AppsCopier returns the application copier associated with the specified
 // application type
-func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
-	switch appsType {
-	case apps.Webapp:
-		return i.hiddenFS(vfs.WebappsDirName)
-	case apps.Konnector:
-		return i.hiddenFS(vfs.KonnectorsDirName)
-	}
-	panic(fmt.Errorf("Unknown application type %s", string(appsType)))
+func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
+	// switch appsType {
+	// case apps.Webapp:
+	// 	return i.hiddenFS(vfs.WebappsDirName)
+	// case apps.Konnector:
+	// 	return i.hiddenFS(vfs.KonnectorsDirName)
+	// }
+	// panic(fmt.Errorf("Unknown application type %s", string(appsType)))
+	return nil
+}
+
+func (i *Instance) AppsFileServer(appsType apps.AppType) apps.FileServer {
+	return nil
 }
 
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the
 // photos/image
 func (i *Instance) ThumbsFS() afero.Fs {
-	return i.hiddenFS(vfs.ThumbsDirName)
-}
-
-func (i *Instance) hiddenFS(dirname string) afero.Fs {
 	fsURL := config.FsURL()
 	switch fsURL.Scheme {
 	case "file", "mem":
 		return afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, dirname))
+			path.Join(fsURL.Path, i.Domain, vfs.ThumbsDirName))
 	case "swift":
 		panic("Not implemented")
 	}
@@ -247,7 +248,7 @@ func (i *Instance) installApp(slug string) error {
 	if !ok {
 		return errors.New("Unknown app")
 	}
-	inst, err := apps.NewInstaller(i, i.AppsFS(apps.Webapp), &apps.InstallerOptions{
+	inst, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp), &apps.InstallerOptions{
 		Operation: apps.Install,
 		Type:      apps.Webapp,
 		SourceURL: source,
@@ -256,17 +257,8 @@ func (i *Instance) installApp(slug string) error {
 	if err != nil {
 		return err
 	}
-	go inst.Install()
-	for {
-		_, done, err := inst.Poll()
-		if err != nil {
-			return err
-		}
-		if done {
-			break
-		}
-	}
-	return nil
+	_, err = inst.RunSync()
+	return err
 }
 
 // Create builds an instance and initializes it

@@ -53,7 +53,7 @@ type WebappManifest struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 
-	Version        string          `json:"version"`
+	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
 	Intents        []Intent        `json:"intents"`
@@ -82,6 +82,9 @@ func (m *WebappManifest) SetRev(rev string) { m.DocRev = rev }
 
 // Source is part of the Manifest interface
 func (m *WebappManifest) Source() string { return m.DocSource }
+
+// Version is part of the Manifest interface
+func (m *WebappManifest) Version() string { return m.DocVersion }
 
 // Slug is part of the Manifest interface
 func (m *WebappManifest) Slug() string { return m.DocSlug }

@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"path"
 	"regexp"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/spf13/afero"
 )
 
 var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
@@ -29,7 +27,8 @@ const (
 // Installer is used to install or update applications.
 type Installer struct {
 	fetcher Fetcher
-	fs      afero.Fs
+	op      Operation
+	fs      Copier
 	db      couchdb.Database
 
 	man  Manifest
@@ -58,11 +57,11 @@ type Fetcher interface {
 	FetchManifest(src *url.URL) (io.ReadCloser, error)
 	// Fetch should download the application and install it in the given
 	// directory.
-	Fetch(src *url.URL, appDir string) error
+	Fetch(src *url.URL, fs Copier, slug, version string) error
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(db couchdb.Database, fs afero.Fs, opts *InstallerOptions) (*Installer, error) {
+func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Installer, error) {
 	if opts.Operation == 0 {
 		panic("Missing installer operation")
 	}
@@ -120,13 +119,14 @@ func NewInstaller(db couchdb.Database, fs afero.Fs, opts *InstallerOptions) (*In
 	var fetcher Fetcher
 	switch src.Scheme {
 	case "git":
-		fetcher = newGitFetcher(fs, manFilename)
+		fetcher = newGitFetcher(manFilename, opts.Type == Konnector)
 	default:
 		return nil, ErrNotSupportedSource
 	}
 
 	return &Installer{
 		fetcher: fetcher,
+		op:      opts.Operation,
 		db:      db,
 		fs:      fs,
 
@@ -139,38 +139,36 @@ func NewInstaller(db couchdb.Database, fs afero.Fs, opts *InstallerOptions) (*In
 	}, nil
 }
 
-// Install will install the application linked to the installer. It will
-// report its progress or error (see Poll method).
-func (i *Installer) Install() {
+// Run will install, update or delete the application linked to the installer,
+// depending on specified operation. It will report its progress or error (see
+// Poll method) and should be run asynchronously.
+func (i *Installer) Run() {
 	defer i.endOfProc()
-	i.man, i.err = i.install()
-	return
-}
-
-// Update will update the application linked to the installer. It will
-// report its progress or error (see Poll method).
-func (i *Installer) Update() {
-	defer i.endOfProc()
-	if state := i.man.State(); state != Ready && state != Errored {
-		i.man, i.err = nil, ErrBadState
-	} else {
+	switch i.op {
+	case Install:
+		i.man, i.err = i.install()
+	case Update:
 		i.man, i.err = i.update()
+	case Delete:
+		i.man, i.err = i.delete()
 	}
 	return
 }
 
-// Delete will remove the application linked to the installer.
-func (i *Installer) Delete() (Manifest, error) {
-	if state := i.man.State(); state != Ready && state != Errored {
-		return nil, ErrBadState
+// RunSync does the same work as Run but can be used synchronously.
+func (i *Installer) RunSync() (Manifest, error) {
+	go i.Run()
+	for {
+		man, done, err := i.Poll()
+		if err != nil {
+			return nil, err
+		}
+		if done {
+			return man, nil
+		}
 	}
-	if err := deleteManifest(i.db, i.man); err != nil {
-		return nil, err
-	}
-	if err := i.fs.RemoveAll(i.baseDirName()); err != nil {
-		return nil, err
-	}
-	return i.man, nil
+	// unreachable
+	return nil, nil
 }
 
 func (i *Installer) endOfProc() {
@@ -202,20 +200,11 @@ func (i *Installer) install() (Manifest, error) {
 	if err := i.ReadManifest(Installing, man); err != nil {
 		return nil, err
 	}
-
 	if err := createManifest(i.db, man); err != nil {
 		return man, err
 	}
-
 	i.manc <- man
-
-	err := i.fs.MkdirAll(i.baseDirName(), 0755)
-	if err != nil {
-		return man, err
-	}
-
-	err = i.fetcher.Fetch(i.src, i.baseDirName())
-	return man, err
+	return man, i.fetcher.Fetch(i.src, i.fs, i.slug, man.Version())
 }
 
 // update will perform the update of an already installed application. It
@@ -226,23 +215,25 @@ func (i *Installer) install() (Manifest, error) {
 // upgrading.
 func (i *Installer) update() (Manifest, error) {
 	man := i.man
-
+	if state := man.State(); state != Ready && state != Errored {
+		return nil, ErrBadState
+	}
 	if err := i.ReadManifest(Upgrading, man); err != nil {
 		return man, err
 	}
-
 	if err := updateManifest(i.db, man); err != nil {
 		return man, err
 	}
-
 	i.manc <- man
-
-	err := i.fetcher.Fetch(i.src, i.baseDirName())
-	return man, err
+	return man, i.fetcher.Fetch(i.src, i.fs, i.slug, man.Version())
 }
 
-func (i *Installer) baseDirName() string {
-	return path.Join("/", i.slug)
+func (i *Installer) delete() (Manifest, error) {
+	if state := i.man.State(); state != Ready && state != Errored {
+		return nil, ErrBadState
+	}
+	i.manc <- i.man
+	return i.man, deleteManifest(i.db, i.man)
 }
 
 // ReadManifest will fetch the manifest and read its JSON content into the

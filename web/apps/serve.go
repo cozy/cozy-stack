@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -20,10 +19,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
-	"github.com/spf13/afero"
 )
 
 // Serve is an handler for serving files from the VFS for a client-side app
@@ -49,7 +46,7 @@ func Serve(c echo.Context) error {
 	if app.State() != apps.Ready {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
-	return ServeAppFile(c, i, NewServer(i.AppsFS(apps.Webapp), nil), app)
+	return ServeAppFile(c, i, i.AppsFileServer(apps.Webapp), app)
 }
 
 func onboarding(c echo.Context) bool {
@@ -86,14 +83,14 @@ func handleIntent(c echo.Context, i *instance.Instance, slug, intentID string) {
 }
 
 // ServeAppFile will serve the requested file using the specified application
-// manifest and AppFileServer context.
+// manifest and apps.FileServer context.
 //
 // It can be used to serve file application in another context than the VFS,
 // for instance for tests or development puposes where we want to serve an
 // application that is not installed on the user's instance. However this
 // procedure should not be used for standard applications, use the Serve method
 // for that.
-func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *apps.WebappManifest) error {
+func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app *apps.WebappManifest) error {
 	slug := app.Slug()
 	route, file := app.FindRoute(path.Clean(c.Request().URL.Path))
 	if route.NotFound() {
@@ -117,7 +114,9 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	if file == "" {
 		file = route.Index
 	}
-	infos, err := fs.Stat(slug, route.Folder, file)
+	filepath := path.Join(route.Folder, file)
+	version := app.Version()
+	infos, err := fs.Stat(slug, version, filepath)
 	if os.IsNotExist(err) {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
@@ -133,7 +132,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 	}
 	// For index file, we inject the locale, the stack domain, and a token if the
 	// user is connected
-	content, err := fs.Open(slug, route.Folder, file)
+	content, err := fs.Open(slug, version, filepath)
 	if err != nil {
 		return err
 	}
@@ -163,64 +162,6 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs AppFileServer, app *a
 		"CozyBar":      cozybar(i),
 		"CozyClientJS": cozyclientjs(i),
 	})
-}
-
-// AppFileServer interface defines a way to access and serve the application's
-// data files.
-type AppFileServer interface {
-	Stat(slug, folder, file string) (os.FileInfo, error)
-	Open(slug, folder, file string) (vfs.File, error)
-	ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error
-}
-
-// NewServer returns a simple wrapper of the afero.Fs interface that
-// provides the AppFileServer interface.
-//
-// You can provide a makePath method to define how the file name should be
-// created from the application's slug, folder and file name. If not provided,
-// the standard VFS concatenation (starting with vfs.WebappsDirName) is used.
-func NewServer(fs afero.Fs, makePath func(slug, folder, file string) string) *Server {
-	if makePath == nil {
-		makePath = defaultMakePath
-	}
-	return &Server{
-		mkPath: makePath,
-		fs:     fs,
-	}
-}
-
-// Server is a simple wrapper of a afero.Fs that provides the
-// AppFileServer interface.
-type Server struct {
-	mkPath func(slug, folder, file string) string
-	fs     afero.Fs
-}
-
-// Stat returns the underlying afero.Fs Stat.
-func (s *Server) Stat(slug, folder, file string) (os.FileInfo, error) {
-	return s.fs.Stat(s.mkPath(slug, folder, file))
-}
-
-// Open returns the underlying afero.Fs Open.
-func (s *Server) Open(slug, folder, file string) (vfs.File, error) {
-	return s.fs.Open(s.mkPath(slug, folder, file))
-}
-
-func defaultMakePath(slug, folder, file string) string {
-	return path.Join("/", slug, folder, file)
-}
-
-// ServeFileContent uses the standard http.ServeContent method to serve the
-// application file data.
-func (s *Server) ServeFileContent(w http.ResponseWriter, req *http.Request, modtime time.Time, slug, folder, file string) error {
-	filepath := s.mkPath(slug, folder, file)
-	r, err := s.fs.Open(filepath)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	http.ServeContent(w, req, filepath, modtime, r)
-	return nil
 }
 
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) error {
