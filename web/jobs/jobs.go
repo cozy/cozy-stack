@@ -11,6 +11,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	_ "github.com/cozy/cozy-stack/pkg/jobs/workers" // import workers
 	_ "github.com/cozy/cozy-stack/pkg/jobs/workers/konnectors"
+	_ "github.com/cozy/cozy-stack/pkg/jobs/workers/mails"
+	_ "github.com/cozy/cozy-stack/pkg/jobs/workers/sharings"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
