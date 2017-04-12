@@ -145,14 +145,26 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 // The server will be closed on container cleanup
 func (c *TestSetup) GetTestServer(prefix string, routes func(*echo.Group),
 	mws ...func(*echo.Echo) *echo.Echo) *httptest.Server {
+	return c.GetTestServerMultipleRoutes(map[string]func(*echo.Group){prefix: routes}, mws...)
+}
+
+// GetTestServerMultipleRoutes starts a testServer and creates a group for each
+// pair of (prefix, routes) given.
+// The server will be closed on container cleanup.
+func (c *TestSetup) GetTestServerMultipleRoutes(mpr map[string]func(*echo.Group), mws ...func(*echo.Echo) *echo.Echo) *httptest.Server {
 	handler := echo.New()
-	group := handler.Group(prefix, func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(context echo.Context) error {
-			context.Set("instance", c.inst)
-			return next(context)
-		}
-	})
-	routes(group)
+
+	for prefix, routes := range mpr {
+		group := handler.Group(prefix, func(next echo.HandlerFunc) echo.HandlerFunc {
+			return func(context echo.Context) error {
+				context.Set("instance", c.inst)
+				return next(context)
+			}
+		})
+
+		routes(group)
+	}
+
 	for _, mw := range mws {
 		handler = mw(handler)
 	}
