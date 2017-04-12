@@ -374,10 +374,16 @@ func TestGetAllJobs(t *testing.T) {
 	}
 
 	if assert.Len(t, v.Data, 2) {
-		assert.Equal(t, consts.Triggers, v.Data[1].Type)
-		assert.Equal(t, "@in", v.Data[1].Attributes.Type)
-		assert.Equal(t, "10s", v.Data[1].Attributes.Arguments)
-		assert.Equal(t, "print", v.Data[1].Attributes.WorkerType)
+		var index int
+		if v.Data[1].Attributes.Type == "@in" {
+			index = 1
+		} else {
+			index = 0
+		}
+		assert.Equal(t, consts.Triggers, v.Data[index].Type)
+		assert.Equal(t, "@in", v.Data[index].Attributes.Type)
+		assert.Equal(t, "10s", v.Data[index].Attributes.Arguments)
+		assert.Equal(t, "print", v.Data[index].Attributes.WorkerType)
 	}
 }
 
