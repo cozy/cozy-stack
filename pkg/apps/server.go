@@ -117,6 +117,8 @@ func defaultMakePath(slug, version, file string) string {
 	return path.Join("/", slug, version, file)
 }
 
+// FIXME: retro-compatibility code to serve application that were not installed
+// in a versioned directory.
 func retroCompatMakePath(slug, version, file string) string {
 	return path.Join("/", slug, file)
 }
