@@ -72,6 +72,7 @@ func (w *Worker) work(workerID string) {
 		domain := job.Domain()
 		if domain == "" {
 			log.Errorf("[job] %s: missing domain from job request", workerID)
+			continue
 		}
 		parentCtx := NewWorkerContext(domain)
 		infos := job.Infos()

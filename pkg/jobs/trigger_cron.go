@@ -74,6 +74,7 @@ func (c *CronTrigger) Schedule() <-chan *JobRequest {
 			select {
 			case <-time.After(-time.Since(next)):
 				ch <- &JobRequest{
+					Domain:     c.infos.Domain,
 					WorkerType: c.infos.WorkerType,
 					Message:    c.infos.Message,
 					Options:    c.infos.Options,
@@ -89,6 +90,7 @@ func (c *CronTrigger) Schedule() <-chan *JobRequest {
 
 func (c *CronTrigger) trigger(ch chan *JobRequest) {
 	ch <- &JobRequest{
+		Domain:     c.infos.Domain,
 		WorkerType: c.infos.WorkerType,
 		Message:    c.infos.Message,
 		Options:    c.infos.Options,

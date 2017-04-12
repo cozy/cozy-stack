@@ -108,13 +108,18 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 
 	var err error
+	err = jobs.StartSystem()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	_, _ = instance.Destroy(domainSharer)
 	in, err = createInstance(domainSharer, "Alice")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
 	err = couchdb.ResetDB(in, testDocType)
 	if err != nil {
 		fmt.Println(err)

@@ -26,6 +26,9 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
+
+	// import the mail worker to test passphrase reset
+	_ "github.com/cozy/cozy-stack/pkg/jobs/workers/mails"
 )
 
 /* #nosec */
@@ -361,7 +364,7 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 	scheduler := jobs.GetScheduler()
-	for _, trigger := range Triggers {
+	for _, trigger := range Triggers(i.Domain) {
 		t, err := jobs.NewTrigger(&trigger)
 		if err != nil {
 			return nil, err

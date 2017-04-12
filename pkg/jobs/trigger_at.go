@@ -97,6 +97,7 @@ func (a *AtTrigger) Schedule() <-chan *JobRequest {
 
 func (a *AtTrigger) trigger(ch chan *JobRequest) {
 	ch <- &JobRequest{
+		Domain:     a.in.Domain,
 		WorkerType: a.in.WorkerType,
 		Message:    a.in.Message,
 		Options:    a.in.Options,

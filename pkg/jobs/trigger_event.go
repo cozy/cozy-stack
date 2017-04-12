@@ -99,8 +99,8 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 						log.Error(err)
 						continue
 					}
-
 					ch <- &JobRequest{
+						Domain:     t.infos.Domain,
 						WorkerType: t.infos.WorkerType,
 						Message:    msg,
 						Options:    t.infos.Options,

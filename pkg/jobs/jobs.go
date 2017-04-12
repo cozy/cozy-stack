@@ -207,11 +207,17 @@ func StartSystem() error {
 
 // GetScheduler returns the global job scheduler.
 func GetScheduler() Scheduler {
+	if scheduler == nil {
+		panic("Job system not initialized")
+	}
 	return scheduler
 }
 
 // GetBroker returns the global job broker.
 func GetBroker() Broker {
+	if broker == nil {
+		panic("Job system not initialized")
+	}
 	return broker
 }
 

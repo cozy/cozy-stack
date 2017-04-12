@@ -728,6 +728,12 @@ func TestMain(m *testing.M) {
 	}
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
+	err = jobs.StartSystem()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	// The instance must be created in db in order to retrieve it from
 	// the share_data worker
 	_, _ = instance.Destroy(domainSharer)
