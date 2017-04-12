@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/jobs/workers"
+	"github.com/cozy/cozy-stack/pkg/jobs/workers/mails"
 )
 
 // The sharing-dependant information: the recipient's name, the sharer's public
@@ -125,11 +125,11 @@ func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValue
 	if r.Email == "" {
 		return nil, ErrRecipientHasNoEmail
 	}
-	mailAddresses := []*workers.MailAddress{&workers.MailAddress{
+	mailAddresses := []*mails.MailAddress{&mails.MailAddress{
 		Name:  r.Email,
 		Email: r.Email,
 	}}
-	return jobs.NewMessage(jobs.JSONEncoding, workers.MailOptions{
+	return jobs.NewMessage(jobs.JSONEncoding, mails.MailOptions{
 		Mode:           "from",
 		To:             mailAddresses,
 		Subject:        "New sharing request / Nouvelle demande de partage",

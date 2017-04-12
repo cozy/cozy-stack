@@ -1,4 +1,4 @@
-package workers
+package sharings
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
@@ -83,9 +84,12 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	docID := event.Event.Doc.M["_id"].(string)
 
 	// Get the sharing document
-	db := couchdb.SimpleDatabasePrefix(domain)
+	i, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 	var res []Sharing
-	err = couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
+	err = couchdb.FindDocs(i, consts.Sharings, &couchdb.FindRequest{
 		UseIndex: "by-sharing-id",
 		Selector: mango.Equal("sharing_id", sharingID),
 	}, &res)
@@ -104,7 +108,7 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 
-	return sendToRecipients(db, domain, sharing, docType, docID)
+	return sendToRecipients(i, domain, sharing, docType, docID)
 }
 
 // checkDocument checks the legitimity of the updated document to be shared

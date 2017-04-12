@@ -1,7 +1,8 @@
-package workers
+package konnectors
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -28,4 +29,9 @@ func TestKonnectorWorker(t *testing.T) {
 	config.GetConfig().Konnectors.Cmd = "echo"
 	err = KonnectorWorker(ctx, msg)
 	assert.NoError(t, err)
+}
+
+func TestMain(m *testing.M) {
+	config.UseTestFile()
+	os.Exit(m.Run())
 }
