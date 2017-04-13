@@ -36,19 +36,19 @@ func newDir(doc *vfs.DirDoc) *dir {
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
-	inst := middlewares.GetInstance(c)
+	fs := middlewares.GetInstance(c).VFS()
 
 	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
 	if err != nil {
 		return err
 	}
 
-	count, err := inst.VFS().DirLength(doc)
+	count, err := fs.DirLength(doc)
 	if err != nil {
 		return err
 	}
 
-	children, err := inst.VFS().DirBatch(doc, cursor)
+	children, err := fs.DirBatch(doc, cursor)
 	if err != nil {
 		return err
 	}
@@ -113,14 +113,14 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		return err
 	}
 
-	inst := middlewares.GetInstance(c)
+	fs := middlewares.GetInstance(c).VFS()
 
-	count, err := inst.VFS().DirLength(doc)
+	count, err := fs.DirLength(doc)
 	if err != nil {
 		return err
 	}
 
-	children, err := inst.VFS().DirBatch(doc, cursor)
+	children, err := fs.DirBatch(doc, cursor)
 	if err != nil {
 		return err
 	}

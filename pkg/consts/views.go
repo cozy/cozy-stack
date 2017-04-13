@@ -57,7 +57,6 @@ function(doc) {
 
 // FilesByParentView is the view used for fetching files referenced by a
 // given document
-// TODO change me for flag hidden
 var FilesByParentView = &couchdb.View{
 	Name:    "by-parent-type-name",
 	Doctype: Files,

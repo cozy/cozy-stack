@@ -49,7 +49,6 @@ create its CouchDB databases.
 var cleanInstanceCmd = &cobra.Command{
 	Use:   "clean [domain]",
 	Short: "Clean badly removed instances",
-	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Help()
