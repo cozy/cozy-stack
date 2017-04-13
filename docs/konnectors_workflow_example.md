@@ -365,9 +365,10 @@ If the user wants to use several account, Settings can setup several triggers fo
 ## Konnector Worker specs
 
 Start the konnector through Rkt, passing as ENV variables :
-    - COZY_CREDENTIALS  security token to communicate with Cozy
-    - COZY_FIELDS       JSON-encoded worker_arguments
-    - COZY_DOMAIN       the starting instance domain
+
+    - `COZY_CREDENTIALS`:  security token to communicate with Cozy
+    - `COZY_FIELDS`:       JSON-encoded worker_arguments
+    - `COZY_DOMAIN`:       the starting instance domain
 
 The konnector proces can send events trough it's stdout (newline separated JSON object), 
 the konnector worker pass these events to the realtime hub as `io.cozy.jobs.events`.
