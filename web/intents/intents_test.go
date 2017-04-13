@@ -40,7 +40,7 @@ func checkIntentResult(t *testing.T, res *http.Response) {
 	attrs := data["attributes"].(map[string]interface{})
 	assert.Equal(t, "PICK", attrs["action"].(string))
 	assert.Equal(t, "io.cozy.files", attrs["type"].(string))
-	assert.Equal(t, "https://app.cozy.example.net/", attrs["client"].(string))
+	assert.Equal(t, "https://app.cozy.example.net", attrs["client"].(string))
 	perms := attrs["permissions"].([]interface{})
 	assert.Len(t, perms, 1)
 	assert.Equal(t, "GET", perms[0].(string))

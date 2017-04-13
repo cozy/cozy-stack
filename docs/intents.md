@@ -280,7 +280,7 @@ Content-Type: application/vnd.api+json
       "action": "PICK",
       "type": "io.cozy.files",
       "permissions": ["GET"],
-      "client": "https://contacts.cozy.example.net/",
+      "client": "https://contacts.cozy.example.net",
       "services": [
         {
           "slug": "files",
@@ -328,7 +328,7 @@ Content-Type: application/vnd.api+json
       "action": "PICK",
       "type": "io.cozy.files",
       "permissions": ["GET"],
-      "client": "https://contacts.cozy.example.net/",
+      "client": "https://contacts.cozy.example.net",
       "services": [
         {
           "slug": "files",
