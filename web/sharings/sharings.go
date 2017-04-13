@@ -2,13 +2,13 @@ package sharings
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/sharings"
+	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -218,8 +218,6 @@ func RecipientRefusedSharing(c echo.Context) error {
 // called, otherwise we will redirect the request to PUT /data/:doctype/:id.
 func receiveDocument(c echo.Context) error {
 	var err error
-	doctype := c.Param("doctype")
-	id := c.Param("id")
 
 	switch c.Param("doctype") {
 	case "":
@@ -228,26 +226,7 @@ func receiveDocument(c echo.Context) error {
 	case consts.Files:
 		err = creationWithIDHandler(c)
 	default:
-		// We call PUT /data/:doctype/:docid
-		url := &url.URL{
-			Host:     c.Request().Host,
-			Path:     fmt.Sprintf("/data/%s/%s", doctype, id),
-			RawQuery: c.QueryParams().Encode(),
-			// TODO When we have a reverse-proxy see if we should force https.
-			Scheme: c.Scheme(),
-		}
-		req, _ := http.NewRequest("PUT", url.String(), c.Request().Body)
-		req.Header = c.Request().Header
-
-		resp, errh := http.DefaultClient.Do(req)
-		if errh != nil {
-			return errh
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return c.JSON(resp.StatusCode, resp.Body)
-		}
+		err = data.UpdateDoc(c)
 	}
 
 	if err != nil {
@@ -265,7 +244,7 @@ func Routes(router *echo.Group) {
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", AddRecipient)
-	router.POST("/doc/:doctype/:id", receiveDocument)
+	router.POST("/doc/:doctype/:docid", receiveDocument)
 }
 
 // wrapErrors returns a formatted error

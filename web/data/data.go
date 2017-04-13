@@ -139,7 +139,9 @@ func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 	})
 }
 
-func updateDoc(c echo.Context) error {
+// UpdateDoc updates the document given in the request or creates a new one with
+// the given id.
+func UpdateDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	var doc couchdb.JSONDoc
@@ -449,7 +451,7 @@ func Routes(router *echo.Group) {
 
 	// API Routes under /:doctype
 	group.GET("/:docid", getDoc)
-	group.PUT("/:docid", updateDoc)
+	group.PUT("/:docid", UpdateDoc)
 	group.DELETE("/:docid", deleteDoc)
 	group.GET("/:docid/relationships/references", listReferencesHandler)
 	group.POST("/:docid/relationships/references", addReferencesHandler)

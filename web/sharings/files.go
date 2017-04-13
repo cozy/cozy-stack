@@ -40,7 +40,7 @@ func creationWithIDHandler(c echo.Context) error {
 
 func createDirWithIDHandler(c echo.Context, fs vfs.VFS) error {
 	name := c.QueryParam("Name")
-	id := c.Param("id")
+	id := c.Param("docid")
 	date := c.Request().Header.Get("Date")
 
 	// TODO handle name collision.
@@ -74,7 +74,7 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 		return err
 	}
 
-	doc.SetID(c.Param("id"))
+	doc.SetID(c.Param("docid"))
 	doc.DirID = consts.SharedWithMeDirID
 
 	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
