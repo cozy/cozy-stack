@@ -52,7 +52,9 @@ func (i *apiIntent) MarshalJSON() ([]byte, error) {
 		return nil, echo.NewHTTPError(http.StatusForbidden)
 	}
 	was := i.doc.Client
-	i.doc.Client = i.ins.SubDomain(parts[1]).String()
+	u := i.ins.SubDomain(parts[1])
+	u.Path = ""
+	i.doc.Client = u.String()
 	res, err := json.Marshal(i.doc)
 	i.doc.Client = was
 	return res, err
