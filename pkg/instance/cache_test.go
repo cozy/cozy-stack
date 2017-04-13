@@ -3,12 +3,14 @@ package instance
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetFs(t *testing.T) {
 	instance := &Instance{
-		Domain: "test-provider.cozycloud.cc",
+		IndexViewsVersion: consts.IndexViewsVersion,
+		Domain:            "test-provider.cozycloud.cc",
 	}
 	err := instance.makeVFS()
 	if !assert.NoError(t, err) {
@@ -25,9 +27,10 @@ func TestCache(t *testing.T) {
 	}()
 
 	i := &Instance{
-		DocID:  "fake-instance",
-		Domain: "cached.cozy.tools",
-		Locale: "zh",
+		IndexViewsVersion: consts.IndexViewsVersion,
+		DocID:             "fake-instance",
+		Domain:            "cached.cozy.tools",
+		Locale:            "zh",
 	}
 	getCache().Set("cached.cozy.tools", i)
 

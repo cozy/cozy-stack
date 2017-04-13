@@ -5,6 +5,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 )
 
+// IndexViewsVersion is the version of current definition of views & indexes.
+// This number should be incremented when this file changes.
+const IndexViewsVersion int = 1
+
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
 var GlobalIndexes = []*mango.Index{
