@@ -26,9 +26,6 @@ import (
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
-
-	// import the mail worker to test passphrase reset
-	_ "github.com/cozy/cozy-stack/pkg/jobs/workers/mails"
 )
 
 /* #nosec */

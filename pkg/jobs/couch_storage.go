@@ -21,12 +21,12 @@ func (t triggerDoc) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.t.Infos())
 }
 
-// CouchStorage cmplements the TriggerStorage interface and uses CouchDB as the
+// CouchStorage implements the TriggerStorage interface and uses CouchDB as the
 // underlying storage for triggers.
 type couchStorage struct {
 }
 
-// NewTriggerCouchStorage ceturns a new instance of CouchStorage using the
+// NewTriggerCouchStorage returns a new instance of CouchStorage using the
 // specified database.
 func NewTriggerCouchStorage() TriggerStorage {
 	return &couchStorage{}
