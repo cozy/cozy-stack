@@ -20,15 +20,15 @@ sha256  786a048897a8d4cd7e8607eb58dcf388e8ab4602d75600754a342a79f349cd3f
 
 name    ./js/cozy-bar.min.js
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.js
-sha256  7008353f061ebef54ef196f7ca480b9603f140d6aaba03f504cf3e50fc8a2af4
+sha256  0dbcbc0dbff17cac7f39407940051df3125fb59d0eb29b2ff9c9442b98dcd037
 
 name    ./js/cozy-bar.min.js.map
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.js.map
-sha256  8af7c7a89f3756594c90bac8be4f92fef72ca4d838792e3ef0894aaab0db37f1
+sha256  b3a78bc17acf41434493bfa9e0d28fda33d0dbc183af633a4e6beb9cfa3c59b0
 
 name    ./css/cozy-bar.min.css
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.css
-sha256  466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f
+sha256  926190a78605721994f1c63970f5c62595f306b33f5d773f36cfbf107bc99440
 
 name    ./css/cozy-bar.min.css.map
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta14/dist/cozy-bar.min.css.map
