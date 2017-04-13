@@ -10,6 +10,7 @@
     - [3. Service Resolution](#3-service-resolution)
     - [4. Handshake](#4-handshake)
     - [5. Processing & Terminating](#5-processing--terminating)
+- [Routes](#routes)
 - [Annexes](#annexes)
     - [Use cases](#use-cases)
     - [Bibliography & Prior Art](#bibliography--prior-art)
@@ -279,7 +280,7 @@ Content-Type: application/vnd.api+json
       "action": "PICK",
       "type": "io.cozy.files",
       "permissions": ["GET"],
-      "client": "contacts.cozy.example.net",
+      "client": "https://contacts.cozy.example.net/",
       "services": [
         {
           "slug": "files",
@@ -327,7 +328,7 @@ Content-Type: application/vnd.api+json
       "action": "PICK",
       "type": "io.cozy.files",
       "permissions": ["GET"],
-      "client": "contacts.cozy.example.net",
+      "client": "https://contacts.cozy.example.net/",
       "services": [
         {
           "slug": "files",
