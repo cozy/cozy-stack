@@ -36,7 +36,8 @@ func (s *couchStorage) GetAll() ([]*TriggerInfos, error) {
 	var infos []*TriggerInfos
 	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
 	req := &couchdb.AllDocsRequest{Limit: 1000}
-	if err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Triggers, req, &infos); err != nil {
+	err := couchdb.GetAllDocs(couchdb.GlobalTriggersDB, consts.Triggers, req, &infos)
+	if err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return infos, nil
 		}
@@ -46,9 +47,9 @@ func (s *couchStorage) GetAll() ([]*TriggerInfos, error) {
 }
 
 func (s *couchStorage) Add(trigger Trigger) error {
-	return couchdb.CreateDoc(couchdb.GlobalDB, &triggerDoc{trigger})
+	return couchdb.CreateDoc(couchdb.GlobalTriggersDB, &triggerDoc{trigger})
 }
 
 func (s *couchStorage) Delete(trigger Trigger) error {
-	return couchdb.DeleteDoc(couchdb.GlobalDB, &triggerDoc{trigger})
+	return couchdb.DeleteDoc(couchdb.GlobalTriggersDB, &triggerDoc{trigger})
 }
