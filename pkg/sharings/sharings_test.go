@@ -277,48 +277,54 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 	assert.NotNil(t, recStatus.AccessToken.AccessToken)
 	assert.NotNil(t, recStatus.AccessToken.RefreshToken)
 
-	// TODO Refactoring necessary.
+	// TODO Refactoring necessary: it is no longer possible to actually share
+	// between two tests servers as the route to send the documents is declared
+	// in web/sharings. Hence checking if the documents do exist will only
+	// result in failures.
+	t.SkipNow()
+
 	// Check updates in case of master-* sharing
-	// if sharingType == consts.MasterSlaveSharing ||
-	// 	sharingType == consts.MasterMasterSharing {
+	if sharingType == consts.MasterSlaveSharing ||
+		sharingType == consts.MasterMasterSharing {
 
-	// 	// Wait for the document to arrive and check it
-	// 	time.Sleep(2000 * time.Millisecond)
+		// Wait for the document to arrive and check it
+		time.Sleep(2000 * time.Millisecond)
 
-	// 	if !isFile {
-	// 		if withSelector {
-	// 			var testDoc2 *couchdb.JSONDoc
-	// 			testDoc2, err = createTestDoc(t)
-	// 			assert.NoError(t, err)
-	// 			assert.NotNil(t, testDoc2)
-	// 			// Wait for the document to arrive and check it
-	// 			time.Sleep(2000 * time.Millisecond)
-	// 			recDoc := &couchdb.JSONDoc{}
-	// 			err = couchdb.GetDoc(recipientIn, testDocType, testDoc2.ID(), recDoc)
-	// 			assert.NoError(t, err)
-	// 			recDoc.Type = testDocType
-	// 			assert.Equal(t, testDoc2, recDoc)
-	// 		} else {
-	// 			updKey := "test"
-	// 			updVal := "update me!"
-	// 			updateTestDoc(t, testDoc, updKey, updVal)
-	// 			// Wait for the document to arrive and check it
-	// 			time.Sleep(2000 * time.Millisecond)
-	// 			recDoc := &couchdb.JSONDoc{}
-	// 			err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
-	// 			assert.NoError(t, err)
-	// 			assert.Equal(t, updVal, recDoc.M[updKey])
-	// 		}
-	// 	} else {
-	// 		newFileName := "mamajustchangedmyname"
-	// 		patch := &vfs.DocPatch{
-	// 			Name: &newFileName,
-	// 		}
-	// 		updateTestFile(t, testDocFile, patch)
+		if !isFile {
+			if withSelector {
+				var testDoc2 *couchdb.JSONDoc
+				testDoc2, err = createTestDoc(t)
+				assert.NoError(t, err)
+				assert.NotNil(t, testDoc2)
+				// Wait for the document to arrive and check it
+				time.Sleep(2000 * time.Millisecond)
+				recDoc := &couchdb.JSONDoc{}
+				err = couchdb.GetDoc(recipientIn, testDocType, testDoc2.ID(), recDoc)
+				assert.NoError(t, err)
+				recDoc.Type = testDocType
+				assert.Equal(t, testDoc2, recDoc)
+			} else {
+				updKey := "test"
+				updVal := "update me!"
+				updateTestDoc(t, testDoc, updKey, updVal)
+				// Wait for the document to arrive and check it
+				time.Sleep(2000 * time.Millisecond)
+				recDoc := &couchdb.JSONDoc{}
+				err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
+				assert.NoError(t, err)
+				assert.Equal(t, updVal, recDoc.M[updKey])
+			}
+		} else {
+			newFileName := "mamajustchangedmyname"
+			patch := &vfs.DocPatch{
+				Name: &newFileName,
+			}
+			updateTestFile(t, testDocFile, patch)
 
-	// TODO check the file on the recipient side when we'll be able
-	// to create files with fixed id
-	// }
+			// TODO check the file on the recipient side when we'll be able
+			// to create files with fixed id
+		}
+	}
 }
 
 func TestGetAccessTokenNoAuth(t *testing.T) {
