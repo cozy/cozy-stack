@@ -1,10 +1,6 @@
 package permissions
 
-import (
-	"errors"
-	"fmt"
-	"strings"
-)
+import "strings"
 
 const ruleSep = " "
 
@@ -69,11 +65,11 @@ func UnmarshalRuleString(in string) (Rule, error) {
 		fallthrough
 	case 1:
 		if parts[0] == "" {
-			return out, errors.New("the type is mandatory for a permissions rule")
+			return out, ErrBadScope
 		}
 		out.Type = parts[0]
 	default:
-		return out, fmt.Errorf("Too many parts in %s", in)
+		return out, ErrBadScope
 	}
 
 	return out, nil
