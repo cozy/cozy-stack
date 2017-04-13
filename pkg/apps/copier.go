@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"errors"
 	"io"
 	"os"
 	"path"
@@ -58,7 +57,7 @@ func (f *swiftCopier) Start(slug, version string) (bool, error) {
 
 func (f *swiftCopier) Copy(name string, src io.Reader) (err error) {
 	if !f.started {
-		return errors.New("copier should call Start() before Copy()")
+		panic("copier should call Start() before Copy()")
 	}
 	defer func() {
 		if err != nil {
@@ -101,7 +100,7 @@ func (f *aferoCopier) Start(slug, version string) (bool, error) {
 
 func (f *aferoCopier) Copy(name string, src io.Reader) (err error) {
 	if !f.started {
-		return errors.New("copier should call Start() before Copy()")
+		panic("copier should call Start() before Copy()")
 	}
 	fullpath := path.Join(f.appDir, name)
 	dir := path.Dir(fullpath)
