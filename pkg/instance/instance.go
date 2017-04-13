@@ -179,6 +179,15 @@ func (i *Instance) AppsFileServer() apps.FileServer {
 	return apps.NewAferoFileServer(baseFS, nil)
 }
 
+// KonnectorsFileServer returns the web-application file server associated to this
+// instance.
+func (i *Instance) KonnectorsFileServer() apps.FileServer {
+	fsURL := config.FsURL()
+	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+		path.Join(fsURL.Path, i.Domain, vfs.KonnectorsDirName))
+	return apps.NewAferoFileServer(baseFS, nil)
+}
+
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the
 // photos/image
 func (i *Instance) ThumbsFS() afero.Fs {
@@ -646,7 +655,8 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 // PickKey choose wich of the Instance keys to use depending on token audience
 func (i *Instance) PickKey(audience string) ([]byte, error) {
 	switch audience {
-	case permissions.AppAudience:
+	case permissions.AppAudience,
+		permissions.KonnectorAudience:
 		return i.SessionSecret, nil
 	case permissions.RefreshTokenAudience,
 		permissions.AccessTokenAudience,
@@ -677,9 +687,20 @@ func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) 
 
 // BuildAppToken is used to build a token to identify the app for requests made
 // to the stack
-func (i *Instance) BuildAppToken(m *apps.WebappManifest) string {
+func (i *Instance) BuildAppToken(m apps.Manifest) string {
 	scope := "" // apps tokens don't have a scope
 	token, err := i.MakeJWT(permissions.AppAudience, m.Slug(), scope, time.Now())
+	if err != nil {
+		return ""
+	}
+	return token
+}
+
+// BuildKonnectorToken is used to build a token to identify the konnector for
+// requests made to the stack
+func (i *Instance) BuildKonnectorToken(m apps.Manifest) string {
+	scope := "" // apps tokens don't have a scope
+	token, err := i.MakeJWT(permissions.KonnectorAudience, m.Slug(), scope, time.Now())
 	if err != nil {
 		return ""
 	}

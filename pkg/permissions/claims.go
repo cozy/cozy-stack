@@ -11,6 +11,9 @@ const (
 	// AppAudience is the audience for JWT used by client-side apps
 	AppAudience = "app"
 
+	// KonnectorAudience is the audience for JWT used by konnectors
+	KonnectorAudience = "konn"
+
 	// CliAudience is the audience for JWT used by command line interface
 	CLIAudience = "cli"
 

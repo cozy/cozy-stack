@@ -14,7 +14,7 @@ func AcceptJSON(next echo.HandlerFunc) echo.HandlerFunc {
 		accept := c.Request().Header.Get("Accept")
 		// Drop the charset if present
 		if accept != "" {
-			accept = strings.Split(accept, ";")[0]
+			accept = strings.SplitN(accept, ";", 2)[0]
 		}
 		if accept != "application/json" {
 			return c.JSON(http.StatusBadRequest, echo.Map{
@@ -32,7 +32,7 @@ func ContentTypeJSON(next echo.HandlerFunc) echo.HandlerFunc {
 		contentType := c.Request().Header.Get("Content-Type")
 		// Drop the charset if present
 		if contentType != "" {
-			contentType = strings.Split(contentType, ";")[0]
+			contentType = strings.SplitN(contentType, ";", 2)[0]
 		}
 		if contentType != "application/json" {
 			return c.JSON(http.StatusBadRequest, echo.Map{

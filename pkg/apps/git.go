@@ -192,7 +192,7 @@ func (g *gitFetcher) copyFiles(fs Copier, files *gitObject.FileIter) error {
 		defer r.Close()
 		hdr := &tar.Header{
 			Name: f.Name,
-			Mode: 0600,
+			Mode: int64(f.Mode),
 			Size: f.Size,
 		}
 		if err = tw.WriteHeader(hdr); err != nil {

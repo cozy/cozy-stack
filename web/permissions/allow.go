@@ -87,7 +87,7 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	switch pdoc.Type {
 	case permissions.TypeCLI:
 		// OK
-	case permissions.TypeApplication:
+	case permissions.TypeApplication, permissions.TypeKonnector:
 		if pdoc.SourceID != sourceID {
 			return echo.NewHTTPError(http.StatusForbidden)
 		}

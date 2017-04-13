@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -93,7 +94,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 
 func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 	path := c.QueryParam("Path")
-	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
+	tags := utils.SplitTrimString(c.QueryParam("Tags"), TagSeparator)
 
 	var doc *vfs.DirDoc
 	var err error

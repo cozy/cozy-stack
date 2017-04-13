@@ -90,6 +90,13 @@ func parseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 		}
 		return pdoc, nil
 
+	case permissions.KonnectorAudience:
+		pdoc, err := permissions.GetForKonnector(instance, claims.Subject)
+		if err != nil {
+			return nil, err
+		}
+		return pdoc, nil
+
 	case permissions.ShareAudience:
 		pdoc, err := permissions.GetForShareCode(instance, token)
 		if err != nil {
@@ -116,7 +123,6 @@ func extract(c echo.Context) (*permissions.Permission, error) {
 	}
 
 	return parseJWT(instance, tok)
-
 }
 
 // GetPermission extracts the permission from the echo context and checks their validity
