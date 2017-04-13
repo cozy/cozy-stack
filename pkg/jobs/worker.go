@@ -16,6 +16,8 @@ type contextKey int
 const (
 	// ContextDomainKey is the used to store the domain string name
 	ContextDomainKey contextKey = iota
+	// ContextWorkerKey is the used to store the workerID string
+	ContextWorkerKey
 )
 
 var (
@@ -42,8 +44,11 @@ type (
 )
 
 // NewWorkerContext returns a context.Context usable by a worker.
-func NewWorkerContext(domain string) context.Context {
-	return context.WithValue(context.Background(), ContextDomainKey, domain)
+func NewWorkerContext(domain, workerID string) context.Context {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextDomainKey, domain)
+	ctx = context.WithValue(ctx, ContextWorkerKey, workerID)
+	return ctx
 }
 
 // Start is used to start the worker consumption of messages from its queue.
@@ -74,27 +79,28 @@ func (w *Worker) work(workerID string) {
 			log.Errorf("[job] %s: missing domain from job request", workerID)
 			continue
 		}
-		parentCtx := NewWorkerContext(domain)
+		parentCtx := NewWorkerContext(domain, workerID)
 		infos := job.Infos()
 		if err = job.AckConsumed(); err != nil {
-			log.Errorf("[job] %s: error acking consume job %s (%s)",
+			log.Errorf("[job] %s: error acking consume job %s: %s",
 				workerID, infos.ID, err.Error())
 			continue
 		}
 		t := &task{
-			ctx:   parentCtx,
-			infos: infos,
-			conf:  w.defaultedConf(infos.Options),
+			ctx:      parentCtx,
+			infos:    infos,
+			conf:     w.defaultedConf(infos.Options),
+			workerID: workerID,
 		}
 		if err = t.run(); err != nil {
-			log.Errorf("[job] %s: error while performing job %s (%s)",
+			log.Errorf("[job] %s: error while performing job %s: %s",
 				workerID, infos.ID, err.Error())
 			err = job.Nack(err)
 		} else {
 			err = job.Ack()
 		}
 		if err != nil {
-			log.Errorf("[job] %s: error while acking job done %s (%s)",
+			log.Errorf("[job] %s: error while acking job done %s: %s",
 				workerID, infos.ID, err.Error())
 		}
 	}
@@ -146,6 +152,7 @@ type task struct {
 	infos *JobInfos
 	conf  *WorkerConfig
 
+	workerID  string
 	startTime time.Time
 	execCount uint
 }
@@ -159,12 +166,14 @@ func (t *task) run() (err error) {
 			return err
 		}
 		if err != nil {
-			log.Warnf("[job] %s: %s (retry in %s)", t.infos.ID, err.Error(), delay)
+			log.Warnf("[job] %s: error while performing job %s: %s (retry in %s)",
+				t.workerID, t.infos.ID, err.Error(), delay)
 		}
 		if delay > 0 {
 			time.Sleep(delay)
 		}
-		log.Debugf("[job] %s: run %d (timeout %s)", t.infos.ID, t.execCount, timeout)
+		log.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
+			t.workerID, t.infos.ID, t.execCount, timeout)
 		ctx, cancel := context.WithTimeout(t.ctx, timeout)
 		if err = t.exec(ctx); err == nil {
 			cancel()

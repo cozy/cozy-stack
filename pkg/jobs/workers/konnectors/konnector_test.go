@@ -14,7 +14,7 @@ func TestKonnectorWorker(t *testing.T) {
 	fields, err := json.Marshal(&struct{ Password string }{Password: "mypass"})
 	assert.NoError(t, err)
 
-	ctx := jobs.NewWorkerContext("cozy.local")
+	ctx := jobs.NewWorkerContext("cozy.local", "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, &KonnectorOptions{
 		Slug:   "slug",
 		Fields: fields,
