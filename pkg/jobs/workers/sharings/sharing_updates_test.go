@@ -99,27 +99,6 @@ func TestSharingUpdatesTooManySharing(t *testing.T) {
 	assert.Equal(t, ErrSharingIDNotUnique, err)
 }
 
-func TestSharingUpdatesIllegitimateDoc(t *testing.T) {
-	params := map[string]interface{}{
-		"sharing_id": "mysharona.illegitimate",
-	}
-	doc := createDoc(t, testDocType, params)
-	sharingDoc := createDoc(t, consts.Sharings, params)
-	defer func() {
-		couchdb.DeleteDoc(in, doc)
-		couchdb.DeleteDoc(in, sharingDoc)
-	}()
-	sharingID := sharingDoc.M["sharing_id"].(string)
-	event := createEvent(t, doc, sharingID)
-
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
-	assert.NoError(t, err)
-
-	err = SharingUpdates(jobs.NewWorkerContext(domainSharer), msg)
-	assert.Error(t, err)
-	assert.Equal(t, ErrDocumentNotLegitimate, err)
-}
-
 func TestSharingUpdatesBadSharingType(t *testing.T) {
 	params := map[string]interface{}{
 		"sharing_id":   "mysharona.badtype",

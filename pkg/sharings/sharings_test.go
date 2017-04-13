@@ -100,6 +100,7 @@ func createTestDoc(t *testing.T) (*couchdb.JSONDoc, error) {
 		M:    make(map[string]interface{}),
 	}
 	doc.M["test"] = "hello there"
+	doc.M["dyn"] = "amic"
 	err := couchdb.CreateDoc(in, doc)
 	assert.NoError(t, err)
 	return doc, err
@@ -142,7 +143,7 @@ func updateTestFile(t *testing.T, fileDoc *vfs.FileDoc, patch *vfs.DocPatch) {
 	assert.NoError(t, err)
 }
 
-func createSharing(t *testing.T, sharingType string, docID string, withFile bool) (*Sharing, error) {
+func createSharing(t *testing.T, sharingType string, docID string, withFile, withSelector bool) (*Sharing, error) {
 	recipient, err := createRecipient(t)
 	assert.NoError(t, err)
 
@@ -157,12 +158,22 @@ func createSharing(t *testing.T, sharingType string, docID string, withFile bool
 	var set permissions.Set
 	var rule permissions.Rule
 	if docID != "" && !withFile {
-		rule = permissions.Rule{
-			Type:   "io.cozy.tests",
-			Verbs:  permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
-			Values: []string{docID},
+		if !withSelector {
+			rule = permissions.Rule{
+				Type:   "io.cozy.tests",
+				Verbs:  permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
+				Values: []string{docID},
+			}
+		} else {
+			rule = permissions.Rule{
+				Type:     "io.cozy.tests",
+				Verbs:    permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
+				Selector: "dyn",
+				Values:   []string{"amic"},
+			}
 		}
 		set = permissions.Set{rule}
+
 	} else if docID != "" && withFile {
 		rule = permissions.Rule{
 			Type:   consts.Files,
@@ -207,7 +218,7 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 	assert.NoError(t, err)
 }
 
-func acceptedSharing(t *testing.T, sharingType string, isFile bool) {
+func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool) {
 	var err error
 	var testDocFile *vfs.FileDoc
 	var testDoc *couchdb.JSONDoc
@@ -218,7 +229,7 @@ func acceptedSharing(t *testing.T, sharingType string, isFile bool) {
 		testDoc, err = createTestDoc(t)
 		assert.NoError(t, err)
 		assert.NotNil(t, testDoc)
-		sharing, err = createSharing(t, sharingType, testDoc.ID(), false)
+		sharing, err = createSharing(t, sharingType, testDoc.ID(), isFile, withSelector)
 		assert.NoError(t, err)
 		assert.NotNil(t, sharing)
 
@@ -227,7 +238,7 @@ func acceptedSharing(t *testing.T, sharingType string, isFile bool) {
 		testDocFile, _, err = createTestFile(t)
 		assert.NoError(t, err)
 		assert.NotNil(t, testDocFile)
-		sharing, err = createSharing(t, sharingType, testDocFile.ID(), true)
+		sharing, err = createSharing(t, sharingType, testDocFile.ID(), isFile, withSelector)
 		assert.NoError(t, err)
 		assert.NotNil(t, sharing)
 	}
@@ -265,24 +276,35 @@ func acceptedSharing(t *testing.T, sharingType string, isFile bool) {
 		time.Sleep(2000 * time.Millisecond)
 
 		if !isFile {
-			updKey := "test"
-			updVal := "update me!"
-			updateTestDoc(t, testDoc, updKey, updVal)
-			assert.NoError(t, err)
-			time.Sleep(1000 * time.Millisecond)
-
-			recDoc := &couchdb.JSONDoc{}
-			err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
-			assert.NoError(t, err)
-			assert.Equal(t, updVal, recDoc.M[updKey])
-
+			if withSelector {
+				var testDoc2 *couchdb.JSONDoc
+				testDoc2, err = createTestDoc(t)
+				assert.NoError(t, err)
+				assert.NotNil(t, testDoc2)
+				// Wait for the document to arrive and check it
+				time.Sleep(2000 * time.Millisecond)
+				recDoc := &couchdb.JSONDoc{}
+				err = couchdb.GetDoc(recipientIn, testDocType, testDoc2.ID(), recDoc)
+				assert.NoError(t, err)
+				recDoc.Type = testDocType
+				assert.Equal(t, testDoc2, recDoc)
+			} else {
+				updKey := "test"
+				updVal := "update me!"
+				updateTestDoc(t, testDoc, updKey, updVal)
+				// Wait for the document to arrive and check it
+				time.Sleep(2000 * time.Millisecond)
+				recDoc := &couchdb.JSONDoc{}
+				err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
+				assert.NoError(t, err)
+				assert.Equal(t, updVal, recDoc.M[updKey])
+			}
 		} else {
 			newFileName := "mamajustchangedmyname"
 			patch := &vfs.DocPatch{
 				Name: &newFileName,
 			}
 			updateTestFile(t, testDocFile, patch)
-			assert.NoError(t, err)
 
 			// TODO check the file on the recipient side when we'll be able
 			// to create files with fixed id
@@ -471,7 +493,7 @@ func TestSharingAcceptedStateNotUnique(t *testing.T) {
 }
 
 func TestSharingAcceptedBadCode(t *testing.T) {
-	s, err := createSharing(t, consts.OneShotSharing, "", false)
+	s, err := createSharing(t, consts.OneShotSharing, "fakeid", false, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 
@@ -483,15 +505,19 @@ func TestSharingAcceptedBadCode(t *testing.T) {
 }
 
 func TestOneShotSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.OneShotSharing, false)
+	acceptedSharing(t, consts.OneShotSharing, false, false)
 }
 
 func TestMasterSlaveSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.MasterSlaveSharing, false)
+	acceptedSharing(t, consts.MasterSlaveSharing, false, false)
 }
 
 func TestOneShotFileSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.OneShotSharing, true)
+	acceptedSharing(t, consts.OneShotSharing, true, false)
+}
+
+func TestMasterSlaveSharingSelectorAcceptedSuccess(t *testing.T) {
+	acceptedSharing(t, consts.MasterSlaveSharing, false, true)
 }
 
 func TestSharingRefusedNoSharing(t *testing.T) {

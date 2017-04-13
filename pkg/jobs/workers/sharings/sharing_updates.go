@@ -107,8 +107,7 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	if err = checkDocument(sharing, docID); err != nil {
 		return err
 	}
-
-	return sendToRecipients(i, domain, sharing, docType, docID)
+	return sendToRecipients(i, domain, sharing, docType, docID, event.Event.Type)
 }
 
 // checkDocument checks the legitimity of the updated document to be shared
@@ -117,19 +116,11 @@ func checkDocument(sharing *Sharing, docID string) error {
 	if sharing.SharingType == consts.OneShotSharing {
 		return ErrDocumentNotLegitimate
 	}
-	// Check permissions
-	for _, rule := range sharing.Permissions {
-		for _, val := range rule.Values {
-			if val == docID {
-				return nil
-			}
-		}
-	}
-	return ErrDocumentNotLegitimate
+	return nil
 }
 
 // sendToRecipients retreives the recipients and send the document
-func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docType, docID string) error {
+func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docType, docID, eventType string) error {
 
 	recInfos := make([]*RecipientInfo, len(sharing.RecipientsStatus))
 	for i, rec := range sharing.RecipientsStatus {
@@ -147,10 +138,11 @@ func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docT
 		}
 		recInfos[i] = info
 	}
+	isUpdate := (eventType == "UPDATED")
 	opts := &SendOptions{
 		DocID:      docID,
 		DocType:    docType,
-		Update:     true,
+		Update:     isUpdate,
 		Recipients: recInfos,
 	}
 	// TODO: handle file sharing
