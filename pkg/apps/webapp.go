@@ -232,6 +232,9 @@ func (m *WebappManifest) FindIntent(action, typ string) *Intent {
 func GetWebappBySlug(db couchdb.Database, slug string) (*WebappManifest, error) {
 	man := &WebappManifest{}
 	err := couchdb.GetDoc(db, consts.Apps, consts.Apps+"/"+slug, man)
+	if couchdb.IsNotFoundError(err) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}

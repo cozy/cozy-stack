@@ -85,7 +85,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		if err == nil {
 			return nil, ErrAlreadyExists
 		}
-		if !couchdb.IsNotFoundError(err) {
+		if err != ErrNotFound {
 			return nil, err
 		}
 		err = nil
@@ -95,8 +95,6 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		case Konnector:
 			man = &konnManifest{}
 		}
-	} else if couchdb.IsNotFoundError(err) {
-		return nil, ErrNotFound
 	} else if err != nil {
 		return nil, err
 	}
