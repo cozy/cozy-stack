@@ -1,12 +1,12 @@
 package apps
 
 import (
-	"archive/tar"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -32,13 +32,18 @@ const glRawManifestURL = "https://%s/%s/%s/raw/%s/%s"
 
 type gitFetcher struct {
 	manFilename string
-	createTar   bool
 }
 
-func newGitFetcher(manFilename string, createTar bool) *gitFetcher {
+func newGitFetcher(appType AppType) *gitFetcher {
+	var manFilename string
+	switch appType {
+	case Webapp:
+		manFilename = WebappManifestName
+	case Konnector:
+		manFilename = KonnectorManifestName
+	}
 	return &gitFetcher{
 		manFilename: manFilename,
-		createTar:   createTar,
 	}
 }
 
@@ -162,55 +167,24 @@ func getWebBranch(src *url.URL) string {
 	return "HEAD"
 }
 
-func (g *gitFetcher) copyFiles(fs Copier, files *gitObject.FileIter) error {
-	if !g.createTar {
-		return files.ForEach(func(f *gitObject.File) error {
-			r, err := f.Reader()
-			if err != nil {
-				return err
-			}
-			defer r.Close()
-			return fs.Copy(f.Name, r)
-		})
-	}
-
-	osFs := afero.NewOsFs()
-	tmp, err := afero.TempFile(afero.NewOsFs(), "", "")
-	if err != nil {
-		return err
-	}
-	defer osFs.Remove(tmp.Name())
-
-	tw := tar.NewWriter(tmp)
-
-	err = files.ForEach(func(f *gitObject.File) error {
-		var r io.ReadCloser
-		r, err = f.Reader()
+func (g *gitFetcher) copyFiles(fs Copier, files *gitObject.FileIter) (err error) {
+	defer func() {
+		if errc := fs.Close(); errc != nil {
+			err = errc
+		}
+	}()
+	return files.ForEach(func(f *gitObject.File) error {
+		r, err := f.Reader()
 		if err != nil {
 			return err
 		}
 		defer r.Close()
-		hdr := &tar.Header{
-			Name: f.Name,
-			Mode: int64(f.Mode),
-			Size: f.Size,
-		}
-		if err = tw.WriteHeader(hdr); err != nil {
-			return err
-		}
-		_, err = io.Copy(tw, r)
-		return err
+		return fs.Copy(&fileInfo{
+			name: f.Name,
+			size: f.Size,
+			mode: os.FileMode(f.Mode),
+		}, r)
 	})
-	if err != nil {
-		return err
-	}
-
-	if err = tw.Flush(); err != nil {
-		return err
-	}
-
-	tmp.Seek(0, 0)
-	return fs.Copy("app.tar", tmp)
 }
 
 func resolveGithubURL(src *url.URL, filename string) (string, error) {

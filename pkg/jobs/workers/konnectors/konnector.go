@@ -71,7 +71,7 @@ func KonnectorWorker(ctx context.Context, m *jobs.Message) error {
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := inst.KonnectorsFileServer()
-	tarFile, err := fileServer.Open(slug, man.Version(), "app.tar")
+	tarFile, err := fileServer.Open(slug, man.Version(), apps.KonnectorArchiveName)
 	if err != nil {
 		return err
 	}

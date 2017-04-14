@@ -48,6 +48,10 @@ const (
 	Konnector
 )
 
+// KonnectorArchiveName is the name of the archive created to store the
+// konnectors sources.
+const KonnectorArchiveName = "app.tar"
+
 // Developer is the name and url of a developer.
 type Developer struct {
 	Name string `json:"name"`

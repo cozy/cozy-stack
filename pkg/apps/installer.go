@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"fmt"
 	"io"
 	"net/url"
 	"regexp"
@@ -64,20 +63,20 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	if opts.Operation == 0 {
 		panic("Missing installer operation")
 	}
+	if opts.Type != Webapp && opts.Type != Konnector {
+		panic("Bad or missing installer type")
+	}
 
 	slug := opts.Slug
 	if slug == "" || !slugReg.MatchString(slug) {
 		return nil, ErrInvalidSlugName
 	}
 
-	var manFilename string
-	switch opts.Type {
-	case Webapp:
-		manFilename = WebappManifestName
-	case Konnector:
-		manFilename = KonnectorManifestName
-	default:
-		return nil, fmt.Errorf("unknown installer type %s", string(opts.Type))
+	// For konnectors applications, we actually create a tar archive in which the
+	// sources are stored before copying the archive into the application
+	// storage.
+	if opts.Type == Konnector {
+		fs = newTarCopier(fs, KonnectorArchiveName)
 	}
 
 	man, err := GetBySlug(db, slug, opts.Type)
@@ -116,7 +115,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	var fetcher Fetcher
 	switch src.Scheme {
 	case "git":
-		fetcher = newGitFetcher(manFilename, opts.Type == Konnector)
+		fetcher = newGitFetcher(opts.Type)
 	default:
 		return nil, ErrNotSupportedSource
 	}
