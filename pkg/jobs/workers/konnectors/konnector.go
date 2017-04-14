@@ -28,7 +28,7 @@ func init() {
 		Concurrency:  4,
 		MaxExecCount: 2,
 		Timeout:      30 * time.Second,
-		WorkerFunc:   KonnectorWorker,
+		WorkerFunc:   Worker,
 	})
 }
 
@@ -38,8 +38,8 @@ type KonnectorOptions struct {
 	Fields json.RawMessage `json:"fields"`
 }
 
-// KonnectorWorker is the worker that runs a konnector by executing an external process.
-func KonnectorWorker(ctx context.Context, m *jobs.Message) error {
+// Worker is the worker that runs a konnector by executing an external process.
+func Worker(ctx context.Context, m *jobs.Message) error {
 	opts := &KonnectorOptions{}
 	if err := m.Unmarshal(&opts); err != nil {
 		return err
@@ -68,6 +68,7 @@ func KonnectorWorker(ctx context.Context, m *jobs.Message) error {
 	if err != nil {
 		return err
 	}
+	defer osFS.RemoveAll(workDir)
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := inst.KonnectorsFileServer()
