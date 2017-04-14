@@ -16,7 +16,7 @@ const (
 	WebappManifestName = "manifest.webapp"
 	// KonnectorManifestName is the name of the manifest at the root of the
 	// konnector application directory
-	KonnectorManifestName = "manifest.konnectors"
+	KonnectorManifestName = "manifest.konnector"
 )
 
 // State is the state of the application

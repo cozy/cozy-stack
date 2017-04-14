@@ -3,6 +3,7 @@ package konnectors
 import (
 	"encoding/json"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -56,7 +57,7 @@ func TestBadFileExec(t *testing.T) {
 			Operation: apps.Install,
 			Type:      apps.Konnector,
 			Slug:      "my-konnector-1",
-			SourceURL: "git://github.com/doubleface/cozy-konnector-trainline.git",
+			SourceURL: "git://github.com/cozy/cozy-konnector-trainline.git",
 		},
 	)
 	if !assert.NoError(t, err) {
@@ -90,6 +91,7 @@ func TestSuccess(t *testing.T) {
 echo "{\"COZY_DOMAIN\":\"${COZY_DOMAIN}\", \"COZY_CREDENTIALS\":\"${COZY_CREDENTIALS}\"}"
 echo "${COZY_FIELDS}"
 echo "bad json"
+echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 >&2 echo "log error"
 `
 	osFs := afero.NewOsFs()
@@ -117,7 +119,7 @@ echo "bad json"
 			Operation: apps.Install,
 			Type:      apps.Konnector,
 			Slug:      "my-konnector-2",
-			SourceURL: "git://github.com/doubleface/cozy-konnector-trainline.git",
+			SourceURL: "git://github.com/cozy/cozy-konnector-trainline.git",
 		},
 	)
 	if !assert.NoError(t, err) {
@@ -136,14 +138,20 @@ echo "bad json"
 		ch := evCh.Read()
 		ev1 := <-ch
 		ev2 := <-ch
+		ev3 := <-ch
 		err = evCh.Close()
 		assert.NoError(t, err)
 		doc1 := ev1.Doc.(couchdb.JSONDoc)
 		doc2 := ev2.Doc.(couchdb.JSONDoc)
+		doc3 := ev3.Doc.(couchdb.JSONDoc)
 		assert.Equal(t, inst.Domain, ev1.Instance)
 		assert.Equal(t, inst.Domain, ev2.Instance)
 		assert.Equal(t, inst.Domain, doc1.M["COZY_DOMAIN"])
 		assert.Equal(t, "mypass", doc2.M["Password"])
+
+		man := doc3.M["Manifest"].(string)
+		assert.True(t, strings.HasPrefix(man, os.TempDir()))
+		assert.True(t, strings.HasSuffix(man, "/manifest.konnector"))
 
 		token := doc1.M["COZY_CREDENTIALS"].(string)
 		var claims permissions.Claims

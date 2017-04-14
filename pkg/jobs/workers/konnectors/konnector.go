@@ -88,8 +88,10 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 			return err
 		}
 		dirname := path.Dir(hdr.Name)
-		if err = workFS.MkdirAll(dirname, 0755); err != nil {
-			return nil
+		if dirname != "." {
+			if err = workFS.MkdirAll(dirname, 0755); err != nil {
+				return nil
+			}
 		}
 		var f afero.File
 		f, err = workFS.OpenFile(hdr.Name, os.O_CREATE|os.O_WRONLY, os.FileMode(hdr.Mode))
