@@ -374,10 +374,17 @@ func TestGetAllJobs(t *testing.T) {
 	}
 
 	if assert.Len(t, v.Data, 2) {
-		assert.Equal(t, consts.Triggers, v.Data[1].Type)
-		assert.Equal(t, "@in", v.Data[1].Attributes.Type)
-		assert.Equal(t, "10s", v.Data[1].Attributes.Arguments)
-		assert.Equal(t, "print", v.Data[1].Attributes.WorkerType)
+		var gotIt = false
+		for _, trig := range v.Data {
+			if trig.Attributes.Type == "@in" {
+				assert.Equal(t, consts.Triggers, trig.Type)
+				assert.Equal(t, "@in", trig.Attributes.Type)
+				assert.Equal(t, "10s", trig.Attributes.Arguments)
+				assert.Equal(t, "print", trig.Attributes.WorkerType)
+				gotIt = true
+			}
+		}
+		assert.True(t, gotIt, "the triggers should appears in trigger list")
 	}
 }
 
