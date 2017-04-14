@@ -40,6 +40,7 @@ type WebappManifest struct {
 	Type string `json:"type,omitempty"`
 
 	Name        string     `json:"name"`
+	Editor      string     `json:"editor"`
 	DocSource   string     `json:"source"`
 	DocSlug     string     `json:"slug"`
 	DocState    State      `json:"state"`
