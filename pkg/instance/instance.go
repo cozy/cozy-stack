@@ -154,64 +154,42 @@ func (i *Instance) makeVFS() error {
 	return err
 }
 
-// AppsFS returns the hidden filesystem associated with the specified
+// AppsCopier returns the application copier associated with the specified
 // application type
-func (i *Instance) AppsFS(appsType apps.AppType) afero.Fs {
+func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
+	fsURL := config.FsURL()
+	var baseDirName string
 	switch appsType {
 	case apps.Webapp:
-		return i.hiddenFS(vfs.WebappsDirName)
+		baseDirName = vfs.WebappsDirName
 	case apps.Konnector:
-		return i.hiddenFS(vfs.KonnectorsDirName)
+		baseDirName = vfs.KonnectorsDirName
 	}
-	panic(fmt.Errorf("Unknown application type %s", string(appsType)))
+	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+		path.Join(fsURL.Path, i.Domain, baseDirName))
+	return apps.NewAferoCopier(baseFS)
+}
+
+// AppsFileServer returns the web-application file server associated to this
+// instance.
+func (i *Instance) AppsFileServer() apps.FileServer {
+	fsURL := config.FsURL()
+	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+		path.Join(fsURL.Path, i.Domain, vfs.WebappsDirName))
+	return apps.NewAferoFileServer(baseFS, nil)
 }
 
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the
 // photos/image
 func (i *Instance) ThumbsFS() afero.Fs {
-	return i.hiddenFS(vfs.ThumbsDirName)
-}
-
-func (i *Instance) hiddenFS(dirname string) afero.Fs {
 	fsURL := config.FsURL()
-	switch fsURL.Scheme {
-	case "file", "mem":
-		return afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, dirname))
-	case "swift":
-		panic("Not implemented")
-	}
-	return nil
+	return afero.NewBasePathFs(afero.NewOsFs(),
+		path.Join(fsURL.Path, i.Domain, vfs.ThumbsDirName))
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.
 func (i *Instance) DiskQuota() int64 {
 	return i.BytesDiskQuota
-}
-
-// StartJobSystem creates all the resources necessary for the instance's job
-// system to work properly.
-func (i *Instance) StartJobSystem() error {
-	broker := jobs.NewMemBroker(i.Domain, jobs.GetWorkersList())
-	scheduler := jobs.NewMemScheduler(i.Domain, jobs.NewTriggerCouchStorage(i))
-	return scheduler.Start(broker)
-}
-
-// StopJobSystem stops all the resources used by the job system associated with
-// the instance.
-func (i *Instance) StopJobSystem() error {
-	// TODO
-	return nil
-}
-
-// JobsBroker returns the jobs broker associated with the instance
-func (i *Instance) JobsBroker() jobs.Broker {
-	return jobs.GetMemBroker(i.Domain)
-}
-
-// JobsScheduler returns the jobs scheduler associated with the instance
-func (i *Instance) JobsScheduler() jobs.Scheduler {
-	return jobs.GetMemScheduler(i.Domain)
 }
 
 // Scheme returns the scheme used for URLs. It is https by default and http
@@ -272,7 +250,7 @@ func (i *Instance) installApp(slug string) error {
 	if !ok {
 		return errors.New("Unknown app")
 	}
-	inst, err := apps.NewInstaller(i, i.AppsFS(apps.Webapp), &apps.InstallerOptions{
+	inst, err := apps.NewInstaller(i, i.AppsCopier(apps.Webapp), &apps.InstallerOptions{
 		Operation: apps.Install,
 		Type:      apps.Webapp,
 		SourceURL: source,
@@ -281,17 +259,8 @@ func (i *Instance) installApp(slug string) error {
 	if err != nil {
 		return err
 	}
-	go inst.Install()
-	for {
-		_, done, err := inst.Poll()
-		if err != nil {
-			return err
-		}
-		if done {
-			break
-		}
-	}
-	return nil
+	_, err = inst.RunSync()
+	return err
 }
 
 // Create builds an instance and initializes it
@@ -391,11 +360,8 @@ func Create(opts *Options) (*Instance, error) {
 	if err := couchdb.DefineViews(i, consts.Views); err != nil {
 		return nil, err
 	}
-	if err := i.StartJobSystem(); err != nil {
-		return nil, err
-	}
-	scheduler := i.JobsScheduler()
-	for _, trigger := range Triggers {
+	scheduler := jobs.GetScheduler()
+	for _, trigger := range Triggers(i.Domain) {
 		t, err := jobs.NewTrigger(&trigger)
 		if err != nil {
 			return nil, err
@@ -531,10 +497,6 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
-	if err = i.StopJobSystem(); err != nil {
-		return nil, err
-	}
-
 	if err = i.VFS().Delete(); err != nil {
 		return nil, err
 	}
@@ -598,7 +560,8 @@ func (i *Instance) RequestPassphraseReset() error {
 	if err != nil {
 		return err
 	}
-	_, _, err = i.JobsBroker().PushJob(&jobs.JobRequest{
+	_, _, err = jobs.GetBroker().PushJob(&jobs.JobRequest{
+		Domain:     i.Domain,
 		WorkerType: "sendmail",
 		Message:    msg,
 	})

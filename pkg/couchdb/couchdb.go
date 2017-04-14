@@ -65,6 +65,11 @@ func rtevent(db Database, evtype string, doc Doc) {
 // GlobalDB is the prefix used for stack-scoped db
 var GlobalDB = SimpleDatabasePrefix("global")
 
+// GlobalTriggersDB is the database prefix used for triggers that may be stored
+// globally on self-hosted instances where we need to store them in the same
+// database.
+var GlobalTriggersDB = SimpleDatabasePrefix("triggers")
+
 // View is the map/reduce thing in CouchDB
 type View struct {
 	Name    string `json:"-"`

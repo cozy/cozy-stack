@@ -50,11 +50,12 @@ func TestInMemoryJobs(t *testing.T) {
 	w.Add(2)
 
 	go func() {
-		broker := NewMemBroker("cozy.local", workersTestList)
+		broker := newMemBroker(workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
 			_, _, err := broker.PushJob(&JobRequest{
+				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -65,11 +66,12 @@ func TestInMemoryJobs(t *testing.T) {
 	}()
 
 	go func() {
-		broker := NewMemBroker("cozy.local", workersTestList)
+		broker := newMemBroker(workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
 			_, _, err := broker.PushJob(&JobRequest{
+				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
 			})
@@ -83,8 +85,9 @@ func TestInMemoryJobs(t *testing.T) {
 }
 
 func TestUnknownWorkerError(t *testing.T) {
-	broker := NewMemBroker("baz.quz", WorkersList{})
+	broker := newMemBroker(WorkersList{})
 	_, _, err := broker.PushJob(&JobRequest{
+		Domain:     "cozy.local",
 		WorkerType: "nope",
 		Message:    nil,
 	})
@@ -95,7 +98,7 @@ func TestUnknownWorkerError(t *testing.T) {
 func TestUnknownMessageType(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker("foo.bar", WorkersList{
+	broker := newMemBroker(WorkersList{
 		"test": {
 			Concurrency: 4,
 			WorkerFunc: func(ctx context.Context, m *Message) error {
@@ -112,6 +115,7 @@ func TestUnknownMessageType(t *testing.T) {
 	w.Add(1)
 	_, _, err := broker.PushJob(&JobRequest{
 		WorkerType: "test",
+		Domain:     "cozy.local",
 		Message: &Message{
 			Type: "unknown",
 			Data: nil,
@@ -125,7 +129,7 @@ func TestUnknownMessageType(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker("timeout.cozy", WorkersList{
+	broker := newMemBroker(WorkersList{
 		"timeout": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -141,6 +145,7 @@ func TestTimeout(t *testing.T) {
 	w.Add(1)
 	_, _, err := broker.PushJob(&JobRequest{
 		WorkerType: "timeout",
+		Domain:     "cozy.local",
 		Message: &Message{
 			Type: "timeout",
 			Data: nil,
@@ -157,7 +162,7 @@ func TestRetry(t *testing.T) {
 	maxExecCount := 4
 
 	var count int
-	broker := NewMemBroker("retry", WorkersList{
+	broker := newMemBroker(WorkersList{
 		"test": {
 			Concurrency:  1,
 			MaxExecCount: uint(maxExecCount),
@@ -177,6 +182,7 @@ func TestRetry(t *testing.T) {
 
 	w.Add(maxExecCount)
 	_, _, err := broker.PushJob(&JobRequest{
+		Domain:     "cozy.local",
 		WorkerType: "test",
 		Message:    nil,
 	})
@@ -190,7 +196,7 @@ func TestPanicRetried(t *testing.T) {
 
 	maxExecCount := 4
 
-	broker := NewMemBroker("panic", WorkersList{
+	broker := newMemBroker(WorkersList{
 		"panic": {
 			Concurrency:  1,
 			MaxExecCount: uint(maxExecCount),
@@ -204,6 +210,7 @@ func TestPanicRetried(t *testing.T) {
 
 	w.Add(maxExecCount)
 	_, _, err := broker.PushJob(&JobRequest{
+		Domain:     "cozy.local",
 		WorkerType: "panic",
 		Message:    nil,
 	})
@@ -218,7 +225,7 @@ func TestPanic(t *testing.T) {
 	even, _ := NewMessage("json", 0)
 	odd, _ := NewMessage("json", 1)
 
-	broker := NewMemBroker("panic2", WorkersList{
+	broker := newMemBroker(WorkersList{
 		"panic2": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -238,13 +245,13 @@ func TestPanic(t *testing.T) {
 	})
 	w.Add(2)
 	var err error
-	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: odd})
+	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: even})
+	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
-	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: odd})
+	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, _, err = broker.PushJob(&JobRequest{WorkerType: "panic2", Message: even})
+	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
 }
@@ -252,7 +259,7 @@ func TestPanic(t *testing.T) {
 func TestInfoChan(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker("chan.cozy", WorkersList{
+	broker := newMemBroker(WorkersList{
 		"timeout": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -268,6 +275,7 @@ func TestInfoChan(t *testing.T) {
 	w.Add(1)
 	job, done, err := broker.PushJob(&JobRequest{
 		WorkerType: "timeout",
+		Domain:     "cozy.local",
 		Message: &Message{
 			Type: "timeout",
 			Data: nil,
@@ -301,6 +309,7 @@ func TestTriggersBadArguments(t *testing.T) {
 	var err error
 	_, err = NewTrigger(&TriggerInfos{
 		ID:        utils.RandomString(10),
+		Domain:    "cozy.local",
 		Type:      "@at",
 		Arguments: "garbage",
 	})
@@ -315,6 +324,7 @@ func TestTriggersBadArguments(t *testing.T) {
 
 	_, err = NewTrigger(&TriggerInfos{
 		ID:        utils.RandomString(10),
+		Domain:    "cozy.local",
 		Type:      "@unknown",
 		Arguments: "",
 	})
@@ -326,7 +336,7 @@ func TestTriggersBadArguments(t *testing.T) {
 func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
-	NewMemBroker("test.scheduler.io", WorkersList{
+	bro := newMemBroker(WorkersList{
 		"worker": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -357,6 +367,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	at := &TriggerInfos{
 		ID:         atID,
 		Type:       "@at",
+		Domain:     "cozy.local",
 		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
 		WorkerType: "worker",
 		Message:    msg1,
@@ -364,6 +375,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	inID := utils.RandomString(10)
 	in := &TriggerInfos{
 		ID:         inID,
+		Domain:     "cozy.local",
 		Type:       "@in",
 		Arguments:  "1s",
 		WorkerType: "worker",
@@ -371,13 +383,11 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	triggers := []*TriggerInfos{at, in}
-	NewMemScheduler("test.scheduler.io", &storage{triggers})
+	sch := newMemScheduler(&storage{triggers})
 
-	bro := GetMemBroker("test.scheduler.io")
-	sch := GetMemScheduler("test.scheduler.io")
 	sch.Start(bro)
 
-	ts, err := sch.GetAll()
+	ts, err := sch.GetAll("cozy.local")
 	assert.NoError(t, err)
 	assert.Len(t, ts, len(triggers))
 
@@ -407,11 +417,11 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 		<-done
 	}
 
-	_, err = sch.Get(atID)
+	_, err = sch.Get("cozy.local", atID)
 	assert.Error(t, err)
 	assert.Equal(t, ErrNotFoundTrigger, err)
 
-	_, err = sch.Get(inID)
+	_, err = sch.Get("cozy.local", inID)
 	assert.Error(t, err)
 	assert.Equal(t, ErrNotFoundTrigger, err)
 }

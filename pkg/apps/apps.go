@@ -65,12 +65,20 @@ type Manifest interface {
 	couchdb.Doc
 	Valid(field, expected string) bool
 	ReadManifest(i io.Reader, slug, sourceURL string) error
+
+	Create(db couchdb.Database) error
+	Update(db couchdb.Database) error
+	Delete(db couchdb.Database) error
+
 	Permissions() permissions.Set
 	Source() string
+	Version() string
 	Slug() string
 	State() State
 	Error() error
+
 	SetState(state State)
+	SetVersion(version string)
 	SetError(err error)
 }
 

@@ -155,7 +155,7 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 
 // addTrigger creates a new trigger on the updates of the shared documents
 func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string) error {
-	scheduler := instance.JobsScheduler()
+	scheduler := jobs.GetScheduler()
 
 	var eventArgs string
 	if rule.Selector != "" {
@@ -175,6 +175,7 @@ func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
 		Type:       "@event",
 		WorkerType: "sharingupdates",
+		Domain:     instance.Domain,
 		Arguments:  eventArgs,
 		Message: &jobs.Message{
 			Type: jobs.JSONEncoding,
@@ -224,7 +225,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			if err != nil {
 				return err
 			}
-			_, _, err = instance.JobsBroker().PushJob(&jobs.JobRequest{
+			_, _, err = jobs.GetBroker().PushJob(&jobs.JobRequest{
+				Domain:     instance.Domain,
 				WorkerType: "sharedata",
 				Options:    nil,
 				Message:    workerMsg,

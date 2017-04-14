@@ -23,7 +23,7 @@ func TestTriggerEvent(t *testing.T) {
 	var wg sync.WaitGroup
 	var called = make(map[string]bool)
 
-	NewMemBroker("test2.scheduler.io", WorkersList{
+	bro := newMemBroker(WorkersList{
 		"worker_event": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -52,6 +52,7 @@ func TestTriggerEvent(t *testing.T) {
 		{
 			ID:         utils.RandomString(10),
 			Type:       "@event",
+			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:DELETED",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-bad-verb"),
@@ -59,6 +60,7 @@ func TestTriggerEvent(t *testing.T) {
 		{
 			ID:         utils.RandomString(10),
 			Type:       "@event",
+			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:CREATED:value:test",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb-correct-value"),
@@ -66,6 +68,7 @@ func TestTriggerEvent(t *testing.T) {
 		{
 			ID:         utils.RandomString(10),
 			Type:       "@event",
+			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:CREATED",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb"),
@@ -73,6 +76,7 @@ func TestTriggerEvent(t *testing.T) {
 		{
 			ID:         utils.RandomString(10),
 			Type:       "@event",
+			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:CREATED:notvalue:test",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb-bad-value"),
@@ -80,15 +84,14 @@ func TestTriggerEvent(t *testing.T) {
 		{
 			ID:         utils.RandomString(10),
 			Type:       "@event",
+			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-wholetype"),
 		},
 	}}
 	wg.Add(3)
-	NewMemScheduler("test2.scheduler.io", storage)
-	bro := GetMemBroker("test2.scheduler.io")
-	sch := GetMemScheduler("test2.scheduler.io")
+	sch := newMemScheduler(storage)
 	sch.Start(bro)
 
 	time.AfterFunc(1*time.Millisecond, func() {
@@ -100,7 +103,7 @@ func TestTriggerEvent(t *testing.T) {
 				"test": "value",
 			},
 		}
-		realtime.InstanceHub("test2.scheduler.io").Publish(&realtime.Event{
+		realtime.InstanceHub("cozy.local").Publish(&realtime.Event{
 			Type: realtime.EventCreate,
 			Doc:  &doc,
 		})
@@ -115,7 +118,6 @@ func TestTriggerEvent(t *testing.T) {
 	assert.False(t, called["message-correct-verb-bad-value"])
 
 	for _, t := range storage.ts {
-		sch.Delete(t.ID)
+		sch.Delete("cozy.local", t.ID)
 	}
-
 }

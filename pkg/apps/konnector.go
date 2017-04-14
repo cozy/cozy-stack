@@ -28,7 +28,7 @@ type konnManifest struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 
-	Version        string          `json:"version"`
+	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
 }
@@ -40,6 +40,7 @@ func (m *konnManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
 func (m *konnManifest) SetID(id string)    {}
 func (m *konnManifest) SetRev(rev string)  { m.DocRev = rev }
 func (m *konnManifest) Source() string     { return m.DocSource }
+func (m *konnManifest) Version() string    { return m.DocVersion }
 func (m *konnManifest) Slug() string       { return m.DocSlug }
 
 func (m *konnManifest) State() State { return m.DocState }
@@ -50,8 +51,9 @@ func (m *konnManifest) Error() error {
 	return errors.New(m.DocError)
 }
 
-func (m *konnManifest) SetState(state State) { m.DocState = state }
-func (m *konnManifest) SetError(err error)   { m.DocError = err.Error() }
+func (m *konnManifest) SetState(state State)      { m.DocState = state }
+func (m *konnManifest) SetError(err error)        { m.DocError = err.Error() }
+func (m *konnManifest) SetVersion(version string) { m.DocVersion = version }
 func (m *konnManifest) Permissions() permissions.Set {
 	return m.DocPermissions
 }
@@ -76,6 +78,35 @@ func (m *konnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	m.DocSlug = slug
 	m.DocSource = sourceURL
 	return nil
+}
+
+func (m *konnManifest) Create(db couchdb.Database) error {
+	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
+		return err
+	}
+	_, err := permissions.CreateKonnectorSet(db, m.Slug(), m.Permissions())
+	return err
+}
+
+func (m *konnManifest) Update(db couchdb.Database) error {
+	err := permissions.DestroyKonnector(db, m.Slug())
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return err
+	}
+	err = couchdb.UpdateDoc(db, m)
+	if err != nil {
+		return err
+	}
+	_, err = permissions.CreateKonnectorSet(db, m.Slug(), m.Permissions())
+	return err
+}
+
+func (m *konnManifest) Delete(db couchdb.Database) error {
+	err := permissions.DestroyKonnector(db, m.Slug())
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return err
+	}
+	return couchdb.DeleteDoc(db, m)
 }
 
 // GetKonnectorBySlug fetch the manifest of a konnector from the database given

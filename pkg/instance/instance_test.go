@@ -15,7 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	_ "github.com/cozy/cozy-stack/pkg/jobs/workers"
+	"github.com/cozy/cozy-stack/pkg/jobs"
+	_ "github.com/cozy/cozy-stack/pkg/jobs/workers/mails"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
@@ -403,6 +404,11 @@ func TestMain(m *testing.M) {
 	instance.Destroy("test.cozycloud.cc")
 	instance.Destroy("test2.cozycloud.cc")
 	instance.Destroy("test.cozycloud.cc.duplicate")
+
+	if err = jobs.StartSystem(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	os.RemoveAll("/usr/local/var/cozy2/")
 

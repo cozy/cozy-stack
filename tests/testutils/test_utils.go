@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -100,6 +101,10 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if c.inst != nil {
 		return c.inst
 	}
+	err := jobs.StartSystem()
+	if err != nil {
+		c.CleanupAndDie("Error while starting job system", err)
+	}
 	if len(opts) == 0 {
 		opts = []*instance.Options{{}}
 	}
@@ -108,7 +113,7 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	} else {
 		c.host = opts[0].Domain
 	}
-	_, err := instance.Destroy(c.host)
+	_, err = instance.Destroy(c.host)
 	if err != nil && err != instance.ErrNotFound {
 		c.CleanupAndDie("Error while destroying instance", err)
 	}

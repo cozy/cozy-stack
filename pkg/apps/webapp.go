@@ -53,7 +53,7 @@ type WebappManifest struct {
 		Description string `json:"description"`
 	} `json:"locales"`
 
-	Version        string          `json:"version"`
+	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
 	Intents        []Intent        `json:"intents"`
@@ -83,6 +83,9 @@ func (m *WebappManifest) SetRev(rev string) { m.DocRev = rev }
 // Source is part of the Manifest interface
 func (m *WebappManifest) Source() string { return m.DocSource }
 
+// Version is part of the Manifest interface
+func (m *WebappManifest) Version() string { return m.DocVersion }
+
 // Slug is part of the Manifest interface
 func (m *WebappManifest) Slug() string { return m.DocSlug }
 
@@ -103,6 +106,9 @@ func (m *WebappManifest) SetState(state State) { m.DocState = state }
 // SetError is part of the Manifest interface
 func (m *WebappManifest) SetError(err error) { m.DocError = err.Error() }
 
+// SetVersion is part of the Manifest interface
+func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
+
 // Permissions is part of the Manifest interface
 func (m *WebappManifest) Permissions() permissions.Set {
 	return m.DocPermissions
@@ -119,7 +125,7 @@ func (m *WebappManifest) Valid(field, value string) bool {
 	return false
 }
 
-// ReadManifest  is part of the Manifest interface
+// ReadManifest is part of the Manifest interface
 func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	if err := json.NewDecoder(r).Decode(&m); err != nil {
 		return ErrBadManifest
@@ -137,6 +143,38 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error
 		}
 	}
 	return nil
+}
+
+// Create is part of the Manifest interface
+func (m *WebappManifest) Create(db couchdb.Database) error {
+	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
+		return err
+	}
+	_, err := permissions.CreateAppSet(db, m.Slug(), m.Permissions())
+	return err
+}
+
+// Update is part of the Manifest interface
+func (m *WebappManifest) Update(db couchdb.Database) error {
+	err := permissions.DestroyApp(db, m.Slug())
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return err
+	}
+	err = couchdb.UpdateDoc(db, m)
+	if err != nil {
+		return err
+	}
+	_, err = permissions.CreateAppSet(db, m.Slug(), m.Permissions())
+	return err
+}
+
+// Delete is part of the Manifest interface
+func (m *WebappManifest) Delete(db couchdb.Database) error {
+	err := permissions.DestroyApp(db, m.Slug())
+	if err != nil && !couchdb.IsNotFoundError(err) {
+		return err
+	}
+	return couchdb.DeleteDoc(db, m)
 }
 
 // FindRoute takes a path, returns the route which matches the best,
