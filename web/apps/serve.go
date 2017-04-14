@@ -104,8 +104,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		if file != "" {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
+		reqURL := c.Request().URL
 		subdomain := i.SubDomain(slug)
-		subdomain.Path = c.Request().URL.String()
+		subdomain.Path = reqURL.Path
+		subdomain.RawQuery = reqURL.RawQuery
+		subdomain.Fragment = reqURL.Fragment
 		redirect := url.Values{
 			"redirect": {subdomain.String()},
 		}
