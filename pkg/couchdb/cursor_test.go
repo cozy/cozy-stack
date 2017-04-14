@@ -14,11 +14,11 @@ func TestStartKeyCursor(t *testing.T) {
 
 	c1 := NewKeyCursor(10, []string{"A", "B"}, "last-result-id")
 
-	req2 := c1.ApplyTo(req1)
-	assert.Nil(t, req2.Key)
-	assert.Equal(t, []string{"A", "B"}, req2.StartKey)
-	assert.Equal(t, "last-result-id", req2.StartKeyDocID)
-	assert.Equal(t, 11, req2.Limit)
+	c1.ApplyTo(req1)
+	assert.Nil(t, req1.Key)
+	assert.Equal(t, []string{"A", "B"}, req1.StartKey)
+	assert.Equal(t, "last-result-id", req1.StartKeyDocID)
+	assert.Equal(t, 11, req1.Limit)
 
 	c2 := NewKeyCursor(3, nil, "")
 

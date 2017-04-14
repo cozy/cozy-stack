@@ -3,7 +3,7 @@ package couchdb
 // A Cursor holds a reference to a page in a couchdb View
 type Cursor interface {
 	HasMore() bool
-	ApplyTo(req *ViewRequest) *ViewRequest
+	ApplyTo(req *ViewRequest)
 	UpdateFrom(res *ViewResponse)
 }
 
@@ -58,14 +58,13 @@ type SkipCursor struct {
 // the transformed ViewRequest will retrieve elements from Cursor to
 // Limit or EndKey whichever comes first
 // /!\ Mutates req
-func (c *SkipCursor) ApplyTo(req *ViewRequest) *ViewRequest {
+func (c *SkipCursor) ApplyTo(req *ViewRequest) {
 	if c.Skip != 0 {
 		req.Skip = c.Skip
 	}
 	if c.Limit != 0 {
 		req.Limit = c.Limit + 1
 	}
-	return req
 }
 
 // UpdateFrom change the cursor status depending on information from
@@ -89,7 +88,7 @@ type StartKeyCursor struct {
 // the transformed ViewRequest will retrieve elements from Cursor to
 // Limit or EndKey whichever comes first
 // /!\ Mutates req
-func (c *StartKeyCursor) ApplyTo(req *ViewRequest) *ViewRequest {
+func (c *StartKeyCursor) ApplyTo(req *ViewRequest) {
 	if c.NextKey != "" && c.NextKey != nil {
 		if req.Key != nil && req.StartKey == nil {
 			req.StartKey = req.Key
@@ -108,7 +107,6 @@ func (c *StartKeyCursor) ApplyTo(req *ViewRequest) *ViewRequest {
 		req.Limit = c.Limit + 1
 	}
 
-	return req
 }
 
 // UpdateFrom change the cursor status depending on information from
