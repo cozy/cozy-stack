@@ -94,6 +94,9 @@ type Indexer interface {
 
 	// CreateFileDoc creates and add in the index a new file document.
 	CreateFileDoc(doc *FileDoc) error
+	// CreateNamedFileDoc creates and add in the index a new file document with
+	// its id already set.
+	CreateNamedFileDoc(doc *FileDoc) error
 	// UpdateFileDoc is used to update the document of a file. It takes the
 	// new file document that you want to create and the old document,
 	// representing the current revision of the file.
@@ -103,6 +106,9 @@ type Indexer interface {
 
 	// CreateDirDoc creates and add in the index a new directory document.
 	CreateDirDoc(doc *DirDoc) error
+	// CreateNamedDirDoc creates and add in the index a new directory document
+	// with its id already set.
+	CreateNamedDirDoc(doc *DirDoc) error
 	// UpdateDirDoc is used to update the document of a directory. It takes the
 	// new directory document that you want to create and the old document,
 	// representing the current revision of the directory.

@@ -67,6 +67,9 @@ const (
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
+	// SharedWithMeDirID is the id of the directory where all the files received
+	// by sharing will end up.
+	SharedWithMeDirID = "io.cozy.sharings.shared-with-me-dir"
 )
 
 const (

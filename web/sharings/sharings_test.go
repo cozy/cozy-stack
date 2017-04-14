@@ -3,6 +3,7 @@ package sharings
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -19,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/data"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,6 +34,8 @@ var clientID string
 var jar http.CookieJar
 var client *http.Client
 var recipientURL string
+var token string
+var iocozytests = "io.cozy.tests"
 
 func createRecipient(t *testing.T) (*sharings.Recipient, error) {
 	recipient := &sharings.Recipient{
@@ -64,6 +68,97 @@ func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode
 	access, err := oauth.CreateAccessCode(recipientIn, clientID, scope)
 	assert.NoError(t, err)
 	return access, err
+}
+
+func TestReceiveDocumentWithNoDoctype(t *testing.T) {
+	randomJSON := echo.Map{
+		"test": "test",
+	}
+	resp, err := postJSON("/sharings/doc//randomid", randomJSON)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestReceiveDocumentSuccessJSON(t *testing.T) {
+	jsondataID := "1234bepoauie"
+	jsondata := echo.Map{
+		"test": "test",
+		"id":   jsondataID,
+	}
+	jsonraw, err := json.Marshal(jsondata)
+	assert.NoError(t, err)
+
+	url, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	url.Path = fmt.Sprintf("/sharings/doc/%s/%s", iocozytests, jsondataID)
+
+	req, err := http.NewRequest(http.MethodPost, url.String(),
+		bytes.NewReader(jsonraw))
+	assert.NoError(t, err)
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Set(echo.HeaderContentType, "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	defer resp.Body.Close()
+
+	// Ensure that document is present by fetching it.
+	doc := &couchdb.JSONDoc{}
+	err = couchdb.GetDoc(testInstance, iocozytests, jsondataID, doc)
+	assert.NoError(t, err)
+}
+
+func TestReceiveDocumentSuccessDir(t *testing.T) {
+	id := "0987jldvnrst"
+
+	urlDest, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, id)
+	urlDest.RawQuery = fmt.Sprintf("Name=TestDir&Type=%s", consts.DirType)
+
+	req, err := http.NewRequest(http.MethodPost, urlDest.String(), nil)
+	assert.NoError(t, err)
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Ensure that the folder was created by fetching it.
+	fs := testInstance.VFS()
+	_, err = fs.DirByID(id)
+	assert.NoError(t, err)
+}
+
+func TestReceiveDocumentSuccessFile(t *testing.T) {
+	id := "testid"
+	body := "testoutest"
+
+	urlDest, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, id)
+	values := url.Values{
+		"Name":       {"TestFile"},
+		"Executable": {"false"},
+		"Type":       {consts.FileType},
+	}
+	urlDest.RawQuery = values.Encode()
+	buf := strings.NewReader(body)
+
+	req, err := http.NewRequest(http.MethodPost, urlDest.String(), buf)
+	assert.NoError(t, err)
+	req.Header.Add("Content-MD5", "VkzK5Gw9aNzQdazZe4y1cw==")
+	req.Header.Add("Content-type", "text/plain")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	fs := testInstance.VFS()
+	_, err = fs.FileByID(id)
+	assert.NoError(t, err)
 }
 
 func TestRecipientRefusedSharingWhenThereIsNoState(t *testing.T) {
@@ -359,6 +454,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
+
 	setup := testutils.NewSetup(m, "sharing_test_alice")
 	setup2 := testutils.NewSetup(m, "sharing_test_bob")
 	var settings couchdb.JSONDoc
@@ -374,16 +470,33 @@ func TestMain(m *testing.M) {
 		Settings: settings2,
 	})
 
+	err := couchdb.ResetDB(testInstance, iocozytests)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	err = couchdb.ResetDB(testInstance, consts.Files)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	jar = setup.GetCookieJar()
 	client = &http.Client{
 		CheckRedirect: noRedirect,
 		Jar:           jar,
 	}
 
-	clientOAuth, _ = setup.GetTestClient("")
+	scope := consts.Files + " " + iocozytests
+	clientOAuth, token = setup.GetTestClient(scope)
 	clientID = clientOAuth.ClientID
 
-	ts = setup.GetTestServer("/sharings", Routes)
+	routes := map[string]func(*echo.Group){
+		"/sharings": Routes,
+		"/data":     data.Routes,
+	}
+	ts = setup.GetTestServerMultipleRoutes(routes)
 	ts2 = setup2.GetTestServer("/auth", auth.Routes)
 	recipientURL = strings.Split(ts2.URL, "http://")[1]
 

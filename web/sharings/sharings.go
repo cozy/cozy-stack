@@ -8,6 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/sharings"
+	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -211,6 +212,30 @@ func RecipientRefusedSharing(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
+// receiveDocument stores a shared document in the Cozy.
+//
+// If the document to store is a "io.cozy.files" our custom handler will be
+// called, otherwise we will redirect the request to PUT /data/:doctype/:id.
+func receiveDocument(c echo.Context) error {
+	var err error
+
+	switch c.Param("doctype") {
+	case "":
+		err = echo.NewHTTPError(http.StatusBadRequest,
+			"Missing parameter: doctype")
+	case consts.Files:
+		err = creationWithIDHandler(c)
+	default:
+		err = data.UpdateDoc(c)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
@@ -219,6 +244,7 @@ func Routes(router *echo.Group) {
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", AddRecipient)
+	router.POST("/doc/:doctype/:docid", receiveDocument)
 }
 
 // wrapErrors returns a formatted error

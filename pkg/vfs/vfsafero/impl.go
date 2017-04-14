@@ -104,7 +104,11 @@ func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
 	if err != nil {
 		return err
 	}
-	err = afs.Indexer.CreateDirDoc(doc)
+	if doc.ID() == "" {
+		err = afs.Indexer.CreateDirDoc(doc)
+	} else {
+		err = afs.Indexer.CreateNamedDirDoc(doc)
+	}
 	if err != nil {
 		afs.fs.Remove(doc.Fullpath) // #nosec
 	}
@@ -487,7 +491,11 @@ func (f *aferoFileCreation) Close() (err error) {
 	f.afs.mu.Lock()
 	defer f.afs.mu.Unlock()
 	if olddoc == nil {
-		return f.afs.Indexer.CreateFileDoc(newdoc)
+		if newdoc.ID() == "" {
+			return f.afs.Indexer.CreateFileDoc(newdoc)
+		}
+
+		return f.afs.Indexer.CreateNamedFileDoc(newdoc)
 	}
 	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
 }
