@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"net/http"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -250,7 +252,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, sharingWorker.SendOptions{
 				DocID:      val,
-				Update:     false,
+				Method:     http.MethodPost,
 				DocType:    docType,
 				Recipients: []*sharingWorker.RecipientInfo{rec},
 			})

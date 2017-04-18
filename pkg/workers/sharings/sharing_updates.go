@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	"net/http"
+
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -36,6 +38,9 @@ var (
 	ErrRecipientDoesNotExist = errors.New("Recipient with given ID does not exist")
 	// ErrRecipientHasNoURL is used to signal that a recipient has no URL.
 	ErrRecipientHasNoURL = errors.New("Recipient has no URL")
+	// ErrEventNotSupported is used to signal that the event propagated by the
+	// trigger is not supported by this worker.
+	ErrEventNotSupported = errors.New("Event not supported")
 )
 
 // TriggerEvent describes the fields retrieved after a triggered event
@@ -138,11 +143,23 @@ func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docT
 		}
 		recInfos[i] = info
 	}
-	isUpdate := (eventType == "UPDATED")
+
+	var method string
+	switch eventType {
+	case "CREATED":
+		method = http.MethodPost
+	case "UPDATED":
+		method = http.MethodPut
+	case "DELETED":
+		method = http.MethodDelete
+	default:
+		return ErrEventNotSupported
+	}
+
 	opts := &SendOptions{
 		DocID:      docID,
 		DocType:    docType,
-		Update:     isUpdate,
+		Method:     method,
 		Recipients: recInfos,
 	}
 	// TODO: handle file sharing

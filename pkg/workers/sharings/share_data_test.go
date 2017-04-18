@@ -2,8 +2,12 @@ package sharings
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
+
+	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -11,6 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,6 +25,8 @@ var testDocID = "aydiayda"
 
 var in *instance.Instance
 var domainSharer = "domain.sharer"
+var setup *testutils.TestSetup
+var ts *httptest.Server
 
 func createInstance(domain, publicName string) (*instance.Instance, error) {
 	var settings couchdb.JSONDoc
@@ -104,8 +112,60 @@ func TestSendDataBadRecipient(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// WARNING: this test creates a new testServer. It might conflict with others,
+// if others were declared.
+func TestDeleteDoc(t *testing.T) {
+	randomrev := "randomrev"
+
+	mpr := map[string]func(*echo.Group){
+		"/sharings": func(router *echo.Group) {
+			router.Any("/doc/:doctype/:docid", func(c echo.Context) error {
+				assert.Equal(t, randomrev, c.QueryParam("rev"))
+				assert.Equal(t, testDocID, c.Param("docid"))
+				assert.Equal(t, testDocType, c.Param("doctype"))
+				return c.JSON(http.StatusOK, nil)
+			})
+		},
+		"/data": func(router *echo.Group) {
+			router.Any("/:doctype/:docid", func(c echo.Context) error {
+				assert.Equal(t, testDocID, c.Param("docid"))
+				assert.Equal(t, testDocType, c.Param("doctype"))
+				doc := &couchdb.JSONDoc{
+					Type: testDocType,
+					M: map[string]interface{}{
+						"_rev": randomrev,
+					},
+				}
+				return c.JSON(http.StatusOK, doc.ToMapWithType())
+			})
+		},
+	}
+	ts = setup.GetTestServerMultipleRoutes(mpr)
+
+	tsURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	domain := tsURL.Host
+	opts := &SendOptions{
+		DocID:   testDocID,
+		DocType: testDocType,
+		Method:  http.MethodDelete,
+		Recipients: []*RecipientInfo{
+			&RecipientInfo{
+				URL:   domain,
+				Token: "whoneedsone?",
+			},
+		},
+	}
+
+	err = DeleteDoc(domain, opts)
+	assert.NoError(t, err)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	testutils.NeedCouchdb()
+
+	setup = testutils.NewSetup(m, "share_data_test")
 
 	err := jobs.StartSystem()
 	if err != nil {

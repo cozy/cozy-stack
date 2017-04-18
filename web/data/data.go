@@ -13,8 +13,9 @@ import (
 	"github.com/labstack/echo"
 )
 
-func validDoctype(next echo.HandlerFunc) echo.HandlerFunc {
-	// TODO extends me to verificate characters allowed in db name.
+// ValidDoctype validates the doctype and sets it in the context of the request.
+func ValidDoctype(next echo.HandlerFunc) echo.HandlerFunc {
+	// TODO extends me to verify characters allowed in db name.
 	return func(c echo.Context) error {
 		doctype := c.Param("doctype")
 		if doctype == "" {
@@ -206,7 +207,8 @@ func UpdateDoc(c echo.Context) error {
 	})
 }
 
-func deleteDoc(c echo.Context) error {
+// DeleteDoc deletes the provided document from its database.
+func DeleteDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
 	docid := c.Param("docid")
@@ -445,14 +447,14 @@ func Routes(router *echo.Group) {
 	router.GET("/", dataAPIWelcome)
 	router.GET("/_all_doctypes", allDoctypes)
 
-	group := router.Group("/:doctype", validDoctype)
+	group := router.Group("/:doctype", ValidDoctype)
 
 	replicationRoutes(group)
 
 	// API Routes under /:doctype
 	group.GET("/:docid", getDoc)
 	group.PUT("/:docid", UpdateDoc)
-	group.DELETE("/:docid", deleteDoc)
+	group.DELETE("/:docid", DeleteDoc)
 	group.GET("/:docid/relationships/references", listReferencesHandler)
 	group.POST("/:docid/relationships/references", addReferencesHandler)
 	group.DELETE("/:docid/relationships/references", removeReferencesHandler)

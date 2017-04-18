@@ -70,15 +70,6 @@ func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode
 	return access, err
 }
 
-func TestReceiveDocumentWithNoDoctype(t *testing.T) {
-	randomJSON := echo.Map{
-		"test": "test",
-	}
-	resp, err := postJSON("/sharings/doc//randomid", randomJSON)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-}
-
 func TestReceiveDocumentSuccessJSON(t *testing.T) {
 	jsondataID := "1234bepoauie"
 	jsondata := echo.Map{
@@ -149,7 +140,7 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, urlDest.String(), buf)
 	assert.NoError(t, err)
 	req.Header.Add("Content-MD5", "VkzK5Gw9aNzQdazZe4y1cw==")
-	req.Header.Add("Content-type", "text/plain")
+	req.Header.Add(echo.HeaderContentType, "text/plain")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -159,6 +150,70 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	fs := testInstance.VFS()
 	_, err = fs.FileByID(id)
 	assert.NoError(t, err)
+}
+
+func TestUpdateDocumentSuccessJSON(t *testing.T) {
+	resp, err := postJSON(t, "/data/"+iocozytests+"/", echo.Map{
+		"testcontent": "old",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	doc := couchdb.JSONDoc{}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&doc)
+	assert.NoError(t, err)
+	doc.SetID(doc.M["id"].(string))
+	doc.SetRev(doc.M["rev"].(string))
+	doc.Type = doc.M["type"].(string)
+	doc.M["testcontent"] = "new"
+	values, err := doc.MarshalJSON()
+	assert.NoError(t, err)
+
+	path := fmt.Sprintf("/sharings/doc/%s/%s", doc.DocType(), doc.ID())
+	req, err := http.NewRequest(http.MethodPut, ts.URL+path,
+		bytes.NewReader(values))
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	updatedDoc := &couchdb.JSONDoc{}
+	err = couchdb.GetDoc(testInstance, doc.DocType(), doc.ID(), updatedDoc)
+	assert.NoError(t, err)
+	assert.Equal(t, doc.M["testcontent"], updatedDoc.M["testcontent"])
+}
+
+func TestDeleteDocumentSuccessJSON(t *testing.T) {
+	// To delete a JSON we need to create one and get its revision.
+	resp, err := postJSON(t, "/data/"+iocozytests+"/", echo.Map{
+		"test": "content",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	doc := couchdb.JSONDoc{}
+	defer resp.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&doc)
+	assert.NoError(t, err)
+
+	delURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	delURL.Path = fmt.Sprintf("/sharings/doc/%s/%s", doc.M["type"], doc.M["id"])
+	delURL.RawQuery = url.Values{"rev": {doc.M["rev"].(string)}}.Encode()
+
+	req, err := http.NewRequest("DELETE", delURL.String(), nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	delDoc := &couchdb.JSONDoc{}
+	err = couchdb.GetDoc(testInstance, doc.DocType(), doc.ID(), delDoc)
+	assert.Error(t, err)
 }
 
 func TestRecipientRefusedSharingWhenThereIsNoState(t *testing.T) {
@@ -236,7 +291,7 @@ func TestSharingAnswerBadState(t *testing.T) {
 
 func TestAddRecipientNoURL(t *testing.T) {
 	email := "mailme@maybe"
-	res, err := postJSON("/sharings/recipient", echo.Map{
+	res, err := postJSON(t, "/sharings/recipient", echo.Map{
 		"email": email,
 	})
 	assert.NoError(t, err)
@@ -246,7 +301,7 @@ func TestAddRecipientNoURL(t *testing.T) {
 func TestAddRecipientSuccess(t *testing.T) {
 	email := "mailme@maybe"
 	url := strings.Split(ts2.URL, "http://")[1]
-	res, err := postJSON("/sharings/recipient", echo.Map{
+	res, err := postJSON(t, "/sharings/recipient", echo.Map{
 		"url":   url,
 		"email": email,
 	})
@@ -408,7 +463,7 @@ func TestSharingRequestSuccess(t *testing.T) {
 }
 
 func TestCreateSharingWithBadType(t *testing.T) {
-	res, err := postJSON("/sharings/", echo.Map{
+	res, err := postJSON(t, "/sharings/", echo.Map{
 		"sharing_type": "shary pie",
 	})
 	assert.NoError(t, err)
@@ -435,7 +490,7 @@ func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 	}
 	recipients := []recipient{rec}
 
-	res, err := postJSON("/sharings/", echo.Map{
+	res, err := postJSON(t, "/sharings/", echo.Map{
 		"sharing_type": consts.OneShotSharing,
 		"recipients":   recipients,
 	})
@@ -444,7 +499,7 @@ func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 }
 
 func TestCreateSharingSuccess(t *testing.T) {
-	res, err := postJSON("/sharings/", echo.Map{
+	res, err := postJSON(t, "/sharings/", echo.Map{
 		"sharing_type": consts.OneShotSharing,
 	})
 	assert.NoError(t, err)
@@ -488,7 +543,7 @@ func TestMain(m *testing.M) {
 		Jar:           jar,
 	}
 
-	scope := consts.Files + " " + iocozytests
+	scope := consts.Files + " " + iocozytests + " " + consts.Sharings
 	clientOAuth, token = setup.GetTestClient(scope)
 	clientID = clientOAuth.ClientID
 
@@ -505,9 +560,15 @@ func TestMain(m *testing.M) {
 	os.Exit(setup.Run())
 }
 
-func postJSON(u string, v echo.Map) (*http.Response, error) {
+func postJSON(t *testing.T, path string, v echo.Map) (*http.Response, error) {
 	body, _ := json.Marshal(v)
-	return http.Post(ts.URL+u, "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, ts.URL+path,
+		bytes.NewReader(body))
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+
+	return http.DefaultClient.Do(req)
 }
 
 func requestGET(u string, v url.Values) (*http.Response, error) {
