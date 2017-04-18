@@ -493,22 +493,7 @@ func Destroy(domain string) (*Instance, error) {
 	defer getCache().Revoke(domain)
 	i, err := Get(domain)
 	if err != nil {
-		// FIXME temporary workaround to delete instances with no named indexes
-		var instances []*Instance
-		req := &couchdb.FindRequest{
-			Selector: mango.Equal("domain", domain),
-			Limit:    1,
-		}
-		if err = couchdb.FindDocs(couchdb.GlobalDB, consts.Instances, req, &instances); err != nil {
-			if couchdb.IsNoDatabaseError(err) {
-				return nil, ErrNotFound
-			}
-			return nil, err
-		}
-		if len(instances) == 0 {
-			return nil, ErrNotFound
-		}
-		i = instances[0]
+		return nil, err
 	}
 
 	if err = couchdb.DeleteDoc(couchdb.GlobalDB, i); err != nil {
