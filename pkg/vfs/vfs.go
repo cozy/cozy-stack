@@ -301,8 +301,9 @@ func OpenFile(fs VFS, name string, flag int, perm os.FileMode) (File, error) {
 
 	filename := path.Base(name)
 	exec := false
+	trashed := false
 	mime, class := ExtractMimeAndClassFromFilename(filename)
-	newdoc, err := NewFileDoc(filename, dirID, -1, nil, mime, class, time.Now(), exec, []string{})
+	newdoc, err := NewFileDoc(filename, dirID, -1, nil, mime, class, time.Now(), exec, trashed, []string{})
 	if err != nil {
 		return nil, err
 	}

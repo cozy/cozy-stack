@@ -1264,15 +1264,23 @@ func TestFileRestore(t *testing.T) {
 
 	fileID, _ := extractDirData(t, data1)
 
-	res2, _ := trash(t, "/files/"+fileID)
+	res2, body2 := trash(t, "/files/"+fileID)
 	if !assert.Equal(t, 200, res2.StatusCode) {
 		return
 	}
+	data2 := body2["data"].(map[string]interface{})
+	attrs2 := data2["attributes"].(map[string]interface{})
+	trashed := attrs2["trashed"].(bool)
+	assert.True(t, trashed)
 
-	res3, _ := restore(t, "/files/trash/"+fileID)
+	res3, body3 := restore(t, "/files/trash/"+fileID)
 	if !assert.Equal(t, 200, res3.StatusCode) {
 		return
 	}
+	data3 := body3["data"].(map[string]interface{})
+	attrs3 := data3["attributes"].(map[string]interface{})
+	trashed = attrs3["trashed"].(bool)
+	assert.False(t, trashed)
 
 	res4, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape("/torestorefile"))
 	if !assert.NoError(t, err) || !assert.Equal(t, 200, res4.StatusCode) {
