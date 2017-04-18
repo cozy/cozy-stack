@@ -20,10 +20,11 @@ const ContentType = "application/vnd.api+json"
 // application/vnd.api+json
 // See http://jsonapi.org/format/#document-structure
 type Document struct {
-	Data     *json.RawMessage `json:"data,omitempty"`
-	Errors   ErrorList        `json:"errors,omitempty"`
-	Links    *LinksList       `json:"links,omitempty"`
-	Included []interface{}    `json:"included,omitempty"`
+	Data     *json.RawMessage  `json:"data,omitempty"`
+	Errors   ErrorList         `json:"errors,omitempty"`
+	Links    *LinksList        `json:"links,omitempty"`
+	Meta     *RelationshipMeta `json:"meta,omitempty"`
+	Included []interface{}     `json:"included,omitempty"`
 }
 
 // WriteData can be called to write an answer with a JSON-API document
@@ -61,6 +62,12 @@ func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
 // DataList can be called to send an multiple-value answer with a
 // JSON-API document contains multiple objects.
 func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) error {
+	return DataListWithTotal(c, statusCode, len(objs), objs, links)
+}
+
+// DataListWithTotal can be called to send a list of Object with a different
+// meta:count, useful to indicate total number of results with pagination.
+func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, links *LinksList) error {
 	objsMarshaled := make([]json.RawMessage, len(objs))
 	for i, o := range objs {
 		j, err := MarshalObject(o)
@@ -77,6 +84,7 @@ func DataList(c echo.Context, statusCode int, objs []Object, links *LinksList) e
 
 	doc := Document{
 		Data:  (*json.RawMessage)(&data),
+		Meta:  &RelationshipMeta{Count: total},
 		Links: links,
 	}
 
@@ -176,29 +184,47 @@ func BindRelations(req *http.Request) ([]couchdb.DocReference, error) {
 // PaginationCursorToParams transforms a Cursor into url.Values
 // the url.Values contains only keys page[limit] & page[cursor]
 // if the cursor is Done, the values will be empty.
-func PaginationCursorToParams(cursor *couchdb.Cursor) (url.Values, error) {
+func PaginationCursorToParams(cursor couchdb.Cursor) (url.Values, error) {
 
 	v := url.Values{}
 
-	v.Set("page[limit]", strconv.Itoa(cursor.Limit))
+	if !cursor.HasMore() {
+		return v, nil
+	}
 
-	if !cursor.Done {
-		cursorObj := []interface{}{cursor.NextKey, cursor.NextDocID}
+	switch cursor.(type) {
+	case *couchdb.StartKeyCursor:
+		skc := cursor.(*couchdb.StartKeyCursor)
+		cursorObj := []interface{}{skc.NextKey, skc.NextDocID}
 		cursorBytes, err := json.Marshal(cursorObj)
 		if err != nil {
 			return nil, err
 		}
+		v.Set("page[limit]", strconv.Itoa(skc.Limit))
 		v.Set("page[cursor]", string(cursorBytes))
+
+	case *couchdb.SkipCursor:
+		sc := cursor.(*couchdb.SkipCursor)
+		v.Set("page[limit]", strconv.Itoa(sc.Limit))
+		v.Set("page[skip]", strconv.Itoa(sc.Skip))
 	}
 
 	return v, nil
 }
 
 // ExtractPaginationCursor creates a Cursor from context Query.
-func ExtractPaginationCursor(c echo.Context, defaultLimit int) (*couchdb.Cursor, error) {
+func ExtractPaginationCursor(c echo.Context, defaultLimit int) (couchdb.Cursor, error) {
 
-	var out = &couchdb.Cursor{
-		Limit: defaultLimit,
+	var limit int
+
+	if limitString := c.QueryParam("page[limit]"); limitString != "" {
+		reqLimit, err := strconv.ParseInt(limitString, 10, 32)
+		if err != nil {
+			return nil, NewError(http.StatusBadRequest, "page limit is not a number")
+		}
+		limit = int(reqLimit)
+	} else {
+		limit = defaultLimit
 	}
 
 	if cursor := c.QueryParam("page[cursor]"); cursor != "" {
@@ -211,22 +237,22 @@ func ExtractPaginationCursor(c echo.Context, defaultLimit int) (*couchdb.Cursor,
 		if len(parts) != 2 {
 			return nil, NewError(http.StatusBadRequest, "bad cursor length %s", cursor)
 		}
-		var ok bool
-		out.NextKey = parts[0]
-		out.NextDocID, ok = parts[1].(string)
+		nextKey := parts[0]
+		nextDocID, ok := parts[1].(string)
 		if !ok {
 			return nil, NewError(http.StatusBadRequest, "bad cursor id %s", cursor)
 		}
 
+		return couchdb.NewKeyCursor(limit, nextKey, nextDocID), nil
 	}
 
-	if limit := c.QueryParam("page[limit]"); limit != "" {
-		reqLimit, err := strconv.ParseInt(limit, 10, 32)
+	if skipString := c.QueryParam("page[skip]"); skipString != "" {
+		reqSkip, err := strconv.Atoi(skipString)
 		if err != nil {
-			return nil, NewError(http.StatusBadRequest, "page limit is not a number")
+			return nil, NewError(http.StatusBadRequest, "page skip is not a number")
 		}
-		out.Limit = int(reqLimit)
+		return couchdb.NewSkipCursor(limit, reqSkip), nil
 	}
 
-	return out, nil
+	return couchdb.NewKeyCursor(limit, nil, ""), nil
 }

@@ -476,36 +476,39 @@ func CreateDoc(db Database, doc Doc) error {
 
 // DefineViews creates a design doc with some views
 func DefineViews(db Database, views []*View) error {
-	// group views by doctype
-	grouped := make(map[string]map[string]*View)
 	for _, v := range views {
-		g, ok := grouped[v.Doctype]
-		if !ok {
-			g = make(map[string]*View)
-			grouped[v.Doctype] = g
+
+		id := "_design/" + v.Name
+		url := makeDBName(db, v.Doctype) + "/" + id
+		doc := &ViewDesignDoc{
+			ID:    id,
+			Lang:  "javascript",
+			Views: map[string]*View{v.Name: v},
 		}
-		g[v.Name] = v
-	}
-	for doctype, views := range grouped {
-		url := makeDBName(db, doctype) + "/_design/" + doctype
-		doc := struct {
-			Lang  string           `json:"language"`
-			Views map[string]*View `json:"views"`
-		}{
-			"javascript",
-			views,
+
+		err := makeRequest(http.MethodPut, url, &doc, nil)
+		if IsConflictError(err) {
+			var old ViewDesignDoc
+			err = makeRequest(http.MethodGet, url, nil, &old)
+			if err != nil {
+				return err
+			}
+			doc.Rev = old.Rev
+			err = makeRequest(http.MethodPut, url, &doc, nil)
 		}
-		err := makeRequest("PUT", url, &doc, nil)
+
 		if err != nil {
 			return err
 		}
+
 	}
+
 	return nil
 }
 
 // ExecView executes the specified view function
 func ExecView(db Database, view *View, req *ViewRequest, results interface{}) error {
-	viewurl := fmt.Sprintf("%s/_design/%s/_view/%s", makeDBName(db, view.Doctype), view.Doctype, view.Name)
+	viewurl := fmt.Sprintf("%s/_design/%s/_view/%s", makeDBName(db, view.Doctype), view.Name, view.Name)
 	// Keys request
 	if req.Keys != nil {
 		return makeRequest("POST", viewurl, req, &results)
@@ -627,6 +630,14 @@ func validateDocID(id string) (string, error) {
 	return id, nil
 }
 
+// ViewDesignDoc is the structure if a _design doc containing views
+type ViewDesignDoc struct {
+	ID    string           `json:"_id,omitempty"`
+	Rev   string           `json:"_rev,omitempty"`
+	Lang  string           `json:"language"`
+	Views map[string]*View `json:"views"`
+}
+
 // IndexCreationResponse is the response from couchdb when we create an Index
 type IndexCreationResponse struct {
 	Result string `json:"result,omitempty"`
@@ -701,15 +712,18 @@ type ViewRequest struct {
 	GroupLevel int  `json:"group_level,omitempty" url:"group_level,omitempty"`
 }
 
+// ViewResponseRow is a row in a ViewResponse
+type ViewResponseRow struct {
+	ID    string           `json:"id"`
+	Key   interface{}      `json:"key"`
+	Value interface{}      `json:"value"`
+	Doc   *json.RawMessage `json:"doc"`
+}
+
 // ViewResponse is the response we receive when executing a view
 type ViewResponse struct {
-	Total int `json:"total_rows"`
-	Rows  []struct {
-		ID    string           `json:"id"`
-		Key   interface{}      `json:"key"`
-		Value interface{}      `json:"value"`
-		Doc   *json.RawMessage `json:"doc"`
-	} `json:"rows"`
+	Total int                `json:"total_rows"`
+	Rows  []*ViewResponseRow `json:"rows"`
 }
 
 // DBStatusResponse is the response from DBStatus

@@ -72,6 +72,8 @@ type Instance struct {
 
 	BytesDiskQuota int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
 
+	IndexViewsVersion int `json:"indexes_version"`
+
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
 	PassphraseHash       []byte    `json:"passphrase_hash,omitempty"`
@@ -263,6 +265,17 @@ func (i *Instance) installApp(slug string) error {
 	return err
 }
 
+func (i *Instance) defineViewsAndIndex() error {
+	if err := couchdb.DefineIndexes(i, consts.Indexes); err != nil {
+		return err
+	}
+	if err := couchdb.DefineViews(i, consts.Views); err != nil {
+		return err
+	}
+	i.IndexViewsVersion = consts.IndexViewsVersion
+	return nil
+}
+
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
 	domain := strings.TrimSpace(opts.Domain)
@@ -354,10 +367,7 @@ func Create(opts *Options) (*Instance, error) {
 	if err := couchdb.CreateNamedDoc(i, opts.Settings); err != nil {
 		return nil, err
 	}
-	if err := couchdb.DefineIndexes(i, consts.Indexes); err != nil {
-		return nil, err
-	}
-	if err := couchdb.DefineViews(i, consts.Views); err != nil {
+	if err := i.defineViewsAndIndex(); err != nil {
 		return nil, err
 	}
 	scheduler := jobs.GetScheduler()
@@ -389,6 +399,15 @@ func Get(domain string) (*Instance, error) {
 			return nil, err
 		}
 		cache.Set(domain, i)
+	}
+
+	if i.IndexViewsVersion != consts.IndexViewsVersion {
+		if err = i.defineViewsAndIndex(); err != nil {
+			return nil, err
+		}
+		if err = Update(i); err != nil {
+			return nil, err
+		}
 	}
 
 	if err = i.makeVFS(); err != nil {

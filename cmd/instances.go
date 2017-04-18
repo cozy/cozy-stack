@@ -10,6 +10,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -43,6 +44,21 @@ create its CouchDB databases.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
+	},
+}
+
+var cleanInstanceCmd = &cobra.Command{
+	Use:   "clean [domain]",
+	Short: "Clean badly removed instances",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		domain := args[0]
+		i := couchdb.SimpleDatabasePrefix(domain)
+		return couchdb.DeleteAllDBs(i)
+
 	},
 }
 
@@ -240,6 +256,7 @@ var oauthClientInstanceCmd = &cobra.Command{
 
 func init() {
 	instanceCmdGroup.AddCommand(addInstanceCmd)
+	instanceCmdGroup.AddCommand(cleanInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)

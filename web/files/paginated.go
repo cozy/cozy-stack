@@ -3,8 +3,6 @@ package files
 // Links is used to generate a JSON-API link for the directory (part of
 import (
 	"encoding/json"
-	"fmt"
-	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -16,7 +14,6 @@ import (
 
 const (
 	defPerPage = 30
-	maxPerPage = 100
 )
 
 type dir struct {
@@ -33,73 +30,47 @@ type apiArchive struct {
 	*vfs.Archive
 }
 
-func paginationConfig(c echo.Context) (int, *vfs.IteratorOptions, error) {
-	var count int64
-	var err error
-	cursorQuery := c.QueryParam("page[cursor]")
-	limitQuery := c.QueryParam("page[limit]")
-	if limitQuery != "" {
-		count, err = strconv.ParseInt(limitQuery, 10, 32)
-		if err != nil {
-			return 0, nil, err
-		}
-	} else {
-		count = defPerPage
-	}
-	if count > maxPerPage {
-		count = maxPerPage
-	}
-	return int(count), &vfs.IteratorOptions{
-		ByFetch: int(count),
-		AfterID: cursorQuery,
-	}, nil
-}
-
 func newDir(doc *vfs.DirDoc) *dir {
 	return &dir{doc: doc}
 }
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-	relsData := make([]couchdb.DocReference, 0)
-	included := make([]jsonapi.Object, 0)
 
-	count, iterOpts, err := paginationConfig(c)
+	fs := middlewares.GetInstance(c).VFS()
+
+	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
 	if err != nil {
 		return err
 	}
 
-	hasNext := true
+	count, err := fs.DirLength(doc)
+	if err != nil {
+		return err
+	}
 
-	i := middlewares.GetInstance(c)
-	iter := i.VFS().DirIterator(doc, iterOpts)
-	for i := 0; i < count; i++ {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			hasNext = false
-			break
-		}
-		if err != nil {
-			return err
-		}
+	children, err := fs.DirBatch(doc, cursor)
+	if err != nil {
+		return err
+	}
+
+	relsData := make([]couchdb.DocReference, len(children))
+	included := make([]jsonapi.Object, len(children))
+
+	for i, child := range children {
+		relsData[i] = couchdb.DocReference{ID: child.ID(), Type: child.DocType()}
+		d, f := child.Refine()
 		if d != nil {
-			included = append(included, newDir(d))
+			included[i] = newDir(d)
 		} else {
-			included = append(included, newFile(f))
+			included[i] = newFile(f)
 		}
-		var ri couchdb.DocReference
-		if d != nil {
-			ri = couchdb.DocReference{ID: d.ID(), Type: d.DocType()}
-		} else {
-			ri = couchdb.DocReference{ID: f.ID(), Type: f.DocType()}
-		}
-		relsData = append(relsData, ri)
 	}
 
 	var parent jsonapi.Relationship
 	if doc.ID() != consts.RootDirID {
 		parent = jsonapi.Relationship{
 			Links: &jsonapi.LinksList{
-				Related: "/files/" + doc.DirID,
+				Self: "/files/" + doc.DirID,
 			},
 			Data: couchdb.DocReference{
 				ID:   doc.DirID,
@@ -108,15 +79,23 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		}
 	}
 	rel := jsonapi.RelationshipMap{
-		"parent":   parent,
-		"contents": jsonapi.Relationship{Data: relsData},
+		"parent": parent,
+		"contents": jsonapi.Relationship{
+			Meta: &jsonapi.RelationshipMeta{Count: count},
+			Links: &jsonapi.LinksList{
+				Self: "/files/" + doc.DocID + "/relationships/contents",
+			},
+			Data: relsData},
 	}
 
-	var links *jsonapi.LinksList
-	if hasNext && len(included) > 0 {
-		next := fmt.Sprintf("/files/%s?page[cursor]=%s&page[limit]=%d",
-			doc.DocID, included[len(included)-1].ID(), count)
-		links = &jsonapi.LinksList{Next: next}
+	var links jsonapi.LinksList
+	if cursor.HasMore() {
+		params, err := jsonapi.PaginationCursorToParams(cursor)
+		if err != nil {
+			return err
+		}
+		next := "/files/" + doc.DocID + "/relationships/contents?" + params.Encode()
+		rel["contents"].Links.Next = next
 	}
 
 	dir := &dir{
@@ -124,34 +103,49 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		rel:      rel,
 		included: included,
 	}
-	return jsonapi.Data(c, statusCode, dir, links)
+	return jsonapi.Data(c, statusCode, dir, &links)
 }
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-	included := make([]jsonapi.Object, 0)
 
-	count, iterOpts, err := paginationConfig(c)
+	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
 	if err != nil {
 		return err
 	}
 
-	i := middlewares.GetInstance(c)
-	iter := i.VFS().DirIterator(doc, iterOpts)
-	for i := 0; i < count; i++ {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
+	fs := middlewares.GetInstance(c).VFS()
+
+	count, err := fs.DirLength(doc)
+	if err != nil {
+		return err
+	}
+
+	children, err := fs.DirBatch(doc, cursor)
+	if err != nil {
+		return err
+	}
+
+	included := make([]jsonapi.Object, len(children))
+	for i, child := range children {
+		d, f := child.Refine()
+		if d != nil {
+			included[i] = newDir(d)
+		} else {
+			included[i] = newFile(f)
 		}
+	}
+
+	var links jsonapi.LinksList
+	if cursor.HasMore() {
+		params, err := jsonapi.PaginationCursorToParams(cursor)
 		if err != nil {
 			return err
 		}
-		if d != nil {
-			included = append(included, newDir(d))
-		} else {
-			included = append(included, newFile(f))
-		}
+		next := c.Request().URL.Path + "?" + params.Encode()
+		links.Next = next
 	}
-	return jsonapi.DataList(c, statusCode, included, nil)
+
+	return jsonapi.DataListWithTotal(c, statusCode, count, included, &links)
 }
 
 // newFile creates an instance of file struct from a vfs.FileDoc document.

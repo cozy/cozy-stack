@@ -5,6 +5,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 )
 
+// IndexViewsVersion is the version of current definition of views & indexes.
+// This number should be incremented when this file changes.
+const IndexViewsVersion int = 1
+
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
 var GlobalIndexes = []*mango.Index{
@@ -55,6 +59,18 @@ function(doc) {
 }`,
 }
 
+// FilesByParentView is the view used for fetching files referenced by a
+// given document
+var FilesByParentView = &couchdb.View{
+	Name:    "by-parent-type-name",
+	Doctype: Files,
+	Map: `
+function(doc) {
+  emit([doc.dir_id, doc.type, doc.name])
+}`,
+	Reduce: "_count",
+}
+
 // PermissionsShareByCView is the view for fetching the permissions associated
 // to a document via a token code.
 var PermissionsShareByCView = &couchdb.View{
@@ -93,6 +109,7 @@ function(doc){
 var Views = []*couchdb.View{
 	DiskUsageView,
 	FilesReferencedByView,
+	FilesByParentView,
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
 }

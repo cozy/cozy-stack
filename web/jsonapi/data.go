@@ -19,6 +19,11 @@ type Meta struct {
 	Rev string `json:"rev,omitempty"`
 }
 
+// RelationshipMeta is a container for the total number of elements
+type RelationshipMeta struct {
+	Count int `json:"count,omitempty"`
+}
+
 // LinksList is the common links used in JSON-API for the top-level or a
 // resource object
 // See http://jsonapi.org/format/#document-links
@@ -37,8 +42,9 @@ type LinksList struct {
 // Data can be a single ResourceIdentifier for to-one relationships,
 // or an array of them for to-many relationships.
 type Relationship struct {
-	Links *LinksList  `json:"links,omitempty"`
-	Data  interface{} `json:"data"`
+	Links *LinksList        `json:"links,omitempty"`
+	Meta  *RelationshipMeta `json:"meta,omitempty"`
+	Data  interface{}       `json:"data"`
 }
 
 // ResourceIdentifier returns the resource identifier of the relationship.

@@ -369,7 +369,7 @@ func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (ma
 
 // GetPermissionsByType gets all share permissions for a given doctype.
 // The passed Cursor will be modified in place
-func GetPermissionsByType(db couchdb.Database, doctype string, cursor *couchdb.Cursor) ([]*Permission, error) {
+func GetPermissionsByType(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
 
 	var req = &couchdb.ViewRequest{
 		StartKey:    []string{doctype},

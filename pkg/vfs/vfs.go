@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 // DefaultContentType is used for files uploaded with no content-type
@@ -141,6 +142,10 @@ type Indexer interface {
 	// DirIterator returns an iterator over the children of the specified
 	// directory.
 	DirIterator(doc *DirDoc, opts *IteratorOptions) DirIterator
+
+	// DirBatch returns a batch of documents
+	DirBatch(*DirDoc, couchdb.Cursor) ([]DirOrFileDoc, error)
+	DirLength(*DirDoc) (int, error)
 }
 
 // Locker interface provides a Read/Write mutex interface that can be used

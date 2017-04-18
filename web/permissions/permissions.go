@@ -144,7 +144,7 @@ func listPermissionsByDoctype(c echo.Context) error {
 	}
 
 	links := &jsonapi.LinksList{}
-	if !cursor.Done {
+	if cursor.HasMore() {
 		params, err := jsonapi.PaginationCursorToParams(cursor)
 		if err != nil {
 			return err
