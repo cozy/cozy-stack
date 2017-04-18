@@ -150,13 +150,13 @@ func (m *WebappManifest) Create(db couchdb.Database) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err := permissions.CreateAppSet(db, m.Slug(), m.Permissions())
+	_, err := permissions.CreateWebappSet(db, m.Slug(), m.Permissions())
 	return err
 }
 
 // Update is part of the Manifest interface
 func (m *WebappManifest) Update(db couchdb.Database) error {
-	err := permissions.DestroyApp(db, m.Slug())
+	err := permissions.DestroyWebapp(db, m.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}
@@ -164,13 +164,13 @@ func (m *WebappManifest) Update(db couchdb.Database) error {
 	if err != nil {
 		return err
 	}
-	_, err = permissions.CreateAppSet(db, m.Slug(), m.Permissions())
+	_, err = permissions.CreateWebappSet(db, m.Slug(), m.Permissions())
 	return err
 }
 
 // Delete is part of the Manifest interface
 func (m *WebappManifest) Delete(db couchdb.Database) error {
-	err := permissions.DestroyApp(db, m.Slug())
+	err := permissions.DestroyWebapp(db, m.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
 	}

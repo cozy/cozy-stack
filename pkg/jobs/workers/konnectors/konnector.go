@@ -34,8 +34,8 @@ func init() {
 
 // KonnectorOptions contains the options to execute a konnector.
 type KonnectorOptions struct {
-	Slug   string          `json:"slug"`
-	Fields json.RawMessage `json:"fields"`
+	Slug   string           `json:"slug"`
+	Fields *json.RawMessage `json:"fields"`
 }
 
 // Worker is the worker that runs a konnector by executing an external process.
@@ -45,8 +45,11 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 
+	var fields string
+	if opts.Fields != nil {
+		fields = string(*opts.Fields)
+	}
 	slug := opts.Slug
-	fields := string(opts.Fields)
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	worker := ctx.Value(jobs.ContextWorkerKey).(string)
 	jobID := fmt.Sprintf("%s/%s/%s", worker, slug, domain)
