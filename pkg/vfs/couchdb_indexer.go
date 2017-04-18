@@ -212,25 +212,24 @@ func (c *couchdbIndexer) FileByPath(name string) (*FileDoc, error) {
 	if err != nil {
 		return nil, err
 	}
-	selector := mango.Map{
-		"dir_id": parent.DocID,
-		"name":   path.Base(name),
-		"type":   consts.FileType,
-	}
-	var docs []*FileDoc
-	req := &couchdb.FindRequest{
-		UseIndex: "dir-file-child",
-		Selector: selector,
-		Limit:    1,
-	}
-	err = couchdb.FindDocs(c.db, consts.Files, req, &docs)
+
+	// consts.FilesByParentView keys are [parentID, type, name]
+	var res couchdb.ViewResponse
+	err = couchdb.ExecView(c.db, consts.FilesByParentView, &couchdb.ViewRequest{
+		Key:         []string{parent.DocID, consts.FileType, path.Base(name)},
+		IncludeDocs: true,
+	}, &res)
 	if err != nil {
 		return nil, err
 	}
-	if len(docs) == 0 {
+
+	if len(res.Rows) == 0 {
 		return nil, os.ErrNotExist
 	}
-	return docs[0], nil
+
+	var fdoc FileDoc
+	err = json.Unmarshal(*res.Rows[0].Doc, &fdoc)
+	return &fdoc, err
 }
 
 func (c *couchdbIndexer) FilePath(doc *FileDoc) (string, error) {

@@ -22,8 +22,6 @@ var Indexes = []*mango.Index{
 	// Sharings
 	mango.IndexOnFields(Sharings, "by-sharing-id", []string{"sharing_id"}),
 
-	// Used to lookup a file given its parent, and the children of a directory
-	mango.IndexOnFields(Files, "dir-file-child", []string{"dir_id", "name", "type"}),
 	// Used to lookup over the children of a directory
 	mango.IndexOnFields(Files, "dir-children", []string{"dir_id", "_id"}),
 	// Used to lookup a directory given its path
