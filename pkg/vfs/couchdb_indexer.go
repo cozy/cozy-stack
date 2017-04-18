@@ -82,6 +82,17 @@ func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
 	return couchdb.UpdateDoc(c.db, newdoc)
 }
 
+func (c *couchdbIndexer) UpdateFileDocs(docs []*FileDoc) error {
+	if len(docs) == 0 {
+		return nil
+	}
+	couchdocs := make([]couchdb.Doc, len(docs))
+	for i, doc := range docs {
+		couchdocs[i] = doc
+	}
+	return couchdb.BulkUpdateDoc(c.db, couchdocs)
+}
+
 func (c *couchdbIndexer) DeleteFileDoc(doc *FileDoc) error {
 	return couchdb.DeleteDoc(c.db, doc)
 }

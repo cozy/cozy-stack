@@ -1404,15 +1404,48 @@ func TestDirRestore(t *testing.T) {
 
 	dirID, _ := extractDirData(t, data1)
 
-	res2, _ := trash(t, "/files/"+dirID)
-	if !assert.Equal(t, 200, res2.StatusCode) {
+	body := "foo,bar"
+	res2, data2 := upload(t, "/files/"+dirID+"?Type=file&Name=totrashfile", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res2.StatusCode) {
 		return
 	}
 
-	res3, _ := restore(t, "/files/trash/"+dirID)
+	fileID, _ := extractDirData(t, data2)
+
+	res3, _ := trash(t, "/files/"+dirID)
 	if !assert.Equal(t, 200, res3.StatusCode) {
 		return
 	}
+
+	res4, err := httpGet(ts.URL + "/files/" + fileID)
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res4.StatusCode) {
+		return
+	}
+
+	var v map[string]interface{}
+	err = extractJSONRes(res4, &v)
+	assert.NoError(t, err)
+	data := v["data"].(map[string]interface{})
+	attrs := data["attributes"].(map[string]interface{})
+	trashed := attrs["trashed"].(bool)
+	assert.True(t, trashed)
+
+	res5, _ := restore(t, "/files/trash/"+dirID)
+	if !assert.Equal(t, 200, res5.StatusCode) {
+		return
+	}
+
+	res6, err := httpGet(ts.URL + "/files/" + fileID)
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res6.StatusCode) {
+		return
+	}
+
+	err = extractJSONRes(res6, &v)
+	assert.NoError(t, err)
+	data = v["data"].(map[string]interface{})
+	attrs = data["attributes"].(map[string]interface{})
+	trashed = attrs["trashed"].(bool)
+	assert.False(t, trashed)
 }
 
 func TestDirRestoreWithConflicts(t *testing.T) {

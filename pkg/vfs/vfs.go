@@ -102,6 +102,8 @@ type Indexer interface {
 	// new file document that you want to create and the old document,
 	// representing the current revision of the file.
 	UpdateFileDoc(olddoc, newdoc *FileDoc) error
+	// UpdateFileDocs is used to update several file docs in a bulk
+	UpdateFileDocs(docs []*FileDoc) error
 	// DeleteFileDoc removes from the index the specified file document.
 	DeleteFileDoc(doc *FileDoc) error
 
@@ -212,6 +214,7 @@ type DirOrFileDoc struct {
 	Mime       string   `json:"mime"`
 	Class      string   `json:"class"`
 	Executable bool     `json:"executable"`
+	Trashed    bool     `json:"trashed"`
 	Metadata   Metadata `json:"metadata,omitempty"`
 }
 
@@ -236,6 +239,7 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 			Mime:        fd.Mime,
 			Class:       fd.Class,
 			Executable:  fd.Executable,
+			Trashed:     fd.Trashed,
 			Tags:        fd.Tags,
 			Metadata:    fd.Metadata,
 		}
