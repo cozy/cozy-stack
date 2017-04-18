@@ -127,6 +127,8 @@ func createToken(c echo.Context) error {
 	switch audience {
 	case "app":
 		audience = permissions.AppAudience
+	case "konn", "konnector":
+		audience = permissions.KonnectorAudience
 	case "access-token":
 		audience = permissions.AccessTokenAudience
 	case "cli":

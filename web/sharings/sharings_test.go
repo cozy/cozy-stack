@@ -347,7 +347,7 @@ func TestSharingRequestBadScope(t *testing.T) {
 	}
 	res, err := requestGET("/sharings/request", urlVal)
 	assert.NoError(t, err)
-	assert.Equal(t, 500, res.StatusCode)
+	assert.Equal(t, 400, res.StatusCode)
 }
 
 func TestSharingRequestNoClientID(t *testing.T) {

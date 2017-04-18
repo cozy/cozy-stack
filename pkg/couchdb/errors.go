@@ -53,11 +53,11 @@ import (
 
 // Error represent an error from couchdb
 type Error struct {
-	StatusCode  int
+	StatusCode  int    `json:"status_code"`
 	CouchdbJSON []byte `json:"-"`
 	Name        string `json:"error"`
 	Reason      string `json:"reason"`
-	Original    error
+	Original    error  `json:"-"`
 }
 
 func (e *Error) Error() string {

@@ -106,7 +106,7 @@ type (
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
 		StartedAt  time.Time   `json:"started_at"`
-		Error      error       `json:"error"`
+		Error      string      `json:"error"`
 	}
 
 	// JobRequest struct is used to represent a new job request.

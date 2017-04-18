@@ -122,7 +122,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 		// Save permissions in couchdb before loading an index page
 		if _, file := app.FindRoute(path.Clean(c.Request().URL.Path)); file == "" {
 			if app.Permissions() != nil {
-				if err := permissions.Force(i, app.Slug(), app.Permissions()); err != nil {
+				if err := permissions.ForceWebapp(i, app.Slug(), app.Permissions()); err != nil {
 					return err
 				}
 			}

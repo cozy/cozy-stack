@@ -1006,14 +1006,14 @@ func TestLogoutNoToken(t *testing.T) {
 func TestLogoutSuccess(t *testing.T) {
 	a := app.WebappManifest{DocSlug: "home"}
 	token := testInstance.BuildAppToken(&a)
-	permissions.CreateAppSet(testInstance, a.Slug(), permissions.Set{})
+	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := client.Do(req)
 	assert.NoError(t, err)
 	defer res.Body.Close()
-	permissions.DestroyApp(testInstance, "home")
+	permissions.DestroyWebapp(testInstance, "home")
 
 	assert.Equal(t, "204 No Content", res.Status)
 	cookies := jar.Cookies(nil)

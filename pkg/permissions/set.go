@@ -2,7 +2,6 @@ package permissions
 
 import (
 	"encoding/json"
-	"errors"
 	"strconv"
 	"strings"
 )
@@ -73,12 +72,12 @@ func (ps *Set) UnmarshalJSON(j []byte) error {
 
 // UnmarshalScopeString parse a Scope string into a permission Set
 func UnmarshalScopeString(in string) (Set, error) {
+	if in == "" {
+		return nil, ErrBadScope
+	}
+
 	parts := strings.Split(in, ruleSep)
 	out := make(Set, len(parts))
-
-	if len(parts) == 0 {
-		return nil, errors.New("Empty scope string")
-	}
 
 	for i, p := range parts {
 		s, err := UnmarshalRuleString(p)

@@ -199,7 +199,7 @@ func (j *MemJob) Nack(err error) error {
 	j.infmu.Lock()
 	job := *j.infos
 	job.State = Errored
-	job.Error = err
+	job.Error = err.Error()
 	j.infos = &job
 	j.infmu.Unlock()
 	return j.asyncSend(&job, true)

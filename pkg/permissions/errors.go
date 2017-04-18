@@ -20,4 +20,8 @@ var (
 	// refresh it
 	ErrExpiredToken = echo.NewHTTPError(http.StatusBadRequest,
 		"Expired token")
+
+	// ErrBadScope is used when the given scope is malformed
+	ErrBadScope = echo.NewHTTPError(http.StatusBadRequest,
+		"Permission scope is empty or malformed")
 )

@@ -16,7 +16,7 @@ const (
 	WebappManifestName = "manifest.webapp"
 	// KonnectorManifestName is the name of the manifest at the root of the
 	// konnector application directory
-	KonnectorManifestName = "manifest.konnectors"
+	KonnectorManifestName = "manifest.konnector"
 )
 
 // State is the state of the application
@@ -47,6 +47,10 @@ const (
 	// Konnector is the serverside application type
 	Konnector
 )
+
+// KonnectorArchiveName is the name of the archive created to store the
+// konnectors sources.
+const KonnectorArchiveName = "app.tar"
 
 // Developer is the name and url of a developer.
 type Developer struct {

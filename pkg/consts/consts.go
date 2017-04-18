@@ -18,6 +18,8 @@ const (
 	Intents = "io.cozy.intents"
 	// Jobs doc type for queued jobs
 	Jobs = "io.cozy.jobs"
+	// JobEvents doc type for realt time events sent by jobs
+	JobEvents = "io.cozy.jobs.events"
 	// OAuthAccessCodes doc type for OAuth2 access codes
 	OAuthAccessCodes = "io.cozy.oauth.access_codes"
 	// OAuthClients doc type for OAuth2 clients

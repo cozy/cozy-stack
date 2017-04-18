@@ -28,8 +28,8 @@ const (
 	// allowed by registerToken
 	TypeRegister = "register"
 
-	// TypeApplication if the value of Permission.Type for an application
-	TypeApplication = "app"
+	// TypeWebapp if the value of Permission.Type for an application
+	TypeWebapp = "app"
 
 	// TypeKonnector if the value of Permission.Type for an application
 	TypeKonnector = "konnector"
@@ -91,7 +91,7 @@ func (p *Permission) Revoke(db couchdb.Database) error {
 // ParentOf check if child has been created by p
 func (p *Permission) ParentOf(child *Permission) bool {
 
-	canBeParent := p.Type == TypeApplication || p.Type == TypeOauth
+	canBeParent := p.Type == TypeWebapp || p.Type == TypeOauth
 
 	return child.Type == TypeSharing && canBeParent &&
 		child.SourceID == p.SourceID
@@ -145,22 +145,22 @@ func GetForCLI(claims *Claims) (*Permission, error) {
 	return pdoc, nil
 }
 
-// GetForApp retrieves the Permission doc for a given app
-func GetForApp(db couchdb.Database, slug string) (*Permission, error) {
-	return getForApp(db, consts.Apps, slug)
+// GetForWebapp retrieves the Permission doc for a given webapp
+func GetForWebapp(db couchdb.Database, slug string) (*Permission, error) {
+	return getForApp(db, TypeWebapp, consts.Apps, slug)
 }
 
 // GetForKonnector retrieves the Permission doc for a given konnector
 func GetForKonnector(db couchdb.Database, slug string) (*Permission, error) {
-	return getForApp(db, consts.Konnectors, slug)
+	return getForApp(db, TypeKonnector, consts.Konnectors, slug)
 }
 
-func getForApp(db couchdb.Database, docType, slug string) (*Permission, error) {
+func getForApp(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
 		Selector: mango.And(
-			mango.Equal("type", TypeApplication),
+			mango.Equal("type", permType),
 			mango.Equal("source_id", docType+"/"+slug),
 		),
 		Limit: 1,
@@ -174,7 +174,7 @@ func getForApp(db couchdb.Database, docType, slug string) (*Permission, error) {
 		err = couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 			UseIndex: "by-source-and-type",
 			Selector: mango.And(
-				mango.Equal("type", TypeApplication),
+				mango.Equal("type", permType),
 				mango.Equal("source_id", docType+"/"+slug),
 			),
 			Limit: 1,
@@ -217,33 +217,34 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	return &pdoc, nil
 }
 
-// CreateAppSet creates a Permission doc for an app
-func CreateAppSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
-	return createAppSet(db, TypeApplication, consts.Apps, slug, set)
+// CreateWebappSet creates a Permission doc for an app
+func CreateWebappSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+	existing, _ := GetForWebapp(db, slug)
+	if existing != nil {
+		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
+	}
+	return createAppSet(db, TypeWebapp, consts.Apps, slug, set)
 }
 
 // CreateKonnectorSet creates a Permission doc for a konnector
 func CreateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+	existing, _ := GetForKonnector(db, slug)
+	if existing != nil {
+		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
+	}
 	return createAppSet(db, TypeKonnector, consts.Konnectors, slug, set)
 }
 
 func createAppSet(db couchdb.Database, typ, docType, slug string, set Set) (*Permission, error) {
-	existing, _ := GetForApp(db, slug)
-	if existing != nil {
-		return nil, fmt.Errorf("There is already a permission doc for %v", slug)
-	}
-
 	doc := &Permission{
 		Type:        typ,
 		SourceID:    docType + "/" + slug,
 		Permissions: set, // @TODO some validation?
 	}
-
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
 		return nil, err
 	}
-
 	return doc, nil
 }
 
@@ -286,11 +287,11 @@ func DeleteShareSet(db couchdb.Database, permID string) error {
 	return couchdb.DeleteDoc(db, doc)
 }
 
-// Force creates or updates a Permission doc for a given app
-func Force(db couchdb.Database, slug string, set Set) error {
-	existing, _ := GetForApp(db, slug)
+// ForceWebapp creates or updates a Permission doc for a given webapp
+func ForceWebapp(db couchdb.Database, slug string, set Set) error {
+	existing, _ := GetForWebapp(db, slug)
 	doc := &Permission{
-		Type:        TypeApplication,
+		Type:        TypeWebapp,
 		SourceID:    consts.Apps + "/" + slug,
 		Permissions: set, // @TODO some validation?
 	}
@@ -303,8 +304,8 @@ func Force(db couchdb.Database, slug string, set Set) error {
 	return couchdb.UpdateDoc(db, doc)
 }
 
-// DestroyApp remove all Permission docs for a given app
-func DestroyApp(db couchdb.Database, slug string) error {
+// DestroyWebapp remove all Permission docs for a given app
+func DestroyWebapp(db couchdb.Database, slug string) error {
 	return destroyApp(db, consts.Apps, slug)
 }
 

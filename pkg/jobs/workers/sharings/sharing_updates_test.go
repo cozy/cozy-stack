@@ -46,7 +46,7 @@ func TestSharingUpdatesNoSharing(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
 
-	err = SharingUpdates(jobs.NewWorkerContext(domainSharer), msg)
+	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
 	assert.Error(t, err)
 	assert.Equal(t, "Sharing does not exist", err.Error())
 
@@ -68,7 +68,7 @@ func TestSharingUpdatesBadSharing(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
 
-	err = SharingUpdates(jobs.NewWorkerContext(domainSharer), msg)
+	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingDoesNotExist, err)
 
@@ -94,7 +94,7 @@ func TestSharingUpdatesTooManySharing(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
 
-	err = SharingUpdates(jobs.NewWorkerContext(domainSharer), msg)
+	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingIDNotUnique, err)
 }
@@ -116,7 +116,7 @@ func TestSharingUpdatesBadSharingType(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
 
-	err = SharingUpdates(jobs.NewWorkerContext(domainSharer), msg)
+	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
 	assert.Error(t, err)
 	assert.Equal(t, ErrDocumentNotLegitimate, err)
 }
@@ -147,7 +147,7 @@ func TestSharingUpdatesNoRecipient(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
 
-	err = SharingUpdates(jobs.NewWorkerContext(domainSharer), msg)
+	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
 	assert.NoError(t, err)
 }
 
@@ -177,6 +177,6 @@ func TestSharingUpdatesBadRecipient(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
 
-	err = SharingUpdates(jobs.NewWorkerContext(domainSharer), msg)
+	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
 	assert.NoError(t, err)
 }

@@ -50,7 +50,7 @@ func SplitTrimString(s, sep string) []string {
 	if s == "" {
 		return []string{}
 	}
-	parts := strings.Split(s, ",")
+	parts := strings.Split(s, sep)
 	filteredParts := parts[:0]
 	for _, part := range parts {
 		part = strings.TrimSpace(part)

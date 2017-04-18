@@ -87,7 +87,7 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	switch pdoc.Type {
 	case permissions.TypeCLI:
 		// OK
-	case permissions.TypeApplication:
+	case permissions.TypeWebapp, permissions.TypeKonnector:
 		if pdoc.SourceID != sourceID {
 			return echo.NewHTTPError(http.StatusForbidden)
 		}
@@ -107,5 +107,5 @@ func AllowLogout(c echo.Context) bool {
 	if err != nil {
 		return false
 	}
-	return pdoc.Type == permissions.TypeApplication
+	return pdoc.Type == permissions.TypeWebapp
 }

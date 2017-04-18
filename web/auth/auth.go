@@ -511,8 +511,7 @@ func accessToken(c echo.Context) error {
 func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		header := c.Request().Header.Get("Authorization")
-		parts := strings.Split(header, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		if !strings.HasPrefix(header, "Bearer ") {
 			return c.JSON(http.StatusBadRequest, echo.Map{
 				"error": "invalid_token",
 			})
@@ -524,7 +523,8 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 				"error": "Client not found",
 			})
 		}
-		_, ok := client.ValidToken(instance, permissions.RegistrationTokenAudience, parts[1])
+		token := header[len("Bearer "):]
+		_, ok := client.ValidToken(instance, permissions.RegistrationTokenAudience, token)
 		if !ok {
 			return c.JSON(http.StatusUnauthorized, echo.Map{
 				"error": "invalid_token",

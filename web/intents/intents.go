@@ -35,7 +35,7 @@ func (i *apiIntent) Links() *jsonapi.LinksList {
 	if len(parts) < 2 {
 		return nil
 	}
-	perms, err := permissions.GetForApp(i.ins, parts[1])
+	perms, err := permissions.GetForWebapp(i.ins, parts[1])
 	if err != nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func (i *apiIntent) MarshalJSON() ([]byte, error) {
 
 func createIntent(c echo.Context) error {
 	pdoc, err := webpermissions.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeApplication {
+	if err != nil || pdoc.Type != permissions.TypeWebapp {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	instance := middlewares.GetInstance(c)
@@ -98,7 +98,7 @@ func getIntent(c echo.Context) error {
 	intent := &intents.Intent{}
 	id := c.Param("id")
 	pdoc, err := webpermissions.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeApplication {
+	if err != nil || pdoc.Type != permissions.TypeWebapp {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	if err = couchdb.GetDoc(instance, consts.Intents, id, intent); err != nil {

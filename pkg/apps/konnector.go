@@ -114,6 +114,9 @@ func (m *konnManifest) Delete(db couchdb.Database) error {
 func GetKonnectorBySlug(db couchdb.Database, slug string) (Manifest, error) {
 	man := &konnManifest{}
 	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, man)
+	if couchdb.IsNotFoundError(err) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
