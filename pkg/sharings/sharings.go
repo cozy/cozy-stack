@@ -207,7 +207,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		// Dynamic sharing
 		if rule.Selector != "" {
 			// Create index based on selector to retrieve documents to share
-			index := mango.IndexOnFields(docType, sharing.ID(), []string{rule.Selector})
+			indexName := "by-" + rule.Selector
+			index := mango.IndexOnFields(docType, indexName, []string{rule.Selector})
 			err := couchdb.DefineIndex(instance, index)
 			if err != nil {
 				return err
@@ -216,9 +217,11 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			var docs []couchdb.JSONDoc
 
 			// Request the index for all values
+			// NOTE: this is not efficient in case of many Values
+			// We might consider a map-reduce approach in case of bottleneck
 			for _, val := range rule.Values {
 				err = couchdb.FindDocs(instance, docType, &couchdb.FindRequest{
-					UseIndex: sharing.ID(),
+					UseIndex: indexName,
 					Selector: mango.Equal(rule.Selector, val),
 				}, &docs)
 				if err != nil {
