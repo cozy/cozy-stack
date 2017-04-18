@@ -1,7 +1,6 @@
 package konnectors
 
 import (
-	"encoding/json"
 	"os"
 	"strings"
 	"sync"
@@ -49,8 +48,7 @@ func TestUnknownApp(t *testing.T) {
 }
 
 func TestBadFileExec(t *testing.T) {
-	fields, err := json.Marshal(&struct{ Password string }{Password: "mypass"})
-	assert.NoError(t, err)
+	fields := &struct{ Password string }{Password: "mypass"}
 
 	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
 		&apps.InstallerOptions{
@@ -86,8 +84,6 @@ func TestBadFileExec(t *testing.T) {
 }
 
 func TestSuccess(t *testing.T) {
-	t.Skip()
-
 	script := `#!/bin/bash
 
 echo "{\"COZY_DOMAIN\":\"${COZY_DOMAIN}\", \"COZY_CREDENTIALS\":\"${COZY_CREDENTIALS}\"}"
@@ -113,8 +109,7 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 		return
 	}
 
-	fields, err := json.Marshal(&struct{ Password string }{Password: "mypass"})
-	assert.NoError(t, err)
+	fields := &struct{ Password string }{Password: "mypass"}
 
 	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
 		&apps.InstallerOptions{
