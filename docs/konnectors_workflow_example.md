@@ -111,7 +111,7 @@ GET /konnectors/manifests?Source=git://github.com/konnectors/trainlines.git
   "version": "3.0.0",
   "licence": "AGPL-3.0",
   "fields": {
-    "saveFolder": {
+    "save_folder": {
       "doctype": "io.cozy.files",
       "type": "folder",
       "verbs":["ALL"]
@@ -165,7 +165,7 @@ HTTP/1.1 200 OK
 }
 ```
 
-6 - SettingsApp asks the user for the additional "saveFolder" config fields. It could for example use a PICK intents for files.
+6 - SettingsApp asks the user for the additional "save_folder" config fields. It could for example use a PICK intents for files.
 
 7 - SettingsApp does install the konnector
 
@@ -208,7 +208,7 @@ PATCH /permissions/456-permission-doc-id-456
       "type": "app",
       "source_id": "io.cozy.konnectors/trainlines",
       "permissions": {
-        "saveFolder": {
+        "save_folder": {
           "type": "io.cozy.files",
           "verbs": ["ALL"],
           "values": ["123-selected-folder-id-123"]
@@ -235,7 +235,7 @@ HTTP/1.1 200 OK
           "type": "io.cozy.events",
           "verbs": ["PATCH"]
         },
-        "saveFolder": {
+        "save_folder": {
           "type": "io.cozy.files",
           "verbs": ["ALL"],
           "values": ["123-selected-folder-id-123"]

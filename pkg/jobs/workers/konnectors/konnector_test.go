@@ -26,8 +26,7 @@ var inst *instance.Instance
 func TestUnknownDomain(t *testing.T) {
 	ctx := jobs.NewWorkerContext("unknown", "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug":   "unknownapp",
-		"fields": nil,
+		"slug": "unknownapp",
 	})
 	assert.NoError(t, err)
 	err = Worker(ctx, msg)
@@ -38,8 +37,7 @@ func TestUnknownDomain(t *testing.T) {
 func TestUnknownApp(t *testing.T) {
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug":   "unknownapp",
-		"fields": nil,
+		"slug": "unknownapp",
 	})
 	assert.NoError(t, err)
 	err = Worker(ctx, msg)
