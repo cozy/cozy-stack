@@ -229,7 +229,7 @@ func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	trashDirID := consts.TrashDirID
 	restorePath := path.Dir(oldpath)
 
-	if err := setTrashedForFilesInsideDir(fs, olddoc, true); err != nil {
+	if err = setTrashedForFilesInsideDir(fs, olddoc, true); err != nil {
 		return nil, err
 	}
 
