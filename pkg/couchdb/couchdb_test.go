@@ -118,7 +118,6 @@ func TestCreateDoc(t *testing.T) {
 	if assert.True(t, iscoucherr) {
 		assert.Equal(t, coucherr.Reason, "deleted")
 	}
-
 }
 
 func TestGetAllDocs(t *testing.T) {
@@ -133,6 +132,33 @@ func TestGetAllDocs(t *testing.T) {
 		assert.Len(t, results, 2)
 		assert.Equal(t, results[0].Test, "all_1")
 		assert.Equal(t, results[1].Test, "all_2")
+	}
+}
+
+func TestBulkUpdateDocs(t *testing.T) {
+	doc1 := &testDoc{Test: "before_1"}
+	doc2 := &testDoc{Test: "before_2"}
+	CreateDoc(TestPrefix, doc1)
+	CreateDoc(TestPrefix, doc2)
+
+	var results []*testDoc
+	err := GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
+	assert.NoError(t, err)
+	results[0].Test = "after_1"
+	results[1].Test = "after_2"
+
+	docs := make([]Doc, len(results))
+	for i, doc := range results {
+		docs[i] = doc
+	}
+	err = BulkUpdateDoc(TestPrefix, docs)
+	assert.NoError(t, err)
+
+	err = GetAllDocs(TestPrefix, TestDoctype, &AllDocsRequest{Limit: 2}, &results)
+	if assert.NoError(t, err) {
+		assert.Len(t, results, 2)
+		assert.Equal(t, results[0].Test, "after_1")
+		assert.Equal(t, results[1].Test, "after_2")
 	}
 }
 

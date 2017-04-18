@@ -201,6 +201,21 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	return newdoc, nil
 }
 
+func setTrashedForFilesInsideDir(fs VFS, doc *DirDoc, trashed bool) error {
+	files := []*FileDoc{}
+	err := walk(fs, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+		if file != nil {
+			file.Trashed = trashed
+			files = append(files, file)
+		}
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	return fs.UpdateFileDocs(files)
+}
+
 // TrashDir is used to delete a directory given its document
 func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	oldpath, err := olddoc.Path(fs)
@@ -214,6 +229,10 @@ func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	trashDirID := consts.TrashDirID
 	restorePath := path.Dir(oldpath)
 
+	if err = setTrashedForFilesInsideDir(fs, olddoc, true); err != nil {
+		return nil, err
+	}
+
 	var newdoc *DirDoc
 	tryOrUseSuffix(olddoc.DocName, conflictFormat, func(name string) error {
 		newdoc, err = ModifyDirMetadata(fs, olddoc, &DocPatch{
@@ -223,7 +242,11 @@ func TrashDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 		})
 		return err
 	})
-	return newdoc, err
+	if err != nil {
+		return nil, err
+	}
+
+	return newdoc, nil
 }
 
 // RestoreDir is used to restore a trashed directory given its document
@@ -236,6 +259,7 @@ func RestoreDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var newdoc *DirDoc
 	var emptyStr string
 	name := stripSuffix(olddoc.DocName, conflictSuffix)
@@ -247,7 +271,15 @@ func RestoreDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 		})
 		return err
 	})
-	return newdoc, err
+	if err != nil {
+		return nil, err
+	}
+
+	if err := setTrashedForFilesInsideDir(fs, olddoc, false); err != nil {
+		return nil, err
+	}
+
+	return newdoc, nil
 }
 
 var (

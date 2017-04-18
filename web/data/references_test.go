@@ -72,7 +72,7 @@ func TestAddReferencesHandler(t *testing.T) {
 	// Make File
 	name := "testtoref.txt"
 	dirID := consts.RootDirID
-	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, nil)
+	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -152,7 +152,7 @@ func TestRemoveReferencesHandler(t *testing.T) {
 
 func makeReferencedTestFile(t *testing.T, doc couchdb.Doc, name string) string {
 	dirID := consts.RootDirID
-	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, nil)
+	filedoc, err := vfs.NewFileDoc(name, dirID, -1, nil, "", "", time.Now(), false, false, nil)
 	if !assert.NoError(t, err) {
 		return ""
 	}

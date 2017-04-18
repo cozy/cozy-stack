@@ -120,7 +120,7 @@ func createTestFile(t *testing.T) (*vfs.FileDoc, *vfs.File, error) {
 	fileContent := "hello !"
 	fs := in.VFS()
 
-	fileDoc, err := vfs.NewFileDoc("testfile", "", -1, nil, "", "", time.Now(), false, []string{})
+	fileDoc, err := vfs.NewFileDoc("testfile", "", -1, nil, "", "", time.Now(), false, false, []string{})
 	if err != nil {
 		return nil, nil, err
 	}

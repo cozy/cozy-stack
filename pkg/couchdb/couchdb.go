@@ -3,6 +3,7 @@ package couchdb
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -395,6 +396,30 @@ func UpdateDoc(db Database, doc Doc) error {
 	}
 	doc.SetRev(res.Rev)
 	rtevent(db, realtime.EventUpdate, doc)
+	return nil
+}
+
+// BulkUpdateDoc is used to update several docs in one call, as a bulk.
+func BulkUpdateDoc(db Database, docs []Doc) error {
+	if len(docs) == 0 {
+		return errors.New("BulkUpdateDoc needs at least one doc")
+	}
+	doctype := docs[0].DocType()
+	url := docURL(db, doctype, "_bulk_docs")
+	body := struct {
+		Docs []Doc `json:"docs"`
+	}{docs}
+	var res []updateResponse
+	if err := makeRequest("POST", url, body, &res); err != nil {
+		return err
+	}
+	if len(res) != len(docs) {
+		return errors.New("BulkUpdateDoc receive an unexpected number of responses")
+	}
+	for i, doc := range docs {
+		doc.SetRev(res[i].Rev)
+		rtevent(db, realtime.EventUpdate, doc)
+	}
 	return nil
 }
 

@@ -247,6 +247,7 @@ func getPatch(c echo.Context) (*vfs.DocPatch, error) {
 		patch.DirID = &rid.ID
 	}
 
+	patch.RestorePath = nil
 	return &patch, nil
 }
 
@@ -790,6 +791,7 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 	}
 
 	executable := c.QueryParam("Executable") == "true"
+	trashed := false
 	return vfs.NewFileDoc(
 		name,
 		dirID,
@@ -799,6 +801,7 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		class,
 		cdate,
 		executable,
+		trashed,
 		tags,
 	)
 }
