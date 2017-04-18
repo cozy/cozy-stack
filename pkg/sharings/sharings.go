@@ -191,9 +191,7 @@ func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 // ShareDoc shares the documents specified in the Sharing structure to the
 // specified recipient
 func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus) error {
-	// Lookup all the sharing permissions
 	for _, rule := range sharing.Permissions {
-		// Only static values are supported yet
 		if len(rule.Values) == 0 {
 			return nil
 		}
@@ -205,8 +203,42 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			}
 		}
 
+		var values []string
+
+		// Dynamic sharing
+		if rule.Selector != "" {
+			// Create index based on selector to retrieve documents to share
+			indexName := "by-" + rule.Selector
+			index := mango.IndexOnFields(docType, indexName, []string{rule.Selector})
+			err := couchdb.DefineIndex(instance, index)
+			if err != nil {
+				return err
+			}
+
+			var docs []couchdb.JSONDoc
+
+			// Request the index for all values
+			// NOTE: this is not efficient in case of many Values
+			// We might consider a map-reduce approach in case of bottleneck
+			for _, val := range rule.Values {
+				err = couchdb.FindDocs(instance, docType, &couchdb.FindRequest{
+					UseIndex: indexName,
+					Selector: mango.Equal(rule.Selector, val),
+				}, &docs)
+				if err != nil {
+					return err
+				}
+				// Save returned doc ids
+				for _, d := range docs {
+					values = append(values, d.ID())
+				}
+			}
+		} else {
+			values = rule.Values
+		}
+
 		// Create a sharedata worker for each doc to send
-		for _, val := range rule.Values {
+		for _, val := range values {
 			domain, err := recStatus.recipient.ExtractDomain()
 			if err != nil {
 				return err

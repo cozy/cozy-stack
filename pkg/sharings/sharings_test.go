@@ -104,13 +104,15 @@ func createRecipient(t *testing.T) (*Recipient, error) {
 	return recipient, err
 }
 
-func createTestDoc(t *testing.T) (*couchdb.JSONDoc, error) {
+func createTestDoc(t *testing.T, withSelector bool) (*couchdb.JSONDoc, error) {
 	doc := &couchdb.JSONDoc{
 		Type: testDocType,
 		M:    make(map[string]interface{}),
 	}
 	doc.M["test"] = "hello there"
-	doc.M["dyn"] = "amic"
+	if withSelector {
+		doc.M["dyn"] = "amic"
+	}
 	err := couchdb.CreateDoc(in, doc)
 	assert.NoError(t, err)
 	return doc, err
@@ -236,7 +238,7 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 
 	// share doc
 	if !isFile {
-		testDoc, err = createTestDoc(t)
+		testDoc, err = createTestDoc(t, withSelector)
 		assert.NoError(t, err)
 		assert.NotNil(t, testDoc)
 		sharing, err = createSharing(t, sharingType, testDoc.ID(), isFile, withSelector)
@@ -294,9 +296,10 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 		if !isFile {
 			if withSelector {
 				var testDoc2 *couchdb.JSONDoc
-				testDoc2, err = createTestDoc(t)
+				testDoc2, err = createTestDoc(t, withSelector)
 				assert.NoError(t, err)
 				assert.NotNil(t, testDoc2)
+
 				// Wait for the document to arrive and check it
 				time.Sleep(2000 * time.Millisecond)
 				recDoc := &couchdb.JSONDoc{}
