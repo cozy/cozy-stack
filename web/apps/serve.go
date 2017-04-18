@@ -160,6 +160,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		"Domain":       i.Domain,
 		"Locale":       i.Locale,
 		"AppName":      app.Name,
+		"AppEditor":    app.Editor,
 		"IconPath":     app.Icon,
 		"CozyBar":      cozybar(i),
 		"CozyClientJS": cozyclientjs(i),

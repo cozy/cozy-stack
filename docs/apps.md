@@ -26,6 +26,7 @@ Field          | Description
 ---------------|---------------------------------------------------------------------
 name           | the name to display on the home
 slug           | the default slug (it can be changed at install time)
+editor         | the editor's name to display on the cozy-bar of the app
 icon           | an icon for the home
 description    | a short description of the application
 source         | where the files of the app can be downloaded

@@ -18,6 +18,7 @@ type AppManifest struct {
 	Rev   string `json:"rev"`
 	Attrs struct {
 		Name        string `json:"name"`
+		Editor      string `json:"editor"`
 		Slug        string `json:"slug"`
 		Source      string `json:"source"`
 		State       string `json:"state"`
