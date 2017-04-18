@@ -47,7 +47,13 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	}
 
 	slug := opts.Slug
-	fields := string(m.Data)
+	fields := struct {
+		Account      string `json:"account"`
+		FolderToSave string `json:"folder_to_save"`
+	}{
+		Account:      opts.Account,
+		FolderToSave: opts.FolderToSave,
+	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	worker := ctx.Value(jobs.ContextWorkerKey).(string)
 	jobID := fmt.Sprintf("%s/%s/%s", worker, slug, domain)
@@ -105,11 +111,16 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		}
 	}
 
+	fieldsJSON, err := json.Marshal(fields)
+	if err != nil {
+		return err
+	}
+
 	konnCmd := config.GetConfig().Konnectors.Cmd
 	cmd := exec.CommandContext(ctx, konnCmd, workDir) // #nosec
 	cmd.Env = []string{
 		"COZY_CREDENTIALS=" + token,
-		"COZY_FIELDS=" + fields,
+		"COZY_FIELDS=" + string(fieldsJSON),
 		"COZY_DOMAIN=" + domain,
 	}
 

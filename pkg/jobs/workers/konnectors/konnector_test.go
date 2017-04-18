@@ -46,7 +46,8 @@ func TestUnknownApp(t *testing.T) {
 }
 
 func TestBadFileExec(t *testing.T) {
-	fields := &struct{ Password string }{Password: "mypass"}
+	account := "123456"
+	folderToSave := "7890"
 
 	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
 		&apps.InstallerOptions{
@@ -66,8 +67,9 @@ func TestBadFileExec(t *testing.T) {
 
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug":   "my-konnector-1",
-		"fields": fields,
+		"slug":           "my-konnector-1",
+		"account":        account,
+		"folder_to_save": folderToSave,
 	})
 	assert.NoError(t, err)
 
@@ -109,7 +111,7 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 		return
 	}
 
-	fields := &struct{ Password string }{Password: "mypass"}
+	account := "123456"
 
 	installer, err := apps.NewInstaller(inst, inst.AppsCopier(apps.Konnector),
 		&apps.InstallerOptions{
@@ -144,7 +146,7 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 		assert.Equal(t, inst.Domain, ev1.Instance)
 		assert.Equal(t, inst.Domain, ev2.Instance)
 		assert.Equal(t, inst.Domain, doc1.M["COZY_DOMAIN"])
-		assert.Equal(t, "mypass", doc2.M["Password"])
+		assert.Equal(t, account, doc2.M["account"])
 
 		man := doc3.M["Manifest"].(string)
 		assert.True(t, strings.HasPrefix(man, os.TempDir()))
@@ -162,8 +164,8 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug":   "my-konnector-2",
-		"fields": fields,
+		"slug":    "my-konnector-2",
+		"account": account,
 	})
 	assert.NoError(t, err)
 
