@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"time"
@@ -29,7 +30,7 @@ func init() {
 type SendOptions struct {
 	DocID      string
 	DocType    string
-	Update     bool
+	Method     string
 	Recipients []*RecipientInfo
 }
 
@@ -49,9 +50,48 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	if opts.DocType != consts.Files {
+		if opts.Method == http.MethodDelete {
+			return DeleteDoc(domain, opts)
+		}
 		return SendDoc(domain, opts)
 	}
 	return SendFile(domain, opts)
+}
+
+// DeleteDoc asks the recipients to delete the shared document which id was
+// provided.
+func DeleteDoc(domain string, opts *SendOptions) error {
+	path := fmt.Sprintf("/sharings/doc/%s/%s", opts.DocType, opts.DocID)
+
+	for _, rec := range opts.Recipients {
+		rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
+		if err != nil {
+			log.Error("[sharing] An error occurred while trying to send "+
+				"update : ", err)
+			continue
+		}
+
+		_, errSend := request.Req(&request.Options{
+			Domain: rec.URL,
+			Method: opts.Method,
+			Path:   path,
+			Headers: request.Headers{
+				"Content-Type":  "application/json",
+				"Accept":        "application/json",
+				"Authorization": "Bearer " + rec.Token,
+			},
+			Body:       nil,
+			Queries:    url.Values{"rev": {rev}},
+			NoResponse: true,
+		})
+		if errSend != nil {
+			log.Error("[sharing] An error occurred while trying to share "+
+				"data : ", errSend)
+		}
+
+	}
+
+	return nil
 }
 
 // SendDoc sends a JSON document to the recipients
@@ -66,7 +106,7 @@ func SendDoc(domain string, opts *SendOptions) error {
 		return err
 	}
 	// A new doc will be created on the recipient side
-	if !opts.Update {
+	if opts.Method == http.MethodPost {
 		delete(doc.M, "_id")
 		delete(doc.M, "_rev")
 	}
@@ -75,8 +115,8 @@ func SendDoc(domain string, opts *SendOptions) error {
 
 	for _, rec := range opts.Recipients {
 		// A doc update requires to set the doc revision from each recipient
-		if opts.Update {
-			rev, err := getDocRevToRecipient(path, rec)
+		if opts.Method == http.MethodPut {
+			rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
 			if err != nil {
 				log.Error("[sharing] An error occurred while trying to send "+
 					"update : ", err)
@@ -93,7 +133,7 @@ func SendDoc(domain string, opts *SendOptions) error {
 		// TODO : handle send failures
 		_, errSend := request.Req(&request.Options{
 			Domain: rec.URL,
-			Method: "PUT",
+			Method: opts.Method,
 			Path:   path,
 			Headers: request.Headers{
 				"Content-Type":  "application/json",
@@ -159,7 +199,7 @@ func SendFile(domain string, opts *SendOptions) error {
 
 		_, errSend := request.Req(&request.Options{
 			Domain: rec.URL,
-			Method: "POST",
+			Method: opts.Method,
 			Path:   path,
 			Headers: request.Headers{
 				"Content-Type":   doc.Mime,
@@ -180,8 +220,11 @@ func SendFile(domain string, opts *SendOptions) error {
 	return nil
 }
 
-// getDocRevToRecipient returns the document revision from the recipient
-func getDocRevToRecipient(path string, recInfo *RecipientInfo) (string, error) {
+// getDocRevAtRecipient returns the revision of the document at the given
+// recipient.
+func getDocRevAtRecipient(doctype, docID string, recInfo *RecipientInfo) (string, error) {
+	path := fmt.Sprintf("/data/%s/%s", doctype, docID)
+
 	res, err := request.Req(&request.Options{
 		Domain: recInfo.URL,
 		Method: "GET",

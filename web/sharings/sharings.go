@@ -215,18 +215,57 @@ func RecipientRefusedSharing(c echo.Context) error {
 // receiveDocument stores a shared document in the Cozy.
 //
 // If the document to store is a "io.cozy.files" our custom handler will be
-// called, otherwise we will redirect the request to PUT /data/:doctype/:id.
+// called, otherwise we will redirect to /data.
 func receiveDocument(c echo.Context) error {
 	var err error
 
 	switch c.Param("doctype") {
-	case "":
-		err = echo.NewHTTPError(http.StatusBadRequest,
-			"Missing parameter: doctype")
 	case consts.Files:
 		err = creationWithIDHandler(c)
 	default:
 		err = data.UpdateDoc(c)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
+// updateDocument updates a shared document in the Cozy.
+//
+// TODO Handle files updates.
+func updateDocument(c echo.Context) error {
+	var err error
+
+	switch c.Param("doctype") {
+	case consts.Files:
+		// TODO
+		err = c.JSON(http.StatusNotImplemented, nil)
+	default:
+		err = data.UpdateDoc(c)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
+// deleteDocument deletes the shared document from the Cozy.
+//
+// TODO Handle files deletions.
+func deleteDocument(c echo.Context) error {
+	var err error
+
+	switch c.Param("doctype") {
+	case consts.Files:
+		// TODO
+		err = c.JSON(http.StatusNotImplemented, nil)
+	default:
+		err = data.DeleteDoc(c)
 	}
 
 	if err != nil {
@@ -244,7 +283,11 @@ func Routes(router *echo.Group) {
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", AddRecipient)
-	router.POST("/doc/:doctype/:docid", receiveDocument)
+
+	group := router.Group("/doc/:doctype", data.ValidDoctype)
+	group.POST("/:docid", receiveDocument)
+	group.PUT("/:docid", updateDocument)
+	group.DELETE("/:docid", deleteDocument)
 }
 
 // wrapErrors returns a formatted error

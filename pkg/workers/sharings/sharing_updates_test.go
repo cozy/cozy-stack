@@ -24,13 +24,13 @@ func createDoc(t *testing.T, docType string, params map[string]interface{}) couc
 	return doc
 }
 
-func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID string) *TriggerEvent {
+func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string) *TriggerEvent {
 	msg := &SharingMessage{
 		SharingID: sharingID,
 		DocType:   doc.Type,
 	}
 	event := &TriggerEvent{
-		Event:   &EventDoc{Doc: &doc},
+		Event:   &EventDoc{Type: eventType, Doc: &doc},
 		Message: msg,
 	}
 	return event
@@ -41,7 +41,7 @@ func TestSharingUpdatesNoSharing(t *testing.T) {
 	defer func() {
 		couchdb.DeleteDoc(in, doc)
 	}()
-	event := createEvent(t, doc, "")
+	event := createEvent(t, doc, "", "CREATED")
 
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
@@ -63,7 +63,7 @@ func TestSharingUpdatesBadSharing(t *testing.T) {
 		couchdb.DeleteDoc(in, sharingDoc)
 	}()
 
-	event := createEvent(t, doc, "badsharingid")
+	event := createEvent(t, doc, "badsharingid", "")
 
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
@@ -89,7 +89,7 @@ func TestSharingUpdatesTooManySharing(t *testing.T) {
 	}()
 	sharingID := doc.M["sharing_id"].(string)
 
-	event := createEvent(t, doc, sharingID)
+	event := createEvent(t, doc, sharingID, "UPDATED")
 
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
@@ -111,7 +111,7 @@ func TestSharingUpdatesBadSharingType(t *testing.T) {
 		couchdb.DeleteDoc(in, sharingDoc)
 	}()
 	sharingID := sharingDoc.M["sharing_id"].(string)
-	event := createEvent(t, doc, sharingID)
+	event := createEvent(t, doc, sharingID, "UPDATED")
 
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
@@ -142,7 +142,7 @@ func TestSharingUpdatesNoRecipient(t *testing.T) {
 		couchdb.DeleteDoc(in, sharingDoc)
 	}()
 	sharingID := sharingDoc.M["sharing_id"].(string)
-	event := createEvent(t, doc, sharingID)
+	event := createEvent(t, doc, sharingID, "CREATED")
 
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
@@ -172,7 +172,7 @@ func TestSharingUpdatesBadRecipient(t *testing.T) {
 		couchdb.DeleteDoc(in, sharingDoc)
 	}()
 	sharingID := sharingDoc.M["sharing_id"].(string)
-	event := createEvent(t, doc, sharingID)
+	event := createEvent(t, doc, sharingID, "CREATED")
 
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
 	assert.NoError(t, err)
