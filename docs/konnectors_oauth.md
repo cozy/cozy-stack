@@ -44,7 +44,7 @@ as well as the associated scope
 }
 ```
 
-io.cozy.accounts_type should not accessible by applications.
+io.cozy.accounts_type should not accessible by applications. They will be loaded into the stack by infra and will be configurable through config files for self-hosters.
 
 # Reminder OAuth flow
 
@@ -54,7 +54,7 @@ io.cozy.accounts_type should not accessible by applications.
 Oauth is divided in 3 steps
 - Client Registration: the client application (the Stack) needs to be registered with the Service.
 - Obtaining & Refreshing Authorization: all the steps from client_id to access_token, the Stack will handle those
-- Using the Token: Ideally, the konnector should only concern itself with this part; it receives an access_token and uses it.
+- Using the access_token: Ideally, the konnector should only concern itself with this part; it receives an access_token and uses it.
 
 
 # Client Registration
@@ -65,12 +65,12 @@ Before beginning the Grant process, most Services require the application to be 
 
 ## Manually
 
-Most services requires an human developer to create the client manually and define its redirect_uri. However each Cozy has its own domain, so for these services, we will need to :
+Most services requires an human developer to create the client manually and define its redirect_uri. However each instance has its own domain, so for these services, we will need to :
 
 **A. Register a "proxy" client**, which is a static page performing redirections as needed, as was done for Facebook events in v2 konnectors. We will register a well known cozy domain, like `oauth-proxy.cozy.io` and registers it with all providers.
 The use and risks associated with this domain should be made clear to the user.
 
-**B. Register each Stack** with a redirect_uri on the main stack domain, if we go this way, the register_uri below moves from `bob.cozy.rocks/accounts/redirect` to `oauth.cozy.rocks/redirect` and the domain wil be appended to the state.
+**B. Register each Stack** with a redirect_uri on the main stack domain, if we go this way, the register_uri below moves from `bob.cozy.rocks/accounts/redirect` to `_cozy_oauth.cozy.rocks/redirect` and the domain wil be prepended to the state.
 This is feasible at cozy scale, but requires more knowledge and work for self-hosters.
 
 ## Dynamic Registration Protocol
@@ -97,9 +97,9 @@ A. In SettingsApp give a link
       redirect_uri=https://bob.cozy.rocks/accounts/redirect">
 ```
 
-**NOTE** the scope may depends on other fields being configured (checkboxes), this will be described in json in the konnectors manifest. The format will be determined upon implementation
+**NOTE** the scope may depends on other fields being configured (checkboxes), this will be described in json in the konnectors manifest. The format will be determined upon implementation.
 
-**NOTE** state should contains a reference to the accountID
+**NOTE** To limit bandwith and risk of state corruption, SettingsApp should save its state under a random key into localStorage, the key is then passed as the state in this query.
 
 
 B. Service let the user login, allow or deny scope
@@ -133,14 +133,20 @@ D. The Service responds (server side) with (json)
   "info":{"name":"Claude Douillet","email":"claude.douillet@example.com"}
 }
 ```
-This whole object is saved as-is into a `io.cozy.accounts`
+This whole object is saved as-is into a `io.cozy.accounts` 's `oauth_callback_results` field.
 
-@TODO better to save known fields separately from other random infos.
+The known fields `access_token`, `refresh_token` & `scope` will be **also** saved on the account itself
 
 
-E. The Stack redirect the user to SettingsApp with configured account.
+E. The Stack redirect the user to SettingsApp
 
-@TODO state should contains enough information for settings app to come back to previous state (just before user clicked the link)
+```http
+HTTP/1.1 302 Found
+Location: https://bob-settings.cozy.rocks/?state=1234zyx&account=accountID
+```
+
+SettingsApp check the state is expected and restore its state to the form but whith account completed.
+
 
 ## SPA flow (Implicit grant)
 
@@ -153,6 +159,8 @@ A. In SettingsApp give a link
     scope=photos&
     state=1234zyx">
 ```
+
+See server-flow for state rules.
 
 B. Service let the user login, allow or deny scope
 Then redirects to
@@ -186,8 +194,12 @@ When using the server-flow, we also get a refresh_token. It is used to get a new
 (konnector A) GET  https://api.service.com/token TOKEN2a       -> invalid
 ```
 
-To avoid this, the stack will be responsible to performs token refresh.
-This will need a redis lock.
+To avoid this, the stack will be responsible to perform token refresh.
+A konnector can requires the stack to refresh an account token with an HTTP request.
+
+```
+POST https://bob-settings.cozy.rocks/accounts/:accountID/refresh
+```
 
 
 # Konnectors Marketplace Requirements
@@ -196,10 +208,18 @@ The following is a few points to be careful for in konnectors when we start allo
 
 - With SPA flow, because of advanced security concerns (confused deputy problem), cozy should validate the `access_token`. However, the way to do that depends on the provider and cannot be described in json, it is therefore the responsibility of the konnector itself.
 
-- With server flow, an evil account type with proper `auth_endpoint` but bad `token_endpoint` could retrieve a valid token as well as cozy client secret. The reviewer of a konnector should make sure both these endpoints are on domains belonging to the Service provider.
+# Account types security rules
+
+- With server flow, an evil account type with proper `auth_endpoint` but bad `token_endpoint` could retrieve a valid token as well as cozy client secret. The reviewer of an `account_type` should make sure both these endpoints are on domains belonging to the Service provider.
 
 
 # Notes for MesInfos experiment
 
-- MAIF konnector uses the webserver flow
+- MAIF konnector uses the webserver flow without redirect_uri validation
 - Orange konnector uses the client-side proxy but hosted on their own servers (/!\ redirect_uri vs redirect_url)
+
+
+# Routes to be implemented
+
+- [ ] `/accounts/redirect`
+- [ ] `/accounts/:accountID/refresh`
