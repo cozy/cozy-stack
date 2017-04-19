@@ -20,6 +20,8 @@ The default page limit is determined on a by-route basis. The client can require
 
 If there is more docs after the limit, the response will contain a `next` key in its links section, with a `page[cursor]` set to fetch docs starting after the last one from current request.
 
+Alternatively, the client can opt in for skip mode by using `page[skip]`. When using skip, the number given in `page[skip]` is number of element ignored before returning value. Similarly, the response will contain a next link with a `page[skip]` set for next page (skip + limit).
+
 ### Example
 
 
@@ -55,5 +57,17 @@ GET /data/some-type/some-id/relationships/references?page[limit]=100&page[cursor
 ```json
 {
   "data": [ "... 20 docs ..." ],
+}
+```
+
+```http
+GET /data/some-type/some-id/relationships/references?page[limit]=10&page[skip]=0
+```
+```json
+{
+  "data": [ "... 10 docs ..." ],
+  "links": {
+    "next": "/data/some-type/some-id/relationships/references?page[limit]=10&page[skip]=10"
+  }
 }
 ```
