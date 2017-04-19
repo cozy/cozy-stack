@@ -32,7 +32,7 @@ couchdb:
   url: http://localhost:5984/
 
 konnectors:
-  cmd: ./scripts/konnector-run.sh
+  cmd: ./scripts/konnector-rkt-run.sh
 
 mail:
   # mail smtp host - flags: --mail-host

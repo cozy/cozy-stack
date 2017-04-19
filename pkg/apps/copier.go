@@ -156,7 +156,7 @@ func newTarCopier(src Copier, name string) Copier {
 
 func (t *tarCopier) Start(slug, version string) (bool, error) {
 	fs := afero.NewOsFs()
-	tmp, err := afero.TempFile(fs, "", "")
+	tmp, err := afero.TempFile(fs, "", "konnector-")
 	if err != nil {
 		return false, err
 	}
