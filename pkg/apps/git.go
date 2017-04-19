@@ -82,19 +82,19 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, error) {
+func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	log.Debugf("[git] Fetch %s", src.String())
 
 	osFs := afero.NewOsFs()
 	gitDir, err := afero.TempDir(osFs, "", "cozy-app-"+man.Slug())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer osFs.RemoveAll(gitDir)
 
 	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	branch := getGitBranch(src)
@@ -113,12 +113,12 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 		ReferenceName: gitPlumbing.ReferenceName(branch),
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ref, err := rep.Head()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	slug := man.Slug()
@@ -131,26 +131,40 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 	// If the application folder already exists, we can bail early.
 	exists, err := fs.Start(slug, version)
 	if err != nil {
-		return nil, err
+		return err
 	}
+	defer func() {
+		if errc := fs.Close(); errc != nil {
+			err = errc
+		}
+	}()
 	if exists {
-		return man, nil
+		return nil
 	}
 
 	commit, err := rep.CommitObject(ref.Hash())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	files, err := commit.Files()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if err = g.copyFiles(fs, files); err != nil {
-		return nil, err
-	}
-	return man, nil
+	return files.ForEach(func(f *gitObject.File) error {
+		var r io.ReadCloser
+		r, err = f.Reader()
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+		return fs.Copy(&fileInfo{
+			name: f.Name,
+			size: f.Size,
+			mode: os.FileMode(f.Mode),
+		}, r)
+	})
 }
 
 func getGitBranch(src *url.URL) string {
@@ -165,26 +179,6 @@ func getWebBranch(src *url.URL) string {
 		return src.Fragment
 	}
 	return "HEAD"
-}
-
-func (g *gitFetcher) copyFiles(fs Copier, files *gitObject.FileIter) (err error) {
-	defer func() {
-		if errc := fs.Close(); errc != nil {
-			err = errc
-		}
-	}()
-	return files.ForEach(func(f *gitObject.File) error {
-		r, err := f.Reader()
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-		return fs.Copy(&fileInfo{
-			name: f.Name,
-			size: f.Size,
-			mode: os.FileMode(f.Mode),
-		}, r)
-	})
 }
 
 func resolveGithubURL(src *url.URL, filename string) (string, error) {

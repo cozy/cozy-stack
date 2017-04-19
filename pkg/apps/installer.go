@@ -55,7 +55,7 @@ type Fetcher interface {
 	FetchManifest(src *url.URL) (io.ReadCloser, error)
 	// Fetch should download the application and install it in the given
 	// directory.
-	Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, error)
+	Fetch(src *url.URL, fs Copier, man Manifest) error
 }
 
 // NewInstaller creates a new Installer
@@ -198,7 +198,7 @@ func (i *Installer) install() (Manifest, error) {
 		return man, err
 	}
 	i.manc <- man
-	return i.fetcher.Fetch(i.src, i.fs, man)
+	return man, i.fetcher.Fetch(i.src, i.fs, man)
 }
 
 // update will perform the update of an already installed application. It
@@ -219,7 +219,7 @@ func (i *Installer) update() (Manifest, error) {
 		return man, err
 	}
 	i.manc <- man
-	return i.fetcher.Fetch(i.src, i.fs, man)
+	return man, i.fetcher.Fetch(i.src, i.fs, man)
 }
 
 func (i *Installer) delete() (Manifest, error) {

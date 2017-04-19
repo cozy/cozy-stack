@@ -122,6 +122,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + string(fieldsJSON),
 		"COZY_DOMAIN=" + domain,
+		"COZY_JOB_ID=" + jobID,
 	}
 
 	cmdErr, err := cmd.StderrPipe()

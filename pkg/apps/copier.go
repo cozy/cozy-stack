@@ -155,8 +155,11 @@ func newTarCopier(src Copier, name string) Copier {
 }
 
 func (t *tarCopier) Start(slug, version string) (bool, error) {
+	if exists, err := t.src.Start(slug, version); err != nil || exists {
+		return exists, err
+	}
 	fs := afero.NewOsFs()
-	tmp, err := afero.TempFile(fs, "", "")
+	tmp, err := afero.TempFile(fs, "", "konnector-")
 	if err != nil {
 		return false, err
 	}
@@ -164,7 +167,7 @@ func (t *tarCopier) Start(slug, version string) (bool, error) {
 	t.tmp = tmp
 	t.fs = fs
 	t.tw = tw
-	return t.src.Start(slug, version)
+	return false, nil
 }
 
 func (t *tarCopier) Copy(stat os.FileInfo, src io.Reader) error {
@@ -189,6 +192,9 @@ func (t *tarCopier) Close() (err error) {
 			err = errc
 		}
 	}()
+	if t.tw == nil || t.tmp == nil {
+		return nil
+	}
 	if err = t.tw.Flush(); err != nil {
 		return err
 	}
