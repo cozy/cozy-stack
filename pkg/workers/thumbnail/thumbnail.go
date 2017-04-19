@@ -1,4 +1,4 @@
-package workers
+package thumbnail
 
 import (
 	"context"
@@ -32,12 +32,12 @@ func init() {
 		Concurrency:  4,
 		MaxExecCount: 3,
 		Timeout:      10 * time.Second,
-		WorkerFunc:   ThumbnailWorker,
+		WorkerFunc:   Worker,
 	})
 }
 
-// ThumbnailWorker is a worker that creates thumbnails for photos and images.
-func ThumbnailWorker(ctx context.Context, m *jobs.Message) error {
+// Worker is a worker that creates thumbnails for photos and images.
+func Worker(ctx context.Context, m *jobs.Message) error {
 	msg := &imageMessage{}
 	if err := m.Unmarshal(msg); err != nil {
 		return err

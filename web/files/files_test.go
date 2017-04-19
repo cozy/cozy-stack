@@ -17,11 +17,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	_ "github.com/cozy/cozy-stack/pkg/jobs/workers"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+
+	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
 )
 
 var ts *httptest.Server

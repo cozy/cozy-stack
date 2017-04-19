@@ -11,10 +11,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	sharingWorker "github.com/cozy/cozy-stack/pkg/jobs/workers/sharings"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	sharingWorker "github.com/cozy/cozy-stack/pkg/workers/sharings"
 )
 
 // Sharing contains all the information about a sharing
