@@ -82,7 +82,7 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) error {
+func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	log.Debugf("[git] Fetch %s", src.String())
 
 	osFs := afero.NewOsFs()
