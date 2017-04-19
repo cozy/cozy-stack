@@ -66,6 +66,12 @@ func TestListDirPaginated(t *testing.T) {
 
 	assert.Len(t, result.Data.Relationships.Contents.Data, 7)
 	assert.Len(t, result.Included, 7)
+
+	for i, ref := range result.Data.Relationships.Contents.Data {
+		id := result.Included[i].(map[string]interface{})["id"].(string)
+		assert.Equal(t, id, ref.ID)
+	}
+
 	assert.Equal(t, result.Data.Relationships.Contents.Meta.Count, 15)
 	next := result.Data.Relationships.Contents.Links.Next
 	assert.NotEmpty(t, next)

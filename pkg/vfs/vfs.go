@@ -206,7 +206,7 @@ type DocPatch struct {
 // DirOrFileDoc is a union struct of FileDoc and DirDoc. It is useful to
 // unmarshal documents from couch.
 type DirOrFileDoc struct {
-	DirDoc
+	*DirDoc
 
 	// fields from FileDoc not contained in DirDoc
 	ByteSize   int64    `json:"size,string"`
@@ -223,7 +223,7 @@ type DirOrFileDoc struct {
 func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 	switch fd.Type {
 	case consts.DirType:
-		return &fd.DirDoc, nil
+		return fd.DirDoc, nil
 	case consts.FileType:
 		return nil, &FileDoc{
 			Type:        fd.Type,

@@ -53,16 +53,19 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		return err
 	}
 
-	relsData := make([]couchdb.DocReference, len(children))
-	included := make([]jsonapi.Object, len(children))
+	relsData := make([]couchdb.DocReference, 0)
+	included := make([]jsonapi.Object, 0)
 
-	for i, child := range children {
-		relsData[i] = couchdb.DocReference{ID: child.ID(), Type: child.DocType()}
+	for _, child := range children {
+		if child.ID() == consts.TrashDirID {
+			continue
+		}
+		relsData = append(relsData, couchdb.DocReference{ID: child.ID(), Type: child.DocType()})
 		d, f := child.Refine()
 		if d != nil {
-			included[i] = newDir(d)
+			included = append(included, newDir(d))
 		} else {
-			included[i] = newFile(f)
+			included = append(included, newFile(f))
 		}
 	}
 
@@ -98,12 +101,13 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		rel["contents"].Links.Next = next
 	}
 
-	dir := &dir{
+	d := &dir{
 		doc:      doc,
 		rel:      rel,
 		included: included,
 	}
-	return jsonapi.Data(c, statusCode, dir, &links)
+
+	return jsonapi.Data(c, statusCode, d, &links)
 }
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
@@ -125,13 +129,16 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		return err
 	}
 
-	included := make([]jsonapi.Object, len(children))
-	for i, child := range children {
+	included := make([]jsonapi.Object, 0)
+	for _, child := range children {
+		if child.ID() == consts.TrashDirID {
+			continue
+		}
 		d, f := child.Refine()
 		if d != nil {
-			included[i] = newDir(d)
+			included = append(included, newDir(d))
 		} else {
-			included[i] = newFile(f)
+			included = append(included, newFile(f))
 		}
 	}
 
