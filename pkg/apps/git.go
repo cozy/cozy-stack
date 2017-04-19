@@ -133,6 +133,11 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if errc := fs.Close(); errc != nil {
+			err = errc
+		}
+	}()
 	if exists {
 		return man, nil
 	}
@@ -147,7 +152,20 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 		return nil, err
 	}
 
-	if err = g.copyFiles(fs, files); err != nil {
+	err = files.ForEach(func(f *gitObject.File) error {
+		var r io.ReadCloser
+		r, err = f.Reader()
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+		return fs.Copy(&fileInfo{
+			name: f.Name,
+			size: f.Size,
+			mode: os.FileMode(f.Mode),
+		}, r)
+	})
+	if err != nil {
 		return nil, err
 	}
 	return man, nil
@@ -165,26 +183,6 @@ func getWebBranch(src *url.URL) string {
 		return src.Fragment
 	}
 	return "HEAD"
-}
-
-func (g *gitFetcher) copyFiles(fs Copier, files *gitObject.FileIter) (err error) {
-	defer func() {
-		if errc := fs.Close(); errc != nil {
-			err = errc
-		}
-	}()
-	return files.ForEach(func(f *gitObject.File) error {
-		r, err := f.Reader()
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-		return fs.Copy(&fileInfo{
-			name: f.Name,
-			size: f.Size,
-			mode: os.FileMode(f.Mode),
-		}, r)
-	})
 }
 
 func resolveGithubURL(src *url.URL, filename string) (string, error) {
