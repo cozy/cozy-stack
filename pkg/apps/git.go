@@ -82,19 +82,19 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
-func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, error) {
+func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) error {
 	log.Debugf("[git] Fetch %s", src.String())
 
 	osFs := afero.NewOsFs()
 	gitDir, err := afero.TempDir(osFs, "", "cozy-app-"+man.Slug())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer osFs.RemoveAll(gitDir)
 
 	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	branch := getGitBranch(src)
@@ -113,12 +113,12 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 		ReferenceName: gitPlumbing.ReferenceName(branch),
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ref, err := rep.Head()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	slug := man.Slug()
@@ -131,7 +131,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 	// If the application folder already exists, we can bail early.
 	exists, err := fs.Start(slug, version)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer func() {
 		if errc := fs.Close(); errc != nil {
@@ -139,20 +139,20 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 		}
 	}()
 	if exists {
-		return man, nil
+		return nil
 	}
 
 	commit, err := rep.CommitObject(ref.Hash())
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	files, err := commit.Files()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = files.ForEach(func(f *gitObject.File) error {
+	return files.ForEach(func(f *gitObject.File) error {
 		var r io.ReadCloser
 		r, err = f.Reader()
 		if err != nil {
@@ -165,10 +165,6 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (Manifest, err
 			mode: os.FileMode(f.Mode),
 		}, r)
 	})
-	if err != nil {
-		return nil, err
-	}
-	return man, nil
 }
 
 func getGitBranch(src *url.URL) string {
