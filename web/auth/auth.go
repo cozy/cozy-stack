@@ -70,7 +70,7 @@ func addCodeToRedirect(redirect, domain, sessionID string) string {
 // defaultRedirectDomain returns the default URL used for redirection after
 // login actions.
 func defaultRedirectDomain(in *instance.Instance) *url.URL {
-	return in.SubDomain(consts.FilesSlug)
+	return in.SubDomain(consts.DriveSlug)
 }
 
 // SetCookieForNewSession creates a new session and sets the cookie on echo context

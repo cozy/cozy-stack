@@ -41,8 +41,8 @@ const (
 )
 
 const (
-	// FilesSlug is the slug of the default app, files, where the user is redirected after login
-	FilesSlug = "files"
+	// DriveSlug is the slug of the default app, files, where the user is redirected after login
+	DriveSlug = "drive"
 	// OnboardingSlug is the slug of the onboarding app, where the user is redirected when he has no passphrase
 	OnboardingSlug = "onboarding"
 	// StoreSlug is the slug of the only app that can install other apps
@@ -103,7 +103,8 @@ const (
 // TODO remove it when we will have a true registry
 var AppsRegistry = map[string]string{
 	"onboarding": "git://github.com/cozy/cozy-onboarding-v3.git#build",
-	"files":      "git://github.com/cozy/cozy-files-v3.git#build",
+	"files":      "git://github.com/cozy/cozy-drive.git#build",
+	"drive":      "git://github.com/cozy/cozy-drive.git#build",
 	"photos":     "git://github.com/cozy/cozy-photos-v3.git#build",
 	"settings":   "git://github.com/cozy/cozy-settings.git#build",
 }
