@@ -48,18 +48,22 @@ func createRecipient(t *testing.T) (*sharings.Recipient, error) {
 }
 
 func createSharing(t *testing.T, recipient *sharings.Recipient) (*sharings.Sharing, error) {
-	recStatus := &sharings.RecipientStatus{
-		RefRecipient: couchdb.DocReference{
+	var recs []*sharings.RecipientStatus
+	recStatus := new(sharings.RecipientStatus)
+	if recipient != nil {
+		ref := couchdb.DocReference{
 			ID:   recipient.RID,
 			Type: consts.Recipients,
-		},
+		}
+		recStatus.RefRecipient = ref
+		recs = append(recs, recStatus)
 	}
 
 	sharing := &sharings.Sharing{
 		SharingType:      consts.OneShotSharing,
-		RecipientsStatus: []*sharings.RecipientStatus{recStatus},
+		RecipientsStatus: recs,
 	}
-	err := sharings.CreateSharingAndRegisterSharer(testInstance, sharing)
+	err := sharings.CreateSharing(testInstance, sharing)
 	assert.NoError(t, err)
 	return sharing, err
 }
@@ -216,6 +220,40 @@ func TestDeleteDocumentSuccessJSON(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestAddSharingRecipientNoSharing(t *testing.T) {
+	res, err := putJSON(t, "/sharings/fakeid/recipient", echo.Map{})
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestAddSharingRecipientBadRecipient(t *testing.T) {
+	sharing, err := createSharing(t, nil)
+	assert.NoError(t, err)
+	args := echo.Map{
+		"ID":   "fakeid",
+		"Type": "io.cozy.recipients",
+	}
+	url := "/sharings/" + sharing.ID() + "/recipient"
+	res, err := putJSON(t, url, args)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestAddSharingRecipientSuccess(t *testing.T) {
+	recipient, err := createRecipient(t)
+	assert.NoError(t, err)
+	sharing, err := createSharing(t, recipient)
+	assert.NoError(t, err)
+	args := echo.Map{
+		"ID":   recipient.ID(),
+		"Type": "io.cozy.recipients",
+	}
+	url := "/sharings/" + sharing.ID() + "/recipient"
+	res, err := putJSON(t, url, args)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+}
+
 func TestRecipientRefusedSharingWhenThereIsNoState(t *testing.T) {
 	urlVal := url.Values{
 		"state":     {""},
@@ -289,7 +327,7 @@ func TestSharingAnswerBadState(t *testing.T) {
 	assert.Equal(t, 404, res.StatusCode)
 }
 
-func TestAddRecipientNoURL(t *testing.T) {
+func TestCreateRecipientNoURL(t *testing.T) {
 	email := "mailme@maybe"
 	res, err := postJSON(t, "/sharings/recipient", echo.Map{
 		"email": email,
@@ -298,7 +336,7 @@ func TestAddRecipientNoURL(t *testing.T) {
 	assert.Equal(t, 400, res.StatusCode)
 }
 
-func TestAddRecipientSuccess(t *testing.T) {
+func TestCreateRecipientSuccess(t *testing.T) {
 	email := "mailme@maybe"
 	url := strings.Split(ts2.URL, "http://")[1]
 	res, err := postJSON(t, "/sharings/recipient", echo.Map{
@@ -563,6 +601,17 @@ func TestMain(m *testing.M) {
 func postJSON(t *testing.T, path string, v echo.Map) (*http.Response, error) {
 	body, _ := json.Marshal(v)
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path,
+		bytes.NewReader(body))
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+
+	return http.DefaultClient.Do(req)
+}
+
+func putJSON(t *testing.T, path string, v echo.Map) (*http.Response, error) {
+	body, _ := json.Marshal(v)
+	req, err := http.NewRequest(http.MethodPut, ts.URL+path,
 		bytes.NewReader(body))
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
