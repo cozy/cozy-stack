@@ -43,54 +43,58 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 
 	errorOccurred := false
 	for _, rs := range s.RecipientsStatus {
-		// Sanity check: recipient is private.
-		if rs.recipient == nil {
-			rs.recipient, err = GetRecipient(instance, rs.RefRecipient.ID)
-			if err != nil {
-				return err
+
+		// A non-empty status indicates a recipient already treated
+		if rs.Status != "" {
+			// Sanity check: recipient is private.
+			if rs.recipient == nil {
+				rs.recipient, err = GetRecipient(instance, rs.RefRecipient.ID)
+				if err != nil {
+					return err
+				}
 			}
-		}
 
-		// Generate recipient specific OAuth query string.
-		oAuthStr, errOAuth := generateOAuthQueryString(s, rs, instance.Scheme())
-		if errOAuth != nil {
-			errorOccurred = logError(errOAuth)
-			continue
-		}
+			// Generate recipient specific OAuth query string.
+			oAuthStr, errOAuth := generateOAuthQueryString(s, rs, instance.Scheme())
+			if errOAuth != nil {
+				errorOccurred = logError(errOAuth)
+				continue
+			}
 
-		// Generate the base values of the email to send, common to all
-		// recipients: the description and the sharer's public name.
-		sharingMessage, errGenMail := generateMailMessage(s, rs.recipient,
-			&mailTemplateValues{
-				RecipientName:    rs.recipient.Email,
-				SharerPublicName: sharerPublicName,
-				Description:      desc,
-				OAuthQueryString: oAuthStr,
-			},
-		)
-		if errGenMail != nil {
-			errorOccurred = logError(errGenMail)
-			continue
-		}
+			// Generate the base values of the email to send, common to all
+			// recipients: the description and the sharer's public name.
+			sharingMessage, errGenMail := generateMailMessage(s, rs.recipient,
+				&mailTemplateValues{
+					RecipientName:    rs.recipient.Email,
+					SharerPublicName: sharerPublicName,
+					Description:      desc,
+					OAuthQueryString: oAuthStr,
+				},
+			)
+			if errGenMail != nil {
+				errorOccurred = logError(errGenMail)
+				continue
+			}
 
-		// We ask to queue a new mail job.
-		// The returned values (other than the error) are ignored because they
-		// are of no use in this situation.
-		// FI: they correspond to the job information and to a channel with
-		// which we can check the advancement of said job.
-		_, _, errJobs := jobs.GetBroker().PushJob(&jobs.JobRequest{
-			Domain:     instance.Domain,
-			WorkerType: "sendmail",
-			Options:    nil,
-			Message:    sharingMessage,
-		})
-		if errJobs != nil {
-			errorOccurred = logError(errJobs)
-			continue
-		}
+			// We ask to queue a new mail job.
+			// The returned values (other than the error) are ignored because they
+			// are of no use in this situation.
+			// FI: they correspond to the job information and to a channel with
+			// which we can check the advancement of said job.
+			_, _, errJobs := jobs.GetBroker().PushJob(&jobs.JobRequest{
+				Domain:     instance.Domain,
+				WorkerType: "sendmail",
+				Options:    nil,
+				Message:    sharingMessage,
+			})
+			if errJobs != nil {
+				errorOccurred = logError(errJobs)
+				continue
+			}
 
-		// Job was created, we set the status to "pending".
-		rs.Status = consts.PendingSharingStatus
+			// Job was created, we set the status to "pending".
+			rs.Status = consts.PendingSharingStatus
+		}
 	}
 
 	// Persist the modifications in the database.

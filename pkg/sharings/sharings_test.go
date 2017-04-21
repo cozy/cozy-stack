@@ -201,7 +201,7 @@ func createSharing(t *testing.T, sharingType string, docID string, withFile, wit
 		RecipientsStatus: []*RecipientStatus{recStatus},
 	}
 
-	err = CreateSharingAndRegisterSharer(in, sharing)
+	err = CreateSharing(in, sharing)
 	assert.NoError(t, err)
 
 	return sharing, err
@@ -715,13 +715,13 @@ func TestCreateSharingAndRegisterSharer(t *testing.T) {
 	}
 
 	// `SharingType` is wrong.
-	err := CreateSharingAndRegisterSharer(in, sharing)
+	err := CreateSharing(in, sharing)
 	assert.Equal(t, ErrBadSharingType, err)
 
 	// `SharingType` is correct.
 	sharing.SharingType = consts.OneShotSharing
 	// However the recipient is not persisted in the database.
-	err = CreateSharingAndRegisterSharer(in, sharing)
+	err = CreateSharing(in, sharing)
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
 
 	// The CreateSharingAndRegisterSharer scenario that succeeds is already
