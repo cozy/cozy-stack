@@ -333,7 +333,7 @@ By default the `content-disposition` will be `inline`, but it will be
 #### Request
 
 ```http
-GET /files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81 HTTP/1.1
+GET /files/download/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81 HTTP/1.1
 ```
 
 #### Response
