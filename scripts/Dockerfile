@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     libmozjs185-dev \
     openssl \
+    imagemagick \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir /usr/src/couchdb \
   && curl -fsSL "$COUCHDB_SRC_URL" -o couchdb.tar.gz \
