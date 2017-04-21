@@ -23,6 +23,11 @@ XMP définit différentes méthodes pour stocker ce document XML au sein même d
 
 ### Les contacts
 
+Plusieurs formats sont utilisés et ceci peut provoquer des incompatibilités entre differents clients. 
+Google propose par exemple au client les deux types de formats (vcard et csv) 
+(Il prend en charge l'importation de fichiers CSV à partir d'Outlook, d'Outlook Express, de Yahoo! Mail, de Hotmail, d'Eudora et de certaines autres applications. Il prend également en charge l'importation de fichiers vCard à partir d'applications telles que le Carnet d'adresses Apple.)
+Les contacts iCloud sont importés et exportés au format vCard
+
 * vcard est un format standard ouvert d'échange de données personnelles (fichier d’extension .vcf) 
 
 Exemple
@@ -76,7 +81,7 @@ Dans CouchDB, les fichers sont indexés et ont une structure arborescente.
 
 ### Les albums 
 
-* L'album est un fichier dans CouchDB qui va lister les photos qu'il contient.
+* L'album est un document dans CouchDB qui va lister les photos qu'il contient.
 
 
 
