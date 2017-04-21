@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -62,6 +63,33 @@ var cleanInstanceCmd = &cobra.Command{
 	},
 }
 
+var showInstanceCmd = &cobra.Command{
+	Use:   "show [domain]",
+	Short: "Show the instance of the specified domain",
+	Long: `
+cozy-stack instances show allows to show the instance on the cozy for a
+given domain.
+`,
+	Example: "$ cozy-stack instances show cozy.tools:8080",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		in, err := c.GetInstance(domain)
+		if err != nil {
+			return err
+		}
+		json, err := json.MarshalIndent(in, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(json))
+		return nil
+	},
+}
+
 var addInstanceCmd = &cobra.Command{
 	Use:   "add [domain]",
 	Short: "Manage instances of a stack",
@@ -112,6 +140,31 @@ given domain.
 	},
 }
 
+var quotaInstanceCmd = &cobra.Command{
+	Use:   "set-disk-quota [domain] [disk-quota]",
+	Short: "Change the disk-quota of the instance",
+	Long: `
+cozy-stack instances set-disk-quota allows to change the disk-quota of the
+instance of the given domain. Set the quota to 0 to remove the quota.
+`,
+	Example: "$ cozy-stack instances set-disk-quota cozy.tools:8080 3GB",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 2 {
+			return cmd.Help()
+		}
+		diskQuota, err := humanize.ParseBytes(args[1])
+		if err != nil {
+			return fmt.Errorf("Could not parse disk-quota: %s", err)
+		}
+		domain := args[0]
+		c := newAdminClient()
+		_, err = c.ModifyInstance(domain, &client.InstanceOptions{
+			DiskQuota: int64(diskQuota),
+		})
+		return err
+	},
+}
+
 var lsInstanceCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "List instances",
@@ -133,7 +186,7 @@ by this server.
 			} else {
 				dev = "prod"
 			}
-			fmt.Printf("%s\t%s\t%s\n", i.Attrs.Domain, i.Attrs.StorageURL, dev)
+			fmt.Printf("%s\t%s\n", i.Attrs.Domain, dev)
 		}
 
 		return nil
@@ -277,9 +330,11 @@ var oauthClientInstanceCmd = &cobra.Command{
 }
 
 func init() {
+	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
 	instanceCmdGroup.AddCommand(cleanInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
+	instanceCmdGroup.AddCommand(quotaInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)

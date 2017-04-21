@@ -17,12 +17,13 @@ type Instance struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
 	Attrs struct {
-		Domain         string `json:"domain"`
-		Locale         string `json:"locale"`
-		StorageURL     string `json:"storage"`
-		Dev            bool   `json:"dev"`
-		PassphraseHash []byte `json:"passphrase_hash,omitempty"`
-		RegisterToken  []byte `json:"register_token,omitempty"`
+		Domain            string `json:"domain"`
+		Locale            string `json:"locale"`
+		Dev               bool   `json:"dev"`
+		BytesDiskQuota    int64  `json:"disk_quota,string,omitempty"`
+		IndexViewsVersion int    `json:"indexes_version"`
+		PassphraseHash    []byte `json:"passphrase_hash,omitempty"`
+		RegisterToken     []byte `json:"register_token,omitempty"`
 	} `json:"attributes"`
 }
 
@@ -56,6 +57,20 @@ type OAuthClientOptions struct {
 	RedirectURI string
 	ClientName  string
 	SoftwareID  string
+}
+
+// GetInstance returns the instance associated with the specified domain.
+func (c *Client) GetInstance(domain string) (*Instance, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		// TODO replace QueryEscape with PathEscape when we will no longer support
+		// go 1.7
+		Path: "/instances/" + url.QueryEscape(domain),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return readInstance(res)
 }
 
 // CreateInstance is used to create a new cozy instance of the specified domain
@@ -106,6 +121,27 @@ func (c *Client) ListInstances() ([]*Instance, error) {
 		return nil, err
 	}
 	return list, nil
+}
+
+// ModifyInstance is used to update an instance.
+func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance, error) {
+	if !validDomain(domain) {
+		return nil, fmt.Errorf("Invalid domain: %s", domain)
+	}
+	res, err := c.Req(&request.Options{
+		Method: "PATCH",
+		// TODO replace QueryEscape with PathEscape when we will no longer support
+		// go 1.7
+		Path: "/instances/" + url.QueryEscape(domain),
+		Queries: url.Values{
+			"Locale":    {opts.Locale},
+			"DiskQuota": {strconv.FormatInt(opts.DiskQuota, 10)},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return readInstance(res)
 }
 
 // DestroyInstance is used to delete an instance and all its data.

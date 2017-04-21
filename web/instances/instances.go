@@ -87,6 +87,38 @@ func createHandler(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, &apiInstance{in}, nil)
 }
 
+func showHandler(c echo.Context) error {
+	domain := c.Param("domain")
+	i, err := instance.Get(domain)
+	if err != nil {
+		return wrapError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
+}
+
+func modifyHandler(c echo.Context) error {
+	domain := c.Param("domain")
+	i, err := instance.Get(domain)
+	if err != nil {
+		return wrapError(err)
+	}
+	if quota := c.QueryParam("DiskQuota"); quota != "" {
+		var diskQuota int64
+		diskQuota, err = strconv.ParseInt(quota, 10, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		i.BytesDiskQuota = diskQuota
+	}
+	if locale := c.QueryParam("Locale"); locale != "" {
+		i.Locale = locale
+	}
+	if err = instance.Update(i); err != nil {
+		return wrapError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
+}
+
 func listHandler(c echo.Context) error {
 	is, err := instance.List()
 	if err != nil {
@@ -190,6 +222,8 @@ func wrapError(err error) error {
 func Routes(router *echo.Group) {
 	router.GET("", listHandler)
 	router.POST("", createHandler)
+	router.GET("/:domain", showHandler)
+	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
