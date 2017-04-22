@@ -205,7 +205,8 @@ func AddSharingRecipient(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	return wrapErrors(err)
+	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
+
 }
 
 // RecipientRefusedSharing is called when the recipient refused the sharing.
