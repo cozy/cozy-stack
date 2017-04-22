@@ -194,8 +194,9 @@ func AddSharingRecipient(c echo.Context) error {
 	if err = c.Bind(&ref); err != nil {
 		return err
 	}
-	rs := &sharings.RecipientStatus{}
-	rs.RefRecipient = ref
+	rs := &sharings.RecipientStatus{
+		RefRecipient: ref,
+	}
 	sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
 
 	if err = sharings.RegisterRecipient(instance, rs); err != nil {
