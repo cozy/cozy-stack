@@ -89,11 +89,11 @@ var installAppCmd = &cobra.Command{
 }
 
 var updateAppCmd = &cobra.Command{
-	Use:     "update [slug]",
+	Use:     "update [slug] [sourceurl]",
 	Short:   "Update the application with the specified slug name.",
 	Aliases: []string{"upgrade"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
+		if len(args) == 0 || len(args) > 2 {
 			return cmd.Help()
 		}
 		if flagAllDomains {
@@ -114,8 +114,15 @@ var updateAppCmd = &cobra.Command{
 			log.Error(errAppsMissingDomain)
 			return cmd.Help()
 		}
+		var src string
+		if len(args) > 1 {
+			src = args[1]
+		}
 		c := newClient(flagAppsDomain, consts.Apps)
-		app, err := c.UpdateApp(&client.AppOptions{Slug: args[0]})
+		app, err := c.UpdateApp(&client.AppOptions{
+			Slug:      args[0],
+			SourceURL: src,
+		})
 		if err != nil {
 			return err
 		}
