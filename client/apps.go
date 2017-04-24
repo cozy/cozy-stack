@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
@@ -48,15 +49,16 @@ type AppManifest struct {
 
 // AppOptions holds the options to install an application.
 type AppOptions struct {
+	AppType   string
 	Slug      string
 	SourceURL string
 }
 
 // ListApps is used to get the list of all installed applications.
-func (c *Client) ListApps() ([]*AppManifest, error) {
+func (c *Client) ListApps(appType string) ([]*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method: "GET",
-		Path:   "/apps/",
+		Path:   makeAppsPath(appType, ""),
 	})
 	if err != nil {
 		return nil, err
@@ -74,7 +76,7 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 		Method: "POST",
 		// TODO replace QueryEscape with PathEscape when we will no longer support
 		// go 1.7
-		Path:    "/apps/" + url.QueryEscape(opts.Slug),
+		Path:    makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
 		Queries: url.Values{"Source": {opts.SourceURL}},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
@@ -90,7 +92,7 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method:  "PUT",
-		Path:    "/apps/" + url.QueryEscape(opts.Slug),
+		Path:    makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
 		Queries: url.Values{"Source": {opts.SourceURL}},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
@@ -106,12 +108,22 @@ func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method: "DELETE",
-		Path:   "/apps/" + url.QueryEscape(opts.Slug),
+		Path:   makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
 	})
 	if err != nil {
 		return nil, err
 	}
 	return readAppManifest(res)
+}
+
+func makeAppsPath(appType, path string) string {
+	switch appType {
+	case consts.Apps:
+		return "/apps/" + path
+	case consts.Konnectors:
+		return "/konnectors/" + path
+	}
+	panic(fmt.Errorf("Unknown application type %s", appType))
 }
 
 func readAppManifestStream(res *http.Response) (*AppManifest, error) {

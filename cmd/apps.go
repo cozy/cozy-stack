@@ -17,7 +17,7 @@ var errAppsMissingDomain = errors.New("Missing --domain flag")
 var flagAppsDomain string
 var flagAllDomains bool
 
-var appsCmdGroup = &cobra.Command{
+var webappsCmdGroup = &cobra.Command{
 	Use:   "apps [command]",
 	Short: "Interact with the cozy applications",
 	Long: `
@@ -31,156 +31,233 @@ a cozy.
 	},
 }
 
-var installAppCmd = &cobra.Command{
-	Use:     "install [slug] [sourceurl]",
-	Short:   "Install an application with the specified slug name from the given source URL.",
+var installWebappCmd = &cobra.Command{
+	Use: "install [slug] [sourceurl]",
+	Short: `Install an application with the specified slug name
+from the given source URL.`,
 	Example: "$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build'",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
-			return cmd.Help()
-		}
-		slug := args[0]
-		var source string
-		if len(args) == 1 {
-			s, ok := consts.AppsRegistry[slug]
-			if !ok {
-				return cmd.Help()
-			}
-			source = s
-		} else {
-			source = args[1]
-		}
-		if flagAllDomains {
-			return foreachDomains(func(in *client.Instance) error {
-				c := newClient(in.Attrs.Domain, consts.Apps)
-				_, err := c.InstallApp(&client.AppOptions{
-					Slug:      slug,
-					SourceURL: source,
-				})
-				if err != nil {
-					if err.Error() == "Application with same slug already exists" {
-						return nil
-					}
-					return err
-				}
-				log.Infof("Application installed successfully on %s", in.Attrs.Domain)
-				return nil
-			})
-		}
-		if flagAppsDomain == "" {
-			log.Error(errAppsMissingDomain)
-			return cmd.Help()
-		}
-		c := newClient(flagAppsDomain, consts.Apps)
-		app, err := c.InstallApp(&client.AppOptions{
-			Slug:      slug,
-			SourceURL: source,
-		})
-		if err != nil {
-			return err
-		}
-		json, err := json.MarshalIndent(app.Attrs, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(json))
-		return nil
+		return installApp(cmd, args, consts.Apps)
 	},
 }
 
-var updateAppCmd = &cobra.Command{
+var updateWebappCmd = &cobra.Command{
 	Use:     "update [slug] [sourceurl]",
 	Short:   "Update the application with the specified slug name.",
 	Aliases: []string{"upgrade"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 || len(args) > 2 {
-			return cmd.Help()
-		}
-		if flagAllDomains {
-			return foreachDomains(func(in *client.Instance) error {
-				c := newClient(in.Attrs.Domain, consts.Apps)
-				_, err := c.UpdateApp(&client.AppOptions{Slug: args[0]})
-				if err != nil {
-					if err.Error() == "Application is not installed" {
-						return nil
-					}
-					return err
-				}
-				log.Infof("Application updated successfully on %s", in.Attrs.Domain)
-				return nil
-			})
-		}
-		if flagAppsDomain == "" {
-			log.Error(errAppsMissingDomain)
-			return cmd.Help()
-		}
-		var src string
-		if len(args) > 1 {
-			src = args[1]
-		}
-		c := newClient(flagAppsDomain, consts.Apps)
-		app, err := c.UpdateApp(&client.AppOptions{
-			Slug:      args[0],
-			SourceURL: src,
-		})
-		if err != nil {
-			return err
-		}
-		json, err := json.MarshalIndent(app.Attrs, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(json))
-		return nil
+		return updateApp(cmd, args, consts.Apps)
 	},
 }
 
-var uninstallAppCmd = &cobra.Command{
+var uninstallWebappCmd = &cobra.Command{
 	Use:     "uninstall [slug]",
 	Short:   "Uninstall the application with the specified slug name.",
 	Aliases: []string{"rm"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) != 1 {
-			return cmd.Help()
-		}
-		if flagAppsDomain == "" {
-			log.Error(errAppsMissingDomain)
-			return cmd.Help()
-		}
-		c := newClient(flagAppsDomain, consts.Apps)
-		app, err := c.UninstallApp(&client.AppOptions{Slug: args[0]})
-		if err != nil {
-			return err
-		}
-		json, err := json.MarshalIndent(app.Attrs, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(json))
-		return nil
+		return uninstallApp(cmd, args, consts.Apps)
 	},
 }
 
-var lsAppsCmd = &cobra.Command{
+var lsWebappsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "List the installed applications.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if flagAppsDomain == "" {
-			log.Error(errAppsMissingDomain)
+		return lsApps(cmd, args, consts.Apps)
+	},
+}
+
+var konnectorsCmdGroup = &cobra.Command{
+	Use:   "konnectors [command]",
+	Short: "Interact with the cozy applications",
+	Long: `
+cozy-stack konnectors allows to interact with the cozy konnectors.
+
+It provides commands to install or update applications from
+a cozy.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
+var installKonnectorCmd = &cobra.Command{
+	Use: "install [slug] [sourceurl]",
+	Short: `Install an konnector with the specified slug name
+from the given source URL.`,
+	Example: "$ cozy-stack konnectors install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build'",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return installApp(cmd, args, consts.Konnectors)
+	},
+}
+
+var updateKonnectorCmd = &cobra.Command{
+	Use:     "update [slug] [sourceurl]",
+	Short:   "Update the konnector with the specified slug name.",
+	Aliases: []string{"upgrade"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return updateApp(cmd, args, consts.Konnectors)
+	},
+}
+
+var uninstallKonnectorCmd = &cobra.Command{
+	Use:     "uninstall [slug]",
+	Short:   "Uninstall the konnector with the specified slug name.",
+	Aliases: []string{"rm"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return uninstallApp(cmd, args, consts.Konnectors)
+	},
+}
+
+var lsKonnectorsCmd = &cobra.Command{
+	Use:   "ls",
+	Short: "List the installed konnectors.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return lsApps(cmd, args, consts.Konnectors)
+	},
+}
+
+func installApp(cmd *cobra.Command, args []string, appType string) error {
+	if len(args) < 1 {
+		return cmd.Help()
+	}
+	slug := args[0]
+	var source string
+	if len(args) == 1 {
+		s, ok := consts.AppsRegistry[slug]
+		if !ok {
 			return cmd.Help()
 		}
-		c := newClient(flagAppsDomain, consts.Apps)
-		// TODO(pagination)
-		apps, err := c.ListApps()
-		if err != nil {
-			return err
-		}
-		for _, app := range apps {
-			fmt.Printf("%s\t%s\t%s\n",
-				app.Attrs.Slug, app.Attrs.Source, app.Attrs.State)
-		}
-		return nil
-	},
+		source = s
+	} else {
+		source = args[1]
+	}
+	if flagAllDomains {
+		return foreachDomains(func(in *client.Instance) error {
+			c := newClient(in.Attrs.Domain, appType)
+			_, err := c.InstallApp(&client.AppOptions{
+				AppType:   appType,
+				Slug:      slug,
+				SourceURL: source,
+			})
+			if err != nil {
+				if err.Error() == "Application with same slug already exists" {
+					return nil
+				}
+				return err
+			}
+			log.Infof("Application installed successfully on %s", in.Attrs.Domain)
+			return nil
+		})
+	}
+	if flagAppsDomain == "" {
+		log.Error(errAppsMissingDomain)
+		return cmd.Help()
+	}
+	c := newClient(flagAppsDomain, appType)
+	app, err := c.InstallApp(&client.AppOptions{
+		AppType:   appType,
+		Slug:      slug,
+		SourceURL: source,
+	})
+	if err != nil {
+		return err
+	}
+	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
+func updateApp(cmd *cobra.Command, args []string, appType string) error {
+	if len(args) == 0 || len(args) > 2 {
+		return cmd.Help()
+	}
+	var src string
+	if len(args) > 1 {
+		src = args[1]
+	}
+	if flagAllDomains {
+		return foreachDomains(func(in *client.Instance) error {
+			c := newClient(in.Attrs.Domain, appType)
+			_, err := c.UpdateApp(&client.AppOptions{
+				AppType:   appType,
+				Slug:      args[0],
+				SourceURL: src,
+			})
+			if err != nil {
+				if err.Error() == "Application is not installed" {
+					return nil
+				}
+				return err
+			}
+			log.Infof("Application updated successfully on %s", in.Attrs.Domain)
+			return nil
+		})
+	}
+	if flagAppsDomain == "" {
+		log.Error(errAppsMissingDomain)
+		return cmd.Help()
+	}
+	c := newClient(flagAppsDomain, appType)
+	app, err := c.UpdateApp(&client.AppOptions{
+		AppType:   appType,
+		Slug:      args[0],
+		SourceURL: src,
+	})
+	if err != nil {
+		return err
+	}
+	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
+func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
+	if len(args) != 1 {
+		return cmd.Help()
+	}
+	if flagAppsDomain == "" {
+		log.Error(errAppsMissingDomain)
+		return cmd.Help()
+	}
+	c := newClient(flagAppsDomain, appType)
+	app, err := c.UninstallApp(&client.AppOptions{
+		AppType: appType,
+		Slug:    args[0],
+	})
+	if err != nil {
+		return err
+	}
+	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
+func lsApps(cmd *cobra.Command, args []string, appType string) error {
+	if flagAppsDomain == "" {
+		log.Error(errAppsMissingDomain)
+		return cmd.Help()
+	}
+	c := newClient(flagAppsDomain, appType)
+	// TODO(pagination)
+	apps, err := c.ListApps(appType)
+	if err != nil {
+		return err
+	}
+	for _, app := range apps {
+		fmt.Printf("%s\t%s\t%s\n",
+			app.Attrs.Slug, app.Attrs.Source, app.Attrs.State)
+	}
+	return nil
 }
 
 func foreachDomains(predicate func(*client.Instance) error) error {
@@ -204,13 +281,22 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 }
 
 func init() {
-	appsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
-	appsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
+	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 
-	appsCmdGroup.AddCommand(lsAppsCmd)
-	appsCmdGroup.AddCommand(installAppCmd)
-	appsCmdGroup.AddCommand(updateAppCmd)
-	appsCmdGroup.AddCommand(uninstallAppCmd)
+	webappsCmdGroup.AddCommand(lsWebappsCmd)
+	webappsCmdGroup.AddCommand(installWebappCmd)
+	webappsCmdGroup.AddCommand(updateWebappCmd)
+	webappsCmdGroup.AddCommand(uninstallWebappCmd)
 
-	RootCmd.AddCommand(appsCmdGroup)
+	konnectorsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
+	konnectorsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+
+	konnectorsCmdGroup.AddCommand(lsKonnectorsCmd)
+	konnectorsCmdGroup.AddCommand(installKonnectorCmd)
+	konnectorsCmdGroup.AddCommand(updateKonnectorCmd)
+	konnectorsCmdGroup.AddCommand(uninstallKonnectorCmd)
+
+	RootCmd.AddCommand(webappsCmdGroup)
+	RootCmd.AddCommand(konnectorsCmdGroup)
 }
