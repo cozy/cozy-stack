@@ -106,7 +106,13 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		}
 		src, err = url.Parse(opts.SourceURL)
 	case Update, Delete:
-		src, err = url.Parse(man.Source())
+		var srcString string
+		if opts.SourceURL == "" {
+			srcString = man.Source()
+		} else {
+			srcString = opts.SourceURL
+		}
+		src, err = url.Parse(srcString)
 	}
 	if err != nil {
 		return nil, err
