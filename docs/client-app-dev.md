@@ -78,8 +78,8 @@ You can also expose the couchdb port (listening in the container on 5984) in ord
 
 Make sure you application is built into `$HOME/myapp` (it should have an
 `index.html` and a `manifest.webapp` files), otherwise it will not work. As an
-example, for the [Files application](https://github.com/cozy/cozy-files-v3/),
-it should be `$HOME/files/build`.
+example, for the [Drive application](https://github.com/cozy/cozy-drive/),
+it should be `$HOME/drive/build`.
 
 If you want to use several applications (for testing the intents for example),
 you can mount several directories inside `/data/cozy-app` like this:
