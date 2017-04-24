@@ -155,9 +155,8 @@ var uninstallAppCmd = &cobra.Command{
 }
 
 var lsAppsCmd = &cobra.Command{
-	Use:     "ls",
-	Short:   "List the installed applications.",
-	Aliases: []string{"rm"},
+	Use:   "ls",
+	Short: "List the installed applications.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagAppsDomain == "" {
 			log.Error(errAppsMissingDomain)
