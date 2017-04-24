@@ -186,7 +186,7 @@ If more than one service match the intent's criteria, the stack returns the list
 
 The client may also decide to let the user choose one of the services. To do this, it should start another intent with a `PICK` action and a `io.cozy.apps` `type`. This intent should be resolved by the stack to a special page, in order to avoid having multiple services trying to handle it and ending up in a loop.
 
-This special page is a service like any other; it expects the list of services to pick from as input data, and will return the one that has been picked to the client. The client can than proceed with the first intent.
+This special page is a service like any other; it expects the list of services to pick from as input data, and will return the one that has been picked to the client. The client can then proceed with the first intent.
 
 The user may decide to abort the intent before picking a service. If that is the case, the choice page will need to inform the client that the intent was aborted.
 
