@@ -35,7 +35,6 @@ func (man *apiApp) MarshalJSON() ([]byte, error) {
 
 // Links is part of the Manifest interface
 func (man *apiApp) Links() *jsonapi.LinksList {
-
 	var route string
 	links := jsonapi.LinksList{}
 	switch man.DocType() {
@@ -136,6 +135,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			&apps.InstallerOptions{
 				Operation: apps.Update,
 				Type:      installerType,
+				SourceURL: c.QueryParam("Source"),
 				Slug:      slug,
 			},
 		)

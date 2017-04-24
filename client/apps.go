@@ -89,8 +89,9 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 // UpdateApp is used to update an application.
 func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
-		Method: "PUT",
-		Path:   "/apps/" + url.QueryEscape(opts.Slug),
+		Method:  "PUT",
+		Path:    "/apps/" + url.QueryEscape(opts.Slug),
+		Queries: url.Values{"Source": {opts.SourceURL}},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
 		},

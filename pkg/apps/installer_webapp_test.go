@@ -330,6 +330,34 @@ func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
 	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), "branch"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The good branch was checked out")
+
+	doUpgrade(5)
+
+	inst, err = NewInstaller(db, fs, &InstallerOptions{
+		Operation: Update,
+		Type:      Webapp,
+		Slug:      "local-cozy-mini-branch",
+		SourceURL: "git://localhost/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	man, err = inst.RunSync()
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, "git://localhost/", man.Source())
+
+	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), WebappManifestName))
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest is present")
+	ok, err = afero.FileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), WebappManifestName), []byte("5.0.0"))
+	assert.NoError(t, err)
+	assert.True(t, ok, "The manifest has the right version")
+	ok, err = afero.Exists(baseFS, path.Join("/", man.Slug(), man.Version(), "branch"))
+	assert.NoError(t, err)
+	assert.False(t, ok, "The good branch was checked out")
 }
 
 func TestWebappInstallFromGithub(t *testing.T) {
