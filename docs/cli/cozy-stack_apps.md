@@ -37,6 +37,7 @@ cozy-stack apps [command]
 ### SEE ALSO
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack apps install](cozy-stack_apps_install.md)	 - Install an application with the specified slug name from the given source URL.
+* [cozy-stack apps ls](cozy-stack_apps_ls.md)	 - List the installed applications.
 * [cozy-stack apps uninstall](cozy-stack_apps_uninstall.md)	 - Uninstall the application with the specified slug name.
 * [cozy-stack apps update](cozy-stack_apps_update.md)	 - Update the application with the specified slug name.
 

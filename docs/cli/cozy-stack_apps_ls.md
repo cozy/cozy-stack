@@ -1,20 +1,14 @@
-## cozy-stack apps install
+## cozy-stack apps ls
 
-Install an application with the specified slug name from the given source URL.
+List the installed applications.
 
 ### Synopsis
 
 
-Install an application with the specified slug name from the given source URL.
+List the installed applications.
 
 ```
-cozy-stack apps install [slug] [sourceurl]
-```
-
-### Examples
-
-```
-$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build'
+cozy-stack apps ls
 ```
 
 ### Options inherited from parent commands
