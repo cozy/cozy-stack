@@ -575,6 +575,17 @@ func TrashHandler(c echo.Context) error {
 		return err
 	}
 
+	var rev string
+	if dir != nil {
+		rev = dir.Rev()
+	} else {
+		rev = file.Rev()
+	}
+
+	if err := checkIfMatch(c, rev); err != nil {
+		return wrapVfsError(err)
+	}
+
 	if dir != nil {
 		doc, errt := vfs.TrashDir(instance.VFS(), dir)
 		if errt != nil {

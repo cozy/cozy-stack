@@ -214,6 +214,11 @@ Content-Type: application/vnd.api+json
 
 Put a directory and its subtree in the trash.
 
+#### HTTP headers
+
+It's possible to send the `If-Match` header, with the previous revision of the
+file/directory (optional).
+
 
 ## Files
 
