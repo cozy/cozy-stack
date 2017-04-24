@@ -34,9 +34,13 @@ cozy-stack instances [command]
 ### SEE ALSO
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack instances add](cozy-stack_instances_add.md)	 - Manage instances of a stack
+* [cozy-stack instances clean](cozy-stack_instances_clean.md)	 - Clean badly removed instances
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
+* [cozy-stack instances set-disk-quota](cozy-stack_instances_set-disk-quota.md)	 - Change the disk-quota of the instance
+* [cozy-stack instances show](cozy-stack_instances_show.md)	 - Show the instance of the specified domain
 * [cozy-stack instances token-app](cozy-stack_instances_token-app.md)	 - Generate a new application token
+* [cozy-stack instances token-cli](cozy-stack_instances_token-cli.md)	 - Generate a new CLI access token (global access)
 * [cozy-stack instances token-oauth](cozy-stack_instances_token-oauth.md)	 - Generate a new OAuth access token
 
