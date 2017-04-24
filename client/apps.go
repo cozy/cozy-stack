@@ -52,11 +52,28 @@ type AppOptions struct {
 	SourceURL string
 }
 
+// ListApps is used to get the list of all installed applications.
+func (c *Client) ListApps() ([]*AppManifest, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   "/apps/",
+	})
+	if err != nil {
+		return nil, err
+	}
+	var mans []*AppManifest
+	if err := readJSONAPI(res.Body, &mans, nil); err != nil {
+		return nil, err
+	}
+	return mans, nil
+}
+
 // InstallApp is used to install an application.
 func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method: "POST",
-		// TODO replace QueryEscape with PathEscape when we will no longer support go 1.7
+		// TODO replace QueryEscape with PathEscape when we will no longer support
+		// go 1.7
 		Path:    "/apps/" + url.QueryEscape(opts.Slug),
 		Queries: url.Values{"Source": {opts.SourceURL}},
 		Headers: request.Headers{

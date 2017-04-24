@@ -154,6 +154,29 @@ var uninstallAppCmd = &cobra.Command{
 	},
 }
 
+var lsAppsCmd = &cobra.Command{
+	Use:     "ls",
+	Short:   "List the installed applications.",
+	Aliases: []string{"rm"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagAppsDomain == "" {
+			log.Error(errAppsMissingDomain)
+			return cmd.Help()
+		}
+		c := newClient(flagAppsDomain, consts.Apps)
+		// TODO(pagination)
+		apps, err := c.ListApps()
+		if err != nil {
+			return err
+		}
+		for _, app := range apps {
+			fmt.Printf("%s\t%s\t%s\n",
+				app.Attrs.Slug, app.Attrs.Source, app.Attrs.State)
+		}
+		return nil
+	},
+}
+
 func foreachDomains(predicate func(*client.Instance) error) error {
 	c := newAdminClient()
 	// TODO(pagination): Make this iteration more robust
@@ -178,6 +201,7 @@ func init() {
 	appsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
 	appsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 
+	appsCmdGroup.AddCommand(lsAppsCmd)
 	appsCmdGroup.AddCommand(installAppCmd)
 	appsCmdGroup.AddCommand(updateAppCmd)
 	appsCmdGroup.AddCommand(uninstallAppCmd)
