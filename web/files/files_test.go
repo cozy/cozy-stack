@@ -1254,6 +1254,43 @@ func TestFileTrash(t *testing.T) {
 	if !assert.Equal(t, 400, res4.StatusCode) {
 		return
 	}
+
+	res5, data2 := upload(t, "/files/?Type=file&Name=totrashfile2", "text/plain", body, "UmfjCVWct/albVkURcJJfg==")
+	if !assert.Equal(t, 201, res5.StatusCode) {
+		return
+	}
+
+	fileID, v2 := extractDirData(t, data2)
+	meta2 := v2["meta"].(map[string]interface{})
+	rev2 := meta2["rev"].(string)
+
+	req6, err := http.NewRequest("DELETE", ts.URL+"/files/"+fileID, nil)
+	req6.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+
+	req6.Header.Add("If-Match", "badrev")
+	res6, err := http.DefaultClient.Do(req6)
+	assert.NoError(t, err)
+	assert.Equal(t, 412, res6.StatusCode)
+
+	res7, err := httpGet(ts.URL + "/files/download?Path=" + url.QueryEscape(vfs.TrashDirName+"/totrashfile"))
+	if !assert.NoError(t, err) || !assert.Equal(t, 200, res7.StatusCode) {
+		return
+	}
+
+	req8, err := http.NewRequest("DELETE", ts.URL+"/files/"+fileID, nil)
+	req8.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	assert.NoError(t, err)
+
+	req8.Header.Add("If-Match", rev2)
+	res8, err := http.DefaultClient.Do(req8)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res8.StatusCode)
+
+	res9, _ := trash(t, "/files/"+fileID)
+	if !assert.Equal(t, 400, res9.StatusCode) {
+		return
+	}
 }
 
 func TestFileRestore(t *testing.T) {
