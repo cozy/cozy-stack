@@ -128,7 +128,7 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 
 // Register asks the recipient to register the sharer as a new OAuth client.
 //
-// To register the sharer must provide the following information:
+// The following information must be provided to register:
 // - redirect uri: where the recipient must answer the sharing request. Our
 //		protocol forces this field to be: "sharerdomain/sharings/answer".
 // - client name: the sharer's public name.
@@ -144,11 +144,6 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		rs.recipient = r
 	}
 
-	// We require the recipient to be persisted in the database.
-	if rs.recipient.RID == "" {
-		return ErrRecipientDoesNotExist
-	}
-
 	// If the recipient has no URL there is no point in registering.
 	if rs.recipient.URL == "" {
 		return ErrRecipientHasNoURL
@@ -161,9 +156,8 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-
-	sharerPublicName, _ := doc.M["public_name"].(string)
-	if sharerPublicName == "" {
+	publicName, _ := doc.M["public_name"].(string)
+	if publicName == "" {
 		return ErrPublicNameNotDefined
 	}
 
@@ -173,7 +167,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 	// We have all we need to register an OAuth client.
 	authClient := &auth.Client{
 		RedirectURIs: []string{redirectURI},
-		ClientName:   sharerPublicName,
+		ClientName:   publicName,
 		ClientKind:   "sharing",
 		SoftwareID:   "github.com/cozy/cozy-stack",
 		ClientURI:    clientURI,

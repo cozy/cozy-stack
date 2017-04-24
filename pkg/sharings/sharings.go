@@ -41,8 +41,9 @@ type Sharing struct {
 // recipient specific. The `ClientID` is different for each recipient and only
 // known by them.
 type Sharer struct {
-	ClientID string `json:"client_id"`
-	URL      string `json:"url"`
+	ClientID     string           `json:"client_id"`
+	URL          string           `json:"url"`
+	SharerStatus *RecipientStatus `json:"sharer_status"`
 }
 
 // SharingAnswer contains the necessary information to answer a sharing
@@ -423,6 +424,24 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 		rs.Status = consts.MailNotSentSharingStatus
 	}
 	return err
+}
+
+// RegisterSharer registers the sharer for master-master sharing
+func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
+	// The sharer is a recipient from this point of view
+	rec := &Recipient{
+		URL: sharing.Sharer.URL,
+	}
+	rs := &RecipientStatus{
+		recipient: rec,
+	}
+	err := rs.Register(instance)
+	if err != nil {
+		log.Error("[sharing] Could not register at "+rec.URL+" ", err)
+		rs.Status = consts.UnregisteredSharingStatus
+	}
+	sharing.Sharer.SharerStatus = rs
+	return couchdb.UpdateDoc(instance, sharing)
 }
 
 // CreateSharing checks the sharing, creates the document in
