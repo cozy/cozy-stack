@@ -56,22 +56,22 @@ ENV MAILHOG_VERSION 0.2.1
 ENV MAILHOG_SRC_URL https://github.com/mailhog/MailHog/releases/download/v$MAILHOG_VERSION/MailHog_linux_amd64
 ENV MAILHOG_SRC_SHA256 25b3cd56e7a1042b695fed8b32808eef778eafa8fb6bd583dde90a8fc2877e0e
 
+RUN curl -fsSL "$MAILHOG_SRC_URL" -o /usr/bin/MailHog \
+  && echo "$MAILHOG_SRC_SHA256  /usr/bin/MailHog" | sha256sum -c -
+
 # cozy-stack
 ENV COZY_STACK_HOST cozy.tools
 ENV COZY_STACK_PORT 8080
 ENV COZY_STACK_PATH cozy-stack
 
-COPY cozy-app-dev.sh cozy-stack /usr/bin/
-RUN curl -fsSL "$MAILHOG_SRC_URL" -o /usr/bin/MailHog \
-  && echo "$MAILHOG_SRC_SHA256  /usr/bin/MailHog" | sha256sum -c - \
-  && chmod +x /usr/bin/cozy-app-dev.sh /usr/bin/cozy-stack /usr/bin/MailHog \
+COPY ./cozy-app-dev.sh ./cozy-stack /usr/bin/
+COPY ./docker-entrypoint.sh /
+
+RUN chmod +x /docker-entrypoint.sh \
+              /usr/bin/cozy-app-dev.sh \
+              /usr/bin/cozy-stack \
+              /usr/bin/MailHog \
   && mkdir -p /data/cozy-app && mkdir -p /data/cozy-storage
 
 EXPOSE 8080 8025 5984
-
-CMD couchdb 2>/dev/null 1>/dev/null & \
-    MailHog 2>/dev/null 1>/dev/null & \
-    echo "0.0.0.0 cozy.tools" >> /etc/hosts && \
-    /usr/bin/cozy-app-dev.sh \
-      -d /data/cozy-app \
-      -f /data/cozy-storage
+ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -195,6 +195,7 @@ do_docker_dev_image() {
 	trap 'trap - SIGTERM && rm -rf "${docker_work_dir}" > /dev/null -- -${$}' SIGINT SIGTERM EXIT
 
 	cp "${WORK_DIR}/scripts/Dockerfile" "${docker_work_dir}"
+	cp "${WORK_DIR}/scripts/docker-entrypoint.sh" "${docker_work_dir}"
 	cp "${WORK_DIR}/scripts/cozy-app-dev.sh" "${docker_work_dir}"
 
 	export GOOS=linux
