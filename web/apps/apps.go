@@ -234,26 +234,40 @@ func writeStream(w http.ResponseWriter, event string, b string) {
 	}
 }
 
-// listHandler handles all GET / requests which can be used to list
+// listWebappsHandler handles all GET / requests which can be used to list
 // installed applications.
-func listHandler(c echo.Context) error {
+func listWebappsHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Apps); err != nil {
 		return err
 	}
-
 	docs, err := apps.ListWebapps(instance)
 	if err != nil {
 		return wrapAppsError(err)
 	}
-
 	objs := make([]jsonapi.Object, len(docs))
 	for i, d := range docs {
 		d.Instance = instance
 		objs[i] = &apiApp{d}
 	}
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
 
+// listKonnectorsHandler handles all GET / requests which can be used to list
+// installed applications.
+func listKonnectorsHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Konnectors); err != nil {
+		return err
+	}
+	docs, err := apps.ListKonnectors(instance)
+	if err != nil {
+		return wrapAppsError(err)
+	}
+	objs := make([]jsonapi.Object, len(docs))
+	for i, d := range docs {
+		objs[i] = &apiApp{d}
+	}
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
@@ -284,7 +298,7 @@ func iconHandler(c echo.Context) error {
 
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
-	router.GET("/", listHandler)
+	router.GET("/", listWebappsHandler)
 	router.POST("/:slug", installHandler(apps.Webapp))
 	router.PUT("/:slug", updateHandler(apps.Webapp))
 	router.DELETE("/:slug", deleteHandler(apps.Webapp))
@@ -293,6 +307,7 @@ func WebappsRoutes(router *echo.Group) {
 
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
+	router.GET("/", listKonnectorsHandler)
 	router.POST("/:slug", installHandler(apps.Konnector))
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))
