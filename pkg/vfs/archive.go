@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -19,10 +18,9 @@ const ZipMime = "application/zip"
 
 // Archive is the data to create a zip archive
 type Archive struct {
-	Name      string    `json:"name"`
-	Secret    string    `json:"-"`
-	ExpiresAt time.Time `json:"expires_at"`
-	Files     []string  `json:"files"`
+	Name   string   `json:"name"`
+	Secret string   `json:"-"`
+	Files  []string `json:"files"`
 
 	// archiveEntries cache
 	entries []ArchiveEntry
