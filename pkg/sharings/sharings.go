@@ -451,10 +451,7 @@ func SendClientID(instance *instance.Instance, sharing *Sharing) error {
 		ClientID:     sharing.Sharer.SharerStatus.HostClientID,
 		HostClientID: newClientID,
 	}
-	if err = Request("POST", domain, path, params); err != nil {
-		return err
-	}
-	return nil
+	return Request("POST", domain, path, params)
 }
 
 // Request is a utility method to send request to remote sharing party
