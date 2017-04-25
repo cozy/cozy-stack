@@ -71,14 +71,18 @@ type Dir struct {
 // directory
 type DirOrFile File
 
-// FilePatch is the structure used to modify file or directory metadata
-type FilePatch struct {
+type FilePatchAttrs struct {
 	Name       string    `json:"name,omitempty"`
 	DirID      string    `json:"dir_id,omitempty"`
 	Tags       []string  `json:"tags,omitempty"`
 	UpdatedAt  time.Time `json:"updated_at,omitempty"`
 	Executable bool      `json:"executable,omitempty"`
-	Rev        string    `json:"-"`
+}
+
+// FilePatch is the structure used to modify file or directory metadata
+type FilePatch struct {
+	Rev   string         `json:"-"`
+	Attrs FilePatchAttrs `json:"attributes"`
 }
 
 // GetFileByID returns a File given the specified ID
@@ -242,7 +246,7 @@ func (c *Client) UpdateAttrsByID(id, rev string, patch *FilePatch) (*DirOrFile, 
 		return nil, err
 	}
 	res, err := c.Req(&request.Options{
-		Method:  "PUT",
+		Method:  "PATCH",
 		Path:    "/files/" + id,
 		Body:    body,
 		Queries: url.Values{"rev": {rev}},
@@ -265,7 +269,7 @@ func (c *Client) UpdateAttrsByPath(name string, patch *FilePatch) (*DirOrFile, e
 		headers["If-Match"] = patch.Rev
 	}
 	res, err := c.Req(&request.Options{
-		Method:  "PUT",
+		Method:  "PATCH",
 		Path:    "/files/metadata",
 		Headers: headers,
 		Body:    body,
@@ -285,8 +289,10 @@ func (c *Client) Move(from, to string) error {
 		return err
 	}
 	_, err = c.UpdateAttrsByPath(from, &FilePatch{
-		DirID: doc.ID,
-		Name:  path.Base(to),
+		Attrs: FilePatchAttrs{
+			DirID: doc.ID,
+			Name:  path.Base(to),
+		},
 	})
 	return err
 }

@@ -23,8 +23,8 @@ type jsonAPIErrors struct {
 
 // jsonAPIDocument is a simple JSONAPI document used to un-serialized
 type jsonAPIDocument struct {
-	Data     json.RawMessage `json:"data"`
-	Included json.RawMessage `json:"included"`
+	Data     *json.RawMessage `json:"data"`
+	Included *json.RawMessage `json:"included"`
 }
 
 // Client encapsulates the element representing a typical connection to the
@@ -166,12 +166,12 @@ func readJSONAPI(r io.Reader, data interface{}, included interface{}) (err error
 		return err
 	}
 	if data != nil {
-		if err = json.Unmarshal(doc.Data, &data); err != nil {
+		if err = json.Unmarshal(*doc.Data, &data); err != nil {
 			return err
 		}
 	}
 	if included != nil && doc.Included != nil {
-		if err = json.Unmarshal(doc.Included, &included); err != nil {
+		if err = json.Unmarshal(*doc.Included, &included); err != nil {
 			return err
 		}
 	}
@@ -184,7 +184,9 @@ func writeJSONAPI(data interface{}) (io.Reader, error) {
 		return nil, err
 	}
 
-	doc := jsonAPIDocument{Data: buf}
+	doc := jsonAPIDocument{
+		Data: (*json.RawMessage)(&buf),
+	}
 	buf, err = json.Marshal(doc)
 	if err != nil {
 		return nil, err
