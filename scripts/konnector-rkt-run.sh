@@ -6,7 +6,7 @@ uuid_file="${1}/.rkt/uuid"
 
 node_image="$(dirname ${0})/nodeslim.aci"
 
-echo "COZY_DOMAIN=${COZY_DOMAIN}" > "${env_file}"
+echo "COZY_URL=${COZY_URL}" > "${env_file}"
 echo "COZY_FIELDS=${COZY_FIELDS}" >> "${env_file}"
 echo "COZY_CREDENTIALS=${COZY_CREDENTIALS}" >> "${env_file}"
 
