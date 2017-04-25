@@ -71,6 +71,8 @@ type Dir struct {
 // directory
 type DirOrFile File
 
+// FilePatchAttrs is the attributes in the JSON-API structure for modifying the
+// metadata of a file or directory
 type FilePatchAttrs struct {
 	Name       string    `json:"name,omitempty"`
 	DirID      string    `json:"dir_id,omitempty"`
