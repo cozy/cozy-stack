@@ -119,9 +119,9 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	konnCmd := config.GetConfig().Konnectors.Cmd
 	cmd := exec.CommandContext(ctx, konnCmd, workDir) // #nosec
 	cmd.Env = []string{
+		"COZY_URL=" + inst.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + string(fieldsJSON),
-		"COZY_DOMAIN=" + domain,
 		"COZY_JOB_ID=" + jobID,
 	}
 
