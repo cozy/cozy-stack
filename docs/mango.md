@@ -132,7 +132,7 @@ If the limit cause some docs to not be returned, the response will have a
 {
     "limit": 100,
     "next": true,
-    "docs": [ "... first hundred docs ..."],
+    "docs": [ "... first hundred docs ..."]
 }
 ```
 
@@ -142,7 +142,7 @@ If the number of docs is lower or equal to the limit, next will be false
 {
     "limit": 100,
     "next": false,
-    "docs": [ "... less than a hundred docs ..."],
+    "docs": [ "... less than a hundred docs ..."]
 }
 ```
 
@@ -153,18 +153,21 @@ To paginate, the client should keep track of the value of the last index field.
 Index on io.cozy.events with fields `["calendar", "date"]`
 
 Try to get all events for a month :
-```
-selector: {"calendar": "my-calendar",
- "date": {$gt:"20161001", $lt:"20161030"}
+
+```json
+selector: {
+  "calendar": "my-calendar",
+  "date": { "$gt": "20161001", "$lt": "20161030" }
 }
 ```
 
 If there is less than 100 events, the response `next` field will be false and there is nothing more to do. If there is more than 100 events for this month, we have a `next=true` in the response.
 
-To keep iterating, we can take the date from the last item we received in the results and use it as next request $gte
+To keep iterating, we can take the date from the last item we received in the results and use it as next request `$gte`
 
-```
-selector: {"calendar": "my-calendar",
- "date": {$gte:"20161023", $lt:"20161030"}
+```json
+selector: {
+  "calendar": "my-calendar",
+  "date": { "$gte" :"20161023", "$lt": "20161030" }
 }
 ```
