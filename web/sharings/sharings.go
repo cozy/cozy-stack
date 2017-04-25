@@ -124,10 +124,12 @@ func SharingRequest(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-
 	// Particular case for master-master: register the sharer
 	if sharingType == consts.MasterMasterSharing {
 		if err = sharings.RegisterSharer(instance, sharing); err != nil {
+			return err
+		}
+		if err = sharings.SendClientID(instance, sharing); err != nil {
 			return err
 		}
 	}
@@ -255,6 +257,29 @@ func RecipientRefusedSharing(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
+// ReceiveClientID receives an OAuth ClientID in a master-master context.
+// This is called from a recipient, after he registered himself to the sharer.
+// The received clientID is called a HostClientID, as it refers to a client
+// created by the sharer, i.e. the host here.
+func ReceiveClientID(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	p := &sharings.SharingRequestParams{}
+	if err := c.Bind(p); err != nil {
+		return err
+	}
+	sharing, rec, err := sharings.FindSharingRecipient(instance, p.SharingID, p.ClientID)
+	if err != nil {
+		return err
+	}
+	rec.HostClientID = p.HostClientID
+	err = couchdb.UpdateDoc(instance, sharing)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, nil)
+}
+
 // receiveDocument stores a shared document in the Cozy.
 //
 // If the document to store is a "io.cozy.files" our custom handler will be
@@ -327,6 +352,7 @@ func Routes(router *echo.Group) {
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", CreateRecipient)
+	router.POST("/access/client", ReceiveClientID)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)

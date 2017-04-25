@@ -2,7 +2,7 @@ package sharings
 
 import (
 	"net/http"
-	"strings"
+	"net/url"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -30,6 +30,9 @@ type RecipientStatus struct {
 	// information she needs to send to authenticate.
 	Client      *auth.Client
 	AccessToken *auth.AccessToken
+
+	// The OAuth ClientID refering to the host's client stored in its db
+	HostClientID string
 }
 
 // ID returns the recipient qualified identifier
@@ -55,10 +58,11 @@ func (r *Recipient) ExtractDomain() (string, error) {
 	if r.URL == "" {
 		return "", ErrRecipientHasNoURL
 	}
-	if tokens := strings.Split(r.URL, "://"); len(tokens) > 1 {
-		return tokens[1], nil
+	u, err := url.Parse(r.URL)
+	if err != nil {
+		return "", err
 	}
-	return r.URL, nil
+	return u.Host, nil
 }
 
 // CreateRecipient inserts a Recipient document in database. Email and URL must
