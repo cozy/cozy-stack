@@ -620,7 +620,7 @@ func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error
 		patch.Tags = data.Tags
 	}
 
-	if patch.UpdatedAt == nil {
+	if patch.UpdatedAt == nil || patch.UpdatedAt.Unix() < 0 {
 		patch.UpdatedAt = data.UpdatedAt
 	}
 
