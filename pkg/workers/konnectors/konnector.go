@@ -158,6 +158,7 @@ func doScanOut(jobID string, scanner *bufio.Scanner, hub realtime.Hub) {
 		err := json.Unmarshal(scanner.Bytes(), &doc.M)
 		if err != nil {
 			log.Warnf("[konnector] %s: Could not parse Stdout as JSON: %s", jobID, err)
+			log.Warnf("[konnector] %s: Stdout: %s", jobID, scanner.Text())
 			continue
 		}
 		hub.Publish(&realtime.Event{
