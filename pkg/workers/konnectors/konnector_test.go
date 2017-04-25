@@ -88,7 +88,7 @@ func TestSuccess(t *testing.T) {
 
 	script := `#!/bin/bash
 
-echo "{\"COZY_DOMAIN\":\"${COZY_DOMAIN}\", \"COZY_CREDENTIALS\":\"${COZY_CREDENTIALS}\"}"
+echo "{\"COZY_URL\":\"${COZY_URL}\", \"COZY_CREDENTIALS\":\"${COZY_CREDENTIALS}\"}"
 echo "${COZY_FIELDS}"
 echo "bad json"
 echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
@@ -145,7 +145,7 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 		doc3 := ev3.Doc.(couchdb.JSONDoc)
 		assert.Equal(t, inst.Domain, ev1.Instance)
 		assert.Equal(t, inst.Domain, ev2.Instance)
-		assert.Equal(t, inst.Domain, doc1.M["COZY_DOMAIN"])
+		assert.Equal(t, inst.PageURL("/", nil), doc1.M["COZY_URL"])
 		assert.Equal(t, account, doc2.M["account"])
 
 		man := doc3.M["Manifest"].(string)
