@@ -23,7 +23,7 @@ var webappsCmdGroup = &cobra.Command{
 	Long: `
 cozy-stack apps allows to interact with the cozy applications.
 
-It provides commands to install or update applications from
+It provides commands to install or update applications on
 a cozy.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -73,7 +73,7 @@ var konnectorsCmdGroup = &cobra.Command{
 	Long: `
 cozy-stack konnectors allows to interact with the cozy konnectors.
 
-It provides commands to install or update applications from
+It provides commands to install or update applications on
 a cozy.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -85,7 +85,7 @@ var installKonnectorCmd = &cobra.Command{
 	Use: "install [slug] [sourceurl]",
 	Short: `Install an konnector with the specified slug name
 from the given source URL.`,
-	Example: "$ cozy-stack konnectors install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build'",
+	Example: "$ cozy-stack konnectors install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-konnector-trainline.git#build'",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return installApp(cmd, args, consts.Konnectors)
 	},
