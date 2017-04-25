@@ -19,19 +19,19 @@ url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.2.0/dist/cozy-c
 sha256  786a048897a8d4cd7e8607eb58dcf388e8ab4602d75600754a342a79f349cd3f
 
 name    ./js/cozy-bar.min.js
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta17/dist/cozy-bar.min.js
-sha256  20df3bf1bfc88010bf1fde6d921b57ab28fc89f912df45835dd542cdf6584924
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta19/dist/cozy-bar.min.js
+sha256  059af59e102b4a62432d3d7b276bca3b5a77a42002490d001c46970778d8b45c
 
 name    ./js/cozy-bar.min.js.map
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta17/dist/cozy-bar.min.js.map
-sha256  a33c098216038e192c81d8e915c1a536cdee260072f217fc137766d435c5b924
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta19/dist/cozy-bar.min.js.map
+sha256  fdacb9bd930d35e3319d485c4b6b011f43225610b33c21286c6e3f576dd4933a
 
 name    ./css/cozy-bar.min.css
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta17/dist/cozy-bar.min.css
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta19/dist/cozy-bar.min.css
 sha256  9c91c86af3891ce41ac57e7b89b1152646976928b15687a5521767e013cf1a37
 
 name    ./css/cozy-bar.min.css.map
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta17/dist/cozy-bar.min.css.map
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta19/dist/cozy-bar.min.css.map
 sha256  461ce5ccc61564581b897a7c38290ee19a72c3044232da54d32edbd45ccf11dc
 
 name    ./fonts/fontawesome-webfont.woff2
