@@ -11,6 +11,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/ncw/swift"
 )
@@ -26,7 +27,7 @@ type swiftVFS struct {
 	container string
 	version   string
 	versionOk bool
-	mu        vfs.Locker
+	mu        lock.ErrorRWLocker
 }
 
 // InitConnection should be used to initialize the connection to the
@@ -49,7 +50,7 @@ func InitConnection(fsURL *url.URL) (err error) {
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
-func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, domain string) (vfs.VFS, error) {
 	if conn == nil {
 		return nil, errors.New("vfsswift: global connection is not initialized")
 	}
@@ -69,7 +70,10 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, domain stri
 }
 
 func (sfs *swiftVFS) InitFs() error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	if err := sfs.Indexer.InitIndex(); err != nil {
 		return err
@@ -89,7 +93,10 @@ func (sfs *swiftVFS) InitFs() error {
 }
 
 func (sfs *swiftVFS) Delete() error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	err := sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		objNames, err := sfs.c.ObjectNames(sfs.container, opts)
@@ -106,7 +113,10 @@ func (sfs *swiftVFS) Delete() error {
 }
 
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	objName := doc.DirID + "/" + doc.DocName
 	_, _, err := sfs.c.Object(sfs.container, objName)
@@ -136,7 +146,10 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 }
 
 func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return nil, lockerr
+	}
 	defer sfs.mu.Unlock()
 
 	diskQuota := sfs.DiskQuota()
@@ -206,19 +219,28 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 }
 
 func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	return sfs.destroyDirContent(doc)
 }
 
 func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	return sfs.destroyDirAndContent(doc)
 }
 
 func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	return sfs.destroyFile(doc)
 }
@@ -290,7 +312,10 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 //
 // @override Indexer.UpdateFileDoc
 func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
 		err := sfs.c.ObjectMove(
@@ -309,7 +334,10 @@ func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 //
 // @override Indexer.UpdateDirDoc
 func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
-	sfs.mu.Lock()
+	lockerr := sfs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer sfs.mu.Unlock()
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
 		err := sfs.c.ObjectMove(
@@ -458,7 +486,10 @@ func (f *swiftFileCreation) Close() (err error) {
 		return f.fs.Indexer.CreateNamedFileDoc(newdoc)
 	}
 
-	f.fs.mu.Lock()
+	lockerr := f.fs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer f.fs.mu.Unlock()
 	err = f.fs.Indexer.UpdateFileDoc(olddoc, newdoc)
 	// If we reach a conflict error, the document has been modified while

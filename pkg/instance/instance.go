@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -141,7 +142,7 @@ func (i *Instance) VFS() vfs.VFS {
 
 func (i *Instance) makeVFS() error {
 	fsURL := config.FsURL()
-	mutex := vfs.NewMemLock(i.Domain)
+	mutex := lock.ReadWrite(i.Domain)
 	index := vfs.NewCouchdbIndexer(i)
 	disk := vfs.DiskThresholder(i)
 	var err error
