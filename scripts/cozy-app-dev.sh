@@ -74,25 +74,26 @@ do_start() {
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
 
-	if [ -f "${appdir}/manifest.webapp" ]; then
-		slug="app"
-	else
-		appsdir=""
-		for i in ${appdir}/*; do
-			if [ -f "${i}/manifest.webapp" ]; then
-				appsdir="${appsdir},$(basename "$i"):${i}"
+	if [ -n "${appdir}" ]; then
+		if [ -f "${appdir}/manifest.webapp" ]; then
+			slug="app"
+		else
+			appsdir=""
+			for i in ${appdir}/*; do
+				if [ -f "${i}/manifest.webapp" ]; then
+					appsdir="${appsdir},$(basename "$i"):${i}"
+				fi
+				if [ -z "$slug" ]; then
+					slug=$(basename "$i")
+				fi
+			done
+			if [ -z "${appsdir}" ]; then
+				echo_err "No manifest found in ${appdir}"
+				exit 1
 			fi
-			if [ -z "$slug" ]; then
-				slug=$(basename "$i")
-			fi
-		done
-		if [ -z "${appsdir}" ]; then
-			echo_err "No manifest found in ${appdir}"
-			exit 1
+			appdir=${appsdir:1}
 		fi
-		appdir=${appsdir:1}
 	fi
-
 
 	echo "starting cozy-stack with ${vfsdir}..."
 
@@ -236,14 +237,8 @@ while getopts ":hud:f:v:" optname; do
 	esac
 done
 
-if [ -z "${appdir}" ]; then
-	echo_err "Missing application directory argument -d"
-	echo_err "Type ${0} -h"
-	exit 1
-fi
-
-if [ ! -d "${appdir}" ]; then
-	echo_err "Application directory ${1} does not exit"
+if [ -n "${appdir}" ] && [ ! -d "${appdir}" ]; then
+	echo_err "Application directory ${appdir} does not exit"
 	exit 1
 fi
 
@@ -251,8 +246,8 @@ if [ -z "${vfsdir}" ]; then
 	vfsdir="$(pwd)/storage"
 fi
 
-appdir=$(real_path "${appdir}")
-vfsdir=$(real_path "${vfsdir}")
+[ -n "${appdir}" ] && appdir=$(real_path "${appdir}")
+[ -n "${vfsdir}" ] && vfsdir=$(real_path "${vfsdir}")
 
 do_start
 exit 0
