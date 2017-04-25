@@ -1,22 +1,22 @@
-## cozy-stack apps install
+## cozy-stack konnectors install
 
-Install an application with the specified slug name
+Install an konnector with the specified slug name
 from the given source URL.
 
 ### Synopsis
 
 
-Install an application with the specified slug name
+Install an konnector with the specified slug name
 from the given source URL.
 
 ```
-cozy-stack apps install [slug] [sourceurl]
+cozy-stack konnectors install [slug] [sourceurl]
 ```
 
 ### Examples
 
 ```
-$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build'
+$ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github.com/cozy/cozy-konnector-trainline.git#build'
 ```
 
 ### Options inherited from parent commands
@@ -33,5 +33,5 @@ $ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/
 ```
 
 ### SEE ALSO
-* [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
+* [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 

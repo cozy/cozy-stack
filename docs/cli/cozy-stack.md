@@ -33,6 +33,7 @@ cozy-stack
 * [cozy-stack doc](cozy-stack_doc.md)	 - Print the documentation
 * [cozy-stack files](cozy-stack_files.md)	 - Interact with the cozy filesystem
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
+* [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 * [cozy-stack serve](cozy-stack_serve.md)	 - Starts the stack and listens for HTTP calls
 * [cozy-stack status](cozy-stack_status.md)	 - Check if the HTTP server is running
 * [cozy-stack version](cozy-stack_version.md)	 - Print the version number

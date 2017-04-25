@@ -1,4 +1,4 @@
-## cozy-stack apps
+## cozy-stack konnectors
 
 Interact with the cozy applications
 
@@ -6,14 +6,14 @@ Interact with the cozy applications
 
 
 
-cozy-stack apps allows to interact with the cozy applications.
+cozy-stack konnectors allows to interact with the cozy konnectors.
 
 It provides commands to install or update applications on
 a cozy.
 
 
 ```
-cozy-stack apps [command]
+cozy-stack konnectors [command]
 ```
 
 ### Options
@@ -36,9 +36,9 @@ cozy-stack apps [command]
 
 ### SEE ALSO
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
-* [cozy-stack apps install](cozy-stack_apps_install.md)	 - Install an application with the specified slug name
+* [cozy-stack konnectors install](cozy-stack_konnectors_install.md)	 - Install an konnector with the specified slug name
 from the given source URL.
-* [cozy-stack apps ls](cozy-stack_apps_ls.md)	 - List the installed applications.
-* [cozy-stack apps uninstall](cozy-stack_apps_uninstall.md)	 - Uninstall the application with the specified slug name.
-* [cozy-stack apps update](cozy-stack_apps_update.md)	 - Update the application with the specified slug name.
+* [cozy-stack konnectors ls](cozy-stack_konnectors_ls.md)	 - List the installed konnectors.
+* [cozy-stack konnectors uninstall](cozy-stack_konnectors_uninstall.md)	 - Uninstall the konnector with the specified slug name.
+* [cozy-stack konnectors update](cozy-stack_konnectors_update.md)	 - Update the konnector with the specified slug name.
 
