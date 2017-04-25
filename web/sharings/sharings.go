@@ -2,7 +2,6 @@ package sharings
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -127,10 +126,10 @@ func SharingRequest(c echo.Context) error {
 	// Particular case for master-master: register the sharer
 	if sharingType == consts.MasterMasterSharing {
 		if err = sharings.RegisterSharer(instance, sharing); err != nil {
-			return err
+			return wrapErrors(err)
 		}
 		if err = sharings.SendClientID(instance, sharing); err != nil {
-			return err
+			return wrapErrors(err)
 		}
 	}
 
@@ -214,9 +213,6 @@ func AddSharingRecipient(c echo.Context) error {
 	if err = sharings.SendSharingMails(instance, sharing); err != nil {
 		return wrapErrors(err)
 	}
-	fmt.Printf("add recipient ok\n")
-	fmt.Printf("sharing : %+v\n", sharing)
-
 	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 
 }
@@ -270,7 +266,7 @@ func ReceiveClientID(c echo.Context) error {
 	}
 	sharing, rec, err := sharings.FindSharingRecipient(instance, p.SharingID, p.ClientID)
 	if err != nil {
-		return err
+		return wrapErrors(err)
 	}
 	rec.HostClientID = p.HostClientID
 	err = couchdb.UpdateDoc(instance, sharing)
