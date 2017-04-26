@@ -145,6 +145,24 @@ func TestSuccessGet(t *testing.T) {
 	}
 }
 
+func TestGetWithSlash(t *testing.T) {
+
+	couchdb.CreateNamedDoc(testInstance, &couchdb.JSONDoc{
+		Type: Type, M: map[string]interface{}{
+			"_id":  "with/slash",
+			"test": "valueslash",
+		}})
+
+	req, _ := http.NewRequest("GET", ts.URL+"/data/"+Type+"/with%2Fslash", nil)
+	req.Header.Add("Authorization", "Bearer "+token)
+	out, res, err := doRequest(req, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "200 OK", res.Status, "should get a 200")
+	if assert.Contains(t, out, "test") {
+		assert.Equal(t, out["test"], "valueslash", "should give the same doc")
+	}
+}
+
 func TestWrongDoctype(t *testing.T) {
 
 	couchdb.DeleteDB(testInstance, "io.cozy.nottype")
