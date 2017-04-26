@@ -3,6 +3,7 @@ package data
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -22,6 +23,14 @@ func ValidDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 			return jsonapi.NewError(http.StatusBadRequest, "Invalid doctype '%s'", doctype)
 		}
 		c.Set("doctype", doctype)
+
+		docidraw := c.Param("docid")
+		docid, err := url.QueryUnescape(docidraw)
+		if err != nil {
+			return jsonapi.NewError(http.StatusBadRequest, "Invalid docid '%s'", docid)
+		}
+		c.Set("docid", docid)
+
 		return next(c)
 	}
 }
@@ -57,7 +66,7 @@ func allDoctypes(c echo.Context) error {
 func getDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	docid := c.Param("docid")
+	docid := c.Get("docid").(string)
 
 	if err := CheckReadable(doctype); err != nil {
 		return err
@@ -161,12 +170,12 @@ func UpdateDoc(c echo.Context) error {
 			"You must either provide an _id and _rev in document (update) or neither (create with fixed id).")
 	}
 
-	if doc.ID() != "" && doc.ID() != c.Param("docid") {
+	if doc.ID() != "" && doc.ID() != c.Get("docid").(string) {
 		return jsonapi.NewError(http.StatusBadRequest, "document _id doesnt match url")
 	}
 
 	if doc.ID() == "" {
-		doc.SetID(c.Param("docid"))
+		doc.SetID(c.Get("docid").(string))
 		return createNamedDoc(c, doc)
 	}
 
@@ -211,7 +220,7 @@ func UpdateDoc(c echo.Context) error {
 func DeleteDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	docid := c.Param("docid")
+	docid := c.Get("docid").(string)
 	revHeader := c.Request().Header.Get("If-Match")
 	revQuery := c.QueryParam("rev")
 	rev := ""
