@@ -72,6 +72,17 @@ func HammerRWMutex(locker ErrorRWLocker, gomaxprocs, numReaders, iterations int)
 	}
 }
 
+func HammerMutex(m ErrorLocker, loops int, cdone chan bool) {
+	for i := 0; i < loops; i++ {
+		err := m.Lock()
+		if err != nil {
+			panic(err)
+		}
+		m.Unlock()
+	}
+	cdone <- true
+}
+
 var n = 1000
 
 func TestMemLock(t *testing.T) {
@@ -96,10 +107,6 @@ func TestMemLock(t *testing.T) {
 
 func TestRedisLock(t *testing.T) {
 
-	// Skipping because the current simpleWriteLock implementation
-	// does not pass RWMutex tests
-	t.SkipNow()
-
 	c := config.GetConfig()
 	backConfig := c.Lock
 	c.Lock = config.Lock{URL: "redis://localhost:6379/0"}
@@ -107,16 +114,14 @@ func TestRedisLock(t *testing.T) {
 	defer func() { c.Lock = backConfig }()
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
 	l := ReadWrite("test-redis")
-	HammerRWMutex(l, 1, 1, n)
-	HammerRWMutex(l, 1, 3, n)
-	HammerRWMutex(l, 1, 10, n)
-	HammerRWMutex(l, 4, 1, n)
-	HammerRWMutex(l, 4, 3, n)
-	HammerRWMutex(l, 4, 10, n)
-	HammerRWMutex(l, 10, 1, n)
-	HammerRWMutex(l, 10, 3, n)
-	HammerRWMutex(l, 10, 10, n)
-	HammerRWMutex(l, 10, 5, n)
+	// @TODO use HammerRWMutex when redisLock is RW lock
+	done := make(chan bool)
+	for i := 0; i < 10; i++ {
+		go HammerMutex(l, n, done)
+	}
+	for i := 0; i < 10; i++ {
+		<-done
+	}
 }
 
 func TestMain(m *testing.M) {
