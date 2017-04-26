@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -83,6 +84,12 @@ func init() {
 
 	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
 	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
+
+	flags.Int("jobs-workers", runtime.NumCPU(), "Number of parallel workers (0 to disable the processing of jobs)")
+	checkNoErr(viper.BindPFlag("jobs.workers", flags.Lookup("jobs-workers")))
+
+	flags.String("jobs-url", "", "URL for the jobs system synchronization, redis or in-memory")
+	checkNoErr(viper.BindPFlag("jobs.url", flags.Lookup("jobs-url")))
 
 	flags.String("konnectors-cmd", "", "konnectors command to be executed")
 	checkNoErr(viper.BindPFlag("konnectors.cmd", flags.Lookup("konnectors-cmd")))

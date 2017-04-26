@@ -1,4 +1,4 @@
-package jobs
+package scheduler
 
 import (
 	"encoding/json"

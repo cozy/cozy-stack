@@ -1,9 +1,10 @@
-package jobs
+package scheduler
 
 import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/robfig/cron"
 )
 
@@ -60,20 +61,20 @@ func (c *CronTrigger) ID() string {
 // Valid implements the permissions.Validable interface
 func (c *CronTrigger) Valid(key, value string) bool {
 	switch key {
-	case WorkerType:
+	case jobs.WorkerType:
 		return c.infos.WorkerType == value
 	}
 	return false
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (c *CronTrigger) Schedule() <-chan *JobRequest {
-	ch := make(chan *JobRequest)
+func (c *CronTrigger) Schedule() <-chan *jobs.JobRequest {
+	ch := make(chan *jobs.JobRequest)
 	go func() {
 		for next := time.Now(); true; next = c.sched.Next(next) {
 			select {
 			case <-time.After(-time.Since(next)):
-				ch <- &JobRequest{
+				ch <- &jobs.JobRequest{
 					Domain:     c.infos.Domain,
 					WorkerType: c.infos.WorkerType,
 					Message:    c.infos.Message,
@@ -88,8 +89,8 @@ func (c *CronTrigger) Schedule() <-chan *JobRequest {
 	return ch
 }
 
-func (c *CronTrigger) trigger(ch chan *JobRequest) {
-	ch <- &JobRequest{
+func (c *CronTrigger) trigger(ch chan *jobs.JobRequest) {
+	ch <- &jobs.JobRequest{
 		Domain:     c.infos.Domain,
 		WorkerType: c.infos.WorkerType,
 		Message:    c.infos.Message,

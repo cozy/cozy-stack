@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
@@ -167,7 +168,7 @@ func TestMain(m *testing.M) {
 
 	setup = testutils.NewSetup(m, "share_data_test")
 
-	err := jobs.StartSystem()
+	err := stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

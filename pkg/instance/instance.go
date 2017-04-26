@@ -20,7 +20,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/settings"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -380,13 +382,13 @@ func Create(opts *Options) (*Instance, error) {
 	if err := i.defineViewsAndIndex(); err != nil {
 		return nil, err
 	}
-	scheduler := jobs.GetScheduler()
+	sched := stack.GetScheduler()
 	for _, trigger := range Triggers(i.Domain) {
-		t, err := jobs.NewTrigger(&trigger)
+		t, err := scheduler.NewTrigger(&trigger)
 		if err != nil {
 			return nil, err
 		}
-		if err = scheduler.Add(t); err != nil {
+		if err = sched.Add(t); err != nil {
 			return nil, err
 		}
 	}
@@ -568,7 +570,7 @@ func (i *Instance) RequestPassphraseReset() error {
 	if err != nil {
 		return err
 	}
-	_, _, err = jobs.GetBroker().PushJob(&jobs.JobRequest{
+	_, _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
 		Domain:     i.Domain,
 		WorkerType: "sendmail",
 		Message:    msg,

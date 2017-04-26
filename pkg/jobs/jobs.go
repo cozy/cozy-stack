@@ -31,11 +31,6 @@ const (
 	WorkerType = "worker"
 )
 
-var (
-	broker    Broker
-	scheduler Scheduler
-)
-
 type (
 	// Queue interface is used to represent an asynchronous queue of jobs from
 	// which it is possible to enqueue and consume jobs.
@@ -135,49 +130,6 @@ type (
 		Timeout      time.Duration `json:"timeout"`
 		RetryDelay   time.Duration `json:"retry_delay"`
 	}
-
-	// Scheduler interface is used to represent a scheduler that is responsible
-	// to listen respond to triggers jobs requests and send them to the broker.
-	Scheduler interface {
-		Start(broker Broker) error
-		Add(trigger Trigger) error
-		Get(domain, id string) (Trigger, error)
-		Delete(domain, id string) error
-		GetAll(domain string) ([]Trigger, error)
-	}
-
-	// Trigger interface is used to represent a trigger.
-	Trigger interface {
-		permissions.Validable
-		Type() string
-		Infos() *TriggerInfos
-		// Schedule should return a channel on which the trigger can send job
-		// requests when it decides to.
-		Schedule() <-chan *JobRequest
-		// Unschedule should be used to clean the trigger states and should close
-		// the returns jobs channel.
-		Unschedule()
-	}
-
-	// TriggerStorage interface is used to represent a persistent layer on which
-	// triggers are stored.
-	TriggerStorage interface {
-		GetAll() ([]*TriggerInfos, error)
-		Add(trigger Trigger) error
-		Delete(trigger Trigger) error
-	}
-
-	// TriggerInfos is a struct containing all the options of a trigger.
-	TriggerInfos struct {
-		ID         string      `json:"_id,omitempty"`
-		Rev        string      `json:"_rev,omitempty"`
-		Domain     string      `json:"domain"`
-		Type       string      `json:"type"`
-		WorkerType string      `json:"worker"`
-		Arguments  string      `json:"arguments"`
-		Options    *JobOptions `json:"options"`
-		Message    *Message    `json:"message"`
-	}
 )
 
 // ID implements the permissions.Validable interface
@@ -196,49 +148,6 @@ func (jr *JobRequest) Valid(key, value string) bool {
 }
 
 var _ permissions.Validable = (*JobRequest)(nil)
-
-// StartSystem starts the job system, and instantiate the the broker and
-// scheduler globals.
-func StartSystem() error {
-	broker = newMemBroker(GetWorkersList())
-	scheduler = newMemScheduler(NewTriggerCouchStorage())
-	return scheduler.Start(broker)
-}
-
-// GetScheduler returns the global job scheduler.
-func GetScheduler() Scheduler {
-	if scheduler == nil {
-		panic("Job system not initialized")
-	}
-	return scheduler
-}
-
-// GetBroker returns the global job broker.
-func GetBroker() Broker {
-	if broker == nil {
-		panic("Job system not initialized")
-	}
-	return broker
-}
-
-// NewTrigger creates the trigger associates with the specified trigger
-// options.
-func NewTrigger(infos *TriggerInfos) (Trigger, error) {
-	switch infos.Type {
-	case "@at":
-		return NewAtTrigger(infos)
-	case "@in":
-		return NewInTrigger(infos)
-	case "@cron":
-		return NewCronTrigger(infos)
-	case "@every":
-		return NewEveryTrigger(infos)
-	case "@event":
-		return NewEventTrigger(infos)
-	default:
-		return nil, ErrUnknownTrigger
-	}
-}
 
 // NewJobInfos creates a new JobInfos instance from a job request.
 func NewJobInfos(req *JobRequest) *JobInfos {

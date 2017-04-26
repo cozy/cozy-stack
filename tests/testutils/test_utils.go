@@ -14,9 +14,9 @@ import (
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/labstack/echo"
@@ -101,7 +101,7 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if c.inst != nil {
 		return c.inst
 	}
-	err := jobs.StartSystem()
+	err := stack.Start()
 	if err != nil {
 		c.CleanupAndDie("Error while starting job system", err)
 	}
