@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
@@ -81,7 +82,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			// are of no use in this situation.
 			// FI: they correspond to the job information and to a channel with
 			// which we can check the advancement of said job.
-			_, _, errJobs := jobs.GetBroker().PushJob(&jobs.JobRequest{
+			_, _, errJobs := stack.GetBroker().PushJob(&jobs.JobRequest{
 				Domain:     instance.Domain,
 				WorkerType: "sendmail",
 				Options:    nil,

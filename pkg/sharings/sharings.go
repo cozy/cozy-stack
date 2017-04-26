@@ -15,6 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/scheduler"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	sharingWorker "github.com/cozy/cozy-stack/pkg/workers/sharings"
 )
@@ -157,7 +159,7 @@ func findSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 
 // addTrigger creates a new trigger on the updates of the shared documents
 func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string) error {
-	scheduler := jobs.GetScheduler()
+	sched := stack.GetScheduler()
 
 	var eventArgs string
 	if rule.Selector != "" {
@@ -174,7 +176,7 @@ func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	if err != nil {
 		return err
 	}
-	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+	t, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
 		Type:       "@event",
 		WorkerType: "sharingupdates",
 		Domain:     instance.Domain,
@@ -187,7 +189,7 @@ func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	if err != nil {
 		return err
 	}
-	return scheduler.Add(t)
+	return sched.Add(t)
 }
 
 // ShareDoc shares the documents specified in the Sharing structure to the
@@ -259,7 +261,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			if err != nil {
 				return err
 			}
-			_, _, err = jobs.GetBroker().PushJob(&jobs.JobRequest{
+			_, _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
 				Domain:     instance.Domain,
 				WorkerType: "sharedata",
 				Options:    nil,

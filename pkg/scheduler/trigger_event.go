@@ -1,8 +1,9 @@
-package jobs
+package scheduler
 
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
@@ -47,7 +48,7 @@ func (t *EventTrigger) ID() string {
 // Valid implements the permissions.Validable interface
 func (t *EventTrigger) Valid(key, value string) bool {
 	switch key {
-	case WorkerType:
+	case jobs.WorkerType:
 		return t.infos.WorkerType == value
 	}
 	return false
@@ -74,20 +75,20 @@ func (t *EventTrigger) interestedBy(e *realtime.Event) bool {
 	return false
 }
 
-func addEventToMessage(e *realtime.Event, base *Message) (*Message, error) {
+func addEventToMessage(e *realtime.Event, base *jobs.Message) (*jobs.Message, error) {
 	var basemsg interface{}
 	if base != nil {
 		base.Unmarshal(&basemsg)
 	}
-	return NewMessage(JSONEncoding, map[string]interface{}{
+	return jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
 		"message": basemsg,
 		"event":   e,
 	})
 }
 
 // Schedule implements the Schedule method of the Trigger interface.
-func (t *EventTrigger) Schedule() <-chan *JobRequest {
-	ch := make(chan *JobRequest)
+func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
+	ch := make(chan *jobs.JobRequest)
 	go func() {
 		c := realtime.InstanceHub(t.infos.Domain).Subscribe(t.mask.Type)
 		for {
@@ -99,7 +100,7 @@ func (t *EventTrigger) Schedule() <-chan *JobRequest {
 						log.Error(err)
 						continue
 					}
-					ch <- &JobRequest{
+					ch <- &jobs.JobRequest{
 						Domain:     t.infos.Domain,
 						WorkerType: t.infos.WorkerType,
 						Message:    msg,

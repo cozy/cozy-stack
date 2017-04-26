@@ -1,4 +1,4 @@
-package jobs
+package scheduler
 
 import (
 	"context"
@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
-func makeMessage(t *testing.T, msg string) *Message {
-	out, err := NewMessage("json", msg)
+func makeMessage(t *testing.T, msg string) *jobs.Message {
+	out, err := jobs.NewMessage("json", msg)
 	assert.NoError(t, err)
 	return out
 }
@@ -23,12 +24,12 @@ func TestTriggerEvent(t *testing.T) {
 	var wg sync.WaitGroup
 	var called = make(map[string]bool)
 
-	bro := newMemBroker(WorkersList{
+	bro := jobs.NewMemBroker(jobs.WorkersList{
 		"worker_event": {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *Message) error {
+			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
 				defer wg.Done()
 				var msg struct {
 					Message string
@@ -91,7 +92,7 @@ func TestTriggerEvent(t *testing.T) {
 		},
 	}}
 	wg.Add(3)
-	sch := newMemScheduler(storage)
+	sch := NewMemScheduler(storage)
 	sch.Start(bro)
 
 	time.AfterFunc(1*time.Millisecond, func() {

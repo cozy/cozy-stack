@@ -9,6 +9,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/scheduler"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -37,7 +39,7 @@ type (
 		workerType string
 	}
 	apiTrigger struct {
-		t jobs.Trigger
+		t scheduler.Trigger
 	}
 	apiTriggerRequest struct {
 		Type            string           `json:"type"`
@@ -99,7 +101,7 @@ func (t *apiTrigger) MarshalJSON() ([]byte, error) {
 
 func getQueue(c echo.Context) error {
 	workerType := c.Param("worker-type")
-	count, err := jobs.GetBroker().QueueLen(workerType)
+	count, err := stack.GetBroker().QueueLen(workerType)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -136,7 +138,7 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, ch, err := jobs.GetBroker().PushJob(jr)
+	job, ch, err := stack.GetBroker().PushJob(jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -162,13 +164,13 @@ func pushJob(c echo.Context) error {
 
 func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := jobs.GetScheduler()
+	sched := stack.GetScheduler()
 	req := &apiTriggerRequest{}
 	if _, err := jsonapi.Bind(c.Request(), &req); err != nil {
 		return wrapJobsError(err)
 	}
 
-	t, err := jobs.NewTrigger(&jobs.TriggerInfos{
+	t, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
 		Type:       req.Type,
 		WorkerType: req.WorkerType,
 		Domain:     instance.Domain,
@@ -187,7 +189,7 @@ func newTrigger(c echo.Context) error {
 		return err
 	}
 
-	if err = scheduler.Add(t); err != nil {
+	if err = sched.Add(t); err != nil {
 		return wrapJobsError(err)
 	}
 	return jsonapi.Data(c, http.StatusCreated, &apiTrigger{t}, nil)
@@ -195,8 +197,8 @@ func newTrigger(c echo.Context) error {
 
 func getTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := jobs.GetScheduler()
-	t, err := scheduler.Get(instance.Domain, c.Param("trigger-id"))
+	sched := stack.GetScheduler()
+	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -208,15 +210,15 @@ func getTrigger(c echo.Context) error {
 
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := jobs.GetScheduler()
-	t, err := scheduler.Get(instance.Domain, c.Param("trigger-id"))
+	sched := stack.GetScheduler()
+	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
 	}
 	if err := permissions.Allow(c, permissions.DELETE, t); err != nil {
 		return err
 	}
-	if err := scheduler.Delete(instance.Domain, c.Param("trigger-id")); err != nil {
+	if err := sched.Delete(instance.Domain, c.Param("trigger-id")); err != nil {
 		return wrapJobsError(err)
 	}
 	return c.NoContent(http.StatusNoContent)
@@ -224,11 +226,11 @@ func deleteTrigger(c echo.Context) error {
 
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	scheduler := jobs.GetScheduler()
+	sched := stack.GetScheduler()
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
 		return err
 	}
-	ts, err := scheduler.GetAll(instance.Domain)
+	ts, err := sched.GetAll(instance.Domain)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -271,9 +273,9 @@ func wrapJobsError(err error) error {
 	switch err {
 	case jobs.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
-	case jobs.ErrNotFoundTrigger:
+	case scheduler.ErrNotFoundTrigger:
 		return jsonapi.NotFound(err)
-	case jobs.ErrUnknownTrigger:
+	case scheduler.ErrUnknownTrigger:
 		return jsonapi.InvalidAttribute("Type", err)
 	}
 	return err
