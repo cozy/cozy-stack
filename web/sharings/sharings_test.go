@@ -587,6 +587,33 @@ func TestReceiveClientIDSuccess(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 }
 
+func TestGetAccessTokenMissingState(t *testing.T) {
+	res, err := postJSON(t, "/sharings/access/code", echo.Map{
+		"state": "",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestGetAccessTokenMissingCode(t *testing.T) {
+	sharing, err := createSharing(t, nil)
+	assert.NoError(t, err)
+	res, err := postJSON(t, "/sharings/access/code", echo.Map{
+		"state": sharing.SharingID,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 500, res.StatusCode)
+}
+
+func TestGetAccessTokenBadState(t *testing.T) {
+	res, err := postJSON(t, "/sharings/access/code", echo.Map{
+		"state": "fakeid",
+		"code":  "fakecode",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
