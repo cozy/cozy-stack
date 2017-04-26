@@ -136,6 +136,14 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 // - software id: the link to the github repository of the stack.
 // - client URI: the domain of the sharer's Cozy.
 func (rs *RecipientStatus) Register(instance *instance.Instance) error {
+	if rs.recipient == nil {
+		r, err := GetRecipient(instance, rs.RefRecipient.ID)
+		if err != nil {
+			return err
+		}
+		rs.recipient = r
+	}
+
 	// We require the recipient to be persisted in the database.
 	if rs.recipient.RID == "" {
 		return ErrRecipientDoesNotExist

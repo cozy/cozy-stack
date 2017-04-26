@@ -408,10 +408,27 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	return sharing, err
 }
 
-// CreateSharingAndRegisterSharer checks the sharing, creates the document in
+// RegisterRecipient registers a sharing recipient
+func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
+	err := rs.Register(instance)
+	if err != nil {
+		if rs.recipient != nil {
+			log.Error("[sharing] Could not register at "+
+				rs.recipient.URL+" ", err)
+			rs.Status = consts.UnregisteredSharingStatus
+		} else {
+			log.Error("[sharing] Sharing recipient not found")
+		}
+	} else {
+		rs.Status = consts.MailNotSentSharingStatus
+	}
+	return err
+}
+
+// CreateSharing checks the sharing, creates the document in
 // base and starts the sharing process by registering the sharer at each
 // recipient as a new OAuth client.
-func CreateSharingAndRegisterSharer(instance *instance.Instance, sharing *Sharing) error {
+func CreateSharing(instance *instance.Instance, sharing *Sharing) error {
 	sharingType := sharing.SharingType
 	if err := CheckSharingType(sharingType); err != nil {
 		return err
@@ -425,14 +442,7 @@ func CreateSharingAndRegisterSharer(instance *instance.Instance, sharing *Sharin
 
 	// Register the sharer at each recipient and set the status accordingly.
 	for _, rs := range recStatus {
-		err = rs.Register(instance)
-		if err != nil {
-			log.Error("[sharing] Could not register at "+
-				rs.recipient.URL+" ", err)
-			rs.Status = consts.UnregisteredSharingStatus
-		} else {
-			rs.Status = consts.MailNotSentSharingStatus
-		}
+		RegisterRecipient(instance, rs)
 	}
 
 	sharing.Owner = true

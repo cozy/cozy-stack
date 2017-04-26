@@ -91,8 +91,8 @@ func SharingAnswer(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u)
 }
 
-// AddRecipient adds a sharing Recipient.
-func AddRecipient(c echo.Context) error {
+// CreateRecipient adds a sharing Recipient.
+func CreateRecipient(c echo.Context) error {
 
 	recipient := new(sharings.Recipient)
 	if err := c.Bind(recipient); err != nil {
@@ -140,7 +140,7 @@ func CreateSharing(c echo.Context) error {
 		return err
 	}
 
-	err := sharings.CreateSharingAndRegisterSharer(instance, sharing)
+	err := sharings.CreateSharing(instance, sharing)
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -174,6 +174,40 @@ func SendSharingMails(c echo.Context) error {
 	}
 
 	return nil
+}
+
+// AddSharingRecipient adds an existing recipient to an existing sharing
+func AddSharingRecipient(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	// Get sharing doc
+	id := c.Param("id")
+	sharing := &sharings.Sharing{}
+	err := couchdb.GetDoc(instance, consts.Sharings, id, sharing)
+	if err != nil {
+		err = sharings.ErrSharingDoesNotExist
+		return wrapErrors(err)
+	}
+
+	// Create recipient, register, and send mail
+	ref := couchdb.DocReference{}
+	if err = c.Bind(&ref); err != nil {
+		return err
+	}
+	rs := &sharings.RecipientStatus{
+		RefRecipient: ref,
+	}
+	sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
+
+	if err = sharings.RegisterRecipient(instance, rs); err != nil {
+		return wrapErrors(err)
+	}
+	if err = sharings.SendSharingMails(instance, sharing); err != nil {
+		return wrapErrors(err)
+	}
+
+	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
+
 }
 
 // RecipientRefusedSharing is called when the recipient refused the sharing.
@@ -278,11 +312,12 @@ func deleteDocument(c echo.Context) error {
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
+	router.PUT("/:id/recipient", AddSharingRecipient)
 	router.PUT("/:id/sendMails", SendSharingMails)
 	router.GET("/request", SharingRequest)
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
-	router.POST("/recipient", AddRecipient)
+	router.POST("/recipient", CreateRecipient)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
