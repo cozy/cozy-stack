@@ -20,7 +20,7 @@ type MemScheduler struct {
 // NewMemScheduler creates a new in-memory scheduler that will load all
 // registered triggers and schedule their work.
 func NewMemScheduler() *MemScheduler {
-	return newMemScheduler(newTriggerCouchStorage())
+	return newMemScheduler(newGlobalDBStorage())
 }
 
 func newMemScheduler(storage triggerStorage) *MemScheduler {

@@ -13,17 +13,17 @@ type triggerStorage interface {
 	Delete(trigger Trigger) error
 }
 
-// CouchStorage implements the TriggerStorage interface and uses CouchDB as the
-// underlying storage for triggers.
-type couchStorage struct{}
+// globalDBStorage implements the triggerStorage interface and uses a single
+// database in CouchDB as the underlying storage for triggers.
+type globalDBStorage struct{}
 
-// newTriggerCouchStorage returns a new instance of CouchStorage using the
+// newGlobalDBStorage returns a new instance of CouchStorage using the
 // specified database.
-func newTriggerCouchStorage() triggerStorage {
-	return &couchStorage{}
+func newGlobalDBStorage() triggerStorage {
+	return &globalDBStorage{}
 }
 
-func (s *couchStorage) GetAll() ([]*TriggerInfos, error) {
+func (s *globalDBStorage) GetAll() ([]*TriggerInfos, error) {
 	var infos []*TriggerInfos
 	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
 	req := &couchdb.AllDocsRequest{Limit: 1000}
@@ -37,10 +37,10 @@ func (s *couchStorage) GetAll() ([]*TriggerInfos, error) {
 	return infos, nil
 }
 
-func (s *couchStorage) Add(trigger Trigger) error {
+func (s *globalDBStorage) Add(trigger Trigger) error {
 	return couchdb.CreateDoc(couchdb.GlobalTriggersDB, trigger.Infos())
 }
 
-func (s *couchStorage) Delete(trigger Trigger) error {
+func (s *globalDBStorage) Delete(trigger Trigger) error {
 	return couchdb.DeleteDoc(couchdb.GlobalTriggersDB, trigger.Infos())
 }
