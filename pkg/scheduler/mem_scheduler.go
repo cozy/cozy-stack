@@ -7,9 +7,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 )
 
-// memScheduler is a centralized scheduler of many triggers. It stars all of
+// MemScheduler is a centralized scheduler of many triggers. It stars all of
 // them and schedules jobs accordingly.
-type memScheduler struct {
+type MemScheduler struct {
 	broker  jobs.Broker
 	storage TriggerStorage
 
@@ -19,8 +19,8 @@ type memScheduler struct {
 
 // NewMemScheduler creates a new in-memory scheduler that will load all
 // registered triggers and schedule their work.
-func NewMemScheduler(storage TriggerStorage) *memScheduler {
-	return &memScheduler{
+func NewMemScheduler(storage TriggerStorage) *MemScheduler {
+	return &MemScheduler{
 		storage: storage,
 		ts:      make(map[string]Trigger),
 	}
@@ -29,7 +29,7 @@ func NewMemScheduler(storage TriggerStorage) *memScheduler {
 // Start will start the scheduler by actually loading all triggers from the
 // scheduler's storage and associate for each of them a go routine in which
 // they wait for the trigger send job requests.
-func (s *memScheduler) Start(b jobs.Broker) error {
+func (s *MemScheduler) Start(b jobs.Broker) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ts, err := s.storage.GetAll()
@@ -53,7 +53,7 @@ func (s *memScheduler) Start(b jobs.Broker) error {
 
 // Add will add a new trigger to the scheduler. The trigger is persisted in
 // storage.
-func (s *memScheduler) Add(t Trigger) error {
+func (s *MemScheduler) Add(t Trigger) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.storage.Add(t); err != nil {
@@ -65,7 +65,7 @@ func (s *memScheduler) Add(t Trigger) error {
 }
 
 // Get returns the trigger with the specified ID.
-func (s *memScheduler) Get(domain, id string) (Trigger, error) {
+func (s *MemScheduler) Get(domain, id string) (Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	t, ok := s.ts[id]
@@ -77,7 +77,7 @@ func (s *memScheduler) Get(domain, id string) (Trigger, error) {
 
 // Delete removes the trigger with the specified ID. The trigger is unscheduled
 // and remove from the storage.
-func (s *memScheduler) Delete(domain, id string) error {
+func (s *MemScheduler) Delete(domain, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	t, ok := s.ts[id]
@@ -93,7 +93,7 @@ func (s *memScheduler) Delete(domain, id string) error {
 }
 
 // GetAll returns all the running in-memory triggers.
-func (s *memScheduler) GetAll(domain string) ([]Trigger, error) {
+func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	v := make([]Trigger, 0)
@@ -105,7 +105,7 @@ func (s *memScheduler) GetAll(domain string) ([]Trigger, error) {
 	return v, nil
 }
 
-func (s *memScheduler) schedule(t Trigger) {
+func (s *MemScheduler) schedule(t Trigger) {
 	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().ID)
 	for req := range t.Schedule() {
 		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().ID)
@@ -120,5 +120,5 @@ func (s *memScheduler) schedule(t Trigger) {
 }
 
 var (
-	_ Scheduler = &memScheduler{}
+	_ Scheduler = &MemScheduler{}
 )

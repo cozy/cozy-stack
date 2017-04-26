@@ -20,8 +20,8 @@ type (
 		cl chan bool
 	}
 
-	// memBroker is an in-memory broker implementation of the Broker interface.
-	memBroker struct {
+	// MemBroker is an in-memory broker implementation of the Broker interface.
+	MemBroker struct {
 		queues map[string]*memQueue
 	}
 
@@ -111,12 +111,12 @@ func NewMemBroker(ws WorkersList) Broker {
 		}
 		w.Start(q)
 	}
-	return &memBroker{queues: queues}
+	return &MemBroker{queues: queues}
 }
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error) {
+func (b *MemBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error) {
 	workerType := req.WorkerType
 	q, ok := b.queues[workerType]
 	if !ok {
@@ -136,7 +136,7 @@ func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error
 
 // QueueLen returns the size of the number of elements in queue of the
 // specified worker type.
-func (b *memBroker) QueueLen(workerType string) (int, error) {
+func (b *MemBroker) QueueLen(workerType string) (int, error) {
 	q, ok := b.queues[workerType]
 	if !ok {
 		return 0, ErrUnknownWorker
@@ -216,6 +216,6 @@ func (j *memJob) Unmarshal() error {
 
 var (
 	_ Queue  = &memQueue{}
-	_ Broker = &memBroker{}
+	_ Broker = &MemBroker{}
 	_ Job    = &memJob{}
 )
