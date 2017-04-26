@@ -71,6 +71,7 @@ type Config struct {
 	AdminPort  int
 	Fs         Fs
 	CouchDB    CouchDB
+	Jobs       Jobs
 	Konnectors Konnectors
 	Cache      Cache
 	Mail       *gomail.DialerOptions
@@ -87,7 +88,13 @@ type CouchDB struct {
 	URL string
 }
 
-// Konnectors contains the configuration values for the konnectors.
+// Jobs contains the configuration values for the jobs and triggers synchronization
+type Jobs struct {
+	Workers int
+	URL     string
+}
+
+// Konnectors contains the configuration values for the konnectors
 type Konnectors struct {
 	Cmd string
 }

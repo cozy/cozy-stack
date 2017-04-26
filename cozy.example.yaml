@@ -32,6 +32,10 @@ couchdb:
   # CouchDB URL - flags: --couchdb-url
   url: http://localhost:5984/
 
+jobs:
+  workers: 1
+  # url: redis://localhost/1
+
 konnectors:
   cmd: ./scripts/konnector-rkt-run.sh
 

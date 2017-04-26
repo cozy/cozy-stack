@@ -3,11 +3,15 @@ package jobs
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/go-redis/redis"
 )
 
 const (
@@ -200,9 +204,29 @@ var _ permissions.Validable = (*JobRequest)(nil)
 // StartSystem starts the job system, and instantiate the the broker and
 // scheduler globals.
 func StartSystem() error {
+	cfg := config.GetConfig().Jobs
+	if cfg.URL == "" || strings.HasPrefix(cfg.URL, "mem") {
+		return startMemSystem(cfg.Workers)
+	}
+	if strings.HasPrefix(cfg.URL, "redis") {
+		opts, err := redis.ParseURL(config.Cache.URL)
+		if err != nil {
+			return err
+		}
+		return startRedisSystem(cfg.Workers, opts)
+	}
+	return errors.New("Invalid jobs URL")
+}
+
+func startMemSystem(nbWorkers int) error {
+	// TODO limit the number of workers to nbWorkers
 	broker = newMemBroker(GetWorkersList())
 	scheduler = newMemScheduler(NewTriggerCouchStorage())
 	return scheduler.Start(broker)
+}
+
+func startRedisSystem(nbWorkers int, opts *redis.Options) error {
+	return errors.New("Not yet implemented")
 }
 
 // GetScheduler returns the global job scheduler.
