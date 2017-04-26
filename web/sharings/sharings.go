@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 
@@ -109,7 +110,6 @@ func CreateRecipient(c echo.Context) error {
 }
 
 // SharingRequest handles a sharing request from the recipient side.
-//
 // It creates a temporary sharing document and redirects to the authorize page.
 func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
@@ -120,9 +120,16 @@ func SharingRequest(c echo.Context) error {
 
 	instance := middlewares.GetInstance(c)
 
-	_, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope, clientID)
+	sharing, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope, clientID)
 	if err != nil {
 		return wrapErrors(err)
+	}
+
+	// Particular case for master-master: register the sharer
+	if sharingType == consts.MasterMasterSharing {
+		if err = sharings.RegisterSharer(instance, sharing); err != nil {
+			return err
+		}
 	}
 
 	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
@@ -205,6 +212,8 @@ func AddSharingRecipient(c echo.Context) error {
 	if err = sharings.SendSharingMails(instance, sharing); err != nil {
 		return wrapErrors(err)
 	}
+	fmt.Printf("add recipient ok\n")
+	fmt.Printf("sharing : %+v\n", sharing)
 
 	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 
