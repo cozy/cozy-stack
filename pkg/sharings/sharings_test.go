@@ -19,9 +19,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	webAuth "github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
@@ -745,7 +745,7 @@ func TestMain(m *testing.M) {
 	}
 	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
 
-	err = jobs.StartSystem()
+	err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -818,7 +818,7 @@ func TestMain(m *testing.M) {
 	}
 
 	createSettings(in)
-	err = jobs.StartSystem()
+	err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
