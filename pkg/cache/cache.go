@@ -5,6 +5,8 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/go-redis/redis"
 )
 
 // Cache is an interface for a structure susceptible of caching
@@ -19,6 +21,12 @@ type noCache struct{}
 func (*noCache) Get(string, interface{}) bool { return false }
 func (*noCache) Set(string, interface{})      {}
 func (*noCache) Del(string)                   {}
+
+type subRedisInterface interface {
+	Get(string) *redis.StringCmd
+	Set(string, interface{}, time.Duration) *redis.StatusCmd
+	Del(...string) *redis.IntCmd
+}
 
 type jsonCache struct {
 	namespace  string
@@ -60,14 +68,14 @@ func (c *jsonCache) Del(d string) {
 // Create creates a cache
 func Create(namespace string, expiration time.Duration) Cache {
 
-	client := getClient()
-	if client == nil {
+	opts := config.GetConfig().Cache.Options()
+	if opts == nil {
 		return &noCache{}
 	}
 
 	return &jsonCache{
 		namespace:  namespace,
 		expiration: expiration,
-		client:     client,
+		client:     redis.NewClient(opts),
 	}
 }
