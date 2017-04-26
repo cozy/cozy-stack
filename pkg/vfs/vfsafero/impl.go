@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/afero"
 )
@@ -23,7 +24,7 @@ type aferoVFS struct {
 	vfs.DiskThresholder
 
 	fs  afero.Fs
-	mu  vfs.Locker
+	mu  lock.ErrorRWLocker
 	pth string
 
 	// whether or not the localfilesystem requires an initialisation of its root
@@ -36,7 +37,7 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, fsURL *url.URL, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsURL *url.URL, domain string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
@@ -70,7 +71,9 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu vfs.Locker, fsURL *url.
 // Init creates the root directory document and the trash directory for this
 // file system.
 func (afs *aferoVFS) InitFs() error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	if err := afs.Indexer.InitIndex(); err != nil {
 		return err
@@ -89,7 +92,9 @@ func (afs *aferoVFS) InitFs() error {
 
 // Delete removes all the elements associated with the filesystem.
 func (afs *aferoVFS) Delete() error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	if afs.osFS {
 		return afero.NewOsFs().RemoveAll(afs.pth)
@@ -98,7 +103,9 @@ func (afs *aferoVFS) Delete() error {
 }
 
 func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	err := afs.fs.Mkdir(doc.Fullpath, 0755)
 	if err != nil {
@@ -116,7 +123,9 @@ func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
 }
 
 func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.Unlock()
 
 	diskQuota := afs.DiskQuota()
@@ -192,19 +201,25 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 }
 
 func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	return afs.destroyDirContent(doc)
 }
 
 func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	return afs.destroyDirAndContent(doc)
 }
 
 func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	return afs.destroyFile(doc)
 }
@@ -253,7 +268,9 @@ func (afs *aferoVFS) destroyFile(doc *vfs.FileDoc) error {
 }
 
 func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	name, err := afs.Indexer.FilePath(doc)
 	if err != nil {
@@ -272,7 +289,9 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 //
 // @override Indexer.UpdateFileDoc
 func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
 		oldpath, err := afs.Indexer.FilePath(olddoc)
@@ -307,7 +326,9 @@ func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 //
 // @override Indexer.UpdateDirDoc
 func (afs *aferoVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
-	afs.mu.Lock()
+	if lockerr := afs.mu.Lock(); lockerr != nil {
+		return lockerr
+	}
 	defer afs.mu.Unlock()
 	if newdoc.Fullpath != olddoc.Fullpath {
 		if err := safeRenameDir(afs, olddoc.Fullpath, newdoc.Fullpath); err != nil {
@@ -318,43 +339,57 @@ func (afs *aferoVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 }
 
 func (afs *aferoVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirByID(fileID)
 }
 
 func (afs *aferoVFS) DirByPath(name string) (*vfs.DirDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirByPath(name)
 }
 
 func (afs *aferoVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.FileByID(fileID)
 }
 
 func (afs *aferoVFS) FileByPath(name string) (*vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.FileByPath(name)
 }
 
 func (afs *aferoVFS) FilePath(doc *vfs.FileDoc) (string, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return "", lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.FilePath(doc)
 }
 
 func (afs *aferoVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirOrFileByID(fileID)
 }
 
 func (afs *aferoVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirOrFileByPath(name)
 }
@@ -488,7 +523,10 @@ func (f *aferoFileCreation) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
-	f.afs.mu.Lock()
+	lockerr := f.afs.mu.Lock()
+	if lockerr != nil {
+		return lockerr
+	}
 	defer f.afs.mu.Unlock()
 	if olddoc == nil {
 		if newdoc.ID() == "" {

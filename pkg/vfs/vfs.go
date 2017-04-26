@@ -150,15 +150,6 @@ type Indexer interface {
 	DirLength(*DirDoc) (int, error)
 }
 
-// Locker interface provides a Read/Write mutex interface that can be used
-// to represent a global locker for a VFS.
-type Locker interface {
-	RLock()
-	RUnlock()
-	Lock()
-	Unlock()
-}
-
 // DiskThresholder it an interface that can be implemeted to known how many space
 // is available on the disk.
 type DiskThresholder interface {

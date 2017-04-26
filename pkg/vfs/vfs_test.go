@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -714,12 +715,12 @@ func TestMain(m *testing.M) {
 func makeAferoFS() (vfs.VFS, func(), error) {
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
-		return nil, nil, errors.New("Could not create temporary directory.")
+		return nil, nil, errors.New("could not create temporary directory")
 	}
 
 	db := couchdb.SimpleDatabasePrefix("io.cozy.vfs.test")
 	index := vfs.NewCouchdbIndexer(db)
-	aferoFs, err := vfsafero.New(index, &diskImpl{}, vfs.NewMemLock("io.cozy.vfs.test"),
+	aferoFs, err := vfsafero.New(index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"),
 		&url.URL{Scheme: "file", Host: "localhost", Path: tempdir}, "io.cozy.vfs.test")
 	if err != nil {
 		return nil, nil, err
@@ -767,7 +768,7 @@ func makeSwiftFS() (vfs.VFS, func(), error) {
 		return nil, nil, err
 	}
 
-	swiftFs, err := vfsswift.New(index, &diskImpl{}, vfs.NewMemLock("io.cozy.vfs.test"),
+	swiftFs, err := vfsswift.New(index, &diskImpl{}, lock.ReadWrite("io.cozy.vfs.test"),
 		"io.cozy.vfs.test")
 	if err != nil {
 		return nil, nil, err

@@ -73,6 +73,7 @@ type Config struct {
 	CouchDB    CouchDB
 	Konnectors Konnectors
 	Cache      Cache
+	Lock       Lock
 	Mail       *gomail.DialerOptions
 	Logger     Logger
 }
@@ -94,6 +95,11 @@ type Konnectors struct {
 
 // Cache contains the configuration values of the caching layer
 type Cache struct {
+	URL string
+}
+
+// Lock contains the configuration values of the locking layer
+type Lock struct {
 	URL string
 }
 
@@ -134,6 +140,19 @@ func CacheOptions() *redis.Options {
 	opts, err := redis.ParseURL(config.Cache.URL)
 	if err != nil {
 		log.Errorf("can't parse cache.URL(%s), ignoring", config.Cache.URL)
+		return nil
+	}
+	return opts
+}
+
+// LockOptions returns the options for caching redis
+func LockOptions() *redis.Options {
+	if config.Lock.URL == "" {
+		return nil
+	}
+	opts, err := redis.ParseURL(config.Lock.URL)
+	if err != nil {
+		log.Errorf("can't parse lock.URL(%s), ignoring", config.Lock.URL)
 		return nil
 	}
 	return opts
@@ -243,6 +262,9 @@ func UseViper(v *viper.Viper) error {
 		},
 		Cache: Cache{
 			URL: v.GetString("cache.url"),
+		},
+		Lock: Lock{
+			URL: v.GetString("lock.url"),
 		},
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
