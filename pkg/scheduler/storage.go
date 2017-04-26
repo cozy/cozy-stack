@@ -1,34 +1,25 @@
 package scheduler
 
 import (
-	"encoding/json"
-
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
-type triggerDoc struct {
-	t Trigger
-}
-
-func (t triggerDoc) ID() string         { return t.t.Infos().ID }
-func (t triggerDoc) Rev() string        { return t.t.Infos().Rev }
-func (t triggerDoc) DocType() string    { return consts.Triggers }
-func (t triggerDoc) Clone() couchdb.Doc { return t }
-func (t triggerDoc) SetID(id string)    { t.t.Infos().ID = id }
-func (t triggerDoc) SetRev(rev string)  { t.t.Infos().Rev = rev }
-func (t triggerDoc) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.t.Infos())
+// triggerStorage interface is used to represent a persistent layer on which
+// triggers are stored.
+type triggerStorage interface {
+	GetAll() ([]*TriggerInfos, error)
+	Add(trigger Trigger) error
+	Delete(trigger Trigger) error
 }
 
 // CouchStorage implements the TriggerStorage interface and uses CouchDB as the
 // underlying storage for triggers.
-type couchStorage struct {
-}
+type couchStorage struct{}
 
-// NewTriggerCouchStorage returns a new instance of CouchStorage using the
+// newTriggerCouchStorage returns a new instance of CouchStorage using the
 // specified database.
-func NewTriggerCouchStorage() TriggerStorage {
+func newTriggerCouchStorage() triggerStorage {
 	return &couchStorage{}
 }
 
@@ -47,9 +38,9 @@ func (s *couchStorage) GetAll() ([]*TriggerInfos, error) {
 }
 
 func (s *couchStorage) Add(trigger Trigger) error {
-	return couchdb.CreateDoc(couchdb.GlobalTriggersDB, &triggerDoc{trigger})
+	return couchdb.CreateDoc(couchdb.GlobalTriggersDB, trigger.Infos())
 }
 
 func (s *couchStorage) Delete(trigger Trigger) error {
-	return couchdb.DeleteDoc(couchdb.GlobalTriggersDB, &triggerDoc{trigger})
+	return couchdb.DeleteDoc(couchdb.GlobalTriggersDB, trigger.Infos())
 }

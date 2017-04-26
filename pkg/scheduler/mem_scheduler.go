@@ -11,7 +11,7 @@ import (
 // them and schedules jobs accordingly.
 type MemScheduler struct {
 	broker  jobs.Broker
-	storage TriggerStorage
+	storage triggerStorage
 
 	ts map[string]Trigger
 	mu sync.RWMutex
@@ -19,7 +19,11 @@ type MemScheduler struct {
 
 // NewMemScheduler creates a new in-memory scheduler that will load all
 // registered triggers and schedule their work.
-func NewMemScheduler(storage TriggerStorage) *MemScheduler {
+func NewMemScheduler() *MemScheduler {
+	return newMemScheduler(newTriggerCouchStorage())
+}
+
+func newMemScheduler(storage triggerStorage) *MemScheduler {
 	return &MemScheduler{
 		storage: storage,
 		ts:      make(map[string]Trigger),
@@ -40,12 +44,11 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	for _, infos := range ts {
 		t, err := NewTrigger(infos)
 		if err != nil {
-			log.Errorln(
-				"[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
-				infos.Type, infos.ID, err.Error())
+			log.Errorf("[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
+				infos.Type, infos.TID, err.Error())
 			continue
 		}
-		s.ts[infos.ID] = t
+		s.ts[infos.TID] = t
 		go s.schedule(t)
 	}
 	return nil
@@ -59,7 +62,7 @@ func (s *MemScheduler) Add(t Trigger) error {
 	if err := s.storage.Add(t); err != nil {
 		return err
 	}
-	s.ts[t.Infos().ID] = t
+	s.ts[t.Infos().TID] = t
 	go s.schedule(t)
 	return nil
 }
@@ -106,19 +109,17 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().ID)
+	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().TID)
 	for req := range t.Schedule() {
-		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().ID)
+		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().TID)
 		if _, _, err := s.broker.PushJob(req); err != nil {
-			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s", t.Type(), t.Infos().ID, err.Error())
+			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s", t.Type(), t.Infos().TID, err.Error())
 		}
 	}
-	log.Debugf("[jobs] trigger %s(%s): Closing trigger", t.Type(), t.Infos().ID)
-	if err := s.Delete(t.Infos().Domain, t.Infos().ID); err != nil {
-		log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s", t.Type(), t.Infos().ID, err.Error())
+	log.Debugf("[jobs] trigger %s(%s): Closing trigger", t.Type(), t.Infos().TID)
+	if err := s.Delete(t.Infos().Domain, t.Infos().TID); err != nil {
+		log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s", t.Type(), t.Infos().TID, err.Error())
 	}
 }
 
-var (
-	_ Scheduler = &MemScheduler{}
-)
+var _ Scheduler = &MemScheduler{}
