@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/labstack/gommon/log"
 )
 
 const luaRefresh = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pexpire", KEYS[1], ARGV[2]) else return 0 end`
@@ -16,12 +17,12 @@ type fakeRWLock struct {
 	ErrorLocker
 }
 
-func (l fakeRWLock) Lock() error    { return l.ErrorLocker.Lock() }
-func (l fakeRWLock) RLock() error   { return l.ErrorLocker.Lock() }
-func (l fakeRWLock) Unlock() error  { return l.ErrorLocker.Unlock() }
-func (l fakeRWLock) RUnlock() error { return l.ErrorLocker.Unlock() }
+func (l fakeRWLock) Lock() error  { return l.ErrorLocker.Lock() }
+func (l fakeRWLock) RLock() error { return nil }
+func (l fakeRWLock) Unlock()      { l.ErrorLocker.Unlock() }
+func (l fakeRWLock) RUnlock()     {}
 
-func getReadisReadWriteLock(c subRedisInterface, ns string) ErrorRWLocker {
+func getRedisReadWriteLock(c subRedisInterface, ns string) ErrorRWLocker {
 	return fakeRWLock{getRedisSimpleLock(c, ns)}
 }
 
@@ -45,9 +46,9 @@ const (
 )
 
 var (
-	// ErrTooManyRetry is the error returned when despite several tries
+	// ErrTooManyRetries is the error returned when despite several tries
 	// we never managed to get a lock
-	ErrTooManyRetry = errors.New("too many retry")
+	ErrTooManyRetries = errors.New("too many retry")
 )
 
 type redisLock struct {
@@ -98,15 +99,17 @@ func (rl *redisLock) Lock() error {
 		time.Sleep(WaitRetry)
 	}
 
-	return ErrTooManyRetry
+	return ErrTooManyRetries
 }
 
-func (rl *redisLock) Unlock() error {
+func (rl *redisLock) Unlock() {
 	rl.mu.Lock()
-	defer func() { rl.token = "" }()
 	defer rl.mu.Unlock()
 	_, err := rl.client.Eval(luaRelease, []string{rl.key}, rl.token).Result()
-	return err
+	rl.token = ""
+	if err != nil {
+		log.Warnf("Failed to unlock: %s", err.Error())
+	}
 }
 
 var redislocks map[string]*redisLock

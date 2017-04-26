@@ -70,8 +70,7 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, dom
 }
 
 func (sfs *swiftVFS) InitFs() error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -93,8 +92,7 @@ func (sfs *swiftVFS) InitFs() error {
 }
 
 func (sfs *swiftVFS) Delete() error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -113,8 +111,7 @@ func (sfs *swiftVFS) Delete() error {
 }
 
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -146,8 +143,7 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 }
 
 func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -219,8 +215,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 }
 
 func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -228,8 +223,7 @@ func (sfs *swiftVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 }
 
 func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -237,8 +231,7 @@ func (sfs *swiftVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 }
 
 func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -312,8 +305,7 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 //
 // @override Indexer.UpdateFileDoc
 func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
@@ -334,8 +326,7 @@ func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 //
 // @override Indexer.UpdateDirDoc
 func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
-	lockerr := sfs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()

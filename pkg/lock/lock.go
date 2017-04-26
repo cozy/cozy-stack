@@ -1,9 +1,9 @@
 package lock
 
-// ReadWrite returns a read/write lock for the given name
+// ReadWrite returns the read/write lock for the given name
 func ReadWrite(domain string) ErrorRWLocker {
 	if c := getClient(); c != nil {
-		return &fakeRWLock{getReadisReadWriteLock(c, domain)}
+		return &fakeRWLock{getRedisReadWriteLock(c, domain)}
 	}
 	return getMemReadWriteLock(domain)
 }
@@ -11,12 +11,12 @@ func ReadWrite(domain string) ErrorRWLocker {
 // An ErrorLocker is a locker which can fail (returns an error)
 type ErrorLocker interface {
 	Lock() error
-	Unlock() error
+	Unlock()
 }
 
 // ErrorRWLocker is the interface for a RWLock as inspired by RWMutex
 type ErrorRWLocker interface {
 	ErrorLocker
 	RLock() error
-	RUnlock() error
+	RUnlock()
 }

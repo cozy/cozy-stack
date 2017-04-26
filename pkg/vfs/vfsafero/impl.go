@@ -71,8 +71,7 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsU
 // Init creates the root directory document and the trash directory for this
 // file system.
 func (afs *aferoVFS) InitFs() error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
@@ -93,8 +92,7 @@ func (afs *aferoVFS) InitFs() error {
 
 // Delete removes all the elements associated with the filesystem.
 func (afs *aferoVFS) Delete() error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
@@ -105,8 +103,7 @@ func (afs *aferoVFS) Delete() error {
 }
 
 func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
@@ -126,8 +123,7 @@ func (afs *aferoVFS) CreateDir(doc *vfs.DirDoc) error {
 }
 
 func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
 	defer afs.mu.Unlock()
@@ -205,8 +201,7 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 }
 
 func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
@@ -214,8 +209,7 @@ func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 }
 
 func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
@@ -223,8 +217,7 @@ func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 }
 
 func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
@@ -294,8 +287,7 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 //
 // @override Indexer.UpdateFileDoc
 func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
@@ -332,8 +324,7 @@ func (afs *aferoVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 //
 // @override Indexer.UpdateDirDoc
 func (afs *aferoVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
-	lockerr := afs.mu.Lock()
-	if lockerr != nil {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
