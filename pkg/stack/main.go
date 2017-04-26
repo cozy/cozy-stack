@@ -53,12 +53,11 @@ func startMemJobSystem(nbWorkers int) error {
 }
 
 func startRedisJobSystem(nbWorkers int, opts *redis.Options) error {
-	// client := redis.NewClient(opts)
+	client := redis.NewClient(opts)
 	// TODO limit the number of workers to nbWorkers
 	// TODO use a redis broker
 	broker = jobs.NewMemBroker(jobs.GetWorkersList())
-	// TODO use a redis scheduler
-	sched = scheduler.NewMemScheduler()
+	sched = scheduler.NewRedisScheduler(client)
 	return sched.Start(broker)
 }
 
