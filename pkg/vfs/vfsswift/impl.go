@@ -288,7 +288,9 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 }
 
 func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer sfs.mu.RUnlock()
 	f, _, err := sfs.c.ObjectOpen(sfs.container, doc.DirID+"/"+doc.DocName, false, nil)
 	if err == swift.ObjectNotFound {
@@ -343,43 +345,57 @@ func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 }
 
 func (sfs *swiftVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer sfs.mu.RUnlock()
 	return sfs.Indexer.DirByID(fileID)
 }
 
 func (sfs *swiftVFS) DirByPath(name string) (*vfs.DirDoc, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer sfs.mu.RUnlock()
 	return sfs.Indexer.DirByPath(name)
 }
 
 func (sfs *swiftVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer sfs.mu.RUnlock()
 	return sfs.Indexer.FileByID(fileID)
 }
 
 func (sfs *swiftVFS) FileByPath(name string) (*vfs.FileDoc, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer sfs.mu.RUnlock()
 	return sfs.Indexer.FileByPath(name)
 }
 
 func (sfs *swiftVFS) FilePath(doc *vfs.FileDoc) (string, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return "", lockerr
+	}
 	defer sfs.mu.RUnlock()
 	return sfs.Indexer.FilePath(doc)
 }
 
 func (sfs *swiftVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, nil, lockerr
+	}
 	defer sfs.mu.RUnlock()
 	return sfs.Indexer.DirOrFileByID(fileID)
 }
 
 func (sfs *swiftVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	sfs.mu.RLock()
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, nil, lockerr
+	}
 	defer sfs.mu.RUnlock()
 	return sfs.Indexer.DirOrFileByPath(name)
 }

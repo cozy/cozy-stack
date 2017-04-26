@@ -268,7 +268,9 @@ func (afs *aferoVFS) destroyFile(doc *vfs.FileDoc) error {
 }
 
 func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	name, err := afs.Indexer.FilePath(doc)
 	if err != nil {
@@ -337,43 +339,57 @@ func (afs *aferoVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 }
 
 func (afs *aferoVFS) DirByID(fileID string) (*vfs.DirDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirByID(fileID)
 }
 
 func (afs *aferoVFS) DirByPath(name string) (*vfs.DirDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirByPath(name)
 }
 
 func (afs *aferoVFS) FileByID(fileID string) (*vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.FileByID(fileID)
 }
 
 func (afs *aferoVFS) FileByPath(name string) (*vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.FileByPath(name)
 }
 
 func (afs *aferoVFS) FilePath(doc *vfs.FileDoc) (string, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return "", lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.FilePath(doc)
 }
 
 func (afs *aferoVFS) DirOrFileByID(fileID string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirOrFileByID(fileID)
 }
 
 func (afs *aferoVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	afs.mu.RLock()
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, nil, lockerr
+	}
 	defer afs.mu.RUnlock()
 	return afs.Indexer.DirOrFileByPath(name)
 }
