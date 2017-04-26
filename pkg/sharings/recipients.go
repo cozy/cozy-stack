@@ -80,9 +80,6 @@ func (rs *RecipientStatus) GetRecipient(db couchdb.Database) error {
 // CreateRecipient inserts a Recipient document in database. Email and URL must
 // not be empty.
 func CreateRecipient(db couchdb.Database, doc *Recipient) error {
-	if doc.Email == "" {
-		return ErrRecipientHasNoEmail
-	}
 	if doc.URL == "" {
 		return ErrRecipientHasNoURL
 	}
