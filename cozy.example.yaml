@@ -26,6 +26,7 @@ fs:
   # default url is the directory relative to the binary: ./storage
 
   # url: file://localhost/var/lib/cozy
+  # url: swift://openstack/?UserName={{ .Env.OS_USERNAME }}&Password={{ .Env.OS_PASSWORD }}&ProjectName={{ .Env.OS_PROJECT_NAME }}&UserDomainName={{ .Env.OS_USER_DOMAIN_NAME }}
 
 couchdb:
   # CouchDB URL - flags: --couchdb-url
