@@ -11,6 +11,8 @@ var (
 	ErrMissingScope = errors.New("The scope parameter is mandatory")
 	//ErrMissingState is used when a request is missing the mandatory state
 	ErrMissingState = errors.New("The state parameter is mandatory")
+	//ErrMissingCode is used when a request is missing the mandatory code
+	ErrMissingCode = errors.New("The code parameter is mandatory")
 	// ErrSharingDoesNotExist is used when the given sharing does not exist.
 	ErrSharingDoesNotExist = errors.New("Sharing does not exist")
 	// ErrRecipientHasNoEmail is used to signal that a recipient has no email.
