@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	authClient "github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -542,6 +543,48 @@ func TestCreateSharingSuccess(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 201, res.StatusCode)
+}
+
+func TestReceiveClientIDBadSharing(t *testing.T) {
+	recipient, err := createRecipient(t)
+	assert.NoError(t, err)
+	sharing, err := createSharing(t, recipient)
+	assert.NoError(t, err)
+	assert.NotNil(t, sharing)
+	authCli := &authClient.Client{
+		ClientID: "myclientid",
+	}
+	sharing.RecipientsStatus[0].Client = authCli
+	err = couchdb.UpdateDoc(testInstance, sharing)
+	assert.NoError(t, err)
+	res, err := postJSON(t, "/sharings/access/client", echo.Map{
+		"state":          "fakestate",
+		"client_id":      "fakeclientid",
+		"host_client_id": "newclientid",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestReceiveClientIDSuccess(t *testing.T) {
+	recipient, err := createRecipient(t)
+	assert.NoError(t, err)
+	sharing, err := createSharing(t, recipient)
+	assert.NoError(t, err)
+	assert.NotNil(t, sharing)
+	authCli := &authClient.Client{
+		ClientID: "myclientid",
+	}
+	sharing.RecipientsStatus[0].Client = authCli
+	err = couchdb.UpdateDoc(testInstance, sharing)
+	assert.NoError(t, err)
+	res, err := postJSON(t, "/sharings/access/client", echo.Map{
+		"state":          sharing.SharingID,
+		"client_id":      sharing.RecipientsStatus[0].Client.ClientID,
+		"host_client_id": "newclientid",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
 }
 
 func TestMain(m *testing.M) {

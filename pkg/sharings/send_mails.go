@@ -47,12 +47,9 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 
 		// A non-empty status indicates a recipient already treated
 		if rs.Status != "" {
-			// Sanity check: recipient is private.
-			if rs.recipient == nil {
-				rs.recipient, err = GetRecipient(instance, rs.RefRecipient.ID)
-				if err != nil {
-					return err
-				}
+			err = rs.GetRecipient(instance)
+			if err != nil {
+				return err
 			}
 
 			// Generate recipient specific OAuth query string.

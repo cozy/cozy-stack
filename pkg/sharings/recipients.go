@@ -2,7 +2,7 @@ package sharings
 
 import (
 	"net/http"
-	"strings"
+	"net/url"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -30,6 +30,9 @@ type RecipientStatus struct {
 	// information she needs to send to authenticate.
 	Client      *auth.Client
 	AccessToken *auth.AccessToken
+
+	// The OAuth ClientID refering to the host's client stored in its db
+	HostClientID string
 }
 
 // ID returns the recipient qualified identifier
@@ -55,10 +58,23 @@ func (r *Recipient) ExtractDomain() (string, error) {
 	if r.URL == "" {
 		return "", ErrRecipientHasNoURL
 	}
-	if tokens := strings.Split(r.URL, "://"); len(tokens) > 1 {
-		return tokens[1], nil
+	u, err := url.Parse(r.URL)
+	if err != nil {
+		return "", err
 	}
-	return r.URL, nil
+	return u.Host, nil
+}
+
+// GetRecipient get the actual recipient of a RecipientStatus
+func (rs *RecipientStatus) GetRecipient(db couchdb.Database) error {
+	if rs.recipient == nil {
+		recipient, err := GetRecipient(db, rs.RefRecipient.ID)
+		if err != nil {
+			return err
+		}
+		rs.recipient = recipient
+	}
+	return nil
 }
 
 // CreateRecipient inserts a Recipient document in database. Email and URL must
@@ -128,7 +144,7 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 
 // Register asks the recipient to register the sharer as a new OAuth client.
 //
-// To register the sharer must provide the following information:
+// The following information must be provided to register:
 // - redirect uri: where the recipient must answer the sharing request. Our
 //		protocol forces this field to be: "sharerdomain/sharings/answer".
 // - client name: the sharer's public name.
@@ -144,11 +160,6 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		rs.recipient = r
 	}
 
-	// We require the recipient to be persisted in the database.
-	if rs.recipient.RID == "" {
-		return ErrRecipientDoesNotExist
-	}
-
 	// If the recipient has no URL there is no point in registering.
 	if rs.recipient.URL == "" {
 		return ErrRecipientHasNoURL
@@ -161,9 +172,8 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-
-	sharerPublicName, _ := doc.M["public_name"].(string)
-	if sharerPublicName == "" {
+	publicName, _ := doc.M["public_name"].(string)
+	if publicName == "" {
 		return ErrPublicNameNotDefined
 	}
 
@@ -173,7 +183,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 	// We have all we need to register an OAuth client.
 	authClient := &auth.Client{
 		RedirectURIs: []string{redirectURI},
-		ClientName:   sharerPublicName,
+		ClientName:   publicName,
 		ClientKind:   "sharing",
 		SoftwareID:   "github.com/cozy/cozy-stack",
 		ClientURI:    clientURI,

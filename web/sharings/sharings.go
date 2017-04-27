@@ -109,7 +109,6 @@ func CreateRecipient(c echo.Context) error {
 }
 
 // SharingRequest handles a sharing request from the recipient side.
-//
 // It creates a temporary sharing document and redirects to the authorize page.
 func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
@@ -120,9 +119,18 @@ func SharingRequest(c echo.Context) error {
 
 	instance := middlewares.GetInstance(c)
 
-	_, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope, clientID)
+	sharing, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope, clientID)
 	if err != nil {
 		return wrapErrors(err)
+	}
+	// Particular case for master-master: register the sharer
+	if sharingType == consts.MasterMasterSharing {
+		if err = sharings.RegisterSharer(instance, sharing); err != nil {
+			return wrapErrors(err)
+		}
+		if err = sharings.SendClientID(instance, sharing); err != nil {
+			return wrapErrors(err)
+		}
 	}
 
 	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
@@ -205,7 +213,6 @@ func AddSharingRecipient(c echo.Context) error {
 	if err = sharings.SendSharingMails(instance, sharing); err != nil {
 		return wrapErrors(err)
 	}
-
 	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 
 }
@@ -244,6 +251,29 @@ func RecipientRefusedSharing(c echo.Context) error {
 	u.Fragment = ""
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
+}
+
+// ReceiveClientID receives an OAuth ClientID in a master-master context.
+// This is called from a recipient, after he registered himself to the sharer.
+// The received clientID is called a HostClientID, as it refers to a client
+// created by the sharer, i.e. the host here.
+func ReceiveClientID(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	p := &sharings.SharingRequestParams{}
+	if err := c.Bind(p); err != nil {
+		return err
+	}
+	sharing, rec, err := sharings.FindSharingRecipient(instance, p.SharingID, p.ClientID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	rec.HostClientID = p.HostClientID
+	err = couchdb.UpdateDoc(instance, sharing)
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, nil)
 }
 
 // receiveDocument stores a shared document in the Cozy.
@@ -318,6 +348,7 @@ func Routes(router *echo.Group) {
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", CreateRecipient)
+	router.POST("/access/client", ReceiveClientID)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
