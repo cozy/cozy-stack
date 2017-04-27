@@ -47,7 +47,7 @@ func GetStore() DownloadStore {
 	if globalStore != nil {
 		return globalStore
 	}
-	opts := config.CacheOptions()
+	opts := config.GetConfig().DownloadStorage.Options()
 	if opts == nil {
 		globalStore = newMemStore()
 	} else {
