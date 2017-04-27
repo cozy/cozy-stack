@@ -162,11 +162,10 @@ func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docT
 		Method:     method,
 		Recipients: recInfos,
 	}
-	// TODO: handle file sharing
 	if opts.DocType != consts.Files {
 		return SendDoc(domain, opts)
 	}
-	return nil
+	return SendFile(domain, opts)
 }
 
 // GetRecipient returns the Recipient stored in database from a given ID

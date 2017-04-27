@@ -147,6 +147,8 @@ func (f *FileDoc) Valid(field, expected string) bool {
 		return f.Class == expected
 	case "tags":
 		return contains(f.Tags, expected)
+	case "dir_id":
+		return f.DirID == expected
 	default:
 		return false
 	}
