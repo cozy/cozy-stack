@@ -255,6 +255,10 @@ func UseViper(v *viper.Viper) error {
 		CouchDB: CouchDB{
 			URL: couchURL.String(),
 		},
+		Jobs: Jobs{
+			Workers: v.GetInt("jobs.workers"),
+			URL:     v.GetString("jobs.url"),
+		},
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
