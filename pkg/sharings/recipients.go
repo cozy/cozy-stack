@@ -65,6 +65,18 @@ func (r *Recipient) ExtractDomain() (string, error) {
 	return u.Host, nil
 }
 
+// GetRecipient get the actual recipient of a RecipientStatus
+func (rs *RecipientStatus) GetRecipient(db couchdb.Database) error {
+	if rs.recipient == nil {
+		recipient, err := GetRecipient(db, rs.RefRecipient.ID)
+		if err != nil {
+			return err
+		}
+		rs.recipient = recipient
+	}
+	return nil
+}
+
 // CreateRecipient inserts a Recipient document in database. Email and URL must
 // not be empty.
 func CreateRecipient(db couchdb.Database, doc *Recipient) error {

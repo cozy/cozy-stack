@@ -322,13 +322,9 @@ func SharingRefused(db couchdb.Database, state, clientID string) (string, error)
 
 	// Sanity check: as the `recipient` is private if the document is fetched
 	// from the database it is nil.
-	if recStatus.recipient == nil {
-		recipient, errGet := GetRecipient(db, recStatus.RefRecipient.ID)
-		if errGet != nil {
-			return "", nil
-		}
-
-		recStatus.recipient = recipient
+	err = recStatus.GetRecipient(db)
+	if err != nil {
+		return "", nil
 	}
 
 	redirect := recStatus.recipient.URL
@@ -415,8 +411,8 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 	err := rs.Register(instance)
 	if err != nil {
 		if rs.recipient != nil {
-			log.Error("[sharing] Could not register at "+
-				rs.recipient.URL+" ", err)
+			log.Errorf("sharing] Could not register at %v : %v",
+				rs.recipient.URL, err)
 			rs.Status = consts.UnregisteredSharingStatus
 		} else {
 			log.Error("[sharing] Sharing recipient not found")
