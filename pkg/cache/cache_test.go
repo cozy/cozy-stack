@@ -33,11 +33,7 @@ func TestGetClient(t *testing.T) {
 func TestGetClientNoRedis(t *testing.T) {
 	var backurl = config.GetConfig().Cache.URL
 	config.GetConfig().Cache.URL = ""
-	globalRedisClient = nil
 	defer func() { config.GetConfig().Cache.URL = backurl }()
-
-	client := getClient()
-	assert.Nil(t, client, "client should be nil if there is no redis url")
 
 	cache := Create("testns", time.Minute)
 	assert.NotNil(t, cache, "we should get a cache if there is no redis url")

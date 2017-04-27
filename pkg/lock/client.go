@@ -24,7 +24,7 @@ func getClient() subRedisInterface {
 		return globalRedisClient
 	}
 
-	opts := config.LockOptions()
+	opts := config.GetConfig().Lock.Options()
 	if opts == nil {
 		return nil
 	}

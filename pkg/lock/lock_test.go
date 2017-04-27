@@ -86,11 +86,10 @@ func HammerMutex(m ErrorLocker, loops int, cdone chan bool) {
 var n = 1000
 
 func TestMemLock(t *testing.T) {
-	c := config.GetConfig()
-	backConfig := c.Lock
-	c.Lock = config.Lock{URL: ""}
+	backurl := config.GetConfig().Lock.URL
+	config.GetConfig().Lock.URL = ""
 	globalRedisClient = nil
-	defer func() { c.Lock = backConfig }()
+	defer func() { config.GetConfig().Lock.URL = backurl }()
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
 	l := ReadWrite("test-mem")
 	HammerRWMutex(l, 1, 1, n)
@@ -107,11 +106,10 @@ func TestMemLock(t *testing.T) {
 
 func TestRedisLock(t *testing.T) {
 
-	c := config.GetConfig()
-	backConfig := c.Lock
-	c.Lock = config.Lock{URL: "redis://localhost:6379/0"}
+	backurl := config.GetConfig().Lock.URL
+	config.GetConfig().Lock.URL = "redis://localhost:6379/0"
 	globalRedisClient = nil
-	defer func() { c.Lock = backConfig }()
+	defer func() { config.GetConfig().Lock.URL = backurl }()
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
 	l := ReadWrite("test-redis")
 	// @TODO use HammerRWMutex when redisLock is RW lock

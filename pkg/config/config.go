@@ -63,20 +63,21 @@ var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host       string
-	Port       int
-	Assets     string
-	Subdomains string
-	AdminHost  string
-	AdminPort  int
-	Fs         Fs
-	CouchDB    CouchDB
-	Jobs       Jobs
-	Konnectors Konnectors
-	Cache      Cache
-	Lock       Lock
-	Mail       *gomail.DialerOptions
-	Logger     Logger
+	Host           string
+	Port           int
+	Assets         string
+	Subdomains     string
+	AdminHost      string
+	AdminPort      int
+	Fs             Fs
+	CouchDB        CouchDB
+	Jobs           Jobs
+	Konnectors     Konnectors
+	Cache          RedisConfig
+	Lock           RedisConfig
+	SessionStorage RedisConfig
+	Mail           *gomail.DialerOptions
+	Logger         Logger
 }
 
 // Fs contains the configuration values of the file-system
@@ -100,8 +101,8 @@ type Konnectors struct {
 	Cmd string
 }
 
-// Cache contains the configuration values of the caching layer
-type Cache struct {
+// RedisConfig contains the configuration values for a redis system
+type RedisConfig struct {
 	URL string
 }
 
@@ -139,27 +140,14 @@ func CouchURL() string {
 	return config.CouchDB.URL
 }
 
-// CacheOptions returns the options for caching redis
-func CacheOptions() *redis.Options {
-	if config.Cache.URL == "" {
+// Options returns the redis.Options for a RedisConfig
+func (rc *RedisConfig) Options() *redis.Options {
+	if rc.URL == "" {
 		return nil
 	}
-	opts, err := redis.ParseURL(config.Cache.URL)
+	opts, err := redis.ParseURL(rc.URL)
 	if err != nil {
-		log.Errorf("can't parse cache.URL(%s), ignoring", config.Cache.URL)
-		return nil
-	}
-	return opts
-}
-
-// LockOptions returns the options for caching redis
-func LockOptions() *redis.Options {
-	if config.Lock.URL == "" {
-		return nil
-	}
-	opts, err := redis.ParseURL(config.Lock.URL)
-	if err != nil {
-		log.Errorf("can't parse lock.URL(%s), ignoring", config.Lock.URL)
+		log.Errorf("can't parse cache.URL(%s), ignoring", rc.URL)
 		return nil
 	}
 	return opts
@@ -267,11 +255,14 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
-		Cache: Cache{
+		Cache: RedisConfig{
 			URL: v.GetString("cache.url"),
 		},
-		Lock: Lock{
+		Lock: RedisConfig{
 			URL: v.GetString("lock.url"),
+		},
+		SessionStorage: RedisConfig{
+			URL: v.GetString("sessions.url"),
 		},
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
