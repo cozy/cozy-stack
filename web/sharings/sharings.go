@@ -46,7 +46,9 @@ func (s *apiSharing) Included() []jsonapi.Object {
 	var included []jsonapi.Object
 	for _, rec := range s.RecipientsStatus {
 		r := rec.GetCachedRecipient()
-		included = append(included, &apiRecipient{r})
+		if r != nil {
+			included = append(included, &apiRecipient{r})
+		}
 	}
 	return included
 }

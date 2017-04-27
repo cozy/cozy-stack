@@ -44,9 +44,8 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 
 	errorOccurred := false
 	for _, rs := range s.RecipientsStatus {
-
-		// A non-empty status indicates a recipient already treated
-		if rs.Status != "" {
+		// Send mail based on the recipient status
+		if rs.Status == consts.MailNotSentSharingStatus {
 			err = rs.GetRecipient(instance)
 			if err != nil {
 				return err
@@ -94,7 +93,6 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			rs.Status = consts.PendingSharingStatus
 		}
 	}
-
 	// Persist the modifications in the database.
 	err = couchdb.UpdateDoc(instance, s)
 	if err != nil {
