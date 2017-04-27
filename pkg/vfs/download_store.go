@@ -34,12 +34,6 @@ type memRef struct {
 	exp time.Time
 }
 
-func storeCleaner(store *memStore) {
-	for range time.Tick(downloadStoreCleanInterval) {
-		store.clean()
-	}
-}
-
 // GetStore returns the DownloadStore.
 func GetStore() DownloadStore {
 	globalStoreMu.Lock()
@@ -58,7 +52,7 @@ func GetStore() DownloadStore {
 
 func newMemStore() DownloadStore {
 	store := &memStore{vals: make(map[string]*memRef)}
-	go storeCleaner(store)
+	go store.cleaner()
 	return store
 }
 
@@ -67,11 +61,13 @@ type memStore struct {
 	vals map[string]*memRef
 }
 
-func (s *memStore) clean() {
-	now := time.Now()
-	for k, v := range s.vals {
-		if now.After(v.exp) {
-			delete(s.vals, k)
+func (s *memStore) cleaner() {
+	for range time.Tick(downloadStoreCleanInterval) {
+		now := time.Now()
+		for k, v := range s.vals {
+			if now.After(v.exp) {
+				delete(s.vals, k)
+			}
 		}
 	}
 }
