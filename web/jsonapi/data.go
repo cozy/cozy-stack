@@ -21,7 +21,7 @@ type Meta struct {
 
 // RelationshipMeta is a container for the total number of elements
 type RelationshipMeta struct {
-	Count int `json:"count,omitempty"`
+	Count *int `json:"count,omitempty"`
 }
 
 // LinksList is the common links used in JSON-API for the top-level or a

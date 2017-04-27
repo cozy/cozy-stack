@@ -84,7 +84,7 @@ func DataListWithTotal(c echo.Context, statusCode, total int, objs []Object, lin
 
 	doc := Document{
 		Data:  (*json.RawMessage)(&data),
-		Meta:  &RelationshipMeta{Count: total},
+		Meta:  &RelationshipMeta{Count: &total},
 		Links: links,
 	}
 

@@ -84,7 +84,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	rel := jsonapi.RelationshipMap{
 		"parent": parent,
 		"contents": jsonapi.Relationship{
-			Meta: &jsonapi.RelationshipMeta{Count: count},
+			Meta: &jsonapi.RelationshipMeta{Count: &count},
 			Links: &jsonapi.LinksList{
 				Self: "/files/" + doc.DocID + "/relationships/contents",
 			},

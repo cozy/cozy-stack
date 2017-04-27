@@ -28,6 +28,25 @@ func getJSON(t *testing.T, url string, out interface{}) error {
 
 }
 
+func TestZeroCountIsPresent(t *testing.T) {
+	_, dirdata := createDir(t, "/files/?Type=directory&Name=emptydirectory")
+	dirdata, ok := dirdata["data"].(map[string]interface{})
+	assert.True(t, ok)
+	parentID, ok := dirdata["id"].(string)
+	assert.True(t, ok)
+
+	var result map[string]interface{}
+	getJSON(t, "/files/"+parentID, &result)
+
+	data := result["data"].(map[string]interface{})
+	rels := data["relationships"].(map[string]interface{})
+	contents := rels["contents"].(map[string]interface{})
+	meta := contents["meta"].(map[string]interface{})
+	count, ok := meta["count"].(float64)
+	assert.True(t, ok)
+	assert.Equal(t, float64(0), count)
+}
+
 func TestListDirPaginated(t *testing.T) {
 
 	_, dirdata := createDir(t, "/files/?Type=directory&Name=paginationcontainer")
