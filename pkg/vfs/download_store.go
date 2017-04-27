@@ -20,11 +20,11 @@ type DownloadStore interface {
 }
 
 // downloadStoreTTL is the time an Archive stay alive
-const downloadStoreTTL = 1 * time.Hour
+var downloadStoreTTL = 1 * time.Hour
 
 // downloadStoreCleanInterval is the time interval between each download
 // cleanup.
-const downloadStoreCleanInterval = 1 * time.Hour
+var downloadStoreCleanInterval = 1 * time.Hour
 
 var globalStoreMu sync.Mutex
 var globalStore DownloadStore
@@ -34,9 +34,9 @@ type memRef struct {
 	exp time.Time
 }
 
-func storeCleaner() {
+func storeCleaner(store *memStore) {
 	for range time.Tick(downloadStoreCleanInterval) {
-		globalStore.(*memStore).clean()
+		store.clean()
 	}
 }
 
@@ -49,12 +49,17 @@ func GetStore() DownloadStore {
 	}
 	opts := config.CacheOptions()
 	if opts == nil {
-		globalStore = &memStore{vals: make(map[string]*memRef)}
-		go storeCleaner()
+		globalStore = newMemStore()
 	} else {
 		globalStore = &redisStore{redis.NewClient(opts)}
 	}
 	return globalStore
+}
+
+func newMemStore() DownloadStore {
+	store := &memStore{vals: make(map[string]*memRef)}
+	go storeCleaner(store)
+	return store
 }
 
 type memStore struct {
