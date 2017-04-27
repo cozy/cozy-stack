@@ -27,8 +27,7 @@ const downloadStoreTTL = 1 * time.Hour
 const downloadStoreCleanInterval = 1 * time.Hour
 
 var globalStoreMu sync.Mutex
-var globalMemStore *memStore
-var globalRedisStore *redisStore
+var globalStore DownloadStore
 
 type memRef struct {
 	val interface{}
@@ -37,7 +36,7 @@ type memRef struct {
 
 func storeCleaner() {
 	for range time.Tick(downloadStoreCleanInterval) {
-		globalMemStore.clean()
+		globalStore.(*memStore).clean()
 	}
 }
 
@@ -45,20 +44,17 @@ func storeCleaner() {
 func GetStore() DownloadStore {
 	globalStoreMu.Lock()
 	defer globalStoreMu.Unlock()
-	if globalRedisStore != nil {
-		return globalRedisStore
-	}
-	if globalMemStore != nil {
-		return globalMemStore
+	if globalStore != nil {
+		return globalStore
 	}
 	opts := config.CacheOptions()
 	if opts == nil {
-		globalMemStore = &memStore{vals: make(map[string]*memRef)}
+		globalStore = &memStore{vals: make(map[string]*memRef)}
 		go storeCleaner()
-		return globalMemStore
+	} else {
+		globalStore = &redisStore{redis.NewClient(opts)}
 	}
-	redisClient := redis.NewClient(opts)
-	return &redisStore{redisClient}
+	return globalStore
 }
 
 type memStore struct {
