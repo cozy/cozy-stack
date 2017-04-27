@@ -63,21 +63,24 @@ var config *Config
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host           string
-	Port           int
-	Assets         string
-	Subdomains     string
-	AdminHost      string
-	AdminPort      int
-	Fs             Fs
-	CouchDB        CouchDB
-	Jobs           Jobs
-	Konnectors     Konnectors
-	Cache          RedisConfig
-	Lock           RedisConfig
-	SessionStorage RedisConfig
-	Mail           *gomail.DialerOptions
-	Logger         Logger
+	Host       string
+	Port       int
+	Assets     string
+	Subdomains string
+	AdminHost  string
+	AdminPort  int
+
+	Fs         Fs
+	CouchDB    CouchDB
+	Jobs       Jobs
+	Konnectors Konnectors
+	Mail       *gomail.DialerOptions
+	Logger     Logger
+
+	Cache           RedisConfig
+	Lock            RedisConfig
+	SessionStorage  RedisConfig
+	DownloadStorage RedisConfig
 }
 
 // Fs contains the configuration values of the file-system
@@ -263,6 +266,9 @@ func UseViper(v *viper.Viper) error {
 		},
 		SessionStorage: RedisConfig{
 			URL: v.GetString("sessions.url"),
+		},
+		DownloadStorage: RedisConfig{
+			URL: v.GetString("downloads.url"),
 		},
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),

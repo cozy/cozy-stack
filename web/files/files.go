@@ -474,7 +474,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 		return archive.Serve(instance.VFS(), c.Response())
 	}
 
-	secret, err := vfs.GetStore(instance.Domain).AddArchive(archive)
+	secret, err := vfs.GetStore().AddArchive(instance.Domain, archive)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -515,7 +515,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		return err
 	}
 
-	secret, err := vfs.GetStore(instance.Domain).AddFile(path)
+	secret, err := vfs.GetStore().AddFile(instance.Domain, path)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -532,7 +532,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 func ArchiveDownloadHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	secret := c.Param("secret")
-	archive, err := vfs.GetStore(instance.Domain).GetArchive(secret)
+	archive, err := vfs.GetStore().GetArchive(instance.Domain, secret)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -547,7 +547,7 @@ func ArchiveDownloadHandler(c echo.Context) error {
 func FileDownloadHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	secret := c.Param("secret")
-	path, err := vfs.GetStore(instance.Domain).GetFile(secret)
+	path, err := vfs.GetStore().GetFile(instance.Domain, secret)
 	if err != nil {
 		return wrapVfsError(err)
 	}
