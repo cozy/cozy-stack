@@ -52,25 +52,27 @@ do_prepare_ldflags() {
 	eval "$(go env)"
 
 	VERSION_OS_ARCH="${GOOS}-${GOARCH}"
-	VERSION_STRING=$(git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
-		describe --tags --dirty 2> /dev/null | \
-		sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g')
+	if [ -z "${VERSION_STRING}" ]; then
+		VERSION_STRING=$(git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
+			describe --tags --dirty 2> /dev/null | \
+			sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g')
 
-	if [ "${VERSION_STRING}" == "" ]; then
-		VERSION_STRING="v0-$(git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD)"
-		echo_wrn "No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
-	fi
-
-	if [ "$(git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD | wc -l)" -gt 0 ]; then
-		if [ "${COZY_ENV}" == production ]; then
-			echo_err "Can not build a production release in a dirty work-tree"
-			exit 1
+		if [ -z "${VERSION_STRING}" ]; then
+			VERSION_STRING="v0-$(git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD)"
+			echo_wrn "No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 		fi
-		VERSION_STRING="${VERSION_STRING}-dirty"
-	fi
 
-	if [ "${COZY_ENV}" == development ]; then
-		VERSION_STRING="${VERSION_STRING}-dev"
+		if ! git --git-dir="${WORK_DIR}/.git" diff --exit-code &>/dev/null; then
+			if [ "${COZY_ENV}" == production ]; then
+				echo_err "Can not build a production release in a dirty work-tree"
+				exit 1
+			fi
+			VERSION_STRING="${VERSION_STRING}-dirty"
+		fi
+
+		if [ "${COZY_ENV}" == development ]; then
+			VERSION_STRING="${VERSION_STRING}-dev"
+		fi
 	fi
 
 	BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
