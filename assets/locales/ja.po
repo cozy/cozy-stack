@@ -1,0 +1,98 @@
+# Translators:
+# Naofumi <naofum@gmail.com>, 2017
+msgid ""
+msgstr ""
+"Last-Translator: Naofumi <naofum@gmail.com>, 2017\n"
+"Language-Team: Japanese (https://www.transifex.com/cozy/teams/39753/ja/)\n"
+"Language: ja\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Login Credentials error"
+msgstr "入力した資格情報が間違っています。もう一度やり直してください。"
+
+msgid "Login Welcome"
+msgstr "ようこそ!"
+
+msgid "Login Welcome name"
+msgstr "%s さん、ようこそ!"
+
+msgid "Login Password help"
+msgstr "Cozy にアクセスするにはパスワードを入力してください"
+
+msgid "Login Password field"
+msgstr "パスワード"
+
+msgid "Login Password show"
+msgstr "パスワードを表示"
+
+msgid "Login Submit"
+msgstr "ログイン"
+
+msgid "Mail Password reset"
+msgstr "Cozy のパスワードをリセット"
+
+msgid "Passphrase reset Help"
+msgstr "パスワードをリセットしてもよろしいですか?"
+
+msgid "Passphrase reset Submit"
+msgstr "パスワードをリセット"
+
+msgid "Passphrase renew Help"
+msgstr "新しいパスワードを入力"
+
+msgid "Passphrase renew Field"
+msgstr "パスワード"
+
+msgid "Passphrase renew Submit"
+msgstr "パスワードを更新"
+
+msgid "Login Forgot password"
+msgstr "パスワードをお忘れですか?"
+
+msgid "Authorize Title"
+msgstr "リモートのアプリケーションを承認"
+
+msgid "Authorize Client presentation"
+msgstr "Cozy にアクセスする権限が必要です。"
+
+msgid "Authorize Policy sentence"
+msgstr "ここであなたのデータの使用に関するポリシーを読むことができます:"
+
+msgid "Authorize Give permission"
+msgstr "この権限により、次のアクセス権が与えられます:"
+
+msgid "Authorize Submit"
+msgstr "承認"
+
+msgid "Error Title"
+msgstr "申し訳ありません"
+
+msgid "Error Message"
+msgstr "エラーが発生しました。"
+
+msgid "Error No state parameter"
+msgstr "state パラメータは必須です"
+
+msgid "Error No client_id parameter"
+msgstr "client_id パラメータは必須です"
+
+msgid "Error No redirect_uri parameter"
+msgstr "redirect_uri パラメータは必須です"
+
+msgid "Error No scope parameter"
+msgstr "scope パラメータは必須です"
+
+msgid "Error No registered client"
+msgstr "クライアントを登録する必要があります"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "redirect_uri パラメータが登録されているパラメータと一致しません"
+
+msgid "Error Invalid redirect_uri"
+msgstr "redirect_uri パラメータが正しくありません"
+
+msgid "Error Invalid response type"
+msgstr "レスポンスタイプが正しくありません"
+
+msgid "Error Must be authenticated"
+msgstr "認証されている必要があります"
