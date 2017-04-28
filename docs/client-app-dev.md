@@ -70,6 +70,16 @@ $ docker run --rm -it \
     cozy/cozy-app-dev
 ```
 
+You can mount your yaml config file :
+
+```sh
+$ docker run --rm -it \
+    -p 8080:8080 \
+    -p 8025:8025 \
+    -v "$HOME/myapp":/data/cozy-app \
+    -v "$HOME/cozy.yaml":/etc/cozy/cozy.yaml \
+    cozy/cozy-app-dev
+```
 A [MailHog](https://github.com/mailhog/MailHog) is running inside docker to
 catch emails. You can view the emails sent by the stack in a web interface on
 http://cozy.tools:8025/
