@@ -74,36 +74,34 @@ func (a *AtTrigger) Valid(key, value string) bool {
 
 // Schedule implements the Schedule method of the Trigger interface.
 func (a *AtTrigger) Schedule() <-chan *jobs.JobRequest {
-	at := a.at
 	ch := make(chan *jobs.JobRequest)
-	duration := time.Since(at)
 	go func() {
-		if duration >= 0 {
-			if duration < maxPastTriggerTime {
-				a.trigger(ch)
-			} else {
-				close(ch)
+		duration := -time.Since(a.at)
+		if duration < 0 {
+			if duration > -maxPastTriggerTime {
+				ch <- a.Trigger()
 			}
+			close(ch)
 			return
 		}
 		select {
-		case <-time.After(-duration):
-			a.trigger(ch)
+		case <-time.After(duration):
+			ch <- a.Trigger()
 		case <-a.done:
-			close(ch)
 		}
+		close(ch)
 	}()
 	return ch
 }
 
-func (a *AtTrigger) trigger(ch chan *jobs.JobRequest) {
-	ch <- &jobs.JobRequest{
+// Trigger returns the triggered job request
+func (a *AtTrigger) Trigger() *jobs.JobRequest {
+	return &jobs.JobRequest{
 		Domain:     a.in.Domain,
 		WorkerType: a.in.WorkerType,
 		Message:    a.in.Message,
 		Options:    a.in.Options,
 	}
-	close(ch)
 }
 
 // Unschedule implements the Unschedule method of the Trigger interface.

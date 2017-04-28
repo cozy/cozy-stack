@@ -67,19 +67,19 @@ func (c *CronTrigger) Valid(key, value string) bool {
 	return false
 }
 
+// NextExecution returns the next time when a job should be fired for this trigger
+func (c *CronTrigger) NextExecution(last time.Time) time.Time {
+	return c.sched.Next(last)
+}
+
 // Schedule implements the Schedule method of the Trigger interface.
 func (c *CronTrigger) Schedule() <-chan *jobs.JobRequest {
 	ch := make(chan *jobs.JobRequest)
 	go func() {
-		for next := time.Now(); true; next = c.sched.Next(next) {
+		for next := time.Now(); true; next = c.NextExecution(next) {
 			select {
 			case <-time.After(-time.Since(next)):
-				ch <- &jobs.JobRequest{
-					Domain:     c.infos.Domain,
-					WorkerType: c.infos.WorkerType,
-					Message:    c.infos.Message,
-					Options:    c.infos.Options,
-				}
+				ch <- c.Trigger()
 			case <-c.done:
 				close(ch)
 				return
@@ -89,8 +89,9 @@ func (c *CronTrigger) Schedule() <-chan *jobs.JobRequest {
 	return ch
 }
 
-func (c *CronTrigger) trigger(ch chan *jobs.JobRequest) {
-	ch <- &jobs.JobRequest{
+// Trigger returns the triggered job request
+func (c *CronTrigger) Trigger() *jobs.JobRequest {
+	return &jobs.JobRequest{
 		Domain:     c.infos.Domain,
 		WorkerType: c.infos.WorkerType,
 		Message:    c.infos.Message,
