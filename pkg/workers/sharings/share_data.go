@@ -307,16 +307,16 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		opts.DocRev = rev
 
 		if md5 == md5AtRec {
-			patch, err := generateDirOrFilePatch(nil, fileDoc)
-			if err != nil {
+			patch, errp := generateDirOrFilePatch(nil, fileDoc)
+			if errp != nil {
 				log.Error("[sharing] Could not generate patch for file "+
-					fileDoc.DocName+": ", err)
+					fileDoc.DocName+": ", errp)
 				continue
 			}
-			err = sendPatchToRecipient(patch, opts, recipient)
-			if err != nil {
+			errsp := sendPatchToRecipient(patch, opts, recipient)
+			if errsp != nil {
 				log.Error("[sharing] An error occurred while trying to "+
-					"send patch: ", err)
+					"send patch: ", errsp)
 			}
 
 			continue

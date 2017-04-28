@@ -390,6 +390,7 @@ func TestPatchDirOrFileSuccessFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	req, err := http.NewRequest("PATCH", patchURL.String(), body)
+	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
 	res, err := http.DefaultClient.Do(req)
@@ -440,6 +441,7 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	assert.NoError(t, err)
 
 	req, err := http.NewRequest("PATCH", patchURL.String(), body)
+	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
 	res, err := http.DefaultClient.Do(req)

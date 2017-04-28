@@ -202,8 +202,8 @@ func patchDirOrFile(c echo.Context) error {
 		rev = fileDoc.Rev()
 	}
 
-	if err := files.CheckIfMatch(c, rev); err != nil {
-		return err
+	if errc := files.CheckIfMatch(c, rev); err != nil {
+		return errc
 	}
 
 	if dirDoc != nil {
