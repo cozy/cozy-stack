@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/data"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -327,16 +328,12 @@ func receiveDocument(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-// updateDocument updates a shared document in the Cozy.
-//
-// TODO Handle files updates.
 func updateDocument(c echo.Context) error {
 	var err error
 
 	switch c.Param("doctype") {
 	case consts.Files:
-		// TODO
-		err = c.JSON(http.StatusNotImplemented, nil)
+		err = updateFile(c)
 	default:
 		err = data.UpdateDoc(c)
 	}
@@ -348,16 +345,16 @@ func updateDocument(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-// deleteDocument deletes the shared document from the Cozy.
-//
-// TODO Handle files deletions.
 func deleteDocument(c echo.Context) error {
 	var err error
 
 	switch c.Param("doctype") {
 	case consts.Files:
-		// TODO
-		err = c.JSON(http.StatusNotImplemented, nil)
+		fileID := c.Param("docid")
+		c.SetParamNames("file-id")
+		c.SetParamValues(fileID)
+		err = files.TrashHandler(c)
+
 	default:
 		err = data.DeleteDoc(c)
 	}
@@ -384,6 +381,7 @@ func Routes(router *echo.Group) {
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
 	group.PUT("/:docid", updateDocument)
+	group.PATCH("/:docid", patchDirOrFile)
 	group.DELETE("/:docid", deleteDocument)
 }
 

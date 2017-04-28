@@ -160,7 +160,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 
-	if err = checkIfMatch(c, olddoc.Rev()); err != nil {
+	if err = CheckIfMatch(c, olddoc.Rev()); err != nil {
 		return wrapVfsError(err)
 	}
 
@@ -260,7 +260,7 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 		rev = file.Rev()
 	}
 
-	if err := checkIfMatch(c, rev); err != nil {
+	if err := CheckIfMatch(c, rev); err != nil {
 		return wrapVfsError(err)
 	}
 
@@ -284,7 +284,7 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 }
 
 // ReadMetadataFromIDHandler handles all GET requests on /files/:file-
-// id aiming at getting file metadata from its path.
+// id aiming at getting file metadata from its id.
 func ReadMetadataFromIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -595,7 +595,7 @@ func TrashHandler(c echo.Context) error {
 		rev = file.Rev()
 	}
 
-	if err := checkIfMatch(c, rev); err != nil {
+	if err := CheckIfMatch(c, rev); err != nil {
 		return wrapVfsError(err)
 	}
 
@@ -830,7 +830,9 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 	)
 }
 
-func checkIfMatch(c echo.Context, rev string) error {
+// CheckIfMatch checks if the revision provided matches the revision number
+// given in the request, in the header and/or the query.
+func CheckIfMatch(c echo.Context, rev string) error {
 	ifMatch := c.Request().Header.Get("If-Match")
 	revQuery := c.QueryParam("rev")
 	var wantedRev string
