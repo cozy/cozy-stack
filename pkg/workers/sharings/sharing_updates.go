@@ -193,7 +193,7 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 			}
 			return PatchDir(opts, dirDoc)
 		}
-		return SendDoc(instance, opts)
+		return UpdateDoc(instance, opts)
 
 	case realtime.EventDelete:
 		if opts.DocType == consts.Files {

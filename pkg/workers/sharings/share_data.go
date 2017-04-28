@@ -45,7 +45,6 @@ type SendOptions struct {
 	DocID      string
 	DocType    string
 	Type       string
-	Method     string
 	Recipients []*RecipientInfo
 	Path       string
 	DocRev     string
@@ -184,54 +183,77 @@ func DeleteDoc(opts *SendOptions) error {
 	return nil
 }
 
-// SendDoc sends or updates a JSON document to the recipients.
+// SendDoc sends a JSON document to the recipients.
 func SendDoc(ins *instance.Instance, opts *SendOptions) error {
 	doc := &couchdb.JSONDoc{}
 	if err := couchdb.GetDoc(ins, opts.DocType, opts.DocID, doc); err != nil {
 		return err
 	}
+
 	// A new doc will be created on the recipient side
-	if opts.Method == http.MethodPost {
-		delete(doc.M, "_id")
-		delete(doc.M, "_rev")
+	delete(doc.M, "_id")
+	delete(doc.M, "_rev")
+
+	for _, rec := range opts.Recipients {
+		errs := sendDocToRecipient(opts, rec, doc, http.MethodPost)
+		if errs != nil {
+			log.Error("[sharing] An error occurred while trying to send "+
+				"a document to a recipient:", errs)
+		}
+	}
+
+	return nil
+}
+
+// UpdateDoc updates a JSON document at each recipient.
+func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
+	doc := &couchdb.JSONDoc{}
+	if err := couchdb.GetDoc(ins, opts.DocType, opts.DocID, doc); err != nil {
+		return err
 	}
 
 	for _, rec := range opts.Recipients {
 		// A doc update requires to set the doc revision from each recipient
-		if opts.Method == http.MethodPut {
-			rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
-			if err != nil {
-				log.Error("[sharing] An error occurred while trying to send "+
-					"update : ", err)
-				continue
-			}
-			doc.SetRev(rev)
-		}
-		body, err := request.WriteJSON(doc.M)
+		rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
 		if err != nil {
-			return err
+			log.Error("[sharing] An error occurred while trying to get "+
+				"the revision of a document: ", err)
+			continue
 		}
+		doc.SetRev(rev)
 
-		// Send the document to the recipient
-		// TODO : handle send failures
-		_, errSend := request.Req(&request.Options{
-			Domain: rec.URL,
-			Method: http.MethodPost,
-			Path:   opts.Path,
-			Headers: request.Headers{
-				"Content-Type":  "application/json",
-				"Accept":        "application/json",
-				"Authorization": "Bearer " + rec.Token,
-			},
-			Body:       body,
-			NoResponse: true,
-		})
-		if errSend != nil {
-			log.Error("[sharing] An error occurred while trying to share "+
-				"data : ", errSend)
+		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
+		if errs != nil {
+			log.Error("[sharing] An error occurred while trying to send "+
+				"an update: ", err)
 		}
 	}
+
 	return nil
+}
+
+func sendDocToRecipient(opts *SendOptions, rec *RecipientInfo, doc *couchdb.JSONDoc, method string) error {
+	body, err := request.WriteJSON(doc.M)
+	if err != nil {
+		return err
+	}
+
+	// Send the document to the recipient
+	// TODO : handle send failures
+	_, err = request.Req(&request.Options{
+		Domain: rec.URL,
+		Method: method,
+		Path:   opts.Path,
+		Headers: request.Headers{
+			"Content-Type":  "application/json",
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + rec.Token,
+		},
+		Body:       body,
+		NoResponse: true,
+	})
+
+	return err
 }
 
 // SendFile sends a binary file to the recipients
@@ -242,10 +264,8 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	}
 	defer opts.closeFile()
 
-	opts.Method = http.MethodPost
-
 	for _, rec := range opts.Recipients {
-		err = sendFileToRecipient(opts, rec)
+		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to share "+
 				"file "+fileDoc.DocName+": ", err)
@@ -322,14 +342,13 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 			continue
 		}
 
-		opts.Method = http.MethodPut
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to open "+
 				fileDoc.DocName+": ", err)
 			continue
 		}
-		err = sendFileToRecipient(opts, recipient)
+		err = sendFileToRecipient(opts, recipient, http.MethodPut)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to share an "+
 				"update of file "+fileDoc.DocName+" to a recipient: ", err)
@@ -399,15 +418,9 @@ func DeleteDirOrFile(opts *SendOptions) error {
 	return nil
 }
 
-func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo) error {
+func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo, method string) error {
 	if !opts.fileOpts.set {
 		return errors.New("[sharing] fileOpts were not set")
-	}
-
-	// This function can be called for an update or for a creation so the
-	// `method` has to be set beforehand.
-	if opts.Method == "" {
-		return errors.New("[sharing] HTTP Method wasn't set")
 	}
 
 	if opts.DocRev != "" {
@@ -416,7 +429,7 @@ func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo) error {
 
 	_, err := request.Req(&request.Options{
 		Domain: recipient.URL,
-		Method: opts.Method,
+		Method: method,
 		Path:   opts.Path,
 		Headers: request.Headers{
 			"Content-Type":   opts.fileOpts.mime,

@@ -189,7 +189,6 @@ func TestDeleteDoc(t *testing.T) {
 	opts := &SendOptions{
 		DocID:   testDocID,
 		DocType: testDocType,
-		Method:  http.MethodDelete,
 		Path:    fmt.Sprintf("/sharings/doc/%s/%s", testDocType, testDocID),
 		Recipients: []*RecipientInfo{
 			&RecipientInfo{
@@ -238,7 +237,6 @@ func TestSendFile(t *testing.T) {
 	sendFileOpts := &SendOptions{
 		DocID:   fileDoc.ID(),
 		DocType: fileDoc.DocType(),
-		Method:  http.MethodPost,
 		Type:    consts.FileType,
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
 			fileDoc.ID()),
@@ -285,7 +283,6 @@ func TestSendDir(t *testing.T) {
 	sendDirOpts := &SendOptions{
 		DocID:   dirDoc.ID(),
 		DocType: dirDoc.DocType(),
-		Method:  http.MethodPost,
 		Type:    consts.FileType,
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", dirDoc.DocType(),
 			dirDoc.ID()),
@@ -354,7 +351,6 @@ func TestUpdateOrPatchFile(t *testing.T) {
 	patchSendOptions := &SendOptions{
 		DocID:   fileDoc.ID(),
 		DocType: fileDoc.DocType(),
-		Method:  http.MethodPut,
 		Type:    consts.FileType,
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
 			fileDoc.ID()),
@@ -366,7 +362,6 @@ func TestUpdateOrPatchFile(t *testing.T) {
 	updateSendOptions := &SendOptions{
 		DocID:   updatedFileDoc.ID(),
 		DocType: updatedFileDoc.DocType(),
-		Method:  http.MethodPut,
 		Type:    consts.FileType,
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", updatedFileDoc.DocType(),
 			updatedFileDoc.ID()),
@@ -419,7 +414,6 @@ func TestPatchDir(t *testing.T) {
 	patchSendOptions := &SendOptions{
 		DocID:   dirDoc.ID(),
 		DocType: dirDoc.DocType(),
-		Method:  http.MethodPatch,
 		Type:    consts.DirType,
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", dirDoc.DocType(),
 			dirDoc.ID()),
@@ -465,7 +459,6 @@ func TestDeleteDirOrFile(t *testing.T) {
 	deleteSendOptions := &SendOptions{
 		DocID:   dirDoc.ID(),
 		DocType: dirDoc.DocType(),
-		Method:  http.MethodDelete,
 		Type:    consts.DirType,
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", dirDoc.DocType(),
 			dirDoc.ID()),

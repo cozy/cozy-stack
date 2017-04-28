@@ -6,8 +6,6 @@ import (
 	"io"
 	"strings"
 
-	"net/http"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -283,7 +281,6 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, sharingWorker.SendOptions{
 				DocID:      val,
-				Method:     http.MethodPost,
 				DocType:    docType,
 				Recipients: []*sharingWorker.RecipientInfo{rec},
 			})
