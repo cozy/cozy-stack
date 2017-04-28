@@ -3,6 +3,7 @@ package vfs
 import (
 	"image"
 	"io"
+	"time"
 
 	// Packages image/... are not used explicitly in the code below,
 	// but are imported for its initialization side-effect
@@ -19,7 +20,7 @@ import (
 // MetadataExtractorVersion is the version number of the metadata extractor.
 // It will be used later to know which files can be re-examined to get more
 // metadata when the extractor is improved.
-const MetadataExtractorVersion = 1
+const MetadataExtractorVersion = 2
 
 // Metadata is a list of metadata specific to each mimetype:
 // id3 for music, exif for jpegs, etc.
@@ -101,6 +102,7 @@ func (e *ImageExtractor) Abort(err error) {
 // Result is called to get the extracted metadata
 func (e *ImageExtractor) Result() Metadata {
 	m := NewMetadata()
+	m["datetime"] = time.Now()
 	cfg := <-e.ch
 	switch cfg := cfg.(type) {
 	case image.Config:
