@@ -70,7 +70,7 @@ $ docker run --rm -it \
     cozy/cozy-app-dev
 ```
 
-You can mount your yaml config file :
+You can mount your yaml config file, to change the log level for example:
 
 ```sh
 $ docker run --rm -it \
@@ -80,6 +80,7 @@ $ docker run --rm -it \
     -v "$HOME/cozy.yaml":/etc/cozy/cozy.yaml \
     cozy/cozy-app-dev
 ```
+
 A [MailHog](https://github.com/mailhog/MailHog) is running inside docker to
 catch emails. You can view the emails sent by the stack in a web interface on
 http://cozy.tools:8025/
