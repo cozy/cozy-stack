@@ -112,6 +112,16 @@ Post a comment in the pull request afterwards; GitHub does not send out
 notifications when you add commits.
 
 
+External assets
+---------------
+
+The cozy-stack serve some assets for the client application. In particular,
+cozy-client-js and cozy-bar assets are listed in `assets/external`. To update
+them, you can open a pull request for this file. When a maintainer will accept
+this pull request, he will also run `scripts/build.sh assets` to transform
+them in go code (to make the repository go gettable).
+
+
 Useful commands
 ---------------
 
