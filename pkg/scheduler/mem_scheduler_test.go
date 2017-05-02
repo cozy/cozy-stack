@@ -22,7 +22,7 @@ func (s *storage) Delete(trigger Trigger) error     { return nil }
 func TestTriggersBadArguments(t *testing.T) {
 	var err error
 	_, err = NewTrigger(&TriggerInfos{
-		ID:        utils.RandomString(10),
+		TID:       utils.RandomString(10),
 		Domain:    "cozy.local",
 		Type:      "@at",
 		Arguments: "garbage",
@@ -30,14 +30,14 @@ func TestTriggersBadArguments(t *testing.T) {
 	assert.Error(t, err)
 
 	_, err = NewTrigger(&TriggerInfos{
-		ID:        utils.RandomString(10),
+		TID:       utils.RandomString(10),
 		Type:      "@in",
 		Arguments: "garbage",
 	})
 	assert.Error(t, err)
 
 	_, err = NewTrigger(&TriggerInfos{
-		ID:        utils.RandomString(10),
+		TID:       utils.RandomString(10),
 		Domain:    "cozy.local",
 		Type:      "@unknown",
 		Arguments: "",
@@ -79,7 +79,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 
 	atID := utils.RandomString(10)
 	at := &TriggerInfos{
-		ID:         atID,
+		TID:        atID,
 		Type:       "@at",
 		Domain:     "cozy.local",
 		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
@@ -88,7 +88,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	}
 	inID := utils.RandomString(10)
 	in := &TriggerInfos{
-		ID:         inID,
+		TID:        inID,
 		Domain:     "cozy.local",
 		Type:       "@in",
 		Arguments:  "1s",
@@ -97,7 +97,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	triggers := []*TriggerInfos{at, in}
-	sch := NewMemScheduler(&storage{triggers})
+	sch := newMemScheduler(&storage{triggers})
 
 	sch.Start(bro)
 
@@ -106,13 +106,13 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	assert.Len(t, ts, len(triggers))
 
 	for _, trigger := range ts {
-		switch trigger.Infos().ID {
+		switch trigger.Infos().TID {
 		case atID:
 			assert.Equal(t, at, trigger.Infos())
 		case inID:
 			assert.Equal(t, in, trigger.Infos())
 		default:
-			t.Fatalf("unknown trigger ID %s", trigger.Infos().ID)
+			t.Fatalf("unknown trigger ID %s", trigger.Infos().TID)
 		}
 	}
 

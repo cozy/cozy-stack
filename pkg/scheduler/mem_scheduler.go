@@ -4,14 +4,56 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 )
 
-// MemScheduler is a centralized scheduler of many triggers. It stars all of
+// triggerGlobalStorage interface is used to represent a persistent layer on
+// which triggers are stored.
+type triggerGlobalStorage interface {
+	GetAll() ([]*TriggerInfos, error)
+	Add(trigger Trigger) error
+	Delete(trigger Trigger) error
+}
+
+// globalDBStorage implements the triggerGlobalStorage interface and uses a
+// single database in CouchDB as the underlying storage for triggers.
+type globalDBStorage struct{}
+
+// newGlobalDBStorage returns a new instance of CouchStorage using the
+// specified database.
+func newGlobalDBStorage() triggerGlobalStorage {
+	return &globalDBStorage{}
+}
+
+func (s *globalDBStorage) GetAll() ([]*TriggerInfos, error) {
+	var infos []*TriggerInfos
+	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
+	req := &couchdb.AllDocsRequest{Limit: 1000}
+	err := couchdb.GetAllDocs(couchdb.GlobalTriggersDB, consts.Triggers, req, &infos)
+	if err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			return infos, nil
+		}
+		return nil, err
+	}
+	return infos, nil
+}
+
+func (s *globalDBStorage) Add(trigger Trigger) error {
+	return couchdb.CreateDoc(couchdb.GlobalTriggersDB, trigger.Infos())
+}
+
+func (s *globalDBStorage) Delete(trigger Trigger) error {
+	return couchdb.DeleteDoc(couchdb.GlobalTriggersDB, trigger.Infos())
+}
+
+// MemScheduler is a centralized scheduler of many triggers. It starts all of
 // them and schedules jobs accordingly.
 type MemScheduler struct {
 	broker  jobs.Broker
-	storage TriggerStorage
+	storage triggerGlobalStorage
 
 	ts map[string]Trigger
 	mu sync.RWMutex
@@ -19,7 +61,11 @@ type MemScheduler struct {
 
 // NewMemScheduler creates a new in-memory scheduler that will load all
 // registered triggers and schedule their work.
-func NewMemScheduler(storage TriggerStorage) *MemScheduler {
+func NewMemScheduler() *MemScheduler {
+	return newMemScheduler(newGlobalDBStorage())
+}
+
+func newMemScheduler(storage triggerGlobalStorage) *MemScheduler {
 	return &MemScheduler{
 		storage: storage,
 		ts:      make(map[string]Trigger),
@@ -40,12 +86,11 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	for _, infos := range ts {
 		t, err := NewTrigger(infos)
 		if err != nil {
-			log.Errorln(
-				"[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
-				infos.Type, infos.ID, err.Error())
+			log.Errorf("[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
+				infos.Type, infos.TID, err.Error())
 			continue
 		}
-		s.ts[infos.ID] = t
+		s.ts[infos.TID] = t
 		go s.schedule(t)
 	}
 	return nil
@@ -59,7 +104,7 @@ func (s *MemScheduler) Add(t Trigger) error {
 	if err := s.storage.Add(t); err != nil {
 		return err
 	}
-	s.ts[t.Infos().ID] = t
+	s.ts[t.Infos().TID] = t
 	go s.schedule(t)
 	return nil
 }
@@ -106,19 +151,17 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().ID)
+	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().TID)
 	for req := range t.Schedule() {
-		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().ID)
+		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().TID)
 		if _, _, err := s.broker.PushJob(req); err != nil {
-			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s", t.Type(), t.Infos().ID, err.Error())
+			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s", t.Type(), t.Infos().TID, err.Error())
 		}
 	}
-	log.Debugf("[jobs] trigger %s(%s): Closing trigger", t.Type(), t.Infos().ID)
-	if err := s.Delete(t.Infos().Domain, t.Infos().ID); err != nil {
-		log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s", t.Type(), t.Infos().ID, err.Error())
+	log.Debugf("[jobs] trigger %s(%s): Closing trigger", t.Type(), t.Infos().TID)
+	if err := s.Delete(t.Infos().Domain, t.Infos().TID); err != nil {
+		log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s", t.Type(), t.Infos().TID, err.Error())
 	}
 }
 
-var (
-	_ Scheduler = &MemScheduler{}
-)
+var _ Scheduler = &MemScheduler{}

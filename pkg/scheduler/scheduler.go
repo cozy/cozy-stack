@@ -1,21 +1,45 @@
 package scheduler
 
 import (
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
-type (
-	// Scheduler interface is used to represent a scheduler that is responsible
-	// to listen respond to triggers jobs requests and send them to the broker.
-	Scheduler interface {
-		Start(broker jobs.Broker) error
-		Add(trigger Trigger) error
-		Get(domain, id string) (Trigger, error)
-		Delete(domain, id string) error
-		GetAll(domain string) ([]Trigger, error)
-	}
+// TriggerInfos is a struct containing all the options of a trigger.
+type TriggerInfos struct {
+	TID        string           `json:"_id,omitempty"`
+	TRev       string           `json:"_rev,omitempty"`
+	Domain     string           `json:"domain"`
+	Type       string           `json:"type"`
+	WorkerType string           `json:"worker"`
+	Arguments  string           `json:"arguments"`
+	Options    *jobs.JobOptions `json:"options"`
+	Message    *jobs.Message    `json:"message"`
+}
 
+// ID implements the couchdb.Doc interface
+func (t *TriggerInfos) ID() string { return t.TID }
+
+// Rev implements the couchdb.Doc interface
+func (t *TriggerInfos) Rev() string { return t.TRev }
+
+// DocType implements the couchdb.Doc interface
+func (t *TriggerInfos) DocType() string { return consts.Triggers }
+
+// Clone implements the couchdb.Doc interface
+func (t *TriggerInfos) Clone() couchdb.Doc { cloned := *t; return &cloned }
+
+// SetID implements the couchdb.Doc interface
+func (t *TriggerInfos) SetID(id string) { t.TID = id }
+
+// SetRev implements the couchdb.Doc interface
+func (t *TriggerInfos) SetRev(rev string) { t.TRev = rev }
+
+var _ couchdb.Doc = &TriggerInfos{}
+
+type (
 	// Trigger interface is used to represent a trigger.
 	Trigger interface {
 		permissions.Validable
@@ -29,24 +53,14 @@ type (
 		Unschedule()
 	}
 
-	// TriggerStorage interface is used to represent a persistent layer on which
-	// triggers are stored.
-	TriggerStorage interface {
-		GetAll() ([]*TriggerInfos, error)
+	// Scheduler interface is used to represent a scheduler that is responsible
+	// to listen respond to triggers jobs requests and send them to the broker.
+	Scheduler interface {
+		Start(broker jobs.Broker) error
 		Add(trigger Trigger) error
-		Delete(trigger Trigger) error
-	}
-
-	// TriggerInfos is a struct containing all the options of a trigger.
-	TriggerInfos struct {
-		ID         string           `json:"_id,omitempty"`
-		Rev        string           `json:"_rev,omitempty"`
-		Domain     string           `json:"domain"`
-		Type       string           `json:"type"`
-		WorkerType string           `json:"worker"`
-		Arguments  string           `json:"arguments"`
-		Options    *jobs.JobOptions `json:"options"`
-		Message    *jobs.Message    `json:"message"`
+		Get(domain, id string) (Trigger, error)
+		Delete(domain, id string) error
+		GetAll(domain string) ([]Trigger, error)
 	}
 )
 

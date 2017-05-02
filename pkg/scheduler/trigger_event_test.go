@@ -20,7 +20,6 @@ func makeMessage(t *testing.T, msg string) *jobs.Message {
 }
 
 func TestTriggerEvent(t *testing.T) {
-
 	var wg sync.WaitGroup
 	var called = make(map[string]bool)
 
@@ -51,7 +50,7 @@ func TestTriggerEvent(t *testing.T) {
 
 	storage := &storage{[]*TriggerInfos{
 		{
-			ID:         utils.RandomString(10),
+			TID:        utils.RandomString(10),
 			Type:       "@event",
 			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:DELETED",
@@ -59,7 +58,7 @@ func TestTriggerEvent(t *testing.T) {
 			Message:    makeMessage(t, "message-bad-verb"),
 		},
 		{
-			ID:         utils.RandomString(10),
+			TID:        utils.RandomString(10),
 			Type:       "@event",
 			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:CREATED:value:test",
@@ -67,7 +66,7 @@ func TestTriggerEvent(t *testing.T) {
 			Message:    makeMessage(t, "message-correct-verb-correct-value"),
 		},
 		{
-			ID:         utils.RandomString(10),
+			TID:        utils.RandomString(10),
 			Type:       "@event",
 			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:CREATED",
@@ -75,7 +74,7 @@ func TestTriggerEvent(t *testing.T) {
 			Message:    makeMessage(t, "message-correct-verb"),
 		},
 		{
-			ID:         utils.RandomString(10),
+			TID:        utils.RandomString(10),
 			Type:       "@event",
 			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject:CREATED:notvalue:test",
@@ -83,7 +82,7 @@ func TestTriggerEvent(t *testing.T) {
 			Message:    makeMessage(t, "message-correct-verb-bad-value"),
 		},
 		{
-			ID:         utils.RandomString(10),
+			TID:        utils.RandomString(10),
 			Type:       "@event",
 			Domain:     "cozy.local",
 			Arguments:  "io.cozy.testeventobject",
@@ -92,7 +91,7 @@ func TestTriggerEvent(t *testing.T) {
 		},
 	}}
 	wg.Add(3)
-	sch := NewMemScheduler(storage)
+	sch := newMemScheduler(storage)
 	sch.Start(bro)
 
 	time.AfterFunc(1*time.Millisecond, func() {
@@ -119,6 +118,6 @@ func TestTriggerEvent(t *testing.T) {
 	assert.False(t, called["message-correct-verb-bad-value"])
 
 	for _, t := range storage.ts {
-		sch.Delete("cozy.local", t.ID)
+		sch.Delete("cozy.local", t.TID)
 	}
 }

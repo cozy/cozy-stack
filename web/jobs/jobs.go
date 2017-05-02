@@ -84,7 +84,7 @@ func (q *apiQueue) Valid(key, value string) bool {
 	return false
 }
 
-func (t *apiTrigger) ID() string                             { return t.t.Infos().ID }
+func (t *apiTrigger) ID() string                             { return t.t.Infos().TID }
 func (t *apiTrigger) Rev() string                            { return "" }
 func (t *apiTrigger) DocType() string                        { return consts.Triggers }
 func (t *apiTrigger) Clone() couchdb.Doc                     { return t }
