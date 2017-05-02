@@ -70,43 +70,49 @@ func (s *RedisScheduler) Start(b jobs.Broker) error {
 // Poll redis to see if there are some triggers ready
 func (s *RedisScheduler) Poll() error {
 	now := strconv.FormatInt(time.Now().UTC().Unix(), 10)
-	// TODO it should be a loop
-	res, err := s.client.Eval(luaPoll, []string{now}).Result()
-	if err != nil || res == nil {
-		return err
-	}
-	results, ok := res.([]interface{})
-	if !ok {
-		return errors.New("Unexpected response from redis")
-	}
-	if len(results) < 2 {
-		return nil
-	}
-	parts := strings.SplitN(results[0].(string), ":", 2)
-	if len(parts) != 2 {
-		// TODO remove the trigger from redis
-		return fmt.Errorf("Invalid key %s", res)
-	}
-	t, err := s.Get(parts[0], parts[1])
-	if err != nil {
-		// TODO if not found, remove the trigger from redis
-		return err
-	}
-	switch t := t.(type) {
-	case *AtTrigger:
-		job := t.Trigger()
-		if _, _, err = s.Broker.PushJob(job); err != nil {
+	for {
+		res, err := s.client.Eval(luaPoll, []string{now}).Result()
+		if err != nil || res == nil {
 			return err
 		}
-		return s.deleteTrigger(t)
-	case *CronTrigger:
-		job := t.Trigger()
-		if _, _, err = s.Broker.PushJob(job); err != nil {
+		results, ok := res.([]interface{})
+		if !ok {
+			return errors.New("Unexpected response from redis")
+		}
+		if len(results) < 2 {
+			return nil
+		}
+		parts := strings.SplitN(results[0].(string), ":", 2)
+		if len(parts) != 2 {
+			s.client.ZRem(SchedKey, results[0])
+			return fmt.Errorf("Invalid key %s", res)
+		}
+		t, err := s.Get(parts[0], parts[1])
+		if err != nil {
+			s.client.ZRem(SchedKey, results[0])
 			return err
 		}
-		return s.addToRedis(t)
+		switch t := t.(type) {
+		case *AtTrigger:
+			job := t.Trigger()
+			if _, _, err = s.Broker.PushJob(job); err != nil {
+				return err
+			}
+			if err := s.deleteTrigger(t); err != nil {
+				return err
+			}
+		case *CronTrigger:
+			job := t.Trigger()
+			if _, _, err = s.Broker.PushJob(job); err != nil {
+				return err
+			}
+			if err := s.addToRedis(t); err != nil {
+				return err
+			}
+		default:
+			return errors.New("Not implemented yet")
+		}
 	}
-	return errors.New("Not implemented yet")
 }
 
 // Add a trigger to the system, by persisting it and using redis for scheduling
