@@ -285,19 +285,21 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     },
     "attributes": {
       "type": "file",
-      "name": "hello.mp3",
+      "name": "sunset.jpg",
       "trashed": false,
       "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
       "created_at": "2016-09-19T12:38:04Z",
       "updated_at": "2016-09-19T12:38:04Z",
       "tags": [],
       "metadata": {
-        "artist": "Adele"
+        "datetime": "2016-09-18T20:38:04Z",
+        "height": 1080,
+        "width": 1920
       },
       "size": 12,
       "executable": false,
-      "class": "document",
-      "mime": "text/plain"
+      "class": "image",
+      "mime": "image/jpg"
     },
     "relationships": {
       "parent": {
@@ -314,12 +316,15 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
           "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
         },
         "data": [
-          { "type": "io.cozy.playlists", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+          { "type": "io.cozy.albums", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
         ]
       }
     },
     "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
+      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "small": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/small",
+      "medium": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
+      "large": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
     }
   }
 }
@@ -365,7 +370,7 @@ By default the `content-disposition` will be `inline`, but it will be
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
 
-### GET /files/:file-id/thumbnail/:format
+### GET /files/:file-id/thumbnails/:secret/:format
 
 Get a thumbnail of a file (for an image only). `:format` can be `small`
 (640x480), `medium` (1280x720), or `large` (1920x1080).
