@@ -147,6 +147,13 @@ func (f *FileDoc) Valid(field, expected string) bool {
 		return f.Class == expected
 	case "tags":
 		return contains(f.Tags, expected)
+	case "referenced_by":
+		for _, ref := range f.ReferencedBy {
+			if ref.ID == expected {
+				return true
+			}
+		}
+		return false
 	default:
 		return false
 	}

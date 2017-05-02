@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/stretchr/testify/assert"
@@ -123,6 +124,27 @@ func TestPermissions(t *testing.T) {
 	}
 	f.Mime = "text/plain"
 	assert.NoError(t, vfs.Allows(fs, psetMime, permissions.GET, f))
+
+	psetReferences := permissions.Set{
+		permissions.Rule{
+			Type:     consts.Files,
+			Verbs:    permissions.ALL,
+			Selector: "referenced_by",
+			Values:   []string{"somealbumid"},
+		},
+	}
+	f.ReferencedBy = []couchdb.DocReference{{Type: "io.cozy.albums", ID: "somealbumid"}}
+	assert.NoError(t, vfs.Allows(fs, psetReferences, permissions.GET, f))
+
+	psetBadReferences := permissions.Set{
+		permissions.Rule{
+			Type:     consts.Files,
+			Verbs:    permissions.ALL,
+			Selector: "referenced_by",
+			Values:   []string{"anotheralbumid"},
+		},
+	}
+	assert.Error(t, vfs.Allows(fs, psetBadReferences, permissions.GET, f))
 
 	psetName := permissions.Set{
 		permissions.Rule{
