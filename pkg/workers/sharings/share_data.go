@@ -3,6 +3,7 @@ package sharings
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -176,11 +177,19 @@ func SendFile(domain string, opts *SendOptions) error {
 	if err != nil {
 		return err
 	}
+	// Send references for permissions
+	// TODO: only send the reference linked  to the actual permission
+	b, err := json.Marshal(doc.ReferencedBy)
+	if err != nil {
+		return nil
+	}
+	refs := string(b[:])
 
 	path := fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, opts.DocID)
 	query := url.Values{
-		"Type": []string{consts.FileType},
-		"Name": []string{doc.DocName},
+		"Type":          []string{consts.FileType},
+		"Name":          []string{doc.DocName},
+		"Referenced_by": []string{refs},
 	}
 	md5 := base64.StdEncoding.EncodeToString(doc.MD5Sum)
 	length := strconv.FormatInt(doc.ByteSize, 10)
