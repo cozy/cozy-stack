@@ -317,7 +317,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 				assert.Equal(t, fileDoc.DocName, *patch.Name)
 				assert.Equal(t, fileDoc.DirID, *patch.DirID)
 				assert.Equal(t, fileDoc.Tags, *patch.Tags)
-				assert.Equal(t, fileDoc.UpdatedAt, *patch.UpdatedAt)
+				assert.Equal(t, fileDoc.UpdatedAt.Unix(),
+					(*patch.UpdatedAt).Unix())
 				return c.JSON(http.StatusOK, nil)
 			})
 			router.PUT("/doc/:doctype/:docid", func(c echo.Context) error {
