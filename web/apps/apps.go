@@ -37,21 +37,20 @@ func (man *apiApp) MarshalJSON() ([]byte, error) {
 func (man *apiApp) Links() *jsonapi.LinksList {
 	var route string
 	links := jsonapi.LinksList{}
-	switch man.DocType() {
-	case consts.Apps:
-		var app = man.Manifest.(*apps.WebappManifest)
+	switch app := man.Manifest.(type) {
+	case (*apps.WebappManifest):
 		route = "/apps/"
 		if app.Icon != "" {
 			links.Icon = "/apps/" + app.Slug() + "/icon"
 		}
 		if app.State() == apps.Ready && app.Instance != nil {
-			links.Related = app.Instance.SubDomain(man.Manifest.Slug()).String()
+			links.Related = app.Instance.SubDomain(app.Slug()).String()
 		}
-
-	case consts.Konnectors:
+	case (*apps.KonnManifest):
 		route = "konnectors"
+		links.Perms = "/permissions/" +
+			url.QueryEscape(consts.Konnectors+"/"+app.Slug())
 	}
-
 	if route != "" {
 		links.Self = route + man.Manifest.Slug()
 	}
