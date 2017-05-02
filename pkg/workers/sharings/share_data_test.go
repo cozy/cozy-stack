@@ -395,7 +395,8 @@ func TestPatchDir(t *testing.T) {
 				assert.Equal(t, dirDoc.DocName, *patch.Name)
 				assert.Equal(t, dirDoc.DirID, *patch.DirID)
 				assert.Equal(t, dirDoc.Tags, *patch.Tags)
-				assert.Equal(t, dirDoc.UpdatedAt, *patch.UpdatedAt)
+				assert.Equal(t, dirDoc.UpdatedAt.Unix(),
+					(*patch.UpdatedAt).Unix())
 				return c.JSON(http.StatusOK, nil)
 			})
 		},
