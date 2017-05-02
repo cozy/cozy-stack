@@ -88,7 +88,8 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 	if err != nil {
 		return
 	}
-	f = newFile(doc)
+	instance := middlewares.GetInstance(c)
+	f = newFile(doc, instance)
 	return
 }
 
@@ -376,14 +377,26 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 func ThumbnailHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
+	secret := c.Param("secret")
+	path, err := vfs.GetStore().GetFile(instance.Domain, secret)
+	if err != nil {
+		return wrapVfsError(err)
+	}
+	if path == "" {
+		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
+	}
+
 	doc, err := instance.VFS().FileByID(c.Param("file-id"))
 	if err != nil {
 		return wrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.GET, nil, doc)
+	expected, err := doc.Path(instance.VFS())
 	if err != nil {
-		return err
+		return wrapVfsError(err)
+	}
+	if expected != path {
+		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 
 	filepath := vfs.ThumbPath(doc, c.Param("format"))
@@ -719,7 +732,7 @@ func Routes(router *echo.Group) {
 	router.POST("/:dir-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
-	router.GET("/:file-id/thumbnail/:format", ThumbnailHandler)
+	router.GET("/:file-id/thumbnails/:secret/:format", ThumbnailHandler)
 
 	router.POST("/archive", ArchiveDownloadCreateHandler)
 	router.GET("/archive/:secret/:fake-name", ArchiveDownloadHandler)

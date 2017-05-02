@@ -34,6 +34,10 @@ type LinksList struct {
 	Next    string `json:"next,omitempty"`
 	Icon    string `json:"icon,omitempty"`
 	Perms   string `json:"permissions,omitempty"`
+	// Thumbnails
+	Small  string `json:"small,omitempty"`
+	Medium string `json:"medium,omitempty"`
+	Large  string `json:"large,omitempty"`
 }
 
 // Relationship is a resource linkage, as described in JSON-API
