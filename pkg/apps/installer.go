@@ -92,7 +92,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		case Webapp:
 			man = &WebappManifest{}
 		case Konnector:
-			man = &konnManifest{}
+			man = &KonnManifest{}
 		}
 	} else if err != nil {
 		return nil, err

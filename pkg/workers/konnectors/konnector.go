@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -63,9 +64,12 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 
-	man, err := apps.GetBySlug(inst, slug, apps.Konnector)
+	man, err := apps.GetKonnectorBySlug(inst, slug)
 	if err != nil {
 		return err
+	}
+	if man.State() != apps.Ready {
+		return errors.New("Konnector is not ready")
 	}
 
 	token := inst.BuildKonnectorToken(man)
@@ -122,6 +126,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		"COZY_URL=" + inst.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + string(fieldsJSON),
+		"COZY_TYPE=" + man.Type,
 		"COZY_JOB_ID=" + jobID,
 	}
 

@@ -10,8 +10,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
-type konnManifest struct {
-	DocRev string `json:"_rev,omitempty"` // konnManifest revision
+// KonnManifest contains all the informations associated with an installed
+// konnector.
+type KonnManifest struct {
+	DocRev string `json:"_rev,omitempty"` // KonnManifest revision
 
 	Name        string     `json:"name"`
 	Type        string     `json:"type,omitempty"`
@@ -33,32 +35,60 @@ type konnManifest struct {
 	DocPermissions permissions.Set `json:"permissions"`
 }
 
-func (m *konnManifest) ID() string         { return m.DocType() + "/" + m.DocSlug }
-func (m *konnManifest) Rev() string        { return m.DocRev }
-func (m *konnManifest) DocType() string    { return consts.Konnectors }
-func (m *konnManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
-func (m *konnManifest) SetID(id string)    {}
-func (m *konnManifest) SetRev(rev string)  { m.DocRev = rev }
-func (m *konnManifest) Source() string     { return m.DocSource }
-func (m *konnManifest) Version() string    { return m.DocVersion }
-func (m *konnManifest) Slug() string       { return m.DocSlug }
+// ID is part of the Manifest interface
+func (m *KonnManifest) ID() string { return m.DocType() + "/" + m.DocSlug }
 
-func (m *konnManifest) State() State { return m.DocState }
-func (m *konnManifest) Error() error {
+// Rev is part of the Manifest interface
+func (m *KonnManifest) Rev() string { return m.DocRev }
+
+// DocType is part of the Manifest interface
+func (m *KonnManifest) DocType() string { return consts.Konnectors }
+
+// Clone is part of the Manifest interface
+func (m *KonnManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
+
+// SetID is part of the Manifest interface
+func (m *KonnManifest) SetID(id string) {}
+
+// SetRev is part of the Manifest interface
+func (m *KonnManifest) SetRev(rev string) { m.DocRev = rev }
+
+// Source is part of the Manifest interface
+func (m *KonnManifest) Source() string { return m.DocSource }
+
+// Version is part of the Manifest interface
+func (m *KonnManifest) Version() string { return m.DocVersion }
+
+// Slug is part of the Manifest interface
+func (m *KonnManifest) Slug() string { return m.DocSlug }
+
+// State is part of the Manifest interface
+func (m *KonnManifest) State() State { return m.DocState }
+
+// Error is part of the Manifest interface
+func (m *KonnManifest) Error() error {
 	if m.DocError == "" {
 		return nil
 	}
 	return errors.New(m.DocError)
 }
 
-func (m *konnManifest) SetState(state State)      { m.DocState = state }
-func (m *konnManifest) SetError(err error)        { m.DocError = err.Error() }
-func (m *konnManifest) SetVersion(version string) { m.DocVersion = version }
-func (m *konnManifest) Permissions() permissions.Set {
+// SetState is part of the Manifest interface
+func (m *KonnManifest) SetState(state State) { m.DocState = state }
+
+// SetError is part of the Manifest interface
+func (m *KonnManifest) SetError(err error) { m.DocError = err.Error() }
+
+// SetVersion is part of the Manifest interface
+func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
+
+// Permissions is part of the Manifest interface
+func (m *KonnManifest) Permissions() permissions.Set {
 	return m.DocPermissions
 }
 
-func (m *konnManifest) Valid(field, value string) bool {
+// Valid is part of the Manifest interface
+func (m *KonnManifest) Valid(field, value string) bool {
 	switch field {
 	case "slug":
 		return m.DocSlug == value
@@ -68,7 +98,8 @@ func (m *konnManifest) Valid(field, value string) bool {
 	return false
 }
 
-func (m *konnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
+// ReadManifest is part of the Manifest interface
+func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	if err := json.NewDecoder(r).Decode(&m); err != nil {
 		return ErrBadManifest
 	}
@@ -80,7 +111,8 @@ func (m *konnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	return nil
 }
 
-func (m *konnManifest) Create(db couchdb.Database) error {
+// Create is part of the Manifest interface
+func (m *KonnManifest) Create(db couchdb.Database) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
@@ -88,7 +120,8 @@ func (m *konnManifest) Create(db couchdb.Database) error {
 	return err
 }
 
-func (m *konnManifest) Update(db couchdb.Database) error {
+// Update is part of the Manifest interface
+func (m *KonnManifest) Update(db couchdb.Database) error {
 	err := permissions.DestroyKonnector(db, m.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
@@ -101,7 +134,8 @@ func (m *konnManifest) Update(db couchdb.Database) error {
 	return err
 }
 
-func (m *konnManifest) Delete(db couchdb.Database) error {
+// Delete is part of the Manifest interface
+func (m *KonnManifest) Delete(db couchdb.Database) error {
 	err := permissions.DestroyKonnector(db, m.Slug())
 	if err != nil && !couchdb.IsNotFoundError(err) {
 		return err
@@ -111,8 +145,8 @@ func (m *konnManifest) Delete(db couchdb.Database) error {
 
 // GetKonnectorBySlug fetch the manifest of a konnector from the database given
 // a slug.
-func GetKonnectorBySlug(db couchdb.Database, slug string) (Manifest, error) {
-	man := &konnManifest{}
+func GetKonnectorBySlug(db couchdb.Database, slug string) (*KonnManifest, error) {
+	man := &KonnManifest{}
 	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, man)
 	if couchdb.IsNotFoundError(err) {
 		return nil, ErrNotFound
@@ -127,7 +161,7 @@ func GetKonnectorBySlug(db couchdb.Database, slug string) (Manifest, error) {
 //
 // TODO: pagination
 func ListKonnectors(db couchdb.Database) ([]Manifest, error) {
-	var docs []*konnManifest
+	var docs []*KonnManifest
 	req := &couchdb.AllDocsRequest{Limit: 100}
 	err := couchdb.GetAllDocs(db, consts.Konnectors, req, &docs)
 	if err != nil {
@@ -140,4 +174,4 @@ func ListKonnectors(db couchdb.Database) ([]Manifest, error) {
 	return mans, nil
 }
 
-var _ Manifest = &konnManifest{}
+var _ Manifest = &KonnManifest{}
