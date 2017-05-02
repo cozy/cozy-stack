@@ -121,6 +121,8 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 		}
 	}
 
+	time.Sleep(50 * time.Millisecond)
+
 	_, err = sch.Get(instanceName, atID)
 	assert.Error(t, err)
 	assert.Equal(t, scheduler.ErrNotFoundTrigger, err)

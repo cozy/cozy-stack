@@ -32,13 +32,6 @@ if #res > 0 then
 end
 return res`
 
-// local res = redis.call("ZRANGEBYSCORE", "` + TriggersKey + `", 0, KEYS[1], "WITHSCORES", "LIMIT", 1)
-// if #res > 0 then
-//   redis.call("ZREM", "` + TriggersKey + `", res[1])
-//   redis.call("ZADD", "` + SchedKey + `", res[1], res[2])
-// end
-// return res
-
 // pollInterval is the time interval between 2 redis polling
 const pollInterval = 1 * time.Second
 
@@ -65,7 +58,7 @@ func redisKey(infos *TriggerInfos) string {
 func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.Broker = b
 	go func() {
-		for _ = range time.Tick(pollInterval) {
+		for range time.Tick(pollInterval) {
 			if err := s.Poll(); err != nil {
 				log.Warnf("[Scheduler] Failed to poll redis: %s", err)
 			}
@@ -151,6 +144,9 @@ func (s *RedisScheduler) Get(domain, id string) (Trigger, error) {
 	var infos TriggerInfos
 	db := couchdb.SimpleDatabasePrefix(domain)
 	if err := couchdb.GetDoc(db, consts.Triggers, id, &infos); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil, ErrNotFoundTrigger
+		}
 		return nil, err
 	}
 	return NewTrigger(&infos)
