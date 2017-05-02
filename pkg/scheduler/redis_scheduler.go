@@ -22,18 +22,26 @@ const TriggersKey = "triggers"
 // currently being executed
 const SchedKey = "scheduling"
 
-// luaPoll returns the lua script used for polling triggers in redis
-// TODO we should poll sched too
-const luaPoll = `
-local res = redis.call("ZRANGEBYSCORE", "` + TriggersKey + `", 0, KEYS[1], "WITHSCORES", "LIMIT", 0, 1)
-if #res > 0 then
-  redis.call("ZREM", "` + TriggersKey + `", res[1])
-  redis.call("ZADD", "` + SchedKey + `", res[2], res[1])
-end
-return res`
-
 // pollInterval is the time interval between 2 redis polling
 const pollInterval = 1 * time.Second
+
+// luaPoll returns the lua script used for polling triggers in redis.
+// If a trigger is in the scheduling key for more than 10 seconds, it is
+// an error and we can try again to schedule it.
+// TODO add tests
+const luaPoll = `
+local w = KEYS[1] - 10
+local s = redis.call("ZRANGEBYSCORE", "` + SchedKey + `", 0, w, "WITHSCORES", "LIMIT", 0, 1)
+if #s > 0 then
+  redis.call("ZADD", "` + SchedKey + `", KEYS[1], t[1])
+  return s
+end
+local t = redis.call("ZRANGEBYSCORE", "` + TriggersKey + `", 0, KEYS[1], "WITHSCORES", "LIMIT", 0, 1)
+if #t > 0 then
+  redis.call("ZREM", "` + TriggersKey + `", t[1])
+  redis.call("ZADD", "` + SchedKey + `", t[2], t[1])
+end
+return t`
 
 // RedisScheduler is a centralized scheduler of many triggers. It starts all of
 // them and schedules jobs accordingly.
@@ -59,7 +67,8 @@ func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.Broker = b
 	go func() {
 		for range time.Tick(pollInterval) {
-			if err := s.Poll(); err != nil {
+			now := time.Now().UTC().Unix()
+			if err := s.Poll(now); err != nil {
 				log.Warnf("[Scheduler] Failed to poll redis: %s", err)
 			}
 		}
@@ -68,10 +77,10 @@ func (s *RedisScheduler) Start(b jobs.Broker) error {
 }
 
 // Poll redis to see if there are some triggers ready
-func (s *RedisScheduler) Poll() error {
-	now := strconv.FormatInt(time.Now().UTC().Unix(), 10)
+func (s *RedisScheduler) Poll(now int64) error {
+	keys := []string{strconv.FormatInt(now, 10)}
 	for {
-		res, err := s.client.Eval(luaPoll, []string{now}).Result()
+		res, err := s.client.Eval(luaPoll, keys).Result()
 		if err != nil || res == nil {
 			return err
 		}
