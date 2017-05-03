@@ -117,8 +117,9 @@ do_start() {
 
 	echo ""
 	do_create_instances
-	echo ""
-	echo "Everything is setup. Go to http://${slug}.${cozy_dev_addr}/"
+	if [ -n "${slug}" ]; then
+		echo "Everything is setup. Go to http://${slug}.${cozy_dev_addr}/"
+	fi
 	echo "To exit, press ^C"
 	cat
 }

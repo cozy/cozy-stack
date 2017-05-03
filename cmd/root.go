@@ -58,6 +58,7 @@ func newClient(domain, scope string) *client.Client {
 		os.Exit(1)
 	}
 	return &client.Client{
+		Addr:       config.ServerAddr(),
 		Domain:     domain,
 		Authorizer: &request.BearerAuthorizer{Token: token},
 	}
