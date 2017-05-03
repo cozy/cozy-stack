@@ -238,7 +238,7 @@ func trashHandler(c echo.Context) error {
 		rev = file.Rev()
 	}
 
-	if err := files.CheckIfMatch(c, rev); err != nil {
+	if err = files.CheckIfMatch(c, rev); err != nil {
 		return err
 	}
 
