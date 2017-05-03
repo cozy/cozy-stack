@@ -39,6 +39,8 @@ example), you can use the --appdir flag like this:
       --assets string           path to the directory with the assets (use the packed assets by default)
       --couchdb-url string      CouchDB URL (default "http://localhost:5984/")
       --fs-url string           filesystem url (default "file://localhost//storage")
+      --jobs-url string         URL for the jobs system synchronization, redis or in-memory
+      --jobs-workers int        Number of parallel workers (0 to disable the processing of jobs) (default 8)
       --konnectors-cmd string   konnectors command to be executed
       --mail-disable-tls        disable smtp over tls
       --mail-host string        mail smtp host (default "localhost")
@@ -54,6 +56,7 @@ example), you can use the --appdir flag like this:
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
+      --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
       --log-level string    define the log level (default "info")

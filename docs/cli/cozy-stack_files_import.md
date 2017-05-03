@@ -25,6 +25,7 @@ cozy-stack files import [--domain domain] [--from name] [--to name] [--match pat
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
+      --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
