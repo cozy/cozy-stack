@@ -81,12 +81,12 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 
 	refBy := c.QueryParam("Referenced_by")
 	if refBy != "" {
-		var refs = &[]couchdb.DocReference{}
+		var refs = []couchdb.DocReference{}
 		b := []byte(refBy)
-		if err = json.Unmarshal(b, refs); err != nil {
+		if err = json.Unmarshal(b, &refs); err != nil {
 			return err
 		}
-		doc.ReferencedBy = *refs
+		doc.ReferencedBy = refs
 	}
 
 	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
