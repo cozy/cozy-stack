@@ -55,6 +55,7 @@ type SharingRequestParams struct {
 	SharingID    string `json:"state"`
 	ClientID     string `json:"client_id"`
 	HostClientID string `json:"host_client_id"`
+	Code         string `json:"code"`
 }
 
 // ID returns the sharing qualified identifier
@@ -128,24 +129,30 @@ func CheckSharingType(sharingType string) error {
 	return ErrBadSharingType
 }
 
-// FindSharingRecipient retrieve a sharing recipient from its clientID and sharingID
-func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sharing, *RecipientStatus, error) {
+// FindSharing retrieves a sharing document gfrom its sharingID
+func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 	var res []Sharing
-
 	err := couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
 		UseIndex: "by-sharing-id",
 		Selector: mango.Equal("sharing_id", sharingID),
 	}, &res)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if len(res) < 1 {
-		return nil, nil, ErrSharingDoesNotExist
+		return nil, ErrSharingDoesNotExist
 	} else if len(res) > 2 {
-		return nil, nil, ErrSharingIDNotUnique
+		return nil, ErrSharingIDNotUnique
 	}
+	return &res[0], nil
+}
 
-	sharing := &res[0]
+// FindSharingRecipient retrieve a sharing recipient from its clientID and sharingID
+func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sharing, *RecipientStatus, error) {
+	sharing, err := FindSharing(db, sharingID)
+	if err != nil {
+		return nil, nil, err
+	}
 	sRec, err := sharing.GetSharingRecipientFromClientID(db, clientID)
 	if err != nil {
 		return nil, nil, err
@@ -282,23 +289,20 @@ func SharingAccepted(instance *instance.Instance, state, clientID, accessCode st
 	if err != nil {
 		return "", err
 	}
-
-	// Update the status to "accepted".
+	// Update the sharing status and asks the recipient for access
 	recStatus.Status = consts.AcceptedSharingStatus
-
-	// Fetch the access and refresh tokens.
-	access, err := recStatus.getAccessToken(instance, accessCode)
-	if err != nil {
-		return "", err
-	}
-	recStatus.AccessToken = access
-
-	// Update the document for later usage.
-	err = couchdb.UpdateDoc(instance, sharing)
+	err = ExchangeCodeForToken(instance, sharing, recStatus, accessCode)
 	if err != nil {
 		return "", err
 	}
 
+	// Particular case for master-master sharing: the recipients needs credentials
+	if sharing.SharingType == consts.MasterMasterSharing {
+		err = SendCode(instance, sharing, recStatus)
+		if err != nil {
+			return "", err
+		}
+	}
 	// Share all the documents with the recipient
 	err = ShareDoc(instance, sharing, recStatus)
 
@@ -427,17 +431,30 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 
 // RegisterSharer registers the sharer for master-master sharing
 func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
-	ss := sharing.Sharer.SharerStatus
-	err := ss.Register(instance)
+	// Register the sharer as a recipient
+	sharer := sharing.Sharer
+	doc := &Recipient{
+		URL: sharer.URL,
+	}
+	err := CreateRecipient(instance, doc)
 	if err != nil {
-		log.Error("[sharing] Could not register at "+ss.recipient.URL+" ", err)
-		ss.Status = consts.UnregisteredSharingStatus
+		return err
+	}
+	ref := couchdb.DocReference{
+		ID:   doc.ID(),
+		Type: consts.Recipients,
+	}
+	sharer.SharerStatus.RefRecipient = ref
+	err = sharer.SharerStatus.Register(instance)
+	if err != nil {
+		log.Error("[sharing] Could not register at "+sharer.URL+" ", err)
+		sharer.SharerStatus.Status = consts.UnregisteredSharingStatus
 	}
 	return couchdb.UpdateDoc(instance, sharing)
 }
 
 // SendClientID sends the registered clientId to the sharer
-func SendClientID(instance *instance.Instance, sharing *Sharing) error {
+func SendClientID(sharing *Sharing) error {
 	domain, err := sharing.Sharer.SharerStatus.recipient.ExtractDomain()
 	if err != nil {
 		return nil
@@ -450,6 +467,40 @@ func SendClientID(instance *instance.Instance, sharing *Sharing) error {
 		HostClientID: newClientID,
 	}
 	return Request("POST", domain, path, params)
+}
+
+// SendCode generates and sends an OAuth code to a recipient
+func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus) error {
+	scope, err := sharing.Permissions.MarshalScopeString()
+	if err != nil {
+		return err
+	}
+	clientID := recStatus.Client.ClientID
+	access, err := oauth.CreateAccessCode(instance, clientID, scope)
+	if err != nil {
+		return err
+	}
+	domain, err := recStatus.recipient.ExtractDomain()
+	if err != nil {
+		return nil
+	}
+	path := "/sharings/access/code"
+	params := SharingRequestParams{
+		SharingID: sharing.SharingID,
+		Code:      access.Code,
+	}
+	return Request("POST", domain, path, params)
+}
+
+// ExchangeCodeForToken asks for an AccessToken based on an AccessCode
+func ExchangeCodeForToken(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus, code string) error {
+	// Fetch the access and refresh tokens.
+	access, err := recStatus.getAccessToken(instance, code)
+	if err != nil {
+		return err
+	}
+	recStatus.AccessToken = access
+	return couchdb.UpdateDoc(instance, sharing)
 }
 
 // Request is a utility method to send request to remote sharing party

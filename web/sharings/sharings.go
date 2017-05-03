@@ -130,7 +130,7 @@ func SharingRequest(c echo.Context) error {
 		if err = sharings.RegisterSharer(instance, sharing); err != nil {
 			return wrapErrors(err)
 		}
-		if err = sharings.SendClientID(instance, sharing); err != nil {
+		if err = sharings.SendClientID(sharing); err != nil {
 			return wrapErrors(err)
 		}
 	}
@@ -278,6 +278,34 @@ func ReceiveClientID(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
+// getAccessToken asks for an Access Token, from the recipient side.
+// It is called in a master-master context, after the sharer received the
+// answer from the recipient.
+func getAccessToken(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	p := &sharings.SharingRequestParams{}
+	if err := c.Bind(p); err != nil {
+		return err
+	}
+	if p.SharingID == "" {
+		return wrapErrors(sharings.ErrMissingState)
+	}
+	if p.Code == "" {
+		return wrapErrors(sharings.ErrMissingCode)
+	}
+	sharing, err := sharings.FindSharing(instance, p.SharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	sharer := sharing.Sharer.SharerStatus
+	err = sharings.ExchangeCodeForToken(instance, sharing, sharer, p.Code)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.JSON(http.StatusOK, nil)
+}
+
 // receiveDocument stores a shared document in the Cozy.
 //
 // If the document to store is a "io.cozy.files" our custom handler will be
@@ -351,6 +379,7 @@ func Routes(router *echo.Group) {
 	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.POST("/recipient", CreateRecipient)
 	router.POST("/access/client", ReceiveClientID)
+	router.POST("/access/code", getAccessToken)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
