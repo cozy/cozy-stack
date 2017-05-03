@@ -229,7 +229,6 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 }
 
 func TestUpdateDocumentSuccessFile(t *testing.T) {
-	t.SkipNow()
 	fs := testInstance.VFS()
 
 	fileDoc := createFile(t, fs, "testupdate", "randomcontent")
@@ -263,9 +262,6 @@ func TestUpdateDocumentSuccessFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// TODO
-	// - get updated file using fileDoc.ID()
-	// - check that md5 matches that of updateDoc.MD5
 	updatedFileDoc, err := fs.FileByID(fileDoc.ID())
 	assert.NoError(t, err)
 	assert.Equal(t, base64.StdEncoding.EncodeToString(updateDoc.MD5Sum),

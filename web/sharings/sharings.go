@@ -9,7 +9,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/data"
-	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -350,10 +349,7 @@ func deleteDocument(c echo.Context) error {
 
 	switch c.Param("doctype") {
 	case consts.Files:
-		fileID := c.Param("docid")
-		c.SetParamNames("file-id")
-		c.SetParamValues(fileID)
-		err = files.TrashHandler(c)
+		err = trashHandler(c)
 
 	default:
 		err = data.DeleteDoc(c)

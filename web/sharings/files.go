@@ -220,3 +220,39 @@ func patchDirOrFile(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, nil)
 }
+
+func trashHandler(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	fileID := c.Param("docid")
+
+	dir, file, err := instance.VFS().DirOrFileByID(fileID)
+	if err != nil {
+		return err
+	}
+
+	var rev string
+	if dir != nil {
+		rev = dir.Rev()
+	} else {
+		rev = file.Rev()
+	}
+
+	if err := files.CheckIfMatch(c, rev); err != nil {
+		return err
+	}
+
+	if dir != nil {
+		_, errt := vfs.TrashDir(instance.VFS(), dir)
+		if errt != nil {
+			return err
+		}
+		return nil
+	}
+
+	_, errt := vfs.TrashFile(instance.VFS(), file)
+	if errt != nil {
+		return err
+	}
+	return nil
+}
