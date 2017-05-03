@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const redisURL = "redis://localhost:6379/"
+const redisURL = "redis://localhost:6379/15"
 
 var instanceName string
 
@@ -131,6 +131,53 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	assert.Equal(t, scheduler.ErrNotFoundTrigger, err)
 }
 
+func TestRedisSchedulerWithCronTriggers(t *testing.T) {
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	assert.NoError(t, err)
+
+	count := 0
+	bro := jobs.NewMemBroker(jobs.WorkersList{
+		"incr": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+				count++
+				return nil
+			},
+		},
+	})
+
+	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch.Stop()
+	sch.Start(bro)
+	sch.Stop()
+	defer sch.Start(bro)
+
+	msg, _ := jobs.NewMessage("json", "@cron")
+
+	infos := &scheduler.TriggerInfos{
+		Type:       "@cron",
+		Domain:     instanceName,
+		Arguments:  "*/3 * * * * *",
+		WorkerType: "incr",
+		Message:    msg,
+	}
+	trigger, err := scheduler.NewTrigger(infos)
+	assert.NoError(t, err)
+	err = sch.Add(trigger)
+	assert.NoError(t, err)
+
+	now := time.Now().UTC().Unix()
+	for i := int64(0); i < 10; i++ {
+		err = sch.Poll(now + i + 4)
+		assert.NoError(t, err)
+	}
+	assert.Equal(t, 4, count)
+}
+
 func TestRedisPollFromSchedKey(t *testing.T) {
 	opts, _ := redis.ParseURL(redisURL)
 	client := redis.NewClient(opts)
@@ -154,6 +201,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	sch.Stop()
 	sch.Start(bro)
 	sch.Stop()
+	defer sch.Start(bro)
 
 	now := time.Now()
 	msg, _ := jobs.NewMessage("json", "@at")

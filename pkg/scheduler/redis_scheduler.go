@@ -127,7 +127,14 @@ func (s *RedisScheduler) Poll(now int64) error {
 			if _, _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
-			if err := s.addToRedis(t); err != nil {
+			score, err := strconv.ParseInt(results[1].(string), 10, 64)
+			var prev time.Time
+			if err != nil {
+				prev = time.Now()
+			} else {
+				prev = time.Unix(score, 0)
+			}
+			if err := s.addToRedis(t, prev); err != nil {
 				return err
 			}
 		default:
@@ -144,23 +151,27 @@ func (s *RedisScheduler) Add(t Trigger) error {
 	if err := couchdb.CreateDoc(db, infos); err != nil {
 		return err
 	}
-	return s.addToRedis(t)
+	return s.addToRedis(t, time.Now())
 }
 
-func (s *RedisScheduler) addToRedis(t Trigger) error {
+func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	var timestamp time.Time
 	switch t := t.(type) {
 	case *AtTrigger:
 		timestamp = t.at
 	case *CronTrigger:
-		timestamp = t.NextExecution(time.Now())
+		timestamp = t.NextExecution(prev)
+		now := time.Now()
+		if timestamp.Before(now) {
+			timestamp = t.NextExecution(now)
+		}
 	case *EventTrigger:
 		// TODO implement this (we ignore it because of the thumbnails trigger)
 		return nil
 	default:
 		return errors.New("Not implemented yet")
 	}
-	return s.client.ZAddNX(TriggersKey, redis.Z{
+	return s.client.ZAdd(TriggersKey, redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(t.Infos()),
 	}).Err()
