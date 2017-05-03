@@ -28,7 +28,7 @@
     submitButton.setAttribute('disabled', true)
 
     const passphrase = passphraseInput.value
-    const redirect = redirectInput.value
+    const redirect = redirectInput.value + window.location.hash
     let headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
