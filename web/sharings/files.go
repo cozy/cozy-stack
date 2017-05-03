@@ -80,12 +80,14 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 	doc.DirID = consts.SharedWithMeDirID
 
 	refBy := c.QueryParam("Referenced_by")
-	var refs = &[]couchdb.DocReference{}
-	b := []byte(refBy)
-	if err = json.Unmarshal(b, refs); err != nil {
-		return err
+	if refBy != "" {
+		var refs = &[]couchdb.DocReference{}
+		b := []byte(refBy)
+		if err = json.Unmarshal(b, refs); err != nil {
+			return err
+		}
+		doc.ReferencedBy = *refs
 	}
-	doc.ReferencedBy = *refs
 
 	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
 		return err
