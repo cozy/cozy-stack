@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"hash"
+	"io"
 	"net/url"
 	"os"
 	"path"
@@ -461,7 +462,7 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 	}
 
 	if f.meta != nil {
-		if _, err = (*f.meta).Write(p); err != nil {
+		if _, err = (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
 			(*f.meta).Abort(err)
 			f.meta = nil
 		}
