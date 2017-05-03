@@ -120,7 +120,7 @@ func TestShowLoginPageWithRedirectXSS(t *testing.T) {
 }
 
 func TestShowLoginPageWithRedirectFragment(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("https://sub."+domain+"/#myfragment"), nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("https://"+domain+"/auth/authorize#myfragment"), nil)
 	req.Host = domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
@@ -129,7 +129,7 @@ func TestShowLoginPageWithRedirectFragment(t *testing.T) {
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
-	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://sub.cozy.example.net/#" />`)
+	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://cozy.example.net/auth/authorize#" />`)
 }
 
 func TestShowLoginPageWithRedirectSuccess(t *testing.T) {
@@ -141,8 +141,7 @@ func TestShowLoginPageWithRedirectSuccess(t *testing.T) {
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.NotContains(t, string(body), "myfragment")
-	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://sub.cozy.example.net/foo/bar?query=foo#" />`)
+	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://sub.cozy.example.net/foo/bar?query=foo#myfragment" />`)
 }
 
 func TestLoginWithBadPassphrase(t *testing.T) {
@@ -161,7 +160,7 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	if assert.Equal(t, "303 See Other", res.Status) {
-		assert.Equal(t, "https://drive.cozy.example.net/#",
+		assert.Equal(t, "https://drive.cozy.example.net/",
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 1)
@@ -186,7 +185,7 @@ func TestLoginWithRedirect(t *testing.T) {
 	assert.NoError(t, err)
 	defer res2.Body.Close()
 	if assert.Equal(t, "303 See Other", res2.Status) {
-		assert.Equal(t, "https://sub.cozy.example.net/#",
+		assert.Equal(t, "https://sub.cozy.example.net/#myfragment",
 			res2.Header.Get("Location"))
 	}
 }
