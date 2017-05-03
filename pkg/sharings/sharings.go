@@ -217,30 +217,53 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 		// Dynamic sharing
 		if rule.Selector != "" {
-			// Create index based on selector to retrieve documents to share
-			indexName := "by-" + rule.Selector
-			index := mango.IndexOnFields(docType, indexName, []string{rule.Selector})
-			err := couchdb.DefineIndex(instance, index)
-			if err != nil {
-				return err
-			}
 
-			var docs []couchdb.JSONDoc
+			// Particular case for referenced_by: use the existing view
+			if rule.Selector == "referenced_by" {
+				// The permission tilte is used to know the referenced doctype
+				refType := rule.Title
 
-			// Request the index for all values
-			// NOTE: this is not efficient in case of many Values
-			// We might consider a map-reduce approach in case of bottleneck
-			for _, val := range rule.Values {
-				err = couchdb.FindDocs(instance, docType, &couchdb.FindRequest{
-					UseIndex: indexName,
-					Selector: mango.Equal(rule.Selector, val),
-				}, &docs)
+				for _, val := range rule.Values {
+					req := &couchdb.ViewRequest{
+						Key: []string{refType, val},
+					}
+					var res couchdb.ViewResponse
+					err := couchdb.ExecView(instance, consts.FilesReferencedByView, req, &res)
+					if err != nil {
+						return err
+					}
+					for _, row := range res.Rows {
+						values = append(values, row.ID)
+					}
+
+				}
+			} else {
+
+				// Create index based on selector to retrieve documents to share
+				indexName := "by-" + rule.Selector
+				index := mango.IndexOnFields(docType, indexName, []string{rule.Selector})
+				err := couchdb.DefineIndex(instance, index)
 				if err != nil {
 					return err
 				}
-				// Save returned doc ids
-				for _, d := range docs {
-					values = append(values, d.ID())
+
+				var docs []couchdb.JSONDoc
+
+				// Request the index for all values
+				// NOTE: this is not efficient in case of many Values
+				// We might consider a map-reduce approach in case of bottleneck
+				for _, val := range rule.Values {
+					err = couchdb.FindDocs(instance, docType, &couchdb.FindRequest{
+						UseIndex: indexName,
+						Selector: mango.Equal(rule.Selector, val),
+					}, &docs)
+					if err != nil {
+						return err
+					}
+					// Save returned doc ids
+					for _, d := range docs {
+						values = append(values, d.ID())
+					}
 				}
 			}
 		} else {

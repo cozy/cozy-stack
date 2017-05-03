@@ -1,10 +1,12 @@
 package sharings
 
 import (
+	"encoding/json"
 	"io"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -76,6 +78,16 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 
 	doc.SetID(c.Param("docid"))
 	doc.DirID = consts.SharedWithMeDirID
+
+	refBy := c.QueryParam("Referenced_by")
+	if refBy != "" {
+		var refs = []couchdb.DocReference{}
+		b := []byte(refBy)
+		if err = json.Unmarshal(b, &refs); err != nil {
+			return err
+		}
+		doc.ReferencedBy = refs
+	}
 
 	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
 		return err
