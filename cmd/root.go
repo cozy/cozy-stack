@@ -19,6 +19,7 @@ import (
 const DefaultStorageDir = "storage"
 
 var cfgFile string
+var flagClientUseHTTPS bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -57,9 +58,16 @@ func newClient(domain, scope string) *client.Client {
 		log.Error(err)
 		os.Exit(1)
 	}
+	var scheme string
+	if flagClientUseHTTPS {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
 	return &client.Client{
 		Addr:       config.ServerAddr(),
 		Domain:     domain,
+		Scheme:     scheme,
 		Authorizer: &request.BearerAuthorizer{Token: token},
 	}
 }
@@ -102,6 +110,8 @@ func init() {
 
 	flags.String("log-level", "info", "define the log level")
 	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
+
+	flags.BoolVar(&flagClientUseHTTPS, "client-use-https", false, "if set the client will use https to communicate with the server")
 }
 
 func checkNoErr(err error) {
