@@ -63,9 +63,7 @@ type OAuthClientOptions struct {
 func (c *Client) GetInstance(domain string) (*Instance, error) {
 	res, err := c.Req(&request.Options{
 		Method: "GET",
-		// TODO replace QueryEscape with PathEscape when we will no longer support
-		// go 1.7
-		Path: "/instances/" + url.QueryEscape(domain),
+		Path:   "/instances/" + domain,
 	})
 	if err != nil {
 		return nil, err
@@ -130,9 +128,7 @@ func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance
 	}
 	res, err := c.Req(&request.Options{
 		Method: "PATCH",
-		// TODO replace QueryEscape with PathEscape when we will no longer support
-		// go 1.7
-		Path: "/instances/" + url.QueryEscape(domain),
+		Path:   "/instances/" + domain,
 		Queries: url.Values{
 			"Locale":    {opts.Locale},
 			"DiskQuota": {strconv.FormatInt(opts.DiskQuota, 10)},

@@ -35,6 +35,7 @@ type (
 	// The NoResponse field can be used in case the call's response if not used. In
 	// such cases, the response body is automatically closed.
 	Options struct {
+		Addr       string
 		Domain     string
 		Scheme     string
 		Method     string
@@ -103,9 +104,16 @@ func Req(opts *Options) (*http.Response, error) {
 			scheme = "https"
 		}
 	}
+
+	var host string
+	if opts.Addr != "" {
+		host = opts.Addr
+	} else {
+		host = opts.Domain
+	}
 	u := url.URL{
 		Scheme: scheme,
-		Host:   opts.Domain,
+		Host:   host,
 		Path:   opts.Path,
 	}
 	if opts.Queries != nil {
@@ -116,6 +124,8 @@ func Req(opts *Options) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	req.Host = opts.Domain
 
 	if opts.Headers != nil {
 		for k, v := range opts.Headers {

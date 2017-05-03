@@ -33,6 +33,7 @@ type jsonAPIDocument struct {
 // It holds the elements to authenticate a user, as well as the transport layer
 // used for all the calls to the stack.
 type Client struct {
+	Addr   string
 	Domain string
 	Scheme string
 	Client *http.Client
@@ -80,6 +81,7 @@ func (c *Client) init() error {
 		}
 	}
 	_, err := request.Req(&request.Options{
+		Addr:       c.Addr,
 		Method:     "GET",
 		Path:       "/version",
 		Domain:     c.Domain,
@@ -131,6 +133,7 @@ func (c *Client) Req(opts *request.Options) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+	opts.Addr = c.Addr
 	opts.Domain = c.Domain
 	opts.Scheme = c.Scheme
 	opts.Client = c.Client
