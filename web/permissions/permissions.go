@@ -59,9 +59,10 @@ func (p *apiPermission) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
 }
 
+type getPermsFunc func(db couchdb.Database, id string) (*permissions.Permission, error)
+
 func displayPermissions(c echo.Context) error {
 	doc, err := GetPermission(c)
-
 	if err != nil {
 		return err
 	}
@@ -200,51 +201,53 @@ func listPermissions(c echo.Context) error {
 	return json.NewEncoder(resp).Encode(doc)
 }
 
-func patchPermission(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	current, err := GetPermission(c)
-	if err != nil {
-		return err
-	}
-
-	var patch permissions.Permission
-	if _, err = jsonapi.Bind(c.Request(), &patch); err != nil {
-		return err
-	}
-
-	patchSet := patch.Permissions != nil && len(patch.Permissions) > 0
-	patchCodes := len(patch.Codes) > 0
-
-	if patchCodes == patchSet {
-		return ErrPatchCodeOrSet
-	}
-
-	toPatch, err := permissions.GetByID(instance, c.Param("permdocid"))
-	if err != nil {
-		return err
-	}
-
-	if patchCodes {
-		// a permission can be updated only by its parent
-		if !current.ParentOf(toPatch) {
-			return ErrForbidden
+func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		instance := middlewares.GetInstance(c)
+		current, err := GetPermission(c)
+		if err != nil {
+			return err
 		}
-		toPatch.PatchCodes(patch.Codes)
-	}
 
-	if patchSet {
-		// I can only add my own permissions to another permission doc
-		if !patch.Permissions.IsSubSetOf(current.Permissions) {
-			return ErrForbidden
+		var patch permissions.Permission
+		if _, err = jsonapi.Bind(c.Request(), &patch); err != nil {
+			return err
 		}
-		toPatch.AddRules(patch.Permissions...)
-	}
 
-	if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
-		return err
-	}
+		patchSet := patch.Permissions != nil && len(patch.Permissions) > 0
+		patchCodes := len(patch.Codes) > 0
 
-	return jsonapi.Data(c, http.StatusOK, &apiPermission{toPatch}, nil)
+		if patchCodes == patchSet {
+			return ErrPatchCodeOrSet
+		}
+
+		toPatch, err := getPerms(instance, paramName)
+		if err != nil {
+			return err
+		}
+
+		if patchCodes {
+			// a permission can be updated only by its parent
+			if !current.ParentOf(toPatch) {
+				return ErrForbidden
+			}
+			toPatch.PatchCodes(patch.Codes)
+		}
+
+		if patchSet {
+			// I can only add my own permissions to another permission doc
+			if !patch.Permissions.IsSubSetOf(current.Permissions) {
+				return ErrForbidden
+			}
+			toPatch.AddRules(patch.Permissions...)
+		}
+
+		if err = couchdb.UpdateDoc(instance, toPatch); err != nil {
+			return err
+		}
+
+		return jsonapi.Data(c, http.StatusOK, &apiPermission{toPatch}, nil)
+	}
 }
 
 func revokePermission(c echo.Context) error {
@@ -271,7 +274,6 @@ func revokePermission(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
-
 }
 
 // Routes sets the routing for the permissions service
@@ -281,6 +283,9 @@ func Routes(router *echo.Group) {
 	router.GET("/doctype/:doctype", listPermissionsByDoctype)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
-	router.PATCH("/:permdocid", patchPermission)
+	router.PATCH("/:permdocid", patchPermission(permissions.GetByID, "permdocid"))
 	router.DELETE("/:permdocid", revokePermission)
+
+	router.PATCH("/apps/:slug", patchPermission(permissions.GetForWebapp, "slug"))
+	router.PATCH("/konnectors/:slug", patchPermission(permissions.GetForKonnector, "slug"))
 }

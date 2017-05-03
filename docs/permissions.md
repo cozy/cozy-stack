@@ -550,3 +550,15 @@ Content-Type: application/vnd.api+json
   ]
 }
 ```
+
+### PATCH /permissions/apps/:slug
+
+Add permissions or remove permissions to the web application with specified
+slug. It behaves like the `PATCH /permissions/:id` route. See this route for
+more examples.
+
+### PATCH /permissions/konnectors/:slug
+
+Add permissions or remove permissions to the konnector with specified slug. It
+behaves like the `PATCH /permissions/:id` route. See this route for more
+examples.
