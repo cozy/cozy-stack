@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
@@ -128,6 +129,63 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	_, err = sch.Get(instanceName, inID)
 	assert.Error(t, err)
 	assert.Equal(t, scheduler.ErrNotFoundTrigger, err)
+}
+
+func TestRedisPollFromSchedKey(t *testing.T) {
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	assert.NoError(t, err)
+
+	count := 0
+	bro := jobs.NewMemBroker(jobs.WorkersList{
+		"incr": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+				count++
+				return nil
+			},
+		},
+	})
+
+	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch.Stop()
+	sch.Start(bro)
+	sch.Stop()
+
+	now := time.Now()
+	msg, _ := jobs.NewMessage("json", "@at")
+
+	at := &scheduler.TriggerInfos{
+		Type:       "@at",
+		Domain:     instanceName,
+		Arguments:  now.Format(time.RFC3339),
+		WorkerType: "incr",
+		Message:    msg,
+	}
+	db := couchdb.SimpleDatabasePrefix(instanceName)
+	err = couchdb.CreateDoc(db, at)
+	assert.NoError(t, err)
+
+	ts := now.UTC().Unix()
+	key := instanceName + ":" + at.TID
+	err = client.ZAdd(scheduler.SchedKey, redis.Z{
+		Score:  float64(ts + 1),
+		Member: key,
+	}).Err()
+	assert.NoError(t, err)
+
+	err = sch.Poll(ts + 2)
+	assert.NoError(t, err)
+	<-time.After(1 * time.Millisecond)
+	assert.Equal(t, 0, count)
+
+	err = sch.Poll(ts + 13)
+	assert.NoError(t, err)
+	<-time.After(1 * time.Millisecond)
+	assert.Equal(t, 1, count)
 }
 
 func TestMain(m *testing.M) {

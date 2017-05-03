@@ -28,12 +28,11 @@ const pollInterval = 1 * time.Second
 // luaPoll returns the lua script used for polling triggers in redis.
 // If a trigger is in the scheduling key for more than 10 seconds, it is
 // an error and we can try again to schedule it.
-// TODO add tests
 const luaPoll = `
 local w = KEYS[1] - 10
 local s = redis.call("ZRANGEBYSCORE", "` + SchedKey + `", 0, w, "WITHSCORES", "LIMIT", 0, 1)
 if #s > 0 then
-  redis.call("ZADD", "` + SchedKey + `", KEYS[1], t[1])
+  redis.call("ZADD", "` + SchedKey + `", KEYS[1], s[1])
   return s
 end
 local t = redis.call("ZRANGEBYSCORE", "` + TriggersKey + `", 0, KEYS[1], "WITHSCORES", "LIMIT", 0, 1)
