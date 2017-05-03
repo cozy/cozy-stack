@@ -171,7 +171,7 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	assert.NoError(t, err)
 
 	now := time.Now().UTC().Unix()
-	for i := int64(0); i < 10; i++ {
+	for i := int64(0); i < 9; i++ {
 		err = sch.Poll(now + i + 4)
 		assert.NoError(t, err)
 	}
