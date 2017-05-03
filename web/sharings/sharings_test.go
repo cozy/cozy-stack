@@ -400,7 +400,7 @@ func TestPatchDirOrFileSuccessFile(t *testing.T) {
 	patchedFile, err := fs.FileByID(fileDoc.ID())
 	assert.NoError(t, err)
 	assert.Equal(t, patchedName, patchedFile.DocName)
-	assert.Equal(t, now, patchedFile.UpdatedAt)
+	assert.WithinDuration(t, now, patchedFile.UpdatedAt, time.Millisecond)
 }
 
 func TestPatchDirOrFileSuccessDir(t *testing.T) {
@@ -451,7 +451,7 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	patchedDir, err := fs.DirByID(dirDoc.ID())
 	assert.NoError(t, err)
 	assert.Equal(t, patchedName, patchedDir.DocName)
-	assert.Equal(t, now, patchedDir.UpdatedAt)
+	assert.WithinDuration(t, now, patchedDir.UpdatedAt, time.Millisecond)
 }
 
 func TestAddSharingRecipientNoSharing(t *testing.T) {
@@ -866,13 +866,7 @@ func TestMain(m *testing.M) {
 		Settings: settings2,
 	})
 
-	err := couchdb.ResetDB(testInstance, iocozytests)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(testInstance, consts.Files)
+	err := couchdb.CreateDB(testInstance, iocozytests)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
