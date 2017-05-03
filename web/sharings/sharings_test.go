@@ -229,6 +229,7 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 }
 
 func TestUpdateDocumentSuccessFile(t *testing.T) {
+	t.Skip()
 	fs := testInstance.VFS()
 
 	fileDoc := createFile(t, fs, "testupdate", "randomcontent")
