@@ -1,0 +1,14 @@
+package accounts
+
+var googleAccountType = &AccountType{
+	GrantMode:             AuthorizationCode,
+	ClientID:              "xxxxx",
+	ClientSecret:          "xxxxx",
+	AuthEndpoint:          "https://accounts.google.com/o/oauth2/v2/auth",
+	TokenEndpoint:         "https://www.googleapis.com/oauth2/v4/token",
+	RegisteredRedirectURI: "_oauth_redirect.xxxxx",
+	ExtraAuthQuery: map[string]string{
+		"access_type":            "offline",
+		"include_granted_scopes": "true",
+	},
+}
