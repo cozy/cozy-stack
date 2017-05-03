@@ -46,15 +46,17 @@ return t`
 // RedisScheduler is a centralized scheduler of many triggers. It starts all of
 // them and schedules jobs accordingly.
 type RedisScheduler struct {
-	Broker jobs.Broker
-	client *redis.Client
+	broker  jobs.Broker
+	client  *redis.Client
+	stopped chan struct{}
 }
 
 // NewRedisScheduler creates a new scheduler that use redis to synchronize with
 // other cozy-stack processes to schedule jobs.
 func NewRedisScheduler(client *redis.Client) *RedisScheduler {
 	return &RedisScheduler{
-		client: client,
+		client:  client,
+		stopped: make(chan struct{}),
 	}
 }
 
@@ -64,16 +66,27 @@ func redisKey(infos *TriggerInfos) string {
 
 // Start a goroutine that will fetch triggers in redis to schedule their jobs
 func (s *RedisScheduler) Start(b jobs.Broker) error {
-	s.Broker = b
+	s.broker = b
 	go func() {
-		for range time.Tick(pollInterval) {
-			now := time.Now().UTC().Unix()
-			if err := s.Poll(now); err != nil {
-				log.Warnf("[Scheduler] Failed to poll redis: %s", err)
+		tick := time.Tick(pollInterval)
+		for {
+			select {
+			case <-s.stopped:
+				return
+			case <-tick:
+				now := time.Now().UTC().Unix()
+				if err := s.Poll(now); err != nil {
+					log.Warnf("[Scheduler] Failed to poll redis: %s", err)
+				}
 			}
 		}
 	}()
 	return nil
+}
+
+// Stop the scheduling of triggers
+func (s *RedisScheduler) Stop() {
+	s.stopped <- struct{}{}
 }
 
 // Poll redis to see if there are some triggers ready
@@ -104,7 +117,7 @@ func (s *RedisScheduler) Poll(now int64) error {
 		switch t := t.(type) {
 		case *AtTrigger:
 			job := t.Trigger()
-			if _, _, err = s.Broker.PushJob(job); err != nil {
+			if _, _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
 			if err := s.deleteTrigger(t); err != nil {
@@ -112,7 +125,7 @@ func (s *RedisScheduler) Poll(now int64) error {
 			}
 		case *CronTrigger:
 			job := t.Trigger()
-			if _, _, err = s.Broker.PushJob(job); err != nil {
+			if _, _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
 			if err := s.addToRedis(t); err != nil {

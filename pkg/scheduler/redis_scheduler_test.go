@@ -66,10 +66,8 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
-	// TODO Don't export Broker
-	// sch.Stop()
-	// sch.Start(bro)
-	sch.Broker = bro
+	sch.Stop()
+	sch.Start(bro)
 
 	tat, err := scheduler.NewTrigger(at)
 	assert.NoError(t, err)
