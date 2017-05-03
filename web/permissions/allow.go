@@ -73,17 +73,18 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	if err != nil {
 		return err
 	}
-	var docType string
+	var docType, sourceID string
 	switch appType {
 	case apps.Konnector:
 		docType = consts.Konnectors
+		sourceID = consts.Konnectors + "/" + consts.DataConnectSlug
 	case apps.Webapp:
 		docType = consts.Apps
+		sourceID = consts.Apps + "/" + consts.StoreSlug
 	}
 	if docType == "" {
 		return fmt.Errorf("unknown application type %s", string(appType))
 	}
-	sourceID := consts.Apps + "/" + consts.StoreSlug
 	switch pdoc.Type {
 	case permissions.TypeCLI:
 		// OK
