@@ -1695,15 +1695,26 @@ func TestDestroyFile(t *testing.T) {
 }
 
 func TestThumbnail(t *testing.T) {
-	res1, _ := download(t, "/files/"+imgID+"/thumbnail/large", "")
+	res1, _ := httpGet(ts.URL + "/files/" + imgID)
 	assert.Equal(t, 200, res1.StatusCode)
-	assert.True(t, strings.HasPrefix(res1.Header.Get("Content-Type"), "image/jpeg"))
-	res2, _ := download(t, "/files/"+imgID+"/thumbnail/medium", "")
+	var obj map[string]interface{}
+	err := extractJSONRes(res1, &obj)
+	assert.NoError(t, err)
+	data := obj["data"].(map[string]interface{})
+	links := data["links"].(map[string]interface{})
+	large := links["large"].(string)
+	medium := links["medium"].(string)
+	small := links["small"].(string)
+
+	res2, _ := download(t, large, "")
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "image/jpeg"))
-	res3, _ := download(t, "/files/"+imgID+"/thumbnail/small", "")
+	res3, _ := download(t, medium, "")
 	assert.Equal(t, 200, res3.StatusCode)
 	assert.True(t, strings.HasPrefix(res3.Header.Get("Content-Type"), "image/jpeg"))
+	res4, _ := download(t, small, "")
+	assert.Equal(t, 200, res4.StatusCode)
+	assert.True(t, strings.HasPrefix(res4.Header.Get("Content-Type"), "image/jpeg"))
 }
 
 func TestMain(m *testing.M) {

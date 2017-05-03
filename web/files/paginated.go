@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -23,7 +24,8 @@ type dir struct {
 }
 
 type file struct {
-	doc *vfs.FileDoc
+	doc      *vfs.FileDoc
+	instance *instance.Instance
 }
 
 type apiArchive struct {
@@ -36,7 +38,8 @@ func newDir(doc *vfs.DirDoc) *dir {
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
-	fs := middlewares.GetInstance(c).VFS()
+	instance := middlewares.GetInstance(c)
+	fs := instance.VFS()
 
 	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
 	if err != nil {
@@ -65,7 +68,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		if d != nil {
 			included = append(included, newDir(d))
 		} else {
-			included = append(included, newFile(f))
+			included = append(included, newFile(f, instance))
 		}
 	}
 
@@ -117,7 +120,8 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		return err
 	}
 
-	fs := middlewares.GetInstance(c).VFS()
+	instance := middlewares.GetInstance(c)
+	fs := instance.VFS()
 
 	count, err := fs.DirLength(doc)
 	if err != nil {
@@ -138,7 +142,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		if d != nil {
 			included = append(included, newDir(d))
 		} else {
-			included = append(included, newFile(f))
+			included = append(included, newFile(f, instance))
 		}
 	}
 
@@ -156,12 +160,13 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 }
 
 // newFile creates an instance of file struct from a vfs.FileDoc document.
-func newFile(doc *vfs.FileDoc) *file {
-	return &file{doc}
+func newFile(doc *vfs.FileDoc, i *instance.Instance) *file {
+	return &file{doc, i}
 }
 
 func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.LinksList) error {
-	return jsonapi.Data(c, statusCode, newFile(doc), links)
+	instance := middlewares.GetInstance(c)
+	return jsonapi.Data(c, statusCode, newFile(doc, instance), links)
 }
 
 var (
@@ -224,5 +229,15 @@ func (f *file) MarshalJSON() ([]byte, error) {
 	return res, err
 }
 func (f *file) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
+	links := jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
+	if f.doc.Class == "image" {
+		if path, err := f.doc.Path(f.instance.VFS()); err == nil {
+			if secret, err := vfs.GetStore().AddFile(f.instance.Domain, path); err == nil {
+				links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/small"
+				links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/medium"
+				links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/large"
+			}
+		}
+	}
+	return &links
 }
