@@ -221,7 +221,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			return ErrPatchCodeOrSet
 		}
 
-		toPatch, err := getPerms(instance, paramName)
+		toPatch, err := getPerms(instance, c.Param(paramName))
 		if err != nil {
 			return err
 		}
