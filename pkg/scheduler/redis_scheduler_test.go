@@ -218,7 +218,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	assert.NoError(t, err)
 
 	ts := now.UTC().Unix()
-	key := instanceName + ":" + at.TID
+	key := instanceName + "/" + at.TID
 	err = client.ZAdd(scheduler.SchedKey, redis.Z{
 		Score:  float64(ts + 1),
 		Member: key,

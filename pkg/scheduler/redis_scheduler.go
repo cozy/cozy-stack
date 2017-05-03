@@ -60,7 +60,7 @@ func NewRedisScheduler(client *redis.Client) *RedisScheduler {
 }
 
 func redisKey(infos *TriggerInfos) string {
-	return infos.Domain + ":" + infos.TID
+	return infos.Domain + "/" + infos.TID
 }
 
 // Start a goroutine that will fetch triggers in redis to schedule their jobs
@@ -103,7 +103,7 @@ func (s *RedisScheduler) Poll(now int64) error {
 		if len(results) < 2 {
 			return nil
 		}
-		parts := strings.SplitN(results[0].(string), ":", 2)
+		parts := strings.SplitN(results[0].(string), "/", 2)
 		if len(parts) != 2 {
 			s.client.ZRem(SchedKey, results[0])
 			return fmt.Errorf("Invalid key %s", res)
