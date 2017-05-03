@@ -67,12 +67,13 @@ func redisKey(infos *TriggerInfos) string {
 func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.broker = b
 	go func() {
-		tick := time.Tick(pollInterval)
+		ticker := time.NewTicker(pollInterval)
 		for {
 			select {
 			case <-s.stopped:
+				ticker.Stop()
 				return
-			case <-tick:
+			case <-ticker.C:
 				now := time.Now().UTC().Unix()
 				if err := s.Poll(now); err != nil {
 					log.Warnf("[Scheduler] Failed to poll redis: %s", err)
@@ -119,7 +120,7 @@ func (s *RedisScheduler) Poll(now int64) error {
 			if _, _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
-			if err := s.deleteTrigger(t); err != nil {
+			if err = s.deleteTrigger(t); err != nil {
 				return err
 			}
 		case *CronTrigger:
