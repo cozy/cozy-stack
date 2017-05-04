@@ -168,6 +168,13 @@ func (d *DirDoc) Valid(field, expected string) bool {
 		return d.DocName == expected
 	case "tags":
 		return contains(d.Tags, expected)
+	case "referenced_by":
+		for _, ref := range d.ReferencedBy {
+			if ref.ID == expected {
+				return true
+			}
+		}
+		return false
 	default:
 		return false
 	}

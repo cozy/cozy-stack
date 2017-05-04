@@ -83,12 +83,17 @@ func addReferencesHandler(c echo.Context) error {
 	}
 
 	for _, fRef := range references {
-		file, err := instance.VFS().FileByID(fRef.ID)
+		dir, file, err := instance.VFS().DirOrFileByID(fRef.ID)
 		if err != nil {
 			return err
 		}
-		file.AddReferencedBy(docRef)
-		err = couchdb.UpdateDoc(instance, file)
+		if file == nil {
+			dir.AddReferencedBy(docRef)
+			err = couchdb.UpdateDoc(instance, dir)
+		} else {
+			file.AddReferencedBy(docRef)
+			err = couchdb.UpdateDoc(instance, file)
+		}
 		if err != nil {
 			return err
 		}
@@ -117,12 +122,17 @@ func removeReferencesHandler(c echo.Context) error {
 	}
 
 	for _, fRef := range references {
-		file, err := instance.VFS().FileByID(fRef.ID)
+		dir, file, err := instance.VFS().DirOrFileByID(fRef.ID)
 		if err != nil {
 			return err
 		}
-		file.RemoveReferencedBy(docRef)
-		err = couchdb.UpdateDoc(instance, file)
+		if file == nil {
+			dir.RemoveReferencedBy(docRef)
+			err = couchdb.UpdateDoc(instance, dir)
+		} else {
+			file.RemoveReferencedBy(docRef)
+			err = couchdb.UpdateDoc(instance, file)
+		}
 		if err != nil {
 			return err
 		}
