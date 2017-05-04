@@ -3,10 +3,9 @@ package sharings
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"time"
-
-	"net/http"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -15,6 +14,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 func init() {
@@ -125,11 +126,11 @@ func checkDocument(sharing *Sharing, docID string) error {
 }
 
 // sendToRecipients retreives the recipients and send the document
-func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docType, docID, eventType string) error {
+func sendToRecipients(instance *instance.Instance, domain string, sharing *Sharing, docType, docID, eventType string) error {
 
 	recInfos := make([]*RecipientInfo, len(sharing.RecipientsStatus))
 	for i, rec := range sharing.RecipientsStatus {
-		recDoc, err := GetRecipient(db, rec.RefRecipient.ID)
+		recDoc, err := GetRecipient(instance, rec.RefRecipient.ID)
 		if err != nil {
 			return err
 		}
@@ -144,29 +145,69 @@ func sendToRecipients(db couchdb.Database, domain string, sharing *Sharing, docT
 		recInfos[i] = info
 	}
 
-	var method string
-	switch eventType {
-	case "CREATED":
-		method = http.MethodPost
-	case "UPDATED":
-		method = http.MethodPut
-	case "DELETED":
-		method = http.MethodDelete
-	default:
-		return ErrEventNotSupported
-	}
-
 	opts := &SendOptions{
 		DocID:      docID,
 		DocType:    docType,
-		Method:     method,
 		Recipients: recInfos,
+		Path:       fmt.Sprintf("/sharings/doc/%s/%s", docType, docID),
 	}
-	// TODO: handle file sharing
-	if opts.DocType != consts.Files {
-		return SendDoc(domain, opts)
+
+	var fileDoc *vfs.FileDoc
+	var dirDoc *vfs.DirDoc
+	var err error
+	if opts.DocType == consts.Files && eventType != realtime.EventDelete {
+		fs := instance.VFS()
+		dirDoc, fileDoc, err = fs.DirOrFileByID(docID)
+		if err != nil {
+			return err
+		}
+
+		if dirDoc != nil {
+			opts.Type = consts.DirType
+		} else {
+			opts.Type = consts.FileType
+		}
 	}
-	return nil
+
+	switch eventType {
+	case realtime.EventCreate:
+		if opts.Type == consts.FileType {
+			return SendFile(instance, opts, fileDoc)
+		}
+		if opts.Type == consts.DirType {
+			return SendDir(instance, opts, dirDoc)
+		}
+		return SendDoc(instance, opts)
+
+	case realtime.EventUpdate:
+		if opts.Type == consts.FileType {
+			if fileDoc.Trashed {
+				return DeleteDirOrFile(opts)
+			}
+			return UpdateOrPatchFile(instance, opts, fileDoc)
+		}
+
+		if opts.Type == consts.DirType {
+			if dirDoc.DirID == consts.TrashDirID {
+				return DeleteDirOrFile(opts)
+			}
+			return PatchDir(opts, dirDoc)
+		}
+		return UpdateDoc(instance, opts)
+
+	case realtime.EventDelete:
+		if opts.DocType == consts.Files {
+			// The event "delete" for a file or a directory means that it has
+			// been permanently deleted from the filesystem. We don't propagate
+			// this event as of now.
+			// TODO Do we propagate this event?
+			return nil
+		}
+		return DeleteDoc(opts)
+
+	default:
+		return ErrEventNotSupported
+	}
 }
 
 // GetRecipient returns the Recipient stored in database from a given ID

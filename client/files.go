@@ -292,8 +292,9 @@ func (c *Client) Move(from, to string) error {
 	}
 	_, err = c.UpdateAttrsByPath(from, &FilePatch{
 		Attrs: FilePatchAttrs{
-			DirID: doc.ID,
-			Name:  path.Base(to),
+			DirID:     doc.ID,
+			Name:      path.Base(to),
+			UpdatedAt: time.Now(),
 		},
 	})
 	return err

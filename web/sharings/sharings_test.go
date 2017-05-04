@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"encoding/base64"
 
 	authClient "github.com/cozy/cozy-stack/client/auth"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -19,9 +24,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -73,6 +80,36 @@ func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode
 	access, err := oauth.CreateAccessCode(recipientIn, clientID, scope)
 	assert.NoError(t, err)
 	return access, err
+}
+
+func createFile(t *testing.T, fs vfs.VFS, name, content string) *vfs.FileDoc {
+	doc, err := vfs.NewFileDoc(name, "", -1, nil, "foo/bar", "foo", time.Now(), false, false, []string{"this", "is", "spartest"})
+	assert.NoError(t, err)
+
+	body := bytes.NewReader([]byte(content))
+
+	file, err := fs.CreateFile(doc, nil)
+	assert.NoError(t, err)
+
+	n, err := io.Copy(file, body)
+	assert.NoError(t, err)
+	assert.Equal(t, len(content), int(n))
+
+	err = file.Close()
+	assert.NoError(t, err)
+
+	return doc
+}
+
+func createDir(t *testing.T, fs vfs.VFS, name string) *vfs.DirDoc {
+	dirDoc, err := vfs.NewDirDoc(fs, name, "", []string{"It's", "me", "again"})
+	assert.NoError(t, err)
+	dirDoc.CreatedAt = time.Now()
+	dirDoc.UpdatedAt = time.Now()
+	err = fs.CreateDir(dirDoc)
+	assert.NoError(t, err)
+
+	return dirDoc
 }
 
 func TestReceiveDocumentSuccessJSON(t *testing.T) {
@@ -191,6 +228,47 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 	assert.Equal(t, doc.M["testcontent"], updatedDoc.M["testcontent"])
 }
 
+func TestUpdateDocumentSuccessFile(t *testing.T) {
+	t.Skip()
+	fs := testInstance.VFS()
+
+	fileDoc := createFile(t, fs, "testupdate", "randomcontent")
+	updateDoc := createFile(t, fs, "updatetestfile", "updaterandomcontent")
+
+	urlDest, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
+		fileDoc.ID())
+	values := url.Values{
+		"Name":       {fileDoc.DocName},
+		"Executable": {"false"},
+		"Type":       {consts.FileType},
+		"rev":        {fileDoc.Rev()},
+	}
+	urlDest.RawQuery = values.Encode()
+
+	body, err := fs.OpenFile(updateDoc)
+	assert.NoError(t, err)
+	defer body.Close()
+
+	req, err := http.NewRequest(http.MethodPut, urlDest.String(), body)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, updateDoc.Mime)
+	req.Header.Add("Content-MD5",
+		base64.StdEncoding.EncodeToString(updateDoc.MD5Sum))
+	req.Header.Add(echo.HeaderAcceptEncoding, "application/vnd.api+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	updatedFileDoc, err := fs.FileByID(fileDoc.ID())
+	assert.NoError(t, err)
+	assert.Equal(t, base64.StdEncoding.EncodeToString(updateDoc.MD5Sum),
+		base64.StdEncoding.EncodeToString(updatedFileDoc.MD5Sum))
+}
+
 func TestDeleteDocumentSuccessJSON(t *testing.T) {
 	// To delete a JSON we need to create one and get its revision.
 	resp, err := postJSON(t, "/data/"+iocozytests+"/", echo.Map{
@@ -219,6 +297,158 @@ func TestDeleteDocumentSuccessJSON(t *testing.T) {
 	delDoc := &couchdb.JSONDoc{}
 	err = couchdb.GetDoc(testInstance, doc.DocType(), doc.ID(), delDoc)
 	assert.Error(t, err)
+}
+
+func TestDeleteDocumentSuccessFile(t *testing.T) {
+	fs := testInstance.VFS()
+	fileDoc := createFile(t, fs, "filetotrash", "randomgarbagecontent")
+
+	delURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	delURL.Path = fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
+		fileDoc.ID())
+	delURL.RawQuery = url.Values{
+		"rev":  {fileDoc.Rev()},
+		"Type": {consts.FileType},
+	}.Encode()
+
+	req, err := http.NewRequest("DELETE", delURL.String(), nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	trashedFileDoc, err := fs.FileByID(fileDoc.ID())
+	assert.NoError(t, err)
+	assert.True(t, trashedFileDoc.Trashed)
+}
+
+func TestDeleteDocumentSuccessDir(t *testing.T) {
+	fs := testInstance.VFS()
+	dirDoc := createDir(t, fs, "dirtotrash")
+
+	delURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	delURL.Path = fmt.Sprintf("/sharings/doc/%s/%s", dirDoc.DocType(),
+		dirDoc.ID())
+	delURL.RawQuery = url.Values{
+		"rev":  {dirDoc.Rev()},
+		"Type": {consts.DirType},
+	}.Encode()
+
+	req, err := http.NewRequest("DELETE", delURL.String(), nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	trashedDirDoc, err := fs.DirByID(dirDoc.ID())
+	assert.NoError(t, err)
+	assert.Equal(t, consts.TrashDirID, trashedDirDoc.DirID)
+}
+
+func TestPatchDirOrFileSuccessFile(t *testing.T) {
+	fs := testInstance.VFS()
+	fileDoc := createFile(t, fs, "filetopatch", "randompatchcontent")
+	_, err := fs.FileByID(fileDoc.ID())
+	assert.NoError(t, err)
+
+	patchURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	patchURL.Path = fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
+		fileDoc.ID())
+	patchURL.RawQuery = url.Values{
+		"rev":  {fileDoc.Rev()},
+		"Type": {consts.FileType},
+	}.Encode()
+
+	patchedName := "patchedfilename"
+	now := time.Now()
+	patch := &vfs.DocPatch{
+		Name:      &patchedName,
+		DirID:     &fileDoc.DirID,
+		Tags:      &fileDoc.Tags,
+		UpdatedAt: &now,
+	}
+	attrs, err := json.Marshal(patch)
+	assert.NoError(t, err)
+	obj := &jsonapi.ObjectMarshalling{
+		Type:       consts.Files,
+		ID:         fileDoc.ID(),
+		Attributes: (*json.RawMessage)(&attrs),
+		Meta:       jsonapi.Meta{Rev: fileDoc.Rev()},
+	}
+	data, err := json.Marshal(obj)
+	docPatch := &jsonapi.Document{Data: (*json.RawMessage)(&data)}
+	assert.NoError(t, err)
+	body, err := request.WriteJSON(docPatch)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest("PATCH", patchURL.String(), body)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	patchedFile, err := fs.FileByID(fileDoc.ID())
+	assert.NoError(t, err)
+	assert.Equal(t, patchedName, patchedFile.DocName)
+	assert.WithinDuration(t, now, patchedFile.UpdatedAt, time.Millisecond)
+}
+
+func TestPatchDirOrFileSuccessDir(t *testing.T) {
+	fs := testInstance.VFS()
+	dirDoc := createDir(t, fs, "dirtopatch")
+	_, err := fs.DirByID(dirDoc.ID())
+	assert.NoError(t, err)
+
+	patchURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	patchURL.Path = fmt.Sprintf("/sharings/doc/%s/%s", dirDoc.DocType(),
+		dirDoc.ID())
+	patchURL.RawQuery = url.Values{
+		"rev":  {dirDoc.Rev()},
+		"Type": {consts.DirType},
+	}.Encode()
+
+	patchedName := "patcheddirname"
+	now := time.Now()
+	patch := &vfs.DocPatch{
+		Name:      &patchedName,
+		DirID:     &dirDoc.DirID,
+		Tags:      &dirDoc.Tags,
+		UpdatedAt: &now,
+	}
+	attrs, err := json.Marshal(patch)
+	assert.NoError(t, err)
+	obj := &jsonapi.ObjectMarshalling{
+		Type:       consts.Files,
+		ID:         dirDoc.ID(),
+		Attributes: (*json.RawMessage)(&attrs),
+		Meta:       jsonapi.Meta{Rev: dirDoc.Rev()},
+	}
+	data, err := json.Marshal(obj)
+	docPatch := &jsonapi.Document{Data: (*json.RawMessage)(&data)}
+	assert.NoError(t, err)
+	body, err := request.WriteJSON(docPatch)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest("PATCH", patchURL.String(), body)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	patchedDir, err := fs.DirByID(dirDoc.ID())
+	assert.NoError(t, err)
+	assert.Equal(t, patchedName, patchedDir.DocName)
+	assert.WithinDuration(t, now, patchedDir.UpdatedAt, time.Millisecond)
 }
 
 func TestAddSharingRecipientNoSharing(t *testing.T) {
@@ -633,13 +863,7 @@ func TestMain(m *testing.M) {
 		Settings: settings2,
 	})
 
-	err := couchdb.ResetDB(testInstance, iocozytests)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	err = couchdb.ResetDB(testInstance, consts.Files)
+	err := couchdb.CreateDB(testInstance, iocozytests)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -654,6 +878,13 @@ func TestMain(m *testing.M) {
 	scope := consts.Files + " " + iocozytests + " " + consts.Sharings
 	clientOAuth, token = setup.GetTestClient(scope)
 	clientID = clientOAuth.ClientID
+
+	// As shared files are put in the shared with me dir, we need it
+	err = createSharedWithMeDir(testInstance.VFS())
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	routes := map[string]func(*echo.Group){
 		"/sharings": Routes,
