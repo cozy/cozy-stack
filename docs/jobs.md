@@ -535,3 +535,22 @@ On a monolithic cozy-stack, the worker pool has a configurable fixed size of wor
 In order to prevent jobs from leaking informations between applications, we may need to add filtering per applications: for instance one queue per applications.
 
 We should also have an explicit check on the permissions of the applications before launching a job scheduled by an application. For more information, refer to our [permission document](./permissions).
+
+
+## Multi-stack
+
+When some instances are served by several stacks, the scheduling and running
+of jobs can be distributed on the stacks. The synchronization is done via
+redis.
+
+For scheduling, there is one important key in redis: `triggers`. It's a sorted
+set. The members are the identifiants of the triggers (with the domain name),
+and the score are the timestamp of the next time the trigger should occur.
+During the short period of time where a trigger is processed, its key is moved
+to `scheduling` (another sorted set). So, even if a stack crash during
+processing a trigger, this trigger won't be lost.
+
+For `@event` triggers, we don't use the same mechanism. Each stack has all the
+triggers in memory and is responsible to trigger them for the events generated
+by the HTTP requests of their API. They also publish them on redis: this
+pub/sub is used for the realtime API.
