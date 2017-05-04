@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strconv"
@@ -422,7 +423,7 @@ func (f *swiftFileCreation) Seek(offset int64, whence int) (int64, error) {
 
 func (f *swiftFileCreation) Write(p []byte) (int, error) {
 	if f.meta != nil {
-		if _, err := (*f.meta).Write(p); err != nil {
+		if _, err := (*f.meta).Write(p); err != nil && err != io.ErrClosedPipe {
 			(*f.meta).Abort(err)
 			f.meta = nil
 		}
