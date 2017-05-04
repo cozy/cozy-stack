@@ -46,9 +46,12 @@ type FileDoc struct {
 
 	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
 
-	// Cache of the fullpath of the file. Should not have to be invalidated since
-	// we use FileDoc as immutable data-structures.
+	// Cache of the fullpath of the file. Should not have to be invalidated
+	// since we use FileDoc as immutable data-structures.
 	fullpath string
+
+	// NOTE: Do not forget to propagate changes made to this structure to the
+	// structure DirOrFileDoc in pkg/vfs/vfs.go.
 }
 
 // ID returns the file qualified identifier
