@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -617,8 +616,7 @@ func normalizeDocPatch(data, patch *DocPatch, cdate time.Time) (*DocPatch, error
 	}
 
 	if patch.UpdatedAt.Before(cdate) {
-		log.Error("UPDATE is before CREATION")
-		// return nil, ErrIllegalTime
+		return nil, ErrIllegalTime
 	}
 
 	if patch.Executable == nil {

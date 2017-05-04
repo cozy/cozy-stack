@@ -260,9 +260,10 @@ func TestSendDir(t *testing.T) {
 				assert.Equal(t, dirDoc.DocName, c.QueryParam("Name"))
 				dirTags := strings.Join(dirDoc.Tags, files.TagSeparator)
 				assert.Equal(t, dirTags, c.QueryParam("Tags"))
-				dirDocPath, err := dirDoc.Path(fs)
-				assert.NoError(t, err)
-				assert.Equal(t, dirDocPath, c.QueryParam("Path"))
+				assert.Equal(t, dirDoc.CreatedAt.Format(time.RFC1123),
+					c.QueryParam("Created_at"))
+				assert.Equal(t, dirDoc.UpdatedAt.Format(time.RFC1123),
+					c.QueryParam("Updated_at"))
 				return c.JSON(http.StatusOK, nil)
 			})
 		},
@@ -329,6 +330,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 				assert.Equal(t, consts.FileType, c.QueryParam("Type"))
 				assert.Equal(t, updatedFileDoc.DocName, c.QueryParam("Name"))
 				assert.Equal(t, "false", c.QueryParam("Executable"))
+				assert.Equal(t, updatedFileDoc.UpdatedAt.Format(time.RFC1123),
+					c.QueryParam("Updated_at"))
 				sentFileDoc, err := files.FileDocFromReq(c,
 					updatedFileDoc.DocName, consts.SharedWithMeDirID, nil)
 				assert.NoError(t, err)

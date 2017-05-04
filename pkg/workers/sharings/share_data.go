@@ -93,6 +93,8 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 		"Type":          {consts.FileType},
 		"Name":          {fileDoc.DocName},
 		"Executable":    {strconv.FormatBool(fileDoc.Executable)},
+		"Created_at":    {fileDoc.CreatedAt.Format(time.RFC1123)},
+		"Updated_at":    {fileDoc.UpdatedAt.Format(time.RFC1123)},
 		"Referenced_by": []string{refs},
 	}
 
@@ -293,11 +295,12 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 				echo.HeaderAuthorization: "Bearer " + recipient.Token,
 			},
 			Queries: url.Values{
-				"Tags":      {dirTags},
-				"Path":      {dirPath},
-				"Recursive": {"true"},
-				"Name":      {dirDoc.DocName},
-				"Type":      {consts.DirType},
+				"Tags":       {dirTags},
+				"Path":       {dirPath},
+				"Name":       {dirDoc.DocName},
+				"Type":       {consts.DirType},
+				"Created_at": {dirDoc.CreatedAt.Format(time.RFC1123)},
+				"Updated_at": {dirDoc.CreatedAt.Format(time.RFC1123)},
 			},
 			NoResponse: true,
 		})
