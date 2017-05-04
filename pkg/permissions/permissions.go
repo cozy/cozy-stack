@@ -8,7 +8,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/labstack/echo"
 )
 
 // Permission is a storable object containing a set of rules and
@@ -42,16 +41,6 @@ const (
 
 	// TypeCLI if the value of Permission.Type for a command-line permission doc
 	TypeCLI = "cli"
-)
-
-var (
-	// ErrNotSubset is returned on requests attempting to create a Set of
-	// permissions which is not a subset of the request's own token.
-	ErrNotSubset = echo.NewHTTPError(403, "attempt to create a larger permission set")
-
-	// ErrOnlyAppCanCreateSubSet is returned if a non-app attempts to create
-	// sharing permissions.
-	ErrOnlyAppCanCreateSubSet = echo.NewHTTPError(403, "only apps can create sharing permissions")
 )
 
 // ID implements jsonapi.Doc

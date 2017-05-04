@@ -24,4 +24,18 @@ var (
 	// ErrBadScope is used when the given scope is malformed
 	ErrBadScope = echo.NewHTTPError(http.StatusBadRequest,
 		"Permission scope is empty or malformed")
+
+	// ErrNotSubset is returned on requests attempting to create a Set of
+	// permissions which is not a subset of the request's own token.
+	ErrNotSubset = echo.NewHTTPError(http.StatusForbidden,
+		"Attempt to create a larger permission set")
+
+	// ErrOnlyAppCanCreateSubSet is returned if a non-app attempts to create
+	// sharing permissions.
+	ErrOnlyAppCanCreateSubSet = echo.NewHTTPError(http.StatusForbidden,
+		"Only apps can create sharing permissions")
+
+	// ErrNotParent is used when the permissions should have a specific parent.
+	ErrNotParent = echo.NewHTTPError(http.StatusForbidden,
+		"Permissions can be updated only by its parent")
 )

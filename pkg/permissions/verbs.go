@@ -80,19 +80,23 @@ func (vs VerbSet) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements json.Unmarshaller on VerbSet
 // it expects a json array
 func (vs *VerbSet) UnmarshalJSON(b []byte) error {
-	if *vs == nil {
-		*vs = make(VerbSet)
-	}
+	*vs = make(VerbSet)
 	var s []string
 	err := json.Unmarshal(b, &s)
 	if err != nil {
 		return err
 	}
-	for v := range ALL {
-		delete(*vs, v)
+	// empty set and ["ALL"] set = ALL
+	if len(s) == 0 || (len(s) == 1 && s[0] == allVerbs) {
+		return nil
 	}
 	for _, v := range s {
-		(*vs)[Verb(v)] = struct{}{}
+		switch v {
+		case "GET", "POST", "PUT", "PATCH", "DELETE":
+			(*vs)[Verb(v)] = struct{}{}
+		default:
+			return ErrBadScope
+		}
 	}
 	return nil
 }
