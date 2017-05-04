@@ -55,7 +55,7 @@ func (c *CronTrigger) DocType() string {
 
 // ID implements the permissions.Validable interface
 func (c *CronTrigger) ID() string {
-	return ""
+	return c.infos.TID
 }
 
 // Valid implements the permissions.Validable interface

@@ -60,7 +60,7 @@ func (a *AtTrigger) DocType() string {
 
 // ID implements the permissions.Validable interface
 func (a *AtTrigger) ID() string {
-	return ""
+	return a.in.TID
 }
 
 // Valid implements the permissions.Validable interface
