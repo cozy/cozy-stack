@@ -30,9 +30,6 @@ var (
 var ErrPatchCodeOrSet = echo.NewHTTPError(http.StatusBadRequest,
 	"The patch doc should have property 'codes' or 'permissions', not both")
 
-// ErrForbidden is returned when a bad operation is attempted on permissions
-var ErrForbidden = echo.NewHTTPError(http.StatusForbidden)
-
 // ContextPermissionSet is the key used in echo context to store permissions set
 const ContextPermissionSet = "permissions_set"
 
@@ -227,17 +224,17 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		}
 
 		if patchCodes {
-			// a permission can be updated only by its parent
 			if !current.ParentOf(toPatch) {
-				return ErrForbidden
+				return echo.NewHTTPError(http.StatusForbidden,
+					"Permissions can be updated only by its parent")
 			}
 			toPatch.PatchCodes(patch.Codes)
 		}
 
 		if patchSet {
-			// I can only add my own permissions to another permission doc
 			if !patch.Permissions.IsSubSetOf(current.Permissions) {
-				return ErrForbidden
+				return echo.NewHTTPError(http.StatusForbidden,
+					"Cannot add a permission that you do not have yourself")
 			}
 			toPatch.AddRules(patch.Permissions...)
 		}
@@ -263,9 +260,9 @@ func revokePermission(c echo.Context) error {
 		return err
 	}
 
-	// a permission can be revoked only by its parent
 	if !current.ParentOf(toRevoke) {
-		return ErrForbidden
+		return echo.NewHTTPError(http.StatusForbidden,
+			"Permissions can be updated only by its parent")
 	}
 
 	err = toRevoke.Revoke(instance)
