@@ -32,7 +32,7 @@ func NewEventTrigger(infos *TriggerInfos) (*EventTrigger, error) {
 
 // Type implements the Type method of the Trigger interface.
 func (t *EventTrigger) Type() string {
-	return "@event"
+	return t.infos.Type
 }
 
 // DocType implements the permissions.Validable interface
@@ -42,7 +42,7 @@ func (t *EventTrigger) DocType() string {
 
 // ID implements the permissions.Validable interface
 func (t *EventTrigger) ID() string {
-	return ""
+	return t.infos.TID
 }
 
 // Valid implements the permissions.Validable interface

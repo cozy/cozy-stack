@@ -499,6 +499,16 @@ func Destroy(domain string) (*Instance, error) {
 		return nil, err
 	}
 
+	sched := stack.GetScheduler()
+	triggers, err := sched.GetAll(i.Domain)
+	if err == nil {
+		for _, t := range triggers {
+			if err = sched.Delete(i.Domain, t.Infos().TID); err != nil {
+				log.Error("[instance] Failed to remove trigger: ", err)
+			}
+		}
+	}
+
 	if err = couchdb.DeleteDoc(couchdb.GlobalDB, i); err != nil {
 		return nil, err
 	}
