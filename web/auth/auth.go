@@ -231,6 +231,7 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error
 			return "", echo.NewHTTPError(http.StatusBadRequest,
 				"bad url: should be subdomain")
 		}
+		return u.String(), nil
 	}
 
 	// To protect against stealing authorization code with redirection, the
