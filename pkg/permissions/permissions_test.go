@@ -107,8 +107,6 @@ func TestJSON2Set(t *testing.T) {
 	assert.Contains(t, []string{"contacts", "images", "mail"}, s[0].Title)
 	assert.Contains(t, []string{"contacts", "images", "mail"}, s[1].Title)
 	assert.Contains(t, []string{"contacts", "images", "mail"}, s[2].Title)
-	assert.EqualValues(t, VerbSet{"GET": struct{}{}, "PUT": struct{}{}}, s[0].Verbs)
-	assert.EqualValues(t, VerbSet{}, s[1].Verbs)
 }
 
 func TestBadJSONSet(t *testing.T) {
@@ -123,6 +121,33 @@ func TestBadJSONSet(t *testing.T) {
 	err := json.Unmarshal(jsonSet, &s)
 	assert.Error(t, err)
 	assert.Equal(t, ErrBadScope, err)
+}
+
+func TestJSONSetVerbParsing(t *testing.T) {
+	var s Set
+	jsonSet := []byte(`{
+    "contacts": {
+      "type": "io.cozy.contacts",
+      "description": "Required for autocompletion on @name",
+      "verbs": ["GET","PUT"]
+    }
+  }`)
+	err := json.Unmarshal(jsonSet, &s)
+	assert.NoError(t, err)
+	assert.Len(t, s, 1)
+	assert.EqualValues(t, VerbSet{"GET": struct{}{}, "PUT": struct{}{}}, s[0].Verbs)
+
+	jsonSet = []byte(`{
+    "contacts": {
+      "type": "io.cozy.contacts",
+      "description": "Required for autocompletion on @name",
+      "verbs": ["ALL"]
+    }
+  }`)
+	err = json.Unmarshal(jsonSet, &s)
+	assert.NoError(t, err)
+	assert.Len(t, s, 1)
+	assert.EqualValues(t, VerbSet{}, s[0].Verbs)
 }
 
 func TestSetToString(t *testing.T) {
