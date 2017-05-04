@@ -200,13 +200,14 @@ type DirOrFileDoc struct {
 	*DirDoc
 
 	// fields from FileDoc not contained in DirDoc
-	ByteSize   int64    `json:"size,string"`
-	MD5Sum     []byte   `json:"md5sum"`
-	Mime       string   `json:"mime"`
-	Class      string   `json:"class"`
-	Executable bool     `json:"executable"`
-	Trashed    bool     `json:"trashed"`
-	Metadata   Metadata `json:"metadata,omitempty"`
+	ByteSize     int64                  `json:"size,string"`
+	MD5Sum       []byte                 `json:"md5sum"`
+	Mime         string                 `json:"mime"`
+	Class        string                 `json:"class"`
+	Executable   bool                   `json:"executable"`
+	Trashed      bool                   `json:"trashed"`
+	Metadata     Metadata               `json:"metadata,omitempty"`
+	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
 }
 
 // Refine returns either a DirDoc or FileDoc pointer depending on the type of
