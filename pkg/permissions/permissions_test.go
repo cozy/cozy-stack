@@ -85,12 +85,12 @@ func TestJSON2Set(t *testing.T) {
     "contacts": {
       "type": "io.cozy.contacts",
       "description": "Required for autocompletion on @name",
-      "verbs": ["GET"]
+      "verbs": ["GET","PUT"]
     },
     "images": {
       "type": "io.cozy.files",
       "description": "Required for the background",
-      "verbs": ["GET"],
+      "verbs": ["ALL"],
       "values": ["io.cozy.files.music-dir"]
     },
     "mail": {
@@ -107,6 +107,22 @@ func TestJSON2Set(t *testing.T) {
 	assert.Contains(t, []string{"contacts", "images", "mail"}, s[0].Title)
 	assert.Contains(t, []string{"contacts", "images", "mail"}, s[1].Title)
 	assert.Contains(t, []string{"contacts", "images", "mail"}, s[2].Title)
+	assert.EqualValues(t, VerbSet{"GET": struct{}{}, "PUT": struct{}{}}, s[0].Verbs)
+	assert.EqualValues(t, VerbSet{}, s[1].Verbs)
+}
+
+func TestBadJSONSet(t *testing.T) {
+	jsonSet := []byte(`{
+    "contacts": {
+      "type": "io.cozy.contacts",
+      "description": "Required for autocompletion on @name",
+      "verbs": ["BAD"]
+    }
+  }`)
+	var s Set
+	err := json.Unmarshal(jsonSet, &s)
+	assert.Error(t, err)
+	assert.Equal(t, ErrBadScope, err)
 }
 
 func TestSetToString(t *testing.T) {
