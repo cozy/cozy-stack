@@ -50,13 +50,12 @@ func (ps Set) MarshalScopeString() (string, error) {
 
 // UnmarshalJSON parses a json formated permission set
 func (ps *Set) UnmarshalJSON(j []byte) error {
-
+	*ps = make(Set, 0)
 	var m map[string]*json.RawMessage
 	err := json.Unmarshal(j, &m)
 	if err != nil {
 		return err
 	}
-
 	for title, rulejson := range m {
 		var r Rule
 		err := json.Unmarshal(*rulejson, &r)
@@ -66,7 +65,6 @@ func (ps *Set) UnmarshalJSON(j []byte) error {
 		r.Title = title
 		*ps = append(*ps, r)
 	}
-
 	return nil
 }
 
