@@ -148,7 +148,14 @@ func TestReceiveDocumentSuccessDir(t *testing.T) {
 	urlDest, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, id)
-	urlDest.RawQuery = fmt.Sprintf("Name=TestDir&Type=%s", consts.DirType)
+	strNow := time.Now().Format(time.RFC1123)
+	query := url.Values{
+		"Name":       {"TestDir"},
+		"Type":       {consts.DirType},
+		"Created_at": {strNow},
+		"Updated_at": {strNow},
+	}
+	urlDest.RawQuery = query.Encode()
 
 	req, err := http.NewRequest(http.MethodPost, urlDest.String(), nil)
 	assert.NoError(t, err)
@@ -171,10 +178,21 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	urlDest, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, id)
+
+	reference := []couchdb.DocReference{{ID: "randomid", Type: "randomtype"}}
+	refBy, err := json.Marshal(reference)
+	assert.NoError(t, err)
+	refs := string(refBy[:])
+
+	strNow := time.Now().Format(time.RFC1123)
+
 	values := url.Values{
-		"Name":       {"TestFile"},
-		"Executable": {"false"},
-		"Type":       {consts.FileType},
+		"Name":          {"TestFile"},
+		"Executable":    {"false"},
+		"Type":          {consts.FileType},
+		"Referenced_by": []string{refs},
+		"Created_at":    {strNow},
+		"Updated_at":    {strNow},
 	}
 	urlDest.RawQuery = values.Encode()
 	buf := strings.NewReader(body)
@@ -228,7 +246,7 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 	assert.Equal(t, doc.M["testcontent"], updatedDoc.M["testcontent"])
 }
 
-func TestUpdateDocumentSuccessFile(t *testing.T) {
+func TestUpdateDocumentConflictError(t *testing.T) {
 	t.Skip()
 	fs := testInstance.VFS()
 
@@ -239,11 +257,13 @@ func TestUpdateDocumentSuccessFile(t *testing.T) {
 	assert.NoError(t, err)
 	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
 		fileDoc.ID())
+	strNow := time.Now().Format(time.RFC1123)
 	values := url.Values{
 		"Name":       {fileDoc.DocName},
 		"Executable": {"false"},
 		"Type":       {consts.FileType},
 		"rev":        {fileDoc.Rev()},
+		"Updated_at": {strNow},
 	}
 	urlDest.RawQuery = values.Encode()
 

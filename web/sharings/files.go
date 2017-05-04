@@ -45,7 +45,6 @@ func creationWithIDHandler(c echo.Context) error {
 func createDirWithIDHandler(c echo.Context, fs vfs.VFS) error {
 	name := c.QueryParam("Name")
 	id := c.Param("docid")
-	date := c.Request().Header.Get("Date")
 
 	// TODO handle name collision.
 	doc, err := vfs.NewDirDoc(fs, name, "", nil)
@@ -56,12 +55,17 @@ func createDirWithIDHandler(c echo.Context, fs vfs.VFS) error {
 	doc.DirID = consts.SharedWithMeDirID
 	doc.SetID(id)
 
-	if date != "" {
-		if t, errt := time.Parse(time.RFC1123, date); errt == nil {
-			doc.CreatedAt = t
-			doc.UpdatedAt = t
-		}
+	createdAt, err := time.Parse(time.RFC1123, c.QueryParam("Created_at"))
+	if err != nil {
+		return err
 	}
+	doc.CreatedAt = createdAt
+
+	updatedAt, err := time.Parse(time.RFC1123, c.QueryParam("Updated_at"))
+	if err != nil {
+		return err
+	}
+	doc.UpdatedAt = updatedAt
 
 	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
 		return err
@@ -90,6 +94,18 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 		}
 		doc.ReferencedBy = refs
 	}
+
+	createdAt, err := time.Parse(time.RFC1123, c.QueryParam("Created_at"))
+	if err != nil {
+		return err
+	}
+	doc.CreatedAt = createdAt
+
+	updatedAt, err := time.Parse(time.RFC1123, c.QueryParam("Updated_at"))
+	if err != nil {
+		return err
+	}
+	doc.UpdatedAt = updatedAt
 
 	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
 		return err
@@ -141,6 +157,12 @@ func updateFile(c echo.Context) error {
 		olddoc.Tags,
 	)
 	newdoc.ReferencedBy = olddoc.ReferencedBy
+
+	updatedAt, err := time.Parse(time.RFC1123, c.QueryParam("Updated_at"))
+	if err != nil {
+		return err
+	}
+	newdoc.UpdatedAt = updatedAt
 
 	if err = files.CheckIfMatch(c, olddoc.Rev()); err != nil {
 		return err
