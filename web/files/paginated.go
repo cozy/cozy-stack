@@ -51,7 +51,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	}
 	// Do not count the trash folder when listing the root directory.
 	if count > 0 && doc.ID() == consts.RootDirID {
-		count -= 1
+		count--
 	}
 
 	children, err := fs.DirBatch(doc, cursor)
@@ -137,7 +137,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	}
 	// Do not count the trash folder when listing the root directory.
 	if count > 0 && doc.ID() == consts.RootDirID {
-		count -= 1
+		count--
 	}
 
 	children, err := fs.DirBatch(doc, cursor)
