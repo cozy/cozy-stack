@@ -15,14 +15,16 @@ else
 			show_warn=true
 		fi
 	done
-	appdir=""
 	if $show_warn; then
+		appdir=""
 		>&2 echo -e ""
 		>&2 echo -e "WARNING:"
 		>&2 echo -e "  No manifest.webapp file has been found in the mounted"
 		>&2 echo -e "  directory /data/cozy-app. The stack will be started"
 		>&2 echo -e "  without serving any local application."
 		>&2 echo -e ""
+	else
+		appdir="/data/cozy-app"
 	fi
 fi
 
