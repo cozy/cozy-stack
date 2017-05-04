@@ -200,14 +200,13 @@ type DirOrFileDoc struct {
 	*DirDoc
 
 	// fields from FileDoc not contained in DirDoc
-	ByteSize     int64                  `json:"size,string"`
-	MD5Sum       []byte                 `json:"md5sum"`
-	Mime         string                 `json:"mime"`
-	Class        string                 `json:"class"`
-	Executable   bool                   `json:"executable"`
-	Trashed      bool                   `json:"trashed"`
-	Metadata     Metadata               `json:"metadata,omitempty"`
-	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
+	ByteSize   int64    `json:"size,string"`
+	MD5Sum     []byte   `json:"md5sum"`
+	Mime       string   `json:"mime"`
+	Class      string   `json:"class"`
+	Executable bool     `json:"executable"`
+	Trashed    bool     `json:"trashed"`
+	Metadata   Metadata `json:"metadata,omitempty"`
 }
 
 // Refine returns either a DirDoc or FileDoc pointer depending on the type of
@@ -218,22 +217,23 @@ func (fd *DirOrFileDoc) Refine() (*DirDoc, *FileDoc) {
 		return fd.DirDoc, nil
 	case consts.FileType:
 		return nil, &FileDoc{
-			Type:        fd.Type,
-			DocID:       fd.DocID,
-			DocRev:      fd.DocRev,
-			DocName:     fd.DocName,
-			DirID:       fd.DirID,
-			RestorePath: fd.RestorePath,
-			CreatedAt:   fd.CreatedAt,
-			UpdatedAt:   fd.UpdatedAt,
-			ByteSize:    fd.ByteSize,
-			MD5Sum:      fd.MD5Sum,
-			Mime:        fd.Mime,
-			Class:       fd.Class,
-			Executable:  fd.Executable,
-			Trashed:     fd.Trashed,
-			Tags:        fd.Tags,
-			Metadata:    fd.Metadata,
+			Type:         fd.Type,
+			DocID:        fd.DocID,
+			DocRev:       fd.DocRev,
+			DocName:      fd.DocName,
+			DirID:        fd.DirID,
+			RestorePath:  fd.RestorePath,
+			CreatedAt:    fd.CreatedAt,
+			UpdatedAt:    fd.UpdatedAt,
+			ByteSize:     fd.ByteSize,
+			MD5Sum:       fd.MD5Sum,
+			Mime:         fd.Mime,
+			Class:        fd.Class,
+			Executable:   fd.Executable,
+			Trashed:      fd.Trashed,
+			Tags:         fd.Tags,
+			Metadata:     fd.Metadata,
+			ReferencedBy: fd.ReferencedBy,
 		}
 	}
 	return nil, nil

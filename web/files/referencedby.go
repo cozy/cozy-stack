@@ -28,21 +28,19 @@ func AddReferencedHandler(c echo.Context) error {
 		return err
 	}
 
-	if dir != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Cant add references to a folder")
-	}
-	if file == nil {
-		return echo.NewHTTPError(http.StatusNotFound, "File not found")
-	}
-
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
 		return wrapVfsError(err)
 	}
 
-	file.AddReferencedBy(references...)
+	if dir == nil {
+		file.AddReferencedBy(references...)
+		err = couchdb.UpdateDoc(instance, file)
+	} else {
+		dir.AddReferencedBy(references...)
+		err = couchdb.UpdateDoc(instance, dir)
+	}
 
-	err = couchdb.UpdateDoc(instance, file)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -58,7 +56,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 
 	fileID := c.Param("file-id")
 
-	file, err := instance.VFS().FileByID(fileID)
+	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
@@ -73,9 +71,14 @@ func RemoveReferencedHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	file.RemoveReferencedBy(references...)
+	if dir != nil {
+		dir.RemoveReferencedBy(references...)
+		err = couchdb.UpdateDoc(instance, dir)
+	} else {
+		file.RemoveReferencedBy(references...)
+		err = couchdb.UpdateDoc(instance, file)
+	}
 
-	err = couchdb.UpdateDoc(instance, file)
 	if err != nil {
 		return wrapVfsError(err)
 	}

@@ -33,6 +33,8 @@ type DirDoc struct {
 
 	// Directory path on VFS
 	Fullpath string `json:"path"`
+
+	ReferencedBy []couchdb.DocReference `json:"referenced_by,omitempty"`
 }
 
 // ID returns the directory qualified identifier
@@ -93,6 +95,23 @@ func (d *DirDoc) IsEmpty(fs VFS) (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+// AddReferencedBy adds referenced_by to the directory
+func (d *DirDoc) AddReferencedBy(ri ...couchdb.DocReference) {
+	d.ReferencedBy = append(d.ReferencedBy, ri...)
+}
+
+// RemoveReferencedBy adds referenced_by to the directory
+func (d *DirDoc) RemoveReferencedBy(ri ...couchdb.DocReference) {
+	// https://github.com/golang/go/wiki/SliceTricks#filtering-without-allocating
+	referenced := d.ReferencedBy[:0]
+	for _, ref := range d.ReferencedBy {
+		if !containsReferencedBy(ri, ref) {
+			referenced = append(referenced, ref)
+		}
+	}
+	d.ReferencedBy = referenced
 }
 
 // NewDirDoc is the DirDoc constructor. The given name is validated.
