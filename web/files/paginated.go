@@ -37,7 +37,6 @@ func newDir(doc *vfs.DirDoc) *dir {
 }
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
 
@@ -49,6 +48,10 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	count, err := fs.DirLength(doc)
 	if err != nil {
 		return err
+	}
+	// Do not count the trash folder when listing the root directory.
+	if count > 0 && doc.ID() == consts.RootDirID {
+		count -= 1
 	}
 
 	children, err := fs.DirBatch(doc, cursor)
@@ -120,7 +123,6 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 }
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-
 	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
 	if err != nil {
 		return err
@@ -132,6 +134,10 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	count, err := fs.DirLength(doc)
 	if err != nil {
 		return err
+	}
+	// Do not count the trash folder when listing the root directory.
+	if count > 0 && doc.ID() == consts.RootDirID {
+		count -= 1
 	}
 
 	children, err := fs.DirBatch(doc, cursor)
