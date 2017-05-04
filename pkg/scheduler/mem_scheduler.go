@@ -96,6 +96,15 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	return nil
 }
 
+// Stop the scheduling of triggers
+func (s *MemScheduler) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, t := range s.ts {
+		t.Unschedule()
+	}
+}
+
 // Add will add a new trigger to the scheduler. The trigger is persisted in
 // storage.
 func (s *MemScheduler) Add(t Trigger) error {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
@@ -16,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const redisURL = "redis://localhost:6379/"
+const redisURL = "redis://localhost:6379/15"
 
 var instanceName string
 
@@ -66,10 +67,8 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
-	// TODO Don't export Broker
-	// sch.Stop()
-	// sch.Start(bro)
-	sch.Broker = bro
+	sch.Stop()
+	sch.Start(bro)
 
 	tat, err := scheduler.NewTrigger(at)
 	assert.NoError(t, err)
@@ -130,6 +129,111 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	_, err = sch.Get(instanceName, inID)
 	assert.Error(t, err)
 	assert.Equal(t, scheduler.ErrNotFoundTrigger, err)
+}
+
+func TestRedisSchedulerWithCronTriggers(t *testing.T) {
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	assert.NoError(t, err)
+
+	count := 0
+	bro := jobs.NewMemBroker(jobs.WorkersList{
+		"incr": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+				count++
+				return nil
+			},
+		},
+	})
+
+	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch.Stop()
+	sch.Start(bro)
+	sch.Stop()
+	defer sch.Start(bro)
+
+	msg, _ := jobs.NewMessage("json", "@cron")
+
+	infos := &scheduler.TriggerInfos{
+		Type:       "@cron",
+		Domain:     instanceName,
+		Arguments:  "*/3 * * * * *",
+		WorkerType: "incr",
+		Message:    msg,
+	}
+	trigger, err := scheduler.NewTrigger(infos)
+	assert.NoError(t, err)
+	err = sch.Add(trigger)
+	assert.NoError(t, err)
+
+	now := time.Now().UTC().Unix()
+	for i := int64(0); i < 9; i++ {
+		err = sch.Poll(now + i + 4)
+		assert.NoError(t, err)
+	}
+	assert.Equal(t, 4, count)
+}
+
+func TestRedisPollFromSchedKey(t *testing.T) {
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	assert.NoError(t, err)
+
+	count := 0
+	bro := jobs.NewMemBroker(jobs.WorkersList{
+		"incr": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+				count++
+				return nil
+			},
+		},
+	})
+
+	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch.Stop()
+	sch.Start(bro)
+	sch.Stop()
+	defer sch.Start(bro)
+
+	now := time.Now()
+	msg, _ := jobs.NewMessage("json", "@at")
+
+	at := &scheduler.TriggerInfos{
+		Type:       "@at",
+		Domain:     instanceName,
+		Arguments:  now.Format(time.RFC3339),
+		WorkerType: "incr",
+		Message:    msg,
+	}
+	db := couchdb.SimpleDatabasePrefix(instanceName)
+	err = couchdb.CreateDoc(db, at)
+	assert.NoError(t, err)
+
+	ts := now.UTC().Unix()
+	key := instanceName + "/" + at.TID
+	err = client.ZAdd(scheduler.SchedKey, redis.Z{
+		Score:  float64(ts + 1),
+		Member: key,
+	}).Err()
+	assert.NoError(t, err)
+
+	err = sch.Poll(ts + 2)
+	assert.NoError(t, err)
+	<-time.After(1 * time.Millisecond)
+	assert.Equal(t, 0, count)
+
+	err = sch.Poll(ts + 13)
+	assert.NoError(t, err)
+	<-time.After(1 * time.Millisecond)
+	assert.Equal(t, 1, count)
 }
 
 func TestMain(m *testing.M) {

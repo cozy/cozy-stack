@@ -57,6 +57,7 @@ type (
 	// to listen respond to triggers jobs requests and send them to the broker.
 	Scheduler interface {
 		Start(broker jobs.Broker) error
+		Stop()
 		Add(trigger Trigger) error
 		Get(domain, id string) (Trigger, error)
 		Delete(domain, id string) error
