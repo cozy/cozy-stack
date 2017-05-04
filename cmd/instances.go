@@ -97,7 +97,7 @@ var addInstanceCmd = &cobra.Command{
 cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 `,
-	Example: "$ cozy-stack instances add --dev --passphrase cozy --apps files,photos,settings cozy.tools:8080",
+	Example: "$ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return cmd.Help()
