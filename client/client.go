@@ -58,7 +58,7 @@ type Client struct {
 func (c *Client) init() {
 	c.initMu.Lock()
 	defer c.initMu.Unlock()
-	if c.inited == true {
+	if c.inited {
 		return
 	}
 	if c.Retries == 0 {
