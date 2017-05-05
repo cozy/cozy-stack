@@ -292,7 +292,6 @@ func (c *couchdbIndexer) DirIterator(doc *DirDoc, opts *IteratorOptions) DirIter
 }
 
 func (c *couchdbIndexer) DirBatch(doc *DirDoc, cursor couchdb.Cursor) ([]DirOrFileDoc, error) {
-
 	// consts.FilesByParentView keys are [parentID, type, name]
 	req := couchdb.ViewRequest{
 		StartKey:    []string{doc.DocID, ""},
@@ -321,7 +320,6 @@ func (c *couchdbIndexer) DirBatch(doc *DirDoc, cursor couchdb.Cursor) ([]DirOrFi
 }
 
 func (c *couchdbIndexer) DirLength(doc *DirDoc) (int, error) {
-
 	req := couchdb.ViewRequest{
 		StartKey:   []string{doc.DocID, ""},
 		EndKey:     []string{doc.DocID, couchdb.MaxString},
