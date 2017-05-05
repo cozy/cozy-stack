@@ -36,8 +36,9 @@ func init() {
 
 // RecipientInfo describes the recipient information
 type RecipientInfo struct {
-	URL   string
-	Token string
+	URL    string
+	Scheme string
+	Token  string
 }
 
 // SendOptions describes the parameters needed to send data
@@ -165,6 +166,7 @@ func DeleteDoc(opts *SendOptions) error {
 
 		_, errSend := request.Req(&request.Options{
 			Domain: rec.URL,
+			Scheme: rec.Scheme,
 			Method: http.MethodDelete,
 			Path:   opts.Path,
 			Headers: request.Headers{
@@ -244,6 +246,7 @@ func sendDocToRecipient(opts *SendOptions, rec *RecipientInfo, doc *couchdb.JSON
 	// TODO : handle send failures
 	_, err = request.Req(&request.Options{
 		Domain: rec.URL,
+		Scheme: rec.Scheme,
 		Method: method,
 		Path:   opts.Path,
 		Headers: request.Headers{
@@ -288,6 +291,7 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 	for _, recipient := range opts.Recipients {
 		_, err := request.Req(&request.Options{
 			Domain: recipient.URL,
+			Scheme: recipient.Scheme,
 			Method: http.MethodPost,
 			Path:   opts.Path,
 			Headers: request.Headers{
@@ -399,6 +403,7 @@ func DeleteDirOrFile(opts *SendOptions) error {
 
 		_, err = request.Req(&request.Options{
 			Domain: recipient.URL,
+			Scheme: recipient.Scheme,
 			Method: http.MethodDelete,
 			Path:   opts.Path,
 			Headers: request.Headers{
@@ -432,6 +437,7 @@ func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo, method str
 
 	_, err := request.Req(&request.Options{
 		Domain: recipient.URL,
+		Scheme: recipient.Scheme,
 		Method: method,
 		Path:   opts.Path,
 		Headers: request.Headers{
@@ -457,6 +463,7 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 
 	_, err = request.Req(&request.Options{
 		Domain: recipient.URL,
+		Scheme: recipient.Scheme,
 		Method: http.MethodPatch,
 		Path:   opts.Path,
 		Headers: request.Headers{
@@ -527,6 +534,7 @@ func getDocRevAtRecipient(doctype, docID string, recInfo *RecipientInfo) (string
 
 	res, err := request.Req(&request.Options{
 		Domain: recInfo.URL,
+		Scheme: recInfo.Scheme,
 		Method: http.MethodGet,
 		Path:   path,
 		Headers: request.Headers{
@@ -577,6 +585,7 @@ func getFileOrDirMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[str
 
 	res, err := request.Req(&request.Options{
 		Domain: recInfo.URL,
+		Scheme: recInfo.Scheme,
 		Method: http.MethodGet,
 		Path:   path,
 		Headers: request.Headers{

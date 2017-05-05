@@ -55,6 +55,7 @@ type (
 		ClientParams *Client
 		Scopes       []string
 		Domain       string
+		Scheme       string
 		HTTPClient   *http.Client
 		UserAgent    string
 		UserAccept   UserAcceptFunc
@@ -183,6 +184,7 @@ func (r *Request) AuthCodeURL(c *Client, state string) (string, error) {
 // req performs an authentication HTTP request
 func (r *Request) req(opts *request.Options) (*http.Response, error) {
 	opts.Domain = r.Domain
+	opts.Scheme = r.Scheme
 	opts.Client = r.HTTPClient
 	opts.ParseError = parseError
 	return request.Req(opts)
