@@ -270,13 +270,14 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 		// Create a sharedata worker for each doc to send
 		for _, val := range values {
-			domain, err := recStatus.recipient.ExtractDomain()
+			domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
 			if err != nil {
 				return err
 			}
 			rec := &sharingWorker.RecipientInfo{
-				URL:   domain,
-				Token: recStatus.AccessToken.AccessToken,
+				URL:    domain,
+				Scheme: scheme,
+				Token:  recStatus.AccessToken.AccessToken,
 			}
 
 			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, sharingWorker.SendOptions{
@@ -475,7 +476,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 
 // SendClientID sends the registered clientId to the sharer
 func SendClientID(sharing *Sharing) error {
-	domain, err := sharing.Sharer.SharerStatus.recipient.ExtractDomain()
+	domain, scheme, err := sharing.Sharer.SharerStatus.recipient.ExtractDomainAndScheme()
 	if err != nil {
 		return nil
 	}
@@ -486,7 +487,7 @@ func SendClientID(sharing *Sharing) error {
 		ClientID:     sharing.Sharer.SharerStatus.HostClientID,
 		HostClientID: newClientID,
 	}
-	return Request("POST", domain, path, params)
+	return Request("POST", domain, scheme, path, params)
 }
 
 // SendCode generates and sends an OAuth code to a recipient
@@ -500,7 +501,7 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 	if err != nil {
 		return err
 	}
-	domain, err := recStatus.recipient.ExtractDomain()
+	domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
 	if err != nil {
 		return nil
 	}
@@ -509,7 +510,7 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		SharingID: sharing.SharingID,
 		Code:      access.Code,
 	}
-	return Request("POST", domain, path, params)
+	return Request("POST", domain, scheme, path, params)
 }
 
 // ExchangeCodeForToken asks for an AccessToken based on an AccessCode
@@ -524,7 +525,7 @@ func ExchangeCodeForToken(instance *instance.Instance, sharing *Sharing, recStat
 }
 
 // Request is a utility method to send request to remote sharing party
-func Request(method, domain, path string, params interface{}) error {
+func Request(method, domain, scheme, path string, params interface{}) error {
 	var body io.Reader
 	var err error
 	if params != nil {
@@ -535,6 +536,7 @@ func Request(method, domain, path string, params interface{}) error {
 	}
 	_, err = request.Req(&request.Options{
 		Domain: domain,
+		Scheme: scheme,
 		Method: method,
 		Path:   path,
 		Headers: request.Headers{

@@ -134,13 +134,14 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 		if err != nil {
 			return err
 		}
-		u, err := ExtractHost(recDoc.M["url"].(string))
+		u, scheme, err := ExtractHostAndScheme(recDoc.M["url"].(string))
 		if err != nil {
 			return err
 		}
 		info := &RecipientInfo{
-			URL:   u,
-			Token: rec.AccessToken.AccessToken,
+			URL:    u,
+			Scheme: scheme,
+			Token:  rec.AccessToken.AccessToken,
 		}
 		recInfos[i] = info
 	}
@@ -220,14 +221,19 @@ func GetRecipient(db couchdb.Database, recID string) (*couchdb.JSONDoc, error) {
 	return doc, err
 }
 
-// ExtractHost returns the recipient's host, without the scheme
-func ExtractHost(fullURL string) (string, error) {
+// ExtractHostAndScheme returns the recipient's host and the scheme
+func ExtractHostAndScheme(fullURL string) (string, string, error) {
 	if fullURL == "" {
-		return "", ErrRecipientHasNoURL
+		return "", "", ErrRecipientHasNoURL
 	}
 	u, err := url.Parse(fullURL)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return u.Host, nil
+	host := u.Host
+	scheme := u.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	return host, scheme, nil
 }

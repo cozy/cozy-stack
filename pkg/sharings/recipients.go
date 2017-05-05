@@ -53,16 +53,21 @@ func (r *Recipient) SetID(id string) { r.RID = id }
 // SetRev changes the recipient revision
 func (r *Recipient) SetRev(rev string) { r.RRev = rev }
 
-// ExtractDomain returns the recipient's domain without the scheme
-func (r *Recipient) ExtractDomain() (string, error) {
+// ExtractDomainAndScheme returns the recipient's domain and the scheme
+func (r *Recipient) ExtractDomainAndScheme() (string, string, error) {
 	if r.URL == "" {
-		return "", ErrRecipientHasNoURL
+		return "", "", ErrRecipientHasNoURL
 	}
 	u, err := url.Parse(r.URL)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return u.Host, nil
+	host := u.Host
+	scheme := u.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	return host, scheme, nil
 }
 
 // GetRecipient get the actual recipient of a RecipientStatus
@@ -124,15 +129,14 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 		return nil, ErrNoOAuthClient
 	}
 
-	// The structure `auth.Request` expects a domain WITHOUT a scheme (i.e.
-	// without "http://" or "https://") so we parse it.
-	recipientDomain, err := rs.recipient.ExtractDomain()
+	recipientDomain, scheme, err := rs.recipient.ExtractDomainAndScheme()
 	if err != nil {
 		return nil, err
 	}
 
 	req := &auth.Request{
 		Domain:     recipientDomain,
+		Scheme:     scheme,
 		HTTPClient: new(http.Client),
 	}
 
@@ -186,13 +190,14 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		ClientURI:    clientURI,
 	}
 
-	recipientURL, err := rs.recipient.ExtractDomain()
+	recipientURL, scheme, err := rs.recipient.ExtractDomainAndScheme()
 	if err != nil {
 		return err
 	}
 
 	req := &auth.Request{
 		Domain:     recipientURL,
+		Scheme:     scheme,
 		HTTPClient: new(http.Client),
 	}
 
