@@ -55,11 +55,11 @@ type Client struct {
 	auth   *auth.Request
 }
 
-func (c *Client) init() error {
+func (c *Client) init() {
 	c.initMu.Lock()
 	defer c.initMu.Unlock()
 	if c.inited {
-		return nil
+		return
 	}
 	if c.Retries == 0 {
 		c.Retries = 3
@@ -80,18 +80,7 @@ func (c *Client) init() error {
 			},
 		}
 	}
-	_, err := request.Req(&request.Options{
-		Addr:       c.Addr,
-		Method:     "GET",
-		Path:       "/version",
-		Domain:     c.Domain,
-		Scheme:     c.Scheme,
-		Client:     c.Client,
-		UserAgent:  c.UserAgent,
-		Authorizer: c.Authorizer,
-	})
-	c.inited = err == nil
-	return err
+	c.inited = true
 }
 
 // Authenticate is used to authenticate a client via OAuth.
@@ -121,10 +110,8 @@ func (c *Client) Authenticate() (request.Authorizer, error) {
 
 // Req is used to perform a request to the stack given the ReqOptions passed.
 func (c *Client) Req(opts *request.Options) (*http.Response, error) {
-	err := c.init()
-	if err != nil {
-		return nil, err
-	}
+	c.init()
+	var err error
 	if c.Authorizer != nil {
 		opts.Authorizer = c.Authorizer
 	} else {
