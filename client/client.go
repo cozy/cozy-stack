@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"sync"
-	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -50,13 +49,16 @@ type Client struct {
 	Transport http.RoundTripper
 
 	authed bool
-	inited int32
+	inited bool
+	initMu sync.Mutex
 	authMu sync.Mutex
 	auth   *auth.Request
 }
 
 func (c *Client) init() {
-	if !atomic.CompareAndSwapInt32(&c.inited, 0, 1) {
+	c.authMu.Lock()
+	defer c.authMu.Unlock()
+	if c.inited == true {
 		return
 	}
 	if c.Retries == 0 {
@@ -78,6 +80,7 @@ func (c *Client) init() {
 			},
 		}
 	}
+	c.inited = true
 }
 
 // Authenticate is used to authenticate a client via OAuth.
