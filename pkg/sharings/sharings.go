@@ -218,12 +218,17 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 			// Particular case for referenced_by: use the existing view
 			if rule.Selector == "referenced_by" {
-				// The permission tilte is used to know the referenced doctype
-				refType := rule.Title
-
 				for _, val := range rule.Values {
+					// A referenced_by selector implies Values in the form
+					// ["refDocType/refId"]
+					parts := strings.Split(val, permissions.RefSep)
+					if len(parts) != 2 {
+						return ErrBadPermission
+					}
+					refType := parts[0]
+					refID := parts[1]
 					req := &couchdb.ViewRequest{
-						Key: []string{refType, val},
+						Key: []string{refType, refID},
 					}
 					var res couchdb.ViewResponse
 					err := couchdb.ExecView(instance, consts.FilesReferencedByView, req, &res)

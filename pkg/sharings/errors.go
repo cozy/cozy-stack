@@ -5,6 +5,8 @@ import "errors"
 var (
 	// ErrBadSharingType is used when the given sharing type is not valid
 	ErrBadSharingType = errors.New("Invalid sharing type")
+	// ErrBadPermission is used when a given permission is not valid
+	ErrBadPermission = errors.New("Invalid permission format")
 	//ErrRecipientDoesNotExist is used when the given recipient does not exist
 	ErrRecipientDoesNotExist = errors.New("Recipient with given ID does not exist")
 	//ErrMissingScope is used when a request is missing the mandatory scope
