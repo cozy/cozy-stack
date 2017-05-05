@@ -56,8 +56,8 @@ type Client struct {
 }
 
 func (c *Client) init() {
-	c.authMu.Lock()
-	defer c.authMu.Unlock()
+	c.initMu.Lock()
+	defer c.initMu.Unlock()
 	if c.inited == true {
 		return
 	}
