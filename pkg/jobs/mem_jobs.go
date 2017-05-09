@@ -20,8 +20,8 @@ type (
 		cl chan bool
 	}
 
-	// MemBroker is an in-memory broker implementation of the Broker interface.
-	MemBroker struct {
+	// memBroker is an in-memory broker implementation of the Broker interface.
+	memBroker struct {
 		queues map[string]*memQueue
 	}
 
@@ -111,12 +111,12 @@ func NewMemBroker(ws WorkersList) Broker {
 		}
 		w.Start(q)
 	}
-	return &MemBroker{queues: queues}
+	return &memBroker{queues: queues}
 }
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *MemBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error) {
+func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error) {
 	workerType := req.WorkerType
 	q, ok := b.queues[workerType]
 	if !ok {
@@ -128,6 +128,9 @@ func (b *MemBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error
 		infos: infos,
 		jobch: jobch,
 	}
+	if err := GlobalStorage.Create(infos); err != nil {
+		return nil, nil, err
+	}
 	if err := q.Enqueue(j); err != nil {
 		return nil, nil, err
 	}
@@ -136,7 +139,7 @@ func (b *MemBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error
 
 // QueueLen returns the size of the number of elements in queue of the
 // specified worker type.
-func (b *MemBroker) QueueLen(workerType string) (int, error) {
+func (b *memBroker) QueueLen(workerType string) (int, error) {
 	q, ok := b.queues[workerType]
 	if !ok {
 		return 0, ErrUnknownWorker
@@ -166,6 +169,9 @@ func (j *memJob) AckConsumed() error {
 	job.StartedAt = time.Now()
 	job.State = Running
 	j.infos = &job
+	if err := GlobalStorage.Update(j.infos); err != nil {
+		return err
+	}
 	j.infmu.Unlock()
 	return j.asyncSend(&job, false)
 }
@@ -177,6 +183,9 @@ func (j *memJob) Ack() error {
 	job := *j.infos
 	job.State = Done
 	j.infos = &job
+	if err := GlobalStorage.Update(j.infos); err != nil {
+		return err
+	}
 	j.infmu.Unlock()
 	return j.asyncSend(&job, true)
 }
@@ -189,6 +198,9 @@ func (j *memJob) Nack(err error) error {
 	job.State = Errored
 	job.Error = err.Error()
 	j.infos = &job
+	if err := GlobalStorage.Update(j.infos); err != nil {
+		return err
+	}
 	j.infmu.Unlock()
 	return j.asyncSend(&job, true)
 }
@@ -216,6 +228,6 @@ func (j *memJob) Unmarshal() error {
 
 var (
 	_ Queue  = &memQueue{}
-	_ Broker = &MemBroker{}
+	_ Broker = &memBroker{}
 	_ Job    = &memJob{}
 )

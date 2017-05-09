@@ -15,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -122,21 +121,36 @@ func TestCreateJobWithEventStream(t *testing.T) {
 	evch := make(chan *event, 1)
 
 	go func() {
-		err := parseEventStream(r, evch)
-		assert.NoError(t, err)
+		assert.NoError(t, parseEventStream(r, evch))
 	}()
 
 	var i int
+	var data map[string]interface{}
 	for ev := range evch {
-		var data *jobs.JobInfos
 		assert.Equal(t, events[i], ev.name)
 		if assert.NotNil(t, ev.data) {
 			assert.NoError(t, json.Unmarshal(ev.data, &data))
 		}
-		fmt.Println(ev.name, data)
 		i++
 	}
-	assert.Equal(t, i, len(events))
+
+	jobID := data["data"].(map[string]interface{})["id"].(string)
+	req, err = http.NewRequest("GET", ts.URL+"/jobs/"+jobID, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Content-Type", "application/json")
+	res, err = http.DefaultClient.Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	err = json.NewDecoder(res.Body).Decode(&data)
+	if !assert.NoError(t, err) {
+		return
+	}
 }
 
 func TestAddGetAndDeleteTriggerAt(t *testing.T) {

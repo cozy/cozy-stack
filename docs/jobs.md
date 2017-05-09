@@ -200,21 +200,17 @@ Example and description of the attributes of a `io.cozy.jobs`:
 
 ```js
 {
+  "domain": "me.cozy.tools",
   "worker": "sendmail",    // worker type name
-  "trigger": "@cron",      // "@cron", "@every", "@event" or ""
-  "trigger_id": "1234",    // trigger id, if any
   "options": {
     "priority": 3,         // priority from 1 to 100, higher number is higher priority
     "timeout": 60,         // timeout value in seconds
     "max_exec_count": 3,   // maximum number of time the job should be executed (including retries)
   },
   "state": "running",      // queued, running, errored
-  "try_count": 1,          // number of time the job has been executed.
-                           // increased at the start of new execution
   "queued_at": "2016-09-19T12:35:08Z",  // time of the queuing
   "started_at": "2016-09-19T12:35:08Z", // time of first execution
-  "errors": [],            // list of errors
-  "output": {}             // output of the worker, if any
+  "error": ""             // error message if any
 }
 ```
 
@@ -225,6 +221,45 @@ Example and description of a job creation options — as you can see, the option
   "priority": 3,         // priority from 1 to 100
   "timeout": 60,         // timeout value in seconds
   "max_exec_count": 3,   // maximum number of retry
+}
+```
+
+
+### GET /jobs/:job-id
+
+Get a job informations given its ID.
+
+#### Request
+
+```http
+GET /jobs/123123 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+  "data": {
+    "type": "io.cozy.jobs",
+    "id": "123123",
+    "attributes": {
+      "domain": "me.cozy.tools",
+      "worker": "sendmail",
+      "options": {
+        "priority": 3,
+        "timeout": 60,
+        "max_exec_count": 3
+      },
+      "state": "running",
+      "queued_at": "2016-09-19T12:35:08Z",
+      "started_at": "2016-09-19T12:35:08Z",
+      "error": ""
+    },
+    "links": {
+      "self": "/jobs/123123"
+    }
+  }
 }
 ```
 
@@ -263,20 +298,17 @@ Accept: application/vnd.api+json
     "type": "io.cozy.jobs",
     "id": "123123",
     "attributes": {
+      "domain": "me.cozy.tools",
       "worker": "sendmail",
-      "trigger": "@cron",
-      "trigger_id": "4321",
       "options": {
         "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
       },
       "state": "running",
-      "try_count": 1,
       "queued_at": "2016-09-19T12:35:08Z",
       "started_at": "2016-09-19T12:35:08Z",
-      "errors": [],
-      "output": {}
+      "error": ""
     },
     "links": {
       "self": "/jobs/123123"

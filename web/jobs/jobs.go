@@ -50,8 +50,8 @@ type (
 	}
 )
 
-func (j *apiJob) ID() string                             { return j.j.ID }
-func (j *apiJob) Rev() string                            { return "" }
+func (j *apiJob) ID() string                             { return j.j.ID() }
+func (j *apiJob) Rev() string                            { return j.j.Rev() }
 func (j *apiJob) DocType() string                        { return consts.Jobs }
 func (j *apiJob) Clone() couchdb.Doc                     { return j }
 func (j *apiJob) SetID(_ string)                         {}
@@ -59,7 +59,7 @@ func (j *apiJob) SetRev(_ string)                        {}
 func (j *apiJob) Relationships() jsonapi.RelationshipMap { return nil }
 func (j *apiJob) Included() []jsonapi.Object             { return nil }
 func (j *apiJob) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/jobs/" + j.j.WorkerType + "/" + j.j.ID}
+	return &jsonapi.LinksList{Self: "/jobs/" + j.j.WorkerType + "/" + j.j.ID()}
 }
 func (j *apiJob) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.j)
@@ -241,6 +241,18 @@ func getAllTriggers(c echo.Context) error {
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
+func getJob(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	job, err := jobs.GlobalStorage.Get(instance.Domain, c.Param("job-id"))
+	if err != nil {
+		return err
+	}
+	if err := permissions.Allow(c, permissions.GET, job); err != nil {
+		return err
+	}
+	return jsonapi.Data(c, http.StatusOK, &apiJob{job}, nil)
+}
+
 // Routes sets the routing for the jobs service
 func Routes(router *echo.Group) {
 	router.GET("/queue/:worker-type", getQueue)
@@ -250,6 +262,8 @@ func Routes(router *echo.Group) {
 	router.POST("/triggers", newTrigger)
 	router.GET("/triggers/:trigger-id", getTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
+
+	router.GET("/:job-id", getJob)
 }
 
 func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
@@ -271,9 +285,9 @@ func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
 
 func wrapJobsError(err error) error {
 	switch err {
-	case jobs.ErrUnknownWorker:
-		return jsonapi.NotFound(err)
-	case scheduler.ErrNotFoundTrigger:
+	case scheduler.ErrNotFoundTrigger,
+		jobs.ErrNotFoundJob,
+		jobs.ErrUnknownWorker:
 		return jsonapi.NotFound(err)
 	case scheduler.ErrUnknownTrigger:
 		return jsonapi.InvalidAttribute("Type", err)

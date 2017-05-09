@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 const (
@@ -93,7 +93,8 @@ type (
 	// JobInfos contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
 	JobInfos struct {
-		ID         string      `json:"id"`
+		JobID      string      `json:"_id,omitempty"`
+		JobRev     string      `json:"_rev,omitempty"`
 		Domain     string      `json:"domain"`
 		WorkerType string      `json:"worker"`
 		Message    *Message    `json:"message"`
@@ -132,6 +133,33 @@ type (
 	}
 )
 
+// ID implements the couchdb.Doc interface
+func (ji *JobInfos) ID() string { return ji.JobID }
+
+// Rev implements the couchdb.Doc interface
+func (ji *JobInfos) Rev() string { return ji.JobRev }
+
+// Clone implements the couchdb.Doc interface
+func (ji *JobInfos) Clone() couchdb.Doc { return ji }
+
+// DocType implements the couchdb.Doc interface
+func (ji *JobInfos) DocType() string { return consts.Jobs }
+
+// SetID implements the couchdb.Doc interface
+func (ji *JobInfos) SetID(id string) { ji.JobID = id }
+
+// SetRev implements the couchdb.Doc interface
+func (ji *JobInfos) SetRev(rev string) { ji.JobRev = rev }
+
+// Valid implements the permissions.Validable interface
+func (ji *JobInfos) Valid(key, value string) bool {
+	switch key {
+	case WorkerType:
+		return ji.WorkerType == value
+	}
+	return false
+}
+
 // ID implements the permissions.Validable interface
 func (jr *JobRequest) ID() string { return "" }
 
@@ -147,12 +175,9 @@ func (jr *JobRequest) Valid(key, value string) bool {
 	return false
 }
 
-var _ permissions.Validable = (*JobRequest)(nil)
-
 // NewJobInfos creates a new JobInfos instance from a job request.
 func NewJobInfos(req *JobRequest) *JobInfos {
 	return &JobInfos{
-		ID:         utils.RandomString(16),
 		Domain:     req.Domain,
 		WorkerType: req.WorkerType,
 		Message:    req.Message,
@@ -202,3 +227,8 @@ func (w *WorkerConfig) clone() *WorkerConfig {
 		RetryDelay:   w.RetryDelay,
 	}
 }
+
+var (
+	_ permissions.Validable = (*JobRequest)(nil)
+	_ permissions.Validable = (*JobInfos)(nil)
+)
