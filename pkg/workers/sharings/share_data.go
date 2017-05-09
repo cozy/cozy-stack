@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -157,7 +158,7 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 // provided.
 func DeleteDoc(opts *SendOptions) error {
 	for _, rec := range opts.Recipients {
-		rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
+		rev, err := getDocRevAtRecipient(nil, http.MethodDelete, opts.DocType, opts.DocID, rec)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to send "+
 				"update : ", err)
@@ -218,10 +219,14 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 	for _, rec := range opts.Recipients {
 		// A doc update requires to set the doc revision from each recipient
-		rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
+		rev, err := getDocRevAtRecipient(doc, http.MethodPut, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to get "+
-				"the revision of a document: ", err)
+			log.Error("[sharing] An error occurred while trying to send "+
+				"update : ", err)
+			continue
+		}
+		// No revision returned: nothing to do
+		if rev == "" {
 			continue
 		}
 		doc.SetRev(rev)
@@ -326,14 +331,22 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
-		md5AtRec, rev, err := getFileMD5AndRevAtRecipient(opts.DocID, recipient)
+		// Get recipient data
+		data, err := getFileOrDirMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
-			log.Error("[sharing] Could not get MD5 at "+recipient.URL+": ", err)
+			log.Error("[sharing] Could not get data at "+recipient.URL+": ", err)
 			continue
 		}
+
+		md5AtRec, rev := extractMD5AndRev(data, recipient)
 		opts.DocRev = rev
 
+		// The MD5 didn't change: this is a PATCH
 		if md5 == md5AtRec {
+			// Check the metadata did change to do the patch
+			if hasChanges := fileHasChanges(fileDoc, data); !hasChanges {
+				continue
+			}
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
 				log.Error("[sharing] Could not generate patch for file "+
@@ -348,7 +361,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 			continue
 		}
-
+		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to open "+
@@ -529,7 +542,7 @@ func generateDirOrFilePatch(dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.
 
 // getDocAtRecipient returns the revision of the document at the given
 // recipient.
-func getDocRevAtRecipient(doctype, docID string, recInfo *RecipientInfo) (string, error) {
+func getDocRevAtRecipient(newDoc *couchdb.JSONDoc, method string, doctype, docID string, recInfo *RecipientInfo) (string, error) {
 	path := fmt.Sprintf("/data/%s/%s", doctype, docID)
 
 	res, err := request.Req(&request.Options{
@@ -551,16 +564,22 @@ func getDocRevAtRecipient(doctype, docID string, recInfo *RecipientInfo) (string
 	if err := request.ReadJSON(res.Body, doc); err != nil {
 		return "", err
 	}
+
 	rev := doc.M["_rev"].(string)
+	if method == http.MethodPut {
+		changes, err := docHasChanges(newDoc, doc)
+		if err != nil {
+			return "", err
+		}
+		if !changes {
+			return "", nil
+		}
+	}
+
 	return rev, nil
 }
 
-func getFileMD5AndRevAtRecipient(fileID string, recipient *RecipientInfo) (md5sum, rev string, err error) {
-	data, err := getFileOrDirMetadataAtRecipient(fileID, recipient)
-	if err != nil {
-		return "", "", err
-	}
-
+func extractMD5AndRev(data map[string]interface{}, recipient *RecipientInfo) (md5sum, rev string) {
 	attributes := data["attributes"].(map[string]interface{})
 	md5sum = attributes["md5sum"].(string)
 	meta := data["meta"].(map[string]interface{})
@@ -616,4 +635,48 @@ func getFileOrDirMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[str
 	// }
 	data := doc["data"].(map[string]interface{})
 	return data, nil
+}
+
+// filehasChanges checks that the local file do have changes compared to the remote one
+// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// we don't propagate the update if they are similar
+func fileHasChanges(newFileDoc *vfs.FileDoc, data map[string]interface{}) bool {
+	//TODO: support modifications on other fields
+	attributes := data["attributes"].(map[string]interface{})
+	if newFileDoc.Name() != attributes["name"].(string) {
+		return true
+	}
+	return false
+}
+
+// docHasChanges checks that the local doc do have changes compared to the remote one
+// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// we don't mitigate the update if they are similar.
+func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) (bool, error) {
+
+	// Compare the md5 of the incoming doc and the existing one
+	newID := newDoc.M["_id"].(string)
+	newRev := newDoc.M["_rev"].(string)
+	delete(newDoc.M, "_id")
+	delete(newDoc.M, "_rev")
+	bNew, err := newDoc.MarshalJSON()
+	if err != nil {
+		return false, err
+	}
+	newChecksum := md5.Sum(bNew)
+
+	delete(doc.M, "_id")
+	delete(doc.M, "_rev")
+	b, err := doc.MarshalJSON()
+	if err != nil {
+		return false, err
+	}
+	checksum := md5.Sum(b)
+	if checksum == newChecksum {
+		return false, nil
+	}
+	newDoc.M["_id"] = newID
+	newDoc.M["_rev"] = newRev
+
+	return true, nil
 }
