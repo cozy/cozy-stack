@@ -3,6 +3,8 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"log/syslog"
 	"net"
 	"net/url"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"text/template"
 
 	log "github.com/Sirupsen/logrus"
+	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 	"github.com/go-redis/redis"
@@ -116,7 +119,8 @@ type Lock struct {
 
 // Logger contains the configuration values of the logger system
 type Logger struct {
-	Level string
+	Level  string
+	Syslog bool
 }
 
 // FsURL returns a copy of the filesystem URL
@@ -283,7 +287,8 @@ func UseViper(v *viper.Viper) error {
 			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
 		},
 		Logger: Logger{
-			Level: v.GetString("log.level"),
+			Level:  v.GetString("log.level"),
+			Syslog: v.GetBool("log.syslog"),
 		},
 	}
 
@@ -380,5 +385,13 @@ func configureLogger() error {
 	}
 
 	log.SetLevel(logLevel)
+	if loggerCfg.Syslog {
+		hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "cozy")
+		if err != nil {
+			return err
+		}
+		log.AddHook(hook)
+		log.SetOutput(ioutil.Discard)
+	}
 	return nil
 }

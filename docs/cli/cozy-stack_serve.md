@@ -42,6 +42,7 @@ example), you can use the --appdir flag like this:
       --jobs-url string         URL for the jobs system synchronization, redis or in-memory
       --jobs-workers int        Number of parallel workers (0 to disable the processing of jobs) (default 8)
       --konnectors-cmd string   konnectors command to be executed
+      --log-syslog              use the local syslog for logging
       --mail-disable-tls        disable smtp over tls
       --mail-host string        mail smtp host (default "localhost")
       --mail-password string    mail smtp password
