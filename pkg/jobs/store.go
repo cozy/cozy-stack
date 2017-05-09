@@ -24,12 +24,12 @@ func (c *couchStorage) Get(domain, jobID string) (*JobInfos, error) {
 	var job JobInfos
 	if err := couchdb.GetDoc(c.db, consts.Jobs, jobID, &job); err != nil {
 		if couchdb.IsNotFoundError(err) {
-			return nil, ErrNotFound
+			return nil, ErrNotFoundJob
 		}
 		return nil, err
 	}
 	if job.Domain != domain {
-		return nil, ErrNotFound
+		return nil, ErrNotFoundJob
 	}
 	return &job, nil
 }
