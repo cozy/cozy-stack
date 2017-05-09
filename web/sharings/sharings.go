@@ -303,6 +303,15 @@ func getAccessToken(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
+	// Add triggers on the recipient side for each rule
+	if sharing.SharingType == consts.MasterMasterSharing {
+		for _, rule := range sharing.Permissions {
+			err = sharings.AddTrigger(instance, rule, sharing.SharingID)
+			if err != nil {
+				return wrapErrors(err)
+			}
+		}
+	}
 	return c.JSON(http.StatusOK, nil)
 }
 
