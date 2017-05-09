@@ -1,5 +1,6 @@
 package sharings
 
+// #nosec
 import (
 	"context"
 	"crypto/md5"
@@ -643,10 +644,7 @@ func getFileOrDirMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[str
 func fileHasChanges(newFileDoc *vfs.FileDoc, data map[string]interface{}) bool {
 	//TODO: support modifications on other fields
 	attributes := data["attributes"].(map[string]interface{})
-	if newFileDoc.Name() != attributes["name"].(string) {
-		return true
-	}
-	return false
+	return newFileDoc.Name() != attributes["name"].(string)
 }
 
 // docHasChanges checks that the local doc do have changes compared to the remote one
@@ -663,7 +661,7 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) (bool, error) 
 	if err != nil {
 		return false, err
 	}
-	newChecksum := md5.Sum(bNew)
+	newChecksum := md5.Sum(bNew) // #nosec
 
 	delete(doc.M, "_id")
 	delete(doc.M, "_rev")
@@ -671,7 +669,7 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) (bool, error) 
 	if err != nil {
 		return false, err
 	}
-	checksum := md5.Sum(b)
+	checksum := md5.Sum(b) // #nosec
 	if checksum == newChecksum {
 		return false, nil
 	}
