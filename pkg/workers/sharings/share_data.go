@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -340,25 +341,24 @@ func SendDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 // changed compared to their local version, and sends a patch if not.
 func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
 	md5 := base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
-
 	// A file descriptor can be open in the for loop.
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
 		// Get recipient data
-		data, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
+		remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
 			log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
 			continue
 		}
 
-		md5AtRec, rev := extractMD5AndRev(data, recipient)
-		opts.DocRev = rev
+		md5AtRec := base64.StdEncoding.EncodeToString(remoteFileDoc.MD5Sum)
+		opts.DocRev = remoteFileDoc.Rev()
 
 		// The MD5 didn't change: this is a PATCH
 		if md5 == md5AtRec {
 			// Check the metadata did change to do the patch
-			if hasChanges := fileHasChanges(fileDoc, data); !hasChanges {
+			if hasChanges := fileHasChanges(fileDoc, remoteFileDoc); !hasChanges {
 				continue
 			}
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
@@ -627,27 +627,16 @@ func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *
 	return doc, nil
 }
 
-func extractMD5AndRev(data map[string]interface{}, recipient *RecipientInfo) (md5sum, rev string) {
-	attributes := data["attributes"].(map[string]interface{})
-	md5sum = attributes["md5sum"].(string)
-	meta := data["meta"].(map[string]interface{})
-	rev = meta["rev"].(string)
-
-	return
-}
-
 func getDirOrFileRevAtRecipient(docID string, recipient *RecipientInfo) (string, error) {
-	data, err := getDirOrFileMetadataAtRecipient(docID, recipient)
+	fileDoc, err := getDirOrFileMetadataAtRecipient(docID, recipient)
 	if err != nil {
 		return "", err
 	}
-
-	meta := data["meta"].(map[string]interface{})
-	rev := meta["rev"].(string)
+	rev := fileDoc.Rev()
 	return rev, nil
 }
 
-func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[string]interface{}, error) {
+func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.FileDoc, error) {
 	path := fmt.Sprintf("/files/%s", id)
 
 	res, err := request.Req(&request.Options{
@@ -665,33 +654,22 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[str
 		return nil, err
 	}
 
-	doc := map[string]interface{}{}
-	err = request.ReadJSON(res.Body, &doc)
+	fileDoc, err := bind(res.Body)
 	if err != nil {
 		return nil, err
 	}
-
-	// What is returned by the stack has the following structure:
-	// data : {
-	//		attributes: {
-	//			md5sum: string,
-	//			…,
-	//		},
-	//		meta: {
-	//			rev: string,
-	//		},
-	// }
-	data := doc["data"].(map[string]interface{})
-	return data, nil
+	return fileDoc, nil
 }
 
 // filehasChanges checks that the local file do have changes compared to the remote one
 // This is done to prevent infinite loops after a PUT/PATCH in master-master:
 // we don't propagate the update if they are similar
-func fileHasChanges(newFileDoc *vfs.FileDoc, data map[string]interface{}) bool {
+func fileHasChanges(newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
 	//TODO: support modifications on other fields
-	attributes := data["attributes"].(map[string]interface{})
-	return newFileDoc.Name() != attributes["name"].(string)
+	if newFileDoc.Name() != remoteFileDoc.Name() {
+		return true
+	}
+	return false
 }
 
 // docHasChanges checks that the local doc do have changes compared to the remote one
@@ -715,4 +693,27 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 	doc.M["_rev"] = rev
 
 	return !isEqual
+}
+
+func bind(body io.Reader) (*vfs.FileDoc, error) {
+	decoder := json.NewDecoder(body)
+	var doc *jsonapi.Document
+	var fileDoc *vfs.FileDoc
+
+	if err := decoder.Decode(&doc); err != nil {
+		return nil, err
+	}
+	if doc.Data == nil {
+		return nil, jsonapi.BadJSON()
+	}
+	var obj *jsonapi.ObjectMarshalling
+	if err := json.Unmarshal(*doc.Data, &obj); err != nil {
+		return nil, err
+	}
+	if obj.Attributes != nil {
+		if err := json.Unmarshal(*obj.Attributes, fileDoc); err != nil {
+			return nil, err
+		}
+	}
+	return fileDoc, nil
 }
