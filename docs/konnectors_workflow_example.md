@@ -170,7 +170,7 @@ HTTP/1.1 200 OK
 7 - SettingsApp does install the konnector
 
 ```http
-POST /konnectors/konnector-trainlines?Source=git://github.com/konnectors/trainlines.git
+POST /konnectors?Source=git://github.com/konnectors/trainlines.git
 ```
 ```http
 HTTP/1.1 200 OK
