@@ -304,6 +304,9 @@ func GetDoc(db Database, doctype, id string, out Doc) error {
 	if err != nil {
 		return err
 	}
+	if id == "" {
+		return fmt.Errorf("Missing ID for GetDoc")
+	}
 	return makeRequest("GET", docURL(db, doctype, id), nil, out)
 }
 
@@ -363,6 +366,9 @@ func DeleteDoc(db Database, doc Doc) error {
 	id, err := validateDocID(doc.ID())
 	if err != nil {
 		return err
+	}
+	if id == "" {
+		return fmt.Errorf("Missing ID for DeleteDoc")
 	}
 
 	var res updateResponse
