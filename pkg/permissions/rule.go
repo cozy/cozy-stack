@@ -7,6 +7,9 @@ const ruleSep = " "
 const valueSep = ","
 const partSep = ":"
 
+// RefSep is used to separate doctype and value for a referenced selector
+const RefSep = "/"
+
 // Rule represent a single permissions rule, ie a Verb and a type
 type Rule struct {
 	// Type is the JSON-API type or couchdb Doctype

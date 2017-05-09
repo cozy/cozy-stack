@@ -149,8 +149,15 @@ func (f *FileDoc) Valid(field, expected string) bool {
 		return contains(f.Tags, expected)
 	case "referenced_by":
 		for _, ref := range f.ReferencedBy {
-			if ref.ID == expected {
-				return true
+			parts := strings.Split(expected, permissions.RefSep)
+			if len(parts) == 2 {
+				if ref.Type == parts[0] && ref.ID == parts[1] {
+					return true
+				}
+			} else {
+				if ref.ID == expected {
+					return true
+				}
 			}
 		}
 		return false
