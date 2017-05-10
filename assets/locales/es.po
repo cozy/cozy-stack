@@ -1,0 +1,101 @@
+# Translators:
+# hernando franco <hfrancod@lautaro.fr>, 2017
+msgid ""
+msgstr ""
+"Last-Translator: hernando franco <hfrancod@lautaro.fr>, 2017\n"
+"Language-Team: Spanish (https://www.transifex.com/cozy/teams/39753/es/)\n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Login Credentials error"
+msgstr ""
+"Las credenciales que usted ha escrito son incorrectas, por favor ensaye de "
+"nuevo."
+
+msgid "Login Welcome"
+msgstr "¡Bienvenida.o.!"
+
+msgid "Login Welcome name"
+msgstr "¡Bienvenida.o.%s!"
+
+msgid "Login Password help"
+msgstr "Escriba su contraseña para acceder a su Cozy"
+
+msgid "Login Password field"
+msgstr "Contraseña"
+
+msgid "Login Password show"
+msgstr "Visualizar la contraseña"
+
+msgid "Login Submit"
+msgstr "Iniciar sesión"
+
+msgid "Mail Password reset"
+msgstr "Reiniciar su contraseña Cozy"
+
+msgid "Passphrase reset Help"
+msgstr "¿Está usted seguro de querer reiniciar su contraseña?"
+
+msgid "Passphrase reset Submit"
+msgstr "Reiniciar la contraseña"
+
+msgid "Passphrase renew Help"
+msgstr "Escriba una nueva contraseña"
+
+msgid "Passphrase renew Field"
+msgstr "contraseña"
+
+msgid "Passphrase renew Submit"
+msgstr "Nueva contraseña"
+
+msgid "Login Forgot password"
+msgstr "¿Ha olvidado su contraseña?"
+
+msgid "Authorize Title"
+msgstr "Autorizar una aplicaciõn remota"
+
+msgid "Authorize Client presentation"
+msgstr "quisiera tener permiso para acceder a su Cozy."
+
+msgid "Authorize Policy sentence"
+msgstr ""
+"Aquí, usted puede leer la política sobre el uso que se hará de sus datos:"
+
+msgid "Authorize Give permission"
+msgstr "Este permiso le da acceso a:"
+
+msgid "Authorize Submit"
+msgstr "Acepto"
+
+msgid "Error Title"
+msgstr "Lo siento"
+
+msgid "Error Message"
+msgstr "Ha ocurrido un error."
+
+msgid "Error No state parameter"
+msgstr "El parámetro de estado es obligatorio"
+
+msgid "Error No client_id parameter"
+msgstr "El parámetro client_id es obligatorio"
+
+msgid "Error No redirect_uri parameter"
+msgstr "El parámetro redirect_url es obligatorio"
+
+msgid "Error No scope parameter"
+msgstr "El parámetro de alcance es obligatorio"
+
+msgid "Error No registered client"
+msgstr "El cliente debe estar inscrito"
+
+msgid "Error Incorrect redirect_uri"
+msgstr "El parámetro redirect_url no coincide con el registrado"
+
+msgid "Error Invalid redirect_uri"
+msgstr "El parámetro redirect_url no es válido"
+
+msgid "Error Invalid response type"
+msgstr "El tipo de respuesta no es válido"
+
+msgid "Error Must be authenticated"
+msgstr "Usted debe ser autentificado"
