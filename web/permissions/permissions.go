@@ -234,12 +234,11 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			for _, r := range patch.Permissions {
 				if r.Type == "" {
 					toPatch.RemoveRule(r)
-				} else {
+				} else if current.Permissions.RuleInSubset(r) {
 					toPatch.AddRules(r)
+				} else {
+					return permissions.ErrNotSubset
 				}
-			}
-			if !toPatch.Permissions.IsSubSetOf(current.Permissions) {
-				return permissions.ErrNotSubset
 			}
 		}
 
