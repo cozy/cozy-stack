@@ -11,7 +11,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	jwt "github.com/dgrijalva/jwt-go"
 )
 
 // This file contains the account_type object as defined in
@@ -216,10 +215,4 @@ func TypeInfo(id string) (*AccountType, error) {
 		return nil, err
 	}
 	return &a, nil
-}
-
-// Claims is used for JWT used in OAuth2 flow and applications token
-type Claims struct {
-	jwt.StandardClaims
-	clientState string `json:"scope,omitempty"`
 }

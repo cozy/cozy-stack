@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis"
@@ -72,7 +73,11 @@ func (store *redisStateStorage) Find(ref string) *stateHolder {
 		return nil
 	}
 	var s stateHolder
-	json.Unmarshal(bb, &s)
+	err = json.Unmarshal(bb, &s)
+	if err != nil {
+		log.Errorf("[redis-oauth-state] bad state in redis %s", string(bb))
+		return nil
+	}
 	return &s
 }
 
