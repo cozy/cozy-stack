@@ -16,21 +16,21 @@ import (
 	"github.com/labstack/echo"
 )
 
-// TODO Support sharing of recursive directories. For now all directories go
-// to /Shared With Me/
+// SharedWithMeDirName is the name of the directory that will contain all shared
+// files.
+// TODO Put in a locale aware constant.
+const SharedWithMeDirName = "Shared With Me"
+
 func creationWithIDHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
 
-	_, err := fs.DirByID(consts.SharedWithMeDirID)
+	err := createDirForSharing(fs, consts.SharedWithMeDirID, "")
 	if err != nil {
-		err = createSharedWithMeDir(fs)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
-	switch c.QueryParam("Type") {
+	switch c.QueryParam(consts.QueryParamType) {
 	case consts.FileType:
 		err = createFileWithIDHandler(c, fs)
 	case consts.DirType:
@@ -43,7 +43,7 @@ func creationWithIDHandler(c echo.Context) error {
 }
 
 func createDirWithIDHandler(c echo.Context, fs vfs.VFS) error {
-	name := c.QueryParam("Name")
+	name := c.QueryParam(consts.QueryParamName)
 	id := c.Param("docid")
 
 	// TODO handle name collision.
@@ -52,16 +52,18 @@ func createDirWithIDHandler(c echo.Context, fs vfs.VFS) error {
 		return err
 	}
 
-	doc.DirID = consts.SharedWithMeDirID
+	doc.DirID = c.QueryParam(consts.QueryParamDirID)
 	doc.SetID(id)
 
-	createdAt, err := time.Parse(time.RFC1123, c.QueryParam("Created_at"))
+	createdAt, err := time.Parse(time.RFC1123,
+		c.QueryParam(consts.QueryParamCreatedAt))
 	if err != nil {
 		return err
 	}
 	doc.CreatedAt = createdAt
 
-	updatedAt, err := time.Parse(time.RFC1123, c.QueryParam("Updated_at"))
+	updatedAt, err := time.Parse(time.RFC1123,
+		c.QueryParam(consts.QueryParamUpdatedAt))
 	if err != nil {
 		return err
 	}
@@ -75,7 +77,7 @@ func createDirWithIDHandler(c echo.Context, fs vfs.VFS) error {
 }
 
 func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
-	name := c.QueryParam("Name")
+	name := c.QueryParam(consts.QueryParamName)
 
 	doc, err := files.FileDocFromReq(c, name, "", nil)
 	if err != nil {
@@ -83,9 +85,9 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 	}
 
 	doc.SetID(c.Param("docid"))
-	doc.DirID = consts.SharedWithMeDirID
+	doc.DirID = c.QueryParam(consts.QueryParamDirID)
 
-	refBy := c.QueryParam("Referenced_by")
+	refBy := c.QueryParam(consts.QueryParamReferencedBy)
 	if refBy != "" {
 		var refs = []couchdb.DocReference{}
 		b := []byte(refBy)
@@ -95,13 +97,15 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 		doc.ReferencedBy = refs
 	}
 
-	createdAt, err := time.Parse(time.RFC1123, c.QueryParam("Created_at"))
+	createdAt, err := time.Parse(time.RFC1123,
+		c.QueryParam(consts.QueryParamCreatedAt))
 	if err != nil {
 		return err
 	}
 	doc.CreatedAt = createdAt
 
-	updatedAt, err := time.Parse(time.RFC1123, c.QueryParam("Updated_at"))
+	updatedAt, err := time.Parse(time.RFC1123,
+		c.QueryParam(consts.QueryParamUpdatedAt))
 	if err != nil {
 		return err
 	}
@@ -126,21 +130,6 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 	return err
 }
 
-func createSharedWithMeDir(fs vfs.VFS) error {
-	// TODO Put "Shared With Me" in a local-aware constant.
-	dirDoc, err := vfs.NewDirDoc(fs, "Shared With Me", "", nil)
-	if err != nil {
-		return err
-	}
-
-	dirDoc.SetID(consts.SharedWithMeDirID)
-	t := time.Now()
-	dirDoc.CreatedAt = t
-	dirDoc.UpdatedAt = t
-
-	return fs.CreateDir(dirDoc)
-}
-
 func updateFile(c echo.Context) error {
 	fs := middlewares.GetInstance(c).VFS()
 	olddoc, err := fs.FileByID(c.Param("docid"))
@@ -150,15 +139,14 @@ func updateFile(c echo.Context) error {
 
 	newdoc, err := files.FileDocFromReq(
 		c,
-		c.QueryParam("Name"),
-		// TODO Handle dir hierarchy within a sharing and stop putting
-		// everything in "Shared With Me".
-		consts.SharedWithMeDirID,
+		c.QueryParam(consts.QueryParamName),
+		c.QueryParam(consts.QueryParamDirID),
 		olddoc.Tags,
 	)
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 
-	updatedAt, err := time.Parse(time.RFC1123, c.QueryParam("Updated_at"))
+	updatedAt, err := time.Parse(time.RFC1123,
+		c.QueryParam(consts.QueryParamUpdatedAt))
 	if err != nil {
 		return err
 	}
@@ -207,9 +195,7 @@ func patchDirOrFile(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 
-	// TODO When supported re-apply hierarchy here.
-
-	*patch.DirID = consts.SharedWithMeDirID
+	*patch.DirID = c.QueryParam(consts.QueryParamDirID)
 	patch.RestorePath = nil
 
 	dirDoc, fileDoc, err := instance.VFS().DirOrFileByID(c.Param("docid"))
@@ -277,4 +263,45 @@ func trashHandler(c echo.Context) error {
 		return err
 	}
 	return nil
+}
+
+// This function either creates the "Shared With Me" directory at the root of
+// the cozy or creates the directory with the given name and id under the
+// "Shared With Me" directory.
+//
+// If a name isn't provided then the id will be used as a replacement.
+func createDirForSharing(fs vfs.VFS, id, name string) error {
+	if _, errd := fs.DirByID(id); errd == nil {
+		return nil
+	}
+
+	var dirID string
+	if id == consts.SharedWithMeDirID {
+		dirID = ""
+		name = SharedWithMeDirName
+	} else {
+		if _, errd := fs.DirByID(consts.SharedWithMeDirID); errd != nil {
+			errc := createDirForSharing(fs, consts.SharedWithMeDirID, "")
+			if errc != nil {
+				return errc
+			}
+		}
+		dirID = consts.SharedWithMeDirID
+	}
+
+	if name == "" {
+		name = id
+	}
+
+	dirDoc, err := vfs.NewDirDoc(fs, name, dirID, nil)
+	if err != nil {
+		return err
+	}
+
+	dirDoc.SetID(id)
+	t := time.Now()
+	dirDoc.CreatedAt = t
+	dirDoc.UpdatedAt = t
+
+	return fs.CreateDir(dirDoc)
 }

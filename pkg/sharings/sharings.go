@@ -287,6 +287,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, sharingWorker.SendOptions{
 				DocID:      val,
+				Selector:   rule.Selector,
+				Values:     values,
 				DocType:    docType,
 				Recipients: []*sharingWorker.RecipientInfo{rec},
 			})
