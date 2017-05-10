@@ -56,3 +56,5 @@ mail:
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level
   level: info
+  # send logs to the local syslog - flags: --log-syslog
+  syslog: false
