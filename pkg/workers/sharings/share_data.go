@@ -1,15 +1,14 @@
 package sharings
 
-// #nosec
 import (
 	"context"
-	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -568,11 +567,7 @@ func getDocRevAtRecipient(newDoc *couchdb.JSONDoc, method string, doctype, docID
 
 	rev := doc.M["_rev"].(string)
 	if method == http.MethodPut {
-		changes, err := docHasChanges(newDoc, doc)
-		if err != nil {
-			return "", err
-		}
-		if !changes {
+		if changes := docHasChanges(newDoc, doc); !changes {
 			return "", nil
 		}
 	}
@@ -650,31 +645,20 @@ func fileHasChanges(newFileDoc *vfs.FileDoc, data map[string]interface{}) bool {
 // docHasChanges checks that the local doc do have changes compared to the remote one
 // This is done to prevent infinite loops after a PUT/PATCH in master-master:
 // we don't mitigate the update if they are similar.
-func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) (bool, error) {
+func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 
-	// Compare the md5 of the incoming doc and the existing one
+	// Compare the incoming doc and the existing one without the _id and _rev
 	newID := newDoc.M["_id"].(string)
 	newRev := newDoc.M["_rev"].(string)
 	delete(newDoc.M, "_id")
 	delete(newDoc.M, "_rev")
-	bNew, err := newDoc.MarshalJSON()
-	if err != nil {
-		return false, err
-	}
-	newChecksum := md5.Sum(bNew) // #nosec
-
 	delete(doc.M, "_id")
 	delete(doc.M, "_rev")
-	b, err := doc.MarshalJSON()
-	if err != nil {
-		return false, err
-	}
-	checksum := md5.Sum(b) // #nosec
-	if checksum == newChecksum {
-		return false, nil
-	}
+
+	isEqual := reflect.DeepEqual(newDoc.M, doc.M)
+
 	newDoc.M["_id"] = newID
 	newDoc.M["_rev"] = newRev
 
-	return true, nil
+	return !isEqual
 }
