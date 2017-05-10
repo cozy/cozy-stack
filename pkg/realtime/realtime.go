@@ -26,12 +26,12 @@ type Event struct {
 // Hub is an object which recive events and calls appropriate listener
 type Hub interface {
 	// Emit is used by publishers when an event occurs
-	Publish(*Event)
+	Publish(event *Event)
 
 	// Subscribe adds a listener for events on a given type
 	// it returns an EventChannel, call the EventChannel Close method
 	// to Unsubscribe.
-	Subscribe(string) EventChannel
+	Subscribe(topicName string) EventChannel
 }
 
 // EventChannel is returned when Suscribing to the hub
@@ -40,4 +40,12 @@ type EventChannel interface {
 	Read() <-chan *Event
 	// Close closes the channel
 	Close() error
+}
+
+// InstanceHub returns a memory hub for an Instance
+func InstanceHub(domain string) Hub {
+	return &memHub{
+		prefix: domain,
+		topics: mainMemTopics,
+	}
 }
