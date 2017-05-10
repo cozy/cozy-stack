@@ -227,7 +227,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 			continue
 		}
 		// No changes: nothing to do
-		if changes := docHasChanges(doc, remoteDoc); !changes {
+		if !docHasChanges(doc, remoteDoc) {
 			continue
 		}
 		rev := remoteDoc.M["_rev"].(string)
@@ -279,8 +279,8 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	for _, rec := range opts.Recipients {
 		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to share "+
-				"file "+fileDoc.DocName+": ", err)
+			log.Errorf("[sharing] An error occurred while trying to share "+
+				"file %v: %v", fileDoc.DocName, err)
 		}
 	}
 
@@ -316,8 +316,8 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 			NoResponse: true,
 		})
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to share "+
-				"the directory "+dirDoc.DocName+": ", err)
+			log.Errorf("[sharing] An error occurred while trying to share "+
+				"the directory %v: %v", dirDoc.DocName, err)
 		}
 	}
 
@@ -336,7 +336,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		// Get recipient data
 		data, err := getFileOrDirMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
-			log.Error("[sharing] Could not get data at "+recipient.URL+": ", err)
+			log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
 			continue
 		}
 
@@ -351,8 +351,8 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 			}
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
-				log.Error("[sharing] Could not generate patch for file "+
-					fileDoc.DocName+": ", errp)
+				log.Errorf("[sharing] Could not generate patch for file %v: %v",
+					fileDoc.DocName, errp)
 				continue
 			}
 			errsp := sendPatchToRecipient(patch, opts, recipient)
@@ -366,14 +366,14 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to open "+
-				fileDoc.DocName+": ", err)
+			log.Errorf("[sharing] An error occurred while trying to open %v: %v",
+				fileDoc.DocName, err)
 			continue
 		}
 		err = sendFileToRecipient(opts, recipient, http.MethodPut)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to share an "+
-				"update of file "+fileDoc.DocName+" to a recipient: ", err)
+			log.Errorf("[sharing] An error occurred while trying to share an "+
+				"update of file %v to a recipient: %v", fileDoc.DocName, err)
 		}
 	}
 
@@ -410,8 +410,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 	for _, recipient := range opts.Recipients {
 		rev, err := getDirOrFileRevAtRecipient(opts.DocID, recipient)
 		if err != nil {
-			log.Error("[sharing] (delete) An error occurred while trying "+
-				"to get a revision at "+recipient.URL+":", err)
+			log.Errorf("[sharing] (delete) An error occurred while trying "+
+				"to get a revision at %v: %v", recipient.URL, err)
 			continue
 		}
 		opts.DocRev = rev
@@ -433,8 +433,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 		})
 
 		if err != nil {
-			log.Error("[sharing] (delete) An error occurred while sending "+
-				"request to "+recipient.URL+": ", err)
+			log.Errorf("[sharing] (delete) An error occurred while sending "+
+				"request to %v: %v", recipient.URL, err)
 		}
 	}
 
