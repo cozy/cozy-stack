@@ -158,12 +158,13 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 // provided.
 func DeleteDoc(opts *SendOptions) error {
 	for _, rec := range opts.Recipients {
-		rev, err := getDocRevAtRecipient(nil, http.MethodDelete, opts.DocType, opts.DocID, rec)
+		doc, err := getDocAtRecipient(nil, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to send "+
-				"update : ", err)
+			log.Error("[sharing] An error occurred while trying to get "+
+				"remote doc : ", err)
 			continue
 		}
+		rev := doc.M["_rev"].(string)
 
 		_, errSend := request.Req(&request.Options{
 			Domain: rec.URL,
@@ -219,16 +220,17 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 	for _, rec := range opts.Recipients {
 		// A doc update requires to set the doc revision from each recipient
-		rev, err := getDocRevAtRecipient(doc, http.MethodPut, opts.DocType, opts.DocID, rec)
+		remoteDoc, err := getDocAtRecipient(doc, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to send "+
-				"update : ", err)
+			log.Error("[sharing] An error occurred while trying to get "+
+				"remote doc : ", err)
 			continue
 		}
-		// No revision returned: nothing to do
-		if rev == "" {
+		// No changes: nothing to do
+		if changes := docHasChanges(doc, remoteDoc); !changes {
 			continue
 		}
+		rev := remoteDoc.M["_rev"].(string)
 		doc.SetRev(rev)
 
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
@@ -540,9 +542,9 @@ func generateDirOrFilePatch(dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.
 	return &jsonapi.Document{Data: (*json.RawMessage)(&data)}, nil
 }
 
-// getDocAtRecipient returns the revision of the document at the given
+// getDocAtRecipient returns the document at the given
 // recipient.
-func getDocRevAtRecipient(newDoc *couchdb.JSONDoc, method string, doctype, docID string, recInfo *RecipientInfo) (string, error) {
+func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *RecipientInfo) (*couchdb.JSONDoc, error) {
 	path := fmt.Sprintf("/data/%s/%s", doctype, docID)
 
 	res, err := request.Req(&request.Options{
@@ -557,22 +559,14 @@ func getDocRevAtRecipient(newDoc *couchdb.JSONDoc, method string, doctype, docID
 		},
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	doc := &couchdb.JSONDoc{}
 	if err := request.ReadJSON(res.Body, doc); err != nil {
-		return "", err
+		return nil, err
 	}
-
-	rev := doc.M["_rev"].(string)
-	if method == http.MethodPut {
-		if changes := docHasChanges(newDoc, doc); !changes {
-			return "", nil
-		}
-	}
-
-	return rev, nil
+	return doc, nil
 }
 
 func extractMD5AndRev(data map[string]interface{}, recipient *RecipientInfo) (md5sum, rev string) {
@@ -650,6 +644,7 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 	// Compare the incoming doc and the existing one without the _id and _rev
 	newID := newDoc.M["_id"].(string)
 	newRev := newDoc.M["_rev"].(string)
+	rev := doc.M["_rev"].(string)
 	delete(newDoc.M, "_id")
 	delete(newDoc.M, "_rev")
 	delete(doc.M, "_id")
@@ -659,6 +654,7 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 
 	newDoc.M["_id"] = newID
 	newDoc.M["_rev"] = newRev
+	doc.M["_rev"] = rev
 
 	return !isEqual
 }
