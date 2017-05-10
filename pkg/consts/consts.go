@@ -120,7 +120,8 @@ const (
 	// QueryParamType is the key for the `type` value (file or directory) in
 	// a query string.
 	QueryParamType = "Type"
-	// QueryParamExecutable is key for the `recursive` value in a query string.
+	// QueryParamExecutable is key for the `executable` field of a vfs.FileDoc
+	// in a query string.
 	QueryParamExecutable = "Executable"
 	// QueryParamCreatedAt is the key for the `created_at` value in a query
 	// string.
