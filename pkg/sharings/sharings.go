@@ -174,7 +174,7 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 
 	msg := sharingWorker.SharingMessage{
 		SharingID: sharingID,
-		DocType:   rule.Type,
+		Rule:      rule,
 	}
 	workerArgs, err := json.Marshal(msg)
 	if err != nil {
