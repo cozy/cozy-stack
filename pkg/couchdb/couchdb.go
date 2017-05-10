@@ -76,6 +76,10 @@ var GlobalTriggersDB = SimpleDatabasePrefix("triggers")
 // database.
 var GlobalJobsDB = SimpleDatabasePrefix("jobs")
 
+// GlobalSecretsDB is the the prefix used for db which hold
+// a cozy stack secrets.
+var GlobalSecretsDB = SimpleDatabasePrefix("secrets")
+
 // View is the map/reduce thing in CouchDB
 type View struct {
 	Name    string `json:"-"`

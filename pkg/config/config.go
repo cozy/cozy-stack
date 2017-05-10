@@ -80,10 +80,11 @@ type Config struct {
 	Mail       *gomail.DialerOptions
 	Logger     Logger
 
-	Cache           RedisConfig
-	Lock            RedisConfig
-	SessionStorage  RedisConfig
-	DownloadStorage RedisConfig
+	Cache                       RedisConfig
+	Lock                        RedisConfig
+	SessionStorage              RedisConfig
+	DownloadStorage             RedisConfig
+	KonnectorsOauthStateStorage RedisConfig
 }
 
 // Fs contains the configuration values of the file-system
@@ -277,6 +278,9 @@ func UseViper(v *viper.Viper) error {
 		},
 		DownloadStorage: RedisConfig{
 			URL: v.GetString("downloads.url"),
+		},
+		KonnectorsOauthStateStorage: RedisConfig{
+			URL: v.GetString("konnectors.oauthstate"),
 		},
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
