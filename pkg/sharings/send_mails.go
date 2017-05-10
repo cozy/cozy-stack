@@ -126,11 +126,11 @@ func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValue
 	if r.Email == "" {
 		return nil, ErrRecipientHasNoEmail
 	}
-	mailAddresses := []*mails.MailAddress{&mails.MailAddress{
+	mailAddresses := []*mails.Address{&mails.Address{
 		Name:  r.Email,
 		Email: r.Email,
 	}}
-	return jobs.NewMessage(jobs.JSONEncoding, mails.MailOptions{
+	return jobs.NewMessage(jobs.JSONEncoding, mails.Options{
 		Mode:           "from",
 		To:             mailAddresses,
 		Subject:        "New sharing request / Nouvelle demande de partage",

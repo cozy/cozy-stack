@@ -124,7 +124,8 @@ type (
 	// system. It contains parameters of the worker along with the worker main
 	// function that perform the work against a job's message.
 	WorkerConfig struct {
-		WorkerFunc   WorkerFunc    `json:"worker_func"`
+		WorkerFunc   WorkerFunc
+		WorkerCommit WorkerCommit
 		Concurrency  uint          `json:"concurrency"`
 		MaxExecCount uint          `json:"max_exec_count"`
 		MaxExecTime  time.Duration `json:"max_exec_time"`
@@ -220,6 +221,7 @@ func (m *Message) Unmarshal(msg interface{}) error {
 func (w *WorkerConfig) clone() *WorkerConfig {
 	return &WorkerConfig{
 		WorkerFunc:   w.WorkerFunc,
+		WorkerCommit: w.WorkerCommit,
 		Concurrency:  w.Concurrency,
 		MaxExecCount: w.MaxExecCount,
 		MaxExecTime:  w.MaxExecTime,

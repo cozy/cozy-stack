@@ -53,9 +53,9 @@ QUIT
 	}
 
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
-		msg := &MailOptions{
-			From: &MailAddress{Email: "me@me"},
-			To: []*MailAddress{
+		msg := &Options{
+			From: &Address{Email: "me@me"},
+			To: []*Address{
 				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
@@ -65,7 +65,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Parts: []*MailPart{
+			Parts: []*Part{
 				{
 					Body: "Hey !!!",
 					Type: "text/plain",
@@ -119,9 +119,9 @@ QUIT
 `
 
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
-		msg := &MailOptions{
-			From: &MailAddress{Email: "me@me"},
-			To: []*MailAddress{
+		msg := &Options{
+			From: &Address{Email: "me@me"},
+			To: []*Address{
 				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
@@ -131,7 +131,7 @@ QUIT
 				Port:       port,
 				DisableTLS: true,
 			},
-			Parts: []*MailPart{
+			Parts: []*Part{
 				{Body: mailBody, Type: "text/html"},
 			},
 		}
@@ -140,9 +140,9 @@ QUIT
 }
 
 func TestMailMissingSubject(t *testing.T) {
-	msg := &MailOptions{
-		From: &MailAddress{Email: "me@me"},
-		To:   []*MailAddress{{Email: "you@you"}},
+	msg := &Options{
+		From: &Address{Email: "me@me"},
+		To:   []*Address{{Email: "you@you"}},
 	}
 	err := sendMail(context.Background(), msg)
 	if assert.Error(t, err) {
@@ -151,11 +151,11 @@ func TestMailMissingSubject(t *testing.T) {
 }
 
 func TestMailBadBodyType(t *testing.T) {
-	msg := &MailOptions{
-		From:    &MailAddress{Email: "me@me"},
-		To:      []*MailAddress{{Email: "you@you"}},
+	msg := &Options{
+		From:    &Address{Email: "me@me"},
+		To:      []*Address{{Email: "you@you"}},
 		Subject: "Up?",
-		Parts: []*MailPart{
+		Parts: []*Part{
 			{
 				Type: "text/qsdqsd",
 				Body: "foo",
@@ -246,9 +246,9 @@ QUIT
 	}
 
 	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
-		msg := &MailOptions{
-			From: &MailAddress{Email: "me@me"},
-			To: []*MailAddress{
+		msg := &Options{
+			From: &Address{Email: "me@me"},
+			To: []*Address{
 				{Email: "you1@you"},
 			},
 			Date:    &time.Time{},
@@ -359,7 +359,7 @@ func mailServer(t *testing.T, serverString, clientString string, expectedHeader 
 }
 
 func TestSendMailNoReply(t *testing.T) {
-	sendMail = func(ctx context.Context, opts *MailOptions) error {
+	sendMail = func(ctx context.Context, opts *Options) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
@@ -381,10 +381,10 @@ func TestSendMailNoReply(t *testing.T) {
 		couchdb.DeleteDoc(db, doc)
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage("json", MailOptions{
+	msg, _ := jobs.NewMessage("json", Options{
 		Mode:    "noreply",
 		Subject: "Up?",
-		Parts: []*MailPart{
+		Parts: []*Part{
 			{
 				Type: "text/plain",
 				Body: "foo",
@@ -398,7 +398,7 @@ func TestSendMailNoReply(t *testing.T) {
 }
 
 func TestSendMailFrom(t *testing.T) {
-	sendMail = func(ctx context.Context, opts *MailOptions) error {
+	sendMail = func(ctx context.Context, opts *Options) error {
 		assert.NotNil(t, opts.From)
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
@@ -420,11 +420,11 @@ func TestSendMailFrom(t *testing.T) {
 		couchdb.DeleteDoc(db, doc)
 		sendMail = doSendMail
 	}()
-	msg, _ := jobs.NewMessage("json", MailOptions{
+	msg, _ := jobs.NewMessage("json", Options{
 		Mode:    "from",
 		Subject: "Up?",
-		To:      []*MailAddress{{Email: "you@you"}},
-		Parts: []*MailPart{
+		To:      []*Address{{Email: "you@you"}},
+		Parts: []*Part{
 			{
 				Type: "text/plain",
 				Body: "foo",

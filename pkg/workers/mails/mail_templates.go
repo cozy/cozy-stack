@@ -88,6 +88,18 @@ Pour information, vous disposez de 15 minutes pour choisir votre nouveau mot de 
 The description given is: {{.Description}}.
 
 {{.OAuthQueryString}}`
+
+	// --- konnector_error ---
+	// TODO: wording and translation of this email is not done
+	mailKonnectorErrorHTMLEn = ``
+	mailKonnectorErrorTextEn = `` +
+		`Hello {{.RecipientName}},
+
+The last execution of the konnector {{.KonnectorName}} has failed.
+Please check that everything is OK.`
+
+	mailKonnectorErrorHTMLFr = ``
+	mailKonnectorErrorTextFr = ``
 )
 
 // MailTemplate is a struct to define a mail template with HTML and text parts.
@@ -132,7 +144,7 @@ func newMailTemplater(tmpls []*MailTemplate) *MailTemplater {
 // Execute will execute the HTML and text temlates for the template with the
 // specified name. It returns the mail parts that should be added to the sent
 // mail.
-func (m *MailTemplater) Execute(name string, data interface{}) ([]*MailPart, error) {
+func (m *MailTemplater) Execute(name string, data interface{}) ([]*Part, error) {
 	bhtml := new(bytes.Buffer)
 	btext := new(bytes.Buffer)
 	if err := m.thtml.ExecuteTemplate(bhtml, name, data); err != nil {
@@ -141,7 +153,7 @@ func (m *MailTemplater) Execute(name string, data interface{}) ([]*MailPart, err
 	if err := m.ttext.ExecuteTemplate(btext, name, data); err != nil {
 		return nil, err
 	}
-	return []*MailPart{
+	return []*Part{
 		{Body: btext.String(), Type: "text/plain"},
 		{Body: bhtml.String(), Type: "text/html"},
 	}, nil
@@ -163,6 +175,16 @@ func init() {
 			Name:     "sharing_request",
 			BodyHTML: mailSharingRequestHTML,
 			BodyText: mailSharingRequestText,
+		},
+		{
+			Name:     "konnector_error_en",
+			BodyHTML: mailKonnectorErrorHTMLEn,
+			BodyText: mailKonnectorErrorTextEn,
+		},
+		{
+			Name:     "konnector_error_fr",
+			BodyHTML: mailKonnectorErrorHTMLFr,
+			BodyText: mailKonnectorErrorTextFr,
 		},
 	})
 }
