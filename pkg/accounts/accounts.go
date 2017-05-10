@@ -43,3 +43,8 @@ func (ac *Account) DocType() string { return consts.Accounts }
 
 // Clone implements couchdb.Doc
 func (ac *Account) Clone() couchdb.Doc { cloned := *ac; return &cloned }
+
+// Valid implements permissions.Validable
+func (ac *Account) Valid(field, expected string) bool {
+	return field == "account_type" && expected == ac.AccountType
+}

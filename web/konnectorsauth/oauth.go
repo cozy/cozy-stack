@@ -1,15 +1,18 @@
-package oauth
+package konnectorsauth
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	webperm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -25,6 +28,8 @@ func (a *apiAccount) Links() *jsonapi.LinksList {
 }
 
 func start(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
 	scope := c.QueryParam("scope")
 	clientState := c.QueryParam("state")
 	accountTypeID := c.Param("accountType")
@@ -33,7 +38,16 @@ func start(c echo.Context) error {
 		return err
 	}
 
-	url, err := accountType.MakeOauthStartURL(scope, clientState)
+	state, err := getStorage().Add(&stateHolder{
+		InstanceDomain: instance.Domain,
+		AccountType:    accountType.ID(),
+		ClientState:    clientState,
+	})
+	if err != nil {
+		return err
+	}
+
+	url, err := accountType.MakeOauthStartURL(scope, state)
 	if err != nil {
 		return err
 	}
@@ -54,6 +68,15 @@ func redirect(c echo.Context) error {
 		return err
 	}
 
+	stateCode := c.QueryParam("state")
+	state := getStorage().Find(stateCode)
+
+	if state == nil ||
+		state.AccountType != accountTypeID ||
+		state.InstanceDomain != instance.Domain {
+		return errors.New("bad state")
+	}
+
 	account, err := accountType.AccessCodeToAccessToken(accessCode)
 	if err != nil {
 		return err
@@ -67,7 +90,7 @@ func redirect(c echo.Context) error {
 	u := instance.SubDomain(consts.DataConnectSlug)
 	vv := &url.Values{}
 	vv.Add("account", account.ID())
-	vv.Add("state", c.QueryParam("state"))
+	vv.Add("state", state.ClientState)
 	u.RawQuery = vv.Encode()
 	return c.Redirect(http.StatusSeeOther, u.String())
 }
@@ -80,6 +103,10 @@ func refresh(c echo.Context) error {
 
 	var account accounts.Account
 	if err := couchdb.GetDoc(instance, consts.Accounts, accountid, &account); err != nil {
+		return err
+	}
+
+	if err := webperm.Allow(c, permissions.GET, &account); err != nil {
 		return err
 	}
 
@@ -104,7 +131,7 @@ func refresh(c echo.Context) error {
 
 // Routes setups routing for cozy-as-oauth-client routes
 func Routes(router *echo.Group) {
-	router.GET("/start/:accountType", start)
-	router.GET("/redirect/:accountType", redirect)
-	router.GET("/refresh/:accountid", refresh)
+	router.GET("/:accountType/start", start, middlewares.NeedInstance)
+	router.GET("/:accountType/redirect", redirect, middlewares.NeedInstance)
+	router.POST("/:accountType/:accountid/refresh", refresh)
 }

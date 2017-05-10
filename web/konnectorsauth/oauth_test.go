@@ -1,4 +1,4 @@
-package oauth
+package konnectorsauth
 
 import (
 	"fmt"
@@ -24,18 +24,24 @@ var ts *httptest.Server
 var testInstance *instance.Instance
 
 func TestOauthFlow(t *testing.T) {
-	u := ts.URL + "/oauth/start/test-service?scope=the+world&state=somesecretstate"
+	u := ts.URL + "/accounts/test-service/start?scope=the+world&state=somesecretstate"
 
 	res, err := http.Get(u)
 	if !assert.NoError(t, err) {
 		return
 	}
+
 	bb, err := ioutil.ReadAll(res.Body)
 	if !assert.NoError(t, err) {
 		return
 	}
 	res.Body.Close()
 	okURL := string(bb)
+
+	if !assert.Equal(t, 200, res.StatusCode) {
+		fmt.Println("Bad response", res, okURL)
+		return
+	}
 
 	// the user click the oauth link
 	stopBeforeDataConnectFail := func(req *http.Request, via []*http.Request) error {
@@ -74,8 +80,8 @@ func TestMain(m *testing.M) {
 		return couchdb.DeleteDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	})
 
-	ts = setup.GetTestServer("/oauth", Routes)
-	redirectURI := ts.URL + "/oauth/redirect/test-service"
+	ts = setup.GetTestServer("/accounts", Routes)
+	redirectURI := ts.URL + "/accounts/test-service/redirect"
 
 	service := makeTestService(redirectURI)
 	setup.AddCleanup(func() error { service.Close(); return nil })

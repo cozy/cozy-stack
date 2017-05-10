@@ -21,8 +21,8 @@ import (
 	"github.com/cozy/cozy-stack/web/instances"
 	"github.com/cozy/cozy-stack/web/intents"
 	"github.com/cozy/cozy-stack/web/jobs"
+	"github.com/cozy/cozy-stack/web/konnectorsauth"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/oauth"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/settings"
 	"github.com/cozy/cozy-stack/web/sharings"
@@ -157,7 +157,8 @@ func SetupRoutes(router *echo.Echo) error {
 		middlewares.LoadSession,
 	}
 	router.GET("/", auth.Home, mws...)
-	oauth.Routes(router.Group("/oauth", mws...))
+	// accounts routes does not all use middlewares
+	konnectorsauth.Routes(router.Group("/accounts"))
 	auth.Routes(router.Group("/auth", mws...))
 	apps.WebappsRoutes(router.Group("/apps", mws...))
 	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
