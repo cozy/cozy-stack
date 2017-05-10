@@ -2,13 +2,17 @@ package jobs
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +21,7 @@ func randomMicro(min, max int) time.Duration {
 }
 
 func TestInMemoryJobs(t *testing.T) {
-	n := 1000
+	n := 10
 	v := 100
 
 	var w sync.WaitGroup
@@ -294,4 +298,15 @@ func TestInfoChan(t *testing.T) {
 
 	assert.NoError(t, err)
 	w.Wait()
+}
+
+func TestMain(m *testing.M) {
+	config.UseTestFile()
+	fmt.Println(config.CouchURL())
+	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
+	if err != nil || db.Status() != checkup.Healthy {
+		fmt.Println("This test need couchdb to run.")
+		os.Exit(1)
+	}
+	os.Exit(m.Run())
 }

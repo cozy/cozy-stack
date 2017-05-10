@@ -71,6 +71,11 @@ var GlobalDB = SimpleDatabasePrefix("global")
 // database.
 var GlobalTriggersDB = SimpleDatabasePrefix("triggers")
 
+// GlobalJobsDB is the database prefix used for jobs that may be stored
+// globally on self-hosted instances where we need to store them in the same
+// database.
+var GlobalJobsDB = SimpleDatabasePrefix("jobs")
+
 // View is the map/reduce thing in CouchDB
 type View struct {
 	Name    string `json:"-"`

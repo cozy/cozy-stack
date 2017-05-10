@@ -83,7 +83,7 @@ func (w *Worker) work(workerID string) {
 		infos := job.Infos()
 		if err = job.AckConsumed(); err != nil {
 			log.Errorf("[job] %s: error acking consume job %s: %s",
-				workerID, infos.ID, err.Error())
+				workerID, infos.ID(), err.Error())
 			continue
 		}
 		t := &task{
@@ -94,14 +94,14 @@ func (w *Worker) work(workerID string) {
 		}
 		if err = t.run(); err != nil {
 			log.Errorf("[job] %s: error while performing job %s: %s",
-				workerID, infos.ID, err.Error())
+				workerID, infos.ID(), err.Error())
 			err = job.Nack(err)
 		} else {
 			err = job.Ack()
 		}
 		if err != nil {
 			log.Errorf("[job] %s: error while acking job done %s: %s",
-				workerID, infos.ID, err.Error())
+				workerID, infos.ID(), err.Error())
 		}
 	}
 }
