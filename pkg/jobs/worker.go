@@ -32,6 +32,10 @@ type (
 	// WorkerFunc represent the work function that a worker should implement.
 	WorkerFunc func(context context.Context, msg *Message) error
 
+	// WorkerCommit is an optional method that is always called once after the
+	// execution of the WorkerFunc.
+	WorkerCommit func(context context.Context, msg *Message, errjob error) error
+
 	// Worker is a unit of work that will consume from a queue and execute the do
 	// method for each jobs it pulls.
 	Worker struct {
@@ -160,6 +164,14 @@ type task struct {
 func (t *task) run() (err error) {
 	t.startTime = time.Now()
 	t.execCount = 0
+	defer func() {
+		if t.conf.WorkerCommit != nil {
+			if errc := t.conf.WorkerCommit(t.ctx, t.infos.Message, err); errc != nil {
+				log.Warnf("[job] %s: error while commiting job %s: %s",
+					t.workerID, t.infos.ID(), errc.Error())
+			}
+		}
+	}()
 	for {
 		retry, delay, timeout := t.nextDelay()
 		if !retry {
@@ -167,13 +179,13 @@ func (t *task) run() (err error) {
 		}
 		if err != nil {
 			log.Warnf("[job] %s: error while performing job %s: %s (retry in %s)",
-				t.workerID, t.infos.ID, err.Error(), delay)
+				t.workerID, t.infos.ID(), err.Error(), delay)
 		}
 		if delay > 0 {
 			time.Sleep(delay)
 		}
 		log.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
-			t.workerID, t.infos.ID, t.execCount, timeout)
+			t.workerID, t.infos.ID(), t.execCount, timeout)
 		ctx, cancel := context.WithTimeout(t.ctx, timeout)
 		if err = t.exec(ctx); err == nil {
 			cancel()

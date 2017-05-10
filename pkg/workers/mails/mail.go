@@ -24,66 +24,66 @@ func init() {
 }
 
 const (
-	// MailModeNoReply is the no-reply mode of a mail, to send mail "to" the
+	// ModeNoReply is the no-reply mode of a mail, to send mail "to" the
 	// user's mail, as a noreply@
-	MailModeNoReply = "noreply"
-	// MailModeFrom is the "from" mode of a mail, to send mail "from" the user's
+	ModeNoReply = "noreply"
+	// ModeFrom is the "from" mode of a mail, to send mail "from" the user's
 	// mail.
-	MailModeFrom = "from"
+	ModeFrom = "from"
 )
 
 // var for testability
 var mailTemplater *MailTemplater
 var sendMail = doSendMail
 
-// MailAddress contains the name and mail of a mail recipient.
-type MailAddress struct {
+// Address contains the name and mail of a mail recipient.
+type Address struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 }
 
-// MailOptions should be used as the options of a mail with manually defined
+// Options should be used as the options of a mail with manually defined
 // content: body and body content-type. It is used as the input of the
 // "sendmail" worker.
-type MailOptions struct {
+type Options struct {
 	Mode           string                `json:"mode"`
-	From           *MailAddress          `json:"from"`
-	To             []*MailAddress        `json:"to"`
+	From           *Address              `json:"from"`
+	To             []*Address            `json:"to"`
 	Subject        string                `json:"subject"`
 	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
 	Date           *time.Time            `json:"date"`
-	Parts          []*MailPart           `json:"parts"`
+	Parts          []*Part               `json:"parts"`
 	TemplateName   string                `json:"template_name"`
 	TemplateValues interface{}           `json:"template_values"`
 }
 
-// MailPart represent a part of the content of the mail. It has a type
+// Part represent a part of the content of the mail. It has a type
 // specifying the content type of the part, and a body.
-type MailPart struct {
+type Part struct {
 	Type string `json:"type"`
 	Body string `json:"body"`
 }
 
 // SendMail is the sendmail worker function.
 func SendMail(ctx context.Context, m *jobs.Message) error {
-	opts := MailOptions{}
+	opts := Options{}
 	err := m.Unmarshal(&opts)
 	if err != nil {
 		return err
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	switch opts.Mode {
-	case MailModeNoReply:
+	case ModeNoReply:
 		toAddr, err := addressFromDomain(domain)
 		if err != nil {
 			return err
 		}
-		opts.To = []*MailAddress{toAddr}
-		opts.From = &MailAddress{Email: "noreply@" + utils.StripPort(domain)}
+		opts.To = []*Address{toAddr}
+		opts.From = &Address{Email: "noreply@" + utils.StripPort(domain)}
 		if tmpl, ok := opts.TemplateValues.(map[string]interface{}); ok {
 			tmpl["RecipientName"] = toAddr.Name
 		}
-	case MailModeFrom:
+	case ModeFrom:
 		fromAddr, err := addressFromDomain(domain)
 		if err != nil {
 			return err
@@ -95,7 +95,7 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 	return sendMail(ctx, &opts)
 }
 
-func addressFromDomain(domain string) (*MailAddress, error) {
+func addressFromDomain(domain string) (*Address, error) {
 	// TODO: cleanup this settings fetching
 	db := couchdb.SimpleDatabasePrefix(domain)
 	doc := &couchdb.JSONDoc{}
@@ -108,13 +108,13 @@ func addressFromDomain(domain string) (*MailAddress, error) {
 		return nil, fmt.Errorf("Domain %s has no email in its settings", domain)
 	}
 	publicName, _ := doc.M["public_name"].(string)
-	return &MailAddress{
+	return &Address{
 		Name:  publicName,
 		Email: email,
 	}, nil
 }
 
-func doSendMail(ctx context.Context, opts *MailOptions) error {
+func doSendMail(ctx context.Context, opts *Options) error {
 	if opts.Subject == "" {
 		return errors.New("Missing mail subject")
 	}
@@ -146,7 +146,7 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 	})
 	mail.SetDateHeader("Date", date)
 
-	var parts []*MailPart
+	var parts []*Part
 	var err error
 	if opts.TemplateName != "" {
 		parts, err = mailTemplater.Execute(opts.TemplateName, opts.TemplateValues)
@@ -168,7 +168,7 @@ func doSendMail(ctx context.Context, opts *MailOptions) error {
 	return dialer.DialAndSend(mail)
 }
 
-func addPart(mail *gomail.Message, part *MailPart) error {
+func addPart(mail *gomail.Message, part *Part) error {
 	contentType := part.Type
 	if contentType != "text/plain" && contentType != "text/html" {
 		return fmt.Errorf("Unknown body content-type %s", contentType)

@@ -23,6 +23,7 @@ var blackList = map[string]bool{
 	consts.Sharings:         none,
 	consts.Apps:             readable,
 	consts.Konnectors:       readable,
+	consts.KonnectorResults: readable,
 	consts.Files:            readable,
 	consts.Jobs:             readable,
 	consts.Queues:           readable,
