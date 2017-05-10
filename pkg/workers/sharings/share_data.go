@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -157,12 +158,13 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 // provided.
 func DeleteDoc(opts *SendOptions) error {
 	for _, rec := range opts.Recipients {
-		rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
+		doc, err := getDocAtRecipient(nil, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to send "+
-				"update : ", err)
+			log.Error("[sharing] An error occurred while trying to get "+
+				"remote doc : ", err)
 			continue
 		}
+		rev := doc.M["_rev"].(string)
 
 		_, errSend := request.Req(&request.Options{
 			Domain: rec.URL,
@@ -218,12 +220,17 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 	for _, rec := range opts.Recipients {
 		// A doc update requires to set the doc revision from each recipient
-		rev, err := getDocRevAtRecipient(opts.DocType, opts.DocID, rec)
+		remoteDoc, err := getDocAtRecipient(doc, opts.DocType, opts.DocID, rec)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to get "+
-				"the revision of a document: ", err)
+				"remote doc : ", err)
 			continue
 		}
+		// No changes: nothing to do
+		if !docHasChanges(doc, remoteDoc) {
+			continue
+		}
+		rev := remoteDoc.M["_rev"].(string)
 		doc.SetRev(rev)
 
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
@@ -272,8 +279,8 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	for _, rec := range opts.Recipients {
 		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to share "+
-				"file "+fileDoc.DocName+": ", err)
+			log.Errorf("[sharing] An error occurred while trying to share "+
+				"file %v: %v", fileDoc.DocName, err)
 		}
 	}
 
@@ -309,8 +316,8 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 			NoResponse: true,
 		})
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to share "+
-				"the directory "+dirDoc.DocName+": ", err)
+			log.Errorf("[sharing] An error occurred while trying to share "+
+				"the directory %v: %v", dirDoc.DocName, err)
 		}
 	}
 
@@ -326,18 +333,26 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
-		md5AtRec, rev, err := getFileMD5AndRevAtRecipient(opts.DocID, recipient)
+		// Get recipient data
+		data, err := getFileOrDirMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
-			log.Error("[sharing] Could not get MD5 at "+recipient.URL+": ", err)
+			log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
 			continue
 		}
+
+		md5AtRec, rev := extractMD5AndRev(data, recipient)
 		opts.DocRev = rev
 
+		// The MD5 didn't change: this is a PATCH
 		if md5 == md5AtRec {
+			// Check the metadata did change to do the patch
+			if hasChanges := fileHasChanges(fileDoc, data); !hasChanges {
+				continue
+			}
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
-				log.Error("[sharing] Could not generate patch for file "+
-					fileDoc.DocName+": ", errp)
+				log.Errorf("[sharing] Could not generate patch for file %v: %v",
+					fileDoc.DocName, errp)
 				continue
 			}
 			errsp := sendPatchToRecipient(patch, opts, recipient)
@@ -348,17 +363,17 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 			continue
 		}
-
+		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to open "+
-				fileDoc.DocName+": ", err)
+			log.Errorf("[sharing] An error occurred while trying to open %v: %v",
+				fileDoc.DocName, err)
 			continue
 		}
 		err = sendFileToRecipient(opts, recipient, http.MethodPut)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to share an "+
-				"update of file "+fileDoc.DocName+" to a recipient: ", err)
+			log.Errorf("[sharing] An error occurred while trying to share an "+
+				"update of file %v to a recipient: %v", fileDoc.DocName, err)
 		}
 	}
 
@@ -395,8 +410,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 	for _, recipient := range opts.Recipients {
 		rev, err := getDirOrFileRevAtRecipient(opts.DocID, recipient)
 		if err != nil {
-			log.Error("[sharing] (delete) An error occurred while trying "+
-				"to get a revision at "+recipient.URL+":", err)
+			log.Errorf("[sharing] (delete) An error occurred while trying "+
+				"to get a revision at %v: %v", recipient.URL, err)
 			continue
 		}
 		opts.DocRev = rev
@@ -418,8 +433,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 		})
 
 		if err != nil {
-			log.Error("[sharing] (delete) An error occurred while sending "+
-				"request to "+recipient.URL+": ", err)
+			log.Errorf("[sharing] (delete) An error occurred while sending "+
+				"request to %v: %v", recipient.URL, err)
 		}
 	}
 
@@ -527,9 +542,9 @@ func generateDirOrFilePatch(dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.
 	return &jsonapi.Document{Data: (*json.RawMessage)(&data)}, nil
 }
 
-// getDocAtRecipient returns the revision of the document at the given
+// getDocAtRecipient returns the document at the given
 // recipient.
-func getDocRevAtRecipient(doctype, docID string, recInfo *RecipientInfo) (string, error) {
+func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *RecipientInfo) (*couchdb.JSONDoc, error) {
 	path := fmt.Sprintf("/data/%s/%s", doctype, docID)
 
 	res, err := request.Req(&request.Options{
@@ -544,23 +559,17 @@ func getDocRevAtRecipient(doctype, docID string, recInfo *RecipientInfo) (string
 		},
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	doc := &couchdb.JSONDoc{}
 	if err := request.ReadJSON(res.Body, doc); err != nil {
-		return "", err
+		return nil, err
 	}
-	rev := doc.M["_rev"].(string)
-	return rev, nil
+	return doc, nil
 }
 
-func getFileMD5AndRevAtRecipient(fileID string, recipient *RecipientInfo) (md5sum, rev string, err error) {
-	data, err := getFileOrDirMetadataAtRecipient(fileID, recipient)
-	if err != nil {
-		return "", "", err
-	}
-
+func extractMD5AndRev(data map[string]interface{}, recipient *RecipientInfo) (md5sum, rev string) {
 	attributes := data["attributes"].(map[string]interface{})
 	md5sum = attributes["md5sum"].(string)
 	meta := data["meta"].(map[string]interface{})
@@ -616,4 +625,36 @@ func getFileOrDirMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[str
 	// }
 	data := doc["data"].(map[string]interface{})
 	return data, nil
+}
+
+// filehasChanges checks that the local file do have changes compared to the remote one
+// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// we don't propagate the update if they are similar
+func fileHasChanges(newFileDoc *vfs.FileDoc, data map[string]interface{}) bool {
+	//TODO: support modifications on other fields
+	attributes := data["attributes"].(map[string]interface{})
+	return newFileDoc.Name() != attributes["name"].(string)
+}
+
+// docHasChanges checks that the local doc do have changes compared to the remote one
+// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// we don't mitigate the update if they are similar.
+func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
+
+	// Compare the incoming doc and the existing one without the _id and _rev
+	newID := newDoc.M["_id"].(string)
+	newRev := newDoc.M["_rev"].(string)
+	rev := doc.M["_rev"].(string)
+	delete(newDoc.M, "_id")
+	delete(newDoc.M, "_rev")
+	delete(doc.M, "_id")
+	delete(doc.M, "_rev")
+
+	isEqual := reflect.DeepEqual(newDoc.M, doc.M)
+
+	newDoc.M["_id"] = newID
+	newDoc.M["_rev"] = newRev
+	doc.M["_rev"] = rev
+
+	return !isEqual
 }

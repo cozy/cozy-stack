@@ -67,6 +67,13 @@ type Sharing struct {
 	SharingType      string             `json:"sharing_type"`
 	Permissions      permissions.Set    `json:"permissions,omitempty"`
 	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
+	Sharer           *Sharer            `json:"sharer,omitempty"`
+}
+
+// Sharer gives the share info, only on the recipient side
+type Sharer struct {
+	URL          string           `json:"url"`
+	SharerStatus *RecipientStatus `json:"sharer_status"`
 }
 
 // RecipientStatus contains the information about a recipient for a sharing
@@ -125,25 +132,29 @@ func checkDocument(sharing *Sharing, docID string) error {
 	return nil
 }
 
-// sendToRecipients retreives the recipients and send the document
+// sendToRecipients sends the document to the recipient, or sharer
 func sendToRecipients(instance *instance.Instance, domain string, sharing *Sharing, docType, docID, eventType string) error {
+	var recInfos []*RecipientInfo
 
-	recInfos := make([]*RecipientInfo, len(sharing.RecipientsStatus))
-	for i, rec := range sharing.RecipientsStatus {
-		recDoc, err := GetRecipient(instance, rec.RefRecipient.ID)
+	if sharing.Sharer != nil && sharing.SharingType == consts.MasterMasterSharing {
+		// We are on the recipient side
+		recInfos = make([]*RecipientInfo, 1)
+		sharerStatus := sharing.Sharer.SharerStatus
+		info, err := extractRecipient(instance, sharerStatus)
 		if err != nil {
 			return err
 		}
-		u, scheme, err := ExtractHostAndScheme(recDoc.M["url"].(string))
-		if err != nil {
-			return err
+		recInfos[0] = info
+	} else {
+		// We are on the sharer side
+		recInfos = make([]*RecipientInfo, len(sharing.RecipientsStatus))
+		for i, rec := range sharing.RecipientsStatus {
+			info, err := extractRecipient(instance, rec)
+			if err != nil {
+				return err
+			}
+			recInfos[i] = info
 		}
-		info := &RecipientInfo{
-			URL:    u,
-			Scheme: scheme,
-			Token:  rec.AccessToken.AccessToken,
-		}
-		recInfos[i] = info
 	}
 
 	opts := &SendOptions{
@@ -209,6 +220,24 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 	default:
 		return ErrEventNotSupported
 	}
+}
+
+func extractRecipient(db couchdb.Database, rec *RecipientStatus) (*RecipientInfo, error) {
+	recDoc, err := GetRecipient(db, rec.RefRecipient.ID)
+	if err != nil {
+		return nil, err
+	}
+	u, scheme, err := ExtractHostAndScheme(recDoc.M["url"].(string))
+
+	if err != nil {
+		return nil, err
+	}
+	info := &RecipientInfo{
+		URL:    u,
+		Scheme: scheme,
+		Token:  rec.AccessToken.AccessToken,
+	}
+	return info, nil
 }
 
 // GetRecipient returns the Recipient stored in database from a given ID

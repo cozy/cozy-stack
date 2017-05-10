@@ -161,8 +161,8 @@ func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	return sharing, sRec, nil
 }
 
-// addTrigger creates a new trigger on the updates of the shared documents
-func addTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string) error {
+// AddTrigger creates a new trigger on the updates of the shared documents
+func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string) error {
 	sched := stack.GetScheduler()
 
 	var eventArgs string
@@ -206,7 +206,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		docType := rule.Type
 		// Trigger the updates if the sharing is not one-shot
 		if sharing.SharingType != consts.OneShotSharing {
-			if err := addTrigger(instance, rule, sharing.SharingID); err != nil {
+			if err := AddTrigger(instance, rule, sharing.SharingID); err != nil {
 				return err
 			}
 		}
