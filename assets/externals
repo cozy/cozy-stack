@@ -37,3 +37,7 @@ sha256  461ce5ccc61564581b897a7c38290ee19a72c3044232da54d32edbd45ccf11dc
 name    ./fonts/fontawesome-webfont.woff2
 url     https://raw.githubusercontent.com/FortAwesome/Font-Awesome/master/fonts/fontawesome-webfont.woff2
 sha256  2adefcbc041e7d18fcf2d417879dc5a09997aa64d675b7a3c4b6ce33da13f3fe
+
+name    ./js/piwik.js
+url     https://piwik.cozycloud.cc/piwik.js
+sha256  4f51df044b76eabafab2fbf420871d472c8f3a629da79ec5fac75c530d79f266
