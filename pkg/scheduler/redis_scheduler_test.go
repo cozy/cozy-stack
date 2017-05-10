@@ -21,6 +21,25 @@ const redisURL = "redis://localhost:6379/15"
 
 var instanceName string
 
+type mockBroker struct {
+	jobs []*jobs.JobRequest
+}
+
+func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.JobInfos, <-chan *jobs.JobInfos, error) {
+	b.jobs = append(b.jobs, request)
+	return nil, nil, nil
+}
+
+func (b *mockBroker) QueueLen(workerType string) (int, error) {
+	count := 0
+	for _, job := range b.jobs {
+		if job.WorkerType == workerType {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
@@ -137,19 +156,7 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
 	assert.NoError(t, err)
 
-	count := 0
-	bro := jobs.NewMemBroker(jobs.WorkersList{
-		"incr": {
-			Concurrency:  1,
-			MaxExecCount: 1,
-			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
-				count++
-				return nil
-			},
-		},
-	})
-
+	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Stop()
 	sch.Start(bro)
@@ -175,6 +182,7 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 		err = sch.Poll(now + i + 4)
 		assert.NoError(t, err)
 	}
+	count, _ := bro.QueueLen("incr")
 	assert.Equal(t, 4, count)
 }
 
@@ -184,19 +192,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
 	assert.NoError(t, err)
 
-	count := 0
-	bro := jobs.NewMemBroker(jobs.WorkersList{
-		"incr": {
-			Concurrency:  1,
-			MaxExecCount: 1,
-			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
-				count++
-				return nil
-			},
-		},
-	})
-
+	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Stop()
 	sch.Start(bro)
@@ -228,11 +224,13 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	err = sch.Poll(ts + 2)
 	assert.NoError(t, err)
 	<-time.After(1 * time.Millisecond)
+	count, _ := bro.QueueLen("incr")
 	assert.Equal(t, 0, count)
 
 	err = sch.Poll(ts + 13)
 	assert.NoError(t, err)
 	<-time.After(1 * time.Millisecond)
+	count, _ = bro.QueueLen("incr")
 	assert.Equal(t, 1, count)
 }
 
