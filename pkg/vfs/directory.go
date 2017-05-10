@@ -213,6 +213,7 @@ func ModifyDirMetadata(fs VFS, olddoc *DirDoc, patch *DocPatch) (*DirDoc, error)
 	newdoc.RestorePath = *patch.RestorePath
 	newdoc.CreatedAt = cdate
 	newdoc.UpdatedAt = *patch.UpdatedAt
+	newdoc.ReferencedBy = olddoc.ReferencedBy
 
 	if err = fs.UpdateDirDoc(olddoc, newdoc); err != nil {
 		return nil, err
