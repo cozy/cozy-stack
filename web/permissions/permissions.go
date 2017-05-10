@@ -231,10 +231,16 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 		}
 
 		if patchSet {
-			if !patch.Permissions.IsSubSetOf(current.Permissions) {
+			for _, r := range patch.Permissions {
+				if r.Type == "" {
+					toPatch.RemoveRule(r)
+				} else {
+					toPatch.AddRules(r)
+				}
+			}
+			if !toPatch.Permissions.IsSubSetOf(current.Permissions) {
 				return permissions.ErrNotSubset
 			}
-			toPatch.AddRules(patch.Permissions...)
 		}
 
 		if err = couchdb.UpdateDoc(instance, toPatch); err != nil {

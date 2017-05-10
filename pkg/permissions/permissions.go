@@ -67,6 +67,17 @@ func (p *Permission) AddRules(rules ...Rule) {
 	p.Permissions = newperms
 }
 
+// RemoveRule remove a rule from the permission doc
+func (p *Permission) RemoveRule(rule Rule) {
+	newperms := p.Permissions[:0]
+	for _, r := range p.Permissions {
+		if r.Title != rule.Title {
+			newperms = append(newperms, r)
+		}
+	}
+	p.Permissions = newperms
+}
+
 // PatchCodes replace the permission docs codes
 func (p *Permission) PatchCodes(codes map[string]string) {
 	p.Codes = codes

@@ -144,7 +144,7 @@ func TestCreateSubPermission(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "200 OK", res.Status, "should get a 200")
-	assert.Len(t, out, 1)
+	assert.Len(t, out, 2)
 	assert.Equal(t, "io.cozy.files", out["whatever"].(map[string]interface{})["type"])
 
 }
@@ -227,9 +227,36 @@ func TestPatchAddRule(t *testing.T) {
 	perms := attrs["permissions"].(map[string]interface{})
 
 	assert.NoError(t, err)
-	assert.Len(t, perms, 2)
+	assert.Len(t, perms, 3)
 	assert.Equal(t, "io.cozy.files", perms["whatever"].(map[string]interface{})["type"])
 	assert.Equal(t, "io.cozy.contacts", perms["otherperm"].(map[string]interface{})["type"])
+}
+
+func TestPatchRemoveRule(t *testing.T) {
+	id, _, err := createTestSubPermissions(token, "paul")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	out, err := doRequest("PATCH", ts.URL+"/permissions/"+id, token, `{
+	  "data": {
+	    "attributes": {
+					"permissions": {
+						"otherrule": { }
+					}
+				}
+	    }
+	  }
+`)
+
+	data := out["data"].(map[string]interface{})
+	assert.Equal(t, id, data["id"])
+	attrs := data["attributes"].(map[string]interface{})
+	perms := attrs["permissions"].(map[string]interface{})
+
+	assert.NoError(t, err)
+	assert.Len(t, perms, 1)
+	assert.Equal(t, "io.cozy.files", perms["whatever"].(map[string]interface{})["type"])
 }
 
 func TestPatchChangesCodes(t *testing.T) {
@@ -305,7 +332,12 @@ func createTestSubPermissions(tok string, codes string) (string, map[string]inte
 				"type":   "io.cozy.files",
 				"verbs":  ["GET"],
 				"values": ["io.cozy.music"]
-			}
+			},
+			"otherrule": {
+				"type":   "io.cozy.files",
+				"verbs":  ["GET"],
+				"values":  ["some-other-dir"]
+		  }
 		}
 	}
 }
