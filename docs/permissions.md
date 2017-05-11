@@ -369,7 +369,7 @@ Accept: application/vnd.api+json
 }
 ```
 
-#### Request to add permisisons
+#### Request to add permissions
 
 ```http
 PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
@@ -390,6 +390,28 @@ Accept: application/vnd.api+json
         "verbs": ["GET"],
         "values": ["some-picture-id"]
       }
+    }
+  }
+}
+```
+
+#### Request to remove permissions
+
+```http
+PATCH /permissions/a340d5e0-d647-11e6-b66c-5fc9ce1e17c6 HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+    "type": "io.cozy.permissions",
+    "permissions": {
+      "remove-this": { }
     }
   }
 }
