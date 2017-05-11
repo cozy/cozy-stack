@@ -355,7 +355,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		// The MD5 didn't change: this is a PATCH
 		if md5 == md5AtRec {
 			// Check the metadata did change to do the patch
-			if hasChanges := fileHasChanges(fileDoc, remoteFileDoc); !hasChanges {
+			if !fileHasChanges(fileDoc, remoteFileDoc) {
 				continue
 			}
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
