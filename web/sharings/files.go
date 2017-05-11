@@ -140,7 +140,7 @@ func updateFile(c echo.Context) error {
 	newdoc, err := files.FileDocFromReq(
 		c,
 		c.QueryParam(consts.QueryParamName),
-		c.QueryParam(consts.QueryParamDirID),
+		olddoc.DirID,
 		olddoc.Tags,
 	)
 	newdoc.ReferencedBy = olddoc.ReferencedBy
@@ -195,7 +195,6 @@ func patchDirOrFile(c echo.Context) error {
 		return jsonapi.BadJSON()
 	}
 
-	*patch.DirID = c.QueryParam(consts.QueryParamDirID)
 	patch.RestorePath = nil
 
 	dirDoc, fileDoc, err := instance.VFS().DirOrFileByID(c.Param("docid"))
@@ -205,8 +204,10 @@ func patchDirOrFile(c echo.Context) error {
 
 	var rev string
 	if dirDoc != nil {
+		*patch.DirID = dirDoc.DirID
 		rev = dirDoc.Rev()
 	} else {
+		*patch.DirID = fileDoc.DirID
 		rev = fileDoc.Rev()
 	}
 

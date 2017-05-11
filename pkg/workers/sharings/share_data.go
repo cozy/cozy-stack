@@ -84,11 +84,6 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 
 	fileOpts := &fileOptions{}
 
-	parentID, err := getParentDirID(opts, fileDoc.DirID)
-	if err != nil {
-		return err
-	}
-
 	fileOpts.mime = fileDoc.Mime
 	fileOpts.contentlength = strconv.FormatInt(fileDoc.ByteSize, 10)
 	fileOpts.md5 = base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
@@ -107,7 +102,6 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 		consts.QueryParamCreatedAt:    {fileDoc.CreatedAt.Format(time.RFC1123)},
 		consts.QueryParamUpdatedAt:    {fileDoc.UpdatedAt.Format(time.RFC1123)},
 		consts.QueryParamReferencedBy: []string{refs},
-		consts.QueryParamDirID:        {parentID},
 	}
 
 	content, err := fs.OpenFile(fileDoc)
@@ -286,6 +280,9 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	}
 	defer opts.closeFile()
 
+	// Give the SharedWithMeDirID as parent: this is a creation
+	opts.fileOpts.queries.Add(consts.QueryParamDirID, consts.SharedWithMeDirID)
+
 	for _, rec := range opts.Recipients {
 		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
@@ -346,7 +343,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 	for _, recipient := range opts.Recipients {
 		// Get recipient data
-		remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
+		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
 			log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
 			continue
@@ -628,15 +625,21 @@ func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *
 }
 
 func getDirOrFileRevAtRecipient(docID string, recipient *RecipientInfo) (string, error) {
-	fileDoc, err := getDirOrFileMetadataAtRecipient(docID, recipient)
+	var rev string
+	dirDoc, fileDoc, err := getDirOrFileMetadataAtRecipient(docID, recipient)
 	if err != nil {
 		return "", err
 	}
-	rev := fileDoc.Rev()
+	if dirDoc != nil {
+		rev = dirDoc.Rev()
+	} else if fileDoc != nil {
+		rev = fileDoc.Rev()
+	}
+
 	return rev, nil
 }
 
-func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.FileDoc, error) {
+func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	path := fmt.Sprintf("/files/%s", id)
 
 	res, err := request.Req(&request.Options{
@@ -651,22 +654,31 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Fi
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	fileDoc, err := bind(res.Body)
+	dirOrFileDoc, err := bindDirOrFile(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return fileDoc, nil
+	dirDoc, fileDoc := dirOrFileDoc.Refine()
+	return dirDoc, fileDoc, nil
 }
 
 // filehasChanges checks that the local file do have changes compared to the remote one
 // This is done to prevent infinite loops after a PUT/PATCH in master-master:
 // we don't propagate the update if they are similar
 func fileHasChanges(newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
-	//TODO: support modifications on other fields
 	if newFileDoc.Name() != remoteFileDoc.Name() {
+		return true
+	}
+	if !reflect.DeepEqual(newFileDoc.Tags, remoteFileDoc.Tags) {
+		return true
+	}
+	if newFileDoc.UpdatedAt != remoteFileDoc.UpdatedAt {
+		return true
+	}
+	//TODO: only consider shared references
+	if !reflect.DeepEqual(newFileDoc.ReferencedBy, remoteFileDoc.ReferencedBy) {
 		return true
 	}
 	return false
@@ -695,10 +707,10 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 	return !isEqual
 }
 
-func bind(body io.Reader) (*vfs.FileDoc, error) {
+func bindDirOrFile(body io.Reader) (*vfs.DirOrFileDoc, error) {
 	decoder := json.NewDecoder(body)
 	var doc *jsonapi.Document
-	var fileDoc *vfs.FileDoc
+	var dirOrFileDoc *vfs.DirOrFileDoc
 
 	if err := decoder.Decode(&doc); err != nil {
 		return nil, err
@@ -711,9 +723,9 @@ func bind(body io.Reader) (*vfs.FileDoc, error) {
 		return nil, err
 	}
 	if obj.Attributes != nil {
-		if err := json.Unmarshal(*obj.Attributes, fileDoc); err != nil {
+		if err := json.Unmarshal(*obj.Attributes, &dirOrFileDoc); err != nil {
 			return nil, err
 		}
 	}
-	return fileDoc, nil
+	return dirOrFileDoc, nil
 }
