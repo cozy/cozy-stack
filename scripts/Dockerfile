@@ -2,13 +2,15 @@
 # applications for cozy-stack. It installs couchdb 2 and the cozy-stack.
 # It should not be used for hosting your cozy cloud in production.
 
-FROM debian:jessie
+FROM debian:jessie-slim
 
 
 # CouchDB
 ENV COUCHDB_VERSION 2.0.0
 ENV COUCHDB_SRC_URL https://dist.apache.org/repos/dist/release/couchdb/source/$COUCHDB_VERSION/apache-couchdb-$COUCHDB_VERSION.tar.gz
 ENV COUCHDB_SRC_SHA256 ccaf3ce9cb06c50a73e091696e557e2a57c5ba02c5b299e1ac2f5b959ee96eca
+
+ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -33,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && ./configure --disable-docs \
   && make release \
   && mv ./rel/couchdb /usr/local \
+  && cd / \
   && rm -rf /usr/src/couchdb \
   # Cleanup
   && apt-get purge -y \
