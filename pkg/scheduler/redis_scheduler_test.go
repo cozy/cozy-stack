@@ -2,6 +2,7 @@ package scheduler_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"sync"
 	"testing"
@@ -49,6 +50,10 @@ func (b *mockBroker) QueueLen(workerType string) (int, error) {
 		}
 	}
 	return count, nil
+}
+
+func (b *mockBroker) GetJobInfos(domain, id string) (*jobs.JobInfos, error) {
+	return nil, errors.New("Not implemented")
 }
 
 func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
