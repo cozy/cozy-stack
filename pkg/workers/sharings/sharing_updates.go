@@ -58,8 +58,8 @@ type EventDoc struct {
 
 // SharingMessage describes a sharing message
 type SharingMessage struct {
-	SharingID string `json:"sharing_id"`
-	DocType   string `json:"doctype"`
+	SharingID string           `json:"sharing_id"`
+	Rule      permissions.Rule `json:"rule"`
 }
 
 // Sharing describes the sharing document structure
@@ -93,7 +93,7 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	sharingID := event.Message.SharingID
-	docType := event.Message.DocType
+	rule := event.Message.Rule
 	docID := event.Event.Doc.M["_id"].(string)
 
 	// Get the sharing document
@@ -120,7 +120,7 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	if err = checkDocument(sharing, docID); err != nil {
 		return err
 	}
-	return sendToRecipients(i, domain, sharing, docType, docID, event.Event.Type)
+	return sendToRecipients(i, domain, sharing, &rule, docID, event.Event.Type)
 }
 
 // checkDocument checks the legitimity of the updated document to be shared
@@ -133,7 +133,7 @@ func checkDocument(sharing *Sharing, docID string) error {
 }
 
 // sendToRecipients sends the document to the recipient, or sharer
-func sendToRecipients(instance *instance.Instance, domain string, sharing *Sharing, docType, docID, eventType string) error {
+func sendToRecipients(instance *instance.Instance, domain string, sharing *Sharing, rule *permissions.Rule, docID, eventType string) error {
 	var recInfos []*RecipientInfo
 
 	if sharing.Sharer != nil && sharing.SharingType == consts.MasterMasterSharing {
@@ -159,15 +159,18 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 
 	opts := &SendOptions{
 		DocID:      docID,
-		DocType:    docType,
+		DocType:    rule.Type,
 		Recipients: recInfos,
-		Path:       fmt.Sprintf("/sharings/doc/%s/%s", docType, docID),
+		Path:       fmt.Sprintf("/sharings/doc/%s/%s", rule.Type, docID),
 	}
 
 	var fileDoc *vfs.FileDoc
 	var dirDoc *vfs.DirDoc
 	var err error
 	if opts.DocType == consts.Files && eventType != realtime.EventDelete {
+		opts.Selector = rule.Selector
+		opts.Values = rule.Values
+
 		fs := instance.VFS()
 		dirDoc, fileDoc, err = fs.DirOrFileByID(docID)
 		if err != nil {
@@ -187,7 +190,7 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 			return SendFile(instance, opts, fileDoc)
 		}
 		if opts.Type == consts.DirType {
-			return SendDir(instance, opts, dirDoc)
+			return SendDir(opts, dirDoc)
 		}
 		return SendDoc(instance, opts)
 

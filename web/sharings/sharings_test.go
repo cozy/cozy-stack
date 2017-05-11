@@ -187,12 +187,12 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	strNow := time.Now().Format(time.RFC1123)
 
 	values := url.Values{
-		"Name":          {"TestFile"},
-		"Executable":    {"false"},
-		"Type":          {consts.FileType},
-		"Referenced_by": []string{refs},
-		"Created_at":    {strNow},
-		"Updated_at":    {strNow},
+		consts.QueryParamName:         {"TestFile"},
+		consts.QueryParamType:         {consts.FileType},
+		consts.QueryParamReferencedBy: []string{refs},
+		consts.QueryParamCreatedAt:    {strNow},
+		consts.QueryParamUpdatedAt:    {strNow},
+		consts.QueryParamDirID:        {consts.SharedWithMeDirID},
 	}
 	urlDest.RawQuery = values.Encode()
 	buf := strings.NewReader(body)
@@ -900,7 +900,7 @@ func TestMain(m *testing.M) {
 	clientID = clientOAuth.ClientID
 
 	// As shared files are put in the shared with me dir, we need it
-	err = createSharedWithMeDir(testInstance.VFS())
+	err = createDirForSharing(testInstance.VFS(), consts.SharedWithMeDirID, "")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

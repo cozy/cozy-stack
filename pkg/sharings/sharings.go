@@ -174,7 +174,7 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 
 	msg := sharingWorker.SharingMessage{
 		SharingID: sharingID,
-		DocType:   rule.Type,
+		Rule:      rule,
 	}
 	workerArgs, err := json.Marshal(msg)
 	if err != nil {
@@ -287,6 +287,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, sharingWorker.SendOptions{
 				DocID:      val,
+				Selector:   rule.Selector,
+				Values:     values,
 				DocType:    docType,
 				Recipients: []*sharingWorker.RecipientInfo{rec},
 			})

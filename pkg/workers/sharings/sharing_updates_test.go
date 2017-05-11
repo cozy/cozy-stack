@@ -27,7 +27,12 @@ func createDoc(t *testing.T, docType string, params map[string]interface{}) couc
 func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string) *TriggerEvent {
 	msg := &SharingMessage{
 		SharingID: sharingID,
-		DocType:   doc.Type,
+		Rule: permissions.Rule{
+			Description: "randomdesc",
+			Selector:    "",
+			Type:        doc.DocType(),
+			Values:      []string{},
+		},
 	}
 	event := &TriggerEvent{
 		Event:   &EventDoc{Type: eventType, Doc: &doc},

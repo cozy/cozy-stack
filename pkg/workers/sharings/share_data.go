@@ -51,6 +51,9 @@ type SendOptions struct {
 	Path       string
 	DocRev     string
 
+	Selector string
+	Values   []string
+
 	fileOpts *fileOptions
 }
 
@@ -80,6 +83,11 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 
 	fileOpts := &fileOptions{}
 
+	parentID, err := getParentDirID(opts, fileDoc.DirID)
+	if err != nil {
+		return err
+	}
+
 	fileOpts.mime = fileDoc.Mime
 	fileOpts.contentlength = strconv.FormatInt(fileDoc.ByteSize, 10)
 	fileOpts.md5 = base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
@@ -92,12 +100,13 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 	}
 	refs := string(b[:])
 	fileOpts.queries = url.Values{
-		"Type":          {consts.FileType},
-		"Name":          {fileDoc.DocName},
-		"Executable":    {strconv.FormatBool(fileDoc.Executable)},
-		"Created_at":    {fileDoc.CreatedAt.Format(time.RFC1123)},
-		"Updated_at":    {fileDoc.UpdatedAt.Format(time.RFC1123)},
-		"Referenced_by": []string{refs},
+		consts.QueryParamType:         {consts.FileType},
+		consts.QueryParamName:         {fileDoc.DocName},
+		consts.QueryParamExecutable:   {strconv.FormatBool(fileDoc.Executable)},
+		consts.QueryParamCreatedAt:    {fileDoc.CreatedAt.Format(time.RFC1123)},
+		consts.QueryParamUpdatedAt:    {fileDoc.UpdatedAt.Format(time.RFC1123)},
+		consts.QueryParamReferencedBy: []string{refs},
+		consts.QueryParamDirID:        {parentID},
 	}
 
 	content, err := fs.OpenFile(fileDoc)
@@ -144,7 +153,7 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 
 		if dirDoc != nil {
 			opts.Type = consts.DirType
-			return SendDir(ins, opts, dirDoc)
+			return SendDir(opts, dirDoc)
 		}
 
 		opts.Type = consts.FileType
@@ -157,8 +166,8 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 // DeleteDoc asks the recipients to delete the shared document which id was
 // provided.
 func DeleteDoc(opts *SendOptions) error {
-	for _, rec := range opts.Recipients {
-		doc, err := getDocAtRecipient(nil, opts.DocType, opts.DocID, rec)
+	for _, recipient := range opts.Recipients {
+		doc, err := getDocAtRecipient(nil, opts.DocType, opts.DocID, recipient)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to get "+
 				"remote doc : ", err)
@@ -167,14 +176,14 @@ func DeleteDoc(opts *SendOptions) error {
 		rev := doc.M["_rev"].(string)
 
 		_, errSend := request.Req(&request.Options{
-			Domain: rec.URL,
-			Scheme: rec.Scheme,
+			Domain: recipient.URL,
+			Scheme: recipient.Scheme,
 			Method: http.MethodDelete,
 			Path:   opts.Path,
 			Headers: request.Headers{
 				"Content-Type":  "application/json",
 				"Accept":        "application/json",
-				"Authorization": "Bearer " + rec.Token,
+				"Authorization": "Bearer " + recipient.Token,
 			},
 			Queries:    url.Values{"rev": {rev}},
 			NoResponse: true,
@@ -288,15 +297,16 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 }
 
 // SendDir sends a directory to the recipients.
-func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) error {
-	dirPath, err := dirDoc.Path(ins.VFS())
+func SendDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
+	dirTags := strings.Join(dirDoc.Tags, files.TagSeparator)
+
+	parentID, err := getParentDirID(opts, dirDoc.DirID)
 	if err != nil {
 		return err
 	}
-	dirTags := strings.Join(dirDoc.Tags, files.TagSeparator)
 
 	for _, recipient := range opts.Recipients {
-		_, err := request.Req(&request.Options{
+		_, errReq := request.Req(&request.Options{
 			Domain: recipient.URL,
 			Scheme: recipient.Scheme,
 			Method: http.MethodPost,
@@ -306,16 +316,18 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 				echo.HeaderAuthorization: "Bearer " + recipient.Token,
 			},
 			Queries: url.Values{
-				"Tags":       {dirTags},
-				"Path":       {dirPath},
-				"Name":       {dirDoc.DocName},
-				"Type":       {consts.DirType},
-				"Created_at": {dirDoc.CreatedAt.Format(time.RFC1123)},
-				"Updated_at": {dirDoc.CreatedAt.Format(time.RFC1123)},
+				consts.QueryParamTags: {dirTags},
+				consts.QueryParamName: {dirDoc.DocName},
+				consts.QueryParamType: {consts.DirType},
+				consts.QueryParamCreatedAt: {
+					dirDoc.CreatedAt.Format(time.RFC1123)},
+				consts.QueryParamUpdatedAt: {
+					dirDoc.CreatedAt.Format(time.RFC1123)},
+				consts.QueryParamDirID: {parentID},
 			},
 			NoResponse: true,
 		})
-		if err != nil {
+		if errReq != nil {
 			log.Errorf("[sharing] An error occurred while trying to share "+
 				"the directory %v: %v", dirDoc.DocName, err)
 		}
@@ -334,7 +346,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 	for _, recipient := range opts.Recipients {
 		// Get recipient data
-		data, err := getFileOrDirMetadataAtRecipient(opts.DocID, recipient)
+		data, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
 			log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
 			continue
@@ -355,7 +367,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 					fileDoc.DocName, errp)
 				continue
 			}
-			errsp := sendPatchToRecipient(patch, opts, recipient)
+			errsp := sendPatchToRecipient(patch, opts, recipient, fileDoc.DirID)
 			if errsp != nil {
 				log.Error("[sharing] An error occurred while trying to "+
 					"send patch: ", errsp)
@@ -394,7 +406,7 @@ func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 			return err
 		}
 		opts.DocRev = rev
-		err = sendPatchToRecipient(patch, opts, rec)
+		err = sendPatchToRecipient(patch, opts, rec, dirDoc.DirID)
 		if err != nil {
 			log.Error("[sharing] An error occurred while trying to send "+
 				"a patch: ", err)
@@ -426,8 +438,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 				echo.HeaderAuthorization: "Bearer " + recipient.Token,
 			},
 			Queries: url.Values{
-				"rev":  {opts.DocRev},
-				"Type": {opts.Type},
+				consts.QueryParamRev:  {opts.DocRev},
+				consts.QueryParamType: {opts.Type},
 			},
 			NoResponse: true,
 		})
@@ -470,8 +482,13 @@ func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo, method str
 	return err
 }
 
-func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient *RecipientInfo) error {
+func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient *RecipientInfo, dirID string) error {
 	body, err := request.WriteJSON(patch)
+	if err != nil {
+		return err
+	}
+
+	parentID, err := getParentDirID(opts, dirID)
 	if err != nil {
 		return err
 	}
@@ -486,14 +503,55 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 			echo.HeaderAuthorization: "Bearer " + recipient.Token,
 		},
 		Queries: url.Values{
-			"rev":  {opts.DocRev},
-			"Type": {opts.Type},
+			consts.QueryParamRev:   {opts.DocRev},
+			consts.QueryParamType:  {opts.Type},
+			consts.QueryParamDirID: {parentID},
 		},
 		Body:       body,
 		NoResponse: true,
 	})
 
 	return err
+}
+
+// getParentDirID returns the id of the parent directory the file should have at
+// the recipient.
+//
+// Two scenarii are possible:
+// 1. There is NO selector: the sharing is based on folders/files. If the file
+//    we are about to send has its id in the `values` declared in the
+//    permissions then it is one of the targets of this sharing. Its
+//    `dirID` must be set to `SharedWithMe`. If not then we don't modify it.
+// 2. There is a selector: the sharing is not based on folders/files. We change
+//    the `dirID` to `SharedWithMe`.
+func getParentDirID(opts *SendOptions, dirID string) (parentID string, err error) {
+	if opts.Selector == "" {
+		if opts.DocID == consts.RootDirID {
+			return "", errors.New("/ cannot be shared")
+		}
+
+		if isShared(opts.DocID, opts.Values) {
+			return consts.SharedWithMeDirID, nil
+		}
+
+		return dirID, nil
+	}
+
+	return consts.SharedWithMeDirID, nil
+}
+
+func isShared(id string, acceptedDirsIDs []string) bool {
+	if id == consts.RootDirID {
+		return false
+	}
+
+	for _, acceptedDirID := range acceptedDirsIDs {
+		if id == acceptedDirID {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Generates a document patch for the given document.
@@ -579,7 +637,7 @@ func extractMD5AndRev(data map[string]interface{}, recipient *RecipientInfo) (md
 }
 
 func getDirOrFileRevAtRecipient(docID string, recipient *RecipientInfo) (string, error) {
-	data, err := getFileOrDirMetadataAtRecipient(docID, recipient)
+	data, err := getDirOrFileMetadataAtRecipient(docID, recipient)
 	if err != nil {
 		return "", err
 	}
@@ -589,7 +647,7 @@ func getDirOrFileRevAtRecipient(docID string, recipient *RecipientInfo) (string,
 	return rev, nil
 }
 
-func getFileOrDirMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[string]interface{}, error) {
+func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[string]interface{}, error) {
 	path := fmt.Sprintf("/files/%s", id)
 
 	res, err := request.Req(&request.Options{

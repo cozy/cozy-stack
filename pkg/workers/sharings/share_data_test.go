@@ -290,7 +290,7 @@ func TestSendDir(t *testing.T) {
 		Recipients: recipients,
 	}
 
-	err = SendDir(testInstance, sendDirOpts, dirDoc)
+	err = SendDir(sendDirOpts, dirDoc)
 	assert.NoError(t, err)
 }
 
