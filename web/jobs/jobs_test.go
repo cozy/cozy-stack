@@ -3,6 +3,7 @@ package jobs
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -478,8 +480,20 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "jobs_test")
-	testInstance = setup.GetTestInstance()
 
+	jobs.AddWorker("print", &jobs.WorkerConfig{
+		Concurrency: 4,
+		WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+			var msg string
+			if err := m.Unmarshal(&msg); err != nil {
+				return err
+			}
+			_, err := fmt.Println(msg)
+			return err
+		},
+	})
+
+	testInstance = setup.GetTestInstance()
 	if err := stack.Start(); err != nil {
 		testutils.Fatal(err)
 	}
