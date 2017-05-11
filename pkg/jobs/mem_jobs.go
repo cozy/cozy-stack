@@ -5,6 +5,9 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
 type (
@@ -32,6 +35,35 @@ type (
 		jobch chan *JobInfos
 	}
 )
+
+// globalStorage is the global job persistence layer used thoughout the stack.
+var globalStorage = &couchStorage{couchdb.GlobalJobsDB}
+
+type couchStorage struct {
+	db couchdb.Database
+}
+
+func (c *couchStorage) Get(domain, jobID string) (*JobInfos, error) {
+	var job JobInfos
+	if err := couchdb.GetDoc(c.db, consts.Jobs, jobID, &job); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil, ErrNotFoundJob
+		}
+		return nil, err
+	}
+	if job.Domain != domain {
+		return nil, ErrNotFoundJob
+	}
+	return &job, nil
+}
+
+func (c *couchStorage) Create(job *JobInfos) error {
+	return couchdb.CreateDoc(c.db, job)
+}
+
+func (c *couchStorage) Update(job *JobInfos) error {
+	return couchdb.UpdateDoc(c.db, job)
+}
 
 // newMemQueue creates and a new in-memory queue.
 func newMemQueue(workerType string) *memQueue {
@@ -128,7 +160,7 @@ func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error
 		infos: infos,
 		jobch: jobch,
 	}
-	if err := GlobalStorage.Create(infos); err != nil {
+	if err := globalStorage.Create(infos); err != nil {
 		return nil, nil, err
 	}
 	if err := q.Enqueue(j); err != nil {
@@ -145,6 +177,11 @@ func (b *memBroker) QueueLen(workerType string) (int, error) {
 		return 0, ErrUnknownWorker
 	}
 	return q.Len(), nil
+}
+
+// GetJobInfos returns the informations about a job.
+func (b *memBroker) GetJobInfos(domain, jobID string) (*JobInfos, error) {
+	return globalStorage.Get(domain, jobID)
 }
 
 // Domain returns the associated domain
@@ -169,7 +206,7 @@ func (j *memJob) AckConsumed() error {
 	job.StartedAt = time.Now()
 	job.State = Running
 	j.infos = &job
-	if err := GlobalStorage.Update(j.infos); err != nil {
+	if err := globalStorage.Update(j.infos); err != nil {
 		return err
 	}
 	j.infmu.Unlock()
@@ -183,7 +220,7 @@ func (j *memJob) Ack() error {
 	job := *j.infos
 	job.State = Done
 	j.infos = &job
-	if err := GlobalStorage.Update(j.infos); err != nil {
+	if err := globalStorage.Update(j.infos); err != nil {
 		return err
 	}
 	j.infmu.Unlock()
@@ -198,7 +235,7 @@ func (j *memJob) Nack(err error) error {
 	job.State = Errored
 	job.Error = err.Error()
 	j.infos = &job
-	if err := GlobalStorage.Update(j.infos); err != nil {
+	if err := globalStorage.Update(j.infos); err != nil {
 		return err
 	}
 	j.infmu.Unlock()

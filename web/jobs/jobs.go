@@ -246,7 +246,7 @@ func getAllTriggers(c echo.Context) error {
 
 func getJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	job, err := jobs.GlobalStorage.Get(instance.Domain, c.Param("job-id"))
+	job, err := stack.GetBroker().GetJobInfos(instance.Domain, c.Param("job-id"))
 	if err != nil {
 		return err
 	}

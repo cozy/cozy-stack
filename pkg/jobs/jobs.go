@@ -55,6 +55,9 @@ type (
 		// QueueLen returns the total element in the queue of the specified worker
 		// type.
 		QueueLen(workerType string) (int, error)
+
+		// GetJobsInfos returns the informations about a job.
+		GetJobInfos(domain, jobID string) (*JobInfos, error)
 	}
 
 	// Job interface represents a job.
