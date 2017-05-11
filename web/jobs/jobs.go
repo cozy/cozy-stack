@@ -226,7 +226,7 @@ func deleteTrigger(c echo.Context) error {
 
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	workerFilter := c.QueryParam("worker")
+	workerFilter := c.QueryParam("Worker")
 	sched := stack.GetScheduler()
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
 		return err
