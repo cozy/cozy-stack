@@ -67,7 +67,7 @@ const (
 	// CSPWhitelist is a whitelist of domains that are allowed in CSP. It's not
 	// permanent, this whitelist will be removed when we will have a more
 	// generic way to enable client-side apps to access some domains (proxy).
-	CSPWhitelist = "*.tile.openstreetmap.org *.tile.osm.org *.tiles.mapbox.com api.mapbox.com"
+	CSPWhitelist = "piwik.cozycloud.cc *.tile.openstreetmap.org *.tile.osm.org *.tiles.mapbox.com api.mapbox.com"
 )
 
 // Secure returns a Middlefunc that can be used to define all the necessary
