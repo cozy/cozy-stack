@@ -38,7 +38,7 @@ func init() {
 
 // Options contains the options to execute a konnector.
 type Options struct {
-	Slug         string `json:"slug"`
+	Konnector    string `json:"konnector"`
 	Account      string `json:"account"`
 	FolderToSave string `json:"folder_to_save"`
 }
@@ -66,7 +66,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 
-	slug := opts.Slug
+	slug := opts.Konnector
 	fields := struct {
 		Account      string `json:"account"`
 		FolderToSave string `json:"folder_to_save"`
@@ -210,7 +210,7 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 		return err
 	}
 
-	slug := opts.Slug
+	slug := opts.Konnector
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 
 	inst, err := instance.Get(domain)

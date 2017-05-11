@@ -271,17 +271,12 @@ POST /jobs/queue/konnector
 {
   "data": {
     "attributes": {
-       "options": {
-       "priority": 10,
-       "timeout": 180,
-       "max_exec_count": 1
+      "arguments": {
+        "konnector": "trainline",
+        "account": "123-account-id-123",
+        "folder_to_save": "123-selected-folder-id-123"
       }
     },
-    "arguments": {
-      "konnector": "io.cozy.konnectors/trainlines",
-      "account": "123-account-id-123",
-      "folder_to_save": "123-selected-folder-id-123"
-    }
   }
 }
 ```
@@ -301,7 +296,7 @@ HTTP/1.1 200 OK
         "max_exec_count": 3
       },
       "arguments": {
-        "konnector": "io.cozy.konnectors/trainlines",
+        "konnector": "trainline",
         "account": "123-account-id-123",
         "folder_to_save": "123-selected-folder-id-123"
       },
@@ -341,7 +336,7 @@ POST /jobs/io.cozy.triggers
       "arguments": "0 0 0 0 1 1 ",
       "worker": "konnector",
       "worker_arguments": {
-        "konnector": "trainlines",
+        "konnector": "trainline",
         "account": "5165621628784562148955",
         "folder_to_save": "877854878455",
       }
