@@ -401,6 +401,27 @@ func TestGetAllJobs(t *testing.T) {
 		assert.Equal(t, "10s", v.Data[index].Attributes.Arguments)
 		assert.Equal(t, "print", v.Data[index].Attributes.WorkerType)
 	}
+
+	req4, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?worker=print", nil)
+	assert.NoError(t, err)
+	req4.Header.Add("Authorization", "Bearer "+token)
+	res4, err := http.DefaultClient.Do(req4)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusOK, res4.StatusCode)
+
+	err = json.NewDecoder(res4.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	if assert.Len(t, v.Data, 1) {
+		assert.Equal(t, consts.Triggers, v.Data[0].Type)
+		assert.Equal(t, "@in", v.Data[0].Attributes.Type)
+		assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
+		assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
+	}
 }
 
 func parseEventStream(r *bufio.Reader, evch chan *event) error {
