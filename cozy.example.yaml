@@ -32,12 +32,25 @@ couchdb:
   # CouchDB URL - flags: --couchdb-url
   url: http://localhost:5984/
 
+cache:
+  # url: redis://localhost:6379/1
+
+lock:
+  # url: redis://localhost:6379/2
+
+sessions:
+  # url: redis://localhost:6379/3
+
+download:
+  # url: redis://localhost:6379/4
+
 jobs:
   workers: 1
-  # url: redis://localhost/1
+  # url: redis://localhost:6379/5
 
 konnectors:
   cmd: ./scripts/konnector-rkt-run.sh
+  # oauthstate: redis://localhost:6379/6
 
 mail:
   # mail smtp host - flags: --mail-host
