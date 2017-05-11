@@ -2,7 +2,7 @@
 # applications for cozy-stack. It installs couchdb 2 and the cozy-stack.
 # It should not be used for hosting your cozy cloud in production.
 
-FROM debian:jessie
+FROM debian:jessie-slim
 
 
 # CouchDB
