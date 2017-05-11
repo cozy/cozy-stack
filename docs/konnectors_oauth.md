@@ -89,23 +89,19 @@ A few services allows to specify arbitrary redirect_url without registering befo
 A. In SettingsApp give a link
 
 ```html
-  <a href="https://service.example/auth? (url)
-      response_type=code&
-      client_id=CLIENT_ID&
+  <a href="https://bob.cozy.rocks/accounts/service-name/start? (url)
       scope=photos&
-      state=1234zyx&
-      redirect_uri=https://bob.cozy.rocks/accounts/redirect">
+      state=1234zyx">
 ```
 
 **NOTE** the scope may depends on other fields being configured (checkboxes), this will be described in json in the konnectors manifest. The format will be determined upon implementation.
 
 **NOTE** To limit bandwith and risk of state corruption, SettingsApp should save its state under a random key into localStorage, the key is then passed as the state in this query.
 
-
 B. Service let the user login, allow or deny scope
 Then redirect to
 ```http
-https://bob.cozy.rocks/accounts/redirect? (url)
+https://bob.cozy.rocks/accounts/service-name/redirect? (url)
   code=AUTH_CODE_HERE&
   state=1234zyx
 ```
@@ -116,7 +112,7 @@ POST https://api.service.example/token
 Content-Type:
   grant_type=authorization_code&
   code=AUTH_CODE_HERE&
-  redirect_uri=https://bob.cozy.rocks/accounts/redirect&
+  redirect_uri=https://bob.cozy.rocks/accounts/service-name/redirect&
   client_id=CLIENT_ID&
   client_secret=CLIENT_SECRET
 ```
@@ -133,9 +129,9 @@ D. The Service responds (server side) with (json)
   "info":{"name":"Claude Douillet","email":"claude.douillet@example.com"}
 }
 ```
-This whole object is saved as-is into a `io.cozy.accounts` 's `oauth_callback_results` field.
+This whole object is saved as-is into a `io.cozy.accounts` 's `extras` field.
 
-The known fields `access_token`, `refresh_token` & `scope` will be **also** saved on the account itself
+The known fields `access_token`, `refresh_token` & `scope` will be **also** saved on the account's `oauth` itself
 
 
 E. The Stack redirect the user to SettingsApp
@@ -217,9 +213,3 @@ The following is a few points to be careful for in konnectors when we start allo
 
 - MAIF konnector uses the webserver flow without redirect_uri validation
 - Orange konnector uses the client-side proxy but hosted on their own servers (/!\ redirect_uri vs redirect_url)
-
-
-# Routes to be implemented
-
-- [ ] `/accounts/redirect`
-- [ ] `/accounts/:accountID/refresh`
