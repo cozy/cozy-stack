@@ -59,7 +59,7 @@ See https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
 - [ ] `GET    /konnectors`             Lists installed konnectors    
 
 **triggers**
-- [ ] `GET    /jobs/triggers?Worker=konnector` Lists konnectors with a configured recurrence.
+- [x] `GET    /jobs/triggers?Worker=konnector` Lists konnectors with a configured recurrence.
 - [x] `POST   /jobs/triggers`                  Enables a konnector recurrence.
 - [x] `DELETE /jobs/triggers/:triggerid`       Disables a konnector recurrence
 
