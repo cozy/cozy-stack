@@ -22,8 +22,30 @@ import (
 
 var ts *httptest.Server
 var testInstance *instance.Instance
+var setup *testutils.TestSetup
 
-func TestOauthFlow(t *testing.T) {
+func TestACOauthFlow(t *testing.T) {
+
+	redirectURI := ts.URL + "/accounts/test-service/redirect"
+
+	service := makeTestACService(redirectURI)
+	defer service.Close()
+
+	serviceType := accounts.AccountType{
+		DocID:                 "test-service",
+		GrantMode:             accounts.AuthorizationCode,
+		ClientID:              "the-client-id",
+		ClientSecret:          "the-client-secret",
+		AuthEndpoint:          service.URL + "/oauth2/v2/auth",
+		TokenEndpoint:         service.URL + "/oauth2/v4/token",
+		RegisteredRedirectURI: redirectURI,
+	}
+	err := couchdb.CreateNamedDoc(couchdb.GlobalSecretsDB, &serviceType)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+
 	u := ts.URL + "/accounts/test-service/start?scope=the+world&state=somesecretstate"
 
 	res, err := http.Get(u)
@@ -44,12 +66,6 @@ func TestOauthFlow(t *testing.T) {
 	}
 
 	// the user click the oauth link
-	stopBeforeDataConnectFail := func(req *http.Request, via []*http.Request) error {
-		if strings.Contains(req.URL.String(), "data-connect") {
-			return http.ErrUseLastResponse
-		}
-		return nil
-	}
 	res2, err := (&http.Client{CheckRedirect: stopBeforeDataConnectFail}).Get(okURL)
 	if !assert.NoError(t, err) {
 		return
@@ -69,42 +85,104 @@ func TestOauthFlow(t *testing.T) {
 	assert.Equal(t, "the-access-token", out.M["oauth"].(map[string]interface{})["access_token"])
 }
 
+func TestRedirectURLOauthFlow(t *testing.T) {
+	redirectURI := "http://" + testInstance.Domain + "/accounts/test-service2/redirect"
+	service := makeTestRedirectURLService(redirectURI)
+	defer service.Close()
+
+	serviceType := accounts.AccountType{
+		DocID:        "test-service2",
+		GrantMode:    accounts.ImplicitGrantRedirectURL,
+		AuthEndpoint: service.URL + "/oauth2/v2/auth",
+	}
+	err := couchdb.CreateNamedDoc(couchdb.GlobalSecretsDB, &serviceType)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+
+	u := ts.URL + "/accounts/test-service2/start?scope=the+world"
+
+	res, err := http.Get(u)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	bb, err := ioutil.ReadAll(res.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+	res.Body.Close()
+	okURL := string(bb)
+
+	if !assert.Equal(t, 200, res.StatusCode) {
+		fmt.Println("Bad response", res, okURL)
+		return
+	}
+
+	res2, err := (&http.Client{CheckRedirect: stopBeforeDataConnectFail}).Get(okURL)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
+	finalURL, err := res2.Location()
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.Contains(t, finalURL.String(), "data-connect") {
+		return
+	}
+
+	var out couchdb.JSONDoc
+	err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "the-access-token2", out.M["oauth"].(map[string]interface{})["access_token"])
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
 
-	setup := testutils.NewSetup(m, "oauth-konnectors")
-	testInstance = setup.GetTestInstance()
+	setup = testutils.NewSetup(m, "oauth-konnectors")
+	ts = setup.GetTestServer("/accounts", Routes)
+	testInstance = setup.GetTestInstance(&instance.Options{
+		Domain: strings.Replace(ts.URL, "http://127.0.0.1", "cozy.tools", 1),
+		Dev:    true,
+	})
 	couchdb.ResetDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	setup.AddCleanup(func() error {
 		return couchdb.DeleteDB(couchdb.GlobalSecretsDB, consts.AccountTypes)
 	})
 
-	ts = setup.GetTestServer("/accounts", Routes)
-	redirectURI := ts.URL + "/accounts/test-service/redirect"
-
-	service := makeTestService(redirectURI)
-	setup.AddCleanup(func() error { service.Close(); return nil })
-	serviceType := accounts.AccountType{
-		DocID:                 "test-service",
-		GrantMode:             accounts.AuthorizationCode,
-		ClientID:              "the-client-id",
-		ClientSecret:          "the-client-secret",
-		AuthEndpoint:          service.URL + "/oauth2/v2/auth",
-		TokenEndpoint:         service.URL + "/oauth2/v4/token",
-		RegisteredRedirectURI: redirectURI,
-	}
-	err := couchdb.CreateNamedDoc(couchdb.GlobalSecretsDB, &serviceType)
-	if err != nil {
-		panic(err)
-	}
-
-	res := m.Run()
-
-	os.Exit(res)
+	os.Exit(setup.Run())
 }
 
-func makeTestService(redirectURI string) *httptest.Server {
+func stopBeforeDataConnectFail(req *http.Request, via []*http.Request) error {
+	if strings.Contains(req.URL.String(), "data-connect") {
+		return http.ErrUseLastResponse
+	}
+	return nil
+}
+
+func makeTestRedirectURLService(redirectURI string) *httptest.Server {
+	serviceHandler := echo.New()
+	serviceHandler.GET("/oauth2/v2/auth", func(c echo.Context) error {
+		ok := c.QueryParam("scope") == "the world" &&
+			c.QueryParam("response_type") == "token" &&
+			c.QueryParam("redirect_url") == redirectURI
+
+		if !ok {
+			return echo.NewHTTPError(400, "Bad Params "+c.QueryParams().Encode())
+		}
+		opts := &url.Values{}
+		opts.Add("access_token", "the-access-token2")
+		return c.String(200, c.QueryParam("redirect_url")+"?"+opts.Encode())
+
+	})
+	return httptest.NewServer(serviceHandler)
+}
+
+func makeTestACService(redirectURI string) *httptest.Server {
 	serviceHandler := echo.New()
 	serviceHandler.GET("/oauth2/v2/auth", func(c echo.Context) error {
 		ok := c.QueryParam("scope") == "the world" &&
@@ -113,7 +191,7 @@ func makeTestService(redirectURI string) *httptest.Server {
 			c.QueryParam("redirect_uri") == redirectURI
 
 		if !ok {
-			return fmt.Errorf("Bad Params " + c.QueryParams().Encode())
+			return echo.NewHTTPError(400, "Bad Params "+c.QueryParams().Encode())
 		}
 		opts := &url.Values{}
 		opts.Add("code", "myaccesscode")
@@ -128,7 +206,7 @@ func makeTestService(redirectURI string) *httptest.Server {
 
 		if !ok {
 			vv, _ := c.FormParams()
-			return fmt.Errorf("Bad Authorization Code " + vv.Encode())
+			return echo.NewHTTPError(400, "Bad Params "+vv.Encode())
 		}
 		return c.JSON(200, map[string]interface{}{
 			"access_token":  "the-access-token",
