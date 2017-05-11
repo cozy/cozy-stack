@@ -85,6 +85,18 @@ func init() {
 	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
 	checkNoErr(viper.BindPFlag("couchdb.url", flags.Lookup("couchdb-url")))
 
+	flags.String("cache-url", "", "URL for the cache, redis or in-memory")
+	checkNoErr(viper.BindPFlag("cache.url", flags.Lookup("cache-url")))
+
+	flags.String("lock-url", "", "URL for the locks, redis or in-memory")
+	checkNoErr(viper.BindPFlag("lock.url", flags.Lookup("lock-url")))
+
+	flags.String("sessions-url", "", "URL for the sessions storage, redis or in-memory")
+	checkNoErr(viper.BindPFlag("sessions.url", flags.Lookup("sessions-url")))
+
+	flags.String("downloads-url", "", "URL for the download secret storage, redis or in-memory")
+	checkNoErr(viper.BindPFlag("downloads.url", flags.Lookup("downloads-url")))
+
 	flags.Int("jobs-workers", runtime.NumCPU(), "Number of parallel workers (0 to disable the processing of jobs)")
 	checkNoErr(viper.BindPFlag("jobs.workers", flags.Lookup("jobs-workers")))
 
@@ -93,6 +105,9 @@ func init() {
 
 	flags.String("konnectors-cmd", "", "konnectors command to be executed")
 	checkNoErr(viper.BindPFlag("konnectors.cmd", flags.Lookup("konnectors-cmd")))
+
+	flags.String("konnectors-oauthstate", "", "URL for the storage of OAuth state for konnectors, redis or in-memory")
+	checkNoErr(viper.BindPFlag("konnectors.oauthstate", flags.Lookup("konnectors-oauthstate")))
 
 	flags.Bool("log-syslog", false, "use the local syslog for logging")
 	checkNoErr(viper.BindPFlag("log.syslog", flags.Lookup("log-syslog")))
