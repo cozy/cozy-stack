@@ -402,7 +402,7 @@ func TestGetAllJobs(t *testing.T) {
 		assert.Equal(t, "print", v.Data[index].Attributes.WorkerType)
 	}
 
-	req4, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?worker=print", nil)
+	req4, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Worker=print", nil)
 	assert.NoError(t, err)
 	req4.Header.Add("Authorization", "Bearer "+token)
 	res4, err := http.DefaultClient.Do(req4)
@@ -422,6 +422,21 @@ func TestGetAllJobs(t *testing.T) {
 		assert.Equal(t, "10s", v.Data[0].Attributes.Arguments)
 		assert.Equal(t, "print", v.Data[0].Attributes.WorkerType)
 	}
+
+	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Worker=nojobforme", nil)
+	assert.NoError(t, err)
+	req5.Header.Add("Authorization", "Bearer "+token)
+	res5, err := http.DefaultClient.Do(req5)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusOK, res5.StatusCode)
+
+	err = json.NewDecoder(res5.Body).Decode(&v)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Len(t, v.Data, 0)
 }
 
 func parseEventStream(r *bufio.Reader, evch chan *event) error {
