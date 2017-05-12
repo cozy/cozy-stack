@@ -15,13 +15,11 @@ type (
 	// memQueue is a queue in-memory implementation of the Queue interface.
 	memQueue struct {
 		MaxCapacity int
+		Jobs        chan Job
 
-		jobs *list.List
+		list *list.List
 		run  bool
 		jmu  sync.RWMutex
-
-		ch chan Job
-		cl chan bool
 	}
 
 	// memBroker is an in-memory broker implementation of the Broker interface.
@@ -32,7 +30,7 @@ type (
 	// memJob struct contains all the parameters of a job.
 	memJob struct {
 		infos *JobInfos
-		infmu sync.RWMutex
+		// No mutex, a memJob is expected to be used from only one goroutine at a time
 	}
 )
 
@@ -68,9 +66,8 @@ func (c *couchStorage) Update(job *JobInfos) error {
 // newMemQueue creates and a new in-memory queue.
 func newMemQueue(workerType string) *memQueue {
 	return &memQueue{
-		jobs: list.New(),
-		ch:   make(chan Job),
-		cl:   make(chan bool),
+		list: list.New(),
+		Jobs: make(chan Job),
 	}
 }
 
@@ -78,7 +75,7 @@ func newMemQueue(workerType string) *memQueue {
 func (q *memQueue) Enqueue(job Job) error {
 	q.jmu.Lock()
 	defer q.jmu.Unlock()
-	q.jobs.PushBack(job)
+	q.list.PushBack(job)
 	if !q.run {
 		q.run = true
 		go q.send()
@@ -89,30 +86,15 @@ func (q *memQueue) Enqueue(job Job) error {
 func (q *memQueue) send() {
 	for {
 		q.jmu.Lock()
-		e := q.jobs.Front()
+		e := q.list.Front()
 		if e == nil {
 			q.run = false
 			q.jmu.Unlock()
 			return
 		}
-		q.jobs.Remove(e)
+		q.list.Remove(e)
 		q.jmu.Unlock()
-		select {
-		case q.ch <- e.Value.(Job):
-			continue
-		case <-q.cl:
-			return
-		}
-	}
-}
-
-// Consume from the queue
-func (q *memQueue) Consume() (Job, error) {
-	select {
-	case job := <-q.ch:
-		return job, nil
-	case <-q.cl:
-		return nil, ErrQueueClosed
+		q.Jobs <- e.Value.(Job)
 	}
 }
 
@@ -120,12 +102,7 @@ func (q *memQueue) Consume() (Job, error) {
 func (q *memQueue) Len() int {
 	q.jmu.RLock()
 	defer q.jmu.RUnlock()
-	return q.jobs.Len()
-}
-
-// Close closes the queue
-func (q *memQueue) Close() {
-	close(q.cl)
+	return q.list.Len()
 }
 
 // NewMemBroker creates a new in-memory broker system.
@@ -141,7 +118,7 @@ func NewMemBroker(ws WorkersList) Broker {
 			Type: workerType,
 			Conf: conf,
 		}
-		w.Start(q)
+		w.Start(q.Jobs)
 	}
 	return &memBroker{queues: queues}
 }
@@ -184,57 +161,48 @@ func (b *memBroker) GetJobInfos(domain, jobID string) (*JobInfos, error) {
 
 // Domain returns the associated domain
 func (j *memJob) Domain() string {
-	j.infmu.RLock()
-	defer j.infmu.RUnlock()
 	return j.infos.Domain
 }
 
 // Infos returns the associated job infos
 func (j *memJob) Infos() *JobInfos {
-	j.infmu.RLock()
-	defer j.infmu.RUnlock()
 	return j.infos
 }
 
 // AckConsumed sets the job infos state to Running an sends the new job infos
 // on the channel.
 func (j *memJob) AckConsumed() error {
-	j.infmu.Lock()
 	job := *j.infos
 	log.Debugf("[jobs] ack_consume %s ", job.ID())
 	job.StartedAt = time.Now()
 	job.State = Running
 	j.infos = &job
-	err := globalStorage.Update(j.infos)
-	j.infmu.Unlock()
-	return err
+	return j.persist()
 }
 
 // Ack sets the job infos state to Done an sends the new job infos on the
 // channel.
 func (j *memJob) Ack() error {
-	j.infmu.Lock()
 	job := *j.infos
 	log.Debugf("[jobs] ack %s ", job.ID())
 	job.State = Done
 	j.infos = &job
-	err := globalStorage.Update(j.infos)
-	j.infmu.Unlock()
-	return err
+	return j.persist()
 }
 
 // Nack sets the job infos state to Errored, set the specified error has the
 // error field and sends the new job infos on the channel.
 func (j *memJob) Nack(err error) error {
-	j.infmu.Lock()
 	job := *j.infos
 	log.Debugf("[jobs] nack %s ", job.ID())
 	job.State = Errored
 	job.Error = err.Error()
 	j.infos = &job
-	err2 := globalStorage.Update(j.infos)
-	j.infmu.Unlock()
-	return err2
+	return j.persist()
+}
+
+func (j *memJob) persist() error {
+	return globalStorage.Update(j.infos)
 }
 
 // Marshal should not be used for a memJob
@@ -248,7 +216,6 @@ func (j *memJob) Unmarshal() error {
 }
 
 var (
-	_ Queue  = &memQueue{}
 	_ Broker = &memBroker{}
 	_ Job    = &memJob{}
 )

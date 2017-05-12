@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"sync/atomic"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -29,6 +28,30 @@ var (
 )
 
 type (
+	// Job interface represents a job.
+	Job interface {
+		// Domain returns the domain name from which the job has been sent.
+		Domain() string
+		// Infos returns the JobInfos data associated with the job
+		Infos() *JobInfos
+		// AckConsumed should be used by the consumer of the job, ack-ing that
+		// it has well received the job and is processing it.
+		AckConsumed() error
+		// Ack should be used by the consumer after the job has been processed,
+		// ack-ing that the job was successfully executed.
+		Ack() error
+		// Nack should be used to tell that the job coult not be consumed or that
+		// an error has happened during its processing. The error passed will be
+		// used to inform in more detail about the error that happened.
+		Nack(error) error
+		// Marshal allows you to define how the job should be marshalled when put
+		// into the queue.
+		Marshal() ([]byte, error)
+		// Unmarshal allows you to define how the job should be unmarshalled when
+		// consumed from the queue.
+		Unmarshal() error
+	}
+
 	// WorkerFunc represent the work function that a worker should implement.
 	WorkerFunc func(context context.Context, msg *Message) error
 
@@ -36,14 +59,25 @@ type (
 	// execution of the WorkerFunc.
 	WorkerCommit func(context context.Context, msg *Message, errjob error) error
 
+	// WorkerConfig is the configuration parameter of a worker defined by the job
+	// system. It contains parameters of the worker along with the worker main
+	// function that perform the work against a job's message.
+	WorkerConfig struct {
+		WorkerFunc   WorkerFunc
+		WorkerCommit WorkerCommit
+		Concurrency  uint          `json:"concurrency"`
+		MaxExecCount uint          `json:"max_exec_count"`
+		MaxExecTime  time.Duration `json:"max_exec_time"`
+		Timeout      time.Duration `json:"timeout"`
+		RetryDelay   time.Duration `json:"retry_delay"`
+	}
+
 	// Worker is a unit of work that will consume from a queue and execute the do
 	// method for each jobs it pulls.
 	Worker struct {
 		Type string
 		Conf *WorkerConfig
-
-		jobs    Queue
-		started int32
+		jobs chan Job
 	}
 )
 
@@ -56,11 +90,8 @@ func NewWorkerContext(domain, workerID string) context.Context {
 }
 
 // Start is used to start the worker consumption of messages from its queue.
-func (w *Worker) Start(q Queue) {
-	if !atomic.CompareAndSwapInt32(&w.started, 0, 1) {
-		return
-	}
-	w.jobs = q
+func (w *Worker) Start(jobs chan Job) {
+	w.jobs = jobs
 	for i := 0; i < int(w.Conf.Concurrency); i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
 		go w.work(name)
@@ -69,15 +100,7 @@ func (w *Worker) Start(q Queue) {
 
 func (w *Worker) work(workerID string) {
 	// TODO: err handling and persistence
-	for {
-		job, err := w.jobs.Consume()
-		if err != nil {
-			if err != ErrQueueClosed {
-				log.Errorf("[job] %s: error while consuming queue (%s)",
-					workerID, err.Error())
-			}
-			return
-		}
+	for job := range w.jobs {
 		domain := job.Domain()
 		if domain == "" {
 			log.Errorf("[job] %s: missing domain from job request", workerID)
@@ -85,7 +108,7 @@ func (w *Worker) work(workerID string) {
 		}
 		parentCtx := NewWorkerContext(domain, workerID)
 		infos := job.Infos()
-		if err = job.AckConsumed(); err != nil {
+		if err := job.AckConsumed(); err != nil {
 			log.Errorf("[job] %s: error acking consume job %s: %s",
 				workerID, infos.ID(), err.Error())
 			continue
@@ -96,6 +119,7 @@ func (w *Worker) work(workerID string) {
 			conf:     w.defaultedConf(infos.Options),
 			workerID: workerID,
 		}
+		var err error
 		if err = t.run(); err != nil {
 			log.Errorf("[job] %s: error while performing job %s: %s",
 				workerID, infos.ID(), err.Error())
@@ -140,15 +164,6 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 		c.Timeout = opts.Timeout
 	}
 	return c
-}
-
-// Stop will stop the worker's consumption of its queue. It will also close the
-// associated queue.
-func (w *Worker) Stop() {
-	if !atomic.CompareAndSwapInt32(&w.started, 1, 0) {
-		return
-	}
-	w.jobs.Close()
 }
 
 type task struct {
