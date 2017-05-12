@@ -63,17 +63,11 @@ const (
 	CSPUnsafeInline
 	// CSPSrcWhitelist enables the whitelist just below in CSP.
 	CSPSrcWhitelist
-	// CSPSrcTracker enables the whitelist of piwik
-	CSPSrcTracker
 
 	// CSPWhitelist is a whitelist of domains that are allowed in CSP. It's not
 	// permanent, this whitelist will be removed when we will have a more
 	// generic way to enable client-side apps to access some domains (proxy).
-	CSPWhitelist = "*.tile.openstreetmap.org *.tile.osm.org *.tiles.mapbox.com api.mapbox.com"
-
-	// CSPTracker is used to whitelist our usage tracker, based on piwik
-	// FIXME remove this as soon as we have a proper way to declare a proxy based on permissions
-	CSPTracker = "piwik.cozycloud.cc"
+	CSPWhitelist = "piwik.cozycloud.cc *.tile.openstreetmap.org *.tile.osm.org *.tiles.mapbox.com api.mapbox.com"
 )
 
 // Secure returns a Middlefunc that can be used to define all the necessary
@@ -172,8 +166,6 @@ func makeCSPHeader(parent, siblings, header string, sources []CSPSource) string 
 			headers[i] = "'unsafe-inline'"
 		case CSPSrcWhitelist:
 			headers[i] = CSPWhitelist
-		case CSPSrcTracker:
-			headers[i] = CSPTracker
 		}
 	}
 	return header + " " + strings.Join(headers, " ") + ";"
