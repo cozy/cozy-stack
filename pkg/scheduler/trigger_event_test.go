@@ -103,9 +103,10 @@ func TestTriggerEvent(t *testing.T) {
 				"test": "value",
 			},
 		}
-		realtime.InstanceHub("cozy.local").Publish(&realtime.Event{
-			Type: realtime.EventCreate,
-			Doc:  &doc,
+		realtime.GetHub().Publish(&realtime.Event{
+			Type:   realtime.EventCreate,
+			Doc:    &doc,
+			Domain: "cozy.local",
 		})
 	})
 

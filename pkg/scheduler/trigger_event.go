@@ -22,7 +22,6 @@ func NewEventTrigger(infos *TriggerInfos) (*EventTrigger, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &EventTrigger{
 		unscheduled: make(chan struct{}),
 		infos:       infos,
@@ -54,58 +53,16 @@ func (t *EventTrigger) Valid(key, value string) bool {
 	return false
 }
 
-func (t *EventTrigger) interestedBy(e *realtime.Event) bool {
-
-	if !t.mask.Verbs.Contains(permissions.Verb(e.Type)) {
-		return false
-	}
-
-	if len(t.mask.Values) == 0 {
-		return true
-	}
-
-	if t.mask.Selector == "" {
-		return t.mask.ValuesContain(e.Doc.ID())
-	}
-
-	if v, ok := e.Doc.(permissions.Validable); ok {
-		return t.mask.ValuesValid(v)
-	}
-
-	return false
-}
-
-func addEventToMessage(e *realtime.Event, base *jobs.Message) (*jobs.Message, error) {
-	var basemsg interface{}
-	if base != nil {
-		base.Unmarshal(&basemsg)
-	}
-	return jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"message": basemsg,
-		"event":   e,
-	})
-}
-
 // Schedule implements the Schedule method of the Trigger interface.
 func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 	ch := make(chan *jobs.JobRequest)
 	go func() {
-		c := realtime.InstanceHub(t.infos.Domain).Subscribe(t.mask.Type)
+		c := realtime.GetHub().Subscribe(t.infos.Domain, t.mask.Type)
 		for {
 			select {
 			case e := <-c.Read():
-				if t.interestedBy(e) {
-					msg, err := addEventToMessage(e, t.infos.Message)
-					if err != nil {
-						log.Error(err)
-						continue
-					}
-					ch <- &jobs.JobRequest{
-						Domain:     t.infos.Domain,
-						WorkerType: t.infos.WorkerType,
-						Message:    msg,
-						Options:    t.infos.Options,
-					}
+				if eventMatchPermission(e, &t.mask) {
+					ch <- t.Trigger(e)
 				}
 			case <-t.unscheduled:
 				close(ch)
@@ -116,6 +73,28 @@ func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 	return ch
 }
 
+// Trigger returns the triggered job request
+func (t *EventTrigger) Trigger(e *realtime.Event) *jobs.JobRequest {
+	var basemsg interface{}
+	base := t.infos.Message
+	if base != nil {
+		base.Unmarshal(&basemsg)
+	}
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+		"message": basemsg,
+		"event":   e,
+	})
+	if err != nil {
+		log.Error(err)
+	}
+	return &jobs.JobRequest{
+		Domain:     t.infos.Domain,
+		WorkerType: t.infos.WorkerType,
+		Message:    msg,
+		Options:    t.infos.Options,
+	}
+}
+
 // Unschedule implements the Unschedule method of the Trigger interface.
 func (t *EventTrigger) Unschedule() {
 	close(t.unscheduled)
@@ -124,4 +103,28 @@ func (t *EventTrigger) Unschedule() {
 // Infos implements the Infos method of the Trigger interface.
 func (t *EventTrigger) Infos() *TriggerInfos {
 	return t.infos
+}
+
+func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
+	if e.Doc.DocType() != rule.Type {
+		return false
+	}
+
+	if !rule.Verbs.Contains(permissions.Verb(e.Type)) {
+		return false
+	}
+
+	if len(rule.Values) == 0 {
+		return true
+	}
+
+	if rule.Selector == "" {
+		return rule.ValuesContain(e.Doc.ID())
+	}
+
+	if v, ok := e.Doc.(permissions.Validable); ok {
+		return rule.ValuesValid(v)
+	}
+
+	return false
 }

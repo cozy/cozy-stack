@@ -162,9 +162,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	scanOut := bufio.NewScanner(cmdOut)
 	scanOut.Buffer(nil, 256*1024)
 
-	hub := realtime.InstanceHub(domain)
-
-	go doScanOut(jobID, scanOut, hub)
+	go doScanOut(jobID, scanOut, domain)
 	go doScanErr(jobID, scanErr)
 
 	if err = cmd.Start(); err != nil {
@@ -176,7 +174,8 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	return nil
 }
 
-func doScanOut(jobID string, scanner *bufio.Scanner, hub realtime.Hub) {
+func doScanOut(jobID string, scanner *bufio.Scanner, domain string) {
+	hub := realtime.GetHub()
 	for scanner.Scan() {
 		doc := couchdb.JSONDoc{Type: consts.JobEvents}
 		err := json.Unmarshal(scanner.Bytes(), &doc.M)
@@ -186,8 +185,9 @@ func doScanOut(jobID string, scanner *bufio.Scanner, hub realtime.Hub) {
 			continue
 		}
 		hub.Publish(&realtime.Event{
-			Type: realtime.EventCreate,
-			Doc:  doc,
+			Type:   realtime.EventCreate,
+			Doc:    doc,
+			Domain: domain,
 		})
 	}
 	if err := scanner.Err(); err != nil {

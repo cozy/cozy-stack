@@ -289,7 +289,7 @@ func TestMain(m *testing.M) {
 
 	receivedEvents = make(map[string]struct{})
 	prefix := strings.TrimSuffix(TestPrefix.Prefix(), "/")
-	eventChan := realtime.InstanceHub(prefix).Subscribe(TestDoctype)
+	eventChan := realtime.GetHub().Subscribe(prefix, TestDoctype)
 	go func() {
 		for ev := range eventChan.Read() {
 			receivedEventsMutex.Lock()
