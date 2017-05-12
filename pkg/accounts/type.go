@@ -36,15 +36,15 @@ var ErrUnrefreshable = errors.New("this account can not be refreshed")
 
 // AccountType holds configuration information for
 type AccountType struct {
-	DocID                 string
-	DocRev                string
-	GrantMode             string
-	ClientID              string
-	ClientSecret          string
-	AuthEndpoint          string
-	TokenEndpoint         string
-	RegisteredRedirectURI string
-	ExtraAuthQuery        map[string]string
+	DocID                 string            `json:"_id,omitempty"`
+	DocRev                string            `json:"_rev,omitempty"`
+	GrantMode             string            `json:"grant_mode,omitempty"`
+	ClientID              string            `json:"client_id,omitempty"`
+	ClientSecret          string            `json:"client_secret,omitempty"`
+	AuthEndpoint          string            `json:"auth_endpoint,omitempty"`
+	TokenEndpoint         string            `json:"token_endpoint,omitempty"`
+	RegisteredRedirectURI string            `json:"redirect_uri,omitempty"`
+	ExtraAuthQuery        map[string]string `json:"extras,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
