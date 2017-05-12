@@ -76,7 +76,7 @@ func eventsKey(domain string) string {
 func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.broker = b
 	s.stopped = make(chan struct{})
-	go s.eventDispatcher()
+	s.startEventDispatcher()
 	go s.pollLoop()
 	return nil
 }
@@ -97,7 +97,7 @@ func (s *RedisScheduler) pollLoop() {
 	}
 }
 
-func (s *RedisScheduler) eventDispatcher() {
+func (s *RedisScheduler) startEventDispatcher() {
 	eventsCh := make(chan *realtime.Event, 100)
 	go func() {
 		c := realtime.GetHub().SubscribeAll()
