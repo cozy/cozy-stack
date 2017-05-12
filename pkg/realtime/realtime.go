@@ -31,7 +31,10 @@ type Hub interface {
 	// Subscribe adds a listener for events on a given type
 	// it returns an EventChannel, call the EventChannel Close method
 	// to Unsubscribe.
-	Subscribe(topicName string) EventChannel
+	Subscribe(domain, topicName string) EventChannel
+
+	// SubscribeAll adds a listener for all events.
+	SubscribeAll() EventChannel
 }
 
 // EventChannel is returned when Suscribing to the hub
@@ -42,10 +45,7 @@ type EventChannel interface {
 	Close() error
 }
 
-// InstanceHub returns a memory hub for an Instance
-func InstanceHub(domain string) Hub {
-	return &memHub{
-		prefix: domain,
-		topics: mainMemTopics,
-	}
+// GetHub returns the global hub
+func GetHub() Hub {
+	return globalMemHub
 }

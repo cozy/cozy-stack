@@ -57,7 +57,7 @@ func (t *EventTrigger) Valid(key, value string) bool {
 func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 	ch := make(chan *jobs.JobRequest)
 	go func() {
-		c := realtime.InstanceHub(t.infos.Domain).Subscribe(t.mask.Type)
+		c := realtime.GetHub().Subscribe(t.infos.Domain, t.mask.Type)
 		for {
 			select {
 			case e := <-c.Read():

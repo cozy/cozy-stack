@@ -6,20 +6,45 @@ import (
 	"sync/atomic"
 )
 
-var mainMemTopics = &memTopics{topics: make(map[string]*topic)}
+var globalMemHub = &memHub{topics: make(map[string]*topic)}
 
-type memTopics struct {
+type memHub struct {
 	sync.RWMutex
 	topics map[string]*topic
 }
 
-func (h *memTopics) get(prefix, topicName string) *topic {
+func (h *memHub) Publish(e *Event) {
+	topic := h.get(e.Domain, e.Doc.DocType())
+	if topic != nil {
+		topic.broadcast <- e
+	}
+	topic = h.get("*", "*")
+	if topic != nil {
+		topic.broadcast <- e
+	}
+}
+
+func (h *memHub) Subscribe(domain, topicName string) EventChannel {
+	topic := h.getOrCreate(domain, topicName)
+	sub := &memSub{
+		topic: topic,
+		send:  make(chan *Event),
+	}
+	topic.subscribe <- sub
+	return sub
+}
+
+func (h *memHub) SubscribeAll() EventChannel {
+	return h.Subscribe("*", "*")
+}
+
+func (h *memHub) get(prefix, topicName string) *topic {
 	h.RLock()
 	defer h.RUnlock()
 	return h.topics[h.topicKey(prefix, topicName)]
 }
 
-func (h *memTopics) getOrCreate(prefix, topicName string) *topic {
+func (h *memHub) getOrCreate(prefix, topicName string) *topic {
 	h.Lock()
 	defer h.Unlock()
 	key := h.topicKey(prefix, topicName)
@@ -31,36 +56,14 @@ func (h *memTopics) getOrCreate(prefix, topicName string) *topic {
 	return it
 }
 
-func (h *memTopics) remove(topic *topic) {
+func (h *memHub) remove(topic *topic) {
 	h.Lock()
 	defer h.Unlock()
 	delete(h.topics, topic.key)
 }
 
-func (h *memTopics) topicKey(domain, doctype string) string {
+func (h *memHub) topicKey(domain, doctype string) string {
 	return domain + ":" + doctype
-}
-
-type memHub struct {
-	prefix string
-	topics *memTopics
-}
-
-func (h *memHub) Publish(e *Event) {
-	topic := h.topics.get(h.prefix, e.Doc.DocType())
-	if topic != nil {
-		topic.broadcast <- e
-	}
-}
-
-func (h *memHub) Subscribe(t string) EventChannel {
-	topic := h.topics.getOrCreate(h.prefix, t)
-	sub := &memSub{
-		topic: topic,
-		send:  make(chan *Event),
-	}
-	topic.subscribe <- sub
-	return sub
 }
 
 type memSub struct {
@@ -87,7 +90,7 @@ func (s *memSub) Close() error {
 }
 
 type topic struct {
-	hub *memTopics
+	hub *memHub
 	key string
 
 	// chans for subscribe/unsubscribe requests
@@ -100,7 +103,7 @@ type topic struct {
 	subs map[*memSub]struct{}
 }
 
-func newTopic(hub *memTopics, key string) *topic {
+func newTopic(hub *memHub, key string) *topic {
 	// subscribers should only be manipulated by the hub loop
 	// it is a Map(type -> Set(subscriber))
 	topic := &topic{

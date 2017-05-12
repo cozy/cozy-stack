@@ -55,11 +55,12 @@ func SimpleDatabasePrefix(prefix string) Database {
 }
 
 func rtevent(db Database, evtype string, doc Doc) {
-	prefix := db.Prefix()
-	prefix = prefix[:len(prefix)-1] // Strip the final '/'
-	realtime.InstanceHub(prefix).Publish(&realtime.Event{
-		Type: evtype,
-		Doc:  doc.Clone(),
+	domain := db.Prefix()
+	domain = domain[:len(domain)-1] // Strip the final '/'
+	realtime.GetHub().Publish(&realtime.Event{
+		Type:   evtype,
+		Doc:    doc.Clone(),
+		Domain: domain,
 	})
 }
 

@@ -100,7 +100,7 @@ func (s *RedisScheduler) pollLoop() {
 func (s *RedisScheduler) eventDispatcher() {
 	eventsCh := make(chan *realtime.Event, 100)
 	go func() {
-		c := realtime.MainHub().Subscribe("*")
+		c := realtime.GetHub().SubscribeAll()
 		for {
 			select {
 			case <-s.stopped:
