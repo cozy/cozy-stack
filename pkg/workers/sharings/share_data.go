@@ -67,6 +67,11 @@ type fileOptions struct {
 	set           bool // default value is false
 }
 
+var (
+	// ErrBadFileFormat is used when the given file is not well structured
+	ErrBadFileFormat = errors.New("Bad file format")
+)
+
 // fillDetailsAndOpenFile will augment the SendOptions structure with the
 // details regarding the file to share and open it so that it can be sent.
 //
@@ -659,6 +664,9 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 	dirOrFileDoc, err := bindDirOrFile(res.Body)
 	if err != nil {
 		return nil, nil, err
+	}
+	if dirOrFileDoc == nil {
+		return nil, nil, ErrBadFileFormat
 	}
 	dirDoc, fileDoc := dirOrFileDoc.Refine()
 	return dirDoc, fileDoc, nil
