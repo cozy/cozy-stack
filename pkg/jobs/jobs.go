@@ -46,11 +46,8 @@ type (
 	// the job system.
 	Broker interface {
 		// PushJob will push try to push a new job from the specified job request.
-		//
-		// This method is asynchronous and returns a chan of JobInfos to observe
-		// the job changing states. This channel does not need to be subscribed,
-		// messages will be dropped if no listeners.
-		PushJob(request *JobRequest) (*JobInfos, <-chan *JobInfos, error)
+		// This method is asynchronous.
+		PushJob(request *JobRequest) (*JobInfos, error)
 
 		// QueueLen returns the total element in the queue of the specified worker
 		// type.

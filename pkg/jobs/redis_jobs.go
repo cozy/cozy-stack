@@ -22,22 +22,19 @@ func NewRedisBroker(client *redis.Client) Broker {
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *redisBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error) {
+func (b *redisBroker) PushJob(req *JobRequest) (*JobInfos, error) {
 	infos := NewJobInfos(req)
 	db := couchdb.SimpleDatabasePrefix(infos.Domain)
 	if err := couchdb.CreateDoc(db, infos); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	key := redisPrefix + infos.WorkerType
 	val := infos.Domain + "/" + infos.JobID
 	if err := b.client.LPush(key, val).Err(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	// TODO remove the chan from the signature of PushJob
-	jobch := make(chan *JobInfos, 2)
-	return infos, jobch, nil
+	return infos, nil
 }
 
 // QueueLen returns the size of the number of elements in queue of the

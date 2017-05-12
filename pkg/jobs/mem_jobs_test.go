@@ -57,7 +57,7 @@ func TestInMemoryJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
-			_, _, err := broker.PushJob(&JobRequest{
+			_, err := broker.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
@@ -73,7 +73,7 @@ func TestInMemoryJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
-			_, _, err := broker.PushJob(&JobRequest{
+			_, err := broker.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
@@ -89,7 +89,7 @@ func TestInMemoryJobs(t *testing.T) {
 
 func TestUnknownWorkerError(t *testing.T) {
 	broker := NewMemBroker(WorkersList{})
-	_, _, err := broker.PushJob(&JobRequest{
+	_, err := broker.PushJob(&JobRequest{
 		Domain:     "cozy.local",
 		WorkerType: "nope",
 		Message:    nil,
@@ -116,7 +116,7 @@ func TestUnknownMessageType(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, _, err := broker.PushJob(&JobRequest{
+	_, err := broker.PushJob(&JobRequest{
 		WorkerType: "test",
 		Domain:     "cozy.local",
 		Message: &Message{
@@ -146,7 +146,7 @@ func TestTimeout(t *testing.T) {
 	})
 
 	w.Add(1)
-	_, _, err := broker.PushJob(&JobRequest{
+	_, err := broker.PushJob(&JobRequest{
 		WorkerType: "timeout",
 		Domain:     "cozy.local",
 		Message: &Message{
@@ -184,7 +184,7 @@ func TestRetry(t *testing.T) {
 	})
 
 	w.Add(maxExecCount)
-	_, _, err := broker.PushJob(&JobRequest{
+	_, err := broker.PushJob(&JobRequest{
 		Domain:     "cozy.local",
 		WorkerType: "test",
 		Message:    nil,
@@ -212,7 +212,7 @@ func TestPanicRetried(t *testing.T) {
 	})
 
 	w.Add(maxExecCount)
-	_, _, err := broker.PushJob(&JobRequest{
+	_, err := broker.PushJob(&JobRequest{
 		Domain:     "cozy.local",
 		WorkerType: "panic",
 		Message:    nil,
@@ -248,54 +248,13 @@ func TestPanic(t *testing.T) {
 	})
 	w.Add(2)
 	var err error
-	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
+	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
+	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
-	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
+	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: odd})
 	assert.NoError(t, err)
-	_, _, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
-	assert.NoError(t, err)
-	w.Wait()
-}
-
-func TestInfoChan(t *testing.T) {
-	var w sync.WaitGroup
-
-	broker := NewMemBroker(WorkersList{
-		"timeout": {
-			Concurrency:  1,
-			MaxExecCount: 1,
-			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, _ *Message) error {
-				<-ctx.Done()
-				w.Done()
-				return ctx.Err()
-			},
-		},
-	})
-
-	w.Add(1)
-	job, done, err := broker.PushJob(&JobRequest{
-		WorkerType: "timeout",
-		Domain:     "cozy.local",
-		Message: &Message{
-			Type: "timeout",
-			Data: nil,
-		},
-	})
-
-	assert.Equal(t, Queued, job.State)
-
-	job = <-done
-	assert.Equal(t, string(Running), string(job.State))
-
-	job = <-done
-	assert.Equal(t, string(Errored), string(job.State))
-
-	job = <-done
-	assert.Nil(t, job)
-
+	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
 }

@@ -32,7 +32,6 @@ type (
 	memJob struct {
 		infos *JobInfos
 		infmu sync.RWMutex
-		jobch chan *JobInfos
 	}
 )
 
@@ -148,25 +147,23 @@ func NewMemBroker(ws WorkersList) Broker {
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, <-chan *JobInfos, error) {
+func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, error) {
 	workerType := req.WorkerType
 	q, ok := b.queues[workerType]
 	if !ok {
-		return nil, nil, ErrUnknownWorker
+		return nil, ErrUnknownWorker
 	}
-	jobch := make(chan *JobInfos, 2)
 	infos := NewJobInfos(req)
 	j := &memJob{
 		infos: infos,
-		jobch: jobch,
 	}
 	if err := globalStorage.Create(infos); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if err := q.Enqueue(j); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return infos, jobch, nil
+	return infos, nil
 }
 
 // QueueLen returns the size of the number of elements in queue of the
@@ -206,11 +203,9 @@ func (j *memJob) AckConsumed() error {
 	job.StartedAt = time.Now()
 	job.State = Running
 	j.infos = &job
-	if err := globalStorage.Update(j.infos); err != nil {
-		return err
-	}
+	err := globalStorage.Update(j.infos)
 	j.infmu.Unlock()
-	return j.asyncSend(&job, false)
+	return err
 }
 
 // Ack sets the job infos state to Done an sends the new job infos on the
@@ -220,11 +215,9 @@ func (j *memJob) Ack() error {
 	job := *j.infos
 	job.State = Done
 	j.infos = &job
-	if err := globalStorage.Update(j.infos); err != nil {
-		return err
-	}
+	err := globalStorage.Update(j.infos)
 	j.infmu.Unlock()
-	return j.asyncSend(&job, true)
+	return err
 }
 
 // Nack sets the job infos state to Errored, set the specified error has the
@@ -235,22 +228,9 @@ func (j *memJob) Nack(err error) error {
 	job.State = Errored
 	job.Error = err.Error()
 	j.infos = &job
-	if err := globalStorage.Update(j.infos); err != nil {
-		return err
-	}
+	err2 := globalStorage.Update(j.infos)
 	j.infmu.Unlock()
-	return j.asyncSend(&job, true)
-}
-
-func (j *memJob) asyncSend(job *JobInfos, closed bool) error {
-	select {
-	case j.jobch <- job:
-	default:
-	}
-	if closed {
-		close(j.jobch)
-	}
-	return nil
+	return err2
 }
 
 // Marshal should not be used for a memJob

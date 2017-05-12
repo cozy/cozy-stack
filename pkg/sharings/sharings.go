@@ -295,7 +295,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			if err != nil {
 				return err
 			}
-			_, _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+			_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
 				Domain:     instance.Domain,
 				WorkerType: "sharedata",
 				Options:    nil,

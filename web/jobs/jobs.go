@@ -138,28 +138,12 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, ch, err := stack.GetBroker().PushJob(jr)
+	job, err := stack.GetBroker().PushJob(jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
 
-	accept := c.Request().Header.Get("Accept")
-	if accept != typeTextEventStream {
-		return jsonapi.Data(c, http.StatusAccepted, &apiJob{job}, nil)
-	}
-
-	w := c.Response().Writer
-	w.Header().Set("Content-Type", typeTextEventStream)
-	w.WriteHeader(200)
-	if err := streamJob(job, w); err != nil {
-		return nil
-	}
-	for job = range ch {
-		if err := streamJob(job, w); err != nil {
-			return nil
-		}
-	}
-	return nil
+	return jsonapi.Data(c, http.StatusAccepted, &apiJob{job}, nil)
 }
 
 func newTrigger(c echo.Context) error {

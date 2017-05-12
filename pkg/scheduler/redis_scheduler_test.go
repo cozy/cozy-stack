@@ -37,9 +37,9 @@ type mockBroker struct {
 	jobs []*jobs.JobRequest
 }
 
-func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.JobInfos, <-chan *jobs.JobInfos, error) {
+func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.JobInfos, error) {
 	b.jobs = append(b.jobs, request)
-	return nil, nil, nil
+	return nil, nil
 }
 
 func (b *mockBroker) QueueLen(workerType string) (int, error) {

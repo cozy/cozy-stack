@@ -1,12 +1,10 @@
 package jobs
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -89,70 +87,6 @@ func TestCreateJobNotExist(t *testing.T) {
 		return
 	}
 	assert.Equal(t, 404, res.StatusCode)
-}
-
-type event struct {
-	name string
-	data []byte
-}
-
-func TestCreateJobWithEventStream(t *testing.T) {
-	body, _ := json.Marshal(&jsonapiReq{
-		Data: &jsonapiData{
-			Attributes: &jobRequest{Arguments: "foobar"},
-		},
-	})
-	req, err := http.NewRequest("POST", ts.URL+"/jobs/queue/print", bytes.NewReader(body))
-	if !assert.NoError(t, err) {
-		return
-	}
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "text/event-stream")
-	res, err := http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer res.Body.Close()
-	r := bufio.NewReader(res.Body)
-	events := []string{
-		"queued",
-		"running",
-		"done",
-	}
-	evch := make(chan *event, 1)
-
-	go func() {
-		assert.NoError(t, parseEventStream(r, evch))
-	}()
-
-	var i int
-	var data map[string]interface{}
-	for ev := range evch {
-		assert.Equal(t, events[i], ev.name)
-		if assert.NotNil(t, ev.data) {
-			assert.NoError(t, json.Unmarshal(ev.data, &data))
-		}
-		i++
-	}
-
-	jobID := data["data"].(map[string]interface{})["id"].(string)
-	req, err = http.NewRequest("GET", ts.URL+"/jobs/"+jobID, nil)
-	if !assert.NoError(t, err) {
-		return
-	}
-	req.Header.Add("Authorization", "Bearer "+token)
-	req.Header.Add("Content-Type", "application/json")
-	res, err = http.DefaultClient.Do(req)
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer res.Body.Close()
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-	err = json.NewDecoder(res.Body).Decode(&data)
-	if !assert.NoError(t, err) {
-		return
-	}
 }
 
 func TestAddGetAndDeleteTriggerAt(t *testing.T) {
@@ -439,41 +373,6 @@ func TestGetAllJobs(t *testing.T) {
 		return
 	}
 	assert.Len(t, v.Data, 0)
-}
-
-func parseEventStream(r *bufio.Reader, evch chan *event) error {
-	defer close(evch)
-	var ev *event
-	for {
-		bs, err := r.ReadBytes('\n')
-		if err == io.EOF {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if bytes.Equal(bs, []byte("\r\n")) {
-			ev = nil
-			continue
-		}
-		spl := bytes.Split(bs, []byte(": "))
-		if len(spl) != 2 {
-			return fmt.Errorf("should be length 2")
-		}
-		k, v := string(spl[0]), bytes.TrimSpace(spl[1])
-		switch k {
-		case "event":
-			ev = &event{name: string(v)}
-		case "data":
-			if ev == nil {
-				return fmt.Errorf("could not parse event stream")
-			}
-			ev.data = v
-			evch <- ev
-		default:
-			return fmt.Errorf("should not be here")
-		}
-	}
 }
 
 func TestMain(m *testing.M) {
