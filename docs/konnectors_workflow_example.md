@@ -59,7 +59,7 @@ See https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
 - [ ] `GET    /konnectors`             Lists installed konnectors    
 
 **triggers**
-- [ ] `GET    /jobs/triggers?worker=konnector` Lists konnectors with a configured recurrence.
+- [x] `GET    /jobs/triggers?Worker=konnector` Lists konnectors with a configured recurrence.
 - [x] `POST   /jobs/triggers`                  Enables a konnector recurrence.
 - [x] `DELETE /jobs/triggers/:triggerid`       Disables a konnector recurrence
 
@@ -366,7 +366,7 @@ Start the konnector through Rkt, passing as ENV variables :
     - `COZY_TYPE`:         the type field of the konnector (ie. "node" etc.)
     - `COZY_URL`:          the starting instance URL
 
-The konnector proces can send events trough it's stdout (newline separated JSON object), 
+The konnector proces can send events trough it's stdout (newline separated JSON object),
 the konnector worker pass these events to the realtime hub as `io.cozy.jobs.events`.
   - Only JSON formatted events are forwarded to the client-side throught realtime
   - Otherwise formatted lines (such as node Error) will be kept in some system logs.

@@ -226,6 +226,7 @@ func deleteTrigger(c echo.Context) error {
 
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	workerFilter := c.QueryParam("Worker")
 	sched := stack.GetScheduler()
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
 		return err
@@ -234,9 +235,11 @@ func getAllTriggers(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	objs := make([]jsonapi.Object, len(ts))
-	for i, t := range ts {
-		objs[i] = &apiTrigger{t}
+	objs := make([]jsonapi.Object, 0, len(ts))
+	for _, t := range ts {
+		if workerFilter == "" || t.Infos().WorkerType == workerFilter {
+			objs = append(objs, &apiTrigger{t})
+		}
 	}
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
