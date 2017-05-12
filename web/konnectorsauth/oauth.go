@@ -47,12 +47,24 @@ func start(c echo.Context) error {
 		return err
 	}
 
-	url, err := accountType.MakeOauthStartURL(scope, state)
+	url, err := accountType.MakeOauthStartURL(instance, scope, state)
 	if err != nil {
 		return err
 	}
 
 	return c.Redirect(http.StatusSeeOther, url)
+}
+
+func redirectToDataConnect(c echo.Context, account *accounts.Account, clientState string) error {
+	instance := middlewares.GetInstance(c)
+	u := instance.SubDomain(consts.DataConnectSlug)
+	vv := &url.Values{}
+	vv.Add("account", account.ID())
+	if clientState != "" {
+		vv.Add("state", clientState)
+	}
+	u.RawQuery = vv.Encode()
+	return c.Redirect(http.StatusSeeOther, u.String())
 }
 
 // redirect is the redirect_uri endpoint passed to oauth services
@@ -62,10 +74,25 @@ func redirect(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	accessCode := c.QueryParam("code")
+	accessToken := c.QueryParam("access_token")
 	accountTypeID := c.Param("accountType")
 	accountType, err := accounts.TypeInfo(accountTypeID)
 	if err != nil {
 		return err
+	}
+
+	if accessToken != "" {
+		account := &accounts.Account{
+			AccountType: accountTypeID,
+			Oauth: &accounts.OauthInfo{
+				AccessToken: accessToken,
+			},
+		}
+		err = couchdb.CreateDoc(instance, account)
+		if err != nil {
+			return err
+		}
+		return redirectToDataConnect(c, account, "")
 	}
 
 	stateCode := c.QueryParam("state")
@@ -87,12 +114,7 @@ func redirect(c echo.Context) error {
 		return err
 	}
 
-	u := instance.SubDomain(consts.DataConnectSlug)
-	vv := &url.Values{}
-	vv.Add("account", account.ID())
-	vv.Add("state", state.ClientState)
-	u.RawQuery = vv.Encode()
-	return c.Redirect(http.StatusSeeOther, u.String())
+	return redirectToDataConnect(c, account, state.ClientState)
 }
 
 // refresh is an internal route used by konnectors to refresh accounts

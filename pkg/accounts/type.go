@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
 // This file contains the account_type object as defined in
@@ -18,6 +19,13 @@ import (
 
 // AuthorizationCode is the server-side grant type.
 var AuthorizationCode = "authorization_code"
+
+// ImplicitGrant is the implicit grant type
+var ImplicitGrant = "token"
+
+// ImplicitGrantRedirectURL is the implicit grant type with
+// redirect_url instead of redirect_uri
+var ImplicitGrantRedirectURL = "token_redirect_url"
 
 // RefreshToken is the refresh grant type
 var RefreshToken = "refresh_token"
@@ -28,15 +36,15 @@ var ErrUnrefreshable = errors.New("this account can not be refreshed")
 
 // AccountType holds configuration information for
 type AccountType struct {
-	DocID                 string
-	DocRev                string
-	GrantMode             string
-	ClientID              string
-	ClientSecret          string
-	AuthEndpoint          string
-	TokenEndpoint         string
-	RegisteredRedirectURI string
-	ExtraAuthQuery        map[string]string
+	DocID                 string            `json:"_id,omitempty"`
+	DocRev                string            `json:"_rev,omitempty"`
+	GrantMode             string            `json:"grant_mode,omitempty"`
+	ClientID              string            `json:"client_id,omitempty"`
+	ClientSecret          string            `json:"client_secret,omitempty"`
+	AuthEndpoint          string            `json:"auth_endpoint,omitempty"`
+	TokenEndpoint         string            `json:"token_endpoint,omitempty"`
+	RegisteredRedirectURI string            `json:"redirect_uri,omitempty"`
+	ExtraAuthQuery        map[string]string `json:"extras,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -71,18 +79,40 @@ type tokenEndpointResponse struct {
 
 // MakeOauthStartURL returns the url at which direct the user to start
 // the oauth flow
-func (at *AccountType) MakeOauthStartURL(scope string, state string) (string, error) {
+func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, state string) (string, error) {
 
 	u, err := url.Parse(at.AuthEndpoint)
 	if err != nil {
 		return "", err
 	}
 	vv := &url.Values{}
-	vv.Add("scope", scope)
-	vv.Add("response_type", "code")
-	vv.Add("client_id", at.ClientID)
-	vv.Add("state", state)
-	vv.Add("redirect_uri", at.RegisteredRedirectURI)
+
+	redirectURI := i.PageURL("/accounts/"+at.ID()+"/redirect", nil)
+	if at.RegisteredRedirectURI != "" {
+		redirectURI = at.RegisteredRedirectURI
+	}
+
+	switch at.GrantMode {
+	case AuthorizationCode:
+		vv.Add("scope", scope)
+		vv.Add("response_type", "code")
+		vv.Add("client_id", at.ClientID)
+		vv.Add("state", state)
+		vv.Add("redirect_uri", redirectURI)
+	case ImplicitGrant:
+		vv.Add("scope", scope)
+		vv.Add("response_type", "token")
+		vv.Add("client_id", at.ClientID)
+		vv.Add("state", state)
+		vv.Add("redirect_uri", redirectURI)
+	case ImplicitGrantRedirectURL:
+		vv.Add("scope", scope)
+		vv.Add("response_type", "token")
+		vv.Add("state", state)
+		vv.Add("redirect_url", redirectURI)
+	default:
+		return "", errors.New("Wrong account type")
+	}
 
 	for k, v := range at.ExtraAuthQuery {
 		vv.Add(k, v)
