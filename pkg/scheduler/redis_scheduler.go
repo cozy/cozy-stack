@@ -277,7 +277,7 @@ func (s *RedisScheduler) deleteTrigger(t Trigger) error {
 	}
 	switch t.(type) {
 	case *EventTrigger:
-		return s.client.HDel(redisKey(t.Infos()), t.ID()).Err()
+		return s.client.HDel(eventsKey(t.Infos().Domain), t.ID()).Err()
 	case *AtTrigger, *CronTrigger:
 		pipe := s.client.Pipeline()
 		pipe.ZRem(TriggersKey, t.ID())

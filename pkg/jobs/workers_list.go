@@ -20,10 +20,12 @@ func init() {
 			Concurrency: 4,
 			WorkerFunc: func(ctx context.Context, m *Message) error {
 				var msg string
+				var err error
 				if err := m.Unmarshal(&msg); err != nil {
-					return err
+					_, err = fmt.Println(string(m.Data))
+				} else {
+					_, err = fmt.Println(msg)
 				}
-				_, err := fmt.Println(msg)
 				return err
 			},
 		},
