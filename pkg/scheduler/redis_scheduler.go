@@ -230,9 +230,7 @@ func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	switch t := t.(type) {
 	case *EventTrigger:
 		hKey := eventsKey(t.Infos().Domain)
-		hMap := make(map[string]interface{})
-		hMap[t.ID()] = t.Infos().Arguments
-		return s.client.HMSet(hKey, hMap).Err()
+		return s.client.HSet(hKey, t.ID(), t.Infos().Arguments).Err()
 	case *AtTrigger:
 		timestamp = t.at
 	case *CronTrigger:
