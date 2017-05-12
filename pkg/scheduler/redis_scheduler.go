@@ -142,7 +142,7 @@ func (s *RedisScheduler) eventLoop(ch <-chan *realtime.Event) {
 					event.Domain, triggerID, err.Error())
 				continue
 			}
-			_, _, err = s.broker.PushJob(t.(*EventTrigger).Trigger(event))
+			_, err = s.broker.PushJob(t.(*EventTrigger).Trigger(event))
 			if err != nil {
 				log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
 					event.Domain, triggerID, err.Error())
