@@ -26,7 +26,7 @@ var inst *instance.Instance
 func TestUnknownDomain(t *testing.T) {
 	ctx := jobs.NewWorkerContext("unknown", "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug": "unknownapp",
+		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
 	err = Worker(ctx, msg)
@@ -37,7 +37,7 @@ func TestUnknownDomain(t *testing.T) {
 func TestUnknownApp(t *testing.T) {
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug": "unknownapp",
+		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
 	err = Worker(ctx, msg)
@@ -67,7 +67,7 @@ func TestBadFileExec(t *testing.T) {
 
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug":           "my-konnector-1",
+		"konnector":      "my-konnector-1",
 		"account":        account,
 		"folder_to_save": folderToSave,
 	})
@@ -164,8 +164,8 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
-		"slug":    "my-konnector-2",
-		"account": account,
+		"konnector": "my-konnector-2",
+		"account":   account,
 	})
 	assert.NoError(t, err)
 
