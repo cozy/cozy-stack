@@ -21,7 +21,7 @@ func init() {
 			WorkerFunc: func(ctx context.Context, m *Message) error {
 				var msg string
 				var err error
-				if err := m.Unmarshal(&msg); err != nil {
+				if err = m.Unmarshal(&msg); err != nil {
 					_, err = fmt.Println(string(m.Data))
 				} else {
 					_, err = fmt.Println(msg)
