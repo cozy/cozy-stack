@@ -106,6 +106,10 @@ func (t *EventTrigger) Infos() *TriggerInfos {
 }
 
 func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
+	if e.Doc.DocType() != rule.Type {
+		return false
+	}
+
 	if !rule.Verbs.Contains(permissions.Verb(e.Type)) {
 		return false
 	}
