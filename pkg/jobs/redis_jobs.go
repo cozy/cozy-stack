@@ -6,7 +6,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-const redisPrefix = "j:"
+const redisPrefix = "j/"
 
 type redisBroker struct {
 	client *redis.Client

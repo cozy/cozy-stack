@@ -1,9 +1,7 @@
 package jobs
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -23,8 +21,6 @@ import (
 	_ "github.com/cozy/cozy-stack/pkg/workers/sharings"
 	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
 )
-
-const typeTextEventStream = "text/event-stream"
 
 type (
 	apiJob struct {
@@ -251,23 +247,6 @@ func Routes(router *echo.Group) {
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 
 	router.GET("/:job-id", getJob)
-}
-
-func streamJob(job *jobs.JobInfos, w http.ResponseWriter) error {
-	b := new(bytes.Buffer)
-	err := jsonapi.WriteData(b, &apiJob{job}, nil)
-	if err != nil {
-		return err
-	}
-	s := fmt.Sprintf("event: %s\r\ndata: %s\r\n\r\n", job.State, b.String())
-	_, err = w.Write([]byte(s))
-	if err != nil {
-		return err
-	}
-	if f, ok := w.(http.Flusher); ok {
-		f.Flush()
-	}
-	return nil
 }
 
 func wrapJobsError(err error) error {
