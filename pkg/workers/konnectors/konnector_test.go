@@ -143,8 +143,8 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 		doc1 := ev1.Doc.(couchdb.JSONDoc)
 		doc2 := ev2.Doc.(couchdb.JSONDoc)
 		doc3 := ev3.Doc.(couchdb.JSONDoc)
-		assert.Equal(t, inst.Domain, ev1.Instance)
-		assert.Equal(t, inst.Domain, ev2.Instance)
+		assert.Equal(t, inst.Domain, ev1.Domain)
+		assert.Equal(t, inst.Domain, ev2.Domain)
 		assert.Equal(t, inst.PageURL("/", nil), doc1.M["COZY_URL"])
 		assert.Equal(t, account, doc2.M["account"])
 

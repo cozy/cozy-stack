@@ -11,6 +11,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/go-redis/redis"
 )
 
@@ -24,6 +26,10 @@ const SchedKey = "scheduling"
 
 // pollInterval is the time interval between 2 redis polling
 const pollInterval = 1 * time.Second
+
+// eventLoopSize is the number of goroutines handling @events and triggering
+// jobs.
+const eventLoopSize = 50
 
 // luaPoll returns the lua script used for polling triggers in redis.
 // If a trigger is in the scheduling key for more than 10 seconds, it is
@@ -63,30 +69,91 @@ func redisKey(infos *TriggerInfos) string {
 	return infos.Domain + "/" + infos.TID
 }
 
+func eventsKey(domain string) string {
+	return "events-" + domain
+}
+
 // Start a goroutine that will fetch triggers in redis to schedule their jobs
 func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.broker = b
+	go s.eventDispatcher()
+	go s.pollLoop()
+	return nil
+}
+
+func (s *RedisScheduler) pollLoop() {
+	ticker := time.NewTicker(pollInterval)
+	for {
+		select {
+		case <-s.stopped:
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			now := time.Now().UTC().Unix()
+			if err := s.Poll(now); err != nil {
+				log.Warnf("[scheduler] Failed to poll redis: %s", err)
+			}
+		}
+	}
+}
+
+func (s *RedisScheduler) eventDispatcher() {
+	eventsCh := make(chan *realtime.Event, 100)
 	go func() {
-		ticker := time.NewTicker(pollInterval)
+		c := realtime.MainHub().Subscribe("*")
 		for {
 			select {
 			case <-s.stopped:
-				ticker.Stop()
+				close(eventsCh)
 				return
-			case <-ticker.C:
-				now := time.Now().UTC().Unix()
-				if err := s.Poll(now); err != nil {
-					log.Warnf("[Scheduler] Failed to poll redis: %s", err)
-				}
+			case event := <-c.Read():
+				eventsCh <- event
 			}
 		}
 	}()
-	return nil
+	for i := 0; i < eventLoopSize; i++ {
+		go s.eventLoop(eventsCh)
+	}
+}
+
+func (s *RedisScheduler) eventLoop(ch <-chan *realtime.Event) {
+	for event := range ch {
+		key := eventsKey(event.Domain)
+		m, err := s.client.HGetAll(key).Result()
+		if err != nil {
+			log.Errorf("[scheduler] Could not fetch redis set %s: %s",
+				key, err.Error())
+			continue
+		}
+		for triggerID, args := range m {
+			rule, err := permissions.UnmarshalRuleString(args)
+			if err != nil {
+				log.Warnf("[scheduler] Coud not unmarshal rule %s: %s",
+					key, err.Error())
+				continue
+			}
+			if !eventMatchPermission(event, &rule) {
+				continue
+			}
+			t, err := s.Get(event.Domain, triggerID)
+			if err != nil {
+				log.Warnf("[scheduler] Could not fetch @event trigger %s %s: %s",
+					event.Domain, triggerID, err.Error())
+				continue
+			}
+			_, _, err = s.broker.PushJob(t.(*EventTrigger).Trigger(event))
+			if err != nil {
+				log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
+					event.Domain, triggerID, err.Error())
+				continue
+			}
+		}
+	}
 }
 
 // Stop the scheduling of triggers
 func (s *RedisScheduler) Stop() {
-	s.stopped <- struct{}{}
+	close(s.stopped)
 }
 
 // Poll redis to see if there are some triggers ready
@@ -158,6 +225,11 @@ func (s *RedisScheduler) Add(t Trigger) error {
 func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	var timestamp time.Time
 	switch t := t.(type) {
+	case *EventTrigger:
+		hKey := eventsKey(t.Infos().Domain)
+		hMap := make(map[string]interface{})
+		hMap[t.ID()] = t.Infos().Arguments
+		return s.client.HMSet(hKey, hMap).Err()
 	case *AtTrigger:
 		timestamp = t.at
 	case *CronTrigger:
@@ -166,9 +238,6 @@ func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 		if timestamp.Before(now) {
 			timestamp = t.NextExecution(now)
 		}
-	case *EventTrigger:
-		// TODO implement this (we ignore it because of the thumbnails trigger)
-		return nil
 	default:
 		return errors.New("Not implemented yet")
 	}
@@ -206,11 +275,17 @@ func (s *RedisScheduler) deleteTrigger(t Trigger) error {
 	if err := couchdb.DeleteDoc(db, t.Infos()); err != nil {
 		return err
 	}
-	pipe := s.client.Pipeline()
-	pipe.ZRem(TriggersKey, t.ID())
-	pipe.ZRem(SchedKey, t.ID())
-	_, err := pipe.Exec()
-	return err
+	switch t.(type) {
+	case *EventTrigger:
+		return s.client.HDel(redisKey(t.Infos()), t.ID()).Err()
+	case *AtTrigger, *CronTrigger:
+		pipe := s.client.Pipeline()
+		pipe.ZRem(TriggersKey, t.ID())
+		pipe.ZRem(SchedKey, t.ID())
+		_, err := pipe.Exec()
+		return err
+	}
+	return nil
 }
 
 // GetAll returns all the triggers for a domain, from couch.

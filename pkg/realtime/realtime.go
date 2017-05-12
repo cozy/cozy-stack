@@ -16,9 +16,9 @@ type Doc interface {
 
 // Event is the basic message structure manipulated by the realtime package
 type Event struct {
-	Instance string
-	Type     string
-	Doc      Doc
+	Domain string
+	Type   string
+	Doc    Doc
 }
 
 // The following API is inspired by https://github.com/gocontrib/pubsub

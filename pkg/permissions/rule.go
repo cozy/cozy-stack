@@ -74,7 +74,6 @@ func UnmarshalRuleString(in string) (Rule, error) {
 	default:
 		return out, ErrBadScope
 	}
-
 	return out, nil
 }
 

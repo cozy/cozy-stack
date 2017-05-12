@@ -56,7 +56,7 @@ func (ih *instancehub) Publish(e *Event) {
 	if it != nil {
 		it.broadcast <- e
 	}
-	e.Instance = ih.prefix
+	e.Domain = ih.prefix
 	gt := ih.mainHub.getTopic(global, e.Doc.DocType())
 	if gt != nil {
 		gt.broadcast <- e

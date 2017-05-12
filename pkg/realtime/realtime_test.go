@@ -54,7 +54,7 @@ func TestRealtime(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for e := range c3.Read() {
-			assert.Equal(t, "testing", e.Instance)
+			assert.Equal(t, "testing", e.Domain)
 			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
