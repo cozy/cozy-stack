@@ -20,7 +20,7 @@ sha256  38f51fd3b949787ccd2e2af577e1a485c27d00de4c722852f61ac88f034f4cc0
 
 name    ./js/cozy-bar.min.js
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta23/dist/cozy-bar.min.js
-sha256  43f5afcc062f6bf739d1c74889a8f59fc32fbfd9a1183d5e7a6845c26cfdf500
+sha256  cd971a933a91b4626feb84bf120f3a9e3ce52be4229403c6a8753d5338b8a595
 
 name    ./css/cozy-bar.min.css
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.0-beta23/dist/cozy-bar.min.css
