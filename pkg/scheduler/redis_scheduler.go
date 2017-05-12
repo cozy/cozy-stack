@@ -60,8 +60,7 @@ type RedisScheduler struct {
 // other cozy-stack processes to schedule jobs.
 func NewRedisScheduler(client *redis.Client) *RedisScheduler {
 	return &RedisScheduler{
-		client:  client,
-		stopped: make(chan struct{}),
+		client: client,
 	}
 }
 
@@ -76,6 +75,7 @@ func eventsKey(domain string) string {
 // Start a goroutine that will fetch triggers in redis to schedule their jobs
 func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.broker = b
+	s.stopped = make(chan struct{})
 	go s.eventDispatcher()
 	go s.pollLoop()
 	return nil
@@ -104,6 +104,7 @@ func (s *RedisScheduler) eventDispatcher() {
 		for {
 			select {
 			case <-s.stopped:
+				c.Close()
 				close(eventsCh)
 				return
 			case event := <-c.Read():
@@ -153,7 +154,9 @@ func (s *RedisScheduler) eventLoop(ch <-chan *realtime.Event) {
 
 // Stop the scheduling of triggers
 func (s *RedisScheduler) Stop() {
-	close(s.stopped)
+	if s.stopped != nil {
+		close(s.stopped)
+	}
 }
 
 // Poll redis to see if there are some triggers ready

@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -20,6 +21,16 @@ import (
 const redisURL = "redis://localhost:6379/15"
 
 var instanceName string
+
+type testDoc struct {
+	id      string
+	rev     string
+	doctype string
+}
+
+func (t *testDoc) ID() string      { return t.id }
+func (t *testDoc) Rev() string     { return t.rev }
+func (t *testDoc) DocType() string { return t.doctype }
 
 type mockBroker struct {
 	jobs []*jobs.JobRequest
@@ -230,6 +241,75 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	err = sch.Poll(ts + 13)
 	assert.NoError(t, err)
 	<-time.After(1 * time.Millisecond)
+	count, _ = bro.QueueLen("incr")
+	assert.Equal(t, 1, count)
+}
+
+func TestRedisTriggerEvent(t *testing.T) {
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	assert.NoError(t, err)
+
+	bro := &mockBroker{}
+	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch.Stop()
+	sch.Start(bro)
+
+	evTrigger := &scheduler.TriggerInfos{
+		Type:       "@event",
+		Domain:     instanceName,
+		Arguments:  "io.cozy.event-test:CREATED",
+		WorkerType: "incr",
+	}
+	tri, err := scheduler.NewTrigger(evTrigger)
+	assert.NoError(t, err)
+	sch.Add(tri)
+
+	realtime.GetHub().Publish(&realtime.Event{
+		Domain: instanceName,
+		Doc: &testDoc{
+			id:      "foo",
+			doctype: "io.cozy.event-test",
+		},
+		Type: realtime.EventCreate,
+	})
+
+	time.Sleep(10 * time.Millisecond)
+
+	count, _ := bro.QueueLen("incr")
+	assert.Equal(t, 1, count)
+
+	type eventMessage struct {
+		Message string
+		Event   map[string]interface{}
+	}
+	var data eventMessage
+	err = bro.jobs[0].Message.Unmarshal(&data)
+	assert.NoError(t, err)
+	assert.Equal(t, data.Event["Domain"].(string), instanceName)
+	assert.Equal(t, data.Event["Type"].(string), "CREATED")
+
+	realtime.GetHub().Publish(&realtime.Event{
+		Domain: instanceName,
+		Doc: &testDoc{
+			id:      "foo",
+			doctype: "io.cozy.event-test",
+		},
+		Type: realtime.EventUpdate,
+	})
+
+	realtime.GetHub().Publish(&realtime.Event{
+		Domain: instanceName,
+		Doc: &testDoc{
+			id:      "foo",
+			doctype: "io.cozy.event-test.bad",
+		},
+		Type: realtime.EventCreate,
+	})
+
+	time.Sleep(10 * time.Millisecond)
+
 	count, _ = bro.QueueLen("incr")
 	assert.Equal(t, 1, count)
 }
