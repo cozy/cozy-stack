@@ -270,8 +270,11 @@ func ExtractHostAndScheme(fullURL string) (string, string, error) {
 	return host, scheme, nil
 }
 
+// isRecipientSide is used to determine whether or not we are on the recipient side.
+// A sharing is on the recipient side iff:
+// - the sharing type is master-master
+// - the SharerStatus structure is not nil
 func isRecipientSide(sharing *Sharing) bool {
-	// The recipient cannot do anything if it is not a master-master sharing
 	if sharing.SharingType == consts.MasterMasterSharing {
 		if sharing.Sharer.SharerStatus != nil {
 			return true
