@@ -259,6 +259,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Stop()
+	time.Sleep(10 * time.Millisecond)
 	sch.Start(bro)
 
 	evTrigger := &scheduler.TriggerInfos{
