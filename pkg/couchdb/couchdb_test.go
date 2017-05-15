@@ -48,7 +48,8 @@ func (t *testDoc) DocType() string {
 }
 
 func (t *testDoc) Clone() Doc {
-	return t
+	cloned := *t
+	return &cloned
 }
 
 func (t *testDoc) SetID(id string) {

@@ -54,12 +54,13 @@ func SimpleDatabasePrefix(prefix string) Database {
 	return &simpleDB{prefix}
 }
 
-func rtevent(db Database, evtype string, doc Doc) {
+func rtevent(db Database, evtype string, doc, oldDoc Doc) {
 	domain := db.Prefix()
 	domain = domain[:len(domain)-1] // Strip the final '/'
 	realtime.GetHub().Publish(&realtime.Event{
 		Type:   evtype,
 		Doc:    doc.Clone(),
+		OldDoc: oldDoc,
 		Domain: domain,
 	})
 }
@@ -260,7 +261,6 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		log.Debugf("[couchdb] error: %s", err.Error())
 		return err
 	}
-
 	if resbody == nil {
 		return nil
 	}
@@ -389,7 +389,7 @@ func DeleteDoc(db Database, doc Doc) error {
 		return err
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventDelete, doc)
+	rtevent(db, realtime.EventDelete, doc, nil)
 	return nil
 }
 
@@ -404,14 +404,22 @@ func UpdateDoc(db Database, doc Doc) error {
 	if id == "" || doc.Rev() == "" || doctype == "" {
 		return fmt.Errorf("UpdateDoc doc argument should have doctype, id and rev")
 	}
+
 	url := docURL(db, doctype, id)
+	// The old doc is requested to be emitted throught rtevent.
+	// This is useful to keep track of the modifications for the triggers.
+	oldDoc := doc.Clone()
+	err = makeRequest("GET", url, nil, oldDoc)
+	if err != nil {
+		return err
+	}
 	var res updateResponse
 	err = makeRequest("PUT", url, doc, &res)
 	if err != nil {
 		return err
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventUpdate, doc)
+	rtevent(db, realtime.EventUpdate, doc, oldDoc)
 	return nil
 }
 
@@ -434,7 +442,7 @@ func BulkUpdateDoc(db Database, docs []Doc) error {
 	}
 	for i, doc := range docs {
 		doc.SetRev(res[i].Rev)
-		rtevent(db, realtime.EventUpdate, doc)
+		rtevent(db, realtime.EventUpdate, doc, nil)
 	}
 	return nil
 }
@@ -459,7 +467,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 		return err
 	}
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventCreate, doc)
+	rtevent(db, realtime.EventCreate, doc, nil)
 	return nil
 }
 
@@ -511,7 +519,7 @@ func CreateDoc(db Database, doc Doc) error {
 
 	doc.SetID(res.ID)
 	doc.SetRev(res.Rev)
-	rtevent(db, realtime.EventCreate, doc)
+	rtevent(db, realtime.EventCreate, doc, nil)
 	return nil
 }
 
