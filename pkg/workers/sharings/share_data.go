@@ -360,11 +360,10 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 					log.Error("[sharing] An error occurred while trying to "+
 						"send file: ", errf)
 				}
-				continue
 			} else {
 				log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
-				continue
 			}
+			continue
 		}
 
 		md5AtRec := base64.StdEncoding.EncodeToString(remoteFileDoc.MD5Sum)
@@ -405,7 +404,6 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 					"send patch: ", errsp)
 			}
 			continue
-
 		}
 		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)

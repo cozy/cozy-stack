@@ -136,7 +136,7 @@ func checkDocument(sharing *Sharing, docID string) error {
 func sendToRecipients(instance *instance.Instance, domain string, sharing *Sharing, rule *permissions.Rule, docID, eventType string) error {
 	var recInfos []*RecipientInfo
 
-	if sharing.Sharer.SharerStatus != nil && sharing.SharingType == consts.MasterMasterSharing {
+	if isRecipientSide(sharing) {
 		// We are on the recipient side
 		recInfos = make([]*RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
@@ -268,4 +268,14 @@ func ExtractHostAndScheme(fullURL string) (string, string, error) {
 		scheme = "https"
 	}
 	return host, scheme, nil
+}
+
+func isRecipientSide(sharing *Sharing) bool {
+	// The recipient cannot do anything if it is not a master-master sharing
+	if sharing.SharingType == consts.MasterMasterSharing {
+		if sharing.Sharer.SharerStatus != nil {
+			return true
+		}
+	}
+	return false
 }
