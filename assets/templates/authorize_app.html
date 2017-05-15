@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <title>Cozy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/settings/theme.css">
+    <link rel="stylesheet" href="/assets/styles/stack.css">
+    <link rel="icon" type="image/png" href="/assets/images/happycloud.png" />
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+  </head>
+  <body>
+    <main role="application">
+      <section class="popup">
+        <header>
+          <a href="https://cozy.io" target="_blank" title="Cozy Website"></a>
+        </header>
+        <div class="container">
+          <form method="POST" action="/auth/authorize/app" class="login auth">
+            <input type="hidden" name="slug" value="{{.Slug}}" />
+            <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+            <div role="region">
+              <h1>{{t "Authorize Title"}}</h1>
+              <ul>
+                {{range $index, $perm := .Permissions}}
+                <li>{{$perm}}</li>
+                {{end}}
+              </ul>
+            </div>
+            <footer>
+              <div class="controls">
+                <button type="submit" class="btn btn-primary">{{t "Authorize Submit"}}</button>
+              </div>
+            </footer>
+          </form>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

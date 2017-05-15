@@ -4,11 +4,13 @@ package auth
 import (
 	"crypto/subtle"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -413,6 +415,75 @@ func authorize(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
+func authorizeAppForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	if !middlewares.IsLoggedIn(c) {
+		u := instance.PageURL("/auth/login", url.Values{
+			"redirect": {instance.FromURL(c.Request().URL)},
+		})
+		return c.Redirect(http.StatusSeeOther, u)
+	}
+
+	app, ok, err := getApp(c, instance, c.QueryParam("slug"))
+	if !ok || err != nil {
+		return err
+	}
+
+	permissions := app.Permissions()
+	return c.Render(http.StatusOK, "authorize_app.html", echo.Map{
+		"Slug":        app.Slug(),
+		"Permissions": permissions,
+		"CSRF":        c.Get("csrf"),
+	})
+}
+
+func authorizeApp(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	if !middlewares.IsLoggedIn(c) {
+		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
+			"Error": "Error Must be authenticated",
+		})
+	}
+
+	app, ok, err := getApp(c, instance, c.FormValue("slug"))
+	if !ok || err != nil {
+		return err
+	}
+
+	app.SetState(apps.Ready)
+	err = app.Update(instance)
+	if err != nil {
+		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
+			"Error": fmt.Sprintf("Could not activate application: %s", err.Error()),
+		})
+	}
+
+	u := instance.SubDomain(app.Slug())
+	return c.Redirect(http.StatusFound, u.String()+"#")
+}
+
+func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Manifest, bool, error) {
+	app, err := apps.GetWebappBySlug(instance, slug)
+	if err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil, false, c.Render(http.StatusNotFound, "error.html", echo.Map{
+				"Error": `Application should have state "installed"`,
+			})
+		}
+		return nil, false, c.Render(http.StatusInternalServerError, "error.html", echo.Map{
+			"Error": fmt.Sprintf("Could not fetch application: %s", err.Error()),
+		})
+	}
+	if app.State() != apps.Installed {
+		return nil, false, c.Render(http.StatusExpectationFailed, "error.html", echo.Map{
+			"Error": `Application should have state "installed"`,
+		})
+	}
+	return app, true, nil
+}
+
 type accessTokenReponse struct {
 	Type    string `json:"token_type"`
 	Scope   string `json:"scope"`
@@ -633,6 +704,8 @@ func Routes(router *echo.Group) {
 	authorizeGroup := router.Group("/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)
 	authorizeGroup.POST("", authorize)
+	authorizeGroup.GET("/app", authorizeAppForm)
+	authorizeGroup.POST("/app", authorizeApp)
 
 	router.POST("/access_token", accessToken)
 }

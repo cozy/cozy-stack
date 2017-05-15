@@ -146,6 +146,9 @@ func (m *KonnManifest) Delete(db couchdb.Database) error {
 // GetKonnectorBySlug fetch the manifest of a konnector from the database given
 // a slug.
 func GetKonnectorBySlug(db couchdb.Database, slug string) (*KonnManifest, error) {
+	if slug == "" || !slugReg.MatchString(slug) {
+		return nil, ErrInvalidSlugName
+	}
 	man := &KonnManifest{}
 	err := couchdb.GetDoc(db, consts.Konnectors, consts.Konnectors+"/"+slug, man)
 	if couchdb.IsNotFoundError(err) {

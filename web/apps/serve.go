@@ -38,15 +38,25 @@ func Serve(c echo.Context) error {
 	slug := c.Get("slug").(string)
 	app, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
-		if couchdb.IsNotFoundError(err) {
+		switch err {
+		case apps.ErrNotFound:
 			return echo.NewHTTPError(http.StatusNotFound, "Application not found")
+		case apps.ErrInvalidSlugName:
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		default:
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
-		return err
 	}
-	if app.State() != apps.Ready {
+	switch app.State() {
+	case apps.Installed:
+		return c.Redirect(http.StatusFound, i.PageURL("/auth/authorize/app", url.Values{
+			"slug": {slug},
+		}))
+	case apps.Ready:
+		return ServeAppFile(c, i, i.AppsFileServer(), app)
+	default:
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
-	return ServeAppFile(c, i, i.AppsFileServer(), app)
 }
 
 func onboarding(c echo.Context) bool {

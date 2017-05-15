@@ -42,11 +42,11 @@ type Installer struct {
 // InstallerOptions provides the slug name of the application along with the
 // source URL.
 type InstallerOptions struct {
-	Type         AppType
-	Operation    Operation
-	Slug         string
-	SourceURL    string
-	NotActivated bool
+	Type        AppType
+	Operation   Operation
+	Slug        string
+	SourceURL   string
+	Deactivated bool
 }
 
 // Fetcher interface should be implemented by the underlying transport
@@ -121,7 +121,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	}
 
 	var endState State
-	if opts.NotActivated {
+	if opts.Deactivated {
 		endState = Installed
 	} else {
 		endState = Ready
@@ -225,7 +225,9 @@ func (i *Installer) install() (Manifest, error) {
 // upgrading.
 func (i *Installer) update() (Manifest, error) {
 	man := i.man
-	if state := man.State(); state != Ready && state != Errored {
+	if state := man.State(); state != Ready &&
+		state != Installed &&
+		state != Errored {
 		return nil, ErrBadState
 	}
 	if err := i.ReadManifest(Upgrading, man); err != nil {
@@ -240,7 +242,9 @@ func (i *Installer) update() (Manifest, error) {
 
 func (i *Installer) delete() (Manifest, error) {
 	man := i.man
-	if state := man.State(); state != Ready && state != Errored {
+	if state := man.State(); state != Ready &&
+		state != Installed &&
+		state != Errored {
 		return nil, ErrBadState
 	}
 	return man, i.man.Delete(i.db)
@@ -264,7 +268,8 @@ func (i *Installer) ReadManifest(state State, man Manifest) error {
 func (i *Installer) Poll() (Manifest, bool, error) {
 	select {
 	case man := <-i.manc:
-		done := man.State() == Ready
+		state := man.State()
+		done := (state == Ready || state == Installed)
 		return man, done, nil
 	case err := <-i.errc:
 		return nil, false, err

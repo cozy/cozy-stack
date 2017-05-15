@@ -74,12 +74,6 @@ func (c *Client) GetInstance(domain string) (*Instance, error) {
 // CreateInstance is used to create a new cozy instance of the specified domain
 // and locale.
 func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
-	var dev string
-	if opts.Dev {
-		dev = "true"
-	} else {
-		dev = "false"
-	}
 	if !validDomain(opts.Domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", opts.Domain)
 	}
@@ -95,7 +89,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 			"Settings":   {opts.Settings},
 			"DiskQuota":  {strconv.FormatInt(opts.DiskQuota, 10)},
 			"Apps":       {strings.Join(opts.Apps, ",")},
-			"Dev":        {dev},
+			"Dev":        {boolQuery(opts.Dev)},
 			"Passphrase": {opts.Passphrase},
 		},
 	})
