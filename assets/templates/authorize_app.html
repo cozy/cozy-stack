@@ -23,7 +23,7 @@
               <h1>{{t "Authorize Title"}}</h1>
               <ul>
                 {{range $index, $perm := .Permissions}}
-                <li>{{$perm}}</li>
+                <li>{{$perm.Title}} ({{$perm.Verbs}}:{{$perm.Type}}): {{$perm.Description}}</li>
                 {{end}}
               </ul>
             </div>
