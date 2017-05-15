@@ -286,7 +286,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 func init() {
 	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
-	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "deactivated", false, "specify that the application should not be activated after installation")
+	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(installWebappCmd)
