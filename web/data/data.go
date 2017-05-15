@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -464,9 +465,9 @@ func Routes(router *echo.Group) {
 	group.GET("/:docid", getDoc)
 	group.PUT("/:docid", UpdateDoc)
 	group.DELETE("/:docid", DeleteDoc)
-	group.GET("/:docid/relationships/references", listReferencesHandler)
-	group.POST("/:docid/relationships/references", addReferencesHandler)
-	group.DELETE("/:docid/relationships/references", removeReferencesHandler)
+	group.GET("/:docid/relationships/references", files.ListReferencesHandler)
+	group.POST("/:docid/relationships/references", files.AddReferencesHandler)
+	group.DELETE("/:docid/relationships/references", files.RemoveReferencesHandler)
 	group.POST("/", createDoc)
 	group.GET("/_all_docs", allDocs)
 	group.POST("/_all_docs", allDocs)
