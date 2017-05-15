@@ -33,6 +33,9 @@ const (
 	Uninstalling = "uninstalling"
 	// Errored state
 	Errored = "errored"
+	// Installed state, can be used to state that an application has been
+	// installed but needs a user interaction to be activated and "ready".
+	Installed = "installed"
 	// Ready state
 	Ready = "ready"
 )

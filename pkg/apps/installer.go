@@ -24,10 +24,11 @@ const (
 
 // Installer is used to install or update applications.
 type Installer struct {
-	fetcher Fetcher
-	op      Operation
-	fs      Copier
-	db      couchdb.Database
+	fetcher  Fetcher
+	op       Operation
+	fs       Copier
+	db       couchdb.Database
+	endState State
 
 	man  Manifest
 	src  *url.URL
@@ -41,10 +42,11 @@ type Installer struct {
 // InstallerOptions provides the slug name of the application along with the
 // source URL.
 type InstallerOptions struct {
-	Type      AppType
-	Operation Operation
-	Slug      string
-	SourceURL string
+	Type         AppType
+	Operation    Operation
+	Slug         string
+	SourceURL    string
+	NotActivated bool
 }
 
 // Fetcher interface should be implemented by the underlying transport
@@ -118,6 +120,13 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		return nil, err
 	}
 
+	var endState State
+	if opts.NotActivated {
+		endState = Installed
+	} else {
+		endState = Ready
+	}
+
 	var fetcher Fetcher
 	switch src.Scheme {
 	case "git":
@@ -127,10 +136,11 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	}
 
 	return &Installer{
-		fetcher: fetcher,
-		op:      opts.Operation,
-		db:      db,
-		fs:      fs,
+		fetcher:  fetcher,
+		op:       opts.Operation,
+		db:       db,
+		fs:       fs,
+		endState: endState,
 
 		man:  man,
 		src:  src,
@@ -184,7 +194,7 @@ func (i *Installer) endOfProc() {
 		i.errc <- err
 		return
 	}
-	man.SetState(Ready)
+	man.SetState(i.endState)
 	man.Update(i.db)
 	i.manc <- i.man
 }
