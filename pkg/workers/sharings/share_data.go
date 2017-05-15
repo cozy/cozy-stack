@@ -370,7 +370,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 							"compare references: ", errf)
 						continue
 					}
-					if refs != nil && len(refs) > 0 {
+					if refs != nil {
 						errr := sendReferenceToRecipient(refs, isUpdate, opts, recipient)
 						if errr != nil {
 							log.Error("[sharing] An error occurred while trying to "+

@@ -474,6 +474,145 @@ func TestDeleteDirOrFile(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestFileHasChangesSameFilesSuccess(t *testing.T) {
+	newFileDoc := &vfs.FileDoc{
+		DocName: "samename",
+	}
+	remoteFileDoc := &vfs.FileDoc{
+		DocName: "samename",
+	}
+	hasChange := fileHasChanges(newFileDoc, remoteFileDoc)
+	assert.Equal(t, false, hasChange)
+}
+
+func TestFileHasChangesNameSuccess(t *testing.T) {
+	newFileDoc := &vfs.FileDoc{
+		DocName: "newname",
+	}
+	remoteFileDoc := &vfs.FileDoc{
+		DocName: "oldname",
+	}
+	hasChange := fileHasChanges(newFileDoc, remoteFileDoc)
+	assert.Equal(t, true, hasChange)
+}
+
+func TestFileHasChangesTagSuccess(t *testing.T) {
+	newFileDoc := &vfs.FileDoc{
+		DocName: "samename",
+	}
+	remoteFileDoc := &vfs.FileDoc{
+		DocName: "samename",
+		Tags:    []string{"pimpmytag"},
+	}
+	hasChange := fileHasChanges(newFileDoc, remoteFileDoc)
+	assert.Equal(t, true, hasChange)
+}
+
+func TestDocHasChangesSameDocsSuccess(t *testing.T) {
+	newDoc := &couchdb.JSONDoc{
+		M: make(map[string]interface{}),
+	}
+	remoteDoc := &couchdb.JSONDoc{
+		M: make(map[string]interface{}),
+	}
+	newDoc.M["_id"] = "sharedid"
+	newDoc.M["_rev"] = "localrev"
+	remoteDoc.M["_id"] = "sharedid"
+	remoteDoc.M["_rev"] = "remoterev"
+	newDoc.M["samefield"] = "thesame"
+	remoteDoc.M["samefield"] = "thesame"
+
+	equal := docHasChanges(newDoc, remoteDoc)
+	assert.Equal(t, false, equal)
+}
+
+func TestDocHasChangesNotSameDocsSuccess(t *testing.T) {
+	newDoc := &couchdb.JSONDoc{
+		M: make(map[string]interface{}),
+	}
+	remoteDoc := &couchdb.JSONDoc{
+		M: make(map[string]interface{}),
+	}
+	newDoc.M["_id"] = "sharedid"
+	newDoc.M["_rev"] = "localrev"
+	remoteDoc.M["_id"] = "sharedid"
+	remoteDoc.M["_rev"] = "remoterev"
+	newDoc.M["samefield"] = "thesame"
+	remoteDoc.M["samefield"] = "notthesame"
+
+	equal := docHasChanges(newDoc, remoteDoc)
+	assert.Equal(t, true, equal)
+}
+
+func TestFindNewRefsBadPermission(t *testing.T) {
+	fileDoc := &vfs.FileDoc{}
+	remoteFileDoc := &vfs.FileDoc{}
+	opts := &SendOptions{
+		Values: []string{"badperm"},
+	}
+	_, _, err := findNewRefs(fileDoc, remoteFileDoc, opts)
+	assert.Error(t, err)
+	assert.Equal(t, ErrBadPermission.Error(), err.Error())
+}
+
+func TestFindNewRefsSameRefSuccess(t *testing.T) {
+	sharedRef := couchdb.DocReference{Type: "reftype", ID: "refid"}
+	localRefs := []couchdb.DocReference{sharedRef}
+	remoteRefs := []couchdb.DocReference{sharedRef}
+	fileDoc := &vfs.FileDoc{
+		ReferencedBy: localRefs,
+	}
+	remoteFileDoc := &vfs.FileDoc{
+		ReferencedBy: remoteRefs,
+	}
+	opts := &SendOptions{
+		Values: []string{"reftype/refid"},
+	}
+	refs, isUpdate, err := findNewRefs(fileDoc, remoteFileDoc, opts)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isUpdate)
+	var expected []couchdb.DocReference
+	assert.Equal(t, expected, refs)
+}
+
+func TestFindNewRefsRemoveLocalRefsSuccess(t *testing.T) {
+	sharedRef := couchdb.DocReference{Type: "reftype", ID: "refid"}
+	localRefs := []couchdb.DocReference{}
+	remoteRefs := []couchdb.DocReference{sharedRef}
+	fileDoc := &vfs.FileDoc{
+		ReferencedBy: localRefs,
+	}
+	remoteFileDoc := &vfs.FileDoc{
+		ReferencedBy: remoteRefs,
+	}
+	opts := &SendOptions{
+		Values: []string{"reftype/refid"},
+	}
+	refs, isUpdate, err := findNewRefs(fileDoc, remoteFileDoc, opts)
+	assert.NoError(t, err)
+	assert.Equal(t, false, isUpdate)
+	assert.Equal(t, remoteRefs, refs)
+}
+
+func TestFindNewRefsRemoveRemoteRefsSuccess(t *testing.T) {
+	sharedRef := couchdb.DocReference{Type: "reftype", ID: "refid"}
+	localRefs := []couchdb.DocReference{sharedRef}
+	remoteRefs := []couchdb.DocReference{}
+	fileDoc := &vfs.FileDoc{
+		ReferencedBy: localRefs,
+	}
+	remoteFileDoc := &vfs.FileDoc{
+		ReferencedBy: remoteRefs,
+	}
+	opts := &SendOptions{
+		Values: []string{"reftype/refid"},
+	}
+	refs, isUpdate, err := findNewRefs(fileDoc, remoteFileDoc, opts)
+	assert.NoError(t, err)
+	assert.Equal(t, true, isUpdate)
+	assert.Equal(t, localRefs, refs)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
