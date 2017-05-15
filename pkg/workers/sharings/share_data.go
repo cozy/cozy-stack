@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -66,6 +67,11 @@ type fileOptions struct {
 	set           bool // default value is false
 }
 
+var (
+	// ErrBadFileFormat is used when the given file is not well structured
+	ErrBadFileFormat = errors.New("Bad file format")
+)
+
 // fillDetailsAndOpenFile will augment the SendOptions structure with the
 // details regarding the file to share and open it so that it can be sent.
 //
@@ -82,11 +88,6 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 	}
 
 	fileOpts := &fileOptions{}
-
-	parentID, err := getParentDirID(opts, fileDoc.DirID)
-	if err != nil {
-		return err
-	}
 
 	fileOpts.mime = fileDoc.Mime
 	fileOpts.contentlength = strconv.FormatInt(fileDoc.ByteSize, 10)
@@ -106,7 +107,6 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 		consts.QueryParamCreatedAt:    {fileDoc.CreatedAt.Format(time.RFC1123)},
 		consts.QueryParamUpdatedAt:    {fileDoc.UpdatedAt.Format(time.RFC1123)},
 		consts.QueryParamReferencedBy: []string{refs},
-		consts.QueryParamDirID:        {parentID},
 	}
 
 	content, err := fs.OpenFile(fileDoc)
@@ -285,6 +285,9 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	}
 	defer opts.closeFile()
 
+	// Give the SharedWithMeDirID as parent: this is a creation
+	opts.fileOpts.queries.Add(consts.QueryParamDirID, consts.SharedWithMeDirID)
+
 	for _, rec := range opts.Recipients {
 		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
@@ -340,25 +343,24 @@ func SendDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 // changed compared to their local version, and sends a patch if not.
 func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
 	md5 := base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
-
 	// A file descriptor can be open in the for loop.
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
 		// Get recipient data
-		data, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
+		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
 			log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
 			continue
 		}
 
-		md5AtRec, rev := extractMD5AndRev(data, recipient)
-		opts.DocRev = rev
+		md5AtRec := base64.StdEncoding.EncodeToString(remoteFileDoc.MD5Sum)
+		opts.DocRev = remoteFileDoc.Rev()
 
 		// The MD5 didn't change: this is a PATCH
 		if md5 == md5AtRec {
 			// Check the metadata did change to do the patch
-			if hasChanges := fileHasChanges(fileDoc, data); !hasChanges {
+			if !fileHasChanges(fileDoc, remoteFileDoc) {
 				continue
 			}
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
@@ -627,27 +629,22 @@ func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *
 	return doc, nil
 }
 
-func extractMD5AndRev(data map[string]interface{}, recipient *RecipientInfo) (md5sum, rev string) {
-	attributes := data["attributes"].(map[string]interface{})
-	md5sum = attributes["md5sum"].(string)
-	meta := data["meta"].(map[string]interface{})
-	rev = meta["rev"].(string)
-
-	return
-}
-
 func getDirOrFileRevAtRecipient(docID string, recipient *RecipientInfo) (string, error) {
-	data, err := getDirOrFileMetadataAtRecipient(docID, recipient)
+	var rev string
+	dirDoc, fileDoc, err := getDirOrFileMetadataAtRecipient(docID, recipient)
 	if err != nil {
 		return "", err
 	}
+	if dirDoc != nil {
+		rev = dirDoc.Rev()
+	} else if fileDoc != nil {
+		rev = fileDoc.Rev()
+	}
 
-	meta := data["meta"].(map[string]interface{})
-	rev := meta["rev"].(string)
 	return rev, nil
 }
 
-func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[string]interface{}, error) {
+func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	path := fmt.Sprintf("/files/%s", id)
 
 	res, err := request.Req(&request.Options{
@@ -662,36 +659,37 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (map[str
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	doc := map[string]interface{}{}
-	err = request.ReadJSON(res.Body, &doc)
+	dirOrFileDoc, err := bindDirOrFile(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	// What is returned by the stack has the following structure:
-	// data : {
-	//		attributes: {
-	//			md5sum: string,
-	//			…,
-	//		},
-	//		meta: {
-	//			rev: string,
-	//		},
-	// }
-	data := doc["data"].(map[string]interface{})
-	return data, nil
+	if dirOrFileDoc == nil {
+		return nil, nil, ErrBadFileFormat
+	}
+	dirDoc, fileDoc := dirOrFileDoc.Refine()
+	return dirDoc, fileDoc, nil
 }
 
 // filehasChanges checks that the local file do have changes compared to the remote one
 // This is done to prevent infinite loops after a PUT/PATCH in master-master:
 // we don't propagate the update if they are similar
-func fileHasChanges(newFileDoc *vfs.FileDoc, data map[string]interface{}) bool {
-	//TODO: support modifications on other fields
-	attributes := data["attributes"].(map[string]interface{})
-	return newFileDoc.Name() != attributes["name"].(string)
+func fileHasChanges(newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
+	if newFileDoc.Name() != remoteFileDoc.Name() {
+		return true
+	}
+	if !reflect.DeepEqual(newFileDoc.Tags, remoteFileDoc.Tags) {
+		return true
+	}
+	if newFileDoc.UpdatedAt != remoteFileDoc.UpdatedAt {
+		return true
+	}
+	//TODO: only consider shared references
+	if !reflect.DeepEqual(newFileDoc.ReferencedBy, remoteFileDoc.ReferencedBy) {
+		return true
+	}
+	return false
 }
 
 // docHasChanges checks that the local doc do have changes compared to the remote one
@@ -715,4 +713,27 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 	doc.M["_rev"] = rev
 
 	return !isEqual
+}
+
+func bindDirOrFile(body io.Reader) (*vfs.DirOrFileDoc, error) {
+	decoder := json.NewDecoder(body)
+	var doc *jsonapi.Document
+	var dirOrFileDoc *vfs.DirOrFileDoc
+
+	if err := decoder.Decode(&doc); err != nil {
+		return nil, err
+	}
+	if doc.Data == nil {
+		return nil, jsonapi.BadJSON()
+	}
+	var obj *jsonapi.ObjectMarshalling
+	if err := json.Unmarshal(*doc.Data, &obj); err != nil {
+		return nil, err
+	}
+	if obj.Attributes != nil {
+		if err := json.Unmarshal(*obj.Attributes, &dirOrFileDoc); err != nil {
+			return nil, err
+		}
+	}
+	return dirOrFileDoc, nil
 }
