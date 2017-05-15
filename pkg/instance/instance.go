@@ -580,7 +580,7 @@ func (i *Instance) RequestPassphraseReset() error {
 	if err != nil {
 		return err
 	}
-	_, _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
 		Domain:     i.Domain,
 		WorkerType: "sendmail",
 		Message:    msg,

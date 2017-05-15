@@ -78,7 +78,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			// are of no use in this situation.
 			// FI: they correspond to the job information and to a channel with
 			// which we can check the advancement of said job.
-			_, _, errJobs := stack.GetBroker().PushJob(&jobs.JobRequest{
+			_, errJobs := stack.GetBroker().PushJob(&jobs.JobRequest{
 				Domain:     instance.Domain,
 				WorkerType: "sendmail",
 				Options:    nil,

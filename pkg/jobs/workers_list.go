@@ -1,10 +1,6 @@
 package jobs
 
-import (
-	"context"
-	"fmt"
-	"time"
-)
+import "fmt"
 
 // WorkersList is a map associating a worker type with its acutal
 // configuration.
@@ -12,33 +8,7 @@ type WorkersList map[string]*WorkerConfig
 
 // WorkersList is the list of available workers with their associated Do
 // function.
-var workersList WorkersList
-
-func init() {
-	workersList = WorkersList{
-		"print": {
-			Concurrency: 4,
-			WorkerFunc: func(ctx context.Context, m *Message) error {
-				var msg string
-				var err error
-				if err = m.Unmarshal(&msg); err != nil {
-					_, err = fmt.Println(string(m.Data))
-				} else {
-					_, err = fmt.Println(msg)
-				}
-				return err
-			},
-		},
-		"timeout": {
-			Concurrency: 4,
-			Timeout:     10 * time.Second,
-			WorkerFunc: func(ctx context.Context, _ *Message) error {
-				<-ctx.Done()
-				return ctx.Err()
-			},
-		},
-	}
-}
+var workersList = WorkersList{}
 
 // GetWorkersList returns a globally defined worker config list.
 func GetWorkersList() WorkersList {

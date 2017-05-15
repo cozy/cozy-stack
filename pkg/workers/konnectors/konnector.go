@@ -268,7 +268,7 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	if err != nil {
 		return err
 	}
-	_, _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
 		Domain:     domain,
 		WorkerType: "sendmail",
 		Message:    msg,

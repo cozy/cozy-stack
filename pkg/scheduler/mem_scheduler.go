@@ -163,7 +163,7 @@ func (s *MemScheduler) schedule(t Trigger) {
 	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().TID)
 	for req := range t.Schedule() {
 		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().TID)
-		if _, _, err := s.broker.PushJob(req); err != nil {
+		if _, err := s.broker.PushJob(req); err != nil {
 			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s", t.Type(), t.Infos().TID, err.Error())
 		}
 	}

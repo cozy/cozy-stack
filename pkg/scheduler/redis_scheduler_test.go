@@ -2,6 +2,7 @@ package scheduler_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"sync"
 	"testing"
@@ -36,9 +37,9 @@ type mockBroker struct {
 	jobs []*jobs.JobRequest
 }
 
-func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.JobInfos, <-chan *jobs.JobInfos, error) {
+func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.JobInfos, error) {
 	b.jobs = append(b.jobs, request)
-	return nil, nil, nil
+	return nil, nil
 }
 
 func (b *mockBroker) QueueLen(workerType string) (int, error) {
@@ -49,6 +50,10 @@ func (b *mockBroker) QueueLen(workerType string) (int, error) {
 		}
 	}
 	return count, nil
+}
+
+func (b *mockBroker) GetJobInfos(domain, id string) (*jobs.JobInfos, error) {
+	return nil, errors.New("Not implemented")
 }
 
 func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
