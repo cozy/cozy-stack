@@ -54,8 +54,7 @@ do_prepare_ldflags() {
 	VERSION_OS_ARCH="${GOOS}-${GOARCH}"
 	if [ -z "${VERSION_STRING}" ]; then
 		VERSION_STRING=$(git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
-			describe --tags --dirty 2> /dev/null | \
-			sed -E 's/(.*)-g[[:xdigit:]]+(-?.*)$/\1\2/g')
+			describe --tags --dirty 2> /dev/null)
 
 		if [ -z "${VERSION_STRING}" ]; then
 			VERSION_STRING="v0-$(git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD)"
