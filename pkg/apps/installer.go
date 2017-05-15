@@ -121,7 +121,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	}
 
 	var endState State
-	if opts.Deactivated {
+	if opts.Deactivated || man.State() == Installed {
 		endState = Installed
 	} else {
 		endState = Ready
