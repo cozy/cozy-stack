@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -m
 
 [ -z "${COZY_STACK_HOST}" ] && COZY_STACK_HOST="cozy.tools"
 [ -z "${COZY_STACK_PORT}" ] && COZY_STACK_PORT="8080"
@@ -69,8 +70,6 @@ do_start() {
 		echo "ok"
 	fi
 
-	trap 'trap - SIGTERM && kill 2>&1 > /dev/null -- -${$}' SIGINT SIGTERM EXIT
-
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
 
@@ -121,7 +120,7 @@ do_start() {
 		echo "Everything is setup. Go to http://${slug}.${cozy_dev_addr}/"
 	fi
 	echo "To exit, press ^C"
-	cat
+	fg 1 > /dev/null
 }
 
 do_check_couchdb() {
