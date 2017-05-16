@@ -33,7 +33,7 @@ type Sharing struct {
 
 	Permissions      permissions.Set    `json:"permissions,omitempty"`
 	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
-	Sharer           *Sharer            `json:"sharer,omitempty"`
+	Sharer           Sharer             `json:"sharer,omitempty"`
 }
 
 // Sharer contains the information about the sharer from the recipient's
@@ -66,7 +66,22 @@ func (s *Sharing) Rev() string { return s.SRev }
 func (s *Sharing) DocType() string { return consts.Sharings }
 
 // Clone implements couchdb.Doc
-func (s *Sharing) Clone() couchdb.Doc { cloned := *s; return &cloned }
+func (s *Sharing) Clone() couchdb.Doc {
+	cloned := *s
+	if s.RecipientsStatus != nil {
+		var rStatus []*RecipientStatus
+		cloned.RecipientsStatus = rStatus
+		for _, v := range s.RecipientsStatus {
+			rec := *v
+			cloned.RecipientsStatus = append(cloned.RecipientsStatus, &rec)
+		}
+	}
+	if s.Sharer.SharerStatus != nil {
+		sharerStatus := *s.Sharer.SharerStatus
+		cloned.Sharer.SharerStatus = &sharerStatus
+	}
+	return &cloned
+}
 
 // SetID changes the sharing qualified identifier
 func (s *Sharing) SetID(id string) { s.SID = id }
@@ -422,7 +437,7 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 		HostClientID: clientID,
 		recipient:    &Recipient{URL: sharerClient.ClientURI},
 	}
-	sharer := &Sharer{
+	sharer := Sharer{
 		URL:          sharerClient.ClientURI,
 		SharerStatus: sr,
 	}

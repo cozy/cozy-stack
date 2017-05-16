@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -70,6 +71,8 @@ type fileOptions struct {
 var (
 	// ErrBadFileFormat is used when the given file is not well structured
 	ErrBadFileFormat = errors.New("Bad file format")
+	// ErrBadPermission is used when a given permission is not valid
+	ErrBadPermission = errors.New("Invalid permission format")
 )
 
 // fillDetailsAndOpenFile will augment the SendOptions structure with the
@@ -142,7 +145,6 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 	if err != nil {
 		return err
 	}
-
 	opts.Path = fmt.Sprintf("/sharings/doc/%s/%s", opts.DocType, opts.DocID)
 
 	if opts.DocType == consts.Files {
@@ -155,7 +157,6 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 			opts.Type = consts.DirType
 			return SendDir(opts, dirDoc)
 		}
-
 		opts.Type = consts.FileType
 		return SendFile(ins, opts, fileDoc)
 	}
@@ -356,13 +357,30 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 		md5AtRec := base64.StdEncoding.EncodeToString(remoteFileDoc.MD5Sum)
 		opts.DocRev = remoteFileDoc.Rev()
-
 		// The MD5 didn't change: this is a PATCH
 		if md5 == md5AtRec {
 			// Check the metadata did change to do the patch
 			if !fileHasChanges(fileDoc, remoteFileDoc) {
-				continue
+
+				// Special case to deal with ReferencedBy fields
+				if opts.Selector == "referenced_by" {
+					refs, isUpdate, errf := findNewRefs(fileDoc, remoteFileDoc, opts)
+					if errf != nil {
+						log.Error("[sharing] An error occurred while trying to "+
+							"compare references: ", errf)
+						continue
+					}
+					if refs != nil {
+						errr := sendReferenceToRecipient(refs, isUpdate, opts, recipient)
+						if errr != nil {
+							log.Error("[sharing] An error occurred while trying to "+
+								"compare references: ", errr)
+						}
+					}
+					continue
+				}
 			}
+
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
 				log.Errorf("[sharing] Could not generate patch for file %v: %v",
@@ -374,8 +392,8 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 				log.Error("[sharing] An error occurred while trying to "+
 					"send patch: ", errsp)
 			}
-
 			continue
+
 		}
 		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
@@ -508,6 +526,43 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 			consts.QueryParamRev:   {opts.DocRev},
 			consts.QueryParamType:  {opts.Type},
 			consts.QueryParamDirID: {parentID},
+		},
+		Body:       body,
+		NoResponse: true,
+	})
+
+	return err
+}
+
+func sendReferenceToRecipient(refs []couchdb.DocReference, isUpdate bool, opts *SendOptions, recipient *RecipientInfo) error {
+	data, err := json.Marshal(refs)
+	if err != nil {
+		return err
+	}
+	doc := jsonapi.Document{
+		Data: (*json.RawMessage)(&data),
+	}
+	body, err := request.WriteJSON(doc)
+	if err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/files/%s/relationships/referenced_by", opts.DocID)
+	var method string
+	if isUpdate {
+		method = http.MethodPost
+	} else {
+		method = http.MethodDelete
+	}
+
+	_, err = request.Req(&request.Options{
+		Domain: recipient.URL,
+		Scheme: recipient.Scheme,
+		Method: method,
+		Path:   path,
+		Headers: request.Headers{
+			echo.HeaderContentType:   jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " + recipient.Token,
 		},
 		Body:       body,
 		NoResponse: true,
@@ -682,13 +737,6 @@ func fileHasChanges(newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
 	if !reflect.DeepEqual(newFileDoc.Tags, remoteFileDoc.Tags) {
 		return true
 	}
-	if newFileDoc.UpdatedAt != remoteFileDoc.UpdatedAt {
-		return true
-	}
-	//TODO: only consider shared references
-	if !reflect.DeepEqual(newFileDoc.ReferencedBy, remoteFileDoc.ReferencedBy) {
-		return true
-	}
 	return false
 }
 
@@ -715,6 +763,65 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 	return !isEqual
 }
 
+// findNewRefs finds reference_by differences between files
+func findNewRefs(newFileDoc, remoteFileDoc *vfs.FileDoc, opts *SendOptions) ([]couchdb.DocReference, bool, error) {
+	var refs []couchdb.DocReference
+	// extract the references from the values
+	var ruleRef []couchdb.DocReference
+	for _, val := range opts.Values {
+		parts := strings.Split(val, permissions.RefSep)
+		if len(parts) != 2 {
+			return nil, false, ErrBadPermission
+		}
+		ref := couchdb.DocReference{
+			Type: parts[0],
+			ID:   parts[1],
+		}
+		ruleRef = append(ruleRef, ref)
+	}
+
+	sharedRef := extractSharedReferences(ruleRef, newFileDoc.ReferencedBy)
+	remoteSharedRef := extractSharedReferences(ruleRef, remoteFileDoc.ReferencedBy)
+
+	if len(sharedRef) > len(remoteSharedRef) {
+		refs = findMissingRefs(sharedRef, remoteSharedRef)
+		return refs, true, nil
+	} else if len(sharedRef) < len(remoteSharedRef) {
+		refs = findMissingRefs(remoteSharedRef, sharedRef)
+		return refs, false, nil
+	}
+	return refs, false, nil
+}
+
+func extractSharedReferences(ruleRef, refs []couchdb.DocReference) []couchdb.DocReference {
+	var sharedRef []couchdb.DocReference
+
+	for _, ref := range refs {
+		for _, rRef := range ruleRef {
+			if rRef.ID == ref.ID && rRef.Type == ref.Type {
+				sharedRef = append(sharedRef, ref)
+			}
+		}
+	}
+	return sharedRef
+}
+
+func findMissingRefs(lref, rref []couchdb.DocReference) []couchdb.DocReference {
+	var refs []couchdb.DocReference
+	for _, lr := range lref {
+		hasRef := false
+		for _, rr := range rref {
+			if rr.ID == lr.ID && rr.Type == lr.Type {
+				hasRef = true
+			}
+		}
+		if !hasRef {
+			refs = append(refs, lr)
+		}
+	}
+	return refs
+}
+
 func bindDirOrFile(body io.Reader) (*vfs.DirOrFileDoc, error) {
 	decoder := json.NewDecoder(body)
 	var doc *jsonapi.Document
@@ -735,5 +842,22 @@ func bindDirOrFile(body io.Reader) (*vfs.DirOrFileDoc, error) {
 			return nil, err
 		}
 	}
+	if rel, ok := obj.GetRelationship("referenced_by"); ok {
+		if res, ok := rel.Data.([]interface{}); ok {
+			var refs []couchdb.DocReference
+			for _, r := range res {
+				if m, ok := r.(map[string]interface{}); ok {
+					idd, _ := m["id"].(string)
+					typ, _ := m["type"].(string)
+					ref := couchdb.DocReference{ID: idd, Type: typ}
+					refs = append(refs, ref)
+				}
+			}
+			dirOrFileDoc.ReferencedBy = refs
+		}
+	}
+	dirOrFileDoc.SetID(obj.ID)
+	dirOrFileDoc.SetRev(obj.Meta.Rev)
+
 	return dirOrFileDoc, nil
 }

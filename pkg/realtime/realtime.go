@@ -19,6 +19,7 @@ type Event struct {
 	Domain string
 	Type   string
 	Doc    Doc
+	OldDoc Doc
 }
 
 // The following API is inspired by https://github.com/gocontrib/pubsub

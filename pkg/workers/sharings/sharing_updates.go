@@ -67,7 +67,7 @@ type Sharing struct {
 	SharingType      string             `json:"sharing_type"`
 	Permissions      permissions.Set    `json:"permissions,omitempty"`
 	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
-	Sharer           *Sharer            `json:"sharer,omitempty"`
+	Sharer           Sharer             `json:"sharer,omitempty"`
 }
 
 // Sharer gives the share info, only on the recipient side
@@ -136,7 +136,7 @@ func checkDocument(sharing *Sharing, docID string) error {
 func sendToRecipients(instance *instance.Instance, domain string, sharing *Sharing, rule *permissions.Rule, docID, eventType string) error {
 	var recInfos []*RecipientInfo
 
-	if sharing.Sharer != nil && sharing.SharingType == consts.MasterMasterSharing {
+	if sharing.Sharer.SharerStatus != nil && sharing.SharingType == consts.MasterMasterSharing {
 		// We are on the recipient side
 		recInfos = make([]*RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
