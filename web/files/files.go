@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -714,12 +716,71 @@ func DestroyFileHandler(c echo.Context) error {
 	return c.NoContent(204)
 }
 
+const maxMangoLimit = 100
+
+// FindFilesMango is the route POST /files/_find
+// used to retrieve files and their metadata from a mango query.
+func FindFilesMango(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	var findRequest map[string]interface{}
+
+	if err := c.Bind(&findRequest); err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
+	}
+
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Files); err != nil {
+		return err
+	}
+
+	limit, hasLimit := findRequest["limit"].(float64)
+	if !hasLimit || limit > maxMangoLimit {
+		limit = 100
+	}
+	skip := 0
+	skipF64, hasSkip := findRequest["skip"].(float64)
+	if hasSkip {
+		skip = int(skipF64)
+	}
+
+	// add 1 so we know if there is more.
+	findRequest["limit"] = limit + 1
+
+	var results []vfs.DirOrFileDoc
+	err := couchdb.FindDocsRaw(instance, consts.Files, &findRequest, &results)
+	if err != nil {
+		return err
+	}
+
+	var total int
+	if len(results) > int(limit) {
+		total = math.MaxInt32 - 1          // we dont know the actual number
+		results = results[:len(results)-1] // loose the last item
+	} else {
+		total = skip + len(results) // let the client know its done.
+	}
+
+	out := make([]jsonapi.Object, len(results))
+	for i, dof := range results {
+		d, f := dof.Refine()
+		if d != nil {
+			out[i] = newDir(d)
+		} else {
+			out[i] = newFile(f, instance)
+		}
+	}
+
+	return jsonapi.DataListWithTotal(c, http.StatusOK, total, out, nil)
+
+}
+
 // Routes sets the routing for the files service
 func Routes(router *echo.Group) {
 	router.HEAD("/download", ReadFileContentFromPathHandler)
 	router.GET("/download", ReadFileContentFromPathHandler)
 	router.HEAD("/download/:file-id", ReadFileContentFromIDHandler)
 	router.GET("/download/:file-id", ReadFileContentFromIDHandler)
+
+	router.POST("/_find", FindFilesMango)
 
 	router.GET("/metadata", ReadMetadataFromPathHandler)
 	router.GET("/:file-id", ReadMetadataFromIDHandler)
