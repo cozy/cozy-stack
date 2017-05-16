@@ -377,8 +377,8 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 								"compare references: ", errr)
 						}
 					}
-					continue
 				}
+				continue
 			}
 
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
