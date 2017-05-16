@@ -64,7 +64,16 @@ func (f *FileDoc) Rev() string { return f.DocRev }
 func (f *FileDoc) DocType() string { return consts.Files }
 
 // Clone implements couchdb.Doc
-func (f *FileDoc) Clone() couchdb.Doc { cloned := *f; return &cloned }
+func (f *FileDoc) Clone() couchdb.Doc {
+	cloned := *f
+	cloned.MD5Sum = make([]byte, len(f.MD5Sum))
+	copy(cloned.MD5Sum, f.MD5Sum)
+	cloned.Tags = make([]string, len(f.Tags))
+	copy(cloned.Tags, f.Tags)
+	cloned.ReferencedBy = make([]couchdb.DocReference, len(f.ReferencedBy))
+	copy(cloned.ReferencedBy, f.ReferencedBy)
+	return &cloned
+}
 
 // SetID changes the file qualified identifier
 func (f *FileDoc) SetID(id string) { f.DocID = id }
