@@ -1,22 +1,86 @@
 package jobs
 
 import (
+	"strings"
+	"time"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/go-redis/redis"
+	"github.com/labstack/gommon/log"
 )
 
 const redisPrefix = "j/"
 
 type redisBroker struct {
 	client *redis.Client
+	queues map[string]chan Job
 }
 
 // NewRedisBroker creates a new broker that will use redis to distribute
 // the jobs among several cozy-stack processes.
 func NewRedisBroker(client *redis.Client) Broker {
-	return &redisBroker{
+	broker := &redisBroker{
 		client: client,
+	}
+	broker.Start(GetWorkersList())
+	return broker
+}
+
+// Start polling jobs from redis queues
+func (b *redisBroker) Start(ws WorkersList) {
+	b.queues = make(map[string]chan Job)
+	var keys []string
+	for workerType, conf := range ws {
+		ch := make(chan Job)
+		b.queues[workerType] = ch
+		w := &Worker{
+			Type: workerType,
+			Conf: conf,
+		}
+		w.Start(ch)
+		keys = append(keys, redisPrefix+workerType)
+	}
+	go b.pollLoop(keys)
+}
+
+func (b *redisBroker) pollLoop(keys []string) {
+	timeout := 30 * time.Second
+	for {
+		results, err := b.client.BRPop(timeout, keys...).Result()
+		if err != nil {
+			time.Sleep(time.Second)
+			continue
+		}
+		if len(results) < 2 {
+			continue
+		}
+
+		workerType := results[0][len(redisPrefix):]
+		ch, ok := b.queues[workerType]
+		if !ok {
+			log.Warnf("Unknown workerType: %s", workerType)
+			continue
+		}
+
+		parts := strings.SplitN(results[1], "/", 2)
+		if len(parts) != 2 {
+			log.Warnf("Invalid key %s", results[1])
+			continue
+		}
+		infos, err := b.GetJobInfos(parts[0], parts[1])
+		if err != nil {
+			log.Warnf("Cannot find job %s on domain %s: %s", parts[1], parts[0], err)
+			continue
+		}
+
+		job := Job{
+			infos: infos,
+			storage: &couchStorage{
+				db: couchdb.SimpleDatabasePrefix(parts[0]),
+			},
+		}
+		ch <- job
 	}
 }
 

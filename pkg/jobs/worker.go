@@ -28,30 +28,6 @@ var (
 )
 
 type (
-	// Job interface represents a job.
-	Job interface {
-		// Domain returns the domain name from which the job has been sent.
-		Domain() string
-		// Infos returns the JobInfos data associated with the job
-		Infos() *JobInfos
-		// AckConsumed should be used by the consumer of the job, ack-ing that
-		// it has well received the job and is processing it.
-		AckConsumed() error
-		// Ack should be used by the consumer after the job has been processed,
-		// ack-ing that the job was successfully executed.
-		Ack() error
-		// Nack should be used to tell that the job coult not be consumed or that
-		// an error has happened during its processing. The error passed will be
-		// used to inform in more detail about the error that happened.
-		Nack(error) error
-		// Marshal allows you to define how the job should be marshalled when put
-		// into the queue.
-		Marshal() ([]byte, error)
-		// Unmarshal allows you to define how the job should be unmarshalled when
-		// consumed from the queue.
-		Unmarshal() error
-	}
-
 	// WorkerFunc represent the work function that a worker should implement.
 	WorkerFunc func(context context.Context, msg *Message) error
 

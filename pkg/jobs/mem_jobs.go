@@ -2,12 +2,8 @@ package jobs
 
 import (
 	"container/list"
-	"errors"
 	"sync"
-	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
@@ -26,42 +22,10 @@ type (
 	memBroker struct {
 		queues map[string]*memQueue
 	}
-
-	// memJob struct contains all the parameters of a job.
-	memJob struct {
-		infos *JobInfos
-		// No mutex, a memJob is expected to be used from only one goroutine at a time
-	}
 )
 
 // globalStorage is the global job persistence layer used thoughout the stack.
 var globalStorage = &couchStorage{couchdb.GlobalJobsDB}
-
-type couchStorage struct {
-	db couchdb.Database
-}
-
-func (c *couchStorage) Get(domain, jobID string) (*JobInfos, error) {
-	var job JobInfos
-	if err := couchdb.GetDoc(c.db, consts.Jobs, jobID, &job); err != nil {
-		if couchdb.IsNotFoundError(err) {
-			return nil, ErrNotFoundJob
-		}
-		return nil, err
-	}
-	if job.Domain != domain {
-		return nil, ErrNotFoundJob
-	}
-	return &job, nil
-}
-
-func (c *couchStorage) Create(job *JobInfos) error {
-	return couchdb.CreateDoc(c.db, job)
-}
-
-func (c *couchStorage) Update(job *JobInfos) error {
-	return couchdb.UpdateDoc(c.db, job)
-}
 
 // newMemQueue creates and a new in-memory queue.
 func newMemQueue(workerType string) *memQueue {
@@ -132,8 +96,9 @@ func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, error) {
 		return nil, ErrUnknownWorker
 	}
 	infos := NewJobInfos(req)
-	j := &memJob{
-		infos: infos,
+	j := Job{
+		infos:   infos,
+		storage: globalStorage,
 	}
 	if err := globalStorage.Create(infos); err != nil {
 		return nil, err
@@ -159,63 +124,6 @@ func (b *memBroker) GetJobInfos(domain, jobID string) (*JobInfos, error) {
 	return globalStorage.Get(domain, jobID)
 }
 
-// Domain returns the associated domain
-func (j *memJob) Domain() string {
-	return j.infos.Domain
-}
-
-// Infos returns the associated job infos
-func (j *memJob) Infos() *JobInfos {
-	return j.infos
-}
-
-// AckConsumed sets the job infos state to Running an sends the new job infos
-// on the channel.
-func (j *memJob) AckConsumed() error {
-	job := *j.infos
-	log.Debugf("[jobs] ack_consume %s ", job.ID())
-	job.StartedAt = time.Now()
-	job.State = Running
-	j.infos = &job
-	return j.persist()
-}
-
-// Ack sets the job infos state to Done an sends the new job infos on the
-// channel.
-func (j *memJob) Ack() error {
-	job := *j.infos
-	log.Debugf("[jobs] ack %s ", job.ID())
-	job.State = Done
-	j.infos = &job
-	return j.persist()
-}
-
-// Nack sets the job infos state to Errored, set the specified error has the
-// error field and sends the new job infos on the channel.
-func (j *memJob) Nack(err error) error {
-	job := *j.infos
-	log.Debugf("[jobs] nack %s ", job.ID())
-	job.State = Errored
-	job.Error = err.Error()
-	j.infos = &job
-	return j.persist()
-}
-
-func (j *memJob) persist() error {
-	return globalStorage.Update(j.infos)
-}
-
-// Marshal should not be used for a memJob
-func (j *memJob) Marshal() ([]byte, error) {
-	return nil, errors.New("should not be marshaled")
-}
-
-// Unmarshal should not be used for a memJob
-func (j *memJob) Unmarshal() error {
-	return errors.New("should not be unmarshaled")
-}
-
 var (
 	_ Broker = &memBroker{}
-	_ Job    = &memJob{}
 )
