@@ -366,9 +366,29 @@ Start the konnector through Rkt, passing as ENV variables :
     - `COZY_TYPE`:         the type field of the konnector (ie. "node" etc.)
     - `COZY_URL`:          the starting instance URL
 
-The konnector proces can send events trough it's stdout (newline separated JSON object),
+The konnector process can send events trough it's stdout (newline separated JSON object),
 the konnector worker pass these events to the realtime hub as `io.cozy.jobs.events`.
   - Only JSON formatted events are forwarded to the client-side throught realtime
   - Otherwise formatted lines (such as node Error) will be kept in some system logs.
 
 Konnectors should NOT log the received account login values in production.
+
+### Konnector error handling
+
+Rocket does not allow to pass error output from the app to it's own error output. We have to find
+another way to pass error messages. Here is a proposition :
+
+The konnector will output json formated messages as stated before (the events) and those events
+will be typed and formatted like this :
+
+```javascript
+{
+    type: "messagetype",  // can be "error", "debug", "warning", and maybe "progress"
+    message: "message"    // can be any string
+}
+```
+
+For the case of "error" type, the message will be a string coming from a npm package shared between
+the data-connect application and the connectors to allow the data-connect application to display
+localized error messages.
+
