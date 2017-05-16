@@ -35,7 +35,14 @@ func (in *Intent) Rev() string { return in.IRev }
 func (in *Intent) DocType() string { return consts.Intents }
 
 // Clone implements couchdb.Doc
-func (in *Intent) Clone() couchdb.Doc { cloned := *in; return &cloned }
+func (in *Intent) Clone() couchdb.Doc {
+	cloned := *in
+	cloned.Permissions = make([]string, len(in.Permissions))
+	copy(cloned.Permissions, in.Permissions)
+	cloned.Services = make([]Service, len(in.Services))
+	copy(cloned.Services, in.Services)
+	return &cloned
+}
 
 // SetID is used to implement the couchdb.Doc interface
 func (in *Intent) SetID(id string) { in.IID = id }

@@ -45,7 +45,14 @@ func (m *KonnManifest) Rev() string { return m.DocRev }
 func (m *KonnManifest) DocType() string { return consts.Konnectors }
 
 // Clone is part of the Manifest interface
-func (m *KonnManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
+func (m *KonnManifest) Clone() couchdb.Doc {
+	cloned := *m
+	if m.Developer != nil {
+		dev := *m.Developer
+		cloned.Developer = &dev
+	}
+	return &cloned
+}
 
 // SetID is part of the Manifest interface
 func (m *KonnManifest) SetID(id string) {}

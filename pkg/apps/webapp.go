@@ -73,7 +73,16 @@ func (m *WebappManifest) Rev() string { return m.DocRev }
 func (m *WebappManifest) DocType() string { return consts.Apps }
 
 // Clone implements couchdb.Doc
-func (m *WebappManifest) Clone() couchdb.Doc { cloned := *m; return &cloned }
+func (m *WebappManifest) Clone() couchdb.Doc {
+	cloned := *m
+	if m.Developer != nil {
+		dev := *m.Developer
+		cloned.Developer = &dev
+	}
+	cloned.Intents = make([]Intent, len(m.Intents))
+	copy(cloned.Intents, m.Intents)
+	return &cloned
+}
 
 // SetID is part of the Manifest interface
 func (m *WebappManifest) SetID(id string) {}
