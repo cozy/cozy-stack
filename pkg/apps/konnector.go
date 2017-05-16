@@ -47,8 +47,10 @@ func (m *KonnManifest) DocType() string { return consts.Konnectors }
 // Clone is part of the Manifest interface
 func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned := *m
-	dev := *m.Developer
-	cloned.Developer = &dev
+	if m.Developer != nil {
+		dev := *m.Developer
+		cloned.Developer = &dev
+	}
 	return &cloned
 }
 
