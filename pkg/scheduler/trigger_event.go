@@ -123,7 +123,7 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 	}
 
 	if v, ok := e.Doc.(permissions.Validable); ok {
-		if rule.ValuesValid(v) {
+		if !rule.ValuesValid(v) {
 			// Particular case where the new doc is not valid but the old one was.
 			if e.OldDoc != nil {
 				if vOld, okOld := e.OldDoc.(permissions.Validable); okOld {
