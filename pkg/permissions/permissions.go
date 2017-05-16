@@ -53,7 +53,14 @@ func (p *Permission) Rev() string { return p.PRev }
 func (p *Permission) DocType() string { return consts.Permissions }
 
 // Clone implements couchdb.Doc
-func (p *Permission) Clone() couchdb.Doc { cloned := *p; return &cloned }
+func (p *Permission) Clone() couchdb.Doc {
+	cloned := *p
+	cloned.Codes = make(map[string]string)
+	for k, v := range p.Codes {
+		cloned.Codes[k] = v
+	}
+	return &cloned
+}
 
 // SetID implements jsonapi.Doc
 func (p *Permission) SetID(id string) { p.PID = id }
