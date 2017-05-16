@@ -57,7 +57,12 @@ func (c *Client) Rev() string { return c.CouchRev }
 func (c *Client) DocType() string { return consts.OAuthClients }
 
 // Clone implements couchdb.Doc
-func (c *Client) Clone() couchdb.Doc { cloned := *c; return &cloned }
+func (c *Client) Clone() couchdb.Doc {
+	cloned := *c
+	cloned.RedirectURIs = make([]string, len(c.RedirectURIs))
+	copy(cloned.RedirectURIs, c.RedirectURIs)
+	return &cloned
+}
 
 // SetID changes the client qualified identifier
 func (c *Client) SetID(id string) { c.CouchID = id }

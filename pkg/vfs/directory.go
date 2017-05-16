@@ -47,7 +47,14 @@ func (d *DirDoc) Rev() string { return d.DocRev }
 func (d *DirDoc) DocType() string { return consts.Files }
 
 // Clone implements couchdb.Doc
-func (d *DirDoc) Clone() couchdb.Doc { cloned := *d; return &cloned }
+func (d *DirDoc) Clone() couchdb.Doc {
+	cloned := *d
+	cloned.Tags = make([]string, len(d.Tags))
+	copy(cloned.Tags, d.Tags)
+	cloned.ReferencedBy = make([]couchdb.DocReference, len(d.ReferencedBy))
+	copy(cloned.ReferencedBy, d.ReferencedBy)
+	return &cloned
+}
 
 // SetID changes the directory qualified identifier
 func (d *DirDoc) SetID(id string) { d.DocID = id }

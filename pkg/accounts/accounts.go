@@ -48,7 +48,14 @@ func (ac *Account) SetRev(rev string) { ac.DocRev = rev }
 func (ac *Account) DocType() string { return consts.Accounts }
 
 // Clone implements couchdb.Doc
-func (ac *Account) Clone() couchdb.Doc { cloned := *ac; return &cloned }
+func (ac *Account) Clone() couchdb.Doc {
+	cloned := *ac
+	cloned.Extras = make(map[string]interface{})
+	for k, v := range ac.Extras {
+		cloned.Extras[k] = v
+	}
+	return &cloned
+}
 
 // Valid implements permissions.Validable
 func (ac *Account) Valid(field, expected string) bool {

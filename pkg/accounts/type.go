@@ -63,7 +63,14 @@ func (at *AccountType) SetRev(rev string) { at.DocRev = rev }
 func (at *AccountType) DocType() string { return consts.AccountTypes }
 
 // Clone implements couchdb.Doc
-func (at *AccountType) Clone() couchdb.Doc { cloned := *at; return &cloned }
+func (at *AccountType) Clone() couchdb.Doc {
+	cloned := *at
+	cloned.ExtraAuthQuery = make(map[string]string)
+	for k, v := range at.ExtraAuthQuery {
+		cloned.ExtraAuthQuery[k] = v
+	}
+	return &cloned
+}
 
 // ensure AccountType implements couchdb.Doc
 var _ couchdb.Doc = (*AccountType)(nil)
