@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -53,6 +54,11 @@ func (p *apiPermission) Included() []jsonapi.Object { return nil }
 
 // Links implements jsonapi.Doc
 func (p *apiPermission) Links() *jsonapi.LinksList {
+	// Cozy to Cozy sharings permissions
+	if p.PID == "" && p.Type == consts.Sharings {
+		return &jsonapi.LinksList{Self: "/sharings/" + p.SourceID}
+	}
+
 	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
 }
 
@@ -119,16 +125,40 @@ type refAndVerb struct {
 const limitPermissionsByDoctype = 30
 
 func listPermissionsByDoctype(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	return listSharedPermissionsByDoctype(c, "sharedByLink",
+		permissions.GetPermissionsByType)
+}
+
+// listSharedWithMePermissionsByDoctype returns the list of all the permissions
+// that apply for a given doctype for documents that were shared to the user.
+func listSharedWithMePermissionsByDoctype(c echo.Context) error {
+	return listSharedPermissionsByDoctype(c, "sharedWithMe",
+		permissions.GetSharedWithMePermissionsByDoctype)
+}
+
+// listSharedWithOthersPermissionsByDoctype returns the list of all the
+// permissions that apply for a given doctype for documents that the user
+// shared with others.
+func listSharedWithOthersPermissionsByDoctype(c echo.Context) error {
+	return listSharedPermissionsByDoctype(c, "sharedWithOthers",
+		permissions.GetSharedWithOthersPermissionsByDoctype)
+}
+
+func listSharedPermissionsByDoctype(c echo.Context, route string, f func(couchdb.Database, string, couchdb.Cursor) ([]*permissions.Permission, error)) error {
+	ins := middlewares.GetInstance(c)
 	doctype := c.Param("doctype")
+	if doctype == "" {
+		return jsonapi.NewError(http.StatusBadRequest, "Missing doctype")
+	}
+
 	current, err := GetPermission(c)
 	if err != nil {
 		return err
 	}
 
-	if !current.Permissions.AllowWholeType("GET", doctype) {
+	if !current.Permissions.AllowWholeType(http.MethodGet, doctype) {
 		return jsonapi.NewError(http.StatusForbidden,
-			"you need GET permission on whole type to list its permissions")
+			"You need GET permission on whole type to list its permissions")
 	}
 
 	cursor, err := jsonapi.ExtractPaginationCursor(c, limitPermissionsByDoctype)
@@ -136,7 +166,7 @@ func listPermissionsByDoctype(c echo.Context) error {
 		return err
 	}
 
-	perms, err := permissions.GetPermissionsByType(instance, doctype, cursor)
+	perms, err := f(ins, doctype, cursor)
 	if err != nil {
 		return err
 	}
@@ -147,7 +177,8 @@ func listPermissionsByDoctype(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		links.Next = fmt.Sprintf("/permissions/doctype/%s?%s", doctype, params.Encode())
+		links.Next = fmt.Sprintf("/permissions/doctype/%s/%s?%s",
+			doctype, route, params.Encode())
 	}
 
 	out := make([]jsonapi.Object, len(perms))
@@ -279,7 +310,11 @@ func revokePermission(c echo.Context) error {
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
-	router.GET("/doctype/:doctype", listPermissionsByDoctype)
+	router.GET("/doctype/:doctype/sharedByLink", listPermissionsByDoctype)
+	router.GET("/doctype/:doctype/sharedWithMe",
+		listSharedWithMePermissionsByDoctype)
+	router.GET("/doctype/:doctype/sharedWithOthers",
+		listSharedWithOthersPermissionsByDoctype)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
 	router.PATCH("/:permdocid", patchPermission(permissions.GetByID, "permdocid"))
