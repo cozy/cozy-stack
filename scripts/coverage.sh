@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-set -e
 set -o pipefail
+
 echo "" > coverage.txt
+failed=false
 
 for d in $(go list ./pkg/... ./web/...); do
 	go test \
@@ -11,8 +12,19 @@ for d in $(go list ./pkg/... ./web/...); do
 		-coverpkg=./pkg/...,./web/... \
 		"$d" \
 		2>&1 | grep -v 'warning: no packages being tested depend on github.com/cozy/cozy-stack'
-	if [ -f profile.out ]; then
-		cat profile.out >> coverage.txt
-		rm profile.out
+	res=$?
+	if [ $res -eq 0 ]; then
+		if [ -f profile.out ]; then
+			cat profile.out >> coverage.txt
+			rm profile.out
+		fi
+	else
+		failed=true
 	fi
 done
+
+if [ "$failed" = true ]; then
+	exit 1
+else
+	exit 0
+fi
