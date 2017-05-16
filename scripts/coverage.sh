@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -o pipefail
 echo "" > coverage.txt
 
 for d in $(go list ./pkg/... ./web/...); do
