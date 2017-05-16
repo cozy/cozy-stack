@@ -16,6 +16,7 @@ var errAppsMissingDomain = errors.New("Missing --domain flag")
 
 var flagAppsDomain string
 var flagAllDomains bool
+var flagAppsDeactivated bool
 
 var webappsCmdGroup = &cobra.Command{
 	Use:   "apps [command]",
@@ -136,9 +137,10 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 		return foreachDomains(func(in *client.Instance) error {
 			c := newClient(in.Attrs.Domain, appType)
 			_, err := c.InstallApp(&client.AppOptions{
-				AppType:   appType,
-				Slug:      slug,
-				SourceURL: source,
+				AppType:     appType,
+				Slug:        slug,
+				SourceURL:   source,
+				Deactivated: flagAppsDeactivated,
 			})
 			if err != nil {
 				if err.Error() == "Application with same slug already exists" {
@@ -156,9 +158,10 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	}
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.InstallApp(&client.AppOptions{
-		AppType:   appType,
-		Slug:      slug,
-		SourceURL: source,
+		AppType:     appType,
+		Slug:        slug,
+		SourceURL:   source,
+		Deactivated: flagAppsDeactivated,
 	})
 	if err != nil {
 		return err
@@ -283,6 +286,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 func init() {
 	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(installWebappCmd)

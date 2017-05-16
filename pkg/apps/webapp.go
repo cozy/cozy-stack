@@ -231,6 +231,9 @@ func (m *WebappManifest) FindIntent(action, typ string) *Intent {
 
 // GetWebappBySlug fetch the WebappManifest from the database given a slug.
 func GetWebappBySlug(db couchdb.Database, slug string) (*WebappManifest, error) {
+	if slug == "" || !slugReg.MatchString(slug) {
+		return nil, ErrInvalidSlugName
+	}
 	man := &WebappManifest{}
 	err := couchdb.GetDoc(db, consts.Apps, consts.Apps+"/"+slug, man)
 	if couchdb.IsNotFoundError(err) {

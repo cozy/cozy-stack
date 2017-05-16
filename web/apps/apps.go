@@ -90,10 +90,11 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
-				Operation: apps.Install,
-				Type:      installerType,
-				SourceURL: c.QueryParam("Source"),
-				Slug:      slug,
+				Operation:   apps.Install,
+				Type:        installerType,
+				SourceURL:   c.QueryParam("Source"),
+				Slug:        slug,
+				Deactivated: c.QueryParam("Deactivated") == "true",
 			},
 		)
 		if err != nil {

@@ -39,6 +39,7 @@ var (
 
 	templatesList = []string{
 		"authorize.html",
+		"authorize_app.html",
 		"error.html",
 		"login.html",
 		"passphrase_reset.html",

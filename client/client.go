@@ -184,3 +184,10 @@ func writeJSONAPI(data interface{}) (io.Reader, error) {
 
 	return bytes.NewReader(buf), nil
 }
+
+func boolQuery(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}

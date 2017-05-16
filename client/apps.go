@@ -49,9 +49,10 @@ type AppManifest struct {
 
 // AppOptions holds the options to install an application.
 type AppOptions struct {
-	AppType   string
-	Slug      string
-	SourceURL string
+	AppType     string
+	Slug        string
+	SourceURL   string
+	Deactivated bool
 }
 
 // ListApps is used to get the list of all installed applications.
@@ -76,8 +77,11 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 		Method: "POST",
 		// TODO replace QueryEscape with PathEscape when we will no longer support
 		// go 1.7
-		Path:    makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
-		Queries: url.Values{"Source": {opts.SourceURL}},
+		Path: makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
+		Queries: url.Values{
+			"Source":      {opts.SourceURL},
+			"Deactivated": {boolQuery(opts.Deactivated)},
+		},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
 		},
