@@ -1,7 +1,6 @@
 package accounts
 
 import (
-	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -10,12 +9,13 @@ import (
 
 // Account holds configuration information for an account
 type Account struct {
-	DocID       string
-	DocRev      string
+	DocID       string                 `json:"_id,omitempty"`
+	DocRev      string                 `json:"_rev,omitempty"`
+	Name        string                 `json:"name"`
 	AccountType string                 `json:"account_type"`
-	Basic       *url.Userinfo          `json:"basic,omitempty"`
+	Basic       *BasicInfo             `json:"auth,omitempty"`
 	Oauth       *OauthInfo             `json:"oauth,omitempty"`
-	Extras      map[string]interface{} `json:"oauth_callback_results"`
+	Extras      map[string]interface{} `json:"oauth_callback_results,omitempty"`
 }
 
 // OauthInfo holds configuration information for an oauth account
@@ -24,6 +24,12 @@ type OauthInfo struct {
 	TokenType    string    `json:"token_type,omitempty"`
 	ExpiresAt    time.Time `json:"expires_at,omitempty"`
 	RefreshToken string    `json:"refresh_token,omitempty"`
+}
+
+// BasicInfo holds configuration information for an user/pass account
+type BasicInfo struct {
+	Login    string `json:"login,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
