@@ -29,12 +29,14 @@ func TestListReferencesHandler(t *testing.T) {
 	var result struct {
 		Links jsonapi.LinksList
 		Data  []couchdb.DocReference `json:"data"`
+		Meta  jsonapi.RelationshipMeta
 	}
 	_, res, err := doRequest(req, &result)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Len(t, result.Data, 4)
+	assert.Equal(t, *result.Meta.Count, 4)
 	assert.Empty(t, result.Links.Next)
 
 	var result2 struct {
@@ -48,6 +50,7 @@ func TestListReferencesHandler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res2.StatusCode)
 	assert.Len(t, result2.Data, 3)
+	assert.Equal(t, *result.Meta.Count, 4)
 	assert.NotEmpty(t, result2.Links.Next)
 
 	var result3 struct {
@@ -62,6 +65,20 @@ func TestListReferencesHandler(t *testing.T) {
 	assert.Equal(t, 200, res3.StatusCode)
 	assert.Len(t, result3.Data, 1)
 	assert.Empty(t, result3.Links.Next)
+
+	var result4 struct {
+		Links    jsonapi.LinksList
+		Data     []couchdb.DocReference `json:"data"`
+		Included []interface{}          `json:"included"`
+	}
+	req4, _ := http.NewRequest("GET", url+"?include=files", nil)
+	req4.Header.Add("Authorization", "Bearer "+token)
+	_, res4, err := doRequest(req4, &result4)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res4.StatusCode)
+	assert.Len(t, result4.Included, 4)
+	assert.NotEmpty(t, result4.Included[0].(map[string]interface{})["_id"])
 }
 
 func TestAddReferencesHandler(t *testing.T) {

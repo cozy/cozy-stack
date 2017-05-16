@@ -243,7 +243,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 					refType := parts[0]
 					refID := parts[1]
 					req := &couchdb.ViewRequest{
-						Key: []string{refType, refID},
+						Key:    []string{refType, refID},
+						Reduce: false,
 					}
 					var res couchdb.ViewResponse
 					err := couchdb.ExecView(instance, consts.FilesReferencedByView, req, &res)

@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 2
+const IndexViewsVersion int = 3
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -47,6 +47,7 @@ function(doc) {
 var FilesReferencedByView = &couchdb.View{
 	Name:    "referenced-by",
 	Doctype: Files,
+	Reduce:  "_count",
 	Map: `
 function(doc) {
   if (isArray(doc.referenced_by)) {
