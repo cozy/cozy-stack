@@ -36,7 +36,7 @@ as well as the associated scope
 ```json
 {
   "_id":"service.example",
-  "grant": "authorization_code",
+  "grant_mode": "authorization_code",
   "client_id": "the registered client id",
   "client_secret": "client_secret is necessary for server-flow",
   "auth_endpoint": "https://service.example/auth",
