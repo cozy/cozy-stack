@@ -13,8 +13,9 @@ import (
 const redisPrefix = "j/"
 
 type redisBroker struct {
-	client *redis.Client
-	queues map[string]chan Job
+	client  *redis.Client
+	queues  map[string]chan Job
+	running bool
 }
 
 // NewRedisBroker creates a new broker that will use redis to distribute
@@ -41,18 +42,24 @@ func (b *redisBroker) Start(ws WorkersList) {
 		w.Start(ch)
 		keys = append(keys, redisPrefix+workerType)
 	}
+	b.running = true
 	go b.pollLoop(keys)
 }
 
+func (b *redisBroker) Stop() {
+	b.running = false
+}
+
+var redisBRPopTimeout = 30 * time.Second
+
 func (b *redisBroker) pollLoop(keys []string) {
-	timeout := 30 * time.Second
 	for {
-		results, err := b.client.BRPop(timeout, keys...).Result()
-		if err != nil {
-			time.Sleep(time.Second)
-			continue
+		if !b.running {
+			return
 		}
-		if len(results) < 2 {
+		results, err := b.client.BRPop(redisBRPopTimeout, keys...).Result()
+		if err != nil || len(results) < 2 {
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 

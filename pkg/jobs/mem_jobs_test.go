@@ -2,23 +2,14 @@ package jobs
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
-
-func randomMicro(min, max int) time.Duration {
-	return time.Duration(rand.Intn(max-min)+min) * time.Microsecond
-}
 
 func TestInMemoryJobs(t *testing.T) {
 	n := 10
@@ -265,8 +256,9 @@ func TestProperSerial(t *testing.T) {
 		WorkerType: "",
 	})
 
-	j := &memJob{
-		infos: infos,
+	j := &Job{
+		infos:   infos,
+		storage: globalStorage,
 	}
 	globalStorage.Create(infos)
 	err := j.AckConsumed()
@@ -274,15 +266,4 @@ func TestProperSerial(t *testing.T) {
 	j2, err := globalStorage.Get("cozy.tools:8080", j.infos.ID())
 	assert.NoError(t, err)
 	assert.Equal(t, State(Running), j2.State)
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	fmt.Println(config.CouchURL())
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
-	os.Exit(m.Run())
 }
