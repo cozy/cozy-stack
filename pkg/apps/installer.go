@@ -8,7 +8,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
-var slugReg = regexp.MustCompile(`^[A-Za-z0-9\-]+$`)
+var slugReg = regexp.MustCompile(`^[a-z0-9\-]+$`)
 
 // Operation is the type of operation the installer is created for.
 type Operation int
