@@ -17,34 +17,35 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 )
 
-var access_code = "access_code"
+var accesscode = "accesscode"
 
-func CheckError(err error) {
+func checkError(err error) {
 	if err != nil {
 		fmt.Println("Error: ", err)
 		os.Exit(1)
 	}
 }
 
-func UserAcceptFunc(accessURL string) string {
-	for access_code == "access_code" {
+func userAcceptFunc(accessURL string) string {
+	for accesscode == "accesscode" {
 	}
-	code := access_code
-	access_code = "access_code"
+	code := accesscode
+	accesscode = "accesscode"
 	return code
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	val := r.URL.Query()
-	access_code = val.Get("access_code")
+	accesscode = val.Get("accesscode")
 
-	io.WriteString(w, "access_code")
+	_, err := io.WriteString(w, "accesscode")
+	checkError(err)
 
 }
 
 func main() {
 
-	http.HandleFunc("/oauth/access_code", handler)
+	http.HandleFunc("/oauth/accesscode", handler)
 	go http.ListenAndServe(":8081", nil)
 
 	httpClient := &http.Client{
@@ -52,7 +53,7 @@ func main() {
 	}
 
 	authClient := &auth.Client{
-		RedirectURIs:    []string{"http://127.0.0.1:8081/oauth/access_code"},
+		RedirectURIs:    []string{"http://127.0.0.1:8081/oauth/accesscode"},
 		ClientName:      "Client",
 		SoftwareID:      "github.com/example/client",
 		ClientKind:      "web",
@@ -68,22 +69,22 @@ func main() {
 
 	// POST /auth/register
 	authClient, err := authReq.RegisterClient(authClient)
-	CheckError(err)
+	checkError(err)
 
 	authReq.Scopes = append(authReq.Scopes, "io.cozy.files:GET")
 
 	b := make([]byte, 32)
 	_, err = io.ReadFull(rand.Reader, b)
-	CheckError(err)
+	checkError(err)
 	state := base64.StdEncoding.EncodeToString(b)
 
 	// GET /auth/authorize
 	codeURL, err := authReq.AuthCodeURL(authClient, state)
-	CheckError(err)
+	checkError(err)
 
 	fmt.Println(strings.Replace(codeURL, "https", "http", 1))
 
-	code := UserAcceptFunc(codeURL)
+	code := userAcceptFunc(codeURL)
 
 	// URL value
 	v := url.Values{
@@ -93,14 +94,14 @@ func main() {
 		"client_secret": {authClient.ClientSecret},
 	}
 
-	// POST /auth/access_token
+	// POST /auth/accessToken
 	opts := &request.Options{
 		Domain:  authReq.Domain,
 		Scheme:  "http",
 		Queries: v,
 		Client:  httpClient,
 		Method:  "POST",
-		Path:    "/auth/access_token",
+		Path:    "/auth/accessToken",
 		Body:    strings.NewReader(v.Encode()),
 		Headers: request.Headers{
 			"Content-Type": "application/x-www-form-urlencoded",
@@ -108,23 +109,23 @@ func main() {
 		},
 	}
 
-	access_token := &auth.AccessToken{}
+	accessToken := &auth.AccessToken{}
 
-	resp, err := httpClient.Get("http://127.0.0.1:8081/oauth/access_code")
-	CheckError(err)
+	resp, err := httpClient.Get("http://127.0.0.1:8081/oauth/accesscode")
+	checkError(err)
 
 	var data []byte
 
 	data, err = ioutil.ReadAll(resp.Body)
-	CheckError(err)
+	checkError(err)
 	fmt.Println(string(data))
 
 	resp, err = request.Req(opts)
-	CheckError(err)
+	checkError(err)
 
 	data, err = ioutil.ReadAll(resp.Body)
-	CheckError(err)
-	err = json.Unmarshal(data, &access_token)
-	CheckError(err)
+	checkError(err)
+	err = json.Unmarshal(data, &accessToken)
+	checkError(err)
 
 }
