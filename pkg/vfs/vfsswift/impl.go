@@ -253,6 +253,11 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 		return err
 	}
 	versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
+	// could happened if the versionning could not be enabled, in which case we
+	// do not propagate the error.
+	if err == swift.ContainerNotFound {
+		return sfs.Indexer.DeleteFileDoc(doc)
+	}
 	if err != nil {
 		return err
 	}
