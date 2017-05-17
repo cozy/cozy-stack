@@ -443,7 +443,7 @@ func Get(domain string) (*Instance, error) {
 	}
 	if i.IndexViewsVersion != consts.IndexViewsVersion {
 		log.Infof("[instance] Indexes outdated: wanted %d; got %d",
-			consts.IndexViewsVersion, consts.IndexViewsVersion)
+			consts.IndexViewsVersion, i.IndexViewsVersion)
 		if err = i.defineViewsAndIndex(); err != nil {
 			log.Errorf("[instance] Could not re-define indexes and views %s: %s",
 				i.Domain, err.Error())
