@@ -46,6 +46,14 @@ func (f *swiftCopier) Start(slug, version string) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
+	if err != swift.ObjectNotFound {
+		return false, err
+	}
+	if _, _, err = f.c.Container(f.container); err == swift.ContainerNotFound {
+		if err = f.c.ContainerCreate(f.container, nil); err != nil {
+			return false, err
+		}
+	}
 	o, err := f.c.ObjectCreate(f.container, f.rootObj, false, "", "", nil)
 	if err != nil {
 		return false, err
