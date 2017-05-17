@@ -159,7 +159,7 @@ func TestRetry(t *testing.T) {
 	broker := NewMemBroker(1, WorkersList{
 		"test": {
 			Concurrency:  1,
-			MaxExecCount: uint(maxExecCount),
+			MaxExecCount: maxExecCount,
 			Timeout:      1 * time.Millisecond,
 			RetryDelay:   1 * time.Millisecond,
 			WorkerFunc: func(ctx context.Context, _ *Message) error {
@@ -193,7 +193,7 @@ func TestPanicRetried(t *testing.T) {
 	broker := NewMemBroker(1, WorkersList{
 		"panic": {
 			Concurrency:  1,
-			MaxExecCount: uint(maxExecCount),
+			MaxExecCount: maxExecCount,
 			RetryDelay:   1 * time.Millisecond,
 			WorkerFunc: func(ctx context.Context, _ *Message) error {
 				w.Done()

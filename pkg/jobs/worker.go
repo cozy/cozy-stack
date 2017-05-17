@@ -78,7 +78,7 @@ func NewWorkerContext(domain, workerID string) context.Context {
 // Start is used to start the worker consumption of messages from its queue.
 func (w *Worker) Start(jobs chan Job) {
 	w.jobs = jobs
-	for i := 0; i < int(w.Conf.Concurrency); i++ {
+	for i := 0; i < w.Conf.Concurrency; i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
 		log.Debugf("Start worker %s", name)
 		go w.work(name)
