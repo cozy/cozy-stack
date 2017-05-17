@@ -434,7 +434,11 @@ func Get(domain string) (*Instance, error) {
 		cache.Set(domain, i)
 	}
 	if i.IndexViewsVersion != consts.IndexViewsVersion {
+		log.Infof("[instance] Indexes outdated: wanted %d; got %d",
+			consts.IndexViewsVersion, consts.IndexViewsVersion)
 		if err = i.defineViewsAndIndex(); err != nil {
+			log.Errorf("[instance] Could not re-define indexes and views %s: %s",
+				i.Domain, err.Error())
 			return nil, err
 		}
 		if err = Update(i); err != nil {
@@ -494,7 +498,7 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 // TODO: don't return the design docs
 func List() ([]*Instance, error) {
 	var docs []*Instance
-	req := &couchdb.AllDocsRequest{Limit: 100}
+	req := &couchdb.AllDocsRequest{Limit: 1000}
 	err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
 	if err != nil {
 		return nil, err
@@ -506,7 +510,11 @@ func List() ([]*Instance, error) {
 // caching
 func Update(i *Instance) error {
 	getCache().Revoke(i.Domain)
-	return couchdb.UpdateDoc(couchdb.GlobalDB, i)
+	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
+		log.Errorf("[instance] Could not update %s: %s", i.Domain, err.Error())
+		return err
+	}
+	return nil
 }
 
 // Destroy is used to remove the instance. All the data linked to this
