@@ -73,7 +73,8 @@ func (q *memQueue) Len() int {
 //
 // The in-memory implementation of the job system has the specifity that
 // workers are actually launched by the broker at its creation.
-func NewMemBroker(ws WorkersList) Broker {
+func NewMemBroker(nbWorkers int, ws WorkersList) Broker {
+	setNbSlots(nbWorkers)
 	queues := make(map[string]*memQueue)
 	for workerType, conf := range ws {
 		q := newMemQueue(workerType)

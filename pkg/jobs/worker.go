@@ -42,8 +42,8 @@ type (
 	WorkerConfig struct {
 		WorkerFunc   WorkerFunc
 		WorkerCommit WorkerCommit
-		Concurrency  uint          `json:"concurrency"`
-		MaxExecCount uint          `json:"max_exec_count"`
+		Concurrency  int           `json:"concurrency"`
+		MaxExecCount int           `json:"max_exec_count"`
 		MaxExecTime  time.Duration `json:"max_exec_time"`
 		Timeout      time.Duration `json:"timeout"`
 		RetryDelay   time.Duration `json:"retry_delay"`
@@ -58,6 +58,16 @@ type (
 	}
 )
 
+var slots chan struct{}
+
+func setNbSlots(nb int) {
+	fmt.Printf("setNbSlots %d\n", nb)
+	slots = make(chan struct{}, nb)
+	for i := 0; i < nb; i++ {
+		slots <- struct{}{}
+	}
+}
+
 // NewWorkerContext returns a context.Context usable by a worker.
 func NewWorkerContext(domain, workerID string) context.Context {
 	ctx := context.Background()
@@ -71,6 +81,7 @@ func (w *Worker) Start(jobs chan Job) {
 	w.jobs = jobs
 	for i := 0; i < int(w.Conf.Concurrency); i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
+		log.Debugf("Start worker %s", name)
 		go w.work(name)
 	}
 }
@@ -113,10 +124,10 @@ func (w *Worker) work(workerID string) {
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 	c := w.Conf.clone()
 	if c.Concurrency == 0 {
-		c.Concurrency = uint(defaultConcurrency)
+		c.Concurrency = defaultConcurrency
 	}
 	if c.MaxExecCount == 0 {
-		c.MaxExecCount = uint(defaultMaxExecCount)
+		c.MaxExecCount = defaultMaxExecCount
 	}
 	if c.MaxExecTime == 0 {
 		c.MaxExecTime = defaultMaxExecTime
@@ -149,7 +160,7 @@ type task struct {
 
 	workerID  string
 	startTime time.Time
-	execCount uint
+	execCount int
 }
 
 func (t *task) run() (err error) {
@@ -192,7 +203,12 @@ func (t *task) run() (err error) {
 }
 
 func (t *task) exec(ctx context.Context) (err error) {
+	fmt.Printf("wait for a slot\n")
+	slot := <-slots
+	fmt.Printf("took a slot\n")
 	defer func() {
+		slots <- slot
+		fmt.Printf("released a slot\n")
 		if r := recover(); r != nil {
 			var ok bool
 			err, ok = r.(error)
@@ -224,7 +240,7 @@ func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
 		// on first execution, execute immediately
 		nextDelay = 0
 	} else {
-		nextDelay = c.RetryDelay << (t.execCount - 1)
+		nextDelay = c.RetryDelay << uint(t.execCount-1)
 
 		// fuzzDelay number between delay * (1 +/- 0.1)
 		fuzzDelay := int(0.1 * float64(nextDelay))

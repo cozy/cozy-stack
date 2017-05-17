@@ -59,7 +59,7 @@ func (b *mockBroker) GetJobInfos(domain, id string) (*jobs.JobInfos, error) {
 func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
-	bro := jobs.NewMemBroker(jobs.WorkersList{
+	bro := jobs.NewMemBroker(1, jobs.WorkersList{
 		"worker": {
 			Concurrency:  1,
 			MaxExecCount: 1,

@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -20,11 +21,14 @@ type redisBroker struct {
 
 // NewRedisBroker creates a new broker that will use redis to distribute
 // the jobs among several cozy-stack processes.
-func NewRedisBroker(client *redis.Client) Broker {
+func NewRedisBroker(nbWorkers int, client *redis.Client) Broker {
 	broker := &redisBroker{
 		client: client,
 	}
-	broker.Start(GetWorkersList())
+	if nbWorkers > 0 {
+		setNbSlots(nbWorkers)
+		broker.Start(GetWorkersList())
+	}
 	return broker
 }
 
@@ -87,7 +91,9 @@ func (b *redisBroker) pollLoop(keys []string) {
 				db: couchdb.SimpleDatabasePrefix(parts[0]),
 			},
 		}
+		fmt.Printf("push job %v\n", job)
 		ch <- job
+		fmt.Printf("job pushed")
 	}
 }
 

@@ -44,7 +44,7 @@ func TestInMemoryJobs(t *testing.T) {
 	w.Add(2)
 
 	go func() {
-		broker := NewMemBroker(workersTestList)
+		broker := NewMemBroker(2, workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
@@ -60,7 +60,7 @@ func TestInMemoryJobs(t *testing.T) {
 	}()
 
 	go func() {
-		broker := NewMemBroker(workersTestList)
+		broker := NewMemBroker(2, workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
@@ -79,7 +79,7 @@ func TestInMemoryJobs(t *testing.T) {
 }
 
 func TestUnknownWorkerError(t *testing.T) {
-	broker := NewMemBroker(WorkersList{})
+	broker := NewMemBroker(1, WorkersList{})
 	_, err := broker.PushJob(&JobRequest{
 		Domain:     "cozy.local",
 		WorkerType: "nope",
@@ -92,7 +92,7 @@ func TestUnknownWorkerError(t *testing.T) {
 func TestUnknownMessageType(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(4, WorkersList{
 		"test": {
 			Concurrency: 4,
 			WorkerFunc: func(ctx context.Context, m *Message) error {
@@ -123,7 +123,7 @@ func TestUnknownMessageType(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"timeout": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -156,7 +156,7 @@ func TestRetry(t *testing.T) {
 	maxExecCount := 4
 
 	var count int
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"test": {
 			Concurrency:  1,
 			MaxExecCount: uint(maxExecCount),
@@ -190,7 +190,7 @@ func TestPanicRetried(t *testing.T) {
 
 	maxExecCount := 4
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"panic": {
 			Concurrency:  1,
 			MaxExecCount: uint(maxExecCount),
@@ -219,7 +219,7 @@ func TestPanic(t *testing.T) {
 	even, _ := NewMessage("json", 0)
 	odd, _ := NewMessage("json", 1)
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"panic2": {
 			Concurrency:  1,
 			MaxExecCount: 1,

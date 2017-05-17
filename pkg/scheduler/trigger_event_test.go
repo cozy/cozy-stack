@@ -23,7 +23,7 @@ func TestTriggerEvent(t *testing.T) {
 	var wg sync.WaitGroup
 	var called = make(map[string]bool)
 
-	bro := jobs.NewMemBroker(jobs.WorkersList{
+	bro := jobs.NewMemBroker(1, jobs.WorkersList{
 		"worker_event": {
 			Concurrency:  1,
 			MaxExecCount: 1,
