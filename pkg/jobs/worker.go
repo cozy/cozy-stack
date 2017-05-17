@@ -75,7 +75,6 @@ func (w *Worker) Start(jobs chan Job) {
 }
 
 func (w *Worker) work(workerID string) {
-	// TODO: err handling and persistence
 	for job := range w.jobs {
 		domain := job.Domain()
 		if domain == "" {
