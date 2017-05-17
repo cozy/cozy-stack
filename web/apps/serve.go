@@ -161,6 +161,8 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	token := "" // #nosec
 	if middlewares.IsLoggedIn(c) {
 		token = i.BuildAppToken(app)
+	} else {
+		token = c.QueryParam("sharecode")
 	}
 	res := c.Response()
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
