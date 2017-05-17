@@ -11,6 +11,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestProperSerial(t *testing.T) {
+	infos := NewJobInfos(&JobRequest{
+		Domain:     "cozy.tools:8080",
+		WorkerType: "",
+	})
+
+	j := &Job{
+		infos:   infos,
+		storage: globalStorage,
+	}
+	globalStorage.Create(infos)
+	err := j.AckConsumed()
+	assert.NoError(t, err)
+	j2, err := globalStorage.Get("cozy.tools:8080", j.infos.ID())
+	assert.NoError(t, err)
+	assert.Equal(t, State(Running), j2.State)
+}
+
 func TestInMemoryJobs(t *testing.T) {
 	n := 10
 	v := 100
@@ -41,14 +59,15 @@ func TestInMemoryJobs(t *testing.T) {
 		},
 	}
 
+	broker1 := NewMemBroker(4, workersTestList)
+	broker2 := NewMemBroker(4, workersTestList)
 	w.Add(2)
 
 	go func() {
-		broker := NewMemBroker(2, workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
-			_, err := broker.PushJob(&JobRequest{
+			_, err := broker1.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
@@ -60,11 +79,10 @@ func TestInMemoryJobs(t *testing.T) {
 	}()
 
 	go func() {
-		broker := NewMemBroker(2, workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
-			_, err := broker.PushJob(&JobRequest{
+			_, err := broker2.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
@@ -248,22 +266,4 @@ func TestPanic(t *testing.T) {
 	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
-}
-
-func TestProperSerial(t *testing.T) {
-	infos := NewJobInfos(&JobRequest{
-		Domain:     "cozy.tools:8080",
-		WorkerType: "",
-	})
-
-	j := &Job{
-		infos:   infos,
-		storage: globalStorage,
-	}
-	globalStorage.Create(infos)
-	err := j.AckConsumed()
-	assert.NoError(t, err)
-	j2, err := globalStorage.Get("cozy.tools:8080", j.infos.ID())
-	assert.NoError(t, err)
-	assert.Equal(t, State(Running), j2.State)
 }
