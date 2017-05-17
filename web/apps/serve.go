@@ -158,7 +158,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		log.Warnf("[apps] %s cannot be parsed as a template: %s", file, err)
 		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 	}
-	token := "" // #nosec
+	var token string
 	if middlewares.IsLoggedIn(c) {
 		token = i.BuildAppToken(app)
 	} else {
