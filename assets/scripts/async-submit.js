@@ -19,7 +19,7 @@
       form.appendChild(errorPanel)
     }
 
-    errorPanel.innerHTML = `<p>${error}</p>`
+    errorPanel.innerHTML = '<p>' + error + '</p>'
     submitButton.removeAttribute('disabled')
   }
 
@@ -35,7 +35,7 @@
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
-      body: `passphrase=${encodeURIComponent(passphrase)}&redirect=${encodeURIComponent(redirect)}`,
+      body: 'passphrase=' + encodeURIComponent(passphrase) + '&redirect=' + encodeURIComponent(redirect),
       credentials: 'same-origin'
     }).then((response) => {
       const loginSuccess = response.status < 400
