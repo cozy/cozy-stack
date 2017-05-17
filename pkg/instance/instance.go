@@ -149,9 +149,9 @@ func (i *Instance) makeVFS() error {
 	disk := vfs.DiskThresholder(i)
 	var err error
 	switch fsURL.Scheme {
-	case "file", "mem":
+	case config.SchemeFile, config.SchemeMem:
 		i.vfs, err = vfsafero.New(index, disk, mutex, fsURL, i.Domain)
-	case "swift":
+	case config.SchemeSwift:
 		i.vfs, err = vfsswift.New(index, disk, mutex, i.Domain)
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
@@ -163,34 +163,55 @@ func (i *Instance) makeVFS() error {
 // application type
 func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 	fsURL := config.FsURL()
-	var baseDirName string
-	switch appsType {
-	case apps.Webapp:
-		baseDirName = vfs.WebappsDirName
-	case apps.Konnector:
-		baseDirName = vfs.KonnectorsDirName
+	switch fsURL.Scheme {
+	case config.SchemeFile, config.SchemeMem:
+		var baseDirName string
+		switch appsType {
+		case apps.Webapp:
+			baseDirName = vfs.WebappsDirName
+		case apps.Konnector:
+			baseDirName = vfs.KonnectorsDirName
+		}
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.Domain, baseDirName))
+		return apps.NewAferoCopier(baseFS)
+	case config.SchemeSwift:
+		return apps.NewSwiftCopier(config.GetSwiftConnection(), appsType)
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
 	}
-	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-		path.Join(fsURL.Path, i.Domain, baseDirName))
-	return apps.NewAferoCopier(baseFS)
 }
 
 // AppsFileServer returns the web-application file server associated to this
 // instance.
 func (i *Instance) AppsFileServer() apps.FileServer {
 	fsURL := config.FsURL()
-	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-		path.Join(fsURL.Path, i.Domain, vfs.WebappsDirName))
-	return apps.NewAferoFileServer(baseFS, nil)
+	switch fsURL.Scheme {
+	case config.SchemeFile, config.SchemeMem:
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.Domain, vfs.WebappsDirName))
+		return apps.NewAferoFileServer(baseFS, nil)
+	case config.SchemeSwift:
+		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Webapp)
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
 }
 
 // KonnectorsFileServer returns the web-application file server associated to this
 // instance.
 func (i *Instance) KonnectorsFileServer() apps.FileServer {
 	fsURL := config.FsURL()
-	baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-		path.Join(fsURL.Path, i.Domain, vfs.KonnectorsDirName))
-	return apps.NewAferoFileServer(baseFS, nil)
+	switch fsURL.Scheme {
+	case config.SchemeFile, config.SchemeMem:
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.Domain, vfs.KonnectorsDirName))
+		return apps.NewAferoFileServer(baseFS, nil)
+	case config.SchemeSwift:
+		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Konnector)
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
 }
 
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the
@@ -412,7 +433,6 @@ func Get(domain string) (*Instance, error) {
 		}
 		cache.Set(domain, i)
 	}
-
 	if i.IndexViewsVersion != consts.IndexViewsVersion {
 		if err = i.defineViewsAndIndex(); err != nil {
 			return nil, err
@@ -421,7 +441,6 @@ func Get(domain string) (*Instance, error) {
 			return nil, err
 		}
 	}
-
 	if err = i.makeVFS(); err != nil {
 		return nil, err
 	}

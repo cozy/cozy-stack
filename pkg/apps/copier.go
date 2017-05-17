@@ -33,14 +33,11 @@ type aferoCopier struct {
 }
 
 // NewSwiftCopier defines a Copier storing data into a swift container.
-func NewSwiftCopier(conn *swift.Connection, container string) (Copier, error) {
-	if container[0] == '/' {
-		container = container[1:]
+func NewSwiftCopier(conn *swift.Connection, appsType AppType) Copier {
+	return &swiftCopier{
+		c:         conn,
+		container: containerName(appsType),
 	}
-	if err := conn.ContainerCreate(container, nil); err != nil {
-		return nil, err
-	}
-	return &swiftCopier{c: conn, container: container}, nil
 }
 
 func (f *swiftCopier) Start(slug, version string) (bool, error) {

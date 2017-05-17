@@ -153,10 +153,6 @@ func listenAndServe(noAdmin bool, appsHandler echo.HandlerFunc) error {
 	}
 
 	if config.IsDevRelease() {
-		fmt.Println(`                           !! DEVELOPMENT RELEASE !!
-You are running a development release which may deactivate some very important
-security features. Please do not use this binary as your production server.
-`)
 		main.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))

@@ -2,10 +2,8 @@ package vfsswift
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strconv"
 
@@ -19,42 +17,18 @@ import (
 
 const versionSuffix = "-version"
 
-var conn *swift.Connection
-
 type swiftVFS struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c         *swift.Connection
 	container string
 	version   string
-	versionOk bool
 	mu        lock.ErrorRWLocker
-}
-
-// InitConnection should be used to initialize the connection to the
-// OpenStack Swift server.
-//
-// This function is not thread-safe.
-func InitConnection(fsURL *url.URL) (err error) {
-	conn, err = config.NewSwiftConnection(fsURL)
-	if err != nil {
-		return err
-	}
-	log.Debugf("[vfsswift] Starting authentication with server %s", conn.AuthUrl)
-	if err = conn.Authenticate(); err != nil {
-		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
-			conn.AuthUrl)
-		return err
-	}
-	return nil
 }
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
 func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, domain string) (vfs.VFS, error) {
-	if conn == nil {
-		return nil, errors.New("vfsswift: global connection is not initialized")
-	}
 	if domain == "" {
 		return nil, fmt.Errorf("vfsswift: specified domain is empty")
 	}
