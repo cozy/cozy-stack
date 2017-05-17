@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -16,10 +17,8 @@ import (
 
 func init() {
 	jobs.AddWorker("sendmail", &jobs.WorkerConfig{
-		Concurrency:  4,
-		MaxExecCount: 3,
-		Timeout:      10 * time.Second,
-		WorkerFunc:   SendMail,
+		Concurrency: runtime.NumCPU(),
+		WorkerFunc:  SendMail,
 	})
 }
 

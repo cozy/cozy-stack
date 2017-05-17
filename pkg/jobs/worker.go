@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"runtime"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -20,7 +21,7 @@ const (
 )
 
 var (
-	defaultConcurrency  = 1
+	defaultConcurrency  = runtime.NumCPU()
 	defaultMaxExecCount = 3
 	defaultMaxExecTime  = 60 * time.Second
 	defaultRetryDelay   = 60 * time.Millisecond

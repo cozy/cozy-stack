@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
+	"runtime"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -20,10 +20,8 @@ import (
 
 func init() {
 	jobs.AddWorker("sharingupdates", &jobs.WorkerConfig{
-		Concurrency:  4,
-		MaxExecCount: 3,
-		Timeout:      10 * time.Second,
-		WorkerFunc:   SharingUpdates,
+		Concurrency: runtime.NumCPU(),
+		WorkerFunc:  SharingUpdates,
 	})
 }
 

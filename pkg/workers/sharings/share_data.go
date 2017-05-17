@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -30,10 +31,8 @@ import (
 
 func init() {
 	jobs.AddWorker("sharedata", &jobs.WorkerConfig{
-		Concurrency:  4,
-		MaxExecCount: 3,
-		Timeout:      10 * time.Second,
-		WorkerFunc:   SendData,
+		Concurrency: runtime.NumCPU(),
+		WorkerFunc:  SendData,
 	})
 }
 
