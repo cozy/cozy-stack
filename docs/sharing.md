@@ -16,7 +16,7 @@ A client-side application can propose sharing by links:
    with codes. See [permissions documentation](permissions.md) for the
    details.
 3. The application can then create a shareable link (e.g.
-   `https://calendar.cozy.example.net/public?code=eiJ3iepoaihohz1Y`) by
+   `https://calendar.cozy.example.net/public?sharecode=eiJ3iepoaihohz1Y`) by
    putting together the app sub-domain, the public route path, and a code for
    the permissions set.
 4. The app can then send this link by mail, via the [jobs system](jobs.md), or
@@ -25,7 +25,7 @@ A client-side application can propose sharing by links:
 
 When someone opens the shared link, the stack will load the public route, find
 the corresponding `index.html` file, and replace `{{.Token}}` inside it by a
-token with the same set of permissions that `code` offers. This token can then
+token with the same set of permissions that `sharecode` offers. This token can then
 be used as a `Bearer` token in the `Authorization` header for requests to the
 stack (or via cozy-client-js).
 
@@ -60,7 +60,7 @@ A sharing document has this structure:
                 "values": ["id1", "id2"],
                 "selector": "calendar-id", //not supported yet
                 "verbs": ["GET","POST", "PUT"]
-            }          
+            }
         },
         "recipients": [
             {
