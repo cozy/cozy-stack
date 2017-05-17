@@ -216,10 +216,18 @@ func (i *Instance) KonnectorsFileServer() apps.FileServer {
 
 // ThumbsFS returns the hidden filesystem for storing the thumbnails of the
 // photos/image
-func (i *Instance) ThumbsFS() afero.Fs {
+func (i *Instance) ThumbsFS() vfs.Thumbser {
 	fsURL := config.FsURL()
-	return afero.NewBasePathFs(afero.NewOsFs(),
-		path.Join(fsURL.Path, i.Domain, vfs.ThumbsDirName))
+	switch fsURL.Scheme {
+	case config.SchemeFile, config.SchemeMem:
+		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
+			path.Join(fsURL.Path, i.Domain, vfs.ThumbsDirName))
+		return vfsafero.NewThumbsFs(baseFS)
+	case config.SchemeSwift:
+		return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
+	default:
+		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))
+	}
 }
 
 // DiskQuota returns the number of bytes allowed on the disk to the user.
