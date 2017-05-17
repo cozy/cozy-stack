@@ -129,15 +129,11 @@ func (m *KonnManifest) Create(db couchdb.Database) error {
 
 // Update is part of the Manifest interface
 func (m *KonnManifest) Update(db couchdb.Database) error {
-	err := permissions.DestroyKonnector(db, m.Slug())
-	if err != nil && !couchdb.IsNotFoundError(err) {
-		return err
-	}
-	err = couchdb.UpdateDoc(db, m)
+	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
 		return err
 	}
-	_, err = permissions.CreateKonnectorSet(db, m.Slug(), m.Permissions())
+	_, err = permissions.UpdateKonnectorSet(db, m.Slug(), m.Permissions())
 	return err
 }
 

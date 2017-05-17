@@ -255,9 +255,35 @@ func createAppSet(db couchdb.Database, typ, docType, slug string, set Set) (*Per
 	return doc, nil
 }
 
+// UpdateWebappSet creates a Permission doc for an app
+func UpdateWebappSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+	doc, err := GetForWebapp(db, slug)
+	if err != nil {
+		return nil, err
+	}
+	return updateAppSet(db, doc, TypeWebapp, consts.Apps, slug, set)
+}
+
+// UpdateKonnectorSet creates a Permission doc for a konnector
+func UpdateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
+	doc, err := GetForKonnector(db, slug)
+	if doc != nil {
+		return nil, err
+	}
+	return updateAppSet(db, doc, TypeKonnector, consts.Konnectors, slug, set)
+}
+
+func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug string, set Set) (*Permission, error) {
+	doc.Permissions = set
+	err := couchdb.UpdateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
 // CreateShareSet creates a Permission doc for sharing
 func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set) (*Permission, error) {
-
 	if parent.Type == TypeRegister || parent.Type == TypeSharing {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
@@ -342,7 +368,6 @@ func destroyApp(db couchdb.Database, docType, slug string) error {
 // GetPermissionsForIDs gets permissions for several IDs
 // returns for every id the combined allowed verbset
 func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (map[string]*VerbSet, error) {
-
 	var res struct {
 		Rows []struct {
 			ID    string   `json:"id"`
