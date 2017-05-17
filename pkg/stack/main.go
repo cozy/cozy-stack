@@ -2,12 +2,12 @@ package stack
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	"github.com/go-redis/redis"
 )
 
@@ -18,14 +18,20 @@ var (
 
 // Start is used to initialize all the
 func Start() error {
+	if config.IsDevRelease() {
+		fmt.Println(`                           !! DEVELOPMENT RELEASE !!
+You are running a development release which may deactivate some very important
+security features. Please do not use this binary as your production server.
+`)
+	}
+
 	// Init the main global connection to the swift server
 	fsURL := config.FsURL()
-	if fsURL.Scheme == "swift" {
-		if err := vfsswift.InitConnection(fsURL); err != nil {
+	if fsURL.Scheme == config.SchemeSwift {
+		if err := config.InitSwiftConnection(fsURL); err != nil {
 			return err
 		}
 	}
-
 	return startJobSystem()
 }
 

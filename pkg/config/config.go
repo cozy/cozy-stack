@@ -56,6 +56,13 @@ const (
 	FlatSubdomains = "flat"
 	// NestedSubdomains is the value for apps subdomains like https://<app>.<user>.<domain>/
 	NestedSubdomains = "nested"
+
+	// SchemeFile is the URL scheme used to configure a file filesystem.
+	SchemeFile = "file"
+	// SchemeMem is the URL scheme used to configure an in-memory filesystem.
+	SchemeMem = "mem"
+	// SchemeSwift is the URL scheme used to configure a swift filesystem.
+	SchemeSwift = "swift"
 )
 
 // AdminSecretFileName is the name of the file containing the administration

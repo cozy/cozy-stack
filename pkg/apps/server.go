@@ -31,9 +31,10 @@ type aferoServer struct {
 
 // NewSwiftFileServer returns provides the apps.FileServer implementation
 // using the swift backend as file server.
-func NewSwiftFileServer(conn *swift.Connection) FileServer {
+func NewSwiftFileServer(conn *swift.Connection, appsType AppType) FileServer {
 	return &swiftServer{
-		c: conn,
+		c:         conn,
+		container: containerName(appsType),
 	}
 }
 
@@ -121,4 +122,21 @@ func defaultMakePath(slug, version, file string) string {
 // in a versioned directory.
 func retroCompatMakePath(slug, version, file string) string {
 	return path.Join("/", slug, file)
+}
+
+func containerName(appsType AppType) string {
+	switch appsType {
+	case Webapp:
+		return "apps-web"
+	case Konnector:
+		return "apps-konnectors"
+	}
+	panic("Unknown AppType")
+}
+
+func wrapSwiftErr(err error) error {
+	if err == swift.ObjectNotFound || err == swift.ContainerNotFound {
+		return os.ErrNotExist
+	}
+	return err
 }

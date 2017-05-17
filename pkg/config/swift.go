@@ -4,26 +4,30 @@ import (
 	"fmt"
 	"net/url"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/ncw/swift"
 )
 
-// NewSwiftConnection returns a swift.Connection pointer created from the
-// actual configuration.
-func NewSwiftConnection(fsURL *url.URL) (conn *swift.Connection, err error) {
-	q := fsURL.Query()
+var swiftConn *swift.Connection
+
+// InitSwiftConnection initialize the global swift handler connection. This is
+// not a thread-safe method.
+func InitSwiftConnection(swiftURL *url.URL) error {
+	q := swiftURL.Query()
 
 	var authURL *url.URL
+	var err error
 	auth := q.Get("AuthURL")
 	if auth == "" {
 		authURL = &url.URL{
 			Scheme: "http",
-			Host:   fsURL.Host,
+			Host:   swiftURL.Host,
 			Path:   "/identity/v3",
 		}
 	} else {
 		authURL, err = url.Parse(auth)
 		if err != nil {
-			return nil, fmt.Errorf("vfsswift: could not parse AuthURL %s", err)
+			panic(fmt.Sprintf("swift: could not parse AuthURL %s", err))
 		}
 	}
 
@@ -35,7 +39,7 @@ func NewSwiftConnection(fsURL *url.URL) (conn *swift.Connection, err error) {
 		password = q.Get("Token")
 	}
 
-	conn = &swift.Connection{
+	swiftConn = &swift.Connection{
 		UserName:       username,
 		ApiKey:         password,
 		AuthUrl:        authURL.String(),
@@ -46,5 +50,20 @@ func NewSwiftConnection(fsURL *url.URL) (conn *swift.Connection, err error) {
 		TenantDomainId: q.Get("ProjectDomainID"),
 	}
 
-	return conn, nil
+	if err = swiftConn.Authenticate(); err != nil {
+		log.Errorf("[swift] Authentication failed with the OpenStack Swift server on %s",
+			swiftConn.AuthUrl)
+		return err
+	}
+	log.Infof("[swift] Successfully authenticated with server %s", swiftConn.AuthUrl)
+	return nil
+}
+
+// GetSwiftConnection returns a swift.Connection pointer created from the
+// actual configuration.
+func GetSwiftConnection() *swift.Connection {
+	if swiftConn == nil {
+		panic("Called GetSwiftConnection() before InitSwiftConnection()")
+	}
+	return swiftConn
 }

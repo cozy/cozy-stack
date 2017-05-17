@@ -33,14 +33,11 @@ type aferoCopier struct {
 }
 
 // NewSwiftCopier defines a Copier storing data into a swift container.
-func NewSwiftCopier(conn *swift.Connection, container string) (Copier, error) {
-	if container[0] == '/' {
-		container = container[1:]
+func NewSwiftCopier(conn *swift.Connection, appsType AppType) Copier {
+	return &swiftCopier{
+		c:         conn,
+		container: containerName(appsType),
 	}
-	if err := conn.ContainerCreate(container, nil); err != nil {
-		return nil, err
-	}
-	return &swiftCopier{c: conn, container: container}, nil
 }
 
 func (f *swiftCopier) Start(slug, version string) (bool, error) {
@@ -48,6 +45,14 @@ func (f *swiftCopier) Start(slug, version string) (bool, error) {
 	_, _, err := f.c.Object(f.container, f.rootObj)
 	if err == nil {
 		return true, nil
+	}
+	if err != swift.ObjectNotFound {
+		return false, err
+	}
+	if _, _, err = f.c.Container(f.container); err == swift.ContainerNotFound {
+		if err = f.c.ContainerCreate(f.container, nil); err != nil {
+			return false, err
+		}
 	}
 	o, err := f.c.ObjectCreate(f.container, f.rootObj, false, "", "", nil)
 	if err != nil {
@@ -202,16 +207,6 @@ func (t *tarCopier) Close() (err error) {
 		return err
 	}
 	return t.src.Copy(&fileInfo{name: KonnectorArchiveName}, t.tmp)
-}
-
-func wrapSwiftErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	if err == swift.ObjectNotFound {
-		return os.ErrNotExist
-	}
-	return nil
 }
 
 type fileInfo struct {

@@ -2,10 +2,8 @@ package vfsswift
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strconv"
 
@@ -19,42 +17,18 @@ import (
 
 const versionSuffix = "-version"
 
-var conn *swift.Connection
-
 type swiftVFS struct {
 	vfs.Indexer
 	vfs.DiskThresholder
 	c         *swift.Connection
 	container string
 	version   string
-	versionOk bool
 	mu        lock.ErrorRWLocker
-}
-
-// InitConnection should be used to initialize the connection to the
-// OpenStack Swift server.
-//
-// This function is not thread-safe.
-func InitConnection(fsURL *url.URL) (err error) {
-	conn, err = config.NewSwiftConnection(fsURL)
-	if err != nil {
-		return err
-	}
-	log.Debugf("[vfsswift] Starting authentication with server %s", conn.AuthUrl)
-	if err = conn.Authenticate(); err != nil {
-		log.Errorf("[vfsswift] Authentication failed with the OpenStack Swift server on %s",
-			conn.AuthUrl)
-		return err
-	}
-	return nil
 }
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
 // swift storage url.
 func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, domain string) (vfs.VFS, error) {
-	if conn == nil {
-		return nil, errors.New("vfsswift: global connection is not initialized")
-	}
 	if domain == "" {
 		return nil, fmt.Errorf("vfsswift: specified domain is empty")
 	}
@@ -62,10 +36,9 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, dom
 		Indexer:         index,
 		DiskThresholder: disk,
 
-		c:         conn,
-		container: domain,
-		version:   domain + versionSuffix,
-		versionOk: true,
+		c:         config.GetSwiftConnection(),
+		container: "cozy-" + domain,
+		version:   "cozy-" + domain + versionSuffix,
 		mu:        mu,
 	}, nil
 }
@@ -80,35 +53,39 @@ func (sfs *swiftVFS) InitFs() error {
 	}
 	if err := sfs.c.VersionContainerCreate(sfs.container, sfs.version); err != nil {
 		if err != swift.Forbidden {
+			log.Errorf("[vfsswift] Could not create container %s: %s",
+				sfs.container, err.Error())
 			return err
 		}
-		log.Warnf("[swift] Could not activate versioning for container %s (%s)",
+		log.Errorf("[vfsswift] Could not activate versioning for container %s: %s",
 			sfs.container, err.Error())
-		sfs.versionOk = false
 		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
 			return err
 		}
 	}
+	log.Infof("[vfsswift] Created container %s", sfs.container)
 	return nil
 }
 
 func (sfs *swiftVFS) Delete() error {
-	if lockerr := sfs.mu.Lock(); lockerr != nil {
-		return lockerr
-	}
-	defer sfs.mu.Unlock()
-	err := sfs.c.ObjectsWalk(sfs.container, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
-		objNames, err := sfs.c.ObjectNames(sfs.container, opts)
-		if err != nil {
-			return nil, err
-		}
-		_, err = sfs.c.BulkDelete(sfs.container, objNames)
-		return objNames, err
-	})
+	// Mark the container as deleted but do not actually delete all the file of
+	// the container. For deleting actual files we should rely on another system
+	// for safety and because swift does not provide a convinient way to delete
+	// a container and its content.
+	err := sfs.c.ContainerUpdate(sfs.container, swift.Headers{"Deleted": "true"})
 	if err != nil {
+		log.Errorf("[vfsswift] Could not mark container as deleted %s: %s",
+			sfs.container, err.Error())
 		return err
 	}
-	return sfs.c.ContainerDelete(sfs.container)
+	err = sfs.c.ContainerUpdate(sfs.version, swift.Headers{"Deleted": "true"})
+	if err != nil && err != swift.ContainerNotFound {
+		log.Errorf("[vfsswift] Could not mark version container as deleted %s: %s",
+			sfs.container, err.Error())
+		return err
+	}
+	log.Infof("[vfsswift] Marked container as deleted %s", sfs.container)
+	return nil
 }
 
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
@@ -275,15 +252,18 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 	if err != nil {
 		return err
 	}
-	if sfs.versionOk {
-		versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
-		if err != nil {
-			return err
-		}
-		_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
-		if err != nil {
-			return err
-		}
+	versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
+	// could happened if the versionning could not be enabled, in which case we
+	// do not propagate the error.
+	if err == swift.ContainerNotFound {
+		return sfs.Indexer.DeleteFileDoc(doc)
+	}
+	if err != nil {
+		return err
+	}
+	_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
+	if err != nil {
+		return err
 	}
 	return sfs.Indexer.DeleteFileDoc(doc)
 }
@@ -452,7 +432,7 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 
 func (f *swiftFileCreation) Close() (err error) {
 	defer func() {
-		if err != nil && f.fs.versionOk {
+		if err != nil {
 			// Deleting the object should be secure since we use X-Versions-Location
 			// on the container and the old object should be restored.
 			f.fs.c.ObjectDelete(f.fs.container, f.name) // #nosec

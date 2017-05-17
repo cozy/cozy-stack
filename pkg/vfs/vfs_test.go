@@ -759,7 +759,7 @@ func makeSwiftFS() (vfs.VFS, func(), error) {
 		return nil, nil, fmt.Errorf("failed to create swift server %s", err)
 	}
 
-	err = vfsswift.InitConnection(&url.URL{
+	err = config.InitSwiftConnection(&url.URL{
 		Scheme:   "swift",
 		Host:     "localhost",
 		RawQuery: "UserName=swifttest&Password=swifttest&AuthURL=" + url.QueryEscape(swiftSrv.AuthURL),
