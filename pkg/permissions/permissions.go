@@ -408,3 +408,107 @@ func GetPermissionsByType(db couchdb.Database, doctype string, cursor couchdb.Cu
 
 	return result, nil
 }
+
+// GetSharedWithMePermissionsByDoctype retrieves the permissions in all
+// the sharings that apply to the given doctype, where the user is a recipient.
+//
+// The cursor will be modified in place.
+func GetSharedWithMePermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
+	return getSharedWithPermissionsByDoctype(db, doctype, cursor,
+		consts.SharedWithMePermissionsView)
+}
+
+// GetSharedWithOthersPermissionsByDoctype retrieves the permissions in all the
+// sharings that apply to the given doctype, where the user is the sharer.
+//
+// The cursor will be modified in place.
+func GetSharedWithOthersPermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
+	return getSharedWithPermissionsByDoctype(db, doctype, cursor,
+		consts.SharedWithOthersPermissionsView)
+}
+
+func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor, view *couchdb.View) ([]*Permission, error) {
+
+	var req = &couchdb.ViewRequest{
+		StartKey:    []string{doctype},
+		EndKey:      []string{doctype, couchdb.MaxString},
+		IncludeDocs: false,
+	}
+
+	cursor.ApplyTo(req)
+
+	var res couchdb.ViewResponse
+	err := couchdb.ExecView(db, view, req, &res)
+
+	cursor.UpdateFrom(&res)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*Permission, len(res.Rows))
+	// The rows have the following format:
+	// "id": "sharingID", "key": [doctype], "value": [rule]
+	for i, row := range res.Rows {
+		var rule Rule
+		rule.Verbs = VerbSet{} // needed for Merge
+
+		// Since we didn't include the Sharing document (it contains all the
+		// permissions, possibly more than what where are interested in),
+		// we have to manually parse the rule.
+		mRule := row.Value.(map[string]interface{})
+		for field := range mRule {
+			switch field {
+			case "description":
+				rule.Description = mRule[field].(string)
+			case "selector":
+				rule.Selector = mRule[field].(string)
+			case "type":
+				rule.Type = mRule[field].(string)
+			case "values":
+				values := mRule[field].([]interface{})
+				rule.Values = make([]string, len(values))
+				for i, value := range values {
+					rule.Values[i] = value.(string)
+				}
+			case "verbs":
+				verbs := mRule[field].([]interface{})
+				if len(verbs) == 0 {
+					rule.Verbs = ALL
+					continue
+				}
+				for _, verbStr := range verbs {
+					var verb Verb
+					switch verbStr.(string) {
+					case "GET":
+						verb = GET
+					case "POST":
+						verb = POST
+					case "PUT":
+						verb = PUT
+					case "PATCH":
+						verb = PATCH
+					case "DELETE":
+						verb = DELETE
+					default:
+						continue
+					}
+
+					rule.Verbs.Merge(&VerbSet{
+						verb: struct{}{},
+					})
+				}
+			default:
+				continue
+			}
+		}
+
+		result[i] = &Permission{
+			Type:        consts.Sharings,
+			SourceID:    row.ID,
+			Permissions: Set{rule},
+		}
+	}
+
+	return result, nil
+}

@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -459,7 +461,7 @@ func TestListPermission(t *testing.T) {
 		}
 	}
 
-	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events", nil)
+	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/sharedByLink", nil)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	req2.Header.Add("Content-Type", "application/json")
 	res2, err := http.DefaultClient.Do(req2)
@@ -475,7 +477,7 @@ func TestListPermission(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, resBody.Data, 2)
 
-	req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events?page[limit]=1", nil)
+	req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/sharedByLink?page[limit]=1", nil)
 	req3.Header.Add("Authorization", "Bearer "+token)
 	req3.Header.Add("Content-Type", "application/json")
 	res3, err := http.DefaultClient.Do(req3)
@@ -495,6 +497,64 @@ func TestListPermission(t *testing.T) {
 
 }
 
+func TestGetSharedWithMePermissionsByDoctype(t *testing.T) {
+	_, _ = createSharingDocument(testInstance, "io.cozy.events", false,
+		[]string{"GET", "POST"})
+	_, _ = createSharingDocument(testInstance, "io.cozy.events", false,
+		[]string{""})
+	_, _ = createSharingDocument(testInstance, "io.cozy.contacts", false,
+		[]string{""})
+	_, _ = createSharingDocument(testInstance, "io.cozy.events", true,
+		[]string{"GET", "PUT"})
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+
+		"/permissions/doctype/io.cozy.events/sharedWithMe", nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+
+	var resBody struct {
+		Data  []map[string]interface{}
+		Links *jsonapi.LinksList
+	}
+
+	err = json.NewDecoder(res.Body).Decode(&resBody)
+	assert.NoError(t, err)
+	assert.Len(t, resBody.Data, 2)
+}
+
+func TestGetSharedWithOthersPermissionsByDoctype(t *testing.T) {
+	_, _ = createSharingDocument(testInstance, "io.cozy.contacts", true,
+		[]string{"GET", "POST"})
+	_, _ = createSharingDocument(testInstance, "io.cozy.contacts", false,
+		[]string{""})
+	_, _ = createSharingDocument(testInstance, "io.cozy.contacts", true,
+		[]string{""})
+	_, _ = createSharingDocument(testInstance, "io.cozy.events", true,
+		[]string{"GET", "PUT"})
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+
+		"/permissions/doctype/io.cozy.contacts/sharedWithOthers", nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+
+	var resBody struct {
+		Data  []map[string]interface{}
+		Links *jsonapi.LinksList
+	}
+
+	err = json.NewDecoder(res.Body).Decode(&resBody)
+	assert.NoError(t, err)
+	assert.Len(t, resBody.Data, 2)
+}
+
 func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {
 	e := &couchdb.JSONDoc{
 		Type: "io.cozy.events",
@@ -502,4 +562,26 @@ func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {
 	}
 	err := couchdb.CreateDoc(i, e)
 	return e, err
+}
+
+func createSharingDocument(i *instance.Instance, doctype string, owner bool, verbs []string) (*couchdb.JSONDoc, error) {
+	sDoc := &couchdb.JSONDoc{
+		Type: "io.cozy.sharings",
+		M: map[string]interface{}{
+			"type":  consts.OneShotSharing,
+			"owner": owner,
+			"desc":  "randomdesc",
+			"permissions": []map[string]interface{}{
+				{
+					"type":     doctype,
+					"selector": "referenced_by",
+					"values":   []interface{}{"eventsrandomid"},
+					"verbs":    verbs,
+				},
+			},
+		},
+	}
+
+	err := couchdb.CreateDoc(i, sDoc)
+	return sDoc, err
 }
