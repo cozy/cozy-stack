@@ -141,7 +141,10 @@ func (ji *JobInfos) ID() string { return ji.JobID }
 func (ji *JobInfos) Rev() string { return ji.JobRev }
 
 // Clone implements the couchdb.Doc interface
-func (ji *JobInfos) Clone() couchdb.Doc { return ji }
+func (ji *JobInfos) Clone() couchdb.Doc {
+	cloned := *ji
+	return &cloned
+}
 
 // DocType implements the couchdb.Doc interface
 func (ji *JobInfos) DocType() string { return consts.Jobs }

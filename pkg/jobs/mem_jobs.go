@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -200,6 +201,7 @@ func (j *memJob) Infos() *JobInfos {
 func (j *memJob) AckConsumed() error {
 	j.infmu.Lock()
 	job := *j.infos
+	log.Debugf("[jobs] ack_consume %s ", job.ID())
 	job.StartedAt = time.Now()
 	job.State = Running
 	j.infos = &job
@@ -213,6 +215,7 @@ func (j *memJob) AckConsumed() error {
 func (j *memJob) Ack() error {
 	j.infmu.Lock()
 	job := *j.infos
+	log.Debugf("[jobs] ack %s ", job.ID())
 	job.State = Done
 	j.infos = &job
 	err := globalStorage.Update(j.infos)
@@ -225,6 +228,7 @@ func (j *memJob) Ack() error {
 func (j *memJob) Nack(err error) error {
 	j.infmu.Lock()
 	job := *j.infos
+	log.Debugf("[jobs] nack %s ", job.ID())
 	job.State = Errored
 	job.Error = err.Error()
 	j.infos = &job

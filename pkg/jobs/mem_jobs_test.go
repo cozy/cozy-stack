@@ -259,6 +259,23 @@ func TestPanic(t *testing.T) {
 	w.Wait()
 }
 
+func TestProperSerial(t *testing.T) {
+	infos := NewJobInfos(&JobRequest{
+		Domain:     "cozy.tools:8080",
+		WorkerType: "",
+	})
+
+	j := &memJob{
+		infos: infos,
+	}
+	globalStorage.Create(infos)
+	err := j.AckConsumed()
+	assert.NoError(t, err)
+	j2, err := globalStorage.Get("cozy.tools:8080", j.infos.ID())
+	assert.NoError(t, err)
+	assert.Equal(t, State(Running), j2.State)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	fmt.Println(config.CouchURL())
