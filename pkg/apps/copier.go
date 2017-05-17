@@ -209,16 +209,6 @@ func (t *tarCopier) Close() (err error) {
 	return t.src.Copy(&fileInfo{name: KonnectorArchiveName}, t.tmp)
 }
 
-func wrapSwiftErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	if err == swift.ObjectNotFound {
-		return os.ErrNotExist
-	}
-	return nil
-}
-
 type fileInfo struct {
 	name string
 	size int64

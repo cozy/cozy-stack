@@ -36,10 +36,9 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, dom
 		Indexer:         index,
 		DiskThresholder: disk,
 
-		c:         conn,
-		container: domain,
-		version:   domain + versionSuffix,
-		versionOk: true,
+		c:         config.GetSwiftConnection(),
+		container: "cozy-" + domain,
+		version:   "cozy-" + domain + versionSuffix,
 		mu:        mu,
 	}, nil
 }
