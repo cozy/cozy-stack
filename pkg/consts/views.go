@@ -97,7 +97,7 @@ function(doc){
       var p = doc.permissions[k];
       var selector = p.selector || "_id";
       for (var i=0; i<p.values.length; i++) {
-				emit([p.type, selector, p.values[i]], p.verbs);
+        emit([p.type, selector, p.values[i]], p.verbs);
       }
     });
   }
