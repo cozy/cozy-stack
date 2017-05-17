@@ -19,6 +19,12 @@ cozy-stack apps install [slug] [sourceurl]
 $ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build'
 ```
 
+### Options
+
+```
+      --ask-permissions   specify that the application should not be activated after installation
+```
+
 ### Options inherited from parent commands
 
 ```
