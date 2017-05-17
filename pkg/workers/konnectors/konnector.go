@@ -30,7 +30,7 @@ func init() {
 	jobs.AddWorker("konnector", &jobs.WorkerConfig{
 		Concurrency:  4,
 		MaxExecCount: 2,
-		Timeout:      30 * time.Second,
+		Timeout:      60 * time.Second,
 		WorkerFunc:   Worker,
 		WorkerCommit: commit,
 	})
