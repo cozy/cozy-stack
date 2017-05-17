@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	mimetype "mime"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -156,6 +157,14 @@ type DiskThresholder interface {
 	// DiskQuota returns the total number of bytes allowed to be stored in the
 	// VFS. If minus or equal to zero, it is considered without limit.
 	DiskQuota() int64
+}
+
+// Thumbser defines an interface to define a thumbnail filesystem.
+type Thumbser interface {
+	CreateThumb(img *FileDoc, format string) (io.WriteCloser, error)
+	RemoveThumb(img *FileDoc, format string) error
+	ServeThumbContent(w http.ResponseWriter, req *http.Request,
+		img *FileDoc, format string) error
 }
 
 // VFS is composed of the Indexer and Fs interface. It is the common interface

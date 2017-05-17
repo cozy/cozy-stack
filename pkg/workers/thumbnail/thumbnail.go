@@ -1,10 +1,10 @@
 package thumbnail
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"time"
 
@@ -43,7 +43,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	log.Debugf("[jobs] thumbnail %s: %#v", domain, msg.Event)
+	log.Infof("[jobs] thumbnail %s: %#v", domain, msg.Event)
 	i, err := instance.Get(domain)
 	if err != nil {
 		return err
@@ -64,46 +64,44 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 
 func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.FileDoc) error {
 	fs := i.ThumbsFS()
-	if err := fs.MkdirAll(vfs.ThumbDir(img), 0755); err != nil {
-		return err
-	}
-	flags := os.O_RDWR | os.O_CREATE
+	var in io.Reader
 	in, err := i.VFS().OpenFile(img)
 	if err != nil {
 		return err
 	}
-	defer in.Close()
-	largeName := vfs.ThumbPath(img, "large")
-	large, err := fs.OpenFile(largeName, flags, 0640)
+	in, err = recGenerateThub(ctx, in, fs, img, "large")
 	if err != nil {
 		return err
 	}
-	defer large.Close()
-	if err = generateThumb(ctx, in, large, formats["large"]); err != nil {
-		return err
-	}
-	mediumName := vfs.ThumbPath(img, "medium")
-	medium, err := fs.OpenFile(mediumName, flags, 0640)
+	in, err = recGenerateThub(ctx, in, fs, img, "medium")
 	if err != nil {
 		return err
 	}
-	defer medium.Close()
-	if _, err = large.Seek(0, 0); err != nil {
-		return err
-	}
-	if err = generateThumb(ctx, large, medium, formats["medium"]); err != nil {
-		return err
-	}
-	smallName := vfs.ThumbPath(img, "small")
-	small, err := fs.OpenFile(smallName, flags, 0640)
+	// TODO(optim): no need for the last output
+	_, err = recGenerateThub(ctx, in, fs, img, "small")
+	return err
+}
+
+func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string) (r io.Reader, err error) {
+	defer func() {
+		if inCloser, ok := in.(io.Closer); ok {
+			if errc := inCloser.Close(); errc != nil && err == nil {
+				err = errc
+			}
+		}
+	}()
+	file, err := fs.CreateThumb(img, format)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer small.Close()
-	if _, err = medium.Seek(0, 0); err != nil {
-		return err
+	defer file.Close()
+	buffer := new(bytes.Buffer)
+	ws := io.MultiWriter(file, buffer)
+	err = generateThumb(ctx, in, ws, format)
+	if err != nil {
+		return nil, err
 	}
-	return generateThumb(ctx, medium, small, formats["small"])
+	return buffer, nil
 }
 
 // The thumbnails are generated with ImageMagick, because it has the better
@@ -121,7 +119,7 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 		"-strip",         // Strip the EXIF metadata
 		"-quality", "82", // A good compromise between file size and quality
 		"-interlace", "none", // Don't use progressive JPEGs, they are heavier
-		"-thumbnail", format, // Makes a thumbnail that fits inside the given format
+		"-thumbnail", formats[format], // Makes a thumbnail that fits inside the given format
 		"-colorspace", "sRGB", // Use the colorspace recommended for web, sRGB
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
@@ -134,8 +132,7 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
 	var e error
 	for format := range formats {
-		filepath := vfs.ThumbPath(img, format)
-		if err := i.ThumbsFS().Remove(filepath); err != nil {
+		if err := i.ThumbsFS().RemoveThumb(img, format); err != nil {
 			e = err
 		}
 	}

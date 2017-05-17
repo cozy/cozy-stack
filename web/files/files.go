@@ -11,7 +11,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -401,23 +400,8 @@ func ThumbnailHandler(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
 
-	filepath := vfs.ThumbPath(doc, c.Param("format"))
 	fs := instance.ThumbsFS()
-	s, err := fs.Stat(filepath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return echo.NewHTTPError(http.StatusNotFound, err)
-		}
-		return err
-	}
-
-	r, err := fs.Open(filepath)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	http.ServeContent(c.Response(), c.Request(), filepath, s.ModTime(), r)
-	return nil
+	return fs.ServeThumbContent(c.Response(), c.Request(), doc, c.Param("format"))
 }
 
 func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
