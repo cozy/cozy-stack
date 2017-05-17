@@ -68,8 +68,8 @@ type (
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
-		StartedAt  time.Time   `json:"started_at"`
-		Error      string      `json:"error"`
+		StartedAt  time.Time   `json:"started_at,omitempty"`
+		Error      string      `json:"error,omitempty"`
 	}
 
 	// JobRequest struct is used to represent a new job request.
