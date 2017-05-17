@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -91,9 +90,7 @@ func (b *redisBroker) pollLoop(keys []string) {
 				db: couchdb.SimpleDatabasePrefix(parts[0]),
 			},
 		}
-		fmt.Printf("push job %v\n", job)
 		ch <- job
-		fmt.Printf("job pushed")
 	}
 }
 

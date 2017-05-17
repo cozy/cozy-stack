@@ -61,7 +61,6 @@ type (
 var slots chan struct{}
 
 func setNbSlots(nb int) {
-	fmt.Printf("setNbSlots %d\n", nb)
 	slots = make(chan struct{}, nb)
 	for i := 0; i < nb; i++ {
 		slots <- struct{}{}
@@ -203,12 +202,9 @@ func (t *task) run() (err error) {
 }
 
 func (t *task) exec(ctx context.Context) (err error) {
-	fmt.Printf("wait for a slot\n")
 	slot := <-slots
-	fmt.Printf("took a slot\n")
 	defer func() {
 		slots <- slot
-		fmt.Printf("released a slot\n")
 		if r := recover(); r != nil {
 			var ok bool
 			err, ok = r.(error)

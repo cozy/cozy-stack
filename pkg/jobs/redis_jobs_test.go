@@ -100,7 +100,6 @@ func TestRedisJobs(t *testing.T) {
 func TestMain(m *testing.M) {
 	redisBRPopTimeout = 1 * time.Second
 	config.UseTestFile()
-	fmt.Println(config.CouchURL())
 	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
