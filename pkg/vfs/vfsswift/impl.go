@@ -53,15 +53,17 @@ func (sfs *swiftVFS) InitFs() error {
 	}
 	if err := sfs.c.VersionContainerCreate(sfs.container, sfs.version); err != nil {
 		if err != swift.Forbidden {
+			log.Errorf("[vfsswift] Could not create container %s: %s",
+				sfs.container, err.Error())
 			return err
 		}
-		log.Warnf("[swift] Could not activate versioning for container %s (%s)",
+		log.Errorf("[vfsswift] Could not activate versioning for container %s: %s",
 			sfs.container, err.Error())
-		sfs.versionOk = false
 		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
 			return err
 		}
 	}
+	log.Infof("[vfsswift] Created container %s", sfs.container)
 	return nil
 }
 
@@ -248,15 +250,13 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 	if err != nil {
 		return err
 	}
-	if sfs.versionOk {
-		versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
-		if err != nil {
-			return err
-		}
-		_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
-		if err != nil {
-			return err
-		}
+	versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
+	if err != nil {
+		return err
+	}
+	_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
+	if err != nil {
+		return err
 	}
 	return sfs.Indexer.DeleteFileDoc(doc)
 }
@@ -425,7 +425,7 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 
 func (f *swiftFileCreation) Close() (err error) {
 	defer func() {
-		if err != nil && f.fs.versionOk {
+		if err != nil {
 			// Deleting the object should be secure since we use X-Versions-Location
 			// on the container and the old object should be restored.
 			f.fs.c.ObjectDelete(f.fs.container, f.name) // #nosec
