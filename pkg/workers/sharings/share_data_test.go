@@ -634,7 +634,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	_, _ = instance.Destroy(domainSharer)
+	instance.Destroy(domainSharer)
 	in, err = createInstance(domainSharer, "Alice")
 	if err != nil {
 		fmt.Println(err)

@@ -753,13 +753,13 @@ func TestMain(m *testing.M) {
 
 	// The instance must be created in db in order to retrieve it from
 	// the share_data worker
-	_, _ = instance.Destroy(domainSharer)
+	instance.Destroy(domainSharer)
 	in, err = createInstance(domainSharer, "Alice")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	_, _ = instance.Destroy(domainRecipient)
+	instance.Destroy(domainRecipient)
 	recipientIn, err = createInstance(domainRecipient, "Bob")
 	if err != nil {
 		fmt.Println(err)

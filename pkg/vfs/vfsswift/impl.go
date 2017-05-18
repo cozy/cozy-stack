@@ -68,24 +68,41 @@ func (sfs *swiftVFS) InitFs() error {
 }
 
 func (sfs *swiftVFS) Delete() error {
-	// Mark the container as deleted but do not actually delete all the file of
-	// the container. For deleting actual files we should rely on another system
-	// for safety and because swift does not provide a convinient way to delete
-	// a container and its content.
-	err := sfs.c.ContainerUpdate(sfs.container, swift.Headers{"Deleted": "true"})
+	err := sfs.deleteContainer(sfs.container)
 	if err != nil {
-		log.Errorf("[vfsswift] Could not mark container as deleted %s: %s",
+		log.Errorf("[vfsswift] Could not delete container %s: %s",
 			sfs.container, err.Error())
 		return err
 	}
-	err = sfs.c.ContainerUpdate(sfs.version, swift.Headers{"Deleted": "true"})
-	if err != nil && err != swift.ContainerNotFound {
-		log.Errorf("[vfsswift] Could not mark version container as deleted %s: %s",
-			sfs.container, err.Error())
+	err = sfs.deleteContainer(sfs.version)
+	if err != nil {
+		log.Errorf("[vfsswift] Could not delete version container %s: %s",
+			sfs.version, err.Error())
 		return err
 	}
-	log.Infof("[vfsswift] Marked container as deleted %s", sfs.container)
+	log.Infof("[vfsswift] Deleted container %s", sfs.container)
 	return nil
+}
+
+func (sfs *swiftVFS) deleteContainer(container string) error {
+	_, _, err := sfs.c.Container(container)
+	if err == swift.ContainerNotFound {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	objectNames, err := sfs.c.ObjectNamesAll(container, nil)
+	if err != nil {
+		return err
+	}
+	if len(objectNames) > 0 {
+		_, err = sfs.c.BulkDelete(container, objectNames)
+		if err != nil {
+			return err
+		}
+	}
+	return sfs.c.ContainerDelete(container)
 }
 
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {

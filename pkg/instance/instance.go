@@ -46,6 +46,8 @@ var passwordResetValidityDuration = 15 * time.Minute
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
 
+const illegalChars = " /?#@\t\r\n\x00"
+
 var (
 	// ErrNotFound is used when the seeked instance was not found
 	ErrNotFound = errors.New("Instance not found")
@@ -319,12 +321,9 @@ func (i *Instance) defineViewsAndIndex() error {
 
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
-	domain := strings.TrimSpace(opts.Domain)
-	if domain == "" || domain == ".." || domain == "." {
-		return nil, ErrIllegalDomain
-	}
-	if strings.ContainsAny(domain, " /?#@\t\r\n\x00") {
-		return nil, ErrIllegalDomain
+	domain, err := validateDomain(opts.Domain)
+	if err != nil {
+		return nil, err
 	}
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		parts := strings.SplitN(domain, ".", 2)
@@ -431,8 +430,12 @@ func Create(opts *Options) (*Instance, error) {
 
 // Get retrieves the instance for a request by its host.
 func Get(domain string) (*Instance, error) {
-	cache := getCache()
 	var err error
+	domain, err = validateDomain(domain)
+	if err != nil {
+		return nil, err
+	}
+	cache := getCache()
 	i := cache.Get(domain)
 	if i == nil {
 		i, err = getFromCouch(domain)
@@ -527,36 +530,34 @@ func Update(i *Instance) error {
 
 // Destroy is used to remove the instance. All the data linked to this
 // instance will be permanently deleted.
-func Destroy(domain string) (*Instance, error) {
-	defer getCache().Revoke(domain)
-	i, err := Get(domain)
+func Destroy(domain string) error {
+	var err error
+	domain, err = validateDomain(domain)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	sched := stack.GetScheduler()
-	triggers, err := sched.GetAll(i.Domain)
+	triggers, err := sched.GetAll(domain)
 	if err == nil {
 		for _, t := range triggers {
-			if err = sched.Delete(i.Domain, t.Infos().TID); err != nil {
+			if err = sched.Delete(domain, t.Infos().TID); err != nil {
 				log.Error("[instance] Failed to remove trigger: ", err)
 			}
 		}
 	}
-
-	if err = couchdb.DeleteDoc(couchdb.GlobalDB, i); err != nil {
-		return nil, err
+	i, err := Get(domain)
+	if err != nil {
+		return err
 	}
-
-	if err = couchdb.DeleteAllDBs(i); err != nil {
-		return nil, err
+	defer getCache().Revoke(domain)
+	db := couchdb.SimpleDatabasePrefix(domain)
+	if err = couchdb.DeleteAllDBs(db); err != nil {
+		return err
 	}
-
 	if err = i.VFS().Delete(); err != nil {
-		return nil, err
+		log.Errorf("[instance] Could not delete VFS %s: %s", i.Domain, err.Error())
 	}
-
-	return i, nil
+	return couchdb.DeleteDoc(couchdb.GlobalDB, i)
 }
 
 // RegisterPassphrase replace the instance registerToken by a passphrase
@@ -751,6 +752,17 @@ func (i *Instance) BuildKonnectorToken(m apps.Manifest) string {
 		return ""
 	}
 	return token
+}
+
+func validateDomain(domain string) (string, error) {
+	domain = strings.TrimSpace(domain)
+	if domain == "" || domain == ".." || domain == "." {
+		return "", ErrIllegalDomain
+	}
+	if strings.ContainsAny(domain, illegalChars) {
+		return "", ErrIllegalDomain
+	}
+	return domain, nil
 }
 
 // ensure Instance implements couchdb.Doc

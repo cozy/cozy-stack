@@ -360,15 +360,12 @@ func TestInstanceDestroy(t *testing.T) {
 		return
 	}
 
-	inst, err := instance.Destroy("test.cozycloud.cc")
-	if assert.NoError(t, err) {
-		assert.NotNil(t, inst)
-	}
+	err = instance.Destroy("test.cozycloud.cc")
+	assert.NoError(t, err)
 
-	inst, err = instance.Destroy("test.cozycloud.cc")
+	err = instance.Destroy("test.cozycloud.cc")
 	if assert.Error(t, err) {
 		assert.Equal(t, instance.ErrNotFound, err)
-		assert.Nil(t, inst)
 	}
 }
 
@@ -402,14 +399,14 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	instance.Destroy("test.cozycloud.cc")
-	instance.Destroy("test2.cozycloud.cc")
-	instance.Destroy("test.cozycloud.cc.duplicate")
-
 	if err = stack.Start(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	instance.Destroy("test.cozycloud.cc")
+	instance.Destroy("test2.cozycloud.cc")
+	instance.Destroy("test.cozycloud.cc.duplicate")
 
 	os.RemoveAll("/usr/local/var/cozy2/")
 

@@ -139,11 +139,11 @@ func listHandler(c echo.Context) error {
 
 func deleteHandler(c echo.Context) error {
 	domain := c.Param("domain")
-	i, err := instance.Destroy(domain)
+	err := instance.Destroy(domain)
 	if err != nil {
 		return wrapError(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func createToken(c echo.Context) error {
