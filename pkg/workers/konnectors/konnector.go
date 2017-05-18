@@ -199,17 +199,21 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	if err = cmd.Start(); err != nil {
 		return wrapErr(ctx, err)
 	}
-	if err = cmd.Wait(); err != nil {
-		return wrapErr(ctx, err)
+
+	err = cmd.Wait()
+	if err != nil {
+		err = wrapErr(ctx, err)
 	}
+
+	close(msgChan)
 	for _, msg := range messages {
 		if msg.Type == konnectorMsgTypeError {
-			err = errors.New(msg.Message)
-			return err
+			// konnector err is more explicit
+			return errors.New(msg.Message)
 		}
 	}
-	close(msgChan)
-	return nil
+
+	return err
 }
 
 func doScanOut(jobID string, scanner *bufio.Scanner, domain string, msgs chan konnectorMsg) {
