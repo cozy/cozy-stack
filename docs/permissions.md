@@ -260,7 +260,7 @@ Accept: application/vnd.api+json
 }
 ```
 
-#### Reponse
+#### Response
 
 ```http
 HTTP/1.1 200 OK
@@ -467,14 +467,14 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 HTTP/1.1 204 No Content
 ```
 
-### GET /permissions/doctype/:doctype
+### GET /permissions/doctype/:doctype/sharedByLink
 
 List permissions for a doctype
 
 #### Request
 
 ```http
-GET /permissions/doctype/io.cozy.events HTTP/1.1
+GET /permissions/doctype/io.cozy.events/sharedByLink HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
 Content-Type: application/vnd.api+json
@@ -584,3 +584,123 @@ more examples.
 Add permissions or remove permissions to the konnector with specified slug. It
 behaves like the `PATCH /permissions/:id` route. See this route for more
 examples.
+
+### GET /permissions/doctype/:doctype/sharedWithMe
+
+Returns the list of permissions associated with sharings where the user is a
+recipient (those documents are shared with the user).
+
+#### Request
+
+```http
+GET /permissions/doctype/io.cozy.files/sharedWithMe
+HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.permissions",
+      "id": "",
+      "attributes": {
+        "type": "io.cozy.sharings",
+        "source_id": "60cf951a866b15d5777118696007ab0b",
+        "permissions": {
+          "rule0": {
+            "type": "io.cozy.files",
+            "verbs": [
+              "GET",
+              "POST",
+              "PUT",
+              "PATCH",
+              "DELETE"
+            ],
+            "selector": "referenced_by",
+            "values": [
+              "io.cozy.photos.albums/60cf951a866b15d577711869600759d4"
+            ]
+          }
+        }
+      },
+      "meta": {},
+      "links": {
+        "self": "/sharings/60cf951a866b15d5777118696007ab0b"
+      }
+    }
+  ],
+  "links": {},
+  "meta": {
+    "count": 1
+  }
+}
+```
+
+Permission required: GET on the whole type.
+
+### GET /permissions/doctype/:doctype/sharedWithOthers
+
+Returns the list of permissions associated with sharings where the user is the
+sharer (the user is sharing those documents with others).
+
+#### Request
+
+```http
+GET /permissions/doctype/io.cozy.files/sharedWithOthers
+HTTP/1.1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.permissions",
+      "id": "",
+      "attributes": {
+        "type": "io.cozy.sharings",
+        "source_id": "60cf951a866b15d5777118696007a13d",
+        "permissions": {
+          "rule0": {
+            "type": "io.cozy.files",
+            "description": "photos",
+            "selector": "referenced_by",
+            "values": [
+              "io.cozy.photos.albums/60cf951a866b15d577711869600759d4"
+            ]
+          }
+        }
+      },
+      "meta": {},
+      "links": {
+        "self": "/sharings/60cf951a866b15d5777118696007a13d"
+      }
+    }
+  ],
+  "links": {},
+  "meta": {
+    "count": 1
+  }
+}
+```
+
+Permission required: GET on the whole type.

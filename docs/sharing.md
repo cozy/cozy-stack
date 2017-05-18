@@ -135,16 +135,6 @@ The answer to the question: "What are you sharing?". It is an optional field but
 This uniquely identify a sharing. This corresponds to the id of the sharing document, on the sharer point of view and is automatically generated at the sharing creation.
 
 
-### Where is the corresponding code?
-
-#### cozy-stack/pkg/sharings
-
-The implementation of the logic: creating a new sharing, handling an answer, starting a replication, etc.
-
-#### cozy-stack/web/sharings
-
-The declaration of the routes and their chaining.
-
 ### Routes
 
 #### POST /sharings/
