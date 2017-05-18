@@ -319,6 +319,38 @@ func (i *Instance) defineViewsAndIndex() error {
 	return nil
 }
 
+func (i *Instance) createDefaultFilesTree() error {
+	administrative, err := vfs.NewDirDocWithPath("Administrative", consts.RootDirID, "/", nil)
+	if err != nil {
+		return err
+	}
+	if err = i.VFS().CreateDir(administrative); err != nil {
+		return err
+	}
+	photos, err := vfs.NewDirDocWithPath("Photos", consts.RootDirID, "/", nil)
+	if err != nil {
+		return err
+	}
+	if err = i.VFS().CreateDir(photos); err != nil {
+		return err
+	}
+	uploaded, err := vfs.NewDirDoc(i.VFS(), "Uploaded from Cozy Photos", photos.ID(), nil)
+	if err != nil {
+		return err
+	}
+	if err = i.VFS().CreateDir(uploaded); err != nil {
+		return err
+	}
+	backuped, err := vfs.NewDirDoc(i.VFS(), "Backuped from my mobile", photos.ID(), nil)
+	if err != nil {
+		return err
+	}
+	if err = i.VFS().CreateDir(backuped); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Create builds an instance and initializes it
 func Create(opts *Options) (*Instance, error) {
 	domain, err := validateDomain(opts.Domain)
@@ -408,6 +440,9 @@ func Create(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 	if err := i.defineViewsAndIndex(); err != nil {
+		return nil, err
+	}
+	if err := i.createDefaultFilesTree(); err != nil {
 		return nil, err
 	}
 	sched := stack.GetScheduler()
