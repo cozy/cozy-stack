@@ -48,7 +48,7 @@ type Client struct {
 }
 
 // ID returns the client qualified identifier
-func (c *Client) ID() string { return c.ClientID }
+func (c *Client) ID() string { return c.CouchID }
 
 // Rev returns the client revision
 func (c *Client) Rev() string { return c.CouchRev }
