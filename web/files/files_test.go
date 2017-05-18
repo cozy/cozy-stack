@@ -364,6 +364,21 @@ func TestUploadWithNoName(t *testing.T) {
 	assert.Equal(t, 422, res.StatusCode)
 }
 
+func TestUploadToNonExistingParent(t *testing.T) {
+	res, _ := upload(t, "/files/nooop?Type=file&Name=no-parent", "text/plain", "foo", "")
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestUploadToTrashedFolder(t *testing.T) {
+	res1, data1 := createDir(t, "/files/?Name=trashed-parent&Type=directory")
+	assert.Equal(t, 201, res1.StatusCode)
+	dirID, _ := extractDirData(t, data1)
+	res2, _ := trash(t, "/files/"+dirID)
+	assert.Equal(t, 200, res2.StatusCode)
+	res3, _ := upload(t, "/files/"+dirID+"?Type=file&Name=trashed-parent", "text/plain", "foo", "")
+	assert.Equal(t, 404, res3.StatusCode)
+}
+
 func TestUploadBadHash(t *testing.T) {
 	body := "foo"
 	res, _ := upload(t, "/files/?Type=file&Name=badhash", "text/plain", body, "3FbbMXfH+PdjAlWFfVb1dQ==")

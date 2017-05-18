@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -171,9 +172,17 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		newdoc.CreatedAt = olddoc.CreatedAt
 	}
 
+	newpath, err := sfs.Indexer.FilePath(newdoc)
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
+		return nil, vfs.ErrParentInTrash
+	}
+
 	objName := newdoc.DirID + "/" + newdoc.DocName
 	if olddoc == nil {
-		_, _, err := sfs.c.Object(sfs.container, objName)
+		_, _, err = sfs.c.Object(sfs.container, objName)
 		if err != swift.ObjectNotFound {
 			if err != nil {
 				return nil, err

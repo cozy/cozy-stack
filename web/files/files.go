@@ -804,6 +804,8 @@ func wrapVfsError(err error) error {
 		return jsonapi.InvalidAttribute("type", err)
 	case vfs.ErrParentDoesNotExist:
 		return jsonapi.NotFound(err)
+	case vfs.ErrParentInTrash:
+		return jsonapi.NotFound(err)
 	case vfs.ErrForbiddenDocMove:
 		return jsonapi.PreconditionFailed("dir-id", err)
 	case vfs.ErrIllegalFilename:
