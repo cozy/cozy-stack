@@ -7,6 +7,18 @@ msgstr ""
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
+msgid "Tree Administrative"
+msgstr ""
+
+msgid "Tree Photos"
+msgstr ""
+
+msgid "Tree Uploaded from Cozy Photos"
+msgstr ""
+
+msgid "Tree Backuped from my mobile"
+msgstr ""
+
 msgid "Login Credentials error"
 msgstr "入力した資格情報が間違っています。もう一度やり直してください。"
 

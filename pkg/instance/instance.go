@@ -320,28 +320,32 @@ func (i *Instance) defineViewsAndIndex() error {
 }
 
 func (i *Instance) createDefaultFilesTree() error {
-	administrative, err := vfs.NewDirDocWithPath("Administrative", consts.RootDirID, "/", nil)
+	name := i.Translate("Tree Administrative")
+	administrative, err := vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
 	if err != nil {
 		return err
 	}
 	if err = i.VFS().CreateDir(administrative); err != nil {
 		return err
 	}
-	photos, err := vfs.NewDirDocWithPath("Photos", consts.RootDirID, "/", nil)
+	name = i.Translate("Tree Photos")
+	photos, err := vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
 	if err != nil {
 		return err
 	}
 	if err = i.VFS().CreateDir(photos); err != nil {
 		return err
 	}
-	uploaded, err := vfs.NewDirDoc(i.VFS(), "Uploaded from Cozy Photos", photos.ID(), nil)
+	name = i.Translate("Tree Uploaded from Cozy Photos")
+	uploaded, err := vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)
 	if err != nil {
 		return err
 	}
 	if err = i.VFS().CreateDir(uploaded); err != nil {
 		return err
 	}
-	backuped, err := vfs.NewDirDoc(i.VFS(), "Backuped from my mobile", photos.ID(), nil)
+	name = i.Translate("Tree Backuped from my mobile")
+	backuped, err := vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)
 	if err != nil {
 		return err
 	}

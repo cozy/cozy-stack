@@ -7,6 +7,18 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
+msgid "Tree Administrative"
+msgstr "Administratif"
+
+msgid "Tree Photos"
+msgstr "Photos"
+
+msgid "Tree Uploaded from Cozy Photos"
+msgstr "Transférées depuis Cozy Photos"
+
+msgid "Tree Backuped from my mobile"
+msgstr "Sauvegardées depuis mon mobile"
+
 msgid "Login Credentials error"
 msgstr ""
 "Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
