@@ -166,15 +166,11 @@ func (m *WebappManifest) Create(db couchdb.Database) error {
 
 // Update is part of the Manifest interface
 func (m *WebappManifest) Update(db couchdb.Database) error {
-	err := permissions.DestroyWebapp(db, m.Slug())
-	if err != nil && !couchdb.IsNotFoundError(err) {
-		return err
-	}
-	err = couchdb.UpdateDoc(db, m)
+	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
 		return err
 	}
-	_, err = permissions.CreateWebappSet(db, m.Slug(), m.Permissions())
+	_, err = permissions.UpdateWebappSet(db, m.Slug(), m.Permissions())
 	return err
 }
 
