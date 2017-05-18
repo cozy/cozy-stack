@@ -96,8 +96,13 @@ func (sfs *swiftVFS) deleteContainer(container string) error {
 	if err != nil {
 		return err
 	}
-	_, err = sfs.c.BulkDelete(container, objectNames)
-	return err
+	if len(objectNames) > 0 {
+		_, err = sfs.c.BulkDelete(container, objectNames)
+		if err != nil {
+			return err
+		}
+	}
+	return sfs.c.ContainerDelete(container)
 }
 
 func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
