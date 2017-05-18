@@ -70,6 +70,8 @@ type fileOptions struct {
 var (
 	// ErrBadFileFormat is used when the given file is not well structured
 	ErrBadFileFormat = errors.New("Bad file format")
+	//ErrRemoteDocDoesNotExist is used when the remote doc does not exist
+	ErrRemoteDocDoesNotExist = errors.New("Remote doc does not exist")
 	// ErrBadPermission is used when a given permission is not valid
 	ErrBadPermission = errors.New("Invalid permission format")
 )
@@ -350,7 +352,16 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		// Get recipient data
 		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 		if err != nil {
-			log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
+			// Special case for document not found: send document
+			if err == ErrRemoteDocDoesNotExist {
+				errf := SendFile(ins, opts, fileDoc)
+				if errf != nil {
+					log.Error("[sharing] An error occurred while trying to "+
+						"send file: ", errf)
+				}
+			} else {
+				log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
+			}
 			continue
 		}
 
@@ -392,7 +403,6 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 					"send patch: ", errsp)
 			}
 			continue
-
 		}
 		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
@@ -713,6 +723,10 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 		},
 	})
 	if err != nil {
+		reqErr := err.(*request.Error)
+		if reqErr.Title == "Not Found" {
+			return nil, nil, ErrRemoteDocDoesNotExist
+		}
 		return nil, nil, err
 	}
 	dirOrFileDoc, err := bindDirOrFile(res.Body)
