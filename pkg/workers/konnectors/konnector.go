@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -28,8 +29,9 @@ import (
 
 func init() {
 	jobs.AddWorker("konnector", &jobs.WorkerConfig{
-		Concurrency:  4,
+		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
+		MaxExecTime:  120 * time.Second,
 		Timeout:      60 * time.Second,
 		WorkerFunc:   Worker,
 		WorkerCommit: commit,

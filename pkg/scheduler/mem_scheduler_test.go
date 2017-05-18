@@ -50,7 +50,7 @@ func TestTriggersBadArguments(t *testing.T) {
 func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
-	bro := jobs.NewMemBroker(jobs.WorkersList{
+	bro := jobs.NewMemBroker(1, jobs.WorkersList{
 		"worker": {
 			Concurrency:  1,
 			MaxExecCount: 1,

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"runtime"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -29,9 +30,9 @@ type imageMessage struct {
 
 func init() {
 	jobs.AddWorker("thumbnail", &jobs.WorkerConfig{
-		Concurrency:  4,
-		MaxExecCount: 3,
-		Timeout:      10 * time.Second,
+		Concurrency:  (runtime.NumCPU() + 1) / 2,
+		MaxExecCount: 2,
+		Timeout:      15 * time.Second,
 		WorkerFunc:   Worker,
 	})
 }

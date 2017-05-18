@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"runtime"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -10,7 +11,7 @@ import (
 
 func init() {
 	jobs.AddWorker("log", &jobs.WorkerConfig{
-		Concurrency:  1,
+		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
 		Timeout:      1 * time.Second,
 		WorkerFunc:   Worker,

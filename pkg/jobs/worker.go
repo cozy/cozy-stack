@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"sync/atomic"
+	"runtime"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	defaultConcurrency  = 1
+	defaultConcurrency  = runtime.NumCPU()
 	defaultMaxExecCount = 3
 	defaultMaxExecTime  = 60 * time.Second
 	defaultRetryDelay   = 60 * time.Millisecond
@@ -36,16 +36,36 @@ type (
 	// execution of the WorkerFunc.
 	WorkerCommit func(context context.Context, msg *Message, errjob error) error
 
+	// WorkerConfig is the configuration parameter of a worker defined by the job
+	// system. It contains parameters of the worker along with the worker main
+	// function that perform the work against a job's message.
+	WorkerConfig struct {
+		WorkerFunc   WorkerFunc
+		WorkerCommit WorkerCommit
+		Concurrency  int           `json:"concurrency"`
+		MaxExecCount int           `json:"max_exec_count"`
+		MaxExecTime  time.Duration `json:"max_exec_time"`
+		Timeout      time.Duration `json:"timeout"`
+		RetryDelay   time.Duration `json:"retry_delay"`
+	}
+
 	// Worker is a unit of work that will consume from a queue and execute the do
 	// method for each jobs it pulls.
 	Worker struct {
 		Type string
 		Conf *WorkerConfig
-
-		jobs    Queue
-		started int32
+		jobs chan Job
 	}
 )
+
+var slots chan struct{}
+
+func setNbSlots(nb int) {
+	slots = make(chan struct{}, nb)
+	for i := 0; i < nb; i++ {
+		slots <- struct{}{}
+	}
+}
 
 // NewWorkerContext returns a context.Context usable by a worker.
 func NewWorkerContext(domain, workerID string) context.Context {
@@ -56,28 +76,17 @@ func NewWorkerContext(domain, workerID string) context.Context {
 }
 
 // Start is used to start the worker consumption of messages from its queue.
-func (w *Worker) Start(q Queue) {
-	if !atomic.CompareAndSwapInt32(&w.started, 0, 1) {
-		return
-	}
-	w.jobs = q
-	for i := 0; i < int(w.Conf.Concurrency); i++ {
+func (w *Worker) Start(jobs chan Job) {
+	w.jobs = jobs
+	for i := 0; i < w.Conf.Concurrency; i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
+		log.Debugf("Start worker %s", name)
 		go w.work(name)
 	}
 }
 
 func (w *Worker) work(workerID string) {
-	// TODO: err handling and persistence
-	for {
-		job, err := w.jobs.Consume()
-		if err != nil {
-			if err != ErrQueueClosed {
-				log.Errorf("[job] %s: error while consuming queue (%s)",
-					workerID, err.Error())
-			}
-			return
-		}
+	for job := range w.jobs {
 		domain := job.Domain()
 		if domain == "" {
 			log.Errorf("[job] %s: missing domain from job request", workerID)
@@ -85,7 +94,7 @@ func (w *Worker) work(workerID string) {
 		}
 		parentCtx := NewWorkerContext(domain, workerID)
 		infos := job.Infos()
-		if err = job.AckConsumed(); err != nil {
+		if err := job.AckConsumed(); err != nil {
 			log.Errorf("[job] %s: error acking consume job %s: %s",
 				workerID, infos.ID(), err.Error())
 			continue
@@ -96,6 +105,7 @@ func (w *Worker) work(workerID string) {
 			conf:     w.defaultedConf(infos.Options),
 			workerID: workerID,
 		}
+		var err error
 		if err = t.run(); err != nil {
 			log.Errorf("[job] %s: error while performing job %s: %s",
 				workerID, infos.ID(), err.Error())
@@ -113,10 +123,10 @@ func (w *Worker) work(workerID string) {
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 	c := w.Conf.clone()
 	if c.Concurrency == 0 {
-		c.Concurrency = uint(defaultConcurrency)
+		c.Concurrency = defaultConcurrency
 	}
 	if c.MaxExecCount == 0 {
-		c.MaxExecCount = uint(defaultMaxExecCount)
+		c.MaxExecCount = defaultMaxExecCount
 	}
 	if c.MaxExecTime == 0 {
 		c.MaxExecTime = defaultMaxExecTime
@@ -142,15 +152,6 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 	return c
 }
 
-// Stop will stop the worker's consumption of its queue. It will also close the
-// associated queue.
-func (w *Worker) Stop() {
-	if !atomic.CompareAndSwapInt32(&w.started, 1, 0) {
-		return
-	}
-	w.jobs.Close()
-}
-
 type task struct {
 	ctx   context.Context
 	infos *JobInfos
@@ -158,7 +159,7 @@ type task struct {
 
 	workerID  string
 	startTime time.Time
-	execCount uint
+	execCount int
 }
 
 func (t *task) run() (err error) {
@@ -201,7 +202,9 @@ func (t *task) run() (err error) {
 }
 
 func (t *task) exec(ctx context.Context) (err error) {
+	slot := <-slots
 	defer func() {
+		slots <- slot
 		if r := recover(); r != nil {
 			var ok bool
 			err, ok = r.(error)
@@ -233,7 +236,7 @@ func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
 		// on first execution, execute immediately
 		nextDelay = 0
 	} else {
-		nextDelay = c.RetryDelay << (t.execCount - 1)
+		nextDelay = c.RetryDelay << uint(t.execCount-1)
 
 		// fuzzDelay number between delay * (1 +/- 0.1)
 		fuzzDelay := int(0.1 * float64(nextDelay))

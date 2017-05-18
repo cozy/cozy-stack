@@ -32,15 +32,6 @@ const (
 )
 
 type (
-	// Queue interface is used to represent an asynchronous queue of jobs from
-	// which it is possible to enqueue and consume jobs.
-	Queue interface {
-		Enqueue(job Job) error
-		Consume() (Job, error)
-		Len() int
-		Close()
-	}
-
 	// Broker interface is used to represent a job broker associated to a
 	// particular domain. A broker can be used to create jobs that are pushed in
 	// the job system.
@@ -55,30 +46,6 @@ type (
 
 		// GetJobsInfos returns the informations about a job.
 		GetJobInfos(domain, jobID string) (*JobInfos, error)
-	}
-
-	// Job interface represents a job.
-	Job interface {
-		// Domain returns the domain name from which the job has been sent.
-		Domain() string
-		// Infos returns the JobInfos data associated with the job
-		Infos() *JobInfos
-		// AckConsumed should be used by the consumer of the job, ack-ing that
-		// it has well received the job and is processing it.
-		AckConsumed() error
-		// Ack should be used by the consumer after the job has been processed,
-		// ack-ing that the job was successfully executed.
-		Ack() error
-		// Nack should be used to tell that the job coult not be consumed or that
-		// an error has happened during its processing. The error passed will be
-		// used to inform in more detail about the error that happened.
-		Nack(error) error
-		// Marshal allows you to define how the job should be marshalled when put
-		// into the queue.
-		Marshal() ([]byte, error)
-		// Unmarshal allows you to define how the job should be unmarshalled when
-		// consumed from the queue.
-		Unmarshal() error
 	}
 
 	// State represent the state of a job.
@@ -101,8 +68,8 @@ type (
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
-		StartedAt  time.Time   `json:"started_at"`
-		Error      string      `json:"error"`
+		StartedAt  time.Time   `json:"started_at,omitempty"`
+		Error      string      `json:"error,omitempty"`
 	}
 
 	// JobRequest struct is used to represent a new job request.
@@ -115,22 +82,9 @@ type (
 
 	// JobOptions struct contains the execution properties of the jobs.
 	JobOptions struct {
-		MaxExecCount uint          `json:"max_exec_count"`
+		MaxExecCount int           `json:"max_exec_count"`
 		MaxExecTime  time.Duration `json:"max_exec_time"`
 		Timeout      time.Duration `json:"timeout"`
-	}
-
-	// WorkerConfig is the configuration parameter of a worker defined by the job
-	// system. It contains parameters of the worker along with the worker main
-	// function that perform the work against a job's message.
-	WorkerConfig struct {
-		WorkerFunc   WorkerFunc
-		WorkerCommit WorkerCommit
-		Concurrency  uint          `json:"concurrency"`
-		MaxExecCount uint          `json:"max_exec_count"`
-		MaxExecTime  time.Duration `json:"max_exec_time"`
-		Timeout      time.Duration `json:"timeout"`
-		RetryDelay   time.Duration `json:"retry_delay"`
 	}
 )
 

@@ -2,22 +2,31 @@ package jobs
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/cozy/checkup"
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func randomMicro(min, max int) time.Duration {
-	return time.Duration(rand.Intn(max-min)+min) * time.Microsecond
+func TestProperSerial(t *testing.T) {
+	infos := NewJobInfos(&JobRequest{
+		Domain:     "cozy.tools:8080",
+		WorkerType: "",
+	})
+
+	j := &Job{
+		infos:   infos,
+		storage: globalStorage,
+	}
+	globalStorage.Create(infos)
+	err := j.AckConsumed()
+	assert.NoError(t, err)
+	j2, err := globalStorage.Get("cozy.tools:8080", j.infos.ID())
+	assert.NoError(t, err)
+	assert.Equal(t, State(Running), j2.State)
 }
 
 func TestInMemoryJobs(t *testing.T) {
@@ -50,14 +59,15 @@ func TestInMemoryJobs(t *testing.T) {
 		},
 	}
 
+	broker1 := NewMemBroker(4, workersTestList)
+	broker2 := NewMemBroker(4, workersTestList)
 	w.Add(2)
 
 	go func() {
-		broker := NewMemBroker(workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
-			_, err := broker.PushJob(&JobRequest{
+			_, err := broker1.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
@@ -69,11 +79,10 @@ func TestInMemoryJobs(t *testing.T) {
 	}()
 
 	go func() {
-		broker := NewMemBroker(workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
-			_, err := broker.PushJob(&JobRequest{
+			_, err := broker2.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
@@ -88,7 +97,7 @@ func TestInMemoryJobs(t *testing.T) {
 }
 
 func TestUnknownWorkerError(t *testing.T) {
-	broker := NewMemBroker(WorkersList{})
+	broker := NewMemBroker(1, WorkersList{})
 	_, err := broker.PushJob(&JobRequest{
 		Domain:     "cozy.local",
 		WorkerType: "nope",
@@ -101,7 +110,7 @@ func TestUnknownWorkerError(t *testing.T) {
 func TestUnknownMessageType(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(4, WorkersList{
 		"test": {
 			Concurrency: 4,
 			WorkerFunc: func(ctx context.Context, m *Message) error {
@@ -132,7 +141,7 @@ func TestUnknownMessageType(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"timeout": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -165,10 +174,10 @@ func TestRetry(t *testing.T) {
 	maxExecCount := 4
 
 	var count int
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"test": {
 			Concurrency:  1,
-			MaxExecCount: uint(maxExecCount),
+			MaxExecCount: maxExecCount,
 			Timeout:      1 * time.Millisecond,
 			RetryDelay:   1 * time.Millisecond,
 			WorkerFunc: func(ctx context.Context, _ *Message) error {
@@ -199,10 +208,10 @@ func TestPanicRetried(t *testing.T) {
 
 	maxExecCount := 4
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"panic": {
 			Concurrency:  1,
-			MaxExecCount: uint(maxExecCount),
+			MaxExecCount: maxExecCount,
 			RetryDelay:   1 * time.Millisecond,
 			WorkerFunc: func(ctx context.Context, _ *Message) error {
 				w.Done()
@@ -228,7 +237,7 @@ func TestPanic(t *testing.T) {
 	even, _ := NewMessage("json", 0)
 	odd, _ := NewMessage("json", 1)
 
-	broker := NewMemBroker(WorkersList{
+	broker := NewMemBroker(1, WorkersList{
 		"panic2": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -257,32 +266,4 @@ func TestPanic(t *testing.T) {
 	_, err = broker.PushJob(&JobRequest{Domain: "cozy.local", WorkerType: "panic2", Message: even})
 	assert.NoError(t, err)
 	w.Wait()
-}
-
-func TestProperSerial(t *testing.T) {
-	infos := NewJobInfos(&JobRequest{
-		Domain:     "cozy.tools:8080",
-		WorkerType: "",
-	})
-
-	j := &memJob{
-		infos: infos,
-	}
-	globalStorage.Create(infos)
-	err := j.AckConsumed()
-	assert.NoError(t, err)
-	j2, err := globalStorage.Get("cozy.tools:8080", j.infos.ID())
-	assert.NoError(t, err)
-	assert.Equal(t, State(Running), j2.State)
-}
-
-func TestMain(m *testing.M) {
-	config.UseTestFile()
-	fmt.Println(config.CouchURL())
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test need couchdb to run.")
-		os.Exit(1)
-	}
-	os.Exit(m.Run())
 }
