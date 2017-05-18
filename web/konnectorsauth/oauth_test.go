@@ -66,7 +66,7 @@ func TestACOauthFlow(t *testing.T) {
 	}
 
 	// the user click the oauth link
-	res2, err := (&http.Client{CheckRedirect: stopBeforeDataConnectFail}).Get(okURL)
+	res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -75,7 +75,7 @@ func TestACOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	if !assert.Contains(t, finalURL.String(), "data-connect") {
+	if !assert.Contains(t, finalURL.String(), "collect") {
 		return
 	}
 
@@ -120,7 +120,7 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 		return
 	}
 
-	res2, err := (&http.Client{CheckRedirect: stopBeforeDataConnectFail}).Get(okURL)
+	res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Get(okURL)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -129,7 +129,7 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	if !assert.Contains(t, finalURL.String(), "data-connect") {
+	if !assert.Contains(t, finalURL.String(), "collect") {
 		return
 	}
 
@@ -157,8 +157,8 @@ func TestMain(m *testing.M) {
 	os.Exit(setup.Run())
 }
 
-func stopBeforeDataConnectFail(req *http.Request, via []*http.Request) error {
-	if strings.Contains(req.URL.String(), "data-connect") {
+func stopBeforeDataCollectFail(req *http.Request, via []*http.Request) error {
+	if strings.Contains(req.URL.String(), "collect") {
 		return http.ErrUseLastResponse
 	}
 	return nil

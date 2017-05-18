@@ -55,9 +55,9 @@ func start(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, url)
 }
 
-func redirectToDataConnect(c echo.Context, account *accounts.Account, clientState string) error {
+func redirectToDataCollect(c echo.Context, account *accounts.Account, clientState string) error {
 	instance := middlewares.GetInstance(c)
-	u := instance.SubDomain(consts.DataConnectSlug)
+	u := instance.SubDomain(consts.CollectSlug)
 	vv := &url.Values{}
 	vv.Add("account", account.ID())
 	if clientState != "" {
@@ -92,7 +92,7 @@ func redirect(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		return redirectToDataConnect(c, account, "")
+		return redirectToDataCollect(c, account, "")
 	}
 
 	stateCode := c.QueryParam("state")
@@ -114,7 +114,7 @@ func redirect(c echo.Context) error {
 		return err
 	}
 
-	return redirectToDataConnect(c, account, state.ClientState)
+	return redirectToDataCollect(c, account, state.ClientState)
 }
 
 // refresh is an internal route used by konnectors to refresh accounts

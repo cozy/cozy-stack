@@ -77,7 +77,7 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	switch appType {
 	case apps.Konnector:
 		docType = consts.Konnectors
-		sourceID = consts.Apps + "/" + consts.DataConnectSlug
+		sourceID = consts.Apps + "/" + consts.CollectSlug
 	case apps.Webapp:
 		docType = consts.Apps
 		sourceID = consts.Apps + "/" + consts.StoreSlug

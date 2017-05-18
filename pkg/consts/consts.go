@@ -56,8 +56,8 @@ const (
 	// StoreSlug is the slug of the only app that can install other apps.
 	// FIXME update me when the store app will be available
 	StoreSlug = "settings"
-	// DataConnectSlug is the slug of the only app that can install konnectors.
-	DataConnectSlug = "data-connect"
+	// CollectSlug is the slug of the only app that can install konnectors.
+	CollectSlug = "collect"
 )
 
 const (
@@ -142,10 +142,9 @@ const (
 // AppsRegistry is an hard-coded list of known apps, with their source URLs
 // TODO remove it when we will have a true registry
 var AppsRegistry = map[string]string{
-	"onboarding":  "git://github.com/cozy/cozy-onboarding-v3.git#build",
-	"files":       "git://github.com/cozy/cozy-drive.git#build",
-	"drive":       "git://github.com/cozy/cozy-drive.git#build",
-	"photos":      "git://github.com/cozy/cozy-photos-v3.git#build",
-	"settings":    "git://github.com/cozy/cozy-settings.git#build",
-	"my-accounts": "git://github.com/cozy/cozy-my-accounts.git#build",
+	"onboarding": "git://github.com/cozy/cozy-onboarding-v3.git#build",
+	"drive":      "git://github.com/cozy/cozy-drive.git#build",
+	"photos":     "git://github.com/cozy/cozy-photos-v3.git#build",
+	"settings":   "git://github.com/cozy/cozy-settings.git#build",
+	"collect":    "git://github.com/cozy/cozy-collect.git#build",
 }
