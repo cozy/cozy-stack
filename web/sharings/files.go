@@ -204,9 +204,17 @@ func patchDirOrFile(c echo.Context) error {
 
 	var rev string
 	if dirDoc != nil {
+		// Safeguard for the date in case of incorrect UpdatedAt from the remote
+		if patch.UpdatedAt.Before(dirDoc.CreatedAt) {
+			*patch.UpdatedAt = dirDoc.UpdatedAt
+		}
 		*patch.DirID = dirDoc.DirID
 		rev = dirDoc.Rev()
 	} else {
+		// Safeguard for the date in case of incorrect UpdatedAt from the remote
+		if patch.UpdatedAt.Before(fileDoc.CreatedAt) {
+			*patch.UpdatedAt = fileDoc.UpdatedAt
+		}
 		*patch.DirID = fileDoc.DirID
 		rev = fileDoc.Rev()
 	}
