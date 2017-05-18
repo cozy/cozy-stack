@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -178,19 +179,31 @@ by this server.
 		if err != nil {
 			return err
 		}
-
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		for _, i := range list {
-			var dev string
-			if i.Attrs.Dev {
-				dev = "dev"
-			} else {
-				dev = "prod"
-			}
-			fmt.Printf("%s\t%s\n", i.Attrs.Domain, dev)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+				i.Attrs.Domain,
+				i.Attrs.Locale,
+				printSize(i.Attrs.BytesDiskQuota),
+				printDev(i.Attrs.Dev),
+			)
 		}
-
-		return nil
+		return w.Flush()
 	},
+}
+
+func printDev(dev bool) string {
+	if dev {
+		return "dev"
+	}
+	return "prod"
+}
+
+func printSize(size int64) string {
+	if size == 0 {
+		return "unlimited"
+	}
+	return humanize.Bytes(uint64(size))
 }
 
 var destroyInstanceCmd = &cobra.Command{
