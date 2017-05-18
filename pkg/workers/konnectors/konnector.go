@@ -219,7 +219,7 @@ func doScanOut(jobID string, scanner *bufio.Scanner, domain string, msgs chan ko
 		to := bytes.LastIndexByte(linebb, '}')
 		var msg konnectorMsg
 		log.Infof("[konnector] %s: Stdout: %s", jobID, string(linebb))
-		if from > -1 && to > -1 {
+		if from > -1 && from < to && to > -1 {
 			err := json.Unmarshal(linebb[from:to+1], &msg)
 			if err == nil {
 				msgs <- msg
