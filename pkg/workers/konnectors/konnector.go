@@ -63,9 +63,10 @@ func (r *result) SetID(id string)    { r.DocID = id }
 func (r *result) SetRev(rev string)  { r.DocRev = rev }
 
 const konnectorMsgTypeError string = "error"
-const konnectorMsgTypeDebug string = "debug"
-const konnectorMsgTypeWarning string = "warning"
-const konnectorMsgTypeProgress string = "progress"
+
+// const konnectorMsgTypeDebug string = "debug"
+// const konnectorMsgTypeWarning string = "warning"
+// const konnectorMsgTypeProgress string = "progress"
 
 type konnectorMsg struct {
 	Type    string `json:"type"`
