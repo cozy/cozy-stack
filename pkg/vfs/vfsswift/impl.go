@@ -182,7 +182,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	objName := newdoc.DirID + "/" + newdoc.DocName
 	if olddoc == nil {
-		_, _, err := sfs.c.Object(sfs.container, objName)
+		_, _, err = sfs.c.Object(sfs.container, objName)
 		if err != swift.ObjectNotFound {
 			if err != nil {
 				return nil, err
