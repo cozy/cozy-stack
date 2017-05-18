@@ -290,7 +290,8 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 	if len(versionObjNames) > 0 {
 		_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
 		if err != nil {
-			return err
+			log.Errorf("[vfsswift] Could not delete version of %s: %s",
+				objName, err.Error())
 		}
 	}
 	return sfs.Indexer.DeleteFileDoc(doc)
