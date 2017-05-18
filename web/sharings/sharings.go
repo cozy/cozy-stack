@@ -371,6 +371,24 @@ func deleteDocument(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
+// Set sharing to revoked and delete all associated OAuth Clients.
+func revokeSharing(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	sharingID := c.Param("id")
+	sharing, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+
+	err = sharings.RevokeSharing(instance, sharing)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
@@ -382,6 +400,7 @@ func Routes(router *echo.Group) {
 	router.POST("/recipient", CreateRecipient)
 	router.POST("/access/client", ReceiveClientID)
 	router.POST("/access/code", getAccessToken)
+	router.DELETE("/:id", revokeSharing)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
