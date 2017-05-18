@@ -527,36 +527,32 @@ func Update(i *Instance) error {
 
 // Destroy is used to remove the instance. All the data linked to this
 // instance will be permanently deleted.
-func Destroy(domain string) (*Instance, error) {
-	defer getCache().Revoke(domain)
-	i, err := Get(domain)
-	if err != nil {
-		return nil, err
-	}
+func Destroy(domain string) error {
+	getCache().Revoke(domain)
 
 	sched := stack.GetScheduler()
-	triggers, err := sched.GetAll(i.Domain)
+	triggers, err := sched.GetAll(domain)
 	if err == nil {
 		for _, t := range triggers {
-			if err = sched.Delete(i.Domain, t.Infos().TID); err != nil {
+			if err = sched.Delete(domain, t.Infos().TID); err != nil {
 				log.Error("[instance] Failed to remove trigger: ", err)
 			}
 		}
 	}
 
-	if err = couchdb.DeleteDoc(couchdb.GlobalDB, i); err != nil {
-		return nil, err
+	db := couchdb.SimpleDatabasePrefix(domain)
+	if err = couchdb.DeleteAllDBs(db); err != nil {
+		return err
 	}
 
-	if err = couchdb.DeleteAllDBs(i); err != nil {
-		return nil, err
+	i, err := Get(domain)
+	if err != nil {
+		return err
 	}
-
 	if err = i.VFS().Delete(); err != nil {
-		return nil, err
+		log.Errorf("[instance] Could not delete VFS %s: %s", i.Domain, err.Error())
 	}
-
-	return i, nil
+	return couchdb.DeleteDoc(couchdb.GlobalDB, i)
 }
 
 // RegisterPassphrase replace the instance registerToken by a passphrase

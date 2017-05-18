@@ -236,18 +236,18 @@ All data associated with this domain will be permanently lost.
 			if str != "yes" && str != "y" {
 				return nil
 			}
+
+			fmt.Println()
 		}
 
 		c := newAdminClient()
-		in, err := c.DestroyInstance(domain)
+		err := c.DestroyInstance(domain)
 		if err != nil {
-			log.Errorf("Failed to remove instance for domain %s", domain)
+			log.Errorf("An error occured while destroying instance for domain %s", domain)
 			return err
 		}
 
-		fmt.Println()
-
-		log.Infof("Instance for domain %s has been destroyed with success", in.Attrs.Domain)
+		log.Infof("Instance for domain %s has been destroyed with success", domain)
 		return nil
 	},
 }

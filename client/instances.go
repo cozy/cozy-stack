@@ -135,18 +135,16 @@ func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance
 }
 
 // DestroyInstance is used to delete an instance and all its data.
-func (c *Client) DestroyInstance(domain string) (*Instance, error) {
+func (c *Client) DestroyInstance(domain string) error {
 	if !validDomain(domain) {
-		return nil, fmt.Errorf("Invalid domain: %s", domain)
+		return fmt.Errorf("Invalid domain: %s", domain)
 	}
-	res, err := c.Req(&request.Options{
-		Method: "DELETE",
-		Path:   "/instances/" + domain,
+	_, err := c.Req(&request.Options{
+		Method:     "DELETE",
+		Path:       "/instances/" + domain,
+		NoResponse: true,
 	})
-	if err != nil {
-		return nil, err
-	}
-	return readInstance(res)
+	return err
 }
 
 // GetToken is used to generate a toke with the specified options.
