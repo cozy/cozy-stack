@@ -363,6 +363,7 @@ func authorizeForm(c echo.Context) error {
 	permissions := strings.Split(params.scope, " ")
 	params.client.ClientID = params.client.CouchID
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
+		"Domain":      instance.Domain,
 		"Locale":      instance.Locale,
 		"Client":      params.client,
 		"State":       params.state,
