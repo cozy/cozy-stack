@@ -155,6 +155,9 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	if strings.HasPrefix(newpath, vfs.TrashDirName+"/") {
+		return nil, vfs.ErrParentInTrash
+	}
 
 	var bakpath string
 	if olddoc != nil {
