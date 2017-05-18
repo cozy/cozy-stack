@@ -113,7 +113,7 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	} else {
 		c.host = opts[0].Domain
 	}
-	_, err = instance.Destroy(c.host)
+	err = instance.Destroy(c.host)
 	if err != nil && err != instance.ErrNotFound {
 		c.CleanupAndDie("Error while destroying instance", err)
 	}
@@ -122,7 +122,7 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if err != nil {
 		c.CleanupAndDie("Cannot create test instance", err)
 	}
-	c.AddCleanup(func() error { _, err := instance.Destroy(i.Domain); return err })
+	c.AddCleanup(func() error { err := instance.Destroy(i.Domain); return err })
 	c.inst = i
 	return i
 }
