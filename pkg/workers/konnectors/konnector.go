@@ -3,6 +3,7 @@ package konnectors
 import (
 	"archive/tar"
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -60,6 +61,16 @@ func (r *result) DocType() string    { return consts.KonnectorResults }
 func (r *result) Clone() couchdb.Doc { return r }
 func (r *result) SetID(id string)    { r.DocID = id }
 func (r *result) SetRev(rev string)  { r.DocRev = rev }
+
+const konnectorMsgTypeError string = "error"
+const konnectorMsgTypeDebug string = "debug"
+const konnectorMsgTypeWarning string = "warning"
+const konnectorMsgTypeProgress string = "progress"
+
+type konnectorMsg struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}
 
 // Worker is the worker that runs a konnector by executing an external process.
 func Worker(ctx context.Context, m *jobs.Message) error {
@@ -164,8 +175,25 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	scanOut := bufio.NewScanner(cmdOut)
 	scanOut.Buffer(nil, 256*1024)
 
-	go doScanOut(jobID, scanOut, domain)
+	var msgChan = make(chan konnectorMsg)
+	var messages []konnectorMsg
+
+	go doScanOut(jobID, scanOut, domain, msgChan)
 	go doScanErr(jobID, scanErr)
+	go func() {
+		hub := realtime.GetHub()
+		for msg := range msgChan {
+			messages = append(messages, msg)
+			hub.Publish(&realtime.Event{
+				Type: realtime.EventCreate,
+				Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
+					"type":    msg.Type,
+					"message": msg.Message,
+				}},
+				Domain: domain,
+			})
+		}
+	}()
 
 	if err = cmd.Start(); err != nil {
 		return wrapErr(ctx, err)
@@ -173,24 +201,31 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	if err = cmd.Wait(); err != nil {
 		return wrapErr(ctx, err)
 	}
+	for _, msg := range messages {
+		if msg.Type == konnectorMsgTypeError {
+			err = errors.New(msg.Message)
+			return err
+		}
+	}
+	close(msgChan)
 	return nil
 }
 
-func doScanOut(jobID string, scanner *bufio.Scanner, domain string) {
-	hub := realtime.GetHub()
+func doScanOut(jobID string, scanner *bufio.Scanner, domain string, msgs chan konnectorMsg) {
 	for scanner.Scan() {
-		doc := couchdb.JSONDoc{Type: consts.JobEvents}
-		err := json.Unmarshal(scanner.Bytes(), &doc.M)
-		if err != nil {
-			log.Warnf("[konnector] %s: Could not parse Stdout as JSON: %s", jobID, err)
-			log.Warnf("[konnector] %s: Stdout: %s", jobID, scanner.Text())
-			continue
+		linebb := scanner.Bytes()
+		from := bytes.IndexByte(linebb, '{')
+		to := bytes.LastIndexByte(linebb, '}')
+		var msg konnectorMsg
+		log.Infof("[konnector] %s: Stdout: %s", jobID, string(linebb[from:to+1]))
+		if from > -1 && to > -1 {
+			err := json.Unmarshal(linebb[from:to+1], &msg)
+			if err == nil {
+				msgs <- msg
+				continue
+			}
 		}
-		hub.Publish(&realtime.Event{
-			Type:   realtime.EventCreate,
-			Doc:    doc,
-			Domain: domain,
-		})
+		log.Warnf("[konnector] %s: Could not parse as JSON", jobID)
 	}
 	if err := scanner.Err(); err != nil {
 		log.Errorf("[konnector] %s: Error while reading stdout: %s", jobID, err)
