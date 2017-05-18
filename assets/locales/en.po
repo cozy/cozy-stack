@@ -58,10 +58,10 @@ msgid "Login Forgot password"
 msgstr "Forgot your password?"
 
 msgid "Authorize Title"
-msgstr "Authorize remote application"
+msgstr "Authorize %s to access your profile"
 
 msgid "Authorize Client presentation"
-msgstr "would like permission to access your Cozy."
+msgstr "would like permission to access your Cozy"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data here:"

@@ -63,20 +63,23 @@ msgid "Login Forgot password"
 msgstr "Mot de passe oublié ?"
 
 msgid "Authorize Title"
-msgstr "Autoriser une application distante"
+msgstr "Autoriser %s à accéder à votre profil ?"
 
 msgid "Authorize Client presentation"
-msgstr "souhaite accéder à votre Cozy."
+msgstr "voudrait accéder aux données suivantes du cozy "
 
 msgid "Authorize Policy sentence"
 msgstr ""
 "Vous pouvez lire la politique d'utilisation des données à cette adresse :"
 
 msgid "Authorize Give permission"
-msgstr "Cet accord donnera accès à l'application pour :"
+msgstr "En cliquant sur Autoriser, vous autorisez l'application à accéder à vos données selon leurs conditions de service et leur politique de confidentialité."
 
 msgid "Authorize Submit"
 msgstr "Accepter"
+
+msgid "Authorize Cancel"
+msgstr "Refuser"
 
 msgid "Error Title"
 msgstr "Désolé"
