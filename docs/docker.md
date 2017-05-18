@@ -28,7 +28,7 @@ Warning, this command will build a linux binary. Use [`GOOS` and `GOARCH`](https
 docker run -it --rm --name cozy-stack \
     -v $(pwd):/go/src/github.com/cozy/cozy-stack \
     -v $(pwd):/go/bin \
-    golang:1.7.4 \
+    golang:1.8 \
     go get -v github.com/cozy/cozy-stack
 ```
 
