@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
+	//"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,7 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 )
 
-var accesscode = "accesscode"
+var accesscode = make(chan string, 1)
 
 func checkError(err error) {
 	if err != nil {
@@ -26,26 +26,24 @@ func checkError(err error) {
 	}
 }
 
-func userAcceptFunc(accessURL string) string {
-	for accesscode == "accesscode" {
-	}
-	code := accesscode
-	accesscode = "accesscode"
-	return code
+func userAcceptFunc(accessURL string, httpClient *http.Client) string {
+	return <-accesscode
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	val := r.URL.Query()
-	accesscode = val.Get("accesscode")
-
-	_, err := io.WriteString(w, "accesscode")
-	checkError(err)
-
+	for {
+		val := r.URL.Query()
+		if val.Get("access_code") != "" {
+			accesscode <- val.Get("access_code")
+			_, err := io.WriteString(w, "accesscode")
+			checkError(err)
+		}
+	}
 }
 
 func main() {
 
-	http.HandleFunc("/oauth/accesscode", handler)
+	http.HandleFunc("/auth/accesscode", handler)
 	go http.ListenAndServe(":8081", nil)
 
 	httpClient := &http.Client{
@@ -53,12 +51,12 @@ func main() {
 	}
 
 	authClient := &auth.Client{
-		RedirectURIs:    []string{"http://127.0.0.1:8081/oauth/accesscode"},
+		RedirectURIs:    []string{"http://127.0.0.1:8081/auth/accesscode"},
 		ClientName:      "Client",
-		SoftwareID:      "github.com/example/client",
+		SoftwareID:      "github.com/cozy/cozy-stack/imexport",
 		ClientKind:      "web",
 		ClientURI:       "http://127.0.0.1:8081",
-		SoftwareVersion: "2.0.1",
+		SoftwareVersion: "0.0.1",
 	}
 
 	authReq := &auth.Request{
@@ -84,7 +82,8 @@ func main() {
 
 	fmt.Println(strings.Replace(codeURL, "https", "http", 1))
 
-	code := userAcceptFunc(codeURL)
+	code := userAcceptFunc(codeURL, httpClient)
+	fmt.Println(code)
 
 	// URL value
 	v := url.Values{
@@ -101,7 +100,7 @@ func main() {
 		Queries: v,
 		Client:  httpClient,
 		Method:  "POST",
-		Path:    "/auth/accessToken",
+		Path:    "/auth/access_token",
 		Body:    strings.NewReader(v.Encode()),
 		Headers: request.Headers{
 			"Content-Type": "application/x-www-form-urlencoded",
@@ -111,21 +110,10 @@ func main() {
 
 	accessToken := &auth.AccessToken{}
 
-	resp, err := httpClient.Get("http://127.0.0.1:8081/oauth/accesscode")
+	resp, err := request.Req(opts)
 	checkError(err)
 
-	var data []byte
-
-	data, err = ioutil.ReadAll(resp.Body)
-	checkError(err)
-	fmt.Println(string(data))
-
-	resp, err = request.Req(opts)
-	checkError(err)
-
-	data, err = ioutil.ReadAll(resp.Body)
-	checkError(err)
-	err = json.Unmarshal(data, &accessToken)
+	err = json.NewDecoder(resp.Body).Decode(&accessToken)
 	checkError(err)
 
 }
