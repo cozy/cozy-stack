@@ -1,6 +1,8 @@
 package middlewares
 
 import (
+	"net/http"
+
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/labstack/echo"
 )
@@ -14,7 +16,14 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		i, err := instance.Get(c.Request().Host)
 		if err != nil {
-			return err
+			switch err {
+			case instance.ErrNotFound:
+				return echo.NewHTTPError(http.StatusNotFound, err)
+			case instance.ErrIllegalDomain:
+				return echo.NewHTTPError(http.StatusBadRequest, err)
+			default:
+				return echo.NewHTTPError(http.StatusInternalServerError, err)
+			}
 		}
 		c.Set("instance", i)
 		return next(c)
