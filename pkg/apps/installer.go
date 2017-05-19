@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
@@ -206,6 +207,7 @@ func (i *Installer) endOfProc() {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) install() (Manifest, error) {
+	log.Infof("[apps] Start install: %s %s", i.slug, i.src.String())
 	man := i.man
 	if err := i.ReadManifest(Installing, man); err != nil {
 		return nil, err
@@ -224,6 +226,7 @@ func (i *Installer) install() (Manifest, error) {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) update() (Manifest, error) {
+	log.Infof("[apps] Start update: %s %s", i.slug, i.src.String())
 	man := i.man
 	if state := man.State(); state != Ready &&
 		state != Installed &&
@@ -241,6 +244,7 @@ func (i *Installer) update() (Manifest, error) {
 }
 
 func (i *Installer) delete() (Manifest, error) {
+	log.Infof("[apps] Start delete: %s %s", i.slug, i.src.String())
 	man := i.man
 	if state := man.State(); state != Ready &&
 		state != Installed &&

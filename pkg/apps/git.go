@@ -20,6 +20,8 @@ import (
 	gitStorage "gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
+var errCloneTimeout = errors.New("git: repository cloning timed out")
+
 // ghURLRegex is used to identify github
 var ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
 
@@ -59,8 +61,13 @@ func isGitlab(src *url.URL) bool {
 	return src.Host == "framagit.org" || strings.Contains(src.Host, "gitlab")
 }
 
-func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
-	var err error
+func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
+	defer func() {
+		if err != nil {
+			log.Errorf("[git] Error while fetching app manifest %s: %s",
+				src.String(), err.Error())
+		}
+	}()
 
 	var u string
 	if isGithub(src) {
@@ -83,7 +90,12 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 }
 
 func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
-	log.Debugf("[git] Fetch %s", src.String())
+	defer func() {
+		if err != nil {
+			log.Errorf("[git] Error while fetching or copying repository %s: %s",
+				src.String(), err.Error())
+		}
+	}()
 
 	osFs := afero.NewOsFs()
 	gitDir, err := afero.TempDir(osFs, "", "cozy-app-"+man.Slug())
@@ -98,7 +110,6 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 
 	branch := getGitBranch(src)
-	log.Debugf("[git] Clone %s %s in %s", src.String(), branch, gitDir)
 
 	// XXX Gitlab doesn't support the git protocol
 	if isGitlab(src) {
@@ -106,14 +117,34 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 		src.Fragment = ""
 	}
 
-	rep, err := git.Clone(storage, nil, &git.CloneOptions{
-		URL:           src.String(),
-		Depth:         1,
-		SingleBranch:  true,
-		ReferenceName: gitPlumbing.ReferenceName(branch),
-	})
-	if err != nil {
+	errch := make(chan error)
+	repch := make(chan *git.Repository)
+
+	srcStr := src.String()
+	log.Infof("[git] Clone %s %s in %s", srcStr, branch, gitDir)
+	go func() {
+		repc, errc := git.Clone(storage, nil, &git.CloneOptions{
+			URL:           srcStr,
+			Depth:         1,
+			SingleBranch:  true,
+			ReferenceName: gitPlumbing.ReferenceName(branch),
+		})
+		if errc != nil {
+			errch <- errc
+		} else {
+			repch <- repc
+		}
+	}()
+
+	var rep *git.Repository
+	select {
+	case rep = <-repch:
+	case err = <-errch:
+		log.Errorf("[git] Clone error of %s: %s", srcStr, err.Error())
 		return err
+	case <-time.After(30 * time.Second):
+		log.Errorf("[git] Clone timeout of %s", srcStr)
+		return errCloneTimeout
 	}
 
 	ref, err := rep.Head()
