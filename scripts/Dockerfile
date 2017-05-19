@@ -67,8 +67,8 @@ ENV COZY_STACK_HOST cozy.tools
 ENV COZY_STACK_PORT 8080
 ENV COZY_STACK_PATH cozy-stack
 
-COPY ./cozy-app-dev.sh ./cozy-stack /usr/bin/
 COPY ./docker-entrypoint.sh /
+COPY ./cozy-app-dev.sh ./cozy-stack /usr/bin/
 
 RUN chmod +x /docker-entrypoint.sh \
               /usr/bin/cozy-app-dev.sh \
