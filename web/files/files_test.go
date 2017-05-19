@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 
@@ -1781,7 +1782,14 @@ func TestMain(m *testing.M) {
 	client, tok := setup.GetTestClient(consts.Files)
 	clientID = client.ClientID
 	token = tok
-	ts = setup.GetTestServer("/files", Routes)
+	ts = setup.GetTestServer("/files", Routes, func(r *echo.Echo) *echo.Echo {
+		secure := middlewares.Secure(&middlewares.SecureConfig{
+			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			XFrameOptions: middlewares.XFrameDeny,
+		})
+		r.Use(secure)
+		return r
+	})
 
 	os.Exit(setup.Run())
 }
