@@ -3,6 +3,18 @@ msgstr ""
 
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+msgid "Tree Administrative"
+msgstr "Administrative"
+
+msgid "Tree Photos"
+msgstr "Photos"
+
+msgid "Tree Uploaded from Cozy Photos"
+msgstr "Uploaded from Cozy Photos"
+
+msgid "Tree Backuped from my mobile"
+msgstr "Backuped from my mobile"
+
 msgid "Login Credentials error"
 msgstr "The credentials you entered are incorrect, please try again."
 
