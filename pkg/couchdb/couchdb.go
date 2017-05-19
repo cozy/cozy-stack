@@ -246,7 +246,9 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 	resp, err := couchdbClient.Do(req)
 	// Possible err = mostly connection failure
 	if err != nil {
-		return newConnectionError(err)
+		err = newConnectionError(err)
+		log.Errorf("[couchdb] %s", err.Error())
+		return err
 	}
 	defer resp.Body.Close()
 
