@@ -61,7 +61,11 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return fmt.Sprintf("CouchDB(%s): %s", e.Name, e.Reason)
+	msg := fmt.Sprintf("CouchDB(%s): %s", e.Name, e.Reason)
+	if e.Original != nil {
+		msg += " - " + e.Original.Error()
+	}
+	return msg
 }
 
 // JSON returns the json representation of this error
