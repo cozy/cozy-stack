@@ -74,6 +74,7 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
     "attributes": {
       "type": "directory",
       "name": "phone",
+      "path": "/Documents/phone",
       "created_at": "2016-09-19T12:35:08Z",
       "updated_at": "2016-09-19T12:35:08Z",
       "tags": ["bills"]
@@ -130,6 +131,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "directory",
       "name": "Documents",
+      "path": "/Documents",
       "created_at": "2016-09-19T12:35:00Z",
       "updated_at": "2016-09-19T12:35:00Z",
       "tags": []
@@ -155,6 +157,7 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "directory",
       "name": "phone",
+      "path": "/Documents/phone",
       "created_at": "2016-09-19T12:35:08Z",
       "updated_at": "2016-09-19T12:35:08Z",
       "tags": ["bills"]
