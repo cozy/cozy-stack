@@ -354,9 +354,6 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "links": {
-    "next": "/jobs/queue?page[cursor]=123123"
-  },
   "data": {
     "count": 12
   }
