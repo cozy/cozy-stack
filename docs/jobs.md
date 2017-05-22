@@ -355,7 +355,11 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": {
-    "count": 12
+    "type": "io.cozy.queues",
+    "id": "sendmail",
+    "attributes": {
+      "count": 12
+    }
   }
 }
 ```
