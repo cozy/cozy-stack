@@ -7,7 +7,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/ncw/swift"
+	"github.com/cozy/swift"
 	"github.com/spf13/afero"
 )
 

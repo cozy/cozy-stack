@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/ncw/swift"
+	"github.com/cozy/swift"
 )
 
 var swiftConn *swift.Connection

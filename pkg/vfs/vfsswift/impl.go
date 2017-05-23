@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/ncw/swift"
+	"github.com/cozy/swift"
 )
 
 const versionSuffix = "-version"
