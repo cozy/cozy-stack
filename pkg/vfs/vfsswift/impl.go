@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/ncw/swift"
+	"github.com/cozy/swift"
 )
 
 const versionSuffix = "-version"
@@ -69,16 +69,16 @@ func (sfs *swiftVFS) InitFs() error {
 }
 
 func (sfs *swiftVFS) Delete() error {
-	err := sfs.deleteContainer(sfs.container)
-	if err != nil {
-		log.Errorf("[vfsswift] Could not delete container %s: %s",
-			sfs.container, err.Error())
-		return err
-	}
-	err = sfs.deleteContainer(sfs.version)
+	err := sfs.deleteContainer(sfs.version)
 	if err != nil {
 		log.Errorf("[vfsswift] Could not delete version container %s: %s",
 			sfs.version, err.Error())
+		return err
+	}
+	err = sfs.deleteContainer(sfs.container)
+	if err != nil {
+		log.Errorf("[vfsswift] Could not delete container %s: %s",
+			sfs.container, err.Error())
 		return err
 	}
 	log.Infof("[vfsswift] Deleted container %s", sfs.container)
@@ -485,6 +485,20 @@ func (f *swiftFileCreation) Close() (err error) {
 	if f.meta != nil {
 		if errc := (*f.meta).Close(); errc == nil {
 			newdoc.Metadata = (*f.meta).Result()
+		}
+	}
+
+	// The actual check of the optionally given md5 hash is handled by the swift
+	// library.
+	if newdoc.MD5Sum == nil {
+		var headers swift.Headers
+		var md5sum []byte
+		headers, err = f.f.Headers()
+		if err == nil {
+			md5sum, err = hex.DecodeString(headers["Etag"])
+			if err == nil {
+				newdoc.MD5Sum = md5sum
+			}
 		}
 	}
 
