@@ -8,16 +8,16 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "Tree Administrative"
-msgstr ""
+msgstr "管理"
 
 msgid "Tree Photos"
-msgstr ""
+msgstr "写真"
 
 msgid "Tree Uploaded from Cozy Photos"
-msgstr ""
+msgstr "Cozy フォトからアップロードしました"
 
 msgid "Tree Backuped from my mobile"
-msgstr ""
+msgstr "自分のモバイルからバックアップしました"
 
 msgid "Login Credentials error"
 msgstr "入力した資格情報が間違っています。もう一度やり直してください。"
@@ -62,19 +62,37 @@ msgid "Login Forgot password"
 msgstr "パスワードをお忘れですか?"
 
 msgid "Authorize Title"
-msgstr "リモートのアプリケーションを承認"
+msgstr ""
+
+msgid "Authorize App Title"
+msgstr ""
+
+msgid "Authorize More"
+msgstr ""
 
 msgid "Authorize Client presentation"
-msgstr "Cozy にアクセスする権限が必要です。"
+msgstr ""
 
 msgid "Authorize Policy sentence"
 msgstr "ここであなたのデータの使用に関するポリシーを読むことができます:"
 
-msgid "Authorize Give permission"
-msgstr "この権限により、次のアクセス権が与えられます:"
+msgid "Authorize Give permission start"
+msgstr ""
+
+msgid "Authorize Give permission keyword"
+msgstr ""
+
+msgid "Authorize Give permission end"
+msgstr ""
+
+msgid "Authorize Give App permission desc"
+msgstr ""
 
 msgid "Authorize Submit"
-msgstr "承認"
+msgstr ""
+
+msgid "Authorize Cancel"
+msgstr ""
 
 msgid "Error Title"
 msgstr "申し訳ありません"
