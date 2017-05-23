@@ -60,17 +60,35 @@ msgstr "Forgot your password?"
 msgid "Authorize Title"
 msgstr "Authorize %s to access your profile"
 
+msgid "Authorize App Title"
+msgstr "The application %s will not transmit any personal data to any third parties."
+
+msgid "Authorize More"
+msgstr "More…"
+
 msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data here:"
 
-msgid "Authorize Give permission"
-msgstr "This permission give access to:"
+msgid "Authorize Give permission start"
+msgstr "By electing "
+
+msgid "Authorize Give permission keyword"
+msgstr "Authorize"
+
+msgid "Authorize Give permission end"
+msgstr ", you accept that the application %s obtains access to your data, locally, and only within your Cozy, and in compliance with the terms of service and the privacy policy."
+
+msgid "Authorize Give App permission desc"
+msgstr "In order to improve the value of your Cozy (%s), the application %s requires access to the following data:"
 
 msgid "Authorize Submit"
-msgstr "Accept"
+msgstr "Authorize access"
+
+msgid "Authorize Cancel"
+msgstr "Deny access"
 
 msgid "Error Title"
 msgstr "Sorry"
