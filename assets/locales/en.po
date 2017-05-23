@@ -79,10 +79,10 @@ msgid "Authorize Give permission keyword"
 msgstr "Authorize"
 
 msgid "Authorize Give permission end"
-msgstr ", you accept that the application obtains access to your data and in compliance with the terms of service and the privacy policy."
+msgstr ", you accept that the application obtains access to your data, and in compliance with the terms of service and the privacy policy."
 
 msgid "Authorize Give App permission end"
-msgstr ", you accept that the application %s obtains access to your data, locally, and only within your Cozy, and in compliance with the terms of service and the privacy policy."
+msgstr ", you accept that the application %s obtains access to your data, only locally and within your Cozy, and in compliance with the terms of service and the privacy policy."
 
 msgid "Authorize Give App permission desc"
 msgstr "In order to improve the value of your Cozy (%s), the application %s requires access to the following data:"

@@ -1,8 +1,8 @@
 # Translators:
-# Naofumi <naofum@gmail.com>, 2017
+# Bruno Michel <brmichel@free.fr>, 2017
 msgid ""
 msgstr ""
-"Last-Translator: Naofumi <naofum@gmail.com>, 2017\n"
+"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
 "Language-Team: Japanese (https://www.transifex.com/cozy/teams/39753/ja/)\n"
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
