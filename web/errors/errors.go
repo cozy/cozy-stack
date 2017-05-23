@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
@@ -19,6 +21,14 @@ func ErrorHandler(err error, c echo.Context) {
 	var ce *couchdb.Error
 	var he *echo.HTTPError
 	var ok bool
+
+	var log *logrus.Entry
+	inst, ok := c.Get("instance").(*instance.Instance)
+	if ok {
+		log = inst.Logger()
+	} else {
+		log = logger.WithNamespace("http")
+	}
 
 	res := c.Response()
 	req := c.Request()

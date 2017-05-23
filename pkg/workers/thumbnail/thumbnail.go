@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -44,7 +44,8 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	log.Infof("[jobs] thumbnail %s: %#v", domain, msg.Event)
+	log := logger.WithDomain(domain)
+	log.Infof("[jobs] thumbnail: %s %s", msg.Event.Type, msg.Event.Doc.ID())
 	i, err := instance.Get(domain)
 	if err != nil {
 		return err

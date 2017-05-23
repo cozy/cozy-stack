@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/go-redis/redis"
 )
+
+var log = logger.WithNamespace("cache")
 
 // Cache is an interface for a structure susceptible of caching
 type Cache interface {
@@ -67,7 +69,6 @@ func (c *jsonCache) Del(d string) {
 
 // Create creates a cache
 func Create(namespace string, expiration time.Duration) Cache {
-
 	opts := config.GetConfig().Cache.Options()
 	if opts == nil {
 		return &noCache{}

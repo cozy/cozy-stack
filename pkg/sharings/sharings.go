@@ -6,7 +6,6 @@ import (
 	"io"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -461,11 +460,11 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 	err := rs.Register(instance)
 	if err != nil {
 		if rs.recipient != nil {
-			log.Errorf("sharing] Could not register at %v : %v",
+			instance.Logger().Errorf("sharing] Could not register at %v : %v",
 				rs.recipient.URL, err)
 			rs.Status = consts.UnregisteredSharingStatus
 		} else {
-			log.Error("[sharing] Sharing recipient not found")
+			instance.Logger().Error("[sharing] Sharing recipient not found")
 		}
 	} else {
 		rs.Status = consts.MailNotSentSharingStatus
@@ -491,7 +490,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	sharer.SharerStatus.RefRecipient = ref
 	err = sharer.SharerStatus.Register(instance)
 	if err != nil {
-		log.Error("[sharing] Could not register at "+sharer.URL+" ", err)
+		instance.Logger().Error("[sharing] Could not register at "+sharer.URL+" ", err)
 		sharer.SharerStatus.Status = consts.UnregisteredSharingStatus
 	}
 	return couchdb.UpdateDoc(instance, sharing)

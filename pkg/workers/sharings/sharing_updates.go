@@ -188,7 +188,7 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 			return SendFile(instance, opts, fileDoc)
 		}
 		if opts.Type == consts.DirType {
-			return SendDir(opts, dirDoc)
+			return SendDir(instance, opts, dirDoc)
 		}
 		return SendDoc(instance, opts)
 

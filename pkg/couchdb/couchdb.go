@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo"
@@ -41,17 +42,26 @@ type Doc interface {
 // for now it is just a string with the database prefix.
 type Database interface {
 	Prefix() string
+	Logger() *logrus.Entry
 }
 
 // SimpleDatabase implements the Database interface
-type simpleDB struct{ prefix string }
+type simpleDB struct {
+	prefix string
+	logger *logrus.Entry
+}
 
 // Prefix implements the Database interface on simpleDB
 func (sdb *simpleDB) Prefix() string { return sdb.prefix + "/" }
 
+func (sdb *simpleDB) Logger() *logrus.Entry { return sdb.logger }
+
 // SimpleDatabasePrefix returns a Database from a prefix, useful for test
 func SimpleDatabasePrefix(prefix string) Database {
-	return &simpleDB{prefix}
+	return &simpleDB{
+		prefix: prefix,
+		logger: logger.WithDomain(prefix),
+	}
 }
 
 func rtevent(db Database, evtype string, doc, oldDoc Doc) {
@@ -219,7 +229,7 @@ func docURL(db Database, doctype, id string) string {
 	return makeDBName(db, doctype) + "/" + url.QueryEscape(id)
 }
 
-func makeRequest(method, path string, reqbody interface{}, resbody interface{}) error {
+func makeRequest(db Database, method, path string, reqbody interface{}, resbody interface{}) error {
 	var reqjson []byte
 	var err error
 
@@ -230,10 +240,10 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		}
 	}
 
-	if log.GetLevel() == log.DebugLevel {
-		log.Debugf("[couchdb] request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
+	log := db.Logger()
+	if logger.IsDebug() {
+		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
-
 	req, err := http.NewRequest(method, config.CouchURL()+path, bytes.NewReader(reqjson))
 	// Possible err = wrong method, unparsable url
 	if err != nil {
@@ -247,7 +257,7 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 	// Possible err = mostly connection failure
 	if err != nil {
 		err = newConnectionError(err)
-		log.Errorf("[couchdb] %s", err.Error())
+		log.Error(err.Error())
 		return err
 	}
 	defer resp.Body.Close()
@@ -257,23 +267,24 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			err = newIOReadError(err)
+			log.Error(err.Error())
 		} else {
 			err = newCouchdbError(resp.StatusCode, body)
+			log.Debug(err.Error())
 		}
-		log.Debugf("[couchdb] error: %s", err.Error())
 		return err
 	}
 	if resbody == nil {
 		return nil
 	}
 
-	if log.GetLevel() == log.DebugLevel {
+	if logger.IsDebug() {
 		var data []byte
 		data, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
-		log.Debugf("[couchdb] response: %s", string(bytes.TrimSpace(data)))
+		log.Debugf("response: %s", string(bytes.TrimSpace(data)))
 		err = json.Unmarshal(data, &resbody)
 	} else {
 		err = json.NewDecoder(resp.Body).Decode(&resbody)
@@ -286,14 +297,14 @@ func makeRequest(method, path string, reqbody interface{}, resbody interface{}) 
 // documents, sequence numbers, etc.
 func DBStatus(db Database, doctype string) (*DBStatusResponse, error) {
 	var out DBStatusResponse
-	return &out, makeRequest("GET", makeDBName(db, doctype), nil, &out)
+	return &out, makeRequest(db, "GET", makeDBName(db, doctype), nil, &out)
 }
 
 // AllDoctypes returns a list of all the doctypes that have a database
 // on a given instance
 func AllDoctypes(db Database) ([]string, error) {
 	var dbs []string
-	if err := makeRequest("GET", "/_all_dbs", nil, &dbs); err != nil {
+	if err := makeRequest(db, "GET", "/_all_dbs", nil, &dbs); err != nil {
 		return nil, err
 	}
 	prefix := escapeCouchdbName(db.Prefix())
@@ -319,17 +330,17 @@ func GetDoc(db Database, doctype, id string, out Doc) error {
 	if id == "" {
 		return fmt.Errorf("Missing ID for GetDoc")
 	}
-	return makeRequest("GET", docURL(db, doctype, id), nil, out)
+	return makeRequest(db, "GET", docURL(db, doctype, id), nil, out)
 }
 
 // CreateDB creates the necessary database for a doctype
 func CreateDB(db Database, doctype string) error {
-	return makeRequest("PUT", makeDBName(db, doctype), nil, nil)
+	return makeRequest(db, "PUT", makeDBName(db, doctype), nil, nil)
 }
 
 // DeleteDB destroy the database for a doctype
 func DeleteDB(db Database, doctype string) error {
-	return makeRequest("DELETE", makeDBName(db, doctype), nil, nil)
+	return makeRequest(db, "DELETE", makeDBName(db, doctype), nil, nil)
 }
 
 // DeleteAllDBs will remove all the couchdb doctype databases for
@@ -343,7 +354,7 @@ func DeleteAllDBs(db Database) error {
 	}
 
 	var dbsList []string
-	err := makeRequest("GET", "_all_dbs", nil, &dbsList)
+	err := makeRequest(db, "GET", "_all_dbs", nil, &dbsList)
 	if err != nil {
 		return err
 	}
@@ -386,7 +397,7 @@ func DeleteDoc(db Database, doc Doc) error {
 	var res updateResponse
 	qs := url.Values{"rev": []string{doc.Rev()}}
 	url := docURL(db, doc.DocType(), id) + "?" + qs.Encode()
-	err = makeRequest("DELETE", url, nil, &res)
+	err = makeRequest(db, "DELETE", url, nil, &res)
 	if err != nil {
 		return err
 	}
@@ -411,12 +422,12 @@ func UpdateDoc(db Database, doc Doc) error {
 	// The old doc is requested to be emitted throught rtevent.
 	// This is useful to keep track of the modifications for the triggers.
 	oldDoc := doc.Clone()
-	err = makeRequest("GET", url, nil, oldDoc)
+	err = makeRequest(db, "GET", url, nil, oldDoc)
 	if err != nil {
 		return err
 	}
 	var res updateResponse
-	err = makeRequest("PUT", url, doc, &res)
+	err = makeRequest(db, "PUT", url, doc, &res)
 	if err != nil {
 		return err
 	}
@@ -436,7 +447,7 @@ func BulkUpdateDoc(db Database, docs []Doc) error {
 		Docs []Doc `json:"docs"`
 	}{docs}
 	var res []updateResponse
-	if err := makeRequest("POST", url, body, &res); err != nil {
+	if err := makeRequest(db, "POST", url, body, &res); err != nil {
 		return err
 	}
 	if len(res) != len(docs) {
@@ -464,7 +475,7 @@ func CreateNamedDoc(db Database, doc Doc) error {
 	}
 	url := docURL(db, doctype, id)
 	var res updateResponse
-	err = makeRequest("PUT", url, doc, &res)
+	err = makeRequest(db, "PUT", url, doc, &res)
 	if err != nil {
 		return err
 	}
@@ -490,13 +501,13 @@ func CreateNamedDocWithDB(db Database, doc Doc) error {
 func createDocOrDb(db Database, doc Doc, response interface{}) error {
 	doctype := doc.DocType()
 	dbname := makeDBName(db, doctype)
-	err := makeRequest("POST", dbname, doc, response)
+	err := makeRequest(db, "POST", dbname, doc, response)
 	if err == nil || !IsNoDatabaseError(err) {
 		return err
 	}
 	err = CreateDB(db, doctype)
 	if err == nil {
-		err = makeRequest("POST", dbname, doc, response)
+		err = makeRequest(db, "POST", dbname, doc, response)
 	}
 	return err
 }
@@ -535,22 +546,22 @@ func DefineViews(db Database, views []*View) error {
 			Lang:  "javascript",
 			Views: map[string]*View{v.Name: v},
 		}
-		err := makeRequest(http.MethodPut, url, &doc, nil)
+		err := makeRequest(db, http.MethodPut, url, &doc, nil)
 		if IsNoDatabaseError(err) {
 			err = CreateDB(db, v.Doctype)
 			if err != nil {
 				return err
 			}
-			err = makeRequest(http.MethodPut, url, &doc, nil)
+			err = makeRequest(db, http.MethodPut, url, &doc, nil)
 		}
 		if IsConflictError(err) {
 			var old ViewDesignDoc
-			err = makeRequest(http.MethodGet, url, nil, &old)
+			err = makeRequest(db, http.MethodGet, url, nil, &old)
 			if err != nil {
 				return err
 			}
 			doc.Rev = old.Rev
-			err = makeRequest(http.MethodPut, url, &doc, nil)
+			err = makeRequest(db, http.MethodPut, url, &doc, nil)
 		}
 
 		if err != nil {
@@ -565,14 +576,14 @@ func ExecView(db Database, view *View, req *ViewRequest, results interface{}) er
 	viewurl := fmt.Sprintf("%s/_design/%s/_view/%s", makeDBName(db, view.Doctype), view.Name, view.Name)
 	// Keys request
 	if req.Keys != nil {
-		return makeRequest("POST", viewurl, req, &results)
+		return makeRequest(db, "POST", viewurl, req, &results)
 	}
 	v, err := req.Values()
 	if err != nil {
 		return err
 	}
 	viewurl += "?" + v.Encode()
-	return makeRequest("GET", viewurl, nil, &results)
+	return makeRequest(db, "GET", viewurl, nil, &results)
 }
 
 // DefineIndex define the index on the doctype database
@@ -586,12 +597,12 @@ func DefineIndex(db Database, index *mango.Index) error {
 func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreationResponse, error) {
 	url := makeDBName(db, doctype) + "/_index"
 	response := &IndexCreationResponse{}
-	err := makeRequest("POST", url, &index, &response)
+	err := makeRequest(db, "POST", url, &index, &response)
 	if IsNoDatabaseError(err) {
 		if err = CreateDB(db, doctype); err != nil {
 			return nil, err
 		}
-		err = makeRequest("POST", url, &index, &response)
+		err = makeRequest(db, "POST", url, &index, &response)
 	}
 	if err != nil {
 		return nil, err
@@ -621,7 +632,7 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 	url := makeDBName(db, doctype) + "/_find"
 	// prepare a structure to receive the results
 	var response findResponse
-	err := makeRequest("POST", url, &req, &response)
+	err := makeRequest(db, "POST", url, &req, &response)
 	if err != nil {
 		return err
 	}
@@ -644,7 +655,7 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 
 	var response AllDocsResponse
 	url := makeDBName(db, doctype) + "/_all_docs?" + v.Encode()
-	err = makeRequest("POST", url, &req, &response)
+	err = makeRequest(db, "POST", url, &req, &response)
 	if err != nil {
 		return err
 	}

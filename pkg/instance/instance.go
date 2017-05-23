@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/settings"
@@ -133,6 +134,11 @@ func (i *Instance) Clone() couchdb.Doc { cloned := *i; return &cloned }
 // current instance
 func (i *Instance) Prefix() string {
 	return i.Domain + "/"
+}
+
+// Logger returns the logger associated with the instance
+func (i *Instance) Logger() *logrus.Entry {
+	return logger.WithDomain(i.Domain)
 }
 
 // VFS returns the storage provider where the binaries for the current instance
@@ -465,7 +471,7 @@ func Create(opts *Options) (*Instance, error) {
 	}
 	for _, app := range opts.Apps {
 		if err := i.installApp(app); err != nil {
-			log.Error("[instance] Failed to install "+app, err)
+			i.Logger().Errorf("Failed to install %s: %s", app, err)
 		}
 	}
 	return i, nil
@@ -488,11 +494,11 @@ func Get(domain string) (*Instance, error) {
 		cache.Set(domain, i)
 	}
 	if i.IndexViewsVersion != consts.IndexViewsVersion {
-		log.Infof("[instance] Indexes outdated: wanted %d; got %d",
+		i.Logger().Infof("Indexes outdated: wanted %d; got %d",
 			consts.IndexViewsVersion, i.IndexViewsVersion)
 		if err = i.defineViewsAndIndex(); err != nil {
-			log.Errorf("[instance] Could not re-define indexes and views %s: %s",
-				i.Domain, err.Error())
+			i.Logger().Errorf("Could not re-define indexes and views: %s",
+				err.Error())
 			return nil, err
 		}
 		if err = Update(i); err != nil {
@@ -552,7 +558,7 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 			return translated
 		}
 	}
-	log.Infof("Translation not found for '%s'", key)
+	i.Logger().Infof("Translation not found for '%s'", key)
 	if strings.HasPrefix(key, "Permissions ") {
 		key = strings.Replace(key, "Permissions ", "", 1)
 	}
@@ -578,7 +584,7 @@ func List() ([]*Instance, error) {
 func Update(i *Instance) error {
 	getCache().Revoke(i.Domain)
 	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
-		log.Errorf("[instance] Could not update %s: %s", i.Domain, err.Error())
+		i.Logger().Errorf("Could not update: %s", err.Error())
 		return err
 	}
 	return nil
@@ -597,7 +603,8 @@ func Destroy(domain string) error {
 	if err == nil {
 		for _, t := range triggers {
 			if err = sched.Delete(domain, t.Infos().TID); err != nil {
-				log.Error("[instance] Failed to remove trigger: ", err)
+				logger.WithDomain(domain).Error(
+					"Failed to remove trigger: ", err)
 			}
 		}
 	}
@@ -611,7 +618,7 @@ func Destroy(domain string) error {
 		return err
 	}
 	if err = i.VFS().Delete(); err != nil {
-		log.Errorf("[instance] Could not delete VFS %s: %s", i.Domain, err.Error())
+		i.Logger().Errorf("Could not delete VFS: %s", err.Error())
 	}
 	return couchdb.DeleteDoc(couchdb.GlobalDB, i)
 }
@@ -749,7 +756,7 @@ func (i *Instance) CheckPassphrase(pass []byte) error {
 	i.PassphraseHash = newHash
 	err = Update(i)
 	if err != nil {
-		log.Error("[instance] Failed to update hash in db", err)
+		i.Logger().Error("Failed to update hash in db", err)
 	}
 
 	return nil

@@ -3,10 +3,11 @@ package scheduler
 import (
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 // triggerGlobalStorage interface is used to represent a persistent layer on
@@ -55,13 +56,14 @@ type MemScheduler struct {
 	broker  jobs.Broker
 	storage triggerGlobalStorage
 
-	ts map[string]Trigger
-	mu sync.RWMutex
+	ts  map[string]Trigger
+	mu  sync.RWMutex
+	log *logrus.Entry
 }
 
 // NewMemScheduler creates a new in-memory scheduler that will load all
 // registered triggers and schedule their work.
-func NewMemScheduler() *MemScheduler {
+func NewMemScheduler() Scheduler {
 	return newMemScheduler(newGlobalDBStorage())
 }
 
@@ -69,6 +71,7 @@ func newMemScheduler(storage triggerGlobalStorage) *MemScheduler {
 	return &MemScheduler{
 		storage: storage,
 		ts:      make(map[string]Trigger),
+		log:     logger.WithNamespace("mem-scheduler"),
 	}
 }
 
@@ -86,7 +89,7 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	for _, infos := range ts {
 		t, err := NewTrigger(infos)
 		if err != nil {
-			log.Errorf("[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
+			s.log.Errorf("[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
 				infos.Type, infos.TID, err.Error())
 			continue
 		}
@@ -160,16 +163,21 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	log.Debugf("[jobs] trigger %s(%s): Starting trigger", t.Type(), t.Infos().TID)
+	s.log.Debugf("[jobs] trigger %s(%s): Starting trigger",
+		t.Type(), t.Infos().TID)
 	for req := range t.Schedule() {
-		log.Debugf("[jobs] trigger %s(%s): Pushing new job", t.Type(), t.Infos().TID)
+		s.log.Debugf("[jobs] trigger %s(%s): Pushing new job",
+			t.Type(), t.Infos().TID)
 		if _, err := s.broker.PushJob(req); err != nil {
-			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s", t.Type(), t.Infos().TID, err.Error())
+			s.log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s",
+				t.Type(), t.Infos().TID, err.Error())
 		}
 	}
-	log.Debugf("[jobs] trigger %s(%s): Closing trigger", t.Type(), t.Infos().TID)
+	s.log.Debugf("[jobs] trigger %s(%s): Closing trigger",
+		t.Type(), t.Infos().TID)
 	if err := s.Delete(t.Infos().Domain, t.Infos().TID); err != nil {
-		log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s", t.Type(), t.Infos().TID, err.Error())
+		s.log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s",
+			t.Type(), t.Infos().TID, err.Error())
 	}
 }
 

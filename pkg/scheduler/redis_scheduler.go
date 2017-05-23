@@ -7,10 +7,11 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/go-redis/redis"
@@ -54,6 +55,7 @@ type RedisScheduler struct {
 	broker  jobs.Broker
 	client  *redis.Client
 	stopped chan struct{}
+	log     *logrus.Entry
 }
 
 // NewRedisScheduler creates a new scheduler that use redis to synchronize with
@@ -61,6 +63,7 @@ type RedisScheduler struct {
 func NewRedisScheduler(client *redis.Client) *RedisScheduler {
 	return &RedisScheduler{
 		client: client,
+		log:    logger.WithNamespace("scheduler-redis"),
 	}
 }
 
@@ -91,7 +94,7 @@ func (s *RedisScheduler) pollLoop() {
 		case <-ticker.C:
 			now := time.Now().UTC().Unix()
 			if err := s.Poll(now); err != nil {
-				log.Warnf("[scheduler] Failed to poll redis: %s", err)
+				s.log.Warnf("[scheduler] Failed to poll redis: %s", err)
 			}
 		}
 	}
@@ -122,14 +125,14 @@ func (s *RedisScheduler) eventLoop(ch <-chan *realtime.Event) {
 		key := eventsKey(event.Domain)
 		m, err := s.client.HGetAll(key).Result()
 		if err != nil {
-			log.Errorf("[scheduler] Could not fetch redis set %s: %s",
+			s.log.Errorf("[scheduler] Could not fetch redis set %s: %s",
 				key, err.Error())
 			continue
 		}
 		for triggerID, args := range m {
 			rule, err := permissions.UnmarshalRuleString(args)
 			if err != nil {
-				log.Warnf("[scheduler] Coud not unmarshal rule %s: %s",
+				s.log.Warnf("[scheduler] Coud not unmarshal rule %s: %s",
 					key, err.Error())
 				continue
 			}
@@ -138,13 +141,13 @@ func (s *RedisScheduler) eventLoop(ch <-chan *realtime.Event) {
 			}
 			t, err := s.Get(event.Domain, triggerID)
 			if err != nil {
-				log.Warnf("[scheduler] Could not fetch @event trigger %s %s: %s",
+				s.log.Warnf("[scheduler] Could not fetch @event trigger %s %s: %s",
 					event.Domain, triggerID, err.Error())
 				continue
 			}
 			_, err = s.broker.PushJob(t.(*EventTrigger).Trigger(event))
 			if err != nil {
-				log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
+				s.log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
 					event.Domain, triggerID, err.Error())
 				continue
 			}

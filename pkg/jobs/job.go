@@ -4,9 +4,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/labstack/gommon/log"
+	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 type (
@@ -54,11 +55,16 @@ func (j *Job) Infos() *JobInfos {
 	return j.infos
 }
 
+// Logger returns a logger associated with the job domain
+func (j *Job) Logger() *logrus.Entry {
+	return logger.WithDomain(j.infos.Domain)
+}
+
 // AckConsumed sets the job infos state to Running an sends the new job infos
 // on the channel.
 func (j *Job) AckConsumed() error {
 	job := *j.infos
-	log.Debugf("[jobs] ack_consume %s ", job.ID())
+	j.Logger().Debugf("[jobs] ack_consume %s ", job.ID())
 	job.StartedAt = time.Now()
 	job.State = Running
 	j.infos = &job
@@ -69,7 +75,7 @@ func (j *Job) AckConsumed() error {
 // channel.
 func (j *Job) Ack() error {
 	job := *j.infos
-	log.Debugf("[jobs] ack %s ", job.ID())
+	j.Logger().Debugf("[jobs] ack %s ", job.ID())
 	job.State = Done
 	j.infos = &job
 	return j.persist()
@@ -79,7 +85,7 @@ func (j *Job) Ack() error {
 // error field and sends the new job infos on the channel.
 func (j *Job) Nack(err error) error {
 	job := *j.infos
-	log.Debugf("[jobs] nack %s ", job.ID())
+	j.Logger().Debugf("[jobs] nack %s ", job.ID())
 	job.State = Errored
 	job.Error = err.Error()
 	j.infos = &job

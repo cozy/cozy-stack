@@ -6,17 +6,15 @@ import (
 	"math/rand"
 	"runtime"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 // contextKey are the keys used in the worker context
 type contextKey int
 
 const (
-	// ContextDomainKey is the used to store the domain string name
+	// ContextDomainKey is used to store the domain string name
 	ContextDomainKey contextKey = iota
-	// ContextWorkerKey is the used to store the workerID string
+	// ContextWorkerKey is used to store the workerID string
 	ContextWorkerKey
 )
 
