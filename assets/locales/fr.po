@@ -83,6 +83,9 @@ msgid "Authorize Give permission keyword"
 msgstr "Autoriser"
 
 msgid "Authorize Give permission end"
+msgstr ", vous autorisez l'application à accéder à vos données selon leurs conditions de service et leur politique de confidentialité."
+
+msgid "Authorize Give App permission end"
 msgstr ", vous acceptez que l'application %s accède à vos données en local et uniquement dans votre cozy selon ses conditions de service et sa politique de confidentialité."
 
 msgid "Authorize Give App permission desc"

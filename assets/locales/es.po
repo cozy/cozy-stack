@@ -88,6 +88,9 @@ msgstr ""
 msgid "Authorize Give permission end"
 msgstr ""
 
+msgid "Authorize Give App permission end"
+msgstr ""
+
 msgid "Authorize Give App permission desc"
 msgstr ""
 
