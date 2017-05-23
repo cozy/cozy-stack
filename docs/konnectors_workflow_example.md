@@ -54,9 +54,9 @@ See https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
 ## Routes
 
 **konnectors**
-- [ ] `GET    /konnectors/marketplace` Lists available konnectors
-- [x] `POST   /konnectors?Source=xxxx` Installs a konnector            
-- [ ] `GET    /konnectors`             Lists installed konnectors    
+- [ ] `GET    /konnectors/marketplace`       Lists available konnectors
+- [x] `POST   /konnectors/:slug?Source=xxxx` Installs a konnector
+- [ ] `GET    /konnectors`                   Lists installed konnectors
 
 **triggers**
 - [x] `GET    /jobs/triggers?Worker=konnector` Lists konnectors with a configured recurrence.
@@ -64,8 +64,8 @@ See https://cozy.github.io/cozy-stack/jobs.html#post-jobstriggers
 - [x] `DELETE /jobs/triggers/:triggerid`       Disables a konnector recurrence
 
 **jobs**
-- [x] `POST   /jobs/queue/konnector` Starts a konnector now        
-- [x] `GET    /jobs/queue/konnector` Lists pending konnectors       
+- [x] `POST   /jobs/queue/konnector` Starts a konnector now
+- [x] `GET    /jobs/queue/konnector` Lists pending konnectors
 
 
 --------------------------------------
