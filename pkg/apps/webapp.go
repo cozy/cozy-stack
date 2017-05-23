@@ -46,6 +46,7 @@ type WebappManifest struct {
 	DocState    State      `json:"state"`
 	DocError    string     `json:"error,omitempty"`
 	Icon        string     `json:"icon"`
+	Category    string     `json:"category"`
 	Description string     `json:"description"`
 	Developer   *Developer `json:"developer"`
 

@@ -23,6 +23,7 @@ type KonnManifest struct {
 	DocError    string     `json:"error,omitempty"`
 	Icon        string     `json:"icon"`
 	Description string     `json:"description"`
+	Category    string     `json:"category"`
 	Developer   *Developer `json:"developer"`
 
 	DefaultLocale string `json:"default_locale"`
