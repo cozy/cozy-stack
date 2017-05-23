@@ -491,9 +491,11 @@ func (f *swiftFileCreation) Close() (err error) {
 	// The actual check of the optionally given md5 hash is handled by the swift
 	// library.
 	if newdoc.MD5Sum == nil {
-		headers, err := f.f.Headers()
+		var headers swift.Headers
+		var md5sum []byte
+		headers, err = f.f.Headers()
 		if err == nil {
-			md5sum, err := hex.DecodeString(headers["Etag"])
+			md5sum, err = hex.DecodeString(headers["Etag"])
 			if err == nil {
 				newdoc.MD5Sum = md5sum
 			}
