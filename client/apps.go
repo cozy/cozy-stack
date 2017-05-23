@@ -25,6 +25,7 @@ type AppManifest struct {
 		State       string `json:"state"`
 		Error       string `json:"error,omitempty"`
 		Icon        string `json:"icon"`
+		Category    string `json:"category"`
 		Description string `json:"description"`
 		Developer   struct {
 			Name string `json:"name"`
