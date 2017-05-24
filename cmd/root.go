@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -54,8 +53,8 @@ func newClient(domain, scope string) *client.Client {
 		Scope:    []string{scope},
 	})
 	if err != nil {
-		log.Errorf("Could not generate access to domain %s", domain)
-		log.Error(err)
+		errPrintf("Could not generate access to domain %s", domain)
+		errPrintf("%s", err)
 		os.Exit(1)
 	}
 	var scheme string
@@ -108,13 +107,17 @@ func init() {
 	flags.Int("admin-port", 6060, "administration server port")
 	checkNoErr(viper.BindPFlag("admin.port", flags.Lookup("admin-port")))
 
-	flags.String("log-level", "info", "define the log level")
-	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
-
 	flags.BoolVar(&flagClientUseHTTPS, "client-use-https", false, "if set the client will use https to communicate with the server")
 }
 
 func checkNoErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func errPrintf(format string, vals ...interface{}) {
+	_, err := fmt.Fprintf(os.Stderr, format+"\n", vals)
 	if err != nil {
 		panic(err)
 	}

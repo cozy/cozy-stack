@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
@@ -41,7 +40,7 @@ example), you can use the --appdir flag like this:
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if !flagAllowRoot && os.Getuid() == 0 {
-			log.Errorf("Use --allow-root if you really want to start with the root user")
+			errPrintf("Use --allow-root if you really want to start with the root user")
 			return errors.New("Starting cozy-stack serve as root not allowed")
 		}
 		if err := stack.Start(); err != nil {
@@ -108,6 +107,9 @@ func init() {
 
 	flags.String("konnectors-oauthstate", "", "URL for the storage of OAuth state for konnectors, redis or in-memory")
 	checkNoErr(viper.BindPFlag("konnectors.oauthstate", flags.Lookup("konnectors-oauthstate")))
+
+	flags.String("log-level", "info", "define the log level")
+	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
 
 	flags.Bool("log-syslog", false, "use the local syslog for logging")
 	checkNoErr(viper.BindPFlag("log.syslog", flags.Lookup("log-syslog")))

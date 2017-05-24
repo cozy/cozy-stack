@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
@@ -148,12 +147,12 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 				}
 				return err
 			}
-			log.Infof("Application installed successfully on %s", in.Attrs.Domain)
+			fmt.Printf("Application installed successfully on %s\n", in.Attrs.Domain)
 			return nil
 		})
 	}
 	if flagAppsDomain == "" {
-		log.Error(errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -196,12 +195,12 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 				}
 				return err
 			}
-			log.Infof("Application updated successfully on %s", in.Attrs.Domain)
+			fmt.Printf("Application updated successfully on %s\n", in.Attrs.Domain)
 			return nil
 		})
 	}
 	if flagAppsDomain == "" {
-		log.Error(errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -226,7 +225,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Help()
 	}
 	if flagAppsDomain == "" {
-		log.Error(errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -247,7 +246,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
-		log.Error(errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -273,7 +272,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 	var hasErr bool
 	for _, i := range list {
 		if err = predicate(i); err != nil {
-			log.Warnf("%s: %s", i.Attrs.Domain, err)
+			errPrintf("%s: %s", i.Attrs.Domain, err)
 			hasErr = true
 		}
 	}
