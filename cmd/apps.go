@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -153,7 +152,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 		})
 	}
 	if flagAppsDomain == "" {
-		fmt.Fprintf(os.Stderr, "%s\n", errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -201,7 +200,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 		})
 	}
 	if flagAppsDomain == "" {
-		fmt.Fprintf(os.Stderr, "%s\n", errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -226,7 +225,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Help()
 	}
 	if flagAppsDomain == "" {
-		fmt.Fprintf(os.Stderr, "%s\n", errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -247,7 +246,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
-		fmt.Fprintf(os.Stderr, "%s\n", errAppsMissingDomain)
+		errPrintf("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -273,7 +272,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 	var hasErr bool
 	for _, i := range list {
 		if err = predicate(i); err != nil {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", i.Attrs.Domain, err)
+			errPrintf("%s: %s", i.Attrs.Domain, err)
 			hasErr = true
 		}
 	}

@@ -127,8 +127,8 @@ given domain.
 			Passphrase: flagPassphrase,
 		})
 		if err != nil {
-			fmt.Fprintf(os.Stderr,
-				"Failed to create instance for domain %s\n", domain)
+			errPrintf(
+				"Failed to create instance for domain %s", domain)
 			return err
 		}
 
@@ -242,8 +242,8 @@ All data associated with this domain will be permanently lost.
 		c := newAdminClient()
 		err := c.DestroyInstance(domain)
 		if err != nil {
-			fmt.Fprintf(os.Stderr,
-				"An error occured while destroying instance for domain %s\n", domain)
+			errPrintf(
+				"An error occured while destroying instance for domain %s", domain)
 			return err
 		}
 

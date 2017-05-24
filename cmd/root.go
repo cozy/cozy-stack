@@ -53,8 +53,8 @@ func newClient(domain, scope string) *client.Client {
 		Scope:    []string{scope},
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not generate access to domain %s\n", domain)
-		fmt.Fprintf(os.Stderr, "%s\n", err)
+		errPrintf("Could not generate access to domain %s", domain)
+		errPrintf("%s", err)
 		os.Exit(1)
 	}
 	var scheme string
@@ -111,6 +111,13 @@ func init() {
 }
 
 func checkNoErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func errPrintf(format string, vals ...interface{}) {
+	_, err := fmt.Fprintf(os.Stderr, format+"\n", vals)
 	if err != nil {
 		panic(err)
 	}
