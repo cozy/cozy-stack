@@ -528,7 +528,6 @@ func CreateDoc(db Database, doc Doc) error {
 // DefineViews creates a design doc with some views
 func DefineViews(db Database, views []*View) error {
 	for _, v := range views {
-
 		id := "_design/" + v.Name
 		url := makeDBName(db, v.Doctype) + "/" + id
 		doc := &ViewDesignDoc{
@@ -536,8 +535,14 @@ func DefineViews(db Database, views []*View) error {
 			Lang:  "javascript",
 			Views: map[string]*View{v.Name: v},
 		}
-
 		err := makeRequest(http.MethodPut, url, &doc, nil)
+		if IsNoDatabaseError(err) {
+			err = CreateDB(db, v.Doctype)
+			if err != nil {
+				return err
+			}
+			err = makeRequest(http.MethodPut, url, &doc, nil)
+		}
 		if IsConflictError(err) {
 			var old ViewDesignDoc
 			err = makeRequest(http.MethodGet, url, nil, &old)
@@ -551,9 +556,7 @@ func DefineViews(db Database, views []*View) error {
 		if err != nil {
 			return err
 		}
-
 	}
-
 	return nil
 }
 
@@ -583,7 +586,14 @@ func DefineIndex(db Database, index *mango.Index) error {
 func DefineIndexRaw(db Database, doctype string, index interface{}) (*IndexCreationResponse, error) {
 	url := makeDBName(db, doctype) + "/_index"
 	response := &IndexCreationResponse{}
-	if err := makeRequest("POST", url, &index, &response); err != nil {
+	err := makeRequest("POST", url, &index, &response)
+	if IsNoDatabaseError(err) {
+		if err = CreateDB(db, doctype); err != nil {
+			return nil, err
+		}
+		err = makeRequest("POST", url, &index, &response)
+	}
+	if err != nil {
 		return nil, err
 	}
 	return response, nil

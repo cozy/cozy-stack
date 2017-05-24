@@ -378,6 +378,7 @@ func Create(opts *Options) (*Instance, error) {
 	i.Domain = domain
 	i.BytesDiskQuota = opts.DiskQuota
 	i.Dev = opts.Dev
+	i.IndexViewsVersion = consts.IndexViewsVersion
 
 	i.PassphraseHash = nil
 	i.PassphraseResetToken = nil
@@ -396,7 +397,7 @@ func Create(opts *Options) (*Instance, error) {
 		}
 	}
 
-	if _, err := Get(i.Domain); err != ErrNotFound {
+	if _, err := getFromCouch(i.Domain); err != ErrNotFound {
 		if err == nil {
 			err = ErrExists
 		}
@@ -584,7 +585,7 @@ func Destroy(domain string) error {
 			}
 		}
 	}
-	i, err := Get(domain)
+	i, err := getFromCouch(domain)
 	if err != nil {
 		return err
 	}
