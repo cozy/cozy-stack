@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -39,40 +41,39 @@ the given parameters to display the configuration.`,
 }
 
 var adminPasswdCmd = &cobra.Command{
-	Use:   "passwd [directory]",
+	Use:   "passwd [filepath]",
 	Short: "Generate an admin passphrase",
 	Long: `
-cozy-stack instances passphrase generate a passphrase hash and save it to a file in
-the specified directory. This passphrase is the one used to authenticate accesses
-to the administration API.
+cozy-stack instances passphrase generate a passphrase hash and save it to the
+specified file. If no file is specified, it is directly printed in standard output.
+This passphrase is the one used to authenticate accesses to the administration API.
 
-example: cozy-stack config passwd ~/.cozy
+example: cozy-stack config passwd ~/.cozy/
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
+		if len(args) > 1 {
 			return cmd.Help()
 		}
-
-		directory := filepath.Join(utils.AbsPath(args[0]))
-		err := os.MkdirAll(directory, 0700)
-		if err != nil {
-			return err
+		var filename string
+		if len(args) == 1 {
+			filename = filepath.Join(utils.AbsPath(args[0]))
+			if ok, _ := utils.DirExists(filename); ok {
+				filename = path.Join(filename, config.AdminSecretFileName)
+			}
 		}
 
-		_, err = fmt.Fprintf(os.Stdout, "Passphrase:")
-		if err != nil {
-			return err
+		if filename != "" {
+			errPrintfln("Hashed passphrase will be written in %s", filename)
 		}
-		pass1, err := gopass.GetPasswdMasked()
+
+		errPrintf("Passphrase: ")
+		pass1, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
 		if err != nil {
 			return err
 		}
 
-		_, err = fmt.Fprintf(os.Stdout, "Confirmation:")
-		if err != nil {
-			return err
-		}
-		pass2, err := gopass.GetPasswdMasked()
+		errPrintf("Confirmation: ")
+		pass2, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
 		if err != nil {
 			return err
 		}
@@ -85,24 +86,25 @@ example: cozy-stack config passwd ~/.cozy
 			return err
 		}
 
-		filename := filepath.Join(directory, config.AdminSecretFileName)
-		f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0444)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+		var out io.Writer
+		if filename != "" {
+			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0444)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
 
-		if err = os.Chmod(filename, 0444); err != nil {
-			return err
+			if err = os.Chmod(filename, 0444); err != nil {
+				return err
+			}
+
+			out = f
+		} else {
+			out = os.Stdout
 		}
 
-		_, err = fmt.Fprintln(f, string(b))
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("Hashed passphrase outputted in", filename)
-		return nil
+		_, err = fmt.Fprintln(out, string(b))
+		return err
 	},
 }
 

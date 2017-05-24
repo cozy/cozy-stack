@@ -152,7 +152,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 		})
 	}
 	if flagAppsDomain == "" {
-		errPrintf("%s", errAppsMissingDomain)
+		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -200,7 +200,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 		})
 	}
 	if flagAppsDomain == "" {
-		errPrintf("%s", errAppsMissingDomain)
+		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -225,7 +225,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 		return cmd.Help()
 	}
 	if flagAppsDomain == "" {
-		errPrintf("%s", errAppsMissingDomain)
+		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -246,7 +246,7 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
-		errPrintf("%s", errAppsMissingDomain)
+		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Help()
 	}
 	c := newClient(flagAppsDomain, appType)
@@ -272,7 +272,7 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 	var hasErr bool
 	for _, i := range list {
 		if err = predicate(i); err != nil {
-			errPrintf("%s: %s", i.Attrs.Domain, err)
+			errPrintfln("%s: %s", i.Attrs.Domain, err)
 			hasErr = true
 		}
 	}
