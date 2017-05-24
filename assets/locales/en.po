@@ -139,7 +139,7 @@ msgid "Permissions worker konnectors"
 msgstr "Running a connector to import data"
 
 msgid "Permissions worker log"
-msgstr "Logging a message"
+msgstr "Storing a message in the system logs"
 
 msgid "Permissions worker sendmail"
 msgstr "Sending a mail"

@@ -36,7 +36,7 @@
                 <li>
                   {{- t $perm.TranslationKey -}}
                   {{- if $perm.Verbs.ReadOnly}}{{t "Permissions Read only"}}{{end -}}
-                  {{- if $perm.Description}}: {{t $perm.Description}}{{end -}}
+                  {{- if $perm.Description}}: {{$perm.Description}}{{end -}}
                 </li>
                   {{end}}
                 </ul>
