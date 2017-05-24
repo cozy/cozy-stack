@@ -42,7 +42,7 @@
               </p>
               <ul>
                 {{range $index, $perm := .Permissions}}
-                <li>{{$perm}}</li>
+                <li>{{$perm.Verbs}}:{{$perm.Type}}</li>
                 {{end}}
               </ul>
               <p>

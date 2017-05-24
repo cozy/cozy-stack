@@ -127,5 +127,8 @@ msgstr "redirect_uri パラメータが正しくありません"
 msgid "Error Invalid response type"
 msgstr "レスポンスタイプが正しくありません"
 
+msgid "Error Invalid scope"
+msgstr ""
+
 msgid "Error Must be authenticated"
 msgstr "認証されている必要があります"

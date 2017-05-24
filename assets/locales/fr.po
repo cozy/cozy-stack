@@ -137,5 +137,8 @@ msgstr "Le paramètre redirect_uri est invalide"
 msgid "Error Invalid response type"
 msgstr "Le type de réponse est invalide"
 
+msgid "Error Invalid scope"
+msgstr "Le paramètre scope est invalide"
+
 msgid "Error Must be authenticated"
 msgstr "Vous devez être connecté"
