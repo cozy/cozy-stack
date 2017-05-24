@@ -77,7 +77,7 @@ msgstr "voudrait accéder aux données suivantes du cozy "
 
 msgid "Authorize Policy sentence"
 msgstr ""
-"ous pouvez lire la politique d'utilisation des données à cette adresse :"
+"Vous pouvez lire la politique d'utilisation des données à cette adresse :"
 
 msgid "Authorize Give permission start"
 msgstr "En cliquant sur "
