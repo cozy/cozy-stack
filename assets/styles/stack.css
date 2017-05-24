@@ -22,7 +22,8 @@ body {
     height: 100%;
     padding: 0;
     background-color: #fff;
-    font: 1em/1.5 Lato, sans-serif;
+    color: #333;
+    font: 1.05em/1.5 Lato, sans-serif;
 }
 
 [role=application] {
@@ -89,7 +90,7 @@ body {
 
 /* Wrapper */
 .popup {
-    flex: 0 0 30rem
+    flex: 0 0 33rem
 }
 
 /* Header */

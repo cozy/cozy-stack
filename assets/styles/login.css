@@ -6,6 +6,8 @@ html {
     -webkit-text-size-adjust: 100%
 }
 body {
+    background-color: #fff;
+    color: #333;
     margin: 0
 }
 figure,
