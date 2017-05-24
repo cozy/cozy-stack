@@ -145,6 +145,9 @@ func (i *Instance) VFS() vfs.VFS {
 }
 
 func (i *Instance) makeVFS() error {
+	if i.vfs != nil {
+		return nil
+	}
 	fsURL := config.FsURL()
 	mutex := lock.ReadWrite(i.Domain)
 	index := vfs.NewCouchdbIndexer(i)
@@ -378,6 +381,7 @@ func Create(opts *Options) (*Instance, error) {
 	i.Domain = domain
 	i.BytesDiskQuota = opts.DiskQuota
 	i.Dev = opts.Dev
+	i.IndexViewsVersion = consts.IndexViewsVersion
 
 	i.PassphraseHash = nil
 	i.PassphraseResetToken = nil
@@ -396,7 +400,7 @@ func Create(opts *Options) (*Instance, error) {
 		}
 	}
 
-	if _, err := Get(i.Domain); err != ErrNotFound {
+	if _, err := getFromCouch(i.Domain); err != ErrNotFound {
 		if err == nil {
 			err = ErrExists
 		}
@@ -518,8 +522,11 @@ func getFromCouch(domain string) (*Instance, error) {
 	if len(instances) == 0 {
 		return nil, ErrNotFound
 	}
-
-	return instances[0], nil
+	i := instances[0]
+	if err = i.makeVFS(); err != nil {
+		return nil, err
+	}
+	return i, nil
 }
 
 var translations = make(map[string]*gotext.Po)
@@ -584,7 +591,7 @@ func Destroy(domain string) error {
 			}
 		}
 	}
-	i, err := Get(domain)
+	i, err := getFromCouch(domain)
 	if err != nil {
 		return err
 	}
