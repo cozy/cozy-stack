@@ -63,20 +63,49 @@ msgid "Login Forgot password"
 msgstr "Mot de passe oublié ?"
 
 msgid "Authorize Title"
-msgstr "Autoriser une application distante"
+msgstr "Autoriser %s à accéder à votre profil ?"
+
+msgid "Authorize App Title"
+msgstr ""
+"L'application %s ne transmet aucune donnée personnelle à des tiers externes"
+
+msgid "Authorize More"
+msgstr "En Savoir plus"
 
 msgid "Authorize Client presentation"
-msgstr "souhaite accéder à votre Cozy."
+msgstr "voudrait accéder aux données suivantes du cozy "
 
 msgid "Authorize Policy sentence"
 msgstr ""
 "Vous pouvez lire la politique d'utilisation des données à cette adresse :"
 
-msgid "Authorize Give permission"
-msgstr "Cet accord donnera accès à l'application pour :"
+msgid "Authorize Give permission start"
+msgstr "En cliquant sur "
+
+msgid "Authorize Give permission keyword"
+msgstr "Autoriser"
+
+msgid "Authorize Give permission end"
+msgstr ""
+", vous autorisez l'application à accéder à vos données, selon ses conditions"
+" de service et sa politique de confidentialité."
+
+msgid "Authorize Give App permission end"
+msgstr ""
+", vous acceptez que l'application %s accède à vos données, uniquement en "
+"local et dans votre cozy, selon ses conditions de service et sa politique de"
+" confidentialité."
+
+msgid "Authorize Give App permission desc"
+msgstr ""
+"Pour optimiser les services rendus par votre Cozy (%s), l'application %s "
+"souhaite accéder aux données ci-dessous :"
 
 msgid "Authorize Submit"
-msgstr "Accepter"
+msgstr "Autoriser"
+
+msgid "Authorize Cancel"
+msgstr "Refuser"
 
 msgid "Error Title"
 msgstr "Désolé"

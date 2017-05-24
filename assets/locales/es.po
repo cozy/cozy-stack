@@ -1,23 +1,23 @@
 # Translators:
-# hernando franco <hfrancod@lautaro.fr>, 2017
+# Bruno Michel <brmichel@free.fr>, 2017
 msgid ""
 msgstr ""
-"Last-Translator: hernando franco <hfrancod@lautaro.fr>, 2017\n"
+"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
 "Language-Team: Spanish (https://www.transifex.com/cozy/teams/39753/es/)\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "Tree Administrative"
-msgstr ""
+msgstr "Administrativo"
 
 msgid "Tree Photos"
-msgstr ""
+msgstr "Fotos"
 
 msgid "Tree Uploaded from Cozy Photos"
-msgstr ""
+msgstr "Subido desde Cozy Fotos"
 
 msgid "Tree Backuped from my mobile"
-msgstr ""
+msgstr "Copiados para respaldarlos desde su celular"
 
 msgid "Login Credentials error"
 msgstr ""
@@ -64,20 +64,41 @@ msgid "Login Forgot password"
 msgstr "¿Ha olvidado su contraseña?"
 
 msgid "Authorize Title"
-msgstr "Autorizar una aplicaciõn remota"
+msgstr ""
+
+msgid "Authorize App Title"
+msgstr ""
+
+msgid "Authorize More"
+msgstr ""
 
 msgid "Authorize Client presentation"
-msgstr "quisiera tener permiso para acceder a su Cozy."
+msgstr ""
 
 msgid "Authorize Policy sentence"
 msgstr ""
 "Aquí, usted puede leer la política sobre el uso que se hará de sus datos:"
 
-msgid "Authorize Give permission"
-msgstr "Este permiso le da acceso a:"
+msgid "Authorize Give permission start"
+msgstr ""
+
+msgid "Authorize Give permission keyword"
+msgstr ""
+
+msgid "Authorize Give permission end"
+msgstr ""
+
+msgid "Authorize Give App permission end"
+msgstr ""
+
+msgid "Authorize Give App permission desc"
+msgstr ""
 
 msgid "Authorize Submit"
-msgstr "Acepto"
+msgstr ""
+
+msgid "Authorize Cancel"
+msgstr ""
 
 msgid "Error Title"
 msgstr "Lo siento"
