@@ -259,7 +259,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Stop()
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 	sch.Start(bro)
 
 	evTrigger := &scheduler.TriggerInfos{
@@ -284,7 +284,9 @@ func TestRedisTriggerEvent(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	count, _ := bro.QueueLen("incr")
-	assert.Equal(t, 1, count)
+	if !assert.Equal(t, 1, count) {
+		return
+	}
 
 	type eventMessage struct {
 		Message string
