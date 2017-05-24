@@ -12,12 +12,12 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	git "github.com/cozy/go-git"
+	gitPlumbing "github.com/cozy/go-git/plumbing"
+	gitObject "github.com/cozy/go-git/plumbing/object"
+	gitStorage "github.com/cozy/go-git/storage/filesystem"
 	"github.com/spf13/afero"
 	gitOsFS "gopkg.in/src-d/go-billy.v2/osfs"
-	git "gopkg.in/src-d/go-git.v4"
-	gitPlumbing "gopkg.in/src-d/go-git.v4/plumbing"
-	gitObject "gopkg.in/src-d/go-git.v4/plumbing/object"
-	gitStorage "gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
 var errCloneTimeout = errors.New("git: repository cloning timed out")
