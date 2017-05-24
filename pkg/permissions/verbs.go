@@ -50,6 +50,15 @@ func (vs VerbSet) ContainsAll(verbs VerbSet) bool {
 	return true
 }
 
+// ReadOnly returns true if the set contains only the verb GET
+func (vs VerbSet) ReadOnly() bool {
+	if len(vs) != 1 {
+		return false
+	}
+	_, has := vs[GET]
+	return has
+}
+
 func (vs VerbSet) String() string {
 	out := ""
 	if len(vs) == 0 || len(vs) == allVerbsLength {

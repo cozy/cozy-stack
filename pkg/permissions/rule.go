@@ -1,6 +1,10 @@
 package permissions
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/cozy/cozy-stack/pkg/consts"
+)
 
 const ruleSep = " "
 
@@ -111,4 +115,21 @@ func (r Rule) ValuesContain(values ...string) bool {
 		}
 	}
 	return true
+}
+
+// TranslationKey returns a string that can be used as a key for translating a
+// description of this rule
+func (r Rule) TranslationKey() string {
+	switch r.Type {
+	case consts.Settings:
+		if r.Verbs.ReadOnly() && len(r.Values) == 1 && r.Values[0] == consts.DiskUsageID {
+			return "Permissions disk usage"
+		}
+	case consts.Jobs:
+		if len(r.Values) == 1 && r.Selector == "worker" {
+			return "Permissions worker " + r.Values[0]
+		}
+		// TODO a specific folder (io.cozy.files)
+	}
+	return "Permissions " + r.Type
 }

@@ -534,10 +534,20 @@ func LoadLocale(identifier, rawPO string) {
 // Translate is used to translate a string to the locale used on this instance
 func (i *Instance) Translate(key string, vars ...interface{}) string {
 	if po, ok := translations[i.Locale]; ok {
-		return po.Get(key, vars...)
+		translated := po.Get(key, vars...)
+		if translated != key && translated != "" {
+			return translated
+		}
 	}
 	if po, ok := translations[DefaultLocale]; ok {
-		return po.Get(key, vars...)
+		translated := po.Get(key, vars...)
+		if translated != key && translated != "" {
+			return translated
+		}
+	}
+	log.Infof("Translation not found for '%s'", key)
+	if strings.HasPrefix(key, "Permissions ") {
+		key = strings.Replace(key, "Permissions ", "", 1)
 	}
 	return fmt.Sprintf(key, vars...)
 }
