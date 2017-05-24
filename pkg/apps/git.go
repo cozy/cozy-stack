@@ -110,11 +110,11 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 
 	branch := getGitBranch(src)
+	src.Fragment = ""
 
 	// XXX Gitlab doesn't support the git protocol
 	if isGitlab(src) {
 		src.Scheme = "https"
-		src.Fragment = ""
 	}
 
 	errch := make(chan error)
