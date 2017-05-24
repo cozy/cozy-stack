@@ -10,7 +10,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -128,15 +127,15 @@ given domain.
 			Passphrase: flagPassphrase,
 		})
 		if err != nil {
-			log.Errorf("Failed to create instance for domain %s", domain)
+			fmt.Fprintf(os.Stderr,
+				"Failed to create instance for domain %s\n", domain)
 			return err
 		}
 
-		log.Infof("Instance created with success for domain %s", in.Attrs.Domain)
+		fmt.Printf("Instance created with success for domain %s\n", in.Attrs.Domain)
 		if in.Attrs.RegisterToken != nil {
-			log.Infof("Registration token: \"%s\"", hex.EncodeToString(in.Attrs.RegisterToken))
+			fmt.Printf("Registration token: \"%s\"\n", hex.EncodeToString(in.Attrs.RegisterToken))
 		}
-		log.Debugf("Instance created: %#v", in.Attrs)
 		return nil
 	},
 }
@@ -243,11 +242,12 @@ All data associated with this domain will be permanently lost.
 		c := newAdminClient()
 		err := c.DestroyInstance(domain)
 		if err != nil {
-			log.Errorf("An error occured while destroying instance for domain %s", domain)
+			fmt.Fprintf(os.Stderr,
+				"An error occured while destroying instance for domain %s\n", domain)
 			return err
 		}
 
-		log.Infof("Instance for domain %s has been destroyed with success", domain)
+		fmt.Printf("Instance for domain %s has been destroyed with success\n", domain)
 		return nil
 	},
 }

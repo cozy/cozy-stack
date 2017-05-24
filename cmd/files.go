@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	humanize "github.com/dustin/go-humanize"
@@ -70,7 +69,7 @@ var execFilesCmd = &cobra.Command{
 			return cmd.Help()
 		}
 		if flagFilesDomain == "" {
-			log.Error(errFilesMissingDomain)
+			fmt.Fprintf(os.Stderr, "%s\n", errFilesMissingDomain)
 			return cmd.Help()
 		}
 		c := newClient(flagFilesDomain, consts.Files)
@@ -88,7 +87,7 @@ var importFilesCmd = &cobra.Command{
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagFilesDomain == "" {
-			log.Error(errFilesMissingDomain)
+			fmt.Fprintf(os.Stderr, "%s\n", errFilesMissingDomain)
 			return cmd.Help()
 		}
 		if flagImportFrom == "" || flagImportTo == "" {
@@ -397,7 +396,7 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 	from = path.Clean(from)
 	to = path.Clean(to)
 
-	log.Infof("Importing from %s to cozy://%s", from, to)
+	fmt.Printf("Importing from %s to cozy://%s\n", from, to)
 
 	i := &importer{
 		c:     c,
@@ -423,14 +422,14 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 
 		distname := path.Join(to, strings.TrimPrefix(localname, from))
 		if f.IsDir() {
-			log.Infoln("create dir", distname)
+			fmt.Printf("create dir %s\n", distname)
 			if !flagImportDryRun {
 				if _, err = i.mkdir(distname); err != nil {
 					return err
 				}
 			}
 		} else {
-			log.Infof("copying file %s to %s", localname, distname)
+			fmt.Printf("copying file %s to %s\n", localname, distname)
 			if !flagImportDryRun {
 				return i.upload(localname, distname)
 			}
