@@ -69,7 +69,7 @@ var execFilesCmd = &cobra.Command{
 			return cmd.Help()
 		}
 		if flagFilesDomain == "" {
-			errPrintf("%s", errFilesMissingDomain)
+			errPrintfln("%s", errFilesMissingDomain)
 			return cmd.Help()
 		}
 		c := newClient(flagFilesDomain, consts.Files)
@@ -87,7 +87,7 @@ var importFilesCmd = &cobra.Command{
 	Short: "Import the specified file or directory into cozy",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagFilesDomain == "" {
-			errPrintf("%s", errFilesMissingDomain)
+			errPrintfln("%s", errFilesMissingDomain)
 			return cmd.Help()
 		}
 		if flagImportFrom == "" || flagImportTo == "" {
