@@ -48,11 +48,13 @@ type Options struct {
 
 // result stores the result of a konnector execution.
 type result struct {
-	DocID     string    `json:"_id,omitempty"`
-	DocRev    string    `json:"_rev,omitempty"`
-	CreatedAt time.Time `json:"last_execution"`
-	State     string    `json:"state"`
-	Error     string    `json:"error"`
+	DocID       string    `json:"_id,omitempty"`
+	DocRev      string    `json:"_rev,omitempty"`
+	CreatedAt   time.Time `json:"last_execution"`
+	LastSuccess time.Time `json:"last_sucess"`
+	Account     string    `json:"account"`
+	State       string    `json:"state"`
+	Error       string    `json:"error"`
 }
 
 func (r *result) ID() string         { return r.DocID }
@@ -270,17 +272,22 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	}
 
 	var state, errstr string
+	var lastSuccess time.Time
 	if errjob != nil {
+		lastSuccess = lastResult.LastSuccess
 		errstr = errjob.Error()
 		state = jobs.Errored
 	} else {
+		lastSuccess = time.Now()
 		state = jobs.Done
 	}
 	result := &result{
-		DocID:     slug,
-		CreatedAt: time.Now(),
-		State:     state,
-		Error:     errstr,
+		DocID:       slug,
+		Account:     opts.Account,
+		CreatedAt:   time.Now(),
+		LastSuccess: lastSuccess,
+		State:       state,
+		Error:       errstr,
 	}
 	if lastResult == nil {
 		err = couchdb.CreateNamedDocWithDB(inst, result)
