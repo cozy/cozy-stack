@@ -123,5 +123,77 @@ msgstr "The redirect_uri parameter is invalid"
 msgid "Error Invalid response type"
 msgstr "Invalid response type"
 
+msgid "Error Invalid scope"
+msgstr "Invalid scope"
+
 msgid "Error Must be authenticated"
 msgstr "You must be authenticated"
+
+msgid "Permissions Read only"
+msgstr ", for read only"
+
+msgid "Permissions disk usage"
+msgstr "The used disk space"
+
+msgid "Permissions worker konnectors"
+msgstr "Running a connector to import data"
+
+msgid "Permissions worker log"
+msgstr "Storing a message in the system logs"
+
+msgid "Permissions worker sendmail"
+msgstr "Sending a mail"
+
+msgid "Permissions io.cozy.accounts"
+msgstr "Accounts"
+
+msgid "Permissions io.cozy.apps"
+msgstr "List of installed applications"
+
+msgid "Permissions io.cozy.bank.accounts"
+msgstr "Banking accounts"
+
+msgid "Permissions io.cozy.bank.groups"
+msgstr "Banking groups"
+
+msgid "Permissions io.cozy.Bills"
+msgstr "Bills"
+
+msgid "Permissions io.cozy.files"
+msgstr "Files"
+
+msgid "Permissions io.cozy.konnectors"
+msgstr "Connectors for importing data"
+
+msgid "Permissions io.cozy.photos.albums"
+msgstr "Photo albums"
+
+msgid "Permissions io.cozy.settings"
+msgstr "Settings"
+
+msgid "Permissions io.cozy.jobs"
+msgstr "Jobs"
+
+msgid "Permissions io.cozy.triggers"
+msgstr "Scheduling jobs"
+
+msgid "Permissions io.cozy.permissions"
+msgstr "Delegating permissions"
+
+msgid "Permissions org-fing-mesinfos-client"
+msgstr "Clients (Mes Infos)"
+
+msgid "Permissions org-fing-mesinfos-consumptionstatement"
+msgstr "Consumption statement (Mes Infos)"
+
+msgid "Permissions org-fing-mesinfos-contract"
+msgstr "Contracts (Mes Infos)"
+
+msgid "Permissions org-fing-mesinfos-energybreakdown"
+msgstr "Energy breakdown (Mes infos)"
+
+msgid "Permissions org-fing-mesinfos-home"
+msgstr "Home (Mes Infos)"
+
+msgid "Permissions org-fing-mesinfos-paymentterms"
+msgstr "Payment terms (Mes Infos)"

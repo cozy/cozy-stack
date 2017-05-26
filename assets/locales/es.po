@@ -130,5 +130,77 @@ msgstr "El parámetro redirect_url no es válido"
 msgid "Error Invalid response type"
 msgstr "El tipo de respuesta no es válido"
 
+msgid "Error Invalid scope"
+msgstr ""
+
 msgid "Error Must be authenticated"
 msgstr "Usted debe ser autentificado"
+
+msgid "Permissions Read only"
+msgstr ""
+
+msgid "Permissions disk usage"
+msgstr ""
+
+msgid "Permissions worker konnectors"
+msgstr ""
+
+msgid "Permissions worker log"
+msgstr ""
+
+msgid "Permissions worker sendmail"
+msgstr ""
+
+msgid "Permissions io.cozy.accounts"
+msgstr ""
+
+msgid "Permissions io.cozy.apps"
+msgstr ""
+
+msgid "Permissions io.cozy.bank.accounts"
+msgstr ""
+
+msgid "Permissions io.cozy.bank.groups"
+msgstr ""
+
+msgid "Permissions io.cozy.Bills"
+msgstr ""
+
+msgid "Permissions io.cozy.files"
+msgstr ""
+
+msgid "Permissions io.cozy.konnectors"
+msgstr ""
+
+msgid "Permissions io.cozy.photos.albums"
+msgstr ""
+
+msgid "Permissions io.cozy.settings"
+msgstr ""
+
+msgid "Permissions io.cozy.jobs"
+msgstr ""
+
+msgid "Permissions io.cozy.triggers"
+msgstr ""
+
+msgid "Permissions io.cozy.permissions"
+msgstr ""
+
+msgid "Permissions org-fing-mesinfos-client"
+msgstr ""
+
+msgid "Permissions org-fing-mesinfos-consumptionstatement"
+msgstr ""
+
+msgid "Permissions org-fing-mesinfos-contract"
+msgstr ""
+
+msgid "Permissions org-fing-mesinfos-energybreakdown"
+msgstr ""
+
+msgid "Permissions org-fing-mesinfos-home"
+msgstr ""
+
+msgid "Permissions org-fing-mesinfos-paymentterms"
+msgstr ""

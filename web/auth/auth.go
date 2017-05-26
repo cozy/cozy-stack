@@ -360,7 +360,12 @@ func authorizeForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	permissions := strings.Split(params.scope, " ")
+	permissions, err := permissions.UnmarshalScopeString(params.scope)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid scope",
+		})
+	}
 	params.client.ClientID = params.client.CouchID
 	return c.Render(http.StatusOK, "authorize.html", echo.Map{
 		"Domain":      instance.Domain,

@@ -39,16 +39,21 @@
                 {{if .Domain}}
                 <strong>{{.Domain}}</strong> :<br />
                 {{end}}
+              </p>
+              <ul>
+                {{range $index, $perm := .Permissions}}
+                <li>
+                  {{- t $perm.TranslationKey -}}
+                  {{- if $perm.Verbs.ReadOnly}}{{t "Permissions Read only"}}{{end -}}
+                </li>
+                {{end}}
+              </ul>
+              <p>
                 {{if .Client.PolicyURI}}
                 {{t "Authorize Policy sentence"}}
                 <a href="{{.Client.PolicyURI}}">{{.Client.PolicyURI}}</a>
                 {{end}}
               </p>
-              <ul>
-                {{range $index, $perm := .Permissions}}
-                <li>{{$perm}}</li>
-                {{end}}
-              </ul>
               <p>
                 {{t "Authorize Give permission start"}}<strong>{{t "Authorize Give permission keyword"}}</strong>{{t "Authorize Give permission end"}}
               </p>
