@@ -1,8 +1,11 @@
 #!/bin/bash
 
-mkdir "${1}/.rkt"
-env_file="${1}/.rkt/env"
-uuid_file="${1}/.rkt/uuid"
+rundir="${1}"
+# rundir="/some/test/konnector/build"
+
+mkdir "${rundir}/.rkt"
+env_file="${rundir}/.rkt/env"
+uuid_file="${rundir}/.rkt/uuid"
 
 node_image="$(dirname ${0})/nodeslim.aci"
 
@@ -18,7 +21,7 @@ sudo rkt run \
   --net=host \
   --set-env-file="${env_file}" \
   --uuid-file-save="${uuid_file}" \
-  --volume data,kind=host,source="${1}" \
+  --volume data,kind=host,source="${rundir}" \
   --mount volume=data,target=/usr/src/app \
   --insecure-options=image "${node_image}" \
   --cpu=100m \
