@@ -281,7 +281,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 		Type: realtime.EventCreate,
 	})
 
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	count, _ := bro.QueueLen("incr")
 	if !assert.Equal(t, 1, count) {
