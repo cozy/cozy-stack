@@ -57,7 +57,8 @@ example: cozy-stack config passwd ~/.cozy/
 		var filename string
 		if len(args) == 1 {
 			filename = filepath.Join(utils.AbsPath(args[0]))
-			if ok, _ := utils.DirExists(filename); ok {
+			ok, err := utils.DirExists(filename)
+			if err == nil && ok {
 				filename = path.Join(filename, config.AdminSecretFileName)
 			}
 		}
@@ -88,7 +89,8 @@ example: cozy-stack config passwd ~/.cozy/
 
 		var out io.Writer
 		if filename != "" {
-			f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0444)
+			var f *os.File
+			f, err = os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0444)
 			if err != nil {
 				return err
 			}
