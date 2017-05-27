@@ -104,7 +104,7 @@ func TestRemoveReferencedByOneRelation(t *testing.T) {
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 204, res.StatusCode)
+	assert.Equal(t, 200, res.StatusCode)
 
 	doc, err := testInstance.VFS().FileByID(fileID1)
 	assert.NoError(t, err)
@@ -127,7 +127,7 @@ func TestRemoveReferencedByMultipleRelation(t *testing.T) {
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, 204, res.StatusCode)
+	assert.Equal(t, 200, res.StatusCode)
 
 	doc, err := testInstance.VFS().FileByID(fileID2)
 	assert.NoError(t, err)
