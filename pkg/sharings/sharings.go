@@ -620,6 +620,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 		err = deleteOAuthClient(ins, sharing.Sharer.SharerStatus.HostClientID)
 	}
 
+	err = couchdb.UpdateDoc(ins, sharing)
 	return err
 }
 
