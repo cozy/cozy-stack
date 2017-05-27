@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -235,6 +236,26 @@ func patchDirOrFile(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	return c.JSON(http.StatusOK, nil)
+}
+
+// This function calls the handler from web/files to remove the references, and
+// then remove the file if it is no longer shared.
+//
+// The permissions are checked in the handler from web/files.
+func removeReferences(c echo.Context) error {
+	err := files.RemoveReferencedHandler(c)
+	if err != nil {
+		return err
+	}
+
+	ins := middlewares.GetInstance(c)
+	err = sharings.RemoveDocumentIfNotShared(ins, consts.Files,
+		c.Param("file-id"))
+	if err != nil {
+		return err
+	}
+
 	return c.JSON(http.StatusOK, nil)
 }
 

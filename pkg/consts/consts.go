@@ -110,6 +110,11 @@ const (
 )
 
 const (
+	// SelectorReferencedBy is the "referenced_by" selector.
+	SelectorReferencedBy = "referenced_by"
+)
+
+const (
 	// QueryParamRev is the key for the revision value in a query string.
 	QueryParamRev = "rev"
 	// QueryParamDirID is the key for the `DirID` field of a vfs.FileDoc or
@@ -129,14 +134,14 @@ const (
 	// QueryParamUpdatedAt is the key for the `Updated_at` value in a query
 	// string.
 	QueryParamUpdatedAt = "Updated_at"
-	// QueryParamReferencedBy is the key for the `referenced_by` values in a
-	// query string.
-	QueryParamReferencedBy = "Referenced_by"
 	// QueryParamRecursive is the key for the `recursive` value in a query
 	// string.
 	QueryParamRecursive = "Recursive"
 	// QueryParamTags is the key for the `tags` values in a query string.
 	QueryParamTags = "Tags"
+	// QueryParamReferencedBy is the key for the `referenced_by` values in a
+	// query string.
+	QueryParamReferencedBy = SelectorReferencedBy
 )
 
 // AppsRegistry is an hard-coded list of known apps, with their source URLs

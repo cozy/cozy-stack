@@ -25,6 +25,10 @@ import (
 // a upperbound for string.
 const MaxString = mango.MaxString
 
+// This constant is used to evaluate permissions in the `Valid` method of a
+// JSONDoc object.
+const selectorReferencedBy = "referenced_by"
+
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
 // ID of the document.
@@ -192,8 +196,37 @@ func (j JSONDoc) Get(key string) interface{} {
 	return j.M[key]
 }
 
-// Valid implements permissions.Validable on JSONDoc
+// Valid implements permissions.Validable on JSONDoc.
+//
+// The `referenced_by` selector is a special case: the `values` field of such
+// rule has the format "doctype/id" and it cannot directly be compared to the
+// same field of a JSONDoc since, in the latter, the format is:
+// "referenced_by": [
+//     {"type": "doctype1", "id": "id1"},
+//     {"type": "doctype2", "id": "id2"},
+// ]
 func (j JSONDoc) Valid(field, value string) bool {
+	if field == selectorReferencedBy {
+		rawReferences := j.Get(field)
+		if rawReferences == nil {
+			return false
+		}
+		references := rawReferences.([]interface{})
+
+		values := strings.Split(value, "/")
+		valueType, valueID := values[0], values[1]
+
+		for _, ref := range references {
+			reference := ref.(map[string]interface{})
+			if valueType == reference["type"].(string) &&
+				valueID == reference["id"].(string) {
+				return true
+			}
+		}
+
+		return false
+	}
+
 	return fmt.Sprintf("%v", j.Get(field)) == value
 }
 

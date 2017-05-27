@@ -83,5 +83,5 @@ func RemoveReferencedHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return c.JSON(http.StatusOK, nil)
 }

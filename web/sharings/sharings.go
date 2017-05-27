@@ -326,6 +326,28 @@ func receiveDocument(c echo.Context) error {
 	case consts.Files:
 		err = creationWithIDHandler(c)
 	default:
+		currDoctype := c.Param("doctype")
+		ins := middlewares.GetInstance(c)
+
+		doctypes, errc := couchdb.AllDoctypes(ins)
+		if errc != nil {
+			return errc
+		}
+
+		var exist bool
+		for _, doctype := range doctypes {
+			if doctype == currDoctype {
+				exist = true
+				break
+			}
+		}
+
+		if !exist {
+			err = couchdb.CreateDB(ins, currDoctype)
+			if err != nil {
+				return err
+			}
+		}
 		err = data.UpdateDoc(c)
 	}
 
@@ -336,6 +358,11 @@ func receiveDocument(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
+// Depending on the doctype this function does two things:
+// 1. If it's a file, its content is updated.
+// 2. If it's a JSON document, its content is updated and a check is performed
+//    to see if the document is still shared after the update. If not then it is
+//    deleted.
 func updateDocument(c echo.Context) error {
 	var err error
 
@@ -344,6 +371,13 @@ func updateDocument(c echo.Context) error {
 		err = updateFile(c)
 	default:
 		err = data.UpdateDoc(c)
+		if err != nil {
+			return err
+		}
+
+		ins := middlewares.GetInstance(c)
+		err = sharings.RemoveDocumentIfNotShared(ins, c.Param("doctype"),
+			c.Param("docid"))
 	}
 
 	if err != nil {
@@ -401,6 +435,8 @@ func Routes(router *echo.Group) {
 	router.POST("/access/client", ReceiveClientID)
 	router.POST("/access/code", getAccessToken)
 	router.DELETE("/:id", revokeSharing)
+
+	router.DELETE("/files/:file-id/referenced_by", removeReferences)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/stretchr/testify/assert"
@@ -39,6 +40,28 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 		Message: msg,
 	}
 	return event
+}
+
+func createSharingDocument(i *instance.Instance, doctype string, owner bool, verbs []string) (*couchdb.JSONDoc, error) {
+	sDoc := &couchdb.JSONDoc{
+		Type: "io.cozy.sharings",
+		M: map[string]interface{}{
+			"type":  consts.OneShotSharing,
+			"owner": owner,
+			"desc":  "randomdesc",
+			"permissions": []map[string]interface{}{
+				{
+					"type":     doctype,
+					"selector": "referenced_by",
+					"values":   []interface{}{"io.cozy.events/random"},
+					"verbs":    verbs,
+				},
+			},
+		},
+	}
+
+	err := couchdb.CreateDoc(i, sDoc)
+	return sDoc, err
 }
 
 func TestSharingUpdatesNoSharing(t *testing.T) {
@@ -184,4 +207,29 @@ func TestSharingUpdatesBadRecipient(t *testing.T) {
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
 	assert.NoError(t, err)
+}
+
+func TestIsDocumentStillShared(t *testing.T) {
+	sharedRef := []couchdb.DocReference{
+		couchdb.DocReference{Type: "io.cozy.events", ID: "random"},
+	}
+
+	optsNotShared := SendOptions{
+		Selector: consts.SelectorReferencedBy,
+		Values:   []string{"io.cozy.events/static"},
+	}
+	assert.False(t, isDocumentStillShared(&optsNotShared, sharedRef))
+
+	optsShared := SendOptions{
+		Selector: consts.SelectorReferencedBy,
+		Values:   []string{"io.cozy.events/random"},
+	}
+	assert.True(t, isDocumentStillShared(&optsShared, sharedRef))
+
+	optsNotShared = SendOptions{
+		Values: []string{"123"},
+		DocID:  "456",
+	}
+	assert.False(t, isDocumentStillShared(&optsNotShared, sharedRef))
+
 }

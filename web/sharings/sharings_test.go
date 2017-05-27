@@ -24,6 +24,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/auth"
@@ -53,6 +54,14 @@ func createRecipient(t *testing.T) *sharings.Recipient {
 	err := sharings.CreateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
 	return recipient
+}
+
+func insertSharingIntoDB(t *testing.T, sharing *sharings.Sharing, rule permissions.Rule) {
+	sharing.SharingID = utils.RandomString(32)
+	sharing.Permissions = permissions.Set{rule}
+
+	err := couchdb.CreateDoc(testInstance, sharing)
+	assert.NoError(t, err)
 }
 
 func createSharing(t *testing.T, owner bool, sharingType string) *sharings.Sharing {
@@ -92,9 +101,11 @@ func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode
 	return access, err
 }
 
-func createFile(t *testing.T, fs vfs.VFS, name, content string) *vfs.FileDoc {
-	doc, err := vfs.NewFileDoc(name, "", -1, nil, "foo/bar", "foo", time.Now(), false, false, []string{"this", "is", "spartest"})
+func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.DocReference) *vfs.FileDoc {
+	doc, err := vfs.NewFileDoc(name, "", -1, nil, "foo/bar", "foo", time.Now(),
+		false, false, []string{"this", "is", "spartest"})
 	assert.NoError(t, err)
+	doc.ReferencedBy = refs
 
 	body := bytes.NewReader([]byte(content))
 
@@ -111,7 +122,7 @@ func createFile(t *testing.T, fs vfs.VFS, name, content string) *vfs.FileDoc {
 	return doc
 }
 
-func createDir(t *testing.T, fs vfs.VFS, name string) *vfs.DirDoc {
+func createDir(t *testing.T, fs vfs.VFS, name string, refs []couchdb.DocReference) *vfs.DirDoc {
 	dirDoc, err := vfs.NewDirDoc(fs, name, "", []string{"It's", "me", "again"})
 	assert.NoError(t, err)
 	dirDoc.CreatedAt = time.Now()
@@ -235,10 +246,23 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 	assert.NoError(t, err)
 	doc.SetID(doc.M["id"].(string))
 	doc.SetRev(doc.M["rev"].(string))
-	doc.Type = doc.M["type"].(string)
+	doc.Type = iocozytests
 	doc.M["testcontent"] = "new"
 	values, err := doc.MarshalJSON()
 	assert.NoError(t, err)
+
+	// If after an update a document is no longer shared, it is removed.
+	sharing := &sharings.Sharing{
+		Owner:       false,
+		SharingType: consts.MasterSlaveSharing,
+	}
+	rule := permissions.Rule{
+		Selector: "_id",
+		Type:     iocozytests,
+		Verbs:    permissions.ALL,
+		Values:   []string{doc.ID()},
+	}
+	insertSharingIntoDB(t, sharing, rule)
 
 	path := fmt.Sprintf("/sharings/doc/%s/%s", doc.DocType(), doc.ID())
 	req, err := http.NewRequest(http.MethodPut, ts.URL+path,
@@ -257,11 +281,12 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 }
 
 func TestUpdateDocumentConflictError(t *testing.T) {
-	t.Skip()
 	fs := testInstance.VFS()
 
-	fileDoc := createFile(t, fs, "testupdate", "randomcontent")
-	updateDoc := createFile(t, fs, "updatetestfile", "updaterandomcontent")
+	fileDoc := createFile(t, fs, "testupdate", "randomcontent",
+		[]couchdb.DocReference{})
+	updateDoc := createFile(t, fs, "updatetestfile", "updaterandomcontent",
+		[]couchdb.DocReference{})
 
 	urlDest, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
@@ -331,7 +356,8 @@ func TestDeleteDocumentSuccessJSON(t *testing.T) {
 
 func TestDeleteDocumentSuccessFile(t *testing.T) {
 	fs := testInstance.VFS()
-	fileDoc := createFile(t, fs, "filetotrash", "randomgarbagecontent")
+	fileDoc := createFile(t, fs, "filetotrash", "randomgarbagecontent",
+		[]couchdb.DocReference{})
 
 	delURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
@@ -356,7 +382,7 @@ func TestDeleteDocumentSuccessFile(t *testing.T) {
 
 func TestDeleteDocumentSuccessDir(t *testing.T) {
 	fs := testInstance.VFS()
-	dirDoc := createDir(t, fs, "dirtotrash")
+	dirDoc := createDir(t, fs, "dirtotrash", []couchdb.DocReference{})
 
 	delURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
@@ -381,7 +407,8 @@ func TestDeleteDocumentSuccessDir(t *testing.T) {
 
 func TestPatchDirOrFileSuccessFile(t *testing.T) {
 	fs := testInstance.VFS()
-	fileDoc := createFile(t, fs, "filetopatch", "randompatchcontent")
+	fileDoc := createFile(t, fs, "filetopatch", "randompatchcontent",
+		[]couchdb.DocReference{})
 	_, err := fs.FileByID(fileDoc.ID())
 	assert.NoError(t, err)
 
@@ -432,7 +459,7 @@ func TestPatchDirOrFileSuccessFile(t *testing.T) {
 
 func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	fs := testInstance.VFS()
-	dirDoc := createDir(t, fs, "dirtopatch")
+	dirDoc := createDir(t, fs, "dirtopatch", []couchdb.DocReference{})
 	_, err := fs.DirByID(dirDoc.ID())
 	assert.NoError(t, err)
 
@@ -479,6 +506,87 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, patchedName, patchedDir.DocName)
 	assert.WithinDuration(t, now, patchedDir.UpdatedAt, time.Millisecond)
+}
+
+func TestRemoveReferences(t *testing.T) {
+	sharing := &sharings.Sharing{
+		Owner:       false,
+		SharingType: consts.MasterSlaveSharing,
+	}
+	rule := permissions.Rule{
+		Selector: consts.SelectorReferencedBy,
+		Type:     consts.Files,
+		Values:   []string{"io.cozy.photos.albums/123"},
+		Verbs:    permissions.ALL,
+	}
+	insertSharingIntoDB(t, sharing, rule)
+
+	refAlbum123 := couchdb.DocReference{
+		Type: "io.cozy.photos.albums",
+		ID:   "123",
+	}
+	refAlbum456 := couchdb.DocReference{
+		Type: "io.cozy.photos.albums",
+		ID:   "456",
+	}
+
+	// Test: the file has two references, we remove one and we check that:
+	// * that reference was removed;
+	// * the file is not trashed (since there is still one shared reference).
+	fileToKeep := createFile(t, testInstance.VFS(), "testRemoveReference",
+		"testRemoveReferenceContent", []couchdb.DocReference{
+			refAlbum123, refAlbum456,
+		})
+
+	removeRefURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	removeRefURL.Path = fmt.Sprintf("/sharings/files/%s/referenced_by",
+		fileToKeep.ID())
+	data, err := json.Marshal(refAlbum456)
+	assert.NoError(t, err)
+	doc := jsonapi.Document{Data: (*json.RawMessage)(&data)}
+	body, err := request.WriteJSON(doc)
+	assert.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodDelete, removeRefURL.String(), body)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	fileDoc, err := testInstance.VFS().FileByID(fileToKeep.ID())
+	assert.NoError(t, err)
+	assert.False(t, fileDoc.Trashed)
+	assert.Len(t, fileDoc.ReferencedBy, 1)
+
+	// Test: the directory has one reference, we remove it and check that:
+	// * the directory is trashed;
+	// * the reference is gone.
+	dirToTrash := createDir(t, testInstance.VFS(), "testRemoveReferenceDir",
+		[]couchdb.DocReference{refAlbum123})
+
+	removeRefURL.Path = fmt.Sprintf("/sharings/files/%s/referenced_by",
+		dirToTrash.ID())
+	data, err = json.Marshal(refAlbum123)
+	assert.NoError(t, err)
+	doc = jsonapi.Document{Data: (*json.RawMessage)(&data)}
+	body, err = request.WriteJSON(doc)
+	assert.NoError(t, err)
+
+	req, err = http.NewRequest(http.MethodDelete, removeRefURL.String(), body)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	dirDoc, err := testInstance.VFS().DirByID(dirToTrash.ID())
+	assert.NoError(t, err)
+	assert.True(t, dirDoc.DirID == consts.TrashDirID)
+	assert.Len(t, dirDoc.ReferencedBy, 0)
 }
 
 func TestAddSharingRecipientNoSharing(t *testing.T) {
@@ -910,12 +1018,6 @@ func TestMain(m *testing.M) {
 		Settings: settings2,
 	})
 
-	err := couchdb.CreateDB(testInstance, iocozytests)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	jar = setup.GetCookieJar()
 	client = &http.Client{
 		CheckRedirect: noRedirect,
@@ -927,7 +1029,7 @@ func TestMain(m *testing.M) {
 	clientID = clientOAuth.ClientID
 
 	// As shared files are put in the shared with me dir, we need it
-	err = createDirForSharing(testInstance.VFS(), consts.SharedWithMeDirID, "")
+	err := createDirForSharing(testInstance.VFS(), consts.SharedWithMeDirID, "")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
