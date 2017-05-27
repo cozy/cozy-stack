@@ -614,10 +614,21 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 		if sharing.Type == consts.MasterMasterSharing {
 			for _, recipient := range sharing.RecipientsStatus {
 				err = deleteOAuthClient(ins, recipient.HostClientID)
+				if err != nil {
+					log.Errorf("[sharings] Could not delete OAuth client: %v",
+						err)
+				} else {
+					recipient.HostClientID = ""
+				}
 			}
 		}
 	} else {
 		err = deleteOAuthClient(ins, sharing.Sharer.SharerStatus.HostClientID)
+		if err != nil {
+			log.Errorf("[sharings] Could not delete OAuth client: %v", err)
+		} else {
+			sharing.Sharer.SharerStatus.HostClientID = ""
+		}
 	}
 
 	err = couchdb.UpdateDoc(ins, sharing)
@@ -627,13 +638,11 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 func deleteOAuthClient(ins *instance.Instance, id string) error {
 	client, err := oauth.FindClient(ins, id)
 	if err != nil {
-		log.Errorf("[sharings] Could not find client %s: %v", id, err)
 		return err
 	}
 	crErr := client.Delete(ins)
 	if crErr != nil {
-		log.Errorf("[sharings] Could not delete client %s: %v", id, crErr.Error)
-		return errors.New("Could not delete client")
+		return errors.New(crErr.Error)
 	}
 	return nil
 }
