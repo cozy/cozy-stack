@@ -16,7 +16,6 @@ import (
 
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -210,15 +209,16 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 
 		if dirDoc != nil {
 			opts.Type = consts.DirType
-			log.Debugf("[sharings] Sending directory: %#v", dirDoc)
+			ins.Logger().Debugf("[sharings] Sending directory: %#v", dirDoc)
 			return SendDir(ins, opts, dirDoc)
 		}
 		opts.Type = consts.FileType
-		log.Debugf("[sharings] Sending file: %v", fileDoc)
+		ins.Logger().Debugf("[sharings] Sending file: %v", fileDoc)
 		return SendFile(ins, opts, fileDoc)
 	}
 
-	log.Debugf("[sharings] Sending JSON (%v): %v", opts.DocType, opts.DocID)
+	ins.Logger().Debugf("[sharings] Sending JSON (%v): %v", opts.DocType,
+		opts.DocID)
 	return SendDoc(ins, opts)
 }
 
@@ -270,8 +270,8 @@ func SendDoc(ins *instance.Instance, opts *SendOptions) error {
 	for _, rec := range opts.Recipients {
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPost)
 		if errs != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to send "+
-				"a document to a recipient:", errs)
+			ins.Logger().Error("[sharing] An error occurred while trying to"+
+				"send a document to a recipient: ", errs)
 		}
 	}
 
@@ -289,8 +289,8 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 		// A doc update requires to set the doc revision from each recipient
 		remoteDoc, err := getDocAtRecipient(doc, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to get "+
-				"remote doc : ", err)
+			ins.Logger().Error("[sharing] An error occurred while trying to "+
+				"get remote doc : ", err)
 			continue
 		}
 		// No changes: nothing to do
@@ -302,8 +302,8 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
 		if errs != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to send "+
-				"an update: ", err)
+			ins.Logger().Error("[sharing] An error occurred while trying to "+
+				"send an update: ", err)
 		}
 	}
 
@@ -356,8 +356,8 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	for _, rec := range opts.Recipients {
 		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to share "+
-				"file %v: %v", fileDoc.DocName, err)
+			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+				"share file %v: %v", fileDoc.DocName, err)
 		}
 	}
 
@@ -396,8 +396,8 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 			NoResponse: true,
 		})
 		if errReq != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to share "+
-				"the directory %v: %v", dirDoc.DocName, err)
+			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+				"share the directory %v: %v", dirDoc.DocName, err)
 		}
 	}
 
@@ -434,8 +434,8 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 			if err == ErrRemoteDocDoesNotExist {
 				errf := SendFile(ins, opts, fileDoc)
 				if errf != nil {
-					ins.Logger().Error("[sharing] An error occurred while trying to "+
-						"send file: ", errf)
+					ins.Logger().Error("[sharing] An error occurred while "+
+						"trying to send file: ", errf)
 				}
 			} else {
 				ins.Logger().Errorf("[sharing] Could not get data at %v: %v",
@@ -468,14 +468,14 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
-				ins.Logger().Errorf("[sharing] Could not generate patch for file %v: %v",
-					fileDoc.DocName, errp)
+				ins.Logger().Errorf("[sharing] Could not generate patch for "+
+					"file %v: %v", fileDoc.DocName, errp)
 				continue
 			}
 			errsp := sendPatchToRecipient(patch, opts, recipient, fileDoc.DirID)
 			if errsp != nil {
-				ins.Logger().Error("[sharing] An error occurred while trying to "+
-					"send patch: ", errsp)
+				ins.Logger().Error("[sharing] An error occurred while trying "+
+					"to send patch: ", errsp)
 			}
 			continue
 		}
@@ -488,8 +488,9 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		}
 		err = sendFileToRecipient(opts, recipient, http.MethodPut)
 		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to share an "+
-				"update of file %v to a recipient: %v", fileDoc.DocName, err)
+			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+				"share an update of file %v to a recipient: %v",
+				fileDoc.DocName, err)
 		}
 	}
 
@@ -531,14 +532,14 @@ func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 // set of "referenced_by" not applying anymore.
 //
 // TODO Handle sharing of directories
-func RemoveDirOrFileFromSharing(opts *SendOptions) error {
+func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions) error {
 	sharedRefs := opts.getSharedReferences()
 
 	for _, recipient := range opts.Recipients {
 		errs := updateReferencesAtRecipient(http.MethodDelete, sharedRefs,
 			opts, recipient)
 		if errs != nil {
-			log.Debugf("[sharings] Could not update reference at "+
+			ins.Logger().Debugf("[sharings] Could not update reference at "+
 				"recipient: %v", errs)
 		}
 	}

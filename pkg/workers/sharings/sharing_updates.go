@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"runtime"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -181,7 +180,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 	switch eventType {
 	case realtime.EventCreate:
 		if opts.Type == consts.FileType {
-			logrus.Debugf("[sharings] Sending file: %#v", fileDoc)
+			ins.Logger().Debugf("[sharings] Sending file: %#v", fileDoc)
 			return SendFile(ins, opts, fileDoc)
 		}
 		if opts.Type == consts.DirType {
@@ -189,22 +188,22 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 			return SendDir(ins, opts, dirDoc)
 		}
 
-		logrus.Debugf("[sharings] Sending JSON (%v): %v", opts.DocType,
+		ins.Logger().Debugf("[sharings] Sending JSON (%v): %v", opts.DocType,
 			opts.DocID)
 		return SendDoc(ins, opts)
 
 	case realtime.EventUpdate:
 		if opts.Type == consts.FileType {
 			if fileDoc.Trashed {
-				logrus.Debugf("[sharings] Sending trash: %#v", fileDoc)
+				ins.Logger().Debugf("[sharings] Sending trash: %#v", fileDoc)
 				return DeleteDirOrFile(opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, fileDoc.ReferencedBy)
 			if !stillShared {
-				logrus.Debugf("[sharings] Sending remove references from %#v",
-					fileDoc)
-				return RemoveDirOrFileFromSharing(opts)
+				ins.Logger().Debugf("[sharings] Sending remove references "+
+					"from %#v", fileDoc)
+				return RemoveDirOrFileFromSharing(ins, opts)
 			}
 
 			return UpdateOrPatchFile(ins, opts, fileDoc)
@@ -212,23 +211,23 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 
 		if opts.Type == consts.DirType {
 			if dirDoc.DirID == consts.TrashDirID {
-				logrus.Debugf("[sharings] Sending trash: %#v", dirDoc)
+				ins.Logger().Debugf("[sharings] Sending trash: %#v", dirDoc)
 				return DeleteDirOrFile(opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, dirDoc.ReferencedBy)
 			if !stillShared {
-				logrus.Debugf("[sharings] Sending remove references from %#v",
-					dirDoc)
-				return RemoveDirOrFileFromSharing(opts)
+				ins.Logger().Debugf("[sharings] Sending remove references "+
+					"from %#v", dirDoc)
+				return RemoveDirOrFileFromSharing(ins, opts)
 			}
 
-			logrus.Debugf("[sharings] Sending patch dir %#v", dirDoc)
+			ins.Logger().Debugf("[sharings] Sending patch dir %#v", dirDoc)
 			return PatchDir(opts, dirDoc)
 		}
 
-		logrus.Debugf("[sharings] Sending update JSON (%v): %v", opts.DocType,
-			opts.DocID)
+		ins.Logger().Debugf("[sharings] Sending update JSON (%v): %v",
+			opts.DocType, opts.DocID)
 		return UpdateDoc(ins, opts)
 
 	case realtime.EventDelete:

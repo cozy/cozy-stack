@@ -592,7 +592,7 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 		Recipients: recipients,
 	}
 
-	err = RemoveDirOrFileFromSharing(&opts)
+	err = RemoveDirOrFileFromSharing(testInstance, &opts)
 	assert.NoError(t, err)
 }
 
