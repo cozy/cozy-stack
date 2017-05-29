@@ -160,7 +160,7 @@ msgstr ""
 msgid "Permissions io.cozy.bank.groups"
 msgstr ""
 
-msgid "Permissions io.cozy.Bills"
+msgid "Permissions io.cozy.bills"
 msgstr ""
 
 msgid "Permissions io.cozy.files"
@@ -184,20 +184,20 @@ msgstr ""
 msgid "Permissions io.cozy.permissions"
 msgstr ""
 
-msgid "Permissions org-fing-mesinfos-client"
+msgid "Permissions org.fing.mesinfos.client"
 msgstr ""
 
-msgid "Permissions org-fing-mesinfos-consumptionstatement"
+msgid "Permissions org.fing.mesinfos.consumptionstatement"
 msgstr ""
 
-msgid "Permissions org-fing-mesinfos-contract"
+msgid "Permissions org.fing.mesinfos.contract"
 msgstr ""
 
-msgid "Permissions org-fing-mesinfos-energybreakdown"
+msgid "Permissions org.fing.mesinfos.energybreakdown"
 msgstr ""
 
-msgid "Permissions org-fing-mesinfos-home"
+msgid "Permissions org.fing.mesinfos.home"
 msgstr ""
 
-msgid "Permissions org-fing-mesinfos-paymentterms"
+msgid "Permissions org.fing.mesinfos.paymentterms"
 msgstr ""
