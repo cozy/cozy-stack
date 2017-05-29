@@ -15,16 +15,18 @@ import (
 	"runtime"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
+
 	"github.com/spf13/afero"
 )
 
@@ -181,8 +183,10 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	var msgChan = make(chan konnectorMsg)
 	var messages []konnectorMsg
 
-	go doScanOut(jobID, scanOut, domain, msgChan)
-	go doScanErr(jobID, scanErr)
+	log := logger.WithDomain(domain)
+
+	go doScanOut(jobID, scanOut, domain, msgChan, log)
+	go doScanErr(jobID, scanErr, log)
 	go func() {
 		hub := realtime.GetHub()
 		for msg := range msgChan {
@@ -218,7 +222,8 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	return err
 }
 
-func doScanOut(jobID string, scanner *bufio.Scanner, domain string, msgs chan konnectorMsg) {
+func doScanOut(jobID string, scanner *bufio.Scanner, domain string,
+	msgs chan konnectorMsg, log *logrus.Entry) {
 	for scanner.Scan() {
 		linebb := scanner.Bytes()
 		from := bytes.IndexByte(linebb, '{')
@@ -239,7 +244,7 @@ func doScanOut(jobID string, scanner *bufio.Scanner, domain string, msgs chan ko
 	}
 }
 
-func doScanErr(jobID string, scanner *bufio.Scanner) {
+func doScanErr(jobID string, scanner *bufio.Scanner, log *logrus.Entry) {
 	for scanner.Scan() {
 		log.Errorf("[konnector] %s: Stderr: %s", jobID, scanner.Text())
 	}

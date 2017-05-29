@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -54,7 +53,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			// Generate recipient specific OAuth query string.
 			oAuthStr, errOAuth := generateOAuthQueryString(s, rs, instance.Scheme())
 			if errOAuth != nil {
-				errorOccurred = logError(errOAuth)
+				errorOccurred = logError(instance, errOAuth)
 				continue
 			}
 
@@ -69,7 +68,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 				},
 			)
 			if errGenMail != nil {
-				errorOccurred = logError(errGenMail)
+				errorOccurred = logError(instance, errGenMail)
 				continue
 			}
 
@@ -85,7 +84,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 				Message:    sharingMessage,
 			})
 			if errJobs != nil {
-				errorOccurred = logError(errJobs)
+				errorOccurred = logError(instance, errJobs)
 				continue
 			}
 
@@ -113,8 +112,8 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 }
 
 // logError will log an error in the stack.
-func logError(err error) bool {
-	log.Error("[sharing] An error occurred while trying to send the email "+
+func logError(i *instance.Instance, err error) bool {
+	i.Logger().Error("[sharing] An error occurred while trying to send the email "+
 		"invitation: ", err)
 	return true
 }

@@ -133,7 +133,7 @@ func GetChanges(db Database, req *ChangesRequest) (*ChangesResponse, error) {
 
 	var response ChangesResponse
 	url := makeDBName(db, req.DocType) + "/_changes?" + v.Encode()
-	err = makeRequest("GET", url, nil, &response)
+	err = makeRequest(db, "GET", url, nil, &response)
 
 	if err != nil {
 		return nil, err

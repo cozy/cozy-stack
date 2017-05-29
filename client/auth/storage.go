@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/utils"
+
 	"github.com/nightlyone/lockfile"
 )
 
@@ -59,7 +59,8 @@ func (s *FileStorage) Load(domain string) (client *Client, token *AccessToken, e
 	}
 	data := &authData{}
 	if err = request.ReadJSON(f, data); err != nil {
-		log.Warnf("Authentication file %s is malformed: %s", filename, err.Error())
+		fmt.Fprintf(os.Stderr, "Authentication file %s is malformed: %s",
+			filename, err.Error())
 		return nil, nil, nil
 	}
 	if data.Domain != domain {

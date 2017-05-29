@@ -25,8 +25,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo"
-	"github.com/labstack/gommon/log"
 )
 
 func init() {
@@ -156,7 +156,7 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 
 		if dirDoc != nil {
 			opts.Type = consts.DirType
-			return SendDir(opts, dirDoc)
+			return SendDir(ins, opts, dirDoc)
 		}
 		opts.Type = consts.FileType
 		return SendFile(ins, opts, fileDoc)
@@ -168,11 +168,12 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 // DeleteDoc asks the recipients to delete the shared document which id was
 // provided.
 func DeleteDoc(opts *SendOptions) error {
+	var errFinal error
+
 	for _, recipient := range opts.Recipients {
 		doc, err := getDocAtRecipient(nil, opts.DocType, opts.DocID, recipient)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to get "+
-				"remote doc : ", err)
+			errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to get remote doc : %s", err.Error()))
 			continue
 		}
 		rev := doc.M["_rev"].(string)
@@ -191,13 +192,11 @@ func DeleteDoc(opts *SendOptions) error {
 			NoResponse: true,
 		})
 		if errSend != nil {
-			log.Error("[sharing] An error occurred while trying to share "+
-				"data : ", errSend)
+			errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to share data : %s", errSend.Error()))
 		}
-
 	}
 
-	return nil
+	return errFinal
 }
 
 // SendDoc sends a JSON document to the recipients.
@@ -214,7 +213,7 @@ func SendDoc(ins *instance.Instance, opts *SendOptions) error {
 	for _, rec := range opts.Recipients {
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPost)
 		if errs != nil {
-			log.Error("[sharing] An error occurred while trying to send "+
+			ins.Logger().Error("[sharing] An error occurred while trying to send "+
 				"a document to a recipient:", errs)
 		}
 	}
@@ -233,7 +232,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 		// A doc update requires to set the doc revision from each recipient
 		remoteDoc, err := getDocAtRecipient(doc, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to get "+
+			ins.Logger().Error("[sharing] An error occurred while trying to get "+
 				"remote doc : ", err)
 			continue
 		}
@@ -246,7 +245,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
 		if errs != nil {
-			log.Error("[sharing] An error occurred while trying to send "+
+			ins.Logger().Error("[sharing] An error occurred while trying to send "+
 				"an update: ", err)
 		}
 	}
@@ -293,7 +292,7 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	for _, rec := range opts.Recipients {
 		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
-			log.Errorf("[sharing] An error occurred while trying to share "+
+			ins.Logger().Errorf("[sharing] An error occurred while trying to share "+
 				"file %v: %v", fileDoc.DocName, err)
 		}
 	}
@@ -302,7 +301,7 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 }
 
 // SendDir sends a directory to the recipients.
-func SendDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
+func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) error {
 	dirTags := strings.Join(dirDoc.Tags, files.TagSeparator)
 
 	parentID, err := getParentDirID(opts, dirDoc.DirID)
@@ -333,7 +332,7 @@ func SendDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 			NoResponse: true,
 		})
 		if errReq != nil {
-			log.Errorf("[sharing] An error occurred while trying to share "+
+			ins.Logger().Errorf("[sharing] An error occurred while trying to share "+
 				"the directory %v: %v", dirDoc.DocName, err)
 		}
 	}
@@ -356,11 +355,12 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 			if err == ErrRemoteDocDoesNotExist {
 				errf := SendFile(ins, opts, fileDoc)
 				if errf != nil {
-					log.Error("[sharing] An error occurred while trying to "+
+					ins.Logger().Error("[sharing] An error occurred while trying to "+
 						"send file: ", errf)
 				}
 			} else {
-				log.Errorf("[sharing] Could not get data at %v: %v", recipient.URL, err)
+				ins.Logger().Errorf("[sharing] Could not get data at %v: %v",
+					recipient.URL, err)
 			}
 			continue
 		}
@@ -376,14 +376,14 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 				if opts.Selector == "referenced_by" {
 					refs, isUpdate, errf := findNewRefs(fileDoc, remoteFileDoc, opts)
 					if errf != nil {
-						log.Error("[sharing] An error occurred while trying to "+
+						ins.Logger().Error("[sharing] An error occurred while trying to "+
 							"compare references: ", errf)
 						continue
 					}
 					if refs != nil {
 						errr := sendReferenceToRecipient(refs, isUpdate, opts, recipient)
 						if errr != nil {
-							log.Error("[sharing] An error occurred while trying to "+
+							ins.Logger().Error("[sharing] An error occurred while trying to "+
 								"compare references: ", errr)
 						}
 					}
@@ -393,13 +393,13 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
-				log.Errorf("[sharing] Could not generate patch for file %v: %v",
+				ins.Logger().Errorf("[sharing] Could not generate patch for file %v: %v",
 					fileDoc.DocName, errp)
 				continue
 			}
 			errsp := sendPatchToRecipient(patch, opts, recipient, fileDoc.DirID)
 			if errsp != nil {
-				log.Error("[sharing] An error occurred while trying to "+
+				ins.Logger().Error("[sharing] An error occurred while trying to "+
 					"send patch: ", errsp)
 			}
 			continue
@@ -407,13 +407,13 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 		if err != nil {
-			log.Errorf("[sharing] An error occurred while trying to open %v: %v",
+			ins.Logger().Errorf("[sharing] An error occurred while trying to open %v: %v",
 				fileDoc.DocName, err)
 			continue
 		}
 		err = sendFileToRecipient(opts, recipient, http.MethodPut)
 		if err != nil {
-			log.Errorf("[sharing] An error occurred while trying to share an "+
+			ins.Logger().Errorf("[sharing] An error occurred while trying to share an "+
 				"update of file %v to a recipient: %v", fileDoc.DocName, err)
 		}
 	}
@@ -424,6 +424,8 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 // PatchDir updates the metadata of the corresponding directory at each
 // recipient's.
 func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
+	var errFinal error
+
 	patch, err := generateDirOrFilePatch(dirDoc, nil)
 	if err != nil {
 		return err
@@ -437,22 +439,22 @@ func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 		opts.DocRev = rev
 		err = sendPatchToRecipient(patch, opts, rec, dirDoc.DirID)
 		if err != nil {
-			log.Error("[sharing] An error occurred while trying to send "+
-				"a patch: ", err)
+			errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to send a patch: %s", err.Error()))
 		}
 	}
 
-	return nil
+	return errFinal
 }
 
 // DeleteDirOrFile asks the recipients to put the file or directory in the
 // trash.
 func DeleteDirOrFile(opts *SendOptions) error {
+	var errFinal error
 	for _, recipient := range opts.Recipients {
 		rev, err := getDirOrFileRevAtRecipient(opts.DocID, recipient)
 		if err != nil {
-			log.Errorf("[sharing] (delete) An error occurred while trying "+
-				"to get a revision at %v: %v", recipient.URL, err)
+			errFinal = multierror.Append(errFinal,
+				fmt.Errorf("Error while trying to get a revision at %v: %v", recipient.URL, err))
 			continue
 		}
 		opts.DocRev = rev
@@ -474,8 +476,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 		})
 
 		if err != nil {
-			log.Errorf("[sharing] (delete) An error occurred while sending "+
-				"request to %v: %v", recipient.URL, err)
+			errFinal = multierror.Append(errFinal,
+				fmt.Errorf("Error while sending request to %v: %v", recipient.URL, err))
 		}
 	}
 

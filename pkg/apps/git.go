@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	git "github.com/cozy/go-git"
 	gitPlumbing "github.com/cozy/go-git/plumbing"
 	gitObject "github.com/cozy/go-git/plumbing/object"
@@ -22,21 +22,24 @@ import (
 
 var errCloneTimeout = errors.New("git: repository cloning timed out")
 
-// ghURLRegex is used to identify github
-var ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+const (
+	ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
+	glRawManifestURL = "https://%s/%s/%s/raw/%s/%s"
+)
 
-const ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
-
-// glURLRegex is used to identify gitlab
-var glURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
-
-const glRawManifestURL = "https://%s/%s/%s/raw/%s/%s"
+var (
+	// ghURLRegex is used to identify github
+	ghURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+	// glURLRegex is used to identify gitlab
+	glURLRegex = regexp.MustCompile(`/([^/]+)/([^/]+).git`)
+)
 
 type gitFetcher struct {
 	manFilename string
+	log         *logrus.Entry
 }
 
-func newGitFetcher(appType AppType) *gitFetcher {
+func newGitFetcher(appType AppType, log *logrus.Entry) *gitFetcher {
 	var manFilename string
 	switch appType {
 	case Webapp:
@@ -46,6 +49,7 @@ func newGitFetcher(appType AppType) *gitFetcher {
 	}
 	return &gitFetcher{
 		manFilename: manFilename,
+		log:         log,
 	}
 }
 
@@ -64,7 +68,7 @@ func isGitlab(src *url.URL) bool {
 func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	defer func() {
 		if err != nil {
-			log.Errorf("[git] Error while fetching app manifest %s: %s",
+			g.log.Errorf("[git] Error while fetching app manifest %s: %s",
 				src.String(), err.Error())
 		}
 	}()
@@ -92,7 +96,7 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	defer func() {
 		if err != nil {
-			log.Errorf("[git] Error while fetching or copying repository %s: %s",
+			g.log.Errorf("[git] Error while fetching or copying repository %s: %s",
 				src.String(), err.Error())
 		}
 	}()
@@ -121,7 +125,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	repch := make(chan *git.Repository)
 
 	srcStr := src.String()
-	log.Infof("[git] Clone %s %s in %s", srcStr, branch, gitDir)
+	g.log.Infof("[git] Clone %s %s in %s", srcStr, branch, gitDir)
 	go func() {
 		repc, errc := git.Clone(storage, nil, &git.CloneOptions{
 			URL:           srcStr,
@@ -140,10 +144,10 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	select {
 	case rep = <-repch:
 	case err = <-errch:
-		log.Errorf("[git] Clone error of %s: %s", srcStr, err.Error())
+		g.log.Errorf("[git] Clone error of %s: %s", srcStr, err.Error())
 		return err
 	case <-time.After(30 * time.Second):
-		log.Errorf("[git] Clone timeout of %s", srcStr)
+		g.log.Errorf("[git] Clone timeout of %s", srcStr)
 		return errCloneTimeout
 	}
 

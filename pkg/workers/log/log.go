@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 func init() {
@@ -21,6 +21,6 @@ func init() {
 // Worker is the worker that just logs its message (useful for debugging)
 func Worker(ctx context.Context, m *jobs.Message) error {
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	log.Printf("[jobs] log %s: %s", domain, m.Data)
+	logger.WithDomain(domain).Infof(string(m.Data))
 	return nil
 }

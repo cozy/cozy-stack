@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -191,11 +190,7 @@ func pollInstaller(c echo.Context, isEventStream bool, w http.ResponseWriter, sl
 		go func() {
 			for {
 				_, done, err := inst.Poll()
-				if err != nil {
-					log.Errorf("[apps] %s could not be installed: %v", slug, err)
-					break
-				}
-				if done {
+				if done || err != nil {
 					break
 				}
 			}

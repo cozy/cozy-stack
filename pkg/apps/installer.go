@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"regexp"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
@@ -38,6 +38,7 @@ type Installer struct {
 	err  error
 	errc chan error
 	manc chan Manifest
+	log  *logrus.Entry
 }
 
 // InstallerOptions provides the slug name of the application along with the
@@ -128,10 +129,12 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		endState = Ready
 	}
 
+	log := db.Logger()
+
 	var fetcher Fetcher
 	switch src.Scheme {
 	case "git":
-		fetcher = newGitFetcher(opts.Type)
+		fetcher = newGitFetcher(opts.Type, log)
 	default:
 		return nil, ErrNotSupportedSource
 	}
@@ -149,6 +152,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 
 		errc: make(chan error, 1),
 		manc: make(chan Manifest, 2),
+		log:  log,
 	}, nil
 }
 
@@ -207,7 +211,7 @@ func (i *Installer) endOfProc() {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) install() (Manifest, error) {
-	log.Infof("[apps] Start install: %s %s", i.slug, i.src.String())
+	i.log.Infof("[apps] Start install: %s %s", i.slug, i.src.String())
 	man := i.man
 	if err := i.ReadManifest(Installing, man); err != nil {
 		return nil, err
@@ -226,7 +230,7 @@ func (i *Installer) install() (Manifest, error) {
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
 func (i *Installer) update() (Manifest, error) {
-	log.Infof("[apps] Start update: %s %s", i.slug, i.src.String())
+	i.log.Infof("[apps] Start update: %s %s", i.slug, i.src.String())
 	man := i.man
 	if state := man.State(); state != Ready &&
 		state != Installed &&
@@ -244,7 +248,7 @@ func (i *Installer) update() (Manifest, error) {
 }
 
 func (i *Installer) delete() (Manifest, error) {
-	log.Infof("[apps] Start delete: %s %s", i.slug, i.src.String())
+	i.log.Infof("[apps] Start delete: %s %s", i.slug, i.src.String())
 	man := i.man
 	if state := man.State(); state != Ready &&
 		state != Installed &&

@@ -6,8 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/labstack/gommon/log"
 )
 
 const luaRefresh = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pexpire", KEYS[1], ARGV[2]) else return 0 end`
@@ -56,6 +57,7 @@ type redisLock struct {
 	mu     sync.Mutex
 	key    string
 	token  string
+	log    *logrus.Entry
 }
 
 func (rl *redisLock) Lock() error {
@@ -108,7 +110,7 @@ func (rl *redisLock) Unlock() {
 	_, err := rl.client.Eval(luaRelease, []string{rl.key}, rl.token).Result()
 	rl.token = ""
 	if err != nil {
-		log.Warnf("Failed to unlock: %s", err.Error())
+		rl.log.Warnf("[redis-lock] Failed to unlock: %s", err.Error())
 	}
 }
 
@@ -119,6 +121,7 @@ func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
 	return &redisLock{
 		client: c,
 		key:    basicLockNS + ns,
+		log:    logger.WithDomain(ns),
 	}
 }
 

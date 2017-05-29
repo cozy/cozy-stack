@@ -6,9 +6,11 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/go-redis/redis"
-	"github.com/labstack/gommon/log"
 )
+
+var log = logger.WithNamespace("redis-job")
 
 const redisPrefix = "j/"
 

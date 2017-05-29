@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -114,7 +113,7 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 		s.LastSeen = time.Now()
 		err := couchdb.UpdateDoc(i, &s)
 		if err != nil {
-			log.Warn("[session] Failed to update session last seen:", err)
+			i.Logger().Warn("[session] Failed to update session last seen:", err)
 		}
 	}
 
@@ -127,7 +126,7 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 	err := couchdb.DeleteDoc(i, s)
 	if err != nil {
-		log.Error("[session] Failed to delete session:", err)
+		i.Logger().Error("[session] Failed to delete session:", err)
 	}
 	return &http.Cookie{
 		Name:   SessionCookieName,

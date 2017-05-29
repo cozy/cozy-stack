@@ -23,15 +23,15 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/cmd"
 )
 
 func main() {
 	if err := cmd.RootCmd.Execute(); err != nil {
-		log.Error(err.Error())
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error()) // #nosec
 		os.Exit(1)
 	}
 }

@@ -6,12 +6,12 @@ import (
 	"net/url"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
@@ -95,7 +95,7 @@ func GetAll(i *instance.Instance) ([]*Client, error) {
 func FindClient(i *instance.Instance, id string) (Client, error) {
 	var c Client
 	if err := couchdb.GetDoc(i, consts.OAuthClients, id, &c); err != nil {
-		log.Errorf("[oauth] Failed to find the client %s: %s", id, err)
+		i.Logger().Errorf("[oauth] Failed to find the client %s: %s", id, err)
 		return c, err
 	}
 	return c, nil
@@ -179,7 +179,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		Subject:  c.CouchID,
 	})
 	if err != nil {
-		log.Errorf("[oauth] Failed to create the registration access token: %s", err)
+		i.Logger().Errorf("[oauth] Failed to create the registration access token: %s", err)
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
@@ -271,7 +271,7 @@ func (c *Client) CreateJWT(i *instance.Instance, audience, scope string) (string
 		Scope: scope,
 	})
 	if err != nil {
-		log.Errorf("[oauth] Failed to create the %s token: %s", audience, err)
+		i.Logger().Errorf("[oauth] Failed to create the %s token: %s", audience, err)
 	}
 	return token, err
 }
@@ -288,20 +288,20 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permi
 		return i.OAuthSecret, nil
 	}
 	if err := crypto.ParseJWT(token, keyFunc, &claims); err != nil {
-		log.Errorf("[oauth] Failed to verify the %s token: %s", audience, err)
+		i.Logger().Errorf("[oauth] Failed to verify the %s token: %s", audience, err)
 		return claims, false
 	}
 	// Note: the refresh and registration tokens don't expire, no need to check its issue date
 	if claims.Audience != audience {
-		log.Errorf("[oauth] Unexpected audience for %s token: %s", audience, claims.Audience)
+		i.Logger().Errorf("[oauth] Unexpected audience for %s token: %s", audience, claims.Audience)
 		return claims, false
 	}
 	if claims.Issuer != i.Domain {
-		log.Errorf("[oauth] Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
+		i.Logger().Errorf("[oauth] Expected %s issuer for %s token, but was: %s", audience, i.Domain, claims.Issuer)
 		return claims, false
 	}
 	if claims.Subject != c.CouchID {
-		log.Errorf("[oauth] Expected %s subject for %s token, but was: %s", audience, c.CouchID, claims.Subject)
+		i.Logger().Errorf("[oauth] Expected %s subject for %s token, but was: %s", audience, c.CouchID, claims.Subject)
 		return claims, false
 	}
 	return claims, true

@@ -1,9 +1,9 @@
 package scheduler
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 )
@@ -85,7 +85,7 @@ func (t *EventTrigger) Trigger(e *realtime.Event) *jobs.JobRequest {
 		"event":   e,
 	})
 	if err != nil {
-		log.Error(err)
+		logger.WithNamespace("event-trigger").Error(err)
 	}
 	return &jobs.JobRequest{
 		Domain:     t.infos.Domain,
