@@ -43,7 +43,8 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 		if app.Icon != "" {
 			links.Icon = "/apps/" + app.Slug() + "/icon"
 		}
-		if app.State() == apps.Ready && app.Instance != nil {
+		if (app.State() == apps.Ready || app.State() == apps.Installed) &&
+			app.Instance != nil {
 			links.Related = app.Instance.SubDomain(app.Slug()).String()
 		}
 	case (*apps.KonnManifest):
