@@ -274,7 +274,9 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	var state, errstr string
 	var lastSuccess time.Time
 	if errjob != nil {
-		lastSuccess = lastResult.LastSuccess
+		if lastResult != nil {
+			lastSuccess = lastResult.LastSuccess
+		}
 		errstr = errjob.Error()
 		state = jobs.Errored
 	} else {
