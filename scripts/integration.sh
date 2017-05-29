@@ -11,6 +11,7 @@ export TEST_TOKEN=$(./cozy-stack instances token-oauth localhost:8080 $CLIENT_ID
 cd tests/pouchdb-integration
 npm install && npm run test
 testresult=$?
+cd ../..
 
 pidstack=$(jobs -pr)
 [ -n "$pidstack" ] && kill -9 $pidstack
