@@ -615,8 +615,8 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 			for _, recipient := range sharing.RecipientsStatus {
 				err = deleteOAuthClient(ins, recipient.HostClientID)
 				if err != nil {
-					log.Errorf("[sharings] Could not delete OAuth client: %v",
-						err)
+					ins.Logger().Errorf("[sharings] Could not delete OAuth "+
+						"client: %v", err)
 				} else {
 					recipient.HostClientID = ""
 				}
@@ -625,7 +625,8 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 	} else {
 		err = deleteOAuthClient(ins, sharing.Sharer.SharerStatus.HostClientID)
 		if err != nil {
-			log.Errorf("[sharings] Could not delete OAuth client: %v", err)
+			ins.Logger().Errorf("[sharings] Could not delete OAuth client: %v",
+				err)
 		} else {
 			sharing.Sharer.SharerStatus.HostClientID = ""
 		}
