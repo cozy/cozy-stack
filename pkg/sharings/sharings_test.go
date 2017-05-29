@@ -728,6 +728,25 @@ func TestCreateSharingAndRegisterSharer(t *testing.T) {
 	// tested in `createSharing`.
 }
 
+func TestDeleteOAuthClient(t *testing.T) {
+	client := oauth.Client{
+		RedirectURIs: []string{"redirect"},
+		ClientName:   "test",
+		SoftwareID:   "1",
+	}
+	crErr := client.Create(in)
+	assert.Nil(t, crErr)
+
+	err := deleteOAuthClient(in, "fakeid")
+	assert.Error(t, err)
+	err = deleteOAuthClient(in, client.ClientID)
+	assert.NoError(t, err)
+
+	errDoc := oauth.Client{}
+	err = couchdb.GetDoc(in, consts.OAuthClients, client.ID(), &errDoc)
+	assert.Error(t, err)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
