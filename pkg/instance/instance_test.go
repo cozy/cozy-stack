@@ -17,8 +17,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/stretchr/testify/assert"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 
 	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
 )
