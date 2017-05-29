@@ -170,7 +170,7 @@ msgstr "Comptes bancaires"
 msgid "Permissions io.cozy.bank.groups"
 msgstr "Groupes de comptes bancaires"
 
-msgid "Permissions io.cozy.Bills"
+msgid "Permissions io.cozy.bills"
 msgstr "Factures"
 
 msgid "Permissions io.cozy.files"
@@ -194,20 +194,20 @@ msgstr "Planification de tâches à exécuter dans le futur"
 msgid "Permissions io.cozy.permissions"
 msgstr "Délégation de permissions"
 
-msgid "Permissions org-fing-mesinfos-client"
+msgid "Permissions org.fing.mesinfos.client"
 msgstr "Clients (Mes Infos)"
 
-msgid "Permissions org-fing-mesinfos-consumptionstatement"
+msgid "Permissions org.fing.mesinfos.consumptionstatement"
 msgstr "Déclaration de consommation (Mes Infos)"
 
-msgid "Permissions org-fing-mesinfos-contract"
+msgid "Permissions org.fing.mesinfos.contract"
 msgstr "Contrats (Mes Infos)"
 
-msgid "Permissions org-fing-mesinfos-energybreakdown"
+msgid "Permissions org.fing.mesinfos.energybreakdown"
 msgstr "Répartition de l'énergie (Mes Infos)"
 
-msgid "Permissions org-fing-mesinfos-home"
+msgid "Permissions org.fing.mesinfos.home"
 msgstr "Domicile (Mes Infos)"
 
-msgid "Permissions org-fing-mesinfos-paymentterms"
+msgid "Permissions org.fing.mesinfos.paymentterms"
 msgstr "Délais de paiement (Mes Infos)"
