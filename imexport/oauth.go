@@ -115,4 +115,17 @@ func main() {
 	err = json.NewDecoder(resp.Body).Decode(&accessToken)
 	checkError(err)
 
+	bearerAuthz := &request.BearerAuthorizer{
+		Token: accessToken.AccessToken,
+	}
+
+	opts.Authorizer = bearerAuthz
+
+	file, err := os.Create("cozy.tar.gz")
+	checkError(err)
+	defer file.Close()
+
+	err = Tardir(file, opts, authReq)
+	checkError(err)
+
 }
