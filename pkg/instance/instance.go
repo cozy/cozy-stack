@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -27,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/leonelquinteros/gotext"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -329,39 +331,34 @@ func (i *Instance) defineViewsAndIndex() error {
 }
 
 func (i *Instance) createDefaultFilesTree() error {
+	var errf error
+
+	createDir := func(dir *vfs.DirDoc, err error) (*vfs.DirDoc, error) {
+		if err != nil {
+			errf = multierror.Append(errf, err)
+			return nil, err
+		}
+		err = i.VFS().CreateDir(dir)
+		if err != nil && !os.IsExist(err) {
+			errf = multierror.Append(errf, err)
+			return nil, err
+		}
+		return dir, nil
+	}
+
 	name := i.Translate("Tree Administrative")
-	administrative, err := vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
-	if err != nil {
-		return err
-	}
-	if err = i.VFS().CreateDir(administrative); err != nil {
-		return err
-	}
+	createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)) // #nosec
+
 	name = i.Translate("Tree Photos")
-	photos, err := vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil)
-	if err != nil {
-		return err
+	photos, err := createDir(vfs.NewDirDocWithPath(name, consts.RootDirID, "/", nil))
+	if err == nil {
+		name = i.Translate("Tree Uploaded from Cozy Photos")
+		createDir(vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)) // #nosec
+		name = i.Translate("Tree Backuped from my mobile")
+		createDir(vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)) // #nosec
 	}
-	if err = i.VFS().CreateDir(photos); err != nil {
-		return err
-	}
-	name = i.Translate("Tree Uploaded from Cozy Photos")
-	uploaded, err := vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)
-	if err != nil {
-		return err
-	}
-	if err = i.VFS().CreateDir(uploaded); err != nil {
-		return err
-	}
-	name = i.Translate("Tree Backuped from my mobile")
-	backuped, err := vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)
-	if err != nil {
-		return err
-	}
-	if err = i.VFS().CreateDir(backuped); err != nil {
-		return err
-	}
-	return nil
+
+	return errf
 }
 
 // Create builds an instance and initializes it
