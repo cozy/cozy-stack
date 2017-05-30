@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
@@ -25,6 +26,7 @@ type swiftVFS struct {
 	container string
 	version   string
 	mu        lock.ErrorRWLocker
+	log       *logrus.Entry
 }
 
 // New returns a vfs.VFS instance associated with the specified indexer and the
