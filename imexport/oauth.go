@@ -125,7 +125,7 @@ func main() {
 	checkError(err)
 	defer file.Close()
 
-	err = Tardir(file, opts, authReq)
+	err = tardir(file, opts, authReq)
 	checkError(err)
 
 }

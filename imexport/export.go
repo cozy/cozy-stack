@@ -5,8 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"os"
-	"strings"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/auth"
@@ -33,12 +31,10 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 		if doc.Attrs.Type == client.DirType {
 			fmt.Println("directory")
 		} else if doc.Attrs.Type == client.FileType {
-			path = strings.TrimPrefix(path, "/")
-			file, err := os.Open(path)
+			readCloser, err := cClient.DownloadByPath(path)
 			if err != nil {
 				return err
 			}
-			defer file.Close()
 
 			hdr := &tar.Header{
 				Name: path,
@@ -48,20 +44,17 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 				AccessTime: doc.Attrs.CreatedAt,
 				ChangeTime: doc.Attrs.UpdatedAt,
 			}
-			err = tw.WriteHeader(hdr)
-			if err != nil {
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+			if _, err := io.Copy(tw, readCloser); err != nil {
 				return err
 			}
 
-			_, err = io.Copy(tw, file)
-			if err != nil {
-				return err
-			}
 		} else {
 			fmt.Println("type not found")
 		}
-
-		return nil
+		return err
 	})
 
 	if err != nil {
@@ -71,10 +64,10 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 	return nil
 }
 
-func Tardir(file *os.File, opts *request.Options, authReq *auth.Request) error {
+func tardir(w io.Writer, opts *request.Options, authReq *auth.Request) error {
 	fmt.Println("tarball")
 	//gzip writer
-	gw := gzip.NewWriter(file)
+	gw := gzip.NewWriter(w)
 	defer gw.Close()
 
 	//tar writer
