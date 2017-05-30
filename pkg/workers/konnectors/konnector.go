@@ -315,11 +315,16 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 		return nil
 	}
 
+	konnectorURL := inst.SubDomain(consts.CollectSlug)
+	konnectorURL.Fragment = "/category/all/" + slug
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, &mails.Options{
-		Mode:           mails.ModeNoReply,
-		Subject:        inst.Translate("Konnector execution error"),
-		TemplateName:   "konnector_error_" + inst.Locale,
-		TemplateValues: map[string]string{"KonnectorName": slug},
+		Mode:         mails.ModeNoReply,
+		Subject:      inst.Translate("Konnector execution error"),
+		TemplateName: "konnector_error_" + inst.Locale,
+		TemplateValues: map[string]string{
+			"KonnectorName": slug,
+			"KonnectorPage": konnectorURL.String(),
+		},
 	})
 	if err != nil {
 		return err
