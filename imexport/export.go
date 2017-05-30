@@ -37,13 +37,17 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 			}
 
 			hdr := &tar.Header{
-				Name: path,
-				//Mode:       int64(doc.Attrs.Tags), //convertir doc.Attrs.Tags en int de permissions
+				Name:       path,
+				Mode:       0644,
 				Size:       doc.Attrs.Size,
 				ModTime:    doc.Attrs.CreatedAt,
 				AccessTime: doc.Attrs.CreatedAt,
 				ChangeTime: doc.Attrs.UpdatedAt,
 			}
+			if doc.Attrs.Executable {
+				hdr.Mode = 0755
+			}
+
 			if err := tw.WriteHeader(hdr); err != nil {
 				return err
 			}
@@ -54,7 +58,7 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 		} else {
 			fmt.Println("type not found")
 		}
-		return err
+		return nil
 	})
 
 	if err != nil {
