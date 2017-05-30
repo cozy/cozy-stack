@@ -25,7 +25,7 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 
 	root := "/Documents"
 
-	err := cClient.WalkByPath(root, func(path string, doc *client.DirOrFile, err error) error {
+	if err := cClient.WalkByPath(root, func(path string, doc *client.DirOrFile, err error) error {
 		fmt.Printf("Visited: %s  type: %s\n", path, doc.Attrs.Type)
 
 		if doc.Attrs.Type == client.DirType {
@@ -58,10 +58,10 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 		} else {
 			fmt.Println("type not found")
 		}
-		return nil
-	})
 
-	if err != nil {
+		return nil
+
+	}); err != nil {
 		return err
 	}
 
@@ -78,8 +78,7 @@ func tardir(w io.Writer, opts *request.Options, authReq *auth.Request) error {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	err := export(tw, opts, authReq)
-	if err != nil {
+	if err := export(tw, opts, authReq); err != nil {
 		return err
 	}
 
