@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
 )
@@ -41,6 +41,7 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, dom
 		container: "cozy-" + domain,
 		version:   "cozy-" + domain + versionSuffix,
 		mu:        mu,
+		log:       logger.WithDomain(domain),
 	}, nil
 }
 
@@ -54,34 +55,34 @@ func (sfs *swiftVFS) InitFs() error {
 	}
 	if err := sfs.c.VersionContainerCreate(sfs.container, sfs.version); err != nil {
 		if err != swift.Forbidden {
-			log.Errorf("[vfsswift] Could not create container %s: %s",
+			sfs.log.Errorf("[vfsswift] Could not create container %s: %s",
 				sfs.container, err.Error())
 			return err
 		}
-		log.Errorf("[vfsswift] Could not activate versioning for container %s: %s",
+		sfs.log.Errorf("[vfsswift] Could not activate versioning for container %s: %s",
 			sfs.container, err.Error())
 		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
 			return err
 		}
 	}
-	log.Infof("[vfsswift] Created container %s", sfs.container)
+	sfs.log.Infof("[vfsswift] Created container %s", sfs.container)
 	return nil
 }
 
 func (sfs *swiftVFS) Delete() error {
 	err := sfs.deleteContainer(sfs.version)
 	if err != nil {
-		log.Errorf("[vfsswift] Could not delete version container %s: %s",
+		sfs.log.Errorf("[vfsswift] Could not delete version container %s: %s",
 			sfs.version, err.Error())
 		return err
 	}
 	err = sfs.deleteContainer(sfs.container)
 	if err != nil {
-		log.Errorf("[vfsswift] Could not delete container %s: %s",
+		sfs.log.Errorf("[vfsswift] Could not delete container %s: %s",
 			sfs.container, err.Error())
 		return err
 	}
-	log.Infof("[vfsswift] Deleted container %s", sfs.container)
+	sfs.log.Infof("[vfsswift] Deleted container %s", sfs.container)
 	return nil
 }
 
@@ -290,7 +291,7 @@ func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 	if len(versionObjNames) > 0 {
 		_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
 		if err != nil {
-			log.Errorf("[vfsswift] Could not delete version of %s: %s",
+			sfs.log.Errorf("[vfsswift] Could not delete version of %s: %s",
 				objName, err.Error())
 		}
 	}
