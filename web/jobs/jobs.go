@@ -130,7 +130,7 @@ func pushJob(c echo.Context) error {
 			Data: req.Arguments,
 		},
 	}
-	if err := permissions.Allow(c, permissions.GET, jr); err != nil {
+	if err := permissions.Allow(c, permissions.POST, jr); err != nil {
 		return err
 	}
 
