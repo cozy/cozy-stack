@@ -31,6 +31,8 @@ at the root of this repository.
   content parts of the
     - `type` string of the content type: either `text/html` or `text/plain`
     - `body` string of the actual body content of the part
+- `attachments`: list of objects `{filename, content}` that represent the
+  files attached to the email
 
 ### Examples
 
