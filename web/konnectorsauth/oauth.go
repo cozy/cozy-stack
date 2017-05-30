@@ -136,14 +136,9 @@ func redirect(c echo.Context) error {
 		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
 	}
 
-	fmt.Println("REQ", req)
-	fmt.Println("BODY", body)
-
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("THERE req", req, body)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
