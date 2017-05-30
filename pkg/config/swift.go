@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cozy/swift"
 )
 

@@ -13,8 +13,9 @@ import (
 	"strings"
 	"text/template"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 	"github.com/go-redis/redis"
@@ -70,6 +71,7 @@ const (
 const AdminSecretFileName = "cozy-admin-passphrase" // #nosec
 
 var config *Config
+var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
@@ -393,19 +395,19 @@ func configureLogger() error {
 		level = "info"
 	}
 
-	logLevel, err := log.ParseLevel(level)
+	logLevel, err := logrus.ParseLevel(level)
 	if err != nil {
 		return err
 	}
 
-	log.SetLevel(logLevel)
+	logrus.SetLevel(logLevel)
 	if loggerCfg.Syslog {
 		hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "cozy")
 		if err != nil {
 			return err
 		}
-		log.AddHook(hook)
-		log.SetOutput(ioutil.Discard)
+		logrus.AddHook(hook)
+		logrus.SetOutput(ioutil.Discard)
 	}
 	return nil
 }

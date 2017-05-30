@@ -646,12 +646,15 @@ func (i *Instance) RequestPassphraseReset() error {
 	// If a registration token is set, we do not generate another token than the
 	// registration one, and bail.
 	if i.RegisterToken != nil {
+		i.Logger().Info("Passphrase reset ignored: not registered")
 		return nil
 	}
 	// If a passphrase reset token is set and valid, we do not generate new one,
 	// and bail.
 	if i.PassphraseResetToken != nil &&
 		time.Now().UTC().Before(i.PassphraseResetTime) {
+		i.Logger().Infof("Passphrase reset ignored: already sent at %s",
+			i.PassphraseResetTime.String())
 		return nil
 	}
 	i.PassphraseResetToken = crypto.GenerateRandomBytes(PasswordResetTokenLen)
