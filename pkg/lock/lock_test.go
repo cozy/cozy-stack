@@ -87,8 +87,7 @@ var n = 1000
 
 func TestMemLock(t *testing.T) {
 	backurl := config.GetConfig().Lock.URL
-	config.GetConfig().Lock.URL = ""
-	globalRedisClient = nil
+	config.GetConfig().Lock = config.NewRedisConfig("")
 	defer func() { config.GetConfig().Lock.URL = backurl }()
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
 	l := ReadWrite("test-mem")
@@ -105,10 +104,8 @@ func TestMemLock(t *testing.T) {
 }
 
 func TestRedisLock(t *testing.T) {
-
 	backurl := config.GetConfig().Lock.URL
-	config.GetConfig().Lock.URL = "redis://localhost:6379/0"
-	globalRedisClient = nil
+	config.GetConfig().Lock = config.NewRedisConfig("redis://localhost:6379/0")
 	defer func() { config.GetConfig().Lock.URL = backurl }()
 	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(-1))
 	l := ReadWrite("test-redis")

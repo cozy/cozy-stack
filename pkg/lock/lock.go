@@ -1,9 +1,12 @@
 package lock
 
+import "github.com/cozy/cozy-stack/pkg/config"
+
 // ReadWrite returns the read/write lock for the given name
 func ReadWrite(domain string) ErrorRWLocker {
-	if c := getClient(); c != nil {
-		return &fakeRWLock{getRedisReadWriteLock(c, domain)}
+	cli := config.GetConfig().Lock.Client()
+	if cli != nil {
+		return &fakeRWLock{getRedisReadWriteLock(cli, domain)}
 	}
 	return getMemReadWriteLock(domain)
 }

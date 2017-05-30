@@ -76,23 +76,17 @@ func (store *redisCodeStorage) FindAndDelete(value, app string) *Code {
 var globalStorage codeStorage
 var globalStorageMutex sync.Mutex
 
-func makeStorage() codeStorage {
-	opts := config.GetConfig().SessionStorage.Options()
-	if opts == nil {
-		return &memCodeStorage{}
-	}
-
-	client := redis.NewClient(opts)
-	return &redisCodeStorage{
-		cl: client,
-	}
-}
-
 func getStorage() codeStorage {
 	globalStorageMutex.Lock()
 	defer globalStorageMutex.Unlock()
-	if globalStorage == nil {
-		globalStorage = makeStorage()
+	if globalStorage != nil {
+		return globalStorage
+	}
+	cli := config.GetConfig().SessionStorage.Client()
+	if cli == nil {
+		globalStorage = &memCodeStorage{}
+	} else {
+		globalStorage = &redisCodeStorage{cl: cli}
 	}
 	return globalStorage
 }

@@ -121,6 +121,9 @@ type Konnectors struct {
 // RedisConfig contains the configuration values for a redis system
 type RedisConfig struct {
 	URL string
+
+	opt *redis.Options
+	cli *redis.Client
 }
 
 // Lock contains the configuration values of the locking layer
@@ -132,6 +135,21 @@ type Lock struct {
 type Logger struct {
 	Level  string
 	Syslog bool
+}
+
+func newRedisConfig(u string) RedisConfig {
+	var conf RedisConfig
+	if u == "" {
+		return conf
+	}
+	opt, err := redis.ParseURL(u)
+	if err != nil {
+		log.Errorf("can't parse cache.URL(%s), ignoring", u)
+		return conf
+	}
+	conf.cli = redis.NewClient(opt)
+	conf.opt = opt
+	return conf
 }
 
 // FsURL returns a copy of the filesystem URL
@@ -158,17 +176,9 @@ func CouchURL() string {
 	return config.CouchDB.URL
 }
 
-// Options returns the redis.Options for a RedisConfig
-func (rc *RedisConfig) Options() *redis.Options {
-	if rc.URL == "" {
-		return nil
-	}
-	opts, err := redis.ParseURL(rc.URL)
-	if err != nil {
-		log.Errorf("can't parse cache.URL(%s), ignoring", rc.URL)
-		return nil
-	}
-	return opts
+// Client returns the redis.Client for a RedisConfig
+func (rc *RedisConfig) Client() *redis.Client {
+	return rc.cli
 }
 
 // IsDevRelease returns whether or not the binary is a development
@@ -278,21 +288,11 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
-		Cache: RedisConfig{
-			URL: v.GetString("cache.url"),
-		},
-		Lock: RedisConfig{
-			URL: v.GetString("lock.url"),
-		},
-		SessionStorage: RedisConfig{
-			URL: v.GetString("sessions.url"),
-		},
-		DownloadStorage: RedisConfig{
-			URL: v.GetString("downloads.url"),
-		},
-		KonnectorsOauthStateStorage: RedisConfig{
-			URL: v.GetString("konnectors.oauthstate"),
-		},
+		Cache:                       newRedisConfig(v.GetString("cache.url")),
+		Lock:                        newRedisConfig(v.GetString("lock.url")),
+		SessionStorage:              newRedisConfig(v.GetString("sessions.url")),
+		DownloadStorage:             newRedisConfig(v.GetString("downloads.url")),
+		KonnectorsOauthStateStorage: newRedisConfig(v.GetString("konnectors.oauthstate")),
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
 			Port:                      v.GetInt("mail.port"),
