@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"runtime"
 	"time"
 
@@ -41,6 +42,12 @@ type Address struct {
 	Email string `json:"email"`
 }
 
+// Attachment is for attaching a file to the mail
+type Attachment struct {
+	Filename string `json:"filename"`
+	Content  string `json:"content"`
+}
+
 // Options should be used as the options of a mail with manually defined
 // content: body and body content-type. It is used as the input of the
 // "sendmail" worker.
@@ -54,6 +61,7 @@ type Options struct {
 	Parts          []*Part               `json:"parts"`
 	TemplateName   string                `json:"template_name"`
 	TemplateValues interface{}           `json:"template_values"`
+	Attachments    []*Attachment         `json:"attachments,omitempty"`
 }
 
 // Part represent a part of the content of the mail. It has a type
@@ -159,6 +167,12 @@ func doSendMail(ctx context.Context, opts *Options) error {
 		if err = addPart(mail, part); err != nil {
 			return err
 		}
+	}
+	for _, attachment := range opts.Attachments {
+		mail.Attach(attachment.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
+			_, err := w.Write([]byte(attachment.Content))
+			return err
+		}))
 	}
 	dialer := gomail.NewDialer(dialerOptions)
 	if deadline, ok := ctx.Deadline(); ok {
