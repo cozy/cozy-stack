@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -17,15 +16,24 @@ import (
 // This file contains the account_type object as defined in
 // docs/konnectors_oauth
 
-// AuthorizationCode is the server-side grant type.
-var AuthorizationCode = "authorization_code"
+// Various grant types
+// - AuthorizationCode is the server-side grant type.
+// - ImplicitGrant is the implicit grant type
+// - ImplicitGrantRedirectURL is the implicit grant type but with redirect_url
+//    											  instead of redirect_uri
+const (
+	AuthorizationCode        = "authorization_code"
+	ImplicitGrant            = "token"
+	ImplicitGrantRedirectURL = "token_redirect_url"
+)
 
-// ImplicitGrant is the implicit grant type
-var ImplicitGrant = "token"
-
-// ImplicitGrantRedirectURL is the implicit grant type with
-// redirect_url instead of redirect_uri
-var ImplicitGrantRedirectURL = "token_redirect_url"
+// Token Request authentication modes for AuthorizationCode grant type
+// normal is through form parameters
+// some services requires it as Basic
+const (
+	FormTokenAuthMode  = "form"
+	BasicTokenAuthMode = "basic"
+)
 
 // RefreshToken is the refresh grant type
 var RefreshToken = "refresh_token"
@@ -43,6 +51,7 @@ type AccountType struct {
 	ClientSecret          string            `json:"client_secret,omitempty"`
 	AuthEndpoint          string            `json:"auth_endpoint,omitempty"`
 	TokenEndpoint         string            `json:"token_endpoint,omitempty"`
+	TokenAuthMode         string            `json:"token_mode,omitempty"`
 	RegisteredRedirectURI string            `json:"redirect_uri,omitempty"`
 	ExtraAuthQuery        map[string]string `json:"extras,omitempty"`
 }
@@ -78,10 +87,21 @@ var _ couchdb.Doc = (*AccountType)(nil)
 type tokenEndpointResponse struct {
 	RefreshToken     string `json:"refresh_token"`
 	AccessToken      string `json:"access_token"`
+	IDToken          string `json:"id_token"` // alternative name for access_token
 	ExpiresIn        int    `json:"expires_in"`
 	TokenType        string `json:"token_type"`
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
+}
+
+// RedirectURI returns the redirectURI for an account,
+// it can be either the
+func (at *AccountType) RedirectURI(i *instance.Instance) string {
+	redirectURI := i.PageURL("/accounts/"+at.ID()+"/redirect", nil)
+	if at.RegisteredRedirectURI != "" {
+		redirectURI = at.RegisteredRedirectURI
+	}
+	return redirectURI
 }
 
 // MakeOauthStartURL returns the url at which direct the user to start
@@ -94,10 +114,7 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 	}
 	vv := &url.Values{}
 
-	redirectURI := i.PageURL("/accounts/"+at.ID()+"/redirect", nil)
-	if at.RegisteredRedirectURI != "" {
-		redirectURI = at.RegisteredRedirectURI
-	}
+	redirectURI := at.RedirectURI(i)
 
 	switch at.GrantMode {
 	case AuthorizationCode:
@@ -128,73 +145,6 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 	u.RawQuery = vv.Encode()
 	return u.String(), nil
 
-}
-
-// AccessCodeToAccessToken exchange an access code for an Access Token
-// as defined in https://tools.ietf.org/html/rfc6749#section-4.1.3
-func (at *AccountType) AccessCodeToAccessToken(authcode string) (*Account, error) {
-	res, err := http.PostForm(at.TokenEndpoint, url.Values{
-		"grant_type":    []string{AuthorizationCode},
-		"code":          []string{authcode},
-		"redirect_uri":  []string{at.RegisteredRedirectURI},
-		"client_id":     []string{at.ClientID},
-		"client_secret": []string{at.ClientSecret},
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		return nil, errors.New("oauth services responded with non-200 res")
-	}
-
-	resBody, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var out tokenEndpointResponse
-	err = json.Unmarshal(resBody, &out)
-	if err != nil {
-		return nil, err
-	}
-
-	if out.Error != "" {
-		return nil, fmt.Errorf("OauthError(%s) %s", out.Error, out.ErrorDescription)
-	}
-
-	var ExpiresAt time.Time
-	if out.ExpiresIn != 0 {
-		ExpiresAt = time.Now().Add(time.Duration(out.ExpiresIn) * time.Second)
-	}
-
-	a := &Account{
-		AccountType: at.ID(),
-		Oauth:       &OauthInfo{ExpiresAt: ExpiresAt},
-	}
-
-	if out.AccessToken == "" {
-		return nil, errors.New("server responded without access token")
-	}
-
-	a.Oauth.AccessToken = out.AccessToken
-	a.Oauth.RefreshToken = out.RefreshToken
-	a.Oauth.TokenType = out.TokenType
-
-	// decode same resBody into a map for non-standard fields
-	var extras map[string]interface{}
-	json.Unmarshal(resBody, &extras)
-	delete(extras, "access_token")
-	delete(extras, "refresh_token")
-	delete(extras, "token_type")
-	delete(extras, "expires_in")
-
-	if len(extras) > 0 {
-		a.Extras = extras
-	}
-
-	return a, nil
 }
 
 // RefreshAccount requires a new AccessToken using the RefreshToken
