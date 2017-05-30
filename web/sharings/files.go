@@ -256,7 +256,7 @@ func removeReferences(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, nil)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func trashHandler(c echo.Context) error {

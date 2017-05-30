@@ -679,10 +679,7 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		doc.Type = doctype
 	}
 
-	loop := true
-	for loop {
-		loop = cursor.HasMore()
-
+	for {
 		perms, errg := permissions.GetSharedWithMePermissionsByDoctype(ins,
 			doctype, cursor)
 		if errg != nil {
@@ -695,6 +692,10 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 					return nil
 				}
 			}
+		}
+
+		if !cursor.HasMore() {
+			break
 		}
 	}
 

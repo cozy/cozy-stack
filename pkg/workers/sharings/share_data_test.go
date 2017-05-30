@@ -402,7 +402,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 		"/sharings": func(router *echo.Group) {
 			router.PATCH("/doc/:doctype/:docid", func(c echo.Context) error {
 				assert.Equal(t, fileDoc.ID(), c.Param("docid"))
-				assert.Equal(t, fileDoc.Rev(), c.QueryParam("rev"))
+				assert.Equal(t, fileDoc.Rev(),
+					c.QueryParam(consts.QueryParamRev))
 				assert.Equal(t, consts.FileType, c.QueryParam("Type"))
 
 				var patch vfs.DocPatch
@@ -507,7 +508,8 @@ func TestPatchDir(t *testing.T) {
 		"/sharings": func(router *echo.Group) {
 			router.PATCH("/doc/:doctype/:docid", func(c echo.Context) error {
 				assert.Equal(t, dirDoc.ID(), c.Param("docid"))
-				assert.Equal(t, dirDoc.Rev(), c.QueryParam("rev"))
+				assert.Equal(t, dirDoc.Rev(),
+					c.QueryParam(consts.QueryParamRev))
 				assert.Equal(t, consts.DirType, c.QueryParam("Type"))
 
 				var patch vfs.DocPatch
@@ -611,7 +613,8 @@ func TestDeleteDirOrFile(t *testing.T) {
 			router.DELETE("/doc/:doctype/:docid", func(c echo.Context) error {
 				assert.Equal(t, dirDoc.DocType(), c.Param("doctype"))
 				assert.Equal(t, dirDoc.ID(), c.Param("docid"))
-				assert.Equal(t, dirDoc.Rev(), c.QueryParam("rev"))
+				assert.Equal(t, dirDoc.Rev(),
+					c.QueryParam(consts.QueryParamRev))
 				return c.JSON(http.StatusOK, nil)
 			})
 		},

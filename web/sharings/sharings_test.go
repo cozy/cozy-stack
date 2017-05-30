@@ -554,7 +554,7 @@ func TestRemoveReferences(t *testing.T) {
 	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
 	fileDoc, err := testInstance.VFS().FileByID(fileToKeep.ID())
 	assert.NoError(t, err)
@@ -581,7 +581,7 @@ func TestRemoveReferences(t *testing.T) {
 	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
 
 	dirDoc, err := testInstance.VFS().DirByID(dirToTrash.ID())
 	assert.NoError(t, err)

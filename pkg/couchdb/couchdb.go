@@ -25,9 +25,9 @@ import (
 // a upperbound for string.
 const MaxString = mango.MaxString
 
-// This constant is used to evaluate permissions in the `Valid` method of a
-// JSONDoc object.
-const selectorReferencedBy = "referenced_by"
+// SelectorReferencedBy is the string constant for the references in a JSON
+// document.
+const SelectorReferencedBy = "referenced_by"
 
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
@@ -206,12 +206,12 @@ func (j JSONDoc) Get(key string) interface{} {
 //     {"type": "doctype2", "id": "id2"},
 // ]
 func (j JSONDoc) Valid(field, value string) bool {
-	if field == selectorReferencedBy {
+	if field == SelectorReferencedBy {
 		rawReferences := j.Get(field)
-		if rawReferences == nil {
+		references, ok := rawReferences.([]interface{})
+		if !ok {
 			return false
 		}
-		references := rawReferences.([]interface{})
 
 		values := strings.Split(value, "/")
 		valueType, valueID := values[0], values[1]

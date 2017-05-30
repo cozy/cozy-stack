@@ -106,7 +106,7 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 		if err != nil {
 			return err
 		}
-		refs = string(b[:])
+		refs = string(b)
 	}
 
 	fileOpts.queries = url.Values{
@@ -169,16 +169,11 @@ func (opts *SendOptions) extractRelevantReferences(refs []couchdb.DocReference) 
 	sharedRefs := opts.getSharedReferences()
 
 	for i, ref := range refs {
-		match := false
 		for _, sharedRef := range sharedRefs {
 			if ref.ID == sharedRef.ID {
-				match = true
+				res = append(res, refs[i])
 				break
 			}
-		}
-
-		if match {
-			res = append(res, refs[i])
 		}
 	}
 
