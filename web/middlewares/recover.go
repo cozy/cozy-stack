@@ -9,20 +9,17 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
-type (
-	// RecoverConfig defines the config for Recover middleware.
-	RecoverConfig struct {
-		// Skipper defines a function to skip middleware.
-		Skipper middleware.Skipper
+// RecoverConfig defines the config for Recover middleware.
+type RecoverConfig struct {
+	// Skipper defines a function to skip middleware.
+	Skipper middleware.Skipper
 
-		// Size of the stack to be printed.
-		// Optional. Default value 4KB.
-		StackSize int `json:"stack_size"`
-	}
-)
+	// Size of the stack to be printed.
+	// Optional. Default value 4KB.
+	StackSize int `json:"stack_size"`
+}
 
 // RecoverWithConfig returns a Recover middleware with config.
-// See: `Recover()`.
 func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 	// Defaults
 	if config.Skipper == nil {
