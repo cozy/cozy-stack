@@ -21,29 +21,15 @@ type (
 	}
 )
 
-var (
-	// DefaultRecoverConfig is the default Recover middleware config.
-	DefaultRecoverConfig = RecoverConfig{
-		Skipper:   middleware.DefaultSkipper,
-		StackSize: 4 << 10, // 4 KB
-	}
-)
-
-// Recover returns a middleware which recovers from panics anywhere in the chain
-// and handles the control to the centralized HTTPErrorHandler.
-func Recover() echo.MiddlewareFunc {
-	return RecoverWithConfig(DefaultRecoverConfig)
-}
-
 // RecoverWithConfig returns a Recover middleware with config.
 // See: `Recover()`.
 func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 	// Defaults
 	if config.Skipper == nil {
-		config.Skipper = DefaultRecoverConfig.Skipper
+		config.Skipper = middleware.DefaultSkipper
 	}
 	if config.StackSize == 0 {
-		config.StackSize = DefaultRecoverConfig.StackSize
+		config.StackSize = 4 << 10 // 4 KB
 	}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
