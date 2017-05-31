@@ -10,6 +10,13 @@ export TEST_TOKEN=$(./cozy-stack instances token-oauth localhost:8080 $CLIENT_ID
 
 cd tests/pouchdb-integration
 npm install && npm run test
+
+if [[ "$TRAVIS" == "true" ]]; then
+  travis_retry npm install && npm run test
+else
+  npm install && npm run test
+fi
+
 testresult=$?
 cd ../..
 
