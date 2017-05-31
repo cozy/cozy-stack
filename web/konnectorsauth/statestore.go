@@ -17,6 +17,7 @@ type stateHolder struct {
 	InstanceDomain string
 	AccountType    string
 	ClientState    string
+	Nonce          string
 	ExpiresAt      int64
 }
 

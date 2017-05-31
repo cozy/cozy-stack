@@ -8,3 +8,4 @@
 local.env
 tests/pouchdb-integration/node_modules
 tests/pouchdb-integration/replication-target
+scripts/nodeslim.aci
