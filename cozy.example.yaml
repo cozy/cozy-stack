@@ -53,6 +53,8 @@ konnectors:
   # oauthstate: redis://localhost:6379/6
 
 mail:
+  # mail noreply address - flags: --mail-noreply-address
+  noreply-address: noreply@localhost
   # mail smtp host - flags: --mail-host
   host: smtp.home
   # mail smtp port - flags: --mail-port

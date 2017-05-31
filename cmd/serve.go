@@ -114,6 +114,9 @@ func init() {
 	flags.Bool("log-syslog", false, "use the local syslog for logging")
 	checkNoErr(viper.BindPFlag("log.syslog", flags.Lookup("log-syslog")))
 
+	flags.String("mail-noreply-address", "", "mail address used for sending mail as a noreply (forgot passwords for example)")
+	checkNoErr(viper.BindPFlag("mail.noreply_address", flags.Lookup("mail-noreply-address")))
+
 	flags.String("mail-host", "localhost", "mail smtp host")
 	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
 

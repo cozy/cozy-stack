@@ -81,6 +81,7 @@ type Config struct {
 	Subdomains string
 	AdminHost  string
 	AdminPort  int
+	NoReply    string
 
 	Fs         Fs
 	CouchDB    CouchDB
@@ -263,6 +264,7 @@ func UseViper(v *viper.Viper) error {
 		AdminHost:  v.GetString("admin.host"),
 		AdminPort:  v.GetInt("admin.port"),
 		Assets:     v.GetString("assets"),
+		NoReply:    v.GetString("mail.noreply_address"),
 		Fs: Fs{
 			URL: fsURL.String(),
 		},

@@ -86,7 +86,11 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 			return err
 		}
 		opts.To = []*Address{toAddr}
-		opts.From = &Address{Email: "noreply@" + utils.StripPort(domain)}
+		from := config.GetConfig().NoReply
+		if from == "" {
+			from = "noreply@" + utils.StripPort(domain)
+		}
+		opts.From = &Address{Email: from}
 		if tmpl, ok := opts.TemplateValues.(map[string]interface{}); ok {
 			tmpl["RecipientName"] = toAddr.Name
 		}
