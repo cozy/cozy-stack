@@ -1,5 +1,9 @@
 package consts
 
+import (
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+)
+
 // Instances doc type for User's instance document
 const Instances = "instances"
 
@@ -110,11 +114,16 @@ const (
 )
 
 const (
+	// SelectorReferencedBy is the "referenced_by" selector.
+	SelectorReferencedBy = couchdb.SelectorReferencedBy
+)
+
+const (
 	// QueryParamRev is the key for the revision value in a query string.
-	QueryParamRev = "rev"
+	QueryParamRev = "Rev"
 	// QueryParamDirID is the key for the `DirID` field of a vfs.FileDoc or
 	// vfs.DirDoc, in a query string.
-	QueryParamDirID = "dir_id"
+	QueryParamDirID = "Dir_id"
 	// QueryParamName is the key for the name value in a query string.
 	QueryParamName = "Name"
 	// QueryParamType is the key for the `type` value (file or directory) in
@@ -129,14 +138,14 @@ const (
 	// QueryParamUpdatedAt is the key for the `Updated_at` value in a query
 	// string.
 	QueryParamUpdatedAt = "Updated_at"
-	// QueryParamReferencedBy is the key for the `referenced_by` values in a
-	// query string.
-	QueryParamReferencedBy = "Referenced_by"
 	// QueryParamRecursive is the key for the `recursive` value in a query
 	// string.
 	QueryParamRecursive = "Recursive"
 	// QueryParamTags is the key for the `tags` values in a query string.
 	QueryParamTags = "Tags"
+	// QueryParamReferencedBy is the key for the `referenced_by` values in a
+	// query string.
+	QueryParamReferencedBy = "Referenced_by"
 )
 
 // AppsRegistry is an hard-coded list of known apps, with their source URLs

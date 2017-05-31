@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	sharingWorker "github.com/cozy/cozy-stack/pkg/workers/sharings"
 )
 
@@ -225,7 +226,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		docType := rule.Type
 		// Trigger the updates if the sharing is not one-shot
 		if sharing.SharingType != consts.OneShotSharing {
-			if err := AddTrigger(instance, rule, sharing.SharingID); err != nil {
+			err := AddTrigger(instance, rule, sharing.SharingID)
+			if err != nil {
 				return err
 			}
 		}
@@ -234,9 +236,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 		// Dynamic sharing
 		if rule.Selector != "" {
-
 			// Particular case for referenced_by: use the existing view
-			if rule.Selector == "referenced_by" {
+			if rule.Selector == consts.SelectorReferencedBy {
 				for _, val := range rule.Values {
 					// A referenced_by selector implies Values in the form
 					// ["refDocType/refId"]
@@ -251,7 +252,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 						Reduce: false,
 					}
 					var res couchdb.ViewResponse
-					err := couchdb.ExecView(instance, consts.FilesReferencedByView, req, &res)
+					err := couchdb.ExecView(instance,
+						consts.FilesReferencedByView, req, &res)
 					if err != nil {
 						return err
 					}
@@ -264,7 +266,8 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 				// Create index based on selector to retrieve documents to share
 				indexName := "by-" + rule.Selector
-				index := mango.IndexOnFields(docType, indexName, []string{rule.Selector})
+				index := mango.IndexOnFields(docType, indexName,
+					[]string{rule.Selector})
 				err := couchdb.DefineIndex(instance, index)
 				if err != nil {
 					return err
@@ -276,10 +279,11 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 				// NOTE: this is not efficient in case of many Values
 				// We might consider a map-reduce approach in case of bottleneck
 				for _, val := range rule.Values {
-					err = couchdb.FindDocs(instance, docType, &couchdb.FindRequest{
-						UseIndex: indexName,
-						Selector: mango.Equal(rule.Selector, val),
-					}, &docs)
+					err = couchdb.FindDocs(instance, docType,
+						&couchdb.FindRequest{
+							UseIndex: indexName,
+							Selector: mango.Equal(rule.Selector, val),
+						}, &docs)
 					if err != nil {
 						return err
 					}
@@ -305,13 +309,15 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 				Token:  recStatus.AccessToken.AccessToken,
 			}
 
-			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, sharingWorker.SendOptions{
-				DocID:      val,
-				Selector:   rule.Selector,
-				Values:     values,
-				DocType:    docType,
-				Recipients: []*sharingWorker.RecipientInfo{rec},
-			})
+			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding,
+				sharingWorker.SendOptions{
+					DocID:      val,
+					Selector:   rule.Selector,
+					Values:     rule.Values,
+					DocType:    docType,
+					Recipients: []*sharingWorker.RecipientInfo{rec},
+				},
+			)
 			if err != nil {
 				return err
 			}
@@ -646,6 +652,75 @@ func deleteOAuthClient(ins *instance.Instance, id string) error {
 		return errors.New(crErr.Error)
 	}
 	return nil
+}
+
+// RemoveDocumentIfNotShared checks if the given document is still shared and
+// removes it if not.
+//
+// To check if a document is still shared all the permissions associated with
+// sharings that apply to its doctype are fetched. If at least one permission
+// "matches" then the document is kept.
+func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) error {
+	fs := ins.VFS()
+
+	// TODO Using a cursor might lead to inconsistency. Change it if the need
+	// arises.
+	cursor := couchdb.NewSkipCursor(10000, 0)
+
+	doc := couchdb.JSONDoc{}
+	err := couchdb.GetDoc(ins, doctype, docID, &doc)
+	if err != nil {
+		return err
+	}
+
+	// The doctype is not always set, at least in the tests, and is required in
+	// order to delete the document.
+	if doc.DocType() == "" {
+		doc.Type = doctype
+	}
+
+	for {
+		perms, errg := permissions.GetSharedWithMePermissionsByDoctype(ins,
+			doctype, cursor)
+		if errg != nil {
+			return errg
+		}
+
+		for _, perm := range perms {
+			for _, rule := range perm.Permissions {
+				if rule.ValuesValid(doc) {
+					return nil
+				}
+			}
+		}
+
+		if !cursor.HasMore() {
+			break
+		}
+	}
+
+	switch doctype {
+	case consts.Files:
+		dirDoc, fileDoc, errd := fs.DirOrFileByID(docID)
+		if errd != nil {
+			return errd
+		}
+
+		if dirDoc != nil {
+			_, errt := vfs.TrashDir(fs, dirDoc)
+			return errt
+		}
+
+		_, errt := vfs.TrashFile(fs, fileDoc)
+		return errt
+
+	default:
+		errd := couchdb.DeleteDoc(ins, doc)
+		if errd != nil {
+			return errd
+		}
+		return nil
+	}
 }
 
 var (

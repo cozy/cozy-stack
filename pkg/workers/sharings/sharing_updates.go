@@ -114,31 +114,26 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	}
 	sharing := &res[0]
 
-	// Check the updated document is legitimate for this sharing
-	if err = checkDocument(sharing, docID); err != nil {
-		return err
-	}
-	return sendToRecipients(i, domain, sharing, &rule, docID, event.Event.Type)
-}
-
-// checkDocument checks the legitimity of the updated document to be shared
-func checkDocument(sharing *Sharing, docID string) error {
-	// Check sharing type
+	// One-Shot sharing do not propagate updates.
 	if sharing.SharingType == consts.OneShotSharing {
 		return ErrDocumentNotLegitimate
 	}
-	return nil
+
+	return sendToRecipients(i, domain, sharing, &rule, docID, event.Event.Type)
 }
 
-// sendToRecipients sends the document to the recipient, or sharer
-func sendToRecipients(instance *instance.Instance, domain string, sharing *Sharing, rule *permissions.Rule, docID, eventType string) error {
+// sendToRecipients sends the document to the recipient, or sharer.
+//
+// Several scenario are to be distinguished:
+// TODO explanation
+func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, rule *permissions.Rule, docID, eventType string) error {
 	var recInfos []*RecipientInfo
 
 	if isRecipientSide(sharing) {
 		// We are on the recipient side
 		recInfos = make([]*RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
-		info, err := extractRecipient(instance, sharerStatus)
+		info, err := extractRecipient(ins, sharerStatus)
 		if err != nil {
 			return err
 		}
@@ -147,7 +142,7 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 		// We are on the sharer side
 		recInfos = make([]*RecipientInfo, len(sharing.RecipientsStatus))
 		for i, rec := range sharing.RecipientsStatus {
-			info, err := extractRecipient(instance, rec)
+			info, err := extractRecipient(ins, rec)
 			if err != nil {
 				return err
 			}
@@ -159,17 +154,17 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 		DocID:      docID,
 		DocType:    rule.Type,
 		Recipients: recInfos,
-		Path:       fmt.Sprintf("/sharings/doc/%s/%s", rule.Type, docID),
+		Selector:   rule.Selector,
+		Values:     rule.Values,
+
+		Path: fmt.Sprintf("/sharings/doc/%s/%s", rule.Type, docID),
 	}
 
 	var fileDoc *vfs.FileDoc
 	var dirDoc *vfs.DirDoc
 	var err error
 	if opts.DocType == consts.Files && eventType != realtime.EventDelete {
-		opts.Selector = rule.Selector
-		opts.Values = rule.Values
-
-		fs := instance.VFS()
+		fs := ins.VFS()
 		dirDoc, fileDoc, err = fs.DirOrFileByID(docID)
 		if err != nil {
 			return err
@@ -185,28 +180,55 @@ func sendToRecipients(instance *instance.Instance, domain string, sharing *Shari
 	switch eventType {
 	case realtime.EventCreate:
 		if opts.Type == consts.FileType {
-			return SendFile(instance, opts, fileDoc)
+			ins.Logger().Debugf("[sharings] Sending file: %#v", fileDoc)
+			return SendFile(ins, opts, fileDoc)
 		}
 		if opts.Type == consts.DirType {
-			return SendDir(instance, opts, dirDoc)
+			ins.Logger().Debugf("[sharings] Sending directory: %#v", dirDoc)
+			return SendDir(ins, opts, dirDoc)
 		}
-		return SendDoc(instance, opts)
+
+		ins.Logger().Debugf("[sharings] Sending JSON (%v): %v", opts.DocType,
+			opts.DocID)
+		return SendDoc(ins, opts)
 
 	case realtime.EventUpdate:
 		if opts.Type == consts.FileType {
 			if fileDoc.Trashed {
+				ins.Logger().Debugf("[sharings] Sending trash: %#v", fileDoc)
 				return DeleteDirOrFile(opts)
 			}
-			return UpdateOrPatchFile(instance, opts, fileDoc)
+
+			stillShared := isDocumentStillShared(opts, fileDoc.ReferencedBy)
+			if !stillShared {
+				ins.Logger().Debugf("[sharings] Sending remove references "+
+					"from %#v", fileDoc)
+				return RemoveDirOrFileFromSharing(ins, opts)
+			}
+
+			return UpdateOrPatchFile(ins, opts, fileDoc)
 		}
 
 		if opts.Type == consts.DirType {
 			if dirDoc.DirID == consts.TrashDirID {
+				ins.Logger().Debugf("[sharings] Sending trash: %#v", dirDoc)
 				return DeleteDirOrFile(opts)
 			}
+
+			stillShared := isDocumentStillShared(opts, dirDoc.ReferencedBy)
+			if !stillShared {
+				ins.Logger().Debugf("[sharings] Sending remove references "+
+					"from %#v", dirDoc)
+				return RemoveDirOrFileFromSharing(ins, opts)
+			}
+
+			ins.Logger().Debugf("[sharings] Sending patch dir %#v", dirDoc)
 			return PatchDir(opts, dirDoc)
 		}
-		return UpdateDoc(instance, opts)
+
+		ins.Logger().Debugf("[sharings] Sending update JSON (%v): %v",
+			opts.DocType, opts.DocID)
+		return UpdateDoc(ins, opts)
 
 	case realtime.EventDelete:
 		if opts.DocType == consts.Files {
@@ -279,4 +301,24 @@ func isRecipientSide(sharing *Sharing) bool {
 		}
 	}
 	return false
+}
+
+// This function checks if the document with the given ID still belong in the
+// sharing that triggered the worker.
+//
+// As the trigger is started by either the current revision of said document or
+// by the previous one, we don't have another way of knowing if the document is
+// still shared.
+//
+// TODO Handle sharing of directories
+func isDocumentStillShared(opts *SendOptions, docRefs []couchdb.DocReference) bool {
+	switch opts.Selector {
+	case consts.SelectorReferencedBy:
+		relevantRefs := opts.extractRelevantReferences(docRefs)
+
+		return len(relevantRefs) > 0
+
+	default:
+		return isShared(opts.DocID, opts.Values)
+	}
 }

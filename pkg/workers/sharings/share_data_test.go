@@ -28,6 +28,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	"reflect"
 )
 
 var testDocType = "io.cozy.tests"
@@ -247,6 +248,64 @@ func TestSendFile(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestSendFileThroughUpdateOrPatchFile(t *testing.T) {
+	// A file can be sent if a GET on the recipient side results in a
+	// "Not Found" error. This is what this test is about.
+
+	fs := testInstance.VFS()
+	fileDoc := createFile(t, fs, "filetestsendthroughupdateorpatchfile",
+		"Hello, it's me again.")
+
+	mpr := map[string]func(*echo.Group){
+		"/files": func(router *echo.Group) {
+			router.GET("/:file-id", func(c echo.Context) error {
+				assert.Equal(t, fileDoc.ID(), c.Param("file-id"))
+				return c.JSON(http.StatusNotFound, map[string]string{
+					"status": "404",
+					"title":  "Not Found",
+					"detail": "sorry don't want to look",
+				})
+			})
+		},
+		"/sharings": func(router *echo.Group) {
+			router.POST("/doc/:doctype/:docid", func(c echo.Context) error {
+				assert.Equal(t, fileDoc.DocType(), c.Param("doctype"))
+				assert.Equal(t, fileDoc.ID(), c.Param("docid"))
+				assert.Equal(t, consts.FileType, c.QueryParam("Type"))
+				assert.Equal(t, fileDoc.DocName, c.QueryParam("Name"))
+				sentFileDoc, err := files.FileDocFromReq(c, fileDoc.DocName,
+					consts.SharedWithMeDirID, nil)
+				assert.NoError(t, err)
+				assert.Equal(t, fileDoc.MD5Sum, sentFileDoc.MD5Sum)
+				return c.JSON(http.StatusOK, nil)
+			})
+		},
+	}
+	if ts != nil {
+		ts.Close()
+	}
+	ts = setup.GetTestServerMultipleRoutes(mpr)
+	tsURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+
+	recipient := &RecipientInfo{
+		URL:   tsURL.Host,
+		Token: "idontneedoneImtesting",
+	}
+	recipients := []*RecipientInfo{recipient}
+
+	updateFileOpts := &SendOptions{
+		DocID:   fileDoc.ID(),
+		DocType: fileDoc.DocType(),
+		Type:    consts.FileType,
+		Path: fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
+			fileDoc.ID()),
+		Recipients: recipients,
+	}
+	err = UpdateOrPatchFile(testInstance, updateFileOpts, fileDoc)
+	assert.NoError(t, err)
+}
+
 func TestSendDir(t *testing.T) {
 	fs := testInstance.VFS()
 	dirDoc := createDir(t, fs, "testsenddir")
@@ -297,7 +356,31 @@ func TestSendDir(t *testing.T) {
 func TestUpdateOrPatchFile(t *testing.T) {
 	fs := testInstance.VFS()
 	fileDoc := createFile(t, fs, "original", "original file")
+	fileDoc.ReferencedBy = []couchdb.DocReference{
+		couchdb.DocReference{Type: "random", ID: "123"},
+	}
+	patchedFileDoc := &vfs.FileDoc{
+		DocName:   "patchedName",
+		DirID:     fileDoc.DirID,
+		Tags:      fileDoc.Tags,
+		UpdatedAt: fileDoc.UpdatedAt,
+		DocID:     fileDoc.ID(),
+		DocRev:    fileDoc.Rev(),
+		MD5Sum:    fileDoc.MD5Sum,
+	}
+	referenceUpdateFileDoc := &vfs.FileDoc{
+		DocName:   fileDoc.DocName,
+		DirID:     fileDoc.DirID,
+		Tags:      fileDoc.Tags,
+		UpdatedAt: fileDoc.UpdatedAt,
+		DocID:     fileDoc.ID(),
+		DocRev:    fileDoc.Rev(),
+		MD5Sum:    fileDoc.MD5Sum,
+	}
+	newReference := couchdb.DocReference{Type: "new", ID: "reference"}
+	referenceUpdateFileDoc.ReferencedBy = []couchdb.DocReference{newReference}
 	updatedFileDoc := createFile(t, fs, "update", "this is an update")
+	updatedFileDoc.ReferencedBy = []couchdb.DocReference{newReference}
 
 	mpr := map[string]func(*echo.Group){
 		"/files": func(router *echo.Group) {
@@ -305,17 +388,28 @@ func TestUpdateOrPatchFile(t *testing.T) {
 				assert.NotEmpty(t, c.Param("file-id"))
 				return jsonapi.Data(c, http.StatusOK, &file{fileDoc}, nil)
 			})
+			router.POST("/:file-id/relationships/referenced_by",
+				func(c echo.Context) error {
+					assert.Equal(t, fileDoc.ID(), c.Param("file-id"))
+					refsReq, err := jsonapi.BindRelations(c.Request())
+					assert.NoError(t, err)
+					assert.True(t, reflect.DeepEqual(refsReq,
+						referenceUpdateFileDoc.ReferencedBy))
+					return c.JSON(http.StatusOK, nil)
+				},
+			)
 		},
 		"/sharings": func(router *echo.Group) {
 			router.PATCH("/doc/:doctype/:docid", func(c echo.Context) error {
 				assert.Equal(t, fileDoc.ID(), c.Param("docid"))
-				assert.Equal(t, fileDoc.Rev(), c.QueryParam("rev"))
+				assert.Equal(t, fileDoc.Rev(),
+					c.QueryParam(consts.QueryParamRev))
 				assert.Equal(t, consts.FileType, c.QueryParam("Type"))
 
 				var patch vfs.DocPatch
 				_, err := jsonapi.Bind(c.Request(), &patch)
 				assert.NoError(t, err)
-				assert.Equal(t, fileDoc.DocName, *patch.Name)
+				assert.Equal(t, patchedFileDoc.DocName, *patch.Name)
 				assert.Equal(t, fileDoc.DirID, *patch.DirID)
 				assert.Equal(t, fileDoc.Tags, *patch.Tags)
 				assert.Equal(t, fileDoc.UpdatedAt.Unix(),
@@ -352,6 +446,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 	}
 	recipients := []*RecipientInfo{testRecipient}
 
+	// Patch test: we trigger a patch by providing a different DocName through
+	// patchedFileDoc.
 	patchSendOptions := &SendOptions{
 		DocID:   fileDoc.ID(),
 		DocType: fileDoc.DocType(),
@@ -360,9 +456,30 @@ func TestUpdateOrPatchFile(t *testing.T) {
 			fileDoc.ID()),
 		Recipients: recipients,
 	}
-	err = UpdateOrPatchFile(testInstance, patchSendOptions, fileDoc)
+	err = UpdateOrPatchFile(testInstance, patchSendOptions, patchedFileDoc)
 	assert.NoError(t, err)
 
+	// Reference test: we trigger an update of references by providing a
+	// "missing" reference through the selector/values in the SendOptions and in
+	// the ReferencedBy field of referenceUpdateFileDoc.
+	referenceSendOptions := &SendOptions{
+		DocID:   fileDoc.ID(),
+		DocType: fileDoc.DocType(),
+		Type:    consts.FileType,
+		Path: fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
+			fileDoc.ID()),
+		Recipients: recipients,
+		Selector:   consts.SelectorReferencedBy,
+		Values:     []string{"new/reference"},
+	}
+	err = UpdateOrPatchFile(testInstance, referenceSendOptions,
+		referenceUpdateFileDoc)
+	assert.NoError(t, err)
+
+	// Update test: we trigger a content update by providing a file with a
+	// different MD5Sum, updatedFileDoc.
+	// We still set Selector/Values so as to test the sharedRefs part in the
+	// method `fillDetailsAndOpenFile`.
 	updateSendOptions := &SendOptions{
 		DocID:   updatedFileDoc.ID(),
 		DocType: updatedFileDoc.DocType(),
@@ -370,6 +487,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", updatedFileDoc.DocType(),
 			updatedFileDoc.ID()),
 		Recipients: recipients,
+		Selector:   consts.SelectorReferencedBy,
+		Values:     []string{"new/reference"},
 	}
 	err = UpdateOrPatchFile(testInstance, updateSendOptions, updatedFileDoc)
 	assert.NoError(t, err)
@@ -389,7 +508,8 @@ func TestPatchDir(t *testing.T) {
 		"/sharings": func(router *echo.Group) {
 			router.PATCH("/doc/:doctype/:docid", func(c echo.Context) error {
 				assert.Equal(t, dirDoc.ID(), c.Param("docid"))
-				assert.Equal(t, dirDoc.Rev(), c.QueryParam("rev"))
+				assert.Equal(t, dirDoc.Rev(),
+					c.QueryParam(consts.QueryParamRev))
 				assert.Equal(t, consts.DirType, c.QueryParam("Type"))
 
 				var patch vfs.DocPatch
@@ -429,6 +549,55 @@ func TestPatchDir(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRemoveDirOrFileFromSharing(t *testing.T) {
+	docID := "thisistheid"
+	refs := []couchdb.DocReference{
+		couchdb.DocReference{
+			Type: "first",
+			ID:   "123",
+		},
+		couchdb.DocReference{
+			Type: "second",
+			ID:   "456",
+		},
+	}
+
+	mpr := map[string]func(*echo.Group){
+		"/sharings": func(router *echo.Group) {
+			router.DELETE("/files/:file-id/referenced_by",
+				func(c echo.Context) error {
+					assert.Equal(t, docID, c.Param("file-id"))
+					reqRefs, err := jsonapi.BindRelations(c.Request())
+					assert.NoError(t, err)
+					assert.True(t, reflect.DeepEqual(refs, reqRefs))
+					return c.JSON(http.StatusOK, nil)
+				},
+			)
+		},
+	}
+	if ts != nil {
+		ts.Close()
+	}
+	ts = setup.GetTestServerMultipleRoutes(mpr)
+	tsURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+	testRecipient := &RecipientInfo{
+		URL:   tsURL.Host,
+		Token: "dontneedoneImtesting",
+	}
+	recipients := []*RecipientInfo{testRecipient}
+
+	opts := SendOptions{
+		Selector:   consts.SelectorReferencedBy,
+		Values:     []string{"first/123", "second/456"},
+		DocID:      docID,
+		Recipients: recipients,
+	}
+
+	err = RemoveDirOrFileFromSharing(testInstance, &opts)
+	assert.NoError(t, err)
+}
+
 func TestDeleteDirOrFile(t *testing.T) {
 	fs := testInstance.VFS()
 	dirDoc := createDir(t, fs, "testdeletedir")
@@ -444,7 +613,8 @@ func TestDeleteDirOrFile(t *testing.T) {
 			router.DELETE("/doc/:doctype/:docid", func(c echo.Context) error {
 				assert.Equal(t, dirDoc.DocType(), c.Param("doctype"))
 				assert.Equal(t, dirDoc.ID(), c.Param("docid"))
-				assert.Equal(t, dirDoc.Rev(), c.QueryParam("rev"))
+				assert.Equal(t, dirDoc.Rev(),
+					c.QueryParam(consts.QueryParamRev))
 				return c.JSON(http.StatusOK, nil)
 			})
 		},
@@ -544,17 +714,6 @@ func TestDocHasChangesNotSameDocsSuccess(t *testing.T) {
 	assert.Equal(t, true, equal)
 }
 
-func TestFindNewRefsBadPermission(t *testing.T) {
-	fileDoc := &vfs.FileDoc{}
-	remoteFileDoc := &vfs.FileDoc{}
-	opts := &SendOptions{
-		Values: []string{"badperm"},
-	}
-	_, _, err := findNewRefs(fileDoc, remoteFileDoc, opts)
-	assert.Error(t, err)
-	assert.Equal(t, ErrBadPermission.Error(), err.Error())
-}
-
 func TestFindNewRefsSameRefSuccess(t *testing.T) {
 	sharedRef := couchdb.DocReference{Type: "reftype", ID: "refid"}
 	localRefs := []couchdb.DocReference{sharedRef}
@@ -568,49 +727,113 @@ func TestFindNewRefsSameRefSuccess(t *testing.T) {
 	opts := &SendOptions{
 		Values: []string{"reftype/refid"},
 	}
-	refs, isUpdate, err := findNewRefs(fileDoc, remoteFileDoc, opts)
-	assert.NoError(t, err)
-	assert.Equal(t, false, isUpdate)
+	refs := findNewRefs(opts, fileDoc, remoteFileDoc)
 	var expected []couchdb.DocReference
 	assert.Equal(t, expected, refs)
 }
 
-func TestFindNewRefsRemoveLocalRefsSuccess(t *testing.T) {
-	sharedRef := couchdb.DocReference{Type: "reftype", ID: "refid"}
-	localRefs := []couchdb.DocReference{}
-	remoteRefs := []couchdb.DocReference{sharedRef}
-	fileDoc := &vfs.FileDoc{
-		ReferencedBy: localRefs,
+func TestExtractRelevantReferences(t *testing.T) {
+	fileDoc := createFile(t, testInstance.VFS(), "extractFileRef",
+		"testExtractFileRef")
+	refs := []couchdb.DocReference{
+		couchdb.DocReference{
+			ID:   "123",
+			Type: "first",
+		},
+		couchdb.DocReference{
+			ID:   "456",
+			Type: "second",
+		},
+		couchdb.DocReference{
+			ID:   "789",
+			Type: "third",
+		},
 	}
-	remoteFileDoc := &vfs.FileDoc{
-		ReferencedBy: remoteRefs,
+	fileDoc.ReferencedBy = refs
+
+	optsBad := SendOptions{
+		Selector: consts.SelectorReferencedBy,
+		Values:   []string{"123", "789"},
 	}
-	opts := &SendOptions{
-		Values: []string{"reftype/refid"},
+	relRefs := optsBad.extractRelevantReferences(refs)
+	assert.Empty(t, relRefs)
+
+	opts := SendOptions{
+		Selector: consts.SelectorReferencedBy,
+		Values:   []string{"first/123", "third/789"},
 	}
-	refs, isUpdate, err := findNewRefs(fileDoc, remoteFileDoc, opts)
-	assert.NoError(t, err)
-	assert.Equal(t, false, isUpdate)
-	assert.Equal(t, remoteRefs, refs)
+	relRefs = opts.extractRelevantReferences(refs)
+	assert.Len(t, relRefs, 2)
 }
 
-func TestFindNewRefsRemoveRemoteRefsSuccess(t *testing.T) {
-	sharedRef := couchdb.DocReference{Type: "reftype", ID: "refid"}
-	localRefs := []couchdb.DocReference{sharedRef}
-	remoteRefs := []couchdb.DocReference{}
-	fileDoc := &vfs.FileDoc{
-		ReferencedBy: localRefs,
+func TestFindMissingRefs(t *testing.T) {
+	lref := []couchdb.DocReference{
+		couchdb.DocReference{
+			Type: "first",
+			ID:   "123",
+		},
+		couchdb.DocReference{
+			Type: "second",
+			ID:   "456",
+		},
+		couchdb.DocReference{
+			Type: "third",
+			ID:   "789",
+		},
 	}
-	remoteFileDoc := &vfs.FileDoc{
-		ReferencedBy: remoteRefs,
+
+	rref := []couchdb.DocReference{
+		couchdb.DocReference{
+			Type: "first",
+			ID:   "123",
+		},
+		couchdb.DocReference{
+			Type: "third",
+			ID:   "789",
+		},
 	}
-	opts := &SendOptions{
-		Values: []string{"reftype/refid"},
+
+	missRefs := findMissingRefs(lref, rref)
+	assert.Len(t, missRefs, 1)
+	assert.True(t, reflect.DeepEqual(missRefs[0], couchdb.DocReference{
+		Type: "second", ID: "456",
+	}))
+}
+
+func TestGetParentDirID(t *testing.T) {
+	optsRoot := SendOptions{
+		Selector: "",
+		DocID:    consts.RootDirID,
 	}
-	refs, isUpdate, err := findNewRefs(fileDoc, remoteFileDoc, opts)
+	_, err := getParentDirID(&optsRoot, "dir")
+	assert.Error(t, err)
+
+	optsShared := SendOptions{
+		Selector: "",
+		DocID:    "123",
+		Values:   []string{"123"},
+	}
+	dirID, err := getParentDirID(&optsShared, "dirID")
 	assert.NoError(t, err)
-	assert.Equal(t, true, isUpdate)
-	assert.Equal(t, localRefs, refs)
+	assert.Equal(t, consts.SharedWithMeDirID, dirID)
+
+	optsNotShared := SendOptions{
+		Selector: "",
+		DocID:    "123",
+		Values:   []string{"456"},
+	}
+	dirID, err = getParentDirID(&optsNotShared, "dirID")
+	assert.NoError(t, err)
+	assert.Equal(t, "dirID", dirID)
+
+	optsNoSelector := SendOptions{
+		Selector: consts.SelectorReferencedBy,
+		DocID:    "123",
+		Values:   []string{"123", "456"},
+	}
+	dirID, err = getParentDirID(&optsNoSelector, "dirID")
+	assert.NoError(t, err)
+	assert.Equal(t, consts.SharedWithMeDirID, dirID)
 }
 
 func TestMain(m *testing.M) {
@@ -673,7 +896,14 @@ func (f *file) SetRev(rev string)  { f.doc.SetRev(rev) }
 func (f *file) DocType() string    { return f.doc.DocType() }
 func (f *file) Clone() couchdb.Doc { cloned := *f; return &cloned }
 func (f *file) Relationships() jsonapi.RelationshipMap {
-	return jsonapi.RelationshipMap{}
+	return jsonapi.RelationshipMap{
+		"referenced_by": jsonapi.Relationship{
+			Links: &jsonapi.LinksList{
+				Self: "/files/" + f.doc.ID() + "/relationships/references",
+			},
+			Data: f.doc.ReferencedBy,
+		},
+	}
 }
 func (f *file) Included() []jsonapi.Object { return []jsonapi.Object{} }
 func (f *file) MarshalJSON() ([]byte, error) {

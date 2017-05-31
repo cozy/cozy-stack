@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -22,7 +21,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/stack"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	webAuth "github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
@@ -35,6 +36,7 @@ var TestPrefix = couchdb.SimpleDatabasePrefix("couchdb-tests")
 var domainSharer = "test-sharing.sparta"
 var domainRecipient = "test-sharing.xerxes"
 
+var testInstance *instance.Instance
 var in *instance.Instance
 var recipientIn *instance.Instance
 var ts *httptest.Server
@@ -104,43 +106,56 @@ func createRecipient(t *testing.T) (*Recipient, error) {
 	return recipient, err
 }
 
-func createTestDoc(t *testing.T, withSelector bool) (*couchdb.JSONDoc, error) {
+func createDoc(t *testing.T, ins *instance.Instance, doctype string, m map[string]interface{}) *couchdb.JSONDoc {
 	doc := &couchdb.JSONDoc{
-		Type: testDocType,
-		M:    make(map[string]interface{}),
+		Type: doctype,
+		M:    m,
 	}
-	doc.M["test"] = "hello there"
-	if withSelector {
-		doc.M["dyn"] = "amic"
-	}
-	err := couchdb.CreateDoc(in, doc)
+
+	err := couchdb.CreateDoc(ins, doc)
 	assert.NoError(t, err)
-	return doc, err
+	return doc
 }
 
-func createTestFile(t *testing.T) (*vfs.FileDoc, *vfs.File, error) {
-	fileContent := "hello !"
-	fs := in.VFS()
+func insertSharingIntoDB(t *testing.T, sharing *Sharing, rule permissions.Rule) {
+	sharing.SharingID = utils.RandomString(32)
+	sharing.Permissions = permissions.Set{rule}
 
-	fileDoc, err := vfs.NewFileDoc("testfile", "", -1, nil, "", "", time.Now(), false, false, []string{})
-	if err != nil {
-		return nil, nil, err
-	}
-	body := bytes.NewReader([]byte(fileContent))
-
-	f, err := fs.CreateFile(fileDoc, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	n, err := io.Copy(f, body)
+	err := couchdb.CreateDoc(testInstance, sharing)
 	assert.NoError(t, err)
-	assert.Equal(t, len(fileContent), int(n))
+}
 
-	if err = f.Close(); err != nil {
-		return nil, nil, err
+func insertClientDocumentInDB(db couchdb.Database, clientID, url string) error {
+	client := couchdb.JSONDoc{
+		Type: consts.OAuthClients,
+		M: map[string]interface{}{
+			"_id":        clientID,
+			"client_uri": url,
+		},
 	}
-	return fileDoc, &f, nil
+
+	return couchdb.CreateNamedDocWithDB(db, client)
+}
+
+func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.DocReference) *vfs.FileDoc {
+	doc, err := vfs.NewFileDoc(name, "", -1, nil, "foo/bar", "foo", time.Now(),
+		false, false, []string{"this", "is", "spartest"})
+	assert.NoError(t, err)
+	doc.ReferencedBy = refs
+
+	body := bytes.NewReader([]byte(content))
+
+	file, err := fs.CreateFile(doc, nil)
+	assert.NoError(t, err)
+
+	n, err := io.Copy(file, body)
+	assert.NoError(t, err)
+	assert.Equal(t, len(content), int(n))
+
+	err = file.Close()
+	assert.NoError(t, err)
+
+	return doc
 }
 
 func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc, k, v string) {
@@ -238,8 +253,9 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 
 	// share doc
 	if !isFile {
-		testDoc, err = createTestDoc(t, withSelector)
-		assert.NoError(t, err)
+		testDoc = createDoc(t, in, testDocType, map[string]interface{}{
+			"dyn": "amic",
+		})
 		assert.NotNil(t, testDoc)
 		sharing, err = createSharing(t, sharingType, testDoc.ID(), isFile, withSelector)
 		assert.NoError(t, err)
@@ -247,8 +263,8 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 
 		// share file
 	} else {
-		testDocFile, _, err = createTestFile(t)
-		assert.NoError(t, err)
+		testDocFile = createFile(t, in.VFS(), "testFileAccepted",
+			"testFileAcceptedContent", []couchdb.DocReference{})
 		assert.NotNil(t, testDocFile)
 		sharing, err = createSharing(t, sharingType, testDocFile.ID(), isFile, withSelector)
 		assert.NoError(t, err)
@@ -295,9 +311,10 @@ func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool
 
 		if !isFile {
 			if withSelector {
-				var testDoc2 *couchdb.JSONDoc
-				testDoc2, err = createTestDoc(t, withSelector)
-				assert.NoError(t, err)
+				testDoc2 := createDoc(t, in, testDocType,
+					map[string]interface{}{
+						"dyn": "amic",
+					})
 				assert.NotNil(t, testDoc2)
 
 				// Wait for the document to arrive and check it
@@ -611,41 +628,27 @@ func TestRecipientRefusedSharingWhenSharingDoesNotExist(t *testing.T) {
 	assert.Equal(t, ErrSharingDoesNotExist, err)
 }
 
-func TestRecipientRefusedSharingWhenSharingIDIsNotUnique(t *testing.T) {
-	testSharingID := "sameid"
-	testClientID := "notUsedClientID"
-	testURL := "notUsedURL"
-
-	_, err := insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID, testURL)
-	if err != nil {
-		t.FailNow()
-	}
-	_, err = insertSharingDocumentInDB(TestPrefix, testSharingID, testClientID, testURL)
-	if err != nil {
-		t.FailNow()
-	}
-
-	_, err = RecipientRefusedSharing(TestPrefix, testSharingID)
-	assert.Error(t, err)
-	assert.Equal(t, ErrSharingIDNotUnique, err)
-}
-
 func TestRecipientRefusedSharingSuccess(t *testing.T) {
-	testSharingID := "SharingSuccess"
-	testClientID := "ClientSuccess"
-
-	docSharingTestID, err := insertSharingDocumentInDB(TestPrefix,
-		testSharingID, testClientID, "randomurl")
-	if err != nil {
-		t.Fail()
+	sharing := Sharing{
+		Type:        "io.cozy.events",
+		Owner:       false,
+		SharingType: consts.MasterSlaveSharing,
+	}
+	rule := permissions.Rule{
+		Selector: "",
+		Type:     "io.cozy.events",
+		Values:   []string{"123"},
+		Verbs:    permissions.ALL,
 	}
 
-	_, err = RecipientRefusedSharing(TestPrefix, testSharingID)
+	insertSharingIntoDB(t, &sharing, rule)
+
+	_, err := RecipientRefusedSharing(testInstance, sharing.SharingID)
 	assert.NoError(t, err)
 
 	// We also test that the sharing document is actually deleted.
-	sharing := couchdb.JSONDoc{}
-	err = couchdb.GetDoc(TestPrefix, consts.Sharings, docSharingTestID, &sharing)
+	doc := couchdb.JSONDoc{}
+	err = couchdb.GetDoc(TestPrefix, consts.Sharings, sharing.ID(), &doc)
 	assert.Error(t, err)
 }
 
@@ -747,14 +750,90 @@ func TestDeleteOAuthClient(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestRemoveDocumentIfNotShared(t *testing.T) {
+	// First set of tests: JSON documents.
+	// Test: the document matches a permission in a sharing so it should NOT be
+	// removed.
+	docEvent := createDoc(t, testInstance, "io.cozy.events",
+		map[string]interface{}{})
+	sharing1 := &Sharing{
+		Owner:       false,
+		SharingType: consts.MasterSlaveSharing,
+	}
+	rule1 := permissions.Rule{
+		Selector: "_id",
+		Type:     "io.cozy.events",
+		Verbs:    permissions.ALL,
+		Values:   []string{docEvent.ID()},
+	}
+	insertSharingIntoDB(t, sharing1, rule1)
+
+	err := RemoveDocumentIfNotShared(testInstance, "io.cozy.events",
+		docEvent.ID())
+	assert.NoError(t, err)
+	doc := couchdb.JSONDoc{}
+	err = couchdb.GetDoc(testInstance, "io.cozy.events", docEvent.ID(), &doc)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, doc)
+
+	// Test: the document doesn't match a permission in a sharing so it should
+	// be removed.
+	docToDelete := createDoc(t, testInstance, "io.cozy.events",
+		map[string]interface{}{})
+
+	err = RemoveDocumentIfNotShared(testInstance, "io.cozy.events",
+		docToDelete.ID())
+	assert.NoError(t, err)
+	doc = couchdb.JSONDoc{}
+	err = couchdb.GetDoc(testInstance, "io.cozy.events", docToDelete.ID(), &doc)
+	assert.Error(t, err)
+	assert.Empty(t, doc.M)
+
+	// Second set of tests: files.
+	sharing2 := &Sharing{
+		Owner:       false,
+		SharingType: consts.MasterSlaveSharing,
+	}
+	rule2 := permissions.Rule{
+		Selector: consts.SelectorReferencedBy,
+		Type:     consts.Files,
+		Verbs:    permissions.ALL,
+		Values:   []string{"io.cozy.photos.albums/456"},
+	}
+	insertSharingIntoDB(t, sharing2, rule2)
+
+	// Test: the file matches a permission in a sharing it should NOT be
+	// removed.
+	fileAlbum := createFile(t, testInstance.VFS(), "testRemoveIfNotSharedAlbum",
+		"testRemoveIfNotSharedAlbumContent", []couchdb.DocReference{
+			couchdb.DocReference{Type: "io.cozy.photos.albums", ID: "456"},
+		})
+
+	err = RemoveDocumentIfNotShared(testInstance, consts.Files, fileAlbum.ID())
+	assert.NoError(t, err)
+	fileDoc, err := testInstance.VFS().FileByID(fileAlbum.ID())
+	assert.NoError(t, err)
+	assert.False(t, fileDoc.Trashed)
+
+	// Test: the file doesn't match a permission in any sharing it should be
+	// removed.
+	fileToDelete := createFile(t, testInstance.VFS(),
+		"testRemoveIfNotSharedToDelete", "testRemoveIfNotSharedToDeleteContent",
+		[]couchdb.DocReference{})
+
+	err = RemoveDocumentIfNotShared(testInstance, consts.Files,
+		fileToDelete.ID())
+	assert.NoError(t, err)
+	fileDoc, err = testInstance.VFS().FileByID(fileToDelete.ID())
+	assert.NoError(t, err)
+	assert.True(t, fileDoc.Trashed)
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
-
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
-	if err != nil || db.Status() != checkup.Healthy {
-		fmt.Println("This test needs couchdb to run.")
-		os.Exit(1)
-	}
+	testutils.NeedCouchdb()
+	testSetup := testutils.NewSetup(m, "pkg_sharings_test")
+	testInstance = testSetup.GetTestInstance()
 
 	// Change the default config to persist the vfs
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
@@ -863,36 +942,4 @@ func TestMain(m *testing.M) {
 	ts.Close()
 
 	os.Exit(res)
-}
-
-func insertSharingDocumentInDB(db couchdb.Database, sharingID, clientID, URL string) (string, error) {
-	sharing := couchdb.JSONDoc{
-		Type: consts.Sharings,
-		M: map[string]interface{}{
-			"sharing_id": sharingID,
-			"sharer": map[string]interface{}{
-				"client_id": clientID,
-				"url":       URL,
-			},
-		},
-	}
-	err := couchdb.CreateDoc(db, sharing)
-	if err != nil {
-		fmt.Printf("Error occurred while trying to insert document: %v\n", err)
-		return "", err
-	}
-
-	return sharing.ID(), nil
-}
-
-func insertClientDocumentInDB(db couchdb.Database, clientID, url string) error {
-	client := couchdb.JSONDoc{
-		Type: consts.OAuthClients,
-		M: map[string]interface{}{
-			"_id":        clientID,
-			"client_uri": url,
-		},
-	}
-
-	return couchdb.CreateNamedDocWithDB(db, client)
 }

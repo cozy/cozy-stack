@@ -52,8 +52,9 @@ type SendOptions struct {
 	Path       string
 	DocRev     string
 
-	Selector string
-	Values   []string
+	Selector   string
+	Values     []string
+	sharedRefs []couchdb.DocReference
 
 	fileOpts *fileOptions
 }
@@ -98,12 +99,16 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 	fileOpts.md5 = base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
 
 	// Send references for permissions
-	// TODO: only send the reference linked to the actual permission
-	b, err := json.Marshal(fileDoc.ReferencedBy)
-	if err != nil {
-		return nil
+	var refs string
+	if opts.Selector == consts.SelectorReferencedBy {
+		sharedRefs := opts.getSharedReferences()
+		b, err := json.Marshal(sharedRefs)
+		if err != nil {
+			return err
+		}
+		refs = string(b)
 	}
-	refs := string(b[:])
+
 	fileOpts.queries = url.Values{
 		consts.QueryParamType:         {consts.FileType},
 		consts.QueryParamName:         {fileDoc.DocName},
@@ -132,6 +137,49 @@ func (opts *SendOptions) closeFile() error {
 	return nil
 }
 
+// If the selector is "referenced_by" then the values are of the form
+// "doctype/id". To be able to use them we first need to parse them.
+func (opts *SendOptions) getSharedReferences() []couchdb.DocReference {
+	if opts.sharedRefs == nil && opts.Selector == consts.SelectorReferencedBy {
+		opts.sharedRefs = []couchdb.DocReference{}
+		for _, ref := range opts.Values {
+			parts := strings.Split(ref, permissions.RefSep)
+			if len(parts) != 2 {
+				continue
+			}
+
+			opts.sharedRefs = append(opts.sharedRefs, couchdb.DocReference{
+				Type: parts[0],
+				ID:   parts[1],
+			})
+		}
+	}
+
+	return opts.sharedRefs
+}
+
+// This function extracts only the relevant references: those that concern the
+// sharing.
+//
+// `sharedRefs` is the set of shared references. The result is thus a subset of
+// it or all.
+func (opts *SendOptions) extractRelevantReferences(refs []couchdb.DocReference) []couchdb.DocReference {
+	var res []couchdb.DocReference
+
+	sharedRefs := opts.getSharedReferences()
+
+	for i, ref := range refs {
+		for _, sharedRef := range sharedRefs {
+			if ref.ID == sharedRef.ID {
+				res = append(res, refs[i])
+				break
+			}
+		}
+	}
+
+	return res
+}
+
 // SendData sends data to all the recipients
 func SendData(ctx context.Context, m *jobs.Message) error {
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
@@ -156,12 +204,16 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 
 		if dirDoc != nil {
 			opts.Type = consts.DirType
+			ins.Logger().Debugf("[sharings] Sending directory: %#v", dirDoc)
 			return SendDir(ins, opts, dirDoc)
 		}
 		opts.Type = consts.FileType
+		ins.Logger().Debugf("[sharings] Sending file: %v", fileDoc)
 		return SendFile(ins, opts, fileDoc)
 	}
 
+	ins.Logger().Debugf("[sharings] Sending JSON (%v): %v", opts.DocType,
+		opts.DocID)
 	return SendDoc(ins, opts)
 }
 
@@ -213,8 +265,8 @@ func SendDoc(ins *instance.Instance, opts *SendOptions) error {
 	for _, rec := range opts.Recipients {
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPost)
 		if errs != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to send "+
-				"a document to a recipient:", errs)
+			ins.Logger().Error("[sharing] An error occurred while trying to"+
+				"send a document to a recipient: ", errs)
 		}
 	}
 
@@ -232,8 +284,8 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 		// A doc update requires to set the doc revision from each recipient
 		remoteDoc, err := getDocAtRecipient(doc, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to get "+
-				"remote doc : ", err)
+			ins.Logger().Error("[sharing] An error occurred while trying to "+
+				"get remote doc : ", err)
 			continue
 		}
 		// No changes: nothing to do
@@ -245,8 +297,8 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
 		if errs != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to send "+
-				"an update: ", err)
+			ins.Logger().Error("[sharing] An error occurred while trying to "+
+				"send an update: ", err)
 		}
 	}
 
@@ -278,7 +330,14 @@ func sendDocToRecipient(opts *SendOptions, rec *RecipientInfo, doc *couchdb.JSON
 	return err
 }
 
-// SendFile sends a binary file to the recipients
+// SendFile sends a binary file to the recipients.
+//
+// At this step the sharer must specify the destination directory: since we are
+// "creating" the file at the recipient we should specify where to put it. For
+// now as we are only sharing albums this destination directory always is
+// "Shared With Me".
+//
+// TODO Handle sharing of directories.
 func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
 	err := opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 	if err != nil {
@@ -292,8 +351,8 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	for _, rec := range opts.Recipients {
 		err = sendFileToRecipient(opts, rec, http.MethodPost)
 		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to share "+
-				"file %v: %v", fileDoc.DocName, err)
+			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+				"share file %v: %v", fileDoc.DocName, err)
 		}
 	}
 
@@ -332,16 +391,30 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 			NoResponse: true,
 		})
 		if errReq != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to share "+
-				"the directory %v: %v", dirDoc.DocName, err)
+			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+				"share the directory %v: %v", dirDoc.DocName, err)
 		}
 	}
 
 	return nil
 }
 
-// UpdateOrPatchFile uploads the file to the recipients if the md5sum has
-// changed compared to their local version, and sends a patch if not.
+// UpdateOrPatchFile updates the file at the recipients.
+//
+// Depending on the type of update several actions are possible:
+// 1. The actual content of the file was modified so we need to upload the new
+//    version to the recipients.
+//        -> we send the file.
+// 2. The event is dectected as a modification but the recipient do not have it,
+//    (a GET on the file returns a 404) so we interpret it as a creation: the
+//    sharer modified the file so as to share it.
+//        -> we send the file.
+// 3. The name of the file has changed.
+//        -> we change the metadata.
+// 4. The references of the file have changed.
+//        -> we update the references.
+//
+// TODO When sharing directories, handle changes on the dirID.
 func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
 	md5 := base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
 	// A file descriptor can be open in the for loop.
@@ -349,14 +422,15 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 	for _, recipient := range opts.Recipients {
 		// Get recipient data
-		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
+		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID,
+			recipient)
 		if err != nil {
 			// Special case for document not found: send document
 			if err == ErrRemoteDocDoesNotExist {
 				errf := SendFile(ins, opts, fileDoc)
 				if errf != nil {
-					ins.Logger().Error("[sharing] An error occurred while trying to "+
-						"send file: ", errf)
+					ins.Logger().Error("[sharing] An error occurred while "+
+						"trying to send file: ", errf)
 				}
 			} else {
 				ins.Logger().Errorf("[sharing] Could not get data at %v: %v",
@@ -367,24 +441,20 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 		md5AtRec := base64.StdEncoding.EncodeToString(remoteFileDoc.MD5Sum)
 		opts.DocRev = remoteFileDoc.Rev()
-		// The MD5 didn't change: this is a PATCH
+
+		// The MD5 didn't change: this is a PATCH or a reference update.
 		if md5 == md5AtRec {
 			// Check the metadata did change to do the patch
 			if !fileHasChanges(fileDoc, remoteFileDoc) {
-
 				// Special case to deal with ReferencedBy fields
-				if opts.Selector == "referenced_by" {
-					refs, isUpdate, errf := findNewRefs(fileDoc, remoteFileDoc, opts)
-					if errf != nil {
-						ins.Logger().Error("[sharing] An error occurred while trying to "+
-							"compare references: ", errf)
-						continue
-					}
+				if opts.Selector == consts.SelectorReferencedBy {
+					refs := findNewRefs(opts, fileDoc, remoteFileDoc)
 					if refs != nil {
-						errr := sendReferenceToRecipient(refs, isUpdate, opts, recipient)
-						if errr != nil {
-							ins.Logger().Error("[sharing] An error occurred while trying to "+
-								"compare references: ", errr)
+						erru := updateReferencesAtRecipient(http.MethodPost,
+							refs, opts, recipient)
+						if erru != nil {
+							ins.Logger().Error("[sharing] An error occurred "+
+								" while trying to update references: ", erru)
 						}
 					}
 				}
@@ -393,28 +463,29 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
-				ins.Logger().Errorf("[sharing] Could not generate patch for file %v: %v",
-					fileDoc.DocName, errp)
+				ins.Logger().Errorf("[sharing] Could not generate patch for "+
+					"file %v: %v", fileDoc.DocName, errp)
 				continue
 			}
 			errsp := sendPatchToRecipient(patch, opts, recipient, fileDoc.DirID)
 			if errsp != nil {
-				ins.Logger().Error("[sharing] An error occurred while trying to "+
-					"send patch: ", errsp)
+				ins.Logger().Error("[sharing] An error occurred while trying "+
+					"to send patch: ", errsp)
 			}
 			continue
 		}
 		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to open %v: %v",
-				fileDoc.DocName, err)
+			ins.Logger().Errorf("[sharing] An error occurred while trying "+
+				"to open %v: %v", fileDoc.DocName, err)
 			continue
 		}
 		err = sendFileToRecipient(opts, recipient, http.MethodPut)
 		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to share an "+
-				"update of file %v to a recipient: %v", fileDoc.DocName, err)
+			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+				"share an update of file %v to a recipient: %v",
+				fileDoc.DocName, err)
 		}
 	}
 
@@ -439,11 +510,36 @@ func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 		opts.DocRev = rev
 		err = sendPatchToRecipient(patch, opts, rec, dirDoc.DirID)
 		if err != nil {
-			errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to send a patch: %s", err.Error()))
+			errFinal = multierror.Append(errFinal,
+				fmt.Errorf("Error while trying to send a patch: %s",
+					err.Error()))
 		}
 	}
 
 	return errFinal
+}
+
+// RemoveDirOrFileFromSharing tells the recipient to remove the file or
+// directory from the specified sharing.
+//
+// As of now since we only support sharings through ids or "referenced_by"
+// selector the only event that could lead to calling this function would be a
+// set of "referenced_by" not applying anymore.
+//
+// TODO Handle sharing of directories
+func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions) error {
+	sharedRefs := opts.getSharedReferences()
+
+	for _, recipient := range opts.Recipients {
+		errs := updateReferencesAtRecipient(http.MethodDelete, sharedRefs,
+			opts, recipient)
+		if errs != nil {
+			ins.Logger().Debugf("[sharings] Could not update reference at "+
+				"recipient: %v", errs)
+		}
+	}
+
+	return nil
 }
 
 // DeleteDirOrFile asks the recipients to put the file or directory in the
@@ -484,6 +580,16 @@ func DeleteDirOrFile(opts *SendOptions) error {
 	return nil
 }
 
+// Send the file to the recipient.
+//
+// Two scenarii are possible:
+// 1. `opts.DocRev` is empty: the recipient should not have the file in his
+//    Cozy.
+//    If we recieve a "403" error — document update conflict — then that means
+//    the file was already shared and we need to update the relevant
+//    information.
+// 2. `opts.DocRev` is NOT empty: the recipient already has the file and the
+//    sharer is updating it.
 func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo, method string) error {
 	if !opts.fileOpts.set {
 		return errors.New("[sharing] fileOpts were not set")
@@ -545,7 +651,12 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 	return err
 }
 
-func sendReferenceToRecipient(refs []couchdb.DocReference, isUpdate bool, opts *SendOptions, recipient *RecipientInfo) error {
+// Depending on the `method` given this function does two things:
+// 1. If it's "POST" it calls the regular routes for adding references to files.
+// 2. If it's "DELETE" it calls the sharing handler because, in addition to
+//    removing the references, we need to see if the file is still shared and if
+//    not we need to trash it.
+func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opts *SendOptions, recipient *RecipientInfo) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return err
@@ -558,12 +669,11 @@ func sendReferenceToRecipient(refs []couchdb.DocReference, isUpdate bool, opts *
 		return err
 	}
 
-	path := fmt.Sprintf("/files/%s/relationships/referenced_by", opts.DocID)
-	var method string
-	if isUpdate {
-		method = http.MethodPost
+	var path string
+	if method == http.MethodPost {
+		path = fmt.Sprintf("/files/%s/relationships/referenced_by", opts.DocID)
 	} else {
-		method = http.MethodDelete
+		path = fmt.Sprintf("/sharings/files/%s/referenced_by", opts.DocID)
 	}
 
 	_, err = request.Req(&request.Options{
@@ -608,13 +718,13 @@ func getParentDirID(opts *SendOptions, dirID string) (parentID string, err error
 	return consts.SharedWithMeDirID, nil
 }
 
-func isShared(id string, acceptedDirsIDs []string) bool {
+func isShared(id string, acceptedIDs []string) bool {
 	if id == consts.RootDirID {
 		return false
 	}
 
-	for _, acceptedDirID := range acceptedDirsIDs {
-		if id == acceptedDirID {
+	for _, acceptedID := range acceptedIDs {
+		if id == acceptedID {
 			return true
 		}
 	}
@@ -668,8 +778,7 @@ func generateDirOrFilePatch(dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.
 	return &jsonapi.Document{Data: (*json.RawMessage)(&data)}, nil
 }
 
-// getDocAtRecipient returns the document at the given
-// recipient.
+// getDocAtRecipient returns the document at the given recipient.
 func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *RecipientInfo) (*couchdb.JSONDoc, error) {
 	path := fmt.Sprintf("/data/%s/%s", doctype, docID)
 
@@ -742,9 +851,10 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 	return dirDoc, fileDoc, nil
 }
 
-// filehasChanges checks that the local file do have changes compared to the remote one
+// filehasChanges checks that the local file do have changes compared to the
+// remote one.
 // This is done to prevent infinite loops after a PUT/PATCH in master-master:
-// we don't propagate the update if they are similar
+// we don't propagate the update if they are similar.
 func fileHasChanges(newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
 	if newFileDoc.Name() != remoteFileDoc.Name() {
 		return true
@@ -755,7 +865,8 @@ func fileHasChanges(newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
 	return false
 }
 
-// docHasChanges checks that the local doc do have changes compared to the remote one
+// docHasChanges checks that the local doc do have changes compared to the
+// remote one.
 // This is done to prevent infinite loops after a PUT/PATCH in master-master:
 // we don't mitigate the update if they are similar.
 func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
@@ -778,47 +889,20 @@ func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 	return !isEqual
 }
 
-// findNewRefs finds reference_by differences between files
-func findNewRefs(newFileDoc, remoteFileDoc *vfs.FileDoc, opts *SendOptions) ([]couchdb.DocReference, bool, error) {
-	var refs []couchdb.DocReference
-	// extract the references from the values
-	var ruleRef []couchdb.DocReference
-	for _, val := range opts.Values {
-		parts := strings.Split(val, permissions.RefSep)
-		if len(parts) != 2 {
-			return nil, false, ErrBadPermission
-		}
-		ref := couchdb.DocReference{
-			Type: parts[0],
-			ID:   parts[1],
-		}
-		ruleRef = append(ruleRef, ref)
+// findNewRefs returns the references the remote is missing or nil if the remote
+// is up to date with the local version of the file.
+//
+// This function does not deal with removing references or updating the local
+// (i.e. if the remote has more references).
+func findNewRefs(opts *SendOptions, fileDoc, remoteFileDoc *vfs.FileDoc) []couchdb.DocReference {
+	refs := opts.extractRelevantReferences(fileDoc.ReferencedBy)
+	remoteRefs := opts.extractRelevantReferences(remoteFileDoc.ReferencedBy)
+
+	if len(refs) > len(remoteRefs) {
+		return findMissingRefs(refs, remoteRefs)
 	}
 
-	sharedRef := extractSharedReferences(ruleRef, newFileDoc.ReferencedBy)
-	remoteSharedRef := extractSharedReferences(ruleRef, remoteFileDoc.ReferencedBy)
-
-	if len(sharedRef) > len(remoteSharedRef) {
-		refs = findMissingRefs(sharedRef, remoteSharedRef)
-		return refs, true, nil
-	} else if len(sharedRef) < len(remoteSharedRef) {
-		refs = findMissingRefs(remoteSharedRef, sharedRef)
-		return refs, false, nil
-	}
-	return refs, false, nil
-}
-
-func extractSharedReferences(ruleRef, refs []couchdb.DocReference) []couchdb.DocReference {
-	var sharedRef []couchdb.DocReference
-
-	for _, ref := range refs {
-		for _, rRef := range ruleRef {
-			if rRef.ID == ref.ID && rRef.Type == ref.Type {
-				sharedRef = append(sharedRef, ref)
-			}
-		}
-	}
-	return sharedRef
+	return nil
 }
 
 func findMissingRefs(lref, rref []couchdb.DocReference) []couchdb.DocReference {
@@ -857,7 +941,7 @@ func bindDirOrFile(body io.Reader) (*vfs.DirOrFileDoc, error) {
 			return nil, err
 		}
 	}
-	if rel, ok := obj.GetRelationship("referenced_by"); ok {
+	if rel, ok := obj.GetRelationship(consts.SelectorReferencedBy); ok {
 		if res, ok := rel.Data.([]interface{}); ok {
 			var refs []couchdb.DocReference
 			for _, r := range res {
