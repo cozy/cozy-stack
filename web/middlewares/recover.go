@@ -64,7 +64,7 @@ func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 					stack := make([]byte, config.StackSize)
 					length := runtime.Stack(stack, false)
 					log := logger.WithDomain(c.Request().Host).WithField("panic", true)
-					log.Errorf("PANIC RECOVER %s: %s\n", err.Error(), stack[:length])
+					log.Errorf("PANIC RECOVER %s: %s", err.Error(), stack[:length])
 					c.Error(err)
 				}
 			}()
