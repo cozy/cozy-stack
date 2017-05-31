@@ -30,7 +30,6 @@ import (
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
 	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
 	"github.com/rakyll/statik/fs"
 )
 
@@ -230,10 +229,8 @@ func CreateSubdomainProxy(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.
 // setupRecover sets a recovering strategy of panics happening in handlers
 func setupRecover(router *echo.Echo) {
 	if !config.IsDevRelease() {
-		recoverMiddleware := middleware.RecoverWithConfig(middleware.RecoverConfig{
-			StackSize:         1 << 10, // 1 KB
-			DisableStackAll:   true,
-			DisablePrintStack: true,
+		recoverMiddleware := middlewares.RecoverWithConfig(middlewares.RecoverConfig{
+			StackSize: 10 << 10, // 10KB
 		})
 		router.Use(recoverMiddleware)
 	}
