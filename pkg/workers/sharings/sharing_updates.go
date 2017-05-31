@@ -128,8 +128,9 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 // TODO explanation
 func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, rule *permissions.Rule, docID, eventType string) error {
 	var recInfos []*RecipientInfo
+	sendToSharer := isRecipientSide(sharing)
 
-	if isRecipientSide(sharing) {
+	if sendToSharer {
 		// We are on the recipient side
 		recInfos = make([]*RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
@@ -203,10 +204,10 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 			if !stillShared {
 				ins.Logger().Debugf("[sharings] Sending remove references "+
 					"from %#v", fileDoc)
-				return RemoveDirOrFileFromSharing(ins, opts)
+				return RemoveDirOrFileFromSharing(ins, opts, sendToSharer)
 			}
 
-			return UpdateOrPatchFile(ins, opts, fileDoc)
+			return UpdateOrPatchFile(ins, opts, fileDoc, sendToSharer)
 		}
 
 		if opts.Type == consts.DirType {
@@ -219,7 +220,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 			if !stillShared {
 				ins.Logger().Debugf("[sharings] Sending remove references "+
 					"from %#v", dirDoc)
-				return RemoveDirOrFileFromSharing(ins, opts)
+				return RemoveDirOrFileFromSharing(ins, opts, sendToSharer)
 			}
 
 			ins.Logger().Debugf("[sharings] Sending patch dir %#v", dirDoc)

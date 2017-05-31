@@ -415,7 +415,7 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 //        -> we update the references.
 //
 // TODO When sharing directories, handle changes on the dirID.
-func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
+func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc, sendToSharer bool) error {
 	md5 := base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
 	// A file descriptor can be open in the for loop.
 	defer opts.closeFile()
@@ -451,7 +451,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 					refs := findNewRefs(opts, fileDoc, remoteFileDoc)
 					if refs != nil {
 						erru := updateReferencesAtRecipient(http.MethodPost,
-							refs, opts, recipient)
+							refs, opts, recipient, sendToSharer)
 						if erru != nil {
 							ins.Logger().Error("[sharing] An error occurred "+
 								" while trying to update references: ", erru)
@@ -522,17 +522,38 @@ func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 // RemoveDirOrFileFromSharing tells the recipient to remove the file or
 // directory from the specified sharing.
 //
+// If we are asking the sharer to remove the file from the sharing then the file
+// has to be trashed locally. The user that is making this request is a
+// recipient and just removed one element from it.
+//
 // As of now since we only support sharings through ids or "referenced_by"
 // selector the only event that could lead to calling this function would be a
 // set of "referenced_by" not applying anymore.
 //
 // TODO Handle sharing of directories
-func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions) error {
+func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions, sendToSharer bool) error {
 	sharedRefs := opts.getSharedReferences()
+
+	if sendToSharer {
+		dirDoc, fileDoc, err := ins.VFS().DirOrFileByID(opts.DocID)
+		if err != nil {
+			return err
+		}
+
+		if dirDoc != nil {
+			_, err = vfs.TrashDir(ins.VFS(), dirDoc)
+		} else {
+			_, err = vfs.TrashFile(ins.VFS(), fileDoc)
+		}
+
+		if err != nil {
+			return err
+		}
+	}
 
 	for _, recipient := range opts.Recipients {
 		errs := updateReferencesAtRecipient(http.MethodDelete, sharedRefs,
-			opts, recipient)
+			opts, recipient, sendToSharer)
 		if errs != nil {
 			ins.Logger().Debugf("[sharings] Could not update reference at "+
 				"recipient: %v", errs)
@@ -656,7 +677,7 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 // 2. If it's "DELETE" it calls the sharing handler because, in addition to
 //    removing the references, we need to see if the file is still shared and if
 //    not we need to trash it.
-func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opts *SendOptions, recipient *RecipientInfo) error {
+func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opts *SendOptions, recipient *RecipientInfo, sendToSharer bool) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return err
@@ -676,11 +697,16 @@ func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opt
 		path = fmt.Sprintf("/sharings/files/%s/referenced_by", opts.DocID)
 	}
 
+	values := url.Values{
+		consts.QueryParamSharer: {strconv.FormatBool(sendToSharer)},
+	}
+
 	_, err = request.Req(&request.Options{
-		Domain: recipient.URL,
-		Scheme: recipient.Scheme,
-		Method: method,
-		Path:   path,
+		Domain:  recipient.URL,
+		Scheme:  recipient.Scheme,
+		Method:  method,
+		Path:    path,
+		Queries: values,
 		Headers: request.Headers{
 			echo.HeaderContentType:   jsonapi.ContentType,
 			echo.HeaderAuthorization: "Bearer " + recipient.Token,

@@ -302,7 +302,7 @@ func TestSendFileThroughUpdateOrPatchFile(t *testing.T) {
 			fileDoc.ID()),
 		Recipients: recipients,
 	}
-	err = UpdateOrPatchFile(testInstance, updateFileOpts, fileDoc)
+	err = UpdateOrPatchFile(testInstance, updateFileOpts, fileDoc, true)
 	assert.NoError(t, err)
 }
 
@@ -456,7 +456,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 			fileDoc.ID()),
 		Recipients: recipients,
 	}
-	err = UpdateOrPatchFile(testInstance, patchSendOptions, patchedFileDoc)
+	err = UpdateOrPatchFile(testInstance, patchSendOptions, patchedFileDoc,
+		true)
 	assert.NoError(t, err)
 
 	// Reference test: we trigger an update of references by providing a
@@ -473,7 +474,7 @@ func TestUpdateOrPatchFile(t *testing.T) {
 		Values:     []string{"new/reference"},
 	}
 	err = UpdateOrPatchFile(testInstance, referenceSendOptions,
-		referenceUpdateFileDoc)
+		referenceUpdateFileDoc, true)
 	assert.NoError(t, err)
 
 	// Update test: we trigger a content update by providing a file with a
@@ -490,7 +491,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 		Selector:   consts.SelectorReferencedBy,
 		Values:     []string{"new/reference"},
 	}
-	err = UpdateOrPatchFile(testInstance, updateSendOptions, updatedFileDoc)
+	err = UpdateOrPatchFile(testInstance, updateSendOptions, updatedFileDoc,
+		true)
 	assert.NoError(t, err)
 }
 
@@ -550,7 +552,12 @@ func TestPatchDir(t *testing.T) {
 }
 
 func TestRemoveDirOrFileFromSharing(t *testing.T) {
-	docID := "thisistheid"
+	fileDoc := createFile(t, testInstance.VFS(), "removeFileFromSharing",
+		"removeFileFromSharingContent")
+	dirDoc := createDir(t, testInstance.VFS(), "removeDirFromSharing")
+	dirToKeep := createDir(t, testInstance.VFS(),
+		"removeDirFromSharingButKeepIt")
+
 	refs := []couchdb.DocReference{
 		couchdb.DocReference{
 			Type: "first",
@@ -566,7 +573,9 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 		"/sharings": func(router *echo.Group) {
 			router.DELETE("/files/:file-id/referenced_by",
 				func(c echo.Context) error {
-					assert.Equal(t, docID, c.Param("file-id"))
+					fileid := c.Param("file-id")
+					assert.True(t, fileid == fileDoc.ID() ||
+						fileid == dirDoc.ID() || fileid == dirToKeep.ID())
 					reqRefs, err := jsonapi.BindRelations(c.Request())
 					assert.NoError(t, err)
 					assert.True(t, reflect.DeepEqual(refs, reqRefs))
@@ -587,15 +596,44 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 	}
 	recipients := []*RecipientInfo{testRecipient}
 
-	opts := SendOptions{
+	optsFile := SendOptions{
 		Selector:   consts.SelectorReferencedBy,
 		Values:     []string{"first/123", "second/456"},
-		DocID:      docID,
+		DocID:      fileDoc.ID(),
 		Recipients: recipients,
 	}
 
-	err = RemoveDirOrFileFromSharing(testInstance, &opts)
+	err = RemoveDirOrFileFromSharing(testInstance, &optsFile, true)
 	assert.NoError(t, err)
+	fileDoc, err = testInstance.VFS().FileByID(fileDoc.ID())
+	assert.NoError(t, err)
+	assert.True(t, fileDoc.Trashed)
+
+	optsDir := SendOptions{
+		Selector:   consts.SelectorReferencedBy,
+		Values:     []string{"first/123", "second/456"},
+		DocID:      dirDoc.ID(),
+		Recipients: recipients,
+	}
+
+	err = RemoveDirOrFileFromSharing(testInstance, &optsDir, true)
+	assert.NoError(t, err)
+	dirDoc, err = testInstance.VFS().DirByID(dirDoc.ID())
+	assert.NoError(t, err)
+	assert.True(t, dirDoc.DirID == consts.TrashDirID)
+
+	optsDirToKeep := SendOptions{
+		Selector:   consts.SelectorReferencedBy,
+		Values:     []string{"first/123", "second/456"},
+		DocID:      dirToKeep.ID(),
+		Recipients: recipients,
+	}
+
+	err = RemoveDirOrFileFromSharing(testInstance, &optsDirToKeep, false)
+	assert.NoError(t, err)
+	dirToKeep, err = testInstance.VFS().DirByID(dirToKeep.ID())
+	assert.NoError(t, err)
+	assert.True(t, dirToKeep.DirID != consts.TrashDirID)
 }
 
 func TestDeleteDirOrFile(t *testing.T) {
