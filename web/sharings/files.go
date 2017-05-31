@@ -8,6 +8,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
@@ -15,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
+	"reflect"
 	"strconv"
 )
 
@@ -23,20 +25,18 @@ import (
 // TODO Put in a locale aware constant.
 const SharedWithMeDirName = "Shared With Me"
 
-func creationWithIDHandler(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	fs := instance.VFS()
+func creationWithIDHandler(c echo.Context, ins *instance.Instance) error {
 
-	err := createDirForSharing(fs, consts.SharedWithMeDirID, "")
+	err := createDirForSharing(ins.VFS(), consts.SharedWithMeDirID, "")
 	if err != nil {
 		return err
 	}
 
 	switch c.QueryParam(consts.QueryParamType) {
 	case consts.FileType:
-		err = createFileWithIDHandler(c, fs)
+		err = createFileWithIDHandler(c, ins)
 	case consts.DirType:
-		err = createDirWithIDHandler(c, fs)
+		err = createDirWithIDHandler(c, ins)
 	default:
 		return files.ErrDocTypeInvalid
 	}
@@ -44,50 +44,19 @@ func creationWithIDHandler(c echo.Context) error {
 	return err
 }
 
-func createDirWithIDHandler(c echo.Context, fs vfs.VFS) error {
+func createDirWithIDHandler(c echo.Context, ins *instance.Instance) error {
+	fs := ins.VFS()
 	name := c.QueryParam(consts.QueryParamName)
 	id := c.Param("docid")
 
 	// TODO handle name collision.
-	doc, err := vfs.NewDirDoc(fs, name, "", nil)
+	newDir, err := vfs.NewDirDoc(fs, name, "", nil)
 	if err != nil {
 		return err
 	}
 
-	doc.DirID = c.QueryParam(consts.QueryParamDirID)
-	doc.SetID(id)
-
-	createdAt, err := time.Parse(time.RFC1123,
-		c.QueryParam(consts.QueryParamCreatedAt))
-	if err != nil {
-		return err
-	}
-	doc.CreatedAt = createdAt
-
-	updatedAt, err := time.Parse(time.RFC1123,
-		c.QueryParam(consts.QueryParamUpdatedAt))
-	if err != nil {
-		return err
-	}
-	doc.UpdatedAt = updatedAt
-
-	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
-		return err
-	}
-
-	return fs.CreateDir(doc)
-}
-
-func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
-	name := c.QueryParam(consts.QueryParamName)
-
-	doc, err := files.FileDocFromReq(c, name, "", nil)
-	if err != nil {
-		return err
-	}
-
-	doc.SetID(c.Param("docid"))
-	doc.DirID = c.QueryParam(consts.QueryParamDirID)
+	newDir.DirID = c.QueryParam(consts.QueryParamDirID)
+	newDir.SetID(id)
 
 	refBy := c.QueryParam(consts.QueryParamReferencedBy)
 	if refBy != "" {
@@ -96,7 +65,7 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 		if err = json.Unmarshal(b, &refs); err != nil {
 			return err
 		}
-		doc.ReferencedBy = refs
+		newDir.ReferencedBy = refs
 	}
 
 	createdAt, err := time.Parse(time.RFC1123,
@@ -104,20 +73,113 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 	if err != nil {
 		return err
 	}
-	doc.CreatedAt = createdAt
+	newDir.CreatedAt = createdAt
 
 	updatedAt, err := time.Parse(time.RFC1123,
 		c.QueryParam(consts.QueryParamUpdatedAt))
 	if err != nil {
 		return err
 	}
-	doc.UpdatedAt = updatedAt
+	newDir.UpdatedAt = updatedAt
 
-	if err = permissions.AllowVFS(c, "POST", doc); err != nil {
+	if err = permissions.AllowVFS(c, "POST", newDir); err != nil {
 		return err
 	}
 
-	file, err := fs.CreateFile(doc, nil)
+	// Caveat: this function can be called not just for creation. If one were to
+	// reshare the same directory we would end up here and `DirByID` won't
+	// return an error since the directory actually exists.
+	// So if that situation happens it means the directory is to be updated and,
+	// in order to not lose information, we need to manually merge the oldDoc
+	// and newDoc references and tags. We assume by default that the values of
+	// newDoc are the correct ones.
+	oldDoc, err := fs.DirByID(newDir.ID())
+	if err == nil {
+		ins.Logger().Debugf("[sharings] Modification detected instead of "+
+			"creation: %s", newDir.ID())
+		newDir.Tags = mergeTags(newDir.Tags, oldDoc.Tags)
+		newDir.ReferencedBy = mergeReferencedBy(newDir.ReferencedBy,
+			oldDoc.ReferencedBy)
+		newDir.SetRev(oldDoc.Rev())
+
+		errm := modifyDirOrFileMetadata(fs, newDir, nil, &vfs.DocPatch{})
+		if errm != nil {
+			return errm
+		}
+
+		return c.NoContent(http.StatusOK)
+	}
+
+	return fs.CreateDir(newDir)
+}
+
+func createFileWithIDHandler(c echo.Context, ins *instance.Instance) error {
+	fs := ins.VFS()
+	name := c.QueryParam(consts.QueryParamName)
+
+	newFile, err := files.FileDocFromReq(c, name, "", nil)
+	if err != nil {
+		return err
+	}
+
+	newFile.SetID(c.Param("docid"))
+	newFile.DirID = c.QueryParam(consts.QueryParamDirID)
+
+	refBy := c.QueryParam(consts.QueryParamReferencedBy)
+	if refBy != "" {
+		var refs = []couchdb.DocReference{}
+		b := []byte(refBy)
+		if err = json.Unmarshal(b, &refs); err != nil {
+			return err
+		}
+		newFile.ReferencedBy = refs
+	}
+
+	createdAt, err := time.Parse(time.RFC1123,
+		c.QueryParam(consts.QueryParamCreatedAt))
+	if err != nil {
+		return err
+	}
+	newFile.CreatedAt = createdAt
+
+	updatedAt, err := time.Parse(time.RFC1123,
+		c.QueryParam(consts.QueryParamUpdatedAt))
+	if err != nil {
+		return err
+	}
+	newFile.UpdatedAt = updatedAt
+
+	if err = permissions.AllowVFS(c, "POST", newFile); err != nil {
+		return err
+	}
+
+	// Caveat: this function can be called not just for creation. If one were to
+	// reshare the same file we would end up here and `FileByID` won't return an
+	// error since the file actually exists.
+	// So if that situation happens it means the file is to be updated and, in
+	// order to not lose information, we need to manually merge the oldDoc and
+	// newDoc metadata, references and tags.
+	// We assume by default that the values of newDoc are the correct ones.
+	oldFile, err := fs.FileByID(newFile.ID())
+	if err != nil {
+		oldFile = nil
+	} else {
+		ins.Logger().Debugf("[sharings] Modification detected instead of "+
+			"creation: %s", newFile.ID())
+
+		newFile.Metadata = mergeMetadata(newFile.Metadata, oldFile.Metadata)
+		newFile.ReferencedBy = mergeReferencedBy(newFile.ReferencedBy,
+			oldFile.ReferencedBy)
+		newFile.Tags = mergeTags(newFile.Tags, oldFile.Tags)
+		newFile.SetRev(oldFile.Rev())
+
+		err = modifyDirOrFileMetadata(fs, nil, newFile, &vfs.DocPatch{})
+		if err != nil {
+			return err
+		}
+	}
+
+	file, err := fs.CreateFile(newFile, oldFile)
 	if err != nil {
 		return err
 	}
@@ -126,6 +188,10 @@ func createFileWithIDHandler(c echo.Context, fs vfs.VFS) error {
 		if cerr := file.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
+		if err != nil {
+			return
+		}
+		err = c.JSON(http.StatusOK, nil)
 	}()
 
 	_, err = io.Copy(file, c.Request().Body)
@@ -162,7 +228,7 @@ func updateFile(c echo.Context) error {
 		return err
 	}
 
-	// The permission is on the ID so the newdoc has to have the same ID or
+	// If the permission is on the ID so the newdoc has to have the same ID or
 	// the permission check will fail.
 	newdoc.SetID(olddoc.ID())
 	if err = permissions.AllowVFS(c, permissions.PUT, newdoc); err != nil {
@@ -189,6 +255,10 @@ func updateFile(c echo.Context) error {
 }
 
 func patchDirOrFile(c echo.Context) error {
+	ins := middlewares.GetInstance(c)
+	ins.Logger().Debugf("[sharings] Patching %s: %s", consts.Files,
+		c.Param("docid"))
+
 	instance := middlewares.GetInstance(c)
 	var patch vfs.DocPatch
 
@@ -225,19 +295,22 @@ func patchDirOrFile(c echo.Context) error {
 		return errc
 	}
 
-	if dirDoc != nil {
-		_, err = vfs.ModifyDirMetadata(instance.VFS(), dirDoc, &patch)
-		if err != nil {
-			return err
-		}
-		return c.JSON(http.StatusOK, nil)
-	}
-
-	_, err = vfs.ModifyFileMetadata(instance.VFS(), fileDoc, &patch)
+	err = modifyDirOrFileMetadata(instance.VFS(), dirDoc, fileDoc, &patch)
 	if err != nil {
 		return err
 	}
-	return c.JSON(http.StatusOK, nil)
+
+	return c.NoContent(http.StatusOK)
+}
+
+func modifyDirOrFileMetadata(fs vfs.VFS, dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc, patch *vfs.DocPatch) error {
+	if dirDoc != nil {
+		_, err := vfs.ModifyDirMetadata(fs, dirDoc, patch)
+		return err
+	}
+
+	_, err := vfs.ModifyFileMetadata(fs, fileDoc, patch)
+	return err
 }
 
 // This function calls the handler from web/files to remove the references, and
@@ -344,4 +417,73 @@ func createDirForSharing(fs vfs.VFS, id, name string) error {
 	dirDoc.UpdatedAt = t
 
 	return fs.CreateDir(dirDoc)
+}
+
+func mergeMetadata(newMeta, oldMeta vfs.Metadata) vfs.Metadata {
+	if newMeta == nil {
+		return oldMeta
+	}
+
+	res := vfs.Metadata{}
+	for newKey, newValue := range newMeta {
+		res[newKey] = newValue
+	}
+
+	for oldKey, oldValue := range oldMeta {
+		if _, present := newMeta[oldKey]; !present {
+			res[oldKey] = oldValue
+		}
+	}
+
+	return res
+}
+
+func mergeReferencedBy(newRefs, oldRefs []couchdb.DocReference) []couchdb.DocReference {
+	if len(newRefs) == 0 {
+		return oldRefs
+	}
+
+	res := make([]couchdb.DocReference, len(newRefs))
+	copy(res, newRefs)
+
+	for _, oldReference := range oldRefs {
+		var exists bool
+		for _, newReference := range newRefs {
+			if reflect.DeepEqual(newReference, oldReference) {
+				exists = true
+				break
+			}
+		}
+
+		if !exists {
+			res = append(res, oldReference)
+		}
+	}
+
+	return res
+}
+
+func mergeTags(newTags, oldTags []string) []string {
+	if len(newTags) == 0 {
+		return oldTags
+	}
+
+	res := make([]string, len(newTags))
+	copy(res, newTags)
+
+	for _, oldTag := range oldTags {
+		var exists bool
+		for _, newTag := range newTags {
+			if newTag == oldTag {
+				exists = true
+				break
+			}
+		}
+
+		if !exists {
+			res = append(res, oldTag)
+		}
+	}
+
+	return res
 }

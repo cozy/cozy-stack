@@ -320,14 +320,16 @@ func getAccessToken(c echo.Context) error {
 // If the document to store is a "io.cozy.files" our custom handler will be
 // called, otherwise we will redirect to /data.
 func receiveDocument(c echo.Context) error {
-	var err error
+	ins := middlewares.GetInstance(c)
+	ins.Logger().Debugf("[sharings] Receiving %s: %s", c.Param("doctype"),
+		c.Param("docid"))
 
+	var err error
 	switch c.Param("doctype") {
 	case consts.Files:
-		err = creationWithIDHandler(c)
+		err = creationWithIDHandler(c, ins)
 	default:
 		currDoctype := c.Param("doctype")
-		ins := middlewares.GetInstance(c)
 
 		doctypes, errc := couchdb.AllDoctypes(ins)
 		if errc != nil {
@@ -364,8 +366,11 @@ func receiveDocument(c echo.Context) error {
 //    to see if the document is still shared after the update. If not then it is
 //    deleted.
 func updateDocument(c echo.Context) error {
-	var err error
+	ins := middlewares.GetInstance(c)
+	ins.Logger().Debugf("[sharings] Updating %s: %s", c.Param("doctype"),
+		c.Param("docid"))
 
+	var err error
 	switch c.Param("doctype") {
 	case consts.Files:
 		err = updateFile(c)
@@ -388,8 +393,11 @@ func updateDocument(c echo.Context) error {
 }
 
 func deleteDocument(c echo.Context) error {
-	var err error
+	ins := middlewares.GetInstance(c)
+	ins.Logger().Debugf("[sharings] Deleting %s: %s", c.Param("doctype"),
+		c.Param("docid"))
 
+	var err error
 	switch c.Param("doctype") {
 	case consts.Files:
 		err = trashHandler(c)

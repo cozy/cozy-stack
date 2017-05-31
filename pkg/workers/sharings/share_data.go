@@ -75,6 +75,8 @@ var (
 	ErrRemoteDocDoesNotExist = errors.New("Remote doc does not exist")
 	// ErrBadPermission is used when a given permission is not valid
 	ErrBadPermission = errors.New("Invalid permission format")
+	// ErrForbidden is used when the recipient returned a 403 error
+	ErrForbidden = errors.New("Forbidden")
 )
 
 // fillDetailsAndOpenFile will augment the SendOptions structure with the
@@ -115,7 +117,7 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 		consts.QueryParamExecutable:   {strconv.FormatBool(fileDoc.Executable)},
 		consts.QueryParamCreatedAt:    {fileDoc.CreatedAt.Format(time.RFC1123)},
 		consts.QueryParamUpdatedAt:    {fileDoc.UpdatedAt.Format(time.RFC1123)},
-		consts.QueryParamReferencedBy: []string{refs},
+		consts.QueryParamReferencedBy: {refs},
 	}
 
 	content, err := fs.OpenFile(fileDoc)
@@ -368,6 +370,16 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 		return err
 	}
 
+	var refs string
+	if opts.Selector == consts.SelectorReferencedBy {
+		sharedRefs := opts.getSharedReferences()
+		b, errm := json.Marshal(sharedRefs)
+		if errm != nil {
+			return errm
+		}
+		refs = string(b)
+	}
+
 	for _, recipient := range opts.Recipients {
 		_, errReq := request.Req(&request.Options{
 			Domain: recipient.URL,
@@ -386,7 +398,8 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 					dirDoc.CreatedAt.Format(time.RFC1123)},
 				consts.QueryParamUpdatedAt: {
 					dirDoc.CreatedAt.Format(time.RFC1123)},
-				consts.QueryParamDirID: {parentID},
+				consts.QueryParamDirID:        {parentID},
+				consts.QueryParamReferencedBy: {refs},
 			},
 			NoResponse: true,
 		})
@@ -405,9 +418,9 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 // 1. The actual content of the file was modified so we need to upload the new
 //    version to the recipients.
 //        -> we send the file.
-// 2. The event is dectected as a modification but the recipient do not have it,
-//    (a GET on the file returns a 404) so we interpret it as a creation: the
-//    sharer modified the file so as to share it.
+// 2. The event is dectected as a modification but the recipient does not have
+//    it (404) or does not let us access it (403 - the file is already shared
+//    in another sharing).
 //        -> we send the file.
 // 3. The name of the file has changed.
 //        -> we change the metadata.
@@ -425,8 +438,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID,
 			recipient)
 		if err != nil {
-			// Special case for document not found: send document
-			if err == ErrRemoteDocDoesNotExist {
+			if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
 				errf := SendFile(ins, opts, fileDoc)
 				if errf != nil {
 					ins.Logger().Error("[sharing] An error occurred while "+
@@ -863,6 +875,10 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 		reqErr := err.(*request.Error)
 		if reqErr.Title == "Not Found" {
 			return nil, nil, ErrRemoteDocDoesNotExist
+		}
+		if reqErr.Status == strconv.Itoa(http.StatusForbidden) ||
+			reqErr.Title == "Forbidden" {
+			return nil, nil, ErrForbidden
 		}
 		return nil, nil, err
 	}
