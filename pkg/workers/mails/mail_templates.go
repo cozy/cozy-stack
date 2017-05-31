@@ -95,11 +95,24 @@ The description given is: {{.Description}}.
 	mailKonnectorErrorTextEn = `` +
 		`Hello {{.RecipientName}},
 
-The last execution of the konnector {{.KonnectorName}} has failed.
-Please check that everything is OK.`
+Something wrong happened when we tried to gather the data from your {{.KonnectorName}} account.
+
+If you want more information, please go to the configuration page {{.KonnectorPage}} of your account.
+
+If the problem remains, please contact us at contact@cozycloud.cc
+
+The Cozy Team.`
 
 	mailKonnectorErrorHTMLFr = ``
-	mailKonnectorErrorTextFr = ``
+	mailKonnectorErrorTextFr = `` +
+		`Bonjour {{.RecipientName}},
+
+Nous avons rencontré une difficulté pour récupérer vos données provenant de votre compte {{.KonnectorName}}.
+
+Pour plus d'information veuillez vous rendre sur la page: {{.KonnectorPage}} de configuration de votre compte.
+Si le problème persiste, n'hésitez pas à nous contacter à contact@cozycloud.cc
+
+L'équipe Cozy.`
 )
 
 // MailTemplate is a struct to define a mail template with HTML and text parts.
