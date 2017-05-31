@@ -163,17 +163,18 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	s.log.Debugf("[jobs] trigger %s(%s): Starting trigger",
+	s.log.Infof("[jobs] trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)
 	for req := range t.Schedule() {
-		s.log.Debugf("[jobs] trigger %s(%s): Pushing new job",
-			t.Type(), t.Infos().TID)
+		log := s.log.WithField("domain", req.Domain)
+		log.Infof(
+			"[jobs] trigger %s (%s): Pushing new job %s")
 		if _, err := s.broker.PushJob(req); err != nil {
-			s.log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s",
+			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s",
 				t.Type(), t.Infos().TID, err.Error())
 		}
 	}
-	s.log.Debugf("[jobs] trigger %s(%s): Closing trigger",
+	s.log.Infof("[jobs] trigger %s(%s): Closing trigger",
 		t.Type(), t.Infos().TID)
 	if err := s.Delete(t.Infos().Domain, t.Infos().TID); err != nil {
 		s.log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s",
