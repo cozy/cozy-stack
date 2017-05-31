@@ -146,6 +146,9 @@ const (
 	// QueryParamReferencedBy is the key for the `referenced_by` values in a
 	// query string.
 	QueryParamReferencedBy = "Referenced_by"
+	// QueryParamSharer is used to tell if the user that received the query is
+	// the sharer or not.
+	QueryParamSharer = "Sharer"
 )
 
 // AppsRegistry is an hard-coded list of known apps, with their source URLs

@@ -15,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
+	"strconv"
 )
 
 // SharedWithMeDirName is the name of the directory that will contain all shared
@@ -240,7 +241,8 @@ func patchDirOrFile(c echo.Context) error {
 }
 
 // This function calls the handler from web/files to remove the references, and
-// then remove the file if it is no longer shared.
+// then remove the file if it is no longer shared and if the user is not the
+// original sharer.
 //
 // The permissions are checked in the handler from web/files.
 func removeReferences(c echo.Context) error {
@@ -249,11 +251,19 @@ func removeReferences(c echo.Context) error {
 		return err
 	}
 
-	ins := middlewares.GetInstance(c)
-	err = sharings.RemoveDocumentIfNotShared(ins, consts.Files,
-		c.Param("file-id"))
+	sharerStr := c.QueryParam(consts.QueryParamSharer)
+	sharer, err := strconv.ParseBool(sharerStr)
 	if err != nil {
 		return err
+	}
+
+	if !sharer {
+		ins := middlewares.GetInstance(c)
+		err = sharings.RemoveDocumentIfNotShared(ins, consts.Files,
+			c.Param("file-id"))
+		if err != nil {
+			return err
+		}
 	}
 
 	return c.NoContent(http.StatusNoContent)

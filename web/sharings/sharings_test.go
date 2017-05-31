@@ -542,6 +542,9 @@ func TestRemoveReferences(t *testing.T) {
 	assert.NoError(t, err)
 	removeRefURL.Path = fmt.Sprintf("/sharings/files/%s/referenced_by",
 		fileToKeep.ID())
+	removeRefURL.RawQuery = url.Values{
+		consts.QueryParamSharer: {"false"},
+	}.Encode()
 	data, err := json.Marshal(refAlbum456)
 	assert.NoError(t, err)
 	doc := jsonapi.Document{Data: (*json.RawMessage)(&data)}
@@ -561,14 +564,42 @@ func TestRemoveReferences(t *testing.T) {
 	assert.False(t, fileDoc.Trashed)
 	assert.Len(t, fileDoc.ReferencedBy, 1)
 
+	// Test: the file only has one reference, we remove it and we check that:
+	// * the reference was removed;
+	// * the file is NOT trashed since it is the sharer.
+	removeRefURL.RawQuery = url.Values{
+		consts.QueryParamSharer: {"true"},
+	}.Encode()
+	data, err = json.Marshal(refAlbum123)
+	assert.NoError(t, err)
+	doc = jsonapi.Document{Data: (*json.RawMessage)(&data)}
+	body, err = request.WriteJSON(doc)
+	assert.NoError(t, err)
+
+	req, err = http.NewRequest(http.MethodDelete, removeRefURL.String(), body)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	req.Header.Add(echo.HeaderContentType, jsonapi.ContentType)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, res.StatusCode)
+
+	fileDoc, err = testInstance.VFS().FileByID(fileToKeep.ID())
+	assert.NoError(t, err)
+	assert.False(t, fileDoc.Trashed)
+	assert.Len(t, fileDoc.ReferencedBy, 0)
+
 	// Test: the directory has one reference, we remove it and check that:
-	// * the directory is trashed;
+	// * the directory is trashed since it is a recipient;
 	// * the reference is gone.
 	dirToTrash := createDir(t, testInstance.VFS(), "testRemoveReferenceDir",
 		[]couchdb.DocReference{refAlbum123})
 
 	removeRefURL.Path = fmt.Sprintf("/sharings/files/%s/referenced_by",
 		dirToTrash.ID())
+	removeRefURL.RawQuery = url.Values{
+		consts.QueryParamSharer: {"false"},
+	}.Encode()
 	data, err = json.Marshal(refAlbum123)
 	assert.NoError(t, err)
 	doc = jsonapi.Document{Data: (*json.RawMessage)(&data)}
