@@ -41,7 +41,7 @@ lock:
 sessions:
   # url: redis://localhost:6379/3
 
-download:
+downloads:
   # url: redis://localhost:6379/4
 
 jobs:
