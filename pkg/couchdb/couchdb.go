@@ -214,6 +214,9 @@ func (j JSONDoc) Valid(field, value string) bool {
 		}
 
 		values := strings.Split(value, "/")
+		if len(values) != 2 {
+			return false
+		}
 		valueType, valueID := values[0], values[1]
 
 		for _, ref := range references {

@@ -32,6 +32,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+	"reflect"
 )
 
 var ts *httptest.Server
@@ -166,6 +167,7 @@ func TestReceiveDocumentSuccessJSON(t *testing.T) {
 func TestReceiveDocumentSuccessDir(t *testing.T) {
 	id := "0987jldvnrst"
 
+	// Test: creation of a directory that did not existed before.
 	urlDest, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, id)
@@ -188,14 +190,36 @@ func TestReceiveDocumentSuccessDir(t *testing.T) {
 
 	// Ensure that the folder was created by fetching it.
 	fs := testInstance.VFS()
-	_, err = fs.DirByID(id)
+	dirDoc, err := fs.DirByID(id)
 	assert.NoError(t, err)
+	assert.Empty(t, dirDoc.ReferencedBy)
+
+	// Test: update of a directory that did exist before.
+	refs := []couchdb.DocReference{couchdb.DocReference{Type: "1", ID: "123"}}
+	b, err := json.Marshal(refs)
+	assert.NoError(t, err)
+	references := string(b[:])
+	query.Add(consts.QueryParamReferencedBy, references)
+	urlDest.RawQuery = query.Encode()
+
+	req, err = http.NewRequest(http.MethodPost, urlDest.String(), nil)
+	assert.NoError(t, err)
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+token)
+
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	dirDoc, err = fs.DirByID(id)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, dirDoc.ReferencedBy)
 }
 
 func TestReceiveDocumentSuccessFile(t *testing.T) {
 	id := "testid"
 	body := "testoutest"
 
+	// Test: creation of a file that did not exist.
 	urlDest, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	urlDest.Path = fmt.Sprintf("/sharings/doc/%s/%s", consts.Files, id)
@@ -203,14 +227,14 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	reference := []couchdb.DocReference{{ID: "randomid", Type: "randomtype"}}
 	refBy, err := json.Marshal(reference)
 	assert.NoError(t, err)
-	refs := string(refBy[:])
+	refs := string(refBy)
 
 	strNow := time.Now().Format(time.RFC1123)
 
 	values := url.Values{
 		consts.QueryParamName:         {"TestFile"},
 		consts.QueryParamType:         {consts.FileType},
-		consts.QueryParamReferencedBy: []string{refs},
+		consts.QueryParamReferencedBy: {refs},
 		consts.QueryParamCreatedAt:    {strNow},
 		consts.QueryParamUpdatedAt:    {strNow},
 		consts.QueryParamDirID:        {consts.SharedWithMeDirID},
@@ -231,6 +255,31 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	fs := testInstance.VFS()
 	_, err = fs.FileByID(id)
 	assert.NoError(t, err)
+
+	// Test: update of a file that existed, we add another reference.
+	refsArr := []couchdb.DocReference{
+		couchdb.DocReference{Type: "1", ID: "123"},
+	}
+	b, err := json.Marshal(refsArr)
+	assert.NoError(t, err)
+	references := string(b)
+	values.Del(consts.QueryParamReferencedBy)
+	values.Add(consts.QueryParamReferencedBy, references)
+	urlDest.RawQuery = values.Encode()
+
+	req, err = http.NewRequest(http.MethodPost, urlDest.String(), buf)
+	assert.NoError(t, err)
+	req.Header.Add("Content-MD5", "VkzK5Gw9aNzQdazZe4y1cw==")
+	req.Header.Add(echo.HeaderContentType, "text/plain")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	fileDoc, err := fs.FileByID(id)
+	assert.NoError(t, err)
+	assert.Len(t, fileDoc.ReferencedBy, 2)
 }
 
 func TestUpdateDocumentSuccessJSON(t *testing.T) {
@@ -1028,6 +1077,57 @@ func TestRevokeSharing(t *testing.T) {
 	_, err = oauth.FindClient(testInstance,
 		sharingRecipient.Sharer.SharerStatus.HostClientID)
 	assert.NotNil(t, err)
+}
+
+func TestMergeMetadata(t *testing.T) {
+	newMeta := vfs.Metadata{"un": "1", "deux": "2"}
+	oldMeta := vfs.Metadata{"trois": "3"}
+	expected := vfs.Metadata{"un": "1", "deux": "2", "trois": "3"}
+
+	res := mergeMetadata(newMeta, nil)
+	assert.True(t, reflect.DeepEqual(newMeta, res))
+
+	res = mergeMetadata(nil, oldMeta)
+	assert.True(t, reflect.DeepEqual(oldMeta, res))
+
+	res = mergeMetadata(newMeta, oldMeta)
+	assert.True(t, reflect.DeepEqual(expected, res))
+}
+
+func TestMergeReferencedBy(t *testing.T) {
+	ref1 := couchdb.DocReference{Type: "1", ID: "123"}
+	ref2 := couchdb.DocReference{Type: "2", ID: "456"}
+	ref3 := couchdb.DocReference{Type: "3", ID: "789"}
+	newRefs := []couchdb.DocReference{ref1, ref2}
+	oldRefs := []couchdb.DocReference{ref1, ref3}
+	expected := []couchdb.DocReference{ref1, ref2, ref3}
+
+	res := mergeReferencedBy(newRefs, nil)
+	assert.True(t, reflect.DeepEqual(newRefs, res))
+
+	res = mergeReferencedBy(nil, oldRefs)
+	assert.True(t, reflect.DeepEqual(oldRefs, res))
+
+	res = mergeReferencedBy([]couchdb.DocReference{}, oldRefs)
+	assert.True(t, reflect.DeepEqual(oldRefs, res))
+
+	res = mergeReferencedBy(newRefs, oldRefs)
+	assert.True(t, reflect.DeepEqual(expected, res))
+}
+
+func TestMergeTags(t *testing.T) {
+	newTags := []string{"1", "2"}
+	oldTags := []string{"2", "3"}
+	expected := []string{"1", "2", "3"}
+
+	res := mergeTags(newTags, nil)
+	assert.True(t, reflect.DeepEqual(newTags, res))
+
+	res = mergeTags(nil, oldTags)
+	assert.True(t, reflect.DeepEqual(oldTags, res))
+
+	res = mergeTags(newTags, oldTags)
+	assert.True(t, reflect.DeepEqual(expected, res))
 }
 
 func TestMain(m *testing.M) {
