@@ -901,8 +901,7 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 		},
 	})
 	if err != nil {
-		reqErr := err.(*request.Error)
-		return nil, nil, parseError(reqErr)
+		return nil, nil, parseError(err)
 	}
 
 	dirOrFileDoc, err := bindDirOrFile(res.Body)
@@ -931,24 +930,28 @@ func headDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) error {
 	})
 
 	if err != nil {
-		reqErr := err.(*request.Error)
-		return parseError(reqErr)
+		return parseError(err)
 	}
 
 	return nil
 }
 
-func parseError(err *request.Error) error {
-	if err.Status == strconv.Itoa(http.StatusNotFound) ||
-		err.Title == "Not Found" {
+func parseError(err error) error {
+	errReq, ok := err.(*request.Error)
+	if !ok {
+		return err
+	}
+
+	if errReq.Status == strconv.Itoa(http.StatusNotFound) ||
+		errReq.Title == "Not Found" {
 		return ErrRemoteDocDoesNotExist
 	}
-	if err.Status == strconv.Itoa(http.StatusForbidden) ||
-		err.Title == "Forbidden" {
+	if errReq.Status == strconv.Itoa(http.StatusForbidden) ||
+		errReq.Title == "Forbidden" {
 		return ErrForbidden
 	}
 
-	return errors.New(err.Error())
+	return errors.New(errReq.Error())
 }
 
 // filehasChanges checks that the local file do have changes compared to the
