@@ -145,7 +145,7 @@ So, the `index.html` should probably looks like:
     <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
   <body>
-    <div role="application" data-token="{{.Token}}" data-cozy-stack="{{.Domain}}">
+    <div role="application" data-cozy-token="{{.Token}}" data-cozy-stack="{{.Domain}}">
     </div>
   </body>
 </html>
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const app = document.querySelector('[role=application]')
   cozy.client.init({
     cozyURL: '//' + app.dataset.cozyStack,
-    token: app.dataset.token
+    token: app.dataset.cozyToken
   })
 })
 
