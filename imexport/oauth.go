@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 )
@@ -68,7 +69,7 @@ func main() {
 	authClient, err := authReq.RegisterClient(authClient)
 	checkError(err)
 
-	authReq.Scopes = append(authReq.Scopes, "io.cozy.files:GET")
+	authReq.Scopes = append(authReq.Scopes, "io.cozy.files:GET io.cozy.jobs")
 
 	b := make([]byte, 32)
 	_, err = io.ReadFull(rand.Reader, b)
@@ -125,7 +126,21 @@ func main() {
 	checkError(err)
 	defer file.Close()
 
-	err = tardir(file, opts, authReq)
+	cClient := &client.Client{
+		Domain: authReq.Domain,
+		Scheme: opts.Scheme,
+		Client: opts.Client,
+
+		AuthClient: authReq.ClientParams,
+		AuthScopes: authReq.Scopes,
+		Authorizer: opts.Authorizer,
+		UserAgent:  opts.UserAgent,
+	}
+
+	err = tardir(file, cClient)
+	checkError(err)
+
+	err = sendMail(cClient)
 	checkError(err)
 
 }

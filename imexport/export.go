@@ -7,8 +7,6 @@ import (
 	"io"
 
 	"github.com/cozy/cozy-stack/client"
-	"github.com/cozy/cozy-stack/client/auth"
-	"github.com/cozy/cozy-stack/client/request"
 )
 
 func writeFile(path string, cClient *client.Client, tw *tar.Writer, doc *client.DirOrFile) error {
@@ -39,17 +37,7 @@ func writeFile(path string, cClient *client.Client, tw *tar.Writer, doc *client.
 	return nil
 }
 
-func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error {
-	cClient := &client.Client{
-		Domain: authReq.Domain,
-		Scheme: opts.Scheme,
-		Client: opts.Client,
-
-		AuthClient: authReq.ClientParams,
-		AuthScopes: authReq.Scopes,
-		Authorizer: opts.Authorizer,
-		UserAgent:  opts.UserAgent,
-	}
+func export(tw *tar.Writer, cClient *client.Client) error {
 
 	root := "/Documents"
 
@@ -72,7 +60,7 @@ func export(tw *tar.Writer, opts *request.Options, authReq *auth.Request) error 
 	return err
 }
 
-func tardir(w io.Writer, opts *request.Options, authReq *auth.Request) error {
+func tardir(w io.Writer, cClient *client.Client) error {
 	//gzip writer
 	gw := gzip.NewWriter(w)
 	defer gw.Close()
@@ -81,7 +69,7 @@ func tardir(w io.Writer, opts *request.Options, authReq *auth.Request) error {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	err := export(tw, opts, authReq)
+	err := export(tw, cClient)
 
 	return err
 
