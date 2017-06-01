@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 )
 
-type Content struct {
+type content struct {
 	Type string `json:"type"`
 	Body string `json:"body"`
 }
@@ -17,10 +17,10 @@ type Content struct {
 type jsonMail struct {
 	Mode    string     `json:"mode"`
 	Subject string     `json:"subject"`
-	Parts   []*Content `json:"parts"`
+	Parts   []*content `json:"parts"`
 }
 
-type Body struct {
+type jsonBody struct {
 	Data struct {
 		Attributes struct {
 			Options struct {
@@ -35,8 +35,8 @@ type Body struct {
 
 func createMail(body string) ([]byte, error) {
 
-	var tab []*Content
-	c := &Content{
+	var tab []*content
+	c := &content{
 		Type: "text/plain",
 		Body: body,
 	}
@@ -47,7 +47,7 @@ func createMail(body string) ([]byte, error) {
 		Parts:   tab,
 	}
 
-	b := &Body{}
+	b := &jsonBody{}
 	b.Data.Attributes.Options.Priority = 3
 	b.Data.Attributes.Options.MaxExecCount = 60
 	b.Data.Attributes.Options.MaxExecCount = 3
