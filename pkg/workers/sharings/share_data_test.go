@@ -209,9 +209,9 @@ func TestSendFile(t *testing.T) {
 
 	mpr := map[string]func(*echo.Group){
 		"/files": func(router *echo.Group) {
-			router.GET("/:file-id", func(c echo.Context) error {
+			router.HEAD("/download/:file-id", func(c echo.Context) error {
 				assert.Equal(t, fileDoc.ID(), c.Param("file-id"))
-				return c.JSON(http.StatusNotFound, nil)
+				return c.JSON(http.StatusForbidden, nil)
 			})
 		},
 		"/sharings": func(router *echo.Group) {
@@ -260,9 +260,9 @@ func TestSendFileAbort(t *testing.T) {
 
 	mpr := map[string]func(*echo.Group){
 		"/files": func(router *echo.Group) {
-			router.GET("/:file-id", func(c echo.Context) error {
+			router.HEAD("/download/:file-id", func(c echo.Context) error {
 				assert.Equal(t, fileDoc.ID(), c.Param("file-id"))
-				return c.JSON(http.StatusConflict, nil)
+				return c.JSON(http.StatusOK, nil)
 			})
 		},
 		"/sharings": func(router *echo.Group) {

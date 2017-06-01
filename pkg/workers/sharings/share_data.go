@@ -337,6 +337,10 @@ func sendDocToRecipient(opts *SendOptions, rec *RecipientInfo, doc *couchdb.JSON
 
 // SendFile sends a binary file to the recipients.
 //
+// To prevent any useless sending we first make a HEAD request on the file. If
+// we have a 404 or a 403 error then we can safely assume that the sending is
+// legitimate.
+//
 // TODO Handle sharing of directories.
 func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
 	err := opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
@@ -346,18 +350,22 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
-		_, _, err = getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
+		err = headDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 
 		if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
 			err = sendFileToRecipient(opts, recipient, http.MethodPost)
 			if err != nil {
 				ins.Logger().Errorf("[sharings] An error occurred while "+
-					"trying to share file %v: %v", fileDoc.DocName, err)
+					"trying to share file %v: %v", fileDoc.ID(), err)
 			}
 
 		} else {
-			ins.Logger().Debugf("[sharings] Aborting, recipient did not tell "+
-				"us the file is missing: %v", err)
+			if err == nil {
+				ins.Logger().Debugf("[sharings] Aborting: recipient already "+
+					"has the file: %s", fileDoc.ID())
+			} else {
+				ins.Logger().Debugf("[sharings] Aborting: %v", err)
+			}
 		}
 	}
 
@@ -365,6 +373,9 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 }
 
 // SendDir sends a directory to the recipients.
+//
+// TODO When supporting sharing of directories, make a HEAD request to check if
+// the recipient doesn't alreay have the dir and abort if that's the case.
 func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) error {
 	dirTags := strings.Join(dirDoc.Tags, files.TagSeparator)
 
@@ -891,16 +902,9 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 	})
 	if err != nil {
 		reqErr := err.(*request.Error)
-		if reqErr.Status == strconv.Itoa(http.StatusNotFound) ||
-			reqErr.Title == "Not Found" {
-			return nil, nil, ErrRemoteDocDoesNotExist
-		}
-		if reqErr.Status == strconv.Itoa(http.StatusForbidden) ||
-			reqErr.Title == "Forbidden" {
-			return nil, nil, ErrForbidden
-		}
-		return nil, nil, err
+		return nil, nil, parseError(reqErr)
 	}
+
 	dirOrFileDoc, err := bindDirOrFile(res.Body)
 	if err != nil {
 		return nil, nil, err
@@ -910,6 +914,41 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 	}
 	dirDoc, fileDoc := dirOrFileDoc.Refine()
 	return dirDoc, fileDoc, nil
+}
+
+func headDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) error {
+	path := fmt.Sprintf("/files/download/%s", id)
+
+	_, err := request.Req(&request.Options{
+		Domain: recInfo.URL,
+		Scheme: recInfo.Scheme,
+		Method: http.MethodHead,
+		Path:   path,
+		Headers: request.Headers{
+			echo.HeaderContentType:   echo.MIMEApplicationJSON,
+			echo.HeaderAuthorization: "Bearer " + recInfo.Token,
+		},
+	})
+
+	if err != nil {
+		reqErr := err.(*request.Error)
+		return parseError(reqErr)
+	}
+
+	return nil
+}
+
+func parseError(err *request.Error) error {
+	if err.Status == strconv.Itoa(http.StatusNotFound) ||
+		err.Title == "Not Found" {
+		return ErrRemoteDocDoesNotExist
+	}
+	if err.Status == strconv.Itoa(http.StatusForbidden) ||
+		err.Title == "Forbidden" {
+		return ErrForbidden
+	}
+
+	return errors.New(err.Error())
 }
 
 // filehasChanges checks that the local file do have changes compared to the
