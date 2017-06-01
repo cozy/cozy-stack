@@ -208,6 +208,12 @@ func TestSendFile(t *testing.T) {
 	fileDoc := createFile(t, fs, "filetestsend", "Hello, it's me again.")
 
 	mpr := map[string]func(*echo.Group){
+		"/files": func(router *echo.Group) {
+			router.GET("/:file-id", func(c echo.Context) error {
+				assert.Equal(t, fileDoc.ID(), c.Param("file-id"))
+				return c.JSON(http.StatusNotFound, nil)
+			})
+		},
 		"/sharings": func(router *echo.Group) {
 			router.POST("/doc/:doctype/:docid", func(c echo.Context) error {
 				assert.Equal(t, fileDoc.DocType(), c.Param("doctype"))
@@ -218,6 +224,53 @@ func TestSendFile(t *testing.T) {
 					consts.SharedWithMeDirID, nil)
 				assert.NoError(t, err)
 				assert.Equal(t, fileDoc.MD5Sum, sentFileDoc.MD5Sum)
+				return c.JSON(http.StatusOK, nil)
+			})
+		},
+	}
+	if ts != nil {
+		ts.Close()
+	}
+	ts = setup.GetTestServerMultipleRoutes(mpr)
+	tsURL, err := url.Parse(ts.URL)
+	assert.NoError(t, err)
+
+	recipient := &RecipientInfo{
+		URL:   tsURL.Host,
+		Token: "idontneedoneImtesting",
+	}
+	recipients := []*RecipientInfo{recipient}
+
+	sendFileOpts := &SendOptions{
+		DocID:   fileDoc.ID(),
+		DocType: fileDoc.DocType(),
+		Type:    consts.FileType,
+		Path: fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
+			fileDoc.ID()),
+		Recipients: recipients,
+	}
+
+	err = SendFile(testInstance, sendFileOpts, fileDoc)
+	assert.NoError(t, err)
+}
+
+func TestSendFileAbort(t *testing.T) {
+	fs := testInstance.VFS()
+	fileDoc := createFile(t, fs, "filetestsendabort", "Hello, it's me again.")
+
+	mpr := map[string]func(*echo.Group){
+		"/files": func(router *echo.Group) {
+			router.GET("/:file-id", func(c echo.Context) error {
+				assert.Equal(t, fileDoc.ID(), c.Param("file-id"))
+				return c.JSON(http.StatusConflict, nil)
+			})
+		},
+		"/sharings": func(router *echo.Group) {
+			router.POST("/doc/:doctype/:docid", func(c echo.Context) error {
+				// As we are testing the fact that the function aborts if the
+				// file already exists we should never reach this part of the
+				// code.
+				t.FailNow()
 				return c.JSON(http.StatusOK, nil)
 			})
 		},
@@ -309,6 +362,9 @@ func TestSendFileThroughUpdateOrPatchFile(t *testing.T) {
 func TestSendDir(t *testing.T) {
 	fs := testInstance.VFS()
 	dirDoc := createDir(t, fs, "testsenddir")
+	dirDoc.ReferencedBy = []couchdb.DocReference{
+		couchdb.DocReference{ID: "123", Type: "first"},
+	}
 
 	mpr := map[string]func(*echo.Group){
 		"/sharings": func(router *echo.Group) {
@@ -341,9 +397,10 @@ func TestSendDir(t *testing.T) {
 	recipients := []*RecipientInfo{recipient}
 
 	sendDirOpts := &SendOptions{
-		DocID:   dirDoc.ID(),
-		DocType: dirDoc.DocType(),
-		Type:    consts.FileType,
+		DocID:    dirDoc.ID(),
+		DocType:  dirDoc.DocType(),
+		Type:     consts.FileType,
+		Selector: consts.SelectorReferencedBy,
 		Path: fmt.Sprintf("/sharings/doc/%s/%s", dirDoc.DocType(),
 			dirDoc.ID()),
 		Recipients: recipients,

@@ -206,15 +206,16 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 
 		if dirDoc != nil {
 			opts.Type = consts.DirType
-			ins.Logger().Debugf("[sharings] Sending directory: %#v", dirDoc)
+			ins.Logger().Debugf("[sharings] share_data: Sending directory: %v",
+				dirDoc)
 			return SendDir(ins, opts, dirDoc)
 		}
 		opts.Type = consts.FileType
-		ins.Logger().Debugf("[sharings] Sending file: %v", fileDoc)
+		ins.Logger().Debugf("[sharings] share_data: Sending file: %v", fileDoc)
 		return SendFile(ins, opts, fileDoc)
 	}
 
-	ins.Logger().Debugf("[sharings] Sending JSON (%v): %v", opts.DocType,
+	ins.Logger().Debugf("[sharings] share_data: Sending %s: %s", opts.DocType,
 		opts.DocID)
 	return SendDoc(ins, opts)
 }
@@ -227,7 +228,9 @@ func DeleteDoc(opts *SendOptions) error {
 	for _, recipient := range opts.Recipients {
 		doc, err := getDocAtRecipient(nil, opts.DocType, opts.DocID, recipient)
 		if err != nil {
-			errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to get remote doc : %s", err.Error()))
+			errFinal = multierror.Append(errFinal,
+				fmt.Errorf("Error while trying to get remote doc : %s",
+					err.Error()))
 			continue
 		}
 		rev := doc.M["_rev"].(string)
@@ -267,7 +270,7 @@ func SendDoc(ins *instance.Instance, opts *SendOptions) error {
 	for _, rec := range opts.Recipients {
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPost)
 		if errs != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to"+
+			ins.Logger().Error("[sharings] An error occurred while trying to"+
 				"send a document to a recipient: ", errs)
 		}
 	}
@@ -286,7 +289,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 		// A doc update requires to set the doc revision from each recipient
 		remoteDoc, err := getDocAtRecipient(doc, opts.DocType, opts.DocID, rec)
 		if err != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to "+
+			ins.Logger().Error("[sharings] An error occurred while trying to "+
 				"get remote doc : ", err)
 			continue
 		}
@@ -299,7 +302,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
 		if errs != nil {
-			ins.Logger().Error("[sharing] An error occurred while trying to "+
+			ins.Logger().Error("[sharings] An error occurred while trying to "+
 				"send an update: ", err)
 		}
 	}
@@ -334,11 +337,6 @@ func sendDocToRecipient(opts *SendOptions, rec *RecipientInfo, doc *couchdb.JSON
 
 // SendFile sends a binary file to the recipients.
 //
-// At this step the sharer must specify the destination directory: since we are
-// "creating" the file at the recipient we should specify where to put it. For
-// now as we are only sharing albums this destination directory always is
-// "Shared With Me".
-//
 // TODO Handle sharing of directories.
 func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
 	err := opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
@@ -347,14 +345,19 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	}
 	defer opts.closeFile()
 
-	// Give the SharedWithMeDirID as parent: this is a creation
-	opts.fileOpts.queries.Add(consts.QueryParamDirID, consts.SharedWithMeDirID)
+	for _, recipient := range opts.Recipients {
+		_, _, err = getDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 
-	for _, rec := range opts.Recipients {
-		err = sendFileToRecipient(opts, rec, http.MethodPost)
-		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
-				"share file %v: %v", fileDoc.DocName, err)
+		if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
+			err = sendFileToRecipient(opts, recipient, http.MethodPost)
+			if err != nil {
+				ins.Logger().Errorf("[sharings] An error occurred while "+
+					"trying to share file %v: %v", fileDoc.DocName, err)
+			}
+
+		} else {
+			ins.Logger().Debugf("[sharings] Aborting, recipient did not tell "+
+				"us the file is missing: %v", err)
 		}
 	}
 
@@ -404,7 +407,7 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 			NoResponse: true,
 		})
 		if errReq != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+			ins.Logger().Errorf("[sharings] An error occurred while trying to "+
 				"share the directory %v: %v", dirDoc.DocName, err)
 		}
 	}
@@ -434,20 +437,26 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
-		// Get recipient data
 		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID,
 			recipient)
+
 		if err != nil {
 			if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
-				errf := SendFile(ins, opts, fileDoc)
+				errf := opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 				if errf != nil {
-					ins.Logger().Error("[sharing] An error occurred while "+
+					return err
+				}
+				errf = sendFileToRecipient(opts, recipient, http.MethodPost)
+				if errf != nil {
+					ins.Logger().Error("[sharings] An error occurred while "+
 						"trying to send file: ", errf)
 				}
+
 			} else {
-				ins.Logger().Errorf("[sharing] Could not get data at %v: %v",
+				ins.Logger().Errorf("[sharings] Could not get data at %v: %v",
 					recipient.URL, err)
 			}
+
 			continue
 		}
 
@@ -465,7 +474,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 						erru := updateReferencesAtRecipient(http.MethodPost,
 							refs, opts, recipient, sendToSharer)
 						if erru != nil {
-							ins.Logger().Error("[sharing] An error occurred "+
+							ins.Logger().Error("[sharings] An error occurred "+
 								" while trying to update references: ", erru)
 						}
 					}
@@ -475,13 +484,13 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 			patch, errp := generateDirOrFilePatch(nil, fileDoc)
 			if errp != nil {
-				ins.Logger().Errorf("[sharing] Could not generate patch for "+
+				ins.Logger().Errorf("[sharings] Could not generate patch for "+
 					"file %v: %v", fileDoc.DocName, errp)
 				continue
 			}
 			errsp := sendPatchToRecipient(patch, opts, recipient, fileDoc.DirID)
 			if errsp != nil {
-				ins.Logger().Error("[sharing] An error occurred while trying "+
+				ins.Logger().Error("[sharings] An error occurred while trying "+
 					"to send patch: ", errsp)
 			}
 			continue
@@ -489,13 +498,13 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		// The MD5 did change: this is a PUT
 		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying "+
+			ins.Logger().Errorf("[sharings] An error occurred while trying "+
 				"to open %v: %v", fileDoc.DocName, err)
 			continue
 		}
 		err = sendFileToRecipient(opts, recipient, http.MethodPut)
 		if err != nil {
-			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+			ins.Logger().Errorf("[sharings] An error occurred while trying to "+
 				"share an update of file %v to a recipient: %v",
 				fileDoc.DocName, err)
 		}
@@ -583,7 +592,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 		rev, err := getDirOrFileRevAtRecipient(opts.DocID, recipient)
 		if err != nil {
 			errFinal = multierror.Append(errFinal,
-				fmt.Errorf("Error while trying to get a revision at %v: %v", recipient.URL, err))
+				fmt.Errorf("Error while trying to get a revision at %v: %v",
+					recipient.URL, err))
 			continue
 		}
 		opts.DocRev = rev
@@ -606,7 +616,8 @@ func DeleteDirOrFile(opts *SendOptions) error {
 
 		if err != nil {
 			errFinal = multierror.Append(errFinal,
-				fmt.Errorf("Error while sending request to %v: %v", recipient.URL, err))
+				fmt.Errorf("Error while sending request to %v: %v",
+					recipient.URL, err))
 		}
 	}
 
@@ -615,17 +626,24 @@ func DeleteDirOrFile(opts *SendOptions) error {
 
 // Send the file to the recipient.
 //
+// If this is a creation (method = "POST") the sharer must specify the
+// destination directory: since we are "creating" the file at the recipient we
+// should specify where to put it. For now as we are only sharing albums this
+// destination directory always is "Shared With Me".
+//
 // Two scenarii are possible:
 // 1. `opts.DocRev` is empty: the recipient should not have the file in his
 //    Cozy.
-//    If we recieve a "403" error — document update conflict — then that means
-//    the file was already shared and we need to update the relevant
-//    information.
 // 2. `opts.DocRev` is NOT empty: the recipient already has the file and the
 //    sharer is updating it.
 func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo, method string) error {
 	if !opts.fileOpts.set {
-		return errors.New("[sharing] fileOpts were not set")
+		return errors.New("[sharings] fileOpts were not set")
+	}
+
+	if method == http.MethodPost {
+		opts.fileOpts.queries.Add(consts.QueryParamDirID,
+			consts.SharedWithMeDirID)
 	}
 
 	if opts.DocRev != "" {
@@ -873,7 +891,8 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 	})
 	if err != nil {
 		reqErr := err.(*request.Error)
-		if reqErr.Title == "Not Found" {
+		if reqErr.Status == strconv.Itoa(http.StatusNotFound) ||
+			reqErr.Title == "Not Found" {
 			return nil, nil, ErrRemoteDocDoesNotExist
 		}
 		if reqErr.Status == strconv.Itoa(http.StatusForbidden) ||

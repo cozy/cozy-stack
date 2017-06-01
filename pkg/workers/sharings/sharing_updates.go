@@ -181,29 +181,32 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 	switch eventType {
 	case realtime.EventCreate:
 		if opts.Type == consts.FileType {
-			ins.Logger().Debugf("[sharings] Sending file: %#v", fileDoc)
+			ins.Logger().Debugf("[sharings] sharing_update: Sending file: %#v",
+				fileDoc)
 			return SendFile(ins, opts, fileDoc)
 		}
 		if opts.Type == consts.DirType {
-			ins.Logger().Debugf("[sharings] Sending directory: %#v", dirDoc)
+			ins.Logger().Debugf("[sharings] sharing_update: Sending "+
+				"directory: %#v", dirDoc)
 			return SendDir(ins, opts, dirDoc)
 		}
 
-		ins.Logger().Debugf("[sharings] Sending JSON (%v): %v", opts.DocType,
-			opts.DocID)
+		ins.Logger().Debugf("[sharings] sharing_update: Sending %v: %v",
+			opts.DocType, opts.DocID)
 		return SendDoc(ins, opts)
 
 	case realtime.EventUpdate:
 		if opts.Type == consts.FileType {
 			if fileDoc.Trashed {
-				ins.Logger().Debugf("[sharings] Sending trash: %#v", fileDoc)
+				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
+					"trash: %#v", fileDoc)
 				return DeleteDirOrFile(opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, fileDoc.ReferencedBy)
 			if !stillShared {
-				ins.Logger().Debugf("[sharings] Sending remove references "+
-					"from %#v", fileDoc)
+				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
+					"remove references from %#v", fileDoc)
 				return RemoveDirOrFileFromSharing(ins, opts, sendToSharer)
 			}
 
@@ -212,23 +215,25 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 
 		if opts.Type == consts.DirType {
 			if dirDoc.DirID == consts.TrashDirID {
-				ins.Logger().Debugf("[sharings] Sending trash: %#v", dirDoc)
+				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
+					"trash: %v", dirDoc)
 				return DeleteDirOrFile(opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, dirDoc.ReferencedBy)
 			if !stillShared {
-				ins.Logger().Debugf("[sharings] Sending remove references "+
-					"from %#v", dirDoc)
+				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
+					"remove references from %v", dirDoc)
 				return RemoveDirOrFileFromSharing(ins, opts, sendToSharer)
 			}
 
-			ins.Logger().Debugf("[sharings] Sending patch dir %#v", dirDoc)
+			ins.Logger().Debugf("[sharings] sharing_update: Sending patch "+
+				"dir: %v", dirDoc)
 			return PatchDir(opts, dirDoc)
 		}
 
-		ins.Logger().Debugf("[sharings] Sending update JSON (%v): %v",
-			opts.DocType, opts.DocID)
+		ins.Logger().Debugf("[sharings] sharing_update: Sending update "+
+			"%s: %s", opts.DocType, opts.DocID)
 		return UpdateDoc(ins, opts)
 
 	case realtime.EventDelete:
