@@ -43,7 +43,7 @@ func createMail(body string) ([]byte, error) {
 	tab = append(tab, c)
 	m := &jsonMail{
 		Mode:    "noreply",
-		Subject: "Cozy: voici vos documents",
+		Subject: "Cozy : voici vos documents",
 		Parts:   tab,
 	}
 
@@ -61,7 +61,7 @@ func createMail(body string) ([]byte, error) {
 
 func sendMail(cClient *client.Client) error {
 
-	text := "Bonjour, vous pouvez des a presents recuperer vos documents"
+	text := "Bonjour, vous pouvez dès à présent récupérer vos documents"
 	mail, err := createMail(text)
 	if err != nil {
 		return err
