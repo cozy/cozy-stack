@@ -15,6 +15,8 @@ import (
 
 	"net/url"
 
+	"reflect"
+
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -30,7 +32,6 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
-	"reflect"
 )
 
 var testDocType = "io.cozy.tests"
@@ -203,7 +204,7 @@ func TestDeleteDoc(t *testing.T) {
 		},
 	}
 
-	err = DeleteDoc(opts)
+	err = DeleteDoc(in, opts)
 	assert.NoError(t, err)
 }
 
@@ -612,7 +613,7 @@ func TestPatchDir(t *testing.T) {
 		Recipients: recipients,
 	}
 
-	err = PatchDir(patchSendOptions, dirDoc)
+	err = PatchDir(in, patchSendOptions, dirDoc)
 	assert.NoError(t, err)
 }
 
@@ -758,7 +759,7 @@ func TestDeleteDirOrFile(t *testing.T) {
 		Recipients: recipients,
 	}
 
-	err = DeleteDirOrFile(deleteSendOptions)
+	err = DeleteDirOrFile(in, deleteSendOptions)
 	assert.NoError(t, err)
 }
 

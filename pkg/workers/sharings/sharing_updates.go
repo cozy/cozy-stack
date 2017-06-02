@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"runtime"
 
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -52,6 +53,34 @@ type TriggerEvent struct {
 type EventDoc struct {
 	Type string `json:"type"`
 	Doc  *couchdb.JSONDoc
+}
+
+// SharingMessage describes a sharing message
+type SharingMessage struct {
+	SharingID string           `json:"sharing_id"`
+	Rule      permissions.Rule `json:"rule"`
+}
+
+// Sharing describes the sharing document structure
+type Sharing struct {
+	SharingType      string             `json:"sharing_type"`
+	Permissions      permissions.Set    `json:"permissions,omitempty"`
+	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
+	Sharer           Sharer             `json:"sharer,omitempty"`
+}
+
+// Sharer gives the share info, only on the recipient side
+type Sharer struct {
+	URL          string           `json:"url"`
+	SharerStatus *RecipientStatus `json:"sharer_status"`
+}
+
+// RecipientStatus contains the information about a recipient for a sharing
+type RecipientStatus struct {
+	Status       string               `json:"status,omitempty"`
+	RefRecipient couchdb.DocReference `json:"recipient,omitempty"`
+	AccessToken  *auth.AccessToken
+	Client       *auth.Client
 }
 
 // SharingUpdates handles shared document updates
@@ -174,7 +203,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			if fileDoc.Trashed {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %#v", fileDoc)
-				return DeleteDirOrFile(opts)
+				return DeleteDirOrFile(ins, opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, fileDoc.ReferencedBy)
@@ -191,7 +220,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			if dirDoc.DirID == consts.TrashDirID {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %v", dirDoc)
-				return DeleteDirOrFile(opts)
+				return DeleteDirOrFile(ins, opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, dirDoc.ReferencedBy)
@@ -203,7 +232,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 
 			ins.Logger().Debugf("[sharings] sharing_update: Sending patch "+
 				"dir: %v", dirDoc)
-			return PatchDir(opts, dirDoc)
+			return PatchDir(ins, opts, dirDoc)
 		}
 
 		ins.Logger().Debugf("[sharings] sharing_update: Sending update "+
@@ -218,7 +247,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			// TODO Do we propagate this event?
 			return nil
 		}
-		return DeleteDoc(opts)
+		return DeleteDoc(ins, opts)
 
 	default:
 		return ErrEventNotSupported
@@ -236,9 +265,10 @@ func extractRecipient(db couchdb.Database, rec *sharings.RecipientStatus) (*shar
 		return nil, err
 	}
 	info := &sharings.RecipientInfo{
-		URL:    u,
-		Scheme: scheme,
-		Token:  rec.AccessToken.AccessToken,
+		URL:         u,
+		Scheme:      scheme,
+		AccessToken: rec.AccessToken,
+		Client:      rec.Client,
 	}
 	return info, nil
 }
