@@ -539,22 +539,6 @@ func TestSharingAcceptedBadCode(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestOneShotSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.OneShotSharing, false, false)
-}
-
-func TestMasterSlaveSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.MasterSlaveSharing, false, false)
-}
-
-func TestOneShotFileSharingAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.OneShotSharing, true, false)
-}
-
-func TestMasterSlaveSharingSelectorAcceptedSuccess(t *testing.T) {
-	acceptedSharing(t, consts.MasterSlaveSharing, false, true)
-}
-
 func TestSharingRefusedNoSharing(t *testing.T) {
 	state := "fake state"
 	clientID := "fake client"

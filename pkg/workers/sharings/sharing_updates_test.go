@@ -5,9 +5,10 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/sharings"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +27,7 @@ func createDoc(t *testing.T, docType string, params map[string]interface{}) couc
 }
 
 func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string) *TriggerEvent {
-	msg := &SharingMessage{
+	msg := &sharings.SharingMessage{
 		SharingID: sharingID,
 		Rule: permissions.Rule{
 			Description: "randomdesc",
@@ -42,26 +43,19 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 	return event
 }
 
-func createSharingDocument(i *instance.Instance, doctype string, owner bool, verbs []string) (*couchdb.JSONDoc, error) {
-	sDoc := &couchdb.JSONDoc{
-		Type: "io.cozy.sharings",
-		M: map[string]interface{}{
-			"type":  consts.OneShotSharing,
-			"owner": owner,
-			"desc":  "randomdesc",
-			"permissions": []map[string]interface{}{
-				{
-					"type":     doctype,
-					"selector": "referenced_by",
-					"values":   []interface{}{"io.cozy.events/random"},
-					"verbs":    verbs,
-				},
-			},
-		},
+func createSharing(t *testing.T, sharingType string, owner bool, rule permissions.Rule) sharings.Sharing {
+	sharing := sharings.Sharing{
+		Owner:       owner,
+		Type:        consts.Sharings,
+		SharingType: sharingType,
+		SharingID:   utils.RandomString(32),
+		Permissions: permissions.Set{rule},
 	}
 
-	err := couchdb.CreateDoc(i, sDoc)
-	return sDoc, err
+	err := couchdb.CreateDoc(testInstance, &sharing)
+	assert.NoError(t, err)
+
+	return sharing
 }
 
 func TestSharingUpdatesNoSharing(t *testing.T) {
