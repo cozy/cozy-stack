@@ -1145,24 +1145,22 @@ func refreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *sharing
 		Scheme:     opts.Scheme,
 		HTTPClient: new(http.Client),
 	}
-	access, rerr := req.RefreshToken(rec.Client, rec.AccessToken)
-	if rerr != nil {
-		ins.Logger().Errorf("[sharing] Refresh token request failed: %v", rerr)
-		return nil, rerr
+	sharing, recStatus, err := sharings.FindSharingRecipient(ins, sharingID, rec.Client.ClientID)
+	if err != nil {
+		return nil, err
 	}
-	sharing := &sharings.Sharing{}
-	rerr = couchdb.GetDoc(ins, consts.Sharings, sharingID, sharing)
-	if rerr != nil {
-		recStatus, err := sharing.GetSharingRecipientFromClientID(ins, rec.Client.ClientID)
-		if err != nil {
-			return nil, err
-		}
-		recStatus.AccessToken = access
-		if err := couchdb.UpdateDoc(ins, sharing); err != nil {
-			return nil, err
-		}
+	refreshToken := rec.AccessToken.RefreshToken
+	access, err := req.RefreshToken(&rec.Client, &rec.AccessToken)
+	if err != nil {
+		ins.Logger().Errorf("[sharing] Refresh token request failed: %v", err)
+		return nil, err
+	}
+	access.RefreshToken = refreshToken
+	recStatus.AccessToken = *access
+	if err = couchdb.UpdateDoc(ins, sharing); err != nil {
+		return nil, err
 	}
 	opts.Headers["Authorization"] = "Bearer " + access.AccessToken
-	res, rerr := request.Req(opts)
-	return res, rerr
+	res, err := request.Req(opts)
+	return res, err
 }

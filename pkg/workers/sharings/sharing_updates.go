@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"runtime"
 
-	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -59,28 +58,6 @@ type EventDoc struct {
 type SharingMessage struct {
 	SharingID string           `json:"sharing_id"`
 	Rule      permissions.Rule `json:"rule"`
-}
-
-// Sharing describes the sharing document structure
-type Sharing struct {
-	SharingType      string             `json:"sharing_type"`
-	Permissions      permissions.Set    `json:"permissions,omitempty"`
-	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
-	Sharer           Sharer             `json:"sharer,omitempty"`
-}
-
-// Sharer gives the share info, only on the recipient side
-type Sharer struct {
-	URL          string           `json:"url"`
-	SharerStatus *RecipientStatus `json:"sharer_status"`
-}
-
-// RecipientStatus contains the information about a recipient for a sharing
-type RecipientStatus struct {
-	Status       string               `json:"status,omitempty"`
-	RefRecipient couchdb.DocReference `json:"recipient,omitempty"`
-	AccessToken  *auth.AccessToken
-	Client       *auth.Client
 }
 
 // SharingUpdates handles shared document updates
@@ -157,6 +134,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	opts := &SendOptions{
 		DocID:      docID,
 		DocType:    rule.Type,
+		SharingID:  sharing.SharingID,
 		Recipients: recInfos,
 		Selector:   rule.Selector,
 		Values:     rule.Values,

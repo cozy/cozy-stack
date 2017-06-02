@@ -73,14 +73,15 @@ type SharingMessage struct {
 type RecipientInfo struct {
 	URL         string
 	Scheme      string
-	Client      *auth.Client
-	AccessToken *auth.AccessToken
+	Client      auth.Client
+	AccessToken auth.AccessToken
 }
 
 // WorkerData describes the basic data the workers need to process the events
 // they will receive.
 type WorkerData struct {
 	DocID      string
+	SharingID  string
 	Selector   string
 	Values     []string
 	DocType    string
@@ -341,6 +342,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, WorkerData{
 				DocID:      val,
+				SharingID:  sharing.SharingID,
 				Selector:   rule.Selector,
 				Values:     rule.Values,
 				DocType:    docType,
@@ -582,7 +584,7 @@ func ExchangeCodeForToken(instance *instance.Instance, sharing *Sharing, recStat
 	if err != nil {
 		return err
 	}
-	recStatus.AccessToken = access
+	recStatus.AccessToken = *access
 	return couchdb.UpdateDoc(instance, sharing)
 }
 
