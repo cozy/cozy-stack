@@ -139,7 +139,7 @@ func (i *Instance) Prefix() string {
 }
 
 func (i *Instance) PathSegment() string {
-	return i.Domain
+	return strings.Replace(i.Domain, ":", "_", -1)
 }
 
 // Logger returns the logger associated with the instance
