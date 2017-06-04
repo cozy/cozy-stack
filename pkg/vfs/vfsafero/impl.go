@@ -39,15 +39,15 @@ type aferoVFS struct {
 //
 // The supported scheme of the storage url are file://, for an OS-FS store, and
 // mem:// for an in-memory store. The backend used is the afero package.
-func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsURL *url.URL, domain string) (vfs.VFS, error) {
+func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, fsURL *url.URL, pathSegment string) (vfs.VFS, error) {
 	if fsURL.Scheme != "mem" && fsURL.Path == "" {
 		return nil, fmt.Errorf("vfsafero: please check the supplied fs url: %s",
 			fsURL.String())
 	}
-	if domain == "" {
-		return nil, fmt.Errorf("vfsafero: specified domain is empty")
+	if pathSegment == "" {
+		return nil, fmt.Errorf("vfsafero: specified path segment is empty")
 	}
-	pth := path.Join(fsURL.Path, domain)
+	pth := path.Join(fsURL.Path, pathSegment)
 	var fs afero.Fs
 	switch fsURL.Scheme {
 	case "file":
