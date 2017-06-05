@@ -17,6 +17,7 @@ import (
 
 	"reflect"
 
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -144,8 +145,8 @@ func TestSendDataBadRecipient(t *testing.T) {
 	}()
 
 	rec := &sharings.RecipientInfo{
-		URL:   "nowhere",
-		Token: "inthesky",
+		URL:         "nowhere",
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
@@ -198,8 +199,8 @@ func TestDeleteDoc(t *testing.T) {
 		Path:    fmt.Sprintf("/sharings/doc/%s/%s", testDocType, testDocID),
 		Recipients: []*sharings.RecipientInfo{
 			&sharings.RecipientInfo{
-				URL:   tsURL.Host,
-				Token: "whoneedsone?",
+				URL:         tsURL.Host,
+				AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 			},
 		},
 	}
@@ -242,8 +243,8 @@ func TestSendFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	recipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "idontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{recipient}
 
@@ -290,8 +291,8 @@ func TestSendFileAbort(t *testing.T) {
 	assert.NoError(t, err)
 
 	recipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "idontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{recipient}
 
@@ -349,8 +350,8 @@ func TestSendFileThroughUpdateOrPatchFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	recipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "idontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{recipient}
 
@@ -398,8 +399,8 @@ func TestSendDir(t *testing.T) {
 	assert.NoError(t, err)
 
 	recipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "idontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{recipient}
 
@@ -507,8 +508,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	testRecipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "dontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{testRecipient}
 
@@ -599,8 +600,8 @@ func TestPatchDir(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	testRecipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "dontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{testRecipient}
 
@@ -666,8 +667,8 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	testRecipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "dontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{testRecipient}
 
@@ -745,8 +746,8 @@ func TestDeleteDirOrFile(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	testRecipient := &sharings.RecipientInfo{
-		URL:   tsURL.Host,
-		Token: "dontneedoneImtesting",
+		URL:         tsURL.Host,
+		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 	recipients := []*sharings.RecipientInfo{testRecipient}
 
