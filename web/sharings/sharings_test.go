@@ -15,6 +15,8 @@ import (
 
 	"encoding/base64"
 
+	"reflect"
+
 	authClient "github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -32,7 +34,6 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
-	"reflect"
 )
 
 var ts *httptest.Server
@@ -981,7 +982,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 
 func TestReceiveClientIDBadSharing(t *testing.T) {
 	sharing := createSharing(t, true, consts.OneShotSharing)
-	authCli := &authClient.Client{
+	authCli := authClient.Client{
 		ClientID: "myclientid",
 	}
 	sharing.RecipientsStatus[0].Client = authCli
@@ -998,7 +999,7 @@ func TestReceiveClientIDBadSharing(t *testing.T) {
 
 func TestReceiveClientIDSuccess(t *testing.T) {
 	sharing := createSharing(t, true, consts.OneShotSharing)
-	authCli := &authClient.Client{
+	authCli := authClient.Client{
 		ClientID: "myclientid",
 	}
 	sharing.RecipientsStatus[0].Client = authCli

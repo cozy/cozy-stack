@@ -16,6 +16,7 @@ import (
 
 	"strings"
 
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -41,6 +42,7 @@ func init() {
 type SendOptions struct {
 	DocID      string
 	DocType    string
+	SharingID  string
 	Type       string
 	Recipients []*sharings.RecipientInfo
 	Path       string
@@ -216,11 +218,11 @@ func SendData(ctx context.Context, m *jobs.Message) error {
 
 // DeleteDoc asks the recipients to delete the shared document which id was
 // provided.
-func DeleteDoc(opts *SendOptions) error {
+func DeleteDoc(ins *instance.Instance, opts *SendOptions) error {
 	var errFinal error
 
 	for _, recipient := range opts.Recipients {
-		doc, err := getDocAtRecipient(nil, opts.DocType, opts.DocID, recipient)
+		doc, err := getDocAtRecipient(ins, nil, opts, recipient)
 		if err != nil {
 			errFinal = multierror.Append(errFinal,
 				fmt.Errorf("Error while trying to get remote doc : %s",
@@ -229,7 +231,7 @@ func DeleteDoc(opts *SendOptions) error {
 		}
 		rev := doc.M["_rev"].(string)
 
-		_, errSend := request.Req(&request.Options{
+		reqOpts := &request.Options{
 			Domain: recipient.URL,
 			Scheme: recipient.Scheme,
 			Method: http.MethodDelete,
@@ -237,13 +239,20 @@ func DeleteDoc(opts *SendOptions) error {
 			Headers: request.Headers{
 				"Content-Type":  "application/json",
 				"Accept":        "application/json",
-				"Authorization": "Bearer " + recipient.Token,
+				"Authorization": "Bearer " + recipient.AccessToken.AccessToken,
 			},
 			Queries:    url.Values{"rev": {rev}},
 			NoResponse: true,
-		})
+		}
+		_, errSend := request.Req(reqOpts)
+
 		if errSend != nil {
-			errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to share data : %s", errSend.Error()))
+			if authError(err) {
+				_, errSend = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			}
+			if errSend != nil {
+				errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to share data : %s", errSend.Error()))
+			}
 		}
 	}
 
@@ -262,10 +271,10 @@ func SendDoc(ins *instance.Instance, opts *SendOptions) error {
 	delete(doc.M, "_rev")
 
 	for _, rec := range opts.Recipients {
-		errs := sendDocToRecipient(opts, rec, doc, http.MethodPost)
+		errs := sendDocToRecipient(ins, opts, rec, doc, http.MethodPost)
 		if errs != nil {
-			ins.Logger().Error("[sharings] An error occurred while trying to"+
-				"send a document to a recipient: ", errs)
+			ins.Logger().Error("[sharing] An error occurred while trying to"+
+				" send a document to a recipient: ", errs)
 		}
 	}
 
@@ -281,7 +290,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 
 	for _, rec := range opts.Recipients {
 		// A doc update requires to set the doc revision from each recipient
-		remoteDoc, err := getDocAtRecipient(doc, opts.DocType, opts.DocID, rec)
+		remoteDoc, err := getDocAtRecipient(ins, doc, opts, rec)
 		if err != nil {
 			ins.Logger().Error("[sharings] An error occurred while trying to "+
 				"get remote doc : ", err)
@@ -294,7 +303,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 		rev := remoteDoc.M["_rev"].(string)
 		doc.SetRev(rev)
 
-		errs := sendDocToRecipient(opts, rec, doc, http.MethodPut)
+		errs := sendDocToRecipient(ins, opts, rec, doc, http.MethodPut)
 		if errs != nil {
 			ins.Logger().Error("[sharings] An error occurred while trying to "+
 				"send an update: ", err)
@@ -304,15 +313,14 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 	return nil
 }
 
-func sendDocToRecipient(opts *SendOptions, rec *sharings.RecipientInfo, doc *couchdb.JSONDoc, method string) error {
+func sendDocToRecipient(ins *instance.Instance, opts *SendOptions, rec *sharings.RecipientInfo, doc *couchdb.JSONDoc, method string) error {
 	body, err := request.WriteJSON(doc.M)
 	if err != nil {
 		return err
 	}
-
 	// Send the document to the recipient
 	// TODO : handle send failures
-	_, err = request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain: rec.URL,
 		Scheme: rec.Scheme,
 		Method: method,
@@ -320,11 +328,22 @@ func sendDocToRecipient(opts *SendOptions, rec *sharings.RecipientInfo, doc *cou
 		Headers: request.Headers{
 			"Content-Type":  "application/json",
 			"Accept":        "application/json",
-			"Authorization": "Bearer " + rec.Token,
+			"Authorization": "Bearer " + rec.AccessToken.AccessToken,
 		},
 		Body:       body,
 		NoResponse: true,
-	})
+	}
+	_, err = request.Req(reqOpts)
+	if err != nil {
+		if authError(err) {
+			body, berr := request.WriteJSON(doc.M)
+			if berr != nil {
+				return berr
+			}
+			reqOpts.Body = body
+			_, err = refreshTokenAndRetry(ins, opts.SharingID, rec, reqOpts)
+		}
+	}
 
 	return err
 }
@@ -347,7 +366,7 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 		err = headDirOrFileMetadataAtRecipient(opts.DocID, recipient)
 
 		if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
-			err = sendFileToRecipient(opts, recipient, http.MethodPost)
+			err = sendFileToRecipient(ins, fileDoc, opts, recipient, http.MethodPost)
 			if err != nil {
 				ins.Logger().Errorf("[sharings] An error occurred while "+
 					"trying to share file %v: %v", fileDoc.ID(), err)
@@ -389,14 +408,14 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 	}
 
 	for _, recipient := range opts.Recipients {
-		_, errReq := request.Req(&request.Options{
+		reqOpts := &request.Options{
 			Domain: recipient.URL,
 			Scheme: recipient.Scheme,
 			Method: http.MethodPost,
 			Path:   opts.Path,
 			Headers: request.Headers{
 				echo.HeaderContentType:   echo.MIMEApplicationJSON,
-				echo.HeaderAuthorization: "Bearer " + recipient.Token,
+				echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
 			},
 			Queries: url.Values{
 				consts.QueryParamTags: {dirTags},
@@ -410,10 +429,16 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 				consts.QueryParamReferencedBy: {refs},
 			},
 			NoResponse: true,
-		})
+		}
+		_, errReq := request.Req(reqOpts)
 		if errReq != nil {
-			ins.Logger().Errorf("[sharings] An error occurred while trying to "+
-				"share the directory %v: %v", dirDoc.DocName, err)
+			if authError(errReq) {
+				_, errReq = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			}
+			if errReq != nil {
+				ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+					"share the directory %v: %v", dirDoc.DocName, errReq)
+			}
 		}
 	}
 
@@ -442,7 +467,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
-		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(opts.DocID,
+		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(ins, opts,
 			recipient)
 
 		if err != nil {
@@ -451,7 +476,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 				if errf != nil {
 					return err
 				}
-				errf = sendFileToRecipient(opts, recipient, http.MethodPost)
+				errf = sendFileToRecipient(ins, fileDoc, opts, recipient, http.MethodPost)
 				if errf != nil {
 					ins.Logger().Error("[sharings] An error occurred while "+
 						"trying to send file: ", errf)
@@ -476,7 +501,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 				if opts.Selector == consts.SelectorReferencedBy {
 					refs := findNewRefs(opts, fileDoc, remoteFileDoc)
 					if refs != nil {
-						erru := updateReferencesAtRecipient(http.MethodPost,
+						erru := updateReferencesAtRecipient(ins, http.MethodPost,
 							refs, opts, recipient, sendToSharer)
 						if erru != nil {
 							ins.Logger().Error("[sharings] An error occurred "+
@@ -493,7 +518,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 					"file %v: %v", fileDoc.DocName, errp)
 				continue
 			}
-			errsp := sendPatchToRecipient(patch, opts, recipient, fileDoc.DirID)
+			errsp := sendPatchToRecipient(ins, patch, opts, recipient, fileDoc.DirID)
 			if errsp != nil {
 				ins.Logger().Error("[sharings] An error occurred while trying "+
 					"to send patch: ", errsp)
@@ -507,7 +532,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 				"to open %v: %v", fileDoc.DocName, err)
 			continue
 		}
-		err = sendFileToRecipient(opts, recipient, http.MethodPut)
+		err = sendFileToRecipient(ins, fileDoc, opts, recipient, http.MethodPut)
 		if err != nil {
 			ins.Logger().Errorf("[sharings] An error occurred while trying to "+
 				"share an update of file %v to a recipient: %v",
@@ -520,7 +545,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 
 // PatchDir updates the metadata of the corresponding directory at each
 // recipient's.
-func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
+func PatchDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) error {
 	var errFinal error
 
 	patch, err := generateDirOrFilePatch(dirDoc, nil)
@@ -529,12 +554,12 @@ func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 	}
 
 	for _, rec := range opts.Recipients {
-		rev, err := getDirOrFileRevAtRecipient(opts.DocID, rec)
+		rev, err := getDirOrFileRevAtRecipient(ins, opts, rec)
 		if err != nil {
 			return err
 		}
 		opts.DocRev = rev
-		err = sendPatchToRecipient(patch, opts, rec, dirDoc.DirID)
+		err = sendPatchToRecipient(ins, patch, opts, rec, dirDoc.DirID)
 		if err != nil {
 			errFinal = multierror.Append(errFinal,
 				fmt.Errorf("Error while trying to send a patch: %s",
@@ -568,7 +593,7 @@ func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions, sendT
 	}
 
 	for _, recipient := range opts.Recipients {
-		errs := updateReferencesAtRecipient(http.MethodDelete, sharedRefs,
+		errs := updateReferencesAtRecipient(ins, http.MethodDelete, sharedRefs,
 			opts, recipient, sendToSharer)
 		if errs != nil {
 			ins.Logger().Debugf("[sharings] Could not update reference at "+
@@ -581,10 +606,10 @@ func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions, sendT
 
 // DeleteDirOrFile asks the recipients to put the file or directory in the
 // trash.
-func DeleteDirOrFile(opts *SendOptions) error {
+func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions) error {
 	var errFinal error
 	for _, recipient := range opts.Recipients {
-		rev, err := getDirOrFileRevAtRecipient(opts.DocID, recipient)
+		rev, err := getDirOrFileRevAtRecipient(ins, opts, recipient)
 		if err != nil {
 			errFinal = multierror.Append(errFinal,
 				fmt.Errorf("Error while trying to get a revision at %v: %v",
@@ -593,26 +618,30 @@ func DeleteDirOrFile(opts *SendOptions) error {
 		}
 		opts.DocRev = rev
 
-		_, err = request.Req(&request.Options{
+		reqOpts := &request.Options{
 			Domain: recipient.URL,
 			Scheme: recipient.Scheme,
 			Method: http.MethodDelete,
 			Path:   opts.Path,
 			Headers: request.Headers{
 				echo.HeaderContentType:   echo.MIMEApplicationJSON,
-				echo.HeaderAuthorization: "Bearer " + recipient.Token,
+				echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
 			},
 			Queries: url.Values{
 				consts.QueryParamRev:  {opts.DocRev},
 				consts.QueryParamType: {opts.Type},
 			},
 			NoResponse: true,
-		})
-
+		}
+		_, err = request.Req(reqOpts)
 		if err != nil {
-			errFinal = multierror.Append(errFinal,
-				fmt.Errorf("Error while sending request to %v: %v",
-					recipient.URL, err))
+			if authError(err) {
+				_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			}
+			if err != nil {
+				errFinal = multierror.Append(errFinal,
+					fmt.Errorf("Error while sending request to %v: %v", recipient.URL, err))
+			}
 		}
 	}
 
@@ -631,7 +660,7 @@ func DeleteDirOrFile(opts *SendOptions) error {
 //    Cozy.
 // 2. `opts.DocRev` is NOT empty: the recipient already has the file and the
 //    sharer is updating it.
-func sendFileToRecipient(opts *SendOptions, recipient *sharings.RecipientInfo, method string) error {
+func sendFileToRecipient(ins *instance.Instance, fileDoc *vfs.FileDoc, opts *SendOptions, recipient *sharings.RecipientInfo, method string) error {
 	if !opts.fileOpts.set {
 		return errors.New("[sharings] fileOpts were not set")
 	}
@@ -644,8 +673,7 @@ func sendFileToRecipient(opts *SendOptions, recipient *sharings.RecipientInfo, m
 	if opts.DocRev != "" {
 		opts.fileOpts.queries.Add("rev", opts.DocRev)
 	}
-
-	_, err := request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain: recipient.URL,
 		Scheme: recipient.Scheme,
 		Method: method,
@@ -655,17 +683,27 @@ func sendFileToRecipient(opts *SendOptions, recipient *sharings.RecipientInfo, m
 			"Accept":         "application/vnd.api+json",
 			"Content-Length": opts.fileOpts.contentlength,
 			"Content-MD5":    opts.fileOpts.md5,
-			"Authorization":  "Bearer " + recipient.Token,
+			"Authorization":  "Bearer " + recipient.AccessToken.AccessToken,
 		},
 		Queries:    opts.fileOpts.queries,
 		Body:       opts.fileOpts.content,
 		NoResponse: true,
-	})
-
+	}
+	_, err := request.Req(reqOpts)
+	if err != nil {
+		if authError(err) {
+			content, erro := ins.VFS().OpenFile(fileDoc)
+			if erro != nil {
+				return erro
+			}
+			reqOpts.Body = content
+			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+		}
+	}
 	return err
 }
 
-func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient *sharings.RecipientInfo, dirID string) error {
+func sendPatchToRecipient(ins *instance.Instance, patch *jsonapi.Document, opts *SendOptions, recipient *sharings.RecipientInfo, dirID string) error {
 	body, err := request.WriteJSON(patch)
 	if err != nil {
 		return err
@@ -675,15 +713,14 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 	if err != nil {
 		return err
 	}
-
-	_, err = request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain: recipient.URL,
 		Scheme: recipient.Scheme,
 		Method: http.MethodPatch,
 		Path:   opts.Path,
 		Headers: request.Headers{
 			echo.HeaderContentType:   jsonapi.ContentType,
-			echo.HeaderAuthorization: "Bearer " + recipient.Token,
+			echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
 		},
 		Queries: url.Values{
 			consts.QueryParamRev:   {opts.DocRev},
@@ -692,8 +729,18 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 		},
 		Body:       body,
 		NoResponse: true,
-	})
-
+	}
+	_, err = request.Req(reqOpts)
+	if err != nil {
+		if authError(err) {
+			body, errw := request.WriteJSON(patch)
+			if errw != nil {
+				return errw
+			}
+			reqOpts.Body = body
+			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+		}
+	}
 	return err
 }
 
@@ -702,7 +749,7 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 // 2. If it's "DELETE" it calls the sharing handler because, in addition to
 //    removing the references, we need to see if the file is still shared and if
 //    not we need to trash it.
-func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opts *SendOptions, recipient *sharings.RecipientInfo, sendToSharer bool) error {
+func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []couchdb.DocReference, opts *SendOptions, recipient *sharings.RecipientInfo, sendToSharer bool) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return err
@@ -726,7 +773,7 @@ func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opt
 		consts.QueryParamSharer: {strconv.FormatBool(sendToSharer)},
 	}
 
-	_, err = request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain:  recipient.URL,
 		Scheme:  recipient.Scheme,
 		Method:  method,
@@ -734,12 +781,22 @@ func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opt
 		Queries: values,
 		Headers: request.Headers{
 			echo.HeaderContentType:   jsonapi.ContentType,
-			echo.HeaderAuthorization: "Bearer " + recipient.Token,
+			echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
 		},
 		Body:       body,
 		NoResponse: true,
-	})
-
+	}
+	_, err = request.Req(reqOpts)
+	if err != nil {
+		if authError(err) {
+			body, errw := request.WriteJSON(doc)
+			if errw != nil {
+				return errw
+			}
+			reqOpts.Body = body
+			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+		}
+	}
 	return err
 }
 
@@ -830,10 +887,10 @@ func generateDirOrFilePatch(dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.
 }
 
 // getDocAtRecipient returns the document at the given recipient.
-func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *sharings.RecipientInfo) (*couchdb.JSONDoc, error) {
-	path := fmt.Sprintf("/data/%s/%s", doctype, docID)
+func getDocAtRecipient(ins *instance.Instance, newDoc *couchdb.JSONDoc, opts *SendOptions, recInfo *sharings.RecipientInfo) (*couchdb.JSONDoc, error) {
+	path := fmt.Sprintf("/data/%s/%s", opts.DocType, opts.DocID)
 
-	res, err := request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain: recInfo.URL,
 		Scheme: recInfo.Scheme,
 		Method: http.MethodGet,
@@ -841,13 +898,20 @@ func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *
 		Headers: request.Headers{
 			"Content-Type":  "application/json",
 			"Accept":        "application/json",
-			"Authorization": "Bearer " + recInfo.Token,
+			"Authorization": "Bearer " + recInfo.AccessToken.AccessToken,
 		},
-	})
-	if err != nil {
-		return nil, err
 	}
-
+	var res *http.Response
+	var err error
+	res, err = request.Req(reqOpts)
+	if err != nil {
+		if authError(err) {
+			res, err = refreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 	doc := &couchdb.JSONDoc{}
 	if err := request.ReadJSON(res.Body, doc); err != nil {
 		return nil, err
@@ -855,9 +919,9 @@ func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *
 	return doc, nil
 }
 
-func getDirOrFileRevAtRecipient(docID string, recipient *sharings.RecipientInfo) (string, error) {
+func getDirOrFileRevAtRecipient(ins *instance.Instance, opts *SendOptions, recipient *sharings.RecipientInfo) (string, error) {
 	var rev string
-	dirDoc, fileDoc, err := getDirOrFileMetadataAtRecipient(docID, recipient)
+	dirDoc, fileDoc, err := getDirOrFileMetadataAtRecipient(ins, opts, recipient)
 	if err != nil {
 		return "", err
 	}
@@ -870,10 +934,10 @@ func getDirOrFileRevAtRecipient(docID string, recipient *sharings.RecipientInfo)
 	return rev, nil
 }
 
-func getDirOrFileMetadataAtRecipient(id string, recInfo *sharings.RecipientInfo) (*vfs.DirDoc, *vfs.FileDoc, error) {
-	path := fmt.Sprintf("/files/%s", id)
+func getDirOrFileMetadataAtRecipient(ins *instance.Instance, opts *SendOptions, recInfo *sharings.RecipientInfo) (*vfs.DirDoc, *vfs.FileDoc, error) {
+	path := fmt.Sprintf("/files/%s", opts.DocID)
 
-	res, err := request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain: recInfo.URL,
 		Scheme: recInfo.Scheme,
 		Method: http.MethodGet,
@@ -881,11 +945,23 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *sharings.RecipientInfo)
 		Headers: request.Headers{
 			echo.HeaderContentType:    echo.MIMEApplicationJSON,
 			echo.HeaderAcceptEncoding: echo.MIMEApplicationJSON,
-			echo.HeaderAuthorization:  "Bearer " + recInfo.Token,
+			echo.HeaderAuthorization:  "Bearer " + recInfo.AccessToken.AccessToken,
 		},
-	})
+	}
+
+	var res *http.Response
+	var rerr error
+
+	res, err := request.Req(reqOpts)
 	if err != nil {
-		return nil, nil, parseError(err)
+		if authError(err) {
+			res, rerr = refreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
+			if rerr != nil {
+				return nil, nil, rerr
+			}
+		} else {
+			return nil, nil, parseError(err)
+		}
 	}
 
 	dirOrFileDoc, err := bindDirOrFile(res.Body)
@@ -909,7 +985,7 @@ func headDirOrFileMetadataAtRecipient(id string, recInfo *sharings.RecipientInfo
 		Path:   path,
 		Headers: request.Headers{
 			echo.HeaderContentType:   echo.MIMEApplicationJSON,
-			echo.HeaderAuthorization: "Bearer " + recInfo.Token,
+			echo.HeaderAuthorization: "Bearer " + recInfo.AccessToken.AccessToken,
 		},
 	})
 
@@ -1046,4 +1122,45 @@ func bindDirOrFile(body io.Reader) (*vfs.DirOrFileDoc, error) {
 	dirOrFileDoc.SetRev(obj.Meta.Rev)
 
 	return dirOrFileDoc, nil
+}
+
+func authError(err error) bool {
+	switch v := err.(type) {
+	case *request.Error:
+		if v.Title == "Bad Request" || v.Title == "Unauthorized" {
+			return true
+		}
+	}
+	return false
+}
+
+// refreshTokenAndRetry is called after an authentication failure.
+// It tries to renew the access_token and request again
+func refreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *sharings.RecipientInfo, opts *request.Options) (*http.Response, error) {
+	ins.Logger().Errorf("[sharing] The request is not authorized. "+
+		"Trying to renew the token for %v", rec.URL)
+
+	req := &auth.Request{
+		Domain:     opts.Domain,
+		Scheme:     opts.Scheme,
+		HTTPClient: new(http.Client),
+	}
+	sharing, recStatus, err := sharings.FindSharingRecipient(ins, sharingID, rec.Client.ClientID)
+	if err != nil {
+		return nil, err
+	}
+	refreshToken := rec.AccessToken.RefreshToken
+	access, err := req.RefreshToken(&rec.Client, &rec.AccessToken)
+	if err != nil {
+		ins.Logger().Errorf("[sharing] Refresh token request failed: %v", err)
+		return nil, err
+	}
+	access.RefreshToken = refreshToken
+	recStatus.AccessToken = *access
+	if err = couchdb.UpdateDoc(ins, sharing); err != nil {
+		return nil, err
+	}
+	opts.Headers["Authorization"] = "Bearer " + access.AccessToken
+	res, err := request.Req(opts)
+	return res, err
 }

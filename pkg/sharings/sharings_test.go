@@ -352,7 +352,7 @@ func TestGetAccessTokenNoAuth(t *testing.T) {
 	code := "sesame"
 	rs := &RecipientStatus{
 		recipient: &Recipient{URL: recipientURL},
-		Client:    &auth.Client{},
+		Client:    auth.Client{},
 	}
 	_, err := rs.getAccessToken(in, code)
 	assert.Error(t, err)
@@ -362,7 +362,7 @@ func TestGetAccessTokenNoURL(t *testing.T) {
 	code := "dummy"
 	rs := &RecipientStatus{
 		recipient: &Recipient{},
-		Client:    &auth.Client{},
+		Client:    auth.Client{},
 	}
 
 	_, err := rs.getAccessToken(in, code)
@@ -454,7 +454,7 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 
 	rStatus := &RecipientStatus{
 		RefRecipient: couchdb.DocReference{ID: "id", Type: "type"},
-		Client: &auth.Client{
+		Client: auth.Client{
 			ClientID: "fakeid",
 		},
 	}
@@ -471,7 +471,7 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 	clientID := "fake client"
 	rs := &RecipientStatus{
-		Client: &auth.Client{
+		Client: auth.Client{
 			ClientID: clientID,
 		},
 	}
@@ -590,7 +590,7 @@ func TestSharingRefusedSuccess(t *testing.T) {
 
 	rStatus := &RecipientStatus{
 		RefRecipient: couchdb.DocReference{ID: recipient.RID},
-		Client: &auth.Client{
+		Client: auth.Client{
 			ClientID: clientID,
 		},
 	}

@@ -54,6 +54,12 @@ type EventDoc struct {
 	Doc  *couchdb.JSONDoc
 }
 
+// SharingMessage describes a sharing message
+type SharingMessage struct {
+	SharingID string           `json:"sharing_id"`
+	Rule      permissions.Rule `json:"rule"`
+}
+
 // SharingUpdates handles shared document updates
 func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
@@ -128,6 +134,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	opts := &SendOptions{
 		DocID:      docID,
 		DocType:    rule.Type,
+		SharingID:  sharing.SharingID,
 		Recipients: recInfos,
 		Selector:   rule.Selector,
 		Values:     rule.Values,
@@ -174,7 +181,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			if fileDoc.Trashed {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %#v", fileDoc)
-				return DeleteDirOrFile(opts)
+				return DeleteDirOrFile(ins, opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, fileDoc.ReferencedBy)
@@ -191,7 +198,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			if dirDoc.DirID == consts.TrashDirID {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %v", dirDoc)
-				return DeleteDirOrFile(opts)
+				return DeleteDirOrFile(ins, opts)
 			}
 
 			stillShared := isDocumentStillShared(opts, dirDoc.ReferencedBy)
@@ -203,7 +210,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 
 			ins.Logger().Debugf("[sharings] sharing_update: Sending patch "+
 				"dir: %v", dirDoc)
-			return PatchDir(opts, dirDoc)
+			return PatchDir(ins, opts, dirDoc)
 		}
 
 		ins.Logger().Debugf("[sharings] sharing_update: Sending update "+
@@ -218,7 +225,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			// TODO Do we propagate this event?
 			return nil
 		}
-		return DeleteDoc(opts)
+		return DeleteDoc(ins, opts)
 
 	default:
 		return ErrEventNotSupported
@@ -236,9 +243,10 @@ func extractRecipient(db couchdb.Database, rec *sharings.RecipientStatus) (*shar
 		return nil, err
 	}
 	info := &sharings.RecipientInfo{
-		URL:    u,
-		Scheme: scheme,
-		Token:  rec.AccessToken.AccessToken,
+		URL:         u,
+		Scheme:      scheme,
+		AccessToken: rec.AccessToken,
+		Client:      rec.Client,
 	}
 	return info, nil
 }

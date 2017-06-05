@@ -228,7 +228,7 @@ func (r *Request) GetAccessToken(c *Client, code string) (*AccessToken, error) {
 func (r *Request) RefreshToken(c *Client, t *AccessToken) (*AccessToken, error) {
 	q := url.Values{
 		"grant_type":    {"refresh_token"},
-		"code":          {t.RefreshToken},
+		"refresh_token": {t.RefreshToken},
 		"client_id":     {c.ClientID},
 		"client_secret": {c.ClientSecret},
 	}

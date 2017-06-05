@@ -28,8 +28,8 @@ type RecipientStatus struct {
 
 	// The sharer is the "client", in the OAuth2 protocol, we keep here the
 	// information she needs to send to authenticate.
-	Client      *auth.Client
-	AccessToken *auth.AccessToken
+	Client      auth.Client
+	AccessToken auth.AccessToken
 
 	// The OAuth ClientID refering to the host's client stored in its db
 	HostClientID string
@@ -140,7 +140,7 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 		HTTPClient: new(http.Client),
 	}
 
-	return req.GetAccessToken(rs.Client, code)
+	return req.GetAccessToken(&rs.Client, code)
 }
 
 // Register asks the recipient to register the sharer as a new OAuth client.
@@ -207,7 +207,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		return err
 	}
 
-	rs.Client = resClient
+	rs.Client = *resClient
 	return nil
 }
 
