@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"runtime"
 
-	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
@@ -15,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -44,41 +44,14 @@ var (
 
 // TriggerEvent describes the fields retrieved after a triggered event
 type TriggerEvent struct {
-	Event   *EventDoc       `json:"event"`
-	Message *SharingMessage `json:"message"`
+	Event   *EventDoc                `json:"event"`
+	Message *sharings.SharingMessage `json:"message"`
 }
 
 // EventDoc describes the event returned by the trigger
 type EventDoc struct {
 	Type string `json:"type"`
 	Doc  *couchdb.JSONDoc
-}
-
-// SharingMessage describes a sharing message
-type SharingMessage struct {
-	SharingID string           `json:"sharing_id"`
-	Rule      permissions.Rule `json:"rule"`
-}
-
-// Sharing describes the sharing document structure
-type Sharing struct {
-	SharingType      string             `json:"sharing_type"`
-	Permissions      permissions.Set    `json:"permissions,omitempty"`
-	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
-	Sharer           Sharer             `json:"sharer,omitempty"`
-}
-
-// Sharer gives the share info, only on the recipient side
-type Sharer struct {
-	URL          string           `json:"url"`
-	SharerStatus *RecipientStatus `json:"sharer_status"`
-}
-
-// RecipientStatus contains the information about a recipient for a sharing
-type RecipientStatus struct {
-	Status       string               `json:"status,omitempty"`
-	RefRecipient couchdb.DocReference `json:"recipient,omitempty"`
-	AccessToken  *auth.AccessToken
 }
 
 // SharingUpdates handles shared document updates
@@ -99,7 +72,7 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	if err != nil {
 		return err
 	}
-	var res []Sharing
+	var res []sharings.Sharing
 	err = couchdb.FindDocs(i, consts.Sharings, &couchdb.FindRequest{
 		UseIndex: "by-sharing-id",
 		Selector: mango.Equal("sharing_id", sharingID),
@@ -126,13 +99,13 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 //
 // Several scenario are to be distinguished:
 // TODO explanation
-func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, rule *permissions.Rule, docID, eventType string) error {
-	var recInfos []*RecipientInfo
+func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.Sharing, rule *permissions.Rule, docID, eventType string) error {
+	var recInfos []*sharings.RecipientInfo
 	sendToSharer := isRecipientSide(sharing)
 
 	if sendToSharer {
 		// We are on the recipient side
-		recInfos = make([]*RecipientInfo, 1)
+		recInfos = make([]*sharings.RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
 		info, err := extractRecipient(ins, sharerStatus)
 		if err != nil {
@@ -141,7 +114,8 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 		recInfos[0] = info
 	} else {
 		// We are on the sharer side
-		recInfos = make([]*RecipientInfo, len(sharing.RecipientsStatus))
+		recInfos = make([]*sharings.RecipientInfo,
+			len(sharing.RecipientsStatus))
 		for i, rec := range sharing.RecipientsStatus {
 			info, err := extractRecipient(ins, rec)
 			if err != nil {
@@ -251,7 +225,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *Sharing, r
 	}
 }
 
-func extractRecipient(db couchdb.Database, rec *RecipientStatus) (*RecipientInfo, error) {
+func extractRecipient(db couchdb.Database, rec *sharings.RecipientStatus) (*sharings.RecipientInfo, error) {
 	recDoc, err := GetRecipient(db, rec.RefRecipient.ID)
 	if err != nil {
 		return nil, err
@@ -261,7 +235,7 @@ func extractRecipient(db couchdb.Database, rec *RecipientStatus) (*RecipientInfo
 	if err != nil {
 		return nil, err
 	}
-	info := &RecipientInfo{
+	info := &sharings.RecipientInfo{
 		URL:    u,
 		Scheme: scheme,
 		Token:  rec.AccessToken.AccessToken,
@@ -300,7 +274,7 @@ func ExtractHostAndScheme(fullURL string) (string, string, error) {
 // A sharing is on the recipient side iff:
 // - the sharing type is master-master
 // - the SharerStatus structure is not nil
-func isRecipientSide(sharing *Sharing) bool {
+func isRecipientSide(sharing *sharings.Sharing) bool {
 	if sharing.SharingType == consts.MasterMasterSharing {
 		if sharing.Sharer.SharerStatus != nil {
 			return true

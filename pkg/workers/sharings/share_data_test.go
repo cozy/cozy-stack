@@ -21,6 +21,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -51,9 +53,11 @@ func createInstance(domain, publicName string) (*instance.Instance, error) {
 	return instance.Create(opts)
 }
 
-func createFile(t *testing.T, fs vfs.VFS, name, content string) *vfs.FileDoc {
+func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.DocReference) *vfs.FileDoc {
 	doc, err := vfs.NewFileDoc(name, "", -1, nil, "foo/bar", "foo", time.Now(), false, false, []string{"this", "is", "spartest"})
 	assert.NoError(t, err)
+
+	doc.ReferencedBy = refs
 
 	body := bytes.NewReader([]byte(content))
 
@@ -91,7 +95,7 @@ func TestSendDataMissingDocType(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
 		DocID:      "fakeid",
 		DocType:    docType,
-		Recipients: []*RecipientInfo{},
+		Recipients: []*sharings.RecipientInfo{},
 	})
 	assert.NoError(t, err)
 
@@ -116,7 +120,7 @@ func TestSendDataBadID(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
 		DocID:      "fakeid",
 		DocType:    testDocType,
-		Recipients: []*RecipientInfo{},
+		Recipients: []*sharings.RecipientInfo{},
 	})
 	assert.NoError(t, err)
 
@@ -138,7 +142,7 @@ func TestSendDataBadRecipient(t *testing.T) {
 		couchdb.DeleteDoc(in, doc)
 	}()
 
-	rec := &RecipientInfo{
+	rec := &sharings.RecipientInfo{
 		URL:   "nowhere",
 		Token: "inthesky",
 	}
@@ -146,7 +150,7 @@ func TestSendDataBadRecipient(t *testing.T) {
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
 		DocID:      testDocID,
 		DocType:    testDocType,
-		Recipients: []*RecipientInfo{rec},
+		Recipients: []*sharings.RecipientInfo{rec},
 	})
 	assert.NoError(t, err)
 
@@ -191,8 +195,8 @@ func TestDeleteDoc(t *testing.T) {
 		DocID:   testDocID,
 		DocType: testDocType,
 		Path:    fmt.Sprintf("/sharings/doc/%s/%s", testDocType, testDocID),
-		Recipients: []*RecipientInfo{
-			&RecipientInfo{
+		Recipients: []*sharings.RecipientInfo{
+			&sharings.RecipientInfo{
 				URL:   tsURL.Host,
 				Token: "whoneedsone?",
 			},
@@ -205,7 +209,8 @@ func TestDeleteDoc(t *testing.T) {
 
 func TestSendFile(t *testing.T) {
 	fs := testInstance.VFS()
-	fileDoc := createFile(t, fs, "filetestsend", "Hello, it's me again.")
+	fileDoc := createFile(t, fs, "filetestsend", "Hello, it's me again.",
+		[]couchdb.DocReference{})
 
 	mpr := map[string]func(*echo.Group){
 		"/files": func(router *echo.Group) {
@@ -235,11 +240,11 @@ func TestSendFile(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 
-	recipient := &RecipientInfo{
+	recipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "idontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{recipient}
+	recipients := []*sharings.RecipientInfo{recipient}
 
 	sendFileOpts := &SendOptions{
 		DocID:   fileDoc.ID(),
@@ -256,7 +261,8 @@ func TestSendFile(t *testing.T) {
 
 func TestSendFileAbort(t *testing.T) {
 	fs := testInstance.VFS()
-	fileDoc := createFile(t, fs, "filetestsendabort", "Hello, it's me again.")
+	fileDoc := createFile(t, fs, "filetestsendabort", "Hello, it's me again.",
+		[]couchdb.DocReference{})
 
 	mpr := map[string]func(*echo.Group){
 		"/files": func(router *echo.Group) {
@@ -282,11 +288,11 @@ func TestSendFileAbort(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 
-	recipient := &RecipientInfo{
+	recipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "idontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{recipient}
+	recipients := []*sharings.RecipientInfo{recipient}
 
 	sendFileOpts := &SendOptions{
 		DocID:   fileDoc.ID(),
@@ -307,7 +313,7 @@ func TestSendFileThroughUpdateOrPatchFile(t *testing.T) {
 
 	fs := testInstance.VFS()
 	fileDoc := createFile(t, fs, "filetestsendthroughupdateorpatchfile",
-		"Hello, it's me again.")
+		"Hello, it's me again.", []couchdb.DocReference{})
 
 	mpr := map[string]func(*echo.Group){
 		"/files": func(router *echo.Group) {
@@ -341,11 +347,11 @@ func TestSendFileThroughUpdateOrPatchFile(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 
-	recipient := &RecipientInfo{
+	recipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "idontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{recipient}
+	recipients := []*sharings.RecipientInfo{recipient}
 
 	updateFileOpts := &SendOptions{
 		DocID:   fileDoc.ID(),
@@ -390,11 +396,11 @@ func TestSendDir(t *testing.T) {
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 
-	recipient := &RecipientInfo{
+	recipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "idontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{recipient}
+	recipients := []*sharings.RecipientInfo{recipient}
 
 	sendDirOpts := &SendOptions{
 		DocID:    dirDoc.ID(),
@@ -412,7 +418,8 @@ func TestSendDir(t *testing.T) {
 
 func TestUpdateOrPatchFile(t *testing.T) {
 	fs := testInstance.VFS()
-	fileDoc := createFile(t, fs, "original", "original file")
+	fileDoc := createFile(t, fs, "original", "original file",
+		[]couchdb.DocReference{})
 	fileDoc.ReferencedBy = []couchdb.DocReference{
 		couchdb.DocReference{Type: "random", ID: "123"},
 	}
@@ -436,7 +443,8 @@ func TestUpdateOrPatchFile(t *testing.T) {
 	}
 	newReference := couchdb.DocReference{Type: "new", ID: "reference"}
 	referenceUpdateFileDoc.ReferencedBy = []couchdb.DocReference{newReference}
-	updatedFileDoc := createFile(t, fs, "update", "this is an update")
+	updatedFileDoc := createFile(t, fs, "update", "this is an update",
+		[]couchdb.DocReference{})
 	updatedFileDoc.ReferencedBy = []couchdb.DocReference{newReference}
 
 	mpr := map[string]func(*echo.Group){
@@ -497,11 +505,11 @@ func TestUpdateOrPatchFile(t *testing.T) {
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
-	testRecipient := &RecipientInfo{
+	testRecipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "dontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{testRecipient}
+	recipients := []*sharings.RecipientInfo{testRecipient}
 
 	// Patch test: we trigger a patch by providing a different DocName through
 	// patchedFileDoc.
@@ -589,11 +597,11 @@ func TestPatchDir(t *testing.T) {
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
-	testRecipient := &RecipientInfo{
+	testRecipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "dontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{testRecipient}
+	recipients := []*sharings.RecipientInfo{testRecipient}
 
 	patchSendOptions := &SendOptions{
 		DocID:   dirDoc.ID(),
@@ -610,10 +618,19 @@ func TestPatchDir(t *testing.T) {
 
 func TestRemoveDirOrFileFromSharing(t *testing.T) {
 	fileDoc := createFile(t, testInstance.VFS(), "removeFileFromSharing",
-		"removeFileFromSharingContent")
+		"removeFileFromSharingContent", []couchdb.DocReference{
+			couchdb.DocReference{Type: "third", ID: "789"},
+		})
 	dirDoc := createDir(t, testInstance.VFS(), "removeDirFromSharing")
 	dirToKeep := createDir(t, testInstance.VFS(),
 		"removeDirFromSharingButKeepIt")
+
+	rule := permissions.Rule{
+		Selector: consts.SelectorReferencedBy,
+		Type:     consts.Files,
+		Values:   []string{"third/789"},
+	}
+	createSharing(t, consts.MasterMasterSharing, false, rule)
 
 	refs := []couchdb.DocReference{
 		couchdb.DocReference{
@@ -647,16 +664,20 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
-	testRecipient := &RecipientInfo{
+	testRecipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "dontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{testRecipient}
+	recipients := []*sharings.RecipientInfo{testRecipient}
 
+	// Test: we simulate a recipient asking the sharer to remove a file from
+	// a sharing while the file is still shared in the sharing we created. It
+	// should not be removed.
 	optsFile := SendOptions{
 		Selector:   consts.SelectorReferencedBy,
 		Values:     []string{"first/123", "second/456"},
 		DocID:      fileDoc.ID(),
+		DocType:    consts.Files,
 		Recipients: recipients,
 	}
 
@@ -664,12 +685,13 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 	assert.NoError(t, err)
 	fileDoc, err = testInstance.VFS().FileByID(fileDoc.ID())
 	assert.NoError(t, err)
-	assert.True(t, fileDoc.Trashed)
+	assert.False(t, fileDoc.Trashed)
 
 	optsDir := SendOptions{
 		Selector:   consts.SelectorReferencedBy,
 		Values:     []string{"first/123", "second/456"},
 		DocID:      dirDoc.ID(),
+		DocType:    consts.Files,
 		Recipients: recipients,
 	}
 
@@ -683,6 +705,7 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 		Selector:   consts.SelectorReferencedBy,
 		Values:     []string{"first/123", "second/456"},
 		DocID:      dirToKeep.ID(),
+		DocType:    consts.Files,
 		Recipients: recipients,
 	}
 
@@ -720,11 +743,11 @@ func TestDeleteDirOrFile(t *testing.T) {
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 	tsURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
-	testRecipient := &RecipientInfo{
+	testRecipient := &sharings.RecipientInfo{
 		URL:   tsURL.Host,
 		Token: "dontneedoneImtesting",
 	}
-	recipients := []*RecipientInfo{testRecipient}
+	recipients := []*sharings.RecipientInfo{testRecipient}
 
 	deleteSendOptions := &SendOptions{
 		DocID:   dirDoc.ID(),
@@ -829,7 +852,7 @@ func TestFindNewRefsSameRefSuccess(t *testing.T) {
 
 func TestExtractRelevantReferences(t *testing.T) {
 	fileDoc := createFile(t, testInstance.VFS(), "extractFileRef",
-		"testExtractFileRef")
+		"testExtractFileRef", []couchdb.DocReference{})
 	refs := []couchdb.DocReference{
 		couchdb.DocReference{
 			ID:   "123",

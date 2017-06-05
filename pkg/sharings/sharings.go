@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	sharingWorker "github.com/cozy/cozy-stack/pkg/workers/sharings"
 )
 
 // Sharing contains all the information about a sharing.
@@ -59,6 +58,31 @@ type SharingRequestParams struct {
 	ClientID     string `json:"client_id"`
 	HostClientID string `json:"host_client_id"`
 	Code         string `json:"code"`
+}
+
+// SharingMessage describes the message that will be transmitted to the workers
+// "sharing_update" and "share_data".
+type SharingMessage struct {
+	SharingID string           `json:"sharing_id"`
+	Rule      permissions.Rule `json:"rule"`
+}
+
+// RecipientInfo describes the recipient information that will be transmitted to
+// the sharing workers.
+type RecipientInfo struct {
+	URL    string
+	Scheme string
+	Token  string
+}
+
+// WorkerData describes the basic data the workers need to process the events
+// they will receive.
+type WorkerData struct {
+	DocID      string
+	Selector   string
+	Values     []string
+	DocType    string
+	Recipients []*RecipientInfo
 }
 
 // ID returns the sharing qualified identifier
@@ -187,15 +211,18 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 
 	var eventArgs string
 	if rule.Selector != "" {
-		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" + strings.Join(rule.Values, ",") + ":" + rule.Selector
+		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
+			strings.Join(rule.Values, ",") + ":" + rule.Selector
 	} else {
-		eventArgs = rule.Type + ":UPDATED,DELETED:" + strings.Join(rule.Values, ",")
+		eventArgs = rule.Type + ":UPDATED,DELETED:" +
+			strings.Join(rule.Values, ",")
 	}
 
-	msg := sharingWorker.SharingMessage{
+	msg := SharingMessage{
 		SharingID: sharingID,
 		Rule:      rule,
 	}
+
 	workerArgs, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -303,21 +330,19 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			if err != nil {
 				return err
 			}
-			rec := &sharingWorker.RecipientInfo{
+			rec := &RecipientInfo{
 				URL:    domain,
 				Scheme: scheme,
 				Token:  recStatus.AccessToken.AccessToken,
 			}
 
-			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding,
-				sharingWorker.SendOptions{
-					DocID:      val,
-					Selector:   rule.Selector,
-					Values:     rule.Values,
-					DocType:    docType,
-					Recipients: []*sharingWorker.RecipientInfo{rec},
-				},
-			)
+			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, WorkerData{
+				DocID:      val,
+				Selector:   rule.Selector,
+				Values:     rule.Values,
+				DocType:    docType,
+				Recipients: []*RecipientInfo{rec},
+			})
 			if err != nil {
 				return err
 			}
@@ -715,11 +740,7 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		return errt
 
 	default:
-		errd := couchdb.DeleteDoc(ins, doc)
-		if errd != nil {
-			return errd
-		}
-		return nil
+		return couchdb.DeleteDoc(ins, doc)
 	}
 }
 

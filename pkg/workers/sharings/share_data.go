@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -36,19 +37,12 @@ func init() {
 	})
 }
 
-// RecipientInfo describes the recipient information
-type RecipientInfo struct {
-	URL    string
-	Scheme string
-	Token  string
-}
-
 // SendOptions describes the parameters needed to send data
 type SendOptions struct {
 	DocID      string
 	DocType    string
 	Type       string
-	Recipients []*RecipientInfo
+	Recipients []*sharings.RecipientInfo
 	Path       string
 	DocRev     string
 
@@ -310,7 +304,7 @@ func UpdateDoc(ins *instance.Instance, opts *SendOptions) error {
 	return nil
 }
 
-func sendDocToRecipient(opts *SendOptions, rec *RecipientInfo, doc *couchdb.JSONDoc, method string) error {
+func sendDocToRecipient(opts *SendOptions, rec *sharings.RecipientInfo, doc *couchdb.JSONDoc, method string) error {
 	body, err := request.WriteJSON(doc.M)
 	if err != nil {
 		return err
@@ -554,9 +548,9 @@ func PatchDir(opts *SendOptions, dirDoc *vfs.DirDoc) error {
 // RemoveDirOrFileFromSharing tells the recipient to remove the file or
 // directory from the specified sharing.
 //
-// If we are asking the sharer to remove the file from the sharing then the file
-// has to be trashed locally. The user that is making this request is a
-// recipient and just removed one element from it.
+// If we are asking the sharer to remove the file from the sharing then the
+// recipient has to check if that file is still shared in another sharing. If
+// not it must be trashed.
 //
 // As of now since we only support sharings through ids or "referenced_by"
 // selector the only event that could lead to calling this function would be a
@@ -567,17 +561,7 @@ func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions, sendT
 	sharedRefs := opts.getSharedReferences()
 
 	if sendToSharer {
-		dirDoc, fileDoc, err := ins.VFS().DirOrFileByID(opts.DocID)
-		if err != nil {
-			return err
-		}
-
-		if dirDoc != nil {
-			_, err = vfs.TrashDir(ins.VFS(), dirDoc)
-		} else {
-			_, err = vfs.TrashFile(ins.VFS(), fileDoc)
-		}
-
+		err := sharings.RemoveDocumentIfNotShared(ins, opts.DocType, opts.DocID)
 		if err != nil {
 			return err
 		}
@@ -647,7 +631,7 @@ func DeleteDirOrFile(opts *SendOptions) error {
 //    Cozy.
 // 2. `opts.DocRev` is NOT empty: the recipient already has the file and the
 //    sharer is updating it.
-func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo, method string) error {
+func sendFileToRecipient(opts *SendOptions, recipient *sharings.RecipientInfo, method string) error {
 	if !opts.fileOpts.set {
 		return errors.New("[sharings] fileOpts were not set")
 	}
@@ -681,7 +665,7 @@ func sendFileToRecipient(opts *SendOptions, recipient *RecipientInfo, method str
 	return err
 }
 
-func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient *RecipientInfo, dirID string) error {
+func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient *sharings.RecipientInfo, dirID string) error {
 	body, err := request.WriteJSON(patch)
 	if err != nil {
 		return err
@@ -718,7 +702,7 @@ func sendPatchToRecipient(patch *jsonapi.Document, opts *SendOptions, recipient 
 // 2. If it's "DELETE" it calls the sharing handler because, in addition to
 //    removing the references, we need to see if the file is still shared and if
 //    not we need to trash it.
-func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opts *SendOptions, recipient *RecipientInfo, sendToSharer bool) error {
+func updateReferencesAtRecipient(method string, refs []couchdb.DocReference, opts *SendOptions, recipient *sharings.RecipientInfo, sendToSharer bool) error {
 	data, err := json.Marshal(refs)
 	if err != nil {
 		return err
@@ -846,7 +830,7 @@ func generateDirOrFilePatch(dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.
 }
 
 // getDocAtRecipient returns the document at the given recipient.
-func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *RecipientInfo) (*couchdb.JSONDoc, error) {
+func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *sharings.RecipientInfo) (*couchdb.JSONDoc, error) {
 	path := fmt.Sprintf("/data/%s/%s", doctype, docID)
 
 	res, err := request.Req(&request.Options{
@@ -871,7 +855,7 @@ func getDocAtRecipient(newDoc *couchdb.JSONDoc, doctype, docID string, recInfo *
 	return doc, nil
 }
 
-func getDirOrFileRevAtRecipient(docID string, recipient *RecipientInfo) (string, error) {
+func getDirOrFileRevAtRecipient(docID string, recipient *sharings.RecipientInfo) (string, error) {
 	var rev string
 	dirDoc, fileDoc, err := getDirOrFileMetadataAtRecipient(docID, recipient)
 	if err != nil {
@@ -886,7 +870,7 @@ func getDirOrFileRevAtRecipient(docID string, recipient *RecipientInfo) (string,
 	return rev, nil
 }
 
-func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.DirDoc, *vfs.FileDoc, error) {
+func getDirOrFileMetadataAtRecipient(id string, recInfo *sharings.RecipientInfo) (*vfs.DirDoc, *vfs.FileDoc, error) {
 	path := fmt.Sprintf("/files/%s", id)
 
 	res, err := request.Req(&request.Options{
@@ -915,7 +899,7 @@ func getDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) (*vfs.Di
 	return dirDoc, fileDoc, nil
 }
 
-func headDirOrFileMetadataAtRecipient(id string, recInfo *RecipientInfo) error {
+func headDirOrFileMetadataAtRecipient(id string, recInfo *sharings.RecipientInfo) error {
 	path := fmt.Sprintf("/files/download/%s", id)
 
 	_, err := request.Req(&request.Options{
