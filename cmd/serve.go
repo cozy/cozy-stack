@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"os"
+	"net/url"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -78,7 +79,11 @@ func init() {
 	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
 	checkNoErr(viper.BindPFlag("assets", flags.Lookup("assets")))
 
-	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
+	defaultFsUrl := &url.URL{
+		Scheme: "file",
+		Path: path.Join(filepath.ToSlash(binDir), DefaultStorageDir),
+	}
+	flags.String("fs-url", defaultFsUrl.String(), "filesystem url")
 	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
 
 	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")

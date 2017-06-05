@@ -3,8 +3,6 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log/syslog"
 	"net"
 	"net/url"
 	"os"
@@ -14,8 +12,8 @@ import (
 	"text/template"
 
 	"github.com/Sirupsen/logrus"
-	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	logger_hooks "github.com/cozy/cozy-stack/pkg/logger/hooks"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
 	"github.com/go-redis/redis"
@@ -404,12 +402,10 @@ func configureLogger() error {
 
 	logrus.SetLevel(logLevel)
 	if loggerCfg.Syslog {
-		hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "cozy")
+		err := logger_hooks.SetupSyslog()
 		if err != nil {
 			return err
 		}
-		logrus.AddHook(hook)
-		logrus.SetOutput(ioutil.Discard)
 	}
 	return nil
 }
