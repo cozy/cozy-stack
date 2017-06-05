@@ -55,19 +55,19 @@ func Init(opt Options) error {
 
 // AddDebugDomain adds the specified domain to the debug list.
 func AddDebugDomain(domain string) error {
-	addDebugDomain(domain)
 	if cli := opts.Redis; cli != nil {
 		return publishLoggersDebug(cli, debugRedisAddChannel, domain)
 	}
+	addDebugDomain(domain)
 	return nil
 }
 
 // RemoveDebugDomain removes the specified domain from the debug list.
 func RemoveDebugDomain(domain string) error {
-	removeDebugDomain(domain)
 	if cli := opts.Redis; cli != nil {
 		return publishLoggersDebug(cli, debugRedisRmvChannel, domain)
 	}
+	removeDebugDomain(domain)
 	return nil
 }
 
