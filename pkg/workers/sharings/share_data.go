@@ -363,7 +363,8 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
-		err = headDirOrFileMetadataAtRecipient(opts.DocID, recipient)
+		err = headDirOrFileMetadataAtRecipient(ins, opts.SharingID, opts.DocID,
+			recipient)
 
 		if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
 			err = sendFileToRecipient(ins, fileDoc, opts, recipient, http.MethodPost)
@@ -955,9 +956,10 @@ func getDirOrFileMetadataAtRecipient(ins *instance.Instance, opts *SendOptions, 
 	res, err := request.Req(reqOpts)
 	if err != nil {
 		if authError(err) {
-			res, rerr = refreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
+			res, rerr = refreshTokenAndRetry(ins, opts.SharingID, recInfo,
+				reqOpts)
 			if rerr != nil {
-				return nil, nil, rerr
+				return nil, nil, parseError(rerr)
 			}
 		} else {
 			return nil, nil, parseError(err)
@@ -975,10 +977,10 @@ func getDirOrFileMetadataAtRecipient(ins *instance.Instance, opts *SendOptions, 
 	return dirDoc, fileDoc, nil
 }
 
-func headDirOrFileMetadataAtRecipient(id string, recInfo *sharings.RecipientInfo) error {
+func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id string, recInfo *sharings.RecipientInfo) error {
 	path := fmt.Sprintf("/files/download/%s", id)
 
-	_, err := request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain: recInfo.URL,
 		Scheme: recInfo.Scheme,
 		Method: http.MethodHead,
@@ -987,9 +989,14 @@ func headDirOrFileMetadataAtRecipient(id string, recInfo *sharings.RecipientInfo
 			echo.HeaderContentType:   echo.MIMEApplicationJSON,
 			echo.HeaderAuthorization: "Bearer " + recInfo.AccessToken.AccessToken,
 		},
-	})
+	}
 
+	_, err := request.Req(reqOpts)
 	if err != nil {
+		if authError(err) {
+			_, err = refreshTokenAndRetry(ins, sharingID, recInfo, reqOpts)
+		}
+
 		return parseError(err)
 	}
 
