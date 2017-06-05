@@ -84,7 +84,6 @@ type Config struct {
 	Jobs       Jobs
 	Konnectors Konnectors
 	Mail       *gomail.DialerOptions
-	Logger     logger.Options
 
 	Cache                       RedisConfig
 	Lock                        RedisConfig

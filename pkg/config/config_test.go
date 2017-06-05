@@ -78,7 +78,5 @@ log:
 	assert.Equal(t, 465, GetConfig().Mail.Port)
 	assert.Equal(t, "mail_username_val", GetConfig().Mail.Username)
 	assert.Equal(t, "mail_password_val", GetConfig().Mail.Password)
-	assert.Equal(t, "warning", GetConfig().Logger.Level)
-
 	assert.Equal(t, logrus.GetLevel(), logrus.WarnLevel)
 }
