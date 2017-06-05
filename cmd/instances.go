@@ -168,7 +168,7 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 
 var debugInstanceCmd = &cobra.Command{
 	Use:   "debug [domain] [true/false]",
-	Short: "Change the disk-quota of the instance",
+	Short: "Activate or deactivate debugging of the instance",
 	Long: `
 cozy-stack instances debug allows to activate or deactivate the debugging of a
 specific domain.
