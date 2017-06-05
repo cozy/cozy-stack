@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -102,6 +103,7 @@ func modifyHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
+	var shouldUpdate bool
 	if quota := c.QueryParam("DiskQuota"); quota != "" {
 		var diskQuota int64
 		diskQuota, err = strconv.ParseInt(quota, 10, 64)
@@ -109,12 +111,26 @@ func modifyHandler(c echo.Context) error {
 			return wrapError(err)
 		}
 		i.BytesDiskQuota = diskQuota
+		shouldUpdate = true
 	}
 	if locale := c.QueryParam("Locale"); locale != "" {
 		i.Locale = locale
+		shouldUpdate = true
 	}
-	if err = instance.Update(i); err != nil {
-		return wrapError(err)
+	if shouldUpdate {
+		if err = instance.Update(i); err != nil {
+			return wrapError(err)
+		}
+	}
+	if debug, err := strconv.ParseBool(c.QueryParam("Debug")); err == nil {
+		if debug {
+			err = logger.AddDebugDomain(domain)
+		} else {
+			err = logger.RemoveDebugDomain(domain)
+		}
+		if err != nil {
+			return wrapError(err)
+		}
 	}
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
 }

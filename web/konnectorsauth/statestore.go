@@ -86,23 +86,17 @@ func (store *redisStateStorage) Find(ref string) *stateHolder {
 var globalStorage stateStorage
 var globalStorageMutex sync.Mutex
 
-func makeStorage() stateStorage {
-	opts := config.GetConfig().KonnectorsOauthStateStorage.Options()
-	if opts == nil {
-		return &memStateStorage{}
-	}
-
-	client := redis.NewClient(opts)
-	return &redisStateStorage{
-		cl: client,
-	}
-}
-
 func getStorage() stateStorage {
 	globalStorageMutex.Lock()
 	defer globalStorageMutex.Unlock()
-	if globalStorage == nil {
-		globalStorage = makeStorage()
+	if globalStorage != nil {
+		return globalStorage
+	}
+	cli := config.GetConfig().KonnectorsOauthStateStorage.Client()
+	if cli == nil {
+		globalStorage = &memStateStorage{}
+	} else {
+		globalStorage = &redisStateStorage{cl: cli}
 	}
 	return globalStorage
 }

@@ -41,11 +41,11 @@ func GetStore() DownloadStore {
 	if globalStore != nil {
 		return globalStore
 	}
-	opts := config.GetConfig().DownloadStorage.Options()
-	if opts == nil {
+	cli := config.GetConfig().DownloadStorage.Client()
+	if cli == nil {
 		globalStore = newMemStore()
 	} else {
-		globalStore = &redisStore{redis.NewClient(opts)}
+		globalStore = &redisStore{cli}
 	}
 	return globalStore
 }

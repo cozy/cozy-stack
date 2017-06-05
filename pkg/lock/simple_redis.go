@@ -9,6 +9,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/go-redis/redis"
 )
 
 const luaRefresh = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("pexpire", KEYS[1], ARGV[2]) else return 0 end`
@@ -16,6 +17,11 @@ const luaRelease = `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.c
 
 type fakeRWLock struct {
 	ErrorLocker
+}
+
+type subRedisInterface interface {
+	SetNX(key string, value interface{}, expiration time.Duration) *redis.BoolCmd
+	Eval(script string, keys []string, args ...interface{}) *redis.Cmd
 }
 
 func (l fakeRWLock) Lock() error  { return l.ErrorLocker.Lock() }

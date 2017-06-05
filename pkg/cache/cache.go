@@ -69,14 +69,13 @@ func (c *jsonCache) Del(d string) {
 
 // Create creates a cache
 func Create(namespace string, expiration time.Duration) Cache {
-	opts := config.GetConfig().Cache.Options()
-	if opts == nil {
+	cli := config.GetConfig().Cache.Client()
+	if cli == nil {
 		return &noCache{}
 	}
-
 	return &jsonCache{
 		namespace:  namespace,
 		expiration: expiration,
-		client:     redis.NewClient(opts),
+		client:     cli,
 	}
 }
