@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -198,6 +199,14 @@ func registerClient(c echo.Context) error {
 	return c.String(http.StatusOK, client.ClientID)
 }
 
+func activateDebug(c echo.Context) error {
+	return logger.AddDebugDomain(c.Param("domain"))
+}
+
+func deactivateDebug(c echo.Context) error {
+	return logger.RemoveDebugDomain(c.Param("domain"))
+}
+
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -225,6 +234,8 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain", showHandler)
 	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)
+	router.POST("/:domain/logger", activateDebug)
+	router.DELETE("/:domain/logger", deactivateDebug)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
 }

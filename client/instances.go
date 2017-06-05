@@ -89,7 +89,7 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 			"Settings":   {opts.Settings},
 			"DiskQuota":  {strconv.FormatInt(opts.DiskQuota, 10)},
 			"Apps":       {strings.Join(opts.Apps, ",")},
-			"Dev":        {boolQuery(opts.Dev)},
+			"Dev":        {strconv.FormatBool(opts.Dev)},
 			"Passphrase": {opts.Passphrase},
 		},
 	})

@@ -1,6 +1,75 @@
 package logger
 
-import "github.com/Sirupsen/logrus"
+import (
+	"io/ioutil"
+	"log/syslog"
+	"sync"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/go-redis/redis"
+	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
+)
+
+const (
+	debugRedisAddChannel = "add:log-debug"
+	debugRedisRmvChannel = "rmv:log-debug"
+)
+
+var opts Options
+
+var loggers = make(map[string]*logrus.Logger)
+var loggersMu sync.RWMutex
+
+// Options contains the configuration values of the logger system
+type Options struct {
+	Syslog bool
+	Level  string
+	Redis  *redis.Client
+}
+
+// Init initializes the logger module with the specified options.
+func Init(opt Options) error {
+	level := opt.Level
+	if level == "" {
+		level = "info"
+	}
+	logLevel, err := logrus.ParseLevel(level)
+	if err != nil {
+		return err
+	}
+	logrus.SetLevel(logLevel)
+	if opt.Syslog {
+		hook, err := syslogHook()
+		if err != nil {
+			return err
+		}
+		logrus.AddHook(hook)
+		logrus.SetOutput(ioutil.Discard)
+	}
+	if cli := opt.Redis; cli != nil {
+		go subscribeLoggersDebug(cli)
+	}
+	opts = opt
+	return nil
+}
+
+// AddDebugDomain adds the specified domain to the debug list.
+func AddDebugDomain(domain string) error {
+	addDebugDomain(domain)
+	if cli := opts.Redis; cli != nil {
+		return publishLoggersDebug(cli, debugRedisAddChannel, domain)
+	}
+	return nil
+}
+
+// RemoveDebugDomain removes the specified domain from the debug list.
+func RemoveDebugDomain(domain string) error {
+	removeDebugDomain(domain)
+	if cli := opts.Redis; cli != nil {
+		return publishLoggersDebug(cli, debugRedisRmvChannel, domain)
+	}
+	return nil
+}
 
 // WithNamespace returns a logger with the specified nspace field.
 func WithNamespace(nspace string) *logrus.Entry {
@@ -9,10 +78,63 @@ func WithNamespace(nspace string) *logrus.Entry {
 
 // WithDomain returns a logger with the specified domain field.
 func WithDomain(domain string) *logrus.Entry {
+	loggersMu.RLock()
+	defer loggersMu.RUnlock()
+	if logger, ok := loggers[domain]; ok {
+		return logger.WithField("domain", domain)
+	}
 	return logrus.WithField("domain", domain)
 }
 
+func addDebugDomain(domain string) {
+	loggersMu.Lock()
+	defer loggersMu.Unlock()
+	_, ok := loggers[domain]
+	if ok {
+		return
+	}
+	logger := logrus.New()
+	logger.Level = logrus.DebugLevel
+	if opts.Syslog {
+		hook, err := syslogHook()
+		if err == nil {
+			logger.Hooks.Add(hook)
+			logger.Out = ioutil.Discard
+		}
+	}
+	loggers[domain] = logger
+	return
+}
+
+func removeDebugDomain(domain string) {
+	loggersMu.Lock()
+	defer loggersMu.Unlock()
+	delete(loggers, domain)
+}
+
+func subscribeLoggersDebug(cli *redis.Client) {
+	sub := cli.Subscribe(debugRedisAddChannel, debugRedisRmvChannel)
+	for msg := range sub.Channel() {
+		domain := msg.Payload
+		switch msg.Channel {
+		case debugRedisAddChannel:
+			addDebugDomain(domain)
+		case debugRedisRmvChannel:
+			removeDebugDomain(domain)
+		}
+	}
+}
+
+func publishLoggersDebug(cli *redis.Client, channel, domain string) error {
+	cmd := cli.Publish(channel, domain)
+	return cmd.Err()
+}
+
+func syslogHook() (*logrus_syslog.SyslogHook, error) {
+	return logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "cozy")
+}
+
 // IsDebug returns whether or not the debug mode is activated.
-func IsDebug() bool {
-	return logrus.GetLevel() == logrus.DebugLevel
+func IsDebug(logger *logrus.Entry) bool {
+	return logger.Logger.Level == logrus.DebugLevel
 }

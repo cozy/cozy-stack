@@ -277,7 +277,7 @@ func makeRequest(db Database, method, path string, reqbody interface{}, resbody 
 	}
 
 	log := db.Logger()
-	if logger.IsDebug() {
+	if logger.IsDebug(log) {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
 	req, err := http.NewRequest(method, config.CouchURL()+path, bytes.NewReader(reqjson))
@@ -314,7 +314,7 @@ func makeRequest(db Database, method, path string, reqbody interface{}, resbody 
 		return nil
 	}
 
-	if logger.IsDebug() {
+	if logger.IsDebug(log) {
 		var data []byte
 		data, err = ioutil.ReadAll(resp.Body)
 		if err != nil {

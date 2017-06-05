@@ -3,8 +3,6 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
-	"log/syslog"
 	"net"
 	"net/url"
 	"os"
@@ -13,8 +11,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/Sirupsen/logrus"
-	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -88,7 +84,7 @@ type Config struct {
 	Jobs       Jobs
 	Konnectors Konnectors
 	Mail       *gomail.DialerOptions
-	Logger     Logger
+	Logger     logger.Options
 
 	Cache                       RedisConfig
 	Lock                        RedisConfig
@@ -131,13 +127,8 @@ type Lock struct {
 	URL string
 }
 
-// Logger contains the configuration values of the logger system
-type Logger struct {
-	Level  string
-	Syslog bool
-}
-
-func newRedisConfig(u string) RedisConfig {
+// NewRedisConfig creates a redis configuration and its associated client.
+func NewRedisConfig(u string) RedisConfig {
 	var conf RedisConfig
 	if u == "" {
 		return conf
@@ -288,11 +279,11 @@ func UseViper(v *viper.Viper) error {
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},
-		Cache:                       newRedisConfig(v.GetString("cache.url")),
-		Lock:                        newRedisConfig(v.GetString("lock.url")),
-		SessionStorage:              newRedisConfig(v.GetString("sessions.url")),
-		DownloadStorage:             newRedisConfig(v.GetString("downloads.url")),
-		KonnectorsOauthStateStorage: newRedisConfig(v.GetString("konnectors.oauthstate")),
+		Cache:                       NewRedisConfig(v.GetString("cache.url")),
+		Lock:                        NewRedisConfig(v.GetString("lock.url")),
+		SessionStorage:              NewRedisConfig(v.GetString("sessions.url")),
+		DownloadStorage:             NewRedisConfig(v.GetString("downloads.url")),
+		KonnectorsOauthStateStorage: NewRedisConfig(v.GetString("konnectors.oauthstate")),
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
 			Port:                      v.GetInt("mail.port"),
@@ -301,13 +292,14 @@ func UseViper(v *viper.Viper) error {
 			DisableTLS:                v.GetBool("mail.disable_tls"),
 			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
 		},
-		Logger: Logger{
-			Level:  v.GetString("log.level"),
-			Syslog: v.GetBool("log.syslog"),
-		},
 	}
 
-	return configureLogger()
+	loggerRedis := NewRedisConfig(v.GetString("log.redis"))
+	return logger.Init(logger.Options{
+		Level:  v.GetString("log.level"),
+		Syslog: v.GetBool("log.syslog"),
+		Redis:  loggerRedis.Client(),
+	})
 }
 
 const defaultTestConfig = `
@@ -387,29 +379,4 @@ func FindConfigFile(name string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("Could not find config file %s", name)
-}
-
-func configureLogger() error {
-	loggerCfg := config.Logger
-
-	level := loggerCfg.Level
-	if level == "" {
-		level = "info"
-	}
-
-	logLevel, err := logrus.ParseLevel(level)
-	if err != nil {
-		return err
-	}
-
-	logrus.SetLevel(logLevel)
-	if loggerCfg.Syslog {
-		hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "cozy")
-		if err != nil {
-			return err
-		}
-		logrus.AddHook(hook)
-		logrus.SetOutput(ioutil.Discard)
-	}
-	return nil
 }

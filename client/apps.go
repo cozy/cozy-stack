@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -81,7 +82,7 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 		Path: makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
 		Queries: url.Values{
 			"Source":      {opts.SourceURL},
-			"Deactivated": {boolQuery(opts.Deactivated)},
+			"Deactivated": {strconv.FormatBool(opts.Deactivated)},
 		},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
