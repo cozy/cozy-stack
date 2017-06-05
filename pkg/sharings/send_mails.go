@@ -44,7 +44,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 	errorOccurred := false
 	for _, rs := range s.RecipientsStatus {
 		// Send mail based on the recipient status
-		if rs.Status == consts.MailNotSentSharingStatus {
+		if rs.Status == consts.SharingStatusMailNotSent {
 			err = rs.GetRecipient(instance)
 			if err != nil {
 				return err
@@ -89,7 +89,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			}
 
 			// Job was created, we set the status to "pending".
-			rs.Status = consts.PendingSharingStatus
+			rs.Status = consts.SharingStatusPending
 		}
 	}
 	// Persist the modifications in the database.

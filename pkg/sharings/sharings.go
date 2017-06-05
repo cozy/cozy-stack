@@ -232,7 +232,7 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	}
 	t, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
 		Type:       "@event",
-		WorkerType: "sharingupdates",
+		WorkerType: consts.WorkerTypeSharingUpdates,
 		Domain:     instance.Domain,
 		Arguments:  eventArgs,
 		Message: &jobs.Message{
@@ -243,6 +243,9 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	if err != nil {
 		return err
 	}
+	instance.Logger().Infof("[sharings] AddTrigger: trigger created for "+
+		"sharing %s", sharingID)
+
 	return sched.Add(t)
 }
 
@@ -374,7 +377,7 @@ func SharingAccepted(instance *instance.Instance, state, clientID, accessCode st
 		return "", err
 	}
 	// Update the sharing status and asks the recipient for access
-	recStatus.Status = consts.AcceptedSharingStatus
+	recStatus.Status = consts.SharingStatusAccepted
 	err = ExchangeCodeForToken(instance, sharing, recStatus, accessCode)
 	if err != nil {
 		return "", err
@@ -402,7 +405,7 @@ func SharingRefused(db couchdb.Database, state, clientID string) (string, error)
 	if errFind != nil {
 		return "", errFind
 	}
-	recStatus.Status = consts.RefusedSharingStatus
+	recStatus.Status = consts.SharingStatusRefused
 
 	// Persists the changes in the database.
 	err := couchdb.UpdateDoc(db, sharing)
@@ -504,12 +507,12 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 		if rs.recipient != nil {
 			instance.Logger().Errorf("sharing] Could not register at %v : %v",
 				rs.recipient.URL, err)
-			rs.Status = consts.UnregisteredSharingStatus
+			rs.Status = consts.SharingStatusUnregistered
 		} else {
 			instance.Logger().Error("[sharing] Sharing recipient not found")
 		}
 	} else {
-		rs.Status = consts.MailNotSentSharingStatus
+		rs.Status = consts.SharingStatusMailNotSent
 	}
 	return err
 }
@@ -533,7 +536,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	err = sharer.SharerStatus.Register(instance)
 	if err != nil {
 		instance.Logger().Error("[sharing] Could not register at "+sharer.URL+" ", err)
-		sharer.SharerStatus.Status = consts.UnregisteredSharingStatus
+		sharer.SharerStatus.Status = consts.SharingStatusUnregistered
 	}
 	return couchdb.UpdateDoc(instance, sharing)
 }
@@ -638,10 +641,14 @@ func CreateSharing(instance *instance.Instance, sharing *Sharing) error {
 	return couchdb.CreateDoc(instance, sharing)
 }
 
-// RevokeSharing revokes the sharing and deletes all the OAuth client
-// associated with it.
+// RevokeSharing revokes the sharing and deletes all the OAuth client and
+// triggers associated with it.
 //
 // Revoking a sharing consists of setting the field `Revoked` to `true`.
+// When the sharing is of type "master-master" both recipients and sharer have
+// trigger(s) and OAuth client(s) to delete.
+// In every other cases only the sharer has trigger(s) to delete and only the
+// recipients have an OAuth client to delete.
 func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 	sharing.Revoked = true
 
@@ -651,37 +658,36 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 			for _, recipient := range sharing.RecipientsStatus {
 				err = deleteOAuthClient(ins, recipient.HostClientID)
 				if err != nil {
-					ins.Logger().Errorf("[sharings] Could not delete OAuth "+
-						"client: %v", err)
-				} else {
-					recipient.HostClientID = ""
+					return err
 				}
+
+				recipient.HostClientID = ""
 			}
 		}
+
+		err = removeSharingTriggers(ins, sharing.SharingID)
+		if err != nil {
+			return err
+		}
+
 	} else {
 		err = deleteOAuthClient(ins, sharing.Sharer.SharerStatus.HostClientID)
 		if err != nil {
-			ins.Logger().Errorf("[sharings] Could not delete OAuth client: %v",
-				err)
-		} else {
-			sharing.Sharer.SharerStatus.HostClientID = ""
+			return err
+		}
+
+		sharing.Sharer.SharerStatus.HostClientID = ""
+
+		if sharing.Type == consts.MasterMasterSharing {
+			err = removeSharingTriggers(ins, sharing.SharingID)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	err = couchdb.UpdateDoc(ins, sharing)
 	return err
-}
-
-func deleteOAuthClient(ins *instance.Instance, id string) error {
-	client, err := oauth.FindClient(ins, id)
-	if err != nil {
-		return err
-	}
-	crErr := client.Delete(ins)
-	if crErr != nil {
-		return errors.New(crErr.Error)
-	}
-	return nil
 }
 
 // RemoveDocumentIfNotShared checks if the given document is still shared and
@@ -747,6 +753,102 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 	default:
 		return couchdb.DeleteDoc(ins, doc)
 	}
+}
+
+// RevokeRecipient revokes a recipient from the given sharing.
+//
+// If there are no more recipients the sharing is revoked and the corresponding
+// trigger is deleted.
+func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID string) error {
+	var removed, hasRecipient bool
+	for _, recipient := range sharing.RecipientsStatus {
+		if recipient.HostClientID == recipientClientID {
+			err := deleteOAuthClient(ins, recipientClientID)
+			if err != nil {
+				return err
+			}
+
+			recipient.Status = consts.SharingStatusRevoked
+			recipient.HostClientID = ""
+			removed = true
+		} else {
+			if recipient.Status != consts.SharingStatusRevoked &&
+				recipient.Status != consts.SharingStatusRefused {
+				hasRecipient = true
+			}
+		}
+
+		if removed && hasRecipient {
+			break
+		}
+	}
+
+	if !removed {
+		ins.Logger().Errorf("[sharing] RevokeRecipient: Recipient %s is not "+
+			"in sharing: %s", recipientClientID, sharing.SharingID)
+		return ErrRecipientDoesNotExist
+	}
+
+	if !hasRecipient {
+		sharing.Revoked = true
+		err := removeSharingTriggers(ins, sharing.SharingID)
+		if err != nil {
+			ins.Logger().Errorf("[sharings] RevokeRecipient: Could not remove "+
+				"triggers for sharing %s: %s", sharing.SharingID, err)
+		}
+	}
+
+	return couchdb.UpdateDoc(ins, sharing)
+}
+
+func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
+	sched := stack.GetScheduler()
+	ts, err := sched.GetAll(ins.Domain)
+	if err != nil {
+		ins.Logger().Errorf("[sharings] removeSharingTriggers: Could not get "+
+			"the list of triggers: %s", err)
+		return err
+	}
+
+	for _, trigger := range ts {
+		infos := trigger.Infos()
+		if infos.WorkerType == consts.WorkerTypeSharingUpdates {
+			msg := SharingMessage{}
+			errm := infos.Message.Unmarshal(&msg)
+			if errm != nil {
+				ins.Logger().Errorf("[sharings] removeSharingTriggers: An "+
+					"error occurred while trying to unmarshal trigger "+
+					"message: %s", errm)
+				continue
+			}
+
+			if msg.SharingID == sharingID {
+				errd := sched.Delete(ins.Domain, trigger.ID())
+				if errd != nil {
+					ins.Logger().Errorf("[sharings] removeSharingTriggers: "+
+						"Could not delete trigger %s: %s", trigger.ID(), errd)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func deleteOAuthClient(ins *instance.Instance, id string) error {
+	client, err := oauth.FindClient(ins, id)
+	if err != nil {
+		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
+			"find OAuth client %s: %s", id, err)
+		return err
+	}
+	crErr := client.Delete(ins)
+	if crErr != nil {
+		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
+			"delete OAuth client %s: %s", id, err)
+		return errors.New(crErr.Error)
+	}
+	return nil
 }
 
 var (
