@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -160,6 +161,30 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 		c := newAdminClient()
 		_, err = c.ModifyInstance(domain, &client.InstanceOptions{
 			DiskQuota: int64(diskQuota),
+		})
+		return err
+	},
+}
+
+var debugInstanceCmd = &cobra.Command{
+	Use:   "debug [domain] [true/false]",
+	Short: "Change the disk-quota of the instance",
+	Long: `
+cozy-stack instances debug allows to activate or deactivate the debugging of a
+specific domain.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 2 {
+			return cmd.Help()
+		}
+		domain := args[0]
+		debug, err := strconv.ParseBool(args[1])
+		if err != nil {
+			return err
+		}
+		c := newAdminClient()
+		_, err = c.ModifyInstance(domain, &client.InstanceOptions{
+			Debug: &debug,
 		})
 		return err
 	},
@@ -348,6 +373,7 @@ func init() {
 	instanceCmdGroup.AddCommand(cleanInstanceCmd)
 	instanceCmdGroup.AddCommand(lsInstanceCmd)
 	instanceCmdGroup.AddCommand(quotaInstanceCmd)
+	instanceCmdGroup.AddCommand(debugInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)

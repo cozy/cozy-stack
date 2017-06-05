@@ -39,6 +39,7 @@ type InstanceOptions struct {
 	Apps       []string
 	Dev        bool
 	Passphrase string
+	Debug      *bool
 }
 
 // TokenOptions is a struct holding all the options to generate a token.
@@ -120,12 +121,17 @@ func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance
 	if !validDomain(domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
+	var debug string
+	if opts.Debug != nil {
+		debug = strconv.FormatBool(*opts.Debug)
+	}
 	res, err := c.Req(&request.Options{
 		Method: "PATCH",
 		Path:   "/instances/" + domain,
 		Queries: url.Values{
 			"Locale":    {opts.Locale},
 			"DiskQuota": {strconv.FormatInt(opts.DiskQuota, 10)},
+			"Debug":     {debug},
 		},
 	})
 	if err != nil {

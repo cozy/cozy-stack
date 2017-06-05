@@ -103,6 +103,7 @@ func modifyHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
+	var shouldUpdate bool
 	if quota := c.QueryParam("DiskQuota"); quota != "" {
 		var diskQuota int64
 		diskQuota, err = strconv.ParseInt(quota, 10, 64)
@@ -110,12 +111,26 @@ func modifyHandler(c echo.Context) error {
 			return wrapError(err)
 		}
 		i.BytesDiskQuota = diskQuota
+		shouldUpdate = true
 	}
 	if locale := c.QueryParam("Locale"); locale != "" {
 		i.Locale = locale
+		shouldUpdate = true
 	}
-	if err = instance.Update(i); err != nil {
-		return wrapError(err)
+	if shouldUpdate {
+		if err = instance.Update(i); err != nil {
+			return wrapError(err)
+		}
+	}
+	if debug, err := strconv.ParseBool(c.QueryParam("Debug")); err == nil {
+		if debug {
+			err = logger.AddDebugDomain(domain)
+		} else {
+			err = logger.RemoveDebugDomain(domain)
+		}
+		if err != nil {
+			return wrapError(err)
+		}
 	}
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{i}, nil)
 }
@@ -199,14 +214,6 @@ func registerClient(c echo.Context) error {
 	return c.String(http.StatusOK, client.ClientID)
 }
 
-func activateDebug(c echo.Context) error {
-	return logger.AddDebugDomain(c.Param("domain"))
-}
-
-func deactivateDebug(c echo.Context) error {
-	return logger.RemoveDebugDomain(c.Param("domain"))
-}
-
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -234,8 +241,6 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain", showHandler)
 	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)
-	router.POST("/:domain/logger", activateDebug)
-	router.DELETE("/:domain/logger", deactivateDebug)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
 }
