@@ -8,7 +8,13 @@ List the installed konnectors.
 List the installed konnectors.
 
 ```
-cozy-stack konnectors ls
+cozy-stack konnectors ls [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for ls
 ```
 
 ### Options inherited from parent commands
@@ -21,7 +27,6 @@ cozy-stack konnectors ls
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

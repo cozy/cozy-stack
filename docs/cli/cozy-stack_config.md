@@ -9,6 +9,12 @@ Show and manage configuration elements
 cozy-stack config allows to print and generate some parts of the configuration
 
 
+### Options
+
+```
+  -h, --help   help for config
+```
+
 ### Options inherited from parent commands
 
 ```
@@ -17,7 +23,6 @@ cozy-stack config allows to print and generate some parts of the configuration
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

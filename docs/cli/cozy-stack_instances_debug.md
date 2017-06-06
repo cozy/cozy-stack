@@ -1,29 +1,23 @@
-## cozy-stack instances set-disk-quota
+## cozy-stack instances debug
 
-Change the disk-quota of the instance
+Activate or deactivate debugging of the instance
 
 ### Synopsis
 
 
 
-cozy-stack instances set-disk-quota allows to change the disk-quota of the
-instance of the given domain. Set the quota to 0 to remove the quota.
+cozy-stack instances debug allows to activate or deactivate the debugging of a
+specific domain.
 
 
 ```
-cozy-stack instances set-disk-quota [domain] [disk-quota] [flags]
-```
-
-### Examples
-
-```
-$ cozy-stack instances set-disk-quota cozy.tools:8080 3GB
+cozy-stack instances debug [domain] [true/false] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for set-disk-quota
+  -h, --help   help for debug
 ```
 
 ### Options inherited from parent commands

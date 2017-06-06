@@ -11,7 +11,7 @@ given domain.
 
 
 ```
-cozy-stack instances add [domain]
+cozy-stack instances add [domain] [flags]
 ```
 
 ### Examples
@@ -27,6 +27,7 @@ $ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings 
       --dev                  To create a development instance
       --disk-quota string    The quota allowed to the instance's VFS
       --email string         The email of the owner
+  -h, --help                 help for add
       --locale string        Locale of the new cozy instance (default "en")
       --passphrase string    Register the instance with this passphrase (useful for tests)
       --public-name string   The public name of the owner
@@ -42,7 +43,6 @@ $ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings 
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

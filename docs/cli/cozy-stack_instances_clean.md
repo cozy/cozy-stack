@@ -8,7 +8,13 @@ Clean badly removed instances
 Clean badly removed instances
 
 ```
-cozy-stack instances clean [domain]
+cozy-stack instances clean [domain] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for clean
 ```
 
 ### Options inherited from parent commands
@@ -19,7 +25,6 @@ cozy-stack instances clean [domain]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

@@ -8,7 +8,13 @@ Register a new OAuth client
 It registers a new OAuth client and returns its client_id
 
 ```
-cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [software_id]
+cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [software_id] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for client-oauth
 ```
 
 ### Options inherited from parent commands
@@ -19,7 +25,6 @@ cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [softwar
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

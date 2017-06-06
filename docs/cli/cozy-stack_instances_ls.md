@@ -11,7 +11,13 @@ by this server.
 
 
 ```
-cozy-stack instances ls
+cozy-stack instances ls [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for ls
 ```
 
 ### Options inherited from parent commands
@@ -22,7 +28,6 @@ cozy-stack instances ls
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

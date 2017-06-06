@@ -13,7 +13,7 @@ a cozy.
 
 
 ```
-cozy-stack konnectors [command]
+cozy-stack konnectors [command] [flags]
 ```
 
 ### Options
@@ -21,6 +21,7 @@ cozy-stack konnectors [command]
 ```
       --all-domains     work on all domains iterativelly
       --domain string   specify the domain name of the instance
+  -h, --help            help for konnectors
 ```
 
 ### Options inherited from parent commands
@@ -31,7 +32,6 @@ cozy-stack konnectors [command]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

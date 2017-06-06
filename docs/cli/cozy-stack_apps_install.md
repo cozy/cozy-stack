@@ -10,7 +10,7 @@ Install an application with the specified slug name
 from the given source URL.
 
 ```
-cozy-stack apps install [slug] [sourceurl]
+cozy-stack apps install [slug] [sourceurl] [flags]
 ```
 
 ### Examples
@@ -23,6 +23,7 @@ $ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/
 
 ```
       --ask-permissions   specify that the application should not be activated after installation
+  -h, --help              help for install
 ```
 
 ### Options inherited from parent commands
@@ -35,7 +36,6 @@ $ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

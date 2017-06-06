@@ -8,13 +8,19 @@ Print the documentation of cozy-stack as markdown
 Print the documentation of cozy-stack as markdown
 
 ```
-cozy-stack doc markdown [directory]
+cozy-stack doc markdown [directory] [flags]
 ```
 
 ### Examples
 
 ```
 $ cozy-stack doc markdown docs/cli
+```
+
+### Options
+
+```
+  -h, --help   help for markdown
 ```
 
 ### Options inherited from parent commands
@@ -25,7 +31,6 @@ $ cozy-stack doc markdown docs/cli
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

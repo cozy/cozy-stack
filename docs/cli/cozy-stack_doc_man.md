@@ -8,7 +8,7 @@ Print the manpages of cozy-stack
 Print the manual pages for using cozy-stack in command-line
 
 ```
-cozy-stack doc man [directory]
+cozy-stack doc man [directory] [flags]
 ```
 
 ### Examples
@@ -20,6 +20,12 @@ $ cozy-stack doc man ~/share/man
 $ man cozy-stack
 ```
 
+### Options
+
+```
+  -h, --help   help for man
+```
+
 ### Options inherited from parent commands
 
 ```
@@ -28,7 +34,6 @@ $ man cozy-stack
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

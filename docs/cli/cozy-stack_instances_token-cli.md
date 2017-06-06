@@ -8,7 +8,13 @@ Generate a new CLI access token (global access)
 Generate a new CLI access token (global access)
 
 ```
-cozy-stack instances token-cli [domain] [scopes]
+cozy-stack instances token-cli [domain] [scopes] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for token-cli
 ```
 
 ### Options inherited from parent commands
@@ -19,7 +25,6 @@ cozy-stack instances token-cli [domain] [scopes]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

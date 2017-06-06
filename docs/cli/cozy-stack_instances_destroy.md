@@ -11,13 +11,14 @@ and all its data.
 
 
 ```
-cozy-stack instances destroy [domain]
+cozy-stack instances destroy [domain] [flags]
 ```
 
 ### Options
 
 ```
       --force   Force the deletion without asking for confirmation
+  -h, --help    help for destroy
 ```
 
 ### Options inherited from parent commands
@@ -28,7 +29,6 @@ cozy-stack instances destroy [domain]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

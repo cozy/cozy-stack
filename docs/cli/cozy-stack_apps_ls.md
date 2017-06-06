@@ -8,7 +8,13 @@ List the installed applications.
 List the installed applications.
 
 ```
-cozy-stack apps ls
+cozy-stack apps ls [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for ls
 ```
 
 ### Options inherited from parent commands
@@ -21,7 +27,6 @@ cozy-stack apps ls
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

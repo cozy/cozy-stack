@@ -9,7 +9,13 @@ Read the environment variables, the config file and
 the given parameters to display the configuration.
 
 ```
-cozy-stack config print
+cozy-stack config print [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for print
 ```
 
 ### Options inherited from parent commands
@@ -20,7 +26,6 @@ cozy-stack config print
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

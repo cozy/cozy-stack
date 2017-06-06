@@ -8,7 +8,13 @@ Check if the HTTP server is running
 Check if the HTTP server has been started and answer 200 for /status.
 
 ```
-cozy-stack status
+cozy-stack status [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for status
 ```
 
 ### Options inherited from parent commands
@@ -19,7 +25,6 @@ cozy-stack status
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

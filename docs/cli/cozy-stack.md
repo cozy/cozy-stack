@@ -11,7 +11,7 @@ with a new experience. You can install Cozy on your own hardware where no one
 profiles you.
 
 ```
-cozy-stack
+cozy-stack [flags]
 ```
 
 ### Options
@@ -21,8 +21,8 @@ cozy-stack
       --admin-port int      administration server port (default 6060)
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
+  -h, --help                help for cozy-stack
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

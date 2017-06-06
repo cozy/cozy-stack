@@ -22,13 +22,19 @@ following line to the .bash_profile
     $ source $(brew --prefix)/etc/bash_completion
 
 ```
-cozy-stack completion [shell]
+cozy-stack completion [shell] [flags]
 ```
 
 ### Examples
 
 ```
 # cozy-stack completion bash > /etc/bash_completion.d/cozy-stack
+```
+
+### Options
+
+```
+  -h, --help   help for completion
 ```
 
 ### Options inherited from parent commands
@@ -39,7 +45,6 @@ cozy-stack completion [shell]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

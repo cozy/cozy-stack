@@ -10,13 +10,19 @@ Install an konnector with the specified slug name
 from the given source URL.
 
 ```
-cozy-stack konnectors install [slug] [sourceurl]
+cozy-stack konnectors install [slug] [sourceurl] [flags]
 ```
 
 ### Examples
 
 ```
 $ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github.com/cozy/cozy-konnector-trainline.git#build'
+```
+
+### Options
+
+```
+  -h, --help   help for install
 ```
 
 ### Options inherited from parent commands
@@ -29,7 +35,6 @@ $ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

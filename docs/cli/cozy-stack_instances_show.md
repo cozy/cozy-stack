@@ -11,13 +11,19 @@ given domain.
 
 
 ```
-cozy-stack instances show [domain]
+cozy-stack instances show [domain] [flags]
 ```
 
 ### Examples
 
 ```
 $ cozy-stack instances show cozy.tools:8080
+```
+
+### Options
+
+```
+  -h, --help   help for show
 ```
 
 ### Options inherited from parent commands
@@ -28,7 +34,6 @@ $ cozy-stack instances show cozy.tools:8080
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

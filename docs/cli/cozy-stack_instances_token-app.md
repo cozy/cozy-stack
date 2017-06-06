@@ -8,13 +8,14 @@ Generate a new application token
 Generate a new application token
 
 ```
-cozy-stack instances token-app [domain] [slug]
+cozy-stack instances token-app [domain] [slug] [flags]
 ```
 
 ### Options
 
 ```
       --expire duration   Make the token expires in this amount of time
+  -h, --help              help for token-app
 ```
 
 ### Options inherited from parent commands
@@ -25,7 +26,6 @@ cozy-stack instances token-app [domain] [slug]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

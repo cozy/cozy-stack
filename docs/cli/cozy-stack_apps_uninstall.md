@@ -8,7 +8,13 @@ Uninstall the application with the specified slug name.
 Uninstall the application with the specified slug name.
 
 ```
-cozy-stack apps uninstall [slug]
+cozy-stack apps uninstall [slug] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for uninstall
 ```
 
 ### Options inherited from parent commands
@@ -21,7 +27,6 @@ cozy-stack apps uninstall [slug]
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

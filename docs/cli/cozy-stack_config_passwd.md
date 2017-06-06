@@ -6,15 +6,21 @@ Generate an admin passphrase
 
 
 
-cozy-stack instances passphrase generate a passphrase hash and save it to a file in
-the specified directory. This passphrase is the one used to authenticate accesses
-to the administration API.
+cozy-stack instances passphrase generate a passphrase hash and save it to the
+specified file. If no file is specified, it is directly printed in standard output.
+This passphrase is the one used to authenticate accesses to the administration API.
 
-example: cozy-stack config passwd ~/.cozy
+example: cozy-stack config passwd ~/.cozy/
 
 
 ```
-cozy-stack config passwd [directory]
+cozy-stack config passwd [filepath] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for passwd
 ```
 
 ### Options inherited from parent commands
@@ -25,7 +31,6 @@ cozy-stack config passwd [directory]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

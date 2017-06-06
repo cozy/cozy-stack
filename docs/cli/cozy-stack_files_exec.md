@@ -21,7 +21,13 @@ Available commands:
 
 
 ```
-cozy-stack files exec [--domain domain] [command]
+cozy-stack files exec [--domain domain] [command] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for exec
 ```
 
 ### Options inherited from parent commands
@@ -33,7 +39,6 @@ cozy-stack files exec [--domain domain] [command]
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

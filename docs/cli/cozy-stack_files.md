@@ -15,13 +15,14 @@ current filesystem into cozy.
 
 
 ```
-cozy-stack files [command]
+cozy-stack files [command] [flags]
 ```
 
 ### Options
 
 ```
       --domain string   specify the domain name of the instance
+  -h, --help            help for files
 ```
 
 ### Options inherited from parent commands
@@ -32,7 +33,6 @@ cozy-stack files [command]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 

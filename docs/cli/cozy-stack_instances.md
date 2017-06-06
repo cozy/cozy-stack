@@ -17,7 +17,13 @@ create its CouchDB databases.
 
 
 ```
-cozy-stack instances [command]
+cozy-stack instances [command] [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for instances
 ```
 
 ### Options inherited from parent commands
@@ -28,7 +34,6 @@ cozy-stack instances [command]
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
       --host string         server host (default "localhost")
-      --log-level string    define the log level (default "info")
   -p, --port int            server port (default 8080)
 ```
 
@@ -37,6 +42,7 @@ cozy-stack instances [command]
 * [cozy-stack instances add](cozy-stack_instances_add.md)	 - Manage instances of a stack
 * [cozy-stack instances clean](cozy-stack_instances_clean.md)	 - Clean badly removed instances
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
+* [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
 * [cozy-stack instances set-disk-quota](cozy-stack_instances_set-disk-quota.md)	 - Change the disk-quota of the instance
