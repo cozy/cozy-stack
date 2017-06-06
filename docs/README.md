@@ -36,6 +36,7 @@ Table of contents
   - [Workers](workers.md)
 - `/permissions` - [Permissions](permissions.md)
 - `/realtime` - [Realtime](realtime.md)
+- `/remote` - [Proxy for remote data/API](remote.md)
 - `/settings` - [Settings](settings.md)
 - `/sharings` - [Sharing](sharing.md)
 
