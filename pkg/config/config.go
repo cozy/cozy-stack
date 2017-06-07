@@ -99,7 +99,8 @@ type Fs struct {
 
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
-	URL string
+	Auth *url.Userinfo
+	URL  string
 }
 
 // Jobs contains the configuration values for the jobs and triggers synchronization
@@ -256,6 +257,8 @@ func UseViper(v *viper.Viper) error {
 	if couchURL.Path == "" {
 		couchURL.Path = "/"
 	}
+	couchAuth := couchURL.User
+	couchURL.User = nil
 
 	config = &Config{
 		Host:       v.GetString("host"),
@@ -269,7 +272,8 @@ func UseViper(v *viper.Viper) error {
 			URL: fsURL.String(),
 		},
 		CouchDB: CouchDB{
-			URL: couchURL.String(),
+			Auth: couchAuth,
+			URL:  couchURL.String(),
 		},
 		Jobs: Jobs{
 			Workers: v.GetInt("jobs.workers"),
