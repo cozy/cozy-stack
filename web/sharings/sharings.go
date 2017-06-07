@@ -423,12 +423,32 @@ func revokeSharing(c echo.Context) error {
 		return jsonapi.NotFound(err)
 	}
 
+	// TODO Add permission check
+
 	err = sharings.RevokeSharing(instance, sharing)
 	if err != nil {
 		return wrapErrors(err)
 	}
 
 	return c.JSON(http.StatusOK, nil)
+}
+
+func revokeRecipient(c echo.Context) error {
+	ins := middlewares.GetInstance(c)
+
+	sharingID := c.Param("id")
+	sharing, err := sharings.FindSharing(ins, sharingID)
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+
+	// TODO Add permission check
+	err = sharings.RevokeRecipient(ins, sharing, c.Param("recipient-client-id"))
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return c.NoContent(http.StatusOK)
 }
 
 // Routes sets the routing for the sharing service
@@ -442,7 +462,9 @@ func Routes(router *echo.Group) {
 	router.POST("/recipient", CreateRecipient)
 	router.POST("/access/client", ReceiveClientID)
 	router.POST("/access/code", getAccessToken)
+
 	router.DELETE("/:id", revokeSharing)
+	router.DELETE("/:id/recipient/:recipient-client-id", revokeRecipient)
 
 	router.DELETE("/files/:file-id/referenced_by", removeReferences)
 

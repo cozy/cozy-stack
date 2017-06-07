@@ -98,19 +98,27 @@ const (
 )
 
 const (
-	// PendingSharingStatus is the sharing pending status
-	PendingSharingStatus = "pending"
-	// RefusedSharingStatus is the sharing refused status
-	RefusedSharingStatus = "refused"
-	// AcceptedSharingStatus is the sharing accepted status
-	AcceptedSharingStatus = "accepted"
-	// ErrorSharingStatus is when the request could not be sent
-	ErrorSharingStatus = "error"
-	// UnregisteredSharingStatus is when the sharer could not register herself
+	// SharingStatusPending is the sharing pending status
+	SharingStatusPending = "pending"
+	// SharingStatusRefused is the sharing refused status
+	SharingStatusRefused = "refused"
+	// SharingStatusAccepted is the sharing accepted status
+	SharingStatusAccepted = "accepted"
+	// SharingStatusError is when the request could not be sent
+	SharingStatusError = "error"
+	// SharingStatusUnregistered is when the sharer could not register herself
 	// as an OAuth client at the recipient's
-	UnregisteredSharingStatus = "unregistered"
-	// MailNotSentSharingStatus is when the mail invitation was not sent
-	MailNotSentSharingStatus = "mail-not-sent"
+	SharingStatusUnregistered = "unregistered"
+	// SharingStatusMailNotSent is when the mail invitation was not sent
+	SharingStatusMailNotSent = "mail-not-sent"
+	// SharingStatusRevoked is to tell if a recipient is revoked.
+	SharingStatusRevoked = "revoked"
+)
+
+const (
+	// WorkerTypeSharingUpdates is the string representation of the type of
+	// workers that deals with updating sharings.
+	WorkerTypeSharingUpdates = "sharingupdates"
 )
 
 const (

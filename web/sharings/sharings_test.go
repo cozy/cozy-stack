@@ -1080,6 +1080,29 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestRevokeRecipient(t *testing.T) {
+	// Test: we provide a wrong sharing id.
+	delURL := fmt.Sprintf("%s/sharings/nothing/recipient/noone", ts.URL)
+	req, err := http.NewRequest(http.MethodDelete, delURL, nil)
+	assert.NoError(t, err)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
+
+	// Create a legitimate sharing.
+	sharing := createSharing(t, false, consts.MasterMasterSharing)
+	// Test: we provide a wrong recipient.
+	delURL = fmt.Sprintf("%s/sharings/%s/recipient/noone", ts.URL,
+		sharing.SharingID)
+	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
+	assert.NoError(t, err)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
+
+	// The success scenario is tested in pkg/sharings/sharings_test.go.
+}
+
 func TestMergeMetadata(t *testing.T) {
 	newMeta := vfs.Metadata{"un": "1", "deux": "2"}
 	oldMeta := vfs.Metadata{"trois": "3"}
