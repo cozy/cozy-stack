@@ -234,7 +234,7 @@ func (j JSONDoc) Valid(field, value string) bool {
 }
 
 var couchdbClient = &http.Client{
-	Timeout: 5 * time.Second,
+	Timeout: 10 * time.Second,
 }
 
 func unescapeCouchdbName(name string) string {
