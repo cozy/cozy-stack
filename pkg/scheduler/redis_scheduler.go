@@ -104,11 +104,13 @@ func (s *RedisScheduler) startEventDispatcher() {
 	eventsCh := make(chan *realtime.Event, 100)
 	go func() {
 		c := realtime.GetHub().SubscribeAll()
+		defer func() {
+			c.Close()
+			close(eventsCh)
+		}()
 		for {
 			select {
 			case <-s.stopped:
-				c.Close()
-				close(eventsCh)
 				return
 			case event := <-c.Read():
 				eventsCh <- event
