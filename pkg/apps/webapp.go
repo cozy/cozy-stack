@@ -6,6 +6,7 @@ import (
 	"io"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -60,6 +61,7 @@ type WebappManifest struct {
 	DocPermissions permissions.Set `json:"permissions"`
 	Intents        []Intent        `json:"intents"`
 	Routes         Routes          `json:"routes"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 
 	Instance SubDomainer `json:"-"` // Used for JSON-API links
 }
@@ -102,6 +104,9 @@ func (m *WebappManifest) Slug() string { return m.DocSlug }
 
 // State is part of the Manifest interface
 func (m *WebappManifest) State() State { return m.DocState }
+
+// LastUpdate is part of the Manifest interface
+func (m *WebappManifest) LastUpdate() time.Time { return m.UpdatedAt }
 
 // Error is part of the Manifest interface
 func (m *WebappManifest) Error() error {
@@ -158,6 +163,7 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error
 
 // Create is part of the Manifest interface
 func (m *WebappManifest) Create(db couchdb.Database) error {
+	m.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
@@ -167,6 +173,7 @@ func (m *WebappManifest) Create(db couchdb.Database) error {
 
 // Update is part of the Manifest interface
 func (m *WebappManifest) Update(db couchdb.Database) error {
+	m.UpdatedAt = time.Now()
 	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -34,6 +35,7 @@ type KonnManifest struct {
 	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
 // ID is part of the Manifest interface
@@ -72,6 +74,9 @@ func (m *KonnManifest) Slug() string { return m.DocSlug }
 
 // State is part of the Manifest interface
 func (m *KonnManifest) State() State { return m.DocState }
+
+// LastUpdate is part of the Manifest interface
+func (m *KonnManifest) LastUpdate() time.Time { return m.UpdatedAt }
 
 // Error is part of the Manifest interface
 func (m *KonnManifest) Error() error {
@@ -121,6 +126,7 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 
 // Create is part of the Manifest interface
 func (m *KonnManifest) Create(db couchdb.Database) error {
+	m.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
@@ -130,6 +136,7 @@ func (m *KonnManifest) Create(db couchdb.Database) error {
 
 // Update is part of the Manifest interface
 func (m *KonnManifest) Update(db couchdb.Database) error {
+	m.UpdatedAt = time.Now()
 	err := couchdb.UpdateDoc(db, m)
 	if err != nil {
 		return err

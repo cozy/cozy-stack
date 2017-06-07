@@ -3,6 +3,7 @@ package apps
 import (
 	"io"
 	"net/url"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -82,6 +83,7 @@ type Manifest interface {
 	Version() string
 	Slug() string
 	State() State
+	LastUpdate() time.Time
 	Error() error
 
 	SetState(state State)
