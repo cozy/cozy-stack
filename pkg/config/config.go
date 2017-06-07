@@ -138,6 +138,7 @@ func NewRedisConfig(u string) RedisConfig {
 		log.Errorf("can't parse cache.URL(%s), ignoring", u)
 		return conf
 	}
+	conf.URL = u
 	conf.cli = redis.NewClient(opt)
 	conf.opt = opt
 	return conf
