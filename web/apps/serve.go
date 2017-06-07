@@ -19,7 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // Serve is an handler for serving files from the VFS for a client-side app
