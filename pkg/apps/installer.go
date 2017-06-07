@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/sirupsen/logrus"
@@ -232,10 +233,8 @@ func (i *Installer) install() (Manifest, error) {
 func (i *Installer) update() (Manifest, error) {
 	i.log.Infof("[apps] Start update: %s %s", i.slug, i.src.String())
 	man := i.man
-	if state := man.State(); state != Ready &&
-		state != Installed &&
-		state != Errored {
-		return nil, ErrBadState
+	if err := i.checkState(man); err != nil {
+		return nil, err
 	}
 	if err := i.ReadManifest(Upgrading, man); err != nil {
 		return man, err
@@ -250,12 +249,26 @@ func (i *Installer) update() (Manifest, error) {
 func (i *Installer) delete() (Manifest, error) {
 	i.log.Infof("[apps] Start delete: %s %s", i.slug, i.src.String())
 	man := i.man
-	if state := man.State(); state != Ready &&
-		state != Installed &&
-		state != Errored {
-		return nil, ErrBadState
+	if err := i.checkState(man); err != nil {
+		return nil, err
 	}
 	return man, i.man.Delete(i.db)
+}
+
+// checkState returns whether or not the manifest is in the right state to
+// perform an update or deletion.
+func (i *Installer) checkState(man Manifest) error {
+	state := man.State()
+	if state == Ready ||
+		state == Installed ||
+		state == Errored {
+		return nil
+	}
+	timeAgo := time.Now().Add(-2 * time.Minute)
+	if man.LastUpdate().Before(timeAgo) {
+		return nil
+	}
+	return ErrBadState
 }
 
 // ReadManifest will fetch the manifest and read its JSON content into the
