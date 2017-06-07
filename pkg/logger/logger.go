@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/Sirupsen/logrus"
+	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/go-redis/redis"
-	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 const (
