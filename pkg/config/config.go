@@ -74,6 +74,7 @@ type Config struct {
 	Host       string
 	Port       int
 	Assets     string
+	Doctypes   string
 	Subdomains string
 	AdminHost  string
 	AdminPort  int
@@ -268,6 +269,7 @@ func UseViper(v *viper.Viper) error {
 		AdminHost:  v.GetString("admin.host"),
 		AdminPort:  v.GetInt("admin.port"),
 		Assets:     v.GetString("assets"),
+		Doctypes:   v.GetString("doctypes"),
 		NoReply:    v.GetString("mail.noreply_address"),
 		Fs: Fs{
 			URL: fsURL.String(),

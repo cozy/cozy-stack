@@ -133,3 +133,12 @@ func InvalidAttribute(attribute string, err error) *Error {
 		},
 	}
 }
+
+// BadGateway returns a 502 formatted error
+func BadGateway(err error) *Error {
+	return &Error{
+		Status: http.StatusBadGateway,
+		Title:  "Bad Gateway",
+		Detail: err.Error(),
+	}
+}

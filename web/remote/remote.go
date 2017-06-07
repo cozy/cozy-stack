@@ -39,6 +39,8 @@ func wrapRemoteErr(err error) error {
 		return jsonapi.NotFound(err)
 	case remote.ErrInvalidRequest:
 		return jsonapi.BadRequest(err)
+	case remote.ErrRequestFailed:
+		return jsonapi.BadGateway(err)
 	}
 	return err
 }
