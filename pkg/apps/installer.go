@@ -264,8 +264,7 @@ func (i *Installer) checkState(man Manifest) error {
 		state == Errored {
 		return nil
 	}
-	timeAgo := time.Now().Add(-2 * time.Minute)
-	if man.LastUpdate().Before(timeAgo) {
+	if time.Since(man.LastUpdate()) > 15*time.Minute {
 		return nil
 	}
 	return ErrBadState
