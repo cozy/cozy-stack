@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
 	"github.com/labstack/echo"
+	"github.com/sirupsen/logrus"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as

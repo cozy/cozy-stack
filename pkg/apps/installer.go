@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/sirupsen/logrus"
 )
 
 var slugReg = regexp.MustCompile(`^[a-z0-9\-]+$`)

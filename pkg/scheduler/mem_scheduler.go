@@ -3,11 +3,11 @@ package scheduler
 import (
 	"sync"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/sirupsen/logrus"
 )
 
 // triggerGlobalStorage interface is used to represent a persistent layer on
