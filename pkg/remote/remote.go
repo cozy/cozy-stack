@@ -1,12 +1,14 @@
 package remote
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -20,8 +22,12 @@ var (
 	// ErrInvalidRequest is used when we can't use the request defined by the
 	// developer
 	ErrInvalidRequest = errors.New("the request is not valid")
-	// ErrRequestFailed when the connexion to the remote website can't be established
+	// ErrRequestFailed is used when the connexion to the remote website can't
+	// be established
 	ErrRequestFailed = errors.New("can't connect to the remote host")
+	// ErrInvalidVariables is used when the variables can't be extracted from
+	// the request
+	ErrInvalidVariables = errors.New("the variables are not valid")
 )
 
 // Remote is the struct used to call a remote website for a doctype
@@ -89,31 +95,84 @@ func Find(doctype string) (*Remote, error) {
 	}
 	raw = string(bytes)
 
-	remote, err := ParseRawRequest(doctype, raw)
-	if err != nil {
-		return nil, err
+	return ParseRawRequest(doctype, raw)
+}
+
+// ExtractVariables extracts the variables:
+// - from the query string for a GET
+// - from the body formatted as JSON for a POST
+func ExtractVariables(verb string, in *http.Request) (map[string]string, error) {
+	vars := make(map[string]string)
+	if verb == "GET" {
+		for k, v := range in.URL.Query() {
+			vars[k] = v[0]
+		}
+	} else {
+		err := json.NewDecoder(in.Body).Decode(&vars)
+		if err != nil {
+			return nil, err
+		}
 	}
+	return vars, nil
+}
+
+var injectionRegexp = regexp.MustCompile("{{\\w+}}")
+
+func injectVar(src string, vars map[string]string) string {
+	return injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
+		m = strings.TrimLeft(m, "{{")
+		m = strings.TrimRight(m, "}}")
+		m = strings.TrimSpace(m)
+		return vars[m]
+	})
+}
+
+// InjectVariables replaces {{variable}} by its value in some fields of the
+// remote struct
+func InjectVariables(remote *Remote, vars map[string]string) {
+	if strings.Contains(remote.URL.Host, "{{") {
+		remote.URL.Host = injectVar(remote.URL.Host, vars)
+	}
+	if strings.Contains(remote.URL.Path, "{{") {
+		remote.URL.Path = injectVar(remote.URL.Path, vars)
+	}
+	if strings.Contains(remote.URL.RawQuery, "{{") {
+		remote.URL.RawQuery = injectVar(remote.URL.RawQuery, vars)
+	}
+	for k, v := range remote.Headers {
+		if strings.Contains(v, "{{") {
+			remote.Headers[k] = injectVar(v, vars)
+		}
+	}
+	if strings.Contains(remote.Body, "{{") {
+		remote.Body = injectVar(remote.Body, vars)
+	}
+}
+
+// ProxyTo calls the external website and proxy the reponse
+func (remote *Remote) ProxyTo(doctype string, rw http.ResponseWriter, in *http.Request) error {
+	// TODO logging (to syslog & couchdb)
+	// TODO declare io.cozy.remote.requests in consts and data blacklist (-> read-only)
+	// TODO check resp content-type
+
+	vars, err := ExtractVariables(remote.Verb, in)
+	if err != nil {
+		log.Infof("Error on extracting variables: %s", err)
+		return ErrInvalidVariables
+	}
+	InjectVariables(remote, vars)
 
 	// Sanitize the remote URL
 	if remote.URL.Scheme != "https" && remote.URL.Scheme != "http" {
 		log.Infof("Invalid scheme for remote doctype %s: %s", doctype, remote.URL.Scheme)
-		return nil, ErrInvalidRequest
+		return ErrInvalidRequest
 	}
 	if strings.Contains(remote.URL.Host, ":") {
 		log.Infof("Invalid host for remote doctype %s: %s", doctype, remote.URL.Host)
-		return nil, ErrInvalidRequest
+		return ErrInvalidRequest
 	}
 	remote.URL.User = nil
 	remote.URL.Fragment = ""
-	return remote, nil
-}
-
-// ProxyTo calls the external website and proxy the reponse
-func (remote *Remote) ProxyTo(rw http.ResponseWriter, in *http.Request) error {
-	// TODO replace variables
-	// TODO logging (to syslog & couchdb)
-	// TODO declare io.cozy.remote.requests in consts and data blacklist (-> read-only)
-	// TODO check resp content-type
 
 	req, err := http.NewRequest(remote.Verb, remote.URL.String(), nil)
 	if err != nil {

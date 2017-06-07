@@ -4,7 +4,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/remote"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 func remoteGet(c echo.Context) error {
@@ -19,7 +19,7 @@ func remoteGet(c echo.Context) error {
 	if remote.Verb != "GET" {
 		return jsonapi.MethodNotAllowed("GET")
 	}
-	err = remote.ProxyTo(c.Response(), c.Request())
+	err = remote.ProxyTo(doctype, c.Response(), c.Request())
 	if err != nil {
 		return wrapRemoteErr(err)
 	}
@@ -41,6 +41,8 @@ func wrapRemoteErr(err error) error {
 		return jsonapi.BadRequest(err)
 	case remote.ErrRequestFailed:
 		return jsonapi.BadGateway(err)
+	case remote.ErrInvalidVariables:
+		return jsonapi.BadRequest(err)
 	}
 	return err
 }
