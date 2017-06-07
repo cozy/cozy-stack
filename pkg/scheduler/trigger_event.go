@@ -58,6 +58,10 @@ func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 	ch := make(chan *jobs.JobRequest)
 	go func() {
 		c := realtime.GetHub().Subscribe(t.infos.Domain, t.mask.Type)
+		defer func() {
+			c.Close()
+			close(ch)
+		}()
 		for {
 			select {
 			case e := <-c.Read():
@@ -65,7 +69,6 @@ func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 					ch <- t.Trigger(e)
 				}
 			case <-t.unscheduled:
-				close(ch)
 				return
 			}
 		}
