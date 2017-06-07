@@ -280,15 +280,23 @@ func makeRequest(db Database, method, path string, reqbody interface{}, resbody 
 	if logger.IsDebug(log) {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
+
 	req, err := http.NewRequest(method, config.CouchURL()+path, bytes.NewReader(reqjson))
 	// Possible err = wrong method, unparsable url
 	if err != nil {
 		return newRequestError(err)
 	}
+	req.Header.Add("Accept", "application/json")
 	if reqbody != nil {
 		req.Header.Add("Content-Type", "application/json")
 	}
-	req.Header.Add("Accept", "application/json")
+
+	auth := config.GetConfig().CouchDB.Auth
+	if auth != nil {
+		if p, ok := auth.Password(); ok {
+			req.SetBasicAuth(auth.Username(), p)
+		}
+	}
 	resp, err := couchdbClient.Do(req)
 	// Possible err = mostly connection failure
 	if err != nil {

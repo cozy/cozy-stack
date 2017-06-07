@@ -53,7 +53,7 @@ type result struct {
 	DocID       string    `json:"_id,omitempty"`
 	DocRev      string    `json:"_rev,omitempty"`
 	CreatedAt   time.Time `json:"last_execution"`
-	LastSuccess time.Time `json:"last_sucess"`
+	LastSuccess time.Time `json:"last_success"`
 	Account     string    `json:"account"`
 	State       string    `json:"state"`
 	Error       string    `json:"error"`
@@ -62,7 +62,7 @@ type result struct {
 func (r *result) ID() string         { return r.DocID }
 func (r *result) Rev() string        { return r.DocRev }
 func (r *result) DocType() string    { return consts.KonnectorResults }
-func (r *result) Clone() couchdb.Doc { return r }
+func (r *result) Clone() couchdb.Doc { c := *r; return &c }
 func (r *result) SetID(id string)    { r.DocID = id }
 func (r *result) SetRev(rev string)  { r.DocRev = rev }
 

@@ -15,7 +15,7 @@ echo "COZY_CREDENTIALS=${COZY_CREDENTIALS}" >> "${env_file}"
 
 rkt_name=$(echo $COZY_JOB_ID | tr A-Z a-z | sed -e 's/[^a-z0-9\-]/-/g')
 
-trap 'sudo rkt stop --force --uuid-file="${uuid_file}" 1>&2 && sudo rkt rm --uuid-file="${uuid_file}" 1>&2' SIGINT SIGTERM EXIT
+trap 'sudo rkt stop --force --uuid-file="${uuid_file}" && sudo rkt rm --uuid-file="${uuid_file}"' SIGINT SIGTERM EXIT
 
 sudo rkt run \
   --net=host \
