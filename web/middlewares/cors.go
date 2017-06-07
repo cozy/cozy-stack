@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // corsBlackList list all routes prefix that are not eligible to CORS

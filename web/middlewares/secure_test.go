@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
 

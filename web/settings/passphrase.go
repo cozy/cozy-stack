@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 func registerPassphrase(c echo.Context) error {

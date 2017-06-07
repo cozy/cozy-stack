@@ -11,7 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 type apiSharing struct {
