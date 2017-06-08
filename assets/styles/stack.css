@@ -26,6 +26,17 @@ body {
     font: 1.05em/1.5 Lato, sans-serif;
 }
 
+a:link,
+a:visited {
+    color: #297EF2;
+    text-decoration: none;
+}
+a:hover,
+a:active,
+a:focus {
+    text-decoration: underline;
+}
+
 [role=application] {
     display: flex;
     flex-direction: row;
