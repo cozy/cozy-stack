@@ -78,7 +78,7 @@ func TestListReferencesHandler(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res4.StatusCode)
 	assert.Len(t, result4.Included, 4)
-	assert.NotEmpty(t, result4.Included[0].(map[string]interface{})["_id"])
+	assert.NotEmpty(t, result4.Included[0].(map[string]interface{})["id"])
 }
 
 func TestAddReferencesHandler(t *testing.T) {
