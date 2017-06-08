@@ -28,6 +28,7 @@ var blackList = map[string]bool{
 	consts.Jobs:             readable,
 	consts.Queues:           readable,
 	consts.Triggers:         readable,
+	consts.RemoteRequests:   readable,
 }
 
 // CheckReadable will abort the context and returns false if the doctype

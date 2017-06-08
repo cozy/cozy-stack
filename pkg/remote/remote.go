@@ -13,6 +13,9 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
@@ -28,7 +31,39 @@ var (
 	// ErrInvalidVariables is used when the variables can't be extracted from
 	// the request
 	ErrInvalidVariables = errors.New("the variables are not valid")
+	// ErrInvalidContentType is used when the response has a content-type that
+	// we deny for security reasons
+	ErrInvalidContentType = errors.New("the content-type for the response is not authorized")
 )
+
+// Request is used to log in couchdb a call to a remote website
+type Request struct {
+	DocID         string `json:"_id,omitempty"`
+	DocRev        string `json:"_rev,omitempty"`
+	RemoteDoctype string `json:"doctype"`
+	Verb          string `json:"verb"`
+	URL           string `json:"url"`
+	ResponseCode  int    `json:"response_code"`
+	ContentType   string `json:"content_type"`
+}
+
+// ID is used to implement the couchdb.Doc interface
+func (r *Request) ID() string { return r.DocID }
+
+// Rev is used to implement the couchdb.Doc interface
+func (r *Request) Rev() string { return r.DocRev }
+
+// SetID is used to implement the couchdb.Doc interface
+func (r *Request) SetID(id string) { r.DocID = id }
+
+// SetRev is used to implement the couchdb.Doc interface
+func (r *Request) SetRev(rev string) { r.DocRev = rev }
+
+// DocType implements couchdb.Doc
+func (r *Request) DocType() string { return consts.RemoteRequests }
+
+// Clone implements couchdb.Doc
+func (r *Request) Clone() couchdb.Doc { cloned := *r; return &cloned }
 
 // Remote is the struct used to call a remote website for a doctype
 type Remote struct {
@@ -150,11 +185,7 @@ func InjectVariables(remote *Remote, vars map[string]string) {
 }
 
 // ProxyTo calls the external website and proxy the reponse
-func (remote *Remote) ProxyTo(doctype string, rw http.ResponseWriter, in *http.Request) error {
-	// TODO logging (to syslog & couchdb)
-	// TODO declare io.cozy.remote.requests in consts and data blacklist (-> read-only)
-	// TODO check resp content-type
-
+func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.ResponseWriter, in *http.Request) error {
 	vars, err := ExtractVariables(remote.Verb, in)
 	if err != nil {
 		log.Infof("Error on extracting variables: %s", err)
@@ -189,6 +220,30 @@ func (remote *Remote) ProxyTo(doctype string, rw http.ResponseWriter, in *http.R
 		log.Infof("Error on request %s: %s", remote.URL.String(), err)
 		return ErrRequestFailed
 	}
+	defer res.Body.Close()
+
+	ctype := res.Header.Get("Content-Type")
+	if ctype != "application/json" && ctype != "text/xml" && ctype != "application/xml" {
+		class := strings.SplitN(ctype, "/", 2)[0]
+		if class != "image" && class != "audio" && class != "video" {
+			log.Infof("request %s has a content-type that is not allowed: %s",
+				remote.URL.String(), ctype)
+			return ErrInvalidContentType
+		}
+	}
+
+	logged := &Request{
+		RemoteDoctype: doctype,
+		Verb:          remote.Verb,
+		URL:           remote.URL.String(),
+		ResponseCode:  res.StatusCode,
+		ContentType:   ctype,
+	}
+	err = couchdb.CreateDoc(ins, logged)
+	if err != nil {
+		log.Errorf("Can't save remote request: %s", err)
+	}
+	log.Debugf("Remote request: %#v\n", logged)
 
 	rw.WriteHeader(res.StatusCode)
 	copyHeader(rw.Header(), res.Header)
@@ -196,7 +251,6 @@ func (remote *Remote) ProxyTo(doctype string, rw http.ResponseWriter, in *http.R
 	if err != nil {
 		log.Infof("Error on copying response from %s: %s", remote.URL.String(), err)
 	}
-	res.Body.Close()
 	return nil
 }
 
@@ -207,3 +261,5 @@ func copyHeader(dst, src http.Header) {
 		}
 	}
 }
+
+var _ couchdb.Doc = (*Request)(nil)

@@ -36,6 +36,8 @@ const (
 	Queues = "io.cozy.queues"
 	// Recipients doc type for sharing recipients
 	Recipients = "io.cozy.recipients"
+	// RemoteRequests doc type for logging requests to remote websites
+	RemoteRequests = "io.cozy.remote.requests"
 	// Sessions doc type for sessions identifying a connection
 	Sessions = "io.cozy.sessions"
 	// Settings doc type for settings to customize an instance
