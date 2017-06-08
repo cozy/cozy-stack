@@ -13,6 +13,8 @@ npm install && npm run test
 testresult=$?
 cd ../..
 
+./scripts/build.sh assets
+
 pidstack=$(jobs -pr)
 [ -n "$pidstack" ] && kill -9 $pidstack
 
