@@ -733,7 +733,7 @@ func FindFilesMango(c echo.Context) error {
 
 	// drop the fields, they can cause issues if not properly manipulated
 	// TODO : optimization potential, necessary fields so far are class & type
-	findRequest["fields"] = ""
+	delete(findRequest, "fields")
 
 	limit, hasLimit := findRequest["limit"].(float64)
 	if !hasLimit || limit > maxMangoLimit {
