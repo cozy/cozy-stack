@@ -238,6 +238,7 @@ func doScanOut(jobID string, scanner *bufio.Scanner, domain string,
 			}
 		}
 		log.Warnf("[konnector] %s: Could not parse as JSON", jobID)
+		log.Debugf("[konnector] %s: %s", jobID, string(linebb))
 	}
 	if err := scanner.Err(); err != nil {
 		log.Errorf("[konnector] %s: Error while reading stdout: %s", jobID, err)
