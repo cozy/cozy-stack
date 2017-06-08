@@ -343,3 +343,19 @@ func (c *couchdbIndexer) DirLength(doc *DirDoc) (int, error) {
 	}
 	return int(f64), nil
 }
+
+func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
+	var res couchdb.ViewResponse
+
+	fmt.Println("DirChildExists", dirID, name)
+
+	// consts.FilesByParentView keys are [parentID, type, name]
+	err := couchdb.ExecView(c.db, consts.FilesByParentView, &couchdb.ViewRequest{
+		Key:         []string{dirID, consts.FileType, name},
+		IncludeDocs: false,
+	}, &res)
+
+	fmt.Println(">>>> ", len(res.Rows), err)
+
+	return len(res.Rows) > 0, err
+}

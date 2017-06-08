@@ -149,6 +149,7 @@ type Indexer interface {
 	// DirBatch returns a batch of documents
 	DirBatch(*DirDoc, couchdb.Cursor) ([]DirOrFileDoc, error)
 	DirLength(*DirDoc) (int, error)
+	DirChildExists(dirID, filename string) (bool, error)
 }
 
 // DiskThresholder it an interface that can be implemeted to known how many space

@@ -114,14 +114,14 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer sfs.mu.Unlock()
-	objName := doc.DirID + "/" + doc.DocName
-	_, _, err := sfs.c.Object(sfs.container, objName)
-	if err != swift.ObjectNotFound {
-		if err != nil {
-			return err
-		}
+	exists, err := sfs.Indexer.DirChildExists(doc.DirID, doc.DocName)
+	if err != nil {
+		return err
+	}
+	if exists {
 		return os.ErrExist
 	}
+	objName := doc.DirID + "/" + doc.DocName
 	f, err := sfs.c.ObjectCreate(sfs.container,
 		objName,
 		false,
@@ -183,14 +183,21 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, vfs.ErrParentInTrash
 	}
 
-	objName := newdoc.DirID + "/" + newdoc.DocName
 	if olddoc == nil {
-		_, _, err = sfs.c.Object(sfs.container, objName)
-		if err != swift.ObjectNotFound {
-			if err != nil {
-				return nil, err
-			}
+		exists, err := sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return nil, err
+		}
+		if exists {
 			return nil, os.ErrExist
+		}
+		if newdoc.ID() == "" {
+			err = sfs.Indexer.CreateFileDoc(newdoc)
+		} else {
+			err = sfs.Indexer.CreateNamedFileDoc(newdoc)
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -198,6 +205,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	if newsize >= 0 {
 		h = swift.Headers{"Content-Length": strconv.FormatInt(newsize, 10)}
 	}
+	objName := newdoc.DirID + "/" + newdoc.DocName
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
 		sfs.container,
@@ -325,7 +333,14 @@ func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 	}
 	defer sfs.mu.Unlock()
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
-		err := sfs.c.ObjectMove(
+		exists, err := sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return os.ErrExist
+		}
+		err = sfs.c.ObjectMove(
 			sfs.container, olddoc.DirID+"/"+olddoc.DocName,
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
@@ -346,7 +361,14 @@ func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 	}
 	defer sfs.mu.Unlock()
 	if newdoc.DirID != olddoc.DirID || newdoc.DocName != olddoc.DocName {
-		err := sfs.c.ObjectMove(
+		exists, err := sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return os.ErrExist
+		}
+		err = sfs.c.ObjectMove(
 			sfs.container, olddoc.DirID+"/"+olddoc.DocName,
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
@@ -513,13 +535,12 @@ func (f *swiftFileCreation) Close() (err error) {
 		return vfs.ErrContentLengthMismatch
 	}
 
+	// The document is already added to the index when closing the file creation
+	// handler. When updating the content of the document with the final
+	// informations (size, md5, ...) we can reuse the same document as olddoc.
 	if olddoc == nil {
-		if newdoc.ID() == "" {
-			return f.fs.Indexer.CreateFileDoc(newdoc)
-		}
-		return f.fs.Indexer.CreateNamedFileDoc(newdoc)
+		olddoc = newdoc
 	}
-
 	lockerr := f.fs.mu.Lock()
 	if lockerr != nil {
 		return lockerr

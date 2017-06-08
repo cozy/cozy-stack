@@ -168,7 +168,8 @@ func (s *MemScheduler) schedule(t Trigger) {
 	for req := range t.Schedule() {
 		log := s.log.WithField("domain", req.Domain)
 		log.Infof(
-			"[jobs] trigger %s (%s): Pushing new job %s")
+			"[jobs] trigger %s(%s): Pushing new job %s",
+			t.Type(), t.Infos().TID, req.WorkerType)
 		if _, err := s.broker.PushJob(req); err != nil {
 			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s",
 				t.Type(), t.Infos().TID, err.Error())
