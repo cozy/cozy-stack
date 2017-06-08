@@ -191,6 +191,16 @@ func (m *WebappManifest) Delete(db couchdb.Database) error {
 	return couchdb.DeleteDoc(db, m)
 }
 
+// HasAPublicRoute returns true if this app has at least a route that can accessed publicly
+func (m *WebappManifest) HasAPublicRoute() bool {
+	for _, r := range m.Routes {
+		if r.Public {
+			return true
+		}
+	}
+	return false
+}
+
 // FindRoute takes a path, returns the route which matches the best,
 // and the part that remains unmatched
 func (m *WebappManifest) FindRoute(vpath string) (Route, string) {
