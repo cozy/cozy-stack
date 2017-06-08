@@ -490,6 +490,12 @@ func (f *swiftFileCreation) Close() (err error) {
 			// Deleting the object should be secure since we use X-Versions-Location
 			// on the container and the old object should be restored.
 			f.fs.c.ObjectDelete(f.fs.container, f.name) // #nosec
+
+			// If an error has occured that is not due to the index update, we should
+			// delete the file from the index.
+			if !couchdb.IsCouchError(err) && olddoc == nil {
+				f.fs.Indexer.DeleteFileDoc(f.newdoc) // #nosec
+			}
 		}
 	}()
 
