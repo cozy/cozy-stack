@@ -86,9 +86,9 @@ func ListReferencesHandler(c echo.Context) error {
 	}
 
 	var refs = make([]couchdb.DocReference, len(res.Rows))
-	var docs []interface{}
+	var docs []jsonapi.Object
 	if includeDocs {
-		docs = make([]interface{}, len(res.Rows))
+		docs = make([]jsonapi.Object, len(res.Rows))
 	}
 
 	for i, row := range res.Rows {
