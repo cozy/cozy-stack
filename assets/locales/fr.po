@@ -63,7 +63,7 @@ msgid "Login Forgot password"
 msgstr "Mot de passe oublié ?"
 
 msgid "Authorize Title"
-msgstr "Autoriser %s à accéder à votre profil ?"
+msgstr "Autoriser %s à accéder à votre profil ?"
 
 msgid "Authorize App Title"
 msgstr ""

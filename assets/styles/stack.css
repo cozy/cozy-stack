@@ -160,3 +160,101 @@ h1 {
 #showMore:checked ~ .toggleContent {
     max-height: 1000px;
 }
+
+/* Permissions */
+/* @TODO Add doctype icons */
+.perm-list {
+    /* waiting for the icons */
+    /*padding: 0;
+    list-style: none;*/
+}
+li[class^="io.cozy.settings"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.accounts"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.apps"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.bank.accounts"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.bank.groups"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.bills"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.files"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.konnectors"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.photos.albums"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.settings"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.jobs"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.triggers"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="io.cozy.permissions"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="org.fing.mesinfos.client"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="org.fing.mesinfos.consumptionstatement"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="org.fing.mesinfos.contract"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="org.fing.mesinfos.energybreakdown"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="org.fing.mesinfos.home"]:before {
+    content: '';
+    display: inline-block;
+}
+li[class^="org.fing.mesinfos.paymentterms"]:before {
+    content: '';
+    display: inline-block;
+}
+
+@media (max-width: 35rem) {
+    [role=application] {
+        height: auto;
+    }
+    .popup {
+        box-sizing: border-box;
+        flex-basis: 100%;
+        padding: 1em;
+    }
+    h1 {
+        font-size: 1.5rem;
+    }
+}
