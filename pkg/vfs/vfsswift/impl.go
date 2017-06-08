@@ -184,7 +184,8 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	}
 
 	if olddoc == nil {
-		exists, err := sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
+		var exists bool
+		exists, err = sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
 		if err != nil {
 			return nil, err
 		}
