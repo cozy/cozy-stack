@@ -33,7 +33,7 @@
                 <p>{{t "Authorize Give App permission desc" .Domain .Slug}}</p>
                 <ul class="perm-list">
                   {{range $index, $perm := .Permissions}}
-                <li class={{ $perm.Type }}>
+                <li class="{{ $perm.Type }}">
                   {{- t $perm.TranslationKey -}}
                   {{- if $perm.Verbs.ReadOnly}}{{t "Permissions Read only"}}{{end -}}
                   {{- if $perm.Description}}: {{$perm.Description}}{{end -}}
