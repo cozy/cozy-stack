@@ -493,7 +493,8 @@ func (f *swiftFileCreation) Close() (err error) {
 
 			// If an error has occured that is not due to the index update, we should
 			// delete the file from the index.
-			if !couchdb.IsCouchError(err) && olddoc == nil {
+			_, isCouchErr := couchdb.IsCouchError(err)
+			if !isCouchErr && f.olddoc == nil {
 				f.fs.Indexer.DeleteFileDoc(f.newdoc) // #nosec
 			}
 		}
