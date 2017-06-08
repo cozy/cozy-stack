@@ -40,9 +40,9 @@
                 <strong>{{.Domain}}</strong> :<br />
                 {{end}}
               </p>
-              <ul>
+              <ul class="perm-list">
                 {{range $index, $perm := .Permissions}}
-                <li>
+                <li class="{{ $perm.Type }}">
                   {{- t $perm.TranslationKey -}}
                   {{- if $perm.Verbs.ReadOnly}}{{t "Permissions Read only"}}{{end -}}
                 </li>
