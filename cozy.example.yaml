@@ -54,7 +54,7 @@ konnectors:
 
 mail:
   # mail noreply address - flags: --mail-noreply-address
-  noreply-address: noreply@localhost
+  noreply_address: noreply@localhost
   # mail smtp host - flags: --mail-host
   host: smtp.home
   # mail smtp port - flags: --mail-port
