@@ -11,6 +11,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/cozy-stack/web/imexport"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/apps"
@@ -163,6 +164,7 @@ func SetupRoutes(router *echo.Echo) error {
 	apps.WebappsRoutes(router.Group("/apps", mws...))
 	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 	data.Routes(router.Group("/data", mws...))
+	imexport.Routes(router.Group("/imexport")
 	files.Routes(router.Group("/files", mws...))
 	intents.Routes(router.Group("/intents", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))
