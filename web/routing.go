@@ -165,7 +165,7 @@ func SetupRoutes(router *echo.Echo) error {
 	apps.WebappsRoutes(router.Group("/apps", mws...))
 	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 	data.Routes(router.Group("/data", mws...))
-	imexport.Routes(router.Group("/imexport"))
+	imexport.Routes(router.Group("/export", mws...))
 	files.Routes(router.Group("/files", mws...))
 	intents.Routes(router.Group("/intents", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))
