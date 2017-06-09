@@ -281,7 +281,11 @@ func makeRequest(db Database, method, path string, reqbody interface{}, resbody 
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
 
-	req, err := http.NewRequest(method, config.CouchURL()+path, bytes.NewReader(reqjson))
+	req, err := http.NewRequest(
+		method,
+		config.CouchURL().String()+path,
+		bytes.NewReader(reqjson),
+	)
 	// Possible err = wrong method, unparsable url
 	if err != nil {
 		return newRequestError(err)
@@ -723,8 +727,7 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 // Proxy generate a httputil.ReverseProxy which forwards the request to the
 // correct route.
 func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
-	// discard error, it is checked in config
-	couchurl, _ := url.Parse(config.CouchURL())
+	couchurl := config.CouchURL()
 
 	director := func(req *http.Request) {
 		req.URL.Scheme = couchurl.Scheme

@@ -94,19 +94,20 @@ type Config struct {
 
 // Fs contains the configuration values of the file-system
 type Fs struct {
-	URL string
+	Auth *url.Userinfo
+	URL  *url.URL
 }
 
 // CouchDB contains the configuration values of the database
 type CouchDB struct {
 	Auth *url.Userinfo
-	URL  string
+	URL  *url.URL
 }
 
 // Jobs contains the configuration values for the jobs and triggers synchronization
 type Jobs struct {
 	Workers int
-	URL     string
+	Redis   RedisConfig
 }
 
 // Konnectors contains the configuration values for the konnectors
@@ -116,15 +117,11 @@ type Konnectors struct {
 
 // RedisConfig contains the configuration values for a redis system
 type RedisConfig struct {
-	URL string
+	Auth *url.Userinfo
+	URL  *url.URL
 
 	opt *redis.Options
 	cli *redis.Client
-}
-
-// Lock contains the configuration values of the locking layer
-type Lock struct {
-	URL string
 }
 
 // NewRedisConfig creates a redis configuration and its associated client.
@@ -135,10 +132,16 @@ func NewRedisConfig(u string) RedisConfig {
 	}
 	opt, err := redis.ParseURL(u)
 	if err != nil {
-		log.Errorf("can't parse cache.URL(%s), ignoring", u)
+		log.Errorf("can't parse redis URL(%s), ignoring", u)
 		return conf
 	}
-	conf.URL = u
+	parsedURL, user, err := parseURL(u)
+	if err != nil {
+		log.Errorf("can't parse redis URL(%s), ignoring", u)
+		return conf
+	}
+	conf.Auth = user
+	conf.URL = parsedURL
 	conf.cli = redis.NewClient(opt)
 	conf.opt = opt
 	return conf
@@ -146,11 +149,7 @@ func NewRedisConfig(u string) RedisConfig {
 
 // FsURL returns a copy of the filesystem URL
 func FsURL() *url.URL {
-	u, err := url.Parse(config.Fs.URL)
-	if err != nil {
-		panic(fmt.Errorf("malformed configuration fs url %s", config.Fs.URL))
-	}
-	return u
+	return config.Fs.URL
 }
 
 // ServerAddr returns the address on which the stack is run
@@ -164,7 +163,7 @@ func AdminServerAddr() string {
 }
 
 // CouchURL returns the CouchDB string url
-func CouchURL() string {
+func CouchURL() *url.URL {
 	return config.CouchDB.URL
 }
 
@@ -251,15 +250,13 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
-	couchURL, err := url.Parse(v.GetString("couchdb.url"))
+	couchURL, couchAuth, err := parseURL(v.GetString("couchdb.url"))
 	if err != nil {
 		return err
 	}
 	if couchURL.Path == "" {
 		couchURL.Path = "/"
 	}
-	couchAuth := couchURL.User
-	couchURL.User = nil
 
 	config = &Config{
 		Host:       v.GetString("host"),
@@ -270,15 +267,15 @@ func UseViper(v *viper.Viper) error {
 		Assets:     v.GetString("assets"),
 		NoReply:    v.GetString("mail.noreply_address"),
 		Fs: Fs{
-			URL: fsURL.String(),
+			URL: fsURL,
 		},
 		CouchDB: CouchDB{
 			Auth: couchAuth,
-			URL:  couchURL.String(),
+			URL:  couchURL,
 		},
 		Jobs: Jobs{
 			Workers: v.GetInt("jobs.workers"),
-			URL:     v.GetString("jobs.url"),
+			Redis:   NewRedisConfig(v.GetString("jobs.url")),
 		},
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
@@ -383,4 +380,14 @@ func FindConfigFile(name string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("Could not find config file %s", name)
+}
+
+func parseURL(u string) (*url.URL, *url.Userinfo, error) {
+	parsedURL, err := url.Parse(u)
+	if err != nil {
+		return nil, nil, err
+	}
+	user := parsedURL.User
+	parsedURL.User = nil
+	return parsedURL, user, nil
 }
