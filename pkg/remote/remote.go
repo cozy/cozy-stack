@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/echo"
 )
 
 var (
@@ -116,7 +117,7 @@ func ParseRawRequest(doctype, raw string) (*Remote, error) {
 	}
 	var remote Remote
 	remote.Verb = parts[0]
-	if remote.Verb != "GET" && remote.Verb != "POST" {
+	if remote.Verb != echo.GET && remote.Verb != echo.POST {
 		log.Infof("Invalid verb for remote doctype %s: %s", doctype, remote.Verb)
 		return nil, ErrInvalidRequest
 	}
@@ -133,7 +134,7 @@ func ParseRawRequest(doctype, raw string) (*Remote, error) {
 	remote.Headers = make(map[string]string)
 	for i, line := range lines[1:] {
 		if line == "" {
-			if remote.Verb == "GET" {
+			if remote.Verb == echo.GET {
 				continue
 			}
 			remote.Body = strings.Join(lines[i+2:], "\n")
@@ -166,8 +167,8 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 				log.Infof("Request not found for remote doctype %s: %s", doctype, err)
 				return nil, ErrNotFoundRemote
 			}
+			defer res.Body.Close()
 			b, err := ioutil.ReadAll(res.Body)
-			res.Body.Close()
 			if err != nil {
 				log.Infof("Request not found for remote doctype %s: %s", doctype, err)
 				return nil, ErrNotFoundRemote
@@ -196,7 +197,7 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 // - from the body formatted as JSON for a POST
 func ExtractVariables(verb string, in *http.Request) (map[string]string, error) {
 	vars := make(map[string]string)
-	if verb == "GET" {
+	if verb == echo.GET {
 		for k, v := range in.URL.Query() {
 			vars[k] = v[0]
 		}
@@ -209,7 +210,7 @@ func ExtractVariables(verb string, in *http.Request) (map[string]string, error) 
 	return vars, nil
 }
 
-var injectionRegexp = regexp.MustCompile("{{\\w+}}")
+var injectionRegexp = regexp.MustCompile(`{{\w+}}`)
 
 func injectVar(src string, vars map[string]string) string {
 	return injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
