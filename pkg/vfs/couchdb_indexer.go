@@ -349,7 +349,10 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 
 	// consts.FilesByParentView keys are [parentID, type, name]
 	err := couchdb.ExecView(c.db, consts.FilesByParentView, &couchdb.ViewRequest{
-		Key:         []string{dirID, consts.FileType, name},
+		Keys: []interface{}{
+			[]string{dirID, consts.FileType, name},
+			[]string{dirID, consts.DirType, name},
+		},
 		IncludeDocs: false,
 	}, &res)
 
