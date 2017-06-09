@@ -11,7 +11,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/cozy-stack/web/imexport"
+	"github.com/cozy/cozy-stack/web/imexport"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/apps"
