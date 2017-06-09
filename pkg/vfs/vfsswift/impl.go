@@ -555,7 +555,7 @@ func (f *swiftFileCreation) Close() (err error) {
 	if olddoc == nil {
 		olddoc = newdoc
 	}
-	if olddoc == nil || olddoc.Trashed == false {
+	if olddoc == nil || !olddoc.Trashed {
 		newdoc.Trashed = false
 	}
 	lockerr := f.fs.mu.Lock()
