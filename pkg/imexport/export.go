@@ -52,7 +52,8 @@ func export(tw *tar.Writer, fs vfs.VFS) error {
 	return err
 }
 
-func tardir(w io.Writer, fs vfs.VFS) error {
+// Tardir tar doc directory
+func Tardir(w io.Writer, fs vfs.VFS) error {
 	//gzip writer
 	gw := gzip.NewWriter(w)
 	defer gw.Close()
