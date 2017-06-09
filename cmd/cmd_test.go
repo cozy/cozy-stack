@@ -29,7 +29,7 @@ var testClient *client.Client
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
+	db, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
@@ -41,7 +41,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   tempdir,
+	}
 	server := echo.New()
 	err = web.SetupRoutes(server)
 	if err != nil {

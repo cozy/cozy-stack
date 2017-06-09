@@ -31,8 +31,8 @@ func TestGetClient(t *testing.T) {
 }
 
 func TestGetClientNoRedis(t *testing.T) {
-	var backurl = config.GetConfig().Cache.URL
-	config.GetConfig().Cache.URL = ""
+	backurl := config.GetConfig().Cache.URL
+	config.GetConfig().Cache.URL = nil
 	defer func() { config.GetConfig().Cache.URL = backurl }()
 
 	cache := Create("testns", time.Minute)

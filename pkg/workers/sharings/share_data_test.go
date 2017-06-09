@@ -966,7 +966,11 @@ func TestMain(m *testing.M) {
 		fmt.Println("Could not create temporary directory.")
 		os.Exit(1)
 	}
-	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   tempdir,
+	}
 
 	setup = testutils.NewSetup(m, "share_data_test")
 	testInstance = setup.GetTestInstance()

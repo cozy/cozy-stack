@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -888,7 +889,11 @@ func TestMain(m *testing.M) {
 		fmt.Println("Could not create temporary directory.")
 		os.Exit(1)
 	}
-	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   tempdir,
+	}
 
 	err = stack.Start()
 	if err != nil {

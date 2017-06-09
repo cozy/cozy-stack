@@ -1776,7 +1776,11 @@ func TestMain(m *testing.M) {
 	}
 	setup.AddCleanup(func() error { return os.RemoveAll(tempdir) })
 
-	config.GetConfig().Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
+	config.GetConfig().Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   tempdir,
+	}
 
 	testInstance = setup.GetTestInstance()
 	client, tok := setup.GetTestClient(consts.Files)
