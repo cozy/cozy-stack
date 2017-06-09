@@ -125,11 +125,18 @@ func ParseRawRequest(doctype, raw string) (*Remote, error) {
 		log.Infof("Invalid URL for remote doctype %s: %s", doctype, parts[1])
 		return nil, ErrInvalidRequest
 	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		log.Infof("Invalid scheme for remote doctype %s: %s", doctype, u.Scheme)
+		return nil, ErrInvalidRequest
+	}
 	remote.URL = u
 	remote.Headers = make(map[string]string)
 	for i, line := range lines[1:] {
 		if line == "" {
-			remote.Body = strings.Join(lines[i+1:], "\n")
+			if remote.Verb == "GET" {
+				continue
+			}
+			remote.Body = strings.Join(lines[i+2:], "\n")
 			break
 		}
 		parts = strings.SplitN(line, ":", 2)
@@ -216,9 +223,6 @@ func injectVar(src string, vars map[string]string) string {
 // InjectVariables replaces {{variable}} by its value in some fields of the
 // remote struct
 func InjectVariables(remote *Remote, vars map[string]string) {
-	if strings.Contains(remote.URL.Host, "{{") {
-		remote.URL.Host = injectVar(remote.URL.Host, vars)
-	}
 	if strings.Contains(remote.URL.Path, "{{") {
 		remote.URL.Path = injectVar(remote.URL.Path, vars)
 	}
@@ -245,10 +249,6 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	InjectVariables(remote, vars)
 
 	// Sanitize the remote URL
-	if remote.URL.Scheme != "https" && remote.URL.Scheme != "http" {
-		log.Infof("Invalid scheme for remote doctype %s: %s", doctype, remote.URL.Scheme)
-		return ErrInvalidRequest
-	}
 	if strings.Contains(remote.URL.Host, ":") {
 		log.Infof("Invalid host for remote doctype %s: %s", doctype, remote.URL.Host)
 		return ErrInvalidRequest
@@ -313,4 +313,7 @@ func copyHeader(dst, src http.Header) {
 	}
 }
 
-var _ couchdb.Doc = (*Request)(nil)
+var (
+	_ couchdb.Doc = (*Doctype)(nil)
+	_ couchdb.Doc = (*Request)(nil)
+)

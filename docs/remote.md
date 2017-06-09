@@ -58,8 +58,8 @@ The format for the request file is:
 - then some lines that describe the HTTP headers
 - then a blank line and the body if the request is a POST
 
-For the URL, the headers, and the body, it's possible to have some dynamic
-part by using `{{`, a variable name, and `}}`.
+For the path, the query-string, the headers, and the body, it's possible to
+have some dynamic part by using `{{`, a variable name, and `}}`.
 
 **Note**: by default, the User-Agent is set to a default value ("cozy-stack" and
 a version number). It can be overriden in the request description.
