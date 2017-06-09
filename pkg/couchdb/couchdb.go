@@ -618,6 +618,9 @@ func DefineViews(db Database, views []*View) error {
 // ExecView executes the specified view function
 func ExecView(db Database, view *View, req *ViewRequest, results interface{}) error {
 	viewurl := fmt.Sprintf("%s/_design/%s/_view/%s", makeDBName(db, view.Doctype), view.Name, view.Name)
+	if req.GroupLevel > 0 {
+		req.Group = true
+	}
 	v, err := req.Values()
 	if err != nil {
 		return err
