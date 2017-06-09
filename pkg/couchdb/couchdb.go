@@ -618,15 +618,14 @@ func DefineViews(db Database, views []*View) error {
 // ExecView executes the specified view function
 func ExecView(db Database, view *View, req *ViewRequest, results interface{}) error {
 	viewurl := fmt.Sprintf("%s/_design/%s/_view/%s", makeDBName(db, view.Doctype), view.Name, view.Name)
-	// Keys request
-	if req.Keys != nil {
-		return makeRequest(db, "POST", viewurl, req, &results)
-	}
 	v, err := req.Values()
 	if err != nil {
 		return err
 	}
 	viewurl += "?" + v.Encode()
+	if req.Keys != nil {
+		return makeRequest(db, "POST", viewurl, req, &results)
+	}
 	return makeRequest(db, "GET", viewurl, nil, &results)
 }
 
@@ -825,6 +824,7 @@ type ViewRequest struct {
 	InclusiveEnd bool `json:"inclusive_end,omitempty" url:"inclusive_end,omitempty"`
 
 	Reduce     bool `json:"reduce" url:"reduce"`
+	Group      bool `json:"group" url:"group"`
 	GroupLevel int  `json:"group_level,omitempty" url:"group_level,omitempty"`
 }
 

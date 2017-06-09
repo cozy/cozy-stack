@@ -353,8 +353,21 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 			[]string{dirID, consts.FileType, name},
 			[]string{dirID, consts.DirType, name},
 		},
-		IncludeDocs: false,
+		Reduce: true,
+		Group:  true,
 	}, &res)
+	if err != nil {
+		return false, err
+	}
 
-	return len(res.Rows) > 0, err
+	if len(res.Rows) == 0 {
+		return false, nil
+	}
+
+	// Reduce of _count should give us a number value
+	f64, ok := res.Rows[0].Value.(float64)
+	if !ok {
+		return false, ErrWrongCouchdbState
+	}
+	return int(f64) > 0, nil
 }
