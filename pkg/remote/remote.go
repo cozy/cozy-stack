@@ -3,6 +3,7 @@ package remote
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -35,6 +36,33 @@ var (
 	// we deny for security reasons
 	ErrInvalidContentType = errors.New("the content-type for the response is not authorized")
 )
+
+const rawURL = "https://raw.githubusercontent.com/cozy/cozy-doctypes/master/%s/request"
+
+// Doctype is used to describe a doctype, its request for a remote doctype for example
+type Doctype struct {
+	DocID   string `json:"_id,omitempty"`
+	DocRev  string `json:"_rev,omitempty"`
+	Request string `json:"request"`
+}
+
+// ID is used to implement the couchdb.Doc interface
+func (d *Doctype) ID() string { return d.DocID }
+
+// Rev is used to implement the couchdb.Doc interface
+func (d *Doctype) Rev() string { return d.DocRev }
+
+// SetID is used to implement the couchdb.Doc interface
+func (d *Doctype) SetID(id string) { d.DocID = id }
+
+// SetRev is used to implement the couchdb.Doc interface
+func (d *Doctype) SetRev(rev string) { d.DocRev = rev }
+
+// DocType implements couchdb.Doc
+func (d *Doctype) DocType() string { return consts.Doctypes }
+
+// Clone implements couchdb.Doc
+func (d *Doctype) Clone() couchdb.Doc { cloned := *d; return &cloned }
 
 // Request is used to log in couchdb a call to a remote website
 type Request struct {
@@ -115,20 +143,43 @@ func ParseRawRequest(doctype, raw string) (*Remote, error) {
 }
 
 // Find finds the request defined for the given doctype
-func Find(doctype string) (*Remote, error) {
+func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 	var raw string
 
 	if config.GetConfig().Doctypes == "" {
-		// TODO fetch it from couch/github
-		return nil, ErrNotFoundRemote
+		dt := Doctype{
+			DocID: consts.Doctypes + "/" + doctype,
+		}
+		err := couchdb.GetDoc(ins, consts.Doctypes, dt.DocID, &dt)
+		if err != nil {
+			u := fmt.Sprintf(rawURL, doctype)
+			res, err := http.Get(u)
+			log.Debugf("Fetch remote doctype from %s\n", doctype)
+			if err != nil {
+				log.Infof("Request not found for remote doctype %s: %s", doctype, err)
+				return nil, ErrNotFoundRemote
+			}
+			b, err := ioutil.ReadAll(res.Body)
+			res.Body.Close()
+			if err != nil {
+				log.Infof("Request not found for remote doctype %s: %s", doctype, err)
+				return nil, ErrNotFoundRemote
+			}
+			dt.Request = string(b)
+			err = couchdb.CreateNamedDocWithDB(ins, &dt)
+			if err != nil {
+				log.Infof("Cannot save remote doctype %s: %s", doctype, err)
+			}
+		}
+		raw = dt.Request
+	} else {
+		filename := path.Join(config.GetConfig().Doctypes, doctype, "request")
+		bytes, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return nil, ErrNotFoundRemote
+		}
+		raw = string(bytes)
 	}
-	// } else {
-	filename := path.Join(config.GetConfig().Doctypes, doctype, "request")
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, ErrNotFoundRemote
-	}
-	raw = string(bytes)
 
 	return ParseRawRequest(doctype, raw)
 }
@@ -222,7 +273,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	}
 	defer res.Body.Close()
 
-	ctype := res.Header.Get("Content-Type")
+	ctype := strings.SplitN(res.Header.Get("Content-Type"), ";", 2)[0] // Drop the charset
 	if ctype != "application/json" && ctype != "text/xml" && ctype != "application/xml" {
 		class := strings.SplitN(ctype, "/", 2)[0]
 		if class != "image" && class != "audio" && class != "video" {

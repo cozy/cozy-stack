@@ -13,14 +13,14 @@ func remoteGet(c echo.Context) error {
 	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return wrapRemoteErr(err)
 	}
-	remote, err := remote.Find(doctype)
+	instance := middlewares.GetInstance(c)
+	remote, err := remote.Find(instance, doctype)
 	if err != nil {
 		return wrapRemoteErr(err)
 	}
 	if remote.Verb != "GET" {
 		return jsonapi.MethodNotAllowed("GET")
 	}
-	instance := middlewares.GetInstance(c)
 	err = remote.ProxyTo(doctype, instance, c.Response(), c.Request())
 	if err != nil {
 		return wrapRemoteErr(err)
@@ -33,14 +33,14 @@ func remotePost(c echo.Context) error {
 	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
 		return wrapRemoteErr(err)
 	}
-	remote, err := remote.Find(doctype)
+	instance := middlewares.GetInstance(c)
+	remote, err := remote.Find(instance, doctype)
 	if err != nil {
 		return wrapRemoteErr(err)
 	}
 	if remote.Verb != "POST" {
 		return jsonapi.MethodNotAllowed("POST")
 	}
-	instance := middlewares.GetInstance(c)
 	err = remote.ProxyTo(doctype, instance, c.Response(), c.Request())
 	if err != nil {
 		return wrapRemoteErr(err)
