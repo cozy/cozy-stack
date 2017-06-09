@@ -192,6 +192,12 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		if exists {
 			return nil, os.ErrExist
 		}
+
+		// When added to the index, the document is first considered hidden. This
+		// flag will only be removed at the end of the upload when all its metadata
+		// are known. See the Close() method.
+		newdoc.Trashed = true
+
 		if newdoc.ID() == "" {
 			err = sfs.Indexer.CreateFileDoc(newdoc)
 		} else {
@@ -548,6 +554,9 @@ func (f *swiftFileCreation) Close() (err error) {
 	// informations (size, md5, ...) we can reuse the same document as olddoc.
 	if olddoc == nil {
 		olddoc = newdoc
+	}
+	if olddoc == nil || olddoc.Trashed == false {
+		newdoc.Trashed = false
 	}
 	lockerr := f.fs.mu.Lock()
 	if lockerr != nil {
