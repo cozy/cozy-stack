@@ -80,7 +80,7 @@ msgstr ""
 "Vous pouvez lire la politique d'utilisation des données à cette adresse "
 
 msgid "Authorize Policy link"
-msgstr "ici "
+msgstr "ici"
 
 msgid "Authorize Give permission start"
 msgstr "En cliquant sur "
