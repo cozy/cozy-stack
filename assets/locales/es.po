@@ -1,8 +1,9 @@
 # Translators:
 # Bruno Michel <brmichel@free.fr>, 2017
+# hernando franco <hfrancod@lautaro.fr>, 2017
 msgid ""
 msgstr ""
-"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
+"Last-Translator: hernando franco <hfrancod@lautaro.fr>, 2017\n"
 "Language-Team: Spanish (https://www.transifex.com/cozy/teams/39753/es/)\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -64,41 +65,51 @@ msgid "Login Forgot password"
 msgstr "¿Ha olvidado su contraseña?"
 
 msgid "Authorize Title"
-msgstr ""
+msgstr "Autorizar a %s a acceder a su perfil"
 
 msgid "Authorize App Title"
-msgstr ""
+msgstr "La aplicación %s no transmite ningún dato personal a terceros."
 
 msgid "Authorize More"
-msgstr ""
+msgstr "Saber más..."
 
 msgid "Authorize Client presentation"
-msgstr ""
+msgstr "quisiera tener el permiso para acceder a su Cozy"
 
 msgid "Authorize Policy sentence"
-msgstr ""
-"Aquí, usted puede leer la política sobre el uso que se hará de sus datos:"
+msgstr "Usted puede leer la política del uso de sus datos en esta dirección"
+
+msgid "Authorize Policy link"
+msgstr "aquí"
 
 msgid "Authorize Give permission start"
-msgstr ""
+msgstr "Haciendo clic"
 
 msgid "Authorize Give permission keyword"
-msgstr ""
+msgstr "Autorizar"
 
 msgid "Authorize Give permission end"
 msgstr ""
+", usted autoriza a la aplicación para que pueda acceder a sus datos en "
+"concordancia con las condiciones del servicio y la política de "
+"confidencialidad."
 
 msgid "Authorize Give App permission end"
 msgstr ""
+", usted acepta que la aplicación %s pueda acceder a sus datos, sólo "
+"localmente y dentro de Cozy, y en concordancia con las condiciones del "
+"servicio y la política de confidencialidad."
 
 msgid "Authorize Give App permission desc"
 msgstr ""
+"para optimizar los servicios suministrados por su Cozy %s, la aplicación %s "
+"requiere el acceso a los siguientes datos:"
 
 msgid "Authorize Submit"
-msgstr ""
+msgstr "Autorizar el acceso"
 
 msgid "Authorize Cancel"
-msgstr ""
+msgstr "Negar el acceso"
 
 msgid "Error Title"
 msgstr "Lo siento"
@@ -116,7 +127,7 @@ msgid "Error No redirect_uri parameter"
 msgstr "El parámetro redirect_url es obligatorio"
 
 msgid "Error No scope parameter"
-msgstr "El parámetro de alcance es obligatorio"
+msgstr "El parámetro scope es obligatorio"
 
 msgid "Error No registered client"
 msgstr "El cliente debe estar inscrito"
@@ -131,76 +142,76 @@ msgid "Error Invalid response type"
 msgstr "El tipo de respuesta no es válido"
 
 msgid "Error Invalid scope"
-msgstr ""
+msgstr "El parámetro scope no es válido"
 
 msgid "Error Must be authenticated"
 msgstr "Usted debe ser autentificado"
 
 msgid "Permissions Read only"
-msgstr ""
+msgstr ", sólo en lectura"
 
 msgid "Permissions disk usage"
-msgstr ""
+msgstr "Cantidad de espacio disco utilizado"
 
 msgid "Permissions worker konnectors"
-msgstr ""
+msgstr "Se está ejecutando un conector para importar datos"
 
 msgid "Permissions worker log"
-msgstr ""
+msgstr "Guardar un mensaje en los diarios del sistema"
 
 msgid "Permissions worker sendmail"
-msgstr ""
+msgstr "Envío de un email"
 
 msgid "Permissions io.cozy.accounts"
-msgstr ""
+msgstr "Cuentas"
 
 msgid "Permissions io.cozy.apps"
-msgstr ""
+msgstr "Lista de las aplicaciones instaladas"
 
 msgid "Permissions io.cozy.bank.accounts"
-msgstr ""
+msgstr "Cuentas bancarias"
 
 msgid "Permissions io.cozy.bank.groups"
-msgstr ""
+msgstr "Grupos bancarios"
 
 msgid "Permissions io.cozy.bills"
-msgstr ""
+msgstr "Facturas"
 
 msgid "Permissions io.cozy.files"
-msgstr ""
+msgstr "Archivos"
 
 msgid "Permissions io.cozy.konnectors"
-msgstr ""
+msgstr "Conectores para importar datos"
 
 msgid "Permissions io.cozy.photos.albums"
-msgstr ""
+msgstr "Álbumes de fotos"
 
 msgid "Permissions io.cozy.settings"
-msgstr ""
+msgstr "Parámetros"
 
 msgid "Permissions io.cozy.jobs"
-msgstr ""
+msgstr "Trabajos por efectuar"
 
 msgid "Permissions io.cozy.triggers"
-msgstr ""
+msgstr "Tareas programadas"
 
 msgid "Permissions io.cozy.permissions"
-msgstr ""
+msgstr "Delegación de permisos"
 
 msgid "Permissions org.fing.mesinfos.client"
-msgstr ""
+msgstr "Clientes (Mis datos)"
 
 msgid "Permissions org.fing.mesinfos.consumptionstatement"
-msgstr ""
+msgstr "Declaración de consumo (Mis datos)"
 
 msgid "Permissions org.fing.mesinfos.contract"
-msgstr ""
+msgstr "Contratos (Mis datos)"
 
 msgid "Permissions org.fing.mesinfos.energybreakdown"
-msgstr ""
+msgstr "Repartición de la energía (Mis datos)"
 
 msgid "Permissions org.fing.mesinfos.home"
-msgstr ""
+msgstr "Domicilio (Mis datos)"
 
 msgid "Permissions org.fing.mesinfos.paymentterms"
-msgstr ""
+msgstr "Plazos de pago (Mis datos)"
