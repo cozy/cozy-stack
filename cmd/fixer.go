@@ -1,5 +1,6 @@
 package cmd
 
+// #nosec
 import (
 	"crypto/md5"
 	"fmt"
@@ -43,7 +44,7 @@ var md5FixerCmd = &cobra.Command{
 				return err
 			}
 			defer r.Close()
-			h := md5.New()
+			h := md5.New() // #nosec
 			_, err = io.Copy(h, r)
 			if err != nil {
 				return err
