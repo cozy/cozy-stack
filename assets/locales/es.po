@@ -215,3 +215,6 @@ msgstr "Domicilio (Mis datos)"
 
 msgid "Permissions org.fing.mesinfos.paymentterms"
 msgstr "Plazos de pago (Mis datos)"
+
+msgid "Sharings Shared with Me directory"
+msgstr ""
