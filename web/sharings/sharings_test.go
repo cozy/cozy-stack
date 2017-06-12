@@ -1184,7 +1184,7 @@ func TestMain(m *testing.M) {
 	clientID = clientOAuth.ClientID
 
 	// As shared files are put in the shared with me dir, we need it
-	err := createDirForSharing(testInstance.VFS(), consts.SharedWithMeDirID, "")
+	err := createDirForSharing(testInstance, consts.SharedWithMeDirID, "")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
