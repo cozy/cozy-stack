@@ -552,11 +552,11 @@ func (f *swiftFileCreation) Close() (err error) {
 	// The document is already added to the index when closing the file creation
 	// handler. When updating the content of the document with the final
 	// informations (size, md5, ...) we can reuse the same document as olddoc.
-	if olddoc == nil {
-		olddoc = newdoc
-	}
 	if olddoc == nil || !olddoc.Trashed {
 		newdoc.Trashed = false
+	}
+	if olddoc == nil {
+		olddoc = newdoc
 	}
 	lockerr := f.fs.mu.Lock()
 	if lockerr != nil {
