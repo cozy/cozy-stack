@@ -116,7 +116,7 @@ body > svg {
 
 [role=application] {
     min-height: 100vh;
-    font-family: Source Sans Pro, sans-serif
+    font: 1.05em/1.5 Lato, sans-serif
 }
 main {
     display: -ms-flexbox;
