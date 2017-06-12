@@ -40,10 +40,10 @@ example), you can use the --appdir flag like this:
       --cache-url string               URL for the cache, redis or in-memory
       --couchdb-url string             CouchDB URL (default "http://localhost:5984/")
       --downloads-url string           URL for the download secret storage, redis or in-memory
-      --fs-url string                  filesystem url (default "file://localhost/home/nono/storage")
+      --fs-url string                  filesystem url (default "file://localhost/Users/pierre/go/src/github.com/cozy/cozy-stack/storage")
   -h, --help                           help for serve
       --jobs-url string                URL for the jobs system synchronization, redis or in-memory
-      --jobs-workers int               Number of parallel workers (0 to disable the processing of jobs) (default 8)
+      --jobs-workers int               Number of parallel workers (0 to disable the processing of jobs) (default 4)
       --konnectors-cmd string          konnectors command to be executed
       --konnectors-oauthstate string   URL for the storage of OAuth state for konnectors, redis or in-memory
       --lock-url string                URL for the locks, redis or in-memory
