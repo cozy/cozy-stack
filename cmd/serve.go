@@ -78,6 +78,9 @@ func init() {
 	flags.String("assets", "", "path to the directory with the assets (use the packed assets by default)")
 	checkNoErr(viper.BindPFlag("assets", flags.Lookup("assets")))
 
+	flags.String("doctypes", "", "path to the directory with the doctypes (for developing/testing a remote doctype)")
+	checkNoErr(viper.BindPFlag("doctypes", flags.Lookup("doctypes")))
+
 	flags.String("fs-url", fmt.Sprintf("file://localhost%s/%s", binDir, DefaultStorageDir), "filesystem url")
 	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
 

@@ -1,0 +1,73 @@
+package remote
+
+import (
+	"github.com/cozy/cozy-stack/pkg/remote"
+	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/echo"
+)
+
+func remoteGet(c echo.Context) error {
+	doctype := c.Param("doctype")
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return wrapRemoteErr(err)
+	}
+	instance := middlewares.GetInstance(c)
+	remote, err := remote.Find(instance, doctype)
+	if err != nil {
+		return wrapRemoteErr(err)
+	}
+	if remote.Verb != "GET" {
+		return jsonapi.MethodNotAllowed("GET")
+	}
+	err = remote.ProxyTo(doctype, instance, c.Response(), c.Request())
+	if err != nil {
+		return wrapRemoteErr(err)
+	}
+	return nil
+}
+
+func remotePost(c echo.Context) error {
+	doctype := c.Param("doctype")
+	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+		return wrapRemoteErr(err)
+	}
+	instance := middlewares.GetInstance(c)
+	remote, err := remote.Find(instance, doctype)
+	if err != nil {
+		return wrapRemoteErr(err)
+	}
+	if remote.Verb != "POST" {
+		return jsonapi.MethodNotAllowed("POST")
+	}
+	err = remote.ProxyTo(doctype, instance, c.Response(), c.Request())
+	if err != nil {
+		return wrapRemoteErr(err)
+	}
+	return nil
+}
+
+// Routes set the routing for the remote service
+func Routes(router *echo.Group) {
+	router.GET("/:doctype", remoteGet)
+	router.POST("/:doctype", remotePost)
+}
+
+func wrapRemoteErr(err error) error {
+	switch err {
+	case remote.ErrNotFoundRemote:
+		return jsonapi.NotFound(err)
+	case remote.ErrInvalidRequest:
+		return jsonapi.BadRequest(err)
+	case remote.ErrRequestFailed:
+		return jsonapi.BadGateway(err)
+	case remote.ErrInvalidVariables:
+		return jsonapi.BadRequest(err)
+	case remote.ErrMissingVar:
+		return jsonapi.BadRequest(err)
+	case remote.ErrInvalidContentType:
+		return jsonapi.BadGateway(err)
+	}
+	return err
+}

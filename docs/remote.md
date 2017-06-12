@@ -1,5 +1,7 @@
 [Table of contents](README.md#table-of-contents)
 
+{% raw %}
+
 # Proxy for remote data/API
 
 The client side applications in Cozy are constrained and cannot speak with
@@ -24,14 +26,14 @@ steps:
 ## Declaring a remote doctype
 
 Doctypes are formalized in this repository:
-https://github.com/cozy/cozy-doctypes. Each doctype has its own directory
-inside the repository. For a remote doctype, it will include a file called
-`request` that will describe how the cozy-stack will request the external
-website.
+[github.com/cozy/cozy-doctypes](https://github.com/cozy/cozy-doctypes).
+Each doctype has its own directory inside the repository. For a remote
+doctype, it will include a file called `request` that will describe how the
+cozy-stack will request the external website.
 
 Let's take an example:
 
-```sh
+```
 $ tree cozy-doctypes
 cozy-doctypes
 ├── [...]
@@ -56,8 +58,8 @@ The format for the request file is:
 - then some lines that describe the HTTP headers
 - then a blank line and the body if the request is a POST
 
-For the URL, the headers, and the body, it's possible to have some dynamic
-part by using `{{`, a variable name, and `}}`.
+For the path, the query-string, the headers, and the body, it's possible to
+have some dynamic part by using `{{`, a variable name, and `}}`.
 
 **Note**: by default, the User-Agent is set to a default value ("cozy-stack" and
 a version number). It can be overriden in the request description.
@@ -85,7 +87,7 @@ doctypes in its manifest, like for other doctypes:
 ```
 
 
-## Calling the `remote` API
+## Calling the remote API
 
 ### GET/POST `/remote/:doctype`
 
@@ -95,7 +97,7 @@ body for POST, to give values for the variables.
 
 Example:
 
-```
+```http
 GET /remote/org.wikidata.search?q=Douglas+Adams HTTP/1.1
 Host: alice.cozy.tools
 ```
@@ -106,11 +108,12 @@ send to the remote website.
 
 Example:
 
-```
+```http
 POST /remote/org.example HTTP/1.1
 Host: alice.cozy.tools
 Content-Type: application/json
-
+```
+```json
 {
   "query": "Qbhtynf Nqnzf",
   "comment": "query is rot13 for Douglas Adams"
@@ -139,3 +142,5 @@ repository and only then test it. So, the cozy-stack serve command will have a
 `--doctypes` option to gives a local directory with the doctypes. You can fork
 the repository, clone it, work on a new doctype inside, test it locally, and
 when OK, make a pull request for it.
+
+{% endraw %}

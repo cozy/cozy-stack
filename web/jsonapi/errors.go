@@ -69,6 +69,15 @@ func BadJSON() *Error {
 	}
 }
 
+// MethodNotAllowed returns a 405 formatted error
+func MethodNotAllowed(method string) *Error {
+	return &Error{
+		Status: http.StatusMethodNotAllowed,
+		Title:  "Method Not Allowed",
+		Detail: method + " is not allowed on this endpoint",
+	}
+}
+
 // Conflict returns a 409 formatted error representing a conflict
 func Conflict(err error) *Error {
 	return &Error{
@@ -122,5 +131,14 @@ func InvalidAttribute(attribute string, err error) *Error {
 		Source: SourceError{
 			Pointer: "/data/attributes/" + attribute,
 		},
+	}
+}
+
+// BadGateway returns a 502 formatted error
+func BadGateway(err error) *Error {
+	return &Error{
+		Status: http.StatusBadGateway,
+		Title:  "Bad Gateway",
+		Detail: err.Error(),
 	}
 }

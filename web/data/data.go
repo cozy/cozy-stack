@@ -449,7 +449,7 @@ func couchdbStyleErrorHandler(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-// Routes sets the routing for the status service
+// Routes sets the routing for the data service
 func Routes(router *echo.Group) {
 	router.Use(couchdbStyleErrorHandler)
 
