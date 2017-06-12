@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"mime"
 	"net/http"
 	"net/url"
 	"path"
@@ -276,7 +277,11 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	}
 	defer res.Body.Close()
 
-	ctype := strings.SplitN(res.Header.Get("Content-Type"), ";", 2)[0] // Drop the charset
+	ctype, _, err := mime.ParseMediaType(res.Header.Get("Content-Type"))
+	if err != nil {
+		log.Infof("request %s has an invalid content-type", remote.URL.String())
+		return ErrInvalidContentType
+	}
 	if ctype != "application/json" && ctype != "text/xml" && ctype != "application/xml" {
 		class := strings.SplitN(ctype, "/", 2)[0]
 		if class != "image" && class != "audio" && class != "video" {
