@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"reflect"
+	"strconv"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -16,18 +19,10 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
-	"reflect"
-	"strconv"
 )
 
-// SharedWithMeDirName is the name of the directory that will contain all shared
-// files.
-// TODO Put in a locale aware constant.
-const SharedWithMeDirName = "Shared With Me"
-
 func creationWithIDHandler(c echo.Context, ins *instance.Instance) error {
-
-	err := createDirForSharing(ins.VFS(), consts.SharedWithMeDirID, "")
+	err := createDirForSharing(ins, consts.SharedWithMeDirID, "")
 	if err != nil {
 		return err
 	}
@@ -383,7 +378,8 @@ func trashHandler(c echo.Context) error {
 // "Shared With Me" directory.
 //
 // If a name isn't provided then the id will be used as a replacement.
-func createDirForSharing(fs vfs.VFS, id, name string) error {
+func createDirForSharing(ins *instance.Instance, id, name string) error {
+	fs := ins.VFS()
 	if _, errd := fs.DirByID(id); errd == nil {
 		return nil
 	}
@@ -391,10 +387,10 @@ func createDirForSharing(fs vfs.VFS, id, name string) error {
 	var dirID string
 	if id == consts.SharedWithMeDirID {
 		dirID = ""
-		name = SharedWithMeDirName
+		name = ins.Translate("Sharings Shared with Me directory")
 	} else {
 		if _, errd := fs.DirByID(consts.SharedWithMeDirID); errd != nil {
-			errc := createDirForSharing(fs, consts.SharedWithMeDirID, "")
+			errc := createDirForSharing(ins, consts.SharedWithMeDirID, "")
 			if errc != nil {
 				return errc
 			}

@@ -214,3 +214,6 @@ msgstr "Domicile (Mes Infos)"
 
 msgid "Permissions org.fing.mesinfos.paymentterms"
 msgstr "Délais de paiement (Mes Infos)"
+
+msgid "Sharings Shared with Me directory"
+msgstr "Partagés avec Moi"
