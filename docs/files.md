@@ -639,7 +639,7 @@ Content-Type: application/vnd.api+json
       "name": "project-X",
       "ids": [
         "a51aeeea-4f79-11e7-9dc4-83f67e9494ab"
-      ]
+      ],
       "files": [
         "/Documents/bills",
         "/Documents/images/sunset.jpg",
