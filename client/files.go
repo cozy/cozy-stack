@@ -79,6 +79,7 @@ type FilePatchAttrs struct {
 	Tags       []string  `json:"tags,omitempty"`
 	UpdatedAt  time.Time `json:"updated_at,omitempty"`
 	Executable bool      `json:"executable,omitempty"`
+	MD5Sum     []byte    `json:"md5sum,omitempty"`
 }
 
 // FilePatch is the structure used to modify file or directory metadata
@@ -242,16 +243,20 @@ func (c *Client) Upload(u *Upload) (*File, error) {
 
 // UpdateAttrsByID is used to update the attributes of a file or directory
 // of the specified ID
-func (c *Client) UpdateAttrsByID(id, rev string, patch *FilePatch) (*DirOrFile, error) {
+func (c *Client) UpdateAttrsByID(id string, patch *FilePatch) (*DirOrFile, error) {
 	body, err := writeJSONAPI(patch)
 	if err != nil {
 		return nil, err
+	}
+	headers := make(request.Headers)
+	if patch.Rev != "" {
+		headers["If-Match"] = patch.Rev
 	}
 	res, err := c.Req(&request.Options{
 		Method:  "PATCH",
 		Path:    "/files/" + id,
 		Body:    body,
-		Queries: url.Values{"rev": {rev}},
+		Headers: headers,
 	})
 	if err != nil {
 		return nil, err

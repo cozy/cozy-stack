@@ -202,6 +202,7 @@ type DocPatch struct {
 	Tags        *[]string  `json:"tags,omitempty"`
 	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
 	Executable  *bool      `json:"executable,omitempty"`
+	MD5Sum      *[]byte    `json:"md5sum,omitempty"`
 }
 
 // DirOrFileDoc is a union struct of FileDoc and DirDoc. It is useful to

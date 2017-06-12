@@ -261,6 +261,10 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	newdoc.Metadata = olddoc.Metadata
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 
+	if patch.MD5Sum != nil {
+		newdoc.MD5Sum = *patch.MD5Sum
+	}
+
 	if err = fs.UpdateFileDoc(olddoc, newdoc); err != nil {
 		return nil, err
 	}
