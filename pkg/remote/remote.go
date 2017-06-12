@@ -35,6 +35,8 @@ var (
 	// ErrInvalidVariables is used when the variables can't be extracted from
 	// the request
 	ErrInvalidVariables = errors.New("the variables are not valid")
+	// ErrMissingVar is used when trying to use a variable that has not been defined
+	ErrMissingVar = errors.New("a variable is used in the template, but no value was given")
 	// ErrInvalidContentType is used when the response has a content-type that
 	// we deny for security reasons
 	ErrInvalidContentType = errors.New("the content-type for the response is not authorized")
@@ -214,32 +216,49 @@ func ExtractVariables(verb string, in *http.Request) (map[string]string, error) 
 
 var injectionRegexp = regexp.MustCompile(`{{\w+}}`)
 
-func injectVar(src string, vars map[string]string) string {
-	return injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
+func injectVar(src string, vars map[string]string) (string, error) {
+	var err error
+	result := injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
 		m = strings.TrimLeft(m, "{{")
 		m = strings.TrimRight(m, "}}")
 		m = strings.TrimSpace(m)
-		return vars[m]
+		if val, ok := vars[m]; ok {
+			return val
+		}
+		err = ErrMissingVar
+		return ""
 	})
+	return result, err
 }
 
 // InjectVariables replaces {{variable}} by its value in some fields of the
 // remote struct
-func InjectVariables(remote *Remote, vars map[string]string) {
+func InjectVariables(remote *Remote, vars map[string]string) error {
+	var err error
 	if strings.Contains(remote.URL.Path, "{{") {
-		remote.URL.Path = injectVar(remote.URL.Path, vars)
+		remote.URL.Path, err = injectVar(remote.URL.Path, vars)
+		if err != nil {
+			return err
+		}
 	}
 	if strings.Contains(remote.URL.RawQuery, "{{") {
-		remote.URL.RawQuery = injectVar(remote.URL.RawQuery, vars)
+		remote.URL.RawQuery, err = injectVar(remote.URL.RawQuery, vars)
+		if err != nil {
+			return err
+		}
 	}
 	for k, v := range remote.Headers {
 		if strings.Contains(v, "{{") {
-			remote.Headers[k] = injectVar(v, vars)
+			remote.Headers[k], err = injectVar(v, vars)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if strings.Contains(remote.Body, "{{") {
-		remote.Body = injectVar(remote.Body, vars)
+		remote.Body, err = injectVar(remote.Body, vars)
 	}
+	return err
 }
 
 // ProxyTo calls the external website and proxy the reponse
@@ -249,7 +268,9 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 		log.Infof("Error on extracting variables: %s", err)
 		return ErrInvalidVariables
 	}
-	InjectVariables(remote, vars)
+	if err = InjectVariables(remote, vars); err != nil {
+		return err
+	}
 
 	// Sanitize the remote URL
 	if strings.Contains(remote.URL.Host, ":") {

@@ -110,7 +110,8 @@ Accept-Language: {{lang}},en
 		"two":  "deux",
 	}
 
-	InjectVariables(r, vars)
+	err = InjectVariables(r, vars)
+	assert.NoError(t, err)
 	assert.Equal(t, "POST", r.Verb)
 	assert.Equal(t, "https", r.URL.Scheme)
 	assert.Equal(t, "example.org", r.URL.Host)
@@ -119,4 +120,9 @@ Accept-Language: {{lang}},en
 	assert.Equal(t, "fr-FR,en", r.Headers["Accept-Language"])
 	assert.Equal(t, "application/json", r.Headers["Content-Type"])
 	assert.Equal(t, `{ "one": "un", "two": "deux" }`, r.Body)
+
+	r, err = ParseRawRequest(doctype, `POST https://example.org/{{missing}}`)
+	assert.NoError(t, err)
+	err = InjectVariables(r, vars)
+	assert.Equal(t, ErrMissingVar, err)
 }

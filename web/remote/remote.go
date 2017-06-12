@@ -52,7 +52,6 @@ func remotePost(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("/:doctype", remoteGet)
 	router.POST("/:doctype", remotePost)
-	// TODO add tests
 }
 
 func wrapRemoteErr(err error) error {
@@ -65,6 +64,10 @@ func wrapRemoteErr(err error) error {
 		return jsonapi.BadGateway(err)
 	case remote.ErrInvalidVariables:
 		return jsonapi.BadRequest(err)
+	case remote.ErrMissingVar:
+		return jsonapi.BadRequest(err)
+	case remote.ErrInvalidContentType:
+		return jsonapi.BadGateway(err)
 	}
 	return err
 }
