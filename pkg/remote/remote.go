@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -267,7 +268,8 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 		req.Header.Set(k, v)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	client := http.Client{Timeout: 20 * time.Second}
+	res, err := client.Do(req)
 	if err != nil {
 		log.Infof("Error on request %s: %s", remote.URL.String(), err)
 		return ErrRequestFailed
