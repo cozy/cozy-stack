@@ -60,7 +60,6 @@ var cleanInstanceCmd = &cobra.Command{
 		domain := args[0]
 		i := couchdb.SimpleDatabasePrefix(domain)
 		return couchdb.DeleteAllDBs(i)
-
 	},
 }
 
