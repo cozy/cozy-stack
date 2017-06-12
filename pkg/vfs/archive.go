@@ -20,6 +20,7 @@ const ZipMime = "application/zip"
 type Archive struct {
 	Name   string   `json:"name"`
 	Secret string   `json:"-"`
+	IDs    []string `json:"ids"`
 	Files  []string `json:"files"`
 
 	// archiveEntries cache
@@ -64,13 +65,34 @@ func ContentDisposition(disposition, filename string) string {
 // GetEntries returns all files and folders in the archive as ArchiveEntry.
 func (a *Archive) GetEntries(fs VFS) ([]ArchiveEntry, error) {
 	if a.entries == nil {
-		entries := make([]ArchiveEntry, len(a.Files))
+		n := len(a.IDs)
+		entries := make([]ArchiveEntry, n+len(a.Files))
+		for i, id := range a.IDs {
+			d, f, err := fs.DirOrFileByID(id)
+			if err != nil {
+				return nil, err
+			}
+			var root string
+			if d != nil {
+				root = d.Fullpath
+			} else {
+				root, err = f.Path(fs)
+				if err != nil {
+					return nil, err
+				}
+			}
+			entries[i] = ArchiveEntry{
+				root: root,
+				Dir:  d,
+				File: f,
+			}
+		}
 		for i, root := range a.Files {
 			d, f, err := fs.DirOrFileByPath(root)
 			if err != nil {
 				return nil, err
 			}
-			entries[i] = ArchiveEntry{
+			entries[n+i] = ArchiveEntry{
 				root: root,
 				Dir:  d,
 				File: f,

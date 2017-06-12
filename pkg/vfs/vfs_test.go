@@ -595,8 +595,9 @@ func TestContentDisposition(t *testing.T) {
 func TestArchive(t *testing.T) {
 	tree := H{
 		"archive/": H{
-			"foo.jpg":   nil,
-			"hello.jpg": nil,
+			"foo.jpg":    nil,
+			"foobar.jpg": nil,
+			"hello.jpg":  nil,
 			"bar/": H{
 				"baz/": H{
 					"one.png": nil,
@@ -613,8 +614,14 @@ func TestArchive(t *testing.T) {
 	_, err := createTree(tree, consts.RootDirID)
 	assert.NoError(t, err)
 
+	foobar, err := fs.FileByPath("/archive/foobar.jpg")
+	assert.NoError(t, err)
+
 	a := &vfs.Archive{
 		Name: "test",
+		IDs: []string{
+			foobar.ID(),
+		},
 		Files: []string{
 			"/archive/foo.jpg",
 			"/archive/bar",
@@ -633,12 +640,13 @@ func TestArchive(t *testing.T) {
 	assert.NoError(t, err)
 	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	assert.NoError(t, err)
-	assert.Equal(t, 4, len(z.File))
+	assert.Equal(t, 5, len(z.File))
 	zipfiles := H{}
 	for _, f := range z.File {
 		zipfiles[f.Name] = nil
 	}
 	assert.EqualValues(t, H{
+		"test/foobar.jpg":      nil,
 		"test/foo.jpg":         nil,
 		"test/bar/baz/one.png": nil,
 		"test/bar/baz/two.png": nil,
