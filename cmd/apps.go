@@ -256,8 +256,8 @@ func lsApps(cmd *cobra.Command, args []string, appType string) error {
 		return err
 	}
 	for _, app := range apps {
-		fmt.Printf("%s\t%s\t%s\n",
-			app.Attrs.Slug, app.Attrs.Source, app.Attrs.State)
+		fmt.Printf("%s\t%s\t%s\t%s\n",
+			app.Attrs.Slug, app.Attrs.Source, app.Attrs.Version, app.Attrs.State)
 	}
 	return nil
 }
