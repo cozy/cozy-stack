@@ -36,10 +36,13 @@ func writeFile(fs vfs.VFS, name string, tw *tar.Writer, doc *vfs.FileDoc) error 
 }
 
 func export(tw *tar.Writer, fs vfs.VFS) error {
-
 	root := "/Documents"
 
 	err := vfs.Walk(fs, root, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+		if err != nil {
+			return err
+		}
+
 		if file != nil {
 			if err := writeFile(fs, name, tw, file); err != nil {
 				return err
