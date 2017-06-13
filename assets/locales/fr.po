@@ -1,8 +1,9 @@
 # Translators:
 # Bruno Michel <brmichel@free.fr>, 2017
+# JC Pagnon <gooz@cozycloud.cc>, 2017
 msgid ""
 msgstr ""
-"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
+"Last-Translator: JC Pagnon <gooz@cozycloud.cc>, 2017\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -214,3 +215,6 @@ msgstr "Domicile (Mes Infos)"
 
 msgid "Permissions org.fing.mesinfos.paymentterms"
 msgstr "Délais de paiement (Mes Infos)"
+
+msgid "Sharings Shared with Me directory"
+msgstr "Partagés avec Moi"

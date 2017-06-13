@@ -200,3 +200,6 @@ msgstr "Home (Mes Infos)"
 
 msgid "Permissions org.fing.mesinfos.paymentterms"
 msgstr "Payment terms (Mes Infos)"
+
+msgid "Sharings Shared with Me directory"
+msgstr "Shared with Me"
