@@ -243,6 +243,17 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 	}
 }
 
+// SettingsDocument returns the document with the settings of this instance
+func (i *Instance) SettingsDocument() (*couchdb.JSONDoc, error) {
+	doc := &couchdb.JSONDoc{}
+	err := couchdb.GetDoc(i, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return nil, err
+	}
+	doc.Type = consts.Settings
+	return doc, nil
+}
+
 // DiskQuota returns the number of bytes allowed on the disk to the user.
 func (i *Instance) DiskQuota() int64 {
 	return i.BytesDiskQuota
@@ -299,6 +310,13 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 		RawQuery: query,
 	}
 	return u.String()
+}
+
+// DefaultRedirection returns the URL where to redirect the user afer login
+// (and in most other cases where we need a redirection URL)
+func (i *Instance) DefaultRedirection() *url.URL {
+	u := i.SubDomain(consts.DriveSlug)
+	return u
 }
 
 func (i *Instance) installApp(slug string) error {

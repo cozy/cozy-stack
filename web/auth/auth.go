@@ -34,7 +34,7 @@ func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if session, err := sessions.GetSession(c, instance); err == nil {
-		redirect := defaultRedirectDomain(instance).String()
+		redirect := instance.DefaultRedirection().String()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
@@ -68,12 +68,6 @@ func addCodeToRedirect(redirect, domain, sessionID string) string {
 	return redirect
 }
 
-// defaultRedirectDomain returns the default URL used for redirection after
-// login actions.
-func defaultRedirectDomain(in *instance.Instance) *url.URL {
-	return in.SubDomain(consts.DriveSlug)
-}
-
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
 func SetCookieForNewSession(c echo.Context) (string, error) {
 	instance := middlewares.GetInstance(c)
@@ -91,10 +85,11 @@ func SetCookieForNewSession(c echo.Context) (string, error) {
 }
 
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect string) error {
-	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(i, consts.Settings, consts.InstanceSettingsID, doc)
-	if err != nil {
-		return err
+	publicName := "J. Doe"
+	if doc, err := i.SettingsDocument(); err == nil {
+		if name, ok := doc.M["public_name"].(string); ok {
+			publicName = name
+		}
 	}
 
 	var credsErrors string
@@ -104,7 +99,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
-		"PublicName":       doc.M["public_name"],
+		"PublicName":       publicName,
 		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
 	})
@@ -113,7 +108,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 func loginForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	redirect, err := checkRedirectParam(c, defaultRedirectDomain(instance))
+	redirect, err := checkRedirectParam(c, instance.DefaultRedirection())
 	if err != nil {
 		return err
 	}
@@ -131,7 +126,7 @@ func login(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
-	redirect, err := checkRedirectParam(c, defaultRedirectDomain(instance))
+	redirect, err := checkRedirectParam(c, instance.DefaultRedirection())
 	if err != nil {
 		return err
 	}
@@ -645,7 +640,7 @@ func passphraseReset(c echo.Context) error {
 func passphraseRenewForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	if middlewares.IsLoggedIn(c) {
-		redirect := defaultRedirectDomain(instance).String()
+		redirect := instance.DefaultRedirection().String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	token := c.QueryParam("token")
@@ -666,7 +661,7 @@ func passphraseRenewForm(c echo.Context) error {
 func passphraseRenew(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	if middlewares.IsLoggedIn(c) {
-		redirect := defaultRedirectDomain(instance).String()
+		redirect := instance.DefaultRedirection().String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))

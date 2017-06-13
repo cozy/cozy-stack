@@ -26,8 +26,7 @@ type mailTemplateValues struct {
 func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 	// We get the Couchdb document describing the instance to get the sharer's
 	// public name.
-	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	doc, err := instance.SettingsDocument()
 	if err != nil {
 		return err
 	}

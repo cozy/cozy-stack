@@ -38,12 +38,10 @@ func (i *apiInstance) MarshalJSON() ([]byte, error) {
 func getInstance(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	doc, err := instance.SettingsDocument()
 	if err != nil {
 		return err
 	}
-	doc.Type = consts.Settings
 	doc.M["locale"] = instance.Locale
 
 	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
