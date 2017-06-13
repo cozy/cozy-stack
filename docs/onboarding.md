@@ -62,7 +62,7 @@ The instance is created
 - She is redirected to the `onboarding` application
 - The `onboarding` application receive the registerToken. It is the default onboarding application and therefore display the cozy cloud agreement and then ask for a Password.
 - The `onboarding` application use its `registerToken` to register the passphrase. Registering the passphrase automatically log Alice in and redirect her back to the `onboarding` app.
-- Afterward, the `onboarding` app receive its token normally through the `data-cozy-token` body attribute, as described in [./auth.md](auth documentation). and can do whatever it needs to do :
+- Afterward, the `onboarding` app receive its token normally through the `data-cozy-token` body attribute, as described in [auth documentation](./auth.md). and can do whatever it needs to do :
   - read from the instance document to prefill/bypass form fields
   - add more informations to the instance document.
   - create `io.cozy.accounts` documents for external accounts.
