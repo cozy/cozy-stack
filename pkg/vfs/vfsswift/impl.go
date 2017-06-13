@@ -18,6 +18,7 @@ import (
 )
 
 const versionSuffix = "-version"
+const maxFileSize = 5 << (3 * 10) // 5 GiB
 
 type swiftVFS struct {
 	vfs.Indexer
@@ -149,24 +150,25 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 
 	diskQuota := sfs.DiskQuota()
 
-	var maxsize, newsize int64
+	var maxsize, newsize, oldsize int64
 	newsize = newdoc.ByteSize
 	if diskQuota > 0 {
 		diskUsage, err := sfs.DiskUsage()
 		if err != nil {
 			return nil, err
 		}
-
-		var oldsize int64
 		if olddoc != nil {
 			oldsize = olddoc.Size()
 		}
 		maxsize = diskQuota - diskUsage
-		if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
-			return nil, vfs.ErrFileTooBig
+		if maxsize > maxFileSize {
+			maxsize = maxFileSize
 		}
 	} else {
-		maxsize = -1 // no limit
+		maxsize = maxFileSize
+	}
+	if maxsize <= 0 || (newsize >= 0 && (newsize-oldsize) > maxsize) {
+		return nil, vfs.ErrFileTooBig
 	}
 
 	if olddoc != nil {
