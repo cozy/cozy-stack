@@ -83,3 +83,5 @@ contexts:
     onboarded_redirection: collect/#/discovery/?intro
     # Redirect to the photos application after login
     default_redirection: drive/#/files
+    # Allow to customize the cozy-bar link to the help
+    help_link: https://forum.cozy.io/
