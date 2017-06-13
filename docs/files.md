@@ -621,6 +621,8 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 Create an archive. The body of the request lists the files and directories that will be included in the archive. For directories, it includes all the files and sub-directories in the archive.
 
+It's possible to give a file by its id (in the `ids` array) or by its path (in the `files` array).
+
 #### Request
 
 ```http
@@ -635,6 +637,9 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files.archives",
     "attributes": {
       "name": "project-X",
+      "ids": [
+        "a51aeeea-4f79-11e7-9dc4-83f67e9494ab"
+      ],
       "files": [
         "/Documents/bills",
         "/Documents/images/sunset.jpg",
