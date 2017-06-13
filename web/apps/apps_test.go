@@ -6,7 +6,6 @@ package apps_test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -339,7 +338,11 @@ func TestMain(m *testing.M) {
 	tempdir := setup.GetTmpDirectory()
 
 	cfg := config.GetConfig()
-	cfg.Fs.URL = fmt.Sprintf("file://localhost%s", tempdir)
+	cfg.Fs.URL = &url.URL{
+		Scheme: "file",
+		Host:   "localhost",
+		Path:   tempdir,
+	}
 	was := cfg.Subdomains
 	cfg.Subdomains = config.NestedSubdomains
 	defer func() { cfg.Subdomains = was }()

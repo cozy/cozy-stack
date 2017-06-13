@@ -19,8 +19,8 @@ func TestReplicationFromcozy(t *testing.T) {
 	var _ = getDocForTest()
 
 	var source = ts.URL + "/data/" + Type
-	var target = config.CouchURL() + "replication-target"
-	var replicator = config.CouchURL() + "_replicate"
+	var target = config.CouchURL().String() + "replication-target"
+	var replicator = config.CouchURL().String() + "_replicate"
 
 	source = strings.Replace(source, "http://", "http://user:"+token+"@", 1)
 

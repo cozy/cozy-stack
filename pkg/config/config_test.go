@@ -14,7 +14,7 @@ func TestUseViper(t *testing.T) {
 	cfg := viper.New()
 	cfg.Set("couchdb.url", "http://db:1234")
 	UseViper(cfg)
-	assert.Equal(t, "http://db:1234/", CouchURL())
+	assert.Equal(t, "http://db:1234/", CouchURL().String())
 }
 
 func TestSetup(t *testing.T) {
@@ -72,8 +72,8 @@ log:
 
 	assert.Equal(t, "myhost", GetConfig().Host)
 	assert.Equal(t, 1235, GetConfig().Port)
-	assert.Equal(t, "swift://openstack/?UserName=os_username_val&Password=os_password_val&ProjectName=os_project_name_val&UserDomainName=os_user_domain_name_val", GetConfig().Fs.URL)
-	assert.Equal(t, "http://192.168.99.100:5984/", GetConfig().CouchDB.URL)
+	assert.Equal(t, "swift://openstack/?UserName=os_username_val&Password=os_password_val&ProjectName=os_project_name_val&UserDomainName=os_user_domain_name_val", GetConfig().Fs.URL.String())
+	assert.Equal(t, "http://192.168.99.100:5984/", GetConfig().CouchDB.URL.String())
 	assert.Equal(t, "ssl0.ovh.net", GetConfig().Mail.Host)
 	assert.Equal(t, 465, GetConfig().Mail.Port)
 	assert.Equal(t, "mail_username_val", GetConfig().Mail.Username)

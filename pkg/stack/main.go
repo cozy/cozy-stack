@@ -1,9 +1,7 @@
 package stack
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -38,17 +36,11 @@ security features. Please do not use this binary as your production server.
 // startJobSystem starts the jobs and scheduler systems
 func startJobSystem() error {
 	cfg := config.GetConfig().Jobs
-	if cfg.URL == "" || strings.HasPrefix(cfg.URL, "mem") {
+	cli := cfg.Redis.Client()
+	if cli == nil {
 		return startMemJobSystem(cfg.Workers)
 	}
-	if strings.HasPrefix(cfg.URL, "redis") {
-		opts, err := redis.ParseURL(cfg.URL)
-		if err != nil {
-			return err
-		}
-		return startRedisJobSystem(cfg.Workers, opts)
-	}
-	return errors.New("Invalid jobs URL")
+	return startRedisJobSystem(cfg.Workers, cli)
 }
 
 func startMemJobSystem(nbWorkers int) error {
@@ -57,8 +49,7 @@ func startMemJobSystem(nbWorkers int) error {
 	return sched.Start(broker)
 }
 
-func startRedisJobSystem(nbWorkers int, opts *redis.Options) error {
-	client := redis.NewClient(opts)
+func startRedisJobSystem(nbWorkers int, client *redis.Client) error {
 	broker = jobs.NewRedisBroker(nbWorkers, client)
 	sched = scheduler.NewRedisScheduler(client)
 	return sched.Start(broker)

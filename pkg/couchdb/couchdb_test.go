@@ -276,7 +276,7 @@ func TestMain(m *testing.M) {
 	config.UseTestFile()
 
 	// First we make sure couchdb is started
-	db, err := checkup.HTTPChecker{URL: config.CouchURL()}.Check()
+	db, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
 	if err != nil || db.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
