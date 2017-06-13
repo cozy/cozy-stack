@@ -81,7 +81,7 @@ func (rl *redisLock) Lock() error {
 		if ok == int64(1) {
 			return nil
 		}
-		// this lock is unavaiable, fallback to creating it
+		// this lock is unavailable, fallback to creating it
 		rl.token = ""
 	}
 

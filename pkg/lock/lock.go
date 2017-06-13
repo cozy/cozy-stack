@@ -6,7 +6,7 @@ import "github.com/cozy/cozy-stack/pkg/config"
 func ReadWrite(domain string) ErrorRWLocker {
 	cli := config.GetConfig().Lock.Client()
 	if cli != nil {
-		return &fakeRWLock{getRedisReadWriteLock(cli, domain)}
+		return getRedisReadWriteLock(cli, domain)
 	}
 	return getMemReadWriteLock(domain)
 }
