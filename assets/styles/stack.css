@@ -1,17 +1,3 @@
-/* FONTS */
-@font-face {
-    font-family: Lato;
-    font-style: normal;
-    font-weight: normal;
-    src: url('../fonts/Lato-Regular.woff2') format('woff2');
-}
-@font-face {
-    font-family: Lato;
-    font-style: normal;
-    font-weight: bold;
-    src: url('../fonts/Lato-Bold.woff2') format('woff2');
-}
-
 /* Basics */
 html {
     height: 100%;
