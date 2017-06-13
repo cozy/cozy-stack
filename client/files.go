@@ -376,25 +376,43 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 		return nil
 	}
 
-	res, err := c.Req(&request.Options{
-		Method: "GET",
-		Path:   "/files/" + url.QueryEscape(doc.ID),
-	})
-	if err != nil {
-		return walkFn(name, doc, err)
-	}
+	reqPath := "/files/" + url.QueryEscape(doc.ID)
+	reqQuery := url.Values{"page[limit]": {"100"}}
+	for {
+		res, err := c.Req(&request.Options{
+			Method:  "GET",
+			Path:    reqPath,
+			Queries: reqQuery,
+		})
+		if err != nil {
+			return walkFn(name, doc, err)
+		}
 
-	var included []*DirOrFile
-	if err = readJSONAPI(res.Body, nil, &included); err != nil {
-		return walkFn(name, doc, err)
-	}
+		var included []*DirOrFile
+		var links struct {
+			Next string
+		}
+		if err = readJSONAPILinks(res.Body, &included, &links); err != nil {
+			return walkFn(name, doc, err)
+		}
 
-	for _, d := range included {
-		fullpath := path.Join(name, d.Attrs.Name)
-		err = walk(c, fullpath, d, walkFn)
-		if err != nil && err != filepath.SkipDir {
+		for _, d := range included {
+			fullpath := path.Join(name, d.Attrs.Name)
+			err = walk(c, fullpath, d, walkFn)
+			if err != nil && err != filepath.SkipDir {
+				return err
+			}
+		}
+
+		if links.Next == "" {
+			break
+		}
+		u, err := url.Parse(links.Next)
+		if err != nil {
 			return err
 		}
+		reqPath = u.Path
+		reqQuery = u.Query()
 	}
 
 	return nil
@@ -402,7 +420,7 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 
 func readDirOrFile(res *http.Response) (*DirOrFile, error) {
 	dirOrFile := &DirOrFile{}
-	if err := readJSONAPI(res.Body, &dirOrFile, nil); err != nil {
+	if err := readJSONAPI(res.Body, &dirOrFile); err != nil {
 		return nil, err
 	}
 	return dirOrFile, nil
@@ -410,7 +428,7 @@ func readDirOrFile(res *http.Response) (*DirOrFile, error) {
 
 func readFile(res *http.Response) (*File, error) {
 	file := &File{}
-	if err := readJSONAPI(res.Body, &file, nil); err != nil {
+	if err := readJSONAPI(res.Body, &file); err != nil {
 		return nil, err
 	}
 	if file.Attrs.Type != FileType {
@@ -421,7 +439,7 @@ func readFile(res *http.Response) (*File, error) {
 
 func readDir(res *http.Response) (*Dir, error) {
 	dir := &Dir{}
-	if err := readJSONAPI(res.Body, &dir, nil); err != nil {
+	if err := readJSONAPI(res.Body, &dir); err != nil {
 		return nil, err
 	}
 	if dir.Attrs.Type != DirType {
