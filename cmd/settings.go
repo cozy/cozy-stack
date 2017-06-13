@@ -28,7 +28,7 @@ It can also take a list of settings to update.
 	Example: "$ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagSettingsDomain == "" {
-			errPrintfln("%s", errAppsMissingDomain)
+			errPrintfln("%s", errSettingsMissingDomain)
 			return cmd.Help()
 		}
 		c := newClient(flagSettingsDomain, consts.Settings)
