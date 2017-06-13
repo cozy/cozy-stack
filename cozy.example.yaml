@@ -73,3 +73,13 @@ log:
   level: info
   # send logs to the local syslog - flags: --log-syslog
   syslog: false
+
+# It is possible to customize some behaviors of cozy-stack in function of the
+# context of an instance (the context field of the settings document of this
+# instance). Here, the "beta" context is customized with.
+contexts:
+  beta:
+    # Redirect to a specific route of cozy-collect after the onboarding
+    onboarded_redirection: collect/#/discovery/?intro
+    # Redirect to the photos application after login
+    default_redirection: drive/#/files

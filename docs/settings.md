@@ -312,3 +312,9 @@ HTTP/1.1 204 No Content
 
 To use this endpoint, an application needs a permission on the type
 `io.cozy.oauth.clients` for the verb `DELETE` (only client-side apps).
+
+### GET /settings/onboarded
+
+It redirects the user to an application after the onboarding. The application
+is selected according to the context of the instance and the configuration of
+the stack.

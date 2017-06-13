@@ -91,6 +91,8 @@ type Config struct {
 	SessionStorage              RedisConfig
 	DownloadStorage             RedisConfig
 	KonnectorsOauthStateStorage RedisConfig
+
+	Contexts map[string]interface{}
 }
 
 // Fs contains the configuration values of the file-system
@@ -295,6 +297,7 @@ func UseViper(v *viper.Viper) error {
 			DisableTLS:                v.GetBool("mail.disable_tls"),
 			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
 		},
+		Contexts: v.GetStringMap("contexts"),
 	}
 
 	loggerRedis := NewRedisConfig(v.GetString("log.redis"))

@@ -312,11 +312,44 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 	return u.String()
 }
 
+func (i *Instance) redirection(key, defaultSlug string) *url.URL {
+	doc, err := i.SettingsDocument()
+	if err != nil {
+		return i.SubDomain(defaultSlug)
+	}
+	ctx, ok := doc.M["context"].(string)
+	if !ok {
+		return i.SubDomain(defaultSlug)
+	}
+	context, ok := config.GetConfig().Contexts[ctx].(map[string]interface{})
+	if !ok {
+		return i.SubDomain(defaultSlug)
+	}
+	redirect, ok := context[key].(string)
+	if !ok {
+		return i.SubDomain(defaultSlug)
+	}
+	splits := strings.SplitN(redirect, "#", 2)
+	parts := strings.SplitN(splits[0], "/", 2)
+	u := i.SubDomain(parts[0])
+	if len(parts) == 2 {
+		u.Path = parts[1]
+	}
+	if len(splits) == 2 {
+		u.Fragment = splits[1]
+	}
+	return u
+}
+
 // DefaultRedirection returns the URL where to redirect the user afer login
 // (and in most other cases where we need a redirection URL)
 func (i *Instance) DefaultRedirection() *url.URL {
-	u := i.SubDomain(consts.DriveSlug)
-	return u
+	return i.redirection("default_redirection", consts.DriveSlug)
+}
+
+// OnboardedRedirection returns the URL where to redirect the user after onboarding
+func (i *Instance) OnboardedRedirection() *url.URL {
+	return i.redirection("onboarded_redirection", consts.DriveSlug)
 }
 
 func (i *Instance) installApp(slug string) error {
