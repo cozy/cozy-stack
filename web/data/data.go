@@ -136,7 +136,7 @@ func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 		return err
 	}
 
-	err = couchdb.CreateNamedDoc(instance, doc)
+	err = couchdb.CreateNamedDocWithDB(instance, doc)
 	if err != nil {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}
