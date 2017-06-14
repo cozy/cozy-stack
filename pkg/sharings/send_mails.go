@@ -18,20 +18,57 @@ type mailTemplateValues struct {
 	RecipientName    string
 	SharerPublicName string
 	Description      string
-	OAuthQueryString string
+	SharingLink      string
+}
+
+// SendDiscoveryMail send a mail to the recipient, in order for him to give his
+// URL to the sender
+func SendDiscoveryMail(instance *instance.Instance, s *Sharing, rs *RecipientStatus) error {
+	sharerPublicName, err := getPublicName(instance)
+	if err != nil {
+		return err
+	}
+	// Fill in the description.
+	var desc string
+	if s.Desc == "" {
+		desc = "[No description provided]"
+	} else {
+		desc = s.Desc
+	}
+
+	discoveryLink, err := generateDiscoveryLink(instance, s, rs)
+	if err != nil {
+		return err
+	}
+
+	// Generate the base values of the email to send
+	discoveryMsg, err := generateMailMessage(s, rs.recipient,
+		&mailTemplateValues{
+			RecipientName:    rs.recipient.Email,
+			SharerPublicName: sharerPublicName,
+			Description:      desc,
+			SharingLink:      discoveryLink,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+		Domain:     instance.Domain,
+		WorkerType: "sendmail",
+		Options:    nil,
+		Message:    discoveryMsg,
+	})
+	return err
 }
 
 // SendSharingMails will generate the mail containing the details
 // regarding this sharing, and will then send it to all the recipients.
 func SendSharingMails(instance *instance.Instance, s *Sharing) error {
-	// We get the Couchdb document describing the instance to get the sharer's
-	// public name.
-	doc, err := instance.SettingsDocument()
+	sharerPublicName, err := getPublicName(instance)
 	if err != nil {
 		return err
 	}
-
-	sharerPublicName, _ := doc.M["public_name"].(string)
 	// Fill in the description.
 	var desc string
 	if s.Desc == "" {
@@ -42,13 +79,16 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 
 	errorOccurred := false
 	for _, rs := range s.RecipientsStatus {
+		err = rs.GetRecipient(instance)
+		if err != nil {
+			return err
+		}
+		// Special case if the recipient's URL is not known: start discovery
+		if rs.recipient.URL == "" {
+			return SendDiscoveryMail(instance, s, rs)
+		}
 		// Send mail based on the recipient status
 		if rs.Status == consts.SharingStatusMailNotSent {
-			err = rs.GetRecipient(instance)
-			if err != nil {
-				return err
-			}
-
 			// Generate recipient specific OAuth query string.
 			oAuthStr, errOAuth := generateOAuthQueryString(s, rs, instance.Scheme())
 			if errOAuth != nil {
@@ -63,7 +103,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 					RecipientName:    rs.recipient.Email,
 					SharerPublicName: sharerPublicName,
 					Description:      desc,
-					OAuthQueryString: oAuthStr,
+					SharingLink:      oAuthStr,
 				},
 			)
 			if errGenMail != nil {
@@ -192,4 +232,35 @@ func generateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 	oAuthQuery.RawQuery = mapParamOAuthQuery.Encode()
 
 	return oAuthQuery.String(), nil
+}
+
+func generateDiscoveryLink(instance *instance.Instance, s *Sharing, rs *RecipientStatus) (string, error) {
+	// Check if the recipient has an URL.
+	if rs.recipient.Email == "" {
+		return "", ErrRecipientHasNoEmail
+	}
+
+	path := "/sharings/discovery"
+	discQuery := url.Values{
+		"recipient_id":    {rs.recipient.ID()},
+		"recipient_email": {rs.recipient.Email},
+		"sharing_id":      {s.SharingID},
+	}
+	discURL := url.URL{
+		Scheme:   instance.Scheme(),
+		Host:     instance.Domain,
+		Path:     path,
+		RawQuery: discQuery.Encode(),
+	}
+
+	return discURL.String(), nil
+}
+
+func getPublicName(instance *instance.Instance) (string, error) {
+	doc, err := instance.SettingsDocument()
+	if err != nil {
+		return "", err
+	}
+	sharerPublicName, _ := doc.M["public_name"].(string)
+	return sharerPublicName, nil
 }

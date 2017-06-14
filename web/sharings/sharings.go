@@ -484,6 +484,47 @@ func setDestinationDirectory(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+func discoveryForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	sharingID := c.QueryParam("sharing_id")
+	recipientID := c.QueryParam("recipient_id")
+	recipientEmail := c.QueryParam("recipient_email")
+
+	// Check mandatory fields
+	_, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid sharing id",
+		})
+	}
+	_, err = sharings.GetRecipient(instance, recipientID)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid recipient id",
+		})
+	}
+	if recipientEmail == "" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid recipient email",
+		})
+	}
+
+	doc := &couchdb.JSONDoc{}
+	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return c.Render(http.StatusOK, "sharing_discovery.html", echo.Map{
+		"Locale":         instance.Locale,
+		"RecipientID":    recipientID,
+		"RecipientEmail": recipientEmail,
+		"SharingID":      sharingID,
+		"PublicName":     doc.M["public_name"],
+	})
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
@@ -495,6 +536,8 @@ func Routes(router *echo.Group) {
 	router.POST("/recipient", CreateRecipient)
 	router.POST("/access/client", ReceiveClientID)
 	router.POST("/access/code", getAccessToken)
+
+	router.GET("/discovery", discoveryForm)
 
 	router.DELETE("/:id", revokeSharing)
 	router.DELETE("/:id/recipient/:recipient-client-id", revokeRecipient)

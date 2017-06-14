@@ -632,7 +632,10 @@ func CreateSharing(instance *instance.Instance, sharing *Sharing) error {
 
 	// Register the sharer at each recipient and set the status accordingly.
 	for _, rs := range recStatus {
-		RegisterRecipient(instance, rs)
+		// If the URL is not known, a discovery mail will be sent later
+		if rs.recipient.URL != "" {
+			RegisterRecipient(instance, rs)
+		}
 	}
 
 	sharing.Owner = true
