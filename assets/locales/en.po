@@ -132,6 +132,9 @@ msgstr "Invalid scope"
 msgid "Error Must be authenticated"
 msgstr "You must be authenticated"
 
+msgid "Error Konnector execution"
+msgstr "Collection problem for your %s account"
+
 msgid "Permissions Read only"
 msgstr ", for read only"
 
