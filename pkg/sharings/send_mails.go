@@ -90,7 +90,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		// Send mail based on the recipient status
 		if rs.Status == consts.SharingStatusMailNotSent {
 			// Generate recipient specific OAuth query string.
-			oAuthStr, errOAuth := generateOAuthQueryString(s, rs, instance.Scheme())
+			oAuthStr, errOAuth := GenerateOAuthQueryString(s, rs, instance.Scheme())
 			if errOAuth != nil {
 				errorOccurred = logError(instance, errOAuth)
 				continue
@@ -177,9 +177,9 @@ func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValue
 	})
 }
 
-// generateOAuthQueryString takes care of creating a correct OAuth request for
+// GenerateOAuthQueryString takes care of creating a correct OAuth request for
 // the given sharing and recipient.
-func generateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (string, error) {
+func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (string, error) {
 
 	// Check if an oauth client exists for the owner at the recipient's.
 	if rs.Client.ClientID == "" || len(rs.Client.RedirectURIs) < 1 {

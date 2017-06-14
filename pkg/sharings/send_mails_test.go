@@ -53,7 +53,7 @@ func TestGenerateMailMessageSuccess(t *testing.T) {
 func TestGenerateOAuthQueryStringWhenThereIsNoOAuthClient(t *testing.T) {
 	// Without client id.
 	recStatus.Client.RedirectURIs = []string{"redirect.me.to.heaven"}
-	oauthQueryString, err := generateOAuthQueryString(sharingTest, recStatus,
+	oauthQueryString, err := GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
 	assert.Equal(t, ErrNoOAuthClient, err)
 	assert.Equal(t, oauthQueryString, "")
@@ -61,7 +61,7 @@ func TestGenerateOAuthQueryStringWhenThereIsNoOAuthClient(t *testing.T) {
 	// Without redirect uri.
 	recStatus.Client.ClientID = "sparta"
 	recStatus.Client.RedirectURIs = []string{}
-	oauthQueryString, err = generateOAuthQueryString(sharingTest, recStatus,
+	oauthQueryString, err = GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
 	assert.Equal(t, ErrNoOAuthClient, err)
 	assert.Equal(t, oauthQueryString, "")
@@ -71,7 +71,7 @@ func TestGenerateOAuthQueryStringWhenThereIsNoOAuthClient(t *testing.T) {
 func TestGenerateOAuthQueryStringWhenRecipientHasNoURL(t *testing.T) {
 	recStatus.Client.RedirectURIs = []string{"redirect.me.to.sparta"}
 
-	oauthQueryString, err := generateOAuthQueryString(sharingTest, recStatus,
+	oauthQueryString, err := GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
 	assert.Equal(t, ErrRecipientHasNoURL, err)
 	assert.Equal(t, "", oauthQueryString)
@@ -82,14 +82,14 @@ func TestGenerateOAuthQueryStringSuccess(t *testing.T) {
 	rec.URL = "this.is.url"
 	expectedStr := "http://this.is.url/sharings/request?client_id=sparta&redirect_uri=redirect.me.to.sparta&response_type=code&scope=&sharing_type=one-shot&state=sparta-id"
 
-	oAuthQueryString, err := generateOAuthQueryString(sharingTest, recStatus,
+	oAuthQueryString, err := GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedStr, oAuthQueryString)
 
 	// Second test: "http" scheme in the url.
 	rec.URL = "http://this.is.url"
-	oAuthQueryString, err = generateOAuthQueryString(sharingTest, recStatus,
+	oAuthQueryString, err = GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedStr, oAuthQueryString)
@@ -97,7 +97,7 @@ func TestGenerateOAuthQueryStringSuccess(t *testing.T) {
 	// Third test: "https" scheme in the url.
 	rec.URL = "https://this.is.url"
 	expectedStr = "https://this.is.url/sharings/request?client_id=sparta&redirect_uri=redirect.me.to.sparta&response_type=code&scope=&sharing_type=one-shot&state=sparta-id"
-	oAuthQueryString, err = generateOAuthQueryString(sharingTest, recStatus,
+	oAuthQueryString, err = GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedStr, oAuthQueryString)

@@ -525,6 +525,48 @@ func discoveryForm(c echo.Context) error {
 	})
 }
 
+func discovery(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	url := c.FormValue("url")
+	sharingID := c.FormValue("sharing_id")
+	recipientID := c.FormValue("recipient_id")
+
+	sharing, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	// Save the URL in db
+	recipient, err := sharings.GetRecipient(instance, recipientID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	recipient.URL = url
+	if err = couchdb.UpdateDoc(instance, recipient); err != nil {
+		return wrapErrors(err)
+	}
+
+	// Register the recipient with the given URL and save in db
+	recStatus, err := sharing.GetRecipientStatusFromRecipientID(instance, recipient.ID())
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
+		return wrapErrors(err)
+	}
+	if err = couchdb.UpdateDoc(instance, sharing); err != nil {
+		return wrapErrors(err)
+	}
+
+	// Generate the oauth URL and redirect the recipient
+	oAuthRedirect, err := sharings.GenerateOAuthQueryString(sharing, recStatus, instance.Scheme())
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.Redirect(http.StatusFound, oAuthRedirect)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
@@ -538,6 +580,7 @@ func Routes(router *echo.Group) {
 	router.POST("/access/code", getAccessToken)
 
 	router.GET("/discovery", discoveryForm)
+	router.POST("/discovery", discovery)
 
 	router.DELETE("/:id", revokeSharing)
 	router.DELETE("/:id/recipient/:recipient-client-id", revokeRecipient)
