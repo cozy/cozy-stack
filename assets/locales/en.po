@@ -209,3 +209,18 @@ msgstr "Societary (Maif)"
 
 msgid "Sharings Shared with Me directory"
 msgstr "Shared with Me"
+
+msgid "Discovery URL help"
+msgstr "Please enter your Cozy URL to receive the sharing from %s"
+
+msgid "Discovery URL field"
+msgstr "URL"
+
+msgid "Discovery URL placeholder"
+msgstr "https://yourcozyaddress.cozy"
+
+msgid "Discovery Submit"
+msgstr "Send"
+
+msgid "Hello recipient email"
+msgstr "Hello %s!"
