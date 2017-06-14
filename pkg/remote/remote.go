@@ -303,7 +303,10 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 		log.Infof("request %s has an invalid content-type", remote.URL.String())
 		return ErrInvalidContentType
 	}
-	if ctype != "application/json" && ctype != "text/xml" && ctype != "application/xml" {
+	if ctype != "application/json" &&
+		ctype != "text/xml" &&
+		ctype != "application/xml" &&
+		ctype != "application/sparql-results+json" {
 		class := strings.SplitN(ctype, "/", 2)[0]
 		if class != "image" && class != "audio" && class != "video" {
 			log.Infof("request %s has a content-type that is not allowed: %s",
