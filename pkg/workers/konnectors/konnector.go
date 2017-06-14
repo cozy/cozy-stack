@@ -320,7 +320,7 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	konnectorURL.Fragment = "/category/all/" + slug
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, &mails.Options{
 		Mode:         mails.ModeNoReply,
-		Subject:      inst.Translate("Konnector execution error"),
+		Subject:      inst.Translate("Error Konnector execution", domain),
 		TemplateName: "konnector_error_" + inst.Locale,
 		TemplateValues: map[string]string{
 			"KonnectorName": slug,

@@ -147,6 +147,9 @@ msgstr "Le paramètre scope est invalide"
 msgid "Error Must be authenticated"
 msgstr "Vous devez être connecté"
 
+msgid "Error Konnector execution"
+msgstr "Problème de collecte pour votre compte %s"
+
 msgid "Permissions Read only"
 msgstr ", en lecture seule "
 
