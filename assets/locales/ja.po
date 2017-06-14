@@ -139,6 +139,9 @@ msgstr "無効なスコープ"
 msgid "Error Must be authenticated"
 msgstr "認証されている必要があります"
 
+msgid "Error Konnector execution"
+msgstr ""
+
 msgid "Permissions Read only"
 msgstr "、読み取り専用"
 

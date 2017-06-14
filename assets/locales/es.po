@@ -147,6 +147,9 @@ msgstr "El parámetro scope no es válido"
 msgid "Error Must be authenticated"
 msgstr "Usted debe ser autentificado"
 
+msgid "Error Konnector execution"
+msgstr ""
+
 msgid "Permissions Read only"
 msgstr ", sólo en lectura"
 
