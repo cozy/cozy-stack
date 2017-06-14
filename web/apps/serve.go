@@ -163,6 +163,13 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	} else {
 		token = c.QueryParam("sharecode")
 	}
+	tracking := "false"
+	settings, err := i.SettingsDocument()
+	if err == nil {
+		if t, ok := settings.M["tracking"].(string); ok {
+			tracking = t
+		}
+	}
 	res := c.Response()
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 	res.WriteHeader(http.StatusOK)
@@ -175,6 +182,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		"IconPath":     app.Icon,
 		"CozyBar":      cozybar(i),
 		"CozyClientJS": cozyclientjs(i),
+		"Tracking":     tracking,
 	})
 }
 
