@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/echo"
 )
 
-const maxRefLimit = 30
+const maxRefLimit = 100
 
 func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Object, error) {
 	var dof vfs.DirOrFileDoc
