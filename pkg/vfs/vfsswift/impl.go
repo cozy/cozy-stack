@@ -1,9 +1,11 @@
 package vfsswift
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -327,7 +329,7 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &swiftFileOpen{f}, nil
+	return &swiftFileOpen{f, nil}, nil
 }
 
 // UpdateFileDoc overrides the indexer's one since the swift fs indexes files
@@ -458,6 +460,10 @@ func (f *swiftFileCreation) Read(p []byte) (int, error) {
 	return 0, os.ErrInvalid
 }
 
+func (f *swiftFileCreation) ReadAt(p []byte, off int64) (int, error) {
+	return 0, os.ErrInvalid
+}
+
 func (f *swiftFileCreation) Seek(offset int64, whence int) (int64, error) {
 	return 0, os.ErrInvalid
 }
@@ -582,11 +588,24 @@ func (f *swiftFileCreation) Close() (err error) {
 }
 
 type swiftFileOpen struct {
-	f *swift.ObjectOpenFile
+	f  *swift.ObjectOpenFile
+	br *bytes.Reader
 }
 
 func (f *swiftFileOpen) Read(p []byte) (int, error) {
 	return f.f.Read(p)
+}
+
+func (f *swiftFileOpen) ReadAt(p []byte, off int64) (int, error) {
+	// TODO find something smarter than keeping the whole file in memory
+	if f.br == nil {
+		buf, err := ioutil.ReadAll(f.f)
+		if err != nil {
+			return 0, err
+		}
+		f.br = bytes.NewReader(buf)
+	}
+	return f.br.ReadAt(p, off)
 }
 
 func (f *swiftFileOpen) Seek(offset int64, whence int) (int64, error) {
