@@ -183,23 +183,26 @@ msgstr "Scheduling jobs"
 msgid "Permissions io.cozy.permissions"
 msgstr "Delegating permissions"
 
-msgid "Permissions org.fing.mesinfos.client"
-msgstr "Clients (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr "Contract (Maif)"
 
-msgid "Permissions org.fing.mesinfos.consumptionstatement"
-msgstr "Consumption statement (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.home"
+msgstr "Home (Maif)"
 
-msgid "Permissions org.fing.mesinfos.contract"
-msgstr "Contracts (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr "Family (Maif)"
 
-msgid "Permissions org.fing.mesinfos.energybreakdown"
-msgstr "Energy breakdown (Mes infos)"
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr "Payment terms (Maif)"
 
-msgid "Permissions org.fing.mesinfos.home"
-msgstr "Home (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.sinistrehabitation"
+msgstr "Housing damage (Maif)"
 
-msgid "Permissions org.fing.mesinfos.paymentterms"
-msgstr "Payment terms (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.sinistrevehicule"
+msgstr "Vehicle damage (Maif)"
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr "Societary (Maif)"
 
 msgid "Sharings Shared with Me directory"
 msgstr "Shared with Me"
