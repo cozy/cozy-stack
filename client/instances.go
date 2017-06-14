@@ -110,7 +110,7 @@ func (c *Client) ListInstances() ([]*Instance, error) {
 		return nil, err
 	}
 	var list []*Instance
-	if err = readJSONAPI(res.Body, &list, nil); err != nil {
+	if err = readJSONAPI(res.Body, &list); err != nil {
 		return nil, err
 	}
 	return list, nil
@@ -205,7 +205,7 @@ func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (string, error) {
 
 func readInstance(res *http.Response) (*Instance, error) {
 	in := &Instance{}
-	if err := readJSONAPI(res.Body, &in, nil); err != nil {
+	if err := readJSONAPI(res.Body, &in); err != nil {
 		return nil, err
 	}
 	return in, nil

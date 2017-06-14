@@ -67,7 +67,7 @@ func (c *Client) ListApps(appType string) ([]*AppManifest, error) {
 		return nil, err
 	}
 	var mans []*AppManifest
-	if err := readJSONAPI(res.Body, &mans, nil); err != nil {
+	if err := readJSONAPI(res.Body, &mans); err != nil {
 		return nil, err
 	}
 	return mans, nil
@@ -154,7 +154,7 @@ func readAppManifestStream(res *http.Response) (*AppManifest, error) {
 		return nil, errors.New("No application data was sent")
 	}
 	app := &AppManifest{}
-	if err := readJSONAPI(bytes.NewReader(lastevt.Data), &app, nil); err != nil {
+	if err := readJSONAPI(bytes.NewReader(lastevt.Data), &app); err != nil {
 		return nil, err
 	}
 	return app, nil
@@ -162,7 +162,7 @@ func readAppManifestStream(res *http.Response) (*AppManifest, error) {
 
 func readAppManifest(res *http.Response) (*AppManifest, error) {
 	app := &AppManifest{}
-	if err := readJSONAPI(res.Body, &app, nil); err != nil {
+	if err := readJSONAPI(res.Body, &app); err != nil {
 		return nil, err
 	}
 	return app, nil

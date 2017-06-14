@@ -25,6 +25,7 @@ type jsonAPIErrors struct {
 type jsonAPIDocument struct {
 	Data     *json.RawMessage `json:"data"`
 	Included *json.RawMessage `json:"included"`
+	Links    *json.RawMessage `json:"links"`
 }
 
 // Client encapsulates the element representing a typical connection to the
@@ -142,7 +143,7 @@ func parseJSONAPIError(res *http.Response, b []byte) error {
 	return errs.Errors[0]
 }
 
-func readJSONAPI(r io.Reader, data interface{}, included interface{}) (err error) {
+func readJSONAPI(r io.Reader, data interface{}) (err error) {
 	defer func() {
 		if rc, ok := r.(io.ReadCloser); ok {
 			if cerr := rc.Close(); err == nil && cerr != nil {
@@ -156,12 +157,31 @@ func readJSONAPI(r io.Reader, data interface{}, included interface{}) (err error
 		return err
 	}
 	if data != nil {
-		if err = json.Unmarshal(*doc.Data, &data); err != nil {
-			return err
+		return json.Unmarshal(*doc.Data, &data)
+	}
+	return nil
+}
+
+func readJSONAPILinks(r io.Reader, included, links interface{}) (err error) {
+	defer func() {
+		if rc, ok := r.(io.ReadCloser); ok {
+			if cerr := rc.Close(); err == nil && cerr != nil {
+				err = cerr
+			}
 		}
+	}()
+	var doc jsonAPIDocument
+	decoder := json.NewDecoder(r)
+	if err = decoder.Decode(&doc); err != nil {
+		return err
 	}
 	if included != nil && doc.Included != nil {
 		if err = json.Unmarshal(*doc.Included, &included); err != nil {
+			return err
+		}
+	}
+	if links != nil && doc.Links != nil {
+		if err = json.Unmarshal(*doc.Links, &links); err != nil {
 			return err
 		}
 	}
