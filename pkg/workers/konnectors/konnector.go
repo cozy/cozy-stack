@@ -23,7 +23,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/sirupsen/logrus"
 
@@ -263,6 +262,8 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	slug := opts.Konnector
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 
+	log := logger.WithDomain(domain)
+
 	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
@@ -330,12 +331,14 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	if err != nil {
 		return err
 	}
-	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
-		Domain:     domain,
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
+	log.Infof("Konnector has failed definitively, should send mail.", msg)
+	// _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+	// 	Domain:     domain,
+	// 	WorkerType: "sendmail",
+	// 	Message:    msg,
+	// })
+	// return err
+	return nil
 }
 
 func wrapErr(ctx context.Context, err error) error {
