@@ -243,6 +243,34 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 	}
 }
 
+// SettingsDocument returns the document with the settings of this instance
+func (i *Instance) SettingsDocument() (*couchdb.JSONDoc, error) {
+	doc := &couchdb.JSONDoc{}
+	err := couchdb.GetDoc(i, consts.Settings, consts.InstanceSettingsID, doc)
+	if err != nil {
+		return nil, err
+	}
+	doc.Type = consts.Settings
+	return doc, nil
+}
+
+// Context returns the map from the config that matches the context of this instance
+func (i *Instance) Context() (map[string]interface{}, error) {
+	doc, err := i.SettingsDocument()
+	if err != nil {
+		return nil, err
+	}
+	ctx, ok := doc.M["context"].(string)
+	if !ok {
+		return nil, errors.New("Context not found")
+	}
+	context, ok := config.GetConfig().Contexts[ctx].(map[string]interface{})
+	if !ok {
+		return nil, errors.New("Context not found")
+	}
+	return context, nil
+}
+
 // DiskQuota returns the number of bytes allowed on the disk to the user.
 func (i *Instance) DiskQuota() int64 {
 	return i.BytesDiskQuota
@@ -299,6 +327,38 @@ func (i *Instance) PageURL(path string, queries url.Values) string {
 		RawQuery: query,
 	}
 	return u.String()
+}
+
+func (i *Instance) redirection(key, defaultSlug string) *url.URL {
+	context, err := i.Context()
+	if err != nil {
+		return i.SubDomain(defaultSlug)
+	}
+	redirect, ok := context[key].(string)
+	if !ok {
+		return i.SubDomain(defaultSlug)
+	}
+	splits := strings.SplitN(redirect, "#", 2)
+	parts := strings.SplitN(splits[0], "/", 2)
+	u := i.SubDomain(parts[0])
+	if len(parts) == 2 {
+		u.Path = parts[1]
+	}
+	if len(splits) == 2 {
+		u.Fragment = splits[1]
+	}
+	return u
+}
+
+// DefaultRedirection returns the URL where to redirect the user afer login
+// (and in most other cases where we need a redirection URL)
+func (i *Instance) DefaultRedirection() *url.URL {
+	return i.redirection("default_redirection", consts.DriveSlug)
+}
+
+// OnboardedRedirection returns the URL where to redirect the user after onboarding
+func (i *Instance) OnboardedRedirection() *url.URL {
+	return i.redirection("onboarded_redirection", consts.DriveSlug)
 }
 
 func (i *Instance) installApp(slug string) error {

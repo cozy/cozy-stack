@@ -268,10 +268,7 @@ func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode
 
 func addPublicName(t *testing.T, instance *instance.Instance) {
 	publicName := "El Shareto"
-	doc := &couchdb.JSONDoc{}
-
-	err := couchdb.GetDoc(instance, consts.Settings,
-		consts.InstanceSettingsID, doc)
+	doc, err := instance.SettingsDocument()
 	assert.NoError(t, err)
 
 	doc.M["public_name"] = publicName

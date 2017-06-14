@@ -167,9 +167,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 	}
 
 	// We get the instance document to extract the public name.
-	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID,
-		doc)
+	doc, err := instance.SettingsDocument()
 	if err != nil {
 		return err
 	}

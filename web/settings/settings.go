@@ -18,4 +18,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/clients", listClients)
 	router.DELETE("/clients/:id", revokeClient)
+
+	router.GET("/onboarded", onboarded)
+	router.GET("/context", context)
 }

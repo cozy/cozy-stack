@@ -312,3 +312,50 @@ HTTP/1.1 204 No Content
 
 To use this endpoint, an application needs a permission on the type
 `io.cozy.oauth.clients` for the verb `DELETE` (only client-side apps).
+
+
+## Context
+
+### GET /settings/onboarded
+
+It redirects the user to an application after the onboarding. The application
+is selected according to the context of the instance and the configuration of
+the stack.
+
+### GET /settings/context
+
+It gives the keys/values from the config for the context of the instance.
+
+#### Request
+
+```http
+GET /settings/context HTTP/1.1
+Host: alice.example.com
+Accept: application/vnd.api+json
+Cookie: sessionid=xxxx
+```
+
+#### Response
+
+```json
+{
+  "data": {
+    "type": "io.cozy.settings",
+    "id": "io.cozy.settings.context",
+    "attributes": {
+      "default_redirection": "drive/#/files",
+      "help_link": "https://forum.cozy.io/",
+      "onboarded_redirection": "collect/#/discovery/?intro"
+    },
+    "links": {
+      "self": "/settings/context"
+    }
+  }
+}
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.settings` for the verb `GET`. It can be restricted to the id
+`io.cozy.settings.context`.
