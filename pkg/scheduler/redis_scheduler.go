@@ -247,10 +247,14 @@ func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	default:
 		return errors.New("Not implemented yet")
 	}
-	return s.client.ZAdd(TriggersKey, redis.Z{
+	pipe := s.client.Pipeline()
+	pipe.ZAdd(TriggersKey, redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(t.Infos()),
 	}).Err()
+	pipe.ZRem(SchedKey, redisKey(t.Infos()))
+	_, err := pipe.Exec()
+	return err
 }
 
 // Get returns the trigger with the specified ID.
@@ -286,8 +290,8 @@ func (s *RedisScheduler) deleteTrigger(t Trigger) error {
 		return s.client.HDel(eventsKey(t.Infos().Domain), t.ID()).Err()
 	case *AtTrigger, *CronTrigger:
 		pipe := s.client.Pipeline()
-		pipe.ZRem(TriggersKey, t.ID())
-		pipe.ZRem(SchedKey, t.ID())
+		pipe.ZRem(TriggersKey, redisKey(t.Infos()))
+		pipe.ZRem(SchedKey, redisKey(t.Infos()))
 		_, err := pipe.Exec()
 		return err
 	}
