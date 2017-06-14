@@ -28,7 +28,7 @@ Alternatively, the client can opt in for skip mode by using `page[skip]`. When u
 The `/relationships/references` as a default limit of 100.
 
 ```http
-GET /data/some-type/some-id/relationships/references
+GET /data/some-type/some-id/relationships/references HTTP/1.1
 ```
 ```json
 {
@@ -40,7 +40,7 @@ GET /data/some-type/some-id/relationships/references
 ```
 
 ```http
-GET /data/some-type/some-id/relationships/references?page[limit]=10
+GET /data/some-type/some-id/relationships/references?page[limit]=10 HTTP/1.1
 ```
 ```json
 {
@@ -52,16 +52,16 @@ GET /data/some-type/some-id/relationships/references?page[limit]=10
 ```
 
 ```http
-GET /data/some-type/some-id/relationships/references?page[limit]=100&page[cursor]=7845122548848454212
+GET /data/some-type/some-id/relationships/references?page[limit]=100&page[cursor]=7845122548848454212 HTTP/1.1
 ```
 ```json
 {
-  "data": [ "... 20 docs ..." ],
+  "data": [ "... 20 docs ..." ]
 }
 ```
 
 ```http
-GET /data/some-type/some-id/relationships/references?page[limit]=10&page[skip]=0
+GET /data/some-type/some-id/relationships/references?page[limit]=10&page[skip]=0 HTTP/1.1
 ```
 ```json
 {
