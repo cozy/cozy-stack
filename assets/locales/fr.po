@@ -195,26 +195,26 @@ msgstr "Tâches à exécuter"
 msgid "Permissions io.cozy.triggers"
 msgstr "Planification de tâches à exécuter dans le futur"
 
-msgid "Permissions io.cozy.permissions"
-msgstr "Délégation de permissions"
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr "Contrat (Maif)"
 
-msgid "Permissions org.fing.mesinfos.client"
-msgstr "Clients (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.home"
+msgstr "Maison (Maif)"
 
-msgid "Permissions org.fing.mesinfos.consumptionstatement"
-msgstr "Déclaration de consommation (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr "Foyer (Maif)"
 
-msgid "Permissions org.fing.mesinfos.contract"
-msgstr "Contrats (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr "Paiement (Maif)"
 
-msgid "Permissions org.fing.mesinfos.energybreakdown"
-msgstr "Répartition de l'énergie (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.sinistrehabitation"
+msgstr "Sinistre habitation (Maif)"
 
-msgid "Permissions org.fing.mesinfos.home"
-msgstr "Domicile (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.sinistrevehicule"
+msgstr "Sinistre véhicule (Maif)"
 
-msgid "Permissions org.fing.mesinfos.paymentterms"
-msgstr "Délais de paiement (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr "Sociétaire (Maif)"
 
 msgid "Sharings Shared with Me directory"
 msgstr "Partagés avec Moi"
