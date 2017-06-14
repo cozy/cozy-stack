@@ -198,23 +198,26 @@ msgstr "Tareas programadas"
 msgid "Permissions io.cozy.permissions"
 msgstr "Delegación de permisos"
 
-msgid "Permissions org.fing.mesinfos.client"
-msgstr "Clientes (Mis datos)"
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.consumptionstatement"
-msgstr "Declaración de consumo (Mis datos)"
+msgid "Permissions fr.maif.maifuser.home"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.contract"
-msgstr "Contratos (Mis datos)"
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.energybreakdown"
-msgstr "Repartición de la energía (Mis datos)"
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.home"
-msgstr "Domicilio (Mis datos)"
+msgid "Permissions fr.maif.maifuser.sinistrehabitation"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.paymentterms"
-msgstr "Plazos de pago (Mis datos)"
+msgid "Permissions fr.maif.maifuser.sinistrevehicule"
+msgstr ""
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr ""
 
 msgid "Sharings Shared with Me directory"
 msgstr ""

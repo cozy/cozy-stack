@@ -195,6 +195,9 @@ msgstr "Tâches à exécuter"
 msgid "Permissions io.cozy.triggers"
 msgstr "Planification de tâches à exécuter dans le futur"
 
+msgid "Permissions io.cozy.permissions"
+msgstr "Délégation de permissions"
+
 msgid "Permissions fr.maif.maifuser.contrat"
 msgstr "Contrat (Maif)"
 

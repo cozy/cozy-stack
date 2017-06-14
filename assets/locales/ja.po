@@ -190,23 +190,26 @@ msgstr "ジョブのスケジュール中"
 msgid "Permissions io.cozy.permissions"
 msgstr "権限の委任"
 
-msgid "Permissions org.fing.mesinfos.client"
-msgstr "クライアント (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.contrat"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.consumptionstatement"
-msgstr "消費明細 (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.home"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.contract"
-msgstr "連絡先 (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.foyer"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.energybreakdown"
-msgstr "エネルギーの内訳 (Mes infos)"
+msgid "Permissions fr.maif.maifuser.paymentterms"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.home"
-msgstr "ホーム (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.sinistrehabitation"
+msgstr ""
 
-msgid "Permissions org.fing.mesinfos.paymentterms"
-msgstr "支払い条件 (Mes Infos)"
+msgid "Permissions fr.maif.maifuser.sinistrevehicule"
+msgstr ""
+
+msgid "Permissions fr.maif.maifuser.societaire"
+msgstr ""
 
 msgid "Sharings Shared with Me directory"
 msgstr "私と共有"
