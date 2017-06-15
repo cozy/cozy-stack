@@ -243,8 +243,8 @@ func generateDiscoveryLink(instance *instance.Instance, s *Sharing, rs *Recipien
 	path := "/sharings/discovery"
 	discQuery := url.Values{
 		"recipient_id":    {rs.recipient.ID()},
-		"recipient_email": {rs.recipient.Email},
 		"sharing_id":      {s.SharingID},
+		"recipient_email": {rs.recipient.Email},
 	}
 	discURL := url.URL{
 		Scheme:   instance.Scheme(),

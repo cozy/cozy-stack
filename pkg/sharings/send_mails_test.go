@@ -104,11 +104,9 @@ func TestGenerateOAuthQueryStringSuccess(t *testing.T) {
 }
 
 func TestSendSharingMails(t *testing.T) {
-	// We provoke the error that occurrs when a recipient has no URL or no
-	// OAuth client by creating an incomplete recipient document.
-	rec.URL = ""
 	// Add the recipient in the database.
-
+	rec.URL = "this.is.url"
+	rec.Email = ""
 	err := couchdb.CreateDoc(in, rec)
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -120,13 +118,19 @@ func TestSendSharingMails(t *testing.T) {
 
 	err = SendSharingMails(in, sharingTest)
 	assert.Error(t, err)
+}
 
-	// The other scenario is when the recipient has no email set.
-	rec.URL = "this.is.url"
-	rec.Email = ""
-	err = couchdb.UpdateDoc(in, rec)
+func TestGenerateDiscoveryLinkRecipientHasNoEmail(t *testing.T) {
+	recStatus.recipient.Email = ""
+	_, err := generateDiscoveryLink(in, sharingTest, recStatus)
+	assert.Equal(t, ErrRecipientHasNoEmail, err)
+}
+
+func TestGenerateDiscoveryLinkSuccess(t *testing.T) {
+	recStatus.recipient.Email = "email.test"
+	expectedStr := "https://" + in.Domain + "/sharings/discovery?recipient_email=email.test&recipient_id=" + rec.ID() + "&sharing_id=sparta-id"
+
+	discLink, err := generateDiscoveryLink(in, sharingTest, recStatus)
 	assert.NoError(t, err)
-
-	err = SendSharingMails(in, sharingTest)
-	assert.Error(t, err)
+	assert.Equal(t, expectedStr, discLink)
 }

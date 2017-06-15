@@ -514,6 +514,35 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 	assert.Nil(t, recStatus)
 }
 
+func TestGetRecipientStatusFromRecipientNoRecipient(t *testing.T) {
+	rs := &RecipientStatus{}
+	sharing := &Sharing{
+		RecipientsStatus: []*RecipientStatus{rs},
+	}
+	recStatus, err := sharing.GetRecipientStatusFromRecipientID(TestPrefix,
+		"bad recipient")
+	assert.Error(t, err)
+	assert.Nil(t, recStatus)
+}
+
+func TestGetRecipientStatusFromRecipientNotFound(t *testing.T) {
+	recID := "fake recipient"
+	rec := &Recipient{}
+	rec.SetID(recID)
+	rs := &RecipientStatus{
+		recipient: rec,
+	}
+
+	sharing := &Sharing{
+		RecipientsStatus: []*RecipientStatus{rs},
+	}
+
+	recStatus, err := sharing.GetRecipientStatusFromRecipientID(TestPrefix,
+		"bad recipient")
+	assert.Equal(t, ErrRecipientDoesNotExist, err)
+	assert.Nil(t, recStatus)
+}
+
 func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 	clientID := "fake client"
 	rs := &RecipientStatus{
@@ -528,6 +557,24 @@ func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 
 	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix,
 		clientID)
+	assert.NoError(t, err)
+	assert.Equal(t, rs, recStatus)
+}
+
+func TestGetRecipientStatusFromRecipientIDSuccess(t *testing.T) {
+	recID := "fake recipient"
+	rec := &Recipient{}
+	rec.SetID(recID)
+	rs := &RecipientStatus{
+		recipient: rec,
+	}
+
+	sharing := &Sharing{
+		RecipientsStatus: []*RecipientStatus{rs},
+	}
+
+	recStatus, err := sharing.GetRecipientStatusFromRecipientID(TestPrefix,
+		recID)
 	assert.NoError(t, err)
 	assert.Equal(t, rs, recStatus)
 }

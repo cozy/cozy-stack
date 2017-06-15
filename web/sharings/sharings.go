@@ -498,10 +498,16 @@ func discoveryForm(c echo.Context) error {
 			"Error": "Error Invalid sharing id",
 		})
 	}
-	_, err = sharings.GetRecipient(instance, recipientID)
+	recipient, err := sharings.GetRecipient(instance, recipientID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error Invalid recipient id",
+		})
+	}
+	// Block multiple url
+	if recipient.URL != "" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error recipient already known",
 		})
 	}
 	if recipientEmail == "" {
@@ -528,7 +534,7 @@ func discoveryForm(c echo.Context) error {
 func discovery(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	url := c.FormValue("url")
+	recipientURL := c.FormValue("url")
 	sharingID := c.FormValue("sharing_id")
 	recipientID := c.FormValue("recipient_id")
 
@@ -542,7 +548,16 @@ func discovery(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	recipient.URL = url
+	recURL, err := url.Parse(recipientURL)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	// Set https as the default scheme
+	if recURL.Scheme == "" {
+		recURL.Scheme = "https"
+	}
+
+	recipient.URL = recURL.String()
 	if err = couchdb.UpdateDoc(instance, recipient); err != nil {
 		return wrapErrors(err)
 	}
@@ -604,7 +619,7 @@ func wrapErrors(err error) error {
 	case sharings.ErrRecipientDoesNotExist:
 		return jsonapi.NotFound(err)
 	case sharings.ErrMissingScope, sharings.ErrMissingState, sharings.ErrRecipientHasNoURL,
-		sharings.ErrRecipientHasNoEmail:
+		sharings.ErrRecipientHasNoEmail, sharings.ErrRecipientBadParams:
 		return jsonapi.BadRequest(err)
 	case sharings.ErrSharingDoesNotExist, sharings.ErrPublicNameNotDefined:
 		return jsonapi.NotFound(err)
