@@ -17,7 +17,7 @@ msgstr "Photos"
 msgid "Tree Uploaded from Cozy Photos"
 msgstr "Transférées depuis Cozy Photos"
 
-msgid "Tree Backuped from my mobile"
+msgid "Tree Backed up from my mobile"
 msgstr "Sauvegardées depuis mon mobile"
 
 msgid "Login Credentials error"
@@ -28,7 +28,7 @@ msgid "Login Welcome"
 msgstr "Bienvenue !"
 
 msgid "Login Welcome name"
-msgstr "Bienvenue %s!"
+msgstr "Bienvenue %s !"
 
 msgid "Login Password help"
 msgstr "Saisissez votre mot de passe pour accéder à votre Cozy"

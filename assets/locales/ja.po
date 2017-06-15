@@ -17,7 +17,7 @@ msgstr "写真"
 msgid "Tree Uploaded from Cozy Photos"
 msgstr "Cozy フォトからアップロードしました"
 
-msgid "Tree Backuped from my mobile"
+msgid "Tree Backed up from my mobile"
 msgstr "自分のモバイルからバックアップしました"
 
 msgid "Login Credentials error"
