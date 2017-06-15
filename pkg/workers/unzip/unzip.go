@@ -3,10 +3,13 @@ package unzip
 import (
 	"archive/zip"
 	"context"
+	"fmt"
 	"io"
+	"path"
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -41,17 +44,20 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	fs := i.VFS()
+	return unzip(fs, msg.Zip, msg.Destination)
+}
 
-	zipDoc, err := fs.FileByID(msg.Zip)
+func unzip(fs vfs.VFS, zipID, destination string) error {
+	zipDoc, err := fs.FileByID(zipID)
 	if err != nil {
 		return err
 	}
-	dstDoc, err := fs.DirByID(msg.Destination)
+	dstDoc, err := fs.DirByID(destination)
 	if err != nil {
 		return err
 	}
 
-	fr, err := i.VFS().OpenFile(zipDoc)
+	fr, err := fs.OpenFile(zipDoc)
 	if err != nil {
 		return err
 	}
@@ -61,7 +67,17 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	for _, f := range r.File {
-		// TODO check if f.Name has slashes
+		name := path.Base(f.Name)
+		dirname := path.Dir(f.Name)
+		dir := dstDoc
+		if dirname != "." {
+			dirname = path.Join(dstDoc.Fullpath, dirname)
+			dir, err = vfs.MkdirAll(fs, dirname, nil)
+			if err != nil {
+				return err
+			}
+		}
+
 		rc, err := f.Open()
 		if err != nil {
 			return err
@@ -70,14 +86,19 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		size := int64(f.UncompressedSize64)
 		mime, class := vfs.ExtractMimeAndClassFromFilename(f.Name)
 		now := time.Now()
-		doc, err := vfs.NewFileDoc(f.Name, dstDoc.ID(), size, nil, mime, class, now, false, false, nil)
+		doc, err := vfs.NewFileDoc(name, dir.ID(), size, nil, mime, class, now, false, false, nil)
 		if err != nil {
 			return err
 		}
 		file, err := fs.CreateFile(doc, nil)
 		if err != nil {
-			// TODO what about conflict?
-			return err
+			if couchdb.IsConflictError(err) {
+				doc.DocName = fmt.Sprintf("%s - conflict - %d", doc.DocName, time.Now().Unix())
+				file, err = fs.CreateFile(doc, nil)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		defer file.Close()
 		_, err = io.Copy(file, rc)
