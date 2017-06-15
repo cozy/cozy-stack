@@ -29,13 +29,10 @@ func SendDiscoveryMail(instance *instance.Instance, s *Sharing, rs *RecipientSta
 		return err
 	}
 	// Fill in the description.
-	var desc string
-	if s.Desc == "" {
+	desc := s.Desc
+	if desc == "" {
 		desc = "[No description provided]"
-	} else {
-		desc = s.Desc
 	}
-
 	discoveryLink, err := generateDiscoveryLink(instance, s, rs)
 	if err != nil {
 		return err
@@ -70,11 +67,9 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		return err
 	}
 	// Fill in the description.
-	var desc string
-	if s.Desc == "" {
+	desc := s.Desc
+	if desc == "" {
 		desc = "[No description provided]"
-	} else {
-		desc = s.Desc
 	}
 
 	errorOccurred := false

@@ -22,7 +22,7 @@ var (
 	// ErrRecipientHasNoURL is used to signal that a recipient has no URL.
 	ErrRecipientHasNoURL = errors.New("Recipient has no URL")
 	// ErrRecipientBadParams is used at a recipient creation when the params are not well defined
-	ErrRecipientBadParams = errors.New("Recipient parameters are not corrects")
+	ErrRecipientBadParams = errors.New("Recipient parameters are invalid")
 	// ErrMailCouldNotBeSent is used when an error ocurred while trying to send
 	// an email.
 	ErrMailCouldNotBeSent = errors.New("Mail could not be sent")
