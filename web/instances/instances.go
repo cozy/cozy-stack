@@ -138,6 +138,9 @@ func modifyHandler(c echo.Context) error {
 func listHandler(c echo.Context) error {
 	is, err := instance.List()
 	if err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			return jsonapi.DataList(c, http.StatusOK, nil, nil)
+		}
 		return wrapError(err)
 	}
 
