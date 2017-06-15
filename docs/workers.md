@@ -12,6 +12,42 @@ arguments.
 The `log` worker will just print in the log file the job sent to it. It can
 useful for debugging for example.
 
+## unzip worker
+
+The `unzip` worker can take a zip archive from the VFS, and will unzip the
+files inside it to a directory of the VFS. The options are:
+
+- `zip`: the ID of the zip file
+- `destination`: the ID of the directory where the files will be unzipped.
+
+### Example
+
+```json
+{
+  "zip": "8737b5d6-51b6-11e7-9194-bf5b64b3bc9e",
+  "destination": "88750a84-51b6-11e7-ba90-4f0b1cb62b7b"
+}
+```
+
+### Permissions
+
+To use this worker from a client-side application, you will need to ask the
+permission. It is done by adding this to the manifest:
+
+```json
+{
+  "permissions": {
+    "unzip-to-a-directory": {
+      "description": "Required to unzip a file inside the cozy",
+      "type": "io.cozy.jobs",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["unzip"]
+    }
+  }
+}
+```
+
 ## sendmail worker
 
 The `sendmail` worker can be used to send mail from the stack. It implies that
