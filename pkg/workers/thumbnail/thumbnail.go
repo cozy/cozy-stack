@@ -43,6 +43,9 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	if err := m.Unmarshal(msg); err != nil {
 		return err
 	}
+	if msg.Event.Type != "DELETED" && msg.Event.Doc.Trashed {
+		return nil
+	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	log := logger.WithDomain(domain)
 	log.Infof("[jobs] thumbnail: %s %s", msg.Event.Type, msg.Event.Doc.ID())
@@ -55,7 +58,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		return generateThumbnails(ctx, i, &msg.Event.Doc)
 	case "UPDATED":
 		if err = removeThumbnails(i, &msg.Event.Doc); err != nil {
-			return err
+			log.Infof("[jobs] failed to remove thumbnails for %s", msg.Event.Doc.ID())
 		}
 		return generateThumbnails(ctx, i, &msg.Event.Doc)
 	case "DELETED":
