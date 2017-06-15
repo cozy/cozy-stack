@@ -100,10 +100,13 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 				}
 			}
 		}
-		defer file.Close()
 		_, err = io.Copy(file, rc)
+		cerr := file.Close()
 		if err != nil {
 			return err
+		}
+		if cerr != nil {
+			return cerr
 		}
 	}
 	return nil
