@@ -49,7 +49,7 @@ var passwordResetValidityDuration = 15 * time.Minute
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
 
-const illegalChars = " /?#@\t\r\n\x00"
+const illegalChars = " /,;&?#@|='\"\t\r\n\x00"
 
 var (
 	// ErrNotFound is used when the seeked instance was not found
