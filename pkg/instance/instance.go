@@ -414,7 +414,7 @@ func (i *Instance) createDefaultFilesTree() error {
 	if err == nil {
 		name = i.Translate("Tree Uploaded from Cozy Photos")
 		createDir(vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)) // #nosec
-		name = i.Translate("Tree Backuped from my mobile")
+		name = i.Translate("Tree Backed up from my mobile")
 		createDir(vfs.NewDirDoc(i.VFS(), name, photos.ID(), nil)) // #nosec
 	}
 
