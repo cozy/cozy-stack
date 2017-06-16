@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"net/url"
 
+	"errors"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -321,31 +324,29 @@ func getAccessToken(c echo.Context) error {
 // called, otherwise we will redirect to /data.
 func receiveDocument(c echo.Context) error {
 	ins := middlewares.GetInstance(c)
-	ins.Logger().Debugf("[sharings] Receiving %s: %s", c.Param("doctype"),
-		c.Param("docid"))
+	sharingID := c.QueryParam(consts.QueryParamSharingID)
+	if sharingID == "" {
+		return jsonapi.BadRequest(errors.New("Missing sharing id"))
+	}
+
+	sharing, errf := sharings.FindSharing(ins, sharingID)
+	if errf != nil {
+		return errf
+	}
 
 	var err error
 	switch c.Param("doctype") {
 	case consts.Files:
-		err = creationWithIDHandler(c, ins)
+		err = creationWithIDHandler(c, ins, sharing.AppSlug)
 	default:
-		currDoctype := c.Param("doctype")
-
-		doctypes, errc := couchdb.AllDoctypes(ins)
+		doctype := c.Param("doctype")
+		exist, errc := doesDoctypeExist(ins, doctype)
 		if errc != nil {
 			return errc
 		}
 
-		var exist bool
-		for _, doctype := range doctypes {
-			if doctype == currDoctype {
-				exist = true
-				break
-			}
-		}
-
 		if !exist {
-			err = couchdb.CreateDB(ins, currDoctype)
+			err = couchdb.CreateDB(ins, doctype)
 			if err != nil {
 				return err
 			}
@@ -357,6 +358,8 @@ func receiveDocument(c echo.Context) error {
 		return err
 	}
 
+	ins.Logger().Debugf("[sharings] Received %s: %s", c.Param("doctype"),
+		c.Param("docid"))
 	return c.JSON(http.StatusOK, nil)
 }
 
@@ -451,6 +454,45 @@ func revokeRecipient(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+func setDestinationDirectory(c echo.Context) error {
+	slug := c.QueryParam(consts.QueryParamAppSlug)
+	if slug == "" {
+		return jsonapi.BadRequest(errors.New("Missing app slug"))
+	}
+
+	// TODO check permissions for app
+
+	doctype := c.QueryParam(consts.QueryParamDocType)
+	if doctype == "" {
+		return jsonapi.BadRequest(errors.New("Missing doctype"))
+	}
+
+	ins := middlewares.GetInstance(c)
+	exists, err := doesDoctypeExist(ins, doctype)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return jsonapi.BadRequest(errors.New("Doctype does not exist"))
+	}
+
+	dirID := c.QueryParam(consts.QueryParamDirID)
+	if dirID == "" {
+		return jsonapi.BadRequest(errors.New("Missing directory id"))
+	}
+
+	if _, err = ins.VFS().DirByID(dirID); err != nil {
+		return jsonapi.BadRequest(errors.New("Directory does not exist"))
+	}
+
+	err = sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
+	if err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
@@ -467,6 +509,8 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:id/recipient/:recipient-client-id", revokeRecipient)
 
 	router.DELETE("/files/:file-id/referenced_by", removeReferences)
+
+	router.POST("/app/destinationDirectory", setDestinationDirectory)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
@@ -493,4 +537,19 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	}
 	return err
+}
+
+func doesDoctypeExist(ins *instance.Instance, doctype string) (bool, error) {
+	doctypes, err := couchdb.AllDoctypes(ins)
+	if err != nil {
+		return false, err
+	}
+
+	for _, dType := range doctypes {
+		if doctype == dType {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

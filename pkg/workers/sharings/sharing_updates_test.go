@@ -46,7 +46,6 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 func createSharing(t *testing.T, sharingType string, owner bool, rule permissions.Rule) sharings.Sharing {
 	sharing := sharings.Sharing{
 		Owner:       owner,
-		Type:        consts.Sharings,
 		SharingType: sharingType,
 		SharingID:   utils.RandomString(32),
 		Permissions: permissions.Set{rule},

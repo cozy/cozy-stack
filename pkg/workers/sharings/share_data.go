@@ -27,8 +27,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/cozy/echo"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 func init() {
@@ -108,6 +108,7 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 	}
 
 	fileOpts.queries = url.Values{
+		consts.QueryParamSharingID:    {opts.SharingID},
 		consts.QueryParamType:         {consts.FileType},
 		consts.QueryParamName:         {fileDoc.DocName},
 		consts.QueryParamExecutable:   {strconv.FormatBool(fileDoc.Executable)},
@@ -241,7 +242,10 @@ func DeleteDoc(ins *instance.Instance, opts *SendOptions) error {
 				"Accept":        "application/json",
 				"Authorization": "Bearer " + recipient.AccessToken.AccessToken,
 			},
-			Queries:    url.Values{"rev": {rev}},
+			Queries: url.Values{
+				consts.QueryParamSharingID: {opts.SharingID},
+				consts.QueryParamRev:       {rev},
+			},
 			NoResponse: true,
 		}
 		_, errSend := request.Req(reqOpts)
@@ -330,6 +334,9 @@ func sendDocToRecipient(ins *instance.Instance, opts *SendOptions, rec *sharings
 			"Accept":        "application/json",
 			"Authorization": "Bearer " + rec.AccessToken.AccessToken,
 		},
+		Queries: url.Values{
+			consts.QueryParamSharingID: {opts.SharingID},
+		},
 		Body:       body,
 		NoResponse: true,
 	}
@@ -393,11 +400,6 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) error {
 	dirTags := strings.Join(dirDoc.Tags, files.TagSeparator)
 
-	parentID, err := getParentDirID(opts, dirDoc.DirID)
-	if err != nil {
-		return err
-	}
-
 	var refs string
 	if opts.Selector == consts.SelectorReferencedBy {
 		sharedRefs := opts.getSharedReferences()
@@ -419,14 +421,14 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 				echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
 			},
 			Queries: url.Values{
-				consts.QueryParamTags: {dirTags},
-				consts.QueryParamName: {dirDoc.DocName},
-				consts.QueryParamType: {consts.DirType},
+				consts.QueryParamSharingID: {opts.SharingID},
+				consts.QueryParamTags:      {dirTags},
+				consts.QueryParamName:      {dirDoc.DocName},
+				consts.QueryParamType:      {consts.DirType},
 				consts.QueryParamCreatedAt: {
 					dirDoc.CreatedAt.Format(time.RFC1123)},
 				consts.QueryParamUpdatedAt: {
 					dirDoc.CreatedAt.Format(time.RFC1123)},
-				consts.QueryParamDirID:        {parentID},
 				consts.QueryParamReferencedBy: {refs},
 			},
 			NoResponse: true,
@@ -629,8 +631,9 @@ func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions) error {
 				echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
 			},
 			Queries: url.Values{
-				consts.QueryParamRev:  {opts.DocRev},
-				consts.QueryParamType: {opts.Type},
+				consts.QueryParamSharingID: {opts.SharingID},
+				consts.QueryParamRev:       {opts.DocRev},
+				consts.QueryParamType:      {opts.Type},
 			},
 			NoResponse: true,
 		}
@@ -651,11 +654,6 @@ func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions) error {
 
 // Send the file to the recipient.
 //
-// If this is a creation (method = "POST") the sharer must specify the
-// destination directory: since we are "creating" the file at the recipient we
-// should specify where to put it. For now as we are only sharing albums this
-// destination directory always is "Shared With Me".
-//
 // Two scenarii are possible:
 // 1. `opts.DocRev` is empty: the recipient should not have the file in his
 //    Cozy.
@@ -664,11 +662,6 @@ func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions) error {
 func sendFileToRecipient(ins *instance.Instance, fileDoc *vfs.FileDoc, opts *SendOptions, recipient *sharings.RecipientInfo, method string) error {
 	if !opts.fileOpts.set {
 		return errors.New("[sharings] fileOpts were not set")
-	}
-
-	if method == http.MethodPost {
-		opts.fileOpts.queries.Add(consts.QueryParamDirID,
-			consts.SharedWithMeDirID)
 	}
 
 	if opts.DocRev != "" {
@@ -710,10 +703,6 @@ func sendPatchToRecipient(ins *instance.Instance, patch *jsonapi.Document, opts 
 		return err
 	}
 
-	parentID, err := getParentDirID(opts, dirID)
-	if err != nil {
-		return err
-	}
 	reqOpts := &request.Options{
 		Domain: recipient.URL,
 		Scheme: recipient.Scheme,
@@ -724,9 +713,9 @@ func sendPatchToRecipient(ins *instance.Instance, patch *jsonapi.Document, opts 
 			echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
 		},
 		Queries: url.Values{
-			consts.QueryParamRev:   {opts.DocRev},
-			consts.QueryParamType:  {opts.Type},
-			consts.QueryParamDirID: {parentID},
+			consts.QueryParamSharingID: {opts.SharingID},
+			consts.QueryParamRev:       {opts.DocRev},
+			consts.QueryParamType:      {opts.Type},
 		},
 		Body:       body,
 		NoResponse: true,
@@ -771,7 +760,8 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 	}
 
 	values := url.Values{
-		consts.QueryParamSharer: {strconv.FormatBool(sendToSharer)},
+		consts.QueryParamSharingID: {opts.SharingID},
+		consts.QueryParamSharer:    {strconv.FormatBool(sendToSharer)},
 	}
 
 	reqOpts := &request.Options{
@@ -781,8 +771,9 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 		Path:    path,
 		Queries: values,
 		Headers: request.Headers{
-			echo.HeaderContentType:   jsonapi.ContentType,
-			echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
+			echo.HeaderContentType: jsonapi.ContentType,
+			echo.HeaderAuthorization: "Bearer " +
+				recipient.AccessToken.AccessToken,
 		},
 		Body:       body,
 		NoResponse: true,
@@ -799,32 +790,6 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 		}
 	}
 	return err
-}
-
-// getParentDirID returns the id of the parent directory the file should have at
-// the recipient.
-//
-// Two scenarii are possible:
-// 1. There is NO selector: the sharing is based on folders/files. If the file
-//    we are about to send has its id in the `values` declared in the
-//    permissions then it is one of the targets of this sharing. Its
-//    `dirID` must be set to `SharedWithMe`. If not then we don't modify it.
-// 2. There is a selector: the sharing is not based on folders/files. We change
-//    the `dirID` to `SharedWithMe`.
-func getParentDirID(opts *SendOptions, dirID string) (parentID string, err error) {
-	if opts.Selector == "" {
-		if opts.DocID == consts.RootDirID {
-			return "", errors.New("/ cannot be shared")
-		}
-
-		if isShared(opts.DocID, opts.Values) {
-			return consts.SharedWithMeDirID, nil
-		}
-
-		return dirID, nil
-	}
-
-	return consts.SharedWithMeDirID, nil
 }
 
 func isShared(id string, acceptedIDs []string) bool {

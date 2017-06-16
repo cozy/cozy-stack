@@ -29,10 +29,10 @@ import (
 type Sharing struct {
 	SID         string `json:"_id,omitempty"`
 	SRev        string `json:"_rev,omitempty"`
-	Type        string `json:"type,omitempty"`
 	Desc        string `json:"desc,omitempty"`
 	SharingID   string `json:"sharing_id,omitempty"`
 	SharingType string `json:"sharing_type"`
+	AppSlug     string `json:"app_slug"`
 	Owner       bool   `json:"owner"`
 	Revoked     bool   `json:"revoked,omitempty"`
 
@@ -654,7 +654,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 
 	var err error
 	if sharing.Owner {
-		if sharing.Type == consts.MasterMasterSharing {
+		if sharing.SharingType == consts.MasterMasterSharing {
 			for _, recipient := range sharing.RecipientsStatus {
 				err = deleteOAuthClient(ins, recipient.HostClientID)
 				if err != nil {
@@ -678,7 +678,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
 
 		sharing.Sharer.SharerStatus.HostClientID = ""
 
-		if sharing.Type == consts.MasterMasterSharing {
+		if sharing.SharingType == consts.MasterMasterSharing {
 			err = removeSharingTriggers(ins, sharing.SharingID)
 			if err != nil {
 				return err
