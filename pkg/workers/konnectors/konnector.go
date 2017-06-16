@@ -319,7 +319,7 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 
 	konnectorURL := inst.SubDomain(consts.CollectSlug)
 	konnectorURL.Fragment = "/category/all/" + slug
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, &mails.Options{
+	mail := mails.Options{
 		Mode:         mails.ModeNoReply,
 		Subject:      inst.Translate("Error Konnector execution", domain),
 		TemplateName: "konnector_error_" + inst.Locale,
@@ -327,11 +327,12 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 			"KonnectorName": slug,
 			"KonnectorPage": konnectorURL.String(),
 		},
-	})
-	if err != nil {
-		return err
 	}
-	log.Infof("Konnector has failed definitively, should send mail.", msg)
+	// msg, err := jobs.NewMessage(jobs.JSONEncoding, &mail)
+	// if err != nil {
+	// 	return err
+	// }
+	log.Info("Konnector has failed definitively, should send mail.", mail)
 	// _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
 	// 	Domain:     domain,
 	// 	WorkerType: "sendmail",
