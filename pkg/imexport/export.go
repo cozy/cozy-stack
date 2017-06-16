@@ -21,6 +21,7 @@ func writeFile(fs vfs.VFS, name string, tw *tar.Writer, doc *vfs.FileDoc) error 
 		ModTime:    doc.ModTime(),
 		AccessTime: doc.CreatedAt,
 		ChangeTime: doc.UpdatedAt,
+		Typeflag:   tar.TypeReg,
 	}
 	if doc.Executable {
 		hdr.Mode = 0755
@@ -35,12 +36,34 @@ func writeFile(fs vfs.VFS, name string, tw *tar.Writer, doc *vfs.FileDoc) error 
 	return nil
 }
 
+func createDir(name string, tw *tar.Writer, dir *vfs.DirDoc) error {
+
+	hdr := &tar.Header{
+		Name:     name,
+		Mode:     0755,
+		Size:     dir.Size(),
+		ModTime:  dir.ModTime(),
+		Typeflag: tar.TypeDir,
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func export(tw *tar.Writer, fs vfs.VFS) error {
 	root := "/Documents"
 
 	err := vfs.Walk(fs, root, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
+		}
+
+		if dir != nil {
+			if err := createDir(name, tw, dir); err != nil {
+				return err
+			}
 		}
 
 		if file != nil {
