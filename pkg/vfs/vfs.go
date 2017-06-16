@@ -78,6 +78,7 @@ type Fs interface {
 // file for reading or writing.
 type File interface {
 	io.Reader
+	io.ReaderAt
 	io.Seeker
 	io.Writer
 	io.Closer

@@ -20,6 +20,7 @@ import (
 	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
 	_ "github.com/cozy/cozy-stack/pkg/workers/sharings"
 	_ "github.com/cozy/cozy-stack/pkg/workers/thumbnail"
+	_ "github.com/cozy/cozy-stack/pkg/workers/unzip"
 )
 
 type (

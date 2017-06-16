@@ -407,6 +407,10 @@ func (f *aferoFileOpen) Read(p []byte) (int, error) {
 	return f.f.Read(p)
 }
 
+func (f *aferoFileOpen) ReadAt(p []byte, off int64) (int, error) {
+	return f.f.ReadAt(p, off)
+}
+
 func (f *aferoFileOpen) Seek(offset int64, whence int) (int64, error) {
 	return f.f.Seek(offset, whence)
 }
@@ -438,6 +442,10 @@ type aferoFileCreation struct {
 }
 
 func (f *aferoFileCreation) Read(p []byte) (int, error) {
+	return 0, os.ErrInvalid
+}
+
+func (f *aferoFileCreation) ReadAt(p []byte, off int64) (int, error) {
 	return 0, os.ErrInvalid
 }
 
