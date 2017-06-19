@@ -45,11 +45,9 @@ func createDir(name string, tw *tar.Writer, dir *vfs.DirDoc) error {
 		ModTime:  dir.ModTime(),
 		Typeflag: tar.TypeDir,
 	}
-	if err := tw.WriteHeader(hdr); err != nil {
-		return err
-	}
+	err := tw.WriteHeader(hdr)
 
-	return nil
+	return err
 }
 
 func export(tw *tar.Writer, fs vfs.VFS) error {

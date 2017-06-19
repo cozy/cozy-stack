@@ -37,7 +37,7 @@ func export(c echo.Context) error {
 
 	mailBody := fmt.Sprintf("Bonjour, vous pouvez dès à présent récupérer vos documents sur le lien suivant : http://%s%s%s-%s",
 		domain, c.Path(), domain, id)
-	msg, _ := jobs.NewMessage("json", workers.Options{
+	msg, err := jobs.NewMessage("json", workers.Options{
 		Mode:    workers.ModeNoReply,
 		Subject: "Cozy: vos documents sont prêts",
 		Parts: []*workers.Part{
@@ -47,6 +47,9 @@ func export(c echo.Context) error {
 			},
 		},
 	})
+	if err != nil {
+		return err
+	}
 
 	context := jobs.NewWorkerContext(instance.Domain, "abcd")
 	err = workers.SendMail(context, msg)
