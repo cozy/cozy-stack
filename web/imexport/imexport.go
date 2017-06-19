@@ -1,14 +1,15 @@
 package imexport
 
 import (
+	"encoding/base32"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/imexport"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -20,7 +21,8 @@ func export(c echo.Context) error {
 
 	domain := instance.Domain
 
-	id := utils.RandomString(16)
+	tab := crypto.GenerateRandomBytes(20)
+	id := base32.StdEncoding.EncodeToString(tab)
 
 	w, err := os.Create(fmt.Sprintf("%s-%s.tar.gz", domain, id))
 	if err != nil {
@@ -33,13 +35,13 @@ func export(c echo.Context) error {
 		return err
 	}
 
-	fmt.Println(instance.Domain, c.Path())
+	lien := fmt.Sprintf("http://%s%s%s-%s", domain, c.Path(), domain, id)
 
-	mailBody := fmt.Sprintf("Bonjour, vous pouvez dès à présent récupérer vos documents sur le lien suivant : http://%s%s%s-%s",
-		domain, c.Path(), domain, id)
+	mailBody := fmt.Sprintf("Bonjour %s,\n\nVotre archive contenant l'ensemble de vos fichiers Cozy est prête à être téléchargée. Vous pouvez vous rendre sur %s pour y accéder.\n\nBonne journée\nL'équipe Cozy.",
+		instance.Domain, lien)
 	msg, err := jobs.NewMessage("json", workers.Options{
 		Mode:    workers.ModeNoReply,
-		Subject: "Cozy: vos documents sont prêts",
+		Subject: "Téléchargement de vos fichiers Cozy",
 		Parts: []*workers.Part{
 			{
 				Type: "text/plain",
