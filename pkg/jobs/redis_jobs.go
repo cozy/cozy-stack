@@ -10,7 +10,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-var log = logger.WithNamespace("redis-job")
+var joblog = logger.WithNamespace("redis-job")
 
 const redisPrefix = "j/"
 
@@ -71,18 +71,18 @@ func (b *redisBroker) pollLoop(keys []string) {
 		workerType := results[0][len(redisPrefix):]
 		ch, ok := b.queues[workerType]
 		if !ok {
-			log.Warnf("Unknown workerType: %s", workerType)
+			joblog.Warnf("Unknown workerType: %s", workerType)
 			continue
 		}
 
 		parts := strings.SplitN(results[1], "/", 2)
 		if len(parts) != 2 {
-			log.Warnf("Invalid key %s", results[1])
+			joblog.Warnf("Invalid key %s", results[1])
 			continue
 		}
 		infos, err := b.GetJobInfos(parts[0], parts[1])
 		if err != nil {
-			log.Warnf("Cannot find job %s on domain %s: %s", parts[1], parts[0], err)
+			joblog.Warnf("Cannot find job %s on domain %s: %s", parts[1], parts[0], err)
 			continue
 		}
 
