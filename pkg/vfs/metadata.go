@@ -14,7 +14,7 @@ import (
 	// Same for image/webp
 	_ "golang.org/x/image/webp"
 
-	"github.com/xor-gate/goexif2/exif"
+	"github.com/cozy/goexif2/exif"
 )
 
 // MetadataExtractorVersion is the version number of the metadata extractor.
