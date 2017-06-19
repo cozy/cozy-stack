@@ -31,7 +31,7 @@ import (
 
 func init() {
 	jobs.AddWorker("konnector", &jobs.WorkerConfig{
-		Concurrency:  runtime.NumCPU(),
+		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
 		MaxExecTime:  200 * time.Second,
 		Timeout:      200 * time.Second,
