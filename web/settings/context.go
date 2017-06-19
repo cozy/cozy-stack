@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -46,6 +47,9 @@ func onboarded(c echo.Context) error {
 func context(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	ctx, err := i.Context()
+	if err == instance.ErrContextNotFound {
+		return jsonapi.NotFound(err)
+	}
 	if err != nil {
 		return err
 	}

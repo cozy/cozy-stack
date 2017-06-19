@@ -66,6 +66,8 @@ var (
 	ErrMissingPassphrase = errors.New("Missing new passphrase")
 	// ErrInvalidPassphrase is returned when the passphrase is invalid
 	ErrInvalidPassphrase = errors.New("Invalid passphrase")
+	// ErrContextNotFound is returned when the instance has no context
+	ErrContextNotFound = errors.New("Context not found")
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
@@ -262,11 +264,11 @@ func (i *Instance) Context() (map[string]interface{}, error) {
 	}
 	ctx, ok := doc.M["context"].(string)
 	if !ok {
-		return nil, errors.New("Context not found")
+		return nil, ErrContextNotFound
 	}
 	context, ok := config.GetConfig().Contexts[ctx].(map[string]interface{})
 	if !ok {
-		return nil, errors.New("Context not found")
+		return nil, ErrContextNotFound
 	}
 	return context, nil
 }
