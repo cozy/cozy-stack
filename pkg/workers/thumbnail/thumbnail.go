@@ -121,6 +121,7 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 		"-limit", "Memory", "2GB",
 		"-limit", "Map", "3GB",
 		"-",              // Takes the input from stdin
+		"-auto-orient",   // Rotate image according to the EXIF metadata
 		"-strip",         // Strip the EXIF metadata
 		"-quality", "82", // A good compromise between file size and quality
 		"-interlace", "none", // Don't use progressive JPEGs, they are heavier
