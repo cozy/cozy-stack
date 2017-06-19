@@ -55,15 +55,15 @@ func export(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"message": "bienvenu sur la super page",
+		"message": "bienvenue sur la super page",
 	})
 }
 
 func exportDir(c echo.Context) error {
-	domId := c.Param("domain-id")
-	fmt.Println(domId)
+	domID := c.Param("domain-id")
+	fmt.Println(domID)
 
-	src, err := os.Open(fmt.Sprintf("%s.tar.gz", domId))
+	src, err := os.Open(fmt.Sprintf("%s.tar.gz", domID))
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func exportDir(c echo.Context) error {
 		return err
 	}
 
-	err = os.Remove(fmt.Sprintf("%s.tar.gz", domId))
+	err = os.Remove(fmt.Sprintf("%s.tar.gz", domID))
 	if err != nil {
 		return err
 	}
