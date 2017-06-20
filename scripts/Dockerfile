@@ -2,7 +2,7 @@
 # applications for cozy-stack. It installs couchdb 2 and the cozy-stack.
 # It should not be used for hosting your cozy cloud in production.
 
-FROM debian:jessie-slim
+FROM debian:stretch-slim
 
 
 # CouchDB
@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
     curl \
-    libicu52 \
+    libicu57 \
     libmozjs185-1.0 \
     erlang-nox \
     erlang-reltool \
@@ -50,7 +50,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && echo "[chttpd]\nbind_address = 0.0.0.0" \
     > /usr/local/couchdb/etc/local.ini \
   && apt-get autoremove -y && apt-get clean \
-  && apt-get install -y libicu52 --no-install-recommends
+  && apt-get install -y libicu57 --no-install-recommends
 
 ENV PATH $PATH:/usr/local/couchdb/bin
 
