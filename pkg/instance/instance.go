@@ -264,7 +264,7 @@ func (i *Instance) Context() (map[string]interface{}, error) {
 	}
 	ctx, ok := doc.M["context"].(string)
 	if !ok {
-		return nil, ErrContextNotFound
+		ctx = "default"
 	}
 	context, ok := config.GetConfig().Contexts[ctx].(map[string]interface{})
 	if !ok {
