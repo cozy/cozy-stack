@@ -35,18 +35,22 @@ func export(c echo.Context) error {
 		return err
 	}
 
+	var objet string
 	lien := fmt.Sprintf("http://%s%s%s-%s", domain, c.Path(), domain, id)
 
-	mailBody := fmt.Sprintf("Bonjour %s,\n\nVotre archive contenant l'ensemble de vos fichiers Cozy est prête à être téléchargée. Vous pouvez vous rendre sur %s pour y accéder.\n\nBonne journée\nL'équipe Cozy.",
-		instance.Domain, lien)
+	if instance.Locale == "en" {
+		objet = "The archive with all your Cozy data is ready"
+	} else if instance.Locale == "fr" {
+		objet = "L'archive contenant toutes les données de Cozy est prête"
+	}
+
 	msg, err := jobs.NewMessage("json", workers.Options{
-		Mode:    workers.ModeNoReply,
-		Subject: "Téléchargement de vos fichiers Cozy",
-		Parts: []*workers.Part{
-			{
-				Type: "text/plain",
-				Body: mailBody,
-			},
+		Mode:         workers.ModeNoReply,
+		Subject:      objet,
+		TemplateName: "archiver_" + instance.Locale,
+		TemplateValues: map[string]string{
+			"RecipientName": domain,
+			"Lien":          lien,
 		},
 	})
 	if err != nil {
