@@ -340,12 +340,7 @@ func receiveDocument(c echo.Context) error {
 		err = creationWithIDHandler(c, ins, sharing.AppSlug)
 	default:
 		doctype := c.Param("doctype")
-		exist, errc := doesDoctypeExist(ins, doctype)
-		if errc != nil {
-			return errc
-		}
-
-		if !exist {
+		if doctypeExists(ins, doctype) {
 			err = couchdb.CreateDB(ins, doctype)
 			if err != nil {
 				return err
@@ -468,11 +463,7 @@ func setDestinationDirectory(c echo.Context) error {
 	}
 
 	ins := middlewares.GetInstance(c)
-	exists, err := doesDoctypeExist(ins, doctype)
-	if err != nil {
-		return err
-	}
-	if !exists {
+	if doctypeExists(ins, doctype) {
 		return jsonapi.BadRequest(errors.New("Doctype does not exist"))
 	}
 
@@ -481,11 +472,11 @@ func setDestinationDirectory(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("Missing directory id"))
 	}
 
-	if _, err = ins.VFS().DirByID(dirID); err != nil {
+	if _, err := ins.VFS().DirByID(dirID); err != nil {
 		return jsonapi.BadRequest(errors.New("Directory does not exist"))
 	}
 
-	err = sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
+	err := sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
 	if err != nil {
 		return err
 	}
@@ -539,17 +530,7 @@ func wrapErrors(err error) error {
 	return err
 }
 
-func doesDoctypeExist(ins *instance.Instance, doctype string) (bool, error) {
-	doctypes, err := couchdb.AllDoctypes(ins)
-	if err != nil {
-		return false, err
-	}
-
-	for _, dType := range doctypes {
-		if doctype == dType {
-			return true, nil
-		}
-	}
-
-	return false, nil
+func doctypeExists(ins *instance.Instance, doctype string) bool {
+	_, err := couchdb.DBStatus(ins, doctype)
+	return err != nil
 }

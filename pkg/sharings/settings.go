@@ -48,36 +48,18 @@ func (s *SharingSettings) SetID(id string) { s.SharingsSettingsID = id }
 // SetRev changes the SharingSettings revision.
 func (s *SharingSettings) SetRev(rev string) { s.SharingsSettingsRev = rev }
 
-// Check if the database `consts.Settings` exists, creates it if not, and
-// finally creates the `SharingSettings` document.
 func createSharingSettingsDocument(ins *instance.Instance) (*SharingSettings, error) {
-	doctypes, err := couchdb.AllDoctypes(ins)
+	s := SharingSettings{}
+	err := couchdb.GetDoc(ins, consts.Settings, consts.SharingSettingsID, &s)
 	if err != nil {
-		return nil, err
-	}
-
-	var exist bool
-	for _, doctype := range doctypes {
-		if consts.Settings == doctype {
-			exist = true
-			break
+		s = SharingSettings{
+			SharingsSettingsID: consts.SharingSettingsID,
+			AppDestination:     make(map[string]map[string]string),
 		}
-	}
-
-	if !exist {
-		err = couchdb.CreateDB(ins, consts.Settings)
+		err = couchdb.CreateNamedDocWithDB(ins, &s)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	s := SharingSettings{
-		SharingsSettingsID: consts.SharingSettingsID,
-		AppDestination:     make(map[string]map[string]string),
-	}
-	err = couchdb.CreateNamedDoc(ins, &s)
-	if err != nil {
-		return nil, err
 	}
 
 	return &s, nil
