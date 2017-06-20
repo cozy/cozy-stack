@@ -12,6 +12,7 @@ import (
 // SharingSettings is the list of destination directories set by the
 // different applications.
 type SharingSettings struct {
+	// AppDestination is following the format: app slug -> doctype -> dirID
 	AppDestination      map[string]map[string]string `json:"app_destination"`
 	SharingsSettingsID  string                       `json:"_id,omitempty"`
 	SharingsSettingsRev string                       `json:"_rev,omitempty"`
