@@ -1,11 +1,9 @@
 package vfs
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,7 +54,6 @@ func TestDownloadStoreInMemory(t *testing.T) {
 }
 
 func TestDownloadStoreInRedis(t *testing.T) {
-	fmt.Println("config.GetConfig().Cache.URL", config.GetConfig().Cache.URL)
 	downloadStoreTTL = 100 * time.Millisecond
 
 	domainA := "alice.cozycloud.local"

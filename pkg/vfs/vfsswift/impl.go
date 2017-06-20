@@ -188,6 +188,11 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, vfs.ErrParentInTrash
 	}
 
+	// Avoid storing negative size in the index.
+	if newdoc.ByteSize < 0 {
+		newdoc.ByteSize = 0
+	}
+
 	if olddoc == nil {
 		var exists bool
 		exists, err = sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
@@ -233,6 +238,8 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileCreation{
 		f:       f,
 		fs:      sfs,
+		w:       0,
+		size:    newsize,
 		name:    objName,
 		meta:    vfs.NewMetaExtractor(newdoc),
 		newdoc:  newdoc,
@@ -273,7 +280,7 @@ func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) error {
 		var f *vfs.FileDoc
 		d, f, err = iter.Next()
 		if err == vfs.ErrIteratorDone {
-			break
+			return nil
 		}
 		var errd error
 		if d != nil {
@@ -293,7 +300,8 @@ func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
 	if err != nil {
 		return err
 	}
-	if err := sfs.c.ObjectDelete(sfs.container, doc.DirID+"/"+doc.DocName); err != nil {
+	err = sfs.c.ObjectDelete(sfs.container, doc.DirID+"/"+doc.DocName)
+	if err != nil && err != swift.ObjectNotFound {
 		return err
 	}
 	return sfs.Indexer.DeleteDirDoc(doc)
@@ -460,6 +468,7 @@ func (sfs *swiftVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, er
 type swiftFileCreation struct {
 	f       *swift.ObjectCreateFile
 	w       int64
+	size    int64
 	fs      *swiftVFS
 	name    string
 	err     error
@@ -501,8 +510,7 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 		return n, f.err
 	}
 
-	size := f.newdoc.ByteSize
-	if size >= 0 && f.w > size {
+	if f.size >= 0 && f.w > f.size {
 		f.err = vfs.ErrContentLengthMismatch
 		return n, f.err
 	}
@@ -560,7 +568,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		}
 	}
 
-	if newdoc.ByteSize < 0 {
+	if f.size < 0 {
 		newdoc.ByteSize = written
 	}
 

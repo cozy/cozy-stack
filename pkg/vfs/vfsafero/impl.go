@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/afero"
 )
 
@@ -189,8 +190,9 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	extractor := vfs.NewMetaExtractor(newdoc)
 
 	return &aferoFileCreation{
-		w: 0,
-		f: f,
+		w:    0,
+		f:    f,
+		size: newsize,
 
 		afs:     afs,
 		newdoc:  newdoc,
@@ -230,21 +232,25 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 
 func (afs *aferoVFS) destroyDirContent(doc *vfs.DirDoc) error {
 	iter := afs.Indexer.DirIterator(doc, nil)
+	var err error
 	for {
+		var d *vfs.DirDoc
+		var f *vfs.FileDoc
 		d, f, err := iter.Next()
 		if err == vfs.ErrIteratorDone {
-			break
+			return nil
 		}
+		var errd error
 		if d != nil {
-			err = afs.destroyDirAndContent(d)
+			errd = afs.destroyDirAndContent(d)
 		} else {
-			err = afs.destroyFile(f)
+			errd = afs.destroyFile(f)
 		}
-		if err != nil {
-			return err
+		if errd != nil {
+			err = multierror.Append(errd)
 		}
 	}
-	return nil
+	return err
 }
 
 func (afs *aferoVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
@@ -430,6 +436,7 @@ func (f *aferoFileOpen) Close() error {
 type aferoFileCreation struct {
 	f       afero.File         // file handle
 	w       int64              // total size written
+	size    int64              // total file size, -1 if unknown
 	afs     *aferoVFS          // parent vfs
 	newdoc  *vfs.FileDoc       // new document
 	olddoc  *vfs.FileDoc       // old document
@@ -466,8 +473,7 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 		return n, f.err
 	}
 
-	size := f.newdoc.ByteSize
-	if size >= 0 && f.w > size {
+	if f.size >= 0 && f.w > f.size {
 		f.err = vfs.ErrContentLengthMismatch
 		return n, f.err
 	}
@@ -544,7 +550,6 @@ func (f *aferoFileCreation) Close() (err error) {
 		if newdoc.ID() == "" {
 			return f.afs.Indexer.CreateFileDoc(newdoc)
 		}
-
 		return f.afs.Indexer.CreateNamedFileDoc(newdoc)
 	}
 	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
