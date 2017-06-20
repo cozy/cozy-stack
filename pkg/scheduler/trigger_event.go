@@ -1,11 +1,17 @@
 package scheduler
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 // EventTrigger implements Trigger for realtime triggered events
@@ -122,22 +128,75 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 	}
 
 	if rule.Selector == "" {
-		return rule.ValuesContain(e.Doc.ID())
+		if rule.ValuesContain(e.Doc.ID()) {
+			return true
+		}
+		if e.Doc.DocType() == consts.Files {
+			fmt.Printf("e = %#v\n", e)
+			fmt.Printf("[Event] doc = %#v\n", e.Doc)
+			fmt.Printf("rule = %#v\n", rule)
+			for _, value := range rule.Values {
+				var dir vfs.DirDoc
+				db := couchdb.SimpleDatabasePrefix(e.Domain)
+				if err := couchdb.GetDoc(db, consts.Files, value, &dir); err != nil {
+					fmt.Printf("dir err = %s\n", err)
+					// TODO log
+					return false
+				}
+				fmt.Printf("dir = %#v\n", dir)
+				if testPath(&dir, e.Doc) {
+					fmt.Printf("doc matches\n")
+					return true
+				}
+				if e.OldDoc != nil {
+					if testPath(&dir, e.OldDoc) {
+						fmt.Printf("olddoc matches\n")
+						return true
+					}
+				}
+			}
+		}
+		return false
 	}
 
 	if v, ok := e.Doc.(permissions.Validable); ok {
-		if !rule.ValuesValid(v) {
-			// Particular case where the new doc is not valid but the old one was.
-			if e.OldDoc != nil {
-				if vOld, okOld := e.OldDoc.(permissions.Validable); okOld {
-					return rule.ValuesValid(vOld)
-				}
-			}
-		} else {
+		if rule.ValuesValid(v) {
 			return true
 		}
-		return rule.ValuesValid(v)
+		// Particular case where the new doc is not valid but the old one was.
+		if e.OldDoc != nil {
+			if vOld, okOld := e.OldDoc.(permissions.Validable); okOld {
+				return rule.ValuesValid(vOld)
+			}
+		}
 	}
 
+	return false
+}
+
+// DumpFilePather is a struct made for calling the Path method of a FileDoc and
+// relying on the cached fullpath of this document (not trying to rebuild it)
+type DumpFilePather struct{}
+
+// FilePath only returns an error saying to not call this method
+func (d DumpFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
+	// TODO log
+	return "", errors.New("DumpFilePather FilePath should not have been called")
+}
+
+var dumpFilePather = DumpFilePather{}
+
+func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
+	if d, ok := doc.(*vfs.DirDoc); ok {
+		return strings.HasPrefix(d.Fullpath, dir.Fullpath+"/")
+	}
+	if f, ok := doc.(*vfs.FileDoc); ok {
+		p, err := f.Path(dumpFilePather)
+		fmt.Printf("testpath %#v -- %#v (err = %v)\n", dir.Fullpath, p, err)
+		if err != nil {
+			return false
+		}
+		return strings.HasPrefix(p, dir.Fullpath+"/")
+	}
 	return false
 }
