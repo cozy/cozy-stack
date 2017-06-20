@@ -17,10 +17,10 @@
         </symbol>
       </defs>
     </svg>
-    <main role="application">
-      <section class="popup">
-        <div>
-          <div class="container">
+    <div role="application">
+    <main>
+        <div class="login auth">
+          <div class="main-wrapper">
             <form method="POST" action="/sharings/discovery" class="login auth">
               <input type="hidden" name="sharing_id" value="{{.SharingID}}" />
               <input type="hidden" name="recipient_id" value="{{.RecipientID}}" />
@@ -50,9 +50,6 @@
             </form>
           </div>
         </div>
-    </section>
       </main>
-    </div>
-    <script src="/assets/scripts/async-submit.js"></script>
   </body>
 </html>
