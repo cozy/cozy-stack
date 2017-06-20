@@ -259,7 +259,7 @@ func (afs *aferoVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
 		return err
 	}
 	err = afs.fs.RemoveAll(doc.Fullpath)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return afs.Indexer.DeleteDirDoc(doc)
@@ -271,7 +271,7 @@ func (afs *aferoVFS) destroyFile(doc *vfs.FileDoc) error {
 		return err
 	}
 	err = afs.fs.Remove(path)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return afs.Indexer.DeleteFileDoc(doc)
