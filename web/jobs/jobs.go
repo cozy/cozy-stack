@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -14,8 +16,10 @@ import (
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 
+	// konnectors is needed for bad triggers cleanup
+	konnectors "github.com/cozy/cozy-stack/pkg/workers/konnectors"
+
 	// import workers
-	_ "github.com/cozy/cozy-stack/pkg/workers/konnectors"
 	_ "github.com/cozy/cozy-stack/pkg/workers/log"
 	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
 	_ "github.com/cozy/cozy-stack/pkg/workers/sharings"
@@ -205,6 +209,43 @@ func deleteTrigger(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func cleanTriggers(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	sched := stack.GetScheduler()
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+		return err
+	}
+	ts, err := sched.GetAll(instance.Domain)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	deleted := 0
+	for _, t := range ts {
+		infos := t.Infos()
+		if infos.WorkerType == "konnector" {
+			var msg konnectors.Options
+			if err = infos.Message.Unmarshal(&msg); err != nil {
+				if err = sched.Delete(instance.Domain, t.ID()); err != nil {
+					logger.WithDomain(instance.Domain).Errorln("failed to delete orphan trigger", err)
+				}
+				deleted++
+				continue
+			}
+
+			var a accounts.Account
+			err = couchdb.GetDoc(instance, consts.Accounts, msg.Account, &a)
+			if couchdb.IsNotFoundError(err) {
+				if err = sched.Delete(instance.Domain, t.ID()); err != nil {
+					logger.WithDomain(instance.Domain).Errorln("failed to delete orphan trigger", err)
+				}
+				deleted++
+			}
+		}
+	}
+
+	return c.JSON(200, map[string]int{"deleted": deleted})
+}
+
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerFilter := c.QueryParam("Worker")
@@ -244,6 +285,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/triggers", getAllTriggers)
 	router.POST("/triggers", newTrigger)
+	router.POST("/triggers/clean", cleanTriggers)
 	router.GET("/triggers/:trigger-id", getTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 

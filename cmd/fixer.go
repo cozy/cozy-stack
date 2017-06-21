@@ -3,10 +3,12 @@ package cmd
 // #nosec
 import (
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"io"
 
 	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
 )
@@ -64,7 +66,37 @@ var md5FixerCmd = &cobra.Command{
 	},
 }
 
+var triggersFixer = &cobra.Command{
+	Use:   "triggers [domain]",
+	Short: "Remove orphaned triggers from an instance",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		c := newClient(args[0], consts.Triggers+" "+consts.Accounts)
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   "/jobs/triggers/clean",
+		})
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var result struct {
+			Deleted int `json:"deleted"`
+		}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Cleaned %d orphans\n", result.Deleted)
+		return nil
+	},
+}
+
 func init() {
 	fixerCmdGroup.AddCommand(md5FixerCmd)
+	fixerCmdGroup.AddCommand(triggersFixer)
 	RootCmd.AddCommand(fixerCmdGroup)
 }
