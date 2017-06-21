@@ -113,6 +113,26 @@ Pour plus d'information veuillez vous rendre sur la page: {{.KonnectorPage}} de 
 Si le problème persiste, n'hésitez pas à nous contacter à contact@cozycloud.cc
 
 L'équipe Cozy.`
+
+	mailArchiveHTMLEn = ``
+	mailArchiveTextEn = `` +
+		`Hello {{.RecipientName}},
+
+You can now download the archive with all your Cozy data. You can download is by clicking on the following link: {{.Lien}}
+
+We wish you a great day,
+
+The Cozy Team`
+
+	mailArchiveHTMLFr = ``
+	mailArchiveTextFr = `` +
+		`Bonjour {{.RecipientName}},
+
+L'archive contenant l'ensemble des données de votre Cozy est prête à être téléchargée. Vous pouvez la télécharger en cliquant sur ce lien : {{.Lien}}
+
+Nous vous souhaitons une très bonne journée,
+
+L'équipe Cozy.`
 )
 
 // MailTemplate is a struct to define a mail template with HTML and text parts.
@@ -198,6 +218,16 @@ func init() {
 			Name:     "konnector_error_fr",
 			BodyHTML: mailKonnectorErrorHTMLFr,
 			BodyText: mailKonnectorErrorTextFr,
+		},
+		{
+			Name:     "archiver_fr",
+			BodyHTML: mailArchiveHTMLFr,
+			BodyText: mailArchiveTextFr,
+		},
+		{
+			Name:     "archiver_en",
+			BodyHTML: mailArchiveHTMLEn,
+			BodyText: mailArchiveTextEn,
 		},
 	})
 }
