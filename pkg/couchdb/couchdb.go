@@ -484,15 +484,11 @@ func UpdateDoc(db Database, doc Doc) error {
 	return nil
 }
 
-// BulkUpdateDoc is used to update several docs in one call, as a bulk.
-func BulkUpdateDoc(db Database, docs []Doc) error {
-	if len(docs) == 0 {
-		return errors.New("BulkUpdateDoc needs at least one doc")
-	}
-	doctype := docs[0].DocType()
+// BulkUpdateDocs is used to update several docs in one call, as a bulk.
+func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
 	url := docURL(db, doctype, "_bulk_docs")
 	body := struct {
-		Docs []Doc `json:"docs"`
+		Docs []interface{} `json:"docs"`
 	}{docs}
 	var res []updateResponse
 	if err := makeRequest(db, "POST", url, body, &res); err != nil {
@@ -502,8 +498,10 @@ func BulkUpdateDoc(db Database, docs []Doc) error {
 		return errors.New("BulkUpdateDoc receive an unexpected number of responses")
 	}
 	for i, doc := range docs {
-		doc.SetRev(res[i].Rev)
-		rtevent(db, realtime.EventUpdate, doc, nil)
+		if d, ok := doc.(Doc); ok {
+			d.SetRev(res[i].Rev)
+			rtevent(db, realtime.EventUpdate, d, nil)
+		}
 	}
 	return nil
 }

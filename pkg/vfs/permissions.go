@@ -12,7 +12,7 @@ import (
 type Validable interface {
 	permissions.Validable
 	parentID() string
-	Path(fs VFS) (string, error)
+	Path(fs FilePather) (string, error)
 	Parent(fs VFS) (*DirDoc, error)
 }
 

@@ -81,12 +81,12 @@ func (f *FileDoc) SetID(id string) { f.DocID = id }
 func (f *FileDoc) SetRev(rev string) { f.DocRev = rev }
 
 // Path is used to generate the file path
-func (f *FileDoc) Path(fs VFS) (string, error) {
+func (f *FileDoc) Path(fp FilePather) (string, error) {
 	if f.fullpath != "" {
 		return f.fullpath, nil
 	}
 	var err error
-	f.fullpath, err = fs.FilePath(f)
+	f.fullpath, err = fp.FilePath(f)
 	return f.fullpath, err
 }
 

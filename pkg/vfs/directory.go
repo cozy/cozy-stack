@@ -63,7 +63,7 @@ func (d *DirDoc) SetID(id string) { d.DocID = id }
 func (d *DirDoc) SetRev(rev string) { d.DocRev = rev }
 
 // Path is used to generate the file path
-func (d *DirDoc) Path(fs VFS) (string, error) {
+func (d *DirDoc) Path(fs FilePather) (string, error) {
 	return d.Fullpath, nil
 }
 
