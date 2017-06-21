@@ -85,3 +85,16 @@ contexts:
     default_redirection: drive/#/files
     # Allow to customize the cozy-bar link to the help
     help_link: https://forum.cozy.io/
+    # Coming soon applications listed in the Cozy Bar's app panel
+    # Will be removed when the store will be available.
+    coming_soon:
+      store:
+        editor: 'Cozy'
+        name: 'Store'
+        slug: 'store'
+        category: 'cozy'
+      bank:
+        editor: 'Cozy'
+        name: 'Bank'
+        slug: 'bank'
+        category: 'partners'
