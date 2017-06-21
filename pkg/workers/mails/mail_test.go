@@ -403,7 +403,8 @@ func TestSendMailFrom(t *testing.T) {
 		assert.NotNil(t, opts.To)
 		assert.Len(t, opts.To, 1)
 		assert.Equal(t, "you@you", opts.To[0].Email)
-		assert.Equal(t, "me@me", opts.From.Email)
+		assert.Equal(t, "noreply@from.triggers", opts.From.Email)
+		assert.Equal(t, "me@me", opts.ReplyTo.Email)
 		return errors.New("yes")
 	}
 	db := couchdb.SimpleDatabasePrefix("from.triggers")
