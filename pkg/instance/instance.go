@@ -137,7 +137,7 @@ func (i *Instance) Clone() couchdb.Doc { cloned := *i; return &cloned }
 // Prefix returns the prefix to use in database naming for the
 // current instance
 func (i *Instance) Prefix() string {
-	return i.Domain + "/"
+	return i.Domain
 }
 
 // Logger returns the logger associated with the instance
