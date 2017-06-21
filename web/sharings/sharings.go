@@ -532,5 +532,5 @@ func wrapErrors(err error) error {
 
 func doctypeExists(ins *instance.Instance, doctype string) bool {
 	_, err := couchdb.DBStatus(ins, doctype)
-	return err != nil
+	return err == nil
 }
