@@ -5,6 +5,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/stack"
 )
 
 // Account holds configuration information for an account
@@ -60,4 +62,41 @@ func (ac *Account) Clone() couchdb.Doc {
 // Valid implements permissions.Validable
 func (ac *Account) Valid(field, expected string) bool {
 	return field == "account_type" && expected == ac.AccountType
+}
+
+func init() {
+	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
+		func(domain string, doc couchdb.Doc, old couchdb.Doc) error {
+			trigs, err := stack.GetScheduler().GetAll(domain)
+			if err != nil {
+				logger.WithDomain(domain).Error(
+					"Failed to fetch triggers after account deletion: ", err)
+				return err
+			}
+			for _, t := range trigs {
+				toDelete := false
+
+				if t.Infos().WorkerType != "konnector" {
+					continue
+				}
+
+				var msg struct {
+					Account string `json:"account"`
+				}
+				err := t.Infos().Message.Unmarshal(&msg)
+				if err != nil {
+					toDelete = true
+				} else {
+					if msg.Account == doc.ID() {
+						toDelete = true
+					}
+				}
+				if toDelete {
+					if err := stack.GetScheduler().Delete(domain, t.ID()); err != nil {
+						logger.WithDomain(domain).Errorln("failed to delete orphan trigger", err)
+					}
+				}
+			}
+			return nil
+		})
 }
