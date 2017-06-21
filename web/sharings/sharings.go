@@ -340,7 +340,7 @@ func receiveDocument(c echo.Context) error {
 		err = creationWithIDHandler(c, ins, sharing.AppSlug)
 	default:
 		doctype := c.Param("doctype")
-		if doctypeExists(ins, doctype) {
+		if !doctypeExists(ins, doctype) {
 			err = couchdb.CreateDB(ins, doctype)
 			if err != nil {
 				return err
@@ -463,7 +463,7 @@ func setDestinationDirectory(c echo.Context) error {
 	}
 
 	ins := middlewares.GetInstance(c)
-	if doctypeExists(ins, doctype) {
+	if !doctypeExists(ins, doctype) {
 		return jsonapi.BadRequest(errors.New("Doctype does not exist"))
 	}
 
