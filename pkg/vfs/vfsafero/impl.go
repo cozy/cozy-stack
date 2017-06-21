@@ -232,13 +232,14 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 
 func (afs *aferoVFS) destroyDirContent(doc *vfs.DirDoc) error {
 	iter := afs.Indexer.DirIterator(doc, nil)
-	var err error
+	var errm error
 	for {
-		var d *vfs.DirDoc
-		var f *vfs.FileDoc
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			return nil
+		d, f, erri := iter.Next()
+		if erri == vfs.ErrIteratorDone {
+			return errm
+		}
+		if erri != nil {
+			return erri
 		}
 		var errd error
 		if d != nil {
@@ -247,10 +248,9 @@ func (afs *aferoVFS) destroyDirContent(doc *vfs.DirDoc) error {
 			errd = afs.destroyFile(f)
 		}
 		if errd != nil {
-			err = multierror.Append(errd)
+			errm = multierror.Append(errd)
 		}
 	}
-	return err
 }
 
 func (afs *aferoVFS) destroyDirAndContent(doc *vfs.DirDoc) error {

@@ -274,13 +274,14 @@ func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
 
 func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) error {
 	iter := sfs.DirIterator(doc, nil)
-	var err error
+	var errm error
 	for {
-		var d *vfs.DirDoc
-		var f *vfs.FileDoc
-		d, f, err = iter.Next()
-		if err == vfs.ErrIteratorDone {
-			return nil
+		d, f, erri := iter.Next()
+		if erri == vfs.ErrIteratorDone {
+			return errm
+		}
+		if erri != nil {
+			return erri
 		}
 		var errd error
 		if d != nil {
@@ -289,10 +290,9 @@ func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) error {
 			errd = sfs.destroyFile(f)
 		}
 		if errd != nil {
-			err = multierror.Append(errd)
+			errm = multierror.Append(errd)
 		}
 	}
-	return err
 }
 
 func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
