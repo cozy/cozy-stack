@@ -117,6 +117,9 @@ func importer(c echo.Context) error {
 		}
 	} else {
 		dst, err = fs.DirByPath("/toto")
+		if err != nil {
+			return err
+		}
 	}
 
 	err = imexport.Untardir(fs, r, dst.ID())
