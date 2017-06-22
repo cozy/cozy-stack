@@ -391,6 +391,10 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 		Type: realtime.EventCreate,
 	})
 
+	time.Sleep(100 * time.Millisecond)
+	count, _ = bro.QueueLen("incr")
+	assert.Equal(t, 1, count)
+
 	bazID := utils.RandomString(10)
 	baz := &vfs.FileDoc{
 		Type:      "file",
@@ -416,7 +420,37 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 		Type:   realtime.EventCreate,
 	})
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(100 * time.Millisecond)
+	count, _ = bro.QueueLen("incr")
+	assert.Equal(t, 2, count)
+
+	// Simulate that /foo/bar/baz is moved to /quux
+	quux := &vfs.FileDoc{
+		Type:      "file",
+		DocID:     bazID,
+		DocRev:    "2-" + utils.RandomString(10),
+		DocName:   "quux",
+		DirID:     consts.RootDirID,
+		CreatedAt: baz.CreatedAt,
+		UpdatedAt: time.Now(),
+		ByteSize:  42,
+		Mime:      "application/json",
+		Class:     "application",
+		Trashed:   false,
+	}
+	ffp = fakeFilePather{"/quux"}
+	p, err = quux.Path(ffp)
+	assert.NoError(t, err)
+	assert.Equal(t, "/quux", p)
+
+	realtime.GetHub().Publish(&realtime.Event{
+		Domain: instanceName,
+		Doc:    quux,
+		OldDoc: baz,
+		Type:   realtime.EventCreate,
+	})
+
+	time.Sleep(100 * time.Millisecond)
 	count, _ = bro.QueueLen("incr")
 	assert.Equal(t, 3, count)
 }

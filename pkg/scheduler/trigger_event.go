@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -132,25 +131,18 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 			return true
 		}
 		if e.Doc.DocType() == consts.Files {
-			fmt.Printf("e = %#v\n", e)
-			fmt.Printf("[Event] doc = %#v\n", e.Doc)
-			fmt.Printf("rule = %#v\n", rule)
 			for _, value := range rule.Values {
 				var dir vfs.DirDoc
 				db := couchdb.SimpleDatabasePrefix(e.Domain)
 				if err := couchdb.GetDoc(db, consts.Files, value, &dir); err != nil {
-					fmt.Printf("dir err = %s\n", err)
-					// TODO log
+					logger.WithNamespace("event-trigger").Error(err)
 					return false
 				}
-				fmt.Printf("dir = %#v\n", dir)
 				if testPath(&dir, e.Doc) {
-					fmt.Printf("doc matches\n")
 					return true
 				}
 				if e.OldDoc != nil {
 					if testPath(&dir, e.OldDoc) {
-						fmt.Printf("olddoc matches\n")
 						return true
 					}
 				}
@@ -180,7 +172,7 @@ type DumpFilePather struct{}
 
 // FilePath only returns an error saying to not call this method
 func (d DumpFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
-	// TODO log
+	logger.WithNamespace("event-trigger").Warning("FilePath method of DumpFilePather has been called")
 	return "", errors.New("DumpFilePather FilePath should not have been called")
 }
 
@@ -192,7 +184,6 @@ func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
 	}
 	if f, ok := doc.(*vfs.FileDoc); ok {
 		p, err := f.Path(dumpFilePather)
-		fmt.Printf("testpath %#v -- %#v (err = %v)\n", dir.Fullpath, p, err)
 		if err != nil {
 			return false
 		}
