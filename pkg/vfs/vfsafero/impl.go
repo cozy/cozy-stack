@@ -248,7 +248,7 @@ func (afs *aferoVFS) destroyDirContent(doc *vfs.DirDoc) error {
 			errd = afs.destroyFile(f)
 		}
 		if errd != nil {
-			errm = multierror.Append(errd)
+			errm = multierror.Append(errm, errd)
 		}
 	}
 }

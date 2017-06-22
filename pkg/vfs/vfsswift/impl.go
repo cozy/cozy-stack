@@ -290,7 +290,7 @@ func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) error {
 			errd = sfs.destroyFile(f)
 		}
 		if errd != nil {
-			errm = multierror.Append(errd)
+			errm = multierror.Append(errm, errd)
 		}
 	}
 }
