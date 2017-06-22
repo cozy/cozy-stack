@@ -1219,6 +1219,7 @@ func TestSetDestinationDirectory(t *testing.T) {
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
 
 func TestDiscoveryFormNoSharingID(t *testing.T) {
 	urlVal := url.Values{
@@ -1230,7 +1231,8 @@ func TestDiscoveryFormNoSharingID(t *testing.T) {
 }
 
 func TestDiscoveryFormNoRecipientID(t *testing.T) {
-	sharing := createSharing(t, true, consts.OneShotSharing)
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
 	urlVal := url.Values{
 		"sharing_id": {sharing.SharingID},
 	}
@@ -1240,8 +1242,9 @@ func TestDiscoveryFormNoRecipientID(t *testing.T) {
 }
 
 func TestDiscoveryFormRecipientWithURL(t *testing.T) {
-	sharing := createSharing(t, true, consts.OneShotSharing)
-	recipient := createRecipient(t)
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
+	recipient := createRecipient(t, "email", "url")
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},
 		"recipient_id": {recipient.ID()},
@@ -1252,7 +1255,8 @@ func TestDiscoveryFormRecipientWithURL(t *testing.T) {
 }
 
 func TestDiscoveryFormNoEmail(t *testing.T) {
-	sharing := createSharing(t, true, consts.OneShotSharing)
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
 	recipient := &sharings.Recipient{
 		Email: "test@mail.fr",
 		URL:   "",
@@ -1269,7 +1273,10 @@ func TestDiscoveryFormNoEmail(t *testing.T) {
 }
 
 func TestDiscoverySuccess(t *testing.T) {
-	sharing := createSharing(t, true, consts.OneShotSharing)
+	recipient := createRecipient(t, "email", recipientURL)
+
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},
 		"recipient_id": {sharing.RecipientsStatus[0].RefRecipient.ID},
@@ -1278,7 +1285,6 @@ func TestDiscoverySuccess(t *testing.T) {
 	res, err := formPOST("/sharings/discovery", urlVal)
 	assert.NoError(t, err)
 	assert.Equal(t, 302, res.StatusCode)
->>>>>>> Add tests
 }
 
 func TestMergeMetadata(t *testing.T) {
