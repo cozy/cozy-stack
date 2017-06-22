@@ -102,7 +102,7 @@ func createDirWithIDHandler(c echo.Context, ins *instance.Instance, dirID string
 			oldDoc.ReferencedBy)
 		newDir.SetRev(oldDoc.Rev())
 
-		errm := modifyDirOrFileMetadata(fs, newDir, nil, &vfs.DocPatch{})
+		errm := modifyDirOrFileMetadata(c, fs, newDir, nil, &vfs.DocPatch{})
 		if errm != nil {
 			return errm
 		}
@@ -172,7 +172,7 @@ func createFileWithIDHandler(c echo.Context, ins *instance.Instance, dirID strin
 		newFile.Tags = mergeTags(newFile.Tags, oldFile.Tags)
 		newFile.SetRev(oldFile.Rev())
 
-		err = modifyDirOrFileMetadata(fs, nil, newFile, &vfs.DocPatch{})
+		err = modifyDirOrFileMetadata(c, fs, nil, newFile, &vfs.DocPatch{})
 		if err != nil {
 			return err
 		}
@@ -294,7 +294,7 @@ func patchDirOrFile(c echo.Context) error {
 		return errc
 	}
 
-	err = modifyDirOrFileMetadata(instance.VFS(), dirDoc, fileDoc, &patch)
+	err = modifyDirOrFileMetadata(c, instance.VFS(), dirDoc, fileDoc, &patch)
 	if err != nil {
 		return err
 	}
@@ -302,12 +302,17 @@ func patchDirOrFile(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func modifyDirOrFileMetadata(fs vfs.VFS, dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc, patch *vfs.DocPatch) error {
+func modifyDirOrFileMetadata(c echo.Context, fs vfs.VFS, dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc, patch *vfs.DocPatch) error {
 	if dirDoc != nil {
+		if err := permissions.AllowVFS(c, permissions.PATCH, dirDoc); err != nil {
+			return err
+		}
 		_, err := vfs.ModifyDirMetadata(fs, dirDoc, patch)
 		return err
 	}
-
+	if err := permissions.AllowVFS(c, permissions.PATCH, fileDoc); err != nil {
+		return err
+	}
 	_, err := vfs.ModifyFileMetadata(fs, fileDoc, patch)
 	return err
 }
@@ -363,6 +368,9 @@ func trashHandler(c echo.Context) error {
 	}
 
 	if dir != nil {
+		if err = permissions.AllowVFS(c, permissions.DELETE, dir); err != nil {
+			return err
+		}
 		_, errt := vfs.TrashDir(instance.VFS(), dir)
 		if errt != nil {
 			return err
@@ -370,6 +378,9 @@ func trashHandler(c echo.Context) error {
 		return nil
 	}
 
+	if err = permissions.AllowVFS(c, permissions.DELETE, file); err != nil {
+		return err
+	}
 	_, errt := vfs.TrashFile(instance.VFS(), file)
 	if errt != nil {
 		return err
