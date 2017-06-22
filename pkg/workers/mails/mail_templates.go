@@ -80,7 +80,7 @@ Pour information, vous disposez de 15 minutes pour choisir votre nouveau mot de 
 
 <p>The description given is: {{.Description}}.</p>
 
-<form action="{{.OAuthQueryString}}">
+<form action="{{.SharingLink}}">
 	<input type="submit" value="Accept this sharing" />
 </form>
 </p>`
@@ -91,7 +91,7 @@ Pour information, vous disposez de 15 minutes pour choisir votre nouveau mot de 
 
 The description given is: {{.Description}}.
 
-{{.OAuthQueryString}}`
+{{.SharingLink}}`
 
 	// --- konnector_error ---
 	// TODO: wording and translation of this email is not done

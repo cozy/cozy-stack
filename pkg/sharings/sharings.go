@@ -165,6 +165,24 @@ func (s *Sharing) GetSharingRecipientFromClientID(db couchdb.Database, clientID 
 	return nil, ErrRecipientDoesNotExist
 }
 
+// GetRecipientStatusFromRecipientID returns the RecipientStatus associated with the
+// given recipient ID.
+func (s *Sharing) GetRecipientStatusFromRecipientID(db couchdb.Database, recID string) (*RecipientStatus, error) {
+	for _, recStatus := range s.RecipientsStatus {
+		if recStatus.recipient == nil {
+			r, err := GetRecipient(db, recStatus.RefRecipient.ID)
+			if err != nil {
+				return nil, err
+			}
+			recStatus.recipient = r
+		}
+		if recStatus.recipient.ID() == recID {
+			return recStatus, nil
+		}
+	}
+	return nil, ErrRecipientDoesNotExist
+}
+
 // CheckSharingType returns an error if the sharing type is incorrect
 func CheckSharingType(sharingType string) error {
 	switch sharingType {
@@ -632,7 +650,10 @@ func CreateSharing(instance *instance.Instance, sharing *Sharing) error {
 
 	// Register the sharer at each recipient and set the status accordingly.
 	for _, rs := range recStatus {
-		RegisterRecipient(instance, rs)
+		// If the URL is not known, a discovery mail will be sent later
+		if rs.recipient.URL != "" {
+			RegisterRecipient(instance, rs)
+		}
 	}
 
 	sharing.Owner = true

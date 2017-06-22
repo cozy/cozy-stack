@@ -802,11 +802,8 @@ func TestSharingAnswerBadState(t *testing.T) {
 	assert.Equal(t, 404, res.StatusCode)
 }
 
-func TestCreateRecipientNoURL(t *testing.T) {
-	email := "mailme@maybe"
-	res, err := postJSON(t, "/sharings/recipient", echo.Map{
-		"email": email,
-	})
+func TestCreateRecipientNoURLNoEmail(t *testing.T) {
+	res, err := postJSON(t, "/sharings/recipient", echo.Map{})
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
 }
@@ -1222,6 +1219,72 @@ func TestSetDestinationDirectory(t *testing.T) {
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
+
+func TestDiscoveryFormNoSharingID(t *testing.T) {
+	urlVal := url.Values{
+		"sharing_id": {""},
+	}
+	res, err := requestGET("/sharings/discovery", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 500, res.StatusCode)
+}
+
+func TestDiscoveryFormNoRecipientID(t *testing.T) {
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
+	urlVal := url.Values{
+		"sharing_id": {sharing.SharingID},
+	}
+	res, err := requestGET("/sharings/discovery", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 500, res.StatusCode)
+}
+
+func TestDiscoveryFormRecipientWithURL(t *testing.T) {
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
+	recipient := createRecipient(t, "email", "url")
+	urlVal := url.Values{
+		"sharing_id":   {sharing.SharingID},
+		"recipient_id": {recipient.ID()},
+	}
+	res, err := requestGET("/sharings/discovery", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 500, res.StatusCode)
+}
+
+func TestDiscoveryFormNoEmail(t *testing.T) {
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
+	recipient := &sharings.Recipient{
+		Email: "test@mail.fr",
+		URL:   "",
+	}
+	err := sharings.CreateRecipient(testInstance, recipient)
+	assert.NoError(t, err)
+	urlVal := url.Values{
+		"sharing_id":   {sharing.SharingID},
+		"recipient_id": {recipient.ID()},
+	}
+	res, err := requestGET("/sharings/discovery", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 500, res.StatusCode)
+}
+
+func TestDiscoverySuccess(t *testing.T) {
+	recipient := createRecipient(t, "email", recipientURL)
+
+	sharing := createSharing(t, consts.OneShotSharing, "", true,
+		[]*sharings.Recipient{recipient}, permissions.Rule{})
+	urlVal := url.Values{
+		"sharing_id":   {sharing.SharingID},
+		"recipient_id": {sharing.RecipientsStatus[0].RefRecipient.ID},
+		"url":          {"http://" + recipientURL},
+	}
+	res, err := formPOST("/sharings/discovery", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 302, res.StatusCode)
 }
 
 func TestMergeMetadata(t *testing.T) {

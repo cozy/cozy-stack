@@ -45,6 +45,7 @@ var (
 		"login.html",
 		"passphrase_reset.html",
 		"passphrase_renew.html",
+		"sharing_discovery.html",
 	}
 )
 
