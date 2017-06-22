@@ -55,6 +55,7 @@ type Options struct {
 	Mode           string                `json:"mode"`
 	From           *Address              `json:"from"`
 	To             []*Address            `json:"to"`
+	ReplyTo        *Address              `json:"reply_to,omitempty"`
 	Subject        string                `json:"subject"`
 	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
 	Date           *time.Time            `json:"date"`
@@ -79,6 +80,10 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 		return err
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
+	from := config.GetConfig().NoReply
+	if from == "" {
+		from = "noreply@" + utils.StripPort(domain)
+	}
 	switch opts.Mode {
 	case ModeNoReply:
 		toAddr, err := addressFromDomain(domain)
@@ -86,20 +91,17 @@ func SendMail(ctx context.Context, m *jobs.Message) error {
 			return err
 		}
 		opts.To = []*Address{toAddr}
-		from := config.GetConfig().NoReply
-		if from == "" {
-			from = "noreply@" + utils.StripPort(domain)
-		}
 		opts.From = &Address{Email: from}
 		if tmpl, ok := opts.TemplateValues.(map[string]interface{}); ok {
 			tmpl["RecipientName"] = toAddr.Name
 		}
 	case ModeFrom:
-		fromAddr, err := addressFromDomain(domain)
+		sender, err := addressFromDomain(domain)
 		if err != nil {
 			return err
 		}
-		opts.From = fromAddr
+		opts.ReplyTo = sender
+		opts.From = &Address{Name: sender.Name, Email: from}
 	default:
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
 	}
@@ -150,11 +152,17 @@ func doSendMail(ctx context.Context, opts *Options) error {
 	for i, to := range opts.To {
 		toAddresses[i] = mail.FormatAddress(to.Email, to.Name)
 	}
-	mail.SetHeaders(map[string][]string{
+	headers := map[string][]string{
 		"From":    {mail.FormatAddress(opts.From.Email, opts.From.Name)},
 		"To":      toAddresses,
 		"Subject": {opts.Subject},
-	})
+	}
+	if opts.ReplyTo != nil {
+		headers["Reply-To"] = []string{
+			mail.FormatAddress(opts.ReplyTo.Email, opts.ReplyTo.Name),
+		}
+	}
+	mail.SetHeaders(headers)
 	mail.SetDateHeader("Date", date)
 
 	var parts []*Part
