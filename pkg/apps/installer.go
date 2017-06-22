@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/sirupsen/logrus"
 )
 
@@ -130,7 +131,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		endState = Ready
 	}
 
-	log := db.Logger()
+	log := logger.WithDomain(db.Prefix())
 
 	var fetcher Fetcher
 	switch src.Scheme {

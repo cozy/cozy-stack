@@ -78,7 +78,7 @@ func (w *Worker) Start(jobs chan Job) {
 	w.jobs = jobs
 	for i := 0; i < w.Conf.Concurrency; i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
-		log.Debugf("Start worker %s", name)
+		joblog.Debugf("Start worker %s", name)
 		go w.work(name)
 	}
 }
@@ -87,13 +87,13 @@ func (w *Worker) work(workerID string) {
 	for job := range w.jobs {
 		domain := job.Domain()
 		if domain == "" {
-			log.Errorf("[job] %s: missing domain from job request", workerID)
+			joblog.Errorf("[job] %s: missing domain from job request", workerID)
 			continue
 		}
 		parentCtx := NewWorkerContext(domain, workerID)
 		infos := job.Infos()
 		if err := job.AckConsumed(); err != nil {
-			log.Errorf("[job] %s: error acking consume job %s: %s",
+			joblog.Errorf("[job] %s: error acking consume job %s: %s",
 				workerID, infos.ID(), err.Error())
 			continue
 		}
@@ -105,14 +105,14 @@ func (w *Worker) work(workerID string) {
 		}
 		var err error
 		if err = t.run(); err != nil {
-			log.Errorf("[job] %s: error while performing job %s: %s",
+			joblog.Errorf("[job] %s: error while performing job %s: %s",
 				workerID, infos.ID(), err.Error())
 			err = job.Nack(err)
 		} else {
 			err = job.Ack()
 		}
 		if err != nil {
-			log.Errorf("[job] %s: error while acking job done %s: %s",
+			joblog.Errorf("[job] %s: error while acking job done %s: %s",
 				workerID, infos.ID(), err.Error())
 		}
 	}
@@ -166,7 +166,7 @@ func (t *task) run() (err error) {
 	defer func() {
 		if t.conf.WorkerCommit != nil {
 			if errc := t.conf.WorkerCommit(t.ctx, t.infos.Message, err); errc != nil {
-				log.Warnf("[job] %s: error while commiting job %s: %s",
+				joblog.Warnf("[job] %s: error while commiting job %s: %s",
 					t.workerID, t.infos.ID(), errc.Error())
 			}
 		}
@@ -177,13 +177,13 @@ func (t *task) run() (err error) {
 			return err
 		}
 		if err != nil {
-			log.Warnf("[job] %s: error while performing job %s: %s (retry in %s)",
+			joblog.Warnf("[job] %s: error while performing job %s: %s (retry in %s)",
 				t.workerID, t.infos.ID(), err.Error(), delay)
 		}
 		if delay > 0 {
 			time.Sleep(delay)
 		}
-		log.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
+		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
 			t.workerID, t.infos.ID(), t.execCount, timeout)
 		ctx, cancel := context.WithTimeout(t.ctx, timeout)
 		if err = t.exec(ctx); err == nil {

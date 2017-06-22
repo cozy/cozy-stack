@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/echo"
 	"github.com/google/go-querystring/query"
-	"github.com/sirupsen/logrus"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as
@@ -46,31 +45,27 @@ type Doc interface {
 // for now it is just a string with the database prefix.
 type Database interface {
 	Prefix() string
-	Logger() *logrus.Entry
 }
 
 // SimpleDatabase implements the Database interface
 type simpleDB struct {
 	prefix string
-	logger *logrus.Entry
 }
 
 // Prefix implements the Database interface on simpleDB
-func (sdb *simpleDB) Prefix() string { return sdb.prefix + "/" }
-
-func (sdb *simpleDB) Logger() *logrus.Entry { return sdb.logger }
+func (sdb *simpleDB) Prefix() string { return sdb.prefix }
 
 // SimpleDatabasePrefix returns a Database from a prefix, useful for test
 func SimpleDatabasePrefix(prefix string) Database {
-	return &simpleDB{
-		prefix: prefix,
-		logger: logger.WithDomain(prefix),
-	}
+	return &simpleDB{prefix: prefix}
 }
 
 func rtevent(db Database, evtype string, doc, oldDoc Doc) {
 	domain := db.Prefix()
-	domain = domain[:len(domain)-1] // Strip the final '/'
+	if err := runHooks(domain, evtype, doc, oldDoc); err != nil {
+		logger.WithDomain(db.Prefix()).Errorf("error in hooks on %s %s %v\n", evtype, doc.DocType(), err)
+	}
+
 	realtime.GetHub().Publish(&realtime.Event{
 		Type:   evtype,
 		Doc:    doc.Clone(),
@@ -249,12 +244,12 @@ func escapeCouchdbName(name string) string {
 
 func makeDBName(db Database, doctype string) string {
 	// @TODO This should be better analysed
-	dbname := escapeCouchdbName(db.Prefix() + doctype)
+	dbname := escapeCouchdbName(db.Prefix() + "/" + doctype)
 	return url.QueryEscape(dbname)
 }
 
 func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
-	dbprefix = escapeCouchdbName(dbprefix)
+	dbprefix = escapeCouchdbName(dbprefix + "/")
 	if !strings.HasPrefix(dbname, dbprefix) {
 		return false, ""
 	}
@@ -276,7 +271,7 @@ func makeRequest(db Database, method, path string, reqbody interface{}, resbody 
 		}
 	}
 
-	log := db.Logger()
+	log := logger.WithDomain(db.Prefix())
 	if logger.IsDebug(log) {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
@@ -358,7 +353,7 @@ func AllDoctypes(db Database) ([]string, error) {
 	prefix := escapeCouchdbName(db.Prefix())
 	var doctypes []string
 	for _, dbname := range dbs {
-		parts := strings.SplitAfter(dbname, "/")
+		parts := strings.Split(dbname, "/")
 		if len(parts) == 2 && parts[0] == prefix {
 			doctype := unescapeCouchdbName(parts[1])
 			doctypes = append(doctypes, doctype)
@@ -397,8 +392,8 @@ func DeleteAllDBs(db Database) error {
 
 	dbprefix := db.Prefix()
 
-	if dbprefix == "" || dbprefix[len(dbprefix)-1] != '/' {
-		return fmt.Errorf("You need to provide the database prefix name ending with /")
+	if dbprefix == "" {
+		return fmt.Errorf("You need to provide a valid database")
 	}
 
 	var dbsList []string
