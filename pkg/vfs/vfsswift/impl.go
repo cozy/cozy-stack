@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 )
 
@@ -187,6 +188,11 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		return nil, vfs.ErrParentInTrash
 	}
 
+	// Avoid storing negative size in the index.
+	if newdoc.ByteSize < 0 {
+		newdoc.ByteSize = 0
+	}
+
 	if olddoc == nil {
 		var exists bool
 		exists, err = sfs.Indexer.DirChildExists(newdoc.DirID, newdoc.DocName)
@@ -232,6 +238,8 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	return &swiftFileCreation{
 		f:       f,
 		fs:      sfs,
+		w:       0,
+		size:    newsize,
 		name:    objName,
 		meta:    vfs.NewMetaExtractor(newdoc),
 		newdoc:  newdoc,
@@ -266,21 +274,25 @@ func (sfs *swiftVFS) DestroyFile(doc *vfs.FileDoc) error {
 
 func (sfs *swiftVFS) destroyDirContent(doc *vfs.DirDoc) error {
 	iter := sfs.DirIterator(doc, nil)
+	var errm error
 	for {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
+		d, f, erri := iter.Next()
+		if erri == vfs.ErrIteratorDone {
+			return errm
 		}
+		if erri != nil {
+			return erri
+		}
+		var errd error
 		if d != nil {
-			err = sfs.destroyDirAndContent(d)
+			errd = sfs.destroyDirAndContent(d)
 		} else {
-			err = sfs.destroyFile(f)
+			errd = sfs.destroyFile(f)
 		}
-		if err != nil {
-			return err
+		if errd != nil {
+			errm = multierror.Append(errm, errd)
 		}
 	}
-	return nil
 }
 
 func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
@@ -288,7 +300,8 @@ func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
 	if err != nil {
 		return err
 	}
-	if err := sfs.c.ObjectDelete(sfs.container, doc.DirID+"/"+doc.DocName); err != nil {
+	err = sfs.c.ObjectDelete(sfs.container, doc.DirID+"/"+doc.DocName)
+	if err != nil && err != swift.ObjectNotFound {
 		return err
 	}
 	return sfs.Indexer.DeleteDirDoc(doc)
@@ -296,27 +309,33 @@ func (sfs *swiftVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
 
 func (sfs *swiftVFS) destroyFile(doc *vfs.FileDoc) error {
 	objName := doc.DirID + "/" + doc.DocName
-	err := sfs.c.ObjectDelete(sfs.container, objName)
+	err := sfs.destroyFileVersions(objName)
 	if err != nil {
+		sfs.log.Errorf("[vfsswift] Could not delete version of %s: %s",
+			objName, err.Error())
+	}
+	err = sfs.c.ObjectDelete(sfs.container, objName)
+	if err != nil && err != swift.ObjectNotFound {
 		return err
 	}
+	return sfs.Indexer.DeleteFileDoc(doc)
+}
+
+func (sfs *swiftVFS) destroyFileVersions(objName string) error {
 	versionObjNames, err := sfs.c.VersionObjectList(sfs.version, objName)
 	// could happened if the versionning could not be enabled, in which case we
 	// do not propagate the error.
-	if err == swift.ContainerNotFound {
-		return sfs.Indexer.DeleteFileDoc(doc)
+	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+		return nil
 	}
 	if err != nil {
 		return err
 	}
 	if len(versionObjNames) > 0 {
 		_, err = sfs.c.BulkDelete(sfs.version, versionObjNames)
-		if err != nil {
-			sfs.log.Errorf("[vfsswift] Could not delete version of %s: %s",
-				objName, err.Error())
-		}
+		return err
 	}
-	return sfs.Indexer.DeleteFileDoc(doc)
+	return nil
 }
 
 func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
@@ -449,6 +468,7 @@ func (sfs *swiftVFS) DirOrFileByPath(name string) (*vfs.DirDoc, *vfs.FileDoc, er
 type swiftFileCreation struct {
 	f       *swift.ObjectCreateFile
 	w       int64
+	size    int64
 	fs      *swiftVFS
 	name    string
 	err     error
@@ -490,8 +510,7 @@ func (f *swiftFileCreation) Write(p []byte) (int, error) {
 		return n, f.err
 	}
 
-	size := f.newdoc.ByteSize
-	if size >= 0 && f.w > size {
+	if f.size >= 0 && f.w > f.size {
 		f.err = vfs.ErrContentLengthMismatch
 		return n, f.err
 	}
@@ -549,7 +568,7 @@ func (f *swiftFileCreation) Close() (err error) {
 		}
 	}
 
-	if newdoc.ByteSize < 0 {
+	if f.size < 0 {
 		newdoc.ByteSize = written
 	}
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/afero"
 )
 
@@ -189,8 +190,9 @@ func (afs *aferoVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 	extractor := vfs.NewMetaExtractor(newdoc)
 
 	return &aferoFileCreation{
-		w: 0,
-		f: f,
+		w:    0,
+		f:    f,
+		size: newsize,
 
 		afs:     afs,
 		newdoc:  newdoc,
@@ -230,21 +232,25 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 
 func (afs *aferoVFS) destroyDirContent(doc *vfs.DirDoc) error {
 	iter := afs.Indexer.DirIterator(doc, nil)
+	var errm error
 	for {
-		d, f, err := iter.Next()
-		if err == vfs.ErrIteratorDone {
-			break
+		d, f, erri := iter.Next()
+		if erri == vfs.ErrIteratorDone {
+			return errm
 		}
+		if erri != nil {
+			return erri
+		}
+		var errd error
 		if d != nil {
-			err = afs.destroyDirAndContent(d)
+			errd = afs.destroyDirAndContent(d)
 		} else {
-			err = afs.destroyFile(f)
+			errd = afs.destroyFile(f)
 		}
-		if err != nil {
-			return err
+		if errd != nil {
+			errm = multierror.Append(errm, errd)
 		}
 	}
-	return nil
 }
 
 func (afs *aferoVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
@@ -253,7 +259,7 @@ func (afs *aferoVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
 		return err
 	}
 	err = afs.fs.RemoveAll(doc.Fullpath)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return afs.Indexer.DeleteDirDoc(doc)
@@ -265,7 +271,7 @@ func (afs *aferoVFS) destroyFile(doc *vfs.FileDoc) error {
 		return err
 	}
 	err = afs.fs.Remove(path)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return afs.Indexer.DeleteFileDoc(doc)
@@ -430,6 +436,7 @@ func (f *aferoFileOpen) Close() error {
 type aferoFileCreation struct {
 	f       afero.File         // file handle
 	w       int64              // total size written
+	size    int64              // total file size, -1 if unknown
 	afs     *aferoVFS          // parent vfs
 	newdoc  *vfs.FileDoc       // new document
 	olddoc  *vfs.FileDoc       // old document
@@ -466,8 +473,7 @@ func (f *aferoFileCreation) Write(p []byte) (int, error) {
 		return n, f.err
 	}
 
-	size := f.newdoc.ByteSize
-	if size >= 0 && f.w > size {
+	if f.size >= 0 && f.w > f.size {
 		f.err = vfs.ErrContentLengthMismatch
 		return n, f.err
 	}
@@ -544,7 +550,6 @@ func (f *aferoFileCreation) Close() (err error) {
 		if newdoc.ID() == "" {
 			return f.afs.Indexer.CreateFileDoc(newdoc)
 		}
-
 		return f.afs.Indexer.CreateNamedFileDoc(newdoc)
 	}
 	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)

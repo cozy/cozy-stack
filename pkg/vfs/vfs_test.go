@@ -755,6 +755,12 @@ func TestCreateFileTooBig(t *testing.T) {
 
 	_, err = fs.FileByPath("/too-big2")
 	assert.True(t, os.IsNotExist(err))
+
+	root, err := fs.DirByPath("/")
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.NoError(t, fs.DestroyDirContent(root))
 }
 
 func TestMain(m *testing.M) {
