@@ -34,8 +34,8 @@ const (
 	Permissions = "io.cozy.permissions"
 	// Queues doc type for jobs queues
 	Queues = "io.cozy.queues"
-	// Recipients doc type for sharing recipients
-	Recipients = "io.cozy.contacts"
+	// Contacts doc type for sharing
+	Contacts = "io.cozy.contacts"
 	// RemoteRequests doc type for logging requests to remote websites
 	RemoteRequests = "io.cozy.remote.requests"
 	// Sessions doc type for sessions identifying a connection

@@ -548,7 +548,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	}
 	ref := couchdb.DocReference{
 		ID:   doc.ID(),
-		Type: consts.Recipients,
+		Type: consts.Contacts,
 	}
 	sharer.SharerStatus.RefRecipient = ref
 	err = sharer.SharerStatus.Register(instance)

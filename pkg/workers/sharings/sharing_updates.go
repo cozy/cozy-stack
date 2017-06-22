@@ -254,7 +254,7 @@ func extractRecipient(db couchdb.Database, rec *sharings.RecipientStatus) (*shar
 // GetRecipient returns the Recipient stored in database from a given ID
 func GetRecipient(db couchdb.Database, recID string) (*couchdb.JSONDoc, error) {
 	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(db, consts.Recipients, recID, doc)
+	err := couchdb.GetDoc(db, consts.Contacts, recID, doc)
 	if couchdb.IsNotFoundError(err) {
 		err = ErrRecipientDoesNotExist
 	}

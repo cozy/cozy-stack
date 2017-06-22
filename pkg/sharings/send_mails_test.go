@@ -18,7 +18,7 @@ var rec = &Recipient{
 
 var recStatus = &RecipientStatus{
 	RefRecipient: couchdb.DocReference{
-		Type: consts.Recipients,
+		Type: consts.Contacts,
 	},
 	Client: auth.Client{
 		ClientID:     "",
