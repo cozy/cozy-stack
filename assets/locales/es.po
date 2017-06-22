@@ -148,7 +148,7 @@ msgid "Error Must be authenticated"
 msgstr "Usted debe ser autentificado"
 
 msgid "Error Konnector execution"
-msgstr ""
+msgstr "Recopilación de problemas de su cuenta %s"
 
 msgid "Permissions Read only"
 msgstr ", sólo en lectura"
@@ -202,25 +202,25 @@ msgid "Permissions io.cozy.permissions"
 msgstr "Delegación de permisos"
 
 msgid "Permissions fr.maif.maifuser.contrat"
-msgstr ""
+msgstr "Contrato (Maif)"
 
 msgid "Permissions fr.maif.maifuser.home"
-msgstr ""
+msgstr "Inicio (Maif)"
 
 msgid "Permissions fr.maif.maifuser.foyer"
-msgstr ""
+msgstr "Familia (Maif)"
 
 msgid "Permissions fr.maif.maifuser.paymentterms"
-msgstr ""
+msgstr "Condiciones de pago (Maif)"
 
 msgid "Permissions fr.maif.maifuser.sinistrehabitation"
-msgstr ""
+msgstr "Seguro de vivienda (Maif)"
 
 msgid "Permissions fr.maif.maifuser.sinistrevehicule"
-msgstr ""
+msgstr "Seguro automóvil (Maif)"
 
 msgid "Permissions fr.maif.maifuser.societaire"
-msgstr ""
+msgstr "Asociaciones (Maif)"
 
 msgid "Sharings Shared with Me directory"
-msgstr ""
+msgstr "Compartido conmigo"

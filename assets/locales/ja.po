@@ -140,7 +140,7 @@ msgid "Error Must be authenticated"
 msgstr "認証されている必要があります"
 
 msgid "Error Konnector execution"
-msgstr ""
+msgstr "お使いの %s アカウントで収集に問題が発生しました"
 
 msgid "Permissions Read only"
 msgstr "、読み取り専用"
@@ -194,25 +194,25 @@ msgid "Permissions io.cozy.permissions"
 msgstr "権限の委任"
 
 msgid "Permissions fr.maif.maifuser.contrat"
-msgstr ""
+msgstr "契約 (Maif)"
 
 msgid "Permissions fr.maif.maifuser.home"
-msgstr ""
+msgstr "ホーム (Maif)"
 
 msgid "Permissions fr.maif.maifuser.foyer"
-msgstr ""
+msgstr "ファミリー (Maif)"
 
 msgid "Permissions fr.maif.maifuser.paymentterms"
-msgstr ""
+msgstr "支払い条件 (Maif)"
 
 msgid "Permissions fr.maif.maifuser.sinistrehabitation"
-msgstr ""
+msgstr "住宅の被害 (Maif)"
 
 msgid "Permissions fr.maif.maifuser.sinistrevehicule"
-msgstr ""
+msgstr "車の被害 (Maif)"
 
 msgid "Permissions fr.maif.maifuser.societaire"
-msgstr ""
+msgstr "社会的 (Maif)"
 
 msgid "Sharings Shared with Me directory"
 msgstr "私と共有"
