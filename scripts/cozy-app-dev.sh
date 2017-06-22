@@ -184,10 +184,10 @@ do_create_instances() {
 
 wait_for() {
 	i="0"
-	while ! LC_NUMERIC=C curl -s --max-time 0.1 -XGET "${1}" > /dev/null; do
+	while ! LC_NUMERIC=C curl -s --max-time 0.5 -XGET "${1}" > /dev/null; do
 		sleep 0.1
 		i=$((i+1))
-		if [ "${i}" -gt "50" ]; then
+		if [ "${i}" -gt "100" ]; then
 			echo_err "could not listen to ${2} on ${1}"
 			exit 1
 		fi
