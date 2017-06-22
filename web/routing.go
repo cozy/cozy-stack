@@ -166,7 +166,7 @@ func SetupRoutes(router *echo.Echo) error {
 	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 	data.Routes(router.Group("/data", mws...))
 	if config.IsDevRelease() {
-		imexport.Routes(router.Group("/export", mws...))
+		imexport.Routes(router.Group("/imexport", mws...))
 	}
 	files.Routes(router.Group("/files", mws...))
 	intents.Routes(router.Group("/intents", mws...))
