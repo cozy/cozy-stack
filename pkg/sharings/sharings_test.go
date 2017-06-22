@@ -38,9 +38,11 @@ var domainSharer = "test-sharing.sparta"
 var domainRecipient = "test-sharing.xerxes"
 
 var testInstance *instance.Instance
+var ts *httptest.Server
+var setup *testutils.TestSetup
+
 var in *instance.Instance
 var recipientIn *instance.Instance
-var ts *httptest.Server
 var recipientURL string
 var testDocType = "io.cozy.tests"
 
@@ -130,35 +132,63 @@ func createOAuthClient(t *testing.T) *oauth.Client {
 	return client
 }
 
-func insertSharingIntoDB(t *testing.T, sharingType string, owner bool, doctype string, recipients []*Recipient, rule permissions.Rule) Sharing {
+func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, doctype string, recipients []*Recipient, rule permissions.Rule) Sharing {
 	sharing := Sharing{
 		SharingType:      sharingType,
 		Owner:            owner,
-		SharingID:        utils.RandomString(32),
 		Permissions:      permissions.Set{rule},
 		RecipientsStatus: []*RecipientStatus{},
 	}
 
-	for _, recipient := range recipients {
-		if recipient.ID() == "" {
-			recipient = createRecipient(t, recipient.Email, recipient.URL)
-		}
-
-		client := createOAuthClient(t)
-
-		sharing.RecipientsStatus = append(sharing.RecipientsStatus,
-			&RecipientStatus{
-				Status: consts.SharingStatusAccepted,
-				RefRecipient: couchdb.DocReference{
-					ID:   recipient.ID(),
-					Type: recipient.DocType(),
-				},
-				recipient:    recipient,
-				HostClientID: client.ClientID,
-			})
+	if sharingID == "" {
+		sharing.SharingID = utils.RandomString(32)
+	} else {
+		sharing.SharingID = sharingID
 	}
 
-	err := couchdb.CreateDoc(testInstance, &sharing)
+	scope, err := rule.MarshalScopeString()
+	assert.NoError(t, err)
+
+	for _, recipient := range recipients {
+		if recipient.ID() == "" {
+			recipient.URL = strings.TrimPrefix(recipient.URL, "http://")
+			err = CreateRecipient(testInstance, recipient)
+			assert.NoError(t, err)
+		}
+
+		rs := &RecipientStatus{
+			Status: consts.SharingStatusAccepted,
+			RefRecipient: couchdb.DocReference{
+				ID:   recipient.ID(),
+				Type: recipient.DocType(),
+			},
+			recipient: recipient,
+			Client: auth.Client{
+				ClientID: utils.RandomString(15),
+			},
+			AccessToken: auth.AccessToken{
+				AccessToken: utils.RandomString(15),
+				Scope:       scope,
+			},
+		}
+
+		if sharingType == consts.MasterMasterSharing {
+			client := createOAuthClient(t)
+			rs.HostClientID = client.ClientID
+		}
+
+		if owner {
+			sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
+		} else {
+			sharing.Sharer = Sharer{
+				SharerStatus: rs,
+				URL:          recipient.URL,
+			}
+			break
+		}
+	}
+
+	err = couchdb.CreateDoc(testInstance, &sharing)
 	assert.NoError(t, err)
 
 	return sharing
@@ -690,7 +720,7 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 		Verbs:    permissions.ALL,
 	}
 
-	sharing := insertSharingIntoDB(t, consts.MasterMasterSharing, false,
+	sharing := insertSharingIntoDB(t, "", consts.MasterMasterSharing, false,
 		"io.cozy.events", []*Recipient{}, rule)
 
 	_, err := RecipientRefusedSharing(testInstance, sharing.SharingID)
@@ -781,18 +811,6 @@ func TestCreateSharingAndRegisterSharer(t *testing.T) {
 	// tested in `createSharing`.
 }
 
-func TestDeleteOAuthClient(t *testing.T) {
-	client := createOAuthClient(t)
-
-	err := deleteOAuthClient(testInstance, "fakeid")
-	assert.Error(t, err)
-	err = deleteOAuthClient(testInstance, client.ClientID)
-	assert.NoError(t, err)
-
-	_, err = oauth.FindClient(testInstance, client.ClientID)
-	assert.Error(t, err)
-}
-
 func TestRemoveDocumentIfNotShared(t *testing.T) {
 	// First set of tests: JSON documents.
 	// Test: the document matches a permission in a sharing so it should NOT be
@@ -805,7 +823,7 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		Verbs:    permissions.ALL,
 		Values:   []string{docEvent.ID()},
 	}
-	_ = insertSharingIntoDB(t, consts.MasterSlaveSharing, false,
+	_ = insertSharingIntoDB(t, "", consts.MasterSlaveSharing, false,
 		"io.cozy.events", []*Recipient{}, rule1)
 
 	err := RemoveDocumentIfNotShared(testInstance, "io.cozy.events",
@@ -836,7 +854,7 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		Verbs:    permissions.ALL,
 		Values:   []string{"io.cozy.photos.albums/456"},
 	}
-	_ = insertSharingIntoDB(t, consts.MasterSlaveSharing, false,
+	_ = insertSharingIntoDB(t, "", consts.MasterSlaveSharing, false,
 		"io.cozy.events", []*Recipient{}, rule2)
 
 	// Test: the file matches a permission in a sharing it should NOT be
@@ -866,66 +884,225 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 	assert.True(t, fileDoc.Trashed)
 }
 
-func TestRevokeRecipient(t *testing.T) {
-	// We create a sharing with 2 recipients.
-	recipient1 := &Recipient{URL: "recipient1.url.cc", Email: "recipient@1"}
-	recipient2 := &Recipient{URL: "recipient2.url.cc", Email: "recipient@2"}
+func TestRevokeSharing(t *testing.T) {
+	sharingIDSharerMM := utils.RandomString(20)
+	sharingIDRecipientMM := utils.RandomString(20)
+	counterRevokeSharing, counterRevokeRecipient := 0, 0
+	mpr := map[string]func(*echo.Group){
+		"/sharings": func(router *echo.Group) {
+			router.DELETE("/:id", func(c echo.Context) error {
+				counterRevokeSharing = counterRevokeSharing + 1
+				assert.Equal(t, sharingIDSharerMM, c.Param("id"))
+				assert.Equal(t, "false",
+					c.QueryParam(consts.QueryParamRecursive))
+				return c.NoContent(http.StatusOK)
+			})
+			router.DELETE("/:id/recipient/:recipient-client-id",
+				func(c echo.Context) error {
+					counterRevokeRecipient = counterRevokeRecipient + 1
+					assert.Equal(t, sharingIDRecipientMM, c.Param("id"))
+					assert.Equal(t, "false",
+						c.QueryParam(consts.QueryParamRecursive))
+					return c.NoContent(http.StatusOK)
+				},
+			)
+		},
+	}
+	if ts != nil {
+		ts.Close()
+	}
+	ts = setup.GetTestServerMultipleRoutes(mpr)
+
+	recipient1 := &Recipient{URL: ts.URL, Email: "recipient1@mail.cc"}
+	recipient2 := &Recipient{URL: ts.URL, Email: "recipient2@mail.cc"}
 	rule := permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
 		Type:     "io.cozy.events",
 		Values:   []string{"io.cozy.calendar/123"},
 		Verbs:    permissions.ALL,
 	}
-	sharing := insertSharingIntoDB(t, consts.MasterMasterSharing, true,
-		"io.cozy.events", []*Recipient{recipient1, recipient2}, rule)
+	// We create a sharing where the user is the owner.
+	sharingSharerMM := insertSharingIntoDB(t, sharingIDSharerMM,
+		consts.MasterMasterSharing, true, "io.cozy.events",
+		[]*Recipient{recipient1, recipient2}, rule)
+	// We add a trigger to this sharing.
+	sched := stack.GetScheduler()
+	triggers, _ := sched.GetAll(testInstance.Domain)
+	nbTriggers := len(triggers)
+	err := AddTrigger(testInstance, rule, sharingSharerMM.SharingID)
+	assert.NoError(t, err)
+	triggers, _ = sched.GetAll(testInstance.Domain)
+	assert.Len(t, triggers, nbTriggers+1)
+
+	// Test: we revoke a sharing where we are the owner.
+	err = RevokeSharing(testInstance, &sharingSharerMM, true)
+	assert.NoError(t, err)
+	// Check: all the recipients were asked to remove the sharing.
+	assert.Equal(t, len(sharingSharerMM.RecipientsStatus), counterRevokeSharing)
+	// Check: the trigger is deleted.
+	triggers, _ = sched.GetAll(testInstance.Domain)
+	assert.Len(t, triggers, nbTriggers)
+	// Check: the OAuth clients for all the recipients were deleted. Both calls
+	// to `FindClient` should return errors.
+	_, err = oauth.FindClient(testInstance,
+		sharingSharerMM.RecipientsStatus[0].HostClientID)
+	assert.Error(t, err)
+	_, err = oauth.FindClient(testInstance,
+		sharingSharerMM.RecipientsStatus[1].HostClientID)
+	assert.Error(t, err)
+	// Check: the sharing is revoked.
+	doc := &Sharing{}
+	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingSharerMM.ID(),
+		doc)
+	assert.NoError(t, err)
+	assert.True(t, doc.Revoked)
+
+	// We create a sharing where the user is the recipient.
+	sharingRecipientMM := insertSharingIntoDB(t, sharingIDRecipientMM,
+		consts.MasterMasterSharing, false, "io.cozy.events",
+		[]*Recipient{recipient1}, rule)
+	// We add a trigger to this sharing.
+	err = AddTrigger(testInstance, rule, sharingRecipientMM.SharingID)
+	assert.NoError(t, err)
+	triggers, _ = sched.GetAll(testInstance.Domain)
+	assert.Len(t, triggers, nbTriggers+1)
+
+	// Test: we revoke a sharing where we are a recipient.
+	err = RevokeSharing(testInstance, &sharingRecipientMM, true)
+	assert.NoError(t, err)
+	// Check: the sharer was asked to revoke us as a recipient.
+	assert.Equal(t, 1, counterRevokeRecipient)
+	// Check: the trigger is deleted.
+	triggers, _ = sched.GetAll(testInstance.Domain)
+	assert.Len(t, triggers, nbTriggers)
+	// Check: the OAuth client for the sharer is deleted.
+	_, err = oauth.FindClient(testInstance,
+		sharingRecipientMM.Sharer.SharerStatus.HostClientID)
+	assert.Error(t, err)
+	// Check: the sharing is revoked.
+	doc = &Sharing{}
+	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingRecipientMM.ID(),
+		doc)
+	assert.NoError(t, err)
+	assert.True(t, doc.Revoked)
+
+}
+
+func TestRevokeRecipient(t *testing.T) {
+	// Test: we try to revoke a recipient from a sharing while we are not the
+	// owner of the sharing.
+	sharingNotSharer := insertSharingIntoDB(t, "", consts.MasterMasterSharing,
+		false, "io.cozy.sharings", []*Recipient{}, permissions.Rule{})
+	err := RevokeRecipient(testInstance, &sharingNotSharer, "wontbeused", false)
+	assert.Error(t, err)
+	assert.Equal(t, err, ErrOnlySharerCanRevokeRecipient)
+
+	// We create a sharing with 2 recipients.
+	sharingID := utils.RandomString(20)
+	mpr := map[string]func(*echo.Group){
+		"/sharings": func(router *echo.Group) {
+			router.DELETE("/:id", func(c echo.Context) error {
+				assert.Equal(t, sharingID, c.Param("id"))
+				assert.Equal(t, "false",
+					c.QueryParam(consts.QueryParamRecursive))
+				return c.NoContent(http.StatusOK)
+			})
+		},
+	}
+	if ts != nil {
+		ts.Close()
+	}
+	ts = setup.GetTestServerMultipleRoutes(mpr)
+
+	recipient1 := &Recipient{URL: "recipient1.url.cc", Email: "recipient@1"}
+	recipient2 := &Recipient{URL: ts.URL, Email: "recipient@2"}
+	rule := permissions.Rule{
+		Selector: consts.SelectorReferencedBy,
+		Type:     "io.cozy.events",
+		Values:   []string{"io.cozy.calendar/123"},
+		Verbs:    permissions.ALL,
+	}
+	sharing := insertSharingIntoDB(t, sharingID, consts.MasterMasterSharing,
+		true, "io.cozy.events", []*Recipient{recipient1, recipient2}, rule)
 
 	// We add a trigger to this sharing.
 	sched := stack.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
 	nbTriggers := len(triggers)
-	err := AddTrigger(testInstance, rule, sharing.SharingID)
+	err = AddTrigger(testInstance, rule, sharing.SharingID)
 	assert.NoError(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
 
 	// Test: we try to remove a recipient that does not belong to this sharing.
-	err = RevokeRecipient(testInstance, &sharing, "randomhostclientid")
+	err = RevokeRecipient(testInstance, &sharing, "randomhostclientid", false)
 	assert.Error(t, err)
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
 
 	// Test: we remove the first recipient.
 	err = RevokeRecipient(testInstance, &sharing,
-		sharing.RecipientsStatus[0].HostClientID)
+		sharing.RecipientsStatus[0].Client.ClientID, false)
 	assert.NoError(t, err)
-	// We check that the first recipient was deleted, that the sharing is not
+	// We check that the first recipient was revoked, that the sharing is not
 	// revoked, and that the trigger still exists.
 	doc := Sharing{}
 	err = couchdb.GetDoc(testInstance, consts.Sharings, sharing.ID(), &doc)
 	assert.NoError(t, err)
 	assert.False(t, doc.Revoked)
+	assert.Equal(t, consts.SharingStatusRevoked, doc.RecipientsStatus[0].Status)
 	assert.Empty(t, doc.RecipientsStatus[0].HostClientID)
+	assert.Empty(t, doc.RecipientsStatus[0].Client.ClientID)
+	assert.Empty(t, doc.RecipientsStatus[0].AccessToken.AccessToken)
+	_, err = oauth.FindClient(testInstance,
+		doc.RecipientsStatus[0].HostClientID)
+	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
 
 	// Test: we remove the second recipient.
+	// By setting `recursive` to true we ask the recipient to revoke the sharing
+	// as well, hence the test server above.
 	err = RevokeRecipient(testInstance, &sharing,
-		sharing.RecipientsStatus[1].HostClientID)
+		sharing.RecipientsStatus[1].Client.ClientID, true)
 	assert.NoError(t, err)
-	// We check that the second recipient was deleted, that the sharing is
+	// We check that the second recipient was revoked, that the sharing is
 	// revoked, and that the trigger was deleted.
 	doc = Sharing{}
 	err = couchdb.GetDoc(testInstance, consts.Sharings, sharing.ID(), &doc)
 	assert.NoError(t, err)
 	assert.True(t, doc.Revoked)
+	assert.Equal(t, consts.SharingStatusRevoked, doc.RecipientsStatus[1].Status)
+	assert.Empty(t, doc.RecipientsStatus[1].HostClientID)
+	assert.Empty(t, doc.RecipientsStatus[1].Client.ClientID)
+	assert.Empty(t, doc.RecipientsStatus[1].AccessToken.AccessToken)
+	_, err = oauth.FindClient(testInstance,
+		doc.RecipientsStatus[1].HostClientID)
+	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers)
+}
+
+func TestDeleteOAuthClient(t *testing.T) {
+	client := createOAuthClient(t)
+
+	err := deleteOAuthClient(testInstance, &RecipientStatus{
+		HostClientID: "fakeid",
+	})
+	assert.Error(t, err)
+	err = deleteOAuthClient(testInstance, &RecipientStatus{
+		HostClientID: client.ClientID,
+	})
+	assert.NoError(t, err)
+
+	_, err = oauth.FindClient(testInstance, client.ClientID)
+	assert.Error(t, err)
 }
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()
-	testSetup := testutils.NewSetup(m, "pkg_sharings_test")
-	testInstance = testSetup.GetTestInstance()
+	setup = testutils.NewSetup(m, "pkg_sharings_test")
+	testInstance = setup.GetTestInstance()
 
 	// Change the default config to persist the vfs
 	tempdir, err := ioutil.TempDir("", "cozy-stack")

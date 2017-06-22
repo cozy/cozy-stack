@@ -19,6 +19,7 @@ import (
 
 	authClient "github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -71,25 +72,41 @@ func createOAuthClient(t *testing.T) *oauth.Client {
 	return client
 }
 
-func createSharing(t *testing.T, sharingType, slug string, owner bool, recipients []*sharings.Recipient, rule permissions.Rule) *sharings.Sharing {
+func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug string, recipients []*sharings.Recipient, rule permissions.Rule) *sharings.Sharing {
 	sharing := &sharings.Sharing{
 		SharingType:      sharingType,
 		Owner:            owner,
-		SharingID:        utils.RandomString(32),
 		Permissions:      permissions.Set{rule},
 		RecipientsStatus: []*sharings.RecipientStatus{},
 	}
 
 	if slug == "" {
-		sharing.AppSlug = utils.RandomString(10)
+		sharing.AppSlug = utils.RandomString(15)
 	} else {
 		sharing.AppSlug = slug
 	}
 
+	if sharingID == "" {
+		sharing.SharingID = utils.RandomString(32)
+	} else {
+		sharing.SharingID = sharingID
+	}
+
+	scope, err := rule.MarshalScopeString()
+	assert.NoError(t, err)
+
 	for _, recipient := range recipients {
 		if recipient.ID() == "" {
-			recipient = createRecipient(t, recipient.Email, recipient.URL)
+			recipient.URL = strings.TrimPrefix(recipient.URL, "http://")
+			err = sharings.CreateRecipient(testInstance, recipient)
+			assert.NoError(t, err)
 		}
+
+		client := createOAuthClient(t)
+		client.CouchID = client.ClientID
+		accessToken, errc := client.CreateJWT(testInstance,
+			permissions.AccessTokenAudience, scope)
+		assert.NoError(t, errc)
 
 		rs := &sharings.RecipientStatus{
 			Status: consts.SharingStatusAccepted,
@@ -98,20 +115,20 @@ func createSharing(t *testing.T, sharingType, slug string, owner bool, recipient
 				Type: recipient.DocType(),
 			},
 			Client: authClient.Client{
-				ClientID: utils.RandomString(32),
+				ClientID: client.ClientID,
 			},
 			AccessToken: authClient.AccessToken{
-				AccessToken:  utils.RandomString(32),
-				RefreshToken: utils.RandomString(32),
+				AccessToken: accessToken,
+				Scope:       scope,
 			},
 		}
 
-		if sharing.SharingType == consts.MasterMasterSharing {
-			client := createOAuthClient(t)
-			rs.HostClientID = client.ClientID
+		if sharingType == consts.MasterMasterSharing {
+			hostClient := createOAuthClient(t)
+			rs.HostClientID = hostClient.ClientID
 		}
 
-		if sharing.Owner {
+		if owner {
 			sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
 		} else {
 			sharing.Sharer = sharings.Sharer{
@@ -120,10 +137,9 @@ func createSharing(t *testing.T, sharingType, slug string, owner bool, recipient
 			}
 			break
 		}
-
 	}
 
-	err := couchdb.CreateDoc(testInstance, sharing)
+	err = couchdb.CreateDoc(testInstance, sharing)
 	assert.NoError(t, err)
 
 	return sharing
@@ -176,7 +192,7 @@ func TestReceiveDocumentSuccessJSON(t *testing.T) {
 	jsonraw, err := json.Marshal(jsondata)
 	assert.NoError(t, err)
 
-	sharing := createSharing(t, consts.MasterSlaveSharing, "", true,
+	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 
 	urlReceive, err := url.Parse(ts.URL)
@@ -207,7 +223,7 @@ func TestReceiveDocumentSuccessJSON(t *testing.T) {
 func TestReceiveDocumentSuccessDir(t *testing.T) {
 	id := "0987jldvnrst"
 
-	sharing := createSharing(t, consts.MasterSlaveSharing, "", true,
+	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 
 	// Test: creation of a directory that did not existed before.
@@ -263,7 +279,7 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	id := "testid"
 	body := "testoutest"
 
-	sharing := createSharing(t, consts.MasterSlaveSharing, "", true,
+	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 
 	// Test: creation of a file that did not exist.
@@ -354,7 +370,7 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 		Verbs:    permissions.ALL,
 		Values:   []string{doc.ID()},
 	}
-	_ = createSharing(t, consts.MasterSlaveSharing, "", false,
+	_ = createSharing(t, "", consts.MasterSlaveSharing, false, "",
 		[]*sharings.Recipient{}, rule)
 
 	path := fmt.Sprintf("/sharings/doc/%s/%s", doc.DocType(), doc.ID())
@@ -608,7 +624,7 @@ func TestRemoveReferences(t *testing.T) {
 		Values:   []string{"io.cozy.photos.albums/123"},
 		Verbs:    permissions.ALL,
 	}
-	_ = createSharing(t, consts.MasterSlaveSharing, "", false,
+	_ = createSharing(t, "", consts.MasterSlaveSharing, false, "",
 		[]*sharings.Recipient{}, rule)
 
 	refAlbum123 := couchdb.DocReference{
@@ -717,7 +733,7 @@ func TestAddSharingRecipientNoSharing(t *testing.T) {
 }
 
 func TestAddSharingRecipientBadRecipient(t *testing.T) {
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 	args := echo.Map{
 		"ID":   "fakeid",
@@ -832,7 +848,7 @@ func TestSharingAnswerBadClientID(t *testing.T) {
 
 func TestSharingAnswerBadCode(t *testing.T) {
 	recipient := createRecipient(t, "email", "url")
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 
 	urlVal := url.Values{
@@ -847,7 +863,7 @@ func TestSharingAnswerBadCode(t *testing.T) {
 
 func TestSharingAnswerSuccess(t *testing.T) {
 	recipient := createRecipient(t, "email", "url")
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 
 	cID := sharing.RecipientsStatus[0].Client.ClientID
@@ -1012,7 +1028,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 
 func TestReceiveClientIDBadSharing(t *testing.T) {
 	recipient := createRecipient(t, "email", "url")
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	authCli := authClient.Client{
 		ClientID: "myclientid",
@@ -1031,7 +1047,7 @@ func TestReceiveClientIDBadSharing(t *testing.T) {
 
 func TestReceiveClientIDSuccess(t *testing.T) {
 	recipient := createRecipient(t, "email", "url")
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	authCli := authClient.Client{
 		ClientID: "myclientid",
@@ -1057,7 +1073,7 @@ func TestGetAccessTokenMissingState(t *testing.T) {
 }
 
 func TestGetAccessTokenMissingCode(t *testing.T) {
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 	res, err := postJSON(t, "/sharings/access/code", echo.Map{
 		"state": sharing.SharingID,
@@ -1076,7 +1092,7 @@ func TestGetAccessTokenBadState(t *testing.T) {
 }
 
 func TestRevokeSharing(t *testing.T) {
-	// Wrong sharing id
+	// Test: revoke a wrong sharing id
 	delURL := fmt.Sprintf("%s/sharings/%s", ts.URL, "fakeid")
 	req, err := http.NewRequest(http.MethodDelete, delURL, nil)
 	assert.NoError(t, err)
@@ -1084,63 +1100,220 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
-	// Sharer for a Master-Master sharing
-	recipient := createRecipient(t, "url", "email")
-	sharingSharer := createSharing(t, consts.MasterMasterSharing, "", true,
-		[]*sharings.Recipient{recipient}, permissions.Rule{})
-
-	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharingSharer.SharingID)
-	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
-	assert.NoError(t, err)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-
-	for _, recipientStatus := range sharingSharer.RecipientsStatus {
-		_, errf := oauth.FindClient(testInstance,
-			recipientStatus.HostClientID)
-		assert.NotNil(t, errf)
+	// Test: correct sharing id but try to authenticate with a wrong app slug.
+	rule := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
 	}
+	permission := permissions.Permission{
+		Permissions: permissions.Set{rule},
+		Type:        permissions.TypeWebapp,
+		SourceID:    consts.Apps + "/" + "nottobetrusted",
+	}
+	err = couchdb.CreateDoc(testInstance, &permission)
+	assert.NoError(t, err)
+	wrongAppToken := testInstance.BuildAppToken(&apps.WebappManifest{
+		DocSlug: "nottobetrusted",
+	})
 
-	// Recipient
-	sharer := createRecipient(t, "url", "emailsharer")
-	sharingRecipient := createSharing(t, consts.MasterMasterSharing, "", false,
-		[]*sharings.Recipient{sharer}, permissions.Rule{})
+	sharing := createSharing(t, "", consts.MasterMasterSharing, true, "",
+		[]*sharings.Recipient{}, permissions.Rule{})
 
-	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharingRecipient.SharingID)
+	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
 	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
 	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+wrongAppToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+
+	// Test: correct sharing id and app slug but incorrect recursive param.
+	slug := utils.RandomString(15)
+	permission = permissions.Permission{
+		Permissions: permissions.Set{rule},
+		Type:        permissions.TypeWebapp,
+		SourceID:    consts.Apps + "/" + slug,
+	}
+	err = couchdb.CreateDoc(testInstance, &permission)
+	assert.NoError(t, err)
+	manifest := &apps.WebappManifest{
+		DocSlug:        slug,
+		DocPermissions: permissions.Set{rule},
+	}
+	err = couchdb.CreateNamedDocWithDB(testInstance, manifest)
+	assert.NoError(t, err)
+	appToken := testInstance.BuildAppToken(manifest)
+
+	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
+		[]*sharings.Recipient{}, permissions.Rule{})
+
+	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
+	queries := url.Values{
+		consts.QueryParamRecursive: {"neithertruenorfalse"},
+	}.Encode()
+	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+
+	// Test: correct sharing id, app slug and recursive query param.
+	// It should pass.
+	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
+	queries = url.Values{consts.QueryParamRecursive: {"false"}}.Encode()
+	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	_, err = oauth.FindClient(testInstance,
-		sharingRecipient.Sharer.SharerStatus.HostClientID)
-	assert.NotNil(t, err)
+	// Test: request comes from someone that doesn't have the correct token.
+	sharer := createRecipient(t, "email1", "url1")
+	sharing = createSharing(t, "", consts.MasterMasterSharing, false, slug,
+		[]*sharings.Recipient{sharer}, rule)
+	scope, err := rule.MarshalScopeString()
+	assert.NoError(t, err)
+
+	badRule := permissions.Rule{
+		Selector: consts.SelectorReferencedBy,
+		Type:     "io.cozy.foos",
+		Values:   []string{"bar", "baz"},
+		Verbs:    permissions.ALL,
+	}
+	badScope, err := badRule.MarshalScopeString()
+	assert.NoError(t, err)
+	client := createOAuthClient(t)
+	client.CouchID = client.ClientID
+	tokenBadScope, err := client.CreateJWT(testInstance,
+		permissions.AccessTokenAudience, badScope)
+	assert.NoError(t, err)
+
+	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
+	queries = url.Values{consts.QueryParamRecursive: {"false"}}.Encode()
+	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+tokenBadScope)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+
+	// Test: request comes from someone that is not the sharer.
+	client = createOAuthClient(t)
+	client.CouchID = client.ClientID // CreateJWT expects CouchID
+	wrongToken, err := client.CreateJWT(testInstance,
+		permissions.AccessTokenAudience, scope)
+	assert.NoError(t, err)
+
+	req.Header.Del(echo.HeaderAuthorization)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+wrongToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+
+	// Test: request comes from the sharer. It should pass.
+	sharerClient, err := oauth.FindClient(testInstance,
+		sharing.Sharer.SharerStatus.HostClientID)
+	assert.NoError(t, err)
+	token, err = sharerClient.CreateJWT(testInstance,
+		permissions.AccessTokenAudience, scope)
+	assert.NoError(t, err)
+
+	req.Header.Del(echo.HeaderAuthorization)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
 func TestRevokeRecipient(t *testing.T) {
-	// Test: we provide a wrong sharing id.
-	delURL := fmt.Sprintf("%s/sharings/nothing/recipient/noone", ts.URL)
+	// Test: revoke a wrong sharing id
+	delURL := fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
+		"fakesharingid", "fakerecipientid")
 	req, err := http.NewRequest(http.MethodDelete, delURL, nil)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
-	// Create a legitimate sharing.
-	sharing := createSharing(t, consts.MasterMasterSharing, "", true,
-		[]*sharings.Recipient{}, permissions.Rule{})
-	// Test: we provide a wrong recipient.
-	delURL = fmt.Sprintf("%s/sharings/%s/recipient/noone", ts.URL,
-		sharing.SharingID)
+	// Test: revoke using the correct app slug but without being the sharer
+	slug := utils.RandomString(15)
+	rule := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	permission := permissions.Permission{
+		Permissions: permissions.Set{rule},
+		Type:        permissions.TypeWebapp,
+		SourceID:    consts.Apps + "/" + slug,
+	}
+	err = couchdb.CreateDoc(testInstance, &permission)
+	assert.NoError(t, err)
+	manifest := &apps.WebappManifest{
+		DocSlug:        slug,
+		DocPermissions: permissions.Set{rule},
+	}
+	err = couchdb.CreateNamedDocWithDB(testInstance, manifest)
+	assert.NoError(t, err)
+	appToken := testInstance.BuildAppToken(manifest)
+
+	sharing := createSharing(t, "", consts.MasterMasterSharing, false, slug,
+		[]*sharings.Recipient{}, rule)
+
+	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
+		sharing.SharingID, "fakerecipientid")
 	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
 	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusNotFound, res.StatusCode)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 
-	// The success scenario is tested in pkg/sharings/sharings_test.go.
+	// Test: correct sharing id and app slug while being the sharer: it should
+	// pass.
+	recipient1 := createRecipient(t, "email1", "url1")
+	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
+		[]*sharings.Recipient{recipient1}, rule)
+
+	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
+		sharing.SharingID, sharing.RecipientsStatus[0].Client.ClientID)
+	queries := url.Values{consts.QueryParamRecursive: {"false"}}.Encode()
+	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
+	assert.NoError(t, err)
+	req.Header.Del(echo.HeaderAuthorization)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	// Test: correct sharing id while being the sharer but the request is not
+	// coming from the recipient that is to be revoked.
+	recipient2 := createRecipient(t, "email2", "url2")
+	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
+		[]*sharings.Recipient{recipient1, recipient2}, rule)
+
+	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
+		sharing.SharingID, sharing.RecipientsStatus[0].Client.ClientID)
+	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
+	assert.NoError(t, err)
+	req.Header.Del(echo.HeaderAuthorization)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+
+		sharing.RecipientsStatus[1].AccessToken.AccessToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+
+	// Test: correct sharing id while being the sharer and the request comes
+	// from the recipient that is to be revoked: it should pass.
+	req.Header.Del(echo.HeaderAuthorization)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+
+		sharing.RecipientsStatus[0].AccessToken.AccessToken)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
 func TestSetDestinationDirectory(t *testing.T) {
@@ -1231,7 +1404,7 @@ func TestDiscoveryFormNoSharingID(t *testing.T) {
 }
 
 func TestDiscoveryFormNoRecipientID(t *testing.T) {
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 	urlVal := url.Values{
 		"sharing_id": {sharing.SharingID},
@@ -1242,7 +1415,7 @@ func TestDiscoveryFormNoRecipientID(t *testing.T) {
 }
 
 func TestDiscoveryFormRecipientWithURL(t *testing.T) {
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 	recipient := createRecipient(t, "email", "url")
 	urlVal := url.Values{
@@ -1255,7 +1428,7 @@ func TestDiscoveryFormRecipientWithURL(t *testing.T) {
 }
 
 func TestDiscoveryFormNoEmail(t *testing.T) {
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 	recipient := &sharings.Recipient{
 		Email: "test@mail.fr",
@@ -1275,7 +1448,7 @@ func TestDiscoveryFormNoEmail(t *testing.T) {
 func TestDiscoverySuccess(t *testing.T) {
 	recipient := createRecipient(t, "email", recipientURL)
 
-	sharing := createSharing(t, consts.OneShotSharing, "", true,
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},

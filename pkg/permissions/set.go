@@ -2,6 +2,7 @@ package permissions
 
 import (
 	"encoding/json"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -131,6 +132,28 @@ func (ps *Set) RuleInSubset(r2 Rule) bool {
 func (ps *Set) IsSubSetOf(parent Set) bool {
 	for _, r := range *ps {
 		if !parent.RuleInSubset(r) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// HasSameRules returns true if the two sets have exactly the same rules.
+func (ps Set) HasSameRules(other Set) bool {
+	for _, rule := range ps {
+		match := false
+		for _, otherRule := range other {
+			if reflect.DeepEqual(rule.Values, otherRule.Values) &&
+				rule.Selector == otherRule.Selector &&
+				otherRule.Verbs.ContainsAll(rule.Verbs) &&
+				reflect.DeepEqual(rule.Type, rule.Type) {
+				match = true
+				break
+			}
+		}
+
+		if !match {
 			return false
 		}
 	}
