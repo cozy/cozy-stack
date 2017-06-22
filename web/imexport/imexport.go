@@ -104,10 +104,6 @@ func importer(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	/*err = vfs.RemoveAll(fs, "/toto")
-	if err != nil {
-		return err
-	}*/
 
 	exist, err := vfs.DirExists(fs, "/toto")
 	if err != nil {
