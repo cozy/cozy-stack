@@ -21,17 +21,23 @@ import (
 	"github.com/cozy/echo"
 )
 
-func creationWithIDHandler(c echo.Context, ins *instance.Instance) error {
-	err := createDirForSharing(ins, consts.SharedWithMeDirID, "")
-	if err != nil {
-		return err
+func creationWithIDHandler(c echo.Context, ins *instance.Instance, slug string) error {
+	dirID := c.QueryParam(consts.QueryParamDirID)
+
+	var err error
+	if dirID == "" {
+		dirID, err = sharings.RetrieveApplicationDestinationDirID(ins, slug,
+			consts.Files)
+		if err != nil {
+			return err
+		}
 	}
 
 	switch c.QueryParam(consts.QueryParamType) {
 	case consts.FileType:
-		err = createFileWithIDHandler(c, ins)
+		err = createFileWithIDHandler(c, ins, dirID)
 	case consts.DirType:
-		err = createDirWithIDHandler(c, ins)
+		err = createDirWithIDHandler(c, ins, dirID)
 	default:
 		return files.ErrDocTypeInvalid
 	}
@@ -39,18 +45,17 @@ func creationWithIDHandler(c echo.Context, ins *instance.Instance) error {
 	return err
 }
 
-func createDirWithIDHandler(c echo.Context, ins *instance.Instance) error {
+func createDirWithIDHandler(c echo.Context, ins *instance.Instance, dirID string) error {
 	fs := ins.VFS()
 	name := c.QueryParam(consts.QueryParamName)
 	id := c.Param("docid")
 
 	// TODO handle name collision.
-	newDir, err := vfs.NewDirDoc(fs, name, "", nil)
+	newDir, err := vfs.NewDirDoc(fs, name, dirID, nil)
 	if err != nil {
 		return err
 	}
 
-	newDir.DirID = c.QueryParam(consts.QueryParamDirID)
 	newDir.SetID(id)
 
 	refBy := c.QueryParam(consts.QueryParamReferencedBy)
@@ -108,17 +113,16 @@ func createDirWithIDHandler(c echo.Context, ins *instance.Instance) error {
 	return fs.CreateDir(newDir)
 }
 
-func createFileWithIDHandler(c echo.Context, ins *instance.Instance) error {
+func createFileWithIDHandler(c echo.Context, ins *instance.Instance, dirID string) error {
 	fs := ins.VFS()
 	name := c.QueryParam(consts.QueryParamName)
 
-	newFile, err := files.FileDocFromReq(c, name, "", nil)
+	newFile, err := files.FileDocFromReq(c, name, dirID, nil)
 	if err != nil {
 		return err
 	}
 
 	newFile.SetID(c.Param("docid"))
-	newFile.DirID = c.QueryParam(consts.QueryParamDirID)
 
 	refBy := c.QueryParam(consts.QueryParamReferencedBy)
 	if refBy != "" {
@@ -371,48 +375,6 @@ func trashHandler(c echo.Context) error {
 		return err
 	}
 	return nil
-}
-
-// This function either creates the "Shared With Me" directory at the root of
-// the cozy or creates the directory with the given name and id under the
-// "Shared With Me" directory.
-//
-// If a name isn't provided then the id will be used as a replacement.
-func createDirForSharing(ins *instance.Instance, id, name string) error {
-	fs := ins.VFS()
-	if _, errd := fs.DirByID(id); errd == nil {
-		return nil
-	}
-
-	var dirID string
-	if id == consts.SharedWithMeDirID {
-		dirID = ""
-		name = ins.Translate("Sharings Shared with Me directory")
-	} else {
-		if _, errd := fs.DirByID(consts.SharedWithMeDirID); errd != nil {
-			errc := createDirForSharing(ins, consts.SharedWithMeDirID, "")
-			if errc != nil {
-				return errc
-			}
-		}
-		dirID = consts.SharedWithMeDirID
-	}
-
-	if name == "" {
-		name = id
-	}
-
-	dirDoc, err := vfs.NewDirDoc(fs, name, dirID, nil)
-	if err != nil {
-		return err
-	}
-
-	dirDoc.SetID(id)
-	t := time.Now()
-	dirDoc.CreatedAt = t
-	dirDoc.UpdatedAt = t
-
-	return fs.CreateDir(dirDoc)
 }
 
 func mergeMetadata(newMeta, oldMeta vfs.Metadata) vfs.Metadata {

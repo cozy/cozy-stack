@@ -166,7 +166,7 @@ func TestDeleteDoc(t *testing.T) {
 	mpr := map[string]func(*echo.Group){
 		"/sharings": func(router *echo.Group) {
 			router.DELETE("/doc/:doctype/:docid", func(c echo.Context) error {
-				assert.Equal(t, randomrev, c.QueryParam("rev"))
+				assert.Equal(t, randomrev, c.QueryParam(consts.QueryParamRev))
 				assert.Equal(t, testDocID, c.Param("docid"))
 				assert.Equal(t, testDocType, c.Param("doctype"))
 				return c.JSON(http.StatusOK, nil)
@@ -228,7 +228,7 @@ func TestSendFile(t *testing.T) {
 				assert.Equal(t, consts.FileType, c.QueryParam("Type"))
 				assert.Equal(t, fileDoc.DocName, c.QueryParam("Name"))
 				sentFileDoc, err := files.FileDocFromReq(c, fileDoc.DocName,
-					consts.SharedWithMeDirID, nil)
+					"", nil)
 				assert.NoError(t, err)
 				assert.Equal(t, fileDoc.MD5Sum, sentFileDoc.MD5Sum)
 				return c.JSON(http.StatusOK, nil)
@@ -335,7 +335,7 @@ func TestSendFileThroughUpdateOrPatchFile(t *testing.T) {
 				assert.Equal(t, consts.FileType, c.QueryParam("Type"))
 				assert.Equal(t, fileDoc.DocName, c.QueryParam("Name"))
 				sentFileDoc, err := files.FileDocFromReq(c, fileDoc.DocName,
-					consts.SharedWithMeDirID, nil)
+					"", nil)
 				assert.NoError(t, err)
 				assert.Equal(t, fileDoc.MD5Sum, sentFileDoc.MD5Sum)
 				return c.JSON(http.StatusOK, nil)
@@ -494,7 +494,7 @@ func TestUpdateOrPatchFile(t *testing.T) {
 				assert.Equal(t, updatedFileDoc.UpdatedAt.Format(time.RFC1123),
 					c.QueryParam("Updated_at"))
 				sentFileDoc, err := files.FileDocFromReq(c,
-					updatedFileDoc.DocName, consts.SharedWithMeDirID, nil)
+					updatedFileDoc.DocName, "", nil)
 				assert.NoError(t, err)
 				assert.Equal(t, updatedFileDoc.MD5Sum, sentFileDoc.MD5Sum)
 				return c.JSON(http.StatusOK, nil)
@@ -918,42 +918,6 @@ func TestFindMissingRefs(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(missRefs[0], couchdb.DocReference{
 		Type: "second", ID: "456",
 	}))
-}
-
-func TestGetParentDirID(t *testing.T) {
-	optsRoot := SendOptions{
-		Selector: "",
-		DocID:    consts.RootDirID,
-	}
-	_, err := getParentDirID(&optsRoot, "dir")
-	assert.Error(t, err)
-
-	optsShared := SendOptions{
-		Selector: "",
-		DocID:    "123",
-		Values:   []string{"123"},
-	}
-	dirID, err := getParentDirID(&optsShared, "dirID")
-	assert.NoError(t, err)
-	assert.Equal(t, consts.SharedWithMeDirID, dirID)
-
-	optsNotShared := SendOptions{
-		Selector: "",
-		DocID:    "123",
-		Values:   []string{"456"},
-	}
-	dirID, err = getParentDirID(&optsNotShared, "dirID")
-	assert.NoError(t, err)
-	assert.Equal(t, "dirID", dirID)
-
-	optsNoSelector := SendOptions{
-		Selector: consts.SelectorReferencedBy,
-		DocID:    "123",
-		Values:   []string{"123", "456"},
-	}
-	dirID, err = getParentDirID(&optsNoSelector, "dirID")
-	assert.NoError(t, err)
-	assert.Equal(t, consts.SharedWithMeDirID, dirID)
 }
 
 func TestMain(m *testing.M) {

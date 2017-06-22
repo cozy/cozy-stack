@@ -87,9 +87,8 @@ const (
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
-	// SharedWithMeDirID is the id of the directory where all the files received
-	// by sharing will end up.
-	SharedWithMeDirID = "io.cozy.sharings.shared-with-me-dir"
+	// SharingSettingsID is the id of the settings document for sharings.
+	SharingSettingsID = "io.cozy.settings.sharings"
 )
 
 const (
@@ -131,8 +130,9 @@ const (
 )
 
 const (
-	// QueryParamRev is the key for the revision value in a query string.
-	QueryParamRev = "Rev"
+	// QueryParamRev is the key for the revision value in a query string. In
+	// web/data the revision is expected as "rev", not "Rev".
+	QueryParamRev = "rev"
 	// QueryParamDirID is the key for the `DirID` field of a vfs.FileDoc or
 	// vfs.DirDoc, in a query string.
 	QueryParamDirID = "Dir_id"
@@ -161,6 +161,13 @@ const (
 	// QueryParamSharer is used to tell if the user that received the query is
 	// the sharer or not.
 	QueryParamSharer = "Sharer"
+	// QueryParamAppSlug is used to transmit the application slug in a query
+	// string.
+	QueryParamAppSlug = "App_slug"
+	// QueryParamDocType is used to transmit the doctype in a query string.
+	QueryParamDocType = "Doctype"
+	// QueryParamSharingID is used to transmit the sharingID in a query string.
+	QueryParamSharingID = "Sharing_id"
 )
 
 // AppsRegistry is an hard-coded list of known apps, with their source URLs

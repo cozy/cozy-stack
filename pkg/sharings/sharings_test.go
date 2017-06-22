@@ -197,6 +197,17 @@ func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.D
 	return doc
 }
 
+func createDir(t *testing.T, fs vfs.VFS, name string, refs []couchdb.DocReference) *vfs.DirDoc {
+	dirDoc, err := vfs.NewDirDoc(fs, name, "", []string{"It's", "me", "again"})
+	assert.NoError(t, err)
+	dirDoc.CreatedAt = time.Now()
+	dirDoc.UpdatedAt = time.Now()
+	err = fs.CreateDir(dirDoc)
+	assert.NoError(t, err)
+
+	return dirDoc
+}
+
 func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc, k, v string) {
 	doc.M[k] = v
 	err := couchdb.UpdateDoc(in, doc)
