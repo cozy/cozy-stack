@@ -143,7 +143,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	// the remote branch and see if we already have a checked-out version of this
 	// tree.
 	cmd := exec.CommandContext(ctx, "git",
-		"ls-remote", "--quiet", "--heads",
+		"ls-remote", "--quiet",
 		"--", srcStr, fmt.Sprintf("refs/heads/%s", branch)) // #nosec
 	lsRemote, err := cmd.CombinedOutput()
 	if err != nil {
