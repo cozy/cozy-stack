@@ -120,14 +120,16 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 		recInfos[0] = info
 	} else {
 		// We are on the sharer side
-		recInfos = make([]*sharings.RecipientInfo,
-			len(sharing.RecipientsStatus))
+		recInfos = make([]*sharings.RecipientInfo, len(sharing.RecipientsStatus))
 		for i, rec := range sharing.RecipientsStatus {
-			info, err := extractRecipient(ins, rec)
-			if err != nil {
-				return err
+			// Ignore the revoked recipients
+			if rec.Status != consts.SharingStatusRevoked {
+				info, err := extractRecipient(ins, rec)
+				if err != nil {
+					return err
+				}
+				recInfos[i] = info
 			}
-			recInfos[i] = info
 		}
 	}
 
