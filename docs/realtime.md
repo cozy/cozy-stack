@@ -4,13 +4,13 @@
 
 ### Definitions
 
-- **Event:** Something happening in the stack.Most of them will come from couchdb, some jobs and user actions might also trigger them.
+- **Event:** Something happening in the stack. Most of them will come from couchdb, some jobs and user actions might also trigger them.
 
 - **Events feed:** the feed of occurring events. There is two types of feeds:
   - **continuous** allows to follow events as they occurs
   - **interval** allow the see the history of the feed from any given time
 
-- **Realtime:** user experienced updates of the interface from change happening from another source. **Ie,** *I have a folder opened in cozy-files on the browser, I take some pictures from my smartphone, the pictures appears in the folder without me needing to refresh the browser tab.*
+- **Realtime:** user experienced updates of the interface from change happening from another source. *Ie, I have a folder opened in cozy-files on the browser, I take some pictures from my smartphone, the pictures appears in the folder without me needing to refresh the browser tab.*
 
 ### What couchdb offers
 
@@ -91,7 +91,7 @@ We accept websocket connection and bind them to a realtime.Dispatcher object.
 
 ### Small cozy version
 
-It all happens in RAM, realtime.Event are immediately transmited to the dispatcher.
+It all happens in RAM, realtime. Event are immediately transmited to the dispatcher.
 
 
 ### Big cozy version (ie. multiple stack instance)
@@ -122,15 +122,15 @@ Sec-WebSocket-Version: 1
 Then messages are sent using json
 ```
 client > {"method": "SUBSCRIBE",
-          payload: {"type":"io.cozy.files", "include_docs": true}
+          "payload": {"type": "io.cozy.files", "include_docs": true}
 client > {"method": "SUBSCRIBE",
-          payload: { "type":"io.cozy.contacts"}
+          "payload": {"type": "io.cozy.contacts"}
 server > {"event": "change",
-          payload: {"id": "idA", "rev": "2-705...", type:"io.cozy.contacts"}}
+          "payload": {"id": "idA", "rev": "2-705...", "type": "io.cozy.contacts"}}
 server > {"event": "change",
-          payload: {"id": "idA", "rev": "3-541...", deleted: true, type:"io.cozy.contacts"}}
+          "payload": {"id": "idA", "rev": "3-541...", "deleted": true, "type": "io.cozy.contacts"}}
 server > {"event": "change",
-          payload: {"id": "idB", "rev": "6-457...", type:"io.cozy.files", doc: {embeded doc ...}}}
+          "payload": {"id": "idB", "rev": "6-457...", "type": "io.cozy.files", "doc": {embeded doc ...}}}
 ```
 
 ### SUBSCRIBE
@@ -139,19 +139,21 @@ A client can send a SUBSCRIBE request to be notified of changes.
 The payload is a selector for the events it wishes to receive
 For now the only possible selector is on type & optionaly id
 
-`{"method": "SUBSCRIBE", payload: {type:"[desired doctype]"}}`
-`{"method": "SUBSCRIBE", payload: {type:"[desired doctype]", id:"idA"}}`
+```
+{"method": "SUBSCRIBE", "payload": {"type": "[desired doctype]"}}
+{"method": "SUBSCRIBE", "payload": {"type": "[desired doctype]", "id": "idA"}}
+```
 
-If the client wants to receive full documents with each events, it can include an `include_docs:true` parameter in the payload.
+If the client wants to receive full documents with each events, it can add an `include_docs:true` parameter in the payload.
 
 In order to subscribe, a client must have permission `GET` on the passed selector. Otherwise an error is passed in the message feed.
 
 ```
 server > {"event": "errror",
-          payload: {
+          "payload": {
             "status": "403 Forbidden"
             "code": "forbidden"
             "title":"Application xxxx can't subscribe to io.cozy.files"
-            "source": {"method": "SUBSCRIBE", payload: {"type":"io.cozy.files", "include_docs": true} }
+            "source": {"method": "SUBSCRIBE", "payload": {"type":"io.cozy.files", "include_docs": true} }
           }}
 ```
