@@ -105,18 +105,19 @@ func importer(c echo.Context) error {
 		return err
 	}
 
-	exist, err := vfs.DirExists(fs, "/toto")
+	rep := c.Param("destination")
+	exist, err := vfs.DirExists(fs, fmt.Sprintf("/%s", rep))
 	if err != nil {
 		return err
 	}
 	var dst *vfs.DirDoc
 	if !exist {
-		dst, err = vfs.Mkdir(fs, "/toto", nil)
+		dst, err = vfs.Mkdir(fs, fmt.Sprintf("/%s", rep), nil)
 		if err != nil {
 			return err
 		}
 	} else {
-		dst, err = fs.DirByPath("/toto")
+		dst, err = fs.DirByPath(fmt.Sprintf("/%s", rep))
 		if err != nil {
 			return err
 		}
@@ -137,7 +138,7 @@ func Routes(router *echo.Group) {
 	router.GET("/export/", export)
 	router.HEAD("/export/", export)
 
-	router.GET("/import/", importer)
+	router.GET("/import/:destination", importer)
 	router.HEAD("/import/", importer)
 
 	router.GET("/export/:domain-id", exportDir)
