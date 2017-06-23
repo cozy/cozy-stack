@@ -1,12 +1,18 @@
 package apps
 
 import (
+	"archive/tar"
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -21,6 +27,7 @@ import (
 )
 
 var errCloneTimeout = errors.New("git: repository cloning timed out")
+var cloneTimeout = 20 * time.Second
 
 const (
 	ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
@@ -73,6 +80,10 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 		}
 	}()
 
+	if isGitSSHScheme(src.Scheme) {
+		return g.fetchManifestFromGitArchive(src)
+	}
+
 	var u string
 	if isGithub(src) {
 		u, err = resolveGithubURL(src, g.manFilename)
@@ -85,12 +96,53 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 		return nil, err
 	}
 
+	g.log.Infof("[git] Fetching manifest on %s", u)
 	res, err := manifestClient.Get(u)
 	if err != nil || res.StatusCode != 200 {
+		g.log.Errorf("[git] Error while fetching manifest on %s", u)
 		return nil, ErrManifestNotReachable
 	}
 
 	return res.Body, nil
+}
+
+// Use the git archive method to download a manifest from the git repository.
+func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, error) {
+	var branch string
+	src, branch = getRemoteURL(src)
+	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git",
+		"archive",
+		"--remote", src.String(),
+		fmt.Sprintf("refs/heads/%s", branch),
+		g.manFilename) // #nosec
+	stdout, err := cmd.CombinedOutput()
+	if err != nil {
+		if err == exec.ErrNotFound {
+			return nil, ErrNotSupportedSource
+		}
+		return nil, ErrManifestNotReachable
+	}
+	buf := new(bytes.Buffer)
+	r := tar.NewReader(bytes.NewReader(stdout))
+	for {
+		h, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, ErrManifestNotReachable
+		}
+		if h.Name != g.manFilename {
+			continue
+		}
+		if _, err = io.Copy(buf, r); err != nil {
+			return nil, ErrManifestNotReachable
+		}
+		return ioutil.NopCloser(buf), nil
+	}
+	return nil, ErrManifestNotReachable
 }
 
 func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
@@ -108,24 +160,133 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 	defer osFs.RemoveAll(gitDir)
 
-	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
-	if err != nil {
+	gitFs := afero.NewBasePathFs(osFs, gitDir)
+	// XXX Gitlab doesn't support the git protocol
+	if src.Scheme == "git" && isGitlab(src) {
+		src.Scheme = "https"
+	}
+
+	// If the scheme uses ssh, we have to use the git command.
+	if isGitSSHScheme(src.Scheme) {
+		err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
+		if err == exec.ErrNotFound {
+			return ErrNotSupportedSource
+		}
 		return err
 	}
 
-	branch := getGitBranch(src)
-	src.Fragment = ""
+	err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
+	if err != exec.ErrNotFound {
+		return err
+	}
 
-	// XXX Gitlab doesn't support the git protocol
-	if isGitlab(src) {
-		src.Scheme = "https"
+	return g.fetchWithGoGit(gitDir, src, fs, man)
+}
+
+func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
+	var branch string
+	src, branch = getRemoteURL(src)
+	srcStr := src.String()
+
+	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
+	defer cancel()
+
+	// The first command we execute is a ls-remote to check the last commit from
+	// the remote branch and see if we already have a checked-out version of this
+	// tree.
+	cmd := exec.CommandContext(ctx, "git",
+		"ls-remote", "--quiet",
+		srcStr, fmt.Sprintf("refs/heads/%s", branch)) // #nosec
+	lsRemote, err := cmd.CombinedOutput()
+	if err != nil {
+		if err != exec.ErrNotFound {
+			g.log.Errorf("[git] ls-remote error of %s %s: %s", srcStr, err.Error(),
+				lsRemote)
+		}
+		return err
+	}
+
+	lsRemoteFields := bytes.Fields(lsRemote)
+	if len(lsRemoteFields) == 0 {
+		return fmt.Errorf("git: unexpected ls-remote output")
+	}
+
+	slug := man.Slug()
+	version := man.Version() + "-" + string(lsRemoteFields[0])
+
+	// The git fetcher needs to update the actual version of the application to
+	// reflect the git version of the repository.
+	man.SetVersion(version)
+
+	// If the application folder already exists, we can bail early.
+	exists, err := fs.Start(slug, version)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if errc := fs.Close(); errc != nil {
+			err = errc
+		}
+	}()
+	if exists {
+		return nil
+	}
+
+	cmd = exec.CommandContext(ctx, "git",
+		"clone",
+		"--quiet",
+		"--depth", "1",
+		"--single-branch",
+		"--branch", branch,
+		"--", srcStr, gitDir) // #nosec
+
+	g.log.Infof("[git] Clone with git %s %s in %s: %s", srcStr, branch, gitDir,
+		strings.Join(cmd.Args, " "))
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		if err != exec.ErrNotFound {
+			g.log.Errorf("[git] Clone error of %s %s: %s", srcStr, stdoutStderr,
+				err.Error())
+		}
+		return err
+	}
+
+	return afero.Walk(gitFs, "/", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			if info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		src, err := gitFs.Open(path)
+		if err != nil {
+			return err
+		}
+		return fs.Copy(&fileInfo{
+			name: path,
+			size: info.Size(),
+			mode: info.Mode(),
+		}, src)
+	})
+}
+
+func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
+	var branch string
+	src, branch = getRemoteURL(src)
+
+	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
+	if err != nil {
+		return err
 	}
 
 	errch := make(chan error)
 	repch := make(chan *git.Repository)
 
 	srcStr := src.String()
-	g.log.Infof("[git] Clone %s %s in %s", srcStr, branch, gitDir)
+	g.log.Infof("[git] Clone with go-git %s %s in %s", srcStr, branch, gitDir)
 	go func() {
 		repc, errc := git.Clone(storage, nil, &git.CloneOptions{
 			URL:           srcStr,
@@ -146,7 +307,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	case err = <-errch:
 		g.log.Errorf("[git] Clone error of %s: %s", srcStr, err.Error())
 		return err
-	case <-time.After(30 * time.Second):
+	case <-time.After(cloneTimeout):
 		g.log.Errorf("[git] Clone timeout of %s", srcStr)
 		return errCloneTimeout
 	}
@@ -202,18 +363,21 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	})
 }
 
-func getGitBranch(src *url.URL) string {
-	if src.Fragment != "" {
-		return "refs/heads/" + src.Fragment
-	}
-	return "HEAD"
-}
-
 func getWebBranch(src *url.URL) string {
 	if src.Fragment != "" {
 		return src.Fragment
 	}
 	return "HEAD"
+}
+
+func getRemoteURL(src *url.URL) (*url.URL, string) {
+	branch := src.Fragment
+	if branch == "" {
+		branch = "master"
+	}
+	clonedSrc := *src
+	clonedSrc.Fragment = ""
+	return &clonedSrc, branch
 }
 
 func resolveGithubURL(src *url.URL, filename string) (string, error) {
@@ -259,6 +423,10 @@ func resolveManifestURL(src *url.URL, filename string) (string, error) {
 	}
 	srccopy.Path = srccopy.Path + filename
 	return srccopy.String(), nil
+}
+
+func isGitSSHScheme(scheme string) bool {
+	return scheme == "git+ssh" || scheme == "ssh+git"
 }
 
 var (
