@@ -1,12 +1,16 @@
 package apps
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -21,6 +25,7 @@ import (
 )
 
 var errCloneTimeout = errors.New("git: repository cloning timed out")
+var cloneTimeout = 20 * time.Second
 
 const (
 	ghRawManifestURL = "https://raw.githubusercontent.com/%s/%s/%s/%s"
@@ -108,24 +113,128 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 	defer osFs.RemoveAll(gitDir)
 
-	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
-	if err != nil {
-		return err
-	}
-
-	branch := getGitBranch(src)
-	src.Fragment = ""
-
 	// XXX Gitlab doesn't support the git protocol
 	if isGitlab(src) {
 		src.Scheme = "https"
+	}
+
+	gitFs := afero.NewBasePathFs(osFs, gitDir)
+	err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
+	if err != exec.ErrNotFound {
+		return err
+	}
+
+	return g.fetchWithGoGit(gitDir, src, fs, man)
+}
+
+func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
+	branch := src.Fragment
+	if branch == "" {
+		branch = "master"
+	}
+
+	src.Fragment = ""
+	srcStr := src.String()
+
+	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
+	defer cancel()
+
+	// The first command we execute is a ls-remote to check the last commit from
+	// the remote branch and see if we already have a checked-out version of this
+	// tree.
+	cmd := exec.CommandContext(ctx, "git",
+		"ls-remote", "--quiet",
+		srcStr, fmt.Sprintf("refs/heads/%s", branch)) // #nosec
+	lsRemote, err := cmd.CombinedOutput()
+	if err != nil {
+		if err != exec.ErrNotFound {
+			g.log.Errorf("[git] ls-remote error of %s %s: %s", srcStr, err.Error(),
+				lsRemote)
+		}
+		return err
+	}
+
+	lsRemoteFields := bytes.Fields(lsRemote)
+	if len(lsRemoteFields) == 0 {
+		return fmt.Errorf("git: unexpected ls-remote output")
+	}
+
+	slug := man.Slug()
+	version := man.Version() + "-" + string(lsRemoteFields[0])
+
+	// The git fetcher needs to update the actual version of the application to
+	// reflect the git version of the repository.
+	man.SetVersion(version)
+
+	// If the application folder already exists, we can bail early.
+	exists, err := fs.Start(slug, version)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if errc := fs.Close(); errc != nil {
+			err = errc
+		}
+	}()
+	if exists {
+		return nil
+	}
+
+	cmd = exec.CommandContext(ctx, "git",
+		"clone",
+		"--quiet",
+		"--depth", "1",
+		"--single-branch",
+		"--branch", branch,
+		"--", srcStr, gitDir) // #nosec
+
+	g.log.Infof("[git] Clone with git %s %s in %s: %s", srcStr, branch, gitDir,
+		strings.Join(cmd.Args, " "))
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil {
+		if err != exec.ErrNotFound {
+			g.log.Errorf("[git] Clone error of %s %s: %s", srcStr, stdoutStderr,
+				err.Error())
+		}
+		return err
+	}
+
+	return afero.Walk(gitFs, "/", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			if info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		src, err := gitFs.Open(path)
+		if err != nil {
+			return err
+		}
+		return fs.Copy(&fileInfo{
+			name: path,
+			size: info.Size(),
+			mode: info.Mode(),
+		}, src)
+	})
+}
+
+func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
+	branch := getGitBranch(src)
+	src.Fragment = ""
+
+	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
+	if err != nil {
+		return err
 	}
 
 	errch := make(chan error)
 	repch := make(chan *git.Repository)
 
 	srcStr := src.String()
-	g.log.Infof("[git] Clone %s %s in %s", srcStr, branch, gitDir)
+	g.log.Infof("[git] Clone with go-git %s %s in %s", srcStr, branch, gitDir)
 	go func() {
 		repc, errc := git.Clone(storage, nil, &git.CloneOptions{
 			URL:           srcStr,
@@ -146,7 +255,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	case err = <-errch:
 		g.log.Errorf("[git] Clone error of %s: %s", srcStr, err.Error())
 		return err
-	case <-time.After(30 * time.Second):
+	case <-time.After(cloneTimeout):
 		g.log.Errorf("[git] Clone timeout of %s", srcStr)
 		return errCloneTimeout
 	}
