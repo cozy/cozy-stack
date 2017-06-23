@@ -1,11 +1,13 @@
 package apps
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -78,6 +80,10 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 		}
 	}()
 
+	if src.Scheme == "git+ssh" || src.Scheme == "ssh+git" {
+		return g.fetchManifestFromGitArchive(src)
+	}
+
 	var u string
 	if isGithub(src) {
 		u, err = resolveGithubURL(src, g.manFilename)
@@ -90,12 +96,48 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 		return nil, err
 	}
 
+	g.log.Infof("[git] Fetching manifest on %s", u)
 	res, err := manifestClient.Get(u)
 	if err != nil || res.StatusCode != 200 {
+		g.log.Errorf("[git] Error while fetching manifest on %s", u)
 		return nil, ErrManifestNotReachable
 	}
 
 	return res.Body, nil
+}
+
+func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, error) {
+	var branch string
+	src, branch = getRemoteURL(src)
+	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git",
+		"archive",
+		"--remote", src.String(),
+		fmt.Sprintf("refs/heads/%s", branch),
+		g.manFilename) // #nosec
+	stdout, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, ErrManifestNotReachable
+	}
+	buf := new(bytes.Buffer)
+	r := tar.NewReader(bytes.NewReader(stdout))
+	for {
+		h, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, ErrManifestNotReachable
+		}
+		if h.Name != g.manFilename {
+			continue
+		}
+		if _, err = io.Copy(buf, r); err != nil {
+			return nil, ErrManifestNotReachable
+		}
+	}
+	return ioutil.NopCloser(buf), nil
 }
 
 func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
@@ -113,12 +155,21 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 	defer osFs.RemoveAll(gitDir)
 
+	gitFs := afero.NewBasePathFs(osFs, gitDir)
 	// XXX Gitlab doesn't support the git protocol
-	if isGitlab(src) {
+	if src.Scheme == "git" && isGitlab(src) {
 		src.Scheme = "https"
 	}
 
-	gitFs := afero.NewBasePathFs(osFs, gitDir)
+	// If the scheme uses ssh, we have to use the git command.
+	if src.Scheme == "git+ssh" || src.Scheme == "ssh+git" {
+		err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
+		if err == exec.ErrNotFound {
+			return ErrNotSupportedSource
+		}
+		return err
+	}
+
 	err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
 	if err != exec.ErrNotFound {
 		return err
@@ -128,12 +179,8 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 }
 
 func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
-	branch := src.Fragment
-	if branch == "" {
-		branch = "master"
-	}
-
-	src.Fragment = ""
+	var branch string
+	src, branch = getRemoteURL(src)
 	srcStr := src.String()
 
 	ctx, cancel := context.WithTimeout(context.Background(), cloneTimeout)
@@ -222,8 +269,8 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 }
 
 func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man Manifest) (err error) {
-	branch := getGitBranch(src)
-	src.Fragment = ""
+	var branch string
+	src, branch = getRemoteURL(src)
 
 	storage, err := gitStorage.NewStorage(gitOsFS.New(gitDir))
 	if err != nil {
@@ -311,18 +358,21 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man 
 	})
 }
 
-func getGitBranch(src *url.URL) string {
-	if src.Fragment != "" {
-		return "refs/heads/" + src.Fragment
-	}
-	return "HEAD"
-}
-
 func getWebBranch(src *url.URL) string {
 	if src.Fragment != "" {
 		return src.Fragment
 	}
 	return "HEAD"
+}
+
+func getRemoteURL(src *url.URL) (*url.URL, string) {
+	branch := src.Fragment
+	if branch == "" {
+		branch = "master"
+	}
+	clonedSrc := *src
+	clonedSrc.Fragment = ""
+	return &clonedSrc, branch
 }
 
 func resolveGithubURL(src *url.URL, filename string) (string, error) {

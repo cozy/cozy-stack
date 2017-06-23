@@ -135,7 +135,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 
 	var fetcher Fetcher
 	switch src.Scheme {
-	case "git":
+	case "git", "git+ssh", "ssh+git":
 		fetcher = newGitFetcher(opts.Type, log)
 	default:
 		return nil, ErrNotSupportedSource
