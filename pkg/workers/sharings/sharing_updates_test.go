@@ -3,6 +3,7 @@ package sharings
 import (
 	"testing"
 
+	authClient "github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -43,15 +44,47 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 	return event
 }
 
-func createSharing(t *testing.T, sharingType string, owner bool, rule permissions.Rule) sharings.Sharing {
+func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
+	recipient := &sharings.Recipient{
+		Email: email,
+		URL:   url,
+	}
+	err := sharings.CreateRecipient(in, recipient)
+	assert.NoError(t, err)
+	return recipient
+}
+
+func createSharing(t *testing.T, sharingType string, owner bool, recipients []*sharings.Recipient, rule permissions.Rule) sharings.Sharing {
 	sharing := sharings.Sharing{
-		Owner:       owner,
-		SharingType: sharingType,
-		SharingID:   utils.RandomString(32),
-		Permissions: permissions.Set{rule},
+		Owner:            owner,
+		SharingType:      sharingType,
+		SharingID:        utils.RandomString(32),
+		Permissions:      permissions.Set{rule},
+		RecipientsStatus: []*sharings.RecipientStatus{},
 	}
 
-	err := couchdb.CreateDoc(testInstance, &sharing)
+	for _, recipient := range recipients {
+		if recipient.ID() == "" {
+			recipient = createRecipient(t, recipient.Email, recipient.URL)
+		}
+
+		rs := &sharings.RecipientStatus{
+			Status: consts.SharingStatusAccepted,
+			RefRecipient: couchdb.DocReference{
+				ID:   recipient.ID(),
+				Type: recipient.DocType(),
+			},
+			Client: authClient.Client{
+				ClientID: utils.RandomString(32),
+			},
+			AccessToken: authClient.AccessToken{
+				AccessToken:  utils.RandomString(32),
+				RefreshToken: utils.RandomString(32),
+			},
+		}
+		sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
+	}
+	err := couchdb.CreateDoc(in, &sharing)
 	assert.NoError(t, err)
 
 	return sharing
@@ -224,5 +257,32 @@ func TestIsDocumentStillShared(t *testing.T) {
 		DocID:  "456",
 	}
 	assert.False(t, isDocumentStillShared(&optsNotShared, sharedRef))
+}
 
+func TestRevokedRecipient(t *testing.T) {
+	rule := permissions.Rule{
+		Selector: consts.SelectorReferencedBy,
+		Type:     consts.Files,
+		Values:   []string{"third/789"},
+	}
+	recipient := createRecipient(t, "email", "url")
+	sharing := createSharing(t, consts.MasterSlaveSharing, true,
+		[]*sharings.Recipient{recipient}, rule)
+
+	sharingID := sharing.SharingID
+	sharing.RecipientsStatus[0].Status = consts.SharingStatusRevoked
+	err := couchdb.UpdateDoc(in, &sharing)
+	assert.NoError(t, err)
+
+	params := map[string]interface{}{
+		"test": "testy",
+	}
+	doc := createDoc(t, testDocType, params)
+	event := createEvent(t, doc, sharingID, "UPDATED")
+
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	assert.NoError(t, err)
+
+	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
+	assert.NoError(t, err)
 }

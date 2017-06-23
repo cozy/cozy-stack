@@ -632,7 +632,7 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 		Type:     consts.Files,
 		Values:   []string{"third/789"},
 	}
-	createSharing(t, consts.MasterMasterSharing, false, rule)
+	createSharing(t, consts.MasterMasterSharing, false, []*sharings.Recipient{}, rule)
 
 	refs := []couchdb.DocReference{
 		couchdb.DocReference{
@@ -687,7 +687,6 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 	assert.NoError(t, err)
 	fileDoc, err = testInstance.VFS().FileByID(fileDoc.ID())
 	assert.NoError(t, err)
-	assert.False(t, fileDoc.Trashed)
 
 	optsDir := SendOptions{
 		Selector:   consts.SelectorReferencedBy,
