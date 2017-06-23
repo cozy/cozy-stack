@@ -250,12 +250,3 @@ func generateDiscoveryLink(instance *instance.Instance, s *Sharing, rs *Recipien
 
 	return discURL.String(), nil
 }
-
-func getPublicName(instance *instance.Instance) (string, error) {
-	doc, err := instance.SettingsDocument()
-	if err != nil {
-		return "", err
-	}
-	sharerPublicName, _ := doc.M["public_name"].(string)
-	return sharerPublicName, nil
-}
