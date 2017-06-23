@@ -117,7 +117,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	secure := middlewares.Secure(&middlewares.SecureConfig{
 		HSTSMaxAge:    hstsMaxAge,
-		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
+		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
 		CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPUnsafeInline},
 		CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
 		CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent, middlewares.CSPSrcWhitelist},
