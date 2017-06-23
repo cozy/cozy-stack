@@ -80,7 +80,7 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 		}
 	}()
 
-	if src.Scheme == "git+ssh" || src.Scheme == "ssh+git" {
+	if isGitSSHScheme(src.Scheme) {
 		return g.fetchManifestFromGitArchive(src)
 	}
 
@@ -166,7 +166,7 @@ func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 
 	// If the scheme uses ssh, we have to use the git command.
-	if src.Scheme == "git+ssh" || src.Scheme == "ssh+git" {
+	if isGitSSHScheme(src.Scheme) {
 		err = g.fetchWithGit(gitFs, gitDir, src, fs, man)
 		if err == exec.ErrNotFound {
 			return ErrNotSupportedSource
@@ -422,6 +422,10 @@ func resolveManifestURL(src *url.URL, filename string) (string, error) {
 	}
 	srccopy.Path = srccopy.Path + filename
 	return srccopy.String(), nil
+}
+
+func isGitSSHScheme(scheme string) bool {
+	return scheme == "git+ssh" || scheme == "ssh+git"
 }
 
 var (
