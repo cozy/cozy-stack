@@ -3,7 +3,6 @@ package sharings
 import (
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -167,8 +166,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		return ErrRecipientHasNoURL
 	}
 
-	// We get the instance document to extract the public name.
-	publicName, err := getPublicName(instance)
+	publicName, err := instance.PublicName()
 	if err != nil {
 		return err
 	}
@@ -204,20 +202,6 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 
 	rs.Client = *resClient
 	return nil
-}
-
-func getPublicName(instance *instance.Instance) (string, error) {
-	doc, err := instance.SettingsDocument()
-	if err != nil {
-		return "", err
-	}
-	sharerPublicName, _ := doc.M["public_name"].(string)
-	// if the public name is not defined, use the instance domain
-	if sharerPublicName == "" {
-		split := strings.Split(instance.Domain, ".")
-		sharerPublicName = split[0]
-	}
-	return sharerPublicName, nil
 }
 
 var (

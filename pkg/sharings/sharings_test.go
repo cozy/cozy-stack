@@ -426,17 +426,6 @@ func TestRegisterNoURL(t *testing.T) {
 	assert.Equal(t, ErrRecipientHasNoURL, err)
 }
 
-func TestRegisterNoPublicName(t *testing.T) {
-	rs := &RecipientStatus{
-		recipient: &Recipient{
-			URL: "http://toto.fr",
-			RID: "dummyid",
-		},
-	}
-	err := rs.Register(in)
-	assert.Equal(t, ErrPublicNameNotDefined, err)
-}
-
 func TestRegisterSuccess(t *testing.T) {
 	// In Go 1.8 url.Parse returns the following error if we try to parse an
 	// url that looks like "127.0.0.1:46473": "first path segment in URL cannot

@@ -24,7 +24,7 @@ type mailTemplateValues struct {
 // SendDiscoveryMail send a mail to the recipient, in order for him to give his
 // URL to the sender
 func SendDiscoveryMail(instance *instance.Instance, s *Sharing, rs *RecipientStatus) error {
-	sharerPublicName, err := getPublicName(instance)
+	sharerPublicName, err := instance.PublicName()
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func SendDiscoveryMail(instance *instance.Instance, s *Sharing, rs *RecipientSta
 // SendSharingMails will generate the mail containing the details
 // regarding this sharing, and will then send it to all the recipients.
 func SendSharingMails(instance *instance.Instance, s *Sharing) error {
-	sharerPublicName, err := getPublicName(instance)
+	sharerPublicName, err := instance.PublicName()
 	if err != nil {
 		return err
 	}
