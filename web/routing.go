@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/web/konnectorsauth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/web/realtime"
 	"github.com/cozy/cozy-stack/web/remote"
 	"github.com/cozy/cozy-stack/web/settings"
 	"github.com/cozy/cozy-stack/web/sharings"
@@ -173,6 +174,7 @@ func SetupRoutes(router *echo.Echo) error {
 	intents.Routes(router.Group("/intents", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))
 	permissions.Routes(router.Group("/permissions", mws...))
+	realtime.Routes(router.Group("/realtime", mws...))
 	remote.Routes(router.Group("/remote", mws...))
 	settings.Routes(router.Group("/settings", mws...))
 	sharings.Routes(router.Group("/sharings", mws...))
