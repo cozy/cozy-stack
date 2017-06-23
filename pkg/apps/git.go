@@ -118,6 +118,9 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 		g.manFilename) // #nosec
 	stdout, err := cmd.CombinedOutput()
 	if err != nil {
+		if err == exec.ErrNotFound {
+			return nil, ErrNotSupportedSource
+		}
 		return nil, ErrManifestNotReachable
 	}
 	buf := new(bytes.Buffer)
