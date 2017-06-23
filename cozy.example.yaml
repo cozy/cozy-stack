@@ -98,3 +98,6 @@ contexts:
         name: 'Bank'
         slug: 'bank'
         category: 'partners'
+    claudy_actions:
+        - desktop
+        - mobile
