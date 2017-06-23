@@ -140,8 +140,9 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 		if _, err = io.Copy(buf, r); err != nil {
 			return nil, ErrManifestNotReachable
 		}
+		return ioutil.NopCloser(buf), nil
 	}
-	return ioutil.NopCloser(buf), nil
+	return nil, ErrManifestNotReachable
 }
 
 func (g *gitFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
