@@ -144,7 +144,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	// tree.
 	cmd := exec.CommandContext(ctx, "git",
 		"ls-remote", "--quiet",
-		"--", srcStr, fmt.Sprintf("refs/heads/%s", branch)) // #nosec
+		srcStr, fmt.Sprintf("refs/heads/%s", branch)) // #nosec
 	lsRemote, err := cmd.CombinedOutput()
 	if err != nil {
 		if err != exec.ErrNotFound {
