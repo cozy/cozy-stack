@@ -106,6 +106,7 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	return res.Body, nil
 }
 
+// Use the git archive method to download a manifest from the git repository.
 func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, error) {
 	var branch string
 	src, branch = getRemoteURL(src)
