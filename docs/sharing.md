@@ -41,7 +41,7 @@ The owner of a cozy instance can send and synchronize documents to others cozy u
 
 ### Sharing document
 
-A sharing document has this structure:
+A sharing document has the following structure. Note some fields are purposely left empty for space convenience.
 
 ```json
     {
@@ -57,20 +57,21 @@ A sharing document has this structure:
             "doctype1": {
                 "description": "doctype1 description",
                 "type": "io.cozy.doctype1",
-                "values": ["id1", "id2"],
+                "values": ["docid1", "docid2"],
                 "selector": "calendar-id", //not supported yet
                 "verbs": ["GET","POST", "PUT"]
             }
         },
         "recipients": [
             {
-                "recipient": {"id": "recipientID1", "type": "io.cozy.recipients"},
+                "recipient": {"id": "mycontactid1", "type": "io.cozy.contacts"},
                 "status": "accepted",
-                "access_token": "myaccesstoken1",
-                "refresh_token": "myrefreshtoken1"
+                "AccessToken": {},
+                "Client": {},
+                "HostClientID": "myhostclientid"
             },
             {
-                "recipient": {"id": "recipientID2", "type": "io.cozy.recipients"},
+                "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
             }
         ]
     }
@@ -82,57 +83,138 @@ To tell if the owner of the Cozy is also the owner of the sharing. This field is
 
 #### permissions
 
-Which documents will be shared. We provide their ids, and eventually a selector for a more dynamic solution (this will come later, though). See [here](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md) for a detailed explanation of the permissions format.
+Which documents will be shared. See the [ permissions](https://cozy.github.io/cozy-stack/permissions.html) for a detailed explanation of the permissions format.
+
+The supported permissions are the following:
+* **Static**: one specify the documents ids to share through the `values` field.
+
+Example of a single file sharing permission:
+
+```json
+"permissions": {
+    "files": {
+        "description": "My secret document",
+        "type": "io.cozy.files",
+        "values": ["fileid"],
+        "verbs": ["ALL"]
+    }
+},
+```
+
+* **Reference**: uses the [referenced_by](https://cozy.github.io/cozy-stack/references-docs-in-vfs.html) field to express a sharing based on relations. Each time a new relation is added to the Cozy and match the permission, e.g. a new photo related to an album, it is automatically shared with the recipients.
+
+ This requires to specify 2 permissions. The first one is a static permission on the referenced object, e.g. an album. The second one specifies the targets of the referenced object, e.g. the files containing a reference to the album. This permission includes the 'referenced_by' keyword in the `selector` field and the referenced object in the `values` field, formatted as `doctype/id`.
+
+Example of a photo album sharing:
+
+```json
+"permissions": {
+    "photos": {
+        "description": "Holidays album",
+        "type": "io.cozy.albums.photos",
+        "values": ["albumdocid"],
+        "verbs": ["ALL"]
+    },
+    "files": {
+        "description": "Holidays photos",
+        "type": "io.cozy.files",
+        "values": ["io.cozy.albums.photos/albumdocid"],
+        "selector": "referenced_by",
+        "verbs": ["ALL"]
+    }
+}
+```
+
+
 
 It is worth mentionning that the permissions are defined on the sharer side, but are be enforced on the recipients side (and also on the sharer side if the sharing is a master-master type), as the documents are pushed to their databases.
 
 
 #### recipients
 
-An array of the recipients and, for each of them, their recipientID, the status of the sharing as well as their token of authentification and the refresh token, if they have accepted the sharing.
+List all the recipients of the sharing:  
 
-The recipientID is the id the document storing the informations relatives to a recipient. The structure is the following:
+```json
+"recipients": [
+    {
+        "recipient": {"id": "mycontactid1", "type": "io.cozy.contacts"},
+        "status": "accepted",
+        "AccessToken": {},
+        "Client": {},
+        "HostClientID": "myhostclientid"
+    },
+    {
+        "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
+    }
+]
+```
+
+##### recipient
+
+Specify the contact document containing the `url` and `email` informations.
+
+We differentiate a recipient from a contact. Semantically, The former has a meaning only in a sharing context while the later is a Cozy contact, usable in other contexts.
+
+
+A contact has the following minimal structure:
 ```json
 {
-    "type": "io.cozy.recipients",
-
-    "url": "bob.url",
-    "mail": "bob@mail",
-
-    "oauth": {
-        "client_id": "myclientid",
-        "client_name": "myclientname",
-        "client_secret": "myclientsecret",
-        "registration_access_token": "myregistration",
-        "redirect_uri": ["alice.cozy/oauth/callback"]
-    }
+    "id": "mycontactid1",
+    "type": "io.cozy.contacts",
+    "url": "https://bob.url.cozy",
+    "email": "bob@mail.cozy",
 }
-
-
 ```
-From a OAuth perspective, Bob being Alice's recipient means Alice is registered as a OAuth client to Bob's Cozy. Thus, we store in this document the informations sent by Bob after Alice's registration.
+Note that the `email` is mandatory to contact the recipient. If the `URL` is missing, a discovery mail will be sent in order to ask the recipient to give it.
 
 
-For the sharing status, the possible values are:
+##### Status
+
+The recipient' sharing status possible values are:
 * `pending`: the recipient didn't reply yet.
 * `accepted`: the recipient accepted.
 * `refused`: the recipient refused.
+* `error`: an error occured for this recipient
+* `unregistered`: the registration failed
+* `mail-not-sent`: the mail has not been sent
+* `revoked`: the recipient has been revoked
+
+
+##### AccessToken
+
+The OAuth credentials used to authenticate to the recipient's Cozy.
+
+See [here](https://github.com/cozy/cozy-stack/blob/master/docs/auth.md#post-authaccess_token) for structure details.
+
+Here, the `scope` corresponds to the accepted sharing permissions by the recipient.
+
+##### Client
+
+From a OAuth perspective, Bob being Alice's recipient means Alice is registered as a OAuth client to Bob's Cozy. Thus, we store for each recipient the informations sent by the recipient after the sharer registration.
+
+See [here](https://github.com/cozy/cozy-stack/blob/master/docs/auth.md#post-authaccess_token) for structure details.
+
+##### HostClientID
+
+This field is only used for `master-master` sharing. It corresponds to the id of the OAuth document stored in the host database, containing the recipient's OAuth information after registration.
+
 
 #### sharing_type
 
 The type of sharing. It should be one of the followings: `master-master`, `master-slave`, `one-shot`.  
 They represent the access rights the recipient and sender have:
-* `master-master`: both recipient and sender can modify the documents and have their modifications pushed to the other.
-* `master-slave`: only the sender can push modifications to the recipient. The recipient can modify localy the documents.
-* `one-shot`: the documents are duplicated and no modifications are pushed.
+* `one-shot`: the documents are sent and no modification is propagated.
+* `master-slave`: only the sharer can propagate modifications to the recipient. The recipient can only modify the documents localy.
+* `master-master`: both recipient and sharer can modify the documents and have their modifications propagated to the other.
+
 
 #### desc
 
-The answer to the question: "What are you sharing?". It is an optional field but, still, it is recommended to provide a small human-readable description.
+The answer to the question: "What are you sharing?". It is an optional field but, still, it is recommended to provide a human-readable description.
 
 #### sharing_id
 
-This uniquely identify a sharing. This corresponds to the id of the sharing document, on the sharer point of view and is automatically generated at the sharing creation.
+This uniquely identify a sharing. It is automatically generated at the sharing creation.
 
 
 ### Routes
@@ -141,7 +223,7 @@ This uniquely identify a sharing. This corresponds to the id of the sharing docu
 
 Create a new sharing. The sharing type, permissions and recipients must be specified. The desc field is optionnal.
 
-Note the recipient id must correspond to an actual recipient previously inserted in the database.
+Note the recipient id must correspond to an actual contact previously inserted in the database.
 
 ##### Request
 
@@ -166,7 +248,7 @@ Content-Type: application/json
     "recipients": [
         {
             "recipient": {
-                "type": "io.cozy.recipients",
+                "type": "io.cozy.contacts",
                 "id": "2a31ce0128b5f89e40fd90da3f014087"
             }
         }
@@ -204,7 +286,7 @@ Content-Type: application/vnd.api+json
           "status": "pending",
           "recipient": {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
-            "type": "io.cozy.recipients"
+            "type": "io.cozy.contacts"
           }
         }
       ]
@@ -220,7 +302,7 @@ Content-Type: application/vnd.api+json
         "data": [
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
-            "type": "io.cozy.recipients"
+            "type": "io.cozy.contacts"
           }
         ]
       }
@@ -228,7 +310,7 @@ Content-Type: application/vnd.api+json
   },
   "included": [
     {
-      "type": "io.cozy.recipients",
+      "type": "io.cozy.contacts",
       "id": "2a31ce0128b5f89e40fd90da3f014087",
       "attributes": {
         "email": "toto@fr",
@@ -249,7 +331,7 @@ Content-Type: application/vnd.api+json
         "rev": "1-461114b45855dc6acdb9bdc5d67e1092"
       },
       "links": {
-        "self": "/recipients/2a31ce0128b5f89e40fd90da3f014087"
+        "self": "/contacts/2a31ce0128b5f89e40fd90da3f014087"
       }
     }
   ]
@@ -257,7 +339,55 @@ Content-Type: application/vnd.api+json
 
 ```
 
+#### POST /sharings/recipient
 
+Create a new recipient. The expected fields are `email` and `url`.
+
+The `email` will be used to send a sharing request, while the `url` is the recipient Cozy's url.
+
+ If the `url` is missing, an additional discovery step will be performed for the next sharing involving this recipient. A mail will be sent to the recipient, containing a link where the recipient will be ask to type his Cozy's url.
+
+
+##### Request
+
+```http
+POST /sharings/recipient HTTP/1.1
+Host: cozy.example.net
+Content-Type: application/json
+```
+
+```json
+{
+    "email": "jonsnow@nightswatch.wall",
+    "url": "https://jonsnow.cozy"
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.contacts",
+    "id": "a6bd9ea3a4bb27e911674d64820180fc",
+    "attributes": {
+      "email": "jonsnow@nightswatch.wall",
+      "url": "https://jonsnow.cozy"
+    },
+    "meta": {
+      "rev": "1-fe30d71ac4d24a87dbe80d61a033a3f5"
+    },
+    "links": {
+      "self": "/contacts/a6bd9ea3a4bb27e911674d64820180fc"
+    }
+  }
+}
+```
 
 ### POST /sharings/:id/sendMail
 
