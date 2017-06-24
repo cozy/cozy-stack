@@ -437,10 +437,8 @@ func revokeSharing(c echo.Context) error {
 	}
 
 	recursiveRaw := c.QueryParam(consts.QueryParamRecursive)
-	var recursive bool
-	if recursiveRaw == "" {
-		recursive = true
-	} else {
+	recursive := true
+	if recursiveRaw != "" {
 		recursive, err = strconv.ParseBool(recursiveRaw)
 		if err != nil {
 			return jsonapi.BadRequest(err)
@@ -466,13 +464,21 @@ func revokeRecipient(c echo.Context) error {
 		return jsonapi.NotFound(err)
 	}
 
-	recipientClientID := c.Param("recipient-client-id")
+	recipientID := c.Param("recipient-id")
+	recipientClientID := ""
+	for _, recipient := range sharing.RecipientsStatus {
+		if recipient.RefRecipient.ID == recipientID {
+			recipientClientID = recipient.Client.ClientID
+			break
+		}
+	}
+	if recipientClientID == "" {
+		return jsonapi.BadRequest(sharings.ErrRecipientDoesNotExist)
+	}
 
 	recursiveRaw := c.QueryParam(consts.QueryParamRecursive)
-	var recursive bool
-	if recursiveRaw == "" {
-		recursive = true
-	} else {
+	recursive := true
+	if recursiveRaw != "" {
 		recursive, err = strconv.ParseBool(recursiveRaw)
 		if err != nil {
 			return jsonapi.BadRequest(err)
@@ -640,8 +646,7 @@ func Routes(router *echo.Group) {
 	router.POST("/discovery", discovery)
 
 	router.DELETE("/:sharing-id", revokeSharing)
-	router.DELETE("/:sharing-id/recipient/:recipient-client-id",
-		revokeRecipient)
+	router.DELETE("/:sharing-id/recipient/:recipient-id", revokeRecipient)
 
 	router.DELETE("/files/:file-id/referenced_by", removeReferences)
 

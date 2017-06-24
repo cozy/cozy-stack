@@ -141,6 +141,10 @@ func (ps *Set) IsSubSetOf(parent Set) bool {
 
 // HasSameRules returns true if the two sets have exactly the same rules.
 func (ps Set) HasSameRules(other Set) bool {
+	if len(ps) != len(other) {
+		return false
+	}
+
 	for _, rule := range ps {
 		match := false
 		for _, otherRule := range other {

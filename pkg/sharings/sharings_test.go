@@ -132,12 +132,18 @@ func createOAuthClient(t *testing.T) *oauth.Client {
 	return client
 }
 
-func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, doctype string, recipients []*Recipient, rule permissions.Rule) Sharing {
-	sharing := Sharing{
+func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, slug string, recipients []*Recipient, rule permissions.Rule) *Sharing {
+	sharing := &Sharing{
 		SharingType:      sharingType,
 		Owner:            owner,
 		Permissions:      permissions.Set{rule},
 		RecipientsStatus: []*RecipientStatus{},
+	}
+
+	if slug == "" {
+		sharing.AppSlug = utils.RandomString(15)
+	} else {
+		sharing.AppSlug = slug
 	}
 
 	if sharingID == "" {
@@ -156,25 +162,30 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 			assert.NoError(t, err)
 		}
 
+		client := createOAuthClient(t)
+		client.CouchID = client.ClientID
+		accessToken, errc := client.CreateJWT(testInstance,
+			permissions.AccessTokenAudience, scope)
+		assert.NoError(t, errc)
+
 		rs := &RecipientStatus{
 			Status: consts.SharingStatusAccepted,
 			RefRecipient: couchdb.DocReference{
 				ID:   recipient.ID(),
 				Type: recipient.DocType(),
 			},
-			recipient: recipient,
 			Client: auth.Client{
-				ClientID: utils.RandomString(15),
+				ClientID: client.ClientID,
 			},
 			AccessToken: auth.AccessToken{
-				AccessToken: utils.RandomString(15),
+				AccessToken: accessToken,
 				Scope:       scope,
 			},
 		}
 
 		if sharingType == consts.MasterMasterSharing {
-			client := createOAuthClient(t)
-			rs.HostClientID = client.ClientID
+			hostClient := createOAuthClient(t)
+			rs.HostClientID = hostClient.ClientID
 		}
 
 		if owner {
@@ -188,7 +199,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 		}
 	}
 
-	err = couchdb.CreateDoc(testInstance, &sharing)
+	err = couchdb.CreateDoc(testInstance, sharing)
 	assert.NoError(t, err)
 
 	return sharing
@@ -897,7 +908,7 @@ func TestRevokeSharing(t *testing.T) {
 					c.QueryParam(consts.QueryParamRecursive))
 				return c.NoContent(http.StatusOK)
 			})
-			router.DELETE("/:id/recipient/:recipient-client-id",
+			router.DELETE("/:id/recipient/:recipient-id",
 				func(c echo.Context) error {
 					counterRevokeRecipient = counterRevokeRecipient + 1
 					assert.Equal(t, sharingIDRecipientMM, c.Param("id"))
@@ -923,7 +934,7 @@ func TestRevokeSharing(t *testing.T) {
 	}
 	// We create a sharing where the user is the owner.
 	sharingSharerMM := insertSharingIntoDB(t, sharingIDSharerMM,
-		consts.MasterMasterSharing, true, "io.cozy.events",
+		consts.MasterMasterSharing, true, "",
 		[]*Recipient{recipient1, recipient2}, rule)
 	// We add a trigger to this sharing.
 	sched := stack.GetScheduler()
@@ -935,7 +946,7 @@ func TestRevokeSharing(t *testing.T) {
 	assert.Len(t, triggers, nbTriggers+1)
 
 	// Test: we revoke a sharing where we are the owner.
-	err = RevokeSharing(testInstance, &sharingSharerMM, true)
+	err = RevokeSharing(testInstance, sharingSharerMM, true)
 	assert.NoError(t, err)
 	// Check: all the recipients were asked to remove the sharing.
 	assert.Equal(t, len(sharingSharerMM.RecipientsStatus), counterRevokeSharing)
@@ -959,8 +970,7 @@ func TestRevokeSharing(t *testing.T) {
 
 	// We create a sharing where the user is the recipient.
 	sharingRecipientMM := insertSharingIntoDB(t, sharingIDRecipientMM,
-		consts.MasterMasterSharing, false, "io.cozy.events",
-		[]*Recipient{recipient1}, rule)
+		consts.MasterMasterSharing, false, "", []*Recipient{recipient1}, rule)
 	// We add a trigger to this sharing.
 	err = AddTrigger(testInstance, rule, sharingRecipientMM.SharingID)
 	assert.NoError(t, err)
@@ -968,7 +978,7 @@ func TestRevokeSharing(t *testing.T) {
 	assert.Len(t, triggers, nbTriggers+1)
 
 	// Test: we revoke a sharing where we are a recipient.
-	err = RevokeSharing(testInstance, &sharingRecipientMM, true)
+	err = RevokeSharing(testInstance, sharingRecipientMM, true)
 	assert.NoError(t, err)
 	// Check: the sharer was asked to revoke us as a recipient.
 	assert.Equal(t, 1, counterRevokeRecipient)
@@ -992,8 +1002,8 @@ func TestRevokeRecipient(t *testing.T) {
 	// Test: we try to revoke a recipient from a sharing while we are not the
 	// owner of the sharing.
 	sharingNotSharer := insertSharingIntoDB(t, "", consts.MasterMasterSharing,
-		false, "io.cozy.sharings", []*Recipient{}, permissions.Rule{})
-	err := RevokeRecipient(testInstance, &sharingNotSharer, "wontbeused", false)
+		false, "", []*Recipient{}, permissions.Rule{})
+	err := RevokeRecipient(testInstance, sharingNotSharer, "wontbeused", false)
 	assert.Error(t, err)
 	assert.Equal(t, err, ErrOnlySharerCanRevokeRecipient)
 
@@ -1023,7 +1033,7 @@ func TestRevokeRecipient(t *testing.T) {
 		Verbs:    permissions.ALL,
 	}
 	sharing := insertSharingIntoDB(t, sharingID, consts.MasterMasterSharing,
-		true, "io.cozy.events", []*Recipient{recipient1, recipient2}, rule)
+		true, "", []*Recipient{recipient1, recipient2}, rule)
 
 	// We add a trigger to this sharing.
 	sched := stack.GetScheduler()
@@ -1035,12 +1045,12 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.Len(t, triggers, nbTriggers+1)
 
 	// Test: we try to remove a recipient that does not belong to this sharing.
-	err = RevokeRecipient(testInstance, &sharing, "randomhostclientid", false)
+	err = RevokeRecipient(testInstance, sharing, "randomhostclientid", false)
 	assert.Error(t, err)
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
 
 	// Test: we remove the first recipient.
-	err = RevokeRecipient(testInstance, &sharing,
+	err = RevokeRecipient(testInstance, sharing,
 		sharing.RecipientsStatus[0].Client.ClientID, false)
 	assert.NoError(t, err)
 	// We check that the first recipient was revoked, that the sharing is not
@@ -1062,7 +1072,7 @@ func TestRevokeRecipient(t *testing.T) {
 	// Test: we remove the second recipient.
 	// By setting `recursive` to true we ask the recipient to revoke the sharing
 	// as well, hence the test server above.
-	err = RevokeRecipient(testInstance, &sharing,
+	err = RevokeRecipient(testInstance, sharing,
 		sharing.RecipientsStatus[1].Client.ClientID, true)
 	assert.NoError(t, err)
 	// We check that the second recipient was revoked, that the sharing is

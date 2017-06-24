@@ -1238,7 +1238,8 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
-	// Test: revoke using the correct app slug but without being the sharer
+	// Test: correct sharing id and app slug while being the sharer: it should
+	// pass.
 	slug := utils.RandomString(15)
 	rule := permissions.Rule{
 		Type:   "io.cozy.foos",
@@ -1260,26 +1261,12 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	appToken := testInstance.BuildAppToken(manifest)
 
-	sharing := createSharing(t, "", consts.MasterMasterSharing, false, slug,
-		[]*sharings.Recipient{}, rule)
+	recipient0 := createRecipient(t, "email0", "url0")
+	sharing := createSharing(t, "", consts.MasterMasterSharing, true, slug,
+		[]*sharings.Recipient{recipient0}, rule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
-		sharing.SharingID, "fakerecipientid")
-	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusForbidden, res.StatusCode)
-
-	// Test: correct sharing id and app slug while being the sharer: it should
-	// pass.
-	recipient1 := createRecipient(t, "email1", "url1")
-	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
-		[]*sharings.Recipient{recipient1}, rule)
-
-	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
-		sharing.SharingID, sharing.RecipientsStatus[0].Client.ClientID)
+		sharing.SharingID, sharing.RecipientsStatus[0].RefRecipient.ID)
 	queries := url.Values{consts.QueryParamRecursive: {"false"}}.Encode()
 	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
 	assert.NoError(t, err)
@@ -1291,12 +1278,12 @@ func TestRevokeRecipient(t *testing.T) {
 
 	// Test: correct sharing id while being the sharer but the request is not
 	// coming from the recipient that is to be revoked.
-	recipient2 := createRecipient(t, "email2", "url2")
+	recipient1 := createRecipient(t, "email1", "url1")
 	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
-		[]*sharings.Recipient{recipient1, recipient2}, rule)
+		[]*sharings.Recipient{recipient0, recipient1}, rule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
-		sharing.SharingID, sharing.RecipientsStatus[0].Client.ClientID)
+		sharing.SharingID, sharing.RecipientsStatus[0].RefRecipient.ID)
 	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
 	assert.NoError(t, err)
 	req.Header.Del(echo.HeaderAuthorization)

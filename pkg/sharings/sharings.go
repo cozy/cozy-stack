@@ -936,35 +936,34 @@ func deleteOAuthClient(ins *instance.Instance, rs *RecipientStatus) error {
 }
 
 func askToRevokeSharing(ins *instance.Instance, rs *RecipientStatus, sharingID string) error {
-	return askToRevoke(ins, rs, sharingID, "")
+	return askToRevoke(ins, rs, sharingID, false)
 }
 
 func askToRevokeRecipient(ins *instance.Instance, rs *RecipientStatus, sharingID string) error {
-	return askToRevoke(ins, rs, sharingID, rs.Client.ClientID)
+	return askToRevoke(ins, rs, sharingID, true)
 }
 
 // TODO Once we will handle error properly (recipient is disconnected and
 // what not) analyze the error returned and take proper actions every time this
 // function is called.
-func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID, recipientClientID string) error {
+func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID string, revokeRecipient bool) error {
 	err := rs.GetRecipient(ins)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] askToRevoke: Could not fetch "+
 			"recipient %s from database: %v", rs.RefRecipient.ID, err)
 		return err
 	}
-	recipient := rs.recipient
 
 	var path string
-	if recipientClientID == "" {
-		path = fmt.Sprintf("/sharings/%s", sharingID)
-	} else {
+	if revokeRecipient {
 		path = fmt.Sprintf("/sharings/%s/recipient/%s", sharingID,
-			recipientClientID)
+			rs.RefRecipient.ID)
+	} else {
+		path = fmt.Sprintf("/sharings/%s", sharingID)
 	}
 
 	_, err = request.Req(&request.Options{
-		Domain:  recipient.URL,
+		Domain:  rs.recipient.URL,
 		Path:    path,
 		Method:  http.MethodDelete,
 		Queries: url.Values{consts.QueryParamRecursive: {"false"}},
@@ -978,7 +977,7 @@ func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID, recipie
 
 	if err != nil {
 		ins.Logger().Errorf("[sharings] askToRevoke: Could not ask recipient "+
-			"%s to revoke sharing %s: %v", recipient.URL, sharingID, err)
+			"%s to revoke sharing %s: %v", rs.recipient.URL, sharingID, err)
 		return err
 	}
 
