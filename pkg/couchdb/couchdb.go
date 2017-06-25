@@ -225,6 +225,9 @@ func (j JSONDoc) Valid(field, value string) bool {
 		return false
 	}
 
+	if field == "" {
+		field = "_id"
+	}
 	return fmt.Sprintf("%v", j.Get(field)) == value
 }
 

@@ -756,6 +756,9 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		}
 	}
 
+	ins.Logger().Debugf("[sharings] Document %s is no longer shared, "+
+		"removing it", docID)
+
 	switch doctype {
 	case consts.Files:
 		dirDoc, fileDoc, errd := fs.DirOrFileByID(docID)
