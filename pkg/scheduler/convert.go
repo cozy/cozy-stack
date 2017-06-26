@@ -40,9 +40,12 @@ func (sched *RedisScheduler) importFromMemStorage() error {
 			}
 
 			db := couchdb.SimpleDatabasePrefix(t.Domain)
+			revback := t.Rev()
+			t.TRev = ""
 			if err = couchdb.CreateNamedDoc(db, t); err != nil {
 				return err
 			}
+			t.SetRev(revback)
 
 			if err = sched.addToRedis(trigger, time.Now()); err != nil {
 				return err
