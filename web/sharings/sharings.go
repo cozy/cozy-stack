@@ -516,12 +516,17 @@ func discoveryForm(c echo.Context) error {
 		})
 	}
 
+	publicName, err := instance.PublicName()
+	if err != nil {
+		return wrapErrors(err)
+	}
+
 	return c.Render(http.StatusOK, "sharing_discovery.html", echo.Map{
 		"Locale":         instance.Locale,
 		"RecipientID":    recipientID,
 		"RecipientEmail": recipientEmail,
 		"SharingID":      sharingID,
-		"PublicName":     instance.PublicName(),
+		"PublicName":     publicName,
 	})
 }
 

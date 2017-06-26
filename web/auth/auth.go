@@ -90,9 +90,14 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 		credsErrors = i.Translate(CredentialsErrorKey)
 	}
 
+	publicName, err := i.PublicName()
+	if err != nil {
+		publicName = ""
+	}
+
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
-		"PublicName":       i.PublicName(),
+		"PublicName":       publicName,
 		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
 	})
