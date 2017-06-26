@@ -146,10 +146,6 @@ func listHandler(c echo.Context) error {
 
 	objs := make([]jsonapi.Object, len(is))
 	for i, in := range is {
-		in.OAuthSecret = nil
-		in.SessionSecret = nil
-		in.RegisterToken = nil
-		in.PassphraseHash = nil
 		objs[i] = &apiInstance{in}
 	}
 
