@@ -117,7 +117,8 @@ func (g *gitFetcher) fetchManifestFromGitArchive(src *url.URL) (io.ReadCloser, e
 		"--remote", src.String(),
 		fmt.Sprintf("refs/heads/%s", branch),
 		g.manFilename) // #nosec
-	stdout, err := cmd.CombinedOutput()
+	g.log.Infof("[git] Fetching manifest %s", strings.Join(cmd.Args, " "))
+	stdout, err := cmd.Output()
 	if err != nil {
 		if err == exec.ErrNotFound {
 			return nil, ErrNotSupportedSource
@@ -197,11 +198,11 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 	cmd := exec.CommandContext(ctx, "git",
 		"ls-remote", "--quiet",
 		srcStr, fmt.Sprintf("refs/heads/%s", branch)) // #nosec
-	lsRemote, err := cmd.CombinedOutput()
+	lsRemote, err := cmd.Output()
 	if err != nil {
 		if err != exec.ErrNotFound {
-			g.log.Errorf("[git] ls-remote error of %s %s: %s", srcStr, err.Error(),
-				lsRemote)
+			g.log.Errorf("[git] ls-remote error of %s: %s",
+				strings.Join(cmd.Args, " "), err.Error())
 		}
 		return err
 	}
