@@ -38,7 +38,7 @@ type Hub interface {
 	SubscribeAll() EventChannel
 }
 
-// EventChannel is returned when Suscribing to the hub
+// EventChannel is returned when Subscribing to the hub
 type EventChannel interface {
 	// Read returns a chan for events
 	Read() <-chan *Event

@@ -30,7 +30,10 @@ func (h *memHub) Subscribe(domain, topicName string) EventChannel {
 		topic: topic,
 		send:  make(chan *Event),
 	}
-	topic.subscribe <- sub
+	// Don't block on Subscribe
+	go func() {
+		topic.subscribe <- sub
+	}()
 	return sub
 }
 
@@ -66,29 +69,6 @@ func (h *memHub) topicKey(domain, doctype string) string {
 	return domain + ":" + doctype
 }
 
-type memSub struct {
-	topic *topic
-	send  chan *Event
-	c     uint32 // mark whether or not the sub is closed
-}
-
-func (s *memSub) Read() <-chan *Event {
-	return s.send
-}
-
-func (s *memSub) closed() bool {
-	return atomic.LoadUint32(&s.c) == 1
-}
-
-func (s *memSub) Close() error {
-	if !atomic.CompareAndSwapUint32(&s.c, 0, 1) {
-		return errors.New("closing a closed subscription")
-	}
-	s.topic.unsubscribe <- s
-	close(s.send)
-	return nil
-}
-
 type topic struct {
 	hub *memHub
 	key string
@@ -109,8 +89,8 @@ func newTopic(hub *memHub, key string) *topic {
 	topic := &topic{
 		hub:         hub,
 		key:         key,
-		subscribe:   make(chan *memSub, 1), // 1-sized buffer to be async
-		unsubscribe: make(chan *memSub, 1), // 1-sized buffer to be async
+		subscribe:   make(chan *memSub),
+		unsubscribe: make(chan *memSub),
 		broadcast:   make(chan *Event, 10),
 		subs:        make(map[*memSub]struct{}),
 	}
@@ -121,20 +101,46 @@ func newTopic(hub *memHub, key string) *topic {
 func (t *topic) loop() {
 	for {
 		select {
+		case s := <-t.unsubscribe:
+			delete(t.subs, s)
+		case s := <-t.subscribe:
+			t.subs[s] = struct{}{}
 		case e := <-t.broadcast:
 			for s := range t.subs {
 				if !s.closed() {
-					s.send <- e
+					select {
+					case s := <-t.unsubscribe:
+						delete(t.subs, s)
+					case s.send <- e:
+					}
 				}
-			}
-		case s := <-t.subscribe:
-			t.subs[s] = struct{}{}
-		case s := <-t.unsubscribe:
-			delete(t.subs, s)
-			if len(t.subs) == 0 {
-				t.hub.remove(t)
-				return
 			}
 		}
 	}
+}
+
+type memSub struct {
+	topic *topic
+	send  chan *Event
+	c     uint32 // mark whether or not the sub is closed
+}
+
+func (s *memSub) Read() <-chan *Event {
+	return s.send
+}
+
+func (s *memSub) closed() bool {
+	return atomic.LoadUint32(&s.c) == 1
+}
+
+func (s *memSub) Close() error {
+	if !atomic.CompareAndSwapUint32(&s.c, 0, 1) {
+		return errors.New("closing a closed subscription")
+	}
+	// Don't block on Close
+	go func() {
+		s.topic.unsubscribe <- s
+		close(s.send)
+	}()
+	return nil
 }

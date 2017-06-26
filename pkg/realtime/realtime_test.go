@@ -90,4 +90,27 @@ func TestRealtime(t *testing.T) {
 			id:      "meneither",
 		},
 	})
+
+	c4 := h.Subscribe("testing", "io.cozy.testobject")
+
+	wg.Add(1)
+	go func() {
+		for e := range c4.Read() {
+			assert.Equal(t, "bar", e.Doc.ID())
+			break
+		}
+		wg.Done()
+	}()
+
+	time.AfterFunc(1*time.Millisecond, func() {
+		h.Publish(&Event{
+			Domain: "testing",
+			Doc: &testDoc{
+				doctype: "io.cozy.testobject",
+				id:      "bar",
+			},
+		})
+	})
+
+	wg.Wait()
 }
