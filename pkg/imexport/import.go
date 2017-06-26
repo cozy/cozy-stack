@@ -52,7 +52,7 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string) error {
 			mime, class := vfs.ExtractMimeAndClassFromFilename(hdr.Name)
 			now := time.Now()
 			executable := true
-			if hdr.FileInfo().Mode() == 644 {
+			if hdr.Mode == 0644 {
 				executable = false
 			}
 

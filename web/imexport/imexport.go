@@ -106,18 +106,20 @@ func importer(c echo.Context) error {
 	}
 
 	rep := c.Param("destination")
-	exist, err := vfs.DirExists(fs, fmt.Sprintf("/%s", rep))
+	rep = fmt.Sprintf("/%s", rep)
+
+	exist, err := vfs.DirExists(fs, rep)
 	if err != nil {
 		return err
 	}
 	var dst *vfs.DirDoc
 	if !exist {
-		dst, err = vfs.Mkdir(fs, fmt.Sprintf("/%s", rep), nil)
+		dst, err = vfs.Mkdir(fs, rep, nil)
 		if err != nil {
 			return err
 		}
 	} else {
-		dst, err = fs.DirByPath(fmt.Sprintf("/%s", rep))
+		dst, err = fs.DirByPath(rep)
 		if err != nil {
 			return err
 		}
