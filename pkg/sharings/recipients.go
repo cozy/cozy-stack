@@ -42,7 +42,7 @@ func (r *Recipient) ID() string { return r.RID }
 func (r *Recipient) Rev() string { return r.RRev }
 
 // DocType returns the recipient document type
-func (r *Recipient) DocType() string { return consts.Recipients }
+func (r *Recipient) DocType() string { return consts.Contacts }
 
 // Clone implements couchdb.Doc
 func (r *Recipient) Clone() couchdb.Doc { cloned := *r; return &cloned }
@@ -96,7 +96,7 @@ func CreateRecipient(db couchdb.Database, doc *Recipient) error {
 // GetRecipient returns the Recipient stored in database from a given ID
 func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 	doc := &Recipient{}
-	err := couchdb.GetDoc(db, consts.Recipients, recID, doc)
+	err := couchdb.GetDoc(db, consts.Contacts, recID, doc)
 	if couchdb.IsNotFoundError(err) {
 		err = ErrRecipientDoesNotExist
 	}

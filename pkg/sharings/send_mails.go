@@ -78,6 +78,10 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		if err != nil {
 			return err
 		}
+		if rs.recipient.Email == "" {
+			errorOccurred = logError(instance, ErrRecipientHasNoEmail)
+			continue
+		}
 		// Special case if the recipient's URL is not known: start discovery
 		if rs.recipient.URL == "" {
 			return SendDiscoveryMail(instance, s, rs)

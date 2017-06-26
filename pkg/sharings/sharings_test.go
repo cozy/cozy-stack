@@ -226,7 +226,7 @@ func createSharing(t *testing.T, sharingType string, docID string, withFile, wit
 	recStatus := &RecipientStatus{
 		RefRecipient: couchdb.DocReference{
 			ID:   recipient.RID,
-			Type: consts.Recipients,
+			Type: consts.Contacts,
 		},
 		recipient: recipient,
 	}
@@ -768,7 +768,7 @@ func TestCreateSharingAndRegisterSharer(t *testing.T) {
 	recStatus := &RecipientStatus{
 		RefRecipient: couchdb.DocReference{
 			ID:   "123",
-			Type: consts.Recipients,
+			Type: consts.Contacts,
 		},
 		recipient: rec,
 	}
@@ -1011,7 +1011,7 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	err = couchdb.ResetDB(TestPrefix, consts.Recipients)
+	err = couchdb.ResetDB(TestPrefix, consts.Contacts)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -1045,7 +1045,7 @@ func TestMain(m *testing.M) {
 
 	res := m.Run()
 	couchdb.DeleteDB(TestPrefix, consts.Sharings)
-	couchdb.DeleteDB(TestPrefix, consts.Recipients)
+	couchdb.DeleteDB(TestPrefix, consts.Contacts)
 	ts.Close()
 
 	os.Exit(res)
