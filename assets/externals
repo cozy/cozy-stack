@@ -19,12 +19,12 @@ url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.3.8/dist/cozy-c
 sha256  4b0276d439f55f8d2c9180b3eb793903e26a0520d1cb5431d16b4855ada01cbe
 
 name    ./js/cozy-bar.min.js
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.1/dist/cozy-bar.min.js
-sha256  cb446e0b90a62ccd15ef7c44614872927eaac1cc9485755c9049e5f985a807b4
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.1.0/dist/cozy-bar.min.js
+sha256  1ab810c020dbf4bd51c3ed1b53f0d49b009a1766f4a0b5612406569fabe2e98b
 
 name    ./css/cozy-bar.min.css
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.0.1/dist/cozy-bar.min.css
-sha256  a48f5a85f8daa34f0e9371a76e16d23d0444d0d201c024a1afdc122089f0d6b9
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.1.0/dist/cozy-bar.min.css
+sha256  ab44b14bede543333cedea6ae9316104a61857244e1094ce629e3df6f779cf71
 
 name    ./fonts/fontawesome-webfont.woff2
 url     https://raw.githubusercontent.com/FortAwesome/Font-Awesome/master/fonts/fontawesome-webfont.woff2
