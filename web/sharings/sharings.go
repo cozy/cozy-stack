@@ -516,18 +516,12 @@ func discoveryForm(c echo.Context) error {
 		})
 	}
 
-	doc := &couchdb.JSONDoc{}
-	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
 	return c.Render(http.StatusOK, "sharing_discovery.html", echo.Map{
 		"Locale":         instance.Locale,
 		"RecipientID":    recipientID,
 		"RecipientEmail": recipientEmail,
 		"SharingID":      sharingID,
-		"PublicName":     doc.M["public_name"],
+		"PublicName":     instance.PublicName(),
 	})
 }
 

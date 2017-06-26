@@ -85,13 +85,6 @@ func SetCookieForNewSession(c echo.Context) (string, error) {
 }
 
 func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect string) error {
-	publicName := "J. Doe"
-	if doc, err := i.SettingsDocument(); err == nil {
-		if name, ok := doc.M["public_name"].(string); ok {
-			publicName = name
-		}
-	}
-
 	var credsErrors string
 	if code == http.StatusUnauthorized {
 		credsErrors = i.Translate(CredentialsErrorKey)
@@ -99,7 +92,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
-		"PublicName":       publicName,
+		"PublicName":       i.PublicName(),
 		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
 	})
