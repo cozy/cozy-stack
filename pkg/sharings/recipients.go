@@ -166,14 +166,9 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		return ErrRecipientHasNoURL
 	}
 
-	// We get the instance document to extract the public name.
-	doc, err := instance.SettingsDocument()
+	publicName, err := instance.PublicName()
 	if err != nil {
 		return err
-	}
-	publicName, _ := doc.M["public_name"].(string)
-	if publicName == "" {
-		return ErrPublicNameNotDefined
 	}
 
 	redirectURI := instance.PageURL("/sharings/answer", nil)
