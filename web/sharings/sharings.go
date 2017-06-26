@@ -516,8 +516,7 @@ func discoveryForm(c echo.Context) error {
 		})
 	}
 
-	doc := &couchdb.JSONDoc{}
-	err = couchdb.GetDoc(instance, consts.Settings, consts.InstanceSettingsID, doc)
+	publicName, err := instance.PublicName()
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -527,7 +526,7 @@ func discoveryForm(c echo.Context) error {
 		"RecipientID":    recipientID,
 		"RecipientEmail": recipientEmail,
 		"SharingID":      sharingID,
-		"PublicName":     doc.M["public_name"],
+		"PublicName":     publicName,
 	})
 }
 
