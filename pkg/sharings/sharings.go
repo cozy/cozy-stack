@@ -744,10 +744,11 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		}
 
 		for _, perm := range perms {
-			for _, rule := range perm.Permissions {
-				if rule.ValuesValid(doc) {
-					return nil
-				}
+			if perm.Permissions.Allow(permissions.GET, doc) ||
+				perm.Permissions.Allow(permissions.POST, doc) ||
+				perm.Permissions.Allow(permissions.PUT, doc) ||
+				perm.Permissions.Allow(permissions.DELETE, doc) {
+				return nil
 			}
 		}
 
