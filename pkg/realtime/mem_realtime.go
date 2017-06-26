@@ -39,7 +39,7 @@ func (h *memHub) Subscribe(domain, topicName string) EventChannel {
 	return sub
 }
 
-func (h *memHub) SubscribeAll() EventChannel {
+func (h *memHub) SubscribeLocalAll() EventChannel {
 	return h.Subscribe("*", "*")
 }
 
@@ -55,7 +55,7 @@ func (h *memHub) getOrCreate(prefix, topicName string) *topic {
 	key := h.topicKey(prefix, topicName)
 	it, exists := h.topics[key]
 	if !exists {
-		it = newTopic(h, key)
+		it = newTopic(key)
 		h.topics[key] = it
 	}
 	return it
@@ -72,7 +72,6 @@ func (h *memHub) topicKey(domain, doctype string) string {
 }
 
 type topic struct {
-	hub *memHub
 	key string
 
 	// chans for subscribe/unsubscribe requests
@@ -85,11 +84,8 @@ type topic struct {
 	subs map[*memSub]struct{}
 }
 
-func newTopic(hub *memHub, key string) *topic {
-	// subscribers should only be manipulated by the hub loop
-	// it is a Map(type -> Set(subscriber))
+func newTopic(key string) *topic {
 	topic := &topic{
-		hub:         hub,
 		key:         key,
 		subscribe:   make(chan *memSub),
 		unsubscribe: make(chan *memSub),

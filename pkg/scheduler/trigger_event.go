@@ -118,7 +118,7 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 		return false
 	}
 
-	if !rule.Verbs.Contains(permissions.Verb(e.Type)) {
+	if !rule.Verbs.Contains(permissions.Verb(e.Verb)) {
 		return false
 	}
 

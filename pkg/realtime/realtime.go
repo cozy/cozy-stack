@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -13,19 +14,19 @@ const (
 	EventDelete = "DELETED"
 )
 
-// Doc is an interface for a object with DocType, ID, Rev
+// Doc is an interface for a object with DocType, ID
 type Doc interface {
 	ID() string
-	Rev() string
 	DocType() string
+	json.Marshaler
 }
 
 // Event is the basic message structure manipulated by the realtime package
 type Event struct {
-	Domain string
-	Type   string
-	Doc    Doc
-	OldDoc Doc
+	Domain string `json:"domain"`
+	Verb   string `json:"verb"`
+	Doc    Doc    `json:"doc"`
+	OldDoc Doc    `json:"old,omitempty"`
 }
 
 // The following API is inspired by https://github.com/gocontrib/pubsub
@@ -40,8 +41,9 @@ type Hub interface {
 	// to Unsubscribe.
 	Subscribe(domain, topicName string) EventChannel
 
-	// SubscribeAll adds a listener for all events.
-	SubscribeAll() EventChannel
+	// SubscribeLocalAll adds a listener for all events that happened in this
+	// cozy-stack process.
+	SubscribeLocalAll() EventChannel
 }
 
 // EventChannel is returned when Subscribing to the hub
@@ -65,8 +67,8 @@ func GetHub() Hub {
 	cli := config.GetConfig().Realtime.Client()
 	if cli == nil {
 		globalHub = newMemHub()
-		// } else {
-		// 	globalHub = &redisHub{cli}
+	} else {
+		globalHub = newRedisHub(cli)
 	}
 	return globalHub
 }
