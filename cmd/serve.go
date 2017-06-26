@@ -111,6 +111,9 @@ func init() {
 	flags.String("konnectors-oauthstate", "", "URL for the storage of OAuth state for konnectors, redis or in-memory")
 	checkNoErr(viper.BindPFlag("konnectors.oauthstate", flags.Lookup("konnectors-oauthstate")))
 
+	flags.String("realtime-url", "", "URL for realtime in the browser via webocket, redis or in-memory")
+	checkNoErr(viper.BindPFlag("realtime.url", flags.Lookup("realtime-url")))
+
 	flags.String("log-level", "info", "define the log level")
 	checkNoErr(viper.BindPFlag("log.level", flags.Lookup("log-level")))
 

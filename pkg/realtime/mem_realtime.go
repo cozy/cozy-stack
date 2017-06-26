@@ -6,11 +6,13 @@ import (
 	"sync/atomic"
 )
 
-var globalMemHub = &memHub{topics: make(map[string]*topic)}
-
 type memHub struct {
 	sync.RWMutex
 	topics map[string]*topic
+}
+
+func newMemHub() *memHub {
+	return &memHub{topics: make(map[string]*topic)}
 }
 
 func (h *memHub) Publish(e *Event) {

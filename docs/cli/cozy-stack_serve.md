@@ -41,7 +41,7 @@ example), you can use the --appdir flag like this:
       --couchdb-url string             CouchDB URL (default "http://localhost:5984/")
       --doctypes string                path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string           URL for the download secret storage, redis or in-memory
-      --fs-url string                  filesystem url (default "file://localhost/Users/pierre/go/src/github.com/cozy/cozy-stack/storage")
+      --fs-url string                  filesystem url (default "file://localhost//storage")
   -h, --help                           help for serve
       --jobs-url string                URL for the jobs system synchronization, redis or in-memory
       --jobs-workers int               Number of parallel workers (0 to disable the processing of jobs) (default 4)
@@ -57,6 +57,7 @@ example), you can use the --appdir flag like this:
       --mail-port int                  mail smtp port (default 465)
       --mail-username string           mail smtp username
       --no-admin                       Start without the admin interface
+      --realtime-url string            URL for realtime in the browser via webocket, redis or in-memory
       --sessions-url string            URL for the sessions storage, redis or in-memory
       --subdomains string              how to structure the subdomains for apps (can be nested or flat) (default "nested")
 ```

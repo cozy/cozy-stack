@@ -18,8 +18,8 @@ func (t *testDoc) ID() string      { return t.id }
 func (t *testDoc) Rev() string     { return t.rev }
 func (t *testDoc) DocType() string { return t.doctype }
 
-func TestRealtime(t *testing.T) {
-	h := GetHub()
+func TestMemRealtime(t *testing.T) {
+	h := newMemHub()
 	c1 := h.Subscribe("testing", "io.cozy.testobject")
 	c2 := h.Subscribe("testing", "io.cozy.testobject")
 	c3 := h.SubscribeAll()

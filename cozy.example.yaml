@@ -53,6 +53,9 @@ konnectors:
   # cmd: ./scripts/konnector-node-run.sh # run connectors with node
   # oauthstate: redis://localhost:6379/6
 
+realtime:
+  # url: redis://localhost:6379/6
+
 mail:
   # mail noreply address - flags: --mail-noreply-address
   noreply_address: noreply@localhost

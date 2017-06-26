@@ -1,5 +1,11 @@
 package realtime
 
+import (
+	"sync"
+
+	"github.com/cozy/cozy-stack/pkg/config"
+)
+
 // Basic data events
 const (
 	EventCreate = "CREATED"
@@ -46,7 +52,21 @@ type EventChannel interface {
 	Close() error
 }
 
+var globalHubMu sync.Mutex
+var globalHub Hub
+
 // GetHub returns the global hub
 func GetHub() Hub {
-	return globalMemHub
+	globalHubMu.Lock()
+	defer globalHubMu.Unlock()
+	if globalHub != nil {
+		return globalHub
+	}
+	cli := config.GetConfig().Realtime.Client()
+	if cli == nil {
+		globalHub = newMemHub()
+		// } else {
+		// 	globalHub = &redisHub{cli}
+	}
+	return globalHub
 }
