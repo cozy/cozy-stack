@@ -24,7 +24,7 @@ var ts *httptest.Server
 var testInstance *instance.Instance
 var setup *testutils.TestSetup
 
-func TestACOauthFlow(t *testing.T) {
+func TestAccessCodeOauthFlow(t *testing.T) {
 
 	redirectURI := ts.URL + "/accounts/test-service/redirect"
 
@@ -137,6 +137,81 @@ func TestRedirectURLOauthFlow(t *testing.T) {
 	err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
 	assert.NoError(t, err)
 	assert.Equal(t, "the-access-token2", out.M["oauth"].(map[string]interface{})["access_token"])
+}
+
+func TestFixedRedirectURIOauthFlow(t *testing.T) {
+	redirectURI := "http://_oauth_callback.cozy.tools/accounts/test-service3/redirect"
+	service := makeTestACService(redirectURI)
+	defer service.Close()
+
+	serviceType := accounts.AccountType{
+		DocID:                 "test-service3",
+		GrantMode:             accounts.AuthorizationCode,
+		ClientID:              "the-client-id",
+		ClientSecret:          "the-client-secret",
+		AuthEndpoint:          service.URL + "/oauth2/v2/auth",
+		TokenEndpoint:         service.URL + "/oauth2/v4/token",
+		RegisteredRedirectURI: redirectURI,
+	}
+	err := couchdb.CreateNamedDoc(couchdb.GlobalSecretsDB, &serviceType)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer couchdb.DeleteDoc(couchdb.GlobalSecretsDB, &serviceType)
+
+	startURL, err := url.Parse(ts.URL + "/accounts/test-service3/start?scope=the+world")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	res, err := http.Get(startURL.String())
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	bb, err := ioutil.ReadAll(res.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+	res.Body.Close()
+	okURL := string(bb)
+
+	if !assert.Equal(t, 200, res.StatusCode) {
+		fmt.Println("Bad response", res, okURL)
+		return
+	}
+
+	okURLObj, err := url.Parse(okURL)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// hack, we want to speak with ts.URL but setting Host to _oauth_callback
+	host := okURLObj.Host
+	okURLObj.Host = startURL.Host
+	req2, err := http.NewRequest("GET", okURLObj.String(), nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	req2.Host = host
+
+	res2, err := (&http.Client{CheckRedirect: stopBeforeDataCollectFail}).Do(req2)
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, http.StatusSeeOther, res2.StatusCode)
+	finalURL, err := res2.Location()
+	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.Contains(t, finalURL.String(), "collect") {
+		return
+	}
+
+	var out couchdb.JSONDoc
+	err = couchdb.GetDoc(testInstance, consts.Accounts, finalURL.Query().Get("account"), &out)
+	assert.NoError(t, err)
+	assert.Equal(t, "the-access-token", out.M["oauth"].(map[string]interface{})["access_token"])
 }
 
 func TestMain(m *testing.M) {
