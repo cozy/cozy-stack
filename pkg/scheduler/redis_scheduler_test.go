@@ -9,11 +9,15 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
+	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/go-redis/redis"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +25,7 @@ import (
 
 const redisURL = "redis://localhost:6379/15"
 
+var testInstance *instance.Instance
 var instanceName string
 
 type testDoc struct {
@@ -194,12 +199,12 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	assert.NoError(t, err)
 
 	now := time.Now().UTC().Unix()
-	for i := int64(0); i < 9; i++ {
+	for i := int64(0); i < 15; i++ {
 		err = sch.Poll(now + i + 4)
 		assert.NoError(t, err)
 	}
 	count, _ := bro.QueueLen("incr")
-	assert.Equal(t, 4, count)
+	assert.Equal(t, 6, count)
 }
 
 func TestRedisPollFromSchedKey(t *testing.T) {
@@ -322,6 +327,134 @@ func TestRedisTriggerEvent(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
+// fakeFilePather is used to force a cached value for the fullpath of a FileDoc
+type fakeFilePather struct {
+	Fullpath string
+}
+
+func (d fakeFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
+	return d.Fullpath, nil
+}
+
+func TestRedisTriggerEventForDirectories(t *testing.T) {
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	assert.NoError(t, err)
+
+	bro := &mockBroker{}
+	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch.Stop()
+	time.Sleep(1 * time.Second)
+	sch.Start(bro)
+
+	dir := &vfs.DirDoc{
+		Type:      "directory",
+		DocName:   "foo",
+		DirID:     consts.RootDirID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Fullpath:  "/foo",
+	}
+	err = testInstance.VFS().CreateDirDoc(dir)
+	assert.NoError(t, err)
+
+	evTrigger := &scheduler.TriggerInfos{
+		Type:       "@event",
+		Domain:     instanceName,
+		Arguments:  "io.cozy.files:CREATED:" + dir.DocID,
+		WorkerType: "incr",
+	}
+	tri, err := scheduler.NewTrigger(evTrigger)
+	assert.NoError(t, err)
+	sch.Add(tri)
+
+	time.Sleep(1 * time.Second)
+	count, _ := bro.QueueLen("incr")
+	if !assert.Equal(t, 0, count) {
+		return
+	}
+
+	barID := utils.RandomString(10)
+	realtime.GetHub().Publish(&realtime.Event{
+		Domain: instanceName,
+		Doc: &vfs.DirDoc{
+			Type:      "directory",
+			DocID:     barID,
+			DocRev:    "1-" + utils.RandomString(10),
+			DocName:   "bar",
+			DirID:     dir.DocID,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Fullpath:  "/foo/bar",
+		},
+		Type: realtime.EventCreate,
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	count, _ = bro.QueueLen("incr")
+	assert.Equal(t, 1, count)
+
+	bazID := utils.RandomString(10)
+	baz := &vfs.FileDoc{
+		Type:      "file",
+		DocID:     bazID,
+		DocRev:    "1-" + utils.RandomString(10),
+		DocName:   "baz",
+		DirID:     barID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		ByteSize:  42,
+		Mime:      "application/json",
+		Class:     "application",
+		Trashed:   false,
+	}
+	ffp := fakeFilePather{"/foo/bar/baz"}
+	p, err := baz.Path(ffp)
+	assert.NoError(t, err)
+	assert.Equal(t, "/foo/bar/baz", p)
+
+	realtime.GetHub().Publish(&realtime.Event{
+		Domain: instanceName,
+		Doc:    baz,
+		Type:   realtime.EventCreate,
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	count, _ = bro.QueueLen("incr")
+	assert.Equal(t, 2, count)
+
+	// Simulate that /foo/bar/baz is moved to /quux
+	quux := &vfs.FileDoc{
+		Type:      "file",
+		DocID:     bazID,
+		DocRev:    "2-" + utils.RandomString(10),
+		DocName:   "quux",
+		DirID:     consts.RootDirID,
+		CreatedAt: baz.CreatedAt,
+		UpdatedAt: time.Now(),
+		ByteSize:  42,
+		Mime:      "application/json",
+		Class:     "application",
+		Trashed:   false,
+	}
+	ffp = fakeFilePather{"/quux"}
+	p, err = quux.Path(ffp)
+	assert.NoError(t, err)
+	assert.Equal(t, "/quux", p)
+
+	realtime.GetHub().Publish(&realtime.Event{
+		Domain: instanceName,
+		Doc:    quux,
+		OldDoc: baz,
+		Type:   realtime.EventCreate,
+	})
+
+	time.Sleep(100 * time.Millisecond)
+	count, _ = bro.QueueLen("incr")
+	assert.Equal(t, 3, count)
+}
+
 func TestMain(m *testing.M) {
 	// prefix = "test:"
 	config.UseTestFile()
@@ -331,7 +464,8 @@ func TestMain(m *testing.M) {
 
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "test_redis_scheduler")
-	instanceName = setup.GetTestInstance().Domain
+	testInstance = setup.GetTestInstance()
+	instanceName = testInstance.Domain
 
 	setup.AddCleanup(func() error {
 		cfg.Jobs.Redis = was

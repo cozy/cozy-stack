@@ -69,14 +69,29 @@ func (c *couchdbIndexer) DiskUsage() (int64, error) {
 }
 
 func (c *couchdbIndexer) CreateFileDoc(doc *FileDoc) error {
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if _, err := doc.Path(c); err != nil {
+		return err
+	}
 	return couchdb.CreateDoc(c.db, doc)
 }
 
 func (c *couchdbIndexer) CreateNamedFileDoc(doc *FileDoc) error {
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if _, err := doc.Path(c); err != nil {
+		return err
+	}
 	return couchdb.CreateNamedDoc(c.db, doc)
 }
 
 func (c *couchdbIndexer) UpdateFileDoc(olddoc, newdoc *FileDoc) error {
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if _, err := olddoc.Path(c); err != nil {
+		return err
+	}
+	if _, err := newdoc.Path(c); err != nil {
+		return err
+	}
 	newdoc.SetID(olddoc.ID())
 	newdoc.SetRev(olddoc.Rev())
 	return couchdb.UpdateDoc(c.db, newdoc)
@@ -86,14 +101,22 @@ func (c *couchdbIndexer) UpdateFileDocs(docs []*FileDoc) error {
 	if len(docs) == 0 {
 		return nil
 	}
-	couchdocs := make([]couchdb.Doc, len(docs))
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	couchdocs := make([]interface{}, len(docs))
 	for i, doc := range docs {
+		if _, err := doc.Path(c); err != nil {
+			return err
+		}
 		couchdocs[i] = doc
 	}
-	return couchdb.BulkUpdateDoc(c.db, couchdocs)
+	return couchdb.BulkUpdateDocs(c.db, consts.Files, couchdocs)
 }
 
 func (c *couchdbIndexer) DeleteFileDoc(doc *FileDoc) error {
+	// Ensure that fullpath is filled because it's used in realtime/@events
+	if _, err := doc.Path(c); err != nil {
+		return err
+	}
 	return couchdb.DeleteDoc(c.db, doc)
 }
 

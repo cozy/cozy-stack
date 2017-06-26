@@ -1,11 +1,16 @@
 package scheduler
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
 // EventTrigger implements Trigger for realtime triggered events
@@ -122,22 +127,67 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 	}
 
 	if rule.Selector == "" {
-		return rule.ValuesContain(e.Doc.ID())
+		if rule.ValuesContain(e.Doc.ID()) {
+			return true
+		}
+		if e.Doc.DocType() == consts.Files {
+			for _, value := range rule.Values {
+				var dir vfs.DirDoc
+				db := couchdb.SimpleDatabasePrefix(e.Domain)
+				if err := couchdb.GetDoc(db, consts.Files, value, &dir); err != nil {
+					logger.WithNamespace("event-trigger").Error(err)
+					return false
+				}
+				if testPath(&dir, e.Doc) {
+					return true
+				}
+				if e.OldDoc != nil {
+					if testPath(&dir, e.OldDoc) {
+						return true
+					}
+				}
+			}
+		}
+		return false
 	}
 
 	if v, ok := e.Doc.(permissions.Validable); ok {
-		if !rule.ValuesValid(v) {
-			// Particular case where the new doc is not valid but the old one was.
-			if e.OldDoc != nil {
-				if vOld, okOld := e.OldDoc.(permissions.Validable); okOld {
-					return rule.ValuesValid(vOld)
-				}
-			}
-		} else {
+		if rule.ValuesValid(v) {
 			return true
 		}
-		return rule.ValuesValid(v)
+		// Particular case where the new doc is not valid but the old one was.
+		if e.OldDoc != nil {
+			if vOld, okOld := e.OldDoc.(permissions.Validable); okOld {
+				return rule.ValuesValid(vOld)
+			}
+		}
 	}
 
+	return false
+}
+
+// DumpFilePather is a struct made for calling the Path method of a FileDoc and
+// relying on the cached fullpath of this document (not trying to rebuild it)
+type DumpFilePather struct{}
+
+// FilePath only returns an error saying to not call this method
+func (d DumpFilePather) FilePath(doc *vfs.FileDoc) (string, error) {
+	logger.WithNamespace("event-trigger").Warning("FilePath method of DumpFilePather has been called")
+	return "", errors.New("DumpFilePather FilePath should not have been called")
+}
+
+var dumpFilePather = DumpFilePather{}
+
+func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
+	if d, ok := doc.(*vfs.DirDoc); ok {
+		return strings.HasPrefix(d.Fullpath, dir.Fullpath+"/")
+	}
+	if f, ok := doc.(*vfs.FileDoc); ok {
+		p, err := f.Path(dumpFilePather)
+		if err != nil {
+			return false
+		}
+		return strings.HasPrefix(p, dir.Fullpath+"/")
+	}
 	return false
 }

@@ -84,6 +84,11 @@ type File interface {
 	io.Closer
 }
 
+// FilePather is an interface for computing the fullpath of a filedoc
+type FilePather interface {
+	FilePath(doc *FileDoc) (string, error)
+}
+
 // Indexer is an interface providing a common set of method for indexing layer
 // of our VFS.
 //
@@ -91,6 +96,8 @@ type File interface {
 // directories metadata, as well as caching them if necessary.
 type Indexer interface {
 	InitIndex() error
+
+	FilePather
 
 	// DiskUsage computes the total size of the files contained in the VFS.
 	DiskUsage() (int64, error)
@@ -134,7 +141,6 @@ type Indexer interface {
 	// FileByPath returns the file document information associated with the
 	// specified path.
 	FileByPath(name string) (*FileDoc, error)
-	FilePath(doc *FileDoc) (string, error)
 
 	// DirOrFileByID returns the document from its identifier without knowing in
 	// advance its type. One of the returned argument is not nil.
