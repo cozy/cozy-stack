@@ -215,6 +215,11 @@ func cleanTriggers(c echo.Context) error {
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
 		return err
 	}
+	if rsched, ok := sched.(*scheduler.RedisScheduler); ok {
+		if err := rsched.ImportFromDB(instance.Domain); err != nil {
+			return wrapJobsError(err)
+		}
+	}
 	ts, err := sched.GetAll(instance.Domain)
 	if err != nil {
 		return wrapJobsError(err)
