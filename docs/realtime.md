@@ -103,7 +103,7 @@ Redis pub/sub ?
 
 We start with a normal websocket handshake.
 
-Websockets include a protocol description in handshake, the protocol described below is hereby named `io.cozy.websocket` version `1`
+Websockets include a protocol description in handshake, the protocol described below is hereby named `io.cozy.websocket`.
 
 Changes to the websocket protocol should be given versions, support for older version should be maintained when reasonable.
 
@@ -116,7 +116,7 @@ Origin: http://calendar.mycozy.example.com
 Authorization: Bearer xxAppOrAuthTokenxx=
 Sec-WebSocket-Key: x3JrandomLkh9GBhXDw==
 Sec-WebSocket-Protocol: io.cozy.websocket
-Sec-WebSocket-Version: 1
+Sec-WebSocket-Version: 13
 ```
 
 Then messages are sent using json
@@ -149,7 +149,7 @@ If the client wants to receive full documents with each events, it can add an `i
 In order to subscribe, a client must have permission `GET` on the passed selector. Otherwise an error is passed in the message feed.
 
 ```
-server > {"event": "errror",
+server > {"event": "error",
           "payload": {
             "status": "403 Forbidden"
             "code": "forbidden"

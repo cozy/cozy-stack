@@ -12,7 +12,8 @@ import (
 
 var upgrader = websocket.Upgrader{
 	// Don't check the origin of the connexion, the Authorization header is enough
-	CheckOrigin: func(r *http.Request) bool { return true },
+	CheckOrigin:  func(r *http.Request) bool { return true },
+	Subprotocols: []string{"io.cozy.websocket"},
 }
 
 type command struct {
@@ -26,8 +27,6 @@ type command struct {
 func ws(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	// TODO set Sec-WebSocket-Protocol: io.cozy.websocket
-	// TODO and Sec-WebSocket-Version: 1
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err
