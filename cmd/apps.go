@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"text/tabwriter"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -255,11 +257,16 @@ func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if err != nil {
 		return err
 	}
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	for _, app := range apps {
-		fmt.Printf("%s\t%s\t%s\t%s\n",
-			app.Attrs.Slug, app.Attrs.Source, app.Attrs.Version, app.Attrs.State)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			app.Attrs.Slug,
+			app.Attrs.Source,
+			app.Attrs.Version,
+			app.Attrs.State,
+		)
 	}
-	return nil
+	return w.Flush()
 }
 
 func foreachDomains(predicate func(*client.Instance) error) error {
