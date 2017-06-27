@@ -33,6 +33,9 @@ func ws(c echo.Context) error {
 	}
 	defer ws.Close()
 
+	ds := realtime.GetHub().Subscriber(instance.Domain)
+	defer ds.Close()
+
 	// TODO accept multiple subscribe commands
 	// TODO filter by id
 	// TODO what do we do with include_docs?
@@ -47,11 +50,10 @@ func ws(c echo.Context) error {
 		return nil
 	}
 	// TODO check permissions
-	ec := realtime.GetHub().Subscribe(instance.Domain, cmd.Payload.Type)
-	defer ec.Close()
+	ds.Subscribe(cmd.Payload.Type)
 
 	for {
-		e := <-ec.Read()
+		e := <-ds.Channel
 		if err := ws.WriteJSON(e); err != nil {
 			return nil
 		}

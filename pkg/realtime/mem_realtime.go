@@ -1,10 +1,6 @@
 package realtime
 
-import (
-	"errors"
-	"sync"
-	"sync/atomic"
-)
+import "sync"
 
 type memHub struct {
 	sync.RWMutex
@@ -26,33 +22,27 @@ func (h *memHub) Publish(e *Event) {
 	}
 }
 
-func (h *memHub) Subscribe(domain, topicName string) EventChannel {
-	topic := h.getOrCreate(domain, topicName)
-	sub := &memSub{
-		topic: topic,
-		send:  make(chan *Event),
-	}
-	// Don't block on Subscribe
-	go func() {
-		topic.subscribe <- sub
-	}()
-	return sub
+func (h *memHub) Subscriber(domain string) *DynamicSubscriber {
+	return newDynamicSubscriber(h, domain)
 }
 
-func (h *memHub) SubscribeLocalAll() EventChannel {
-	return h.Subscribe("*", "*")
+func (h *memHub) SubscribeLocalAll() *DynamicSubscriber {
+	ds := newDynamicSubscriber(nil, "")
+	t := h.GetTopic("*", "*")
+	ds.addTopic(t)
+	return ds
 }
 
-func (h *memHub) get(prefix, topicName string) *topic {
+func (h *memHub) get(domain, doctype string) *topic {
 	h.RLock()
 	defer h.RUnlock()
-	return h.topics[h.topicKey(prefix, topicName)]
+	return h.topics[h.topicKey(domain, doctype)]
 }
 
-func (h *memHub) getOrCreate(prefix, topicName string) *topic {
+func (h *memHub) GetTopic(domain, doctype string) *topic {
 	h.Lock()
 	defer h.Unlock()
-	key := h.topicKey(prefix, topicName)
+	key := h.topicKey(domain, doctype)
 	it, exists := h.topics[key]
 	if !exists {
 		it = newTopic(key)
@@ -72,25 +62,25 @@ func (h *memHub) topicKey(domain, doctype string) string {
 }
 
 type topic struct {
-	key string
+	key string // TODO remove it
 
 	// chans for subscribe/unsubscribe requests
-	subscribe   chan *memSub
-	unsubscribe chan *memSub
+	subscribe   chan *MemSub
+	unsubscribe chan *MemSub
 	broadcast   chan *Event
 
 	// set of this topic subs, it should only be manipulated by the topic
 	// loop goroutine
-	subs map[*memSub]struct{}
+	subs map[*MemSub]struct{}
 }
 
 func newTopic(key string) *topic {
 	topic := &topic{
 		key:         key,
-		subscribe:   make(chan *memSub),
-		unsubscribe: make(chan *memSub),
+		subscribe:   make(chan *MemSub),
+		unsubscribe: make(chan *MemSub),
 		broadcast:   make(chan *Event, 10),
-		subs:        make(map[*memSub]struct{}),
+		subs:        make(map[*MemSub]struct{}),
 	}
 	go topic.loop()
 	return topic
@@ -105,40 +95,12 @@ func (t *topic) loop() {
 			t.subs[s] = struct{}{}
 		case e := <-t.broadcast:
 			for s := range t.subs {
-				if !s.closed() {
-					select {
-					case s := <-t.unsubscribe:
-						delete(t.subs, s)
-					case s.send <- e:
-					}
+				select {
+				case s := <-t.unsubscribe:
+					delete(t.subs, s)
+				case *s <- e:
 				}
 			}
 		}
 	}
-}
-
-type memSub struct {
-	topic *topic
-	send  chan *Event
-	c     uint32 // mark whether or not the sub is closed
-}
-
-func (s *memSub) Read() <-chan *Event {
-	return s.send
-}
-
-func (s *memSub) closed() bool {
-	return atomic.LoadUint32(&s.c) == 1
-}
-
-func (s *memSub) Close() error {
-	if !atomic.CompareAndSwapUint32(&s.c, 0, 1) {
-		return errors.New("closing a closed subscription")
-	}
-	// Don't block on Close
-	go func() {
-		s.topic.unsubscribe <- s
-		close(s.send)
-	}()
-	return nil
 }

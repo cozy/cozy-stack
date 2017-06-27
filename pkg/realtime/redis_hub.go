@@ -87,6 +87,10 @@ func (h *redisHub) start() {
 	}
 }
 
+func (h *redisHub) GetTopic(domain, doctype string) *topic {
+	return nil
+}
+
 func (h *redisHub) Publish(e *Event) {
 	h.local.broadcast <- e
 	buf, err := json.Marshal(e)
@@ -97,18 +101,12 @@ func (h *redisHub) Publish(e *Event) {
 	h.c.Publish(eventsRedisKey, string(buf))
 }
 
-func (h *redisHub) Subscribe(domain, topicName string) EventChannel {
-	return h.mem.Subscribe(domain, topicName)
+func (h *redisHub) Subscriber(domain string) *DynamicSubscriber {
+	return h.mem.Subscriber(domain)
 }
 
-func (h *redisHub) SubscribeLocalAll() EventChannel {
-	sub := &memSub{
-		topic: h.local,
-		send:  make(chan *Event),
-	}
-	// Don't block on Subscribe
-	go func() {
-		h.local.subscribe <- sub
-	}()
-	return sub
+func (h *redisHub) SubscribeLocalAll() *DynamicSubscriber {
+	ds := newDynamicSubscriber(nil, "")
+	ds.addTopic(h.local)
+	return ds
 }

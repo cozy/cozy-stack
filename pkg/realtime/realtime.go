@@ -1,8 +1,9 @@
 package realtime
 
 import (
-	"encoding/json"
+	"errors"
 	"sync"
+	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 )
@@ -18,7 +19,7 @@ const (
 type Doc interface {
 	ID() string
 	DocType() string
-	json.Marshaler
+	// TODO json.Marshaler
 }
 
 // Event is the basic message structure manipulated by the realtime package
@@ -36,22 +37,79 @@ type Hub interface {
 	// Emit is used by publishers when an event occurs
 	Publish(event *Event)
 
-	// Subscribe adds a listener for events on a given type
-	// it returns an EventChannel, call the EventChannel Close method
-	// to Unsubscribe.
-	Subscribe(domain, topicName string) EventChannel
+	// Subscriber creates a DynamicSubscriber that can subscribe to several
+	// doctypes. Call its Close method to Unsubscribe.
+	Subscriber(domain string) *DynamicSubscriber
 
 	// SubscribeLocalAll adds a listener for all events that happened in this
 	// cozy-stack process.
-	SubscribeLocalAll() EventChannel
+	SubscribeLocalAll() *DynamicSubscriber
+
+	// GetTopic returns the topic for the given domain+doctype.
+	// It creates the topic if it does not exist.
+	GetTopic(domain, doctype string) *topic
 }
 
-// EventChannel is returned when Subscribing to the hub
-type EventChannel interface {
-	// Read returns a chan for events
-	Read() <-chan *Event
-	// Close closes the channel
-	Close() error
+// MemSub is a chan of events
+type MemSub chan *Event
+
+// DynamicSubscriber is used to subscribe to several doctypes
+type DynamicSubscriber struct {
+	Channel MemSub
+	hub     Hub
+	domain  string
+	topics  []*topic
+	c       uint32 // mark whether or not the sub is closed
+}
+
+func newDynamicSubscriber(hub Hub, domain string) *DynamicSubscriber {
+	return &DynamicSubscriber{
+		Channel: make(chan *Event, 10),
+		hub:     hub,
+		domain:  domain,
+	}
+}
+
+// Subscribe adds a listener for events on a given doctype
+func (ds *DynamicSubscriber) Subscribe(doctype string) error {
+	if ds.Closed() || ds.hub == nil {
+		return errors.New("Can't subscribe")
+	}
+	t := ds.hub.GetTopic(ds.domain, doctype)
+	// TODO check that t is not already in ds.topics
+	ds.addTopic(t)
+	return nil
+}
+
+func (ds *DynamicSubscriber) addTopic(t *topic) {
+	ds.topics = append(ds.topics, t)
+	t.subscribe <- &ds.Channel
+}
+
+// Closed returns true if it will no longer send events in its channel
+func (ds *DynamicSubscriber) Closed() bool {
+	return atomic.LoadUint32(&ds.c) == 1
+}
+
+// Close closes the channel (async)
+func (ds *DynamicSubscriber) Close() error {
+	if !atomic.CompareAndSwapUint32(&ds.c, 0, 1) {
+		return errors.New("closing a closed subscription")
+	}
+	// Don't block on Close
+	wg := sync.WaitGroup{}
+	for _, t := range ds.topics {
+		wg.Add(1)
+		go func(t *topic) {
+			t.unsubscribe <- &ds.Channel
+			wg.Done()
+		}(t)
+	}
+	go func() {
+		wg.Wait()
+		close(ds.Channel)
+	}()
+	return nil
 }
 
 var globalHubMu sync.Mutex

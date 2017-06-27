@@ -115,7 +115,7 @@ func (s *RedisScheduler) startEventDispatcher() {
 			select {
 			case <-s.stopped:
 				return
-			case event := <-c.Read():
+			case event := <-c.Channel:
 				eventsCh <- event
 			}
 		}

@@ -23,14 +23,19 @@ func (t *testDoc) MarshalJSON() ([]byte, error) {
 
 func TestMemRealtime(t *testing.T) {
 	h := newMemHub()
-	c1 := h.Subscribe("testing", "io.cozy.testobject")
-	c2 := h.Subscribe("testing", "io.cozy.testobject")
+	c1 := h.Subscriber("testing")
+	c2 := h.Subscriber("testing")
 	c3 := h.SubscribeLocalAll()
 	wg := sync.WaitGroup{}
 
+	err := c1.Subscribe("io.cozy.testobject")
+	assert.NoError(t, err)
+	err = c2.Subscribe("io.cozy.testobject")
+	assert.NoError(t, err)
+
 	wg.Add(1)
 	go func() {
-		for e := range c1.Read() {
+		for e := range c1.Channel {
 			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
@@ -39,7 +44,7 @@ func TestMemRealtime(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		for e := range c2.Read() {
+		for e := range c2.Channel {
 			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
@@ -48,7 +53,7 @@ func TestMemRealtime(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		for e := range c3.Read() {
+		for e := range c3.Channel {
 			assert.Equal(t, "testing", e.Domain)
 			assert.Equal(t, "foo", e.Doc.ID())
 			break
@@ -68,7 +73,7 @@ func TestMemRealtime(t *testing.T) {
 
 	wg.Wait()
 
-	err := c1.Close()
+	err = c1.Close()
 	assert.NoError(t, err)
 	err = c2.Close()
 	assert.NoError(t, err)
@@ -94,15 +99,23 @@ func TestMemRealtime(t *testing.T) {
 		},
 	})
 
-	c4 := h.Subscribe("testing", "io.cozy.testobject")
+	c4 := h.Subscriber("testing")
+	err = c4.Subscribe("io.cozy.testobject")
+	assert.NoError(t, err)
+	err = c4.Subscribe("io.cozy.testobject2")
+	assert.NoError(t, err)
 
-	wg.Add(1)
+	wg.Add(2)
 	go func() {
-		for e := range c4.Read() {
-			assert.Equal(t, "bar", e.Doc.ID())
-			break
+		expected := "bar"
+		for e := range c4.Channel {
+			assert.Equal(t, expected, e.Doc.ID())
+			wg.Done()
+			if expected == "baz" {
+				break
+			}
+			expected = "baz"
 		}
-		wg.Done()
 	}()
 
 	time.AfterFunc(1*time.Millisecond, func() {
@@ -111,6 +124,15 @@ func TestMemRealtime(t *testing.T) {
 			Doc: &testDoc{
 				doctype: "io.cozy.testobject",
 				id:      "bar",
+			},
+		})
+	})
+	time.AfterFunc(2*time.Millisecond, func() {
+		h.Publish(&Event{
+			Domain: "testing",
+			Doc: &testDoc{
+				doctype: "io.cozy.testobject2",
+				id:      "baz",
 			},
 		})
 	})
@@ -123,14 +145,19 @@ func TestRedisRealtime(t *testing.T) {
 	assert.NoError(t, err)
 	client := redis.NewClient(opt)
 	h := newRedisHub(client)
-	c1 := h.Subscribe("testing", "io.cozy.testobject")
-	c2 := h.Subscribe("testing", "io.cozy.testobject")
+	c1 := h.Subscriber("testing")
+	c2 := h.Subscriber("testing")
 	c3 := h.SubscribeLocalAll()
 	wg := sync.WaitGroup{}
 
+	err = c1.Subscribe("io.cozy.testobject")
+	assert.NoError(t, err)
+	err = c2.Subscribe("io.cozy.testobject")
+	assert.NoError(t, err)
+
 	wg.Add(1)
 	go func() {
-		for e := range c1.Read() {
+		for e := range c1.Channel {
 			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
@@ -139,7 +166,7 @@ func TestRedisRealtime(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		for e := range c2.Read() {
+		for e := range c2.Channel {
 			assert.Equal(t, "foo", e.Doc.ID())
 			break
 		}
@@ -148,7 +175,7 @@ func TestRedisRealtime(t *testing.T) {
 
 	wg.Add(1)
 	go func() {
-		for e := range c3.Read() {
+		for e := range c3.Channel {
 			assert.Equal(t, "testing", e.Domain)
 			assert.Equal(t, "foo", e.Doc.ID())
 			break
@@ -195,15 +222,23 @@ func TestRedisRealtime(t *testing.T) {
 	})
 
 	time.Sleep(100 * time.Millisecond)
-	c4 := h.Subscribe("testing", "io.cozy.testobject")
+	c4 := h.Subscriber("testing")
+	err = c4.Subscribe("io.cozy.testobject")
+	assert.NoError(t, err)
+	err = c4.Subscribe("io.cozy.testobject2")
+	assert.NoError(t, err)
 
-	wg.Add(1)
+	wg.Add(2)
 	go func() {
-		for e := range c4.Read() {
-			assert.Equal(t, "bar", e.Doc.ID())
-			break
+		expected := "bar"
+		for e := range c4.Channel {
+			assert.Equal(t, expected, e.Doc.ID())
+			wg.Done()
+			if expected == "baz" {
+				break
+			}
+			expected = "baz"
 		}
-		wg.Done()
 	}()
 
 	time.AfterFunc(1*time.Millisecond, func() {
@@ -212,6 +247,15 @@ func TestRedisRealtime(t *testing.T) {
 			Doc: &testDoc{
 				doctype: "io.cozy.testobject",
 				id:      "bar",
+			},
+		})
+	})
+	time.AfterFunc(2*time.Millisecond, func() {
+		h.Publish(&Event{
+			Domain: "testing",
+			Doc: &testDoc{
+				doctype: "io.cozy.testobject2",
+				id:      "baz",
 			},
 		})
 	})
