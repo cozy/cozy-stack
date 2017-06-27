@@ -204,29 +204,38 @@ by this server.
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		for _, i := range list {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\n",
 				i.Attrs.Domain,
 				i.Attrs.Locale,
-				printSize(i.Attrs.BytesDiskQuota),
-				printDev(i.Attrs.Dev),
+				formatSize(i.Attrs.BytesDiskQuota),
+				formatDev(i.Attrs.Dev),
+				formatOnboarded(len(i.Attrs.RegisterToken) == 0),
+				i.Attrs.IndexViewsVersion,
 			)
 		}
 		return w.Flush()
 	},
 }
 
-func printDev(dev bool) string {
+func formatSize(size int64) string {
+	if size == 0 {
+		return "unlimited"
+	}
+	return humanize.Bytes(uint64(size))
+}
+
+func formatDev(dev bool) string {
 	if dev {
 		return "dev"
 	}
 	return "prod"
 }
 
-func printSize(size int64) string {
-	if size == 0 {
-		return "unlimited"
+func formatOnboarded(onboarded bool) string {
+	if onboarded {
+		return "onboarded"
 	}
-	return humanize.Bytes(uint64(size))
+	return "pending"
 }
 
 var destroyInstanceCmd = &cobra.Command{

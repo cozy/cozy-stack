@@ -148,7 +148,6 @@ func listHandler(c echo.Context) error {
 	for i, in := range is {
 		in.OAuthSecret = nil
 		in.SessionSecret = nil
-		in.RegisterToken = nil
 		in.PassphraseHash = nil
 		objs[i] = &apiInstance{in}
 	}

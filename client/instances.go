@@ -17,13 +17,14 @@ type Instance struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
 	Attrs struct {
-		Domain            string `json:"domain"`
-		Locale            string `json:"locale"`
-		Dev               bool   `json:"dev"`
-		BytesDiskQuota    int64  `json:"disk_quota,string,omitempty"`
-		IndexViewsVersion int    `json:"indexes_version"`
-		PassphraseHash    []byte `json:"passphrase_hash,omitempty"`
-		RegisterToken     []byte `json:"register_token,omitempty"`
+		Domain               string    `json:"domain"`
+		Locale               string    `json:"locale"`
+		Dev                  bool      `json:"dev"`
+		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
+		IndexViewsVersion    int       `json:"indexes_version"`
+		PassphraseResetToken []byte    `json:"passphrase_reset_token"`
+		PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
+		RegisterToken        []byte    `json:"register_token,omitempty"`
 	} `json:"attributes"`
 }
 
