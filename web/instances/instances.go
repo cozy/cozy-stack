@@ -78,7 +78,6 @@ func createHandler(c echo.Context) error {
 	}
 	in.OAuthSecret = nil
 	in.SessionSecret = nil
-	in.PassphraseHash = nil
 	pass := c.QueryParam("Passphrase")
 	if pass != "" {
 		if err = in.RegisterPassphrase([]byte(pass), in.RegisterToken); err != nil {
@@ -146,6 +145,8 @@ func listHandler(c echo.Context) error {
 
 	objs := make([]jsonapi.Object, len(is))
 	for i, in := range is {
+		in.OAuthSecret = nil
+		in.SessionSecret = nil
 		objs[i] = &apiInstance{in}
 	}
 
