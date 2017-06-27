@@ -278,9 +278,8 @@ prepare_assets() {
 }
 
 download_asset() {
-	echo "${1}:"
+	printf "downloading %s:" "${1}"
 	mkdir -p "${assets_dst}/${1%/*}"
-	printf "\tdownloading %s... " "${1}"
 	set +e
 	curl -s --fail "${2}" > "${assets_dst}/${1}"
 	retc=${?}
@@ -291,21 +290,19 @@ download_asset() {
 		echo_err "curl failed with return code ${retc}"
 		exit 1
 	fi
-	echo "ok"
 	if [ -n "${3}" ]; then
-		printf "\tchecking sha256... "
 		dgst=$(openssl dgst -sha256 < "${assets_dst}/${1}" | sed 's/^.* //')
 		if [ "${3}" != "${dgst}" ]; then
 			echo "failed"
 			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}"
 			exit 1
 		fi
-		echo "ok"
 	fi
-	du -h "${assets_dst}/${1}"
+	asset_size=$(du -h "${assets_dst}/${1}" | awk '{print $1}')
 	# reuse the same mod time properties as the externals files so have
 	# reproductible output
 	touch -m -t "${assets_mod_time}" "${assets_dst}/${1}"
+	printf " %s\n" "${asset_size}"
 }
 
 do_clean() {
