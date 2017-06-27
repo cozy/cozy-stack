@@ -2,10 +2,8 @@ package vfs
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -143,7 +141,6 @@ func (c *couchdbIndexer) DeleteDirDoc(doc *DirDoc) error {
 	return couchdb.DeleteDoc(c.db, doc)
 }
 
-// @TODO use couchdb bulk updates instead
 func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 	var children []*DirDoc
 	sel := mango.StartWith("path", oldpath+"/")
@@ -156,26 +153,12 @@ func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 		return err
 	}
 
-	errc := make(chan error)
-
-	for _, child := range children {
-		go func(child *DirDoc) {
-			if !strings.HasPrefix(child.Fullpath, oldpath+"/") {
-				errc <- fmt.Errorf("Child has wrong base directory")
-			} else {
-				child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
-				errc <- couchdb.UpdateDoc(c.db, child)
-			}
-		}(child)
+	couchdocs := make([]interface{}, len(children))
+	for i, child := range children {
+		child.Fullpath = path.Join(newpath, child.Fullpath[len(oldpath)+1:])
+		couchdocs[i] = child
 	}
-
-	for range children {
-		if e := <-errc; e != nil {
-			err = e
-		}
-	}
-
-	return err
+	return couchdb.BulkUpdateDocs(c.db, consts.Files, couchdocs)
 }
 
 func (c *couchdbIndexer) DirByID(fileID string) (*DirDoc, error) {
