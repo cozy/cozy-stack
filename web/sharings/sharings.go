@@ -6,15 +6,20 @@ import (
 	"net/url"
 
 	"errors"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	perm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 type apiSharing struct {
@@ -413,35 +418,79 @@ func deleteDocument(c echo.Context) error {
 
 // Set sharing to revoked and delete all associated OAuth Clients.
 func revokeSharing(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	sharingID := c.Param("id")
-	sharing, err := sharings.FindSharing(instance, sharingID)
-	if err != nil {
-		return jsonapi.NotFound(err)
-	}
-
-	// TODO Add permission check
-
-	err = sharings.RevokeSharing(instance, sharing)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return c.JSON(http.StatusOK, nil)
-}
-
-func revokeRecipient(c echo.Context) error {
 	ins := middlewares.GetInstance(c)
 
-	sharingID := c.Param("id")
+	sharingID := c.Param("sharing-id")
 	sharing, err := sharings.FindSharing(ins, sharingID)
 	if err != nil {
 		return jsonapi.NotFound(err)
 	}
 
-	// TODO Add permission check
-	err = sharings.RevokeRecipient(ins, sharing, c.Param("recipient-client-id"))
+	sharerID := ""
+	if sharing.Sharer.SharerStatus != nil {
+		sharerID = sharing.Sharer.SharerStatus.HostClientID
+	}
+
+	err = checkRevokeSharingPermissions(c, ins, sharing, sharerID)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, err)
+	}
+
+	recursiveRaw := c.QueryParam(consts.QueryParamRecursive)
+	recursive := true
+	if recursiveRaw != "" {
+		recursive, err = strconv.ParseBool(recursiveRaw)
+		if err != nil {
+			return jsonapi.BadRequest(err)
+		}
+	}
+
+	err = sharings.RevokeSharing(ins, sharing, recursive)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	ins.Logger().Debugf("[sharings] revokeSharing: Sharing %s was revoked",
+		sharingID)
+
+	return c.NoContent(http.StatusOK)
+}
+
+func revokeRecipient(c echo.Context) error {
+	ins := middlewares.GetInstance(c)
+
+	sharingID := c.Param("sharing-id")
+	sharing, err := sharings.FindSharing(ins, sharingID)
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+
+	recipientID := c.Param("recipient-id")
+	recipientClientID := ""
+	for _, recipient := range sharing.RecipientsStatus {
+		if recipient.RefRecipient.ID == recipientID {
+			recipientClientID = recipient.Client.ClientID
+			break
+		}
+	}
+	if recipientClientID == "" {
+		return jsonapi.BadRequest(sharings.ErrRecipientDoesNotExist)
+	}
+
+	recursiveRaw := c.QueryParam(consts.QueryParamRecursive)
+	recursive := true
+	if recursiveRaw != "" {
+		recursive, err = strconv.ParseBool(recursiveRaw)
+		if err != nil {
+			return jsonapi.BadRequest(err)
+		}
+	}
+
+	err = checkRevokeRecipientPermissions(c, ins, sharing, recipientClientID)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, err)
+	}
+
+	err = sharings.RevokeRecipient(ins, sharing, recipientClientID, recursive)
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -596,8 +645,8 @@ func Routes(router *echo.Group) {
 	router.GET("/discovery", discoveryForm)
 	router.POST("/discovery", discovery)
 
-	router.DELETE("/:id", revokeSharing)
-	router.DELETE("/:id/recipient/:recipient-client-id", revokeRecipient)
+	router.DELETE("/:sharing-id", revokeSharing)
+	router.DELETE("/:sharing-id/recipient/:recipient-id", revokeRecipient)
 
 	router.DELETE("/files/:file-id/referenced_by", removeReferences)
 
@@ -608,6 +657,76 @@ func Routes(router *echo.Group) {
 	group.PUT("/:docid", updateDocument)
 	group.PATCH("/:docid", patchDirOrFile)
 	group.DELETE("/:docid", deleteDocument)
+}
+
+func checkRevokeRecipientPermissions(c echo.Context, ins *instance.Instance, sharing *sharings.Sharing, recipientClientID string) error {
+	// Only the sharer can revoke a recipient, hence `ownerHasToBeSharer` is set
+	// to true.
+	return checkRevokePermissions(c, ins, sharing, recipientClientID, true)
+}
+
+func checkRevokeSharingPermissions(c echo.Context, ins *instance.Instance, sharing *sharings.Sharing, recipientClientID string) error {
+	// Any participant has the possibility to revoke a sharing, hence
+	// `ownerHasToBeSharer` is set to false.
+	return checkRevokePermissions(c, ins, sharing, recipientClientID, false)
+}
+
+// Check if the permissions given in the revoke request apply.
+//
+// Two scenarii can lead to valid permissions:
+// 1. The permissions identify the application and, if `ownerHasToBeSharer` is
+// true, the user is the owner of the sharing.
+// 2. The permissions identify the user that is to be revoked or the sharer.
+func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sharings.Sharing, recipientClientID string, ownerHasToBeSharer bool) error {
+	token := perm.GetRequestToken(c)
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		return err
+	}
+
+	var claims permissions.Claims
+	err = crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
+		return ins.PickKey(token.Claims.(*permissions.Claims).Audience)
+	}, &claims)
+	if err != nil {
+		return err
+	}
+
+	switch claims.Audience {
+	case permissions.AppAudience:
+		appID := consts.Apps + "/" + sharing.AppSlug
+		if requestPerm.SourceID == appID {
+			if ownerHasToBeSharer {
+				if sharing.Owner {
+					return nil
+				}
+				return sharings.ErrForbidden
+			}
+			return nil
+		}
+		return sharings.ErrForbidden
+
+	case permissions.AccessTokenAudience:
+		if !sharing.Permissions.HasSameRules(requestPerm.Permissions) {
+			return permissions.ErrInvalidToken
+		}
+
+		if sharing.Owner {
+			if claims.Subject == recipientClientID {
+				return nil
+			}
+		} else {
+			sharerClientID := sharing.Sharer.SharerStatus.HostClientID
+			if claims.Subject == sharerClientID {
+				return nil
+			}
+		}
+
+		return sharings.ErrForbidden
+
+	default:
+		return permissions.ErrInvalidAudience
+	}
 }
 
 // wrapErrors returns a formatted error

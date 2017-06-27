@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
+
+	"net/url"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -20,6 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/labstack/echo"
 )
 
 // Sharing contains all the information about a sharing.
@@ -662,55 +666,6 @@ func CreateSharing(instance *instance.Instance, sharing *Sharing) error {
 	return couchdb.CreateDoc(instance, sharing)
 }
 
-// RevokeSharing revokes the sharing and deletes all the OAuth client and
-// triggers associated with it.
-//
-// Revoking a sharing consists of setting the field `Revoked` to `true`.
-// When the sharing is of type "master-master" both recipients and sharer have
-// trigger(s) and OAuth client(s) to delete.
-// In every other cases only the sharer has trigger(s) to delete and only the
-// recipients have an OAuth client to delete.
-func RevokeSharing(ins *instance.Instance, sharing *Sharing) error {
-	sharing.Revoked = true
-
-	var err error
-	if sharing.Owner {
-		if sharing.SharingType == consts.MasterMasterSharing {
-			for _, recipient := range sharing.RecipientsStatus {
-				err = deleteOAuthClient(ins, recipient.HostClientID)
-				if err != nil {
-					return err
-				}
-
-				recipient.HostClientID = ""
-			}
-		}
-
-		err = removeSharingTriggers(ins, sharing.SharingID)
-		if err != nil {
-			return err
-		}
-
-	} else {
-		err = deleteOAuthClient(ins, sharing.Sharer.SharerStatus.HostClientID)
-		if err != nil {
-			return err
-		}
-
-		sharing.Sharer.SharerStatus.HostClientID = ""
-
-		if sharing.SharingType == consts.MasterMasterSharing {
-			err = removeSharingTriggers(ins, sharing.SharingID)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	err = couchdb.UpdateDoc(ins, sharing)
-	return err
-}
-
 // RemoveDocumentIfNotShared checks if the given document is still shared and
 // removes it if not.
 //
@@ -780,22 +735,120 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 	}
 }
 
-// RevokeRecipient revokes a recipient from the given sharing.
+// RevokeSharing revokes the sharing and deletes all the OAuth client and
+// triggers associated with it.
 //
-// If there are no more recipients the sharing is revoked and the corresponding
-// trigger is deleted.
-func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID string) error {
-	var removed, hasRecipient bool
-	for _, recipient := range sharing.RecipientsStatus {
-		if recipient.HostClientID == recipientClientID {
-			err := deleteOAuthClient(ins, recipientClientID)
+// Revoking a sharing consists of setting the field `Revoked` to `true`.
+// When the sharing is of type "master-master" both recipients and sharer have
+// trigger(s) and OAuth client(s) to delete.
+// In every other cases only the sharer has trigger(s) to delete and only the
+// recipients have an OAuth client to delete.
+//
+// When this function is called it needs to call either `RevokerSharing` or
+// `RevokeRecipient` depending on who initiated the revocation. This is
+// represented by the `recursive` boolean parameter. The first call has this set
+// to `true` while the subsequent call has it set to `false`.
+func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) error {
+	var err error
+	if sharing.Owner {
+		for _, rs := range sharing.RecipientsStatus {
+			if recursive {
+				err = askToRevokeSharing(ins, rs, sharing.SharingID)
+				if err != nil {
+					continue
+				}
+			}
+
+			if sharing.SharingType == consts.MasterMasterSharing {
+				err = deleteOAuthClient(ins, rs)
+				if err != nil {
+					continue
+				}
+			}
+		}
+
+		err = removeSharingTriggers(ins, sharing.SharingID)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		if recursive {
+			err = askToRevokeRecipient(ins, sharing.Sharer.SharerStatus,
+				sharing.SharingID)
 			if err != nil {
 				return err
 			}
+		}
 
+		err = deleteOAuthClient(ins, sharing.Sharer.SharerStatus)
+		if err != nil {
+			return err
+		}
+
+		if sharing.SharingType == consts.MasterMasterSharing {
+			err = removeSharingTriggers(ins, sharing.SharingID)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	sharing.Revoked = true
+	ins.Logger().Debugf("[sharings] Setting status of sharing %s to revoked",
+		sharing.SharingID)
+	return couchdb.UpdateDoc(ins, sharing)
+}
+
+// RevokeRecipient revokes a recipient from the given sharing. Only the sharer
+// can make this action.
+//
+// If the sharing is of type "master-master" the sharer also has to remove the
+// recipient's OAuth client.
+//
+// If there are no more recipients the sharing is revoked and the corresponding
+// trigger is deleted.
+func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID string, recursive bool) error {
+	if !sharing.Owner {
+		return ErrOnlySharerCanRevokeRecipient
+	}
+
+	var removed, hasRecipient bool
+	for _, recipient := range sharing.RecipientsStatus {
+		if recipient.Client.ClientID == recipientClientID {
+
+			if recursive {
+				err := askToRevokeSharing(ins, recipient, sharing.SharingID)
+				if err != nil {
+					return err
+				}
+
+				ins.Logger().Debugf("[sharings] RevokeRecipient: recipient "+
+					"%s has revoked the sharing %s", recipientClientID,
+					sharing.SharingID)
+			}
+
+			if sharing.SharingType == consts.MasterMasterSharing {
+				err := deleteOAuthClient(ins, recipient)
+				if err != nil {
+					return err
+				}
+
+				recipient.HostClientID = ""
+			}
+
+			recipient.Client = auth.Client{}
+			recipient.AccessToken = auth.AccessToken{}
 			recipient.Status = consts.SharingStatusRevoked
-			recipient.HostClientID = ""
 			removed = true
+
+			err := recipient.GetRecipient(ins)
+			if err != nil {
+				return err
+			}
+			ins.Logger().Debugf("[sharings] RevokeRecipient: Recipient %s "+
+				"revoked", recipient.recipient.URL)
+
 		} else {
 			if recipient.Status != consts.SharingStatusRevoked &&
 				recipient.Status != consts.SharingStatusRefused {
@@ -809,17 +862,21 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID
 	}
 
 	if !removed {
-		ins.Logger().Errorf("[sharing] RevokeRecipient: Recipient %s is not "+
+		ins.Logger().Errorf("[sharings] RevokeRecipient: Recipient %s is not "+
 			"in sharing: %s", recipientClientID, sharing.SharingID)
 		return ErrRecipientDoesNotExist
 	}
 
 	if !hasRecipient {
-		sharing.Revoked = true
 		err := removeSharingTriggers(ins, sharing.SharingID)
 		if err != nil {
 			ins.Logger().Errorf("[sharings] RevokeRecipient: Could not remove "+
 				"triggers for sharing %s: %s", sharing.SharingID, err)
+		} else {
+			sharing.Revoked = true
+			ins.Logger().Debugf("[sharings] RevokeRecipient: Setting status "+
+				"of sharing %s to revoked, no more recipients",
+				sharing.SharingID)
 		}
 	}
 
@@ -853,6 +910,9 @@ func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
 					ins.Logger().Errorf("[sharings] removeSharingTriggers: "+
 						"Could not delete trigger %s: %s", trigger.ID(), errd)
 				}
+
+				ins.Logger().Infof("[sharings] Trigger %s deleted for "+
+					"sharing %s", trigger.ID(), sharingID)
 			}
 		}
 	}
@@ -860,19 +920,73 @@ func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
 	return nil
 }
 
-func deleteOAuthClient(ins *instance.Instance, id string) error {
-	client, err := oauth.FindClient(ins, id)
+func deleteOAuthClient(ins *instance.Instance, rs *RecipientStatus) error {
+	client, err := oauth.FindClient(ins, rs.HostClientID)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
-			"find OAuth client %s: %s", id, err)
+			"find OAuth client %s: %s", rs.HostClientID, err)
 		return err
 	}
 	crErr := client.Delete(ins)
 	if crErr != nil {
 		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
-			"delete OAuth client %s: %s", id, err)
+			"delete OAuth client %s: %s", rs.HostClientID, err)
 		return errors.New(crErr.Error)
 	}
+
+	ins.Logger().Debugf("[sharings] OAuth client %s deleted", rs.HostClientID)
+	rs.HostClientID = ""
+	return nil
+}
+
+func askToRevokeSharing(ins *instance.Instance, rs *RecipientStatus, sharingID string) error {
+	return askToRevoke(ins, rs, sharingID, false)
+}
+
+func askToRevokeRecipient(ins *instance.Instance, rs *RecipientStatus, sharingID string) error {
+	return askToRevoke(ins, rs, sharingID, true)
+}
+
+// TODO Once we will handle error properly (recipient is disconnected and
+// what not) analyze the error returned and take proper actions every time this
+// function is called.
+func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID string, revokeRecipient bool) error {
+	err := rs.GetRecipient(ins)
+	if err != nil {
+		ins.Logger().Errorf("[sharings] askToRevoke: Could not fetch "+
+			"recipient %s from database: %v", rs.RefRecipient.ID, err)
+		return err
+	}
+
+	var path string
+	if revokeRecipient {
+		path = fmt.Sprintf("/sharings/%s/recipient/%s", sharingID,
+			rs.RefRecipient.ID)
+	} else {
+		path = fmt.Sprintf("/sharings/%s", sharingID)
+	}
+
+	_, err = request.Req(&request.Options{
+		Domain:  rs.recipient.URL,
+		Path:    path,
+		Method:  http.MethodDelete,
+		Queries: url.Values{consts.QueryParamRecursive: {"false"}},
+		Headers: request.Headers{
+			echo.HeaderAuthorization: fmt.Sprintf("Bearer %s",
+				rs.AccessToken.AccessToken),
+		},
+		Body:       nil,
+		NoResponse: true,
+	})
+
+	if err != nil {
+		ins.Logger().Errorf("[sharings] askToRevoke: Could not ask recipient "+
+			"%s to revoke sharing %s: %v", rs.recipient.URL, sharingID, err)
+		return err
+	}
+
+	rs.Client = auth.Client{}
+	rs.AccessToken = auth.AccessToken{}
 	return nil
 }
 

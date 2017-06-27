@@ -34,6 +34,12 @@ var (
 	// ErrSharerDidNotReceiveAnswer is used when a recipient has not received a
 	// http.StatusOK after sending her answer to the sharer.
 	ErrSharerDidNotReceiveAnswer = errors.New("Sharer did not receive the answer")
-	//ErrPublicNameNotDefined is used when a sharer wants to register to a recipient
+	// ErrPublicNameNotDefined is used when a sharer wants to register to a recipient
 	ErrPublicNameNotDefined = errors.New("The Cozy's public name must be defined")
+	// ErrOnlySharerCanRevokeRecipient is used when a user other than the sharer
+	// attempts to revoke a recipient.
+	ErrOnlySharerCanRevokeRecipient = errors.New("Only the sharer can revoke " +
+		"a recipient")
+	// ErrForbidden is used when a request is made with insufficient rights.
+	ErrForbidden = errors.New("Request denied: insufficient rights")
 )

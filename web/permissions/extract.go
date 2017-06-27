@@ -38,7 +38,8 @@ func hasRegisterToken(c echo.Context, i *instance.Instance) bool {
 	return subtle.ConstantTimeCompare(tok, expectedTok) == 1
 }
 
-func getRequestToken(c echo.Context) string {
+// GetRequestToken retrieves the token from the incoming request.
+func GetRequestToken(c echo.Context) string {
 	header := c.Request().Header.Get(echo.HeaderAuthorization)
 	if strings.HasPrefix(header, bearerAuthScheme) {
 		return header[len(bearerAuthScheme):]
@@ -118,7 +119,7 @@ func extract(c echo.Context) (*permissions.Permission, error) {
 	}
 
 	var tok string
-	if tok = getRequestToken(c); tok == "" {
+	if tok = GetRequestToken(c); tok == "" {
 		return nil, ErrNoToken
 	}
 
