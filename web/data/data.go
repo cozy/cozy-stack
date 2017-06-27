@@ -346,13 +346,14 @@ func findDocuments(c echo.Context) error {
 }
 
 var allowedChangesParams = map[string]bool{
-	"feed":      true,
-	"style":     true,
-	"since":     true,
-	"limit":     true,
-	"timeout":   true,
-	"heartbeat": true, // Pouchdb sends heartbeet even for non-continuous
-	"_nonce":    true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
+	"feed":         true,
+	"style":        true,
+	"since":        true,
+	"limit":        true,
+	"timeout":      true,
+	"include_docs": true,
+	"heartbeat":    true, // Pouchdb sends heartbeet even for non-continuous
+	"_nonce":       true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
 }
 
 func changesFeed(c echo.Context) error {
@@ -384,16 +385,19 @@ func changesFeed(c echo.Context) error {
 		}
 	}
 
+	includeDocs := c.QueryParam("include_docs") == "true"
+
 	if err = permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
 	results, err := couchdb.GetChanges(instance, &couchdb.ChangesRequest{
-		DocType: doctype,
-		Feed:    feed,
-		Style:   feedStyle,
-		Since:   c.QueryParam("since"),
-		Limit:   limit,
+		DocType:     doctype,
+		Feed:        feed,
+		Style:       feedStyle,
+		Since:       c.QueryParam("since"),
+		Limit:       limit,
+		IncludeDocs: includeDocs,
 	})
 
 	if err != nil {
