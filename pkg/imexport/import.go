@@ -51,10 +51,7 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string) error {
 			name := path.Base(hdr.Name)
 			mime, class := vfs.ExtractMimeAndClassFromFilename(hdr.Name)
 			now := time.Now()
-			executable := true
-			if hdr.Mode == 0644 {
-				executable = false
-			}
+			executable := hdr.FileInfo().Mode()&0100 != 0
 
 			dirDoc, err := fs.DirByPath(fmt.Sprintf("%s%s", dstDoc.Fullpath, path.Dir(hdr.Name)))
 			if err != nil {
