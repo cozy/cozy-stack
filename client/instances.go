@@ -22,7 +22,6 @@ type Instance struct {
 		Dev                  bool      `json:"dev"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
 		IndexViewsVersion    int       `json:"indexes_version"`
-		PassphraseHash       []byte    `json:"passphrase_hash,omitempty"`
 		PassphraseResetToken []byte    `json:"passphrase_reset_token"`
 		PassphraseResetTime  time.Time `json:"passphrase_reset_time"`
 		RegisterToken        []byte    `json:"register_token,omitempty"`
