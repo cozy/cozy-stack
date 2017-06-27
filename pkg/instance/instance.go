@@ -50,6 +50,7 @@ var passwordResetValidityDuration = 15 * time.Minute
 const DefaultLocale = "en"
 
 const illegalChars = " /,;&?#@|='\"\t\r\n\x00"
+const illegalFirstChars = "0123456789."
 
 var (
 	// ErrNotFound is used when the seeked instance was not found
@@ -900,6 +901,9 @@ func validateDomain(domain string) (string, error) {
 		return "", ErrIllegalDomain
 	}
 	if strings.ContainsAny(domain, illegalChars) {
+		return "", ErrIllegalDomain
+	}
+	if strings.ContainsAny(domain[:1], illegalFirstChars) {
 		return "", ErrIllegalDomain
 	}
 	return domain, nil
