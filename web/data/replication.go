@@ -25,8 +25,7 @@ func getDesignDoc(c echo.Context) error {
 		return err
 	}
 
-	revs := c.QueryParam("revs")
-	if revs == "true" {
+	if paramIsTrue(c, "revs") {
 		return proxy(c, "_design/"+docid)
 	}
 

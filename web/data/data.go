@@ -15,6 +15,10 @@ import (
 	"github.com/cozy/echo"
 )
 
+func paramIsTrue(c echo.Context, param string) bool {
+	return c.QueryParam(param) == "true"
+}
+
 // ValidDoctype validates the doctype and sets it in the context of the request.
 func ValidDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	// TODO extends me to verify characters allowed in db name.
@@ -77,8 +81,7 @@ func getDoc(c echo.Context) error {
 		return dbStatus(c)
 	}
 
-	revs := c.QueryParam("revs")
-	if revs == "true" {
+	if paramIsTrue(c, "revs") {
 		return proxy(c, docid)
 	}
 
@@ -385,7 +388,7 @@ func changesFeed(c echo.Context) error {
 		}
 	}
 
-	includeDocs := c.QueryParam("include_docs") == "true"
+	includeDocs := paramIsTrue(c, "include_docs")
 
 	if err = permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
