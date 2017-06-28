@@ -521,6 +521,9 @@ func TestPatchDirOrFileSuccessFile(t *testing.T) {
 	_, err := fs.FileByID(fileDoc.ID())
 	assert.NoError(t, err)
 
+	sharing := createSharing(t, consts.MasterSlaveSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
+
 	patchURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	patchURL.Path = fmt.Sprintf("/sharings/doc/%s/%s", fileDoc.DocType(),
@@ -528,6 +531,7 @@ func TestPatchDirOrFileSuccessFile(t *testing.T) {
 	patchURL.RawQuery = url.Values{
 		"rev":  {fileDoc.Rev()},
 		"Type": {consts.FileType},
+		consts.QueryParamSharingID: {sharing.SharingID},
 	}.Encode()
 
 	patchedName := "patchedfilename"
@@ -572,6 +576,9 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	_, err := fs.DirByID(dirDoc.ID())
 	assert.NoError(t, err)
 
+	sharing := createSharing(t, consts.MasterSlaveSharing, "", true,
+		[]*sharings.Recipient{}, permissions.Rule{})
+
 	patchURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
 	patchURL.Path = fmt.Sprintf("/sharings/doc/%s/%s", dirDoc.DocType(),
@@ -579,6 +586,7 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	patchURL.RawQuery = url.Values{
 		"rev":  {dirDoc.Rev()},
 		"Type": {consts.DirType},
+		consts.QueryParamSharingID: {sharing.SharingID},
 	}.Encode()
 
 	patchedName := "patcheddirname"
