@@ -146,8 +146,9 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	var fileDoc *vfs.FileDoc
 	var dirDoc *vfs.DirDoc
 	var err error
+	fs := ins.VFS()
+
 	if opts.DocType == consts.Files && eventType != realtime.EventDelete {
-		fs := ins.VFS()
 		dirDoc, fileDoc, err = fs.DirOrFileByID(docID)
 		if err != nil {
 			return err
@@ -185,13 +186,12 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 				return DeleteDirOrFile(ins, opts)
 			}
 
-			stillShared := isDocumentStillShared(opts, fileDoc.ReferencedBy)
+			stillShared := isDocumentStillShared(fs, opts, fileDoc.ReferencedBy)
 			if !stillShared {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"remove references from %#v", fileDoc)
 				return RemoveDirOrFileFromSharing(ins, opts, sendToSharer)
 			}
-
 			return UpdateOrPatchFile(ins, opts, fileDoc, sendToSharer)
 		}
 
@@ -202,7 +202,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 				return DeleteDirOrFile(ins, opts)
 			}
 
-			stillShared := isDocumentStillShared(opts, dirDoc.ReferencedBy)
+			stillShared := isDocumentStillShared(fs, opts, dirDoc.ReferencedBy)
 			if !stillShared {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"remove references from %v", dirDoc)
@@ -300,7 +300,7 @@ func isRecipientSide(sharing *sharings.Sharing) bool {
 // still shared.
 //
 // TODO Handle sharing of directories
-func isDocumentStillShared(opts *SendOptions, docRefs []couchdb.DocReference) bool {
+func isDocumentStillShared(fs vfs.VFS, opts *SendOptions, docRefs []couchdb.DocReference) bool {
 	switch opts.Selector {
 	case consts.SelectorReferencedBy:
 		relevantRefs := opts.extractRelevantReferences(docRefs)
@@ -308,6 +308,6 @@ func isDocumentStillShared(opts *SendOptions, docRefs []couchdb.DocReference) bo
 		return len(relevantRefs) > 0
 
 	default:
-		return isShared(opts.DocID, opts.Values)
+		return isShared(fs, opts.DocID, opts.Values)
 	}
 }
