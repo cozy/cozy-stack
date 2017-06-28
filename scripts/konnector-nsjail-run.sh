@@ -31,7 +31,7 @@ read -r -d '' seccomp_string << EOM
 #define SOCK_DGRAM  2   /* datagram socket */
 #define SOCK_TYPE_MASK 0x0f
 
-POLICY example {
+POLICY konnectors {
   KILL {
     acct,
     add_key,
@@ -99,7 +99,7 @@ POLICY example {
     }
   }
 }
-USE example DEFAULT ALLOW
+USE konnectors DEFAULT ALLOW
 EOM
 
 nsjail \
