@@ -171,7 +171,6 @@ func (i *Installer) Run() {
 	case Delete:
 		i.man, i.err = i.delete()
 	}
-	return
 }
 
 // RunSync does the same work as Run but can be used synchronously.

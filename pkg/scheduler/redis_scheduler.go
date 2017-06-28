@@ -80,7 +80,7 @@ func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.broker = b
 	s.stopped = make(chan struct{})
 	s.startEventDispatcher()
-	// if err := s.importFromMemStorage(); err != nil {
+	// if err := s.ImportFromMemStorage(); err != nil {
 	// 	return err
 	// }
 	go s.pollLoop()

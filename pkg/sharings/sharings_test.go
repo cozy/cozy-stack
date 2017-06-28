@@ -332,7 +332,7 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 	assert.NoError(t, err)
 }
 
-func acceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool) {
+func TestAcceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool) {
 	var err error
 	var testDocFile *vfs.FileDoc
 	var testDoc *couchdb.JSONDoc
