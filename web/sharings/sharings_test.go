@@ -521,7 +521,7 @@ func TestPatchDirOrFileSuccessFile(t *testing.T) {
 	_, err := fs.FileByID(fileDoc.ID())
 	assert.NoError(t, err)
 
-	sharing := createSharing(t, consts.MasterSlaveSharing, "", true,
+	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 
 	patchURL, err := url.Parse(ts.URL)
@@ -576,7 +576,7 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	_, err := fs.DirByID(dirDoc.ID())
 	assert.NoError(t, err)
 
-	sharing := createSharing(t, consts.MasterSlaveSharing, "", true,
+	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 
 	patchURL, err := url.Parse(ts.URL)

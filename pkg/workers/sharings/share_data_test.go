@@ -268,7 +268,7 @@ func TestSendFileAbort(t *testing.T) {
 
 	mpr := map[string]func(*echo.Group){
 		"/files": func(router *echo.Group) {
-			router.HEAD("/download/:file-id", func(c echo.Context) error {
+			router.HEAD("/:file-id", func(c echo.Context) error {
 				assert.Equal(t, fileDoc.ID(), c.Param("file-id"))
 				return c.JSON(http.StatusOK, nil)
 			})
@@ -477,7 +477,7 @@ func TestUpdateOrPatchFile(t *testing.T) {
 				_, err := jsonapi.Bind(c.Request(), &patch)
 				assert.NoError(t, err)
 				assert.Equal(t, patchedFileDoc.DocName, *patch.Name)
-				assert.Equal(t, fileDoc.DirID, *patch.DirID)
+				assert.Equal(t, "", *patch.DirID)
 				assert.Equal(t, fileDoc.Tags, *patch.Tags)
 				assert.Equal(t, fileDoc.UpdatedAt.Unix(),
 					(*patch.UpdatedAt).Unix())
@@ -770,7 +770,10 @@ func TestFileHasChangesSameFilesSuccess(t *testing.T) {
 	remoteFileDoc := &vfs.FileDoc{
 		DocName: "samename",
 	}
-	hasChange := fileHasChanges(newFileDoc, remoteFileDoc)
+	opts := &SendOptions{
+		Values: []string{"123"},
+	}
+	hasChange := fileHasChanges(in.VFS(), opts, newFileDoc, remoteFileDoc)
 	assert.Equal(t, false, hasChange)
 }
 
@@ -781,7 +784,10 @@ func TestFileHasChangesNameSuccess(t *testing.T) {
 	remoteFileDoc := &vfs.FileDoc{
 		DocName: "oldname",
 	}
-	hasChange := fileHasChanges(newFileDoc, remoteFileDoc)
+	opts := &SendOptions{
+		Values: []string{"123"},
+	}
+	hasChange := fileHasChanges(in.VFS(), opts, newFileDoc, remoteFileDoc)
 	assert.Equal(t, true, hasChange)
 }
 
@@ -793,7 +799,10 @@ func TestFileHasChangesTagSuccess(t *testing.T) {
 		DocName: "samename",
 		Tags:    []string{"pimpmytag"},
 	}
-	hasChange := fileHasChanges(newFileDoc, remoteFileDoc)
+	opts := &SendOptions{
+		Values: []string{"123"},
+	}
+	hasChange := fileHasChanges(in.VFS(), opts, newFileDoc, remoteFileDoc)
 	assert.Equal(t, true, hasChange)
 }
 
