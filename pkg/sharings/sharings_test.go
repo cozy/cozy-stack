@@ -99,16 +99,6 @@ func createSettings(instance *instance.Instance) {
 	}
 }
 
-func createRecipient(t *testing.T, email, url string) *Recipient {
-	recipient := &Recipient{
-		Email: email,
-		URL:   url,
-	}
-	err := CreateRecipient(in, recipient)
-	assert.NoError(t, err)
-	return recipient
-}
-
 func createDoc(t *testing.T, ins *instance.Instance, doctype string, m map[string]interface{}) *couchdb.JSONDoc {
 	doc := &couchdb.JSONDoc{
 		Type: doctype,
@@ -249,75 +239,6 @@ func createDir(t *testing.T, fs vfs.VFS, name string, refs []couchdb.DocReferenc
 	return dirDoc
 }
 
-func updateTestDoc(t *testing.T, doc *couchdb.JSONDoc, k, v string) {
-	doc.M[k] = v
-	err := couchdb.UpdateDoc(in, doc)
-	assert.NoError(t, err)
-}
-
-func updateTestFile(t *testing.T, fileDoc *vfs.FileDoc, patch *vfs.DocPatch) {
-	fs := in.VFS()
-	_, err := vfs.ModifyFileMetadata(fs, fileDoc, patch)
-	assert.NoError(t, err)
-}
-
-func createSharing(t *testing.T, sharingType string, docID string, withFile, withSelector bool) (*Sharing, error) {
-	recipient := createRecipient(t, "hey@mail.fr", recipientURL)
-
-	recStatus := &RecipientStatus{
-		RefRecipient: couchdb.DocReference{
-			ID:   recipient.RID,
-			Type: consts.Contacts,
-		},
-		recipient: recipient,
-	}
-
-	var set permissions.Set
-	var rule permissions.Rule
-	if docID != "" && !withFile {
-		if !withSelector {
-			rule = permissions.Rule{
-				Type:   "io.cozy.tests",
-				Verbs:  permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
-				Values: []string{docID},
-			}
-		} else {
-			rule = permissions.Rule{
-				Type:     "io.cozy.tests",
-				Verbs:    permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
-				Selector: "dyn",
-				Values:   []string{"amic"},
-			}
-		}
-		set = permissions.Set{rule}
-
-	} else if docID != "" && withFile {
-		rule = permissions.Rule{
-			Type:   consts.Files,
-			Verbs:  permissions.Verbs(permissions.POST, permissions.PUT, permissions.GET),
-			Values: []string{docID, consts.RootDirID},
-		}
-		set = permissions.Set{rule}
-	}
-
-	sharing := &Sharing{
-		SharingType:      sharingType,
-		Permissions:      set,
-		RecipientsStatus: []*RecipientStatus{recStatus},
-	}
-
-	err := CreateSharing(in, sharing)
-	assert.NoError(t, err)
-
-	return sharing, err
-}
-
-func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode, error) {
-	access, err := oauth.CreateAccessCode(recipientIn, clientID, scope)
-	assert.NoError(t, err)
-	return access, err
-}
-
 func addPublicName(t *testing.T, instance *instance.Instance) {
 	publicName := "El Shareto"
 	doc, err := instance.SettingsDocument()
@@ -330,109 +251,6 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 
 	err = couchdb.UpdateDoc(in, doc)
 	assert.NoError(t, err)
-}
-
-func TestAcceptedSharing(t *testing.T, sharingType string, isFile, withSelector bool) {
-	var err error
-	var testDocFile *vfs.FileDoc
-	var testDoc *couchdb.JSONDoc
-	var sharing *Sharing
-
-	// share doc
-	if !isFile {
-		testDoc = createDoc(t, in, testDocType, map[string]interface{}{
-			"dyn": "amic",
-		})
-		assert.NotNil(t, testDoc)
-		sharing, err = createSharing(t, sharingType, testDoc.ID(), isFile, withSelector)
-		assert.NoError(t, err)
-		assert.NotNil(t, sharing)
-
-		// share file
-	} else {
-		testDocFile = createFile(t, in.VFS(), "testFileAccepted",
-			"testFileAcceptedContent", []couchdb.DocReference{})
-		assert.NotNil(t, testDocFile)
-		sharing, err = createSharing(t, sharingType, testDocFile.ID(), isFile, withSelector)
-		assert.NoError(t, err)
-		assert.NotNil(t, sharing)
-	}
-
-	// `createSharing` only creates one recipient.
-	clientID := sharing.RecipientsStatus[0].Client.ClientID
-
-	set := sharing.Permissions
-	scope, err := set.MarshalScopeString()
-	assert.NoError(t, err)
-
-	access, err := generateAccessCode(t, clientID, scope)
-	assert.NoError(t, err)
-
-	domain, err := SharingAccepted(in, sharing.SharingID, clientID, access.Code)
-	assert.NoError(t, err)
-	assert.NotNil(t, domain)
-
-	// Check sharing status on the sharer side
-	doc := &Sharing{}
-	err = couchdb.GetDoc(in, consts.Sharings, sharing.SID, doc)
-	assert.NoError(t, err)
-	recStatuses, err := doc.RecStatus(in)
-	assert.NoError(t, err)
-	recStatus := recStatuses[0]
-	assert.Equal(t, consts.SharingStatusAccepted, recStatus.Status)
-	assert.NotNil(t, recStatus.AccessToken.AccessToken)
-	assert.NotNil(t, recStatus.AccessToken.RefreshToken)
-
-	// TODO Refactoring necessary: it is no longer possible to actually share
-	// between two tests servers as the route to send the documents is declared
-	// in web/sharings. Hence checking if the documents do exist will only
-	// result in failures.
-	t.SkipNow()
-
-	// Check updates in case of master-* sharing
-	if sharingType == consts.MasterSlaveSharing ||
-		sharingType == consts.MasterMasterSharing {
-
-		// Wait for the document to arrive and check it
-		time.Sleep(2000 * time.Millisecond)
-
-		if !isFile {
-			if withSelector {
-				testDoc2 := createDoc(t, in, testDocType,
-					map[string]interface{}{
-						"dyn": "amic",
-					})
-				assert.NotNil(t, testDoc2)
-
-				// Wait for the document to arrive and check it
-				time.Sleep(2000 * time.Millisecond)
-				recDoc := &couchdb.JSONDoc{}
-				err = couchdb.GetDoc(recipientIn, testDocType, testDoc2.ID(), recDoc)
-				assert.NoError(t, err)
-				recDoc.Type = testDocType
-				assert.Equal(t, testDoc2, recDoc)
-			} else {
-				updKey := "test"
-				updVal := "update me!"
-				updateTestDoc(t, testDoc, updKey, updVal)
-				// Wait for the document to arrive and check it
-				time.Sleep(2000 * time.Millisecond)
-				recDoc := &couchdb.JSONDoc{}
-				err = couchdb.GetDoc(recipientIn, testDocType, testDoc.ID(), recDoc)
-				assert.NoError(t, err)
-				assert.Equal(t, updVal, recDoc.M[updKey])
-			}
-		} else {
-			newFileName := "mamajustchangedmyname"
-			patch := &vfs.DocPatch{
-				Name: &newFileName,
-			}
-			updateTestFile(t, testDocFile, patch)
-
-			// TODO check the file on the recipient side when we'll be able
-			// to create files with fixed id
-		}
-	}
 }
 
 func TestGetAccessTokenNoAuth(t *testing.T) {
