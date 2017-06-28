@@ -52,7 +52,7 @@ cozy-stack serve
 And then create an instance for development:
 
 ```bash
-cozy-stack instances add --dev --apps drive,settings,onboarding --passphrase cozy "cozy.tools:8080"
+cozy-stack instances add --dev --apps drive,photos,settings --passphrase cozy "cozy.tools:8080"
 ```
 
 The cozy-stack server listens on http://cozy.tools:8080/ by default. See `cozy-stack --help` for more informations.
@@ -76,3 +76,7 @@ cozy-stack instances rm cozy.tools:8080
 
 You should configure your DNS, your reverse-proxy, and read [the
 documentation](README.md) before creating cozy instances for production.
+
+We don't have yet an official documentation for that, but you can try to
+follow [the guide written by
+Clochix](https://clochix.github.io/gozy-docs/en/install/manual/).
