@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/cozy/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,10 +46,6 @@ func jsonReader(data interface{}) io.Reader {
 	return bytes.NewReader(bs)
 }
 
-func docURL(ts *httptest.Server, doc couchdb.JSONDoc) string {
-	return ts.URL + "/data/" + doc.DocType() + "/" + doc.ID()
-}
-
 func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface{}, res *http.Response, err error) {
 	res, err = client.Do(req)
 	if err != nil {
@@ -75,15 +70,6 @@ func doRequest(req *http.Request, out interface{}) (jsonres map[string]interface
 	}
 	return nil, res, err
 
-}
-
-func injectInstance(i *instance.Instance) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("instance", i)
-			return next(c)
-		}
-	}
 }
 
 func getDocForTest() couchdb.JSONDoc {

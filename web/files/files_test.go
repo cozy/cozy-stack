@@ -169,10 +169,6 @@ func extractDirData(t *testing.T, data map[string]interface{}) (string, map[stri
 	return id, data
 }
 
-type relsParent struct {
-	parent *jsonData
-}
-
 type jsonData struct {
 	Type  string                 `json:"type"`
 	ID    string                 `json:"id"`

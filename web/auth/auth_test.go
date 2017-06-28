@@ -1245,13 +1245,6 @@ func postFormDomain(domain, u string, v *url.Values) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func putForm(u string, v *url.Values) (*http.Response, error) {
-	req, _ := http.NewRequest("PUT", ts.URL+u, bytes.NewBufferString(v.Encode()))
-	req.Host = domain
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	return client.Do(req)
-}
-
 func getTestURL() (string, error) {
 	req, _ := http.NewRequest("GET", ts.URL+"/test", nil)
 	req.Host = domain

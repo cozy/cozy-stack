@@ -11,13 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type getDirRes struct {
-	Meta struct {
-		Count int
-	}
-	Included []interface{}
-}
-
 func getJSON(t *testing.T, url string, out interface{}) error {
 	res, err := httpGet(ts.URL + url)
 	assert.NoError(t, err)

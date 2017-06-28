@@ -14,7 +14,6 @@ import (
 )
 
 var domain string
-var ts *httptest.Server
 
 func TestSetupAssets(t *testing.T) {
 	e := echo.New()

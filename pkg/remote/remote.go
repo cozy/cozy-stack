@@ -219,8 +219,8 @@ var injectionRegexp = regexp.MustCompile(`{{\w+}}`)
 func injectVar(src string, vars map[string]string) (string, error) {
 	var err error
 	result := injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
-		m = strings.TrimLeft(m, "{{")
-		m = strings.TrimRight(m, "}}")
+		m = strings.TrimLeft(m, "{")
+		m = strings.TrimRight(m, "}")
 		m = strings.TrimSpace(m)
 		if val, ok := vars[m]; ok {
 			return val

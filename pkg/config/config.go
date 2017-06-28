@@ -349,8 +349,6 @@ func UseTestFile() {
 	if err := UseViper(v); err != nil {
 		panic(fmt.Errorf("fatal error test config file: %s", err))
 	}
-
-	return
 }
 
 // UseTestYAML can be used in a test file to inject a configuration
@@ -366,8 +364,6 @@ func UseTestYAML(yaml string) {
 	if err := UseViper(v); err != nil {
 		panic(fmt.Errorf("fatal error test config file: %s", err))
 	}
-
-	return
 }
 
 // FindConfigFile search in the Paths directories for the file with the given

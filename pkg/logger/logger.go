@@ -103,7 +103,6 @@ func addDebugDomain(domain string) {
 		}
 	}
 	loggers[domain] = logger
-	return
 }
 
 func removeDebugDomain(domain string) {

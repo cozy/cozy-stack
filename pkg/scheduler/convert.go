@@ -8,9 +8,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
-// importFromMemStorage fetch triggers from the old storage and add them
+// ImportFromMemStorage fetch triggers from the old storage and add them
 // into the new scheduler
-func (sched *RedisScheduler) importFromMemStorage() error {
+func (sched *RedisScheduler) ImportFromMemStorage() error {
 
 	oldStorage := &globalDBStorage{}
 
