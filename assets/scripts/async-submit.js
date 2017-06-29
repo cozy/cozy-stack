@@ -57,7 +57,4 @@
 
   passphraseInput.focus()
   submitButton.removeAttribute('disabled')
-
-  // Preload font awesome
-  try { document.fonts.load('14px FontAwesome') } catch (e) {}
 })(window)
