@@ -60,7 +60,6 @@ type fileOptions struct {
 	mime          string
 	md5           string
 	queries       url.Values
-	content       vfs.File
 	set           bool // default value is false
 }
 
@@ -117,22 +116,8 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 		consts.QueryParamReferencedBy: {refs},
 	}
 
-	content, err := fs.OpenFile(fileDoc)
-	if err != nil {
-		return err
-	}
-	fileOpts.content = content
 	fileOpts.set = true
-
 	opts.fileOpts = fileOpts
-	return nil
-}
-
-func (opts *SendOptions) closeFile() error {
-	if opts.fileOpts != nil && opts.fileOpts.set {
-		return opts.fileOpts.content.Close()
-	}
-
 	return nil
 }
 
@@ -367,7 +352,6 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	if err != nil {
 		return err
 	}
-	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
 		err = headDirOrFileMetadataAtRecipient(ins, opts.SharingID, opts.DocID,
@@ -466,8 +450,6 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 // TODO When sharing directories, handle changes on the dirID.
 func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc, sendToSharer bool) error {
 	md5 := base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
-	// A file descriptor can be open in the for loop.
-	defer opts.closeFile()
 
 	for _, recipient := range opts.Recipients {
 		_, remoteFileDoc, err := getDirOrFileMetadataAtRecipient(ins, opts,
@@ -667,6 +649,13 @@ func sendFileToRecipient(ins *instance.Instance, fileDoc *vfs.FileDoc, opts *Sen
 	if opts.DocRev != "" {
 		opts.fileOpts.queries.Add("rev", opts.DocRev)
 	}
+
+	content, err := ins.VFS().OpenFile(fileDoc)
+	if err != nil {
+		return err
+	}
+	defer content.Close()
+
 	reqOpts := &request.Options{
 		Domain: recipient.URL,
 		Scheme: recipient.Scheme,
@@ -680,10 +669,10 @@ func sendFileToRecipient(ins *instance.Instance, fileDoc *vfs.FileDoc, opts *Sen
 			"Authorization":  "Bearer " + recipient.AccessToken.AccessToken,
 		},
 		Queries:    opts.fileOpts.queries,
-		Body:       opts.fileOpts.content,
+		Body:       content,
 		NoResponse: true,
 	}
-	_, err := request.Req(reqOpts)
+	_, err = request.Req(reqOpts)
 	if err != nil {
 		if authError(err) {
 			content, erro := ins.VFS().OpenFile(fileDoc)
