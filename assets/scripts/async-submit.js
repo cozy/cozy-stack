@@ -4,11 +4,11 @@
 
   const d = window.document
   let form = d.getElementById('login-form')
-  const url = form.getAttribute('action')
+  const url = form && form.getAttribute('action')
   const passphraseInput = d.getElementById('password')
   const redirectInput = d.getElementById('redirect')
   const submitButton = d.getElementById('login-submit')
-  let errorPanel = form.querySelector('.errors')
+  let errorPanel = form && form.querySelector('.errors')
 
   const showError = function (error) {
     error = error || 'The Cozy server is unavailable. Do you have network?'
@@ -23,7 +23,7 @@
     submitButton.removeAttribute('disabled')
   }
 
-  form.addEventListener('submit', (event) => {
+  form && form.addEventListener('submit', (event) => {
     event.preventDefault()
     submitButton.setAttribute('disabled', true)
 
