@@ -28,7 +28,7 @@ a:focus {
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    min-height: 100%;
 }
 .btn {
     box-sizing: border-box;
@@ -87,7 +87,8 @@ a:focus {
 
 /* Wrapper */
 .popup {
-    flex: 0 0 33rem
+    flex: 0 0 33rem;
+    padding: 1em 0;
 }
 
 /* Header */
@@ -159,87 +160,89 @@ h1 {
 }
 
 /* Permissions */
-/* @TODO Add doctype icons */
 .perm-list {
-    /* waiting for the icons */
-    /*padding: 0;
-    list-style: none;*/
+    padding: 0;
+    list-style: none;
 }
-li[class^="io.cozy.settings"]:before {
+.perm-list li {
+    margin-bottom: 16px;
+}
+.perm-list li:before {
     content: '';
     display: inline-block;
+    width: 32px;
+    height: 32px;
+    margin-right: 16px;
+    background-image: url('../images/icon-fallback.svg');
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    vertical-align: -9px;
+}
+li[class^="io.cozy.settings"]:before {
+    background-image: url('../images/icon-settings.svg');
 }
 li[class^="io.cozy.accounts"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-accounts.svg');
 }
 li[class^="io.cozy.apps"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-apps.svg');
 }
 li[class^="io.cozy.bank.accounts"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-bank-accounts.svg');
 }
 li[class^="io.cozy.bank.groups"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-bank-groups.svg');
 }
 li[class^="io.cozy.bills"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-bill.svg');
 }
 li[class^="io.cozy.files"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-files.svg');
 }
 li[class^="io.cozy.konnectors"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-konnectors.svg');
+}
+li[class^="io.cozy.konnectors.result"]:before {
+    background-image: url('../images/icon-konnectors-result.svg');
 }
 li[class^="io.cozy.photos.albums"]:before {
-    content: '';
-    display: inline-block;
-}
-li[class^="io.cozy.settings"]:before {
-    content: '';
-    display: inline-block;
-}
-li[class^="io.cozy.jobs"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-photos-album.svg');
 }
 li[class^="io.cozy.triggers"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-triggers.svg');
 }
 li[class^="io.cozy.permissions"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-permissions.svg');
 }
-li[class^="org.fing.mesinfos.client"]:before {
-    content: '';
-    display: inline-block;
+li[class^="org.fing.mesinfos.client"]:before,
+li[class^="fr.maif.maifuser.societaire"]:before {
+    background-image: url('../images/icon-profile.svg');
 }
 li[class^="org.fing.mesinfos.consumptionstatement"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-consumption.svg');
 }
-li[class^="org.fing.mesinfos.contract"]:before {
-    content: '';
-    display: inline-block;
+li[class^="org.fing.mesinfos.contract"]:before,
+li[class^="fr.maif.maifuser.contrat"]:before {
+    background-image: url('../images/icon-contract.svg');
 }
 li[class^="org.fing.mesinfos.energybreakdown"]:before {
-    content: '';
-    display: inline-block;
+    background-image: url('../images/icon-energybreakdown.svg');
 }
-li[class^="org.fing.mesinfos.home"]:before {
-    content: '';
-    display: inline-block;
+li[class^="org.fing.mesinfos.home"]:before,
+li[class^="fr.maif.maifuser.home"]:before {
+    background-image: url('../images/icon-home.svg');
 }
-li[class^="org.fing.mesinfos.paymentterms"]:before {
-    content: '';
-    display: inline-block;
+li[class^="org.fing.mesinfos.paymentterms"]:before,
+li[class^="fr.maif.maifuser.paymentterms"]:before {
+    background-image: url('../images/icon-files-pen.svg');
+}
+li[class^="fr.maif.maifuser.foyer"]:before {
+    background-image: url('../images/icon-family.svg');
+}
+li[class^="fr.maif.maifuser.sinistrehabitation"]:before,
+li[class^="fr.maif.maifuser.sinistrevehicule"]:before {
+    background-image: url('../images/icon-sinister.svg');
 }
 
 @media (max-width: 35rem) {
