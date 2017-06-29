@@ -42,6 +42,7 @@
                       title="Show password"
                       name="password-visibility"></button>
                   <input id="password" name="passphrase" placeholder="Password" type="password" autofocus="true" autocomplete="new-password" />
+                  <progress id="password-strength" step='1' min='0' max='100' value=0 class="pw-weak" />
                 </p>
               </form>
             </div>
@@ -56,5 +57,6 @@
     </div>
     <script src="/assets/scripts/password-visibility.js"></script>
     <script src="/assets/scripts/async-submit.js"></script>
+    <script src="/assets/scripts/passwd-strength-indicator.js"></script>
   </body>
 </html>

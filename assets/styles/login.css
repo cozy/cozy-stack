@@ -267,6 +267,54 @@ select.error {
 input[type=number] {
     width: 100%
 }
+progress {
+  margin: .5em 0;
+  width: 100%;
+  height: .5em;
+  color: #297EF2;
+  background: #F5F6F7;
+  border: 0;
+  border-radius: 1.25em;
+}
+progress::-webkit-progress-bar {
+  background: #F5F6F7;
+  border-radius: 1.25em;
+}
+progress::-webkit-progress-value {
+ background: #32363F;
+ border-radius: 1.25em;
+}
+progress::-moz-progress-bar {
+ background: #32363F;
+ border-radius: 1.25em;
+}
+progress.pw-weak {
+  color: #F52D2D;
+}
+progress.pw-weak::-webkit-progress-value {
+  background: #F52D2D;
+}
+progress.pw-weak::-moz-progress-bar {
+  background: #F52D2D;
+}
+progress.pw-moderate {
+  color: #FFAE5F;
+}
+progress.pw-moderate::-webkit-progress-value {
+  background: #FFAE5F;
+}
+progress.pw-moderate::-moz-progress-bar {
+  background: #FFAE5F;
+}
+progress.pw-strong {
+  color: #35CE68;
+}
+progress.pw-strong::-webkit-progress-value {
+  background: #35CE68;
+}
+progress.pw-strong::-moz-progress-bar {
+  background: #35CE68;
+}
 [role=button],
 button {
     box-sizing: border-box;
