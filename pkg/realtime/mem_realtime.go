@@ -62,7 +62,7 @@ func (h *memHub) topicKey(domain, doctype string) string {
 }
 
 type topic struct {
-	key string // TODO remove it
+	key string
 
 	// chans for subscribe/unsubscribe requests
 	subscribe   chan *MemSub

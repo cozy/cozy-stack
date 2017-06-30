@@ -2,8 +2,8 @@ package realtime
 
 import (
 	"encoding/json"
-	"fmt"
 
+	"github.com/cozy/cozy-stack/pkg/logger"
 	redis "github.com/go-redis/redis"
 )
 
@@ -70,11 +70,12 @@ func (j *jsonEvent) UnmarshalJSON(buf []byte) error {
 
 func (h *redisHub) start() {
 	sub := h.c.Subscribe(eventsRedisKey)
+	log := logger.WithNamespace("realtime-redis")
 	for msg := range sub.Channel() {
 		je := jsonEvent{}
 		buf := []byte(msg.Payload)
 		if err := json.Unmarshal(buf, &je); err != nil {
-			fmt.Printf("Error on start: %s\n", err) // TODO log
+			log.Warnf("Error on start: %s", err)
 			continue
 		}
 		e := &Event{
@@ -95,7 +96,8 @@ func (h *redisHub) Publish(e *Event) {
 	h.local.broadcast <- e
 	buf, err := json.Marshal(e)
 	if err != nil {
-		fmt.Printf("Error on publish: %s\n", err) // TODO log
+		log := logger.WithNamespace("realtime-redis")
+		log.Warnf("Error on publish: %s", err)
 		return
 	}
 	h.c.Publish(eventsRedisKey, string(buf))

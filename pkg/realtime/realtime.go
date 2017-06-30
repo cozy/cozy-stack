@@ -56,8 +56,8 @@ type MemSub chan *Event
 // DynamicSubscriber is used to subscribe to several doctypes
 type DynamicSubscriber struct {
 	Channel MemSub
+	Domain  string
 	hub     Hub
-	domain  string
 	topics  []*topic
 	c       uint32 // mark whether or not the sub is closed
 }
@@ -66,7 +66,7 @@ func newDynamicSubscriber(hub Hub, domain string) *DynamicSubscriber {
 	return &DynamicSubscriber{
 		Channel: make(chan *Event, 10),
 		hub:     hub,
-		domain:  domain,
+		Domain:  domain,
 	}
 }
 
@@ -75,7 +75,7 @@ func (ds *DynamicSubscriber) Subscribe(doctype string) error {
 	if ds.Closed() || ds.hub == nil {
 		return errors.New("Can't subscribe")
 	}
-	t := ds.hub.GetTopic(ds.domain, doctype)
+	t := ds.hub.GetTopic(ds.Domain, doctype)
 	// TODO check that t is not already in ds.topics
 	ds.addTopic(t)
 	return nil
