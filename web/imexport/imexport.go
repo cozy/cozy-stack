@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/imexport"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
@@ -67,7 +68,6 @@ func export(c echo.Context) error {
 		"message": "bienvenue sur la super page",
 	})
 }
-
 func exportDir(c echo.Context) error {
 	domID := c.Param("domain-id")
 	fmt.Println(domID)
@@ -96,11 +96,53 @@ func exportDir(c echo.Context) error {
 	})
 }
 
+func importer(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	fs := instance.VFS()
+
+	r, err := os.Open("cozy.tar.gz")
+	if err != nil {
+		return err
+	}
+
+	rep := c.Param("destination")
+	rep = fmt.Sprintf("/%s", rep)
+
+	exist, err := vfs.DirExists(fs, rep)
+	if err != nil {
+		return err
+	}
+	var dst *vfs.DirDoc
+	if !exist {
+		dst, err = vfs.Mkdir(fs, rep, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		dst, err = fs.DirByPath(rep)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = imexport.Untardir(fs, r, dst.ID())
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "bienvenue sur la super page cozy",
+	})
+}
+
 // Routes sets the routing for export
 func Routes(router *echo.Group) {
-	router.GET("/", export)
-	router.HEAD("/", export)
+	router.GET("/export/", export)
+	router.HEAD("/export/", export)
 
-	router.GET("/:domain-id", exportDir)
+	router.GET("/import/:destination", importer)
+	router.HEAD("/import/", importer)
+
+	router.GET("/export/:domain-id", exportDir)
 
 }
