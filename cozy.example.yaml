@@ -49,7 +49,8 @@ jobs:
   # url: redis://localhost:6379/5
 
 konnectors:
-  cmd: ./scripts/konnector-rkt-run.sh
+  cmd: ./scripts/konnector-rkt-run.sh # run connectors with rkt
+  # cmd: ./scripts/konnector-node-run.sh # run connectors with node
   # oauthstate: redis://localhost:6379/6
 
 mail:
