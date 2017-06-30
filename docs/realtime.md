@@ -5,11 +5,9 @@
 ### Definitions
 
 - **Event:** Something happening in the stack. Most of them will come from couchdb, some jobs and user actions might also trigger them.
-
 - **Events feed:** the feed of occurring events. There is two types of feeds:
   - **continuous** allows to follow events as they occurs
   - **interval** allow the see the history of the feed from any given time
-
 - **Realtime:** user experienced updates of the interface from change happening from another source. *Ie, I have a folder opened in cozy-files on the browser, I take some pictures from my smartphone, the pictures appears in the folder without me needing to refresh the browser tab.*
 
 ### What couchdb offers
@@ -60,13 +58,9 @@ While not absolutely necessary, having cozy A notify cozy B when a shared docume
 ### Options
 
 - **Polling:** regularly ask the server what happened since last time.
-
 - **COMET:** Leaving a normal HTTP connection open sending data and heartbeets regularly to keep it open, reading xhr.responseText at intervals without waiting for readyState == 4. Restart the connection when it breaks.
-
 - **SSE:** Normalized & standardized version of COMET with [half-decent browser support (86% users)](http://caniuse.com/#feat=eventsource) but easily polyfillable (it's just COMET). It is simpler and easier to debug. It has some limitations (no HTTP headers in JS api, counts toward the maximum number of http connection per domain).
-
 - **Websocket:** keep a socket open, it allows 2 way data communication which we do not need, has [better server support (92% users)](http://caniuse.com/#feat=websockets) but is impossible to polyfill client side, more popular, there is a better [golang package](https://godoc.org/github.com/gorilla/websocket)
-
 - **SockJS & cie** they are **a lot** of packages which imitate Websocket API while using complicated client&server polyfill to allow support of older browser. [SockJS](https://github.com/sockjs/) is a drop-in websocket replacement with a go package and javascript client.
 
 ### Choice = Websocket
@@ -75,7 +69,7 @@ While SSE appears at first glance like a better fit for our use case, its limita
 
 ### optimization paths (future)
 
-- **bandwidth** Limiting the number of events sent by allowing the client to specified it is only interested in events matching a selector *(files app only care about changes in the files of the current folder view)*  
+- **bandwidth** Limiting the number of events sent by allowing the client to specified it is only interested in events matching a selector *(files app only care about changes in the files of the current folder view)*
 - **number of connections** Instead of 1 socket / tab, we can probably make 1 socket / browser using some hackish combination of SharedWorker / iframe.postMessage and a client-side demultiplexer.
 - **both** No need for realtime if the user is not using the tab (for most usecases), we could cut the realtime feed depending on [Page Visibility API](https://www.w3.org/TR/2011/WD-page-visibility-20110602/)
 
@@ -93,10 +87,9 @@ We accept websocket connection and bind them to a realtime.Dispatcher object.
 
 It all happens in RAM, realtime. Event are immediately transmited to the dispatcher.
 
-
 ### Big cozy version (ie. multiple stack instance)
 
-Redis pub/sub ?
+Redis pub/sub
 
 
 ## Websocket API
