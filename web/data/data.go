@@ -15,6 +15,10 @@ import (
 	"github.com/cozy/echo"
 )
 
+func paramIsTrue(c echo.Context, param string) bool {
+	return c.QueryParam(param) == "true"
+}
+
 // ValidDoctype validates the doctype and sets it in the context of the request.
 func ValidDoctype(next echo.HandlerFunc) echo.HandlerFunc {
 	// TODO extends me to verify characters allowed in db name.
@@ -77,8 +81,7 @@ func getDoc(c echo.Context) error {
 		return dbStatus(c)
 	}
 
-	revs := c.QueryParam("revs")
-	if revs == "true" {
+	if paramIsTrue(c, "revs") {
 		return proxy(c, docid)
 	}
 
@@ -346,13 +349,14 @@ func findDocuments(c echo.Context) error {
 }
 
 var allowedChangesParams = map[string]bool{
-	"feed":      true,
-	"style":     true,
-	"since":     true,
-	"limit":     true,
-	"timeout":   true,
-	"heartbeat": true, // Pouchdb sends heartbeet even for non-continuous
-	"_nonce":    true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
+	"feed":         true,
+	"style":        true,
+	"since":        true,
+	"limit":        true,
+	"timeout":      true,
+	"include_docs": true,
+	"heartbeat":    true, // Pouchdb sends heartbeet even for non-continuous
+	"_nonce":       true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
 }
 
 func changesFeed(c echo.Context) error {
@@ -384,16 +388,19 @@ func changesFeed(c echo.Context) error {
 		}
 	}
 
+	includeDocs := paramIsTrue(c, "include_docs")
+
 	if err = permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
 	results, err := couchdb.GetChanges(instance, &couchdb.ChangesRequest{
-		DocType: doctype,
-		Feed:    feed,
-		Style:   feedStyle,
-		Since:   c.QueryParam("since"),
-		Limit:   limit,
+		DocType:     doctype,
+		Feed:        feed,
+		Style:       feedStyle,
+		Since:       c.QueryParam("since"),
+		Limit:       limit,
+		IncludeDocs: includeDocs,
 	})
 
 	if err != nil {
