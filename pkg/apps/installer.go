@@ -200,8 +200,10 @@ func (i *Installer) endOfProc() {
 		i.errc <- err
 		return
 	}
-	man.SetState(i.endState)
-	man.Update(i.db)
+	if i.op != Delete {
+		man.SetState(i.endState)
+		man.Update(i.db)
+	}
 	i.manc <- i.man
 }
 

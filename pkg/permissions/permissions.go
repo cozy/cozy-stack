@@ -267,7 +267,7 @@ func UpdateWebappSet(db couchdb.Database, slug string, set Set) (*Permission, er
 // UpdateKonnectorSet creates a Permission doc for a konnector
 func UpdateKonnectorSet(db couchdb.Database, slug string, set Set) (*Permission, error) {
 	doc, err := GetForKonnector(db, slug)
-	if doc != nil {
+	if err != nil {
 		return nil, err
 	}
 	return updateAppSet(db, doc, TypeKonnector, consts.Konnectors, slug, set)
