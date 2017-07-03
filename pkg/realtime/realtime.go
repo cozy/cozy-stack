@@ -19,7 +19,6 @@ const (
 type Doc interface {
 	ID() string
 	DocType() string
-	// TODO json.Marshaler
 }
 
 // Event is the basic message structure manipulated by the realtime package

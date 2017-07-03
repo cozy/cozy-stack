@@ -283,7 +283,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 			id:      "foo",
 			doctype: "io.cozy.event-test",
 		},
-		Type: realtime.EventCreate,
+		Verb: realtime.EventCreate,
 	})
 
 	time.Sleep(1 * time.Second)
@@ -300,8 +300,8 @@ func TestRedisTriggerEvent(t *testing.T) {
 	var data eventMessage
 	err = bro.jobs[0].Message.Unmarshal(&data)
 	assert.NoError(t, err)
-	assert.Equal(t, data.Event["Domain"].(string), instanceName)
-	assert.Equal(t, data.Event["Type"].(string), "CREATED")
+	assert.Equal(t, data.Event["domain"].(string), instanceName)
+	assert.Equal(t, data.Event["verb"].(string), "CREATED")
 
 	realtime.GetHub().Publish(&realtime.Event{
 		Domain: instanceName,
@@ -309,7 +309,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 			id:      "foo",
 			doctype: "io.cozy.event-test",
 		},
-		Type: realtime.EventUpdate,
+		Verb: realtime.EventUpdate,
 	})
 
 	realtime.GetHub().Publish(&realtime.Event{
@@ -318,7 +318,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 			id:      "foo",
 			doctype: "io.cozy.event-test.bad",
 		},
-		Type: realtime.EventCreate,
+		Verb: realtime.EventCreate,
 	})
 
 	time.Sleep(10 * time.Millisecond)
@@ -388,7 +388,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 			UpdatedAt: time.Now(),
 			Fullpath:  "/foo/bar",
 		},
-		Type: realtime.EventCreate,
+		Verb: realtime.EventCreate,
 	})
 
 	time.Sleep(100 * time.Millisecond)
@@ -417,7 +417,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	realtime.GetHub().Publish(&realtime.Event{
 		Domain: instanceName,
 		Doc:    baz,
-		Type:   realtime.EventCreate,
+		Verb:   realtime.EventCreate,
 	})
 
 	time.Sleep(100 * time.Millisecond)
@@ -447,7 +447,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 		Domain: instanceName,
 		Doc:    quux,
 		OldDoc: baz,
-		Type:   realtime.EventCreate,
+		Verb:   realtime.EventCreate,
 	})
 
 	time.Sleep(100 * time.Millisecond)

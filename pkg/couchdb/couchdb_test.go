@@ -288,11 +288,12 @@ func TestMain(m *testing.M) {
 	}
 
 	receivedEvents = make(map[string]struct{})
-	eventChan := realtime.GetHub().Subscribe(TestPrefix.Prefix(), TestDoctype)
+	eventChan := realtime.GetHub().Subscriber(TestPrefix.Prefix())
+	eventChan.Subscribe(TestDoctype)
 	go func() {
-		for ev := range eventChan.Read() {
+		for ev := range eventChan.Channel {
 			receivedEventsMutex.Lock()
-			receivedEvents[ev.Type+ev.Doc.ID()] = struct{}{}
+			receivedEvents[ev.Verb+ev.Doc.ID()] = struct{}{}
 			receivedEventsMutex.Unlock()
 		}
 	}()

@@ -96,8 +96,9 @@ func (t *topic) loop() {
 		case e := <-t.broadcast:
 			for s := range t.subs {
 				select {
-				case s := <-t.unsubscribe:
-					delete(t.subs, s)
+				// FIXME we can lose some events if s != sub
+				case sub := <-t.unsubscribe:
+					delete(t.subs, sub)
 				case *s <- e:
 				}
 			}

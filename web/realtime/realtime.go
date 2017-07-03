@@ -149,7 +149,9 @@ func readPump(i *instance.Instance, ws *websocket.Conn, ds *realtime.DynamicSubs
 
 		// TODO filter by id
 		// TODO what do we do with include_docs?
-		ds.Subscribe(cmd.Payload.Type)
+		if err := ds.Subscribe(cmd.Payload.Type); err != nil {
+			logger.WithDomain(ds.Domain).Warnf("realtime error: %s", err)
+		}
 	}
 }
 
