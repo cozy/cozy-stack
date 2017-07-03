@@ -20,14 +20,10 @@ const (
 
 <p>Hello {{.RecipientName}}.<br/> Forgot your password? No worries, let's get you a new one! Click on the link below to safely change it.</p>
 
-<table cellspacing="0" cellpadding="0" style="background-color:#297EF2; border-radius: 3px;">
-<tr><td colspan="3">&nbsp;</td></tr>
-<tr><td width="25">&nbsp;</td><td style="color:white;">
-<a href="{{.PassphraseResetLink}}" style="color:white; text-decoration:none; text-transform:uppercase; font-weight: bold;">
-Reset my password
-</a>
-</td><td width="25">&nbsp;</td></tr>
-<tr><td colspan="3">&nbsp;</td></tr>
+<table style="margin: 0 auto;">
+<tr>
+<td><a href="{{.PassphraseResetLink}}" target="_blank" style="display: block; background: #297EF2; text-transform: uppercase; line-height: 1.1; color: white; text-decoration: none; border-top: 20px solid #297EF2; border-right: 43px solid #297EF2; border-bottom: 20px solid #297EF2; border-left: 43px solid #297EF2; border-radius: 2px;">Reset my password</a></td>
+</tr>
 </table>
 
 <p>You never asked for a new password? In this case you can forget this email.<br/> Just so you know, you have 15 minutes to choose a new password, then this email will self-destruct.</p>`
@@ -49,14 +45,10 @@ Just so you know, you have 15 minutes to choose a new password, then this email 
 
 <p>Bonjour {{.RecipientName}}.<br/> Vous avez oublié votre mot de passe ? Pas de panique, il est temps de vous en trouver un nouveau ! Cliquez sur le lien ci-dessous pour le changer en toute sécurité.</p>
 
-<table cellspacing="0" cellpadding="0" style="background-color:#297EF2; border-radius: 3px;">
-<tr><td colspan="3">&nbsp;</td></tr>
-<tr><td width="25">&nbsp;</td><td style="color:white;">
-<a href="{{.PassphraseResetLink}}" style="color:white; text-decoration:none; text-transform:uppercase; font-weight: bold;">
-Je réinitialise mon mot de passe
-</a>
-</td><td width="25">&nbsp;</td></tr>
-<tr><td colspan="3">&nbsp;</td></tr>
+<table style="margin: 0 auto;">
+<tr>
+<td><a href="{{.PassphraseResetLink}}" target="_blank" style="display: block; background: #297EF2; text-transform: uppercase; line-height: 1.1; color: white; text-decoration: none; border-top: 20px solid #297EF2; border-right: 43px solid #297EF2; border-bottom: 20px solid #297EF2; border-left: 43px solid #297EF2; border-radius: 2px;">Je réinitialise mon mot de passe</a></td>
+</tr>
 </table>
 
 <p>Vous n'avez jamais demandé de nouveau mot de passe ? Alors vous pouvez ignorer cet email.<br/> Pour information, vous disposez de 15 minutes pour choisir votre nouveau mot de passe, passé ce délai cet email s'auto-détruira.</p>`
@@ -80,10 +72,11 @@ Pour information, vous disposez de 15 minutes pour choisir votre nouveau mot de 
 
 <p>The description given is: {{.Description}}.</p>
 
-<form action="{{.SharingLink}}">
-	<input type="submit" value="Accept this sharing" />
-</form>
-</p>`
+<table style="margin: 0 auto;">
+<tr>
+<td><a href="{{.SharingLink}}" target="_blank" style="display: block; background: #297EF2; text-transform: uppercase; line-height: 1.1; color: white; text-decoration: none; border-top: 20px solid #297EF2; border-right: 43px solid #297EF2; border-bottom: 20px solid #297EF2; border-left: 43px solid #297EF2; border-radius: 2px;">Accept this sharing</a></td>
+</tr>
+</table>`
 
 	mailSharingRequestText = `` +
 		`Hey {{.RecipientName}}!
