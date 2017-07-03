@@ -7,7 +7,7 @@
     indicator.setAttribute('class', `pw-${strength.label}`)
   }, false)
 
-  // Return given password srength as an object {percentage, label}
+  // Return given password strength as an object {percentage, label}
   getStrength = function (password) {
     if (!password && password !== '') {
       throw new Error('password parameter is missing')
