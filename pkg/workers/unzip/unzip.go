@@ -78,6 +78,10 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 			}
 		}
 
+		if f.Mode().IsDir() {
+			continue
+		}
+
 		rc, err := f.Open()
 		if err != nil {
 			return err
