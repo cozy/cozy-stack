@@ -100,8 +100,15 @@ func (ds *DynamicSubscriber) Close() error {
 	for _, t := range ds.topics {
 		wg.Add(1)
 		go func(t *topic) {
-			t.unsubscribe <- &ds.Channel
-			wg.Done()
+			for {
+				select {
+				case t.unsubscribe <- &ds.Channel:
+					wg.Done()
+					return
+				case <-ds.Channel:
+					// Purge events
+				}
+			}
 		}(t)
 	}
 	go func() {

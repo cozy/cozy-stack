@@ -51,12 +51,6 @@ func (h *memHub) GetTopic(domain, doctype string) *topic {
 	return it
 }
 
-func (h *memHub) remove(topic *topic) {
-	h.Lock()
-	defer h.Unlock()
-	delete(h.topics, topic.key)
-}
-
 func (h *memHub) topicKey(domain, doctype string) string {
 	return domain + ":" + doctype
 }
@@ -95,12 +89,7 @@ func (t *topic) loop() {
 			t.subs[s] = struct{}{}
 		case e := <-t.broadcast:
 			for s := range t.subs {
-				select {
-				// FIXME we can lose some events if s != sub
-				case sub := <-t.unsubscribe:
-					delete(t.subs, sub)
-				case *s <- e:
-				}
+				*s <- e
 			}
 		}
 	}

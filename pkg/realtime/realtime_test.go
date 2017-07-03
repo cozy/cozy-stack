@@ -99,6 +99,8 @@ func TestMemRealtime(t *testing.T) {
 		},
 	})
 
+	time.Sleep(1 * time.Millisecond)
+
 	c4 := h.Subscriber("testing")
 	err = c4.Subscribe("io.cozy.testobject")
 	assert.NoError(t, err)
