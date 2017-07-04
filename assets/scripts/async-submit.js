@@ -56,5 +56,7 @@
   })
 
   passphraseInput.focus()
-  submitButton.removeAttribute('disabled')
-})(window, document)
+  if (!/passphrase_renew$/.test(document.location.pathname)) {
+    submitButton.removeAttribute('disabled')
+  }
+})(window)

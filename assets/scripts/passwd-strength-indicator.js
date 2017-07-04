@@ -1,10 +1,12 @@
 (function (window, document) {
   const indicator = document.getElementById('password-strength')
+  const submit = document.getElementById('login-submit')
 
   document.getElementById('password').addEventListener('input', function(event) {
     const strength = getStrength(event.target.value)
     indicator.value = parseInt(strength.percentage, 10)
     indicator.setAttribute('class', `pw-${strength.label}`)
+    submit[strength.label == 'weak' ? 'setAttribute' : 'removeAttribute']('disabled', '')
   }, false)
 
   // Return given password strength as an object {percentage, label}
