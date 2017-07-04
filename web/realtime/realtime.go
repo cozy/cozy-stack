@@ -165,9 +165,13 @@ func ws(c echo.Context) error {
 	defer ws.Close()
 
 	ws.SetReadLimit(maxMessageSize)
-	ws.SetReadDeadline(time.Now().Add(pongWait))
+	if err = ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		return nil
+	}
 	ws.SetPongHandler(func(string) error {
-		ws.SetReadDeadline(time.Now().Add(pongWait))
+		if err := ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -186,17 +190,23 @@ func ws(c echo.Context) error {
 			if !ok { // Websocket has been closed by the client
 				return nil
 			}
-			ws.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return nil
+			}
 			if err := ws.WriteJSON(e); err != nil {
 				return nil
 			}
 		case e := <-ds.Channel:
-			ws.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
 			if err := ws.WriteJSON(e); err != nil {
 				return nil
 			}
 		case <-ticker.C:
-			ws.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				return err
+			}
 			if err := ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				return nil
 			}
