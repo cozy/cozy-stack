@@ -103,7 +103,9 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 			ref := doc.ReferencedBy
 			for _, v := range ref {
 				out := &couchdb.JSONDoc{}
-				couchdb.GetDoc(db, v.Type, v.ID, out)
+				if err := couchdb.GetDoc(db, v.Type, v.ID, out); err != nil {
+					return err
+				}
 				m := out.ToMapWithType()
 
 				albumName := m["name"]
