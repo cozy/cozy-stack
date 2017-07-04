@@ -109,6 +109,7 @@ func missingType(cmd *command) *wsError {
 func readPump(i *instance.Instance, ws *websocket.Conn, ds *realtime.DynamicSubscriber, errc chan *wsError) {
 	var auth map[string]string
 	if err := ws.ReadJSON(&auth); err != nil {
+		errc <- unknownMethod(auth["method"], auth)
 		return
 	}
 	if strings.ToUpper(auth["method"]) != "AUTH" {
