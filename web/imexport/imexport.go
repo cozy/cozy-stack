@@ -31,7 +31,7 @@ func export(c echo.Context) error {
 	}
 	defer w.Close()
 
-	err = imexport.Tardir(w, fs)
+	err = imexport.Tardir(w, fs, domain)
 	if err != nil {
 		return err
 	}
