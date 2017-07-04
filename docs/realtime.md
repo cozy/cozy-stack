@@ -119,11 +119,11 @@ client > {"method": "SUBSCRIBE",
           "payload": {"type": "io.cozy.files"}
 client > {"method": "SUBSCRIBE",
           "payload": {"type": "io.cozy.contacts"}
-server > {"event": "change",
+server > {"event": "UPDATED",
           "payload": {"id": "idA", "rev": "2-705...", "type": "io.cozy.contacts", "doc": {embeded doc ...}}}
-server > {"event": "change",
-          "payload": {"id": "idA", "rev": "3-541...", "deleted": true, "type": "io.cozy.contacts"}}
-server > {"event": "change",
+server > {"event": "DELETED",
+          "payload": {"id": "idA", "rev": "3-541...", "type": "io.cozy.contacts"}}
+server > {"event": "UPDATED",
           "payload": {"id": "idB", "rev": "6-457...", "type": "io.cozy.files", "doc": {embeded doc ...}}}
 ```
 

@@ -46,6 +46,17 @@ type command struct {
 	} `json:"payload"`
 }
 
+type wsResponsePayload struct {
+	Type string      `json:"type"`
+	ID   string      `json:"id"`
+	Doc  interface{} `json:"doc,omitempty"`
+}
+
+type wsResponse struct {
+	Event   string            `json:"event"`
+	Payload wsResponsePayload `json:"payload"`
+}
+
 type wsErrorPayload struct {
 	Status string      `json:"status"`
 	Code   string      `json:"code"`
@@ -201,7 +212,15 @@ func ws(c echo.Context) error {
 			if err := ws.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
 				return err
 			}
-			if err := ws.WriteJSON(e); err != nil {
+			res := wsResponse{
+				Event: e.Verb,
+				Payload: wsResponsePayload{
+					Type: e.Doc.DocType(),
+					ID:   e.Doc.ID(),
+					Doc:  e.Doc,
+				},
+			}
+			if err := ws.WriteJSON(res); err != nil {
 				return nil
 			}
 		case <-ticker.C:
