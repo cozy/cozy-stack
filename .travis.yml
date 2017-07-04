@@ -28,4 +28,3 @@ after_success:
 
 after_failure:
   - docker ps -a
-  - docker logs couch
