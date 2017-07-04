@@ -53,7 +53,7 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string) error {
 			now := time.Now()
 			executable := hdr.FileInfo().Mode()&0100 != 0
 
-			dirDoc, err := fs.DirByPath(fmt.Sprintf("%s%s", dstDoc.Fullpath, path.Dir(hdr.Name)))
+			dirDoc, err := fs.DirByPath(path.Join(dstDoc.Fullpath, path.Dir(hdr.Name)))
 			if err != nil {
 				return err
 			}
@@ -74,8 +74,13 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string) error {
 				}
 			}
 
-			if _, err := io.Copy(file, tr); err != nil {
+			_, err = io.Copy(file, tr)
+			cerr := file.Close()
+			if err != nil {
 				return err
+			}
+			if cerr != nil {
+				return cerr
 			}
 		}
 
