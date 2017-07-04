@@ -405,4 +405,58 @@ Answer a sharing request.
 
 Delete the specified sharing (both the sharing document and the associated permission).
 
+
+### Frequently Asked Questions
+
+#### How can I know if something is shared with me?
+
+First call the route [GET /permissions/doctype/:doctype/sharedWithMe](permissions.md#get-permissionsdoctypedoctypesharedwithme) to get a list of permissions. This route will only look for permissions that apply to sharings where the logged-in user is a recipient.
+
+Now check if your resource is subject to one of those permissions. If that's the case then the resource was shared with the logged-in user.
+
+#### How can I know if something was shared by me?
+
+Same as above except you need to call the route [GET /permissions/doctype/:doctype/sharedWithOthers](permissions.md#get-permissionsdoctypedoctypesharedwithothers).
+
+#### Great! I know that my resource is shared. Can I have more information regarding the sharing?
+
+Yes, in the permissions you obtained before there is a field called `source_id`. The value of that field is the id of the sharing document the permission was extracted from.
+
+Having its id you can fetch it and get all the information you need.
+
+#### Could you remind us the different types of sharings?
+
+* _One-shot_: the documents are sent to the recipients and that's it. No updates, no nothing. It's as if you gave them a copy of the data on a usb key.
+* _Master-slave_: updates you make on the documents are propagated to the recipients. The recipients can only consult as everything they do will not be propagated back.
+* _Master-master_: what you and the recipients do is propagated to everybody. Updates, deletions, additions are shared to all parties no matter if they are the sharer or the recipients.
+
+#### Do you have use-cases for the different types of sharings?
+
+Yes!
+* For _one-shot_: an official paper (such as a bill or an ID) you want to give to someone.
+* For _master-slave_: a password file that the sysadmins want to share to the rest of the company. Only the sysadmins can modify the password file, the others can only consult them.
+* For _master-master_: a folder containing shared resources for a project. You want all parties to be able to modify the content as well as adding new ones.
+
+#### What are the information required for a recipient?
+
+Two things: an e-mail and the url of the Cozy. We have a discovery feature so the url is not a necessity but it will be convenient if you don't want the recipients to enter their url everytime you share something with them.
+
+#### What documents are created and when?
+
+When the user asks to share a resource a sharing document is created. That happens before the emails are sent to the recipients. That also means that if all recipients refuse the sharing document will still be there.  
+The permissions associated are described in that document but **no actual permission documents are created, at any point in the protocol** — permissions are still enforced, it's just that there is no need to create permission documents.
+
+When the recipients accept, a sharing document is created on their Cozy. The sharing document the recipients have is slighty different from that of the sharer.
+
+#### What are the differences between the sharing document located at the sharer and the one located at the recipients?
+
+This table sums up the differences:
+
+| Field      | Sharer                                          | Recipient                                   |
+|------------|-------------------------------------------------|---------------------------------------------|
+| Owner      | True                                            | False                                       |
+| Recipients | Contains all the recipients related information | (empty)                                     |
+| Sharer     | (empty)                                         | Contains all the sharer related information |
+
+
 {% endraw %}
