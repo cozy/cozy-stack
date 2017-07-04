@@ -96,7 +96,7 @@ func (t *topic) loop() {
 		case s := <-t.unsubscribe:
 			delete(t.subs, s)
 		case w := <-t.subscribe:
-			f, _ := t.subs[w.sub]
+			f := t.subs[w.sub]
 			if w.id == "" {
 				f.whole = true
 			} else {

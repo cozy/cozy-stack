@@ -31,7 +31,7 @@ const (
 )
 
 var upgrader = websocket.Upgrader{
-	// Don't check the origin of the connexion, the Authorization header is enough
+	// Don't check the origin of the connexion, we check authorization later
 	CheckOrigin:     func(r *http.Request) bool { return true },
 	Subprotocols:    []string{"io.cozy.websocket"},
 	ReadBufferSize:  1024,
@@ -127,7 +127,7 @@ func readPump(i *instance.Instance, ws *websocket.Conn, ds *realtime.DynamicSubs
 
 	for {
 		cmd := &command{}
-		if err := ws.ReadJSON(cmd); err != nil {
+		if err = ws.ReadJSON(cmd); err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				logger.WithDomain(ds.Domain).Infof("ws error: %s", err)
 			}
@@ -158,7 +158,6 @@ func readPump(i *instance.Instance, ws *websocket.Conn, ds *realtime.DynamicSubs
 	}
 }
 
-// TODO add tests
 func ws(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -173,10 +172,7 @@ func ws(c echo.Context) error {
 		return nil
 	}
 	ws.SetPongHandler(func(string) error {
-		if err := ws.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-			return err
-		}
-		return nil
+		return ws.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
 	ds := realtime.GetHub().Subscriber(instance.Domain)
