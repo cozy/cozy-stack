@@ -13,23 +13,27 @@ Two type of objects are managed in the registry: applications and versions.
 
 An application object contains the following fields:
 
-- name: the application name
-- editor: the application editor
-- category: the application category
-- repository: object with type and url of package repository
-- license: the application license
-- versions: a list of all versions
+- `name`: the application name
+- `type`: the application type ("webapp" or "konnector")
+- `editor`: the application editor name
+- `category`: the application category
+- `repository`: object with type and url of package repository
+- `license`: the application license
+- `versions`: a list of all versions from the stable channel
+- `versionsDev`: a list of all versions from the dev channel
 
 ### Version
 
 An application version object contains the following fields:
 
-- name: the application name
-- description: description from the package.json
-- version: the version string
-- url: url of the tarball containing the application at specified version
-- sha256: the sha256 checksum of the application content
-- permissions: the permissions map contained in the manifest
+- `name`: the application name
+- `description`: description from the package.json
+- `version`: the version string
+- `channel`: the channel of the version (stable or dev)
+- `url`: url of the tarball containing the application at specified version
+- `size`: the size of the application package (uncompressed) in bytes
+- `sha256`: the sha256 checksum of the application content
+- `permissions`: the permissions map contained in the manifest
 
 ## APIs: Adding to registry
 
@@ -49,37 +53,26 @@ This route adds an application to the registry. The content of the request shoul
 
 ```http
 POST /drive
+X-Cozy-Registry-Key: AbCdE
 
 {
     "name": "drive",
     "editor": "cozy",
     "description": "The drive application",
-    "versions": ["v3.1.1","v3.1.2"],
     "repository": "https://github.com/cozy/cozy-drive",
+    "tags": ["foo", "bar", "baz"],
     "license": "BSD"
 }
 ```
 
 ### POST /:app/:version
 
-This route adds a version of an application to the registry. The application content can be transmitted by two different mean:
+This route adds a version of an application to the registry.
 
-    - via a `url` query parameter specifying the url of the gzipped tarball
-    - via the content of the POST request in which case the registry should store the application on its own.
-
-The content of the manifest file is used to fill the fields of the version.
-
-Before adding the application version to the registry, the registry should check the following:
+The content of the manifest file extracted from the application data is used to fill the fields of the version. Before adding the application version to the registry, the registry should check the following:
 
     - the `manifest` file contained in the tarball should be checked and have its fields checked against the application properties
-    - the application content should be checked against the given `sha256` query parameter
-
-#### Query-String
-
-Parameter | Description
-----------|------------------------------------
-url       | the url of the tarball [optional]
-sha256    | the checksum of the tarball in hex string 
+    - the application content should check the sha256 checksum
 
 #### Status codes
 
@@ -92,13 +85,14 @@ sha256    | the checksum of the tarball in hex string
 #### Request
 
 ```http
-POST /drive/v3.1.2?url=https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz&sha256=466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f
-```
+POST /drive/v3.1.2
+X-Cozy-Registry-Key: AbCdE
 
-```http
-POST /drive/v3.1.2?sha256=466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f
-
-tar ...
+{
+    "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "channel": "stable",
+}
 ```
 
 #### Response
@@ -272,3 +266,9 @@ registries:
   context2:
     - https://context2.registry.cozy.io/
 ```
+
+# Authentication
+
+For now the authentication scheme to publish an application is kept minimal and simple. Each editor is given an API key that should be present in the header of the http request when creating a application or publishing a new version.
+
+The API key should be present in the `X-Cozy-Registry-Key` header.
