@@ -194,7 +194,7 @@ From a OAuth perspective, Bob being Alice's recipient means Alice is registered 
 
 See [here](https://github.com/cozy/cozy-stack/blob/master/docs/auth.md#post-authaccess_token) for structure details.
 
-##### HostClientID
+##### HostClientID
 
 This field is only used for `master-master` sharing. It corresponds to the id of the OAuth document stored in the host database, containing the recipient's OAuth information after registration.
 
