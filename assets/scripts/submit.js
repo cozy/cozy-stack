@@ -1,29 +1,32 @@
 /* global Headers, fetch */
-(function (w) {
-  if (!w.fetch || !w.Headers || !w.FormData) return
+(function (window, document) {
+  if (!window.fetch || !window.Headers || !window.FormData) return
 
-  const d = window.document
-  let form = d.getElementById('login-form')
-  const url = form && form.getAttribute('action')
-  const passphraseInput = d.getElementById('password')
-  const redirectInput = d.getElementById('redirect')
-  const submitButton = d.getElementById('login-submit')
-  let errorPanel = form && form.querySelector('.errors')
+  const loginForm = document.getElementById('login-form')
+  const resetForm = document.getElementById('renew-passphrase-form')
+
+  const url = loginForm && loginForm.getAttribute('action')
+
+  const passphraseInput = document.getElementById('password')
+  const redirectInput = document.getElementById('redirect')
+  const submitButton = document.getElementById('login-submit')
+
+  let errorPanel = loginForm && loginForm.querySelector('.errors')
 
   const showError = function (error) {
     error = error || 'The Cozy server is unavailable. Do you have network?'
 
     if (!errorPanel) {
-      errorPanel = d.createElement('div')
+      errorPanel = document.createElement('div')
       errorPanel.classList.add('errors')
-      form.appendChild(errorPanel)
+      loginForm.appendChild(errorPanel)
     }
 
     errorPanel.innerHTML = '<p>' + error + '</p>'
     submitButton.removeAttribute('disabled')
   }
 
-  form && form.addEventListener('submit', (event) => {
+  loginForm && loginForm.addEventListener('submit', (event) => {
     event.preventDefault()
     submitButton.setAttribute('disabled', true)
 
@@ -55,8 +58,21 @@
     }).catch(showError)
   })
 
+  resetForm && resetForm.addEventListener('submit', (event) => {
+    event.preventDefault()
+    const { label } = window.password.getStrength(passphraseInput.value)
+    if (label == 'weak') {
+      return false
+    } else {
+      resetForm.submit()
+    }
+  })
+
+  resetForm && passphraseInput.addEventListener('input', function(event) {
+    const { label } = window.password.getStrength(event.target.value)
+    submitButton[label == 'weak' ? 'setAttribute' : 'removeAttribute']('disabled', '')
+  })
+
   passphraseInput.focus()
-  if (!/passphrase_renew$/.test(document.location.pathname)) {
-    submitButton.removeAttribute('disabled')
-  }
-})(window)
+  loginForm && submitButton.removeAttribute('disabled')
+})(window, document)
