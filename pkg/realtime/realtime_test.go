@@ -142,6 +142,111 @@ func TestMemRealtime(t *testing.T) {
 	wg.Wait()
 }
 
+func TestWatch(t *testing.T) {
+	h := newMemHub()
+	c1 := h.Subscriber("testing")
+	wg := sync.WaitGroup{}
+
+	err := c1.Watch("io.cozy.testobject", "id1")
+	assert.NoError(t, err)
+	err = c1.Watch("io.cozy.testobject", "id2")
+	assert.NoError(t, err)
+
+	wg.Add(1)
+	go func() {
+		for e := range c1.Channel {
+			assert.Equal(t, "id1", e.Doc.ID())
+			break
+		}
+		for e := range c1.Channel {
+			assert.Equal(t, "id2", e.Doc.ID())
+			break
+		}
+		wg.Done()
+	}()
+
+	time.Sleep(1 * time.Millisecond)
+	h.Publish(&Event{
+		Domain: "testing",
+		Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "not-id1-and-not-id2",
+		},
+	})
+
+	time.Sleep(1 * time.Millisecond)
+	h.Publish(&Event{
+		Domain: "testing",
+		Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "id1",
+		},
+	})
+
+	time.Sleep(1 * time.Millisecond)
+	h.Publish(&Event{
+		Domain: "testing",
+		Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "id2",
+		},
+	})
+
+	wg.Wait()
+
+	err = c1.Subscribe("io.cozy.testobject")
+	assert.NoError(t, err)
+
+	wg.Add(1)
+	go func() {
+		for e := range c1.Channel {
+			assert.Equal(t, "id1", e.Doc.ID())
+			break
+		}
+		for e := range c1.Channel {
+			assert.Equal(t, "id2", e.Doc.ID())
+			break
+		}
+		for e := range c1.Channel {
+			assert.Equal(t, "id3", e.Doc.ID())
+			break
+		}
+		wg.Done()
+	}()
+
+	time.Sleep(1 * time.Millisecond)
+	h.Publish(&Event{
+		Domain: "testing",
+		Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "id1",
+		},
+	})
+
+	time.Sleep(1 * time.Millisecond)
+	h.Publish(&Event{
+		Domain: "testing",
+		Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "id2",
+		},
+	})
+
+	time.Sleep(1 * time.Millisecond)
+	h.Publish(&Event{
+		Domain: "testing",
+		Doc: &testDoc{
+			doctype: "io.cozy.testobject",
+			id:      "id3",
+		},
+	})
+
+	wg.Wait()
+
+	err = c1.Close()
+	assert.NoError(t, err)
+}
+
 func TestRedisRealtime(t *testing.T) {
 	opt, err := redis.ParseURL("redis://localhost:6379/6")
 	assert.NoError(t, err)
