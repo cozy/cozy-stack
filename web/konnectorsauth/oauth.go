@@ -94,10 +94,6 @@ func redirect(c echo.Context) error {
 	i, _ := instance.Get(c.Request().Host)
 
 	if i != nil && accessToken != "" {
-		if i == nil {
-			return echo.NewHTTPError(http.StatusBadRequest,
-				"using ?access_token with instance-less redirect")
-		}
 		account := &accounts.Account{
 			AccountType: accountTypeID,
 			Oauth: &accounts.OauthInfo{
@@ -109,6 +105,11 @@ func redirect(c echo.Context) error {
 			return err
 		}
 		return redirectToDataCollect(c, account, "")
+	}
+
+	if accessToken != "" {
+		return echo.NewHTTPError(http.StatusBadRequest,
+			"using ?access_token with instance-less redirect")
 	}
 
 	stateCode := c.QueryParam("state")
