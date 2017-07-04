@@ -23,7 +23,7 @@ var formats = map[string]string{
 
 type imageMessage struct {
 	Event struct {
-		Type string      `json:"Type"`
+		Verb string      `json:"Verb"`
 		Doc  vfs.FileDoc `json:"Doc"`
 	} `json:"event"`
 }
@@ -43,17 +43,17 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	if err := m.Unmarshal(msg); err != nil {
 		return err
 	}
-	if msg.Event.Type != "DELETED" && msg.Event.Doc.Trashed {
+	if msg.Event.Verb != "DELETED" && msg.Event.Doc.Trashed {
 		return nil
 	}
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 	log := logger.WithDomain(domain)
-	log.Infof("[jobs] thumbnail: %s %s", msg.Event.Type, msg.Event.Doc.ID())
+	log.Infof("[jobs] thumbnail: %s %s", msg.Event.Verb, msg.Event.Doc.ID())
 	i, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
-	switch msg.Event.Type {
+	switch msg.Event.Verb {
 	case "CREATED":
 		return generateThumbnails(ctx, i, &msg.Event.Doc)
 	case "UPDATED":
@@ -64,7 +64,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	case "DELETED":
 		return removeThumbnails(i, &msg.Event.Doc)
 	}
-	return fmt.Errorf("Unknown type %s for image event", msg.Event.Type)
+	return fmt.Errorf("Unknown type %s for image event", msg.Event.Verb)
 }
 
 func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.FileDoc) error {
