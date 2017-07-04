@@ -103,7 +103,7 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 			ref := doc.ReferencedBy
 			for _, v := range ref {
 				out := &couchdb.JSONDoc{}
-				if err := couchdb.GetDoc(db, v.Type, v.ID, out); err != nil {
+				if err = couchdb.GetDoc(db, v.Type, v.ID, out); err != nil {
 					return err
 				}
 				m := out.ToMapWithType()
