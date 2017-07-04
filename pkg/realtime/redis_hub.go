@@ -109,6 +109,6 @@ func (h *redisHub) Subscriber(domain string) *DynamicSubscriber {
 
 func (h *redisHub) SubscribeLocalAll() *DynamicSubscriber {
 	ds := newDynamicSubscriber(nil, "")
-	ds.addTopic(h.local)
+	ds.addTopic(h.local, "")
 	return ds
 }

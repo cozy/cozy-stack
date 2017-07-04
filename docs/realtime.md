@@ -116,11 +116,11 @@ Then messages are sent using json
 client > {"method": "AUTH",
           "payload": "xxAppOrAuthTokenxx="
 client > {"method": "SUBSCRIBE",
-          "payload": {"type": "io.cozy.files", "include_docs": true}
+          "payload": {"type": "io.cozy.files"}
 client > {"method": "SUBSCRIBE",
           "payload": {"type": "io.cozy.contacts"}
 server > {"event": "change",
-          "payload": {"id": "idA", "rev": "2-705...", "type": "io.cozy.contacts"}}
+          "payload": {"id": "idA", "rev": "2-705...", "type": "io.cozy.contacts", "doc": {embeded doc ...}}}
 server > {"event": "change",
           "payload": {"id": "idA", "rev": "3-541...", "deleted": true, "type": "io.cozy.contacts"}}
 server > {"event": "change",
@@ -148,8 +148,6 @@ For now the only possible selector is on type & optionaly id
 {"method": "SUBSCRIBE", "payload": {"type": "[desired doctype]", "id": "idA"}}
 ```
 
-If the client wants to receive full documents with each events, it can add an `include_docs:true` parameter in the payload.
-
 In order to subscribe, a client must have permission `GET` on the passed selector. Otherwise an error is passed in the message feed.
 
 ```
@@ -158,6 +156,6 @@ server > {"event": "error",
             "status": "403 Forbidden"
             "code": "forbidden"
             "title":"The Application can't subscribe to io.cozy.files"
-            "source": {"method": "SUBSCRIBE", "payload": {"type":"io.cozy.files", "include_docs": true} }
+            "source": {"method": "SUBSCRIBE", "payload": {"type":"io.cozy.files"} }
           }}
 ```

@@ -69,20 +69,38 @@ func newDynamicSubscriber(hub Hub, domain string) *DynamicSubscriber {
 	}
 }
 
-// Subscribe adds a listener for events on a given doctype
+// Subscribe adds a listener for events on a whole doctype
 func (ds *DynamicSubscriber) Subscribe(doctype string) error {
 	if ds.Closed() || ds.hub == nil {
 		return errors.New("Can't subscribe")
 	}
 	t := ds.hub.GetTopic(ds.Domain, doctype)
-	// TODO check that t is not already in ds.topics
-	ds.addTopic(t)
+	ds.addTopic(t, "")
 	return nil
 }
 
-func (ds *DynamicSubscriber) addTopic(t *topic) {
-	ds.topics = append(ds.topics, t)
-	t.subscribe <- &ds.Channel
+// Watch adds a listener for events for a specific document (doctype+id)
+func (ds *DynamicSubscriber) Watch(doctype, id string) error {
+	if ds.Closed() || ds.hub == nil {
+		return errors.New("Can't subscribe")
+	}
+	t := ds.hub.GetTopic(ds.Domain, doctype)
+	ds.addTopic(t, id)
+	return nil
+}
+
+func (ds *DynamicSubscriber) addTopic(t *topic, id string) {
+	found := false
+	for _, topic := range ds.topics {
+		if t == topic {
+			found = true
+			break
+		}
+	}
+	if !found {
+		ds.topics = append(ds.topics, t)
+	}
+	t.subscribe <- &toWatch{&ds.Channel, id}
 }
 
 // Closed returns true if it will no longer send events in its channel
