@@ -41,7 +41,7 @@
       const loginSuccess = response.status < 400
       response.json().then((body) => {
         if (loginSuccess) {
-          submitButton.innerHTML = '<i class="fa fa-check"></i>'
+          submitButton.innerHTML = '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
           submitButton.classList.add('btn-success')
           if (body.redirect) {
             window.location = body.redirect
@@ -57,7 +57,4 @@
 
   passphraseInput.focus()
   submitButton.removeAttribute('disabled')
-
-  // Preload font awesome
-  try { document.fonts.load('14px FontAwesome') } catch (e) {}
-})(window)
+})(window, document)
