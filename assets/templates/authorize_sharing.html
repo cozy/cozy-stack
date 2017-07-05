@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="{{.Locale}}">
+  <head>
+    <meta charset="utf-8">
+    <title>Cozy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/fonts/fonts.css">
+    <link rel="stylesheet" href="/assets/styles/stack.css">
+    <link rel="icon" type="image/png" href="/assets/images/happycloud.png" />
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+  </head>
+  <body>
+    <main role="application">
+      <section class="popup">
+        <header>
+          <a href="https://cozy.io" target="_blank" title="Cozy Website" class="shield"></a>
+        </header>
+        <div class="container">
+          <form method="POST" action="/auth/authorize" class="login auth">
+            <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+            <input type="hidden" name="client_id" value="{{.Client.ClientID}}" />
+            <input type="hidden" name="state" value="{{.State}}" />
+            <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
+            <input type="hidden" name="scope" value="{{.Scope}}" />
+            <div role="region">
+              <h1>{{t "Authorize Sharing Title" .Client.ClientName}}</h1>
+              {{if .Client.LogoURI}}
+              <img class="client-logo" src="{{.Client.LogoURI}}" />
+              {{end}}
+              <p class="help">
+                <strong>
+                {{if .Client.ClientURI}}
+                <a href="{{.Client.ClientURI}}">{{.Client.ClientName}}</a>
+                {{else}}
+                {{.Client.ClientName}}
+                {{end}}
+                </strong>
+                {{t "Authorize Sharing presentation"}}<br />
+                {{if .Domain}}
+                <strong>{{.Domain}}</strong> :<br />
+                {{end}}
+              </p>
+              <ul class="perm-list">
+                {{range $index, $perm := .Permissions}}
+                <li class="{{ $perm.Type }}">
+                  {{- t $perm.TranslationKey -}}
+                  {{- if $perm.Verbs.ReadOnly}}{{t "Permissions Read only"}}{{end -}}
+                </li>
+                {{end}}
+              </ul>
+              <p>
+                {{if .Client.PolicyURI}}
+                {{t "Authorize Policy sentence"}}
+                <a href="{{.Client.PolicyURI}}">{{t "Authorize Policy link"}}</a>.
+                {{end}}
+              </p>
+              <p>
+                {{t "Authorize Give permission start"}}<strong>{{t "Authorize Give Sharing permission keyword"}}</strong>{{t "Authorize Give Sharing permission end" .Client.ClientName}}
+              </p>
+            </div>
+            <footer>
+              <div class="controls">
+                <button type="cancel" class="btn btn-secondary">{{t "Authorize Cancel Sharing"}}</button>
+                <button type="submit" class="btn btn-primary">{{t "Authorize Submit Sharing"}}</button>
+              </div>
+            </footer>
+          </form>
+        </div>
+      </section>
+    </main>
+    <script src="/assets/scripts/cancel-button.js"></script>
+  </body>
+</html>

@@ -63,11 +63,17 @@ msgstr "Authorize %s to access your profile"
 msgid "Authorize App Title"
 msgstr "The application %s will not transmit any personal data to any third parties."
 
+msgid "Authorize Sharing Title"
+msgstr "Accept sharing from %s"
+
 msgid "Authorize More"
 msgstr "More…"
 
 msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
+
+msgid "Authorize Sharing presentation"
+msgstr "would like permission to share with your Cozy"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data "
@@ -81,11 +87,17 @@ msgstr "By electing "
 msgid "Authorize Give permission keyword"
 msgstr "Authorize"
 
+msgid "Authorize Give Sharing permission keyword"
+msgstr "Accept"
+
 msgid "Authorize Give permission end"
 msgstr ", you accept that the application obtains access to your data, and in compliance with the terms of service and the privacy policy."
 
 msgid "Authorize Give App permission end"
 msgstr ", you accept that the application %s obtains access to your data, only locally and within your Cozy, and in compliance with the terms of service and the privacy policy."
+
+msgid "Authorize Give Sharing permission end"
+msgstr ", you authorize that the Cozy of %s obtains access to share data, in compliance with the terms of service and the privacy policy."
 
 msgid "Authorize Give App permission desc"
 msgstr "In order to improve the value of your Cozy (%s), the application %s requires access to the following data:"
@@ -93,8 +105,14 @@ msgstr "In order to improve the value of your Cozy (%s), the application %s requ
 msgid "Authorize Submit"
 msgstr "Authorize access"
 
+msgid "Authorize Submit Sharing"
+msgstr "Accept sharing"
+
 msgid "Authorize Cancel"
 msgstr "Deny access"
+
+msgid "Authorize Cancel Sharing"
+msgstr "Deny sharing"
 
 msgid "Error Title"
 msgstr "Sorry"
