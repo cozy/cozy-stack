@@ -135,7 +135,7 @@ X-Cozy-Registry-Key: AbCdE
     "name": "drive",
     "editor": "cozy",
     "description": {
-        "en": The drive application"
+        "en": "The drive application"
     },
     "repository": "https://github.com/cozy/cozy-drive",
     "tags": ["foo", "bar", "baz"]
