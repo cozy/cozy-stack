@@ -390,15 +390,15 @@ registries:
 #
 
 registries:
-  defaults:
-    - https://myregistry.home/
-    - https://main.registry.cozy.io/
-
   context1:
     - https://context1.registry.cozy.io/
 
   context2:
     - https://context2.registry.cozy.io/
+
+  defaults:
+    - https://myregistry.home/
+    - https://main.registry.cozy.io/
 ```
 
 # Authentication
