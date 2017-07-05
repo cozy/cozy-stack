@@ -20,8 +20,15 @@ pidstack=$(jobs -pr)
 [ -n "$pidstack" ] && kill -9 "$pidstack"
 
 if git grep -l -e 'github.com/labstack/gommon/log' -e 'github.com/dgrijalva/jwt-go' -- '*.go'; then
+  echo "Forbidden packages"
   exit 1
 fi
 
-[ $testresult -gt 0 ] && exit $testresult
-[ $assetsresult -gt 0 ] && exit $assetsresult
+if [ $testresult -gt 0 ]; then
+  echo "Bad tests"
+  exit $testresult
+fi
+if [ $assetsresult -gt 0 ]; then
+  echo "Bad assets"
+  exit $assetsresult
+fi
