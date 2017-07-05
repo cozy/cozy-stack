@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/echo"
@@ -568,9 +569,10 @@ func createSharingDocument(i *instance.Instance, doctype string, owner bool, ver
 	sDoc := &couchdb.JSONDoc{
 		Type: "io.cozy.sharings",
 		M: map[string]interface{}{
-			"type":  consts.OneShotSharing,
-			"owner": owner,
-			"desc":  "randomdesc",
+			"type":       consts.OneShotSharing,
+			"owner":      owner,
+			"sharing_id": utils.RandomString(32),
+			"desc":       "randomdesc",
 			"permissions": []map[string]interface{}{
 				{
 					"type":     doctype,
