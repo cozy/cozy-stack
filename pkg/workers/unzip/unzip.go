@@ -66,15 +66,20 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 	if err != nil {
 		return err
 	}
+
+	dirs := make(map[string]struct{})
 	for _, f := range r.File {
 		name := path.Base(f.Name)
 		dirname := path.Dir(f.Name)
 		dir := dstDoc
 		if dirname != "." {
 			dirname = path.Join(dstDoc.Fullpath, dirname)
-			dir, err = vfs.MkdirAll(fs, dirname, nil)
-			if err != nil {
-				return err
+			if _, ok := dirs[dirname]; !ok {
+				dir, err = vfs.MkdirAll(fs, dirname, nil)
+				if err != nil {
+					return err
+				}
+				dirs[dirname] = struct{}{}
 			}
 		}
 
