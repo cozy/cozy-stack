@@ -85,91 +85,24 @@ route, this default one:
 }
 ```
 
-### GET /apps/manifests
+## Sources
 
-Give access to the manifest for an application. It can have several usages,
-but the most important one is to display informations about the app to the
-user so that she can install the app and give the permissions in full
-knowledge of the cause.
+Here is the available sources, defined by the scheme of the source URl:
 
-#### Query-String
+  - `registry://`: to install an application from the instance registries
+  - `git://` or `git+ssh://`: to install an application from a git repository
+  - `http://` or `https://`: to install an application from an http server (via a tarball)
 
-Parameter | Description
-----------|-----------------------------------------
-Source    | URL from where the app can be downloaded
+The `registry` scheme expect the following elements:
 
-#### Request
+  - scheme: `registry`
+  - host: the name of the application
+  - path: `/:channel` the channel of the application (see the [registry](docs/registry.md) doc)
 
-```http
-GET /apps/manifests?Source=git://github.com/cozy/cozy-emails.git HTTP/1.1
-Accept: application/vnd.api+json
-```
-
-#### Response
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json
-```
-
-```json
-{
-  "data": {
-    "type": "io.cozy.apps",
-    "id": "git://github.com/cozy/cozy-emails",
-    "attributes": {
-      "name": "cozy-emails",
-      "slug": "emails",
-      "icon": "icon.svg",
-      "description": "A webmail for Cozy Cloud",
-      "source": "git://github.com/cozy/cozy-emails",
-      "developer": {
-        "name": "Cozy",
-        "url": "https://cozy.io/"
-      },
-      "default_locale": "en",
-      "locales": {
-        "fr": {
-          "description": "Un client web pour les courriels",
-          "permissions": {
-            "mails": {
-              "description": "Requis pour lire et écrire des emails"
-            }
-          }
-        }
-      },
-      "version": "1.2.3",
-      "license": "AGPL-3.0",
-      "intents": [
-        {
-          "action": "CREATE",
-          "type": "io.cozy.emails",
-          "href": "/compose"
-        }
-      ],
-      "permissions": {
-        "mails": {
-          "description": "Required for reading and writing emails",
-          "type": "io.cozy.emails"
-        }
-      }
-    }
-  }
-}
-```
-
-#### Notes
-
-- The server should keep the manifest in cache, as it will be probably used in
-  the near future to install the application.
-- To start, we will implement a git provider to fetch manifest and install
-  apps. Later, we will add other providers, like mercurial and npm.
-- It's possible to use a branch for git, by putting it the fragment of the
-  URL, like `git://github.com/cozy/cozy-emails#develop`.
-- To download the manifest with git, we can use [git
-  archive](https://www.kernel.org/pub/software/scm/git/docs/git-archive.html),
-  except on github (where it's blocked). For github, we can use
-  `https://raw.githubusercontent.com/:user/:project/:branch/manifest.webapp`
+Examples:
+  - `registry://drive/stable`
+  - `registry://drive/beta`
+  - `registry://drive/dev`
 
 ### POST /apps/:slug
 
