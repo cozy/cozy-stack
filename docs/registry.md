@@ -4,7 +4,6 @@ The registry is a place where applications metadata are stored and versioned. It
 
 We define an application registry as an API. This should allow us to defer the real implementation of the registry storage and allow different store implementations.
 
-
 ## Objects
 
 Two type of objects are managed in the registry: applications and versions.
@@ -35,6 +34,10 @@ An application version object contains the following fields:
 - `sha256`: the sha256 checksum of the application content
 - `permissions`: the permissions map contained in the manifest
 
+The version string should be of the exact following form:
+
+  - `vX.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
+
 ## APIs: Adding to registry
 
 These APIs can be used to add elements to the registry.
@@ -52,7 +55,7 @@ This route adds an application to the registry. The content of the request shoul
 #### Request
 
 ```http
-POST /drive
+POST /stable/drive
 X-Cozy-Registry-Key: AbCdE
 
 {
@@ -65,9 +68,11 @@ X-Cozy-Registry-Key: AbCdE
 }
 ```
 
-### POST /:app/:version
+### POST /:channel/:app/:version
 
-This route adds a version of an application to the registry.
+This route adds a version of an application to the registry to the specified channel (stable or dev).
+
+When adding a version to the dev channel, it is possible and recommended to specify a commit id. The version of the dev will be expanded with this id, like so: `vX.X.X-commit`.
 
 The content of the manifest file extracted from the application data is used to fill the fields of the version. Before adding the application version to the registry, the registry should check the following:
 
@@ -84,14 +89,28 @@ The content of the manifest file extracted from the application data is used to 
 
 #### Request
 
+Request to add a stable release:
+
 ```http
-POST /drive/v3.1.2
+POST /stable/drive/v3.1.2
 X-Cozy-Registry-Key: AbCdE
 
 {
     "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
+}
+```
+
+Request to add a development release:
+
+```http
+POST /stable/drive/v3.1.2
+X-Cozy-Registry-Key: AbCdE
+
+{
+    "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
+    "commit": "7ed536cc0a6c2a7daa7e961bdfd5ef5fe763a442",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-    "channel": "stable",
 }
 ```
 
@@ -108,6 +127,8 @@ Location: http://.../v3.1.2
     "version": "v3.1.2",
     "url": "http://.../v3.1.2",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "channel": "stable",
+    "size": "1000",
     "description": "Description of the 3.1.2 version of drive",
     "permissions": {
         "apps": {
@@ -161,9 +182,12 @@ Content-Type: application/json
 [
     {
         "name": "drive",
+        "type": "webapp",
         "editor": "cozy",
+        "category": "files",
         "description": "The drive application",
         "versions": ["v3.1.1","v3.1.2"],
+        "versionsDev": ["v3.1.1-7ed536cc0a6c2a7daa7e961bdfd5ef5fe763a442"],
         "repository": "https://github.com/cozy/cozy-drive",
         "license": "BSD"
     },
@@ -193,22 +217,24 @@ Content-Type: application/json
 ```json
 {
     "name": "drive",
+    "type": "webapp",
     "editor": "cozy",
     "description": "The drive application",
     "versions": ["v3.1.1","v3.1.2"],
+    "versionsDev": ["v3.1.1","v3.1.1-7ed536cc0a6c2a7daa7e961bdfd5ef5fe763a442", "v3.1.2"],
     "repository": "https://github.com/cozy/cozy-drive",
     "license": "BSD"
 }
 ```
 
-### GET /:app/:version
+### GET /:channel/:app/:version
 
-Get an application version.
+Get an application version on the specified channel (stable or dev).
 
 #### Request
 
 ```http
-GET /drive/v3.1.1
+GET /stable/drive/v3.1.1
 ```
 
 #### Response
@@ -220,15 +246,44 @@ Content-Type: application/json
 
 ```json
 {
-    "name": "drive",
-    "editor": "cozy",
-    "description": "The drive application",
-    "versions": ["v3.1.1","v3.1.2"],
-    "repository": "https://github.com/cozy/cozy-drive",
-    "license": "BSD"
+    "version": "v3.1.1",
+    "url": "http://.../v3.1.1",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "channel": "stable",
+    "size": "1000",
+    "description": "Description of the 3.1.1 version of drive",
+    "permissions": {}
 }
 ```
 
+### GET /:channel/:app/:latest
+
+Get the latest version available on the specified channel.
+
+#### Request
+
+```http
+GET /dev/drive/latest
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+    "version": "v3.1.1",
+    "url": "http://.../v3.1.1",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "channel": "stable",
+    "size": "1000",
+    "description": "Description of the 3.1.1 version of drive",
+    "permissions": {}
+}
+```
 
 ## Attaching a cozy-stack to a registry or a list of registries
 
@@ -257,14 +312,14 @@ registries:
 
 registries:
   defaults:
-    - https://myregistry.home/
-    - https://main.registry.cozy.io/
+    - https://myregistry.home/stable/
+    - https://main.registry.cozy.io/stable/
 
   context1:
-    - https://context1.registry.cozy.io/
+    - https://context1.registry.cozy.io/dev/
 
   context2:
-    - https://context2.registry.cozy.io/
+    - https://context2.registry.cozy.io/dev/
 ```
 
 # Authentication
