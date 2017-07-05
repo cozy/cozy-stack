@@ -435,25 +435,24 @@ func GetPermissionsByType(db couchdb.Database, doctype string, cursor couchdb.Cu
 }
 
 // GetSharedWithMePermissionsByDoctype retrieves the permissions in all
-// the sharings that apply to the given doctype, where the user is a recipient.
+// the sharings that apply to the given doctype, where the user is a recipient
+// (i.e. owner is false).
 //
 // The cursor will be modified in place.
 func GetSharedWithMePermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
-	return getSharedWithPermissionsByDoctype(db, doctype, cursor,
-		consts.SharedWithMePermissionsView)
+	return getSharedWithPermissionsByDoctype(db, doctype, cursor, false)
 }
 
 // GetSharedWithOthersPermissionsByDoctype retrieves the permissions in all the
-// sharings that apply to the given doctype, where the user is the sharer.
+// sharings that apply to the given doctype, where the user is the sharer (i.e.
+// owner is true).
 //
 // The cursor will be modified in place.
 func GetSharedWithOthersPermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
-	return getSharedWithPermissionsByDoctype(db, doctype, cursor,
-		consts.SharedWithOthersPermissionsView)
+	return getSharedWithPermissionsByDoctype(db, doctype, cursor, true)
 }
 
-func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor, view *couchdb.View) ([]*Permission, error) {
-
+func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor, owner bool) ([]*Permission, error) {
 	var req = &couchdb.ViewRequest{
 		StartKey:    []string{doctype},
 		EndKey:      []string{doctype, couchdb.MaxString},
@@ -463,18 +462,24 @@ func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, curs
 	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, view, req, &res)
-
-	cursor.UpdateFrom(&res)
-
+	err := couchdb.ExecView(db, consts.SharedWithPermissionsView, req, &res)
 	if err != nil {
 		return nil, err
 	}
 
+	cursor.UpdateFrom(&res)
+
 	result := make([]*Permission, len(res.Rows))
+
 	// The rows have the following format:
-	// "id": "sharingID", "key": [doctype], "value": [rule]
+	// "id": "_id", "key": [type, sharing_id, owner], "value": [rule]
+	// see consts/views.go and the view "SharedWithPermissionView"
 	for i, row := range res.Rows {
+		keys := row.Key.([]interface{})
+		if keys[2].(bool) != owner {
+			continue
+		}
+
 		var rule Rule
 		rule.Verbs = VerbSet{} // needed for Merge
 
@@ -530,7 +535,7 @@ func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, curs
 
 		result[i] = &Permission{
 			Type:        consts.Sharings,
-			SourceID:    row.ID,
+			SourceID:    keys[1].(string),
 			Permissions: Set{rule},
 		}
 	}
