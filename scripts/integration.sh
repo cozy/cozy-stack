@@ -14,11 +14,21 @@ testresult=$?
 cd ../..
 
 ./scripts/build.sh assets
+assetsresult=$?
 
 pidstack=$(jobs -pr)
-[ -n "$pidstack" ] && kill -9 $pidstack
+[ -n "$pidstack" ] && kill -9 "$pidstack"
 
-if git grep -l -e 'github.com/labstack/gommon/log' -e 'github.com/dgrijalva/jwt-go' -- '*.go'
-then exit 1
-else exit $testresult
+if git grep -l -e 'github.com/labstack/gommon/log' -e 'github.com/dgrijalva/jwt-go' -- '*.go'; then
+  echo "Forbidden packages"
+  exit 1
+fi
+
+if [ $testresult -gt 0 ]; then
+  echo "Bad tests"
+  exit $testresult
+fi
+if [ $assetsresult -gt 0 ]; then
+  echo "Bad assets"
+  exit $assetsresult
 fi
