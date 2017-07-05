@@ -14,11 +14,14 @@ testresult=$?
 cd ../..
 
 ./scripts/build.sh assets
+assetsresult=$?
 
 pidstack=$(jobs -pr)
-[ -n "$pidstack" ] && kill -9 $pidstack
+[ -n "$pidstack" ] && kill -9 "$pidstack"
 
-if git grep -l -e 'github.com/labstack/gommon/log' -e 'github.com/dgrijalva/jwt-go' -- '*.go'
-then exit 1
-else exit $testresult
+if git grep -l -e 'github.com/labstack/gommon/log' -e 'github.com/dgrijalva/jwt-go' -- '*.go'; then
+  exit 1
 fi
+
+[ $testresult -gt 0 ] && exit $testresult
+[ $assetsresult -gt 0 ] && exit $assetsresult
