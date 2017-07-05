@@ -28,11 +28,13 @@ An application version object contains the following fields:
 - `name`: the application name
 - `description`: description from the package.json
 - `version`: the version string
+- `created_at`: date of the release creation
 - `channel`: the channel of the version (stable or dev)
 - `url`: url of the tarball containing the application at specified version
 - `size`: the size of the application package (uncompressed) in bytes
 - `sha256`: the sha256 checksum of the application content
 - `permissions`: the permissions map contained in the manifest
+- `locales`: the availables locales and the associated translated description
 
 The version string should be of the exact following form:
 
@@ -125,6 +127,7 @@ Location: http://.../v3.1.2
     "version": "v3.1.2",
     "url": "http://.../v3.1.2",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "created_at": "2017-07-05T07:54:40.982Z",
     "channel": "stable",
     "size": "1000",
     "description": "Description of the 3.1.2 version of drive",
@@ -138,6 +141,11 @@ Location: http://.../v3.1.2
           "description": "Required by the cozy-bar display Claudy and to know which applications are coming soon",
           "type": "io.cozy.settings",
           "verbs": ["GET"]
+        }
+    },
+    "locales": {
+        "fr": {
+            "description": "Description de la version 3.1.2 de drive"
         }
     }
 }
@@ -249,8 +257,10 @@ Content-Type: application/json
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "channel": "stable",
     "size": "1000",
+    "created_at": "2017-07-05T07:54:40.982Z",
     "description": "Description of the 3.1.1 version of drive",
-    "permissions": {}
+    "permissions": { },
+    "locales": { }
 }
 ```
 
@@ -278,8 +288,10 @@ Content-Type: application/json
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "channel": "stable",
     "size": "1000",
+    "created_at": "2017-07-05T07:54:40.982Z",
     "description": "Description of the 3.1.1 version of drive",
-    "permissions": {}
+    "permissions": { },
+    "locales": { }
 }
 ```
 
@@ -322,6 +334,8 @@ registries:
 
 # Authentication
 
-For now the authentication scheme to publish an application is kept minimal and simple. Each editor is given an API key that should be present in the header of the http request when creating a application or publishing a new version.
+The definition of the authentication API is not finished yet. It will be released when the first implementation will come out.
+
+For now the authentication scheme to publish an application will be kept minimal and simple. Each editor will be given an API key that should be present in the header of the http request when creating a application or publishing a new version.
 
 The API key should be present in the `X-Cozy-Registry-Key` header.
