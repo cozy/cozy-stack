@@ -26,10 +26,6 @@ name    ./css/cozy-bar.min.css
 url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.1.1/dist/cozy-bar.min.css
 sha256  ab44b14bede543333cedea6ae9316104a61857244e1094ce629e3df6f779cf71
 
-name    ./fonts/fontawesome-webfont.woff2
-url     https://raw.githubusercontent.com/FortAwesome/Font-Awesome/master/fonts/fontawesome-webfont.woff2
-sha256  2adefcbc041e7d18fcf2d417879dc5a09997aa64d675b7a3c4b6ce33da13f3fe
-
 name    ./js/piwik.js
 url     https://piwik.cozycloud.cc/piwik.js
 sha256  af256878a3ed52614189b6e2031e5c9cfd5aa57491a48b13905836fb8217069e
