@@ -379,21 +379,31 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 // existence
 func HeadDirOrFile(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+
 	switch c.QueryParam("Type") {
 	case consts.FileType:
-		_, err := instance.VFS().FileByID(c.Param("file-id"))
+		file, err := instance.VFS().FileByID(c.Param("file-id"))
 		if err != nil {
 			return wrapVfsError(err)
 		}
+		err = checkPerm(c, permissions.GET, nil, file)
+		if err != nil {
+			return err
+		}
 	case consts.DirType:
-		_, err := instance.VFS().DirByID(c.Param("file-id"))
+		dir, err := instance.VFS().DirByID(c.Param("file-id"))
 		if err != nil {
 			return wrapVfsError(err)
+		}
+		err = checkPerm(c, permissions.GET, dir, nil)
+		if err != nil {
+			return err
 		}
 	default:
 		err := ErrDocTypeInvalid
 		return wrapVfsError(err)
 	}
+
 	return nil
 }
 
