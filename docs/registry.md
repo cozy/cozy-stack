@@ -36,7 +36,8 @@ An application version object contains the following fields:
 
 The version string should be of the exact following form:
 
-  - `vX.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
+  - stable channel: `vX.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
+  - dev channel: `vX.Y.Z-checksum` where `X`, `Y` and `Z` are positive or null integers and `checksum` is a unique identifier of the dev release (typacally a shasum of the git commit)
 
 ## APIs: Adding to registry
 
@@ -72,8 +73,6 @@ X-Cozy-Registry-Key: AbCdE
 
 This route adds a version of an application to the registry to the specified channel (stable or dev).
 
-When adding a version to the dev channel, it is possible and recommended to specify a commit id. The version of the dev will be expanded with this id, like so: `vX.X.X-commit`.
-
 The content of the manifest file extracted from the application data is used to fill the fields of the version. Before adding the application version to the registry, the registry should check the following:
 
     - the `manifest` file contained in the tarball should be checked and have its fields checked against the application properties
@@ -104,12 +103,11 @@ X-Cozy-Registry-Key: AbCdE
 Request to add a development release:
 
 ```http
-POST /stable/drive/v3.1.2
+POST /dev/drive/v3.1.2-7a1618dff78ba445650f266bbe334cbc9176f03a
 X-Cozy-Registry-Key: AbCdE
 
 {
-    "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
-    "commit": "7ed536cc0a6c2a7daa7e961bdfd5ef5fe763a442",
+    "url": "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
 }
 ```
