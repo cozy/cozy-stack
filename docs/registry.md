@@ -4,48 +4,118 @@ The registry is a place where applications metadata are stored and versioned. It
 
 We define an application registry as an API. This should allow us to defer the real implementation of the registry storage and allow different store implementations.
 
+## Channels
+
+We differentiate three channels of release for each application:
+
+    - stable: for stable releases
+    - beta: for application that can be tested in advance
+    - dev: for the latest releases directly from the trunk of the repository
+
+For each of these channels, the version string has a different format which differentiate the version channel:
+
+  - stable: `X.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
+  - beta: `X.Y.Z-beta.M` where `X`, `Y`, `Z` and `M` are positive or null integers
+  - dev: `X.Y.Z-dev.checksum` where `X`, `Y` and `Z` are positive or null integers and `checksum` is a unique identifier of the dev release (typacally a shasum of the git commit)
+
 ## Objects
 
-Two type of objects are managed in the registry: applications and versions.
+Two types of objects are managed in the registry: applications and versions.
 
 ### Application
 
-An application object contains the following fields:
+An application described a specific package. It is linked to multiple versions (releases) of the application.
+
+A application object is **mutable**.
+
+A application object contains the following fields:
 
 - `name`: the application name
 - `type`: the application type ("webapp" or "konnector")
 - `editor`: the application editor name
+- `description`: object containing the description description of the application in multiple languages
 - `category`: the application category
 - `repository`: object with type and url of package repository
-- `license`: the application license
-- `versions`: a list of all versions from the stable channel
-- `versionsDev`: a list of all versions from the dev channel
+- `tags`: list of tags associated with the application
+- `versions`: an object containing all the channels versions
+
+Example:
+
+```json
+{
+    "name": "drive",
+    "editor": "cozy",
+    "description": {
+        "en": "The drive application",
+        "fr": "L'application drive gestionnaire de fichier"
+    },
+    "repository": "https://github.com/cozy/cozy-drive",
+    "tags": ["foo", "bar", "baz"],
+    "versions": {
+        "stable": ["3.1.1"],
+        "beta": ["3.1.1-beta.1"],
+        "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+    }
+}
+```
 
 ### Version
+
+A version object describe a specific release of an application.
+
+A version object is **immutable**.
 
 An application version object contains the following fields:
 
 - `name`: the application name
-- `description`: description from the package.json
+- `description`: description of the version
 - `version`: the version string
 - `created_at`: date of the release creation
-- `channel`: the channel of the version (stable or dev)
 - `url`: url of the tarball containing the application at specified version
-- `size`: the size of the application package (uncompressed) in bytes
+- `size`: the size of the application package (uncompressed) in bytes as string
 - `sha256`: the sha256 checksum of the application content
 - `permissions`: the permissions map contained in the manifest
 - `locales`: the availables locales and the associated translated description
+- `license`: the application's version license
 
-The version string should be of the exact following form:
+The version string should follow the channels rule.
 
-  - stable channel: `vX.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
-  - dev channel: `vX.Y.Z-checksum` where `X`, `Y` and `Z` are positive or null integers and `checksum` is a unique identifier of the dev release (typacally a shasum of the git commit)
+Example:
+
+```json
+{
+    "version": "v3.1.2",
+    "url": "http://.../v3.1.2",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "size": "1000",
+    "description": "Description of the 3.1.2 version of drive",
+    "license": "BSD",
+    "permissions": {
+        "apps": {
+          "description": "Required by the cozy-bar to display the icons of the apps",
+          "type": "io.cozy.apps",
+          "verbs": ["GET", "POST", "PUT"]
+        },
+        "settings": {
+          "description": "Required by the cozy-bar display Claudy and to know which applications are coming soon",
+          "type": "io.cozy.settings",
+          "verbs": ["GET"]
+        }
+    },
+    "locales": {
+        "fr": {
+            "description": "Description de la version 3.1.2 de drive"
+        }
+    }
+}
+```
 
 ## APIs: Adding to registry
 
 These APIs can be used to add elements to the registry.
 
-### POST /:app
+### POST /apps/:app
 
 This route adds an application to the registry. The content of the request should be a json object of an application.
 
@@ -58,7 +128,7 @@ This route adds an application to the registry. The content of the request shoul
 #### Request
 
 ```http
-POST /stable/drive
+POST /apps/drive
 X-Cozy-Registry-Key: AbCdE
 
 {
@@ -66,14 +136,13 @@ X-Cozy-Registry-Key: AbCdE
     "editor": "cozy",
     "description": "The drive application",
     "repository": "https://github.com/cozy/cozy-drive",
-    "tags": ["foo", "bar", "baz"],
-    "license": "BSD"
+    "tags": ["foo", "bar", "baz"]
 }
 ```
 
-### POST /:channel/:app/:version
+### POST /apps/:channel/:app/:version
 
-This route adds a version of an application to the registry to the specified channel (stable or dev).
+This route adds a version of an application to the registry to the specified channel (stable, beta or dev).
 
 The content of the manifest file extracted from the application data is used to fill the fields of the version. Before adding the application version to the registry, the registry should check the following:
 
@@ -93,7 +162,7 @@ The content of the manifest file extracted from the application data is used to 
 Request to add a stable release:
 
 ```http
-POST /stable/drive/v3.1.2
+POST /apps/drive/v3.1.2
 X-Cozy-Registry-Key: AbCdE
 
 {
@@ -105,7 +174,7 @@ X-Cozy-Registry-Key: AbCdE
 Request to add a development release:
 
 ```http
-POST /dev/drive/v3.1.2-7a1618dff78ba445650f266bbe334cbc9176f03a
+POST /apps/drive/v3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a
 X-Cozy-Registry-Key: AbCdE
 
 {
@@ -128,7 +197,6 @@ Location: http://.../v3.1.2
     "url": "http://.../v3.1.2",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "created_at": "2017-07-05T07:54:40.982Z",
-    "channel": "stable",
     "size": "1000",
     "description": "Description of the 3.1.2 version of drive",
     "permissions": {
@@ -156,7 +224,7 @@ Location: http://.../v3.1.2
 
 These routes define the querying part of a registry to access to the available applications and versions. These APIs are also implemented directly by the cozy-stack.
 
-### GET /
+### GET /apps
 
 Get the list of all applications.
 
@@ -174,7 +242,7 @@ order     | order to apply to the list
 #### Request
 
 ```http
-GET /?filter[category]=cozy&page=0&limit=30
+GET /apps?filter[category]=cozy&page=0&limit=30
 ```
 
 #### Response
@@ -203,14 +271,14 @@ Content-Type: application/json
 ]
 ```
 
-### GET /:app
+### GET /apps/:app
 
 Get an application object by name.
 
 #### Request
 
 ```http
-GET /drive
+GET /apps/drive
 ```
 
 #### Response
@@ -223,24 +291,26 @@ Content-Type: application/json
 ```json
 {
     "name": "drive",
-    "type": "webapp",
     "editor": "cozy",
     "description": "The drive application",
-    "versions": ["v3.1.1","v3.1.2"],
-    "versionsDev": ["v3.1.1","v3.1.1-7ed536cc0a6c2a7daa7e961bdfd5ef5fe763a442", "v3.1.2"],
     "repository": "https://github.com/cozy/cozy-drive",
-    "license": "BSD"
+    "tags": ["foo", "bar", "baz"],
+    "versions": {
+        "stable": ["3.1.1"],
+        "beta": ["3.1.1-beta.1"],
+        "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+    }
 }
 ```
 
-### GET /:channel/:app/:version
+### GET /apps/:app/:version
 
-Get an application version on the specified channel (stable or dev).
+Get an application version.
 
 #### Request
 
 ```http
-GET /stable/drive/v3.1.1
+GET /apps/drive/v3.1.1
 ```
 
 #### Response
@@ -255,23 +325,23 @@ Content-Type: application/json
     "version": "v3.1.1",
     "url": "http://.../v3.1.1",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-    "channel": "stable",
     "size": "1000",
     "created_at": "2017-07-05T07:54:40.982Z",
     "description": "Description of the 3.1.1 version of drive",
+    "license": "BSD",
     "permissions": { },
     "locales": { }
 }
 ```
 
-### GET /:channel/:app/:latest
+### GET /apps/:app/:channel/latest
 
 Get the latest version available on the specified channel.
 
 #### Request
 
 ```http
-GET /dev/drive/latest
+GET /apps/drive/dev/latest
 ```
 
 #### Response
@@ -286,7 +356,6 @@ Content-Type: application/json
     "version": "v3.1.1",
     "url": "http://.../v3.1.1",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-    "channel": "stable",
     "size": "1000",
     "created_at": "2017-07-05T07:54:40.982Z",
     "description": "Description of the 3.1.1 version of drive",
@@ -322,14 +391,14 @@ registries:
 
 registries:
   defaults:
-    - https://myregistry.home/stable/
-    - https://main.registry.cozy.io/stable/
+    - https://myregistry.home/
+    - https://main.registry.cozy.io/
 
   context1:
-    - https://context1.registry.cozy.io/dev/
+    - https://context1.registry.cozy.io/
 
   context2:
-    - https://context2.registry.cozy.io/dev/
+    - https://context2.registry.cozy.io/
 ```
 
 # Authentication
