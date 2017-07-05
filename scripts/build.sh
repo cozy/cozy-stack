@@ -278,7 +278,7 @@ prepare_assets() {
 }
 
 download_asset() {
-	printf "downloading %s:" "${1}"
+	printf "downloading %s: " "${1}"
 	mkdir -p "${assets_dst}/${1%/*}"
 	set +e
 	curl -s --fail "${2}" > "${assets_dst}/${1}"
@@ -302,7 +302,7 @@ download_asset() {
 	# reuse the same mod time properties as the externals files so have
 	# reproductible output
 	touch -m -t "${assets_mod_time}" "${assets_dst}/${1}"
-	printf " %s\n" "${asset_size}"
+	printf "%s\n" "${asset_size}"
 }
 
 do_clean() {
