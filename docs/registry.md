@@ -117,7 +117,7 @@ These APIs can be used to add elements to the registry.
 
 ### POST /apps/:app
 
-This route adds an application to the registry. The content of the request should be a json object of an application.
+This route adds or modify an application to the registry. The content of the request should be a json object of an application.
 
 #### Status codes
 
@@ -134,13 +134,15 @@ X-Cozy-Registry-Key: AbCdE
 {
     "name": "drive",
     "editor": "cozy",
-    "description": "The drive application",
+    "description": {
+        "en": The drive application"
+    },
     "repository": "https://github.com/cozy/cozy-drive",
     "tags": ["foo", "bar", "baz"]
 }
 ```
 
-### POST /apps/:channel/:app/:version
+### POST /apps/:app/:version
 
 This route adds a version of an application to the registry to the specified channel (stable, beta or dev).
 
