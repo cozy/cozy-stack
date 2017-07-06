@@ -141,7 +141,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 			}
 		}
 		var f afero.File
-		f, err = workFS.OpenFile(hdr.Name, os.O_CREATE|os.O_WRONLY, os.FileMode(hdr.Mode))
+		f, err = workFS.OpenFile(hdr.Name, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			return err
 		}
