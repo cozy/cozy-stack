@@ -145,6 +145,26 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 	return sharing
 }
 
+func generateAppToken(t *testing.T, ruleReq permissions.Rule) (string, string) {
+	slug := utils.RandomString(15)
+	permReq := permissions.Permission{
+		Permissions: permissions.Set{ruleReq},
+		Type:        permissions.TypeWebapp,
+		SourceID:    consts.Apps + "/" + slug,
+	}
+
+	err := couchdb.CreateDoc(testInstance, &permReq)
+	assert.NoError(t, err)
+	manifest := &apps.WebappManifest{
+		DocSlug:        slug,
+		DocPermissions: permissions.Set{ruleReq},
+	}
+	err = couchdb.CreateNamedDocWithDB(testInstance, manifest)
+	assert.NoError(t, err)
+	appToken := testInstance.BuildAppToken(manifest)
+	return appToken, slug
+}
+
 func generateAccessCode(t *testing.T, clientID, scope string) (*oauth.AccessCode, error) {
 	access, err := oauth.CreateAccessCode(recipientIn, clientID, scope)
 	assert.NoError(t, err)
@@ -983,11 +1003,66 @@ func TestSharingRequestSuccess(t *testing.T) {
 }
 
 func TestCreateSharingWithBadType(t *testing.T) {
-	res, err := postJSON(t, "/sharings/", echo.Map{
-		"sharing_type": "shary pie",
-	})
+
+	ruleSharing := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	setSharing := permissions.Set{ruleSharing}
+
+	ruleReq := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	appToken, _ := generateAppToken(t, ruleReq)
+
+	u := fmt.Sprintf("%s/sharings/", ts.URL)
+	v := echo.Map{
+		"sharing_type": "badsharingtype",
+		"permissions":  setSharing,
+	}
+	body, _ := json.Marshal(v)
+
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(body))
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 422, res.StatusCode)
+}
+
+func TestCreateSharingBadPermission(t *testing.T) {
+	ruleSharing := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	setSharing := permissions.Set{ruleSharing}
+
+	ruleReq := permissions.Rule{
+		Type:   "io.cozy.badone",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	appToken, _ := generateAppToken(t, ruleReq)
+
+	u := fmt.Sprintf("%s/sharings/", ts.URL)
+	v := echo.Map{
+		"sharing_type": consts.MasterMasterSharing,
+		"permissions":  setSharing,
+	}
+	body, _ := json.Marshal(v)
+
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(body))
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 }
 
 func TestSendMailsWithWrongSharingID(t *testing.T) {
@@ -1001,8 +1076,8 @@ func TestSendMailsWithWrongSharingID(t *testing.T) {
 }
 
 func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
-	type recipient map[string]map[string]string
 
+	type recipient map[string]map[string]string
 	rec := recipient{
 		"recipient": {
 			"id": "hodor",
@@ -1010,20 +1085,66 @@ func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 	}
 	recipients := []recipient{rec}
 
-	res, err := postJSON(t, "/sharings/", echo.Map{
-		"sharing_type": consts.OneShotSharing,
+	ruleSharing := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	setSharing := permissions.Set{ruleSharing}
+
+	ruleReq := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	appToken, _ := generateAppToken(t, ruleReq)
+
+	u := fmt.Sprintf("%s/sharings/", ts.URL)
+	v := echo.Map{
+		"sharing_type": consts.MasterMasterSharing,
+		"permissions":  setSharing,
 		"recipients":   recipients,
-	})
+	}
+	body, _ := json.Marshal(v)
+
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(body))
 	assert.NoError(t, err)
-	assert.Equal(t, 404, res.StatusCode)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func TestCreateSharingSuccess(t *testing.T) {
-	res, err := postJSON(t, "/sharings/", echo.Map{
-		"sharing_type": consts.OneShotSharing,
-	})
+	ruleSharing := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	setSharing := permissions.Set{ruleSharing}
+
+	ruleReq := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	appToken, _ := generateAppToken(t, ruleReq)
+
+	u := fmt.Sprintf("%s/sharings/", ts.URL)
+	v := echo.Map{
+		"sharing_type": consts.MasterMasterSharing,
+		"permissions":  setSharing,
+	}
+	body, _ := json.Marshal(v)
+
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(body))
 	assert.NoError(t, err)
-	assert.Equal(t, 201, res.StatusCode)
+	req.Header.Add(echo.HeaderContentType, "application/json")
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
 func TestReceiveClientIDBadSharing(t *testing.T) {
@@ -1100,53 +1221,30 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
-	// Test: correct sharing id but try to authenticate with a wrong app slug.
+	// Test: correct sharing id but incorrect permissions.
+
 	rule := permissions.Rule{
 		Type:   "io.cozy.foos",
 		Values: []string{"bar", "baz"},
 		Verbs:  permissions.ALL,
 	}
-	permission := permissions.Permission{
-		Permissions: permissions.Set{rule},
-		Type:        permissions.TypeWebapp,
-		SourceID:    consts.Apps + "/" + "nottobetrusted",
+	badRule := permissions.Rule{
+		Type: "io.cozy.badone",
 	}
-	err = couchdb.CreateDoc(testInstance, &permission)
-	assert.NoError(t, err)
-	wrongAppToken := testInstance.BuildAppToken(&apps.WebappManifest{
-		DocSlug: "nottobetrusted",
-	})
-
 	sharing := createSharing(t, "", consts.MasterMasterSharing, true, "",
-		[]*sharings.Recipient{}, permissions.Rule{})
+		[]*sharings.Recipient{}, rule)
+	appToken, _ := generateAppToken(t, badRule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
 	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
 	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+wrongAppToken)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 
-	// Test: correct sharing id and app slug but incorrect recursive param.
-	slug := utils.RandomString(15)
-	permission = permissions.Permission{
-		Permissions: permissions.Set{rule},
-		Type:        permissions.TypeWebapp,
-		SourceID:    consts.Apps + "/" + slug,
-	}
-	err = couchdb.CreateDoc(testInstance, &permission)
-	assert.NoError(t, err)
-	manifest := &apps.WebappManifest{
-		DocSlug:        slug,
-		DocPermissions: permissions.Set{rule},
-	}
-	err = couchdb.CreateNamedDocWithDB(testInstance, manifest)
-	assert.NoError(t, err)
-	appToken := testInstance.BuildAppToken(manifest)
-
-	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
-		[]*sharings.Recipient{}, permissions.Rule{})
+	// Test: correct sharing id and permission but incorrect recursive param.
+	appToken, slug := generateAppToken(t, rule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
 	queries := url.Values{
@@ -1177,7 +1275,7 @@ func TestRevokeSharing(t *testing.T) {
 	scope, err := rule.MarshalScopeString()
 	assert.NoError(t, err)
 
-	badRule := permissions.Rule{
+	badRule = permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
 		Type:     "io.cozy.foos",
 		Values:   []string{"bar", "baz"},
