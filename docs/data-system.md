@@ -71,6 +71,76 @@ Content-Type: application/json
 - 500 internal server error
 
 
+## Access multiple documents at once
+
+### Request
+```http
+POST /data/:type/_all_docs HTTP/1.1
+```
+```http
+POST /data/io.cozy.files/_all_docs?include_docs=true HTTP/1.1
+Content-Length: ...
+Content-Type: application/json
+Accept: application/json
+```
+```json
+{
+    "keys": [
+        "7f46ed4ed2a775494da3b0b44e00314f",
+        "7f46ed4ed2a775494da3b0b44e003b18"
+    ]
+}
+```
+
+### Response OK
+```http
+HTTP/1.1 200 OK
+Date: Mon, 27 Sept 2016 12:28:53 GMT
+Content-Length: ...
+Content-Type: application/json
+Etag: "3-6494e0ac6494e0ac"
+```
+```json
+{
+    "total_rows": 11,
+    "rows": [
+        {
+            "id": "7f46ed4ed2a775494da3b0b44e00314f",
+            "key": "7f46ed4ed2a775494da3b0b44e00314f",
+            "value": {
+                "rev": "1-870e58f8a1b2130c3a41e767f9c7d93a"
+            },
+            "doc": {
+                "_id": "7f46ed4ed2a775494da3b0b44e00314f",
+                "_rev": "1-870e58f8a1b2130c3a41e767f9c7d93a",
+                "type": "directory",
+                "name": "Uploaded from Cozy Photos",
+                "dir_id": "7f46ed4ed2a775494da3b0b44e0027df",
+                "created_at": "2017-07-04T06:49:12.844631837Z",
+                "updated_at": "2017-07-04T06:49:12.844631837Z",
+                "tags": [],
+                "path": "/Photos/Uploaded from Cozy Photos"
+            }
+        },
+        {
+            "key": "7f46ed4ed2a775494da3b0b44e003b18",
+            "error": "not_found"
+        }
+    ]
+}
+```
+
+### possible errors :
+- 401 unauthorized (no authentication has been provided)
+- 403 forbidden (the authentication does not provide permissions for this action)
+- 500 internal server error
+
+
+### Details
+
+When some keys don't match an existing document, the response still has a status 200 and the errors are included in the `rows` field (see above, same behavior as [CouchDB](http://docs.couchdb.org/en/2.0.0/api/database/bulk-api.html#post--db-_all_docs)).
+
+
 ## Create a document
 
 ### Request
