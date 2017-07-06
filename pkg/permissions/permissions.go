@@ -414,12 +414,11 @@ func GetPermissionsByType(db couchdb.Database, doctype string, cursor couchdb.Cu
 
 	var res couchdb.ViewResponse
 	err := couchdb.ExecView(db, consts.PermissionsShareByDocView, req, &res)
-
-	cursor.UpdateFrom(&res)
-
 	if err != nil {
 		return nil, err
 	}
+
+	cursor.UpdateFrom(&res)
 
 	result := make([]*Permission, len(res.Rows))
 	for i, row := range res.Rows {
@@ -469,12 +468,12 @@ func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, curs
 
 	cursor.UpdateFrom(&res)
 
-	result := make([]*Permission, len(res.Rows))
+	result := make([]*Permission, 0, len(res.Rows))
 
 	// The rows have the following format:
 	// "id": "_id", "key": [type, sharing_id, owner], "value": [rule]
 	// see consts/views.go and the view "SharedWithPermissionView"
-	for i, row := range res.Rows {
+	for _, row := range res.Rows {
 		keys := row.Key.([]interface{})
 		if keys[2].(bool) != owner {
 			continue
@@ -533,11 +532,12 @@ func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, curs
 			}
 		}
 
-		result[i] = &Permission{
+		pdoc := &Permission{
 			Type:        consts.Sharings,
 			SourceID:    keys[1].(string),
 			Permissions: Set{rule},
 		}
+		result = append(result, pdoc)
 	}
 
 	return result, nil
