@@ -129,7 +129,7 @@ This route adds or modify an application to the registry. The content of the req
 
 ```http
 POST /apps/drive
-X-Cozy-Registry-Key: AbCdE
+Authorization: AbCdE
 
 {
     "name": "drive",
@@ -165,7 +165,7 @@ Request to add a stable release:
 
 ```http
 POST /apps/drive/v3.1.2
-X-Cozy-Registry-Key: AbCdE
+Authorization: AbCdE
 
 {
     "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
@@ -177,7 +177,7 @@ Request to add a development release:
 
 ```http
 POST /apps/drive/v3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a
-X-Cozy-Registry-Key: AbCdE
+Authorization: AbCdE
 
 {
     "url": "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
@@ -409,4 +409,4 @@ The definition of the authentication API is not finished yet. It will be release
 
 For now the authentication scheme to publish an application will be kept minimal and simple. Each editor will be given an API key that should be present in the header of the http request when creating a application or publishing a new version.
 
-The API key should be present in the `X-Cozy-Registry-Key` header.
+The API key should be present in the `Authorization` header.
