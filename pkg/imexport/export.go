@@ -63,7 +63,7 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 		return err
 	}
 
-	metaDir := "Metadata/"
+	metaDir := "metadata/album/"
 	hdrDir := &tar.Header{
 		Name:     metaDir,
 		Mode:     0755,
@@ -75,14 +75,13 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 
 	hdr := &tar.Header{
 		Name:       metaDir + "album.json",
-		Size:       int64(0),
 		Mode:       0644,
 		AccessTime: time.Now(),
 		ChangeTime: time.Now(),
 		Typeflag:   tar.TypeReg,
 	}
 
-	var content [][]byte
+	var content bytes.Buffer
 	var size int64
 
 	for _, val := range results {
@@ -119,8 +118,8 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 
 			size += int64(len(jsonString) + 1) // len([]byte("\n"))
 
-			content = append(content, jsonString)
-			content = append(content, []byte("\n"))
+			content.Write(jsonString)
+			content.Write([]byte("\n"))
 
 		}
 
@@ -131,11 +130,10 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 		return err
 	}
 
-	for _, val := range content {
-		if _, err := io.Copy(tw, bytes.NewReader(val)); err != nil {
-			return err
-		}
+	if _, err := content.WriteTo(tw); err != nil {
+		return err
 	}
+
 	return nil
 }
 
@@ -165,8 +163,7 @@ func export(tw *tar.Writer, fs vfs.VFS, domain string) error {
 	if err != nil {
 		return err
 	}
-	err = metadata(tw, fs, domain)
-	return err
+	return metadata(tw, fs, domain)
 }
 
 // Tardir tar doc directory
