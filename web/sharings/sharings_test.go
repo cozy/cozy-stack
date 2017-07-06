@@ -1147,6 +1147,65 @@ func TestCreateSharingSuccess(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, res.StatusCode)
 }
 
+func TestGetSharingDocNotFound(t *testing.T) {
+	appRule := permissions.Rule{
+		Type: "io.cozy.foos",
+	}
+	appToken, _ := generateAppToken(t, appRule)
+
+	u := fmt.Sprintf("%s/sharings/%s", ts.URL, "fakeid")
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, res.StatusCode)
+}
+
+func TestGetSharingDocBadPermissions(t *testing.T) {
+	rule := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar"},
+		Verbs:  permissions.ALL,
+	}
+	appRule := permissions.Rule{
+		Type: "io.cozy.baddoctype",
+	}
+	sharing := createSharing(t, "", consts.MasterMasterSharing, true, "",
+		[]*sharings.Recipient{}, rule)
+	appToken, _ := generateAppToken(t, appRule)
+
+	u := fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusForbidden, res.StatusCode)
+}
+
+func TestGetSharingDocSuccess(t *testing.T) {
+	rule := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar"},
+		Verbs:  permissions.ALL,
+	}
+	appRule := permissions.Rule{
+		Type: "io.cozy.foos",
+	}
+	sharing := createSharing(t, "", consts.MasterMasterSharing, true, "",
+		[]*sharings.Recipient{}, rule)
+	appToken, _ := generateAppToken(t, appRule)
+
+	u := fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+}
+
 func TestReceiveClientIDBadSharing(t *testing.T) {
 	recipient := createRecipient(t, "email", "url")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
