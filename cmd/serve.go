@@ -9,12 +9,10 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/stack"
-	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var flagNoAdmin bool
 var flagAllowRoot bool
 var flagAppdirs []string
 
@@ -43,11 +41,9 @@ example), you can use the --appdir flag like this:
 			errPrintfln("Use --allow-root if you really want to start with the root user")
 			return errors.New("Starting cozy-stack serve as root not allowed")
 		}
-		if err := stack.Start(); err != nil {
-			return err
-		}
+		var apps map[string]string
 		if len(flagAppdirs) > 0 {
-			apps := make(map[string]string)
+			apps = make(map[string]string)
 			for _, app := range flagAppdirs {
 				parts := strings.Split(app, ":")
 				switch len(parts) {
@@ -59,9 +55,13 @@ example), you can use the --appdir flag like this:
 					return errors.New("Invalid appdir value")
 				}
 			}
-			return web.ListenAndServeWithAppDir(apps)
 		}
-		return web.ListenAndServe(flagNoAdmin)
+		var group Shutdowner
+		group, err := stack.Start(apps)
+		if err != nil {
+			return err
+		}
+		return group.Wait()
 	},
 }
 
@@ -139,7 +139,6 @@ func init() {
 	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
 
 	RootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().BoolVar(&flagNoAdmin, "no-admin", false, "Start without the admin interface")
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	serveCmd.Flags().StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
 }

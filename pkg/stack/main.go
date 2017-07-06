@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
+	"github.com/cozy/cozy-stack/web"
 	"github.com/go-redis/redis"
 )
 
@@ -15,7 +16,7 @@ var (
 )
 
 // Start is used to initialize all the
-func Start() error {
+func Start(apps map[string]string) error {
 	if config.IsDevRelease() {
 		fmt.Println(`                           !! DEVELOPMENT RELEASE !!
 You are running a development release which may deactivate some very important
@@ -30,7 +31,18 @@ security features. Please do not use this binary as your production server.
 			return err
 		}
 	}
-	return startJobSystem()
+
+	if err := startJobSystem(); err != nil {
+		return err
+	}
+
+	if apps != nil {
+		group.Add(web.ListenAndServeWithAppDir(apps))
+	} else {
+		group.Add(web.ListenAndServe())
+	}
+
+	return group.Wait()
 }
 
 // startJobSystem starts the jobs and scheduler systems

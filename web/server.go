@@ -4,11 +4,14 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"path"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -20,9 +23,14 @@ import (
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
 	"github.com/google/gops/agent"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/afero"
 )
+
+type Shutdowner interface {
+	Shutdown(ctx context.Context) error
+}
 
 var supportedLocales = []string{"en", "fr"}
 
@@ -64,8 +72,8 @@ func LoadSupportedLocales() error {
 
 // ListenAndServe creates and setups all the necessary http endpoints and start
 // them.
-func ListenAndServe(noAdmin bool) error {
-	return listenAndServe(noAdmin, webapps.Serve)
+func ListenAndServe() (Shutdowner, error) {
+	return listenAndServe(webapps.Serve)
 }
 
 // ListenAndServeWithAppDir creates and setup all the necessary http endpoints
@@ -74,7 +82,7 @@ func ListenAndServe(noAdmin bool) error {
 // In order to serve the application, the specified directory should provide
 // a manifest.webapp file that will be used to parameterize the application
 // permissions.
-func ListenAndServeWithAppDir(appsdir map[string]string) error {
+func ListenAndServeWithAppDir(appsdir map[string]string) (Shutdowner, error) {
 	for slug, dir := range appsdir {
 		dir = utils.AbsPath(dir)
 		appsdir[slug] = dir
@@ -92,7 +100,7 @@ func ListenAndServeWithAppDir(appsdir map[string]string) error {
 			return err
 		}
 	}
-	return listenAndServe(false, func(c echo.Context) error {
+	return listenAndServe(func(c echo.Context) error {
 		slug := c.Get("slug").(string)
 		dir, ok := appsdir[slug]
 		if !ok {
@@ -144,8 +152,8 @@ func checkExists(filepath string) error {
 	return nil
 }
 
-func listenAndServe(noAdmin bool, appsHandler echo.HandlerFunc) error {
-	main, err := CreateSubdomainProxy(echo.New(), appsHandler)
+func listenAndServe(appsHandler echo.HandlerFunc) (Shutdowner, error) {
+	major, err := CreateSubdomainProxy(echo.New(), appsHandler)
 	if err != nil {
 		return err
 	}
@@ -154,24 +162,58 @@ func listenAndServe(noAdmin bool, appsHandler echo.HandlerFunc) error {
 	}
 
 	if config.IsDevRelease() {
-		main.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		major.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))
 	}
 
 	errs := make(chan error)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
 
-	if !noAdmin {
-		if err = agent.Listen(nil); err != nil {
-			return err
-		}
-		admin := echo.New()
-		if err = SetupAdminRoutes(admin); err != nil {
-			return err
-		}
-		go func() { errs <- admin.Start(config.AdminServerAddr()) }()
+	if err = agent.Listen(nil); err != nil {
+		return err
 	}
 
-	go func() { errs <- main.Start(config.ServerAddr()) }()
-	return <-errs
+	admin := echo.New()
+	if err = SetupAdminRoutes(admin); err != nil {
+		return err
+	}
+
+	go func() { errs <- admin.Start(config.AdminServerAddr()) }()
+	go func() { errs <- major.Start(config.ServerAddr()) }()
+
+	select {
+	case err := <-errs:
+		return err
+	case sig := <-sigs:
+		ctx := context.WithTimeout(context.Background(), 60*time.Second)
+	}
+}
+
+type groupShutdown struct {
+	s []Shutdowner
+}
+
+func newGroupShutdown(s ...Shutdowner) groupShutdown {
+	return groupShutdown{s}
+}
+
+func (g *groupShutdown) Shutdown(ctx context.Context) error {
+	errs := make(chan error)
+	count := len(g.s)
+	for _, s := range g.s {
+		go func() { errs <- s.Shutdown(ctx) }()
+	}
+	var errm error
+	for err := range errs {
+		if err != nil {
+			errm = multierror.Append(errm, err)
+		}
+		count--
+		if count == 0 {
+			break
+		}
+	}
+	return errm
 }
