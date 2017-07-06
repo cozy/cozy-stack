@@ -118,8 +118,12 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 
 			size += int64(len(jsonString) + 1) // len([]byte("\n"))
 
-			content.Write(jsonString)
-			content.Write([]byte("\n"))
+			if _, err = content.Write(jsonString); err != nil {
+				return err
+			}
+			if _, err = content.Write([]byte("\n")); err != nil {
+				return err
+			}
 
 		}
 
