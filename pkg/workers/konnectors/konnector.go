@@ -146,8 +146,12 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 			return err
 		}
 		_, err = io.Copy(f, tr)
+		errc := f.Close()
 		if err != nil {
 			return err
+		}
+		if errc != nil {
+			return errc
 		}
 	}
 
