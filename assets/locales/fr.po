@@ -70,11 +70,17 @@ msgid "Authorize App Title"
 msgstr ""
 "L'application %s ne transmet aucune donnée personnelle à des tiers externes"
 
+msgid "Authorize Sharing Title"
+msgstr "Accepter le partage de %s ?"
+
 msgid "Authorize More"
 msgstr "En Savoir plus"
 
 msgid "Authorize Client presentation"
 msgstr "voudrait accéder aux données suivantes du cozy "
+
+msgid "Authorize Sharing presentation"
+msgstr "voudrait partager les données suivantes avec votre cozy"
 
 msgid "Authorize Policy sentence"
 msgstr ""
@@ -89,6 +95,9 @@ msgstr "En cliquant sur "
 msgid "Authorize Give permission keyword"
 msgstr "Autoriser"
 
+msgid "Authorize Give Sharing permission keyword"
+msgstr "Accepter"
+
 msgid "Authorize Give permission end"
 msgstr ""
 ", vous autorisez l'application à accéder à vos données, selon ses conditions"
@@ -100,6 +109,11 @@ msgstr ""
 "local et dans votre cozy, selon ses conditions de service et sa politique de"
 " confidentialité."
 
+msgid "Authorize Give Sharing permission end"
+msgstr ""
+", vous autorisez le cozy de %s à obtenir un accès pour partager des données,
+" selon ses conditions de service et sa politique de confidentialité."
+
 msgid "Authorize Give App permission desc"
 msgstr ""
 "Pour optimiser les services rendus par votre Cozy (%s), l'application %s "
@@ -108,8 +122,14 @@ msgstr ""
 msgid "Authorize Submit"
 msgstr "Autoriser"
 
+msgid "Authorize Submit Sharing"
+msgstr "Accepter le partage"
+
 msgid "Authorize Cancel"
 msgstr "Refuser"
+
+msgid "Authorize Cancel Sharing"
+msgstr "Refuser le partage"
 
 msgid "Error Title"
 msgstr "Désolé"

@@ -359,16 +359,31 @@ func authorizeForm(c echo.Context) error {
 		})
 	}
 	params.client.ClientID = params.client.CouchID
-	return c.Render(http.StatusOK, "authorize.html", echo.Map{
-		"Domain":      instance.Domain,
-		"Locale":      instance.Locale,
-		"Client":      params.client,
-		"State":       params.state,
-		"RedirectURI": params.redirectURI,
-		"Scope":       params.scope,
-		"Permissions": permissions,
-		"CSRF":        c.Get("csrf"),
-	})
+
+	if c.QueryParam("sharing_type") != "" {
+		err = c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
+			"Domain":      instance.Domain,
+			"Locale":      instance.Locale,
+			"Client":      params.client,
+			"State":       params.state,
+			"RedirectURI": params.redirectURI,
+			"Scope":       params.scope,
+			"Permissions": permissions,
+			"CSRF":        c.Get("csrf"),
+		})
+	} else {
+		err = c.Render(http.StatusOK, "authorize.html", echo.Map{
+			"Domain":      instance.Domain,
+			"Locale":      instance.Locale,
+			"Client":      params.client,
+			"State":       params.state,
+			"RedirectURI": params.redirectURI,
+			"Scope":       params.scope,
+			"Permissions": permissions,
+			"CSRF":        c.Get("csrf"),
+		})
+	}
+	return err
 }
 
 func authorize(c echo.Context) error {
