@@ -22,6 +22,9 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
+// DiscoveryErrorKey is the key for translating the discovery error message
+const DiscoveryErrorKey = "URL Discovery error"
+
 type apiSharing struct {
 	*sharings.Sharing
 }
@@ -533,6 +536,28 @@ func setDestinationDirectory(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
+func renderDiscoveryForm(c echo.Context, instance *instance.Instance, code int, recID, recEmail, sharingID string) error {
+	// Send error message if the code is not 200
+	var urlErr string
+	if code != http.StatusOK {
+		urlErr = instance.Translate(DiscoveryErrorKey)
+	}
+
+	publicName, err := instance.PublicName()
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return c.Render(code, "sharing_discovery.html", echo.Map{
+		"Locale":         instance.Locale,
+		"RecipientID":    recID,
+		"RecipientEmail": recEmail,
+		"SharingID":      sharingID,
+		"PublicName":     publicName,
+		"URLError":       urlErr,
+	})
+}
+
 func discoveryForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -565,26 +590,17 @@ func discoveryForm(c echo.Context) error {
 		})
 	}
 
-	publicName, err := instance.PublicName()
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return c.Render(http.StatusOK, "sharing_discovery.html", echo.Map{
-		"Locale":         instance.Locale,
-		"RecipientID":    recipientID,
-		"RecipientEmail": recipientEmail,
-		"SharingID":      sharingID,
-		"PublicName":     publicName,
-	})
+	return renderDiscoveryForm(c, instance, http.StatusOK, recipientID, recipientEmail, sharingID)
 }
 
 func discovery(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
 	recipientURL := c.FormValue("url")
 	sharingID := c.FormValue("sharing_id")
 	recipientID := c.FormValue("recipient_id")
+	recipientEmail := c.FormValue("recipient_email")
 
 	sharing, err := sharings.FindSharing(instance, sharingID)
 	if err != nil {
@@ -616,7 +632,12 @@ func discovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
-		return wrapErrors(err)
+		if wantsJSON {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": instance.Translate(DiscoveryErrorKey),
+			})
+		}
+		return renderDiscoveryForm(c, instance, http.StatusBadRequest, recipientID, recipientEmail, sharingID)
 	}
 	if err = couchdb.UpdateDoc(instance, sharing); err != nil {
 		return wrapErrors(err)
