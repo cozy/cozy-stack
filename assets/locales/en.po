@@ -18,6 +18,9 @@ msgstr "Backed up from my mobile"
 msgid "Login Credentials error"
 msgstr "The credentials you entered are incorrect, please try again."
 
+msgid "URL Discovery error"
+msgstr "The Cozy URL you entered is incorrect, please try again"
+
 msgid "Login Welcome"
 msgstr "Welcome!"
 
