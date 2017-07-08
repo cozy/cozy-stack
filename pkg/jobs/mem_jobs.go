@@ -107,7 +107,9 @@ func (b *memBroker) Start(ws WorkersList) error {
 		}
 		b.queues[workerType] = q
 		b.workers = append(b.workers, w)
-		w.Start(q.Jobs)
+		if err := w.Start(q.Jobs); err != nil {
+			return err
+		}
 	}
 	return nil
 }

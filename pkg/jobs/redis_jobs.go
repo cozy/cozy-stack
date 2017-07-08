@@ -58,7 +58,9 @@ func (b *redisBroker) Start(ws WorkersList) error {
 		b.queues[workerType] = ch
 		b.workers = append(b.workers, w)
 		keys = append(keys, redisPrefix+workerType)
-		w.Start(ch)
+		if err := w.Start(ch); err != nil {
+			return err
+		}
 	}
 	go b.pollLoop(keys)
 	return nil

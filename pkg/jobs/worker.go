@@ -77,15 +77,18 @@ func NewWorkerContext(domain, workerID string) context.Context {
 }
 
 // Start is used to start the worker consumption of messages from its queue.
-func (w *Worker) Start(jobs chan Job) {
+func (w *Worker) Start(jobs chan Job) error {
+	if !atomic.CompareAndSwapUint32(&w.running, 0, 1) {
+		return ErrClosed
+	}
 	w.jobs = jobs
-	w.running = 1
 	w.closed = make(chan struct{})
 	for i := 0; i < w.Conf.Concurrency; i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
 		joblog.Debugf("Start worker %s", name)
 		go w.work(name, w.closed)
 	}
+	return nil
 }
 
 // Shutdown is used to close the worker, waiting for all tasks to end
