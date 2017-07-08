@@ -165,13 +165,19 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 
 // Shutdown the scheduling of triggers
 func (s *RedisScheduler) Shutdown(ctx context.Context) error {
-	fmt.Print("  shutting down redis scheduler...")
-	if s.closed != nil {
-		close(s.closed)
+	if s.closed == nil {
+		return nil
 	}
-	<-s.stopped
-	s.client.Close()
-	fmt.Println("ok.")
+	fmt.Print("  shutting down redis scheduler...")
+	close(s.closed)
+	defer s.client.Close()
+	select {
+	case <-ctx.Done():
+		fmt.Println("failed: ", ctx.Err())
+		return ctx.Err()
+	case <-s.stopped:
+		fmt.Println("ok.")
+	}
 	return nil
 }
 

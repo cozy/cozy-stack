@@ -71,11 +71,12 @@ func (b *redisBroker) Shutdown(ctx context.Context) error {
 		return ErrClosed
 	}
 	fmt.Print("  shutting down redis broker...")
-	<-b.closed
-	// Cannot use the context for the closing the client. Hopefully it is not a
-	// long operation.
-	if err := b.client.Close(); err != nil {
-		joblog.Errorf("Error while closing redis client: %s", err.Error())
+	defer b.client.Close()
+	select {
+	case <-ctx.Done():
+		fmt.Println("failed:", ctx.Err())
+		return ctx.Err()
+	case <-b.closed:
 	}
 	errs := make(chan error)
 	for _, w := range b.workers {
