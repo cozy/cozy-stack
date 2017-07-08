@@ -946,7 +946,7 @@ func TestMain(m *testing.M) {
 		Path:   tempdir,
 	}
 
-	err = stack.Start()
+	_, err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -1019,7 +1019,7 @@ func TestMain(m *testing.M) {
 	}
 
 	createSettings(in)
-	err = stack.Start()
+	_, err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

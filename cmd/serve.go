@@ -1,14 +1,19 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/stack"
+	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -56,12 +61,41 @@ example), you can use the --appdir flag like this:
 				}
 			}
 		}
-		var group Shutdowner
-		group, err := stack.Start(apps)
+
+		processes, err := stack.Start()
 		if err != nil {
 			return err
 		}
-		return group.Wait()
+
+		var servers *web.Servers
+		if apps != nil {
+			servers, err = web.ListenAndServeWithAppDir(apps)
+		} else {
+			servers, err = web.ListenAndServe()
+		}
+		if err != nil {
+			return err
+		}
+		servers.Start()
+
+		group := utils.NewGroupShutdown(servers, processes)
+
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, os.Interrupt)
+
+		select {
+		case err := <-servers.Wait():
+			return err
+		case <-sigs:
+			fmt.Println("\nshutdown started")
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel() // make gometalinter happy
+			if err := group.Shutdown(ctx); err != nil {
+				return err
+			}
+			fmt.Println("all settled, bye bye !")
+			return nil
+		}
 	},
 }
 

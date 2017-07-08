@@ -393,7 +393,7 @@ func TestMain(m *testing.M) {
 	})
 
 	testInstance = setup.GetTestInstance()
-	if err := stack.Start(); err != nil {
+	if _, err := stack.Start(); err != nil {
 		testutils.Fatal(err)
 	}
 

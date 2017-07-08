@@ -9,9 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/signal"
 	"path"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -23,14 +21,9 @@ import (
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
 	"github.com/google/gops/agent"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/afero"
 )
-
-type Shutdowner interface {
-	Shutdown(ctx context.Context) error
-}
 
 var supportedLocales = []string{"en", "fr"}
 
@@ -72,7 +65,7 @@ func LoadSupportedLocales() error {
 
 // ListenAndServe creates and setups all the necessary http endpoints and start
 // them.
-func ListenAndServe() (Shutdowner, error) {
+func ListenAndServe() (*Servers, error) {
 	return listenAndServe(webapps.Serve)
 }
 
@@ -82,22 +75,22 @@ func ListenAndServe() (Shutdowner, error) {
 // In order to serve the application, the specified directory should provide
 // a manifest.webapp file that will be used to parameterize the application
 // permissions.
-func ListenAndServeWithAppDir(appsdir map[string]string) (Shutdowner, error) {
+func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 	for slug, dir := range appsdir {
 		dir = utils.AbsPath(dir)
 		appsdir[slug] = dir
 		exists, err := utils.DirExists(dir)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !exists {
-			return fmt.Errorf("Directory %s does not exist", dir)
+			return nil, fmt.Errorf("Directory %s does not exist", dir)
 		}
 		if err = checkExists(path.Join(dir, apps.WebappManifestName)); err != nil {
-			return err
+			return nil, err
 		}
 		if err = checkExists(path.Join(dir, "index.html")); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	return listenAndServe(func(c echo.Context) error {
@@ -152,13 +145,13 @@ func checkExists(filepath string) error {
 	return nil
 }
 
-func listenAndServe(appsHandler echo.HandlerFunc) (Shutdowner, error) {
+func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
 	major, err := CreateSubdomainProxy(echo.New(), appsHandler)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = LoadSupportedLocales(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if config.IsDevRelease() {
@@ -167,53 +160,49 @@ func listenAndServe(appsHandler echo.HandlerFunc) (Shutdowner, error) {
 		}))
 	}
 
-	errs := make(chan error)
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt)
-
 	if err = agent.Listen(nil); err != nil {
-		return err
+		return nil, err
 	}
 
 	admin := echo.New()
 	if err = SetupAdminRoutes(admin); err != nil {
+		return nil, err
+	}
+
+	return &Servers{
+		major: major,
+		admin: admin,
+	}, nil
+}
+
+// Servers contains the started HTTP servers and implement the Shutdowner
+// interface.
+type Servers struct {
+	major *echo.Echo
+	admin *echo.Echo
+	errs  chan error
+}
+
+// Start starts the servers.
+func (e *Servers) Start() {
+	e.errs = make(chan error, 2)
+	go func() { e.errs <- e.admin.Start(config.AdminServerAddr()) }()
+	go func() { e.errs <- e.major.Start(config.ServerAddr()) }()
+}
+
+// Wait for servers to stop or fall in error.
+func (e *Servers) Wait() <-chan error {
+	return e.errs
+}
+
+// Shutdown gracefully stops the servers.
+func (e *Servers) Shutdown(ctx context.Context) error {
+	g := utils.NewGroupShutdown(e.admin, e.major)
+	fmt.Print("  shutting down servers...")
+	if err := g.Shutdown(ctx); err != nil {
+		fmt.Println("failed: ", err.Error())
 		return err
 	}
-
-	go func() { errs <- admin.Start(config.AdminServerAddr()) }()
-	go func() { errs <- major.Start(config.ServerAddr()) }()
-
-	select {
-	case err := <-errs:
-		return err
-	case sig := <-sigs:
-		ctx := context.WithTimeout(context.Background(), 60*time.Second)
-	}
-}
-
-type groupShutdown struct {
-	s []Shutdowner
-}
-
-func newGroupShutdown(s ...Shutdowner) groupShutdown {
-	return groupShutdown{s}
-}
-
-func (g *groupShutdown) Shutdown(ctx context.Context) error {
-	errs := make(chan error)
-	count := len(g.s)
-	for _, s := range g.s {
-		go func() { errs <- s.Shutdown(ctx) }()
-	}
-	var errm error
-	for err := range errs {
-		if err != nil {
-			errm = multierror.Append(errm, err)
-		}
-		count--
-		if count == 0 {
-			break
-		}
-	}
-	return errm
+	fmt.Println("ok.")
+	return nil
 }

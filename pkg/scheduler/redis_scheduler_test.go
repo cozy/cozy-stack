@@ -42,6 +42,14 @@ type mockBroker struct {
 	jobs []*jobs.JobRequest
 }
 
+func (b *mockBroker) Start(workersList jobs.WorkersList) error {
+	return nil
+}
+
+func (b *mockBroker) Shutdown(ctx context.Context) error {
+	return nil
+}
+
 func (b *mockBroker) PushJob(request *jobs.JobRequest) (*jobs.JobInfos, error) {
 	b.jobs = append(b.jobs, request)
 	return nil, nil
@@ -64,7 +72,8 @@ func (b *mockBroker) GetJobInfos(domain, id string) (*jobs.JobInfos, error) {
 func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
-	bro := jobs.NewMemBroker(1, jobs.WorkersList{
+	bro := jobs.NewMemBroker(1)
+	bro.Start(jobs.WorkersList{
 		"worker": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -107,7 +116,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
-	sch.Stop()
+	sch.Shutdown(context.Background())
 	sch.Start(bro)
 
 	tat, err := scheduler.NewTrigger(at)
@@ -179,9 +188,9 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
-	sch.Stop()
+	sch.Shutdown(context.Background())
 	sch.Start(bro)
-	sch.Stop()
+	sch.Shutdown(context.Background())
 	defer sch.Start(bro)
 
 	msg, _ := jobs.NewMessage("json", "@cron")
@@ -215,9 +224,9 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
-	sch.Stop()
+	sch.Shutdown(context.Background())
 	sch.Start(bro)
-	sch.Stop()
+	sch.Shutdown(context.Background())
 	defer sch.Start(bro)
 
 	now := time.Now()
@@ -263,7 +272,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
-	sch.Stop()
+	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.Start(bro)
 
@@ -344,7 +353,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 
 	bro := &mockBroker{}
 	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
-	sch.Stop()
+	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.Start(bro)
 

@@ -102,8 +102,8 @@ func TestRedisJobs(t *testing.T) {
 	}()
 
 	w.Wait()
-	broker1.Stop()
-	broker2.Stop()
+	broker1.Shutdown(context.Background())
+	broker2.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
 }
 

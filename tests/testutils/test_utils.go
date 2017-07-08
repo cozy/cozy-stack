@@ -101,7 +101,7 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if c.inst != nil {
 		return c.inst
 	}
-	err := stack.Start()
+	_, err := stack.Start()
 	if err != nil {
 		c.CleanupAndDie("Error while starting job system", err)
 	}
