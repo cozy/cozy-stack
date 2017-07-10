@@ -120,6 +120,8 @@ func CreateRecipient(c echo.Context) error {
 
 // SharingRequest handles a sharing request from the recipient side.
 // It creates a temporary sharing document and redirects to the authorize page.
+// TODO: this route should be protected against 'DDoS' attacks: one could spam
+// this route to force a doc creation at each request
 func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
 	state := c.QueryParam("state")
@@ -157,7 +159,9 @@ func CreateSharing(c echo.Context) error {
 	if err := c.Bind(sharing); err != nil {
 		return err
 	}
-
+	if err := checkCreatePermissions(c, sharing); err != nil {
+		return err
+	}
 	err := sharings.CreateSharing(instance, sharing)
 	if err != nil {
 		return wrapErrors(err)
@@ -694,8 +698,7 @@ func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sha
 
 	switch claims.Audience {
 	case permissions.AppAudience:
-		appID := consts.Apps + "/" + sharing.AppSlug
-		if requestPerm.SourceID == appID {
+		if sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
 			if ownerHasToBeSharer {
 				if sharing.Owner {
 					return nil
@@ -710,7 +713,6 @@ func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sha
 		if !sharing.Permissions.HasSameRules(requestPerm.Permissions) {
 			return permissions.ErrInvalidToken
 		}
-
 		if sharing.Owner {
 			if claims.Subject == recipientClientID {
 				return nil
@@ -727,6 +729,20 @@ func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sha
 	default:
 		return permissions.ErrInvalidAudience
 	}
+}
+
+// checkCreatePermissions checks the sharer's token has all the permissions
+// matching the ones defined in the sharing document
+func checkCreatePermissions(c echo.Context, sharing *sharings.Sharing) error {
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if !sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
+	return nil
+
 }
 
 // wrapErrors returns a formatted error
