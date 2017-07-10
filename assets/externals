@@ -19,12 +19,12 @@ url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.3.8/dist/cozy-c
 sha256  4b0276d439f55f8d2c9180b3eb793903e26a0520d1cb5431d16b4855ada01cbe
 
 name    ./js/cozy-bar.min.js
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.2.2/dist/cozy-bar.min.js
-sha256  d7c65808032c9b3c7df119802a7fd956ae2002ad9b3ca63319143b6704f35e16
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v4.0.0/dist/cozy-bar.min.js
+sha256  3c1c73bfd6396cfb181f4a0a82151bf17fca279bd4e57aa8621fb172ae388353
 
 name    ./css/cozy-bar.min.css
-url     https://raw.githubusercontent.com/cozy/cozy-bar/v3.2.2/dist/cozy-bar.min.css
-sha256  ab44b14bede543333cedea6ae9316104a61857244e1094ce629e3df6f779cf71
+url     https://raw.githubusercontent.com/cozy/cozy-bar/v4.0.0/dist/cozy-bar.min.css
+sha256  b662c29c638ad66070874c34c70e123706af9d8d30edb5cc1aab828bd913ffb6
 
 name    ./js/piwik.js
 url     https://piwik.cozycloud.cc/piwik.js
