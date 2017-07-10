@@ -85,7 +85,7 @@ We accept websocket connection and bind them to a realtime.Dispatcher object.
 
 ### Small cozy version
 
-It all happens in RAM, realtime. Event are immediately transmited to the dispatcher.
+It all happens in RAM, realtime.Event are immediately transmited to the dispatcher.
 
 ### Big cozy version (ie. multiple stack instance)
 
