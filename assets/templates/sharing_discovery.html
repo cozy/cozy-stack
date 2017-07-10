@@ -41,6 +41,11 @@
                     <label for="URL"> {{t "Discovery URL field"}}</label>
                     <input id="url" name="url" placeholder="{{t "Discovery URL placeholder"}}" type="text" autofocus="true" />
                   </p>
+                  {{if .URLError}}
+                  <div class="errors">
+                    <p>{{.URLError}}</p>
+                  </div>
+                  {{end}}
               </div>
               <footer>
                 <div class="controls">
