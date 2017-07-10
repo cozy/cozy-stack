@@ -52,7 +52,8 @@ func GetRequestToken(c echo.Context) string {
 	return ""
 }
 
-func parseJWT(instance *instance.Instance, token string) (*permissions.Permission, error) {
+// ParseJWT parses a JSON Web Token, and returns the associated permissions.
+func ParseJWT(instance *instance.Instance, token string) (*permissions.Permission, error) {
 	var claims permissions.Claims
 	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		return instance.PickKey(token.Claims.(*permissions.Claims).Audience)
@@ -123,7 +124,7 @@ func extract(c echo.Context) (*permissions.Permission, error) {
 		return nil, ErrNoToken
 	}
 
-	return parseJWT(instance, tok)
+	return ParseJWT(instance, tok)
 }
 
 // GetPermission extracts the permission from the echo context and checks their validity

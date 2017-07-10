@@ -1,16 +1,14 @@
 package realtime
 
-import (
-	"errors"
-	"sync"
-	"sync/atomic"
-)
-
-var globalMemHub = &memHub{topics: make(map[string]*topic)}
+import "sync"
 
 type memHub struct {
 	sync.RWMutex
 	topics map[string]*topic
+}
+
+func newMemHub() *memHub {
+	return &memHub{topics: make(map[string]*topic)}
 }
 
 func (h *memHub) Publish(e *Event) {
@@ -24,95 +22,69 @@ func (h *memHub) Publish(e *Event) {
 	}
 }
 
-func (h *memHub) Subscribe(domain, topicName string) EventChannel {
-	topic := h.getOrCreate(domain, topicName)
-	sub := &memSub{
-		topic: topic,
-		send:  make(chan *Event),
-	}
-	topic.subscribe <- sub
-	return sub
+func (h *memHub) Subscriber(domain string) *DynamicSubscriber {
+	return newDynamicSubscriber(h, domain)
 }
 
-func (h *memHub) SubscribeAll() EventChannel {
-	return h.Subscribe("*", "*")
+func (h *memHub) SubscribeLocalAll() *DynamicSubscriber {
+	ds := newDynamicSubscriber(nil, "")
+	t := h.GetTopic("*", "*")
+	ds.addTopic(t, "")
+	return ds
 }
 
-func (h *memHub) get(prefix, topicName string) *topic {
+func (h *memHub) get(domain, doctype string) *topic {
 	h.RLock()
 	defer h.RUnlock()
-	return h.topics[h.topicKey(prefix, topicName)]
+	return h.topics[h.topicKey(domain, doctype)]
 }
 
-func (h *memHub) getOrCreate(prefix, topicName string) *topic {
+func (h *memHub) GetTopic(domain, doctype string) *topic {
 	h.Lock()
 	defer h.Unlock()
-	key := h.topicKey(prefix, topicName)
+	key := h.topicKey(domain, doctype)
 	it, exists := h.topics[key]
 	if !exists {
-		it = newTopic(h, key)
+		it = newTopic(key)
 		h.topics[key] = it
 	}
 	return it
-}
-
-func (h *memHub) remove(topic *topic) {
-	h.Lock()
-	defer h.Unlock()
-	delete(h.topics, topic.key)
 }
 
 func (h *memHub) topicKey(domain, doctype string) string {
 	return domain + ":" + doctype
 }
 
-type memSub struct {
-	topic *topic
-	send  chan *Event
-	c     uint32 // mark whether or not the sub is closed
+type filter struct {
+	whole bool // true if the events for the whole doctype should be sent
+	ids   []string
 }
 
-func (s *memSub) Read() <-chan *Event {
-	return s.send
-}
-
-func (s *memSub) closed() bool {
-	return atomic.LoadUint32(&s.c) == 1
-}
-
-func (s *memSub) Close() error {
-	if !atomic.CompareAndSwapUint32(&s.c, 0, 1) {
-		return errors.New("closing a closed subscription")
-	}
-	s.topic.unsubscribe <- s
-	close(s.send)
-	return nil
+type toWatch struct {
+	sub *MemSub
+	id  string
 }
 
 type topic struct {
-	hub *memHub
 	key string
 
 	// chans for subscribe/unsubscribe requests
-	subscribe   chan *memSub
-	unsubscribe chan *memSub
+	subscribe   chan *toWatch
+	unsubscribe chan *MemSub
 	broadcast   chan *Event
 
 	// set of this topic subs, it should only be manipulated by the topic
 	// loop goroutine
-	subs map[*memSub]struct{}
+	subs map[*MemSub]filter
 }
 
-func newTopic(hub *memHub, key string) *topic {
-	// subscribers should only be manipulated by the hub loop
-	// it is a Map(type -> Set(subscriber))
+func newTopic(key string) *topic {
 	topic := &topic{
-		hub:         hub,
 		key:         key,
-		subscribe:   make(chan *memSub, 1), // 1-sized buffer to be async
-		unsubscribe: make(chan *memSub, 1), // 1-sized buffer to be async
+		subscribe:   make(chan *toWatch),
+		unsubscribe: make(chan *MemSub),
 		broadcast:   make(chan *Event, 10),
-		subs:        make(map[*memSub]struct{}),
+		subs:        make(map[*MemSub]filter),
 	}
 	go topic.loop()
 	return topic
@@ -121,19 +93,32 @@ func newTopic(hub *memHub, key string) *topic {
 func (t *topic) loop() {
 	for {
 		select {
-		case e := <-t.broadcast:
-			for s := range t.subs {
-				if !s.closed() {
-					s.send <- e
-				}
-			}
-		case s := <-t.subscribe:
-			t.subs[s] = struct{}{}
 		case s := <-t.unsubscribe:
 			delete(t.subs, s)
-			if len(t.subs) == 0 {
-				t.hub.remove(t)
-				return
+		case w := <-t.subscribe:
+			f := t.subs[w.sub]
+			if w.id == "" {
+				f.whole = true
+			} else {
+				f.ids = append(f.ids, w.id)
+			}
+			t.subs[w.sub] = f
+		case e := <-t.broadcast:
+			for s, f := range t.subs {
+				ok := false
+				if f.whole {
+					ok = true
+				} else {
+					for _, id := range f.ids {
+						if e.Doc.ID() == id {
+							ok = true
+							break
+						}
+					}
+				}
+				if ok {
+					*s <- e
+				}
 			}
 		}
 	}

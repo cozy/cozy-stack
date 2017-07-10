@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/web/konnectorsauth"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/web/realtime"
 	"github.com/cozy/cozy-stack/web/remote"
 	"github.com/cozy/cozy-stack/web/settings"
 	"github.com/cozy/cozy-stack/web/sharings"
@@ -118,7 +119,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	secure := middlewares.Secure(&middlewares.SecureConfig{
 		HSTSMaxAge:    hstsMaxAge,
-		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent},
+		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
 		CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPUnsafeInline},
 		CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
 		CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent, middlewares.CSPSrcWhitelist},
@@ -174,6 +175,7 @@ func SetupRoutes(router *echo.Echo) error {
 	intents.Routes(router.Group("/intents", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))
 	permissions.Routes(router.Group("/permissions", mws...))
+	realtime.Routes(router.Group("/realtime", mws...))
 	remote.Routes(router.Group("/remote", mws...))
 	settings.Routes(router.Group("/settings", mws...))
 	sharings.Routes(router.Group("/sharings", mws...))

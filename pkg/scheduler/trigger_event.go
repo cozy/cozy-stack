@@ -62,14 +62,15 @@ func (t *EventTrigger) Valid(key, value string) bool {
 func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 	ch := make(chan *jobs.JobRequest)
 	go func() {
-		c := realtime.GetHub().Subscribe(t.infos.Domain, t.mask.Type)
+		sub := realtime.GetHub().Subscriber(t.infos.Domain)
+		sub.Subscribe(t.mask.Type)
 		defer func() {
-			c.Close()
+			sub.Close()
 			close(ch)
 		}()
 		for {
 			select {
-			case e := <-c.Read():
+			case e := <-sub.Channel:
 				if eventMatchPermission(e, &t.mask) {
 					ch <- t.Trigger(e)
 				}
@@ -118,7 +119,7 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 		return false
 	}
 
-	if !rule.Verbs.Contains(permissions.Verb(e.Type)) {
+	if !rule.Verbs.Contains(permissions.Verb(e.Verb)) {
 		return false
 	}
 

@@ -104,7 +104,7 @@ func TestTriggerEvent(t *testing.T) {
 			},
 		}
 		realtime.GetHub().Publish(&realtime.Event{
-			Type:   realtime.EventCreate,
+			Verb:   realtime.EventCreate,
 			Doc:    &doc,
 			Domain: "cozy.local",
 		})

@@ -1,5 +1,13 @@
 package realtime
 
+import (
+	"errors"
+	"sync"
+	"sync/atomic"
+
+	"github.com/cozy/cozy-stack/pkg/config"
+)
+
 // Basic data events
 const (
 	EventCreate = "CREATED"
@@ -7,19 +15,18 @@ const (
 	EventDelete = "DELETED"
 )
 
-// Doc is an interface for a object with DocType, ID, Rev
+// Doc is an interface for a object with DocType, ID
 type Doc interface {
 	ID() string
-	Rev() string
 	DocType() string
 }
 
 // Event is the basic message structure manipulated by the realtime package
 type Event struct {
-	Domain string
-	Type   string
-	Doc    Doc
-	OldDoc Doc
+	Domain string `json:"domain"`
+	Verb   string `json:"verb"`
+	Doc    Doc    `json:"doc"`
+	OldDoc Doc    `json:"old,omitempty"`
 }
 
 // The following API is inspired by https://github.com/gocontrib/pubsub
@@ -29,24 +36,121 @@ type Hub interface {
 	// Emit is used by publishers when an event occurs
 	Publish(event *Event)
 
-	// Subscribe adds a listener for events on a given type
-	// it returns an EventChannel, call the EventChannel Close method
-	// to Unsubscribe.
-	Subscribe(domain, topicName string) EventChannel
+	// Subscriber creates a DynamicSubscriber that can subscribe to several
+	// doctypes. Call its Close method to Unsubscribe.
+	Subscriber(domain string) *DynamicSubscriber
 
-	// SubscribeAll adds a listener for all events.
-	SubscribeAll() EventChannel
+	// SubscribeLocalAll adds a listener for all events that happened in this
+	// cozy-stack process.
+	SubscribeLocalAll() *DynamicSubscriber
+
+	// GetTopic returns the topic for the given domain+doctype.
+	// It creates the topic if it does not exist.
+	GetTopic(domain, doctype string) *topic
 }
 
-// EventChannel is returned when Suscribing to the hub
-type EventChannel interface {
-	// Read returns a chan for events
-	Read() <-chan *Event
-	// Close closes the channel
-	Close() error
+// MemSub is a chan of events
+type MemSub chan *Event
+
+// DynamicSubscriber is used to subscribe to several doctypes
+type DynamicSubscriber struct {
+	Channel MemSub
+	Domain  string
+	hub     Hub
+	topics  []*topic
+	c       uint32 // mark whether or not the sub is closed
 }
+
+func newDynamicSubscriber(hub Hub, domain string) *DynamicSubscriber {
+	return &DynamicSubscriber{
+		Channel: make(chan *Event, 10),
+		hub:     hub,
+		Domain:  domain,
+	}
+}
+
+// Subscribe adds a listener for events on a whole doctype
+func (ds *DynamicSubscriber) Subscribe(doctype string) error {
+	if ds.Closed() || ds.hub == nil {
+		return errors.New("Can't subscribe")
+	}
+	t := ds.hub.GetTopic(ds.Domain, doctype)
+	ds.addTopic(t, "")
+	return nil
+}
+
+// Watch adds a listener for events for a specific document (doctype+id)
+func (ds *DynamicSubscriber) Watch(doctype, id string) error {
+	if ds.Closed() || ds.hub == nil {
+		return errors.New("Can't subscribe")
+	}
+	t := ds.hub.GetTopic(ds.Domain, doctype)
+	ds.addTopic(t, id)
+	return nil
+}
+
+func (ds *DynamicSubscriber) addTopic(t *topic, id string) {
+	found := false
+	for _, topic := range ds.topics {
+		if t == topic {
+			found = true
+			break
+		}
+	}
+	if !found {
+		ds.topics = append(ds.topics, t)
+	}
+	t.subscribe <- &toWatch{&ds.Channel, id}
+}
+
+// Closed returns true if it will no longer send events in its channel
+func (ds *DynamicSubscriber) Closed() bool {
+	return atomic.LoadUint32(&ds.c) == 1
+}
+
+// Close closes the channel (async)
+func (ds *DynamicSubscriber) Close() error {
+	if !atomic.CompareAndSwapUint32(&ds.c, 0, 1) {
+		return errors.New("closing a closed subscription")
+	}
+	// Don't block on Close
+	wg := sync.WaitGroup{}
+	for _, t := range ds.topics {
+		wg.Add(1)
+		go func(t *topic) {
+			for {
+				select {
+				case t.unsubscribe <- &ds.Channel:
+					wg.Done()
+					return
+				case <-ds.Channel:
+					// Purge events
+				}
+			}
+		}(t)
+	}
+	go func() {
+		wg.Wait()
+		close(ds.Channel)
+	}()
+	return nil
+}
+
+var globalHubMu sync.Mutex
+var globalHub Hub
 
 // GetHub returns the global hub
 func GetHub() Hub {
-	return globalMemHub
+	globalHubMu.Lock()
+	defer globalHubMu.Unlock()
+	if globalHub != nil {
+		return globalHub
+	}
+	cli := config.GetConfig().Realtime.Client()
+	if cli == nil {
+		globalHub = newMemHub()
+	} else {
+		globalHub = newRedisHub(cli)
+	}
+	return globalHub
 }

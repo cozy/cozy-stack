@@ -1,20 +1,20 @@
-## cozy-stack fixer
+## cozy-stack fixer triggers
 
-A set of tools to fix issues or migrate content for retro-compatibility.
+Remove orphaned triggers from an instance
 
 ### Synopsis
 
 
-A set of tools to fix issues or migrate content for retro-compatibility.
+Remove orphaned triggers from an instance
 
 ```
-cozy-stack fixer [command] [flags]
+cozy-stack fixer triggers [domain] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for fixer
+  -h, --help   help for triggers
 ```
 
 ### Options inherited from parent commands
@@ -29,7 +29,5 @@ cozy-stack fixer [command] [flags]
 ```
 
 ### SEE ALSO
-* [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
-* [cozy-stack fixer md5](cozy-stack_fixer_md5.md)	 - Fix missing md5 from contents in the vfs
-* [cozy-stack fixer triggers](cozy-stack_fixer_triggers.md)	 - Remove orphaned triggers from an instance
+* [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

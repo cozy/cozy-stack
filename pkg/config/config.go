@@ -91,6 +91,7 @@ type Config struct {
 	SessionStorage              RedisConfig
 	DownloadStorage             RedisConfig
 	KonnectorsOauthStateStorage RedisConfig
+	Realtime                    RedisConfig
 
 	Contexts map[string]interface{}
 }
@@ -289,6 +290,7 @@ func UseViper(v *viper.Viper) error {
 		SessionStorage:              NewRedisConfig(v.GetString("sessions.url")),
 		DownloadStorage:             NewRedisConfig(v.GetString("downloads.url")),
 		KonnectorsOauthStateStorage: NewRedisConfig(v.GetString("konnectors.oauthstate")),
+		Realtime:                    NewRedisConfig(v.GetString("realtime.url")),
 		Mail: &gomail.DialerOptions{
 			Host:                      v.GetString("mail.host"),
 			Port:                      v.GetInt("mail.port"),

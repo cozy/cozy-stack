@@ -60,14 +60,14 @@ func SimpleDatabasePrefix(prefix string) Database {
 	return &simpleDB{prefix: prefix}
 }
 
-func rtevent(db Database, evtype string, doc, oldDoc Doc) {
+func rtevent(db Database, verb string, doc, oldDoc Doc) {
 	domain := db.Prefix()
-	if err := runHooks(domain, evtype, doc, oldDoc); err != nil {
-		logger.WithDomain(db.Prefix()).Errorf("error in hooks on %s %s %v\n", evtype, doc.DocType(), err)
+	if err := runHooks(domain, verb, doc, oldDoc); err != nil {
+		logger.WithDomain(db.Prefix()).Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
 
 	realtime.GetHub().Publish(&realtime.Event{
-		Type:   evtype,
+		Verb:   verb,
 		Doc:    doc.Clone(),
 		OldDoc: oldDoc,
 		Domain: domain,

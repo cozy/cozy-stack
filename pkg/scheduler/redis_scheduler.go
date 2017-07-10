@@ -106,7 +106,7 @@ func (s *RedisScheduler) pollLoop() {
 func (s *RedisScheduler) startEventDispatcher() {
 	eventsCh := make(chan *realtime.Event, 100)
 	go func() {
-		c := realtime.GetHub().SubscribeAll()
+		c := realtime.GetHub().SubscribeLocalAll()
 		defer func() {
 			c.Close()
 			close(eventsCh)
@@ -115,7 +115,7 @@ func (s *RedisScheduler) startEventDispatcher() {
 			select {
 			case <-s.stopped:
 				return
-			case event := <-c.Read():
+			case event := <-c.Channel:
 				eventsCh <- event
 			}
 		}

@@ -195,7 +195,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		for msg := range msgChan {
 			messages = append(messages, msg)
 			hub.Publish(&realtime.Event{
-				Type: realtime.EventCreate,
+				Verb: realtime.EventCreate,
 				Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
 					"type":    msg.Type,
 					"message": msg.Message,

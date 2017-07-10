@@ -133,8 +133,9 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 	wg.Add(1)
 
 	go func() {
-		evCh := realtime.GetHub().Subscribe(inst.Domain, consts.JobEvents)
-		ch := evCh.Read()
+		evCh := realtime.GetHub().Subscriber(inst.Domain)
+		evCh.Subscribe(consts.JobEvents)
+		ch := evCh.Channel
 		ev1 := <-ch
 		ev2 := <-ch
 		ev3 := <-ch

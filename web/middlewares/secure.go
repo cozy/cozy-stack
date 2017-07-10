@@ -53,7 +53,9 @@ const (
 	CSPSrcBlob
 	// CSPSrcParent adds the parent domain as an eligible CSP source.
 	CSPSrcParent
-	// CSPSrcSiblings add all the siblings subdomains as eligibles CSP
+	// CSPSrcWS adds the parent domain eligible for websocket.
+	CSPSrcWS
+	// CSPSrcSiblings adds all the siblings subdomains as eligibles CSP
 	// sources.
 	CSPSrcSiblings
 	// CSPSrcAny is the '*' option. It allows any domain as an eligible source.
@@ -158,6 +160,8 @@ func makeCSPHeader(parent, siblings, header string, sources []CSPSource) string 
 			headers[i] = "blob:"
 		case CSPSrcParent:
 			headers[i] = parent
+		case CSPSrcWS:
+			headers[i] = "ws://" + parent + " wss://" + parent
 		case CSPSrcSiblings:
 			headers[i] = siblings
 		case CSPSrcAny:
