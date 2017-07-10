@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -76,9 +77,11 @@ func redirectToDataCollect(c echo.Context, account *accounts.Account, clientStat
 
 // redirect is the redirect_uri endpoint passed to oauth services
 // it should create the account.
+// middlewares.NeedInstance is not applied before this handler
+// it needs to handle both
+// - with instance redirect
+// - without instance redirect
 func redirect(c echo.Context) error {
-
-	instance := middlewares.GetInstance(c)
 
 	accessCode := c.QueryParam("code")
 	accessToken := c.QueryParam("access_token")
@@ -88,18 +91,25 @@ func redirect(c echo.Context) error {
 		return err
 	}
 
-	if accessToken != "" {
+	i, _ := instance.Get(c.Request().Host)
+
+	if i != nil && accessToken != "" {
 		account := &accounts.Account{
 			AccountType: accountTypeID,
 			Oauth: &accounts.OauthInfo{
 				AccessToken: accessToken,
 			},
 		}
-		err = couchdb.CreateDoc(instance, account)
+		err = couchdb.CreateDoc(i, account)
 		if err != nil {
 			return err
 		}
 		return redirectToDataCollect(c, account, "")
+	}
+
+	if accessToken != "" {
+		return echo.NewHTTPError(http.StatusBadRequest,
+			"using ?access_token with instance-less redirect")
 	}
 
 	stateCode := c.QueryParam("state")
@@ -107,8 +117,16 @@ func redirect(c echo.Context) error {
 
 	if state == nil ||
 		state.AccountType != accountTypeID ||
-		state.InstanceDomain != instance.Domain {
+		(i != nil && state.InstanceDomain != i.Domain) {
 		return errors.New("bad state")
+	}
+
+	// TODO should we check if the req.Host is a given "_oauth_callback" domain?
+	if i == nil {
+		i, err = instance.Get(state.InstanceDomain)
+		if err != nil {
+			return errors.New("bad state")
+		}
 	}
 
 	var req *http.Request
@@ -116,7 +134,7 @@ func redirect(c echo.Context) error {
 	data := url.Values{
 		"grant_type":   []string{accounts.AuthorizationCode},
 		"code":         []string{accessCode},
-		"redirect_uri": []string{accountType.RedirectURI(instance)},
+		"redirect_uri": []string{accountType.RedirectURI(i)},
 		"state":        []string{stateCode},
 		"nonce":        []string{state.Nonce},
 	}
@@ -128,16 +146,16 @@ func redirect(c echo.Context) error {
 
 	body := data.Encode()
 	req, err = http.NewRequest("POST", accountType.TokenEndpoint, strings.NewReader(body))
+	if err != nil {
+		return err
+	}
+
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Accept", "application/json")
 
 	if accountType.TokenAuthMode == accounts.BasicTokenAuthMode {
 		auth := []byte(accountType.ClientID + ":" + accountType.ClientSecret)
 		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
-	}
-
-	if err != nil {
-		return err
 	}
 
 	res, err := http.DefaultClient.Do(req)
@@ -207,7 +225,7 @@ func redirect(c echo.Context) error {
 		account.Extras = extras
 	}
 
-	err = couchdb.CreateDoc(instance, account)
+	err = couchdb.CreateDoc(i, account)
 	if err != nil {
 		return err
 	}
@@ -250,8 +268,10 @@ func refresh(c echo.Context) error {
 }
 
 // Routes setups routing for cozy-as-oauth-client routes
+// Careful, the normal middlewares NeedInstance and LoadSession are not applied
+// to this group in web/routing
 func Routes(router *echo.Group) {
 	router.GET("/:accountType/start", start, middlewares.NeedInstance)
-	router.GET("/:accountType/redirect", redirect, middlewares.NeedInstance)
+	router.GET("/:accountType/redirect", redirect)
 	router.POST("/:accountType/:accountid/refresh", refresh)
 }
