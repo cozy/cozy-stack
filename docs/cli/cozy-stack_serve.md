@@ -9,6 +9,10 @@ Starts the stack and listens for HTTP calls
 It will accept HTTP requests on localhost:8080 by default.
 Use the --port and --host flags to change the listening option.
 
+The SIGINT signal will trigger a graceful stop of cozy-stack: it will wait that
+current HTTP requests and jobs are finished (in a limit of 2 minutes) before
+exiting.
+
 If you are the developer of a client-side app, you can use --appdir
 to mount a directory as the application with the 'app' slug.
 
