@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -117,23 +118,33 @@ func missingType(cmd *command) *wsError {
 	}
 }
 
-func readPump(i *instance.Instance, ws *websocket.Conn, ds *realtime.DynamicSubscriber, errc chan *wsError) {
+func sendErr(ctx context.Context, errc chan *wsError, e *wsError) {
+	select {
+	case errc <- e:
+	case <-ctx.Done():
+	}
+}
+
+func readPump(ctx context.Context, i *instance.Instance, ws *websocket.Conn,
+	ds *realtime.DynamicSubscriber, errc chan *wsError) {
+	defer close(errc)
+
 	var auth map[string]string
 	if err := ws.ReadJSON(&auth); err != nil {
-		errc <- unknownMethod(auth["method"], auth)
+		sendErr(ctx, errc, unknownMethod(auth["method"], auth))
 		return
 	}
 	if strings.ToUpper(auth["method"]) != "AUTH" {
-		errc <- unknownMethod(auth["method"], auth)
+		sendErr(ctx, errc, unknownMethod(auth["method"], auth))
 		return
 	}
 	if auth["payload"] == "" {
-		errc <- unauthorized(auth)
+		sendErr(ctx, errc, unauthorized(auth))
 		return
 	}
 	pdoc, err := webpermissions.ParseJWT(i, auth["payload"])
 	if err != nil {
-		errc <- unauthorized(auth)
+		sendErr(ctx, errc, unauthorized(auth))
 		return
 	}
 
@@ -147,15 +158,15 @@ func readPump(i *instance.Instance, ws *websocket.Conn, ds *realtime.DynamicSubs
 		}
 
 		if strings.ToUpper(cmd.Method) != "SUBSCRIBE" {
-			errc <- unknownMethod(cmd.Method, cmd)
+			sendErr(ctx, errc, unknownMethod(cmd.Method, cmd))
 			continue
 		}
 		if cmd.Payload.Type == "" {
-			errc <- missingType(cmd)
+			sendErr(ctx, errc, missingType(cmd))
 			continue
 		}
 		if !pdoc.Permissions.AllowWholeType(permissions.GET, cmd.Payload.Type) {
-			errc <- forbidden(cmd)
+			sendErr(ctx, errc, forbidden(cmd))
 			continue
 		}
 
@@ -189,9 +200,10 @@ func ws(c echo.Context) error {
 
 	ds := realtime.GetHub().Subscriber(instance.Domain)
 	defer ds.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	errc := make(chan *wsError)
-
-	go readPump(instance, ws, ds, errc)
+	go readPump(ctx, instance, ws, ds, errc)
 
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
