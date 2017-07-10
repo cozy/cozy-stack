@@ -36,7 +36,8 @@ func (sched *RedisScheduler) ImportFromMemStorage() error {
 			// trigger does not exists in new storage, copy it
 			trigger, errn := NewTrigger(t)
 			if errn != nil {
-				return errn
+				logger.WithDomain(t.Domain).Errorln("old trigger is invalid", t)
+				continue
 			}
 
 			db := couchdb.SimpleDatabasePrefix(t.Domain)
