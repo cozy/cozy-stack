@@ -319,6 +319,7 @@ func TestRedisRealtime(t *testing.T) {
 			id:      "nobodywillseeme",
 		},
 	})
+	time.Sleep(100 * time.Millisecond)
 
 	h.Publish(&Event{
 		Domain: "testing",
@@ -327,8 +328,8 @@ func TestRedisRealtime(t *testing.T) {
 			id:      "meneither",
 		},
 	})
-
 	time.Sleep(100 * time.Millisecond)
+
 	c4 := h.Subscriber("testing")
 	err = c4.Subscribe("io.cozy.testobject")
 	assert.NoError(t, err)
