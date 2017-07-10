@@ -524,7 +524,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 		}
 	}
 
-	err = permissions.Allow(c, "GET", doc)
+	err = checkPerm(c, "GET", nil, doc)
 	if err != nil {
 		return err
 	}
