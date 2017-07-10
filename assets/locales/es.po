@@ -70,11 +70,17 @@ msgstr "Autorizar a %s a acceder a su perfil"
 msgid "Authorize App Title"
 msgstr "La aplicación %s no transmite ningún dato personal a terceros."
 
+msgid "Authorize Sharing Title"
+msgstr ""
+
 msgid "Authorize More"
 msgstr "Saber más..."
 
 msgid "Authorize Client presentation"
 msgstr "quisiera tener el permiso para acceder a su Cozy"
+
+msgid "Authorize Sharing presentation"
+msgstr ""
 
 msgid "Authorize Policy sentence"
 msgstr "Usted puede leer la política del uso de sus datos en esta dirección"
@@ -88,6 +94,9 @@ msgstr "Haciendo clic"
 msgid "Authorize Give permission keyword"
 msgstr "Autorizar"
 
+msgid "Authorize Give Sharing permission keyword"
+msgstr ""
+
 msgid "Authorize Give permission end"
 msgstr ""
 ", usted autoriza a la aplicación para que pueda acceder a sus datos en "
@@ -100,6 +109,9 @@ msgstr ""
 "localmente y dentro de Cozy, y en concordancia con las condiciones del "
 "servicio y la política de confidencialidad."
 
+msgid "Authorize Give Sharing permission end"
+msgstr ""
+
 msgid "Authorize Give App permission desc"
 msgstr ""
 "para optimizar los servicios suministrados por su Cozy %s, la aplicación %s "
@@ -108,8 +120,14 @@ msgstr ""
 msgid "Authorize Submit"
 msgstr "Autorizar el acceso"
 
+msgid "Authorize Submit Sharing"
+msgstr ""
+
 msgid "Authorize Cancel"
 msgstr "Negar el acceso"
+
+msgid "Authorize Cancel Sharing"
+msgstr ""
 
 msgid "Error Title"
 msgstr "Lo siento"
@@ -224,3 +242,18 @@ msgstr "Asociaciones (Maif)"
 
 msgid "Sharings Shared with Me directory"
 msgstr "Compartido conmigo"
+
+msgid "Discovery URL help"
+msgstr ""
+
+msgid "Discovery URL field"
+msgstr ""
+
+msgid "Discovery URL placeholder"
+msgstr ""
+
+msgid "Discovery Submit"
+msgstr ""
+
+msgid "Hello recipient email"
+msgstr ""

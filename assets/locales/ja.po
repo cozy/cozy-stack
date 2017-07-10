@@ -68,11 +68,17 @@ msgstr "%s のあなたのプロフィールへのアクセスを承認"
 msgid "Authorize App Title"
 msgstr "アプリケーション %s は、第三者に個人情報を送信しません。"
 
+msgid "Authorize Sharing Title"
+msgstr ""
+
 msgid "Authorize More"
 msgstr "さらに…"
 
 msgid "Authorize Client presentation"
 msgstr "Cozy にアクセスする権限が必要です"
+
+msgid "Authorize Sharing presentation"
+msgstr ""
 
 msgid "Authorize Policy sentence"
 msgstr "データの使用方法に関するポリシーを読むことができます"
@@ -86,6 +92,9 @@ msgstr "選出して "
 msgid "Authorize Give permission keyword"
 msgstr "承認"
 
+msgid "Authorize Give Sharing permission keyword"
+msgstr ""
+
 msgid "Authorize Give permission end"
 msgstr "、アプリケーションがあなたのデータにアクセスすること、利用規約およびプライバシーポリシーに従うことを承諾します。"
 
@@ -94,14 +103,23 @@ msgstr ""
 "、アプリケーション %s がローカルで、および Cozy "
 "内で、あなたのデータへのアクセスすること、利用規約およびプライバシーポリシーに従って取得することを承諾します。"
 
+msgid "Authorize Give Sharing permission end"
+msgstr ""
+
 msgid "Authorize Give App permission desc"
 msgstr "Cozy (%s) の価値を向上させるために、アプリケーション %s は次のデータにアクセスする必要があります:"
 
 msgid "Authorize Submit"
 msgstr "アクセスを承認"
 
+msgid "Authorize Submit Sharing"
+msgstr ""
+
 msgid "Authorize Cancel"
 msgstr "アクセスを拒否"
+
+msgid "Authorize Cancel Sharing"
+msgstr ""
 
 msgid "Error Title"
 msgstr "申し訳ありません"
@@ -216,3 +234,18 @@ msgstr "社会的 (Maif)"
 
 msgid "Sharings Shared with Me directory"
 msgstr "私と共有"
+
+msgid "Discovery URL help"
+msgstr ""
+
+msgid "Discovery URL field"
+msgstr ""
+
+msgid "Discovery URL placeholder"
+msgstr ""
+
+msgid "Discovery Submit"
+msgstr ""
+
+msgid "Hello recipient email"
+msgstr ""
