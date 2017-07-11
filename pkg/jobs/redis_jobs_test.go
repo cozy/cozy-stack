@@ -79,7 +79,7 @@ func TestRedisJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
-			_, err := broker1.PushJob(&JobRequest{
+			_, err = broker1.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
@@ -94,7 +94,7 @@ func TestRedisJobs(t *testing.T) {
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
-			_, err := broker2.PushJob(&JobRequest{
+			_, err = broker2.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
 				Message:    msg,
