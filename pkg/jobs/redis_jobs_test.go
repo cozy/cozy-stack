@@ -58,8 +58,8 @@ func TestRedisJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := &redisBroker{client: client}
-	broker2 := &redisBroker{client: client}
+	broker1 := NewRedisBroker(1, client)
+	broker2 := NewRedisBroker(1, client)
 	msg, _ := NewMessage(JSONEncoding, "z-0")
 	_, err := broker1.PushJob(&JobRequest{
 		Domain:     "cozy.local",
