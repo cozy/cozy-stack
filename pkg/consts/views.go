@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 5
+const IndexViewsVersion int = 6
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -114,7 +114,7 @@ function(doc) {
   Object.keys(doc.permissions).forEach(function(k) {
     var rule = doc.permissions[k];
     for (var i=0; i<rule.values.length; i++) {
-      emit([rule.type, doc.sharing_id, doc.owner], rule);
+      emit([rule.type, doc.owner, doc.sharing_id], rule);
     }
   });
 }`,
