@@ -71,6 +71,8 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	copy(cloned.Tags, f.Tags)
 	cloned.ReferencedBy = make([]couchdb.DocReference, len(f.ReferencedBy))
 	copy(cloned.ReferencedBy, f.ReferencedBy)
+	// It happens that a cloned file is mutated => it's safer to clear the fullpath
+	cloned.fullpath = ""
 	return &cloned
 }
 
