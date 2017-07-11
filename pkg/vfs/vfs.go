@@ -546,12 +546,38 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 		mime = contentType
 	}
 
-	// @TODO improve for specific mime types
-	slashIndex := strings.Index(contentType, "/")
-	if slashIndex >= 0 {
-		class = contentType[:slashIndex]
-	} else {
-		class = contentType
+	switch contentType {
+	case DefaultContentType:
+		class = "files"
+	case "application/x-apple-diskimage", "application/x-msdownload":
+		class = "binary"
+	case "text/html", "text/css", "text/xml", "application/js", "text/x-c",
+		"text/x-go", "text/x-python", "application/x-ruby":
+		class = "code"
+	case "application/pdf":
+		class = "pdf"
+	case "application/vnd.ms-powerpoint", "application/x-iwork-keynote-sffkey",
+		"application/vnd.oasis.opendocument.graphics",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation":
+		class = "slide"
+	case "application/vnd.ms-excel", "application/x-iwork-numbers-sffnumbers",
+		"application/vnd.oasis.opendocument.spreadsheet",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+		class = "spreadsheet"
+	case "application/msword", "application/x-iwork-pages-sffpages",
+		"application/vnd.oasis.opendocument.text",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+		class = "text"
+	case "application/x-7z-compressed", "application/x-rar-compressed",
+		"application/zip", "application/gzip", "application/x-tar":
+		class = "zip"
+	default:
+		slashIndex := strings.Index(contentType, "/")
+		if slashIndex >= 0 {
+			class = contentType[:slashIndex]
+		} else {
+			class = contentType
+		}
 	}
 
 	return mime, class
