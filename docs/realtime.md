@@ -101,7 +101,7 @@ Websockets include a protocol description in handshake, the protocol described b
 Changes to the websocket protocol should be given versions, support for older version should be maintained when reasonable.
 
 ```http
-GET /realtime HTTP/1.1
+GET /realtime/ HTTP/1.1
 Host: mycozy.example.com
 Upgrade: websocket
 Connection: Upgrade
