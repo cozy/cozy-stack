@@ -132,11 +132,6 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 		<-done
 	}
 
-	_, err = sch.Get("cozy.local", atID)
-	assert.Error(t, err)
-	assert.Equal(t, ErrNotFoundTrigger, err)
-
-	_, err = sch.Get("cozy.local", inID)
-	assert.Error(t, err)
-	assert.Equal(t, ErrNotFoundTrigger, err)
+	err = sch.Shutdown(context.Background())
+	assert.NoError(t, err)
 }

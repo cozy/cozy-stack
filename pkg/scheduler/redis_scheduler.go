@@ -64,8 +64,9 @@ type RedisScheduler struct {
 // other cozy-stack processes to schedule jobs.
 func NewRedisScheduler(client *redis.Client) *RedisScheduler {
 	return &RedisScheduler{
-		client: client,
-		log:    logger.WithNamespace("scheduler-redis"),
+		client:  client,
+		log:     logger.WithNamespace("scheduler-redis"),
+		stopped: make(chan struct{}),
 	}
 }
 
@@ -95,6 +96,7 @@ func (s *RedisScheduler) pollLoop() {
 		select {
 		case <-s.closed:
 			ticker.Stop()
+			s.stopped <- struct{}{}
 			return
 		case <-ticker.C:
 			now := time.Now().UTC().Unix()
@@ -160,7 +162,6 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 			}
 		}
 	}
-	s.stopped <- struct{}{}
 }
 
 // Shutdown the scheduling of triggers
@@ -170,7 +171,6 @@ func (s *RedisScheduler) Shutdown(ctx context.Context) error {
 	}
 	fmt.Print("  shutting down redis scheduler...")
 	close(s.closed)
-	defer s.client.Close()
 	select {
 	case <-ctx.Done():
 		fmt.Println("failed: ", ctx.Err())
