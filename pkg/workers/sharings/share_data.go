@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -33,7 +32,7 @@ import (
 
 func init() {
 	jobs.AddWorker("sharedata", &jobs.WorkerConfig{
-		Concurrency: runtime.NumCPU(),
+		Concurrency: 1, // no concurency, to make sure directory hierarchy order is respected
 		WorkerFunc:  SendData,
 	})
 }
@@ -53,6 +52,7 @@ type SendOptions struct {
 	sharedRefs []couchdb.DocReference
 
 	fileOpts *fileOptions
+	dirOpts  *dirOptions
 }
 
 type fileOptions struct {
@@ -61,6 +61,12 @@ type fileOptions struct {
 	md5           string
 	queries       url.Values
 	set           bool // default value is false
+}
+
+type dirOptions struct {
+	tags  string
+	refs  string
+	dirID string
 }
 
 var (
@@ -96,7 +102,7 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 	fileOpts.md5 = base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
 
 	// Send references for permissions
-	var refs string
+	var refs, dirID string
 	if opts.Selector == consts.SelectorReferencedBy {
 		sharedRefs := opts.getSharedReferences()
 		b, err := json.Marshal(sharedRefs)
@@ -104,6 +110,11 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 			return err
 		}
 		refs = string(b)
+	}
+
+	// Specify the dirID if it part of a directory sharing
+	if isDirSharing(fs, opts) {
+		dirID = fileDoc.DirID
 	}
 
 	fileOpts.queries = url.Values{
@@ -114,6 +125,7 @@ func (opts *SendOptions) fillDetailsAndOpenFile(fs vfs.VFS, fileDoc *vfs.FileDoc
 		consts.QueryParamCreatedAt:    {fileDoc.CreatedAt.Format(time.RFC1123)},
 		consts.QueryParamUpdatedAt:    {fileDoc.UpdatedAt.Format(time.RFC1123)},
 		consts.QueryParamReferencedBy: {refs},
+		consts.QueryParamDirID:        {dirID},
 	}
 
 	fileOpts.set = true
@@ -346,7 +358,6 @@ func sendDocToRecipient(ins *instance.Instance, opts *SendOptions, rec *sharings
 // we have a 404 or a 403 error then we can safely assume that the sending is
 // legitimate.
 //
-// TODO Handle sharing of directories.
 func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) error {
 	err := opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
 	if err != nil {
@@ -354,8 +365,9 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 	}
 
 	for _, recipient := range opts.Recipients {
+		// Check remote existence of the file
 		err = headDirOrFileMetadataAtRecipient(ins, opts.SharingID, opts.DocID,
-			recipient)
+			consts.FileType, recipient)
 
 		if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
 			err = sendFileToRecipient(ins, fileDoc, opts, recipient, http.MethodPost)
@@ -379,10 +391,11 @@ func SendFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc) e
 
 // SendDir sends a directory to the recipients.
 //
-// TODO When supporting sharing of directories, make a HEAD request to check if
-// the recipient doesn't alreay have the dir and abort if that's the case.
 func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) error {
+	dirOpts := &dirOptions{}
+
 	dirTags := strings.Join(dirDoc.Tags, files.TagSeparator)
+	dirOpts.tags = dirTags
 
 	var refs string
 	if opts.Selector == consts.SelectorReferencedBy {
@@ -393,38 +406,33 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 		}
 		refs = string(b)
 	}
+	dirOpts.refs = refs
+
+	// Specify the dirID only if the directory is not the sharing container
+	dirID := dirDoc.DirID
+	if dirIsSharedContainer(opts, dirDoc.ID()) {
+		dirID = ""
+	}
+	dirOpts.dirID = dirID
+	opts.dirOpts = dirOpts
 
 	for _, recipient := range opts.Recipients {
-		reqOpts := &request.Options{
-			Domain: recipient.URL,
-			Scheme: recipient.Scheme,
-			Method: http.MethodPost,
-			Path:   opts.Path,
-			Headers: request.Headers{
-				echo.HeaderContentType:   echo.MIMEApplicationJSON,
-				echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
-			},
-			Queries: url.Values{
-				consts.QueryParamSharingID: {opts.SharingID},
-				consts.QueryParamTags:      {dirTags},
-				consts.QueryParamName:      {dirDoc.DocName},
-				consts.QueryParamType:      {consts.DirType},
-				consts.QueryParamCreatedAt: {
-					dirDoc.CreatedAt.Format(time.RFC1123)},
-				consts.QueryParamUpdatedAt: {
-					dirDoc.CreatedAt.Format(time.RFC1123)},
-				consts.QueryParamReferencedBy: {refs},
-			},
-			NoResponse: true,
-		}
-		_, errReq := request.Req(reqOpts)
-		if errReq != nil {
-			if authError(errReq) {
-				_, errReq = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+		// Check remote existence of the directory
+		err := headDirOrFileMetadataAtRecipient(ins, opts.SharingID, opts.DocID,
+			consts.DirType, recipient)
+		if err == ErrRemoteDocDoesNotExist || err == ErrForbidden {
+			err = sendDirToRecipient(ins, dirDoc, opts, recipient)
+			if err != nil {
+				ins.Logger().Errorf("[sharings] An error occurred while "+
+					"trying to share directory %v: %v", dirDoc.ID(), err)
 			}
-			if errReq != nil {
-				ins.Logger().Errorf("[sharing] An error occurred while trying to "+
-					"share the directory %v: %v", dirDoc.DocName, errReq)
+
+		} else {
+			if err == nil {
+				ins.Logger().Debugf("[sharings] Aborting: recipient already "+
+					"has the directory: %s", dirDoc.ID())
+			} else {
+				ins.Logger().Debugf("[sharings] Aborting: %v", err)
 			}
 		}
 	}
@@ -447,7 +455,6 @@ func SendDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) erro
 // 4. The references of the file have changed.
 //        -> we update the references.
 //
-// TODO When sharing directories, handle changes on the dirID.
 func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.FileDoc, sendToSharer bool) error {
 	md5 := base64.StdEncoding.EncodeToString(fileDoc.MD5Sum)
 
@@ -481,7 +488,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 		// The MD5 didn't change: this is a PATCH or a reference update.
 		if md5 == md5AtRec {
 			// Check the metadata did change to do the patch
-			if !fileHasChanges(fileDoc, remoteFileDoc) {
+			if !fileHasChanges(ins.VFS(), opts, fileDoc, remoteFileDoc) {
 				// Special case to deal with ReferencedBy fields
 				if opts.Selector == consts.SelectorReferencedBy {
 					refs := findNewRefs(opts, fileDoc, remoteFileDoc)
@@ -496,8 +503,7 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 				}
 				continue
 			}
-
-			patch, errp := generateDirOrFilePatch(nil, fileDoc)
+			patch, errp := generateDirOrFilePatch(ins.VFS(), opts, nil, fileDoc)
 			if errp != nil {
 				ins.Logger().Errorf("[sharings] Could not generate patch for "+
 					"file %v: %v", fileDoc.DocName, errp)
@@ -508,21 +514,22 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 				ins.Logger().Error("[sharings] An error occurred while trying "+
 					"to send patch: ", errsp)
 			}
-			continue
+		} else {
+			// The MD5 did change: this is a PUT
+			err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
+			if err != nil {
+				ins.Logger().Errorf("[sharings] An error occurred while trying "+
+					"to open %v: %v", fileDoc.DocName, err)
+				continue
+			}
+			err = sendFileToRecipient(ins, fileDoc, opts, recipient, http.MethodPut)
+			if err != nil {
+				ins.Logger().Errorf("[sharings] An error occurred while trying to "+
+					"share an update of file %v to a recipient: %v",
+					fileDoc.DocName, err)
+			}
 		}
-		// The MD5 did change: this is a PUT
-		err = opts.fillDetailsAndOpenFile(ins.VFS(), fileDoc)
-		if err != nil {
-			ins.Logger().Errorf("[sharings] An error occurred while trying "+
-				"to open %v: %v", fileDoc.DocName, err)
-			continue
-		}
-		err = sendFileToRecipient(ins, fileDoc, opts, recipient, http.MethodPut)
-		if err != nil {
-			ins.Logger().Errorf("[sharings] An error occurred while trying to "+
-				"share an update of file %v to a recipient: %v",
-				fileDoc.DocName, err)
-		}
+
 	}
 
 	return nil
@@ -533,22 +540,26 @@ func UpdateOrPatchFile(ins *instance.Instance, opts *SendOptions, fileDoc *vfs.F
 func PatchDir(ins *instance.Instance, opts *SendOptions, dirDoc *vfs.DirDoc) error {
 	var errFinal error
 
-	patch, err := generateDirOrFilePatch(dirDoc, nil)
+	patch, err := generateDirOrFilePatch(ins.VFS(), opts, dirDoc, nil)
 	if err != nil {
 		return err
 	}
 
 	for _, rec := range opts.Recipients {
-		rev, err := getDirOrFileRevAtRecipient(ins, opts, rec)
+		remoteDirDoc, _, err := getDirOrFileMetadataAtRecipient(ins, opts, rec)
 		if err != nil {
 			return err
 		}
-		opts.DocRev = rev
-		err = sendPatchToRecipient(ins, patch, opts, rec, dirDoc.DirID)
-		if err != nil {
-			errFinal = multierror.Append(errFinal,
-				fmt.Errorf("Error while trying to send a patch: %s",
-					err.Error()))
+		opts.DocRev = remoteDirDoc.Rev()
+
+		// Share only if directories have changes
+		if dirHasChanges(ins.VFS(), opts, dirDoc, remoteDirDoc) {
+			err = sendPatchToRecipient(ins, patch, opts, rec, dirDoc.DirID)
+			if err != nil {
+				errFinal = multierror.Append(errFinal,
+					fmt.Errorf("Error while trying to send a patch: %s",
+						err.Error()))
+			}
 		}
 	}
 
@@ -686,6 +697,44 @@ func sendFileToRecipient(ins *instance.Instance, fileDoc *vfs.FileDoc, opts *Sen
 	return err
 }
 
+// Send the file to the recipient.
+func sendDirToRecipient(ins *instance.Instance, dirDoc *vfs.DirDoc, opts *SendOptions, recipient *sharings.RecipientInfo) error {
+	reqOpts := &request.Options{
+		Domain: recipient.URL,
+		Scheme: recipient.Scheme,
+		Method: http.MethodPost,
+		Path:   opts.Path,
+		Headers: request.Headers{
+			echo.HeaderContentType:   echo.MIMEApplicationJSON,
+			echo.HeaderAuthorization: "Bearer " + recipient.AccessToken.AccessToken,
+		},
+		Queries: url.Values{
+			consts.QueryParamSharingID: {opts.SharingID},
+			consts.QueryParamTags:      {opts.dirOpts.tags},
+			consts.QueryParamName:      {dirDoc.DocName},
+			consts.QueryParamType:      {consts.DirType},
+			consts.QueryParamCreatedAt: {
+				dirDoc.CreatedAt.Format(time.RFC1123)},
+			consts.QueryParamUpdatedAt: {
+				dirDoc.CreatedAt.Format(time.RFC1123)},
+			consts.QueryParamReferencedBy: {opts.dirOpts.refs},
+			consts.QueryParamDirID:        {opts.dirOpts.dirID},
+		},
+		NoResponse: true,
+	}
+	_, err := request.Req(reqOpts)
+	if err != nil {
+		if authError(err) {
+			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+		}
+		if err != nil {
+			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
+				"share the directory %v: %v", dirDoc.DocName, err)
+		}
+	}
+	return err
+}
+
 func sendPatchToRecipient(ins *instance.Instance, patch *jsonapi.Document, opts *SendOptions, recipient *sharings.RecipientInfo, dirID string) error {
 	body, err := request.WriteJSON(patch)
 	if err != nil {
@@ -781,7 +830,8 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 	return err
 }
 
-func isShared(id string, acceptedIDs []string) bool {
+// NOTE: the root folder cannot be shared yet
+func isShared(fs vfs.VFS, id string, acceptedIDs []string) bool {
 	if id == consts.RootDirID {
 		return false
 	}
@@ -789,6 +839,25 @@ func isShared(id string, acceptedIDs []string) bool {
 	for _, acceptedID := range acceptedIDs {
 		if id == acceptedID {
 			return true
+		}
+
+		for id != consts.RootDirID {
+			dirDoc, fileDoc, err := fs.DirOrFileByID(id)
+			if err != nil {
+				break
+			}
+			if dirDoc != nil {
+				if dirDoc.DirID == acceptedID {
+					return true
+				}
+				id = dirDoc.DirID
+			}
+			if fileDoc != nil {
+				if fileDoc.DirID == acceptedID {
+					return true
+				}
+				id = fileDoc.DirID
+			}
 		}
 	}
 
@@ -801,21 +870,31 @@ func isShared(id string, acceptedIDs []string) bool {
 // http://jsonapi.org/format/#document-structure
 // The data part of the jsonapi.Document contains an ObjectMarshalling, see:
 // web/jsonapi/data.go:66
-func generateDirOrFilePatch(dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.Document, error) {
+func generateDirOrFilePatch(fs vfs.VFS, opts *SendOptions, dirDoc *vfs.DirDoc, fileDoc *vfs.FileDoc) (*jsonapi.Document, error) {
 	var patch vfs.DocPatch
-	var id string
-	var rev string
+	var id, rev, dirID string
 
 	if dirDoc != nil {
+		dirID = dirDoc.DirID
+		if opts.Selector == "" {
+			// Specify the dirID only if the directory is not the sharing container
+			if dirIsSharedContainer(opts, dirDoc.ID()) {
+				dirID = ""
+			}
+		}
+		patch.DirID = &dirID
 		patch.Name = &dirDoc.DocName
-		patch.DirID = &dirDoc.DirID
 		patch.Tags = &dirDoc.Tags
 		patch.UpdatedAt = &dirDoc.UpdatedAt
 		id = dirDoc.ID()
 		rev = dirDoc.Rev()
 	} else {
+		if isDirSharing(fs, opts) {
+			// The dirID is only needed for directory sharing
+			dirID = fileDoc.DirID
+		}
 		patch.Name = &fileDoc.DocName
-		patch.DirID = &fileDoc.DirID
+		patch.DirID = &dirID
 		patch.Tags = &fileDoc.Tags
 		patch.UpdatedAt = &fileDoc.UpdatedAt
 		id = fileDoc.ID()
@@ -931,9 +1010,11 @@ func getDirOrFileMetadataAtRecipient(ins *instance.Instance, opts *SendOptions, 
 	return dirDoc, fileDoc, nil
 }
 
-func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id string, recInfo *sharings.RecipientInfo) error {
-	path := fmt.Sprintf("/files/download/%s", id)
-
+func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id, headType string, recInfo *sharings.RecipientInfo) error {
+	path := fmt.Sprintf("/files/%s", id)
+	queries := url.Values{
+		"Type": {headType},
+	}
 	reqOpts := &request.Options{
 		Domain: recInfo.URL,
 		Scheme: recInfo.Scheme,
@@ -943,6 +1024,7 @@ func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id stri
 			echo.HeaderContentType:   echo.MIMEApplicationJSON,
 			echo.HeaderAuthorization: "Bearer " + recInfo.AccessToken.AccessToken,
 		},
+		Queries: queries,
 	}
 
 	_, err := request.Req(reqOpts)
@@ -979,12 +1061,38 @@ func parseError(err error) error {
 // remote one.
 // This is done to prevent infinite loops after a PUT/PATCH in master-master:
 // we don't propagate the update if they are similar.
-func fileHasChanges(newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
+func fileHasChanges(fs vfs.VFS, opts *SendOptions, newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
 	if newFileDoc.Name() != remoteFileDoc.Name() {
 		return true
 	}
 	if !reflect.DeepEqual(newFileDoc.Tags, remoteFileDoc.Tags) {
 		return true
+	}
+	// Handle dirID change for directory sharing
+	if isDirSharing(fs, opts) {
+		if newFileDoc.DirID != remoteFileDoc.DirID {
+			return true
+		}
+	}
+
+	return false
+}
+
+// dirHasChanges checks that the local directory do have changes compared to the
+// remote one.
+// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// we don't propagate the update if they are similar.
+func dirHasChanges(fs vfs.VFS, opts *SendOptions, newDirDoc, remoteDirDoc *vfs.DirDoc) bool {
+	if newDirDoc.Name() != remoteDirDoc.Name() {
+		return true
+	}
+	// Handle dirID change for directory sharing
+	if isDirSharing(fs, opts) {
+		if !dirIsSharedContainer(opts, newDirDoc.ID()) {
+			if newDirDoc.DirID != remoteDirDoc.DirID {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -1124,4 +1232,30 @@ func refreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *sharing
 	opts.Headers["Authorization"] = "Bearer " + access.AccessToken
 	res, err := request.Req(opts)
 	return res, err
+}
+
+// dirIsSharedContainer returns true if the given dirID is the sharing container
+func dirIsSharedContainer(opts *SendOptions, dirID string) bool {
+	for _, val := range opts.Values {
+		if val == dirID {
+			return true
+		}
+	}
+	return false
+}
+
+// isDirSharing returns true if it is a directory sharing
+func isDirSharing(fs vfs.VFS, opts *SendOptions) bool {
+	if opts.Selector == "" && opts.DocType == consts.Files {
+		for _, val := range opts.Values {
+			dirDoc, _, err := fs.DirOrFileByID(val)
+			if err != nil {
+				return false
+			}
+			if dirDoc != nil {
+				return true
+			}
+		}
+	}
+	return false
 }

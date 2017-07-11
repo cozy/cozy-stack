@@ -244,19 +244,19 @@ func TestIsDocumentStillShared(t *testing.T) {
 		Selector: consts.SelectorReferencedBy,
 		Values:   []string{"io.cozy.events/static"},
 	}
-	assert.False(t, isDocumentStillShared(&optsNotShared, sharedRef))
+	assert.False(t, isDocumentStillShared(in.VFS(), &optsNotShared, sharedRef))
 
 	optsShared := SendOptions{
 		Selector: consts.SelectorReferencedBy,
 		Values:   []string{"io.cozy.events/random"},
 	}
-	assert.True(t, isDocumentStillShared(&optsShared, sharedRef))
+	assert.True(t, isDocumentStillShared(in.VFS(), &optsShared, sharedRef))
 
 	optsNotShared = SendOptions{
 		Values: []string{"123"},
 		DocID:  "456",
 	}
-	assert.False(t, isDocumentStillShared(&optsNotShared, sharedRef))
+	assert.False(t, isDocumentStillShared(in.VFS(), &optsNotShared, sharedRef))
 }
 
 func TestRevokedRecipient(t *testing.T) {

@@ -375,6 +375,38 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	return nil
 }
 
+// HeadDirOrFile handles HEAD requests on directory or file to check their
+// existence
+func HeadDirOrFile(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	switch c.QueryParam("Type") {
+	case consts.FileType:
+		file, err := instance.VFS().FileByID(c.Param("file-id"))
+		if err != nil {
+			return wrapVfsError(err)
+		}
+		err = checkPerm(c, permissions.GET, nil, file)
+		if err != nil {
+			return err
+		}
+	case consts.DirType:
+		dir, err := instance.VFS().DirByID(c.Param("file-id"))
+		if err != nil {
+			return wrapVfsError(err)
+		}
+		err = checkPerm(c, permissions.GET, dir, nil)
+		if err != nil {
+			return err
+		}
+	default:
+		err := ErrDocTypeInvalid
+		return wrapVfsError(err)
+	}
+
+	return nil
+}
+
 // ThumbnailHandler serves thumbnails of the images/photos
 func ThumbnailHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -784,6 +816,8 @@ func Routes(router *echo.Group) {
 	router.GET("/download/:file-id", ReadFileContentFromIDHandler)
 
 	router.POST("/_find", FindFilesMango)
+
+	router.HEAD("/:file-id", HeadDirOrFile)
 
 	router.GET("/metadata", ReadMetadataFromPathHandler)
 	router.GET("/:file-id", ReadMetadataFromIDHandler)

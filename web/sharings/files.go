@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"time"
@@ -261,6 +262,11 @@ func patchDirOrFile(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	var patch vfs.DocPatch
 
+	sharingID := c.QueryParam(consts.QueryParamSharingID)
+	if sharingID == "" {
+		return jsonapi.BadRequest(errors.New("Missing sharing id"))
+	}
+
 	_, err := jsonapi.Bind(c.Request(), &patch)
 	if err != nil {
 		return jsonapi.BadJSON()
@@ -279,14 +285,18 @@ func patchDirOrFile(c echo.Context) error {
 		if patch.UpdatedAt.Before(dirDoc.CreatedAt) {
 			*patch.UpdatedAt = dirDoc.UpdatedAt
 		}
-		*patch.DirID = dirDoc.DirID
+		if *patch.DirID == "" {
+			*patch.DirID = dirDoc.DirID
+		}
 		rev = dirDoc.Rev()
 	} else {
 		// Safeguard for the date in case of incorrect UpdatedAt from the remote
 		if patch.UpdatedAt.Before(fileDoc.CreatedAt) {
 			*patch.UpdatedAt = fileDoc.UpdatedAt
 		}
-		*patch.DirID = fileDoc.DirID
+		if *patch.DirID == "" {
+			*patch.DirID = fileDoc.DirID
+		}
 		rev = fileDoc.Rev()
 	}
 

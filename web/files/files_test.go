@@ -1177,6 +1177,29 @@ func TestFileCreateAndDownloadByID(t *testing.T) {
 	assert.Equal(t, `inline; filename=todownload2stepsbis`, disposition)
 }
 
+func TestHeadDirOrFileNotFound(t *testing.T) {
+	req, _ := http.NewRequest("HEAD", ts.URL+"/files/fakeid/?Type=directory", strings.NewReader(""))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 404, res.StatusCode)
+}
+
+func TestHeadDirOrFileExists(t *testing.T) {
+	res, _ := createDir(t, "/files/?Name=hellothere&Type=directory")
+	assert.Equal(t, 201, res.StatusCode)
+
+	storage := testInstance.VFS()
+	dir, err := storage.DirByPath("/hellothere")
+	assert.NoError(t, err)
+	id := dir.ID()
+	req, _ := http.NewRequest("HEAD", ts.URL+"/files/"+id+"?Type=directory", strings.NewReader(""))
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+}
+
 func TestArchiveNotFound(t *testing.T) {
 	body := bytes.NewBufferString(`{
 		"data": {

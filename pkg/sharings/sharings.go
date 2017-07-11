@@ -239,7 +239,7 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
 			strings.Join(rule.Values, ",") + ":" + rule.Selector
 	} else {
-		eventArgs = rule.Type + ":UPDATED,DELETED:" +
+		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
 			strings.Join(rule.Values, ",")
 	}
 
@@ -278,7 +278,6 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		if len(rule.Values) == 0 {
 			return nil
 		}
-		docType := rule.Type
 		// Trigger the updates if the sharing is not one-shot
 		if sharing.SharingType != consts.OneShotSharing {
 			err := AddTrigger(instance, rule, sharing.SharingID)
@@ -288,104 +287,171 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		}
 
 		var values []string
-
-		// Dynamic sharing
+		var err error
 		if rule.Selector != "" {
-			// Particular case for referenced_by: use the existing view
-			if rule.Selector == consts.SelectorReferencedBy {
-				for _, val := range rule.Values {
-					// A referenced_by selector implies Values in the form
-					// ["refDocType/refId"]
-					parts := strings.Split(val, permissions.RefSep)
-					if len(parts) != 2 {
-						return ErrBadPermission
-					}
-					refType := parts[0]
-					refID := parts[1]
-					req := &couchdb.ViewRequest{
-						Key:    []string{refType, refID},
-						Reduce: false,
-					}
-					var res couchdb.ViewResponse
-					err := couchdb.ExecView(instance,
-						consts.FilesReferencedByView, req, &res)
-					if err != nil {
-						return err
-					}
-					for _, row := range res.Rows {
-						values = append(values, row.ID)
-					}
-
-				}
-			} else {
-
-				// Create index based on selector to retrieve documents to share
-				indexName := "by-" + rule.Selector
-				index := mango.IndexOnFields(docType, indexName,
-					[]string{rule.Selector})
-				err := couchdb.DefineIndex(instance, index)
-				if err != nil {
-					return err
-				}
-
-				var docs []couchdb.JSONDoc
-
-				// Request the index for all values
-				// NOTE: this is not efficient in case of many Values
-				// We might consider a map-reduce approach in case of bottleneck
-				for _, val := range rule.Values {
-					err = couchdb.FindDocs(instance, docType,
-						&couchdb.FindRequest{
-							UseIndex: indexName,
-							Selector: mango.Equal(rule.Selector, val),
-						}, &docs)
-					if err != nil {
-						return err
-					}
-					// Save returned doc ids
-					for _, d := range docs {
-						values = append(values, d.ID())
-					}
-				}
+			// Selector-based sharing
+			values, err = sharingBySelector(instance, rule)
+			if err != nil {
+				return err
 			}
 		} else {
-			values = rule.Values
+			// Value-based sharing
+			values, err = sharingByValues(instance, rule)
+			if err != nil {
+				return err
+			}
+		}
+		err = sendData(instance, sharing, recStatus, values, rule)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// sharingBySelector returns the ids to share based on the Rule selector
+func sharingBySelector(instance *instance.Instance, rule permissions.Rule) ([]string, error) {
+	var values []string
+
+	// Particular case for referenced_by: use the existing view
+	if rule.Selector == consts.SelectorReferencedBy {
+		for _, val := range rule.Values {
+			// A referenced_by selector implies Values in the form
+			// ["refDocType/refId"]
+			parts := strings.Split(val, permissions.RefSep)
+			if len(parts) != 2 {
+				return nil, ErrBadPermission
+			}
+			refType := parts[0]
+			refID := parts[1]
+			req := &couchdb.ViewRequest{
+				Key:    []string{refType, refID},
+				Reduce: false,
+			}
+			var res couchdb.ViewResponse
+			err := couchdb.ExecView(instance,
+				consts.FilesReferencedByView, req, &res)
+			if err != nil {
+				return nil, err
+			}
+			for _, row := range res.Rows {
+				values = append(values, row.ID)
+			}
+
+		}
+	} else {
+		// Create index based on selector to retrieve documents to share
+		indexName := "by-" + rule.Selector
+		index := mango.IndexOnFields(rule.Type, indexName,
+			[]string{rule.Selector})
+		err := couchdb.DefineIndex(instance, index)
+		if err != nil {
+			return nil, err
 		}
 
-		// Create a sharedata worker for each doc to send
-		for _, val := range values {
-			domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
-			if err != nil {
-				return err
-			}
-			rec := &RecipientInfo{
-				URL:         domain,
-				Scheme:      scheme,
-				AccessToken: recStatus.AccessToken,
-				Client:      recStatus.Client,
-			}
+		var docs []couchdb.JSONDoc
 
-			workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, WorkerData{
-				DocID:      val,
-				SharingID:  sharing.SharingID,
-				Selector:   rule.Selector,
-				Values:     rule.Values,
-				DocType:    docType,
-				Recipients: []*RecipientInfo{rec},
-			})
+		// Request the index for all values
+		// NOTE: this is not efficient in case of many Values
+		// We might consider a map-reduce approach in case of bottleneck
+		for _, val := range rule.Values {
+			err = couchdb.FindDocs(instance, rule.Type,
+				&couchdb.FindRequest{
+					UseIndex: indexName,
+					Selector: mango.Equal(rule.Selector, val),
+				}, &docs)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
-				Domain:     instance.Domain,
-				WorkerType: "sharedata",
-				Options:    nil,
-				Message:    workerMsg,
-			})
-			if err != nil {
-				return err
+			// Save returned doc ids
+			for _, d := range docs {
+				values = append(values, d.ID())
 			}
+		}
+	}
+	return values, nil
+}
 
+// sharingByValues returns the ids to share based on the Rule values
+func sharingByValues(instance *instance.Instance, rule permissions.Rule) ([]string, error) {
+	var values []string
+
+	// Iterate on values to detect directory sharing
+	for _, val := range rule.Values {
+		if rule.Type == consts.Files {
+			fs := instance.VFS()
+			dirDoc, _, err := fs.DirOrFileByID(val)
+			if err != nil {
+				return nil, err
+			}
+			// Directory sharing: get all hierarchy
+			if dirDoc != nil {
+				rootPath, err := dirDoc.Path(fs)
+				if err != nil {
+					return nil, err
+				}
+				err = vfs.Walk(fs, rootPath, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+					if err != nil {
+						return err
+					}
+					var id string
+					if dir != nil {
+						id = dir.ID()
+					} else if file != nil {
+						id = file.ID()
+					}
+					values = append(values, id)
+
+					return nil
+				})
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				// The value is a file: no particular treatment
+				values = append(values, val)
+			}
+		} else {
+			// Not a file nor directory: no particular treatment
+			values = append(values, val)
+		}
+	}
+	return values, nil
+}
+
+func sendData(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus, values []string, rule permissions.Rule) error {
+	// Create a sharedata worker for each doc to send
+	for _, val := range values {
+		domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
+		if err != nil {
+			return err
+		}
+		rec := &RecipientInfo{
+			URL:         domain,
+			Scheme:      scheme,
+			AccessToken: recStatus.AccessToken,
+			Client:      recStatus.Client,
+		}
+
+		workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, WorkerData{
+			DocID:      val,
+			SharingID:  sharing.SharingID,
+			Selector:   rule.Selector,
+			Values:     rule.Values,
+			DocType:    rule.Type,
+			Recipients: []*RecipientInfo{rec},
+		})
+		if err != nil {
+			return err
+		}
+		_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+			Domain:     instance.Domain,
+			WorkerType: "sharedata",
+			Options:    nil,
+			Message:    workerMsg,
+		})
+		if err != nil {
+			return err
 		}
 	}
 	return nil
