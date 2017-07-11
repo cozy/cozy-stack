@@ -410,7 +410,7 @@ Delete the specified sharing (both the sharing document and the associated permi
 
 #### How can I know if something is shared with me?
 
-First call the route [GET /permissions/doctype/:doctype/sharedWithMe](permissions.md#get-permissionsdoctypedoctypesharedwithme) to get a list of permissions. This route will only look for permissions that apply to sharings where the logged-in user is a recipient.
+First, call the route [GET /permissions/doctype/:doctype/sharedWithMe](permissions.md#get-permissionsdoctypedoctypesharedwithme) to get a list of permissions. This route will only look for permissions that apply to sharings where the logged-in user is a recipient.
 
 Now check if your resource is subject to one of those permissions. If that's the case then the resource was shared with the logged-in user.
 
@@ -422,9 +422,9 @@ Same as above except you need to call the route [GET /permissions/doctype/:docty
 
 Yes, in the permissions you obtained before there is a field called `source_id`. The value of that field is the id of the sharing document the permission was extracted from.
 
-Having its id you can fetch it and get all the information you need.
+Having its id, you can fetch it and get all the information you need.
 
-#### Could you remind us the different types of sharings?
+#### Could you remind me the different types of sharings?
 
 * _One-shot_: the documents are sent to the recipients and that's it. No updates, no nothing. It's as if you gave them a copy of the data on a usb key.
 * _Master-slave_: updates you make on the documents are propagated to the recipients. The recipients can only consult as everything they do will not be propagated back.
@@ -441,12 +441,12 @@ Yes!
 
 Two things: an e-mail and the url of the Cozy. We have a discovery feature so the url is not a necessity but it will be convenient if you don't want the recipients to enter their url everytime you share something with them.
 
-#### What documents are created and when?
+#### Which documents are created and when?
 
-When the user asks to share a resource a sharing document is created. That happens before the emails are sent to the recipients. That also means that if all recipients refuse the sharing document will still be there.  
-The permissions associated are described in that document but **no actual permission documents are created, at any point in the protocol** — permissions are still enforced, it's just that there is no need to create permission documents.
+When the user asks to share a resource, a sharing document is created. That happens before the emails are sent to the recipients. That also means that if all recipients refuse the sharing, the sharing document will still be there.  
+The permissions associated are described in that document but **no actual permission documents are created, at any point in the protocol** — permissions are still enforced, there is just no need to create permission documents.
 
-When the recipients accept, a sharing document is created on their Cozy. The sharing document the recipients have is slighty different from that of the sharer.
+When the recipients accept, a sharing document is created on their own Cozy. The sharing document the recipients have is slighty different from the sharer's one.
 
 #### What are the differences between the sharing document located at the sharer and the one located at the recipients?
 
