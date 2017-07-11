@@ -178,6 +178,23 @@ func CreateSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, &apiSharing{sharing}, nil)
 }
 
+// GetSharingDoc returns the sharing document associated to the given sharingID.
+// The requester must have the permission on at least one doctype declared in
+// the sharing document.
+func GetSharingDoc(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	sharingID := c.Param("sharing-id")
+	sharing, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+	if err = checkGetPermissions(c, sharing); err != nil {
+		return err
+	}
+	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
+}
+
 // SendSharingMails sends the mails requests for the provided sharing.
 func SendSharingMails(c echo.Context) error {
 	// Fetch the instance.
@@ -667,6 +684,7 @@ func Routes(router *echo.Group) {
 	router.POST("/access/client", ReceiveClientID)
 	router.POST("/access/code", getAccessToken)
 
+	router.GET("/:sharing-id", GetSharingDoc)
 	router.GET("/discovery", discoveryForm)
 	router.POST("/discovery", discovery)
 
@@ -763,7 +781,21 @@ func checkCreatePermissions(c echo.Context, sharing *sharings.Sharing) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return nil
+}
 
+// checkGetPermissions checks the requester's token has at least one doctype
+// permission declared in the sharing document
+func checkGetPermissions(c echo.Context, sharing *sharings.Sharing) error {
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	for _, rule := range sharing.Permissions {
+		if requestPerm.Permissions.RuleInSubset(rule) {
+			return nil
+		}
+	}
+	return echo.NewHTTPError(http.StatusForbidden)
 }
 
 // wrapErrors returns a formatted error
