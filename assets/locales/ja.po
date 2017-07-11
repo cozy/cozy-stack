@@ -232,6 +232,9 @@ msgstr ""
 msgid "Permissions fr.maif.maifuser.societaire"
 msgstr "社会的 (Maif)"
 
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr ""
+
 msgid "Sharings Shared with Me directory"
 msgstr "私と共有"
 

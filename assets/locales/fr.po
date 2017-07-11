@@ -24,7 +24,8 @@ msgstr ""
 "Les identifiants que vous avez saisis sont incorrects, veuillez ré-essayer."
 
 msgid "URL Discovery error"
-msgstr "L'adresse du Cozy que vous avez saisie est incorrecte, veuillez ré-essayer."
+msgstr ""
+"L'adresse du Cozy que vous avez saisie est incorrecte, veuillez ré-essayer."
 
 msgid "Login Welcome"
 msgstr "Bienvenue !"
@@ -240,6 +241,9 @@ msgstr "Sinistre (Maif)"
 
 msgid "Permissions fr.maif.maifuser.societaire"
 msgstr "Sociétaire (Maif)"
+
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr "Déclarations d'assurance (Maif)"
 
 msgid "Sharings Shared with Me directory"
 msgstr "Partagés avec Moi"
