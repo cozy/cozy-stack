@@ -8,9 +8,15 @@ import (
 	"io"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
+
+type references struct {
+	Albumid  string
+	Filepath string
+}
 
 func writeFile(fs vfs.VFS, name string, tw *tar.Writer, doc *vfs.FileDoc) error {
 	file, err := fs.OpenFile(doc)
@@ -56,10 +62,9 @@ func createDir(name string, tw *tar.Writer, dir *vfs.DirDoc) error {
 
 func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 	db := couchdb.SimpleDatabasePrefix(domain)
-	doctype := "io.cozy.files"
-	req := &couchdb.AllDocsRequest{}
+	doctype := "io.cozy.photos.albums"
 	var results []map[string]interface{}
-	if err := couchdb.GetAllDocs(db, doctype, req, &results); err != nil {
+	if err := couchdb.GetAllDocs(db, doctype, &couchdb.AllDocsRequest{}, &results); err != nil {
 		return err
 	}
 
@@ -73,7 +78,7 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 		return err
 	}
 
-	hdr := &tar.Header{
+	hdrAlbum := &tar.Header{
 		Name:       metaDir + "album.json",
 		Mode:       0644,
 		AccessTime: time.Now(),
@@ -85,56 +90,91 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 	var size int64
 
 	for _, val := range results {
-		if val["referenced_by"] != nil {
+		jsonString, err := json.Marshal(val)
+		if err != nil {
+			return err
+		}
 
-			id := val["_id"].(string)
-			doc, err := fs.FileByID(id)
-			if err != nil {
-				return err
-			}
+		size += int64(len(jsonString) + 1) // len([]byte("\n"))
 
-			path, err := fs.FilePath(doc)
-			if err != nil {
-				return err
-			}
-			val["album_filepath"] = path
-
-			ref := doc.ReferencedBy
-			for _, v := range ref {
-				out := &couchdb.JSONDoc{}
-				if err = couchdb.GetDoc(db, v.Type, v.ID, out); err != nil {
-					return err
-				}
-				m := out.ToMapWithType()
-
-				albumName := m["name"]
-				val["album_name"] = albumName
-			}
-
-			jsonString, err := json.Marshal(val)
-			if err != nil {
-				return err
-			}
-
-			size += int64(len(jsonString) + 1) // len([]byte("\n"))
-
-			if _, err = content.Write(jsonString); err != nil {
-				return err
-			}
-			if _, err = content.Write([]byte("\n")); err != nil {
-				return err
-			}
-
+		if _, err = content.Write(jsonString); err != nil {
+			return err
+		}
+		if _, err = content.Write([]byte("\n")); err != nil {
+			return err
 		}
 
 	}
 
-	hdr.Size = size
-	if err := tw.WriteHeader(hdr); err != nil {
+	hdrAlbum.Size = size
+	if err := tw.WriteHeader(hdrAlbum); err != nil {
 		return err
 	}
 
 	if _, err := content.WriteTo(tw); err != nil {
+		return err
+	}
+
+	var buf bytes.Buffer
+	size = 0
+
+	hdrRef := &tar.Header{
+		Name:       metaDir + "references.json",
+		Mode:       0644,
+		AccessTime: time.Now(),
+		ChangeTime: time.Now(),
+		Typeflag:   tar.TypeReg,
+	}
+
+	req := &couchdb.ViewRequest{
+		StartKey:    []string{"io.cozy.photos.albums"},
+		EndKey:      []string{"io.cozy.photos.albums", couchdb.MaxString},
+		IncludeDocs: true,
+		Reduce:      false,
+	}
+	res := &couchdb.ViewResponse{}
+	if err := couchdb.ExecView(db, consts.FilesReferencedByView, req, res); err != nil {
+		return err
+	}
+
+	for _, v := range res.Rows {
+		key := v.Key.([]interface{})
+		id := key[1].(string)
+
+		doc, err := fs.FileByID(v.ID)
+		if err != nil {
+			return err
+		}
+
+		path, err := fs.FilePath(doc)
+		if err != nil {
+			return err
+		}
+
+		ref := references{
+			Albumid:  id,
+			Filepath: path,
+		}
+		b, err := json.Marshal(ref)
+		if err != nil {
+			return err
+		}
+
+		size += int64(len(b) + 1) // len([]byte("\n"))
+		if _, err = buf.Write(b); err != nil {
+			return err
+		}
+		if _, err = buf.Write([]byte("\n")); err != nil {
+			return err
+		}
+	}
+
+	hdrRef.Size = size
+	if err := tw.WriteHeader(hdrRef); err != nil {
+		return err
+	}
+
+	if _, err := buf.WriteTo(tw); err != nil {
 		return err
 	}
 
