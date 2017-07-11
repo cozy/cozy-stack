@@ -236,11 +236,8 @@ msgstr "Foyer (Maif)"
 msgid "Permissions fr.maif.maifuser.paymentterms"
 msgstr "Paiement (Maif)"
 
-msgid "Permissions fr.maif.maifuser.sinistrehabitation"
-msgstr "Sinistre habitation (Maif)"
-
-msgid "Permissions fr.maif.maifuser.sinistrevehicule"
-msgstr "Sinistre véhicule (Maif)"
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr "Sinistre (Maif)"
 
 msgid "Permissions fr.maif.maifuser.societaire"
 msgstr "Sociétaire (Maif)"

@@ -219,11 +219,8 @@ msgstr "Family (Maif)"
 msgid "Permissions fr.maif.maifuser.paymentterms"
 msgstr "Payment terms (Maif)"
 
-msgid "Permissions fr.maif.maifuser.sinistrehabitation"
-msgstr "Housing damage (Maif)"
-
-msgid "Permissions fr.maif.maifuser.sinistrevehicule"
-msgstr "Vehicle damage (Maif)"
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr "Damage (Maif)"
 
 msgid "Permissions fr.maif.maifuser.societaire"
 msgstr "Societary (Maif)"
