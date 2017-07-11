@@ -1,9 +1,8 @@
 # Translators:
 # Bruno Michel <brmichel@free.fr>, 2017
-# JC Pagnon <gooz@cozycloud.cc>, 2017
 msgid ""
 msgstr ""
-"Last-Translator: JC Pagnon <gooz@cozycloud.cc>, 2017\n"
+"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
 "Language-Team: French (https://www.transifex.com/cozy/teams/39753/fr/)\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -114,8 +113,8 @@ msgstr ""
 
 msgid "Authorize Give Sharing permission end"
 msgstr ""
-", vous autorisez le cozy de %s à obtenir un accès pour partager des données,
-" selon ses conditions de service et sa politique de confidentialité."
+", vous autorisez le cozy de %s à obtenir un accès pour partager des données "
+"selon ses conditions de service et sa politique de confidentialité."
 
 msgid "Authorize Give App permission desc"
 msgstr ""
@@ -246,7 +245,8 @@ msgid "Sharings Shared with Me directory"
 msgstr "Partagés avec Moi"
 
 msgid "Discovery URL help"
-msgstr "Merci d'entrer l'adresse de votre Cozy pour recevoir le partage de %s."
+msgstr ""
+"Merci d'entrer l'adresse de votre Cozy pour recevoir le partage de %s."
 
 msgid "Discovery URL field"
 msgstr "URL"

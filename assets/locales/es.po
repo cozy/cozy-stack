@@ -1,9 +1,8 @@
 # Translators:
 # Bruno Michel <brmichel@free.fr>, 2017
-# hernando franco <hfrancod@lautaro.fr>, 2017
 msgid ""
 msgstr ""
-"Last-Translator: hernando franco <hfrancod@lautaro.fr>, 2017\n"
+"Last-Translator: Bruno Michel <brmichel@free.fr>, 2017\n"
 "Language-Team: Spanish (https://www.transifex.com/cozy/teams/39753/es/)\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -24,6 +23,9 @@ msgid "Login Credentials error"
 msgstr ""
 "Las credenciales que usted ha escrito son incorrectas, por favor ensaye de "
 "nuevo."
+
+msgid "URL Discovery error"
+msgstr ""
 
 msgid "Login Welcome"
 msgstr "¡Bienvenida.o.!"
@@ -231,11 +233,8 @@ msgstr "Familia (Maif)"
 msgid "Permissions fr.maif.maifuser.paymentterms"
 msgstr "Condiciones de pago (Maif)"
 
-msgid "Permissions fr.maif.maifuser.sinistrehabitation"
-msgstr "Seguro de vivienda (Maif)"
-
-msgid "Permissions fr.maif.maifuser.sinistrevehicule"
-msgstr "Seguro automóvil (Maif)"
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr ""
 
 msgid "Permissions fr.maif.maifuser.societaire"
 msgstr "Asociaciones (Maif)"

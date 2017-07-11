@@ -23,6 +23,9 @@ msgstr "自分のモバイルからバックアップしました"
 msgid "Login Credentials error"
 msgstr "入力した資格情報が間違っています。もう一度やり直してください。"
 
+msgid "URL Discovery error"
+msgstr ""
+
 msgid "Login Welcome"
 msgstr "ようこそ!"
 
@@ -69,7 +72,7 @@ msgid "Authorize App Title"
 msgstr "アプリケーション %s は、第三者に個人情報を送信しません。"
 
 msgid "Authorize Sharing Title"
-msgstr ""
+msgstr "%sから同期を承認"
 
 msgid "Authorize More"
 msgstr "さらに…"
@@ -78,7 +81,7 @@ msgid "Authorize Client presentation"
 msgstr "Cozy にアクセスする権限が必要です"
 
 msgid "Authorize Sharing presentation"
-msgstr ""
+msgstr "Cozy と共有するアクセス許可が必要です"
 
 msgid "Authorize Policy sentence"
 msgstr "データの使用方法に関するポリシーを読むことができます"
@@ -93,7 +96,7 @@ msgid "Authorize Give permission keyword"
 msgstr "承認"
 
 msgid "Authorize Give Sharing permission keyword"
-msgstr ""
+msgstr "承認"
 
 msgid "Authorize Give permission end"
 msgstr "、アプリケーションがあなたのデータにアクセスすること、利用規約およびプライバシーポリシーに従うことを承諾します。"
@@ -104,7 +107,7 @@ msgstr ""
 "内で、あなたのデータへのアクセスすること、利用規約およびプライバシーポリシーに従って取得することを承諾します。"
 
 msgid "Authorize Give Sharing permission end"
-msgstr ""
+msgstr "、%s の Cozy がデータを共有すること、利用規約およびプライバシーポリシーに従うことを承諾します。"
 
 msgid "Authorize Give App permission desc"
 msgstr "Cozy (%s) の価値を向上させるために、アプリケーション %s は次のデータにアクセスする必要があります:"
@@ -113,13 +116,13 @@ msgid "Authorize Submit"
 msgstr "アクセスを承認"
 
 msgid "Authorize Submit Sharing"
-msgstr ""
+msgstr "共有を承認"
 
 msgid "Authorize Cancel"
 msgstr "アクセスを拒否"
 
 msgid "Authorize Cancel Sharing"
-msgstr ""
+msgstr "共有を拒否"
 
 msgid "Error Title"
 msgstr "申し訳ありません"
@@ -223,11 +226,8 @@ msgstr "ファミリー (Maif)"
 msgid "Permissions fr.maif.maifuser.paymentterms"
 msgstr "支払い条件 (Maif)"
 
-msgid "Permissions fr.maif.maifuser.sinistrehabitation"
-msgstr "住宅の被害 (Maif)"
-
-msgid "Permissions fr.maif.maifuser.sinistrevehicule"
-msgstr "車の被害 (Maif)"
+msgid "Permissions fr.maif.maifuser.sinistre"
+msgstr ""
 
 msgid "Permissions fr.maif.maifuser.societaire"
 msgstr "社会的 (Maif)"
@@ -236,16 +236,16 @@ msgid "Sharings Shared with Me directory"
 msgstr "私と共有"
 
 msgid "Discovery URL help"
-msgstr ""
+msgstr "%s から共有を受信する Cozy URL を入力してください"
 
 msgid "Discovery URL field"
-msgstr ""
+msgstr "URL"
 
 msgid "Discovery URL placeholder"
-msgstr ""
+msgstr "https://yourcozyaddress.cozy"
 
 msgid "Discovery Submit"
-msgstr ""
+msgstr "送信"
 
 msgid "Hello recipient email"
-msgstr ""
+msgstr "%sさん、こんにちは!"
