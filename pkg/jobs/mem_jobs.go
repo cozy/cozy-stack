@@ -107,7 +107,9 @@ func (b *memBroker) Start(ws WorkersList) error {
 		}
 		b.queues[workerType] = q
 		b.workers = append(b.workers, w)
-		if err := w.Start(q.Jobs); err != nil {
+	}
+	for _, w := range b.workers {
+		if err := w.Start(b.queues[w.Type].Jobs); err != nil {
 			return err
 		}
 	}
@@ -117,6 +119,9 @@ func (b *memBroker) Start(ws WorkersList) error {
 func (b *memBroker) Shutdown(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
+	}
+	if b.nbWorkers <= 0 {
+		return nil
 	}
 	fmt.Print("  shutting down in-memory broker...")
 	errs := make(chan error)

@@ -58,7 +58,9 @@ func (b *redisBroker) Start(ws WorkersList) error {
 		b.queues[workerType] = ch
 		b.workers = append(b.workers, w)
 		keys = append(keys, redisPrefix+workerType)
-		if err := w.Start(ch); err != nil {
+	}
+	for _, w := range b.workers {
+		if err := w.Start(b.queues[w.Type]); err != nil {
 			return err
 		}
 	}
@@ -69,6 +71,9 @@ func (b *redisBroker) Start(ws WorkersList) error {
 func (b *redisBroker) Shutdown(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
+	}
+	if b.nbWorkers <= 0 {
+		return nil
 	}
 	fmt.Print("  shutting down redis broker...")
 	defer b.client.Close()

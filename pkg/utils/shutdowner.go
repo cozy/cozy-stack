@@ -28,6 +28,10 @@ func (g *GroupShutdown) Shutdown(ctx context.Context) error {
 	var errm error
 	for _, s := range g.s {
 		if err := s.Shutdown(ctx); err != nil {
+			// no need to continue if the context has errored
+			if err == ctx.Err() {
+				return err
+			}
 			errm = multierror.Append(errm, err)
 		}
 	}

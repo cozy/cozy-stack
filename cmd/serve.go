@@ -65,42 +65,47 @@ example), you can use the --appdir flag like this:
 				}
 			}
 		}
-
-		processes, err := stack.Start()
-		if err != nil {
-			return err
-		}
-
-		var servers *web.Servers
-		if apps != nil {
-			servers, err = web.ListenAndServeWithAppDir(apps)
-		} else {
-			servers, err = web.ListenAndServe()
-		}
-		if err != nil {
-			return err
-		}
-		servers.Start()
-
-		group := utils.NewGroupShutdown(servers, processes)
-
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, os.Interrupt)
-
-		select {
-		case err := <-servers.Wait():
-			return err
-		case <-sigs:
-			fmt.Println("\nshutdown started")
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-			defer cancel() // make gometalinter happy
-			if err := group.Shutdown(ctx); err != nil {
-				return err
-			}
-			fmt.Println("all settled, bye bye !")
-			return nil
-		}
+		return start(apps)
 	},
+}
+
+func start(apps map[string]string) error {
+	processes, err := stack.Start()
+	if err != nil {
+		return err
+	}
+
+	var servers *web.Servers
+	if apps != nil {
+		servers, err = web.ListenAndServeWithAppDir(apps)
+	} else {
+		servers, err = web.ListenAndServe()
+	}
+	if err != nil {
+		return err
+	}
+	servers.Start()
+
+	group := utils.NewGroupShutdown(servers, processes)
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
+
+	// interrupt signal start a graceful shutdown of all running systems (jobs,
+	// servers, schedulers, ...)
+	select {
+	case err := <-servers.Wait():
+		return err
+	case <-sigs:
+		fmt.Println("\nshutdown started")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel() // make gometalinter happy
+		if err := group.Shutdown(ctx); err != nil {
+			return err
+		}
+		fmt.Println("all settled, bye bye !")
+		return nil
+	}
 }
 
 func init() {
