@@ -240,8 +240,7 @@ li[class^="fr.maif.maifuser.paymentterms"]:before {
 li[class^="fr.maif.maifuser.foyer"]:before {
     background-image: url('../images/icon-family.svg');
 }
-li[class^="fr.maif.maifuser.sinistrehabitation"]:before,
-li[class^="fr.maif.maifuser.sinistrevehicule"]:before {
+li[class^="fr.maif.maifuser.sinistre"]:before {
     background-image: url('../images/icon-sinister.svg');
 }
 
