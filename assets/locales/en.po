@@ -225,6 +225,9 @@ msgstr "Damage (Maif)"
 msgid "Permissions fr.maif.maifuser.societaire"
 msgstr "Societary (Maif)"
 
+msgid "Permissions org.fing.mesinfos.insuranceclaim"
+msgstr "Insurance claims (Maif)"
+
 msgid "Sharings Shared with Me directory"
 msgstr "Shared with Me"
 
