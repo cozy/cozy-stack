@@ -58,10 +58,16 @@ func TestRedisJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := &redisBroker{client: client}
-	broker2 := &redisBroker{client: client}
+	broker1 := NewRedisBroker(4, client)
+	err := broker1.Start(workersTestList)
+	assert.NoError(t, err)
+
+	broker2 := NewRedisBroker(4, client)
+	err = broker2.Start(workersTestList)
+	assert.NoError(t, err)
+
 	msg, _ := NewMessage(JSONEncoding, "z-0")
-	_, err := broker1.PushJob(&JobRequest{
+	_, err = broker1.PushJob(&JobRequest{
 		Domain:     "cozy.local",
 		WorkerType: "test",
 		Message:    msg,
@@ -70,7 +76,6 @@ func TestRedisJobs(t *testing.T) {
 	w.Add(3)
 
 	go func() {
-		broker1.Start(workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
@@ -86,7 +91,6 @@ func TestRedisJobs(t *testing.T) {
 	}()
 
 	go func() {
-		broker2.Start(workersTestList)
 		for i := 0; i < n; i++ {
 			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
@@ -102,8 +106,10 @@ func TestRedisJobs(t *testing.T) {
 	}()
 
 	w.Wait()
-	broker1.Shutdown(context.Background())
-	broker2.Shutdown(context.Background())
+	err = broker1.Shutdown(context.Background())
+	assert.NoError(t, err)
+	err = broker2.Shutdown(context.Background())
+	assert.NoError(t, err)
 	time.Sleep(1 * time.Second)
 }
 
