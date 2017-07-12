@@ -1,3 +1,5 @@
+/assets/locales/*.po
+!/assets/locales/en.po
 /coverage.txt
 /cozy-stack*
 /debian
