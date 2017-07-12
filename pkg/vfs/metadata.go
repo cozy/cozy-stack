@@ -187,14 +187,14 @@ func (e *ExifExtractor) Result() Metadata {
 	return m
 }
 
-// AudioExtractor is used to extract width/height from images
+// AudioExtractor is used to extract album/artist/etc. from audio
 type AudioExtractor struct {
 	w  *io.PipeWriter
 	r  *io.PipeReader
 	ch chan interface{}
 }
 
-// NewAudioExtractor returns an extractor for images
+// NewAudioExtractor returns an extractor for audio
 func NewAudioExtractor() *AudioExtractor {
 	e := &AudioExtractor{}
 	e.r, e.w = io.Pipe()
