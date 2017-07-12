@@ -1,8 +1,10 @@
 package vfs
 
 import (
+	"bytes"
 	"image"
 	"io"
+	"io/ioutil"
 	"time"
 
 	// Packages image/... are not used explicitly in the code below,
@@ -14,8 +16,8 @@ import (
 	// Same for image/webp
 	_ "golang.org/x/image/webp"
 
-	"github.com/bogem/id3v2"
 	"github.com/cozy/goexif2/exif"
+	"github.com/dhowden/tag"
 )
 
 // MetadataExtractorVersion is the version number of the metadata extractor.
@@ -50,8 +52,8 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 		e = NewExifExtractor()
 	case "image/png", "image/gif":
 		e = NewImageExtractor()
-	case "audio/mp3", "audio/mpeg":
-		e = NewID3Extractor()
+	case "audio/mp3", "audio/mpeg", "audio/ogg", "audio/x-m4a", "audio/flac":
+		e = NewAudioExtractor()
 	}
 	if e != nil {
 		return &e
@@ -185,16 +187,16 @@ func (e *ExifExtractor) Result() Metadata {
 	return m
 }
 
-// ID3Extractor is used to extract width/height from images
-type ID3Extractor struct {
+// AudioExtractor is used to extract width/height from images
+type AudioExtractor struct {
 	w  *io.PipeWriter
 	r  *io.PipeReader
 	ch chan interface{}
 }
 
-// NewID3Extractor returns an extractor for images
-func NewID3Extractor() *ID3Extractor {
-	e := &ID3Extractor{}
+// NewAudioExtractor returns an extractor for images
+func NewAudioExtractor() *AudioExtractor {
+	e := &AudioExtractor{}
 	e.r, e.w = io.Pipe()
 	e.ch = make(chan interface{})
 	go e.Start()
@@ -202,56 +204,63 @@ func NewID3Extractor() *ID3Extractor {
 }
 
 // Start is used in a goroutine to start the metadata extraction
-func (e *ID3Extractor) Start() {
-	opts := id3v2.Options{
-		Parse:       true,
-		ParseFrames: []string{"Album", "Artist", "Genre", "Title", "Year"},
+func (e *AudioExtractor) Start() {
+	buf, err := ioutil.ReadAll(e.r)
+	if err != nil {
+		e.ch <- err
+		return
 	}
-	tag, err := id3v2.ParseReader(e.r, opts)
+	tags, err := tag.ReadFrom(bytes.NewReader(buf))
 	e.r.Close()
 	if err != nil {
 		e.ch <- err
 	} else {
-		e.ch <- tag
+		e.ch <- tags
 	}
 }
 
 // Write is called to push some bytes to the extractor
-func (e *ID3Extractor) Write(p []byte) (n int, err error) {
+func (e *AudioExtractor) Write(p []byte) (n int, err error) {
 	return e.w.Write(p)
 }
 
 // Close is called when all the bytes has been pushed, to finalize the extraction
-func (e *ID3Extractor) Close() error {
+func (e *AudioExtractor) Close() error {
 	return e.w.Close()
 }
 
 // Abort is called when the extractor can be discarded
-func (e *ID3Extractor) Abort(err error) {
+func (e *AudioExtractor) Abort(err error) {
 	e.w.CloseWithError(err)
 	<-e.ch
 }
 
 // Result is called to get the extracted metadata
-func (e *ID3Extractor) Result() Metadata {
+func (e *AudioExtractor) Result() Metadata {
 	m := NewMetadata()
-	tag := <-e.ch
-	switch tag := tag.(type) {
-	case *id3v2.Tag:
-		if album := tag.Album(); album != "" {
+	tags := <-e.ch
+	switch tags := tags.(type) {
+	case tag.Metadata:
+		if album := tags.Album(); album != "" {
 			m["album"] = album
 		}
-		if artist := tag.Artist(); artist != "" {
+		if artist := tags.Artist(); artist != "" {
 			m["artist"] = artist
 		}
-		if genre := tag.Genre(); genre != "" {
+		if composer := tags.Composer(); composer != "" {
+			m["composer"] = composer
+		}
+		if genre := tags.Genre(); genre != "" {
 			m["genre"] = genre
 		}
-		if title := tag.Title(); title != "" {
+		if title := tags.Title(); title != "" {
 			m["title"] = title
 		}
-		if year := tag.Year(); year != "" {
+		if year := tags.Year(); year != 0 {
 			m["year"] = year
+		}
+		if track, _ := tags.Track(); track != 0 {
+			m["track"] = track
 		}
 	}
 	return m
