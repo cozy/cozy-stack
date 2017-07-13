@@ -50,7 +50,7 @@ type TriggerEvent struct {
 
 // EventDoc describes the event returned by the trigger
 type EventDoc struct {
-	Type string `json:"type"`
+	Verb string `json:"verb"`
 	Doc  *couchdb.JSONDoc
 }
 
@@ -71,7 +71,7 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 	}
 	sharingID := event.Message.SharingID
 	rule := event.Message.Rule
-	docID := event.Event.Doc.M["_id"].(string)
+	docID := event.Event.Doc.ID()
 
 	// Get the sharing document
 	i, err := instance.Get(domain)
@@ -98,7 +98,7 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 		return ErrDocumentNotLegitimate
 	}
 
-	return sendToRecipients(i, domain, sharing, &rule, docID, event.Event.Type)
+	return sendToRecipients(i, domain, sharing, &rule, docID, event.Event.Verb)
 }
 
 // sendToRecipients sends the document to the recipient, or sharer.
@@ -160,7 +160,6 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			opts.Type = consts.FileType
 		}
 	}
-
 	switch eventType {
 	case realtime.EventCreate:
 		if opts.Type == consts.FileType {
