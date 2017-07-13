@@ -85,6 +85,10 @@ route, this default one:
 }
 ```
 
+**Note**: if you have a public route, it's probably better to put the app icon
+in it. So, the cozy-bar can display it for the users that go on the public
+part of the app.
+
 ## Sources
 
 Here is the available sources, defined by the scheme of the source URl:
