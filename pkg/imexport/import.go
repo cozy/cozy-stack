@@ -120,7 +120,7 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string, domain string) error {
 		case tar.TypeDir:
 			if hdr.Name == "metadata/album/" {
 				for {
-					hdr, err := tr.Next()
+					hdr, err = tr.Next()
 					if err == io.EOF {
 						break
 					}
