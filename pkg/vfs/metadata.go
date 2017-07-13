@@ -1,8 +1,10 @@
 package vfs
 
 import (
+	"bytes"
 	"image"
 	"io"
+	"io/ioutil"
 	"time"
 
 	// Packages image/... are not used explicitly in the code below,
@@ -15,6 +17,7 @@ import (
 	_ "golang.org/x/image/webp"
 
 	"github.com/cozy/goexif2/exif"
+	"github.com/dhowden/tag"
 )
 
 // MetadataExtractorVersion is the version number of the metadata extractor.
@@ -49,6 +52,8 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 		e = NewExifExtractor()
 	case "image/png", "image/gif":
 		e = NewImageExtractor()
+	case "audio/mp3", "audio/mpeg", "audio/ogg", "audio/x-m4a", "audio/flac":
+		e = NewAudioExtractor()
 	}
 	if e != nil {
 		return &e
@@ -177,6 +182,85 @@ func (e *ExifExtractor) Result() Metadata {
 				"lat":  lat,
 				"long": long,
 			}
+		}
+	}
+	return m
+}
+
+// AudioExtractor is used to extract album/artist/etc. from audio
+type AudioExtractor struct {
+	w  *io.PipeWriter
+	r  *io.PipeReader
+	ch chan interface{}
+}
+
+// NewAudioExtractor returns an extractor for audio
+func NewAudioExtractor() *AudioExtractor {
+	e := &AudioExtractor{}
+	e.r, e.w = io.Pipe()
+	e.ch = make(chan interface{})
+	go e.Start()
+	return e
+}
+
+// Start is used in a goroutine to start the metadata extraction
+func (e *AudioExtractor) Start() {
+	buf, err := ioutil.ReadAll(e.r)
+	if err != nil {
+		e.ch <- err
+		return
+	}
+	tags, err := tag.ReadFrom(bytes.NewReader(buf))
+	e.r.Close()
+	if err != nil {
+		e.ch <- err
+	} else {
+		e.ch <- tags
+	}
+}
+
+// Write is called to push some bytes to the extractor
+func (e *AudioExtractor) Write(p []byte) (n int, err error) {
+	return e.w.Write(p)
+}
+
+// Close is called when all the bytes has been pushed, to finalize the extraction
+func (e *AudioExtractor) Close() error {
+	return e.w.Close()
+}
+
+// Abort is called when the extractor can be discarded
+func (e *AudioExtractor) Abort(err error) {
+	e.w.CloseWithError(err)
+	<-e.ch
+}
+
+// Result is called to get the extracted metadata
+func (e *AudioExtractor) Result() Metadata {
+	m := NewMetadata()
+	tags := <-e.ch
+	switch tags := tags.(type) {
+	case tag.Metadata:
+		if album := tags.Album(); album != "" {
+			m["album"] = album
+		}
+		if artist := tags.Artist(); artist != "" {
+			m["artist"] = artist
+		}
+		if composer := tags.Composer(); composer != "" {
+			m["composer"] = composer
+		}
+		if genre := tags.Genre(); genre != "" {
+			m["genre"] = genre
+		}
+		if title := tags.Title(); title != "" {
+			m["title"] = title
+		}
+		if year := tags.Year(); year != 0 {
+			m["year"] = year
+		}
+		if track, _ := tags.Track(); track != 0 {
+			m["track"] = track
 		}
 	}
 	return m
