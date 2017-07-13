@@ -38,7 +38,7 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 		},
 	}
 	event := &TriggerEvent{
-		Event:   &EventDoc{Type: eventType, Doc: &doc},
+		Event:   &EventDoc{Verb: eventType, Doc: &doc},
 		Message: msg,
 	}
 	return event
