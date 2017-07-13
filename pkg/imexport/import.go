@@ -10,7 +10,6 @@ import (
 	"io"
 	"path"
 	"time"
-	//"io/ioutil"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -23,10 +22,16 @@ func album(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db c
 
 	for bs.Scan() {
 		jsondoc := &couchdb.JSONDoc{}
-		err := json.Unmarshal(bs.Bytes(), &jsondoc)
+		err := jsondoc.UnmarshalJSON(bs.Bytes())
 		if err != nil {
 			return err
 		}
+		doctype, ok := jsondoc.M["type"].(string)
+		if ok {
+			jsondoc.Type = doctype
+		}
+		delete(jsondoc.M, "type")
+
 		id := jsondoc.ID()
 		jsondoc.SetID("")
 		jsondoc.SetRev("")
@@ -38,23 +43,19 @@ func album(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db c
 
 		m[id] = &couchdb.DocReference{
 			ID:   jsondoc.ID(),
-			Type: "io.cozy.photos.albums",
+			Type: jsondoc.DocType(),
 		}
 
-		fmt.Println("type et doctype:", jsondoc.Type, jsondoc.DocType())
-
-		fmt.Println("docreference: ", m[id])
 	}
 
 	for {
-		hdr, err := tr.Next()
+		_, err := tr.Next()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			return err
 		}
-		fmt.Println("path in loop: ", path.Base(hdr.Name))
 
 		bs = bufio.NewScanner(tr)
 		for bs.Scan() {
@@ -64,20 +65,21 @@ func album(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db c
 				return err
 			}
 
-			file, err := fs.FileByPath(ref.Filepath)
+			file, err := fs.FileByPath(dstDoc.Fullpath + ref.Filepath)
 			if err != nil {
 				return err
 			}
 
 			if m[ref.Albumid] != nil {
 				file.AddReferencedBy(*m[ref.Albumid])
+				if err = couchdb.UpdateDoc(db, file); err != nil {
+					return err
+				}
 			}
 
 		}
 
 	}
-
-	fmt.Println("vamos rafa")
 
 	return nil
 
@@ -116,10 +118,7 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string, domain string) error {
 		switch hdr.Typeflag {
 
 		case tar.TypeDir:
-			//name := path.Base(hdr.Name)
-			fmt.Println(hdr.Name)
 			if hdr.Name == "metadata/album/" {
-				fmt.Println("metadata ok")
 				for {
 					hdr, err := tr.Next()
 					if err == io.EOF {
@@ -183,8 +182,6 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string, domain string) error {
 		}
 
 	}
-
-	fmt.Println("end untardir")
 
 	return nil
 
