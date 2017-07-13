@@ -13,9 +13,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
-type references struct {
-	Albumid  string
-	Filepath string
+// References between albumid and filepath
+type References struct {
+	Albumid  string `json:"albumid"`
+	Filepath string `json:"filepath"`
 }
 
 func writeFile(fs vfs.VFS, name string, tw *tar.Writer, doc *vfs.FileDoc) error {
@@ -151,7 +152,7 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 			return err
 		}
 
-		ref := references{
+		ref := References{
 			Albumid:  id,
 			Filepath: path,
 		}
