@@ -19,7 +19,6 @@ var blackList = map[string]bool{
 	consts.OAuthClients:     none,
 	consts.OAuthAccessCodes: none,
 	consts.Archives:         none,
-	consts.Contacts:         none,
 	consts.Sharings:         none,
 	consts.Apps:             readable,
 	consts.Konnectors:       readable,
