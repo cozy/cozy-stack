@@ -742,8 +742,9 @@ func TestRevokeSharing(t *testing.T) {
 	}
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 
-	recipient1 := &Recipient{URL: ts.URL, Email: "recipient1@mail.cc"}
-	recipient2 := &Recipient{URL: ts.URL, Email: "recipient2@mail.cc"}
+	u := "http://" + ts.URL
+	recipient1 := &Recipient{URL: u, Email: "recipient1@mail.cc"}
+	recipient2 := &Recipient{URL: u, Email: "recipient2@mail.cc"}
 	rule := permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
 		Type:     "io.cozy.events",
@@ -763,7 +764,7 @@ func TestRevokeSharing(t *testing.T) {
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
 
-	// Test: we revoke a sharing where we are the owner.
+	// Test: we revoke a sharing being the owner.
 	err = RevokeSharing(testInstance, sharingSharerMM, true)
 	assert.NoError(t, err)
 	// Check: all the recipients were asked to remove the sharing.
@@ -842,8 +843,9 @@ func TestRevokeRecipient(t *testing.T) {
 	}
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 
+	u := "http://" + ts.URL
 	recipient1 := &Recipient{URL: "recipient1.url.cc", Email: "recipient@1"}
-	recipient2 := &Recipient{URL: ts.URL, Email: "recipient@2"}
+	recipient2 := &Recipient{URL: u, Email: "recipient@2"}
 	rule := permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
 		Type:     "io.cozy.events",
