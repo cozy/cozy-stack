@@ -2,17 +2,92 @@ package imexport
 
 import (
 	"archive/tar"
+	"bufio"
 	"compress/gzip"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"path"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
+func album(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db couchdb.Database) error {
+	m := make(map[string]*couchdb.DocReference)
+
+	bs := bufio.NewScanner(tr)
+
+	for bs.Scan() {
+		jsondoc := &couchdb.JSONDoc{}
+		err := jsondoc.UnmarshalJSON(bs.Bytes())
+		if err != nil {
+			return err
+		}
+		doctype, ok := jsondoc.M["type"].(string)
+		if ok {
+			jsondoc.Type = doctype
+		}
+		delete(jsondoc.M, "type")
+
+		id := jsondoc.ID()
+		jsondoc.SetID("")
+		jsondoc.SetRev("")
+
+		err = couchdb.CreateDoc(db, jsondoc)
+		if err != nil {
+			return err
+		}
+
+		m[id] = &couchdb.DocReference{
+			ID:   jsondoc.ID(),
+			Type: jsondoc.DocType(),
+		}
+
+	}
+
+	for {
+		_, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		bs = bufio.NewScanner(tr)
+		for bs.Scan() {
+			ref := &References{}
+			err := json.Unmarshal(bs.Bytes(), &ref)
+			if err != nil {
+				return err
+			}
+
+			file, err := fs.FileByPath(dstDoc.Fullpath + ref.Filepath)
+			if err != nil {
+				return err
+			}
+
+			if m[ref.Albumid] != nil {
+				file.AddReferencedBy(*m[ref.Albumid])
+				if err = couchdb.UpdateDoc(db, file); err != nil {
+					return err
+				}
+			}
+
+		}
+
+	}
+
+	return nil
+
+}
+
 // Untardir untar doc directory
-func Untardir(fs vfs.VFS, r io.Reader, dst string) error {
+func Untardir(fs vfs.VFS, r io.Reader, dst string, domain string) error {
+	db := couchdb.SimpleDatabasePrefix(domain)
 
 	dstDoc, err := fs.DirByID(dst)
 	if err != nil {
@@ -43,8 +118,26 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string) error {
 		switch hdr.Typeflag {
 
 		case tar.TypeDir:
-			if _, err := vfs.MkdirAll(fs, doc, nil); err != nil {
-				return err
+			if hdr.Name == "metadata/album/" {
+				for {
+					hdr, err = tr.Next()
+					if err == io.EOF {
+						break
+					}
+					if err != nil {
+						return err
+					}
+					if path.Base(hdr.Name) == "album.json" {
+						err = album(fs, hdr, tr, dstDoc, db)
+						if err != nil {
+							return err
+						}
+					}
+				}
+			} else {
+				if _, err := vfs.MkdirAll(fs, doc, nil); err != nil {
+					return err
+				}
 			}
 
 		case tar.TypeReg:
@@ -82,6 +175,10 @@ func Untardir(fs vfs.VFS, r io.Reader, dst string) error {
 			if cerr != nil {
 				return cerr
 			}
+
+		default:
+			return errors.New("Unknown typeflag ")
+
 		}
 
 	}

@@ -99,6 +99,7 @@ func exportDir(c echo.Context) error {
 func importer(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
+	domain := instance.Domain
 
 	r, err := os.Open("cozy.tar.gz")
 	if err != nil {
@@ -125,7 +126,7 @@ func importer(c echo.Context) error {
 		}
 	}
 
-	err = imexport.Untardir(fs, r, dst.ID())
+	err = imexport.Untardir(fs, r, dst.ID(), domain)
 	if err != nil {
 		return err
 	}
