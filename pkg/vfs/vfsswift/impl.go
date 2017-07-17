@@ -537,6 +537,7 @@ func (f *swiftFileCreation) Close() (err error) {
 	if err = f.f.Close(); err != nil {
 		if f.meta != nil {
 			(*f.meta).Abort(err)
+			f.meta = nil
 		}
 		if f.err == nil {
 			f.err = err
