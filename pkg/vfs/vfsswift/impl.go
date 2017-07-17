@@ -375,6 +375,8 @@ func (sfs *swiftVFS) UpdateFileDoc(olddoc, newdoc *vfs.FileDoc) error {
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
 		if err != nil {
+			sfs.log.Errorf("[vfsswift] Could not move file %s/%s: %s",
+				sfs.container, olddoc.DirID+"/"+olddoc.DocName, err.Error())
 			return err
 		}
 	}
@@ -403,6 +405,8 @@ func (sfs *swiftVFS) UpdateDirDoc(olddoc, newdoc *vfs.DirDoc) error {
 			sfs.container, newdoc.DirID+"/"+newdoc.DocName,
 		)
 		if err != nil {
+			sfs.log.Errorf("[vfsswift] Could not move dir %s/%s: %s",
+				sfs.container, olddoc.DirID+"/"+olddoc.DocName, err.Error())
 			return err
 		}
 	}
