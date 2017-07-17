@@ -50,13 +50,14 @@ type Options struct {
 
 // result stores the result of a konnector execution.
 type result struct {
-	DocID       string    `json:"_id,omitempty"`
-	DocRev      string    `json:"_rev,omitempty"`
-	CreatedAt   time.Time `json:"last_execution"`
-	LastSuccess time.Time `json:"last_success"`
-	Account     string    `json:"account"`
-	State       string    `json:"state"`
-	Error       string    `json:"error"`
+	DocID       string         `json:"_id,omitempty"`
+	DocRev      string         `json:"_rev,omitempty"`
+	CreatedAt   time.Time      `json:"last_execution"`
+	LastSuccess time.Time      `json:"last_success"`
+	Logs        []konnectorMsg `json:"logs"`
+	Account     string         `json:"account"`
+	State       string         `json:"state"`
+	Error       string         `json:"error"`
 }
 
 func (r *result) ID() string         { return r.DocID }
@@ -76,6 +77,19 @@ type konnectorMsg struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
 }
+
+type konnectorLogs struct {
+	Slug     string         `json:"_id,omitempty"`
+	DocRev   string         `json:"_rev,omitempty"`
+	Messages []konnectorMsg `json:"logs"`
+}
+
+func (kl *konnectorLogs) ID() string         { return kl.Slug }
+func (kl *konnectorLogs) Rev() string        { return kl.DocRev }
+func (kl *konnectorLogs) DocType() string    { return consts.KonnectorLogs }
+func (kl *konnectorLogs) Clone() couchdb.Doc { c := *kl; return &c }
+func (kl *konnectorLogs) SetID(id string)    {}
+func (kl *konnectorLogs) SetRev(rev string)  { kl.DocRev = rev }
 
 // Worker is the worker that runs a konnector by executing an external process.
 func Worker(ctx context.Context, m *jobs.Message) error {
@@ -194,6 +208,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	go func() {
 		hub := realtime.GetHub()
 		for msg := range msgChan {
+			// TODO: filter some of the messages
 			messages = append(messages, msg)
 			hub.Publish(&realtime.Event{
 				Verb: realtime.EventCreate,
@@ -216,6 +231,15 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	}
 
 	close(msgChan)
+
+	errLogs := couchdb.Upsert(inst, &konnectorLogs{
+		Slug:     slug,
+		Messages: messages,
+	})
+	if errLogs != nil {
+		fmt.Println("Failed to save konnector logs", errLogs)
+	}
+
 	for _, msg := range messages {
 		if msg.Type == konnectorMsgTypeError {
 			// konnector err is more explicit

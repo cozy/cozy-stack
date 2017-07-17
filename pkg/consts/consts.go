@@ -14,6 +14,8 @@ const (
 	Konnectors = "io.cozy.konnectors"
 	// KonnectorResults doc type for konnector last execution result.
 	KonnectorResults = "io.cozy.konnectors.result"
+	// KonnectorLogs doc type for konnector last execution logs.
+	KonnectorLogs = "io.cozy.konnectors.logs"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
 	// Doctypes doc type for doctype list
