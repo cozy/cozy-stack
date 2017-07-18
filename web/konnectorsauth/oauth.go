@@ -104,6 +104,7 @@ func redirect(c echo.Context) error {
 		if err != nil {
 			return err
 		}
+		c.Set("instance", i)
 		return redirectToDataCollect(c, account, "")
 	}
 
@@ -230,6 +231,7 @@ func redirect(c echo.Context) error {
 		return err
 	}
 
+	c.Set("instance", i)
 	return redirectToDataCollect(c, account, state.ClientState)
 }
 
