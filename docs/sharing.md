@@ -402,7 +402,7 @@ Receive a sharing request.
 Answer a sharing request.
 
 
-### DELETE /sharings/:id
+### DELETE /sharings/:sharing-id
 
 Revoke a sharing. Depending on the role of the logged-in user and the type of sharing, the implications are different:
 
@@ -436,7 +436,7 @@ HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
-### DELETE /sharings/:id/recipient/:recipient-id
+### DELETE /sharings/:sharing-id/recipient/:recipient-id
 
 Revoke a recipient from a sharing. Only the sharer can make that action and depending on the type of sharing the implications differ:
 
