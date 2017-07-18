@@ -1032,8 +1032,14 @@ func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID string, 
 		path = fmt.Sprintf("/sharings/%s", sharingID)
 	}
 
+	domain, scheme, err := rs.recipient.ExtractDomainAndScheme()
+	if err != nil {
+		return err
+	}
+
 	_, err = request.Req(&request.Options{
-		Domain:  rs.recipient.URL,
+		Domain:  domain,
+		Scheme:  scheme,
 		Path:    path,
 		Method:  http.MethodDelete,
 		Queries: url.Values{consts.QueryParamRecursive: {"false"}},
