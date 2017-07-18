@@ -542,7 +542,7 @@ func RecipientRefusedSharing(db couchdb.Database, sharingID string) (string, err
 
 // CreateSharingRequest checks fields integrity and creates a sharing document
 // for an incoming sharing request
-func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, clientID string) (*Sharing, error) {
+func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, clientID, appSlug string) (*Sharing, error) {
 	if state == "" {
 		return nil, ErrMissingState
 	}
@@ -575,6 +575,7 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	}
 
 	sharing := &Sharing{
+		AppSlug:     appSlug,
 		SharingType: sharingType,
 		SharingID:   state,
 		Permissions: permissions,

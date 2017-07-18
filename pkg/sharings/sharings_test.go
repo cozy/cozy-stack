@@ -562,19 +562,19 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 }
 
 func TestCreateSharingRequestBadParams(t *testing.T) {
-	_, err := CreateSharingRequest(TestPrefix, "", "", "", "", "")
+	_, err := CreateSharingRequest(TestPrefix, "", "", "", "", "", "")
 	assert.Error(t, err)
 
 	state := "1234"
-	_, err = CreateSharingRequest(TestPrefix, "", state, "", "", "")
+	_, err = CreateSharingRequest(TestPrefix, "", state, "", "", "", "")
 	assert.Error(t, err)
 
 	sharingType := consts.OneShotSharing
-	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, "", "")
+	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, "", "", "")
 	assert.Error(t, err)
 
 	scope := "io.cozy.sharings"
-	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, scope, "")
+	_, err = CreateSharingRequest(TestPrefix, "", state, sharingType, scope, "", "")
 	assert.Error(t, err)
 	assert.Equal(t, ErrNoOAuthClient, err)
 }
@@ -601,7 +601,7 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 	scope, err := set.MarshalScopeString()
 	assert.NoError(t, err)
 
-	sharing, err := CreateSharingRequest(TestPrefix, desc, state, sharingType, scope, clientID)
+	sharing, err := CreateSharingRequest(TestPrefix, desc, state, sharingType, scope, clientID, "randomappslug")
 	assert.NoError(t, err)
 	assert.Equal(t, state, sharing.SharingID)
 	assert.Equal(t, sharingType, sharing.SharingType)
