@@ -128,9 +128,11 @@ This route adds or modify an application to the registry. The content of the req
 #### Request
 
 ```http
-POST /apps/drive
+POST /apps/drive HTTP/1.1
 Authorization: AbCdE
+```
 
+```json
 {
     "name": "drive",
     "editor": "cozy",
@@ -164,9 +166,11 @@ The content of the manifest file extracted from the application data is used to 
 Request to add a stable release:
 
 ```http
-POST /apps/drive/v3.1.2
+POST /apps/drive/v3.1.2 HTTP/1.1
 Authorization: AbCdE
+```
 
+```json
 {
     "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
@@ -176,9 +180,11 @@ Authorization: AbCdE
 Request to add a development release:
 
 ```http
-POST /apps/drive/v3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a
+POST /apps/drive/v3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a HTTP/1.1
 Authorization: AbCdE
+```
 
+```json
 {
     "url": "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
@@ -244,7 +250,7 @@ order     | order to apply to the list
 #### Request
 
 ```http
-GET /apps?filter[category]=cozy&page=0&limit=30
+GET /apps?filter[category]=cozy&page=0&limit=30 HTTP/1.1
 ```
 
 #### Response
@@ -280,7 +286,7 @@ Get an application object by name.
 #### Request
 
 ```http
-GET /apps/drive
+GET /apps/drive HTTP/1.1
 ```
 
 #### Response
@@ -312,7 +318,7 @@ Get an application version.
 #### Request
 
 ```http
-GET /apps/drive/v3.1.1
+GET /apps/drive/v3.1.1 HTTP/1.1
 ```
 
 #### Response
@@ -343,7 +349,7 @@ Get the latest version available on the specified channel.
 #### Request
 
 ```http
-GET /apps/drive/dev/latest
+GET /apps/drive/dev/latest HTTP/1.1
 ```
 
 #### Response
