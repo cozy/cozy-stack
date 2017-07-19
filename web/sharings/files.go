@@ -360,13 +360,14 @@ func trashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("docid")
+	hardDelete, _ := strconv.ParseBool(c.QueryParam("hard_delete"))
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
 		return err
 	}
 
-	var rev string
+	var rev, path string
 	if dir != nil {
 		rev = dir.Rev()
 	} else {
@@ -381,8 +382,16 @@ func trashHandler(c echo.Context) error {
 		if err = permissions.AllowVFS(c, permissions.DELETE, dir); err != nil {
 			return err
 		}
-		_, errt := vfs.TrashDir(instance.VFS(), dir)
-		if errt != nil {
+		if hardDelete {
+			path, err = dir.Path(instance.VFS())
+			if err != nil {
+				return err
+			}
+			err = vfs.Remove(instance.VFS(), path)
+		} else {
+			_, err = vfs.TrashDir(instance.VFS(), dir)
+		}
+		if err != nil {
 			return err
 		}
 		return nil
@@ -391,8 +400,16 @@ func trashHandler(c echo.Context) error {
 	if err = permissions.AllowVFS(c, permissions.DELETE, file); err != nil {
 		return err
 	}
-	_, errt := vfs.TrashFile(instance.VFS(), file)
-	if errt != nil {
+	if hardDelete {
+		path, err = file.Path(instance.VFS())
+		if err != nil {
+			return err
+		}
+		err = vfs.Remove(instance.VFS(), path)
+	} else {
+		_, err = vfs.TrashFile(instance.VFS(), file)
+	}
+	if err != nil {
 		return err
 	}
 	return nil

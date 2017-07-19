@@ -759,7 +759,7 @@ func TestDeleteDirOrFile(t *testing.T) {
 		Recipients: recipients,
 	}
 
-	err = DeleteDirOrFile(in, deleteSendOptions)
+	err = DeleteDirOrFile(in, deleteSendOptions, false)
 	assert.NoError(t, err)
 }
 
