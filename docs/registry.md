@@ -1,22 +1,22 @@
 # Registry
 
-The registry is a place where applications metadata are stored and versioned. It can be used by a cozy 
+The registry is a place where developers can submit their applications, both web apps and konnectors. The applications metadata are stored and versioned. It can be used by a cozy to list applications to be installed, and for auto-updating the applications.
 
-We define an application registry as an API. This should allow us to defer the real implementation of the registry storage and allow different store implementations.
+We define the application registry as an API. This should allow us to defer the real implementation of the registry storage and allow different store implementations.
 
 ## Channels
 
 We differentiate three channels of release for each application:
 
-    - stable: for stable releases
-    - beta: for application that can be tested in advance
-    - dev: for the latest releases directly from the trunk of the repository
+- stable: for stable releases
+- beta: for application that can be tested in advance
+- dev: for the latest releases directly from the trunk of the repository
 
 For each of these channels, the version string has a different format which differentiate the version channel:
 
-  - stable: `X.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
-  - beta: `X.Y.Z-beta.M` where `X`, `Y`, `Z` and `M` are positive or null integers
-  - dev: `X.Y.Z-dev.checksum` where `X`, `Y` and `Z` are positive or null integers and `checksum` is a unique identifier of the dev release (typacally a shasum of the git commit)
+- stable: `X.Y.Z` where `X`, `Y` and `Z` are positive or null integers.
+- beta: `X.Y.Z-beta.M` where `X`, `Y`, `Z` and `M` are positive or null integers
+- dev: `X.Y.Z-dev.checksum` where `X`, `Y` and `Z` are positive or null integers and `checksum` is a unique identifier of the dev release (typically a shasum of the git commit)
 
 ## Objects
 
@@ -26,16 +26,16 @@ Two types of objects are managed in the registry: applications and versions.
 
 An application described a specific package. It is linked to multiple versions (releases) of the application.
 
-A application object is **mutable**.
+An application object is **mutable**.
 
-A application object contains the following fields:
+An application object contains the following fields:
 
 - `name`: the application name
 - `type`: the application type ("webapp" or "konnector")
 - `editor`: the application editor name
 - `description`: object containing the description description of the application in multiple languages
 - `category`: the application category
-- `repository`: object with type and url of package repository
+- `repository`: object with type and URL of package repository
 - `tags`: list of tags associated with the application
 - `versions`: an object containing all the channels versions
 
@@ -71,12 +71,12 @@ An application version object contains the following fields:
 - `description`: description of the version
 - `version`: the version string
 - `created_at`: date of the release creation
-- `url`: url of the tarball containing the application at specified version
+- `url`: URL of the tarball containing the application at specified version
 - `size`: the size of the application package (uncompressed) in bytes as string
 - `sha256`: the sha256 checksum of the application content
 - `permissions`: the permissions map contained in the manifest
-- `locales`: the availables locales and the associated translated description
-- `license`: the application's version license
+- `locales`: the available locales and the associated translated description
+- `license`: the license of this version
 
 The version string should follow the channels rule.
 
@@ -84,8 +84,8 @@ Example:
 
 ```json
 {
-    "version": "v3.1.2",
-    "url": "http://.../v3.1.2",
+    "version": "3.1.2",
+    "url": "http://.../3.1.2",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "created_at": "2017-07-05T07:54:40.982Z",
     "size": "1000",
@@ -150,23 +150,23 @@ This route adds a version of an application to the registry to the specified cha
 
 The content of the manifest file extracted from the application data is used to fill the fields of the version. Before adding the application version to the registry, the registry should check the following:
 
-    - the `manifest` file contained in the tarball should be checked and have its fields checked against the application properties
-    - the application content should check the sha256 checksum
+- the `manifest` file contained in the tarball should be checked and have its fields checked against the application properties
+- the application content should check the sha256 checksum
 
 #### Status codes
 
 * 201 Created, when the version has been successfully added to the registry
 * 409 Conflict, when the version already exists
 * 404 Not Found, when the application does not exist
-* 412 Precondition Failed, when the sent application data is invalid (could not fetch data url, bad checksum, bad manifest in the tarball, ...)
-* 400 Bad request, when the request is invalid (bad checksum encoding, bad url, ...)
+* 412 Precondition Failed, when the sent application data is invalid (could not fetch data URL, bad checksum, bad manifest in the tarball...)
+* 400 Bad request, when the request is invalid (bad checksum encoding, bad URL...)
 
 #### Request
 
 Request to add a stable release:
 
 ```http
-POST /apps/drive/v3.1.2 HTTP/1.1
+POST /apps/drive/3.1.2 HTTP/1.1
 Authorization: AbCdE
 ```
 
@@ -180,7 +180,7 @@ Authorization: AbCdE
 Request to add a development release:
 
 ```http
-POST /apps/drive/v3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a HTTP/1.1
+POST /apps/drive/3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a HTTP/1.1
 Authorization: AbCdE
 ```
 
@@ -196,13 +196,13 @@ Authorization: AbCdE
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/json
-Location: http://.../v3.1.2
+Location: http://.../3.1.2
 ```
 
 ```json
 {
-    "version": "v3.1.2",
-    "url": "http://.../v3.1.2",
+    "version": "3.1.2",
+    "url": "http://.../3.1.2",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "created_at": "2017-07-05T07:54:40.982Z",
     "size": "1000",
@@ -244,7 +244,7 @@ Parameter | Description
 ----------|------------------------------------
 page      | the page of the list
 limit     | the maximum number of applications to show
-filter[]  | a filter to apply on fields of the applicaiton
+filter[]  | a filter to apply on fields of the application
 order     | order to apply to the list
 
 #### Request
@@ -268,8 +268,11 @@ Content-Type: application/json
         "editor": "cozy",
         "category": "files",
         "description": "The drive application",
-        "versions": ["v3.1.1","v3.1.2"],
-        "versionsDev": ["v3.1.1-7ed536cc0a6c2a7daa7e961bdfd5ef5fe763a442"],
+        "versions": {
+            "stable": ["3.1.1"],
+            "beta": ["3.1.1-beta.1"],
+            "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+        },
         "repository": "https://github.com/cozy/cozy-drive",
         "license": "BSD"
     },
@@ -318,7 +321,7 @@ Get an application version.
 #### Request
 
 ```http
-GET /apps/drive/v3.1.1 HTTP/1.1
+GET /apps/drive/3.1.1 HTTP/1.1
 ```
 
 #### Response
@@ -330,8 +333,8 @@ Content-Type: application/json
 
 ```json
 {
-    "version": "v3.1.1",
-    "url": "http://.../v3.1.1",
+    "version": "3.1.1",
+    "url": "http://.../3.1.1",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "size": "1000",
     "created_at": "2017-07-05T07:54:40.982Z",
@@ -361,8 +364,8 @@ Content-Type: application/json
 
 ```json
 {
-    "version": "v3.1.1",
-    "url": "http://.../v3.1.1",
+    "version": "3.1.1",
+    "url": "http://.../3.1.1",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "size": "1000",
     "created_at": "2017-07-05T07:54:40.982Z",
@@ -374,7 +377,7 @@ Content-Type: application/json
 
 ## Attaching a cozy-stack to a registry or a list of registries
 
-In the configuration file of a stack, a `registries` namespace is added. This namespace can contain a list of url for the different registries attached to the stack.
+In the configuration file of a stack, a `registries` namespace is added. This namespace can contain a list of URL for the different registries attached to the stack.
 
 The stack itself implements the querying API of a registry. When querying this API, to ask for an application, the stack uses this hierarchy of registries to proxy or redirect the user.
 
