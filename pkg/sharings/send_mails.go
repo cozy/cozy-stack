@@ -221,12 +221,13 @@ func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 	}
 
 	mapParamOAuthQuery := url.Values{
-		"client_id":     {rs.Client.ClientID},
-		"redirect_uri":  {rs.Client.RedirectURIs[0]},
-		"response_type": {"code"},
-		"scope":         {permissionsScope},
-		"sharing_type":  {s.SharingType},
-		"state":         {s.SharingID},
+		consts.QueryParamAppSlug: {s.AppSlug},
+		"client_id":              {rs.Client.ClientID},
+		"redirect_uri":           {rs.Client.RedirectURIs[0]},
+		"response_type":          {"code"},
+		"scope":                  {permissionsScope},
+		"sharing_type":           {s.SharingType},
+		"state":                  {s.SharingID},
 	}
 	oAuthQuery.RawQuery = mapParamOAuthQuery.Encode()
 

@@ -30,6 +30,7 @@ var recStatus = &RecipientStatus{
 var mailValues = &mailTemplateValues{}
 
 var sharingTest = &Sharing{
+	AppSlug:          "spartapp",
 	SharingType:      consts.OneShotSharing,
 	RecipientsStatus: []*RecipientStatus{recStatus},
 	SharingID:        "sparta-id",
@@ -80,7 +81,7 @@ func TestGenerateOAuthQueryStringWhenRecipientHasNoURL(t *testing.T) {
 func TestGenerateOAuthQueryStringSuccess(t *testing.T) {
 	// First test: no scheme in the url.
 	rec.URL = "this.is.url"
-	expectedStr := "http://this.is.url/sharings/request?client_id=sparta&redirect_uri=redirect.me.to.sparta&response_type=code&scope=&sharing_type=one-shot&state=sparta-id"
+	expectedStr := "http://this.is.url/sharings/request?App_slug=spartapp&client_id=sparta&redirect_uri=redirect.me.to.sparta&response_type=code&scope=&sharing_type=one-shot&state=sparta-id"
 
 	oAuthQueryString, err := GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
@@ -96,7 +97,7 @@ func TestGenerateOAuthQueryStringSuccess(t *testing.T) {
 
 	// Third test: "https" scheme in the url.
 	rec.URL = "https://this.is.url"
-	expectedStr = "https://this.is.url/sharings/request?client_id=sparta&redirect_uri=redirect.me.to.sparta&response_type=code&scope=&sharing_type=one-shot&state=sparta-id"
+	expectedStr = "https://this.is.url/sharings/request?App_slug=spartapp&client_id=sparta&redirect_uri=redirect.me.to.sparta&response_type=code&scope=&sharing_type=one-shot&state=sparta-id"
 	oAuthQueryString, err = GenerateOAuthQueryString(sharingTest, recStatus,
 		instanceScheme)
 	assert.NoError(t, err)

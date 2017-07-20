@@ -131,10 +131,12 @@ func SharingRequest(c echo.Context) error {
 	sharingType := c.QueryParam("sharing_type")
 	desc := c.QueryParam("desc")
 	clientID := c.QueryParam("client_id")
+	appSlug := c.QueryParam(consts.QueryParamAppSlug)
 
 	instance := middlewares.GetInstance(c)
 
-	sharing, err := sharings.CreateSharingRequest(instance, desc, state, sharingType, scope, clientID)
+	sharing, err := sharings.CreateSharingRequest(instance, desc, state,
+		sharingType, scope, clientID, appSlug)
 	if err != nil {
 		return wrapErrors(err)
 	}
