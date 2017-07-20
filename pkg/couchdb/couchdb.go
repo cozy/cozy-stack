@@ -296,7 +296,9 @@ func makeRequest(db Database, method, path string, reqbody interface{}, resbody 
 			req.SetBasicAuth(auth.Username(), p)
 		}
 	}
+	start := time.Now()
 	resp, err := couchdbClient.Do(req)
+	elapsed := time.Since(start)
 	// Possible err = mostly connection failure
 	if err != nil {
 		err = newConnectionError(err)
@@ -304,6 +306,10 @@ func makeRequest(db Database, method, path string, reqbody interface{}, resbody 
 		return err
 	}
 	defer resp.Body.Close()
+
+	if elapsed.Seconds() >= 10 {
+		log.Printf("slow request on %s %s (%s)", method, path, elapsed)
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var body []byte
