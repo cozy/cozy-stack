@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"runtime"
 
@@ -139,8 +140,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 		Recipients: recInfos,
 		Selector:   rule.Selector,
 		Values:     rule.Values,
-
-		Path: fmt.Sprintf("/sharings/doc/%s/%s", rule.Type, docID),
+		Path:       fmt.Sprintf("/sharings/doc/%s/%s", rule.Type, docID),
 	}
 
 	var fileDoc *vfs.FileDoc
@@ -151,6 +151,11 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	if opts.DocType == consts.Files && eventType != realtime.EventDelete {
 		dirDoc, fileDoc, err = fs.DirOrFileByID(docID)
 		if err != nil {
+			// If deleted: propagate event
+			errVfs := err.(*couchdb.Error)
+			if errVfs.StatusCode == http.StatusNotFound {
+				return DeleteDirOrFile(ins, opts, true)
+			}
 			return err
 		}
 
@@ -182,7 +187,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			if fileDoc.Trashed {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %#v", fileDoc)
-				return DeleteDirOrFile(ins, opts)
+				return DeleteDirOrFile(ins, opts, false)
 			}
 
 			stillShared := isDocumentStillShared(fs, opts, fileDoc.ReferencedBy)
@@ -198,7 +203,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			if dirDoc.DirID == consts.TrashDirID {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %v", dirDoc)
-				return DeleteDirOrFile(ins, opts)
+				return DeleteDirOrFile(ins, opts, false)
 			}
 
 			stillShared := isDocumentStillShared(fs, opts, dirDoc.ReferencedBy)

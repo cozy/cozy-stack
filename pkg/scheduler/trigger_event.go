@@ -132,6 +132,7 @@ func eventMatchPermission(e *realtime.Event, rule *permissions.Rule) bool {
 			return true
 		}
 		if e.Doc.DocType() == consts.Files {
+
 			for _, value := range rule.Values {
 				var dir vfs.DirDoc
 				db := couchdb.SimpleDatabasePrefix(e.Domain)
@@ -184,6 +185,9 @@ func testPath(dir *vfs.DirDoc, doc realtime.Doc) bool {
 		return strings.HasPrefix(d.Fullpath, dir.Fullpath+"/")
 	}
 	if f, ok := doc.(*vfs.FileDoc); ok {
+		if f.Trashed {
+			return strings.HasPrefix(f.RestorePath, dir.Fullpath)
+		}
 		p, err := f.Path(dumpFilePather)
 		if err != nil {
 			return false

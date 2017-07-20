@@ -601,8 +601,8 @@ func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions, sendT
 }
 
 // DeleteDirOrFile asks the recipients to put the file or directory in the
-// trash.
-func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions) error {
+// trash, if hardDelete is false
+func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions, hardDelete bool) error {
 	var errFinal error
 	for _, recipient := range opts.Recipients {
 		rev, err := getDirOrFileRevAtRecipient(ins, opts, recipient)
@@ -627,6 +627,7 @@ func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions) error {
 				consts.QueryParamSharingID: {opts.SharingID},
 				consts.QueryParamRev:       {opts.DocRev},
 				consts.QueryParamType:      {opts.Type},
+				"hard_delete":              {strconv.FormatBool(hardDelete)},
 			},
 			NoResponse: true,
 		}
