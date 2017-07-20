@@ -66,6 +66,9 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 	doctype := "io.cozy.photos.albums"
 	var results []map[string]interface{}
 	if err := couchdb.GetAllDocs(db, doctype, &couchdb.AllDocsRequest{}, &results); err != nil {
+		if couchdb.IsNoDatabaseError(err) {
+			return nil
+		}
 		return err
 	}
 
