@@ -344,7 +344,6 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 		Message:    msg,
 	})
 	return err
-	return nil
 }
 
 func wrapErr(ctx context.Context, err error) error {
