@@ -401,10 +401,92 @@ Receive a sharing request.
 
 Answer a sharing request.
 
-### DELETE /sharings/:id
 
-Delete the specified sharing (both the sharing document and the associated permission).
+### DELETE /sharings/:sharing-id
 
+Revoke a sharing. Depending on the role of the logged-in user and the type of sharing, the implications are different:
+
+| ROLE / SHARING-TYPE | MASTER-SLAVE SHARING                                    | MASTER-MASTER SHARING                                            |
+|---------------------|---------------------------------------------------------|------------------------------------------------------------------|
+| Sharer              | Delete all triggers linked to the sharing.              | Delete all triggers linked to the sharing.                       |
+|                     | Ask all recipients to revoke the sharing.               | Ask all recipients to revoke the sharing.                        |
+|                     |                                                         | Revoke the OAuth clients of all the recipients for that sharing. |
+| Recipient           | Revoke the OAuth client of the sharer for that sharing. | Revoke the OAuth client of the sharer for that sharing.          |
+|                     | Ask the sharer to revoke the logged-in user.            | Ask the sharer to revoke the logged-in user.                     |
+|                     |                                                         | Delete all triggers linked to the sharing.                       |
+
+Permissions for that route are checked as following:
+
+* The application at the origin of the sharing can revoke it.
+* The sharer can ask the recipients to revoke the sharing.
+
+#### Request
+
+```http
+DELETE /sharings/CfFNWhvEDzHDYOxQvzqPAfHcqQolmjEY HTTP/1.1
+Authorization: Bearer zE3OTMsImlzcyI6ImNvenkyLmxvY2FsOjgwODAiLCJzdWIiOiI5ZTZlN …
+Host: cozy.example.net
+Content-Type: application/json
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+Content-Type: application/json
+```
+
+### DELETE /sharings/:sharing-id/recipient/:recipient-id
+
+Revoke a recipient from a sharing. Only the sharer can make that action and depending on the type of sharing the implications differ:
+
+* for both _Master-Master_ and _Master-Slave_ sharings the sharer asks the recipient to revoke the sharing;
+* for _Master-Master_ sharing the sharer also deletes the OAuth client of the recipient for that sharing.
+
+#### Request
+
+```http
+DELETE /sharings/xkWMVOrVitZVSqXAAvErcmUAdEKMCLlx/recipient/9e6e595ee50575a3faa064987d00b476
+Authorization: Bearer WQiOiJhY2Nlc3MiLCJpYXQiOjE1MDAzNzM0NDIsIml …
+Host: cozy.example.net
+Content-Type: application/json
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+Content-Type: application/json
+```
+
+
+### POST /sharings/app/destinationDirectory
+
+Sets the destination directory of the given application.  
+The "destination directory" is where the shared files received by this application will go. Only files shared using "Cozy to Cozy sharings" are concerned.
+
+For example if a user sets the destination directory of the application "Photos" to `/Shared with Me/Photos` (by providing its **id**) then all shared photos will go there.
+
+#### Request
+
+Query parameters required:
+
+* `App_slug`: the slug of the application.
+* `Doctype`: the doctype concerned. For now only `io.cozy.files` can be used.
+* `Dir_id`: the id of the destination directory. The directory should already exist.
+
+```http
+POST /sharings/app/destinationDirectory?App_slug=sharotronic&Doctype=io.cozy.sharings&Dir_id=9e6e595ee50575a3faa064987d0e30eb
+Host: cozy.example.net
+Content-Type: application/json
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+Content-Type: application/json
+```
 
 ### Frequently Asked Questions
 
@@ -457,6 +539,5 @@ This table sums up the differences:
 | Owner      | True                                            | False                                       |
 | Recipients | Contains all the recipients related information | (empty)                                     |
 | Sharer     | (empty)                                         | Contains all the sharer related information |
-
 
 {% endraw %}
