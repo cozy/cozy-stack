@@ -91,7 +91,7 @@ part of the app.
 
 ## Sources
 
-Here is the available sources, defined by the scheme of the source URl:
+Here is the available sources, defined by the scheme of the source URL:
 
   - `registry://`: to install an application from the instance registries
   - `git://` or `git+ssh://`: to install an application from a git repository
@@ -103,10 +103,11 @@ The `registry` scheme expect the following elements:
   - host: the name of the application
   - path: `/:channel` the channel of the application (see the [registry](docs/registry.md) doc)
 
-Examples:
-  - `registry://drive/stable`
-  - `registry://drive/beta`
-  - `registry://drive/dev`
+Examples: `registry://drive/stable`, `registry://drive/beta`, and `registry://drive/dev`.
+
+For the `git` scheme, the fragment in the URL can be used to specify which branch to install.
+
+For the `http` and `https` schemes, the fragment can be used to give the expected sha256sum.
 
 ### POST /apps/:slug
 
@@ -297,87 +298,6 @@ Content-Type: image/svg+xml
 ```
 
 
-## Manage the marketplace
-
-### GET /apps/manifests
-
-List applications in the marketplace.
-
-### POST /apps/manifests
-
-Add an application to the marketplace. The payload is a subset of the
-manifest, with at least `name` and `source`. But it's possible to add the
-other fields of the manifest to give more informations.
-
-#### Request
-
-```http
-GET /apps?filter[state]=installed HTTP/1.1
-Accept: application/vnd.api+json
-Content-Type: application/vnd.api+json
-```
-
-```json
-{
-  "data": {
-    "type": "io.cozy.apps",
-    "attributes": {
-      "name": "cozy-emails",
-      "slug": "emails",
-      "icon": "/Apps/marketplace/emails.svg",
-      "source": "git://github.com/cozy/cozy-emails",
-      "default_locale": "en",
-      "description": "A webmail for Cozy Cloud",
-      "locales": {
-        "fr": {
-          "name": "courriels",
-          "description": "Un client web pour les courriels dans Cozy Cloud"
-        }
-      }
-    }
-  }
-}
-```
-
-#### Response
-
-```http
-HTTP/1.1 201 Created
-Content-Type: application/vnd.api+json
-```
-
-```json
-{
-  "data": {
-    "id": "4f6436ce-8967-11e6-b174-ab83adac69f2",
-    "type": "io.cozy.apps",
-    "attributes": {
-      "name": "cozy-emails",
-      "slug": "emails",
-      "icon": "/Apps/marketplace/emails.svg",
-      "source": "git://github.com/cozy/cozy-emails",
-      "default_locale": "en",
-      "description": "A webmail for Cozy Cloud",
-      "locales": {
-        "fr": {
-          "name": "courriels",
-          "description": "Un client web pour les courriels dans Cozy Cloud"
-        }
-      }
-    }
-  }
-}
-```
-
-### PATCH /apps/manifests/:id
-
-Update an application in the marketplace.
-
-### DELETE /apps/manifests/:id
-
-Remove an application from the marketplace.
-
-
 ## Uninstall an application
 
 ### DELETE /apps/:slug
@@ -393,6 +313,94 @@ DELETE /apps/tasky HTTP/1.1
 ```http
 HTTP/1.1 204 No Content
 ```
+
+
+## The marketplace
+
+### GET /apps/manifests
+
+List applications in the marketplace (ie the union of the apps declared in the registries of this cozy instance).
+
+#### Query-String
+
+Parameter | Description
+----------|------------------------------------------------------
+cursor    | the name of the last application on the previous page
+limit     | the maximum number of applications to show
+filter[]  | a filter to apply on fields of the application
+order     | order to apply to the list
+
+#### Request
+
+```http
+GET /apps/manifests?filter[category]=cozy&filter[type]=webapp HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+    "data": [{
+      "name": "drive",
+      "type": "webapp",
+      "editor": "cozy",
+      "category": "files",
+      "description": "The drive application",
+      "versions": {
+          "stable": ["3.1.1"],
+          "beta": ["3.1.1-beta.1"],
+          "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+      },
+      "repository": "https://github.com/cozy/cozy-drive",
+      "license": "BSD"
+    }, {
+       // ...
+    }],
+    "links": {
+        "next": "/apps/marketplace?filter[cursor]=photos&filter[limit]=30"
+    }
+}
+```
+
+### GET /apps/manifests/:name/:version
+
+Get informations about an application, for a specified version.
+For examples, the permissions can change from one version to another.
+
+#### Request
+
+```http
+GET /apps/manifests/drive/3.1.1 HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "data": {
+    "version": "3.1.1",
+    "url": "http://.../3.1.1",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "size": "1000",
+    "created_at": "2017-07-05T07:54:40.982Z",
+    "description": "Description of the 3.1.1 version of drive",
+    "license": "BSD",
+    "permissions": { },
+    "locales": { }
+  }
+}
+```
+
 
 
 ## Access an application

@@ -24,8 +24,8 @@ Table of contents
 ## Services
 
 - `/auth` - [Authentication & OAuth](auth.md)
-  - [Registry](registry.md)
 - `/apps` - [Applications Management](apps.md)
+  - [Registry](registry.md)
 - `/data` - [Data System](data-system.md)
   - [Mango](mango.md)
   - [Replication](replication.md)
