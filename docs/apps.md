@@ -324,8 +324,11 @@ List applications in the marketplace (ie the union of the apps declared in the r
 #### Query-String
 
 Parameter | Description
-----------|------------------------------------
+----------|------------------------------------------------------
+cursor    | the name of the last application on the previous page
+limit     | the maximum number of applications to show
 filter[]  | a filter to apply on fields of the application
+order     | order to apply to the list
 
 #### Request
 
@@ -341,25 +344,27 @@ Content-Type: application/json
 ```
 
 ```json
-[
-    {
-        "name": "drive",
-        "type": "webapp",
-        "editor": "cozy",
-        "category": "files",
-        "description": "The drive application",
-        "versions": {
-            "stable": ["3.1.1"],
-            "beta": ["3.1.1-beta.1"],
-            "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
-        },
-        "repository": "https://github.com/cozy/cozy-drive",
-        "license": "BSD"
-    },
-    {
-        // ...
+{
+    "data": [{
+      "name": "drive",
+      "type": "webapp",
+      "editor": "cozy",
+      "category": "files",
+      "description": "The drive application",
+      "versions": {
+          "stable": ["3.1.1"],
+          "beta": ["3.1.1-beta.1"],
+          "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+      },
+      "repository": "https://github.com/cozy/cozy-drive",
+      "license": "BSD"
+    }, {
+       // ...
+    }],
+    "links": {
+        "next": "/apps/marketplace?filter[cursor]=photos&filter[limit]=30"
     }
-]
+}
 ```
 
 ### GET /apps/manifests/:name/:version
@@ -382,6 +387,7 @@ Content-Type: application/json
 
 ```json
 {
+  "data": {
     "version": "3.1.1",
     "url": "http://.../3.1.1",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
@@ -391,6 +397,7 @@ Content-Type: application/json
     "license": "BSD",
     "permissions": { },
     "locales": { }
+  }
 }
 ```
 

@@ -236,13 +236,13 @@ These routes define the querying part of a registry to access to the available a
 
 Get the list of all applications.
 
-A simple pagination scheme is available via the `page` and `limit` query parameter. The `filter[???]` query parameters can be used to filter by fields values.
+A pagination scheme is available via the `limit` and `cursor` query parameter. The `filter[???]` query parameters can be used to filter by fields values.
 
 #### Query-String
 
 Parameter | Description
-----------|------------------------------------
-page      | the page of the list
+----------|------------------------------------------------------
+cursor    | the name of the last application on the previous page
 limit     | the maximum number of applications to show
 filter[]  | a filter to apply on fields of the application
 order     | order to apply to the list
@@ -250,7 +250,7 @@ order     | order to apply to the list
 #### Request
 
 ```http
-GET /apps?filter[category]=cozy&page=0&limit=30 HTTP/1.1
+GET /apps?filter[category]=cozy&page=0 HTTP/1.1
 ```
 
 #### Response
