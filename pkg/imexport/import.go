@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -86,7 +87,9 @@ func album(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db c
 }
 
 // Untardir untar doc directory
-func Untardir(fs vfs.VFS, r io.Reader, dst string, domain string) error {
+func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
+	fs := instance.VFS()
+	domain := instance.Domain
 	db := couchdb.SimpleDatabasePrefix(domain)
 
 	dstDoc, err := fs.DirByID(dst)

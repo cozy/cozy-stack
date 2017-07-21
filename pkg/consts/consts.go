@@ -20,6 +20,8 @@ const (
 	Doctypes = "io.cozy.doctypes"
 	// Files doc type for type for files and directories
 	Files = "io.cozy.files"
+	// PhotosAlbums doc type for photos albums
+	PhotosAlbums = "io.cozy.photos.albums"
 	// Intents doc type for intents persisted in couchdb
 	Intents = "io.cozy.intents"
 	// Jobs doc type for queued jobs

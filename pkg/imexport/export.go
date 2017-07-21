@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -61,9 +62,11 @@ func createDir(name string, tw *tar.Writer, dir *vfs.DirDoc) error {
 	return err
 }
 
-func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
+func metadata(tw *tar.Writer, instance *instance.Instance) error {
+	fs := instance.VFS()
+	domain := instance.Domain
 	db := couchdb.SimpleDatabasePrefix(domain)
-	doctype := "io.cozy.photos.albums"
+	doctype := consts.PhotosAlbums
 	var results []map[string]interface{}
 	if err := couchdb.GetAllDocs(db, doctype, &couchdb.AllDocsRequest{}, &results); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
@@ -131,8 +134,8 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 	}
 
 	req := &couchdb.ViewRequest{
-		StartKey:    []string{"io.cozy.photos.albums"},
-		EndKey:      []string{"io.cozy.photos.albums", couchdb.MaxString},
+		StartKey:    []string{consts.PhotosAlbums},
+		EndKey:      []string{consts.PhotosAlbums, couchdb.MaxString},
 		IncludeDocs: true,
 		Reduce:      false,
 	}
@@ -185,7 +188,8 @@ func metadata(tw *tar.Writer, fs vfs.VFS, domain string) error {
 	return nil
 }
 
-func export(tw *tar.Writer, fs vfs.VFS, domain string) error {
+func export(tw *tar.Writer, instance *instance.Instance) error {
+	fs := instance.VFS()
 	root := "/"
 
 	err := vfs.Walk(fs, root, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
@@ -211,11 +215,11 @@ func export(tw *tar.Writer, fs vfs.VFS, domain string) error {
 	if err != nil {
 		return err
 	}
-	return metadata(tw, fs, domain)
+	return metadata(tw, instance)
 }
 
 // Tardir tar doc directory
-func Tardir(w io.Writer, fs vfs.VFS, domain string) error {
+func Tardir(w io.Writer, instance *instance.Instance) error {
 	//gzip writer
 	gw := gzip.NewWriter(w)
 	defer gw.Close()
@@ -224,7 +228,7 @@ func Tardir(w io.Writer, fs vfs.VFS, domain string) error {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	err := export(tw, fs, domain)
+	err := export(tw, instance)
 
 	return err
 

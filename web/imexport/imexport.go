@@ -18,8 +18,6 @@ import (
 
 func export(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	fs := instance.VFS()
-
 	domain := instance.Domain
 
 	tab := crypto.GenerateRandomBytes(20)
@@ -31,7 +29,7 @@ func export(c echo.Context) error {
 	}
 	defer w.Close()
 
-	err = imexport.Tardir(w, fs, domain)
+	err = imexport.Tardir(w, instance)
 	if err != nil {
 		return err
 	}
@@ -99,7 +97,6 @@ func exportDir(c echo.Context) error {
 func importer(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
-	domain := instance.Domain
 
 	r, err := os.Open("cozy.tar.gz")
 	if err != nil {
@@ -126,7 +123,7 @@ func importer(c echo.Context) error {
 		}
 	}
 
-	err = imexport.Untardir(fs, r, dst.ID(), domain)
+	err = imexport.Untardir(r, dst.ID(), instance)
 	if err != nil {
 		return err
 	}
