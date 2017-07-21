@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/echo"
 	"github.com/cozy/echo/middleware"
+	"github.com/google/gops/agent"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/afero"
 )
@@ -161,6 +162,9 @@ func listenAndServe(noAdmin bool, appsHandler echo.HandlerFunc) error {
 	errs := make(chan error)
 
 	if !noAdmin {
+		if err = agent.Listen(nil); err != nil {
+			return err
+		}
 		admin := echo.New()
 		if err = SetupAdminRoutes(admin); err != nil {
 			return err

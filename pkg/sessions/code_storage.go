@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/go-redis/redis"
 )
 
@@ -45,6 +46,8 @@ func (store *memCodeStorage) FindAndDelete(value string, app string) *Code {
 	return found
 }
 
+var codelog = logger.WithNamespace("sessions-code")
+
 type subRedisInterface interface {
 	Eval(script string, keys []string, args ...interface{}) *redis.Cmd
 	Set(key string, value interface{}, expiration time.Duration) *redis.StatusCmd
@@ -55,14 +58,22 @@ type redisCodeStorage struct {
 }
 
 func (store *redisCodeStorage) Add(c *Code) error {
-	return store.cl.Set(c.Value+":"+c.AppHost, c.SessionID, CodeTTL).Err()
+	err := store.cl.Set(c.Value+":"+c.AppHost, c.SessionID, CodeTTL).Err()
+	if err != nil {
+		codelog.Errorf("Cannot save a sessions code: %s", err)
+	}
+	return err
 }
 
 const luaGetAndDelete = `local v = redis.call("GET", KEYS[1]); redis.call("DEL", KEYS[1]); return v`
 
 func (store *redisCodeStorage) FindAndDelete(value, app string) *Code {
 	sessionID, err := store.cl.Eval(luaGetAndDelete, []string{value + ":" + app}).Result()
-	if err != nil || sessionID == redis.Nil {
+	if err != nil {
+		codelog.Errorf("Error while fetching a sessions code: %s", err)
+		return nil
+	}
+	if sessionID == redis.Nil {
 		return nil
 	}
 
