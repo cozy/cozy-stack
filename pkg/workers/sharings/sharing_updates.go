@@ -123,7 +123,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 		for _, rec := range sharing.RecipientsStatus {
 			// Ignore the revoked recipients
 			if rec.Status != consts.SharingStatusRevoked {
-				info, err := extractRecipient(ins, rec)
+				info, err := sharings.ExtractRecipientInfo(ins, rec)
 				if err != nil {
 					return err
 				}
