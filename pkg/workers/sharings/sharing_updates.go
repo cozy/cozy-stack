@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"runtime"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -114,7 +113,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 		// We are on the recipient side
 		recInfos = make([]*sharings.RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
-		info, err := extractRecipient(ins, sharerStatus)
+		info, err := sharings.ExtractRecipientInfo(ins, sharerStatus)
 		if err != nil {
 			return err
 		}
@@ -237,25 +236,6 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	}
 }
 
-func extractRecipient(db couchdb.Database, rec *sharings.RecipientStatus) (*sharings.RecipientInfo, error) {
-	recDoc, err := GetRecipient(db, rec.RefRecipient.ID)
-	if err != nil {
-		return nil, err
-	}
-	u, scheme, err := ExtractHostAndScheme(recDoc.M["url"].(string))
-
-	if err != nil {
-		return nil, err
-	}
-	info := &sharings.RecipientInfo{
-		URL:         u,
-		Scheme:      scheme,
-		AccessToken: rec.AccessToken,
-		Client:      rec.Client,
-	}
-	return info, nil
-}
-
 // GetRecipient returns the Recipient stored in database from a given ID
 func GetRecipient(db couchdb.Database, recID string) (*couchdb.JSONDoc, error) {
 	doc := &couchdb.JSONDoc{}
@@ -264,23 +244,6 @@ func GetRecipient(db couchdb.Database, recID string) (*couchdb.JSONDoc, error) {
 		err = ErrRecipientDoesNotExist
 	}
 	return doc, err
-}
-
-// ExtractHostAndScheme returns the recipient's host and the scheme
-func ExtractHostAndScheme(fullURL string) (string, string, error) {
-	if fullURL == "" {
-		return "", "", ErrRecipientHasNoURL
-	}
-	u, err := url.Parse(fullURL)
-	if err != nil {
-		return "", "", err
-	}
-	host := u.Host
-	scheme := u.Scheme
-	if scheme == "" {
-		scheme = "https"
-	}
-	return host, scheme, nil
 }
 
 // isRecipientSide is used to determine whether or not we are on the recipient side.
