@@ -299,10 +299,7 @@ func ExtractHostAndScheme(fullURL string) (string, string, error) {
 // A sharing is on the recipient side iff:
 // - the SharerStatus structure is not nil
 func isRecipientSide(sharing *sharings.Sharing) bool {
-	if sharing.Sharer.SharerStatus != nil {
-		return true
-	}
-	return false
+	return sharing.Sharer.SharerStatus != nil
 }
 
 // This function checks if the document with the given ID still belong in the
