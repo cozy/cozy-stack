@@ -54,7 +54,7 @@ konnectors:
   # oauthstate: redis://localhost:6379/6
 
 realtime:
-  # url: redis://localhost:6379/6
+  # url: redis://localhost:6379/7
 
 mail:
   # mail noreply address - flags: --mail-noreply-address
