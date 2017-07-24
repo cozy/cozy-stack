@@ -1038,7 +1038,7 @@ func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID string, 
 		return err
 	}
 
-	_, err = request.Req(&request.Options{
+	reqOpts := &request.Options{
 		Domain:  domain,
 		Scheme:  scheme,
 		Path:    path,
@@ -1050,17 +1050,89 @@ func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID string, 
 		},
 		Body:       nil,
 		NoResponse: true,
-	})
+	}
+
+	_, err = request.Req(reqOpts)
 
 	if err != nil {
-		ins.Logger().Errorf("[sharings] askToRevoke: Could not ask recipient "+
-			"%s to revoke sharing %s: %v", rs.recipient.URL, sharingID, err)
+		if AuthError(err) {
+			recInfo, errInfo := ExtractRecipientInfo(ins, rs)
+			if errInfo != nil {
+				return errInfo
+			}
+			_, err = RefreshTokenAndRetry(ins, sharingID, recInfo, reqOpts)
+		}
+		if err != nil {
+			ins.Logger().Errorf("[sharings] askToRevoke: Could not ask recipient "+
+				"%s to revoke sharing %s: %v", rs.recipient.URL, sharingID, err)
+		}
 		return err
 	}
 
 	rs.Client = auth.Client{}
 	rs.AccessToken = auth.AccessToken{}
 	return nil
+}
+
+// RefreshTokenAndRetry is called after an authentication failure.
+// It tries to renew the access_token and request again
+func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *RecipientInfo, opts *request.Options) (*http.Response, error) {
+	ins.Logger().Errorf("[sharing] The request is not authorized. "+
+		"Trying to renew the token for %v", rec.URL)
+
+	req := &auth.Request{
+		Domain:     opts.Domain,
+		Scheme:     opts.Scheme,
+		HTTPClient: new(http.Client),
+	}
+	sharing, recStatus, err := FindSharingRecipient(ins, sharingID, rec.Client.ClientID)
+	if err != nil {
+		return nil, err
+	}
+	refreshToken := rec.AccessToken.RefreshToken
+	access, err := req.RefreshToken(&rec.Client, &rec.AccessToken)
+	if err != nil {
+		ins.Logger().Errorf("[sharing] Refresh token request failed: %v", err)
+		return nil, err
+	}
+	access.RefreshToken = refreshToken
+	recStatus.AccessToken = *access
+	if err = couchdb.UpdateDoc(ins, sharing); err != nil {
+		return nil, err
+	}
+	opts.Headers["Authorization"] = "Bearer " + access.AccessToken
+	res, err := request.Req(opts)
+	return res, err
+}
+
+// AuthError returns true if the given error is an authentication one
+func AuthError(err error) bool {
+	switch v := err.(type) {
+	case *request.Error:
+		if v.Title == "Bad Request" || v.Title == "Unauthorized" {
+			return true
+		}
+	}
+	return false
+}
+
+// ExtractRecipientInfo returns a RecipientInfo from a RecipientStatus
+func ExtractRecipientInfo(db couchdb.Database, rec *RecipientStatus) (*RecipientInfo, error) {
+	recipient, err := GetRecipient(db, rec.RefRecipient.ID)
+	if err != nil {
+		return nil, err
+	}
+	u, scheme, err := recipient.ExtractDomainAndScheme()
+	if err != nil {
+		return nil, err
+	}
+	info := &RecipientInfo{
+		URL:         u,
+		Scheme:      scheme,
+		AccessToken: rec.AccessToken,
+		Client:      rec.Client,
+	}
+	return info, nil
 }
 
 var (

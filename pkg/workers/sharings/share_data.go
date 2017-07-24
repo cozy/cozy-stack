@@ -15,7 +15,6 @@ import (
 
 	"strings"
 
-	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -248,8 +247,8 @@ func DeleteDoc(ins *instance.Instance, opts *SendOptions) error {
 		_, errSend := request.Req(reqOpts)
 
 		if errSend != nil {
-			if authError(err) {
-				_, errSend = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			if sharings.AuthError(errSend) {
+				_, errSend = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 			}
 			if errSend != nil {
 				errFinal = multierror.Append(errFinal, fmt.Errorf("Error while trying to share data : %s", errSend.Error()))
@@ -339,13 +338,13 @@ func sendDocToRecipient(ins *instance.Instance, opts *SendOptions, rec *sharings
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
+		if sharings.AuthError(err) {
 			body, berr := request.WriteJSON(doc.M)
 			if berr != nil {
 				return berr
 			}
 			reqOpts.Body = body
-			_, err = refreshTokenAndRetry(ins, opts.SharingID, rec, reqOpts)
+			_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, rec, reqOpts)
 		}
 	}
 
@@ -633,8 +632,8 @@ func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions, hardDelete bool)
 		}
 		_, err = request.Req(reqOpts)
 		if err != nil {
-			if authError(err) {
-				_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			if sharings.AuthError(err) {
+				_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 			}
 			if err != nil {
 				errFinal = multierror.Append(errFinal,
@@ -686,13 +685,13 @@ func sendFileToRecipient(ins *instance.Instance, fileDoc *vfs.FileDoc, opts *Sen
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
+		if sharings.AuthError(err) {
 			content, erro := ins.VFS().OpenFile(fileDoc)
 			if erro != nil {
 				return erro
 			}
 			reqOpts.Body = content
-			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 		}
 	}
 	return err
@@ -725,8 +724,8 @@ func sendDirToRecipient(ins *instance.Instance, dirDoc *vfs.DirDoc, opts *SendOp
 	}
 	_, err := request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
-			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+		if sharings.AuthError(err) {
+			_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 		}
 		if err != nil {
 			ins.Logger().Errorf("[sharing] An error occurred while trying to "+
@@ -761,13 +760,13 @@ func sendPatchToRecipient(ins *instance.Instance, patch *jsonapi.Document, opts 
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
+		if sharings.AuthError(err) {
 			body, errw := request.WriteJSON(patch)
 			if errw != nil {
 				return errw
 			}
 			reqOpts.Body = body
-			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 		}
 	}
 	return err
@@ -819,13 +818,13 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
+		if sharings.AuthError(err) {
 			body, errw := request.WriteJSON(doc)
 			if errw != nil {
 				return errw
 			}
 			reqOpts.Body = body
-			_, err = refreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
+			_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 		}
 	}
 	return err
@@ -940,8 +939,8 @@ func getDocAtRecipient(ins *instance.Instance, newDoc *couchdb.JSONDoc, opts *Se
 	var err error
 	res, err = request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
-			res, err = refreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
+		if sharings.AuthError(err) {
+			res, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
 			if err != nil {
 				return nil, err
 			}
@@ -989,8 +988,8 @@ func getDirOrFileMetadataAtRecipient(ins *instance.Instance, opts *SendOptions, 
 
 	res, err := request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
-			res, rerr = refreshTokenAndRetry(ins, opts.SharingID, recInfo,
+		if sharings.AuthError(err) {
+			res, rerr = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recInfo,
 				reqOpts)
 			if rerr != nil {
 				return nil, nil, parseError(rerr)
@@ -1030,8 +1029,8 @@ func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id, hea
 
 	_, err := request.Req(reqOpts)
 	if err != nil {
-		if authError(err) {
-			_, err = refreshTokenAndRetry(ins, sharingID, recInfo, reqOpts)
+		if sharings.AuthError(err) {
+			_, err = sharings.RefreshTokenAndRetry(ins, sharingID, recInfo, reqOpts)
 		}
 
 		return parseError(err)
@@ -1192,47 +1191,6 @@ func bindDirOrFile(body io.Reader) (*vfs.DirOrFileDoc, error) {
 	dirOrFileDoc.SetRev(obj.Meta.Rev)
 
 	return dirOrFileDoc, nil
-}
-
-func authError(err error) bool {
-	switch v := err.(type) {
-	case *request.Error:
-		if v.Title == "Bad Request" || v.Title == "Unauthorized" {
-			return true
-		}
-	}
-	return false
-}
-
-// refreshTokenAndRetry is called after an authentication failure.
-// It tries to renew the access_token and request again
-func refreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *sharings.RecipientInfo, opts *request.Options) (*http.Response, error) {
-	ins.Logger().Errorf("[sharing] The request is not authorized. "+
-		"Trying to renew the token for %v", rec.URL)
-
-	req := &auth.Request{
-		Domain:     opts.Domain,
-		Scheme:     opts.Scheme,
-		HTTPClient: new(http.Client),
-	}
-	sharing, recStatus, err := sharings.FindSharingRecipient(ins, sharingID, rec.Client.ClientID)
-	if err != nil {
-		return nil, err
-	}
-	refreshToken := rec.AccessToken.RefreshToken
-	access, err := req.RefreshToken(&rec.Client, &rec.AccessToken)
-	if err != nil {
-		ins.Logger().Errorf("[sharing] Refresh token request failed: %v", err)
-		return nil, err
-	}
-	access.RefreshToken = refreshToken
-	recStatus.AccessToken = *access
-	if err = couchdb.UpdateDoc(ins, sharing); err != nil {
-		return nil, err
-	}
-	opts.Headers["Authorization"] = "Bearer " + access.AccessToken
-	res, err := request.Req(opts)
-	return res, err
 }
 
 // dirIsSharedContainer returns true if the given dirID is the sharing container
