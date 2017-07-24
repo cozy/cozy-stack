@@ -651,30 +651,41 @@ func passphraseReset(c echo.Context) error {
 }
 
 func passphraseRenewForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 	if middlewares.IsLoggedIn(c) {
-		redirect := instance.DefaultRedirection().String()
+		redirect := inst.DefaultRedirection().String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
-	token := c.QueryParam("token")
 	// Check that the token is actually defined and well encoded. The actual
-	// token value checking is done on the passphraseRenew handler.
-	if _, err := hex.DecodeString(token); err != nil || token == "" {
+	// token value checking is also done on the passphraseRenew handler.
+	token, err := hex.DecodeString(c.QueryParam("token"))
+	if err != nil || len(token) == 0 {
+		return c.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid_token",
+		})
+	}
+	if err = inst.CheckPassphraseRenewToken(token); err != nil {
+		// If the token is missing or outdated we redirect to the passphrase reset
+		// form.
+		if err == instance.ErrMissingToken {
+			return c.Redirect(http.StatusSeeOther,
+				inst.PageURL("/auth/passphrase_reset", nil))
+		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
 		})
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
-		"Locale":               instance.Locale,
+		"Locale":               inst.Locale,
 		"PassphraseResetToken": token,
 		"CSRF":                 c.Get("csrf"),
 	})
 }
 
 func passphraseRenew(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 	if middlewares.IsLoggedIn(c) {
-		redirect := instance.DefaultRedirection().String()
+		redirect := inst.DefaultRedirection().String()
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 	pass := []byte(c.FormValue("passphrase"))
@@ -684,12 +695,18 @@ func passphraseRenew(c echo.Context) error {
 			"error": "invalid_token",
 		})
 	}
-	if err := instance.PassphraseRenew(pass, token); err != nil {
+	if err := inst.PassphraseRenew(pass, token); err != nil {
+		// If the token is missing or outdated we redirect to the passphrase reset
+		// form.
+		if err == instance.ErrMissingToken {
+			return c.Redirect(http.StatusSeeOther,
+				inst.PageURL("/auth/passphrase_reset", nil))
+		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
 		})
 	}
-	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }
 
 // Routes sets the routing for the status service
