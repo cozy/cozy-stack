@@ -143,8 +143,11 @@ func TestUntardir(t *testing.T) {
 	err = couchdb.GetAllDocs(testdb, consts.PhotosAlbums, &couchdb.AllDocsRequest{}, &results)
 	assert.NoError(t, err)
 
-	testAlbum := results[0]
-	assert.Equal(t, "albumTest", testAlbum["name"])
+	for _, val := range results {
+		if val["_id"] == photo.ReferencedBy[0].ID {
+			assert.Equal(t, "albumTest", val["name"])
+		}
+	}
 
 	err = os.Remove("cozy_test.tar.gz")
 	assert.NoError(t, err)
