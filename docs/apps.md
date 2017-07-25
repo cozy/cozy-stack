@@ -317,7 +317,7 @@ HTTP/1.1 204 No Content
 
 ## The marketplace
 
-### GET /apps/manifests
+### GET /apps/registries
 
 List applications in the marketplace (ie the union of the apps declared in the registries of this cozy instance).
 
@@ -333,7 +333,7 @@ order     | order to apply to the list
 #### Request
 
 ```http
-GET /apps/manifests?filter[category]=cozy&filter[type]=webapp HTTP/1.1
+GET /apps/registries?filter[category]=cozy&filter[type]=webapp HTTP/1.1
 ```
 
 #### Response
@@ -346,28 +346,31 @@ Content-Type: application/json
 ```json
 {
     "data": [{
-      "name": "drive",
-      "type": "webapp",
-      "editor": "cozy",
-      "category": "files",
-      "description": "The drive application",
-      "versions": {
-          "stable": ["3.1.1"],
-          "beta": ["3.1.1-beta.1"],
-          "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
-      },
-      "repository": "https://github.com/cozy/cozy-drive",
-      "license": "BSD"
+      "id": "Drive",
+      "type": "io.cozy.registry.webapps",
+      "attributes": {
+        "name": "Drive",
+        "editor": "Cozy",
+        "category": "files",
+        "description": "The drive application",
+        "versions": {
+            "stable": ["3.1.1"],
+            "beta": ["3.1.1-beta.1"],
+            "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+        },
+        "repository": "https://github.com/cozy/cozy-drive",
+        "license": "BSD"
+      }
     }, {
        // ...
     }],
     "links": {
-        "next": "/apps/marketplace?filter[cursor]=photos&filter[limit]=30"
+        "next": "/apps/registries?filter[cursor]=photos&filter[limit]=30"
     }
 }
 ```
 
-### GET /apps/manifests/:name/:version
+### GET /apps/registries/:name/:version
 
 Get informations about an application, for a specified version.
 For examples, the permissions can change from one version to another.
@@ -375,7 +378,7 @@ For examples, the permissions can change from one version to another.
 #### Request
 
 ```http
-GET /apps/manifests/drive/3.1.1 HTTP/1.1
+GET /apps/registries/Drive/3.1.1 HTTP/1.1
 ```
 
 #### Response
@@ -388,15 +391,19 @@ Content-Type: application/json
 ```json
 {
   "data": {
-    "version": "3.1.1",
-    "url": "http://.../3.1.1",
-    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-    "size": "1000",
-    "created_at": "2017-07-05T07:54:40.982Z",
-    "description": "Description of the 3.1.1 version of drive",
-    "license": "BSD",
-    "permissions": { },
-    "locales": { }
+    "id": "Drive/3.1.1",
+    "type": "io.cozy.registry.versions",
+    "attributes": {
+      "version": "3.1.1",
+      "url": "http://.../3.1.1",
+      "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+      "size": "1000",
+      "created_at": "2017-07-05T07:54:40.982Z",
+      "description": "Description of the 3.1.1 version of drive",
+      "license": "BSD",
+      "permissions": { },
+      "locales": { }
+    }
   }
 }
 ```

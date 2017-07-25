@@ -294,6 +294,7 @@ func iconHandler(c echo.Context) error {
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listWebappsHandler)
+	router.GET("/registries", registryHandler(apps.Webapp))
 	router.POST("/:slug", installHandler(apps.Webapp))
 	router.PUT("/:slug", updateHandler(apps.Webapp))
 	router.DELETE("/:slug", deleteHandler(apps.Webapp))
@@ -303,6 +304,7 @@ func WebappsRoutes(router *echo.Group) {
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
 	router.GET("/", listKonnectorsHandler)
+	router.GET("/registries", registryHandler(apps.Konnector))
 	router.POST("/:slug", installHandler(apps.Konnector))
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))
