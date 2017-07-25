@@ -45,6 +45,7 @@ var (
 		"authorize_sharing.html",
 		"error.html",
 		"login.html",
+		"need_onboarding.html",
 		"passphrase_reset.html",
 		"passphrase_renew.html",
 		"sharing_discovery.html",
@@ -206,7 +207,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 // CreateSubdomainProxy returns a new web server that will handle that apps
 // proxy routing if the host of the request match an application, and route to
 // the given router otherwise.
-func CreateSubdomainProxy(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.Echo, error) {
+func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*echo.Echo, error) {
 	if err := SetupAssets(router, config.GetConfig().Assets); err != nil {
 		return nil, err
 	}
@@ -215,7 +216,7 @@ func CreateSubdomainProxy(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.
 		return nil, err
 	}
 
-	serveApps = SetupAppsHandler(serveApps)
+	appsHandler = SetupAppsHandler(appsHandler)
 
 	main := echo.New()
 	main.Any("/*", func(c echo.Context) error {
@@ -224,7 +225,7 @@ func CreateSubdomainProxy(router *echo.Echo, serveApps echo.HandlerFunc) (*echo.
 			if i, err := instance.Get(parent); err == nil {
 				c.Set("instance", i)
 				c.Set("slug", slug)
-				return serveApps(c)
+				return appsHandler(c)
 			}
 		}
 

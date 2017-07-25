@@ -40,6 +40,9 @@ func Home(c echo.Context) error {
 	}
 
 	if len(instance.RegisterToken) > 0 {
+		if !webpermissions.CheckRegisterToken(c, instance) {
+			return c.Render(http.StatusOK, "need_onboarding.html", nil)
+		}
 		sub := instance.SubDomain(consts.OnboardingSlug)
 		sub.RawQuery = c.Request().URL.RawQuery
 		return c.Redirect(http.StatusSeeOther, sub.String())

@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -29,12 +30,15 @@ func Serve(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
 	}
 	i := middlewares.GetInstance(c)
+	slug := c.Get("slug").(string)
+	if len(i.RegisterToken) > 0 && slug != consts.OnboardingSlug {
+		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
+	}
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		if code := c.QueryParam("code"); code != "" {
 			return tryAuthWithSessionCode(c, i, code)
 		}
 	}
-	slug := c.Get("slug").(string)
 	app, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
 		switch err {
@@ -56,14 +60,6 @@ func Serve(c echo.Context) error {
 	default:
 		return echo.NewHTTPError(http.StatusServiceUnavailable, "Application is not ready")
 	}
-}
-
-func onboarding(c echo.Context) bool {
-	i := middlewares.GetInstance(c)
-	if len(i.RegisterToken) == 0 {
-		return false
-	}
-	return c.QueryParam("registerToken") != ""
 }
 
 // handleIntent will allow iframes from another app if the current app is
@@ -105,12 +101,22 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	if route.NotFound() {
 		return echo.NewHTTPError(http.StatusNotFound, "Page not found")
 	}
-	needAuth := !route.Public
-	if slug == consts.OnboardingSlug && file == "" && !onboarding(c) {
-		needAuth = true
+	if file == "" {
+		file = route.Index
 	}
+
+	var needAuth bool
+	if len(i.RegisterToken) > 0 && file == route.Index {
+		if slug != consts.OnboardingSlug || !permissions.CheckRegisterToken(c, i) {
+			return c.Redirect(http.StatusFound, i.PageURL("/", nil))
+		}
+		needAuth = false
+	} else {
+		needAuth = !route.Public
+	}
+
 	if needAuth && !middlewares.IsLoggedIn(c) {
-		if file != "" {
+		if file != route.Index {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
 		reqURL := c.Request().URL
@@ -122,9 +128,6 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 			"redirect": {subdomain.String()},
 		}
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
-	}
-	if file == "" {
-		file = route.Index
 	}
 	filepath := path.Join(route.Folder, file)
 	version := app.Version()
