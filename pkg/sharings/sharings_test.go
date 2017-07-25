@@ -759,7 +759,7 @@ func TestRevokeSharing(t *testing.T) {
 	sched := stack.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
 	nbTriggers := len(triggers)
-	err := AddTrigger(testInstance, rule, sharingSharerMM.SharingID)
+	err := AddTrigger(testInstance, rule, sharingSharerMM.SharingID, false)
 	assert.NoError(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
@@ -791,7 +791,7 @@ func TestRevokeSharing(t *testing.T) {
 	sharingRecipientMM := insertSharingIntoDB(t, sharingIDRecipientMM,
 		consts.MasterMasterSharing, false, "", []*Recipient{recipient1}, rule)
 	// We add a trigger to this sharing.
-	err = AddTrigger(testInstance, rule, sharingRecipientMM.SharingID)
+	err = AddTrigger(testInstance, rule, sharingRecipientMM.SharingID, false)
 	assert.NoError(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
@@ -859,7 +859,7 @@ func TestRevokeRecipient(t *testing.T) {
 	sched := stack.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
 	nbTriggers := len(triggers)
-	err = AddTrigger(testInstance, rule, sharing.SharingID)
+	err = AddTrigger(testInstance, rule, sharing.SharingID, false)
 	assert.NoError(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)

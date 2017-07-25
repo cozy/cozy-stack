@@ -150,9 +150,9 @@ func (ps Set) HasSameRules(other Set) bool {
 		for _, otherRule := range other {
 			if reflect.DeepEqual(rule.Values, otherRule.Values) &&
 				rule.Selector == otherRule.Selector &&
-				len(otherRule.Verbs) == len(rule.Verbs) &&
+				rule.Verbs.ContainsAll(otherRule.Verbs) &&
 				otherRule.Verbs.ContainsAll(rule.Verbs) &&
-				reflect.DeepEqual(rule.Type, rule.Type) {
+				reflect.DeepEqual(otherRule.Type, rule.Type) {
 				match = true
 				break
 			}

@@ -231,7 +231,9 @@ func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 }
 
 // AddTrigger creates a new trigger on the updates of the shared documents
-func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string) error {
+// The delTrigger flag is when the trigger must only listen deletions, i.e. a
+// Master-Slave on the recipient side, for the revocation
+func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string, delTrigger bool) error {
 	sched := stack.GetScheduler()
 
 	var eventArgs string
@@ -239,8 +241,14 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
 			strings.Join(rule.Values, ",") + ":" + rule.Selector
 	} else {
-		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
-			strings.Join(rule.Values, ",")
+		if delTrigger {
+			eventArgs = rule.Type + ":DELETED:" +
+				strings.Join(rule.Values, ",")
+		} else {
+			eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
+				strings.Join(rule.Values, ",")
+		}
+
 	}
 
 	msg := SharingMessage{
@@ -280,7 +288,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		}
 		// Trigger the updates if the sharing is not one-shot
 		if sharing.SharingType != consts.OneShotSharing {
-			err := AddTrigger(instance, rule, sharing.SharingID)
+			err := AddTrigger(instance, rule, sharing.SharingID, false)
 			if err != nil {
 				return err
 			}
@@ -820,7 +828,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 	if sharing.Owner {
 		for _, rs := range sharing.RecipientsStatus {
 			if recursive {
-				err = askToRevokeSharing(ins, rs, sharing.SharingID)
+				err = askToRevokeSharing(ins, sharing, rs)
 				if err != nil {
 					continue
 				}
@@ -841,8 +849,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 
 	} else {
 		if recursive {
-			err = askToRevokeRecipient(ins, sharing.Sharer.SharerStatus,
-				sharing.SharingID)
+			err = askToRevokeRecipient(ins, sharing, sharing.Sharer.SharerStatus)
 			if err != nil {
 				return err
 			}
@@ -860,7 +867,6 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 			}
 		}
 	}
-
 	sharing.Revoked = true
 	ins.Logger().Debugf("[sharings] Setting status of sharing %s to revoked",
 		sharing.SharingID)
@@ -885,7 +891,7 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID
 		if recipient.Client.ClientID == recipientClientID {
 
 			if recursive {
-				err := askToRevokeSharing(ins, recipient, sharing.SharingID)
+				err := askToRevokeSharing(ins, sharing, recipient)
 				if err != nil {
 					return err
 				}
@@ -1006,18 +1012,25 @@ func deleteOAuthClient(ins *instance.Instance, rs *RecipientStatus) error {
 	return nil
 }
 
-func askToRevokeSharing(ins *instance.Instance, rs *RecipientStatus, sharingID string) error {
-	return askToRevoke(ins, rs, sharingID, false)
+func askToRevokeSharing(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus) error {
+	return askToRevoke(ins, sharing, rs, "")
 }
 
-func askToRevokeRecipient(ins *instance.Instance, rs *RecipientStatus, sharingID string) error {
-	return askToRevoke(ins, rs, sharingID, true)
+func askToRevokeRecipient(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus) error {
+	// TODO: If the recipient revoke a master-slave sharing, he  cannot request
+	// the sharer yet, as he have no credentials
+	if rs.RefRecipient.ID != "" {
+		return askToRevoke(ins, sharing, rs, rs.Client.ClientID)
+	}
+	return nil
+
 }
 
 // TODO Once we will handle error properly (recipient is disconnected and
 // what not) analyze the error returned and take proper actions every time this
 // function is called.
-func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID string, revokeRecipient bool) error {
+func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, recipientClientID string) error {
+	sharingID := sharing.SharingID
 	err := rs.GetRecipient(ins)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] askToRevoke: Could not fetch "+
@@ -1026,13 +1039,19 @@ func askToRevoke(ins *instance.Instance, rs *RecipientStatus, sharingID string, 
 	}
 
 	var path string
-	if revokeRecipient {
-		path = fmt.Sprintf("/sharings/%s/recipient/%s", sharingID,
-			rs.RefRecipient.ID)
-	} else {
+	if recipientClientID == "" {
 		path = fmt.Sprintf("/sharings/%s", sharingID)
+	} else {
+		// From the recipient point of view, only a Master-Master sharing
+		// grants him the rights to request the sharer, as he doesn't have
+		// any credentials otherwise.
+		if sharing.SharingType == consts.MasterMasterSharing {
+			path = fmt.Sprintf("/sharings/%s/recipient/%s", sharingID,
+				rs.HostClientID)
+		} else {
+			return nil
+		}
 	}
-
 	domain, scheme, err := rs.recipient.ExtractDomainAndScheme()
 	if err != nil {
 		return err

@@ -148,6 +148,14 @@ func SharingRequest(c echo.Context) error {
 		if err = sharings.SendClientID(sharing); err != nil {
 			return wrapErrors(err)
 		}
+	} else if sharing.SharingType == consts.MasterSlaveSharing {
+		// The recipient listens deletes for a master-slave sharing
+		for _, rule := range sharing.Permissions {
+			err = sharings.AddTrigger(instance, rule, sharing.SharingID, true)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
@@ -340,7 +348,7 @@ func getAccessToken(c echo.Context) error {
 	// Add triggers on the recipient side for each rule
 	if sharing.SharingType == consts.MasterMasterSharing {
 		for _, rule := range sharing.Permissions {
-			err = sharings.AddTrigger(instance, rule, sharing.SharingID)
+			err = sharings.AddTrigger(instance, rule, sharing.SharingID, false)
 			if err != nil {
 				return wrapErrors(err)
 			}
@@ -490,17 +498,7 @@ func revokeRecipient(c echo.Context) error {
 		return jsonapi.NotFound(err)
 	}
 
-	recipientID := c.Param("recipient-id")
-	recipientClientID := ""
-	for _, recipient := range sharing.RecipientsStatus {
-		if recipient.RefRecipient.ID == recipientID {
-			recipientClientID = recipient.Client.ClientID
-			break
-		}
-	}
-	if recipientClientID == "" {
-		return jsonapi.BadRequest(sharings.ErrRecipientDoesNotExist)
-	}
+	recipientClientID := c.Param("recipient-client-id")
 
 	recursiveRaw := c.QueryParam(consts.QueryParamRecursive)
 	recursive := true
@@ -691,7 +689,7 @@ func Routes(router *echo.Group) {
 	router.POST("/discovery", discovery)
 
 	router.DELETE("/:sharing-id", revokeSharing)
-	router.DELETE("/:sharing-id/recipient/:recipient-id", revokeRecipient)
+	router.DELETE("/:sharing-id/recipient/:recipient-client-id", revokeRecipient)
 
 	router.DELETE("/files/:file-id/referenced_by", removeReferences)
 
@@ -724,6 +722,7 @@ func checkRevokeSharingPermissions(c echo.Context, ins *instance.Instance, shari
 // 2. The permissions identify the user that is to be revoked or the sharer.
 func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sharings.Sharing, recipientClientID string, ownerHasToBeSharer bool) error {
 	token := perm.GetRequestToken(c)
+
 	requestPerm, err := perm.GetPermission(c)
 	if err != nil {
 		return err
@@ -755,8 +754,12 @@ func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sha
 			return permissions.ErrInvalidToken
 		}
 		if sharing.Owner {
-			if claims.Subject == recipientClientID {
-				return nil
+			for _, rec := range sharing.RecipientsStatus {
+				if rec.Client.ClientID == recipientClientID {
+					if claims.Subject == rec.HostClientID {
+						return nil
+					}
+				}
 			}
 		} else {
 			sharerClientID := sharing.Sharer.SharerStatus.HostClientID

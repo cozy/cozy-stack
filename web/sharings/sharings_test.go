@@ -124,8 +124,7 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 		}
 
 		if sharingType == consts.MasterMasterSharing {
-			hostClient := createOAuthClient(t)
-			rs.HostClientID = hostClient.ClientID
+			rs.HostClientID = client.ClientID
 		}
 
 		if owner {
@@ -1431,7 +1430,7 @@ func TestRevokeRecipient(t *testing.T) {
 		[]*sharings.Recipient{recipient0}, rule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
-		sharing.SharingID, sharing.RecipientsStatus[0].RefRecipient.ID)
+		sharing.SharingID, sharing.RecipientsStatus[0].Client.ClientID)
 	queries := url.Values{consts.QueryParamRecursive: {"false"}}.Encode()
 	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
 	assert.NoError(t, err)
@@ -1448,7 +1447,7 @@ func TestRevokeRecipient(t *testing.T) {
 		[]*sharings.Recipient{recipient0, recipient1}, rule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
-		sharing.SharingID, sharing.RecipientsStatus[0].RefRecipient.ID)
+		sharing.SharingID, sharing.RecipientsStatus[0].HostClientID)
 	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
 	assert.NoError(t, err)
 	req.Header.Del(echo.HeaderAuthorization)

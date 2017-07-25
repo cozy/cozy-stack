@@ -107,10 +107,26 @@ func SharingUpdates(ctx context.Context, m *jobs.Message) error {
 // TODO explanation
 func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.Sharing, rule *permissions.Rule, docID, eventType string) error {
 	var recInfos []*sharings.RecipientInfo
+
+	// sharing revoked: drop it
+	// NOTE: this should never happen as a revoked sharing removes the triggers
+	if sharing.Revoked {
+		return nil
+	}
 	sendToSharer := isRecipientSide(sharing)
 
 	if sendToSharer {
 		// We are on the recipient side
+
+		// Particular case: the recipient removes the target of the sharing,
+		// e.g. the shared directory, the photo album, etc
+		if isSharedContainer(rule, docID) {
+			err := sharings.RevokeSharing(ins, sharing, true)
+			if err != nil {
+				return err
+			}
+		}
+
 		recInfos = make([]*sharings.RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
 		info, err := sharings.ExtractRecipientInfo(ins, sharerStatus)
@@ -118,6 +134,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			return err
 		}
 		recInfos[0] = info
+
 	} else {
 		// We are on the sharer side
 		for _, rec := range sharing.RecipientsStatus {
@@ -248,15 +265,9 @@ func GetRecipient(db couchdb.Database, recID string) (*couchdb.JSONDoc, error) {
 
 // isRecipientSide is used to determine whether or not we are on the recipient side.
 // A sharing is on the recipient side iff:
-// - the sharing type is master-master
 // - the SharerStatus structure is not nil
 func isRecipientSide(sharing *sharings.Sharing) bool {
-	if sharing.SharingType == consts.MasterMasterSharing {
-		if sharing.Sharer.SharerStatus != nil {
-			return true
-		}
-	}
-	return false
+	return sharing.Sharer.SharerStatus != nil
 }
 
 // This function checks if the document with the given ID still belong in the
@@ -277,4 +288,17 @@ func isDocumentStillShared(fs vfs.VFS, opts *SendOptions, docRefs []couchdb.DocR
 	default:
 		return isShared(fs, opts.DocID, opts.Values)
 	}
+}
+
+// isSharedContainer returns true if the given doc is the target of the sharing
+func isSharedContainer(rule *permissions.Rule, docID string) bool {
+	if rule.Selector == "" {
+		// Single file or directory sharing
+		if len(rule.Values) == 1 {
+			if rule.Values[0] == docID {
+				return true
+			}
+		}
+	}
+	return false
 }
