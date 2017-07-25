@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/apps/registry"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
 )
 
@@ -39,7 +40,14 @@ var _ jsonapi.Object = (*registryApp)(nil)
 
 func registryHandler(appType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// TODO authentication, permissions, and tests
+		t := "webapps"
+		if appType == apps.Konnector {
+			t = "konnectors"
+		}
+		doctype := "io.cozy.registries." + t
+		if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+			return err
+		}
 		apps := registry.All(appType)
 		objs := make([]jsonapi.Object, len(apps))
 		for i, a := range apps {
