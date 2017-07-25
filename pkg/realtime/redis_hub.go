@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
 	redis "github.com/go-redis/redis"
@@ -73,10 +74,22 @@ func (h *redisHub) start() {
 	log := logger.WithNamespace("realtime-redis")
 	for msg := range sub.Channel() {
 		je := jsonEvent{}
-		buf := []byte(msg.Payload)
+		parts := strings.SplitN(msg.Payload, ",", 2)
+		if len(parts) < 2 {
+			log.Warnf("Invalid payload: %s", msg.Payload)
+			continue
+		}
+		doctype := parts[0]
+		buf := []byte(parts[1])
 		if err := json.Unmarshal(buf, &je); err != nil {
 			log.Warnf("Error on start: %s", err)
 			continue
+		}
+		if je.Doc != nil {
+			je.Doc.Type = doctype
+		}
+		if je.Old != nil {
+			je.Old.Type = doctype
 		}
 		e := &Event{
 			Domain: je.Domain,
@@ -100,7 +113,7 @@ func (h *redisHub) Publish(e *Event) {
 		log.Warnf("Error on publish: %s", err)
 		return
 	}
-	h.c.Publish(eventsRedisKey, string(buf))
+	h.c.Publish(eventsRedisKey, e.Doc.DocType()+","+string(buf))
 }
 
 func (h *redisHub) Subscriber(domain string) *DynamicSubscriber {
