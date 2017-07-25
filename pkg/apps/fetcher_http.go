@@ -121,7 +121,7 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 		return err
 	}
 	defer func() {
-		if errc := fs.Close(); errc != nil {
+		if errc := fs.Close(); errc != nil && err == nil {
 			err = errc
 		}
 	}()
