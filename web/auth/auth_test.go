@@ -1186,7 +1186,6 @@ func TestMain(m *testing.M) {
 	setup := testutils.NewSetup(m, "auth_test")
 
 	testInstance = setup.GetTestInstance(&instance.Options{Domain: domain})
-	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
 
 	jar = setup.GetCookieJar()
 	client = &http.Client{
