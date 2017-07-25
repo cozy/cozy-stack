@@ -218,7 +218,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 		return err
 	}
 	defer func() {
-		if errc := fs.Close(); errc != nil && err = nil {
+		if errc := fs.Close(); errc != nil && err == nil {
 			err = errc
 		}
 	}()

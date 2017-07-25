@@ -2,7 +2,11 @@ package apps
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
+	"hash"
 	"io"
 	"net/http"
 	"net/url"
@@ -47,21 +51,22 @@ func (f *httpFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	if resp.StatusCode != 200 {
 		return nil, ErrManifestNotReachable
 	}
+
+	var reader io.Reader = resp.Body
+
 	contentType := resp.Header.Get("Content-Type")
-	var reader io.Reader
 	switch contentType {
 	case
 		"application/gzip",
 		"application/x-gzip",
 		"application/x-tgz",
 		"application/tar+gzip":
-		reader, err = gzip.NewReader(resp.Body)
-	default:
-		reader = resp.Body
+		reader, err = gzip.NewReader(reader)
+		if err != nil {
+			return nil, ErrManifestNotReachable
+		}
 	}
-	if err != nil {
-		return nil, ErrManifestNotReachable
-	}
+
 	tarReader := tar.NewReader(reader)
 	for {
 		hdr, err := tarReader.Next()
@@ -100,17 +105,27 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	if resp.StatusCode != 200 {
 		return ErrNotFound
 	}
+
+	var reader io.Reader = resp.Body
+	var shasum []byte
+	var h hash.Hash
+
+	if frag := src.Fragment; frag != "" {
+		shasum, err = hex.DecodeString(frag)
+		if err == nil {
+			h = sha256.New()
+			reader = io.TeeReader(reader, h)
+		}
+	}
+
 	contentType := resp.Header.Get("Content-Type")
-	var reader io.Reader
 	switch contentType {
 	case
 		"application/gzip",
 		"application/x-gzip",
 		"application/x-tgz",
 		"application/tar+gzip":
-		reader, err = gzip.NewReader(resp.Body)
-	default:
-		reader = resp.Body
+		reader, err = gzip.NewReader(reader)
 	}
 	if err != nil {
 		return err
@@ -154,4 +169,8 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 			return err
 		}
 	}
+	if len(shasum) > 0 && !bytes.Equal(shasum, h.Sum(nil)) {
+		return ErrBadChecksum
+	}
+	return nil
 }
