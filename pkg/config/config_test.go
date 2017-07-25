@@ -24,6 +24,7 @@ func TestSetup(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	defer tmpfile.Close()
 	defer os.Remove(tmpfile.Name())
 
 	os.Setenv("OS_USERNAME", "os_username_val")
