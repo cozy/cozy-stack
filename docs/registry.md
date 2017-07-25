@@ -381,7 +381,7 @@ In the configuration file of a stack, a `registries` namespace is added. This na
 
 The stack itself implements the querying API of a registry. When querying this API, to ask for an application, the stack uses this hierarchy of registries to proxy or redirect the user.
 
-The hierarchy can also be contextualised to specify different registries to different contexts. The `defaults` context is applied lastly.
+The hierarchy can also be contextualised to specify different registries to different contexts. The `default` context is applied lastly.
 
 ### Examples:
 
@@ -407,7 +407,7 @@ registries:
   context2:
     - https://context2.registry.cozy.io/
 
-  defaults:
+  default:
     - https://myregistry.home/
     - https://main.registry.cozy.io/
 ```
