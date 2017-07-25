@@ -274,6 +274,23 @@ func (i *Instance) Context() (map[string]interface{}, error) {
 	return context, nil
 }
 
+// Registries returns the list of registries associated with the instance.
+func (i *Instance) Registries() ([]*url.URL, error) {
+	doc, err := i.SettingsDocument()
+	if err != nil {
+		return nil, err
+	}
+	ctx, ok := doc.M["context"].(string)
+	if !ok {
+		ctx = "default"
+	}
+	regs, ok := config.GetConfig().Registries[ctx]
+	if !ok {
+		return nil, ErrContextNotFound
+	}
+	return regs, nil
+}
+
 // DiskQuota returns the number of bytes allowed on the disk to the user.
 func (i *Instance) DiskQuota() int64 {
 	return i.BytesDiskQuota

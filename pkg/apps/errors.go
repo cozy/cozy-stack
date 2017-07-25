@@ -28,4 +28,7 @@ var (
 	// ErrMissingSource is used when installing an application, but there is no
 	// source URL
 	ErrMissingSource = errors.New("The source URL for the app is missing")
+	// ErrBadChecksum is used when the application checksum does not match the
+	// specified one.
+	ErrBadChecksum = errors.New("Application checksum does not match")
 )

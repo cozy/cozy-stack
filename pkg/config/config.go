@@ -93,7 +93,8 @@ type Config struct {
 	KonnectorsOauthStateStorage RedisConfig
 	Realtime                    RedisConfig
 
-	Contexts map[string]interface{}
+	Contexts   map[string]interface{}
+	Registries map[string][]*url.URL
 }
 
 // Fs contains the configuration values of the file-system
@@ -262,6 +263,11 @@ func UseViper(v *viper.Viper) error {
 		couchURL.Path = "/"
 	}
 
+	regs, err := makeRegistries(v)
+	if err != nil {
+		return err
+	}
+
 	config = &Config{
 		Host:       v.GetString("host"),
 		Port:       v.GetInt("port"),
@@ -299,7 +305,8 @@ func UseViper(v *viper.Viper) error {
 			DisableTLS:                v.GetBool("mail.disable_tls"),
 			SkipCertificateValidation: v.GetBool("mail.skip_certificate_validation"),
 		},
-		Contexts: v.GetStringMap("contexts"),
+		Contexts:   v.GetStringMap("contexts"),
+		Registries: regs,
 	}
 
 	loggerRedis := NewRedisConfig(v.GetString("log.redis"))
@@ -308,6 +315,52 @@ func UseViper(v *viper.Viper) error {
 		Syslog: v.GetBool("log.syslog"),
 		Redis:  loggerRedis.Client(),
 	})
+}
+
+func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
+	regs := make(map[string][]*url.URL)
+
+	regsSlice := v.GetStringSlice("registries")
+	if len(regsSlice) > 0 {
+		urlList := make([]*url.URL, len(regsSlice))
+		for i, s := range regsSlice {
+			u, err := url.Parse(s)
+			if err != nil {
+				return nil, err
+			}
+			urlList[i] = u
+		}
+		regs["default"] = urlList
+	} else {
+		for k, v := range v.GetStringMap("registries") {
+			list, ok := v.([]interface{})
+			if !ok {
+				return nil, fmt.Errorf(
+					"Bad format in the registries section of the configuration file: "+
+						"should be a list of strings, got %#v", v)
+			}
+			urlList := make([]*url.URL, len(list))
+			for i, s := range list {
+				u, err := url.Parse(s.(string))
+				if err != nil {
+					return nil, err
+				}
+				urlList[i] = u
+			}
+			regs[k] = urlList
+		}
+	}
+
+	if defaults, ok := regs["default"]; ok {
+		for ctx, urls := range regs {
+			if ctx == "default" {
+				continue
+			}
+			regs[ctx] = append(urls, defaults...)
+		}
+	}
+
+	return regs, nil
 }
 
 const defaultTestConfig = `

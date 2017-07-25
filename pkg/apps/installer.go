@@ -133,10 +133,23 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 
 	log := logger.WithDomain(db.Prefix())
 
+	var manFilename string
+	switch opts.Type {
+	case Webapp:
+		manFilename = WebappManifestName
+	case Konnector:
+		manFilename = KonnectorManifestName
+	}
+
 	var fetcher Fetcher
 	switch src.Scheme {
 	case "git", "git+ssh", "ssh+git":
-		fetcher = newGitFetcher(opts.Type, log)
+		fetcher = newGitFetcher(manFilename, log)
+	case "http", "https":
+		fetcher = newHTTPFetcher(manFilename, log)
+	// TODO:
+	// case "registry":
+	// fetcher = newRegistryFetcher(manFilename, log)
 	default:
 		return nil, ErrNotSupportedSource
 	}

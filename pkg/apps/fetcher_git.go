@@ -46,14 +46,7 @@ type gitFetcher struct {
 	log         *logrus.Entry
 }
 
-func newGitFetcher(appType AppType, log *logrus.Entry) *gitFetcher {
-	var manFilename string
-	switch appType {
-	case Webapp:
-		manFilename = WebappManifestName
-	case Konnector:
-		manFilename = KonnectorManifestName
-	}
+func newGitFetcher(manFilename string, log *logrus.Entry) *gitFetcher {
 	return &gitFetcher{
 		manFilename: manFilename,
 		log:         log,
@@ -225,7 +218,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 		return err
 	}
 	defer func() {
-		if errc := fs.Close(); errc != nil {
+		if errc := fs.Close(); errc != nil && err == nil {
 			err = errc
 		}
 	}()
