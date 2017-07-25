@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -63,8 +64,14 @@ log:
     level: warning
 
 registries:
-  - http://abc
-  - http://def
+  foo:
+    - http://abc
+    - http://def
+  bar:
+    - http://def
+    - http://abc
+  default:
+    - https://default
 `))
 	if !assert.NoError(t, err) {
 		return
@@ -83,4 +90,16 @@ registries:
 	assert.Equal(t, "mail_username_val", GetConfig().Mail.Username)
 	assert.Equal(t, "mail_password_val", GetConfig().Mail.Password)
 	assert.Equal(t, logrus.GetLevel(), logrus.WarnLevel)
+
+	assert.EqualValues(t, []string{"http://abc", "http://def", "https://default"}, regsToStrings(GetConfig().Registries["foo"]))
+	assert.EqualValues(t, []string{"http://def", "http://abc", "https://default"}, regsToStrings(GetConfig().Registries["bar"]))
+	assert.EqualValues(t, []string{"https://default"}, regsToStrings(GetConfig().Registries["default"]))
+}
+
+func regsToStrings(regs []*url.URL) []string {
+	ss := make([]string, len(regs))
+	for i, r := range regs {
+		ss[i] = r.String()
+	}
+	return ss
 }
