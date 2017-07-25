@@ -147,9 +147,9 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		fetcher = newGitFetcher(manFilename, log)
 	case "http", "https":
 		fetcher = newHTTPFetcher(manFilename, log)
-	case "registry":
-		// TODO:
-		// fetcher = newRegistryFetcher(manFilename, log)
+	// TODO:
+	// case "registry":
+	// fetcher = newRegistryFetcher(manFilename, log)
 	default:
 		return nil, ErrNotSupportedSource
 	}
