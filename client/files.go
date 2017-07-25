@@ -92,7 +92,7 @@ type FilePatch struct {
 func (c *Client) GetFileByID(id string) (*File, error) {
 	res, err := c.Req(&request.Options{
 		Method: "GET",
-		Path:   "/files/" + url.QueryEscape(id),
+		Path:   "/files/" + url.PathEscape(id),
 	})
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (c *Client) GetFileByPath(name string) (*File, error) {
 func (c *Client) GetDirByID(id string) (*Dir, error) {
 	res, err := c.Req(&request.Options{
 		Method: "GET",
-		Path:   "/files/" + url.QueryEscape(id),
+		Path:   "/files/" + url.PathEscape(id),
 	})
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (c *Client) mkdir(name string, recur string) (*Dir, error) {
 func (c *Client) DownloadByID(id string) (io.ReadCloser, error) {
 	res, err := c.Req(&request.Options{
 		Method: "GET",
-		Path:   "/files/download/" + url.QueryEscape(id),
+		Path:   "/files/download/" + url.PathEscape(id),
 	})
 	if err != nil {
 		return nil, err
@@ -222,13 +222,13 @@ func (c *Client) Upload(u *Upload) (*File, error) {
 	}
 	if u.Overwrite {
 		opts.Method = "PUT"
-		opts.Path = "/files/" + url.QueryEscape(u.FileID)
+		opts.Path = "/files/" + url.PathEscape(u.FileID)
 		if u.FileRev != "" {
 			headers["If-Match"] = u.FileRev
 		}
 	} else {
 		opts.Method = "POST"
-		opts.Path = "/files/" + url.QueryEscape(u.DirID)
+		opts.Path = "/files/" + url.PathEscape(u.DirID)
 		opts.Queries = url.Values{
 			"Type": {"file"},
 			"Name": {u.Name},
@@ -310,7 +310,7 @@ func (c *Client) Move(from, to string) error {
 func (c *Client) TrashByID(id string) error {
 	_, err := c.Req(&request.Options{
 		Method:     "DELETE",
-		Path:       "/files/" + url.QueryEscape(id),
+		Path:       "/files/" + url.PathEscape(id),
 		NoResponse: true,
 	})
 	return err
@@ -331,7 +331,7 @@ func (c *Client) TrashByPath(name string) error {
 func (c *Client) RestoreByID(id string) error {
 	_, err := c.Req(&request.Options{
 		Method:     "POST",
-		Path:       "/files/trash/" + url.QueryEscape(id),
+		Path:       "/files/trash/" + url.PathEscape(id),
 		NoResponse: true,
 	})
 	return err
@@ -376,7 +376,7 @@ func walk(c *Client, name string, doc *DirOrFile, walkFn WalkFn) error {
 		return nil
 	}
 
-	reqPath := "/files/" + url.QueryEscape(doc.ID)
+	reqPath := "/files/" + url.PathEscape(doc.ID)
 	reqQuery := url.Values{"page[limit]": {"100"}}
 	for {
 		res, err := c.Req(&request.Options{

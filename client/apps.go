@@ -77,9 +77,7 @@ func (c *Client) ListApps(appType string) ([]*AppManifest, error) {
 func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method: "POST",
-		// TODO replace QueryEscape with PathEscape when we will no longer support
-		// go 1.7
-		Path: makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
+		Path:   makeAppsPath(opts.AppType, url.PathEscape(opts.Slug)),
 		Queries: url.Values{
 			"Source":      {opts.SourceURL},
 			"Deactivated": {strconv.FormatBool(opts.Deactivated)},
@@ -98,7 +96,7 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method:  "PUT",
-		Path:    makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
+		Path:    makeAppsPath(opts.AppType, opts.Slug),
 		Queries: url.Values{"Source": {opts.SourceURL}},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
@@ -114,7 +112,7 @@ func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 func (c *Client) UninstallApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method: "DELETE",
-		Path:   makeAppsPath(opts.AppType, url.QueryEscape(opts.Slug)),
+		Path:   makeAppsPath(opts.AppType, url.PathEscape(opts.Slug)),
 	})
 	if err != nil {
 		return nil, err

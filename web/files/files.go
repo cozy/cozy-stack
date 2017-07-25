@@ -526,7 +526,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 	}
 	archive.Secret = secret
 
-	fakeName := url.QueryEscape(archive.Name)
+	fakeName := url.PathEscape(archive.Name)
 
 	links := &jsonapi.LinksList{
 		Related: "/files/archive/" + secret + "/" + fakeName + ".zip",
