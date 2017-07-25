@@ -46,14 +46,7 @@ type gitFetcher struct {
 	log         *logrus.Entry
 }
 
-func newGitFetcher(appType AppType, log *logrus.Entry) *gitFetcher {
-	var manFilename string
-	switch appType {
-	case Webapp:
-		manFilename = WebappManifestName
-	case Konnector:
-		manFilename = KonnectorManifestName
-	}
+func newGitFetcher(manFilename string, log *logrus.Entry) *gitFetcher {
 	return &gitFetcher{
 		manFilename: manFilename,
 		log:         log,
