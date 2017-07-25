@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
 type (
@@ -107,6 +108,13 @@ func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, error) {
 	if err := q.Enqueue(j); err != nil {
 		return nil, err
 	}
+	// Writing in couchdb should be enough to publish this event,
+	// but it is not published on right domain, so we publish it again.
+	realtime.GetHub().Publish(&realtime.Event{
+		Verb:   realtime.EventCreate,
+		Doc:    infos.Clone(),
+		Domain: infos.Domain,
+	})
 	return infos, nil
 }
 
