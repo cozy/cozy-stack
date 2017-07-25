@@ -186,8 +186,7 @@ func (t *task) run() (err error) {
 		}
 		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
 			t.workerID, t.infos.ID(), t.execCount, timeout)
-		ctx := context.WithValue(t.ctx, "jobslogger", joblog)
-		ctx, cancel := context.WithTimeout(ctx, timeout)
+		ctx, cancel := context.WithTimeout(t.ctx, timeout)
 		if err = t.exec(ctx); err == nil {
 			cancel()
 			break
