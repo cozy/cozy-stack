@@ -442,6 +442,47 @@ func TestWebappInstallFromGitlab(t *testing.T) {
 	}
 }
 
+func TestWebappInstallFromHTTP(t *testing.T) {
+	manGen = manifestWebapp
+	manName = WebappManifestName
+	inst, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
+		Type:      Webapp,
+		Slug:      "http-cozy-drive",
+		SourceURL: "https://github.com/cozy/cozy-drive/archive/71e5cde66f754f986afc7111962ed2dd361bd5e4.tar.gz",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	go inst.Run()
+
+	var state State
+	for {
+		man, done, err := inst.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if state == "" {
+			if !assert.EqualValues(t, Installing, man.State()) {
+				return
+			}
+		} else if state == Installing {
+			if !assert.EqualValues(t, Ready, man.State()) {
+				return
+			}
+			if !assert.True(t, done) {
+				return
+			}
+			break
+		} else {
+			t.Fatalf("invalid state")
+			return
+		}
+		state = man.State()
+	}
+}
+
 func TestWebappUninstall(t *testing.T) {
 	manGen = manifestWebapp
 	manName = WebappManifestName

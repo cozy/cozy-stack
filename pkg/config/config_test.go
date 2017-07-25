@@ -61,6 +61,10 @@ mail:
 log:
     # logger level (debug, info, warning, panic, fatal) - flags: --log-level
     level: warning
+
+registries:
+  - http://abc
+  - http://def
 `))
 	if !assert.NoError(t, err) {
 		return

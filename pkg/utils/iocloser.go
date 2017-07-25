@@ -7,6 +7,7 @@ type readCloser struct {
 	c func() error
 }
 
+// ReadCloser returns an io.ReadCloser from a io.Reader and a close method.
 func ReadCloser(r io.Reader, c func() error) io.ReadCloser {
 	return &readCloser{r, c}
 }

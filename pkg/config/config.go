@@ -356,7 +356,7 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 			if ctx == "default" {
 				continue
 			}
-			urls = append(urls, defaults...)
+			regs[ctx] = append(urls, defaults...)
 		}
 	}
 
