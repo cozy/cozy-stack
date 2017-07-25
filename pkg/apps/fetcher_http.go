@@ -93,6 +93,19 @@ func (f *httpFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 }
 
 func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
+	exists, err := fs.Start(man.Slug(), man.Version())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if errc := fs.Close(); errc != nil && err == nil {
+			err = errc
+		}
+	}()
+	if exists {
+		return nil
+	}
+
 	req, err := http.NewRequest(http.MethodGet, src.String(), nil)
 	if err != nil {
 		return err
@@ -129,19 +142,6 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 	if err != nil {
 		return err
-	}
-
-	exists, err := fs.Start(man.Slug(), man.Version())
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if errc := fs.Close(); errc != nil && err == nil {
-			err = errc
-		}
-	}()
-	if exists {
-		return nil
 	}
 
 	tarReader := tar.NewReader(reader)
