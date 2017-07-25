@@ -24,7 +24,7 @@ Other events will be generated from the stack itself, such as session close or j
 
 **We cannot have a continuous `_changes` feed open to every databases**
 
-## Use cases for inverval events feeds
+## Use cases for interval events feeds
 
 ### Replication
 
