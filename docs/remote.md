@@ -43,11 +43,11 @@ cozy-doctypes
     └── request
 
 $ cat cozy-doctypes/org.wikidata.entity/request
-GET https://www.wikidata.org/wiki/Special:EntityData/{{entity}}.json
+GET https://www.wikidata.org/wiki/Special:EntityData/{{path entity}}.json
 Accept: application/json
 
 $ cat cozy-doctypes/org.wikidata.search/request
-GET https://www.wikidata.org/w/api.php?action=wbsearchentities&search={{q}}&language=en&format=json
+GET https://www.wikidata.org/w/api.php?action=wbsearchentities&search={{query q}}&language=en&format=json
 ```
 
 Here, we have two remote doctypes. Each one has a request defined for it.
@@ -59,7 +59,12 @@ The format for the request file is:
 - then a blank line and the body if the request is a POST
 
 For the path, the query-string, the headers, and the body, it's possible to
-have some dynamic part by using `{{`, a variable name, and `}}`.
+have some dynamic part by using `{{`, a variable name, and `}}`. Some templating helpers are available to escape specific variables using `{{` function name - space - variable name `}}`:
+
+  - `json`: for json parts (`{ "key": "{{json val}}" }`)
+  - `header`: for headers (`Accept: {{header acceptHeader}}`)
+  - `path`: for path in urls (`http://cozy.io/{{path pathName}}/foobar`)
+  - `query`: for query in urls (`http://cozy.io?q={{query queryName}}`)
 
 **Note**: by default, the User-Agent is set to a default value ("cozy-stack" and
 a version number). It can be overriden in the request description.

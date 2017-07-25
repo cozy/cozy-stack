@@ -114,7 +114,7 @@ var log = logger.WithNamespace("remote")
 // And for a POST, we have a blank line, and then the body.
 func ParseRawRequest(doctype, raw string) (*Remote, error) {
 	lines := strings.Split(raw, "\n")
-	parts := strings.Split(lines[0], " ")
+	parts := strings.SplitN(lines[0], " ", 2)
 	if len(parts) != 2 {
 		log.Infof("%s cannot be used as a remote doctype", doctype)
 		return nil, ErrInvalidRequest
@@ -196,10 +196,10 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 	return ParseRawRequest(doctype, raw)
 }
 
-// ExtractVariables extracts the variables:
+// extractVariables extracts the variables:
 // - from the query string for a GET
 // - from the body formatted as JSON for a POST
-func ExtractVariables(verb string, in *http.Request) (map[string]string, error) {
+func extractVariables(verb string, in *http.Request) (map[string]string, error) {
 	vars := make(map[string]string)
 	if verb == echo.GET {
 		for k, v := range in.URL.Query() {
@@ -214,26 +214,55 @@ func ExtractVariables(verb string, in *http.Request) (map[string]string, error) 
 	return vars, nil
 }
 
-var injectionRegexp = regexp.MustCompile(`{{\w+}}`)
+var injectionRegexp = regexp.MustCompile(`{{[0-9A-Za-z_ ]+}}`)
 
 func injectVar(src string, vars map[string]string) (string, error) {
 	var err error
 	result := injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
-		m = strings.TrimLeft(m, "{")
-		m = strings.TrimRight(m, "}")
-		m = strings.TrimSpace(m)
-		if val, ok := vars[m]; ok {
-			return val
+		ms := strings.SplitN(strings.TrimSpace(m[2:len(m)-2]), " ", 2)
+
+		var varname string
+		var funname string
+		if len(ms) == 1 {
+			varname = ms[0]
+		} else {
+			funname = ms[0]
+			varname = ms[1]
 		}
-		err = ErrMissingVar
-		return ""
+
+		val, ok := vars[varname]
+		if !ok {
+			err = ErrMissingVar
+			return ""
+		}
+
+		switch funname {
+		case "":
+			return val
+		case "header":
+			return strings.Replace(val, "\n", "\\n", -1)
+		case "json":
+			var b []byte
+			b, err = json.Marshal(val)
+			if err != nil {
+				return ""
+			}
+			return string(b[1 : len(b)-1])
+		case "query":
+			return url.QueryEscape(val)
+		case "path":
+			return url.PathEscape(val)
+		default:
+			err = fmt.Errorf("remote: unknown template function %s", funname)
+			return ""
+		}
 	})
 	return result, err
 }
 
-// InjectVariables replaces {{variable}} by its value in some fields of the
+// injectVariables replaces {{variable}} by its value in some fields of the
 // remote struct
-func InjectVariables(remote *Remote, vars map[string]string) error {
+func injectVariables(remote *Remote, vars map[string]string) error {
 	var err error
 	if strings.Contains(remote.URL.Path, "{{") {
 		remote.URL.Path, err = injectVar(remote.URL.Path, vars)
@@ -263,12 +292,12 @@ func InjectVariables(remote *Remote, vars map[string]string) error {
 
 // ProxyTo calls the external website and proxy the reponse
 func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.ResponseWriter, in *http.Request) error {
-	vars, err := ExtractVariables(remote.Verb, in)
+	vars, err := extractVariables(remote.Verb, in)
 	if err != nil {
 		log.Infof("Error on extracting variables: %s", err)
 		return ErrInvalidVariables
 	}
-	if err = InjectVariables(remote, vars); err != nil {
+	if err = injectVariables(remote, vars); err != nil {
 		return err
 	}
 

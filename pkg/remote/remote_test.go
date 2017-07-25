@@ -73,7 +73,7 @@ func TestExtractVariablesGET(t *testing.T) {
 	u, err := url.Parse("https://example.org/foo?one=un&two=deux")
 	assert.NoError(t, err)
 	in := &http.Request{URL: u}
-	vars, err := ExtractVariables("GET", in)
+	vars, err := extractVariables("GET", in)
 	assert.NoError(t, err)
 	assert.Equal(t, "un", vars["one"])
 	assert.Equal(t, "deux", vars["two"])
@@ -82,47 +82,50 @@ func TestExtractVariablesGET(t *testing.T) {
 func TestExtractVariablesPOST(t *testing.T) {
 	body := bytes.NewReader([]byte(`{"one": "un", "two": "deux"}`))
 	in := httptest.NewRequest("POST", "https://example.com/bar", body)
-	vars, err := ExtractVariables("POST", in)
+	vars, err := extractVariables("POST", in)
 	assert.NoError(t, err)
 	assert.Equal(t, "un", vars["one"])
 	assert.Equal(t, "deux", vars["two"])
 
 	body = bytes.NewReader([]byte(`one=un&two=deux`))
 	in = httptest.NewRequest("POST", "https://example.com/bar", body)
-	_, err = ExtractVariables("POST", in)
+	_, err = extractVariables("POST", in)
 	assert.Error(t, err)
 }
 
 func TestInjectVariables(t *testing.T) {
-	raw := `POST https://example.org/foo/{{bar}}?q={{q}}
-Content-Type: application/json
-Accept-Language: {{lang}},en
+	raw := `POST https://example.org/foo/{{path bar}}?q={{query q}}
+Content-Type: {{contentType}}
+Accept-Language: {{header lang}},en
 
-{ "one": "{{one}}", "two": "{{two}}" }`
+{ "one": "{{ json one }}", "two": "{{ json two }}" }`
 	r, err := ParseRawRequest(doctype, raw)
-	assert.NoError(t, err)
-
-	vars := map[string]string{
-		"bar":  "baz",
-		"q":    "Q42",
-		"lang": "fr-FR",
-		"one":  "un",
-		"two":  "deux",
+	if !assert.NoError(t, err) {
+		return
 	}
 
-	err = InjectVariables(r, vars)
+	vars := map[string]string{
+		"contentType": "application/json",
+		"bar":         "baz&/",
+		"q":           "Q42&?",
+		"lang":        "fr-FR\n",
+		"one":         "un\"\n",
+		"two":         "deux",
+	}
+
+	err = injectVariables(r, vars)
 	assert.NoError(t, err)
 	assert.Equal(t, "POST", r.Verb)
 	assert.Equal(t, "https", r.URL.Scheme)
 	assert.Equal(t, "example.org", r.URL.Host)
-	assert.Equal(t, "/foo/baz", r.URL.Path)
-	assert.Equal(t, "q=Q42", r.URL.RawQuery)
-	assert.Equal(t, "fr-FR,en", r.Headers["Accept-Language"])
+	assert.Equal(t, "/foo/baz&%2F", r.URL.Path)
+	assert.Equal(t, "q=Q42%26%3F", r.URL.RawQuery)
+	assert.Equal(t, "fr-FR\\n,en", r.Headers["Accept-Language"])
 	assert.Equal(t, "application/json", r.Headers["Content-Type"])
-	assert.Equal(t, `{ "one": "un", "two": "deux" }`, r.Body)
+	assert.Equal(t, `{ "one": "un\"\n", "two": "deux" }`, r.Body)
 
 	r, err = ParseRawRequest(doctype, `POST https://example.org/{{missing}}`)
 	assert.NoError(t, err)
-	err = InjectVariables(r, vars)
+	err = injectVariables(r, vars)
 	assert.Equal(t, ErrMissingVar, err)
 }
