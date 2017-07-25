@@ -1110,9 +1110,7 @@ func TestPassphraseRenewFormWithToken(t *testing.T) {
 		return
 	}
 	defer res.Body.Close()
-	assert.Equal(t, "200 OK", res.Status)
-	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), `type="hidden" name="passphrase_reset_token" value="badbee" />`)
+	assert.Equal(t, "400 Bad Request", res.Status)
 }
 
 func TestPassphraseRenew(t *testing.T) {
