@@ -12,8 +12,10 @@ const (
 	Apps = "io.cozy.apps"
 	// Konnectors doc type for konnector application manifests
 	Konnectors = "io.cozy.konnectors"
-	// KonnectorResults doc type for konnector last execution result.
+	// KonnectorResults doc type for konnector last execution result
 	KonnectorResults = "io.cozy.konnectors.result"
+	// Versions doc type for apps versions from the registries
+	Versions = "io.cozy.registry.versions"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
 	// Doctypes doc type for doctype list
