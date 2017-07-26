@@ -39,13 +39,13 @@ func (a *registryApp) Included() []jsonapi.Object {
 // registryApp is a jsonapi.Object
 var _ jsonapi.Object = (*registryApp)(nil)
 
-func registryHandler(appType apps.AppType) echo.HandlerFunc {
+func registryListHandler(appType apps.AppType) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		t := "webapps"
 		if appType == apps.Konnector {
 			t = "konnectors"
 		}
-		doctype := "io.cozy.registries." + t
+		doctype := "io.cozy.registry." + t
 		if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
 			return err
 		}

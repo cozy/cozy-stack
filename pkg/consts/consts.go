@@ -15,7 +15,7 @@ const (
 	// KonnectorResults doc type for konnector last execution result
 	KonnectorResults = "io.cozy.konnectors.result"
 	// Versions doc type for apps versions from the registries
-	Versions = "io.cozy.registries.versions"
+	Versions = "io.cozy.registry.versions"
 	// Archives doc type for zip archives with files and directories
 	Archives = "io.cozy.files.archives"
 	// Doctypes doc type for doctype list

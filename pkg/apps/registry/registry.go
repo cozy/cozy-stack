@@ -102,6 +102,7 @@ var (
 			Fr: "Application pour l'embarquement de Cozy v3",
 		},
 		Repository: "https://github.com/cozy/cozy-onboarding-v3",
+		Tags:       []string{"welcome"},
 		Versions: AppVersions{
 			Stable: []string{"3.0.0"},
 		},
