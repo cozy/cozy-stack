@@ -94,7 +94,7 @@ func TestExtractVariablesPOST(t *testing.T) {
 }
 
 func TestInjectVariables(t *testing.T) {
-	raw := `POST https://example.org/foo/{{path bar}}?q={{query q}}
+	raw := `POST https://example.org/foo/{{bar}}?q={{q}}
 Content-Type: {{contentType}}
 Accept-Language: {{lang}},en
 

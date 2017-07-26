@@ -43,11 +43,11 @@ cozy-doctypes
     └── request
 
 $ cat cozy-doctypes/org.wikidata.entity/request
-GET https://www.wikidata.org/wiki/Special:EntityData/{{path entity}}.json
+GET https://www.wikidata.org/wiki/Special:EntityData/{{entity}}.json
 Accept: application/json
 
 $ cat cozy-doctypes/org.wikidata.search/request
-GET https://www.wikidata.org/w/api.php?action=wbsearchentities&search={{query q}}&language=en&format=json
+GET https://www.wikidata.org/w/api.php?action=wbsearchentities&search={{q}}&language=en&format=json
 ```
 
 Here, we have two remote doctypes. Each one has a request defined for it.
@@ -59,16 +59,33 @@ The format for the request file is:
 - then a blank line and the body if the request is a POST
 
 For the path, the query-string, the headers, and the body, it's possible to
-have some dynamic part by using `{{`, a variable name, and `}}`. Some templating helpers are available to escape specific variables using `{{` function name - space - variable name `}}`:
+have some dynamic part by using `{{`, a variable name, and `}}`.
+
+Some templating helpers are available to escape specific variables using `{{` function name - space - variable name `}}`. These helpers are only available for the body part of the template.
 
 Available helpers:
 
   - `json`: for json parts (`{ "key": "{{json val}}" }`)
-  - `path`: for path in urls (`http://cozy.io/{{path pathName}}/foobar`)
-  - `query`: for query in urls (`http://cozy.io?q={{query queryName}}`)
+  - `html`: for html parts (`<p>{{html val}}</p>`)
+  - `query`: for query parameter of a url  (`http://foobar.com?q={{query q}}`)
+  - `path`: for path component of a url (`http://foobar.com/{{path p}}`)
+
+Values injected in the URL are automatically URI-escaped based on the part they are included in: namely as a query parameter or as a path component.
 
 **Note**: by default, the User-Agent is set to a default value ("cozy-stack" and
 a version number). It can be overriden in the request description.
+
+Example:
+
+```
+GET https://foobar.com/{{path}}?q={{query}}
+Content-Type: {{contentType}}
+
+{
+  "key": "{{json value}}",
+  "url": "http://anotherurl.com/{{path anotherPath}}?q={{query anotherQuery}}",
+}
+```
 
 
 ## Declaring permissions
