@@ -61,8 +61,31 @@ The format for the request file is:
 For the path, the query-string, the headers, and the body, it's possible to
 have some dynamic part by using `{{`, a variable name, and `}}`.
 
+Some templating helpers are available to escape specific variables using `{{` function name - space - variable name `}}`. These helpers are only available for the body part of the template.
+
+Available helpers:
+
+  - `json`: for json parts (`{ "key": "{{json val}}" }`)
+  - `html`: for html parts (`<p>{{html val}}</p>`)
+  - `query`: for query parameter of a url  (`http://foobar.com?q={{query q}}`)
+  - `path`: for path component of a url (`http://foobar.com/{{path p}}`)
+
+Values injected in the URL are automatically URI-escaped based on the part they are included in: namely as a query parameter or as a path component.
+
 **Note**: by default, the User-Agent is set to a default value ("cozy-stack" and
 a version number). It can be overriden in the request description.
+
+Example:
+
+```
+GET https://foobar.com/{{path}}?q={{query}}
+Content-Type: {{contentType}}
+
+{
+  "key": "{{json value}}",
+  "url": "http://anotherurl.com/{{path anotherPath}}?q={{query anotherQuery}}",
+}
+```
 
 
 ## Declaring permissions

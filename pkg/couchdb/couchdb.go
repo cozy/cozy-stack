@@ -245,7 +245,7 @@ func escapeCouchdbName(name string) string {
 func makeDBName(db Database, doctype string) string {
 	// @TODO This should be better analysed
 	dbname := escapeCouchdbName(db.Prefix() + "/" + doctype)
-	return url.QueryEscape(dbname)
+	return url.PathEscape(dbname)
 }
 
 func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
@@ -257,7 +257,7 @@ func dbNameHasPrefix(dbname, dbprefix string) (bool, string) {
 }
 
 func docURL(db Database, doctype, id string) string {
-	return makeDBName(db, doctype) + "/" + url.QueryEscape(id)
+	return makeDBName(db, doctype) + "/" + url.PathEscape(id)
 }
 
 func makeRequest(db Database, method, path string, reqbody interface{}, resbody interface{}) error {
@@ -743,7 +743,7 @@ func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
 		req.URL.Host = couchurl.Host
 		req.Header.Del(echo.HeaderAuthorization) // drop stack auth
 		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
-		req.URL.Path, _ = url.QueryUnescape(req.URL.RawPath)
+		req.URL.Path, _ = url.PathUnescape(req.URL.RawPath)
 	}
 
 	return &httputil.ReverseProxy{
