@@ -70,7 +70,7 @@ An application version object contains the following fields:
 
 - `name`: the application name
 - `type`: the application type (webapp, konnector, ...)
-- `manifest`: the entire manifest defined in the package
+- `manifest`: the [entire](./apps.md#the-manifest) [manifest](./konnectors.md#the-manifest) defined in the package
 - `created_at`: date of the release creation
 - `url`: URL of the tarball containing the application at specified version
 - `size`: the size of the application package (uncompressed) in bytes as string
