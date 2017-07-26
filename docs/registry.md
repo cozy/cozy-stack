@@ -82,6 +82,7 @@ Example:
 
 ```json
 {
+    "name": "drive",
     "type": "webapp",
     "version": "3.1.2",
     "created_at": "2017-07-05T07:54:40.982Z",
