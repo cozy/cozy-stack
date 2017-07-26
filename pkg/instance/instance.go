@@ -782,9 +782,9 @@ func (i *Instance) RequestPassphraseReset() error {
 	return err
 }
 
-// PassphraseRenew changes the passphrase to the specified one if the given
-// token matches the `PassphraseResetToken` field.
-func (i *Instance) PassphraseRenew(pass, tok []byte) error {
+// CheckPassphraseRenewToken checks whether the given token is good to use for
+// resetting the passphrase.
+func (i *Instance) CheckPassphraseRenewToken(tok []byte) error {
 	if i.PassphraseResetToken == nil {
 		return ErrMissingToken
 	}
@@ -793,6 +793,16 @@ func (i *Instance) PassphraseRenew(pass, tok []byte) error {
 	}
 	if subtle.ConstantTimeCompare(i.PassphraseResetToken, tok) != 1 {
 		return ErrInvalidToken
+	}
+	return nil
+}
+
+// PassphraseRenew changes the passphrase to the specified one if the given
+// token matches the `PassphraseResetToken` field.
+func (i *Instance) PassphraseRenew(pass, tok []byte) error {
+	err := i.CheckPassphraseRenewToken(tok)
+	if err != nil {
+		return err
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
