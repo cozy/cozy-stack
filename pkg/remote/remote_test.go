@@ -98,7 +98,8 @@ func TestInjectVariables(t *testing.T) {
 Content-Type: {{contentType}}
 Accept-Language: {{lang}},en
 
-{ "one": "{{ json one }}", "two": "{{ json two }}" }`
+{ "one": "{{ json one }}", "two": "{{ json two }}" }
+<p>{{html content}}</p>`
 	r, err := ParseRawRequest(doctype, raw)
 	if !assert.NoError(t, err) {
 		return
@@ -111,6 +112,7 @@ Accept-Language: {{lang}},en
 		"lang":        "fr-FR\n",
 		"one":         "un\"\n",
 		"two":         "deux",
+		"content":     "hey ! <<>>",
 	}
 
 	err = injectVariables(r, vars)
@@ -122,7 +124,8 @@ Accept-Language: {{lang}},en
 	assert.Equal(t, "q=Q42%26%3F", r.URL.RawQuery)
 	assert.Equal(t, "fr-FR\\n,en", r.Headers["Accept-Language"])
 	assert.Equal(t, "application/json", r.Headers["Content-Type"])
-	assert.Equal(t, `{ "one": "un\"\n", "two": "deux" }`, r.Body)
+	assert.Equal(t, `{ "one": "un\"\n", "two": "deux" }
+<p>hey ! &lt;&lt;&gt;&gt;</p>`, r.Body)
 
 	r, err = ParseRawRequest(doctype, `POST https://example.org/{{missing}}`)
 	assert.NoError(t, err)
