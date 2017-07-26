@@ -19,10 +19,11 @@ const bearerAuthScheme = "Bearer "
 const basicAuthScheme = "Basic "
 const contextPermissionDoc = "permissions_doc"
 
-// ErrNoToken is returned when the request has no token
-var ErrNoToken = echo.NewHTTPError(http.StatusUnauthorized, "No token in request")
+var errNoToken = echo.NewHTTPError(http.StatusUnauthorized, "No token in request")
 
-func hasRegisterToken(c echo.Context, i *instance.Instance) bool {
+// CheckRegisterToken returns true if the registerToken is set and match the
+// one from the instance.
+func CheckRegisterToken(c echo.Context, i *instance.Instance) bool {
 	hexToken := c.QueryParam("registerToken")
 	expectedTok := i.RegisterToken
 
@@ -115,13 +116,16 @@ func ParseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 func extract(c echo.Context) (*permissions.Permission, error) {
 	instance := middlewares.GetInstance(c)
 
-	if hasRegisterToken(c, instance) {
-		return permissions.GetForRegisterToken(), nil
+	if len(instance.RegisterToken) > 0 {
+		if CheckRegisterToken(c, instance) {
+			return permissions.GetForRegisterToken(), nil
+		}
+		return nil, errNoToken
 	}
 
 	var tok string
 	if tok = GetRequestToken(c); tok == "" {
-		return nil, ErrNoToken
+		return nil, errNoToken
 	}
 
 	return ParseJWT(instance, tok)
@@ -129,7 +133,6 @@ func extract(c echo.Context) (*permissions.Permission, error) {
 
 // GetPermission extracts the permission from the echo context and checks their validity
 func GetPermission(c echo.Context) (*permissions.Permission, error) {
-
 	pdoc, ok := c.Get(contextPermissionDoc).(*permissions.Permission)
 	if ok && pdoc != nil {
 		return pdoc, nil
@@ -141,6 +144,5 @@ func GetPermission(c echo.Context) (*permissions.Permission, error) {
 	}
 
 	c.Set(contextPermissionDoc, pdoc)
-
 	return pdoc, nil
 }
