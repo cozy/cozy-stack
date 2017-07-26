@@ -39,6 +39,9 @@ msgstr "Show password"
 msgid "Login Submit"
 msgstr "Log in"
 
+msgid "Onboarding Check Mails"
+msgstr "Your Cozy has not been yet activated. Check your email and click on the activation link to proceed to the installation of your Cozy."
+
 msgid "Mail Password reset"
 msgstr "Reset you Cozy password"
 
