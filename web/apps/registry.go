@@ -6,6 +6,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/apps/registry"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
@@ -54,5 +55,47 @@ func registryHandler(appType apps.AppType) echo.HandlerFunc {
 			objs[i] = &registryApp{a}
 		}
 		return jsonapi.DataList(c, http.StatusOK, objs, nil)
+	}
+}
+
+type registryVersion struct {
+	*registry.Version
+}
+
+// MarshalJSON is part of the jsonapi.Object interface
+func (v *registryVersion) MarshalJSON() ([]byte, error) {
+	return json.Marshal(v.Version)
+}
+
+// Links is part of the jsonapi.Object interface
+func (v *registryVersion) Links() *jsonapi.LinksList {
+	return nil
+}
+
+// Relationships is part of the jsonapi.Object interface
+func (v *registryVersion) Relationships() jsonapi.RelationshipMap {
+	return jsonapi.RelationshipMap{}
+}
+
+// Included is part of the jsonapi.Object interface
+func (v *registryVersion) Included() []jsonapi.Object {
+	return []jsonapi.Object{}
+}
+
+// registryVersion is a jsonapi.Object
+var _ jsonapi.Object = (*registryVersion)(nil)
+
+func versionHandler(appType apps.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if err := permissions.AllowWholeType(c, permissions.GET, consts.Versions); err != nil {
+			return err
+		}
+		name := c.Param("name")
+		num := c.Param("version")
+		v, err := registry.GetAppVersion(appType, name, num)
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		return jsonapi.Data(c, http.StatusOK, &registryVersion{v}, nil)
 	}
 }

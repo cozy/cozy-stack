@@ -12,6 +12,7 @@ import (
 	"path"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/apps/registry"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -295,6 +296,7 @@ func iconHandler(c echo.Context) error {
 func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listWebappsHandler)
 	router.GET("/registries", registryHandler(apps.Webapp))
+	router.GET("/registries/:name/:version", versionHandler(apps.Webapp))
 	router.POST("/:slug", installHandler(apps.Webapp))
 	router.PUT("/:slug", updateHandler(apps.Webapp))
 	router.DELETE("/:slug", deleteHandler(apps.Webapp))
@@ -305,6 +307,7 @@ func WebappsRoutes(router *echo.Group) {
 func KonnectorRoutes(router *echo.Group) {
 	router.GET("/", listKonnectorsHandler)
 	router.GET("/registries", registryHandler(apps.Konnector))
+	router.GET("/registries/:name/:version", versionHandler(apps.Konnector))
 	router.POST("/:slug", installHandler(apps.Konnector))
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))
@@ -328,6 +331,8 @@ func wrapAppsError(err error) error {
 		return jsonapi.BadRequest(err)
 	case apps.ErrMissingSource:
 		return jsonapi.BadRequest(err)
+	case registry.ErrVersionNotFound:
+		return jsonapi.NotFound(err)
 	}
 	if _, ok := err.(*url.Error); ok {
 		return jsonapi.InvalidParameter("Source", err)
