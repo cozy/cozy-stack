@@ -96,7 +96,7 @@ func TestExtractVariablesPOST(t *testing.T) {
 func TestInjectVariables(t *testing.T) {
 	raw := `POST https://example.org/foo/{{path bar}}?q={{query q}}
 Content-Type: {{contentType}}
-Accept-Language: {{header lang}},en
+Accept-Language: {{lang}},en
 
 { "one": "{{ json one }}", "two": "{{ json two }}" }`
 	r, err := ParseRawRequest(doctype, raw)

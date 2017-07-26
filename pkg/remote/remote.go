@@ -216,7 +216,7 @@ func extractVariables(verb string, in *http.Request) (map[string]string, error) 
 
 var injectionRegexp = regexp.MustCompile(`{{[0-9A-Za-z_ ]+}}`)
 
-func injectVar(src string, vars map[string]string) (string, error) {
+func injectVar(src string, vars map[string]string, isHeader bool) (string, error) {
 	var err error
 	result := injectionRegexp.ReplaceAllStringFunc(src, func(m string) string {
 		ms := strings.SplitN(strings.TrimSpace(m[2:len(m)-2]), " ", 2)
@@ -238,24 +238,27 @@ func injectVar(src string, vars map[string]string) (string, error) {
 
 		switch funname {
 		case "":
-			return val
-		case "header":
-			return strings.Replace(val, "\n", "\\n", -1)
+			break
 		case "json":
 			var b []byte
 			b, err = json.Marshal(val)
 			if err != nil {
 				return ""
 			}
-			return string(b[1 : len(b)-1])
+			val = string(b[1 : len(b)-1])
 		case "query":
-			return url.QueryEscape(val)
+			val = url.QueryEscape(val)
 		case "path":
-			return url.PathEscape(val)
+			val = url.PathEscape(val)
 		default:
 			err = fmt.Errorf("remote: unknown template function %s", funname)
 			return ""
 		}
+		// make sure we do not introduce newlines in headers
+		if isHeader {
+			return strings.Replace(val, "\n", "\\n", -1)
+		}
+		return val
 	})
 	return result, err
 }
@@ -265,27 +268,27 @@ func injectVar(src string, vars map[string]string) (string, error) {
 func injectVariables(remote *Remote, vars map[string]string) error {
 	var err error
 	if strings.Contains(remote.URL.Path, "{{") {
-		remote.URL.Path, err = injectVar(remote.URL.Path, vars)
+		remote.URL.Path, err = injectVar(remote.URL.Path, vars, false)
 		if err != nil {
 			return err
 		}
 	}
 	if strings.Contains(remote.URL.RawQuery, "{{") {
-		remote.URL.RawQuery, err = injectVar(remote.URL.RawQuery, vars)
+		remote.URL.RawQuery, err = injectVar(remote.URL.RawQuery, vars, false)
 		if err != nil {
 			return err
 		}
 	}
 	for k, v := range remote.Headers {
 		if strings.Contains(v, "{{") {
-			remote.Headers[k], err = injectVar(v, vars)
+			remote.Headers[k], err = injectVar(v, vars, true)
 			if err != nil {
 				return err
 			}
 		}
 	}
 	if strings.Contains(remote.Body, "{{") {
-		remote.Body, err = injectVar(remote.Body, vars)
+		remote.Body, err = injectVar(remote.Body, vars, false)
 	}
 	return err
 }

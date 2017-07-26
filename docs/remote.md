@@ -61,8 +61,9 @@ The format for the request file is:
 For the path, the query-string, the headers, and the body, it's possible to
 have some dynamic part by using `{{`, a variable name, and `}}`. Some templating helpers are available to escape specific variables using `{{` function name - space - variable name `}}`:
 
+Available helpers:
+
   - `json`: for json parts (`{ "key": "{{json val}}" }`)
-  - `header`: for headers (`Accept: {{header acceptHeader}}`)
   - `path`: for path in urls (`http://cozy.io/{{path pathName}}/foobar`)
   - `query`: for query in urls (`http://cozy.io?q={{query queryName}}`)
 
