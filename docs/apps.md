@@ -394,6 +394,7 @@ Content-Type: application/json
     "id": "Drive/3.1.1",
     "type": "io.cozy.registry.versions",
     "attributes": {
+      "name": "Drive",
       "version": "3.1.1",
       "url": "http://.../3.1.1",
       "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
