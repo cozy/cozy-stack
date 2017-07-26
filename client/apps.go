@@ -96,7 +96,7 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
 	res, err := c.Req(&request.Options{
 		Method:  "PUT",
-		Path:    makeAppsPath(opts.AppType, opts.Slug),
+		Path:    makeAppsPath(opts.AppType, url.PathEscape(opts.Slug)),
 		Queries: url.Values{"Source": {opts.SourceURL}},
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
