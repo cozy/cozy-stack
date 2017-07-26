@@ -553,6 +553,27 @@ func CreateNamedDocWithDB(db Database, doc Doc) error {
 	return err
 }
 
+// Upsert create the doc or update it if it already exists.
+func Upsert(db Database, doc Doc) error {
+	id, err := validateDocID(doc.ID())
+	if err != nil {
+		return err
+	}
+
+	var old JSONDoc
+	err = GetDoc(db, doc.DocType(), id, &old)
+	if IsNotFoundError(err) {
+		return CreateNamedDoc(db, doc)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	doc.SetRev(old.Rev())
+	return UpdateDoc(db, doc)
+}
+
 func createDocOrDb(db Database, doc Doc, response interface{}) error {
 	doctype := doc.DocType()
 	dbname := makeDBName(db, doctype)

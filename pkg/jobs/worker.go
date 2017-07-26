@@ -163,6 +163,7 @@ type task struct {
 func (t *task) run() (err error) {
 	t.startTime = time.Now()
 	t.execCount = 0
+
 	defer func() {
 		if t.conf.WorkerCommit != nil {
 			if errc := t.conf.WorkerCommit(t.ctx, t.infos.Message, err); errc != nil {
