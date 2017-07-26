@@ -44,6 +44,7 @@ Example:
 ```json
 {
     "name": "drive",
+    "type": "webapp",
     "editor": "cozy",
     "description": {
         "en": "The drive application",
@@ -68,15 +69,12 @@ A version object is **immutable**.
 An application version object contains the following fields:
 
 - `name`: the application name
-- `description`: description of the version
-- `version`: the version string
+- `type`: the application type (webapp, konnector, ...)
+- `manifest`: the entire manifest defined in the package
 - `created_at`: date of the release creation
 - `url`: URL of the tarball containing the application at specified version
 - `size`: the size of the application package (uncompressed) in bytes as string
 - `sha256`: the sha256 checksum of the application content
-- `permissions`: the permissions map contained in the manifest
-- `locales`: the available locales and the associated translated description
-- `license`: the license of this version
 
 The version string should follow the channels rule.
 
@@ -84,30 +82,13 @@ Example:
 
 ```json
 {
+    "type": "webapp",
     "version": "3.1.2",
-    "url": "http://.../3.1.2",
-    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "created_at": "2017-07-05T07:54:40.982Z",
+    "url": "http://.../3.1.2",
     "size": "1000",
-    "description": "Description of the 3.1.2 version of drive",
-    "license": "BSD",
-    "permissions": {
-        "apps": {
-          "description": "Required by the cozy-bar to display the icons of the apps",
-          "type": "io.cozy.apps",
-          "verbs": ["GET", "POST", "PUT"]
-        },
-        "settings": {
-          "description": "Required by the cozy-bar display Claudy and to know which applications are coming soon",
-          "type": "io.cozy.settings",
-          "verbs": ["GET"]
-        }
-    },
-    "locales": {
-        "fr": {
-            "description": "Description de la version 3.1.2 de drive"
-        }
-    }
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "manifest": { /* ... */ }
 }
 ```
 
@@ -201,29 +182,14 @@ Location: http://.../3.1.2
 
 ```json
 {
-    "version": "3.1.2",
-    "url": "http://.../3.1.2",
-    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "name": "drive",
+    "type": "webapp",
+    "version": "3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a",
     "created_at": "2017-07-05T07:54:40.982Z",
+    "url": "http://.../7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
     "size": "1000",
-    "description": "Description of the 3.1.2 version of drive",
-    "permissions": {
-        "apps": {
-          "description": "Required by the cozy-bar to display the icons of the apps",
-          "type": "io.cozy.apps",
-          "verbs": ["GET", "POST", "PUT"]
-        },
-        "settings": {
-          "description": "Required by the cozy-bar display Claudy and to know which applications are coming soon",
-          "type": "io.cozy.settings",
-          "verbs": ["GET"]
-        }
-    },
-    "locales": {
-        "fr": {
-            "description": "Description de la version 3.1.2 de drive"
-        }
-    }
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "manifest": { /* ... */ }
 }
 ```
 
@@ -333,15 +299,14 @@ Content-Type: application/json
 
 ```json
 {
+    "name": "drive",
+    "type": "webapp",
     "version": "3.1.1",
     "url": "http://.../3.1.1",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "size": "1000",
     "created_at": "2017-07-05T07:54:40.982Z",
-    "description": "Description of the 3.1.1 version of drive",
-    "license": "BSD",
-    "permissions": { },
-    "locales": { }
+    "manifest": { /* ... */ }
 }
 ```
 
@@ -364,14 +329,14 @@ Content-Type: application/json
 
 ```json
 {
+    "name": "drive",
+    "type": "webapp",
     "version": "3.1.1",
     "url": "http://.../3.1.1",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
     "size": "1000",
     "created_at": "2017-07-05T07:54:40.982Z",
-    "description": "Description of the 3.1.1 version of drive",
-    "permissions": { },
-    "locales": { }
+    "manifest": { /* ... */ }
 }
 ```
 
