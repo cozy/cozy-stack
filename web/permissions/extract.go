@@ -24,19 +24,18 @@ var errNoToken = echo.NewHTTPError(http.StatusUnauthorized, "No token in request
 // CheckRegisterToken returns true if the registerToken is set and match the
 // one from the instance.
 func CheckRegisterToken(c echo.Context, i *instance.Instance) bool {
-	hexToken := c.QueryParam("registerToken")
-	expectedTok := i.RegisterToken
-
-	if hexToken == "" || len(expectedTok) == 0 {
+	if len(i.RegisterToken) == 0 {
 		return false
 	}
-
+	hexToken := c.QueryParam("registerToken")
+	if hexToken == "" {
+		return false
+	}
 	tok, err := hex.DecodeString(hexToken)
 	if err != nil {
 		return false
 	}
-
-	return subtle.ConstantTimeCompare(tok, expectedTok) == 1
+	return subtle.ConstantTimeCompare(tok, i.RegisterToken) == 1
 }
 
 // GetRequestToken retrieves the token from the incoming request.
@@ -116,11 +115,8 @@ func ParseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 func extract(c echo.Context) (*permissions.Permission, error) {
 	instance := middlewares.GetInstance(c)
 
-	if len(instance.RegisterToken) > 0 {
-		if CheckRegisterToken(c, instance) {
-			return permissions.GetForRegisterToken(), nil
-		}
-		return nil, errNoToken
+	if CheckRegisterToken(c, instance) {
+		return permissions.GetForRegisterToken(), nil
 	}
 
 	var tok string
