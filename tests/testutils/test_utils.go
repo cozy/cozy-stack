@@ -121,7 +121,7 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if err != nil {
 		c.CleanupAndDie("Cannot create test instance", err)
 	}
-	if err = i.RegisterPassphrase([]byte("MyPassphrase"), i.RegisterToken); err != nil {
+	if err = i.RegisterPassphrase([]byte("cozy"), i.RegisterToken); err != nil {
 		c.CleanupAndDie("Cannot register test instance", err)
 	}
 	c.AddCleanup(func() error { err := instance.Destroy(i.Domain); return err })

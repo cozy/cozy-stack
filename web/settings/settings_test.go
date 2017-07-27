@@ -14,7 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/sessions"
@@ -82,12 +81,6 @@ func TestRegisterPassphraseWrongToken(t *testing.T) {
 }
 
 func TestRegisterPassphraseCorrectToken(t *testing.T) {
-	testInstance.RegisterToken = crypto.GenerateRandomBytes(instance.RegisterTokenLen)
-	testInstance.PassphraseHash = nil
-	err := instance.Update(testInstance)
-	if !assert.NoError(t, err) {
-		return
-	}
 	args, _ := json.Marshal(&echo.Map{
 		"passphrase":     "MyFirstPassphrase",
 		"register_token": hex.EncodeToString(testInstance.RegisterToken),
