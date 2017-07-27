@@ -40,16 +40,17 @@ func CheckRegisterToken(c echo.Context, i *instance.Instance) bool {
 
 // GetRequestToken retrieves the token from the incoming request.
 func GetRequestToken(c echo.Context) string {
-	header := c.Request().Header.Get(echo.HeaderAuthorization)
-	if strings.HasPrefix(header, bearerAuthScheme) {
-		return header[len(bearerAuthScheme):]
-	} else if strings.HasPrefix(header, basicAuthScheme) {
-		_, pass, _ := c.Request().BasicAuth()
-		return pass
-	} else if tok := c.QueryParam("bearer_token"); tok != "" {
-		return tok
+	req := c.Request()
+	if header := req.Header.Get(echo.HeaderAuthorization); header != "" {
+		if strings.HasPrefix(header, bearerAuthScheme) {
+			return header[len(bearerAuthScheme):]
+		}
+		if strings.HasPrefix(header, basicAuthScheme) {
+			_, pass, _ := req.BasicAuth()
+			return pass
+		}
 	}
-	return ""
+	return c.QueryParam("bearer_token")
 }
 
 // ParseJWT parses a JSON Web Token, and returns the associated permissions.
