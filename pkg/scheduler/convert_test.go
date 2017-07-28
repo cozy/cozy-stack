@@ -47,7 +47,8 @@ func TestTriggersFromMonoStackAreImportedInRedit(t *testing.T) {
 	defer newsched.Delete("triggers-convert.cozy.tools", trig.ID())
 
 	memsched2 := scheduler.NewMemScheduler()
-	bro := jobs.NewMemBroker(1, jobs.WorkersList{})
+	bro := jobs.NewMemBroker(1)
+	bro.Start(jobs.WorkersList{})
 	memsched2.Start(bro)
 	oldtrigkept, err := memsched2.Get("triggers-convert.cozy.tools", trig.ID())
 	assert.Nil(t, oldtrigkept, "old trigger has been deleted")

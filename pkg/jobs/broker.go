@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"time"
 
@@ -36,6 +37,9 @@ type (
 	// particular domain. A broker can be used to create jobs that are pushed in
 	// the job system.
 	Broker interface {
+		Start(workersList WorkersList) error
+		Shutdown(ctx context.Context) error
+
 		// PushJob will push try to push a new job from the specified job request.
 		// This method is asynchronous.
 		PushJob(request *JobRequest) (*JobInfos, error)

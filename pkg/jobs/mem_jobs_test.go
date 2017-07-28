@@ -59,8 +59,10 @@ func TestInMemoryJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := NewMemBroker(4, workersTestList)
-	broker2 := NewMemBroker(4, workersTestList)
+	broker1 := NewMemBroker(4)
+	broker2 := NewMemBroker(4)
+	broker1.Start(workersTestList)
+	broker2.Start(workersTestList)
 	w.Add(2)
 
 	go func() {
@@ -97,7 +99,8 @@ func TestInMemoryJobs(t *testing.T) {
 }
 
 func TestUnknownWorkerError(t *testing.T) {
-	broker := NewMemBroker(1, WorkersList{})
+	broker := NewMemBroker(1)
+	broker.Start(WorkersList{})
 	_, err := broker.PushJob(&JobRequest{
 		Domain:     "cozy.local",
 		WorkerType: "nope",
@@ -110,7 +113,8 @@ func TestUnknownWorkerError(t *testing.T) {
 func TestUnknownMessageType(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker(4, WorkersList{
+	broker := NewMemBroker(4)
+	broker.Start(WorkersList{
 		"test": {
 			Concurrency: 4,
 			WorkerFunc: func(ctx context.Context, m *Message) error {
@@ -141,7 +145,8 @@ func TestUnknownMessageType(t *testing.T) {
 func TestTimeout(t *testing.T) {
 	var w sync.WaitGroup
 
-	broker := NewMemBroker(1, WorkersList{
+	broker := NewMemBroker(1)
+	broker.Start(WorkersList{
 		"timeout": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -174,7 +179,8 @@ func TestRetry(t *testing.T) {
 	maxExecCount := 4
 
 	var count int
-	broker := NewMemBroker(1, WorkersList{
+	broker := NewMemBroker(1)
+	broker.Start(WorkersList{
 		"test": {
 			Concurrency:  1,
 			MaxExecCount: maxExecCount,
@@ -208,7 +214,8 @@ func TestPanicRetried(t *testing.T) {
 
 	maxExecCount := 4
 
-	broker := NewMemBroker(1, WorkersList{
+	broker := NewMemBroker(1)
+	broker.Start(WorkersList{
 		"panic": {
 			Concurrency:  1,
 			MaxExecCount: maxExecCount,
@@ -237,7 +244,8 @@ func TestPanic(t *testing.T) {
 	even, _ := NewMessage("json", 0)
 	odd, _ := NewMessage("json", 1)
 
-	broker := NewMemBroker(1, WorkersList{
+	broker := NewMemBroker(1)
+	broker.Start(WorkersList{
 		"panic2": {
 			Concurrency:  1,
 			MaxExecCount: 1,

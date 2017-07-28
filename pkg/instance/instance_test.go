@@ -398,7 +398,7 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
-	if err = stack.Start(); err != nil {
+	if _, err = stack.Start(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

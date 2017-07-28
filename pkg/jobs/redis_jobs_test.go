@@ -40,10 +40,7 @@ func TestRedisJobs(t *testing.T) {
 				if !assert.NoError(t, err) {
 					return err
 				}
-				if strings.HasPrefix(msg, "z-") {
-					_, err := strconv.Atoi(msg[len("z-"):])
-					assert.NoError(t, err)
-				} else if strings.HasPrefix(msg, "a-") {
+				if strings.HasPrefix(msg, "a-") {
 					_, err := strconv.Atoi(msg[len("a-"):])
 					assert.NoError(t, err)
 				} else if strings.HasPrefix(msg, "b-") {
@@ -58,21 +55,13 @@ func TestRedisJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := &redisBroker{client: client}
-	broker2 := &redisBroker{client: client}
-	msg, _ := NewMessage(JSONEncoding, "z-0")
-	_, err := broker1.PushJob(&JobRequest{
-		Domain:     "cozy.local",
-		WorkerType: "test",
-		Message:    msg,
-	})
-	assert.NoError(t, err)
-	w.Add(3)
+	broker1 := NewRedisBroker(1, client)
+	broker2 := NewRedisBroker(1, client)
+	w.Add(2 * (1 + n))
 
 	go func() {
 		broker1.Start(workersTestList)
 		for i := 0; i < n; i++ {
-			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
 			_, err := broker1.PushJob(&JobRequest{
 				Domain:     "cozy.local",
@@ -88,7 +77,6 @@ func TestRedisJobs(t *testing.T) {
 	go func() {
 		broker2.Start(workersTestList)
 		for i := 0; i < n; i++ {
-			w.Add(1)
 			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
 			_, err := broker2.PushJob(&JobRequest{
 				Domain:     "cozy.local",
@@ -102,8 +90,8 @@ func TestRedisJobs(t *testing.T) {
 	}()
 
 	w.Wait()
-	broker1.Stop()
-	broker2.Stop()
+	broker1.Shutdown(context.Background())
+	broker2.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
 }
 

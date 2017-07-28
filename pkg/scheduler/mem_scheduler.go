@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"context"
+	"fmt"
 	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -99,13 +101,16 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	return nil
 }
 
-// Stop the scheduling of triggers
-func (s *MemScheduler) Stop() {
+// Shutdown the scheduling of triggers
+func (s *MemScheduler) Shutdown(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	fmt.Print("  shutting down in-memory scheduler...")
 	for _, t := range s.ts {
 		t.Unschedule()
 	}
+	fmt.Println("ok.")
+	return nil
 }
 
 // Add will add a new trigger to the scheduler. The trigger is persisted in
@@ -141,12 +146,9 @@ func (s *MemScheduler) Delete(domain, id string) error {
 	if !ok || t.Infos().Domain != domain {
 		return ErrNotFoundTrigger
 	}
-	if err := s.storage.Delete(t); err != nil {
-		return err
-	}
 	delete(s.ts, id)
 	t.Unschedule()
-	return nil
+	return s.storage.Delete(t)
 }
 
 // GetAll returns all the running in-memory triggers.
@@ -174,12 +176,6 @@ func (s *MemScheduler) schedule(t Trigger) {
 			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s",
 				t.Type(), t.Infos().TID, err.Error())
 		}
-	}
-	s.log.Infof("[jobs] trigger %s(%s): Closing trigger",
-		t.Type(), t.Infos().TID)
-	if err := s.Delete(t.Infos().Domain, t.Infos().TID); err != nil {
-		s.log.Errorf("[jobs] trigger %s(%s): Could not delete trigger: %s",
-			t.Type(), t.Infos().TID, err.Error())
 	}
 }
 
