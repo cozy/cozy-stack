@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +28,22 @@ func TestRemoteGET(t *testing.T) {
 	assert.Equal(t, 200, res.StatusCode)
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, `{"entities":`, string(body[:12]))
+
+	var results []map[string]interface{}
+	allReq := &couchdb.AllDocsRequest{
+		Descending: true,
+		Limit:      1,
+	}
+	err = couchdb.GetAllDocs(testInstance, consts.RemoteRequests, allReq, &results)
+	assert.NoError(t, err)
+	assert.Len(t, results, 1)
+	logged := results[0]
+	assert.Equal(t, "org.wikidata.entity", logged["doctype"].(string))
+	assert.Equal(t, "GET", logged["verb"].(string))
+	assert.Equal(t, "https://www.wikidata.org/wiki/Special:EntityData/Q42.json", logged["url"].(string))
+	assert.Equal(t, float64(200), logged["response_code"].(float64))
+	assert.Equal(t, "application/json", logged["content_type"].(string))
+	assert.NotNil(t, logged["created_at"])
 }
 
 func TestMain(m *testing.M) {
