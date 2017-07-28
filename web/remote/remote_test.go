@@ -20,7 +20,7 @@ var ts *httptest.Server
 var token string
 
 func TestRemoteGET(t *testing.T) {
-	req, _ := http.NewRequest("GET", ts.URL+"/remote/org.wikidata.entity?entity=Q42", nil)
+	req, _ := http.NewRequest("GET", ts.URL+"/remote/org.wikidata.entity?entity=Q42&comment=foo", nil)
 	req.Header.Add("Authorization", "Bearer "+token)
 	req.Host = testInstance.Domain
 	res, err := http.DefaultClient.Do(req)
@@ -44,6 +44,9 @@ func TestRemoteGET(t *testing.T) {
 	assert.Equal(t, float64(200), logged["response_code"].(float64))
 	assert.Equal(t, "application/json", logged["content_type"].(string))
 	assert.NotNil(t, logged["created_at"])
+	vars := logged["variables"].(map[string]interface{})
+	assert.Equal(t, "Q42", vars["entity"].(string))
+	assert.Equal(t, "foo", vars["comment"].(string))
 }
 
 func TestMain(m *testing.M) {

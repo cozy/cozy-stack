@@ -72,14 +72,15 @@ func (d *Doctype) Clone() couchdb.Doc { cloned := *d; return &cloned }
 
 // Request is used to log in couchdb a call to a remote website
 type Request struct {
-	DocID         string    `json:"_id,omitempty"`
-	DocRev        string    `json:"_rev,omitempty"`
-	RemoteDoctype string    `json:"doctype"`
-	Verb          string    `json:"verb"`
-	URL           string    `json:"url"`
-	ResponseCode  int       `json:"response_code"`
-	ContentType   string    `json:"content_type"`
-	CreatedAt     time.Time `json:"created_at"`
+	DocID         string            `json:"_id,omitempty"`
+	DocRev        string            `json:"_rev,omitempty"`
+	RemoteDoctype string            `json:"doctype"`
+	Verb          string            `json:"verb"`
+	URL           string            `json:"url"`
+	ResponseCode  int               `json:"response_code"`
+	ContentType   string            `json:"content_type"`
+	Variables     map[string]string `json:"variables"`
+	CreatedAt     time.Time         `json:"created_at"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -360,6 +361,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 		URL:           remote.URL.String(),
 		ResponseCode:  res.StatusCode,
 		ContentType:   ctype,
+		Variables:     vars,
 		CreatedAt:     time.Now(),
 	}
 	err = couchdb.CreateDoc(ins, logged)
