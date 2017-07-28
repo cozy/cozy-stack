@@ -118,11 +118,9 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 		c.CleanupAndDie("Error while destroying instance", err)
 	}
 	i, err := instance.Create(opts[0])
+
 	if err != nil {
 		c.CleanupAndDie("Cannot create test instance", err)
-	}
-	if err = i.RegisterPassphrase([]byte("MyPassphrase"), i.RegisterToken); err != nil {
-		c.CleanupAndDie("Cannot register test instance", err)
 	}
 	c.AddCleanup(func() error { err := instance.Destroy(i.Domain); return err })
 	c.inst = i
