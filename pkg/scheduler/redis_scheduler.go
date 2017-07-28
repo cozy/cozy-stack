@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -54,6 +55,7 @@ return t`
 type RedisScheduler struct {
 	broker  jobs.Broker
 	client  *redis.Client
+	closed  chan struct{}
 	stopped chan struct{}
 	log     *logrus.Entry
 }
@@ -62,8 +64,9 @@ type RedisScheduler struct {
 // other cozy-stack processes to schedule jobs.
 func NewRedisScheduler(client *redis.Client) *RedisScheduler {
 	return &RedisScheduler{
-		client: client,
-		log:    logger.WithNamespace("scheduler-redis"),
+		client:  client,
+		log:     logger.WithNamespace("scheduler-redis"),
+		stopped: make(chan struct{}),
 	}
 }
 
@@ -78,7 +81,7 @@ func eventsKey(domain string) string {
 // Start a goroutine that will fetch triggers in redis to schedule their jobs
 func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.broker = b
-	s.stopped = make(chan struct{})
+	s.closed = make(chan struct{})
 	s.startEventDispatcher()
 	if err := s.ImportFromMemStorage(); err != nil {
 		s.log.Errorln("Something went wrong while importing old storage", err)
@@ -91,8 +94,9 @@ func (s *RedisScheduler) pollLoop() {
 	ticker := time.NewTicker(pollInterval)
 	for {
 		select {
-		case <-s.stopped:
+		case <-s.closed:
 			ticker.Stop()
+			s.stopped <- struct{}{}
 			return
 		case <-ticker.C:
 			now := time.Now().UTC().Unix()
@@ -113,7 +117,7 @@ func (s *RedisScheduler) startEventDispatcher() {
 		}()
 		for {
 			select {
-			case <-s.stopped:
+			case <-s.closed:
 				return
 			case event := <-c.Channel:
 				eventsCh <- event
@@ -125,8 +129,8 @@ func (s *RedisScheduler) startEventDispatcher() {
 	}
 }
 
-func (s *RedisScheduler) eventLoop(ch <-chan *realtime.Event) {
-	for event := range ch {
+func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
+	for event := range eventsCh {
 		key := eventsKey(event.Domain)
 		m, err := s.client.HGetAll(key).Result()
 		if err != nil {
@@ -160,11 +164,21 @@ func (s *RedisScheduler) eventLoop(ch <-chan *realtime.Event) {
 	}
 }
 
-// Stop the scheduling of triggers
-func (s *RedisScheduler) Stop() {
-	if s.stopped != nil {
-		close(s.stopped)
+// Shutdown the scheduling of triggers
+func (s *RedisScheduler) Shutdown(ctx context.Context) error {
+	if s.closed == nil {
+		return nil
 	}
+	fmt.Print("  shutting down redis scheduler...")
+	close(s.closed)
+	select {
+	case <-ctx.Done():
+		fmt.Println("failed: ", ctx.Err())
+		return ctx.Err()
+	case <-s.stopped:
+		fmt.Println("ok.")
+	}
+	return nil
 }
 
 // Poll redis to see if there are some triggers ready

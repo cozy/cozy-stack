@@ -50,7 +50,8 @@ func TestTriggersBadArguments(t *testing.T) {
 func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
-	bro := jobs.NewMemBroker(1, jobs.WorkersList{
+	bro := jobs.NewMemBroker(1)
+	bro.Start(jobs.WorkersList{
 		"worker": {
 			Concurrency:  1,
 			MaxExecCount: 1,
@@ -131,11 +132,6 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 		<-done
 	}
 
-	_, err = sch.Get("cozy.local", atID)
-	assert.Error(t, err)
-	assert.Equal(t, ErrNotFoundTrigger, err)
-
-	_, err = sch.Get("cozy.local", inID)
-	assert.Error(t, err)
-	assert.Equal(t, ErrNotFoundTrigger, err)
+	err = sch.Shutdown(context.Background())
+	assert.NoError(t, err)
 }

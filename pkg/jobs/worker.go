@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"sync/atomic"
 	"time"
 )
 
@@ -50,9 +51,11 @@ type (
 	// Worker is a unit of work that will consume from a queue and execute the do
 	// method for each jobs it pulls.
 	Worker struct {
-		Type string
-		Conf *WorkerConfig
-		jobs chan Job
+		Type    string
+		Conf    *WorkerConfig
+		jobs    chan Job
+		running uint32
+		closed  chan struct{}
 	}
 )
 
@@ -74,16 +77,37 @@ func NewWorkerContext(domain, workerID string) context.Context {
 }
 
 // Start is used to start the worker consumption of messages from its queue.
-func (w *Worker) Start(jobs chan Job) {
+func (w *Worker) Start(jobs chan Job) error {
+	if !atomic.CompareAndSwapUint32(&w.running, 0, 1) {
+		return ErrClosed
+	}
 	w.jobs = jobs
+	w.closed = make(chan struct{})
 	for i := 0; i < w.Conf.Concurrency; i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
 		joblog.Debugf("Start worker %s", name)
-		go w.work(name)
+		go w.work(name, w.closed)
 	}
+	return nil
 }
 
-func (w *Worker) work(workerID string) {
+// Shutdown is used to close the worker, waiting for all tasks to end
+func (w *Worker) Shutdown(ctx context.Context) error {
+	if !atomic.CompareAndSwapUint32(&w.running, 1, 0) {
+		return ErrClosed
+	}
+	close(w.jobs)
+	for i := 0; i < w.Conf.Concurrency; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-w.closed:
+		}
+	}
+	return nil
+}
+
+func (w *Worker) work(workerID string, closed chan<- struct{}) {
 	for job := range w.jobs {
 		domain := job.Domain()
 		if domain == "" {
@@ -116,6 +140,8 @@ func (w *Worker) work(workerID string) {
 				workerID, infos.ID(), err.Error())
 		}
 	}
+	joblog.Debugf("[job] %s: worker shut down", workerID)
+	closed <- struct{}{}
 }
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {

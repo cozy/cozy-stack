@@ -10,6 +10,7 @@ for d in $(go list ./pkg/... ./web/...); do
 		-coverprofile=profile.out \
 		-covermode=count \
 		-coverpkg=./pkg/...,./web/... \
+		-timeout 2m \
 		"$d" \
 		2>&1 | grep -v 'warning: no packages being tested depend on github.com/cozy/cozy-stack'
 	res=$?

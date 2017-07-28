@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"context"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -57,7 +59,7 @@ type (
 	// to listen respond to triggers jobs requests and send them to the broker.
 	Scheduler interface {
 		Start(broker jobs.Broker) error
-		Stop()
+		Shutdown(ctx context.Context) error
 		Add(trigger Trigger) error
 		Get(domain, id string) (Trigger, error)
 		Delete(domain, id string) error

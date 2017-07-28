@@ -2,10 +2,14 @@ package jobs
 
 import (
 	"container/list"
+	"context"
+	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 type (
@@ -21,7 +25,11 @@ type (
 
 	// memBroker is an in-memory broker implementation of the Broker interface.
 	memBroker struct {
-		queues map[string]*memQueue
+		nbWorkers int
+		queues    map[string]*memQueue
+		workers   []*Worker
+		running   uint32
+		closed    chan struct{}
 	}
 )
 
@@ -74,24 +82,67 @@ func (q *memQueue) Len() int {
 //
 // The in-memory implementation of the job system has the specifity that
 // workers are actually launched by the broker at its creation.
-func NewMemBroker(nbWorkers int, ws WorkersList) Broker {
-	setNbSlots(nbWorkers)
-	queues := make(map[string]*memQueue)
+func NewMemBroker(nbWorkers int) Broker {
+	return &memBroker{
+		nbWorkers: nbWorkers,
+		queues:    make(map[string]*memQueue),
+		closed:    make(chan struct{}),
+	}
+}
+
+func (b *memBroker) Start(ws WorkersList) error {
+	if !atomic.CompareAndSwapUint32(&b.running, 0, 1) {
+		return ErrClosed
+	}
+	if b.nbWorkers <= 0 {
+		return nil
+	}
+	joblog.Infof("Starting in-memory broker with %d workers", b.nbWorkers)
+	setNbSlots(b.nbWorkers)
 	for workerType, conf := range ws {
 		q := newMemQueue(workerType)
-		queues[workerType] = q
 		w := &Worker{
 			Type: workerType,
 			Conf: conf,
 		}
-		w.Start(q.Jobs)
+		b.queues[workerType] = q
+		b.workers = append(b.workers, w)
+		if err := w.Start(q.Jobs); err != nil {
+			return err
+		}
 	}
-	return &memBroker{queues: queues}
+	return nil
+}
+
+func (b *memBroker) Shutdown(ctx context.Context) error {
+	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
+		return ErrClosed
+	}
+	fmt.Print("  shutting down in-memory broker...")
+	errs := make(chan error)
+	for _, w := range b.workers {
+		go func(w *Worker) { errs <- w.Shutdown(ctx) }(w)
+	}
+	var errm error
+	for i := 0; i < len(b.workers); i++ {
+		if err := <-errs; err != nil {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	if errm != nil {
+		fmt.Println("failed: ", errm)
+	} else {
+		fmt.Println("ok")
+	}
+	return errm
 }
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
 func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, error) {
+	if atomic.LoadUint32(&b.running) == 0 {
+		return nil, ErrClosed
+	}
 	workerType := req.WorkerType
 	q, ok := b.queues[workerType]
 	if !ok {

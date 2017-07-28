@@ -4,6 +4,7 @@
 package web
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -64,8 +65,8 @@ func LoadSupportedLocales() error {
 
 // ListenAndServe creates and setups all the necessary http endpoints and start
 // them.
-func ListenAndServe(noAdmin bool) error {
-	return listenAndServe(noAdmin, webapps.Serve)
+func ListenAndServe() (*Servers, error) {
+	return listenAndServe(webapps.Serve)
 }
 
 // ListenAndServeWithAppDir creates and setup all the necessary http endpoints
@@ -74,25 +75,25 @@ func ListenAndServe(noAdmin bool) error {
 // In order to serve the application, the specified directory should provide
 // a manifest.webapp file that will be used to parameterize the application
 // permissions.
-func ListenAndServeWithAppDir(appsdir map[string]string) error {
+func ListenAndServeWithAppDir(appsdir map[string]string) (*Servers, error) {
 	for slug, dir := range appsdir {
 		dir = utils.AbsPath(dir)
 		appsdir[slug] = dir
 		exists, err := utils.DirExists(dir)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !exists {
-			return fmt.Errorf("Directory %s does not exist", dir)
+			return nil, fmt.Errorf("Directory %s does not exist", dir)
 		}
 		if err = checkExists(path.Join(dir, apps.WebappManifestName)); err != nil {
-			return err
+			return nil, err
 		}
 		if err = checkExists(path.Join(dir, "index.html")); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return listenAndServe(false, func(c echo.Context) error {
+	return listenAndServe(func(c echo.Context) error {
 		slug := c.Get("slug").(string)
 		dir, ok := appsdir[slug]
 		if !ok {
@@ -144,34 +145,64 @@ func checkExists(filepath string) error {
 	return nil
 }
 
-func listenAndServe(noAdmin bool, appsHandler echo.HandlerFunc) error {
-	main, err := CreateSubdomainProxy(echo.New(), appsHandler)
+func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
+	major, err := CreateSubdomainProxy(echo.New(), appsHandler)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = LoadSupportedLocales(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if config.IsDevRelease() {
-		main.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		major.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))
 	}
 
-	errs := make(chan error)
-
-	if !noAdmin {
-		if err = agent.Listen(nil); err != nil {
-			return err
-		}
-		admin := echo.New()
-		if err = SetupAdminRoutes(admin); err != nil {
-			return err
-		}
-		go func() { errs <- admin.Start(config.AdminServerAddr()) }()
+	if err = agent.Listen(nil); err != nil {
+		return nil, err
 	}
 
-	go func() { errs <- main.Start(config.ServerAddr()) }()
-	return <-errs
+	admin := echo.New()
+	if err = SetupAdminRoutes(admin); err != nil {
+		return nil, err
+	}
+
+	return &Servers{
+		major: major,
+		admin: admin,
+	}, nil
+}
+
+// Servers contains the started HTTP servers and implement the Shutdowner
+// interface.
+type Servers struct {
+	major *echo.Echo
+	admin *echo.Echo
+	errs  chan error
+}
+
+// Start starts the servers.
+func (e *Servers) Start() {
+	e.errs = make(chan error, 2)
+	go func() { e.errs <- e.admin.Start(config.AdminServerAddr()) }()
+	go func() { e.errs <- e.major.Start(config.ServerAddr()) }()
+}
+
+// Wait for servers to stop or fall in error.
+func (e *Servers) Wait() <-chan error {
+	return e.errs
+}
+
+// Shutdown gracefully stops the servers.
+func (e *Servers) Shutdown(ctx context.Context) error {
+	g := utils.NewGroupShutdown(e.admin, e.major)
+	fmt.Print("  shutting down servers...")
+	if err := g.Shutdown(ctx); err != nil {
+		fmt.Println("failed: ", err.Error())
+		return err
+	}
+	fmt.Println("ok.")
+	return nil
 }

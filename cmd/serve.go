@@ -1,20 +1,23 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/stack"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var flagNoAdmin bool
 var flagAllowRoot bool
 var flagAppdirs []string
 
@@ -25,6 +28,10 @@ var serveCmd = &cobra.Command{
 	Long: `Starts the stack and listens for HTTP calls
 It will accept HTTP requests on localhost:8080 by default.
 Use the --port and --host flags to change the listening option.
+
+The SIGINT signal will trigger a graceful stop of cozy-stack: it will wait that
+current HTTP requests and jobs are finished (in a limit of 2 minutes) before
+exiting.
 
 If you are the developer of a client-side app, you can use --appdir
 to mount a directory as the application with the 'app' slug.
@@ -43,11 +50,9 @@ example), you can use the --appdir flag like this:
 			errPrintfln("Use --allow-root if you really want to start with the root user")
 			return errors.New("Starting cozy-stack serve as root not allowed")
 		}
-		if err := stack.Start(); err != nil {
-			return err
-		}
+		var apps map[string]string
 		if len(flagAppdirs) > 0 {
-			apps := make(map[string]string)
+			apps = make(map[string]string)
 			for _, app := range flagAppdirs {
 				parts := strings.Split(app, ":")
 				switch len(parts) {
@@ -59,9 +64,42 @@ example), you can use the --appdir flag like this:
 					return errors.New("Invalid appdir value")
 				}
 			}
-			return web.ListenAndServeWithAppDir(apps)
 		}
-		return web.ListenAndServe(flagNoAdmin)
+
+		processes, err := stack.Start()
+		if err != nil {
+			return err
+		}
+
+		var servers *web.Servers
+		if apps != nil {
+			servers, err = web.ListenAndServeWithAppDir(apps)
+		} else {
+			servers, err = web.ListenAndServe()
+		}
+		if err != nil {
+			return err
+		}
+		servers.Start()
+
+		group := utils.NewGroupShutdown(servers, processes)
+
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, os.Interrupt)
+
+		select {
+		case err := <-servers.Wait():
+			return err
+		case <-sigs:
+			fmt.Println("\nshutdown started")
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel() // make gometalinter happy
+			if err := group.Shutdown(ctx); err != nil {
+				return err
+			}
+			fmt.Println("all settled, bye bye !")
+			return nil
+		}
 	},
 }
 
@@ -139,7 +177,6 @@ func init() {
 	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
 
 	RootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().BoolVar(&flagNoAdmin, "no-admin", false, "Start without the admin interface")
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	serveCmd.Flags().StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
 }
