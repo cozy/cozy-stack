@@ -436,12 +436,14 @@ HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
-### DELETE /sharings/:sharing-id/recipient/:recipient-id
+### DELETE /sharings/:sharing-id/recipient/:client-id
 
 Revoke a recipient from a sharing. Only the sharer can make that action and depending on the type of sharing the implications differ:
 
 * for both _Master-Master_ and _Master-Slave_ sharings the sharer asks the recipient to revoke the sharing;
 * for _Master-Master_ sharing the sharer also deletes the OAuth client of the recipient for that sharing.
+
+The `client-id` is the one provided by the recipient at the registration step. It is saved on the sharer side in the sharing document, in the `Client` object for the given recipient.
 
 #### Request
 
