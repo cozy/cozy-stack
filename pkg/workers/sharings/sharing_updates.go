@@ -118,15 +118,6 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	if sendToSharer {
 		// We are on the recipient side
 
-		// Particular case: the recipient removes the target of the sharing,
-		// e.g. the shared directory, the photo album, etc
-		if isSharedContainer(rule, docID) {
-			err := sharings.RevokeSharing(ins, sharing, true)
-			if err != nil {
-				return err
-			}
-		}
-
 		recInfos = make([]*sharings.RecipientInfo, 1)
 		sharerStatus := sharing.Sharer.SharerStatus
 		info, err := sharings.ExtractRecipientInfo(ins, sharerStatus)
@@ -217,6 +208,14 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 
 		if opts.Type == consts.DirType {
 			if dirDoc.DirID == consts.TrashDirID {
+				// Particular case: the recipient removes the target of the sharing,
+				// e.g. the shared directory
+				if sendToSharer && isSharedContainer(rule, docID) {
+					err := sharings.RevokeSharing(ins, sharing, true)
+					if err != nil {
+						return err
+					}
+				}
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %v", dirDoc)
 				return DeleteDirOrFile(ins, opts, false)
@@ -245,6 +244,14 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			// this event as of now.
 			// TODO Do we propagate this event?
 			return nil
+		}
+		// Particular case: the recipient removes the target of the sharing,
+		// e.g. a photo album
+		if sendToSharer && isSharedContainer(rule, docID) {
+			err := sharings.RevokeSharing(ins, sharing, true)
+			if err != nil {
+				return err
+			}
 		}
 		return DeleteDoc(ins, opts)
 
