@@ -333,7 +333,7 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	// 	return err
 	// }
 
-	return nil
+	return err
 	// // if it is the first try we do not take into account an error, we bail.
 	// if lastResult == nil {
 	// 	return nil
