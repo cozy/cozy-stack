@@ -35,6 +35,7 @@ Table of contents
 - `/jobs` - [Jobs](jobs.md)
   - [Konnectors](konnectors.md)
   - [Workers](workers.md)
+- `/notifications` - [Notifications](notifications.md)
 - `/permissions` - [Permissions](permissions.md)
 - `/realtime` - [Realtime](realtime.md)
 - `/remote` - [Proxy for remote data/API](remote.md)
