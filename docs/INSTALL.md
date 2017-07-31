@@ -77,6 +77,6 @@ cozy-stack instances rm cozy.tools:8080
 You should configure your DNS, your reverse-proxy, and read [the
 documentation](README.md) before creating cozy instances for production.
 
-We don't have yet an official documentation for that, but you can try to
-follow [the guide written by
-Clochix](https://clochix.github.io/gozy-docs/en/install/manual/).
+We have started to write documentation about that, but it is a work in
+progress: you can try [the guide](https://docs.cozy.io/en/install/manual/)
+and don't hesitate to report issues with it. It will help us improve it.
