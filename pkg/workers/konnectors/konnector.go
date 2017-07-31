@@ -23,8 +23,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/stack"
-	"github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
@@ -291,8 +289,6 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	slug := opts.Konnector
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 
-	log := logger.WithDomain(domain)
-
 	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
@@ -333,41 +329,43 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 		result.SetRev(lastResult.Rev())
 		err = couchdb.UpdateDoc(inst, result)
 	}
-	if err != nil {
-		return err
-	}
+	// if err != nil {
+	// 	return err
+	// }
 
-	// if it is the first try we do not take into account an error, we bail.
-	if lastResult == nil {
-		return nil
-	}
-	// if the job has not errored, or the last one was already errored, we bail.
-	if state != jobs.Errored || lastResult.State == jobs.Errored {
-		return nil
-	}
+	return nil
+	// // if it is the first try we do not take into account an error, we bail.
+	// if lastResult == nil {
+	// 	return nil
+	// }
+	// // if the job has not errored, or the last one was already errored, we bail.
+	// if state != jobs.Errored || lastResult.State == jobs.Errored {
+	// 	return nil
+	// }
 
-	konnectorURL := inst.SubDomain(consts.CollectSlug)
-	konnectorURL.Fragment = "/category/all/" + slug
-	mail := mails.Options{
-		Mode:         mails.ModeNoReply,
-		Subject:      inst.Translate("Error Konnector execution", domain),
-		TemplateName: "konnector_error_" + inst.Locale,
-		TemplateValues: map[string]string{
-			"KonnectorName": slug,
-			"KonnectorPage": konnectorURL.String(),
-		},
-	}
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, &mail)
-	if err != nil {
-		return err
-	}
-	log.Info("Konnector has failed definitively, should send mail.", mail)
-	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
-		Domain:     domain,
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
+	// konnectorURL := inst.SubDomain(consts.CollectSlug)
+	// konnectorURL.Fragment = "/category/all/" + slug
+	// mail := mails.Options{
+	// 	Mode:         mails.ModeNoReply,
+	// 	Subject:      inst.Translate("Error Konnector execution", domain),
+	// 	TemplateName: "konnector_error_" + inst.Locale,
+	// 	TemplateValues: map[string]string{
+	// 		"KonnectorName": slug,
+	// 		"KonnectorPage": konnectorURL.String(),
+	// 	},
+	// }
+	// msg, err := jobs.NewMessage(jobs.JSONEncoding, &mail)
+	// if err != nil {
+	// 	return err
+	// }
+	// log := logger.WithDomain(domain)
+	// log.Info("Konnector has failed definitively, should send mail.", mail)
+	// _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+	// 	Domain:     domain,
+	// 	WorkerType: "sendmail",
+	// 	Message:    msg,
+	// })
+	// return err
 }
 
 func wrapErr(ctx context.Context, err error) error {
