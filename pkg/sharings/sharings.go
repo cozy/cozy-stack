@@ -23,7 +23,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/labstack/echo"
+	"github.com/cozy/echo"
 )
 
 // Sharing contains all the information about a sharing.
