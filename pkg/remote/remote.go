@@ -47,9 +47,10 @@ const rawURL = "https://raw.githubusercontent.com/cozy/cozy-doctypes/master/%s/r
 
 // Doctype is used to describe a doctype, its request for a remote doctype for example
 type Doctype struct {
-	DocID   string `json:"_id,omitempty"`
-	DocRev  string `json:"_rev,omitempty"`
-	Request string `json:"request"`
+	DocID     string    `json:"_id,omitempty"`
+	DocRev    string    `json:"_rev,omitempty"`
+	Request   string    `json:"request"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -166,7 +167,8 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 			DocID: consts.Doctypes + "/" + doctype,
 		}
 		err := couchdb.GetDoc(ins, consts.Doctypes, dt.DocID, &dt)
-		if err != nil {
+		if err != nil || dt.UpdatedAt.Add(24*time.Hour).Before(time.Now()) {
+			rev := dt.Rev()
 			u := fmt.Sprintf(rawURL, doctype)
 			res, err := http.Get(u)
 			log.Debugf("Fetch remote doctype from %s\n", doctype)
@@ -181,7 +183,13 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 				return nil, ErrNotFoundRemote
 			}
 			dt.Request = string(b)
-			err = couchdb.CreateNamedDocWithDB(ins, &dt)
+			dt.UpdatedAt = time.Now()
+			if rev == "" {
+				err = couchdb.CreateNamedDocWithDB(ins, &dt)
+			} else {
+				dt.SetRev(rev)
+				err = couchdb.UpdateDoc(ins, &dt)
+			}
 			if err != nil {
 				log.Infof("Cannot save remote doctype %s: %s", doctype, err)
 			}
