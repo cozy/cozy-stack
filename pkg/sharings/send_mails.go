@@ -84,7 +84,14 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		}
 		// Special case if the recipient's URL is not known: start discovery
 		if rs.recipient.URL == "" {
-			return SendDiscoveryMail(instance, s, rs)
+			err = SendDiscoveryMail(instance, s, rs)
+			if err != nil {
+				logError(instance, err)
+				rs.Status = consts.SharingStatusMailNotSent
+			} else {
+				rs.Status = consts.SharingStatusPending
+			}
+			return couchdb.UpdateDoc(instance, s)
 		}
 		// Send mail based on the recipient status
 		if rs.Status == consts.SharingStatusMailNotSent {
@@ -138,7 +145,6 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 				"and sending the email invitation (%v)", err,
 				ErrMailCouldNotBeSent)
 		}
-
 		return err
 	}
 
