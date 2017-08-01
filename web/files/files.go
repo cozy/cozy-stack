@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -458,16 +457,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	} else if !checkPermission {
 		// Allow some files to be displayed by the browser in the client-side apps
 		if doc.Mime == "text/plain" || doc.Class == "image" || doc.Class == "audio" || doc.Class == "video" || doc.Mime == "application/pdf" {
-			h := c.Response().Header()
-			h.Set(echo.HeaderXFrameOptions, middlewares.XFrameSameOrigin)
-			host := c.Request().Host
-			if config.GetConfig().Subdomains == config.FlatSubdomains {
-				parts := strings.SplitN(host, ".", 2)
-				host = parts[0]
-			}
-			csp := h.Get(echo.HeaderContentSecurityPolicy)
-			csp += "frame-src *." + host + ";"
-			h.Set(echo.HeaderContentSecurityPolicy, csp)
+			c.Response().Header().Del(echo.HeaderXFrameOptions)
 		}
 	}
 	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
