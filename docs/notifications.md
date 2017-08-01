@@ -9,15 +9,15 @@ Notifications are couchdb documents with the doctype `io.cozy.notifications`.
 Schema will be defined in cozy-doctypes, along the lines of
 ```
 source: applicationID
-notificationType: text // useful to "hide notif like this"
+reference: text // useful to "hide notif like this"
 title: text
 content?: text
 icon?: image
 actions?: [{text, intent}]
 ```
 
-All applications/services/konnector can create notifications (no permissions needed).
-But for reading notifications, a permission is needed on `io.cozy.notifications`:
+All applications/services/konnector can create notifications if they have a
+permission on `io.cozy.notifications` with the `POST` verb.
 
 - Notifications will appear in the cozy-bar.
 - Cozy mobile app(s) may display notifications on mobile.
@@ -39,7 +39,7 @@ You can use the `/data/io.cozy.notifications` routes to read the notifications.
 ```http
 POST /notifications HTTP/1.1
 Host: alice.cozy.tools
-Authentication: Bearer ...
+Authorization: Bearer ...
 Content-Type: application/vnd.api+json
 ```
 ```json
@@ -47,13 +47,13 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.notifications",
     "attributes": {
-      "notificationType": "new operations",
+      "reference": "new operations",
       "title": "5 new operations on your bank account",
       "content": "You have 5 new operations on your bank account:\n-2 debit operations\n-3 credit operations",
       "icon": "https://calendar.alice.cozy.tools/alert.png",
       "actions": [
         {
-          "text": "Show these operations"
+          "text": "Show these operations",
           "intent": {"action": "OPEN", "type": "io.cozy.bank.operations"}
         }
       ]
@@ -80,13 +80,13 @@ Content-Type: application/vnd.api+json
     },
     "attributes": {
       "source": "190973ce-7605-11e7-ae6f-37c643b07905",
-      "notificationType": "new operations",
+      "reference": "new operations",
       "title": "5 new operations on your bank account",
       "content": "You have 5 new operations on your bank account:\n-2 debit operations\n-3 credit operations",
       "icon": "https://calendar.alice.cozy.tools/alert.png",
       "actions": [
         {
-          "text": "Show these operations"
+          "text": "Show these operations",
           "intent": {"action": "OPEN", "type": "io.cozy.bank.operations"}
         }
       ]
@@ -98,4 +98,78 @@ Content-Type: application/vnd.api+json
 
 ## Updating a notification
 
-### PUT /notifications/:id
+### PATCH /notifications/:id
+
+#### HTTP headers
+
+It's possible to send the `If-Match` header, with the previous revision of the
+notifications (optional).
+
+#### Request
+
+```http
+PATCH /notifications/c57a548c-7602-11e7-933b-6f27603d27da HTTP/1.1
+Host: alice.cozy.tools
+Authorization: Bearer ...
+Content-Type: application/vnd.api+json
+```
+```json
+{
+  "data": {
+    "type": "io.cozy.notifications",
+    "id": "c57a548c-7602-11e7-933b-6f27603d27da",
+    "attributes": {
+      "title": "6 new operations on your bank account",
+      "content": "You have 6 new operations on your bank account:\n-3 debit operations\n-3 credit operations",
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/vnd.api+json
+```
+```json
+{
+  "data": {
+    "type": "io.cozy.notifications",
+    "id": "c57a548c-7602-11e7-933b-6f27603d27da",
+    "meta": {
+      "rev": "2-037e9170adf1"
+    },
+    "attributes": {
+      "source": "190973ce-7605-11e7-ae6f-37c643b07905",
+      "reference": "new operations",
+      "title": "6 new operations on your bank account",
+      "content": "You have 6 new operations on your bank account:\n-1 debit operations\n-3 credit operations",
+      "icon": "https://calendar.alice.cozy.tools/alert.png",
+      "actions": [
+        {
+          "text": "Show these operations",
+          "intent": {"action": "OPEN", "type": "io.cozy.bank.operations"}
+        }
+      ]
+    }
+  }
+}
+```
+
+## Deleting a notification
+
+### DELETE /notifications/:id
+
+#### Request
+
+```http
+DELETE /notifications/c57a548c-7602-11e7-933b-6f27603d27da HTTP/1.1
+Authorization: Bearer ...
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
