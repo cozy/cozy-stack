@@ -333,7 +333,7 @@ order     | order to apply to the list
 #### Request
 
 ```http
-GET /apps/registries?filter[category]=cozy&filter[type]=webapp HTTP/1.1
+GET /apps/registries?filter[category]=cozy HTTP/1.1
 ```
 
 #### Response
@@ -405,7 +405,6 @@ Content-Type: application/json
   }
 }
 ```
-
 
 
 ## Access an application
