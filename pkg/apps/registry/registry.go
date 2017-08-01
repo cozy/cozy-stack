@@ -267,6 +267,7 @@ func All(appType string) []*App {
 
 // FindBySlug returns the application with the given slug.
 func FindBySlug(slug string) (*App, error) {
+	slug = strings.ToLower(slug)
 	for _, app := range webapps {
 		if strings.ToLower(app.Name) == slug {
 			return app, nil
