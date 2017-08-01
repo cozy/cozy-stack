@@ -75,6 +75,7 @@ An application version object contains the following fields:
 - `url`: URL of the tarball containing the application at specified version
 - `size`: the size of the application package (uncompressed) in bytes as string
 - `sha256`: the sha256 checksum of the application content
+- `tar_prefix`: optional tar prefix directory specified to properly extract the application content
 
 The version string should follow the channels rule.
 

@@ -93,6 +93,14 @@ func (f *httpFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 }
 
 func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
+	var shasum []byte
+	if frag := src.Fragment; frag != "" {
+		shasum, _ = hex.DecodeString(frag)
+	}
+	return fetchHTTP(src, shasum, fs, man, f.prefix)
+}
+
+func fetchHTTP(src *url.URL, shasum []byte, fs Copier, man Manifest, prefix string) (err error) {
 	exists, err := fs.Start(man.Slug(), man.Version())
 	if err != nil {
 		return err
@@ -120,15 +128,11 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	}
 
 	var reader io.Reader = resp.Body
-	var shasum []byte
 	var h hash.Hash
 
-	if frag := src.Fragment; frag != "" {
-		shasum, err = hex.DecodeString(frag)
-		if err == nil {
-			h = sha256.New()
-			reader = io.TeeReader(reader, h)
-		}
+	if len(shasum) > 0 {
+		h = sha256.New()
+		reader = io.TeeReader(reader, h)
 	}
 
 	contentType := resp.Header.Get("Content-Type")
@@ -139,9 +143,13 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 		"application/x-tgz",
 		"application/tar+gzip":
 		reader, err = gzip.NewReader(reader)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+	case "application/octet-stream":
+		if r, err := gzip.NewReader(reader); err == nil {
+			reader = r
+		}
 	}
 
 	tarReader := tar.NewReader(reader)
@@ -157,8 +165,8 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 			continue
 		}
 		name := hdr.Name
-		if len(f.prefix) > 0 && strings.HasPrefix(name, f.prefix) {
-			name = name[len(f.prefix):]
+		if len(prefix) > 0 && strings.HasPrefix(name, prefix) {
+			name = name[len(prefix):]
 		}
 		err = fs.Copy(&fileInfo{
 			name: name,

@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
@@ -32,6 +31,8 @@ type App struct {
 	Repository  string         `json:"repository"`
 	Tags        []string       `json:"tags"`
 	Versions    AppVersions    `json:"versions"`
+
+	vers []*Version
 }
 
 // ID is used to implement the couchdb.Doc aterface
@@ -64,6 +65,7 @@ type Version struct {
 	CreatedAt time.Time       `json:"created_at"`
 	Size      string          `json:"size"`
 	Manifest  json.RawMessage `json:"manifest"`
+	TarPrefix string          `json:"tar_prefix"`
 }
 
 // ID is used to implement the couchdb.Doc aterface
@@ -161,16 +163,16 @@ var (
 		Versions: AppVersions{
 			Stable: []string{"3.0.3"},
 		},
-	}
-
-	collectThreeOhThree = &Version{
-		Name:      "Collect",
-		Version:   "3.0.3",
-		URL:       "https://github.com/cozy/cozy-collect/releases/download/v3.0.3/cozy-collect-v3.0.3.tgz",
-		Sha256:    "1332d2301c2362f207cf35880725179157368a921253293b062946eb6d96e3ae",
-		CreatedAt: time.Now(),
-		Size:      "3821149",
-		Manifest: json.RawMessage(`{
+		vers: []*Version{
+			{
+				Name:      "Collect",
+				Version:   "3.0.3",
+				URL:       "https://github.com/cozy/cozy-collect/releases/download/v3.0.3/cozy-collect-v3.0.3.tgz",
+				Sha256:    "1332d2301c2362f207cf35880725179157368a921253293b062946eb6d96e3ae",
+				CreatedAt: time.Now(),
+				Size:      "3821149",
+				TarPrefix: "cozy-collect-v3.0.3",
+				Manifest: json.RawMessage(`{
 "name": "Collect",
 "slug": "collect",
 "icon": "cozy_collect.svg",
@@ -251,21 +253,22 @@ var (
   "type": ["io.cozy.accounts"],
   "href": "/services"
 }]}`),
+			},
+		},
 	}
 
 	webapps = []*App{onboarding, drive, photos, settings, collect}
-
-	webappsVersions = []*Version{collectThreeOhThree}
 )
 
 // All returns all the (webapps|konnectors) applications.
-func All(appType apps.AppType) []*App {
+func All(appType string) []*App {
 	return webapps
 }
 
 // FindBySlug returns the application with the given slug.
-func FindBySlug(appType apps.AppType, slug string) (*App, error) {
-	for _, app := range All(appType) {
+func FindBySlug(slug string) (*App, error) {
+	slug = strings.ToLower(slug)
+	for _, app := range webapps {
 		if strings.ToLower(app.Name) == slug {
 			return app, nil
 		}
@@ -274,11 +277,27 @@ func FindBySlug(appType apps.AppType, slug string) (*App, error) {
 }
 
 // GetAppVersion returns a version object for an app + version number.
-func GetAppVersion(appType apps.AppType, name, number string) (*Version, error) {
-	for _, v := range webappsVersions {
-		if v.Name == name && v.Version == number {
+func GetAppVersion(slug, number string) (*Version, error) {
+	app, err := FindBySlug(slug)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range app.vers {
+		if v.Version == number {
 			return v, nil
 		}
 	}
 	return nil, ErrVersionNotFound
+}
+
+// GetAppLatestVersion returns the latest version for an app.
+func GetAppLatestVersion(slug string) (*Version, error) {
+	app, err := FindBySlug(slug)
+	if err != nil {
+		return nil, err
+	}
+	if len(app.vers) == 0 {
+		return nil, ErrVersionNotFound
+	}
+	return app.vers[len(app.vers)-1], nil
 }

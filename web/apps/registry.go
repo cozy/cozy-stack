@@ -49,7 +49,7 @@ func registryListHandler(appType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
 			return err
 		}
-		apps := registry.All(appType)
+		apps := registry.All(t)
 		objs := make([]jsonapi.Object, len(apps))
 		for i, a := range apps {
 			objs[i] = &registryApp{a}
@@ -92,7 +92,7 @@ func versionHandler(appType apps.AppType) echo.HandlerFunc {
 		}
 		name := c.Param("name")
 		num := c.Param("version")
-		v, err := registry.GetAppVersion(appType, name, num)
+		v, err := registry.GetAppVersion(name, num)
 		if err != nil {
 			return wrapAppsError(err)
 		}
