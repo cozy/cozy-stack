@@ -682,7 +682,7 @@ func passphraseRenewForm(c echo.Context) error {
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
 		"Locale":               inst.Locale,
-		"PassphraseResetToken": token,
+		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
 	})
 }
