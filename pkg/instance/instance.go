@@ -658,17 +658,21 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 }
 
 // List returns the list of declared instances.
-//
-// TODO: pagination
-// TODO: don't return the design docs
 func List() ([]*Instance, error) {
-	var docs []*Instance
-	req := &couchdb.AllDocsRequest{Limit: 3000}
-	err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
-	if err != nil {
-		return nil, err
+	nb := 1000
+	var all, docs []*Instance
+	for skip := 0; skip < 1e9; skip += nb {
+		req := &couchdb.AllDocsRequest{Limit: nb, Skip: skip}
+		err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, docs...)
+		if len(docs) == 0 {
+			break
+		}
 	}
-	return docs, nil
+	return all, nil
 }
 
 // Update is used to save changes made to an instance, it will invalidate
