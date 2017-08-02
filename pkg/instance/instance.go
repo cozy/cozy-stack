@@ -663,7 +663,7 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 // TODO: don't return the design docs
 func List() ([]*Instance, error) {
 	var docs []*Instance
-	req := &couchdb.AllDocsRequest{Limit: 1000}
+	req := &couchdb.AllDocsRequest{Limit: 3000}
 	err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
 	if err != nil {
 		return nil, err
