@@ -1,9 +1,11 @@
 package notifications
 
 import (
-	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/stack"
+	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
 // Notification data containing associated to an application a list of actions
@@ -54,14 +56,33 @@ type Action struct {
 }
 
 // Create a new notification in database.
-func Create(db couchdb.Database, slug string, n *Notification) error {
-	man, err := apps.GetBySlug(db, slug, apps.Webapp)
+func Create(db couchdb.Database, sourceID string, n *Notification) error {
+	if n.Content == "" || n.Title == "" || len(n.Actions) == 0 {
+		return ErrBadNotification
+	}
+	n.Source = sourceID
+	if err := couchdb.CreateDoc(db, n); err != nil {
+		return err
+	}
+	return sendMail(db, n)
+}
+
+func sendMail(db couchdb.Database, n *Notification) error {
+	mail := mails.Options{
+		Mode:    mails.ModeNoReply,
+		Subject: n.Title,
+		Parts: []*mails.Part{
+			{Body: n.Content, Type: "text/plain"},
+		},
+	}
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, &mail)
 	if err != nil {
 		return err
 	}
-	if n.Reference == "" || n.Content == "" || n.Title == "" || len(n.Actions) == 0 {
-		return ErrBadNotification
-	}
-	n.Source = man.ID()
-	return couchdb.CreateDoc(db, n)
+	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+		Domain:     db.Prefix(),
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	return err
 }

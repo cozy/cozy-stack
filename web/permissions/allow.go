@@ -102,24 +102,31 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 	return nil
 }
 
-// AllowForWebapp checks that the permissions is valid and comes from an
+// AllowForApp checks that the permissions is valid and comes from an
 // application. If valid, the application's slug is returned.
-func AllowForWebapp(c echo.Context, v permissions.Verb, o permissions.Validable) (slug string, err error) {
+func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Validable) (slug string, err error) {
 	pdoc, err := GetPermission(c)
 	if err != nil {
 		return "", err
 	}
-	if pdoc.Type != permissions.TypeWebapp {
+	if pdoc.Type != permissions.TypeWebapp && pdoc.Type != permissions.TypeKonnector {
 		return "", errForbidden
 	}
 	if !pdoc.Permissions.Allow(v, o) {
 		return "", errForbidden
 	}
 	sourceID := pdoc.SourceID
-	if !strings.HasPrefix(sourceID, consts.Apps+"/") {
-		return "", errForbidden
+	switch pdoc.Type {
+	case permissions.TypeWebapp:
+		if strings.HasPrefix(sourceID, consts.Apps+"/") {
+			return sourceID[len(consts.Apps)+1:], nil
+		}
+	case permissions.TypeKonnector:
+		if strings.HasPrefix(sourceID, consts.Konnectors+"/") {
+			return sourceID[len(consts.Konnectors)+1:], nil
+		}
 	}
-	return sourceID[len(consts.Apps)+1:], nil
+	return "", errForbidden
 }
 
 // AllowLogout checks if the current permission allows loging out.

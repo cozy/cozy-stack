@@ -39,11 +39,11 @@ func createHandler(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request(), &n); err != nil {
 		return err
 	}
-	slug, err := permissions.AllowForWebapp(c, permissions.POST, n)
+	sourceID, err := permissions.AllowForApp(c, permissions.POST, n)
 	if err != nil {
 		return err
 	}
-	if err := notifications.Create(inst, slug, n); err != nil {
+	if err := notifications.Create(inst, sourceID, n); err != nil {
 		return wrapErrors(err)
 	}
 	return jsonapi.Data(c, http.StatusCreated, &apiNotif{n}, nil)
