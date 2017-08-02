@@ -3,6 +3,7 @@ package permissions
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -12,6 +13,8 @@ import (
 	"github.com/cozy/echo"
 )
 
+var errForbidden = echo.NewHTTPError(http.StatusForbidden)
+
 // AllowWholeType validates that the context permission set can use a verb on
 // the whold doctype
 func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
@@ -19,9 +22,8 @@ func AllowWholeType(c echo.Context, v permissions.Verb, doctype string) error {
 	if err != nil {
 		return err
 	}
-
 	if !pdoc.Permissions.AllowWholeType(v, doctype) {
-		return echo.NewHTTPError(http.StatusForbidden)
+		return errForbidden
 	}
 	return nil
 }
@@ -32,9 +34,8 @@ func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
 	if err != nil {
 		return err
 	}
-
 	if !pdoc.Permissions.Allow(v, o) {
-		return echo.NewHTTPError(http.StatusForbidden)
+		return errForbidden
 	}
 	return nil
 }
@@ -46,7 +47,7 @@ func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) erro
 		return err
 	}
 	if !pdoc.Permissions.AllowID(v, doctype, id) {
-		return echo.NewHTTPError(http.StatusForbidden)
+		return errForbidden
 	}
 	return nil
 }
@@ -60,7 +61,7 @@ func AllowVFS(c echo.Context, v permissions.Verb, o vfs.Validable) error {
 	}
 	err = vfs.Allows(instance.VFS(), pdoc.Permissions, v, o)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusForbidden)
+		return errForbidden
 	}
 	return nil
 }
@@ -90,15 +91,35 @@ func AllowInstallApp(c echo.Context, appType apps.AppType, v permissions.Verb) e
 		// OK
 	case permissions.TypeWebapp, permissions.TypeKonnector:
 		if pdoc.SourceID != sourceID {
-			return echo.NewHTTPError(http.StatusForbidden)
+			return errForbidden
 		}
 	default:
-		return echo.NewHTTPError(http.StatusForbidden)
+		return errForbidden
 	}
 	if !pdoc.Permissions.AllowWholeType(v, docType) {
-		return echo.NewHTTPError(http.StatusForbidden)
+		return errForbidden
 	}
 	return nil
+}
+
+// AllowForWebapp checks that the permissions is valid and comes from an
+// application. If valid, the application's slug is returned.
+func AllowForWebapp(c echo.Context, v permissions.Verb, o permissions.Validable) (slug string, err error) {
+	pdoc, err := GetPermission(c)
+	if err != nil {
+		return "", err
+	}
+	if pdoc.Type != permissions.TypeWebapp {
+		return "", errForbidden
+	}
+	if !pdoc.Permissions.Allow(v, o) {
+		return "", errForbidden
+	}
+	sourceID := pdoc.SourceID
+	if !strings.HasPrefix(sourceID, consts.Apps+"/") {
+		return "", errForbidden
+	}
+	return sourceID[len(consts.Apps)+1:], nil
 }
 
 // AllowLogout checks if the current permission allows loging out.
