@@ -57,7 +57,7 @@ type Action struct {
 
 // Create a new notification in database.
 func Create(db couchdb.Database, sourceID string, n *Notification) error {
-	if n.Content == "" || n.Title == "" || len(n.Actions) == 0 {
+	if n.Content == "" || n.Title == "" {
 		return ErrBadNotification
 	}
 	n.Source = sourceID
