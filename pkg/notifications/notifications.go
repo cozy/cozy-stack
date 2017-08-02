@@ -52,6 +52,7 @@ type Action struct {
 	Intent struct {
 		Action string `json:"action"`
 		Type   string `json:"type"`
+		Data   string `json:"data"`
 	}
 }
 
