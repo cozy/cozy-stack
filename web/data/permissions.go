@@ -25,6 +25,7 @@ var blackList = map[string]bool{
 	consts.KonnectorResults: readable,
 	consts.Files:            readable,
 	consts.Jobs:             readable,
+	consts.Notifications:    readable,
 	consts.Queues:           readable,
 	consts.Triggers:         readable,
 	consts.RemoteRequests:   readable,
