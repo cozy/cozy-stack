@@ -183,6 +183,14 @@ func (e *ExifExtractor) Result() Metadata {
 				"long": long,
 			}
 		}
+		if o, err := x.Get("Orientation"); err == nil {
+			if orientation, err := o.Int(0); err == nil {
+				m["orientation"] = orientation
+				if orientation > 4 {
+					m["width"], m["height"] = m["height"], m["width"]
+				}
+			}
+		}
 	}
 	return m
 }
