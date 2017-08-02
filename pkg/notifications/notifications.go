@@ -60,6 +60,9 @@ func Create(db couchdb.Database, sourceID string, n *Notification) error {
 	if n.Content == "" || n.Title == "" {
 		return ErrBadNotification
 	}
+	if len(n.Actions) == 0 {
+		n.Actions = make([]*Action, 0)
+	}
 	n.Source = sourceID
 	if err := couchdb.CreateDoc(db, n); err != nil {
 		return err
