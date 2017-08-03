@@ -287,10 +287,13 @@ func getJob(c echo.Context) error {
 
 func cleanJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	var job jobs.JobInfos
-	var ups []jobs.JobInfos
+	var ups []*jobs.JobInfos
 	now := time.Now()
-	err := couchdb.ForeachDocs(instance, consts.Jobs, &job, func() error {
+	err := couchdb.ForeachDocs(instance, consts.Jobs, func(data []byte) error {
+		var job *jobs.JobInfos
+		if err := json.Unmarshal(data, &job); err != nil {
+			return err
+		}
 		if job.State != jobs.Running {
 			return nil
 		}
@@ -305,7 +308,7 @@ func cleanJobs(c echo.Context) error {
 	var errf error
 	for _, j := range ups {
 		j.State = jobs.Done
-		err := couchdb.UpdateDoc(instance, &j)
+		err := couchdb.UpdateDoc(instance, j)
 		if err != nil {
 			errf = multierror.Append(errf, err)
 		}

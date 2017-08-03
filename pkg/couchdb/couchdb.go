@@ -755,7 +755,7 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 
 // ForeachDocs traverse all the documents from the given database with the
 // specified doctype and calls a function for each document.
-func ForeachDocs(db Database, doctype string, doc interface{}, fn func() error) error {
+func ForeachDocs(db Database, doctype string, fn func([]byte) error) error {
 	var startKey string
 	limit := 100
 	for {
@@ -785,10 +785,7 @@ func ForeachDocs(db Database, doctype string, doc interface{}, fn func() error) 
 		startKey = ""
 		for _, row := range res.Rows {
 			if !strings.HasPrefix(row.ID, "_design") {
-				if err = json.Unmarshal(row.Doc, doc); err != nil {
-					return err
-				}
-				if err = fn(); err != nil {
+				if err = fn(row.Doc); err != nil {
 					return err
 				}
 				startKey = row.ID

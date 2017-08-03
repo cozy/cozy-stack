@@ -3,6 +3,7 @@ package instance
 import (
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -659,11 +660,13 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 
 // List returns the list of declared instances.
 func List() ([]*Instance, error) {
-	var doc *Instance
 	var all []*Instance
-	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, &doc, func() error {
-		cop := *doc
-		all = append(all, &cop)
+	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
+		var doc *Instance
+		if err := json.Unmarshal(data, &doc); err != nil {
+			return err
+		}
+		all = append(all, doc)
 		return nil
 	})
 	if err != nil {
