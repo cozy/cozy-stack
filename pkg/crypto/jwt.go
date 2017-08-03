@@ -26,7 +26,6 @@ func ParseJWT(tokenString string, keyFunc jwt.Keyfunc, claims jwt.Claims) error 
 		}
 		return keyFunc(token)
 	})
-
 	if err != nil {
 		return err
 	}
