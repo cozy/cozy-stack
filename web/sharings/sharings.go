@@ -728,6 +728,8 @@ func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sha
 		return err
 	}
 
+	// TODO: avoid having to parse the JWT token twice — already done by the
+	// perm.GetPermission method.
 	var claims permissions.Claims
 	err = crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		return ins.PickKey(token.Claims.(*permissions.Claims).Audience)
