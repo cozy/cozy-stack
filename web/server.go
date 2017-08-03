@@ -161,7 +161,7 @@ func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
 	}
 
 	if err = agent.Listen(nil); err != nil {
-		return nil, err
+		fmt.Printf("Error on gops agent: %s\n", err)
 	}
 
 	admin := echo.New()
