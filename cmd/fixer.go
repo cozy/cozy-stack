@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/cobra"
 )
 
@@ -62,6 +63,38 @@ var md5FixerCmd = &cobra.Command{
 			}
 			fmt.Println()
 			return nil
+		})
+	},
+}
+
+var mimeFixerCmd = &cobra.Command{
+	Use:   "mime [domain]",
+	Short: "Fix the class computed from the mime-type",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		c := newClient(args[0], consts.Files)
+		return c.WalkByPath("/", func(name string, doc *client.DirOrFile, err error) error {
+			if err != nil {
+				return err
+			}
+			attrs := doc.Attrs
+			if attrs.Type == consts.DirType {
+				return nil
+			}
+			_, class := vfs.ExtractMimeAndClassFromFilename(attrs.Name)
+			if class == attrs.Class {
+				return nil
+			}
+			fmt.Printf("Fix %s: %s -> %s\n", attrs.Name, attrs.Class, class)
+			_, err = c.UpdateAttrsByID(doc.ID, &client.FilePatch{
+				Rev: doc.Rev,
+				Attrs: client.FilePatchAttrs{
+					Class: class,
+				},
+			})
+			return err
 		})
 	},
 }
@@ -126,6 +159,7 @@ var jobsFixer = &cobra.Command{
 
 func init() {
 	fixerCmdGroup.AddCommand(md5FixerCmd)
+	fixerCmdGroup.AddCommand(mimeFixerCmd)
 	fixerCmdGroup.AddCommand(triggersFixer)
 	fixerCmdGroup.AddCommand(jobsFixer)
 	RootCmd.AddCommand(fixerCmdGroup)

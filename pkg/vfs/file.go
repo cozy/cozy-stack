@@ -239,7 +239,7 @@ func ModifyFileMetadata(fs VFS, olddoc *FileDoc, patch *DocPatch) (*FileDoc, err
 	newname := *patch.Name
 	oldname := olddoc.DocName
 	var mime, class string
-	if rename && path.Ext(newname) != path.Ext(oldname) {
+	if patch.Class != nil || (rename && path.Ext(newname) != path.Ext(oldname)) {
 		mime, class = ExtractMimeAndClassFromFilename(newname)
 	} else {
 		mime, class = olddoc.Mime, olddoc.Class
