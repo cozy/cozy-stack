@@ -33,15 +33,11 @@
                     </svg>
                   </div>
                 </figure>
-                {{if .PublicName}}
-                  <h1>{{t "Login Welcome name" .PublicName}}</h1>
-                {{else}}
-                  <h1>{{t "Login Welcome"}}</h1>
-                {{end}}
+                <h1>{{.Title}}</h1>
               </header>
               <div role="region">
                   <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
-                  <p class="help" id="login-password-tip">{{t "Login Password help"}}</p>
+                  <p class="help" id="login-password-tip">{{.Help}}</p>
                   <p class="line">
                     <label for="password" aria-describedby="login-password-tip">{{t "Login Password field"}}</label>
                     <button id="password-visibility-button" class="icon password-visibility-icon masked"

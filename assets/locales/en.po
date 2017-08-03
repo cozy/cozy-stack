@@ -39,6 +39,12 @@ msgstr "Show password"
 msgid "Login Submit"
 msgstr "Log in"
 
+msgid "Login Reconnect title"
+msgstr "Confirm your password"
+
+msgid "Login Reconnect help"
+msgstr "Hello! Once you've confirmed your password, you'll access the permission board to allow or not the access to mobile app. It's up to you !"
+
 msgid "Onboarding Check Mails"
 msgstr "Your Cozy has not been yet activated. Check your email and click on the activation link to proceed to the installation of your Cozy."
 
