@@ -204,7 +204,7 @@ by this server.
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		for _, i := range list {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%d\n",
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\tv%d\n",
 				i.Attrs.Domain,
 				i.Attrs.Locale,
 				formatSize(i.Attrs.BytesDiskQuota),

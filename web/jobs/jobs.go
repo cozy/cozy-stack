@@ -3,6 +3,7 @@ package jobs
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -15,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/echo"
+	multierror "github.com/hashicorp/go-multierror"
 
 	// konnectors is needed for bad triggers cleanup
 	konnectors "github.com/cozy/cozy-stack/pkg/workers/konnectors"
@@ -283,6 +285,40 @@ func getJob(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiJob{job}, nil)
 }
 
+func cleanJobs(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	var ups []*jobs.JobInfos
+	now := time.Now()
+	err := couchdb.ForeachDocs(instance, consts.Jobs, func(data []byte) error {
+		var job *jobs.JobInfos
+		if err := json.Unmarshal(data, &job); err != nil {
+			return err
+		}
+		if job.State != jobs.Running {
+			return nil
+		}
+		if job.StartedAt.Add(1 * time.Hour).Before(now) {
+			ups = append(ups, job)
+		}
+		return nil
+	})
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
+		return err
+	}
+	var errf error
+	for _, j := range ups {
+		j.State = jobs.Done
+		err := couchdb.UpdateDoc(instance, j)
+		if err != nil {
+			errf = multierror.Append(errf, err)
+		}
+	}
+	if errf != nil {
+		return errf
+	}
+	return c.JSON(200, map[string]int{"deleted": len(ups)})
+}
+
 // Routes sets the routing for the jobs service
 func Routes(router *echo.Group) {
 	router.GET("/queue/:worker-type", getQueue)
@@ -294,6 +330,7 @@ func Routes(router *echo.Group) {
 	router.GET("/triggers/:trigger-id", getTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 
+	router.POST("/clean", cleanJobs)
 	router.GET("/:job-id", getJob)
 }
 

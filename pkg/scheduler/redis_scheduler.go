@@ -319,7 +319,7 @@ func (s *RedisScheduler) deleteTrigger(t Trigger) error {
 func (s *RedisScheduler) GetAll(domain string) ([]Trigger, error) {
 	var infos []*TriggerInfos
 	db := couchdb.SimpleDatabasePrefix(domain)
-	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
+	// TODO(pagination): use a sort of couchdb.ForeachDocs function when available.
 	req := &couchdb.AllDocsRequest{Limit: 1000}
 	err := couchdb.GetAllDocs(db, consts.Triggers, req, &infos)
 	if err != nil {

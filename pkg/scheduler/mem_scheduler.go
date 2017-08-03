@@ -32,7 +32,7 @@ func newGlobalDBStorage() triggerGlobalStorage {
 
 func (s *globalDBStorage) GetAll() ([]*TriggerInfos, error) {
 	var infos []*TriggerInfos
-	// TODO(pagination): use a sort of couchdb.WalkDocs function when available.
+	// TODO(pagination): use a sort of couchdb.ForeachDocs function when available.
 	req := &couchdb.AllDocsRequest{Limit: 1000}
 	err := couchdb.GetAllDocs(couchdb.GlobalTriggersDB, consts.Triggers, req, &infos)
 	if err != nil {
