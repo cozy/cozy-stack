@@ -723,7 +723,6 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
-// TODO: pagination
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {
 	v, err := query.Values(req)
 	if err != nil {
@@ -733,7 +732,7 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 
 	var response AllDocsResponse
 	url := makeDBName(db, doctype) + "/_all_docs?" + v.Encode()
-	err = makeRequest(db, "POST", url, &req, &response)
+	err = makeRequest(db, "GET", url, nil, &response)
 	if err != nil {
 		return err
 	}
@@ -752,6 +751,56 @@ func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interf
 		return err
 	}
 	return json.Unmarshal(data, results)
+}
+
+// ForeachDocs traverse all the documents from the given database with the
+// specified doctype and calls a function for each document.
+func ForeachDocs(db Database, doctype string, doc interface{}, fn func() error) error {
+	var startKey string
+	limit := 100
+	for {
+		skip := 0
+		if startKey != "" {
+			skip = 1
+		}
+		req := &AllDocsRequest{
+			StartKeyDocID: startKey,
+			Skip:          skip,
+			Limit:         limit,
+		}
+		v, err := query.Values(req)
+		if err != nil {
+			return err
+		}
+		v.Add("include_docs", "true")
+
+		var res AllDocsResponse
+		url := makeDBName(db, doctype) + "/_all_docs?" + v.Encode()
+		err = makeRequest(db, "GET", url, nil, &res)
+		if err != nil {
+			return err
+		}
+
+		var count int
+		startKey = ""
+		for _, row := range res.Rows {
+			if !strings.HasPrefix(row.ID, "_design") {
+				if err = json.Unmarshal(row.Doc, doc); err != nil {
+					return err
+				}
+				if err = fn(); err != nil {
+					return err
+				}
+				startKey = row.ID
+				count++
+			}
+		}
+		if count == 0 || len(res.Rows) < limit {
+			break
+		}
+	}
+
+	return nil
 }
 
 // Proxy generate a httputil.ReverseProxy which forwards the request to the
@@ -819,12 +868,13 @@ type FindRequest struct {
 
 // AllDocsRequest is used to build a _all_docs request
 type AllDocsRequest struct {
-	Descending bool     `url:"descending,omitempty"`
-	Keys       []string `url:"keys,omitempty"`
-	Limit      int      `url:"limit,omitempty"`
-	Skip       int      `url:"skip,omitempty"`
-	StartKey   string   `url:"start_key,omitempty"`
-	EndKey     string   `url:"end_key,omitempty"`
+	Descending    bool   `url:"descending,omitempty"`
+	Limit         int    `url:"limit,omitempty"`
+	Skip          int    `url:"skip,omitempty"`
+	StartKey      string `url:"startkey,omitempty"`
+	StartKeyDocID string `url:"startkey_docid,omitempty"`
+	EndKey        string `url:"endkey,omitempty"`
+	EndKeyDocID   string `url:"endkey_docid,omitempty"`
 }
 
 // AllDocsResponse is the response we receive from an _all_docs request

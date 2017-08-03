@@ -659,18 +659,15 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 
 // List returns the list of declared instances.
 func List() ([]*Instance, error) {
-	nb := 1000
-	var all, docs []*Instance
-	for skip := 0; skip < 1e9; skip += nb {
-		req := &couchdb.AllDocsRequest{Limit: nb, Skip: skip}
-		err := couchdb.GetAllDocs(couchdb.GlobalDB, consts.Instances, req, &docs)
-		if err != nil {
-			return nil, err
-		}
-		all = append(all, docs...)
-		if len(docs) == 0 {
-			break
-		}
+	var doc *Instance
+	var all []*Instance
+	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, &doc, func() error {
+		cop := *doc
+		all = append(all, &cop)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return all, nil
 }

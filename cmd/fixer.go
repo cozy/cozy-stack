@@ -95,8 +95,38 @@ var triggersFixer = &cobra.Command{
 	},
 }
 
+var jobsFixer = &cobra.Command{
+	Use:   "jobs [domain]",
+	Short: "Take a look at the consistency of the jobs",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		c := newClient(args[0], consts.Jobs)
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   "/jobs/clean",
+		})
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var result struct {
+			Deleted int `json:"deleted"`
+		}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Cleaned %d jobs\n", result.Deleted)
+		return nil
+	},
+}
+
 func init() {
 	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(triggersFixer)
+	fixerCmdGroup.AddCommand(jobsFixer)
 	RootCmd.AddCommand(fixerCmdGroup)
 }
