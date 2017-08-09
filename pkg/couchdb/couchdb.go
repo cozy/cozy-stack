@@ -562,10 +562,16 @@ func Upsert(db Database, doc Doc) error {
 
 	var old JSONDoc
 	err = GetDoc(db, doc.DocType(), id, &old)
+	if IsNoDatabaseError(err) {
+		err = CreateDB(db, doc.DocType())
+		if err != nil {
+			return err
+		}
+		return CreateNamedDoc(db, doc)
+	}
 	if IsNotFoundError(err) {
 		return CreateNamedDoc(db, doc)
 	}
-
 	if err != nil {
 		return err
 	}
