@@ -445,7 +445,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	}
 
 	if checkPermission {
-		err = permissions.Allow(c, "GET", doc)
+		err = permissions.Allow(c, permissions.GET, doc)
 		if err != nil {
 			return err
 		}

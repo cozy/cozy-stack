@@ -79,7 +79,6 @@ func ParseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 		if _, err := oauth.FindClient(instance, claims.Subject); err != nil {
 			return nil, permissions.ErrInvalidToken
 		}
-
 		return permissions.GetForOauth(&claims)
 
 	case permissions.CLIAudience:
@@ -112,30 +111,26 @@ func ParseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 	}
 }
 
-// extract permissions doc or set from the context
-func extract(c echo.Context) (*permissions.Permission, error) {
-	instance := middlewares.GetInstance(c)
-
-	if CheckRegisterToken(c, instance) {
-		return permissions.GetForRegisterToken(), nil
-	}
-
-	var tok string
-	if tok = GetRequestToken(c); tok == "" {
-		return nil, errNoToken
-	}
-
-	return ParseJWT(instance, tok)
-}
-
 // GetPermission extracts the permission from the echo context and checks their validity
 func GetPermission(c echo.Context) (*permissions.Permission, error) {
+	var err error
+
 	pdoc, ok := c.Get(contextPermissionDoc).(*permissions.Permission)
 	if ok && pdoc != nil {
 		return pdoc, nil
 	}
 
-	pdoc, err := extract(c)
+	inst := middlewares.GetInstance(c)
+	if CheckRegisterToken(c, inst) {
+		return permissions.GetForRegisterToken(), nil
+	}
+
+	tok := GetRequestToken(c)
+	if tok == "" {
+		return nil, errNoToken
+	}
+
+	pdoc, err = ParseJWT(inst, tok)
 	if err != nil {
 		return nil, err
 	}
