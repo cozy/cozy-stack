@@ -12,7 +12,6 @@ import (
 	"path"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/cozy/cozy-stack/pkg/apps/registry"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -88,7 +87,10 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.Header().Set("Content-Type", typeTextEventStream)
 			w.WriteHeader(200)
 		}
-
+		registries, err := instance.Registries()
+		if err != nil {
+			return err
+		}
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation:   apps.Install,
@@ -96,6 +98,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 				SourceURL:   c.QueryParam("Source"),
 				Slug:        slug,
 				Deactivated: c.QueryParam("Deactivated") == "true",
+				Registries:  registries,
 			},
 		)
 		if err != nil {
@@ -130,13 +133,17 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.Header().Set("Content-Type", typeTextEventStream)
 			w.WriteHeader(200)
 		}
-
+		registries, err := instance.Registries()
+		if err != nil {
+			return err
+		}
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
-				Operation: apps.Update,
-				Type:      installerType,
-				SourceURL: c.QueryParam("Source"),
-				Slug:      slug,
+				Operation:  apps.Update,
+				Type:       installerType,
+				SourceURL:  c.QueryParam("Source"),
+				Slug:       slug,
+				Registries: registries,
 			},
 		)
 		if err != nil {
@@ -164,11 +171,16 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowInstallApp(c, installerType, permissions.DELETE); err != nil {
 			return err
 		}
+		registries, err := instance.Registries()
+		if err != nil {
+			return err
+		}
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
-				Operation: apps.Delete,
-				Type:      installerType,
-				Slug:      slug,
+				Operation:  apps.Delete,
+				Type:       installerType,
+				Slug:       slug,
+				Registries: registries,
 			},
 		)
 		if err != nil {
@@ -295,8 +307,6 @@ func iconHandler(c echo.Context) error {
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listWebappsHandler)
-	router.GET("/registries", registryListHandler(apps.Webapp))
-	router.GET("/registries/:name/:version", versionHandler(apps.Webapp))
 	router.POST("/:slug", installHandler(apps.Webapp))
 	router.PUT("/:slug", updateHandler(apps.Webapp))
 	router.DELETE("/:slug", deleteHandler(apps.Webapp))
@@ -306,8 +316,6 @@ func WebappsRoutes(router *echo.Group) {
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
 	router.GET("/", listKonnectorsHandler)
-	router.GET("/registries", registryListHandler(apps.Konnector))
-	router.GET("/registries/:name/:version", versionHandler(apps.Konnector))
 	router.POST("/:slug", installHandler(apps.Konnector))
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))
@@ -331,8 +339,6 @@ func wrapAppsError(err error) error {
 		return jsonapi.BadRequest(err)
 	case apps.ErrMissingSource:
 		return jsonapi.BadRequest(err)
-	case registry.ErrVersionNotFound:
-		return jsonapi.NotFound(err)
 	}
 	if _, ok := err.(*url.Error); ok {
 		return jsonapi.InvalidParameter("Source", err)

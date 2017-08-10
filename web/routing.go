@@ -26,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/realtime"
+	"github.com/cozy/cozy-stack/web/registry"
 	"github.com/cozy/cozy-stack/web/remote"
 	"github.com/cozy/cozy-stack/web/settings"
 	"github.com/cozy/cozy-stack/web/sharings"
@@ -168,6 +169,7 @@ func SetupRoutes(router *echo.Echo) error {
 	auth.Routes(router.Group("/auth", mws...))
 	apps.WebappsRoutes(router.Group("/apps", mws...))
 	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
+	registry.Routes(router.Group("/registry", mws...))
 	data.Routes(router.Group("/data", mws...))
 	if config.IsDevRelease() {
 		imexport.Routes(router.Group("/imexport", mws...))
