@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 // NeedInstance is an echo middleware which will display an error

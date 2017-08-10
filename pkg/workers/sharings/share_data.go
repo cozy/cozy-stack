@@ -25,8 +25,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/cozy/echo"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo"
 )
 
 func init() {

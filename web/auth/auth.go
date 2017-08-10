@@ -19,8 +19,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/echo"
-	"github.com/cozy/echo/middleware"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 )
 
 // CredentialsErrorKey is the key for translating the message showed to the

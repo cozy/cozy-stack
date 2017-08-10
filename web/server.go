@@ -18,9 +18,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
-	"github.com/cozy/echo/middleware"
 	"github.com/google/gops/agent"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/afero"
 )

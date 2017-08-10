@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 // A Version describes a specific release of an application.

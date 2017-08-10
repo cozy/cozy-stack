@@ -13,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 func export(c echo.Context) error {

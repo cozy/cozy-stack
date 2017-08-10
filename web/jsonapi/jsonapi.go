@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 // ContentType is the official mime-type for JSON-API

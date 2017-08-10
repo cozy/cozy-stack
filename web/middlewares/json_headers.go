@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 // AcceptJSON is an echo middleware that checks that the HTTP Accept header

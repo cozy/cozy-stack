@@ -29,7 +29,7 @@ import (
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 

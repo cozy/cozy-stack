@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 const loggedInKey = "logged-in"

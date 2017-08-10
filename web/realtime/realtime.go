@@ -13,8 +13,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/echo"
 	"github.com/gorilla/websocket"
+	"github.com/labstack/echo"
 )
 
 const (

@@ -15,8 +15,8 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/echo"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/labstack/echo"
 
 	// konnectors is needed for bad triggers cleanup
 	konnectors "github.com/cozy/cozy-stack/pkg/workers/konnectors"

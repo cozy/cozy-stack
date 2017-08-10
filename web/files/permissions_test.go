@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
