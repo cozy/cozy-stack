@@ -3,7 +3,6 @@ package konnectors
 import (
 	"archive/tar"
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -196,39 +195,41 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	scanOut := bufio.NewScanner(cmdOut)
 	scanOut.Buffer(nil, 256*1024)
 
-	var msgChan = make(chan konnectorMsg)
 	var messages []konnectorMsg
 
 	log := logger.WithDomain(domain)
-
-	go doScanOut(jobID, scanOut, domain, msgChan, log)
-	go doScanErr(jobID, scanErr, log)
-	go func() {
-		hub := realtime.GetHub()
-		for msg := range msgChan {
-			// TODO: filter some of the messages
-			messages = append(messages, msg)
-			hub.Publish(&realtime.Event{
-				Verb: realtime.EventCreate,
-				Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
-					"type":    msg.Type,
-					"message": msg.Message,
-				}},
-				Domain: domain,
-			})
-		}
-	}()
 
 	if err = cmd.Start(); err != nil {
 		return wrapErr(ctx, err)
 	}
 
-	err = cmd.Wait()
-	if err != nil {
-		err = wrapErr(ctx, err)
+	go doScanErr(jobID, scanErr, log)
+
+	hub := realtime.GetHub()
+
+	for scanOut.Scan() {
+		line := scanOut.Bytes()
+		var msg konnectorMsg
+		if err = json.Unmarshal(line, &msg); err != nil {
+			log.Warnf("[konnector] %s: Could not parse stdout as JSON: \"%s\"", jobID, string(line))
+			continue
+		}
+		// TODO: filter some of the messages
+		messages = append(messages, msg)
+		hub.Publish(&realtime.Event{
+			Verb: realtime.EventCreate,
+			Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
+				"type":    msg.Type,
+				"message": msg.Message,
+			}},
+			Domain: domain,
+		})
 	}
 
-	close(msgChan)
+	if err = cmd.Wait(); err != nil {
+		err = wrapErr(ctx, err)
+		log.Errorf("[konnector] %s: Konnector has failed: %s", jobID, err.Error())
+	}
 
 	errLogs := couchdb.Upsert(inst, &konnectorLogs{
 		Slug:     slug,
@@ -248,35 +249,9 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	return err
 }
 
-func doScanOut(jobID string, scanner *bufio.Scanner, domain string,
-	msgs chan konnectorMsg, log *logrus.Entry) {
-	for scanner.Scan() {
-		linebb := scanner.Bytes()
-		from := bytes.IndexByte(linebb, '{')
-		to := bytes.LastIndexByte(linebb, '}')
-		var msg konnectorMsg
-		log.Infof("[konnector] %s: Stdout: %s", jobID, string(linebb))
-		if from > -1 && from < to && to > -1 {
-			err := json.Unmarshal(linebb[from:to+1], &msg)
-			if err == nil {
-				msgs <- msg
-				continue
-			}
-		}
-		log.Warnf("[konnector] %s: Could not parse as JSON", jobID)
-		log.Debugf("[konnector] %s: %s", jobID, string(linebb))
-	}
-	if err := scanner.Err(); err != nil {
-		log.Errorf("[konnector] %s: Error while reading stdout: %s", jobID, err)
-	}
-}
-
 func doScanErr(jobID string, scanner *bufio.Scanner, log *logrus.Entry) {
 	for scanner.Scan() {
 		log.Errorf("[konnector] %s: Stderr: %s", jobID, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		log.Errorf("[konnector] %s: Error while reading stderr: %s", jobID, err)
 	}
 }
 
