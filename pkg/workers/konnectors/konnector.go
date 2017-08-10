@@ -196,20 +196,17 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	scanOut := bufio.NewScanner(cmdOut)
 	scanOut.Buffer(nil, 256*1024)
 
-	waitch := make(chan error)
-	logsch := make(chan konnectorMsg, 10)
-
 	var messages []konnectorMsg
 
 	log := logger.WithDomain(domain)
+	logsch := make(chan konnectorMsg, 10)
 
-	go doScanOut(jobID, scanOut, domain, logsch, log)
-	go doScanErr(jobID, scanErr, log)
 	if err = cmd.Start(); err != nil {
 		return wrapErr(ctx, err)
 	}
 
-	go func() { waitch <- cmd.Wait() }()
+	go doScanOut(jobID, scanOut, domain, logsch, log)
+	go doScanErr(jobID, scanErr, log)
 
 	hub := realtime.GetHub()
 	for msg := range logsch {
@@ -225,8 +222,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		})
 	}
 
-	err = <-waitch
-	if err != nil {
+	if err = cmd.Wait(); err != nil {
 		err = wrapErr(ctx, err)
 	}
 
