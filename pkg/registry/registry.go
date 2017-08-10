@@ -24,22 +24,25 @@ type Version struct {
 	TarPrefix string          `json:"tar_prefix"`
 }
 
-var ErrVersionNotFound = errors.New("Version not found")
+var errVersionNotFound = errors.New("Version not found")
 
 var proxyClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, error) {
+// GetLatestVersion returns the latest version available from the list of
+// registries by resolving them in sequence using the specified application
+// name and channel name.
+func GetLatestVersion(appName, channel string, registries []*url.URL) (*Version, error) {
 	requestURI := fmt.Sprintf("/registry/%s/%s/latest",
-		url.PathEscape(slug),
+		url.PathEscape(appName),
 		url.PathEscape(channel))
 	rc, ok, err := resolveInRegistries(registries, requestURI)
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
-		return nil, ErrVersionNotFound
+		return nil, errVersionNotFound
 	}
 	defer rc.Close()
 	var v *Version
@@ -49,6 +52,9 @@ func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, er
 	return v, nil
 }
 
+// Proxy will proxy the given request to the registries in sequence and return
+// the response as io.ReadCloser when finding a registry returning a HTTP 200OK
+// response.
 func Proxy(req *http.Request, registries []*url.URL) (io.ReadCloser, error) {
 	rc, ok, err := resolveInRegistries(registries, req.RequestURI)
 	if err != nil {

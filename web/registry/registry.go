@@ -24,6 +24,7 @@ func proxyReq(c echo.Context) error {
 	return c.Stream(http.StatusOK, echo.MIMEApplicationJSON, r)
 }
 
+// Routes sets the routing for the registry
 func Routes(router *echo.Group) {
 	router.GET("", proxyReq)
 	router.GET("/", proxyReq)
