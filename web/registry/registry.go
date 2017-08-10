@@ -14,8 +14,11 @@ func proxyReq(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	// TODO: remove this offline registry (temporary)
+	if len(registries) == 0 {
+		registries = append(registries, offlineRegistry)
+	}
 	req := c.Request()
-	registries = append(registries, offlineRegistry)
 	r, err := registry.Proxy(req, registries)
 	if err != nil {
 		return err
