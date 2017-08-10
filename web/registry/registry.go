@@ -15,6 +15,7 @@ func proxyReq(c echo.Context) error {
 		return err
 	}
 	req := c.Request()
+	registries = append(registries, offlineRegistry)
 	r, err := registry.Proxy(req, registries)
 	if err != nil {
 		return err
@@ -24,6 +25,7 @@ func proxyReq(c echo.Context) error {
 }
 
 func Routes(router *echo.Group) {
+	router.GET("", proxyReq)
 	router.GET("/", proxyReq)
 	router.GET("/:app", proxyReq)
 	router.GET("/:app/:version", proxyReq)
