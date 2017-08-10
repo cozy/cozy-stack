@@ -160,7 +160,9 @@ func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
 		}))
 	}
 
-	if err = agent.Listen(nil); err != nil {
+	// XXX: Removed gops graceful shutdown as it broke our own...
+	//
+	if err = agent.Listen(&agent.Options{NoShutdownCleanup: true}); err != nil {
 		fmt.Printf("Error on gops agent: %s\n", err)
 	}
 
