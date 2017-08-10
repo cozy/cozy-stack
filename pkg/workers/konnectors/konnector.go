@@ -228,6 +228,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 
 	if err = cmd.Wait(); err != nil {
 		err = wrapErr(ctx, err)
+		log.Errorf("[konnector] %s: Konnector has failed: %s", jobID, err.Error())
 	}
 
 	errLogs := couchdb.Upsert(inst, &konnectorLogs{
@@ -251,9 +252,6 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 func doScanErr(jobID string, scanner *bufio.Scanner, log *logrus.Entry) {
 	for scanner.Scan() {
 		log.Errorf("[konnector] %s: Stderr: %s", jobID, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		log.Errorf("[konnector] %s: Error while reading stderr: %s", jobID, err)
 	}
 }
 
