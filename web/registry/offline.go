@@ -2,62 +2,39 @@ package registry
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"time"
-
-	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 )
 
-// AppDescription is the embedded description of an application.
-type AppDescription struct {
+var offlineRegistry *url.URL
+
+type appDescription struct {
 	En string `json:"en"`
 	Fr string `json:"fr"`
 }
 
-// AppVersions is the embedded versions of an application.
-type AppVersions struct {
+type appVersions struct {
 	Stable []string `json:"stable"`
 	Beta   []string `json:"beta"`
 	Dev    []string `json:"dev"`
 }
 
-// An App is the manifest of on application on the registry.
-type App struct {
-	appType     string
+type app struct {
 	Name        string         `json:"name"`
+	Type        string         `json:"type"`
 	Editor      string         `json:"editor"`
-	Description AppDescription `json:"description"`
+	Description appDescription `json:"description"`
 	Repository  string         `json:"repository"`
 	Tags        []string       `json:"tags"`
-	Versions    AppVersions    `json:"versions"`
+	Versions    appVersions    `json:"versions"`
 
-	vers []*Version
+	vers []*version
 }
 
-// ID is used to implement the couchdb.Doc aterface
-func (a *App) ID() string { return a.Name }
-
-// Rev is used to implement the couchdb.Doc aterface
-func (a *App) Rev() string { return "" }
-
-// DocType is used to implement the couchdb.Doc aterface
-func (a *App) DocType() string { return "io.cozy.registry." + a.appType + "s" }
-
-// Clone implements couchdb.Doc
-func (a *App) Clone() couchdb.Doc {
-	cloned := *a
-	return &cloned
-}
-
-// SetID is used to implement the couchdb.Doc aterface
-func (a *App) SetID(id string) {}
-
-// SetRev is used to implement the couchdb.Doc aterface
-func (a *App) SetRev(rev string) {}
-
-// A Version describes a specific release of an application.
-type Version struct {
+type version struct {
 	Name      string          `json:"name"`
 	Version   string          `json:"version"`
 	URL       string          `json:"url"`
@@ -68,104 +45,83 @@ type Version struct {
 	TarPrefix string          `json:"tar_prefix"`
 }
 
-// ID is used to implement the couchdb.Doc aterface
-func (v *Version) ID() string { return v.Name + "/" + v.Version }
-
-// Rev is used to implement the couchdb.Doc aterface
-func (v *Version) Rev() string { return "" }
-
-// DocType is used to implement the couchdb.Doc aterface
-func (v *Version) DocType() string { return consts.Versions }
-
-// Clone implements couchdb.Doc
-func (v *Version) Clone() couchdb.Doc {
-	cloned := *v
-	return &cloned
-}
-
-// SetID is used to implement the couchdb.Doc aterface
-func (v *Version) SetID(id string) {}
-
-// SetRev is used to implement the couchdb.Doc aterface
-func (v *Version) SetRev(rev string) {}
-
 var (
-	onboarding = &App{
-		appType: "webapp",
-		Name:    "Onboarding",
-		Editor:  "Cozy",
-		Description: AppDescription{
+	onboarding = &app{
+		Name:   "onboarding",
+		Type:   "webapp",
+		Editor: "Cozy",
+		Description: appDescription{
 			En: "Register application for Cozy v3",
 			Fr: "Application pour l'embarquement de Cozy v3",
 		},
 		Repository: "https://github.com/cozy/cozy-onboarding-v3",
 		Tags:       []string{"welcome"},
-		Versions: AppVersions{
+		Versions: appVersions{
 			Stable: []string{"3.0.0"},
 		},
 	}
 
-	drive = &App{
-		appType: "webapp",
-		Name:    "Drive",
-		Editor:  "Cozy",
-		Description: AppDescription{
+	drive = &app{
+		Name:   "drive",
+		Type:   "webapp",
+		Editor: "Cozy",
+		Description: appDescription{
 			En: "File manager for Cozy v3",
 			Fr: "Gestionnaire de fichiers pour Cozy v3",
 		},
 		Repository: "https://github.com/cozy/cozy-drive",
 		Tags:       []string{"files"},
-		Versions: AppVersions{
+		Versions: appVersions{
 			Stable: []string{"0.3.5", "0.3.4"},
 		},
 	}
 
-	photos = &App{
-		appType: "webapp",
-		Name:    "Photos",
-		Editor:  "Cozy",
-		Description: AppDescription{
+	photos = &app{
+		Name:   "photos",
+		Type:   "webapp",
+		Editor: "Cozy",
+		Description: appDescription{
 			En: "Photos manager for Cozy v3",
 			Fr: "Gestionnaire de photos pour Cozy v3",
 		},
 		Repository: "https://github.com/cozy/cozy-photos-v3",
 		Tags:       []string{"albums"},
-		Versions: AppVersions{
+		Versions: appVersions{
 			Stable: []string{"3.0.0"},
 		},
 	}
 
-	settings = &App{
-		appType: "webapp",
-		Name:    "Settings",
-		Editor:  "Cozy",
-		Description: AppDescription{
+	settings = &app{
+		Name:   "settings",
+		Type:   "webapp",
+		Editor: "Cozy",
+		Description: appDescription{
 			En: "Settings manager for Cozy v3",
 			Fr: "Gestionnaire de paramètres pour Cozy v3",
 		},
 		Repository: "https://github.com/cozy/cozy-settings",
 		Tags:       []string{"profile"},
-		Versions: AppVersions{
+		Versions: appVersions{
 			Stable: []string{"3.0.3"},
 		},
 	}
 
-	collect = &App{
-		appType: "webapp",
-		Name:    "Collect",
-		Editor:  "Cozy",
-		Description: AppDescription{
+	collect = &app{
+		Name:   "collect",
+		Type:   "webapp",
+		Editor: "Cozy",
+		Description: appDescription{
 			En: "Configuration application for konnectors",
 			Fr: "Application de configuration pour les konnectors",
 		},
 		Repository: "https://github.com/cozy/cozy-collect",
 		Tags:       []string{"konnectors"},
-		Versions: AppVersions{
+		Versions: appVersions{
 			Stable: []string{"3.0.3"},
 		},
-		vers: []*Version{
+		vers: []*version{
 			{
-				Name:      "Collect",
+				Name:      "collect",
 				Version:   "3.0.3",
 				URL:       "https://github.com/cozy/cozy-collect/releases/download/v3.0.3/cozy-collect-v3.0.3.tgz",
 				Sha256:    "1332d2301c2362f207cf35880725179157368a921253293b062946eb6d96e3ae",
@@ -173,7 +129,7 @@ var (
 				Size:      "3821149",
 				TarPrefix: "cozy-collect-v3.0.3",
 				Manifest: json.RawMessage(`{
-"name": "Collect",
+"name": "collect",
 "slug": "collect",
 "icon": "cozy_collect.svg",
 "description": "Configuration application for konnectors",
@@ -257,47 +213,87 @@ var (
 		},
 	}
 
-	webapps = []*App{onboarding, drive, photos, settings, collect}
+	webapps = []*app{onboarding, drive, photos, settings, collect}
 )
 
-// All returns all the (webapps|konnectors) applications.
-func All(appType string) []*App {
-	return webapps
-}
-
-// FindBySlug returns the application with the given slug.
-func FindBySlug(slug string) (*App, error) {
-	slug = strings.ToLower(slug)
+func getApp(appName string) (*app, bool) {
+	appName = strings.ToLower(appName)
 	for _, app := range webapps {
-		if strings.ToLower(app.Name) == slug {
-			return app, nil
+		if strings.ToLower(app.Name) == appName {
+			return app, true
 		}
 	}
-	return nil, ErrAppNotFound
+	return nil, false
 }
 
-// GetAppVersion returns a version object for an app + version number.
-func GetAppVersion(slug, number string) (*Version, error) {
-	app, err := FindBySlug(slug)
-	if err != nil {
-		return nil, err
+func getVersion(appName, number string) (*version, bool) {
+	app, ok := getApp(appName)
+	if !ok {
+		return nil, false
 	}
 	for _, v := range app.vers {
 		if v.Version == number {
-			return v, nil
+			return v, true
 		}
 	}
-	return nil, ErrVersionNotFound
+	return nil, false
 }
 
-// GetAppLatestVersion returns the latest version for an app.
-func GetAppLatestVersion(slug string) (*Version, error) {
-	app, err := FindBySlug(slug)
-	if err != nil {
-		return nil, err
+func getLatestVersion(appName string) (*version, bool) {
+	app, ok := getApp(appName)
+	if !ok {
+		return nil, false
 	}
 	if len(app.vers) == 0 {
-		return nil, ErrVersionNotFound
+		return nil, false
 	}
-	return app.vers[len(app.vers)-1], nil
+	return app.vers[len(app.vers)-1], true
+}
+
+func init() {
+	var mux = http.NewServeMux()
+	mux.HandleFunc("/registry", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(webapps)
+	})
+	mux.HandleFunc("/registry/", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		path := req.URL.Path
+		if path == "/registry/" {
+			json.NewEncoder(w).Encode(webapps)
+			return
+		}
+		path = path[len("/registry/"):]
+		paths := strings.Split(path, "/")
+		var appName, versionNumber, channel string
+		switch len(paths) {
+		case 1:
+			appName = paths[0]
+		case 2:
+			appName, versionNumber = paths[0], paths[1]
+		case 3:
+			if paths[2] == "latest" {
+				appName, channel = paths[0], paths[1]
+			}
+		}
+		var v interface{}
+		var ok bool
+		if appName != "" {
+			if channel != "" {
+				v, ok = getLatestVersion(appName)
+			} else if versionNumber != "" {
+				v, ok = getVersion(appName, versionNumber)
+			} else {
+				v, ok = getApp(appName)
+			}
+		}
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			json.NewEncoder(w).Encode(v)
+		}
+	})
+
+	server := httptest.NewServer(mux)
+	offlineRegistry, _ = url.Parse(server.URL)
 }

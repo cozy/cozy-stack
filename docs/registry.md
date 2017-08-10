@@ -4,6 +4,8 @@ The registry is a place where developers can submit their applications, both web
 
 We define the application registry as an API. This should allow us to defer the real implementation of the registry storage and allow different store implementations.
 
+The stack itself implement the [querying part of the registry API](#apis-querying-registry), proxying the request to [the registries attached to the instance](#attaching-a-cozy-stack-to-a-registry-or-a-list-of-registries).
+
 ## Channels
 
 We differentiate three channels of release for each application:
@@ -33,6 +35,7 @@ An application object contains the following fields:
 - `name`: the application name
 - `type`: the application type ("webapp" or "konnector")
 - `editor`: the application editor name
+- `full_name`: object containing a human readable name for the application in multiple languages
 - `description`: object containing the description description of the application in multiple languages
 - `category`: the application category
 - `repository`: object with type and URL of package repository
@@ -46,6 +49,10 @@ Example:
     "name": "drive",
     "type": "webapp",
     "editor": "cozy",
+    "full_name": {
+        "en": "Drive",
+        "fr": "Drive"
+    },
     "description": {
         "en": "The drive application",
         "fr": "L'application drive gestionnaire de fichier"
@@ -98,7 +105,7 @@ Example:
 
 These APIs can be used to add elements to the registry.
 
-### POST /apps/:app
+### POST /registry/:app
 
 This route adds or modify an application to the registry. The content of the request should be a json object of an application.
 
@@ -111,7 +118,7 @@ This route adds or modify an application to the registry. The content of the req
 #### Request
 
 ```http
-POST /apps/drive HTTP/1.1
+POST /registry/drive HTTP/1.1
 Authorization: AbCdE
 ```
 
@@ -119,6 +126,10 @@ Authorization: AbCdE
 {
     "name": "drive",
     "editor": "cozy",
+    "full_name": {
+        "en": "Drive",
+        "fr": "Drive"
+    },
     "description": {
         "en": "The drive application"
     },
@@ -127,7 +138,7 @@ Authorization: AbCdE
 }
 ```
 
-### POST /apps/:app/:version
+### POST /registry/:app/:version
 
 This route adds a version of an application to the registry to the specified channel (stable, beta or dev).
 
@@ -149,7 +160,7 @@ The content of the manifest file extracted from the application data is used to 
 Request to add a stable release:
 
 ```http
-POST /apps/drive/3.1.2 HTTP/1.1
+POST /registry/drive/3.1.2 HTTP/1.1
 Authorization: AbCdE
 ```
 
@@ -163,7 +174,7 @@ Authorization: AbCdE
 Request to add a development release:
 
 ```http
-POST /apps/drive/3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a HTTP/1.1
+POST /registry/drive/3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a HTTP/1.1
 Authorization: AbCdE
 ```
 
@@ -250,14 +261,14 @@ Content-Type: application/json
 ]
 ```
 
-### GET /apps/:app
+### GET /registry/:app
 
 Get an application object by name.
 
 #### Request
 
 ```http
-GET /apps/drive HTTP/1.1
+GET /registry/drive HTTP/1.1
 ```
 
 #### Response
@@ -282,14 +293,14 @@ Content-Type: application/json
 }
 ```
 
-### GET /apps/:app/:version
+### GET /registry/:app/:version
 
 Get an application version.
 
 #### Request
 
 ```http
-GET /apps/drive/3.1.1 HTTP/1.1
+GET /registry/drive/3.1.1 HTTP/1.1
 ```
 
 #### Response
@@ -312,14 +323,14 @@ Content-Type: application/json
 }
 ```
 
-### GET /apps/:app/:channel/latest
+### GET /registry/:app/:channel/latest
 
 Get the latest version available on the specified channel.
 
 #### Request
 
 ```http
-GET /apps/drive/dev/latest HTTP/1.1
+GET /registry/drive/dev/latest HTTP/1.1
 ```
 
 #### Response

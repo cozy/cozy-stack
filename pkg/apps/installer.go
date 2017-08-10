@@ -51,6 +51,7 @@ type InstallerOptions struct {
 	Slug        string
 	SourceURL   string
 	Deactivated bool
+	Registries  []*url.URL
 }
 
 // Fetcher interface should be implemented by the underlying transport
@@ -148,7 +149,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	case "http", "https":
 		fetcher = newHTTPFetcher(manFilename, log)
 	case "registry":
-		fetcher = newRegistryFetcher(manFilename, log)
+		fetcher = newRegistryFetcher(opts.Registries, log)
 	default:
 		return nil, ErrNotSupportedSource
 	}

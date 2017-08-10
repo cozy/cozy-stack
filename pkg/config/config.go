@@ -351,13 +351,16 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 		}
 	}
 
-	if defaults, ok := regs["default"]; ok {
-		for ctx, urls := range regs {
-			if ctx == "default" {
-				continue
-			}
-			regs[ctx] = append(urls, defaults...)
+	defaults, ok := regs["default"]
+	if !ok {
+		defaults = make([]*url.URL, 0)
+		regs["default"] = defaults
+	}
+	for ctx, urls := range regs {
+		if ctx == "default" {
+			continue
 		}
+		regs[ctx] = append(urls, defaults...)
 	}
 
 	return regs, nil
