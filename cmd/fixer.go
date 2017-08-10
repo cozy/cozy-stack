@@ -44,13 +44,15 @@ var md5FixerCmd = &cobra.Command{
 			fmt.Printf("Recalculate md5 of %s...", name)
 			r, err := c.DownloadByID(doc.ID)
 			if err != nil {
-				return err
+				fmt.Printf("failed to init download: %s", err.Error())
+				return nil
 			}
 			defer r.Close()
 			h := md5.New() // #nosec
 			_, err = io.Copy(h, r)
 			if err != nil {
-				return err
+				fmt.Printf("failed to download: %s", err.Error())
+				return nil
 			}
 			_, err = c.UpdateAttrsByID(doc.ID, &client.FilePatch{
 				Rev: doc.Rev,
@@ -59,9 +61,10 @@ var md5FixerCmd = &cobra.Command{
 				},
 			})
 			if err != nil {
-				return err
+				fmt.Printf("failed to update: %s", err.Error())
+				return nil
 			}
-			fmt.Println()
+			fmt.Println("ok.")
 			return nil
 		})
 	},
