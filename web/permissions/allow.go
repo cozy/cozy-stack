@@ -3,7 +3,6 @@ package permissions
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -115,18 +114,7 @@ func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Validable) (s
 	if !pdoc.Permissions.Allow(v, o) {
 		return "", errForbidden
 	}
-	sourceID := pdoc.SourceID
-	switch pdoc.Type {
-	case permissions.TypeWebapp:
-		if strings.HasPrefix(sourceID, consts.Apps+"/") {
-			return sourceID[len(consts.Apps)+1:], nil
-		}
-	case permissions.TypeKonnector:
-		if strings.HasPrefix(sourceID, consts.Konnectors+"/") {
-			return sourceID[len(consts.Konnectors)+1:], nil
-		}
-	}
-	return "", errForbidden
+	return sourceID, nil
 }
 
 // AllowLogout checks if the current permission allows loging out.
