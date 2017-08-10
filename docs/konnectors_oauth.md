@@ -31,7 +31,7 @@ as well as the associated scope
 }
 ```
 
-`io.cozy.accounts_type` contains the oauth configuration
+`io.cozy.account_types` contains the oauth configuration
 
 ```json
 {
@@ -44,7 +44,7 @@ as well as the associated scope
 }
 ```
 
-io.cozy.accounts_type should not accessible by applications. They will be loaded into the stack by infra and will be configurable through config files for self-hosters.
+io.cozy.account_types should not accessible by applications. They will be loaded into the stack by infra and will be configurable through config files for self-hosters.
 
 # Reminder OAuth flow
 
