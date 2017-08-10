@@ -196,39 +196,39 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	scanOut := bufio.NewScanner(cmdOut)
 	scanOut.Buffer(nil, 256*1024)
 
-	var msgChan = make(chan konnectorMsg)
+	waitch := make(chan error)
+	logsch := make(chan konnectorMsg, 10)
+
 	var messages []konnectorMsg
 
 	log := logger.WithDomain(domain)
 
-	go doScanOut(jobID, scanOut, domain, msgChan, log)
+	go doScanOut(jobID, scanOut, domain, logsch, log)
 	go doScanErr(jobID, scanErr, log)
-	go func() {
-		hub := realtime.GetHub()
-		for msg := range msgChan {
-			// TODO: filter some of the messages
-			messages = append(messages, msg)
-			hub.Publish(&realtime.Event{
-				Verb: realtime.EventCreate,
-				Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
-					"type":    msg.Type,
-					"message": msg.Message,
-				}},
-				Domain: domain,
-			})
-		}
-	}()
-
 	if err = cmd.Start(); err != nil {
 		return wrapErr(ctx, err)
 	}
 
-	err = cmd.Wait()
+	go func() { waitch <- cmd.Wait() }()
+
+	hub := realtime.GetHub()
+	for msg := range logsch {
+		// TODO: filter some of the messages
+		messages = append(messages, msg)
+		hub.Publish(&realtime.Event{
+			Verb: realtime.EventCreate,
+			Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
+				"type":    msg.Type,
+				"message": msg.Message,
+			}},
+			Domain: domain,
+		})
+	}
+
+	err = <-waitch
 	if err != nil {
 		err = wrapErr(ctx, err)
 	}
-
-	close(msgChan)
 
 	errLogs := couchdb.Upsert(inst, &konnectorLogs{
 		Slug:     slug,
@@ -248,8 +248,12 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	return err
 }
 
-func doScanOut(jobID string, scanner *bufio.Scanner, domain string,
-	msgs chan konnectorMsg, log *logrus.Entry) {
+func doScanOut(jobID string,
+	scanner *bufio.Scanner, domain string,
+	logsch chan konnectorMsg, log *logrus.Entry) {
+
+	defer close(logsch)
+
 	for scanner.Scan() {
 		linebb := scanner.Bytes()
 		from := bytes.IndexByte(linebb, '{')
@@ -259,13 +263,14 @@ func doScanOut(jobID string, scanner *bufio.Scanner, domain string,
 		if from > -1 && from < to && to > -1 {
 			err := json.Unmarshal(linebb[from:to+1], &msg)
 			if err == nil {
-				msgs <- msg
+				logsch <- msg
 				continue
 			}
 		}
 		log.Warnf("[konnector] %s: Could not parse as JSON", jobID)
 		log.Debugf("[konnector] %s: %s", jobID, string(linebb))
 	}
+
 	if err := scanner.Err(); err != nil {
 		log.Errorf("[konnector] %s: Error while reading stdout: %s", jobID, err)
 	}
