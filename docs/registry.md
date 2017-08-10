@@ -35,6 +35,7 @@ An application object contains the following fields:
 - `name`: the application name
 - `type`: the application type ("webapp" or "konnector")
 - `editor`: the application editor name
+- `full_name`: object containing a human readable name for the application in multiple languages
 - `description`: object containing the description description of the application in multiple languages
 - `category`: the application category
 - `repository`: object with type and URL of package repository
@@ -48,6 +49,10 @@ Example:
     "name": "drive",
     "type": "webapp",
     "editor": "cozy",
+    "full_name": {
+        "en": "Drive",
+        "fr": "Drive"
+    },
     "description": {
         "en": "The drive application",
         "fr": "L'application drive gestionnaire de fichier"
@@ -121,6 +126,10 @@ Authorization: AbCdE
 {
     "name": "drive",
     "editor": "cozy",
+    "full_name": {
+        "en": "Drive",
+        "fr": "Drive"
+    },
     "description": {
         "en": "The drive application"
     },
