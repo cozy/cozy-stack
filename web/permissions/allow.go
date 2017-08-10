@@ -114,7 +114,7 @@ func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Validable) (s
 	if !pdoc.Permissions.Allow(v, o) {
 		return "", errForbidden
 	}
-	return sourceID, nil
+	return pdoc.SourceID, nil
 }
 
 // AllowLogout checks if the current permission allows loging out.
