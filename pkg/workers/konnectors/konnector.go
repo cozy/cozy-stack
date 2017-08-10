@@ -211,7 +211,7 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 		line := scanOut.Bytes()
 		var msg konnectorMsg
 		if err = json.Unmarshal(line, &msg); err != nil {
-			log.Warnf("[konnector] %s: Could not parse stdout as JSON: \"\"", jobID, string(line))
+			log.Warnf("[konnector] %s: Could not parse stdout as JSON: \"%s\"", jobID, string(line))
 			continue
 		}
 		// TODO: filter some of the messages
