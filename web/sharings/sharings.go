@@ -106,9 +106,8 @@ func SharingAnswer(c echo.Context) error {
 
 // CreateRecipient adds a sharing Recipient.
 func CreateRecipient(c echo.Context) error {
-
 	recipient := new(sharings.Recipient)
-	if err := c.Bind(recipient); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(recipient); err != nil {
 		return err
 	}
 	instance := middlewares.GetInstance(c)
@@ -169,7 +168,7 @@ func CreateSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	sharing := new(sharings.Sharing)
-	if err := c.Bind(sharing); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(sharing); err != nil {
 		return err
 	}
 	if err := checkCreatePermissions(c, sharing); err != nil {
@@ -237,13 +236,12 @@ func AddSharingRecipient(c echo.Context) error {
 	sharing := &sharings.Sharing{}
 	err := couchdb.GetDoc(instance, consts.Sharings, id, sharing)
 	if err != nil {
-		err = sharings.ErrSharingDoesNotExist
-		return wrapErrors(err)
+		return wrapErrors(sharings.ErrSharingDoesNotExist)
 	}
 
 	// Create recipient, register, and send mail
 	ref := couchdb.DocReference{}
-	if err = c.Bind(&ref); err != nil {
+	if err = json.NewDecoder(c.Request().Body).Decode(&ref); err != nil {
 		return err
 	}
 	rs := &sharings.RecipientStatus{
@@ -305,7 +303,7 @@ func ReceiveClientID(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	p := &sharings.SharingRequestParams{}
-	if err := c.Bind(p); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(p); err != nil {
 		return err
 	}
 	sharing, rec, err := sharings.FindSharingRecipient(instance, p.SharingID, p.ClientID)
@@ -327,7 +325,7 @@ func getAccessToken(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	p := &sharings.SharingRequestParams{}
-	if err := c.Bind(p); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(p); err != nil {
 		return err
 	}
 	if p.SharingID == "" {

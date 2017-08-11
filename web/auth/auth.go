@@ -4,6 +4,7 @@ package auth
 import (
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -259,7 +260,7 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error
 func registerClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
 	client := new(oauth.Client)
-	if err := c.Bind(client); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(client); err != nil {
 		return err
 	}
 	instance := middlewares.GetInstance(c)
@@ -278,7 +279,7 @@ func readClient(c echo.Context) error {
 func updateClient(c echo.Context) error {
 	// TODO add rate-limiting to prevent DOS attacks
 	client := new(oauth.Client)
-	if err := c.Bind(client); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(client); err != nil {
 		return err
 	}
 	oldClient := c.Get("client").(oauth.Client)

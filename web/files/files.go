@@ -5,6 +5,7 @@ package files
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -745,7 +746,7 @@ func FindFilesMango(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	var findRequest map[string]interface{}
 
-	if err := c.Bind(&findRequest); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(&findRequest); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
