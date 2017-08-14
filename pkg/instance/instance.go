@@ -287,7 +287,7 @@ func (i *Instance) Registries() ([]*url.URL, error) {
 	}
 	regs, ok := config.GetConfig().Registries[ctx]
 	if !ok {
-		return nil, ErrContextNotFound
+		return make([]*url.URL, 0), nil
 	}
 	return regs, nil
 }

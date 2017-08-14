@@ -80,16 +80,16 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
+		registries, err := instance.Registries()
+		if err != nil {
+			return err
+		}
 		var w http.ResponseWriter
 		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
 		if isEventStream {
 			w = c.Response().Writer
 			w.Header().Set("Content-Type", typeTextEventStream)
 			w.WriteHeader(200)
-		}
-		registries, err := instance.Registries()
-		if err != nil {
-			return err
 		}
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
@@ -125,6 +125,10 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err := permissions.AllowInstallApp(c, installerType, permissions.POST); err != nil {
 			return err
 		}
+		registries, err := instance.Registries()
+		if err != nil {
+			return err
+		}
 
 		var w http.ResponseWriter
 		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
@@ -132,10 +136,6 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			w = c.Response().Writer
 			w.Header().Set("Content-Type", typeTextEventStream)
 			w.WriteHeader(200)
-		}
-		registries, err := instance.Registries()
-		if err != nil {
-			return err
 		}
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
