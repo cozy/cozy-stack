@@ -9,7 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 var errForbidden = echo.NewHTTPError(http.StatusForbidden)

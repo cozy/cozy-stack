@@ -9,7 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 // BasicAuth use HTTP basic authentication to authenticate a user. The secret

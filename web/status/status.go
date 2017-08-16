@@ -7,7 +7,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 // Status responds with the status of the service

@@ -10,7 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 func proxyReq(c echo.Context) error {

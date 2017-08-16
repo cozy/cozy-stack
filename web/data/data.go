@@ -2,6 +2,7 @@
 package data
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 func paramIsTrue(c echo.Context, param string) bool {
@@ -106,7 +107,7 @@ func createDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	doc := couchdb.JSONDoc{Type: doctype}
-	if err := c.Bind(&doc.M); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(&doc.M); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
@@ -159,7 +160,7 @@ func UpdateDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	var doc couchdb.JSONDoc
-	if err := c.Bind(&doc); err != nil {
+	if err := json.NewDecoder(c.Request().Body).Decode(&doc); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
@@ -275,9 +276,9 @@ func DeleteDoc(c echo.Context) error {
 func defineIndex(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	var definitionRequest map[string]interface{}
 
-	if err := c.Bind(&definitionRequest); err != nil {
+	var definitionRequest map[string]interface{}
+	if err := json.NewDecoder(c.Request().Body).Decode(&definitionRequest); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
@@ -307,9 +308,9 @@ const maxMangoLimit = 100
 func findDocuments(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
-	var findRequest map[string]interface{}
 
-	if err := c.Bind(&findRequest); err != nil {
+	var findRequest map[string]interface{}
+	if err := json.NewDecoder(c.Request().Body).Decode(&findRequest); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 

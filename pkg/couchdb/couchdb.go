@@ -16,8 +16,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/echo"
 	"github.com/google/go-querystring/query"
+	"github.com/labstack/echo"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as

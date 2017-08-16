@@ -18,7 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/tests/testutils"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 

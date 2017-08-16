@@ -19,7 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 func creationWithIDHandler(c echo.Context, ins *instance.Instance, slug string) error {

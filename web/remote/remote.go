@@ -5,7 +5,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 func remoteGet(c echo.Context) error {

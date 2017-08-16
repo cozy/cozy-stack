@@ -14,7 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 )
 
 type apiIntent struct {

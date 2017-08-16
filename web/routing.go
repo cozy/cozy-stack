@@ -34,7 +34,7 @@ import (
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
-	"github.com/cozy/echo"
+	"github.com/labstack/echo"
 	"github.com/rakyll/statik/fs"
 )
 

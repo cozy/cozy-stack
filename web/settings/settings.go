@@ -3,7 +3,7 @@
 // with some CSS variables that can be used as a theme.
 package settings
 
-import "github.com/cozy/echo"
+import "github.com/labstack/echo"
 
 // Routes sets the routing for the settings service
 func Routes(router *echo.Group) {
