@@ -456,7 +456,7 @@ known standards make sense (caldav & carddav for example), use them. Else,
 [JSON API](http://jsonapi.org) is a good default.
 
 The golang web framework used for the cozy stack is
-[Echo](https://github.com/cozy/echo/).
+[Echo](https://github.com/labstack/echo/).
 
 #### HTTP status codes
 
