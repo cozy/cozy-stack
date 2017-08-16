@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/google/gops/agent"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/rakyll/statik/fs"
@@ -158,12 +157,6 @@ func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
 		major.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 			Format: "time=${time_rfc3339}\tstatus=${status}\tmethod=${method}\thost=${host}\turi=${uri}\tbytes_out=${bytes_out}\n",
 		}))
-	}
-
-	// XXX: Removed gops graceful shutdown as it broke our own...
-	//
-	if err = agent.Listen(&agent.Options{NoShutdownCleanup: true}); err != nil {
-		fmt.Printf("Error on gops agent: %s\n", err)
 	}
 
 	admin := echo.New()

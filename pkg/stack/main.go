@@ -1,7 +1,9 @@
 package stack
 
 import (
+	"context"
 	"fmt"
+	"os"
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -9,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	"github.com/google/gops/agent"
 )
 
 var (
@@ -18,6 +21,15 @@ var (
 
 var log = logger.WithNamespace("stack")
 
+type gopAgent struct{}
+
+func (g gopAgent) Shutdown(ctx context.Context) error {
+	fmt.Print("  shutting down gops...")
+	agent.Close()
+	fmt.Println("ok.")
+	return nil
+}
+
 // Start is used to initialize all the
 func Start() (utils.Shutdowner, error) {
 	if config.IsDevRelease() {
@@ -25,6 +37,11 @@ func Start() (utils.Shutdowner, error) {
 You are running a development release which may deactivate some very important
 security features. Please do not use this binary as your production server.
 `)
+	}
+
+	err := agent.Listen(&agent.Options{NoShutdownCleanup: true})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error on gops agent: %s\n", err)
 	}
 
 	// Check that we can properly reach CouchDB.
@@ -66,7 +83,8 @@ security features. Please do not use this binary as your production server.
 	if err := schder.Start(broker); err != nil {
 		return nil, err
 	}
-	return utils.NewGroupShutdown(broker, schder), nil
+
+	return utils.NewGroupShutdown(broker, schder, gopAgent{}), nil
 }
 
 // GetBroker returns the global job broker.
