@@ -726,6 +726,17 @@ func DestroyFileHandler(c echo.Context) error {
 		return err
 	}
 
+	var rev string
+	if dir != nil {
+		rev = dir.Rev()
+	} else {
+		rev = file.Rev()
+	}
+
+	if err = CheckIfMatch(c, rev); err != nil {
+		return wrapVfsError(err)
+	}
+
 	if dir != nil {
 		err = instance.VFS().DestroyDirAndContent(dir)
 	} else {
