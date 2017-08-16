@@ -19,7 +19,11 @@ assetsresult=$?
 pidstack=$(jobs -pr)
 [ -n "$pidstack" ] && kill -9 "$pidstack"
 
-if git grep -l -e 'github.com/labstack/gommon/log' -e 'github.com/dgrijalva/jwt-go' -- '*.go'; then
+if git grep -l \
+  -e 'github.com/labstack/gommon/log' \
+  -e 'github.com/dgrijalva/jwt-go' \
+  -e 'github.com/cozy/echo' \
+  -- '*.go'; then
   echo "Forbidden packages"
   exit 1
 fi
