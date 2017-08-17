@@ -192,7 +192,7 @@ var triggersFixer = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("Cleaned %d orphans\n", result.Deleted)
+		fmt.Printf("Cleaned %d orphans on %s\n", result.Deleted, args[0])
 		return nil
 	},
 }
@@ -221,7 +221,7 @@ var jobsFixer = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("Cleaned %d jobs\n", result.Deleted)
+		fmt.Printf("Cleaned %d jobs on %s\n", result.Deleted, args[0])
 		return nil
 	},
 }
