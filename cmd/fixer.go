@@ -2,10 +2,13 @@ package cmd
 
 // #nosec
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
+	"strings"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
@@ -19,6 +22,69 @@ var fixerCmdGroup = &cobra.Command{
 	Short: "A set of tools to fix issues or migrate content for retro-compatibility.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
+	},
+}
+
+var albumsCreatedAtFixerCmd = &cobra.Command{
+	Use:   "albums-created-at [domain]",
+	Short: "Add a created_at field for albums where it's missing",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		c := newClient(args[0], consts.PhotosAlbums)
+		res, err := c.Req(&request.Options{
+			Method: "GET",
+			Path:   "/data/" + consts.PhotosAlbums + "/_all_docs",
+			Queries: url.Values{
+				"limit":        {"1000"},
+				"include_docs": {"true"},
+			},
+		})
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+		var result map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&result)
+		if err != nil {
+			return err
+		}
+		rows, ok := result["rows"].([]interface{})
+		if !ok {
+			return nil // no albums
+		}
+
+		count := 0
+		for _, r := range rows {
+			row := r.(map[string]interface{})
+			id := row["id"].(string)
+			if strings.HasPrefix(id, "_design") {
+				continue
+			}
+			album := row["doc"].(map[string]interface{})
+			if _, ok := album["created_at"]; ok {
+				continue
+			}
+			count++
+			album["created_at"] = "2017-06-01T02:03:04.000Z"
+			buf, err := json.Marshal(album)
+			if err != nil {
+				return err
+			}
+			body := bytes.NewReader(buf)
+			_, err = c.Req(&request.Options{
+				Method: "PUT",
+				Path:   "/data/" + consts.PhotosAlbums + "/" + id,
+				Body:   body,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		fmt.Printf("Added created_at for %d albums on %s\n", count, args[0])
+		return nil
 	},
 }
 
@@ -161,6 +227,7 @@ var jobsFixer = &cobra.Command{
 }
 
 func init() {
+	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
 	fixerCmdGroup.AddCommand(triggersFixer)
