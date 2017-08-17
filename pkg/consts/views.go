@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 6
+const IndexViewsVersion int = 7
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -53,6 +53,23 @@ function(doc) {
   if (isArray(doc.referenced_by)) {
     for (var i = 0; i < doc.referenced_by.length; i++) {
       emit([doc.referenced_by[i].type, doc.referenced_by[i].id]);
+    }
+  }
+}`,
+}
+
+// ReferencedBySortedByDatetimeView is the view used for fetching files referenced by a
+// given document, sorted by the datetime
+var ReferencedBySortedByDatetimeView = &couchdb.View{
+	Name:    "referenced-by-sorted-by-datetime",
+	Doctype: Files,
+	Reduce:  "_count",
+	Map: `
+function(doc) {
+  if (isArray(doc.referenced_by)) {
+    for (var i = 0; i < doc.referenced_by.length; i++) {
+      var datetime = (doc.metadata && doc.metadata.datetime) || '';
+      emit([doc.referenced_by[i].type, doc.referenced_by[i].id, datetime]);
     }
   }
 }`,
@@ -124,6 +141,7 @@ function(doc) {
 var Views = []*couchdb.View{
 	DiskUsageView,
 	FilesReferencedByView,
+	ReferencedBySortedByDatetimeView,
 	FilesByParentView,
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
