@@ -575,3 +575,49 @@ func TestWebappUninstall(t *testing.T) {
 	assert.Nil(t, inst3)
 	assert.Equal(t, ErrNotFound, err)
 }
+
+func TestWebappUninstallErrored(t *testing.T) {
+	manGen = manifestWebapp
+	manName = WebappManifestName
+
+	inst1, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Install,
+		Type:      Webapp,
+		Slug:      "github-cozy-delete-errored",
+		SourceURL: "git://foobar.is.not.available/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	go inst1.Run()
+	for {
+		var done bool
+		_, done, err = inst1.Poll()
+		if done || err != nil {
+			break
+		}
+	}
+	if !assert.Error(t, err) {
+		return
+	}
+
+	inst2, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Delete,
+		Type:      Webapp,
+		Slug:      "github-cozy-delete-errored",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = inst2.RunSync()
+	if !assert.NoError(t, err) {
+		return
+	}
+	inst3, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Delete,
+		Type:      Webapp,
+		Slug:      "github-cozy-delete-errored",
+	})
+	assert.Nil(t, inst3)
+	assert.Equal(t, ErrNotFound, err)
+}
