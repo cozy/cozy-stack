@@ -2,8 +2,10 @@ package files
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -64,11 +66,34 @@ func ListReferencesHandler(c echo.Context) error {
 		count = int(resCount.Rows[0].Value.(float64))
 	}
 
-	req := &couchdb.ViewRequest{Key: key, IncludeDocs: includeDocs, Reduce: false}
+	sort := c.QueryParam("sort")
+	descending := strings.HasPrefix(sort, "-")
+	start := key
+	end := []string{key[0], key[1], couchdb.MaxString}
+	if descending {
+		start, end = end, start
+	}
+	var view *couchdb.View
+	switch sort {
+	case "", "id", "-id":
+		view = consts.FilesReferencedByView
+	case "datetime", "-datetime":
+		view = consts.ReferencedBySortedByDatetimeView
+	default:
+		return jsonapi.BadRequest(errors.New("Invalid sort parameter"))
+	}
+
+	req := &couchdb.ViewRequest{
+		StartKey:    start,
+		EndKey:      end,
+		IncludeDocs: includeDocs,
+		Reduce:      false,
+		Descending:  descending,
+	}
 	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
-	err = couchdb.ExecView(instance, consts.FilesReferencedByView, req, &res)
+	err = couchdb.ExecView(instance, view, req, &res)
 	if err != nil {
 		return err
 	}
