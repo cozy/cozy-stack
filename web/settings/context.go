@@ -40,6 +40,12 @@ func onboarded(c echo.Context) error {
 	if !middlewares.IsLoggedIn(c) {
 		return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", nil))
 	}
+	if !i.OnboardingFinished {
+		i.OnboardingFinished = true
+		if err := instance.Update(i); err != nil {
+			return err
+		}
+	}
 	redirect := i.OnboardedRedirection().String()
 	return c.Redirect(http.StatusSeeOther, redirect)
 }

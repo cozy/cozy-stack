@@ -20,6 +20,7 @@ type Instance struct {
 		Domain               string    `json:"domain"`
 		Locale               string    `json:"locale"`
 		Dev                  bool      `json:"dev"`
+		OnboardingFinished   bool      `json:"onboarding_finished"`
 		BytesDiskQuota       int64     `json:"disk_quota,string,omitempty"`
 		IndexViewsVersion    int       `json:"indexes_version"`
 		PassphraseResetToken []byte    `json:"passphrase_reset_token"`
@@ -30,17 +31,18 @@ type Instance struct {
 
 // InstanceOptions contains the options passed on instance creation.
 type InstanceOptions struct {
-	Domain     string
-	Locale     string
-	Timezone   string
-	Email      string
-	PublicName string
-	Settings   string
-	DiskQuota  int64
-	Apps       []string
-	Dev        bool
-	Passphrase string
-	Debug      *bool
+	Domain             string
+	Locale             string
+	Timezone           string
+	Email              string
+	PublicName         string
+	Settings           string
+	DiskQuota          int64
+	Apps               []string
+	Dev                bool
+	Passphrase         string
+	Debug              *bool
+	OnboardingFinished *bool
 }
 
 // TokenOptions is a struct holding all the options to generate a token.
@@ -122,17 +124,21 @@ func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance
 	if !validDomain(domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
-	var debug string
+	var debug, onboardingFinished string
 	if opts.Debug != nil {
 		debug = strconv.FormatBool(*opts.Debug)
+	}
+	if opts.OnboardingFinished != nil {
+		onboardingFinished = strconv.FormatBool(*opts.OnboardingFinished)
 	}
 	res, err := c.Req(&request.Options{
 		Method: "PATCH",
 		Path:   "/instances/" + domain,
 		Queries: url.Values{
-			"Locale":    {opts.Locale},
-			"DiskQuota": {strconv.FormatInt(opts.DiskQuota, 10)},
-			"Debug":     {debug},
+			"Locale":             {opts.Locale},
+			"DiskQuota":          {strconv.FormatInt(opts.DiskQuota, 10)},
+			"OnboardingFinished": {onboardingFinished},
+			"Debug":              {debug},
 		},
 	})
 	if err != nil {

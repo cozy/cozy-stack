@@ -46,9 +46,9 @@ func Home(c echo.Context) error {
 				"Locale": instance.Locale,
 			})
 		}
-		sub := instance.SubDomain(consts.OnboardingSlug)
-		sub.RawQuery = c.Request().URL.RawQuery
-		return c.Redirect(http.StatusSeeOther, sub.String())
+		redirect := instance.SubDomain(consts.OnboardingSlug)
+		redirect.RawQuery = c.Request().URL.RawQuery
+		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
 	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))

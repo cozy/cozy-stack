@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client"
@@ -226,11 +227,45 @@ var jobsFixer = &cobra.Command{
 	},
 }
 
+var onboardingsFixer = &cobra.Command{
+	Use:   "onboardings",
+	Short: "Add the onboarding_finished flag to user that have registered their passphrase",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		list, err := c.ListInstances()
+		if err != nil {
+			return err
+		}
+		var hasErrored bool
+		t := true
+		for _, i := range list {
+			if len(i.Attrs.RegisterToken) > 0 || i.Attrs.OnboardingFinished {
+				continue
+			}
+			fmt.Printf("Setting onboarding finished flag on '%s'...", i.Attrs.Domain)
+			_, err = c.ModifyInstance(i.Attrs.Domain, &client.InstanceOptions{
+				OnboardingFinished: &t,
+			})
+			if err != nil {
+				fmt.Printf("failed: %s\n", err)
+				hasErrored = true
+			} else {
+				fmt.Printf("ok\n")
+			}
+		}
+		if hasErrored {
+			os.Exit(1)
+		}
+		return nil
+	},
+}
+
 func init() {
 	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
 	fixerCmdGroup.AddCommand(triggersFixer)
 	fixerCmdGroup.AddCommand(jobsFixer)
+	fixerCmdGroup.AddCommand(onboardingsFixer)
 	RootCmd.AddCommand(fixerCmdGroup)
 }

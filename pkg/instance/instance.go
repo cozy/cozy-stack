@@ -82,6 +82,8 @@ type Instance struct {
 	Locale string `json:"locale"`         // The locale used on the server
 	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
 
+	OnboardingFinished bool `json:"onboarding_finished"` // Whether or not the onboarding is complete
+
 	BytesDiskQuota int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
 
 	IndexViewsVersion int `json:"indexes_version"`
@@ -389,10 +391,14 @@ func (i *Instance) redirection(key, defaultSlug string) *url.URL {
 // DefaultRedirection returns the URL where to redirect the user afer login
 // (and in most other cases where we need a redirection URL)
 func (i *Instance) DefaultRedirection() *url.URL {
+	if !i.OnboardingFinished {
+		return i.SubDomain(consts.OnboardingSlug)
+	}
 	return i.redirection("default_redirection", consts.DriveSlug)
 }
 
-// OnboardedRedirection returns the URL where to redirect the user after onboarding
+// OnboardedRedirection returns the URL where to redirect the user after
+// onboarding
 func (i *Instance) OnboardedRedirection() *url.URL {
 	return i.redirection("onboarded_redirection", consts.DriveSlug)
 }
