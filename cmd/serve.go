@@ -158,6 +158,9 @@ func init() {
 	flags.Bool("log-syslog", false, "use the local syslog for logging")
 	checkNoErr(viper.BindPFlag("log.syslog", flags.Lookup("log-syslog")))
 
+	flags.String("hooks", ".", "define the directory used for hook scripts")
+	checkNoErr(viper.BindPFlag("hooks", flags.Lookup("hooks")))
+
 	flags.String("mail-noreply-address", "", "mail address used for sending mail as a noreply (forgot passwords for example)")
 	checkNoErr(viper.BindPFlag("mail.noreply_address", flags.Lookup("mail-noreply-address")))
 
