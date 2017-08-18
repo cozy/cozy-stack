@@ -84,6 +84,12 @@ func createHandler(c echo.Context) error {
 		if err = in.RegisterPassphrase([]byte(pass), in.RegisterToken); err != nil {
 			return err
 		}
+		// set the onboarding finished when specifying a passphrase. we totally
+		// skip the onboarding in that case.
+		in.OnboardingFinished = true
+		if err = instance.Update(in); err != nil {
+			return err
+		}
 	}
 	return jsonapi.Data(c, http.StatusCreated, &apiInstance{in}, nil)
 }
@@ -115,6 +121,13 @@ func modifyHandler(c echo.Context) error {
 	}
 	if locale := c.QueryParam("Locale"); locale != "" {
 		i.Locale = locale
+		shouldUpdate = true
+	}
+	if onboardingFinished := c.QueryParam("OnboardingFinished"); onboardingFinished != "" {
+		i.OnboardingFinished, err = strconv.ParseBool(onboardingFinished)
+		if err != nil {
+			return wrapError(err)
+		}
 		shouldUpdate = true
 	}
 	if shouldUpdate {

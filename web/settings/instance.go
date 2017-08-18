@@ -43,6 +43,7 @@ func getInstance(c echo.Context) error {
 		return err
 	}
 	doc.M["locale"] = instance.Locale
+	doc.M["onboarding_finished"] = instance.OnboardingFinished
 
 	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
 		return err

@@ -29,16 +29,21 @@ func Serve(c echo.Context) error {
 	if method != "GET" && method != "HEAD" {
 		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
 	}
+
 	i := middlewares.GetInstance(c)
 	slug := c.Get("slug").(string)
-	if len(i.RegisterToken) > 0 && slug != consts.OnboardingSlug {
+
+	if (!i.OnboardingFinished && slug != consts.OnboardingSlug) ||
+		(i.OnboardingFinished && slug == consts.OnboardingSlug) {
 		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 	}
+
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		if code := c.QueryParam("code"); code != "" {
 			return tryAuthWithSessionCode(c, i, code)
 		}
 	}
+
 	app, err := apps.GetWebappBySlug(i, slug)
 	if err != nil {
 		switch err {
@@ -50,6 +55,7 @@ func Serve(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
 	}
+
 	switch app.State() {
 	case apps.Installed:
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/authorize/app", url.Values{
