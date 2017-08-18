@@ -352,6 +352,7 @@ func TestMain(m *testing.M) {
 	hash, _ := crypto.GenerateFromPassphrase([]byte(pass))
 	testInstance.PassphraseHash = hash
 	testInstance.RegisterToken = nil
+	testInstance.OnboardingFinished = true
 	couchdb.UpdateDoc(couchdb.GlobalDB, testInstance)
 
 	err := installMiniApp()
