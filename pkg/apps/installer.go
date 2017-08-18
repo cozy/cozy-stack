@@ -37,7 +37,6 @@ type Installer struct {
 	src  *url.URL
 	slug string
 
-	err  error
 	errc chan error
 	manc chan Manifest
 	log  *logrus.Entry
@@ -175,15 +174,43 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 // depending on specified operation. It will report its progress or error (see
 // Poll method) and should be run asynchronously.
 func (i *Installer) Run() {
-	defer i.endOfProc()
+	var err error
+
+	man := i.man
+	if man == nil {
+		panic("Manifest is nil")
+	}
+
 	switch i.op {
 	case Install:
-		i.man, i.err = i.install()
+		err = i.install(man)
 	case Update:
-		i.man, i.err = i.update()
+		err = i.update(man)
 	case Delete:
-		i.man, i.err = i.delete()
+		err = i.delete(man)
+	default:
+		panic("Unknown operation")
 	}
+
+	if err == ErrBadState {
+		i.errc <- err
+		return
+	}
+
+	if err != nil {
+		man.SetState(Errored)
+		man.SetError(err)
+		man.Update(i.db)
+		i.errc <- err
+		return
+	}
+
+	if i.op != Delete {
+		man.SetState(i.endState)
+		man.Update(i.db)
+	}
+
+	i.manc <- man
 }
 
 // RunSync does the same work as Run but can be used synchronously.
@@ -200,43 +227,22 @@ func (i *Installer) RunSync() (Manifest, error) {
 	}
 }
 
-func (i *Installer) endOfProc() {
-	man, err := i.man, i.err
-	if man == nil || err == ErrBadState {
-		i.errc <- err
-		return
-	}
-	if err != nil {
-		man.SetState(Errored)
-		man.SetError(err)
-		man.Update(i.db)
-		i.errc <- err
-		return
-	}
-	if i.op != Delete {
-		man.SetState(i.endState)
-		man.Update(i.db)
-	}
-	i.manc <- i.man
-}
-
 // install will perform the installation of an application. It returns the
 // freshly fetched manifest from the source along with a possible error in case
 // the installation went wrong.
 //
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
-func (i *Installer) install() (Manifest, error) {
+func (i *Installer) install(man Manifest) error {
 	i.log.Infof("[apps] Start install: %s %s", i.slug, i.src.String())
-	man := i.man
 	if err := i.ReadManifest(Installing, man); err != nil {
-		return nil, err
+		return err
 	}
 	if err := man.Create(i.db); err != nil {
-		return man, err
+		return err
 	}
 	i.manc <- man
-	return man, i.fetcher.Fetch(i.src, i.fs, man)
+	return i.fetcher.Fetch(i.src, i.fs, man)
 }
 
 // update will perform the update of an already installed application. It
@@ -245,29 +251,27 @@ func (i *Installer) install() (Manifest, error) {
 //
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
-func (i *Installer) update() (Manifest, error) {
+func (i *Installer) update(man Manifest) error {
 	i.log.Infof("[apps] Start update: %s %s", i.slug, i.src.String())
-	man := i.man
 	if err := i.checkState(man); err != nil {
-		return nil, err
+		return err
 	}
 	if err := i.ReadManifest(Upgrading, man); err != nil {
-		return man, err
+		return err
 	}
 	if err := man.Update(i.db); err != nil {
-		return man, err
+		return err
 	}
 	i.manc <- man
-	return man, i.fetcher.Fetch(i.src, i.fs, man)
+	return i.fetcher.Fetch(i.src, i.fs, man)
 }
 
-func (i *Installer) delete() (Manifest, error) {
+func (i *Installer) delete(man Manifest) error {
 	i.log.Infof("[apps] Start delete: %s %s", i.slug, i.src.String())
-	man := i.man
 	if err := i.checkState(man); err != nil {
-		return nil, err
+		return err
 	}
-	return man, i.man.Delete(i.db)
+	return man.Delete(i.db)
 }
 
 // checkState returns whether or not the manifest is in the right state to
@@ -304,7 +308,9 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 	select {
 	case man := <-i.manc:
 		state := man.State()
-		done := (state == Ready || state == Installed)
+		// state can be errored in final stage of the process, for instance when an
+		// Errored application is being uninstalled.
+		done := (state == Ready || state == Installed || state == Errored)
 		return man, done, nil
 	case err := <-i.errc:
 		return nil, false, err
