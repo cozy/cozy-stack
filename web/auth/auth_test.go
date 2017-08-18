@@ -1185,6 +1185,11 @@ func TestMain(m *testing.M) {
 
 	testInstance = setup.GetTestInstance(&instance.Options{Domain: domain})
 	testInstance.RegisterPassphrase([]byte("MyPassphrase"), testInstance.RegisterToken)
+	testInstance.OnboardingFinished = true
+	err := instance.Update(testInstance)
+	if err != nil {
+		testutils.Fatal(err)
+	}
 
 	jar = setup.GetCookieJar()
 	client = &http.Client{
