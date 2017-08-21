@@ -209,7 +209,7 @@ by this server.
 				i.Attrs.Locale,
 				formatSize(i.Attrs.BytesDiskQuota),
 				formatDev(i.Attrs.Dev),
-				formatOnboarded(len(i.Attrs.RegisterToken) == 0),
+				formatOnboarded(i),
 				i.Attrs.IndexViewsVersion,
 			)
 		}
@@ -231,9 +231,12 @@ func formatDev(dev bool) string {
 	return "prod"
 }
 
-func formatOnboarded(onboarded bool) string {
-	if onboarded {
+func formatOnboarded(i *client.Instance) string {
+	if i.Attrs.OnboardingFinished {
 		return "onboarded"
+	}
+	if len(i.Attrs.RegisterToken) > 0 {
+		return "onboarding"
 	}
 	return "pending"
 }
