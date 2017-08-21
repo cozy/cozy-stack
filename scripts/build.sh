@@ -53,15 +53,15 @@ do_prepare_ldflags() {
 
 	VERSION_OS_ARCH="${GOOS}-${GOARCH}"
 	if [ -z "${VERSION_STRING}" ]; then
-		VERSION_STRING=$(git --git-dir="${WORK_DIR}/.git" --work-tree="${WORK_DIR}" \
+		VERSION_STRING=$(git -C "${WORK_DIR}" --work-tree="${WORK_DIR}" \
 			describe --tags --dirty 2> /dev/null)
 
 		if [ -z "${VERSION_STRING}" ]; then
-			VERSION_STRING="v0-$(git --git-dir="${WORK_DIR}/.git" rev-parse --short HEAD)"
+			VERSION_STRING="v0-$(git -C "${WORK_DIR}" rev-parse --short HEAD)"
 			echo_wrn "No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 		fi
 
-		if ! git --git-dir="${WORK_DIR}/.git" diff --exit-code &>/dev/null; then
+		if ! git -C "${WORK_DIR}" diff --exit-code &>/dev/null; then
 			if [ "${COZY_ENV}" == production ]; then
 				echo_err "Can not build a production release in a dirty work-tree"
 				exit 1
@@ -129,18 +129,20 @@ do_build() {
 	do_assets
 
 	if [ -z "${1}" ]; then
-		BINARY="cozy-stack-${VERSION_OS_ARCH}-${VERSION_STRING}"
+		BINARY="$(pwd)/cozy-stack-${VERSION_OS_ARCH}-${VERSION_STRING}"
 	else
 		BINARY="${1}"
 	fi
 
 	printf "building cozy-stack in %s... " "${BINARY}"
+	pushd "${WORK_DIR}" > /dev/null
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
 		" \
 		-o "${BINARY}"
+	popd > /dev/null
 	echo "ok"
 }
 
@@ -179,12 +181,14 @@ do_deploy() {
 
 do_assets() {
 	clean_assets
-	tx pull -a || echo "Do you have configured transifex?"
+	tx -r "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
 	prepare_assets
 	printf "executing go generate... "
 	go get -u github.com/rakyll/statik
 	rm -f "${WORK_DIR}/web/statik/statik.go"
+	pushd "${WORK_DIR}" > /dev/null
 	go generate ./web
+	popd > /dev/null
 	echo "ok"
 	clean_assets
 }
@@ -218,13 +222,13 @@ prepare_assets() {
 	assets_src="${WORK_DIR}/assets"
 	assets_externals="${assets_src}/externals"
 
-	if [ "$(git --git-dir="${WORK_DIR}/.git" diff --shortstat HEAD -- "${assets_externals}" | wc -l)" -gt 0 ]; then
+	if [ "$(git -C "${WORK_DIR}" diff --shortstat HEAD -- "${assets_externals}" | wc -l)" -gt 0 ]; then
 		echo_err "file ${assets_externals} is dirty."
 		echo_err "it should be commited into git in order to generate the asset file."
 		exit 1
 	fi
 
-	assets_mod_time=$(git log --pretty=format:%cd -n 1 --date=iso "${assets_externals}")
+	assets_mod_time=$(git -C "${WORK_DIR}" log --pretty=format:%cd -n 1 --date=iso "${assets_externals}")
 	case "$(uname -s)" in
 		Darwin)
 			assets_mod_time=$(date -j -f '%Y-%m-%d %H:%M:%S %z' "${assets_mod_time}" +%Y%m%d%H%M.%S)
