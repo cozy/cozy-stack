@@ -129,19 +129,20 @@ do_build() {
 	do_assets
 
 	if [ -z "${1}" ]; then
-		BINARY="$(pwd)/cozy-stack-${VERSION_OS_ARCH}-${VERSION_STRING}"
+		BINARY="cozy-stack-${VERSION_OS_ARCH}-${VERSION_STRING}"
 	else
 		BINARY="${1}"
 	fi
 
 	printf "building cozy-stack in %s... " "${BINARY}"
+	abs_binary="$(pwd)/${BINARY}"
 	pushd "${WORK_DIR}" > /dev/null
 	go build -ldflags "\
 		-X github.com/cozy/cozy-stack/pkg/config.Version=${VERSION_STRING} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildTime=${BUILD_TIME} \
 		-X github.com/cozy/cozy-stack/pkg/config.BuildMode=${BUILD_MODE}
 		" \
-		-o "${BINARY}"
+		-o "${abs_binary}"
 	popd > /dev/null
 	echo "ok"
 }
