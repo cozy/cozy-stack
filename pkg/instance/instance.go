@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -463,6 +464,22 @@ func Create(opts *Options) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	var i *Instance
+	err = hooks.Execute("add-instance", []string{domain}, func() error {
+		var err2 error
+		i, err2 = CreateWithoutHooks(opts)
+		return err2
+	})
+	return i, err
+}
+
+// CreateWithoutHooks builds an instance and initializes it. The difference
+// with Create is that script hooks are not executed for this function.
+func CreateWithoutHooks(opts *Options) (*Instance, error) {
+	domain, err := validateDomain(opts.Domain)
+	if err != nil {
+		return nil, err
+	}
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		parts := strings.SplitN(domain, ".", 2)
 		if strings.Contains(parts[0], "-") {
@@ -689,6 +706,18 @@ func Update(i *Instance) error {
 // Destroy is used to remove the instance. All the data linked to this
 // instance will be permanently deleted.
 func Destroy(domain string) error {
+	domain, err := validateDomain(domain)
+	if err != nil {
+		return err
+	}
+	return hooks.Execute("remove-instance", []string{domain}, func() error {
+		return DestroyWithoutHooks(domain)
+	})
+}
+
+// DestroyWithoutHooks is used to remove the instance. The difference with
+// Destroy is that scripts hooks are not executed for this function.
+func DestroyWithoutHooks(domain string) error {
 	var err error
 	domain, err = validateDomain(domain)
 	if err != nil {
