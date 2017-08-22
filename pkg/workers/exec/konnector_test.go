@@ -1,4 +1,4 @@
-package konnectors
+package exec
 
 import (
 	"os"

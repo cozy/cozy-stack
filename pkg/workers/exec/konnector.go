@@ -1,17 +1,14 @@
-package konnectors
+package exec
 
 import (
 	"archive/tar"
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
-	"runtime"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -20,29 +17,22 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
 )
 
-func init() {
-	jobs.AddWorker("konnector", &jobs.WorkerConfig{
-		Concurrency:  runtime.NumCPU() * 2,
-		MaxExecCount: 2,
-		MaxExecTime:  200 * time.Second,
-		Timeout:      200 * time.Second,
-		WorkerFunc:   Worker,
-		WorkerCommit: commit,
-	})
-}
-
-// Options contains the options to execute a konnector.
-type Options struct {
+// KonnectorOptions contains the options to execute a konnector.
+type KonnectorOptions struct {
 	Konnector    string `json:"konnector"`
 	Account      string `json:"account"`
 	FolderToSave string `json:"folder_to_save"`
+}
+
+type konnectorWorker struct {
+	opts     *KonnectorOptions
+	man      *apps.KonnManifest
+	messages []konnectorMsg
 }
 
 // result stores the result of a konnector execution.
@@ -88,52 +78,38 @@ func (kl *konnectorLogs) Clone() couchdb.Doc { c := *kl; return &c }
 func (kl *konnectorLogs) SetID(id string)    {}
 func (kl *konnectorLogs) SetRev(rev string)  { kl.DocRev = rev }
 
-// Worker is the worker that runs a konnector by executing an external process.
-func Worker(ctx context.Context, m *jobs.Message) error {
-	opts := &Options{}
-	if err := m.Unmarshal(&opts); err != nil {
-		return err
+func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) (workDir string, err error) {
+	opts := &KonnectorOptions{}
+	if err = m.Unmarshal(&opts); err != nil {
+		return
 	}
 
 	slug := opts.Konnector
-	fields := struct {
-		Account      string `json:"account"`
-		FolderToSave string `json:"folder_to_save"`
-	}{
-		Account:      opts.Account,
-		FolderToSave: opts.FolderToSave,
-	}
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	worker := ctx.Value(jobs.ContextWorkerKey).(string)
-	jobID := fmt.Sprintf("%s/%s/%s", worker, slug, domain)
 
-	inst, err := instance.Get(domain)
+	man, err := apps.GetKonnectorBySlug(i, slug)
 	if err != nil {
-		return err
-	}
-
-	man, err := apps.GetKonnectorBySlug(inst, slug)
-	if err != nil {
-		return err
+		return
 	}
 	if man.State() != apps.Ready {
-		return errors.New("Konnector is not ready")
+		err = errors.New("Konnector is not ready")
+		return
 	}
 
-	token := inst.BuildKonnectorToken(man)
+	w.opts = opts
+	w.man = man
 
 	osFS := afero.NewOsFs()
-	workDir, err := afero.TempDir(osFS, "", "konnector-"+slug)
+	workDir, err = afero.TempDir(osFS, "", "konnector-"+slug)
 	if err != nil {
-		return err
+		return
 	}
 	defer osFS.RemoveAll(workDir)
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
-	fileServer := inst.KonnectorsFileServer()
+	fileServer := i.KonnectorsFileServer()
 	tarFile, err := fileServer.Open(slug, man.Version(), apps.KonnectorArchiveName)
 	if err != nil {
-		return err
+		return
 	}
 
 	tr := tar.NewReader(tarFile)
@@ -144,102 +120,90 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 			break
 		}
 		if err != nil {
-			return err
+			return
 		}
 		dirname := path.Dir(hdr.Name)
 		if dirname != "." {
 			if err = workFS.MkdirAll(dirname, 0755); err != nil {
-				return nil
+				return
 			}
 		}
 		var f afero.File
 		f, err = workFS.OpenFile(hdr.Name, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			return err
+			return
 		}
 		_, err = io.Copy(f, tr)
 		errc := f.Close()
 		if err != nil {
-			return err
+			return
 		}
 		if errc != nil {
-			return errc
+			err = errc
+			return
 		}
+	}
+
+	return workDir, nil
+}
+
+func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (cmd string, env []string, jobID string, err error) {
+	jobID = fmt.Sprintf("konnector/%s/%s", w.opts.Konnector, i.Domain)
+
+	fields := struct {
+		Account      string `json:"account"`
+		FolderToSave string `json:"folder_to_save"`
+	}{
+		Account:      w.opts.Account,
+		FolderToSave: w.opts.FolderToSave,
 	}
 
 	fieldsJSON, err := json.Marshal(fields)
 	if err != nil {
-		return err
+		return
 	}
 
-	konnCmd := config.GetConfig().Konnectors.Cmd
-	cmd := exec.CommandContext(ctx, konnCmd, workDir) // #nosec
-	cmd.Env = []string{
-		"COZY_URL=" + inst.PageURL("/", nil),
+	token := i.BuildKonnectorToken(w.man)
+
+	cmd = config.GetConfig().Konnectors.Cmd
+	env = []string{
+		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + string(fieldsJSON),
-		"COZY_TYPE=" + man.Type,
+		"COZY_TYPE=" + w.man.Type,
 		"COZY_JOB_ID=" + jobID,
 	}
+	return
+}
 
-	cmdErr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
+func (w *konnectorWorker) ScanOuput(i *instance.Instance, line []byte) error {
+	var msg konnectorMsg
+	if err := json.Unmarshal(line, &msg); err != nil {
+		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
-	cmdOut, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
+	// TODO: filter some of the messages
+	w.messages = append(w.messages, msg)
+	realtime.GetHub().Publish(&realtime.Event{
+		Verb: realtime.EventCreate,
+		Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
+			"type":    msg.Type,
+			"message": msg.Message,
+		}},
+		Domain: i.Domain,
+	})
+	return nil
+}
 
-	scanErr := bufio.NewScanner(cmdErr)
-	scanOut := bufio.NewScanner(cmdOut)
-	scanOut.Buffer(nil, 256*1024)
-
-	var messages []konnectorMsg
-
-	log := logger.WithDomain(domain)
-
-	if err = cmd.Start(); err != nil {
-		return wrapErr(ctx, err)
-	}
-
-	go doScanErr(jobID, scanErr, log)
-
-	hub := realtime.GetHub()
-
-	for scanOut.Scan() {
-		line := scanOut.Bytes()
-		var msg konnectorMsg
-		if err = json.Unmarshal(line, &msg); err != nil {
-			log.Warnf("[konnector] %s: Could not parse stdout as JSON: \"%s\"", jobID, string(line))
-			continue
-		}
-		// TODO: filter some of the messages
-		messages = append(messages, msg)
-		hub.Publish(&realtime.Event{
-			Verb: realtime.EventCreate,
-			Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
-				"type":    msg.Type,
-				"message": msg.Message,
-			}},
-			Domain: domain,
-		})
-	}
-
-	if err = cmd.Wait(); err != nil {
-		err = wrapErr(ctx, err)
-		log.Errorf("[konnector] %s: Konnector has failed: %s", jobID, err.Error())
-	}
-
-	errLogs := couchdb.Upsert(inst, &konnectorLogs{
-		Slug:     slug,
-		Messages: messages,
+func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
+	errLogs := couchdb.Upsert(i, &konnectorLogs{
+		Slug:     w.opts.Konnector,
+		Messages: w.messages,
 	})
 	if errLogs != nil {
 		fmt.Println("Failed to save konnector logs", errLogs)
 	}
 
-	for _, msg := range messages {
+	for _, msg := range w.messages {
 		if msg.Type == konnectorMsgTypeError {
 			// konnector err is more explicit
 			return errors.New(msg.Message)
@@ -249,19 +213,8 @@ func Worker(ctx context.Context, m *jobs.Message) error {
 	return err
 }
 
-func doScanErr(jobID string, scanner *bufio.Scanner, log *logrus.Entry) {
-	for scanner.Scan() {
-		log.Errorf("[konnector] %s: Stderr: %s", jobID, scanner.Text())
-	}
-}
-
-func commit(ctx context.Context, m *jobs.Message, errjob error) error {
-	opts := &Options{}
-	if err := m.Unmarshal(&opts); err != nil {
-		return err
-	}
-
-	slug := opts.Konnector
+func (w *konnectorWorker) Commit(ctx context.Context, msg *jobs.Message, errjob error) error {
+	slug := w.opts.Konnector
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 
 	inst, err := instance.Get(domain)
@@ -292,7 +245,7 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	}
 	result := &result{
 		DocID:       slug,
-		Account:     opts.Account,
+		Account:     w.opts.Account,
 		CreatedAt:   time.Now(),
 		LastSuccess: lastSuccess,
 		State:       state,
@@ -341,11 +294,4 @@ func commit(ctx context.Context, m *jobs.Message, errjob error) error {
 	// 	Message:    msg,
 	// })
 	// return err
-}
-
-func wrapErr(ctx context.Context, err error) error {
-	if ctx.Err() == context.DeadlineExceeded {
-		return context.DeadlineExceeded
-	}
-	return err
 }

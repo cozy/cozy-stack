@@ -17,6 +17,8 @@ const (
 	ContextDomainKey contextKey = iota
 	// ContextWorkerKey is used to store the workerID string
 	ContextWorkerKey
+	// ContextExecWorkerKey is used to store the worker exec struct (see pkg workers/exec)
+	ContextExecWorkerKey
 )
 
 var (
@@ -31,6 +33,11 @@ type (
 	// WorkerFunc represent the work function that a worker should implement.
 	WorkerFunc func(context context.Context, msg *Message) error
 
+	// WorkerThreadedFunc represent the work function that a worker should
+	// implement. In addition to a simple WorkerFunc, a threaded one can thread
+	// its context on each call and to the commit method.
+	WorkerThreadedFunc func(context context.Context, msg *Message) (context.Context, error)
+
 	// WorkerCommit is an optional method that is always called once after the
 	// execution of the WorkerFunc.
 	WorkerCommit func(context context.Context, msg *Message, errjob error) error
@@ -39,13 +46,14 @@ type (
 	// system. It contains parameters of the worker along with the worker main
 	// function that perform the work against a job's message.
 	WorkerConfig struct {
-		WorkerFunc   WorkerFunc
-		WorkerCommit WorkerCommit
-		Concurrency  int           `json:"concurrency"`
-		MaxExecCount int           `json:"max_exec_count"`
-		MaxExecTime  time.Duration `json:"max_exec_time"`
-		Timeout      time.Duration `json:"timeout"`
-		RetryDelay   time.Duration `json:"retry_delay"`
+		WorkerFunc         WorkerFunc
+		WorkerThreadedFunc WorkerThreadedFunc
+		WorkerCommit       WorkerCommit
+		Concurrency        int           `json:"concurrency"`
+		MaxExecCount       int           `json:"max_exec_count"`
+		MaxExecTime        time.Duration `json:"max_exec_time"`
+		Timeout            time.Duration `json:"timeout"`
+		RetryDelay         time.Duration `json:"retry_delay"`
 	}
 
 	// Worker is a unit of work that will consume from a queue and execute the do
@@ -145,7 +153,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 }
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
-	c := w.Conf.clone()
+	c := w.Conf.Clone()
 	if c.Concurrency == 0 {
 		c.Concurrency = defaultConcurrency
 	}
@@ -189,10 +197,10 @@ type task struct {
 func (t *task) run() (err error) {
 	t.startTime = time.Now()
 	t.execCount = 0
-
+	ctx := t.ctx
 	defer func() {
 		if t.conf.WorkerCommit != nil {
-			if errc := t.conf.WorkerCommit(t.ctx, t.infos.Message, err); errc != nil {
+			if errc := t.conf.WorkerCommit(ctx, t.infos.Message, err); errc != nil {
 				joblog.Warnf("[job] %s: error while commiting job %s: %s",
 					t.workerID, t.infos.ID(), errc.Error())
 			}
@@ -212,21 +220,19 @@ func (t *task) run() (err error) {
 		}
 		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
 			t.workerID, t.infos.ID(), t.execCount, timeout)
-		ctx, cancel := context.WithTimeout(t.ctx, timeout)
-		if err = t.exec(ctx); err == nil {
-			cancel()
+		ctx, _ = context.WithTimeout(ctx, timeout)
+		if ctx, err = t.exec(ctx); err == nil {
 			break
 		}
 		// Even though ctx should have expired already, it is good practice to call
 		// its cancelation function in any case. Failure to do so may keep the
 		// context and its parent alive longer than necessary.
-		cancel()
 		t.execCount++
 	}
 	return nil
 }
 
-func (t *task) exec(ctx context.Context) (err error) {
+func (t *task) exec(ctx context.Context) (c context.Context, err error) {
 	slot := <-slots
 	defer func() {
 		slots <- slot
@@ -238,7 +244,14 @@ func (t *task) exec(ctx context.Context) (err error) {
 			}
 		}
 	}()
-	return t.conf.WorkerFunc(ctx, t.infos.Message)
+	if t.conf.WorkerThreadedFunc != nil {
+		c, err = t.conf.WorkerThreadedFunc(ctx, t.infos.Message)
+		if c != nil {
+			ctx = c
+		}
+		return ctx, err
+	}
+	return ctx, t.conf.WorkerFunc(ctx, t.infos.Message)
 }
 
 func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
