@@ -307,6 +307,7 @@ func (afs *aferoVFS) Fsck() ([]vfs.FsckError, error) {
 }
 
 func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.FsckError, error) {
+	entries := make(map[string]struct{})
 	iter := afs.Indexer.DirIterator(dir, nil)
 	for {
 		d, f, err := iter.Next()
@@ -318,6 +319,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 		}
 		var fullpath string
 		if f != nil {
+			entries[f.DocName] = struct{}{}
 			fullpath = path.Join(dir.Fullpath, f.DocName)
 			stat, err := afs.fs.Stat(fullpath)
 			if _, ok := err.(*os.PathError); ok {
@@ -334,6 +336,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 				})
 			}
 		} else {
+			entries[d.DocName] = struct{}{}
 			stat, err := afs.fs.Stat(d.Fullpath)
 			if _, ok := err.(*os.PathError); ok {
 				errors = append(errors, vfs.FsckError{
@@ -347,12 +350,36 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 					Filename: fullpath,
 					Message:  "it's a directory in CouchDB but a file on the local FS",
 				})
-			}
-			if errors, err = afs.fsckWalk(d, errors); err != nil {
-				return nil, err
+			} else {
+				if errors, err = afs.fsckWalk(d, errors); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
+
+	fileinfos, err := afero.ReadDir(afs.fs, dir.Fullpath)
+	if err != nil {
+		return nil, err
+	}
+	for _, fileinfo := range fileinfos {
+		if _, ok := entries[fileinfo.Name()]; !ok {
+			filename := path.Join(dir.Fullpath, fileinfo.Name())
+			if filename == "/.cozy_apps" || filename == "/.cozy_konnectors" || filename == "/.thumbs" {
+				continue
+			}
+			what := "file"
+			if fileinfo.IsDir() {
+				what = "dir"
+			}
+			msg := fmt.Sprintf("the %s is present in CouchDB but not on the local FS", what)
+			errors = append(errors, vfs.FsckError{
+				Filename: filename,
+				Message:  msg,
+			})
+		}
+	}
+
 	return errors, nil
 }
 
