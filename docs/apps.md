@@ -37,6 +37,7 @@ version        | the current version number
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
 intents        | a list of intents provided by this app (see [here](intents.md) for more details)
 permissions    | a map of permissions needed by the app (see [here](permissions.md) for more details)
+services       | a map of the services associated with the app (see below for more details)
 routes         | a map of routes for the app (see below for more details)
 
 ### Routes
@@ -88,6 +89,29 @@ route, this default one:
 **Note**: if you have a public route, it's probably better to put the app icon
 in it. So, the cozy-bar can display it for the users that go on the public
 part of the app.
+
+### Services
+
+Application may require background and offline process to analyse the user's data and emit some notification or warning even without the user being on the application. These part of the application are called services and can be declaired as part of the application in its manifest.
+
+In contrast to [konnectors](./konnectors.md), services have the same permissions as the web application and can not access to internet. They are not intended to collect outside informations but rather analyse the current set of collected information inside the cozy. However they share the same mechanisms as the konnectors to describe how and when they should be executed: via our trigger system.
+
+To define a service, first the code needs to be stored with the application content, as single (packaged) javascript files. In the manifest, declare the service and its parameters following this example:
+
+```json
+{
+  "services": {
+    "low-budget-notification": {
+      "type": "node",
+      "file": "/services/low-budget-notification.js",
+      "trigger": "@cron 0 0 0 * * *"
+    },
+    // ...
+  }
+}
+```
+
+The `trigger` field should follow the available triggers described in the [jobs documentation](./jobs.md). The `file` field should specify the service code run and the `type` field describe the code type (only `"node"` for now).
 
 ## Sources
 
