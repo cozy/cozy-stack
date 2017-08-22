@@ -16,7 +16,7 @@ icon?: image
 actions?: [{text, intent}]
 ```
 
-All applications, services or konnectors can create notifications if they have
+All applications, services and konnectors can create notifications if they have
 a permission on `io.cozy.notifications` with the `POST` verb.
 
 - Notifications will appear in the cozy-bar.

@@ -95,7 +95,7 @@ part of the app.
 Application may require background and offline process to analyse the user's
 data and emit some notification or warning even without the user being on the
 application. These part of the application are called services and can be
-declaired as part of the application in its manifest.
+declared as part of the application in its manifest.
 
 In contrast to [konnectors](./konnectors.md), services have the same
 permissions as the web application and can not access to internet. They are
