@@ -211,7 +211,7 @@ Location: http://.../3.1.2
 
 These routes define the querying part of a registry to access to the available applications and versions. These APIs are also implemented directly by the cozy-stack.
 
-### GET /apps
+### GET /registry
 
 Get the list of all applications.
 
@@ -229,7 +229,7 @@ order     | order to apply to the list
 #### Request
 
 ```http
-GET /apps?filter[category]=cozy&page=0 HTTP/1.1
+GET /registry?filter[category]=cozy&page=0 HTTP/1.1
 ```
 
 #### Response
