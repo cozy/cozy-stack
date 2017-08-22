@@ -3,11 +3,11 @@ package vfsswift
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -355,7 +355,92 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 }
 
 func (sfs *swiftVFS) Fsck() ([]vfs.FsckError, error) {
-	return nil, errors.New("not yet")
+	if lockerr := sfs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
+	defer sfs.mu.RUnlock()
+	root, err := sfs.Indexer.DirByPath("/")
+	if err != nil {
+		return nil, err
+	}
+	var errors []vfs.FsckError
+	return sfs.fsckWalk(root, errors)
+}
+
+func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.FsckError, error) {
+	entries := make(map[string]struct{})
+	iter := sfs.Indexer.DirIterator(dir, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var fullpath string
+		if f != nil {
+			entries[f.DocName] = struct{}{}
+			info, _, err := sfs.c.Object(sfs.container, f.DirID+"/"+f.DocName)
+			if err == swift.ObjectNotFound {
+				errors = append(errors, vfs.FsckError{
+					Filename: path.Join(dir.Fullpath, f.DocName),
+					Message:  "the file is present in CouchDB but not in Swift",
+				})
+			} else if err != nil {
+				return nil, err
+			} else if info.ContentType == "directory" {
+				errors = append(errors, vfs.FsckError{
+					Filename: fullpath,
+					Message:  "it's a file in CouchDB but a directory in Swift",
+				})
+			}
+		} else {
+			entries[d.DocName] = struct{}{}
+			info, _, err := sfs.c.Object(sfs.container, d.DirID+"/"+d.DocName)
+			if err == swift.ObjectNotFound {
+				errors = append(errors, vfs.FsckError{
+					Filename: d.Fullpath,
+					Message:  "the directory is present in CouchDB but not in Swift",
+				})
+			} else if err != nil {
+				return nil, err
+			} else if info.ContentType != "directory" {
+				errors = append(errors, vfs.FsckError{
+					Filename: d.Fullpath,
+					Message:  "it's a directory in CouchDB but a file in Swift",
+				})
+			} else {
+				if errors, err = sfs.fsckWalk(d, errors); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	objects, err := sfs.c.ObjectsAll(sfs.container, &swift.ObjectsOpts{
+		Path: dir.DirID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, object := range objects {
+		name := path.Base(object.Name)
+		if _, ok := entries[name]; !ok {
+			filename := path.Join(dir.Fullpath, name)
+			what := "file"
+			if object.ContentType == "directory" {
+				what = "dir"
+			}
+			msg := fmt.Sprintf("the %s is present in Swift but not in CouchDB", what)
+			errors = append(errors, vfs.FsckError{
+				Filename: filename,
+				Message:  msg,
+			})
+		}
+	}
+
+	return errors, nil
 }
 
 // UpdateFileDoc overrides the indexer's one since the swift fs indexes files

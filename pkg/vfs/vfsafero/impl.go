@@ -347,7 +347,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 				return nil, err
 			} else if !stat.IsDir() {
 				errors = append(errors, vfs.FsckError{
-					Filename: fullpath,
+					Filename: d.Fullpath,
 					Message:  "it's a directory in CouchDB but a file on the local FS",
 				})
 			} else {
@@ -372,7 +372,7 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 			if fileinfo.IsDir() {
 				what = "dir"
 			}
-			msg := fmt.Sprintf("the %s is present in CouchDB but not on the local FS", what)
+			msg := fmt.Sprintf("the %s is present on the local FS but not in CouchDB", what)
 			errors = append(errors, vfs.FsckError{
 				Filename: filename,
 				Message:  msg,
