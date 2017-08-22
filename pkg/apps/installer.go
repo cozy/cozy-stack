@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/sirupsen/logrus"
 )
@@ -235,14 +236,17 @@ func (i *Installer) RunSync() (Manifest, error) {
 // upgrading.
 func (i *Installer) install(man Manifest) error {
 	i.log.Infof("[apps] Start install: %s %s", i.slug, i.src.String())
-	if err := i.ReadManifest(Installing, man); err != nil {
-		return err
-	}
-	if err := man.Create(i.db); err != nil {
-		return err
-	}
-	i.manc <- man
-	return i.fetcher.Fetch(i.src, i.fs, man)
+	args := []string{i.db.Prefix(), i.slug}
+	return hooks.Execute("install-app", args, func() error {
+		if err := i.ReadManifest(Installing, man); err != nil {
+			return err
+		}
+		if err := man.Create(i.db); err != nil {
+			return err
+		}
+		i.manc <- man
+		return i.fetcher.Fetch(i.src, i.fs, man)
+	})
 }
 
 // update will perform the update of an already installed application. It
@@ -271,7 +275,10 @@ func (i *Installer) delete(man Manifest) error {
 	if err := i.checkState(man); err != nil {
 		return err
 	}
-	return man.Delete(i.db)
+	args := []string{i.db.Prefix(), i.slug}
+	return hooks.Execute("remove-app", args, func() error {
+		return man.Delete(i.db)
+	})
 }
 
 // checkState returns whether or not the manifest is in the right state to
