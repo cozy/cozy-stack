@@ -92,11 +92,21 @@ part of the app.
 
 ### Services
 
-Application may require background and offline process to analyse the user's data and emit some notification or warning even without the user being on the application. These part of the application are called services and can be declaired as part of the application in its manifest.
+Application may require background and offline process to analyse the user's
+data and emit some notification or warning even without the user being on the
+application. These part of the application are called services and can be
+declaired as part of the application in its manifest.
 
-In contrast to [konnectors](./konnectors.md), services have the same permissions as the web application and can not access to internet. They are not intended to collect outside informations but rather analyse the current set of collected information inside the cozy. However they share the same mechanisms as the konnectors to describe how and when they should be executed: via our trigger system.
+In contrast to [konnectors](./konnectors.md), services have the same
+permissions as the web application and can not access to internet. They are
+not intended to collect outside informations but rather analyse the current
+set of collected information inside the cozy. However they share the same
+mechanisms as the konnectors to describe how and when they should be executed:
+via our trigger system.
 
-To define a service, first the code needs to be stored with the application content, as single (packaged) javascript files. In the manifest, declare the service and its parameters following this example:
+To define a service, first the code needs to be stored with the application
+content, as single (packaged) javascript files. In the manifest, declare the
+service and its parameters following this example:
 
 ```json
 {
@@ -111,7 +121,9 @@ To define a service, first the code needs to be stored with the application cont
 }
 ```
 
-The `trigger` field should follow the available triggers described in the [jobs documentation](./jobs.md). The `file` field should specify the service code run and the `type` field describe the code type (only `"node"` for now).
+The `trigger` field should follow the available triggers described in the
+[jobs documentation](./jobs.md). The `file` field should specify the service
+code run and the `type` field describe the code type (only `"node"` for now).
 
 ## Sources
 
