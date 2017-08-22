@@ -3,6 +3,7 @@ package vfsswift
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -351,6 +352,10 @@ func (sfs *swiftVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, err
 	}
 	return &swiftFileOpen{f, nil}, nil
+}
+
+func (sfs *swiftVFS) Fsck() ([]vfs.FsckError, error) {
+	return nil, errors.New("not yet")
 }
 
 // UpdateFileDoc overrides the indexer's one since the swift fs indexes files

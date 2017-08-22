@@ -72,6 +72,8 @@ type Fs interface {
 	// OpenFile return a file handler for reading associated with the given file
 	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
+	// Fsck return the list of inconsistencies in the VFS
+	Fsck() ([]FsckError, error)
 }
 
 // File is a reader, writer, seeker, closer iterface reprsenting an opened
@@ -82,6 +84,12 @@ type File interface {
 	io.Seeker
 	io.Writer
 	io.Closer
+}
+
+// FsckError is a struct for an inconsistency in the VFS
+type FsckError struct {
+	Filename string `json:"filename"`
+	Message  string `json:"message"`
 }
 
 // FilePather is an interface for computing the fullpath of a filedoc
@@ -512,7 +520,7 @@ func walk(fs VFS, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn) error 
 	}
 	iter := fs.DirIterator(dir, nil)
 	for {
-		f, d, err := iter.Next()
+		d, f, err := iter.Next()
 		if err == ErrIteratorDone {
 			break
 		}
@@ -525,7 +533,7 @@ func walk(fs VFS, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn) error 
 		} else {
 			fullpath = path.Join(name, d.DocName)
 		}
-		if err = walk(fs, fullpath, f, d, walkFn); err != nil {
+		if err = walk(fs, fullpath, d, f, walkFn); err != nil {
 			return err
 		}
 	}
