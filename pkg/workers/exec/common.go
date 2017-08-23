@@ -31,8 +31,8 @@ type execWorker interface {
 	Commit(ctx context.Context, msg *jobs.Message, errjob error) error
 }
 
-func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() execWorker) {
-	workerFunc := func(ctx context.Context, m *jobs.Message) (context.Context, error) {
+func makeExecWorkerFunc(createWorker func() execWorker) jobs.WorkerThreadedFunc {
+	return func(ctx context.Context, m *jobs.Message) (context.Context, error) {
 		worker := createWorker()
 
 		ctx = context.WithValue(ctx, jobs.ContextExecWorkerKey, worker)
@@ -95,7 +95,10 @@ func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() exec
 
 		return ctx, worker.Error(inst, err)
 	}
+}
 
+func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() execWorker) {
+	workerFunc := makeExecWorkerFunc(createWorker)
 	workerCommit := func(ctx context.Context, msg *jobs.Message, errjob error) error {
 		worker := ctx.Value(jobs.ContextExecWorkerKey)
 		if w, ok := worker.(execWorker); ok {
