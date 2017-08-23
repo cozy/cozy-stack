@@ -91,14 +91,11 @@ func TestBadFileExec(t *testing.T) {
 }
 
 func TestSuccess(t *testing.T) {
-	t.Skip()
-
 	script := `#!/bin/bash
 
-echo "{\"COZY_URL\":\"${COZY_URL}\", \"COZY_CREDENTIALS\":\"${COZY_CREDENTIALS}\"}"
-echo "${COZY_FIELDS}"
+echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL} ${COZY_CREDENTIALS}\"}"
 echo "bad json"
-echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
+echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 >&2 echo "log error"
 `
 	osFs := afero.NewOsFs()
@@ -145,22 +142,25 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 		ch := evCh.Channel
 		ev1 := <-ch
 		ev2 := <-ch
-		ev3 := <-ch
 		err = evCh.Close()
 		assert.NoError(t, err)
 		doc1 := ev1.Doc.(couchdb.JSONDoc)
 		doc2 := ev2.Doc.(couchdb.JSONDoc)
-		doc3 := ev3.Doc.(couchdb.JSONDoc)
+
 		assert.Equal(t, inst.Domain, ev1.Domain)
 		assert.Equal(t, inst.Domain, ev2.Domain)
-		assert.Equal(t, inst.PageURL("/", nil), doc1.M["COZY_URL"])
-		assert.Equal(t, account, doc2.M["account"])
 
-		man := doc3.M["Manifest"].(string)
-		assert.True(t, strings.HasPrefix(man, os.TempDir()))
-		assert.True(t, strings.HasSuffix(man, "/manifest.konnector"))
+		assert.Equal(t, "toto", doc1.M["type"])
+		assert.Equal(t, "manifest", doc2.M["type"])
 
-		token := doc1.M["COZY_CREDENTIALS"].(string)
+		msg2 := doc2.M["message"].(string)
+		assert.True(t, strings.HasPrefix(msg2, os.TempDir()))
+		assert.True(t, strings.HasSuffix(msg2, "/manifest.konnector"))
+
+		msg1 := doc1.M["message"].(string)
+		cozyURL := "COZY_URL=" + inst.PageURL("/", nil) + " "
+		assert.True(t, strings.HasPrefix(msg1, cozyURL))
+		token := msg1[len(cozyURL):]
 		var claims permissions.Claims
 		err = crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
 			return inst.PickKey(t.Claims.(*permissions.Claims).Audience)

@@ -3,6 +3,7 @@ package exec
 import (
 	"bufio"
 	"context"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -48,6 +49,7 @@ func makeExecWorkerFunc(createWorker func() execWorker) jobs.WorkerThreadedFunc 
 		if err != nil {
 			return ctx, err
 		}
+		defer os.RemoveAll(workDir)
 
 		cmdStr, env, jobID, err := worker.PrepareCmdEnv(inst, m)
 		if err != nil {
