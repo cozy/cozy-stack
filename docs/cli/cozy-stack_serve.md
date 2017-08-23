@@ -47,8 +47,9 @@ example), you can use the --appdir flag like this:
       --downloads-url string           URL for the download secret storage, redis or in-memory
       --fs-url string                  filesystem url (default "file://localhost//storage")
   -h, --help                           help for serve
+      --hooks string                   define the directory used for hook scripts (default ".")
       --jobs-url string                URL for the jobs system synchronization, redis or in-memory
-      --jobs-workers int               Number of parallel workers (0 to disable the processing of jobs) (default 4)
+      --jobs-workers int               Number of parallel workers (0 to disable the processing of jobs) (default 8)
       --konnectors-cmd string          konnectors command to be executed
       --konnectors-oauthstate string   URL for the storage of OAuth state for konnectors, redis or in-memory
       --lock-url string                URL for the locks, redis or in-memory
@@ -60,7 +61,6 @@ example), you can use the --appdir flag like this:
       --mail-password string           mail smtp password
       --mail-port int                  mail smtp port (default 465)
       --mail-username string           mail smtp username
-      --no-admin                       Start without the admin interface
       --realtime-url string            URL for realtime in the browser via webocket, redis or in-memory
       --sessions-url string            URL for the sessions storage, redis or in-memory
       --subdomains string              how to structure the subdomains for apps (can be nested or flat) (default "nested")

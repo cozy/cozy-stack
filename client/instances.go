@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -158,6 +159,25 @@ func (c *Client) DestroyInstance(domain string) error {
 		NoResponse: true,
 	})
 	return err
+}
+
+// FsckInstance returns the list of the inconsistencies in the VFS.
+func (c *Client) FsckInstance(domain string) ([]map[string]interface{}, error) {
+	if !validDomain(domain) {
+		return nil, fmt.Errorf("Invalid domain: %s", domain)
+	}
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   "/instances/" + domain + "/fsck",
+	})
+	if err != nil {
+		return nil, err
+	}
+	var list []map[string]interface{}
+	if err = json.NewDecoder(res.Body).Decode(&list); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 // GetToken is used to generate a toke with the specified options.

@@ -177,6 +177,19 @@ func deleteHandler(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func fsckHandler(c echo.Context) error {
+	domain := c.Param("domain")
+	i, err := instance.Get(domain)
+	if err != nil {
+		return wrapError(err)
+	}
+	list, err := i.VFS().Fsck()
+	if err != nil {
+		return wrapError(err)
+	}
+	return c.JSON(http.StatusOK, list)
+}
+
 func createToken(c echo.Context) error {
 	domain := c.QueryParam("Domain")
 	audience := c.QueryParam("Audience")
@@ -256,6 +269,7 @@ func Routes(router *echo.Group) {
 	router.GET("/:domain", showHandler)
 	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)
+	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
 }

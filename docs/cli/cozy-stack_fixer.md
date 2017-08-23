@@ -30,6 +30,10 @@ cozy-stack fixer [command] [flags]
 
 ### SEE ALSO
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack fixer albums-created-at](cozy-stack_fixer_albums-created-at.md)	 - Add a created_at field for albums where it's missing
+* [cozy-stack fixer jobs](cozy-stack_fixer_jobs.md)	 - Take a look at the consistency of the jobs
 * [cozy-stack fixer md5](cozy-stack_fixer_md5.md)	 - Fix missing md5 from contents in the vfs
+* [cozy-stack fixer mime](cozy-stack_fixer_mime.md)	 - Fix the class computed from the mime-type
+* [cozy-stack fixer onboardings](cozy-stack_fixer_onboardings.md)	 - Add the onboarding_finished flag to user that have registered their passphrase
 * [cozy-stack fixer triggers](cozy-stack_fixer_triggers.md)	 - Remove orphaned triggers from an instance
 

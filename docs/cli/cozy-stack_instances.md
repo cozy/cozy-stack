@@ -44,6 +44,7 @@ cozy-stack instances [command] [flags]
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
 * [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
+* [cozy-stack instances fsck](cozy-stack_instances_fsck.md)	 - Check and repair a vfs
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
 * [cozy-stack instances set-disk-quota](cozy-stack_instances_set-disk-quota.md)	 - Change the disk-quota of the instance
 * [cozy-stack instances show](cozy-stack_instances_show.md)	 - Show the instance of the specified domain

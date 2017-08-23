@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,6 +30,7 @@ var flagDev bool
 var flagPassphrase string
 var flagForce bool
 var flagExpire time.Duration
+var flagDry bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -288,6 +290,43 @@ All data associated with this domain will be permanently lost.
 	},
 }
 
+var fsckInstanceCmd = &cobra.Command{
+	Use:   "fsck [domain]",
+	Short: "Check and repair a vfs",
+	Long: `
+The cozy-stack fsck command checks that the files in the VFS are not
+desynchronized, ie a file present in CouchDB but not swift/localfs, or present
+in swift/localfs but not couchdb.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+
+		domain := args[0]
+
+		if !flagDry {
+			fmt.Printf("Sorry, only cozy-stack fsck --dry is implemented currently.")
+			return errors.New("Not implemented yet")
+		}
+
+		c := newAdminClient()
+		list, err := c.FsckInstance(domain)
+		if err != nil {
+			return err
+		}
+
+		if len(list) == 0 {
+			fmt.Printf("Instance for domain %s is clean\n", domain)
+		} else {
+			for _, entry := range list {
+				fmt.Printf("- %s: %s\n", entry["filename"], entry["message"])
+			}
+		}
+		return nil
+	},
+}
+
 var appTokenInstanceCmd = &cobra.Command{
 	Use:   "token-app [domain] [slug]",
 	Short: "Generate a new application token",
@@ -386,6 +425,7 @@ func init() {
 	instanceCmdGroup.AddCommand(quotaInstanceCmd)
 	instanceCmdGroup.AddCommand(debugInstanceCmd)
 	instanceCmdGroup.AddCommand(destroyInstanceCmd)
+	instanceCmdGroup.AddCommand(fsckInstanceCmd)
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
@@ -400,6 +440,7 @@ func init() {
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
+	fsckInstanceCmd.Flags().BoolVar(&flagDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	RootCmd.AddCommand(instanceCmdGroup)

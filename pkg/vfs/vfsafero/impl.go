@@ -293,6 +293,95 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &aferoFileOpen{f}, nil
 }
 
+func (afs *aferoVFS) Fsck() ([]vfs.FsckError, error) {
+	if lockerr := afs.mu.RLock(); lockerr != nil {
+		return nil, lockerr
+	}
+	defer afs.mu.RUnlock()
+	root, err := afs.Indexer.DirByPath("/")
+	if err != nil {
+		return nil, err
+	}
+	var errors []vfs.FsckError
+	return afs.fsckWalk(root, errors)
+}
+
+func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.FsckError, error) {
+	entries := make(map[string]struct{})
+	iter := afs.Indexer.DirIterator(dir, nil)
+	for {
+		d, f, err := iter.Next()
+		if err == vfs.ErrIteratorDone {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var fullpath string
+		if f != nil {
+			entries[f.DocName] = struct{}{}
+			fullpath = path.Join(dir.Fullpath, f.DocName)
+			stat, err := afs.fs.Stat(fullpath)
+			if _, ok := err.(*os.PathError); ok {
+				errors = append(errors, vfs.FsckError{
+					Filename: fullpath,
+					Message:  "the file is present in CouchDB but not on the local FS",
+				})
+			} else if err != nil {
+				return nil, err
+			} else if stat.IsDir() {
+				errors = append(errors, vfs.FsckError{
+					Filename: fullpath,
+					Message:  "it's a file in CouchDB but a directory on the local FS",
+				})
+			}
+		} else {
+			entries[d.DocName] = struct{}{}
+			stat, err := afs.fs.Stat(d.Fullpath)
+			if _, ok := err.(*os.PathError); ok {
+				errors = append(errors, vfs.FsckError{
+					Filename: d.Fullpath,
+					Message:  "the directory is present in CouchDB but not on the local FS",
+				})
+			} else if err != nil {
+				return nil, err
+			} else if !stat.IsDir() {
+				errors = append(errors, vfs.FsckError{
+					Filename: d.Fullpath,
+					Message:  "it's a directory in CouchDB but a file on the local FS",
+				})
+			} else {
+				if errors, err = afs.fsckWalk(d, errors); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	fileinfos, err := afero.ReadDir(afs.fs, dir.Fullpath)
+	if err != nil {
+		return nil, err
+	}
+	for _, fileinfo := range fileinfos {
+		if _, ok := entries[fileinfo.Name()]; !ok {
+			filename := path.Join(dir.Fullpath, fileinfo.Name())
+			if filename == "/.cozy_apps" || filename == "/.cozy_konnectors" || filename == "/.thumbs" {
+				continue
+			}
+			msg := "the file is present on the local FS but not in CouchDB"
+			if fileinfo.IsDir() {
+				msg = "the directory is present on the local FS but not in CouchDB"
+			}
+			errors = append(errors, vfs.FsckError{
+				Filename: filename,
+				Message:  msg,
+			})
+		}
+	}
+
+	return errors, nil
+}
+
 // UpdateFileDoc overrides the indexer's one since the afero.Fs is by essence
 // also indexed by path. When moving a file, the index has to be moved and the
 // filesystem should also be updated.
