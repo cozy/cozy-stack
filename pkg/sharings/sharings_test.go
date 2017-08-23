@@ -147,7 +147,9 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 
 	for _, recipient := range recipients {
 		if recipient.ID() == "" {
-			recipient.URL = strings.TrimPrefix(recipient.URL, "http://")
+			for _, cozy := range recipient.Cozy {
+				cozy.URL = strings.TrimPrefix(cozy.URL, "http://")
+			}
 			err = CreateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
 		}
@@ -183,7 +185,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 		} else {
 			sharing.Sharer = Sharer{
 				SharerStatus: rs,
-				URL:          recipient.URL,
+				URL:          recipient.Cozy[0].URL,
 			}
 			break
 		}
@@ -256,8 +258,12 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 func TestGetAccessTokenNoAuth(t *testing.T) {
 	code := "sesame"
 	rs := &RecipientStatus{
-		recipient: &Recipient{URL: recipientURL},
-		Client:    auth.Client{},
+		recipient: &Recipient{
+			Cozy: []RecipientCozy{
+				RecipientCozy{URL: recipientURL},
+			},
+		},
+		Client: auth.Client{},
 	}
 	_, err := rs.getAccessToken(in, code)
 	assert.Error(t, err)
@@ -297,9 +303,13 @@ func TestRegisterSuccess(t *testing.T) {
 
 	rs := &RecipientStatus{
 		recipient: &Recipient{
-			URL:   rURL,
-			Email: "xerxes@fr",
-			RID:   "dummyid",
+			Cozy: []RecipientCozy{
+				RecipientCozy{URL: rURL},
+			},
+			Email: []RecipientEmail{
+				RecipientEmail{Address: "xerxes@fr"},
+			},
+			RID: "dummyid",
 		},
 	}
 
@@ -511,8 +521,12 @@ func TestSharingRefusedSuccess(t *testing.T) {
 	clientID := "thriftshopclient"
 
 	recipient := &Recipient{
-		URL:   "https://toto.fr",
-		Email: "cpasbien@mail.fr",
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: "https://toto.fr"},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "cpasbien@mail.fr"},
+		},
 	}
 	err := couchdb.CreateDoc(TestPrefix, recipient)
 	assert.NoError(t, err)
@@ -532,7 +546,7 @@ func TestSharingRefusedSuccess(t *testing.T) {
 
 	redirect, err := SharingRefused(TestPrefix, state, clientID)
 	assert.NoError(t, err)
-	assert.Equal(t, recipient.URL, redirect)
+	assert.Equal(t, recipient.Cozy[0].URL, redirect)
 }
 
 func TestRecipientRefusedSharingWhenSharingDoesNotExist(t *testing.T) {
@@ -610,7 +624,9 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 
 func TestCreateSharingAndRegisterSharer(t *testing.T) {
 	rec := &Recipient{
-		Email: "test@test.fr",
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "test@test.fr"},
+		},
 	}
 
 	recStatus := &RecipientStatus{
@@ -742,9 +758,23 @@ func TestRevokeSharing(t *testing.T) {
 	}
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 
-	u := "http://" + ts.URL
-	recipient1 := &Recipient{URL: u, Email: "recipient1@mail.cc"}
-	recipient2 := &Recipient{URL: u, Email: "recipient2@mail.cc"}
+	u := ts.URL
+	recipient1 := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: u},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "recipient1@mail.cc"},
+		},
+	}
+	recipient2 := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: u},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "recipient2@mail.cc"},
+		},
+	}
 	rule := permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
 		Type:     "io.cozy.events",
@@ -843,9 +873,23 @@ func TestRevokeRecipient(t *testing.T) {
 	}
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 
-	u := "http://" + ts.URL
-	recipient1 := &Recipient{URL: "recipient1.url.cc", Email: "recipient@1"}
-	recipient2 := &Recipient{URL: u, Email: "recipient@2"}
+	u := ts.URL
+	recipient1 := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: "recipient1.url.cc"},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "recipient@1"},
+		},
+	}
+	recipient2 := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: u},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "recipient@2"},
+		},
+	}
 	rule := permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
 		Type:     "io.cozy.events",

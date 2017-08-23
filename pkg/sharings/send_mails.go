@@ -41,7 +41,7 @@ func SendDiscoveryMail(instance *instance.Instance, s *Sharing, rs *RecipientSta
 	// Generate the base values of the email to send
 	discoveryMsg, err := generateMailMessage(s, rs.recipient,
 		&mailTemplateValues{
-			RecipientName:    rs.recipient.Email,
+			RecipientName:    rs.recipient.Email[0].Address,
 			SharerPublicName: sharerPublicName,
 			Description:      desc,
 			SharingLink:      discoveryLink,
@@ -78,12 +78,12 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		if err != nil {
 			return err
 		}
-		if rs.recipient.Email == "" {
+		if len(rs.recipient.Email) == 0 {
 			errorOccurred = logError(instance, ErrRecipientHasNoEmail)
 			continue
 		}
 		// Special case if the recipient's URL is not known: start discovery
-		if rs.recipient.URL == "" {
+		if len(rs.recipient.Cozy) == 0 {
 			err = SendDiscoveryMail(instance, s, rs)
 			if err != nil {
 				logError(instance, err)
@@ -106,7 +106,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			// recipients: the description and the sharer's public name.
 			sharingMessage, errGenMail := generateMailMessage(s, rs.recipient,
 				&mailTemplateValues{
-					RecipientName:    rs.recipient.Email,
+					RecipientName:    rs.recipient.Email[0].Address,
 					SharerPublicName: sharerPublicName,
 					Description:      desc,
 					SharingLink:      oAuthStr,
@@ -166,12 +166,12 @@ func logError(i *instance.Instance, err error) bool {
 // from the sharing to generate the mail we will send to the specified
 // recipient.
 func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValues) (*jobs.Message, error) {
-	if r.Email == "" {
+	if len(r.Email) == 0 {
 		return nil, ErrRecipientHasNoEmail
 	}
 	mailAddresses := []*mails.Address{&mails.Address{
-		Name:  r.Email,
-		Email: r.Email,
+		Name:  r.Email[0].Address,
+		Email: r.Email[0].Address,
 	}}
 	return jobs.NewMessage(jobs.JSONEncoding, mails.Options{
 		Mode:           "from",
@@ -192,7 +192,7 @@ func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 	}
 
 	// Check if the recipient has an URL.
-	if rs.recipient.URL == "" {
+	if len(rs.recipient.Cozy) == 0 {
 		return "", ErrRecipientHasNoURL
 	}
 
@@ -210,14 +210,14 @@ func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 		return "", err
 	}
 
-	oAuthQuery, err := url.Parse(rs.recipient.URL)
+	oAuthQuery, err := url.Parse(rs.recipient.Cozy[0].URL)
 	if err != nil {
 		return "", err
 	}
 	// Special scenario: if r.URL doesn't have an "http://" or "https://" prefix
 	// then `url.Parse` doesn't set any host.
 	if oAuthQuery.Host == "" {
-		oAuthQuery.Host = rs.recipient.URL
+		oAuthQuery.Host = rs.recipient.Cozy[0].URL
 	}
 	oAuthQuery.Path = "/sharings/request"
 	// The link/button we put in the email has to have an http:// or https://
@@ -242,7 +242,7 @@ func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 
 func generateDiscoveryLink(instance *instance.Instance, s *Sharing, rs *RecipientStatus) (string, error) {
 	// Check if the recipient has an URL.
-	if rs.recipient.Email == "" {
+	if len(rs.recipient.Email) == 0 {
 		return "", ErrRecipientHasNoEmail
 	}
 
@@ -250,7 +250,7 @@ func generateDiscoveryLink(instance *instance.Instance, s *Sharing, rs *Recipien
 	discQuery := url.Values{
 		"recipient_id":    {rs.recipient.ID()},
 		"sharing_id":      {s.SharingID},
-		"recipient_email": {rs.recipient.Email},
+		"recipient_email": {rs.recipient.Email[0].Address},
 	}
 	discURL := url.URL{
 		Scheme:   instance.Scheme(),

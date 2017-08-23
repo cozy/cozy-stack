@@ -106,11 +106,22 @@ func SharingAnswer(c echo.Context) error {
 
 // CreateRecipient adds a sharing Recipient.
 func CreateRecipient(c echo.Context) error {
-	recipient := new(sharings.Recipient)
-	if err := json.NewDecoder(c.Request().Body).Decode(recipient); err != nil {
+	var body map[string]string
+	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
 		return err
 	}
 	instance := middlewares.GetInstance(c)
+	recipient := &sharings.Recipient{}
+	if email, ok := body["email"]; ok {
+		recipient.Email = []sharings.RecipientEmail{
+			sharings.RecipientEmail{Address: email},
+		}
+	}
+	if u, ok := body["url"]; ok {
+		recipient.Cozy = []sharings.RecipientCozy{
+			sharings.RecipientCozy{URL: u},
+		}
+	}
 
 	err := sharings.CreateRecipient(instance, recipient)
 	if err != nil {
@@ -598,7 +609,7 @@ func discoveryForm(c echo.Context) error {
 		})
 	}
 	// Block multiple url
-	if recipient.URL != "" {
+	if len(recipient.Cozy) > 0 {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error recipient already known",
 		})
@@ -640,7 +651,7 @@ func discovery(c echo.Context) error {
 		recURL.Scheme = "https"
 	}
 
-	recipient.URL = recURL.String()
+	recipient.Cozy = append(recipient.Cozy, sharings.RecipientCozy{URL: recURL.String()})
 	if err = couchdb.UpdateDoc(instance, recipient); err != nil {
 		return wrapErrors(err)
 	}

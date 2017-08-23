@@ -490,7 +490,7 @@ func SharingAccepted(instance *instance.Instance, state, clientID, accessCode st
 	err = ShareDoc(instance, sharing, recStatus)
 
 	// Redirect the recipient after acceptation
-	redirect := recStatus.recipient.URL
+	redirect := recStatus.recipient.Cozy[0].URL
 	return redirect, err
 }
 
@@ -516,7 +516,7 @@ func SharingRefused(db couchdb.Database, state, clientID string) (string, error)
 		return "", nil
 	}
 
-	redirect := recStatus.recipient.URL
+	redirect := recStatus.recipient.Cozy[0].URL
 	return redirect, err
 }
 
@@ -575,7 +575,13 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	}
 	sr := &RecipientStatus{
 		HostClientID: clientID,
-		recipient:    &Recipient{URL: sharerClient.ClientURI},
+		recipient: &Recipient{
+			Cozy: []RecipientCozy{
+				RecipientCozy{
+					URL: sharerClient.ClientURI,
+				},
+			},
+		},
 	}
 	sharer := Sharer{
 		URL:          sharerClient.ClientURI,
@@ -603,7 +609,7 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 	if err != nil {
 		if rs.recipient != nil {
 			instance.Logger().Errorf("sharing] Could not register at %v : %v",
-				rs.recipient.URL, err)
+				rs.recipient.Cozy[0].URL, err)
 			rs.Status = consts.SharingStatusUnregistered
 		} else {
 			instance.Logger().Error("[sharing] Sharing recipient not found")
@@ -619,7 +625,11 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	// Register the sharer as a recipient
 	sharer := sharing.Sharer
 	doc := &Recipient{
-		URL: sharer.URL,
+		Cozy: []RecipientCozy{
+			RecipientCozy{
+				URL: sharer.URL,
+			},
+		},
 	}
 	err := CreateRecipient(instance, doc)
 	if err != nil {
@@ -730,7 +740,7 @@ func CreateSharing(instance *instance.Instance, sharing *Sharing) error {
 	// Register the sharer at each recipient and set the status accordingly.
 	for _, rs := range recStatus {
 		// If the URL is not known, a discovery mail will be sent later
-		if rs.recipient.URL != "" {
+		if len(rs.recipient.Cozy) > 0 {
 			RegisterRecipient(instance, rs)
 		}
 	}
@@ -920,7 +930,7 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID
 				return err
 			}
 			ins.Logger().Debugf("[sharings] RevokeRecipient: Recipient %s "+
-				"revoked", recipient.recipient.URL)
+				"revoked", recipient.recipient.Cozy[0].URL)
 
 		} else {
 			if recipient.Status != consts.SharingStatusRevoked &&
@@ -1083,7 +1093,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, 
 		}
 		if err != nil {
 			ins.Logger().Errorf("[sharings] askToRevoke: Could not ask recipient "+
-				"%s to revoke sharing %s: %v", rs.recipient.URL, sharingID, err)
+				"%s to revoke sharing %s: %v", rs.recipient.Cozy[0].URL, sharingID, err)
 		}
 		return err
 	}

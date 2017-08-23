@@ -52,8 +52,12 @@ var iocozytests = "io.cozy.tests"
 
 func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
 	recipient := &sharings.Recipient{
-		Email: email,
-		URL:   url,
+		Email: []sharings.RecipientEmail{
+			sharings.RecipientEmail{Address: email},
+		},
+		Cozy: []sharings.RecipientCozy{
+			sharings.RecipientCozy{URL: url},
+		},
 	}
 	err := sharings.CreateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
@@ -97,7 +101,7 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 
 	for _, recipient := range recipients {
 		if recipient.ID() == "" {
-			recipient.URL = strings.TrimPrefix(recipient.URL, "http://")
+			recipient.Cozy[0].URL = strings.TrimPrefix(recipient.Cozy[0].URL, "http://")
 			err = sharings.CreateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
 		}
@@ -132,7 +136,7 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 		} else {
 			sharing.Sharer = sharings.Sharer{
 				SharerStatus: rs,
-				URL:          recipient.URL,
+				URL:          recipient.Cozy[0].URL,
 			}
 			break
 		}
@@ -1582,8 +1586,9 @@ func TestDiscoveryFormNoEmail(t *testing.T) {
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
 	recipient := &sharings.Recipient{
-		Email: "test@mail.fr",
-		URL:   "",
+		Email: []sharings.RecipientEmail{
+			sharings.RecipientEmail{Address: "test@mail.fr"},
+		},
 	}
 	err := sharings.CreateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
@@ -1604,7 +1609,7 @@ func TestDiscoverySuccess(t *testing.T) {
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},
 		"recipient_id": {sharing.RecipientsStatus[0].RefRecipient.ID},
-		"url":          {"http://" + recipientURL},
+		"url":          {recipientURL},
 	}
 	res, err := formPOST("/sharings/discovery", urlVal)
 	assert.NoError(t, err)
@@ -1697,7 +1702,7 @@ func TestMain(m *testing.M) {
 	}
 	ts = setup.GetTestServerMultipleRoutes(routes)
 	ts2 = setup2.GetTestServer("/auth", auth.Routes)
-	recipientURL = strings.Split(ts2.URL, "http://")[1]
+	recipientURL = ts2.URL
 
 	setup.AddCleanup(func() error { setup2.Cleanup(); return nil })
 
