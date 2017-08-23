@@ -117,6 +117,8 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 			return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 		}
 		needAuth = false
+	} else if slug == consts.OnboardingSlug {
+		needAuth = true
 	} else {
 		needAuth = !route.Public
 	}
