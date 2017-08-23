@@ -231,7 +231,7 @@ func (t *task) run() (err error) {
 		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
 			t.workerID, t.infos.ID(), t.execCount, timeout)
 		ctx, cancel := context.WithTimeout(t.ctx, timeout)
-		if err = t.exec(cookie, ctx); err == nil {
+		if err = t.exec(ctx, cookie); err == nil {
 			cancel()
 			break
 		}
@@ -244,7 +244,7 @@ func (t *task) run() (err error) {
 	return nil
 }
 
-func (t *task) exec(cookie interface{}, ctx context.Context) (err error) {
+func (t *task) exec(ctx context.Context, cookie interface{}) (err error) {
 	slot := <-slots
 	defer func() {
 		slots <- slot
