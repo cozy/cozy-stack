@@ -84,7 +84,7 @@ var (
 			En: "Photos manager for Cozy v3",
 			Fr: "Gestionnaire de photos pour Cozy v3",
 		},
-		Repository: "https://github.com/cozy/cozy-photos-v3",
+		Repository: "https://github.com/cozy/drive",
 		Tags:       []string{"albums"},
 		Versions: appVersions{
 			Stable: []string{"3.0.0"},

@@ -16,7 +16,7 @@ cozy-stack apps install [slug] [sourceurl] [flags]
 ### Examples
 
 ```
-$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build'
+$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build-drive'
 ```
 
 ### Options

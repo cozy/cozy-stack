@@ -182,8 +182,8 @@ const (
 // TODO remove it when we will have a true registry
 var AppsRegistry = map[string]string{
 	"onboarding": "git://github.com/cozy/cozy-onboarding-v3.git#build",
-	"drive":      "git://github.com/cozy/cozy-drive.git#build",
-	"photos":     "git://github.com/cozy/cozy-photos-v3.git#build",
+	"drive":      "git://github.com/cozy/cozy-drive.git#build-drive",
+	"photos":     "git://github.com/cozy/cozy-drive.git#build-photos",
 	"settings":   "git://github.com/cozy/cozy-settings.git#build",
 	"collect":    "git://github.com/cozy/cozy-collect.git#build",
 }
