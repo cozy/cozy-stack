@@ -368,11 +368,10 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 			if filename == "/.cozy_apps" || filename == "/.cozy_konnectors" || filename == "/.thumbs" {
 				continue
 			}
-			what := "file"
+			msg := "the file is present on the local FS but not in CouchDB"
 			if fileinfo.IsDir() {
-				what = "dir"
+				msg = "the directory is present on the local FS but not in CouchDB"
 			}
-			msg := fmt.Sprintf("the %s is present on the local FS but not in CouchDB", what)
 			errors = append(errors, vfs.FsckError{
 				Filename: filename,
 				Message:  msg,

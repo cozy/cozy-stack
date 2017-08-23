@@ -23,6 +23,7 @@ import (
 
 const versionSuffix = "-version"
 const maxFileSize = 5 << (3 * 10) // 5 GiB
+const dirContentType = "directory"
 
 type swiftVFS struct {
 	vfs.Indexer
@@ -131,7 +132,7 @@ func (sfs *swiftVFS) CreateDir(doc *vfs.DirDoc) error {
 		objName,
 		false,
 		"",
-		"directory",
+		dirContentType,
 		nil,
 	)
 	if err != nil {
@@ -389,7 +390,7 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 				})
 			} else if err != nil {
 				return nil, err
-			} else if info.ContentType == "directory" {
+			} else if info.ContentType == dirContentType {
 				errors = append(errors, vfs.FsckError{
 					Filename: fullpath,
 					Message:  "it's a file in CouchDB but a directory in Swift",
@@ -405,7 +406,7 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 				})
 			} else if err != nil {
 				return nil, err
-			} else if info.ContentType != "directory" {
+			} else if info.ContentType != dirContentType {
 				errors = append(errors, vfs.FsckError{
 					Filename: d.Fullpath,
 					Message:  "it's a directory in CouchDB but a file in Swift",
@@ -429,7 +430,7 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 		if _, ok := entries[name]; !ok {
 			filename := path.Join(dir.Fullpath, name)
 			what := "file"
-			if object.ContentType == "directory" {
+			if object.ContentType == dirContentType {
 				what = "dir"
 			}
 			msg := fmt.Sprintf("the %s is present in Swift but not in CouchDB", what)
