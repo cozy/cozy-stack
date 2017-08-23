@@ -23,9 +23,7 @@ import (
 
 var inst *instance.Instance
 
-var konnectorWorkerFunc = makeExecWorkerFunc(func() execWorker {
-	return &konnectorWorker{}
-})
+var konnectorWorkerFunc = makeExecWorkerFunc()
 
 func TestUnknownDomain(t *testing.T) {
 	ctx := jobs.NewWorkerContext("unknown", "id")
@@ -33,10 +31,10 @@ func TestUnknownDomain(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	ctx, err = konnectorWorkerFunc(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.Error(t, err)
 	assert.Equal(t, "Instance not found", err.Error())
-	assert.NotNil(t, ctx.Value(jobs.ContextExecWorkerKey))
 }
 
 func TestUnknownApp(t *testing.T) {
@@ -45,10 +43,10 @@ func TestUnknownApp(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	ctx, err = konnectorWorkerFunc(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.Error(t, err)
 	assert.Equal(t, "Application is not installed", err.Error())
-	assert.NotNil(t, ctx.Value(jobs.ContextExecWorkerKey))
 }
 
 func TestBadFileExec(t *testing.T) {
@@ -80,13 +78,14 @@ func TestBadFileExec(t *testing.T) {
 	assert.NoError(t, err)
 
 	config.GetConfig().Konnectors.Cmd = ""
-	ctx, err = konnectorWorkerFunc(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.Error(t, err)
 	assert.Equal(t, "fork/exec : no such file or directory", err.Error())
-	assert.NotNil(t, ctx.Value(jobs.ContextExecWorkerKey))
 
 	config.GetConfig().Konnectors.Cmd = "echo"
-	ctx, err = konnectorWorkerFunc(ctx, msg)
+	w = &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.NoError(t, err)
 }
 
@@ -178,9 +177,9 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	assert.NoError(t, err)
 
 	config.GetConfig().Konnectors.Cmd = tmpScript.Name()
-	ctx, err = konnectorWorkerFunc(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.NoError(t, err)
-	assert.NotNil(t, ctx.Value(jobs.ContextExecWorkerKey))
 
 	wg.Wait()
 }

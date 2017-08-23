@@ -32,28 +32,27 @@ type execWorker interface {
 	Commit(ctx context.Context, msg *jobs.Message, errjob error) error
 }
 
-func makeExecWorkerFunc(createWorker func() execWorker) jobs.WorkerThreadedFunc {
-	return func(ctx context.Context, m *jobs.Message) (context.Context, error) {
-		worker := createWorker()
+func makeExecWorkerFunc() jobs.WorkerThreadedFunc {
+	return func(ctx context.Context, cookie interface{}, m *jobs.Message) error {
+		worker := cookie.(execWorker)
 
-		ctx = context.WithValue(ctx, jobs.ContextExecWorkerKey, worker)
 		domain := ctx.Value(jobs.ContextDomainKey).(string)
 		workerName := ctx.Value(jobs.ContextWorkerKey).(string)
 
 		inst, err := instance.Get(domain)
 		if err != nil {
-			return ctx, err
+			return err
 		}
 
 		workDir, err := worker.PrepareWorkDir(inst, m)
 		if err != nil {
-			return ctx, err
+			return err
 		}
 		defer os.RemoveAll(workDir)
 
 		cmdStr, env, jobID, err := worker.PrepareCmdEnv(inst, m)
 		if err != nil {
-			return ctx, err
+			return err
 		}
 
 		cmd := exec.CommandContext(ctx, cmdStr, workDir) // #nosec
@@ -61,11 +60,11 @@ func makeExecWorkerFunc(createWorker func() execWorker) jobs.WorkerThreadedFunc 
 
 		cmdErr, err := cmd.StderrPipe()
 		if err != nil {
-			return ctx, err
+			return err
 		}
 		cmdOut, err := cmd.StdoutPipe()
 		if err != nil {
-			return ctx, err
+			return err
 		}
 
 		scanErr := bufio.NewScanner(cmdErr)
@@ -75,7 +74,7 @@ func makeExecWorkerFunc(createWorker func() execWorker) jobs.WorkerThreadedFunc 
 		log := logger.WithDomain(domain)
 
 		if err = cmd.Start(); err != nil {
-			return ctx, wrapErr(ctx, err)
+			return wrapErr(ctx, err)
 		}
 
 		go func() {
@@ -95,21 +94,26 @@ func makeExecWorkerFunc(createWorker func() execWorker) jobs.WorkerThreadedFunc 
 			log.Errorf("[%s] %s: failed: %s", workerName, jobID, err)
 		}
 
-		return ctx, worker.Error(inst, err)
+		return worker.Error(inst, err)
 	}
 }
 
 func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() execWorker) {
-	workerFunc := makeExecWorkerFunc(createWorker)
-	workerCommit := func(ctx context.Context, msg *jobs.Message, errjob error) error {
-		worker := ctx.Value(jobs.ContextExecWorkerKey)
-		if w, ok := worker.(execWorker); ok {
+	workerFunc := makeExecWorkerFunc()
+
+	workerInit := func() (interface{}, error) {
+		return createWorker(), nil
+	}
+
+	workerCommit := func(ctx context.Context, cookie interface{}, msg *jobs.Message, errjob error) error {
+		if w, ok := cookie.(execWorker); ok {
 			return w.Commit(ctx, msg, errjob)
 		}
 		return errjob
 	}
 
 	cfg = cfg.Clone()
+	cfg.WorkerInit = workerInit
 	cfg.WorkerThreadedFunc = workerFunc
 	cfg.WorkerCommit = workerCommit
 

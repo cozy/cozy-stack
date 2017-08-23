@@ -17,8 +17,6 @@ const (
 	ContextDomainKey contextKey = iota
 	// ContextWorkerKey is used to store the workerID string
 	ContextWorkerKey
-	// ContextExecWorkerKey is used to store the worker exec struct (see pkg workers/exec)
-	ContextExecWorkerKey
 )
 
 var (
@@ -30,22 +28,28 @@ var (
 )
 
 type (
+	// WorkerInitFunc is optionally called at the beginning of the process and
+	// can produce a cookie value that will be passed into the given
+	// WorkerThreaderFunc.
+	WorkerInitFunc func() (interface{}, error)
+
 	// WorkerFunc represent the work function that a worker should implement.
 	WorkerFunc func(context context.Context, msg *Message) error
 
 	// WorkerThreadedFunc represent the work function that a worker should
 	// implement. In addition to a simple WorkerFunc, a threaded one can thread
 	// its context on each call and to the commit method.
-	WorkerThreadedFunc func(context context.Context, msg *Message) (context.Context, error)
+	WorkerThreadedFunc func(context context.Context, cookie interface{}, msg *Message) error
 
 	// WorkerCommit is an optional method that is always called once after the
 	// execution of the WorkerFunc.
-	WorkerCommit func(context context.Context, msg *Message, errjob error) error
+	WorkerCommit func(context context.Context, cookie interface{}, msg *Message, errjob error) error
 
 	// WorkerConfig is the configuration parameter of a worker defined by the job
 	// system. It contains parameters of the worker along with the worker main
 	// function that perform the work against a job's message.
 	WorkerConfig struct {
+		WorkerInit         WorkerInitFunc
 		WorkerFunc         WorkerFunc
 		WorkerThreadedFunc WorkerThreadedFunc
 		WorkerCommit       WorkerCommit
@@ -195,17 +199,23 @@ type task struct {
 }
 
 func (t *task) run() (err error) {
+	var cookie interface{}
 	t.startTime = time.Now()
 	t.execCount = 0
-	ctx := t.ctx
 	defer func() {
 		if t.conf.WorkerCommit != nil {
-			if errc := t.conf.WorkerCommit(ctx, t.infos.Message, err); errc != nil {
+			if errc := t.conf.WorkerCommit(t.ctx, cookie, t.infos.Message, err); errc != nil {
 				joblog.Warnf("[job] %s: error while commiting job %s: %s",
 					t.workerID, t.infos.ID(), errc.Error())
 			}
 		}
 	}()
+	if t.conf.WorkerInit != nil {
+		cookie, err = t.conf.WorkerInit()
+		if err != nil {
+			return err
+		}
+	}
 	for {
 		retry, delay, timeout := t.nextDelay()
 		if !retry {
@@ -220,19 +230,21 @@ func (t *task) run() (err error) {
 		}
 		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
 			t.workerID, t.infos.ID(), t.execCount, timeout)
-		ctx, _ = context.WithTimeout(ctx, timeout)
-		if ctx, err = t.exec(ctx); err == nil {
+		ctx, cancel := context.WithTimeout(t.ctx, timeout)
+		if err = t.exec(cookie, ctx); err == nil {
+			cancel()
 			break
 		}
 		// Even though ctx should have expired already, it is good practice to call
 		// its cancelation function in any case. Failure to do so may keep the
 		// context and its parent alive longer than necessary.
+		cancel()
 		t.execCount++
 	}
 	return nil
 }
 
-func (t *task) exec(ctx context.Context) (c context.Context, err error) {
+func (t *task) exec(cookie interface{}, ctx context.Context) (err error) {
 	slot := <-slots
 	defer func() {
 		slots <- slot
@@ -245,13 +257,9 @@ func (t *task) exec(ctx context.Context) (c context.Context, err error) {
 		}
 	}()
 	if t.conf.WorkerThreadedFunc != nil {
-		c, err = t.conf.WorkerThreadedFunc(ctx, t.infos.Message)
-		if c != nil {
-			ctx = c
-		}
-		return ctx, err
+		return t.conf.WorkerThreadedFunc(ctx, cookie, t.infos.Message)
 	}
-	return ctx, t.conf.WorkerFunc(ctx, t.infos.Message)
+	return t.conf.WorkerFunc(ctx, t.infos.Message)
 }
 
 func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
