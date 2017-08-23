@@ -276,7 +276,7 @@ func (i *Installer) delete(man Manifest) error {
 		return err
 	}
 	args := []string{i.db.Prefix(), i.slug}
-	return hooks.Execute("remove-app", args, func() error {
+	return hooks.Execute("uninstall-app", args, func() error {
 		return man.Delete(i.db)
 	})
 }
