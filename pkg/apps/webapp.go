@@ -203,8 +203,7 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error
 
 // Create is part of the Manifest interface
 func (m *WebappManifest) Create(db couchdb.Database) error {
-	err := diffServices(db, m.Slug(), nil, m.Services)
-	if err != nil {
+	if err := diffServices(db, m.Slug(), nil, m.Services); err != nil {
 		return err
 	}
 	m.CreatedAt = time.Now()
@@ -212,22 +211,20 @@ func (m *WebappManifest) Create(db couchdb.Database) error {
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err
 	}
-	_, err = permissions.CreateWebappSet(db, m.Slug(), m.Permissions())
+	_, err := permissions.CreateWebappSet(db, m.Slug(), m.Permissions())
 	return err
 }
 
 // Update is part of the Manifest interface
 func (m *WebappManifest) Update(db couchdb.Database) error {
-	err := diffServices(db, m.Slug(), m.oldServices, m.Services)
-	if err != nil {
+	if err := diffServices(db, m.Slug(), m.oldServices, m.Services); err != nil {
 		return err
 	}
 	m.UpdatedAt = time.Now()
-	err = couchdb.UpdateDoc(db, m)
-	if err != nil {
+	if err := couchdb.UpdateDoc(db, m); err != nil {
 		return err
 	}
-	_, err = permissions.UpdateWebappSet(db, m.Slug(), m.Permissions())
+	_, err := permissions.UpdateWebappSet(db, m.Slug(), m.Permissions())
 	return err
 }
 
