@@ -106,8 +106,7 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) 
 	workFS := afero.NewBasePathFs(osFS, workDir)
 
 	fileServer := i.KonnectorsFileServer()
-	tarFileName := path.Join("/", apps.KonnectorArchiveName)
-	tarFile, err := fileServer.Open(slug, man.Version(), tarFileName)
+	tarFile, err := fileServer.Open(slug, man.Version(), apps.KonnectorArchiveName)
 	if err != nil {
 		return
 	}
