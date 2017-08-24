@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +23,7 @@ import (
 var localGitCmd *exec.Cmd
 var localGitDir string
 var localVersion string
+var localServices string
 var ts *httptest.Server
 
 var manGen func() string
@@ -39,7 +39,10 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func manifestWebapp() string {
-	return strings.Replace(`{
+	if localServices == "" {
+		localServices = "{}"
+	}
+	return `{
   "description": "A mini app to test cozy-stack-v2",
   "developer": {
     "name": "Bruno",
@@ -49,12 +52,13 @@ func manifestWebapp() string {
   "name": "mini-app",
   "permissions": {},
   "slug": "mini",
-  "version": "`+localVersion+`"
-}`, "\n", "", -1)
+  "version": "` + localVersion + `",
+  "services": ` + localServices + `
+}`
 }
 
 func manifestKonnector() string {
-	return strings.Replace(`{
+	return `{
   "description": "A mini konnector to test cozy-stack-v2",
   "type": "node",
   "developer": {
@@ -65,8 +69,8 @@ func manifestKonnector() string {
   "name": "mini-app",
   "permissions": {},
   "slug": "mini",
-  "version": "`+localVersion+`"
-}`, "\n", "", -1)
+  "version": "` + localVersion + `"
+}`
 }
 
 func serveGitRep() {

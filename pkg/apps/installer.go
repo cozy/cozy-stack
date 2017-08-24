@@ -177,18 +177,17 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 func (i *Installer) Run() {
 	var err error
 
-	man := i.man
-	if man == nil {
+	if i.man == nil {
 		panic("Manifest is nil")
 	}
 
 	switch i.op {
 	case Install:
-		err = i.install(man)
+		err = i.install()
 	case Update:
-		err = i.update(man)
+		err = i.update()
 	case Delete:
-		err = i.delete(man)
+		err = i.delete()
 	default:
 		panic("Unknown operation")
 	}
@@ -196,7 +195,7 @@ func (i *Installer) Run() {
 	if err != nil {
 		i.errc <- err
 	} else {
-		i.manc <- man
+		i.manc <- i.man
 	}
 }
 
@@ -220,19 +219,19 @@ func (i *Installer) RunSync() (Manifest, error) {
 //
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
-func (i *Installer) install(man Manifest) error {
+func (i *Installer) install() error {
 	i.log.Infof("[apps] Start install: %s %s", i.slug, i.src.String())
 	args := []string{i.db.Prefix(), i.slug}
 	return hooks.Execute("install-app", args, func() error {
-		if err := i.ReadManifest(Installing, man); err != nil {
+		if err := i.ReadManifest(Installing); err != nil {
 			return err
 		}
-		i.manc <- man
-		if err := i.fetcher.Fetch(i.src, i.fs, man); err != nil {
+		i.manc <- i.man
+		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
 		}
-		man.SetState(i.endState)
-		return man.Create(i.db)
+		i.man.SetState(i.endState)
+		return i.man.Create(i.db)
 	})
 }
 
@@ -242,30 +241,30 @@ func (i *Installer) install(man Manifest) error {
 //
 // Note that the fetched manifest is returned even if an error occurred while
 // upgrading.
-func (i *Installer) update(man Manifest) error {
+func (i *Installer) update() error {
 	i.log.Infof("[apps] Start update: %s %s", i.slug, i.src.String())
-	if err := i.checkState(man); err != nil {
+	if err := i.checkState(i.man); err != nil {
 		return err
 	}
-	if err := i.ReadManifest(Upgrading, man); err != nil {
+	if err := i.ReadManifest(Upgrading); err != nil {
 		return err
 	}
-	i.manc <- man
-	if err := i.fetcher.Fetch(i.src, i.fs, man); err != nil {
+	i.manc <- i.man
+	if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 		return err
 	}
-	man.SetState(i.endState)
-	return man.Update(i.db)
+	i.man.SetState(i.endState)
+	return i.man.Update(i.db)
 }
 
-func (i *Installer) delete(man Manifest) error {
+func (i *Installer) delete() error {
 	i.log.Infof("[apps] Start delete: %s %s", i.slug, i.src.String())
-	if err := i.checkState(man); err != nil {
+	if err := i.checkState(i.man); err != nil {
 		return err
 	}
 	args := []string{i.db.Prefix(), i.slug}
 	return hooks.Execute("uninstall-app", args, func() error {
-		return man.Delete(i.db)
+		return i.man.Delete(i.db)
 	})
 }
 
@@ -286,14 +285,14 @@ func (i *Installer) checkState(man Manifest) error {
 // passed manifest pointer.
 //
 // The State field of the manifest will be set to the specified state.
-func (i *Installer) ReadManifest(state State, man Manifest) error {
+func (i *Installer) ReadManifest(state State) error {
 	r, err := i.fetcher.FetchManifest(i.src)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
-	man.SetState(state)
-	return man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
+	i.man.SetState(state)
+	return i.man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
 }
 
 // Poll should be used to monitor the progress of the Installer.

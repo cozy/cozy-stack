@@ -1,7 +1,6 @@
 package apps
 
 import (
-	"encoding/json"
 	"fmt"
 	"path"
 	"testing"
@@ -154,6 +153,19 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	manGen = manifestWebapp
 	manName = WebappManifestName
 
+	defer func() {
+		localServices = ""
+	}()
+
+	localServices = `{
+		"service1": {
+
+			"type": "node",
+			"file": "/services/service1.js",
+			"trigger": "@cron 0 0 0 * * *"
+		}
+	}`
+
 	doUpgrade(1)
 
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
@@ -177,7 +189,17 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	assert.True(t, ok, "The manifest has the right version")
 	version1 := man.Version()
 
+	manWebapp := man.(*WebappManifest)
+	if assert.NotNil(t, manWebapp.Services["service1"]) {
+		service1 := manWebapp.Services["service1"]
+		assert.Equal(t, "/services/service1.js", service1.File)
+		assert.Equal(t, "@cron 0 0 0 * * *", service1.TriggerOptions)
+		assert.Equal(t, "node", service1.Type)
+		assert.NotEmpty(t, service1.TriggerID)
+	}
+
 	doUpgrade(2)
+	localServices = ""
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
 		Operation: Update,
@@ -225,6 +247,8 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	ok, err = afero.FileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), WebappManifestName), []byte("2.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
+	manWebapp = man.(*WebappManifest)
+	assert.Nil(t, manWebapp.Services["service1"])
 }
 
 func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {

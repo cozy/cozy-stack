@@ -39,6 +39,14 @@ type Service struct {
 // Services is a map to define services assciated with an application.
 type Services map[string]*Service
 
+// Locale can be used to describe a locale.
+type Locale struct {
+	Description string `json:"description"`
+}
+
+// Locales is a map to define the available locales of the application.
+type Locales map[string]Locale
+
 // Intent is a declaration of a service for other client-side apps
 type Intent struct {
 	Action string   `json:"action"`
@@ -64,10 +72,8 @@ type WebappManifest struct {
 	Description string     `json:"description"`
 	Developer   *Developer `json:"developer"`
 
-	DefaultLocale string `json:"default_locale"`
-	Locales       map[string]struct {
-		Description string `json:"description"`
-	} `json:"locales"`
+	DefaultLocale string  `json:"default_locale"`
+	Locales       Locales `json:"locales"`
 
 	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
@@ -99,8 +105,28 @@ func (m *WebappManifest) Clone() couchdb.Doc {
 		dev := *m.Developer
 		cloned.Developer = &dev
 	}
+
+	cloned.Routes = make(Routes, len(m.Routes))
+	for k, v := range m.Routes {
+		cloned.Routes[k] = v
+	}
+
+	cloned.Services = make(Services, len(m.Services))
+	for k, v := range m.Services {
+		cloned.Services[k] = v
+	}
+
+	cloned.Locales = make(Locales, len(m.Locales))
+	for k, v := range m.Locales {
+		cloned.Locales[k] = v
+	}
+
 	cloned.Intents = make([]Intent, len(m.Intents))
 	copy(cloned.Intents, m.Intents)
+
+	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
+	copy(cloned.DocPermissions, m.DocPermissions)
+
 	return &cloned
 }
 
@@ -177,8 +203,7 @@ func (m *WebappManifest) ReadManifest(r io.Reader, slug, sourceURL string) error
 
 // Create is part of the Manifest interface
 func (m *WebappManifest) Create(db couchdb.Database) error {
-	var err error
-	m.Services, err = diffServices(db, m.Slug(), nil, m.Services)
+	err := diffServices(db, m.Slug(), nil, m.Services)
 	if err != nil {
 		return err
 	}
@@ -193,8 +218,7 @@ func (m *WebappManifest) Create(db couchdb.Database) error {
 
 // Update is part of the Manifest interface
 func (m *WebappManifest) Update(db couchdb.Database) error {
-	var err error
-	m.Services, err = diffServices(db, m.Slug(), m.oldServices, m.Services)
+	err := diffServices(db, m.Slug(), m.oldServices, m.Services)
 	if err != nil {
 		return err
 	}
@@ -209,7 +233,7 @@ func (m *WebappManifest) Update(db couchdb.Database) error {
 
 // Delete is part of the Manifest interface
 func (m *WebappManifest) Delete(db couchdb.Database) error {
-	_, err := diffServices(db, m.Slug(), m.Services, nil)
+	err := diffServices(db, m.Slug(), m.Services, nil)
 	if err != nil {
 		return err
 	}
@@ -220,7 +244,7 @@ func (m *WebappManifest) Delete(db couchdb.Database) error {
 	return couchdb.DeleteDoc(db, m)
 }
 
-func diffServices(db couchdb.Database, slug string, oldServices, newServices Services) (Services, error) {
+func diffServices(db couchdb.Database, slug string, oldServices, newServices Services) error {
 	domain := db.Prefix()
 
 	if oldServices == nil {
@@ -259,7 +283,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 	sched := stack.GetScheduler()
 	for _, service := range deleted {
 		if err := sched.Delete(domain, service.TriggerID); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -279,7 +303,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 			"service_file": service.File,
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 		trigger, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
 			Type:       triggerType,
@@ -289,15 +313,15 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 			Message:    msg,
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if err = sched.Add(trigger); err != nil {
-			return nil, err
+			return err
 		}
 		service.TriggerID = trigger.ID()
 	}
 
-	return newServices, nil
+	return nil
 }
 
 // FindRoute takes a path, returns the route which matches the best,
