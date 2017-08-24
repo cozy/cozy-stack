@@ -51,12 +51,12 @@ func (c *jsonCache) Get(d string, out interface{}) bool {
 func (c *jsonCache) Set(d string, i interface{}) {
 	bytes, err := json.Marshal(i)
 	if err != nil {
-		log.Error("unable to cache ", c.namespace+d, err)
+		log.Errorf("unable to marshal instance %q: %s", c.namespace+d, err)
 		return
 	}
 	err = c.client.Set(c.namespace+d, bytes, c.expiration).Err()
 	if err != nil {
-		log.Error("unable to cache instance", i, err)
+		log.Errorf("unable to cache value %q: %s", c.namespace+d, err)
 	}
 }
 

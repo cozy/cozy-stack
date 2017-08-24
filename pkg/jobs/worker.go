@@ -28,24 +28,36 @@ var (
 )
 
 type (
+	// WorkerInitFunc is optionally called at the beginning of the process and
+	// can produce a cookie value that will be passed into the given
+	// WorkerThreaderFunc.
+	WorkerInitFunc func() (interface{}, error)
+
 	// WorkerFunc represent the work function that a worker should implement.
 	WorkerFunc func(context context.Context, msg *Message) error
 
+	// WorkerThreadedFunc represent the work function that a worker should
+	// implement. In addition to a simple WorkerFunc, a threaded one can thread
+	// its context on each call and to the commit method.
+	WorkerThreadedFunc func(context context.Context, cookie interface{}, msg *Message) error
+
 	// WorkerCommit is an optional method that is always called once after the
 	// execution of the WorkerFunc.
-	WorkerCommit func(context context.Context, msg *Message, errjob error) error
+	WorkerCommit func(context context.Context, cookie interface{}, msg *Message, errjob error) error
 
 	// WorkerConfig is the configuration parameter of a worker defined by the job
 	// system. It contains parameters of the worker along with the worker main
 	// function that perform the work against a job's message.
 	WorkerConfig struct {
-		WorkerFunc   WorkerFunc
-		WorkerCommit WorkerCommit
-		Concurrency  int           `json:"concurrency"`
-		MaxExecCount int           `json:"max_exec_count"`
-		MaxExecTime  time.Duration `json:"max_exec_time"`
-		Timeout      time.Duration `json:"timeout"`
-		RetryDelay   time.Duration `json:"retry_delay"`
+		WorkerInit         WorkerInitFunc
+		WorkerFunc         WorkerFunc
+		WorkerThreadedFunc WorkerThreadedFunc
+		WorkerCommit       WorkerCommit
+		Concurrency        int           `json:"concurrency"`
+		MaxExecCount       int           `json:"max_exec_count"`
+		MaxExecTime        time.Duration `json:"max_exec_time"`
+		Timeout            time.Duration `json:"timeout"`
+		RetryDelay         time.Duration `json:"retry_delay"`
 	}
 
 	// Worker is a unit of work that will consume from a queue and execute the do
@@ -145,7 +157,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 }
 
 func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
-	c := w.Conf.clone()
+	c := w.Conf.Clone()
 	if c.Concurrency == 0 {
 		c.Concurrency = defaultConcurrency
 	}
@@ -187,17 +199,23 @@ type task struct {
 }
 
 func (t *task) run() (err error) {
+	var cookie interface{}
 	t.startTime = time.Now()
 	t.execCount = 0
-
 	defer func() {
 		if t.conf.WorkerCommit != nil {
-			if errc := t.conf.WorkerCommit(t.ctx, t.infos.Message, err); errc != nil {
+			if errc := t.conf.WorkerCommit(t.ctx, cookie, t.infos.Message, err); errc != nil {
 				joblog.Warnf("[job] %s: error while commiting job %s: %s",
 					t.workerID, t.infos.ID(), errc.Error())
 			}
 		}
 	}()
+	if t.conf.WorkerInit != nil {
+		cookie, err = t.conf.WorkerInit()
+		if err != nil {
+			return err
+		}
+	}
 	for {
 		retry, delay, timeout := t.nextDelay()
 		if !retry {
@@ -213,7 +231,7 @@ func (t *task) run() (err error) {
 		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
 			t.workerID, t.infos.ID(), t.execCount, timeout)
 		ctx, cancel := context.WithTimeout(t.ctx, timeout)
-		if err = t.exec(ctx); err == nil {
+		if err = t.exec(ctx, cookie); err == nil {
 			cancel()
 			break
 		}
@@ -226,7 +244,7 @@ func (t *task) run() (err error) {
 	return nil
 }
 
-func (t *task) exec(ctx context.Context) (err error) {
+func (t *task) exec(ctx context.Context, cookie interface{}) (err error) {
 	slot := <-slots
 	defer func() {
 		slots <- slot
@@ -238,6 +256,9 @@ func (t *task) exec(ctx context.Context) (err error) {
 			}
 		}
 	}()
+	if t.conf.WorkerThreadedFunc != nil {
+		return t.conf.WorkerThreadedFunc(ctx, cookie, t.infos.Message)
+	}
 	return t.conf.WorkerFunc(ctx, t.infos.Message)
 }
 

@@ -18,8 +18,8 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo"
 
-	// konnectors is needed for bad triggers cleanup
-	konnectors "github.com/cozy/cozy-stack/pkg/workers/konnectors"
+	// exec is needed for bad triggers cleanup
+	exec "github.com/cozy/cozy-stack/pkg/workers/exec"
 
 	// import workers
 	_ "github.com/cozy/cozy-stack/pkg/workers/log"
@@ -230,7 +230,7 @@ func cleanTriggers(c echo.Context) error {
 	for _, t := range ts {
 		infos := t.Infos()
 		if infos.WorkerType == "konnector" {
-			var msg konnectors.Options
+			var msg exec.KonnectorOptions
 			if err = infos.Message.Unmarshal(&msg); err != nil {
 				if err = sched.Delete(instance.Domain, t.ID()); err != nil {
 					logger.WithDomain(instance.Domain).Errorln("failed to delete orphan trigger", err)

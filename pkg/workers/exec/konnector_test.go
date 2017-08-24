@@ -1,4 +1,4 @@
-package konnectors
+package exec
 
 import (
 	"os"
@@ -23,13 +23,16 @@ import (
 
 var inst *instance.Instance
 
+var konnectorWorkerFunc = makeExecWorkerFunc()
+
 func TestUnknownDomain(t *testing.T) {
 	ctx := jobs.NewWorkerContext("unknown", "id")
 	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	err = Worker(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.Error(t, err)
 	assert.Equal(t, "Instance not found", err.Error())
 }
@@ -40,7 +43,8 @@ func TestUnknownApp(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	err = Worker(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.Error(t, err)
 	assert.Equal(t, "Application is not installed", err.Error())
 }
@@ -74,12 +78,14 @@ func TestBadFileExec(t *testing.T) {
 	assert.NoError(t, err)
 
 	config.GetConfig().Konnectors.Cmd = ""
-	err = Worker(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.Error(t, err)
 	assert.Equal(t, "fork/exec : no such file or directory", err.Error())
 
 	config.GetConfig().Konnectors.Cmd = "echo"
-	err = Worker(ctx, msg)
+	w = &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.NoError(t, err)
 }
 
@@ -88,10 +94,9 @@ func TestSuccess(t *testing.T) {
 
 	script := `#!/bin/bash
 
-echo "{\"COZY_URL\":\"${COZY_URL}\", \"COZY_CREDENTIALS\":\"${COZY_CREDENTIALS}\"}"
-echo "${COZY_FIELDS}"
+echo "{\"type\": \"toto\", \"message\": \"COZY_URL=${COZY_URL} ${COZY_CREDENTIALS}\"}"
 echo "bad json"
-echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
+echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 >&2 echo "log error"
 `
 	osFs := afero.NewOsFs()
@@ -138,22 +143,25 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 		ch := evCh.Channel
 		ev1 := <-ch
 		ev2 := <-ch
-		ev3 := <-ch
 		err = evCh.Close()
 		assert.NoError(t, err)
 		doc1 := ev1.Doc.(couchdb.JSONDoc)
 		doc2 := ev2.Doc.(couchdb.JSONDoc)
-		doc3 := ev3.Doc.(couchdb.JSONDoc)
+
 		assert.Equal(t, inst.Domain, ev1.Domain)
 		assert.Equal(t, inst.Domain, ev2.Domain)
-		assert.Equal(t, inst.PageURL("/", nil), doc1.M["COZY_URL"])
-		assert.Equal(t, account, doc2.M["account"])
 
-		man := doc3.M["Manifest"].(string)
-		assert.True(t, strings.HasPrefix(man, os.TempDir()))
-		assert.True(t, strings.HasSuffix(man, "/manifest.konnector"))
+		assert.Equal(t, "toto", doc1.M["type"])
+		assert.Equal(t, "manifest", doc2.M["type"])
 
-		token := doc1.M["COZY_CREDENTIALS"].(string)
+		msg2 := doc2.M["message"].(string)
+		assert.True(t, strings.HasPrefix(msg2, os.TempDir()))
+		assert.True(t, strings.HasSuffix(msg2, "/manifest.konnector"))
+
+		msg1 := doc1.M["message"].(string)
+		cozyURL := "COZY_URL=" + inst.PageURL("/", nil) + " "
+		assert.True(t, strings.HasPrefix(msg1, cozyURL))
+		token := msg1[len(cozyURL):]
 		var claims permissions.Claims
 		err = crypto.ParseJWT(token, func(t *jwt.Token) (interface{}, error) {
 			return inst.PickKey(t.Claims.(*permissions.Claims).Audience)
@@ -171,7 +179,8 @@ echo "{\"Manifest\": \"$(ls ${1}/manifest.konnector)\"}"
 	assert.NoError(t, err)
 
 	config.GetConfig().Konnectors.Cmd = tmpScript.Name()
-	err = Worker(ctx, msg)
+	w := &konnectorWorker{}
+	err = konnectorWorkerFunc(ctx, w, msg)
 	assert.NoError(t, err)
 
 	wg.Wait()

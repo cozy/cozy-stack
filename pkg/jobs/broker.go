@@ -179,7 +179,8 @@ func (m *Message) Unmarshal(msg interface{}) error {
 	}
 }
 
-func (w *WorkerConfig) clone() *WorkerConfig {
+// Clone clones the worker config
+func (w *WorkerConfig) Clone() *WorkerConfig {
 	return &WorkerConfig{
 		WorkerFunc:   w.WorkerFunc,
 		WorkerCommit: w.WorkerCommit,
