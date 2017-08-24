@@ -182,7 +182,6 @@ func (w *konnectorWorker) ScanOuput(i *instance.Instance, line []byte) error {
 	}
 	// TODO: filter some of the messages
 	w.messages = append(w.messages, msg)
-	fmt.Println(">>>>> publish", msg.Type, msg.Message)
 	realtime.GetHub().Publish(&realtime.Event{
 		Verb: realtime.EventCreate,
 		Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
