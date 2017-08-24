@@ -420,7 +420,7 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 	}
 
 	objects, err := sfs.c.ObjectsAll(sfs.container, &swift.ObjectsOpts{
-		Path: dir.DirID,
+		Path: dir.DocID,
 	})
 	if err != nil {
 		return nil, err
@@ -429,11 +429,13 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 		name := path.Base(object.Name)
 		if _, ok := entries[name]; !ok {
 			filename := path.Join(dir.Fullpath, name)
-			what := "file"
-			if object.ContentType == dirContentType {
-				what = "dir"
+			if filename == vfs.TrashDirName {
+				continue
 			}
-			msg := fmt.Sprintf("the %s is present in Swift but not in CouchDB", what)
+			msg := "the file is present in Swift but not in CouchDB"
+			if object.ContentType == dirContentType {
+				msg = "the directory is present in Swift but not in CouchDB"
+			}
 			errors = append(errors, vfs.FsckError{
 				Filename: filename,
 				Message:  msg,
