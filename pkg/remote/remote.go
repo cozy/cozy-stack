@@ -328,7 +328,11 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	remote.URL.User = nil
 	remote.URL.Fragment = ""
 
-	req, err := http.NewRequest(remote.Verb, remote.URL.String(), nil)
+	var body io.Reader
+	if remote.Verb != "GET" && remote.Verb != "DELETE" {
+		body = strings.NewReader(remote.Body)
+	}
+	req, err := http.NewRequest(remote.Verb, remote.URL.String(), body)
 	if err != nil {
 		return ErrInvalidRequest
 	}

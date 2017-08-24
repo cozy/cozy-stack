@@ -79,7 +79,7 @@ Go](https://golang.org/doc/effective_go.html), comment the code, etc.).
 Don't forget to add tests and be sure they are green:
 
 ```
-$ go test -v
+$ go test -v ./...
 ```
 
 #### Step 5: Commit
