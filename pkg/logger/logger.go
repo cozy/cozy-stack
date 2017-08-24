@@ -2,12 +2,10 @@ package logger
 
 import (
 	"io/ioutil"
-	"log/syslog"
 	"sync"
 
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
-	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 const (
@@ -127,10 +125,6 @@ func subscribeLoggersDebug(cli *redis.Client) {
 func publishLoggersDebug(cli *redis.Client, channel, domain string) error {
 	cmd := cli.Publish(channel, domain)
 	return cmd.Err()
-}
-
-func syslogHook() (*logrus_syslog.SyslogHook, error) {
-	return logrus_syslog.NewSyslogHook("", "", syslog.LOG_INFO, "cozy")
 }
 
 // IsDebug returns whether or not the debug mode is activated.
