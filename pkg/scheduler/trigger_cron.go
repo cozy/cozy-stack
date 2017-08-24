@@ -76,7 +76,9 @@ func (c *CronTrigger) NextExecution(last time.Time) time.Time {
 func (c *CronTrigger) Schedule() <-chan *jobs.JobRequest {
 	ch := make(chan *jobs.JobRequest)
 	go func() {
-		for next := time.Now(); true; next = c.NextExecution(next) {
+		next := time.Now()
+		for {
+			next = c.NextExecution(next)
 			select {
 			case <-time.After(-time.Since(next)):
 				ch <- c.Trigger()
