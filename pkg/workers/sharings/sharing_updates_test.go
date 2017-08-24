@@ -46,8 +46,12 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 
 func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
 	recipient := &sharings.Recipient{
-		Email: email,
-		URL:   url,
+		Email: []sharings.RecipientEmail{
+			sharings.RecipientEmail{Address: email},
+		},
+		Cozy: []sharings.RecipientCozy{
+			sharings.RecipientCozy{URL: url},
+		},
 	}
 	err := sharings.CreateRecipient(in, recipient)
 	assert.NoError(t, err)
@@ -65,7 +69,7 @@ func createSharing(t *testing.T, sharingType string, owner bool, recipients []*s
 
 	for _, recipient := range recipients {
 		if recipient.ID() == "" {
-			recipient = createRecipient(t, recipient.Email, recipient.URL)
+			recipient = createRecipient(t, recipient.Email[0].Address, recipient.Cozy[0].URL)
 		}
 
 		rs := &sharings.RecipientStatus{

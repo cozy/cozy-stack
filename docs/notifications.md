@@ -120,7 +120,7 @@ Content-Type: application/vnd.api+json
     "id": "c57a548c-7602-11e7-933b-6f27603d27da",
     "attributes": {
       "title": "6 new operations on your bank account",
-      "content": "You have 6 new operations on your bank account:\n-3 debit operations\n-3 credit operations",
+      "content": "You have 6 new operations on your bank account:\n-3 debit operations\n-3 credit operations"
     }
   }
 }

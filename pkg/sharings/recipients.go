@@ -10,12 +10,22 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
+// RecipientEmail is a struct describing an email of a contact
+type RecipientEmail struct {
+	Address string `json:"address"`
+}
+
+// RecipientCozy is a struct describing a cozy instance of the recipient
+type RecipientCozy struct {
+	URL string `json:"url"`
+}
+
 // Recipient is a struct describing a sharing recipient
 type Recipient struct {
-	RID   string `json:"_id,omitempty"`
-	RRev  string `json:"_rev,omitempty"`
-	Email string `json:"email"`
-	URL   string `json:"url"`
+	RID   string           `json:"_id,omitempty"`
+	RRev  string           `json:"_rev,omitempty"`
+	Email []RecipientEmail `json:"email,omitempty"`
+	Cozy  []RecipientCozy  `json:"cozy,omitempty"`
 }
 
 // RecipientStatus contains the information about a recipient for a sharing
@@ -55,10 +65,10 @@ func (r *Recipient) SetRev(rev string) { r.RRev = rev }
 
 // ExtractDomainAndScheme returns the recipient's domain and the scheme
 func (r *Recipient) ExtractDomainAndScheme() (string, string, error) {
-	if r.URL == "" {
+	if len(r.Cozy) == 0 {
 		return "", "", ErrRecipientHasNoURL
 	}
-	u, err := url.Parse(r.URL)
+	u, err := url.Parse(r.Cozy[0].URL)
 	if err != nil {
 		return "", "", err
 	}
@@ -85,7 +95,7 @@ func (rs *RecipientStatus) GetRecipient(db couchdb.Database) error {
 // CreateRecipient inserts a Recipient document in database. Email and URL must
 // not be empty.
 func CreateRecipient(db couchdb.Database, doc *Recipient) error {
-	if doc.URL == "" && doc.Email == "" {
+	if len(doc.Cozy) == 0 && len(doc.Email) == 0 {
 		return ErrRecipientBadParams
 	}
 
@@ -122,7 +132,7 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 		rs.recipient = recipient
 	}
 
-	if rs.recipient.URL == "" {
+	if len(rs.recipient.Cozy) == 0 {
 		return nil, ErrRecipientHasNoURL
 	}
 	if rs.Client.ClientID == "" {
@@ -162,7 +172,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 	}
 
 	// If the recipient has no URL there is no point in registering.
-	if rs.recipient.URL == "" {
+	if len(rs.recipient.Cozy) == 0 {
 		return ErrRecipientHasNoURL
 	}
 

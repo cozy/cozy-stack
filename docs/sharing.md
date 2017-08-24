@@ -71,7 +71,7 @@ A sharing document has the following structure. Note some fields are purposely l
                 "HostClientID": "myhostclientid"
             },
             {
-                "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
+                "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"}
             }
         ]
     }
@@ -144,7 +144,7 @@ List all the recipients of the sharing:
         "HostClientID": "myhostclientid"
     },
     {
-        "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
+        "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"}
     }
 ]
 ```
@@ -153,18 +153,22 @@ List all the recipients of the sharing:
 
 Specify the contact document containing the `url` and `email` informations.
 
-We differentiate a recipient from a contact. Semantically, The former has a meaning only in a sharing context while the later is a Cozy contact, usable in other contexts.
-
+We differentiate a recipient from a contact. Semantically, The former has a meaning only in a sharing context while the later is a [Cozy contact](https://cozy.github.io/cozy-doctypes/io.cozy.contacts.html), usable in other contexts.
 
 A contact has the following minimal structure:
 ```json
 {
     "id": "mycontactid1",
     "type": "io.cozy.contacts",
-    "url": "https://bob.url.cozy",
-    "email": "bob@mail.cozy",
+    "email": [
+      { "address": "bob@mail.cozy" },
+    ],
+    "_cozy": [
+      { "url": "https://bob.url.cozy" },
+    ]
 }
 ```
+
 Note that the `email` is mandatory to contact the recipient. If the `URL` is missing, a discovery mail will be sent in order to ask the recipient to give it.
 
 
@@ -313,8 +317,12 @@ Content-Type: application/vnd.api+json
       "type": "io.cozy.contacts",
       "id": "2a31ce0128b5f89e40fd90da3f014087",
       "attributes": {
-        "email": "toto@fr",
-        "url": "url.fr",
+        "email": {
+          "address": "toto@fr"
+        },
+        "_cozy": {
+          "url": "url.fr"
+        },
         "Client": {
           "client_id": "123",
           "client_secret_expires_at": 0,
@@ -345,7 +353,7 @@ Create a new recipient. The expected fields are `email` and `url`.
 
 The `email` will be used to send a sharing request, while the `url` is the recipient Cozy's url.
 
- If the `url` is missing, an additional discovery step will be performed for the next sharing involving this recipient. A mail will be sent to the recipient, containing a link where the recipient will be ask to type his Cozy's url.
+If the `url` is missing, an additional discovery step will be performed for the next sharing involving this recipient. A mail will be sent to the recipient, containing a link where the recipient will be ask to type his Cozy's url.
 
 
 ##### Request
@@ -376,8 +384,12 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.contacts",
     "id": "a6bd9ea3a4bb27e911674d64820180fc",
     "attributes": {
-      "email": "jonsnow@nightswatch.wall",
-      "url": "https://jonsnow.cozy"
+      "email": {
+        "address": "jonsnow@nightswatch.wall"
+      },
+      "_cozy": {
+        "url": "https://jonsnow.cozy"
+      }
     },
     "meta": {
       "rev": "1-fe30d71ac4d24a87dbe80d61a033a3f5"

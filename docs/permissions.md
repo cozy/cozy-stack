@@ -593,8 +593,7 @@ recipient (those documents are shared with the user).
 #### Request
 
 ```http
-GET /permissions/doctype/io.cozy.files/sharedWithMe
-HTTP/1.1
+GET /permissions/doctype/io.cozy.files/sharedWithMe HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
@@ -656,8 +655,7 @@ sharer (the user is sharing those documents with others).
 #### Request
 
 ```http
-GET /permissions/doctype/io.cozy.files/sharedWithOthers
-HTTP/1.1
+GET /permissions/doctype/io.cozy.files/sharedWithOthers HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
