@@ -32,8 +32,6 @@ const (
 	Upgrading = "upgrading"
 	// Uninstalling state
 	Uninstalling = "uninstalling"
-	// Errored state
-	Errored = "errored"
 	// Installed state, can be used to state that an application has been
 	// installed but needs a user interaction to be activated and "ready".
 	Installed = "installed"
@@ -84,11 +82,9 @@ type Manifest interface {
 	Slug() string
 	State() State
 	LastUpdate() time.Time
-	Error() error
 
 	SetState(state State)
 	SetVersion(version string)
-	SetError(err error)
 }
 
 // GetBySlug returns an app manifest identified by its slug

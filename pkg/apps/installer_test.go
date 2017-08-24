@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/spf13/afero"
 )
 
@@ -96,6 +97,7 @@ git checkout -`
 	localGitCmd.Dir = localGitDir
 	if out, err := localGitCmd.CombinedOutput(); err != nil {
 		fmt.Println(string(out))
+		os.Exit(1)
 	}
 }
 
@@ -112,6 +114,8 @@ git checkout master`
 	cmd.Dir = localGitDir
 	if out, err := cmd.Output(); err != nil {
 		fmt.Println(string(out), err)
+	} else {
+		fmt.Println("did upgrade", localVersion)
 	}
 }
 
@@ -125,6 +129,11 @@ func TestMain(m *testing.M) {
 	check, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
 	if err != nil || check.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
+		os.Exit(1)
+	}
+
+	if _, err = stack.Start(); err != nil {
+		fmt.Println("Error while starting job system", err)
 		os.Exit(1)
 	}
 

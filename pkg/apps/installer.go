@@ -193,25 +193,11 @@ func (i *Installer) Run() {
 		panic("Unknown operation")
 	}
 
-	if err == ErrBadState {
-		i.errc <- err
-		return
-	}
-
 	if err != nil {
-		man.SetState(Errored)
-		man.SetError(err)
-		man.Update(i.db)
 		i.errc <- err
-		return
+	} else {
+		i.manc <- man
 	}
-
-	if i.op != Delete {
-		man.SetState(i.endState)
-		man.Update(i.db)
-	}
-
-	i.manc <- man
 }
 
 // RunSync does the same work as Run but can be used synchronously.
@@ -241,11 +227,12 @@ func (i *Installer) install(man Manifest) error {
 		if err := i.ReadManifest(Installing, man); err != nil {
 			return err
 		}
-		if err := man.Create(i.db); err != nil {
+		i.manc <- man
+		if err := i.fetcher.Fetch(i.src, i.fs, man); err != nil {
 			return err
 		}
-		i.manc <- man
-		return i.fetcher.Fetch(i.src, i.fs, man)
+		man.SetState(i.endState)
+		return man.Create(i.db)
 	})
 }
 
@@ -263,11 +250,12 @@ func (i *Installer) update(man Manifest) error {
 	if err := i.ReadManifest(Upgrading, man); err != nil {
 		return err
 	}
-	if err := man.Update(i.db); err != nil {
+	i.manc <- man
+	if err := i.fetcher.Fetch(i.src, i.fs, man); err != nil {
 		return err
 	}
-	i.manc <- man
-	return i.fetcher.Fetch(i.src, i.fs, man)
+	man.SetState(i.endState)
+	return man.Update(i.db)
 }
 
 func (i *Installer) delete(man Manifest) error {
@@ -285,9 +273,7 @@ func (i *Installer) delete(man Manifest) error {
 // perform an update or deletion.
 func (i *Installer) checkState(man Manifest) error {
 	state := man.State()
-	if state == Ready ||
-		state == Installed ||
-		state == Errored {
+	if state == Ready || state == Installed {
 		return nil
 	}
 	if time.Since(man.LastUpdate()) > 15*time.Minute {
@@ -315,9 +301,7 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 	select {
 	case man := <-i.manc:
 		state := man.State()
-		// state can be errored in final stage of the process, for instance when an
-		// Errored application is being uninstalled.
-		done := (state == Ready || state == Installed || state == Errored)
+		done := (state == Ready || state == Installed)
 		return man, done, nil
 	case err := <-i.errc:
 		return nil, false, err

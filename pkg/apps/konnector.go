@@ -2,7 +2,6 @@ package apps
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"time"
 
@@ -35,6 +34,7 @@ type KonnManifest struct {
 	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
+	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
@@ -78,19 +78,8 @@ func (m *KonnManifest) State() State { return m.DocState }
 // LastUpdate is part of the Manifest interface
 func (m *KonnManifest) LastUpdate() time.Time { return m.UpdatedAt }
 
-// Error is part of the Manifest interface
-func (m *KonnManifest) Error() error {
-	if m.DocError == "" {
-		return nil
-	}
-	return errors.New(m.DocError)
-}
-
 // SetState is part of the Manifest interface
 func (m *KonnManifest) SetState(state State) { m.DocState = state }
-
-// SetError is part of the Manifest interface
-func (m *KonnManifest) SetError(err error) { m.DocError = err.Error() }
 
 // SetVersion is part of the Manifest interface
 func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
@@ -113,19 +102,28 @@ func (m *KonnManifest) Valid(field, value string) bool {
 
 // ReadManifest is part of the Manifest interface
 func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
-	if err := json.NewDecoder(r).Decode(&m); err != nil {
+	var newManifest KonnManifest
+	if err := json.NewDecoder(r).Decode(&newManifest); err != nil {
 		return ErrBadManifest
 	}
-	if m.Type != "node" {
+	if newManifest.Type != "node" {
 		return ErrBadManifest
 	}
-	m.DocSlug = slug
-	m.DocSource = sourceURL
+
+	newManifest.SetID(m.ID())
+	newManifest.SetRev(m.Rev())
+	newManifest.SetState(m.State())
+	newManifest.CreatedAt = m.CreatedAt
+	newManifest.DocSlug = slug
+	newManifest.DocSource = sourceURL
+
+	*m = newManifest
 	return nil
 }
 
 // Create is part of the Manifest interface
 func (m *KonnManifest) Create(db couchdb.Database) error {
+	m.CreatedAt = time.Now()
 	m.UpdatedAt = time.Now()
 	if err := couchdb.CreateNamedDocWithDB(db, m); err != nil {
 		return err

@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 	"testing"
@@ -584,7 +585,7 @@ func TestWebappUninstallErrored(t *testing.T) {
 		Operation: Install,
 		Type:      Webapp,
 		Slug:      "github-cozy-delete-errored",
-		SourceURL: "git://foobar.is.not.available/",
+		SourceURL: "git://localhost/",
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -593,6 +594,27 @@ func TestWebappUninstallErrored(t *testing.T) {
 	for {
 		var done bool
 		_, done, err = inst1.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if done {
+			break
+		}
+	}
+
+	inst2, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Update,
+		Type:      Webapp,
+		Slug:      "github-cozy-delete-errored",
+		SourceURL: "git://foobar.does.not.exist/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	go inst2.Run()
+	for {
+		var done bool
+		_, done, err = inst2.Poll()
 		if done || err != nil {
 			break
 		}
@@ -601,23 +623,24 @@ func TestWebappUninstallErrored(t *testing.T) {
 		return
 	}
 
-	inst2, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Delete,
-		Type:      Webapp,
-		Slug:      "github-cozy-delete-errored",
-	})
-	if !assert.NoError(t, err) {
-		return
-	}
-	_, err = inst2.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
 	inst3, err := NewInstaller(db, fs, &InstallerOptions{
 		Operation: Delete,
 		Type:      Webapp,
 		Slug:      "github-cozy-delete-errored",
 	})
-	assert.Nil(t, inst3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = inst3.RunSync()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	inst4, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Delete,
+		Type:      Webapp,
+		Slug:      "github-cozy-delete-errored",
+	})
+	assert.Nil(t, inst4)
 	assert.Equal(t, ErrNotFound, err)
 }
