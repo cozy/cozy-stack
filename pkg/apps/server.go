@@ -39,6 +39,9 @@ func NewSwiftFileServer(conn *swift.Connection, appsType AppType) FileServer {
 }
 
 func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
+	if !path.IsAbs(file) {
+		return nil, os.ErrNotExist
+	}
 	objName := s.makeObjectName(slug, version, file)
 	f, _, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
@@ -48,6 +51,9 @@ func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
 }
 
 func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
+	if !path.IsAbs(file) {
+		return os.ErrNotExist
+	}
 	objName := s.makeObjectName(slug, version, file)
 	f, o, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
@@ -81,6 +87,9 @@ func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, file string) s
 }
 
 func (s *aferoServer) Open(slug, version, file string) (io.ReadCloser, error) {
+	if !path.IsAbs(file) {
+		return nil, os.ErrNotExist
+	}
 	filepath := s.mkPath(slug, version, file)
 	f, err := s.open(filepath)
 	if os.IsNotExist(err) {
@@ -93,6 +102,9 @@ func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
 }
 
 func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
+	if !path.IsAbs(file) {
+		return os.ErrNotExist
+	}
 	filepath := s.mkPath(slug, version, file)
 	err := s.serveFileContent(w, req, filepath)
 	if os.IsNotExist(err) {

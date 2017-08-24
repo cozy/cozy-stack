@@ -274,7 +274,9 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 			triggerArgs = strings.TrimSpace(triggerOpts[1])
 		}
 		msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]string{
-			"slug": slug,
+			"slug":         slug,
+			"type":         service.Type,
+			"service_file": service.File,
 		})
 		if err != nil {
 			return nil, err
