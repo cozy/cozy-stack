@@ -121,11 +121,11 @@ func init() {
 	flags.String("doctypes", "", "path to the directory with the doctypes (for developing/testing a remote doctype)")
 	checkNoErr(viper.BindPFlag("doctypes", flags.Lookup("doctypes")))
 
-	defaultFsUrl := &url.URL{
+	defaultFsURL := &url.URL{
 		Scheme: "file",
 		Path: path.Join(filepath.ToSlash(binDir), DefaultStorageDir),
 	}
-	flags.String("fs-url", defaultFsUrl.String(), "filesystem url")
+	flags.String("fs-url", defaultFsURL.String(), "filesystem url")
 	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
 
 	flags.String("couchdb-url", "http://localhost:5984/", "CouchDB URL")
