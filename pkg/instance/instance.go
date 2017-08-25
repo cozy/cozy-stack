@@ -145,11 +145,6 @@ func (i *Instance) Prefix() string {
 	return i.Domain
 }
 
-// DirName returns the name of the subdirectory where instance data are stored.
-func (i *Instance) DirName() string {
-	return i.Domain
-}
-
 // Logger returns the logger associated with the instance
 func (i *Instance) Logger() *logrus.Entry {
 	return logger.WithDomain(i.Domain)
