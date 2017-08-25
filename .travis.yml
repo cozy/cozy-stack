@@ -6,7 +6,6 @@ services:
 language: go
 go:
   - 1.8.x
-  - 1.9.x
 
 before_install:
   - docker run -d -p 5984:5984 --net=host --name couch klaemo/couchdb:2.0.0
