@@ -170,7 +170,7 @@ func (i *Instance) makeVFS() error {
 	var err error
 	switch fsURL.Scheme {
 	case config.SchemeFile, config.SchemeMem:
-		i.vfs, err = vfsafero.New(index, disk, mutex, fsURL, i.Domain)
+		i.vfs, err = vfsafero.New(index, disk, mutex, fsURL, i.DirName())
 	case config.SchemeSwift:
 		i.vfs, err = vfsswift.New(index, disk, mutex, i.Domain)
 	default:
@@ -193,7 +193,7 @@ func (i *Instance) AppsCopier(appsType apps.AppType) apps.Copier {
 			baseDirName = vfs.KonnectorsDirName
 		}
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, baseDirName))
+			path.Join(fsURL.Path, i.DirName(), baseDirName))
 		return apps.NewAferoCopier(baseFS)
 	case config.SchemeSwift:
 		return apps.NewSwiftCopier(config.GetSwiftConnection(), appsType)
@@ -209,7 +209,7 @@ func (i *Instance) AppsFileServer() apps.FileServer {
 	switch fsURL.Scheme {
 	case config.SchemeFile, config.SchemeMem:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, vfs.WebappsDirName))
+			path.Join(fsURL.Path, i.DirName(), vfs.WebappsDirName))
 		return apps.NewAferoFileServer(baseFS, nil)
 	case config.SchemeSwift:
 		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Webapp)
@@ -225,7 +225,7 @@ func (i *Instance) KonnectorsFileServer() apps.FileServer {
 	switch fsURL.Scheme {
 	case config.SchemeFile, config.SchemeMem:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, vfs.KonnectorsDirName))
+			path.Join(fsURL.Path, i.DirName(), vfs.KonnectorsDirName))
 		return apps.NewAferoFileServer(baseFS, nil)
 	case config.SchemeSwift:
 		return apps.NewSwiftFileServer(config.GetSwiftConnection(), apps.Konnector)
@@ -241,7 +241,7 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 	switch fsURL.Scheme {
 	case config.SchemeFile, config.SchemeMem:
 		baseFS := afero.NewBasePathFs(afero.NewOsFs(),
-			path.Join(fsURL.Path, i.Domain, vfs.ThumbsDirName))
+			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
 		return vfsafero.NewThumbsFs(baseFS)
 	case config.SchemeSwift:
 		return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
