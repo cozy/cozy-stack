@@ -39,7 +39,7 @@ func NewSwiftFileServer(conn *swift.Connection, appsType AppType) FileServer {
 }
 
 func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
-	objName := defaultMakePath(slug, version, file)
+	objName := s.makeObjectName(slug, version, file)
 	f, _, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
 		return nil, wrapSwiftErr(err)
@@ -48,7 +48,7 @@ func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
 }
 
 func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
-	objName := defaultMakePath(slug, version, file)
+	objName := s.makeObjectName(slug, version, file)
 	f, o, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
 		return wrapSwiftErr(err)
@@ -58,6 +58,10 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	w.Header().Set("Etag", o["Etag"])
 	http.ServeContent(w, req, objName, lastModified, f)
 	return nil
+}
+
+func (s *swiftServer) makeObjectName(slug, version, file string) string {
+	return path.Join(slug, version, file)
 }
 
 // NewAferoFileServer returns a simple wrapper of the afero.Fs interface that
