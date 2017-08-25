@@ -1,0 +1,25 @@
+version: "{build}"
+
+platform: x64
+
+clone_folder: c:\gopath\src\github.com\cozy\cozy-stack
+
+environment:
+  GOPATH: c:\gopath
+  GOVERSION: 1.8
+
+install:
+  - rmdir c:\go /s /q
+  - appveyor DownloadFile https://storage.googleapis.com/golang/go%GOVERSION%.windows-amd64.msi
+  - msiexec /i go%GOVERSION%.windows-amd64.msi /q
+  - set PATH=%GOPATH%\bin;c:\go\bin;%PATH%
+  - echo %PATH%
+  - go version
+  - go env
+  - go get -d ./...
+
+build_script:
+  - go install
+
+test_script:
+  - cozy-stack --help
