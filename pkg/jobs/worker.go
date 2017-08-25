@@ -202,6 +202,12 @@ func (t *task) run() (err error) {
 	var cookie interface{}
 	t.startTime = time.Now()
 	t.execCount = 0
+	if t.conf.WorkerInit != nil {
+		cookie, err = t.conf.WorkerInit()
+		if err != nil {
+			return err
+		}
+	}
 	defer func() {
 		if t.conf.WorkerCommit != nil {
 			if errc := t.conf.WorkerCommit(t.ctx, cookie, t.infos.Message, err); errc != nil {
@@ -210,12 +216,6 @@ func (t *task) run() (err error) {
 			}
 		}
 	}()
-	if t.conf.WorkerInit != nil {
-		cookie, err = t.conf.WorkerInit()
-		if err != nil {
-			return err
-		}
-	}
 	for {
 		retry, delay, timeout := t.nextDelay()
 		if !retry {
