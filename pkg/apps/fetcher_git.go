@@ -234,8 +234,7 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 		"--branch", branch,
 		"--", srcStr, gitDir) // #nosec
 
-	g.log.Infof("[git] Clone with git %s %s in %s: %s", srcStr, branch, gitDir,
-		strings.Join(cmd.Args, " "))
+	g.log.Infof("[git] Clone with git: %s", strings.Join(cmd.Args, " "))
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		if err != exec.ErrNotFound {

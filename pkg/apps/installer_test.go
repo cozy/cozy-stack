@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,12 +16,14 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/spf13/afero"
 )
 
 var localGitCmd *exec.Cmd
 var localGitDir string
 var localVersion string
+var localServices string
 var ts *httptest.Server
 
 var manGen func() string
@@ -38,7 +39,10 @@ func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func manifestWebapp() string {
-	return strings.Replace(`{
+	if localServices == "" {
+		localServices = "{}"
+	}
+	return `{
   "description": "A mini app to test cozy-stack-v2",
   "developer": {
     "name": "Bruno",
@@ -48,12 +52,13 @@ func manifestWebapp() string {
   "name": "mini-app",
   "permissions": {},
   "slug": "mini",
-  "version": "`+localVersion+`"
-}`, "\n", "", -1)
+  "version": "` + localVersion + `",
+  "services": ` + localServices + `
+}`
 }
 
 func manifestKonnector() string {
-	return strings.Replace(`{
+	return `{
   "description": "A mini konnector to test cozy-stack-v2",
   "type": "node",
   "developer": {
@@ -64,8 +69,8 @@ func manifestKonnector() string {
   "name": "mini-app",
   "permissions": {},
   "slug": "mini",
-  "version": "`+localVersion+`"
-}`, "\n", "", -1)
+  "version": "` + localVersion + `"
+}`
 }
 
 func serveGitRep() {
@@ -96,6 +101,7 @@ git checkout -`
 	localGitCmd.Dir = localGitDir
 	if out, err := localGitCmd.CombinedOutput(); err != nil {
 		fmt.Println(string(out))
+		os.Exit(1)
 	}
 }
 
@@ -112,6 +118,8 @@ git checkout master`
 	cmd.Dir = localGitDir
 	if out, err := cmd.Output(); err != nil {
 		fmt.Println(string(out), err)
+	} else {
+		fmt.Println("did upgrade", localVersion)
 	}
 }
 
@@ -125,6 +133,11 @@ func TestMain(m *testing.M) {
 	check, err := checkup.HTTPChecker{URL: config.CouchURL().String()}.Check()
 	if err != nil || check.Status() != checkup.Healthy {
 		fmt.Println("This test need couchdb to run.")
+		os.Exit(1)
+	}
+
+	if _, err = stack.Start(); err != nil {
+		fmt.Println("Error while starting job system", err)
 		os.Exit(1)
 	}
 

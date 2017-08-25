@@ -22,6 +22,15 @@ func init() {
 	}, func() execWorker {
 		return &konnectorWorker{}
 	})
+
+	addExecWorker("service", &jobs.WorkerConfig{
+		Concurrency:  runtime.NumCPU() * 2,
+		MaxExecCount: 2,
+		MaxExecTime:  200 * time.Second,
+		Timeout:      200 * time.Second,
+	}, func() execWorker {
+		return &serviceWorker{}
+	})
 }
 
 type execWorker interface {

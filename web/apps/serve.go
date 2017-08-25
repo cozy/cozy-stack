@@ -137,7 +137,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		}
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
 	}
-	filepath := path.Join(route.Folder, file)
+	filepath := path.Join("/", route.Folder, file)
 	version := app.Version()
 	if file != route.Index {
 		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)

@@ -153,6 +153,19 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	manGen = manifestWebapp
 	manName = WebappManifestName
 
+	defer func() {
+		localServices = ""
+	}()
+
+	localServices = `{
+		"service1": {
+
+			"type": "node",
+			"file": "/services/service1.js",
+			"trigger": "@cron 0 0 0 * * *"
+		}
+	}`
+
 	doUpgrade(1)
 
 	inst, err := NewInstaller(db, fs, &InstallerOptions{
@@ -176,7 +189,17 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	assert.True(t, ok, "The manifest has the right version")
 	version1 := man.Version()
 
+	manWebapp := man.(*WebappManifest)
+	if assert.NotNil(t, manWebapp.Services["service1"]) {
+		service1 := manWebapp.Services["service1"]
+		assert.Equal(t, "/services/service1.js", service1.File)
+		assert.Equal(t, "@cron 0 0 0 * * *", service1.TriggerOptions)
+		assert.Equal(t, "node", service1.Type)
+		assert.NotEmpty(t, service1.TriggerID)
+	}
+
 	doUpgrade(2)
+	localServices = ""
 
 	inst, err = NewInstaller(db, fs, &InstallerOptions{
 		Operation: Update,
@@ -224,6 +247,8 @@ func TestWebappInstallWithUpgrade(t *testing.T) {
 	ok, err = afero.FileContainsBytes(baseFS, path.Join("/", man.Slug(), man.Version(), WebappManifestName), []byte("2.0.0"))
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
+	manWebapp = man.(*WebappManifest)
+	assert.Nil(t, manWebapp.Services["service1"])
 }
 
 func TestWebappInstallAndUpgradeWithBranch(t *testing.T) {
@@ -584,7 +609,7 @@ func TestWebappUninstallErrored(t *testing.T) {
 		Operation: Install,
 		Type:      Webapp,
 		Slug:      "github-cozy-delete-errored",
-		SourceURL: "git://foobar.is.not.available/",
+		SourceURL: "git://localhost/",
 	})
 	if !assert.NoError(t, err) {
 		return
@@ -593,6 +618,27 @@ func TestWebappUninstallErrored(t *testing.T) {
 	for {
 		var done bool
 		_, done, err = inst1.Poll()
+		if !assert.NoError(t, err) {
+			return
+		}
+		if done {
+			break
+		}
+	}
+
+	inst2, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Update,
+		Type:      Webapp,
+		Slug:      "github-cozy-delete-errored",
+		SourceURL: "git://foobar.does.not.exist/",
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	go inst2.Run()
+	for {
+		var done bool
+		_, done, err = inst2.Poll()
 		if done || err != nil {
 			break
 		}
@@ -601,23 +647,24 @@ func TestWebappUninstallErrored(t *testing.T) {
 		return
 	}
 
-	inst2, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Delete,
-		Type:      Webapp,
-		Slug:      "github-cozy-delete-errored",
-	})
-	if !assert.NoError(t, err) {
-		return
-	}
-	_, err = inst2.RunSync()
-	if !assert.NoError(t, err) {
-		return
-	}
 	inst3, err := NewInstaller(db, fs, &InstallerOptions{
 		Operation: Delete,
 		Type:      Webapp,
 		Slug:      "github-cozy-delete-errored",
 	})
-	assert.Nil(t, inst3)
+	if !assert.NoError(t, err) {
+		return
+	}
+	_, err = inst3.RunSync()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	inst4, err := NewInstaller(db, fs, &InstallerOptions{
+		Operation: Delete,
+		Type:      Webapp,
+		Slug:      "github-cozy-delete-errored",
+	})
+	assert.Nil(t, inst4)
 	assert.Equal(t, ErrNotFound, err)
 }

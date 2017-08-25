@@ -128,7 +128,7 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) 
 			}
 		}
 		var f afero.File
-		f, err = workFS.OpenFile(hdr.Name, os.O_CREATE|os.O_WRONLY, 0644)
+		f, err = workFS.OpenFile(hdr.Name, os.O_CREATE|os.O_WRONLY, 0640)
 		if err != nil {
 			return
 		}
