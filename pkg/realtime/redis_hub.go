@@ -32,6 +32,9 @@ type jsonDoc struct {
 func (j jsonDoc) ID() string      { id, _ := j.M["_id"].(string); return id }
 func (j jsonDoc) DocType() string { return j.Type }
 func (j *jsonDoc) MarshalJSON() ([]byte, error) {
+	if j.M == nil {
+		return json.Marshal(map[string]string{"_type": j.Type})
+	}
 	j.M["_type"] = j.Type
 	defer delete(j.M, "_type")
 	return json.Marshal(j.M)
