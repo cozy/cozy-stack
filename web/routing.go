@@ -120,17 +120,23 @@ func newRenderer(assetsPath string) (*renderer, error) {
 // SetupAppsHandler adds all the necessary middlewares for the application
 // handler.
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
-	secure := middlewares.Secure(&middlewares.SecureConfig{
-		HSTSMaxAge:    hstsMaxAge,
-		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
-		CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPUnsafeInline},
-		CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
-		CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent, middlewares.CSPSrcWhitelist},
-		CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
-		XFrameOptions: middlewares.XFrameDeny,
-	})
+	mws := []echo.MiddlewareFunc{
+		middlewares.LoadSession,
+	}
+	if !config.GetConfig().DisableCSP {
+		secure := middlewares.Secure(&middlewares.SecureConfig{
+			HSTSMaxAge:    hstsMaxAge,
+			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPSrcWS},
+			CSPStyleSrc:   []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcParent, middlewares.CSPUnsafeInline},
+			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
+			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent, middlewares.CSPSrcWhitelist},
+			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
+			XFrameOptions: middlewares.XFrameDeny,
+		})
+		mws = append([]echo.MiddlewareFunc{secure}, mws...)
+	}
 
-	return middlewares.Compose(appsHandler, secure, middlewares.LoadSession)
+	return middlewares.Compose(appsHandler, mws...)
 }
 
 // SetupAssets add assets routing and handling to the given router. It also
@@ -150,15 +156,18 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
-	secure := middlewares.Secure(&middlewares.SecureConfig{
-		HSTSMaxAge:    hstsMaxAge,
-		CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
-		// Display logos of OAuth clients on the authorize page
-		CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcAny},
-		XFrameOptions: middlewares.XFrameDeny,
-	})
+	if !config.GetConfig().DisableCSP {
+		secure := middlewares.Secure(&middlewares.SecureConfig{
+			HSTSMaxAge:    hstsMaxAge,
+			CSPDefaultSrc: []middlewares.CSPSource{middlewares.CSPSrcSelf},
+			// Display logos of OAuth clients on the authorize page
+			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcAny},
+			XFrameOptions: middlewares.XFrameDeny,
+		})
+		router.Use(secure)
+	}
 
-	router.Use(secure, middlewares.CORS)
+	router.Use(middlewares.CORS)
 
 	mws := []echo.MiddlewareFunc{
 		middlewares.NeedInstance,

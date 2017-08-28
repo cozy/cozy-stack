@@ -43,6 +43,7 @@ example), you can use the --appdir flag like this:
       --assets string                  path to the directory with the assets (use the packed assets by default)
       --cache-url string               URL for the cache, redis or in-memory
       --couchdb-url string             CouchDB URL (default "http://localhost:5984/")
+      --disable-csp                    Disable the Content Security Policy (only available for development)
       --doctypes string                path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string           URL for the download secret storage, redis or in-memory
       --fs-url string                  filesystem url (default "file://localhost//storage")
