@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	humanize "github.com/dustin/go-humanize"
@@ -137,6 +138,24 @@ given domain.
 		fmt.Printf("Instance created with success for domain %s\n", in.Attrs.Domain)
 		if in.Attrs.RegisterToken != nil {
 			fmt.Printf("Registration token: \"%s\"\n", hex.EncodeToString(in.Attrs.RegisterToken))
+		}
+		if len(flagApps) == 0 {
+			return nil
+		}
+		apps, err := newClient(domain, consts.Apps).ListApps(consts.Apps)
+		if err == nil && len(flagApps) != len(apps) {
+			for _, slug := range flagApps {
+				found := false
+				for _, app := range apps {
+					if app.Attrs.Slug == slug {
+						found = true
+						break
+					}
+				}
+				if !found {
+					fmt.Printf("/!\\ Application %s has not been installed\n", slug)
+				}
+			}
 		}
 		return nil
 	},
