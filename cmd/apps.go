@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var errAppsMissingDomain = errors.New("Missing --domain flag")
+var errAppsMissingDomain = errors.New("Missing --domain flag, or COZY_DOMAIN env variable")
 
 var flagAppsDomain string
 var flagAllDomains bool
@@ -290,7 +290,8 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 }
 
 func init() {
-	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
+	domain := os.Getenv("COZY_DOMAIN")
+	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
 
@@ -299,7 +300,7 @@ func init() {
 	webappsCmdGroup.AddCommand(updateWebappCmd)
 	webappsCmdGroup.AddCommand(uninstallWebappCmd)
 
-	konnectorsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", "", "specify the domain name of the instance")
+	konnectorsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	konnectorsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 
 	konnectorsCmdGroup.AddCommand(lsKonnectorsCmd)
