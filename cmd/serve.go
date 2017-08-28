@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web"
@@ -22,6 +23,7 @@ import (
 
 var flagAllowRoot bool
 var flagAppdirs []string
+var flagDisableCSP bool
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -51,6 +53,12 @@ example), you can use the --appdir flag like this:
 		if !flagAllowRoot && os.Getuid() == 0 {
 			errPrintfln("Use --allow-root if you really want to start with the root user")
 			return errors.New("Starting cozy-stack serve as root not allowed")
+		}
+		if flagDisableCSP {
+			if config.BuildMode == config.Production {
+				return errors.New("Using --disable-csp is allowed only for development")
+			}
+			config.GetConfig().DisableCSP = true
 		}
 		var apps map[string]string
 		if len(flagAppdirs) > 0 {
@@ -123,7 +131,7 @@ func init() {
 
 	defaultFsURL := &url.URL{
 		Scheme: "file",
-		Path: path.Join(filepath.ToSlash(binDir), DefaultStorageDir),
+		Path:   path.Join(filepath.ToSlash(binDir), DefaultStorageDir),
 	}
 	flags.String("fs-url", defaultFsURL.String(), "filesystem url")
 	checkNoErr(viper.BindPFlag("fs.url", flags.Lookup("fs-url")))
@@ -188,4 +196,5 @@ func init() {
 	RootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	serveCmd.Flags().StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
+	serveCmd.Flags().BoolVar(&flagDisableCSP, "disable-csp", false, "Disable the Content Security Policy (only available for development)")
 }

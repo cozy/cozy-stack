@@ -96,6 +96,8 @@ type Config struct {
 
 	Contexts   map[string]interface{}
 	Registries map[string][]*url.URL
+
+	DisableCSP bool
 }
 
 // Fs contains the configuration values of the file-system
