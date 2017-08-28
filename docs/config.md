@@ -14,7 +14,12 @@ priority):
 -  `/etc/cozy`
 
 The configuration can also be passed or overriden using the flags of the
-command line interface. See `cozy-stack --help`.
+command line interface. See `cozy-stack --help`. And it's also possible to use
+env variables, in upper case, prefixed by `COZY_`.
+
+```sh
+COZY_PORT=9090 cozy-stack serve
+```
 
 See the example to check what contains the configuration.
 

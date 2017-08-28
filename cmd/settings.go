@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client"
@@ -107,6 +108,6 @@ func updateSettings(c *client.Client, obj map[string]interface{}, args string) (
 }
 
 func init() {
-	settingsCmd.PersistentFlags().StringVar(&flagSettingsDomain, "domain", "", "specify the domain name of the instance")
+	settingsCmd.PersistentFlags().StringVar(&flagSettingsDomain, "domain", os.Getenv("COZY_DOMAIN"), "specify the domain name of the instance")
 	RootCmd.AddCommand(settingsCmd)
 }

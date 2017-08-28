@@ -454,7 +454,7 @@ func splitArgs(command string) []string {
 }
 
 func init() {
-	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", "", "specify the domain name of the instance")
+	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", os.Getenv("COZY_DOMAIN"), "specify the domain name of the instance")
 
 	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
 	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "directory to import to in cozy")
