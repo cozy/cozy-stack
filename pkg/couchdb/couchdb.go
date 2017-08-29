@@ -718,6 +718,15 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 	var response findResponse
 	err := makeRequest(db, "POST", url, &req, &response)
 	if err != nil {
+		if isIndexError(err) {
+			jsonReq, errm := json.Marshal(req)
+			if errm != nil {
+				return err
+			}
+			errc := err.(*Error)
+			errc.Reason += fmt.Sprintf(" (original req: %s)", string(jsonReq))
+			return errc
+		}
 		return err
 	}
 	if response.Warning != "" {
