@@ -22,7 +22,7 @@ func TestCache(t *testing.T) {
 	s2 := getCache().Get("cached.cozy.tools", s.DocID)
 	assert.NotNil(t, s2)
 	assert.Equal(t, s.DocID, s2.DocID)
-	assert.Equal(t, s.LastSeen, s2.LastSeen)
+	assert.Equal(t, s.LastSeen.Unix(), s2.LastSeen.Unix())
 
 	globalCache.Revoke("cached.cozy.tools", s.DocID)
 
