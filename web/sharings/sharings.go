@@ -596,7 +596,7 @@ func discoveryForm(c echo.Context) error {
 	recipientEmail := c.QueryParam("recipient_email")
 
 	// Check mandatory fields
-	_, err := sharings.FindSharing(instance, sharingID)
+	sharing, err := sharings.FindSharing(instance, sharingID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error Invalid sharing id",
@@ -610,9 +610,19 @@ func discoveryForm(c echo.Context) error {
 	}
 	// Block multiple url
 	if len(recipient.Cozy) > 0 {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error recipient already known",
-		})
+		recStatus, err := sharing.GetRecipientStatusFromRecipientID(instance, recipient.ID())
+		if err != nil {
+			return wrapErrors(err)
+		}
+		if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
+			return wrapErrors(err)
+		}
+		// Generate the oauth URL and redirect the recipient
+		oAuthRedirect, err := sharings.GenerateOAuthQueryString(sharing, recStatus, instance.Scheme())
+		if err != nil {
+			return wrapErrors(err)
+		}
+		return c.Redirect(http.StatusFound, oAuthRedirect)
 	}
 	if recipientEmail == "" {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{

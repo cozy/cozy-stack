@@ -1579,7 +1579,7 @@ func TestDiscoveryFormRecipientWithURL(t *testing.T) {
 	}
 	res, err := requestGET("/sharings/discovery", urlVal)
 	assert.NoError(t, err)
-	assert.Equal(t, 500, res.StatusCode)
+	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestDiscoveryFormNoEmail(t *testing.T) {
