@@ -112,6 +112,7 @@ func TestAllDoctypes(t *testing.T) {
 	assert.NoError(t, err)
 	expected := []string{
 		"io.cozy.apps",
+		"io.cozy.contacts",
 		"io.cozy.events",
 		"io.cozy.files",
 		"io.cozy.konnectors",
