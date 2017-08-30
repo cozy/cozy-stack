@@ -631,7 +631,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 			},
 		},
 	}
-	err := CreateRecipient(instance, doc)
+	err := CreateOrUpdateRecipient(instance, doc)
 	if err != nil {
 		return err
 	}

@@ -123,7 +123,7 @@ func CreateRecipient(c echo.Context) error {
 		}
 	}
 
-	err := sharings.CreateRecipient(instance, recipient)
+	err := sharings.CreateOrUpdateRecipient(instance, recipient)
 	if err != nil {
 		return wrapErrors(err)
 	}

@@ -59,7 +59,7 @@ func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
 			sharings.RecipientCozy{URL: url},
 		},
 	}
-	err := sharings.CreateRecipient(testInstance, recipient)
+	err := sharings.CreateOrUpdateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
 	return recipient
 }
@@ -102,7 +102,7 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 	for _, recipient := range recipients {
 		if recipient.ID() == "" {
 			recipient.Cozy[0].URL = strings.TrimPrefix(recipient.Cozy[0].URL, "http://")
-			err = sharings.CreateRecipient(testInstance, recipient)
+			err = sharings.CreateOrUpdateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
 		}
 
@@ -1590,7 +1590,7 @@ func TestDiscoveryFormNoEmail(t *testing.T) {
 			sharings.RecipientEmail{Address: "test@mail.fr"},
 		},
 	}
-	err := sharings.CreateRecipient(testInstance, recipient)
+	err := sharings.CreateOrUpdateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},

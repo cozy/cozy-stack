@@ -150,7 +150,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 			for _, cozy := range recipient.Cozy {
 				cozy.URL = strings.TrimPrefix(cozy.URL, "http://")
 			}
-			err = CreateRecipient(testInstance, recipient)
+			err = CreateOrUpdateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
 		}
 
@@ -333,6 +333,83 @@ func TestGetRecipient(t *testing.T) {
 	doc, err := GetRecipient(TestPrefix, recipient.RID)
 	assert.NoError(t, err)
 	assert.Equal(t, recipient, doc)
+}
+
+func TestCreateOrUpdateRecipient(t *testing.T) {
+	// Create a contact for Alice
+	alice := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: "https://alice.cozy.tools/"},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "alice@cozy.tools"},
+		},
+	}
+	err := CreateOrUpdateRecipient(TestPrefix, alice)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, alice.RID)
+	assert.NotEmpty(t, alice.RRev)
+	doc, err := GetRecipient(TestPrefix, alice.RID)
+	assert.NoError(t, err)
+	assert.Equal(t, alice, doc)
+
+	// Update a contact for Bob (found by his email)
+	bob := &Recipient{
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "bob@cozy.tools"},
+		},
+	}
+	err = couchdb.CreateDoc(TestPrefix, bob)
+	assert.NoError(t, err)
+	bob2 := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: "https://bob.cozy.tools/"},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "bob@cozy.tools"},
+		},
+	}
+	err = CreateOrUpdateRecipient(TestPrefix, bob2)
+	assert.NoError(t, err)
+	assert.Equal(t, bob.RID, bob2.RID)
+	assert.NotEmpty(t, bob2.RRev)
+	doc, err = GetRecipient(TestPrefix, bob.RID)
+	assert.NoError(t, err)
+	assert.Len(t, doc.Email, 1)
+	assert.Equal(t, "bob@cozy.tools", doc.Email[0].Address)
+	assert.Len(t, doc.Cozy, 1)
+	assert.Equal(t, "https://bob.cozy.tools/", doc.Cozy[0].URL)
+
+	// Update a contact for Charlie (found by his cozy)
+	charlie := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: "https://charlie.cozy.tools/"},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "charlie@cozy.wtf"},
+		},
+	}
+	err = couchdb.CreateDoc(TestPrefix, charlie)
+	assert.NoError(t, err)
+	charlie2 := &Recipient{
+		Cozy: []RecipientCozy{
+			RecipientCozy{URL: "https://charlie.cozy.tools/"},
+		},
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "charlie@cozy.tools"},
+		},
+	}
+	err = CreateOrUpdateRecipient(TestPrefix, charlie2)
+	assert.NoError(t, err)
+	assert.Equal(t, charlie.RID, charlie2.RID)
+	assert.NotEmpty(t, charlie2.RRev)
+	doc, err = GetRecipient(TestPrefix, charlie.RID)
+	assert.NoError(t, err)
+	assert.Len(t, doc.Email, 2)
+	assert.Equal(t, "charlie@cozy.wtf", doc.Email[0].Address)
+	assert.Equal(t, "charlie@cozy.tools", doc.Email[1].Address)
+	assert.Len(t, doc.Cozy, 1)
+	assert.Equal(t, "https://charlie.cozy.tools/", doc.Cozy[0].URL)
 }
 
 func TestCheckSharingTypeBadType(t *testing.T) {
@@ -1078,6 +1155,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	err = couchdb.DefineIndex(in, mango.IndexOnFields(consts.Sharings, "by-sharing-id", []string{"sharing_id"}))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	err = couchdb.DefineViews(TestPrefix, consts.ViewsByDoctype(consts.Contacts))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
