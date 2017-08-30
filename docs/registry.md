@@ -224,12 +224,12 @@ Parameter | Description
 cursor    | the cursor of the last application on the previous page
 limit     | the maximum number of applications to show
 filter[]  | a filter to apply on fields of the application
-order     | order to apply to the list
+sort      | name of the field on which to apply the sort of the list
 
 #### Request
 
 ```http
-GET /registry?filter[category]=cozy&page=0 HTTP/1.1
+GET /registry?filter[category]=cozy&limit=20&sort=name HTTP/1.1
 ```
 
 #### Response
