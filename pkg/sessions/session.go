@@ -36,7 +36,6 @@ type Session struct {
 	DocID    string             `json:"_id,omitempty"`
 	DocRev   string             `json:"_rev,omitempty"`
 	LastSeen time.Time          `json:"last_seen,omitempty"`
-	Closed   bool               `json:"closed"`
 }
 
 // DocType implements couchdb.Doc
@@ -70,15 +69,17 @@ func New(i *instance.Instance) (*Session, error) {
 	var s = &Session{
 		Instance: i,
 		LastSeen: time.Now(),
-		Closed:   false,
 	}
 
-	return s, couchdb.CreateDoc(i, s)
+	if err := couchdb.CreateDoc(i, s); err != nil {
+		return nil, err
+	}
+	getCache().Set(i.Domain, s.DocID, s)
+	return s, nil
 }
 
 // GetSession retrieves the session from a echo.Context
 func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
-	var s Session
 	var err error
 	// check for cached session in context
 	si := c.Get(SessionContextKey)
@@ -98,32 +99,44 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 		return nil, err
 	}
 
-	err = couchdb.GetDoc(i, consts.Sessions, string(sessionID), &s)
-	// invalid session id
-	if couchdb.IsNotFoundError(err) {
-		return nil, ErrInvalidID
-	}
-	if err != nil {
-		return nil, err
+	updateCache := false
+	s := getCache().Get(i.Domain, string(sessionID))
+	if s == nil {
+		s = &Session{}
+		err = couchdb.GetDoc(i, consts.Sessions, string(sessionID), s)
+		// invalid session id
+		if couchdb.IsNotFoundError(err) {
+			return nil, ErrInvalidID
+		}
+		if err != nil {
+			return nil, err
+		}
+		updateCache = true
 	}
 
 	// if the session is older than half its maxAgeDuration,
 	// save the new LastSeen
 	if s.OlderThan(maxAgeDuration / 2) {
 		s.LastSeen = time.Now()
-		err := couchdb.UpdateDoc(i, &s)
+		err := couchdb.UpdateDoc(i, s)
 		if err != nil {
 			i.Logger().Warn("[session] Failed to update session last seen:", err)
 		}
+		updateCache = true
 	}
 
-	c.Set(SessionContextKey, &s)
-	return &s, nil
+	if updateCache {
+		getCache().Set(i.Domain, s.DocID, s)
+	}
+
+	c.Set(SessionContextKey, s)
+	return s, nil
 }
 
 // Delete is a function to delete the session in couchdb,
 // and returns a cookie with a negative MaxAge to clear it
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
+	getCache().Revoke(i.Domain, s.DocID)
 	err := couchdb.DeleteDoc(i, s)
 	if err != nil {
 		i.Logger().Error("[session] Failed to delete session:", err)
