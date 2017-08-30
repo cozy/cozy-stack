@@ -878,7 +878,7 @@ func TestSharingAnswerBadClientID(t *testing.T) {
 }
 
 func TestSharingAnswerBadCode(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email1", "url1")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 
@@ -893,7 +893,7 @@ func TestSharingAnswerBadCode(t *testing.T) {
 }
 
 func TestSharingAnswerSuccess(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email2", "url2")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 
@@ -1218,7 +1218,7 @@ func TestGetSharingDocSuccess(t *testing.T) {
 }
 
 func TestReceiveClientIDBadSharing(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email3", "url3")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	authCli := authClient.Client{
@@ -1237,7 +1237,7 @@ func TestReceiveClientIDBadSharing(t *testing.T) {
 }
 
 func TestReceiveClientIDSuccess(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email4", "url4")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	authCli := authClient.Client{
@@ -1572,7 +1572,7 @@ func TestDiscoveryFormNoRecipientID(t *testing.T) {
 func TestDiscoveryFormRecipientWithURL(t *testing.T) {
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email5", "url5")
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},
 		"recipient_id": {recipient.ID()},
@@ -1602,7 +1602,7 @@ func TestDiscoveryFormNoEmail(t *testing.T) {
 }
 
 func TestDiscoverySuccess(t *testing.T) {
-	recipient := createRecipient(t, "email", recipientURL)
+	recipient := createRecipient(t, "email6", recipientURL)
 
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})

@@ -661,9 +661,19 @@ func discovery(c echo.Context) error {
 		recURL.Scheme = "https"
 	}
 
-	recipient.Cozy = append(recipient.Cozy, sharings.RecipientCozy{URL: recURL.String()})
-	if err = couchdb.UpdateDoc(instance, recipient); err != nil {
-		return wrapErrors(err)
+	cozyURL := recURL.String()
+	found := false
+	for _, c := range recipient.Cozy {
+		if c.URL == cozyURL {
+			found = true
+			break
+		}
+	}
+	if !found {
+		recipient.Cozy = append(recipient.Cozy, sharings.RecipientCozy{URL: cozyURL})
+		if err = couchdb.UpdateDoc(instance, recipient); err != nil {
+			return wrapErrors(err)
+		}
 	}
 
 	// Register the recipient with the given URL and save in db
