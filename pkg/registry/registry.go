@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo"
@@ -70,27 +71,36 @@ func Proxy(req *http.Request, registries []*url.URL) (io.ReadCloser, error) {
 	return rc, nil
 }
 
+type jsonObject struct {
+	name string
+	reg  int
+	obj  map[string]interface{}
+}
+
 // ProxyList will proxy the given request to the registries by aggregating the
 // results along the way. It should be used for list endpoints.
-func ProxyList(req *http.Request, registries []*url.URL) ([]json.RawMessage, error) {
+func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error) {
 	ref, err := url.Parse(req.RequestURI)
 	if err != nil {
 		return nil, err
 	}
 
-	refNoLimit := cloneURLWithoutQuery(ref, "cursor", "limit")
+	refNoCursor := removeQueries(ref, "cursor")
 
 	var sortBy string
 	var sortReverse bool
-	var cursor, limit int
+	var limit int
+	var cursors []string
 
 	q := ref.Query()
 	if v, ok := q["cursor"]; ok {
-		cursor, _ = strconv.Atoi(v[0])
+		cursors = strings.Split(v[0], "|")
 	}
-	if cursor <= 0 {
-		cursor = 0
+	diff := len(registries) - len(cursors)
+	for i := 0; i < diff; i++ {
+		cursors = append(cursors, "")
 	}
+
 	if v, ok := q["sort"]; ok {
 		sortBy = v[0]
 	}
@@ -110,37 +120,34 @@ func ProxyList(req *http.Request, registries []*url.URL) ([]json.RawMessage, err
 
 	uniques := make(map[string]struct{})
 
-	list := make([]json.RawMessage, 0)
-	for _, registry := range registries[:len(registries)-1] {
-		list, err = fetchListUnique(registry, refNoLimit, list, uniques)
+	list := make([]jsonObject, 0)
+	for registryIndex, registry := range registries {
+		registryRef := addQueries(refNoCursor, "cursor", cursors[registryIndex])
+		list, err = fetchListUnique(registry, registryRef, registryIndex, list, uniques)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	var ok bool
-	list, ok = sortedList(list, cursor, sortBy, limit, sortReverse, false)
-	if ok {
-		return list, nil
+	sortList(list, sortBy, sortReverse)
+
+	l := limit
+	if l > len(list) {
+		l = len(list)
 	}
 
-	rest := limit - (len(list) - cursor)
-
-	lastRegistry := registries[len(registries)-1]
-	refNewLimit, _ := url.Parse(refNoLimit.String())
-	refQ := refNewLimit.Query()
-	refQ.Add("limit", strconv.Itoa(rest))
-
-	list, err = fetchListUnique(lastRegistry, ref, list, uniques)
-	if err != nil {
-		return nil, err
+	list = list[:l]
+	result := make([]map[string]interface{}, l)
+	for i, el := range list {
+		cursors[el.reg] = el.name
+		el.obj["cursor"] = strings.Join(cursors, "|")
+		result[i] = el.obj
 	}
 
-	list, _ = sortedList(list, cursor, sortBy, limit, sortReverse, true)
-	return list, nil
+	return json.Marshal(result)
 }
 
-func fetchListUnique(registry, ref *url.URL, list []json.RawMessage, uniques map[string]struct{}) (result []json.RawMessage, err error) {
+func fetchListUnique(registry, ref *url.URL, index int, list []jsonObject, uniques map[string]struct{}) (result []jsonObject, err error) {
 	result = list
 	rc, ok, err := fetch(registry, ref)
 	if err != nil {
@@ -150,23 +157,18 @@ func fetchListUnique(registry, ref *url.URL, list []json.RawMessage, uniques map
 		return
 	}
 	defer rc.Close()
-	var resp []json.RawMessage
+	var resp []map[string]interface{}
 	if err = json.NewDecoder(rc).Decode(&resp); err != nil {
 		return
 	}
 	if len(resp) == 0 {
 		return
 	}
-	var el struct {
-		Name string `json:"name"`
-	}
-	for _, b := range resp {
-		if err = json.Unmarshal(b, &el); err != nil {
-			return
-		}
-		if _, ok = uniques[el.Name]; !ok {
-			result = append(result, b)
-			uniques[el.Name] = struct{}{}
+	for _, obj := range resp {
+		name := obj["name"].(string)
+		if _, ok = uniques[name]; !ok {
+			result = append(result, jsonObject{name, index, obj})
+			uniques[name] = struct{}{}
 		}
 	}
 	return
@@ -222,27 +224,15 @@ func fetch(registry, ref *url.URL) (rc io.ReadCloser, ok bool, err error) {
 	return resp.Body, true, nil
 }
 
-func sortedList(list []json.RawMessage, cursor int, sortBy string, limit int, reverse, starved bool) ([]json.RawMessage, bool) {
-	if cursor-len(list) < limit {
-		if !starved {
-			return list, false
-		}
-		if cursor > len(list) {
-			cursor = len(list)
-		}
-		list = list[cursor:]
-	}
+func sortList(list []jsonObject, sortBy string, reverse bool) {
 	sort.Slice(list, func(i, j int) bool {
-		var a, b map[string]interface{}
-		json.Unmarshal(list[i], &a)
-		json.Unmarshal(list[j], &b)
 		var less bool
-		switch valA := a[sortBy].(type) {
+		switch valA := list[i].obj[sortBy].(type) {
 		case string:
-			valB := b[sortBy].(string)
+			valB := list[j].obj[sortBy].(string)
 			less = valA < valB
 		case int:
-			valB := b[sortBy].(int)
+			valB := list[j].obj[sortBy].(int)
 			less = valA < valB
 		}
 		if reverse {
@@ -250,14 +240,9 @@ func sortedList(list []json.RawMessage, cursor int, sortBy string, limit int, re
 		}
 		return less
 	})
-	offset := cursor + limit
-	if offset > len(list) {
-		offset = len(list)
-	}
-	return list[cursor:offset], true
 }
 
-func cloneURLWithoutQuery(u *url.URL, filter ...string) *url.URL {
+func removeQueries(u *url.URL, filter ...string) *url.URL {
 	u, _ = url.Parse(u.String())
 	q1 := u.Query()
 	q2 := make(url.Values)
@@ -277,5 +262,15 @@ func cloneURLWithoutQuery(u *url.URL, filter ...string) *url.URL {
 		}
 	}
 	u.RawQuery = q2.Encode()
+	return u
+}
+
+func addQueries(u *url.URL, queries ...string) *url.URL {
+	u, _ = url.Parse(u.String())
+	q := u.Query()
+	for i := 0; i < len(queries); i += 2 {
+		q.Add(queries[i], queries[i+1])
+	}
+	u.RawQuery = q.Encode()
 	return u
 }
