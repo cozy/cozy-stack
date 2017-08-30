@@ -254,7 +254,6 @@ func sortedList(list []json.RawMessage, cursor int, sortBy string, limit int, re
 	if offset > len(list) {
 		offset = len(list)
 	}
-	fmt.Printf("len(list)=%d cursor=%d offset=%d limit=%d\n", len(list), cursor, offset, limit)
 	return list[cursor:offset], true
 }
 
