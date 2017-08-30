@@ -220,8 +220,8 @@ A pagination scheme is available via the `limit` and `cursor` query parameter. T
 #### Query-String
 
 Parameter | Description
-----------|------------------------------------------------------
-cursor    | the name of the last application on the previous page
+----------|--------------------------------------------------------
+cursor    | the cursor of the last application on the previous page
 limit     | the maximum number of applications to show
 filter[]  | a filter to apply on fields of the application
 order     | order to apply to the list
@@ -253,7 +253,8 @@ Content-Type: application/json
             "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
         },
         "repository": "https://github.com/cozy/cozy-drive",
-        "license": "BSD"
+        "license": "BSD",
+        "cursor": "ZHJpdmU6MAo="
     },
     {
         // ...
