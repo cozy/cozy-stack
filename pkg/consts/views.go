@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 7
+const IndexViewsVersion int = 8
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -108,7 +108,7 @@ var PermissionsShareByDocView = &couchdb.View{
 	Name:    "byDoc",
 	Doctype: Permissions,
 	Map: `
-function(doc){
+function(doc) {
   if (doc.type === "share" && doc.permissions) {
     Object.keys(doc.permissions).forEach(function(k) {
       var p = doc.permissions[k];
@@ -137,6 +137,27 @@ function(doc) {
 }`,
 }
 
+// SharingRecipientView is used to find a contact that is a sharing recipient,
+// by its email or its cozy instance.
+var SharingRecipientView = &couchdb.View{
+	Name:    "sharingRecipient",
+	Doctype: Contacts,
+	Map: `
+function(doc) {
+  if (isArray(doc.email)) {
+    for (var i = 0; i < doc.email.length; i++) {
+      emit([doc.email[i].address, 'email']);
+    }
+  }
+  if (isArray(doc.cozy)) {
+    for (var i = 0; i < doc.cozy.length; i++) {
+      emit([doc.cozy[i].url, 'cozy']);
+    }
+  }
+}
+`,
+}
+
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
@@ -146,6 +167,7 @@ var Views = []*couchdb.View{
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
 	SharedWithPermissionsView,
+	SharingRecipientView,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.

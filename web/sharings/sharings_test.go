@@ -59,7 +59,7 @@ func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
 			sharings.RecipientCozy{URL: url},
 		},
 	}
-	err := sharings.CreateRecipient(testInstance, recipient)
+	err := sharings.CreateOrUpdateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
 	return recipient
 }
@@ -102,7 +102,7 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 	for _, recipient := range recipients {
 		if recipient.ID() == "" {
 			recipient.Cozy[0].URL = strings.TrimPrefix(recipient.Cozy[0].URL, "http://")
-			err = sharings.CreateRecipient(testInstance, recipient)
+			err = sharings.CreateOrUpdateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
 		}
 
@@ -878,7 +878,7 @@ func TestSharingAnswerBadClientID(t *testing.T) {
 }
 
 func TestSharingAnswerBadCode(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email1", "url1")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 
@@ -893,7 +893,7 @@ func TestSharingAnswerBadCode(t *testing.T) {
 }
 
 func TestSharingAnswerSuccess(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email2", "url2")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 
@@ -1218,7 +1218,7 @@ func TestGetSharingDocSuccess(t *testing.T) {
 }
 
 func TestReceiveClientIDBadSharing(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email3", "url3")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	authCli := authClient.Client{
@@ -1237,7 +1237,7 @@ func TestReceiveClientIDBadSharing(t *testing.T) {
 }
 
 func TestReceiveClientIDSuccess(t *testing.T) {
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email4", "url4")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})
 	authCli := authClient.Client{
@@ -1572,14 +1572,14 @@ func TestDiscoveryFormNoRecipientID(t *testing.T) {
 func TestDiscoveryFormRecipientWithURL(t *testing.T) {
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{}, permissions.Rule{})
-	recipient := createRecipient(t, "email", "url")
+	recipient := createRecipient(t, "email5", "url5")
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},
 		"recipient_id": {recipient.ID()},
 	}
 	res, err := requestGET("/sharings/discovery", urlVal)
 	assert.NoError(t, err)
-	assert.Equal(t, 500, res.StatusCode)
+	assert.Equal(t, 404, res.StatusCode)
 }
 
 func TestDiscoveryFormNoEmail(t *testing.T) {
@@ -1590,7 +1590,7 @@ func TestDiscoveryFormNoEmail(t *testing.T) {
 			sharings.RecipientEmail{Address: "test@mail.fr"},
 		},
 	}
-	err := sharings.CreateRecipient(testInstance, recipient)
+	err := sharings.CreateOrUpdateRecipient(testInstance, recipient)
 	assert.NoError(t, err)
 	urlVal := url.Values{
 		"sharing_id":   {sharing.SharingID},
@@ -1602,7 +1602,7 @@ func TestDiscoveryFormNoEmail(t *testing.T) {
 }
 
 func TestDiscoverySuccess(t *testing.T) {
-	recipient := createRecipient(t, "email", recipientURL)
+	recipient := createRecipient(t, "email6", recipientURL)
 
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*sharings.Recipient{recipient}, permissions.Rule{})

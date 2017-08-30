@@ -53,7 +53,7 @@ func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
 			sharings.RecipientCozy{URL: url},
 		},
 	}
-	err := sharings.CreateRecipient(in, recipient)
+	err := sharings.CreateOrUpdateRecipient(in, recipient)
 	assert.NoError(t, err)
 	return recipient
 }

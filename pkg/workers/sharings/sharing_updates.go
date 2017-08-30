@@ -260,16 +260,6 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	}
 }
 
-// GetRecipient returns the Recipient stored in database from a given ID
-func GetRecipient(db couchdb.Database, recID string) (*couchdb.JSONDoc, error) {
-	doc := &couchdb.JSONDoc{}
-	err := couchdb.GetDoc(db, consts.Contacts, recID, doc)
-	if couchdb.IsNotFoundError(err) {
-		err = ErrRecipientDoesNotExist
-	}
-	return doc, err
-}
-
 // isRecipientSide is used to determine whether or not we are on the recipient side.
 // A sharing is on the recipient side iff:
 // - the SharerStatus structure is not nil

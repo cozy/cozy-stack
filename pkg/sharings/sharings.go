@@ -608,7 +608,7 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 	err := rs.Register(instance)
 	if err != nil {
 		if rs.recipient != nil {
-			instance.Logger().Errorf("sharing] Could not register at %v : %v",
+			instance.Logger().Errorf("[sharing] Could not register at %v : %v",
 				rs.recipient.Cozy[0].URL, err)
 			rs.Status = consts.SharingStatusUnregistered
 		} else {
@@ -631,7 +631,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 			},
 		},
 	}
-	err := CreateRecipient(instance, doc)
+	err := CreateOrUpdateRecipient(instance, doc)
 	if err != nil {
 		return err
 	}
