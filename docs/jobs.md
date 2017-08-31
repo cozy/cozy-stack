@@ -366,6 +366,8 @@ restrict its permission to only one worker, like this:
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 
+The `debounce` parameter can be used to limit the number of jobs created in a burst. It delays the creation of the job on the first input by the given time argument, and if the trigger has its condition matched again during this period, it won't create another job.
+
 #### Request
 
 ```http
@@ -377,8 +379,9 @@ Accept: application/vnd.api+json
 {
   "data": {
     "attributes": {
-      "type": "@every",
-      "arguments": "30m10s",
+      "type": "@event",
+      "arguments": "io.cozy.invitations",
+      "debounce": "10m",
       "worker": "sendmail",
       "worker_arguments": {},
       "options": {
@@ -401,6 +404,7 @@ Accept: application/vnd.api+json
     "attributes": {
       "type": "@every",
       "arguments": "30m10s",
+      "debounce": "10m",
       "worker": "sendmail",
       "options": {
         "priority": 3,
