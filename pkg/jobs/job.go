@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,11 +39,35 @@ func (c *couchStorage) Get(domain, jobID string) (*JobInfos, error) {
 }
 
 func (c *couchStorage) Create(job *JobInfos) error {
-	return couchdb.CreateDoc(c.db, job)
+	if err := couchdb.CreateDoc(c.db, job); err != nil {
+		return err
+	}
+	if c == globalStorage {
+		// Writing in couchdb should be enough to publish this event,
+		// but it is not published on right domain, so we publish it again.
+		realtime.GetHub().Publish(&realtime.Event{
+			Verb:   realtime.EventCreate,
+			Doc:    job.Clone(),
+			Domain: job.Domain,
+		})
+	}
+	return nil
 }
 
 func (c *couchStorage) Update(job *JobInfos) error {
-	return couchdb.UpdateDoc(c.db, job)
+	if err := couchdb.UpdateDoc(c.db, job); err != nil {
+		return err
+	}
+	if c == globalStorage {
+		// Writing in couchdb should be enough to publish this event,
+		// but it is not published on right domain, so we publish it again.
+		realtime.GetHub().Publish(&realtime.Event{
+			Verb:   realtime.EventUpdate,
+			Doc:    job.Clone(),
+			Domain: job.Domain,
+		})
+	}
+	return nil
 }
 
 // Domain returns the associated domain
