@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -131,6 +133,66 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	for i := 0; i < len(ts); i++ {
 		<-done
 	}
+
+	err = sch.Shutdown(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestMemSchedulerWithDebounce(t *testing.T) {
+	called := 0
+	bro := jobs.NewMemBroker(1)
+	bro.Start(jobs.WorkersList{
+		"worker": {
+			Concurrency:  1,
+			MaxExecCount: 1,
+			Timeout:      1 * time.Millisecond,
+			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+				called++
+				return nil
+			},
+		},
+	})
+
+	msg, _ := jobs.NewMessage("json", "@event")
+	ti := &TriggerInfos{
+		TID:        utils.RandomString(10),
+		Type:       "@event",
+		Domain:     "cozy.local",
+		Arguments:  "io.cozy.testdebounce",
+		Debounce:   "1s",
+		WorkerType: "worker",
+		Message:    msg,
+	}
+
+	triggers := []*TriggerInfos{ti}
+	sch := newMemScheduler(&storage{triggers})
+	sch.Start(bro)
+
+	ts, err := sch.GetAll("cozy.local")
+	assert.NoError(t, err)
+	assert.Len(t, ts, len(triggers))
+
+	doc := couchdb.JSONDoc{
+		Type: "io.cozy.testdebounce",
+		M: map[string]interface{}{
+			"_id":  "test-id",
+			"_rev": "1-xxabxx",
+			"test": "value",
+		},
+	}
+	event := &realtime.Event{
+		Verb:   realtime.EventCreate,
+		Doc:    &doc,
+		Domain: "cozy.local",
+	}
+
+	for i := 0; i < 24; i++ {
+		time.Sleep(100 * time.Millisecond)
+		realtime.GetHub().Publish(event)
+	}
+
+	time.Sleep(1500 * time.Millisecond)
+	assert.Equal(t, 3, called)
 
 	err = sch.Shutdown(context.Background())
 	assert.NoError(t, err)
