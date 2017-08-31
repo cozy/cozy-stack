@@ -151,7 +151,7 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (
 
 	fields := struct {
 		Account      string `json:"account"`
-		FolderToSave string `json:"folder_to_save"`
+		FolderToSave string `json:"folder_to_save,omitempty"`
 	}{
 		Account:      w.opts.Account,
 		FolderToSave: w.opts.FolderToSave,
