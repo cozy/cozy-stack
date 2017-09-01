@@ -141,8 +141,13 @@ func retrieveSharedWithMeDirID(ins *instance.Instance, s *SharingSettings) (stri
 }
 
 func createSharedWithMeDir(ins *instance.Instance, s *SharingSettings) (string, error) {
-	dirDoc, err := vfs.NewDirDoc(ins.VFS(),
-		ins.Translate("Sharings Shared with Me directory"), "", nil)
+	name := ins.Translate("Sharings Shared with Me directory")
+	if doc, err := ins.VFS().DirByPath("/" + name); err == nil {
+		s.SharedWithMeDirID = doc.ID()
+		return s.SharedWithMeDirID, nil
+	}
+
+	dirDoc, err := vfs.NewDirDoc(ins.VFS(), name, "", nil)
 	if err != nil {
 		return "", err
 	}
