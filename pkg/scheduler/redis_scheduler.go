@@ -156,7 +156,8 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 			}
 			et := t.(*EventTrigger)
 			if et.infos.Debounce != "" {
-				if d, err := time.ParseDuration(et.infos.Debounce); err == nil {
+				var d time.Duration
+				if d, err = time.ParseDuration(et.infos.Debounce); err == nil {
 					timestamp := time.Now().Add(d)
 					s.client.ZAddNX(TriggersKey, redis.Z{
 						Score:  float64(timestamp.UTC().Unix()),
@@ -220,6 +221,11 @@ func (s *RedisScheduler) Poll(now int64) error {
 			return err
 		}
 		switch t := t.(type) {
+		case *EventTrigger: // Debounced
+			job := t.Trigger(nil)
+			if _, err = s.broker.PushJob(job); err != nil {
+				return err
+			}
 		case *AtTrigger:
 			job := t.Trigger()
 			if _, err = s.broker.PushJob(job); err != nil {
@@ -241,11 +247,6 @@ func (s *RedisScheduler) Poll(now int64) error {
 				prev = time.Unix(score, 0)
 			}
 			if err := s.addToRedis(t, prev); err != nil {
-				return err
-			}
-		case *EventTrigger: // Debounced
-			job := t.Trigger(nil)
-			if _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
 		default:
