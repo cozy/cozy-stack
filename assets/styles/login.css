@@ -161,7 +161,7 @@ header p {
     color: #788195
 }
 .svg-wrapper {
-    background-color: #33a6ff
+    background-color: #297EF2
 }
 footer {
     margin-top: 2em
@@ -171,7 +171,7 @@ footer ol {
     padding: 0
 }
 a {
-    color: #33a6ff;
+    color: #297EF2;
     text-decoration: none
 }
 form .line {
@@ -254,7 +254,7 @@ input[type=number]:focus,
 input[type=password]:focus,
 input[type=text]:focus,
 select:focus {
-    border: 1px solid #33a6ff;
+    border: 1px solid #297EF2;
     background: none
 }
 input[type=number].error,
@@ -323,7 +323,7 @@ button {
     padding: .55em 2em;
     min-height: 2.5em;
     border-radius: 4px;
-    background-color: #33a6ff;
+    background-color: #297EF2;
     text-align: center;
     text-transform: uppercase;
     color: #fff
@@ -365,7 +365,7 @@ footer li {
     margin: 3px;
     height: 3px;
     border-radius: 3px;
-    background-color: #33a6ff;
+    background-color: #297EF2;
     text-indent: -9999em
 }
 footer li:first-child {

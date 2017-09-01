@@ -104,6 +104,9 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 	if strings.Contains(redirect, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
+	} else if strings.Contains(redirect, i.Domain+"/auth/authorize") {
+		title = i.Translate("Login Connect from oauth title")
+		help = i.Translate("Login Connect from oauth help")
 	} else {
 		if publicName == "" {
 			title = i.Translate("Login Welcome")
