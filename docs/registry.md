@@ -217,6 +217,26 @@ Get the list of all applications.
 
 A pagination scheme is available via the `limit` and `cursor` query parameter. The `filter[???]` query parameters can be used to filter by fields values.
 
+Filtering is allowed on the following fields:
+
+  - `type`
+  - `editor`
+  - `category`
+  - `tags`
+
+Filtering is allowed on multiple tags with the `,` separator. For example:
+`filter[tags]=foo,bar` will match the applications with both `foo` and `bar`
+as tags.
+
+Sorting is allowed on the following fields:
+
+  - `name`
+  - `type`
+  - `editor`
+  - `category`
+  - `created_at`
+  - `updated_at`
+
 #### Query-String
 
 Parameter | Description
