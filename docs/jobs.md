@@ -367,6 +367,7 @@ restrict its permission to only one worker, like this:
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 
 The `debounce` parameter can be used to limit the number of jobs created in a burst. It delays the creation of the job on the first input by the given time argument, and if the trigger has its condition matched again during this period, it won't create another job.
+It can be useful to combine it with the changes feed of couchdb with a last sequence number persisted by the worker, as it allows to have a nice diff between two executions of the worker.
 
 #### Request
 

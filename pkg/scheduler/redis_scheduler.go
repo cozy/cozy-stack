@@ -154,7 +154,20 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 					event.Domain, triggerID, err.Error())
 				continue
 			}
-			_, err = s.broker.PushJob(t.(*EventTrigger).Trigger(event))
+			et := t.(*EventTrigger)
+			if et.infos.Debounce != "" {
+				if d, err := time.ParseDuration(et.infos.Debounce); err == nil {
+					timestamp := time.Now().Add(d)
+					s.client.ZAddNX(TriggersKey, redis.Z{
+						Score:  float64(timestamp.UTC().Unix()),
+						Member: redisKey(t.Infos()),
+					})
+					continue
+				}
+				s.log.Warnf("[scheduler] Trigger %s %s has an invalid debounce: %s",
+					et.infos.Domain, et.infos.TID, et.infos.Debounce)
+			}
+			_, err = s.broker.PushJob(et.Trigger(event))
 			if err != nil {
 				s.log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
 					event.Domain, triggerID, err.Error())
@@ -228,6 +241,11 @@ func (s *RedisScheduler) Poll(now int64) error {
 				prev = time.Unix(score, 0)
 			}
 			if err := s.addToRedis(t, prev); err != nil {
+				return err
+			}
+		case *EventTrigger: // Debounced
+			job := t.Trigger(nil)
+			if _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
 		default:

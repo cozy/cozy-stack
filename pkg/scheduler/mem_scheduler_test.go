@@ -159,7 +159,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 		Type:       "@event",
 		Domain:     "cozy.local",
 		Arguments:  "io.cozy.testdebounce",
-		Debounce:   "1s",
+		Debounce:   "100ms",
 		WorkerType: "worker",
 		Message:    msg,
 	}
@@ -187,11 +187,11 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	}
 
 	for i := 0; i < 24; i++ {
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		realtime.GetHub().Publish(event)
 	}
 
-	time.Sleep(1500 * time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 	assert.Equal(t, 3, called)
 
 	err = sch.Shutdown(context.Background())

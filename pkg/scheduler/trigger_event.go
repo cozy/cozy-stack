@@ -89,10 +89,15 @@ func (t *EventTrigger) Trigger(e *realtime.Event) *jobs.JobRequest {
 	if base != nil {
 		base.Unmarshal(&basemsg)
 	}
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+	m := map[string]interface{}{
 		"message": basemsg,
-		"event":   e,
-	})
+	}
+	if e == nil {
+		m["debounced"] = true
+	} else {
+		m["event"] = e
+	}
+	msg, err := jobs.NewMessage(jobs.JSONEncoding, m)
 	if err != nil {
 		logger.WithNamespace("event-trigger").Error(err)
 	}

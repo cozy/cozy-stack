@@ -92,7 +92,7 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	for _, infos := range ts {
 		t, err := NewTrigger(infos)
 		if err != nil {
-			s.log.Errorf("[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
+			s.log.Errorf("[scheduler] scheduler: Could not load the trigger %s(%s) at startup: %s",
 				infos.Type, infos.TID, err.Error())
 			continue
 		}
@@ -166,7 +166,7 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	s.log.Infof("[jobs] trigger %s(%s): Starting trigger",
+	s.log.Infof("[scheduler] trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)
 	ch := t.Schedule()
 	var debounced <-chan time.Time
@@ -176,7 +176,7 @@ func (s *MemScheduler) schedule(t Trigger) {
 	if infos.Debounce != "" {
 		var err error
 		if d, err = time.ParseDuration(infos.Debounce); err != nil {
-			s.log.Infof("[jobs] trigger %s has an invalid debounce: %s",
+			s.log.Infof("[scheduler] trigger %s has an invalid debounce: %s",
 				infos.TID, infos.Debounce)
 		}
 	}
@@ -203,10 +203,10 @@ func (s *MemScheduler) schedule(t Trigger) {
 func (s *MemScheduler) pushJob(t Trigger, req *jobs.JobRequest) {
 	log := s.log.WithField("domain", req.Domain)
 	log.Infof(
-		"[jobs] trigger %s(%s): Pushing new job %s",
+		"[scheduler] trigger %s(%s): Pushing new job %s",
 		t.Type(), t.Infos().TID, req.WorkerType)
 	if _, err := s.broker.PushJob(req); err != nil {
-		log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s",
+		log.Errorf("[scheduler] trigger %s(%s): Could not schedule a new job: %s",
 			t.Type(), t.Infos().TID, err.Error())
 	}
 }
