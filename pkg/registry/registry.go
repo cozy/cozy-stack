@@ -71,21 +71,6 @@ func Proxy(req *http.Request, registries []*url.URL) (io.ReadCloser, error) {
 	return rc, nil
 }
 
-func printCursor(c []int) string {
-	sum := 0
-	for _, i := range c {
-		sum += i
-	}
-	if sum == -len(c) {
-		return ""
-	}
-	var a []string
-	for _, i := range c {
-		a = append(a, strconv.Itoa(i))
-	}
-	return strings.Join(a, "|")
-}
-
 type jsonObject map[string]interface{}
 
 type appsList struct {
@@ -195,7 +180,7 @@ func (a *appsList) fetch(r *registryFetchState) error {
 		}
 		nextCursor := resp.PageInfo.NextCursor
 		if len(resp.List) < limit || nextCursor == "" {
-			r.ended = cursor + len(resp.List) - 1
+			r.ended = cursor + len(resp.List)
 			break
 		}
 		cursor, _ = strconv.Atoi(nextCursor)
@@ -230,9 +215,9 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 
 	list := a.list[:limit]
 
-	// calculation of the next cursor by iterating through the sorted and
-	// truncated list and incrementing the dimension of the cursor associated
-	// with the objects registry.
+	// Calculation of the next multi-cursor by iterating through the sorted and
+	// truncated list and incrementing the dimension of the multi-cursor
+	// associated with the objects registry.
 	//
 	// In the end, we also check if the end value of each dimensions of the
 	// cursor reached the end of the list. If so, the dimension is set to -1.
@@ -255,7 +240,7 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 		List: list,
 		PageInfo: pageInfo{
 			Count:      len(list),
-			NextCursor: printCursor(cursors),
+			NextCursor: printMutliCursor(cursors),
 		},
 	}
 }
@@ -356,6 +341,22 @@ func fetch(registry, ref *url.URL) (rc io.ReadCloser, ok bool, err error) {
 		return
 	}
 	return resp.Body, true, nil
+}
+
+func printMutliCursor(c []int) string {
+	// if all dimensions of the multi-cursor are -1, we print the empty string
+	sum := 0
+	for _, i := range c {
+		sum += i
+	}
+	if sum == -len(c) {
+		return ""
+	}
+	var a []string
+	for _, i := range c {
+		a = append(a, strconv.Itoa(i))
+	}
+	return strings.Join(a, "|")
 }
 
 func removeQueries(u *url.URL, filter ...string) *url.URL {
