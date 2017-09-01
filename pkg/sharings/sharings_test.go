@@ -410,6 +410,29 @@ func TestCreateOrUpdateRecipient(t *testing.T) {
 	assert.Equal(t, "charlie@cozy.tools", doc.Email[1].Address)
 	assert.Len(t, doc.Cozy, 1)
 	assert.Equal(t, "https://charlie.cozy.tools/", doc.Cozy[0].URL)
+
+	// Nothing to do for Dave (found by his email)
+	dave := &Recipient{
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "dave@cozy.tools"},
+		},
+	}
+	err = couchdb.CreateDoc(TestPrefix, dave)
+	assert.NoError(t, err)
+	dave2 := &Recipient{
+		Email: []RecipientEmail{
+			RecipientEmail{Address: "dave@cozy.tools"},
+		},
+	}
+	err = CreateOrUpdateRecipient(TestPrefix, dave2)
+	assert.NoError(t, err)
+	assert.Equal(t, dave.RID, dave2.RID)
+	assert.NotEmpty(t, dave2.RRev)
+	doc, err = GetRecipient(TestPrefix, dave.RID)
+	assert.NoError(t, err)
+	assert.Len(t, doc.Email, 1)
+	assert.Equal(t, "dave@cozy.tools", doc.Email[0].Address)
+	assert.Len(t, doc.Cozy, 0)
 }
 
 func TestCheckSharingTypeBadType(t *testing.T) {

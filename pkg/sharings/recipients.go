@@ -104,12 +104,12 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *Recipient) error {
 	if len(doc.Email) > 0 {
 		err := couchdb.ExecView(db, consts.SharingRecipientView, &couchdb.ViewRequest{
 			Key:         []string{doc.Email[0].Address, "email"},
-			IncludeDocs: len(doc.Cozy) > 0,
+			IncludeDocs: true,
 			Limit:       1,
 		}, &res)
 		if err == nil && len(res.Rows) > 0 {
 			if len(doc.Cozy) == 0 {
-				return nil
+				return json.Unmarshal(*res.Rows[0].Doc, &doc)
 			}
 			cozy := doc.Cozy[0]
 			doc.Cozy = nil
@@ -129,12 +129,12 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *Recipient) error {
 	if len(doc.Cozy) > 0 {
 		err := couchdb.ExecView(db, consts.SharingRecipientView, &couchdb.ViewRequest{
 			Key:         []string{doc.Cozy[0].URL, "cozy"},
-			IncludeDocs: len(doc.Email) > 0,
+			IncludeDocs: true,
 			Limit:       1,
 		}, &res)
 		if err == nil && len(res.Rows) > 0 {
 			if len(doc.Email) == 0 {
-				return nil
+				return json.Unmarshal(*res.Rows[0].Doc, &doc)
 			}
 			email := doc.Email[0]
 			doc.Email = nil
