@@ -71,10 +71,193 @@ func Proxy(req *http.Request, registries []*url.URL) (io.ReadCloser, error) {
 	return rc, nil
 }
 
-type jsonObject struct {
-	name string
-	reg  int
-	obj  map[string]interface{}
+func printCursor(c []int) string {
+	sum := 0
+	for _, i := range c {
+		sum += i
+	}
+	if sum == -len(c) {
+		return ""
+	}
+	var a []string
+	for _, i := range c {
+		a = append(a, strconv.Itoa(i))
+	}
+	return strings.Join(a, "|")
+}
+
+type jsonObject map[string]interface{}
+
+type appsList struct {
+	ref        *url.URL
+	list       []jsonObject
+	registries []*registryFetchState
+	names      map[string]struct {
+		*registryFetchState
+		int
+	}
+	limit int
+}
+
+type pageInfo struct {
+	Count      int    `json:"count"`
+	NextCursor string `json:"next_cursor,omitempty"`
+}
+
+type appsPaginated struct {
+	List     []jsonObject `json:"list"`
+	PageInfo pageInfo     `json:"page_info"`
+}
+
+type registryFetchState struct {
+	url    *url.URL
+	index  int
+	cursor int
+	ended  int
+}
+
+func newAppsList(ref *url.URL, registries []*url.URL, cursors []int, limit int) *appsList {
+	if len(registries) != len(cursors) {
+		panic("should have same length")
+	}
+	regStates := make([]*registryFetchState, len(registries))
+	for i := range regStates {
+		regStates[i] = &registryFetchState{
+			index:  i,
+			url:    registries[i],
+			cursor: cursors[i],
+			ended:  -1,
+		}
+	}
+	return &appsList{
+		ref:   ref,
+		limit: limit,
+		list:  make([]jsonObject, 0),
+		names: make(map[string]struct {
+			*registryFetchState
+			int
+		}),
+		registries: regStates,
+	}
+}
+
+func (a *appsList) FetchAll() error {
+	for _, r := range a.registries {
+		if err := a.fetch(r); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (a *appsList) fetch(r *registryFetchState) error {
+	limit := a.limit
+
+	cursor := r.cursor
+	// A negative dimension of the cursor means we already reached the end of the
+	// list. There is no need to fetch anymore in that case.
+	if cursor < 0 {
+		return nil
+	}
+
+	for {
+		ref := addQueries(removeQueries(a.ref, "cursor", "limit"),
+			"cursor", strconv.Itoa(cursor),
+			"limit", strconv.Itoa(limit),
+		)
+		rc, ok, err := fetch(r.url, ref)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+		defer rc.Close()
+		var resp appsPaginated
+		if err = json.NewDecoder(rc).Decode(&resp); err != nil {
+			return err
+		}
+		added := 0
+		for i, obj := range resp.List {
+			name := obj["name"].(string)
+			if _, ok := a.names[name]; ok {
+				continue
+			}
+			a.list = append(a.list, obj)
+			a.names[name] = struct {
+				*registryFetchState
+				int
+			}{r, cursor + i}
+			added++
+		}
+		if added >= limit {
+			break
+		}
+		nextCursor := resp.PageInfo.NextCursor
+		if len(resp.List) < limit || nextCursor == "" {
+			r.ended = cursor + len(resp.List) - 1
+			break
+		}
+		cursor, _ = strconv.Atoi(nextCursor)
+		limit -= added
+	}
+
+	return nil
+}
+
+func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPaginated {
+	sort.Slice(a.list, func(i, j int) bool {
+		vi := a.list[i]
+		vj := a.list[j]
+		var less bool
+		switch valA := vi[sortBy].(type) {
+		case string:
+			valB := vj[sortBy].(string)
+			less = valA < valB
+		case int:
+			valB := vj[sortBy].(int)
+			less = valA < valB
+		}
+		if reverse {
+			return !less
+		}
+		return less
+	})
+
+	if limit > len(a.list) {
+		limit = len(a.list)
+	}
+
+	list := a.list[:limit]
+
+	// calculation of the next cursor by iterating through the sorted and
+	// truncated list and incrementing the dimension of the cursor associated
+	// with the objects registry.
+	//
+	// In the end, we also check if the end value of each dimensions of the
+	// cursor reached the end of the list. If so, the dimension is set to -1.
+	cursors := make([]int, len(a.registries))
+	for i, reg := range a.registries {
+		cursors[i] = reg.cursor
+	}
+	for _, o := range list {
+		name := o["name"].(string)
+		reg := a.names[name]
+		cursors[reg.index] = reg.int + 1
+	}
+	for i, reg := range a.registries {
+		if e := reg.ended; e >= 0 && cursors[i] >= e {
+			cursors[i] = -1
+		}
+	}
+
+	return &appsPaginated{
+		List: list,
+		PageInfo: pageInfo{
+			Count:      len(list),
+			NextCursor: printCursor(cursors),
+		},
+	}
 }
 
 // ProxyList will proxy the given request to the registries by aggregating the
@@ -85,22 +268,22 @@ func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error
 		return nil, err
 	}
 
-	refNoCursor := removeQueries(ref, "cursor")
-
 	var sortBy string
 	var sortReverse bool
 	var limit int
-	var cursors []string
+
+	cursors := make([]int, len(registries))
 
 	q := ref.Query()
 	if v, ok := q["cursor"]; ok {
-		cursors = strings.Split(v[0], "|")
+		splits := strings.Split(v[0], "|")
+		for i, s := range splits {
+			if i >= len(registries) {
+				break
+			}
+			cursors[i], _ = strconv.Atoi(s)
+		}
 	}
-	diff := len(registries) - len(cursors)
-	for i := 0; i < diff; i++ {
-		cursors = append(cursors, "")
-	}
-
 	if v, ok := q["sort"]; ok {
 		sortBy = v[0]
 	}
@@ -118,60 +301,11 @@ func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error
 		limit = defaultLimit
 	}
 
-	uniques := make(map[string]struct{})
-
-	list := make([]jsonObject, 0)
-	for registryIndex, registry := range registries {
-		registryRef := addQueries(refNoCursor, "cursor", cursors[registryIndex])
-		list, err = fetchListUnique(registry, registryRef, registryIndex, list, uniques)
-		if err != nil {
-			return nil, err
-		}
+	list := newAppsList(ref, registries, cursors, limit)
+	if err := list.FetchAll(); err != nil {
+		return nil, err
 	}
-
-	sortList(list, sortBy, sortReverse)
-
-	l := limit
-	if l > len(list) {
-		l = len(list)
-	}
-
-	list = list[:l]
-	result := make([]map[string]interface{}, l)
-	for i, el := range list {
-		cursors[el.reg] = el.name
-		el.obj["cursor"] = strings.Join(cursors, "|")
-		result[i] = el.obj
-	}
-
-	return json.Marshal(result)
-}
-
-func fetchListUnique(registry, ref *url.URL, index int, list []jsonObject, uniques map[string]struct{}) (result []jsonObject, err error) {
-	result = list
-	rc, ok, err := fetch(registry, ref)
-	if err != nil {
-		return
-	}
-	if !ok {
-		return
-	}
-	defer rc.Close()
-	var resp []map[string]interface{}
-	if err = json.NewDecoder(rc).Decode(&resp); err != nil {
-		return
-	}
-	if len(resp) == 0 {
-		return
-	}
-	for _, obj := range resp {
-		name := obj["name"].(string)
-		if _, ok = uniques[name]; !ok {
-			result = append(result, jsonObject{name, index, obj})
-			uniques[name] = struct{}{}
-		}
-	}
-	return
+	return json.Marshal(list.Paginated(sortBy, sortReverse, limit))
 }
 
 func fetchUntilFound(registries []*url.URL, requestURI string) (rc io.ReadCloser, ok bool, err error) {
@@ -222,24 +356,6 @@ func fetch(registry, ref *url.URL) (rc io.ReadCloser, ok bool, err error) {
 		return
 	}
 	return resp.Body, true, nil
-}
-
-func sortList(list []jsonObject, sortBy string, reverse bool) {
-	sort.Slice(list, func(i, j int) bool {
-		var less bool
-		switch valA := list[i].obj[sortBy].(type) {
-		case string:
-			valB := list[j].obj[sortBy].(string)
-			less = valA < valB
-		case int:
-			valB := list[j].obj[sortBy].(int)
-			less = valA < valB
-		}
-		if reverse {
-			return !less
-		}
-		return less
-	})
 }
 
 func removeQueries(u *url.URL, filter ...string) *url.URL {

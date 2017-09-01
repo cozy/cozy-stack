@@ -240,26 +240,31 @@ Content-Type: application/json
 ```
 
 ```json
-[
-    {
-        "name": "drive",
-        "type": "webapp",
-        "editor": "cozy",
-        "category": "files",
-        "description": "The drive application",
-        "versions": {
-            "stable": ["3.1.1"],
-            "beta": ["3.1.1-beta.1"],
-            "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+{
+    "list": [
+        {
+            "name": "drive",
+            "type": "webapp",
+            "editor": "cozy",
+            "category": "files",
+            "description": "The drive application",
+            "versions": {
+                "stable": ["3.1.1"],
+                "beta": ["3.1.1-beta.1"],
+                "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+            },
+            "repository": "https://github.com/cozy/cozy-drive",
+            "license": "BSD",
         },
-        "repository": "https://github.com/cozy/cozy-drive",
-        "license": "BSD",
-        "cursor": "ZHJpdmU6MAo="
-    },
-    {
-        // ...
+        {
+            // ...
+        }
+    ],
+    "page_info": {
+        "count": 2,
+        "next_cursor": "..."
     }
-]
+}
 ```
 
 ### GET /registry/:app
