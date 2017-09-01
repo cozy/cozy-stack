@@ -96,9 +96,9 @@ type appsPaginated struct {
 
 type registryFetchState struct {
 	url    *url.URL
-	index  int
-	cursor int
-	ended  int
+	index  int // index in the registries array
+	cursor int // cursor used to fetch the registry
+	ended  int // cursor of the last element in the regitry (-1 if unknown)
 }
 
 func newAppsList(ref *url.URL, registries []*url.URL, cursors []int, limit int) *appsList {
