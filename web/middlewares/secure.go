@@ -93,12 +93,12 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			hsts := true
+			production := true
 			if in := c.Get("instance"); in != nil && in.(*instance.Instance).Dev {
-				hsts = false
+				production = false
 			}
 			h := c.Response().Header()
-			if hsts && hstsHeader != "" {
+			if production && hstsHeader != "" {
 				h.Set(echo.HeaderStrictTransportSecurity, hstsHeader)
 			}
 			if xFrameHeader != "" {
