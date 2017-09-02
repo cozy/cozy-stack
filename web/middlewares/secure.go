@@ -104,43 +104,45 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			if xFrameHeader != "" {
 				h.Set(echo.HeaderXFrameOptions, xFrameHeader)
 			}
-			var cspHeader string
-			parent, _, siblings := SplitHost(c.Request().Host)
-			if len(conf.CSPDefaultSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrc)
-			}
-			if len(conf.CSPScriptSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "script-src", conf.CSPScriptSrc)
-			}
-			if len(conf.CSPFrameSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "frame-src", conf.CSPFrameSrc)
-			}
-			if len(conf.CSPConnectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "connect-src", conf.CSPConnectSrc)
-			}
-			if len(conf.CSPFontSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "font-src", conf.CSPFontSrc)
-			}
-			if len(conf.CSPImgSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "img-src", conf.CSPImgSrc)
-			}
-			if len(conf.CSPManifestSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "manifest-src", conf.CSPManifestSrc)
-			}
-			if len(conf.CSPMediaSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "media-src", conf.CSPMediaSrc)
-			}
-			if len(conf.CSPObjectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "object-src", conf.CSPObjectSrc)
-			}
-			if len(conf.CSPStyleSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "style-src", conf.CSPStyleSrc)
-			}
-			if len(conf.CSPWorkerSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "worker-src", conf.CSPWorkerSrc)
-			}
-			if cspHeader != "" {
-				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
+			if production {
+				var cspHeader string
+				parent, _, siblings := SplitHost(c.Request().Host)
+				if len(conf.CSPDefaultSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrc)
+				}
+				if len(conf.CSPScriptSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "script-src", conf.CSPScriptSrc)
+				}
+				if len(conf.CSPFrameSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "frame-src", conf.CSPFrameSrc)
+				}
+				if len(conf.CSPConnectSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "connect-src", conf.CSPConnectSrc)
+				}
+				if len(conf.CSPFontSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "font-src", conf.CSPFontSrc)
+				}
+				if len(conf.CSPImgSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "img-src", conf.CSPImgSrc)
+				}
+				if len(conf.CSPManifestSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "manifest-src", conf.CSPManifestSrc)
+				}
+				if len(conf.CSPMediaSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "media-src", conf.CSPMediaSrc)
+				}
+				if len(conf.CSPObjectSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "object-src", conf.CSPObjectSrc)
+				}
+				if len(conf.CSPStyleSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "style-src", conf.CSPStyleSrc)
+				}
+				if len(conf.CSPWorkerSrc) > 0 {
+					cspHeader += makeCSPHeader(parent, siblings, "worker-src", conf.CSPWorkerSrc)
+				}
+				if cspHeader != "" {
+					h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
+				}
 			}
 			h.Set(echo.HeaderXContentTypeOptions, "nosniff")
 			return next(c)
