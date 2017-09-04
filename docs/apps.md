@@ -132,6 +132,7 @@ Here is the available sources, defined by the scheme of the source URL:
   - `registry://`: to install an application from the instance registries
   - `git://` or `git+ssh://`: to install an application from a git repository
   - `http://` or `https://`: to install an application from an http server (via a tarball)
+  - `file://`: to install an application from a local directory (for instance: `file:///home/user/code/cozy-app`)
 
 The `registry` scheme expect the following elements:
 
