@@ -28,8 +28,6 @@ With some possible additional options
 - `--email <email>`
 - `--environment <dev/test/production>`
 - `--apps <app1,app2,app3>`
-- `--home <cozy-home>`
-- `--onboarding <cozy-onboarding>`
 - `--registry https://registry.cozycloud.cc`
 
 It registers the instance in a global couchdb database `global/instances`
@@ -80,11 +78,7 @@ Then it creates the basic settings
 Settings are created as named id in the `$PREFIX/io.cozy.settings` database.
 During onboarding, the fields will be prefilled with these value if they were provided.
 
-Finally, default applications are installed in the following order :
-
-- the `home` and `onboarding` applications are installed according to provided URL or cozy defaults.
-- If the `apps` CLI param is given, all these apps are installed
-- If the environment is set to `dev`, some devtools are installed
+Finally, applications from the `--apps` CLI option are installed.
 
 
 --------------------------------------
