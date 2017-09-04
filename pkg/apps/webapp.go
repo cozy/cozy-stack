@@ -271,6 +271,8 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 			newService.TriggerOptions != oldService.TriggerOptions {
 			deleted = append(deleted, oldService)
 			created = append(created, newService)
+		} else {
+			*newService = *oldService
 		}
 	}
 	for _, newService := range clone {

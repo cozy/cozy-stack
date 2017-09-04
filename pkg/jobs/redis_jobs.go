@@ -14,7 +14,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
-var joblog = logger.WithNamespace("redis-job")
+var joblog = logger.WithNamespace("jobs")
 
 const redisPrefix = "j/"
 
