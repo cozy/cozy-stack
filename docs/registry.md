@@ -57,6 +57,7 @@ Example:
         "en": "The drive application",
         "fr": "L'application drive gestionnaire de fichier"
     },
+    "category": "main",
     "repository": "https://github.com/cozy/cozy-drive",
     "tags": ["foo", "bar", "baz"],
     "versions": {
@@ -249,7 +250,7 @@ sort      | name of the field on which to apply the sort of the list
 #### Request
 
 ```http
-GET /registry?filter[category]=cozy&limit=20&sort=name HTTP/1.1
+GET /registry?filter[category]=main&limit=20&sort=name HTTP/1.1
 ```
 
 #### Response
@@ -266,7 +267,7 @@ Content-Type: application/json
             "name": "drive",
             "type": "webapp",
             "editor": "cozy",
-            "category": "files",
+            "category": "main",
             "description": "The drive application",
             "versions": {
                 "stable": ["3.1.1"],
@@ -274,7 +275,7 @@ Content-Type: application/json
                 "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
             },
             "repository": "https://github.com/cozy/cozy-drive",
-            "license": "BSD",
+            "license": "BSD"
         },
         {
             // ...
