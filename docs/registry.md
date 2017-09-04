@@ -217,19 +217,39 @@ Get the list of all applications.
 
 A pagination scheme is available via the `limit` and `cursor` query parameter. The `filter[???]` query parameters can be used to filter by fields values.
 
+Filtering is allowed on the following fields:
+
+  - `type`
+  - `editor`
+  - `category`
+  - `tags`
+
+Filtering is allowed on multiple tags with the `,` separator. For example:
+`filter[tags]=foo,bar` will match the applications with both `foo` and `bar`
+as tags.
+
+Sorting is allowed on the following fields:
+
+  - `name`
+  - `type`
+  - `editor`
+  - `category`
+  - `created_at`
+  - `updated_at`
+
 #### Query-String
 
 Parameter | Description
-----------|------------------------------------------------------
-cursor    | the name of the last application on the previous page
+----------|--------------------------------------------------------
+cursor    | the cursor of the last application on the previous page
 limit     | the maximum number of applications to show
 filter[]  | a filter to apply on fields of the application
-order     | order to apply to the list
+sort      | name of the field on which to apply the sort of the list
 
 #### Request
 
 ```http
-GET /registry?filter[category]=cozy&page=0 HTTP/1.1
+GET /registry?filter[category]=cozy&limit=20&sort=name HTTP/1.1
 ```
 
 #### Response
@@ -240,25 +260,31 @@ Content-Type: application/json
 ```
 
 ```json
-[
-    {
-        "name": "drive",
-        "type": "webapp",
-        "editor": "cozy",
-        "category": "files",
-        "description": "The drive application",
-        "versions": {
-            "stable": ["3.1.1"],
-            "beta": ["3.1.1-beta.1"],
-            "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+{
+    "list": [
+        {
+            "name": "drive",
+            "type": "webapp",
+            "editor": "cozy",
+            "category": "files",
+            "description": "The drive application",
+            "versions": {
+                "stable": ["3.1.1"],
+                "beta": ["3.1.1-beta.1"],
+                "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
+            },
+            "repository": "https://github.com/cozy/cozy-drive",
+            "license": "BSD",
         },
-        "repository": "https://github.com/cozy/cozy-drive",
-        "license": "BSD"
-    },
-    {
-        // ...
+        {
+            // ...
+        }
+    ],
+    "page_info": {
+        "count": 2,
+        "next_cursor": "..."
     }
-]
+}
 ```
 
 ### GET /registry/:app
