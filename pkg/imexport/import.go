@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -49,35 +50,29 @@ func album(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db c
 
 	}
 
-	for {
-		_, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
+	_, err := tr.Next()
+	if err != nil {
+		return err
+	}
+
+	bs = bufio.NewScanner(tr)
+	for bs.Scan() {
+		ref := &References{}
+		err := json.Unmarshal(bs.Bytes(), &ref)
 		if err != nil {
 			return err
 		}
 
-		bs = bufio.NewScanner(tr)
-		for bs.Scan() {
-			ref := &References{}
-			err := json.Unmarshal(bs.Bytes(), &ref)
-			if err != nil {
+		file, err := fs.FileByPath(dstDoc.Fullpath + ref.Filepath)
+		if err != nil {
+			return err
+		}
+
+		if m[ref.Albumid] != nil {
+			file.AddReferencedBy(*m[ref.Albumid])
+			if err = couchdb.UpdateDoc(db, file); err != nil {
 				return err
 			}
-
-			file, err := fs.FileByPath(dstDoc.Fullpath + ref.Filepath)
-			if err != nil {
-				return err
-			}
-
-			if m[ref.Albumid] != nil {
-				file.AddReferencedBy(*m[ref.Albumid])
-				if err = couchdb.UpdateDoc(db, file); err != nil {
-					return err
-				}
-			}
-
 		}
 
 	}
@@ -121,7 +116,8 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 		switch hdr.Typeflag {
 
 		case tar.TypeDir:
-			if hdr.Name == "metadata/album/" {
+
+			if strings.TrimPrefix(hdr.Name, "/") == "metadata/album/" {
 				for {
 					hdr, err = tr.Next()
 					if err == io.EOF {
@@ -130,6 +126,7 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 					if err != nil {
 						return err
 					}
+
 					if path.Base(hdr.Name) == "album.json" {
 						err = album(fs, hdr, tr, dstDoc, db)
 						if err != nil {
@@ -144,6 +141,7 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 			}
 
 		case tar.TypeReg:
+
 			name := path.Base(hdr.Name)
 			mime, class := vfs.ExtractMimeAndClassFromFilename(hdr.Name)
 			now := time.Now()
@@ -180,7 +178,8 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 			}
 
 		default:
-			return errors.New("Unknown typeflag ")
+			fmt.Println("Unknown typeflag", hdr.Typeflag)
+			return errors.New("Unknown typeflag")
 
 		}
 
