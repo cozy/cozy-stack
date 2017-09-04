@@ -38,7 +38,7 @@ func (f *fileFetcher) FetchManifest(src *url.URL) (io.ReadCloser, error) {
 	return r, nil
 }
 
-func (f *fileFetcher) Fetch(src *url.URL, fs Copier, man Manifest) error {
+func (f *fileFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	version := man.Version() + "-" + utils.RandomString(10)
 	man.SetVersion(version)
 	exists, err := fs.Start(man.Slug(), man.Version())
