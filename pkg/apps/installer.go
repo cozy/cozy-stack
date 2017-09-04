@@ -150,6 +150,8 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		fetcher = newHTTPFetcher(manFilename, log)
 	case "registry":
 		fetcher = newRegistryFetcher(opts.Registries, log)
+	case "file":
+		fetcher = newFileFetcher(manFilename, log)
 	default:
 		return nil, ErrNotSupportedSource
 	}
