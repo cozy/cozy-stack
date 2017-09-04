@@ -24,7 +24,7 @@ version` should show you the version if every thing is right.
 
 ### Using `go`
 
-[Install go](https://golang.org/doc/install), version >= 1.7. With `go` installed and configured, you can run the following command:
+[Install go](https://golang.org/doc/install), version >= 1.8. With `go` installed and configured, you can run the following command:
 
 ```
 go get -u github.com/cozy/cozy-stack
