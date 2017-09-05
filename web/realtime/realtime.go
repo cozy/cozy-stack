@@ -151,7 +151,13 @@ func readPump(ctx context.Context, i *instance.Instance, ws *websocket.Conn,
 	for {
 		cmd := &command{}
 		if err = ws.ReadJSON(cmd); err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+			// The error code 1005=CloseNotStatusReceived is received when calling
+			// client-side close() method (without any status), at least on Chrome.
+			// Since it what most client-side code use, we do not log it.
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway,
+				websocket.CloseNormalClosure,
+				websocket.CloseNoStatusReceived) {
 				logger.WithDomain(ds.Domain).Infof("ws error: %s", err)
 			}
 			break
