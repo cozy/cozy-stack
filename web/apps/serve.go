@@ -33,7 +33,7 @@ func Serve(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	slug := c.Get("slug").(string)
 
-	if (!i.OnboardingFinished && slug != consts.OnboardingSlug && c.QueryParam("intent") == "") ||
+	if (!i.OnboardingFinished && slug != consts.OnboardingSlug && slug != consts.CollectSlug) ||
 		(i.OnboardingFinished && slug == consts.OnboardingSlug) {
 		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 	}
