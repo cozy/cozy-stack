@@ -159,6 +159,9 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 
 			file, err := fs.CreateFile(fileDoc, nil)
 			if err != nil {
+				if strings.Contains(path.Dir(hdr.Name), "/Photos/") {
+					continue
+				}
 				extension := path.Ext(fileDoc.DocName)
 				fileName := fileDoc.DocName[0 : len(fileDoc.DocName)-len(extension)]
 				fileDoc.DocName = fmt.Sprintf("%s-conflict-%d%s", fileName, time.Now().Unix(), extension)
@@ -166,6 +169,7 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 				if err != nil {
 					return err
 				}
+
 			}
 
 			_, err = io.Copy(file, tr)
