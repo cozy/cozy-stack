@@ -90,8 +90,8 @@ type pageInfo struct {
 }
 
 type appsPaginated struct {
-	List     []jsonObject `json:"list"`
-	PageInfo pageInfo     `json:"page_info"`
+	List     []jsonObject `json:"data"`
+	PageInfo pageInfo     `json:"meta"`
 }
 
 type registryFetchState struct {

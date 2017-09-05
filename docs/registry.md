@@ -40,6 +40,8 @@ An application object contains the following fields:
 - `category`: the application category
 - `repository`: object with type and URL of package repository
 - `tags`: list of tags associated with the application
+- `logo_url`: link to the logo image
+- `screenshot_urls`: array of links to the screenshots of the application
 - `versions`: an object containing all the channels versions
 
 Example:
@@ -60,6 +62,8 @@ Example:
     "category": "main",
     "repository": "https://github.com/cozy/cozy-drive",
     "tags": ["foo", "bar", "baz"],
+    "logo_url": "https://foobar.img/logo.jpg",
+    "screenshot_urls": ["https://foobar.img/screen1.jpg", "https://foobar.img/screen2.jpg"],
     "versions": {
         "stable": ["3.1.1"],
         "beta": ["3.1.1-beta.1"],
@@ -120,7 +124,7 @@ This route adds or modify an application to the registry. The content of the req
 
 ```http
 POST /registry/drive HTTP/1.1
-Authorization: AbCdE
+Authorization: Token AbCdE
 ```
 
 ```json
@@ -162,7 +166,7 @@ Request to add a stable release:
 
 ```http
 POST /registry/drive/3.1.2 HTTP/1.1
-Authorization: AbCdE
+Authorization: Token AbCdE
 ```
 
 ```json
@@ -176,7 +180,7 @@ Request to add a development release:
 
 ```http
 POST /registry/drive/3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a HTTP/1.1
-Authorization: AbCdE
+Authorization: Token AbCdE
 ```
 
 ```json
@@ -262,7 +266,7 @@ Content-Type: application/json
 
 ```json
 {
-    "list": [
+    "data": [
         {
             "name": "drive",
             "type": "webapp",
@@ -281,7 +285,7 @@ Content-Type: application/json
             // ...
         }
     ],
-    "page_info": {
+    "meta": {
         "count": 2,
         "next_cursor": "..."
     }
@@ -419,8 +423,4 @@ registries:
 
 # Authentication
 
-The definition of the authentication API is not finished yet. It will be released when the first implementation will come out.
-
-For now the authentication scheme to publish an application will be kept minimal and simple. Each editor will be given an API key that should be present in the header of the http request when creating a application or publishing a new version.
-
-The API key should be present in the `Authorization` header.
+To be defined.
