@@ -151,7 +151,7 @@ func readPump(ctx context.Context, i *instance.Instance, ws *websocket.Conn,
 	for {
 		cmd := &command{}
 		if err = ws.ReadJSON(cmd); err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				logger.WithDomain(ds.Domain).Infof("ws error: %s", err)
 			}
 			break
