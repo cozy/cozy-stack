@@ -33,7 +33,8 @@ func Serve(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	slug := c.Get("slug").(string)
 
-	if i.OnboardingFinished && slug == consts.OnboardingSlug {
+	if (!i.OnboardingFinished && slug != consts.OnboardingSlug && c.QueryParam("intent") == "") ||
+		(i.OnboardingFinished && slug == consts.OnboardingSlug) {
 		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 	}
 
@@ -108,13 +109,6 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	}
 	if file == "" {
 		file = route.Index
-	}
-
-	if !i.OnboardingFinished &&
-		slug != consts.OnboardingSlug &&
-		c.QueryParam("intent") == "" &&
-		file == route.Index {
-		return c.Redirect(http.StatusFound, i.PageURL("/", nil))
 	}
 
 	var needAuth bool
