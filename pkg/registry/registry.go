@@ -267,7 +267,7 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 		// non-null ones, we can increment their value by at-most one. This
 		// correspond to values that where rejected by having the same names as
 		// prioritized objects.
-		i += 1
+		i++
 		for ; i < l; i++ {
 			if c := offsets[i]; c > 0 && cursors[i] == c-1 {
 				cursors[i] = c
