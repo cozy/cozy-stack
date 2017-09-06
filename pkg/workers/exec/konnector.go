@@ -170,6 +170,7 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + string(fieldsJSON),
 		"COZY_TYPE=" + w.man.Type,
+		"COZY_LOCALE=" + i.Locale,
 		"COZY_JOB_ID=" + jobID,
 	}
 	return
