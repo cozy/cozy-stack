@@ -77,11 +77,8 @@ type appsList struct {
 	ref        *url.URL
 	list       []jsonObject
 	registries []*registryFetchState
-	names      map[string]struct {
-		*registryFetchState
-		int
-	}
-	limit int
+	names      map[string][]int
+	limit      int
 }
 
 type pageInfo struct {
@@ -115,36 +112,49 @@ func newAppsList(ref *url.URL, registries []*url.URL, cursors []int, limit int) 
 		}
 	}
 	return &appsList{
-		ref:   ref,
-		limit: limit,
-		list:  make([]jsonObject, 0),
-		names: make(map[string]struct {
-			*registryFetchState
-			int
-		}),
+		ref:        ref,
+		limit:      limit,
+		list:       make([]jsonObject, 0),
+		names:      make(map[string][]int),
 		registries: regStates,
 	}
 }
 
 func (a *appsList) FetchAll() error {
-	for _, r := range a.registries {
-		if err := a.fetch(r); err != nil {
+	l := len(a.registries)
+	for i, r := range a.registries {
+		// We fetch the entire registry except for the last one. In practice, the
+		// "high-priority" registries should be small and the last one contain the
+		// vast majority of the applications.
+		fetchAll := i < l-1
+		if err := a.fetch(r, fetchAll); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (a *appsList) fetch(r *registryFetchState) error {
-	limit := a.limit
+func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
+	names := a.names
+	minCursor := r.cursor
+	maxCursor := r.cursor + a.limit
 
-	cursor := r.cursor
+	var cursor, limit int
+	if fetchAll {
+		cursor = 0
+		limit = 50
+	} else {
+		cursor = r.cursor
+		limit = a.limit
+	}
+
 	// A negative dimension of the cursor means we already reached the end of the
 	// list. There is no need to fetch anymore in that case.
-	if cursor < 0 {
+	if !fetchAll && r.cursor < 0 {
 		return nil
 	}
 
+	added := 0
 	for {
 		ref := addQueries(removeQueries(a.ref, "cursor", "limit"),
 			"cursor", strconv.Itoa(cursor),
@@ -162,29 +172,40 @@ func (a *appsList) fetch(r *registryFetchState) error {
 		if err = json.NewDecoder(rc).Decode(&resp); err != nil {
 			return err
 		}
-		added := 0
+
 		for i, obj := range resp.List {
+			objCursor := cursor + i
+
+			objInRange := r.cursor >= 0 &&
+				objCursor >= minCursor &&
+				objCursor <= maxCursor
+
+			// if an object with same name has already been fetched, we skip it
 			name := obj["name"].(string)
-			if _, ok := a.names[name]; ok {
-				continue
+			offsets, ok := names[name]
+			if !ok {
+				offsets = make([]int, len(a.registries))
+				names[name] = offsets
 			}
-			a.list = append(a.list, obj)
-			a.names[name] = struct {
-				*registryFetchState
-				int
-			}{r, cursor + i}
-			added++
+			if objInRange {
+				offsets[r.index] = objCursor + 1
+				if !ok {
+					a.list = append(a.list, obj)
+					added++
+				}
+			}
 		}
-		if added >= limit {
-			break
-		}
+
 		nextCursor := resp.PageInfo.NextCursor
-		if len(resp.List) < limit || nextCursor == "" {
+		if nextCursor == "" {
 			r.ended = cursor + len(resp.List)
 			break
 		}
+
 		cursor, _ = strconv.Atoi(nextCursor)
-		limit -= added
+		if !fetchAll && limit-added <= 0 {
+			break
+		}
 	}
 
 	return nil
@@ -215,21 +236,45 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 
 	list := a.list[:limit]
 
+	// Copy the original cursor
+	cursors := make([]int, len(a.registries))
+	for i, reg := range a.registries {
+		cursors[i] = reg.cursor
+	}
+
 	// Calculation of the next multi-cursor by iterating through the sorted and
 	// truncated list and incrementing the dimension of the multi-cursor
 	// associated with the objects registry.
 	//
 	// In the end, we also check if the end value of each dimensions of the
 	// cursor reached the end of the list. If so, the dimension is set to -1.
-	cursors := make([]int, len(a.registries))
-	for i, reg := range a.registries {
-		cursors[i] = reg.cursor
-	}
+	l := len(a.registries)
 	for _, o := range list {
 		name := o["name"].(string)
-		reg := a.names[name]
-		cursors[reg.index] = reg.int + 1
+		offsets := a.names[name]
+
+		i := 0
+		// This first loop checks the first element >= 0 in the offsets associated
+		// to the object. This first non null element is set as the cursor of the
+		// dimension.
+		for ; i < l; i++ {
+			if c := offsets[i]; c > 0 {
+				cursors[i] = c
+				break
+			}
+		}
+		// We continue the iteration to the next lower-priority dimensions and for
+		// non-null ones, we can increment their value by at-most one. This
+		// correspond to values that where rejected by having the same names as
+		// prioritized objects.
+		i++
+		for ; i < l; i++ {
+			if c := offsets[i]; c > 0 && cursors[i] == c-1 {
+				cursors[i] = c
+			}
+		}
 	}
+
 	for i, reg := range a.registries {
 		if e := reg.ended; e >= 0 && cursors[i] >= e {
 			cursors[i] = -1
