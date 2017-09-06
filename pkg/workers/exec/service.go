@@ -85,6 +85,7 @@ func (w *serviceWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (cm
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_TYPE=" + w.opts.Type,
+		"COZY_LOCALE=" + i.Locale,
 		"COZY_JOB_ID=" + jobID,
 	}
 	return
