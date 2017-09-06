@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -91,7 +92,7 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 	for _, infos := range ts {
 		t, err := NewTrigger(infos)
 		if err != nil {
-			s.log.Errorf("[jobs] scheduler: Could not load the trigger %s(%s) at startup: %s",
+			s.log.Errorf("[scheduler] scheduler: Could not load the trigger %s(%s) at startup: %s",
 				infos.Type, infos.TID, err.Error())
 			continue
 		}
@@ -165,17 +166,48 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	s.log.Infof("[jobs] trigger %s(%s): Starting trigger",
+	s.log.Infof("[scheduler] trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)
-	for req := range t.Schedule() {
-		log := s.log.WithField("domain", req.Domain)
-		log.Infof(
-			"[jobs] trigger %s(%s): Pushing new job %s",
-			t.Type(), t.Infos().TID, req.WorkerType)
-		if _, err := s.broker.PushJob(req); err != nil {
-			log.Errorf("[jobs] trigger %s(%s): Could not schedule a new job: %s",
-				t.Type(), t.Infos().TID, err.Error())
+	ch := t.Schedule()
+	var debounced <-chan time.Time
+	var originalReq *jobs.JobRequest
+	var d time.Duration
+	infos := t.Infos()
+	if infos.Debounce != "" {
+		var err error
+		if d, err = time.ParseDuration(infos.Debounce); err != nil {
+			s.log.Infof("[scheduler] trigger %s has an invalid debounce: %s",
+				infos.TID, infos.Debounce)
 		}
+	}
+	for {
+		select {
+		case req, ok := <-ch:
+			if !ok {
+				return
+			}
+			if d == 0 {
+				s.pushJob(t, req)
+			} else if debounced == nil {
+				debounced = time.After(d)
+				originalReq = req
+			}
+		case <-debounced:
+			s.pushJob(t, originalReq)
+			debounced = nil
+			originalReq = nil
+		}
+	}
+}
+
+func (s *MemScheduler) pushJob(t Trigger, req *jobs.JobRequest) {
+	log := s.log.WithField("domain", req.Domain)
+	log.Infof(
+		"[scheduler] trigger %s(%s): Pushing new job %s",
+		t.Type(), t.Infos().TID, req.WorkerType)
+	if _, err := s.broker.PushJob(req); err != nil {
+		log.Errorf("[scheduler] trigger %s(%s): Could not schedule a new job: %s",
+			t.Type(), t.Infos().TID, err.Error())
 	}
 }
 

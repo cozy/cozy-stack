@@ -17,6 +17,7 @@ type TriggerInfos struct {
 	Type       string           `json:"type"`
 	WorkerType string           `json:"worker"`
 	Arguments  string           `json:"arguments"`
+	Debounce   string           `json:"debounce,omitempty"`
 	Options    *jobs.JobOptions `json:"options"`
 	Message    *jobs.Message    `json:"message"`
 }

@@ -16,18 +16,57 @@ This doc introduces two cozy types:
 
 ## Triggers
 
-Jobs can be launched by six different types of triggers:
+Jobs can be launched by five different types of triggers:
 
-  - `@cron` to schedule recurring jobs scheduled at specific times
-  - `@every` to schedule periodic jobs executed at a given fix interval
   - `@at` to schedule a one-time job executed after at a specific time in the future
   - `@in` to schedule a one-time job executed after a specific amount of time
+  - `@every` to schedule periodic jobs executed at a given fix interval
+  - `@cron` to schedule recurring jobs scheduled at specific times
   - `@event` to launch a job after a change in the cozy
-  - `@webhook` to launch a job by requesting an unguessable URL
 
-These six triggers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
+These five triggers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
 
 Jobs can also be queued up programatically, without the help of a specific trigger directly via the `/jobs/queue` API. In this case the `trigger` name is empty.
+
+
+### `@at` syntax
+
+The `@at` trigger takes a ISO-8601 formatted string indicating a UTC time in the future. The date is of this form: `YYYY-MM-DDTHH:mm:ss.sssZ`
+
+Examples
+
+```
+@at 2018-12-12T15:36:25.507Z
+```
+
+
+### `@in` syntax
+
+The `@in` trigger takes the same duration syntax as `@every`
+
+Examples
+
+```
+@in 10m
+@in 1h30m
+```
+
+
+### `@every` syntax
+
+The `@every` trigger uses the same syntax as golang's `time.ParseDuration` (but only support time units above seconds):
+
+A duration string is a possibly signed sequence of decimal numbers, each with
+optional fraction and a unit suffix, such as "300ms", "1.5h" or "2h45m". Valid
+time units are "s", "m", "h".
+
+Examples
+
+```
+@every 1.5h   # schedules every 1 and a half hours
+@every 30m10s # schedules every 30 minutes and 10 seconds
+```
+
 
 ### `@cron` syntax
 
@@ -87,44 +126,6 @@ Examples:
 ```
 
 
-### `@every` syntax
-
-The `@every` trigger uses the same syntax as golang's `time.ParseDuration` (but only support time units above seconds):
-
-A duration string is a possibly signed sequence of decimal numbers, each with
-optional fraction and a unit suffix, such as "300ms", "1.5h" or "2h45m". Valid
-time units are "s", "m", "h".
-
-Examples
-
-```
-@every 1.5h   # schedules every 1 and a half hours
-@every 30m10s # schedules every 30 minutes and 10 seconds
-```
-
-
-### `@at` syntax
-
-The `@at` trigger takes a ISO-8601 formatted string indicating a UTC time in the future. The date is of this form: `YYYY-MM-DDTHH:mm:ss.sssZ`
-
-Examples
-
-```
-@at 2016-12-12T15:36:25.507Z
-```
-
-### `@in` syntax
-
-The `@in` trigger takes the same duration syntax as `@every`
-
-Examples
-
-```
-@in 10m
-@in 1h30m
-```
-
-
 ### `@event` syntax
 
 The `@event` syntax allows to trigger a job when something occurs in the stack.
@@ -145,30 +146,6 @@ Examples
 @event io.cozy.files:CREATED // a file was created
 @event io.cozy.files:DELETED:image/jpg:mime // an image was deleted
 ```
-
-
-### `@webhook` syntax
-
-The `@webhook` syntax does not take any specific input. It is a specific trigger that generates a unique URL that can used by an external service to push a new job.
-
-For example, we could give a webhook URL to github to update on our cozy the app after each new release.
-
-
-### Launcher rate limitation
-
-Every trigger has a rate limitation policy to prevent triggers from spawning too many jobs at the same time. The specific rules are not yet decided, but they should work along the two following properties.
-
-#### Parallel limitations
-
-Each trigger will have a limited number of workers it is allowed to queue in parallel.
-
-#### Back pressure
-
-Each trigger should have a back-pressure policy to drop job spawning when not necessary. For instance:
-
-* *throttling policy* (aka *debouncing*) to drop job actions given timings parameters. ie. a job scheduled after contact updates should only be triggered once after several contacts are updated in a given time lapse, or should be scheduled when the updates stopped for a given time
-* *side effect limitation* in the case of an `@event` trigger, a job doing an external API call should not be spawned if another one is already running for another close event
-* *full queue* when no worker is available, or the queue has too many elements, it can decide to drop the job action (given some informations)
 
 
 ## Error Handling
@@ -389,6 +366,9 @@ restrict its permission to only one worker, like this:
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
 
+The `debounce` parameter can be used to limit the number of jobs created in a burst. It delays the creation of the job on the first input by the given time argument, and if the trigger has its condition matched again during this period, it won't create another job.
+It can be useful to combine it with the changes feed of couchdb with a last sequence number persisted by the worker, as it allows to have a nice diff between two executions of the worker.
+
 #### Request
 
 ```http
@@ -400,8 +380,9 @@ Accept: application/vnd.api+json
 {
   "data": {
     "attributes": {
-      "type": "@every",
-      "arguments": "30m10s",
+      "type": "@event",
+      "arguments": "io.cozy.invitations",
+      "debounce": "10m",
       "worker": "sendmail",
       "worker_arguments": {},
       "options": {
@@ -424,6 +405,7 @@ Accept: application/vnd.api+json
     "attributes": {
       "type": "@every",
       "arguments": "30m10s",
+      "debounce": "10m",
       "worker": "sendmail",
       "options": {
         "priority": 3,

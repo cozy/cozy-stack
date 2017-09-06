@@ -464,6 +464,48 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	assert.Equal(t, 3, count)
 }
 
+func TestRedisSchedulerWithDebounce(t *testing.T) {
+	opts, _ := redis.ParseURL(redisURL)
+	client := redis.NewClient(opts)
+	err := client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()
+	assert.NoError(t, err)
+
+	bro := &mockBroker{}
+	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch.Shutdown(context.Background())
+	time.Sleep(1 * time.Second)
+	sch.Start(bro)
+
+	evTrigger := &scheduler.TriggerInfos{
+		Type:       "@event",
+		Domain:     instanceName,
+		Arguments:  "io.cozy.debounce-test:CREATED",
+		WorkerType: "incr",
+		Debounce:   "2s",
+	}
+	tri, err := scheduler.NewTrigger(evTrigger)
+	assert.NoError(t, err)
+	sch.Add(tri)
+
+	event := &realtime.Event{
+		Domain: instanceName,
+		Doc: &testDoc{
+			id:      "foo",
+			doctype: "io.cozy.debounce-test",
+		},
+		Verb: realtime.EventCreate,
+	}
+
+	for i := 0; i < 10; i++ {
+		time.Sleep(300 * time.Millisecond)
+		realtime.GetHub().Publish(event)
+	}
+
+	time.Sleep(2 * time.Second)
+	count, _ := bro.QueueLen("incr")
+	assert.Equal(t, 2, count)
+}
+
 func TestMain(m *testing.M) {
 	// prefix = "test:"
 	config.UseTestFile()
