@@ -50,6 +50,7 @@ type (
 		Arguments       string           `json:"arguments"`
 		WorkerType      string           `json:"worker"`
 		WorkerArguments json.RawMessage  `json:"worker_arguments"`
+		Debounce        string           `json:"debounce"`
 		Options         *jobs.JobOptions `json:"options"`
 	}
 )
@@ -158,11 +159,18 @@ func newTrigger(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
+	if req.Debounce != "" {
+		if _, err := time.ParseDuration(req.Debounce); err != nil {
+			return jsonapi.InvalidAttribute("debounce", err)
+		}
+	}
+
 	t, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
 		Type:       req.Type,
 		WorkerType: req.WorkerType,
 		Domain:     instance.Domain,
 		Arguments:  req.Arguments,
+		Debounce:   req.Debounce,
 		Options:    req.Options,
 		Message: &jobs.Message{
 			Type: jobs.JSONEncoding,
