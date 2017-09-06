@@ -39,6 +39,7 @@ An application object contains the following fields:
 - `description`: object containing the description description of the application in multiple languages
 - `category`: the application category
 - `repository`: object with type and URL of package repository
+- `locales`: list of locales supported by the application
 - `tags`: list of tags associated with the application
 - `logo_url`: link to the logo image
 - `screenshot_urls`: array of links to the screenshots of the application
@@ -61,6 +62,7 @@ Example:
     },
     "category": "main",
     "repository": "https://github.com/cozy/cozy-drive",
+    "locales": ["en", "fr"],
     "tags": ["foo", "bar", "baz"],
     "logo_url": "https://foobar.img/logo.jpg",
     "screenshot_urls": ["https://foobar.img/screen1.jpg", "https://foobar.img/screen2.jpg"],
