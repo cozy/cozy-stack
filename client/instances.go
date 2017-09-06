@@ -38,7 +38,7 @@ type InstanceOptions struct {
 	Email              string
 	PublicName         string
 	Settings           string
-	DiskQuota          int64
+	DiskQuota          *int64
 	Apps               []string
 	Dev                bool
 	Passphrase         string
@@ -82,21 +82,24 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	if !validDomain(opts.Domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", opts.Domain)
 	}
+	q := url.Values{
+		"Domain":     {opts.Domain},
+		"Locale":     {opts.Locale},
+		"Timezone":   {opts.Timezone},
+		"Email":      {opts.Email},
+		"PublicName": {opts.PublicName},
+		"Settings":   {opts.Settings},
+		"Apps":       {strings.Join(opts.Apps, ",")},
+		"Dev":        {strconv.FormatBool(opts.Dev)},
+		"Passphrase": {opts.Passphrase},
+	}
+	if opts.DiskQuota != nil {
+		q.Add("DiskQuota", strconv.FormatInt(*opts.DiskQuota, 10))
+	}
 	res, err := c.Req(&request.Options{
-		Method: "POST",
-		Path:   "/instances",
-		Queries: url.Values{
-			"Domain":     {opts.Domain},
-			"Locale":     {opts.Locale},
-			"Timezone":   {opts.Timezone},
-			"Email":      {opts.Email},
-			"PublicName": {opts.PublicName},
-			"Settings":   {opts.Settings},
-			"DiskQuota":  {strconv.FormatInt(opts.DiskQuota, 10)},
-			"Apps":       {strings.Join(opts.Apps, ",")},
-			"Dev":        {strconv.FormatBool(opts.Dev)},
-			"Passphrase": {opts.Passphrase},
-		},
+		Method:  "POST",
+		Path:    "/instances",
+		Queries: q,
 	})
 	if err != nil {
 		return nil, err
@@ -125,22 +128,22 @@ func (c *Client) ModifyInstance(domain string, opts *InstanceOptions) (*Instance
 	if !validDomain(domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
-	var debug, onboardingFinished string
+	q := url.Values{
+		"Locale": {opts.Locale},
+	}
 	if opts.Debug != nil {
-		debug = strconv.FormatBool(*opts.Debug)
+		q.Add("Debug", strconv.FormatBool(*opts.Debug))
 	}
 	if opts.OnboardingFinished != nil {
-		onboardingFinished = strconv.FormatBool(*opts.OnboardingFinished)
+		q.Add("OnboardingFinished", strconv.FormatBool(*opts.OnboardingFinished))
+	}
+	if opts.DiskQuota != nil {
+		q.Add("DiskQuota", strconv.FormatInt(*opts.DiskQuota, 10))
 	}
 	res, err := c.Req(&request.Options{
-		Method: "PATCH",
-		Path:   "/instances/" + domain,
-		Queries: url.Values{
-			"Locale":             {opts.Locale},
-			"DiskQuota":          {strconv.FormatInt(opts.DiskQuota, 10)},
-			"OnboardingFinished": {onboardingFinished},
-			"Debug":              {debug},
-		},
+		Method:  "PATCH",
+		Path:    "/instances/" + domain,
+		Queries: q,
 	})
 	if err != nil {
 		return nil, err
