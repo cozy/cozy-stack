@@ -3,7 +3,7 @@
 package logger
 
 import (
-  "log/syslog"
+	"log/syslog"
 
 	"github.com/sirupsen/logrus"
 	logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
