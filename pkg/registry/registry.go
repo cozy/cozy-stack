@@ -212,17 +212,29 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 }
 
 func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPaginated {
+	sortByName := sortBy == "name"
 	sort.Slice(a.list, func(i, j int) bool {
 		vi := a.list[i]
 		vj := a.list[j]
-		var less bool
+		var less, equal bool
 		switch valA := vi[sortBy].(type) {
 		case string:
 			valB := vj[sortBy].(string)
 			less = valA < valB
+			if !sortByName && !less {
+				equal = valA == valB
+			}
 		case int:
 			valB := vj[sortBy].(int)
 			less = valA < valB
+			if !sortByName && !less {
+				equal = valA == valB
+			}
+		}
+		if equal {
+			nameA := vi["name"].(string)
+			nameB := vj["name"].(string)
+			less = nameA < nameB
 		}
 		if reverse {
 			return !less
