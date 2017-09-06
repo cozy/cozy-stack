@@ -119,6 +119,7 @@ nsjail \
   -E "COZY_URL=${COZY_URL}" \
   -E "COZY_FIELDS=${COZY_FIELDS}" \
   -E "COZY_CREDENTIALS=${COZY_CREDENTIALS}" \
+  -E "COZY_LOCALE=${COZY_LOCALE}" \
   -R "${rundir}:/usr/src/konnector/" \
   -R /lib \
   -R /lib64 \
@@ -146,5 +147,6 @@ nsjail \
 #   -E "COZY_URL=${COZY_URL}" \
 #   -E "COZY_FIELDS=${COZY_FIELDS}" \
 #   -E "COZY_CREDENTIALS=${COZY_CREDENTIALS}" \
+#   -E "COZY_LOCALE=${COZY_LOCALE}" \
 #   -R "${rundir}:/usr/src/konnector/" \
 #   -- /usr/bin/nodejs /usr/src/konnector/index.js
