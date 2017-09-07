@@ -17,9 +17,10 @@ import (
 
 // ServiceOptions contains the options to execute a service.
 type ServiceOptions struct {
-	Slug        string `json:"slug"`
-	Type        string `json:"type"`
-	ServiceFile string `json:"service_file"`
+	Slug        string          `json:"slug"`
+	Type        string          `json:"type"`
+	ServiceFile string          `json:"service_file"`
+	Message     *ServiceOptions `json:"message"`
 }
 
 type serviceWorker struct {
@@ -31,6 +32,9 @@ func (w *serviceWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) (w
 	opts := &ServiceOptions{}
 	if err = m.Unmarshal(&opts); err != nil {
 		return
+	}
+	if opts.Message != nil {
+		opts = opts.Message
 	}
 
 	slug := opts.Slug

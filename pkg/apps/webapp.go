@@ -32,6 +32,7 @@ type Routes map[string]Route
 type Service struct {
 	Type           string `json:"type"`
 	File           string `json:"file"`
+	Debounce       string `json:"debounce"`
 	TriggerOptions string `json:"trigger"`
 	TriggerID      string `json:"trigger_id"`
 }
@@ -268,7 +269,8 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		delete(clone, name)
 		if newService.File != oldService.File ||
 			newService.Type != oldService.Type ||
-			newService.TriggerOptions != oldService.TriggerOptions {
+			newService.TriggerOptions != oldService.TriggerOptions ||
+			newService.Debounce != oldService.Debounce {
 			deleted = append(deleted, oldService)
 			created = append(created, newService)
 		} else {
@@ -307,6 +309,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		trigger, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
 			Type:       triggerType,
 			WorkerType: "service",
+			Debounce:   service.Debounce,
 			Domain:     domain,
 			Arguments:  triggerArgs,
 			Message:    msg,
