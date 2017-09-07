@@ -1,6 +1,5 @@
 // Package settings regroups some API methods to facilitate the usage of the
-// io.cozy settings documents. For example, it has a route for getting a CSS
-// with some CSS variables that can be used as a theme.
+// io.cozy settings documents.
 package settings
 
 import (

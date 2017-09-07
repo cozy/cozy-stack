@@ -249,10 +249,7 @@ Webdav and RemoteStorage.
 ### Settings `/settings`
 
 Each cozy instance has some settings, like its domain name, its language, the
-name of its owner, the background for the home, etc. Also, the owner of the
-cozy instance can choose a theme (a set of colors and a font) and this theme
-will be available as a set of CSS variables in a stylesheet that can be
-imported by the applications.
+name of its owner, the background for the home, etc.
 
 ### Notifications `/notifications`
 
@@ -343,19 +340,15 @@ display informations would be nice too!
 
 You can install new apps here.
 
-### Activity Monitor (was My apps) `/apps/activity-monitor`
+### Settings (was My apps) `/apps/settings`
 
-It's a list of your installed apps and devices.
+It's a list of your installed apps and devices, and you can configure some
+settings like your email address.
 
-### My Accounts (was konnectors) `/apps/my-accounts`
+### Collect (was konnectors) `/apps/collect`
 
 You can configure new accounts, to fetch data from them, and see the already
 configured accounts.
-
-### Preferences `/apps/preferences`
-
-You can set the settings of your cozy, choose a new background for the home,
-and select a theme.
 
 ### Devtools `/apps/devtools`
 
@@ -370,11 +363,7 @@ Manage your contact books.
 
 Manage your events and alarms.
 
-### Emails `/apps/emails`
-
-A webmail client to read, send and backup your emails.
-
-### Files `/apps/files`
+### Drive `/apps/drive`
 
 A web interface to browse your files.
 
