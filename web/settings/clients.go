@@ -4,13 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/oauth"
+	perms "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
+	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 type apiOauthClient struct{ *oauth.Client }
@@ -69,6 +74,45 @@ func revokeClient(c echo.Context) error {
 
 	if err := client.Delete(instance); err != nil {
 		return errors.New(err.Error)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func synchronized(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	tok := permissions.GetRequestToken(c)
+	if tok == "" {
+		return perms.ErrInvalidToken
+	}
+
+	var claims perms.Claims
+	err := crypto.ParseJWT(tok, func(token *jwt.Token) (interface{}, error) {
+		return instance.PickKey(token.Claims.(*perms.Claims).Audience)
+	}, &claims)
+	if err != nil {
+		return perms.ErrInvalidToken
+	}
+
+	// check if the claim is valid
+	if claims.Issuer != instance.Domain {
+		return perms.ErrInvalidToken
+	}
+	if claims.Expired() {
+		return perms.ErrExpiredToken
+	}
+	if claims.Audience != perms.AccessTokenAudience {
+		return perms.ErrInvalidToken
+	}
+
+	client, err := oauth.FindClient(instance, claims.Subject)
+	if err != nil {
+		return perms.ErrInvalidToken
+	}
+
+	client.SynchronizedAt = time.Now()
+	if err := couchdb.UpdateDoc(instance, &client); err != nil {
+		return err
 	}
 	return c.NoContent(http.StatusNoContent)
 }

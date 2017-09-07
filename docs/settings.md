@@ -234,7 +234,8 @@ Content-type: application/json
       "logo_uri": "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
       "policy_uri": "https://cozy.io/policy",
       "software_id": "/github.com/cozy-labs/cozy-desktop",
-      "software_version": "0.16.0"
+      "software_version": "0.16.0",
+      "synchronized_at": "2017-09-05T16:23:04Z"
     },
     "links": {
       "self": "/settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51"
@@ -268,6 +269,26 @@ HTTP/1.1 204 No Content
 
 To use this endpoint, an application needs a permission on the type
 `io.cozy.oauth.clients` for the verb `DELETE` (only client-side apps).
+
+### POST /settings/synchronized
+
+Any OAuth2 client can make a request to this endpoint with its token, no
+permission is needed. It will update the date of last synchronization for this
+device.
+
+#### Request
+
+```http
+POST /settings/synchronized HTTP/1.1
+Host: alice.example.com
+Authorization: Bearer oauth2-access-token
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
 
 
 ## Context
