@@ -137,7 +137,6 @@ So, the `index.html` should probably looks like:
   <head>
     <meta charset="utf-8">
     <title>My Awesome App for Cozy</title>
-    <link rel="stylesheet" src="//{{.Domain}}/settings/theme.css">
     <link rel="stylesheet" src="my-app.css">
     {{.CozyClientJS}}
     {{.CozyBar}}
@@ -166,7 +165,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ...
 ```
-
-For the `theme.css` stylesheet, you can read the [settings documentation](settings.md).
 
 {% endraw %}

@@ -24,7 +24,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/settings"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
@@ -556,9 +555,6 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 		return nil, err
 	}
 	if err := i.VFS().InitFs(); err != nil {
-		return nil, err
-	}
-	if err := settings.CreateDefaultTheme(i); err != nil {
 		return nil, err
 	}
 	if opts.Settings.M == nil {

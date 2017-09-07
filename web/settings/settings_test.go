@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,13 +26,6 @@ var testInstance *instance.Instance
 var instanceRev string
 var token string
 var oauthClientID string
-
-func TestThemeCSS(t *testing.T) {
-	res, err := http.Get(ts.URL + "/settings/theme.css")
-	assert.NoError(t, err)
-	body, _ := ioutil.ReadAll(res.Body)
-	assert.Equal(t, []byte(":root"), body[:5])
-}
 
 func TestDiskUsage(t *testing.T) {
 	res, err := http.Get(ts.URL + "/settings/disk-usage")
