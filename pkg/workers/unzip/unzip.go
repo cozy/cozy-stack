@@ -18,7 +18,7 @@ import (
 
 type zipMessage struct {
 	Zip         string `json:"zip"`
-	Destination string `string:"destination"`
+	Destination string `json:"destination"`
 }
 
 func init() {
