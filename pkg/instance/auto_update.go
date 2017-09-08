@@ -35,8 +35,9 @@ func UpdateAll() error {
 	}
 
 	go func() {
-		errc <- ForeachInstances(func(inst *Instance) error {
-			return update(inst, insc)
+		ForeachInstances(func(inst *Instance) error {
+			update(inst, insc, errc)
+			return nil
 		})
 		close(insc)
 	}()
@@ -75,7 +76,7 @@ func UpdateInstance(inst *Instance) error {
 	}
 
 	go func() {
-		errc <- update(inst, insc)
+		update(inst, insc, errc)
 		close(insc)
 	}()
 
@@ -94,21 +95,19 @@ func UpdateInstance(inst *Instance) error {
 	return errm
 }
 
-func update(inst *Instance, insc chan *apps.Installer) error {
+func update(inst *Instance, insc chan *apps.Installer, errc chan error) {
 	if !inst.AutoUpdate {
-		return nil
+		return
 	}
 
 	registries, err := inst.Registries()
 	if err != nil {
-		return err
+		errc <- err
+		return
 	}
 
 	var g sync.WaitGroup
 	g.Add(2)
-
-	var errm error
-	errc := make(chan error)
 
 	go func() {
 		defer g.Done()
@@ -144,18 +143,7 @@ func update(inst *Instance, insc chan *apps.Installer) error {
 		}
 	}()
 
-	go func() {
-		for err := range errc {
-			if err != nil {
-				errm = multierror.Append(errm, err)
-			}
-		}
-	}()
-
 	g.Wait()
-	close(errc)
-
-	return errm
 }
 
 func createInstaller(inst *Instance, registries []*url.URL, man apps.Manifest) (*apps.Installer, error) {
