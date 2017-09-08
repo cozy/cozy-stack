@@ -275,5 +275,5 @@ func refresh(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("/:accountType/start", start, middlewares.NeedInstance)
 	router.GET("/:accountType/redirect", redirect)
-	router.POST("/:accountType/:accountid/refresh", refresh)
+	router.POST("/:accountType/:accountid/refresh", refresh, middlewares.NeedInstance)
 }
