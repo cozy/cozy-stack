@@ -48,6 +48,7 @@ type Installer struct {
 type InstallerOptions struct {
 	Type        AppType
 	Operation   Operation
+	Manifest    Manifest
 	Slug        string
 	SourceURL   string
 	Deactivated bool
@@ -70,41 +71,48 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	if opts.Operation == 0 {
 		panic("Missing installer operation")
 	}
-	if opts.Type != Webapp && opts.Type != Konnector {
-		panic("Bad or missing installer type")
-	}
 
+	appType := opts.Type
 	slug := opts.Slug
-	if slug == "" || !slugReg.MatchString(slug) {
-		return nil, ErrInvalidSlugName
+	man := opts.Manifest
+	if man == nil {
+		if appType != Webapp && appType != Konnector {
+			panic("Bad or missing installer type")
+		}
+		if slug == "" || !slugReg.MatchString(slug) {
+			return nil, ErrInvalidSlugName
+		}
+		var err error
+		man, err = GetBySlug(db, slug, appType)
+		if opts.Operation == Install {
+			if err == nil {
+				return nil, ErrAlreadyExists
+			}
+			if err != ErrNotFound {
+				return nil, err
+			}
+			switch opts.Type {
+			case Webapp:
+				man = &WebappManifest{}
+			case Konnector:
+				man = &KonnManifest{}
+			}
+		} else if err != nil {
+			return nil, err
+		}
+	} else {
+		appType = man.AppType()
+		slug = man.Slug()
 	}
 
 	// For konnectors applications, we actually create a tar archive in which the
 	// sources are stored before copying the archive into the application
 	// storage.
-	if opts.Type == Konnector {
+	if appType == Konnector {
 		fs = newTarCopier(fs, KonnectorArchiveName)
 	}
 
-	man, err := GetBySlug(db, slug, opts.Type)
-	if opts.Operation == Install {
-		if err == nil {
-			return nil, ErrAlreadyExists
-		}
-		if err != ErrNotFound {
-			return nil, err
-		}
-		err = nil
-		switch opts.Type {
-		case Webapp:
-			man = &WebappManifest{}
-		case Konnector:
-			man = &KonnManifest{}
-		}
-	} else if err != nil {
-		return nil, err
-	}
-
+	var err error
 	var src *url.URL
 	switch opts.Operation {
 	case Install:
@@ -135,7 +143,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	log := logger.WithDomain(db.Prefix())
 
 	var manFilename string
-	switch opts.Type {
+	switch appType {
 	case Webapp:
 		manFilename = WebappManifestName
 	case Konnector:

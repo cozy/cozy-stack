@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -317,6 +318,10 @@ func iconHandler(c echo.Context) error {
 		return err
 	}
 	return nil
+}
+
+func autoUpdate(c echo.Context) error {
+	return instance.UpdateAll()
 }
 
 // WebappsRoutes sets the routing for the web apps service

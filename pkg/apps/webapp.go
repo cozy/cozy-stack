@@ -157,6 +157,9 @@ func (m *WebappManifest) SetState(state State) { m.DocState = state }
 // SetVersion is part of the Manifest interface
 func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
 
+// ManifestType is part of the Manifest interface
+func (m *WebappManifest) AppType() AppType { return Webapp }
+
 // Permissions is part of the Manifest interface
 func (m *WebappManifest) Permissions() permissions.Set {
 	return m.DocPermissions
@@ -397,7 +400,7 @@ func GetWebappBySlug(db couchdb.Database, slug string) (*WebappManifest, error) 
 // TODO: pagination
 func ListWebapps(db couchdb.Database) ([]*WebappManifest, error) {
 	var docs []*WebappManifest
-	req := &couchdb.AllDocsRequest{Limit: 100}
+	req := &couchdb.AllDocsRequest{Limit: 200}
 	err := couchdb.GetAllDocs(db, consts.Apps, req, &docs)
 	if err != nil {
 		return nil, err

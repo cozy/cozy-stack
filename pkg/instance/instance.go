@@ -76,11 +76,12 @@ var (
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID  string `json:"_id,omitempty"`  // couchdb _id
-	DocRev string `json:"_rev,omitempty"` // couchdb _rev
-	Domain string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	Locale string `json:"locale"`         // The locale used on the server
-	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
+	DocID      string `json:"_id,omitempty"`  // couchdb _id
+	DocRev     string `json:"_rev,omitempty"` // couchdb _rev
+	Domain     string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	Locale     string `json:"locale"`         // The locale used on the server
+	AutoUpdate bool   `json:"auto_update"`    // Whether or not the instance has auto updates for its applications
+	Dev        bool   `json:"dev"`            // Whether or not the instance is for development
 
 	OnboardingFinished bool `json:"onboarding_finished"` // Whether or not the onboarding is complete
 
@@ -701,11 +702,7 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 // List returns the list of declared instances.
 func List() ([]*Instance, error) {
 	var all []*Instance
-	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
-		var doc *Instance
-		if err := json.Unmarshal(data, &doc); err != nil {
-			return err
-		}
+	err := ForeachInstances(func(doc *Instance) error {
 		all = append(all, doc)
 		return nil
 	})
@@ -713,6 +710,17 @@ func List() ([]*Instance, error) {
 		return nil, err
 	}
 	return all, nil
+}
+
+// ForeachInstances execute the given callback for each instances.
+func ForeachInstances(fn func(*Instance) error) error {
+	return couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
+		var doc *Instance
+		if err := json.Unmarshal(data, &doc); err != nil {
+			return err
+		}
+		return fn(doc)
+	})
 }
 
 // Update is used to save changes made to an instance, it will invalidate
