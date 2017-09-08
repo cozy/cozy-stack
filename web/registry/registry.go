@@ -19,7 +19,7 @@ func proxyReq(c echo.Context) error {
 		registries = append(registries, offlineRegistry)
 	}
 	req := c.Request()
-	r, err := registry.Proxy(req, registries, true /*= withCache */)
+	r, err := registry.Proxy(req, registries, registry.WithCache)
 	if err != nil {
 		return err
 	}
