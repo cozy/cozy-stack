@@ -46,7 +46,7 @@ func GetLatestVersion(appName, channel string, registries []*url.URL) (*Version,
 	requestURI := fmt.Sprintf("/registry/%s/%s/latest",
 		url.PathEscape(appName),
 		url.PathEscape(channel))
-	rc, ok, err := fetchUntilFound(registries, requestURI)
+	rc, ok, err := fetchUntilFound(registries, requestURI, true)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +64,8 @@ func GetLatestVersion(appName, channel string, registries []*url.URL) (*Version,
 // Proxy will proxy the given request to the registries in sequence and return
 // the response as io.ReadCloser when finding a registry returning a HTTP 200OK
 // response.
-func Proxy(req *http.Request, registries []*url.URL) (io.ReadCloser, error) {
-	rc, ok, err := fetchUntilFound(registries, req.RequestURI)
+func Proxy(req *http.Request, registries []*url.URL, withCache bool) (io.ReadCloser, error) {
+	rc, ok, err := fetchUntilFound(registries, req.RequestURI, withCache)
 	if err != nil {
 		return nil, err
 	}
@@ -73,6 +73,54 @@ func Proxy(req *http.Request, registries []*url.URL) (io.ReadCloser, error) {
 		return nil, echo.NewHTTPError(http.StatusNotFound)
 	}
 	return rc, nil
+}
+
+// ProxyList will proxy the given request to the registries by aggregating the
+// results along the way. It should be used for list endpoints.
+func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error) {
+	ref, err := url.Parse(req.RequestURI)
+	if err != nil {
+		return nil, err
+	}
+
+	var sortBy string
+	var sortReverse bool
+	var limit int
+
+	cursors := make([]int, len(registries))
+
+	q := ref.Query()
+	if v, ok := q["cursor"]; ok {
+		splits := strings.Split(v[0], "|")
+		for i, s := range splits {
+			if i >= len(registries) {
+				break
+			}
+			cursors[i], _ = strconv.Atoi(s)
+		}
+	}
+	if v, ok := q["sort"]; ok {
+		sortBy = v[0]
+	}
+	if len(sortBy) > 0 && sortBy[0] == '-' {
+		sortReverse = true
+		sortBy = sortBy[1:]
+	}
+	if sortBy == "" {
+		sortBy = "name"
+	}
+	if v, ok := q["limit"]; ok {
+		limit, _ = strconv.Atoi(v[0])
+	}
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+
+	list := newAppsList(ref, registries, cursors, limit)
+	if err := list.FetchAll(); err != nil {
+		return nil, err
+	}
+	return json.Marshal(list.Paginated(sortBy, sortReverse, limit))
 }
 
 type jsonObject map[string]interface{}
@@ -164,7 +212,7 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 			"cursor", strconv.Itoa(cursor),
 			"limit", strconv.Itoa(limit),
 		)
-		rc, ok, err := fetch(r.url, ref)
+		rc, ok, err := fetch(r.url, ref, false)
 		if err != nil {
 			return err
 		}
@@ -306,61 +354,13 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 	}
 }
 
-// ProxyList will proxy the given request to the registries by aggregating the
-// results along the way. It should be used for list endpoints.
-func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error) {
-	ref, err := url.Parse(req.RequestURI)
-	if err != nil {
-		return nil, err
-	}
-
-	var sortBy string
-	var sortReverse bool
-	var limit int
-
-	cursors := make([]int, len(registries))
-
-	q := ref.Query()
-	if v, ok := q["cursor"]; ok {
-		splits := strings.Split(v[0], "|")
-		for i, s := range splits {
-			if i >= len(registries) {
-				break
-			}
-			cursors[i], _ = strconv.Atoi(s)
-		}
-	}
-	if v, ok := q["sort"]; ok {
-		sortBy = v[0]
-	}
-	if len(sortBy) > 0 && sortBy[0] == '-' {
-		sortReverse = true
-		sortBy = sortBy[1:]
-	}
-	if sortBy == "" {
-		sortBy = "name"
-	}
-	if v, ok := q["limit"]; ok {
-		limit, _ = strconv.Atoi(v[0])
-	}
-	if limit <= 0 {
-		limit = defaultLimit
-	}
-
-	list := newAppsList(ref, registries, cursors, limit)
-	if err := list.FetchAll(); err != nil {
-		return nil, err
-	}
-	return json.Marshal(list.Paginated(sortBy, sortReverse, limit))
-}
-
-func fetchUntilFound(registries []*url.URL, requestURI string) (rc io.ReadCloser, ok bool, err error) {
+func fetchUntilFound(registries []*url.URL, requestURI string, withCache bool) (rc io.ReadCloser, ok bool, err error) {
 	ref, err := url.Parse(requestURI)
 	if err != nil {
 		return
 	}
 	for _, registry := range registries {
-		rc, ok, err = fetch(registry, ref)
+		rc, ok, err = fetch(registry, ref, withCache)
 		if err != nil {
 			return
 		}
@@ -372,11 +372,14 @@ func fetchUntilFound(registries []*url.URL, requestURI string) (rc io.ReadCloser
 	return nil, false, nil
 }
 
-func fetch(registry, ref *url.URL) (rc io.ReadCloser, ok bool, err error) {
+func fetch(registry, ref *url.URL, withCache bool) (rc io.ReadCloser, ok bool, err error) {
 	u := registry.ResolveReference(ref)
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return
+	}
+	if !withCache {
+		req.Header.Set("cache-control", "no-cache")
 	}
 	resp, err := proxyClient.Do(req)
 	if err != nil {
