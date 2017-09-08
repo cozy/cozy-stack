@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gregjones/httpcache"
 	"github.com/labstack/echo"
 )
 
@@ -31,8 +32,11 @@ type Version struct {
 
 var errVersionNotFound = errors.New("Version not found")
 
+var proxyCache = httpcache.NewMemoryCache()
+
 var proxyClient = &http.Client{
-	Timeout: 10 * time.Second,
+	Timeout:   10 * time.Second,
+	Transport: httpcache.NewTransport(proxyCache),
 }
 
 // GetLatestVersion returns the latest version available from the list of
