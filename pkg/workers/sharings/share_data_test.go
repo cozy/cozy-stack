@@ -947,7 +947,7 @@ func TestMain(m *testing.M) {
 	setup = testutils.NewSetup(m, "share_data_test")
 	testInstance = setup.GetTestInstance()
 
-	_, err = stack.Start()
+	_, _, _, err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

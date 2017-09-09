@@ -158,9 +158,9 @@ func UpdateInstance(inst *Instance, slugs ...string) error {
 }
 
 func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, slugs ...string) {
-	// if !inst.AutoUpdate {
-	// 	return
-	// }
+	if !inst.AutoUpdate {
+		return
+	}
 
 	registries, err := inst.Registries()
 	if err != nil {

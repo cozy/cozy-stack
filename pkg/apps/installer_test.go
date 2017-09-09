@@ -136,7 +136,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if _, err = stack.Start(); err != nil {
+	if _, _, _, err = stack.Start(); err != nil {
 		fmt.Println("Error while starting job system", err)
 		os.Exit(1)
 	}

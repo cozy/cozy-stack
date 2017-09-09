@@ -1091,12 +1091,6 @@ func TestMain(m *testing.M) {
 		Path:   tempdir,
 	}
 
-	_, err = stack.Start()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	// The instance must be created in db in order to retrieve it from
 	// the share_data worker
 	instance.Destroy(domainSharer)
@@ -1164,7 +1158,7 @@ func TestMain(m *testing.M) {
 	}
 
 	createSettings(in)
-	_, err = stack.Start()
+	_, _, _, err = stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
