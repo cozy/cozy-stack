@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gregjones/httpcache"
+	"github.com/cozy/httpcache"
 	"github.com/labstack/echo"
 )
 
@@ -32,11 +32,9 @@ type Version struct {
 
 var errVersionNotFound = errors.New("Version not found")
 
-var proxyCache = httpcache.NewMemoryCache()
-
 var proxyClient = &http.Client{
 	Timeout:   10 * time.Second,
-	Transport: httpcache.NewTransport(proxyCache),
+	Transport: httpcache.NewMemoryCacheTransport(32),
 }
 
 // CacheControl defines whether or not to use caching for the request made to
