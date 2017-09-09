@@ -7,16 +7,12 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/google/gops/agent"
-)
-
-var (
-	broker jobs.Broker
-	schder scheduler.Scheduler
 )
 
 var log = logger.WithNamespace("stack")
@@ -31,7 +27,7 @@ func (g gopAgent) Shutdown(ctx context.Context) error {
 }
 
 // Start is used to initialize all the
-func Start() (utils.Shutdowner, error) {
+func Start() (broker jobs.Broker, schder scheduler.Scheduler, processes utils.Shutdowner, err error) {
 	if config.IsDevRelease() {
 		fmt.Println(`                           !! DEVELOPMENT RELEASE !!
 You are running a development release which may deactivate some very important
@@ -39,7 +35,7 @@ security features. Please do not use this binary as your production server.
 `)
 	}
 
-	err := agent.Listen(agent.Options{})
+	err = agent.Listen(agent.Options{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error on gops agent: %s\n", err)
 	}
@@ -50,10 +46,12 @@ security features. Please do not use this binary as your production server.
 		MustContain: `"version":"2`,
 	}.Check()
 	if err != nil {
-		return nil, fmt.Errorf("Could not reach Couchdb 2.0 database: %s", err.Error())
+		err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", err.Error())
+		return
 	}
 	if db.Status() == checkup.Down {
-		return nil, fmt.Errorf("Could not reach Couchdb 2.0 database:\n%s", db.String())
+		err = fmt.Errorf("Could not reach Couchdb 2.0 database:\n%s", db.String())
+		return
 	}
 	if db.Status() != checkup.Healthy {
 		log.Warnf("CouchDB does not seem to be in a healthy state, "+
@@ -63,9 +61,15 @@ security features. Please do not use this binary as your production server.
 	// Init the main global connection to the swift server
 	fsURL := config.FsURL()
 	if fsURL.Scheme == config.SchemeSwift {
-		if err := config.InitSwiftConnection(fsURL); err != nil {
-			return nil, err
+		if err = config.InitSwiftConnection(fsURL); err != nil {
+			return
 		}
+	}
+
+	// Start update cron for auto-updates
+	cronUpdates, err := instance.StartUpdateCron()
+	if err != nil {
+		return
 	}
 
 	jobsConfig := config.GetConfig().Jobs
@@ -77,28 +81,19 @@ security features. Please do not use this binary as your production server.
 		broker = jobs.NewMemBroker(nbWorkers)
 		schder = scheduler.NewMemScheduler()
 	}
-	if err := broker.Start(jobs.GetWorkersList()); err != nil {
-		return nil, err
+	if err = broker.Start(jobs.GetWorkersList()); err != nil {
+		return
 	}
-	if err := schder.Start(broker); err != nil {
-		return nil, err
+	if err = schder.Start(broker); err != nil {
+		return
 	}
 
-	return utils.NewGroupShutdown(broker, schder, gopAgent{}), nil
-}
-
-// GetBroker returns the global job broker.
-func GetBroker() jobs.Broker {
-	if broker == nil {
-		panic("Job system not initialized")
-	}
-	return broker
-}
-
-// GetScheduler returns the global job scheduler.
-func GetScheduler() scheduler.Scheduler {
-	if schder == nil {
-		panic("Job system not initialized")
-	}
-	return schder
+	// Global shutdowner that composes all the running processes of the stack
+	processes = utils.NewGroupShutdown(
+		broker,
+		schder,
+		cronUpdates,
+		gopAgent{},
+	)
+	return
 }

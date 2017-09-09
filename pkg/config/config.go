@@ -71,15 +71,16 @@ var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host       string
-	Port       int
-	Assets     string
-	Doctypes   string
-	Subdomains string
-	AdminHost  string
-	AdminPort  int
-	NoReply    string
-	Hooks      string
+	Host        string
+	Port        int
+	Assets      string
+	Doctypes    string
+	Subdomains  string
+	AdminHost   string
+	AdminPort   int
+	NoReply     string
+	Hooks       string
+	AutoUpdates string
 
 	Fs         Fs
 	CouchDB    CouchDB
@@ -272,15 +273,16 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Host:       v.GetString("host"),
-		Port:       v.GetInt("port"),
-		Subdomains: v.GetString("subdomains"),
-		AdminHost:  v.GetString("admin.host"),
-		AdminPort:  v.GetInt("admin.port"),
-		Assets:     v.GetString("assets"),
-		Doctypes:   v.GetString("doctypes"),
-		NoReply:    v.GetString("mail.noreply_address"),
-		Hooks:      v.GetString("hooks"),
+		Host:        v.GetString("host"),
+		Port:        v.GetInt("port"),
+		Subdomains:  v.GetString("subdomains"),
+		AdminHost:   v.GetString("admin.host"),
+		AdminPort:   v.GetInt("admin.port"),
+		Assets:      v.GetString("assets"),
+		Doctypes:    v.GetString("doctypes"),
+		NoReply:     v.GetString("mail.noreply_address"),
+		Hooks:       v.GetString("hooks"),
+		AutoUpdates: v.GetString("auto_updates"),
 		Fs: Fs{
 			URL: fsURL,
 		},

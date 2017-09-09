@@ -94,13 +94,6 @@ func MarshalObject(o Object) (json.RawMessage, error) {
 	links := o.Links()
 	rels := o.Relationships()
 
-	o.SetID("")
-	o.SetRev("")
-	defer func() {
-		o.SetID(id)
-		o.SetRev(rev)
-	}()
-
 	b, err := json.Marshal(o)
 	if err != nil {
 		return nil, err

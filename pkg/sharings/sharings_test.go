@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -886,7 +887,7 @@ func TestRevokeSharing(t *testing.T) {
 		consts.MasterMasterSharing, true, "",
 		[]*Recipient{recipient1, recipient2}, rule)
 	// We add a trigger to this sharing.
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
 	nbTriggers := len(triggers)
 	err := AddTrigger(testInstance, rule, sharingSharerMM.SharingID, false)
@@ -1000,7 +1001,7 @@ func TestRevokeRecipient(t *testing.T) {
 		true, "", []*Recipient{recipient1, recipient2}, rule)
 
 	// We add a trigger to this sharing.
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
 	nbTriggers := len(triggers)
 	err = AddTrigger(testInstance, rule, sharing.SharingID, false)

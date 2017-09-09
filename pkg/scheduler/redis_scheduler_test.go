@@ -11,11 +11,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -115,7 +115,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 		Message:    msg2,
 	}
 
-	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Shutdown(context.Background())
 	sch.Start(bro)
 
@@ -187,7 +187,7 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Shutdown(context.Background())
 	sch.Start(bro)
 	sch.Shutdown(context.Background())
@@ -223,7 +223,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Shutdown(context.Background())
 	sch.Start(bro)
 	sch.Shutdown(context.Background())
@@ -271,7 +271,7 @@ func TestRedisTriggerEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.Start(bro)
@@ -352,7 +352,7 @@ func TestRedisTriggerEventForDirectories(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.Start(bro)
@@ -471,7 +471,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 	assert.NoError(t, err)
 
 	bro := &mockBroker{}
-	sch := stack.GetScheduler().(*scheduler.RedisScheduler)
+	sch := globals.GetScheduler().(*scheduler.RedisScheduler)
 	sch.Shutdown(context.Background())
 	time.Sleep(1 * time.Second)
 	sch.Start(bro)

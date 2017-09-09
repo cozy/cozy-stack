@@ -15,12 +15,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/labstack/echo"
@@ -234,7 +234,7 @@ func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 // The delTrigger flag is when the trigger must only listen deletions, i.e. a
 // Master-Slave on the recipient side, for the revocation
 func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string, delTrigger bool) error {
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 
 	var eventArgs string
 	if rule.Selector != "" {
@@ -452,7 +452,7 @@ func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		if err != nil {
 			return err
 		}
-		_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+		_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
 			Domain:     instance.Domain,
 			WorkerType: "sharedata",
 			Options:    nil,
@@ -967,7 +967,7 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID
 }
 
 func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	ts, err := sched.GetAll(ins.Domain)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] removeSharingTriggers: Could not get "+
