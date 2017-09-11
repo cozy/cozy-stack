@@ -11,7 +11,7 @@ Schema will be defined in cozy-doctypes, along the lines of
 source: applicationID
 reference: text // useful to "hide notif like this"
 title: text
-content?: text
+content: text
 icon?: image
 actions?: [{text, intent}]
 ```
