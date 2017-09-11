@@ -53,7 +53,9 @@ func newGitFetcher(manFilename string, log *logrus.Entry) *gitFetcher {
 	}
 }
 
-var manifestClient = &http.Client{
+// ManifestClient is the client used to HTTP resources from the git fetcher. It
+// is exported for tests purposes only.
+var ManifestClient = &http.Client{
 	Timeout: 60 * time.Second,
 }
 
@@ -90,7 +92,7 @@ func (g *gitFetcher) FetchManifest(src *url.URL) (r io.ReadCloser, err error) {
 	}
 
 	g.log.Infof("[git] Fetching manifest on %s", u)
-	res, err := manifestClient.Get(u)
+	res, err := ManifestClient.Get(u)
 	if err != nil || res.StatusCode != 200 {
 		g.log.Errorf("[git] Error while fetching manifest on %s", u)
 		return nil, ErrManifestNotReachable

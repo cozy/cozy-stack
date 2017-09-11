@@ -1,4 +1,4 @@
-package apps
+package apps_test
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/cozy/checkup"
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -81,8 +82,8 @@ func serveGitRep() {
 	}
 	localGitDir = dir
 	args := `
-echo '` + manifestWebapp() + `' > ` + WebappManifestName + ` && \
-echo '` + manifestKonnector() + `' > ` + KonnectorManifestName + ` && \
+echo '` + manifestWebapp() + `' > ` + apps.WebappManifestName + ` && \
+echo '` + manifestKonnector() + `' > ` + apps.KonnectorManifestName + ` && \
 git init . && \
 git add . && \
 git commit -m 'Initial commit' && \
@@ -109,8 +110,8 @@ git checkout -`
 func doUpgrade(major int) {
 	localVersion = fmt.Sprintf("%d.0.0", major)
 	args := `
-echo '` + manifestWebapp() + `' > ` + WebappManifestName + ` && \
-echo '` + manifestKonnector() + `' > ` + KonnectorManifestName + ` && \
+echo '` + manifestWebapp() + `' > ` + apps.WebappManifestName + ` && \
+echo '` + manifestKonnector() + `' > ` + apps.KonnectorManifestName + ` && \
 git commit -am "Upgrade commit" && \
 git checkout branch && \
 git rebase master && \
@@ -125,7 +126,7 @@ git checkout master`
 }
 
 var db couchdb.Database
-var fs Copier
+var fs apps.Copier
 var baseFS afero.Fs
 
 func TestMain(m *testing.M) {
@@ -144,7 +145,7 @@ func TestMain(m *testing.M) {
 	}
 	globals.Set(b, s)
 
-	manifestClient = &http.Client{
+	apps.ManifestClient = &http.Client{
 		Transport: &transport{},
 	}
 
@@ -173,7 +174,7 @@ func TestMain(m *testing.M) {
 	}
 
 	baseFS = afero.NewMemMapFs()
-	fs = NewAferoCopier(baseFS)
+	fs = apps.NewAferoCopier(baseFS)
 
 	go serveGitRep()
 

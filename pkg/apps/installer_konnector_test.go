@@ -1,22 +1,23 @@
-package apps
+package apps_test
 
 import (
 	"path"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestKonnectorInstallSuccessful(t *testing.T) {
 	manGen = manifestKonnector
-	manName = KonnectorManifestName
+	manName = apps.KonnectorManifestName
 
 	doUpgrade(1)
 
-	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Install,
-		Type:      Konnector,
+	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      apps.Konnector,
 		Slug:      "local-konnector",
 		SourceURL: "git://localhost/",
 	})
@@ -26,8 +27,8 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 
 	go inst.Run()
 
-	var state State
-	var man Manifest
+	var state apps.State
+	var man apps.Manifest
 	for {
 		var done bool
 		var err2 error
@@ -36,11 +37,11 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Installing, man.State()) {
+			if !assert.EqualValues(t, apps.Installing, man.State()) {
 				return
 			}
-		} else if state == Installing {
-			if !assert.EqualValues(t, Ready, man.State()) {
+		} else if state == apps.Installing {
+			if !assert.EqualValues(t, apps.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -61,45 +62,45 @@ func TestKonnectorInstallSuccessful(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, ok, "The manifest has the right version")
 
-	inst2, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Install,
-		Type:      Konnector,
+	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      apps.Konnector,
 		Slug:      "local-konnector",
 		SourceURL: "git://localhost/",
 	})
 	assert.Nil(t, inst2)
-	assert.Equal(t, ErrAlreadyExists, err)
+	assert.Equal(t, apps.ErrAlreadyExists, err)
 }
 
 func TestKonnectorUpgradeNotExist(t *testing.T) {
 	manGen = manifestKonnector
-	manName = KonnectorManifestName
-	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Update,
-		Type:      Konnector,
+	manName = apps.KonnectorManifestName
+	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Update,
+		Type:      apps.Konnector,
 		Slug:      "cozy-konnector-not-exist",
 	})
 	assert.Nil(t, inst)
-	assert.Equal(t, ErrNotFound, err)
+	assert.Equal(t, apps.ErrNotFound, err)
 
-	inst, err = NewInstaller(db, fs, &InstallerOptions{
-		Operation: Delete,
-		Type:      Konnector,
+	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Delete,
+		Type:      apps.Konnector,
 		Slug:      "cozy-konnector-not-exist",
 	})
 	assert.Nil(t, inst)
-	assert.Equal(t, ErrNotFound, err)
+	assert.Equal(t, apps.ErrNotFound, err)
 }
 
 func TestKonnectorInstallWithUpgrade(t *testing.T) {
 	manGen = manifestKonnector
-	manName = KonnectorManifestName
+	manName = apps.KonnectorManifestName
 
 	doUpgrade(1)
 
-	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Install,
-		Type:      Konnector,
+	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      apps.Konnector,
 		Slug:      "cozy-konnector-b",
 		SourceURL: "git://localhost/",
 	})
@@ -109,7 +110,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 	go inst.Run()
 
-	var man Manifest
+	var man apps.Manifest
 	for {
 		var done bool
 		man, done, err = inst.Poll()
@@ -130,9 +131,9 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 	doUpgrade(2)
 
-	inst, err = NewInstaller(db, fs, &InstallerOptions{
-		Operation: Update,
-		Type:      Konnector,
+	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Update,
+		Type:      apps.Konnector,
 		Slug:      "cozy-konnector-b",
 	})
 	if !assert.NoError(t, err) {
@@ -141,7 +142,7 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 	go inst.Run()
 
-	var state State
+	var state apps.State
 	for {
 		var done bool
 		man, done, err = inst.Poll()
@@ -149,11 +150,11 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Upgrading, man.State()) {
+			if !assert.EqualValues(t, apps.Upgrading, man.State()) {
 				return
 			}
-		} else if state == Upgrading {
-			if !assert.EqualValues(t, Ready, man.State()) {
+		} else if state == apps.Upgrading {
+			if !assert.EqualValues(t, apps.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -177,12 +178,12 @@ func TestKonnectorInstallWithUpgrade(t *testing.T) {
 
 func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 	manGen = manifestKonnector
-	manName = KonnectorManifestName
+	manName = apps.KonnectorManifestName
 	doUpgrade(3)
 
-	inst, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Install,
-		Type:      Konnector,
+	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      apps.Konnector,
 		Slug:      "local-konnector-branch",
 		SourceURL: "git://localhost/#branch",
 	})
@@ -192,8 +193,8 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 
 	go inst.Run()
 
-	var state State
-	var man Manifest
+	var state apps.State
+	var man apps.Manifest
 	for {
 		var done bool
 		var err2 error
@@ -202,11 +203,11 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Installing, man.State()) {
+			if !assert.EqualValues(t, apps.Installing, man.State()) {
 				return
 			}
-		} else if state == Installing {
-			if !assert.EqualValues(t, Ready, man.State()) {
+		} else if state == apps.Installing {
+			if !assert.EqualValues(t, apps.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -229,9 +230,9 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 
 	doUpgrade(4)
 
-	inst, err = NewInstaller(db, fs, &InstallerOptions{
-		Operation: Update,
-		Type:      Konnector,
+	inst, err = apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Update,
+		Type:      apps.Konnector,
 		Slug:      "local-konnector-branch",
 	})
 	if !assert.NoError(t, err) {
@@ -249,11 +250,11 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 			return
 		}
 		if state == "" {
-			if !assert.EqualValues(t, Upgrading, man.State()) {
+			if !assert.EqualValues(t, apps.Upgrading, man.State()) {
 				return
 			}
-		} else if state == Upgrading {
-			if !assert.EqualValues(t, Ready, man.State()) {
+		} else if state == apps.Upgrading {
+			if !assert.EqualValues(t, apps.Ready, man.State()) {
 				return
 			}
 			if !assert.True(t, done) {
@@ -277,10 +278,10 @@ func TestKonnectorInstallAndUpgradeWithBranch(t *testing.T) {
 
 func TestKonnectorUninstall(t *testing.T) {
 	manGen = manifestKonnector
-	manName = KonnectorManifestName
-	inst1, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Install,
-		Type:      Konnector,
+	manName = apps.KonnectorManifestName
+	inst1, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Install,
+		Type:      apps.Konnector,
 		Slug:      "konnector-delete",
 		SourceURL: "git://localhost/",
 	})
@@ -298,9 +299,9 @@ func TestKonnectorUninstall(t *testing.T) {
 			break
 		}
 	}
-	inst2, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Delete,
-		Type:      Konnector,
+	inst2, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Delete,
+		Type:      apps.Konnector,
 		Slug:      "konnector-delete",
 	})
 	if !assert.NoError(t, err) {
@@ -310,11 +311,11 @@ func TestKonnectorUninstall(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	inst3, err := NewInstaller(db, fs, &InstallerOptions{
-		Operation: Delete,
-		Type:      Konnector,
+	inst3, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
+		Operation: apps.Delete,
+		Type:      apps.Konnector,
 		Slug:      "konnector-delete",
 	})
 	assert.Nil(t, inst3)
-	assert.Equal(t, ErrNotFound, err)
+	assert.Equal(t, apps.ErrNotFound, err)
 }
