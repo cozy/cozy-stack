@@ -16,7 +16,7 @@ before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
   - go get -u github.com/alecthomas/gometalinter
   - gometalinter --install
-  - gometalinter --deadline 120s --dupl-threshold 70 -D interfacer -D errcheck -D gocyclo -D dupl ./...
+  - gometalinter --config=.golinter ./...
 
 script:
   - nvm use 6

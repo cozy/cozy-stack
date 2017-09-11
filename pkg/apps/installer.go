@@ -248,13 +248,32 @@ func (i *Installer) update() error {
 	if err := i.checkState(i.man); err != nil {
 		return err
 	}
+
+	version := i.man.Version()
 	if err := i.ReadManifest(Upgrading); err != nil {
 		return err
 	}
+
 	i.manc <- i.man
-	if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
-		return err
+
+	// Fast path for registry:// and http:// sources: we do not need to go
+	// further in the case where the fetched manifest has the same version has
+	// the one in database.
+	//
+	// For git:// and file:// sources, it may be more complicated since we need
+	// to actually fetch the data to extract the exact version of the manifest.
+	var sameVersion bool
+	switch i.src.Scheme {
+	case "registry", "http", "https":
+		sameVersion = (version == i.man.Version())
 	}
+
+	if !sameVersion {
+		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
+			return err
+		}
+	}
+
 	i.man.SetState(i.endState)
 	return i.man.Update(i.db)
 }
