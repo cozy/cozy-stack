@@ -61,7 +61,7 @@ func TestMemRealtime(t *testing.T) {
 		wg.Done()
 	}()
 
-	time.AfterFunc(1*time.Millisecond, func() {
+	time.AfterFunc(10*time.Millisecond, func() {
 		h.Publish(&Event{
 			Domain: "testing",
 			Doc: &testDoc{
@@ -120,7 +120,7 @@ func TestMemRealtime(t *testing.T) {
 		}
 	}()
 
-	time.AfterFunc(1*time.Millisecond, func() {
+	time.AfterFunc(10*time.Millisecond, func() {
 		h.Publish(&Event{
 			Domain: "testing",
 			Doc: &testDoc{
@@ -129,7 +129,7 @@ func TestMemRealtime(t *testing.T) {
 			},
 		})
 	})
-	time.AfterFunc(2*time.Millisecond, func() {
+	time.AfterFunc(20*time.Millisecond, func() {
 		h.Publish(&Event{
 			Domain: "testing",
 			Doc: &testDoc{
@@ -290,7 +290,7 @@ func TestRedisRealtime(t *testing.T) {
 		wg.Done()
 	}()
 
-	time.AfterFunc(1*time.Millisecond, func() {
+	time.AfterFunc(10*time.Millisecond, func() {
 		h.Publish(&Event{
 			Domain: "testing",
 			Doc: &testDoc{
@@ -349,7 +349,7 @@ func TestRedisRealtime(t *testing.T) {
 		}
 	}()
 
-	time.AfterFunc(1*time.Millisecond, func() {
+	time.AfterFunc(10*time.Millisecond, func() {
 		h.Publish(&Event{
 			Domain: "testing",
 			Doc: &testDoc{
@@ -358,7 +358,7 @@ func TestRedisRealtime(t *testing.T) {
 			},
 		})
 	})
-	time.AfterFunc(2*time.Millisecond, func() {
+	time.AfterFunc(20*time.Millisecond, func() {
 		h.Publish(&Event{
 			Domain: "testing",
 			Doc: &testDoc{
