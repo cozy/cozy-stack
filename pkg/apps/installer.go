@@ -258,6 +258,7 @@ func (i *Installer) update() error {
 	}
 
 	version := i.man.Version()
+	oldPermissions := i.man.Permissions()
 	if err := i.ReadManifest(Upgrading); err != nil {
 		return err
 	}
@@ -274,6 +275,16 @@ func (i *Installer) update() error {
 	switch i.src.Scheme {
 	case "registry", "http", "https":
 		sameVersion = (version == i.man.Version())
+	}
+
+	// If the permissions have changed, we set the end state of the applications
+	// as "installed", meaning the user will have to accept the new set of
+	// permissions before accessing to set the application state as "ready".
+	newPermissions := i.man.Permissions()
+	samePermissions := newPermissions != nil && oldPermissions != nil &&
+		newPermissions.HasSameRules(oldPermissions)
+	if !samePermissions {
+		i.endState = Installed
 	}
 
 	if !sameVersion {
