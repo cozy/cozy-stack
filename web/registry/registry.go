@@ -3,13 +3,19 @@ package registry
 import (
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/registry"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
 func proxyReq(c echo.Context) error {
 	i := middlewares.GetInstance(c)
+	pdoc, err := webpermissions.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeWebapp {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
 	registries, err := i.Registries()
 	if err != nil {
 		return err
@@ -29,6 +35,10 @@ func proxyReq(c echo.Context) error {
 
 func proxyListReq(c echo.Context) error {
 	i := middlewares.GetInstance(c)
+	pdoc, err := webpermissions.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeWebapp {
+		return echo.NewHTTPError(http.StatusForbidden)
+	}
 	registries, err := i.Registries()
 	if err != nil {
 		return err
