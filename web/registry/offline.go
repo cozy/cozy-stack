@@ -254,7 +254,10 @@ func init() {
 	var mux = http.NewServeMux()
 	mux.HandleFunc("/registry", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(webapps)
+		resp := map[string]interface{}{
+			"data": webapps,
+		}
+		json.NewEncoder(w).Encode(resp)
 	})
 	mux.HandleFunc("/registry/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
