@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -947,11 +948,12 @@ func TestMain(m *testing.M) {
 	setup = testutils.NewSetup(m, "share_data_test")
 	testInstance = setup.GetTestInstance()
 
-	_, _, _, err = stack.Start()
+	b, s, _, err := stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	globals.Set(b, s)
 
 	instance.Destroy(domainSharer)
 	in, err = createInstance(domainSharer, "Alice")

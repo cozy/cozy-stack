@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
@@ -393,9 +394,11 @@ func TestMain(m *testing.M) {
 	})
 
 	testInstance = setup.GetTestInstance()
-	if _, _, _, err := stack.Start(); err != nil {
+	b, s, _, err := stack.Start()
+	if err != nil {
 		testutils.Fatal(err)
 	}
+	globals.Set(b, s)
 
 	scope := consts.Queues + " " + consts.Jobs + " " + consts.Triggers
 	_, token = setup.GetTestClient(scope)

@@ -1158,11 +1158,12 @@ func TestMain(m *testing.M) {
 	}
 
 	createSettings(in)
-	_, _, _, err = stack.Start()
+	b, s, _, err := stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	globals.Set(b, s)
 
 	ts = createServer()
 	recipientURL = strings.Split(ts.URL, "http://")[1]
