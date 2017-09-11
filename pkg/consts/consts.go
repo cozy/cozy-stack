@@ -68,8 +68,7 @@ const (
 	// redirected when he has no passphrase.
 	OnboardingSlug = "onboarding"
 	// StoreSlug is the slug of the only app that can install other apps.
-	// FIXME update me when the store app will be available
-	StoreSlug = "settings"
+	StoreSlug = "store"
 	// CollectSlug is the slug of the only app that can install konnectors.
 	CollectSlug = "collect"
 )
