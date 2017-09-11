@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -23,23 +24,28 @@ func NewCouchdbIndexer(db couchdb.Database) Indexer {
 }
 
 func (c *couchdbIndexer) InitIndex() error {
+	createDate := time.Now()
 	err := couchdb.CreateNamedDocWithDB(c.db, &DirDoc{
-		DocName:  "",
-		Type:     consts.DirType,
-		DocID:    consts.RootDirID,
-		Fullpath: "/",
-		DirID:    "",
+		DocName:   "",
+		Type:      consts.DirType,
+		DocID:     consts.RootDirID,
+		Fullpath:  "/",
+		DirID:     "",
+		CreatedAt: createDate,
+		UpdatedAt: createDate,
 	})
 	if err != nil {
 		return err
 	}
 
 	err = couchdb.CreateNamedDocWithDB(c.db, &DirDoc{
-		DocName:  path.Base(TrashDirName),
-		Type:     consts.DirType,
-		DocID:    consts.TrashDirID,
-		Fullpath: TrashDirName,
-		DirID:    consts.RootDirID,
+		DocName:   path.Base(TrashDirName),
+		Type:      consts.DirType,
+		DocID:     consts.TrashDirID,
+		Fullpath:  TrashDirName,
+		DirID:     consts.RootDirID,
+		CreatedAt: createDate,
+		UpdatedAt: createDate,
 	})
 	if err != nil && !couchdb.IsConflictError(err) {
 		return err
