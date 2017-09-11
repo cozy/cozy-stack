@@ -26,6 +26,7 @@ func GetScheduler() scheduler.Scheduler {
 	return schder
 }
 
+// Set will set the globales values.
 func Set(b jobs.Broker, s scheduler.Scheduler) {
 	broker = b
 	schder = s

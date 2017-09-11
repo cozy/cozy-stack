@@ -6,6 +6,10 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
+// NopShutdown implements the Shutdowner interface but does not execute any
+// process on shutdown.
+var NopShutdown = NewGroupShutdown()
+
 // Shutdowner is an interface with a Shutdown method to gracefully shutdown
 // a running process.
 type Shutdowner interface {

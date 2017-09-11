@@ -90,7 +90,7 @@ func (m *KonnManifest) SetState(state State) { m.DocState = state }
 // SetVersion is part of the Manifest interface
 func (m *KonnManifest) SetVersion(version string) { m.DocVersion = version }
 
-// ManifestType is part of the Manifest interface
+// AppType is part of the Manifest interface
 func (m *KonnManifest) AppType() AppType { return Konnector }
 
 // Permissions is part of the Manifest interface

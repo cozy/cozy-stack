@@ -71,22 +71,22 @@ var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host        string
-	Port        int
-	Assets      string
-	Doctypes    string
-	Subdomains  string
-	AdminHost   string
-	AdminPort   int
-	NoReply     string
-	Hooks       string
-	AutoUpdates string
+	Host       string
+	Port       int
+	Assets     string
+	Doctypes   string
+	Subdomains string
+	AdminHost  string
+	AdminPort  int
+	NoReply    string
+	Hooks      string
 
-	Fs         Fs
-	CouchDB    CouchDB
-	Jobs       Jobs
-	Konnectors Konnectors
-	Mail       *gomail.DialerOptions
+	AutoUpdates AutoUpdates
+	Fs          Fs
+	CouchDB     CouchDB
+	Jobs        Jobs
+	Konnectors  Konnectors
+	Mail        *gomail.DialerOptions
 
 	Cache                       RedisConfig
 	Lock                        RedisConfig
@@ -122,6 +122,12 @@ type Jobs struct {
 // Konnectors contains the configuration values for the konnectors
 type Konnectors struct {
 	Cmd string
+}
+
+// AutoUpdates contains the configuration values for auto updates
+type AutoUpdates struct {
+	Activated bool
+	Schedule  string
 }
 
 // RedisConfig contains the configuration values for a redis system
@@ -273,16 +279,15 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	config = &Config{
-		Host:        v.GetString("host"),
-		Port:        v.GetInt("port"),
-		Subdomains:  v.GetString("subdomains"),
-		AdminHost:   v.GetString("admin.host"),
-		AdminPort:   v.GetInt("admin.port"),
-		Assets:      v.GetString("assets"),
-		Doctypes:    v.GetString("doctypes"),
-		NoReply:     v.GetString("mail.noreply_address"),
-		Hooks:       v.GetString("hooks"),
-		AutoUpdates: v.GetString("auto_updates"),
+		Host:       v.GetString("host"),
+		Port:       v.GetInt("port"),
+		Subdomains: v.GetString("subdomains"),
+		AdminHost:  v.GetString("admin.host"),
+		AdminPort:  v.GetInt("admin.port"),
+		Assets:     v.GetString("assets"),
+		Doctypes:   v.GetString("doctypes"),
+		NoReply:    v.GetString("mail.noreply_address"),
+		Hooks:      v.GetString("hooks"),
 		Fs: Fs{
 			URL: fsURL,
 		},
@@ -296,6 +301,10 @@ func UseViper(v *viper.Viper) error {
 		},
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
+		},
+		AutoUpdates: AutoUpdates{
+			Activated: v.GetString("auto_updates.schedule") != "",
+			Schedule:  v.GetString("auto_updates.schedule"),
 		},
 		Cache:                       NewRedisConfig(v.GetString("cache.url")),
 		Lock:                        NewRedisConfig(v.GetString("lock.url")),

@@ -27,18 +27,24 @@ type updateCron struct {
 	finished chan struct{}
 }
 
+// StartUpdateCron starts the auto update process which launche a full auto
+// updates of all the instances existing.
 func StartUpdateCron() (utils.Shutdowner, error) {
+	autoUpdates := config.GetConfig().AutoUpdates
+	if !autoUpdates.Activated {
+		return utils.NopShutdown, nil
+	}
+
 	u := &updateCron{
 		stopped:  make(chan struct{}),
 		finished: make(chan struct{}),
 	}
 
-	autoUpdates := config.GetConfig().AutoUpdates
-	if autoUpdates == "" {
-		autoUpdates = "@midnight"
+	scheduleValue := autoUpdates.Schedule
+	if scheduleValue == "" {
+		scheduleValue = "@midnight"
 	}
-
-	schedule, err := cron.Parse(autoUpdates)
+	schedule, err := cron.Parse(scheduleValue)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +80,9 @@ func (u *updateCron) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// UpdateAll starts the auto-updates process for all instances. The slugs
+// parameters can be used optionnaly to filter (whitelist) the applications'
+// slug to update.
 func UpdateAll(slugs ...string) error {
 	<-globalUpdating
 	defer func() {
@@ -120,6 +129,8 @@ func UpdateAll(slugs ...string) error {
 	return errm
 }
 
+// UpdateInstance starts the auto-update process on the given instance. The
+// slugs parameters can be used to filter (whitelist) the applications' slug
 func UpdateInstance(inst *Instance, slugs ...string) error {
 	insc := make(chan *apps.Installer)
 	errc := make(chan error)

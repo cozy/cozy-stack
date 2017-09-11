@@ -157,7 +157,7 @@ func (m *WebappManifest) SetState(state State) { m.DocState = state }
 // SetVersion is part of the Manifest interface
 func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
 
-// ManifestType is part of the Manifest interface
+// AppType is part of the Manifest interface
 func (m *WebappManifest) AppType() AppType { return Webapp }
 
 // Permissions is part of the Manifest interface
