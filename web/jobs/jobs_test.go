@@ -83,10 +83,10 @@ func TestCreateJobNotExist(t *testing.T) {
 		},
 	})
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/none", bytes.NewReader(body))
-	token, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI",
+	tokenNone, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI",
 		consts.Jobs+":ALL:none:worker",
 		time.Now())
-	req.Header.Add("Authorization", "Bearer "+token)
+	req.Header.Add("Authorization", "Bearer "+tokenNone)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
