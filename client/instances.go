@@ -64,6 +64,12 @@ type OAuthClientOptions struct {
 	SoftwareID  string
 }
 
+// UpdatesOptions is a struct holding all the options to launch an update.
+type UpdatesOptions struct {
+	Domain string
+	Slugs  []string
+}
+
 // GetInstance returns the instance associated with the specified domain.
 func (c *Client) GetInstance(domain string) (*Instance, error) {
 	res, err := c.Req(&request.Options{
@@ -231,6 +237,22 @@ func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+// Updates launch the updating process of the applications. When no Domain is
+// specified, the updates are launched for all the existing instances.
+func (c *Client) Updates(opts *UpdatesOptions) error {
+	q := url.Values{
+		"Domain": {opts.Domain},
+		"Slugs":  {strings.Join(opts.Slugs, ",")},
+	}
+	_, err := c.Req(&request.Options{
+		Method:     "POST",
+		Path:       "/instances/updates",
+		Queries:    q,
+		NoResponse: true,
+	})
+	return err
 }
 
 func readInstance(res *http.Response) (*Instance, error) {

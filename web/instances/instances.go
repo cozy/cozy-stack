@@ -271,7 +271,6 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:domain", deleteHandler)
 	router.GET("/:domain/fsck", fsckHandler)
 	router.POST("/updates", updatesHandler)
-	router.POST("/updates/:slug", updatesHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/robfig/cron"
@@ -16,6 +17,7 @@ import (
 
 const numUpdaters = 50
 
+var log = logger.WithNamespace("updates")
 var globalUpdating = make(chan struct{}, 1)
 
 func init() {
@@ -56,8 +58,8 @@ func StartUpdateCron() (utils.Shutdowner, error) {
 			next = schedule.Next(next)
 			select {
 			case <-time.After(-time.Since(next)):
-				if err := UpdateAll(); err != nil {
-					fmt.Println("Error", err)
+				if err := UpdateAll(false); err != nil {
+					log.Error("Could not update all:", err)
 				}
 			case <-u.stopped:
 				return
@@ -83,7 +85,7 @@ func (u *updateCron) Shutdown(ctx context.Context) error {
 // UpdateAll starts the auto-updates process for all instances. The slugs
 // parameters can be used optionnaly to filter (whitelist) the applications'
 // slug to update.
-func UpdateAll(slugs ...string) error {
+func UpdateAll(force bool, slugs ...string) error {
 	<-globalUpdating
 	defer func() {
 		globalUpdating <- struct{}{}
@@ -108,7 +110,9 @@ func UpdateAll(slugs ...string) error {
 	go func() {
 		// TODO: filter instances that are AutoUpdate only
 		ForeachInstances(func(inst *Instance) error {
-			installerPush(inst, insc, errc, slugs...)
+			if force || inst.AutoUpdate {
+				installerPush(inst, insc, errc, slugs...)
+			}
 			return nil
 		})
 		close(insc)
@@ -169,10 +173,6 @@ func UpdateInstance(inst *Instance, slugs ...string) error {
 }
 
 func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, slugs ...string) {
-	if !inst.AutoUpdate {
-		return
-	}
-
 	registries, err := inst.Registries()
 	if err != nil {
 		errc <- err

@@ -437,6 +437,36 @@ var oauthClientInstanceCmd = &cobra.Command{
 	},
 }
 
+var updateAllCmd = &cobra.Command{
+	Use:   "update-all [slugs...]",
+	Short: "Starts the updates for all instances.",
+	Long: `Starts the updates for all instances. The slugs arguments can be used
+to select which applications should be updated.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		return c.Updates(&client.UpdatesOptions{
+			Slugs: args,
+		})
+	},
+}
+
+var updateCmd = &cobra.Command{
+	Use:   "update [domain] [slugs...]",
+	Short: "Starts the updates for the specified domain instance.",
+	Long: `Starts the updates for the specified domain instance. The slugs
+arguments can be used to select which applications should be updated.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return cmd.Help()
+		}
+		c := newAdminClient()
+		return c.Updates(&client.UpdatesOptions{
+			Domain: args[0],
+			Slugs:  args[1:],
+		})
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
@@ -450,6 +480,8 @@ func init() {
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
+	instanceCmdGroup.AddCommand(updateAllCmd)
+	instanceCmdGroup.AddCommand(updateCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
