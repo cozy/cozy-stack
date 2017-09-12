@@ -134,7 +134,7 @@ func pushJob(c echo.Context) error {
 			Data: req.Arguments,
 		},
 	}
-	if err := permissions.Allow(c, permissions.POST, jr); err != nil {
+	if err := permissions.AllowOnFields(c, permissions.POST, jr, "worker"); err != nil {
 		return err
 	}
 
@@ -175,8 +175,7 @@ func newTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-
-	if err = permissions.Allow(c, permissions.POST, t); err != nil {
+	if err = permissions.AllowOnFields(c, permissions.POST, t, "worker"); err != nil {
 		return err
 	}
 

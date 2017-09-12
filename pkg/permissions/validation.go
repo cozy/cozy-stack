@@ -12,11 +12,28 @@ func validValues(r Rule, o Validable) bool {
 	if len(r.Values) == 0 {
 		return true
 	}
-
 	if r.Selector == "" {
 		return r.ValuesContain(o.ID())
 	}
+	return r.ValuesValid(o)
+}
 
+func validOnFields(r Rule, o Validable, fields ...string) bool {
+	// in this case, if r.Values is empty the selector is considered too wide and
+	// is forbidden
+	if len(r.Values) == 0 || r.Selector == "" {
+		return false
+	}
+	var validSelector bool
+	for _, f := range fields {
+		if r.Selector == f {
+			validSelector = true
+			break
+		}
+	}
+	if !validSelector {
+		return false
+	}
 	return r.ValuesValid(o)
 }
 
@@ -51,5 +68,13 @@ func (s Set) AllowID(v Verb, doctype, id string) bool {
 func (s Set) Allow(v Verb, o Validable) bool {
 	return s.Some(func(r Rule) bool {
 		return validVerbAndType(r, v, o.DocType()) && validValues(r, o)
+	})
+}
+
+// AllowOnFields returns true if the set allows to apply verb to given doc on
+// the specified fields.
+func (s Set) AllowOnFields(v Verb, o Validable, fields ...string) bool {
+	return s.Some(func(r Rule) bool {
+		return validVerbAndType(r, v, o.DocType()) && validOnFields(r, o, fields...)
 	})
 }
