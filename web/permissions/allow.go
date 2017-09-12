@@ -39,6 +39,19 @@ func Allow(c echo.Context, v permissions.Verb, o permissions.Validable) error {
 	return nil
 }
 
+// AllowOnFields validates the validable object againt the context permission
+// set and ensure the selector validates the given fields.
+func AllowOnFields(c echo.Context, v permissions.Verb, o permissions.Validable, fields ...string) error {
+	pdoc, err := GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if !pdoc.Permissions.AllowOnFields(v, o, fields...) {
+		return errForbidden
+	}
+	return nil
+}
+
 // AllowTypeAndID validates a type & ID against the context permission set
 func AllowTypeAndID(c echo.Context, v permissions.Verb, doctype, id string) error {
 	pdoc, err := GetPermission(c)
