@@ -110,7 +110,7 @@ func UpdateAll(force bool, slugs ...string) error {
 	go func() {
 		// TODO: filter instances that are AutoUpdate only
 		ForeachInstances(func(inst *Instance) error {
-			if force || inst.AutoUpdate {
+			if force || !inst.NoAutoUpdate {
 				installerPush(inst, insc, errc, slugs...)
 			}
 			return nil

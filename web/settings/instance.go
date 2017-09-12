@@ -43,6 +43,7 @@ func getInstance(c echo.Context) error {
 	}
 	doc.M["locale"] = instance.Locale
 	doc.M["onboarding_finished"] = instance.OnboardingFinished
+	doc.M["auto_update"] = !instance.NoAutoUpdate
 
 	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
 		return err
@@ -77,7 +78,7 @@ func updateInstance(c echo.Context) error {
 
 	if autoUpdate, ok := doc.M["auto_update"].(bool); ok {
 		delete(doc.M, "auto_upate")
-		inst.AutoUpdate = autoUpdate
+		inst.NoAutoUpdate = !autoUpdate
 		needUpdate = true
 	}
 
