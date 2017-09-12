@@ -68,51 +68,18 @@ type Fetcher interface {
 
 // NewInstaller creates a new Installer
 func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Installer, error) {
-	if opts.Operation == 0 {
-		panic("Missing installer operation")
-	}
-
-	appType := opts.Type
-	slug := opts.Slug
-	man := opts.Manifest
-	if man == nil {
-		if appType != Webapp && appType != Konnector {
-			panic("Bad or missing installer type")
-		}
-		if slug == "" || !slugReg.MatchString(slug) {
-			return nil, ErrInvalidSlugName
-		}
-		var err error
-		man, err = GetBySlug(db, slug, appType)
-		if opts.Operation == Install {
-			if err == nil {
-				return nil, ErrAlreadyExists
-			}
-			if err != ErrNotFound {
-				return nil, err
-			}
-			switch opts.Type {
-			case Webapp:
-				man = &WebappManifest{}
-			case Konnector:
-				man = &KonnManifest{}
-			}
-		} else if err != nil {
-			return nil, err
-		}
-	} else {
-		appType = man.AppType()
-		slug = man.Slug()
+	man, err := initManifest(db, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// For konnectors applications, we actually create a tar archive in which the
 	// sources are stored before copying the archive into the application
 	// storage.
-	if appType == Konnector {
+	if man.AppType() == Konnector {
 		fs = newTarCopier(fs, KonnectorArchiveName)
 	}
 
-	var err error
 	var src *url.URL
 	switch opts.Operation {
 	case Install:
@@ -128,6 +95,8 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 			srcString = opts.SourceURL
 		}
 		src, err = url.Parse(srcString)
+	default:
+		panic("Unknwon installer operation")
 	}
 	if err != nil {
 		return nil, err
@@ -143,7 +112,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	log := logger.WithDomain(db.Prefix())
 
 	var manFilename string
-	switch appType {
+	switch man.AppType() {
 	case Webapp:
 		manFilename = WebappManifestName
 	case Konnector:
@@ -173,12 +142,50 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 
 		man:  man,
 		src:  src,
-		slug: slug,
+		slug: man.Slug(),
 
 		errc: make(chan error, 1),
 		manc: make(chan Manifest, 2),
 		log:  log,
 	}, nil
+}
+
+func initManifest(db couchdb.Database, opts *InstallerOptions) (man Manifest, err error) {
+	if man = opts.Manifest; man != nil {
+		return man, nil
+	}
+
+	slug := opts.Slug
+	if slug == "" || !slugReg.MatchString(slug) {
+		return nil, ErrInvalidSlugName
+	}
+
+	if opts.Operation == Install {
+		_, err = GetBySlug(db, slug, opts.Type)
+		if err == nil {
+			return nil, ErrAlreadyExists
+		}
+		if err != ErrNotFound {
+			return nil, err
+		}
+		switch opts.Type {
+		case Webapp:
+			man = &WebappManifest{DocSlug: slug}
+		case Konnector:
+			man = &KonnManifest{DocSlug: slug}
+		}
+	} else {
+		man, err = GetBySlug(db, slug, opts.Type)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if man == nil {
+		panic("Bad or missing installer type")
+	}
+
+	return man, nil
 }
 
 // Run will install, update or delete the application linked to the installer,
