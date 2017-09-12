@@ -39,7 +39,7 @@ security features. Please do not use this binary as your production server.
 `)
 	}
 
-	err := agent.Listen(&agent.Options{NoShutdownCleanup: true})
+	err := agent.Listen(agent.Options{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error on gops agent: %s\n", err)
 	}
