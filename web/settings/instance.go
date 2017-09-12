@@ -93,5 +93,7 @@ func updateInstance(c echo.Context) error {
 	}
 
 	doc.M["locale"] = inst.Locale
+	doc.M["onboarding_finished"] = inst.OnboardingFinished
+	doc.M["auto_update"] = !inst.NoAutoUpdate
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
