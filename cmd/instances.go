@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var flagDomain string
 var flagLocale string
 var flagTimezone string
 var flagEmail string
@@ -437,32 +438,27 @@ var oauthClientInstanceCmd = &cobra.Command{
 	},
 }
 
-var updateAllCmd = &cobra.Command{
-	Use:   "update-all [slugs...]",
-	Short: "Starts the updates for all instances.",
-	Long: `Starts the updates for all instances. The slugs arguments can be used
-to select which applications should be updated.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		c := newAdminClient()
-		return c.Updates(&client.UpdatesOptions{
-			Slugs: args,
-		})
-	},
-}
-
 var updateCmd = &cobra.Command{
 	Use:   "update [domain] [slugs...]",
 	Short: "Starts the updates for the specified domain instance.",
-	Long: `Starts the updates for the specified domain instance. The slugs
-arguments can be used to select which applications should be updated.`,
+	Long: `Starts the updates for the specified domain instance. Use whether the --domain
+flag to specify the instance or the --all-domains flags to updates all domains.
+The slugs arguments can be used to select which applications should be
+updated.`,
+	Aliases: []string{"updates"},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
-			return cmd.Help()
-		}
 		c := newAdminClient()
+		if flagAllDomains {
+			return c.Updates(&client.UpdatesOptions{
+				Slugs: args,
+			})
+		}
+		if flagDomain == "" {
+			return errAppsMissingDomain
+		}
 		return c.Updates(&client.UpdatesOptions{
-			Domain: args[0],
-			Slugs:  args[1:],
+			Domain: flagDomain,
+			Slugs:  args,
 		})
 	},
 }
@@ -480,7 +476,6 @@ func init() {
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
-	instanceCmdGroup.AddCommand(updateAllCmd)
 	instanceCmdGroup.AddCommand(updateCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
@@ -495,5 +490,7 @@ func init() {
 	fsckInstanceCmd.Flags().BoolVar(&flagDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "specify the domain name of the instance")
 	RootCmd.AddCommand(instanceCmdGroup)
 }
