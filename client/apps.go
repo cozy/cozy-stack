@@ -50,7 +50,7 @@ type AppManifest struct {
 			Public bool   `json:"public"`
 		} `json:"routes,omitempty"`
 
-		Services *struct {
+		Services *map[string]struct {
 			Type           string `json:"type"`
 			File           string `json:"file"`
 			Debounce       string `json:"debounce"`
