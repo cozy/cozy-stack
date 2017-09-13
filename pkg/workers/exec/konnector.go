@@ -77,9 +77,7 @@ func (kl *konnectorLogs) DocType() string { return consts.KonnectorLogs }
 func (kl *konnectorLogs) Clone() couchdb.Doc {
 	cloned := *kl
 	cloned.Messages = make([]*konnectorMsg, len(kl.Messages))
-	for k, v := range kl.Messages {
-		cloned.Messages[k] = v
-	}
+	copy(cloned.Messages, kl.Messages)
 	return &cloned
 }
 func (kl *konnectorLogs) SetID(id string)   {}
