@@ -47,12 +47,17 @@ type result struct {
 	Error       string          `json:"error"`
 }
 
-func (r *result) ID() string         { return r.DocID }
-func (r *result) Rev() string        { return r.DocRev }
-func (r *result) DocType() string    { return consts.KonnectorResults }
-func (r *result) Clone() couchdb.Doc { c := *r; return &c }
-func (r *result) SetID(id string)    { r.DocID = id }
-func (r *result) SetRev(rev string)  { r.DocRev = rev }
+func (r *result) ID() string      { return r.DocID }
+func (r *result) Rev() string     { return r.DocRev }
+func (r *result) DocType() string { return consts.KonnectorResults }
+func (r *result) Clone() couchdb.Doc {
+	cloned := *r
+	cloned.Logs = make([]*konnectorMsg, len(r.Logs))
+	copy(cloned.Logs, r.Logs)
+	return &cloned
+}
+func (r *result) SetID(id string)   { r.DocID = id }
+func (r *result) SetRev(rev string) { r.DocRev = rev }
 
 const konnectorMsgTypeError string = "error"
 
