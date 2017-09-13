@@ -69,6 +69,22 @@ var lsWebappsCmd = &cobra.Command{
 	},
 }
 
+var showWebappCmd = &cobra.Command{
+	Use:   "show [slug]",
+	Short: "Show the application attributes",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return showApp(cmd, args, consts.Apps)
+	},
+}
+
+var showKonnectorCmd = &cobra.Command{
+	Use:   "show [slug]",
+	Short: "Show the application attributes",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return showApp(cmd, args, consts.Apps)
+	},
+}
+
 var konnectorsCmdGroup = &cobra.Command{
 	Use:   "konnectors [command]",
 	Short: "Interact with the cozy applications",
@@ -246,6 +262,30 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 	return nil
 }
 
+func showApp(cmd *cobra.Command, args []string, appType string) error {
+	if flagAppsDomain == "" {
+		errPrintfln("%s", errAppsMissingDomain)
+		return cmd.Help()
+	}
+	if len(args) < 1 {
+		return cmd.Help()
+	}
+	c := newClient(flagAppsDomain, appType)
+	app, err := c.GetApp(&client.AppOptions{
+		Slug:    args[0],
+		AppType: appType,
+	})
+	if err != nil {
+		return err
+	}
+	json, err := json.MarshalIndent(app.Attrs, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
@@ -296,6 +336,7 @@ func init() {
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
+	webappsCmdGroup.AddCommand(showWebappCmd)
 	webappsCmdGroup.AddCommand(installWebappCmd)
 	webappsCmdGroup.AddCommand(updateWebappCmd)
 	webappsCmdGroup.AddCommand(uninstallWebappCmd)
@@ -304,6 +345,7 @@ func init() {
 	konnectorsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 
 	konnectorsCmdGroup.AddCommand(lsKonnectorsCmd)
+	konnectorsCmdGroup.AddCommand(showKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(installKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(updateKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(uninstallKonnectorCmd)

@@ -71,6 +71,21 @@ func (man *apiApp) Included() []jsonapi.Object {
 // apiApp is a jsonapi.Object
 var _ jsonapi.Object = (*apiApp)(nil)
 
+func getHandler(appType apps.AppType) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		instance := middlewares.GetInstance(c)
+		slug := c.Param("slug")
+		man, err := apps.GetBySlug(instance, slug, appType)
+		if err != nil {
+			return wrapAppsError(err)
+		}
+		if err := permissions.Allow(c, permissions.GET, man); err != nil {
+			return err
+		}
+		return jsonapi.Data(c, http.StatusOK, &apiApp{man}, nil)
+	}
+}
+
 // installHandler handles all POST /:slug request and tries to install
 // or update the application with the given Source.
 func installHandler(installerType apps.AppType) echo.HandlerFunc {
@@ -307,6 +322,7 @@ func iconHandler(c echo.Context) error {
 // WebappsRoutes sets the routing for the web apps service
 func WebappsRoutes(router *echo.Group) {
 	router.GET("/", listWebappsHandler)
+	router.GET("/:slug", getHandler(apps.Webapp))
 	router.POST("/:slug", installHandler(apps.Webapp))
 	router.PUT("/:slug", updateHandler(apps.Webapp))
 	router.DELETE("/:slug", deleteHandler(apps.Webapp))
@@ -316,6 +332,7 @@ func WebappsRoutes(router *echo.Group) {
 // KonnectorRoutes sets the routing for the konnectors service
 func KonnectorRoutes(router *echo.Group) {
 	router.GET("/", listKonnectorsHandler)
+	router.GET("/:slug", getHandler(apps.Webapp))
 	router.POST("/:slug", installHandler(apps.Konnector))
 	router.PUT("/:slug", updateHandler(apps.Konnector))
 	router.DELETE("/:slug", deleteHandler(apps.Konnector))

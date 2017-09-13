@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -19,15 +20,17 @@ type AppManifest struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
 	Attrs struct {
-		Name        string `json:"name"`
-		Editor      string `json:"editor"`
-		Slug        string `json:"slug"`
-		Source      string `json:"source"`
-		State       string `json:"state"`
-		Error       string `json:"error,omitempty"`
-		Icon        string `json:"icon"`
-		Category    string `json:"category"`
-		Description string `json:"description"`
+		Name        string    `json:"name"`
+		Editor      string    `json:"editor"`
+		Slug        string    `json:"slug"`
+		Source      string    `json:"source"`
+		State       string    `json:"state"`
+		Error       string    `json:"error,omitempty"`
+		Icon        string    `json:"icon"`
+		CreatedAt   time.Time `json:"created_at"`
+		UpdatedAt   time.Time `json:"updated_at"`
+		Category    string    `json:"category"`
+		Description string    `json:"description"`
 		Developer   struct {
 			Name string `json:"name"`
 			URL  string `json:"url,omitempty"`
@@ -41,12 +44,20 @@ type AppManifest struct {
 		Version     string           `json:"version"`
 		License     string           `json:"license"`
 		Permissions *permissions.Set `json:"permissions"`
-		Routes      map[string]struct {
+		Routes      *map[string]struct {
 			Folder string `json:"folder"`
 			Index  string `json:"index"`
 			Public bool   `json:"public"`
-		} `json:"routes"`
-	} `json:"attributes"`
+		} `json:"routes,omitempty"`
+
+		Services *struct {
+			Type           string `json:"type"`
+			File           string `json:"file"`
+			Debounce       string `json:"debounce"`
+			TriggerOptions string `json:"trigger"`
+			TriggerID      string `json:"trigger_id"`
+		} `json:"services"`
+	} `json:"attributes,omitempty"`
 }
 
 // AppOptions holds the options to install an application.
@@ -71,6 +82,18 @@ func (c *Client) ListApps(appType string) ([]*AppManifest, error) {
 		return nil, err
 	}
 	return mans, nil
+}
+
+// GetApp is used to fetch an application manifest with specified slug
+func (c *Client) GetApp(opts *AppOptions) (*AppManifest, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   makeAppsPath(opts.AppType, url.PathEscape(opts.Slug)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return readAppManifest(res)
 }
 
 // InstallApp is used to install an application.
