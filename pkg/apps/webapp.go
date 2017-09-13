@@ -400,7 +400,7 @@ func GetWebappBySlug(db couchdb.Database, slug string) (*WebappManifest, error) 
 // TODO: pagination
 func ListWebapps(db couchdb.Database) ([]*WebappManifest, error) {
 	var docs []*WebappManifest
-	req := &couchdb.AllDocsRequest{Limit: 200}
+	req := &couchdb.AllDocsRequest{Limit: 100}
 	err := couchdb.GetAllDocs(db, consts.Apps, req, &docs)
 	if err != nil {
 		return nil, err
