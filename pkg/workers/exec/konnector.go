@@ -32,19 +32,19 @@ type KonnectorOptions struct {
 type konnectorWorker struct {
 	opts     *KonnectorOptions
 	man      *apps.KonnManifest
-	messages []konnectorMsg
+	messages []*konnectorMsg
 }
 
 // result stores the result of a konnector execution.
 type result struct {
-	DocID       string         `json:"_id,omitempty"`
-	DocRev      string         `json:"_rev,omitempty"`
-	CreatedAt   time.Time      `json:"last_execution"`
-	LastSuccess time.Time      `json:"last_success"`
-	Logs        []konnectorMsg `json:"logs"`
-	Account     string         `json:"account"`
-	State       string         `json:"state"`
-	Error       string         `json:"error"`
+	DocID       string          `json:"_id,omitempty"`
+	DocRev      string          `json:"_rev,omitempty"`
+	CreatedAt   time.Time       `json:"last_execution"`
+	LastSuccess time.Time       `json:"last_success"`
+	Logs        []*konnectorMsg `json:"logs"`
+	Account     string          `json:"account"`
+	State       string          `json:"state"`
+	Error       string          `json:"error"`
 }
 
 func (r *result) ID() string         { return r.DocID }
@@ -66,17 +66,22 @@ type konnectorMsg struct {
 }
 
 type konnectorLogs struct {
-	Slug     string         `json:"_id,omitempty"`
-	DocRev   string         `json:"_rev,omitempty"`
-	Messages []konnectorMsg `json:"logs"`
+	Slug     string          `json:"_id,omitempty"`
+	DocRev   string          `json:"_rev,omitempty"`
+	Messages []*konnectorMsg `json:"logs"`
 }
 
-func (kl *konnectorLogs) ID() string         { return kl.Slug }
-func (kl *konnectorLogs) Rev() string        { return kl.DocRev }
-func (kl *konnectorLogs) DocType() string    { return consts.KonnectorLogs }
-func (kl *konnectorLogs) Clone() couchdb.Doc { c := *kl; return &c }
-func (kl *konnectorLogs) SetID(id string)    {}
-func (kl *konnectorLogs) SetRev(rev string)  { kl.DocRev = rev }
+func (kl *konnectorLogs) ID() string      { return kl.Slug }
+func (kl *konnectorLogs) Rev() string     { return kl.DocRev }
+func (kl *konnectorLogs) DocType() string { return consts.KonnectorLogs }
+func (kl *konnectorLogs) Clone() couchdb.Doc {
+	cloned := *kl
+	cloned.Messages = make([]*konnectorMsg, len(kl.Messages))
+	copy(cloned.Messages, kl.Messages)
+	return &cloned
+}
+func (kl *konnectorLogs) SetID(id string)   {}
+func (kl *konnectorLogs) SetRev(rev string) { kl.DocRev = rev }
 
 func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) (workDir string, err error) {
 	opts := &KonnectorOptions{}
@@ -177,7 +182,7 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (
 }
 
 func (w *konnectorWorker) ScanOuput(i *instance.Instance, line []byte) error {
-	var msg konnectorMsg
+	msg := &konnectorMsg{}
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
