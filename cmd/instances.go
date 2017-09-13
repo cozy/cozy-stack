@@ -440,8 +440,8 @@ var oauthClientInstanceCmd = &cobra.Command{
 
 var updateCmd = &cobra.Command{
 	Use:   "update [domain] [slugs...]",
-	Short: "Starts the updates for the specified domain instance.",
-	Long: `Starts the updates for the specified domain instance. Use whether the --domain
+	Short: "Start the updates for the specified domain instance.",
+	Long: `Start the updates for the specified domain instance. Use whether the --domain
 flag to specify the instance or the --all-domains flags to updates all domains.
 The slugs arguments can be used to select which applications should be
 updated.`,
