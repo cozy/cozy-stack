@@ -69,7 +69,8 @@ func updateInstance(c echo.Context) error {
 		return err
 	}
 
-	var needUpdate bool
+	needUpdate := false
+
 	if locale, ok := doc.M["locale"].(string); ok {
 		delete(doc.M, "locale")
 		inst.Locale = locale
