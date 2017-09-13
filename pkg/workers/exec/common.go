@@ -118,7 +118,7 @@ func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() exec
 		if w, ok := cookie.(execWorker); ok {
 			return w.Commit(ctx, msg, errjob)
 		}
-		return errjob
+		return nil
 	}
 
 	cfg = cfg.Clone()

@@ -215,8 +215,9 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 
 func (w *konnectorWorker) Commit(ctx context.Context, msg *jobs.Message, errjob error) error {
 	if w.opts == nil {
-		return errjob
+		return nil
 	}
+
 	slug := w.opts.Konnector
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 

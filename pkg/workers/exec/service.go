@@ -104,5 +104,5 @@ func (w *serviceWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *serviceWorker) Commit(ctx context.Context, msg *jobs.Message, errjob error) error {
-	return errjob
+	return nil
 }
