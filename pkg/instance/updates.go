@@ -16,6 +16,7 @@ import (
 )
 
 const numUpdaters = 50
+const numUpdatersSingleInstance = 4
 
 var log = logger.WithNamespace("updates")
 var globalUpdating = make(chan struct{}, 1)
@@ -136,9 +137,9 @@ func UpdateInstance(inst *Instance, slugs ...string) error {
 	errc := make(chan error)
 
 	var g sync.WaitGroup
-	g.Add(4)
+	g.Add(numUpdatersSingleInstance)
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < numUpdatersSingleInstance; i++ {
 		go func() {
 			for installer := range insc {
 				_, err := installer.RunSync()
