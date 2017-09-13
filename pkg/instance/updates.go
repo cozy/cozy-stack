@@ -42,11 +42,7 @@ func StartUpdateCron() (utils.Shutdowner, error) {
 		finished: make(chan struct{}),
 	}
 
-	scheduleValue := autoUpdates.Schedule
-	if scheduleValue == "" {
-		scheduleValue = "@midnight"
-	}
-	schedule, err := cron.Parse(scheduleValue)
+	schedule, err := cron.Parse(autoUpdates.Schedule)
 	if err != nil {
 		return nil, err
 	}
