@@ -101,6 +101,12 @@ func (ji *JobInfos) Rev() string { return ji.JobRev }
 // Clone implements the couchdb.Doc interface
 func (ji *JobInfos) Clone() couchdb.Doc {
 	cloned := *ji
+	if ji.Message != nil {
+		cloned.Message = &(*ji.Message)
+	}
+	if ji.Options != nil {
+		cloned.Options = &(*ji.Options)
+	}
 	return &cloned
 }
 

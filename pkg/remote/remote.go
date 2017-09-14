@@ -100,7 +100,14 @@ func (r *Request) SetRev(rev string) { r.DocRev = rev }
 func (r *Request) DocType() string { return consts.RemoteRequests }
 
 // Clone implements couchdb.Doc
-func (r *Request) Clone() couchdb.Doc { cloned := *r; return &cloned }
+func (r *Request) Clone() couchdb.Doc {
+	cloned := *r
+	cloned.Variables = make(map[string]string)
+	for k, v := range r.Variables {
+		cloned.Variables[k] = v
+	}
+	return &cloned
+}
 
 // Remote is the struct used to call a remote website for a doctype
 type Remote struct {

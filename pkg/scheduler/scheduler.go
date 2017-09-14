@@ -32,7 +32,16 @@ func (t *TriggerInfos) Rev() string { return t.TRev }
 func (t *TriggerInfos) DocType() string { return consts.Triggers }
 
 // Clone implements the couchdb.Doc interface
-func (t *TriggerInfos) Clone() couchdb.Doc { cloned := *t; return &cloned }
+func (t *TriggerInfos) Clone() couchdb.Doc {
+	cloned := *t
+	if t.Options != nil {
+		cloned.Options = &(*t.Options)
+	}
+	if t.Message != nil {
+		cloned.Message = &(*t.Message)
+	}
+	return &cloned
+}
 
 // SetID implements the couchdb.Doc interface
 func (t *TriggerInfos) SetID(id string) { t.TID = id }

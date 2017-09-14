@@ -136,7 +136,28 @@ func (i *Instance) Rev() string { return i.DocRev }
 func (i *Instance) SetRev(v string) { i.DocRev = v }
 
 // Clone implements couchdb.Doc
-func (i *Instance) Clone() couchdb.Doc { cloned := *i; return &cloned }
+func (i *Instance) Clone() couchdb.Doc {
+	cloned := *i
+
+	cloned.PassphraseHash = make([]byte, len(i.PassphraseHash))
+	copy(cloned.PassphraseHash, i.PassphraseHash)
+
+	cloned.PassphraseResetToken = make([]byte, len(i.PassphraseResetToken))
+	copy(cloned.PassphraseResetToken, i.PassphraseResetToken)
+
+	cloned.RegisterToken = make([]byte, len(i.RegisterToken))
+	copy(cloned.RegisterToken, i.RegisterToken)
+
+	cloned.SessionSecret = make([]byte, len(i.SessionSecret))
+	copy(cloned.SessionSecret, i.SessionSecret)
+
+	cloned.OAuthSecret = make([]byte, len(i.OAuthSecret))
+	copy(cloned.OAuthSecret, i.OAuthSecret)
+
+	cloned.CLISecret = make([]byte, len(i.CLISecret))
+	copy(cloned.CLISecret, i.CLISecret)
+	return &cloned
+}
 
 // Prefix returns the prefix to use in database naming for the
 // current instance

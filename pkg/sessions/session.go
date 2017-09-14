@@ -54,7 +54,13 @@ func (s *Session) Rev() string { return s.DocRev }
 func (s *Session) SetRev(v string) { s.DocRev = v }
 
 // Clone implements couchdb.Doc
-func (s *Session) Clone() couchdb.Doc { cloned := *s; return &cloned }
+func (s *Session) Clone() couchdb.Doc {
+	cloned := *s
+	if cloned.Instance != nil {
+		cloned.Instance = &(*cloned.Instance)
+	}
+	return &cloned
+}
 
 // ensure Session implements couchdb.Doc
 var _ couchdb.Doc = (*Session)(nil)

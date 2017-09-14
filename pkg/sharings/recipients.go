@@ -56,7 +56,15 @@ func (r *Recipient) Rev() string { return r.RRev }
 func (r *Recipient) DocType() string { return consts.Contacts }
 
 // Clone implements couchdb.Doc
-func (r *Recipient) Clone() couchdb.Doc { cloned := *r; return &cloned }
+func (r *Recipient) Clone() couchdb.Doc {
+	cloned := *r
+	cloned.Email = make([]RecipientEmail, len(r.Email))
+	copy(cloned.Email, r.Email)
+
+	cloned.Cozy = make([]RecipientCozy, len(r.Cozy))
+	copy(cloned.Cozy, r.Cozy)
+	return &cloned
+}
 
 // SetID changes the recipient qualified identifier
 func (r *Recipient) SetID(id string) { r.RID = id }
