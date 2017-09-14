@@ -33,7 +33,9 @@ func (n *Notification) DocType() string { return consts.Notifications }
 func (n *Notification) Clone() couchdb.Doc {
 	cloned := *n
 	cloned.Actions = make([]*Action, len(n.Actions))
-	copy(cloned.Actions, n.Actions)
+	for k, v := range n.Actions {
+		cloned.Actions[k] = &(*v)
+	}
 	return &cloned
 }
 

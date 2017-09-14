@@ -165,7 +165,19 @@ func (a *Archive) Rev() string { return "" }
 func (a *Archive) DocType() string { return consts.Archives }
 
 // Clone implements couchdb.Doc
-func (a *Archive) Clone() couchdb.Doc { cloned := *a; return &cloned }
+func (a *Archive) Clone() couchdb.Doc {
+	cloned := *a
+
+	cloned.IDs = make([]string, len(a.IDs))
+	copy(cloned.IDs, a.IDs)
+
+	cloned.Files = make([]string, len(a.Files))
+	copy(cloned.Files, a.Files)
+
+	cloned.entries = make([]ArchiveEntry, len(a.entries))
+	copy(cloned.entries, a.entries)
+	return &cloned
+}
 
 // SetID makes Archive a jsonapi.Object
 func (a *Archive) SetID(_ string) {}

@@ -64,6 +64,12 @@ func (c *Client) Clone() couchdb.Doc {
 	cloned := *c
 	cloned.RedirectURIs = make([]string, len(c.RedirectURIs))
 	copy(cloned.RedirectURIs, c.RedirectURIs)
+
+	cloned.GrantTypes = make([]string, len(c.GrantTypes))
+	copy(cloned.GrantTypes, c.GrantTypes)
+
+	cloned.ResponseTypes = make([]string, len(c.ResponseTypes))
+	copy(cloned.ResponseTypes, c.ResponseTypes)
 	return &cloned
 }
 

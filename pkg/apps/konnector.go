@@ -26,10 +26,8 @@ type KonnManifest struct {
 	Category    string     `json:"category"`
 	Developer   *Developer `json:"developer"`
 
-	DefaultLocale string `json:"default_locale"`
-	Locales       map[string]struct {
-		Description string `json:"description"`
-	} `json:"locales"`
+	DefaultLocale string  `json:"default_locale"`
+	Locales       Locales `json:"locales"`
 
 	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
@@ -51,9 +49,17 @@ func (m *KonnManifest) DocType() string { return consts.Konnectors }
 func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned := *m
 	if m.Developer != nil {
-		dev := *m.Developer
-		cloned.Developer = &dev
+		cloned.Developer = &(*m.Developer)
 	}
+
+	cloned.Locales = make(Locales, len(m.Locales))
+	for k, v := range m.Locales {
+		cloned.Locales[k] = v
+	}
+
+	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
+	copy(cloned.DocPermissions, m.DocPermissions)
+
 	return &cloned
 }
 
