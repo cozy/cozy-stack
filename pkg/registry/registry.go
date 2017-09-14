@@ -20,7 +20,7 @@ const defaultLimit = 50
 
 // A Version describes a specific release of an application.
 type Version struct {
-	Name      string          `json:"name"`
+	Slug      string          `json:"slug"`
 	Version   string          `json:"version"`
 	URL       string          `json:"url"`
 	Sha256    string          `json:"sha256"`
@@ -50,10 +50,10 @@ const (
 
 // GetLatestVersion returns the latest version available from the list of
 // registries by resolving them in sequence using the specified application
-// name and channel name.
-func GetLatestVersion(appName, channel string, registries []*url.URL) (*Version, error) {
+// slug and channel name.
+func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, error) {
 	requestURI := fmt.Sprintf("/registry/%s/%s/latest",
-		url.PathEscape(appName),
+		url.PathEscape(slug),
 		url.PathEscape(channel))
 	rc, ok, err := fetchUntilFound(registries, requestURI, WithCache)
 	if err != nil {
@@ -116,7 +116,7 @@ func ProxyList(req *http.Request, registries []*url.URL) (json.RawMessage, error
 		sortBy = sortBy[1:]
 	}
 	if sortBy == "" {
-		sortBy = "name"
+		sortBy = "slug"
 	}
 	if v, ok := q["limit"]; ok {
 		limit, _ = strconv.Atoi(v[0])
@@ -138,7 +138,7 @@ type appsList struct {
 	ref        *url.URL
 	list       []jsonObject
 	registries []*registryFetchState
-	names      map[string][]int
+	slugs      map[string][]int
 	limit      int
 }
 
@@ -176,7 +176,7 @@ func newAppsList(ref *url.URL, registries []*url.URL, cursors []int, limit int) 
 		ref:        ref,
 		limit:      limit,
 		list:       make([]jsonObject, 0),
-		names:      make(map[string][]int),
+		slugs:      make(map[string][]int),
 		registries: regStates,
 	}
 }
@@ -196,7 +196,7 @@ func (a *appsList) FetchAll() error {
 }
 
 func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
-	names := a.names
+	slugs := a.slugs
 	minCursor := r.cursor
 	maxCursor := r.cursor + a.limit
 
@@ -241,12 +241,12 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 				objCursor >= minCursor &&
 				objCursor <= maxCursor
 
-			// if an object with same name has already been fetched, we skip it
-			name := obj["name"].(string)
-			offsets, ok := names[name]
+			// if an object with same slug has already been fetched, we skip it
+			slug := obj["slug"].(string)
+			offsets, ok := slugs[slug]
 			if !ok {
 				offsets = make([]int, len(a.registries))
-				names[name] = offsets
+				slugs[slug] = offsets
 			}
 			if objInRange {
 				offsets[r.index] = objCursor + 1
@@ -273,7 +273,7 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 }
 
 func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPaginated {
-	sortByName := sortBy == "name"
+	sortBySlug := sortBy == "slug"
 	sort.Slice(a.list, func(i, j int) bool {
 		vi := a.list[i]
 		vj := a.list[j]
@@ -282,20 +282,20 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 		case string:
 			valB := vj[sortBy].(string)
 			less = valA < valB
-			if !sortByName && !less {
+			if !sortBySlug && !less {
 				equal = valA == valB
 			}
 		case int:
 			valB := vj[sortBy].(int)
 			less = valA < valB
-			if !sortByName && !less {
+			if !sortBySlug && !less {
 				equal = valA == valB
 			}
 		}
 		if equal {
-			nameA := vi["name"].(string)
-			nameB := vj["name"].(string)
-			less = nameA < nameB
+			slugA := vi["slug"].(string)
+			slugB := vj["slug"].(string)
+			less = slugA < slugB
 		}
 		if reverse {
 			return !less
@@ -323,8 +323,8 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 	// cursor reached the end of the list. If so, the dimension is set to -1.
 	l := len(a.registries)
 	for _, o := range list {
-		name := o["name"].(string)
-		offsets := a.names[name]
+		slug := o["slug"].(string)
+		offsets := a.slugs[slug]
 
 		i := 0
 		// This first loop checks the first element >= 0 in the offsets associated
@@ -338,7 +338,7 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 		}
 		// We continue the iteration to the next lower-priority dimensions and for
 		// non-null ones, we can increment their value by at-most one. This
-		// correspond to values that where rejected by having the same names as
+		// correspond to values that where rejected by having the same slugs as
 		// prioritized objects.
 		i++
 		for ; i < l; i++ {

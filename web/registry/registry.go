@@ -20,10 +20,6 @@ func proxyReq(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	// TODO: remove this offline registry (temporary)
-	if len(registries) == 0 {
-		registries = append(registries, offlineRegistry)
-	}
 	req := c.Request()
 	r, err := registry.Proxy(req, registries, registry.WithCache)
 	if err != nil {
@@ -42,10 +38,6 @@ func proxyListReq(c echo.Context) error {
 	registries, err := i.Registries()
 	if err != nil {
 		return err
-	}
-	// TODO: remove this offline registry (temporary)
-	if len(registries) == 0 {
-		registries = append(registries, offlineRegistry)
 	}
 	req := c.Request()
 	list, err := registry.ProxyList(req, registries)
