@@ -119,8 +119,8 @@ This route adds or modify an application to the registry. The content of the req
 #### Status codes
 
 * 201 Created, when the application has been successfully added
-* 409 Conflict, when an application with the same name already exists
-* 400 Bad request, if the given application data is malformed (bad name, missing editor, ...)
+* 409 Conflict, when an application with the same slug already exists
+* 400 Bad request, if the given application data is malformed (bad slug, missing editor, ...)
 
 #### Request
 
@@ -237,7 +237,7 @@ as tags.
 
 Sorting is allowed on the following fields:
 
-  - `name`
+  - `slug`
   - `type`
   - `editor`
   - `category`
@@ -256,7 +256,7 @@ sort      | name of the field on which to apply the sort of the list
 #### Request
 
 ```http
-GET /registry?filter[category]=main&limit=20&sort=name HTTP/1.1
+GET /registry?filter[category]=main&limit=20&sort=slug HTTP/1.1
 ```
 
 #### Response
@@ -296,7 +296,7 @@ Content-Type: application/json
 
 ### GET /registry/:app
 
-Get an application object by name.
+Get an application object by slug.
 
 #### Request
 
