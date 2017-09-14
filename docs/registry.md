@@ -32,10 +32,10 @@ An application object is **mutable**.
 
 An application object contains the following fields:
 
-- `name`: the application name
+- `slug`: the application slug (unique)
 - `type`: the application type ("webapp" or "konnector")
 - `editor`: the application editor name
-- `full_name`: object containing a human readable name for the application in multiple languages
+- `name`: object containing a human readable name for the application in multiple languages
 - `description`: object containing the description description of the application in multiple languages
 - `category`: the application category
 - `repository`: object with type and URL of package repository
@@ -49,10 +49,10 @@ Example:
 
 ```json
 {
-    "name": "drive",
+    "slug": "drive",
     "type": "webapp",
     "editor": "cozy",
-    "full_name": {
+    "name": {
         "en": "Drive",
         "fr": "Drive"
     },
@@ -82,7 +82,7 @@ A version object is **immutable**.
 
 An application version object contains the following fields:
 
-- `name`: the application name
+- `slug`: the application slug
 - `type`: the application type (webapp, konnector, ...)
 - `manifest`: the [entire](./apps.md#the-manifest) [manifest](./konnectors.md#the-manifest) defined in the package
 - `created_at`: date of the release creation
@@ -97,7 +97,7 @@ Example:
 
 ```json
 {
-    "name": "drive",
+    "slug": "drive",
     "type": "webapp",
     "version": "3.1.2",
     "created_at": "2017-07-05T07:54:40.982Z",
@@ -131,9 +131,9 @@ Authorization: Token AbCdE
 
 ```json
 {
-    "name": "drive",
+    "slug": "drive",
     "editor": "cozy",
-    "full_name": {
+    "name": {
         "en": "Drive",
         "fr": "Drive"
     },
@@ -202,7 +202,7 @@ Location: http://.../3.1.2
 
 ```json
 {
-    "name": "drive",
+    "slug": "drive",
     "type": "webapp",
     "version": "3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a",
     "created_at": "2017-07-05T07:54:40.982Z",
@@ -270,7 +270,7 @@ Content-Type: application/json
 {
     "data": [
         {
-            "name": "drive",
+            "slug": "drive",
             "type": "webapp",
             "editor": "cozy",
             "category": "main",
@@ -313,7 +313,7 @@ Content-Type: application/json
 
 ```json
 {
-    "name": "drive",
+    "slug": "drive",
     "editor": "cozy",
     "description": "The drive application",
     "repository": "https://github.com/cozy/cozy-drive",
@@ -345,7 +345,7 @@ Content-Type: application/json
 
 ```json
 {
-    "name": "drive",
+    "slug": "drive",
     "type": "webapp",
     "version": "3.1.1",
     "url": "http://.../3.1.1",
@@ -375,7 +375,7 @@ Content-Type: application/json
 
 ```json
 {
-    "name": "drive",
+    "slug": "drive",
     "type": "webapp",
     "version": "3.1.1",
     "url": "http://.../3.1.1",
