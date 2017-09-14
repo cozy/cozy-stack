@@ -212,7 +212,7 @@ func (i *Installer) Run() {
 	if err != nil {
 		i.errc <- err
 	} else {
-		i.manc <- i.man
+		i.manc <- i.man.Clone().(Manifest)
 	}
 }
 
@@ -243,7 +243,7 @@ func (i *Installer) install() error {
 		if err := i.ReadManifest(Installing); err != nil {
 			return err
 		}
-		i.manc <- i.man
+		i.manc <- i.man.Clone().(Manifest)
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
 		}
@@ -270,7 +270,7 @@ func (i *Installer) update() error {
 		return err
 	}
 
-	i.manc <- i.man
+	i.manc <- i.man.Clone().(Manifest)
 
 	// Fast path for registry:// and http:// sources: we do not need to go
 	// further in the case where the fetched manifest has the same version has

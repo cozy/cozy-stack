@@ -99,6 +99,13 @@ func MarshalObject(o Object) (json.RawMessage, error) {
 		return nil, err
 	}
 
+	o.SetID("")
+	o.SetRev("")
+	defer func() {
+		o.SetID(id)
+		o.SetRev(rev)
+	}()
+
 	data := ObjectMarshalling{
 		Type:          o.DocType(),
 		ID:            id,
