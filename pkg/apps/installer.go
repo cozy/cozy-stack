@@ -48,6 +48,7 @@ type Installer struct {
 type InstallerOptions struct {
 	Type        AppType
 	Operation   Operation
+	Manifest    Manifest
 	Slug        string
 	SourceURL   string
 	Deactivated bool
@@ -67,42 +68,16 @@ type Fetcher interface {
 
 // NewInstaller creates a new Installer
 func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Installer, error) {
-	if opts.Operation == 0 {
-		panic("Missing installer operation")
-	}
-	if opts.Type != Webapp && opts.Type != Konnector {
-		panic("Bad or missing installer type")
-	}
-
-	slug := opts.Slug
-	if slug == "" || !slugReg.MatchString(slug) {
-		return nil, ErrInvalidSlugName
+	man, err := initManifest(db, opts)
+	if err != nil {
+		return nil, err
 	}
 
 	// For konnectors applications, we actually create a tar archive in which the
 	// sources are stored before copying the archive into the application
 	// storage.
-	if opts.Type == Konnector {
+	if man.AppType() == Konnector {
 		fs = newTarCopier(fs, KonnectorArchiveName)
-	}
-
-	man, err := GetBySlug(db, slug, opts.Type)
-	if opts.Operation == Install {
-		if err == nil {
-			return nil, ErrAlreadyExists
-		}
-		if err != ErrNotFound {
-			return nil, err
-		}
-		err = nil
-		switch opts.Type {
-		case Webapp:
-			man = &WebappManifest{}
-		case Konnector:
-			man = &KonnManifest{}
-		}
-	} else if err != nil {
-		return nil, err
 	}
 
 	var src *url.URL
@@ -120,6 +95,8 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 			srcString = opts.SourceURL
 		}
 		src, err = url.Parse(srcString)
+	default:
+		panic("Unknwon installer operation")
 	}
 	if err != nil {
 		return nil, err
@@ -135,7 +112,7 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 	log := logger.WithDomain(db.Prefix())
 
 	var manFilename string
-	switch opts.Type {
+	switch man.AppType() {
 	case Webapp:
 		manFilename = WebappManifestName
 	case Konnector:
@@ -165,12 +142,50 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 
 		man:  man,
 		src:  src,
-		slug: slug,
+		slug: man.Slug(),
 
 		errc: make(chan error, 1),
 		manc: make(chan Manifest, 2),
 		log:  log,
 	}, nil
+}
+
+func initManifest(db couchdb.Database, opts *InstallerOptions) (man Manifest, err error) {
+	if man = opts.Manifest; man != nil {
+		return man, nil
+	}
+
+	slug := opts.Slug
+	if slug == "" || !slugReg.MatchString(slug) {
+		return nil, ErrInvalidSlugName
+	}
+
+	if opts.Operation == Install {
+		_, err = GetBySlug(db, slug, opts.Type)
+		if err == nil {
+			return nil, ErrAlreadyExists
+		}
+		if err != ErrNotFound {
+			return nil, err
+		}
+		switch opts.Type {
+		case Webapp:
+			man = &WebappManifest{DocSlug: slug}
+		case Konnector:
+			man = &KonnManifest{DocSlug: slug}
+		}
+	} else {
+		man, err = GetBySlug(db, slug, opts.Type)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if man == nil {
+		panic("Bad or missing installer type")
+	}
+
+	return man, nil
 }
 
 // Run will install, update or delete the application linked to the installer,
@@ -197,7 +212,7 @@ func (i *Installer) Run() {
 	if err != nil {
 		i.errc <- err
 	} else {
-		i.manc <- i.man
+		i.manc <- i.man.Clone().(Manifest)
 	}
 }
 
@@ -228,7 +243,7 @@ func (i *Installer) install() error {
 		if err := i.ReadManifest(Installing); err != nil {
 			return err
 		}
-		i.manc <- i.man
+		i.manc <- i.man.Clone().(Manifest)
 		if err := i.fetcher.Fetch(i.src, i.fs, i.man); err != nil {
 			return err
 		}
@@ -250,11 +265,12 @@ func (i *Installer) update() error {
 	}
 
 	version := i.man.Version()
+	oldPermissions := i.man.Permissions()
 	if err := i.ReadManifest(Upgrading); err != nil {
 		return err
 	}
 
-	i.manc <- i.man
+	i.manc <- i.man.Clone().(Manifest)
 
 	// Fast path for registry:// and http:// sources: we do not need to go
 	// further in the case where the fetched manifest has the same version has
@@ -266,6 +282,16 @@ func (i *Installer) update() error {
 	switch i.src.Scheme {
 	case "registry", "http", "https":
 		sameVersion = (version == i.man.Version())
+	}
+
+	// If the permissions have changed, we set the end state of the applications
+	// as "installed", meaning the user will have to accept the new set of
+	// permissions before accessing to set the application state as "ready".
+	newPermissions := i.man.Permissions()
+	samePermissions := newPermissions != nil && oldPermissions != nil &&
+		newPermissions.HasSameRules(oldPermissions)
+	if !samePermissions {
+		i.endState = Installed
 	}
 
 	if !sameVersion {

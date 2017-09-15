@@ -81,11 +81,12 @@ type Config struct {
 	NoReply    string
 	Hooks      string
 
-	Fs         Fs
-	CouchDB    CouchDB
-	Jobs       Jobs
-	Konnectors Konnectors
-	Mail       *gomail.DialerOptions
+	AutoUpdates AutoUpdates
+	Fs          Fs
+	CouchDB     CouchDB
+	Jobs        Jobs
+	Konnectors  Konnectors
+	Mail        *gomail.DialerOptions
 
 	Cache                       RedisConfig
 	Lock                        RedisConfig
@@ -121,6 +122,12 @@ type Jobs struct {
 // Konnectors contains the configuration values for the konnectors
 type Konnectors struct {
 	Cmd string
+}
+
+// AutoUpdates contains the configuration values for auto updates
+type AutoUpdates struct {
+	Activated bool
+	Schedule  string
 }
 
 // RedisConfig contains the configuration values for a redis system
@@ -294,6 +301,10 @@ func UseViper(v *viper.Viper) error {
 		},
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
+		},
+		AutoUpdates: AutoUpdates{
+			Activated: v.GetString("auto_updates.schedule") != "",
+			Schedule:  v.GetString("auto_updates.schedule"),
 		},
 		Cache:                       NewRedisConfig(v.GetString("cache.url")),
 		Lock:                        NewRedisConfig(v.GetString("lock.url")),

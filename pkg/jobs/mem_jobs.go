@@ -129,9 +129,9 @@ func (b *memBroker) Shutdown(ctx context.Context) error {
 		}
 	}
 	if errm != nil {
-		fmt.Println("failed: ", errm)
+		fmt.Println("failed:", errm)
 	} else {
-		fmt.Println("ok")
+		fmt.Println("ok.")
 	}
 	return errm
 }

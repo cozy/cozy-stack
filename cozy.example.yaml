@@ -76,6 +76,10 @@ mail:
 # directory with the hooks scripts - flags: --hooks
 hooks: ./scripts/hooks
 
+# Auto updates scheduler
+auto_updates:
+  schedule: "@cron 0 0 0 * * *"
+
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level
   level: info

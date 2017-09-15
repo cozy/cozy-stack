@@ -8,10 +8,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -106,7 +106,7 @@ func (t *apiTrigger) MarshalJSON() ([]byte, error) {
 
 func getQueue(c echo.Context) error {
 	workerType := c.Param("worker-type")
-	count, err := stack.GetBroker().QueueLen(workerType)
+	count, err := globals.GetBroker().QueueLen(workerType)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -143,7 +143,7 @@ func pushJob(c echo.Context) error {
 		return err
 	}
 
-	job, err := stack.GetBroker().PushJob(jr)
+	job, err := globals.GetBroker().PushJob(jr)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -153,7 +153,7 @@ func pushJob(c echo.Context) error {
 
 func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	req := &apiTriggerRequest{}
 	if _, err := jsonapi.Bind(c.Request(), &req); err != nil {
 		return wrapJobsError(err)
@@ -193,7 +193,7 @@ func newTrigger(c echo.Context) error {
 
 func getTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
@@ -206,7 +206,7 @@ func getTrigger(c echo.Context) error {
 
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
 		return wrapJobsError(err)
@@ -222,7 +222,7 @@ func deleteTrigger(c echo.Context) error {
 
 func cleanTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
 		return err
 	}
@@ -265,7 +265,7 @@ func cleanTriggers(c echo.Context) error {
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerFilter := c.QueryParam("Worker")
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func getAllTriggers(c echo.Context) error {
 
 func getJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	job, err := stack.GetBroker().GetJobInfos(instance.Domain, c.Param("job-id"))
+	job, err := globals.GetBroker().GetJobInfos(instance.Domain, c.Param("job-id"))
 	if err != nil {
 		return err
 	}

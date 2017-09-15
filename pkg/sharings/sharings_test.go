@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -886,7 +887,7 @@ func TestRevokeSharing(t *testing.T) {
 		consts.MasterMasterSharing, true, "",
 		[]*Recipient{recipient1, recipient2}, rule)
 	// We add a trigger to this sharing.
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
 	nbTriggers := len(triggers)
 	err := AddTrigger(testInstance, rule, sharingSharerMM.SharingID, false)
@@ -1000,7 +1001,7 @@ func TestRevokeRecipient(t *testing.T) {
 		true, "", []*Recipient{recipient1, recipient2}, rule)
 
 	// We add a trigger to this sharing.
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
 	nbTriggers := len(triggers)
 	err = AddTrigger(testInstance, rule, sharing.SharingID, false)
@@ -1090,12 +1091,6 @@ func TestMain(m *testing.M) {
 		Path:   tempdir,
 	}
 
-	_, err = stack.Start()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
 	// The instance must be created in db in order to retrieve it from
 	// the share_data worker
 	instance.Destroy(domainSharer)
@@ -1163,11 +1158,12 @@ func TestMain(m *testing.M) {
 	}
 
 	createSettings(in)
-	_, err = stack.Start()
+	b, s, _, err := stack.Start()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	globals.Set(b, s)
 
 	ts = createServer()
 	recipientURL = strings.Split(ts.URL, "http://")[1]

@@ -270,6 +270,7 @@ func Routes(router *echo.Group) {
 	router.PATCH("/:domain", modifyHandler)
 	router.DELETE("/:domain", deleteHandler)
 	router.GET("/:domain/fsck", fsckHandler)
+	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
 }

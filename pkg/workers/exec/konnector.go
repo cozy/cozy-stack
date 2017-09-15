@@ -296,7 +296,7 @@ func (w *konnectorWorker) Commit(ctx context.Context, msg *jobs.Message, errjob 
 	// }
 	// log := logger.WithDomain(domain)
 	// log.Info("Konnector has failed definitively, should send mail.", mail)
-	// _, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+	// _, err = globals.GetBroker().PushJob(&jobs.JobRequest{
 	// 	Domain:     domain,
 	// 	WorkerType: "sendmail",
 	// 	Message:    msg,

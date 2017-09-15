@@ -123,6 +123,7 @@ Cookie: sessionid=xxxx
     },
     "attributes": {
       "locale":"fr",
+      "auto_update": true,
       "email": "alice@example.com",
       "public_name":"Alice Martin"
     }

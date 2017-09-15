@@ -3,8 +3,8 @@ package notifications
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
@@ -85,7 +85,7 @@ func sendMail(db couchdb.Database, n *Notification) error {
 	if err != nil {
 		return err
 	}
-	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
 		Domain:     db.Prefix(),
 		WorkerType: "sendmail",
 		Message:    msg,

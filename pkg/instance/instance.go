@@ -18,13 +18,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
@@ -76,11 +76,12 @@ var (
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID  string `json:"_id,omitempty"`  // couchdb _id
-	DocRev string `json:"_rev,omitempty"` // couchdb _rev
-	Domain string `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
-	Locale string `json:"locale"`         // The locale used on the server
-	Dev    bool   `json:"dev"`            // Whether or not the instance is for development
+	DocID        string `json:"_id,omitempty"`            // couchdb _id
+	DocRev       string `json:"_rev,omitempty"`           // couchdb _rev
+	Domain       string `json:"domain"`                   // The main DNS domain, like example.cozycloud.cc
+	Locale       string `json:"locale"`                   // The locale used on the server
+	NoAutoUpdate bool   `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
+	Dev          bool   `json:"dev,omitempty"`            // Whether or not the instance is for development
 
 	OnboardingFinished bool `json:"onboarding_finished"` // Whether or not the onboarding is complete
 
@@ -592,7 +593,7 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	if err := i.createDefaultFilesTree(); err != nil {
 		return nil, err
 	}
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	for _, trigger := range Triggers(i.Domain) {
 		t, err := scheduler.NewTrigger(&trigger)
 		if err != nil {
@@ -701,11 +702,7 @@ func (i *Instance) Translate(key string, vars ...interface{}) string {
 // List returns the list of declared instances.
 func List() ([]*Instance, error) {
 	var all []*Instance
-	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
-		var doc *Instance
-		if err := json.Unmarshal(data, &doc); err != nil {
-			return err
-		}
+	err := ForeachInstances(func(doc *Instance) error {
 		all = append(all, doc)
 		return nil
 	})
@@ -713,6 +710,17 @@ func List() ([]*Instance, error) {
 		return nil, err
 	}
 	return all, nil
+}
+
+// ForeachInstances execute the given callback for each instances.
+func ForeachInstances(fn func(*Instance) error) error {
+	return couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
+		var doc *Instance
+		if err := json.Unmarshal(data, &doc); err != nil {
+			return err
+		}
+		return fn(doc)
+	})
 }
 
 // Update is used to save changes made to an instance, it will invalidate
@@ -746,7 +754,7 @@ func DestroyWithoutHooks(domain string) error {
 	if err != nil {
 		return err
 	}
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	triggers, err := sched.GetAll(domain)
 	if err == nil {
 		for _, t := range triggers {
@@ -830,7 +838,7 @@ func (i *Instance) RequestPassphraseReset() error {
 	if err != nil {
 		return err
 	}
-	_, err = stack.GetBroker().PushJob(&jobs.JobRequest{
+	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
 		Domain:     i.Domain,
 		WorkerType: "sendmail",
 		Message:    msg,

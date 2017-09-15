@@ -9,10 +9,10 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/stack"
 )
 
 // Route is a struct to serve a folder inside an app
@@ -157,6 +157,9 @@ func (m *WebappManifest) SetState(state State) { m.DocState = state }
 // SetVersion is part of the Manifest interface
 func (m *WebappManifest) SetVersion(version string) { m.DocVersion = version }
 
+// AppType is part of the Manifest interface
+func (m *WebappManifest) AppType() AppType { return Webapp }
+
 // Permissions is part of the Manifest interface
 func (m *WebappManifest) Permissions() permissions.Set {
 	return m.DocPermissions
@@ -280,7 +283,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		created = append(created, newService)
 	}
 
-	sched := stack.GetScheduler()
+	sched := globals.GetScheduler()
 	for _, service := range deleted {
 		if err := sched.Delete(domain, service.TriggerID); err != nil {
 			return err

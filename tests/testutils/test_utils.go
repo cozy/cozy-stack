@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -101,10 +102,11 @@ func (c *TestSetup) GetTestInstance(opts ...*instance.Options) *instance.Instanc
 	if c.inst != nil {
 		return c.inst
 	}
-	_, err := stack.Start()
+	b, s, _, err := stack.Start()
 	if err != nil {
 		c.CleanupAndDie("Error while starting job system", err)
 	}
+	globals.Set(b, s)
 	if len(opts) == 0 {
 		opts = []*instance.Options{{}}
 	}

@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var flagDomain string
 var flagLocale string
 var flagTimezone string
 var flagEmail string
@@ -437,6 +438,31 @@ var oauthClientInstanceCmd = &cobra.Command{
 	},
 }
 
+var updateCmd = &cobra.Command{
+	Use:   "update [domain] [slugs...]",
+	Short: "Start the updates for the specified domain instance.",
+	Long: `Start the updates for the specified domain instance. Use whether the --domain
+flag to specify the instance or the --all-domains flags to updates all domains.
+The slugs arguments can be used to select which applications should be
+updated.`,
+	Aliases: []string{"updates"},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		if flagAllDomains {
+			return c.Updates(&client.UpdatesOptions{
+				Slugs: args,
+			})
+		}
+		if flagDomain == "" {
+			return errAppsMissingDomain
+		}
+		return c.Updates(&client.UpdatesOptions{
+			Domain: flagDomain,
+			Slugs:  args,
+		})
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
@@ -450,6 +476,7 @@ func init() {
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
+	instanceCmdGroup.AddCommand(updateCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
@@ -463,5 +490,7 @@ func init() {
 	fsckInstanceCmd.Flags().BoolVar(&flagDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "specify the domain name of the instance")
 	RootCmd.AddCommand(instanceCmdGroup)
 }

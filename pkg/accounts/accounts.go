@@ -5,8 +5,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/stack"
 )
 
 // Account holds configuration information for an account
@@ -73,7 +73,7 @@ func (ac *Account) Valid(field, expected string) bool {
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
 		func(domain string, doc couchdb.Doc, old couchdb.Doc) error {
-			trigs, err := stack.GetScheduler().GetAll(domain)
+			trigs, err := globals.GetScheduler().GetAll(domain)
 			if err != nil {
 				logger.WithDomain(domain).Error(
 					"Failed to fetch triggers after account deletion: ", err)
@@ -98,7 +98,7 @@ func init() {
 					}
 				}
 				if toDelete {
-					if err := stack.GetScheduler().Delete(domain, t.ID()); err != nil {
+					if err := globals.GetScheduler().Delete(domain, t.ID()); err != nil {
 						logger.WithDomain(domain).Errorln("failed to delete orphan trigger", err)
 					}
 				}

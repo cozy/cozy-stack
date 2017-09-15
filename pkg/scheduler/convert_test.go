@@ -3,9 +3,9 @@ package scheduler_test
 import (
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +26,7 @@ func TestTriggersFromMonoStackAreImportedInRedit(t *testing.T) {
 		return
 	}
 
-	newsched := stack.GetScheduler().(*scheduler.RedisScheduler)
+	newsched := globals.GetScheduler().(*scheduler.RedisScheduler)
 	err = newsched.ImportFromMemStorage()
 	if !assert.NoError(t, err) {
 		return

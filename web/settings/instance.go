@@ -43,6 +43,7 @@ func getInstance(c echo.Context) error {
 	}
 	doc.M["locale"] = instance.Locale
 	doc.M["onboarding_finished"] = instance.OnboardingFinished
+	doc.M["auto_update"] = !instance.NoAutoUpdate
 
 	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
 		return err
@@ -68,9 +69,21 @@ func updateInstance(c echo.Context) error {
 		return err
 	}
 
+	needUpdate := false
+
 	if locale, ok := doc.M["locale"].(string); ok {
 		delete(doc.M, "locale")
 		inst.Locale = locale
+		needUpdate = true
+	}
+
+	if autoUpdate, ok := doc.M["auto_update"].(bool); ok {
+		delete(doc.M, "auto_upate")
+		inst.NoAutoUpdate = !autoUpdate
+		needUpdate = true
+	}
+
+	if needUpdate {
 		if err := instance.Update(inst); err != nil {
 			return err
 		}
@@ -81,5 +94,7 @@ func updateInstance(c echo.Context) error {
 	}
 
 	doc.M["locale"] = inst.Locale
+	doc.M["onboarding_finished"] = inst.OnboardingFinished
+	doc.M["auto_update"] = !inst.NoAutoUpdate
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }

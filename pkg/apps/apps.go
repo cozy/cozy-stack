@@ -45,7 +45,7 @@ type AppType int
 
 const (
 	// Webapp is the clientside application type
-	Webapp AppType = iota
+	Webapp AppType = iota + 1
 	// Konnector is the serverside application type
 	Konnector
 )
@@ -76,6 +76,7 @@ type Manifest interface {
 	Update(db couchdb.Database) error
 	Delete(db couchdb.Database) error
 
+	AppType() AppType
 	Permissions() permissions.Set
 	Source() string
 	Version() string
