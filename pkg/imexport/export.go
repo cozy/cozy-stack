@@ -14,6 +14,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
+const (
+	metaAlbumDir   = "metadata/album/"
+	albumFile      = "album.json"
+	referencesFile = "references.json"
+)
+
 // References between albumid and filepath
 type References struct {
 	Albumid  string `json:"albumid"`
@@ -75,9 +81,8 @@ func metadata(tw *tar.Writer, instance *instance.Instance) error {
 		return err
 	}
 
-	metaDir := "metadata/album/"
 	hdrDir := &tar.Header{
-		Name:     metaDir,
+		Name:     metaAlbumDir,
 		Mode:     0755,
 		Typeflag: tar.TypeDir,
 	}
@@ -86,7 +91,7 @@ func metadata(tw *tar.Writer, instance *instance.Instance) error {
 	}
 
 	hdrAlbum := &tar.Header{
-		Name:       metaDir + "album.json",
+		Name:       metaAlbumDir + albumFile,
 		Mode:       0644,
 		AccessTime: time.Now(),
 		ChangeTime: time.Now(),
@@ -126,7 +131,7 @@ func metadata(tw *tar.Writer, instance *instance.Instance) error {
 	size = 0
 
 	hdrRef := &tar.Header{
-		Name:       metaDir + "references.json",
+		Name:       metaAlbumDir + referencesFile,
 		Mode:       0644,
 		AccessTime: time.Now(),
 		ChangeTime: time.Now(),
