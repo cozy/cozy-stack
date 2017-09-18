@@ -11,7 +11,7 @@ var docCmdGroup = &cobra.Command{
 	Short: "Print the documentation",
 	Long:  "Print the documentation about the usage of cozy-stack in command-line",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
+		return cmd.Usage()
 	},
 }
 
@@ -25,7 +25,7 @@ $ cozy-stack doc man ~/share/man
 $ man cozy-stack`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		header := &doc.GenManHeader{
 			Title:   "COZY-STACK",

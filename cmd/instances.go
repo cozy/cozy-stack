@@ -48,7 +48,7 @@ Each instance has a separate space for storing files and a prefix used to
 create its CouchDB databases.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
+		return cmd.Usage()
 	},
 }
 
@@ -57,7 +57,7 @@ var cleanInstanceCmd = &cobra.Command{
 	Short: "Clean badly removed instances",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 
 		domain := args[0]
@@ -76,7 +76,7 @@ given domain.
 	Example: "$ cozy-stack instances show cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		domain := args[0]
 		c := newAdminClient()
@@ -103,7 +103,7 @@ given domain.
 	Example: "$ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings cozy.tools:8080",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 
 		var quota int64
@@ -171,7 +171,7 @@ instance of the given domain. Set the quota to 0 to remove the quota.
 	Example: "$ cozy-stack instances set-disk-quota cozy.tools:8080 3GB",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 2 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		diskQuota, err := humanize.ParseBytes(args[1])
 		if err != nil {
@@ -196,7 +196,7 @@ specific domain.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 2 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		domain := args[0]
 		debug, err := strconv.ParseBool(args[1])
@@ -273,7 +273,7 @@ and all its data.
 	Aliases: []string{"rm"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 
 		domain := args[0]
@@ -320,7 +320,7 @@ in swift/localfs but not couchdb.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 
 		domain := args[0]
@@ -352,7 +352,7 @@ var appTokenInstanceCmd = &cobra.Command{
 	Short: "Generate a new application token",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newAdminClient()
 		token, err := c.GetToken(&client.TokenOptions{
@@ -374,7 +374,7 @@ var cliTokenInstanceCmd = &cobra.Command{
 	Short: "Generate a new CLI access token (global access)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newAdminClient()
 		token, err := c.GetToken(&client.TokenOptions{
@@ -396,7 +396,7 @@ var oauthTokenInstanceCmd = &cobra.Command{
 	Short: "Generate a new OAuth access token",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 3 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newAdminClient()
 		token, err := c.GetToken(&client.TokenOptions{
@@ -420,7 +420,7 @@ var oauthClientInstanceCmd = &cobra.Command{
 	Long:  `It registers a new OAuth client and returns its client_id`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 4 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newAdminClient()
 		clientID, err := c.RegisterOAuthClient(&client.OAuthClientOptions{

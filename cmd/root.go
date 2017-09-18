@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -20,6 +21,9 @@ const DefaultStorageDir = "storage"
 var cfgFile string
 var flagClientUseHTTPS bool
 
+// ErrUsage is returned by the cmd.Usage() method
+var ErrUsage = errors.New("Bad usage of command")
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "cozy-stack",
@@ -33,7 +37,7 @@ profiles you.`,
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Display the usage/help by default
-		return cmd.Help()
+		return cmd.Usage()
 	},
 	// Do not display usage on error
 	SilenceUsage: true,
@@ -92,6 +96,13 @@ func newAdminClient() *client.Client {
 }
 
 func init() {
+	usageFunc := RootCmd.UsageFunc()
+
+	RootCmd.SetUsageFunc(func(cmd *cobra.Command) error {
+		usageFunc(cmd)
+		return ErrUsage
+	})
+
 	flags := RootCmd.PersistentFlags()
 	flags.StringVarP(&cfgFile, "config", "c", "", "configuration file (default \"$HOME/.cozy.yaml\")")
 

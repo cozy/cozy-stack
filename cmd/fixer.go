@@ -22,7 +22,7 @@ var fixerCmdGroup = &cobra.Command{
 	Use:   "fixer [command]",
 	Short: "A set of tools to fix issues or migrate content for retro-compatibility.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
+		return cmd.Usage()
 	},
 }
 
@@ -31,7 +31,7 @@ var albumsCreatedAtFixerCmd = &cobra.Command{
 	Short: "Add a created_at field for albums where it's missing",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newClient(args[0], consts.PhotosAlbums)
 		res, err := c.Req(&request.Options{
@@ -94,7 +94,7 @@ var md5FixerCmd = &cobra.Command{
 	Short: "Fix missing md5 from contents in the vfs",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newClient(args[0], consts.Files)
 		return c.WalkByPath("/", func(name string, doc *client.DirOrFile, err error) error {
@@ -142,7 +142,7 @@ var mimeFixerCmd = &cobra.Command{
 	Short: "Fix the class computed from the mime-type",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newClient(args[0], consts.Files)
 		return c.WalkByPath("/", func(name string, doc *client.DirOrFile, err error) error {
@@ -174,7 +174,7 @@ var triggersFixer = &cobra.Command{
 	Short: "Remove orphaned triggers from an instance",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newClient(args[0], consts.Triggers+" "+consts.Accounts)
 		res, err := c.Req(&request.Options{
@@ -203,7 +203,7 @@ var jobsFixer = &cobra.Command{
 	Short: "Take a look at the consistency of the jobs",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newClient(args[0], consts.Jobs)
 		res, err := c.Req(&request.Options{

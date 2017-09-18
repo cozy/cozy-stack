@@ -30,7 +30,7 @@ It can also take a list of settings to update.
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagSettingsDomain == "" {
 			errPrintfln("%s", errSettingsMissingDomain)
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newClient(flagSettingsDomain, consts.Settings)
 		res, err := c.Req(&request.Options{
