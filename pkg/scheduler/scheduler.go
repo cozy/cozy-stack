@@ -35,10 +35,12 @@ func (t *TriggerInfos) DocType() string { return consts.Triggers }
 func (t *TriggerInfos) Clone() couchdb.Doc {
 	cloned := *t
 	if t.Options != nil {
-		cloned.Options = &(*t.Options)
+		tmp := *t.Options
+		cloned.Options = &tmp
 	}
 	if t.Message != nil {
-		cloned.Message = &(*t.Message)
+		tmp := *t.Message
+		cloned.Message = &tmp
 	}
 	return &cloned
 }

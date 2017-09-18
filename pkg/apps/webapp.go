@@ -103,7 +103,8 @@ func (m *WebappManifest) DocType() string { return consts.Apps }
 func (m *WebappManifest) Clone() couchdb.Doc {
 	cloned := *m
 	if m.Developer != nil {
-		cloned.Developer = &(*m.Developer)
+		tmp := *m.Developer
+		cloned.Developer = &tmp
 	}
 
 	cloned.Routes = make(Routes, len(m.Routes))

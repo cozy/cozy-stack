@@ -49,7 +49,8 @@ func (m *KonnManifest) DocType() string { return consts.Konnectors }
 func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned := *m
 	if m.Developer != nil {
-		cloned.Developer = &(*m.Developer)
+		tmp := *m.Developer
+		cloned.Developer = &tmp
 	}
 
 	cloned.Locales = make(Locales, len(m.Locales))

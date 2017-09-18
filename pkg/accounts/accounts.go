@@ -53,10 +53,12 @@ func (ac *Account) DocType() string { return consts.Accounts }
 func (ac *Account) Clone() couchdb.Doc {
 	cloned := *ac
 	if ac.Oauth != nil {
-		cloned.Oauth = &(*ac.Oauth)
+		tmp := *ac.Oauth
+		cloned.Oauth = &tmp
 	}
 	if ac.Basic != nil {
-		cloned.Basic = &(*ac.Basic)
+		tmp := *ac.Basic
+		cloned.Basic = &tmp
 	}
 	cloned.Extras = make(map[string]interface{})
 	for k, v := range ac.Extras {

@@ -57,7 +57,8 @@ func (s *Session) SetRev(v string) { s.DocRev = v }
 func (s *Session) Clone() couchdb.Doc {
 	cloned := *s
 	if cloned.Instance != nil {
-		cloned.Instance = &(*s.Instance)
+		tmp := *s.Instance
+		cloned.Instance = &tmp
 	}
 	return &cloned
 }
