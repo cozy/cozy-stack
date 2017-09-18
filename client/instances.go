@@ -216,7 +216,7 @@ func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 
 // RegisterOAuthClient register a new OAuth client associated to the specified
 // instance.
-func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (string, error) {
+func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (map[string]interface{}, error) {
 	q := url.Values{
 		"Domain":      {opts.Domain},
 		"RedirectURI": {opts.RedirectURI},
@@ -229,14 +229,14 @@ func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (string, error) {
 		Queries: q,
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer res.Body.Close()
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return "", err
+	var client map[string]interface{}
+	if err = json.NewDecoder(res.Body).Decode(&client); err != nil {
+		return nil, err
 	}
-	return string(b), nil
+	return client, nil
 }
 
 // Updates launch the updating process of the applications. When no Domain is

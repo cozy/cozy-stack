@@ -33,6 +33,7 @@ var flagPassphrase string
 var flagForce bool
 var flagExpire time.Duration
 var flagDry bool
+var flagJSON bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -424,7 +425,7 @@ var oauthClientInstanceCmd = &cobra.Command{
 			return cmd.Usage()
 		}
 		c := newAdminClient()
-		clientID, err := c.RegisterOAuthClient(&client.OAuthClientOptions{
+		client, err := c.RegisterOAuthClient(&client.OAuthClientOptions{
 			Domain:      args[0],
 			RedirectURI: args[1],
 			ClientName:  args[2],
@@ -433,7 +434,13 @@ var oauthClientInstanceCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Println(clientID)
+		if flagJSON {
+			encoder := json.NewEncoder(os.Stdout)
+			encoder.SetIndent("", "\t")
+			err = encoder.Encode(client)
+		} else {
+			_, err = fmt.Println(client["client_id"])
+		}
 		return err
 	},
 }
@@ -490,6 +497,7 @@ func init() {
 	fsckInstanceCmd.Flags().BoolVar(&flagDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
+	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "specify the domain name of the instance")
 	RootCmd.AddCommand(instanceCmdGroup)

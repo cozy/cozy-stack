@@ -239,7 +239,7 @@ func registerClient(c echo.Context) error {
 	if regErr := client.Create(in); regErr != nil {
 		return c.String(http.StatusBadRequest, regErr.Description)
 	}
-	return c.String(http.StatusOK, client.ClientID)
+	return c.JSON(http.StatusOK, client)
 }
 
 func wrapError(err error) error {
