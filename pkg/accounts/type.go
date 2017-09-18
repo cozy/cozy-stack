@@ -188,6 +188,10 @@ func (at *AccountType) RefreshAccount(a Account) error {
 		a.Oauth.ExpiresAt = time.Now().Add(time.Duration(out.ExpiresIn) * time.Second)
 	}
 
+	if out.RefreshToken != "" {
+		a.Oauth.RefreshToken = out.RefreshToken
+	}
+
 	return nil
 }
 
