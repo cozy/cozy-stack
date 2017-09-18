@@ -56,7 +56,7 @@ interface. It also provide an import command to import from your
 current filesystem into cozy.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
+		return cmd.Usage()
 	},
 }
 
@@ -66,17 +66,17 @@ var execFilesCmd = &cobra.Command{
 	Long:  "Execute a command on the VFS of the specified domain.\n" + filesExecUsage,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		if flagFilesDomain == "" {
 			errPrintfln("%s", errFilesMissingDomain)
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		c := newClient(flagFilesDomain, consts.Files)
 		command := args[0]
 		err := execCommand(c, command, os.Stdout)
 		if err == errFilesExec {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		return err
 	},
@@ -88,10 +88,10 @@ var importFilesCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if flagFilesDomain == "" {
 			errPrintfln("%s", errFilesMissingDomain)
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		if flagImportFrom == "" || flagImportTo == "" {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 
 		var match *regexp.Regexp

@@ -30,7 +30,7 @@ following line to the .bash_profile
 	ValidArgs: []string{"bash"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		switch args[0] {
 		case "bash":

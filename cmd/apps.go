@@ -29,7 +29,7 @@ It provides commands to install or update applications on
 a cozy.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
+		return cmd.Usage()
 	},
 }
 
@@ -95,7 +95,7 @@ It provides commands to install or update applications on
 a cozy.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
+		return cmd.Usage()
 	},
 }
 
@@ -137,14 +137,14 @@ var lsKonnectorsCmd = &cobra.Command{
 
 func installApp(cmd *cobra.Command, args []string, appType string) error {
 	if len(args) < 1 {
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	slug := args[0]
 	var source string
 	if len(args) == 1 {
 		s, ok := consts.AppsRegistry[slug]
 		if !ok {
-			return cmd.Help()
+			return cmd.Usage()
 		}
 		source = s
 	} else {
@@ -171,7 +171,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 	}
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.InstallApp(&client.AppOptions{
@@ -193,7 +193,7 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 
 func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	if len(args) == 0 || len(args) > 2 {
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	var src string
 	if len(args) > 1 {
@@ -219,7 +219,7 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 	}
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.UpdateApp(&client.AppOptions{
@@ -240,11 +240,11 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 
 func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 	if len(args) != 1 {
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.UninstallApp(&client.AppOptions{
@@ -265,10 +265,10 @@ func uninstallApp(cmd *cobra.Command, args []string, appType string) error {
 func showApp(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	if len(args) < 1 {
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.GetApp(&client.AppOptions{
@@ -289,7 +289,7 @@ func showApp(cmd *cobra.Command, args []string, appType string) error {
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
-		return cmd.Help()
+		return cmd.Usage()
 	}
 	c := newClient(flagAppsDomain, appType)
 	// TODO(pagination)
