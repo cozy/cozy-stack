@@ -208,7 +208,7 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 	}
 	if len(res) < 1 {
 		return nil, ErrSharingDoesNotExist
-	} else if len(res) > 2 {
+	} else if len(res) > 1 {
 		return nil, ErrSharingIDNotUnique
 	}
 	return &res[0], nil
