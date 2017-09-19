@@ -671,9 +671,6 @@ func discovery(c echo.Context) error {
 	}
 	if !found {
 		recipient.Cozy = append(recipient.Cozy, sharings.RecipientCozy{URL: cozyURL})
-		if err = couchdb.UpdateDoc(instance, recipient); err != nil {
-			return wrapErrors(err)
-		}
 	}
 
 	// Register the recipient with the given URL and save in db
@@ -681,6 +678,7 @@ func discovery(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
+	recStatus.ForceRecipient(recipient)
 	if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
 		if wantsJSON {
 			return c.JSON(http.StatusBadRequest, echo.Map{
@@ -688,6 +686,12 @@ func discovery(c echo.Context) error {
 			})
 		}
 		return renderDiscoveryForm(c, instance, http.StatusBadRequest, recipientID, recipientEmail, sharingID)
+	}
+
+	if !found {
+		if err = couchdb.UpdateDoc(instance, recipient); err != nil {
+			return wrapErrors(err)
+		}
 	}
 	if err = couchdb.UpdateDoc(instance, sharing); err != nil {
 		return wrapErrors(err)
