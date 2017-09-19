@@ -57,7 +57,7 @@ curl -sS -v --fail -X POST \
     -H "Content-Type: application/json" \
     -H "Authorization: Token ${REGISTRY_TOKEN}" \
     -d "{\"version\": \"${COZY_APP_VERSION}\", \"url\": \"${COZY_BUILD_URL}\", \"sha256\": \"${shasum}\"}" \
-    "https://registry.cozy.io/registry/versions/"
+    "https://registry.cozy.io/registry/versions"
 ```
 
 ## Access to our official registry
