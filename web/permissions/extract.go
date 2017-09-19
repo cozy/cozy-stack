@@ -107,7 +107,7 @@ func ParseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 		return pdoc, nil
 
 	default:
-		return nil, echo.NewHTTPError(http.StatusBadRequest, "Unrecognized token audience %v", claims.Audience)
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "Unrecognized token audience "+claims.Audience)
 	}
 }
 
