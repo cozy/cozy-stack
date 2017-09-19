@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +35,7 @@ type updateCron struct {
 // updates of all the instances existing.
 func StartUpdateCron() (utils.Shutdowner, error) {
 	autoUpdates := config.GetConfig().AutoUpdates
+
 	if !autoUpdates.Activated {
 		return utils.NopShutdown, nil
 	}
@@ -43,7 +45,8 @@ func StartUpdateCron() (utils.Shutdowner, error) {
 		finished: make(chan struct{}),
 	}
 
-	schedule, err := cron.Parse(autoUpdates.Schedule)
+	spec := strings.TrimPrefix(autoUpdates.Schedule, "@cron ")
+	schedule, err := cron.Parse(spec)
 	if err != nil {
 		return nil, err
 	}
