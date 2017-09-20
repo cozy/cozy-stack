@@ -23,7 +23,7 @@ Rsync is a well-understood, safe and stable algorithm to replicate files hierarc
 
 ## Couchdb replication & limitation
 
-Couchdb 2 replication protocol is described [in details here ](http://docs.couchdb.org/en/2.0.0/replication/protocol.html)
+Couchdb 2 replication protocol is described [in details here](http://docs.couchdb.org/en/2.1.0/replication/protocol.html).
 
 
 ### Quick summary
@@ -79,10 +79,10 @@ db.replicate.to('https://bob.cozycloud.cc/data/contacts')
 
 To suport this we need to:
 
-- Proxy `/data/:doctype/_changes` route with since, limit, feed=normal. Refuse all filter parameters with a clear error message. [(Doc)](http://docs.couchdb.org/en/2.0.0/api/database/changes.html)
-- Add support of `open_revs`, `revs`, `latest` query parameter to `GET /data/:doctype/:docid` [(Doc) ](http://docs.couchdb.org/en/2.0.0/api/document/common.html?highlight=open_revs#get--db-docid)
-- Proxy the `/data/:doctype/_revs_diff` [(Doc)](http://docs.couchdb.org/en/2.0.0/api/database/misc.html#db-revs-diff) and `/data/:doctype/_bulk_docs` routes [(Doc)](http://docs.couchdb.org/en/2.0.0/api/database/bulk-api.html) routes
-- Have `/data/:doctype/_ensure_full_commit` [(Doc)](http://docs.couchdb.org/en/2.0.0/api/database/compact.html#db-ensure-full-, revs, latestcommit) returns 201
+- Proxy `/data/:doctype/_changes` route with since, limit, feed=normal. Refuse all filter parameters with a clear error message. [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/changes.html)
+- Add support of `open_revs`, `revs`, `latest` query parameter to `GET /data/:doctype/:docid` [(Doc) ](http://docs.couchdb.org/en/2.1.0/api/document/common.html?highlight=open_revs#get--db-docid)
+- Proxy the `/data/:doctype/_revs_diff` [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/misc.html#db-revs-diff) and `/data/:doctype/_bulk_docs` routes [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/bulk-api.html) routes
+- Have `/data/:doctype/_ensure_full_commit` [(Doc)](http://docs.couchdb.org/en/2.1.0/api/database/compact.html#db-ensure-full-, revs, latestcommit) returns 201
 
 This will cover documents part of the Devices use case.
 
@@ -107,7 +107,7 @@ Depending on benchmarking, we can do some optimization on the feed:
 - close feeds when the user is not on screen
 - multiplex different applications' feed, so each open cozy will only use one socket to the server. This is hard, as all apps live on separate domain, an (hackish) option might be a iframe/SharedWorker bridge.
 
-To have some form of couchdb-to-stack continuous changes monitoring, we can monitor `_db_udpates` [(Doc)](http://docs.couchdb.org/en/2.0.0/api/server/common.html#db-updates) which gives us an update when a couchdb has changed. We can then perform a `_changes` query on this database to get the changed docs and proxy that to the stack-to-client change feed.
+To have some form of couchdb-to-stack continuous changes monitoring, we can monitor `_db_udpates` [(Doc)](http://docs.couchdb.org/en/2.1.0/api/server/common.html#db-updates) which gives us an update when a couchdb has changed. We can then perform a `_changes` query on this database to get the changed docs and proxy that to the stack-to-client change feed.
 
 **Conclusion:** We will use Websocket from the client to the stack. We will try to avoid using continuous changes feed from couchdb to the stack. We will optimize if proven needed by benchmarks, starting with "useless" changes and eventually some multiplexing.
 

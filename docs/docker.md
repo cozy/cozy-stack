@@ -13,7 +13,7 @@ $ docker run -d \
     --name cozy-stack-couch \
     -p 5984:5984 \
     -v $HOME/.cozy-stack-couch:/opt/couchdb/data \
-    klaemo/couchdb:2.0.0
+    apache/couchdb:2.1
 $ curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
 ```
 
