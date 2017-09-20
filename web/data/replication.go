@@ -118,7 +118,7 @@ func replicationRoutes(group *echo.Group) {
 	group.GET("/", dbStatus)
 	group.GET("/_design/:designdocid", getDesignDoc)
 	group.GET("/_changes", changesFeed)
-	// POST=GET see http://docs.couchdb.org/en/2.0.0/api/database/changes.html#post--db-_changes)
+	// POST=GET see http://docs.couchdb.org/en/2.1.0/api/database/changes.html#post--db-_changes)
 	group.POST("/_changes", changesFeed)
 
 	group.POST("/_ensure_full_commit", fullCommit)

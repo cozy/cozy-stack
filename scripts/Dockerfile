@@ -6,9 +6,9 @@ FROM debian:stretch-slim
 
 
 # CouchDB
-ENV COUCHDB_VERSION 2.0.0
+ENV COUCHDB_VERSION 2.1.0
 ENV COUCHDB_SRC_URL https://dist.apache.org/repos/dist/release/couchdb/source/$COUCHDB_VERSION/apache-couchdb-$COUCHDB_VERSION.tar.gz
-ENV COUCHDB_SRC_SHA256 ccaf3ce9cb06c50a73e091696e557e2a57c5ba02c5b299e1ac2f5b959ee96eca
+ENV COUCHDB_SRC_SHA256 eb1fbf746cd4bce2322389983e4d174c78e1520435578bff1507bb51c96a8825
 
 ARG DEBIAN_FRONTEND=noninteractive
 
