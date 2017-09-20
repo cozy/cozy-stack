@@ -429,4 +429,8 @@ registries:
 
 # Authentication
 
-To be defined.
+The authentication is based on a token that allow you to publish applications
+and versions with for one specific editor name. This token is base64 encoded.
+
+In order to receive this token, please take a look at the page on [publication
+on the registry](./registry-publish.md).
