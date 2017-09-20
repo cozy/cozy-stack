@@ -38,10 +38,12 @@ set -e
 #   COZY_APP_VERSION: the version string of the deployed version
 
 if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
+    echo "No deployment: in pull-request"
     exit 0
 fi
 
 if [ "${TRAVIS_BRANCH}" != "master" ] && [ "${TRAVIS_BRANCH}" != "${TRAVIS_TAG}" ]; then
+    printf "No deployment: not in master branch nor tag (TRAVIS_BRANCH=%s TRAVIS_TAG=%s)\n" "${TRAVIS_BRANCH}" "${TRAVIS_TAG}"
     exit 0
 fi
 
