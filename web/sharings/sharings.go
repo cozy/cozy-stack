@@ -147,6 +147,10 @@ func SharingRequest(c echo.Context) error {
 
 	sharing, err := sharings.CreateSharingRequest(instance, desc, state,
 		sharingType, scope, clientID, appSlug)
+	if err == sharings.ErrSharingAlreadyExist {
+		redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
+		return c.Redirect(http.StatusSeeOther, redirectAuthorize)
+	}
 	if err != nil {
 		return wrapErrors(err)
 	}

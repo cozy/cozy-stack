@@ -460,7 +460,7 @@ The `client-id` is the one provided by the recipient at the registration step. I
 #### Request
 
 ```http
-DELETE /sharings/xkWMVOrVitZVSqXAAvErcmUAdEKMCLlx/recipient/9e6e595ee50575a3faa064987d00b476
+DELETE /sharings/xkWMVOrVitZVSqXAAvErcmUAdEKMCLlx/recipient/9e6e595ee50575a3faa064987d00b476 HTTP/1.1
 Authorization: Bearer WQiOiJhY2Nlc3MiLCJpYXQiOjE1MDAzNzM0NDIsIml …
 Host: cozy.example.net
 Content-Type: application/json
@@ -490,7 +490,7 @@ Query parameters required:
 * `Dir_id`: the id of the destination directory. The directory should already exist.
 
 ```http
-POST /sharings/app/destinationDirectory?App_slug=sharotronic&Doctype=io.cozy.sharings&Dir_id=9e6e595ee50575a3faa064987d0e30eb
+POST /sharings/app/destinationDirectory?App_slug=sharotronic&Doctype=io.cozy.sharings&Dir_id=9e6e595ee50575a3faa064987d0e30eb HTTP/1.1
 Host: cozy.example.net
 Content-Type: application/json
 ```

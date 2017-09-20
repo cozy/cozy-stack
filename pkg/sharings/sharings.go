@@ -208,7 +208,7 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 	}
 	if len(res) < 1 {
 		return nil, ErrSharingDoesNotExist
-	} else if len(res) > 2 {
+	} else if len(res) > 1 {
 		return nil, ErrSharingIDNotUnique
 	}
 	return &res[0], nil
@@ -573,6 +573,16 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	if err != nil {
 		return nil, ErrNoOAuthClient
 	}
+
+	var res []Sharing
+	err = couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
+		UseIndex: "by-sharing-id",
+		Selector: mango.Equal("sharing_id", state),
+	}, &res)
+	if err == nil && len(res) > 0 {
+		return nil, ErrSharingAlreadyExist
+	}
+
 	sr := &RecipientStatus{
 		HostClientID: clientID,
 		recipient: &Recipient{
