@@ -27,7 +27,7 @@ import (
 func Serve(c echo.Context) error {
 	method := c.Request().Method
 	if method != "GET" && method != "HEAD" {
-		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method %s not allowed", method)
+		return echo.NewHTTPError(http.StatusMethodNotAllowed, "Method "+method+" not allowed")
 	}
 
 	i := middlewares.GetInstance(c)
