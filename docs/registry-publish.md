@@ -37,6 +37,14 @@ set -e
 #   COZY_BUILD_URL: the URL of the deployed tarball for your application
 #   COZY_APP_VERSION: the version string of the deployed version
 
+if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
+    exit 0
+fi
+
+if [ "${TRAVIS_BRANCH}" != "master" ] && [ "${TRAVIS_BRANCH}" != "${TRAVIS_TAG}" ]; then
+    exit 0
+fi
+
 if [ -z "${COZY_APP_VERSION}" ]; then
     if [ -n "${TRAVIS_TAG}" ]; then
         COZY_APP_VERSION="${TRAVIS_TAG}"
