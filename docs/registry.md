@@ -412,7 +412,7 @@ registries:
 #
 #   - https://context1.registry.cozy.io/
 #   - https://myregistry.home/
-#   - https://main.registry.cozy.io/
+#   - https://registry.cozy.io/
 #
 
 registries:
@@ -424,7 +424,7 @@ registries:
 
   default:
     - https://myregistry.home/
-    - https://main.registry.cozy.io/
+    - https://registry.cozy.io/
 ```
 
 # Authentication
