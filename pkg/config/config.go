@@ -48,6 +48,10 @@ var Paths = []string{
 	"/etc/cozy",
 }
 
+// hardcodedRegistry is the default registry used if no configuration is set
+// for registries.
+var hardcodedRegistry, _ = url.Parse("https://registry.cozy.io/")
+
 const (
 	// FlatSubdomains is the value for apps subdomains like https://<user>-<app>.<domain>/
 	FlatSubdomains = "flat"
@@ -368,7 +372,7 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 
 	defaults, ok := regs["default"]
 	if !ok {
-		defaults = make([]*url.URL, 0)
+		defaults = []*url.URL{hardcodedRegistry}
 		regs["default"] = defaults
 	}
 	for ctx, urls := range regs {
