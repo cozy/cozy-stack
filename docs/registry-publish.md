@@ -43,7 +43,7 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
 fi
 
 if [ "${TRAVIS_BRANCH}" != "master" ] && [ "${TRAVIS_BRANCH}" != "${TRAVIS_TAG}" ]; then
-    printf "No deployment: not in master branch nor tag (TRAVIS_BRANCH=%s TRAVIS_TAG=%s)\n" "${TRAVIS_BRANCH}" "${TRAVIS_TAG}"
+    printf 'No deployment: not in master branch nor tag (TRAVIS_BRANCH=%s TRAVIS_TAG=%s)\n' "${TRAVIS_BRANCH}" "${TRAVIS_TAG}"
     exit 0
 fi
 
@@ -66,7 +66,7 @@ fi
 
 shasum=$(curl -sSL --fail "${COZY_BUILD_URL}" | shasum -a 256 | cut -d" " -f1)
 
-printf "Publishing version \"%s\" from \"%s\" (%s)\n" "${COZY_APP_VERSION}" "${COZY_BUILD_URL}" "${shasum}"
+printf 'Publishing version "%s" from "%s" (%s)\n' "${COZY_APP_VERSION}" "${COZY_BUILD_URL}" "${shasum}"
 
 curl -sS --fail -X POST \
     -H "Content-Type: application/json" \
