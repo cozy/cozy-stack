@@ -56,7 +56,12 @@ if [ -z "${COZY_APP_VERSION}" ]; then
 fi
 
 if [ -z "${COZY_BUILD_URL}" ]; then
-    COZY_BUILD_URL="https://github.com/${TRAVIS_REPO_SLUG}/archive/${TRAVIS_COMMIT}.tar.gz"
+    url="https://github.com/${TRAVIS_REPO_SLUG}/archive"
+    if [ -n "${TRAVIS_TAG}" ]; then
+        COZY_BUILD_URL="${url}/${TRAVIS_TAG}.tar.gz"
+    else
+        COZY_BUILD_URL="${url}/${TRAVIS_COMMIT}.tar.gz"
+    fi
 fi
 
 shasum=$(curl -sSL --fail "${COZY_BUILD_URL}" | shasum -a 256 | cut -d" " -f1)
