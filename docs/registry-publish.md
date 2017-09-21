@@ -59,9 +59,9 @@ if [ -z "${COZY_BUILD_URL}" ]; then
     COZY_BUILD_URL="https://github.com/${TRAVIS_REPO_SLUG}/archive/${TRAVIS_COMMIT}.tar.gz"
 fi
 
-printf "Publishing version \"%s\" from \"%s\" (%s)\n" "${COZY_APP_VERSION}" "${COZY_BUILD_URL}" "${shasum}"
-
 shasum=$(curl -sSL --fail "${COZY_BUILD_URL}" | shasum -a 256 | cut -d" " -f1)
+
+printf "Publishing version \"%s\" from \"%s\" (%s)\n" "${COZY_APP_VERSION}" "${COZY_BUILD_URL}" "${shasum}"
 
 curl -sS --fail -X POST \
     -H "Content-Type: application/json" \
