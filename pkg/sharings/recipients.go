@@ -162,6 +162,13 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *Recipient) error {
 	return couchdb.CreateDoc(db, doc)
 }
 
+// ForceRecipient forces the recipient. It is useful when testing the URL of
+// the cozy instances of the recipient before saving the recipient if
+// successful.
+func (rs *RecipientStatus) ForceRecipient(r *Recipient) {
+	rs.recipient = r
+}
+
 // GetRecipient returns the Recipient stored in database from a given ID
 func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 	doc := &Recipient{}
