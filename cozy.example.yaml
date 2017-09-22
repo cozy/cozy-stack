@@ -80,6 +80,10 @@ hooks: ./scripts/hooks
 auto_updates:
   schedule: "@cron 0 0 0 * * *"
 
+# Registries used for applications and konnectors
+registries:
+  - https://registry.cozy.io/
+
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level
   level: info

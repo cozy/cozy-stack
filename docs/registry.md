@@ -6,6 +6,10 @@ We define the application registry as an API. This should allow us to defer the 
 
 The stack itself implement the [querying part of the registry API](#apis-querying-registry), proxying the request to [the registries attached to the instance](#attaching-a-cozy-stack-to-a-registry-or-a-list-of-registries).
 
+## Publishing on our official registries
+
+In order for you to publish on our official registries, please follow [this howto](./registry_publish.md) describing how to obtain a token and parameter you repository to automatically publish versions.
+
 ## Channels
 
 We differentiate three channels of release for each application:
@@ -408,7 +412,7 @@ registries:
 #
 #   - https://context1.registry.cozy.io/
 #   - https://myregistry.home/
-#   - https://main.registry.cozy.io/
+#   - https://registry.cozy.io/
 #
 
 registries:
@@ -420,9 +424,13 @@ registries:
 
   default:
     - https://myregistry.home/
-    - https://main.registry.cozy.io/
+    - https://registry.cozy.io/
 ```
 
 # Authentication
 
-To be defined.
+The authentication is based on a token that allow you to publish applications
+and versions with for one specific editor name. This token is base64 encoded.
+
+In order to receive this token, please take a look at the page on [publication
+on the registry](./registry-publish.md).
