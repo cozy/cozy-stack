@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -71,8 +72,8 @@ type ContactCozy struct {
 
 // Contact is a struct containing all the informations about a contact
 type Contact struct {
-	ID  string `json:"_id,omitempty"`
-	Rev string `json:"_rev,omitempty"`
+	DocID  string `json:"_id,omitempty"`
+	DocRev string `json:"_rev,omitempty"`
 
 	FullName string            `json:"fullname,omitempty"`
 	Name     *ContactName      `json:"name,omitempty"`
@@ -81,6 +82,42 @@ type Contact struct {
 	Phone    []*ContactPhone   `json:"phone,omitempty"`
 	Cozy     []*ContactCozy    `json:"cozy,omitempty"`
 }
+
+// ID returns the contact qualified identifier
+func (c *Contact) ID() string { return c.DocID }
+
+// Rev returns the contact revision
+func (c *Contact) Rev() string { return c.DocRev }
+
+// DocType returns the contact document type
+func (c *Contact) DocType() string { return consts.Contacts }
+
+// Clone implements couchdb.Doc
+func (c *Contact) Clone() couchdb.Doc {
+	cloned := *c
+	cloned.FullName = c.FullName
+	cloned.Name = c.Name
+
+	cloned.Email = make([]*ContactEmail, len(c.Email))
+	copy(cloned.Email, c.Email)
+
+	cloned.Address = make([]*ContactAddress, len(c.Address))
+	copy(cloned.Address, c.Address)
+
+	cloned.Phone = make([]*ContactPhone, len(c.Phone))
+	copy(cloned.Phone, c.Phone)
+
+	cloned.Cozy = make([]*ContactCozy, len(c.Cozy))
+	copy(cloned.Cozy, c.Cozy)
+
+	return &cloned
+}
+
+// SetID changes the contact qualified identifier
+func (c *Contact) SetID(id string) { c.DocID = id }
+
+// SetRev changes the contact revision
+func (c *Contact) SetRev(rev string) { c.DocRev = rev }
 
 func createAlbum(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db couchdb.Database) error {
 	m := make(map[string]*couchdb.DocReference)
@@ -197,7 +234,6 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 		return err
 	}
 
-	fmt.Println("vcard: ", vcard)
 	name := vcard.Name()
 	contactname := &ContactName{
 		FamilyName:     name.FamilyName,
@@ -252,9 +288,9 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 		Email:    contactemail,
 		Phone:    contactphone,
 	}
-	fmt.Println(contact)
 
-	return nil
+	return couchdb.CreateDoc(db, contact)
+
 }
 
 // Untardir untar doc directory
