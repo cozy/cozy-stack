@@ -15,12 +15,72 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	vcardParser "github.com/emersion/go-vcard"
 )
 
 const (
 	metaDir    = "metadata"
 	contactExt = ".vcf"
 )
+
+// ContactName is a struct describing a name of a contact
+type ContactName struct {
+	FamilyName     string `json:"familyName,omitempty"`
+	GivenName      string `json:"givenName,omitempty"`
+	AdditionalName string `json:"additionalName,omitempty"`
+	NamePrefix     string `json:"namePrefix,omitempty"`
+	NameSuffix     string `json:"nameSuffix,omitempty"`
+}
+
+// ContactEmail is a struct describing an email of a contact
+type ContactEmail struct {
+	Address string `json:address`
+	Type    string `json:"type,omitempty"`
+	Label   string `json:"label,omitempty"`
+	Primary bool   `json:"primary,omitempty"`
+}
+
+// ContactAddress is a struct describing an address of a contact
+type ContactAddress struct {
+	Street           string `json:"street,omitempty"`
+	Pobox            string `json:"pobox,omitempty"`
+	City             string `json:"city,omitempty"`
+	Region           string `json:"region,omitempty"`
+	Postcode         string `json:"postcode,omitempty"`
+	Country          string `json:"country,omitempty"`
+	Type             string `json:"type,omitempty"`
+	Primary          bool   `json:"primary,omitempty"`
+	Label            string `json:"label,omitempty"`
+	FormattedAddress string `json:"formattedAddress,omitempty"`
+}
+
+// ContactPhone is a struct describing a phone of a contact
+type ContactPhone struct {
+	Number  string `json:"number"`
+	Type    string `json:"type,omitempty"`
+	Label   string `json:"label,omitempty"`
+	Primary bool   `json:"primary,omitempty"`
+}
+
+// ContactCozy is a struct describing a cozy instance of a contact
+type ContactCozy struct {
+	URL     string `json:"url`
+	Label   string `json:"label,omitempty"`
+	Primary bool   `json:"primary,omitempty"`
+}
+
+// Contact is a struct containing all the informations about a contact
+type Contact struct {
+	ID  string `json:"_id,omitempty"`
+	Rev string `json:"_rev,omitempty"`
+
+	FullName string            `json:"fullname,omitempty"`
+	Name     *ContactName      `json:"name,omitempty"`
+	Email    []*ContactEmail   `json:"email"`
+	Address  []*ContactAddress `json:"address,omitempty"`
+	Phone    []*ContactPhone   `json:"phone,omitempty"`
+	Cozy     []*ContactCozy    `json:"cozy,omitempty"`
+}
 
 func createAlbum(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db couchdb.Database) error {
 	m := make(map[string]*couchdb.DocReference)
@@ -55,11 +115,11 @@ func createAlbum(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc
 
 	}
 
-	hdr, err := tr.Next()
+	_, err := tr.Next()
 	if err != nil {
 		return err
 	}
-	fmt.Println("end album.json and ", hdr)
+
 	bs = bufio.NewScanner(tr)
 	for bs.Scan() {
 		ref := &References{}
@@ -130,6 +190,69 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc)
 }
 
 func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Database) error {
+
+	decoder := vcardParser.NewDecoder(tr)
+	vcard, err := decoder.Decode()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("vcard: ", vcard)
+	name := vcard.Name()
+	contactname := &ContactName{
+		FamilyName:     name.FamilyName,
+		GivenName:      name.GivenName,
+		AdditionalName: name.AdditionalName,
+		NamePrefix:     name.HonorificPrefix,
+		NameSuffix:     name.HonorificSuffix,
+	}
+
+	var contactemail []*ContactEmail
+	for i, mail := range vcard.Values("EMAIL") {
+		ce := &ContactEmail{
+			Address: mail,
+		}
+		if i == 0 {
+			ce.Type = "MAIN"
+			ce.Primary = true
+		}
+		contactemail = append(contactemail, ce)
+	}
+
+	var contactphone []*ContactPhone
+	for i, phone := range vcard.Values("TEL") {
+		cp := &ContactPhone{
+			Number: phone,
+		}
+		if i == 0 {
+			cp.Type = "MAIN"
+			cp.Primary = true
+		}
+		contactphone = append(contactphone, cp)
+	}
+
+	var contactaddress []*ContactAddress
+	for _, address := range vcard.Addresses() {
+		ca := &ContactAddress{
+			Street:           address.StreetAddress,
+			Pobox:            address.PostOfficeBox,
+			City:             address.Locality,
+			Region:           address.Region,
+			Postcode:         address.PostalCode,
+			Country:          address.Country,
+			FormattedAddress: address.Value,
+		}
+		contactaddress = append(contactaddress, ca)
+	}
+
+	contact := &Contact{
+		FullName: name.Value,
+		Name:     contactname,
+		Address:  contactaddress,
+		Email:    contactemail,
+		Phone:    contactphone,
+	}
+	fmt.Println(contact)
 
 	return nil
 }
