@@ -35,7 +35,7 @@ type ContactName struct {
 
 // ContactEmail is a struct describing an email of a contact
 type ContactEmail struct {
-	Address string `json:address`
+	Address string `json:"address"`
 	Type    string `json:"type,omitempty"`
 	Label   string `json:"label,omitempty"`
 	Primary bool   `json:"primary,omitempty"`
@@ -65,7 +65,7 @@ type ContactPhone struct {
 
 // ContactCozy is a struct describing a cozy instance of a contact
 type ContactCozy struct {
-	URL     string `json:"url`
+	URL     string `json:"url"`
 	Label   string `json:"label,omitempty"`
 	Primary bool   `json:"primary,omitempty"`
 }
@@ -331,7 +331,7 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 			fmt.Println(hdr.Name)
 			if !strings.Contains(hdr.Name, metaDir) {
 
-				if _, err := vfs.MkdirAll(fs, doc, nil); err != nil {
+				if _, err = vfs.MkdirAll(fs, doc, nil); err != nil {
 					return err
 				}
 			}
