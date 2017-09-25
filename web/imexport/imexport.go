@@ -15,7 +15,7 @@ import (
 	"github.com/labstack/echo"
 )
 
-func export(c echo.Context) error {
+func exporter(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	domain := instance.Domain
 
@@ -66,7 +66,7 @@ func export(c echo.Context) error {
 	})
 }
 
-func import(c echo.Context) error {
+func importer(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
 
@@ -95,7 +95,7 @@ func import(c echo.Context) error {
 		}
 	}
 
-	err = imexport.Untardir(r, dst.ID(), instance)
+	err = imexport.Untardir(r, dst, instance)
 	if err != nil {
 		return err
 	}
@@ -107,6 +107,6 @@ func import(c echo.Context) error {
 
 // Routes sets the routing for export
 func Routes(router *echo.Group) {
-	router.GET("/export/", export)
-	router.GET("/import/:destination", import)
+	router.GET("/export/", exporter)
+	router.GET("/import/:destination", importer)
 }

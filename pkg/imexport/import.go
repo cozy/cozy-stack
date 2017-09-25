@@ -291,29 +291,19 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 	}
 
 	return couchdb.CreateDoc(db, contact)
-
 }
 
 // Untardir untar doc directory
-func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
+func Untardir(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	fs := instance.VFS()
-	domain := instance.Domain
-	db := couchdb.SimpleDatabasePrefix(domain)
 
-	dstDoc, err := fs.DirByID(dst)
-	if err != nil {
-		return err
-	}
-
-	//gzip reader
+	// tar+gzip reader
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return err
 	}
 	defer gr.Close()
-
-	//tar reader
-	tr := tar.NewReader(gr)
+	tgz := tar.NewReader(gr)
 
 	for {
 		hdr, err := tr.Next()
@@ -324,32 +314,30 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 			return err
 		}
 
-		doc := path.Join(dstDoc.Fullpath, hdr.Name)
+		doctype, name := strings.SplitN("/", hdr.Name, 1)[0]
+		fmt.Printf("%s -> %s\n", hdr.Name, doctype)
 
 		switch hdr.Typeflag {
-
 		case tar.TypeDir:
-			fmt.Println(hdr.Name)
-			if !strings.Contains(hdr.Name, metaDir) {
-
-				if _, err = vfs.MkdirAll(fs, doc, nil); err != nil {
+			if doctype == "files" {
+				dirname := path.Join(dst.Fullpath, name)
+				if _, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
 					return err
 				}
 			}
 
 		case tar.TypeReg:
-
-			if path.Base(hdr.Name) == albumFile {
-				err = createAlbum(fs, hdr, tr, dstDoc, db)
+			if doctype == "albums" && name == albumFile {
+				err = createAlbum(fs, hdr, tgz, dst, instance)
 				if err != nil {
 					return err
 				}
-			} else if path.Ext(hdr.Name) == contactExt {
-				if err := createContact(fs, hdr, tr, db); err != nil {
+			} else if doctype == "contacts" {
+				if err := createContact(fs, hdr, tgz, instance); err != nil {
 					return err
 				}
-			} else {
-				if err := createFile(fs, hdr, tr, dstDoc); err != nil {
+			} else if doctype == "files" {
+				if err := createFile(fs, hdr, tgz, dst); err != nil {
 					return err
 				}
 			}
@@ -357,11 +345,8 @@ func Untardir(r io.Reader, dst string, instance *instance.Instance) error {
 		default:
 			fmt.Println("Unknown typeflag", hdr.Typeflag)
 			return errors.New("Unknown typeflag")
-
 		}
-
 	}
 
 	return nil
-
 }
