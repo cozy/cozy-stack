@@ -3,7 +3,6 @@ package imexport
 import (
 	"encoding/base32"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 
@@ -66,35 +65,8 @@ func export(c echo.Context) error {
 		"message": "bienvenue sur la super page",
 	})
 }
-func exportDir(c echo.Context) error {
-	domID := c.Param("domain-id")
-	fmt.Println(domID)
 
-	src, err := os.Open(fmt.Sprintf("%s.tar.gz", domID))
-	if err != nil {
-		return err
-	}
-	dst, err := os.Create("cozy.tar.gz")
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(dst, src)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(fmt.Sprintf("%s.tar.gz", domID))
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": "bienvenue sur la super page bis",
-	})
-}
-
-func importer(c echo.Context) error {
+func import(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
 
@@ -136,11 +108,5 @@ func importer(c echo.Context) error {
 // Routes sets the routing for export
 func Routes(router *echo.Group) {
 	router.GET("/export/", export)
-	router.HEAD("/export/", export)
-
-	router.GET("/import/:destination", importer)
-	router.HEAD("/import/", importer)
-
-	router.GET("/export/:domain-id", exportDir)
-
+	router.GET("/import/:destination", import)
 }
