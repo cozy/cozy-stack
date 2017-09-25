@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"path"
 	"strings"
 	"time"
@@ -77,7 +78,7 @@ type Contact struct {
 
 	FullName string            `json:"fullname,omitempty"`
 	Name     *ContactName      `json:"name,omitempty"`
-	Email    []*ContactEmail   `json:"email"`
+	Email    []*ContactEmail   `json:"email,omitempty"`
 	Address  []*ContactAddress `json:"address,omitempty"`
 	Phone    []*ContactPhone   `json:"phone,omitempty"`
 	Cozy     []*ContactCozy    `json:"cozy,omitempty"`
@@ -206,7 +207,7 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc)
 		}
 		extension := path.Ext(fileDoc.DocName)
 		fileName := fileDoc.DocName[0 : len(fileDoc.DocName)-len(extension)]
-		fileDoc.DocName = fmt.Sprintf("%s-conflict-%d%s", fileName, time.Now().Unix(), extension)
+		fileDoc.DocName = fmt.Sprintf("%s-conflict-%d%s", fileName, rand.Int(), extension)
 		file, err = fs.CreateFile(fileDoc, nil)
 		if err != nil {
 			return err
