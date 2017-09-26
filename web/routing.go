@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/web/data"
 	"github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/files"
-	"github.com/cozy/cozy-stack/web/imexport"
 	"github.com/cozy/cozy-stack/web/instances"
 	"github.com/cozy/cozy-stack/web/intents"
 	"github.com/cozy/cozy-stack/web/jobs"
@@ -181,9 +180,6 @@ func SetupRoutes(router *echo.Echo) error {
 	apps.KonnectorRoutes(router.Group("/konnectors", mws...))
 	registry.Routes(router.Group("/registry", mws...))
 	data.Routes(router.Group("/data", mws...))
-	if config.IsDevRelease() {
-		imexport.Routes(router.Group("/imexport", mws...))
-	}
 	files.Routes(router.Group("/files", mws...))
 	intents.Routes(router.Group("/intents", mws...))
 	jobs.Routes(router.Group("/jobs", mws...))

@@ -43,7 +43,7 @@ func writeFile(tw *tar.Writer, doc *vfs.FileDoc, name string, fs vfs.VFS) error 
 	if doc.Executable {
 		hdr.Mode = 0750
 	}
-	if err := tw.WriteHeader(hdr); err != nil {
+	if err = tw.WriteHeader(hdr); err != nil {
 		return err
 	}
 	_, err = io.Copy(tw, file)

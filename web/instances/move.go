@@ -1,4 +1,4 @@
-package imexport
+package instances
 
 import (
 	"encoding/base32"
@@ -33,22 +33,18 @@ func exporter(c echo.Context) error {
 		return err
 	}
 
-	var objet string
-	lien := fmt.Sprintf("http://%s%s%s-%s", domain, c.Path(), domain, id)
-
-	if instance.Locale == "en" {
-		objet = "The archive with all your Cozy data is ready"
-	} else if instance.Locale == "fr" {
-		objet = "L'archive contenant toutes les données de Cozy est prête"
+	link := fmt.Sprintf("http://%s%s%s-%s", domain, c.Path(), domain, id)
+	subject := "The archive with all your Cozy data is ready"
+	if instance.Locale == "fr" {
+		subject = "L'archive contenant toutes les données de Cozy est prête"
 	}
-
 	msg, err := jobs.NewMessage("json", workers.Options{
 		Mode:         workers.ModeNoReply,
-		Subject:      objet,
+		Subject:      subject,
 		TemplateName: "archiver_" + instance.Locale,
 		TemplateValues: map[string]string{
 			"RecipientName": domain,
-			"Lien":          lien,
+			"Link":          link,
 		},
 	})
 	if err != nil {
@@ -61,22 +57,24 @@ func exporter(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": "bienvenue sur la super page",
-	})
+	return c.NoContent(http.StatusNoContent, nil)
 }
 
 func importer(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
 
-	r, err := os.Open("cozy.tar.gz")
+	filename := c.QueryParam("filename")
+	if filename == "" {
+		filename = "cozy.tar.gz"
+	}
+	r, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
-	rep := c.Param("destination")
+	rep := c.QueryParam("destination")
 	rep = fmt.Sprintf("/%s", rep)
 
 	exist, err := vfs.DirExists(fs, rep)
@@ -101,13 +99,5 @@ func importer(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
-		"message": "bienvenue sur la super page cozy",
-	})
-}
-
-// Routes sets the routing for export
-func Routes(router *echo.Group) {
-	router.GET("/export/", exporter)
-	router.GET("/import/:destination", importer)
+	return c.NoContent(http.StatusNoContent, nil)
 }
