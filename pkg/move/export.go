@@ -4,12 +4,16 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"encoding/base32"
 	"encoding/json"
+	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
@@ -193,13 +197,23 @@ func export(tw *tar.Writer, instance *instance.Instance) error {
 	return albums(tw, instance)
 }
 
-// Tardir tar doc directory
-func Tardir(w io.Writer, instance *instance.Instance) error {
+// Export is used to create a tarball with files and photos from an instance
+func Export(instance *instance.Instance) (string, error) {
+	domain := instance.Domain
+	tab := crypto.GenerateRandomBytes(20)
+	id := base32.StdEncoding.EncodeToString(tab)
+	filename := fmt.Sprintf("%s-%s.tar.gz", domain, id)
+
+	w, err := os.Create(filename)
+	if err != nil {
+		return "", err
+	}
+	defer w.Close()
+
 	gw := gzip.NewWriter(w)
 	tw := tar.NewWriter(gw)
-	err := export(tw, instance)
+	err = export(tw, instance)
 	tw.Close()
 	gw.Close()
-	return err
-
+	return filename, err
 }

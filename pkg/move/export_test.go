@@ -18,6 +18,7 @@ import (
 )
 
 var inst *instance.Instance
+var filename string
 
 var testdb couchdb.Database
 
@@ -74,14 +75,10 @@ func TestTardir(t *testing.T) {
 	err = couchdb.UpdateDoc(testdb, image)
 	assert.NoError(t, err)
 
-	w, err := os.Create("cozy_test.tar.gz")
-	assert.NoError(t, err)
-	defer w.Close()
-
-	err = Tardir(w, inst)
+	filename, err = Export(inst)
 	assert.NoError(t, err)
 
-	r, err := os.Open("cozy_test.tar.gz")
+	r, err := os.Open(filename)
 	assert.NoError(t, err)
 	defer r.Close()
 
@@ -120,17 +117,17 @@ func TestTardir(t *testing.T) {
 
 }
 
-func TestUntardir(t *testing.T) {
+func TestImport(t *testing.T) {
 	fs := inst.VFS()
 
-	r, err := os.Open("cozy_test.tar.gz")
+	r, err := os.Open(filename)
 	assert.NoError(t, err)
 	defer r.Close()
 
 	dst, err := vfs.Mkdir(fs, "/destination", nil)
 	assert.NoError(t, err)
 
-	err = Untardir(r, dst, inst)
+	err = untar(r, dst, inst)
 	assert.NoError(t, err)
 
 	logo, err := fs.FileByPath("/destination/logos.zip")
@@ -151,7 +148,7 @@ func TestUntardir(t *testing.T) {
 		}
 	}
 
-	err = os.Remove("cozy_test.tar.gz")
+	err = os.Remove(filename)
 	assert.NoError(t, err)
 }
 

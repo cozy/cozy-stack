@@ -1,15 +1,12 @@
 package instances
 
 import (
-	"encoding/base32"
 	"fmt"
 	"net/http"
-	"os"
+	"strings"
 
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/move"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
@@ -18,22 +15,12 @@ import (
 func exporter(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	domain := instance.Domain
-
-	tab := crypto.GenerateRandomBytes(20)
-	id := base32.StdEncoding.EncodeToString(tab)
-
-	w, err := os.Create(fmt.Sprintf("%s-%s.tar.gz", domain, id))
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	err = move.Tardir(w, instance)
+	filename, err := move.Export(instance)
 	if err != nil {
 		return err
 	}
 
-	link := fmt.Sprintf("http://%s%s%s-%s", domain, c.Path(), domain, id)
+	link := fmt.Sprintf("http://%s%s%s", domain, c.Path(), filename)
 	subject := "The archive with all your Cozy data is ready"
 	if instance.Locale == "fr" {
 		subject = "L'archive contenant toutes les données de Cozy est prête"
@@ -50,54 +37,30 @@ func exporter(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
-	context := jobs.NewWorkerContext(instance.Domain, "abcd")
-	err = workers.SendMail(context, msg)
-	if err != nil {
+	context := jobs.NewWorkerContext(instance.Domain, "export")
+	if err = workers.SendMail(context, msg); err != nil {
 		return err
 	}
 
-	return c.NoContent(http.StatusNoContent, nil)
+	return c.NoContent(http.StatusNoContent)
 }
 
 func importer(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	fs := instance.VFS()
+
+	dst := c.QueryParam("destination")
+	if !strings.HasPrefix(dst, "/") {
+		dst = "/" + dst
+	}
 
 	filename := c.QueryParam("filename")
 	if filename == "" {
 		filename = "cozy.tar.gz"
 	}
-	r, err := os.Open(filename)
+
+	err := move.Import(instance, filename, dst)
 	if err != nil {
 		return err
 	}
-	defer r.Close()
-
-	rep := c.QueryParam("destination")
-	rep = fmt.Sprintf("/%s", rep)
-
-	exist, err := vfs.DirExists(fs, rep)
-	if err != nil {
-		return err
-	}
-	var dst *vfs.DirDoc
-	if !exist {
-		dst, err = vfs.Mkdir(fs, rep, nil)
-		if err != nil {
-			return err
-		}
-	} else {
-		dst, err = fs.DirByPath(rep)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = move.Untardir(r, dst, instance)
-	if err != nil {
-		return err
-	}
-
-	return c.NoContent(http.StatusNoContent, nil)
+	return c.NoContent(http.StatusNoContent)
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -279,8 +280,8 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc)
 	return cerr
 }
 
-// Untardir untar doc directory
-func Untardir(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
+// untar untar doc directory
+func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	fs := instance.VFS()
 
 	// tar+gzip reader
@@ -339,4 +340,33 @@ func Untardir(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	}
 
 	return nil
+}
+
+// Import is used to import a tarball with files, photos, contacts to an instance
+func Import(instance *instance.Instance, filename, destination string) error {
+	r, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	fs := instance.VFS()
+	exist, err := vfs.DirExists(fs, destination)
+	if err != nil {
+		return err
+	}
+	var dst *vfs.DirDoc
+	if !exist {
+		dst, err = vfs.Mkdir(fs, destination, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		dst, err = fs.DirByPath(destination)
+		if err != nil {
+			return err
+		}
+	}
+
+	return untar(r, dst, instance)
 }
