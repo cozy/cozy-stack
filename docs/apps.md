@@ -28,6 +28,7 @@ name           | the name to display on the home
 slug           | the default slug (it can be changed at install time)
 editor         | the editor's name to display on the cozy-bar of the app
 icon           | an icon for the home
+screenshots    | an array of path to the screenshots of the application
 description    | a short description of the application
 source         | where the files of the app can be downloaded
 developer      | `name` and `url` for the developer
