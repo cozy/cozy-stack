@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
-	"github.com/cozy/cozy-stack/pkg/imexport"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/move"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -28,7 +28,7 @@ func exporter(c echo.Context) error {
 	}
 	defer w.Close()
 
-	err = imexport.Tardir(w, instance)
+	err = move.Tardir(w, instance)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func importer(c echo.Context) error {
 		}
 	}
 
-	err = imexport.Untardir(r, dst, instance)
+	err = move.Untardir(r, dst, instance)
 	if err != nil {
 		return err
 	}
