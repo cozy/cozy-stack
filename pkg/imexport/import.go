@@ -20,11 +20,6 @@ import (
 	vcardParser "github.com/emersion/go-vcard"
 )
 
-const (
-	metaDir    = "metadata"
-	contactExt = ".vcf"
-)
-
 // ContactName is a struct describing a name of a contact
 type ContactName struct {
 	FamilyName     string `json:"familyName,omitempty"`
@@ -120,115 +115,7 @@ func (c *Contact) SetID(id string) { c.DocID = id }
 // SetRev changes the contact revision
 func (c *Contact) SetRev(rev string) { c.DocRev = rev }
 
-func createAlbum(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db couchdb.Database) error {
-	m := make(map[string]*couchdb.DocReference)
-
-	bs := bufio.NewScanner(tr)
-
-	for bs.Scan() {
-		jsondoc := &couchdb.JSONDoc{}
-		err := jsondoc.UnmarshalJSON(bs.Bytes())
-		if err != nil {
-			return err
-		}
-		doctype, ok := jsondoc.M["type"].(string)
-		if ok {
-			jsondoc.Type = doctype
-		}
-		delete(jsondoc.M, "type")
-
-		id := jsondoc.ID()
-		jsondoc.SetID("")
-		jsondoc.SetRev("")
-
-		err = couchdb.CreateDoc(db, jsondoc)
-		if err != nil {
-			return err
-		}
-
-		m[id] = &couchdb.DocReference{
-			ID:   jsondoc.ID(),
-			Type: jsondoc.DocType(),
-		}
-
-	}
-
-	_, err := tr.Next()
-	if err != nil {
-		return err
-	}
-
-	bs = bufio.NewScanner(tr)
-	for bs.Scan() {
-		ref := &References{}
-		err := json.Unmarshal(bs.Bytes(), &ref)
-		if err != nil {
-			return err
-		}
-
-		file, err := fs.FileByPath(dstDoc.Fullpath + ref.Filepath)
-		if err != nil {
-			return err
-		}
-
-		if m[ref.Albumid] != nil {
-			file.AddReferencedBy(*m[ref.Albumid])
-			if err = couchdb.UpdateDoc(db, file); err != nil {
-				return err
-			}
-		}
-
-	}
-
-	return nil
-
-}
-
-func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc) error {
-	name := path.Base(hdr.Name)
-	mime, class := vfs.ExtractMimeAndClassFromFilename(hdr.Name)
-	now := time.Now()
-	executable := hdr.FileInfo().Mode()&0100 != 0
-
-	dirDoc, err := fs.DirByPath(path.Join(dstDoc.Fullpath, path.Dir(hdr.Name)))
-	if err != nil {
-		return err
-	}
-
-	fileDoc, err := vfs.NewFileDoc(name, dirDoc.ID(), hdr.Size, nil, mime, class, now, executable, false, nil)
-	if err != nil {
-		return err
-	}
-
-	file, err := fs.CreateFile(fileDoc, nil)
-	if err != nil {
-		if strings.Contains(path.Dir(hdr.Name), "/Photos/") {
-			return nil
-		}
-		extension := path.Ext(fileDoc.DocName)
-		fileName := fileDoc.DocName[0 : len(fileDoc.DocName)-len(extension)]
-		fileDoc.DocName = fmt.Sprintf("%s-conflict-%d%s", fileName, rand.Int(), extension)
-		file, err = fs.CreateFile(fileDoc, nil)
-		if err != nil {
-			return err
-		}
-
-	}
-
-	_, err = io.Copy(file, tr)
-	cerr := file.Close()
-	if err != nil {
-		return err
-	}
-	if cerr != nil {
-		return cerr
-	}
-
-	return nil
-}
-
 func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Database) error {
-
 	decoder := vcardParser.NewDecoder(tr)
 	vcard, err := decoder.Decode()
 	if err != nil {
@@ -293,6 +180,105 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 	return couchdb.CreateDoc(db, contact)
 }
 
+func createAlbum(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db couchdb.Database) error {
+	m := make(map[string]*couchdb.DocReference)
+
+	bs := bufio.NewScanner(tr)
+
+	for bs.Scan() {
+		jsondoc := &couchdb.JSONDoc{}
+		err := jsondoc.UnmarshalJSON(bs.Bytes())
+		if err != nil {
+			return err
+		}
+		doctype, ok := jsondoc.M["type"].(string)
+		if ok {
+			jsondoc.Type = doctype
+		}
+		delete(jsondoc.M, "type")
+
+		id := jsondoc.ID()
+		jsondoc.SetID("")
+		jsondoc.SetRev("")
+
+		err = couchdb.CreateDoc(db, jsondoc)
+		if err != nil {
+			return err
+		}
+
+		m[id] = &couchdb.DocReference{
+			ID:   jsondoc.ID(),
+			Type: jsondoc.DocType(),
+		}
+
+	}
+
+	_, err := tr.Next()
+	if err != nil {
+		return err
+	}
+
+	bs = bufio.NewScanner(tr)
+	for bs.Scan() {
+		ref := &Reference{}
+		err := json.Unmarshal(bs.Bytes(), &ref)
+		if err != nil {
+			return err
+		}
+
+		file, err := fs.FileByPath(dstDoc.Fullpath + ref.Filepath)
+		if err != nil {
+			return err
+		}
+
+		if m[ref.Albumid] != nil {
+			file.AddReferencedBy(*m[ref.Albumid])
+			if err = couchdb.UpdateDoc(db, file); err != nil {
+				return err
+			}
+		}
+
+	}
+
+	return nil
+
+}
+
+func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc) error {
+	name := path.Base(hdr.Name)
+	name = strings.TrimPrefix(name, "files/")
+	mime, class := vfs.ExtractMimeAndClassFromFilename(name)
+	now := time.Now()
+	executable := hdr.FileInfo().Mode()&0100 != 0
+
+	dirDoc, err := fs.DirByPath(path.Join(dstDoc.Fullpath, path.Dir(name)))
+	if err != nil {
+		return err
+	}
+	fileDoc, err := vfs.NewFileDoc(name, dirDoc.ID(), hdr.Size, nil, mime, class, now, executable, false, nil)
+	if err != nil {
+		return err
+	}
+
+	file, err := fs.CreateFile(fileDoc, nil)
+	if err != nil {
+		ext := path.Ext(fileDoc.DocName)
+		fileName := fileDoc.DocName[0 : len(fileDoc.DocName)-len(ext)]
+		fileDoc.DocName = fmt.Sprintf("%s-conflict-%d%s", fileName, rand.Int(), ext)
+		file, err = fs.CreateFile(fileDoc, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = io.Copy(file, tr)
+	cerr := file.Close()
+	if err != nil {
+		return err
+	}
+	return cerr
+}
+
 // Untardir untar doc directory
 func Untardir(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	fs := instance.VFS()
@@ -306,7 +292,7 @@ func Untardir(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	tgz := tar.NewReader(gr)
 
 	for {
-		hdr, err := tr.Next()
+		hdr, err := tgz.Next()
 		if err == io.EOF {
 			break
 		}
@@ -314,8 +300,12 @@ func Untardir(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 			return err
 		}
 
-		doctype, name := strings.SplitN("/", hdr.Name, 1)[0]
-		fmt.Printf("%s -> %s\n", hdr.Name, doctype)
+		parts := strings.SplitN(path.Clean(hdr.Name), "/", 2)
+		var name, doctype string
+		if len(parts) > 1 {
+			doctype = parts[0]
+			name = parts[1]
+		}
 
 		switch hdr.Typeflag {
 		case tar.TypeDir:
@@ -327,7 +317,7 @@ func Untardir(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 			}
 
 		case tar.TypeReg:
-			if doctype == "albums" && name == albumFile {
+			if doctype == "albums" && name == albumsFile {
 				err = createAlbum(fs, hdr, tgz, dst, instance)
 				if err != nil {
 					return err

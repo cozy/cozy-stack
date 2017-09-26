@@ -15,26 +15,25 @@ import (
 )
 
 const (
-	metaAlbumDir   = "metadata/album/"
-	albumFile      = "album.json"
+	albumsFile     = "albums.json"
 	referencesFile = "references.json"
 )
 
-// References between albumid and filepath
-type References struct {
+// Reference between albumid and filepath
+type Reference struct {
 	Albumid  string `json:"albumid"`
 	Filepath string `json:"filepath"`
 }
 
-func writeFile(fs vfs.VFS, name string, tw *tar.Writer, doc *vfs.FileDoc) error {
+func writeFile(tw *tar.Writer, doc *vfs.FileDoc, name string, fs vfs.VFS) error {
 	file, err := fs.OpenFile(doc)
 	if err != nil {
 		return err
 	}
-
+	defer file.Close()
 	hdr := &tar.Header{
-		Name:       name,
-		Mode:       0644,
+		Name:       "files/" + name,
+		Mode:       0640,
 		Size:       doc.Size(),
 		ModTime:    doc.ModTime(),
 		AccessTime: doc.CreatedAt,
@@ -42,39 +41,31 @@ func writeFile(fs vfs.VFS, name string, tw *tar.Writer, doc *vfs.FileDoc) error 
 		Typeflag:   tar.TypeReg,
 	}
 	if doc.Executable {
-		hdr.Mode = 0755
+		hdr.Mode = 0750
 	}
-
 	if err := tw.WriteHeader(hdr); err != nil {
 		return err
 	}
-	if _, err := io.Copy(tw, file); err != nil {
-		return err
-	}
-	return nil
+	_, err = io.Copy(tw, file)
+	return err
 }
 
-func createDir(name string, tw *tar.Writer, dir *vfs.DirDoc) error {
-
+func createDir(tw *tar.Writer, dir *vfs.DirDoc, name string) error {
 	hdr := &tar.Header{
-		Name:     name,
+		Name:     "files/" + name,
 		Mode:     0755,
 		Size:     dir.Size(),
 		ModTime:  dir.ModTime(),
 		Typeflag: tar.TypeDir,
 	}
-	err := tw.WriteHeader(hdr)
-
-	return err
+	return tw.WriteHeader(hdr)
 }
 
-func metadata(tw *tar.Writer, instance *instance.Instance) error {
-	fs := instance.VFS()
-	domain := instance.Domain
-	db := couchdb.SimpleDatabasePrefix(domain)
+func albums(tw *tar.Writer, instance *instance.Instance) error {
 	doctype := consts.PhotosAlbums
+	allReq := &couchdb.AllDocsRequest{}
 	var results []map[string]interface{}
-	if err := couchdb.GetAllDocs(db, doctype, &couchdb.AllDocsRequest{}, &results); err != nil {
+	if err := couchdb.GetAllDocs(instance, doctype, allReq, &results); err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return nil
 		}
@@ -82,7 +73,7 @@ func metadata(tw *tar.Writer, instance *instance.Instance) error {
 	}
 
 	hdrDir := &tar.Header{
-		Name:     metaAlbumDir,
+		Name:     "albums",
 		Mode:     0755,
 		Typeflag: tar.TypeDir,
 	}
@@ -90,52 +81,33 @@ func metadata(tw *tar.Writer, instance *instance.Instance) error {
 		return err
 	}
 
-	hdrAlbum := &tar.Header{
-		Name:       metaAlbumDir + albumFile,
-		Mode:       0644,
-		AccessTime: time.Now(),
-		ChangeTime: time.Now(),
-		Typeflag:   tar.TypeReg,
-	}
-
 	var content bytes.Buffer
-	var size int64
-
+	size := 0
 	for _, val := range results {
-		jsonString, err := json.Marshal(val)
+		b, err := json.Marshal(val)
 		if err != nil {
 			return err
 		}
-
-		size += int64(len(jsonString) + 1) // len([]byte("\n"))
-
-		if _, err = content.Write(jsonString); err != nil {
+		b = append(b, '\n')
+		size += len(b)
+		if _, err = content.Write(b); err != nil {
 			return err
 		}
-		if _, err = content.Write([]byte("\n")); err != nil {
-			return err
-		}
-
 	}
 
-	hdrAlbum.Size = size
-	if err := tw.WriteHeader(hdrAlbum); err != nil {
-		return err
-	}
-
-	if _, err := content.WriteTo(tw); err != nil {
-		return err
-	}
-
-	var buf bytes.Buffer
-	size = 0
-
-	hdrRef := &tar.Header{
-		Name:       metaAlbumDir + referencesFile,
+	hdrAlbum := &tar.Header{
+		Name:       "albums/" + albumsFile,
 		Mode:       0644,
+		Size:       int64(size),
 		AccessTime: time.Now(),
 		ChangeTime: time.Now(),
 		Typeflag:   tar.TypeReg,
+	}
+	if err := tw.WriteHeader(hdrAlbum); err != nil {
+		return err
+	}
+	if _, err := content.WriteTo(tw); err != nil {
+		return err
 	}
 
 	req := &couchdb.ViewRequest{
@@ -145,25 +117,25 @@ func metadata(tw *tar.Writer, instance *instance.Instance) error {
 		Reduce:      false,
 	}
 	res := &couchdb.ViewResponse{}
-	if err := couchdb.ExecView(db, consts.FilesReferencedByView, req, res); err != nil {
+	if err := couchdb.ExecView(instance, consts.FilesReferencedByView, req, res); err != nil {
 		return err
 	}
 
+	var buf bytes.Buffer
+	fs := instance.VFS()
+	size = 0
 	for _, v := range res.Rows {
 		key := v.Key.([]interface{})
 		id := key[1].(string)
-
 		doc, err := fs.FileByID(v.ID)
 		if err != nil {
 			return err
 		}
-
 		path, err := fs.FilePath(doc)
 		if err != nil {
 			return err
 		}
-
-		ref := References{
+		ref := Reference{
 			Albumid:  id,
 			Filepath: path,
 		}
@@ -171,45 +143,43 @@ func metadata(tw *tar.Writer, instance *instance.Instance) error {
 		if err != nil {
 			return err
 		}
-
-		size += int64(len(b) + 1) // len([]byte("\n"))
+		b = append(b, '\n')
+		size += len(b)
 		if _, err = buf.Write(b); err != nil {
 			return err
 		}
-		if _, err = buf.Write([]byte("\n")); err != nil {
-			return err
-		}
 	}
 
-	hdrRef.Size = size
+	hdrRef := &tar.Header{
+		Name:       "albums/" + referencesFile,
+		Mode:       0644,
+		Size:       int64(size),
+		AccessTime: time.Now(),
+		ChangeTime: time.Now(),
+		Typeflag:   tar.TypeReg,
+	}
 	if err := tw.WriteHeader(hdrRef); err != nil {
 		return err
 	}
-
-	if _, err := buf.WriteTo(tw); err != nil {
-		return err
-	}
-
-	return nil
+	_, err := buf.WriteTo(tw)
+	return err
 }
 
 func export(tw *tar.Writer, instance *instance.Instance) error {
 	fs := instance.VFS()
-	root := "/"
-
-	err := vfs.Walk(fs, root, func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
+	err := vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, file *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if dir != nil {
-			if err := createDir(name, tw, dir); err != nil {
+			if err := createDir(tw, dir, name); err != nil {
 				return err
 			}
 		}
 
 		if file != nil {
-			if err := writeFile(fs, name, tw, file); err != nil {
+			if err := writeFile(tw, file, name, fs); err != nil {
 				return err
 			}
 
@@ -220,21 +190,16 @@ func export(tw *tar.Writer, instance *instance.Instance) error {
 	if err != nil {
 		return err
 	}
-	return metadata(tw, instance)
+	return albums(tw, instance)
 }
 
 // Tardir tar doc directory
 func Tardir(w io.Writer, instance *instance.Instance) error {
-	//gzip writer
 	gw := gzip.NewWriter(w)
-	defer gw.Close()
-
-	//tar writer
 	tw := tar.NewWriter(gw)
-	defer tw.Close()
-
 	err := export(tw, instance)
-
+	tw.Close()
+	gw.Close()
 	return err
 
 }

@@ -74,6 +74,7 @@ func importer(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 
 	rep := c.Param("destination")
 	rep = fmt.Sprintf("/%s", rep)
