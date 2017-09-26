@@ -10,12 +10,28 @@ import (
 	"github.com/labstack/echo"
 )
 
-func proxyReq(cacheControl registry.CacheControl) echo.HandlerFunc {
+type authType int
+
+const (
+	authed authType = iota
+	perms
+)
+
+func proxyReq(auth authType, cacheControl registry.CacheControl) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		i := middlewares.GetInstance(c)
-		pdoc, err := webpermissions.GetPermission(c)
-		if err != nil || pdoc.Type != permissions.TypeWebapp {
-			return echo.NewHTTPError(http.StatusForbidden)
+		switch auth {
+		case authed:
+			if !middlewares.IsLoggedIn(c) {
+				return echo.NewHTTPError(http.StatusForbidden)
+			}
+		case perms:
+			pdoc, err := webpermissions.GetPermission(c)
+			if err != nil || pdoc.Type != permissions.TypeWebapp {
+				return echo.NewHTTPError(http.StatusForbidden)
+			}
+		default:
+			panic("unknown authType")
 		}
 		registries, err := i.Registries()
 		if err != nil {
@@ -54,9 +70,9 @@ func proxyListReq(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("", proxyListReq)
 	router.GET("/", proxyListReq)
-	router.GET("/:app", proxyReq(registry.WithCache))
-	router.GET("/:app/icon", proxyReq(registry.NoCache))
-	router.GET("/:app/screenshots/:filename", proxyReq(registry.NoCache))
-	router.GET("/:app/:version", proxyReq(registry.WithCache))
-	router.GET("/:app/:channel/latest", proxyReq(registry.WithCache))
+	router.GET("/:app", proxyReq(perms, registry.WithCache))
+	router.GET("/:app/icon", proxyReq(authed, registry.NoCache))
+	router.GET("/:app/screenshots/:filename", proxyReq(authed, registry.NoCache))
+	router.GET("/:app/:version", proxyReq(perms, registry.WithCache))
+	router.GET("/:app/:channel/latest", proxyReq(perms, registry.WithCache))
 }
