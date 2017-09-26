@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -42,8 +43,10 @@ security features. Please do not use this binary as your production server.
 
 	// Check that we can properly reach CouchDB.
 	db, err := checkup.HTTPChecker{
-		URL:         config.CouchURL().String(),
-		MustContain: `"version":"2`,
+		URL:            config.CouchURL().String(),
+		MustContain:    `"version":"2`,
+		Attempts:       5,
+		AttemptSpacing: 1 * time.Second,
 	}.Check()
 	if err != nil {
 		err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", err.Error())
