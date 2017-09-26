@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"sort"
@@ -39,13 +38,13 @@ var proxyClient = &http.Client{
 
 // CacheControl defines whether or not to use caching for the request made to
 // the registries.
-type CacheControl bool
+type CacheControl int
 
 const (
 	// WithCache specify caching
-	WithCache CacheControl = true
+	WithCache CacheControl = iota
 	// NoCache disables any caching
-	NoCache = false
+	NoCache
 )
 
 // GetLatestVersion returns the latest version available from the list of
@@ -55,16 +54,16 @@ func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, er
 	requestURI := fmt.Sprintf("/registry/%s/%s/latest",
 		url.PathEscape(slug),
 		url.PathEscape(channel))
-	rc, ok, err := fetchUntilFound(registries, requestURI, WithCache)
+	resp, ok, err := fetchUntilFound(registries, requestURI, WithCache)
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
 		return nil, errVersionNotFound
 	}
-	defer rc.Close()
+	defer resp.Body.Close()
 	var v *Version
-	if err = json.NewDecoder(rc).Decode(&v); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&v); err != nil {
 		return nil, err
 	}
 	return v, nil
@@ -73,15 +72,15 @@ func GetLatestVersion(slug, channel string, registries []*url.URL) (*Version, er
 // Proxy will proxy the given request to the registries in sequence and return
 // the response as io.ReadCloser when finding a registry returning a HTTP 200OK
 // response.
-func Proxy(req *http.Request, registries []*url.URL, cache CacheControl) (io.ReadCloser, error) {
-	rc, ok, err := fetchUntilFound(registries, req.RequestURI, cache)
+func Proxy(req *http.Request, registries []*url.URL, cache CacheControl) (*http.Response, error) {
+	resp, ok, err := fetchUntilFound(registries, req.RequestURI, cache)
 	if err != nil {
 		return nil, err
 	}
 	if !ok {
 		return nil, echo.NewHTTPError(http.StatusNotFound)
 	}
-	return rc, nil
+	return resp, nil
 }
 
 // ProxyList will proxy the given request to the registries by aggregating the
@@ -221,20 +220,20 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 			"cursor", strconv.Itoa(cursor),
 			"limit", strconv.Itoa(limit),
 		)
-		rc, ok, err := fetch(r.url, ref, NoCache)
+		resp, ok, err := fetch(r.url, ref, NoCache)
 		if err != nil {
 			return err
 		}
 		if !ok {
 			return nil
 		}
-		defer rc.Close()
-		var resp appsPaginated
-		if err = json.NewDecoder(rc).Decode(&resp); err != nil {
+		defer resp.Body.Close()
+		var page appsPaginated
+		if err = json.NewDecoder(resp.Body).Decode(&page); err != nil {
 			return err
 		}
 
-		for i, obj := range resp.List {
+		for i, obj := range page.List {
 			objCursor := cursor + i
 
 			objInRange := r.cursor >= 0 &&
@@ -257,9 +256,9 @@ func (a *appsList) fetch(r *registryFetchState, fetchAll bool) error {
 			}
 		}
 
-		nextCursor := resp.PageInfo.NextCursor
+		nextCursor := page.PageInfo.NextCursor
 		if nextCursor == "" {
-			r.ended = cursor + len(resp.List)
+			r.ended = cursor + len(page.List)
 			break
 		}
 
@@ -363,13 +362,13 @@ func (a *appsList) Paginated(sortBy string, reverse bool, limit int) *appsPagina
 	}
 }
 
-func fetchUntilFound(registries []*url.URL, requestURI string, cache CacheControl) (rc io.ReadCloser, ok bool, err error) {
+func fetchUntilFound(registries []*url.URL, requestURI string, cache CacheControl) (resp *http.Response, ok bool, err error) {
 	ref, err := url.Parse(requestURI)
 	if err != nil {
 		return
 	}
 	for _, registry := range registries {
-		rc, ok, err = fetch(registry, ref, cache)
+		resp, ok, err = fetch(registry, ref, cache)
 		if err != nil {
 			return
 		}
@@ -381,16 +380,16 @@ func fetchUntilFound(registries []*url.URL, requestURI string, cache CacheContro
 	return nil, false, nil
 }
 
-func fetch(registry, ref *url.URL, cache CacheControl) (rc io.ReadCloser, ok bool, err error) {
+func fetch(registry, ref *url.URL, cache CacheControl) (resp *http.Response, ok bool, err error) {
 	u := registry.ResolveReference(ref)
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return
 	}
-	if !cache {
+	if cache == NoCache {
 		req.Header.Set("cache-control", "no-cache")
 	}
-	resp, err := proxyClient.Do(req)
+	resp, err = proxyClient.Do(req)
 	if err != nil {
 		return
 	}
@@ -413,7 +412,7 @@ func fetch(registry, ref *url.URL, cache CacheControl) (rc io.ReadCloser, ok boo
 		}
 		return
 	}
-	return resp.Body, true, nil
+	return resp, true, nil
 }
 
 func printMutliCursor(c []int) string {
