@@ -51,7 +51,8 @@ if [ -z "${COZY_APP_VERSION}" ]; then
     if [ -n "${TRAVIS_TAG}" ]; then
         COZY_APP_VERSION="${TRAVIS_TAG}"
     else
-        COZY_APP_VERSION="$(jq -r '.version' < "${TRAVIS_BUILD_DIR}/package.json")-dev.${TRAVIS_COMMIT}"
+        manfile=$(find "${TRAVIS_BUILD_DIR}" \( -name "manifest.webapp" -o -name "manifest.konnector" \) | head -n1)
+        COZY_APP_VERSION="$(jq -r '.version' < "${manfile}")-dev.${TRAVIS_COMMIT}"
     fi
 fi
 
