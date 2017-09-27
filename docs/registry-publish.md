@@ -27,23 +27,34 @@ Like said, you need to add this block of ciphered data in the `.travis.yml`.
 This will allow you to use the `REGISTRY_TOKEN` variable in your deployment
 script.
 
-Then you can adapt this script as your [`after_deploy`](https://docs.travis-ci.com/user/customizing-the-build#The-Build-Lifecycle) script. It contains two environment variables that you can adapt as your need.
+Then you can adapt this script as your [`after_deploy` or `after_success`](https://docs.travis-ci.com/user/customizing-the-build#The-Build-Lifecycle) script.
+
+It contains environment variables that you can adapt as your need:
+  - `COZY_APP_VERSION`: the version string of the deployed version
+  - `COZY_BUILD_URL`: the URL of the deployed tarball for your application
+  - `COZY_BUILD_BRANCH`: the name of the build branch from which the script creates dev releases
 
 ```bash
 #!/bin/bash
 set -e
 
 # Environnment variables:
-#   COZY_BUILD_URL: the URL of the deployed tarball for your application
 #   COZY_APP_VERSION: the version string of the deployed version
+#   COZY_BUILD_URL: the URL of the deployed tarball for your application
+#   COZY_BUILD_BRANCH: the name of the build branch from which the script
+#                      creates dev releases
+
+if [ -z "${COZY_BUILD_BRANCH}" ]; then
+    COZY_BUILD_BRANCH="master"
+fi
 
 if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     echo "No deployment: in pull-request"
     exit 0
 fi
 
-if [ "${TRAVIS_BRANCH}" != "master" ] && [ "${TRAVIS_BRANCH}" != "${TRAVIS_TAG}" ]; then
-    printf 'No deployment: not in master branch nor tag (TRAVIS_BRANCH=%s TRAVIS_TAG=%s)\n' "${TRAVIS_BRANCH}" "${TRAVIS_TAG}"
+if [ "${TRAVIS_BRANCH}" != "${COZY_BUILD_BRANCH}" ] && [ -z "${TRAVIS_TAG}" ]; then
+    printf 'No deployment: not in %s branch nor tag (TRAVIS_BRANCH=%s TRAVIS_TAG=%s)\n' "${COZY_BUILD_BRANCH}" "${TRAVIS_BRANCH}" "${TRAVIS_TAG}"
     exit 0
 fi
 
