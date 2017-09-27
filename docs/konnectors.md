@@ -15,27 +15,14 @@ type           | the type of the konnector source ("node" is the only supported 
 slug           | the default slug (it can be changed at install time)
 icon           | an icon for the home
 description    | a short description of the konnector
-fields         | the list of required fields with their type
 source         | where the files of the app can be downloaded
 developer      | `name` and `url` for the developer
 default_locale | the locale used for the name and description fields
 locales        | translations of the name and description fields in other locales
 version        | the current version number
+parameters     | any json object that will be passed to the konnector on execution in the `COZY_PARAMETERS` environment variable
 license        | [the SPDX license identifier](https://spdx.org/licenses/)
 permissions    | a map of permissions needed by the app (see [here](permissions.md) for more details)
-
-For the "fields" field here is an example :
-```
-{
-  "fields": {
-    "login": "string",
-    "password": "password",
-    "folderPath": "path"
-  }
-}
-```
-
-This will allow the "My accounts" application to get the list of fields to display and their type. The list of possible types still needs to be defined.
 
 ### POST /konnectors/:slug
 

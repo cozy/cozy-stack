@@ -166,6 +166,11 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (
 		return
 	}
 
+	paramsJSON, err := json.Marshal(w.man.Parameters)
+	if err != nil {
+		return
+	}
+
 	token := i.BuildKonnectorToken(w.man)
 
 	cmd = config.GetConfig().Konnectors.Cmd
@@ -173,6 +178,7 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + string(fieldsJSON),
+		"COZY_PARAMETERS=" + string(paramsJSON),
 		"COZY_TYPE=" + w.man.Type,
 		"COZY_LOCALE=" + i.Locale,
 		"COZY_JOB_ID=" + jobID,

@@ -363,6 +363,7 @@ Start the konnector through Rkt, passing as ENV variables :
 
     - `COZY_CREDENTIALS`:  security token to communicate with Cozy
     - `COZY_FIELDS`:       JSON-encoded worker_arguments
+    - `COZY_PARAMETERS`:       JSON-encoded parameters associated with the konnector
     - `COZY_TYPE`:         the type field of the konnector (eg. "node" etc.)
     - `COZY_LOCALE`:       the locale of the user (eg. "en" etc.)
     - `COZY_URL`:          the starting instance URL

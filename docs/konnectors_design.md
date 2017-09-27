@@ -345,9 +345,10 @@ directory](https://github.com/cozy-labs/konnectors/tree/master/server/lib).
 
 The konnector will be run with the following environment variables :
 
-- COZY_CREDENTIALS : containing the response to Oauth request as json string
-- COZY_URL : to know what instance is running the konnector
-- COZY_FIELDS : as a json string with all the values from the account associated to the  konnector. This should correspond to fields defined in the manifest.konnectors with the "fields" attribute.
+- `COZY_CREDENTIALS` : containing the response to Oauth request as json string
+- `COZY_URL` : to know what instance is running the konnector
+- `COZY_FIELDS` : as a json string with all the values from the account associated to the  konnector.
+- `COZY_PARAMETERS` : optional json string associated with the application, used to parameterize a konnector based on a common set of code.
 
 In the end of the konnector execution (or timeout), the logs are read in the log.txt file and added
 to the konnector own log file (in VFS) and the run directory is then destroyed.
