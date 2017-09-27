@@ -218,6 +218,6 @@ func Routes(router *echo.Group) {
 	router.POST("/updates", updatesHandler)
 	router.POST("/token", createToken)
 	router.POST("/oauth_client", registerClient)
-	router.POST("/export", exporter)
-	router.POST("/import", importer)
+	router.POST("/:domain/export", exporter)
+	router.POST("/:domain/import", importer)
 }

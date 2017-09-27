@@ -34,6 +34,7 @@ var flagForce bool
 var flagExpire time.Duration
 var flagDry bool
 var flagJSON bool
+var flagDirectory string
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -470,6 +471,38 @@ updated.`,
 	},
 }
 
+var exportCmd = &cobra.Command{
+	Use:   "export [domain]",
+	Short: "Export an instance to a tarball",
+	Long:  `Export the files and photos albums to a tarball (.tar.gz)`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		if flagDomain == "" {
+			return errAppsMissingDomain
+		}
+		return c.Export(flagDomain)
+	},
+}
+
+var importCmd = &cobra.Command{
+	Use:   "import [domain] [tarball]",
+	Short: "Import a tarball",
+	Long:  `Import a tarball with files, photos albums and contacts to an instance`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		if flagDomain == "" {
+			return errAppsMissingDomain
+		}
+		if len(args) < 1 {
+			return errors.New("The path to the tarball is missing")
+		}
+		return c.Import(flagDomain, &client.ImportOptions{
+			Filename:    args[0],
+			Destination: flagDirectory,
+		})
+	},
+}
+
 func init() {
 	instanceCmdGroup.AddCommand(showInstanceCmd)
 	instanceCmdGroup.AddCommand(addInstanceCmd)
@@ -484,6 +517,8 @@ func init() {
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
 	instanceCmdGroup.AddCommand(updateCmd)
+	instanceCmdGroup.AddCommand(exportCmd)
+	instanceCmdGroup.AddCommand(importCmd)
 	addInstanceCmd.Flags().StringVar(&flagLocale, "locale", instance.DefaultLocale, "Locale of the new cozy instance")
 	addInstanceCmd.Flags().StringVar(&flagTimezone, "tz", "", "The timezone for the user")
 	addInstanceCmd.Flags().StringVar(&flagEmail, "email", "", "The email of the owner")
@@ -498,7 +533,10 @@ func init() {
 	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
-	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
-	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "specify the domain name of the instance")
+	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
+	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	importCmd.Flags().StringVar(&flagDirectory, "directory", "", "Put the imported files inside this directory")
 	RootCmd.AddCommand(instanceCmdGroup)
 }

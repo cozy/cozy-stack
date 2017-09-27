@@ -5,16 +5,19 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/move"
 	workers "github.com/cozy/cozy-stack/pkg/workers/mails"
-	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
 
 func exporter(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	domain := instance.Domain
+	domain := c.Param("domain")
+	instance, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 	filename, err := move.Export(instance)
 	if err != nil {
 		return err
@@ -46,7 +49,11 @@ func exporter(c echo.Context) error {
 }
 
 func importer(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	domain := c.Param("domain")
+	instance, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 
 	dst := c.QueryParam("destination")
 	if !strings.HasPrefix(dst, "/") {
@@ -58,7 +65,7 @@ func importer(c echo.Context) error {
 		filename = "cozy.tar.gz"
 	}
 
-	err := move.Import(instance, filename, dst)
+	err = move.Import(instance, filename, dst)
 	if err != nil {
 		return err
 	}
