@@ -45,8 +45,7 @@ An application object contains the following fields:
 - `repository`: object with type and URL of package repository
 - `locales`: list of locales supported by the application
 - `tags`: list of tags associated with the application
-- `logo_url`: link to the logo image
-- `screenshot_urls`: array of links to the screenshots of the application
+- `screenshots`: array of screenshots filenames
 - `versions`: an object containing all the channels versions
 
 Example:
@@ -68,8 +67,7 @@ Example:
     "repository": "https://github.com/cozy/cozy-drive",
     "locales": ["en", "fr"],
     "tags": ["foo", "bar", "baz"],
-    "logo_url": "https://foobar.img/logo.jpg",
-    "screenshot_urls": ["https://foobar.img/screen1.jpg", "https://foobar.img/screen2.jpg"],
+    "screenshots": ["screen1.jpg", "screen2.jpg"],
     "versions": {
         "stable": ["3.1.1"],
         "beta": ["3.1.1-beta.1"],
@@ -328,6 +326,47 @@ Content-Type: application/json
         "dev": ["3.1.1-dev.7a8354f74b50d7beead7719252a18ed45f55d070"]
     }
 }
+```
+
+### GET /registry/:app/icon
+
+Get the current application icon.
+
+#### Request
+
+```http
+GET /registry/drive/icon
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/svg+xml
+
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <g fill="none" fill-rule="evenodd"></g>
+</svg>
+```
+
+### GET /registry/:app/screenshots/:filename
+
+Get the screenshot with the specified filename from the field `screenshots` of
+the application.
+
+#### Request
+
+```http
+GET /registry/drive/screenshots/screen1.jpg
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+
+...
 ```
 
 ### GET /registry/:app/:version

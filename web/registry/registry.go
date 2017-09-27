@@ -10,23 +10,42 @@ import (
 	"github.com/labstack/echo"
 )
 
-func proxyReq(c echo.Context) error {
-	i := middlewares.GetInstance(c)
-	pdoc, err := webpermissions.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeWebapp {
-		return echo.NewHTTPError(http.StatusForbidden)
+type authType int
+
+const (
+	authed authType = iota
+	perms
+)
+
+func proxyReq(auth authType, cacheControl registry.CacheControl) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		i := middlewares.GetInstance(c)
+		switch auth {
+		case authed:
+			if !middlewares.IsLoggedIn(c) {
+				return echo.NewHTTPError(http.StatusForbidden)
+			}
+		case perms:
+			pdoc, err := webpermissions.GetPermission(c)
+			if err != nil || pdoc.Type != permissions.TypeWebapp {
+				return echo.NewHTTPError(http.StatusForbidden)
+			}
+		default:
+			panic("unknown authType")
+		}
+		registries, err := i.Registries()
+		if err != nil {
+			return err
+		}
+		req := c.Request()
+		resp, err := registry.Proxy(req, registries, cacheControl)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		contentType := resp.Header.Get("content-type")
+		return c.Stream(resp.StatusCode, contentType, resp.Body)
 	}
-	registries, err := i.Registries()
-	if err != nil {
-		return err
-	}
-	req := c.Request()
-	r, err := registry.Proxy(req, registries, registry.WithCache)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-	return c.Stream(http.StatusOK, echo.MIMEApplicationJSON, r)
 }
 
 func proxyListReq(c echo.Context) error {
@@ -51,7 +70,9 @@ func proxyListReq(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.GET("", proxyListReq)
 	router.GET("/", proxyListReq)
-	router.GET("/:app", proxyReq)
-	router.GET("/:app/:version", proxyReq)
-	router.GET("/:app/:channel/latest", proxyReq)
+	router.GET("/:app", proxyReq(perms, registry.WithCache))
+	router.GET("/:app/icon", proxyReq(authed, registry.NoCache))
+	router.GET("/:app/screenshots/:filename", proxyReq(authed, registry.NoCache))
+	router.GET("/:app/:version", proxyReq(perms, registry.WithCache))
+	router.GET("/:app/:channel/latest", proxyReq(perms, registry.WithCache))
 }
