@@ -31,7 +31,7 @@ Then you can adapt this script as your [`after_deploy` or `after_success`](https
 
 It contains environment variables that you can adapt as your need:
   - `COZY_APP_VERSION`: the version string of the deployed version
-  - `COZY_APP_PARAMS`: an optional JSON object (string, object or array) that will parameterize the application on its execution.
+  - `COZY_APP_PARAMETERS`: an optional JSON object (string, object or array) that will parameterize the application on its execution.
   - `COZY_BUILD_URL`: the URL of the deployed tarball for your application
   - `COZY_BUILD_BRANCH`: the name of the build branch from which the script creates dev releases
 
@@ -45,9 +45,8 @@ set -e
 #   COZY_BUILD_BRANCH: the name of the build branch from which the script
 #                      creates dev releases
 
-if [ -z "${COZY_BUILD_BRANCH}" ]; then
-    COZY_BUILD_BRANCH="master"
-fi
+[ -z "${COZY_BUILD_BRANCH}" ] && COZY_BUILD_BRANCH="master"
+[ -z "${COZY_APP_PARAMETERS}" ] && COZY_APP_PARAMETERS="null"
 
 if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
     echo "No deployment: in pull-request"
@@ -57,6 +56,11 @@ fi
 if [ "${TRAVIS_BRANCH}" != "${COZY_BUILD_BRANCH}" ] && [ -z "${TRAVIS_TAG}" ]; then
     printf 'No deployment: not in %s branch nor tag (TRAVIS_BRANCH=%s TRAVIS_TAG=%s)\n' "${COZY_BUILD_BRANCH}" "${TRAVIS_BRANCH}" "${TRAVIS_TAG}"
     exit 0
+fi
+
+if ! jq <<< "${COZY_APP_PARAMETERS}" > /dev/null; then
+  printf "Could not parse COZY_APP_PARAMETERS=%s as JSON\n" "${COZY_APP_PARAMETERS}"
+  exit 1
 fi
 
 if [ -z "${COZY_APP_VERSION}" ]; then
@@ -79,12 +83,12 @@ fi
 
 shasum=$(curl -sSL --fail "${COZY_BUILD_URL}" | shasum -a 256 | cut -d" " -f1)
 
-printf 'Publishing version "%s" from "%s" (%s)\n' "${COZY_APP_VERSION}" "${COZY_BUILD_URL}" "${shasum}"
+printf 'Publishing version "%s" from "%s" (%s)\n' "${COZY_APP_VERSION}" "${COZY_BUILD_URL}\n" "${shasum}"
 
 curl -sS --fail -X POST \
     -H "Content-Type: application/json" \
     -H "Authorization: Token ${REGISTRY_TOKEN}" \
-    -d "{\"version\": \"${COZY_APP_VERSION}\", \"url\": \"${COZY_BUILD_URL}\", \"sha256\": \"${shasum}\"}" \
+    -d "{\"version\": \"${COZY_APP_VERSION}\", \"url\": \"${COZY_BUILD_URL}\", \"sha256\": \"${shasum}\", \"parameters\": ${COZY_APP_PARAMETERS}}" \
     "https://registry.cozy.io/registry/versions"
 ```
 
