@@ -24,6 +24,18 @@ For each of these channels, the version string has a different format which diff
 - beta: `X.Y.Z-beta.M` where `X`, `Y`, `Z` and `M` are positive or null integers
 - dev: `X.Y.Z-dev.checksum` where `X`, `Y` and `Z` are positive or null integers and `checksum` is a unique identifier of the dev release (typically a shasum of the git commit)
 
+## Version order
+
+TLDR: 1.0.0-dev.* < 1.0.0 and 1.0.0-beta.* < 1.0.0, make sure you upgrade your app version after publishing stable.
+
+The order used to determine the latest version of a channel is the following:
+
+    - `1.0.0-dev.*  < 1.0.0 (dev < stable)`
+    - `1.0.0-beta.* < 1.0.0 (beta < stable)`
+    - `1.0.0-beta.1 < 1.0.0-beta.2`
+
+To order beta and dev releases, we apply a sort by their creation date.
+
 ## Objects
 
 Two types of objects are managed in the registry: applications and versions.
@@ -147,7 +159,7 @@ Authorization: Token AbCdE
 }
 ```
 
-### POST /registry/:app/:version
+### POST /registry/:app/:version or POST /registry/:app/versions
 
 This route adds a version of an application to the registry to the specified channel (stable, beta or dev).
 
@@ -155,6 +167,15 @@ The content of the manifest file extracted from the application data is used to 
 
 - the `manifest` file contained in the tarball should be checked and have its fields checked against the application properties
 - the application content should check the sha256 checksum
+
+Fields of the object sent to this request:
+
+  - **`url`**: the url where the application tarball is stored
+  - **`sha256`**: the sha256 checksum of the tarball
+  - **`version`**: the version value (should match the one in the manifest)
+  - `parameters?`: an optional json value (any) that will override the `parameters` field of the manifest
+  - `icon?`: an optional path to override the `icon` field of the manifest
+  - `screenshots?`: and optional array of path to override the `screenshots` field of the manifest
 
 #### Status codes
 
