@@ -29,6 +29,7 @@ type KonnManifest struct {
 	DefaultLocale string  `json:"default_locale"`
 	Locales       Locales `json:"locales"`
 
+	Parameters     json.RawMessage `json:"parameters"`
 	DocVersion     string          `json:"version"`
 	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`

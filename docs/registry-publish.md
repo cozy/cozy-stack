@@ -31,6 +31,7 @@ Then you can adapt this script as your [`after_deploy` or `after_success`](https
 
 It contains environment variables that you can adapt as your need:
   - `COZY_APP_VERSION`: the version string of the deployed version
+  - `COZY_APP_PARAMS`: an optional JSON object (string, object or array) that will parameterize the application on its execution.
   - `COZY_BUILD_URL`: the URL of the deployed tarball for your application
   - `COZY_BUILD_BRANCH`: the name of the build branch from which the script creates dev releases
 
