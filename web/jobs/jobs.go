@@ -16,8 +16,6 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/labstack/echo"
 
-	// exec is needed for bad triggers cleanup
-
 	// import workers
 	_ "github.com/cozy/cozy-stack/pkg/workers/exec"
 	_ "github.com/cozy/cozy-stack/pkg/workers/log"
