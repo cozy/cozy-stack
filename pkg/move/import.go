@@ -256,9 +256,9 @@ func createAlbum(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc
 }
 
 func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc) error {
-	name := path.Base(hdr.Name)
-	name = strings.TrimPrefix(name, "files/")
-	mime, class := vfs.ExtractMimeAndClassFromFilename(name)
+	name := strings.TrimPrefix(hdr.Name, "files/")
+	filename := path.Base(name)
+	mime, class := vfs.ExtractMimeAndClassFromFilename(filename)
 	now := time.Now()
 	executable := hdr.FileInfo().Mode()&0100 != 0
 
@@ -266,7 +266,7 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc)
 	if err != nil {
 		return err
 	}
-	fileDoc, err := vfs.NewFileDoc(name, dirDoc.ID(), hdr.Size, nil, mime, class, now, executable, false, nil)
+	fileDoc, err := vfs.NewFileDoc(filename, dirDoc.ID(), hdr.Size, nil, mime, class, now, executable, false, nil)
 	if err != nil {
 		return err
 	}
