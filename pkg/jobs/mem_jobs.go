@@ -7,7 +7,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -31,9 +30,6 @@ type (
 		closed    chan struct{}
 	}
 )
-
-// globalStorage is the global job persistence layer used thoughout the stack.
-var globalStorage = &couchStorage{couchdb.GlobalJobsDB}
 
 // newMemQueue creates and a new in-memory queue.
 func newMemQueue(workerType string) *memQueue {
@@ -148,11 +144,12 @@ func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, error) {
 		return nil, ErrUnknownWorker
 	}
 	infos := NewJobInfos(req)
+	storage := newCouchStorage(req.Domain)
 	j := Job{
 		infos:   infos,
-		storage: globalStorage,
+		storage: storage,
 	}
-	if err := globalStorage.Create(infos); err != nil {
+	if err := storage.Create(infos); err != nil {
 		return nil, err
 	}
 	if err := q.Enqueue(j); err != nil {
@@ -173,7 +170,7 @@ func (b *memBroker) QueueLen(workerType string) (int, error) {
 
 // GetJobInfos returns the informations about a job.
 func (b *memBroker) GetJobInfos(domain, jobID string) (*JobInfos, error) {
-	return globalStorage.Get(domain, jobID)
+	return newCouchStorage(domain).Get(jobID)
 }
 
 var (

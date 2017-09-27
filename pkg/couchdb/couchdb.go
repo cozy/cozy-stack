@@ -82,11 +82,6 @@ var GlobalDB = SimpleDatabasePrefix("global")
 // database.
 var GlobalTriggersDB = SimpleDatabasePrefix("triggers")
 
-// GlobalJobsDB is the database prefix used for jobs that may be stored
-// globally on self-hosted instances where we need to store them in the same
-// database.
-var GlobalJobsDB = SimpleDatabasePrefix("jobs")
-
 // GlobalSecretsDB is the the prefix used for db which hold
 // a cozy stack secrets.
 var GlobalSecretsDB = SimpleDatabasePrefix("secrets")

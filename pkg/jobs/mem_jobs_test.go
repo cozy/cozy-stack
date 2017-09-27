@@ -16,15 +16,15 @@ func TestProperSerial(t *testing.T) {
 		Domain:     "cozy.tools:8080",
 		WorkerType: "",
 	})
-
+	storage := newCouchStorage(infos.Domain)
 	j := &Job{
 		infos:   infos,
-		storage: globalStorage,
+		storage: storage,
 	}
-	globalStorage.Create(infos)
+	storage.Create(infos)
 	err := j.AckConsumed()
 	assert.NoError(t, err)
-	j2, err := globalStorage.Get("cozy.tools:8080", j.infos.ID())
+	j2, err := storage.Get(j.infos.ID())
 	assert.NoError(t, err)
 	assert.Equal(t, State(Running), j2.State)
 }

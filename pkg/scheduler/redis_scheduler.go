@@ -83,9 +83,6 @@ func (s *RedisScheduler) Start(b jobs.Broker) error {
 	s.broker = b
 	s.closed = make(chan struct{})
 	s.startEventDispatcher()
-	if err := s.ImportFromMemStorage(); err != nil {
-		s.log.Errorln("Something went wrong while importing old storage", err)
-	}
 	go s.pollLoop()
 	return nil
 }
