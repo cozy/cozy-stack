@@ -72,12 +72,14 @@ type Contact struct {
 	DocID  string `json:"_id,omitempty"`
 	DocRev string `json:"_rev,omitempty"`
 
-	FullName string            `json:"fullname,omitempty"`
-	Name     *ContactName      `json:"name,omitempty"`
-	Email    []*ContactEmail   `json:"email,omitempty"`
-	Address  []*ContactAddress `json:"address,omitempty"`
-	Phone    []*ContactPhone   `json:"phone,omitempty"`
-	Cozy     []*ContactCozy    `json:"cozy,omitempty"`
+	FullName string           `json:"fullname,omitempty"`
+	Name     ContactName      `json:"name,omitempty"`
+	Birthday string           `json:"birthday,omitempty"`
+	Note     string           `json:"note,omitempty"`
+	Email    []ContactEmail   `json:"email,omitempty"`
+	Address  []ContactAddress `json:"address,omitempty"`
+	Phone    []ContactPhone   `json:"phone,omitempty"`
+	Cozy     []ContactCozy    `json:"cozy,omitempty"`
 }
 
 // ID returns the contact qualified identifier
@@ -95,16 +97,16 @@ func (c *Contact) Clone() couchdb.Doc {
 	cloned.FullName = c.FullName
 	cloned.Name = c.Name
 
-	cloned.Email = make([]*ContactEmail, len(c.Email))
+	cloned.Email = make([]ContactEmail, len(c.Email))
 	copy(cloned.Email, c.Email)
 
-	cloned.Address = make([]*ContactAddress, len(c.Address))
+	cloned.Address = make([]ContactAddress, len(c.Address))
 	copy(cloned.Address, c.Address)
 
-	cloned.Phone = make([]*ContactPhone, len(c.Phone))
+	cloned.Phone = make([]ContactPhone, len(c.Phone))
 	copy(cloned.Phone, c.Phone)
 
-	cloned.Cozy = make([]*ContactCozy, len(c.Cozy))
+	cloned.Cozy = make([]ContactCozy, len(c.Cozy))
 	copy(cloned.Cozy, c.Cozy)
 
 	return &cloned
@@ -124,41 +126,47 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 	}
 
 	name := vcard.Name()
-	contactname := &ContactName{
+	contactname := ContactName{
 		FamilyName:     name.FamilyName,
 		GivenName:      name.GivenName,
 		AdditionalName: name.AdditionalName,
 		NamePrefix:     name.HonorificPrefix,
 		NameSuffix:     name.HonorificSuffix,
 	}
+	fullname := name.Value
+	if names := vcard.FormattedNames(); len(names) > 0 {
+		fullname = names[0].Value
+	}
 
-	var contactemail []*ContactEmail
-	for i, mail := range vcard.Values("EMAIL") {
-		ce := &ContactEmail{
+	var bday string
+	if field := vcard.Get("BDAY"); field != nil {
+		bday = field.Value
+	}
+
+	var note string
+	if field := vcard.Get("NOTE"); field != nil {
+		note = field.Value
+	}
+
+	var contactemail []ContactEmail
+	for _, mail := range vcard.Values("EMAIL") {
+		ce := ContactEmail{
 			Address: mail,
-		}
-		if i == 0 {
-			ce.Type = "MAIN"
-			ce.Primary = true
 		}
 		contactemail = append(contactemail, ce)
 	}
 
-	var contactphone []*ContactPhone
-	for i, phone := range vcard.Values("TEL") {
-		cp := &ContactPhone{
+	var contactphone []ContactPhone
+	for _, phone := range vcard.Values("TEL") {
+		cp := ContactPhone{
 			Number: phone,
-		}
-		if i == 0 {
-			cp.Type = "MAIN"
-			cp.Primary = true
 		}
 		contactphone = append(contactphone, cp)
 	}
 
-	var contactaddress []*ContactAddress
+	var contactaddress []ContactAddress
 	for _, address := range vcard.Addresses() {
-		ca := &ContactAddress{
+		ca := ContactAddress{
 			Street:           address.StreetAddress,
 			Pobox:            address.PostOfficeBox,
 			City:             address.Locality,
@@ -171,8 +179,10 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 	}
 
 	contact := &Contact{
-		FullName: name.Value,
+		FullName: fullname,
 		Name:     contactname,
+		Birthday: bday,
+		Note:     note,
 		Address:  contactaddress,
 		Email:    contactemail,
 		Phone:    contactphone,
