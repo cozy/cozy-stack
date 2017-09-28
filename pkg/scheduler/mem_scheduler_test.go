@@ -129,7 +129,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	for _, trigger := range triggers {
-		err := sch.Delete(trigger.Domain, trigger.TID)
+		err = sch.Delete(trigger.Domain, trigger.TID)
 		assert.NoError(t, err)
 	}
 
@@ -204,7 +204,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	assert.Equal(t, 3, called)
 
 	for _, trigger := range triggers {
-		err := sch.Delete(trigger.Domain, trigger.TID)
+		err = sch.Delete(trigger.Domain, trigger.TID)
 		assert.NoError(t, err)
 	}
 
