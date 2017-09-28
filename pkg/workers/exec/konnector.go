@@ -65,9 +65,10 @@ type konnectorMsg struct {
 }
 
 type konnectorLogs struct {
-	Slug     string         `json:"_id,omitempty"`
-	DocRev   string         `json:"_rev,omitempty"`
-	Messages []konnectorMsg `json:"logs"`
+	Slug      string         `json:"_id,omitempty"`
+	DocRev    string         `json:"_rev,omitempty"`
+	Messages  []konnectorMsg `json:"logs"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 func (kl *konnectorLogs) ID() string      { return kl.Slug }
@@ -206,8 +207,9 @@ func (w *konnectorWorker) ScanOuput(i *instance.Instance, line []byte) error {
 
 func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 	errLogs := couchdb.Upsert(i, &konnectorLogs{
-		Slug:     w.opts.Konnector,
-		Messages: w.messages,
+		Slug:      w.opts.Konnector,
+		Messages:  w.messages,
+		CreatedAt: time.Now(),
 	})
 	if errLogs != nil {
 		fmt.Println("Failed to save konnector logs", errLogs)
