@@ -261,6 +261,7 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 	return err
 }
 
+// Export launch the creation of a tarball to export data from an instance.
 func (c *Client) Export(domain string) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
@@ -273,6 +274,7 @@ func (c *Client) Export(domain string) error {
 	return err
 }
 
+// Import launch the import of a tarball with data to put in an instance.
 func (c *Client) Import(domain string, opts *ImportOptions) error {
 	if !validDomain(domain) {
 		return fmt.Errorf("Invalid domain: %s", domain)
