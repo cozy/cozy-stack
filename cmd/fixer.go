@@ -169,35 +169,6 @@ var mimeFixerCmd = &cobra.Command{
 	},
 }
 
-var triggersFixer = &cobra.Command{
-	Use:   "triggers [domain]",
-	Short: "Remove orphaned triggers from an instance",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return cmd.Usage()
-		}
-		c := newClient(args[0], consts.Triggers+" "+consts.Accounts)
-		res, err := c.Req(&request.Options{
-			Method: "POST",
-			Path:   "/jobs/triggers/clean",
-		})
-		if err != nil {
-			return err
-		}
-		defer res.Body.Close()
-		var result struct {
-			Deleted int `json:"deleted"`
-		}
-		err = json.NewDecoder(res.Body).Decode(&result)
-		if err != nil {
-			return err
-		}
-
-		fmt.Printf("Cleaned %d orphans on %s\n", result.Deleted, args[0])
-		return nil
-	},
-}
-
 var jobsFixer = &cobra.Command{
 	Use:   "jobs [domain]",
 	Short: "Take a look at the consistency of the jobs",
@@ -264,7 +235,6 @@ func init() {
 	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
-	fixerCmdGroup.AddCommand(triggersFixer)
 	fixerCmdGroup.AddCommand(jobsFixer)
 	fixerCmdGroup.AddCommand(onboardingsFixer)
 	RootCmd.AddCommand(fixerCmdGroup)
