@@ -9,22 +9,12 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
-
-type storage struct {
-	ts []*TriggerInfos
-}
-
-func (s *storage) GetAll() ([]*TriggerInfos, error) { return s.ts, nil }
-func (s *storage) Add(trigger Trigger) error        { return nil }
-func (s *storage) Delete(trigger Trigger) error     { return nil }
 
 func TestTriggersBadArguments(t *testing.T) {
 	var err error
 	_, err = NewTrigger(&TriggerInfos{
-		TID:       utils.RandomString(10),
 		Domain:    "cozy.local",
 		Type:      "@at",
 		Arguments: "garbage",
@@ -32,14 +22,12 @@ func TestTriggersBadArguments(t *testing.T) {
 	assert.Error(t, err)
 
 	_, err = NewTrigger(&TriggerInfos{
-		TID:       utils.RandomString(10),
 		Type:      "@in",
 		Arguments: "garbage",
 	})
 	assert.Error(t, err)
 
 	_, err = NewTrigger(&TriggerInfos{
-		TID:       utils.RandomString(10),
 		Domain:    "cozy.local",
 		Type:      "@unknown",
 		Arguments: "",
@@ -80,19 +68,15 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	wAt.Add(1) // 1 time in @at
 	wIn.Add(1) // 1 time in @in
 
-	atID := utils.RandomString(10)
 	at := &TriggerInfos{
-		TID:        atID,
 		Type:       "@at",
-		Domain:     "cozy.local",
+		Domain:     "cozy.local.memsched_timetriggers",
 		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
 		WorkerType: "worker",
 		Message:    msg1,
 	}
-	inID := utils.RandomString(10)
 	in := &TriggerInfos{
-		TID:        inID,
-		Domain:     "cozy.local",
+		Domain:     "cozy.local.memsched_timetriggers",
 		Type:       "@in",
 		Arguments:  "1s",
 		WorkerType: "worker",
@@ -100,20 +84,30 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	}
 
 	triggers := []*TriggerInfos{at, in}
-	sch := newMemScheduler(&storage{triggers})
-
+	sch := newMemScheduler()
 	sch.Start(bro)
 
-	ts, err := sch.GetAll("cozy.local")
+	for _, infos := range triggers {
+		trigger, err := NewTrigger(infos)
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = sch.Add(trigger)
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	ts, err := sch.GetAll("cozy.local.memsched_timetriggers")
 	assert.NoError(t, err)
 	assert.Len(t, ts, len(triggers))
 
 	for _, trigger := range ts {
-		switch trigger.Infos().TID {
-		case atID:
-			assert.Equal(t, at, trigger.Infos())
-		case inID:
-			assert.Equal(t, in, trigger.Infos())
+		switch trigger.Infos().Type {
+		case "@at":
+			assert.EqualValues(t, at, trigger.Infos())
+		case "@in":
+			assert.EqualValues(t, in, trigger.Infos())
 		default:
 			t.Fatalf("unknown trigger ID %s", trigger.Infos().TID)
 		}
@@ -132,6 +126,11 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 
 	for i := 0; i < len(ts); i++ {
 		<-done
+	}
+
+	for _, trigger := range triggers {
+		err := sch.Delete(trigger.Domain, trigger.TID)
+		assert.NoError(t, err)
 	}
 
 	err = sch.Shutdown(context.Background())
@@ -155,9 +154,8 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 
 	msg, _ := jobs.NewMessage("json", "@event")
 	ti := &TriggerInfos{
-		TID:        utils.RandomString(10),
 		Type:       "@event",
-		Domain:     "cozy.local",
+		Domain:     "cozy.local.withdebounce",
 		Arguments:  "io.cozy.testdebounce",
 		Debounce:   "100ms",
 		WorkerType: "worker",
@@ -165,10 +163,21 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	}
 
 	triggers := []*TriggerInfos{ti}
-	sch := newMemScheduler(&storage{triggers})
+	sch := newMemScheduler()
 	sch.Start(bro)
 
-	ts, err := sch.GetAll("cozy.local")
+	for _, infos := range triggers {
+		trigger, err := NewTrigger(infos)
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = sch.Add(trigger)
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	ts, err := sch.GetAll("cozy.local.withdebounce")
 	assert.NoError(t, err)
 	assert.Len(t, ts, len(triggers))
 
@@ -183,7 +192,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 	event := &realtime.Event{
 		Verb:   realtime.EventCreate,
 		Doc:    &doc,
-		Domain: "cozy.local",
+		Domain: "cozy.local.withdebounce",
 	}
 
 	for i := 0; i < 24; i++ {
@@ -193,6 +202,11 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 
 	time.Sleep(150 * time.Millisecond)
 	assert.Equal(t, 3, called)
+
+	for _, trigger := range triggers {
+		err := sch.Delete(trigger.Domain, trigger.TID)
+		assert.NoError(t, err)
+	}
 
 	err = sch.Shutdown(context.Background())
 	assert.NoError(t, err)

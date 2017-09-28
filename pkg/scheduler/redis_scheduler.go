@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -335,9 +336,14 @@ func (s *RedisScheduler) deleteTrigger(t Trigger) error {
 func (s *RedisScheduler) GetAll(domain string) ([]Trigger, error) {
 	var infos []*TriggerInfos
 	db := couchdb.SimpleDatabasePrefix(domain)
-	// TODO(pagination): use a sort of couchdb.ForeachDocs function when available.
-	req := &couchdb.AllDocsRequest{Limit: 1000}
-	err := couchdb.GetAllDocs(db, consts.Triggers, req, &infos)
+	err := couchdb.ForeachDocs(db, consts.Triggers, func(data []byte) error {
+		var t *TriggerInfos
+		if err := json.Unmarshal(data, &t); err != nil {
+			return err
+		}
+		infos = append(infos, t)
+		return nil
+	})
 	if err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return nil, nil

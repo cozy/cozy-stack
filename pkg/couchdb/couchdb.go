@@ -77,11 +77,6 @@ func rtevent(db Database, verb string, doc, oldDoc Doc) {
 // GlobalDB is the prefix used for stack-scoped db
 var GlobalDB = SimpleDatabasePrefix("global")
 
-// GlobalTriggersDB is the database prefix used for triggers that may be stored
-// globally on self-hosted instances where we need to store them in the same
-// database.
-var GlobalTriggersDB = SimpleDatabasePrefix("triggers")
-
 // GlobalSecretsDB is the the prefix used for db which hold
 // a cozy stack secrets.
 var GlobalSecretsDB = SimpleDatabasePrefix("secrets")
