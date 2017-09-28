@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,7 +44,6 @@ func TestInMemoryJobs(t *testing.T) {
 				if !assert.NoError(t, err) {
 					return err
 				}
-				fmt.Println(">>> worker msg=", msg)
 				if strings.HasPrefix(msg, "a-") {
 					_, err := strconv.Atoi(msg[len("a-"):])
 					assert.NoError(t, err)
@@ -76,11 +74,9 @@ func TestInMemoryJobs(t *testing.T) {
 				WorkerType: "test",
 				Message:    msg,
 			})
-			fmt.Println(">> send 1=", string(msg.Data), err)
 			assert.NoError(t, err)
 			time.Sleep(randomMicro(0, v))
 		}
-		fmt.Println(">> send done 1")
 		w.Done()
 	}()
 
@@ -93,11 +89,9 @@ func TestInMemoryJobs(t *testing.T) {
 				WorkerType: "test",
 				Message:    msg,
 			})
-			fmt.Println(">> send 2=", string(msg.Data), err)
 			assert.NoError(t, err)
 			time.Sleep(randomMicro(0, v))
 		}
-		fmt.Println(">> send done 2")
 		w.Done()
 	}()
 
