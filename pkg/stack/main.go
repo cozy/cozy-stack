@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/google/gops/agent"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logger.WithNamespace("stack")
@@ -42,23 +43,33 @@ security features. Please do not use this binary as your production server.
 	}
 
 	// Check that we can properly reach CouchDB.
-	db, err := checkup.HTTPChecker{
-		URL:            config.CouchURL().String(),
-		MustContain:    `"version":"2`,
-		Attempts:       5,
-		AttemptSpacing: 1 * time.Second,
-	}.Check()
+	attempts := 8
+	attemptsSpacing := 1 * time.Second
+	for i := 0; i < attempts; i++ {
+		var db checkup.Result
+		db, err = checkup.HTTPChecker{
+			URL:         config.CouchURL().String(),
+			MustContain: `"version":"2`,
+		}.Check()
+		if err != nil {
+			err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", err.Error())
+		} else if db.Status() == checkup.Down {
+			err = fmt.Errorf("Could not reach Couchdb 2.0 database")
+		} else if db.Status() != checkup.Healthy {
+			log.Warnf("CouchDB does not seem to be in a healthy state, " +
+				"the cozy-stack will be starting anyway")
+			break
+		}
+		if err == nil {
+			break
+		}
+		if i < attempts-1 {
+			logrus.Warnf("%s, retrying in %v", err, attemptsSpacing)
+			time.Sleep(attemptsSpacing)
+		}
+	}
 	if err != nil {
-		err = fmt.Errorf("Could not reach Couchdb 2.0 database: %s", err.Error())
 		return
-	}
-	if db.Status() == checkup.Down {
-		err = fmt.Errorf("Could not reach Couchdb 2.0 database:\n%s", db.String())
-		return
-	}
-	if db.Status() != checkup.Healthy {
-		log.Warnf("CouchDB does not seem to be in a healthy state, "+
-			"the cozy-stack will be starting anyway:\n%s", db.String())
 	}
 
 	// Init the main global connection to the swift server
