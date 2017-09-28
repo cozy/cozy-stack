@@ -1,4 +1,4 @@
-package imexport
+package move
 
 import (
 	"archive/tar"
@@ -18,6 +18,7 @@ import (
 )
 
 var inst *instance.Instance
+var filename string
 
 var testdb couchdb.Database
 
@@ -73,16 +74,13 @@ func TestTardir(t *testing.T) {
 	image.AddReferencedBy(*testAlbumref)
 	err = couchdb.UpdateDoc(testdb, image)
 	assert.NoError(t, err)
-	//
 
-	w, err := os.Create("cozy_test.tar.gz")
+	filename, err = Export(inst)
 	assert.NoError(t, err)
 
-	err = Tardir(w, inst)
+	r, err := os.Open(filename)
 	assert.NoError(t, err)
-
-	r, err := os.Open("cozy_test.tar.gz")
-	assert.NoError(t, err)
+	defer r.Close()
 
 	gr, err := gzip.NewReader(r)
 	assert.NoError(t, err)
@@ -96,17 +94,17 @@ func TestTardir(t *testing.T) {
 			break
 		}
 		assert.NoError(t, err)
-		if hdr.Name == "logos.zip" {
+		if hdr.Name == "files/logos.zip" {
 			assert.Equal(t, int64(2814), hdr.Size)
 		}
-		if hdr.Name == "metadata/album/" {
+		if hdr.Name == "albums/" {
 			for {
 				hdr, err := tr.Next()
 				if err == io.EOF {
 					break
 				}
 				assert.NoError(t, err)
-				if hdr.Name == "album.json" {
+				if hdr.Name == "albums.json" {
 					assert.NotNil(t, hdr.Size)
 				}
 				if hdr.Name == "references.json" {
@@ -119,16 +117,17 @@ func TestTardir(t *testing.T) {
 
 }
 
-func TestUntardir(t *testing.T) {
+func TestImport(t *testing.T) {
 	fs := inst.VFS()
 
-	r, err := os.Open("cozy_test.tar.gz")
+	r, err := os.Open(filename)
 	assert.NoError(t, err)
+	defer r.Close()
 
 	dst, err := vfs.Mkdir(fs, "/destination", nil)
 	assert.NoError(t, err)
 
-	err = Untardir(r, dst.ID(), inst)
+	err = untar(r, dst, inst)
 	assert.NoError(t, err)
 
 	logo, err := fs.FileByPath("/destination/logos.zip")
@@ -149,7 +148,7 @@ func TestUntardir(t *testing.T) {
 		}
 	}
 
-	err = os.Remove("cozy_test.tar.gz")
+	err = os.Remove(filename)
 	assert.NoError(t, err)
 }
 

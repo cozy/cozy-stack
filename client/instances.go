@@ -70,6 +70,12 @@ type UpdatesOptions struct {
 	Slugs  []string
 }
 
+// ImportOptions is a struct with the options for importing a tarball.
+type ImportOptions struct {
+	Filename    string
+	Destination string
+}
+
 // GetInstance returns the instance associated with the specified domain.
 func (c *Client) GetInstance(domain string) (*Instance, error) {
 	res, err := c.Req(&request.Options{
@@ -249,6 +255,35 @@ func (c *Client) Updates(opts *UpdatesOptions) error {
 	_, err := c.Req(&request.Options{
 		Method:     "POST",
 		Path:       "/instances/updates",
+		Queries:    q,
+		NoResponse: true,
+	})
+	return err
+}
+
+func (c *Client) Export(domain string) error {
+	if !validDomain(domain) {
+		return fmt.Errorf("Invalid domain: %s", domain)
+	}
+	_, err := c.Req(&request.Options{
+		Method:     "POST",
+		Path:       "/instances/" + domain + "/export",
+		NoResponse: true,
+	})
+	return err
+}
+
+func (c *Client) Import(domain string, opts *ImportOptions) error {
+	if !validDomain(domain) {
+		return fmt.Errorf("Invalid domain: %s", domain)
+	}
+	q := url.Values{
+		"Filename":    {opts.Filename},
+		"Destination": {opts.Destination},
+	}
+	_, err := c.Req(&request.Options{
+		Method:     "POST",
+		Path:       "/instances/" + domain + "/import",
 		Queries:    q,
 		NoResponse: true,
 	})

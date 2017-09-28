@@ -115,7 +115,7 @@ L'équipe Cozy.`
 	mailArchiveTextEn = `` +
 		`Hello {{.RecipientName}},
 
-You can now download the archive with all your Cozy data. You can download is by clicking on the following link: {{.Lien}}
+You can now download the archive with all your Cozy data. You can download is by clicking on the following link: {{.Link}}
 
 We wish you a great day,
 
@@ -125,7 +125,7 @@ The Cozy Team`
 	mailArchiveTextFr = `` +
 		`Bonjour {{.RecipientName}},
 
-L'archive contenant l'ensemble des données de votre Cozy est prête à être téléchargée. Vous pouvez la télécharger en cliquant sur ce lien : {{.Lien}}
+L'archive contenant l'ensemble des données de votre Cozy est prête à être téléchargée. Vous pouvez la télécharger en cliquant sur ce lien : {{.Link}}
 
 Nous vous souhaitons une très bonne journée,
 
