@@ -117,6 +117,7 @@ func TestAllDoctypes(t *testing.T) {
 		"io.cozy.files",
 		"io.cozy.konnectors",
 		"io.cozy.settings",
+		"io.cozy.triggers",
 	}
 	assert.Equal(t, expected, dbs)
 }
