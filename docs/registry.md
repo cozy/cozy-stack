@@ -196,6 +196,7 @@ Authorization: Token AbCdE
 
 ```json
 {
+    "version": "3.1.2",
     "url": "https://github.com/cozy/cozy-drive/archive/v3.1.2.tar.gz",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
 }
@@ -210,8 +211,25 @@ Authorization: Token AbCdE
 
 ```json
 {
+    "version": "3.1.2-dev.7a1618dff78ba445650f266bbe334cbc9176f03a",
     "url": "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
     "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f"
+}
+```
+
+Request to add a version with optional parameters:
+
+```http
+POST /registry/drive/3.1.2 HTTP/1.1
+Authorization: Token AbCdE
+```
+
+```json
+{
+    "version": "3.1.2",
+    "url": "https://github.com/cozy/cozy-photos-v3/archive/7a1618dff78ba445650f266bbe334cbc9176f03a.zip",
+    "sha256": "466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
+    "parameters": {"foo": "bar", "baz": 123}
 }
 ```
 
