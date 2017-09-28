@@ -309,9 +309,13 @@ func (i *Instance) Registries() ([]*url.URL, error) {
 	if !ok {
 		ctx = "default"
 	}
-	regs, ok := config.GetConfig().Registries[ctx]
+	registries := config.GetConfig().Registries
+	regs, ok := registries[ctx]
 	if !ok {
-		return make([]*url.URL, 0), nil
+		regs, ok = registries["default"]
+		if !ok {
+			regs = make([]*url.URL, 0)
+		}
 	}
 	return regs, nil
 }
