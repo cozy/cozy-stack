@@ -131,10 +131,8 @@ func (b *redisBroker) pollLoop(keys []string) {
 		}
 
 		job := Job{
-			infos: infos,
-			storage: &couchStorage{
-				db: couchdb.SimpleDatabasePrefix(parts[0]),
-			},
+			infos:   infos,
+			storage: newCouchStorage(parts[0]),
 		}
 		ch <- job
 	}

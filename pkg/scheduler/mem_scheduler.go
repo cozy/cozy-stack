@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -33,9 +34,14 @@ func newGlobalDBStorage() triggerGlobalStorage {
 
 func (s *globalDBStorage) GetAll() ([]*TriggerInfos, error) {
 	var infos []*TriggerInfos
-	// TODO(pagination): use a sort of couchdb.ForeachDocs function when available.
-	req := &couchdb.AllDocsRequest{Limit: 1000}
-	err := couchdb.GetAllDocs(couchdb.GlobalTriggersDB, consts.Triggers, req, &infos)
+	err := couchdb.ForeachDocs(couchdb.GlobalTriggersDB, consts.Triggers, func(data []byte) error {
+		var t *TriggerInfos
+		if err := json.Unmarshal(data, &t); err != nil {
+			return err
+		}
+		infos = append(infos, t)
+		return nil
+	})
 	if err != nil {
 		if couchdb.IsNoDatabaseError(err) {
 			return infos, nil
