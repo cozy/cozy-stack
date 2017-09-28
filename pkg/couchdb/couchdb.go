@@ -583,7 +583,7 @@ func createDocOrDb(db Database, doc Doc, response interface{}) error {
 		return err
 	}
 	err = CreateDB(db, doctype)
-	if err == nil {
+	if err == nil || IsFileExists(err) {
 		err = makeRequest(db, "POST", dbname, doc, response)
 	}
 	return err
