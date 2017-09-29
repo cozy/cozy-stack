@@ -9,7 +9,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,51 +48,59 @@ func TestTriggerEvent(t *testing.T) {
 		},
 	})
 
-	storage := &storage{[]*TriggerInfos{
+	triggers := []*TriggerInfos{
 		{
-			TID:        utils.RandomString(10),
 			Type:       "@event",
-			Domain:     "cozy.local",
+			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:DELETED",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-bad-verb"),
 		},
 		{
-			TID:        utils.RandomString(10),
 			Type:       "@event",
-			Domain:     "cozy.local",
+			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:CREATED:value:test",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb-correct-value"),
 		},
 		{
-			TID:        utils.RandomString(10),
 			Type:       "@event",
-			Domain:     "cozy.local",
+			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:CREATED",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb"),
 		},
 		{
-			TID:        utils.RandomString(10),
 			Type:       "@event",
-			Domain:     "cozy.local",
+			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject:CREATED:notvalue:test",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-correct-verb-bad-value"),
 		},
 		{
-			TID:        utils.RandomString(10),
 			Type:       "@event",
-			Domain:     "cozy.local",
+			Domain:     "cozy.local.triggerevent",
 			Arguments:  "io.cozy.testeventobject",
 			WorkerType: "worker_event",
 			Message:    makeMessage(t, "message-wholetype"),
 		},
-	}}
-	wg.Add(3)
-	sch := newMemScheduler(storage)
+	}
+
+	sch := newMemScheduler()
 	sch.Start(bro)
+
+	for _, infos := range triggers {
+		trigger, err := NewTrigger(infos)
+		if !assert.NoError(t, err) {
+			return
+		}
+		err = sch.Add(trigger)
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	wg.Add(3)
 
 	time.AfterFunc(1*time.Millisecond, func() {
 		doc := couchdb.JSONDoc{
@@ -107,7 +114,7 @@ func TestTriggerEvent(t *testing.T) {
 		realtime.GetHub().Publish(&realtime.Event{
 			Verb:   realtime.EventCreate,
 			Doc:    &doc,
-			Domain: "cozy.local",
+			Domain: "cozy.local.triggerevent",
 		})
 	})
 
@@ -119,7 +126,11 @@ func TestTriggerEvent(t *testing.T) {
 	assert.False(t, called["message-bad-verb"])
 	assert.False(t, called["message-correct-verb-bad-value"])
 
-	for _, t := range storage.ts {
-		sch.Delete("cozy.local", t.TID)
+	for _, trigger := range triggers {
+		err := sch.Delete(trigger.Domain, trigger.TID)
+		assert.NoError(t, err)
 	}
+
+	err := sch.Shutdown(context.Background())
+	assert.NoError(t, err)
 }

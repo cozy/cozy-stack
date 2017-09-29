@@ -14,56 +14,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// triggerGlobalStorage interface is used to represent a persistent layer on
-// which triggers are stored.
-type triggerGlobalStorage interface {
-	GetAll() ([]*TriggerInfos, error)
-	Add(trigger Trigger) error
-	Delete(trigger Trigger) error
-}
-
-// globalDBStorage implements the triggerGlobalStorage interface and uses a
-// single database in CouchDB as the underlying storage for triggers.
-type globalDBStorage struct{}
-
-// newGlobalDBStorage returns a new instance of CouchStorage using the
-// specified database.
-func newGlobalDBStorage() triggerGlobalStorage {
-	return &globalDBStorage{}
-}
-
-func (s *globalDBStorage) GetAll() ([]*TriggerInfos, error) {
-	var infos []*TriggerInfos
-	err := couchdb.ForeachDocs(couchdb.GlobalTriggersDB, consts.Triggers, func(data []byte) error {
-		var t *TriggerInfos
-		if err := json.Unmarshal(data, &t); err != nil {
-			return err
-		}
-		infos = append(infos, t)
-		return nil
-	})
-	if err != nil {
-		if couchdb.IsNoDatabaseError(err) {
-			return infos, nil
-		}
-		return nil, err
-	}
-	return infos, nil
-}
-
-func (s *globalDBStorage) Add(trigger Trigger) error {
-	return couchdb.CreateDoc(couchdb.GlobalTriggersDB, trigger.Infos())
-}
-
-func (s *globalDBStorage) Delete(trigger Trigger) error {
-	return couchdb.DeleteDoc(couchdb.GlobalTriggersDB, trigger.Infos())
-}
-
 // MemScheduler is a centralized scheduler of many triggers. It starts all of
 // them and schedules jobs accordingly.
 type MemScheduler struct {
-	broker  jobs.Broker
-	storage triggerGlobalStorage
+	broker jobs.Broker
 
 	ts  map[string]Trigger
 	mu  sync.RWMutex
@@ -73,14 +27,13 @@ type MemScheduler struct {
 // NewMemScheduler creates a new in-memory scheduler that will load all
 // registered triggers and schedule their work.
 func NewMemScheduler() Scheduler {
-	return newMemScheduler(newGlobalDBStorage())
+	return newMemScheduler()
 }
 
-func newMemScheduler(storage triggerGlobalStorage) *MemScheduler {
+func newMemScheduler() *MemScheduler {
 	return &MemScheduler{
-		storage: storage,
-		ts:      make(map[string]Trigger),
-		log:     logger.WithNamespace("mem-scheduler"),
+		ts:  make(map[string]Trigger),
+		log: logger.WithNamespace("mem-scheduler"),
 	}
 }
 
@@ -90,11 +43,35 @@ func newMemScheduler(storage triggerGlobalStorage) *MemScheduler {
 func (s *MemScheduler) Start(b jobs.Broker) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	ts, err := s.storage.GetAll()
-	if err != nil {
+
+	var ts []*TriggerInfos
+	err := couchdb.ForeachDocs(couchdb.GlobalDB, consts.Instances, func(data []byte) error {
+		var d struct {
+			Domain string `json:"domain"`
+		}
+		if err := json.Unmarshal(data, &d); err != nil {
+			return err
+		}
+		db := couchdb.SimpleDatabasePrefix(d.Domain)
+		err := couchdb.ForeachDocs(db, consts.Triggers, func(data []byte) error {
+			var t *TriggerInfos
+			if err := json.Unmarshal(data, &t); err != nil {
+				return err
+			}
+			ts = append(ts, t)
+			return nil
+		})
+		if err != nil && !couchdb.IsNoDatabaseError(err) {
+			return err
+		}
+		return nil
+	})
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
 		return err
 	}
+
 	s.broker = b
+
 	for _, infos := range ts {
 		t, err := NewTrigger(infos)
 		if err != nil {
@@ -105,6 +82,7 @@ func (s *MemScheduler) Start(b jobs.Broker) error {
 		s.ts[infos.TID] = t
 		go s.schedule(t)
 	}
+
 	return nil
 }
 
@@ -125,7 +103,8 @@ func (s *MemScheduler) Shutdown(ctx context.Context) error {
 func (s *MemScheduler) Add(t Trigger) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if err := s.storage.Add(t); err != nil {
+	db := couchdb.SimpleDatabasePrefix(t.Infos().Domain)
+	if err := couchdb.CreateDoc(db, t.Infos()); err != nil {
 		return err
 	}
 	s.ts[t.Infos().TID] = t
@@ -155,7 +134,8 @@ func (s *MemScheduler) Delete(domain, id string) error {
 	}
 	delete(s.ts, id)
 	t.Unschedule()
-	return s.storage.Delete(t)
+	db := couchdb.SimpleDatabasePrefix(t.Infos().Domain)
+	return couchdb.DeleteDoc(db, t.Infos())
 }
 
 // GetAll returns all the running in-memory triggers.
