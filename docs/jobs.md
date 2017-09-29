@@ -245,6 +245,8 @@ Accept: application/vnd.api+json
 
 Enqueue programmatically a new job.
 
+This route requires a specific permission on the worker-type. A global permission on the global `io.cozy.jobs` doctype is not allowed.
+
 #### Request
 
 ```http
@@ -297,8 +299,9 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.jobs` for the verb `POST`. In most cases, the application will
-restrict its permission to only one worker, like this:
+`io.cozy.jobs` for the verb `POST`. The is required to restrict its permission
+to specific worker(s), like this (a global permission on the doctype is not
+allowed):
 
 ```json
 {
@@ -365,6 +368,8 @@ restrict its permission to only one worker, like this:
 ### POST /jobs/triggers
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
+
+This route requires a specific permission on the worker type. A global permission on the global `io.cozy.triggers` doctype is not allowed.
 
 The `debounce` parameter can be used to limit the number of jobs created in a burst. It delays the creation of the job on the first input by the given time argument, and if the trigger has its condition matched again during this period, it won't create another job.
 It can be useful to combine it with the changes feed of couchdb with a last sequence number persisted by the worker, as it allows to have a nice diff between two executions of the worker.
