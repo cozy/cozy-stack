@@ -31,6 +31,16 @@ func RandomString(n int) string {
 	return string(b)
 }
 
+// IsInArray returns whether or not a string is in the given array of strings.
+func IsInArray(s string, a []string) bool {
+	for _, ss := range a {
+		if s == ss {
+			return true
+		}
+	}
+	return false
+}
+
 // StripPort extract the domain name from a domain:port string.
 func StripPort(domain string) string {
 	if strings.Contains(domain, ":") {

@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -290,7 +291,7 @@ func (i *Installer) update() error {
 	newPermissions := i.man.Permissions()
 	samePermissions := newPermissions != nil && oldPermissions != nil &&
 		newPermissions.HasSameRules(oldPermissions)
-	if !samePermissions {
+	if !samePermissions && !isPlatformApp(i.man) {
 		i.endState = Installed
 	}
 
@@ -352,4 +353,18 @@ func (i *Installer) Poll() (Manifest, bool, error) {
 	case err := <-i.errc:
 		return nil, false, err
 	}
+}
+
+func isPlatformApp(man Manifest) bool {
+	if man.AppType() != Webapp {
+		return false
+	}
+	return utils.IsInArray(man.Slug(), []string{
+		"onboarding",
+		"settings",
+		"collect",
+		"photos",
+		"drive",
+		"store",
+	})
 }
