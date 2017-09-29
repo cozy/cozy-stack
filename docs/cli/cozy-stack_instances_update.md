@@ -1,21 +1,25 @@
-## cozy-stack instances client-oauth
+## cozy-stack instances update
 
-Register a new OAuth client
+Start the updates for the specified domain instance.
 
 ### Synopsis
 
 
-It registers a new OAuth client and returns its client_id
+Start the updates for the specified domain instance. Use whether the --domain
+flag to specify the instance or the --all-domains flags to updates all domains.
+The slugs arguments can be used to select which applications should be
+updated.
 
 ```
-cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [software_id] [flags]
+cozy-stack instances update [domain] [slugs...] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for client-oauth
-      --json   Output more informations in JSON format
+      --all-domains     Work on all domains iterativelly
+      --domain string   Specify the domain name of the instance
+  -h, --help            help for update
 ```
 
 ### Options inherited from parent commands

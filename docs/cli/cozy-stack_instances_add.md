@@ -23,7 +23,7 @@ $ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings 
 ### Options
 
 ```
-      --apps stringSlice     Apps to be preinstalled
+      --apps strings         Apps to be preinstalled
       --dev                  To create a development instance
       --disk-quota string    The quota allowed to the instance's VFS
       --email string         The email of the owner

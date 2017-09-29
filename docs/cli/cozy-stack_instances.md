@@ -44,11 +44,14 @@ cozy-stack instances [command] [flags]
 * [cozy-stack instances client-oauth](cozy-stack_instances_client-oauth.md)	 - Register a new OAuth client
 * [cozy-stack instances debug](cozy-stack_instances_debug.md)	 - Activate or deactivate debugging of the instance
 * [cozy-stack instances destroy](cozy-stack_instances_destroy.md)	 - Remove instance
+* [cozy-stack instances export](cozy-stack_instances_export.md)	 - Export an instance to a tarball
 * [cozy-stack instances fsck](cozy-stack_instances_fsck.md)	 - Check and repair a vfs
+* [cozy-stack instances import](cozy-stack_instances_import.md)	 - Import a tarball
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
 * [cozy-stack instances set-disk-quota](cozy-stack_instances_set-disk-quota.md)	 - Change the disk-quota of the instance
 * [cozy-stack instances show](cozy-stack_instances_show.md)	 - Show the instance of the specified domain
 * [cozy-stack instances token-app](cozy-stack_instances_token-app.md)	 - Generate a new application token
 * [cozy-stack instances token-cli](cozy-stack_instances_token-cli.md)	 - Generate a new CLI access token (global access)
 * [cozy-stack instances token-oauth](cozy-stack_instances_token-oauth.md)	 - Generate a new OAuth access token
+* [cozy-stack instances update](cozy-stack_instances_update.md)	 - Start the updates for the specified domain instance.
 

@@ -1,21 +1,20 @@
-## cozy-stack instances client-oauth
+## cozy-stack konnectors show
 
-Register a new OAuth client
+Show the application attributes
 
 ### Synopsis
 
 
-It registers a new OAuth client and returns its client_id
+Show the application attributes
 
 ```
-cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [software_id] [flags]
+cozy-stack konnectors show [slug] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for client-oauth
-      --json   Output more informations in JSON format
+  -h, --help   help for show
 ```
 
 ### Options inherited from parent commands
@@ -23,12 +22,14 @@ cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [softwar
 ```
       --admin-host string   administration server host (default "localhost")
       --admin-port int      administration server port (default 6060)
+      --all-domains         work on all domains iterativelly
       --client-use-https    if set the client will use https to communicate with the server
   -c, --config string       configuration file (default "$HOME/.cozy.yaml")
+      --domain string       specify the domain name of the instance
       --host string         server host (default "localhost")
   -p, --port int            server port (default 8080)
 ```
 
 ### SEE ALSO
-* [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
+* [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 

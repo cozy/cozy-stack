@@ -1,21 +1,21 @@
-## cozy-stack instances client-oauth
+## cozy-stack instances export
 
-Register a new OAuth client
+Export an instance to a tarball
 
 ### Synopsis
 
 
-It registers a new OAuth client and returns its client_id
+Export the files and photos albums to a tarball (.tar.gz)
 
 ```
-cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [software_id] [flags]
+cozy-stack instances export [domain] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for client-oauth
-      --json   Output more informations in JSON format
+      --domain string   Specify the domain name of the instance
+  -h, --help            help for export
 ```
 
 ### Options inherited from parent commands

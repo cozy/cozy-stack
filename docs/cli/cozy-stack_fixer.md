@@ -35,5 +35,4 @@ cozy-stack fixer [command] [flags]
 * [cozy-stack fixer md5](cozy-stack_fixer_md5.md)	 - Fix missing md5 from contents in the vfs
 * [cozy-stack fixer mime](cozy-stack_fixer_mime.md)	 - Fix the class computed from the mime-type
 * [cozy-stack fixer onboardings](cozy-stack_fixer_onboardings.md)	 - Add the onboarding_finished flag to user that have registered their passphrase
-* [cozy-stack fixer triggers](cozy-stack_fixer_triggers.md)	 - Remove orphaned triggers from an instance
 

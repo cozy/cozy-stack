@@ -1,21 +1,22 @@
-## cozy-stack instances client-oauth
+## cozy-stack instances import
 
-Register a new OAuth client
+Import a tarball
 
 ### Synopsis
 
 
-It registers a new OAuth client and returns its client_id
+Import a tarball with files, photos albums and contacts to an instance
 
 ```
-cozy-stack instances client-oauth [domain] [redirect_uri] [client_name] [software_id] [flags]
+cozy-stack instances import [domain] [tarball] [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for client-oauth
-      --json   Output more informations in JSON format
+      --directory string   Put the imported files inside this directory
+      --domain string      Specify the domain name of the instance
+  -h, --help               help for import
 ```
 
 ### Options inherited from parent commands
