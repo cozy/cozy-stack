@@ -52,12 +52,9 @@ func TestGetQueue(t *testing.T) {
 	assert.NoError(t, err)
 	data := result["data"].(map[string]interface{})
 	typ := data["type"].(string)
-	assert.Equal(t, "io.cozy.queues", typ)
+	assert.Equal(t, "io.cozy.jobs", typ)
 	id := data["id"].(string)
 	assert.Equal(t, "print", id)
-	attrs := data["attributes"].(map[string]interface{})
-	count := attrs["count"].(float64)
-	assert.Equal(t, 0, int(count))
 }
 
 func TestCreateJob(t *testing.T) {
