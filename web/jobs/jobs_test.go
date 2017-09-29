@@ -50,11 +50,8 @@ func TestGetQueue(t *testing.T) {
 	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
-	data := result["data"].(map[string]interface{})
-	typ := data["type"].(string)
-	assert.Equal(t, "io.cozy.jobs", typ)
-	id := data["id"].(string)
-	assert.Equal(t, "print", id)
+	data := result["data"].([]interface{})
+	assert.Equal(t, 0, len(data))
 }
 
 func TestCreateJob(t *testing.T) {

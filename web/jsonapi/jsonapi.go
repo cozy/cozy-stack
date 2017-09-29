@@ -31,17 +31,23 @@ type Document struct {
 // containing a single object as data into an io.Writer.
 func WriteData(w io.Writer, o Object, links *LinksList) error {
 	var included []interface{}
-	for _, o := range o.Included() {
-		data, err := MarshalObject(o)
-		if err != nil {
-			return err
+
+	if inc := o.Included(); inc != nil {
+		included = make([]interface{}, len(inc))
+		for i, o := range inc {
+			data, err := MarshalObject(o)
+			if err != nil {
+				return err
+			}
+			included[i] = &data
 		}
-		included = append(included, &data)
 	}
+
 	data, err := MarshalObject(o)
 	if err != nil {
 		return err
 	}
+
 	doc := Document{
 		Data:     &data,
 		Links:    links,

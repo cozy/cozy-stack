@@ -334,11 +334,7 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "id": "sendmail",
-    "type": "io.cozy.jobs"
-  },
-  "included": [{
+  "data": [{
     "attributes": {
         "domain": "cozy.tools:8080",
         "options": null,
@@ -355,7 +351,10 @@ Accept: application/vnd.api+json
         "rev": "1-f823bcd2759103a5ad1a98f4bf083b36"
     },
     "type": "io.cozy.jobs"
-  }]
+  }],
+  "meta": {
+    "count": 0
+  }
 }
 ```
 

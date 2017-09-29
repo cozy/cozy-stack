@@ -35,7 +35,6 @@ type (
 	}
 	apiQueue struct {
 		workerType string
-		included   []jsonapi.Object
 	}
 	apiTrigger struct {
 		t scheduler.Trigger
@@ -65,18 +64,8 @@ func (j *apiJob) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.j)
 }
 
-func (q *apiQueue) ID() string                             { return q.workerType }
-func (q *apiQueue) Rev() string                            { return "" }
-func (q *apiQueue) DocType() string                        { return consts.Jobs }
-func (q *apiQueue) Clone() couchdb.Doc                     { return q }
-func (q *apiQueue) SetID(_ string)                         {}
-func (q *apiQueue) SetRev(_ string)                        {}
-func (q *apiQueue) Relationships() jsonapi.RelationshipMap { return nil }
-func (q *apiQueue) Included() []jsonapi.Object             { return q.included }
-func (q *apiQueue) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/jobs/queue/" + q.workerType}
-}
-func (q *apiQueue) MarshalJSON() ([]byte, error) { return []byte(`{}`), nil }
+func (q *apiQueue) ID() string      { return q.workerType }
+func (q *apiQueue) DocType() string { return consts.Jobs }
 func (q *apiQueue) Valid(key, value string) bool {
 	switch key {
 	case "worker":
@@ -104,9 +93,7 @@ func getQueue(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.Param("worker-type")
 
-	o := &apiQueue{
-		workerType: workerType,
-	}
+	o := &apiQueue{workerType: workerType}
 	if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
 		return err
 	}
@@ -116,12 +103,12 @@ func getQueue(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	o.included = make([]jsonapi.Object, len(js))
+	objs := make([]jsonapi.Object, len(js))
 	for i, j := range js {
-		o.included[i] = &apiJob{j}
+		objs[i] = &apiJob{j}
 	}
 
-	return jsonapi.Data(c, http.StatusOK, o, nil)
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
 func pushJob(c echo.Context) error {
