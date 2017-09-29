@@ -76,6 +76,7 @@ type (
 		Get(domain, id string) (Trigger, error)
 		Delete(domain, id string) error
 		GetAll(domain string) ([]Trigger, error)
+		RebuildRedis(domain string) error
 	}
 )
 

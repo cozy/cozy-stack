@@ -231,11 +231,21 @@ var onboardingsFixer = &cobra.Command{
 	},
 }
 
+var redisFixer = &cobra.Command{
+	Use:   "redis",
+	Short: "Rebuild scheduling data strucutures in redis",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c := newAdminClient()
+		return c.RebuildRedis()
+	},
+}
+
 func init() {
 	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
+	fixerCmdGroup.AddCommand(jobsFixer)
 	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
-	fixerCmdGroup.AddCommand(jobsFixer)
 	fixerCmdGroup.AddCommand(onboardingsFixer)
+	fixerCmdGroup.AddCommand(redisFixer)
 	RootCmd.AddCommand(fixerCmdGroup)
 }

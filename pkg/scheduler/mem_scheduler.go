@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -195,6 +196,10 @@ func (s *MemScheduler) pushJob(t Trigger, req *jobs.JobRequest) {
 		log.Errorf("[scheduler] trigger %s(%s): Could not schedule a new job: %s",
 			t.Type(), t.Infos().TID, err.Error())
 	}
+}
+
+func (s *MemScheduler) RebuildRedis(domain string) error {
+	return errors.New("MemScheduler does not use redis")
 }
 
 var _ Scheduler = &MemScheduler{}
