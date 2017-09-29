@@ -335,19 +335,34 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": {
-    "type": "io.cozy.queues",
     "id": "sendmail",
+    "type": "io.cozy.jobs"
+  },
+  "included": [{
     "attributes": {
-      "count": 12
-    }
-  }
+        "domain": "cozy.tools:8080",
+        "options": null,
+        "queued_at": "2017-09-29T15:32:31.953878568+02:00",
+        "started_at": "0001-01-01T00:00:00Z",
+        "state": "queued",
+        "worker": "log"
+    },
+    "id": "77689bca9634b4fb08d6ca3d1643de5f",
+    "links": {
+        "self": "/jobs/log/77689bca9634b4fb08d6ca3d1643de5f"
+    },
+    "meta": {
+        "rev": "1-f823bcd2759103a5ad1a98f4bf083b36"
+    },
+    "type": "io.cozy.jobs"
+  }]
 }
 ```
 
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.queues` for the verb `GET`. In most cases, the application will
+`io.cozy.jobs` for the verb `GET`. In most cases, the application will
 restrict its permission to only one worker, like this:
 
 ```json
@@ -355,7 +370,7 @@ restrict its permission to only one worker, like this:
   "permissions": {
     "mail-from-the-user": {
       "description": "Required to know the number of jobs in the sendmail queues",
-      "type": "io.cozy.queues",
+      "type": "io.cozy.jobs",
       "verbs": ["GET"],
       "selector": "worker",
       "values": ["sendmail"]

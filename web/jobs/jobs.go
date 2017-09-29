@@ -34,8 +34,8 @@ type (
 		Options   *jobs.JobOptions `json:"options"`
 	}
 	apiQueue struct {
-		Count      int `json:"count"`
 		workerType string
+		included   []jsonapi.Object
 	}
 	apiTrigger struct {
 		t scheduler.Trigger
@@ -67,15 +67,16 @@ func (j *apiJob) MarshalJSON() ([]byte, error) {
 
 func (q *apiQueue) ID() string                             { return q.workerType }
 func (q *apiQueue) Rev() string                            { return "" }
-func (q *apiQueue) DocType() string                        { return consts.Queues }
+func (q *apiQueue) DocType() string                        { return consts.Jobs }
 func (q *apiQueue) Clone() couchdb.Doc                     { return q }
 func (q *apiQueue) SetID(_ string)                         {}
 func (q *apiQueue) SetRev(_ string)                        {}
 func (q *apiQueue) Relationships() jsonapi.RelationshipMap { return nil }
-func (q *apiQueue) Included() []jsonapi.Object             { return nil }
+func (q *apiQueue) Included() []jsonapi.Object             { return q.included }
 func (q *apiQueue) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/queue/" + q.workerType}
 }
+func (q *apiQueue) MarshalJSON() ([]byte, error) { return []byte(`{}`), nil }
 func (q *apiQueue) Valid(key, value string) bool {
 	switch key {
 	case "worker":
@@ -100,16 +101,26 @@ func (t *apiTrigger) MarshalJSON() ([]byte, error) {
 }
 
 func getQueue(c echo.Context) error {
-	// TODO: get rid of this method
+	instance := middlewares.GetInstance(c)
 	workerType := c.Param("worker-type")
-	count := 0
+
 	o := &apiQueue{
 		workerType: workerType,
-		Count:      count,
 	}
-	if err := permissions.Allow(c, permissions.GET, o); err != nil {
+	if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
 		return err
 	}
+
+	js, err := jobs.GetQueuedJobs(instance.Domain, workerType)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
+	o.included = make([]jsonapi.Object, len(js))
+	for i, j := range js {
+		o.included[i] = &apiJob{j}
+	}
+
 	return jsonapi.Data(c, http.StatusOK, o, nil)
 }
 

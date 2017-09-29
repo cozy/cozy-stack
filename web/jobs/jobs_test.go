@@ -407,7 +407,6 @@ func TestMain(m *testing.M) {
 	globals.Set(b, s)
 
 	scope := strings.Join([]string{
-		consts.Queues,
 		consts.Jobs + ":ALL:print:worker",
 		consts.Triggers + ":ALL:print:worker",
 	}, " ")

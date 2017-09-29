@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 8
+const IndexViewsVersion int = 9
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -26,6 +26,9 @@ var Indexes = []*mango.Index{
 	mango.IndexOnFields(Files, "dir-children", []string{"dir_id", "_id"}),
 	// Used to lookup a directory given its path
 	mango.IndexOnFields(Files, "dir-by-path", []string{"path"}),
+
+	// Used to lookup a queued and running jobs
+	mango.IndexOnFields(Jobs, "by-worker-and-state", []string{"worker", "state"}),
 }
 
 // DiskUsageView is the view used for computing the disk usage

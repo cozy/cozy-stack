@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/sirupsen/logrus"
@@ -229,6 +230,25 @@ func Get(domain, jobID string) (*Job, error) {
 		return nil, err
 	}
 	return &job, nil
+}
+
+// GetQueuedJobs returns the list of jobs which states is "queued" or "running"
+func GetQueuedJobs(domain, workerType string) ([]*Job, error) {
+	var results []*Job
+	db := couchdb.SimpleDatabasePrefix(domain)
+	req := &couchdb.FindRequest{
+		UseIndex: "by-worker-and-state",
+		Selector: mango.And(
+			mango.Equal("worker", workerType),
+			mango.Or(
+				mango.Equal("state", Queued),
+				mango.Equal("state", Running),
+			),
+		),
+		Limit: 200,
+	}
+	err := couchdb.FindDocs(db, consts.Jobs, req, &results)
+	return results, err
 }
 
 // NewMessage returns a new Message encoded in the specified format.
