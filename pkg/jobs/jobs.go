@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -42,14 +45,11 @@ type (
 
 		// PushJob will push try to push a new job from the specified job request.
 		// This method is asynchronous.
-		PushJob(request *JobRequest) (*JobInfos, error)
+		PushJob(request *JobRequest) (*Job, error)
 
 		// QueueLen returns the total element in the queue of the specified worker
 		// type.
 		QueueLen(workerType string) (int, error)
-
-		// GetJobsInfos returns the informations about a job.
-		GetJobInfos(domain, jobID string) (*JobInfos, error)
 	}
 
 	// State represent the state of a job.
@@ -61,9 +61,9 @@ type (
 		Type string
 	}
 
-	// JobInfos contains all the metadata informations of a Job. It can be
+	// Job contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
-	JobInfos struct {
+	Job struct {
 		JobID      string      `json:"_id,omitempty"`
 		JobRev     string      `json:"_rev,omitempty"`
 		Domain     string      `json:"domain"`
@@ -93,39 +93,39 @@ type (
 )
 
 // ID implements the couchdb.Doc interface
-func (ji *JobInfos) ID() string { return ji.JobID }
+func (j *Job) ID() string { return j.JobID }
 
 // Rev implements the couchdb.Doc interface
-func (ji *JobInfos) Rev() string { return ji.JobRev }
+func (j *Job) Rev() string { return j.JobRev }
 
 // Clone implements the couchdb.Doc interface
-func (ji *JobInfos) Clone() couchdb.Doc {
-	cloned := *ji
-	if ji.Message != nil {
-		tmp := *ji.Message
+func (j *Job) Clone() couchdb.Doc {
+	cloned := *j
+	if j.Message != nil {
+		tmp := *j.Message
 		cloned.Message = &tmp
 	}
-	if ji.Options != nil {
-		tmp := *ji.Options
+	if j.Options != nil {
+		tmp := *j.Options
 		cloned.Options = &tmp
 	}
 	return &cloned
 }
 
 // DocType implements the couchdb.Doc interface
-func (ji *JobInfos) DocType() string { return consts.Jobs }
+func (j *Job) DocType() string { return consts.Jobs }
 
 // SetID implements the couchdb.Doc interface
-func (ji *JobInfos) SetID(id string) { ji.JobID = id }
+func (j *Job) SetID(id string) { j.JobID = id }
 
 // SetRev implements the couchdb.Doc interface
-func (ji *JobInfos) SetRev(rev string) { ji.JobRev = rev }
+func (j *Job) SetRev(rev string) { j.JobRev = rev }
 
 // Valid implements the permissions.Validable interface
-func (ji *JobInfos) Valid(key, value string) bool {
+func (j *Job) Valid(key, value string) bool {
 	switch key {
 	case WorkerType:
-		return ji.WorkerType == value
+		return j.WorkerType == value
 	}
 	return false
 }
@@ -145,9 +145,70 @@ func (jr *JobRequest) Valid(key, value string) bool {
 	return false
 }
 
-// NewJobInfos creates a new JobInfos instance from a job request.
-func NewJobInfos(req *JobRequest) *JobInfos {
-	return &JobInfos{
+// Logger returns a logger associated with the job domain
+func (j *Job) Logger() *logrus.Entry {
+	return logger.WithDomain(j.Domain)
+}
+
+// AckConsumed sets the job infos state to Running an sends the new job infos
+// on the channel.
+func (j *Job) AckConsumed() error {
+	job := *j
+	j.Logger().Debugf("[jobs] ack_consume %s ", job.ID())
+	job.StartedAt = time.Now()
+	job.State = Running
+	*j = job
+	return j.Update()
+}
+
+// Ack sets the job infos state to Done an sends the new job infos on the
+// channel.
+func (j *Job) Ack() error {
+	job := *j
+	j.Logger().Debugf("[jobs] ack %s ", job.ID())
+	job.State = Done
+	*j = job
+	return j.Update()
+}
+
+// Nack sets the job infos state to Errored, set the specified error has the
+// error field and sends the new job infos on the channel.
+func (j *Job) Nack(err error) error {
+	job := *j
+	j.Logger().Debugf("[jobs] nack %s ", job.ID())
+	job.State = Errored
+	job.Error = err.Error()
+	*j = job
+	return j.Update()
+}
+
+// Update updates the job in couchdb
+func (j *Job) Update() error {
+	return couchdb.UpdateDoc(j.db(), j)
+}
+
+// Create creates the job in couchdb
+func (j *Job) Create() error {
+	return couchdb.CreateDoc(j.db(), j)
+}
+
+func (j *Job) db() couchdb.Database {
+	return couchdb.SimpleDatabasePrefix(j.Domain)
+}
+
+// Marshal should not be used for a Job
+func (j *Job) Marshal() ([]byte, error) {
+	return nil, errors.New("should not be marshaled")
+}
+
+// Unmarshal should not be used for a Job
+func (j *Job) Unmarshal() error {
+	return errors.New("should not be unmarshaled")
+}
+
+// NewJob creates a new Job instance from a job request.
+func NewJob(req *JobRequest) *Job {
+	return &Job{
 		Domain:     req.Domain,
 		WorkerType: req.WorkerType,
 		Message:    req.Message,
@@ -155,6 +216,19 @@ func NewJobInfos(req *JobRequest) *JobInfos {
 		State:      Queued,
 		QueuedAt:   time.Now(),
 	}
+}
+
+// Get returns the informations about a job.
+func Get(domain, jobID string) (*Job, error) {
+	var job Job
+	db := couchdb.SimpleDatabasePrefix(domain)
+	if err := couchdb.GetDoc(db, consts.Jobs, jobID, &job); err != nil {
+		if couchdb.IsNotFoundError(err) {
+			return nil, ErrNotFoundJob
+		}
+		return nil, err
+	}
+	return &job, nil
 }
 
 // NewMessage returns a new Message encoded in the specified format.
@@ -204,5 +278,5 @@ func (w *WorkerConfig) Clone() *WorkerConfig {
 
 var (
 	_ permissions.Validable = (*JobRequest)(nil)
-	_ permissions.Validable = (*JobInfos)(nil)
+	_ permissions.Validable = (*Job)(nil)
 )

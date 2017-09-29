@@ -12,21 +12,15 @@ import (
 )
 
 func TestProperSerial(t *testing.T) {
-	infos := NewJobInfos(&JobRequest{
+	job := NewJob(&JobRequest{
 		Domain:     "cozy.tools:8080",
 		WorkerType: "",
 	})
-	storage := newCouchStorage(infos.Domain)
-	j := &Job{
-		infos:   infos,
-		storage: storage,
-	}
-	storage.Create(infos)
-	err := j.AckConsumed()
+	assert.NoError(t, job.Create())
+	assert.NoError(t, job.AckConsumed())
+	job2, err := Get(job.Domain, job.ID())
 	assert.NoError(t, err)
-	j2, err := storage.Get(j.infos.ID())
-	assert.NoError(t, err)
-	assert.Equal(t, State(Running), j2.State)
+	assert.Equal(t, State(Running), job2.State)
 }
 
 func TestInMemoryJobs(t *testing.T) {

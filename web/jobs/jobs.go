@@ -27,7 +27,7 @@ import (
 
 type (
 	apiJob struct {
-		j *jobs.JobInfos
+		j *jobs.Job
 	}
 	apiJobRequest struct {
 		Arguments json.RawMessage  `json:"arguments"`
@@ -100,20 +100,16 @@ func (t *apiTrigger) MarshalJSON() ([]byte, error) {
 }
 
 func getQueue(c echo.Context) error {
+	// TODO: get rid of this method
 	workerType := c.Param("worker-type")
-	count, err := globals.GetBroker().QueueLen(workerType)
-	if err != nil {
-		return wrapJobsError(err)
-	}
+	count := 0
 	o := &apiQueue{
 		workerType: workerType,
 		Count:      count,
 	}
-
 	if err := permissions.Allow(c, permissions.GET, o); err != nil {
 		return err
 	}
-
 	return jsonapi.Data(c, http.StatusOK, o, nil)
 }
 
@@ -236,7 +232,7 @@ func getAllTriggers(c echo.Context) error {
 
 func getJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	job, err := globals.GetBroker().GetJobInfos(instance.Domain, c.Param("job-id"))
+	job, err := jobs.Get(instance.Domain, c.Param("job-id"))
 	if err != nil {
 		return err
 	}
@@ -251,10 +247,10 @@ func cleanJobs(c echo.Context) error {
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Jobs); err != nil {
 		return err
 	}
-	var ups []*jobs.JobInfos
+	var ups []*jobs.Job
 	now := time.Now()
 	err := couchdb.ForeachDocs(instance, consts.Jobs, func(data []byte) error {
-		var job *jobs.JobInfos
+		var job *jobs.Job
 		if err := json.Unmarshal(data, &job); err != nil {
 			return err
 		}

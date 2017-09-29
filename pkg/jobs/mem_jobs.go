@@ -14,7 +14,7 @@ type (
 	// memQueue is a queue in-memory implementation of the Queue interface.
 	memQueue struct {
 		MaxCapacity int
-		Jobs        chan Job
+		Jobs        chan *Job
 
 		list *list.List
 		run  bool
@@ -35,15 +35,15 @@ type (
 func newMemQueue(workerType string) *memQueue {
 	return &memQueue{
 		list: list.New(),
-		Jobs: make(chan Job),
+		Jobs: make(chan *Job),
 	}
 }
 
 // Enqueue into the queue
-func (q *memQueue) Enqueue(job Job) error {
+func (q *memQueue) Enqueue(job *Job) error {
 	q.jmu.Lock()
 	defer q.jmu.Unlock()
-	q.list.PushBack(job)
+	q.list.PushBack(job.Clone())
 	if !q.run {
 		q.run = true
 		go q.send()
@@ -62,7 +62,7 @@ func (q *memQueue) send() {
 		}
 		q.list.Remove(e)
 		q.jmu.Unlock()
-		q.Jobs <- e.Value.(Job)
+		q.Jobs <- e.Value.(*Job)
 	}
 }
 
@@ -137,7 +137,7 @@ func (b *memBroker) Shutdown(ctx context.Context) error {
 
 // PushJob will produce a new Job with the given options and enqueue the job in
 // the proper queue.
-func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, error) {
+func (b *memBroker) PushJob(req *JobRequest) (*Job, error) {
 	if atomic.LoadUint32(&b.running) == 0 {
 		return nil, ErrClosed
 	}
@@ -146,19 +146,14 @@ func (b *memBroker) PushJob(req *JobRequest) (*JobInfos, error) {
 	if !ok {
 		return nil, ErrUnknownWorker
 	}
-	infos := NewJobInfos(req)
-	storage := newCouchStorage(req.Domain)
-	j := Job{
-		infos:   infos,
-		storage: storage,
-	}
-	if err := storage.Create(infos); err != nil {
+	job := NewJob(req)
+	if err := job.Create(); err != nil {
 		return nil, err
 	}
-	if err := q.Enqueue(j); err != nil {
+	if err := q.Enqueue(job); err != nil {
 		return nil, err
 	}
-	return infos, nil
+	return job, nil
 }
 
 // QueueLen returns the size of the number of elements in queue of the
@@ -169,11 +164,6 @@ func (b *memBroker) QueueLen(workerType string) (int, error) {
 		return 0, ErrUnknownWorker
 	}
 	return q.Len(), nil
-}
-
-// GetJobInfos returns the informations about a job.
-func (b *memBroker) GetJobInfos(domain, jobID string) (*JobInfos, error) {
-	return newCouchStorage(domain).Get(jobID)
 }
 
 var (
