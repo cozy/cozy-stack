@@ -113,6 +113,9 @@ func (b *memBroker) Shutdown(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
 	}
+	if b.nbWorkers <= 0 {
+		return nil
+	}
 	fmt.Print("  shutting down in-memory broker...")
 	errs := make(chan error)
 	for _, w := range b.workers {

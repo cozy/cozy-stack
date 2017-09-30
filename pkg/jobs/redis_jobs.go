@@ -70,6 +70,9 @@ func (b *redisBroker) Shutdown(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
 	}
+	if b.nbWorkers <= 0 {
+		return nil
+	}
 	fmt.Print("  shutting down redis broker...")
 	defer b.client.Close()
 	select {
