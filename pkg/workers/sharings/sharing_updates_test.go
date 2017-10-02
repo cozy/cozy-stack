@@ -101,7 +101,7 @@ func TestSharingUpdatesNoSharing(t *testing.T) {
 	}()
 	event := createEvent(t, doc, "", "CREATED")
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	msg, err := jobs.NewMessage(event)
 	assert.NoError(t, err)
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
@@ -123,7 +123,7 @@ func TestSharingUpdatesBadSharing(t *testing.T) {
 
 	event := createEvent(t, doc, "badsharingid", "")
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	msg, err := jobs.NewMessage(event)
 	assert.NoError(t, err)
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
@@ -149,7 +149,7 @@ func TestSharingUpdatesTooManySharing(t *testing.T) {
 
 	event := createEvent(t, doc, sharingID, "UPDATED")
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	msg, err := jobs.NewMessage(event)
 	assert.NoError(t, err)
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
@@ -171,7 +171,7 @@ func TestSharingUpdatesBadSharingType(t *testing.T) {
 	sharingID := sharingDoc.M["sharing_id"].(string)
 	event := createEvent(t, doc, sharingID, "UPDATED")
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	msg, err := jobs.NewMessage(event)
 	assert.NoError(t, err)
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
@@ -202,7 +202,7 @@ func TestSharingUpdatesNoRecipient(t *testing.T) {
 	sharingID := sharingDoc.M["sharing_id"].(string)
 	event := createEvent(t, doc, sharingID, "CREATED")
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	msg, err := jobs.NewMessage(event)
 	assert.NoError(t, err)
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
@@ -232,7 +232,7 @@ func TestSharingUpdatesBadRecipient(t *testing.T) {
 	sharingID := sharingDoc.M["sharing_id"].(string)
 	event := createEvent(t, doc, sharingID, "CREATED")
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	msg, err := jobs.NewMessage(event)
 	assert.NoError(t, err)
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)
@@ -284,7 +284,7 @@ func TestRevokedRecipient(t *testing.T) {
 	doc := createDoc(t, testDocType, params)
 	event := createEvent(t, doc, sharingID, "UPDATED")
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, event)
+	msg, err := jobs.NewMessage(event)
 	assert.NoError(t, err)
 
 	err = SharingUpdates(jobs.NewWorkerContext(domainSharer, "123"), msg)

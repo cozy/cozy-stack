@@ -176,7 +176,7 @@ func (opts *SendOptions) extractRelevantReferences(refs []couchdb.DocReference) 
 }
 
 // SendData sends data to all the recipients
-func SendData(ctx context.Context, m *jobs.Message) error {
+func SendData(ctx context.Context, m jobs.Message) error {
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 
 	opts := &SendOptions{}

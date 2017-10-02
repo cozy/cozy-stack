@@ -27,7 +27,7 @@ var konnectorWorkerFunc = makeExecWorkerFunc()
 
 func TestUnknownDomain(t *testing.T) {
 	ctx := jobs.NewWorkerContext("unknown", "id")
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
@@ -39,7 +39,7 @@ func TestUnknownDomain(t *testing.T) {
 
 func TestUnknownApp(t *testing.T) {
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
@@ -70,7 +70,7 @@ func TestBadFileExec(t *testing.T) {
 	}
 
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector":      "my-konnector-1",
 		"account":        account,
 		"folder_to_save": folderToSave,
@@ -172,7 +172,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	}()
 
 	ctx := jobs.NewWorkerContext(inst.Domain, "id")
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "my-konnector-2",
 		"account":   account,
 	})

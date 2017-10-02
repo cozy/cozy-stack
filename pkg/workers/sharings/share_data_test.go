@@ -95,7 +95,7 @@ func TestSendDataMissingDocType(t *testing.T) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
+	msg, err := jobs.NewMessage(SendOptions{
 		DocID:      "fakeid",
 		DocType:    docType,
 		Recipients: []*sharings.RecipientInfo{},
@@ -120,7 +120,7 @@ func TestSendDataBadID(t *testing.T) {
 		couchdb.DeleteDoc(in, doc)
 	}()
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
+	msg, err := jobs.NewMessage(SendOptions{
 		DocID:      "fakeid",
 		DocType:    testDocType,
 		Recipients: []*sharings.RecipientInfo{},
@@ -150,7 +150,7 @@ func TestSendDataBadRecipient(t *testing.T) {
 		AccessToken: auth.AccessToken{AccessToken: "inthesky"},
 	}
 
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, SendOptions{
+	msg, err := jobs.NewMessage(SendOptions{
 		DocID:      testDocID,
 		DocType:    testDocType,
 		Recipients: []*sharings.RecipientInfo{rec},

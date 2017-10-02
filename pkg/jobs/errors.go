@@ -11,6 +11,6 @@ var (
 	ErrQueueClosed = errors.New("jobs: queue is closed")
 	// ErrUnknownWorker the asked worker does not exist
 	ErrUnknownWorker = errors.New("jobs: could not find worker")
-	// ErrUnknownMessageType is used for an unknown message encoding type
-	ErrUnknownMessageType = errors.New("jobs: unknown message encoding type")
+	// ErrMessageNil is used for an nil message
+	ErrMessageNil = errors.New("jobs: message is nil")
 )

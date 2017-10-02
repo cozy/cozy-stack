@@ -34,15 +34,15 @@ func init() {
 }
 
 type execWorker interface {
-	PrepareWorkDir(i *instance.Instance, m *jobs.Message) (string, error)
-	PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (cmd string, env []string, jobID string, err error)
+	PrepareWorkDir(i *instance.Instance, m jobs.Message) (string, error)
+	PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd string, env []string, jobID string, err error)
 	ScanOuput(i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
-	Commit(ctx context.Context, msg *jobs.Message, errjob error) error
+	Commit(ctx context.Context, msg jobs.Message, errjob error) error
 }
 
 func makeExecWorkerFunc() jobs.WorkerThreadedFunc {
-	return func(ctx context.Context, cookie interface{}, m *jobs.Message) error {
+	return func(ctx context.Context, cookie interface{}, m jobs.Message) error {
 		worker := cookie.(execWorker)
 
 		domain := ctx.Value(jobs.ContextDomainKey).(string)
@@ -114,7 +114,7 @@ func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() exec
 		return createWorker(), nil
 	}
 
-	workerCommit := func(ctx context.Context, cookie interface{}, msg *jobs.Message, errjob error) error {
+	workerCommit := func(ctx context.Context, cookie interface{}, msg jobs.Message, errjob error) error {
 		if w, ok := cookie.(execWorker); ok {
 			return w.Commit(ctx, msg, errjob)
 		}

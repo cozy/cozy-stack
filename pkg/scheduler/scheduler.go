@@ -19,7 +19,7 @@ type TriggerInfos struct {
 	Arguments  string           `json:"arguments"`
 	Debounce   string           `json:"debounce,omitempty"`
 	Options    *jobs.JobOptions `json:"options"`
-	Message    *jobs.Message    `json:"message"`
+	Message    jobs.Message     `json:"message"`
 }
 
 // ID implements the couchdb.Doc interface
@@ -39,8 +39,9 @@ func (t *TriggerInfos) Clone() couchdb.Doc {
 		cloned.Options = &tmp
 	}
 	if t.Message != nil {
-		tmp := *t.Message
-		cloned.Message = &tmp
+		tmp := t.Message
+		t.Message = make([]byte, len(tmp))
+		copy(t.Message[:], tmp)
 	}
 	return &cloned
 }

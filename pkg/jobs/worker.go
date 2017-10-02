@@ -34,16 +34,16 @@ type (
 	WorkerInitFunc func() (interface{}, error)
 
 	// WorkerFunc represent the work function that a worker should implement.
-	WorkerFunc func(context context.Context, msg *Message) error
+	WorkerFunc func(context context.Context, msg Message) error
 
 	// WorkerThreadedFunc represent the work function that a worker should
 	// implement. In addition to a simple WorkerFunc, a threaded one can thread
 	// its context on each call and to the commit method.
-	WorkerThreadedFunc func(context context.Context, cookie interface{}, msg *Message) error
+	WorkerThreadedFunc func(context context.Context, cookie interface{}, msg Message) error
 
 	// WorkerCommit is an optional method that is always called once after the
 	// execution of the WorkerFunc.
-	WorkerCommit func(context context.Context, cookie interface{}, msg *Message, errjob error) error
+	WorkerCommit func(context context.Context, cookie interface{}, msg Message, errjob error) error
 
 	// WorkerConfig is the configuration parameter of a worker defined by the job
 	// system. It contains parameters of the worker along with the worker main

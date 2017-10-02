@@ -1,7 +1,6 @@
 package sharings
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -256,7 +255,7 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 		Rule:      rule,
 	}
 
-	workerArgs, err := json.Marshal(msg)
+	workerArgs, err := jobs.NewMessage(msg)
 	if err != nil {
 		return err
 	}
@@ -265,10 +264,7 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 		WorkerType: consts.WorkerTypeSharingUpdates,
 		Domain:     instance.Domain,
 		Arguments:  eventArgs,
-		Message: &jobs.Message{
-			Type: jobs.JSONEncoding,
-			Data: workerArgs,
-		},
+		Message:    workerArgs,
 	})
 	if err != nil {
 		return err
@@ -441,7 +437,7 @@ func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 			Client:      recStatus.Client,
 		}
 
-		workerMsg, err := jobs.NewMessage(jobs.JSONEncoding, WorkerData{
+		workerMsg, err := jobs.NewMessage(WorkerData{
 			DocID:      val,
 			SharingID:  sharing.SharingID,
 			Selector:   rule.Selector,

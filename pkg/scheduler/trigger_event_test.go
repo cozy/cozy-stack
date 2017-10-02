@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func makeMessage(t *testing.T, msg string) *jobs.Message {
-	out, err := jobs.NewMessage("json", msg)
+func makeMessage(t *testing.T, msg string) jobs.Message {
+	out, err := jobs.NewMessage(msg)
 	assert.NoError(t, err)
 	return out
 }
@@ -28,7 +28,7 @@ func TestTriggerEvent(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
 				defer wg.Done()
 				var msg struct {
 					Message string

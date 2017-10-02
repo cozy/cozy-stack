@@ -84,20 +84,15 @@ func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 
 // Trigger returns the triggered job request
 func (t *EventTrigger) Trigger(e *realtime.Event) *jobs.JobRequest {
-	var basemsg interface{}
-	base := t.infos.Message
-	if base != nil {
-		base.Unmarshal(&basemsg)
-	}
 	m := map[string]interface{}{
-		"message": basemsg,
+		"message": t.infos.Message,
 	}
 	if e == nil {
 		m["debounced"] = true
 	} else {
 		m["event"] = e
 	}
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, m)
+	msg, err := jobs.NewMessage(m)
 	if err != nil {
 		logger.WithNamespace("event-trigger").Error(err)
 	}

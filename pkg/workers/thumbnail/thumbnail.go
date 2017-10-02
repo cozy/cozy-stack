@@ -38,7 +38,7 @@ func init() {
 }
 
 // Worker is a worker that creates thumbnails for photos and images.
-func Worker(ctx context.Context, m *jobs.Message) error {
+func Worker(ctx context.Context, m jobs.Message) error {
 	msg := &imageMessage{}
 	if err := m.Unmarshal(msg); err != nil {
 		return err
