@@ -147,6 +147,19 @@ Cookie: seesioncookie....
 Authorization: Bearer app-token
 ```
 
+### DELETE /auth/login/others
+
+This can be used to log-out all active sessions except the one used by the request. This allow to disconnect any other users currenctly authenticated on the system. An app token must be passed in the
+`Authorization` header, to protect against CSRF attack on this (this can part
+of bigger attacks like session fixation).
+
+```http
+DELETE /auth/login/others HTTP/1.1
+Host: cozy.example.org
+Cookie: seesioncookie....
+Authorization: Bearer app-token
+```
+
 ### GET /auth/passphrase_reset
 
 Display a form for the user to reset its password, in case he has forgotten it
