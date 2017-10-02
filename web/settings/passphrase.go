@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -31,6 +32,10 @@ func registerPassphrase(c echo.Context) error {
 	passphrase := []byte(args.Passphrase)
 	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
 		return jsonapi.BadRequest(err)
+	}
+
+	if err := sessions.StoreNewLoginEntry(instance, c.Request()); err != nil {
+		return err
 	}
 
 	if _, err := auth.SetCookieForNewSession(c); err != nil {

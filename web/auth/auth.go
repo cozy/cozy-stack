@@ -161,6 +161,9 @@ func login(c echo.Context) error {
 			if sessionID, err = SetCookieForNewSession(c); err != nil {
 				return err
 			}
+			if err := sessions.StoreNewLoginEntry(instance, c.Request()); err != nil {
+				return err
+			}
 		}
 	}
 

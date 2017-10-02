@@ -46,6 +46,8 @@ const (
 	RemoteRequests = "io.cozy.remote.requests"
 	// Sessions doc type for sessions identifying a connection
 	Sessions = "io.cozy.sessions"
+	// SessionsLogins doc type for sessions identifying a connection
+	SessionsLogins = "io.cozy.sessions.logins"
 	// Settings doc type for settings to customize an instance
 	Settings = "io.cozy.settings"
 	// Sharings doc type for document and file sharing
