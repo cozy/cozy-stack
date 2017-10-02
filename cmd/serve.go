@@ -92,6 +92,8 @@ example), you can use the --appdir flag like this:
 		if err != nil {
 			return err
 		}
+
+		fmt.Println("Ready and waiting for connections:")
 		servers.Start()
 
 		group := utils.NewGroupShutdown(servers, processes)
@@ -103,13 +105,13 @@ example), you can use the --appdir flag like this:
 		case err := <-servers.Wait():
 			return err
 		case <-sigs:
-			fmt.Println("\nshutdown started")
+			fmt.Println("\nReceived interrupt signal:")
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel() // make gometalinter happy
 			if err := group.Shutdown(ctx); err != nil {
 				return err
 			}
-			fmt.Println("all settled, bye bye !")
+			fmt.Println("All settled, bye bye !")
 			return nil
 		}
 	},

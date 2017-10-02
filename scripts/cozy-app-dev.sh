@@ -70,6 +70,8 @@ do_start() {
 		echo "ok"
 	fi
 
+	trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
+
 	check_not_running ":${COZY_STACK_PORT}" "cozy-stack"
 	do_check_couchdb
 
