@@ -280,8 +280,8 @@ func (c *Client) Import(domain string, opts *ImportOptions) error {
 		return fmt.Errorf("Invalid domain: %s", domain)
 	}
 	q := url.Values{
-		"Filename":    {opts.Filename},
-		"Destination": {opts.Destination},
+		"filename":    {opts.Filename},
+		"destination": {opts.Destination},
 	}
 	_, err := c.Req(&request.Options{
 		Method:     "POST",
