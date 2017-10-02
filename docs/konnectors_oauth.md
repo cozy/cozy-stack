@@ -35,7 +35,7 @@ as well as the associated scope
 
 ```json
 {
-  "_id":"service.example",
+  "_id": "service.example",
   "grant_mode": "authorization_code",
   "client_id": "the registered client id",
   "client_secret": "client_secret is necessary for server-flow",
@@ -44,7 +44,7 @@ as well as the associated scope
 }
 ```
 
-io.cozy.account_types should not accessible by applications. They will be loaded into the stack by infra and will be configurable through config files for self-hosters.
+io.cozy.account_types should not be accessible to the applications. They will be loaded into the stack by infra and will be configurable through config files for self-hosters.
 
 # Reminder OAuth flow
 
@@ -65,12 +65,12 @@ Before beginning the Grant process, most Services require the application to be 
 
 ## Manually
 
-Most services requires an human developer to create the client manually and define its redirect_uri. However each instance has its own domain, so for these services, we will need to :
+Most services requires a human developer to create the client manually and define its redirect_uri. However each instance has its own domain, so for these services, we will need to:
 
 **A. Register a "proxy" client**, which is a static page performing redirections as needed, as was done for Facebook events in v2 konnectors. We will register a well known cozy domain, like `oauth-proxy.cozy.io` and registers it with all providers.
 The use and risks associated with this domain should be made clear to the user.
 
-**B. Register each Stack** with a redirect_uri on the main stack domain, if we go this way, the register_uri below moves from `bob.cozy.rocks/accounts/redirect` to `_cozy_oauth.cozy.rocks/redirect` and the domain wil be prepended to the state.
+**B. Register each Stack** with a redirect_uri on the main stack domain, if we go this way, the register_uri below moves from `bob.cozy.rocks/accounts/redirect` to `_cozy_oauth.cozy.rocks/redirect` and the domain will be prepended to the state.
 This is feasible at cozy scale, but requires more knowledge and work for self-hosters.
 
 ## Dynamic Registration Protocol
@@ -96,7 +96,7 @@ A. In SettingsApp give a link
 
 **NOTE** the scope may depends on other fields being configured (checkboxes), this will be described in json in the konnectors manifest. The format will be determined upon implementation.
 
-**NOTE** To limit bandwith and risk of state corruption, SettingsApp should save its state under a random key into localStorage, the key is then passed as the state in this query.
+**NOTE** To limit bandwidth and risk of state corruption, SettingsApp should save its state under a random key into localStorage, the key is then passed as the state in this query.
 
 B. Service let the user login, allow or deny scope
 Then redirect to
