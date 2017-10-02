@@ -45,7 +45,7 @@ profiles you.`,
 	SilenceErrors: true,
 }
 
-func newClient(domain, scope string) *client.Client {
+func newClient(domain string, scopes ...string) *client.Client {
 	// For the CLI client, we rely on the admin APIs to generate a CLI token.
 	// We may want in the future rely on OAuth to handle the permissions with
 	// more granularity.
@@ -54,7 +54,7 @@ func newClient(domain, scope string) *client.Client {
 		Domain:   domain,
 		Subject:  "CLI",
 		Audience: permissions.CLIAudience,
-		Scope:    []string{scope},
+		Scope:    scopes,
 	})
 	if err != nil {
 		errPrintfln("Could not generate access to domain %s", domain)

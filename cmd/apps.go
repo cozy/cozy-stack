@@ -19,7 +19,7 @@ var flagAppsDomain string
 var flagAllDomains bool
 var flagAppsDeactivated bool
 
-var flagKonnectorAccount string
+var flagKonnectorAccountID string
 var flagKonnectorFolder string
 
 var webappsCmdGroup = &cobra.Command{
@@ -150,14 +150,25 @@ var runKonnectorsCmd = &cobra.Command{
 		if len(args) < 1 {
 			return cmd.Usage()
 		}
+
 		slug := args[0]
-		c := newClient(flagAppsDomain, consts.Jobs+":POST:konnector:worker")
+		c := newClient(flagAppsDomain, consts.Jobs+":POST:konnector:worker", consts.Files)
+
+		var folderID string
+		if flagKonnectorFolder != "" {
+			d, err := c.GetDirByPath(flagKonnectorFolder)
+			if err != nil {
+				return err
+			}
+			folderID = d.ID
+		}
+
 		j, err := c.JobPush(&client.JobOptions{
 			Worker: "konnector",
 			Arguments: map[string]interface{}{
 				"konnector":      slug,
-				"account":        flagKonnectorAccount,
-				"folder_to_save": flagKonnectorFolder,
+				"account":        flagKonnectorAccountID,
+				"folder_to_save": folderID,
 			},
 		})
 		if err != nil {
@@ -368,11 +379,14 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
+
 	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
+
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
-	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccount, "account", "", "specify the account to use for running the konnector")
-	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorFolder, "folder", "", "specify the path of the folder associated with the konnector")
+
+	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
+	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorFolder, "folder", "", "specify the folder path associated with the konnector")
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(showWebappCmd)
