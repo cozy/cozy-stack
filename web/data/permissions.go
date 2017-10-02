@@ -20,12 +20,8 @@ var blackList = map[string]bool{
 	consts.OAuthAccessCodes: none,
 	consts.Archives:         none,
 	consts.Sharings:         none,
-
-	// TODO: uncomment to restric jobs permissions (make these none instead of
-	// readable).
-	consts.Jobs:     readable,
-	consts.Triggers: readable,
-
+	consts.Jobs:             none,
+	consts.Triggers:         none,
 	consts.Apps:             readable,
 	consts.Konnectors:       readable,
 	consts.KonnectorResults: readable,

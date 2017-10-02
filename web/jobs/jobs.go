@@ -94,11 +94,7 @@ func getQueue(c echo.Context) error {
 	workerType := c.Param("worker-type")
 
 	o := &apiQueue{workerType: workerType}
-	// TODO: uncomment to restric jobs permissions.
-	// if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
-	// 	return err
-	// }
-	if err := permissions.Allow(c, permissions.GET, o); err != nil {
+	if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
 		return err
 	}
 
@@ -132,11 +128,7 @@ func pushJob(c echo.Context) error {
 			Data: req.Arguments,
 		},
 	}
-	// TODO: uncomment to restric jobs permissions.
-	// if err := permissions.AllowOnFields(c, permissions.POST, jr, "worker"); err != nil {
-	// 	return err
-	// }
-	if err := permissions.Allow(c, permissions.POST, jr); err != nil {
+	if err := permissions.AllowOnFields(c, permissions.POST, jr, "worker"); err != nil {
 		return err
 	}
 
@@ -177,11 +169,7 @@ func newTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	// TODO: uncomment to restric jobs permissions.
-	// if err = permissions.AllowOnFields(c, permissions.POST, t, "worker"); err != nil {
-	// 	return err
-	// }
-	if err = permissions.Allow(c, permissions.POST, t); err != nil {
+	if err = permissions.AllowOnFields(c, permissions.POST, t, "worker"); err != nil {
 		return err
 	}
 
