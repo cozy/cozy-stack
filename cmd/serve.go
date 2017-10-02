@@ -55,12 +55,14 @@ example), you can use the --appdir flag like this:
 			errPrintfln("Use --allow-root if you really want to start with the root user")
 			return errors.New("Starting cozy-stack serve as root not allowed")
 		}
+
 		if flagDisableCSP {
-			if config.BuildMode == config.Production {
+			if !config.IsDevRelease() {
 				return errors.New("Using --disable-csp is allowed only for development")
 			}
 			config.GetConfig().DisableCSP = true
 		}
+
 		var apps map[string]string
 		if len(flagAppdirs) > 0 {
 			apps = make(map[string]string)
