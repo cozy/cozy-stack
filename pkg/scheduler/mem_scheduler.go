@@ -198,6 +198,8 @@ func (s *MemScheduler) pushJob(t Trigger, req *jobs.JobRequest) {
 	}
 }
 
+// RebuildRedis does nothing for the in memory scheduler. It's just here to
+// implement the Scheduler interface.
 func (s *MemScheduler) RebuildRedis(domain string) error {
 	return errors.New("MemScheduler does not use redis")
 }
