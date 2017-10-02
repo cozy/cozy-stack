@@ -182,6 +182,8 @@ func (j *Job) db() couchdb.Database {
 	return couchdb.SimpleDatabasePrefix(j.Domain)
 }
 
+// UnmarshalJSON implements json.Unmarshaler on Message. It should be retro-
+// compatible with the old Message representation { Data, Type }.
 func (m *Message) UnmarshalJSON(data []byte) error {
 	// For retro-compatibility purposes
 	var mm struct {
@@ -204,6 +206,7 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON implements json.Marshaler on Message.
 func (m Message) MarshalJSON() ([]byte, error) {
 	v := json.RawMessage(m)
 	return json.Marshal(v)
