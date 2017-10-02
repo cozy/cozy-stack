@@ -205,6 +205,32 @@ func logout(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func logoutOthers(c echo.Context) error {
+	res := c.Response()
+	origin := c.Request().Header.Get(echo.HeaderOrigin)
+	res.Header().Set(echo.HeaderAccessControlAllowOrigin, origin)
+	res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
+
+	instance := middlewares.GetInstance(c)
+	if !webpermissions.AllowLogout(c) {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "The user can logout only from client-side apps",
+		})
+	}
+
+	session, err := sessions.GetSession(c, instance)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{
+			"error": "Could not retrieve session",
+		})
+	}
+	if err = sessions.DeleteOthers(instance, session.ID()); err != nil {
+		return err
+	}
+
+	return c.NoContent(http.StatusNoContent)
+}
+
 func logoutPreflight(c echo.Context) error {
 	req := c.Request()
 	res := c.Response()
@@ -745,6 +771,8 @@ func Routes(router *echo.Group) {
 
 	router.GET("/login", loginForm)
 	router.POST("/login", login)
+	router.DELETE("/login/others", logoutOthers)
+	router.OPTIONS("/login/others", logoutPreflight)
 	router.DELETE("/login", logout)
 	router.OPTIONS("/login", logoutPreflight)
 

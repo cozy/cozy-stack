@@ -1,6 +1,7 @@
 package sessions
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -191,6 +192,28 @@ func (s *Session) ToAppCookie(domain string) (*http.Cookie, error) {
 		Secure:   !s.Instance.Dev,
 		HttpOnly: true,
 	}, nil
+}
+
+// DeleteOthers will remove all sessions except the one given in parameter.
+func DeleteOthers(i *instance.Instance, selfSessionID string) error {
+	var sessions []*Session
+	err := couchdb.ForeachDocs(i, consts.Sessions, func(data []byte) error {
+		var s Session
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		sessions = append(sessions, &s)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	for _, s := range sessions {
+		if s.ID() != selfSessionID {
+			s.Delete(i)
+		}
+	}
+	return nil
 }
 
 // cookieMACConfig returns the options to authenticate the session cookie.

@@ -1052,6 +1052,65 @@ func TestLogoutSuccess(t *testing.T) {
 	assert.Equal(t, "_csrf", cookies[0].Name)
 }
 
+func TestLogoutOthers(t *testing.T) {
+	anonymousClient := &http.Client{CheckRedirect: noRedirect}
+
+	res1, err := postFormWithClient(anonymousClient, "/auth/login", &url.Values{
+		"passphrase": {"MyPassphrase"},
+	})
+	assert.NoError(t, err)
+	defer res1.Body.Close()
+	if !assert.Equal(t, "303 See Other", res1.Status) {
+		return
+	}
+	cookies1 := res1.Cookies()
+	assert.Len(t, cookies1, 1)
+
+	res2, err := postFormWithClient(anonymousClient, "/auth/login", &url.Values{
+		"passphrase": {"MyPassphrase"},
+	})
+	assert.NoError(t, err)
+	defer res2.Body.Close()
+	if !assert.Equal(t, "303 See Other", res2.Status) {
+		return
+	}
+	cookies2 := res2.Cookies()
+	assert.Len(t, cookies2, 1)
+
+	a := app.WebappManifest{DocSlug: "home"}
+	token := testInstance.BuildAppToken(&a)
+	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
+
+	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
+	reqLogout1.Host = domain
+	reqLogout1.Header.Add("Authorization", "Bearer "+token)
+	reqLogout1.AddCookie(cookies1[0])
+	resLogout1, err := client.Do(reqLogout1)
+	assert.NoError(t, err)
+	defer resLogout1.Body.Close()
+	assert.Equal(t, 204, resLogout1.StatusCode)
+
+	reqLogout2, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
+	reqLogout2.Host = domain
+	reqLogout2.Header.Add("Authorization", "Bearer "+token)
+	reqLogout2.AddCookie(cookies2[0])
+	resLogout2, err := client.Do(reqLogout2)
+	assert.NoError(t, err)
+	defer resLogout2.Body.Close()
+	assert.Equal(t, 401, resLogout2.StatusCode)
+
+	reqLogout3, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
+	reqLogout3.Host = domain
+	reqLogout3.Header.Add("Authorization", "Bearer "+token)
+	reqLogout3.AddCookie(cookies1[0])
+	resLogout3, err := client.Do(reqLogout3)
+	assert.NoError(t, err)
+	defer resLogout3.Body.Close()
+	assert.Equal(t, 204, resLogout3.StatusCode)
+
+	permissions.DestroyWebapp(testInstance, "home")
+}
+
 func TestPassphraseResetLoggedIn(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/auth/passphrase_reset", nil)
 	req.Host = domain
@@ -1278,6 +1337,13 @@ func postFormDomain(domain, u string, v *url.Values) (*http.Response, error) {
 	req.Host = domain
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	return client.Do(req)
+}
+
+func postFormWithClient(c *http.Client, u string, v *url.Values) (*http.Response, error) {
+	req, _ := http.NewRequest("POST", ts.URL+u, bytes.NewBufferString(v.Encode()))
+	req.Host = domain
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	return c.Do(req)
 }
 
 func getTestURL() (string, error) {
