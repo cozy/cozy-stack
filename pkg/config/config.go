@@ -18,13 +18,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	// Production mode
-	Production string = "production"
-	// Development mode
-	Development string = "development"
-)
-
 var (
 	// Version of the release (see scripts/build.sh script)
 	Version string
@@ -33,8 +26,10 @@ var (
 	BuildTime string
 	// BuildMode is the build mode of the release. Should be either
 	// production or development.
-	BuildMode = Development
+	BuildMode = "development"
 )
+
+var isDevRelease = (BuildMode == "development")
 
 // Filename is the default configuration filename that cozy
 // search for
@@ -52,12 +47,19 @@ var Paths = []string{
 // for registries.
 var hardcodedRegistry, _ = url.Parse("https://registry.cozy.io/")
 
-const (
-	// FlatSubdomains is the value for apps subdomains like https://<user>-<app>.<domain>/
-	FlatSubdomains = "flat"
-	// NestedSubdomains is the value for apps subdomains like https://<app>.<user>.<domain>/
-	NestedSubdomains = "nested"
+// SubdomainType specify how subdomains are structured.
+type SubdomainType int
 
+const (
+	// FlatSubdomains is the value for apps subdomains like
+	// https://<user>-<app>.<domain>/
+	FlatSubdomains SubdomainType = iota + 1
+	// NestedSubdomains is the value for apps subdomains like
+	// https://<app>.<user>.<domain>/ (used by default)
+	NestedSubdomains
+)
+
+const (
 	// SchemeFile is the URL scheme used to configure a file filesystem.
 	SchemeFile = "file"
 	// SchemeMem is the URL scheme used to configure an in-memory filesystem.
@@ -79,7 +81,7 @@ type Config struct {
 	Port       int
 	Assets     string
 	Doctypes   string
-	Subdomains string
+	Subdomains SubdomainType
 	AdminHost  string
 	AdminPort  int
 	NoReply    string
@@ -194,7 +196,7 @@ func (rc *RedisConfig) Client() *redis.Client {
 // IsDevRelease returns whether or not the binary is a development
 // release
 func IsDevRelease() bool {
-	return BuildMode == Development
+	return isDevRelease
 }
 
 // GetConfig returns the configured instance of Config
@@ -282,10 +284,24 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	var subdomains SubdomainType
+	if subs := v.GetString("subdomains"); subs != "" {
+		switch subs {
+		case "flat":
+			subdomains = FlatSubdomains
+		case "nested":
+			subdomains = NestedSubdomains
+		default:
+			return fmt.Errorf(`Subdomains mode should either be "flat" or "nested", was: %q`, subs)
+		}
+	} else {
+		subdomains = NestedSubdomains
+	}
+
 	config = &Config{
 		Host:       v.GetString("host"),
 		Port:       v.GetInt("port"),
-		Subdomains: v.GetString("subdomains"),
+		Subdomains: subdomains,
 		AdminHost:  v.GetString("admin.host"),
 		AdminPort:  v.GetInt("admin.port"),
 		Assets:     v.GetString("assets"),
