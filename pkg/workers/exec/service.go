@@ -28,7 +28,7 @@ type serviceWorker struct {
 	man  *apps.WebappManifest
 }
 
-func (w *serviceWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) (workDir string, err error) {
+func (w *serviceWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (workDir string, err error) {
 	opts := &ServiceOptions{}
 	if err = m.Unmarshal(&opts); err != nil {
 		return
@@ -79,7 +79,7 @@ func (w *serviceWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) (w
 	return workDir, nil
 }
 
-func (w *serviceWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (cmd string, env []string, jobID string, err error) {
+func (w *serviceWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd string, env []string, jobID string, err error) {
 	jobID = fmt.Sprintf("service/%s/%s", w.opts.Slug, i.Domain)
 
 	token := i.BuildAppToken(w.man)
@@ -103,6 +103,6 @@ func (w *serviceWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
 
-func (w *serviceWorker) Commit(ctx context.Context, msg *jobs.Message, errjob error) error {
+func (w *serviceWorker) Commit(ctx context.Context, msg jobs.Message, errjob error) error {
 	return nil
 }

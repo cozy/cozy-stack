@@ -127,10 +127,7 @@ func pushJob(c echo.Context) error {
 		Domain:     instance.Domain,
 		WorkerType: c.Param("worker-type"),
 		Options:    req.Options,
-		Message: &jobs.Message{
-			Type: jobs.JSONEncoding,
-			Data: req.Arguments,
-		},
+		Message:    jobs.Message(req.Arguments),
 	}
 	// TODO: uncomment to restric jobs permissions.
 	// if err := permissions.AllowOnFields(c, permissions.POST, jr, "worker"); err != nil {
@@ -169,10 +166,7 @@ func newTrigger(c echo.Context) error {
 		Arguments:  req.Arguments,
 		Debounce:   req.Debounce,
 		Options:    req.Options,
-		Message: &jobs.Message{
-			Type: jobs.JSONEncoding,
-			Data: req.WorkerArguments,
-		},
+		Message:    jobs.Message(req.WorkerArguments),
 	})
 	if err != nil {
 		return wrapJobsError(err)

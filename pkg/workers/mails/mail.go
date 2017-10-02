@@ -73,7 +73,7 @@ type Part struct {
 }
 
 // SendMail is the sendmail worker function.
-func SendMail(ctx context.Context, m *jobs.Message) error {
+func SendMail(ctx context.Context, m jobs.Message) error {
 	opts := Options{}
 	err := m.Unmarshal(&opts)
 	if err != nil {

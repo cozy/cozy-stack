@@ -165,7 +165,7 @@ func logError(i *instance.Instance, err error) bool {
 // generateMailMessage will extract and compute the relevant information
 // from the sharing to generate the mail we will send to the specified
 // recipient.
-func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValues) (*jobs.Message, error) {
+func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValues) (jobs.Message, error) {
 	if len(r.Email) == 0 {
 		return nil, ErrRecipientHasNoEmail
 	}
@@ -173,7 +173,7 @@ func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValue
 		Name:  r.Email[0].Address,
 		Email: r.Email[0].Address,
 	}}
-	return jobs.NewMessage(jobs.JSONEncoding, mails.Options{
+	return jobs.NewMessage(mails.Options{
 		Mode:           "from",
 		To:             mailAddresses,
 		Subject:        "New sharing request / Nouvelle demande de partage",

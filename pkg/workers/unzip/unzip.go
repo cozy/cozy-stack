@@ -31,7 +31,7 @@ func init() {
 }
 
 // Worker is a worker that unzip a file.
-func Worker(ctx context.Context, m *jobs.Message) error {
+func Worker(ctx context.Context, m jobs.Message) error {
 	msg := &zipMessage{}
 	if err := m.Unmarshal(msg); err != nil {
 		return err

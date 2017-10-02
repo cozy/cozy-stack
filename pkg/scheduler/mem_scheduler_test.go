@@ -46,7 +46,7 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
 				var msg string
 				if err := m.Unmarshal(&msg); err != nil {
 					return err
@@ -62,8 +62,8 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 		},
 	})
 
-	msg1, _ := jobs.NewMessage("json", "@at")
-	msg2, _ := jobs.NewMessage("json", "@in")
+	msg1, _ := jobs.NewMessage("@at")
+	msg2, _ := jobs.NewMessage("@in")
 
 	wAt.Add(1) // 1 time in @at
 	wIn.Add(1) // 1 time in @in
@@ -145,14 +145,14 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
 				called++
 				return nil
 			},
 		},
 	})
 
-	msg, _ := jobs.NewMessage("json", "@event")
+	msg, _ := jobs.NewMessage("@event")
 	ti := &TriggerInfos{
 		Type:       "@event",
 		Domain:     "cozy.local.withdebounce",

@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +24,43 @@ func TestProperSerial(t *testing.T) {
 	assert.Equal(t, State(Running), job2.State)
 }
 
+func TestMessageMarshalling(t *testing.T) {
+	data := []byte(`{"Data": "InZhbHVlIgo=", "Type": "json"}`)
+	var m Message
+	assert.NoError(t, json.Unmarshal(data, &m))
+	var s string
+	assert.NoError(t, m.Unmarshal(&s))
+	assert.Equal(t, "value", s)
+
+	data = []byte(`"value2"`)
+	assert.NoError(t, json.Unmarshal(data, &m))
+	assert.NoError(t, m.Unmarshal(&s))
+	assert.Equal(t, "value2", s)
+
+	data = []byte(`{
+		"domain": "cozy.local",
+		"worker": "foo",
+		"message": {"Data": "InZhbHVlIgo=", "Type": "json"}
+}`)
+
+	var j Job
+	assert.NoError(t, json.Unmarshal(data, &j))
+	assert.Equal(t, "cozy.local", j.Domain)
+	assert.Equal(t, "foo", j.WorkerType)
+	assert.EqualValues(t, []byte(`"value"`), j.Message)
+
+	var err error
+	var j2 Job
+	data, err = json.Marshal(j)
+	assert.NoError(t, err)
+	assert.NoError(t, json.Unmarshal(data, &j2))
+	assert.Equal(t, "cozy.local", j2.Domain)
+	assert.Equal(t, "foo", j2.WorkerType)
+	assert.EqualValues(t, []byte(`"value"`), j2.Message)
+
+	assert.EqualValues(t, &j2, j2.Clone())
+}
+
 func TestInMemoryJobs(t *testing.T) {
 	n := 10
 	v := 100
@@ -32,7 +70,7 @@ func TestInMemoryJobs(t *testing.T) {
 	var workersTestList = WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(ctx context.Context, m *Message) error {
+			WorkerFunc: func(ctx context.Context, m Message) error {
 				var msg string
 				err := m.Unmarshal(&msg)
 				if !assert.NoError(t, err) {
@@ -62,7 +100,7 @@ func TestInMemoryJobs(t *testing.T) {
 	go func() {
 		for i := 0; i < n; i++ {
 			w.Add(1)
-			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
+			msg, _ := NewMessage("a-" + strconv.Itoa(i+1))
 			_, err := broker1.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
@@ -77,7 +115,7 @@ func TestInMemoryJobs(t *testing.T) {
 	go func() {
 		for i := 0; i < n; i++ {
 			w.Add(1)
-			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
+			msg, _ := NewMessage("b-" + strconv.Itoa(i+1))
 			_, err := broker2.PushJob(&JobRequest{
 				Domain:     "cozy.local",
 				WorkerType: "test",
@@ -111,11 +149,11 @@ func TestUnknownMessageType(t *testing.T) {
 	broker.Start(WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(ctx context.Context, m *Message) error {
+			WorkerFunc: func(ctx context.Context, m Message) error {
 				var msg string
 				err := m.Unmarshal(&msg)
 				assert.Error(t, err)
-				assert.Equal(t, ErrUnknownMessageType, err)
+				assert.Equal(t, ErrMessageNil, err)
 				w.Done()
 				return nil
 			},
@@ -126,10 +164,7 @@ func TestUnknownMessageType(t *testing.T) {
 	_, err := broker.PushJob(&JobRequest{
 		WorkerType: "test",
 		Domain:     "cozy.local",
-		Message: &Message{
-			Type: "unknown",
-			Data: nil,
-		},
+		Message:    nil,
 	})
 
 	assert.NoError(t, err)
@@ -145,7 +180,7 @@ func TestTimeout(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, _ *Message) error {
+			WorkerFunc: func(ctx context.Context, _ Message) error {
 				<-ctx.Done()
 				w.Done()
 				return ctx.Err()
@@ -157,10 +192,7 @@ func TestTimeout(t *testing.T) {
 	_, err := broker.PushJob(&JobRequest{
 		WorkerType: "timeout",
 		Domain:     "cozy.local",
-		Message: &Message{
-			Type: "timeout",
-			Data: nil,
-		},
+		Message:    nil,
 	})
 
 	assert.NoError(t, err)
@@ -180,7 +212,7 @@ func TestRetry(t *testing.T) {
 			MaxExecCount: maxExecCount,
 			Timeout:      1 * time.Millisecond,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, _ *Message) error {
+			WorkerFunc: func(ctx context.Context, _ Message) error {
 				<-ctx.Done()
 				w.Done()
 				count++
@@ -214,7 +246,7 @@ func TestPanicRetried(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: maxExecCount,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, _ *Message) error {
+			WorkerFunc: func(ctx context.Context, _ Message) error {
 				w.Done()
 				panic("oops")
 			},
@@ -235,8 +267,8 @@ func TestPanicRetried(t *testing.T) {
 func TestPanic(t *testing.T) {
 	var w sync.WaitGroup
 
-	even, _ := NewMessage("json", 0)
-	odd, _ := NewMessage("json", 1)
+	even, _ := NewMessage(0)
+	odd, _ := NewMessage(1)
 
 	broker := NewMemBroker(1)
 	broker.Start(WorkersList{
@@ -244,7 +276,7 @@ func TestPanic(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *Message) error {
+			WorkerFunc: func(ctx context.Context, m Message) error {
 				var i int
 				if err := m.Unmarshal(&i); err != nil {
 					return err

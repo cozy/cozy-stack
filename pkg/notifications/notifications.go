@@ -82,7 +82,7 @@ func sendMail(db couchdb.Database, n *Notification) error {
 			{Body: n.Content, Type: "text/plain"},
 		},
 	}
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, &mail)
+	msg, err := jobs.NewMessage(&mail)
 	if err != nil {
 		return err
 	}

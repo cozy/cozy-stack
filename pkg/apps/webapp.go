@@ -301,7 +301,7 @@ func diffServices(db couchdb.Database, slug string, oldServices, newServices Ser
 		if len(triggerOpts) > 1 {
 			triggerArgs = strings.TrimSpace(triggerOpts[1])
 		}
-		msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]string{
+		msg, err := jobs.NewMessage(map[string]string{
 			"slug":         slug,
 			"type":         service.Type,
 			"service_file": service.File,

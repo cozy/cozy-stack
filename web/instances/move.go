@@ -28,7 +28,7 @@ func exporter(c echo.Context) error {
 	if instance.Locale == "fr" {
 		subject = "L'archive contenant toutes les données de Cozy est prête"
 	}
-	msg, err := jobs.NewMessage("json", workers.Options{
+	msg, err := jobs.NewMessage(workers.Options{
 		Mode:         workers.ModeNoReply,
 		Subject:      subject,
 		TemplateName: "archiver_" + instance.Locale,

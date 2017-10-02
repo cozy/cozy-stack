@@ -383,7 +383,7 @@ func TestMain(m *testing.M) {
 
 	jobs.AddWorker("print", &jobs.WorkerConfig{
 		Concurrency: 4,
-		WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+		WorkerFunc: func(ctx context.Context, m jobs.Message) error {
 			var msg string
 			if err := m.Unmarshal(&msg); err != nil {
 				return err

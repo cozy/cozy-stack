@@ -83,7 +83,7 @@ func (kl *konnectorLogs) Clone() couchdb.Doc {
 func (kl *konnectorLogs) SetID(id string)   {}
 func (kl *konnectorLogs) SetRev(rev string) { kl.DocRev = rev }
 
-func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) (workDir string, err error) {
+func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (workDir string, err error) {
 	opts := &KonnectorOptions{}
 	if err = m.Unmarshal(&opts); err != nil {
 		return
@@ -151,7 +151,7 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m *jobs.Message) 
 	return workDir, nil
 }
 
-func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m *jobs.Message) (cmd string, env []string, jobID string, err error) {
+func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd string, env []string, jobID string, err error) {
 	jobID = fmt.Sprintf("konnector/%s/%s", w.opts.Konnector, i.Domain)
 
 	fields := struct {
@@ -225,7 +225,7 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
 
-func (w *konnectorWorker) Commit(ctx context.Context, msg *jobs.Message, errjob error) error {
+func (w *konnectorWorker) Commit(ctx context.Context, msg jobs.Message, errjob error) error {
 	if w.opts == nil {
 		return nil
 	}
@@ -298,7 +298,7 @@ func (w *konnectorWorker) Commit(ctx context.Context, msg *jobs.Message, errjob 
 	// 		"KonnectorPage": konnectorURL.String(),
 	// 	},
 	// }
-	// msg, err := jobs.NewMessage(jobs.JSONEncoding, &mail)
+	// msg, err := jobs.NewMessage(&mail)
 	// if err != nil {
 	// 	return err
 	// }

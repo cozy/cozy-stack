@@ -830,7 +830,7 @@ func (i *Instance) RequestPassphraseReset() error {
 	resetURL := i.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(i.PassphraseResetToken)},
 	})
-	msg, err := jobs.NewMessage(jobs.JSONEncoding, map[string]interface{}{
+	msg, err := jobs.NewMessage(map[string]interface{}{
 		"mode":          "noreply",
 		"subject":       i.Translate("Mail Password reset"),
 		"template_name": "passphrase_reset_" + i.Locale,

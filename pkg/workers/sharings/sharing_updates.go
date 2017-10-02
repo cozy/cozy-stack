@@ -61,7 +61,7 @@ type SharingMessage struct {
 }
 
 // SharingUpdates handles shared document updates
-func SharingUpdates(ctx context.Context, m *jobs.Message) error {
+func SharingUpdates(ctx context.Context, m jobs.Message) error {
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 
 	event := &TriggerEvent{}

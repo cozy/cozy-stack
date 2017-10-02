@@ -30,11 +30,12 @@ func TestRedisJobs(t *testing.T) {
 	v := 100
 
 	var w sync.WaitGroup
+	w.Add(2*n + 1)
 
 	var workersTestList = WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(ctx context.Context, m *Message) error {
+			WorkerFunc: func(ctx context.Context, m Message) error {
 				var msg string
 				err := m.Unmarshal(&msg)
 				if !assert.NoError(t, err) {
@@ -66,46 +67,42 @@ func TestRedisJobs(t *testing.T) {
 	err = broker2.Start(workersTestList)
 	assert.NoError(t, err)
 
-	msg, _ := NewMessage(JSONEncoding, "z-0")
+	msg, _ := NewMessage("z-0")
 	_, err = broker1.PushJob(&JobRequest{
-		Domain:     "cozy.local",
+		Domain:     "cozy.local.redisjobs",
 		WorkerType: "test",
 		Message:    msg,
 	})
 	assert.NoError(t, err)
-	w.Add(3)
 
 	go func() {
 		for i := 0; i < n; i++ {
-			w.Add(1)
-			msg, _ := NewMessage(JSONEncoding, "a-"+strconv.Itoa(i+1))
+			msg, _ := NewMessage("a-" + strconv.Itoa(i+1))
 			_, err = broker1.PushJob(&JobRequest{
-				Domain:     "cozy.local",
+				Domain:     "cozy.local.redisjobs",
 				WorkerType: "test",
 				Message:    msg,
 			})
 			assert.NoError(t, err)
 			time.Sleep(randomMicro(0, v))
 		}
-		w.Done()
 	}()
 
 	go func() {
 		for i := 0; i < n; i++ {
-			w.Add(1)
-			msg, _ := NewMessage(JSONEncoding, "b-"+strconv.Itoa(i+1))
+			msg, _ := NewMessage("b-" + strconv.Itoa(i+1))
 			_, err = broker2.PushJob(&JobRequest{
-				Domain:     "cozy.local",
+				Domain:     "cozy.local.redisjobs",
 				WorkerType: "test",
 				Message:    msg,
 			})
 			assert.NoError(t, err)
 			time.Sleep(randomMicro(0, v))
 		}
-		w.Done()
 	}()
 
 	w.Wait()
+
 	err = broker1.Shutdown(context.Background())
 	assert.NoError(t, err)
 	err = broker2.Shutdown(context.Background())

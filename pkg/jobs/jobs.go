@@ -1,10 +1,8 @@
 package jobs
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -24,11 +22,6 @@ const (
 	Done = "done"
 	// Errored state
 	Errored = "errored"
-)
-
-const (
-	// JSONEncoding is a JSON encoding message type
-	JSONEncoding = "json"
 )
 
 const (
@@ -56,11 +49,8 @@ type (
 	// State represent the state of a job.
 	State string
 
-	// Message is a byte slice representing an encoded job message type.
-	Message struct {
-		Data []byte
-		Type string
-	}
+	// Message is a json encoded job message.
+	Message json.RawMessage
 
 	// Job contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
@@ -69,7 +59,7 @@ type (
 		JobRev     string      `json:"_rev,omitempty"`
 		Domain     string      `json:"domain"`
 		WorkerType string      `json:"worker"`
-		Message    *Message    `json:"message"`
+		Message    Message     `json:"message"`
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
@@ -81,7 +71,7 @@ type (
 	JobRequest struct {
 		Domain     string
 		WorkerType string
-		Message    *Message
+		Message    Message
 		Options    *JobOptions
 	}
 
@@ -102,13 +92,14 @@ func (j *Job) Rev() string { return j.JobRev }
 // Clone implements the couchdb.Doc interface
 func (j *Job) Clone() couchdb.Doc {
 	cloned := *j
-	if j.Message != nil {
-		tmp := *j.Message
-		cloned.Message = &tmp
-	}
 	if j.Options != nil {
 		tmp := *j.Options
 		cloned.Options = &tmp
+	}
+	if j.Message != nil {
+		tmp := j.Message
+		j.Message = make([]byte, len(tmp))
+		copy(j.Message[:], tmp)
 	}
 	return &cloned
 }
@@ -154,32 +145,26 @@ func (j *Job) Logger() *logrus.Entry {
 // AckConsumed sets the job infos state to Running an sends the new job infos
 // on the channel.
 func (j *Job) AckConsumed() error {
-	job := *j
-	j.Logger().Debugf("[jobs] ack_consume %s ", job.ID())
-	job.StartedAt = time.Now()
-	job.State = Running
-	*j = job
+	j.Logger().Debugf("[jobs] ack_consume %s ", j.ID())
+	j.StartedAt = time.Now()
+	j.State = Running
 	return j.Update()
 }
 
 // Ack sets the job infos state to Done an sends the new job infos on the
 // channel.
 func (j *Job) Ack() error {
-	job := *j
-	j.Logger().Debugf("[jobs] ack %s ", job.ID())
-	job.State = Done
-	*j = job
+	j.Logger().Debugf("[jobs] ack %s ", j.ID())
+	j.State = Done
 	return j.Update()
 }
 
 // Nack sets the job infos state to Errored, set the specified error has the
 // error field and sends the new job infos on the channel.
 func (j *Job) Nack(err error) error {
-	job := *j
-	j.Logger().Debugf("[jobs] nack %s ", job.ID())
-	job.State = Errored
-	job.Error = err.Error()
-	*j = job
+	j.Logger().Debugf("[jobs] nack %s ", j.ID())
+	j.State = Errored
+	j.Error = err.Error()
 	return j.Update()
 }
 
@@ -197,14 +182,31 @@ func (j *Job) db() couchdb.Database {
 	return couchdb.SimpleDatabasePrefix(j.Domain)
 }
 
-// Marshal should not be used for a Job
-func (j *Job) Marshal() ([]byte, error) {
-	return nil, errors.New("should not be marshaled")
+func (m *Message) UnmarshalJSON(data []byte) error {
+	// For retro-compatibility purposes
+	var mm struct {
+		Data []byte `json:"Data"`
+		Type string `json:"Type"`
+	}
+	if err := json.Unmarshal(data, &mm); err == nil && mm.Type == "json" {
+		var v json.RawMessage
+		if err = json.Unmarshal(mm.Data, &v); err != nil {
+			return err
+		}
+		*m = Message(v)
+		return nil
+	}
+	var v json.RawMessage
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	*m = Message(v)
+	return nil
 }
 
-// Unmarshal should not be used for a Job
-func (j *Job) Unmarshal() error {
-	return errors.New("should not be unmarshaled")
+func (m Message) MarshalJSON() ([]byte, error) {
+	v := json.RawMessage(m)
+	return json.Marshal(v)
 }
 
 // NewJob creates a new Job instance from a job request.
@@ -252,33 +254,21 @@ func GetQueuedJobs(domain, workerType string) ([]*Job, error) {
 }
 
 // NewMessage returns a new Message encoded in the specified format.
-func NewMessage(enc string, data interface{}) (*Message, error) {
-	var b []byte
-	var err error
-	switch enc {
-	case JSONEncoding:
-		b, err = json.Marshal(data)
-	default:
-		err = ErrUnknownMessageType
-	}
+func NewMessage(data interface{}) (Message, error) {
+	b, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
-	return &Message{
-		Type: enc,
-		Data: b,
-	}, nil
+	return Message(b), nil
 }
 
 // Unmarshal can be used to unmarshal the encoded message value in the
 // specified interface's type.
-func (m *Message) Unmarshal(msg interface{}) error {
-	switch m.Type {
-	case JSONEncoding:
-		return json.NewDecoder(bytes.NewReader(m.Data)).Decode(msg)
-	default:
-		return ErrUnknownMessageType
+func (m Message) Unmarshal(msg interface{}) error {
+	if m == nil {
+		return ErrMessageNil
 	}
+	return json.Unmarshal(m, &msg)
 }
 
 // Clone clones the worker config

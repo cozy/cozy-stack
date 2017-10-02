@@ -73,7 +73,7 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m *jobs.Message) error {
+			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
 				var msg string
 				if err := m.Unmarshal(&msg); err != nil {
 					return err
@@ -89,8 +89,8 @@ func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 		},
 	})
 
-	msg1, _ := jobs.NewMessage("json", "@at")
-	msg2, _ := jobs.NewMessage("json", "@in")
+	msg1, _ := jobs.NewMessage("@at")
+	msg2, _ := jobs.NewMessage("@in")
 
 	wAt.Add(1) // 1 time in @at
 	wIn.Add(1) // 1 time in @in
@@ -188,7 +188,7 @@ func TestRedisSchedulerWithCronTriggers(t *testing.T) {
 	sch.Shutdown(context.Background())
 	defer sch.Start(bro)
 
-	msg, _ := jobs.NewMessage("json", "@cron")
+	msg, _ := jobs.NewMessage("@cron")
 
 	infos := &scheduler.TriggerInfos{
 		Type:       "@cron",
@@ -225,7 +225,7 @@ func TestRedisPollFromSchedKey(t *testing.T) {
 	defer sch.Start(bro)
 
 	now := time.Now()
-	msg, _ := jobs.NewMessage("json", "@at")
+	msg, _ := jobs.NewMessage("@at")
 
 	at := &scheduler.TriggerInfos{
 		Type:       "@at",
