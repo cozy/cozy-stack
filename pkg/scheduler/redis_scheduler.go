@@ -361,4 +361,18 @@ func (s *RedisScheduler) GetAll(domain string) ([]Trigger, error) {
 	return v, nil
 }
 
+// RebuildRedis puts all the triggers in redis (idempotent)
+func (s *RedisScheduler) RebuildRedis(domain string) error {
+	triggers, err := s.GetAll(domain)
+	if err != nil {
+		return err
+	}
+	for _, t := range triggers {
+		if err = s.addToRedis(t, time.Now()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 var _ Scheduler = &RedisScheduler{}

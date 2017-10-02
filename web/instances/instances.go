@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -187,6 +188,20 @@ func fsckHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, list)
 }
 
+func rebuildRedis(c echo.Context) error {
+	instances, err := instance.List()
+	if err != nil {
+		return wrapError(err)
+	}
+	for _, i := range instances {
+		err = globals.GetScheduler().RebuildRedis(i.Domain)
+		if err != nil {
+			return wrapError(err)
+		}
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -220,4 +235,5 @@ func Routes(router *echo.Group) {
 	router.POST("/oauth_client", registerClient)
 	router.POST("/:domain/export", exporter)
 	router.POST("/:domain/import", importer)
+	router.POST("/redis", rebuildRedis)
 }

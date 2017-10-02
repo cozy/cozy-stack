@@ -292,6 +292,16 @@ func (c *Client) Import(domain string, opts *ImportOptions) error {
 	return err
 }
 
+// RebuildRedis puts the triggers in redis.
+func (c *Client) RebuildRedis() error {
+	_, err := c.Req(&request.Options{
+		Method:     "POST",
+		Path:       "/instances/redis",
+		NoResponse: true,
+	})
+	return err
+}
+
 func readInstance(res *http.Response) (*Instance, error) {
 	in := &Instance{}
 	if err := readJSONAPI(res.Body, &in); err != nil {
