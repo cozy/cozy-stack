@@ -19,6 +19,9 @@ var flagAppsDomain string
 var flagAllDomains bool
 var flagAppsDeactivated bool
 
+var flagKonnectorAccount string
+var flagKonnectorFolder string
+
 var webappsCmdGroup = &cobra.Command{
 	Use:   "apps [command]",
 	Short: "Interact with the cozy applications",
@@ -132,6 +135,40 @@ var lsKonnectorsCmd = &cobra.Command{
 	Short: "List the installed konnectors.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return lsApps(cmd, args, consts.Konnectors)
+	},
+}
+
+var runKonnectorsCmd = &cobra.Command{
+	Use:   "run [slug]",
+	Short: "Run a konnector.",
+	Long:  "Run a konnector named with specified slug using the specified options.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if flagAppsDomain == "" {
+			errPrintfln("%s", errAppsMissingDomain)
+			return cmd.Usage()
+		}
+		if len(args) < 1 {
+			return cmd.Usage()
+		}
+		slug := args[0]
+		c := newClient(flagAppsDomain, consts.Jobs+":POST:konnector:worker")
+		j, err := c.JobPush(&client.JobOptions{
+			Worker: "konnector",
+			Arguments: map[string]interface{}{
+				"konnector":      slug,
+				"account":        flagKonnectorAccount,
+				"folder_to_save": flagKonnectorFolder,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		job, err := json.MarshalIndent(j, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(job))
+		return nil
 	},
 }
 
@@ -334,6 +371,8 @@ func init() {
 	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
+	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccount, "account", "", "specify the account to use for running the konnector")
+	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorFolder, "folder", "", "specify the path of the folder associated with the konnector")
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(showWebappCmd)
@@ -349,6 +388,7 @@ func init() {
 	konnectorsCmdGroup.AddCommand(installKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(updateKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(uninstallKonnectorCmd)
+	konnectorsCmdGroup.AddCommand(runKonnectorsCmd)
 
 	RootCmd.AddCommand(webappsCmdGroup)
 	RootCmd.AddCommand(konnectorsCmdGroup)
