@@ -18,6 +18,7 @@ type LoginEntry struct {
 	DocID     string    `json:"_id,omitempty"`
 	DocRev    string    `json:"_rev,omitempty"`
 	IP        string    `json:"ip"`
+	OS        string    `json:"os"`
 	UA        string    `json:"user_agent"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -59,8 +60,11 @@ func StoreNewLoginEntry(i *instance.Instance, req *http.Request) error {
 		ip = req.RemoteAddr
 	}
 
+	ua := user_agent.New(req.UserAgent())
+
 	l := &LoginEntry{
 		IP:        ip,
+		OS:        ua.OS(),
 		UA:        req.UserAgent(),
 		CreatedAt: time.Now(),
 	}
