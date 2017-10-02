@@ -61,15 +61,15 @@ do_prepare_ldflags() {
 			echo_wrn "No tag has been found to version the stack, using \"${VERSION_STRING}\" as version number"
 		fi
 
-		if ! git -C "${WORK_DIR}" diff --exit-code &>/dev/null; then
-			if [ "${COZY_ENV}" == production ]; then
+		if ! git -C "${WORK_DIR}" diff --exit-code HEAD &>/dev/null; then
+			if [ "${COZY_ENV}" == "production" ]; then
 				echo_err "Can not build a production release in a dirty work-tree"
 				exit 1
 			fi
 			VERSION_STRING="${VERSION_STRING}-dirty"
 		fi
 
-		if [ "${COZY_ENV}" == development ]; then
+		if [ "${COZY_ENV}" == "development" ]; then
 			VERSION_STRING="${VERSION_STRING}-dev"
 		fi
 	fi
@@ -284,21 +284,17 @@ prepare_assets() {
 download_asset() {
 	printf "downloading %s: " "${1}"
 	mkdir -p "${assets_dst}/${1%/*}"
-	set +e
-	curl -s --fail "${2}" > "${assets_dst}/${1}"
-	retc=${?}
-	set -e
-	if [ ${retc} -ne 0 ]; then
+	if ! curl -sSL --fail "${2}" 1> "${assets_dst}/${1}" 2>/dev/null; then
 		echo "failed"
-		echo_err "Could not fetch resource ${2}"
-		echo_err "curl failed with return code ${retc}"
+		echo_err "Could not fetch resource with curl: ${2}"
 		exit 1
 	fi
 	if [ -n "${3}" ]; then
 		dgst=$(openssl dgst -sha256 < "${assets_dst}/${1}" | sed 's/^.* //')
 		if [ "${3}" != "${dgst}" ]; then
 			echo "failed"
-			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}"
+			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}:"
+			echo_err "  expecting \"${dgst}\", got \"${3}\"."
 			exit 1
 		fi
 	fi

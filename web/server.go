@@ -145,7 +145,10 @@ func checkExists(filepath string) error {
 }
 
 func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
-	major, err := CreateSubdomainProxy(echo.New(), appsHandler)
+	e := echo.New()
+	e.HideBanner = true
+
+	major, err := CreateSubdomainProxy(e, appsHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -160,6 +163,8 @@ func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
 	}
 
 	admin := echo.New()
+	admin.HideBanner = true
+
 	if err = SetupAdminRoutes(admin); err != nil {
 		return nil, err
 	}
@@ -180,9 +185,14 @@ type Servers struct {
 
 // Start starts the servers.
 func (e *Servers) Start() {
-	e.errs = make(chan error, 2)
-	go func() { e.errs <- e.admin.Start(config.AdminServerAddr()) }()
-	go func() { e.errs <- e.major.Start(config.ServerAddr()) }()
+	e.errs = make(chan error)
+	go e.start(e.major, "major", config.ServerAddr())
+	go e.start(e.admin, "admin", config.AdminServerAddr())
+}
+
+func (e *Servers) start(s *echo.Echo, name, addr string) {
+	fmt.Printf("  http server %s started on %q\n", name, addr)
+	e.errs <- s.Start(addr)
 }
 
 // Wait for servers to stop or fall in error.
