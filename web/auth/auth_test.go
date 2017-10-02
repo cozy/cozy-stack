@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	app "github.com/cozy/cozy-stack/pkg/apps"
@@ -166,6 +167,19 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 		assert.Len(t, cookies, 1)
 		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
 		assert.NotEmpty(t, cookies[0].Value)
+
+		var results []*sessions.LoginEntry
+		err = couchdb.GetAllDocs(
+			couchdb.SimpleDatabasePrefix(domain),
+			consts.SessionsLogins,
+			&couchdb.AllDocsRequest{Limit: 100},
+			&results,
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(results))
+		assert.Equal(t, "Go-http-client/1.1", results[0].UA)
+		assert.True(t, strings.HasPrefix(results[0].IP, "127.0.0.1:"))
+		assert.False(t, results[0].CreatedAt.IsZero())
 	}
 }
 
