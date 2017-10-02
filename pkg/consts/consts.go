@@ -40,8 +40,6 @@ const (
 	OAuthClients = "io.cozy.oauth.clients"
 	// Permissions doc type for permissions identifying a connection
 	Permissions = "io.cozy.permissions"
-	// Queues doc type for jobs queues
-	Queues = "io.cozy.queues"
 	// Contacts doc type for sharing
 	Contacts = "io.cozy.contacts"
 	// RemoteRequests doc type for logging requests to remote websites

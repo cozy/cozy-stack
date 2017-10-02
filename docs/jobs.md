@@ -245,6 +245,8 @@ Accept: application/vnd.api+json
 
 Enqueue programmatically a new job.
 
+This route requires a specific permission on the worker-type. A global permission on the global `io.cozy.jobs` doctype is not allowed.
+
 #### Request
 
 ```http
@@ -297,8 +299,9 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.jobs` for the verb `POST`. In most cases, the application will
-restrict its permission to only one worker, like this:
+`io.cozy.jobs` for the verb `POST`. The is required to restrict its permission
+to specific worker(s), like this (a global permission on the doctype is not
+allowed):
 
 ```json
 {
@@ -331,12 +334,26 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": {
-    "type": "io.cozy.queues",
-    "id": "sendmail",
+  "data": [{
     "attributes": {
-      "count": 12
-    }
+        "domain": "cozy.tools:8080",
+        "options": null,
+        "queued_at": "2017-09-29T15:32:31.953878568+02:00",
+        "started_at": "0001-01-01T00:00:00Z",
+        "state": "queued",
+        "worker": "log"
+    },
+    "id": "77689bca9634b4fb08d6ca3d1643de5f",
+    "links": {
+        "self": "/jobs/log/77689bca9634b4fb08d6ca3d1643de5f"
+    },
+    "meta": {
+        "rev": "1-f823bcd2759103a5ad1a98f4bf083b36"
+    },
+    "type": "io.cozy.jobs"
+  }],
+  "meta": {
+    "count": 0
   }
 }
 ```
@@ -344,7 +361,7 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.queues` for the verb `GET`. In most cases, the application will
+`io.cozy.jobs` for the verb `GET`. In most cases, the application will
 restrict its permission to only one worker, like this:
 
 ```json
@@ -352,7 +369,7 @@ restrict its permission to only one worker, like this:
   "permissions": {
     "mail-from-the-user": {
       "description": "Required to know the number of jobs in the sendmail queues",
-      "type": "io.cozy.queues",
+      "type": "io.cozy.jobs",
       "verbs": ["GET"],
       "selector": "worker",
       "values": ["sendmail"]
@@ -365,6 +382,8 @@ restrict its permission to only one worker, like this:
 ### POST /jobs/triggers
 
 Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
+
+This route requires a specific permission on the worker type. A global permission on the global `io.cozy.triggers` doctype is not allowed.
 
 The `debounce` parameter can be used to limit the number of jobs created in a burst. It delays the creation of the job on the first input by the given time argument, and if the trigger has its condition matched again during this period, it won't create another job.
 It can be useful to combine it with the changes feed of couchdb with a last sequence number persisted by the worker, as it allows to have a nice diff between two executions of the worker.

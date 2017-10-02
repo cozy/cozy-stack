@@ -27,14 +27,13 @@ import (
 
 type (
 	apiJob struct {
-		j *jobs.JobInfos
+		j *jobs.Job
 	}
 	apiJobRequest struct {
 		Arguments json.RawMessage  `json:"arguments"`
 		Options   *jobs.JobOptions `json:"options"`
 	}
 	apiQueue struct {
-		Count      int `json:"count"`
 		workerType string
 	}
 	apiTrigger struct {
@@ -65,17 +64,8 @@ func (j *apiJob) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.j)
 }
 
-func (q *apiQueue) ID() string                             { return q.workerType }
-func (q *apiQueue) Rev() string                            { return "" }
-func (q *apiQueue) DocType() string                        { return consts.Queues }
-func (q *apiQueue) Clone() couchdb.Doc                     { return q }
-func (q *apiQueue) SetID(_ string)                         {}
-func (q *apiQueue) SetRev(_ string)                        {}
-func (q *apiQueue) Relationships() jsonapi.RelationshipMap { return nil }
-func (q *apiQueue) Included() []jsonapi.Object             { return nil }
-func (q *apiQueue) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/jobs/queue/" + q.workerType}
-}
+func (q *apiQueue) ID() string      { return q.workerType }
+func (q *apiQueue) DocType() string { return consts.Jobs }
 func (q *apiQueue) Valid(key, value string) bool {
 	switch key {
 	case "worker":
@@ -100,21 +90,29 @@ func (t *apiTrigger) MarshalJSON() ([]byte, error) {
 }
 
 func getQueue(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
 	workerType := c.Param("worker-type")
-	count, err := globals.GetBroker().QueueLen(workerType)
-	if err != nil {
-		return wrapJobsError(err)
-	}
-	o := &apiQueue{
-		workerType: workerType,
-		Count:      count,
-	}
 
+	o := &apiQueue{workerType: workerType}
+	// TODO: uncomment to restric jobs permissions.
+	// if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
+	// 	return err
+	// }
 	if err := permissions.Allow(c, permissions.GET, o); err != nil {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, o, nil)
+	js, err := jobs.GetQueuedJobs(instance.Domain, workerType)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
+	objs := make([]jsonapi.Object, len(js))
+	for i, j := range js {
+		objs[i] = &apiJob{j}
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
 func pushJob(c echo.Context) error {
@@ -134,6 +132,10 @@ func pushJob(c echo.Context) error {
 			Data: req.Arguments,
 		},
 	}
+	// TODO: uncomment to restric jobs permissions.
+	// if err := permissions.AllowOnFields(c, permissions.POST, jr, "worker"); err != nil {
+	// 	return err
+	// }
 	if err := permissions.Allow(c, permissions.POST, jr); err != nil {
 		return err
 	}
@@ -175,7 +177,10 @@ func newTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-
+	// TODO: uncomment to restric jobs permissions.
+	// if err = permissions.AllowOnFields(c, permissions.POST, t, "worker"); err != nil {
+	// 	return err
+	// }
 	if err = permissions.Allow(c, permissions.POST, t); err != nil {
 		return err
 	}
@@ -237,7 +242,7 @@ func getAllTriggers(c echo.Context) error {
 
 func getJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	job, err := globals.GetBroker().GetJobInfos(instance.Domain, c.Param("job-id"))
+	job, err := jobs.Get(instance.Domain, c.Param("job-id"))
 	if err != nil {
 		return err
 	}
@@ -252,10 +257,10 @@ func cleanJobs(c echo.Context) error {
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Jobs); err != nil {
 		return err
 	}
-	var ups []*jobs.JobInfos
+	var ups []*jobs.Job
 	now := time.Now()
 	err := couchdb.ForeachDocs(instance, consts.Jobs, func(data []byte) error {
-		var job *jobs.JobInfos
+		var job *jobs.Job
 		if err := json.Unmarshal(data, &job); err != nil {
 			return err
 		}

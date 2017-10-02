@@ -125,7 +125,7 @@ func (r Rule) TranslationKey() string {
 		if r.Verbs.ReadOnly() && len(r.Values) == 1 && r.Values[0] == consts.DiskUsageID {
 			return "Permissions disk usage"
 		}
-	case consts.Jobs:
+	case consts.Jobs, consts.Triggers:
 		if len(r.Values) == 1 && r.Selector == "worker" {
 			return "Permissions worker " + r.Values[0]
 		}

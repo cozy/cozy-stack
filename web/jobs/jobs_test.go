@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/tests/testutils"
@@ -48,14 +50,8 @@ func TestGetQueue(t *testing.T) {
 	var result map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
-	data := result["data"].(map[string]interface{})
-	typ := data["type"].(string)
-	assert.Equal(t, "io.cozy.queues", typ)
-	id := data["id"].(string)
-	assert.Equal(t, "print", id)
-	attrs := data["attributes"].(map[string]interface{})
-	count := attrs["count"].(float64)
-	assert.Equal(t, 0, int(count))
+	data := result["data"].([]interface{})
+	assert.Equal(t, 0, len(data))
 }
 
 func TestCreateJob(t *testing.T) {
@@ -81,7 +77,10 @@ func TestCreateJobNotExist(t *testing.T) {
 		},
 	})
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/jobs/queue/none", bytes.NewReader(body))
-	req.Header.Add("Authorization", "Bearer "+token)
+	tokenNone, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI",
+		consts.Jobs+":ALL:none:worker",
+		time.Now())
+	req.Header.Add("Authorization", "Bearer "+tokenNone)
 	assert.NoError(t, err)
 	res, err := http.DefaultClient.Do(req)
 	if !assert.NoError(t, err) {
@@ -278,7 +277,8 @@ func TestGetAllJobs(t *testing.T) {
 
 	req1, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
 	assert.NoError(t, err)
-	req1.Header.Add("Authorization", "Bearer "+token)
+	tokenTriggers, _ := testInstance.MakeJWT(permissions.CLIAudience, "CLI", consts.Triggers, time.Now())
+	req1.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res1, err := http.DefaultClient.Do(req1)
 	if !assert.NoError(t, err) {
 		return
@@ -314,7 +314,7 @@ func TestGetAllJobs(t *testing.T) {
 
 	req3, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers", nil)
 	assert.NoError(t, err)
-	req3.Header.Add("Authorization", "Bearer "+token)
+	req3.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res3, err := http.DefaultClient.Do(req3)
 	if !assert.NoError(t, err) {
 		return
@@ -341,7 +341,7 @@ func TestGetAllJobs(t *testing.T) {
 
 	req4, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Worker=print", nil)
 	assert.NoError(t, err)
-	req4.Header.Add("Authorization", "Bearer "+token)
+	req4.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res4, err := http.DefaultClient.Do(req4)
 	if !assert.NoError(t, err) {
 		return
@@ -362,7 +362,7 @@ func TestGetAllJobs(t *testing.T) {
 
 	req5, err := http.NewRequest(http.MethodGet, ts.URL+"/jobs/triggers?Worker=nojobforme", nil)
 	assert.NoError(t, err)
-	req5.Header.Add("Authorization", "Bearer "+token)
+	req5.Header.Add("Authorization", "Bearer "+tokenTriggers)
 	res5, err := http.DefaultClient.Do(req5)
 	if !assert.NoError(t, err) {
 		return
@@ -400,8 +400,12 @@ func TestMain(m *testing.M) {
 	}
 	globals.Set(b, s)
 
-	scope := consts.Queues + " " + consts.Jobs + " " + consts.Triggers
-	_, token = setup.GetTestClient(scope)
+	scope := strings.Join([]string{
+		consts.Jobs + ":ALL:print:worker",
+		consts.Triggers + ":ALL:print:worker",
+	}, " ")
+	token, _ = testInstance.MakeJWT(permissions.CLIAudience, "CLI", scope,
+		time.Now())
 
 	ts = setup.GetTestServer("/jobs", Routes)
 	os.Exit(setup.Run())

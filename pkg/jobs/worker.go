@@ -65,7 +65,7 @@ type (
 	Worker struct {
 		Type    string
 		Conf    *WorkerConfig
-		jobs    chan Job
+		jobs    chan *Job
 		running uint32
 		closed  chan struct{}
 	}
@@ -89,7 +89,7 @@ func NewWorkerContext(domain, workerID string) context.Context {
 }
 
 // Start is used to start the worker consumption of messages from its queue.
-func (w *Worker) Start(jobs chan Job) error {
+func (w *Worker) Start(jobs chan *Job) error {
 	if !atomic.CompareAndSwapUint32(&w.running, 0, 1) {
 		return ErrClosed
 	}
@@ -121,35 +121,34 @@ func (w *Worker) Shutdown(ctx context.Context) error {
 
 func (w *Worker) work(workerID string, closed chan<- struct{}) {
 	for job := range w.jobs {
-		domain := job.Domain()
+		domain := job.Domain
 		if domain == "" {
 			joblog.Errorf("[job] %s: missing domain from job request", workerID)
 			continue
 		}
 		parentCtx := NewWorkerContext(domain, workerID)
-		infos := job.Infos()
 		if err := job.AckConsumed(); err != nil {
 			joblog.Errorf("[job] %s: error acking consume job %s: %s",
-				workerID, infos.ID(), err.Error())
+				workerID, job.ID(), err.Error())
 			continue
 		}
 		t := &task{
 			ctx:      parentCtx,
-			infos:    infos,
-			conf:     w.defaultedConf(infos.Options),
+			job:      job,
+			conf:     w.defaultedConf(job.Options),
 			workerID: workerID,
 		}
 		var err error
 		if err = t.run(); err != nil {
 			joblog.Errorf("[job] %s: error while performing job %s: %s",
-				workerID, infos.ID(), err.Error())
+				workerID, job.ID(), err.Error())
 			err = job.Nack(err)
 		} else {
 			err = job.Ack()
 		}
 		if err != nil {
 			joblog.Errorf("[job] %s: error while acking job done %s: %s",
-				workerID, infos.ID(), err.Error())
+				workerID, job.ID(), err.Error())
 		}
 	}
 	joblog.Debugf("[job] %s: worker shut down", workerID)
@@ -189,9 +188,9 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 }
 
 type task struct {
-	ctx   context.Context
-	infos *JobInfos
-	conf  *WorkerConfig
+	ctx  context.Context
+	job  *Job
+	conf *WorkerConfig
 
 	workerID  string
 	startTime time.Time
@@ -210,9 +209,9 @@ func (t *task) run() (err error) {
 	}
 	defer func() {
 		if t.conf.WorkerCommit != nil {
-			if errc := t.conf.WorkerCommit(t.ctx, cookie, t.infos.Message, err); errc != nil {
+			if errc := t.conf.WorkerCommit(t.ctx, cookie, t.job.Message, err); errc != nil {
 				joblog.Warnf("[job] %s: error while commiting job %s: %s",
-					t.workerID, t.infos.ID(), errc.Error())
+					t.workerID, t.job.ID(), errc.Error())
 			}
 		}
 	}()
@@ -223,13 +222,13 @@ func (t *task) run() (err error) {
 		}
 		if err != nil {
 			joblog.Warnf("[job] %s: error while performing job %s: %s (retry in %s)",
-				t.workerID, t.infos.ID(), err.Error(), delay)
+				t.workerID, t.job.ID(), err.Error(), delay)
 		}
 		if delay > 0 {
 			time.Sleep(delay)
 		}
 		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
-			t.workerID, t.infos.ID(), t.execCount, timeout)
+			t.workerID, t.job.ID(), t.execCount, timeout)
 		ctx, cancel := context.WithTimeout(t.ctx, timeout)
 		if err = t.exec(ctx, cookie); err == nil {
 			cancel()
@@ -257,9 +256,9 @@ func (t *task) exec(ctx context.Context, cookie interface{}) (err error) {
 		}
 	}()
 	if t.conf.WorkerThreadedFunc != nil {
-		return t.conf.WorkerThreadedFunc(ctx, cookie, t.infos.Message)
+		return t.conf.WorkerThreadedFunc(ctx, cookie, t.job.Message)
 	}
-	return t.conf.WorkerFunc(ctx, t.infos.Message)
+	return t.conf.WorkerFunc(ctx, t.job.Message)
 }
 
 func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
