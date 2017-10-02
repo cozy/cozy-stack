@@ -117,3 +117,6 @@ contexts:
     claudy_actions:
         - desktop
         - mobile
+
+# Disable the Content Security Policy (only available for development)
+disable_csp: false

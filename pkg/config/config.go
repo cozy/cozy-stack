@@ -326,6 +326,7 @@ func UseViper(v *viper.Viper) error {
 		},
 		Contexts:   v.GetStringMap("contexts"),
 		Registries: regs,
+		DisableCSP: v.GetBool("disable_csp"),
 	}
 
 	loggerRedis := NewRedisConfig(v.GetString("log.redis"))
