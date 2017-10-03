@@ -7,12 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/go-redis/redis"
 	multierror "github.com/hashicorp/go-multierror"
 )
-
-var joblog = logger.WithNamespace("jobs")
 
 const redisPrefix = "j/"
 
