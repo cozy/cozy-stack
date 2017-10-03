@@ -266,10 +266,10 @@ Content-Type: application/vnd.api+json
 
 An application can be in one of these states:
 
+- `installed`, the application is installed but still require some user interaction to accept its permissions
 - `ready`, the user can use it
 - `installing`, the installation is running and the app will soon be usable
 - `upgrading`, a new version is being installed
-- `uninstalling`, the app will be removed, and will return to the `available` state.
 - `errored`, the app is in an error state and can not be used.
 
 #### Request
