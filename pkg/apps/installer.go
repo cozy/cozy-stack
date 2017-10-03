@@ -285,14 +285,18 @@ func (i *Installer) update() error {
 		sameVersion = (version == i.man.Version())
 	}
 
-	// If the permissions have changed, we set the end state of the applications
-	// as "installed", meaning the user will have to accept the new set of
-	// permissions before accessing to set the application state as "ready".
-	newPermissions := i.man.Permissions()
-	samePermissions := newPermissions != nil && oldPermissions != nil &&
-		newPermissions.HasSameRules(oldPermissions)
-	if !samePermissions && !isPlatformApp(i.man) {
-		i.endState = Installed
+	// TODO: decide what behavior to chose for auto-updating konnectors that
+	// would change their permissions...
+	if i.man.AppType() == Webapp && !isPlatformApp(i.man) {
+		// If the permissions have changed, we set the end state of the applications
+		// as "installed", meaning the user will have to accept the new set of
+		// permissions before accessing to set the application state as "ready".
+		newPermissions := i.man.Permissions()
+		samePermissions := newPermissions != nil && oldPermissions != nil &&
+			newPermissions.HasSameRules(oldPermissions)
+		if !samePermissions {
+			i.endState = Installed
+		}
 	}
 
 	if !sameVersion {
