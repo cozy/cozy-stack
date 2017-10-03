@@ -67,7 +67,6 @@ type WebappManifest struct {
 	DocSource   string     `json:"source"`
 	DocSlug     string     `json:"slug"`
 	DocState    State      `json:"state"`
-	DocError    string     `json:"error,omitempty"`
 	Icon        string     `json:"icon"`
 	Category    string     `json:"category"`
 	Description string     `json:"description"`
@@ -88,6 +87,9 @@ type WebappManifest struct {
 	Instance SubDomainer `json:"-"` // Used for JSON-API links
 
 	oldServices Services // Used to diff against when updating the app
+
+	Err string `json:"error,omitempty"`
+	err error
 }
 
 // ID is part of the Manifest interface
@@ -165,6 +167,16 @@ func (m *WebappManifest) AppType() AppType { return Webapp }
 func (m *WebappManifest) Permissions() permissions.Set {
 	return m.DocPermissions
 }
+
+// SetError is part of the Manifest interface
+func (m *WebappManifest) SetError(err error) {
+	m.SetState(Errored)
+	m.Err = err.Error()
+	m.err = err
+}
+
+// Error is part of the Manifest interface
+func (m *WebappManifest) Error() error { return m.err }
 
 // Valid is part of the Manifest interface
 func (m *WebappManifest) Valid(field, value string) bool {

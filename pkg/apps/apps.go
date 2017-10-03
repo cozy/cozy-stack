@@ -24,19 +24,17 @@ const (
 type State string
 
 const (
-	// Available state
-	Available State = "available"
 	// Installing state
 	Installing = "installing"
 	// Upgrading state
 	Upgrading = "upgrading"
-	// Uninstalling state
-	Uninstalling = "uninstalling"
 	// Installed state, can be used to state that an application has been
 	// installed but needs a user interaction to be activated and "ready".
 	Installed = "installed"
 	// Ready state
 	Ready = "ready"
+	// Errored state
+	Errored = "errored"
 )
 
 // AppType is an enum to represent the type of application: webapp clientside
@@ -83,6 +81,9 @@ type Manifest interface {
 	Slug() string
 	State() State
 	LastUpdate() time.Time
+
+	SetError(err error)
+	Error() error
 
 	SetState(state State)
 	SetVersion(version string)

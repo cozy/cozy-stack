@@ -20,7 +20,6 @@ type KonnManifest struct {
 	DocSource   string     `json:"source"`
 	DocSlug     string     `json:"slug"`
 	DocState    State      `json:"state"`
-	DocError    string     `json:"error,omitempty"`
 	Icon        string     `json:"icon"`
 	Description string     `json:"description"`
 	Category    string     `json:"category"`
@@ -35,6 +34,9 @@ type KonnManifest struct {
 	DocPermissions permissions.Set `json:"permissions"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
+
+	Err string `json:"error,omitempty"`
+	err error
 }
 
 // ID is part of the Manifest interface
@@ -99,6 +101,16 @@ func (m *KonnManifest) AppType() AppType { return Konnector }
 func (m *KonnManifest) Permissions() permissions.Set {
 	return m.DocPermissions
 }
+
+// SetError is part of the Manifest interface
+func (m *KonnManifest) SetError(err error) {
+	m.SetState(Errored)
+	m.Err = err.Error()
+	m.err = err
+}
+
+// Error is part of the Manifest interface
+func (m *KonnManifest) Error() error { return m.err }
 
 // Valid is part of the Manifest interface
 func (m *KonnManifest) Valid(field, value string) bool {

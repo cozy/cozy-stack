@@ -9,6 +9,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/hooks"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -210,11 +211,16 @@ func (i *Installer) Run() {
 		panic("Unknown operation")
 	}
 
+	man := i.man.Clone().(Manifest)
 	if err != nil {
-		i.errc <- err
-	} else {
-		i.manc <- i.man.Clone().(Manifest)
+		man.SetError(err)
+		realtime.GetHub().Publish(&realtime.Event{
+			Verb:   realtime.EventUpdate,
+			Doc:    man.Clone(),
+			Domain: i.db.Prefix(),
+		})
 	}
+	i.manc <- man
 }
 
 // RunSync does the same work as Run but can be used synchronously.
@@ -344,19 +350,29 @@ func (i *Installer) ReadManifest(state State) error {
 	}
 	defer r.Close()
 	i.man.SetState(state)
-	return i.man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
+
+	err = i.man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
+	if err != nil {
+		return err
+	}
+
+	realtime.GetHub().Publish(&realtime.Event{
+		Verb:   realtime.EventUpdate,
+		Doc:    i.man.Clone(),
+		Domain: i.db.Prefix(),
+	})
+
+	return nil
 }
 
 // Poll should be used to monitor the progress of the Installer.
 func (i *Installer) Poll() (Manifest, bool, error) {
-	select {
-	case man := <-i.manc:
-		state := man.State()
-		done := (state == Ready || state == Installed)
-		return man, done, nil
-	case err := <-i.errc:
-		return nil, false, err
+	man := <-i.manc
+	done := false
+	if s := man.State(); s == Ready || s == Installed || s == Errored {
+		done = true
 	}
+	return man, done, man.Error()
 }
 
 func isPlatformApp(man Manifest) bool {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -127,7 +128,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 		}
 
 		go inst.Run()
-		return pollInstaller(c, isEventStream, w, slug, inst)
+		return pollInstaller(c, instance, isEventStream, w, slug, inst)
 	}
 }
 
@@ -173,7 +174,7 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 		}
 
 		go inst.Run()
-		return pollInstaller(c, isEventStream, w, slug, inst)
+		return pollInstaller(c, instance, isEventStream, w, slug, inst)
 	}
 }
 
@@ -209,7 +210,7 @@ func deleteHandler(installerType apps.AppType) echo.HandlerFunc {
 	}
 }
 
-func pollInstaller(c echo.Context, isEventStream bool, w http.ResponseWriter, slug string, inst *apps.Installer) error {
+func pollInstaller(c echo.Context, instance *instance.Instance, isEventStream bool, w http.ResponseWriter, slug string, inst *apps.Installer) error {
 	if !isEventStream {
 		man, _, err := inst.Poll()
 		if err != nil {
