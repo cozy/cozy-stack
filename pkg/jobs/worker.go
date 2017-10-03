@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 )
@@ -253,6 +254,7 @@ func (t *task) exec(ctx context.Context, cookie interface{}) (err error) {
 			if !ok {
 				err = fmt.Errorf("%v", r)
 			}
+			joblog.Errorf("%s: %s", r, debug.Stack())
 		}
 	}()
 	if t.conf.WorkerThreadedFunc != nil {

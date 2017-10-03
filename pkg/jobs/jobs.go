@@ -83,6 +83,8 @@ type (
 	}
 )
 
+var joblog = logger.WithNamespace("jobs")
+
 // ID implements the couchdb.Doc interface
 func (j *Job) ID() string { return j.JobID }
 
