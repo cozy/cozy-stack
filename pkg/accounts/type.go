@@ -112,7 +112,7 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 	if err != nil {
 		return "", err
 	}
-	vv := &url.Values{}
+	vv := u.Query()
 
 	redirectURI := at.RedirectURI(i)
 
