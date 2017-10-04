@@ -1,32 +1,32 @@
-package oauth
+package oauth_test
 
 import (
+	"os"
 	"testing"
 
-	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
-var instanceSecret = crypto.GenerateRandomBytes(64)
-var in = &instance.Instance{
-	OAuthSecret: instanceSecret,
-	Domain:      "test-jwt.example.org",
-}
-var c = &Client{
+var testInstance *instance.Instance
+
+var c = &oauth.Client{
 	CouchID: "my-client-id",
 }
 
 func TestCreateJWT(t *testing.T) {
-	tokenString, err := c.CreateJWT(in, "test", "foo:read")
+	tokenString, err := c.CreateJWT(testInstance, "test", "foo:read")
 	assert.NoError(t, err)
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 		assert.True(t, ok, "The signing method should be HMAC")
-		return in.OAuthSecret, nil
+		return testInstance.OAuthSecret, nil
 	})
 	assert.NoError(t, err)
 	assert.True(t, token.Valid)
@@ -34,47 +34,90 @@ func TestCreateJWT(t *testing.T) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	assert.True(t, ok, "Claims can be parsed as standard claims")
 	assert.Equal(t, "test", claims["aud"])
-	assert.Equal(t, "test-jwt.example.org", claims["iss"])
+	assert.Equal(t, testInstance.Domain, claims["iss"])
 	assert.Equal(t, "my-client-id", claims["sub"])
 	assert.Equal(t, "foo:read", claims["scope"])
 }
 
 func TestParseJWT(t *testing.T) {
-	tokenString, err := c.CreateJWT(in, "refresh", "foo:read")
+	tokenString, err := c.CreateJWT(testInstance, "refresh", "foo:read")
 	assert.NoError(t, err)
 
-	claims, ok := c.ValidToken(in, permissions.RefreshTokenAudience, tokenString)
+	claims, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
 	assert.True(t, ok, "The token must be valid")
 	assert.Equal(t, "refresh", claims.Audience)
-	assert.Equal(t, "test-jwt.example.org", claims.Issuer)
+	assert.Equal(t, testInstance.Domain, claims.Issuer)
 	assert.Equal(t, "my-client-id", claims.Subject)
 	assert.Equal(t, "foo:read", claims.Scope)
 }
 
 func TestParseJWTInvalidAudience(t *testing.T) {
-	tokenString, err := c.CreateJWT(in, "access", "foo:read")
+	tokenString, err := c.CreateJWT(testInstance, "access", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidToken(in, permissions.RefreshTokenAudience, tokenString)
+	_, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
+}
+
+func TestCreateClient(t *testing.T) {
+	client := &oauth.Client{
+		ClientName:   "foo",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "bar",
+	}
+	assert.Nil(t, client.Create(testInstance))
+
+	client2 := &oauth.Client{
+		ClientName:   "foo",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "bar",
+	}
+	assert.Nil(t, client2.Create(testInstance))
+
+	client3 := &oauth.Client{
+		ClientName:   "foo",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "bar",
+	}
+	assert.Nil(t, client3.Create(testInstance))
+
+	client4 := &oauth.Client{
+		ClientName:   "foo-2",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "bar",
+	}
+	assert.Nil(t, client4.Create(testInstance))
+
+	assert.Equal(t, "foo", client.ClientName)
+	assert.Equal(t, "foo-2", client2.ClientName)
+	assert.Equal(t, "foo-3", client3.ClientName)
+	assert.Equal(t, "foo-2-2", client4.ClientName)
 }
 
 func TestParseJWTInvalidIssuer(t *testing.T) {
 	other := &instance.Instance{
-		OAuthSecret: in.OAuthSecret,
+		OAuthSecret: testInstance.OAuthSecret,
 		Domain:      "other.example.com",
 	}
 	tokenString, err := c.CreateJWT(other, "refresh", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidToken(in, permissions.RefreshTokenAudience, tokenString)
+	_, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
 }
 
 func TestParseJWTInvalidSubject(t *testing.T) {
-	other := &Client{
+	other := &oauth.Client{
 		CouchID: "my-other-client",
 	}
-	tokenString, err := other.CreateJWT(in, "refresh", "foo:read")
+	tokenString, err := other.CreateJWT(testInstance, "refresh", "foo:read")
 	assert.NoError(t, err)
-	_, ok := c.ValidToken(in, permissions.RefreshTokenAudience, tokenString)
+	_, ok := c.ValidToken(testInstance, permissions.RefreshTokenAudience, tokenString)
 	assert.False(t, ok, "The token should be invalid")
+}
+
+func TestMain(m *testing.M) {
+	config.UseTestFile()
+	setup := testutils.NewSetup(m, "oauth_client")
+	testInstance = setup.GetTestInstance()
+	os.Exit(m.Run())
+	setup.Cleanup()
 }

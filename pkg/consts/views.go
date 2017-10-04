@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 9
+const IndexViewsVersion int = 10
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -29,6 +29,9 @@ var Indexes = []*mango.Index{
 
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(Jobs, "by-worker-and-state", []string{"worker", "state"}),
+
+	// Used to lookup oauth clients by name
+	mango.IndexOnFields(OAuthClients, "by-client-name", []string{"client_name"}),
 }
 
 // DiskUsageView is the view used for computing the disk usage

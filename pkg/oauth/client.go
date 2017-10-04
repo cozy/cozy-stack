@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -163,6 +166,49 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 		return err
 	}
 
+	var results []*Client
+	req := &couchdb.FindRequest{
+		UseIndex: "by-client-name",
+		Selector: mango.StartWith("client_name", c.ClientName),
+	}
+	err := couchdb.FindDocs(i, consts.OAuthClients, req, &results)
+	if err != nil && !couchdb.IsNoDatabaseError(err) {
+		return &ClientRegistrationError{
+			Code:  http.StatusInternalServerError,
+			Error: "internal_server_error",
+		}
+	}
+
+	// Find the correct suffix to apply to the client name in case it is already
+	// used.
+	suffix := ""
+	if len(results) > 0 {
+		n := 1
+		found := false
+		prefix := c.ClientName + "-"
+		for _, r := range results {
+			name := r.ClientName
+			if name == c.ClientName {
+				found = true
+				continue
+			}
+			if !strings.HasPrefix(name, prefix) {
+				continue
+			}
+			var m int
+			m, err = strconv.Atoi(name[len(prefix):])
+			if err == nil && m > n {
+				n = m
+			}
+		}
+		if found {
+			suffix = strconv.Itoa(n + 1)
+		}
+	}
+	if suffix != "" {
+		c.ClientName = c.ClientName + "-" + suffix
+	}
+
 	c.CouchID = ""
 	c.CouchRev = ""
 	c.ClientID = ""
@@ -173,14 +219,13 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
 
-	if err := couchdb.CreateDoc(i, c); err != nil {
+	if err = couchdb.CreateDoc(i, c); err != nil {
 		return &ClientRegistrationError{
 			Code:  http.StatusInternalServerError,
 			Error: "internal_server_error",
 		}
 	}
 
-	var err error
 	c.RegistrationToken, err = crypto.NewJWT(i.OAuthSecret, jwt.StandardClaims{
 		Audience: permissions.RegistrationTokenAudience,
 		Issuer:   i.Domain,
@@ -229,6 +274,7 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 
 	c.CouchID = old.CouchID
 	c.CouchRev = old.CouchRev
+	c.ClientName = old.ClientName
 	c.ClientID = ""
 	c.SecretExpiresAt = 0
 	c.RegistrationToken = ""
