@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 func init() {
@@ -134,4 +135,18 @@ func AbsPath(inPath string) string {
 	}
 
 	return ""
+}
+
+// CleanUTF8 returns a string with only valid UTF-8 runes
+func CleanUTF8(s string) string {
+	if utf8.ValidString(s) {
+		return s
+	}
+	v := make([]rune, 0, len(s))
+	for _, r := range s {
+		if r != utf8.RuneError {
+			v = append(v, r)
+		}
+	}
+	return string(v)
 }

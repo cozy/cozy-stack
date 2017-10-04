@@ -13,6 +13,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -69,6 +70,7 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 
 	dirs := make(map[string]*vfs.DirDoc)
 	for _, f := range r.File {
+		f.Name = utils.CleanUTF8(f.Name)
 		name := path.Base(f.Name)
 		dirname := path.Dir(f.Name)
 		dir := dstDoc
