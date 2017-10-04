@@ -151,8 +151,17 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 // as specified in https://tools.ietf.org/html/rfc6749#section-6
 func (at *AccountType) RefreshAccount(a Account) error {
 
-	if a.Oauth == nil || a.Oauth.RefreshToken == "" {
+	if a.Oauth == nil {
 		return ErrUnrefreshable
+	}
+
+	// If no endpoint is specified for the account type, the stack just sends
+	// the client ID and client secret to the konnector and let it fetch the
+	// token its-self.
+	if a.Oauth.RefreshToken == "" {
+		a.Oauth.ClientID = at.ClientID
+		a.Oauth.ClientSecret = at.ClientSecret
+		return nil
 	}
 
 	res, err := http.PostForm(at.TokenEndpoint, url.Values{

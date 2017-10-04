@@ -26,6 +26,8 @@ type OauthInfo struct {
 	TokenType    string    `json:"token_type,omitempty"`
 	ExpiresAt    time.Time `json:"expires_at,omitempty"`
 	RefreshToken string    `json:"refresh_token,omitempty"`
+	ClientID     string    `json:"client_id,omitempty"`
+	ClientSecret string    `json:"client_secret,omitempty"`
 }
 
 // BasicInfo holds configuration information for an user/pass account
