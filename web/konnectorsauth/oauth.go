@@ -101,11 +101,6 @@ func redirect(c echo.Context) error {
 				AccessToken: accessToken,
 			},
 		}
-	} else if accountType.TokenEndpoint == "" {
-		account.Oauth = &accounts.OauthInfo{
-			ClientID:     accountType.ClientID,
-			ClientSecret: accountType.ClientSecret,
-		}
 	} else {
 		stateCode := c.QueryParam("state")
 		state := getStorage().Find(stateCode)
@@ -121,11 +116,21 @@ func redirect(c echo.Context) error {
 			}
 		}
 
-		account, err = accountType.RequestAccessToken(i, accessCode, stateCode, state.Nonce)
-		if err != nil {
-			return err
+		if accountType.TokenEndpoint == "" {
+			params := c.QueryParams()
+			params.Del("state")
+			account.Oauth = &accounts.OauthInfo{
+				ClientID:     accountType.ClientID,
+				ClientSecret: accountType.ClientSecret,
+				Query:        &params,
+			}
+		} else {
+			account, err = accountType.RequestAccessToken(i, accessCode, stateCode, state.Nonce)
+			if err != nil {
+				return err
+			}
+			clientState = state.ClientState
 		}
-		clientState = state.ClientState
 	}
 
 	err = couchdb.CreateDoc(i, account)
