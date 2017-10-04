@@ -386,7 +386,7 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 		"redirect_uris":             []string{"https://example.org/oauth/callback"},
 		"grant_types":               []string{"ignored"},
 		"response_types":            []string{"ignored"},
-		"client_name":               "cozy-test",
+		"client_name":               "new-cozy-test",
 		"client_kind":               "test",
 		"client_uri":                "https://github.com/cozy/cozy-test",
 		"logo_uri":                  "https://raw.github.com/cozy/cozy-setup/gh-pages/assets/images/happycloud.png",
@@ -412,7 +412,7 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	assert.Equal(t, client.RedirectURIs, []string{"https://example.org/oauth/callback"})
 	assert.Equal(t, client.GrantTypes, []string{"authorization_code", "refresh_token"})
 	assert.Equal(t, client.ResponseTypes, []string{"code"})
-	assert.Equal(t, client.ClientName, "cozy-test")
+	assert.Equal(t, client.ClientName, "new-cozy-test")
 	assert.Equal(t, client.ClientKind, "test")
 	assert.Equal(t, client.ClientURI, "https://github.com/cozy/cozy-test")
 	assert.Equal(t, client.LogoURI, "https://raw.github.com/cozy/cozy-setup/gh-pages/assets/images/happycloud.png")
