@@ -105,9 +105,9 @@ func unzip(fs vfs.VFS, zipID, destination string) error {
 			if couchdb.IsConflictError(err) {
 				doc.DocName = fmt.Sprintf("%s - conflict - %d", doc.DocName, time.Now().Unix())
 				file, err = fs.CreateFile(doc, nil)
-				if err != nil {
-					return err
-				}
+			}
+			if err != nil {
+				return err
 			}
 		}
 		_, err = io.Copy(file, rc)
