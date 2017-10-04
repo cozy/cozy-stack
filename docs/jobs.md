@@ -309,7 +309,6 @@ allowed):
     "mail-from-the-user": {
       "description": "Required to send mails from the user to his/her friends",
       "type": "io.cozy.jobs",
-      "selector": "worker",
       "verbs": ["POST"],
       "selector": "worker",
       "values": ["sendmail"]
