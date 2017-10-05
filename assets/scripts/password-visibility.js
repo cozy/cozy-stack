@@ -6,6 +6,7 @@
     event.preventDefault()
     passwordVisibility = !passwordVisibility
     passwordInput.type = passwordVisibility ? 'text' : 'password'
+    passwordInput.setAttribute('autocomplete', passwordVisibility ? 'off' : 'current-password')
     passwordVisibilityButton.setAttribute('aria-pressed', passwordVisibility)
   })
 })(window.document)
