@@ -366,7 +366,10 @@ func (i *Installer) ReadManifest(state State) error {
 		return err
 	}
 
-	if i.man.AppType() == Konnector && i.overridenParameters != nil {
+	shouldOverrideParameters := (i.overridenParameters != nil &&
+		i.man.AppType() == Konnector &&
+		i.src.Scheme != "registry")
+	if shouldOverrideParameters {
 		if m, ok := i.man.(*KonnManifest); ok {
 			m.Parameters = i.overridenParameters
 		}
