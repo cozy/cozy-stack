@@ -181,7 +181,7 @@ do_deploy() {
 
 do_assets() {
 	clean_assets
-	tx -r "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
+	tx -r "${WORK_DIR}" pull -a
 	prepare_assets
 	printf "executing go generate... "
 	go get -u github.com/rakyll/statik
