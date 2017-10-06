@@ -57,15 +57,18 @@ type AppManifest struct {
 			TriggerOptions string `json:"trigger"`
 			TriggerID      string `json:"trigger_id"`
 		} `json:"services"`
+
+		Parameters json.RawMessage `json:"parameters,omitempty"`
 	} `json:"attributes,omitempty"`
 }
 
 // AppOptions holds the options to install an application.
 type AppOptions struct {
-	AppType     string
-	Slug        string
-	SourceURL   string
-	Deactivated bool
+	AppType             string
+	Slug                string
+	SourceURL           string
+	Deactivated         bool
+	OverridenParameters *json.RawMessage
 }
 
 // ListApps is used to get the list of all installed applications.
@@ -98,13 +101,21 @@ func (c *Client) GetApp(opts *AppOptions) (*AppManifest, error) {
 
 // InstallApp is used to install an application.
 func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
+	q := url.Values{
+		"Source":      {opts.SourceURL},
+		"Deactivated": {strconv.FormatBool(opts.Deactivated)},
+	}
+	if opts.OverridenParameters != nil {
+		b, err := json.Marshal(opts.OverridenParameters)
+		if err != nil {
+			return nil, err
+		}
+		q["Parameters"] = []string{string(b)}
+	}
 	res, err := c.Req(&request.Options{
-		Method: "POST",
-		Path:   makeAppsPath(opts.AppType, url.PathEscape(opts.Slug)),
-		Queries: url.Values{
-			"Source":      {opts.SourceURL},
-			"Deactivated": {strconv.FormatBool(opts.Deactivated)},
-		},
+		Method:  "POST",
+		Path:    makeAppsPath(opts.AppType, url.PathEscape(opts.Slug)),
+		Queries: q,
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
 		},
@@ -117,10 +128,20 @@ func (c *Client) InstallApp(opts *AppOptions) (*AppManifest, error) {
 
 // UpdateApp is used to update an application.
 func (c *Client) UpdateApp(opts *AppOptions) (*AppManifest, error) {
+	q := url.Values{
+		"Source": {opts.SourceURL},
+	}
+	if opts.OverridenParameters != nil {
+		b, err := json.Marshal(opts.OverridenParameters)
+		if err != nil {
+			return nil, err
+		}
+		q["Parameters"] = []string{string(b)}
+	}
 	res, err := c.Req(&request.Options{
 		Method:  "PUT",
 		Path:    makeAppsPath(opts.AppType, url.PathEscape(opts.Slug)),
-		Queries: url.Values{"Source": {opts.SourceURL}},
+		Queries: q,
 		Headers: request.Headers{
 			"Accept": "text/event-stream",
 		},

@@ -21,6 +21,7 @@ var flagAppsDeactivated bool
 
 var flagKonnectorAccountID string
 var flagKonnectorFolder string
+var flagKonnectorsParameters string
 
 var webappsCmdGroup = &cobra.Command{
 	Use:   "apps [command]",
@@ -221,12 +222,21 @@ func installApp(cmd *cobra.Command, args []string, appType string) error {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
+
+	var overridenParameters *json.RawMessage
+	if flagKonnectorsParameters != "" {
+		tmp := json.RawMessage(flagKonnectorsParameters)
+		overridenParameters = &tmp
+	}
+
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.InstallApp(&client.AppOptions{
 		AppType:     appType,
 		Slug:        slug,
 		SourceURL:   source,
 		Deactivated: flagAppsDeactivated,
+
+		OverridenParameters: overridenParameters,
 	})
 	if err != nil {
 		return err
@@ -269,11 +279,20 @@ func updateApp(cmd *cobra.Command, args []string, appType string) error {
 		errPrintfln("%s", errAppsMissingDomain)
 		return cmd.Usage()
 	}
+
+	var overridenParameters *json.RawMessage
+	if flagKonnectorsParameters != "" {
+		tmp := json.RawMessage(flagKonnectorsParameters)
+		overridenParameters = &tmp
+	}
+
 	c := newClient(flagAppsDomain, appType)
 	app, err := c.UpdateApp(&client.AppOptions{
 		AppType:   appType,
 		Slug:      args[0],
 		SourceURL: src,
+
+		OverridenParameters: overridenParameters,
 	})
 	if err != nil {
 		return err
@@ -395,6 +414,7 @@ func init() {
 	webappsCmdGroup.AddCommand(uninstallWebappCmd)
 
 	konnectorsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
+	konnectorsCmdGroup.PersistentFlags().StringVar(&flagKonnectorsParameters, "parameters", "", "override the parameters of the installed konnector")
 	konnectorsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")
 
 	konnectorsCmdGroup.AddCommand(lsKonnectorsCmd)

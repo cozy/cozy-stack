@@ -100,6 +100,16 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 		if err != nil {
 			return err
 		}
+
+		var overridenParameters *json.RawMessage
+		if p := c.QueryParam("Parameters"); p != "" {
+			var v json.RawMessage
+			if err = json.Unmarshal([]byte(p), &v); err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest)
+			}
+			overridenParameters = &v
+		}
+
 		var w http.ResponseWriter
 		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
 		if isEventStream {
@@ -107,6 +117,7 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 			w.Header().Set("Content-Type", typeTextEventStream)
 			w.WriteHeader(200)
 		}
+
 		inst, err := apps.NewInstaller(instance, instance.AppsCopier(installerType),
 			&apps.InstallerOptions{
 				Operation:   apps.Install,
@@ -115,6 +126,8 @@ func installHandler(installerType apps.AppType) echo.HandlerFunc {
 				Slug:        slug,
 				Deactivated: c.QueryParam("Deactivated") == "true",
 				Registries:  registries,
+
+				OverridenParameters: overridenParameters,
 			},
 		)
 		if err != nil {
@@ -146,6 +159,15 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 			return err
 		}
 
+		var overridenParameters *json.RawMessage
+		if p := c.QueryParam("Parameters"); p != "" {
+			var v json.RawMessage
+			if err = json.Unmarshal([]byte(p), &v); err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest)
+			}
+			overridenParameters = &v
+		}
+
 		var w http.ResponseWriter
 		isEventStream := c.Request().Header.Get("Accept") == typeTextEventStream
 		if isEventStream {
@@ -160,6 +182,8 @@ func updateHandler(installerType apps.AppType) echo.HandlerFunc {
 				SourceURL:  c.QueryParam("Source"),
 				Slug:       slug,
 				Registries: registries,
+
+				OverridenParameters: overridenParameters,
 			},
 		)
 		if err != nil {

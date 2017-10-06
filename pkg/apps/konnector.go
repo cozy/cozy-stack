@@ -28,12 +28,12 @@ type KonnManifest struct {
 	DefaultLocale string  `json:"default_locale"`
 	Locales       Locales `json:"locales"`
 
-	Parameters     json.RawMessage `json:"parameters"`
-	DocVersion     string          `json:"version"`
-	License        string          `json:"license"`
-	DocPermissions permissions.Set `json:"permissions"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	Parameters     *json.RawMessage `json:"parameters"`
+	DocVersion     string           `json:"version"`
+	License        string           `json:"license"`
+	DocPermissions permissions.Set  `json:"permissions"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
 
 	Err string `json:"error,omitempty"`
 	err error
@@ -63,6 +63,12 @@ func (m *KonnManifest) Clone() couchdb.Doc {
 
 	cloned.DocPermissions = make(permissions.Set, len(m.DocPermissions))
 	copy(cloned.DocPermissions, m.DocPermissions)
+
+	if m.Parameters != nil {
+		v := make(json.RawMessage, len(*m.Parameters))
+		copy(v, *m.Parameters)
+		cloned.Parameters = &v
+	}
 
 	return &cloned
 }
@@ -139,6 +145,7 @@ func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	newManifest.CreatedAt = m.CreatedAt
 	newManifest.DocSlug = slug
 	newManifest.DocSource = sourceURL
+	newManifest.Parameters = m.Parameters
 
 	*m = newManifest
 	return nil

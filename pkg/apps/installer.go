@@ -1,6 +1,7 @@
 package apps
 
 import (
+	"encoding/json"
 	"io"
 	"net/url"
 	"regexp"
@@ -36,6 +37,8 @@ type Installer struct {
 	db       couchdb.Database
 	endState State
 
+	overridenParameters *json.RawMessage
+
 	man  Manifest
 	src  *url.URL
 	slug string
@@ -55,6 +58,11 @@ type InstallerOptions struct {
 	SourceURL   string
 	Deactivated bool
 	Registries  []*url.URL
+
+	// Used to override the "Parameters" field of konnectors during installation.
+	// This modification is usefull to allow the parameterization of a konnector
+	// at its installation as we do not have yet a registry up and running.
+	OverridenParameters *json.RawMessage
 }
 
 // Fetcher interface should be implemented by the underlying transport
@@ -141,6 +149,8 @@ func NewInstaller(db couchdb.Database, fs Copier, opts *InstallerOptions) (*Inst
 		db:       db,
 		fs:       fs,
 		endState: endState,
+
+		overridenParameters: opts.OverridenParameters,
 
 		man:  man,
 		src:  src,
@@ -354,6 +364,12 @@ func (i *Installer) ReadManifest(state State) error {
 	err = i.man.ReadManifest(io.LimitReader(r, ManifestMaxSize), i.slug, i.src.String())
 	if err != nil {
 		return err
+	}
+
+	if i.man.AppType() == Konnector && i.overridenParameters != nil {
+		if m, ok := i.man.(*KonnManifest); ok {
+			m.Parameters = i.overridenParameters
+		}
 	}
 
 	realtime.GetHub().Publish(&realtime.Event{
