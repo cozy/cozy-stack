@@ -114,6 +114,10 @@ contexts:
         name: 'Bank'
         slug: 'bank'
         category: 'partners'
+    # claudy actions list
     claudy_actions:
         - desktop
         - mobile
+    # konnectors slugs to exclude from cozy-collect
+    exclude_konnectors:
+        - a_konnector_slug
