@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
 )
@@ -153,22 +156,73 @@ var runKonnectorsCmd = &cobra.Command{
 		}
 
 		slug := args[0]
-		c := newClient(flagAppsDomain, consts.Jobs+":POST:konnector:worker", consts.Files)
+		c := newClient(flagAppsDomain,
+			consts.Jobs+":POST:konnector:worker",
+			consts.Files,
+			consts.Accounts,
+		)
 
-		var folderID string
-		if flagKonnectorFolder != "" {
+		var folderID, accountID string
+
+		if flagKonnectorAccountID != "" && flagKonnectorFolder != "" {
+			accountID = flagKonnectorAccountID
 			d, err := c.GetDirByPath(flagKonnectorFolder)
 			if err != nil {
 				return err
 			}
 			folderID = d.ID
+		} else {
+			res, err := c.Req(&request.Options{
+				Method: "GET",
+				Path:   fmt.Sprintf("/data/%s/_all_docs", url.PathEscape(consts.Accounts)),
+				Queries: url.Values{
+					"include_docs": []string{"true"},
+				},
+			})
+			if err != nil {
+				return err
+			}
+			defer res.Body.Close()
+
+			var allDocs struct {
+				Rows []struct {
+					ID  string          `json:"id"`
+					Doc json.RawMessage `json:"doc"`
+				} `json:"rows"`
+			}
+
+			if err = json.NewDecoder(res.Body).Decode(&allDocs); err != nil {
+				return err
+			}
+
+			for _, r := range allDocs.Rows {
+				var v struct {
+					ID          string `json:"_id"`
+					AccountType string `json:"account_type"`
+					FolderID    string `json:"folderId"`
+				}
+				if strings.HasPrefix(r.ID, "_design") {
+					continue
+				}
+				if err = json.Unmarshal(r.Doc, &v); err != nil {
+					return err
+				}
+				if v.AccountType == slug {
+					folderID = v.FolderID
+					accountID = v.ID
+					break
+				}
+			}
+		}
+		if folderID == "" || accountID == "" {
+			return fmt.Errorf("Could not find account associated with konnector %q", slug)
 		}
 
 		j, err := c.JobPush(&client.JobOptions{
 			Worker: "konnector",
 			Arguments: map[string]interface{}{
 				"konnector":      slug,
-				"account":        flagKonnectorAccountID,
+				"account":        accountID,
 				"folder_to_save": folderID,
 			},
 		})
