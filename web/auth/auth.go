@@ -580,6 +580,9 @@ func accessToken(c echo.Context) error {
 
 	client, err := oauth.FindClient(instance, clientID)
 	if err != nil {
+		if couchErr, isCouchErr := couchdb.IsCouchError(err); isCouchErr && couchErr.StatusCode >= 500 {
+			return err
+		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "the client must be registered",
 		})
