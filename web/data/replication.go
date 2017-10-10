@@ -79,10 +79,24 @@ func bulkGet(c echo.Context) error {
 	return proxy(c, "_bulk_get")
 }
 
+func bulkDocs(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+		return err
+	}
+
+	if err := CheckReadable(doctype); err != nil {
+		return err
+	}
+
+	return proxy(c, "_bulk_docs")
+}
+
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
 		return err
 	}
 
@@ -139,6 +153,7 @@ func replicationRoutes(group *echo.Group) {
 
 	// useful for Pouchdb replication
 	group.GET("/_bulk_get", bulkGet)
+	group.POST("/_bulk_docs", bulkDocs)
 
 	group.POST("/_revs_diff", revsDiff)
 
