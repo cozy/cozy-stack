@@ -66,12 +66,13 @@ func rtevent(db Database, verb string, doc, oldDoc Doc) {
 		logger.WithDomain(db.Prefix()).Errorf("error in hooks on %s %s %v\n", verb, doc.DocType(), err)
 	}
 
-	realtime.GetHub().Publish(&realtime.Event{
+	e := &realtime.Event{
 		Verb:   verb,
 		Doc:    doc.Clone(),
 		OldDoc: oldDoc,
 		Domain: domain,
-	})
+	}
+	go realtime.GetHub().Publish(e)
 }
 
 // GlobalDB is the prefix used for stack-scoped db
