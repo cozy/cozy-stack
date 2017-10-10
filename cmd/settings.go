@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
 )
@@ -108,6 +109,11 @@ func updateSettings(c *client.Client, obj map[string]interface{}, args string) (
 }
 
 func init() {
-	settingsCmd.PersistentFlags().StringVar(&flagSettingsDomain, "domain", os.Getenv("COZY_DOMAIN"), "specify the domain name of the instance")
+	domain := os.Getenv("COZY_DOMAIN")
+	if domain == "" && config.IsDevRelease() {
+		domain = "cozy.tools:8080"
+	}
+
+	settingsCmd.PersistentFlags().StringVar(&flagSettingsDomain, "domain", domain, "specify the domain name of the instance")
 	RootCmd.AddCommand(settingsCmd)
 }

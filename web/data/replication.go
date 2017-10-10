@@ -93,6 +93,20 @@ func fullCommit(c echo.Context) error {
 	return proxy(c, "_ensure_full_commit")
 }
 
+func revsDiff(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
+
+	if err := CheckReadable(doctype); err != nil {
+		return err
+	}
+
+	return proxy(c, "_revs_diff")
+}
+
 func dbStatus(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	doctype := c.Get("doctype").(string)
@@ -125,6 +139,8 @@ func replicationRoutes(group *echo.Group) {
 
 	// useful for Pouchdb replication
 	group.GET("/_bulk_get", bulkGet)
+
+	group.POST("/_revs_diff", revsDiff)
 
 	// for storing checkpoints
 	group.GET("/_local/:docid", getLocalDoc)

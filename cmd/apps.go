@@ -12,6 +12,7 @@ import (
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/client/request"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
 )
@@ -452,6 +453,9 @@ func foreachDomains(predicate func(*client.Instance) error) error {
 
 func init() {
 	domain := os.Getenv("COZY_DOMAIN")
+	if domain == "" && config.IsDevRelease() {
+		domain = "cozy.tools:8080"
+	}
 
 	webappsCmdGroup.PersistentFlags().StringVar(&flagAppsDomain, "domain", domain, "specify the domain name of the instance")
 	webappsCmdGroup.PersistentFlags().BoolVar(&flagAllDomains, "all-domains", false, "work on all domains iterativelly")

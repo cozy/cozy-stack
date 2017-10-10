@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/client"
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
@@ -454,7 +455,12 @@ func splitArgs(command string) []string {
 }
 
 func init() {
-	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", os.Getenv("COZY_DOMAIN"), "specify the domain name of the instance")
+	domain := os.Getenv("COZY_DOMAIN")
+	if domain == "" && config.IsDevRelease() {
+		domain = "cozy.tools:8080"
+	}
+
+	filesCmdGroup.PersistentFlags().StringVar(&flagFilesDomain, "domain", domain, "specify the domain name of the instance")
 
 	importFilesCmd.Flags().StringVar(&flagImportFrom, "from", "", "directory to import from in cozy")
 	importFilesCmd.Flags().StringVar(&flagImportTo, "to", "/", "directory to import to in cozy")
