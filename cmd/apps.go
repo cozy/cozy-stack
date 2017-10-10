@@ -89,7 +89,7 @@ var showKonnectorCmd = &cobra.Command{
 	Use:   "show [slug]",
 	Short: "Show the application attributes",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return showApp(cmd, args, consts.Apps)
+		return showApp(cmd, args, consts.Konnectors)
 	},
 }
 
