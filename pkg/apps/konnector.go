@@ -20,7 +20,7 @@ type KonnManifest struct {
 	DocSource   string     `json:"source"`
 	DocSlug     string     `json:"slug"`
 	DocState    State      `json:"state"`
-	Icon        string     `json:"icon"`
+	Icon        string     `json:"icon,omitempty"`
 	Description string     `json:"description"`
 	Category    string     `json:"category"`
 	Developer   *Developer `json:"developer"`
