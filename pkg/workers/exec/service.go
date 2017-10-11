@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -95,7 +96,7 @@ func (w *serviceWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd
 	return
 }
 
-func (w *serviceWorker) ScanOuput(i *instance.Instance, line []byte) error {
+func (w *serviceWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, line []byte) error {
 	return nil
 }
 

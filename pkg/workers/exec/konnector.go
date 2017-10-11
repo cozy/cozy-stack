@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
 )
@@ -54,12 +55,12 @@ func (r *result) SetID(id string)    { r.DocID = id }
 func (r *result) SetRev(rev string)  { r.DocRev = rev }
 
 const (
+	konnectorMsgTypeWarning  = "warning"
 	konnectorMsgTypeError    = "error"
 	konnectorMsgTypeCritical = "critical"
 )
 
 // const konnectorMsgTypeDebug string = "debug"
-// const konnectorMsgTypeWarning string = "warning"
 // const konnectorMsgTypeProgress string = "progress"
 
 type konnectorMsg struct {
@@ -193,12 +194,19 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (c
 	return
 }
 
-func (w *konnectorWorker) ScanOuput(i *instance.Instance, line []byte) error {
+func (w *konnectorWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, line []byte) error {
 	var msg konnectorMsg
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
-	// TODO: filter some of the messages
+
+	switch msg.Type {
+	case konnectorMsgTypeError, konnectorMsgTypeCritical:
+		log.Error(msg.Message)
+	case konnectorMsgTypeWarning:
+		log.Warn(msg.Message)
+	}
+
 	w.messages = append(w.messages, msg)
 	realtime.GetHub().Publish(&realtime.Event{
 		Verb: realtime.EventCreate,

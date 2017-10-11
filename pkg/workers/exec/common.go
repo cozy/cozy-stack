@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -36,7 +37,7 @@ func init() {
 type execWorker interface {
 	PrepareWorkDir(i *instance.Instance, m jobs.Message) (string, error)
 	PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd string, env []string, jobID string, err error)
-	ScanOuput(i *instance.Instance, line []byte) error
+	ScanOuput(i *instance.Instance, log *logrus.Entry, line []byte) error
 	Error(i *instance.Instance, err error) error
 	Commit(ctx context.Context, msg jobs.Message, errjob error) error
 }
@@ -81,6 +82,8 @@ func makeExecWorkerFunc() jobs.WorkerThreadedFunc {
 		scanOut.Buffer(nil, 256*1024)
 
 		log := logger.WithDomain(domain)
+		log = log.WithField("type", "konnector")
+		log = log.WithField("job_id", jobID)
 
 		if err = cmd.Start(); err != nil {
 			return wrapErr(ctx, err)
@@ -93,7 +96,7 @@ func makeExecWorkerFunc() jobs.WorkerThreadedFunc {
 		}()
 
 		for scanOut.Scan() {
-			if errOut := worker.ScanOuput(inst, scanOut.Bytes()); errOut != nil {
+			if errOut := worker.ScanOuput(inst, log, scanOut.Bytes()); errOut != nil {
 				log.Errorf("[%s] %s: %s", workerName, jobID, errOut)
 			}
 		}
