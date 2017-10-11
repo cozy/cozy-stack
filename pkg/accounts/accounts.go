@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -22,10 +23,13 @@ type Account struct {
 
 // OauthInfo holds configuration information for an oauth account
 type OauthInfo struct {
-	AccessToken  string    `json:"access_token,omitempty"`
-	TokenType    string    `json:"token_type,omitempty"`
-	ExpiresAt    time.Time `json:"expires_at,omitempty"`
-	RefreshToken string    `json:"refresh_token,omitempty"`
+	AccessToken  string      `json:"access_token,omitempty"`
+	TokenType    string      `json:"token_type,omitempty"`
+	ExpiresAt    time.Time   `json:"expires_at,omitempty"`
+	RefreshToken string      `json:"refresh_token,omitempty"`
+	ClientID     string      `json:"client_id,omitempty"`
+	ClientSecret string      `json:"client_secret,omitempty"`
+	Query        *url.Values `json:"query,omitempty"`
 }
 
 // BasicInfo holds configuration information for an user/pass account

@@ -1,11 +1,14 @@
 package accounts
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -112,7 +115,7 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 	if err != nil {
 		return "", err
 	}
-	vv := &url.Values{}
+	vv := u.Query()
 
 	redirectURI := at.RedirectURI(i)
 
@@ -147,12 +150,119 @@ func (at *AccountType) MakeOauthStartURL(i *instance.Instance, scope string, sta
 
 }
 
+// RequestAccessToken asks the service an access token
+// https://tools.ietf.org/html/rfc6749#section-4
+func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stateCode, stateNonce string) (*Account, error) {
+	data := url.Values{
+		"grant_type":   []string{AuthorizationCode},
+		"code":         []string{accessCode},
+		"redirect_uri": []string{at.RedirectURI(i)},
+		"state":        []string{stateCode},
+		"nonce":        []string{stateNonce},
+	}
+
+	if at.TokenAuthMode != BasicTokenAuthMode {
+		data.Add("client_id", at.ClientID)
+		data.Add("client_secret", at.ClientSecret)
+	}
+
+	body := data.Encode()
+	req, err := http.NewRequest("POST", at.TokenEndpoint, strings.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Accept", "application/json")
+
+	if at.TokenAuthMode == BasicTokenAuthMode {
+		auth := []byte(at.ClientID + ":" + at.ClientSecret)
+		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	resBody, err := ioutil.ReadAll(res.Body)
+	if res.StatusCode != 200 {
+		return nil, errors.New("oauth services responded with non-200 res: " + string(resBody))
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var out struct {
+		RefreshToken     string `json:"refresh_token"`
+		AccessToken      string `json:"access_token"`
+		IDToken          string `json:"id_token"` // alternative name for access_token
+		ExpiresIn        int    `json:"expires_in"`
+		TokenType        string `json:"token_type"`
+		Error            string `json:"error"`
+		ErrorDescription string `json:"error_description"`
+	}
+	err = json.Unmarshal(resBody, &out)
+	if err != nil {
+		return nil, err
+	}
+	if out.Error != "" {
+		return nil, fmt.Errorf("OauthError(%s) %s", out.Error, out.ErrorDescription)
+	}
+
+	var ExpiresAt time.Time
+	if out.ExpiresIn != 0 {
+		ExpiresAt = time.Now().Add(time.Duration(out.ExpiresIn) * time.Second)
+	}
+
+	account := &Account{
+		AccountType: at.ID(),
+		Oauth:       &OauthInfo{ExpiresAt: ExpiresAt},
+	}
+
+	if out.AccessToken == "" {
+		out.AccessToken = out.IDToken
+	}
+
+	if out.AccessToken == "" {
+		return nil, errors.New("server responded without access token")
+	}
+
+	account.Oauth.AccessToken = out.AccessToken
+	account.Oauth.RefreshToken = out.RefreshToken
+	account.Oauth.TokenType = out.TokenType
+
+	// decode same resBody into a map for non-standard fields
+	var extras map[string]interface{}
+	json.Unmarshal(resBody, &extras)
+	delete(extras, "access_token")
+	delete(extras, "refresh_token")
+	delete(extras, "token_type")
+	delete(extras, "expires_in")
+
+	if len(extras) > 0 {
+		account.Extras = extras
+	}
+
+	return account, nil
+}
+
 // RefreshAccount requires a new AccessToken using the RefreshToken
 // as specified in https://tools.ietf.org/html/rfc6749#section-6
 func (at *AccountType) RefreshAccount(a Account) error {
 
-	if a.Oauth == nil || a.Oauth.RefreshToken == "" {
+	if a.Oauth == nil {
 		return ErrUnrefreshable
+	}
+
+	// If no endpoint is specified for the account type, the stack just sends
+	// the client ID and client secret to the konnector and let it fetch the
+	// token its-self.
+	if a.Oauth.RefreshToken == "" {
+		a.Oauth.ClientID = at.ClientID
+		a.Oauth.ClientSecret = at.ClientSecret
+		return nil
 	}
 
 	res, err := http.PostForm(at.TokenEndpoint, url.Values{

@@ -1,15 +1,10 @@
 package konnectorsauth
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -82,7 +77,6 @@ func redirectToDataCollect(c echo.Context, account *accounts.Account, clientStat
 // - with instance redirect
 // - without instance redirect
 func redirect(c echo.Context) error {
-
 	accessCode := c.QueryParam("code")
 	accessToken := c.QueryParam("access_token")
 	accountTypeID := c.Param("accountType")
@@ -92,147 +86,59 @@ func redirect(c echo.Context) error {
 	}
 
 	i, _ := instance.Get(c.Request().Host)
+	clientState := ""
+	var account *accounts.Account
 
-	if i != nil && accessToken != "" {
-		account := &accounts.Account{
+	if accessToken != "" {
+		if i == nil {
+			return echo.NewHTTPError(http.StatusBadRequest,
+				"using ?access_token with instance-less redirect")
+		}
+
+		account = &accounts.Account{
 			AccountType: accountTypeID,
 			Oauth: &accounts.OauthInfo{
 				AccessToken: accessToken,
 			},
 		}
-		err = couchdb.CreateDoc(i, account)
-		if err != nil {
-			return err
-		}
-		c.Set("instance", i)
-		return redirectToDataCollect(c, account, "")
-	}
-
-	if accessToken != "" {
-		return echo.NewHTTPError(http.StatusBadRequest,
-			"using ?access_token with instance-less redirect")
-	}
-
-	stateCode := c.QueryParam("state")
-	state := getStorage().Find(stateCode)
-
-	if state == nil ||
-		state.AccountType != accountTypeID ||
-		(i != nil && state.InstanceDomain != i.Domain) {
-		return errors.New("bad state")
-	}
-
-	// TODO should we check if the req.Host is a given "_oauth_callback" domain?
-	if i == nil {
-		i, err = instance.Get(state.InstanceDomain)
-		if err != nil {
+	} else {
+		stateCode := c.QueryParam("state")
+		state := getStorage().Find(stateCode)
+		if state == nil ||
+			state.AccountType != accountTypeID ||
+			(i != nil && state.InstanceDomain != i.Domain) {
 			return errors.New("bad state")
 		}
-	}
+		if i == nil {
+			i, err = instance.Get(state.InstanceDomain)
+			if err != nil {
+				return errors.New("bad state")
+			}
+		}
 
-	var req *http.Request
-
-	data := url.Values{
-		"grant_type":   []string{accounts.AuthorizationCode},
-		"code":         []string{accessCode},
-		"redirect_uri": []string{accountType.RedirectURI(i)},
-		"state":        []string{stateCode},
-		"nonce":        []string{state.Nonce},
-	}
-
-	if accountType.TokenAuthMode != accounts.BasicTokenAuthMode {
-		data.Add("client_id", accountType.ClientID)
-		data.Add("client_secret", accountType.ClientSecret)
-	}
-
-	body := data.Encode()
-	req, err = http.NewRequest("POST", accountType.TokenEndpoint, strings.NewReader(body))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Accept", "application/json")
-
-	if accountType.TokenAuthMode == accounts.BasicTokenAuthMode {
-		auth := []byte(accountType.ClientID + ":" + accountType.ClientSecret)
-		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	resBody, err := ioutil.ReadAll(res.Body)
-
-	if res.StatusCode != 200 {
-		return errors.New("oauth services responded with non-200 res : " + string(resBody))
-	}
-
-	if err != nil {
-		return err
-	}
-
-	var out struct {
-		RefreshToken     string `json:"refresh_token"`
-		AccessToken      string `json:"access_token"`
-		IDToken          string `json:"id_token"` // alternative name for access_token
-		ExpiresIn        int    `json:"expires_in"`
-		TokenType        string `json:"token_type"`
-		Error            string `json:"error"`
-		ErrorDescription string `json:"error_description"`
-	}
-	err = json.Unmarshal(resBody, &out)
-	if err != nil {
-		return err
-	}
-
-	if out.Error != "" {
-		return fmt.Errorf("OauthError(%s) %s", out.Error, out.ErrorDescription)
-	}
-
-	var ExpiresAt time.Time
-	if out.ExpiresIn != 0 {
-		ExpiresAt = time.Now().Add(time.Duration(out.ExpiresIn) * time.Second)
-	}
-
-	account := &accounts.Account{
-		AccountType: accountType.ID(),
-		Oauth:       &accounts.OauthInfo{ExpiresAt: ExpiresAt},
-	}
-
-	if out.AccessToken == "" {
-		out.AccessToken = out.IDToken
-	}
-
-	if out.AccessToken == "" {
-		return errors.New("server responded without access token")
-	}
-
-	account.Oauth.AccessToken = out.AccessToken
-	account.Oauth.RefreshToken = out.RefreshToken
-	account.Oauth.TokenType = out.TokenType
-
-	// decode same resBody into a map for non-standard fields
-	var extras map[string]interface{}
-	json.Unmarshal(resBody, &extras)
-	delete(extras, "access_token")
-	delete(extras, "refresh_token")
-	delete(extras, "token_type")
-	delete(extras, "expires_in")
-
-	if len(extras) > 0 {
-		account.Extras = extras
+		if accountType.TokenEndpoint == "" {
+			params := c.QueryParams()
+			params.Del("state")
+			account.Oauth = &accounts.OauthInfo{
+				ClientID:     accountType.ClientID,
+				ClientSecret: accountType.ClientSecret,
+				Query:        &params,
+			}
+		} else {
+			account, err = accountType.RequestAccessToken(i, accessCode, stateCode, state.Nonce)
+			if err != nil {
+				return err
+			}
+			clientState = state.ClientState
+		}
 	}
 
 	err = couchdb.CreateDoc(i, account)
 	if err != nil {
 		return err
 	}
-
 	c.Set("instance", i)
-	return redirectToDataCollect(c, account, state.ClientState)
+	return redirectToDataCollect(c, account, clientState)
 }
 
 // refresh is an internal route used by konnectors to refresh accounts
