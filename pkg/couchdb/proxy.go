@@ -78,7 +78,21 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 				Error string `json:"error"`
 			}
 
-			if reqValue.NewEdits == nil || *reqValue.NewEdits {
+			// When using the 'new_edits' flag (like pouchdb), the couchdb response
+			// does not contain any value. We only rely on the request data and
+			// expect no error.
+			if reqValue.NewEdits != nil && !*reqValue.NewEdits {
+				for _, doc := range reqValue.Docs {
+					rev := doc.Rev()
+					var event string
+					if strings.HasPrefix(rev, "1-") {
+						event = realtime.EventCreate
+					} else {
+						event = realtime.EventUpdate
+					}
+					rtevent(db, event, doc, nil)
+				}
+			} else {
 				var respValues []*respValue
 				if err = json.Unmarshal(data, &respValues); err != nil {
 					return
@@ -104,17 +118,6 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 						event = realtime.EventCreate
 					}
 					doc.SetRev(r.Rev)
-					rtevent(db, event, doc, nil)
-				}
-			} else {
-				for _, doc := range reqValue.Docs {
-					rev := doc.Rev()
-					var event string
-					if strings.HasPrefix(rev, "1-") {
-						event = realtime.EventCreate
-					} else {
-						event = realtime.EventUpdate
-					}
 					rtevent(db, event, doc, nil)
 				}
 			}
