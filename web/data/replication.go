@@ -124,7 +124,7 @@ func createDB(c echo.Context) error {
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+	if err := permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
 		return err
 	}
 
