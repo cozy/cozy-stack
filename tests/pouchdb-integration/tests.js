@@ -92,7 +92,7 @@ function destroyObjects (done) {
   }, done)
 }
 
-xdescribe('Replication stack -> pouchdb', function () {
+describe('Replication stack -> pouchdb', function () {
   var target = new Pouchdb('replication-target')
   before(destroySource)
   before(createTestObject(42))
