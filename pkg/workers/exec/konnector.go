@@ -53,7 +53,10 @@ func (r *result) Clone() couchdb.Doc { c := *r; return &c }
 func (r *result) SetID(id string)    { r.DocID = id }
 func (r *result) SetRev(rev string)  { r.DocRev = rev }
 
-const konnectorMsgTypeError string = "error"
+const (
+	konnectorMsgTypeError    = "error"
+	konnectorMsgTypeCritical = "critical"
+)
 
 // const konnectorMsgTypeDebug string = "debug"
 // const konnectorMsgTypeWarning string = "warning"
@@ -218,11 +221,20 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 		fmt.Println("Failed to save konnector logs", errLogs)
 	}
 
+	// For retro-compatibility, we still use "error" logs as returned error, only
+	// in the case that no "critical" message are actually returned. In such
+	// case, We use the last "error" log as the returned error.
+	var lastErrorMessage error
 	for _, msg := range w.messages {
-		if msg.Type == konnectorMsgTypeError {
-			// konnector err is more explicit
+		if msg.Type == konnectorMsgTypeCritical {
 			return errors.New(msg.Message)
 		}
+		if msg.Type == konnectorMsgTypeError {
+			lastErrorMessage = errors.New(msg.Message)
+		}
+	}
+	if lastErrorMessage != nil {
+		return lastErrorMessage
 	}
 
 	return err
