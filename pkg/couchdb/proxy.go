@@ -112,10 +112,10 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 						continue
 					}
 					var event string
-					if doc.Rev() != "" {
-						event = realtime.EventUpdate
-					} else {
+					if doc.Rev() == "" {
 						event = realtime.EventCreate
+					} else {
+						event = realtime.EventUpdate
 					}
 					doc.SetRev(r.Rev)
 					rtevent(db, event, doc, nil)
