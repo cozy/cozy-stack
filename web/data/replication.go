@@ -85,7 +85,7 @@ func bulkDocs(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -107,6 +107,20 @@ func bulkDocs(c echo.Context) error {
 	return nil
 }
 
+func createDB(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+		return err
+	}
+
+	if err := CheckWritable(doctype); err != nil {
+		return err
+	}
+
+	return proxy(c, "/")
+}
+
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
@@ -114,7 +128,7 @@ func fullCommit(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -156,6 +170,8 @@ func dbStatus(c echo.Context) error {
 }
 
 func replicationRoutes(group *echo.Group) {
+	group.PUT("/", createDB)
+
 	// Routes used only for replication
 	group.GET("/", dbStatus)
 	group.GET("/_design/:designdocid", getDesignDoc)

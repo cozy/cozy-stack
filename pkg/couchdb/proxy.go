@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -49,7 +50,8 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 	}
 
 	var reqValue struct {
-		Docs []JSONDoc `json:"docs"`
+		Docs     []JSONDoc `json:"docs"`
+		NewEdits *bool     `json:"new_edits"`
 	}
 
 	if err = json.Unmarshal(body, &reqValue); err != nil {
@@ -69,31 +71,52 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 	p.Transport = &bulkTransport{
 		RoundTripper: http.DefaultTransport,
 		OnResponseRead: func(data []byte) {
-			var resp []struct {
+			type respValue struct {
 				ID    string `json:"id"`
 				Rev   string `json:"rev"`
 				OK    bool   `json:"ok"`
 				Error string `json:"error"`
 			}
-			if err = json.Unmarshal(data, &resp); err != nil {
-				return
-			}
-			for _, r := range resp {
-				if r.Error != "" || !r.OK {
-					continue
+
+			if reqValue.NewEdits == nil || *reqValue.NewEdits {
+				var respValues []*respValue
+				if err = json.Unmarshal(data, &respValues); err != nil {
+					return
 				}
-				doc, ok := docs[r.ID]
-				if !ok {
-					continue
+
+				docs := make(map[string]JSONDoc)
+				for _, doc := range reqValue.Docs {
+					docs[doc.ID()] = doc
 				}
-				var event string
-				if doc.Rev() != "" {
-					event = realtime.EventUpdate
-				} else {
-					event = realtime.EventCreate
+
+				for _, r := range respValues {
+					if r.Error != "" || !r.OK {
+						continue
+					}
+					doc, ok := docs[r.ID]
+					if !ok {
+						continue
+					}
+					var event string
+					if doc.Rev() != "" {
+						event = realtime.EventUpdate
+					} else {
+						event = realtime.EventCreate
+					}
+					doc.SetRev(r.Rev)
+					rtevent(db, event, doc, nil)
 				}
-				doc.SetRev(r.Rev)
-				rtevent(db, event, doc, nil)
+			} else {
+				for _, doc := range reqValue.Docs {
+					rev := doc.Rev()
+					var event string
+					if strings.HasPrefix(rev, "1-") {
+						event = realtime.EventCreate
+					} else {
+						event = realtime.EventUpdate
+					}
+					rtevent(db, event, doc, nil)
+				}
 			}
 		},
 	}
@@ -120,7 +143,9 @@ func (t *bulkTransport) RoundTrip(req *http.Request) (resp *http.Response, err e
 	if err != nil {
 		return nil, err
 	}
-	go t.OnResponseRead(b)
+	if resp.StatusCode == http.StatusCreated {
+		go t.OnResponseRead(b)
+	}
 	resp.Body = ioutil.NopCloser(bytes.NewReader(b))
 	return resp, nil
 }
