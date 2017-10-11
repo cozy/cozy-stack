@@ -92,29 +92,6 @@ function destroyObjects (done) {
   }, done)
 }
 
-describe('Replication stack -> pouchdb', function () {
-  var target = new Pouchdb('replication-target')
-  before(destroySource)
-  before(createTestObject(42))
-  before(createTestObject(666))
-  before(createTestObject(1969))
-
-  it('When I start a replication', function (done) {
-    target.replicate.from(SOURCE, {skip_setup: true}, done)
-  })
-
-  it('Then I have 3 items in target', function (done) {
-    target.get(this.docIds[42].id, function (err, res) {
-      if (err) return done()
-      if (res['test'] !== 42) done(new Error('wrong doc'))
-      done(null)
-    })
-  })
-
-  after(destroyObjects)
-  after(function (done) { target.destroy(done) })
-})
-
 describe('Replication pouchdb -> stack', function () {
   var target = new Pouchdb('replication-target')
   before(destroySource)
@@ -139,4 +116,27 @@ describe('Replication pouchdb -> stack', function () {
       target.replicate.to(SOURCE, {}, done)
     }, done)
   })
+})
+
+describe('Replication stack -> pouchdb', function () {
+  var target = new Pouchdb('replication-target')
+  before(destroySource)
+  before(createTestObject(42))
+  before(createTestObject(666))
+  before(createTestObject(1969))
+
+  it('When I start a replication', function (done) {
+    target.replicate.from(SOURCE, {skip_setup: true}, done)
+  })
+
+  it('Then I have 3 items in target', function (done) {
+    target.get(this.docIds[42].id, function (err, res) {
+      if (err) return done()
+      if (res['test'] !== 42) done(new Error('wrong doc'))
+      done(null)
+    })
+  })
+
+  after(destroyObjects)
+  after(function (done) { target.destroy(done) })
 })
