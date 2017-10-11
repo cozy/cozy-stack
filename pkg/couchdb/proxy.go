@@ -1,0 +1,126 @@
+package couchdb
+
+import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+
+	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/labstack/echo"
+)
+
+// Proxy generate a httputil.ReverseProxy which forwards the request to the
+// correct route.
+func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
+	couchURL := config.CouchURL()
+	couchAuth := config.GetConfig().CouchDB.Auth
+
+	director := func(req *http.Request) {
+		req.URL.Scheme = couchURL.Scheme
+		req.URL.Host = couchURL.Host
+		req.Header.Del(echo.HeaderAuthorization) // drop stack auth
+		req.Header.Del(echo.HeaderCookie)
+		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
+		req.URL.Path, _ = url.PathUnescape(req.URL.RawPath)
+		if couchAuth != nil {
+			if p, ok := couchAuth.Password(); ok {
+				req.SetBasicAuth(couchAuth.Username(), p)
+			}
+		}
+	}
+
+	return &httputil.ReverseProxy{
+		Director: director,
+	}
+}
+
+// ProxyBulkDocs generates a httputil.ReverseProxy to forward the couchdb
+// request on the _bulk_docs endpoint. This endpoint is specific since it will
+// mutate many document in database, the stack has to read the response from
+// couch to emit the correct realtime events.
+func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.ReverseProxy, *http.Request, error) {
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var reqValue struct {
+		Docs []JSONDoc `json:"docs"`
+	}
+
+	if err = json.Unmarshal(body, &reqValue); err != nil {
+		return nil, nil, echo.NewHTTPError(http.StatusBadRequest,
+			"request body is not valid JSON")
+	}
+
+	docs := make(map[string]JSONDoc)
+	for _, d := range reqValue.Docs {
+		docs[d.ID()] = d
+	}
+
+	// reset body to proxy
+	req.Body = ioutil.NopCloser(bytes.NewReader(body))
+
+	p := Proxy(db, doctype, "/_bulk_docs")
+	p.Transport = &bulkTransport{
+		RoundTripper: http.DefaultTransport,
+		OnResponseRead: func(data []byte) {
+			var resp []struct {
+				ID    string `json:"id"`
+				Rev   string `json:"rev"`
+				OK    bool   `json:"ok"`
+				Error string `json:"error"`
+			}
+			if err = json.Unmarshal(data, &resp); err != nil {
+				return
+			}
+			for _, r := range resp {
+				if r.Error != "" || !r.OK {
+					continue
+				}
+				doc, ok := docs[r.ID]
+				if !ok {
+					continue
+				}
+				var event string
+				if doc.Rev() != "" {
+					event = realtime.EventUpdate
+				} else {
+					event = realtime.EventCreate
+				}
+				doc.SetRev(r.Rev)
+				rtevent(db, event, doc, nil)
+			}
+		},
+	}
+
+	return p, req, nil
+}
+
+type bulkTransport struct {
+	http.RoundTripper
+	OnResponseRead func([]byte)
+}
+
+func (t *bulkTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	resp, err = t.RoundTripper.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if errc := resp.Body.Close(); err == nil && errc != nil {
+			err = errc
+		}
+	}()
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	go t.OnResponseRead(b)
+	resp.Body = ioutil.NopCloser(bytes.NewReader(b))
+	return resp, nil
+}

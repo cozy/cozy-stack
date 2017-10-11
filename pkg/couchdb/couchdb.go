@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
-	"github.com/labstack/echo"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as
@@ -804,31 +802,6 @@ func ForeachDocs(db Database, doctype string, fn func([]byte) error) error {
 	}
 
 	return nil
-}
-
-// Proxy generate a httputil.ReverseProxy which forwards the request to the
-// correct route.
-func Proxy(db Database, doctype, path string) *httputil.ReverseProxy {
-	couchURL := config.CouchURL()
-	couchAuth := config.GetConfig().CouchDB.Auth
-
-	director := func(req *http.Request) {
-		req.URL.Scheme = couchURL.Scheme
-		req.URL.Host = couchURL.Host
-		req.Header.Del(echo.HeaderAuthorization) // drop stack auth
-		req.Header.Del(echo.HeaderCookie)
-		req.URL.RawPath = "/" + makeDBName(db, doctype) + "/" + path
-		req.URL.Path, _ = url.PathUnescape(req.URL.RawPath)
-		if couchAuth != nil {
-			if p, ok := couchAuth.Password(); ok {
-				req.SetBasicAuth(couchAuth.Username(), p)
-			}
-		}
-	}
-
-	return &httputil.ReverseProxy{
-		Director: director,
-	}
 }
 
 func validateDocID(id string) (string, error) {

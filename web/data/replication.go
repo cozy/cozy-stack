@@ -47,7 +47,6 @@ func getLocalDoc(c echo.Context) error {
 	}
 
 	return proxy(c, "_local/"+docid)
-
 }
 
 func setLocalDoc(c echo.Context) error {
@@ -90,7 +89,22 @@ func bulkDocs(c echo.Context) error {
 		return err
 	}
 
-	return proxy(c, "_bulk_docs")
+	instance := middlewares.GetInstance(c)
+	p, req, err := couchdb.ProxyBulkDocs(instance, doctype, c.Request())
+	if err != nil {
+		var code int
+		if errHTTP, ok := err.(*echo.HTTPError); ok {
+			code = errHTTP.Code
+		} else {
+			code = http.StatusInternalServerError
+		}
+		return c.JSON(code, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	p.ServeHTTP(c.Response(), req)
+	return nil
 }
 
 func fullCommit(c echo.Context) error {
