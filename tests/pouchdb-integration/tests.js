@@ -92,7 +92,7 @@ function destroyObjects (done) {
   }, done)
 }
 
-describe('Replication stack -> pouchdb', function () {
+xdescribe('Replication stack -> pouchdb', function () {
   var target = new Pouchdb('replication-target')
   before(destroySource)
   before(createTestObject(42))
@@ -113,4 +113,30 @@ describe('Replication stack -> pouchdb', function () {
 
   after(destroyObjects)
   after(function (done) { target.destroy(done) })
+})
+
+describe('Replication pouchdb -> stack', function () {
+  var target = new Pouchdb('replication-target')
+  before(destroySource)
+
+  var docs;
+
+  it('create doc in bulk', function (done) {
+    Promise.all([
+      target.post({ title: 'Coucou 1' }),
+      target.post({ title: 'Coucou 2' }),
+    ]).then((_docs) => {
+      docs = _docs
+      target.replicate.to(SOURCE, {}, done)
+    }, done)
+  })
+
+  it('update doc in bulk', function (done) {
+    Promise.all([
+      target.put({ title: 'Coucou 1 - edited', "_id": docs[0].id, "_rev": docs[0].rev }),
+      target.put({ title: 'Coucou 2 - edited', "_id": docs[1].id, "_rev": docs[1].rev }),
+    ]).then(() => {
+      target.replicate.to(SOURCE, {}, done)
+    }, done)
+  })
 })

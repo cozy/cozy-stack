@@ -47,7 +47,6 @@ func getLocalDoc(c echo.Context) error {
 	}
 
 	return proxy(c, "_local/"+docid)
-
 }
 
 func setLocalDoc(c echo.Context) error {
@@ -79,6 +78,49 @@ func bulkGet(c echo.Context) error {
 	return proxy(c, "_bulk_get")
 }
 
+func bulkDocs(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+		return err
+	}
+
+	if err := CheckWritable(doctype); err != nil {
+		return err
+	}
+
+	instance := middlewares.GetInstance(c)
+	p, req, err := couchdb.ProxyBulkDocs(instance, doctype, c.Request())
+	if err != nil {
+		var code int
+		if errHTTP, ok := err.(*echo.HTTPError); ok {
+			code = errHTTP.Code
+		} else {
+			code = http.StatusInternalServerError
+		}
+		return c.JSON(code, echo.Map{
+			"error": err.Error(),
+		})
+	}
+
+	p.ServeHTTP(c.Response(), req)
+	return nil
+}
+
+func createDB(c echo.Context) error {
+	doctype := c.Get("doctype").(string)
+
+	if err := permissions.AllowWholeType(c, permissions.POST, doctype); err != nil {
+		return err
+	}
+
+	if err := CheckWritable(doctype); err != nil {
+		return err
+	}
+
+	return proxy(c, "/")
+}
+
 func fullCommit(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
@@ -86,7 +128,7 @@ func fullCommit(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -128,6 +170,8 @@ func dbStatus(c echo.Context) error {
 }
 
 func replicationRoutes(group *echo.Group) {
+	group.PUT("/", createDB)
+
 	// Routes used only for replication
 	group.GET("/", dbStatus)
 	group.GET("/_design/:designdocid", getDesignDoc)
@@ -139,6 +183,7 @@ func replicationRoutes(group *echo.Group) {
 
 	// useful for Pouchdb replication
 	group.GET("/_bulk_get", bulkGet)
+	group.POST("/_bulk_docs", bulkDocs)
 
 	group.POST("/_revs_diff", revsDiff)
 
