@@ -62,7 +62,7 @@ func (i *apiIntent) MarshalJSON() ([]byte, error) {
 
 func createIntent(c echo.Context) error {
 	pdoc, err := webpermissions.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeWebapp {
+	if err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	instance := middlewares.GetInstance(c)

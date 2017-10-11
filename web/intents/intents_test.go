@@ -69,26 +69,6 @@ func TestCreateIntent(t *testing.T) {
 	checkIntentResult(t, res)
 }
 
-func TestCreateIntentIsRejectedForOAuthClients(t *testing.T) {
-	body := `{
-		"data": {
-			"type": "io.cozy.settings",
-			"attributes": {
-				"action": "PICK",
-				"type": "io.cozy.files",
-				"permissions": ["GET"]
-			}
-		}
-	}`
-	req, _ := http.NewRequest("POST", ts.URL+"/intents", bytes.NewBufferString(body))
-	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add("Accept", "application/vnd.api+json")
-	req.Header.Add("Authorization", "Bearer "+token)
-	res, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, 403, res.StatusCode)
-}
-
 func TestGetIntent(t *testing.T) {
 	req, _ := http.NewRequest("GET", ts.URL+"/intents/"+intentID, nil)
 	req.Header.Add("Content-Type", "application/vnd.api+json")
