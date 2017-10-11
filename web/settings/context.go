@@ -7,9 +7,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
+	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -61,8 +62,9 @@ func context(c echo.Context) error {
 	}
 
 	doc := &apiContext{ctx}
-	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
-		return err
+	pdoc, err := webpermissions.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeWebapp {
+		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
 	return jsonapi.Data(c, http.StatusOK, doc, nil)
