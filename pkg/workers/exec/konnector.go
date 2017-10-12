@@ -55,12 +55,12 @@ func (r *result) SetID(id string)    { r.DocID = id }
 func (r *result) SetRev(rev string)  { r.DocRev = rev }
 
 const (
+	konnectorMsgTypeDebug    = "debug"
 	konnectorMsgTypeWarning  = "warning"
 	konnectorMsgTypeError    = "error"
 	konnectorMsgTypeCritical = "critical"
 )
 
-// const konnectorMsgTypeDebug string = "debug"
 // const konnectorMsgTypeProgress string = "progress"
 
 type konnectorMsg struct {
@@ -201,10 +201,12 @@ func (w *konnectorWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, lin
 	}
 
 	switch msg.Type {
-	case konnectorMsgTypeError, konnectorMsgTypeCritical:
-		log.Error(msg.Message)
+	case konnectorMsgTypeDebug:
+		log.Debug(msg.Message)
 	case konnectorMsgTypeWarning:
 		log.Warn(msg.Message)
+	case konnectorMsgTypeError, konnectorMsgTypeCritical:
+		log.Error(msg.Message)
 	}
 
 	w.messages = append(w.messages, msg)
