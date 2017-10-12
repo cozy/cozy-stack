@@ -41,12 +41,16 @@ the given parameters to display the configuration.`,
 }
 
 var adminPasswdCmd = &cobra.Command{
-	Use:   "passwd [filepath]",
-	Short: "Generate an admin passphrase",
+	Use:     "passwd [filepath]",
+	Aliases: []string{"password", "passphrase", "pass"},
+	Short:   "Generate an admin passphrase",
 	Long: `
 cozy-stack instances passphrase generate a passphrase hash and save it to the
 specified file. If no file is specified, it is directly printed in standard output.
 This passphrase is the one used to authenticate accesses to the administration API.
+
+The environment variable 'COZY_ADMIN_PASSPHRASE' can be used to pass the passphrase
+if needed.
 
 example: cozy-stack config passwd ~/.cozy/
 `,
@@ -67,22 +71,27 @@ example: cozy-stack config passwd ~/.cozy/
 			errPrintfln("Hashed passphrase will be written in %s", filename)
 		}
 
-		errPrintf("Passphrase: ")
-		pass1, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
-		if err != nil {
-			return err
+		passphrase := []byte(os.Getenv("COZY_ADMIN_PASSPHRASE"))
+		if len(passphrase) == 0 {
+			errPrintf("Passphrase: ")
+			pass1, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
+			if err != nil {
+				return err
+			}
+
+			errPrintf("Confirmation: ")
+			pass2, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
+			if err != nil {
+				return err
+			}
+			if !bytes.Equal(pass1, pass2) {
+				return fmt.Errorf("Passphrase missmatch")
+			}
+
+			passphrase = pass1
 		}
 
-		errPrintf("Confirmation: ")
-		pass2, err := gopass.GetPasswdPrompt("", false, os.Stdin, os.Stderr)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(pass1, pass2) {
-			return fmt.Errorf("Passphrase missmatch")
-		}
-
-		b, err := crypto.GenerateFromPassphrase(pass1)
+		b, err := crypto.GenerateFromPassphrase(passphrase)
 		if err != nil {
 			return err
 		}
