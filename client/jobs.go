@@ -30,11 +30,18 @@ type Job struct {
 	Attrs struct {
 		Domain    string          `json:"domain"`
 		Message   json.RawMessage `json:"message"`
-		Options   *jobOptions     `json:"options"`
-		QueuedAt  time.Time       `json:"queued_at"`
-		StartedAt time.Time       `json:"started_at"`
-		State     string          `json:"state"`
-		Worker    string          `json:"worker"`
+		Debounced bool            `json:"debounced"`
+		Event     struct {
+			Domain string          `json:"domain"`
+			Verb   string          `json:"verb"`
+			Doc    json.RawMessage `json:"doc"`
+			OldDoc json.RawMessage `json:"old,omitempty"`
+		} `json:"event"`
+		Options   *jobOptions `json:"options"`
+		QueuedAt  time.Time   `json:"queued_at"`
+		StartedAt time.Time   `json:"started_at"`
+		State     string      `json:"state"`
+		Worker    string      `json:"worker"`
 	} `json:"attributes"`
 }
 

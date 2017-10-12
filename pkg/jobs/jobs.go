@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,16 +56,18 @@ type (
 	// Job contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
 	Job struct {
-		JobID      string      `json:"_id,omitempty"`
-		JobRev     string      `json:"_rev,omitempty"`
-		Domain     string      `json:"domain"`
-		WorkerType string      `json:"worker"`
-		Message    Message     `json:"message"`
-		Options    *JobOptions `json:"options"`
-		State      State       `json:"state"`
-		QueuedAt   time.Time   `json:"queued_at"`
-		StartedAt  time.Time   `json:"started_at,omitempty"`
-		Error      string      `json:"error,omitempty"`
+		JobID      string          `json:"_id,omitempty"`
+		JobRev     string          `json:"_rev,omitempty"`
+		Domain     string          `json:"domain"`
+		WorkerType string          `json:"worker"`
+		Message    Message         `json:"message"`
+		Debounced  bool            `json:"debounced"`
+		Event      *realtime.Event `json:"event"`
+		Options    *JobOptions     `json:"options"`
+		State      State           `json:"state"`
+		QueuedAt   time.Time       `json:"queued_at"`
+		StartedAt  time.Time       `json:"started_at,omitempty"`
+		Error      string          `json:"error,omitempty"`
 	}
 
 	// JobRequest struct is used to represent a new job request.
@@ -72,6 +75,8 @@ type (
 		Domain     string
 		WorkerType string
 		Message    Message
+		Debounced  bool
+		Event      *realtime.Event
 		Options    *JobOptions
 	}
 
@@ -220,6 +225,8 @@ func NewJob(req *JobRequest) *Job {
 		Domain:     req.Domain,
 		WorkerType: req.WorkerType,
 		Message:    req.Message,
+		Debounced:  req.Debounced,
+		Event:      req.Event,
 		Options:    req.Options,
 		State:      Queued,
 		QueuedAt:   time.Now(),

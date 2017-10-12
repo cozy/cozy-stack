@@ -8,6 +8,8 @@ import (
 	"runtime/debug"
 	"sync/atomic"
 	"time"
+
+	"github.com/cozy/cozy-stack/pkg/realtime"
 )
 
 // contextKey are the keys used in the worker context
@@ -18,6 +20,9 @@ const (
 	ContextDomainKey contextKey = iota
 	// ContextWorkerKey is used to store the workerID string
 	ContextWorkerKey
+	// ContextEventKey is used to store an optional *realtime.Event pointer when
+	// the worker is executed with an event (via the @event trigger for instance).
+	ContextEventKey
 )
 
 var (
@@ -89,6 +94,16 @@ func NewWorkerContext(domain, workerID string) context.Context {
 	return ctx
 }
 
+// NewWorkerContextWithEvent returns a context.Context usable by a worker. It
+// returns the same context as NewWorkerContext except that it also includes
+// the event (realtime.Event pointer) responsible for the job, from a @event
+// trigger for instance.
+func NewWorkerContextWithEvent(domain, workerID string, event *realtime.Event) context.Context {
+	ctx := NewWorkerContext(domain, workerID)
+	ctx = context.WithValue(ctx, ContextEventKey, event)
+	return ctx
+}
+
 // Start is used to start the worker consumption of messages from its queue.
 func (w *Worker) Start(jobs chan *Job) error {
 	if !atomic.CompareAndSwapUint32(&w.running, 0, 1) {
@@ -127,7 +142,12 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			joblog.Errorf("[job] %s: missing domain from job request", workerID)
 			continue
 		}
-		parentCtx := NewWorkerContext(domain, workerID)
+		var parentCtx context.Context
+		if event := job.Event; event != nil {
+			parentCtx = NewWorkerContextWithEvent(domain, workerID, event)
+		} else {
+			parentCtx = NewWorkerContext(domain, workerID)
+		}
 		if err := job.AckConsumed(); err != nil {
 			joblog.Errorf("[job] %s: error acking consume job %s: %s",
 				workerID, job.ID(), err.Error())

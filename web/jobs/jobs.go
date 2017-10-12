@@ -198,6 +198,22 @@ func getTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
 }
 
+func launchTrigger(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	t, err := globals.GetScheduler().Get(instance.Domain, c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if err = permissions.Allow(c, permissions.POST, t); err != nil {
+		return err
+	}
+	j, err := globals.GetBroker().PushJob(t.Infos().JobRequest())
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	return jsonapi.Data(c, http.StatusCreated, &apiJob{j}, nil)
+}
+
 func deleteTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := globals.GetScheduler()
@@ -225,6 +241,7 @@ func getAllTriggers(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
+	// TODO: we could potentially benefit from an index on 'worker_type' field.
 	objs := make([]jsonapi.Object, 0, len(ts))
 	for _, t := range ts {
 		if workerFilter == "" || t.Infos().WorkerType == workerFilter {
@@ -291,6 +308,7 @@ func Routes(router *echo.Group) {
 	router.GET("/triggers", getAllTriggers)
 	router.POST("/triggers", newTrigger)
 	router.GET("/triggers/:trigger-id", getTrigger)
+	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 
 	router.POST("/clean", cleanJobs)

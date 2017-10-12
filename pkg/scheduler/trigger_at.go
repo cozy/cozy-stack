@@ -79,29 +79,19 @@ func (a *AtTrigger) Schedule() <-chan *jobs.JobRequest {
 		duration := -time.Since(a.at)
 		if duration < 0 {
 			if duration > -maxPastTriggerTime {
-				ch <- a.Trigger()
+				ch <- a.in.JobRequest()
 			}
 			close(ch)
 			return
 		}
 		select {
 		case <-time.After(duration):
-			ch <- a.Trigger()
+			ch <- a.in.JobRequest()
 		case <-a.done:
 		}
 		close(ch)
 	}()
 	return ch
-}
-
-// Trigger returns the triggered job request
-func (a *AtTrigger) Trigger() *jobs.JobRequest {
-	return &jobs.JobRequest{
-		Domain:     a.in.Domain,
-		WorkerType: a.in.WorkerType,
-		Message:    a.in.Message,
-		Options:    a.in.Options,
-	}
 }
 
 // Unschedule implements the Unschedule method of the Trigger interface.

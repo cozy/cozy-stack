@@ -42,18 +42,6 @@ var (
 	ErrEventNotSupported = errors.New("Event not supported")
 )
 
-// TriggerEvent describes the fields retrieved after a triggered event
-type TriggerEvent struct {
-	Event   *EventDoc                `json:"event"`
-	Message *sharings.SharingMessage `json:"message"`
-}
-
-// EventDoc describes the event returned by the trigger
-type EventDoc struct {
-	Verb string `json:"verb"`
-	Doc  *couchdb.JSONDoc
-}
-
 // SharingMessage describes a sharing message
 type SharingMessage struct {
 	SharingID string           `json:"sharing_id"`
@@ -63,15 +51,20 @@ type SharingMessage struct {
 // SharingUpdates handles shared document updates
 func SharingUpdates(ctx context.Context, m jobs.Message) error {
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
+	event, ok := ctx.Value(jobs.ContextEventKey).(*realtime.Event)
+	if !ok {
+		return fmt.Errorf("Missing realtime event from context")
+	}
 
-	event := &TriggerEvent{}
-	err := m.Unmarshal(&event)
+	var msg *sharings.SharingMessage
+	err := m.Unmarshal(&msg)
 	if err != nil {
 		return err
 	}
-	sharingID := event.Message.SharingID
-	rule := event.Message.Rule
-	docID := event.Event.Doc.ID()
+
+	sharingID := msg.SharingID
+	rule := msg.Rule
+	docID := event.Doc.ID()
 
 	// Get the sharing document
 	i, err := instance.Get(domain)
@@ -98,7 +91,7 @@ func SharingUpdates(ctx context.Context, m jobs.Message) error {
 		return ErrDocumentNotLegitimate
 	}
 
-	return sendToRecipients(i, domain, sharing, &rule, docID, event.Event.Verb)
+	return sendToRecipients(i, domain, sharing, &rule, docID, event.Verb)
 }
 
 // sendToRecipients sends the document to the recipient, or sharer.
