@@ -46,6 +46,7 @@ type Job struct {
 	} `json:"attributes"`
 }
 
+// Trigger is a struct representing a trigger
 type Trigger struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
@@ -114,6 +115,7 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 	return j, nil
 }
 
+// GetTrigger return the trigger with the specified ID.
 func (c *Client) GetTrigger(triggerID string) (*Trigger, error) {
 	res, err := c.Req(&request.Options{
 		Method: "GET",
@@ -129,6 +131,7 @@ func (c *Client) GetTrigger(triggerID string) (*Trigger, error) {
 	return t, nil
 }
 
+// GetTriggers returns the list of all triggers with the specified worker type.
 func (c *Client) GetTriggers(worker string) ([]*Trigger, error) {
 	res, err := c.Req(&request.Options{
 		Method:  "GET",
@@ -145,7 +148,8 @@ func (c *Client) GetTriggers(worker string) ([]*Trigger, error) {
 	return t, nil
 }
 
-func (c *Client) TriggerRun(triggerID string) (*Job, error) {
+// TriggerLaunch launches manually the trigger with the specified ID.
+func (c *Client) TriggerLaunch(triggerID string) (*Job, error) {
 	res, err := c.Req(&request.Options{
 		Method: "POST",
 		Path:   fmt.Sprintf("/jobs/triggers/%s/launch", url.PathEscape(triggerID)),
