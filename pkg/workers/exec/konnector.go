@@ -106,7 +106,8 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (
 		defaultFolderPath, _ := msg["default_folder_path"].(string)
 		if folderToSave != "" {
 			if defaultFolderPath == "" {
-				defaultFolderPath = fmt.Sprintf("/???/%s", slug)
+				name := i.Translate("Tree Administrative")
+				defaultFolderPath = fmt.Sprintf("/%s/%s", name, slug)
 			}
 			if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
 				folderToSave = ""
