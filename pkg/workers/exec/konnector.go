@@ -30,6 +30,11 @@ type KonnectorOptions struct {
 	FolderToSave string `json:"folder_to_save"`
 }
 
+type konnectorMsg struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+}
+
 type konnectorWorker struct {
 	opts     *KonnectorOptions
 	man      *apps.KonnManifest
@@ -62,30 +67,6 @@ const (
 )
 
 // const konnectorMsgTypeProgress string = "progress"
-
-type konnectorMsg struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-}
-
-type konnectorLogs struct {
-	Slug      string         `json:"_id,omitempty"`
-	DocRev    string         `json:"_rev,omitempty"`
-	Messages  []konnectorMsg `json:"logs"`
-	CreatedAt time.Time      `json:"created_at"`
-}
-
-func (kl *konnectorLogs) ID() string      { return kl.Slug }
-func (kl *konnectorLogs) Rev() string     { return kl.DocRev }
-func (kl *konnectorLogs) DocType() string { return consts.KonnectorLogs }
-func (kl *konnectorLogs) Clone() couchdb.Doc {
-	cloned := *kl
-	cloned.Messages = make([]konnectorMsg, len(kl.Messages))
-	copy(cloned.Messages, kl.Messages)
-	return &cloned
-}
-func (kl *konnectorLogs) SetID(id string)   {}
-func (kl *konnectorLogs) SetRev(rev string) { kl.DocRev = rev }
 
 func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (workDir string, err error) {
 	opts := &KonnectorOptions{}
@@ -222,15 +203,6 @@ func (w *konnectorWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, lin
 }
 
 func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
-	errLogs := couchdb.Upsert(i, &konnectorLogs{
-		Slug:      w.opts.Konnector,
-		Messages:  w.messages,
-		CreatedAt: time.Now(),
-	})
-	if errLogs != nil {
-		fmt.Println("Failed to save konnector logs", errLogs)
-	}
-
 	// For retro-compatibility, we still use "error" logs as returned error, only
 	// in the case that no "critical" message are actually returned. In such
 	// case, We use the last "error" log as the returned error.
