@@ -72,7 +72,9 @@ func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 			select {
 			case e := <-sub.Channel:
 				if eventMatchPermission(e, &t.mask) {
-					ch <- t.Infos().JobRequestWithEvent(e)
+					if evt, err := t.Infos().JobRequestWithEvent(e); err == nil {
+						ch <- evt
+					}
 				}
 			case <-t.unscheduled:
 				return

@@ -166,7 +166,13 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 				s.log.Warnf("[scheduler] Trigger %s %s has an invalid debounce: %s",
 					et.infos.Domain, et.infos.TID, et.infos.Debounce)
 			}
-			_, err = s.broker.PushJob(et.Infos().JobRequestWithEvent(event))
+			jobRequest, err := et.Infos().JobRequestWithEvent(event)
+			if err != nil {
+				s.log.Warnf("[scheduler] Could not encode realtime event %s %s: %s",
+					event.Domain, triggerID, err.Error())
+				continue
+			}
+			_, err = s.broker.PushJob(jobRequest)
 			if err != nil {
 				s.log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
 					event.Domain, triggerID, err.Error())

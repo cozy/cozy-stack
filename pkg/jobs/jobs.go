@@ -53,21 +53,24 @@ type (
 	// Message is a json encoded job message.
 	Message json.RawMessage
 
+	// Event is a json encoded value of a realtime.Event
+	Event json.RawMessage
+
 	// Job contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
 	Job struct {
-		JobID      string          `json:"_id,omitempty"`
-		JobRev     string          `json:"_rev,omitempty"`
-		Domain     string          `json:"domain"`
-		WorkerType string          `json:"worker"`
-		Message    Message         `json:"message"`
-		Debounced  bool            `json:"debounced"`
-		Event      *realtime.Event `json:"event"`
-		Options    *JobOptions     `json:"options"`
-		State      State           `json:"state"`
-		QueuedAt   time.Time       `json:"queued_at"`
-		StartedAt  time.Time       `json:"started_at,omitempty"`
-		Error      string          `json:"error,omitempty"`
+		JobID      string      `json:"_id,omitempty"`
+		JobRev     string      `json:"_rev,omitempty"`
+		Domain     string      `json:"domain"`
+		WorkerType string      `json:"worker"`
+		Message    Message     `json:"message"`
+		Event      Event       `json:"event"`
+		Debounced  bool        `json:"debounced"`
+		Options    *JobOptions `json:"options"`
+		State      State       `json:"state"`
+		QueuedAt   time.Time   `json:"queued_at"`
+		StartedAt  time.Time   `json:"started_at,omitempty"`
+		Error      string      `json:"error,omitempty"`
 	}
 
 	// JobRequest struct is used to represent a new job request.
@@ -75,8 +78,8 @@ type (
 		Domain     string
 		WorkerType string
 		Message    Message
+		Event      Event
 		Debounced  bool
-		Event      *realtime.Event
 		Options    *JobOptions
 	}
 
@@ -265,13 +268,22 @@ func GetQueuedJobs(domain, workerType string) ([]*Job, error) {
 	return results, err
 }
 
-// NewMessage returns a new Message encoded in the specified format.
+// NewMessage returns a json encoded data
 func NewMessage(data interface{}) (Message, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
 	return Message(b), nil
+}
+
+// NewEvent return a json encoded realtime.Event
+func NewEvent(data *realtime.Event) (Event, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return Event(b), nil
 }
 
 // Unmarshal can be used to unmarshal the encoded message value in the
@@ -281,6 +293,15 @@ func (m Message) Unmarshal(msg interface{}) error {
 		return ErrMessageNil
 	}
 	return json.Unmarshal(m, &msg)
+}
+
+// Unmarshal can be used to unmarshal the encoded message value in the
+// specified interface's type.
+func (e Event) Unmarshal(evt interface{}) error {
+	if e == nil {
+		return ErrMessageNil
+	}
+	return json.Unmarshal(e, &evt)
 }
 
 // Clone clones the worker config

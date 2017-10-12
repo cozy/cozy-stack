@@ -28,7 +28,7 @@ func createDoc(t *testing.T, docType string, params map[string]interface{}) couc
 	return doc
 }
 
-func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string) (jobs.Message, *realtime.Event) {
+func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string) (jobs.Message, jobs.Event) {
 	data := &sharings.SharingMessage{
 		SharingID: sharingID,
 		Rule: permissions.Rule{
@@ -40,11 +40,13 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 	}
 	msg, err := jobs.NewMessage(data)
 	assert.NoError(t, err)
-	event := &realtime.Event{
+
+	evt, err := jobs.NewEvent(&realtime.Event{
 		Verb: eventType,
 		Doc:  doc,
-	}
-	return msg, event
+	})
+	assert.NoError(t, err)
+	return msg, evt
 }
 
 func createRecipient(t *testing.T, email, url string) *sharings.Recipient {

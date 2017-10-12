@@ -297,15 +297,18 @@ func TestRedisTriggerEvent(t *testing.T) {
 		return
 	}
 
-	type eventMessage struct {
-		Message string
-		Event   map[string]interface{}
+	var evt struct {
+		Domain string `json:"domain"`
+		Verb   string `json:"verb"`
 	}
-	var data eventMessage
+	var data string
+	err = bro.jobs[0].Event.Unmarshal(&evt)
+	assert.NoError(t, err)
 	err = bro.jobs[0].Message.Unmarshal(&data)
 	assert.NoError(t, err)
-	assert.Equal(t, data.Event["domain"].(string), instanceName)
-	assert.Equal(t, data.Event["verb"].(string), "CREATED")
+
+	assert.Equal(t, evt.Domain, instanceName)
+	assert.Equal(t, evt.Verb, "CREATED")
 
 	realtime.GetHub().Publish(&realtime.Event{
 		Domain: instanceName,

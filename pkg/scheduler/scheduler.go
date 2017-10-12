@@ -105,10 +105,14 @@ func (t *TriggerInfos) JobRequest() *jobs.JobRequest {
 
 // JobRequestWithEvent returns a job request associated with the scheduler
 // informations associated to the specified realtime event.
-func (t *TriggerInfos) JobRequestWithEvent(event *realtime.Event) *jobs.JobRequest {
+func (t *TriggerInfos) JobRequestWithEvent(event *realtime.Event) (*jobs.JobRequest, error) {
 	req := t.JobRequest()
-	req.Event = event
-	return req
+	evt, err := jobs.NewEvent(event)
+	if err != nil {
+		return nil, err
+	}
+	req.Event = evt
+	return req, nil
 }
 
 // SetID implements the couchdb.Doc interface

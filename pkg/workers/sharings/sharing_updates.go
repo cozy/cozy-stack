@@ -51,9 +51,17 @@ type SharingMessage struct {
 // SharingUpdates handles shared document updates
 func SharingUpdates(ctx context.Context, m jobs.Message) error {
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	event, ok := ctx.Value(jobs.ContextEventKey).(*realtime.Event)
+	e, ok := ctx.Value(jobs.ContextEventKey).(jobs.Event)
 	if !ok {
-		return fmt.Errorf("Missing realtime event from context")
+		return errors.New("Missing realtime event from context")
+	}
+
+	var event struct {
+		Verb string `json:"verb"`
+		Doc  *couchdb.JSONDoc
+	}
+	if err := e.Unmarshal(&event); err != nil {
+		return err
 	}
 
 	var msg *sharings.SharingMessage

@@ -3,6 +3,7 @@ package thumbnail
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -15,17 +16,15 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
+type imageEvent struct {
+	Verb string      `json:"Verb"`
+	Doc  vfs.FileDoc `json:"Doc"`
+}
+
 var formats = map[string]string{
 	"small":  "640x480",
 	"medium": "1280x720",
 	"large":  "1920x1080",
-}
-
-type imageMessage struct {
-	Event struct {
-		Verb string      `json:"Verb"`
-		Doc  vfs.FileDoc `json:"Doc"`
-	} `json:"event"`
 }
 
 func init() {
@@ -39,32 +38,38 @@ func init() {
 
 // Worker is a worker that creates thumbnails for photos and images.
 func Worker(ctx context.Context, m jobs.Message) error {
-	msg := &imageMessage{}
-	if err := m.Unmarshal(msg); err != nil {
+	domain := ctx.Value(jobs.ContextDomainKey).(string)
+	e, ok := ctx.Value(jobs.ContextEventKey).(jobs.Event)
+	if !ok {
+		return errors.New("Missing realtime event from context")
+	}
+
+	var img imageEvent
+	if err := e.Unmarshal(&img); err != nil {
 		return err
 	}
-	if msg.Event.Verb != "DELETED" && msg.Event.Doc.Trashed {
+	if img.Verb != "DELETED" && img.Doc.Trashed {
 		return nil
 	}
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
+
 	log := logger.WithDomain(domain)
-	log.Infof("[jobs] thumbnail: %s %s", msg.Event.Verb, msg.Event.Doc.ID())
+	log.Infof("[jobs] thumbnail: %s %s", img.Verb, img.Doc.ID())
 	i, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
-	switch msg.Event.Verb {
+	switch img.Verb {
 	case "CREATED":
-		return generateThumbnails(ctx, i, &msg.Event.Doc)
+		return generateThumbnails(ctx, i, &img.Doc)
 	case "UPDATED":
-		if err = removeThumbnails(i, &msg.Event.Doc); err != nil {
-			log.Infof("[jobs] failed to remove thumbnails for %s", msg.Event.Doc.ID())
+		if err = removeThumbnails(i, &img.Doc); err != nil {
+			log.Infof("[jobs] failed to remove thumbnails for %s", img.Doc.ID())
 		}
-		return generateThumbnails(ctx, i, &msg.Event.Doc)
+		return generateThumbnails(ctx, i, &img.Doc)
 	case "DELETED":
-		return removeThumbnails(i, &msg.Event.Doc)
+		return removeThumbnails(i, &img.Doc)
 	}
-	return fmt.Errorf("Unknown type %s for image event", msg.Event.Verb)
+	return fmt.Errorf("Unknown type %s for image event", img.Verb)
 }
 
 func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.FileDoc) error {
