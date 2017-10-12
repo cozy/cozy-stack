@@ -101,23 +101,25 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (
 
 	// Create the folder in which the konnector has the right to write.
 	{
+		fs := i.VFS()
 		folderToSave, _ := msg["folder_to_save"].(string)
+		defaultFolderPath, _ := msg["default_folder_path"].(string)
 		if folderToSave != "" {
-			defaultFolderPath, _ := msg["default_folder_path"].(string)
 			if defaultFolderPath == "" {
 				defaultFolderPath = fmt.Sprintf("/???/%s", slug)
 			}
-			fs := i.VFS()
 			if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
-				var dir *vfs.DirDoc
-				dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
-				if err != nil {
-					return
-				}
-				folderToSave = dir.ID()
+				folderToSave = ""
 			}
 		}
-		msg["folder_to_save"] = folderToSave
+		if folderToSave == "" {
+			var dir *vfs.DirDoc
+			dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
+			if err != nil {
+				return
+			}
+			msg["folder_to_save"] = dir.ID()
+		}
 	}
 
 	tr := tar.NewReader(tarFile)
