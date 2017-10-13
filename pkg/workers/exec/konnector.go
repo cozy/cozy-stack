@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
 )
@@ -27,6 +28,11 @@ type KonnectorOptions struct {
 	Konnector    string `json:"konnector"`
 	Account      string `json:"account"`
 	FolderToSave string `json:"folder_to_save"`
+}
+
+type konnectorMsg struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
 }
 
 type konnectorWorker struct {
@@ -53,35 +59,14 @@ func (r *result) Clone() couchdb.Doc { c := *r; return &c }
 func (r *result) SetID(id string)    { r.DocID = id }
 func (r *result) SetRev(rev string)  { r.DocRev = rev }
 
-const konnectorMsgTypeError string = "error"
+const (
+	konnectorMsgTypeDebug    = "debug"
+	konnectorMsgTypeWarning  = "warning"
+	konnectorMsgTypeError    = "error"
+	konnectorMsgTypeCritical = "critical"
+)
 
-// const konnectorMsgTypeDebug string = "debug"
-// const konnectorMsgTypeWarning string = "warning"
 // const konnectorMsgTypeProgress string = "progress"
-
-type konnectorMsg struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-}
-
-type konnectorLogs struct {
-	Slug      string         `json:"_id,omitempty"`
-	DocRev    string         `json:"_rev,omitempty"`
-	Messages  []konnectorMsg `json:"logs"`
-	CreatedAt time.Time      `json:"created_at"`
-}
-
-func (kl *konnectorLogs) ID() string      { return kl.Slug }
-func (kl *konnectorLogs) Rev() string     { return kl.DocRev }
-func (kl *konnectorLogs) DocType() string { return consts.KonnectorLogs }
-func (kl *konnectorLogs) Clone() couchdb.Doc {
-	cloned := *kl
-	cloned.Messages = make([]konnectorMsg, len(kl.Messages))
-	copy(cloned.Messages, kl.Messages)
-	return &cloned
-}
-func (kl *konnectorLogs) SetID(id string)   {}
-func (kl *konnectorLogs) SetRev(rev string) { kl.DocRev = rev }
 
 func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (workDir string, err error) {
 	opts := &KonnectorOptions{}
@@ -190,12 +175,21 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (c
 	return
 }
 
-func (w *konnectorWorker) ScanOuput(i *instance.Instance, line []byte) error {
+func (w *konnectorWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, line []byte) error {
 	var msg konnectorMsg
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
-	// TODO: filter some of the messages
+
+	switch msg.Type {
+	case konnectorMsgTypeDebug:
+		log.Debug(msg.Message)
+	case konnectorMsgTypeWarning:
+		log.Warn(msg.Message)
+	case konnectorMsgTypeError, konnectorMsgTypeCritical:
+		log.Error(msg.Message)
+	}
+
 	w.messages = append(w.messages, msg)
 	realtime.GetHub().Publish(&realtime.Event{
 		Verb: realtime.EventCreate,
@@ -209,20 +203,20 @@ func (w *konnectorWorker) ScanOuput(i *instance.Instance, line []byte) error {
 }
 
 func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
-	errLogs := couchdb.Upsert(i, &konnectorLogs{
-		Slug:      w.opts.Konnector,
-		Messages:  w.messages,
-		CreatedAt: time.Now(),
-	})
-	if errLogs != nil {
-		fmt.Println("Failed to save konnector logs", errLogs)
-	}
-
+	// For retro-compatibility, we still use "error" logs as returned error, only
+	// in the case that no "critical" message are actually returned. In such
+	// case, We use the last "error" log as the returned error.
+	var lastErrorMessage error
 	for _, msg := range w.messages {
-		if msg.Type == konnectorMsgTypeError {
-			// konnector err is more explicit
+		if msg.Type == konnectorMsgTypeCritical {
 			return errors.New(msg.Message)
 		}
+		if msg.Type == konnectorMsgTypeError {
+			lastErrorMessage = errors.New(msg.Message)
+		}
+	}
+	if lastErrorMessage != nil {
+		return lastErrorMessage
 	}
 
 	return err
