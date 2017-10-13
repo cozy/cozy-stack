@@ -37,7 +37,7 @@ cozy-stack konnectors [command] [flags]
 
 ### SEE ALSO
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
-* [cozy-stack konnectors install](cozy-stack_konnectors_install.md)	 - Install an konnector with the specified slug name
+* [cozy-stack konnectors install](cozy-stack_konnectors_install.md)	 - Install a konnector with the specified slug name
 from the given source URL.
 * [cozy-stack konnectors ls](cozy-stack_konnectors_ls.md)	 - List the installed konnectors.
 * [cozy-stack konnectors show](cozy-stack_konnectors_show.md)	 - Show the application attributes

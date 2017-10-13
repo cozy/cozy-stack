@@ -109,7 +109,7 @@ a cozy.
 
 var installKonnectorCmd = &cobra.Command{
 	Use: "install [slug] [sourceurl]",
-	Short: `Install an konnector with the specified slug name
+	Short: `Install a konnector with the specified slug name
 from the given source URL.`,
 	Example: "$ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github.com/cozy/cozy-konnector-trainline.git#build'",
 	RunE: func(cmd *cobra.Command, args []string) error {

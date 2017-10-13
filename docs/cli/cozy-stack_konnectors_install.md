@@ -1,12 +1,12 @@
 ## cozy-stack konnectors install
 
-Install an konnector with the specified slug name
+Install a konnector with the specified slug name
 from the given source URL.
 
 ### Synopsis
 
 
-Install an konnector with the specified slug name
+Install a konnector with the specified slug name
 from the given source URL.
 
 ```
