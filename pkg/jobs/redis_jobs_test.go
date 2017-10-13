@@ -35,9 +35,9 @@ func TestRedisJobs(t *testing.T) {
 	var workersTestList = WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(ctx context.Context, m Message) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				var msg string
-				err := m.Unmarshal(&msg)
+				err := ctx.UnmarshalMessage(&msg)
 				if !assert.NoError(t, err) {
 					return err
 				}

@@ -312,15 +312,14 @@ func (e Event) Unmarshal(evt interface{}) error {
 // Clone clones the worker config
 func (w *WorkerConfig) Clone() *WorkerConfig {
 	return &WorkerConfig{
-		WorkerInit:         w.WorkerInit,
-		WorkerFunc:         w.WorkerFunc,
-		WorkerThreadedFunc: w.WorkerThreadedFunc,
-		WorkerCommit:       w.WorkerCommit,
-		Concurrency:        w.Concurrency,
-		MaxExecCount:       w.MaxExecCount,
-		MaxExecTime:        w.MaxExecTime,
-		Timeout:            w.Timeout,
-		RetryDelay:         w.RetryDelay,
+		WorkerInit:   w.WorkerInit,
+		WorkerFunc:   w.WorkerFunc,
+		WorkerCommit: w.WorkerCommit,
+		Concurrency:  w.Concurrency,
+		MaxExecCount: w.MaxExecCount,
+		MaxExecTime:  w.MaxExecTime,
+		Timeout:      w.Timeout,
+		RetryDelay:   w.RetryDelay,
 	}
 }
 

@@ -46,9 +46,9 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				var msg string
-				if err := m.Unmarshal(&msg); err != nil {
+				if err := ctx.UnmarshalMessage(&msg); err != nil {
 					return err
 				}
 				switch msg {
@@ -145,7 +145,7 @@ func TestMemSchedulerWithDebounce(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				called++
 				return nil
 			},

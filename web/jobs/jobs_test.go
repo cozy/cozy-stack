@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -383,9 +382,9 @@ func TestMain(m *testing.M) {
 
 	jobs.AddWorker("print", &jobs.WorkerConfig{
 		Concurrency: 4,
-		WorkerFunc: func(ctx context.Context, m jobs.Message) error {
+		WorkerFunc: func(ctx *jobs.WorkerContext) error {
 			var msg string
-			if err := m.Unmarshal(&msg); err != nil {
+			if err := ctx.UnmarshalMessage(&msg); err != nil {
 				return err
 			}
 			_, err := fmt.Println(msg)

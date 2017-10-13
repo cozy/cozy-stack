@@ -1,7 +1,6 @@
 package sharings
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -49,24 +48,18 @@ type SharingMessage struct {
 }
 
 // SharingUpdates handles shared document updates
-func SharingUpdates(ctx context.Context, m jobs.Message) error {
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	e, ok := ctx.Value(jobs.ContextEventKey).(jobs.Event)
-	if !ok {
-		return errors.New("Missing realtime event from context")
-	}
-
+func SharingUpdates(ctx *jobs.WorkerContext) error {
+	domain := ctx.Domain()
 	var event struct {
 		Verb string `json:"verb"`
 		Doc  *couchdb.JSONDoc
 	}
-	if err := e.Unmarshal(&event); err != nil {
+	if err := ctx.UnmarshalEvent(&event); err != nil {
 		return err
 	}
 
 	var msg *sharings.SharingMessage
-	err := m.Unmarshal(&msg)
-	if err != nil {
+	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
 

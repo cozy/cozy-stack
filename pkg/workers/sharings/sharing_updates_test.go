@@ -106,7 +106,7 @@ func TestSharingUpdatesNoSharing(t *testing.T) {
 	}()
 	msg, event := createEvent(t, doc, "", "CREATED")
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", event), msg)
+	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", msg, event))
 	assert.Error(t, err)
 	assert.Equal(t, "Sharing does not exist", err.Error())
 
@@ -125,7 +125,7 @@ func TestSharingUpdatesBadSharing(t *testing.T) {
 
 	msg, event := createEvent(t, doc, "badsharingid", "")
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", event), msg)
+	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", msg, event))
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingDoesNotExist, err)
 
@@ -148,7 +148,7 @@ func TestSharingUpdatesTooManySharing(t *testing.T) {
 
 	msg, event := createEvent(t, doc, sharingID, "UPDATED")
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", event), msg)
+	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", msg, event))
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingIDNotUnique, err)
 }
@@ -167,7 +167,7 @@ func TestSharingUpdatesBadSharingType(t *testing.T) {
 	sharingID := sharingDoc.M["sharing_id"].(string)
 	msg, event := createEvent(t, doc, sharingID, "UPDATED")
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", event), msg)
+	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", msg, event))
 	assert.Error(t, err)
 	assert.Equal(t, ErrDocumentNotLegitimate, err)
 }
@@ -195,7 +195,7 @@ func TestSharingUpdatesNoRecipient(t *testing.T) {
 	sharingID := sharingDoc.M["sharing_id"].(string)
 	msg, event := createEvent(t, doc, sharingID, "CREATED")
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", event), msg)
+	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", msg, event))
 	assert.NoError(t, err)
 }
 
@@ -222,7 +222,7 @@ func TestSharingUpdatesBadRecipient(t *testing.T) {
 	sharingID := sharingDoc.M["sharing_id"].(string)
 	msg, event := createEvent(t, doc, sharingID, "CREATED")
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", event), msg)
+	err := SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", msg, event))
 	assert.NoError(t, err)
 }
 
@@ -271,6 +271,6 @@ func TestRevokedRecipient(t *testing.T) {
 	doc := createDoc(t, testDocType, params)
 	msg, event := createEvent(t, doc, sharingID, "UPDATED")
 
-	err = SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", event), msg)
+	err = SharingUpdates(jobs.NewWorkerContextWithEvent(domainSharer, "123", msg, event))
 	assert.NoError(t, err)
 }

@@ -1,7 +1,6 @@
 package sharings
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -176,11 +175,11 @@ func (opts *SendOptions) extractRelevantReferences(refs []couchdb.DocReference) 
 }
 
 // SendData sends data to all the recipients
-func SendData(ctx context.Context, m jobs.Message) error {
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
+func SendData(ctx *jobs.WorkerContext) error {
+	domain := ctx.Domain()
 
 	opts := &SendOptions{}
-	err := m.Unmarshal(&opts)
+	err := ctx.UnmarshalMessage(&opts)
 	if err != nil {
 		return err
 	}
@@ -199,16 +198,16 @@ func SendData(ctx context.Context, m jobs.Message) error {
 
 		if dirDoc != nil {
 			opts.Type = consts.DirType
-			ins.Logger().Debugf("[sharings] share_data: Sending directory: %v",
+			ctx.Logger().Debugf("[sharings] share_data: Sending directory: %v",
 				dirDoc)
 			return SendDir(ins, opts, dirDoc)
 		}
 		opts.Type = consts.FileType
-		ins.Logger().Debugf("[sharings] share_data: Sending file: %v", fileDoc)
+		ctx.Logger().Debugf("[sharings] share_data: Sending file: %v", fileDoc)
 		return SendFile(ins, opts, fileDoc)
 	}
 
-	ins.Logger().Debugf("[sharings] share_data: Sending %s: %s", opts.DocType,
+	ctx.Logger().Debugf("[sharings] share_data: Sending %s: %s", opts.DocType,
 		opts.DocID)
 	return SendDoc(ins, opts)
 }

@@ -2,7 +2,6 @@ package exec
 
 import (
 	"archive/tar"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
 )
@@ -63,9 +61,9 @@ const (
 
 // const konnectorMsgTypeProgress string = "progress"
 
-func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (workDir string, err error) {
+func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
 	var msg map[string]interface{}
-	if err = m.Unmarshal(&msg); err != nil {
+	if err = ctx.UnmarshalMessage(&msg); err != nil {
 		return
 	}
 
@@ -158,7 +156,7 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (
 	return workDir, nil
 }
 
-func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd string, env []string, jobID string, err error) {
+func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, jobID string, err error) {
 	jobID = fmt.Sprintf("konnector/%s/%s", w.slug, i.Domain)
 
 	// Directly pass the job message as fields parameters
@@ -187,7 +185,7 @@ func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (c
 	return
 }
 
-func (w *konnectorWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, line []byte) error {
+func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
 	var msg konnectorMsg
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
@@ -195,11 +193,11 @@ func (w *konnectorWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, lin
 
 	switch msg.Type {
 	case konnectorMsgTypeDebug:
-		log.Debug(msg.Message)
+		ctx.Logger().Debug(msg.Message)
 	case konnectorMsgTypeWarning:
-		log.Warn(msg.Message)
+		ctx.Logger().Warn(msg.Message)
 	case konnectorMsgTypeError, konnectorMsgTypeCritical:
-		log.Error(msg.Message)
+		ctx.Logger().Error(msg.Message)
 	}
 
 	w.messages = append(w.messages, msg)
@@ -234,13 +232,13 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
 
-func (w *konnectorWorker) Commit(ctx context.Context, msg jobs.Message, errjob error) error {
+func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
 	if w.msg == nil {
 		return nil
 	}
 
 	accountID, _ := w.msg["account"].(string)
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
+	domain := ctx.Domain()
 
 	inst, err := instance.Get(domain)
 	if err != nil {

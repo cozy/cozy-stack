@@ -102,7 +102,7 @@ func TestSendDataMissingDocType(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	err = SendData(jobs.NewWorkerContext(domainSharer, "123"), msg)
+	err = SendData(jobs.NewWorkerContext(domainSharer, "123", msg))
 	assert.Error(t, err)
 	assert.Equal(t, "CouchDB(not_found): missing", err.Error())
 }
@@ -127,7 +127,7 @@ func TestSendDataBadID(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	err = SendData(jobs.NewWorkerContext(domainSharer, "123"), msg)
+	err = SendData(jobs.NewWorkerContext(domainSharer, "123", msg))
 	assert.Error(t, err)
 	assert.Equal(t, "CouchDB(not_found): missing", err.Error())
 }
@@ -157,7 +157,7 @@ func TestSendDataBadRecipient(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	err = SendData(jobs.NewWorkerContext(domainSharer, "123"), msg)
+	err = SendData(jobs.NewWorkerContext(domainSharer, "123", msg))
 	assert.NoError(t, err)
 }
 
