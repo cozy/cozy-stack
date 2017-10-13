@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -61,12 +62,11 @@ type (
 	// execution and contains specific values from the job.
 	WorkerContext struct {
 		context.Context
-		domain   string
-		workerID string
-		msg      Message
-		evt      Event
-		log      *logrus.Entry
-		cookie   interface{}
+		domain string
+		msg    Message
+		evt    Event
+		log    *logrus.Entry
+		cookie interface{}
 	}
 )
 
@@ -83,11 +83,10 @@ func setNbSlots(nb int) {
 func NewWorkerContext(domain, workerID string, msg Message) *WorkerContext {
 	ctx := context.Background()
 	return &WorkerContext{
-		Context:  ctx,
-		domain:   domain,
-		workerID: workerID,
-		msg:      msg,
-		log:      logger.WithDomain(domain).WithField("worker_id", workerID),
+		Context: ctx,
+		domain:  domain,
+		msg:     msg,
+		log:     logger.WithDomain(domain).WithField("worker_id", workerID),
 	}
 }
 
@@ -117,13 +116,12 @@ func (c *WorkerContext) WithCookie(cookie interface{}) *WorkerContext {
 
 func (c *WorkerContext) clone() *WorkerContext {
 	return &WorkerContext{
-		Context:  c.Context,
-		domain:   c.domain,
-		workerID: c.workerID,
-		msg:      c.msg,
-		evt:      c.evt,
-		log:      c.log,
-		cookie:   c.cookie,
+		Context: c.Context,
+		domain:  c.domain,
+		msg:     c.msg,
+		evt:     c.evt,
+		log:     c.log,
+		cookie:  c.cookie,
 	}
 }
 
@@ -140,7 +138,7 @@ func (c *WorkerContext) UnmarshalMessage(v interface{}) error {
 // UnmarshalEvent unmarshals the event contained in the worker context.
 func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
 	if c.evt == nil {
-		return fmt.Errorf("jobs: does not have an event associated (from worker %q)", c.workerID)
+		return errors.New("jobs: does not have an event associated")
 	}
 	return c.evt.Unmarshal(v)
 }
@@ -200,27 +198,26 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			parentCtx = NewWorkerContext(domain, workerID, job.Message)
 		}
 		if err := job.AckConsumed(); err != nil {
-			joblog.Errorf("[job] %s: error acking consume job %s: %s",
-				workerID, job.ID(), err.Error())
+			parentCtx.Logger().Errorf("[job] error acking consume job: %s",
+				err.Error())
 			continue
 		}
 		t := &task{
-			ctx:      parentCtx,
-			job:      job,
-			conf:     w.defaultedConf(job.Options),
-			workerID: workerID,
+			ctx:  parentCtx,
+			job:  job,
+			conf: w.defaultedConf(job.Options),
 		}
 		var err error
 		if err = t.run(); err != nil {
-			joblog.Errorf("[job] %s: error while performing job %s: %s",
-				workerID, job.ID(), err.Error())
+			parentCtx.Logger().Errorf("[job] error while performing job: %s",
+				err.Error())
 			err = job.Nack(err)
 		} else {
 			err = job.Ack()
 		}
 		if err != nil {
-			joblog.Errorf("[job] %s: error while acking job done %s: %s",
-				workerID, job.ID(), err.Error())
+			parentCtx.Logger().Errorf("[job] error while acking job done: %s",
+				err.Error())
 		}
 	}
 	joblog.Debugf("[job] %s: worker shut down", workerID)
@@ -264,7 +261,6 @@ type task struct {
 	conf *WorkerConfig
 	job  *Job
 
-	workerID  string
 	startTime time.Time
 	execCount int
 }
@@ -281,8 +277,8 @@ func (t *task) run() (err error) {
 	defer func() {
 		if t.conf.WorkerCommit != nil {
 			if errc := t.conf.WorkerCommit(t.ctx, err); errc != nil {
-				joblog.Warnf("[job] %s: error while commiting job %s: %s",
-					t.workerID, t.job.ID(), errc.Error())
+				t.ctx.Logger().Warnf("[job] error while commiting job: %s",
+					errc.Error())
 			}
 		}
 	}()
@@ -292,14 +288,14 @@ func (t *task) run() (err error) {
 			return err
 		}
 		if err != nil {
-			joblog.Warnf("[job] %s: error while performing job %s: %s (retry in %s)",
-				t.workerID, t.job.ID(), err.Error(), delay)
+			t.ctx.Logger().Warnf("[job] error while performing job: %s (retry in %s)",
+				err.Error(), delay)
 		}
 		if delay > 0 {
 			time.Sleep(delay)
 		}
-		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
-			t.workerID, t.job.ID(), t.execCount, timeout)
+		t.ctx.Logger().Debugf("[job] executing job (%d) (timeout %s)",
+			t.execCount, timeout)
 		ctx, cancel := t.ctx.WithTimeout(timeout)
 		if err = t.exec(ctx); err == nil {
 			cancel()
