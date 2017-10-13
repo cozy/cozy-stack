@@ -111,6 +111,11 @@ func (j *Job) Clone() couchdb.Doc {
 		j.Message = make([]byte, len(tmp))
 		copy(j.Message[:], tmp)
 	}
+	if j.Event != nil {
+		tmp := j.Event
+		j.Event = make([]byte, len(tmp))
+		copy(j.Event[:], tmp)
+	}
 	return &cloned
 }
 
