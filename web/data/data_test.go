@@ -117,6 +117,7 @@ func TestAllDoctypes(t *testing.T) {
 		"io.cozy.files",
 		"io.cozy.jobs",
 		"io.cozy.konnectors",
+		"io.cozy.sessions.logins",
 		"io.cozy.settings",
 		"io.cozy.triggers",
 	}

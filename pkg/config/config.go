@@ -86,6 +86,7 @@ type Config struct {
 	AdminPort  int
 	NoReply    string
 	Hooks      string
+	GeoDB      string
 
 	AutoUpdates AutoUpdates
 	Fs          Fs
@@ -308,6 +309,7 @@ func UseViper(v *viper.Viper) error {
 		Doctypes:   v.GetString("doctypes"),
 		NoReply:    v.GetString("mail.noreply_address"),
 		Hooks:      v.GetString("hooks"),
+		GeoDB:      v.GetString("geodb"),
 		Fs: Fs{
 			URL: fsURL,
 		},

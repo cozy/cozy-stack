@@ -76,6 +76,10 @@ mail:
 # directory with the hooks scripts - flags: --hooks
 hooks: ./scripts/hooks
 
+# location of the database for IP -> City lookups - flags: --geodb
+# See https://dev.maxmind.com/geoip/geoip2/geolite2/
+geodb: ""
+
 # Auto updates scheduler
 auto_updates:
   schedule: "@cron 0 0 0 * * *"
