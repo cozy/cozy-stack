@@ -18,17 +18,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/realtime"
+	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
 )
-
-// KonnectorOptions contains the options to execute a konnector.
-type KonnectorOptions struct {
-	Konnector    string `json:"konnector"`
-	Account      string `json:"account"`
-	FolderToSave string `json:"folder_to_save"`
-}
 
 type konnectorMsg struct {
 	Type    string `json:"type"`
@@ -36,13 +30,14 @@ type konnectorMsg struct {
 }
 
 type konnectorWorker struct {
-	opts     *KonnectorOptions
+	slug     string
+	msg      map[string]interface{}
 	man      *apps.KonnManifest
 	messages []konnectorMsg
 }
 
-// result stores the result of a konnector execution.
-type result struct {
+// konnectorResult stores the result of a konnector execution.
+type konnectorResult struct {
 	DocID       string    `json:"_id,omitempty"`
 	DocRev      string    `json:"_rev,omitempty"`
 	CreatedAt   time.Time `json:"last_execution"`
@@ -52,12 +47,12 @@ type result struct {
 	Error       string    `json:"error"`
 }
 
-func (r *result) ID() string         { return r.DocID }
-func (r *result) Rev() string        { return r.DocRev }
-func (r *result) DocType() string    { return consts.KonnectorResults }
-func (r *result) Clone() couchdb.Doc { c := *r; return &c }
-func (r *result) SetID(id string)    { r.DocID = id }
-func (r *result) SetRev(rev string)  { r.DocRev = rev }
+func (r *konnectorResult) ID() string         { return r.DocID }
+func (r *konnectorResult) Rev() string        { return r.DocRev }
+func (r *konnectorResult) DocType() string    { return consts.KonnectorResults }
+func (r *konnectorResult) Clone() couchdb.Doc { c := *r; return &c }
+func (r *konnectorResult) SetID(id string)    { r.DocID = id }
+func (r *konnectorResult) SetRev(rev string)  { r.DocRev = rev }
 
 const (
 	konnectorMsgTypeDebug    = "debug"
@@ -69,13 +64,12 @@ const (
 // const konnectorMsgTypeProgress string = "progress"
 
 func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (workDir string, err error) {
-	opts := &KonnectorOptions{}
-	if err = m.Unmarshal(&opts); err != nil {
+	var msg map[string]interface{}
+	if err = m.Unmarshal(&msg); err != nil {
 		return
 	}
 
-	slug := opts.Konnector
-
+	slug, _ := msg["konnector"].(string)
 	man, err := apps.GetKonnectorBySlug(i, slug)
 	if err != nil {
 		return
@@ -88,7 +82,8 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (
 		return
 	}
 
-	w.opts = opts
+	w.slug = slug
+	w.msg = msg
 	w.man = man
 
 	osFS := afero.NewOsFs()
@@ -102,6 +97,30 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (
 	tarFile, err := fileServer.Open(slug, man.Version(), apps.KonnectorArchiveName)
 	if err != nil {
 		return
+	}
+
+	// Create the folder in which the konnector has the right to write.
+	{
+		fs := i.VFS()
+		folderToSave, _ := msg["folder_to_save"].(string)
+		defaultFolderPath, _ := msg["default_folder_path"].(string)
+		if folderToSave != "" {
+			if defaultFolderPath == "" {
+				name := i.Translate("Tree Administrative")
+				defaultFolderPath = fmt.Sprintf("/%s/%s", name, slug)
+			}
+			if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
+				folderToSave = ""
+			}
+		}
+		if folderToSave == "" {
+			var dir *vfs.DirDoc
+			dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
+			if err != nil {
+				return
+			}
+			msg["folder_to_save"] = dir.ID()
+		}
 	}
 
 	tr := tar.NewReader(tarFile)
@@ -140,17 +159,10 @@ func (w *konnectorWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (
 }
 
 func (w *konnectorWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd string, env []string, jobID string, err error) {
-	jobID = fmt.Sprintf("konnector/%s/%s", w.opts.Konnector, i.Domain)
+	jobID = fmt.Sprintf("konnector/%s/%s", w.slug, i.Domain)
 
-	fields := struct {
-		Account      string `json:"account"`
-		FolderToSave string `json:"folder_to_save,omitempty"`
-	}{
-		Account:      w.opts.Account,
-		FolderToSave: w.opts.FolderToSave,
-	}
-
-	fieldsJSON, err := json.Marshal(fields)
+	// Directly pass the job message as fields parameters
+	fieldsJSON, err := json.Marshal(w.msg)
 	if err != nil {
 		return
 	}
@@ -223,11 +235,11 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *konnectorWorker) Commit(ctx context.Context, msg jobs.Message, errjob error) error {
-	if w.opts == nil {
+	if w.msg == nil {
 		return nil
 	}
 
-	slug := w.opts.Konnector
+	accountID, _ := w.msg["account"].(string)
 	domain := ctx.Value(jobs.ContextDomainKey).(string)
 
 	inst, err := instance.Get(domain)
@@ -235,8 +247,8 @@ func (w *konnectorWorker) Commit(ctx context.Context, msg jobs.Message, errjob e
 		return err
 	}
 
-	lastResult := &result{}
-	err = couchdb.GetDoc(inst, consts.KonnectorResults, slug, lastResult)
+	lastResult := &konnectorResult{}
+	err = couchdb.GetDoc(inst, consts.KonnectorResults, w.slug, lastResult)
 	if err != nil {
 		if !couchdb.IsNotFoundError(err) {
 			return err
@@ -256,9 +268,10 @@ func (w *konnectorWorker) Commit(ctx context.Context, msg jobs.Message, errjob e
 		lastSuccess = time.Now()
 		state = jobs.Done
 	}
-	result := &result{
-		DocID:       slug,
-		Account:     w.opts.Account,
+
+	result := &konnectorResult{
+		DocID:       w.slug,
+		Account:     accountID,
 		CreatedAt:   time.Now(),
 		LastSuccess: lastSuccess,
 		State:       state,
@@ -270,11 +283,12 @@ func (w *konnectorWorker) Commit(ctx context.Context, msg jobs.Message, errjob e
 		result.SetRev(lastResult.Rev())
 		err = couchdb.UpdateDoc(inst, result)
 	}
+	return err
+
 	// if err != nil {
 	// 	return err
 	// }
 
-	return err
 	// // if it is the first try we do not take into account an error, we bail.
 	// if lastResult == nil {
 	// 	return nil
