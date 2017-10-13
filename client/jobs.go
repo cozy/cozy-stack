@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -30,11 +31,37 @@ type Job struct {
 	Attrs struct {
 		Domain    string          `json:"domain"`
 		Message   json.RawMessage `json:"message"`
-		Options   *jobOptions     `json:"options"`
-		QueuedAt  time.Time       `json:"queued_at"`
-		StartedAt time.Time       `json:"started_at"`
-		State     string          `json:"state"`
-		Worker    string          `json:"worker"`
+		Debounced bool            `json:"debounced"`
+		Event     struct {
+			Domain string          `json:"domain"`
+			Verb   string          `json:"verb"`
+			Doc    json.RawMessage `json:"doc"`
+			OldDoc json.RawMessage `json:"old,omitempty"`
+		} `json:"event"`
+		Options   *jobOptions `json:"options"`
+		QueuedAt  time.Time   `json:"queued_at"`
+		StartedAt time.Time   `json:"started_at"`
+		State     string      `json:"state"`
+		Worker    string      `json:"worker"`
+	} `json:"attributes"`
+}
+
+// Trigger is a struct representing a trigger
+type Trigger struct {
+	ID    string `json:"id"`
+	Rev   string `json:"rev"`
+	Attrs struct {
+		Domain     string          `json:"domain"`
+		Type       string          `json:"type"`
+		WorkerType string          `json:"worker"`
+		Arguments  string          `json:"arguments"`
+		Debounce   string          `json:"debounce"`
+		Message    json.RawMessage `json:"message"`
+		Options    *struct {
+			MaxExecCount int           `json:"max_exec_count"`
+			MaxExecTime  time.Duration `json:"max_exec_time"`
+			Timeout      time.Duration `json:"timeout"`
+		} `json:"options"`
 	} `json:"attributes"`
 }
 
@@ -81,9 +108,58 @@ func (c *Client) JobPush(r *JobOptions) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	var j Job
+	var j *Job
 	if err := readJSONAPI(res.Body, &j); err != nil {
 		return nil, err
 	}
-	return &j, nil
+	return j, nil
+}
+
+// GetTrigger return the trigger with the specified ID.
+func (c *Client) GetTrigger(triggerID string) (*Trigger, error) {
+	res, err := c.Req(&request.Options{
+		Method: "GET",
+		Path:   fmt.Sprintf("/jobs/triggers/%s", url.PathEscape(triggerID)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var t *Trigger
+	if err := readJSONAPI(res.Body, &t); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+// GetTriggers returns the list of all triggers with the specified worker type.
+func (c *Client) GetTriggers(worker string) ([]*Trigger, error) {
+	res, err := c.Req(&request.Options{
+		Method:  "GET",
+		Path:    fmt.Sprintf("/jobs/triggers"),
+		Queries: url.Values{"Worker": {worker}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var t []*Trigger
+	if err := readJSONAPI(res.Body, &t); err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
+// TriggerLaunch launches manually the trigger with the specified ID.
+func (c *Client) TriggerLaunch(triggerID string) (*Job, error) {
+	res, err := c.Req(&request.Options{
+		Method: "POST",
+		Path:   fmt.Sprintf("/jobs/triggers/%s/launch", url.PathEscape(triggerID)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	var j *Job
+	if err := readJSONAPI(res.Body, &j); err != nil {
+		return nil, err
+	}
+	return j, nil
 }

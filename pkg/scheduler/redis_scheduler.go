@@ -166,7 +166,13 @@ func (s *RedisScheduler) eventLoop(eventsCh <-chan *realtime.Event) {
 				s.log.Warnf("[scheduler] Trigger %s %s has an invalid debounce: %s",
 					et.infos.Domain, et.infos.TID, et.infos.Debounce)
 			}
-			_, err = s.broker.PushJob(et.Trigger(event))
+			jobRequest, err := et.Infos().JobRequestWithEvent(event)
+			if err != nil {
+				s.log.Warnf("[scheduler] Could not encode realtime event %s %s: %s",
+					event.Domain, triggerID, err.Error())
+				continue
+			}
+			_, err = s.broker.PushJob(jobRequest)
 			if err != nil {
 				s.log.Warnf("[scheduler] Could not push job trigger by event %s %s: %s",
 					event.Domain, triggerID, err.Error())
@@ -220,12 +226,13 @@ func (s *RedisScheduler) Poll(now int64) error {
 		}
 		switch t := t.(type) {
 		case *EventTrigger: // Debounced
-			job := t.Trigger(nil)
+			job := t.Infos().JobRequest()
+			job.Debounced = true
 			if _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
 		case *AtTrigger:
-			job := t.Trigger()
+			job := t.Infos().JobRequest()
 			if _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
@@ -233,7 +240,7 @@ func (s *RedisScheduler) Poll(now int64) error {
 				return err
 			}
 		case *CronTrigger:
-			job := t.Trigger()
+			job := t.Infos().JobRequest()
 			if _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}

@@ -7,52 +7,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 )
-
-// TriggerInfos is a struct containing all the options of a trigger.
-type TriggerInfos struct {
-	TID        string           `json:"_id,omitempty"`
-	TRev       string           `json:"_rev,omitempty"`
-	Domain     string           `json:"domain"`
-	Type       string           `json:"type"`
-	WorkerType string           `json:"worker"`
-	Arguments  string           `json:"arguments"`
-	Debounce   string           `json:"debounce,omitempty"`
-	Options    *jobs.JobOptions `json:"options"`
-	Message    jobs.Message     `json:"message"`
-}
-
-// ID implements the couchdb.Doc interface
-func (t *TriggerInfos) ID() string { return t.TID }
-
-// Rev implements the couchdb.Doc interface
-func (t *TriggerInfos) Rev() string { return t.TRev }
-
-// DocType implements the couchdb.Doc interface
-func (t *TriggerInfos) DocType() string { return consts.Triggers }
-
-// Clone implements the couchdb.Doc interface
-func (t *TriggerInfos) Clone() couchdb.Doc {
-	cloned := *t
-	if t.Options != nil {
-		tmp := *t.Options
-		cloned.Options = &tmp
-	}
-	if t.Message != nil {
-		tmp := t.Message
-		t.Message = make([]byte, len(tmp))
-		copy(t.Message[:], tmp)
-	}
-	return &cloned
-}
-
-// SetID implements the couchdb.Doc interface
-func (t *TriggerInfos) SetID(id string) { t.TID = id }
-
-// SetRev implements the couchdb.Doc interface
-func (t *TriggerInfos) SetRev(rev string) { t.TRev = rev }
-
-var _ couchdb.Doc = &TriggerInfos{}
 
 type (
 	// Trigger interface is used to represent a trigger.
@@ -79,6 +35,19 @@ type (
 		GetAll(domain string) ([]Trigger, error)
 		RebuildRedis(domain string) error
 	}
+
+	// TriggerInfos is a struct containing all the options of a trigger.
+	TriggerInfos struct {
+		TID        string           `json:"_id,omitempty"`
+		TRev       string           `json:"_rev,omitempty"`
+		Domain     string           `json:"domain"`
+		Type       string           `json:"type"`
+		WorkerType string           `json:"worker"`
+		Arguments  string           `json:"arguments"`
+		Debounce   string           `json:"debounce"`
+		Options    *jobs.JobOptions `json:"options"`
+		Message    jobs.Message     `json:"message"`
+	}
 )
 
 // NewTrigger creates the trigger associates with the specified trigger
@@ -99,3 +68,57 @@ func NewTrigger(infos *TriggerInfos) (Trigger, error) {
 		return nil, ErrUnknownTrigger
 	}
 }
+
+// ID implements the couchdb.Doc interface
+func (t *TriggerInfos) ID() string { return t.TID }
+
+// Rev implements the couchdb.Doc interface
+func (t *TriggerInfos) Rev() string { return t.TRev }
+
+// DocType implements the couchdb.Doc interface
+func (t *TriggerInfos) DocType() string { return consts.Triggers }
+
+// Clone implements the couchdb.Doc interface
+func (t *TriggerInfos) Clone() couchdb.Doc {
+	cloned := *t
+	if t.Options != nil {
+		tmp := *t.Options
+		cloned.Options = &tmp
+	}
+	if t.Message != nil {
+		tmp := t.Message
+		t.Message = make([]byte, len(tmp))
+		copy(t.Message[:], tmp)
+	}
+	return &cloned
+}
+
+// JobRequest returns a job request associated with the scheduler informations.
+func (t *TriggerInfos) JobRequest() *jobs.JobRequest {
+	return &jobs.JobRequest{
+		Domain:     t.Domain,
+		WorkerType: t.WorkerType,
+		Message:    t.Message,
+		Options:    t.Options,
+	}
+}
+
+// JobRequestWithEvent returns a job request associated with the scheduler
+// informations associated to the specified realtime event.
+func (t *TriggerInfos) JobRequestWithEvent(event *realtime.Event) (*jobs.JobRequest, error) {
+	req := t.JobRequest()
+	evt, err := jobs.NewEvent(event)
+	if err != nil {
+		return nil, err
+	}
+	req.Event = evt
+	return req, nil
+}
+
+// SetID implements the couchdb.Doc interface
+func (t *TriggerInfos) SetID(id string) { t.TID = id }
+
+// SetRev implements the couchdb.Doc interface
+func (t *TriggerInfos) SetRev(rev string) { t.TRev = rev }
+
+var _ couchdb.Doc = &TriggerInfos{}

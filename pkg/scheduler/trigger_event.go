@@ -72,7 +72,9 @@ func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 			select {
 			case e := <-sub.Channel:
 				if eventMatchPermission(e, &t.mask) {
-					ch <- t.Trigger(e)
+					if evt, err := t.Infos().JobRequestWithEvent(e); err == nil {
+						ch <- evt
+					}
 				}
 			case <-t.unscheduled:
 				return
@@ -80,28 +82,6 @@ func (t *EventTrigger) Schedule() <-chan *jobs.JobRequest {
 		}
 	}()
 	return ch
-}
-
-// Trigger returns the triggered job request
-func (t *EventTrigger) Trigger(e *realtime.Event) *jobs.JobRequest {
-	m := map[string]interface{}{
-		"message": t.infos.Message,
-	}
-	if e == nil {
-		m["debounced"] = true
-	} else {
-		m["event"] = e
-	}
-	msg, err := jobs.NewMessage(m)
-	if err != nil {
-		logger.WithNamespace("event-trigger").Error(err)
-	}
-	return &jobs.JobRequest{
-		Domain:     t.infos.Domain,
-		WorkerType: t.infos.WorkerType,
-		Message:    msg,
-		Options:    t.infos.Options,
-	}
 }
 
 // Unschedule implements the Unschedule method of the Trigger interface.

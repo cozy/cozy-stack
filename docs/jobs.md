@@ -499,6 +499,44 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `GET`.
 
+### POST /jobs/triggers/:trigger-id/launch
+
+Launch a trigger manually given its ID and return the created job.
+
+#### Request
+
+```http
+POST /jobs/triggers/123123/launch HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+  "data": {
+    "type": "io.cozy.jobs",
+    "id": "123123",
+    "attributes": {
+      "domain": "me.cozy.tools",
+      "worker": "sendmail",
+      "options": {},
+      "state": "running",
+      "queued_at": "2016-09-19T12:35:08Z",
+      "started_at": "2016-09-19T12:35:08Z",
+      "error": ""
+    },
+    "links": {
+      "self": "/jobs/123123"
+    }
+  }
+}
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `POST`.
 
 ### GET /jobs/triggers
 

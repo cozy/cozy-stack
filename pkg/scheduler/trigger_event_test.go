@@ -30,19 +30,26 @@ func TestTriggerEvent(t *testing.T) {
 			Timeout:      1 * time.Millisecond,
 			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
 				defer wg.Done()
-				var msg struct {
-					Message string
-					Event   struct {
-						Type string
-						Doc  *couchdb.JSONDoc
-					}
-				}
+				var msg string
 				if err := m.Unmarshal(&msg); err != nil {
 					assert.NoError(t, err)
 					return err
 				}
-				assert.Equal(t, "test-id", msg.Event.Doc.ID())
-				called[msg.Message] = true
+				e, ok := ctx.Value(jobs.ContextEventKey).(jobs.Event)
+				assert.True(t, ok)
+				var evt struct {
+					Domain string `json:"domain"`
+					Verb   string `json:"verb"`
+					Doc    couchdb.JSONDoc
+				}
+				if err := e.Unmarshal(&evt); err != nil {
+					assert.NoError(t, err)
+					return nil
+				}
+				assert.Equal(t, "cozy.local.triggerevent", evt.Domain)
+				assert.Equal(t, "CREATED", evt.Verb)
+				assert.Equal(t, "test-id", evt.Doc.ID())
+				called[msg] = true
 				return nil
 			},
 		},

@@ -81,7 +81,7 @@ func (c *CronTrigger) Schedule() <-chan *jobs.JobRequest {
 			next = c.NextExecution(next)
 			select {
 			case <-time.After(-time.Since(next)):
-				ch <- c.Trigger()
+				ch <- c.infos.JobRequest()
 			case <-c.done:
 				close(ch)
 				return
@@ -89,16 +89,6 @@ func (c *CronTrigger) Schedule() <-chan *jobs.JobRequest {
 		}
 	}()
 	return ch
-}
-
-// Trigger returns the triggered job request
-func (c *CronTrigger) Trigger() *jobs.JobRequest {
-	return &jobs.JobRequest{
-		Domain:     c.infos.Domain,
-		WorkerType: c.infos.WorkerType,
-		Message:    c.infos.Message,
-		Options:    c.infos.Options,
-	}
 }
 
 // Unschedule implements the Unschedule method of the Trigger interface.

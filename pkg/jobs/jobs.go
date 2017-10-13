@@ -10,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -52,6 +53,9 @@ type (
 	// Message is a json encoded job message.
 	Message json.RawMessage
 
+	// Event is a json encoded value of a realtime.Event
+	Event json.RawMessage
+
 	// Job contains all the metadata informations of a Job. It can be
 	// marshalled in JSON.
 	Job struct {
@@ -60,6 +64,8 @@ type (
 		Domain     string      `json:"domain"`
 		WorkerType string      `json:"worker"`
 		Message    Message     `json:"message"`
+		Event      Event       `json:"event"`
+		Debounced  bool        `json:"debounced"`
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
@@ -72,6 +78,8 @@ type (
 		Domain     string
 		WorkerType string
 		Message    Message
+		Event      Event
+		Debounced  bool
 		Options    *JobOptions
 	}
 
@@ -102,6 +110,11 @@ func (j *Job) Clone() couchdb.Doc {
 		tmp := j.Message
 		j.Message = make([]byte, len(tmp))
 		copy(j.Message[:], tmp)
+	}
+	if j.Event != nil {
+		tmp := j.Event
+		j.Event = make([]byte, len(tmp))
+		copy(j.Event[:], tmp)
 	}
 	return &cloned
 }
@@ -220,6 +233,8 @@ func NewJob(req *JobRequest) *Job {
 		Domain:     req.Domain,
 		WorkerType: req.WorkerType,
 		Message:    req.Message,
+		Debounced:  req.Debounced,
+		Event:      req.Event,
 		Options:    req.Options,
 		State:      Queued,
 		QueuedAt:   time.Now(),
@@ -258,13 +273,22 @@ func GetQueuedJobs(domain, workerType string) ([]*Job, error) {
 	return results, err
 }
 
-// NewMessage returns a new Message encoded in the specified format.
+// NewMessage returns a json encoded data
 func NewMessage(data interface{}) (Message, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
 	return Message(b), nil
+}
+
+// NewEvent return a json encoded realtime.Event
+func NewEvent(data *realtime.Event) (Event, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return Event(b), nil
 }
 
 // Unmarshal can be used to unmarshal the encoded message value in the
@@ -274,6 +298,15 @@ func (m Message) Unmarshal(msg interface{}) error {
 		return ErrMessageNil
 	}
 	return json.Unmarshal(m, &msg)
+}
+
+// Unmarshal can be used to unmarshal the encoded message value in the
+// specified interface's type.
+func (e Event) Unmarshal(evt interface{}) error {
+	if e == nil {
+		return ErrMessageNil
+	}
+	return json.Unmarshal(e, &evt)
 }
 
 // Clone clones the worker config
