@@ -1,7 +1,6 @@
 package exec
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -29,9 +27,9 @@ type serviceWorker struct {
 	man  *apps.WebappManifest
 }
 
-func (w *serviceWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (workDir string, err error) {
+func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
 	opts := &ServiceOptions{}
-	if err = m.Unmarshal(&opts); err != nil {
+	if err = ctx.UnmarshalMessage(&opts); err != nil {
 		return
 	}
 	if opts.Message != nil {
@@ -80,7 +78,7 @@ func (w *serviceWorker) PrepareWorkDir(i *instance.Instance, m jobs.Message) (wo
 	return workDir, nil
 }
 
-func (w *serviceWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd string, env []string, jobID string, err error) {
+func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, jobID string, err error) {
 	jobID = fmt.Sprintf("service/%s/%s", w.opts.Slug, i.Domain)
 
 	token := i.BuildAppToken(w.man)
@@ -96,7 +94,7 @@ func (w *serviceWorker) PrepareCmdEnv(i *instance.Instance, m jobs.Message) (cmd
 	return
 }
 
-func (w *serviceWorker) ScanOuput(i *instance.Instance, log *logrus.Entry, line []byte) error {
+func (w *serviceWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
 	return nil
 }
 
@@ -104,6 +102,6 @@ func (w *serviceWorker) Error(i *instance.Instance, err error) error {
 	return err
 }
 
-func (w *serviceWorker) Commit(ctx context.Context, msg jobs.Message, errjob error) error {
+func (w *serviceWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
 	return nil
 }

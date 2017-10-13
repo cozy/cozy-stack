@@ -8,19 +8,9 @@ import (
 	"runtime/debug"
 	"sync/atomic"
 	"time"
-)
 
-// contextKey are the keys used in the worker context
-type contextKey int
-
-const (
-	// ContextDomainKey is used to store the domain string name
-	ContextDomainKey contextKey = iota
-	// ContextWorkerKey is used to store the workerID string
-	ContextWorkerKey
-	// ContextEventKey is used to store an optional Event when the worker is
-	// executed with an event (via the @event trigger for instance).
-	ContextEventKey
+	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -33,35 +23,28 @@ var (
 
 type (
 	// WorkerInitFunc is optionally called at the beginning of the process and
-	// can produce a cookie value that will be passed into the given
-	// WorkerThreaderFunc.
-	WorkerInitFunc func() (interface{}, error)
+	// can produce a context value.
+	WorkerInitFunc func(ctx *WorkerContext) (*WorkerContext, error)
 
 	// WorkerFunc represent the work function that a worker should implement.
-	WorkerFunc func(context context.Context, msg Message) error
-
-	// WorkerThreadedFunc represent the work function that a worker should
-	// implement. In addition to a simple WorkerFunc, a threaded one can thread
-	// its context on each call and to the commit method.
-	WorkerThreadedFunc func(context context.Context, cookie interface{}, msg Message) error
+	WorkerFunc func(ctx *WorkerContext) error
 
 	// WorkerCommit is an optional method that is always called once after the
 	// execution of the WorkerFunc.
-	WorkerCommit func(context context.Context, cookie interface{}, msg Message, errjob error) error
+	WorkerCommit func(ctx *WorkerContext, errjob error) error
 
 	// WorkerConfig is the configuration parameter of a worker defined by the job
 	// system. It contains parameters of the worker along with the worker main
 	// function that perform the work against a job's message.
 	WorkerConfig struct {
-		WorkerInit         WorkerInitFunc
-		WorkerFunc         WorkerFunc
-		WorkerThreadedFunc WorkerThreadedFunc
-		WorkerCommit       WorkerCommit
-		Concurrency        int           `json:"concurrency"`
-		MaxExecCount       int           `json:"max_exec_count"`
-		MaxExecTime        time.Duration `json:"max_exec_time"`
-		Timeout            time.Duration `json:"timeout"`
-		RetryDelay         time.Duration `json:"retry_delay"`
+		WorkerInit   WorkerInitFunc
+		WorkerFunc   WorkerFunc
+		WorkerCommit WorkerCommit
+		Concurrency  int           `json:"concurrency"`
+		MaxExecCount int           `json:"max_exec_count"`
+		MaxExecTime  time.Duration `json:"max_exec_time"`
+		Timeout      time.Duration `json:"timeout"`
+		RetryDelay   time.Duration `json:"retry_delay"`
 	}
 
 	// Worker is a unit of work that will consume from a queue and execute the do
@@ -72,6 +55,18 @@ type (
 		jobs    chan *Job
 		running uint32
 		closed  chan struct{}
+	}
+
+	// WorkerContext is a context.Context passed to the worker for each job
+	// execution and contains specific values from the job.
+	WorkerContext struct {
+		context.Context
+		domain   string
+		workerID string
+		msg      Message
+		evt      Event
+		log      *logrus.Entry
+		cookie   interface{}
 	}
 )
 
@@ -85,20 +80,79 @@ func setNbSlots(nb int) {
 }
 
 // NewWorkerContext returns a context.Context usable by a worker.
-func NewWorkerContext(domain, workerID string) context.Context {
+func NewWorkerContext(domain, workerID string, msg Message) *WorkerContext {
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, ContextDomainKey, domain)
-	ctx = context.WithValue(ctx, ContextWorkerKey, workerID)
-	return ctx
+	return &WorkerContext{
+		Context:  ctx,
+		domain:   domain,
+		workerID: workerID,
+		msg:      msg,
+		log:      logger.WithDomain(domain).WithField("worker_id", workerID),
+	}
 }
 
 // NewWorkerContextWithEvent returns a context.Context usable by a worker. It
 // returns the same context as NewWorkerContext except that it also includes
 // the event responsible for the job, from a @event trigger for instance.
-func NewWorkerContextWithEvent(domain, workerID string, event Event) context.Context {
-	ctx := NewWorkerContext(domain, workerID)
-	ctx = context.WithValue(ctx, ContextEventKey, event)
+func NewWorkerContextWithEvent(domain, workerID string, msg Message, event Event) *WorkerContext {
+	ctx := NewWorkerContext(domain, workerID, msg)
+	ctx.evt = event
 	return ctx
+}
+
+// WithTimeout returns a clone of the context with a different deadline.
+func (c *WorkerContext) WithTimeout(timeout time.Duration) (*WorkerContext, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(c.Context, timeout)
+	newCtx := c.clone()
+	newCtx.Context = ctx
+	return newCtx, cancel
+}
+
+// WithCookie returns a clone of the context with a new cookie value.
+func (c *WorkerContext) WithCookie(cookie interface{}) *WorkerContext {
+	newCtx := c.clone()
+	newCtx.cookie = cookie
+	return newCtx
+}
+
+func (c *WorkerContext) clone() *WorkerContext {
+	return &WorkerContext{
+		Context:  c.Context,
+		domain:   c.domain,
+		workerID: c.workerID,
+		msg:      c.msg,
+		evt:      c.evt,
+		log:      c.log,
+		cookie:   c.cookie,
+	}
+}
+
+// Logger return the logger associated with the worker context.
+func (c *WorkerContext) Logger() *logrus.Entry {
+	return c.log
+}
+
+// UnmarshalMessage unmarshals the message contained in the worker context.
+func (c *WorkerContext) UnmarshalMessage(v interface{}) error {
+	return c.msg.Unmarshal(v)
+}
+
+// UnmarshalEvent unmarshals the event contained in the worker context.
+func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
+	if c.evt == nil {
+		return fmt.Errorf("jobs: does not have an event associated (from worker %q)", c.workerID)
+	}
+	return c.evt.Unmarshal(v)
+}
+
+// Domain returns the domain associated with the worker context.
+func (c *WorkerContext) Domain() string {
+	return c.domain
+}
+
+// Cookie returns the cookie associated with the worker context.
+func (c *WorkerContext) Cookie() interface{} {
+	return c.cookie
 }
 
 // Start is used to start the worker consumption of messages from its queue.
@@ -139,11 +193,11 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			joblog.Errorf("[job] %s: missing domain from job request", workerID)
 			continue
 		}
-		var parentCtx context.Context
+		var parentCtx *WorkerContext
 		if event := job.Event; event != nil {
-			parentCtx = NewWorkerContextWithEvent(domain, workerID, event)
+			parentCtx = NewWorkerContextWithEvent(domain, workerID, job.Message, event)
 		} else {
-			parentCtx = NewWorkerContext(domain, workerID)
+			parentCtx = NewWorkerContext(domain, workerID, job.Message)
 		}
 		if err := job.AckConsumed(); err != nil {
 			joblog.Errorf("[job] %s: error acking consume job %s: %s",
@@ -206,9 +260,9 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 }
 
 type task struct {
-	ctx  context.Context
-	job  *Job
+	ctx  *WorkerContext
 	conf *WorkerConfig
+	job  *Job
 
 	workerID  string
 	startTime time.Time
@@ -216,18 +270,17 @@ type task struct {
 }
 
 func (t *task) run() (err error) {
-	var cookie interface{}
 	t.startTime = time.Now()
 	t.execCount = 0
 	if t.conf.WorkerInit != nil {
-		cookie, err = t.conf.WorkerInit()
+		t.ctx, err = t.conf.WorkerInit(t.ctx)
 		if err != nil {
 			return err
 		}
 	}
 	defer func() {
 		if t.conf.WorkerCommit != nil {
-			if errc := t.conf.WorkerCommit(t.ctx, cookie, t.job.Message, err); errc != nil {
+			if errc := t.conf.WorkerCommit(t.ctx, err); errc != nil {
 				joblog.Warnf("[job] %s: error while commiting job %s: %s",
 					t.workerID, t.job.ID(), errc.Error())
 			}
@@ -247,8 +300,8 @@ func (t *task) run() (err error) {
 		}
 		joblog.Debugf("[job] %s: executing job %s(%d) (timeout %s)",
 			t.workerID, t.job.ID(), t.execCount, timeout)
-		ctx, cancel := context.WithTimeout(t.ctx, timeout)
-		if err = t.exec(ctx, cookie); err == nil {
+		ctx, cancel := t.ctx.WithTimeout(timeout)
+		if err = t.exec(ctx); err == nil {
 			cancel()
 			break
 		}
@@ -261,7 +314,7 @@ func (t *task) run() (err error) {
 	return nil
 }
 
-func (t *task) exec(ctx context.Context, cookie interface{}) (err error) {
+func (t *task) exec(ctx *WorkerContext) (err error) {
 	slot := <-slots
 	defer func() {
 		slots <- slot
@@ -274,10 +327,7 @@ func (t *task) exec(ctx context.Context, cookie interface{}) (err error) {
 			joblog.Errorf("%s: %s", r, debug.Stack())
 		}
 	}()
-	if t.conf.WorkerThreadedFunc != nil {
-		return t.conf.WorkerThreadedFunc(ctx, cookie, t.job.Message)
-	}
-	return t.conf.WorkerFunc(ctx, t.job.Message)
+	return t.conf.WorkerFunc(ctx)
 }
 
 func (t *task) nextDelay() (bool, time.Duration, time.Duration) {

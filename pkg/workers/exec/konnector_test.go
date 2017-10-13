@@ -26,25 +26,23 @@ var inst *instance.Instance
 var konnectorWorkerFunc = makeExecWorkerFunc()
 
 func TestUnknownDomain(t *testing.T) {
-	ctx := jobs.NewWorkerContext("unknown", "id")
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	w := &konnectorWorker{}
-	err = konnectorWorkerFunc(ctx, w, msg)
+	ctx := jobs.NewWorkerContext("unknown", "id", msg).WithCookie(&konnectorWorker{})
+	err = konnectorWorkerFunc(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Instance not found", err.Error())
 }
 
 func TestUnknownApp(t *testing.T) {
-	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	w := &konnectorWorker{}
-	err = konnectorWorkerFunc(ctx, w, msg)
+	ctx := jobs.NewWorkerContext(inst.Domain, "id", msg).WithCookie(&konnectorWorker{})
+	err = konnectorWorkerFunc(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Application is not installed", err.Error())
 }
@@ -69,7 +67,6 @@ func TestBadFileExec(t *testing.T) {
 		return
 	}
 
-	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector":      "my-konnector-1",
 		"account":        account,
@@ -78,14 +75,13 @@ func TestBadFileExec(t *testing.T) {
 	assert.NoError(t, err)
 
 	config.GetConfig().Konnectors.Cmd = ""
-	w := &konnectorWorker{}
-	err = konnectorWorkerFunc(ctx, w, msg)
+	ctx := jobs.NewWorkerContext(inst.Domain, "id", msg).WithCookie(&konnectorWorker{})
+	err = konnectorWorkerFunc(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "fork/exec : no such file or directory", err.Error())
 
 	config.GetConfig().Konnectors.Cmd = "echo"
-	w = &konnectorWorker{}
-	err = konnectorWorkerFunc(ctx, w, msg)
+	err = konnectorWorkerFunc(ctx)
 	assert.NoError(t, err)
 }
 
@@ -171,7 +167,6 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 		wg.Done()
 	}()
 
-	ctx := jobs.NewWorkerContext(inst.Domain, "id")
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "my-konnector-2",
 		"account":   account,
@@ -179,8 +174,8 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	assert.NoError(t, err)
 
 	config.GetConfig().Konnectors.Cmd = tmpScript.Name()
-	w := &konnectorWorker{}
-	err = konnectorWorkerFunc(ctx, w, msg)
+	ctx := jobs.NewWorkerContext(inst.Domain, "id", msg).WithCookie(&konnectorWorker{})
+	err = konnectorWorkerFunc(ctx)
 	assert.NoError(t, err)
 
 	wg.Wait()

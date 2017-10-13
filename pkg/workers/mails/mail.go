@@ -73,13 +73,13 @@ type Part struct {
 }
 
 // SendMail is the sendmail worker function.
-func SendMail(ctx context.Context, m jobs.Message) error {
+func SendMail(ctx *jobs.WorkerContext) error {
 	opts := Options{}
-	err := m.Unmarshal(&opts)
+	err := ctx.UnmarshalMessage(&opts)
 	if err != nil {
 		return err
 	}
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
+	domain := ctx.Domain()
 	from := config.GetConfig().NoReply
 	if from == "" {
 		from = "noreply@" + utils.StripPort(domain)

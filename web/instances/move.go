@@ -40,8 +40,8 @@ func exporter(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	context := jobs.NewWorkerContext(instance.Domain, "export")
-	if err = workers.SendMail(context, msg); err != nil {
+	ctx := jobs.NewWorkerContext(instance.Domain, "export", msg)
+	if err = workers.SendMail(ctx); err != nil {
 		return err
 	}
 

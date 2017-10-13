@@ -3,7 +3,6 @@ package thumbnail
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -37,17 +36,14 @@ func init() {
 }
 
 // Worker is a worker that creates thumbnails for photos and images.
-func Worker(ctx context.Context, m jobs.Message) error {
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	e, ok := ctx.Value(jobs.ContextEventKey).(jobs.Event)
-	if !ok {
-		return errors.New("Missing realtime event from context")
-	}
+func Worker(ctx *jobs.WorkerContext) error {
+	domain := ctx.Domain()
 
 	var img imageEvent
-	if err := e.Unmarshal(&img); err != nil {
+	if err := ctx.UnmarshalEvent(&img); err != nil {
 		return err
 	}
+
 	if img.Verb != "DELETED" && img.Doc.Trashed {
 		return nil
 	}

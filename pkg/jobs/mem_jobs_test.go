@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"context"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -70,9 +69,9 @@ func TestInMemoryJobs(t *testing.T) {
 	var workersTestList = WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(ctx context.Context, m Message) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				var msg string
-				err := m.Unmarshal(&msg)
+				err := ctx.UnmarshalMessage(&msg)
 				if !assert.NoError(t, err) {
 					return err
 				}
@@ -149,9 +148,9 @@ func TestUnknownMessageType(t *testing.T) {
 	broker.Start(WorkersList{
 		"test": {
 			Concurrency: 4,
-			WorkerFunc: func(ctx context.Context, m Message) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				var msg string
-				err := m.Unmarshal(&msg)
+				err := ctx.UnmarshalMessage(&msg)
 				assert.Error(t, err)
 				assert.Equal(t, ErrMessageNil, err)
 				w.Done()
@@ -180,7 +179,7 @@ func TestTimeout(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, _ Message) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				<-ctx.Done()
 				w.Done()
 				return ctx.Err()
@@ -212,7 +211,7 @@ func TestRetry(t *testing.T) {
 			MaxExecCount: maxExecCount,
 			Timeout:      1 * time.Millisecond,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, _ Message) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				<-ctx.Done()
 				w.Done()
 				count++
@@ -246,7 +245,7 @@ func TestPanicRetried(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: maxExecCount,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, _ Message) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				w.Done()
 				panic("oops")
 			},
@@ -276,9 +275,9 @@ func TestPanic(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			RetryDelay:   1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m Message) error {
+			WorkerFunc: func(ctx *WorkerContext) error {
 				var i int
-				if err := m.Unmarshal(&i); err != nil {
+				if err := ctx.UnmarshalMessage(&i); err != nil {
 					return err
 				}
 				if i%2 != 0 {

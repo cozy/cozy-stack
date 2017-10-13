@@ -2,7 +2,6 @@ package unzip
 
 import (
 	"archive/zip"
-	"context"
 	"fmt"
 	"io"
 	"path"
@@ -12,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
@@ -32,15 +30,13 @@ func init() {
 }
 
 // Worker is a worker that unzip a file.
-func Worker(ctx context.Context, m jobs.Message) error {
+func Worker(ctx *jobs.WorkerContext) error {
 	msg := &zipMessage{}
-	if err := m.Unmarshal(msg); err != nil {
+	if err := ctx.UnmarshalMessage(msg); err != nil {
 		return err
 	}
-	domain := ctx.Value(jobs.ContextDomainKey).(string)
-	log := logger.WithDomain(domain)
-	log.Infof("[jobs] unzip %s in %s", msg.Zip, msg.Destination)
-	i, err := instance.Get(domain)
+	ctx.Logger().Infof("[jobs] unzip %s in %s", msg.Zip, msg.Destination)
+	i, err := instance.Get(ctx.Domain())
 	if err != nil {
 		return err
 	}

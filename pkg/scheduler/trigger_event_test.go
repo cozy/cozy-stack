@@ -28,21 +28,19 @@ func TestTriggerEvent(t *testing.T) {
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx context.Context, m jobs.Message) error {
+			WorkerFunc: func(ctx *jobs.WorkerContext) error {
 				defer wg.Done()
 				var msg string
-				if err := m.Unmarshal(&msg); err != nil {
+				if err := ctx.UnmarshalMessage(&msg); err != nil {
 					assert.NoError(t, err)
 					return err
 				}
-				e, ok := ctx.Value(jobs.ContextEventKey).(jobs.Event)
-				assert.True(t, ok)
 				var evt struct {
 					Domain string `json:"domain"`
 					Verb   string `json:"verb"`
 					Doc    couchdb.JSONDoc
 				}
-				if err := e.Unmarshal(&evt); err != nil {
+				if err := ctx.UnmarshalEvent(&evt); err != nil {
 					assert.NoError(t, err)
 					return nil
 				}
