@@ -181,6 +181,9 @@ func init() {
 	flags.String("hooks", ".", "define the directory used for hook scripts")
 	checkNoErr(viper.BindPFlag("hooks", flags.Lookup("hooks")))
 
+	flags.String("geodb", ".", "define the location of the database for IP -> City lookups")
+	checkNoErr(viper.BindPFlag("geodb", flags.Lookup("geodb")))
+
 	flags.String("mail-noreply-address", "", "mail address used for sending mail as a noreply (forgot passwords for example)")
 	checkNoErr(viper.BindPFlag("mail.noreply_address", flags.Lookup("mail-noreply-address")))
 
