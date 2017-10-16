@@ -21,14 +21,15 @@ import (
 // provide the user with informations about the history of all the logins that
 // may have happened on its domain.
 type LoginEntry struct {
-	DocID     string    `json:"_id,omitempty"`
-	DocRev    string    `json:"_rev,omitempty"`
-	IP        string    `json:"ip"`
-	City      string    `json:"city,omitempty"`
-	Country   string    `json:"country,omitempty"`
+	DocID   string `json:"_id,omitempty"`
+	DocRev  string `json:"_rev,omitempty"`
+	IP      string `json:"ip"`
+	City    string `json:"city,omitempty"`
+	Country string `json:"country,omitempty"`
+	// XXX No omitempty on os and browser, because they are indexed in couchdb
 	UA        string    `json:"user_agent"`
-	OS        string    `json:"os,omitempty"`
-	Browser   string    `json:"browser,omitempty"`
+	OS        string    `json:"os"`
+	Browser   string    `json:"browser"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
