@@ -1,9 +1,9 @@
-# Registry publication
+# Apps registry publication
 
 ## Automate publication
 
 The following tutorial explains how to connect your continuous integration
-based on Travis to automatically publish new versions on the registry.
+based on Travis to automatically publish new versions on the apps registry.
 
 In this tutorial, we assume:
 
@@ -92,7 +92,7 @@ curl -sS --fail -X POST \
     "https://registry.cozy.io/registry/versions"
 ```
 
-## Access to our official registry
+## Access to our official apps registry
 
 In order to access to our official repository, you need a token for a specific
 editor. To do so, concact us directly at the address contact@cozycloud.cc

@@ -45,7 +45,7 @@ var Paths = []string{
 
 // hardcodedRegistry is the default registry used if no configuration is set
 // for registries.
-var hardcodedRegistry, _ = url.Parse("https://registry.cozy.io/")
+var hardcodedRegistry, _ = url.Parse("https://apps-registry.cozy.io/")
 
 // SubdomainType specify how subdomains are structured.
 type SubdomainType int

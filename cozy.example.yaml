@@ -86,7 +86,7 @@ auto_updates:
 
 # Registries used for applications and konnectors
 registries:
-  - https://registry.cozy.io/
+  - https://apps-registry.cozy.io/
 
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level

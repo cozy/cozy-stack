@@ -26,9 +26,7 @@ With some possible additional options
 - `--locale <lang>`
 - `--tz <timezone>`
 - `--email <email>`
-- `--environment <dev/test/production>`
 - `--apps <app1,app2,app3>`
-- `--registry https://registry.cozycloud.cc`
 
 It registers the instance in a global couchdb database `global/instances`
 ```json
@@ -71,9 +69,6 @@ Then it creates the basic settings
 - `email` if an email was provided through the CLI
 - `locale` if a locale was provided through the CLI
 - `tz` if a timezone was provided through the CLI
-- `home_app` slug of the app to use as home, `cozy-home` by default
-- `onboarding_app` slug of the app to use as onboarding, `cozy-onboarding` by default
-- `registry_url` URL of the registry place to fetch manifests of installable applications.
 
 Settings are created as named id in the `$PREFIX/io.cozy.settings` database.
 During onboarding, the fields will be prefilled with these value if they were provided.

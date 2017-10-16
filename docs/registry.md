@@ -1,8 +1,8 @@
-# Registry
+# Apps registry
 
-The registry is a place where developers can submit their applications, both web apps and konnectors. The applications metadata are stored and versioned. It can be used by a cozy to list applications to be installed, and for auto-updating the applications.
+The apps registry is a place where developers can submit their applications, both web apps and konnectors. The applications metadata are stored and versioned. It can be used by a cozy to list applications to be installed, and for auto-updating the applications.
 
-We define the application registry as an API. This should allow us to defer the real implementation of the registry storage and allow different store implementations.
+We define the applications registry as an API. This should allow us to defer the real implementation of the registry storage and allow different store implementations.
 
 The stack itself implement the [querying part of the registry API](#apis-querying-registry), proxying the request to [the registries attached to the instance](#attaching-a-cozy-stack-to-a-registry-or-a-list-of-registries).
 
