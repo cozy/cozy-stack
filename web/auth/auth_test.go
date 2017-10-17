@@ -1144,7 +1144,7 @@ func TestPassphraseReset(t *testing.T) {
 	}
 	defer res2.Body.Close()
 	if assert.Equal(t, "303 See Other", res2.Status) {
-		assert.Equal(t, "https://cozy.example.net/auth/login",
+		assert.Equal(t, "https://cozy.example.net/auth/login?msg=passphrase-reset-requested",
 			res2.Header.Get("Location"))
 	}
 }
@@ -1159,7 +1159,7 @@ func TestPassphraseRenewFormNoToken(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), `{"error":"invalid_token"}`)
+	assert.Contains(t, string(body), `The link to reset the password is truncated or has expired`)
 }
 
 func TestPassphraseRenewFormBadToken(t *testing.T) {
@@ -1172,7 +1172,7 @@ func TestPassphraseRenewFormBadToken(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), `{"error":"invalid_token"}`)
+	assert.Contains(t, string(body), `The link to reset the password is truncated or has expired`)
 }
 
 func TestPassphraseRenewFormWithToken(t *testing.T) {
