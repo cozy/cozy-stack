@@ -101,7 +101,10 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 		publicName = ""
 	}
 
-	if strings.Contains(redirect, "reconnect") {
+	if c.QueryParam("msg") == "passphrase-reset-requested" {
+		title = i.Translate("Login Connect after reset requested title")
+		help = i.Translate("Login Connect after reset requested help")
+	} else if strings.Contains(redirect, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
 	} else if strings.Contains(redirect, i.Domain+"/auth/authorize") {
@@ -685,10 +688,15 @@ func passphraseResetForm(c echo.Context) error {
 }
 
 func passphraseReset(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	i := middlewares.GetInstance(c)
 	// TODO: check user informations to allow the reset of the passphrase since
 	// this route is of course not protected by authentication/permission check.
-	if err := instance.RequestPassphraseReset(); err != nil {
+	if err := i.RequestPassphraseReset(); err != nil {
+		if err == instance.ErrResetAlreadyRequested {
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Error": "Error Reset already requested",
+			})
+		}
 		return err
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
@@ -696,12 +704,14 @@ func passphraseReset(c echo.Context) error {
 	// him out to be able to re-go through the process of logging back-in. It is
 	// more a UX choice than a "security" one.
 	if middlewares.IsLoggedIn(c) {
-		session, err := sessions.GetSession(c, instance)
+		session, err := sessions.GetSession(c, i)
 		if err == nil {
-			c.SetCookie(session.Delete(instance))
+			c.SetCookie(session.Delete(i))
 		}
 	}
-	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+	v := url.Values{}
+	v.Add("msg", "passphrase-reset-requested")
+	return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", v))
 }
 
 func passphraseRenewForm(c echo.Context) error {
@@ -714,16 +724,15 @@ func passphraseRenewForm(c echo.Context) error {
 	// token value checking is also done on the passphraseRenew handler.
 	token, err := hex.DecodeString(c.QueryParam("token"))
 	if err != nil || len(token) == 0 {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid_token",
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid reset token",
 		})
 	}
 	if err = inst.CheckPassphraseRenewToken(token); err != nil {
-		// If the token is missing or outdated we redirect to the passphrase reset
-		// form.
 		if err == instance.ErrMissingToken {
-			return c.Redirect(http.StatusSeeOther,
-				inst.PageURL("/auth/passphrase_reset", nil))
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Error": "Error Invalid reset token",
+			})
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
@@ -745,16 +754,15 @@ func passphraseRenew(c echo.Context) error {
 	pass := []byte(c.FormValue("passphrase"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid_token",
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid reset token",
 		})
 	}
 	if err := inst.PassphraseRenew(pass, token); err != nil {
-		// If the token is missing or outdated we redirect to the passphrase reset
-		// form.
 		if err == instance.ErrMissingToken {
-			return c.Redirect(http.StatusSeeOther,
-				inst.PageURL("/auth/passphrase_reset", nil))
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Error": "Error Invalid reset token",
+			})
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",

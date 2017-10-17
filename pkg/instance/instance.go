@@ -70,6 +70,8 @@ var (
 	ErrInvalidPassphrase = errors.New("Invalid passphrase")
 	// ErrContextNotFound is returned when the instance has no context
 	ErrContextNotFound = errors.New("Context not found")
+	// ErrResetAlreadyRequested is returned when a passphrase reset token is already set and valid
+	ErrResetAlreadyRequested = errors.New("The passphrase reset has already been requested")
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
@@ -818,7 +820,7 @@ func (i *Instance) RequestPassphraseReset() error {
 		time.Now().UTC().Before(i.PassphraseResetTime) {
 		i.Logger().Infof("Passphrase reset ignored: already sent at %s",
 			i.PassphraseResetTime.String())
-		return nil
+		return ErrResetAlreadyRequested
 	}
 	i.PassphraseResetToken = crypto.GenerateRandomBytes(PasswordResetTokenLen)
 	i.PassphraseResetTime = time.Now().UTC().Add(passwordResetValidityDuration)
