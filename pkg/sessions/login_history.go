@@ -9,8 +9,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/notifications"
 	"github.com/mssola/user_agent"
 	maxminddb "github.com/oschwald/maxminddb-golang"
 )
@@ -118,27 +120,27 @@ func StoreNewLoginEntry(i *instance.Instance, req *http.Request) error {
 		CreatedAt: time.Now(),
 	}
 
-	// var results []*LoginEntry
-	// r := &couchdb.FindRequest{
-	// 	UseIndex: "by-os-browser-ip",
-	// 	Selector: mango.And(
-	// 		mango.Equal("os", os),
-	// 		mango.Equal("browser", browser),
-	// 		mango.Equal("ip", ip),
-	// 	),
-	// 	Limit: 1,
-	// }
-	// err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
-	// if err != nil || len(results) == 0 {
-	// 	notif := &notifications.Notification{
-	// 		Reference: "New connexion",
-	// 		Title:     i.Translate("Session New connection title"),
-	// 		Content:   i.Translate("Session New connection content", i.Domain, browser, os, city, country),
-	// 	}
-	// 	if err = notifications.Create(i, "stack", notif); err != nil {
-	// 		return err
-	// 	}
-	// }
+	var results []*LoginEntry
+	r := &couchdb.FindRequest{
+		UseIndex: "by-os-browser-ip",
+		Selector: mango.And(
+			mango.Equal("os", os),
+			mango.Equal("browser", browser),
+			mango.Equal("ip", ip),
+		),
+		Limit: 1,
+	}
+	err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
+	if err != nil || len(results) == 0 {
+		notif := &notifications.Notification{
+			Reference: "New connexion",
+			Title:     i.Translate("Session New connection title"),
+			Content:   i.Translate("Session New connection content", i.Domain, browser, os, city, country),
+		}
+		if err = notifications.Create(i, "stack", notif); err != nil {
+			return err
+		}
+	}
 
 	return couchdb.CreateDoc(i, l)
 }
