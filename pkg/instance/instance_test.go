@@ -288,9 +288,7 @@ func TestRequestPassphraseReset(t *testing.T) {
 	assert.True(t, !in.PassphraseResetTime.Before(time.Now().UTC()))
 
 	err = in.RequestPassphraseReset()
-	if !assert.NoError(t, err) {
-		return
-	}
+	assert.Equal(t, instance.ErrResetAlreadyRequested, err)
 	assert.EqualValues(t, regToken, in.PassphraseResetToken)
 	assert.EqualValues(t, regTime, in.PassphraseResetTime)
 }
