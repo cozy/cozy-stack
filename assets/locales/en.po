@@ -39,6 +39,12 @@ msgstr "Show password"
 msgid "Login Submit"
 msgstr "Log in"
 
+msgid "Login Connect after reset requested title"
+msgstr "Hello again"
+
+msgid "Login Connect after reset requested help"
+msgstr "An email with a link to reset the password has been sent. If you don't see it in your inbox, please check your spam folder."
+
 msgid "Login Reconnect title"
 msgstr "Confirm your password"
 

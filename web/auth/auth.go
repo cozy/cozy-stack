@@ -101,7 +101,10 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 		publicName = ""
 	}
 
-	if strings.Contains(redirect, "reconnect") {
+	if c.QueryParam("msg") == "passphrase-reset-requested" {
+		title = i.Translate("Login Connect after reset requested title")
+		help = i.Translate("Login Connect after reset requested help")
+	} else if strings.Contains(redirect, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
 	} else if strings.Contains(redirect, i.Domain+"/auth/authorize") {
@@ -706,7 +709,9 @@ func passphraseReset(c echo.Context) error {
 			c.SetCookie(session.Delete(i))
 		}
 	}
-	return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", nil))
+	v := url.Values{}
+	v.Add("msg", "passphrase-reset-requested")
+	return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", v))
 }
 
 func passphraseRenewForm(c echo.Context) error {
