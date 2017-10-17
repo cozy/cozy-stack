@@ -714,16 +714,15 @@ func passphraseRenewForm(c echo.Context) error {
 	// token value checking is also done on the passphraseRenew handler.
 	token, err := hex.DecodeString(c.QueryParam("token"))
 	if err != nil || len(token) == 0 {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid_token",
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid reset token",
 		})
 	}
 	if err = inst.CheckPassphraseRenewToken(token); err != nil {
-		// If the token is missing or outdated we redirect to the passphrase reset
-		// form.
 		if err == instance.ErrMissingToken {
-			return c.Redirect(http.StatusSeeOther,
-				inst.PageURL("/auth/passphrase_reset", nil))
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Error": "Error Invalid reset token",
+			})
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
@@ -745,16 +744,15 @@ func passphraseRenew(c echo.Context) error {
 	pass := []byte(c.FormValue("passphrase"))
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid_token",
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid reset token",
 		})
 	}
 	if err := inst.PassphraseRenew(pass, token); err != nil {
-		// If the token is missing or outdated we redirect to the passphrase reset
-		// form.
 		if err == instance.ErrMissingToken {
-			return c.Redirect(http.StatusSeeOther,
-				inst.PageURL("/auth/passphrase_reset", nil))
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Error": "Error Invalid reset token",
+			})
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid_token",
