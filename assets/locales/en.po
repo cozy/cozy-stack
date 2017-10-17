@@ -180,6 +180,9 @@ msgstr "Collection problem for your %s account"
 msgid "Error Invalid reset token"
 msgstr "The link to reset the password is truncated or has expired"
 
+msgid "Error Reset already requested"
+msgstr "The reset of the password has already been requested. Please check your mail inbox, and the spam folder!"
+
 msgid "Permissions Read only"
 msgstr ", for read only"
 

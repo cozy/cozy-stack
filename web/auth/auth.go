@@ -685,10 +685,15 @@ func passphraseResetForm(c echo.Context) error {
 }
 
 func passphraseReset(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	i := middlewares.GetInstance(c)
 	// TODO: check user informations to allow the reset of the passphrase since
 	// this route is of course not protected by authentication/permission check.
-	if err := instance.RequestPassphraseReset(); err != nil {
+	if err := i.RequestPassphraseReset(); err != nil {
+		if err == instance.ErrResetAlreadyRequested {
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Error": "Error Reset already requested",
+			})
+		}
 		return err
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
@@ -696,12 +701,12 @@ func passphraseReset(c echo.Context) error {
 	// him out to be able to re-go through the process of logging back-in. It is
 	// more a UX choice than a "security" one.
 	if middlewares.IsLoggedIn(c) {
-		session, err := sessions.GetSession(c, instance)
+		session, err := sessions.GetSession(c, i)
 		if err == nil {
-			c.SetCookie(session.Delete(instance))
+			c.SetCookie(session.Delete(i))
 		}
 	}
-	return c.Redirect(http.StatusSeeOther, instance.PageURL("/auth/login", nil))
+	return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", nil))
 }
 
 func passphraseRenewForm(c echo.Context) error {
