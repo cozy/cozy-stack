@@ -417,6 +417,28 @@ var oauthTokenInstanceCmd = &cobra.Command{
 	},
 }
 
+var oauthRefreshTokenInstanceCmd = &cobra.Command{
+	Use:   "refresh-token-oauth [domain] [clientid] [scopes]",
+	Short: "Generate a new OAuth refresh token",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 3 {
+			return cmd.Usage()
+		}
+		c := newAdminClient()
+		token, err := c.GetToken(&client.TokenOptions{
+			Domain:   args[0],
+			Subject:  args[1],
+			Audience: "refresh-token",
+			Scope:    args[2:],
+		})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Println(token)
+		return err
+	},
+}
+
 var oauthClientInstanceCmd = &cobra.Command{
 	Use:   "client-oauth [domain] [redirect_uri] [client_name] [software_id]",
 	Short: "Register a new OAuth client",
@@ -515,6 +537,7 @@ func init() {
 	instanceCmdGroup.AddCommand(appTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(cliTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthTokenInstanceCmd)
+	instanceCmdGroup.AddCommand(oauthRefreshTokenInstanceCmd)
 	instanceCmdGroup.AddCommand(oauthClientInstanceCmd)
 	instanceCmdGroup.AddCommand(updateCmd)
 	instanceCmdGroup.AddCommand(exportCmd)
