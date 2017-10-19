@@ -277,7 +277,8 @@ func (at *AccountType) RefreshAccount(a Account) error {
 	}
 
 	if res.StatusCode != 200 {
-		return errors.New("oauth services responded with non-200 res")
+		resBody, _ := ioutil.ReadAll(res.Body)
+		return errors.New("oauth services responded with non-200 res: " + string(resBody))
 	}
 
 	var out tokenEndpointResponse
