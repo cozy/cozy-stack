@@ -215,7 +215,7 @@ var runKonnectorsCmd = &cobra.Command{
 				}
 			}
 		}
-		if folderID == "" || accountID == "" {
+		if accountID == "" {
 			return fmt.Errorf("Could not find account associated with konnector %q", slug)
 		}
 
