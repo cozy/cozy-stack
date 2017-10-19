@@ -13,6 +13,8 @@ from the given source URL.
 cozy-stack apps install [slug] [sourceurl] [flags]
 ```
 
+[Some schemes](../../docs/apps.md#sources) are allowed as `[sourceurl]`.
+
 ### Examples
 
 ```
