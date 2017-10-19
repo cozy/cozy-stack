@@ -20,7 +20,7 @@ cozy-stack apps [command] [flags]
 
 ```
       --all-domains     work on all domains iterativelly
-      --domain string   specify the domain name of the instance
+      --domain string   specify the domain name of the instance (default "cozy.tools:8080")
   -h, --help            help for apps
 ```
 

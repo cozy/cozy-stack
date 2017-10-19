@@ -1,20 +1,20 @@
-## cozy-stack fixer triggers
+## cozy-stack fixer redis
 
-Remove orphaned triggers from an instance
+Rebuild scheduling data strucutures in redis
 
 ### Synopsis
 
 
-Remove orphaned triggers from an instance
+Rebuild scheduling data strucutures in redis
 
 ```
-cozy-stack fixer triggers [domain] [flags]
+cozy-stack fixer redis [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for triggers
+  -h, --help   help for redis
 ```
 
 ### Options inherited from parent commands

@@ -19,9 +19,10 @@ cozy-stack konnectors [command] [flags]
 ### Options
 
 ```
-      --all-domains     work on all domains iterativelly
-      --domain string   specify the domain name of the instance
-  -h, --help            help for konnectors
+      --all-domains         work on all domains iterativelly
+      --domain string       specify the domain name of the instance (default "cozy.tools:8080")
+  -h, --help                help for konnectors
+      --parameters string   override the parameters of the installed konnector
 ```
 
 ### Options inherited from parent commands
@@ -40,6 +41,7 @@ cozy-stack konnectors [command] [flags]
 * [cozy-stack konnectors install](cozy-stack_konnectors_install.md)	 - Install a konnector with the specified slug name
 from the given source URL.
 * [cozy-stack konnectors ls](cozy-stack_konnectors_ls.md)	 - List the installed konnectors.
+* [cozy-stack konnectors run](cozy-stack_konnectors_run.md)	 - Run a konnector.
 * [cozy-stack konnectors show](cozy-stack_konnectors_show.md)	 - Show the application attributes
 * [cozy-stack konnectors uninstall](cozy-stack_konnectors_uninstall.md)	 - Uninstall the konnector with the specified slug name.
 * [cozy-stack konnectors update](cozy-stack_konnectors_update.md)	 - Update the konnector with the specified slug name.

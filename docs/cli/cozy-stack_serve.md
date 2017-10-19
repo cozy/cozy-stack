@@ -47,6 +47,7 @@ example), you can use the --appdir flag like this:
       --doctypes string                path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string           URL for the download secret storage, redis or in-memory
       --fs-url string                  filesystem url (default "file:///storage")
+      --geodb string                   define the location of the database for IP -> City lookups (default ".")
   -h, --help                           help for serve
       --hooks string                   define the directory used for hook scripts (default ".")
       --jobs-url string                URL for the jobs system synchronization, redis or in-memory

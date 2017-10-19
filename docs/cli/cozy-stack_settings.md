@@ -24,7 +24,7 @@ $ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John
 ### Options
 
 ```
-      --domain string   specify the domain name of the instance
+      --domain string   specify the domain name of the instance (default "cozy.tools:8080")
   -h, --help            help for settings
 ```
 
