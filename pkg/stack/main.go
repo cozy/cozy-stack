@@ -43,12 +43,14 @@ security features. Please do not use this binary as your production server.
 	}
 
 	// Check that we can properly reach CouchDB.
+	u := config.CouchURL()
+	u.User = config.GetConfig().CouchDB.Auth
 	attempts := 8
 	attemptsSpacing := 1 * time.Second
 	for i := 0; i < attempts; i++ {
 		var db checkup.Result
 		db, err = checkup.HTTPChecker{
-			URL:         config.CouchURL().String(),
+			URL:         u.String(),
 			MustContain: `"version":"2`,
 		}.Check()
 		if err != nil {
