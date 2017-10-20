@@ -27,6 +27,8 @@ func createToken(c echo.Context) error {
 		audience = permissions.KonnectorAudience
 	case "access-token":
 		audience = permissions.AccessTokenAudience
+	case "refresh-token":
+		audience = permissions.RefreshTokenAudience
 	case "cli":
 		audience = permissions.CLIAudience
 	default:

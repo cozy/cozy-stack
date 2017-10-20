@@ -48,6 +48,7 @@ cozy-stack instances [command] [flags]
 * [cozy-stack instances fsck](cozy-stack_instances_fsck.md)	 - Check and repair a vfs
 * [cozy-stack instances import](cozy-stack_instances_import.md)	 - Import a tarball
 * [cozy-stack instances ls](cozy-stack_instances_ls.md)	 - List instances
+* [cozy-stack instances refresh-token-oauth](cozy-stack_instances_refresh-token-oauth.md)	 - Generate a new OAuth refresh token
 * [cozy-stack instances set-disk-quota](cozy-stack_instances_set-disk-quota.md)	 - Change the disk-quota of the instance
 * [cozy-stack instances show](cozy-stack_instances_show.md)	 - Show the instance of the specified domain
 * [cozy-stack instances token-app](cozy-stack_instances_token-app.md)	 - Generate a new application token
