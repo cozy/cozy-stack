@@ -118,6 +118,8 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 			var dir *vfs.DirDoc
 			dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
 			if err != nil {
+				log := logger.WithDomain(i.Domain)
+				log.Warnf("Can't create the default folder %s for konnector %s: %s", defaultFolderPath, slug, err)
 				return
 			}
 			msg["folder_to_save"] = dir.ID()
