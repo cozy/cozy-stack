@@ -104,17 +104,17 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	{
 		fs := i.VFS()
 		folderToSave, _ := msg["folder_to_save"].(string)
-		defaultFolderPath, _ := msg["default_folder_path"].(string)
 		if folderToSave != "" {
-			if defaultFolderPath == "" {
-				name := i.Translate("Tree Administrative")
-				defaultFolderPath = fmt.Sprintf("/%s/%s", name, slug)
-			}
 			if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
 				folderToSave = ""
 			}
 		}
 		if folderToSave == "" {
+			defaultFolderPath, _ := msg["default_folder_path"].(string)
+			if defaultFolderPath == "" {
+				name := i.Translate("Tree Administrative")
+				defaultFolderPath = fmt.Sprintf("/%s/%s", name, slug)
+			}
 			var dir *vfs.DirDoc
 			dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
 			if err != nil {
