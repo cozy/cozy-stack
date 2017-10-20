@@ -135,7 +135,7 @@ func StoreNewLoginEntry(i *instance.Instance, req *http.Request) error {
 		notif := &notifications.Notification{
 			Reference: "New connexion",
 			Title:     i.Translate("Session New connection title"),
-			Content:   i.Translate("Session New connection content", i.Domain, browser, os, city, country),
+			Content:   i.Translate("Session New connection content", i.Domain, city, country, ip, browser, os),
 		}
 		if err = notifications.Create(i, "stack", notif); err != nil {
 			return err

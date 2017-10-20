@@ -61,10 +61,15 @@ msgid "Login Connect from oauth help"
 msgstr "Hello! Once you've confirmed your password, you'll access the permission board where you can allow the application to access your data or not. It's up to you !"
 
 msgid "Session New connection title"
-msgstr "New connection to your cozy"
+msgstr "We have detected a new connection to your Cozy, is it you?"
 
 msgid "Session New connection content"
-msgstr "We notice that you logged into your cozy %s.\nBrowser: %s (%s)\nLocation: %s, %s"
+msgstr ""
+"We have noticed a new connection to your Cozy at %s from %s, %s (%s) with the browser %s under %s.\n\n"
+"If it's you:\n"
+"We are sorry to have worried you for nothing but it's better to be safe.\n\n"
+"If it's not you:\n"
+"Don't panic! Your account may have been compromised. We have a drastic solution to take back the control on your home: start by setting a new password."
 
 msgid "Onboarding Check Mails"
 msgstr "Your Cozy has not been yet activated. Check your email and click on the activation link to proceed to the installation of your Cozy."
