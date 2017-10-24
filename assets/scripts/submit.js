@@ -53,6 +53,7 @@
           }
         } else {
           showError(body.error)
+          passphraseInput.select()
         }
       }).catch(showError)
     }).catch(showError)
