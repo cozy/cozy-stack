@@ -125,15 +125,23 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 		return err
 	}
 
-	name := vcard.Name()
+	fullname := "John Doe"
 	contactname := ContactName{
-		FamilyName:     name.FamilyName,
-		GivenName:      name.GivenName,
-		AdditionalName: name.AdditionalName,
-		NamePrefix:     name.HonorificPrefix,
-		NameSuffix:     name.HonorificSuffix,
+		GivenName:  "John",
+		FamilyName: "Doe",
 	}
-	fullname := name.Value
+
+	name := vcard.Name()
+	if name != nil {
+		contactname = ContactName{
+			FamilyName:     name.FamilyName,
+			GivenName:      name.GivenName,
+			AdditionalName: name.AdditionalName,
+			NamePrefix:     name.HonorificPrefix,
+			NameSuffix:     name.HonorificSuffix,
+		}
+		fullname = name.Value
+	}
 	if names := vcard.FormattedNames(); len(names) > 0 {
 		fullname = names[0].Value
 	}
