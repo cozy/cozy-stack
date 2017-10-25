@@ -150,7 +150,7 @@ func GetJobs(t Trigger) ([]*jobs.Job, error) {
 	return jobs, nil
 }
 
-// GetLastJob returns the last
+// GetLastJob returns the last completed job lauched by the given trigger.
 func GetLastJob(t Trigger) (*jobs.Job, error) {
 	triggerInfos := t.Infos()
 	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
@@ -178,7 +178,8 @@ func GetLastJob(t Trigger) (*jobs.Job, error) {
 	return j, nil
 }
 
-// GetLastJobs get the last job for all workers with the given worker type.
+// GetLastJobs get the last completed job for all workers with the given worker
+// type.
 func GetLastJobs(domain, workerType string) ([]*jobs.Job, error) {
 	db := couchdb.SimpleDatabasePrefix(domain)
 	req := &couchdb.ViewRequest{

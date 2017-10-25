@@ -358,11 +358,10 @@ func cleanJobs(c echo.Context) error {
 		if err := json.Unmarshal(data, &job); err != nil {
 			return err
 		}
-		if job.State != jobs.Running {
-			return nil
-		}
-		if job.StartedAt.Add(1 * time.Hour).Before(now) {
-			ups = append(ups, job)
+		if job.State == jobs.Running || job.State == jobs.Queued {
+			if job.StartedAt.Add(1 * time.Hour).Before(now) {
+				ups = append(ups, job)
+			}
 		}
 		return nil
 	})
