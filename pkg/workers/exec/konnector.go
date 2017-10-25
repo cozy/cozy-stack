@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
-	"time"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -34,24 +34,6 @@ type konnectorWorker struct {
 	man      *apps.KonnManifest
 	messages []konnectorMsg
 }
-
-// konnectorResult stores the result of a konnector execution.
-type konnectorResult struct {
-	DocID       string    `json:"_id,omitempty"`
-	DocRev      string    `json:"_rev,omitempty"`
-	CreatedAt   time.Time `json:"last_execution"`
-	LastSuccess time.Time `json:"last_success"`
-	Account     string    `json:"account"`
-	State       string    `json:"state"`
-	Error       string    `json:"error"`
-}
-
-func (r *konnectorResult) ID() string         { return r.DocID }
-func (r *konnectorResult) Rev() string        { return r.DocRev }
-func (r *konnectorResult) DocType() string    { return consts.KonnectorResults }
-func (r *konnectorResult) Clone() couchdb.Doc { c := *r; return &c }
-func (r *konnectorResult) SetID(id string)    { r.DocID = id }
-func (r *konnectorResult) SetRev(rev string)  { r.DocRev = rev }
 
 const (
 	konnectorMsgTypeDebug    = "debug"
@@ -111,7 +93,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 			defaultFolderPath, _ := msg["default_folder_path"].(string)
 			if defaultFolderPath == "" {
 				name := i.Translate("Tree Administrative")
-				defaultFolderPath = fmt.Sprintf("/%s/%s", name, slug)
+				defaultFolderPath = fmt.Sprintf("/%s/%s", name, strings.Title(slug))
 			}
 			var dir *vfs.DirDoc
 			dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
@@ -236,89 +218,59 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
-	if w.msg == nil {
-		return nil
-	}
+	return nil
+	// triggerID, ok := ctx.TriggerID()
+	// if !ok {
+	// 	return nil
+	// }
 
-	accountID, _ := w.msg["account"].(string)
-	domain := ctx.Domain()
-
-	inst, err := instance.Get(domain)
-	if err != nil {
-		return err
-	}
-
-	lastResult := &konnectorResult{}
-	err = couchdb.GetDoc(inst, consts.KonnectorResults, w.slug, lastResult)
-	if err != nil {
-		if !couchdb.IsNotFoundError(err) {
-			return err
-		}
-		lastResult = nil
-	}
-
-	var state, errstr string
-	var lastSuccess time.Time
-	if errjob != nil {
-		if lastResult != nil {
-			lastSuccess = lastResult.LastSuccess
-		}
-		errstr = errjob.Error()
-		state = jobs.Errored
-	} else {
-		lastSuccess = time.Now()
-		state = jobs.Done
-	}
-
-	result := &konnectorResult{
-		DocID:       w.slug,
-		Account:     accountID,
-		CreatedAt:   time.Now(),
-		LastSuccess: lastSuccess,
-		State:       state,
-		Error:       errstr,
-	}
-	if lastResult == nil {
-		err = couchdb.CreateNamedDocWithDB(inst, result)
-	} else {
-		result.SetRev(lastResult.Rev())
-		err = couchdb.UpdateDoc(inst, result)
-	}
-
+	// sched := globals.GetScheduler()
+	// t, err := sched.Get(ctx.Domain(), triggerID)
 	// if err != nil {
 	// 	return err
 	// }
 
+	// lastJob, err := scheduler.GetLastJob(t)
 	// // if it is the first try we do not take into account an error, we bail.
-	// if lastResult == nil {
+	// if err == scheduler.ErrNotFoundTrigger {
 	// 	return nil
 	// }
+	// if err != nil {
+	// 	return err
+	// }
+
 	// // if the job has not errored, or the last one was already errored, we bail.
-	// if state != jobs.Errored || lastResult.State == jobs.Errored {
+	// if errjob == nil || lastJob.State == jobs.Errored {
 	// 	return nil
 	// }
 
-	// konnectorURL := inst.SubDomain(consts.CollectSlug)
+	// i, err := instance.Get(ctx.Domain())
+	// if err != nil {
+	// 	return err
+	// }
+
+	// konnectorURL := i.SubDomain(consts.CollectSlug)
 	// konnectorURL.Fragment = "/category/all/" + w.slug
 	// mail := mails.Options{
 	// 	Mode:         mails.ModeNoReply,
-	// 	Subject:      inst.Translate("Error Konnector execution", domain),
-	// 	TemplateName: "konnector_error_" + inst.Locale,
+	// 	Subject:      i.Translate("Error Konnector execution", ctx.Domain()),
+	// 	TemplateName: "konnector_error_" + i.Locale,
 	// 	TemplateValues: map[string]string{
 	// 		"KonnectorName": w.slug,
 	// 		"KonnectorPage": konnectorURL.String(),
 	// 	},
 	// }
+
 	// msg, err := jobs.NewMessage(&mail)
 	// if err != nil {
 	// 	return err
 	// }
-	// log := logger.WithDomain(domain)
-	// log.Info("Konnector has failed definitively, should send mail.", mail)
+
+	// ctx.Logger().Info("Konnector has failed definitively, should send mail.", mail)
 	// _, err = globals.GetBroker().PushJob(&jobs.JobRequest{
-	// 	Domain:     domain,
+	// 	Domain:     ctx.Domain(),
 	// 	WorkerType: "sendmail",
 	// 	Message:    msg,
 	// })
-	return err
+	// return err
 }

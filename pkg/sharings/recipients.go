@@ -117,11 +117,11 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *Recipient) error {
 		}, &res)
 		if err == nil && len(res.Rows) > 0 {
 			if len(doc.Cozy) == 0 {
-				return json.Unmarshal(*res.Rows[0].Doc, &doc)
+				return json.Unmarshal(res.Rows[0].Doc, &doc)
 			}
 			cozy := doc.Cozy[0]
 			doc.Cozy = nil
-			if err = json.Unmarshal(*res.Rows[0].Doc, &doc); err != nil {
+			if err = json.Unmarshal(res.Rows[0].Doc, &doc); err != nil {
 				return err
 			}
 			for _, c := range doc.Cozy {
@@ -142,11 +142,11 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *Recipient) error {
 		}, &res)
 		if err == nil && len(res.Rows) > 0 {
 			if len(doc.Email) == 0 {
-				return json.Unmarshal(*res.Rows[0].Doc, &doc)
+				return json.Unmarshal(res.Rows[0].Doc, &doc)
 			}
 			email := doc.Email[0]
 			doc.Email = nil
-			if err = json.Unmarshal(*res.Rows[0].Doc, &doc); err != nil {
+			if err = json.Unmarshal(res.Rows[0].Doc, &doc); err != nil {
 				return err
 			}
 			for _, e := range doc.Email {

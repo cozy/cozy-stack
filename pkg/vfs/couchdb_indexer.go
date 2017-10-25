@@ -251,7 +251,7 @@ func (c *couchdbIndexer) FileByPath(name string) (*FileDoc, error) {
 	}
 
 	var fdoc FileDoc
-	err = json.Unmarshal(*res.Rows[0].Doc, &fdoc)
+	err = json.Unmarshal(res.Rows[0].Doc, &fdoc)
 	return &fdoc, err
 }
 
@@ -321,7 +321,7 @@ func (c *couchdbIndexer) DirBatch(doc *DirDoc, cursor couchdb.Cursor) ([]DirOrFi
 	docs := make([]DirOrFileDoc, len(res.Rows))
 	for i, row := range res.Rows {
 		var doc DirOrFileDoc
-		err := json.Unmarshal(*row.Doc, &doc)
+		err := json.Unmarshal(row.Doc, &doc)
 		if err != nil {
 			return nil, err
 		}

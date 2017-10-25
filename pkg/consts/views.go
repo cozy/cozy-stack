@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 11
+const IndexViewsVersion int = 12
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -29,6 +29,7 @@ var Indexes = []*mango.Index{
 
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(Jobs, "by-worker-and-state", []string{"worker", "state"}),
+	mango.IndexOnFields(Jobs, "by-trigger-id", []string{"trigger_id"}),
 
 	// Used to lookup oauth clients by name
 	mango.IndexOnFields(OAuthClients, "by-client-name", []string{"client_name"}),
@@ -167,6 +168,21 @@ function(doc) {
 `,
 }
 
+// TriggerLastJob indexes the last job launched by a specific trigger.
+var TriggerLastJob = &couchdb.View{
+	Name:    "triggerLastJob",
+	Doctype: Jobs,
+	Map: `
+function(doc) {
+  if (doc.trigger_id) {
+    var state = doc.state;
+    if (state == "done" || state == "errored")) {
+      emit([doc.worker, doc.trigger_id], state)
+    }
+  }
+}`,
+}
+
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
@@ -177,6 +193,7 @@ var Views = []*couchdb.View{
 	PermissionsShareByDocView,
 	SharedWithPermissionsView,
 	SharingRecipientView,
+	TriggerLastJob,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.

@@ -897,10 +897,10 @@ type ViewRequest struct {
 
 // ViewResponseRow is a row in a ViewResponse
 type ViewResponseRow struct {
-	ID    string           `json:"id"`
-	Key   interface{}      `json:"key"`
-	Value interface{}      `json:"value"`
-	Doc   *json.RawMessage `json:"doc"`
+	ID    string          `json:"id"`
+	Key   interface{}     `json:"key"`
+	Value interface{}     `json:"value"`
+	Doc   json.RawMessage `json:"doc"`
 }
 
 // ViewResponse is the response we receive when executing a view

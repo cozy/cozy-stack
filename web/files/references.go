@@ -123,7 +123,7 @@ func ListReferencesHandler(c echo.Context) error {
 		}
 
 		if includeDocs {
-			docs[i], err = rawMessageToObject(instance, *row.Doc)
+			docs[i], err = rawMessageToObject(instance, row.Doc)
 			if err != nil {
 				return err
 			}

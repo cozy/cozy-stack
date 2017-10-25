@@ -63,6 +63,7 @@ type (
 		JobRev     string      `json:"_rev,omitempty"`
 		Domain     string      `json:"domain"`
 		WorkerType string      `json:"worker"`
+		TriggerID  string      `json:"trigger_id"`
 		Message    Message     `json:"message"`
 		Event      Event       `json:"event"`
 		Debounced  bool        `json:"debounced"`
@@ -77,6 +78,7 @@ type (
 	JobRequest struct {
 		Domain     string
 		WorkerType string
+		TriggerID  string
 		Message    Message
 		Event      Event
 		Debounced  bool
@@ -232,6 +234,7 @@ func NewJob(req *JobRequest) *Job {
 	return &Job{
 		Domain:     req.Domain,
 		WorkerType: req.WorkerType,
+		TriggerID:  req.TriggerID,
 		Message:    req.Message,
 		Debounced:  req.Debounced,
 		Event:      req.Event,
@@ -270,7 +273,10 @@ func GetQueuedJobs(domain, workerType string) ([]*Job, error) {
 		Limit: 200,
 	}
 	err := couchdb.FindDocs(db, consts.Jobs, req, &results)
-	return results, err
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 // NewMessage returns a json encoded data
