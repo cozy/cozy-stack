@@ -9,7 +9,7 @@ go:
   - 1.9.x
 
 before_install:
-  - docker run -d -p 5984:5984 --net=host --name couch klaemo/couchdb:2.0.0
+  - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.1
   - nvm install 6
 
 before_script:
