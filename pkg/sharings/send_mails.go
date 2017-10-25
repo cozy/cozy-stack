@@ -91,7 +91,11 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 			} else {
 				rs.Status = consts.SharingStatusPending
 			}
-			return couchdb.UpdateDoc(instance, s)
+			err = couchdb.UpdateDoc(instance, s)
+			if err != nil {
+				errorOccurred = logError(instance, err)
+			}
+			continue
 		}
 		// Send mail based on the recipient status
 		if rs.Status == consts.SharingStatusMailNotSent {
