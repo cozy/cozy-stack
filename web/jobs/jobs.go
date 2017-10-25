@@ -348,7 +348,7 @@ func getJob(c echo.Context) error {
 
 func cleanJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Jobs); err != nil {
+	if err := permissions.AllowWholeType(c, permissions.POST, consts.Jobs); err != nil {
 		return err
 	}
 	var ups []*jobs.Job
