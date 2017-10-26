@@ -635,7 +635,7 @@ Query parameters:
 #### Request
 
 ```http
-GET /jobs/triggers?Worker=konnector HTTP/1.1
+GET /jobs/triggers/jobs?Worker=konnector HTTP/1.1
 Accept: application/vnd.api+json
 ```
 

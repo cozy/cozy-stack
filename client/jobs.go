@@ -30,6 +30,7 @@ type Job struct {
 	Rev   string `json:"rev"`
 	Attrs struct {
 		Domain    string          `json:"domain"`
+		TriggerID string          `json:"trigger_id"`
 		Message   json.RawMessage `json:"message"`
 		Debounced bool            `json:"debounced"`
 		Event     struct {
