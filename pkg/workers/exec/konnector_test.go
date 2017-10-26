@@ -31,7 +31,7 @@ func TestUnknownDomain(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     "",
+		Domain:     "instance.does.not.exist",
 		Message:    msg,
 		WorkerType: "konnector",
 	})

@@ -279,11 +279,10 @@ func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.QueryParam("Worker")
 
-	if workerType == "" {
-		if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+		if workerType == "" {
 			return err
 		}
-	} else {
 		o := &scheduler.TriggerInfos{WorkerType: workerType}
 		if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
 			return err
@@ -310,11 +309,10 @@ func getTriggersLastJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.QueryParam("Worker")
 
-	if workerType == "" {
-		if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+		if workerType == "" {
 			return err
 		}
-	} else {
 		o := &scheduler.TriggerInfos{WorkerType: workerType}
 		if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
 			return err
