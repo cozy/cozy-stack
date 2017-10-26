@@ -130,7 +130,7 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPFontSrc:    []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcParent},
 			CSPImgSrc:     []middlewares.CSPSource{middlewares.CSPSrcSelf, middlewares.CSPSrcData, middlewares.CSPSrcBlob, middlewares.CSPSrcParent, middlewares.CSPSrcWhitelist},
 			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
-			XFrameOptions: middlewares.XFrameDeny,
+			XFrameOptions: middlewares.XFrameSameOrigin,
 		})
 		mws = append([]echo.MiddlewareFunc{secure}, mws...)
 	}
