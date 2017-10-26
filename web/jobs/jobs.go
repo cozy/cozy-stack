@@ -3,6 +3,7 @@ package jobs
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -201,6 +202,16 @@ func getTrigger(c echo.Context) error {
 func getTriggerJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
+	var err error
+
+	var limit int
+	if queryLimit := c.QueryParam("Limit"); queryLimit != "" {
+		limit, err = strconv.Atoi(queryLimit)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err)
+		}
+	}
+
 	sched := globals.GetScheduler()
 	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
 	if err != nil {
@@ -210,7 +221,7 @@ func getTriggerJobs(c echo.Context) error {
 		return err
 	}
 
-	js, err := scheduler.GetJobs(t)
+	js, err := scheduler.GetJobs(t, limit)
 	if err != nil {
 		return wrapJobsError(err)
 	}
@@ -221,26 +232,6 @@ func getTriggerJobs(c echo.Context) error {
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
-}
-
-func getTriggerLastJob(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	sched := globals.GetScheduler()
-	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
-	if err != nil {
-		return wrapJobsError(err)
-	}
-	if err = permissions.Allow(c, permissions.GET, t); err != nil {
-		return err
-	}
-
-	j, err := scheduler.GetLastJob(t)
-	if err != nil {
-		return wrapJobsError(err)
-	}
-
-	return jsonapi.Data(c, http.StatusOK, &apiJob{j}, nil)
 }
 
 func launchTrigger(c echo.Context) error {
@@ -390,7 +381,6 @@ func Routes(router *echo.Group) {
 	router.GET("/triggers/jobs", getTriggersLastJob)
 	router.GET("/triggers/:trigger-id", getTrigger)
 	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
-	router.GET("/triggers/:trigger-id/jobs/last", getTriggerLastJob)
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 

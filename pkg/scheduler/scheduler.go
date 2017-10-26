@@ -134,14 +134,17 @@ func (t *TriggerInfos) Valid(key, value string) bool {
 }
 
 // GetJobs returns the jobs launched by the given trigger.
-func GetJobs(t Trigger) ([]*jobs.Job, error) {
+func GetJobs(t Trigger, limit int) ([]*jobs.Job, error) {
 	triggerInfos := t.Infos()
 	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
 	var jobs []*jobs.Job
+	if limit <= 0 || limit > 50 {
+		limit = 50
+	}
 	req := &couchdb.FindRequest{
 		UseIndex: "by-trigger-id",
 		Selector: mango.Equal("trigger_id", triggerInfos.ID()),
-		Limit:    50,
+		Limit:    limit,
 	}
 	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
 	if err != nil {

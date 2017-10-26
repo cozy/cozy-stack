@@ -503,10 +503,14 @@ To use this endpoint, an application needs a permission on the type
 
 Get the jobs launched by the trigger with the specified ID.
 
+Query parameters:
+
+  - `Limit`: to specify the number of jobs to get out
+
 #### Request
 
 ```http
-GET /jobs/triggers/123123/jobs HTTP/1.1
+GET /jobs/triggers/123123/jobs?Limit=1 HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
