@@ -176,11 +176,12 @@ var TriggerLastJob = &couchdb.View{
 function(doc) {
   if (doc.trigger_id) {
     var state = doc.state;
-    if (state == "done" || state == "errored")) {
-      emit([doc.worker, doc.trigger_id], state)
+    if (state == "done" || state == "errored") {
+      emit([doc.worker, doc.trigger_id], state);
     }
   }
-}`,
+}
+`,
 }
 
 // Views is the list of all views that are created by the stack.
