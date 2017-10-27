@@ -23,16 +23,13 @@ import (
 	"github.com/spf13/afero"
 )
 
-type konnectorMsg struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-}
-
 type konnectorWorker struct {
-	slug     string
-	msg      map[string]interface{}
-	man      *apps.KonnManifest
-	messages []konnectorMsg
+	slug string
+	msg  map[string]interface{}
+	man  *apps.KonnManifest
+
+	err     error
+	lastErr error
 }
 
 // konnectorResult stores the result of a konnector execution.
@@ -189,7 +186,10 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 }
 
 func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
-	var msg konnectorMsg
+	var msg struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	}
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
@@ -199,11 +199,17 @@ func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instanc
 		ctx.Logger().Debug(msg.Message)
 	case konnectorMsgTypeWarning:
 		ctx.Logger().Warn(msg.Message)
-	case konnectorMsgTypeError, konnectorMsgTypeCritical:
+	case konnectorMsgTypeError:
+		// For retro-compatibility, we still use "error" logs as returned error,
+		// only in the case that no "critical" message are actually returned. In
+		// such case, We use the last "error" log as the returned error.
+		w.lastErr = errors.New(msg.Message)
+		ctx.Logger().Error(msg.Message)
+	case konnectorMsgTypeCritical:
+		w.err = errors.New(msg.Message)
 		ctx.Logger().Error(msg.Message)
 	}
 
-	w.messages = append(w.messages, msg)
 	realtime.GetHub().Publish(&realtime.Event{
 		Verb: realtime.EventCreate,
 		Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
@@ -216,22 +222,12 @@ func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instanc
 }
 
 func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
-	// For retro-compatibility, we still use "error" logs as returned error, only
-	// in the case that no "critical" message are actually returned. In such
-	// case, We use the last "error" log as the returned error.
-	var lastErrorMessage error
-	for _, msg := range w.messages {
-		if msg.Type == konnectorMsgTypeCritical {
-			return errors.New(msg.Message)
-		}
-		if msg.Type == konnectorMsgTypeError {
-			lastErrorMessage = errors.New(msg.Message)
-		}
+	if w.err != nil {
+		return w.err
 	}
-	if lastErrorMessage != nil {
-		return lastErrorMessage
+	if w.lastErr != nil {
+		return w.lastErr
 	}
-
 	return err
 }
 
