@@ -391,7 +391,12 @@ func TestSendMailNoReply(t *testing.T) {
 			},
 		},
 	})
-	err = SendMail(jobs.NewWorkerContext("noreply.triggers", "123", msg))
+	j := jobs.NewJob(&jobs.JobRequest{
+		Domain:     "noreply.triggers",
+		Message:    msg,
+		WorkerType: "sendmail",
+	})
+	err = SendMail(jobs.NewWorkerContext("123", j))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}
@@ -432,7 +437,12 @@ func TestSendMailFrom(t *testing.T) {
 			},
 		},
 	})
-	err = SendMail(jobs.NewWorkerContext("from.triggers", "123", msg))
+	j := jobs.NewJob(&jobs.JobRequest{
+		Domain:     "from.triggers",
+		Message:    msg,
+		WorkerType: "sendmail",
+	})
+	err = SendMail(jobs.NewWorkerContext("123", j))
 	if assert.Error(t, err) {
 		assert.Equal(t, "yes", err.Error())
 	}

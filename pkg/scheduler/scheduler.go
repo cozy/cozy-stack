@@ -2,9 +2,11 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -98,6 +100,7 @@ func (t *TriggerInfos) JobRequest() *jobs.JobRequest {
 	return &jobs.JobRequest{
 		Domain:     t.Domain,
 		WorkerType: t.WorkerType,
+		TriggerID:  t.ID(),
 		Message:    t.Message,
 		Options:    t.Options,
 	}
@@ -106,11 +109,11 @@ func (t *TriggerInfos) JobRequest() *jobs.JobRequest {
 // JobRequestWithEvent returns a job request associated with the scheduler
 // informations associated to the specified realtime event.
 func (t *TriggerInfos) JobRequestWithEvent(event *realtime.Event) (*jobs.JobRequest, error) {
-	req := t.JobRequest()
 	evt, err := jobs.NewEvent(event)
 	if err != nil {
 		return nil, err
 	}
+	req := t.JobRequest()
 	req.Event = evt
 	return req, nil
 }
@@ -120,5 +123,90 @@ func (t *TriggerInfos) SetID(id string) { t.TID = id }
 
 // SetRev implements the couchdb.Doc interface
 func (t *TriggerInfos) SetRev(rev string) { t.TRev = rev }
+
+// Valid implements the permissions.Validable interface
+func (t *TriggerInfos) Valid(key, value string) bool {
+	switch key {
+	case "worker":
+		return t.WorkerType == value
+	}
+	return false
+}
+
+// GetJobs returns the jobs launched by the given trigger.
+func GetJobs(t Trigger, limit int) ([]*jobs.Job, error) {
+	triggerInfos := t.Infos()
+	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
+	var jobs []*jobs.Job
+	if limit <= 0 || limit > 50 {
+		limit = 50
+	}
+	req := &couchdb.FindRequest{
+		UseIndex: "by-trigger-id",
+		Selector: mango.Equal("trigger_id", triggerInfos.ID()),
+		Limit:    limit,
+	}
+	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
+	if err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
+// GetLastJob returns the last completed job lauched by the given trigger.
+func GetLastJob(t Trigger) (*jobs.Job, error) {
+	triggerInfos := t.Infos()
+	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
+	req := &couchdb.ViewRequest{
+		Key:         []string{triggerInfos.Type, triggerInfos.ID()},
+		IncludeDocs: true,
+		Reduce:      false,
+		Limit:       1,
+	}
+	res := &couchdb.ViewResponse{}
+	err := couchdb.ExecView(db, consts.TriggerLastJob, req, res)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res.Rows) != 1 {
+		return nil, ErrNotFoundTrigger
+	}
+
+	var j *jobs.Job
+	if err := json.Unmarshal(res.Rows[0].Doc, &j); err != nil {
+		return nil, err
+	}
+
+	return j, nil
+}
+
+// GetLastJobs get the last completed job for all workers with the given worker
+// type.
+func GetLastJobs(domain, workerType string) ([]*jobs.Job, error) {
+	db := couchdb.SimpleDatabasePrefix(domain)
+	req := &couchdb.ViewRequest{
+		StartKey:    []string{workerType},
+		EndKey:      []string{workerType, couchdb.MaxString},
+		IncludeDocs: true,
+		Reduce:      false,
+	}
+	res := &couchdb.ViewResponse{}
+	err := couchdb.ExecView(db, consts.TriggerLastJob, req, res)
+	if err != nil {
+		return nil, err
+	}
+
+	js := make([]*jobs.Job, len(res.Rows))
+	for i, v := range res.Rows {
+		var j *jobs.Job
+		if err := json.Unmarshal(v.Doc, &j); err != nil {
+			return nil, err
+		}
+		js[i] = j
+	}
+
+	return js, nil
+}
 
 var _ couchdb.Doc = &TriggerInfos{}

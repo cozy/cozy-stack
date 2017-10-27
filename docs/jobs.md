@@ -499,6 +499,38 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `GET`.
 
+### GET /jobs/triggers/:trigger-id/jobs
+
+Get the jobs launched by the trigger with the specified ID.
+
+Query parameters:
+
+  - `Limit`: to specify the number of jobs to get out
+
+#### Request
+
+```http
+GET /jobs/triggers/123123/jobs?Limit=1 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.jobs",
+      "id": "123123",
+      "attributes": {},
+      "links": {
+        "self": "/jobs/123123"
+      }
+    }
+  ]
+}
+```
+
 ### POST /jobs/triggers/:trigger-id/launch
 
 Launch a trigger manually given its ID and return the created job.
@@ -538,14 +570,34 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `POST`.
 
-### GET /jobs/triggers
+### DELETE /jobs/triggers/:trigger-id
 
-Get the list of triggers.
+Delete a trigger given its ID.
 
 #### Request
 
 ```http
-GET /jobs/triggers HTTP/1.1
+DELETE /jobs/triggers/123123 HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `DELETE`.
+
+### GET /jobs/triggers
+
+Get the list of triggers.
+
+Query parameters:
+
+  - `Worker`: to filter only triggers associated with a specific worker.
+
+#### Request
+
+```http
+GET /jobs/triggers?Worker=konnector HTTP/1.1
 Accept: application/vnd.api+json
 ```
 
@@ -569,24 +621,46 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.triggers` for the verb `GET`.
+`io.cozy.triggers` for the verb `GET`. When used on a specific worker, the
+permission can be specified on the `worker` field.
 
+### GET /jobs/triggers/jobs
 
-### DELETE /jobs/triggers/:trigger-id
+Get the list of the last job launched by all triggers.
 
-Delete a trigger given its ID.
+Query parameters:
+
+  - `Worker`: to filter only jobs from triggers associated with a specific worker.
 
 #### Request
 
 ```http
-DELETE /jobs/triggers/123123 HTTP/1.1
+GET /jobs/triggers/jobs?Worker=konnector HTTP/1.1
 Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.jobs",
+      "id": "123123",
+      "attributes": {},
+      "links": {
+        "self": "/jobs/123123"
+      }
+    }
+  ]
+}
 ```
 
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.triggers` for the verb `DELETE`.
+`io.cozy.triggers` for the verb `GET`. When used on a specific worker, the
+permission can be specified on the `worker` field.
 
 #### Status codes
 

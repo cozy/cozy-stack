@@ -30,7 +30,12 @@ func TestUnknownDomain(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	ctx := jobs.NewWorkerContext("unknown", "id", msg).WithCookie(&konnectorWorker{})
+	j := jobs.NewJob(&jobs.JobRequest{
+		Domain:     "instance.does.not.exist",
+		Message:    msg,
+		WorkerType: "konnector",
+	})
+	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
 	err = konnectorWorkerFunc(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Instance not found", err.Error())
@@ -41,7 +46,12 @@ func TestUnknownApp(t *testing.T) {
 		"konnector": "unknownapp",
 	})
 	assert.NoError(t, err)
-	ctx := jobs.NewWorkerContext(inst.Domain, "id", msg).WithCookie(&konnectorWorker{})
+	j := jobs.NewJob(&jobs.JobRequest{
+		Domain:     inst.Domain,
+		Message:    msg,
+		WorkerType: "konnector",
+	})
+	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
 	err = konnectorWorkerFunc(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Application is not installed", err.Error())
@@ -74,8 +84,14 @@ func TestBadFileExec(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
+	j := jobs.NewJob(&jobs.JobRequest{
+		Domain:     inst.Domain,
+		Message:    msg,
+		WorkerType: "konnector",
+	})
+
 	config.GetConfig().Konnectors.Cmd = ""
-	ctx := jobs.NewWorkerContext(inst.Domain, "id", msg).WithCookie(&konnectorWorker{})
+	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
 	err = konnectorWorkerFunc(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "fork/exec : no such file or directory", err.Error())
@@ -173,8 +189,14 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 	})
 	assert.NoError(t, err)
 
+	j := jobs.NewJob(&jobs.JobRequest{
+		Domain:     inst.Domain,
+		Message:    msg,
+		WorkerType: "konnector",
+	})
+
 	config.GetConfig().Konnectors.Cmd = tmpScript.Name()
-	ctx := jobs.NewWorkerContext(inst.Domain, "id", msg).WithCookie(&konnectorWorker{})
+	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
 	err = konnectorWorkerFunc(ctx)
 	assert.NoError(t, err)
 

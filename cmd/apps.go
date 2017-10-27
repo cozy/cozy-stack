@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/cozy/cozy-stack/client"
-	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/spf13/cobra"
@@ -24,7 +21,6 @@ var flagAllDomains bool
 var flagAppsDeactivated bool
 
 var flagKonnectorAccountID string
-var flagKonnectorFolder string
 var flagKonnectorsParameters string
 
 var webappsCmdGroup = &cobra.Command{
@@ -160,82 +156,66 @@ var runKonnectorsCmd = &cobra.Command{
 		slug := args[0]
 		c := newClient(flagAppsDomain,
 			consts.Jobs+":POST:konnector:worker",
+			consts.Triggers,
 			consts.Files,
 			consts.Accounts,
 		)
 
-		var folderID, accountID string
+		ts, err := c.GetTriggers("konnector")
+		if err != nil {
+			return err
+		}
 
-		if flagKonnectorAccountID != "" && flagKonnectorFolder != "" {
-			accountID = flagKonnectorAccountID
-			d, err := c.GetDirByPath(flagKonnectorFolder)
-			if err != nil {
+		type localTrigger struct {
+			id        string
+			accountID string
+		}
+
+		var triggers []*localTrigger
+		for _, t := range ts {
+			var msg struct {
+				Slug    string `json:"konnector"`
+				Account string `json:"account"`
+			}
+			if err = json.Unmarshal(t.Attrs.Message, &msg); err != nil {
 				return err
 			}
-			folderID = d.ID
-		} else {
-			res, err := c.Req(&request.Options{
-				Method: "GET",
-				Path:   fmt.Sprintf("/data/%s/_all_docs", url.PathEscape(consts.Accounts)),
-				Queries: url.Values{
-					"include_docs": []string{"true"},
-				},
-			})
-			if err != nil {
-				return err
+			if msg.Slug == slug {
+				triggers = append(triggers, &localTrigger{t.ID, msg.Account})
 			}
-			defer res.Body.Close()
+		}
 
-			var allDocs struct {
-				Rows []struct {
-					ID  string          `json:"id"`
-					Doc json.RawMessage `json:"doc"`
-				} `json:"rows"`
+		if len(triggers) == 0 {
+			return fmt.Errorf("Could not find a konnector %q", slug)
+		}
+
+		var trigger *localTrigger
+		if len(triggers) > 1 || flagKonnectorAccountID != "" {
+			if flagKonnectorAccountID == "" {
+				// TODO: better multi-account support
+				return errors.New("Found multiple konnectors with different accounts:" +
+					"use the --account-id flag (support for better multi-accounts support in the CLI is still a work in progress)")
 			}
-
-			if err = json.NewDecoder(res.Body).Decode(&allDocs); err != nil {
-				return err
-			}
-
-			for _, r := range allDocs.Rows {
-				var v struct {
-					ID          string `json:"_id"`
-					AccountType string `json:"account_type"`
-					FolderID    string `json:"folderId"`
-				}
-				if strings.HasPrefix(r.ID, "_design") {
-					continue
-				}
-				if err = json.Unmarshal(r.Doc, &v); err != nil {
-					return err
-				}
-				if v.AccountType == slug {
-					folderID = v.FolderID
-					accountID = v.ID
+			for _, t := range triggers {
+				if t.accountID == flagKonnectorAccountID {
+					trigger = t
 					break
 				}
 			}
-		}
-		if accountID == "" {
-			return fmt.Errorf("Could not find account associated with konnector %q", slug)
+			if trigger == nil {
+				return fmt.Errorf("Could not find konnector linked to account with id %q",
+					flagKonnectorAccountID)
+			}
+		} else {
+			trigger = triggers[0]
 		}
 
-		j, err := c.JobPush(&client.JobOptions{
-			Worker: "konnector",
-			Arguments: map[string]interface{}{
-				"konnector":      slug,
-				"account":        accountID,
-				"folder_to_save": folderID,
-			},
-		})
+		j, err := c.TriggerLaunch(trigger.id)
 		if err != nil {
 			return err
 		}
-		job, err := json.MarshalIndent(j, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(job))
+
+		fmt.Println("job", j)
 		return nil
 	},
 }
@@ -464,7 +444,6 @@ func init() {
 	installWebappCmd.PersistentFlags().BoolVar(&flagAppsDeactivated, "ask-permissions", false, "specify that the application should not be activated after installation")
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
-	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorFolder, "folder", "", "specify the folder path associated with the konnector")
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(showWebappCmd)

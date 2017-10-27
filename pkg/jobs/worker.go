@@ -62,8 +62,7 @@ type (
 	// execution and contains specific values from the job.
 	WorkerContext struct {
 		context.Context
-		domain string
-		msg    Message
+		job    *Job
 		evt    Event
 		log    *logrus.Entry
 		cookie interface{}
@@ -80,21 +79,20 @@ func setNbSlots(nb int) {
 }
 
 // NewWorkerContext returns a context.Context usable by a worker.
-func NewWorkerContext(domain, workerID string, msg Message) *WorkerContext {
+func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 	ctx := context.Background()
 	return &WorkerContext{
 		Context: ctx,
-		domain:  domain,
-		msg:     msg,
-		log:     logger.WithDomain(domain).WithField("worker_id", workerID),
+		job:     job,
+		log:     logger.WithDomain(job.Domain).WithField("worker_id", workerID),
 	}
 }
 
 // NewWorkerContextWithEvent returns a context.Context usable by a worker. It
 // returns the same context as NewWorkerContext except that it also includes
 // the event responsible for the job, from a @event trigger for instance.
-func NewWorkerContextWithEvent(domain, workerID string, msg Message, event Event) *WorkerContext {
-	ctx := NewWorkerContext(domain, workerID, msg)
+func NewWorkerContextWithEvent(workerID string, job *Job, event Event) *WorkerContext {
+	ctx := NewWorkerContext(workerID, job)
 	ctx.evt = event
 	return ctx
 }
@@ -117,8 +115,7 @@ func (c *WorkerContext) WithCookie(cookie interface{}) *WorkerContext {
 func (c *WorkerContext) clone() *WorkerContext {
 	return &WorkerContext{
 		Context: c.Context,
-		domain:  c.domain,
-		msg:     c.msg,
+		job:     c.job,
 		evt:     c.evt,
 		log:     c.log,
 		cookie:  c.cookie,
@@ -132,7 +129,7 @@ func (c *WorkerContext) Logger() *logrus.Entry {
 
 // UnmarshalMessage unmarshals the message contained in the worker context.
 func (c *WorkerContext) UnmarshalMessage(v interface{}) error {
-	return c.msg.Unmarshal(v)
+	return c.job.Message.Unmarshal(v)
 }
 
 // UnmarshalEvent unmarshals the event contained in the worker context.
@@ -145,7 +142,14 @@ func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
 
 // Domain returns the domain associated with the worker context.
 func (c *WorkerContext) Domain() string {
-	return c.domain
+	return c.job.Domain
+}
+
+// TriggerID returns the possible trigger identifier responsible for launching
+// the job.
+func (c *WorkerContext) TriggerID() (string, bool) {
+	triggerID := c.job.TriggerID
+	return triggerID, triggerID != ""
 }
 
 // Cookie returns the cookie associated with the worker context.
@@ -193,9 +197,9 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 		}
 		var parentCtx *WorkerContext
 		if event := job.Event; event != nil {
-			parentCtx = NewWorkerContextWithEvent(domain, workerID, job.Message, event)
+			parentCtx = NewWorkerContextWithEvent(workerID, job, event)
 		} else {
-			parentCtx = NewWorkerContext(domain, workerID, job.Message)
+			parentCtx = NewWorkerContext(workerID, job)
 		}
 		if err := job.AckConsumed(); err != nil {
 			parentCtx.Logger().Errorf("[job] error acking consume job: %s",

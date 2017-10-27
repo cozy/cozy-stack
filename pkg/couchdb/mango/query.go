@@ -184,7 +184,7 @@ type SortBy struct {
 // MarshalJSON implements json.Marshaller on SortBy
 // it will returns a json array [field, direction]
 func (s SortBy) MarshalJSON() ([]byte, error) {
-	asSlice := []string{s.Field, string(s.Direction)}
+	asSlice := []Map{makeMap(s.Field, string(s.Direction))}
 	return json.Marshal(asSlice)
 }
 

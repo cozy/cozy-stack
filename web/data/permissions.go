@@ -26,13 +26,12 @@ var blackList = map[string]bool{
 	consts.Jobs:     readable,
 	consts.Triggers: readable,
 
-	consts.Apps:             readable,
-	consts.Konnectors:       readable,
-	consts.KonnectorResults: readable,
-	consts.Files:            readable,
-	consts.Notifications:    readable,
-	consts.RemoteRequests:   readable,
-	consts.SessionsLogins:   readable,
+	consts.Apps:           readable,
+	consts.Konnectors:     readable,
+	consts.Files:          readable,
+	consts.Notifications:  readable,
+	consts.RemoteRequests: readable,
+	consts.SessionsLogins: readable,
 }
 
 // CheckReadable will abort the context and returns false if the doctype

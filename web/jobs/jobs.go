@@ -3,6 +3,7 @@ package jobs
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -198,6 +199,41 @@ func getTrigger(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
 }
 
+func getTriggerJobs(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	var err error
+
+	var limit int
+	if queryLimit := c.QueryParam("Limit"); queryLimit != "" {
+		limit, err = strconv.Atoi(queryLimit)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err)
+		}
+	}
+
+	sched := globals.GetScheduler()
+	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if err = permissions.Allow(c, permissions.GET, t); err != nil {
+		return err
+	}
+
+	js, err := scheduler.GetJobs(t, limit)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
+	objs := make([]jsonapi.Object, len(js))
+	for i, j := range js {
+		objs[i] = &apiJob{j}
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
 func launchTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	t, err := globals.GetScheduler().Get(instance.Domain, c.Param("trigger-id"))
@@ -232,22 +268,58 @@ func deleteTrigger(c echo.Context) error {
 
 func getAllTriggers(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	workerFilter := c.QueryParam("Worker")
-	sched := globals.GetScheduler()
+	workerType := c.QueryParam("Worker")
+
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
-		return err
+		if workerType == "" {
+			return err
+		}
+		o := &scheduler.TriggerInfos{WorkerType: workerType}
+		if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
+			return err
+		}
 	}
+
+	sched := globals.GetScheduler()
 	ts, err := sched.GetAll(instance.Domain)
 	if err != nil {
 		return wrapJobsError(err)
 	}
+
 	// TODO: we could potentially benefit from an index on 'worker_type' field.
 	objs := make([]jsonapi.Object, 0, len(ts))
 	for _, t := range ts {
-		if workerFilter == "" || t.Infos().WorkerType == workerFilter {
+		if workerType == "" || t.Infos().WorkerType == workerType {
 			objs = append(objs, &apiTrigger{t})
 		}
 	}
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
+func getTriggersLastJob(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	workerType := c.QueryParam("Worker")
+
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
+		if workerType == "" {
+			return err
+		}
+		o := &scheduler.TriggerInfos{WorkerType: workerType}
+		if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
+			return err
+		}
+	}
+
+	js, err := scheduler.GetLastJobs(instance.Domain, workerType)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+
+	objs := make([]jsonapi.Object, len(js))
+	for i, j := range js {
+		objs[i] = &apiJob{j}
+	}
+
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
 }
 
@@ -265,7 +337,7 @@ func getJob(c echo.Context) error {
 
 func cleanJobs(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Jobs); err != nil {
+	if err := permissions.AllowWholeType(c, permissions.POST, consts.Jobs); err != nil {
 		return err
 	}
 	var ups []*jobs.Job
@@ -275,11 +347,10 @@ func cleanJobs(c echo.Context) error {
 		if err := json.Unmarshal(data, &job); err != nil {
 			return err
 		}
-		if job.State != jobs.Running {
-			return nil
-		}
-		if job.StartedAt.Add(1 * time.Hour).Before(now) {
-			ups = append(ups, job)
+		if job.State == jobs.Running || job.State == jobs.Queued {
+			if job.StartedAt.Add(1 * time.Hour).Before(now) {
+				ups = append(ups, job)
+			}
 		}
 		return nil
 	})
@@ -305,9 +376,11 @@ func Routes(router *echo.Group) {
 	router.GET("/queue/:worker-type", getQueue)
 	router.POST("/queue/:worker-type", pushJob)
 
-	router.GET("/triggers", getAllTriggers)
 	router.POST("/triggers", newTrigger)
+	router.GET("/triggers", getAllTriggers)
+	router.GET("/triggers/jobs", getTriggersLastJob)
 	router.GET("/triggers/:trigger-id", getTrigger)
+	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
 

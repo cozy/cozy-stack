@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/move"
@@ -40,8 +41,14 @@ func exporter(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	ctx := jobs.NewWorkerContext(instance.Domain, "export", msg)
-	if err = workers.SendMail(ctx); err != nil {
+
+	broker := globals.GetBroker()
+	_, err = broker.PushJob(&jobs.JobRequest{
+		Domain:     instance.Domain,
+		WorkerType: "sendmail",
+		Message:    msg,
+	})
+	if err != nil {
 		return err
 	}
 

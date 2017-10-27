@@ -153,7 +153,7 @@ func (s *MemScheduler) GetAll(domain string) ([]Trigger, error) {
 }
 
 func (s *MemScheduler) schedule(t Trigger) {
-	s.log.Infof("[scheduler] trigger %s(%s): Starting trigger",
+	s.log.Debugf("[scheduler] trigger %s(%s): Starting trigger",
 		t.Type(), t.Infos().TID)
 	ch := t.Schedule()
 	var debounced <-chan time.Time

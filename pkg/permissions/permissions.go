@@ -216,7 +216,7 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	}
 
 	var pdoc Permission
-	err = json.Unmarshal(*res.Rows[0].Doc, &pdoc)
+	err = json.Unmarshal(res.Rows[0].Doc, &pdoc)
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +423,7 @@ func GetPermissionsByType(db couchdb.Database, doctype string, cursor couchdb.Cu
 	result := make([]*Permission, len(res.Rows))
 	for i, row := range res.Rows {
 		var pdoc Permission
-		err := json.Unmarshal(*row.Doc, &pdoc)
+		err := json.Unmarshal(row.Doc, &pdoc)
 		if err != nil {
 			return nil, err
 		}
