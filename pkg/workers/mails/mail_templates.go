@@ -126,10 +126,27 @@ The Cozy Team`
 		`Bonjour {{.RecipientName}},
 
 L'archive contenant l'ensemble des données de votre Cozy est prête à être téléchargée. Vous pouvez la télécharger en cliquant sur ce lien : {{.Link}}
-
 Nous vous souhaitons une très bonne journée,
 
 L'équipe Cozy.`
+
+	mailTwoFactorHTMLFr = ``
+	mailTwoFactorTextFr = `` +
+		`Bonjour {{.RecipientName}},
+
+Code à utiliser pour l'authentification double-facteurs: {{.TwoFactorPasscode}}
+Nous vous souhaitons une très bonne journée,
+
+L'équipe Cozy.`
+
+	mailTwoFactorHTMLEn = ``
+	mailTwoFactorTextEn = `` +
+		`Hello {{.RecipientName}},
+
+Here is the code to use for two-factor authentication: {{.TwoFactorPasscode}}.
+We wish you a great day,
+
+The Cozy Team`
 )
 
 // MailTemplate is a struct to define a mail template with HTML and text parts.
@@ -225,6 +242,16 @@ func init() {
 			Name:     "archiver_en",
 			BodyHTML: mailArchiveHTMLEn,
 			BodyText: mailArchiveTextEn,
+		},
+		{
+			Name:     "two_factor_fr",
+			BodyHTML: mailTwoFactorHTMLFr,
+			BodyText: mailTwoFactorTextFr,
+		},
+		{
+			Name:     "two_factor_en",
+			BodyHTML: mailTwoFactorHTMLEn,
+			BodyText: mailTwoFactorTextEn,
 		},
 	})
 }

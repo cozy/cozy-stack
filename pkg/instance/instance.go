@@ -30,6 +30,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/leonelquinteros/gotext"
+	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -46,6 +48,13 @@ const (
 // passwordResetValidityDuration is the validity duration of the passphrase
 // reset token.
 var passwordResetValidityDuration = 15 * time.Minute
+
+var twoFactorTOTPOptions = totp.ValidateOpts{
+	Period:    30, // 30s
+	Skew:      4,  // 30s +- 4*30s = [-2min; 2,5min]
+	Digits:    otp.DigitsSix,
+	Algorithm: otp.AlgorithmSHA256,
+}
 
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
@@ -78,12 +87,13 @@ var (
 // like the domain, the locale or the access to the databases and files storage
 // It is a couchdb.Doc to be persisted in couchdb.
 type Instance struct {
-	DocID        string `json:"_id,omitempty"`            // couchdb _id
-	DocRev       string `json:"_rev,omitempty"`           // couchdb _rev
-	Domain       string `json:"domain"`                   // The main DNS domain, like example.cozycloud.cc
-	Locale       string `json:"locale"`                   // The locale used on the server
-	NoAutoUpdate bool   `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
-	Dev          bool   `json:"dev,omitempty"`            // Whether or not the instance is for development
+	DocID        string   `json:"_id,omitempty"`  // couchdb _id
+	DocRev       string   `json:"_rev,omitempty"` // couchdb _rev
+	Domain       string   `json:"domain"`         // The main DNS domain, like example.cozycloud.cc
+	Locale       string   `json:"locale"`         // The locale used on the server
+	AuthMode     AuthMode `json:"auth_mode"`
+	NoAutoUpdate bool     `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
+	Dev          bool     `json:"dev,omitempty"`            // Whether or not the instance is for development
 
 	OnboardingFinished bool `json:"onboarding_finished"` // Whether or not the onboarding is complete
 
@@ -832,14 +842,30 @@ func (i *Instance) RequestPassphraseReset() error {
 	resetURL := i.PageURL("/auth/passphrase_renew", url.Values{
 		"token": {hex.EncodeToString(i.PassphraseResetToken)},
 	})
-	msg, err := jobs.NewMessage(map[string]interface{}{
-		"mode":          "noreply",
-		"subject":       i.Translate("Mail Password reset"),
-		"template_name": "passphrase_reset_" + i.Locale,
-		"template_values": map[string]string{
+	return i.SendMail(&Mail{
+		SubjectKey:   "Mail Password reset",
+		TemplateName: "passphrase_reset",
+		TemplateValues: map[string]interface{}{
 			"BaseURL":             i.PageURL("/", nil),
 			"PassphraseResetLink": resetURL,
 		},
+	})
+}
+
+// Mail contains the informations to send a mail for the instance owner.
+type Mail struct {
+	SubjectKey     string
+	TemplateName   string
+	TemplateValues map[string]interface{}
+}
+
+// SendMail send a mail to the instance owner.
+func (i *Instance) SendMail(m *Mail) error {
+	msg, err := jobs.NewMessage(map[string]interface{}{
+		"mode":            "noreply",
+		"subject":         i.Translate(m.SubjectKey),
+		"template_name":   m.TemplateName + "_" + i.Locale,
+		"template_values": m.TemplateValues,
 	})
 	if err != nil {
 		return err

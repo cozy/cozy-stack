@@ -38,14 +38,21 @@
               <div role="region">
                   <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
                   <p class="help" id="login-password-tip">{{.Help}}</p>
-                  <p class="line">
+                    {{if not .TwoFactorForm}}
+                    <p id="password-form" class="line">
                     <label for="password" aria-describedby="login-password-tip">{{t "Login Password field"}}</label>
                     <button id="password-visibility-button" class="icon password-visibility-icon masked"
                         type="button"
                         title="{{t "Login Password show"}}"
                         name="password-visibility"></button>
                     <input id="password" name="passphrase" placeholder="{{t "Login Password field"}}" type="password" autofocus="true" autocomplete="current-password" />
-                  </p>
+                    </p>
+                    {{end}}
+                    <p id="two-factor-form" class="line{{if not .TwoFactorForm}} display-none{{end}}">
+                    <label for="two-factor-passcode" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
+                    <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
+                    <input id="two-factor-passcode" name="two-factor-passcode" placeholder="{{t "Login Two factor field"}}" type="text" autofocus="true" autocomplete="current-password" />
+                    </p>
                   {{if .CredentialsError}}
                   <div class="errors">
                     <p>{{.CredentialsError}}</p>

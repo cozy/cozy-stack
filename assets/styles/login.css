@@ -210,6 +210,9 @@ label {
     display: none;
     color: #ff3713
 }
+.display-none {
+    display: none !important;
+}
 input[type=number],
 input[type=password],
 input[type=text],
