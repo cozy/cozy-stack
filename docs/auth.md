@@ -185,6 +185,41 @@ Cookie: seesioncookie....
 Authorization: Bearer app-token
 ```
 
+
+### GET /auth/sessions
+
+This route allows to get all the currently active sessions.
+
+```
+GET /auth/sessions HTTP/1.1
+Host: cozy.example.org
+Cookie: ...
+Authorization: Bearer ...
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "data": [{
+    "id": "...",
+    "attributes": {
+      "last_seen": ""
+    },
+    "meta": {
+      "rev": "..."
+    }
+  }]
+}
+```
+
+#### Permissions
+
+This route requires the application to have permissions on the `io.cozy.sessions` doctype with the `GET` verb.
+
 ### GET /auth/passphrase_reset
 
 Display a form for the user to reset its password, in case he has forgotten it

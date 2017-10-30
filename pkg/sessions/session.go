@@ -141,6 +141,15 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 	return s, nil
 }
 
+// GetAll return all active sessions
+func GetAll(inst *instance.Instance) ([]*Session, error) {
+	var sessions []*Session
+	if err := couchdb.GetAllDocs(inst, consts.Sessions, nil, &sessions); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
 // Delete is a function to delete the session in couchdb,
 // and returns a cookie with a negative MaxAge to clear it
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
