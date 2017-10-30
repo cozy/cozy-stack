@@ -57,6 +57,18 @@ msgstr "Hello! Once you've confirmed your password, you'll access the permission
 msgid "Login Connect from oauth title"
 msgstr "Confirm your password"
 
+msgid "Login Two factor error"
+msgstr "The passcode you entered is incorrect, please try again."
+
+msgid "Login Two factor field"
+msgstr "Passcode"
+
+msgid "Login Two factor help"
+msgstr "Enter the passcode sent to you to access your Cozy"
+
+msgid "Mail Two factor subject"
+msgstr "Verify your connection to Cozy"
+
 msgid "Login Connect from oauth help"
 msgstr "Hello! Once you've confirmed your password, you'll access the permission board where you can allow the application to access your data or not. It's up to you !"
 

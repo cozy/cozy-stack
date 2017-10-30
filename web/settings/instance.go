@@ -35,15 +35,16 @@ func (i *apiInstance) MarshalJSON() ([]byte, error) {
 }
 
 func getInstance(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 
-	doc, err := instance.SettingsDocument()
+	doc, err := inst.SettingsDocument()
 	if err != nil {
 		return err
 	}
-	doc.M["locale"] = instance.Locale
-	doc.M["onboarding_finished"] = instance.OnboardingFinished
-	doc.M["auto_update"] = !instance.NoAutoUpdate
+	doc.M["locale"] = inst.Locale
+	doc.M["onboarding_finished"] = inst.OnboardingFinished
+	doc.M["auto_update"] = !inst.NoAutoUpdate
+	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 
 	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
 		return err
@@ -73,14 +74,27 @@ func updateInstance(c echo.Context) error {
 
 	if locale, ok := doc.M["locale"].(string); ok {
 		delete(doc.M, "locale")
-		inst.Locale = locale
-		needUpdate = true
+		if inst.Locale != locale {
+			inst.Locale = locale
+			needUpdate = true
+		}
 	}
 
 	if autoUpdate, ok := doc.M["auto_update"].(bool); ok {
 		delete(doc.M, "auto_upate")
-		inst.NoAutoUpdate = !autoUpdate
-		needUpdate = true
+		if inst.NoAutoUpdate != !autoUpdate {
+			inst.NoAutoUpdate = !autoUpdate
+			needUpdate = true
+		}
+	}
+
+	if authModeStr, ok := doc.M["auth_mode"].(string); ok {
+		delete(doc.M, "auth_mode")
+		authMode := instance.StringToAuthMode(authModeStr)
+		if inst.AuthMode != authMode {
+			inst.AuthMode = authMode
+			needUpdate = true
+		}
 	}
 
 	if needUpdate {
@@ -96,5 +110,6 @@ func updateInstance(c echo.Context) error {
 	doc.M["locale"] = inst.Locale
 	doc.M["onboarding_finished"] = inst.OnboardingFinished
 	doc.M["auto_update"] = !inst.NoAutoUpdate
+	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }

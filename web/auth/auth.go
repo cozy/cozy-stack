@@ -132,9 +132,19 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 }
 
 func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect string, twoFactorToken []byte) error {
+	var title string
+	publicName, err := i.PublicName()
+	if err != nil {
+		publicName = ""
+	}
+	if publicName == "" {
+		title = i.Translate("Login Welcome")
+	} else {
+		title = i.Translate("Login Welcome name", publicName)
+	}
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
-		"Title":            i.Translate("Login Two factor title"),
+		"Title":            title,
 		"Help":             i.Translate("Login Two factor help"),
 		"CredentialsError": nil,
 		"Redirect":         redirect,
@@ -185,7 +195,7 @@ func login(c echo.Context) error {
 		successfulAuthentication = inst.ValidateTwoFactorPasscode(twoFactorToken, twoFactorPasscode)
 	} else if len(passphrase) > 0 && inst.CheckPassphrase(passphrase) == nil {
 		switch inst.AuthMode {
-		case instance.TwoFactor:
+		case instance.TwoFactorMail:
 			twoFactorToken, err = inst.SendTwoFactorPasscode()
 			if err != nil {
 				return err

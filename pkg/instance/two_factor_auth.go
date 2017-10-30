@@ -15,10 +15,30 @@ type AuthMode int
 const (
 	// Basic authentication mode, only passphrase
 	Basic AuthMode = iota
-	// TwoFactor authentication mode, with passphrase + passcode sent via another
-	// factor.
-	TwoFactor
+	// TwoFactorMail authentication mode, with passcode sent via email
+	TwoFactorMail
 )
+
+// AuthModeToString encode authentication mode in a string
+func AuthModeToString(authMode AuthMode) string {
+	switch authMode {
+	case TwoFactorMail:
+		return "two_factor_mail"
+	default:
+		return "basic"
+	}
+}
+
+// StringToAuthMode converts a string encoded authentication mode into a
+// AuthMode int.
+func StringToAuthMode(authMode string) AuthMode {
+	switch authMode {
+	case "two_factor_mail":
+		return TwoFactorMail
+	default:
+		return Basic
+	}
+}
 
 // GenerateTwoFactorSecrets generates a (token, passcode) pair that can be
 // used as a two factor authentication secret value. The token is used to allow
