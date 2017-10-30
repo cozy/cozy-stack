@@ -187,7 +187,7 @@ func login(c echo.Context) error {
 	twoFactorToken := []byte(c.FormValue("two-factor-token"))
 	twoFactorPasscode := c.FormValue("two-factor-passcode")
 	twoFactorTrustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
-	twoFactorGenerateTrustDeviceToken, _ := strconv.ParseBool(c.FormValue("two-factor-generate-trusted-device-token"))
+	twoFactorGenerateTrustedDeviceToken, _ := strconv.ParseBool(c.FormValue("two-factor-generate-trusted-device-token"))
 	passphrase := []byte(c.FormValue("passphrase"))
 
 	var twoFactorGeneratedTrustedDeviceToken []byte
@@ -203,7 +203,7 @@ func login(c echo.Context) error {
 		successfulAuthentication = inst.ValidateTwoFactorPasscode(
 			twoFactorToken, twoFactorPasscode)
 
-		if successfulAuthentication && twoFactorGenerateTrustDeviceToken {
+		if successfulAuthentication && twoFactorGenerateTrustedDeviceToken {
 			twoFactorGeneratedTrustedDeviceToken, _ =
 				inst.GenerateTwoFactorTrustedDeviceSecret(c.Request())
 		}
