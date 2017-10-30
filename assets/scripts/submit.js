@@ -14,11 +14,11 @@
   const twoFactorTokenInput = document.getElementById('two-factor-token')
   const twoFactorTrustDeviceCheckbox = document.getElementById('two-factor-trust-device')
   const twoFactorForm = document.getElementById('two-factor-form')
-  const passwordForm = document.getElementById("password-form")
+  const passwordForm = document.getElementById('password-form')
 
   let errorPanel = loginForm && loginForm.querySelector('.errors')
 
-  const twoFactorTrustedDeviceTokenKey = "two-factor-trusted-device-token"
+  const twoFactorTrustedDeviceTokenKey = 'two-factor-trusted-device-token'
   let localStorage = null
   try {
     localStorage = window.localStorage
