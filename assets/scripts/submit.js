@@ -12,7 +12,7 @@
   const submitButton = document.getElementById('login-submit')
   const twoFactorPasscodeInput = document.getElementById('two-factor-passcode')
   const twoFactorTokenInput = document.getElementById('two-factor-token')
-  const twoFactorForm = document.getElementById("two-factor-form")
+  const twoFactorForm = document.getElementById('two-factor-form')
   const passwordForm = document.getElementById("password-form")
 
   let errorPanel = loginForm && loginForm.querySelector('.errors')
@@ -27,7 +27,6 @@
     if (!errorPanel) {
       errorPanel = document.createElement('div')
       errorPanel.classList.add('errors')
-      errorPanel.appendChild(document.createElement('p'))
       loginForm.appendChild(errorPanel)
     }
 

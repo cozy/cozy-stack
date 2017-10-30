@@ -51,7 +51,7 @@ var passwordResetValidityDuration = 15 * time.Minute
 
 var twoFactorTOTPOptions = totp.ValidateOpts{
 	Period:    30, // 30s
-	Skew:      4,  // 30s +- 4*30s = [-2min; 2,5min]
+	Skew:      10, // 30s +- 10*30s = [-5min; 5,5min]
 	Digits:    otp.DigitsSix,
 	Algorithm: otp.AlgorithmSHA256,
 }

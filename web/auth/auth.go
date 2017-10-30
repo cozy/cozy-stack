@@ -121,10 +121,13 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		help = i.Translate("Login Password help")
 	}
 
+	twoFactorHelp := i.Translate("Login Two factor help")
+
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
 		"Title":            title,
-		"Help":             help,
+		"PasswordHelp":     help,
+		"TwoFactorHelp":    twoFactorHelp,
 		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
 		"TwoFactorForm":    false,
