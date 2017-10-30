@@ -37,8 +37,8 @@
               </header>
               <div role="region">
                   <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
-                  {{if not .TwoFactorForm}}
                   <p class="help" id="login-password-tip">{{.PasswordHelp}}</p>
+                  {{if not .TwoFactorForm}}
                   <p id="password-form" class="line">
                   <label for="password" aria-describedby="login-password-tip">{{t "Login Password field"}}</label>
                   <button id="password-visibility-button" class="icon password-visibility-icon masked"
@@ -50,9 +50,11 @@
                   {{end}}
                   <p class="help" id="login-password-tip">{{.TwoFactorHelp}}</p>
                   <p id="two-factor-form" class="line{{if not .TwoFactorForm}} display-none{{end}}">
-                  <label for="two-factor-passcode" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
                   <input id="two-factor-token" type="hidden" name="two-factor-token" value="{{.TwoFactorToken}}" />
+                  <label for="two-factor-passcode" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
                   <input id="two-factor-passcode" name="two-factor-passcode" placeholder="{{t "Login Two factor field"}}" type="text" autofocus="true" autocomplete="current-password" />
+                  <label for="two-factor-trust-device" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor trust field"}}</label>
+                  <input id="two-factor-trust-device" name="two-factor-trust-device" type="checkbox" />
                   </p>
                   {{if .CredentialsError}}
                   <div class="errors">

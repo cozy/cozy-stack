@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -182,36 +183,55 @@ func login(c echo.Context) error {
 		return err
 	}
 
-	var sessionID string
 	successfulAuthentication := false
-
 	twoFactorToken := []byte(c.FormValue("two-factor-token"))
 	twoFactorPasscode := c.FormValue("two-factor-passcode")
+	twoFactorTrustedDeviceToken := []byte(c.FormValue("two-factor-trusted-device-token"))
+	twoFactorGenerateTrustedDeviceToken, _ := strconv.ParseBool(c.FormValue("two-factor-generate-trusted-device-token"))
 	passphrase := []byte(c.FormValue("passphrase"))
 
-	twoFactorRequest := len(twoFactorToken) > 0 && twoFactorPasscode != ""
+	var twoFactorGeneratedTrustedDeviceToken []byte
 
+	twoFactorRequest := len(twoFactorToken) > 0 && twoFactorPasscode != ""
+	passphraseRequest := len(passphrase) > 0
+
+	var sessionID string
 	session, err := sessions.GetSession(c, inst)
 	if err == nil {
 		sessionID = session.ID()
 	} else if twoFactorRequest {
-		successfulAuthentication = inst.ValidateTwoFactorPasscode(twoFactorToken, twoFactorPasscode)
-	} else if len(passphrase) > 0 && inst.CheckPassphrase(passphrase) == nil {
-		switch inst.AuthMode {
-		case instance.TwoFactorMail:
-			twoFactorToken, err = inst.SendTwoFactorPasscode()
-			if err != nil {
-				return err
+		successfulAuthentication = inst.ValidateTwoFactorPasscode(
+			twoFactorToken, twoFactorPasscode)
+
+		if successfulAuthentication && twoFactorGenerateTrustedDeviceToken {
+			twoFactorGeneratedTrustedDeviceToken, _ =
+				inst.GenerateTwoFactorTrustedDeviceSecret(c.Request())
+		}
+	} else if passphraseRequest {
+		if inst.CheckPassphrase(passphrase) == nil {
+			switch inst.AuthMode {
+			case instance.TwoFactorMail:
+				if len(twoFactorTrustedDeviceToken) > 0 {
+					successfulAuthentication = inst.ValidateTwoFactorTrustedDeviceSecret(
+						c.Request(), twoFactorTrustedDeviceToken)
+				}
+				if !successfulAuthentication {
+					twoFactorToken, err = inst.SendTwoFactorPasscode()
+					if err != nil {
+						return err
+					}
+					if wantsJSON {
+						return c.JSON(http.StatusOK, echo.Map{
+							"redirect":         redirect,
+							"two_factor_token": string(twoFactorToken),
+						})
+					}
+					return renderTwoFactorForm(c, inst, http.StatusOK,
+						redirect, twoFactorToken)
+				}
+			default:
+				successfulAuthentication = true
 			}
-			if wantsJSON {
-				return c.JSON(http.StatusOK, echo.Map{
-					"redirect":         redirect,
-					"two_factor_token": string(twoFactorToken),
-				})
-			}
-			return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken)
-		default:
-			successfulAuthentication = true
 		}
 	}
 
@@ -237,14 +257,20 @@ func login(c echo.Context) error {
 				"error": errorMessage,
 			})
 		}
-		return renderLoginForm(c, inst, http.StatusUnauthorized, errorMessage, redirect)
+		return renderLoginForm(c, inst, http.StatusUnauthorized,
+			errorMessage, redirect)
 	}
 
 	// logged-in
 	redirect = addCodeToRedirect(redirect, inst.Domain, sessionID)
 	if wantsJSON {
-		return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
+		result := echo.Map{"redirect": redirect}
+		if len(twoFactorGeneratedTrustedDeviceToken) > 0 {
+			result["two_factor_trusted_device_token"] = string(twoFactorGeneratedTrustedDeviceToken)
+		}
+		return c.JSON(http.StatusOK, result)
 	}
+
 	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
