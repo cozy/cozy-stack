@@ -50,12 +50,12 @@ func assertMACConfig(c *MACConfig) {
 //
 // Message format (name prefix is in MAC but removed from message):
 //
-//  <------- MAC input ------->
-//         <---------- message ---------->
-//  | name |    time |  blob  |     hmac |
-//  |      | 8 bytes |  ----  | 32 bytes |
+//  <---------------- MAC input ---------------->
+//                           <---------- Message ---------->
+//  | name | additional data |    time |  value  |     hmac |
+//  | ---- |       ---       | 8 bytes |   ---   | 32 bytes |
 //
-func EncodeAuthMessage(c *MACConfig, value []byte) ([]byte, error) {
+func EncodeAuthMessage(c *MACConfig, value, additionalData []byte) ([]byte, error) {
 	assertMACConfig(c)
 
 	maxLength := c.MaxLen
@@ -66,9 +66,13 @@ func EncodeAuthMessage(c *MACConfig, value []byte) ([]byte, error) {
 	time := Timestamp()
 
 	// Create message with MAC
-	size := len(c.Name) + binary.Size(time) + len(value) + macLen
+	sizeHidden := len(c.Name) + len(additionalData)
+	sizeMessageAndMAC := binary.Size(time) + len(value) + macLen
+	size := sizeHidden + sizeMessageAndMAC
+
 	buf := bytes.NewBuffer(make([]byte, 0, size))
 	buf.Write([]byte(c.Name))
+	buf.Write(additionalData)
 	binary.Write(buf, binary.BigEndian, time)
 	buf.Write(value)
 
@@ -76,7 +80,7 @@ func EncodeAuthMessage(c *MACConfig, value []byte) ([]byte, error) {
 	buf.Write(createMAC(c.Key, buf.Bytes()))
 
 	// Skip name
-	buf.Next(len(c.Name))
+	buf.Next(sizeHidden)
 
 	// Check length
 	if base64.RawURLEncoding.EncodedLen(buf.Len()) > maxLength {
@@ -90,7 +94,7 @@ func EncodeAuthMessage(c *MACConfig, value []byte) ([]byte, error) {
 // DecodeAuthMessage verifies a message authentified with message
 // authentication code and returns the message value algon with the issued time
 // of the message.
-func DecodeAuthMessage(c *MACConfig, enc []byte) ([]byte, error) {
+func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error) {
 	assertMACConfig(c)
 
 	maxLength := c.MaxLen
@@ -108,15 +112,20 @@ func DecodeAuthMessage(c *MACConfig, enc []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(dec) < macLen {
+		return nil, errMACInvalid
+	}
 
-	// Prepend name
-	dec = append([]byte(c.Name), dec...)
+	// Prepend name and additional data
+	if len(c.Name) > 0 {
+		additionalData = append([]byte(c.Name), additionalData...)
+	}
+	if len(additionalData) > 0 {
+		dec = append(additionalData, dec...)
+	}
 
 	// Verify message with MAC
 	{
-		if len(dec) < macLen {
-			return nil, errMACInvalid
-		}
 		var mac = dec[len(dec)-macLen:]
 		dec = dec[:len(dec)-macLen]
 		if !verifyMAC(c.Key, dec, mac) {

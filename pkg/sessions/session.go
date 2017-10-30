@@ -102,7 +102,7 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 		return nil, ErrNoCookie
 	}
 
-	sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i), []byte(cookie.Value))
+	sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i), []byte(cookie.Value), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 
 // ToCookie returns an http.Cookie for this Session
 func (s *Session) ToCookie() (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()))
+	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 
 // ToAppCookie returns an http.Cookie for this Session on an app subdomain
 func (s *Session) ToAppCookie(domain string) (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()))
+	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()), nil)
 	if err != nil {
 		return nil, err
 	}

@@ -2,9 +2,11 @@ package instance
 
 import (
 	"encoding/base32"
+	"net/http"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/mssola/user_agent"
 	"github.com/pquerna/otp/totp"
 )
 
@@ -52,15 +54,15 @@ func (i *Instance) GenerateTwoFactorSecrets() (token []byte, passcode string, er
 	if err != nil {
 		return
 	}
-	token, err = crypto.EncodeAuthMessage(i.totpMACConfig(), []byte(i.Domain))
+	token, err = crypto.EncodeAuthMessage(i.totpMACConfig(), nil, []byte(i.Domain))
 	return
 }
 
 // ValidateTwoFactorPasscode validates the given (token, passcode) pair for two
 // factor authentication.
 func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool {
-	v, err := crypto.DecodeAuthMessage(i.totpMACConfig(), token)
-	if err != nil || string(v) != i.Domain {
+	_, err := crypto.DecodeAuthMessage(i.totpMACConfig(), token, []byte(i.Domain))
+	if err != nil {
 		return false
 	}
 	ok, err := totp.ValidateCustom(passcode, base32.StdEncoding.EncodeToString(i.SessionSecret),
@@ -91,11 +93,40 @@ func (i *Instance) SendTwoFactorPasscode() ([]byte, error) {
 	return token, nil
 }
 
+// GenerateTwoFactorTrustedDeviceSecret generates a token that can be kept by the
+// user on-demand to avoid having two-factor authentication on a specific
+// machine.
+func (i *Instance) GenerateTwoFactorTrustedDeviceSecret(req *http.Request) ([]byte, error) {
+	ua := user_agent.New(req.UserAgent())
+	browser, _ := ua.Browser()
+	additionalData := []byte(i.Domain + ua.OS() + browser)
+	return crypto.EncodeAuthMessage(i.trustedDeviceMACConfig(), nil, additionalData)
+}
+
+// ValidateTwoFactorTrustedDeviceSecret validates the given token used to check
+// if the computer is trusted to avoid two-factor authorization.
+func (i *Instance) ValidateTwoFactorTrustedDeviceSecret(req *http.Request, token []byte) bool {
+	ua := user_agent.New(req.UserAgent())
+	browser, _ := ua.Browser()
+	additionalData := []byte(i.Domain + ua.OS() + browser)
+	_, err := crypto.DecodeAuthMessage(i.trustedDeviceMACConfig(), token, additionalData)
+	return err == nil
+}
+
 func (i *Instance) totpMACConfig() *crypto.MACConfig {
 	return &crypto.MACConfig{
 		Name:   "totp",
 		Key:    i.SessionSecret,
 		MaxAge: int64(twoFactorTOTPOptions.Period * twoFactorTOTPOptions.Skew),
+		MaxLen: 256,
+	}
+}
+
+func (i *Instance) trustedDeviceMACConfig() *crypto.MACConfig {
+	return &crypto.MACConfig{
+		Name:   "trusted-device",
+		Key:    i.SessionSecret,
+		MaxAge: 0,
 		MaxLen: 256,
 	}
 }

@@ -12,10 +12,17 @@
   const submitButton = document.getElementById('login-submit')
   const twoFactorPasscodeInput = document.getElementById('two-factor-passcode')
   const twoFactorTokenInput = document.getElementById('two-factor-token')
+  const twoFactorTrustDeviceCheckbox = document.getElementById('two-factor-trust-device')
   const twoFactorForm = document.getElementById('two-factor-form')
   const passwordForm = document.getElementById("password-form")
 
   let errorPanel = loginForm && loginForm.querySelector('.errors')
+
+  const twoFactorTrustedDeviceTokenKey = "two-factor-trusted-device-token"
+  let localStorage = null
+  try {
+    localStorage = window.localStorage
+  } catch(e) {}
 
   const showError = function (error) {
     if (error) {
@@ -43,14 +50,18 @@
     submitButton.setAttribute('disabled', true)
 
     const passphrase = passphraseInput.value
+    const twoFactorTrustedDeviceToken = (localStorage && localStorage.getItem(twoFactorTrustedDeviceTokenKey)) || ''
     const redirect = redirectInput.value + window.location.hash
     let headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
+    const reqBody = 'passphrase=' + encodeURIComponent(passphrase) +
+      '&two-factor-trusted-device-token=' + encodeURIComponent(twoFactorTrustedDeviceToken) +
+      '&redirect=' + encodeURIComponent(redirect);
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
-      body: 'passphrase=' + encodeURIComponent(passphrase) + '&redirect=' + encodeURIComponent(redirect),
+      body: reqBody,
       credentials: 'same-origin'
     }).then((response) => {
       const loginSuccess = response.status < 400
@@ -81,13 +92,16 @@
 
     const passcode = twoFactorPasscodeInput.value
     const token = twoFactorTokenInput.value
+    const trustDevice = twoFactorTrustDeviceCheckbox.checked ? '1' : '0'
     const redirect = redirectInput.value + window.location.hash
+
     let headers = new Headers()
     headers.append('Content-Type', 'application/x-www-form-urlencoded')
     headers.append('Accept', 'application/json')
-    const reqBody = encodeURIComponent('two-factor-passcode') + '=' + encodeURIComponent(passcode) +
-      '&' + encodeURIComponent('two-factor-token') + '=' + encodeURIComponent(token) +
-      '&' + encodeURIComponent('redirect') + '=' + encodeURIComponent(redirect);
+    const reqBody = 'two-factor-passcode=' + encodeURIComponent(passcode) +
+      '&two-factor-token=' + encodeURIComponent(token) +
+      '&two-factor-generate-trusted-device-token=' + encodeURIComponent(trustDevice) +
+      '&redirect=' + encodeURIComponent(redirect);
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
@@ -99,6 +113,9 @@
         if (loginSuccess) {
           submitButton.innerHTML = '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
           submitButton.classList.add('btn-success')
+          if (localStorage && typeof body.two_factor_trusted_device_token == 'string') {
+            localStorage.setItem(twoFactorTrustedDeviceTokenKey, body.two_factor_trusted_device_token)
+          }
           if (body.redirect) {
             window.location = body.redirect
           } else {

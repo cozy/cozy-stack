@@ -63,6 +63,9 @@ msgstr "The passcode you entered is incorrect, please try again."
 msgid "Login Two factor field"
 msgstr "Passcode"
 
+msgid "Login Two factor trust field"
+msgstr "Trust this computer"
+
 msgid "Login Two factor help"
 msgstr "Enter the passcode sent to you to access your Cozy"
 
