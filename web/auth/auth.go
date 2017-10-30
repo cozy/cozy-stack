@@ -24,9 +24,14 @@ import (
 	"github.com/labstack/echo/middleware"
 )
 
-// CredentialsErrorKey is the key for translating the message showed to the
-// user when he/she enters incorrect credentials
-const CredentialsErrorKey = "Login Credentials error"
+const (
+	// CredentialsErrorKey is the key for translating the message showed to the
+	// user when he/she enters incorrect credentials
+	CredentialsErrorKey = "Login Credentials error"
+	// TwoFactorErrorKey is the key for translating the message showed to the
+	// user when he/she enters incorrect two factor secret
+	TwoFactorErrorKey = "Login Two factor error"
+)
 
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
@@ -90,11 +95,8 @@ func SetCookieForNewSession(c echo.Context) (string, error) {
 	return session.ID(), nil
 }
 
-func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect string) error {
-	var title, help, credsErrors string
-	if code == http.StatusUnauthorized {
-		credsErrors = i.Translate(CredentialsErrorKey)
-	}
+func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors, redirect string) error {
+	var title, help string
 
 	publicName, err := i.PublicName()
 	if err != nil {
@@ -119,12 +121,38 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, redirect st
 		help = i.Translate("Login Password help")
 	}
 
+	twoFactorHelp := i.Translate("Login Two factor help")
+
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
 		"Title":            title,
-		"Help":             help,
+		"PasswordHelp":     help,
+		"TwoFactorHelp":    twoFactorHelp,
 		"CredentialsError": credsErrors,
 		"Redirect":         redirect,
+		"TwoFactorForm":    false,
+	})
+}
+
+func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect string, twoFactorToken []byte) error {
+	var title string
+	publicName, err := i.PublicName()
+	if err != nil {
+		publicName = ""
+	}
+	if publicName == "" {
+		title = i.Translate("Login Welcome")
+	} else {
+		title = i.Translate("Login Welcome name", publicName)
+	}
+	return c.Render(code, "login.html", echo.Map{
+		"Locale":           i.Locale,
+		"Title":            title,
+		"Help":             i.Translate("Login Two factor help"),
+		"CredentialsError": nil,
+		"Redirect":         redirect,
+		"TwoFactorForm":    true,
+		"TwoFactorToken":   string(twoFactorToken),
 	})
 }
 
@@ -142,49 +170,82 @@ func loginForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
 
-	return renderLoginForm(c, instance, http.StatusOK, redirect)
+	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
 }
 
 func login(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
 
-	redirect, err := checkRedirectParam(c, instance.DefaultRedirection())
+	redirect, err := checkRedirectParam(c, inst.DefaultRedirection())
 	if err != nil {
 		return err
 	}
 
 	var sessionID string
-	session, err := sessions.GetSession(c, instance)
+	successfulAuthentication := false
+
+	twoFactorToken := []byte(c.FormValue("two-factor-token"))
+	twoFactorPasscode := c.FormValue("two-factor-passcode")
+	passphrase := []byte(c.FormValue("passphrase"))
+
+	twoFactorRequest := len(twoFactorToken) > 0 && twoFactorPasscode != ""
+
+	session, err := sessions.GetSession(c, inst)
 	if err == nil {
 		sessionID = session.ID()
-	} else {
-		passphrase := []byte(c.FormValue("passphrase"))
-		if err := instance.CheckPassphrase(passphrase); err == nil {
-			if sessionID, err = SetCookieForNewSession(c); err != nil {
+	} else if twoFactorRequest {
+		successfulAuthentication = inst.ValidateTwoFactorPasscode(twoFactorToken, twoFactorPasscode)
+	} else if len(passphrase) > 0 && inst.CheckPassphrase(passphrase) == nil {
+		switch inst.AuthMode {
+		case instance.TwoFactorMail:
+			twoFactorToken, err = inst.SendTwoFactorPasscode()
+			if err != nil {
 				return err
 			}
-			if err := sessions.StoreNewLoginEntry(instance, c.Request()); err != nil {
-				return err
+			if wantsJSON {
+				return c.JSON(http.StatusOK, echo.Map{
+					"redirect":         redirect,
+					"two_factor_token": string(twoFactorToken),
+				})
 			}
+			return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken)
+		default:
+			successfulAuthentication = true
 		}
 	}
 
-	if sessionID != "" {
-		redirect = addCodeToRedirect(redirect, instance.Domain, sessionID)
+	if successfulAuthentication {
+		if sessionID, err = SetCookieForNewSession(c); err != nil {
+			return err
+		}
+		if err = sessions.StoreNewLoginEntry(inst, c.Request()); err != nil {
+			return err
+		}
+	}
+
+	// not logged-in
+	if sessionID == "" {
+		var errorMessage string
+		if twoFactorRequest {
+			errorMessage = inst.Translate(TwoFactorErrorKey)
+		} else {
+			errorMessage = inst.Translate(CredentialsErrorKey)
+		}
 		if wantsJSON {
-			return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
+			return c.JSON(http.StatusUnauthorized, echo.Map{
+				"error": errorMessage,
+			})
 		}
-		return c.Redirect(http.StatusSeeOther, redirect)
+		return renderLoginForm(c, inst, http.StatusUnauthorized, errorMessage, redirect)
 	}
 
+	// logged-in
+	redirect = addCodeToRedirect(redirect, inst.Domain, sessionID)
 	if wantsJSON {
-		return c.JSON(http.StatusUnauthorized, echo.Map{
-			"error": instance.Translate(CredentialsErrorKey),
-		})
+		return c.JSON(http.StatusOK, echo.Map{"redirect": redirect})
 	}
-
-	return renderLoginForm(c, instance, http.StatusUnauthorized, redirect)
+	return c.Redirect(http.StatusSeeOther, redirect)
 }
 
 func logout(c echo.Context) error {

@@ -134,6 +134,31 @@ Set-Cookie: ...
 Location: https://contacts.cozy.example.org/foo
 ```
 
+When two-factor authentication (2FA) authentication is activated, this
+endpoint will not directly sent a redirection after this first passphrase
+step. In such case, a `200 OK` response is sent along with a token value in
+the response (either in JSON if requested or directly in a new HTML form).
+
+Along with this token, on 2FA passcode is sent to the user via another
+transport (email for instance, depending on the user's preferences). Another
+request should be sent to the same endpoint with a valid pair `(token,
+passcode)`, ensuring that the user correctly entered its passphrase *and*
+received a fresh passcode by another mean.
+
+```http
+POST /auth/login HTTP/1.1
+Host: cozy.example.org
+Content-Type: application/x-www-form-urlencoded
+
+two-factor-token=123123123123&passcode=678678&redirect=https%3A%2F%2Fcontacts.cozy.example.org
+```
+
+```http
+HTTP/1.1 302 Moved Temporarily
+Set-Cookie: ...
+Location: https://contacts.cozy.example.org/foo
+```
+
 ### DELETE /auth/login
 
 This can be used to log-out the user. An app token must be passed in the
@@ -531,10 +556,26 @@ A new password is generated and print in the console.
 
 > Is two-factor authentication (2FA) possible?
 
-Yes, it's possible.
+Yes, it's possible. Via the cozy-settings application, the two-factor
+authentication can be activated.
 
-**TODO:** explain how
+Here is how it works in more details:
 
+On each connection, when the 2FA is activated, the user is asked for its
+passphrase first. When entering correct passphrase, the user is then asked
+for:
+
+  - a TOTP (Timebased One-Time password, RFC 6238) derived from a secret
+    associated with the instance.
+  - a short term timestamped MAC with the same validity time-range and also
+    derived from the same secret.
+
+The TOTP is valid for a time range of about 5 minutes. When sending a correct
+and still-valid pair `(passcode, token)`, the user is granted with
+authentication cookie.
+
+The passcode can be sent to the instance's owner via email — more transport
+shall be added later.
 
 ## Client-side apps
 

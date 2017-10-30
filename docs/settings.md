@@ -125,7 +125,8 @@ Cookie: sessionid=xxxx
       "locale":"fr",
       "auto_update": true,
       "email": "alice@example.com",
-      "public_name":"Alice Martin"
+      "public_name":"Alice Martin",
+      "auth_mode": "basic"
     }
   }
 }
@@ -163,7 +164,8 @@ Authorization: Bearer settings-token
       "locale":"fr",
       "email": "alice@example.com",
       "public_name":"Alice Martin",
-      "timezone": "Europe/Berlin"
+      "timezone": "Europe/Berlin",
+      "auth_mode": "two_factor_mail"
     }
   }
 }
@@ -188,7 +190,8 @@ Content-type: application/json
       "locale":"fr",
       "email": "alice@example.com",
       "public_name":"Alice Martin",
-      "timezone": "Europe/Berlin"
+      "timezone": "Europe/Berlin",
+      "auth_mode": "two_factor_mail"
     }
   }
 }
