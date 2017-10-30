@@ -13,7 +13,6 @@ var none = false
 
 var blackList = map[string]bool{
 	consts.Instances:        none,
-	consts.Sessions:         none,
 	consts.Permissions:      none,
 	consts.Intents:          none,
 	consts.OAuthClients:     none,
@@ -31,6 +30,7 @@ var blackList = map[string]bool{
 	consts.Files:          readable,
 	consts.Notifications:  readable,
 	consts.RemoteRequests: readable,
+	consts.Sessions:       readable,
 	consts.SessionsLogins: readable,
 }
 
