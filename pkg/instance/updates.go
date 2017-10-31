@@ -254,7 +254,9 @@ func createInstaller(inst *Instance, registries []*url.URL, man apps.Manifest, o
 	var sourceURL string
 	if opts.ForceRegistry {
 		originalSourceURL, err := url.Parse(man.Source())
-		if err == nil && originalSourceURL.Scheme == "git" {
+		if err == nil && (originalSourceURL.Scheme == "git" ||
+			originalSourceURL.Scheme == "git+ssh" ||
+			originalSourceURL.Scheme == "ssh+git") {
 			var channel string
 			if strings.HasPrefix(originalSourceURL.Fragment, "build") {
 				channel = "dev"
