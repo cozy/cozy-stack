@@ -17,6 +17,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	vcardParser "github.com/emersion/go-vcard"
 )
@@ -305,6 +306,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	// tar+gzip reader
 	gr, err := gzip.NewReader(r)
 	if err != nil {
+		logger.WithDomain(instance.Domain).Errorf("Can't open gzip reader for import: %s", err)
 		return err
 	}
 	defer gr.Close()
@@ -316,6 +318,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 			break
 		}
 		if err != nil {
+			logger.WithDomain(instance.Domain).Errorf("Error on import: %s", err)
 			return err
 		}
 
@@ -331,6 +334,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 			if doctype == "files" {
 				dirname := path.Join(dst.Fullpath, name)
 				if _, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
+					logger.WithDomain(instance.Domain).Errorf("Can't import directory %s: %s", hdr.Name, err)
 					return err
 				}
 			}
@@ -339,20 +343,23 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 			if doctype == "albums" && name == albumsFile {
 				err = createAlbum(fs, hdr, tgz, dst, instance)
 				if err != nil {
+					logger.WithDomain(instance.Domain).Errorf("Can't import album %s: %s", hdr.Name, err)
 					return err
 				}
 			} else if doctype == "contacts" {
 				if err := createContact(fs, hdr, tgz, instance); err != nil {
+					logger.WithDomain(instance.Domain).Errorf("Can't import contact %s: %s", hdr.Name, err)
 					return err
 				}
 			} else if doctype == "files" {
 				if err := createFile(fs, hdr, tgz, dst); err != nil {
+					logger.WithDomain(instance.Domain).Errorf("Can't import file %s: %s", hdr.Name, err)
 					return err
 				}
 			}
 
 		default:
-			fmt.Println("Unknown typeflag", hdr.Typeflag)
+			logger.WithDomain(instance.Domain).Errorf("Unknown typeflag for import: %s", hdr.Typeflag)
 			return errors.New("Unknown typeflag")
 		}
 	}
@@ -371,17 +378,20 @@ func Import(instance *instance.Instance, filename, destination string) error {
 	fs := instance.VFS()
 	exist, err := vfs.DirExists(fs, destination)
 	if err != nil {
+		logger.WithDomain(instance.Domain).Errorf("Error for destination %s: %s", destination, err)
 		return err
 	}
 	var dst *vfs.DirDoc
 	if !exist {
 		dst, err = vfs.Mkdir(fs, destination, nil)
 		if err != nil {
+			logger.WithDomain(instance.Domain).Errorf("Can't create destination directory %s: %s", destination, err)
 			return err
 		}
 	} else {
 		dst, err = fs.DirByPath(destination)
 		if err != nil {
+			logger.WithDomain(instance.Domain).Errorf("Can't find destination directory %s: %s", destination, err)
 			return err
 		}
 	}
