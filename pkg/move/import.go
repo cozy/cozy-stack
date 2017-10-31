@@ -354,11 +354,9 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 			} else if doctype == "files" {
 				if err := createFile(fs, hdr, tgz, dst); err != nil {
 					// XXX Tarball from cozy v2 exports can have files in a non-existant directory
-					if err == os.ErrNotExist {
-						dirname := path.Join(dst.Fullpath, path.Dir(name))
-						if _, err2 := vfs.MkdirAll(fs, dirname, nil); err2 == nil {
-							err = createFile(fs, hdr, tgz, dst)
-						}
+					dirname := path.Join(dst.Fullpath, path.Dir(name))
+					if _, err2 := vfs.MkdirAll(fs, dirname, nil); err2 == nil {
+						err = createFile(fs, hdr, tgz, dst)
 					}
 					logger.WithDomain(instance.Domain).Errorf("Can't import file %s: %s", hdr.Name, err)
 					return err
