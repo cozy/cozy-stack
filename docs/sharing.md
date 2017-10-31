@@ -163,7 +163,7 @@ A contact has the following minimal structure:
     "email": [
       { "address": "bob@mail.cozy" },
     ],
-    "_cozy": [
+    "cozy": [
       { "url": "https://bob.url.cozy" },
     ]
 }
@@ -320,7 +320,7 @@ Content-Type: application/vnd.api+json
         "email": {
           "address": "toto@fr"
         },
-        "_cozy": {
+        "cozy": {
           "url": "url.fr"
         },
         "Client": {
@@ -387,7 +387,7 @@ Content-Type: application/vnd.api+json
       "email": {
         "address": "jonsnow@nightswatch.wall"
       },
-      "_cozy": {
+      "cozy": {
         "url": "https://jonsnow.cozy"
       }
     },
