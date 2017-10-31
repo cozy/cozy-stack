@@ -30,17 +30,18 @@ func registerPassphrase(c echo.Context) error {
 	}
 
 	passphrase := []byte(args.Passphrase)
-	if err := instance.RegisterPassphrase(passphrase, registerToken); err != nil {
+	if err = instance.RegisterPassphrase(passphrase, registerToken); err != nil {
 		return jsonapi.BadRequest(err)
 	}
 
-	if err := sessions.StoreNewLoginEntry(instance, c.Request()); err != nil {
+	sessionID, err := auth.SetCookieForNewSession(c)
+	if err != nil {
 		return err
+	}
+	if err := sessions.StoreNewLoginEntry(instance, sessionID, c.Request()); err != nil {
+		instance.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 	}
 
-	if _, err := auth.SetCookieForNewSession(c); err != nil {
-		return err
-	}
 	return c.NoContent(http.StatusNoContent)
 }
 

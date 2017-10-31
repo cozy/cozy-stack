@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
@@ -33,6 +34,21 @@ const (
 	// user when he/she enters incorrect two factor secret
 	TwoFactorErrorKey = "Login Two factor error"
 )
+
+type apiSession struct {
+	s *sessions.Session
+}
+
+func (s *apiSession) ID() string                             { return s.s.ID() }
+func (s *apiSession) Rev() string                            { return s.s.Rev() }
+func (s *apiSession) DocType() string                        { return consts.Sessions }
+func (s *apiSession) Clone() couchdb.Doc                     { return s }
+func (s *apiSession) SetID(_ string)                         {}
+func (s *apiSession) SetRev(_ string)                        {}
+func (s *apiSession) Relationships() jsonapi.RelationshipMap { return nil }
+func (s *apiSession) Included() []jsonapi.Object             { return nil }
+func (s *apiSession) Links() *jsonapi.LinksList              { return nil }
+func (s *apiSession) MarshalJSON() ([]byte, error)           { return json.Marshal(s.s) }
 
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
@@ -239,8 +255,8 @@ func login(c echo.Context) error {
 		if sessionID, err = SetCookieForNewSession(c); err != nil {
 			return err
 		}
-		if err = sessions.StoreNewLoginEntry(inst, c.Request()); err != nil {
-			return err
+		if err = sessions.StoreNewLoginEntry(inst, sessionID, c.Request()); err != nil {
+			inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 		}
 	}
 
@@ -858,6 +874,26 @@ func passphraseRenew(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }
 
+func getSessions(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := webpermissions.AllowWholeType(c, webpermissions.GET, consts.Sessions); err != nil {
+		return err
+	}
+
+	sessions, err := sessions.GetAll(inst)
+	if err != nil {
+		return err
+	}
+
+	objs := make([]jsonapi.Object, len(sessions))
+	for i, s := range sessions {
+		objs[i] = &apiSession{s}
+	}
+
+	return jsonapi.DataList(c, http.StatusOK, objs, nil)
+}
+
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -883,6 +919,8 @@ func Routes(router *echo.Group) {
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
 	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON, checkRegistrationToken)
 	router.DELETE("/register/:client-id", deleteClient, checkRegistrationToken)
+
+	router.GET("/sessions", getSessions)
 
 	authorizeGroup := router.Group("/authorize", noCSRF)
 	authorizeGroup.GET("", authorizeForm)

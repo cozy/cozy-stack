@@ -21,11 +21,12 @@ import (
 // provide the user with informations about the history of all the logins that
 // may have happened on its domain.
 type LoginEntry struct {
-	DocID   string `json:"_id,omitempty"`
-	DocRev  string `json:"_rev,omitempty"`
-	IP      string `json:"ip"`
-	City    string `json:"city,omitempty"`
-	Country string `json:"country,omitempty"`
+	DocID     string `json:"_id,omitempty"`
+	DocRev    string `json:"_rev,omitempty"`
+	SessionID string `json:"session_id"`
+	IP        string `json:"ip"`
+	City      string `json:"city,omitempty"`
+	Country   string `json:"country,omitempty"`
 	// XXX No omitempty on os and browser, because they are indexed in couchdb
 	UA        string    `json:"user_agent"`
 	OS        string    `json:"os"`
@@ -95,7 +96,7 @@ func lookupIP(ip, locale string) (city, country string) {
 
 // StoreNewLoginEntry creates a new login entry in the database associated with
 // the given instance.
-func StoreNewLoginEntry(i *instance.Instance, req *http.Request) error {
+func StoreNewLoginEntry(i *instance.Instance, sessionID string, req *http.Request) error {
 	var ip string
 	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
@@ -113,6 +114,7 @@ func StoreNewLoginEntry(i *instance.Instance, req *http.Request) error {
 	l := &LoginEntry{
 		IP:        ip,
 		City:      city,
+		SessionID: sessionID,
 		Country:   country,
 		UA:        req.UserAgent(),
 		OS:        os,
@@ -130,6 +132,7 @@ func StoreNewLoginEntry(i *instance.Instance, req *http.Request) error {
 		),
 		Limit: 1,
 	}
+
 	err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
 	if err != nil || len(results) == 0 {
 		notif := &notifications.Notification{
