@@ -35,6 +35,7 @@ var flagExpire time.Duration
 var flagDry bool
 var flagJSON bool
 var flagDirectory string
+var flagForceRegistry bool
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -480,15 +481,17 @@ updated.`,
 		c := newAdminClient()
 		if flagAllDomains {
 			return c.Updates(&client.UpdatesOptions{
-				Slugs: args,
+				Slugs:         args,
+				ForceRegistry: flagForceRegistry,
 			})
 		}
 		if flagDomain == "" {
 			return errAppsMissingDomain
 		}
 		return c.Updates(&client.UpdatesOptions{
-			Domain: flagDomain,
-			Slugs:  args,
+			Domain:        flagDomain,
+			Slugs:         args,
+			ForceRegistry: flagForceRegistry,
 		})
 	},
 }
@@ -558,6 +561,7 @@ func init() {
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
+	updateCmd.Flags().BoolVar(&flagForceRegistry, "force-registry", false, "Force to update all applications sources from git to the registry")
 	exportCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")
 	importCmd.Flags().StringVar(&flagDirectory, "directory", "", "Put the imported files inside this directory")

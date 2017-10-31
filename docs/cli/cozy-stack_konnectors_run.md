@@ -15,7 +15,6 @@ cozy-stack konnectors run [slug] [flags]
 
 ```
       --account-id string   specify the account ID to use for running the konnector
-      --folder string       specify the folder path associated with the konnector
   -h, --help                help for run
 ```
 

@@ -31,6 +31,19 @@ type updateCron struct {
 	finished chan struct{}
 }
 
+// UpdatesOptions is the option handler for updates:
+//   - Slugs: allow to filter the application's slugs to update, if empty, all
+//     applications are updated
+//   - Force: forces the update, even if the user has not activated the auto-
+//     update
+//   - ForceRegistry: translates the git:// sourced application into
+//     registry://
+type UpdatesOptions struct {
+	Slugs         []string
+	Force         bool
+	ForceRegistry bool
+}
+
 // StartUpdateCron starts the auto update process which launche a full auto
 // updates of all the instances existing.
 func StartUpdateCron() (utils.Shutdowner, error) {
@@ -58,7 +71,7 @@ func StartUpdateCron() (utils.Shutdowner, error) {
 			next = schedule.Next(next)
 			select {
 			case <-time.After(-time.Since(next)):
-				if err := UpdateAll(false); err != nil {
+				if err := UpdateAll(&UpdatesOptions{}); err != nil {
 					log.Error("Could not update all:", err)
 				}
 			case <-u.stopped:
@@ -85,7 +98,7 @@ func (u *updateCron) Shutdown(ctx context.Context) error {
 // UpdateAll starts the auto-updates process for all instances. The slugs
 // parameters can be used optionnaly to filter (whitelist) the applications'
 // slug to update.
-func UpdateAll(force bool, slugs ...string) error {
+func UpdateAll(opts *UpdatesOptions) error {
 	<-globalUpdating
 	defer func() {
 		globalUpdating <- struct{}{}
@@ -110,8 +123,8 @@ func UpdateAll(force bool, slugs ...string) error {
 	go func() {
 		// TODO: filter instances that are AutoUpdate only
 		ForeachInstances(func(inst *Instance) error {
-			if force || !inst.NoAutoUpdate {
-				installerPush(inst, insc, errc, slugs...)
+			if opts.Force || !inst.NoAutoUpdate {
+				installerPush(inst, insc, errc, opts)
 			}
 			return nil
 		})
@@ -135,7 +148,7 @@ func UpdateAll(force bool, slugs ...string) error {
 
 // UpdateInstance starts the auto-update process on the given instance. The
 // slugs parameters can be used to filter (whitelist) the applications' slug
-func UpdateInstance(inst *Instance, slugs ...string) error {
+func UpdateInstance(inst *Instance, opts *UpdatesOptions) error {
 	insc := make(chan *apps.Installer)
 	errc := make(chan error)
 
@@ -153,7 +166,7 @@ func UpdateInstance(inst *Instance, slugs ...string) error {
 	}
 
 	go func() {
-		installerPush(inst, insc, errc, slugs...)
+		installerPush(inst, insc, errc, opts)
 		close(insc)
 	}()
 
@@ -172,7 +185,7 @@ func UpdateInstance(inst *Instance, slugs ...string) error {
 	return errm
 }
 
-func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, slugs ...string) {
+func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, opts *UpdatesOptions) {
 	registries, err := inst.Registries()
 	if err != nil {
 		errc <- err
@@ -190,10 +203,10 @@ func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, s
 			return
 		}
 		for _, app := range webapps {
-			if filterSlug(app.Slug(), slugs) {
+			if filterSlug(app.Slug(), opts.Slugs) {
 				continue
 			}
-			installer, err := createInstaller(inst, registries, app)
+			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
 				errc <- err
 			} else {
@@ -210,10 +223,10 @@ func installerPush(inst *Instance, insc chan *apps.Installer, errc chan error, s
 			return
 		}
 		for _, app := range konnectors {
-			if filterSlug(app.Slug(), slugs) {
+			if filterSlug(app.Slug(), opts.Slugs) {
 				continue
 			}
-			installer, err := createInstaller(inst, registries, app)
+			installer, err := createInstaller(inst, registries, app, opts)
 			if err != nil {
 				errc <- err
 			} else {
@@ -237,12 +250,26 @@ func filterSlug(slug string, slugs []string) bool {
 	return true
 }
 
-func createInstaller(inst *Instance, registries []*url.URL, man apps.Manifest) (*apps.Installer, error) {
+func createInstaller(inst *Instance, registries []*url.URL, man apps.Manifest, opts *UpdatesOptions) (*apps.Installer, error) {
+	var sourceURL string
+	if opts.ForceRegistry {
+		originalSourceURL, err := url.Parse(man.Source())
+		if err == nil && originalSourceURL.Scheme == "git" {
+			var channel string
+			if strings.HasPrefix(originalSourceURL.Fragment, "build") {
+				channel = "dev"
+			} else {
+				channel = "stable"
+			}
+			sourceURL = fmt.Sprintf("registry://%s/%s", man.Slug(), channel)
+		}
+	}
 	return apps.NewInstaller(inst, inst.AppsCopier(man.AppType()),
 		&apps.InstallerOptions{
 			Operation:  apps.Update,
 			Manifest:   man,
 			Registries: registries,
+			SourceURL:  sourceURL,
 		},
 	)
 }
