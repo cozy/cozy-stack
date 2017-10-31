@@ -288,6 +288,17 @@ Content-Type: application/vnd.api+json
       "recipients": [
         {
           "status": "pending",
+          "Client": {
+            "client_id": "123",
+            "client_secret_expires_at": 0,
+            "redirect_uris": [
+              "toto.fr"
+            ],
+            "grant_types": null,
+            "response_types": null,
+            "client_name": "toto",
+            "software_id": ""
+          },
           "recipient": {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
             "type": "io.cozy.contacts"
@@ -323,18 +334,6 @@ Content-Type: application/vnd.api+json
         "cozy": {
           "url": "url.fr"
         },
-        "Client": {
-          "client_id": "123",
-          "client_secret_expires_at": 0,
-          "redirect_uris": [
-            "toto.fr"
-          ],
-          "grant_types": null,
-          "response_types": null,
-          "client_name": "toto",
-          "software_id": ""
-        }
-      },
       "meta": {
         "rev": "1-461114b45855dc6acdb9bdc5d67e1092"
       },
