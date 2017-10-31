@@ -96,7 +96,7 @@ func lookupIP(ip, locale string) (city, country string) {
 
 // StoreNewLoginEntry creates a new login entry in the database associated with
 // the given instance.
-func StoreNewLoginEntry(i *instance.Instance, sessionID string, req *http.Request) error {
+func StoreNewLoginEntry(i *instance.Instance, sessionID string, req *http.Request, notifEnabled bool) error {
 	var ip string
 	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
@@ -122,26 +122,27 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID string, req *http.Reques
 		CreatedAt: time.Now(),
 	}
 
-	var results []*LoginEntry
-	r := &couchdb.FindRequest{
-		UseIndex: "by-os-browser-ip",
-		Selector: mango.And(
-			mango.Equal("os", os),
-			mango.Equal("browser", browser),
-			mango.Equal("ip", ip),
-		),
-		Limit: 1,
-	}
-
-	err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
-	if err != nil || len(results) == 0 {
-		notif := &notifications.Notification{
-			Reference: "New connexion",
-			Title:     i.Translate("Session New connection title"),
-			Content:   i.Translate("Session New connection content", i.Domain, city, country, ip, browser, os),
+	if notifEnabled {
+		var results []*LoginEntry
+		r := &couchdb.FindRequest{
+			UseIndex: "by-os-browser-ip",
+			Selector: mango.And(
+				mango.Equal("os", os),
+				mango.Equal("browser", browser),
+				mango.Equal("ip", ip),
+			),
+			Limit: 1,
 		}
-		if err = notifications.Create(i, "stack", notif); err != nil {
-			return err
+		err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
+		if err != nil || len(results) == 0 {
+			notif := &notifications.Notification{
+				Reference: "New connexion",
+				Title:     i.Translate("Session New connection title"),
+				Content:   i.Translate("Session New connection content", i.Domain, city, country, ip, browser, os),
+			}
+			if err = notifications.Create(i, "stack", notif); err != nil {
+				return err
+			}
 		}
 	}
 

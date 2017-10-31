@@ -255,7 +255,7 @@ func login(c echo.Context) error {
 		if sessionID, err = SetCookieForNewSession(c); err != nil {
 			return err
 		}
-		if err = sessions.StoreNewLoginEntry(inst, sessionID, c.Request()); err != nil {
+		if err = sessions.StoreNewLoginEntry(inst, sessionID, c.Request(), true); err != nil {
 			inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 		}
 	}
