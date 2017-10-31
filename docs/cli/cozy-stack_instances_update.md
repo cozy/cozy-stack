@@ -17,9 +17,10 @@ cozy-stack instances update [domain] [slugs...] [flags]
 ### Options
 
 ```
-      --all-domains     Work on all domains iterativelly
-      --domain string   Specify the domain name of the instance
-  -h, --help            help for update
+      --all-domains      Work on all domains iterativelly
+      --domain string    Specify the domain name of the instance
+      --force-registry   Force to update all applications sources from git to the registry
+  -h, --help             help for update
 ```
 
 ### Options inherited from parent commands

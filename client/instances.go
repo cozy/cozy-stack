@@ -66,8 +66,9 @@ type OAuthClientOptions struct {
 
 // UpdatesOptions is a struct holding all the options to launch an update.
 type UpdatesOptions struct {
-	Domain string
-	Slugs  []string
+	Domain        string
+	Slugs         []string
+	ForceRegistry bool
 }
 
 // ImportOptions is a struct with the options for importing a tarball.
@@ -249,8 +250,9 @@ func (c *Client) RegisterOAuthClient(opts *OAuthClientOptions) (map[string]inter
 // specified, the updates are launched for all the existing instances.
 func (c *Client) Updates(opts *UpdatesOptions) error {
 	q := url.Values{
-		"Domain": {opts.Domain},
-		"Slugs":  {strings.Join(opts.Slugs, ",")},
+		"Domain":        {opts.Domain},
+		"Slugs":         {strings.Join(opts.Slugs, ",")},
+		"ForceRegistry": {strconv.FormatBool(opts.ForceRegistry)},
 	}
 	_, err := c.Req(&request.Options{
 		Method:     "POST",
