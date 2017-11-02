@@ -55,9 +55,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH $PATH:/usr/local/couchdb/bin
 
 # MailHog
-ENV MAILHOG_VERSION 0.2.1
+ENV MAILHOG_VERSION 1.0.0
 ENV MAILHOG_SRC_URL https://github.com/mailhog/MailHog/releases/download/v$MAILHOG_VERSION/MailHog_linux_amd64
-ENV MAILHOG_SRC_SHA256 25b3cd56e7a1042b695fed8b32808eef778eafa8fb6bd583dde90a8fc2877e0e
+ENV MAILHOG_SRC_SHA256 ba921e04438e176c474d533447ae64707ffcdd1230f0153f86cb188d348f25c0
 
 RUN curl -fsSL "$MAILHOG_SRC_URL" -o /usr/bin/MailHog \
   && echo "$MAILHOG_SRC_SHA256  /usr/bin/MailHog" | sha256sum -c -
