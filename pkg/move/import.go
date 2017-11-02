@@ -200,68 +200,61 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 	return couchdb.CreateDoc(db, contact)
 }
 
-func createAlbum(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, db couchdb.Database) error {
-	m := make(map[string]*couchdb.DocReference)
-
+func createAlbums(i *instance.Instance, tr *tar.Reader, albums *AlbumReferences) error {
 	bs := bufio.NewScanner(tr)
 
 	for bs.Scan() {
 		jsondoc := &couchdb.JSONDoc{}
-		err := jsondoc.UnmarshalJSON(bs.Bytes())
-		if err != nil {
+		if err := jsondoc.UnmarshalJSON(bs.Bytes()); err != nil {
 			return err
 		}
-		doctype, ok := jsondoc.M["type"].(string)
-		if ok {
-			jsondoc.Type = doctype
-		}
 		delete(jsondoc.M, "type")
-
 		id := jsondoc.ID()
 		jsondoc.SetID("")
 		jsondoc.SetRev("")
+		jsondoc.Type = consts.PhotosAlbums
 
-		err = couchdb.CreateDoc(db, jsondoc)
-		if err != nil {
+		if err := couchdb.CreateDoc(i, jsondoc); err != nil {
 			return err
 		}
-
-		m[id] = &couchdb.DocReference{
+		(*albums)[id] = couchdb.DocReference{
 			ID:   jsondoc.ID(),
-			Type: jsondoc.DocType(),
+			Type: consts.PhotosAlbums,
 		}
-
 	}
 
-	_, err := tr.Next()
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
-	bs = bufio.NewScanner(tr)
+// AlbumReferences is used to associate photos to their albums, though we don't
+// force the ID of the albums to the values in the tarball.
+type AlbumReferences map[string]couchdb.DocReference
+
+func fillAlbums(i *instance.Instance, tr *tar.Reader, dstDoc *vfs.DirDoc, albums *AlbumReferences) error {
+	fs := i.VFS()
+	bs := bufio.NewScanner(tr)
+
 	for bs.Scan() {
-		ref := &Reference{}
-		err := json.Unmarshal(bs.Bytes(), &ref)
-		if err != nil {
+		ref := Reference{}
+		if err := json.Unmarshal(bs.Bytes(), &ref); err != nil {
 			return err
 		}
 
 		file, err := fs.FileByPath(dstDoc.Fullpath + ref.Filepath)
 		if err != nil {
-			return err
+			// XXX Ignore missing photos (we have this for migrating some cozy v2)
+			continue
 		}
 
-		if m[ref.Albumid] != nil {
-			file.AddReferencedBy(*m[ref.Albumid])
-			if err = couchdb.UpdateDoc(db, file); err != nil {
+		if docRef, ok := (*albums)[ref.Albumid]; ok {
+			file.AddReferencedBy(docRef)
+			if err = couchdb.UpdateDoc(i, file); err != nil {
 				return err
 			}
 		}
-
 	}
 
 	return nil
-
 }
 
 func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc) error {
@@ -316,6 +309,8 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	defer gr.Close()
 	tgz := tar.NewReader(gr)
 
+	albumsRef := make(AlbumReferences)
+
 	for {
 		hdr, err := tgz.Next()
 		if err == io.EOF {
@@ -345,7 +340,13 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 
 		case tar.TypeReg:
 			if doctype == "albums" && name == albumsFile {
-				err = createAlbum(fs, hdr, tgz, dst, instance)
+				err = createAlbums(instance, tgz, &albumsRef)
+				if err != nil {
+					logger.WithDomain(instance.Domain).Errorf("Can't import album %s: %s", hdr.Name, err)
+					return err
+				}
+			} else if doctype == "albums" && name == referencesFile {
+				err = fillAlbums(instance, tgz, dst, &albumsRef)
 				if err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import album %s: %s", hdr.Name, err)
 					return err
