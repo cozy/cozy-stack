@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -65,17 +66,17 @@ func (s *apiSharing) Included() []jsonapi.Object {
 }
 
 type apiRecipient struct {
-	*sharings.Recipient
+	*contacts.Contact
 }
 
 func (r *apiRecipient) MarshalJSON() ([]byte, error) {
-	return json.Marshal(r.Recipient)
+	return json.Marshal(r.Contact)
 }
 
 func (r *apiRecipient) Relationships() jsonapi.RelationshipMap { return nil }
 func (r *apiRecipient) Included() []jsonapi.Object             { return nil }
 func (r *apiRecipient) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/recipients/" + r.RID}
+	return &jsonapi.LinksList{Self: "/recipients/" + r.DocID}
 }
 
 var _ jsonapi.Object = (*apiSharing)(nil)
@@ -102,33 +103,6 @@ func SharingAnswer(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	return c.Redirect(http.StatusFound, u)
-}
-
-// CreateRecipient adds a sharing Recipient.
-func CreateRecipient(c echo.Context) error {
-	var body map[string]string
-	if err := json.NewDecoder(c.Request().Body).Decode(&body); err != nil {
-		return err
-	}
-	instance := middlewares.GetInstance(c)
-	recipient := &sharings.Recipient{}
-	if email, ok := body["email"]; ok {
-		recipient.Email = []sharings.RecipientEmail{
-			sharings.RecipientEmail{Address: email},
-		}
-	}
-	if u, ok := body["url"]; ok {
-		recipient.Cozy = []sharings.RecipientCozy{
-			sharings.RecipientCozy{URL: u},
-		}
-	}
-
-	err := sharings.CreateOrUpdateRecipient(instance, recipient)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return jsonapi.Data(c, http.StatusCreated, &apiRecipient{recipient}, nil)
 }
 
 // SharingRequest handles a sharing request from the recipient side.
@@ -674,7 +648,7 @@ func discovery(c echo.Context) error {
 		}
 	}
 	if !found {
-		recipient.Cozy = append(recipient.Cozy, sharings.RecipientCozy{URL: cozyURL})
+		recipient.Cozy = append(recipient.Cozy, contacts.Cozy{URL: cozyURL})
 	}
 
 	// Register the recipient with the given URL and save in db
@@ -717,7 +691,6 @@ func Routes(router *echo.Group) {
 	router.GET("/request", SharingRequest)
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
-	router.POST("/recipient", CreateRecipient)
 	router.POST("/access/client", ReceiveClientID)
 	router.POST("/access/code", getAccessToken)
 

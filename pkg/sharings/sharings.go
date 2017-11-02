@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/globals"
@@ -142,8 +143,8 @@ func (s *Sharing) RecStatus(db couchdb.Database) ([]*RecipientStatus, error) {
 }
 
 // Recipients returns the sharing recipients
-func (s *Sharing) Recipients(db couchdb.Database) ([]*Recipient, error) {
-	var recipients []*Recipient
+func (s *Sharing) Recipients(db couchdb.Database) ([]*contacts.Contact, error) {
+	var recipients []*contacts.Contact
 
 	for _, rec := range s.RecipientsStatus {
 		recipient, err := GetRecipient(db, rec.RefRecipient.ID)
@@ -426,7 +427,7 @@ func sharingByValues(instance *instance.Instance, rule permissions.Rule) ([]stri
 func sendData(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus, values []string, rule permissions.Rule) error {
 	// Create a sharedata worker for each doc to send
 	for _, val := range values {
-		domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
+		domain, scheme, err := ExtractDomainAndScheme(recStatus.recipient)
 		if err != nil {
 			return err
 		}
@@ -581,9 +582,9 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 
 	sr := &RecipientStatus{
 		HostClientID: clientID,
-		recipient: &Recipient{
-			Cozy: []RecipientCozy{
-				RecipientCozy{
+		recipient: &contacts.Contact{
+			Cozy: []contacts.Cozy{
+				contacts.Cozy{
 					URL: sharerClient.ClientURI,
 				},
 			},
@@ -630,9 +631,9 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	// Register the sharer as a recipient
 	sharer := sharing.Sharer
-	doc := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{
+	doc := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{
 				URL: sharer.URL,
 			},
 		},
@@ -656,7 +657,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 
 // SendClientID sends the registered clientId to the sharer
 func SendClientID(sharing *Sharing) error {
-	domain, scheme, err := sharing.Sharer.SharerStatus.recipient.ExtractDomainAndScheme()
+	domain, scheme, err := ExtractDomainAndScheme(sharing.Sharer.SharerStatus.recipient)
 	if err != nil {
 		return nil
 	}
@@ -681,7 +682,7 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 	if err != nil {
 		return err
 	}
-	domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
+	domain, scheme, err := ExtractDomainAndScheme(recStatus.recipient)
 	if err != nil {
 		return nil
 	}
@@ -1068,7 +1069,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, 
 			return nil
 		}
 	}
-	domain, scheme, err := rs.recipient.ExtractDomainAndScheme()
+	domain, scheme, err := ExtractDomainAndScheme(rs.recipient)
 	if err != nil {
 		return err
 	}
@@ -1157,7 +1158,7 @@ func ExtractRecipientInfo(db couchdb.Database, rec *RecipientStatus) (*Recipient
 	if err != nil {
 		return nil, err
 	}
-	u, scheme, err := recipient.ExtractDomainAndScheme()
+	u, scheme, err := ExtractDomainAndScheme(recipient)
 	if err != nil {
 		return nil, err
 	}

@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/globals"
@@ -123,7 +124,7 @@ func createOAuthClient(t *testing.T) *oauth.Client {
 	return client
 }
 
-func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, slug string, recipients []*Recipient, rule permissions.Rule) *Sharing {
+func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, slug string, recipients []*contacts.Contact, rule permissions.Rule) *Sharing {
 	sharing := &Sharing{
 		SharingType:      sharingType,
 		Owner:            owner,
@@ -259,9 +260,9 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 func TestGetAccessTokenNoAuth(t *testing.T) {
 	code := "sesame"
 	rs := &RecipientStatus{
-		recipient: &Recipient{
-			Cozy: []RecipientCozy{
-				RecipientCozy{URL: recipientURL},
+		recipient: &contacts.Contact{
+			Cozy: []contacts.Cozy{
+				contacts.Cozy{URL: recipientURL},
 			},
 		},
 		Client: auth.Client{},
@@ -273,7 +274,7 @@ func TestGetAccessTokenNoAuth(t *testing.T) {
 func TestGetAccessTokenNoURL(t *testing.T) {
 	code := "dummy"
 	rs := &RecipientStatus{
-		recipient: &Recipient{},
+		recipient: &contacts.Contact{},
 		Client:    auth.Client{},
 	}
 
@@ -283,8 +284,8 @@ func TestGetAccessTokenNoURL(t *testing.T) {
 
 func TestRegisterNoURL(t *testing.T) {
 	rs := &RecipientStatus{
-		recipient: &Recipient{
-			RID: "dummyid",
+		recipient: &contacts.Contact{
+			DocID: "dummyid",
 		},
 	}
 	err := rs.Register(in)
@@ -303,14 +304,14 @@ func TestRegisterSuccess(t *testing.T) {
 	}
 
 	rs := &RecipientStatus{
-		recipient: &Recipient{
-			Cozy: []RecipientCozy{
-				RecipientCozy{URL: rURL},
+		recipient: &contacts.Contact{
+			Cozy: []contacts.Cozy{
+				contacts.Cozy{URL: rURL},
 			},
-			Email: []RecipientEmail{
-				RecipientEmail{Address: "xerxes@fr"},
+			Email: []contacts.Email{
+				contacts.Email{Address: "xerxes@fr"},
 			},
-			RID: "dummyid",
+			DocID: "dummyid",
 		},
 	}
 
@@ -322,7 +323,7 @@ func TestRegisterSuccess(t *testing.T) {
 }
 
 func TestGetRecipient(t *testing.T) {
-	recipient := &Recipient{}
+	recipient := &contacts.Contact{}
 
 	_, err := GetRecipient(TestPrefix, "maurice")
 	assert.Error(t, err)
@@ -331,50 +332,50 @@ func TestGetRecipient(t *testing.T) {
 	err = couchdb.CreateDoc(TestPrefix, recipient)
 	assert.NoError(t, err)
 
-	doc, err := GetRecipient(TestPrefix, recipient.RID)
+	doc, err := GetRecipient(TestPrefix, recipient.DocID)
 	assert.NoError(t, err)
 	assert.Equal(t, recipient, doc)
 }
 
 func TestCreateOrUpdateRecipient(t *testing.T) {
 	// Create a contact for Alice
-	alice := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: "https://alice.cozy.tools/"},
+	alice := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: "https://alice.cozy.tools/"},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "alice@cozy.tools"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "alice@cozy.tools"},
 		},
 	}
 	err := CreateOrUpdateRecipient(TestPrefix, alice)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, alice.RID)
-	assert.NotEmpty(t, alice.RRev)
-	doc, err := GetRecipient(TestPrefix, alice.RID)
+	assert.NotEmpty(t, alice.DocID)
+	assert.NotEmpty(t, alice.DocRev)
+	doc, err := GetRecipient(TestPrefix, alice.DocID)
 	assert.NoError(t, err)
 	assert.Equal(t, alice, doc)
 
 	// Update a contact for Bob (found by his email)
-	bob := &Recipient{
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "bob@cozy.tools"},
+	bob := &contacts.Contact{
+		Email: []contacts.Email{
+			contacts.Email{Address: "bob@cozy.tools"},
 		},
 	}
 	err = couchdb.CreateDoc(TestPrefix, bob)
 	assert.NoError(t, err)
-	bob2 := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: "https://bob.cozy.tools/"},
+	bob2 := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: "https://bob.cozy.tools/"},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "bob@cozy.tools"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "bob@cozy.tools"},
 		},
 	}
 	err = CreateOrUpdateRecipient(TestPrefix, bob2)
 	assert.NoError(t, err)
-	assert.Equal(t, bob.RID, bob2.RID)
-	assert.NotEmpty(t, bob2.RRev)
-	doc, err = GetRecipient(TestPrefix, bob.RID)
+	assert.Equal(t, bob.DocID, bob2.DocID)
+	assert.NotEmpty(t, bob2.DocRev)
+	doc, err = GetRecipient(TestPrefix, bob.DocID)
 	assert.NoError(t, err)
 	assert.Len(t, doc.Email, 1)
 	assert.Equal(t, "bob@cozy.tools", doc.Email[0].Address)
@@ -382,29 +383,29 @@ func TestCreateOrUpdateRecipient(t *testing.T) {
 	assert.Equal(t, "https://bob.cozy.tools/", doc.Cozy[0].URL)
 
 	// Update a contact for Charlie (found by his cozy)
-	charlie := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: "https://charlie.cozy.tools/"},
+	charlie := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: "https://charlie.cozy.tools/"},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "charlie@cozy.wtf"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "charlie@cozy.wtf"},
 		},
 	}
 	err = couchdb.CreateDoc(TestPrefix, charlie)
 	assert.NoError(t, err)
-	charlie2 := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: "https://charlie.cozy.tools/"},
+	charlie2 := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: "https://charlie.cozy.tools/"},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "charlie@cozy.tools"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "charlie@cozy.tools"},
 		},
 	}
 	err = CreateOrUpdateRecipient(TestPrefix, charlie2)
 	assert.NoError(t, err)
-	assert.Equal(t, charlie.RID, charlie2.RID)
-	assert.NotEmpty(t, charlie2.RRev)
-	doc, err = GetRecipient(TestPrefix, charlie.RID)
+	assert.Equal(t, charlie.DocID, charlie2.DocID)
+	assert.NotEmpty(t, charlie2.DocRev)
+	doc, err = GetRecipient(TestPrefix, charlie.DocID)
 	assert.NoError(t, err)
 	assert.Len(t, doc.Email, 2)
 	assert.Equal(t, "charlie@cozy.wtf", doc.Email[0].Address)
@@ -413,23 +414,23 @@ func TestCreateOrUpdateRecipient(t *testing.T) {
 	assert.Equal(t, "https://charlie.cozy.tools/", doc.Cozy[0].URL)
 
 	// Nothing to do for Dave (found by his email)
-	dave := &Recipient{
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "dave@cozy.tools"},
+	dave := &contacts.Contact{
+		Email: []contacts.Email{
+			contacts.Email{Address: "dave@cozy.tools"},
 		},
 	}
 	err = couchdb.CreateDoc(TestPrefix, dave)
 	assert.NoError(t, err)
-	dave2 := &Recipient{
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "dave@cozy.tools"},
+	dave2 := &contacts.Contact{
+		Email: []contacts.Email{
+			contacts.Email{Address: "dave@cozy.tools"},
 		},
 	}
 	err = CreateOrUpdateRecipient(TestPrefix, dave2)
 	assert.NoError(t, err)
-	assert.Equal(t, dave.RID, dave2.RID)
-	assert.NotEmpty(t, dave2.RRev)
-	doc, err = GetRecipient(TestPrefix, dave.RID)
+	assert.Equal(t, dave.DocID, dave2.DocID)
+	assert.NotEmpty(t, dave2.DocRev)
+	doc, err = GetRecipient(TestPrefix, dave.DocID)
 	assert.NoError(t, err)
 	assert.Len(t, doc.Email, 1)
 	assert.Equal(t, "dave@cozy.tools", doc.Email[0].Address)
@@ -486,7 +487,7 @@ func TestGetRecipientStatusFromRecipientNoRecipient(t *testing.T) {
 
 func TestGetRecipientStatusFromRecipientNotFound(t *testing.T) {
 	recID := "fake recipient"
-	rec := &Recipient{}
+	rec := &contacts.Contact{}
 	rec.SetID(recID)
 	rs := &RecipientStatus{
 		recipient: rec,
@@ -522,7 +523,7 @@ func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 
 func TestGetRecipientStatusFromRecipientIDSuccess(t *testing.T) {
 	recID := "fake recipient"
-	rec := &Recipient{}
+	rec := &contacts.Contact{}
 	rec.SetID(recID)
 	rs := &RecipientStatus{
 		recipient: rec,
@@ -621,19 +622,19 @@ func TestSharingRefusedSuccess(t *testing.T) {
 	state := "stateoftheart2"
 	clientID := "thriftshopclient"
 
-	recipient := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: "https://toto.fr"},
+	recipient := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: "https://toto.fr"},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "cpasbien@mail.fr"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "cpasbien@mail.fr"},
 		},
 	}
 	err := couchdb.CreateDoc(TestPrefix, recipient)
 	assert.NoError(t, err)
 
 	rStatus := &RecipientStatus{
-		RefRecipient: couchdb.DocReference{ID: recipient.RID},
+		RefRecipient: couchdb.DocReference{ID: recipient.DocID},
 		Client: auth.Client{
 			ClientID: clientID,
 		},
@@ -665,7 +666,7 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 	}
 
 	sharing := insertSharingIntoDB(t, "", consts.MasterMasterSharing, false,
-		"io.cozy.events", []*Recipient{}, rule)
+		"io.cozy.events", []*contacts.Contact{}, rule)
 
 	_, err := RecipientRefusedSharing(testInstance, sharing.SharingID)
 	assert.NoError(t, err)
@@ -724,9 +725,9 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 }
 
 func TestCreateSharingAndRegisterSharer(t *testing.T) {
-	rec := &Recipient{
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "test@test.fr"},
+	rec := &contacts.Contact{
+		Email: []contacts.Email{
+			contacts.Email{Address: "test@test.fr"},
 		},
 	}
 
@@ -770,7 +771,7 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		Values:   []string{docEvent.ID()},
 	}
 	_ = insertSharingIntoDB(t, "", consts.MasterSlaveSharing, false,
-		"io.cozy.events", []*Recipient{}, rule1)
+		"io.cozy.events", []*contacts.Contact{}, rule1)
 
 	err := RemoveDocumentIfNotShared(testInstance, "io.cozy.events",
 		docEvent.ID())
@@ -801,7 +802,7 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		Values:   []string{"io.cozy.photos.albums/456"},
 	}
 	_ = insertSharingIntoDB(t, "", consts.MasterSlaveSharing, false,
-		"io.cozy.events", []*Recipient{}, rule2)
+		"io.cozy.events", []*contacts.Contact{}, rule2)
 
 	// Test: the file matches a permission in a sharing it should NOT be
 	// removed.
@@ -860,20 +861,20 @@ func TestRevokeSharing(t *testing.T) {
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 
 	u := ts.URL
-	recipient1 := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: u},
+	recipient1 := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: u},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "recipient1@mail.cc"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "recipient1@mail.cc"},
 		},
 	}
-	recipient2 := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: u},
+	recipient2 := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: u},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "recipient2@mail.cc"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "recipient2@mail.cc"},
 		},
 	}
 	rule := permissions.Rule{
@@ -885,7 +886,7 @@ func TestRevokeSharing(t *testing.T) {
 	// We create a sharing where the user is the owner.
 	sharingSharerMM := insertSharingIntoDB(t, sharingIDSharerMM,
 		consts.MasterMasterSharing, true, "",
-		[]*Recipient{recipient1, recipient2}, rule)
+		[]*contacts.Contact{recipient1, recipient2}, rule)
 	// We add a trigger to this sharing.
 	sched := globals.GetScheduler()
 	triggers, _ := sched.GetAll(testInstance.Domain)
@@ -920,7 +921,7 @@ func TestRevokeSharing(t *testing.T) {
 
 	// We create a sharing where the user is the recipient.
 	sharingRecipientMM := insertSharingIntoDB(t, sharingIDRecipientMM,
-		consts.MasterMasterSharing, false, "", []*Recipient{recipient1}, rule)
+		consts.MasterMasterSharing, false, "", []*contacts.Contact{recipient1}, rule)
 	// We add a trigger to this sharing.
 	err = AddTrigger(testInstance, rule, sharingRecipientMM.SharingID, false)
 	assert.NoError(t, err)
@@ -952,7 +953,7 @@ func TestRevokeRecipient(t *testing.T) {
 	// Test: we try to revoke a recipient from a sharing while we are not the
 	// owner of the sharing.
 	sharingNotSharer := insertSharingIntoDB(t, "", consts.MasterMasterSharing,
-		false, "", []*Recipient{}, permissions.Rule{})
+		false, "", []*contacts.Contact{}, permissions.Rule{})
 	err := RevokeRecipient(testInstance, sharingNotSharer, "wontbeused", false)
 	assert.Error(t, err)
 	assert.Equal(t, err, ErrOnlySharerCanRevokeRecipient)
@@ -975,20 +976,20 @@ func TestRevokeRecipient(t *testing.T) {
 	ts = setup.GetTestServerMultipleRoutes(mpr)
 
 	u := ts.URL
-	recipient1 := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: "recipient1.url.cc"},
+	recipient1 := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: "recipient1.url.cc"},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "recipient@1"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "recipient@1"},
 		},
 	}
-	recipient2 := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{URL: u},
+	recipient2 := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: u},
 		},
-		Email: []RecipientEmail{
-			RecipientEmail{Address: "recipient@2"},
+		Email: []contacts.Email{
+			contacts.Email{Address: "recipient@2"},
 		},
 	}
 	rule := permissions.Rule{
@@ -998,7 +999,7 @@ func TestRevokeRecipient(t *testing.T) {
 		Verbs:    permissions.ALL,
 	}
 	sharing := insertSharingIntoDB(t, sharingID, consts.MasterMasterSharing,
-		true, "", []*Recipient{recipient1, recipient2}, rule)
+		true, "", []*contacts.Contact{recipient1, recipient2}, rule)
 
 	// We add a trigger to this sharing.
 	sched := globals.GetScheduler()

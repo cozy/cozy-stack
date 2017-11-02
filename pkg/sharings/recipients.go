@@ -7,27 +7,10 @@ import (
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
-
-// RecipientEmail is a struct describing an email of a contact
-type RecipientEmail struct {
-	Address string `json:"address"`
-}
-
-// RecipientCozy is a struct describing a cozy instance of the recipient
-type RecipientCozy struct {
-	URL string `json:"url"`
-}
-
-// Recipient is a struct describing a sharing recipient
-type Recipient struct {
-	RID   string           `json:"_id,omitempty"`
-	RRev  string           `json:"_rev,omitempty"`
-	Email []RecipientEmail `json:"email,omitempty"`
-	Cozy  []RecipientCozy  `json:"cozy,omitempty"`
-}
 
 // RecipientStatus contains the information about a recipient for a sharing
 type RecipientStatus struct {
@@ -35,7 +18,7 @@ type RecipientStatus struct {
 
 	// Reference on the recipient.
 	RefRecipient couchdb.DocReference `json:"recipient,omitempty"`
-	recipient    *Recipient
+	recipient    *contacts.Contact
 
 	// The sharer is the "client", in the OAuth2 protocol, we keep here the
 	// information she needs to send to authenticate.
@@ -46,34 +29,8 @@ type RecipientStatus struct {
 	HostClientID string
 }
 
-// ID returns the recipient qualified identifier
-func (r *Recipient) ID() string { return r.RID }
-
-// Rev returns the recipient revision
-func (r *Recipient) Rev() string { return r.RRev }
-
-// DocType returns the recipient document type
-func (r *Recipient) DocType() string { return consts.Contacts }
-
-// Clone implements couchdb.Doc
-func (r *Recipient) Clone() couchdb.Doc {
-	cloned := *r
-	cloned.Email = make([]RecipientEmail, len(r.Email))
-	copy(cloned.Email, r.Email)
-
-	cloned.Cozy = make([]RecipientCozy, len(r.Cozy))
-	copy(cloned.Cozy, r.Cozy)
-	return &cloned
-}
-
-// SetID changes the recipient qualified identifier
-func (r *Recipient) SetID(id string) { r.RID = id }
-
-// SetRev changes the recipient revision
-func (r *Recipient) SetRev(rev string) { r.RRev = rev }
-
 // ExtractDomainAndScheme returns the recipient's domain and the scheme
-func (r *Recipient) ExtractDomainAndScheme() (string, string, error) {
+func ExtractDomainAndScheme(r *contacts.Contact) (string, string, error) {
 	if len(r.Cozy) == 0 {
 		return "", "", ErrRecipientHasNoURL
 	}
@@ -103,7 +60,7 @@ func (rs *RecipientStatus) GetRecipient(db couchdb.Database) error {
 
 // CreateOrUpdateRecipient inserts a Recipient document in database. Email and URL must
 // not be empty.
-func CreateOrUpdateRecipient(db couchdb.Database, doc *Recipient) error {
+func CreateOrUpdateRecipient(db couchdb.Database, doc *contacts.Contact) error {
 	if len(doc.Cozy) == 0 && len(doc.Email) == 0 {
 		return ErrRecipientBadParams
 	}
@@ -165,13 +122,13 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *Recipient) error {
 // ForceRecipient forces the recipient. It is useful when testing the URL of
 // the cozy instances of the recipient before saving the recipient if
 // successful.
-func (rs *RecipientStatus) ForceRecipient(r *Recipient) {
+func (rs *RecipientStatus) ForceRecipient(r *contacts.Contact) {
 	rs.recipient = r
 }
 
 // GetRecipient returns the Recipient stored in database from a given ID
-func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
-	doc := &Recipient{}
+func GetRecipient(db couchdb.Database, recID string) (*contacts.Contact, error) {
+	doc := &contacts.Contact{}
 	err := couchdb.GetDoc(db, consts.Contacts, recID, doc)
 	if couchdb.IsNotFoundError(err) {
 		err = ErrRecipientDoesNotExist
@@ -181,7 +138,7 @@ func GetRecipient(db couchdb.Database, recID string) (*Recipient, error) {
 
 // GetCachedRecipient returns the recipient cached in memory within
 // the RecipientStatus. CAN BE NIL, Used by jsonapi
-func (rs *RecipientStatus) GetCachedRecipient() *Recipient {
+func (rs *RecipientStatus) GetCachedRecipient() *contacts.Contact {
 	return rs.recipient
 }
 
@@ -205,7 +162,7 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 		return nil, ErrNoOAuthClient
 	}
 
-	recipientDomain, scheme, err := rs.recipient.ExtractDomainAndScheme()
+	recipientDomain, scheme, err := ExtractDomainAndScheme(rs.recipient)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +216,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		ClientURI:    clientURI,
 	}
 
-	recipientURL, scheme, err := rs.recipient.ExtractDomainAndScheme()
+	recipientURL, scheme, err := ExtractDomainAndScheme(rs.recipient)
 	if err != nil {
 		return err
 	}
@@ -279,7 +236,3 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 	rs.Client = *resClient
 	return nil
 }
-
-var (
-	_ couchdb.Doc = &Recipient{}
-)

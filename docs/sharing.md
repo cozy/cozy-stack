@@ -132,7 +132,7 @@ It is worth mentionning that the permissions are defined on the sharer side, but
 
 #### recipients
 
-List all the recipients of the sharing:  
+List all the recipients of the sharing:
 
 ```json
 "recipients": [
@@ -345,60 +345,6 @@ Content-Type: application/vnd.api+json
   ]
 }
 
-```
-
-#### POST /sharings/recipient
-
-Create a new recipient. The expected fields are `email` and `url`.
-
-The `email` will be used to send a sharing request, while the `url` is the recipient Cozy's url.
-
-If the `url` is missing, an additional discovery step will be performed for the next sharing involving this recipient. A mail will be sent to the recipient, containing a link where the recipient will be ask to type his Cozy's url.
-
-
-##### Request
-
-```http
-POST /sharings/recipient HTTP/1.1
-Host: cozy.example.net
-Content-Type: application/json
-```
-
-```json
-{
-    "email": "jonsnow@nightswatch.wall",
-    "url": "https://jonsnow.cozy"
-}
-```
-
-#### Response
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json
-```
-
-```json
-{
-  "data": {
-    "type": "io.cozy.contacts",
-    "id": "a6bd9ea3a4bb27e911674d64820180fc",
-    "attributes": {
-      "email": {
-        "address": "jonsnow@nightswatch.wall"
-      },
-      "cozy": {
-        "url": "https://jonsnow.cozy"
-      }
-    },
-    "meta": {
-      "rev": "1-fe30d71ac4d24a87dbe80d61a033a3f5"
-    },
-    "links": {
-      "self": "/contacts/a6bd9ea3a4bb27e911674d64820180fc"
-    }
-  }
-}
 ```
 
 ### POST /sharings/:id/sendMail
