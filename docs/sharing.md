@@ -334,6 +334,7 @@ Content-Type: application/vnd.api+json
         "cozy": {
           "url": "url.fr"
         },
+      },
       "meta": {
         "rev": "1-461114b45855dc6acdb9bdc5d67e1092"
       },
