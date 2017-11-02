@@ -65,6 +65,7 @@ type (
 		job    *Job
 		evt    Event
 		log    *logrus.Entry
+		id     string
 		cookie interface{}
 	}
 )
@@ -81,10 +82,13 @@ func setNbSlots(nb int) {
 // NewWorkerContext returns a context.Context usable by a worker.
 func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 	ctx := context.Background()
+	id := fmt.Sprintf("%s/%s", workerID, job.ID())
+	log := logger.WithDomain(job.Domain).WithField("job_id", job.ID()).WithField("worker_id", workerID)
 	return &WorkerContext{
 		Context: ctx,
 		job:     job,
-		log:     logger.WithDomain(job.Domain).WithField("worker_id", workerID),
+		log:     log,
+		id:      id,
 	}
 }
 
@@ -118,8 +122,14 @@ func (c *WorkerContext) clone() *WorkerContext {
 		job:     c.job,
 		evt:     c.evt,
 		log:     c.log,
+		id:      c.id,
 		cookie:  c.cookie,
 	}
+}
+
+// ID returns a unique identifier for the worker context.
+func (c *WorkerContext) ID() string {
+	return c.id
 }
 
 // Logger return the logger associated with the worker context.

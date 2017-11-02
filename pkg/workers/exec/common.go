@@ -10,6 +10,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -33,9 +34,10 @@ func init() {
 }
 
 type execWorker interface {
+	Slug() string
 	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error)
-	PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, jobID string, err error)
-	ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error
+	PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
+	ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error
 	Error(i *instance.Instance, err error) error
 	Commit(ctx *jobs.WorkerContext, errjob error) error
 }
@@ -56,7 +58,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		}
 		defer os.RemoveAll(workDir)
 
-		cmdStr, env, jobID, err := worker.PrepareCmdEnv(ctx, inst)
+		cmdStr, env, err := worker.PrepareCmdEnv(ctx, inst)
 		if err != nil {
 			return err
 		}
@@ -81,21 +83,22 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return wrapErr(ctx, err)
 		}
 
+		log := ctx.Logger().WithField("slug", worker.Slug())
 		go func() {
 			for scanErr.Scan() {
-				ctx.Logger().Errorf("%s: Stderr: %s", jobID, scanErr.Text())
+				log.Errorf("Stderr: %s", scanErr.Text())
 			}
 		}()
 
 		for scanOut.Scan() {
-			if errOut := worker.ScanOuput(ctx, inst, scanOut.Bytes()); errOut != nil {
-				ctx.Logger().Errorf("%s: %s", jobID, errOut)
+			if errOut := worker.ScanOuput(ctx, inst, log, scanOut.Bytes()); errOut != nil {
+				log.Error(errOut)
 			}
 		}
 
 		if err = cmd.Wait(); err != nil {
 			err = wrapErr(ctx, err)
-			ctx.Logger().Errorf("%s: failed: %s", jobID, err)
+			log.Errorf("failed: %s", err)
 		}
 
 		return worker.Error(inst, err)

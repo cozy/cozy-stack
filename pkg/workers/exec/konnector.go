@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
 )
@@ -156,9 +157,11 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	return workDir, nil
 }
 
-func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, jobID string, err error) {
-	jobID = fmt.Sprintf("konnector/%s/%s", w.slug, i.Domain)
+func (w *konnectorWorker) Slug() string {
+	return w.slug
+}
 
+func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
 	// Directly pass the job message as fields parameters
 	fieldsJSON, err := json.Marshal(w.msg)
 	if err != nil {
@@ -180,12 +183,12 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 		"COZY_PARAMETERS=" + string(paramsJSON),
 		"COZY_TYPE=" + w.man.Type,
 		"COZY_LOCALE=" + i.Locale,
-		"COZY_JOB_ID=" + jobID,
+		"COZY_JOB_ID=" + ctx.ID(),
 	}
 	return
 }
 
-func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
+func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error {
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -196,27 +199,27 @@ func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instanc
 
 	switch msg.Type {
 	case konnectorMsgTypeDebug:
-		ctx.Logger().Debug(msg.Message)
+		log.Debug(msg.Message)
 	case konnectorMsgTypeWarning:
-		ctx.Logger().Warn(msg.Message)
+		log.Warn(msg.Message)
 	case konnectorMsgTypeError:
 		// For retro-compatibility, we still use "error" logs as returned error,
 		// only in the case that no "critical" message are actually returned. In
 		// such case, We use the last "error" log as the returned error.
 		w.lastErr = errors.New(msg.Message)
-		ctx.Logger().Error(msg.Message)
+		log.Error(msg.Message)
 	case konnectorMsgTypeCritical:
 		w.err = errors.New(msg.Message)
-		ctx.Logger().Error(msg.Message)
+		log.Error(msg.Message)
 	}
 
 	realtime.GetHub().Publish(&realtime.Event{
-		Verb: realtime.EventCreate,
+		Domain: i.Domain,
+		Verb:   realtime.EventCreate,
 		Doc: couchdb.JSONDoc{Type: consts.JobEvents, M: map[string]interface{}{
 			"type":    msg.Type,
 			"message": msg.Message,
 		}},
-		Domain: i.Domain,
 	})
 	return nil
 }

@@ -2,7 +2,6 @@ package exec
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path"
@@ -11,6 +10,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -78,23 +78,24 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 	return workDir, nil
 }
 
-func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, jobID string, err error) {
-	jobID = fmt.Sprintf("service/%s/%s", w.opts.Slug, i.Domain)
+func (w *serviceWorker) Slug() string {
+	return w.opts.Slug
+}
 
+func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
 	token := i.BuildAppToken(w.man)
-
 	cmd = config.GetConfig().Konnectors.Cmd
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_TYPE=" + w.opts.Type,
 		"COZY_LOCALE=" + i.Locale,
-		"COZY_JOB_ID=" + jobID,
+		"COZY_JOB_ID=" + ctx.ID(),
 	}
 	return
 }
 
-func (w *serviceWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
+func (w *serviceWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error {
 	return nil
 }
 
