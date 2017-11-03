@@ -394,19 +394,22 @@ HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
-### DELETE /sharings/:sharing-id/recipient/:client-id
+### DELETE /sharings/:sharing-id/:recipient-client-id
+
+This internal route is used by the cozy instance of the recipient to inform
+the sharer that its owner has revoked the sharing.
+
+### DELETE /sharings/:sharing-id/recipient/:contact-id
 
 Revoke a recipient from a sharing. Only the sharer can make that action and depending on the type of sharing the implications differ:
 
 * for both _Master-Master_ and _Master-Slave_ sharings the sharer asks the recipient to revoke the sharing;
 * for _Master-Master_ sharing the sharer also deletes the OAuth client of the recipient for that sharing.
 
-The `client-id` is the one provided by the recipient at the registration step. It is saved on the sharer side in the sharing document, in the `Client` object for the given recipient.
-
 #### Request
 
 ```http
-DELETE /sharings/xkWMVOrVitZVSqXAAvErcmUAdEKMCLlx/recipient/9e6e595ee50575a3faa064987d00b476 HTTP/1.1
+DELETE /sharings/xkWMVOrVitZVSqXAAvErcmUAdEKMCLlx/recipient/f319a796-bfed-11e7-9903-d3d8f0929aa5 HTTP/1.1
 Authorization: Bearer WQiOiJhY2Nlc3MiLCJpYXQiOjE1MDAzNzM0NDIsIml …
 Host: cozy.example.net
 Content-Type: application/json

@@ -135,6 +135,7 @@ func GetForOauth(claims *Claims) (*Permission, error) {
 	pdoc := &Permission{
 		Type:        TypeOauth,
 		Permissions: set,
+		SourceID:    claims.Subject,
 	}
 	return pdoc, nil
 }

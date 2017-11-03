@@ -11,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
@@ -20,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/web/middlewares"
 	perm "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // DiscoveryErrorKey is the key for translating the discovery error message
@@ -447,16 +445,13 @@ func revokeSharing(c echo.Context) error {
 		return jsonapi.NotFound(err)
 	}
 
-	sharerID := ""
-	if sharing.Sharer.SharerStatus != nil {
-		sharerID = sharing.Sharer.SharerStatus.HostClientID
-	}
-
-	err = checkRevokeSharingPermissions(c, ins, sharing, sharerID)
+	err = checkRevokeSharingPermissions(c, sharing)
 	if err != nil {
 		return c.JSON(http.StatusForbidden, err)
 	}
 
+	// TODO do not use an explicit param, infer it from the token
+	// from app => true, from OAuth => false
 	recursiveRaw := c.QueryParam(consts.QueryParamRecursive)
 	recursive := true
 	if recursiveRaw != "" {
@@ -466,12 +461,10 @@ func revokeSharing(c echo.Context) error {
 		}
 	}
 
-	err = sharings.RevokeSharing(ins, sharing, recursive)
-	if err != nil {
+	if err = sharings.RevokeSharing(ins, sharing, recursive); err != nil {
 		return wrapErrors(err)
 	}
-	ins.Logger().Debugf("[sharings] revokeSharing: Sharing %s was revoked",
-		sharingID)
+	ins.Logger().Debugf("[sharings] revokeSharing: Sharing %s was revoked", sharingID)
 
 	return c.NoContent(http.StatusOK)
 }
@@ -485,23 +478,38 @@ func revokeRecipient(c echo.Context) error {
 		return jsonapi.NotFound(err)
 	}
 
-	recipientClientID := c.Param("recipient-client-id")
+	recipientClientID := c.Param("client-id")
 
-	recursiveRaw := c.QueryParam(consts.QueryParamRecursive)
-	recursive := true
-	if recursiveRaw != "" {
-		recursive, err = strconv.ParseBool(recursiveRaw)
-		if err != nil {
-			return jsonapi.BadRequest(err)
-		}
-	}
-
-	err = checkRevokeRecipientPermissions(c, ins, sharing, recipientClientID)
+	err = checkRevokeRecipientPermissions(c, sharing, recipientClientID)
 	if err != nil {
 		return c.JSON(http.StatusForbidden, err)
 	}
 
-	err = sharings.RevokeRecipient(ins, sharing, recipientClientID, recursive)
+	err = sharings.RevokeRecipient(ins, sharing, recipientClientID, false)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+func revokeContact(c echo.Context) error {
+	ins := middlewares.GetInstance(c)
+
+	sharingID := c.Param("sharing-id")
+	sharing, err := sharings.FindSharing(ins, sharingID)
+	if err != nil {
+		return jsonapi.NotFound(err)
+	}
+
+	contactID := c.Param("contact-id")
+
+	err = checkRevokeContactPermissions(c, sharing)
+	if err != nil {
+		return c.JSON(http.StatusForbidden, err)
+	}
+
+	err = sharings.RevokeRecipient(ins, sharing, contactID, true) // FIXME
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -699,7 +707,8 @@ func Routes(router *echo.Group) {
 	router.POST("/discovery", discovery)
 
 	router.DELETE("/:sharing-id", revokeSharing)
-	router.DELETE("/:sharing-id/recipient/:recipient-client-id", revokeRecipient)
+	router.DELETE("/:sharing-id/:client-id", revokeRecipient)
+	router.DELETE("/:sharing-id/recipient/:contact-id", revokeContact)
 
 	router.DELETE("/files/:file-id/referenced_by", removeReferences)
 
@@ -712,74 +721,79 @@ func Routes(router *echo.Group) {
 	group.DELETE("/:docid", deleteDocument)
 }
 
-func checkRevokeRecipientPermissions(c echo.Context, ins *instance.Instance, sharing *sharings.Sharing, recipientClientID string) error {
-	// Only the sharer can revoke a recipient, hence `ownerHasToBeSharer` is set
-	// to true.
-	return checkRevokePermissions(c, ins, sharing, recipientClientID, true)
-}
-
-func checkRevokeSharingPermissions(c echo.Context, ins *instance.Instance, sharing *sharings.Sharing, recipientClientID string) error {
-	// Any participant has the possibility to revoke a sharing, hence
-	// `ownerHasToBeSharer` is set to false.
-	return checkRevokePermissions(c, ins, sharing, recipientClientID, false)
-}
-
-// Check if the permissions given in the revoke request apply.
-//
-// Two scenarii can lead to valid permissions:
-// 1. The permissions identify the application and, if `ownerHasToBeSharer` is
-// true, the user is the owner of the sharing.
-// 2. The permissions identify the user that is to be revoked or the sharer.
-func checkRevokePermissions(c echo.Context, ins *instance.Instance, sharing *sharings.Sharing, recipientClientID string, ownerHasToBeSharer bool) error {
-	token := perm.GetRequestToken(c)
-
+func checkRevokeContactPermissions(c echo.Context, sharing *sharings.Sharing) error {
 	requestPerm, err := perm.GetPermission(c)
 	if err != nil {
 		return err
 	}
 
-	// TODO: avoid having to parse the JWT token twice — already done by the
-	// perm.GetPermission method.
-	var claims permissions.Claims
-	err = crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
-		return ins.PickKey(token.Claims.(*permissions.Claims).Audience)
-	}, &claims)
+	if sharing.Owner && sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
+		return nil
+	}
+
+	return sharings.ErrForbidden
+}
+
+func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, recipientClientID string) error {
+	requestPerm, err := perm.GetPermission(c)
 	if err != nil {
 		return err
 	}
 
-	switch claims.Audience {
-	case permissions.AppAudience:
-		if sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
-			if ownerHasToBeSharer {
-				if sharing.Owner {
+	if requestPerm.Type != permissions.TypeOauth {
+		return sharings.ErrForbidden
+	}
+
+	if !sharing.Permissions.HasSameRules(requestPerm.Permissions) {
+		return permissions.ErrInvalidToken
+	}
+
+	if sharing.Owner {
+		for _, rec := range sharing.RecipientsStatus {
+			if rec.Client.ClientID == recipientClientID {
+				if requestPerm.SourceID == rec.HostClientID {
 					return nil
 				}
-				return sharings.ErrForbidden
 			}
+		}
+	} else {
+		sharerClientID := sharing.Sharer.SharerStatus.HostClientID
+		if requestPerm.SourceID == sharerClientID {
+			return nil
+		}
+	}
+
+	return sharings.ErrForbidden
+}
+
+// Check if the permissions given in the revoke request apply.
+//
+// Two scenarii can lead to valid permissions:
+// 1. The permissions identify the application
+// 2. The permissions identify the user that is to be revoked or the sharer.
+func checkRevokeSharingPermissions(c echo.Context, sharing *sharings.Sharing) error {
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		return err
+	}
+
+	switch requestPerm.Type {
+	case permissions.TypeWebapp:
+		if sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
 			return nil
 		}
 		return sharings.ErrForbidden
 
-	case permissions.AccessTokenAudience:
+	case permissions.TypeOauth:
 		if !sharing.Permissions.HasSameRules(requestPerm.Permissions) {
 			return permissions.ErrInvalidToken
 		}
-		if sharing.Owner {
-			for _, rec := range sharing.RecipientsStatus {
-				if rec.Client.ClientID == recipientClientID {
-					if claims.Subject == rec.HostClientID {
-						return nil
-					}
-				}
-			}
-		} else {
+		if !sharing.Owner {
 			sharerClientID := sharing.Sharer.SharerStatus.HostClientID
-			if claims.Subject == sharerClientID {
+			if requestPerm.SourceID == sharerClientID {
 				return nil
 			}
 		}
-
 		return sharings.ErrForbidden
 
 	default:
