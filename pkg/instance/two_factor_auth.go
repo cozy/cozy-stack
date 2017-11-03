@@ -1,14 +1,25 @@
 package instance
 
 import (
+	"crypto/sha256"
 	"encoding/base32"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/mssola/user_agent"
+	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
+	"golang.org/x/crypto/hkdf"
 )
+
+var twoFactorTOTPOptions = totp.ValidateOpts{
+	Period:    30, // 30s
+	Skew:      10, // 30s +- 10*30s = [-5min; 5,5min]
+	Digits:    otp.DigitsSix,
+	Algorithm: otp.AlgorithmSHA256,
+}
 
 // AuthMode defines the authentication mode chosen for the connection to this
 // instance.
@@ -49,28 +60,44 @@ func StringToAuthMode(authMode string) AuthMode {
 //
 // The passcode should be send to the user by another mean (mail, SMS, ...)
 func (i *Instance) GenerateTwoFactorSecrets() (token []byte, passcode string, err error) {
-	passcode, err = totp.GenerateCodeCustom(base32.StdEncoding.EncodeToString(i.SessionSecret),
-		time.Now().UTC(), twoFactorTOTPOptions)
+	// A salt is used when we generate a new 2FA secret to derive a new TOTP
+	// function from. This allow us to have TOTP derived from a new key each time
+	// we check the first step of the 2FA ("the passphrase step"). This salt is
+	// given to the user and signed in the "two-factor-token" MAC.
+	salt := crypto.GenerateRandomBytes(sha256.Size)
+	token, err = crypto.EncodeAuthMessage(i.totpMACConfig(), salt, nil)
 	if err != nil {
 		return
 	}
-	token, err = crypto.EncodeAuthMessage(i.totpMACConfig(), nil, []byte(i.Domain))
+
+	hkdf := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
+	key := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, key)
+	if err != nil {
+		return
+	}
+	passcode, err = totp.GenerateCodeCustom(base32.StdEncoding.EncodeToString(key),
+		time.Now().UTC(), twoFactorTOTPOptions)
 	return
 }
 
 // ValidateTwoFactorPasscode validates the given (token, passcode) pair for two
 // factor authentication.
 func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool {
-	_, err := crypto.DecodeAuthMessage(i.totpMACConfig(), token, []byte(i.Domain))
+	salt, err := crypto.DecodeAuthMessage(i.totpMACConfig(), token, nil)
 	if err != nil {
 		return false
 	}
-	ok, err := totp.ValidateCustom(passcode, base32.StdEncoding.EncodeToString(i.SessionSecret),
-		time.Now().UTC(), twoFactorTOTPOptions)
-	if err != nil || !ok {
+
+	hkdf := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
+	key := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, key)
+	if err != nil {
 		return false
 	}
-	return true
+	ok, err := totp.ValidateCustom(passcode, base32.StdEncoding.EncodeToString(key),
+		time.Now().UTC(), twoFactorTOTPOptions)
+	return ok && err == nil
 }
 
 // SendTwoFactorPasscode sends by mail the two factor secret to the owner of
@@ -117,7 +144,7 @@ func (i *Instance) totpMACConfig() *crypto.MACConfig {
 	return &crypto.MACConfig{
 		Name:   "totp",
 		Key:    i.SessionSecret,
-		MaxAge: int64(twoFactorTOTPOptions.Period * twoFactorTOTPOptions.Skew),
+		MaxAge: 0,
 		MaxLen: 256,
 	}
 }

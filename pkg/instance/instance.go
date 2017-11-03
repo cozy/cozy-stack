@@ -30,8 +30,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/leonelquinteros/gotext"
-	"github.com/pquerna/otp"
-	"github.com/pquerna/otp/totp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -48,13 +46,6 @@ const (
 // passwordResetValidityDuration is the validity duration of the passphrase
 // reset token.
 var passwordResetValidityDuration = 15 * time.Minute
-
-var twoFactorTOTPOptions = totp.ValidateOpts{
-	Period:    30, // 30s
-	Skew:      10, // 30s +- 10*30s = [-5min; 5,5min]
-	Digits:    otp.DigitsSix,
-	Algorithm: otp.AlgorithmSHA256,
-}
 
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
