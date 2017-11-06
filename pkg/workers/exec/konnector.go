@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -17,9 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/sirupsen/logrus"
 
 	"github.com/spf13/afero"
@@ -97,30 +94,30 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	}
 
 	// Create the folder in which the konnector has the right to write.
-	{
-		fs := i.VFS()
-		folderToSave, _ := msg["folder_to_save"].(string)
-		if folderToSave != "" {
-			if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
-				folderToSave = ""
-			}
-		}
-		if folderToSave == "" {
-			defaultFolderPath, _ := msg["default_folder_path"].(string)
-			if defaultFolderPath == "" {
-				name := i.Translate("Tree Administrative")
-				defaultFolderPath = fmt.Sprintf("/%s/%s", name, strings.Title(slug))
-			}
-			var dir *vfs.DirDoc
-			dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
-			if err != nil {
-				log := logger.WithDomain(i.Domain)
-				log.Warnf("Can't create the default folder %s for konnector %s: %s", defaultFolderPath, slug, err)
-				return
-			}
-			msg["folder_to_save"] = dir.ID()
-		}
-	}
+	// {
+	// 	fs := i.VFS()
+	// 	folderToSave, _ := msg["folder_to_save"].(string)
+	// 	if folderToSave != "" {
+	// 		if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
+	// 			folderToSave = ""
+	// 		}
+	// 	}
+	// 	if folderToSave == "" {
+	// 		defaultFolderPath, _ := msg["default_folder_path"].(string)
+	// 		if defaultFolderPath == "" {
+	// 			name := i.Translate("Tree Administrative")
+	// 			defaultFolderPath = fmt.Sprintf("/%s/%s", name, strings.Title(slug))
+	// 		}
+	// 		var dir *vfs.DirDoc
+	// 		dir, err = vfs.MkdirAll(fs, defaultFolderPath, nil)
+	// 		if err != nil {
+	// 			log := logger.WithDomain(i.Domain)
+	// 			log.Warnf("Can't create the default folder %s for konnector %s: %s", defaultFolderPath, slug, err)
+	// 			return
+	// 		}
+	// 		msg["folder_to_save"] = dir.ID()
+	// 	}
+	// }
 
 	tr := tar.NewReader(tarFile)
 	for {
