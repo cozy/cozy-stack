@@ -13,8 +13,7 @@ In this tutorial, we assume:
     `cozy/cozy-example`
 
 You first need to add the token to your travis configuration file
-`.travis.yml`. To do so, you need the [`travis` utility](https://github.com
-/travis-ci/travis.rb#installation) to encrypt its value.
+`.travis.yml`. To do so, you need the [`travis` utility](https://github.com/travis-ci/travis.rb#installation) to encrypt its value.
 
 ```sh
 $ travis encrypt REGISTRY_TOKEN=AbCdEf --add -r cozy/cozy-example
