@@ -39,13 +39,10 @@ func (s *apiSharing) Links() *jsonapi.LinksList {
 // It is used to generate the recipients relationships
 func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
 	l := len(s.RecipientsStatus)
-	i := 0
-
 	data := make([]couchdb.DocReference, l)
-	for _, rec := range s.RecipientsStatus {
+	for i, rec := range s.RecipientsStatus {
 		r := rec.RefRecipient
 		data[i] = couchdb.DocReference{ID: r.ID, Type: r.Type}
-		i++
 	}
 	contents := jsonapi.Relationship{Data: data}
 	return jsonapi.RelationshipMap{"recipients": contents}
@@ -74,7 +71,7 @@ func (r *apiRecipient) MarshalJSON() ([]byte, error) {
 func (r *apiRecipient) Relationships() jsonapi.RelationshipMap { return nil }
 func (r *apiRecipient) Included() []jsonapi.Object             { return nil }
 func (r *apiRecipient) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/recipients/" + r.DocID}
+	return &jsonapi.LinksList{Self: "/data/io.cozy.contacts/" + r.DocID}
 }
 
 var _ jsonapi.Object = (*apiSharing)(nil)
