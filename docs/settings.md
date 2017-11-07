@@ -202,6 +202,40 @@ Content-type: application/json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.settings` for the verb `PUT`.
 
+### GET /settings/sessions
+
+This route allows to get all the currently active sessions.
+
+```
+GET /settings/sessions HTTP/1.1
+Host: cozy.example.org
+Cookie: ...
+Authorization: Bearer ...
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
+
+```json
+{
+  "data": [{
+    "id": "...",
+    "attributes": {
+      "last_seen": ""
+    },
+    "meta": {
+      "rev": "..."
+    }
+  }]
+}
+```
+
+#### Permissions
+
+This route requires the application to have permissions on the `io.cozy.sessions` doctype with the `GET` verb.
+
 ## OAuth 2 clients
 
 ### GET /settings/clients
