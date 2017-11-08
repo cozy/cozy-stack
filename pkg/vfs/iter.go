@@ -29,7 +29,9 @@ func NewIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) DirIter
 		opt.ByFetch = iterMaxFetchSize
 	}
 	sel := mango.Equal("dir_id", dir.DocID)
-	if opt.AfterID != "" {
+	if opt.AfterID == "" {
+		sel = mango.And(sel, mango.Exists("_id"))
+	} else {
 		// TODO: adapt this code when filtering and sorting are added to the
 		// iterator
 		sel = mango.And(sel, mango.Gt("_id", opt.AfterID))

@@ -351,7 +351,10 @@ func destroyApp(db couchdb.Database, docType, slug string) error {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
-		Selector: mango.Equal("source_id", docType+"/"+slug),
+		Selector: mango.And(
+			mango.Equal("source_id", docType+"/"+slug),
+			mango.Exists("type"),
+		),
 	}, &res)
 	if err != nil {
 		return err

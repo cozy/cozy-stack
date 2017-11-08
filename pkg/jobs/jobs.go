@@ -265,6 +265,7 @@ func GetQueuedJobs(domain, workerType string) ([]*Job, error) {
 		UseIndex: "by-worker-and-state",
 		Selector: mango.And(
 			mango.Equal("worker", workerType),
+			mango.Exists("state"), // XXX it is needed by couchdb to use the index
 			mango.Or(
 				mango.Equal("state", Queued),
 				mango.Equal("state", Running),

@@ -26,6 +26,9 @@ const lt ValueOperator = "$lt"
 // Lte ($lte) checks that field <= value
 const lte ValueOperator = "$lte"
 
+// Exists ($exists) checks that the field exists (or is missing)
+const exists ValueOperator = "$exists"
+
 // LogicOperator is an operator between two filters
 type LogicOperator string
 
@@ -128,6 +131,9 @@ func Nor(filters ...Filter) Filter { return logicFilter{nor, filters} }
 
 // Not returns a filter inversing another filter
 func Not(filter Filter) Filter { return logicFilter{not, []Filter{filter}} }
+
+// Exists returns a filter that check that the document has this field
+func Exists(field string) Filter { return &valueFilter{field, exists, true} }
 
 // Equal returns a filter that check if a field == value
 func Equal(field string, value interface{}) Filter { return makeMap(field, value) }
