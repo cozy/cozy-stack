@@ -177,8 +177,9 @@ func TestQuery(t *testing.T) {
 	doc1 := testDoc{FieldA: "value1", FieldB: 100}
 	doc2 := testDoc{FieldA: "value2", FieldB: 1000}
 	doc3 := testDoc{FieldA: "value2", FieldB: 300}
-	doc4 := testDoc{FieldA: "value13", FieldB: 1500}
-	docs := []*testDoc{&doc1, &doc2, &doc3, &doc4}
+	doc4 := testDoc{FieldA: "value1", FieldB: 1500}
+	doc5 := testDoc{FieldA: "value1", FieldB: 150}
+	docs := []*testDoc{&doc1, &doc2, &doc3, &doc4, &doc5}
 	for _, doc := range docs {
 		err := CreateDoc(TestPrefix, doc)
 		if !assert.NoError(t, err) || doc.ID() == "" {
@@ -195,7 +196,10 @@ func TestQuery(t *testing.T) {
 	var out []testDoc
 	req := &FindRequest{
 		UseIndex: "my-index",
-		Selector: mango.Equal("fieldA", "value2"),
+		Selector: mango.And(
+			mango.Equal("fieldA", "value2"),
+			mango.Exists("fieldB"),
+		),
 	}
 	err = FindDocs(TestPrefix, TestDoctype, req, &out)
 	if assert.NoError(t, err) {
@@ -208,13 +212,18 @@ func TestQuery(t *testing.T) {
 	}
 
 	var out2 []testDoc
-	req2 := &FindRequest{Selector: mango.StartWith("fieldA", "value1")}
+	req2 := &FindRequest{
+		UseIndex: "my-index",
+		Selector: mango.And(
+			mango.Equal("fieldA", "value1"),
+			mango.Between("fieldB", 10, 1000),
+		),
+	}
 	err = FindDocs(TestPrefix, TestDoctype, req2, &out2)
 	if assert.NoError(t, err) {
 		assert.Len(t, out, 2, "should get 2 results")
-		// if we do as startWith, docs will be ordered by the rest of fieldA
 		assert.Equal(t, doc1.ID(), out2[0].ID())
-		assert.Equal(t, doc4.ID(), out2[1].ID())
+		assert.Equal(t, doc5.ID(), out2[1].ID())
 	}
 
 }
