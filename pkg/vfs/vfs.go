@@ -35,6 +35,9 @@ const (
 	// KonnectorsDirName is the path of the directory in which konnectors source
 	// are stored
 	KonnectorsDirName = "/.cozy_konnectors"
+	// OrphansDirName is the path of the directory used to store data-files added
+	// in the index from a filesystem-check (fsck)
+	OrphansDirName = "/.cozy_orphans"
 )
 
 const (
@@ -49,6 +52,7 @@ var ErrSkipDir = errors.New("skip directories")
 // Fs is an interface providing a set of high-level methods to interact with
 // the file-system binaries and metadata.
 type Fs interface {
+	Index() Indexer
 	InitFs() error
 	Delete() error
 
@@ -72,8 +76,9 @@ type Fs interface {
 	// OpenFile return a file handler for reading associated with the given file
 	// document. The file handler implements io.ReadCloser and io.Seeker.
 	OpenFile(doc *FileDoc) (File, error)
+
 	// Fsck return the list of inconsistencies in the VFS
-	Fsck() ([]FsckError, error)
+	Fsck() ([]*FsckLog, error)
 }
 
 // File is a reader, writer, seeker, closer iterface reprsenting an opened
@@ -84,12 +89,6 @@ type File interface {
 	io.Seeker
 	io.Writer
 	io.Closer
-}
-
-// FsckError is a struct for an inconsistency in the VFS
-type FsckError struct {
-	Filename string `json:"filename"`
-	Message  string `json:"message"`
 }
 
 // FilePather is an interface for computing the fullpath of a filedoc
