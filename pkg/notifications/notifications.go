@@ -10,14 +10,15 @@ import (
 
 // Notification data containing associated to an application a list of actions
 type Notification struct {
-	NID       string    `json:"_id,omitempty"`
-	NRev      string    `json:"_rev,omitempty"`
-	Source    string    `json:"source"`
-	Reference string    `json:"reference"`
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`
-	Icon      string    `json:"icon"`
-	Actions   []*Action `json:"actions"`
+	NID         string    `json:"_id,omitempty"`
+	NRev        string    `json:"_rev,omitempty"`
+	Source      string    `json:"source"`
+	Reference   string    `json:"reference"`
+	Title       string    `json:"title"`
+	Content     string    `json:"content"`
+	ContentHTML string    `json:"content_html"`
+	Icon        string    `json:"icon"`
+	Actions     []*Action `json:"actions"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -75,12 +76,21 @@ func Create(db couchdb.Database, sourceID string, n *Notification) error {
 }
 
 func sendMail(db couchdb.Database, n *Notification) error {
+	var parts []*mails.Part
+	if n.ContentHTML == "" {
+		parts = []*mails.Part{
+			{Body: n.Content, Type: "text/plain"},
+		}
+	} else {
+		parts = []*mails.Part{
+			{Body: n.ContentHTML, Type: "text/html"},
+			{Body: n.Content, Type: "text/plain"},
+		}
+	}
 	mail := mails.Options{
 		Mode:    mails.ModeNoReply,
 		Subject: n.Title,
-		Parts: []*mails.Part{
-			{Body: n.Content, Type: "text/plain"},
-		},
+		Parts:   parts,
 	}
 	msg, err := jobs.NewMessage(&mail)
 	if err != nil {
