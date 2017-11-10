@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -270,6 +271,11 @@ func UseViper(v *viper.Viper) error {
 	fsURL, err := url.Parse(v.GetString("fs.url"))
 	if err != nil {
 		return err
+	}
+	if fsURL.Scheme == "file" {
+		if fsPath := fsURL.Path; fsPath != "" && !path.IsAbs(fsPath) {
+			return fmt.Errorf("Filesystem path should be absolute, was: %q", fsPath)
+		}
 	}
 
 	couchURL, couchAuth, err := parseURL(v.GetString("couchdb.url"))
