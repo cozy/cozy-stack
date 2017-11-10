@@ -273,8 +273,12 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 	if fsURL.Scheme == "file" {
-		if fsPath := fsURL.Path; fsPath != "" && !path.IsAbs(fsPath) {
+		fsPath := fsURL.Path
+		if fsPath != "" && !path.IsAbs(fsPath) {
 			return fmt.Errorf("Filesystem path should be absolute, was: %q", fsPath)
+		}
+		if fsPath == "/" {
+			return fmt.Errorf("Filesystem path should not be root, was: %q", fsPath)
 		}
 	}
 
