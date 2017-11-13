@@ -390,6 +390,10 @@ func MkdirAll(fs VFS, name string, tags []string) (*DirDoc, error) {
 		parent, err = NewDirDocWithParent(dirs[i], parent, nil)
 		if err == nil {
 			err = fs.CreateDir(parent)
+			// XXX MkdirAll has no lock, so we have to consider the risk of a race condition
+			if os.IsExist(err) {
+				parent, err = fs.DirByPath(path.Join(parent.Fullpath, dirs[i]))
+			}
 		}
 		if err != nil {
 			return nil, err
