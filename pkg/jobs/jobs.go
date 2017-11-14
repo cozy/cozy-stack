@@ -70,7 +70,8 @@ type (
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
 		QueuedAt   time.Time   `json:"queued_at"`
-		StartedAt  time.Time   `json:"started_at,omitempty"`
+		StartedAt  time.Time   `json:"started_at"`
+		FinishedAt time.Time   `json:"finished_at"`
 		Error      string      `json:"error,omitempty"`
 	}
 
@@ -172,6 +173,7 @@ func (j *Job) AckConsumed() error {
 // channel.
 func (j *Job) Ack() error {
 	j.Logger().Debugf("[jobs] ack %s ", j.ID())
+	j.FinishedAt = time.Now()
 	j.State = Done
 	return j.Update()
 }
@@ -180,6 +182,7 @@ func (j *Job) Ack() error {
 // error field and sends the new job infos on the channel.
 func (j *Job) Nack(err error) error {
 	j.Logger().Debugf("[jobs] nack %s ", j.ID())
+	j.FinishedAt = time.Now()
 	j.State = Errored
 	j.Error = err.Error()
 	return j.Update()
