@@ -22,6 +22,7 @@ const (
 type FsckLog struct {
 	Type        FsckLogType
 	FileDoc     *FileDoc
+	IsFile      bool
 	DirDoc      *DirDoc
 	Filename    string
 	PruneAction string
@@ -32,12 +33,12 @@ type FsckLog struct {
 func (f *FsckLog) String() string {
 	switch f.Type {
 	case FileMissing:
-		if f.IsFile() {
+		if f.IsFile {
 			return "the file is present in the index but not on the filesystem"
 		}
 		return "the directory is present in the index but not on the filesystem"
 	case TypeMismatch:
-		if f.IsFile() {
+		if f.IsFile {
 			return "it's a file in the index but a directory on the filesystem"
 		}
 		return "it's a directory in the index but a file on the filesystem"
@@ -53,7 +54,7 @@ func (f *FsckLog) MarshalJSON() ([]byte, error) {
 		"filename": f.Filename,
 		"message":  f.String(),
 	}
-	if f.IsFile() {
+	if f.IsFile {
 		v["file_id"] = f.FileDoc.ID()
 	} else {
 		v["file_id"] = f.DirDoc.ID()
@@ -65,69 +66,57 @@ func (f *FsckLog) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// IsFile returns whether or not the associated log is for a file document or a
-// directory.
-func (f *FsckLog) IsFile() bool {
-	return f.FileDoc != nil
-}
-
 // FsckPrune tries to fix the given list on inconsistencies in the VFS
-func FsckPrune(fs VFS, logbook []*FsckLog, dryrun bool) {
-	indexer := fs.Index()
-	for _, entry := range logbook {
-		switch entry.Type {
-		case FileMissing:
-			entry.PruneAction = "deleting entry from index"
-			if dryrun {
-				continue
-			}
-			if entry.IsFile() {
-				if err := indexer.DeleteFileDoc(entry.FileDoc); err != nil {
-					entry.PruneError = err
-				}
-			} else {
-				if err := indexer.DeleteDirDoc(entry.DirDoc); err != nil {
-					entry.PruneError = err
-				}
-			}
-		case IndexMissing:
-			if !entry.IsFile() {
-				continue
-			}
-			fileDoc := entry.FileDoc
-			var orphan bool
-			parentDir, err := indexer.DirByID(fileDoc.DirID)
-			if err != nil {
-				orphan = true
-			} else {
-				fullpath := path.Join(parentDir.Fullpath, fileDoc.Name())
-				if _, err := indexer.FileByPath(fullpath); err == nil {
-					entry.PruneError = err
-					continue
-				}
-			}
-			if orphan {
-				entry.PruneAction = "creating index entry in orphan directory"
-			} else {
-				entry.PruneAction = "creating index entry in-place"
-			}
-			if dryrun {
-				continue
-			}
-			if orphan {
-				orphanDir, err := MkdirAll(fs, OrphansDirName, nil)
-				if err != nil {
-					entry.PruneError = err
-					continue
-				}
-				fileDoc.DirID = orphanDir.ID()
-			}
-			if err := indexer.CreateFileDoc(fileDoc); err != nil {
+func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
+	switch entry.Type {
+	case FileMissing:
+		entry.PruneAction = "deleting entry from index"
+		if dryrun {
+			return
+		}
+		if entry.IsFile {
+			if err := indexer.DeleteFileDoc(entry.FileDoc); err != nil {
 				entry.PruneError = err
 			}
-		case TypeMismatch:
-			// TODO: determine how to handle type mismatch... This probably require a
-			// human interaction.
+		} else {
+			if err := indexer.DeleteDirDoc(entry.DirDoc); err != nil {
+				entry.PruneError = err
+			}
+		}
+	case IndexMissing:
+		if !entry.IsFile {
+			return
+		}
+		fileDoc := entry.FileDoc
+		var orphan bool
+		parentDir, err := indexer.DirByID(fileDoc.DirID)
+		if err != nil {
+			orphan = true
+		} else {
+			fullpath := path.Join(parentDir.Fullpath, fileDoc.Name())
+			if _, err := indexer.FileByPath(fullpath); err == nil {
+				entry.PruneError = err
+				return
+			}
+		}
+		if orphan {
+			entry.PruneAction = "creating index entry in orphan directory"
+		} else {
+			entry.PruneAction = "creating index entry in-place"
+		}
+		if dryrun {
+			return
+		}
+		if orphan {
+			orphanDir, err := Mkdir(fs, OrphansDirName, nil)
+			if err != nil {
+				entry.PruneError = err
+				return
+			}
+			fileDoc.DirID = orphanDir.ID()
+		}
+		if err := indexer.CreateFileDoc(fileDoc); err != nil {
+			entry.PruneError = err
 		}
 	}
 }

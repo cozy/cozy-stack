@@ -52,7 +52,6 @@ var ErrSkipDir = errors.New("skip directories")
 // Fs is an interface providing a set of high-level methods to interact with
 // the file-system binaries and metadata.
 type Fs interface {
-	Index() Indexer
 	InitFs() error
 	Delete() error
 
@@ -78,7 +77,8 @@ type Fs interface {
 	OpenFile(doc *FileDoc) (File, error)
 
 	// Fsck return the list of inconsistencies in the VFS
-	Fsck() ([]*FsckLog, error)
+	Fsck() (logbook []*FsckLog, err error)
+	FsckPrune(logbook []*FsckLog, dryrun bool)
 }
 
 // File is a reader, writer, seeker, closer iterface reprsenting an opened

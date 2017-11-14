@@ -78,10 +78,6 @@ func (sfs *swiftVFS) InitFs() error {
 	return nil
 }
 
-func (sfs *swiftVFS) Index() vfs.Indexer {
-	return sfs.Indexer
-}
-
 func (sfs *swiftVFS) Delete() error {
 	err := sfs.deleteContainer(sfs.version)
 	if err != nil {
@@ -393,20 +389,30 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 		}
 
 		if f != nil {
+			var info swift.Object
 			fullpath := path.Join(dir.Fullpath, f.DocName)
 			entries[f.DocName] = struct{}{}
-			info, _, err := sfs.c.Object(sfs.container, f.DirID+"/"+f.DocName)
+			info, _, err = sfs.c.Object(sfs.container, f.DirID+"/"+f.DocName)
 			if err == swift.ObjectNotFound {
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.FileMissing,
+					IsFile:   true,
 					FileDoc:  f,
 					Filename: fullpath,
 				})
 			} else if err != nil {
 				return nil, err
 			} else if info.ContentType == dirContentType {
+				var dirDoc *vfs.DirDoc
+				name := path.Base(info.Name)
+				dirDoc, err = vfs.NewDirDocWithParent(name, dir, nil)
+				if err != nil {
+					return nil, err
+				}
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.TypeMismatch,
+					IsFile:   true,
+					DirDoc:   dirDoc,
 					FileDoc:  f,
 					Filename: fullpath,
 				})
@@ -416,19 +422,28 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			if d.Fullpath == vfs.TrashDirName {
 				continue
 			}
-			info, _, err := sfs.c.Object(sfs.container, d.DirID+"/"+d.DocName)
+			var info swift.Object
+			info, _, err = sfs.c.Object(sfs.container, d.DirID+"/"+d.DocName)
 			if err == swift.ObjectNotFound {
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.FileMissing,
+					IsFile:   false,
 					DirDoc:   d,
 					Filename: d.Fullpath,
 				})
 			} else if err != nil {
 				return nil, err
 			} else if info.ContentType != dirContentType {
+				var fileDoc *vfs.FileDoc
+				fileDoc, err = objectToFileDoc(dir, info)
+				if err != nil {
+					continue
+				}
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.TypeMismatch,
+					IsFile:   false,
 					DirDoc:   d,
+					FileDoc:  fileDoc,
 					Filename: d.Fullpath,
 				})
 			} else {
@@ -451,29 +466,14 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			if object.Bytes == 0 {
 				continue
 			}
-			trashed := strings.HasPrefix(dir.Fullpath, vfs.TrashDirName)
-			md5sum, err := hex.DecodeString(object.Hash)
-			if err != nil {
-				continue
-			}
-			mime, class := vfs.ExtractMimeAndClass(object.ContentType)
-			fileDoc, err := vfs.NewFileDoc(
-				name,
-				dir.DocID,
-				object.Bytes,
-				md5sum,
-				mime,
-				class,
-				object.LastModified,
-				false,
-				trashed,
-				nil)
+			fileDoc, err := objectToFileDoc(dir, object)
 			if err != nil {
 				continue
 			}
 			filename := path.Join(dir.Fullpath, name)
 			logbook = append(logbook, &vfs.FsckLog{
 				Type:     vfs.IndexMissing,
+				IsFile:   true,
 				FileDoc:  fileDoc,
 				Filename: filename,
 			})
@@ -481,6 +481,86 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 	}
 
 	return logbook, nil
+}
+
+func objectToFileDoc(dir *vfs.DirDoc, object swift.Object) (*vfs.FileDoc, error) {
+	trashed := strings.HasPrefix(dir.Fullpath, vfs.TrashDirName)
+	md5sum, err := hex.DecodeString(object.Hash)
+	if err != nil {
+		return nil, err
+	}
+	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
+	return vfs.NewFileDoc(
+		path.Base(object.Name),
+		dir.DocID,
+		object.Bytes,
+		md5sum,
+		mime,
+		class,
+		object.LastModified,
+		false,
+		trashed,
+		nil)
+}
+
+// FsckPrune tries to fix the given list on inconsistencies in the VFS
+func (sfs *swiftVFS) FsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
+	for _, entry := range logbook {
+		switch entry.Type {
+		case vfs.FileMissing:
+		case vfs.IndexMissing:
+			vfs.FsckPrune(sfs, sfs.Indexer, entry, dryrun)
+		case vfs.TypeMismatch:
+			if entry.IsFile {
+				// file on couchdb and directory on swift: we update the index to
+				// remove the file index and create a directory one
+				err := sfs.Indexer.DeleteFileDoc(entry.FileDoc)
+				if err != nil {
+					entry.PruneError = err
+				}
+				err = sfs.Indexer.CreateDirDoc(entry.DirDoc)
+				if err != nil {
+					entry.PruneError = err
+				}
+			} else {
+				// directory on couchdb and file on swift: we keep the directory and
+				// move the object into the orphan directory and create a new index
+				// associated with it.
+				orphanDir, err := vfs.Mkdir(sfs, vfs.OrphansDirName, nil)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				olddoc := entry.FileDoc
+				newdoc := entry.FileDoc.Clone().(*vfs.FileDoc)
+				newdoc.DirID = orphanDir.DirID
+				err = sfs.c.ObjectMove(
+					sfs.container, olddoc.DirID+"/"+olddoc.DocName,
+					sfs.container, newdoc.DirID+"/"+newdoc.DocName,
+				)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				_, err = sfs.c.ObjectCreate(sfs.container,
+					olddoc.DirID+"/"+olddoc.DocName,
+					false,
+					"",
+					dirContentType,
+					nil,
+				)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				err = sfs.Indexer.CreateFileDoc(newdoc)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+			}
+		}
+	}
 }
 
 // UpdateFileDoc overrides the indexer's one since the swift fs indexes files

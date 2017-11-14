@@ -333,38 +333,56 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 		}
 		var fullpath string
 		if f != nil {
+			var stat os.FileInfo
 			entries[f.DocName] = struct{}{}
 			fullpath = path.Join(dir.Fullpath, f.DocName)
-			stat, err := afs.fs.Stat(fullpath)
+			stat, err = afs.fs.Stat(fullpath)
 			if _, ok := err.(*os.PathError); ok {
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.FileMissing,
+					IsFile:   true,
 					FileDoc:  f,
 					Filename: fullpath,
 				})
 			} else if err != nil {
 				return nil, err
 			} else if stat.IsDir() {
+				var dirDoc *vfs.DirDoc
+				dirDoc, err = vfs.NewDirDocWithParent(f.DocName, dir, nil)
+				if err != nil {
+					return nil, err
+				}
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.TypeMismatch,
+					IsFile:   true,
+					DirDoc:   dirDoc,
 					FileDoc:  f,
 					Filename: fullpath,
 				})
 			}
 		} else {
 			entries[d.DocName] = struct{}{}
-			stat, err := afs.fs.Stat(d.Fullpath)
+			var stat os.FileInfo
+			stat, err = afs.fs.Stat(d.Fullpath)
 			if _, ok := err.(*os.PathError); ok {
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.FileMissing,
+					IsFile:   false,
 					DirDoc:   d,
 					Filename: d.Fullpath,
 				})
 			} else if err != nil {
 				return nil, err
 			} else if !stat.IsDir() {
+				var fileDoc *vfs.FileDoc
+				fileDoc, err = fileInfosToFileDoc(dir, d.Fullpath, stat)
+				if err != nil {
+					return nil, err
+				}
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.TypeMismatch,
+					IsFile:   false,
+					FileDoc:  fileDoc,
 					DirDoc:   d,
 					Filename: d.Fullpath,
 				})
@@ -392,28 +410,13 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			if fileinfo.Size() == 0 {
 				continue
 			}
-			trashed := strings.HasPrefix(filename, vfs.TrashDirName)
-			contentType, md5sum, err := extractContentTypeAndMD5(filename)
-			if err != nil {
-				continue
-			}
-			mime, class := vfs.ExtractMimeAndClass(contentType)
-			fileDoc, err := vfs.NewFileDoc(
-				fileinfo.Name(),
-				dir.DocID,
-				fileinfo.Size(),
-				md5sum,
-				mime,
-				class,
-				fileinfo.ModTime(),
-				false,
-				trashed,
-				nil)
+			fileDoc, err := fileInfosToFileDoc(dir, filename, fileinfo)
 			if err != nil {
 				continue
 			}
 			logbook = append(logbook, &vfs.FsckLog{
 				Type:     vfs.IndexMissing,
+				IsFile:   true,
 				FileDoc:  fileDoc,
 				Filename: filename,
 			})
@@ -421,6 +424,78 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 	}
 
 	return logbook, nil
+}
+
+func fileInfosToFileDoc(dir *vfs.DirDoc, fullpath string, fileinfo os.FileInfo) (*vfs.FileDoc, error) {
+	trashed := strings.HasPrefix(fullpath, vfs.TrashDirName)
+	contentType, md5sum, err := extractContentTypeAndMD5(fullpath)
+	if err != nil {
+		return nil, err
+	}
+	mime, class := vfs.ExtractMimeAndClass(contentType)
+	return vfs.NewFileDoc(
+		fileinfo.Name(),
+		dir.DocID,
+		fileinfo.Size(),
+		md5sum,
+		mime,
+		class,
+		fileinfo.ModTime(),
+		false,
+		trashed,
+		nil)
+}
+
+// FsckPrune tries to fix the given list on inconsistencies in the VFS
+func (afs *aferoVFS) FsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
+	for _, entry := range logbook {
+		switch entry.Type {
+		case vfs.FileMissing:
+		case vfs.IndexMissing:
+			vfs.FsckPrune(afs, afs.Indexer, entry, dryrun)
+		case vfs.TypeMismatch:
+			if entry.IsFile {
+				// file on couchdb and directory on swift: we update the index to
+				// remove the file index and create a directory one
+				err := afs.Indexer.DeleteFileDoc(entry.FileDoc)
+				if err != nil {
+					entry.PruneError = err
+				}
+				err = afs.Indexer.CreateDirDoc(entry.DirDoc)
+				if err != nil {
+					entry.PruneError = err
+				}
+			} else {
+				// directory on couchdb and file on filesystem: we keep the directory
+				// and move the object into the orphan directory and create a new index
+				// associated with it.
+				orphanDir, err := vfs.Mkdir(afs, vfs.OrphansDirName, nil)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				oldname := entry.Filename
+				newname := path.Join(vfs.OrphansDirName, entry.FileDoc.Name())
+				err = afs.fs.Rename(oldname, newname)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				err = afs.fs.Mkdir(oldname, 0755)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				newdoc := entry.FileDoc.Clone().(*vfs.FileDoc)
+				newdoc.DirID = orphanDir.ID()
+				err = afs.Indexer.CreateFileDoc(newdoc)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+			}
+		}
+	}
 }
 
 // UpdateFileDoc overrides the indexer's one since the afero.Fs is by essence

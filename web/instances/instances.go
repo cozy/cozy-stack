@@ -11,7 +11,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
 )
@@ -190,7 +189,7 @@ func fsckHandler(c echo.Context) error {
 		return wrapError(err)
 	}
 	if prune {
-		vfs.FsckPrune(fs, logbook, dryRun)
+		fs.FsckPrune(logbook, dryRun)
 	}
 	return c.JSON(http.StatusOK, logbook)
 }
