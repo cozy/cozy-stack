@@ -312,13 +312,13 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	albumsRef := make(AlbumReferences)
 
 	for {
-		hdr, err := tgz.Next()
-		if err == io.EOF {
+		hdr, errb := tgz.Next()
+		if errb == io.EOF {
 			break
 		}
-		if err != nil {
-			logger.WithDomain(instance.Domain).Errorf("Error on import: %s", err)
-			return err
+		if errb != nil {
+			logger.WithDomain(instance.Domain).Errorf("Error on import: %s", errb)
+			return errb
 		}
 
 		parts := strings.SplitN(path.Clean(hdr.Name), "/", 2)
@@ -334,7 +334,6 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 				dirname := path.Join(dst.Fullpath, name)
 				if _, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import directory %s: %s", hdr.Name, err)
-					return err
 				}
 			}
 
@@ -343,23 +342,19 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 				err = createAlbums(instance, tgz, &albumsRef)
 				if err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import album %s: %s", hdr.Name, err)
-					return err
 				}
 			} else if doctype == "albums" && name == referencesFile {
 				err = fillAlbums(instance, tgz, dst, &albumsRef)
 				if err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import album %s: %s", hdr.Name, err)
-					return err
 				}
 			} else if doctype == "contacts" {
-				if err := createContact(fs, hdr, tgz, instance); err != nil {
+				if err = createContact(fs, hdr, tgz, instance); err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import contact %s: %s", hdr.Name, err)
-					return err
 				}
 			} else if doctype == "files" {
-				if err := createFile(fs, hdr, tgz, dst); err != nil {
+				if err = createFile(fs, hdr, tgz, dst); err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import file %s: %s", hdr.Name, err)
-					return err
 				}
 			}
 
@@ -369,7 +364,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 		}
 	}
 
-	return nil
+	return err
 }
 
 // Import is used to import a tarball with files, photos, contacts to an instance
