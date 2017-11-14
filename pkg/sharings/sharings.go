@@ -890,6 +890,45 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
+// RevokeRecipientByContactID revokes a recipient from the given sharing. Only the sharer
+// can make this action.
+func RevokeRecipientByContactID(ins *instance.Instance, sharing *Sharing, contactID string) error {
+	if !sharing.Owner {
+		return ErrOnlySharerCanRevokeRecipient
+	}
+
+	for _, rs := range sharing.RecipientsStatus {
+		if err := rs.GetRecipient(ins); err != nil {
+			return err
+		}
+		if rs.recipient.DocID == contactID {
+			// TODO check how askToRevokeRecipient behave when no recipient has accepted the sharing
+			if err := askToRevokeSharing(ins, sharing, rs); err != nil {
+				return err
+			}
+			return RevokeRecipient(ins, sharing, rs)
+		}
+	}
+
+	return nil
+}
+
+// RevokeRecipientByClientID revokes a recipient from the given sharing. Only the sharer
+// can make this action.
+func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientID string) error {
+	if !sharing.Owner {
+		return ErrOnlySharerCanRevokeRecipient
+	}
+
+	for _, rs := range sharing.RecipientsStatus {
+		if rs.Client.ClientID == clientID {
+			return RevokeRecipient(ins, sharing, rs)
+		}
+	}
+
+	return nil
+}
+
 // RevokeRecipient revokes a recipient from the given sharing. Only the sharer
 // can make this action.
 //
@@ -898,76 +937,33 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 //
 // If there are no more recipients the sharing is revoked and the corresponding
 // trigger is deleted.
-func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID string, recursive bool) error {
-	if !sharing.Owner {
-		return ErrOnlySharerCanRevokeRecipient
+func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *RecipientStatus) error {
+	if sharing.SharingType == consts.MasterMasterSharing {
+		if err := deleteOAuthClient(ins, recipient); err != nil {
+			return err
+		}
+		recipient.HostClientID = ""
 	}
 
-	var removed, hasRecipient bool
+	recipient.Client = auth.Client{}
+	recipient.AccessToken = auth.AccessToken{}
+	recipient.Status = consts.SharingStatusRevoked
+
+	toRevoke := true
 	for _, recipient := range sharing.RecipientsStatus {
-		if recipient.Client.ClientID == recipientClientID {
-
-			if recursive {
-				err := askToRevokeSharing(ins, sharing, recipient)
-				if err != nil {
-					return err
-				}
-
-				ins.Logger().Debugf("[sharings] RevokeRecipient: recipient "+
-					"%s has revoked the sharing %s", recipientClientID,
-					sharing.SharingID)
-			}
-
-			if sharing.SharingType == consts.MasterMasterSharing {
-				err := deleteOAuthClient(ins, recipient)
-				if err != nil {
-					return err
-				}
-
-				recipient.HostClientID = ""
-			}
-
-			recipient.Client = auth.Client{}
-			recipient.AccessToken = auth.AccessToken{}
-			recipient.Status = consts.SharingStatusRevoked
-			removed = true
-
-			err := recipient.GetRecipient(ins)
-			if err != nil {
-				return err
-			}
-			ins.Logger().Debugf("[sharings] RevokeRecipient: Recipient %s "+
-				"revoked", recipient.recipient.Cozy[0].URL)
-
-		} else {
-			if recipient.Status != consts.SharingStatusRevoked &&
-				recipient.Status != consts.SharingStatusRefused {
-				hasRecipient = true
-			}
-		}
-
-		if removed && hasRecipient {
-			break
+		if recipient.Status != consts.SharingStatusRevoked &&
+			recipient.Status != consts.SharingStatusRefused {
+			toRevoke = false
 		}
 	}
 
-	if !removed {
-		ins.Logger().Errorf("[sharings] RevokeRecipient: Recipient %s is not "+
-			"in sharing: %s", recipientClientID, sharing.SharingID)
-		return ErrRecipientDoesNotExist
-	}
-
-	if !hasRecipient {
-		err := removeSharingTriggers(ins, sharing.SharingID)
-		if err != nil {
+	if toRevoke {
+		// TODO check how removeSharingTriggers behave when no recipient has accepted the sharing
+		if err := removeSharingTriggers(ins, sharing.SharingID); err != nil {
 			ins.Logger().Errorf("[sharings] RevokeRecipient: Could not remove "+
 				"triggers for sharing %s: %s", sharing.SharingID, err)
-		} else {
-			sharing.Revoked = true
-			ins.Logger().Debugf("[sharings] RevokeRecipient: Setting status "+
-				"of sharing %s to revoked, no more recipients",
-				sharing.SharingID)
 		}
+		sharing.Revoked = true
 	}
 
 	return couchdb.UpdateDoc(ins, sharing)
