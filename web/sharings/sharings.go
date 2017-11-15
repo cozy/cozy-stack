@@ -28,20 +28,34 @@ type apiSharing struct {
 }
 
 func (s *apiSharing) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.Sharing)
+	// XXX do not put the recipients (and their OAuth infos) in the response
+	return json.Marshal(&struct {
+		Recipients []*sharings.RecipientStatus `json:"recipients,omitempty"`
+		*sharings.Sharing
+	}{
+		Recipients: nil,
+		Sharing:    s.Sharing,
+	})
 }
+
 func (s *apiSharing) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
+}
+
+type apiReference struct {
+	ID     string `json:"id"`
+	Type   string `json:"type"`
+	Status string `json:"status"`
 }
 
 // Relationships is part of the jsonapi.Object interface
 // It is used to generate the recipients relationships
 func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
 	l := len(s.RecipientsStatus)
-	data := make([]couchdb.DocReference, l)
+	data := make([]apiReference, l)
 	for i, rec := range s.RecipientsStatus {
 		r := rec.RefRecipient
-		data[i] = couchdb.DocReference{ID: r.ID, Type: r.Type}
+		data[i] = apiReference{ID: r.ID, Type: r.Type, Status: rec.Status}
 	}
 	contents := jsonapi.Relationship{Data: data}
 	return jsonapi.RelationshipMap{"recipients": contents}
@@ -107,7 +121,7 @@ func SharingRequest(c echo.Context) error {
 	scope := c.QueryParam("scope")
 	state := c.QueryParam("state")
 	sharingType := c.QueryParam("sharing_type")
-	desc := c.QueryParam("desc")
+	desc := c.QueryParam("description")
 	clientID := c.QueryParam("client_id")
 	appSlug := c.QueryParam(consts.QueryParamAppSlug)
 
@@ -154,6 +168,7 @@ func CreateSharing(c echo.Context) error {
 	if err := json.NewDecoder(c.Request().Body).Decode(sharing); err != nil {
 		return err
 	}
+	// TODO we should enforce the app_slug
 	if err := checkCreatePermissions(c, sharing); err != nil {
 		return err
 	}

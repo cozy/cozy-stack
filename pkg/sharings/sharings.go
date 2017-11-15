@@ -33,7 +33,7 @@ import (
 type Sharing struct {
 	SID         string `json:"_id,omitempty"`
 	SRev        string `json:"_rev,omitempty"`
-	Desc        string `json:"desc,omitempty"`
+	Description string `json:"description,omitempty"`
 	SharingID   string `json:"sharing_id,omitempty"`
 	SharingType string `json:"sharing_type"`
 	AppSlug     string `json:"app_slug"`
@@ -601,7 +601,7 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 		SharingID:   state,
 		Permissions: permissions,
 		Owner:       false,
-		Desc:        desc,
+		Description: desc,
 		Sharer:      sharer,
 		Revoked:     false,
 	}

@@ -30,7 +30,7 @@ func SendDiscoveryMail(instance *instance.Instance, s *Sharing, rs *RecipientSta
 		return err
 	}
 	// Fill in the description.
-	desc := s.Desc
+	desc := s.Description
 	if desc == "" {
 		desc = "[No description provided]"
 	}
@@ -68,7 +68,7 @@ func SendSharingMails(instance *instance.Instance, s *Sharing) error {
 		return err
 	}
 	// Fill in the description.
-	desc := s.Desc
+	desc := s.Description
 	if desc == "" {
 		desc = "[No description provided]"
 	}

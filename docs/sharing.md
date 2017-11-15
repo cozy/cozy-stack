@@ -47,9 +47,10 @@ left empty for space convenience.
   "_rev": "yyy",
   "type": "io.cozy.sharings",
   "sharing_type": "one-shot",
-  "desc": "Give it to me baby!",
+  "description": "Give it to me baby!",
   "sharing_id": "zzz",
   "owner": true,
+  "app_slug": "cal",
 
   "permissions": {
     "doctype1": {
@@ -69,7 +70,8 @@ left empty for space convenience.
       "HostClientID": "myhostclientid"
     },
     {
-      "recipient": { "id": "mycontactid2", "type": "io.cozy.contacts" }
+      "recipient": { "id": "mycontactid2", "type": "io.cozy.contacts" },
+      "status": "pending",
     }
   ]
 }
@@ -84,7 +86,7 @@ one.
 #### permissions
 
 Which documents will be shared. See the
-[ permissions](https://cozy.github.io/cozy-stack/permissions.html) for a
+[permissions](https://cozy.github.io/cozy-stack/permissions.html) for a
 detailed explanation of the permissions format.
 
 The supported permissions are the following:
@@ -137,7 +139,7 @@ Example of a photo album sharing:
 ```
 
 It is worth mentionning that the permissions are defined on the sharer side, but
-are be enforced on the recipients side (and also on the sharer side if the
+are enforced on the recipients side (and also on the sharer side if the
 sharing is a master-master type), as the documents are pushed to their
 databases.
 
@@ -150,12 +152,10 @@ List all the recipients of the sharing:
     {
         "recipient": {"id": "mycontactid1", "type": "io.cozy.contacts"},
         "status": "accepted",
-        "AccessToken": {},
-        "Client": {},
-        "HostClientID": "myhostclientid"
     },
     {
-        "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"}
+        "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
+        "status": "pending",
     }
 ]
 ```
@@ -225,8 +225,7 @@ information after registration.
 #### sharing_type
 
 The type of sharing. It should be one of the followings: `master-master`,
-`master-slave`, `one-shot`.\
-They represent the access rights the recipient and sender have:
+`master-slave`, `one-shot`. They represent the access rights the recipient and sender have:
 
 * `one-shot`: the documents are sent and no modification is propagated.
 * `master-slave`: only the sharer can propagate modifications to the recipient.
@@ -234,7 +233,7 @@ They represent the access rights the recipient and sender have:
 * `master-master`: both recipient and sharer can modify the documents and have
   their modifications propagated to the other.
 
-#### desc
+#### description
 
 The answer to the question: "What are you sharing?". It is an optional field
 but, still, it is recommended to provide a human-readable description.
@@ -249,7 +248,7 @@ creation.
 #### POST /sharings/
 
 Create a new sharing. The sharing type, permissions and recipients must be
-specified. The desc field is optionnal.
+specified. The description field is optionnal.
 
 Note the recipient id must correspond to an actual contact previously inserted
 in the database.
@@ -265,7 +264,7 @@ Content-Type: application/json
 ```json
 {
   "sharing_type": "one-shot",
-  "desc": "sharing test",
+  "description": "sharing test",
   "permissions": {
     "tests": {
       "description": "test",
@@ -307,25 +306,7 @@ Content-Type: application/vnd.api+json
           "description": "test",
           "values": ["test-id"]
         }
-      },
-      "recipients": [
-        {
-          "status": "pending",
-          "Client": {
-            "client_id": "123",
-            "client_secret_expires_at": 0,
-            "redirect_uris": ["toto.fr"],
-            "grant_types": null,
-            "response_types": null,
-            "client_name": "toto",
-            "software_id": ""
-          },
-          "recipient": {
-            "id": "2a31ce0128b5f89e40fd90da3f014087",
-            "type": "io.cozy.contacts"
-          }
-        }
-      ]
+      }
     },
     "meta": {
       "rev": "1-4859c6c755143adf0838d225c5e97882"
@@ -339,6 +320,7 @@ Content-Type: application/vnd.api+json
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
             "type": "io.cozy.contacts"
+            "status": "pending",
           }
         ]
       }
@@ -527,15 +509,16 @@ Yes!
 
 #### What are the information required for a recipient?
 
-Two things: an e-mail and the url of the Cozy. We have a discovery feature so
-the url is not a necessity but it will be convenient if you don't want the
-recipients to enter their url everytime you share something with them.
+Two things: an e-mail and the URL of the Cozy. We have a discovery feature so
+the URL is not a necessity but it will be convenient if you don't want the
+recipients to enter their URL everytime you share something with them.
 
 #### Which documents are created and when?
 
 When the user asks to share a resource, a sharing document is created. That
 happens before the emails are sent to the recipients. That also means that if
-all recipients refuse the sharing, the sharing document will still be there.\
+all recipients refuse the sharing, the sharing document will still be there.
+
 The permissions associated are described in that document but **no actual permission
 documents are created, at any point in the protocol** — permissions are still enforced,
 there is just no need to create permission documents.
