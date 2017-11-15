@@ -2,18 +2,20 @@
 
 ## Automate publication
 
-The following tutorial explains how to connect your continuous integration
-based on Travis to automatically publish new versions on the apps registry.
+The following tutorial explains how to connect your continuous integration based
+on Travis to automatically publish new versions on the apps registry.
 
 In this tutorial, we assume:
 
-  - you have a token allowing you to publish applications for your `editor`:
-    `AbCdEf`
-  - you are working on a repository plugged on travis and named on github
-    `cozy/cozy-example`
+* you have a token allowing you to publish applications for your `editor`:
+  `AbCdEf`
+* you are working on a repository plugged on travis and named on github
+  `cozy/cozy-example`
 
-You first need to add the token to your travis configuration file
-`.travis.yml`. To do so, you need the [`travis` utility](https://github.com/travis-ci/travis.rb#installation) to encrypt its value.
+You first need to add the token to your travis configuration file `.travis.yml`.
+To do so, you need the
+[`travis` utility](https://github.com/travis-ci/travis.rb#installation) to
+encrypt its value.
 
 ```sh
 $ travis encrypt REGISTRY_TOKEN=AbCdEf --add -r cozy/cozy-example
@@ -26,13 +28,18 @@ Like said, you need to add this block of ciphered data in the `.travis.yml`.
 This will allow you to use the `REGISTRY_TOKEN` variable in your deployment
 script.
 
-Then you can adapt this script as your [`after_deploy` or `after_success`](https://docs.travis-ci.com/user/customizing-the-build#The-Build-Lifecycle) script.
+Then you can adapt this script as your
+[`after_deploy` or `after_success`](https://docs.travis-ci.com/user/customizing-the-build#The-Build-Lifecycle)
+script.
 
 It contains environment variables that you can adapt as your need:
-  - `COZY_APP_VERSION`: the version string of the deployed version
-  - `COZY_APP_PARAMETERS`: an optional JSON object (string, object or array) that will parameterize the application on its execution.
-  - `COZY_BUILD_URL`: the URL of the deployed tarball for your application
-  - `COZY_BUILD_BRANCH`: the name of the build branch from which the script creates dev releases
+
+* `COZY_APP_VERSION`: the version string of the deployed version
+* `COZY_APP_PARAMETERS`: an optional JSON object (string, object or array) that
+  will parameterize the application on its execution.
+* `COZY_BUILD_URL`: the URL of the deployed tarball for your application
+* `COZY_BUILD_BRANCH`: the name of the build branch from which the script
+  creates dev releases
 
 ```bash
 #!/bin/bash
@@ -94,8 +101,8 @@ curl -sS --fail -X POST \
 ## Access to our official apps registry
 
 In order to access to our official repository, you need a token for a specific
-editor. To do so, concact us directly at the address contact@cozycloud.cc
-with a mail using the following title prefix: `[registry]` and
-precising the name of the editor of your application.
+editor. To do so, concact us directly at the address contact@cozycloud.cc with a
+mail using the following title prefix: `[registry]` and precising the name of
+the editor of your application.
 
 We will provide you with the correct token.

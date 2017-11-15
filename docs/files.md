@@ -2,11 +2,10 @@
 
 # Virtual File System
 
-Cozy applications can use files for storing binary content, like photos or
-bills in PDF. This service offers a REST API to manipulate easily without
-having to know the underlying storage layer. The metadata are kept in CouchDB,
-but the binaries can go to the local system, or a Swift instance.
-
+Cozy applications can use files for storing binary content, like photos or bills
+in PDF. This service offers a REST API to manipulate easily without having to
+know the underlying storage layer. The metadata are kept in CouchDB, but the
+binaries can go to the local system, or a Swift instance.
 
 ## Directories
 
@@ -17,28 +16,30 @@ sensitive.
 
 ### Root directory
 
-The root of the virtual file system is a special directory with id `io.cozy.files.root-dir`.
+The root of the virtual file system is a special directory with id
+`io.cozy.files.root-dir`.
 
-You can use it in any request where you would use a directory, except you cannot delete it.
+You can use it in any request where you would use a directory, except you cannot
+delete it.
 
 ### POST /files/:dir-id
 
-Create a new directory. The `dir-id` parameter is optional. When it's not
-given, the directory is created at the root of the virtual file system.
+Create a new directory. The `dir-id` parameter is optional. When it's not given,
+the directory is created at the root of the virtual file system.
 
 #### Query-String
 
-Parameter | Description
-----------|-------------------
-Type      | `directory`
-Name      | the directory name
-Tags      | an array of tags
+| Parameter | Description        |
+| --------- | ------------------ |
+| Type      | `directory`        |
+| Name      | the directory name |
+| Tags      | an array of tags   |
 
 #### HTTP headers
 
-Parameter | Description
-----------|---------------------------------------
-Date      | The modification date of the directory
+| Parameter | Description                            |
+| --------- | -------------------------------------- |
+| Date      | The modification date of the directory |
 
 #### Request
 
@@ -53,7 +54,8 @@ Date: Mon, 19 Sep 2016 12:35:08 GMT
 * 201 Created, when the directory has been successfully created
 * 404 Not Found, when the parent directory does not exist
 * 409 Conflict, when a directory with the same name already exists
-* 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or invalid
+* 422 Unprocessable Entity, when the `Type` or `Name` parameter is missing or
+  invalid
 
 #### Response
 
@@ -99,9 +101,11 @@ Location: http://cozy.example.com/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee
 
 ### GET /files/:file-id
 
-Get a directory or a file informations. In the case of a directory, it contains the list of files and sub-directories inside it.
+Get a directory or a file informations. In the case of a directory, it contains
+the list of files and sub-directories inside it.
 
-Contents is paginated following [jsonapi conventions](jsonapi.md#pagination). The default limit is 30 entries.
+Contents is paginated following [jsonapi conventions](jsonapi.md#pagination).
+The default limit is 30 entries.
 
 #### Request
 
@@ -120,7 +124,8 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "links": {
-    "next": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
+    "next":
+      "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81?page[cursor]=9152d568-7e7c-11e6-a377-37cbfb190b4b"
   },
   "data": {
     "type": "io.cozy.files",
@@ -139,8 +144,14 @@ Content-Type: application/vnd.api+json
     "relationships": {
       "contents": {
         "data": [
-          { "type": "io.cozy.files", "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee" },
-          { "type": "io.cozy.files", "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b" }
+          {
+            "type": "io.cozy.files",
+            "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
+          },
+          {
+            "type": "io.cozy.files",
+            "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b"
+          }
         ]
       }
     },
@@ -148,68 +159,71 @@ Content-Type: application/vnd.api+json
       "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
     }
   },
-  "included": [{
-    "type": "io.cozy.files",
-    "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
-    "meta": {
-      "rev": "1-ff3beeb456eb"
-    },
-    "attributes": {
-      "type": "directory",
-      "name": "phone",
-      "path": "/Documents/phone",
-      "created_at": "2016-09-19T12:35:08Z",
-      "updated_at": "2016-09-19T12:35:08Z",
-      "tags": ["bills"]
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-        },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+  "included": [
+    {
+      "type": "io.cozy.files",
+      "id": "6494e0ac-dfcb-11e5-88c1-472e84a9cbee",
+      "meta": {
+        "rev": "1-ff3beeb456eb"
+      },
+      "attributes": {
+        "type": "directory",
+        "name": "phone",
+        "path": "/Documents/phone",
+        "created_at": "2016-09-19T12:35:08Z",
+        "updated_at": "2016-09-19T12:35:08Z",
+        "tags": ["bills"]
+      },
+      "relationships": {
+        "parent": {
+          "links": {
+            "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+          },
+          "data": {
+            "type": "io.cozy.files",
+            "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+          }
         }
+      },
+      "links": {
+        "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
       }
     },
-    "links": {
-      "self": "/files/6494e0ac-dfcb-11e5-88c1-472e84a9cbee"
-    }
-  }, {
-    "type": "io.cozy.files",
-    "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
-    "meta": {
-      "rev": "1-0e6d5b72"
-    },
-    "attributes": {
-      "type": "file",
-      "name": "hello.txt",
-      "trashed": false,
-      "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "size": 12,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "relationships": {
-      "parent": {
-        "links": {
-          "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
-        },
-        "data": {
-          "type": "io.cozy.files",
-          "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+    {
+      "type": "io.cozy.files",
+      "id": "9152d568-7e7c-11e6-a377-37cbfb190b4b",
+      "meta": {
+        "rev": "1-0e6d5b72"
+      },
+      "attributes": {
+        "type": "file",
+        "name": "hello.txt",
+        "trashed": false,
+        "md5sum": "ODZmYjI2OWQxOTBkMmM4NQo=",
+        "created_at": "2016-09-19T12:38:04Z",
+        "updated_at": "2016-09-19T12:38:04Z",
+        "tags": [],
+        "size": 12,
+        "executable": false,
+        "class": "document",
+        "mime": "text/plain"
+      },
+      "relationships": {
+        "parent": {
+          "links": {
+            "related": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+          },
+          "data": {
+            "type": "io.cozy.files",
+            "id": "fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81"
+          }
         }
+      },
+      "links": {
+        "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
       }
-    },
-    "links": {
-      "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b"
     }
-  }]
+  ]
 }
 ```
 
@@ -222,7 +236,6 @@ Put a directory and its subtree in the trash.
 It's possible to send the `If-Match` header, with the previous revision of the
 file/directory (optional).
 
-
 ## Files
 
 A file is a binary content with some metadata.
@@ -233,21 +246,21 @@ Upload a file
 
 #### Query-String
 
-Parameter | Description
-----------|---------------------------------------------------
-Type      | `file`
-Name      | the file name
-Tags      | an array of tags
-Executable| `true` if the file is executable (UNIX permission)
+| Parameter  | Description                                        |
+| ---------- | -------------------------------------------------- |
+| Type       | `file`                                             |
+| Name       | the file name                                      |
+| Tags       | an array of tags                                   |
+| Executable | `true` if the file is executable (UNIX permission) |
 
 #### HTTP headers
 
-Parameter     | Description
---------------|--------------------------------------------
-Content-Length| The file size
-Content-MD5   | A Base64-encoded binary MD5 sum of the file
-Content-Type  | The mime-type of the file
-Date          | The modification date of the file
+| Parameter      | Description                                 |
+| -------------- | ------------------------------------------- |
+| Content-Length | The file size                               |
+| Content-MD5    | A Base64-encoded binary MD5 sum of the file |
+| Content-Type   | The mime-type of the file                   |
+| Date           | The modification date of the file           |
 
 #### Request
 
@@ -267,8 +280,10 @@ Hello world!
 * 201 Created, when the file has been successfully created
 * 404 Not Found, when the parent directory does not exist
 * 409 Conflict, when a file with the same name already exists
-* 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to the md5sum computed by the server
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist, `Type` or `Name` parameter is missing or invalid, etc.)
+* 412 Precondition Failed, when the md5sum is `Content-MD5` is not equal to the
+  md5sum computed by the server
+* 422 Unprocessable Entity, when the sent data is invalid (for example, the
+  parent doesn't exist, `Type` or `Name` parameter is missing or invalid, etc.)
 
 #### Response
 
@@ -316,18 +331,25 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
       },
       "referenced_by": {
         "links": {
-          "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+          "self":
+            "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
         },
         "data": [
-          { "type": "io.cozy.albums", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+          {
+            "type": "io.cozy.albums",
+            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+          }
         ]
       }
     },
     "links": {
       "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
-      "small": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/small",
-      "medium": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
-      "large": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
+      "small":
+        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/small",
+      "medium":
+        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
+      "large":
+        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
     }
   }
 }
@@ -384,9 +406,8 @@ Overwrite a file
 
 #### HTTP headers
 
-The HTTP headers are the same than for uploading a file. There is one
-additional header, `If-Match`, with the previous revision of the file
-(optional).
+The HTTP headers are the same than for uploading a file. There is one additional
+header, `If-Match`, with the previous revision of the file (optional).
 
 #### Request
 
@@ -406,7 +427,8 @@ HELLO WORLD!
 
 * 200 OK, when the file has been successfully overwritten
 * 404 Not Found, when the file wasn't existing
-* 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file
+* 412 Precondition Failed, when the `If-Match` header is set and doesn't match
+  the last revision of the file
 
 #### Response
 
@@ -457,7 +479,6 @@ Content-Type: application/vnd.api+json
 ### DELETE /files/:file-id
 
 Put a file in the trash.
-
 
 ## Common
 
@@ -565,10 +586,13 @@ Content-Type: application/vnd.api+json
 #### Status codes
 
 * 200 OK, when the file or directory metadata has been successfully updated
-* 400 Bad Request, when a the directory is asked to move to one of its sub-directories
+* 400 Bad Request, when a the directory is asked to move to one of its
+  sub-directories
 * 404 Not Found, when the file/directory wasn't existing
-* 412 Precondition Failed, when the `If-Match` header is set and doesn't match the last revision of the file/directory
-* 422 Unprocessable Entity, when the sent data is invalid (for example, the parent doesn't exist)
+* 412 Precondition Failed, when the `If-Match` header is set and doesn't match
+  the last revision of the file/directory
+* 422 Unprocessable Entity, when the sent data is invalid (for example, the
+  parent doesn't exist)
 
 #### Response
 
@@ -619,9 +643,12 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 ### POST /files/archive
 
-Create an archive. The body of the request lists the files and directories that will be included in the archive. For directories, it includes all the files and sub-directories in the archive.
+Create an archive. The body of the request lists the files and directories that
+will be included in the archive. For directories, it includes all the files and
+sub-directories in the archive.
 
-It's possible to give a file by its id (in the `ids` array) or by its path (in the `files` array).
+It's possible to give a file by its id (in the `ids` array) or by its path (in
+the `files` array).
 
 #### Request
 
@@ -637,9 +664,7 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.files.archives",
     "attributes": {
       "name": "project-X",
-      "ids": [
-        "a51aeeea-4f79-11e7-9dc4-83f67e9494ab"
-      ],
+      "ids": ["a51aeeea-4f79-11e7-9dc4-83f67e9494ab"],
       "files": [
         "/Documents/bills",
         "/Documents/images/sunset.jpg",
@@ -656,6 +681,7 @@ Content-Type: application/vnd.api+json
 HTTP/1.1 200 OK
 Content-Type: application/vnd.api+json
 ```
+
 ```json
 {
   "links": {
@@ -674,11 +700,10 @@ Content-Type: application/vnd.api+json
 ### GET /files/archive/:key/:name
 
 Download a previously created archive. The name parameter is not used in the
-stack but aims to allow setting a name even for browser / downloader that do
-not support Content-Disposition filename.
+stack but aims to allow setting a name even for browser / downloader that do not
+support Content-Disposition filename.
 
 **This route does not require Basic Authentification**
-
 
 ```http
 GET /files/archive/4521DC87/project-X.zip HTTP/1.1
@@ -691,7 +716,8 @@ Content-Type: application/zip
 ### POST /files/downloads?Path=file_path
 
 Create a file download. The Path query parameter specifies the file to download.
-The response json API links contains a `related` link for downloading the file, see below.
+The response json API links contains a `related` link for downloading the file,
+see below.
 
 ### POST /files/downloads?Id=file_id
 
@@ -702,20 +728,18 @@ Also create a file download. But it takes the id of the file and not its path.
 Allows to download a file with a secret created from the route above.
 
 The name parameter is not used in the stack but aims to allow setting a name
-even for browser / downloader that do not support Content-Disposition
-filename.
+even for browser / downloader that do not support Content-Disposition filename.
 
 By default the `content-disposition` will be `inline`, but it will be
 `attachment` if the query string contains the parameter `Dl=1`
 
 **This route does not require Basic Authentification**
 
-
 ## Trash
 
-When a file is deleted, it is first moved to the trash. In the trash, it can
-be restored. Or, after some time, it will be removed from the trash and
-permanently destroyed.
+When a file is deleted, it is first moved to the trash. In the trash, it can be
+restored. Or, after some time, it will be removed from the trash and permanently
+destroyed.
 
 The file `trashed` attribute will be set to true.
 
@@ -725,10 +749,10 @@ List the files inside the trash. It's paginated.
 
 ### Query-String
 
-Parameter    | Description
--------------|--------------------------------------
-page[cursor] | the last id of the results
-page[limit]  | the number of entries (30 by default)
+| Parameter    | Description                           |
+| ------------ | ------------------------------------- |
+| page[cursor] | the last id of the results            |
+| page[limit]  | the number of entries (30 by default) |
 
 #### Request
 
@@ -746,51 +770,54 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "data": [{
-    "type": "io.cozy.files",
-    "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
-    "meta": {
-      "rev": "1-3b75377c"
+  "data": [
+    {
+      "type": "io.cozy.files",
+      "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
+      "meta": {
+        "rev": "1-3b75377c"
+      },
+      "attributes": {
+        "type": "file",
+        "name": "foo.txt",
+        "trashed": true,
+        "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
+        "created_at": "2016-09-19T12:38:04Z",
+        "updated_at": "2016-09-19T12:38:04Z",
+        "tags": [],
+        "size": 123,
+        "executable": false,
+        "class": "document",
+        "mime": "text/plain"
+      },
+      "links": {
+        "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
+      }
     },
-    "attributes": {
-      "type": "file",
-      "name": "foo.txt",
-      "trashed": true,
-      "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "size": 123,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "links": {
-      "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
+    {
+      "type": "io.cozy.files",
+      "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
+      "meta": {
+        "rev": "1-4a09030e"
+      },
+      "attributes": {
+        "type": "file",
+        "name": "bar.txt",
+        "trashed": true,
+        "md5sum": "YWVhYjg3ZWI0OWQzZjRlMAo=",
+        "created_at": "2016-09-19T12:38:04Z",
+        "updated_at": "2016-09-19T12:38:04Z",
+        "tags": [],
+        "size": 456,
+        "executable": false,
+        "class": "document",
+        "mime": "text/plain"
+      },
+      "links": {
+        "self": "/files/trash/4a4fc582-7f3e-11e6-b9ca-278406b6ddd4"
+      }
     }
-  }, {
-    "type": "io.cozy.files",
-    "id": "4a4fc582-7f3e-11e6-b9ca-278406b6ddd4",
-    "meta": {
-      "rev": "1-4a09030e"
-    },
-    "attributes": {
-      "type": "file",
-      "name": "bar.txt",
-      "trashed": true,
-      "md5sum": "YWVhYjg3ZWI0OWQzZjRlMAo=",
-      "created_at": "2016-09-19T12:38:04Z",
-      "updated_at": "2016-09-19T12:38:04Z",
-      "tags": [],
-      "size": 456,
-      "executable": false,
-      "class": "document",
-      "mime": "text/plain"
-    },
-    "links": {
-      "self": "/files/trash/4a4fc582-7f3e-11e6-b9ca-278406b6ddd4"
-    }
-  }]
+  ]
 }
 ```
 
@@ -809,8 +836,7 @@ backups).
 
 Clear out the trash.
 
-
 ## Trashed attribute
 
-All files that are inside the trash will have a `trashed: true` attribute.
-This attribute can be used in mango queries to only get "interesting" files.
+All files that are inside the trash will have a `trashed: true` attribute. This
+attribute can be used in mango queries to only get "interesting" files.

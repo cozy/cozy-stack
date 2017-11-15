@@ -6,24 +6,24 @@
 
 Cozy applications can use data from the Data System and files from the Virtual
 File System. Of course, sometimes a link between data and files can be useful.
-For example, the application can have an album with photos. The album will be
-a document in CouchDB (with a title and other fields), but il will also list
-the files to use as photos.
+For example, the application can have an album with photos. The album will be a
+document in CouchDB (with a title and other fields), but il will also list the
+files to use as photos.
 
 A direct way to do that is storing the files IDs in the album document. It's
 simple and will work pretty well if the files are manipulated only from this
 application. But, files are often accessed from other apps, like cozy-desktop
-and cozy-drive. To improve the User eXperience, it should be nice to alert
-the user when a file in an album is modified or deleted.
+and cozy-drive. To improve the User eXperience, it should be nice to alert the
+user when a file in an album is modified or deleted.
 
 When a file is modified, we can offer the user the choice between keeping the
 original version in the album, or using the new modified file. When a file is
 moved to the trash, we can alert the user and let him/her restore the file.
 
-Cozy-desktop, cozy-drive, and the other apps can't scan all the documents
-with many different doctypes to find all the references to a file to detect
-such cases. The goal of this document is to offer a way to do that, and it is
-called _References_.
+Cozy-desktop, cozy-drive, and the other apps can't scan all the documents with
+many different doctypes to find all the references to a file to detect such
+cases. The goal of this document is to offer a way to do that, and it is called
+_References_.
 
 The references of a file are listed in its JSON-API representation in the
 `references` field, within the `relationships` object of `data`.
@@ -62,10 +62,14 @@ The references of a file are listed in its JSON-API representation in the
       },
       "referenced_by": {
         "links": {
-          "self": "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
+          "self":
+            "/files/fce1a6c0-dfc5-11e5-8d1a-1f854d4aaf81/relationships/references"
         },
         "data": [
-          { "type": "io.cozy.playlists", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+          {
+            "type": "io.cozy.playlists",
+            "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+          }
         ]
       }
     },
@@ -93,7 +97,10 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": [
-    { "type": "io.cozy.playlists", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+    {
+      "type": "io.cozy.playlists",
+      "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+    }
   ]
 }
 ```
@@ -120,7 +127,10 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": [
-    { "type": "io.cozy.playlists", "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0" }
+    {
+      "type": "io.cozy.playlists",
+      "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
+    }
   ]
 }
 ```
@@ -135,8 +145,14 @@ Content-Type: application/vnd.api+json
 ```json
 {
   "data": [
-    { "type": "io.cozy.playlists", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" },
-    { "type": "io.cozy.playlists", "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0" }
+    {
+      "type": "io.cozy.playlists",
+      "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4"
+    },
+    {
+      "type": "io.cozy.playlists",
+      "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
+    }
   ]
 }
 ```
@@ -156,7 +172,10 @@ Accept: application/vnd.api+json
 ```json
 {
   "data": [
-    { "type": "io.cozy.playlists", "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0" }
+    {
+      "type": "io.cozy.playlists",
+      "id": "f2625cc0-e2d6-11e6-a0d5-cfbbfb141af0"
+    }
   ]
 }
 ```
@@ -172,9 +191,11 @@ Content-Type: application/vnd.api+json
 
 Returns all the files associated to an album or playlist.
 
-Contents is paginated following [jsonapi conventions](jsonapi.md#pagination). The default limit is 100 entries.
+Contents is paginated following [jsonapi conventions](jsonapi.md#pagination).
+The default limit is 100 entries.
 
-It's also possible to sort the files by their datetime (for photos) with the `sort` query parameter: `?sort=datetime`.
+It's also possible to sort the files by their datetime (for photos) with the
+`sort` query parameter: `?sort=datetime`.
 
 #### Request
 
@@ -274,17 +295,17 @@ Content-Type: application/vnd.api+json
 Before an application updates a file, it can check if the file has some
 references. If it is the case, it may offer to the user two choices:
 
-- update the file with the new version (the albums and playlists will use the
+* update the file with the new version (the albums and playlists will use the
   new version)
-- save the new version as a new file and preserve the old file (the old file
-  may be moved to a `originals` directory).
+* save the new version as a new file and preserve the old file (the old file may
+  be moved to a `originals` directory).
 
 ### Moving a referenced file to the trash
 
-The stack will refuse to move a referenced file to the trash. It's the same
-for a folder that contains a referenced file. The application has to remove
-the references first. It's possible to clear all the references on a file with
-a `PATCH` request like this:
+The stack will refuse to move a referenced file to the trash. It's the same for
+a folder that contains a referenced file. The application has to remove the
+references first. It's possible to clear all the references on a file with a
+`PATCH` request like this:
 
 ```http
 PATCH /files/9152d568-7e7c-11e6-a377-37cbfb190b4b/relationships/references HTTP/1.1
@@ -304,19 +325,21 @@ The references are persisted in the `io.cozy.files` documents in CouchDB. A
 mango index is used to fetch all the files that are associated to a given
 document (for `GET /data/:type/:doc-id/relationships/references`).
 
-For request to update or move to trash a file, it is easy to fetch its
-CouchDB document to see if it has a reference. But it is more difficult when
-moving a folder to trash. To do that, we need two requests to fetch the number
-of references in a folder.
+For request to update or move to trash a file, it is easy to fetch its CouchDB
+document to see if it has a reference. But it is more difficult when moving a
+folder to trash. To do that, we need two requests to fetch the number of
+references in a folder.
 
 1/ Get all descendant folders from a given folder, with a CouchDB View:
 
 ```js
-map = function(doc) { if(doc.type === "folder") emit(doc.path) }
+map = function(doc) {
+  if (doc.type === "folder") emit(doc.path);
+};
 query = {
-    starkey: parent_folder_path + "/",
-    endkey: parent_folder_path +"/\uFFFF"
-}
+  starkey: parent_folder_path + "/",
+  endkey: parent_folder_path + "/\uFFFF"
+};
 ```
 
 2/ Get the total number of "referenced" file for this folders list, with a

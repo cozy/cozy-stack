@@ -6,23 +6,29 @@
 
 ## Using `cozy-app-dev`
 
-This document describe a tool to run an environment in order to develop client-side application on the cozy-stack.
+This document describe a tool to run an environment in order to develop
+client-side application on the cozy-stack.
 
-We provide two different ways to run this environment, either manually where you have to install part of the dependencies yourself or *via* a Docker image in which all dependencies are packed.
+We provide two different ways to run this environment, either manually where you
+have to install part of the dependencies yourself or _via_ a Docker image in
+which all dependencies are packed.
 
-This environment will provide a running instance a http server serving both a specified directory of your application on `app.cozy.tools:8080` and the `cozy-stack` on `cozy.tools:8080` (you can change the hostname and port if you want, see below).
+This environment will provide a running instance a http server serving both a
+specified directory of your application on `app.cozy.tools:8080` and the
+`cozy-stack` on `cozy.tools:8080` (you can change the hostname and port if you
+want, see below).
 
 The default passphrase will be "cozy"
 
-
 ### Manually
 
-To run the `scripts/cozy-app-dev.sh` directly on you system, you'll need to following dependencies:
+To run the `scripts/cozy-app-dev.sh` directly on you system, you'll need to
+following dependencies:
 
-  - `go`
-  - `curl`
-  - `git`
-  - `couchdb2`: you need at least a running instance of CouchDB 2
+* `go`
+* `curl`
+* `git`
+* `couchdb2`: you need at least a running instance of CouchDB 2
 
 Examples:
 
@@ -37,18 +43,21 @@ another host and port with the variable `COUCHDB_URL` like so:
 $ COUCHDB_URL=http://couchdb.local:1234/ ./scripts/cozy-app-dev.sh -d ~/code/myapp
 ```
 
-You can have more informations about the usage of this script with the following command:
+You can have more informations about the usage of this script with the following
+command:
 
 ```
 $ ./scripts/cozy-app-dev.sh -h
 ```
 
-
 ### With Docker
 
-If you do not want to install the required dependencies, we provide a Docker image which encapsulates the dev script and all its dependencies.
+If you do not want to install the required dependencies, we provide a Docker
+image which encapsulates the dev script and all its dependencies.
 
-To run a ephemeral instance, on the `$HOME/myapp` directory, use the following command (warning: all the data stored by your application in couchdb and the VFS won't remain after):
+To run a ephemeral instance, on the `$HOME/myapp` directory, use the following
+command (warning: all the data stored by your application in couchdb and the VFS
+won't remain after):
 
 ```sh
 $ docker run --rm -it \
@@ -85,12 +94,14 @@ A [MailHog](https://github.com/mailhog/MailHog) is running inside docker to
 catch emails. You can view the emails sent by the stack in a web interface on
 http://cozy.tools:8025/
 
-You can also expose the couchdb port (listening in the container on 5984) in order to access its admin page. For instance add `-p 1234:5984` to access to the admin interface on `http://localhost:1234/_utils`.
+You can also expose the couchdb port (listening in the container on 5984) in
+order to access its admin page. For instance add `-p 1234:5984` to access to the
+admin interface on `http://localhost:1234/_utils`.
 
 Make sure you application is built into `$HOME/myapp` (it should have an
 `index.html` and a `manifest.webapp` files), otherwise it will not work. As an
-example, for the [Drive application](https://github.com/cozy/cozy-drive/),
-it should be `$HOME/drive/build`.
+example, for the [Drive application](https://github.com/cozy/cozy-drive/), it
+should be `$HOME/drive/build`.
 
 If you want to use several applications (for testing the intents for example),
 you can mount several directories inside `/data/cozy-app` like this:
@@ -104,30 +115,30 @@ $ docker run --rm -it \
     cozy/cozy-app-dev
 ```
 
-
 ## Good practices for your application
 
 When an application makes a request to the stack, like loading a list of
 contacts, it sends two informations that will be used by the stack to allow or
 deny the access:
 
-- the user session cookie
-- a token that identifies the application (only when the user is connected).
+* the user session cookie
+* a token that identifies the application (only when the user is connected).
 
-So, the application needs such a token. It also needs to know where to send
-the requests for the stack (it can be guessed, but with the nested vs flat
-subdomains structures, it's better to get the information from the stack). To
-do that, when the application loads its HTML index file, the stack will parse
-it as a template and will insert the relevant values.
+So, the application needs such a token. It also needs to know where to send the
+requests for the stack (it can be guessed, but with the nested vs flat
+subdomains structures, it's better to get the information from the stack). To do
+that, when the application loads its HTML index file, the stack will parse it as
+a template and will insert the relevant values.
 
-- `{{.Token}}` will be replaced by the token for the application.
-- `{{.Domain}}` will be replaced by the stack hostname.
-- `{{.Locale}}` will be replaced by the locale for the instance.
-- `{{.AppName}}`: will be replaced by the application name.
-- `{{.AppEditor}}`: will be replaced by the application's editor.
-- `{{.IconPath}}`: will be replaced by the application's icon path.
-- `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
-- `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the cozy-client-js.
+* `{{.Token}}` will be replaced by the token for the application.
+* `{{.Domain}}` will be replaced by the stack hostname.
+* `{{.Locale}}` will be replaced by the locale for the instance.
+* `{{.AppName}}`: will be replaced by the application name.
+* `{{.AppEditor}}`: will be replaced by the application's editor.
+* `{{.IconPath}}`: will be replaced by the application's icon path.
+* `{{.CozyBar}}` will be replaced by the JavaScript to inject the cozy-bar.
+* `{{.CozyClientJS}}` will be replaced by the JavaScript to inject the
+  cozy-client-js.
 
 So, the `index.html` should probably looks like:
 
@@ -153,15 +164,15 @@ So, the `index.html` should probably looks like:
 And `my-app.js`:
 
 ```js
-'use strict'
+"use strict";
 
-document.addEventListener('DOMContentLoaded', () => {
-  const app = document.querySelector('[role=application]')
+document.addEventListener("DOMContentLoaded", () => {
+  const app = document.querySelector("[role=application]");
   cozy.client.init({
-    cozyURL: '//' + app.dataset.cozyStack,
+    cozyURL: "//" + app.dataset.cozyStack,
     token: app.dataset.cozyToken
-  })
-})
+  });
+});
 
 // ...
 ```

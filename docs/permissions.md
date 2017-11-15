@@ -4,38 +4,35 @@
 
 ## When the permissions are used?
 
-The permissions are used when a request is made to cozy stack. It allows to
-let the owner of the cozy instance controls the access to her data, files and
-actions on them. The permissions are given in several contexts. Let's see
-them!
+The permissions are used when a request is made to cozy stack. It allows to let
+the owner of the cozy instance controls the access to her data, files and
+actions on them. The permissions are given in several contexts. Let's see them!
 
 ### Client-side apps
 
-When the user installs a new client-side app, she is asked to accept an
-initial set of permissions for this app. This set of permissions is described
-in the manifest of the app.
+When the user installs a new client-side app, she is asked to accept an initial
+set of permissions for this app. This set of permissions is described in the
+manifest of the app.
 
 Later, the application can gain more permissions via the [intents](intents.md)
 and optional permissions. See below for more details.
 
 When the authentified user access a client-side app, the app receives a token
-from the stack that can be used in later requests to the stack as a proof of
-the permissions it owns.
+from the stack that can be used in later requests to the stack as a proof of the
+permissions it owns.
 
 ### External apps via OAuth2
 
 An external application can ask for permissions via the OAuth2 dance, and use
-them later with the access token. The permissions are in the `scope`
-parameter.
+them later with the access token. The permissions are in the `scope` parameter.
 
 ### Sharing with other users
 
 The owner of a cozy instance can share some documents and files with other
 users. It can be done in two ways:
 
-- If the other user also has a cozy, it can be a cozy-to-cozy sharing.
-- Else, the owner can give to him a link with a code.
-
+* If the other user also has a cozy, it can be a cozy-to-cozy sharing.
+* Else, the owner can give to him a link with a code.
 
 ## What is a permission?
 
@@ -54,19 +51,18 @@ allow to access and modify any file or directory.
 
 Some known types:
 
-- `io.cozy.files`, for files and folder in the [VFS](files.md)
-- `io.cozy.apps`, for [apps](apps.md)
-- `io.cozy.settings`, for the [settings](settings.md)
-- `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
-- `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
+* `io.cozy.files`, for files and folder in the [VFS](files.md)
+* `io.cozy.apps`, for [apps](apps.md)
+* `io.cozy.settings`, for the [settings](settings.md)
+* `io.cozy.jobs` and `io.cozy.triggers`, for [jobs](jobs.md)
+* `io.cozy.oauth.clients`, to list and revoke [OAuth 2 clients](auth.md)
 
 ### Verbs
 
-It says which HTTP verbs can be used for requests to the cozy-stack. `GET`
-will give read-only access, `DELETE` can be used for deletions, etc. Verbs
-should be declared in a list, like `["GET", "POST", "DELETE"]`, and use
-`["ALL"]` as a shortcut for `["GET", "POST", "PUT", "PATCH", "DELETE"]` (it is
-the default).
+It says which HTTP verbs can be used for requests to the cozy-stack. `GET` will
+give read-only access, `DELETE` can be used for deletions, etc. Verbs should be
+declared in a list, like `["GET", "POST", "DELETE"]`, and use `["ALL"]` as a
+shortcut for `["GET", "POST", "PUT", "PATCH", "DELETE"]` (it is the default).
 
 **Note**: `HEAD` is implicitely implied when `GET` is allowed. `OPTIONS` for
 Cross-Origin Resources Sharing is always allowed, the stack does not have the
@@ -106,7 +102,6 @@ And the other is for the events inside the calendar:
 }
 ```
 
-
 ## What format for a permission?
 
 ### JSON
@@ -117,8 +112,8 @@ can be used to give more informations to the user. Only the `type` field is
 mandatory.
 
 In the manifest, the permissions are regrouped in a map. The key is not very
-relevant, it's just here for localization. The same key is used in the
-`locales` field to identify the permission.
+relevant, it's just here for localization. The same key is used in the `locales`
+field to identify the permission.
 
 Example:
 
@@ -133,7 +128,7 @@ Example:
     "images": {
       "description": "Required for the background",
       "type": "io.cozy.files",
-      "verbs": ["GET","POST"],
+      "verbs": ["GET", "POST"],
       "values": ["io.cozy.files.music-dir"]
     },
     "mail": {
@@ -164,8 +159,7 @@ io.cozy.contacts io.cozy.files:GET:io.cozy.files.music-dir io.cozy.jobs:POST:sen
 
 ### Inspiration
 
-- [Access control on other similar platforms](https://news.ycombinator.com/item?id=12784999)
-
+* [Access control on other similar platforms](https://news.ycombinator.com/item?id=12784999)
 
 ## Routes
 
@@ -209,7 +203,8 @@ Content-Type: application/vnd.api+json
           "values": ["io.cozy.files.music-dir"]
         },
         "mail": {
-          "description": "Required to send a congratulations email to your friends",
+          "description":
+            "Required to send a congratulations email to your friends",
           "type": "io.cozy.jobs",
           "selector": "worker",
           "values": ["sendmail"]
@@ -222,10 +217,10 @@ Content-Type: application/vnd.api+json
 
 ### POST /permissions
 
-Create a new set of permissions. It can also associates one or more codes to
-it, via the `codes` parameter in the query string. These codes can then be
-sent to other people as a way to give these permissions (sharing by links).
-The parameter is comma separed list of values. The role of these values is to
+Create a new set of permissions. It can also associates one or more codes to it,
+via the `codes` parameter in the query string. These codes can then be sent to
+other people as a way to give these permissions (sharing by links). The
+parameter is comma separed list of values. The role of these values is to
 identify the codes if you want to revoke some of them later. A `ttl` parameter
 can also be given to make the codes expires after a delay.
 
@@ -337,11 +332,11 @@ Content-Type: application/vnd.api+json
 
 ### PATCH /permissions/:id
 
-Add permissions in this permissions set. It can be used in inter-apps context
-as a way to give another app the permission for some data. For example, the
-contact application can send a "_pick a photo_" intent to the photos application
-with its permission id, and the photos app can then let the user choose a
-photo and give the contacts application the permissions to use it.
+Add permissions in this permissions set. It can be used in inter-apps context as
+a way to give another app the permission for some data. For example, the contact
+application can send a "_pick a photo_" intent to the photos application with
+its permission id, and the photos app can then let the user choose a photo and
+give the contacts application the permissions to use it.
 
 It can also be used to add or remove codes.
 
@@ -411,7 +406,7 @@ Accept: application/vnd.api+json
     "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
     "type": "io.cozy.permissions",
     "permissions": {
-      "remove-this": { }
+      "remove-this": {}
     }
   }
 }
@@ -480,6 +475,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
 ```
+
 #### Reponse
 
 ```http
@@ -515,8 +511,8 @@ Content-Type: application/vnd.api+json
         "permissions": {
           "rule0": {
             "type": "io.cozy.events",
-            "verbs": [ "GET" ],
-            "values": [ "c47f82396d09bfcd270343c5855b169b" ]
+            "verbs": ["GET"],
+            "values": ["c47f82396d09bfcd270343c5855b169b"]
           }
         },
         "codes": { "bob": "secret" }
@@ -618,17 +614,9 @@ Content-Type: application/vnd.api+json
         "permissions": {
           "rule0": {
             "type": "io.cozy.files",
-            "verbs": [
-              "GET",
-              "POST",
-              "PUT",
-              "PATCH",
-              "DELETE"
-            ],
+            "verbs": ["GET", "POST", "PUT", "PATCH", "DELETE"],
             "selector": "referenced_by",
-            "values": [
-              "io.cozy.photos.albums/60cf951a866b15d577711869600759d4"
-            ]
+            "values": ["io.cozy.photos.albums/60cf951a866b15d577711869600759d4"]
           }
         }
       },
@@ -682,9 +670,7 @@ Content-Type: application/vnd.api+json
             "type": "io.cozy.files",
             "description": "photos",
             "selector": "referenced_by",
-            "values": [
-              "io.cozy.photos.albums/60cf951a866b15d577711869600759d4"
-            ]
+            "values": ["io.cozy.photos.albums/60cf951a866b15d577711869600759d4"]
           }
         }
       },

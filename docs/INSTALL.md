@@ -1,5 +1,4 @@
-How to install Cozy-stack?
-==========================
+# How to install Cozy-stack?
 
 ## Dependencies
 
@@ -9,8 +8,8 @@ How to install Cozy-stack?
 * Git
 * Image Magick
 
-To install CouchDB 2 through Docker, take a look at our [Docker specific documentation](docker.md).
-
+To install CouchDB 2 through Docker, take a look at our
+[Docker specific documentation](docker.md).
 
 ## Install for self-hosting
 
@@ -18,7 +17,6 @@ We have started to write documentation on how to install cozy on your own
 server. [The guide](https://docs.cozy.io/en/install/manual/) is still work in
 progress. So, don't hesitate to report issues with it. It will help us improve
 it.
-
 
 ## Install for development / local tests
 
@@ -36,26 +34,28 @@ version` should show you the version if every thing is right.
 
 #### Using `go`
 
-[Install go](https://golang.org/doc/install), version >= 1.8. With `go` installed and configured, you can run the following command:
+[Install go](https://golang.org/doc/install), version >= 1.8. With `go`
+installed and configured, you can run the following command:
 
 ```
 go get -u github.com/cozy/cozy-stack
 ```
 
-This will fetch the sources in `$GOPATH/src/github.com/cozy/cozy-stack` and build a binary in `$GOPATH/bin/cozy-stack`.
+This will fetch the sources in `$GOPATH/src/github.com/cozy/cozy-stack` and
+build a binary in `$GOPATH/bin/cozy-stack`.
 
-Don't forget to add your `$GOPATH` to your `$PATH` in your `*rc` file so that you can execute the binary without entering its full path.
+Don't forget to add your `$GOPATH` to your `$PATH` in your `*rc` file so that
+you can execute the binary without entering its full path.
 
 ```
 export PATH="$(go env GOPATH)/bin:$PATH"
 ```
 
-
 ### Add an instance for testing
 
 You can configure your `cozy-stack` using a configuration file or different
-comand line arguments. Assuming CouchDB is installed and running on default
-port `5984`, you can start the server:
+comand line arguments. Assuming CouchDB is installed and running on default port
+`5984`, you can start the server:
 
 ```bash
 cozy-stack serve
@@ -67,9 +67,11 @@ And then create an instance for development:
 cozy-stack instances add --dev --apps drive,photos,settings --passphrase cozy "cozy.tools:8080"
 ```
 
-The cozy-stack server listens on http://cozy.tools:8080/ by default. See `cozy-stack --help` for more informations.
+The cozy-stack server listens on http://cozy.tools:8080/ by default. See
+`cozy-stack --help` for more informations.
 
-The above command will create an instance on http://cozy.tools:8080/ with the passphrase `cozy`.
+The above command will create an instance on http://cozy.tools:8080/ with the
+passphrase `cozy`.
 
 Make sure the full stack is up with:
 
