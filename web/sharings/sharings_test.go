@@ -1275,7 +1275,6 @@ func TestRevokeSharing(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
 	// Test: correct sharing id but incorrect permissions.
-
 	rule := permissions.Rule{
 		Type:   "io.cozy.foos",
 		Values: []string{"bar", "baz"},
@@ -1296,25 +1295,10 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 
-	// Test: correct sharing id and permission but incorrect recursive param.
+	// Test: correct sharing id and app slug. It should pass.
 	appToken, slug := generateAppToken(t, rule)
-
 	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
-	queries := url.Values{
-		consts.QueryParamRecursive: {"neithertruenorfalse"},
-	}.Encode()
-	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-
-	// Test: correct sharing id, app slug and recursive query param.
-	// It should pass.
-	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
-	queries = url.Values{consts.QueryParamRecursive: {"false"}}.Encode()
-	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
+	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
 	res, err = http.DefaultClient.Do(req)
@@ -1343,8 +1327,7 @@ func TestRevokeSharing(t *testing.T) {
 	assert.NoError(t, err)
 
 	delURL = fmt.Sprintf("%s/sharings/%s", ts.URL, sharing.SharingID)
-	queries = url.Values{consts.QueryParamRecursive: {"false"}}.Encode()
-	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
+	req, err = http.NewRequest(http.MethodDelete, delURL, nil)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+tokenBadScope)
 	res, err = http.DefaultClient.Do(req)
@@ -1389,8 +1372,7 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, res.StatusCode)
 
-	// Test: correct sharing id and app slug while being the sharer: it should
-	// pass.
+	// Test: correct sharing id and app slug while being the sharer: it should pass.
 	slug := utils.RandomString(15)
 	rule := permissions.Rule{
 		Type:   "io.cozy.foos",
@@ -1433,7 +1415,7 @@ func TestRevokeRecipient(t *testing.T) {
 	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
 		[]*contacts.Contact{recipient0, recipient1}, rule)
 
-	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
+	delURL = fmt.Sprintf("%s/sharings/%s/%s", ts.URL,
 		sharing.SharingID, sharing.RecipientsStatus[0].HostClientID)
 	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
 	assert.NoError(t, err)

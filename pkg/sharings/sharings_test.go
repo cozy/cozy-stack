@@ -954,7 +954,7 @@ func TestRevokeRecipient(t *testing.T) {
 	// owner of the sharing.
 	sharingNotSharer := insertSharingIntoDB(t, "", consts.MasterMasterSharing,
 		false, "", []*contacts.Contact{}, permissions.Rule{})
-	err := RevokeRecipient(testInstance, sharingNotSharer, "wontbeused", false)
+	err := RevokeRecipientByClientID(testInstance, sharingNotSharer, "wontbeused")
 	assert.Error(t, err)
 	assert.Equal(t, err, ErrOnlySharerCanRevokeRecipient)
 
@@ -1010,14 +1010,8 @@ func TestRevokeRecipient(t *testing.T) {
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
 
-	// Test: we try to remove a recipient that does not belong to this sharing.
-	err = RevokeRecipient(testInstance, sharing, "randomhostclientid", false)
-	assert.Error(t, err)
-	assert.Equal(t, ErrRecipientDoesNotExist, err)
-
 	// Test: we remove the first recipient.
-	err = RevokeRecipient(testInstance, sharing,
-		sharing.RecipientsStatus[0].Client.ClientID, false)
+	err = RevokeRecipientByClientID(testInstance, sharing, sharing.RecipientsStatus[0].Client.ClientID)
 	assert.NoError(t, err)
 	// We check that the first recipient was revoked, that the sharing is not
 	// revoked, and that the trigger still exists.
@@ -1029,8 +1023,7 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.Empty(t, doc.RecipientsStatus[0].HostClientID)
 	assert.Empty(t, doc.RecipientsStatus[0].Client.ClientID)
 	assert.Empty(t, doc.RecipientsStatus[0].AccessToken.AccessToken)
-	_, err = oauth.FindClient(testInstance,
-		doc.RecipientsStatus[0].HostClientID)
+	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[0].HostClientID)
 	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
@@ -1038,8 +1031,7 @@ func TestRevokeRecipient(t *testing.T) {
 	// Test: we remove the second recipient.
 	// By setting `recursive` to true we ask the recipient to revoke the sharing
 	// as well, hence the test server above.
-	err = RevokeRecipient(testInstance, sharing,
-		sharing.RecipientsStatus[1].Client.ClientID, true)
+	err = RevokeRecipientByContactID(testInstance, sharing, recipient2.DocID)
 	assert.NoError(t, err)
 	// We check that the second recipient was revoked, that the sharing is
 	// revoked, and that the trigger was deleted.
@@ -1051,8 +1043,7 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.Empty(t, doc.RecipientsStatus[1].HostClientID)
 	assert.Empty(t, doc.RecipientsStatus[1].Client.ClientID)
 	assert.Empty(t, doc.RecipientsStatus[1].AccessToken.AccessToken)
-	_, err = oauth.FindClient(testInstance,
-		doc.RecipientsStatus[1].HostClientID)
+	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[1].HostClientID)
 	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers)
