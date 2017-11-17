@@ -5,6 +5,7 @@ package auth_test
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -50,6 +51,19 @@ var altRegistrationToken string
 var csrfToken string
 var code string
 var refreshToken string
+
+func getSessionID(cookies []*http.Cookie) string {
+	for _, c := range cookies {
+		if c.Name == "cozysessid" {
+			b, err := base64.RawURLEncoding.DecodeString(c.Value)
+			if err != nil {
+				return ""
+			}
+			return string(b[8 : 8+32])
+		}
+	}
+	return ""
+}
 
 func TestIsLoggedInWhenNotLoggedIn(t *testing.T) {
 	content, err := getTestURL()
@@ -1036,7 +1050,7 @@ func TestLogoutNoToken(t *testing.T) {
 
 func TestLogoutSuccess(t *testing.T) {
 	a := app.WebappManifest{DocSlug: "home"}
-	token := testInstance.BuildAppToken(&a)
+	token := testInstance.BuildAppToken(&a, getSessionID(jar.Cookies(nil)))
 	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/login", nil)
 	req.Host = domain
@@ -1078,7 +1092,7 @@ func TestLogoutOthers(t *testing.T) {
 	assert.Len(t, cookies2, 1)
 
 	a := app.WebappManifest{DocSlug: "home"}
-	token := testInstance.BuildAppToken(&a)
+	token := testInstance.BuildAppToken(&a, getSessionID(cookies1))
 	permissions.CreateWebappSet(testInstance, a.Slug(), permissions.Set{})
 
 	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)

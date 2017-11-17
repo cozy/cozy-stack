@@ -26,7 +26,7 @@ func IsLoggedIn(c echo.Context) bool {
 	return ok
 }
 
-// GetSessions returns the sessions associated with the given context.
+// GetSession returns the sessions associated with the given context.
 func GetSession(c echo.Context) (*sessions.Session, bool) {
 	s, ok := c.Get(sessionKey).(*sessions.Session)
 	if !ok {
