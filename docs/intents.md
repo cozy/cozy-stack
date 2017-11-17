@@ -2,51 +2,73 @@
 
 # Intents
 
-- [Overview](#overview)
-- [Glossary](#glossary)
-- [Proposal](#proposal)
-    - [1. Manifest](#1-manifest)
-    - [2. Intent Start](##2-intent-start)
-    - [3. Service Resolution](#3-service-resolution)
-    - [4. Handshake](#4-handshake)
-    - [5. Processing & Terminating](#5-processing--terminating)
-- [Routes](#routes)
-- [Annexes](#annexes)
-    - [Use cases](#use-cases)
-    - [Bibliography & Prior Art](#bibliography--prior-art)
-    - [Discarded Ideas](#discarded-ideas)
-
+* [Overview](#overview)
+* [Glossary](#glossary)
+* [Proposal](#proposal)
+  * [1. Manifest](#1-manifest)
+  * [2. Intent Start](##2-intent-start)
+  * [3. Service Resolution](#3-service-resolution)
+  * [4. Handshake](#4-handshake)
+  * [5. Processing & Terminating](#5-processing--terminating)
+* [Routes](#routes)
+* [Annexes](#annexes)
+  * [Use cases](#use-cases)
+  * [Bibliography & Prior Art](#bibliography--prior-art)
+  * [Discarded Ideas](#discarded-ideas)
 
 ## Overview
 
-A typical Cozy Cloud runs multiple applications, but most of these applications are focused on one task and interact with one particular type of data.
+A typical Cozy Cloud runs multiple applications, but most of these applications
+are focused on one task and interact with one particular type of data.
 
-However, Cozy Cloud especially shines when data is combined across apps to provide an integrated experience. This is made difficult by the fact that apps have no dedicated back-end and that they have restricted access to documents.
+However, Cozy Cloud especially shines when data is combined across apps to
+provide an integrated experience. This is made difficult by the fact that apps
+have no dedicated back-end and that they have restricted access to documents.
 
-This document outlines a proposal for apps to rely on each other to accomplish certain tasks and gain access to new documents, in a way that hopefully is neither painful for the users nor the developers.
-
+This document outlines a proposal for apps to rely on each other to accomplish
+certain tasks and gain access to new documents, in a way that hopefully is
+neither painful for the users nor the developers.
 
 ## Glossary
 
-- **Intent**: Intents, sometimes also called Activities, is a pattern used in environments where multiple apps with different purposes coexist. The idea is that any app can express the need to do *something* that it can't do itself, and an app that *can* do it will take over from there.
-- **Stack**: refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the server-side part of the Cozy infrastructure.
-- **Client**: the client is the application that *starts* an intent.
-- **Service**: the service is the application that *handles* an intent started by a client.
-
+* **Intent**: Intents, sometimes also called Activities, is a pattern used in
+  environments where multiple apps with different purposes coexist. The idea is
+  that any app can express the need to do _something_ that it can't do itself,
+  and an app that _can_ do it will take over from there.
+* **Stack**: refers to [cozy-stack](https://github.com/cozy/cozy-stack/), the
+  server-side part of the Cozy infrastructure.
+* **Client**: the client is the application that _starts_ an intent.
+* **Service**: the service is the application that _handles_ an intent started
+  by a client.
 
 ## Proposal
 
-In this proposal, services declare themselves through their manifest. When a clients starts an intent, the stack finds the appropriate service and help the two apps to create a communication channel between them. After the channel is ready, the intent is processed. These steps are detailed below.
+In this proposal, services declare themselves through their manifest. When a
+clients starts an intent, the stack finds the appropriate service and help the
+two apps to create a communication channel between them. After the channel is
+ready, the intent is processed. These steps are detailed below.
 
 ### 1. Manifest
 
-Every app can register itself as a potential handler for one or more intents. To do so, it must provide the following information for each intent it wishes to handle:
+Every app can register itself as a potential handler for one or more intents. To
+do so, it must provide the following information for each intent it wishes to
+handle:
 
-- `action`: A verb that describes what the service should do. The most common actions are `CREATE`, `EDIT`, `OPEN`, `PICK`, and `SHARE`. While we recommend using one of these verbs, the list is not exhaustive and may be extended by any app.
-- `type`: One or more types of data on which the service knows how to operate the `action`. A `type` can be expressed as a [MIME type](https://en.wikipedia.org/wiki/Media_type) or a [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing). The application must have permissions for any Cozy Document Type listed here. You can also think of the `type` as the intent's subject.
-- `href`: the relative URL of the route designed to handle this intent. A query-string with the intent id will be added to this URL.
+* `action`: A verb that describes what the service should do. The most common
+  actions are `CREATE`, `EDIT`, `OPEN`, `PICK`, and `SHARE`. While we recommend
+  using one of these verbs, the list is not exhaustive and may be extended by
+  any app.
+* `type`: One or more types of data on which the service knows how to operate
+  the `action`. A `type` can be expressed as a
+  [MIME type](https://en.wikipedia.org/wiki/Media_type) or a
+  [Cozy Document Type](https://github.com/cozy/cozy-stack/blob/master/docs/data-system.md#typing).
+  The application must have permissions for any Cozy Document Type listed here.
+  You can also think of the `type` as the intent's subject.
+* `href`: the relative URL of the route designed to handle this intent. A
+  query-string with the intent id will be added to this URL.
 
-These informations must be provided in the manifest of the application, inside the `intents` key.
+These informations must be provided in the manifest of the application, inside
+the `intents` key.
 
 Here is a very simple example:
 
@@ -60,7 +82,8 @@ Here is a very simple example:
 ]
 ```
 
-When this service is called, it will load the page `https://service.domain.example.com/pick?intent=123abc`.
+When this service is called, it will load the page
+`https://service.domain.example.com/pick?intent=123abc`.
 
 Here is an example of an app that supports multiple data types:
 
@@ -95,19 +118,37 @@ This information is stored by the stack when the application is installed.
 
 ### 2. Intent Start
 
-Any app can start a new intent whenever it wants. When it does, the app becomes the *client*.
+Any app can start a new intent whenever it wants. When it does, the app becomes
+the _client_.
 
 To start an intent, it must specify the following information:
 
-- `action` : an action verb, which will be matched against the actions declared in services manifest files.
-- `type` : a **single** data type, which will be matched against the types declared in services manifest files.
+* `action` : an action verb, which will be matched against the actions declared
+  in services manifest files.
+* `type` : a **single** data type, which will be matched against the types
+  declared in services manifest files.
 
-There are also two optional fields that can be defined at the start of the intent:
+There are also two optional fields that can be defined at the start of the
+intent:
 
-- `data`: Any data that the client wants to make available to the service. `data` must be a JSON object but its structure is left to the discretion of the client. The only exception is when `type` is a MIME type and the client wishes to send a file to the service. In that case, the file should be represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and must be named `content`. This convention is also recomended when dealing with other intent `type`s. See the examples below for an example of this.
-- `permissions` : When `type` is a Cozy Document Type and the client expects to receive one or more documents as part of the reply from the service, the `permissions` field allows the client to request permissions for these documents. `permissions` is a list of HTTP Verbs. Refer [to this section](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md#verbs) of the permission documentation for more information.
+* `data`: Any data that the client wants to make available to the service.
+  `data` must be a JSON object but its structure is left to the discretion of
+  the client. The only exception is when `type` is a MIME type and the client
+  wishes to send a file to the service. In that case, the file should be
+  represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and
+  must be named `content`. This convention is also recomended when dealing with
+  other intent `type`s. See the examples below for an example of this.
+* `permissions` : When `type` is a Cozy Document Type and the client expects to
+  receive one or more documents as part of the reply from the service, the
+  `permissions` field allows the client to request permissions for these
+  documents. `permissions` is a list of HTTP Verbs. Refer
+  [to this section](https://github.com/cozy/cozy-stack/blob/master/docs/permissions.md#verbs)
+  of the permission documentation for more information.
 
-**Note**: if the intent's subject is a Cozy Doctype that holds references to other Cozy Documents (such as an album referencing photos or a playlist referencing music files), the permissions should be granted for the referenced documents too, whenever possible.
+**Note**: if the intent's subject is a Cozy Doctype that holds references to
+other Cozy Documents (such as an album referencing photos or a playlist
+referencing music files), the permissions should be granted for the referenced
+documents too, whenever possible.
 
 Here is an example of what the API could look like:
 
@@ -164,74 +205,116 @@ cozy.intents.start('EDIT', 'image/png', {
 
 ### 3. Service Resolution
 
-The service resolution is the phase where a service is chosen to handle an intent. This phase is handled by the stack.
+The service resolution is the phase where a service is chosen to handle an
+intent. This phase is handled by the stack.
 
-After the client has started it's intent, it sends the `action`, the `type` and the `permissions` to the stack. The stack will then traverse the list of installed apps and find all the apps that can handle that specific combination.
-Note that if the intent request `GET` permissions on a certain Cozy Document Type, but the service does not have this permission itself, it can not handle the intent.
+After the client has started it's intent, it sends the `action`, the `type` and
+the `permissions` to the stack. The stack will then traverse the list of
+installed apps and find all the apps that can handle that specific combination.
+Note that if the intent request `GET` permissions on a certain Cozy Document
+Type, but the service does not have this permission itself, it can not handle
+the intent.
 
 The stack then stores the information for that intent:
 
-- A unique id for that intent
-- Client URL
-- Service URL
-- `action`
-- `type`
-- `permissions`
+* A unique id for that intent
+* Client URL
+* Service URL
+* `action`
+* `type`
+* `permissions`
 
-Finally, the service URL is suffixed with `?intent=` followed by the intent's id, and then sent to the client.
+Finally, the service URL is suffixed with `?intent=` followed by the intent's
+id, and then sent to the client.
 
 #### Service choice
 
-If more than one service match the intent's criteria, the stack returns the list of all matching service URLs to the client (and stores it in the service URL version of the intent it keeps in memory). The client is then free to pick one arbitrarily.
+If more than one service match the intent's criteria, the stack returns the list
+of all matching service URLs to the client (and stores it in the service URL
+version of the intent it keeps in memory). The client is then free to pick one
+arbitrarily.
 
-The client may also decide to let the user choose one of the services. To do this, it should start another intent with a `PICK` action and a `io.cozy.apps` `type`. This intent should be resolved by the stack to a special page, in order to avoid having multiple services trying to handle it and ending up in a loop.
+The client may also decide to let the user choose one of the services. To do
+this, it should start another intent with a `PICK` action and a `io.cozy.apps`
+`type`. This intent should be resolved by the stack to a special page, in order
+to avoid having multiple services trying to handle it and ending up in a loop.
 
-This special page is a service like any other; it expects the list of services to pick from as input data, and will return the one that has been picked to the client. The client can then proceed with the first intent.
+This special page is a service like any other; it expects the list of services
+to pick from as input data, and will return the one that has been picked to the
+client. The client can then proceed with the first intent.
 
-The user may decide to abort the intent before picking a service. If that is the case, the choice page will need to inform the client that the intent was aborted.
+The user may decide to abort the intent before picking a service. If that is the
+case, the choice page will need to inform the client that the intent was
+aborted.
 
 #### No available service
 
-If no service is available to handle an intent, the stack returns an error to the client.
+If no service is available to handle an intent, the stack returns an error to
+the client.
 
-At a later phase of this project, the stack may traverse the applications registered in a store to find suitable services, and prompt the user to install one.
+At a later phase of this project, the stack may traverse the applications
+registered in a store to find suitable services, and prompt the user to install
+one.
 
 ### 4. Handshake
 
-The next phase consist of the client and the service establishing a communication channel between them. The communication will be done using the [window.postMessage](https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage) API.
+The next phase consist of the client and the service establishing a
+communication channel between them. The communication will be done using the
+[window.postMessage](https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage)
+API.
 
 #### Service Initialization
 
-When the client receives the service URL from the stack, it starts to listen for messages coming from that URL. Once the listener is started, it opens an iframe that points to the service's URL.
+When the client receives the service URL from the stack, it starts to listen for
+messages coming from that URL. Once the listener is started, it opens an iframe
+that points to the service's URL.
 
 #### Service to Client
 
-At this point, the service app is opened on the route that it provided in the `href` part of it's manifest. This route now also contains the intent's id.
+At this point, the service app is opened on the route that it provided in the
+`href` part of it's manifest. This route now also contains the intent's id.
 
-The service queries the stack to find out information about the intent, passing along the intent id. In response, the stack sends the client's URL, the `action`, and the `type`. If the intent includes `permissions`, the stack sends them too, as well as the client's permission id.
+The service queries the stack to find out information about the intent, passing
+along the intent id. In response, the stack sends the client's URL, the
+`action`, and the `type`. If the intent includes `permissions`, the stack sends
+them too, as well as the client's permission id.
 
-It then starts to listen for messages coming from the client's URL. Eventually, it sends a message to the client, as a mean to inform it that the service is now ready.
+It then starts to listen for messages coming from the client's URL. Eventually,
+it sends a message to the client, as a mean to inform it that the service is now
+ready.
 
 #### Client to Service
 
-After the client receives the "ready" message from the service, it sends a message to the service acknowledging the "ready" state.
+After the client receives the "ready" message from the service, it sends a
+message to the service acknowledging the "ready" state.
 
-Along with this message, it should send the `data` that was provided at  the start of the intent, if any.
+Along with this message, it should send the `data` that was provided at the
+start of the intent, if any.
 
 ### 5. Processing & Terminating
 
-After this handshake, there is a confirmed communication channel between the client and the service, and the service knows what it has to do. This is the phase where the user interacts with the service.
+After this handshake, there is a confirmed communication channel between the
+client and the service, and the service knows what it has to do. This is the
+phase where the user interacts with the service.
 
-If the service is going to grant extra permissions to the client app, it is strongly recommended to make this clear to the user.
+If the service is going to grant extra permissions to the client app, it is
+strongly recommended to make this clear to the user.
 
-When the service has finished his task, it sends a "completed" message to the client. Permissions extensions should have been done before that. Along with the completed message, the service should send any data it deems relevant.
-This data should be a JSON object. Again, the structure of that object is left to the discretion of the service, except when `type` is a MIME type. In that case, the file should be represented as a base-64 encoded [Data URL](http://dataurl.net/#about) and must be named `content`. This convention is also recomended when dealing with other intent `type`s.
+When the service has finished his task, it sends a "completed" message to the
+client. Permissions extensions should have been done before that. Along with the
+completed message, the service should send any data it deems relevant. This data
+should be a JSON object. Again, the structure of that object is left to the
+discretion of the service, except when `type` is a MIME type. In that case, the
+file should be represented as a base-64 encoded
+[Data URL](http://dataurl.net/#about) and must be named `content`. This
+convention is also recomended when dealing with other intent `type`s.
 
-After the client receives a "completed" message, it can close the service's iframe and resume operations as usual.
+After the client receives a "completed" message, it can close the service's
+iframe and resume operations as usual.
 
-If, for whatever reason, the service can not fulfill the intent, it can send an "error" message to the client.
-When the client receives an "error" message, the intent is aborted and the iframe can be closed.
-
+If, for whatever reason, the service can not fulfill the intent, it can send an
+"error" message to the client. When the client receives an "error" message, the
+intent is aborted and the iframe can be closed.
 
 ## Routes
 
@@ -284,7 +367,8 @@ Content-Type: application/vnd.api+json
       "services": [
         {
           "slug": "files",
-          "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+          "href":
+            "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
         }
       ]
     },
@@ -332,7 +416,8 @@ Content-Type: application/vnd.api+json
       "services": [
         {
           "slug": "files",
-          "href": "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
+          "href":
+            "https://files.cozy.example.net/pick?intent=77bcc42c-0fd8-11e7-ac95-8f605f6e8338"
         }
       ]
     },
@@ -344,50 +429,65 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-
 ## Annexes
 
 ### Use Cases
 
-Here is a non exhaustive list of situations that *may* use intents:
+Here is a non exhaustive list of situations that _may_ use intents:
 
-- Configure a new connector account
-- Share a photo album via email
-- Add an attachment to an email
-- Attach a note to a contact
-- Create a contact based on an email
-- Save an attachment received in an email
-- Create a birthday event in a calendar, based on a contact
-- Create an event based on an email's content
-- Create an event based on an ICS file
-- Chose an avatar for a contact
-- Open a file from the file browser (music, PDF, image, ...)
-- Attach a receipt to an expense
-- Provide a tip for another application
+* Configure a new connector account
+* Share a photo album via email
+* Add an attachment to an email
+* Attach a note to a contact
+* Create a contact based on an email
+* Save an attachment received in an email
+* Create a birthday event in a calendar, based on a contact
+* Create an event based on an email's content
+* Create an event based on an ICS file
+* Chose an avatar for a contact
+* Open a file from the file browser (music, PDF, image, ...)
+* Attach a receipt to an expense
+* Provide a tip for another application
 
 ### Bibliography & Prior Art
 
-- Prior art: https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287
-- Web intents: http://webintents.org/
-- WebActivities: https://wiki.mozilla.org/WebAPI/WebActivities and https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities
-- Siri Intents: https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
-- Android Intents: https://developer.android.com/reference/android/content/Intent.html
-- iOS extensions: https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html
+* Prior art:
+  https://forum.cozy.io/t/cozy-tech-topic-inter-app-communication-architecture/2287
+* Web intents: http://webintents.org/
+* WebActivities: https://wiki.mozilla.org/WebAPI/WebActivities and
+  https://developer.mozilla.org/en-US/docs/Archive/Firefox_OS/API/Web_Activities
+* Siri Intents:
+  https://developer.apple.com/library/content/documentation/Intents/Conceptual/SiriIntegrationGuide/ResolvingandHandlingIntents.html#//apple_ref/doc/uid/TP40016875-CH5-SW1
+* Android Intents:
+  https://developer.android.com/reference/android/content/Intent.html
+* iOS extensions:
+  https://developer.apple.com/library/content/documentation/General/Conceptual/ExtensibilityPG/index.html
 
 ### Discarded Ideas
 
 #### Disposition
 
-Some specifications include a `disposition` field in the manifests, that gives a hint to the client about how to display the service (inlined or in a new window).
-Since we were unable to find a use case where a new window is required, we decided not to include the `disposition` in this specification. It might be added later if the need arises.
+Some specifications include a `disposition` field in the manifests, that gives a
+hint to the client about how to display the service (inlined or in a new
+window). Since we were unable to find a use case where a new window is required,
+we decided not to include the `disposition` in this specification. It might be
+added later if the need arises.
 
 #### Client / Server architecture
 
-Instead of letting the two applications communicate with each other, they could be made to talk through the stack.
-This would be useful as the stack could act as a middleware, transforming data on the fly or granting permissions where appropriate.
+Instead of letting the two applications communicate with each other, they could
+be made to talk through the stack. This would be useful as the stack could act
+as a middleware, transforming data on the fly or granting permissions where
+appropriate.
 
-However, this approach has also severe drawbacks, notably the fact that the stack must hold a copy of all the data that the apps want to transfer (which can include large files). It also makes it significantly harder for the client to know when the intent has been processed.
+However, this approach has also severe drawbacks, notably the fact that the
+stack must hold a copy of all the data that the apps want to transfer (which can
+include large files). It also makes it significantly harder for the client to
+know when the intent has been processed.
 
 #### Data representation
 
-The client could explicitly request a data format to be used in the communication. However, this idea was abandoned because the format is *always* json, except when then intent's `type` is a MIME type, in which case the data format *also* uses this type.
+The client could explicitly request a data format to be used in the
+communication. However, this idea was abandoned because the format is _always_
+json, except when then intent's `type` is a MIME type, in which case the data
+format _also_ uses this type.

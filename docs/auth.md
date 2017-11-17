@@ -4,38 +4,35 @@
 
 ## Introduction
 
-In this document, we will cover how to protect the usage of the cozy-stack.
-When the cozy-stack receives a request, it checks that the request is
-authorized, and if yes, it processes it and answers it.
-
+In this document, we will cover how to protect the usage of the cozy-stack. When
+the cozy-stack receives a request, it checks that the request is authorized, and
+if yes, it processes it and answers it.
 
 ## What about OAuth2?
 
-OAuth2 is about delegating an access to resources on a server to another
-party. It is a framework, not a strictly defined protocol, for organizing the
+OAuth2 is about delegating an access to resources on a server to another party.
+It is a framework, not a strictly defined protocol, for organizing the
 interactions between these 4 actors:
 
-- the resource owner, the "user" that can click on buttons
-- the client, the website or application that would like to access the
-  resources
-- the authorization server, whose role is limited to give tokens but is
-  central in OAuth2 interactions
-- the resources server, the server that controls the resources.
+* the resource owner, the "user" that can click on buttons
+* the client, the website or application that would like to access the resources
+* the authorization server, whose role is limited to give tokens but is central
+  in OAuth2 interactions
+* the resources server, the server that controls the resources.
 
 For cozy, both the authorization server and the resources server roles are
 played by the cozy-stack. The resource owner is the owner of a cozy instance.
-The client can be the cozy-desktop app, cozy-mobile, or many other
-applications.
+The client can be the cozy-desktop app, cozy-mobile, or many other applications.
 
 OAuth2, and its extensions, is a large world. At its core, there is 2 things:
 letting the client get a token issued by the authorization server, and using
 this token to access to the resources. OAuth2 describe 4 flows, called grant
 types, for the first part:
 
-- Authorization code
-- Implicit grant type
-- Client credentials grant type
-- Resource owner credentials grant type.
+* Authorization code
+* Implicit grant type
+* Client credentials grant type
+* Resource owner credentials grant type.
 
 On cozy, only the most typical one is used: authorization code. To start this
 flow, the client must have a `client_id` and `client_secret`. The Cozy stack
@@ -44,38 +41,37 @@ OAuth2) to allow the clients to obtain them.
 
 OAuth2 has also 3 ways to use a token:
 
-- in the query-string (even if the spec does not recommended it)
-- in the POST body
-- in the HTTP Authorization header.
+* in the query-string (even if the spec does not recommended it)
+* in the POST body
+* in the HTTP Authorization header.
 
 On cozy, only the HTTP header is supported.
 
 OAuth2 has a lot of assumptions. Let's see some of them and their consequences
 on Cozy:
 
-- TLS is very important to secure the communications. in OAuth 1, there was a
-  mechanism to sign the requests. But it was very difficult to get it right
-  for the developers and was abandonned in OAuth2, in favor of using TLS. The
-  Cozy instance are already accessible only in HTTPS, so there is nothing
-  particular to do for that.
+* TLS is very important to secure the communications. in OAuth 1, there was a
+  mechanism to sign the requests. But it was very difficult to get it right for
+  the developers and was abandonned in OAuth2, in favor of using TLS. The Cozy
+  instance are already accessible only in HTTPS, so there is nothing particular
+  to do for that.
 
-- There is a principle called TOFU, Trust On First Use. It said that if the
-  user will give his permission for delegating access to its resources when
-  the client will try to access them for the first time. Later, the client
-  will be able to keep accessing them even if the user is no longer here to
-  give his permissions.
+* There is a principle called TOFU, Trust On First Use. It said that if the user
+  will give his permission for delegating access to its resources when the
+  client will try to access them for the first time. Later, the client will be
+  able to keep accessing them even if the user is no longer here to give his
+  permissions.
 
-- The client can't make the assumptions about when its tokens will work. The
+* The client can't make the assumptions about when its tokens will work. The
   tokens have no meaning for him (like cookies in a browser), they are just
-  something it got from the authorization server and can send with its
-  request. The access token can expire, the user can revoke them, etc.
+  something it got from the authorization server and can send with its request.
+  The access token can expire, the user can revoke them, etc.
 
-- OAuth 2.0 defines no cryptographic methods. But a developer that want to use
+* OAuth 2.0 defines no cryptographic methods. But a developer that want to use
   it will have to put her hands in that.
 
-If you want to learn OAuth 2 in details, I recommend the [OAuth 2 in Action
-book](https://www.manning.com/books/oauth-2-in-action).
-
+If you want to learn OAuth 2 in details, I recommend the
+[OAuth 2 in Action book](https://www.manning.com/books/oauth-2-in-action).
 
 ## The cozy stack as an authorization server
 
@@ -84,12 +80,11 @@ book](https://www.manning.com/books/oauth-2-in-action).
 Display a form with a password field to let the user authenticates herself to
 the cozy stack.
 
-This endpoint accepts a `redirect` parameter. If the user is already logged
-in, she will be redirected immediately. Else, the parameter will be transfered
-in the POST. This parameter can only contain a link to an application
-installed on the cozy (thus to a subdomain of the cozy instance). To protect
-against stealing authorization code with redirection, the fragment is always
-overriden:
+This endpoint accepts a `redirect` parameter. If the user is already logged in,
+she will be redirected immediately. Else, the parameter will be transfered in
+the POST. This parameter can only contain a link to an application installed on
+the cozy (thus to a subdomain of the cozy instance). To protect against stealing
+authorization code with redirection, the fragment is always overriden:
 
 ```http
 GET /auth/login?redirect=https://contacts.cozy.example.org/foo?bar#baz HTTP/1.1
@@ -97,19 +92,19 @@ Host: cozy.example.org
 Cookie: ...
 ```
 
-**Note**: the redirect parameter should be URL-encoded. We haven't done that
-to make it clear what the path (`foo`), the query-string (`bar`), and the
-fragment (`baz`) are.
+**Note**: the redirect parameter should be URL-encoded. We haven't done that to
+make it clear what the path (`foo`), the query-string (`bar`), and the fragment
+(`baz`) are.
 
 ```http
 HTTP/1.1 302 Moved Temporarily
 Location: https://contacts.cozy.example.org/foo?bar#
 ```
 
-If the `redirect` parameter is invalid, the response will be `400 Bad
-Request`. Same for other parameters, the redirection will happen only on
-success (even if OAuth2 says the authorization server can redirect on errors,
-it's very complicated to do it safely, and it is better to avoid this trap).
+If the `redirect` parameter is invalid, the response will be `400 Bad Request`.
+Same for other parameters, the redirection will happen only on success (even if
+OAuth2 says the authorization server can redirect on errors, it's very
+complicated to do it safely, and it is better to avoid this trap).
 
 ### POST /auth/login
 
@@ -134,16 +129,16 @@ Set-Cookie: ...
 Location: https://contacts.cozy.example.org/foo
 ```
 
-When two-factor authentication (2FA) authentication is activated, this
-endpoint will not directly sent a redirection after this first passphrase
-step. In such case, a `200 OK` response is sent along with a token value in
-the response (either in JSON if requested or directly in a new HTML form).
+When two-factor authentication (2FA) authentication is activated, this endpoint
+will not directly sent a redirection after this first passphrase step. In such
+case, a `200 OK` response is sent along with a token value in the response
+(either in JSON if requested or directly in a new HTML form).
 
-Along with this token, on 2FA passcode is sent to the user via another
-transport (email for instance, depending on the user's preferences). Another
-request should be sent to the same endpoint with a valid pair `(token,
-passcode)`, ensuring that the user correctly entered its passphrase *and*
-received a fresh passcode by another mean.
+Along with this token, on 2FA passcode is sent to the user via another transport
+(email for instance, depending on the user's preferences). Another request
+should be sent to the same endpoint with a valid pair `(token, passcode)`,
+ensuring that the user correctly entered its passphrase _and_ received a fresh
+passcode by another mean.
 
 ```http
 POST /auth/login HTTP/1.1
@@ -162,8 +157,8 @@ Location: https://contacts.cozy.example.org/foo
 ### DELETE /auth/login
 
 This can be used to log-out the user. An app token must be passed in the
-`Authorization` header, to protect against CSRF attack on this (this can part
-of bigger attacks like session fixation).
+`Authorization` header, to protect against CSRF attack on this (this can part of
+bigger attacks like session fixation).
 
 ```http
 DELETE /auth/login HTTP/1.1
@@ -174,9 +169,11 @@ Authorization: Bearer app-token
 
 ### DELETE /auth/login/others
 
-This can be used to log-out all active sessions except the one used by the request. This allow to disconnect any other users currenctly authenticated on the system. An app token must be passed in the
-`Authorization` header, to protect against CSRF attack on this (this can part
-of bigger attacks like session fixation).
+This can be used to log-out all active sessions except the one used by the
+request. This allow to disconnect any other users currenctly authenticated on
+the system. An app token must be passed in the `Authorization` header, to
+protect against CSRF attack on this (this can part of bigger attacks like
+session fixation).
 
 ```http
 DELETE /auth/login/others HTTP/1.1
@@ -184,7 +181,6 @@ Host: cozy.example.org
 Cookie: seesioncookie....
 Authorization: Bearer app-token
 ```
-
 
 ### GET /auth/passphrase_reset
 
@@ -201,12 +197,12 @@ Cookie: ...
 
 ### POST /auth/passphrase_reset
 
-After the user has clicked on the reset button of the passphrase reset form,
-it will execute a request to this endpoint.
+After the user has clicked on the reset button of the passphrase reset form, it
+will execute a request to this endpoint.
 
-This endpoint will create a token for the user to actually renew his
-passphrase. The token has a short-live duration of about 15 minutes. After the
-token is created, it is sent to the user on its mailbox.
+This endpoint will create a token for the user to actually renew his passphrase.
+The token has a short-live duration of about 15 minutes. After the token is
+created, it is sent to the user on its mailbox.
 
 This endpoint will redirect the user on the login form page.
 
@@ -236,8 +232,8 @@ Cookie: ...
 After the user has entered its new passphrase in the renew passphrase form, a
 request is made to this endpoint to renew the passphrase.
 
-This endpoint requires a valid token to actually work. In case of a success,
-the user is redirected to the login form.
+This endpoint requires a valid token to actually work. In case of a success, the
+user is redirected to the login form.
 
 ```http
 POST /auth/passphrase_reset HTTP/1.1
@@ -251,34 +247,35 @@ csrf_token=123456890&passphrase_reset_token=123456789&passphrase=mynewpassphrase
 
 This route is used by OAuth2 clients to dynamically register them-selves.
 
-See [OAuth 2.0 Dynamic Client Registration
-Protocol](https://tools.ietf.org/html/rfc7591) for the details.
+See
+[OAuth 2.0 Dynamic Client Registration Protocol](https://tools.ietf.org/html/rfc7591)
+for the details.
 
 The client must send a JSON request, with at least:
 
-- `redirect_uris`, an array of strings with the redirect URIs that the client
+* `redirect_uris`, an array of strings with the redirect URIs that the client
   will use in the authorization flow
-- `client_name`, human-readable string name of the client to be presented to
-  the end-user during authorization
-- `software_id`, an identifier of the software used by the client (it should
-  remain the same for all instances of the client software, whereas
-  `client_id` varies between instances).
+* `client_name`, human-readable string name of the client to be presented to the
+  end-user during authorization
+* `software_id`, an identifier of the software used by the client (it should
+  remain the same for all instances of the client software, whereas `client_id`
+  varies between instances).
 
 It can also send the optional fields:
 
-- `client_kind` (possible values: web, desktop, mobile, browser, etc.)
-- `client_uri`, URL string of a web page providing information about the client
-- `logo_uri`, to display an icon to the user in the authorization flow
-- `policy_uri`, URL string that points to a human-readable privacy policy
+* `client_kind` (possible values: web, desktop, mobile, browser, etc.)
+* `client_uri`, URL string of a web page providing information about the client
+* `logo_uri`, to display an icon to the user in the authorization flow
+* `policy_uri`, URL string that points to a human-readable privacy policy
   document that describes how the deployment organization collects, uses,
   retains, and discloses personal data
-- `software_version`, a version identifier string for the client software.
+* `software_version`, a version identifier string for the client software.
 
 The server gives to the client the previous fields and these informations:
 
-- `client_id`
-- `client_secret`
-- `registration_access_token`
+* `client_id`
+* `client_secret`
+* `registration_access_token`
 
 Example:
 
@@ -328,12 +325,13 @@ Content-Type: application/json
 
 ### GET /auth/register/:client-id
 
-This route is used by the clients to get informations about them-selves.
-The client has to send its registration access token to be able to use this
+This route is used by the clients to get informations about them-selves. The
+client has to send its registration access token to be able to use this
 endpoint.
 
-See [OAuth 2.0 Dynamic Client Registration Management
-Protocol](https://tools.ietf.org/html/rfc7592) for more details.
+See
+[OAuth 2.0 Dynamic Client Registration Management Protocol](https://tools.ietf.org/html/rfc7592)
+for more details.
 
 ```http
 GET /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3 HTTP/1.1
@@ -367,13 +365,13 @@ Content-Type: application/json
 
 ### PUT /auth/register/:client-id
 
-This route is used by the clients to update informations about them-selves.
-The client has to send its registration access token to be able to use this
+This route is used by the clients to update informations about them-selves. The
+client has to send its registration access token to be able to use this
 endpoint.
 
-**Note:** the client can ask to change its `client_secret`. To do that, it
-must send the current `client_secret`, and the server will respond with the
-new `client_secret`.
+**Note:** the client can ask to change its `client_secret`. To do that, it must
+send the current `client_secret`, and the server will respond with the new
+`client_secret`.
 
 ```http
 PUT /auth/register/64ce5cb0-bd4c-11e6-880e-b3b7dfda89d3 HTTP/1.1
@@ -445,14 +443,14 @@ and has an accept button if she is OK with that.
 
 The parameters are:
 
-- `client_id`, that identify the client
-- `redirect_uri`, it has to be exactly the same as the one used in registration
-- `state`, it's a protection against CSRF on the client (a random string
+* `client_id`, that identify the client
+* `redirect_uri`, it has to be exactly the same as the one used in registration
+* `state`, it's a protection against CSRF on the client (a random string
   generated by the client, that it can check when the user will be redirected
   with the authorization code. It can be used as a key in local storage for
   storing a state in a SPA).
-- `response_type`, only `code` is supported
-- `scope`, a space separated list of the [permissions](permissions.md) asked
+* `response_type`, only `code` is supported
+* `scope`, a space separated list of the [permissions](permissions.md) asked
   (like `io.cozy.files:GET` for read-only access to files).
 
 ```http
@@ -460,8 +458,8 @@ GET /auth/authorize?client_id=oauth-client-1&response_type=code&scope=io.cozy.fi
 Host: cozy.example.org
 ```
 
-**Note** we warn the user that he is about to share his data with an
-application which only the callback URI is guaranteed.
+**Note** we warn the user that he is about to share his data with an application
+which only the callback URI is guaranteed.
 
 ### POST /auth/authorize
 
@@ -487,19 +485,19 @@ Location: https://client.org/?state=Eh6ahshepei5Oojo&access_code=Aih7ohth#
 
 ### POST /auth/access_token
 
-Now, the client can check that the state is correct, and if it is the case,
-ask for an `access_token`. It can use this route with the `code` (ie
-access_code) given above.
+Now, the client can check that the state is correct, and if it is the case, ask
+for an `access_token`. It can use this route with the `code` (ie access_code)
+given above.
 
 This endpoint is also used to refresh the access token, by sending the
 `refresh_token` instead of the `access_code`.
 
 The parameters are:
 
-- `grant_type`, with `authorization_code` or `refresh_token` as value
-- `code` or `refresh_token`, depending on which grant type is used
-- `client_id`
-- `client_secret`
+* `grant_type`, with `authorization_code` or `refresh_token` as value
+* `code` or `refresh_token`, depending on which grant type is used
+* `client_id`
+* `client_secret`
 
 Example:
 
@@ -531,13 +529,13 @@ Content-type: application/json
 The access tokens are formatted as [JSON Web Tokens (JWT)](https://jwt.io/),
 like this:
 
-Claim   | Fullname  | What it identifies
---------|-----------|-------------------------------------------------------------------
-`aud`   | Audience  | Identify the recipient where the token can be used (like `access`)
-`iss`   | Issuer    | Identify the Cozy instance (its domain in fact)
-`iat`   | Issued At | Identify when the token was issued (Unix timestamp)
-`sub`   | Subject   | Identify the client that can use the token
-`scope` | Scope     | Identify the scope of actions that the client can accomplish
+| Claim   | Fullname  | What it identifies                                                 |
+| ------- | --------- | ------------------------------------------------------------------ |
+| `aud`   | Audience  | Identify the recipient where the token can be used (like `access`) |
+| `iss`   | Issuer    | Identify the Cozy instance (its domain in fact)                    |
+| `iat`   | Issued At | Identify when the token was issued (Unix timestamp)                |
+| `sub`   | Subject   | Identify the client that can use the token                         |
+| `scope` | Scope     | Identify the scope of actions that the client can accomplish       |
 
 The `scope` is used for [permissions](permissions.md).
 
@@ -563,13 +561,12 @@ authentication can be activated.
 Here is how it works in more details:
 
 On each connection, when the 2FA is activated, the user is asked for its
-passphrase first. When entering correct passphrase, the user is then asked
-for:
+passphrase first. When entering correct passphrase, the user is then asked for:
 
-  - a TOTP (Timebased One-Time password, RFC 6238) derived from a secret
-    associated with the instance.
-  - a short term timestamped MAC with the same validity time-range and also
-    derived from the same secret.
+* a TOTP (Timebased One-Time password, RFC 6238) derived from a secret
+  associated with the instance.
+* a short term timestamped MAC with the same validity time-range and also
+  derived from the same secret.
 
 The TOTP is valid for a time range of about 5 minutes. When sending a correct
 and still-valid pair `(passcode, token)`, the user is granted with
@@ -591,37 +588,37 @@ details.
 ### How to get a token?
 
 When a user access an application, she first loads the HTML page. Inside this
-page, a token specific to this app is injected (only for private routes), via
-a templating method.
+page, a token specific to this app is injected (only for private routes), via a
+templating method.
 
-We have prefered our custom solution to the implicit grant type of OAuth2 for
-2 reasons:
+We have prefered our custom solution to the implicit grant type of OAuth2 for 2
+reasons:
 
 1. It has a better User Experience. The implicit grant type works with 2
-redirections (the application to the stack, and then the stack to the
-application), and the first one needs JS to detect if the token is present or
-not in the fragment hash. It has a strong impact on the time to load the
-application.
+   redirections (the application to the stack, and then the stack to the
+   application), and the first one needs JS to detect if the token is present or
+   not in the fragment hash. It has a strong impact on the time to load the
+   application.
 
 2. The implicit grant type of OAuth2 has a severe drawback on security: the
-token appears in the URL and is shown by the browser. It can also be leaked
-with the HTTP `Referer` header.
+   token appears in the URL and is shown by the browser. It can also be leaked
+   with the HTTP `Referer` header.
 
 The token will be given only for the authenticated user. For nested subdomains
 (like `calendar.joe.example.net`), the session cookie from the stack is enough
 (it is for `.joe.example.net`).
 
 But for flat subdomains (like `joe-calendar.example.net`), it's more
-complicated. On the first try of the user, she will be redirected to the
-stack. As she is already logged-in, she will be redirected to the app with a
-session code (else she can login). This session code can be exchanged to a
-session cookie. A redirection will still happen to remove the code from the
-URL (it helps to avoid the code being saved in the browser history). For
-security reasons, the session code have the following properties:
+complicated. On the first try of the user, she will be redirected to the stack.
+As she is already logged-in, she will be redirected to the app with a session
+code (else she can login). This session code can be exchanged to a session
+cookie. A redirection will still happen to remove the code from the URL (it
+helps to avoid the code being saved in the browser history). For security
+reasons, the session code have the following properties:
 
-- It can only be used once.
-- It is tied to an application (`calendar` in our example).
-- It has a very short time span of validity (1 minute).
+* It can only be used once.
+* It is tied to an application (`calendar` in our example).
+* It has a very short time span of validity (1 minute).
 
 ### How to use a token?
 
@@ -639,35 +636,34 @@ cookies are needed for a token to be valid.
 
 ### How to refresh a token?
 
-The token is valid only for 24 hours. If the application is opened for more
-than that, it will need to get a new token. But most applications won't be
-kept open for so long and it's okay if they don't try to refresh tokens. At
-worst, the user just had to reload its page and it will work again.
+The token is valid only for 24 hours. If the application is opened for more than
+that, it will need to get a new token. But most applications won't be kept open
+for so long and it's okay if they don't try to refresh tokens. At worst, the
+user just had to reload its page and it will work again.
 
-The app can know it's time to get a new token when the stack starts sending
-401 Unauthorized responses. In that case, it can fetches the same html page
-that it was loaded initially, parses it and extracts the new token.
-
+The app can know it's time to get a new token when the stack starts sending 401
+Unauthorized responses. In that case, it can fetches the same html page that it
+was loaded initially, parses it and extracts the new token.
 
 ## Third-party websites
 
 ### How to register the application?
 
-If a third-party websites would like to access a cozy, it had to register
-first. For example, a big company can have data about a user and may want
-to offer her a way to get her data back in her cozy. When the user is
-connected on the website of this company, she can give her cozy address. The
-website will then register on this cozy, using the OAuth2 Dynamic Client
-Registration Protocol, as explained [above](#post-authregister).
+If a third-party websites would like to access a cozy, it had to register first.
+For example, a big company can have data about a user and may want to offer her
+a way to get her data back in her cozy. When the user is connected on the
+website of this company, she can give her cozy address. The website will then
+register on this cozy, using the OAuth2 Dynamic Client Registration Protocol, as
+explained [above](#post-authregister).
 
 ### How to get a token?
 
 To get an access token, it's enough to follow the authorization code flow of
 OAuth2:
 
-- sending the user to the cozy, on the authorize page
-- if the user approves, she is then redirected back to the client
-- the client gets the access code and can exchange it to an access token.
+* sending the user to the cozy, on the authorize page
+* if the user approves, she is then redirected back to the client
+* the client gets the access code and can exchange it to an access token.
 
 ### How to use a token?
 
@@ -683,20 +679,19 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 
 ### How to refresh a token?
 
-The access token will be valid only for 24 hours. After that, a new access
-token must be asked. To do that, just follow the refresh token flow, as
-explained [above](#post-authaccess_token).
-
+The access token will be valid only for 24 hours. After that, a new access token
+must be asked. To do that, just follow the refresh token flow, as explained
+[above](#post-authaccess_token).
 
 ## Devices and browser extensions
 
 For devices and browser extensions, it is nearly the same than for third-party
-websites. The main difficulty is the redirect_uri. In OAuth2, the access code
-is given to the client by redirecting the user to an URL controlled by the
-client. But devices and browser extensions don't have an obvious URL for that.
+websites. The main difficulty is the redirect_uri. In OAuth2, the access code is
+given to the client by redirecting the user to an URL controlled by the client.
+But devices and browser extensions don't have an obvious URL for that.
 
-The IETF has published an RFC called [OAuth 2.0 for Native
-Apps](https://tools.ietf.org/html/draft-ietf-oauth-native-apps-05).
+The IETF has published an RFC called
+[OAuth 2.0 for Native Apps](https://tools.ietf.org/html/draft-ietf-oauth-native-apps-05).
 
 ### Native apps on desktop
 
@@ -712,35 +707,33 @@ itself with the same URI.
 ### Chrome extensions
 
 Chrome extensions can use URL like
-`https://<extension-id>.chromiumapp.org/<anything-here>` for their usage.
-See https://developer.chrome.com/apps/app_identity#non for more details. It
-has also a method to simplify the creation of such an URL:
+`https://<extension-id>.chromiumapp.org/<anything-here>` for their usage. See
+https://developer.chrome.com/apps/app_identity#non for more details. It has also
+a method to simplify the creation of such an URL:
 [`chrome.identity.getRedirectURL`](https://developer.chrome.com/apps/identity#method-getRedirectURL).
 
 ### Firefox extensions
 
 It is possible to use an _out of band_ URN: `urn:ietf:wg:oauth:2.0:oob:auto`.
-The token is then extracted from the title of the page.
-See [this addon for google
-oauth2](https://github.com/AdrianArroyoCalle/firefox-addons/blob/master/addon-google-oauth2/addon-google-oauth2.js)
+The token is then extracted from the title of the page. See
+[this addon for google oauth2](https://github.com/AdrianArroyoCalle/firefox-addons/blob/master/addon-google-oauth2/addon-google-oauth2.js)
 as an example.
-
 
 ## Security considerations
 
 The password will be stored in a secure fashion, with a password hashing
 function. The hashing function and its parameter will be stored with the hash,
-in order to make it possible to change the algorithm and/or the parameters
-later if we had any suspicion that it became too weak. The initial algorithm
-is [scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
+in order to make it possible to change the algorithm and/or the parameters later
+if we had any suspicion that it became too weak. The initial algorithm is
+[scrypt](https://godoc.org/golang.org/x/crypto/scrypt).
 
 The access code is valid only once, and will expire after 5 minutes
 
 Dynamically registered applications won't have access to all possible scopes.
 For example, an application that has been dynamically registered can't ask the
 cozy owner to give it the right to install other applications. This limitation
-should improve security, as avoiding too powerful scopes to be used with
-unknown applications.
+should improve security, as avoiding too powerful scopes to be used with unknown
+applications.
 
 The cozy stack will apply rate limiting to avoid brute-force attacks.
 
@@ -757,14 +750,13 @@ flow. But it is mandatory to use it with Cozy.
 
 For more on this subject, here is a list of links:
 
-- https://www.owasp.org/index.php/Authentication_Cheat_Sheet
-- https://tools.ietf.org/html/rfc6749#page-53
-- https://tools.ietf.org/html/rfc6819
-- https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
-- http://www.oauthsecurity.com/
-
+* https://www.owasp.org/index.php/Authentication_Cheat_Sheet
+* https://tools.ietf.org/html/rfc6749#page-53
+* https://tools.ietf.org/html/rfc6819
+* https://tools.ietf.org/html/draft-ietf-oauth-closing-redirectors-00
+* http://www.oauthsecurity.com/
 
 ## Conclusion
 
-Security is hard. If you want to share some concerns with us, do not hesitate
-to send us an email to security AT cozycloud.cc.
+Security is hard. If you want to share some concerns with us, do not hesitate to
+send us an email to security AT cozycloud.cc.

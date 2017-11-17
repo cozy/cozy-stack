@@ -6,8 +6,8 @@
 
 ### GET /settings/disk-usage
 
-Says how many bytes are available and used to store files. When not
-limited the `quota` field is omitted.
+Says how many bytes are available and used to store files. When not limited the
+`quota` field is omitted.
 
 #### Request
 
@@ -122,10 +122,10 @@ Cookie: sessionid=xxxx
       "rev": "3-56521545485448482"
     },
     "attributes": {
-      "locale":"fr",
+      "locale": "fr",
       "auto_update": true,
       "email": "alice@example.com",
-      "public_name":"Alice Martin",
+      "public_name": "Alice Martin",
       "auth_mode": "basic"
     }
   }
@@ -161,9 +161,9 @@ Authorization: Bearer settings-token
       "rev": "3-56521545485448482"
     },
     "attributes": {
-      "locale":"fr",
+      "locale": "fr",
       "email": "alice@example.com",
-      "public_name":"Alice Martin",
+      "public_name": "Alice Martin",
       "timezone": "Europe/Berlin",
       "auth_mode": "two_factor_mail"
     }
@@ -187,9 +187,9 @@ Content-type: application/json
       "rev": "4-5a3e315e"
     },
     "attributes": {
-      "locale":"fr",
+      "locale": "fr",
       "email": "alice@example.com",
-      "public_name":"Alice Martin",
+      "public_name": "Alice Martin",
       "timezone": "Europe/Berlin",
       "auth_mode": "two_factor_mail"
     }
@@ -220,21 +220,24 @@ Content-Type: application/json
 
 ```json
 {
-  "data": [{
-    "id": "...",
-    "attributes": {
-      "last_seen": ""
-    },
-    "meta": {
-      "rev": "..."
+  "data": [
+    {
+      "id": "...",
+      "attributes": {
+        "last_seen": ""
+      },
+      "meta": {
+        "rev": "..."
+      }
     }
-  }]
+  ]
 }
 ```
 
 #### Permissions
 
-This route requires the application to have permissions on the `io.cozy.sessions` doctype with the `GET` verb.
+This route requires the application to have permissions on the
+`io.cozy.sessions` doctype with the `GET` verb.
 
 ## OAuth 2 clients
 
@@ -261,24 +264,26 @@ Content-type: application/json
 
 ```json
 {
-  "data": [{
-    "type": "io.cozy.oauth.clients",
-    "id": "30e84c10-e6cf-11e6-9bfd-a7106972de51",
-    "attributes": {
-      "redirect_uris": ["http://localhost:4000/oauth/callback"],
-      "client_name": "Cozy-Desktop on my-new-laptop",
-      "client_kind": "desktop",
-      "client_uri": "https://docs.cozy.io/en/mobile/desktop.html",
-      "logo_uri": "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
-      "policy_uri": "https://cozy.io/policy",
-      "software_id": "/github.com/cozy-labs/cozy-desktop",
-      "software_version": "0.16.0",
-      "synchronized_at": "2017-09-05T16:23:04Z"
-    },
-    "links": {
-      "self": "/settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51"
+  "data": [
+    {
+      "type": "io.cozy.oauth.clients",
+      "id": "30e84c10-e6cf-11e6-9bfd-a7106972de51",
+      "attributes": {
+        "redirect_uris": ["http://localhost:4000/oauth/callback"],
+        "client_name": "Cozy-Desktop on my-new-laptop",
+        "client_kind": "desktop",
+        "client_uri": "https://docs.cozy.io/en/mobile/desktop.html",
+        "logo_uri": "https://docs.cozy.io/assets/images/cozy-logo-docs.svg",
+        "policy_uri": "https://cozy.io/policy",
+        "software_id": "/github.com/cozy-labs/cozy-desktop",
+        "software_version": "0.16.0",
+        "synchronized_at": "2017-09-05T16:23:04Z"
+      },
+      "links": {
+        "self": "/settings/clients/30e84c10-e6cf-11e6-9bfd-a7106972de51"
+      }
     }
-  }]
+  ]
 }
 ```
 
@@ -328,14 +333,13 @@ Authorization: Bearer oauth2-access-token
 HTTP/1.1 204 No Content
 ```
 
-
 ## Context
 
 ### GET /settings/onboarded
 
-It redirects the user to an application after the onboarding. The application
-is selected according to the context of the instance and the configuration of
-the stack.
+It redirects the user to an application after the onboarding. The application is
+selected according to the context of the instance and the configuration of the
+stack.
 
 ### GET /settings/context
 

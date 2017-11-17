@@ -2,11 +2,12 @@
 
 # Docker
 
-This page list various operations that can be automated *via* Docker.
+This page list various operations that can be automated _via_ Docker.
 
 ## Running a CouchDB instance
 
-This will run a new instance of CouchDB in `single` mode (no cluster) and in `admin-party-mode` (no user). This command exposes couchdb on the port `5984`.
+This will run a new instance of CouchDB in `single` mode (no cluster) and in
+`admin-party-mode` (no user). This command exposes couchdb on the port `5984`.
 
 ```bash
 $ docker run -d \
@@ -19,9 +20,11 @@ $ curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
 
 Verify your installation at: http://127.0.0.1:5984/_utils/#verifyinstall.
 
-## Building a cozy-stack *via* Docker
+## Building a cozy-stack _via_ Docker
 
-Warning, this command will build a linux binary. Use [`GOOS` and `GOARCH`](https://golang.org/doc/install/source#environment) to adapt to your own system.
+Warning, this command will build a linux binary. Use
+[`GOOS` and `GOARCH`](https://golang.org/doc/install/source#environment) to
+adapt to your own system.
 
 ```bash
 # From your cozy-stack developement folder

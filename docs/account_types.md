@@ -2,18 +2,17 @@
 
 # Account types
 
-
 ## Google
 
 Example creation of google account_type for the stack at .mycozy.cloud
 
-- Go to https://console.developers.google.com
-- Select or Create Project (up left near the logo)
-- Enable desired APIs (TBD with usages)
-- Click "Credentials"
-- Create credentials > Oauth Client ID > Web application
-- Set redirectURI to https://oauthcallback.mycozy.cloud/accounts/google/redirect
-- Copy and paste provided Client ID and Client Secret.
+* Go to https://console.developers.google.com
+* Select or Create Project (up left near the logo)
+* Enable desired APIs (TBD with usages)
+* Click "Credentials"
+* Create credentials > Oauth Client ID > Web application
+* Set redirectURI to https://oauthcallback.mycozy.cloud/accounts/google/redirect
+* Copy and paste provided Client ID and Client Secret.
 
 Then save the data in the console
 

@@ -2,43 +2,50 @@
 
 # Jobs
 
-Jobs are designed to represent asynchronous tasks that your cozy can execute. These tasks can be scheduled in advance, recurring or sudden and provide various services.
+Jobs are designed to represent asynchronous tasks that your cozy can execute.
+These tasks can be scheduled in advance, recurring or sudden and provide various
+services.
 
-At the time, we do not provide "generic" and programmable tasks. This list of available workers is part of the defined API.
+At the time, we do not provide "generic" and programmable tasks. This list of
+available workers is part of the defined API.
 
-The job queue can be either local to the cozy-stack when used as a monolithic instance (self-hosted for instance) or distributed via a redis server for distributed infrastructures.
+The job queue can be either local to the cozy-stack when used as a monolithic
+instance (self-hosted for instance) or distributed via a redis server for
+distributed infrastructures.
 
 This doc introduces two cozy types:
 
-  - `io.cozy.jobs` for jobs
-  - `io.cozy.triggers` for triggers
-
+* `io.cozy.jobs` for jobs
+* `io.cozy.triggers` for triggers
 
 ## Triggers
 
 Jobs can be launched by five different types of triggers:
 
-  - `@at` to schedule a one-time job executed after at a specific time in the future
-  - `@in` to schedule a one-time job executed after a specific amount of time
-  - `@every` to schedule periodic jobs executed at a given fix interval
-  - `@cron` to schedule recurring jobs scheduled at specific times
-  - `@event` to launch a job after a change in the cozy
+* `@at` to schedule a one-time job executed after at a specific time in the
+  future
+* `@in` to schedule a one-time job executed after a specific amount of time
+* `@every` to schedule periodic jobs executed at a given fix interval
+* `@cron` to schedule recurring jobs scheduled at specific times
+* `@event` to launch a job after a change in the cozy
 
-These five triggers have specific syntaxes to describe when jobs should be scheduled. See below for more informations.
+These five triggers have specific syntaxes to describe when jobs should be
+scheduled. See below for more informations.
 
-Jobs can also be queued up programatically, without the help of a specific trigger directly via the `/jobs/queue` API. In this case the `trigger` name is empty.
-
+Jobs can also be queued up programatically, without the help of a specific
+trigger directly via the `/jobs/queue` API. In this case the `trigger` name is
+empty.
 
 ### `@at` syntax
 
-The `@at` trigger takes a ISO-8601 formatted string indicating a UTC time in the future. The date is of this form: `YYYY-MM-DDTHH:mm:ss.sssZ`
+The `@at` trigger takes a ISO-8601 formatted string indicating a UTC time in the
+future. The date is of this form: `YYYY-MM-DDTHH:mm:ss.sssZ`
 
 Examples
 
 ```
 @at 2018-12-12T15:36:25.507Z
 ```
-
 
 ### `@in` syntax
 
@@ -51,10 +58,10 @@ Examples
 @in 1h30m
 ```
 
-
 ### `@every` syntax
 
-The `@every` trigger uses the same syntax as golang's `time.ParseDuration` (but only support time units above seconds):
+The `@every` trigger uses the same syntax as golang's `time.ParseDuration` (but
+only support time units above seconds):
 
 A duration string is a possibly signed sequence of decimal numbers, each with
 optional fraction and a unit suffix, such as "300ms", "1.5h" or "2h45m". Valid
@@ -67,33 +74,33 @@ Examples
 @every 30m10s # schedules every 30 minutes and 10 seconds
 ```
 
-
 ### `@cron` syntax
 
-In order to schedule recurring jobs, the `@cron` trigger has the syntax using six fields:
+In order to schedule recurring jobs, the `@cron` trigger has the syntax using
+six fields:
 
-Field name   | Mandatory? | Allowed values  | Allowed special characters
--------------|------------|-----------------|---------------------------
-Seconds      | Yes        | 0-59            | * / , -
-Minutes      | Yes        | 0-59            | * / , -
-Hours        | Yes        | 0-23            | * / , -
-Day of month | Yes        | 1-31            | * / , - ?
-Month        | Yes        | 1-12 or JAN-DEC | * / , -
-Day of week  | Yes        | 0-6 or SUN-SAT  | * / , - ?
+| Field name   | Mandatory? | Allowed values  | Allowed special characters |
+| ------------ | ---------- | --------------- | -------------------------- |
+| Seconds      | Yes        | 0-59            | \* / , -                   |
+| Minutes      | Yes        | 0-59            | \* / , -                   |
+| Hours        | Yes        | 0-23            | \* / , -                   |
+| Day of month | Yes        | 1-31            | \* / , - ?                 |
+| Month        | Yes        | 1-12 or JAN-DEC | \* / , -                   |
+| Day of week  | Yes        | 0-6 or SUN-SAT  | \* / , - ?                 |
 
 Asterisk ( `*` )
 
-The asterisk indicates that the cron expression will match for all values of
-the field; e.g., using an asterisk in the 5th field (month) would indicate
-every month.
+The asterisk indicates that the cron expression will match for all values of the
+field; e.g., using an asterisk in the 5th field (month) would indicate every
+month.
 
 Slash ( `/` )
 
 Slashes are used to describe increments of ranges. For example 3-59/15 in the
 1st field (minutes) would indicate the 3rd minute of the hour and every 15
-minutes thereafter. The form ``"*\/..."`` is equivalent to the form
-``"first-last/..."``, that is, an increment over the largest possible range of
-the field. The form `"N-/..."` is accepted as meaning `"N-MAX/..."`, that is,
+minutes thereafter. The form `"*\/..."` is equivalent to the form
+`"first-last/..."`, that is, an increment over the largest possible range of the
+field. The form `"N-/..."` is accepted as meaning `"N-MAX/..."`, that is,
 starting at N, use the increment until the end of that specific range. It does
 not wrap around.
 
@@ -125,7 +132,6 @@ Examples:
 @cron 0 0 * * * *  # Run once an hour, beginning of hour
 ```
 
-
 ### `@event` syntax
 
 The `@event` syntax allows to trigger a job when something occurs in the stack.
@@ -133,11 +139,13 @@ It follow the same syntax than permissions scope string :
 
 `type[:verb][:values][:selector]`
 
-Unlike for permissions string, the verb should be one of `CREATED`, `DELETED`, `UPDATED`.
+Unlike for permissions string, the verb should be one of `CREATED`, `DELETED`,
+`UPDATED`.
 
 It is a work in progress, for now only events on couchdb package triggers it.
 
-The job worker will receive a compound message including original trigger_infos messages and the event which has triggered it.
+The job worker will receive a compound message including original trigger_infos
+messages and the event which has triggered it.
 
 Examples
 
@@ -147,29 +155,35 @@ Examples
 @event io.cozy.files:DELETED:image/jpg:mime // an image was deleted
 ```
 
-
 ## Error Handling
 
-Jobs can fail to execute their task. We have two ways to parameterize such cases.
+Jobs can fail to execute their task. We have two ways to parameterize such
+cases.
 
 ### Retry
 
-A retry count can be optionally specified to ask the worker to re-execute the task if it has failed.
+A retry count can be optionally specified to ask the worker to re-execute the
+task if it has failed.
 
-Each retry is executed after a configurable delay. The try count is part of the attributes of the job. Also, each occurring error is kept in the `errors` field containing all the errors that may have happened.
+Each retry is executed after a configurable delay. The try count is part of the
+attributes of the job. Also, each occurring error is kept in the `errors` field
+containing all the errors that may have happened.
 
 ### Timeout
 
-A worker may never end. To prevent this, a configurable timeout value is specified with the job.
+A worker may never end. To prevent this, a configurable timeout value is
+specified with the job.
 
-If a job does not end after the specified amount of time, it will be aborted. A timeout is just like another error from the worker and can provoke a retry if specified.
+If a job does not end after the specified amount of time, it will be aborted. A
+timeout is just like another error from the worker and can provoke a retry if
+specified.
 
 ### Defaults
 
-By default, jobs are parameterized with a maximum of 3 tries with 1 minute timeout.
+By default, jobs are parameterized with a maximum of 3 tries with 1 minute
+timeout.
 
 These defaults may vary given the workload of the workers.
-
 
 ## Jobs API
 
@@ -191,7 +205,8 @@ Example and description of the attributes of a `io.cozy.jobs`:
 }
 ```
 
-Example and description of a job creation options — as you can see, the options are replicated in the `io.cozy.jobs` attributes:
+Example and description of a job creation options — as you can see, the options
+are replicated in the `io.cozy.jobs` attributes:
 
 ```js
 {
@@ -200,7 +215,6 @@ Example and description of a job creation options — as you can see, the option
   "max_exec_count": 3,   // maximum number of retry
 }
 ```
-
 
 ### GET /jobs/:job-id
 
@@ -240,12 +254,12 @@ Accept: application/vnd.api+json
 }
 ```
 
-
 ### POST /jobs/queue/:worker-type
 
 Enqueue programmatically a new job.
 
-This route requires a specific permission on the worker-type. A global permission on the global `io.cozy.jobs` doctype is not allowed.
+This route requires a specific permission on the worker-type. A global
+permission on the global `io.cozy.jobs` doctype is not allowed.
 
 #### Request
 
@@ -317,7 +331,6 @@ allowed):
 }
 ```
 
-
 ### GET /jobs/queue/:worker-type
 
 List the jobs in the queue.
@@ -333,24 +346,26 @@ Accept: application/vnd.api+json
 
 ```json
 {
-  "data": [{
-    "attributes": {
+  "data": [
+    {
+      "attributes": {
         "domain": "cozy.tools:8080",
         "options": null,
         "queued_at": "2017-09-29T15:32:31.953878568+02:00",
         "started_at": "0001-01-01T00:00:00Z",
         "state": "queued",
         "worker": "log"
-    },
-    "id": "77689bca9634b4fb08d6ca3d1643de5f",
-    "links": {
+      },
+      "id": "77689bca9634b4fb08d6ca3d1643de5f",
+      "links": {
         "self": "/jobs/log/77689bca9634b4fb08d6ca3d1643de5f"
-    },
-    "meta": {
+      },
+      "meta": {
         "rev": "1-f823bcd2759103a5ad1a98f4bf083b36"
-    },
-    "type": "io.cozy.jobs"
-  }],
+      },
+      "type": "io.cozy.jobs"
+    }
+  ],
   "meta": {
     "count": 0
   }
@@ -360,14 +375,15 @@ Accept: application/vnd.api+json
 #### Permissions
 
 To use this endpoint, an application needs a permission on the type
-`io.cozy.jobs` for the verb `GET`. In most cases, the application will
-restrict its permission to only one worker, like this:
+`io.cozy.jobs` for the verb `GET`. In most cases, the application will restrict
+its permission to only one worker, like this:
 
 ```json
 {
   "permissions": {
     "mail-from-the-user": {
-      "description": "Required to know the number of jobs in the sendmail queues",
+      "description":
+        "Required to know the number of jobs in the sendmail queues",
       "type": "io.cozy.jobs",
       "verbs": ["GET"],
       "selector": "worker",
@@ -377,15 +393,20 @@ restrict its permission to only one worker, like this:
 }
 ```
 
-
 ### POST /jobs/triggers
 
-Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the types of trigger and their arguments syntax.
+Add a trigger of the worker. See [triggers' descriptions](#triggers) to see the
+types of trigger and their arguments syntax.
 
-This route requires a specific permission on the worker type. A global permission on the global `io.cozy.triggers` doctype is not allowed.
+This route requires a specific permission on the worker type. A global
+permission on the global `io.cozy.triggers` doctype is not allowed.
 
-The `debounce` parameter can be used to limit the number of jobs created in a burst. It delays the creation of the job on the first input by the given time argument, and if the trigger has its condition matched again during this period, it won't create another job.
-It can be useful to combine it with the changes feed of couchdb with a last sequence number persisted by the worker, as it allows to have a nice diff between two executions of the worker.
+The `debounce` parameter can be used to limit the number of jobs created in a
+burst. It delays the creation of the job on the first input by the given time
+argument, and if the trigger has its condition matched again during this period,
+it won't create another job. It can be useful to combine it with the changes
+feed of couchdb with a last sequence number persisted by the worker, as it
+allows to have a nice diff between two executions of the worker.
 
 #### Request
 
@@ -448,7 +469,8 @@ restrict its permission to only one worker, like this:
 {
   "permissions": {
     "mail-from-the-user": {
-      "description": "Required to send regularly mails from the user to his/her friends",
+      "description":
+        "Required to send regularly mails from the user to his/her friends",
       "type": "io.cozy.triggers",
       "verbs": ["POST"],
       "selector": "worker",
@@ -457,7 +479,6 @@ restrict its permission to only one worker, like this:
   }
 }
 ```
-
 
 ### GET /jobs/triggers/:trigger-id
 
@@ -505,7 +526,7 @@ Get the jobs launched by the trigger with the specified ID.
 
 Query parameters:
 
-  - `Limit`: to specify the number of jobs to get out
+* `Limit`: to specify the number of jobs to get out
 
 #### Request
 
@@ -592,7 +613,7 @@ Get the list of triggers.
 
 Query parameters:
 
-  - `Worker`: to filter only triggers associated with a specific worker.
+* `Worker`: to filter only triggers associated with a specific worker.
 
 #### Request
 
@@ -630,7 +651,7 @@ Get the list of the last job launched by all triggers.
 
 Query parameters:
 
-  - `Worker`: to filter only jobs from triggers associated with a specific worker.
+* `Worker`: to filter only jobs from triggers associated with a specific worker.
 
 #### Request
 
@@ -667,26 +688,28 @@ permission can be specified on the `worker` field.
 * 204 No Content, when the trigger has been successfully removed
 * 404 Not Found, when the trigger does not exist
 
-
 ## Worker pool
 
 The consuming side of the job queue is handled by a worker pool.
 
-On a monolithic cozy-stack, the worker pool has a configurable fixed size of workers. The default value is not yet determined. Each time a worker has finished a job, it check the queue and based on the priority and the queued date of the job, picks a new job to execute.
-
+On a monolithic cozy-stack, the worker pool has a configurable fixed size of
+workers. The default value is not yet determined. Each time a worker has
+finished a job, it check the queue and based on the priority and the queued date
+of the job, picks a new job to execute.
 
 ## Permissions
 
-In order to prevent jobs from leaking informations between applications, we may need to add filtering per applications: for instance one queue per applications.
+In order to prevent jobs from leaking informations between applications, we may
+need to add filtering per applications: for instance one queue per applications.
 
-We should also have an explicit check on the permissions of the applications before launching a job scheduled by an application. For more information, refer to our [permission document](./permissions).
-
+We should also have an explicit check on the permissions of the applications
+before launching a job scheduled by an application. For more information, refer
+to our [permission document](./permissions).
 
 ## Multi-stack
 
-When some instances are served by several stacks, the scheduling and running
-of jobs can be distributed on the stacks. The synchronization is done via
-redis.
+When some instances are served by several stacks, the scheduling and running of
+jobs can be distributed on the stacks. The synchronization is done via redis.
 
 For scheduling, there is one important key in redis: `triggers`. It's a sorted
 set. The members are the identifiants of the triggers (with the domain name),
@@ -697,5 +720,5 @@ processing a trigger, this trigger won't be lost.
 
 For `@event` triggers, we don't use the same mechanism. Each stack has all the
 triggers in memory and is responsible to trigger them for the events generated
-by the HTTP requests of their API. They also publish them on redis: this
-pub/sub is used for the realtime API.
+by the HTTP requests of their API. They also publish them on redis: this pub/sub
+is used for the realtime API.

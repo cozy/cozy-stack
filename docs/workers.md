@@ -3,9 +3,8 @@
 # Workers
 
 This page list all the currently available workers on the cozy-stack. It
-describes their input arguments object. See the [jobs document](jobs.md) to
-know more about the API context in which you can see how to use these
-arguments.
+describes their input arguments object. See the [jobs document](jobs.md) to know
+more about the API context in which you can see how to use these arguments.
 
 ## log worker
 
@@ -14,11 +13,11 @@ useful for debugging for example.
 
 ## unzip worker
 
-The `unzip` worker can take a zip archive from the VFS, and will unzip the
-files inside it to a directory of the VFS. The options are:
+The `unzip` worker can take a zip archive from the VFS, and will unzip the files
+inside it to a directory of the VFS. The options are:
 
-- `zip`: the ID of the zip file
-- `destination`: the ID of the directory where the files will be unzipped.
+* `zip`: the ID of the zip file
+* `destination`: the ID of the directory where the files will be unzipped.
 
 ### Example
 
@@ -57,18 +56,18 @@ at the root of this repository.
 
 `sendmail` options fields are the following:
 
-- `mode`: string specifying the mode of the send:
-    - `noreply` to send a notification mail to the user
-    - `from` to send a mail from the user
-- `to`: list of object `{name, email}` representing the addresses of the
+* `mode`: string specifying the mode of the send:
+  * `noreply` to send a notification mail to the user
+  * `from` to send a mail from the user
+* `to`: list of object `{name, email}` representing the addresses of the
   recipients. (should not be used in `noreply` mode)
-- `subject`: string specifying the subject of the mail
-- `parts`: list of part objects `{type, body}` listing representing the
-  content parts of the
-    - `type` string of the content type: either `text/html` or `text/plain`
-    - `body` string of the actual body content of the part
-- `attachments`: list of objects `{filename, content}` that represent the
-  files attached to the email
+* `subject`: string specifying the subject of the mail
+* `parts`: list of part objects `{type, body}` listing representing the content
+  parts of the
+  * `type` string of the content type: either `text/html` or `text/plain`
+  * `body` string of the actual body content of the part
+* `attachments`: list of objects `{filename, content}` that represent the files
+  attached to the email
 
 ### Examples
 

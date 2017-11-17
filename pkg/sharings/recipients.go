@@ -22,11 +22,11 @@ type RecipientStatus struct {
 
 	// The sharer is the "client", in the OAuth2 protocol, we keep here the
 	// information she needs to send to authenticate.
-	Client      auth.Client
-	AccessToken auth.AccessToken
+	Client      auth.Client      `json:"client"`
+	AccessToken auth.AccessToken `json:"access_token"`
 
 	// The OAuth ClientID refering to the host's client stored in its db
-	HostClientID string
+	HostClientID string `json:"host_client_id,omitempty"`
 }
 
 // ExtractDomainAndScheme returns the recipient's domain and the scheme
