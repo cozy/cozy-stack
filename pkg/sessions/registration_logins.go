@@ -16,7 +16,7 @@ import (
 
 var log = logger.WithNamespace("sessions")
 
-const redisKey = "registration-logins"
+const redisRegistationKey = "registration-logins"
 
 type registrationEntry struct {
 	Domain       string
@@ -98,7 +98,7 @@ func PushLoginRegistration(domain string, login *LoginEntry) error {
 		if err != nil {
 			return err
 		}
-		return cli.HSet(redisKey, entry.Key(), b).Err()
+		return cli.HSet(redisRegistationKey, entry.Key(), b).Err()
 	}
 
 	registrationsMapLock.Lock()
@@ -109,13 +109,22 @@ func PushLoginRegistration(domain string, login *LoginEntry) error {
 
 // RemoveLoginRegistration removes a login from the registration map.
 func RemoveLoginRegistration(domain, clientID string) error {
+	var entryPtr *registrationEntry
 	key := domain + "|" + clientID
 	if cli := config.GetConfig().SessionStorage.Client(); cli != nil {
-		return cli.HDel(redisKey, key).Err()
-	}
-
-	var entryPtr *registrationEntry
-	{
+		b, err := cli.HGet(redisRegistationKey, key).Result()
+		if err != nil {
+			return err
+		}
+		var entry registrationEntry
+		if err = json.Unmarshal([]byte(b), &entry); err != nil {
+			return err
+		}
+		if err = cli.HDel(redisRegistationKey, key).Err(); err != nil {
+			return err
+		}
+		entryPtr = &entry
+	} else {
 		registrationsMapLock.Lock()
 		entry, ok := registrationsMap[key]
 		if ok {
@@ -127,7 +136,6 @@ func RemoveLoginRegistration(domain, clientID string) error {
 	if entryPtr != nil {
 		sendRegistrationNotification(entryPtr, true)
 	}
-
 	return nil
 }
 
@@ -137,7 +145,7 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 	now := time.Now()
 	if cli := config.GetConfig().SessionStorage.Client(); cli != nil {
 		var vals map[string]string
-		vals, err = cli.HGetAll(redisKey).Result()
+		vals, err = cli.HGetAll(redisRegistationKey).Result()
 		if err != nil {
 			return
 		}
@@ -162,7 +170,7 @@ func sweepRegistrations() (waitDuration time.Duration, err error) {
 		}
 
 		if len(deletedKeys) > 0 {
-			err = cli.HDel(redisKey, deletedKeys...).Err()
+			err = cli.HDel(redisRegistationKey, deletedKeys...).Err()
 		}
 	} else {
 		registrationsMapLock.Lock()
