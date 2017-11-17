@@ -5,6 +5,7 @@ import (
 
 	authClient "github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -49,13 +50,13 @@ func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string)
 	return msg, evt
 }
 
-func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
-	recipient := &sharings.Recipient{
-		Email: []sharings.RecipientEmail{
-			sharings.RecipientEmail{Address: email},
+func createRecipient(t *testing.T, email, url string) *contacts.Contact {
+	recipient := &contacts.Contact{
+		Email: []contacts.Email{
+			contacts.Email{Address: email},
 		},
-		Cozy: []sharings.RecipientCozy{
-			sharings.RecipientCozy{URL: url},
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{URL: url},
 		},
 	}
 	err := sharings.CreateOrUpdateRecipient(in, recipient)
@@ -63,7 +64,7 @@ func createRecipient(t *testing.T, email, url string) *sharings.Recipient {
 	return recipient
 }
 
-func createSharing(t *testing.T, sharingType string, owner bool, recipients []*sharings.Recipient, rule permissions.Rule) sharings.Sharing {
+func createSharing(t *testing.T, sharingType string, owner bool, recipients []*contacts.Contact, rule permissions.Rule) sharings.Sharing {
 	sharing := sharings.Sharing{
 		Owner:            owner,
 		SharingType:      sharingType,
@@ -294,7 +295,7 @@ func TestRevokedRecipient(t *testing.T) {
 	}
 	recipient := createRecipient(t, "email", "url")
 	sharing := createSharing(t, consts.MasterSlaveSharing, true,
-		[]*sharings.Recipient{recipient}, rule)
+		[]*contacts.Contact{recipient}, rule)
 
 	sharingID := sharing.SharingID
 	sharing.RecipientsStatus[0].Status = consts.SharingStatusRevoked

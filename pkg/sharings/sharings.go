@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/globals"
@@ -142,8 +143,8 @@ func (s *Sharing) RecStatus(db couchdb.Database) ([]*RecipientStatus, error) {
 }
 
 // Recipients returns the sharing recipients
-func (s *Sharing) Recipients(db couchdb.Database) ([]*Recipient, error) {
-	var recipients []*Recipient
+func (s *Sharing) Recipients(db couchdb.Database) ([]*contacts.Contact, error) {
+	var recipients []*contacts.Contact
 
 	for _, rec := range s.RecipientsStatus {
 		recipient, err := GetRecipient(db, rec.RefRecipient.ID)
@@ -426,7 +427,7 @@ func sharingByValues(instance *instance.Instance, rule permissions.Rule) ([]stri
 func sendData(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus, values []string, rule permissions.Rule) error {
 	// Create a sharedata worker for each doc to send
 	for _, val := range values {
-		domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
+		domain, scheme, err := ExtractDomainAndScheme(recStatus.recipient)
 		if err != nil {
 			return err
 		}
@@ -581,9 +582,9 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 
 	sr := &RecipientStatus{
 		HostClientID: clientID,
-		recipient: &Recipient{
-			Cozy: []RecipientCozy{
-				RecipientCozy{
+		recipient: &contacts.Contact{
+			Cozy: []contacts.Cozy{
+				contacts.Cozy{
 					URL: sharerClient.ClientURI,
 				},
 			},
@@ -630,9 +631,9 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	// Register the sharer as a recipient
 	sharer := sharing.Sharer
-	doc := &Recipient{
-		Cozy: []RecipientCozy{
-			RecipientCozy{
+	doc := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{
 				URL: sharer.URL,
 			},
 		},
@@ -656,7 +657,7 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 
 // SendClientID sends the registered clientId to the sharer
 func SendClientID(sharing *Sharing) error {
-	domain, scheme, err := sharing.Sharer.SharerStatus.recipient.ExtractDomainAndScheme()
+	domain, scheme, err := ExtractDomainAndScheme(sharing.Sharer.SharerStatus.recipient)
 	if err != nil {
 		return nil
 	}
@@ -681,7 +682,7 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 	if err != nil {
 		return err
 	}
-	domain, scheme, err := recStatus.recipient.ExtractDomainAndScheme()
+	domain, scheme, err := ExtractDomainAndScheme(recStatus.recipient)
 	if err != nil {
 		return nil
 	}
@@ -889,6 +890,45 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
+// RevokeRecipientByContactID revokes a recipient from the given sharing. Only the sharer
+// can make this action.
+func RevokeRecipientByContactID(ins *instance.Instance, sharing *Sharing, contactID string) error {
+	if !sharing.Owner {
+		return ErrOnlySharerCanRevokeRecipient
+	}
+
+	for _, rs := range sharing.RecipientsStatus {
+		if err := rs.GetRecipient(ins); err != nil {
+			return err
+		}
+		if rs.recipient.DocID == contactID {
+			// TODO check how askToRevokeRecipient behave when no recipient has accepted the sharing
+			if err := askToRevokeSharing(ins, sharing, rs); err != nil {
+				return err
+			}
+			return RevokeRecipient(ins, sharing, rs)
+		}
+	}
+
+	return nil
+}
+
+// RevokeRecipientByClientID revokes a recipient from the given sharing. Only the sharer
+// can make this action.
+func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientID string) error {
+	if !sharing.Owner {
+		return ErrOnlySharerCanRevokeRecipient
+	}
+
+	for _, rs := range sharing.RecipientsStatus {
+		if rs.Client.ClientID == clientID {
+			return RevokeRecipient(ins, sharing, rs)
+		}
+	}
+
+	return nil
+}
+
 // RevokeRecipient revokes a recipient from the given sharing. Only the sharer
 // can make this action.
 //
@@ -897,76 +937,33 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 //
 // If there are no more recipients the sharing is revoked and the corresponding
 // trigger is deleted.
-func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipientClientID string, recursive bool) error {
-	if !sharing.Owner {
-		return ErrOnlySharerCanRevokeRecipient
+func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *RecipientStatus) error {
+	if sharing.SharingType == consts.MasterMasterSharing {
+		if err := deleteOAuthClient(ins, recipient); err != nil {
+			return err
+		}
+		recipient.HostClientID = ""
 	}
 
-	var removed, hasRecipient bool
+	recipient.Client = auth.Client{}
+	recipient.AccessToken = auth.AccessToken{}
+	recipient.Status = consts.SharingStatusRevoked
+
+	toRevoke := true
 	for _, recipient := range sharing.RecipientsStatus {
-		if recipient.Client.ClientID == recipientClientID {
-
-			if recursive {
-				err := askToRevokeSharing(ins, sharing, recipient)
-				if err != nil {
-					return err
-				}
-
-				ins.Logger().Debugf("[sharings] RevokeRecipient: recipient "+
-					"%s has revoked the sharing %s", recipientClientID,
-					sharing.SharingID)
-			}
-
-			if sharing.SharingType == consts.MasterMasterSharing {
-				err := deleteOAuthClient(ins, recipient)
-				if err != nil {
-					return err
-				}
-
-				recipient.HostClientID = ""
-			}
-
-			recipient.Client = auth.Client{}
-			recipient.AccessToken = auth.AccessToken{}
-			recipient.Status = consts.SharingStatusRevoked
-			removed = true
-
-			err := recipient.GetRecipient(ins)
-			if err != nil {
-				return err
-			}
-			ins.Logger().Debugf("[sharings] RevokeRecipient: Recipient %s "+
-				"revoked", recipient.recipient.Cozy[0].URL)
-
-		} else {
-			if recipient.Status != consts.SharingStatusRevoked &&
-				recipient.Status != consts.SharingStatusRefused {
-				hasRecipient = true
-			}
-		}
-
-		if removed && hasRecipient {
-			break
+		if recipient.Status != consts.SharingStatusRevoked &&
+			recipient.Status != consts.SharingStatusRefused {
+			toRevoke = false
 		}
 	}
 
-	if !removed {
-		ins.Logger().Errorf("[sharings] RevokeRecipient: Recipient %s is not "+
-			"in sharing: %s", recipientClientID, sharing.SharingID)
-		return ErrRecipientDoesNotExist
-	}
-
-	if !hasRecipient {
-		err := removeSharingTriggers(ins, sharing.SharingID)
-		if err != nil {
+	if toRevoke {
+		// TODO check how removeSharingTriggers behave when no recipient has accepted the sharing
+		if err := removeSharingTriggers(ins, sharing.SharingID); err != nil {
 			ins.Logger().Errorf("[sharings] RevokeRecipient: Could not remove "+
 				"triggers for sharing %s: %s", sharing.SharingID, err)
-		} else {
-			sharing.Revoked = true
-			ins.Logger().Debugf("[sharings] RevokeRecipient: Setting status "+
-				"of sharing %s to revoked, no more recipients",
-				sharing.SharingID)
 		}
+		sharing.Revoked = true
 	}
 
 	return couchdb.UpdateDoc(ins, sharing)
@@ -1068,7 +1065,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, 
 			return nil
 		}
 	}
-	domain, scheme, err := rs.recipient.ExtractDomainAndScheme()
+	domain, scheme, err := ExtractDomainAndScheme(rs.recipient)
 	if err != nil {
 		return err
 	}
@@ -1157,7 +1154,7 @@ func ExtractRecipientInfo(db couchdb.Database, rec *RecipientStatus) (*Recipient
 	if err != nil {
 		return nil, err
 	}
-	u, scheme, err := recipient.ExtractDomainAndScheme()
+	u, scheme, err := ExtractDomainAndScheme(recipient)
 	if err != nil {
 		return nil, err
 	}

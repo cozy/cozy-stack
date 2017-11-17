@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -169,7 +170,7 @@ func logError(i *instance.Instance, err error) bool {
 // generateMailMessage will extract and compute the relevant information
 // from the sharing to generate the mail we will send to the specified
 // recipient.
-func generateMailMessage(s *Sharing, r *Recipient, mailValues *mailTemplateValues) (jobs.Message, error) {
+func generateMailMessage(s *Sharing, r *contacts.Contact, mailValues *mailTemplateValues) (jobs.Message, error) {
 	if len(r.Email) == 0 {
 		return nil, ErrRecipientHasNoEmail
 	}

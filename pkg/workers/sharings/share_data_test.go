@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/globals"
@@ -651,7 +652,7 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 		Type:     consts.Files,
 		Values:   []string{"third/789"},
 	}
-	createSharing(t, consts.MasterMasterSharing, false, []*sharings.Recipient{}, rule)
+	createSharing(t, consts.MasterMasterSharing, false, []*contacts.Contact{}, rule)
 
 	refs := []couchdb.DocReference{
 		couchdb.DocReference{

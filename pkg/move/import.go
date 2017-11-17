@@ -15,109 +15,13 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	vcardParser "github.com/emersion/go-vcard"
 )
-
-// ContactName is a struct describing a name of a contact
-type ContactName struct {
-	FamilyName     string `json:"familyName,omitempty"`
-	GivenName      string `json:"givenName,omitempty"`
-	AdditionalName string `json:"additionalName,omitempty"`
-	NamePrefix     string `json:"namePrefix,omitempty"`
-	NameSuffix     string `json:"nameSuffix,omitempty"`
-}
-
-// ContactEmail is a struct describing an email of a contact
-type ContactEmail struct {
-	Address string `json:"address"`
-	Type    string `json:"type,omitempty"`
-	Label   string `json:"label,omitempty"`
-	Primary bool   `json:"primary,omitempty"`
-}
-
-// ContactAddress is a struct describing an address of a contact
-type ContactAddress struct {
-	Street           string `json:"street,omitempty"`
-	Pobox            string `json:"pobox,omitempty"`
-	City             string `json:"city,omitempty"`
-	Region           string `json:"region,omitempty"`
-	Postcode         string `json:"postcode,omitempty"`
-	Country          string `json:"country,omitempty"`
-	Type             string `json:"type,omitempty"`
-	Primary          bool   `json:"primary,omitempty"`
-	Label            string `json:"label,omitempty"`
-	FormattedAddress string `json:"formattedAddress,omitempty"`
-}
-
-// ContactPhone is a struct describing a phone of a contact
-type ContactPhone struct {
-	Number  string `json:"number"`
-	Type    string `json:"type,omitempty"`
-	Label   string `json:"label,omitempty"`
-	Primary bool   `json:"primary,omitempty"`
-}
-
-// ContactCozy is a struct describing a cozy instance of a contact
-type ContactCozy struct {
-	URL     string `json:"url"`
-	Label   string `json:"label,omitempty"`
-	Primary bool   `json:"primary,omitempty"`
-}
-
-// Contact is a struct containing all the informations about a contact
-type Contact struct {
-	DocID  string `json:"_id,omitempty"`
-	DocRev string `json:"_rev,omitempty"`
-
-	FullName string           `json:"fullname,omitempty"`
-	Name     ContactName      `json:"name,omitempty"`
-	Birthday string           `json:"birthday,omitempty"`
-	Note     string           `json:"note,omitempty"`
-	Email    []ContactEmail   `json:"email,omitempty"`
-	Address  []ContactAddress `json:"address,omitempty"`
-	Phone    []ContactPhone   `json:"phone,omitempty"`
-	Cozy     []ContactCozy    `json:"cozy,omitempty"`
-}
-
-// ID returns the contact qualified identifier
-func (c *Contact) ID() string { return c.DocID }
-
-// Rev returns the contact revision
-func (c *Contact) Rev() string { return c.DocRev }
-
-// DocType returns the contact document type
-func (c *Contact) DocType() string { return consts.Contacts }
-
-// Clone implements couchdb.Doc
-func (c *Contact) Clone() couchdb.Doc {
-	cloned := *c
-	cloned.FullName = c.FullName
-	cloned.Name = c.Name
-
-	cloned.Email = make([]ContactEmail, len(c.Email))
-	copy(cloned.Email, c.Email)
-
-	cloned.Address = make([]ContactAddress, len(c.Address))
-	copy(cloned.Address, c.Address)
-
-	cloned.Phone = make([]ContactPhone, len(c.Phone))
-	copy(cloned.Phone, c.Phone)
-
-	cloned.Cozy = make([]ContactCozy, len(c.Cozy))
-	copy(cloned.Cozy, c.Cozy)
-
-	return &cloned
-}
-
-// SetID changes the contact qualified identifier
-func (c *Contact) SetID(id string) { c.DocID = id }
-
-// SetRev changes the contact revision
-func (c *Contact) SetRev(rev string) { c.DocRev = rev }
 
 func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Database) error {
 	decoder := vcardParser.NewDecoder(tr)
@@ -127,14 +31,14 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 	}
 
 	fullname := "John Doe"
-	contactname := ContactName{
+	contactname := contacts.Name{
 		GivenName:  "John",
 		FamilyName: "Doe",
 	}
 
 	name := vcard.Name()
 	if name != nil {
-		contactname = ContactName{
+		contactname = contacts.Name{
 			FamilyName:     name.FamilyName,
 			GivenName:      name.GivenName,
 			AdditionalName: name.AdditionalName,
@@ -157,25 +61,25 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 		note = field.Value
 	}
 
-	var contactemail []ContactEmail
+	var contactemail []contacts.Email
 	for _, mail := range vcard.Values("EMAIL") {
-		ce := ContactEmail{
+		ce := contacts.Email{
 			Address: mail,
 		}
 		contactemail = append(contactemail, ce)
 	}
 
-	var contactphone []ContactPhone
+	var contactphone []contacts.Phone
 	for _, phone := range vcard.Values("TEL") {
-		cp := ContactPhone{
+		cp := contacts.Phone{
 			Number: phone,
 		}
 		contactphone = append(contactphone, cp)
 	}
 
-	var contactaddress []ContactAddress
+	var contactaddress []contacts.Address
 	for _, address := range vcard.Addresses() {
-		ca := ContactAddress{
+		ca := contacts.Address{
 			Street:           address.StreetAddress,
 			Pobox:            address.PostOfficeBox,
 			City:             address.Locality,
@@ -187,7 +91,7 @@ func createContact(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, db couchdb.Datab
 		contactaddress = append(contactaddress, ca)
 	}
 
-	contact := &Contact{
+	contact := &contacts.Contact{
 		FullName: fullname,
 		Name:     contactname,
 		Birthday: bday,
