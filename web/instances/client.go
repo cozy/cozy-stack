@@ -34,7 +34,7 @@ func createToken(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
 	}
 	issuedAt := time.Now()
-	token, err := in.MakeJWT(audience, subject, scope, issuedAt)
+	token, err := in.MakeJWT(audience, subject, scope, "", issuedAt)
 	if err != nil {
 		return err
 	}

@@ -47,7 +47,8 @@ var (
 // Claims is used for JWT used in OAuth2 flow and applications token
 type Claims struct {
 	jwt.StandardClaims
-	Scope string `json:"scope,omitempty"`
+	Scope     string `json:"scope,omitempty"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 // IssuedAtUTC returns a time.Time struct of the IssuedAt field in UTC
@@ -61,7 +62,14 @@ func (claims *Claims) Expired() bool {
 	var validityDuration time.Duration
 	switch claims.Audience {
 	case AppAudience:
-		validityDuration = appTokenValidityDuration
+		if claims.SessionID == "" {
+			// an app token with no session association is used for services which
+			// should have tokens that have the same properties as the konnector's
+			// tokens
+			validityDuration = konnectorTokenValidityDuration
+		} else {
+			validityDuration = appTokenValidityDuration
+		}
 	case KonnectorAudience:
 		validityDuration = konnectorTokenValidityDuration
 	case CLIAudience:
