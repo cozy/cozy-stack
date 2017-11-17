@@ -125,7 +125,7 @@ func sendErr(ctx context.Context, errc chan *wsError, e *wsError) {
 	}
 }
 
-func readPump(ctx context.Context, i *instance.Instance, ws *websocket.Conn,
+func readPump(c echo.Context, ctx context.Context, i *instance.Instance, ws *websocket.Conn,
 	ds *realtime.DynamicSubscriber, errc chan *wsError) {
 	defer close(errc)
 
@@ -142,7 +142,7 @@ func readPump(ctx context.Context, i *instance.Instance, ws *websocket.Conn,
 		sendErr(ctx, errc, unauthorized(auth))
 		return
 	}
-	pdoc, err := webpermissions.ParseJWT(i, auth["payload"])
+	pdoc, err := webpermissions.ParseJWT(c, i, auth["payload"])
 	if err != nil {
 		sendErr(ctx, errc, unauthorized(auth))
 		return
@@ -203,7 +203,7 @@ func ws(c echo.Context) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	errc := make(chan *wsError)
-	go readPump(ctx, instance, ws, ds, errc)
+	go readPump(c, ctx, instance, ws, ds, errc)
 
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()

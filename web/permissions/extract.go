@@ -54,7 +54,7 @@ func GetRequestToken(c echo.Context) string {
 }
 
 // ParseJWT parses a JSON Web Token, and returns the associated permissions.
-func ParseJWT(instance *instance.Instance, token string) (*permissions.Permission, error) {
+func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permissions.Permission, error) {
 	var claims permissions.Claims
 	err := crypto.ParseJWT(token, func(token *jwt.Token) (interface{}, error) {
 		return instance.PickKey(token.Claims.(*permissions.Claims).Audience)
@@ -71,6 +71,13 @@ func ParseJWT(instance *instance.Instance, token string) (*permissions.Permissio
 
 	if claims.Expired() {
 		return nil, permissions.ErrExpiredToken
+	}
+
+	if claims.SessionID != "" {
+		s, ok := middlewares.GetSession(c)
+		if !ok || s.ID() != claims.SessionID {
+			return nil, permissions.ErrInvalidToken
+		}
 	}
 
 	switch claims.Audience {
@@ -130,7 +137,7 @@ func GetPermission(c echo.Context) (*permissions.Permission, error) {
 		return nil, errNoToken
 	}
 
-	pdoc, err = ParseJWT(inst, tok)
+	pdoc, err = ParseJWT(c, inst, tok)
 	if err != nil {
 		return nil, err
 	}

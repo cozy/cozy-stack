@@ -80,7 +80,7 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
 		"revoked-client",
 		"io.cozy.contacts io.cozy.files:GET",
-		time.Now())
+		"", time.Now())
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
@@ -95,7 +95,7 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 func TestGetPermissionsForExpiredToken(t *testing.T) {
 	pastTimestamp := time.Now().Add(-30 * 24 * time.Hour) // in seconds
 	tok, err := testInstance.MakeJWT(permissions.AccessTokenAudience,
-		clientID, "io.cozy.contacts io.cozy.files:GET", pastTimestamp)
+		clientID, "io.cozy.contacts io.cozy.files:GET", "", pastTimestamp)
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
