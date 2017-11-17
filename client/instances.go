@@ -52,7 +52,6 @@ type TokenOptions struct {
 	Subject  string
 	Audience string
 	Scope    []string
-	Expire   time.Duration
 }
 
 // OAuthClientOptions is a struct holding all the options to generate an OAuth
@@ -203,7 +202,6 @@ func (c *Client) GetToken(opts *TokenOptions) (string, error) {
 		"Subject":  {opts.Subject},
 		"Audience": {opts.Audience},
 		"Scope":    {strings.Join(opts.Scope, " ")},
-		"Expire":   {opts.Expire.String()},
 	}
 	res, err := c.Req(&request.Options{
 		Method:  "POST",
