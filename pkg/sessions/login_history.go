@@ -3,6 +3,7 @@ package sessions
 import (
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -28,9 +29,11 @@ type LoginEntry struct {
 	City      string `json:"city,omitempty"`
 	Country   string `json:"country,omitempty"`
 	// XXX No omitempty on os and browser, because they are indexed in couchdb
-	UA        string    `json:"user_agent"`
-	OS        string    `json:"os"`
-	Browser   string    `json:"browser"`
+	UA      string `json:"user_agent"`
+	OS      string `json:"os"`
+	Browser string `json:"browser"`
+	// Used when the login entry is linked to an OAuth client registration
+	ClientID  string    `json:"client_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -96,7 +99,7 @@ func lookupIP(ip, locale string) (city, country string) {
 
 // StoreNewLoginEntry creates a new login entry in the database associated with
 // the given instance.
-func StoreNewLoginEntry(i *instance.Instance, sessionID string, req *http.Request, notifEnabled bool) error {
+func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *http.Request, notifEnabled bool) error {
 	var ip string
 	if forwardedFor := req.Header.Get("X-Forwarded-For"); forwardedFor != "" {
 		ip = strings.TrimSpace(strings.SplitN(forwardedFor, ",", 2)[0])
@@ -119,32 +122,70 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID string, req *http.Reques
 		UA:        req.UserAgent(),
 		OS:        os,
 		Browser:   browser,
+		ClientID:  clientID,
 		CreatedAt: time.Now(),
 	}
 
-	if notifEnabled {
+	if err := couchdb.CreateDoc(i, l); err != nil {
+		return err
+	}
+
+	if clientID != "" {
+		if err := PushLoginRegistration(i.Domain, l); err != nil {
+			i.Logger().Errorf("Could not push login in registration queue: %s", err)
+		}
+	} else if notifEnabled {
+		if err := sendLoginNotification(i, l, false); err != nil {
+			i.Logger().Errorf("Could not send login notification: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func sendLoginNotification(i *instance.Instance, l *LoginEntry, registrationNotification bool) error {
+	var sendNotification bool
+
+	if registrationNotification && l.ClientID != "" {
+		sendNotification = true
+	} else {
 		var results []*LoginEntry
 		r := &couchdb.FindRequest{
 			UseIndex: "by-os-browser-ip",
 			Selector: mango.And(
-				mango.Equal("os", os),
-				mango.Equal("browser", browser),
-				mango.Equal("ip", ip),
+				mango.Equal("os", l.OS),
+				mango.Equal("browser", l.Browser),
+				mango.Equal("ip", l.IP),
 			),
 			Limit: 1,
 		}
 		err := couchdb.FindDocs(i, consts.SessionsLogins, r, &results)
-		if err != nil || len(results) == 0 {
-			notif := &notifications.Notification{
-				Reference: "New connexion",
-				Title:     i.Translate("Session New connection title"),
-				Content:   i.Translate("Session New connection content", i.Domain, city, country, ip, browser, os),
-			}
-			if err = notifications.Create(i, "stack", notif); err != nil {
-				return err
-			}
-		}
+		sendNotification = err != nil || len(results) == 0
 	}
 
-	return couchdb.CreateDoc(i, l)
+	if !sendNotification {
+		return nil
+	}
+
+	var title, content string
+	if registrationNotification && l.ClientID != "" {
+		devicesLink := i.SubDomain(consts.SettingsSlug)
+		devicesLink.Fragment = "connectedDevices"
+
+		revokeLink := i.SubDomain(consts.SettingsSlug)
+		revokeLink.Fragment = "connectedDevices/" + url.PathEscape(l.ClientID)
+
+		title = i.Translate("Session New connection for registration title")
+		content = i.Translate("Session New connection for registration content", devicesLink, revokeLink)
+	} else {
+		title = i.Translate("Session New connection title")
+		content = i.Translate("Session New connection content", l.City, l.Country, l.IP, l.Browser, l.OS)
+	}
+
+	notif := &notifications.Notification{
+		Reference: "New connexion",
+		Title:     title,
+		Content:   content,
+	}
+	return notifications.Create(i, "stack", notif)
 }

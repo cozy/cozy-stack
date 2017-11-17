@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -149,4 +150,14 @@ func CleanUTF8(s string) string {
 		}
 	}
 	return string(v)
+}
+
+// CloneURL clones the given url
+func CloneURL(u *url.URL) *url.URL {
+	clone := *u
+	if clone.User != nil {
+		tmp := *clone.User
+		clone.User = &tmp
+	}
+	return &clone
 }
