@@ -85,10 +85,10 @@ func (s *sweeper) Shutdown(ctx context.Context) error {
 }
 
 // PushLoginRegistration pushes a new login into the registration queue.
-func PushLoginRegistration(domain string, login *LoginEntry) error {
+func PushLoginRegistration(domain string, login *LoginEntry, clientID string) error {
 	entry := registrationEntry{
 		Domain:       domain,
-		ClientID:     login.ClientID,
+		ClientID:     clientID,
 		LoginEntryID: login.ID(),
 		Expire:       time.Now(),
 	}
@@ -213,7 +213,11 @@ func sendRegistrationNotification(entry *registrationEntry, registrationNotifica
 	if err != nil {
 		return err
 	}
-	return sendLoginNotification(i, &login, registrationNotification)
+	var clientID string
+	if registrationNotification {
+		clientID = entry.ClientID
+	}
+	return sendLoginNotification(i, &login, clientID)
 }
 
 func sendExpiredRegistrationNotifications(entries []registrationEntry) {

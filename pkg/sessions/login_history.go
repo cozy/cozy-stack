@@ -29,12 +29,11 @@ type LoginEntry struct {
 	City      string `json:"city,omitempty"`
 	Country   string `json:"country,omitempty"`
 	// XXX No omitempty on os and browser, because they are indexed in couchdb
-	UA      string `json:"user_agent"`
-	OS      string `json:"os"`
-	Browser string `json:"browser"`
-	// Used when the login entry is linked to an OAuth client registration
-	ClientID  string    `json:"client_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	UA                 string    `json:"user_agent"`
+	OS                 string    `json:"os"`
+	Browser            string    `json:"browser"`
+	ClientRegistration bool      `json:"client_registration"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 // DocType implements couchdb.Doc
@@ -115,15 +114,15 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 	os := ua.OS()
 
 	l := &LoginEntry{
-		IP:        ip,
-		City:      city,
-		SessionID: sessionID,
-		Country:   country,
-		UA:        req.UserAgent(),
-		OS:        os,
-		Browser:   browser,
-		ClientID:  clientID,
-		CreatedAt: time.Now(),
+		IP:                 ip,
+		City:               city,
+		SessionID:          sessionID,
+		Country:            country,
+		UA:                 req.UserAgent(),
+		OS:                 os,
+		Browser:            browser,
+		ClientRegistration: clientID != "",
+		CreatedAt:          time.Now(),
 	}
 
 	if err := couchdb.CreateDoc(i, l); err != nil {
@@ -131,11 +130,11 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 	}
 
 	if clientID != "" {
-		if err := PushLoginRegistration(i.Domain, l); err != nil {
+		if err := PushLoginRegistration(i.Domain, l, clientID); err != nil {
 			i.Logger().Errorf("Could not push login in registration queue: %s", err)
 		}
 	} else if notifEnabled {
-		if err := sendLoginNotification(i, l, false); err != nil {
+		if err := sendLoginNotification(i, l, ""); err != nil {
 			i.Logger().Errorf("Could not send login notification: %s", err)
 		}
 	}
@@ -143,10 +142,10 @@ func StoreNewLoginEntry(i *instance.Instance, sessionID, clientID string, req *h
 	return nil
 }
 
-func sendLoginNotification(i *instance.Instance, l *LoginEntry, registrationNotification bool) error {
+func sendLoginNotification(i *instance.Instance, l *LoginEntry, clientRegistrationID string) error {
 	var sendNotification bool
 
-	if registrationNotification && l.ClientID != "" {
+	if clientRegistrationID != "" {
 		sendNotification = true
 	} else {
 		var results []*LoginEntry
@@ -168,12 +167,12 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry, registrationNoti
 	}
 
 	var title, content string
-	if registrationNotification && l.ClientID != "" {
+	if clientRegistrationID != "" {
 		devicesLink := i.SubDomain(consts.SettingsSlug)
 		devicesLink.Fragment = "connectedDevices"
 
 		revokeLink := i.SubDomain(consts.SettingsSlug)
-		revokeLink.Fragment = "connectedDevices/" + url.PathEscape(l.ClientID)
+		revokeLink.Fragment = "connectedDevices/" + url.PathEscape(clientRegistrationID)
 
 		title = i.Translate("Session New connection for registration title")
 		content = i.Translate("Session New connection for registration content", devicesLink, revokeLink)
