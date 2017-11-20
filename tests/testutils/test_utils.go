@@ -225,28 +225,3 @@ func (c *TestSetup) GetCookieJar() http.CookieJar {
 		URL: instanceURL,
 	}
 }
-
-// func resetDBAndViews(db couchdb.Database, doctype string) error {
-// 	if err := couchdb.ResetDB(db, doctype); err != nil {
-// 		return err
-// 	}
-//
-// 	if err := couchdb.DefineIndexes(db, consts.IndexesByDoctype(doctype)); err != nil {
-// 		return err
-// 	}
-//
-// 	if err := couchdb.DefineViews(db, consts.ViewsByDoctype(doctype)); err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
-//
-// func (c *TestSetup) GetCleanDB(db couchdb.Database, doctype string) {
-// 	err := resetDBAndViews()
-// 	if err != nil {
-// 		c.CleanupAndDie(err)
-// 	}
-// 	c.addCleanup(func() { couchdb.DeleteDB(db, doctype) })
-//
-// }
