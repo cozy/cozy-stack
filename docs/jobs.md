@@ -506,6 +506,18 @@ Accept: application/vnd.api+json
         "priority": 3,
         "timeout": 60,
         "max_exec_count": 3
+      },
+      "present_state": {
+        "current_status": "done",
+        "last_success": "2017-11-20T13:31:09.01641731",
+        "last_successful_job_id": "abcde",
+        "last_execution": "2017-11-20T13:31:09.01641731",
+        "last_executed_job_id": "abcde",
+        "last_failure": "2017-11-20T13:31:09.01641731",
+        "last_failed_job_id": "abcde",
+        "last_error": "error value",
+        "last_manual_execution": "2017-11-20T13:31:09.01641731",
+        "last_manual_job_id": "abcde"
       }
     },
     "links": {
@@ -644,49 +656,6 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `GET`. When used on a specific worker, the
 permission can be specified on the `worker` field.
-
-### GET /jobs/triggers/jobs
-
-Get the list of the last job launched by all triggers.
-
-Query parameters:
-
-* `Worker`: to filter only jobs from triggers associated with a specific worker.
-
-#### Request
-
-```http
-GET /jobs/triggers/jobs?Worker=konnector HTTP/1.1
-Accept: application/vnd.api+json
-```
-
-#### Response
-
-```json
-{
-  "data": [
-    {
-      "type": "io.cozy.jobs",
-      "id": "123123",
-      "attributes": {},
-      "links": {
-        "self": "/jobs/123123"
-      }
-    }
-  ]
-}
-```
-
-#### Permissions
-
-To use this endpoint, an application needs a permission on the type
-`io.cozy.triggers` for the verb `GET`. When used on a specific worker, the
-permission can be specified on the `worker` field.
-
-#### Status codes
-
-* 204 No Content, when the trigger has been successfully removed
-* 404 Not Found, when the trigger does not exist
 
 ## Worker pool
 

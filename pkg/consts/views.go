@@ -168,22 +168,6 @@ function(doc) {
 `,
 }
 
-// TriggerLastJob indexes the last job launched by a specific trigger.
-var TriggerLastJob = &couchdb.View{
-	Name:    "triggerLastJob",
-	Doctype: Jobs,
-	Map: `
-function(doc) {
-  if (doc.trigger_id) {
-    var state = doc.state;
-    if (state == "done" || state == "errored") {
-      emit([doc.worker, doc.trigger_id], state);
-    }
-  }
-}
-`,
-}
-
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
@@ -194,7 +178,6 @@ var Views = []*couchdb.View{
 	PermissionsShareByDocView,
 	SharedWithPermissionsView,
 	SharingRecipientView,
-	TriggerLastJob,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.

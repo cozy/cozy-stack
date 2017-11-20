@@ -38,7 +38,7 @@ type (
 		workerType string
 	}
 	apiTrigger struct {
-		t scheduler.Trigger
+		t *scheduler.TriggerInfos
 	}
 	apiTriggerRequest struct {
 		Type            string           `json:"type"`
@@ -50,24 +50,24 @@ type (
 	}
 )
 
-func (j *apiJob) ID() string                             { return j.j.ID() }
-func (j *apiJob) Rev() string                            { return j.j.Rev() }
-func (j *apiJob) DocType() string                        { return consts.Jobs }
-func (j *apiJob) Clone() couchdb.Doc                     { return j }
-func (j *apiJob) SetID(_ string)                         {}
-func (j *apiJob) SetRev(_ string)                        {}
-func (j *apiJob) Relationships() jsonapi.RelationshipMap { return nil }
-func (j *apiJob) Included() []jsonapi.Object             { return nil }
-func (j *apiJob) Links() *jsonapi.LinksList {
+func (j apiJob) ID() string                             { return j.j.ID() }
+func (j apiJob) Rev() string                            { return j.j.Rev() }
+func (j apiJob) DocType() string                        { return consts.Jobs }
+func (j apiJob) Clone() couchdb.Doc                     { return j }
+func (j apiJob) SetID(_ string)                         {}
+func (j apiJob) SetRev(_ string)                        {}
+func (j apiJob) Relationships() jsonapi.RelationshipMap { return nil }
+func (j apiJob) Included() []jsonapi.Object             { return nil }
+func (j apiJob) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/" + j.j.WorkerType + "/" + j.j.ID()}
 }
-func (j *apiJob) MarshalJSON() ([]byte, error) {
+func (j apiJob) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.j)
 }
 
-func (q *apiQueue) ID() string      { return q.workerType }
-func (q *apiQueue) DocType() string { return consts.Jobs }
-func (q *apiQueue) Valid(key, value string) bool {
+func (q apiQueue) ID() string      { return q.workerType }
+func (q apiQueue) DocType() string { return consts.Jobs }
+func (q apiQueue) Valid(key, value string) bool {
 	switch key {
 	case "worker":
 		return q.workerType == value
@@ -75,26 +75,26 @@ func (q *apiQueue) Valid(key, value string) bool {
 	return false
 }
 
-func (t *apiTrigger) ID() string                             { return t.t.Infos().TID }
-func (t *apiTrigger) Rev() string                            { return "" }
-func (t *apiTrigger) DocType() string                        { return consts.Triggers }
-func (t *apiTrigger) Clone() couchdb.Doc                     { return t }
-func (t *apiTrigger) SetID(_ string)                         {}
-func (t *apiTrigger) SetRev(_ string)                        {}
-func (t *apiTrigger) Relationships() jsonapi.RelationshipMap { return nil }
-func (t *apiTrigger) Included() []jsonapi.Object             { return nil }
-func (t *apiTrigger) Links() *jsonapi.LinksList {
+func (t apiTrigger) ID() string                             { return t.t.TID }
+func (t apiTrigger) Rev() string                            { return "" }
+func (t apiTrigger) DocType() string                        { return consts.Triggers }
+func (t apiTrigger) Clone() couchdb.Doc                     { return t }
+func (t apiTrigger) SetID(_ string)                         {}
+func (t apiTrigger) SetRev(_ string)                        {}
+func (t apiTrigger) Relationships() jsonapi.RelationshipMap { return nil }
+func (t apiTrigger) Included() []jsonapi.Object             { return nil }
+func (t apiTrigger) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID()}
 }
-func (t *apiTrigger) MarshalJSON() ([]byte, error) {
-	return json.Marshal(t.t.Infos())
+func (t apiTrigger) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.t)
 }
 
 func getQueue(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	workerType := c.Param("worker-type")
 
-	o := &apiQueue{workerType: workerType}
+	o := apiQueue{workerType: workerType}
 	// TODO: uncomment to restric jobs permissions.
 	// if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
 	// 	return err
@@ -110,7 +110,7 @@ func getQueue(c echo.Context) error {
 
 	objs := make([]jsonapi.Object, len(js))
 	for i, j := range js {
-		objs[i] = &apiJob{j}
+		objs[i] = apiJob{j}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
@@ -119,7 +119,7 @@ func getQueue(c echo.Context) error {
 func pushJob(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	req := &apiJobRequest{}
+	req := apiJobRequest{}
 	if _, err := jsonapi.Bind(c.Request(), &req); err != nil {
 		return wrapJobsError(err)
 	}
@@ -143,13 +143,13 @@ func pushJob(c echo.Context) error {
 		return wrapJobsError(err)
 	}
 
-	return jsonapi.Data(c, http.StatusAccepted, &apiJob{job}, nil)
+	return jsonapi.Data(c, http.StatusAccepted, apiJob{job}, nil)
 }
 
 func newTrigger(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sched := globals.GetScheduler()
-	req := &apiTriggerRequest{}
+	req := apiTriggerRequest{}
 	if _, err := jsonapi.Bind(c.Request(), &req); err != nil {
 		return wrapJobsError(err)
 	}
@@ -183,7 +183,7 @@ func newTrigger(c echo.Context) error {
 	if err = sched.Add(t); err != nil {
 		return wrapJobsError(err)
 	}
-	return jsonapi.Data(c, http.StatusCreated, &apiTrigger{t}, nil)
+	return jsonapi.Data(c, http.StatusCreated, apiTrigger{t.Infos()}, nil)
 }
 
 func getTrigger(c echo.Context) error {
@@ -196,7 +196,7 @@ func getTrigger(c echo.Context) error {
 	if err := permissions.Allow(c, permissions.GET, t); err != nil {
 		return err
 	}
-	return jsonapi.Data(c, http.StatusOK, &apiTrigger{t}, nil)
+	return jsonapi.Data(c, http.StatusOK, apiTrigger{t.Infos()}, nil)
 }
 
 func getTriggerJobs(c echo.Context) error {
@@ -228,7 +228,7 @@ func getTriggerJobs(c echo.Context) error {
 
 	objs := make([]jsonapi.Object, len(js))
 	for i, j := range js {
-		objs[i] = &apiJob{j}
+		objs[i] = apiJob{j}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
@@ -243,11 +243,13 @@ func launchTrigger(c echo.Context) error {
 	if err = permissions.Allow(c, permissions.POST, t); err != nil {
 		return err
 	}
-	j, err := globals.GetBroker().PushJob(t.Infos().JobRequest())
+	req := t.Infos().JobRequest()
+	req.Manual = true
+	j, err := globals.GetBroker().PushJob(req)
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	return jsonapi.Data(c, http.StatusCreated, &apiJob{j}, nil)
+	return jsonapi.Data(c, http.StatusCreated, apiJob{j}, nil)
 }
 
 func deleteTrigger(c echo.Context) error {
@@ -289,35 +291,14 @@ func getAllTriggers(c echo.Context) error {
 	// TODO: we could potentially benefit from an index on 'worker_type' field.
 	objs := make([]jsonapi.Object, 0, len(ts))
 	for _, t := range ts {
-		if workerType == "" || t.Infos().WorkerType == workerType {
-			objs = append(objs, &apiTrigger{t})
+		tInfos := t.Infos()
+		if workerType == "" || tInfos.WorkerType == workerType {
+			tInfos.PresentState, err = scheduler.GetTriggerState(t)
+			if err != nil {
+				return wrapJobsError(err)
+			}
+			objs = append(objs, apiTrigger{tInfos})
 		}
-	}
-	return jsonapi.DataList(c, http.StatusOK, objs, nil)
-}
-
-func getTriggersLastJob(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	workerType := c.QueryParam("Worker")
-
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Triggers); err != nil {
-		if workerType == "" {
-			return err
-		}
-		o := &scheduler.TriggerInfos{WorkerType: workerType}
-		if err := permissions.AllowOnFields(c, permissions.GET, o, "worker"); err != nil {
-			return err
-		}
-	}
-
-	js, err := scheduler.GetLastJobs(instance.Domain, workerType)
-	if err != nil {
-		return wrapJobsError(err)
-	}
-
-	objs := make([]jsonapi.Object, len(js))
-	for i, j := range js {
-		objs[i] = &apiJob{j}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, objs, nil)
@@ -332,7 +313,7 @@ func getJob(c echo.Context) error {
 	if err := permissions.Allow(c, permissions.GET, job); err != nil {
 		return err
 	}
-	return jsonapi.Data(c, http.StatusOK, &apiJob{job}, nil)
+	return jsonapi.Data(c, http.StatusOK, apiJob{job}, nil)
 }
 
 func cleanJobs(c echo.Context) error {
@@ -378,7 +359,6 @@ func Routes(router *echo.Group) {
 
 	router.POST("/triggers", newTrigger)
 	router.GET("/triggers", getAllTriggers)
-	router.GET("/triggers/jobs", getTriggersLastJob)
 	router.GET("/triggers/:trigger-id", getTrigger)
 	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
