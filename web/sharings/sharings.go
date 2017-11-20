@@ -495,38 +495,34 @@ func revokeContact(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func setDestinationDirectory(c echo.Context) error {
-	slug := c.QueryParam(consts.QueryParamAppSlug)
-	if slug == "" {
-		return jsonapi.BadRequest(errors.New("Missing app slug"))
+func setDestination(c echo.Context) error {
+	pdoc, err := perm.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeWebapp {
+		return jsonapi.BadRequest(errors.New("Invalid request"))
 	}
+	slug := pdoc.SourceID
 
-	// TODO check permissions for app
-
-	doctype := c.QueryParam(consts.QueryParamDocType)
+	doctype := c.Param("doctype")
 	if doctype == "" {
 		return jsonapi.BadRequest(errors.New("Missing doctype"))
 	}
-
-	ins := middlewares.GetInstance(c)
-	if !doctypeExists(ins, doctype) {
-		return jsonapi.BadRequest(errors.New("Doctype does not exist"))
+	if doctype != consts.Files {
+		return jsonapi.BadRequest(errors.New("Not supported doctype"))
 	}
 
 	dirID := c.QueryParam(consts.QueryParamDirID)
 	if dirID == "" {
 		return jsonapi.BadRequest(errors.New("Missing directory id"))
 	}
-
+	ins := middlewares.GetInstance(c)
 	if _, err := ins.VFS().DirByID(dirID); err != nil {
 		return jsonapi.BadRequest(errors.New("Directory does not exist"))
 	}
 
-	err := sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
+	err = sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
 	if err != nil {
 		return err
 	}
-
 	return c.NoContent(http.StatusOK)
 }
 
@@ -689,7 +685,7 @@ func Routes(router *echo.Group) {
 
 	router.DELETE("/files/:file-id/referenced_by", removeReferences)
 
-	router.POST("/app/destinationDirectory", setDestinationDirectory)
+	router.POST("/destination/:doctype", setDestination)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
