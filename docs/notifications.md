@@ -3,7 +3,7 @@
 # Notifications
 
 Inspiration:
-https://developer.android.com/guide/topics/ui/notifiers/notifications.html
+[Android Notifications](https://developer.android.com/guide/topics/ui/notifiers/notifications.html)
 
 Notifications are couchdb documents with the doctype `io.cozy.notifications`.
 
