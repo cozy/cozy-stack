@@ -319,7 +319,7 @@ Content-Type: application/vnd.api+json
         "data": [
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
-            "type": "io.cozy.contacts"
+            "type": "io.cozy.contacts",
             "status": "pending",
           }
         ]
@@ -348,18 +348,6 @@ Content-Type: application/vnd.api+json
   ]
 }
 ```
-
-### POST /sharings/:id/sendMail
-
-Send a sharing request by mail.
-
-### PUT /sharings/:id
-
-Receive a sharing request.
-
-### POST /sharings/:id/answer
-
-Answer a sharing request.
 
 ### DELETE /sharings/:sharing-id
 
