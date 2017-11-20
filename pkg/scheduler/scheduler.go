@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"context"
-	"encoding/json"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -40,15 +40,31 @@ type (
 
 	// TriggerInfos is a struct containing all the options of a trigger.
 	TriggerInfos struct {
-		TID        string           `json:"_id,omitempty"`
-		TRev       string           `json:"_rev,omitempty"`
-		Domain     string           `json:"domain"`
-		Type       string           `json:"type"`
-		WorkerType string           `json:"worker"`
-		Arguments  string           `json:"arguments"`
-		Debounce   string           `json:"debounce"`
-		Options    *jobs.JobOptions `json:"options"`
-		Message    jobs.Message     `json:"message"`
+		TID          string           `json:"_id,omitempty"`
+		TRev         string           `json:"_rev,omitempty"`
+		Domain       string           `json:"domain"`
+		Type         string           `json:"type"`
+		WorkerType   string           `json:"worker"`
+		Arguments    string           `json:"arguments"`
+		Debounce     string           `json:"debounce"`
+		Options      *jobs.JobOptions `json:"options"`
+		Message      jobs.Message     `json:"message"`
+		CurrentState *TriggerState    `json:"current_state,omitempty"`
+	}
+
+	// TriggerState represent the current state of the trigger
+	TriggerState struct {
+		TID                 string     `json:"trigger_id"`
+		Status              jobs.State `json:"status"`
+		LastSuccess         *time.Time `json:"last_success,omitempty"`
+		LastSuccessfulJobID string     `json:"last_successful_job_id,omitempty"`
+		LastExecution       *time.Time `json:"last_execution,omitempty"`
+		LastExecutedJobID   string     `json:"last_executed_job_id,omitempty"`
+		LastFailure         *time.Time `json:"last_failure,omitempty"`
+		LastFailedJobID     string     `json:"last_failed_job_id,omitempty"`
+		LastError           string     `json:"last_error,omitempty"`
+		LastManualExecution *time.Time `json:"last_manual_execution,omitempty"`
+		LastManualJobID     string     `json:"last_manual_job_id,omitempty"`
 	}
 )
 
@@ -153,60 +169,40 @@ func GetJobs(t Trigger, limit int) ([]*jobs.Job, error) {
 	return jobs, nil
 }
 
-// GetLastJob returns the last completed job lauched by the given trigger.
-func GetLastJob(t Trigger) (*jobs.Job, error) {
-	triggerInfos := t.Infos()
-	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
-	req := &couchdb.ViewRequest{
-		Key:         []string{triggerInfos.Type, triggerInfos.ID()},
-		IncludeDocs: true,
-		Reduce:      false,
-		Limit:       1,
-	}
-	res := &couchdb.ViewResponse{}
-	err := couchdb.ExecView(db, consts.TriggerLastJob, req, res)
+// GetTriggerState returns the state of the trigger, calculated from the last
+// launched jobs.
+func GetTriggerState(t Trigger) (*TriggerState, error) {
+	js, err := GetJobs(t, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(res.Rows) != 1 {
-		return nil, ErrNotFoundTrigger
-	}
+	var state TriggerState
 
-	var j *jobs.Job
-	if err := json.Unmarshal(res.Rows[0].Doc, &j); err != nil {
-		return nil, err
-	}
+	state.Status = jobs.Done
+	state.TID = t.ID()
 
-	return j, nil
-}
-
-// GetLastJobs get the last completed job for all workers with the given worker
-// type.
-func GetLastJobs(domain, workerType string) ([]*jobs.Job, error) {
-	db := couchdb.SimpleDatabasePrefix(domain)
-	req := &couchdb.ViewRequest{
-		StartKey:    []string{workerType},
-		EndKey:      []string{workerType, couchdb.MaxString},
-		IncludeDocs: true,
-		Reduce:      false,
-	}
-	res := &couchdb.ViewResponse{}
-	err := couchdb.ExecView(db, consts.TriggerLastJob, req, res)
-	if err != nil {
-		return nil, err
-	}
-
-	js := make([]*jobs.Job, len(res.Rows))
-	for i, v := range res.Rows {
-		var j *jobs.Job
-		if err := json.Unmarshal(v.Doc, &j); err != nil {
-			return nil, err
+	for _, j := range js {
+		startedAt := &j.StartedAt
+		switch j.State {
+		case jobs.Errored:
+			state.LastFailure = startedAt
+			state.LastFailedJobID = j.ID()
+			state.LastError = j.Error
+		case jobs.Done:
+			state.LastSuccess = startedAt
+			state.LastSuccessfulJobID = j.ID()
 		}
-		js[i] = j
+		if j.Manual && (j.State == jobs.Done || j.State == jobs.Errored) {
+			state.LastManualExecution = startedAt
+			state.LastManualJobID = j.ID()
+		}
+		state.LastExecution = startedAt
+		state.LastExecutedJobID = j.ID()
+		state.Status = j.State
 	}
 
-	return js, nil
+	return &state, nil
 }
 
 var _ couchdb.Doc = &TriggerInfos{}

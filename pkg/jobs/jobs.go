@@ -66,6 +66,7 @@ type (
 		TriggerID  string      `json:"trigger_id"`
 		Message    Message     `json:"message"`
 		Event      Event       `json:"event"`
+		Manual     bool        `json:"manual_execution"`
 		Debounced  bool        `json:"debounced"`
 		Options    *JobOptions `json:"options"`
 		State      State       `json:"state"`
@@ -82,6 +83,7 @@ type (
 		TriggerID  string
 		Message    Message
 		Event      Event
+		Manual     bool
 		Debounced  bool
 		Options    *JobOptions
 	}
@@ -238,6 +240,7 @@ func NewJob(req *JobRequest) *Job {
 		Domain:     req.Domain,
 		WorkerType: req.WorkerType,
 		TriggerID:  req.TriggerID,
+		Manual:     req.Manual,
 		Message:    req.Message,
 		Debounced:  req.Debounced,
 		Event:      req.Event,
