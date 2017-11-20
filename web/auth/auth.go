@@ -40,7 +40,7 @@ const (
 func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	if session, err := sessions.GetSession(c, instance); err == nil {
+	if session, ok := middlewares.GetSession(c); ok {
 		redirect := instance.DefaultRedirection().String()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
@@ -165,8 +165,8 @@ func loginForm(c echo.Context) error {
 		return err
 	}
 
-	session, err := sessions.GetSession(c, instance)
-	if err == nil {
+	session, ok := middlewares.GetSession(c)
+	if ok {
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
 		return c.Redirect(http.StatusSeeOther, redirect)
 	}
@@ -196,8 +196,8 @@ func login(c echo.Context) error {
 	passphraseRequest := len(passphrase) > 0
 
 	var sessionID string
-	session, err := sessions.GetSession(c, inst)
-	if err == nil {
+	session, ok := middlewares.GetSession(c)
+	if ok {
 		sessionID = session.ID()
 	} else if twoFactorRequest {
 		successfulAuthentication = inst.ValidateTwoFactorPasscode(
@@ -287,8 +287,8 @@ func logout(c echo.Context) error {
 		})
 	}
 
-	session, err := sessions.GetSession(c, instance)
-	if err == nil {
+	session, ok := middlewares.GetSession(c)
+	if ok {
 		c.SetCookie(session.Delete(instance))
 	}
 
@@ -308,13 +308,13 @@ func logoutOthers(c echo.Context) error {
 		})
 	}
 
-	session, err := sessions.GetSession(c, instance)
-	if err != nil {
+	session, ok := middlewares.GetSession(c)
+	if !ok {
 		return c.JSON(http.StatusUnauthorized, echo.Map{
 			"error": "Could not retrieve session",
 		})
 	}
-	if err = sessions.DeleteOthers(instance, session.ID()); err != nil {
+	if err := sessions.DeleteOthers(instance, session.ID()); err != nil {
 		return err
 	}
 
@@ -790,11 +790,9 @@ func passphraseReset(c echo.Context) error {
 	// (maybe by accident) asks for a passphrase reset while logged in, we log
 	// him out to be able to re-go through the process of logging back-in. It is
 	// more a UX choice than a "security" one.
-	if middlewares.IsLoggedIn(c) {
-		session, err := sessions.GetSession(c, i)
-		if err == nil {
-			c.SetCookie(session.Delete(i))
-		}
+	session, ok := middlewares.GetSession(c)
+	if ok {
+		c.SetCookie(session.Delete(i))
 	}
 	v := url.Values{}
 	v.Add("msg", "passphrase-reset-requested")

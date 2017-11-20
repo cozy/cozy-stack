@@ -123,7 +123,8 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		needAuth = !route.Public
 	}
 
-	if needAuth && !middlewares.IsLoggedIn(c) {
+	session, isLoggedIn := middlewares.GetSession(c)
+	if needAuth && !isLoggedIn {
 		if file != route.Index {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
 		}
@@ -169,8 +170,8 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 	}
 	var token string
-	if middlewares.IsLoggedIn(c) {
-		token = i.BuildAppToken(app)
+	if isLoggedIn {
+		token = i.BuildAppToken(app, session.ID())
 	} else {
 		token = c.QueryParam("sharecode")
 	}

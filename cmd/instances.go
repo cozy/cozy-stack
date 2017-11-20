@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
-	"time"
 
 	"github.com/cozy/cozy-stack/client"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -31,7 +30,6 @@ var flagApps []string
 var flagDev bool
 var flagPassphrase string
 var flagForce bool
-var flagExpire time.Duration
 var flagDry bool
 var flagJSON bool
 var flagDirectory string
@@ -363,7 +361,6 @@ var appTokenInstanceCmd = &cobra.Command{
 			Domain:   args[0],
 			Subject:  args[1],
 			Audience: "app",
-			Expire:   flagExpire,
 		})
 		if err != nil {
 			return err
@@ -385,7 +382,6 @@ var cliTokenInstanceCmd = &cobra.Command{
 			Domain:   args[0],
 			Scope:    args[1:],
 			Audience: "cli",
-			Expire:   flagExpire,
 		})
 		if err != nil {
 			return err
@@ -408,7 +404,6 @@ var oauthTokenInstanceCmd = &cobra.Command{
 			Subject:  args[1],
 			Audience: "access-token",
 			Scope:    args[2:],
-			Expire:   flagExpire,
 		})
 		if err != nil {
 			return err
@@ -556,8 +551,6 @@ func init() {
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	fsckInstanceCmd.Flags().BoolVar(&flagDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
-	appTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
-	oauthTokenInstanceCmd.Flags().DurationVar(&flagExpire, "expire", 0, "Make the token expires in this amount of time")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")

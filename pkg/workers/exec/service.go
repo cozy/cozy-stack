@@ -83,7 +83,7 @@ func (w *serviceWorker) Slug() string {
 }
 
 func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
-	token := i.BuildAppToken(w.man)
+	token := i.BuildAppToken(w.man, "")
 	cmd = config.GetConfig().Konnectors.Cmd
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),

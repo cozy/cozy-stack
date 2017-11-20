@@ -15,7 +15,6 @@ func createToken(c echo.Context) error {
 	audience := c.QueryParam("Audience")
 	scope := c.QueryParam("Scope")
 	subject := c.QueryParam("Subject")
-	expire := c.QueryParam("Expire")
 	in, err := instance.Get(domain)
 	if err != nil {
 		return wrapError(err)
@@ -35,13 +34,7 @@ func createToken(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Unknown audience %s", audience)
 	}
 	issuedAt := time.Now()
-	if expire != "" && expire != "0s" {
-		var duration time.Duration
-		if duration, err = time.ParseDuration(expire); err == nil {
-			issuedAt = issuedAt.Add(duration - permissions.TokenValidityDuration)
-		}
-	}
-	token, err := in.MakeJWT(audience, subject, scope, issuedAt)
+	token, err := in.MakeJWT(audience, subject, scope, "", issuedAt)
 	if err != nil {
 		return err
 	}

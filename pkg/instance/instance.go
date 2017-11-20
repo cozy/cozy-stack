@@ -971,7 +971,7 @@ func (i *Instance) PickKey(audience string) ([]byte, error) {
 }
 
 // MakeJWT is a shortcut to create a JWT
-func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) (string, error) {
+func (i *Instance) MakeJWT(audience, subject, scope, sessionID string, issuedAt time.Time) (string, error) {
 	secret, err := i.PickKey(audience)
 	if err != nil {
 		return "", err
@@ -983,15 +983,18 @@ func (i *Instance) MakeJWT(audience, subject, scope string, issuedAt time.Time) 
 			IssuedAt: issuedAt.Unix(),
 			Subject:  subject,
 		},
-		Scope: scope,
+		Scope:     scope,
+		SessionID: sessionID,
 	})
 }
 
 // BuildAppToken is used to build a token to identify the app for requests made
 // to the stack
-func (i *Instance) BuildAppToken(m apps.Manifest) string {
+func (i *Instance) BuildAppToken(m apps.Manifest, sessionID string) string {
 	scope := "" // apps tokens don't have a scope
-	token, err := i.MakeJWT(permissions.AppAudience, m.Slug(), scope, time.Now())
+	subject := m.Slug()
+	now := time.Now()
+	token, err := i.MakeJWT(permissions.AppAudience, subject, scope, sessionID, now)
 	if err != nil {
 		return ""
 	}
@@ -1002,7 +1005,8 @@ func (i *Instance) BuildAppToken(m apps.Manifest) string {
 // requests made to the stack
 func (i *Instance) BuildKonnectorToken(m apps.Manifest) string {
 	scope := "" // apps tokens don't have a scope
-	token, err := i.MakeJWT(permissions.KonnectorAudience, m.Slug(), scope, time.Now())
+	subject := m.Slug()
+	token, err := i.MakeJWT(permissions.KonnectorAudience, subject, scope, "", time.Now())
 	if err != nil {
 		return ""
 	}

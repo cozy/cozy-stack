@@ -67,7 +67,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	token, err := testInstance.MakeJWT(permissions.CLIAudience, "CLI", consts.Files, time.Now())
+	token, err := testInstance.MakeJWT(permissions.CLIAudience, "CLI", consts.Files, "", time.Now())
 	if err != nil {
 		fmt.Println("Could not get test instance token.", err)
 		os.Exit(1)

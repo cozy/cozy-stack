@@ -165,7 +165,7 @@ func generateAppToken(t *testing.T, ruleReq permissions.Rule) (string, string) {
 	}
 	err = couchdb.CreateNamedDocWithDB(testInstance, manifest)
 	assert.NoError(t, err)
-	appToken := testInstance.BuildAppToken(manifest)
+	appToken := testInstance.BuildAppToken(manifest, "")
 	return appToken, slug
 }
 
@@ -1392,7 +1392,7 @@ func TestRevokeRecipient(t *testing.T) {
 	}
 	err = couchdb.CreateNamedDocWithDB(testInstance, manifest)
 	assert.NoError(t, err)
-	appToken := testInstance.BuildAppToken(manifest)
+	appToken := testInstance.BuildAppToken(manifest, "")
 
 	recipient0 := createRecipient(t, "email0", "url0")
 	sharing := createSharing(t, "", consts.MasterMasterSharing, true, slug,
