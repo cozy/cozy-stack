@@ -507,8 +507,8 @@ Accept: application/vnd.api+json
         "timeout": 60,
         "max_exec_count": 3
       },
-      "present_state": {
-        "current_status": "done",
+      "current_state": {
+        "status": "done",
         "last_success": "2017-11-20T13:31:09.01641731",
         "last_successful_job_id": "abcde",
         "last_execution": "2017-11-20T13:31:09.01641731",

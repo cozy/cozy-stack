@@ -293,7 +293,7 @@ func getAllTriggers(c echo.Context) error {
 	for _, t := range ts {
 		tInfos := t.Infos()
 		if workerType == "" || tInfos.WorkerType == workerType {
-			tInfos.PresentState, err = scheduler.GetTriggerState(t)
+			tInfos.CurrentState, err = scheduler.GetTriggerState(t)
 			if err != nil {
 				return wrapJobsError(err)
 			}

@@ -49,13 +49,13 @@ type (
 		Debounce     string           `json:"debounce"`
 		Options      *jobs.JobOptions `json:"options"`
 		Message      jobs.Message     `json:"message"`
-		PresentState *TriggerState    `json:"present_state,omitempty"`
+		CurrentState *TriggerState    `json:"current_state,omitempty"`
 	}
 
 	// TriggerState represent the current state of the trigger
 	TriggerState struct {
 		TID                 string     `json:"trigger_id"`
-		Status              jobs.State `json:"current_status"`
+		Status              jobs.State `json:"status"`
 		LastSuccess         *time.Time `json:"last_success,omitempty"`
 		LastSuccessfulJobID string     `json:"last_successful_job_id,omitempty"`
 		LastExecution       *time.Time `json:"last_execution,omitempty"`
