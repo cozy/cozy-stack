@@ -1059,16 +1059,6 @@ func TestCreateSharingBadPermission(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 }
 
-func TestSendMailsWithWrongSharingID(t *testing.T) {
-	req, _ := http.NewRequest("PUT", ts.URL+"/sharings/wrongid/sendMails",
-		nil)
-
-	res, err := http.DefaultClient.Do(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 404, res.StatusCode)
-}
-
 func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 
 	type recipient map[string]map[string]string

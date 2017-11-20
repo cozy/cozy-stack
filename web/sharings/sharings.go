@@ -202,29 +202,6 @@ func GetSharingDoc(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 }
 
-// SendSharingMails sends the mails requests for the provided sharing.
-func SendSharingMails(c echo.Context) error {
-	// Fetch the instance.
-	instance := middlewares.GetInstance(c)
-
-	// Fetch the document id and then the sharing document.
-	docID := c.Param("id")
-	sharing := &sharings.Sharing{}
-	err := couchdb.GetDoc(instance, consts.Sharings, docID, sharing)
-	if err != nil {
-		err = sharings.ErrSharingDoesNotExist
-		return wrapErrors(err)
-	}
-
-	// Send the mails.
-	err = sharings.SendSharingMails(instance, sharing)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return nil
-}
-
 // AddSharingRecipient adds an existing recipient to an existing sharing
 func AddSharingRecipient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -696,7 +673,6 @@ func discovery(c echo.Context) error {
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
 	router.PUT("/:id/recipient", AddSharingRecipient)
-	router.PUT("/:id/sendMails", SendSharingMails)
 	router.GET("/request", SharingRequest)
 	router.GET("/answer", SharingAnswer)
 	router.POST("/formRefuse", RecipientRefusedSharing)
