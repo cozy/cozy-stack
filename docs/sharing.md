@@ -319,7 +319,7 @@ Content-Type: application/vnd.api+json
         "data": [
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
-            "type": "io.cozy.contacts"
+            "type": "io.cozy.contacts",
             "status": "pending",
           }
         ]
@@ -348,18 +348,6 @@ Content-Type: application/vnd.api+json
   ]
 }
 ```
-
-### POST /sharings/:id/sendMail
-
-Send a sharing request by mail.
-
-### PUT /sharings/:id
-
-Receive a sharing request.
-
-### POST /sharings/:id/answer
-
-Answer a sharing request.
 
 ### DELETE /sharings/:sharing-id
 
@@ -427,11 +415,11 @@ HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
-### POST /sharings/app/destinationDirectory
+### POST /sharings/destination/:doctype
 
-Sets the destination directory of the given application.\
-The "destination directory" is where the shared files received by this application
-will go. Only files shared using "Cozy to Cozy sharings" are concerned.
+Sets the destination directory of the given application. The "destination
+directory" is where the shared files received by this application will go.
+Only files shared using "Cozy to Cozy sharings" are concerned.
 
 For example if a user sets the destination directory of the application "Photos"
 to `/Shared with Me/Photos` (by providing its **id**) then all shared photos
@@ -439,15 +427,14 @@ will go there.
 
 #### Request
 
-Query parameters required:
+Required parameters:
 
-* `App_slug`: the slug of the application.
-* `Doctype`: the doctype concerned. For now only `io.cozy.files` can be used.
+* `doctype`: the doctype concerned. For now only `io.cozy.files` can be used.
 * `Dir_id`: the id of the destination directory. The directory should already
   exist.
 
 ```http
-POST /sharings/app/destinationDirectory?App_slug=sharotronic&Doctype=io.cozy.sharings&Dir_id=9e6e595ee50575a3faa064987d0e30eb HTTP/1.1
+POST /sharings/destination/io.cozy.sharings?Dir_id=9e6e595ee50575a3faa064987d0e30eb HTTP/1.1
 Host: cozy.example.net
 Content-Type: application/json
 ```
@@ -458,6 +445,14 @@ Content-Type: application/json
 HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
+
+#### Note
+
+The slug of the application that makes this request is extracted from its
+token and stored in the config document. The application that creates the
+sharing on the other cozy instance must have the same slug to trigger this
+behaviour.
+
 
 ### Frequently Asked Questions
 

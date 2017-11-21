@@ -1059,16 +1059,6 @@ func TestCreateSharingBadPermission(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, res.StatusCode)
 }
 
-func TestSendMailsWithWrongSharingID(t *testing.T) {
-	req, _ := http.NewRequest("PUT", ts.URL+"/sharings/wrongid/sendMails",
-		nil)
-
-	res, err := http.DefaultClient.Do(req)
-
-	assert.NoError(t, err)
-	assert.Equal(t, 404, res.StatusCode)
-}
-
 func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 
 	type recipient map[string]map[string]string
@@ -1436,79 +1426,41 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestSetDestinationDirectory(t *testing.T) {
-	setDestinationURL := fmt.Sprintf("%s/sharings/app/destinationDirectory",
-		ts.URL)
-	req, err := http.NewRequest(http.MethodPost, setDestinationURL, nil)
-	assert.NoError(t, err)
+func TestSetDestination(t *testing.T) {
+	ruleReq := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
+	}
+	appToken, _ := generateAppToken(t, ruleReq)
+	setDestinationURL := ts.URL + "/sharings/destination/io.cozy.files"
 
 	// Test: no query params given.
+	req, err := http.NewRequest(http.MethodPost, setDestinationURL, nil)
+	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
-	// Test: only slug given.
+	// Test: a dirID that doesn't exist.
 	queries := url.Values{
-		consts.QueryParamAppSlug: {"randomapp"},
+		consts.QueryParamDirID: {"randomid"},
 	}.Encode()
-
-	req, err = http.NewRequest(http.MethodPost, setDestinationURL+"?"+queries,
-		nil)
+	req, err = http.NewRequest(http.MethodPost, setDestinationURL+"?"+queries, nil)
 	assert.NoError(t, err)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-
-	// Test: doctype + slug given but doctype doesn't exist.
-	queries = url.Values{
-		consts.QueryParamAppSlug: {"randomapp"},
-		consts.QueryParamDocType: {"randomdoctype"},
-	}.Encode()
-
-	req, err = http.NewRequest(http.MethodPost, setDestinationURL+"?"+queries,
-		nil)
-	assert.NoError(t, err)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-
-	// Test: doctype + slug and doctype exists.
-	queries = url.Values{
-		consts.QueryParamAppSlug: {"randomapp"},
-		consts.QueryParamDocType: {"io.cozy.files"},
-	}.Encode()
-
-	req, err = http.NewRequest(http.MethodPost, setDestinationURL+"?"+queries,
-		nil)
-	assert.NoError(t, err)
-	res, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
-
-	// Test: slug + doctype + dirID but dirID doesn't exist.
-	queries = url.Values{
-		consts.QueryParamAppSlug: {"randomapp"},
-		consts.QueryParamDocType: {"io.cozy.files"},
-		consts.QueryParamDirID:   {"randomid"},
-	}.Encode()
-
-	req, err = http.NewRequest(http.MethodPost, setDestinationURL+"?"+queries,
-		nil)
-	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
 
 	// Test: everything was provided.
 	queries = url.Values{
-		consts.QueryParamAppSlug: {"randomapp"},
-		consts.QueryParamDocType: {"io.cozy.files"},
-		consts.QueryParamDirID:   {consts.RootDirID},
+		consts.QueryParamDirID: {consts.RootDirID},
 	}.Encode()
-
-	req, err = http.NewRequest(http.MethodPost, setDestinationURL+"?"+queries,
-		nil)
+	req, err = http.NewRequest(http.MethodPost, setDestinationURL+"?"+queries, nil)
 	assert.NoError(t, err)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res.StatusCode)

@@ -90,74 +90,6 @@ func (r *apiRecipient) Links() *jsonapi.LinksList {
 var _ jsonapi.Object = (*apiSharing)(nil)
 var _ jsonapi.Object = (*apiRecipient)(nil)
 
-// SharingAnswer handles a sharing answer from the sharer side
-func SharingAnswer(c echo.Context) error {
-	var err error
-	var u string
-
-	state := c.QueryParam("state")
-	clientID := c.QueryParam("client_id")
-	accessCode := c.QueryParam("access_code")
-
-	instance := middlewares.GetInstance(c)
-
-	// The sharing is refused if there is no access code
-	if accessCode != "" {
-		u, err = sharings.SharingAccepted(instance, state, clientID, accessCode)
-	} else {
-		u, err = sharings.SharingRefused(instance, state, clientID)
-	}
-	if err != nil {
-		return wrapErrors(err)
-	}
-	return c.Redirect(http.StatusFound, u)
-}
-
-// SharingRequest handles a sharing request from the recipient side.
-// It creates a temporary sharing document and redirects to the authorize page.
-// TODO: this route should be protected against 'DDoS' attacks: one could spam
-// this route to force a doc creation at each request
-func SharingRequest(c echo.Context) error {
-	scope := c.QueryParam("scope")
-	state := c.QueryParam("state")
-	sharingType := c.QueryParam("sharing_type")
-	desc := c.QueryParam("description")
-	clientID := c.QueryParam("client_id")
-	appSlug := c.QueryParam(consts.QueryParamAppSlug)
-
-	instance := middlewares.GetInstance(c)
-
-	sharing, err := sharings.CreateSharingRequest(instance, desc, state,
-		sharingType, scope, clientID, appSlug)
-	if err == sharings.ErrSharingAlreadyExist {
-		redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
-		return c.Redirect(http.StatusSeeOther, redirectAuthorize)
-	}
-	if err != nil {
-		return wrapErrors(err)
-	}
-	// Particular case for master-master: register the sharer
-	if sharingType == consts.MasterMasterSharing {
-		if err = sharings.RegisterSharer(instance, sharing); err != nil {
-			return wrapErrors(err)
-		}
-		if err = sharings.SendClientID(sharing); err != nil {
-			return wrapErrors(err)
-		}
-	} else if sharing.SharingType == consts.MasterSlaveSharing {
-		// The recipient listens deletes for a master-slave sharing
-		for _, rule := range sharing.Permissions {
-			err = sharings.AddTrigger(instance, rule, sharing.SharingID, true)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
-	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
-}
-
 // CreateSharing initializes a sharing by creating the associated document,
 // registering the sharer as a new OAuth client at each recipient as well as
 // sending them a mail invitation.
@@ -202,30 +134,10 @@ func GetSharingDoc(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 }
 
-// SendSharingMails sends the mails requests for the provided sharing.
-func SendSharingMails(c echo.Context) error {
-	// Fetch the instance.
-	instance := middlewares.GetInstance(c)
-
-	// Fetch the document id and then the sharing document.
-	docID := c.Param("id")
-	sharing := &sharings.Sharing{}
-	err := couchdb.GetDoc(instance, consts.Sharings, docID, sharing)
-	if err != nil {
-		err = sharings.ErrSharingDoesNotExist
-		return wrapErrors(err)
-	}
-
-	// Send the mails.
-	err = sharings.SendSharingMails(instance, sharing)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return nil
-}
-
 // AddSharingRecipient adds an existing recipient to an existing sharing
+// TODO document this route
+// TODO use a query param to pass the contact id (instead of JSON)
+// TODO check that the contact exists
 func AddSharingRecipient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
@@ -257,7 +169,56 @@ func AddSharingRecipient(c echo.Context) error {
 
 }
 
-// RecipientRefusedSharing is called when the recipient refused the sharing.
+// SharingRequest handles a sharing request from the recipient side.
+// It creates a temporary sharing document and redirects to the authorize page.
+// TODO: this route should be protected against 'DDoS' attacks: one could spam
+// this route to force a doc creation at each request
+// TODO document this route
+// TODO can we use a verb that is not GET?
+// TODO can we make this request idempotent?
+func SharingRequest(c echo.Context) error {
+	scope := c.QueryParam("scope")
+	state := c.QueryParam("state")
+	sharingType := c.QueryParam("sharing_type")
+	desc := c.QueryParam("description")
+	clientID := c.QueryParam("client_id")
+	appSlug := c.QueryParam(consts.QueryParamAppSlug)
+
+	instance := middlewares.GetInstance(c)
+
+	sharing, err := sharings.CreateSharingRequest(instance, desc, state,
+		sharingType, scope, clientID, appSlug)
+	if err == sharings.ErrSharingAlreadyExist {
+		redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
+		return c.Redirect(http.StatusSeeOther, redirectAuthorize)
+	}
+	if err != nil {
+		return wrapErrors(err)
+	}
+	// Particular case for master-master: register the sharer
+	if sharingType == consts.MasterMasterSharing {
+		if err = sharings.RegisterSharer(instance, sharing); err != nil {
+			return wrapErrors(err)
+		}
+		if err = sharings.SendClientID(sharing); err != nil {
+			return wrapErrors(err)
+		}
+	} else if sharing.SharingType == consts.MasterSlaveSharing {
+		// The recipient listens deletes for a master-slave sharing
+		for _, rule := range sharing.Permissions {
+			err = sharings.AddTrigger(instance, rule, sharing.SharingID, true)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
+	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
+}
+
+// RecipientRefusedSharing is called when the recipient refused the sharing (on
+// the recipient side).
 //
 // This function will delete the sharing document and inform the sharer by
 // returning her the sharing id, the client id (oauth) and nothing else (more
@@ -291,6 +252,171 @@ func RecipientRefusedSharing(c echo.Context) error {
 	u.Fragment = ""
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
+}
+
+// SharingAnswer handles a sharing answer from the sharer side
+// TODO document this route
+// TODO can we use a verb that is not GET?
+// TODO can we make this request idempotent?
+func SharingAnswer(c echo.Context) error {
+	var err error
+	var u string
+
+	state := c.QueryParam("state")
+	clientID := c.QueryParam("client_id")
+	accessCode := c.QueryParam("access_code")
+
+	instance := middlewares.GetInstance(c)
+
+	// The sharing is refused if there is no access code
+	if accessCode != "" {
+		u, err = sharings.SharingAccepted(instance, state, clientID, accessCode)
+	} else {
+		u, err = sharings.SharingRefused(instance, state, clientID)
+	}
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.Redirect(http.StatusFound, u)
+}
+
+func renderDiscoveryForm(c echo.Context, instance *instance.Instance, code int, recID, recEmail, sharingID string) error {
+	// Send error message if the code is not 200
+	var urlErr string
+	if code != http.StatusOK {
+		urlErr = instance.Translate(DiscoveryErrorKey)
+	}
+
+	publicName, err := instance.PublicName()
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	return c.Render(code, "sharing_discovery.html", echo.Map{
+		"Locale":         instance.Locale,
+		"RecipientID":    recID,
+		"RecipientEmail": recEmail,
+		"SharingID":      sharingID,
+		"PublicName":     publicName,
+		"URLError":       urlErr,
+	})
+}
+
+func discoveryForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+
+	sharingID := c.QueryParam("sharing_id")
+	recipientID := c.QueryParam("recipient_id")
+	recipientEmail := c.QueryParam("recipient_email")
+
+	// Check mandatory fields
+	sharing, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid sharing id",
+		})
+	}
+	recipient, err := sharings.GetRecipient(instance, recipientID)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid recipient id",
+		})
+	}
+	// Block multiple url
+	if len(recipient.Cozy) > 0 {
+		recStatus, err := sharing.GetRecipientStatusFromRecipientID(instance, recipient.ID())
+		if err != nil {
+			return wrapErrors(err)
+		}
+		if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
+			return wrapErrors(err)
+		}
+		// Generate the oauth URL and redirect the recipient
+		oAuthRedirect, err := sharings.GenerateOAuthQueryString(sharing, recStatus, instance.Scheme())
+		if err != nil {
+			return wrapErrors(err)
+		}
+		return c.Redirect(http.StatusFound, oAuthRedirect)
+	}
+	if recipientEmail == "" {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid recipient email",
+		})
+	}
+
+	return renderDiscoveryForm(c, instance, http.StatusOK, recipientID, recipientEmail, sharingID)
+}
+
+func discovery(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
+
+	recipientURL := c.FormValue("url")
+	sharingID := c.FormValue("sharing_id")
+	recipientID := c.FormValue("recipient_id")
+	recipientEmail := c.FormValue("recipient_email")
+
+	sharing, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	// Save the URL in db
+	recipient, err := sharings.GetRecipient(instance, recipientID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	recURL, err := url.Parse(recipientURL)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	// Set https as the default scheme
+	if recURL.Scheme == "" {
+		recURL.Scheme = "https"
+	}
+
+	cozyURL := recURL.String()
+	found := false
+	for _, c := range recipient.Cozy {
+		if c.URL == cozyURL {
+			found = true
+			break
+		}
+	}
+	if !found {
+		recipient.Cozy = append(recipient.Cozy, contacts.Cozy{URL: cozyURL})
+	}
+
+	// Register the recipient with the given URL and save in db
+	recStatus, err := sharing.GetRecipientStatusFromRecipientID(instance, recipient.ID())
+	if err != nil {
+		return wrapErrors(err)
+	}
+	recStatus.ForceRecipient(recipient)
+	if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
+		if wantsJSON {
+			return c.JSON(http.StatusBadRequest, echo.Map{
+				"error": instance.Translate(DiscoveryErrorKey),
+			})
+		}
+		return renderDiscoveryForm(c, instance, http.StatusBadRequest, recipientID, recipientEmail, sharingID)
+	}
+
+	if !found {
+		if err = couchdb.UpdateDoc(instance, recipient); err != nil {
+			return wrapErrors(err)
+		}
+	}
+	if err = couchdb.UpdateDoc(instance, sharing); err != nil {
+		return wrapErrors(err)
+	}
+
+	// Generate the oauth URL and redirect the recipient
+	oAuthRedirect, err := sharings.GenerateOAuthQueryString(sharing, recStatus, instance.Scheme())
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.Redirect(http.StatusFound, oAuthRedirect)
 }
 
 // ReceiveClientID receives an OAuth ClientID in a master-master context.
@@ -518,208 +644,70 @@ func revokeContact(c echo.Context) error {
 	return c.NoContent(http.StatusOK)
 }
 
-func setDestinationDirectory(c echo.Context) error {
-	slug := c.QueryParam(consts.QueryParamAppSlug)
-	if slug == "" {
-		return jsonapi.BadRequest(errors.New("Missing app slug"))
+func setDestination(c echo.Context) error {
+	pdoc, err := perm.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeWebapp {
+		return jsonapi.BadRequest(errors.New("Invalid request"))
 	}
+	slug := pdoc.SourceID
 
-	// TODO check permissions for app
-
-	doctype := c.QueryParam(consts.QueryParamDocType)
+	doctype := c.Param("doctype")
 	if doctype == "" {
 		return jsonapi.BadRequest(errors.New("Missing doctype"))
 	}
-
-	ins := middlewares.GetInstance(c)
-	if !doctypeExists(ins, doctype) {
-		return jsonapi.BadRequest(errors.New("Doctype does not exist"))
+	if doctype != consts.Files {
+		return jsonapi.BadRequest(errors.New("Not supported doctype"))
 	}
 
 	dirID := c.QueryParam(consts.QueryParamDirID)
 	if dirID == "" {
 		return jsonapi.BadRequest(errors.New("Missing directory id"))
 	}
-
-	if _, err := ins.VFS().DirByID(dirID); err != nil {
+	ins := middlewares.GetInstance(c)
+	if _, err = ins.VFS().DirByID(dirID); err != nil {
 		return jsonapi.BadRequest(errors.New("Directory does not exist"))
 	}
 
-	err := sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
+	err = sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
 	if err != nil {
 		return err
 	}
-
 	return c.NoContent(http.StatusOK)
-}
-
-func renderDiscoveryForm(c echo.Context, instance *instance.Instance, code int, recID, recEmail, sharingID string) error {
-	// Send error message if the code is not 200
-	var urlErr string
-	if code != http.StatusOK {
-		urlErr = instance.Translate(DiscoveryErrorKey)
-	}
-
-	publicName, err := instance.PublicName()
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return c.Render(code, "sharing_discovery.html", echo.Map{
-		"Locale":         instance.Locale,
-		"RecipientID":    recID,
-		"RecipientEmail": recEmail,
-		"SharingID":      sharingID,
-		"PublicName":     publicName,
-		"URLError":       urlErr,
-	})
-}
-
-func discoveryForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	sharingID := c.QueryParam("sharing_id")
-	recipientID := c.QueryParam("recipient_id")
-	recipientEmail := c.QueryParam("recipient_email")
-
-	// Check mandatory fields
-	sharing, err := sharings.FindSharing(instance, sharingID)
-	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid sharing id",
-		})
-	}
-	recipient, err := sharings.GetRecipient(instance, recipientID)
-	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid recipient id",
-		})
-	}
-	// Block multiple url
-	if len(recipient.Cozy) > 0 {
-		recStatus, err := sharing.GetRecipientStatusFromRecipientID(instance, recipient.ID())
-		if err != nil {
-			return wrapErrors(err)
-		}
-		if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
-			return wrapErrors(err)
-		}
-		// Generate the oauth URL and redirect the recipient
-		oAuthRedirect, err := sharings.GenerateOAuthQueryString(sharing, recStatus, instance.Scheme())
-		if err != nil {
-			return wrapErrors(err)
-		}
-		return c.Redirect(http.StatusFound, oAuthRedirect)
-	}
-	if recipientEmail == "" {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid recipient email",
-		})
-	}
-
-	return renderDiscoveryForm(c, instance, http.StatusOK, recipientID, recipientEmail, sharingID)
-}
-
-func discovery(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	wantsJSON := c.Request().Header.Get("Accept") == "application/json"
-
-	recipientURL := c.FormValue("url")
-	sharingID := c.FormValue("sharing_id")
-	recipientID := c.FormValue("recipient_id")
-	recipientEmail := c.FormValue("recipient_email")
-
-	sharing, err := sharings.FindSharing(instance, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	// Save the URL in db
-	recipient, err := sharings.GetRecipient(instance, recipientID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	recURL, err := url.Parse(recipientURL)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	// Set https as the default scheme
-	if recURL.Scheme == "" {
-		recURL.Scheme = "https"
-	}
-
-	cozyURL := recURL.String()
-	found := false
-	for _, c := range recipient.Cozy {
-		if c.URL == cozyURL {
-			found = true
-			break
-		}
-	}
-	if !found {
-		recipient.Cozy = append(recipient.Cozy, contacts.Cozy{URL: cozyURL})
-	}
-
-	// Register the recipient with the given URL and save in db
-	recStatus, err := sharing.GetRecipientStatusFromRecipientID(instance, recipient.ID())
-	if err != nil {
-		return wrapErrors(err)
-	}
-	recStatus.ForceRecipient(recipient)
-	if err = sharings.RegisterRecipient(instance, recStatus); err != nil {
-		if wantsJSON {
-			return c.JSON(http.StatusBadRequest, echo.Map{
-				"error": instance.Translate(DiscoveryErrorKey),
-			})
-		}
-		return renderDiscoveryForm(c, instance, http.StatusBadRequest, recipientID, recipientEmail, sharingID)
-	}
-
-	if !found {
-		if err = couchdb.UpdateDoc(instance, recipient); err != nil {
-			return wrapErrors(err)
-		}
-	}
-	if err = couchdb.UpdateDoc(instance, sharing); err != nil {
-		return wrapErrors(err)
-	}
-
-	// Generate the oauth URL and redirect the recipient
-	oAuthRedirect, err := sharings.GenerateOAuthQueryString(sharing, recStatus, instance.Scheme())
-	if err != nil {
-		return wrapErrors(err)
-	}
-	return c.Redirect(http.StatusFound, oAuthRedirect)
 }
 
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
-	router.POST("/", CreateSharing)
-	router.PUT("/:id/recipient", AddSharingRecipient)
-	router.PUT("/:id/sendMails", SendSharingMails)
-	router.GET("/request", SharingRequest)
-	router.GET("/answer", SharingAnswer)
-	router.POST("/formRefuse", RecipientRefusedSharing)
-	router.POST("/access/client", ReceiveClientID)
-	router.POST("/access/code", getAccessToken)
+	// API endpoints for the apps
+	router.POST("/destination/:doctype", setDestination)
 
+	router.POST("/", CreateSharing)
 	router.GET("/:sharing-id", GetSharingDoc)
+	router.POST("/:id/recipients", AddSharingRecipient)
+
+	// HTML forms, to be consumed directly by a browser
+	router.GET("/request", SharingRequest)
+	router.POST("/formRefuse", RecipientRefusedSharing)
+	router.GET("/answer", SharingAnswer)
+
 	router.GET("/discovery", discoveryForm)
 	router.POST("/discovery", discovery)
 
-	router.DELETE("/:sharing-id", revokeSharing)
-	router.DELETE("/:sharing-id/:client-id", revokeRecipient)
-	router.DELETE("/:sharing-id/recipient/:contact-id", revokeContact)
-
-	router.DELETE("/files/:file-id/referenced_by", removeReferences)
-
-	router.POST("/app/destinationDirectory", setDestinationDirectory)
+	// Internal routes, to be called by a cozy-stack
+	router.POST("/access/client", ReceiveClientID)
+	router.POST("/access/code", getAccessToken)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
 	group.PUT("/:docid", updateDocument)
 	group.PATCH("/:docid", patchDirOrFile)
 	group.DELETE("/:docid", deleteDocument)
+
+	router.DELETE("/files/:file-id/referenced_by", removeReferences)
+
+	// Revoke a sharing
+	router.DELETE("/:sharing-id", revokeSharing)
+	router.DELETE("/:sharing-id/:client-id", revokeRecipient)
+	router.DELETE("/:sharing-id/recipient/:contact-id", revokeContact)
 }
 
 func checkRevokeContactPermissions(c echo.Context, sharing *sharings.Sharing) error {

@@ -126,12 +126,6 @@ const (
 )
 
 const (
-	// WorkerTypeSharingUpdates is the string representation of the type of
-	// workers that deals with updating sharings.
-	WorkerTypeSharingUpdates = "sharingupdates"
-)
-
-const (
 	// SelectorReferencedBy is the "referenced_by" selector.
 	SelectorReferencedBy = couchdb.SelectorReferencedBy
 )
@@ -171,8 +165,6 @@ const (
 	// QueryParamAppSlug is used to transmit the application slug in a query
 	// string.
 	QueryParamAppSlug = "App_slug"
-	// QueryParamDocType is used to transmit the doctype in a query string.
-	QueryParamDocType = "Doctype"
 	// QueryParamSharingID is used to transmit the sharingID in a query string.
 	QueryParamSharingID = "Sharing_id"
 )
