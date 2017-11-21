@@ -664,7 +664,7 @@ func setDestination(c echo.Context) error {
 		return jsonapi.BadRequest(errors.New("Missing directory id"))
 	}
 	ins := middlewares.GetInstance(c)
-	if _, err := ins.VFS().DirByID(dirID); err != nil {
+	if _, err = ins.VFS().DirByID(dirID); err != nil {
 		return jsonapi.BadRequest(errors.New("Directory does not exist"))
 	}
 
