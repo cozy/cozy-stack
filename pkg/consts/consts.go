@@ -71,6 +71,8 @@ const (
 	StoreSlug = "store"
 	// CollectSlug is the slug of the only app that can install konnectors.
 	CollectSlug = "collect"
+	// SettingsSlug is the slog of the settings application.
+	SettingsSlug = "settings"
 )
 
 const (

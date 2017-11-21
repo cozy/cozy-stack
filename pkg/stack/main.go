@@ -12,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
+	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"
@@ -104,11 +105,14 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
+	sessionSweeper := sessions.SweepLoginRegistrations()
+
 	// Global shutdowner that composes all the running processes of the stack
 	processes = utils.NewGroupShutdown(
 		broker,
 		schder,
 		cronUpdates,
+		sessionSweeper,
 		gopAgent{},
 	)
 	return

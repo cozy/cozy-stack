@@ -144,7 +144,7 @@ func TestShowLoginPageWithRedirectFragment(t *testing.T) {
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.NotContains(t, string(body), "myfragment")
-	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://cozy.example.net/auth/authorize#" />`)
+	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://cozy.example.net/auth/authorize#=" />`)
 }
 
 func TestShowLoginPageWithRedirectSuccess(t *testing.T) {

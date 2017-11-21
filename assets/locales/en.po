@@ -63,11 +63,14 @@ msgstr "The passcode you entered is incorrect, please try again."
 msgid "Login Two factor field"
 msgstr "Passcode"
 
-msgid "Login Two factor trust field"
-msgstr "Trust this computer"
-
 msgid "Login Two factor help"
 msgstr "Enter the passcode sent to you to access your Cozy"
+
+msgid "Login Two factor device trust field"
+msgstr "Trust this computer"
+
+msgid "Login Two factor device trust help"
+msgstr "By checking this option, this device won't be asked for two factor authentication in the future"
 
 msgid "Mail Two factor subject"
 msgstr "Verify your connection to Cozy"
@@ -86,6 +89,15 @@ msgstr ""
 "Great news! Keep calm and get Cozy again.\n"
 "- If no:\n"
 "Don't worry! Please reset your password to avoid compromising the security of your account."
+
+msgid "Session New connection for registration title"
+msgstr "A new device connected to your Cozy"
+
+msgid "Session New connection for registration content"
+msgstr ""
+"Congrats, the registration of a new device to your Cozy has been successful.\n"
+"You can manage your devices directly from your Cozy by following this link: %s.\n\n"
+"If you are not the source of this addition you can revoke the new device by following this link: %s. Or contact us on the following address: contact@cozycloud.cc."
 
 msgid "Onboarding Check Mails"
 msgstr "Your Cozy has not been yet activated. Check your email and click on the activation link to proceed to the installation of your Cozy."

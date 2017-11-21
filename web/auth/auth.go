@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
@@ -41,9 +42,9 @@ func Home(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	if session, ok := middlewares.GetSession(c); ok {
-		redirect := instance.DefaultRedirection().String()
+		redirect := instance.DefaultRedirection()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
-		return c.Redirect(http.StatusSeeOther, redirect)
+		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
 	if len(instance.RegisterToken) > 0 {
@@ -66,15 +67,15 @@ func Home(c echo.Context) error {
 // add a code parameter to the redirect URL that can be exchanged to the
 // cookie. The code can be used only once, is valid only one minute, and is
 // specific to the app (it can't be used by another app).
-func addCodeToRedirect(redirect, domain, sessionID string) string {
+func addCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
 	// TODO add rate-limiting on the number of session codes generated
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
-		u, err := url.Parse(redirect)
-		if err == nil && u.Host != domain {
-			q := u.Query()
-			q.Set("code", sessions.BuildCode(sessionID, u.Host).Value)
-			u.RawQuery = q.Encode()
-			return u.String()
+		redirect = utils.CloneURL(redirect)
+		if redirect.Host != domain {
+			q := redirect.Query()
+			q.Set("code", sessions.BuildCode(sessionID, redirect.Host).Value)
+			redirect.RawQuery = q.Encode()
+			return redirect
 		}
 	}
 	return redirect
@@ -96,7 +97,7 @@ func SetCookieForNewSession(c echo.Context) (string, error) {
 	return session.ID(), nil
 }
 
-func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors, redirect string) error {
+func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors string, redirect *url.URL) error {
 	var title, help string
 
 	publicName, err := i.PublicName()
@@ -104,13 +105,15 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		publicName = ""
 	}
 
+	redirectStr := redirect.String()
+
 	if c.QueryParam("msg") == "passphrase-reset-requested" {
 		title = i.Translate("Login Connect after reset requested title")
 		help = i.Translate("Login Connect after reset requested help")
-	} else if strings.Contains(redirect, "reconnect") {
+	} else if strings.Contains(redirectStr, "reconnect") {
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
-	} else if strings.Contains(redirect, i.Domain+"/auth/authorize") {
+	} else if redirect.Host == i.Domain && redirect.Path == "/auth/authorize" {
 		title = i.Translate("Login Connect from oauth title")
 		help = i.Translate("Login Connect from oauth help")
 	} else {
@@ -122,20 +125,17 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		help = i.Translate("Login Password help")
 	}
 
-	twoFactorHelp := i.Translate("Login Two factor help")
-
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
 		"Title":            title,
 		"PasswordHelp":     help,
-		"TwoFactorHelp":    twoFactorHelp,
 		"CredentialsError": credsErrors,
-		"Redirect":         redirect,
+		"Redirect":         redirectStr,
 		"TwoFactorForm":    false,
 	})
 }
 
-func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect string, twoFactorToken []byte) error {
+func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirect *url.URL, twoFactorToken []byte) error {
 	var title string
 	publicName, err := i.PublicName()
 	if err != nil {
@@ -151,7 +151,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		"Title":            title,
 		"Help":             i.Translate("Login Two factor help"),
 		"CredentialsError": nil,
-		"Redirect":         redirect,
+		"Redirect":         redirect.String(),
 		"TwoFactorForm":    true,
 		"TwoFactorToken":   string(twoFactorToken),
 	})
@@ -168,7 +168,7 @@ func loginForm(c echo.Context) error {
 	session, ok := middlewares.GetSession(c)
 	if ok {
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
-		return c.Redirect(http.StatusSeeOther, redirect)
+		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
 	return renderLoginForm(c, instance, http.StatusOK, "", redirect)
@@ -222,12 +222,11 @@ func login(c echo.Context) error {
 					}
 					if wantsJSON {
 						return c.JSON(http.StatusOK, echo.Map{
-							"redirect":         redirect,
+							"redirect":         redirect.String(),
 							"two_factor_token": string(twoFactorToken),
 						})
 					}
-					return renderTwoFactorForm(c, inst, http.StatusOK,
-						redirect, twoFactorToken)
+					return renderTwoFactorForm(c, inst, http.StatusOK, redirect, twoFactorToken)
 				}
 			default:
 				successfulAuthentication = true
@@ -239,7 +238,13 @@ func login(c echo.Context) error {
 		if sessionID, err = SetCookieForNewSession(c); err != nil {
 			return err
 		}
-		if err = sessions.StoreNewLoginEntry(inst, sessionID, c.Request(), true); err != nil {
+
+		var clientID string
+		if redirect.Host == inst.Domain && redirect.Path == "/auth/authorize" {
+			clientID = redirect.Query().Get("client_id")
+		}
+
+		if err = sessions.StoreNewLoginEntry(inst, sessionID, clientID, c.Request(), true); err != nil {
 			inst.Logger().Errorf("Could not store session history %q: %s", sessionID, err)
 		}
 	}
@@ -264,14 +269,14 @@ func login(c echo.Context) error {
 	// logged-in
 	redirect = addCodeToRedirect(redirect, inst.Domain, sessionID)
 	if wantsJSON {
-		result := echo.Map{"redirect": redirect}
+		result := echo.Map{"redirect": redirect.String()}
 		if len(twoFactorGeneratedTrustedDeviceToken) > 0 {
 			result["two_factor_trusted_device_token"] = string(twoFactorGeneratedTrustedDeviceToken)
 		}
 		return c.JSON(http.StatusOK, result)
 	}
 
-	return c.Redirect(http.StatusSeeOther, redirect)
+	return c.Redirect(http.StatusSeeOther, redirect.String())
 }
 
 func logout(c echo.Context) error {
@@ -342,7 +347,7 @@ func logoutPreflight(c echo.Context) error {
 
 // checkRedirectParam returns the optional redirect query parameter. If not
 // empty, we check that the redirect is a subdomain of the cozy-instance.
-func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error) {
+func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (*url.URL, error) {
 	redirect := c.FormValue("redirect")
 	if redirect == "" {
 		redirect = defaultRedirect.String()
@@ -350,12 +355,12 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error
 
 	u, err := url.Parse(redirect)
 	if err != nil {
-		return "", echo.NewHTTPError(http.StatusBadRequest,
+		return nil, echo.NewHTTPError(http.StatusBadRequest,
 			"bad url: could not parse")
 	}
 
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return "", echo.NewHTTPError(http.StatusBadRequest,
+		return nil, echo.NewHTTPError(http.StatusBadRequest,
 			"bad url: bad scheme")
 	}
 
@@ -363,10 +368,10 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error
 	if u.Host != instance.Domain {
 		instanceHost, appSlug, _ := middlewares.SplitHost(u.Host)
 		if instanceHost != instance.Domain || appSlug == "" {
-			return "", echo.NewHTTPError(http.StatusBadRequest,
+			return nil, echo.NewHTTPError(http.StatusBadRequest,
 				"bad url: should be subdomain")
 		}
-		return u.String(), nil
+		return u, nil
 	}
 
 	// To protect against stealing authorization code with redirection, the
@@ -375,8 +380,8 @@ func checkRedirectParam(c echo.Context, defaultRedirect *url.URL) (string, error
 	//
 	// see: oauthsecurity.com/#provider-in-the-middle
 	// see: 7.4.2 OAuth2 in Action
-	u.Fragment = ""
-	return u.String() + "#", nil
+	u.Fragment = "="
+	return u, nil
 }
 
 func registerClient(c echo.Context) error {
@@ -736,6 +741,7 @@ func accessToken(c echo.Context) error {
 		})
 	}
 
+	sessions.RemoveLoginRegistration(instance.Domain, clientID)
 	return c.JSON(http.StatusOK, out)
 }
 
