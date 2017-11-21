@@ -30,7 +30,8 @@ var flagApps []string
 var flagDev bool
 var flagPassphrase string
 var flagForce bool
-var flagDry bool
+var flagFsckDry bool
+var flagFsckPrune bool
 var flagJSON bool
 var flagDirectory string
 var flagForceRegistry bool
@@ -327,13 +328,8 @@ in swift/localfs but not couchdb.
 
 		domain := args[0]
 
-		if !flagDry {
-			fmt.Printf("Sorry, only cozy-stack fsck --dry is implemented currently.")
-			return errors.New("Not implemented yet")
-		}
-
 		c := newAdminClient()
-		list, err := c.FsckInstance(domain)
+		list, err := c.FsckInstance(domain, flagFsckPrune, flagFsckDry)
 		if err != nil {
 			return err
 		}
@@ -342,7 +338,15 @@ in swift/localfs but not couchdb.
 			fmt.Printf("Instance for domain %s is clean\n", domain)
 		} else {
 			for _, entry := range list {
-				fmt.Printf("- %s: %s\n", entry["filename"], entry["message"])
+				fmt.Printf("- %q: %s\n", entry["filename"], entry["message"])
+				if pruneAction := entry["prune_action"]; pruneAction != "" {
+					fmt.Printf("  %s...", pruneAction)
+					if pruneError := entry["prune_error"]; pruneError != "" {
+						fmt.Printf("error: %s\n", pruneError)
+					} else {
+						fmt.Println("ok")
+					}
+				}
 			}
 		}
 		return nil
@@ -550,7 +554,8 @@ func init() {
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
-	fsckInstanceCmd.Flags().BoolVar(&flagDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
+	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
+	fsckInstanceCmd.Flags().BoolVar(&flagFsckPrune, "prune", false, "Try to solve inconsistencies by modifying the file system")
 	oauthClientInstanceCmd.Flags().BoolVar(&flagJSON, "json", false, "Output more informations in JSON format")
 	updateCmd.Flags().BoolVar(&flagAllDomains, "all-domains", false, "Work on all domains iterativelly")
 	updateCmd.Flags().StringVar(&flagDomain, "domain", "", "Specify the domain name of the instance")

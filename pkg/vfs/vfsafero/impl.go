@@ -10,12 +10,15 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/afero"
+
+	"camlistore.org/pkg/magic"
 )
 
 // aferoVFS is a struct implementing the vfs.VFS interface associated with
@@ -90,6 +93,10 @@ func (afs *aferoVFS) InitFs() error {
 		return err
 	}
 	return nil
+}
+
+func (afs *aferoVFS) Index() vfs.Indexer {
+	return afs.Indexer
 }
 
 // Delete removes all the elements associated with the filesystem.
@@ -293,20 +300,27 @@ func (afs *aferoVFS) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 	return &aferoFileOpen{f}, nil
 }
 
-func (afs *aferoVFS) Fsck() ([]vfs.FsckError, error) {
-	if lockerr := afs.mu.RLock(); lockerr != nil {
+func (afs *aferoVFS) Fsck() ([]*vfs.FsckLog, error) {
+	if lockerr := afs.mu.Lock(); lockerr != nil {
 		return nil, lockerr
 	}
-	defer afs.mu.RUnlock()
+	defer afs.mu.Unlock()
 	root, err := afs.Indexer.DirByPath("/")
 	if err != nil {
 		return nil, err
 	}
-	var errors []vfs.FsckError
-	return afs.fsckWalk(root, errors)
+	var logbook []*vfs.FsckLog
+	logbook, err = afs.fsckWalk(root, logbook)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(logbook, func(i, j int) bool {
+		return logbook[i].Filename < logbook[j].Filename
+	})
+	return logbook, nil
 }
 
-func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.FsckError, error) {
+func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.FsckLog, error) {
 	entries := make(map[string]struct{})
 	iter := afs.Indexer.DirIterator(dir, nil)
 	for {
@@ -319,39 +333,61 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 		}
 		var fullpath string
 		if f != nil {
+			var stat os.FileInfo
 			entries[f.DocName] = struct{}{}
 			fullpath = path.Join(dir.Fullpath, f.DocName)
-			stat, err := afs.fs.Stat(fullpath)
+			stat, err = afs.fs.Stat(fullpath)
 			if _, ok := err.(*os.PathError); ok {
-				errors = append(errors, vfs.FsckError{
+				logbook = append(logbook, &vfs.FsckLog{
+					Type:     vfs.FileMissing,
+					IsFile:   true,
+					FileDoc:  f,
 					Filename: fullpath,
-					Message:  "the file is present in CouchDB but not on the local FS",
 				})
 			} else if err != nil {
 				return nil, err
 			} else if stat.IsDir() {
-				errors = append(errors, vfs.FsckError{
+				var dirDoc *vfs.DirDoc
+				dirDoc, err = vfs.NewDirDocWithParent(f.DocName, dir, nil)
+				if err != nil {
+					return nil, err
+				}
+				logbook = append(logbook, &vfs.FsckLog{
+					Type:     vfs.TypeMismatch,
+					IsFile:   true,
+					DirDoc:   dirDoc,
+					FileDoc:  f,
 					Filename: fullpath,
-					Message:  "it's a file in CouchDB but a directory on the local FS",
 				})
 			}
 		} else {
 			entries[d.DocName] = struct{}{}
-			stat, err := afs.fs.Stat(d.Fullpath)
+			var stat os.FileInfo
+			stat, err = afs.fs.Stat(d.Fullpath)
 			if _, ok := err.(*os.PathError); ok {
-				errors = append(errors, vfs.FsckError{
+				logbook = append(logbook, &vfs.FsckLog{
+					Type:     vfs.FileMissing,
+					IsFile:   false,
+					DirDoc:   d,
 					Filename: d.Fullpath,
-					Message:  "the directory is present in CouchDB but not on the local FS",
 				})
 			} else if err != nil {
 				return nil, err
 			} else if !stat.IsDir() {
-				errors = append(errors, vfs.FsckError{
+				var fileDoc *vfs.FileDoc
+				fileDoc, err = fileInfosToFileDoc(dir, d.Fullpath, stat)
+				if err != nil {
+					return nil, err
+				}
+				logbook = append(logbook, &vfs.FsckLog{
+					Type:     vfs.TypeMismatch,
+					IsFile:   false,
+					FileDoc:  fileDoc,
+					DirDoc:   d,
 					Filename: d.Fullpath,
-					Message:  "it's a directory in CouchDB but a file on the local FS",
 				})
 			} else {
-				if errors, err = afs.fsckWalk(d, errors); err != nil {
+				if logbook, err = afs.fsckWalk(d, logbook); err != nil {
 					return nil, err
 				}
 			}
@@ -362,24 +398,104 @@ func (afs *aferoVFS) fsckWalk(dir *vfs.DirDoc, errors []vfs.FsckError) ([]vfs.Fs
 	if err != nil {
 		return nil, err
 	}
+
 	for _, fileinfo := range fileinfos {
 		if _, ok := entries[fileinfo.Name()]; !ok {
 			filename := path.Join(dir.Fullpath, fileinfo.Name())
-			if filename == "/.cozy_apps" || filename == "/.cozy_konnectors" || filename == "/.thumbs" {
+			if filename == vfs.WebappsDirName ||
+				filename == vfs.KonnectorsDirName ||
+				filename == vfs.ThumbsDirName {
 				continue
 			}
-			msg := "the file is present on the local FS but not in CouchDB"
-			if fileinfo.IsDir() {
-				msg = "the directory is present on the local FS but not in CouchDB"
+			if fileinfo.Size() == 0 {
+				continue
 			}
-			errors = append(errors, vfs.FsckError{
+			fileDoc, err := fileInfosToFileDoc(dir, filename, fileinfo)
+			if err != nil {
+				continue
+			}
+			logbook = append(logbook, &vfs.FsckLog{
+				Type:     vfs.IndexMissing,
+				IsFile:   true,
+				FileDoc:  fileDoc,
 				Filename: filename,
-				Message:  msg,
 			})
 		}
 	}
 
-	return errors, nil
+	return logbook, nil
+}
+
+func fileInfosToFileDoc(dir *vfs.DirDoc, fullpath string, fileinfo os.FileInfo) (*vfs.FileDoc, error) {
+	trashed := strings.HasPrefix(fullpath, vfs.TrashDirName)
+	contentType, md5sum, err := extractContentTypeAndMD5(fullpath)
+	if err != nil {
+		return nil, err
+	}
+	mime, class := vfs.ExtractMimeAndClass(contentType)
+	return vfs.NewFileDoc(
+		fileinfo.Name(),
+		dir.DocID,
+		fileinfo.Size(),
+		md5sum,
+		mime,
+		class,
+		fileinfo.ModTime(),
+		false,
+		trashed,
+		nil)
+}
+
+// FsckPrune tries to fix the given list on inconsistencies in the VFS
+func (afs *aferoVFS) FsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
+	for _, entry := range logbook {
+		switch entry.Type {
+		case vfs.FileMissing:
+		case vfs.IndexMissing:
+			vfs.FsckPrune(afs, afs.Indexer, entry, dryrun)
+		case vfs.TypeMismatch:
+			if entry.IsFile {
+				// file on couchdb and directory on swift: we update the index to
+				// remove the file index and create a directory one
+				err := afs.Indexer.DeleteFileDoc(entry.FileDoc)
+				if err != nil {
+					entry.PruneError = err
+				}
+				err = afs.Indexer.CreateDirDoc(entry.DirDoc)
+				if err != nil {
+					entry.PruneError = err
+				}
+			} else {
+				// directory on couchdb and file on filesystem: we keep the directory
+				// and move the object into the orphan directory and create a new index
+				// associated with it.
+				orphanDir, err := vfs.Mkdir(afs, vfs.OrphansDirName, nil)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				oldname := entry.Filename
+				newname := path.Join(vfs.OrphansDirName, entry.FileDoc.Name())
+				err = afs.fs.Rename(oldname, newname)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				err = afs.fs.Mkdir(oldname, 0755)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+				newdoc := entry.FileDoc.Clone().(*vfs.FileDoc)
+				newdoc.DirID = orphanDir.ID()
+				err = afs.Indexer.CreateFileDoc(newdoc)
+				if err != nil {
+					entry.PruneError = err
+					continue
+				}
+			}
+		}
+	}
 }
 
 // UpdateFileDoc overrides the indexer's one since the afero.Fs is by essence
@@ -691,6 +807,22 @@ func safeRenameDir(afs *aferoVFS, oldpath, newpath string) error {
 	}
 
 	return afs.fs.Rename(oldpath, newpath)
+}
+
+func extractContentTypeAndMD5(filename string) (contentType string, md5sum []byte, err error) {
+	f, err := os.Open(filename)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	var r io.Reader
+	contentType, r = magic.MIMETypeFromReader(f)
+	h := md5.New() // #nosec
+	if _, err = io.Copy(h, r); err != nil {
+		return
+	}
+	md5sum = h.Sum(nil)
+	return
 }
 
 var (

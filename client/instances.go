@@ -177,18 +177,22 @@ func (c *Client) DestroyInstance(domain string) error {
 }
 
 // FsckInstance returns the list of the inconsistencies in the VFS.
-func (c *Client) FsckInstance(domain string) ([]map[string]interface{}, error) {
+func (c *Client) FsckInstance(domain string, prune, dryRun bool) ([]map[string]string, error) {
 	if !validDomain(domain) {
 		return nil, fmt.Errorf("Invalid domain: %s", domain)
 	}
 	res, err := c.Req(&request.Options{
 		Method: "GET",
-		Path:   "/instances/" + domain + "/fsck",
+		Path:   "/instances/" + url.PathEscape(domain) + "/fsck",
+		Queries: url.Values{
+			"Prune":  {strconv.FormatBool(prune)},
+			"DryRun": {strconv.FormatBool(dryRun)},
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
-	var list []map[string]interface{}
+	var list []map[string]string
 	if err = json.NewDecoder(res.Body).Decode(&list); err != nil {
 		return nil, err
 	}
@@ -268,7 +272,7 @@ func (c *Client) Export(domain string) error {
 	}
 	_, err := c.Req(&request.Options{
 		Method:     "POST",
-		Path:       "/instances/" + domain + "/export",
+		Path:       "/instances/" + url.PathEscape(domain) + "/export",
 		NoResponse: true,
 	})
 	return err
@@ -285,7 +289,7 @@ func (c *Client) Import(domain string, opts *ImportOptions) error {
 	}
 	_, err := c.Req(&request.Options{
 		Method:     "POST",
-		Path:       "/instances/" + domain + "/import",
+		Path:       "/instances/" + url.PathEscape(domain) + "/import",
 		Queries:    q,
 		NoResponse: true,
 	})

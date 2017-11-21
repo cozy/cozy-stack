@@ -181,11 +181,17 @@ func fsckHandler(c echo.Context) error {
 	if err != nil {
 		return wrapError(err)
 	}
-	list, err := i.VFS().Fsck()
+	prune, _ := strconv.ParseBool(c.QueryParam("Prune"))
+	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
+	fs := i.VFS()
+	logbook, err := fs.Fsck()
 	if err != nil {
 		return wrapError(err)
 	}
-	return c.JSON(http.StatusOK, list)
+	if prune {
+		fs.FsckPrune(logbook, dryRun)
+	}
+	return c.JSON(http.StatusOK, logbook)
 }
 
 func rebuildRedis(c echo.Context) error {
