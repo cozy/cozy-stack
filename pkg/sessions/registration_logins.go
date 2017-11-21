@@ -102,6 +102,9 @@ func PushLoginRegistration(domain string, login *LoginEntry, clientID string) er
 	}
 
 	registrationsMapLock.Lock()
+	if registrationsMap == nil {
+		registrationsMap = make(map[string]registrationEntry)
+	}
 	registrationsMap[entry.Key()] = entry
 	registrationsMapLock.Unlock()
 	return nil
