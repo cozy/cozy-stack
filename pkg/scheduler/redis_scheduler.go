@@ -221,7 +221,9 @@ func (s *RedisScheduler) Poll(now int64) error {
 		}
 		t, err := s.Get(parts[0], parts[1])
 		if err != nil {
-			s.client.ZRem(SchedKey, results[0])
+			if err == ErrNotFoundTrigger {
+				s.client.ZRem(SchedKey, results[0])
+			}
 			return err
 		}
 		switch t := t.(type) {
