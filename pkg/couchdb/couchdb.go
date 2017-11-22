@@ -725,6 +725,17 @@ func FindDocsRaw(db Database, doctype string, req interface{}, results interface
 	return json.Unmarshal(response.Docs, results)
 }
 
+// CountAllDocs returns the number of documents of the given doctype.
+func CountAllDocs(db Database, doctype string) (int, error) {
+	var response AllDocsResponse
+	url := makeDBName(db, doctype) + "/_all_docs?limit=0"
+	err := makeRequest(db, "GET", url, nil, &response)
+	if err != nil {
+		return 0, err
+	}
+	return response.TotalRows, nil
+}
+
 // GetAllDocs returns all documents of a specified doctype. It filters
 // out the possible _design document.
 func GetAllDocs(db Database, doctype string, req *AllDocsRequest, results interface{}) error {

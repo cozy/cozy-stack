@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
@@ -33,6 +34,7 @@ import (
 	_ "github.com/cozy/cozy-stack/web/statik" // Generated file with the packed assets
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
+
 	"github.com/labstack/echo"
 	"github.com/rakyll/statik/fs"
 )
@@ -204,6 +206,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 		router.Use(middlewares.BasicAuth(config.AdminSecretFileName))
 	}
 
+	metrics.Routes(router.Group("/metrics"))
 	instances.Routes(router.Group("/instances"))
 	version.Routes(router.Group("/version"))
 

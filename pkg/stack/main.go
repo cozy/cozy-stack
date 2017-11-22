@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/utils"
+
 	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"
 )
