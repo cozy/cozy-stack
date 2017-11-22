@@ -59,13 +59,11 @@ func (man *apiApp) Links() *jsonapi.LinksList {
 
 // Relationships is part of the Manifest interface
 func (man *apiApp) Relationships() jsonapi.RelationshipMap {
-	//TODO include permissions doc
 	return jsonapi.RelationshipMap{}
 }
 
 // Included is part of the Manifest interface
 func (man *apiApp) Included() []jsonapi.Object {
-	//TODO include permissions doc
 	return []jsonapi.Object{}
 }
 
@@ -82,6 +80,9 @@ func getHandler(appType apps.AppType) echo.HandlerFunc {
 		}
 		if err := permissions.Allow(c, permissions.GET, man); err != nil {
 			return err
+		}
+		if webapp, ok := man.(*apps.WebappManifest); ok {
+			webapp.Instance = instance
 		}
 		return jsonapi.Data(c, http.StatusOK, &apiApp{man}, nil)
 	}
