@@ -161,7 +161,8 @@ func fillAlbums(i *instance.Instance, tr *tar.Reader, dstDoc *vfs.DirDoc, albums
 	return nil
 }
 
-func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc) error {
+func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc, dirs map[string]*vfs.DirDoc) error {
+	var err error
 	name := strings.TrimPrefix(hdr.Name, "files/")
 	filename := path.Base(name)
 	mime, class := vfs.ExtractMimeAndClassFromFilename(filename)
@@ -169,12 +170,13 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc)
 	executable := hdr.FileInfo().Mode()&0100 != 0
 
 	dirname := path.Join(dstDoc.Fullpath, path.Dir(name))
-	dirDoc, err := fs.DirByPath(dirname)
-	if err != nil {
+	dirDoc, ok := dirs[dirname]
+	if !ok {
 		// XXX Tarball from cozy v2 exports can have files in a non-existant directory
 		if dirDoc, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
 			return err
 		}
+		dirs[dirname] = dirDoc
 	}
 	fileDoc, err := vfs.NewFileDoc(filename, dirDoc.ID(), hdr.Size, nil, mime, class, now, executable, false, nil)
 	if err != nil {
@@ -214,6 +216,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 	tgz := tar.NewReader(gr)
 
 	albumsRef := make(AlbumReferences)
+	dirs := make(map[string]*vfs.DirDoc)
 
 	for {
 		hdr, errb := tgz.Next()
@@ -236,8 +239,11 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 		case tar.TypeDir:
 			if doctype == "files" {
 				dirname := path.Join(dst.Fullpath, name)
-				if _, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
+				var dir *vfs.DirDoc
+				if dir, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import directory %s: %s", hdr.Name, err)
+				} else {
+					dirs[dirname] = dir
 				}
 			}
 
@@ -257,7 +263,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 					logger.WithDomain(instance.Domain).Errorf("Can't import contact %s: %s", hdr.Name, err)
 				}
 			} else if doctype == "files" {
-				if err = createFile(fs, hdr, tgz, dst); err != nil {
+				if err = createFile(fs, hdr, tgz, dst, dirs); err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import file %s: %s", hdr.Name, err)
 				}
 			}
