@@ -132,6 +132,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"CredentialsError": credsErrors,
 		"Redirect":         redirectStr,
 		"TwoFactorForm":    false,
+		"TwoFactorToken":   "",
 	})
 }
 
@@ -149,7 +150,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 	return c.Render(code, "login.html", echo.Map{
 		"Locale":           i.Locale,
 		"Title":            title,
-		"Help":             i.Translate("Login Two factor help"),
+		"PasswordHelp":     "",
 		"CredentialsError": nil,
 		"Redirect":         redirect.String(),
 		"TwoFactorForm":    true,
