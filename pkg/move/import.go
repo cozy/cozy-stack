@@ -239,7 +239,8 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 		case tar.TypeDir:
 			if doctype == "files" {
 				dirname := path.Join(dst.Fullpath, name)
-				if dir, err := vfs.MkdirAll(fs, dirname, nil); err != nil {
+				var dir *vfs.DirDoc
+				if dir, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import directory %s: %s", hdr.Name, err)
 				} else {
 					dirs[dirname] = dir
