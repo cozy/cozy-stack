@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"errors"
 
@@ -649,7 +650,11 @@ func setDestination(c echo.Context) error {
 	if err != nil || pdoc.Type != permissions.TypeWebapp {
 		return jsonapi.BadRequest(errors.New("Invalid request"))
 	}
-	slug := pdoc.SourceID
+	parts := strings.SplitN(pdoc.SourceID, "/", 2)
+	if len(parts) < 2 {
+		return jsonapi.BadRequest(errors.New("Invalid request"))
+	}
+	slug := parts[1]
 
 	doctype := c.Param("doctype")
 	if doctype == "" {
