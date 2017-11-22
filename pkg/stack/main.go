@@ -14,8 +14,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/utils"
 
-	_ "github.com/cozy/cozy-stack/pkg/metrics"
-
 	"github.com/google/gops/agent"
 	"github.com/sirupsen/logrus"
 )

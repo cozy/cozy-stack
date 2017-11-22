@@ -13,6 +13,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
@@ -35,7 +36,6 @@ import (
 	"github.com/cozy/cozy-stack/web/version"
 
 	"github.com/labstack/echo"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rakyll/statik/fs"
 )
 
@@ -206,12 +206,7 @@ func SetupAdminRoutes(router *echo.Echo) error {
 		router.Use(middlewares.BasicAuth(config.AdminSecretFileName))
 	}
 
-	// Default prometheus handler comes with two collectors:
-	//  - ProcessCollector: cpu, memory and file descriptor usage as well as the
-	//    process start time for the given process id under the given
-	//    namespace...
-	//  - GoCollector: current go process, goroutines, GC pauses, ...
-	router.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+	metrics.Routes(router.Group("/metrics"))
 	instances.Routes(router.Group("/instances"))
 	version.Routes(router.Group("/version"))
 
