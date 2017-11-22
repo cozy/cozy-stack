@@ -33,8 +33,8 @@ const (
 	// TypeKonnector if the value of Permission.Type for an application
 	TypeKonnector = "konnector"
 
-	// TypeSharing if the value of Permission.Type for a share permission doc
-	TypeSharing = "share"
+	// TypeShareByLink if the value of Permission.Type for a share (by link) permission doc
+	TypeShareByLink = "share"
 
 	// TypeOauth if the value of Permission.Type for a oauth permission doc
 	TypeOauth = "oauth"
@@ -100,7 +100,7 @@ func (p *Permission) ParentOf(child *Permission) bool {
 
 	canBeParent := p.Type == TypeWebapp || p.Type == TypeOauth
 
-	return child.Type == TypeSharing && canBeParent &&
+	return child.Type == TypeShareByLink && canBeParent &&
 		child.SourceID == p.SourceID
 }
 
@@ -247,7 +247,7 @@ func createAppSet(db couchdb.Database, typ, docType, slug string, set Set) (*Per
 	doc := &Permission{
 		Type:        typ,
 		SourceID:    docType + "/" + slug,
-		Permissions: set, // @TODO some validation?
+		Permissions: set,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
@@ -285,7 +285,7 @@ func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug strin
 
 // CreateShareSet creates a Permission doc for sharing
 func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set) (*Permission, error) {
-	if parent.Type == TypeRegister || parent.Type == TypeSharing {
+	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
 
@@ -295,9 +295,9 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 
 	// SourceID stays the same, allow quick destruction of all children permissions
 	doc := &Permission{
-		Type:        TypeSharing,
+		Type:        TypeShareByLink,
 		SourceID:    parent.SourceID,
-		Permissions: set, // @TODO some validation?
+		Permissions: set,
 		Codes:       codes,
 	}
 
@@ -327,7 +327,7 @@ func ForceWebapp(db couchdb.Database, slug string, set Set) error {
 	doc := &Permission{
 		Type:        TypeWebapp,
 		SourceID:    consts.Apps + "/" + slug,
-		Permissions: set, // @TODO some validation?
+		Permissions: set,
 	}
 	if existing == nil {
 		return couchdb.CreateDoc(db, doc)
