@@ -7,7 +7,7 @@ import (
 const (
 	// WorkerExecResultSuccess for success result label
 	WorkerExecResultSuccess = "success"
-	// WorkerExecResultSuccess for errored result label
+	// WorkerExecResultErrored for errored result label
 	WorkerExecResultErrored = "errored"
 )
 
