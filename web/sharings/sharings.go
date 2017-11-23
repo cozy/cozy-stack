@@ -111,7 +111,7 @@ func CreateSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	if err = sharings.SendSharingMails(instance, sharing); err != nil {
+	if err = sharings.SendMails(instance, sharing); err != nil {
 		return wrapErrors(err)
 	}
 
@@ -163,7 +163,7 @@ func AddSharingRecipient(c echo.Context) error {
 	if err = sharings.RegisterRecipient(instance, rs); err != nil {
 		return wrapErrors(err)
 	}
-	if err = sharings.SendSharingMails(instance, sharing); err != nil {
+	if err = sharings.SendMails(instance, sharing); err != nil {
 		return wrapErrors(err)
 	}
 	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)

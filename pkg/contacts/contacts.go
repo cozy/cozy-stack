@@ -3,6 +3,7 @@ package contacts
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
 // Name is a struct describing a name of a contact
@@ -101,3 +102,19 @@ func (c *Contact) SetID(id string) { c.DocID = id }
 
 // SetRev changes the contact revision
 func (c *Contact) SetRev(rev string) { c.DocRev = rev }
+
+// ToMailAddress returns a struct that can be used by cozy-stack to send an
+// email to this contact
+func (c *Contact) ToMailAddress() (*mails.Address, error) {
+	if len(c.Email) == 0 {
+		return nil, ErrNoMailAddress
+	}
+	mail := c.Email[0].Address
+	name := mail
+	if c.FullName != "" {
+		name = c.FullName
+	} else if c.Name.GivenName != "" || c.Name.FamilyName != "" {
+		name = c.Name.GivenName + " " + c.Name.FamilyName
+	}
+	return &mails.Address{Name: name, Email: mail}, nil
+}

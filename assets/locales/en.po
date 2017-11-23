@@ -360,10 +360,10 @@ msgid "Mail Sharing Request Subject"
 msgstr "New sharing request for your Cozy"
 
 msgid "Mail Sharing Request Intro"
-msgstr "{{.SharerPublicName}} wants to share a document with you! You will only be able to view it."
+msgstr "{{.SharerPublicName}} wants to share a document with you!"
 
 msgid "Mail Sharing Request Button instruction"
-msgstr "The description given is: {{.Description}}."
+msgstr "The given description is: {{.Description}}."
 
 msgid "Mail Sharing Request Button text"
 msgstr "Accept this sharing"
