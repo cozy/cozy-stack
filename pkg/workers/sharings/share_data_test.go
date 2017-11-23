@@ -22,7 +22,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
@@ -986,11 +985,6 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	err = couchdb.ResetDB(in, consts.Sharings)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	err = couchdb.DefineIndex(in, mango.IndexOnFields(consts.Sharings, "by-sharing-id", []string{"sharing_id"}))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -110,6 +110,11 @@ func (c *Contact) ToMailAddress() (*mails.Address, error) {
 		return nil, ErrNoMailAddress
 	}
 	mail := c.Email[0].Address
+	for _, email := range c.Email {
+		if email.Primary {
+			mail = email.Address
+		}
+	}
 	name := mail
 	if c.FullName != "" {
 		name = c.FullName
@@ -117,4 +122,18 @@ func (c *Contact) ToMailAddress() (*mails.Address, error) {
 		name = c.Name.GivenName + " " + c.Name.FamilyName
 	}
 	return &mails.Address{Name: name, Email: mail}, nil
+}
+
+// PrimaryCozyURL returns the URL of the primary cozy,
+// or a blank string if the contact has no known cozy.
+func (c *Contact) PrimaryCozyURL() string {
+	if len(c.Cozy) == 0 {
+		return ""
+	}
+	for _, cozy := range c.Cozy {
+		if cozy.Primary {
+			return cozy.URL
+		}
+	}
+	return c.Cozy[0].URL
 }

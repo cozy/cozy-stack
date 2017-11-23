@@ -60,6 +60,7 @@ func (rs *RecipientStatus) GetRecipient(db couchdb.Database) error {
 
 // CreateOrUpdateRecipient inserts a Recipient document in database. Email and URL must
 // not be empty.
+// TODO use an ID to find the contact and kill the SharingRecipientView
 func CreateOrUpdateRecipient(db couchdb.Database, doc *contacts.Contact) error {
 	if len(doc.Cozy) == 0 && len(doc.Email) == 0 {
 		return ErrRecipientBadParams

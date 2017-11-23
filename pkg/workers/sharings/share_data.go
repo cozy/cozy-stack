@@ -246,7 +246,7 @@ func DeleteDoc(ins *instance.Instance, opts *SendOptions) error {
 		_, errSend := request.Req(reqOpts)
 
 		if errSend != nil {
-			if sharings.AuthError(errSend) {
+			if sharings.IsAuthError(errSend) {
 				_, errSend = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 			}
 			if errSend != nil {
@@ -337,7 +337,7 @@ func sendDocToRecipient(ins *instance.Instance, opts *SendOptions, rec *sharings
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			body, berr := request.WriteJSON(doc.M)
 			if berr != nil {
 				return berr
@@ -631,7 +631,7 @@ func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions, hardDelete bool)
 		}
 		_, err = request.Req(reqOpts)
 		if err != nil {
-			if sharings.AuthError(err) {
+			if sharings.IsAuthError(err) {
 				_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 			}
 			if err != nil {
@@ -684,7 +684,7 @@ func sendFileToRecipient(ins *instance.Instance, fileDoc *vfs.FileDoc, opts *Sen
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			content, erro := ins.VFS().OpenFile(fileDoc)
 			if erro != nil {
 				return erro
@@ -723,7 +723,7 @@ func sendDirToRecipient(ins *instance.Instance, dirDoc *vfs.DirDoc, opts *SendOp
 	}
 	_, err := request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			_, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recipient, reqOpts)
 		}
 		if err != nil {
@@ -759,7 +759,7 @@ func sendPatchToRecipient(ins *instance.Instance, patch *jsonapi.Document, opts 
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			body, errw := request.WriteJSON(patch)
 			if errw != nil {
 				return errw
@@ -817,7 +817,7 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 	}
 	_, err = request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			body, errw := request.WriteJSON(doc)
 			if errw != nil {
 				return errw
@@ -938,7 +938,7 @@ func getDocAtRecipient(ins *instance.Instance, newDoc *couchdb.JSONDoc, opts *Se
 	var err error
 	res, err = request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			res, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
 			if err != nil {
 				return nil, err
@@ -987,7 +987,7 @@ func getDirOrFileMetadataAtRecipient(ins *instance.Instance, opts *SendOptions, 
 
 	res, err := request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			res, rerr = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recInfo,
 				reqOpts)
 			if rerr != nil {
@@ -1028,7 +1028,7 @@ func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id, hea
 
 	_, err := request.Req(reqOpts)
 	if err != nil {
-		if sharings.AuthError(err) {
+		if sharings.IsAuthError(err) {
 			_, err = sharings.RefreshTokenAndRetry(ins, sharingID, recInfo, reqOpts)
 		}
 

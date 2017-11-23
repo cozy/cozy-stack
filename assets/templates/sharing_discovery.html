@@ -19,42 +19,40 @@
     </svg>
     <div role="application">
     <main>
-        <div class="login auth">
-          <div class="main-wrapper">
-            <form method="POST" action="/sharings/discovery" class="login auth">
-              <input type="hidden" name="sharing_id" value="{{.SharingID}}" />
-              <input type="hidden" name="recipient_id" value="{{.RecipientID}}" />
-              <header>
-                <figure>
-                  <div class="svg-wrapper">
-                    <svg>
-                      <use xlink:href="#cozy-icon" />
-                    </svg>
-                  </div>
-                </figure>
-              <h1>{{t "Hello recipient email" .RecipientEmail}}</h1>
-              </header>
-              <div role="region">
-                  <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
-                  <p class="help">{{t "Discovery URL help" .PublicName}}</p>
-                  <p class="line">
-                    <label for="URL"> {{t "Discovery URL field"}}</label>
-                    <input id="url" name="url" placeholder="{{t "Discovery URL placeholder"}}" type="text" autofocus="true" />
-                  </p>
-                  {{if .URLError}}
-                  <div class="errors">
-                    <p>{{.URLError}}</p>
-                  </div>
-                  {{end}}
-              </div>
-              <footer>
-                <div class="controls">
-                  <button type="submit">{{t "Discovery Submit"}}</button>
+      <div class="login auth">
+        <div class="main-wrapper">
+          <form method="POST" action="/sharings/{{.SharingID}}/discovery" class="login auth">
+            <input type="hidden" name="sharecode" value="{{.ShareCode}}" />
+            <header>
+              <figure>
+                <div class="svg-wrapper">
+                  <svg>
+                    <use xlink:href="#cozy-icon" />
+                  </svg>
                 </div>
-              </footer>
-            </form>
-          </div>
+              </figure>
+            <h1>{{t "Hello recipient email" .RecipientName}}</h1>
+            </header>
+            <div role="region">
+              <p class="help">{{t "Discovery URL help" .PublicName}}</p>
+              <p class="line">
+                <label for="URL"> {{t "Discovery URL field"}}</label>
+                <input id="url" name="url" placeholder="{{t "Discovery URL placeholder"}}" type="text" autofocus="true" value="{{.RecipientCozy}}" />
+              </p>
+              {{if .URLError}}
+              <div class="errors">
+                <p>{{.URLError}}</p>
+              </div>
+              {{end}}
+            </div>
+            <footer>
+              <div class="controls">
+                <button type="submit">{{t "Discovery Submit"}}</button>
+              </div>
+            </footer>
+          </form>
         </div>
-      </main>
+      </div>
+    </main>
   </body>
 </html>

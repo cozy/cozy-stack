@@ -71,7 +71,7 @@ func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 		"response_type":          {"code"},
 		"scope":                  {permissionsScope},
 		"sharing_type":           {s.SharingType},
-		"state":                  {s.SharingID},
+		"state":                  {s.SID},
 	}
 	oAuthQuery.RawQuery = mapParamOAuthQuery.Encode()
 
@@ -188,6 +188,7 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	}
 
 	var res []Sharing
+	// TODO don't use the by-sharing index
 	err = couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
 		UseIndex: "by-sharing-id",
 		Selector: mango.Equal("sharing_id", state),
@@ -214,7 +215,8 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	sharing := &Sharing{
 		AppSlug:     appSlug,
 		SharingType: sharingType,
-		SharingID:   state,
+		// TODO force the ID
+		// SharingID:   state,
 		Permissions: permissions,
 		Owner:       false,
 		Description: desc,
@@ -227,7 +229,8 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 }
 
 // RegisterRecipient registers a sharing recipient
-func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
+// TODO use the cozyURL param
+func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus, cozyURL string) error {
 	err := rs.Register(instance)
 	if err != nil {
 		if rs.recipient != nil {
@@ -280,7 +283,7 @@ func SendClientID(sharing *Sharing) error {
 	path := "/sharings/access/client"
 	newClientID := sharing.Sharer.SharerStatus.Client.ClientID
 	params := SharingRequestParams{
-		SharingID:       sharing.SharingID,
+		SharingID:       sharing.SID,
 		ClientID:        sharing.Sharer.SharerStatus.InboundClientID,
 		InboundClientID: newClientID,
 	}
@@ -304,7 +307,7 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 	}
 	path := "/sharings/access/code"
 	params := SharingRequestParams{
-		SharingID: sharing.SharingID,
+		SharingID: sharing.SID,
 		Code:      access.Code,
 	}
 	return Request("POST", domain, scheme, path, params)
@@ -377,7 +380,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 			}
 		}
 
-		err = removeSharingTriggers(ins, sharing.SharingID)
+		err = removeSharingTriggers(ins, sharing.SID)
 		if err != nil {
 			return err
 		}
@@ -396,7 +399,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 		}
 
 		if sharing.SharingType == consts.TwoWaySharing {
-			err = removeSharingTriggers(ins, sharing.SharingID)
+			err = removeSharingTriggers(ins, sharing.SID)
 			if err != nil {
 				return err
 			}
@@ -404,7 +407,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 	}
 	sharing.Revoked = true
 	ins.Logger().Debugf("[sharings] Setting status of sharing %s to revoked",
-		sharing.SharingID)
+		sharing.SID)
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
@@ -477,9 +480,9 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Recipi
 
 	if toRevoke {
 		// TODO check how removeSharingTriggers behave when no recipient has accepted the sharing
-		if err := removeSharingTriggers(ins, sharing.SharingID); err != nil {
+		if err := removeSharingTriggers(ins, sharing.SID); err != nil {
 			ins.Logger().Errorf("[sharings] RevokeRecipient: Could not remove "+
-				"triggers for sharing %s: %s", sharing.SharingID, err)
+				"triggers for sharing %s: %s", sharing.SID, err)
 		}
 		sharing.Revoked = true
 	}
@@ -561,7 +564,7 @@ func askToRevokeRecipient(ins *instance.Instance, sharing *Sharing, rs *Recipien
 // what not) analyze the error returned and take proper actions every time this
 // function is called.
 func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, recipientClientID string) error {
-	sharingID := sharing.SharingID
+	sharingID := sharing.SID
 	err := rs.GetRecipient(ins)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] askToRevoke: Could not fetch "+
@@ -605,7 +608,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, 
 	_, err = request.Req(reqOpts)
 
 	if err != nil {
-		if AuthError(err) {
+		if IsAuthError(err) {
 			recInfo, errInfo := ExtractRecipientInfo(ins, rs)
 			if errInfo != nil {
 				return errInfo
@@ -655,8 +658,8 @@ func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *Recipie
 	return res, err
 }
 
-// AuthError returns true if the given error is an authentication one
-func AuthError(err error) bool {
+// IsAuthError returns true if the given error is an authentication one
+func IsAuthError(err error) bool {
 	switch v := err.(type) {
 	case *request.Error:
 		if v.Title == "Bad Request" || v.Title == "Unauthorized" {

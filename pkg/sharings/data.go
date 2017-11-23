@@ -22,7 +22,7 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		}
 		// Trigger the updates if the sharing is not one-shot
 		if sharing.SharingType != consts.OneShotSharing {
-			err := AddTrigger(instance, rule, sharing.SharingID, false)
+			err := AddTrigger(instance, rule, sharing.SID, false)
 			if err != nil {
 				return err
 			}
@@ -177,7 +177,7 @@ func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 
 		workerMsg, err := jobs.NewMessage(WorkerData{
 			DocID:      val,
-			SharingID:  sharing.SharingID,
+			SharingID:  sharing.SID,
 			Selector:   rule.Selector,
 			Values:     rule.Values,
 			DocType:    rule.Type,

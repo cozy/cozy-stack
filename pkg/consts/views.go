@@ -19,8 +19,6 @@ var GlobalIndexes = []*mango.Index{
 var Indexes = []*mango.Index{
 	// Permissions
 	mango.IndexOnFields(Permissions, "by-source-and-type", []string{"source_id", "type"}),
-	// Sharings
-	mango.IndexOnFields(Sharings, "by-sharing-id", []string{"sharing_id"}),
 
 	// Used to lookup over the children of a directory
 	mango.IndexOnFields(Files, "dir-children", []string{"dir_id", "_id"}),
@@ -104,7 +102,7 @@ var PermissionsShareByCView = &couchdb.View{
 	Doctype: Permissions,
 	Map: `
 function(doc) {
-  if (doc.type === "share" && doc.codes) {
+  if (doc.type && doc.type.slice(0, 5) === "share" && doc.codes) {
     Object.keys(doc.codes).forEach(function(k) {
       emit(doc.codes[k]);
     })

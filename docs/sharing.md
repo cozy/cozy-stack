@@ -300,7 +300,6 @@ Content-Type: application/vnd.api+json
       "rev": "1-4859c6c755143adf0838d225c5e97882"
     },
     "attributes": {
-      "sharing_id": "wccKeeGnAppnHgXWqBxKqSpKNpZiMeFR",
       "sharing_type": "one-shot",
       "description": "sharing test",
       "preview_path": "/sharings/preview",
@@ -524,25 +523,21 @@ Yes!
   to someone.
 * For _one-way_: a password file that the sysadmins want to share to the rest of
   the company. Only the sysadmins can modify the password file, the others can
-  only consult them.
+  only consult it.
 * For _two-way_: a folder containing shared resources for a project. You want
   all parties to be able to modify the content as well as adding new ones.
 
 #### What are the information required for a recipient?
 
-Two things: an e-mail and the URL of the Cozy. We have a discovery feature so
-the URL is not a necessity but it will be convenient if you don't want the
-recipients to enter their URL everytime you share something with them.
+Only an email address is mandatory. The URL of their Cozy can also be used,
+but it is not here, it's not a big deal: we have a discovery feature so we can
+ask the recipients what is the URL of their Cozy.
 
 #### Which documents are created and when?
 
 When the user asks to share a resource, a sharing document is created. That
 happens before the emails are sent to the recipients. That also means that if
 all recipients refuse the sharing, the sharing document will still be there.
-
-The permissions associated are described in that document but **no actual
-permission documents are created, at any point in the protocol** — permissions
-are still enforced, there is just no need to create permission documents.
 
 When the recipients accept, a sharing document is created on their own Cozy. The
 sharing document the recipients have is slighty different from the sharer's one.
@@ -553,7 +548,7 @@ This table sums up the differences:
 
 | Field      | Sharer                                          | Recipient                                   |
 | ---------- | ----------------------------------------------- | ------------------------------------------- |
-| Owner      | True                                            | False                                       |
+| Owner      | true                                            | false                                       |
 | Recipients | Contains all the recipients related information | (empty)                                     |
 | Sharer     | (empty)                                         | Contains all the sharer related information |
 

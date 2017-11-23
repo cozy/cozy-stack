@@ -465,6 +465,7 @@ func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, curs
 	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
+	// TODO kill the SharedWithPermissionView
 	err := couchdb.ExecView(db, consts.SharedWithPermissionsView, req, &res)
 	if err != nil {
 		return nil, err

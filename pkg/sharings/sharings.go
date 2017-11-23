@@ -7,13 +7,11 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/scheduler"
-	"github.com/cozy/cozy-stack/pkg/utils"
 )
 
 const (
@@ -38,7 +36,6 @@ type CreateSharingParams struct {
 type Sharing struct {
 	SID         string          `json:"_id,omitempty"`
 	SRev        string          `json:"_rev,omitempty"`
-	SharingID   string          `json:"sharing_id,omitempty"`
 	SharingType string          `json:"sharing_type"`
 	Permissions permissions.Set `json:"permissions,omitempty"`
 	Sharer      Sharer          `json:"sharer,omitempty"`
@@ -212,7 +209,6 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 	}
 
 	sharing := &Sharing{
-		SharingID:        utils.RandomString(32),
 		SharingType:      sharingType,
 		Permissions:      params.Permissions,
 		RecipientsStatus: make([]*RecipientStatus, 0, len(params.Recipients)),
@@ -249,22 +245,14 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 	return sharing, nil
 }
 
-// FindSharing retrieves a sharing document gfrom its sharingID
+// FindSharing retrieves a sharing document from its ID
 func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
-	var res []Sharing
-	err := couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
-		UseIndex: "by-sharing-id",
-		Selector: mango.Equal("sharing_id", sharingID),
-	}, &res)
+	var res *Sharing
+	err := couchdb.GetDoc(db, consts.Sharings, sharingID, res)
 	if err != nil {
 		return nil, err
 	}
-	if len(res) < 1 {
-		return nil, ErrSharingDoesNotExist
-	} else if len(res) > 1 {
-		return nil, ErrSharingIDNotUnique
-	}
-	return &res[0], nil
+	return res, nil
 }
 
 // FindSharingRecipient retrieve a sharing recipient from its clientID and sharingID

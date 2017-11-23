@@ -73,6 +73,7 @@ func SharingUpdates(ctx *jobs.WorkerContext) error {
 		return err
 	}
 	var res []sharings.Sharing
+	// TODO don't use the by-sharing index
 	err = couchdb.FindDocs(i, consts.Sharings, &couchdb.FindRequest{
 		UseIndex: "by-sharing-id",
 		Selector: mango.Equal("sharing_id", sharingID),
@@ -137,7 +138,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	opts := &SendOptions{
 		DocID:      docID,
 		DocType:    rule.Type,
-		SharingID:  sharing.SharingID,
+		SharingID:  sharing.SID,
 		Recipients: recInfos,
 		Selector:   rule.Selector,
 		Values:     rule.Values,
