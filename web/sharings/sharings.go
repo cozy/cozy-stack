@@ -196,16 +196,16 @@ func SharingRequest(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	// Particular case for master-master: register the sharer
-	if sharingType == consts.MasterMasterSharing {
+	// Particular case for two-way: register the sharer
+	if sharingType == consts.TwoWaySharing {
 		if err = sharings.RegisterSharer(instance, sharing); err != nil {
 			return wrapErrors(err)
 		}
 		if err = sharings.SendClientID(sharing); err != nil {
 			return wrapErrors(err)
 		}
-	} else if sharing.SharingType == consts.MasterSlaveSharing {
-		// The recipient listens deletes for a master-slave sharing
+	} else if sharing.SharingType == consts.OneWaySharing {
+		// The recipient listens deletes for a one-way sharing
 		for _, rule := range sharing.Permissions {
 			err = sharings.AddTrigger(instance, rule, sharing.SharingID, true)
 			if err != nil {
@@ -420,9 +420,9 @@ func discovery(c echo.Context) error {
 	return c.Redirect(http.StatusFound, oAuthRedirect)
 }
 
-// ReceiveClientID receives an OAuth ClientID in a master-master context.
+// ReceiveClientID receives an OAuth ClientID in a two-way context.
 // This is called from a recipient, after he registered himself to the sharer.
-// The received clientID is called a HostClientID, as it refers to a client
+// The received clientID is called a InboundClientID, as it refers to a client
 // created by the sharer, i.e. the host here.
 func ReceiveClientID(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -435,7 +435,7 @@ func ReceiveClientID(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	rec.HostClientID = p.HostClientID
+	rec.InboundClientID = p.InboundClientID
 	err = couchdb.UpdateDoc(instance, sharing)
 	if err != nil {
 		return err
@@ -444,7 +444,7 @@ func ReceiveClientID(c echo.Context) error {
 }
 
 // getAccessToken asks for an Access Token, from the recipient side.
-// It is called in a master-master context, after the sharer received the
+// It is called in a two-way context, after the sharer received the
 // answer from the recipient.
 func getAccessToken(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -469,7 +469,7 @@ func getAccessToken(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	// Add triggers on the recipient side for each rule
-	if sharing.SharingType == consts.MasterMasterSharing {
+	if sharing.SharingType == consts.TwoWaySharing {
 		for _, rule := range sharing.Permissions {
 			err = sharings.AddTrigger(instance, rule, sharing.SharingID, false)
 			if err != nil {
@@ -745,13 +745,13 @@ func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, 
 	if sharing.Owner {
 		for _, rec := range sharing.RecipientsStatus {
 			if rec.Client.ClientID == recipientClientID {
-				if requestPerm.SourceID == rec.HostClientID {
+				if requestPerm.SourceID == rec.InboundClientID {
 					return nil
 				}
 			}
 		}
 	} else {
-		sharerClientID := sharing.Sharer.SharerStatus.HostClientID
+		sharerClientID := sharing.Sharer.SharerStatus.InboundClientID
 		if requestPerm.SourceID == sharerClientID {
 			return nil
 		}
@@ -783,7 +783,7 @@ func checkRevokeSharingPermissions(c echo.Context, sharing *sharings.Sharing) (s
 			return "", permissions.ErrInvalidToken
 		}
 		if !sharing.Owner {
-			sharerClientID := sharing.Sharer.SharerStatus.HostClientID
+			sharerClientID := sharing.Sharer.SharerStatus.InboundClientID
 			if requestPerm.SourceID == sharerClientID {
 				return requestPerm.Type, nil
 			}

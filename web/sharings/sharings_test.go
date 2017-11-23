@@ -128,8 +128,8 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 			},
 		}
 
-		if sharingType == consts.MasterMasterSharing {
-			rs.HostClientID = client.ClientID
+		if sharingType == consts.TwoWaySharing {
+			rs.InboundClientID = client.ClientID
 		}
 
 		if owner {
@@ -216,7 +216,7 @@ func TestReceiveDocumentSuccessJSON(t *testing.T) {
 	jsonraw, err := json.Marshal(jsondata)
 	assert.NoError(t, err)
 
-	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
+	sharing := createSharing(t, "", consts.OneWaySharing, true, "",
 		[]*contacts.Contact{}, permissions.Rule{})
 
 	urlReceive, err := url.Parse(ts.URL)
@@ -247,7 +247,7 @@ func TestReceiveDocumentSuccessJSON(t *testing.T) {
 func TestReceiveDocumentSuccessDir(t *testing.T) {
 	id := "0987jldvnrst"
 
-	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
+	sharing := createSharing(t, "", consts.OneWaySharing, true, "",
 		[]*contacts.Contact{}, permissions.Rule{})
 
 	// Test: creation of a directory that did not existed before.
@@ -303,7 +303,7 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 	id := "testid"
 	body := "testoutest"
 
-	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
+	sharing := createSharing(t, "", consts.OneWaySharing, true, "",
 		[]*contacts.Contact{}, permissions.Rule{})
 
 	// Test: creation of a file that did not exist.
@@ -394,7 +394,7 @@ func TestUpdateDocumentSuccessJSON(t *testing.T) {
 		Verbs:    permissions.ALL,
 		Values:   []string{doc.ID()},
 	}
-	_ = createSharing(t, "", consts.MasterSlaveSharing, false, "",
+	_ = createSharing(t, "", consts.OneWaySharing, false, "",
 		[]*contacts.Contact{}, rule)
 
 	path := fmt.Sprintf("/sharings/doc/%s/%s", doc.DocType(), doc.ID())
@@ -545,7 +545,7 @@ func TestPatchDirOrFileSuccessFile(t *testing.T) {
 	_, err := fs.FileByID(fileDoc.ID())
 	assert.NoError(t, err)
 
-	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
+	sharing := createSharing(t, "", consts.OneWaySharing, true, "",
 		[]*contacts.Contact{}, permissions.Rule{})
 
 	patchURL, err := url.Parse(ts.URL)
@@ -600,7 +600,7 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	_, err := fs.DirByID(dirDoc.ID())
 	assert.NoError(t, err)
 
-	sharing := createSharing(t, "", consts.MasterSlaveSharing, true, "",
+	sharing := createSharing(t, "", consts.OneWaySharing, true, "",
 		[]*contacts.Contact{}, permissions.Rule{})
 
 	patchURL, err := url.Parse(ts.URL)
@@ -656,7 +656,7 @@ func TestRemoveReferences(t *testing.T) {
 		Values:   []string{"io.cozy.photos.albums/123"},
 		Verbs:    permissions.ALL,
 	}
-	_ = createSharing(t, "", consts.MasterSlaveSharing, false, "",
+	_ = createSharing(t, "", consts.OneWaySharing, false, "",
 		[]*contacts.Contact{}, rule)
 
 	refAlbum123 := couchdb.DocReference{
@@ -1045,7 +1045,7 @@ func TestCreateSharingBadPermission(t *testing.T) {
 
 	u := fmt.Sprintf("%s/sharings/", ts.URL)
 	v := echo.Map{
-		"sharing_type": consts.MasterMasterSharing,
+		"sharing_type": consts.TwoWaySharing,
 		"permissions":  setSharing,
 	}
 	body, _ := json.Marshal(v)
@@ -1085,7 +1085,7 @@ func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 
 	u := fmt.Sprintf("%s/sharings/", ts.URL)
 	v := echo.Map{
-		"sharing_type": consts.MasterMasterSharing,
+		"sharing_type": consts.TwoWaySharing,
 		"permissions":  setSharing,
 		"recipients":   recipients,
 	}
@@ -1117,7 +1117,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 
 	u := fmt.Sprintf("%s/sharings/", ts.URL)
 	v := echo.Map{
-		"sharing_type": consts.MasterMasterSharing,
+		"sharing_type": consts.TwoWaySharing,
 		"permissions":  setSharing,
 	}
 	body, _ := json.Marshal(v)
@@ -1155,7 +1155,7 @@ func TestGetSharingDocBadPermissions(t *testing.T) {
 	appRule := permissions.Rule{
 		Type: "io.cozy.baddoctype",
 	}
-	sharing := createSharing(t, "", consts.MasterMasterSharing, true, "",
+	sharing := createSharing(t, "", consts.TwoWaySharing, true, "",
 		[]*contacts.Contact{}, rule)
 	appToken, _ := generateAppToken(t, appRule)
 
@@ -1177,7 +1177,7 @@ func TestGetSharingDocSuccess(t *testing.T) {
 	appRule := permissions.Rule{
 		Type: "io.cozy.foos",
 	}
-	sharing := createSharing(t, "", consts.MasterMasterSharing, true, "",
+	sharing := createSharing(t, "", consts.TwoWaySharing, true, "",
 		[]*contacts.Contact{}, rule)
 	appToken, _ := generateAppToken(t, appRule)
 
@@ -1201,9 +1201,9 @@ func TestReceiveClientIDBadSharing(t *testing.T) {
 	err := couchdb.UpdateDoc(testInstance, sharing)
 	assert.NoError(t, err)
 	res, err := postJSON(t, "/sharings/access/client", echo.Map{
-		"state":          "fakestate",
-		"client_id":      "fakeclientid",
-		"host_client_id": "newclientid",
+		"state":             "fakestate",
+		"client_id":         "fakeclientid",
+		"inbound_client_id": "newclientid",
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
@@ -1220,9 +1220,9 @@ func TestReceiveClientIDSuccess(t *testing.T) {
 	err := couchdb.UpdateDoc(testInstance, sharing)
 	assert.NoError(t, err)
 	res, err := postJSON(t, "/sharings/access/client", echo.Map{
-		"state":          sharing.SharingID,
-		"client_id":      sharing.RecipientsStatus[0].Client.ClientID,
-		"host_client_id": "newclientid",
+		"state":             sharing.SharingID,
+		"client_id":         sharing.RecipientsStatus[0].Client.ClientID,
+		"inbound_client_id": "newclientid",
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
@@ -1273,7 +1273,7 @@ func TestRevokeSharing(t *testing.T) {
 	badRule := permissions.Rule{
 		Type: "io.cozy.badone",
 	}
-	sharing := createSharing(t, "", consts.MasterMasterSharing, true, "",
+	sharing := createSharing(t, "", consts.TwoWaySharing, true, "",
 		[]*contacts.Contact{}, rule)
 	appToken, _ := generateAppToken(t, badRule)
 
@@ -1297,7 +1297,7 @@ func TestRevokeSharing(t *testing.T) {
 
 	// Test: request comes from someone that doesn't have the correct token.
 	sharer := createRecipient(t, "email1", "url1")
-	sharing = createSharing(t, "", consts.MasterMasterSharing, false, slug,
+	sharing = createSharing(t, "", consts.TwoWaySharing, false, slug,
 		[]*contacts.Contact{sharer}, rule)
 	scope, err := rule.MarshalScopeString()
 	assert.NoError(t, err)
@@ -1339,7 +1339,7 @@ func TestRevokeSharing(t *testing.T) {
 
 	// Test: request comes from the sharer. It should pass.
 	sharerClient, err := oauth.FindClient(testInstance,
-		sharing.Sharer.SharerStatus.HostClientID)
+		sharing.Sharer.SharerStatus.InboundClientID)
 	assert.NoError(t, err)
 	token, err = sharerClient.CreateJWT(testInstance,
 		permissions.AccessTokenAudience, scope)
@@ -1385,7 +1385,7 @@ func TestRevokeRecipient(t *testing.T) {
 	appToken := testInstance.BuildAppToken(manifest, "")
 
 	recipient0 := createRecipient(t, "email0", "url0")
-	sharing := createSharing(t, "", consts.MasterMasterSharing, true, slug,
+	sharing := createSharing(t, "", consts.TwoWaySharing, true, slug,
 		[]*contacts.Contact{recipient0}, rule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s/recipient/%s", ts.URL,
@@ -1402,11 +1402,11 @@ func TestRevokeRecipient(t *testing.T) {
 	// Test: correct sharing id while being the sharer but the request is not
 	// coming from the recipient that is to be revoked.
 	recipient1 := createRecipient(t, "email1", "url1")
-	sharing = createSharing(t, "", consts.MasterMasterSharing, true, slug,
+	sharing = createSharing(t, "", consts.TwoWaySharing, true, slug,
 		[]*contacts.Contact{recipient0, recipient1}, rule)
 
 	delURL = fmt.Sprintf("%s/sharings/%s/%s", ts.URL,
-		sharing.SharingID, sharing.RecipientsStatus[0].HostClientID)
+		sharing.SharingID, sharing.RecipientsStatus[0].InboundClientID)
 	req, err = http.NewRequest(http.MethodDelete, delURL+"?"+queries, nil)
 	assert.NoError(t, err)
 	req.Header.Del(echo.HeaderAuthorization)

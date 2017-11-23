@@ -67,11 +67,11 @@ left empty for space convenience.
       "status": "accepted",
       "AccessToken": {},
       "Client": {},
-      "HostClientID": "myhostclientid"
+      "InboundClientID": "myhostclientid"
     },
     {
       "recipient": { "id": "mycontactid2", "type": "io.cozy.contacts" },
-      "status": "pending",
+      "status": "pending"
     }
   ]
 }
@@ -86,8 +86,8 @@ one.
 #### permissions
 
 Which documents will be shared. See the
-[permissions](https://cozy.github.io/cozy-stack/permissions.html) for a
-detailed explanation of the permissions format.
+[permissions](https://cozy.github.io/cozy-stack/permissions.html) for a detailed
+explanation of the permissions format.
 
 The supported permissions are the following:
 
@@ -139,9 +139,8 @@ Example of a photo album sharing:
 ```
 
 It is worth mentionning that the permissions are defined on the sharer side, but
-are enforced on the recipients side (and also on the sharer side if the
-sharing is a master-master type), as the documents are pushed to their
-databases.
+are enforced on the recipients side (and also on the sharer side if the sharing
+is a two-way type), as the documents are pushed to their databases.
 
 #### recipients
 
@@ -216,22 +215,22 @@ See
 [here](https://github.com/cozy/cozy-stack/blob/master/docs/auth.md#post-authaccess_token)
 for structure details.
 
-##### HostClientID
+##### InboundClientID
 
-This field is only used for `master-master` sharing. It corresponds to the id of
-the OAuth document stored in the host database, containing the recipient's OAuth
+This field is only used for `two-way` sharing. It corresponds to the id of the
+OAuth document stored in the host database, containing the recipient's OAuth
 information after registration.
 
 #### sharing_type
 
-The type of sharing. It should be one of the followings: `master-master`,
-`master-slave`, `one-shot`. They represent the access rights the recipient and sender have:
+The type of sharing. It should be one of the followings: `two-way`, `one-way`,
+`one-shot`. They represent the access rights the recipient and sender have:
 
 * `one-shot`: the documents are sent and no modification is propagated.
-* `master-slave`: only the sharer can propagate modifications to the recipient.
-  The recipient can only modify the documents localy.
-* `master-master`: both recipient and sharer can modify the documents and have
-  their modifications propagated to the other.
+* `one-way`: only the sharer can propagate modifications to the recipient. The
+  recipient can only modify the documents localy.
+* `two-way`: both recipient and sharer can modify the documents and have their
+  modifications propagated to the other.
 
 #### description
 
@@ -320,7 +319,7 @@ Content-Type: application/vnd.api+json
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
             "type": "io.cozy.contacts",
-            "status": "pending",
+            "status": "pending"
           }
         ]
       }
@@ -354,7 +353,7 @@ Content-Type: application/vnd.api+json
 Revoke a sharing. Depending on the role of the logged-in user and the type of
 sharing, the implications are different:
 
-| ROLE / SHARING-TYPE | MASTER-SLAVE SHARING                                    | MASTER-MASTER SHARING                                            |
+| ROLE / SHARING-TYPE | ONE-WAY SHARING                                         | TWO-WAY SHARING                                                  |
 | ------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
 | Sharer              | Delete all triggers linked to the sharing.              | Delete all triggers linked to the sharing.                       |
 |                     | Ask all recipients to revoke the sharing.               | Ask all recipients to revoke the sharing.                        |
@@ -394,9 +393,9 @@ sharer that its owner has revoked the sharing.
 Revoke a recipient from a sharing. Only the sharer can make that action and
 depending on the type of sharing the implications differ:
 
-* for both _Master-Master_ and _Master-Slave_ sharings the sharer asks the
-  recipient to revoke the sharing;
-* for _Master-Master_ sharing the sharer also deletes the OAuth client of the
+* for both _Two-way_ and _One-way_ sharings the sharer asks the recipient to
+  revoke the sharing;
+* for _Two-way_ sharing the sharer also deletes the OAuth client of the
   recipient for that sharing.
 
 #### Request
@@ -418,8 +417,8 @@ Content-Type: application/json
 ### POST /sharings/destination/:doctype
 
 Sets the destination directory of the given application. The "destination
-directory" is where the shared files received by this application will go.
-Only files shared using "Cozy to Cozy sharings" are concerned.
+directory" is where the shared files received by this application will go. Only
+files shared using "Cozy to Cozy sharings" are concerned.
 
 For example if a user sets the destination directory of the application "Photos"
 to `/Shared with Me/Photos` (by providing its **id**) then all shared photos
@@ -448,11 +447,9 @@ Content-Type: application/json
 
 #### Note
 
-The slug of the application that makes this request is extracted from its
-token and stored in the config document. The application that creates the
-sharing on the other cozy instance must have the same slug to trigger this
-behaviour.
-
+The slug of the application that makes this request is extracted from its token
+and stored in the config document. The application that creates the sharing on
+the other cozy instance must have the same slug to trigger this behaviour.
 
 ### Frequently Asked Questions
 
@@ -483,12 +480,12 @@ Having its id, you can fetch it and get all the information you need.
 
 * _One-shot_: the documents are sent to the recipients and that's it. No
   updates, no nothing. It's as if you gave them a copy of the data on a usb key.
-* _Master-slave_: updates you make on the documents are propagated to the
-  recipients. The recipients can only consult as everything they do will not be
-  propagated back.
-* _Master-master_: what you and the recipients do is propagated to everybody.
-  Updates, deletions, additions are shared to all parties no matter if they are
-  the sharer or the recipients.
+* _One-way_: updates you make on the documents are propagated to the recipients.
+  The recipients can only consult as everything they do will not be propagated
+  back.
+* _Two-way_: what you and the recipients do is propagated to everybody. Updates,
+  deletions, additions are shared to all parties no matter if they are the
+  sharer or the recipients.
 
 #### Do you have use-cases for the different types of sharings?
 
@@ -496,11 +493,11 @@ Yes!
 
 * For _one-shot_: an official paper (such as a bill or an ID) you want to give
   to someone.
-* For _master-slave_: a password file that the sysadmins want to share to the
-  rest of the company. Only the sysadmins can modify the password file, the
-  others can only consult them.
-* For _master-master_: a folder containing shared resources for a project. You
-  want all parties to be able to modify the content as well as adding new ones.
+* For _one-way_: a password file that the sysadmins want to share to the rest of
+  the company. Only the sysadmins can modify the password file, the others can
+  only consult them.
+* For _two-way_: a folder containing shared resources for a project. You want
+  all parties to be able to modify the content as well as adding new ones.
 
 #### What are the information required for a recipient?
 
@@ -514,9 +511,9 @@ When the user asks to share a resource, a sharing document is created. That
 happens before the emails are sent to the recipients. That also means that if
 all recipients refuse the sharing, the sharing document will still be there.
 
-The permissions associated are described in that document but **no actual permission
-documents are created, at any point in the protocol** — permissions are still enforced,
-there is just no need to create permission documents.
+The permissions associated are described in that document but **no actual
+permission documents are created, at any point in the protocol** — permissions
+are still enforced, there is just no need to create permission documents.
 
 When the recipients accept, a sharing document is created on their own Cozy. The
 sharing document the recipients have is slighty different from the sharer's one.

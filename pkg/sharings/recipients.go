@@ -26,7 +26,7 @@ type RecipientStatus struct {
 	AccessToken auth.AccessToken `json:"access_token"`
 
 	// The OAuth ClientID refering to the host's client stored in its db
-	HostClientID string `json:"host_client_id,omitempty"`
+	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
 // ExtractDomainAndScheme returns the recipient's domain and the scheme

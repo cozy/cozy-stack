@@ -652,7 +652,7 @@ func TestRemoveDirOrFileFromSharing(t *testing.T) {
 		Type:     consts.Files,
 		Values:   []string{"third/789"},
 	}
-	createSharing(t, consts.MasterMasterSharing, false, []*contacts.Contact{}, rule)
+	createSharing(t, consts.TwoWaySharing, false, []*contacts.Contact{}, rule)
 
 	refs := []couchdb.DocReference{
 		couchdb.DocReference{

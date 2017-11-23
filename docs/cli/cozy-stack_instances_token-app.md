@@ -14,8 +14,7 @@ cozy-stack instances token-app [domain] [slug] [flags]
 ### Options
 
 ```
-      --expire duration   Make the token expires in this amount of time
-  -h, --help              help for token-app
+  -h, --help   help for token-app
 ```
 
 ### Options inherited from parent commands

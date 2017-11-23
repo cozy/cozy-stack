@@ -65,10 +65,10 @@ type Sharer struct {
 // SharingRequestParams contains the basic information required to request
 // a sharing party
 type SharingRequestParams struct {
-	SharingID    string `json:"state"`
-	ClientID     string `json:"client_id"`
-	HostClientID string `json:"host_client_id"`
-	Code         string `json:"code"`
+	SharingID       string `json:"state"`
+	ClientID        string `json:"client_id"`
+	InboundClientID string `json:"inbound_client_id"`
+	Code            string `json:"code"`
 }
 
 // SharingMessage describes the message that will be transmitted to the workers
@@ -196,7 +196,7 @@ func (s *Sharing) GetRecipientStatusFromRecipientID(db couchdb.Database, recID s
 // CheckSharingType returns an error if the sharing type is incorrect
 func CheckSharingType(sharingType string) error {
 	switch sharingType {
-	case consts.OneShotSharing, consts.MasterSlaveSharing, consts.MasterMasterSharing:
+	case consts.OneShotSharing, consts.OneWaySharing, consts.TwoWaySharing:
 		return nil
 	}
 	return ErrBadSharingType
@@ -237,8 +237,8 @@ func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 }
 
 // AddTrigger creates a new trigger on the updates of the shared documents
-// The delTrigger flag is when the trigger must only listen deletions, i.e. a
-// Master-Slave on the recipient side, for the revocation
+// The delTrigger flag is when the trigger must only listen deletions, i.e.
+// an one-way on the recipient side, for the revocation
 func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string, delTrigger bool) error {
 	sched := globals.GetScheduler()
 
@@ -482,8 +482,8 @@ func SharingAccepted(instance *instance.Instance, state, clientID, accessCode st
 		return "", err
 	}
 
-	// Particular case for master-master sharing: the recipients needs credentials
-	if sharing.SharingType == consts.MasterMasterSharing {
+	// Particular case for two-way sharing: the recipients needs credentials
+	if sharing.SharingType == consts.TwoWaySharing {
 		err = SendCode(instance, sharing, recStatus)
 		if err != nil {
 			return "", err
@@ -587,7 +587,7 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	}
 
 	sr := &RecipientStatus{
-		HostClientID: clientID,
+		InboundClientID: clientID,
 		recipient: &contacts.Contact{
 			Cozy: []contacts.Cozy{
 				contacts.Cozy{
@@ -633,7 +633,7 @@ func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus) error {
 	return err
 }
 
-// RegisterSharer registers the sharer for master-master sharing
+// RegisterSharer registers the sharer for two-way sharing
 func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 	// Register the sharer as a recipient
 	sharer := sharing.Sharer
@@ -670,9 +670,9 @@ func SendClientID(sharing *Sharing) error {
 	path := "/sharings/access/client"
 	newClientID := sharing.Sharer.SharerStatus.Client.ClientID
 	params := SharingRequestParams{
-		SharingID:    sharing.SharingID,
-		ClientID:     sharing.Sharer.SharerStatus.HostClientID,
-		HostClientID: newClientID,
+		SharingID:       sharing.SharingID,
+		ClientID:        sharing.Sharer.SharerStatus.InboundClientID,
+		InboundClientID: newClientID,
 	}
 	return Request("POST", domain, scheme, path, params)
 }
@@ -837,7 +837,7 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 // triggers associated with it.
 //
 // Revoking a sharing consists of setting the field `Revoked` to `true`.
-// When the sharing is of type "master-master" both recipients and sharer have
+// When the sharing is of type "two-way" both recipients and sharer have
 // trigger(s) and OAuth client(s) to delete.
 // In every other cases only the sharer has trigger(s) to delete and only the
 // recipients have an OAuth client to delete.
@@ -857,7 +857,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 				}
 			}
 
-			if sharing.SharingType == consts.MasterMasterSharing {
+			if sharing.SharingType == consts.TwoWaySharing {
 				err = deleteOAuthClient(ins, rs)
 				if err != nil {
 					continue
@@ -883,7 +883,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 			return err
 		}
 
-		if sharing.SharingType == consts.MasterMasterSharing {
+		if sharing.SharingType == consts.TwoWaySharing {
 			err = removeSharingTriggers(ins, sharing.SharingID)
 			if err != nil {
 				return err
@@ -938,17 +938,17 @@ func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientI
 // RevokeRecipient revokes a recipient from the given sharing. Only the sharer
 // can make this action.
 //
-// If the sharing is of type "master-master" the sharer also has to remove the
+// If the sharing is of type "two-way" the sharer also has to remove the
 // recipient's OAuth client.
 //
 // If there are no more recipients the sharing is revoked and the corresponding
 // trigger is deleted.
 func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *RecipientStatus) error {
-	if sharing.SharingType == consts.MasterMasterSharing {
+	if sharing.SharingType == consts.TwoWaySharing {
 		if err := deleteOAuthClient(ins, recipient); err != nil {
 			return err
 		}
-		recipient.HostClientID = ""
+		recipient.InboundClientID = ""
 	}
 
 	recipient.Client = auth.Client{}
@@ -1013,21 +1013,21 @@ func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
 }
 
 func deleteOAuthClient(ins *instance.Instance, rs *RecipientStatus) error {
-	client, err := oauth.FindClient(ins, rs.HostClientID)
+	client, err := oauth.FindClient(ins, rs.InboundClientID)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
-			"find OAuth client %s: %s", rs.HostClientID, err)
+			"find OAuth client %s: %s", rs.InboundClientID, err)
 		return err
 	}
 	crErr := client.Delete(ins)
 	if crErr != nil {
 		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
-			"delete OAuth client %s: %s", rs.HostClientID, err)
+			"delete OAuth client %s: %s", rs.InboundClientID, err)
 		return errors.New(crErr.Error)
 	}
 
-	ins.Logger().Debugf("[sharings] OAuth client %s deleted", rs.HostClientID)
-	rs.HostClientID = ""
+	ins.Logger().Debugf("[sharings] OAuth client %s deleted", rs.InboundClientID)
+	rs.InboundClientID = ""
 	return nil
 }
 
@@ -1036,7 +1036,7 @@ func askToRevokeSharing(ins *instance.Instance, sharing *Sharing, rs *RecipientS
 }
 
 func askToRevokeRecipient(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus) error {
-	// TODO: If the recipient revoke a master-slave sharing, he  cannot request
+	// TODO: If the recipient revoke a one-way sharing, he  cannot request
 	// the sharer yet, as he have no credentials
 	if rs.RefRecipient.ID != "" {
 		return askToRevoke(ins, sharing, rs, rs.Client.ClientID)
@@ -1061,12 +1061,12 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, 
 	if recipientClientID == "" {
 		path = fmt.Sprintf("/sharings/%s", sharingID)
 	} else {
-		// From the recipient point of view, only a Master-Master sharing
+		// From the recipient point of view, only a two-way sharing
 		// grants him the rights to request the sharer, as he doesn't have
 		// any credentials otherwise.
-		if sharing.SharingType == consts.MasterMasterSharing {
+		if sharing.SharingType == consts.TwoWaySharing {
 			path = fmt.Sprintf("/sharings/%s/recipient/%s", sharingID,
-				rs.HostClientID)
+				rs.InboundClientID)
 		} else {
 			return nil
 		}

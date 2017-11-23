@@ -1058,7 +1058,7 @@ func parseError(err error) error {
 
 // filehasChanges checks that the local file do have changes compared to the
 // remote one.
-// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// This is done to prevent infinite loops after a PUT/PATCH in two-way:
 // we don't propagate the update if they are similar.
 func fileHasChanges(fs vfs.VFS, opts *SendOptions, newFileDoc, remoteFileDoc *vfs.FileDoc) bool {
 	if newFileDoc.Name() != remoteFileDoc.Name() {
@@ -1079,7 +1079,7 @@ func fileHasChanges(fs vfs.VFS, opts *SendOptions, newFileDoc, remoteFileDoc *vf
 
 // dirHasChanges checks that the local directory do have changes compared to the
 // remote one.
-// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// This is done to prevent infinite loops after a PUT/PATCH in two-way:
 // we don't propagate the update if they are similar.
 func dirHasChanges(fs vfs.VFS, opts *SendOptions, newDirDoc, remoteDirDoc *vfs.DirDoc) bool {
 	if newDirDoc.Name() != remoteDirDoc.Name() {
@@ -1098,7 +1098,7 @@ func dirHasChanges(fs vfs.VFS, opts *SendOptions, newDirDoc, remoteDirDoc *vfs.D
 
 // docHasChanges checks that the local doc do have changes compared to the
 // remote one.
-// This is done to prevent infinite loops after a PUT/PATCH in master-master:
+// This is done to prevent infinite loops after a PUT/PATCH in two-way:
 // we don't mitigate the update if they are similar.
 func docHasChanges(newDoc *couchdb.JSONDoc, doc *couchdb.JSONDoc) bool {
 
