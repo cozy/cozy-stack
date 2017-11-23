@@ -11,6 +11,7 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 )
 
+// redisPrefix is the prefix for jobs queues in redis.
 const redisPrefix = "j/"
 
 type redisBroker struct {
@@ -63,6 +64,14 @@ func (b *redisBroker) Start(ws WorkersList) error {
 	go b.pollLoop(keys)
 
 	return nil
+}
+
+func (b *redisBroker) WorkersTypes() []string {
+	types := make([]string, len(b.workers))
+	for i, worker := range b.workers {
+		types[i] = worker.Type
+	}
+	return types
 }
 
 func (b *redisBroker) Shutdown(ctx context.Context) error {

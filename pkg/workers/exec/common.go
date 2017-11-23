@@ -10,6 +10,8 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -43,7 +45,7 @@ type execWorker interface {
 }
 
 func makeExecWorkerFunc() jobs.WorkerFunc {
-	return func(ctx *jobs.WorkerContext) error {
+	return func(ctx *jobs.WorkerContext) (err error) {
 		worker := ctx.Cookie().(execWorker)
 		domain := ctx.Domain()
 
@@ -78,6 +80,19 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		scanErr := bufio.NewScanner(cmdErr)
 		scanOut := bufio.NewScanner(cmdOut)
 		scanOut.Buffer(nil, 256*1024)
+
+		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+			var result string
+			if err != nil {
+				result = metrics.WorkerExecResultErrored
+			} else {
+				result = metrics.WorkerExecResultSuccess
+			}
+			metrics.WorkersKonnectorsExecDurations.
+				WithLabelValues(worker.Slug(), result).
+				Observe(v)
+		}))
+		defer timer.ObserveDuration()
 
 		if err = cmd.Start(); err != nil {
 			return wrapErr(ctx, err)
