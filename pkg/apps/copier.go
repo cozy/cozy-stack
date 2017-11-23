@@ -55,7 +55,7 @@ func (f *swiftCopier) Start(slug, version string) (bool, error) {
 			return false, err
 		}
 	}
-	o, err := f.c.ObjectCreate(f.container, f.rootObj, false, "", "", nil)
+	o, err := f.c.ObjectCreate(f.container, f.rootObj, false, "", "directory", nil)
 	if err != nil {
 		return false, err
 	}
@@ -67,6 +67,9 @@ func (f *swiftCopier) Start(slug, version string) (bool, error) {
 func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 	if !f.started {
 		panic("copier should call Start() before Copy()")
+	}
+	if stat.IsDir() {
+		return nil
 	}
 	defer func() {
 		if err != nil {
