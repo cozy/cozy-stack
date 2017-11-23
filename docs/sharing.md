@@ -58,7 +58,7 @@ are purposely left empty for space convenience.
     {
       "recipient": { "id": "mycontactid1", "type": "io.cozy.contacts" },
       "status": "accepted",
-      "url": "https://example.mycozy.cloud/"
+      "url": "https://example.mycozy.cloud/",
       "access_token": {},
       "client": {},
       "inbound_client_id": "myhostclientid"
@@ -296,25 +296,27 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.sharings",
     "id": "ce8835a061d0ef68947afe69a0046722",
-    "attributes": {
-      "owner": true,
-      "sharing_id": "wccKeeGnAppnHgXWqBxKqSpKNpZiMeFR",
-      "sharing_type": "one-shot",
-      "permissions": {
-        "tests": {
-          "type": "io.cozy.tests",
-          "description": "test",
-          "values": ["test-id"]
-        }
-      }
-    },
     "meta": {
       "rev": "1-4859c6c755143adf0838d225c5e97882"
+    },
+    "attributes": {
+      "sharing_id": "wccKeeGnAppnHgXWqBxKqSpKNpZiMeFR",
+      "sharing_type": "one-shot",
+      "description": "sharing test",
+      "preview_path": "/sharings/preview",
+      "app_slug": "cal",
+      "owner": true
     },
     "links": {
       "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
     },
     "relationships": {
+      "permissions": {
+        "data": {
+          "id": "46b25ad6-d044-11e7-af96-579d7e6c689e",
+          "type": "io.cozy.permissions"
+        }
+      },
       "recipients": {
         "data": [
           {
@@ -328,8 +330,37 @@ Content-Type: application/vnd.api+json
   },
   "included": [
     {
+      "type": "io.cozy.permissions",
+      "id": "46b25ad6-d044-11e7-af96-579d7e6c689e",
+      "meta": {
+        "rev": "1-fbed00fed407"
+      },
+      "attributes": {
+        "type": "shared-by-me",
+        "source_id": "io.cozy.sharings/ce8835a061d0ef68947afe69a0046722",
+        "codes": {
+          "yuot7NaiaeGugh8T": "2a31ce0128b5f89e40fd90da3f014087",
+        },
+        "expires_at": 1483951978,
+        "permissions": {
+          "tests": {
+            "description": "test",
+            "type": "io.cozy.tests",
+            "values": ["test-id"],
+            "verbs": ["GET"]
+          }
+        }
+      },
+      "links": {
+        "self": "/permissions/46b25ad6-d044-11e7-af96-579d7e6c689e"
+      }
+    },
+    {
       "type": "io.cozy.contacts",
       "id": "2a31ce0128b5f89e40fd90da3f014087",
+      "meta": {
+        "rev": "1-461114b45855dc6acdb9bdc5d67e1092"
+      },
       "attributes": {
         "email": {
           "address": "toto@fr"
@@ -337,9 +368,6 @@ Content-Type: application/vnd.api+json
         "cozy": {
           "url": "url.fr"
         }
-      },
-      "meta": {
-        "rev": "1-461114b45855dc6acdb9bdc5d67e1092"
       },
       "links": {
         "self": "/contacts/2a31ce0128b5f89e40fd90da3f014087"
