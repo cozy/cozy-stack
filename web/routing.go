@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -36,6 +37,7 @@ import (
 	"github.com/cozy/cozy-stack/web/version"
 
 	"github.com/labstack/echo"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rakyll/statik/fs"
 )
 
@@ -157,6 +159,8 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
+	router.Use(timersMiddleware)
+
 	if !config.GetConfig().DisableCSP {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
@@ -198,6 +202,19 @@ func SetupRoutes(router *echo.Echo) error {
 
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil
+}
+
+func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+			status := strconv.Itoa(c.Response().Status)
+			metrics.HTTPTotalDurations.
+				WithLabelValues(c.Request().Method, status).
+				Observe(v)
+		}))
+		defer timer.ObserveDuration()
+		return next(c)
+	}
 }
 
 // SetupAdminRoutes sets the routing for the administration HTTP endpoints
