@@ -21,10 +21,10 @@ var WorkerExecDurations = prometheus.NewHistogramVec(
 
 		Help: "Execution duration in seconds of the workers labelled by worker type and result.",
 
-		// A 2 seconds of granularity should be hopefully be enough. With 30
+		// A 5 seconds of granularity should be hopefully be enough. With 12
 		// buckets, it gives us a range from 0 to 1 minute. We may readjust these
 		// parameters when we gather more metrics.
-		Buckets: prometheus.LinearBuckets(0, 2, 30),
+		Buckets: prometheus.LinearBuckets(0, 5, 12),
 	},
 	[]string{"worker_type", "result"},
 )
@@ -75,7 +75,7 @@ workers_exec_durations for the "konnector" and "service" worker types, but offer
 a label by slug.`,
 
 		// Using the same buckets as WorkerExecDurations
-		Buckets: prometheus.LinearBuckets(0, 2, 30),
+		Buckets: prometheus.LinearBuckets(0, 5, 12),
 	},
 	[]string{"slug", "result"},
 )
