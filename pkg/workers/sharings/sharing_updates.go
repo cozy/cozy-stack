@@ -32,8 +32,6 @@ var (
 	// ErrDocumentNotLegitimate is used when a shared document is triggered but
 	// not legitimate for this sharing
 	ErrDocumentNotLegitimate = errors.New("Triggered illegitimate shared document")
-	//ErrRecipientDoesNotExist is used when the given recipient does not exist
-	ErrRecipientDoesNotExist = errors.New("Recipient with given ID does not exist")
 	// ErrRecipientHasNoURL is used to signal that a recipient has no URL.
 	ErrRecipientHasNoURL = errors.New("Recipient has no URL")
 	// ErrEventNotSupported is used to signal that the event propagated by the
@@ -108,14 +106,14 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	if sharing.Revoked {
 		return nil
 	}
-	sendToSharer := isRecipientSide(sharing)
+	sendToSharer := !sharing.Owner
 
 	if sendToSharer {
 		// We are on the recipient side
 
 		recInfos = make([]*sharings.RecipientInfo, 1)
-		sharerStatus := sharing.Sharer.SharerStatus
-		info, err := sharings.ExtractRecipientInfo(ins, sharerStatus)
+		sharerStatus := sharing.Sharer
+		info, err := sharings.ExtractRecipientInfo(ins, &sharerStatus)
 		if err != nil {
 			return err
 		}
@@ -123,10 +121,10 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 
 	} else {
 		// We are on the sharer side
-		for _, rec := range sharing.RecipientsStatus {
+		for _, rec := range sharing.Recipients {
 			// Ignore the revoked recipients
 			if rec.Status != consts.SharingStatusRevoked {
-				info, err := sharings.ExtractRecipientInfo(ins, rec)
+				info, err := sharings.ExtractRecipientInfo(ins, &rec)
 				if err != nil {
 					return err
 				}
@@ -253,13 +251,6 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 	default:
 		return ErrEventNotSupported
 	}
-}
-
-// isRecipientSide is used to determine whether or not we are on the recipient side.
-// A sharing is on the recipient side iff:
-// - the SharerStatus structure is not nil
-func isRecipientSide(sharing *sharings.Sharing) bool {
-	return sharing.Sharer.SharerStatus != nil
 }
 
 // This function checks if the document with the given ID still belong in the

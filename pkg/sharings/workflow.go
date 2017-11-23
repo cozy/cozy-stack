@@ -22,7 +22,7 @@ import (
 
 // GenerateOAuthQueryString takes care of creating a correct OAuth request for
 // the given sharing and recipient.
-func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (string, error) {
+func GenerateOAuthQueryString(s *Sharing, rs *Member, scheme string) (string, error) {
 
 	// Check if an oauth client exists for the owner at the recipient's.
 	if rs.Client.ClientID == "" || len(rs.Client.RedirectURIs) < 1 {
@@ -30,7 +30,7 @@ func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 	}
 
 	// Check if the recipient has an URL.
-	if len(rs.recipient.Cozy) == 0 {
+	if len(rs.contact.Cozy) == 0 {
 		return "", ErrRecipientHasNoURL
 	}
 
@@ -48,14 +48,14 @@ func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (s
 		return "", err
 	}
 
-	oAuthQuery, err := url.Parse(rs.recipient.Cozy[0].URL)
+	oAuthQuery, err := url.Parse(rs.contact.Cozy[0].URL)
 	if err != nil {
 		return "", err
 	}
 	// Special scenario: if r.URL doesn't have an "http://" or "https://" prefix
 	// then `url.Parse` doesn't set any host.
 	if oAuthQuery.Host == "" {
-		oAuthQuery.Host = rs.recipient.Cozy[0].URL
+		oAuthQuery.Host = rs.contact.Cozy[0].URL
 	}
 	oAuthQuery.Path = "/sharings/request"
 	// The link/button we put in the email has to have an http:// or https://
@@ -103,7 +103,7 @@ func SharingAccepted(instance *instance.Instance, state, clientID, accessCode st
 	err = ShareDoc(instance, sharing, recStatus)
 
 	// Redirect the recipient after acceptation
-	redirect := recStatus.recipient.Cozy[0].URL
+	redirect := recStatus.contact.Cozy[0].URL
 	return redirect, err
 }
 
@@ -124,13 +124,13 @@ func SharingRefused(db couchdb.Database, state, clientID string) (string, error)
 
 	// Sanity check: as the `recipient` is private if the document is fetched
 	// from the database it is nil.
-	err = recStatus.GetRecipient(db)
-	if err != nil {
+	c := recStatus.Contact(db)
+	if c == nil {
 		return "", nil
 	}
 
-	redirect := recStatus.recipient.Cozy[0].URL
-	return redirect, err
+	redirect := c.Cozy[0].URL
+	return redirect, nil
 }
 
 // RecipientRefusedSharing deletes the sharing document and returns the address
@@ -197,19 +197,16 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 		return nil, ErrSharingAlreadyExist
 	}
 
-	sr := &RecipientStatus{
+	sharer := Member{
+		URL:             sharerClient.ClientURI,
 		InboundClientID: clientID,
-		recipient: &contacts.Contact{
+		contact: &contacts.Contact{
 			Cozy: []contacts.Cozy{
 				contacts.Cozy{
 					URL: sharerClient.ClientURI,
 				},
 			},
 		},
-	}
-	sharer := Sharer{
-		URL:          sharerClient.ClientURI,
-		SharerStatus: sr,
 	}
 
 	sharing := &Sharing{
@@ -230,12 +227,12 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 
 // RegisterRecipient registers a sharing recipient
 // TODO use the cozyURL param
-func RegisterRecipient(instance *instance.Instance, rs *RecipientStatus, cozyURL string) error {
+func RegisterRecipient(instance *instance.Instance, rs *Member, cozyURL string) error {
 	err := rs.Register(instance)
 	if err != nil {
-		if rs.recipient != nil {
+		if rs.contact != nil {
 			instance.Logger().Errorf("[sharing] Could not register at %v : %v",
-				rs.recipient.Cozy[0].URL, err)
+				rs.contact.Cozy[0].URL, err)
 			rs.Status = consts.SharingStatusUnregistered
 		} else {
 			instance.Logger().Error("[sharing] Sharing recipient not found")
@@ -265,33 +262,33 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 		ID:   doc.ID(),
 		Type: consts.Contacts,
 	}
-	sharer.SharerStatus.RefRecipient = ref
-	err = sharer.SharerStatus.Register(instance)
+	sharer.RefContact = ref
+	err = sharer.Register(instance)
 	if err != nil {
 		instance.Logger().Error("[sharing] Could not register at "+sharer.URL+" ", err)
-		sharer.SharerStatus.Status = consts.SharingStatusUnregistered
+		sharer.Status = consts.SharingStatusUnregistered
 	}
 	return couchdb.UpdateDoc(instance, sharing)
 }
 
 // SendClientID sends the registered clientId to the sharer
 func SendClientID(sharing *Sharing) error {
-	domain, scheme, err := ExtractDomainAndScheme(sharing.Sharer.SharerStatus.recipient)
+	domain, scheme, err := ExtractDomainAndScheme(sharing.Sharer.contact)
 	if err != nil {
 		return nil
 	}
 	path := "/sharings/access/client"
-	newClientID := sharing.Sharer.SharerStatus.Client.ClientID
+	newClientID := sharing.Sharer.Client.ClientID
 	params := SharingRequestParams{
 		SharingID:       sharing.SID,
-		ClientID:        sharing.Sharer.SharerStatus.InboundClientID,
+		ClientID:        sharing.Sharer.InboundClientID,
 		InboundClientID: newClientID,
 	}
 	return Request("POST", domain, scheme, path, params)
 }
 
 // SendCode generates and sends an OAuth code to a recipient
-func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus) error {
+func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
 	scope, err := sharing.Permissions.MarshalScopeString()
 	if err != nil {
 		return err
@@ -301,7 +298,7 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 	if err != nil {
 		return err
 	}
-	domain, scheme, err := ExtractDomainAndScheme(recStatus.recipient)
+	domain, scheme, err := ExtractDomainAndScheme(recStatus.contact)
 	if err != nil {
 		return nil
 	}
@@ -314,7 +311,7 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 }
 
 // ExchangeCodeForToken asks for an AccessToken based on an AccessCode
-func ExchangeCodeForToken(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus, code string) error {
+func ExchangeCodeForToken(instance *instance.Instance, sharing *Sharing, recStatus *Member, code string) error {
 	// Fetch the access and refresh tokens.
 	access, err := recStatus.getAccessToken(instance, code)
 	if err != nil {
@@ -364,16 +361,16 @@ func Request(method, domain, scheme, path string, params interface{}) error {
 func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) error {
 	var err error
 	if sharing.Owner {
-		for _, rs := range sharing.RecipientsStatus {
+		for _, rs := range sharing.Recipients {
 			if recursive {
-				err = askToRevokeSharing(ins, sharing, rs)
+				err = askToRevokeSharing(ins, sharing, &rs)
 				if err != nil {
 					continue
 				}
 			}
 
 			if sharing.SharingType == consts.TwoWaySharing {
-				err = deleteOAuthClient(ins, rs)
+				err = deleteOAuthClient(ins, &rs)
 				if err != nil {
 					continue
 				}
@@ -387,13 +384,13 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 
 	} else {
 		if recursive {
-			err = askToRevokeRecipient(ins, sharing, sharing.Sharer.SharerStatus)
+			err = askToRevokeRecipient(ins, sharing, &sharing.Sharer)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = deleteOAuthClient(ins, sharing.Sharer.SharerStatus)
+		err = deleteOAuthClient(ins, &sharing.Sharer)
 		if err != nil {
 			return err
 		}
@@ -418,16 +415,14 @@ func RevokeRecipientByContactID(ins *instance.Instance, sharing *Sharing, contac
 		return ErrOnlySharerCanRevokeRecipient
 	}
 
-	for _, rs := range sharing.RecipientsStatus {
-		if err := rs.GetRecipient(ins); err != nil {
-			return err
-		}
-		if rs.recipient.DocID == contactID {
+	for _, rs := range sharing.Recipients {
+		c := rs.Contact(ins)
+		if c != nil && c.DocID == contactID {
 			// TODO check how askToRevokeRecipient behave when no recipient has accepted the sharing
-			if err := askToRevokeSharing(ins, sharing, rs); err != nil {
+			if err := askToRevokeSharing(ins, sharing, &rs); err != nil {
 				return err
 			}
-			return RevokeRecipient(ins, sharing, rs)
+			return RevokeRecipient(ins, sharing, &rs)
 		}
 	}
 
@@ -441,9 +436,9 @@ func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientI
 		return ErrOnlySharerCanRevokeRecipient
 	}
 
-	for _, rs := range sharing.RecipientsStatus {
+	for _, rs := range sharing.Recipients {
 		if rs.Client.ClientID == clientID {
-			return RevokeRecipient(ins, sharing, rs)
+			return RevokeRecipient(ins, sharing, &rs)
 		}
 	}
 
@@ -458,7 +453,7 @@ func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientI
 //
 // If there are no more recipients the sharing is revoked and the corresponding
 // trigger is deleted.
-func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *RecipientStatus) error {
+func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member) error {
 	if sharing.SharingType == consts.TwoWaySharing {
 		if err := deleteOAuthClient(ins, recipient); err != nil {
 			return err
@@ -471,7 +466,7 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Recipi
 	recipient.Status = consts.SharingStatusRevoked
 
 	toRevoke := true
-	for _, recipient := range sharing.RecipientsStatus {
+	for _, recipient := range sharing.Recipients {
 		if recipient.Status != consts.SharingStatusRevoked &&
 			recipient.Status != consts.SharingStatusRefused {
 			toRevoke = false
@@ -527,7 +522,7 @@ func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
 	return nil
 }
 
-func deleteOAuthClient(ins *instance.Instance, rs *RecipientStatus) error {
+func deleteOAuthClient(ins *instance.Instance, rs *Member) error {
 	client, err := oauth.FindClient(ins, rs.InboundClientID)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
@@ -546,14 +541,14 @@ func deleteOAuthClient(ins *instance.Instance, rs *RecipientStatus) error {
 	return nil
 }
 
-func askToRevokeSharing(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus) error {
+func askToRevokeSharing(ins *instance.Instance, sharing *Sharing, rs *Member) error {
 	return askToRevoke(ins, sharing, rs, "")
 }
 
-func askToRevokeRecipient(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus) error {
+func askToRevokeRecipient(ins *instance.Instance, sharing *Sharing, rs *Member) error {
 	// TODO: If the recipient revoke a one-way sharing, he  cannot request
 	// the sharer yet, as he have no credentials
-	if rs.RefRecipient.ID != "" {
+	if rs.RefContact.ID != "" {
 		return askToRevoke(ins, sharing, rs, rs.Client.ClientID)
 	}
 	return nil
@@ -563,13 +558,13 @@ func askToRevokeRecipient(ins *instance.Instance, sharing *Sharing, rs *Recipien
 // TODO Once we will handle error properly (recipient is disconnected and
 // what not) analyze the error returned and take proper actions every time this
 // function is called.
-func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, recipientClientID string) error {
+func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *Member, recipientClientID string) error {
 	sharingID := sharing.SID
-	err := rs.GetRecipient(ins)
-	if err != nil {
+	c := rs.Contact(ins)
+	if c == nil {
 		ins.Logger().Errorf("[sharings] askToRevoke: Could not fetch "+
-			"recipient %s from database: %v", rs.RefRecipient.ID, err)
-		return err
+			"recipient %s from database", rs.RefContact.ID)
+		return ErrRecipientDoesNotExist
 	}
 
 	var path string
@@ -586,7 +581,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, 
 			return nil
 		}
 	}
-	domain, scheme, err := ExtractDomainAndScheme(rs.recipient)
+	domain, scheme, err := ExtractDomainAndScheme(rs.contact)
 	if err != nil {
 		return err
 	}
@@ -617,7 +612,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *RecipientStatus, 
 		}
 		if err != nil {
 			ins.Logger().Errorf("[sharings] askToRevoke: Could not ask recipient "+
-				"%s to revoke sharing %s: %v", rs.recipient.Cozy[0].URL, sharingID, err)
+				"%s to revoke sharing %s: %v", rs.contact.Cozy[0].URL, sharingID, err)
 		}
 		return err
 	}

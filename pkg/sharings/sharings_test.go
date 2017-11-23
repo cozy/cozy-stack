@@ -125,10 +125,10 @@ func createOAuthClient(t *testing.T) *oauth.Client {
 
 func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, slug string, recipients []*contacts.Contact, rule permissions.Rule) *Sharing {
 	sharing := &Sharing{
-		SharingType:      sharingType,
-		Owner:            owner,
-		Permissions:      permissions.Set{rule},
-		RecipientsStatus: []*RecipientStatus{},
+		SharingType: sharingType,
+		Owner:       owner,
+		Permissions: permissions.Set{rule},
+		Recipients:  []*Member{},
 	}
 
 	if slug == "" {
@@ -161,9 +161,9 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 			permissions.AccessTokenAudience, scope)
 		assert.NoError(t, errc)
 
-		rs := &RecipientStatus{
+		rs := &Member{
 			Status: consts.SharingStatusAccepted,
-			RefRecipient: couchdb.DocReference{
+			RefContact: couchdb.DocReference{
 				ID:   recipient.ID(),
 				Type: recipient.DocType(),
 			},
@@ -182,7 +182,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 		}
 
 		if owner {
-			sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
+			sharing.Recipients = append(sharing.Recipients, rs)
 		} else {
 			sharing.Sharer = Sharer{
 				SharerStatus: rs,
@@ -258,7 +258,7 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 
 func TestGetAccessTokenNoAuth(t *testing.T) {
 	code := "sesame"
-	rs := &RecipientStatus{
+	rs := &Member{
 		recipient: &contacts.Contact{
 			Cozy: []contacts.Cozy{
 				contacts.Cozy{URL: recipientURL},
@@ -272,7 +272,7 @@ func TestGetAccessTokenNoAuth(t *testing.T) {
 
 func TestGetAccessTokenNoURL(t *testing.T) {
 	code := "dummy"
-	rs := &RecipientStatus{
+	rs := &Member{
 		recipient: &contacts.Contact{},
 		Client:    auth.Client{},
 	}
@@ -282,7 +282,7 @@ func TestGetAccessTokenNoURL(t *testing.T) {
 }
 
 func TestRegisterNoURL(t *testing.T) {
-	rs := &RecipientStatus{
+	rs := &Member{
 		recipient: &contacts.Contact{
 			DocID: "dummyid",
 		},
@@ -302,7 +302,7 @@ func TestRegisterSuccess(t *testing.T) {
 		rURL = "http://" + rURL
 	}
 
-	rs := &RecipientStatus{
+	rs := &Member{
 		recipient: &contacts.Contact{
 			Cozy: []contacts.Cozy{
 				contacts.Cozy{URL: rURL},
@@ -321,17 +321,17 @@ func TestRegisterSuccess(t *testing.T) {
 	assert.NotNil(t, rs.Client)
 }
 
-func TestGetRecipient(t *testing.T) {
+func TestGetContact(t *testing.T) {
 	recipient := &contacts.Contact{}
 
-	_, err := GetRecipient(TestPrefix, "maurice")
+	_, err := GetContact(TestPrefix, "maurice")
 	assert.Error(t, err)
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
 
 	err = couchdb.CreateDoc(TestPrefix, recipient)
 	assert.NoError(t, err)
 
-	doc, err := GetRecipient(TestPrefix, recipient.DocID)
+	doc, err := GetContact(TestPrefix, recipient.DocID)
 	assert.NoError(t, err)
 	assert.Equal(t, recipient, doc)
 }
@@ -350,7 +350,7 @@ func TestCreateOrUpdateRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, alice.DocID)
 	assert.NotEmpty(t, alice.DocRev)
-	doc, err := GetRecipient(TestPrefix, alice.DocID)
+	doc, err := GetContact(TestPrefix, alice.DocID)
 	assert.NoError(t, err)
 	assert.Equal(t, alice, doc)
 
@@ -374,7 +374,7 @@ func TestCreateOrUpdateRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, bob.DocID, bob2.DocID)
 	assert.NotEmpty(t, bob2.DocRev)
-	doc, err = GetRecipient(TestPrefix, bob.DocID)
+	doc, err = GetContact(TestPrefix, bob.DocID)
 	assert.NoError(t, err)
 	assert.Len(t, doc.Email, 1)
 	assert.Equal(t, "bob@cozy.tools", doc.Email[0].Address)
@@ -404,7 +404,7 @@ func TestCreateOrUpdateRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, charlie.DocID, charlie2.DocID)
 	assert.NotEmpty(t, charlie2.DocRev)
-	doc, err = GetRecipient(TestPrefix, charlie.DocID)
+	doc, err = GetContact(TestPrefix, charlie.DocID)
 	assert.NoError(t, err)
 	assert.Len(t, doc.Email, 2)
 	assert.Equal(t, "charlie@cozy.wtf", doc.Email[0].Address)
@@ -429,7 +429,7 @@ func TestCreateOrUpdateRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, dave.DocID, dave2.DocID)
 	assert.NotEmpty(t, dave2.DocRev)
-	doc, err = GetRecipient(TestPrefix, dave.DocID)
+	doc, err = GetContact(TestPrefix, dave.DocID)
 	assert.NoError(t, err)
 	assert.Len(t, doc.Email, 1)
 	assert.Equal(t, "dave@cozy.tools", doc.Email[0].Address)
@@ -457,14 +457,14 @@ func TestGetSharingRecipientFromClientIDNoRecipient(t *testing.T) {
 func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 	clientID := "fake client"
 
-	rStatus := &RecipientStatus{
-		RefRecipient: couchdb.DocReference{ID: "id", Type: "type"},
+	rStatus := &Member{
+		RefContact: couchdb.DocReference{ID: "id", Type: "type"},
 		Client: auth.Client{
 			ClientID: "fakeid",
 		},
 	}
 	sharing := &Sharing{
-		RecipientsStatus: []*RecipientStatus{rStatus},
+		Recipients: []*Member{rStatus},
 	}
 	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix,
 		clientID)
@@ -473,30 +473,30 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 	assert.Nil(t, recStatus)
 }
 
-func TestGetRecipientStatusFromRecipientNoRecipient(t *testing.T) {
-	rs := &RecipientStatus{}
+func TestGetMemberFromRecipientNoRecipient(t *testing.T) {
+	rs := &Member{}
 	sharing := &Sharing{
-		RecipientsStatus: []*RecipientStatus{rs},
+		Recipients: []*Member{rs},
 	}
-	recStatus, err := sharing.GetRecipientStatusFromRecipientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromRecipientID(TestPrefix,
 		"bad recipient")
 	assert.Error(t, err)
 	assert.Nil(t, recStatus)
 }
 
-func TestGetRecipientStatusFromRecipientNotFound(t *testing.T) {
+func TestGetMemberFromRecipientNotFound(t *testing.T) {
 	recID := "fake recipient"
 	rec := &contacts.Contact{}
 	rec.SetID(recID)
-	rs := &RecipientStatus{
+	rs := &Member{
 		recipient: rec,
 	}
 
 	sharing := &Sharing{
-		RecipientsStatus: []*RecipientStatus{rs},
+		Recipients: []*Member{rs},
 	}
 
-	recStatus, err := sharing.GetRecipientStatusFromRecipientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromRecipientID(TestPrefix,
 		"bad recipient")
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
 	assert.Nil(t, recStatus)
@@ -504,14 +504,14 @@ func TestGetRecipientStatusFromRecipientNotFound(t *testing.T) {
 
 func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 	clientID := "fake client"
-	rs := &RecipientStatus{
+	rs := &Member{
 		Client: auth.Client{
 			ClientID: clientID,
 		},
 	}
 
 	sharing := &Sharing{
-		RecipientsStatus: []*RecipientStatus{rs},
+		Recipients: []*Member{rs},
 	}
 
 	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix,
@@ -520,19 +520,19 @@ func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 	assert.Equal(t, rs, recStatus)
 }
 
-func TestGetRecipientStatusFromRecipientIDSuccess(t *testing.T) {
+func TestGetMemberFromRecipientIDSuccess(t *testing.T) {
 	recID := "fake recipient"
 	rec := &contacts.Contact{}
 	rec.SetID(recID)
-	rs := &RecipientStatus{
+	rs := &Member{
 		recipient: rec,
 	}
 
 	sharing := &Sharing{
-		RecipientsStatus: []*RecipientStatus{rs},
+		Recipients: []*Member{rs},
 	}
 
-	recStatus, err := sharing.GetRecipientStatusFromRecipientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromRecipientID(TestPrefix,
 		recID)
 	assert.NoError(t, err)
 	assert.Equal(t, rs, recStatus)
@@ -632,15 +632,15 @@ func TestSharingRefusedSuccess(t *testing.T) {
 	err := couchdb.CreateDoc(TestPrefix, recipient)
 	assert.NoError(t, err)
 
-	rStatus := &RecipientStatus{
-		RefRecipient: couchdb.DocReference{ID: recipient.DocID},
+	rStatus := &Member{
+		RefContact: couchdb.DocReference{ID: recipient.DocID},
 		Client: auth.Client{
 			ClientID: clientID,
 		},
 	}
 	sharing := &Sharing{
-		SharingID:        state,
-		RecipientsStatus: []*RecipientStatus{rStatus},
+		SharingID:  state,
+		Recipients: []*Member{rStatus},
 	}
 	err = couchdb.CreateDoc(TestPrefix, sharing)
 	assert.NoError(t, err)
@@ -885,17 +885,17 @@ func TestRevokeSharing(t *testing.T) {
 	err = RevokeSharing(testInstance, sharingSharerMM, true)
 	assert.NoError(t, err)
 	// Check: all the recipients were asked to remove the sharing.
-	assert.Equal(t, len(sharingSharerMM.RecipientsStatus), counterRevokeSharing)
+	assert.Equal(t, len(sharingSharerMM.Recipients), counterRevokeSharing)
 	// Check: the trigger is deleted.
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers)
 	// Check: the OAuth clients for all the recipients were deleted. Both calls
 	// to `FindClient` should return errors.
 	_, err = oauth.FindClient(testInstance,
-		sharingSharerMM.RecipientsStatus[0].InboundClientID)
+		sharingSharerMM.Recipients[0].InboundClientID)
 	assert.Error(t, err)
 	_, err = oauth.FindClient(testInstance,
-		sharingSharerMM.RecipientsStatus[1].InboundClientID)
+		sharingSharerMM.Recipients[1].InboundClientID)
 	assert.Error(t, err)
 	// Check: the sharing is revoked.
 	doc := &Sharing{}
@@ -996,7 +996,7 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.Len(t, triggers, nbTriggers+1)
 
 	// Test: we remove the first recipient.
-	err = RevokeRecipientByClientID(testInstance, sharing, sharing.RecipientsStatus[0].Client.ClientID)
+	err = RevokeRecipientByClientID(testInstance, sharing, sharing.Recipients[0].Client.ClientID)
 	assert.NoError(t, err)
 	// We check that the first recipient was revoked, that the sharing is not
 	// revoked, and that the trigger still exists.
@@ -1004,11 +1004,11 @@ func TestRevokeRecipient(t *testing.T) {
 	err = couchdb.GetDoc(testInstance, consts.Sharings, sharing.ID(), &doc)
 	assert.NoError(t, err)
 	assert.False(t, doc.Revoked)
-	assert.Equal(t, consts.SharingStatusRevoked, doc.RecipientsStatus[0].Status)
-	assert.Empty(t, doc.RecipientsStatus[0].InboundClientID)
-	assert.Empty(t, doc.RecipientsStatus[0].Client.ClientID)
-	assert.Empty(t, doc.RecipientsStatus[0].AccessToken.AccessToken)
-	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[0].InboundClientID)
+	assert.Equal(t, consts.SharingStatusRevoked, doc.Recipients[0].Status)
+	assert.Empty(t, doc.Recipients[0].InboundClientID)
+	assert.Empty(t, doc.Recipients[0].Client.ClientID)
+	assert.Empty(t, doc.Recipients[0].AccessToken.AccessToken)
+	_, err = oauth.FindClient(testInstance, doc.Recipients[0].InboundClientID)
 	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
@@ -1024,11 +1024,11 @@ func TestRevokeRecipient(t *testing.T) {
 	err = couchdb.GetDoc(testInstance, consts.Sharings, sharing.ID(), &doc)
 	assert.NoError(t, err)
 	assert.True(t, doc.Revoked)
-	assert.Equal(t, consts.SharingStatusRevoked, doc.RecipientsStatus[1].Status)
-	assert.Empty(t, doc.RecipientsStatus[1].InboundClientID)
-	assert.Empty(t, doc.RecipientsStatus[1].Client.ClientID)
-	assert.Empty(t, doc.RecipientsStatus[1].AccessToken.AccessToken)
-	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[1].InboundClientID)
+	assert.Equal(t, consts.SharingStatusRevoked, doc.Recipients[1].Status)
+	assert.Empty(t, doc.Recipients[1].InboundClientID)
+	assert.Empty(t, doc.Recipients[1].Client.ClientID)
+	assert.Empty(t, doc.Recipients[1].AccessToken.AccessToken)
+	_, err = oauth.FindClient(testInstance, doc.Recipients[1].InboundClientID)
 	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers)
@@ -1037,11 +1037,11 @@ func TestRevokeRecipient(t *testing.T) {
 func TestDeleteOAuthClient(t *testing.T) {
 	client := createOAuthClient(t)
 
-	err := deleteOAuthClient(testInstance, &RecipientStatus{
+	err := deleteOAuthClient(testInstance, &Member{
 		InboundClientID: "fakeid",
 	})
 	assert.Error(t, err)
-	err = deleteOAuthClient(testInstance, &RecipientStatus{
+	err = deleteOAuthClient(testInstance, &Member{
 		InboundClientID: client.ClientID,
 	})
 	assert.NoError(t, err)

@@ -12,28 +12,30 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
-// RecipientStatus contains the information about a recipient for a sharing
-type RecipientStatus struct {
+// Member contains the information about a recipient (or the sharer) for a sharing
+type Member struct {
 	Status string `json:"status,omitempty"`
+	URL    string `json:"url,omitempty"`
 
-	// Reference on the recipient.
-	RefRecipient couchdb.DocReference `json:"recipient,omitempty"`
-	recipient    *contacts.Contact
+	// Only a reference on the contact is persisted in the sharing document
+	RefContact couchdb.DocReference `json:"contact,omitempty"`
+	contact    *contacts.Contact
 
-	// The sharer is the "client", in the OAuth2 protocol, we keep here the
-	// information she needs to send to authenticate.
+	// Information needed to send data to the member
 	Client      auth.Client      `json:"client"`
 	AccessToken auth.AccessToken `json:"access_token"`
 
-	// The OAuth ClientID refering to the host's client stored in its db
+	// The OAuth ClientID used for authentifying incoming requests from the member
 	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
 // ExtractDomainAndScheme returns the recipient's domain and the scheme
+// TODO kill this method
 func ExtractDomainAndScheme(r *contacts.Contact) (string, string, error) {
 	if len(r.Cozy) == 0 {
 		return "", "", ErrRecipientHasNoURL
 	}
+	// TODO We should use the Member.URL (to be confirmed)
 	u, err := url.Parse(r.Cozy[0].URL)
 	if err != nil {
 		return "", "", err
@@ -46,16 +48,30 @@ func ExtractDomainAndScheme(r *contacts.Contact) (string, string, error) {
 	return host, scheme, nil
 }
 
-// GetRecipient get the actual recipient of a RecipientStatus
-func (rs *RecipientStatus) GetRecipient(db couchdb.Database) error {
-	if rs.recipient == nil {
-		recipient, err := GetRecipient(db, rs.RefRecipient.ID)
-		if err != nil {
-			return err
-		}
-		rs.recipient = recipient
+// GetContact returns the contact stored in database from a given ID
+// TODO move this function to the contacts package
+func GetContact(db couchdb.Database, contactID string) (*contacts.Contact, error) {
+	doc := &contacts.Contact{}
+	err := couchdb.GetDoc(db, consts.Contacts, contactID, doc)
+	if couchdb.IsNotFoundError(err) {
+		err = ErrRecipientDoesNotExist
 	}
-	return nil
+	return doc, err
+}
+
+// Contact get the actual contact of a Member
+func (m *Member) Contact(db couchdb.Database) *contacts.Contact {
+	if m.contact == nil {
+		if db == nil {
+			return nil
+		}
+		c, err := GetContact(db, m.RefContact.ID)
+		if err != nil {
+			return nil
+		}
+		m.contact = c
+	}
+	return m.contact
 }
 
 // CreateOrUpdateRecipient inserts a Recipient document in database. Email and URL must
@@ -123,59 +139,33 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *contacts.Contact) error {
 // ForceRecipient forces the recipient. It is useful when testing the URL of
 // the cozy instances of the recipient before saving the recipient if
 // successful.
-func (rs *RecipientStatus) ForceRecipient(r *contacts.Contact) {
-	rs.recipient = r
-}
-
-// GetRecipient returns the Recipient stored in database from a given ID
-// TODO rename this function to GetContact
-func GetRecipient(db couchdb.Database, recID string) (*contacts.Contact, error) {
-	doc := &contacts.Contact{}
-	err := couchdb.GetDoc(db, consts.Contacts, recID, doc)
-	if couchdb.IsNotFoundError(err) {
-		err = ErrRecipientDoesNotExist
-	}
-	return doc, err
-}
-
-// GetCachedRecipient returns the recipient cached in memory within
-// the RecipientStatus. CAN BE NIL, Used by jsonapi
-func (rs *RecipientStatus) GetCachedRecipient() *contacts.Contact {
-	return rs.recipient
+// TODO kill this method
+func (rs *Member) ForceRecipient(r *contacts.Contact) {
+	rs.contact = r
 }
 
 // getAccessToken sends an "access_token" request to the recipient using the
 // given authorization code.
-func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*auth.AccessToken, error) {
-	// Sanity check: `recipient` being a private attribute it can be nil if the
-	// sharing document that references it was extracted from the database.
-	if rs.recipient == nil {
-		recipient, err := GetRecipient(db, rs.RefRecipient.ID)
-		if err != nil {
-			return nil, err
-		}
-		rs.recipient = recipient
-	}
-
-	if len(rs.recipient.Cozy) == 0 {
+// TODO db parameter is not needed
+func (m *Member) getAccessToken(db couchdb.Database, code string) (*auth.AccessToken, error) {
+	if m.URL == "" {
 		return nil, ErrRecipientHasNoURL
 	}
-	if rs.Client.ClientID == "" {
+	if m.Client.ClientID == "" {
 		return nil, ErrNoOAuthClient
 	}
 
-	recipientDomain, scheme, err := ExtractDomainAndScheme(rs.recipient)
+	u, err := url.Parse(m.URL)
 	if err != nil {
 		return nil, err
 	}
 
 	req := &auth.Request{
-		Domain:     recipientDomain,
-		Scheme:     scheme,
+		Domain:     u.Host,
+		Scheme:     u.Scheme,
 		HTTPClient: new(http.Client),
 	}
-
-	return req.GetAccessToken(&rs.Client, code)
+	return req.GetAccessToken(&m.Client, code)
 }
 
 // Register asks the recipient to register the sharer as a new OAuth client.
@@ -187,17 +177,18 @@ func (rs *RecipientStatus) getAccessToken(db couchdb.Database, code string) (*au
 // - client kind: "sharing" since this will be a sharing oriented OAuth client.
 // - software id: the link to the github repository of the stack.
 // - client URI: the domain of the sharer's Cozy.
-func (rs *RecipientStatus) Register(instance *instance.Instance) error {
-	if rs.recipient == nil {
-		r, err := GetRecipient(instance, rs.RefRecipient.ID)
+// TODO refactor this method
+func (rs *Member) Register(instance *instance.Instance) error {
+	if rs.contact == nil {
+		r, err := GetContact(instance, rs.RefContact.ID)
 		if err != nil {
 			return err
 		}
-		rs.recipient = r
+		rs.contact = r
 	}
 
 	// If the recipient has no URL there is no point in registering.
-	if len(rs.recipient.Cozy) == 0 {
+	if len(rs.contact.Cozy) == 0 {
 		return ErrRecipientHasNoURL
 	}
 
@@ -218,7 +209,7 @@ func (rs *RecipientStatus) Register(instance *instance.Instance) error {
 		ClientURI:    clientURI,
 	}
 
-	recipientURL, scheme, err := ExtractDomainAndScheme(rs.recipient)
+	recipientURL, scheme, err := ExtractDomainAndScheme(rs.contact)
 	if err != nil {
 		return err
 	}

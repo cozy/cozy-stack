@@ -38,25 +38,13 @@ type Sharing struct {
 	SRev        string          `json:"_rev,omitempty"`
 	SharingType string          `json:"sharing_type"`
 	Permissions permissions.Set `json:"permissions,omitempty"`
-	Sharer      Sharer          `json:"sharer,omitempty"`
-	// TODO rename RecipientsStatus in Recipients
-	RecipientsStatus []*RecipientStatus `json:"recipients,omitempty"`
-	Description      string             `json:"description,omitempty"`
-	PreviewPath      string             `json:"preview_path,omitempty"`
-	AppSlug          string             `json:"app_slug"`
-	Owner            bool               `json:"owner"`
-	Revoked          bool               `json:"revoked,omitempty"`
-}
-
-// Sharer contains the information about the sharer from the recipient's
-// perspective.
-//
-// ATTENTION: This structure will only be filled by the recipients as it is
-// recipient specific. The `ClientID` is different for each recipient and only
-// known by them.
-type Sharer struct {
-	URL          string           `json:"url"`
-	SharerStatus *RecipientStatus `json:"sharer_status"`
+	Sharer      Member          `json:"sharer,omitempty"`
+	Recipients  []Member        `json:"recipients,omitempty"`
+	Description string          `json:"description,omitempty"`
+	PreviewPath string          `json:"preview_path,omitempty"`
+	AppSlug     string          `json:"app_slug"`
+	Owner       bool            `json:"owner"`
+	Revoked     bool            `json:"revoked,omitempty"`
 }
 
 // SharingRequestParams contains the basic information required to request
@@ -107,18 +95,6 @@ func (s *Sharing) DocType() string { return consts.Sharings }
 // Clone implements couchdb.Doc
 func (s *Sharing) Clone() couchdb.Doc {
 	cloned := *s
-	if s.RecipientsStatus != nil {
-		var rStatus []*RecipientStatus
-		cloned.RecipientsStatus = rStatus
-		for _, v := range s.RecipientsStatus {
-			rec := *v
-			cloned.RecipientsStatus = append(cloned.RecipientsStatus, &rec)
-		}
-	}
-	if s.Sharer.SharerStatus != nil {
-		sharerStatus := *s.Sharer.SharerStatus
-		cloned.Sharer.SharerStatus = &sharerStatus
-	}
 	return &cloned
 }
 
@@ -128,33 +104,17 @@ func (s *Sharing) SetID(id string) { s.SID = id }
 // SetRev changes the sharing revision
 func (s *Sharing) SetRev(rev string) { s.SRev = rev }
 
-// RecStatus returns the sharing recipients status
-func (s *Sharing) RecStatus(db couchdb.Database) ([]*RecipientStatus, error) {
-	var rStatus []*RecipientStatus
-
-	for _, rec := range s.RecipientsStatus {
-		recipient, err := GetRecipient(db, rec.RefRecipient.ID)
-		if err != nil {
-			return nil, err
-		}
-		rec.recipient = recipient
-		rStatus = append(rStatus, rec)
-	}
-
-	s.RecipientsStatus = rStatus
-	return rStatus, nil
-}
-
-// Recipients returns the sharing recipients
-func (s *Sharing) Recipients(db couchdb.Database) ([]*contacts.Contact, error) {
+// Contacts returns the sharing recipients
+// TODO see how this method is used to try to find something better
+func (s *Sharing) Contacts(db couchdb.Database) ([]*contacts.Contact, error) {
 	var recipients []*contacts.Contact
 
-	for _, rec := range s.RecipientsStatus {
-		recipient, err := GetRecipient(db, rec.RefRecipient.ID)
+	for _, rec := range s.Recipients {
+		recipient, err := GetContact(db, rec.RefContact.ID)
 		if err != nil {
 			return nil, err
 		}
-		rec.recipient = recipient
+		rec.contact = recipient
 		recipients = append(recipients, recipient)
 	}
 
@@ -163,28 +123,29 @@ func (s *Sharing) Recipients(db couchdb.Database) ([]*contacts.Contact, error) {
 
 // GetSharingRecipientFromClientID returns the Recipient associated with the
 // given clientID.
-func (s *Sharing) GetSharingRecipientFromClientID(db couchdb.Database, clientID string) (*RecipientStatus, error) {
-	for _, recStatus := range s.RecipientsStatus {
+func (s *Sharing) GetSharingRecipientFromClientID(db couchdb.Database, clientID string) (*Member, error) {
+	for _, recStatus := range s.Recipients {
 		if recStatus.Client.ClientID == clientID {
-			return recStatus, nil
+			return &recStatus, nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist
 }
 
-// GetRecipientStatusFromRecipientID returns the RecipientStatus associated with the
+// GetMemberFromRecipientID returns the Member associated with the
 // given recipient ID.
-func (s *Sharing) GetRecipientStatusFromRecipientID(db couchdb.Database, recID string) (*RecipientStatus, error) {
-	for _, recStatus := range s.RecipientsStatus {
-		if recStatus.recipient == nil {
-			r, err := GetRecipient(db, recStatus.RefRecipient.ID)
+// TODO refactor
+func (s *Sharing) GetMemberFromRecipientID(db couchdb.Database, recID string) (*Member, error) {
+	for _, recStatus := range s.Recipients {
+		if recStatus.contact == nil {
+			r, err := GetContact(db, recStatus.RefContact.ID)
 			if err != nil {
 				return nil, err
 			}
-			recStatus.recipient = r
+			recStatus.contact = r
 		}
-		if recStatus.recipient.ID() == recID {
-			return recStatus, nil
+		if recStatus.contact.ID() == recID {
+			return &recStatus, nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist
@@ -209,33 +170,33 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 	}
 
 	sharing := &Sharing{
-		SharingType:      sharingType,
-		Permissions:      params.Permissions,
-		RecipientsStatus: make([]*RecipientStatus, 0, len(params.Recipients)),
-		Description:      params.Description,
-		PreviewPath:      params.PreviewPath,
-		AppSlug:          slug,
-		Owner:            true,
-		Revoked:          false,
+		SharingType: sharingType,
+		Permissions: params.Permissions,
+		Recipients:  make([]Member, 0, len(params.Recipients)),
+		Description: params.Description,
+		PreviewPath: params.PreviewPath,
+		AppSlug:     slug,
+		Owner:       true,
+		Revoked:     false,
 	}
 
-	// Fetch the recipients in the database and populate RecipientsStatus
+	// Fetch the recipients in the database and populate Recipients
 	for _, contactID := range params.Recipients {
-		contact, err := GetRecipient(instance, contactID)
+		contact, err := GetContact(instance, contactID)
 		if err != nil {
 			continue
 		}
-		recipient := &RecipientStatus{
+		recipient := Member{
 			Status: consts.SharingStatusPending,
-			RefRecipient: couchdb.DocReference{
+			RefContact: couchdb.DocReference{
 				Type: consts.Contacts,
 				ID:   contact.DocID,
 			},
-			recipient: contact,
+			contact: contact,
 		}
-		sharing.RecipientsStatus = append(sharing.RecipientsStatus, recipient)
+		sharing.Recipients = append(sharing.Recipients, recipient)
 	}
-	if len(sharing.RecipientsStatus) == 0 {
+	if len(sharing.Recipients) == 0 {
 		return nil, ErrRecipientDoesNotExist // TODO better error
 	}
 
@@ -256,7 +217,8 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 }
 
 // FindSharingRecipient retrieve a sharing recipient from its clientID and sharingID
-func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sharing, *RecipientStatus, error) {
+// TODO see how this method is used to try to find a better name (or refactor)
+func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sharing, *Member, error) {
 	sharing, err := FindSharing(db, sharingID)
 	if err != nil {
 		return nil, nil, err
@@ -317,9 +279,9 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 	return sched.Add(t)
 }
 
-// ExtractRecipientInfo returns a RecipientInfo from a RecipientStatus
-func ExtractRecipientInfo(db couchdb.Database, rec *RecipientStatus) (*RecipientInfo, error) {
-	recipient, err := GetRecipient(db, rec.RefRecipient.ID)
+// ExtractRecipientInfo returns a RecipientInfo from a Member
+func ExtractRecipientInfo(db couchdb.Database, rec *Member) (*RecipientInfo, error) {
+	recipient, err := GetContact(db, rec.RefContact.ID)
 	if err != nil {
 		return nil, err
 	}

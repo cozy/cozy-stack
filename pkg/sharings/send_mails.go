@@ -34,15 +34,16 @@ func SendMails(instance *instance.Instance, s *Sharing) error {
 		desc = "Surprise!"
 	}
 
-	for _, recipient := range s.RecipientsStatus {
+	for _, recipient := range s.Recipients {
 		if recipient.Status != consts.SharingStatusPending &&
 			recipient.Status != consts.SharingStatusMailNotSent {
 			continue
 		}
 
-		mailAddress, erro := recipient.recipient.ToMailAddress()
+		// TODO we should check that the contact is not nil
+		mailAddress, erro := recipient.Contact(instance).ToMailAddress()
 		if erro != nil {
-			instance.Logger().Errorf("[sharing] Recipient has no email address: %#v", recipient.recipient)
+			instance.Logger().Errorf("[sharing] Recipient has no email address: %#v", recipient.RefContact)
 			err = ErrRecipientHasNoEmail
 			recipient.Status = consts.SharingStatusMailNotSent
 			if erru := couchdb.UpdateDoc(instance, s); erru != nil {
@@ -50,7 +51,7 @@ func SendMails(instance *instance.Instance, s *Sharing) error {
 			}
 			continue
 		}
-		link := linkForRecipient(instance, s, recipient)
+		link := linkForRecipient(instance, s, &recipient)
 		mailValues := &mailTemplateValues{
 			RecipientName:    mailAddress.Name,
 			SharerPublicName: sharerPublicName,
@@ -85,7 +86,7 @@ func SendMails(instance *instance.Instance, s *Sharing) error {
 	return err
 }
 
-func linkForRecipient(i *instance.Instance, s *Sharing, rs *RecipientStatus) string {
+func linkForRecipient(i *instance.Instance, s *Sharing, rs *Member) string {
 	code := "XXX" // TODO
 	query := url.Values{"sharecode": {code}}
 

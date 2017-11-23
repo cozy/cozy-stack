@@ -38,8 +38,8 @@ users.
 
 ### Sharing document
 
-A sharing document has the following structure in CouchDB. Note some fields
-are purposely left empty for space convenience.
+A sharing document has the following structure in CouchDB. Note some fields are
+purposely left empty for space convenience.
 
 ```json
 {
@@ -56,7 +56,7 @@ are purposely left empty for space convenience.
   },
   "recipients": [
     {
-      "recipient": { "id": "mycontactid1", "type": "io.cozy.contacts" },
+      "contact": { "id": "mycontactid1", "type": "io.cozy.contacts" },
       "status": "accepted",
       "url": "https://example.mycozy.cloud/",
       "access_token": {},
@@ -64,7 +64,7 @@ are purposely left empty for space convenience.
       "inbound_client_id": "myhostclientid"
     },
     {
-      "recipient": { "id": "mycontactid2", "type": "io.cozy.contacts" },
+      "contact": { "id": "mycontactid2", "type": "io.cozy.contacts" },
       "status": "pending"
     }
   ]
@@ -148,18 +148,18 @@ List all the recipients of the sharing:
 ```json
 "recipients": [
     {
-        "recipient": {"id": "mycontactid1", "type": "io.cozy.contacts"},
+        "contact": {"id": "mycontactid1", "type": "io.cozy.contacts"},
         "status": "accepted",
         "url": "https://example.mycozy.cloud/"
     },
     {
-        "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
+        "contact": {"id": "mycontactid2", "type": "io.cozy.contacts"},
         "status": "pending"
     }
 ]
 ```
 
-##### recipient
+##### contact
 
 Specify the contact document containing the `url` and `email` informations.
 
@@ -179,7 +179,7 @@ A contact has the following minimal structure:
 }
 ```
 
-Note that the `email` is mandatory to contact the recipient. If the `URL` is
+Note that the `email` is mandatory to contact the recipient. If the cozy `URL` is
 missing, a discovery mail will be sent in order to ask the recipient to give it.
 
 ##### status
@@ -271,9 +271,7 @@ Content-Type: application/json
       "values": ["test-id"]
     }
   },
-  "recipients": [
-    "2a31ce0128b5f89e40fd90da3f014087"
-  ],
+  "recipients": ["2a31ce0128b5f89e40fd90da3f014087"],
   "description": "sharing test",
   "preview_path": "/sharings/preview"
 }
@@ -338,7 +336,7 @@ Content-Type: application/vnd.api+json
         "type": "shared-by-me",
         "source_id": "io.cozy.sharings/ce8835a061d0ef68947afe69a0046722",
         "codes": {
-          "yuot7NaiaeGugh8T": "2a31ce0128b5f89e40fd90da3f014087",
+          "yuot7NaiaeGugh8T": "2a31ce0128b5f89e40fd90da3f014087"
         },
         "expires_at": 1483951978,
         "permissions": {
@@ -529,9 +527,9 @@ Yes!
 
 #### What are the information required for a recipient?
 
-Only an email address is mandatory. The URL of their Cozy can also be used,
-but it is not here, it's not a big deal: we have a discovery feature so we can
-ask the recipients what is the URL of their Cozy.
+Only an email address is mandatory. The URL of their Cozy can also be used, but
+it is not here, it's not a big deal: we have a discovery feature so we can ask
+the recipients what is the URL of their Cozy.
 
 #### Which documents are created and when?
 

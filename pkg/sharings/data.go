@@ -15,7 +15,7 @@ import (
 
 // ShareDoc shares the documents specified in the Sharing structure to the
 // specified recipient
-func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus) error {
+func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
 	for _, rule := range sharing.Permissions {
 		if len(rule.Values) == 0 {
 			return nil
@@ -161,10 +161,10 @@ func sharingByValues(instance *instance.Instance, rule permissions.Rule) ([]stri
 	return values, nil
 }
 
-func sendData(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus, values []string, rule permissions.Rule) error {
+func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Member, values []string, rule permissions.Rule) error {
 	// Create a sharedata worker for each doc to send
 	for _, val := range values {
-		domain, scheme, err := ExtractDomainAndScheme(recStatus.recipient)
+		domain, scheme, err := ExtractDomainAndScheme(recStatus.contact)
 		if err != nil {
 			return err
 		}

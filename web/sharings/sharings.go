@@ -53,7 +53,7 @@ func (s *apiSharing) MarshalJSON() ([]byte, error) {
 	// XXX do not put the recipients (and their OAuth infos) in the response
 	// TODO do the same for the sharer
 	return json.Marshal(&struct {
-		Recipients []*sharings.RecipientStatus `json:"recipients,omitempty"`
+		Recipients []*sharings.Member `json:"recipients,omitempty"`
 		*sharings.Sharing
 	}{
 		Recipients: nil,
@@ -68,10 +68,10 @@ func (s *apiSharing) Links() *jsonapi.LinksList {
 // Relationships is part of the jsonapi.Object interface
 // It is used to generate the recipients relationships
 func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
-	l := len(s.RecipientsStatus)
+	l := len(s.Recipients)
 	data := make([]apiReference, l)
-	for i, rec := range s.RecipientsStatus {
-		r := rec.RefRecipient
+	for i, rec := range s.Recipients {
+		r := rec.RefContact
 		data[i] = apiReference{ID: r.ID, Type: r.Type, Status: rec.Status}
 	}
 	contents := jsonapi.Relationship{Data: data}
@@ -82,10 +82,10 @@ func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
 func (s *apiSharing) Included() []jsonapi.Object {
 	// TODO add the permissions in relationships + included
 	var included []jsonapi.Object
-	for _, rec := range s.RecipientsStatus {
-		r := rec.GetCachedRecipient()
-		if r != nil {
-			included = append(included, &apiRecipient{r})
+	for _, rec := range s.Recipients {
+		c := rec.Contact(nil)
+		if c != nil {
+			included = append(included, &apiRecipient{c})
 		}
 	}
 	return included
@@ -156,10 +156,10 @@ func AddSharingRecipient(c echo.Context) error {
 	if err = json.NewDecoder(c.Request().Body).Decode(&ref); err != nil {
 		return err
 	}
-	rs := &sharings.RecipientStatus{
-		RefRecipient: ref,
+	rs := sharings.Member{
+		RefContact: ref,
 	}
-	sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
+	sharing.Recipients = append(sharing.Recipients, rs)
 
 	if err = sharings.SendMails(instance, sharing); err != nil {
 		return wrapErrors(err)
@@ -316,8 +316,8 @@ func discoveryForm(c echo.Context) error {
 			"Error": "Error Invalid sharing id",
 		})
 	}
-	fmt.Printf("sharing = %#v\n", sharing)                       // TODO
-	recipient, err := sharings.GetRecipient(instance, shareCode) // TODO
+	fmt.Printf("sharing = %#v\n", sharing)                     // TODO
+	recipient, err := sharings.GetContact(instance, shareCode) // TODO
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error Invalid sharecode",
@@ -339,7 +339,7 @@ func discovery(c echo.Context) error {
 	}
 
 	// Save the URL in db
-	recipient, err := sharings.GetRecipient(instance, shareCode) // TODO
+	recipient, err := sharings.GetContact(instance, shareCode) // TODO
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -365,7 +365,7 @@ func discovery(c echo.Context) error {
 	}
 
 	// Register the recipient with the given URL and save in db
-	recStatus, err := sharing.GetRecipientStatusFromRecipientID(instance, recipient.ID())
+	recStatus, err := sharing.GetMemberFromRecipientID(instance, recipient.ID())
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -435,8 +435,8 @@ func getAccessToken(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	sharer := sharing.Sharer.SharerStatus
-	err = sharings.ExchangeCodeForToken(instance, sharing, sharer, p.Code)
+	sharer := sharing.Sharer
+	err = sharings.ExchangeCodeForToken(instance, sharing, &sharer, p.Code)
 	if err != nil {
 		return wrapErrors(err)
 	}

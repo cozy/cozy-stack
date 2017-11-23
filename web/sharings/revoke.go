@@ -111,7 +111,7 @@ func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, 
 	}
 
 	if sharing.Owner {
-		for _, rec := range sharing.RecipientsStatus {
+		for _, rec := range sharing.Recipients {
 			if rec.Client.ClientID == recipientClientID {
 				if requestPerm.SourceID == rec.InboundClientID {
 					return nil
@@ -119,7 +119,7 @@ func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, 
 			}
 		}
 	} else {
-		sharerClientID := sharing.Sharer.SharerStatus.InboundClientID
+		sharerClientID := sharing.Sharer.InboundClientID
 		if requestPerm.SourceID == sharerClientID {
 			return nil
 		}
@@ -151,7 +151,7 @@ func checkRevokeSharingPermissions(c echo.Context, sharing *sharings.Sharing) (s
 			return "", permissions.ErrInvalidToken
 		}
 		if !sharing.Owner {
-			sharerClientID := sharing.Sharer.SharerStatus.InboundClientID
+			sharerClientID := sharing.Sharer.InboundClientID
 			if requestPerm.SourceID == sharerClientID {
 				return requestPerm.Type, nil
 			}

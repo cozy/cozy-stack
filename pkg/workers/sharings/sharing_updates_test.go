@@ -70,7 +70,7 @@ func createSharing(t *testing.T, sharingType string, owner bool, recipients []*c
 		SharingType:      sharingType,
 		SharingID:        utils.RandomString(32),
 		Permissions:      permissions.Set{rule},
-		RecipientsStatus: []*sharings.RecipientStatus{},
+		Recipients: []*sharings.Member{},
 	}
 
 	for _, recipient := range recipients {
@@ -78,9 +78,9 @@ func createSharing(t *testing.T, sharingType string, owner bool, recipients []*c
 			recipient = createRecipient(t, recipient.Email[0].Address, recipient.Cozy[0].URL)
 		}
 
-		rs := &sharings.RecipientStatus{
+		rs := &sharings.Member{
 			Status: consts.SharingStatusAccepted,
-			RefRecipient: couchdb.DocReference{
+			RefContact: couchdb.DocReference{
 				ID:   recipient.ID(),
 				Type: recipient.DocType(),
 			},
@@ -92,7 +92,7 @@ func createSharing(t *testing.T, sharingType string, owner bool, recipients []*c
 				RefreshToken: utils.RandomString(32),
 			},
 		}
-		sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
+		sharing.Recipients = append(sharing.Recipients, rs)
 	}
 	err := couchdb.CreateDoc(in, &sharing)
 	assert.NoError(t, err)
@@ -298,7 +298,7 @@ func TestRevokedRecipient(t *testing.T) {
 		[]*contacts.Contact{recipient}, rule)
 
 	sharingID := sharing.SharingID
-	sharing.RecipientsStatus[0].Status = consts.SharingStatusRevoked
+	sharing.Recipients[0].Status = consts.SharingStatusRevoked
 	err := couchdb.UpdateDoc(in, &sharing)
 	assert.NoError(t, err)
 
