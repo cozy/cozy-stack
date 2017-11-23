@@ -38,36 +38,30 @@ users.
 
 ### Sharing document
 
-A sharing document has the following structure. Note some fields are purposely
-left empty for space convenience.
+A sharing document has the following structure in CouchDB. Note some fields
+are purposely left empty for space convenience.
 
 ```json
 {
   "_id": "xxx",
   "_rev": "yyy",
-  "type": "io.cozy.sharings",
   "sharing_type": "one-shot",
   "description": "Give it to me baby!",
-  "sharing_id": "zzz",
   "owner": true,
   "app_slug": "cal",
-
+  "preview_path": "/sharings/preview",
   "permissions": {
-    "doctype1": {
-      "description": "doctype1 description",
-      "type": "io.cozy.doctype1",
-      "values": ["docid1", "docid2"],
-      "selector": "calendar-id", //not supported yet
-      "verbs": ["GET", "POST", "PUT"]
-    }
+    "type": "io.cozy.permissions",
+    "id": "80a466d6-d034-11e7-bf9e-e3c1c4a9f82a"
   },
   "recipients": [
     {
       "recipient": { "id": "mycontactid1", "type": "io.cozy.contacts" },
       "status": "accepted",
-      "AccessToken": {},
-      "Client": {},
-      "InboundClientID": "myhostclientid"
+      "url": "https://example.mycozy.cloud/"
+      "access_token": {},
+      "client": {},
+      "inbound_client_id": "myhostclientid"
     },
     {
       "recipient": { "id": "mycontactid2", "type": "io.cozy.contacts" },
@@ -82,6 +76,11 @@ left empty for space convenience.
 To tell if the owner of the Cozy is also the owner of the sharing. This field is
 set automatically by the stack when creating (`true`) or receiving (`false`)
 one.
+
+#### revoked
+
+An additional field, `revoked`, will be added to the document, with the value
+`true` when the sharing has been revoked.
 
 #### permissions
 
@@ -151,10 +150,11 @@ List all the recipients of the sharing:
     {
         "recipient": {"id": "mycontactid1", "type": "io.cozy.contacts"},
         "status": "accepted",
+        "url": "https://example.mycozy.cloud/"
     },
     {
         "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
-        "status": "pending",
+        "status": "pending"
     }
 ]
 ```
@@ -182,19 +182,19 @@ A contact has the following minimal structure:
 Note that the `email` is mandatory to contact the recipient. If the `URL` is
 missing, a discovery mail will be sent in order to ask the recipient to give it.
 
-##### Status
+##### status
 
 The recipient' sharing status possible values are:
 
 * `pending`: the recipient didn't reply yet.
 * `accepted`: the recipient accepted.
 * `refused`: the recipient refused.
-* `error`: an error occured for this recipient
-* `unregistered`: the registration failed
-* `mail-not-sent`: the mail has not been sent
-* `revoked`: the recipient has been revoked
+* `error`: an error occured for this recipient.
+* `unregistered`: the registration failed.
+* `mail-not-sent`: the mail has not been sent.
+* `revoked`: the recipient has been revoked.
 
-##### AccessToken
+##### access_token
 
 The OAuth credentials used to authenticate to the recipient's Cozy.
 
@@ -205,7 +205,7 @@ for structure details.
 Here, the `scope` corresponds to the accepted sharing permissions by the
 recipient.
 
-##### Client
+##### client
 
 From a OAuth perspective, Bob being Alice's recipient means Alice is registered
 as a OAuth client to Bob's Cozy. Thus, we store for each recipient the
@@ -215,11 +215,16 @@ See
 [here](https://github.com/cozy/cozy-stack/blob/master/docs/auth.md#post-authaccess_token)
 for structure details.
 
-##### InboundClientID
+##### inbound_client_id
 
 This field is only used for `two-way` sharing. It corresponds to the id of the
 OAuth document stored in the host database, containing the recipient's OAuth
 information after registration.
+
+#### owner
+
+It's the same structure as a recipient, but it's only here for the sharing
+document that is not the owner of the sharing.
 
 #### sharing_type
 
@@ -237,20 +242,16 @@ The type of sharing. It should be one of the followings: `two-way`, `one-way`,
 The answer to the question: "What are you sharing?". It is an optional field
 but, still, it is recommended to provide a human-readable description.
 
-#### sharing_id
+#### preview_path
 
-This uniquely identify a sharing. It is automatically generated at the sharing
-creation.
+**TODO**
 
 ### Routes
 
 #### POST /sharings/
 
 Create a new sharing. The sharing type, permissions and recipients must be
-specified. The description field is optionnal.
-
-Note the recipient id must correspond to an actual contact previously inserted
-in the database.
+specified. The description and preview_path fields are optional.
 
 ##### Request
 
@@ -263,25 +264,25 @@ Content-Type: application/json
 ```json
 {
   "sharing_type": "one-shot",
-  "description": "sharing test",
   "permissions": {
     "tests": {
       "description": "test",
       "type": "io.cozy.tests",
-      "verbs": ["GET", "POST"],
       "values": ["test-id"]
     }
   },
   "recipients": [
-    {
-      "recipient": {
-        "type": "io.cozy.contacts",
-        "id": "2a31ce0128b5f89e40fd90da3f014087"
-      }
-    }
-  ]
+    "2a31ce0128b5f89e40fd90da3f014087"
+  ],
+  "description": "sharing test",
+  "preview_path": "/sharings/preview"
 }
 ```
+
+**Note:** for the permissions, the HTTP `verbs` will be overwritten by the
+cozy-stack with the values needed to operate the sharing. The recipients field
+is an array with ids of contacts (that must have been already created on the
+cozy).
 
 #### Response
 
