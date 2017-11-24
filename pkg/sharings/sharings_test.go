@@ -725,34 +725,20 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 }
 
 func TestCreateSharingAndRegisterSharer(t *testing.T) {
-	rec := &contacts.Contact{
-		Email: []contacts.Email{
-			contacts.Email{Address: "test@test.fr"},
-		},
-	}
-
-	recStatus := &RecipientStatus{
-		RefRecipient: couchdb.DocReference{
-			ID:   "123",
-			Type: consts.Contacts,
-		},
-		recipient: rec,
-	}
-
-	sharing := &Sharing{
-		SharingType:      "shotmedown",
-		RecipientsStatus: []*RecipientStatus{recStatus},
+	sharing := &CreateSharingParams{
+		SharingType: "shotmedown",
+		Recipients:  []string{"123"},
 	}
 
 	// `SharingType` is wrong.
-	err := CreateSharing(in, sharing)
+	_, err := CreateSharing(in, sharing, "drive")
 	assert.Equal(t, ErrBadSharingType, err)
 
 	// `SharingType` is correct.
 	sharing.SharingType = consts.OneShotSharing
 	// However the recipient is not persisted in the database.
-	err = CreateSharing(in, sharing)
-	assert.Equal(t, ErrRecipientDoesNotExist, err)
+	_, err = CreateSharing(in, sharing, "drive")
+	assert.Error(t, err)
 
 	// The CreateSharingAndRegisterSharer scenario that succeeds is already
 	// tested in `createSharing`.

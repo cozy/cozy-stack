@@ -1,7 +1,6 @@
 package sharings
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client/auth"
@@ -241,7 +240,7 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 		sharing.RecipientsStatus = append(sharing.RecipientsStatus, recipient)
 	}
 	if len(sharing.RecipientsStatus) == 0 {
-		return nil, errors.New("No recipient") // TODO better error
+		return nil, ErrRecipientDoesNotExist // TODO better error
 	}
 
 	if err := couchdb.CreateDoc(instance, sharing); err != nil {

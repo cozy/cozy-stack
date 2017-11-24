@@ -100,7 +100,7 @@ func CreateSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	params := &sharings.CreateSharingParams{}
 	if err := json.NewDecoder(c.Request().Body).Decode(params); err != nil {
-		return err
+		return jsonapi.BadRequest(errors.New("Invalid body"))
 	}
 	slug, err := checkCreatePermissions(c, params)
 	if err != nil {

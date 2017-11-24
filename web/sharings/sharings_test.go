@@ -1060,22 +1060,12 @@ func TestCreateSharingBadPermission(t *testing.T) {
 }
 
 func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
-
-	type recipient map[string]map[string]string
-	rec := recipient{
-		"recipient": {
-			"id": "hodor",
-		},
-	}
-	recipients := []recipient{rec}
-
 	ruleSharing := permissions.Rule{
 		Type:   "io.cozy.foos",
 		Values: []string{"bar", "baz"},
 		Verbs:  permissions.ALL,
 	}
 	setSharing := permissions.Set{ruleSharing}
-
 	ruleReq := permissions.Rule{
 		Type:   "io.cozy.foos",
 		Values: []string{"bar", "baz"},
@@ -1087,7 +1077,7 @@ func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 	v := echo.Map{
 		"sharing_type": consts.TwoWaySharing,
 		"permissions":  setSharing,
-		"recipients":   recipients,
+		"recipients":   []string{"hodor"},
 	}
 	body, _ := json.Marshal(v)
 
@@ -1101,6 +1091,8 @@ func TestCreateSharingWithNonExistingRecipient(t *testing.T) {
 }
 
 func TestCreateSharingSuccess(t *testing.T) {
+	contact := createRecipient(t, "email-create-sharing", "url-create-sharing")
+
 	ruleSharing := permissions.Rule{
 		Type:   "io.cozy.foos",
 		Values: []string{"bar", "baz"},
@@ -1119,6 +1111,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 	v := echo.Map{
 		"sharing_type": consts.TwoWaySharing,
 		"permissions":  setSharing,
+		"recipients":   []string{contact.DocID},
 	}
 	body, _ := json.Marshal(v)
 
