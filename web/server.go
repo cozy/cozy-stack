@@ -18,13 +18,48 @@ import (
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/leonelquinteros/gotext"
+
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/afero"
 )
 
+const defaultLocale = "en"
+
 var supportedLocales = []string{"en", "fr"}
+
+// TODO: Cleanup locales loading and translation functions described in both
+// "instance" and "web" packages.
+var translations = make(map[string]*gotext.Po)
+
+// LoadLocale creates the translation object for a locale from the content of a .po file
+func LoadLocale(identifier, rawPO string) {
+	po := &gotext.Po{Language: identifier}
+	po.Parse(rawPO)
+	translations[identifier] = po
+}
+
+// Translator returns a translation function of the locale specified
+func Translator(locale string) func(key string, vars ...interface{}) string {
+	return func(key string, vars ...interface{}) string {
+		if po, ok := translations[locale]; ok {
+			translated := po.Get(key, vars...)
+			if translated != key && translated != "" {
+				return translated
+			}
+		}
+		if po, ok := translations[defaultLocale]; ok {
+			translated := po.Get(key, vars...)
+			if translated != key && translated != "" {
+				return translated
+			}
+		}
+		return fmt.Sprintf(key, vars...)
+	}
+}
 
 // LoadSupportedLocales reads the po files packed in go or from the assets directory
 // and loads them for translations
@@ -40,6 +75,7 @@ func LoadSupportedLocales() error {
 				return fmt.Errorf("Can't load the po file for %s", locale)
 			}
 			instance.LoadLocale(locale, string(po))
+			LoadLocale(locale, string(po))
 		}
 		return nil
 	}
@@ -58,6 +94,7 @@ func LoadSupportedLocales() error {
 			return err
 		}
 		instance.LoadLocale(locale, string(po))
+		LoadLocale(locale, string(po))
 	}
 	return nil
 }

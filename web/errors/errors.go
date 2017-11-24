@@ -1,9 +1,9 @@
 package errors
 
 import (
-	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -14,41 +14,28 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ErrorHandler is the default error handler of our server. It always write a
-// jsonapi compatible error.
+// ErrorHandler is the default error handler of our APIs.
 func ErrorHandler(err error, c echo.Context) {
 	var je *jsonapi.Error
 	var ce *couchdb.Error
-	var he *echo.HTTPError
-	var ok bool
 
 	var log *logrus.Entry
-	inst, ok := c.Get("instance").(*instance.Instance)
-	if ok {
-		log = inst.Logger()
-	} else {
-		log = logger.WithNamespace("http")
+	if config.IsDevRelease() {
+		inst, ok := c.Get("instance").(*instance.Instance)
+		if ok {
+			log = inst.Logger()
+		} else {
+			log = logger.WithNamespace("http")
+		}
 	}
 
 	res := c.Response()
 	req := c.Request()
 
-	if he, ok = err.(*echo.HTTPError); ok {
-		// #nosec
-		if !res.Committed {
-			if c.Request().Method == http.MethodHead {
-				c.NoContent(he.Code)
-			} else {
-				c.String(he.Code, fmt.Sprintf("%v", he.Message))
-			}
-		}
-		if config.IsDevRelease() {
-			log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
-		}
-		return
-	}
-
-	if os.IsExist(err) {
+	var ok bool
+	if _, ok = err.(*echo.HTTPError); ok {
+		// nothing to do
+	} else if os.IsExist(err) {
 		je = jsonapi.Conflict(err)
 	} else if os.IsNotExist(err) {
 		je = jsonapi.NotFound(err)
@@ -66,16 +53,64 @@ func ErrorHandler(err error, c echo.Context) {
 		}
 	}
 
-	// #nosec
-	if !res.Committed {
+	if config.IsDevRelease() {
+		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+	}
+
+	if res.Committed {
+		return
+	}
+
+	if je != nil {
 		if c.Request().Method == http.MethodHead {
 			c.NoContent(je.Status)
-		} else {
-			jsonapi.DataError(c, je)
+			return
+		}
+		jsonapi.DataError(c, je)
+		return
+	}
+
+	HTMLErrorHandler(err, c)
+}
+
+// HTMLErrorHandler is the default fallback error handler for error rendered in
+// HTML pages, mainly for users, assets and routes that are not part of our API
+// per-se.
+func HTMLErrorHandler(err error, c echo.Context) {
+	status := http.StatusInternalServerError
+
+	if he, ok := err.(*echo.HTTPError); ok {
+		status = he.Code
+		if he.Inner != nil {
+			err = he.Inner
 		}
 	}
 
-	if config.IsDevRelease() {
-		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+	var title, value string
+	if err == instance.ErrNotFound {
+		status = http.StatusNotFound
+		title = "Error Instance not found Title"
+		value = "Error Instance not found Message"
+	}
+	if title == "" {
+		if status >= 500 {
+			title = "Error Internal Server Error Title"
+			value = "Error Internal Server Error Message"
+		} else {
+			title = "Error Title"
+			value = err.Error()
+		}
+	}
+
+	acceptHTML := strings.Contains(c.Request().Header.Get("Accept"), echo.MIMETextHTML)
+	if c.Request().Method == http.MethodHead {
+		c.NoContent(status)
+	} else if acceptHTML {
+		c.Render(status, "error.html", echo.Map{
+			"ErrorTitle": title,
+			"Error":      value,
+		})
+	} else {
+		c.String(status, err.Error())
 	}
 }

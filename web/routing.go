@@ -10,11 +10,13 @@ import (
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/data"
@@ -58,17 +60,37 @@ var (
 )
 
 type renderer struct {
+	http.Handler
 	t *template.Template
-	h http.Handler
 }
 
 func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	i := middlewares.GetInstance(c)
+	var funcMap template.FuncMap
+	i, ok := middlewares.GetInstanceSafe(c)
+	if ok {
+		funcMap = template.FuncMap{"t": i.Translate}
+	} else {
+		// TODO: improve language detection with a package like
+		// "golang.org/x/text/language"
+		lang := defaultLocale
+		acceptLanguage := c.Request().Header.Get("Accept-Language")
+		acceptLanguageSplit := strings.SplitN(acceptLanguage, ";", 2)
+		if len(acceptLanguage) >= 1 {
+			langs := utils.SplitTrimString(acceptLanguageSplit[0], ",")
+			for _, l := range langs {
+				if utils.IsInArray(l, supportedLocales) {
+					lang = l
+					break
+				}
+			}
+		}
+		funcMap = template.FuncMap{"t": Translator(lang)}
+	}
 	t, err := r.t.Clone()
 	if err != nil {
 		return err
 	}
-	return t.Funcs(template.FuncMap{"t": i.Translate}).ExecuteTemplate(w, name, data)
+	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
 }
 
 func newRenderer(assetsPath string) (*renderer, error) {
@@ -84,7 +106,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 			return nil, fmt.Errorf("Can't load the assets from %s", assetsPath)
 		}
 		h := http.FileServer(http.Dir(assetsPath))
-		r := &renderer{t, h}
+		r := &renderer{t: t, Handler: h}
 		return r, nil
 	}
 
@@ -116,7 +138,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 	}
 
 	h := http.FileServer(statikFS)
-	r := &renderer{t, h}
+	r := &renderer{t: t, Handler: h}
 	return r, nil
 }
 
@@ -151,9 +173,9 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 	}
 
 	router.Renderer = r
-	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r.h)))
-	router.GET("/favicon.ico", echo.WrapHandler(r.h))
-	router.GET("/robots.txt", echo.WrapHandler(r.h))
+	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r)))
+	router.GET("/favicon.ico", echo.WrapHandler(r))
+	router.GET("/robots.txt", echo.WrapHandler(r))
 	return nil
 }
 
@@ -249,6 +271,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 
 	main := echo.New()
 	main.HideBanner = true
+	main.Renderer = router.Renderer
 	main.Any("/*", func(c echo.Context) error {
 		// TODO(optim): minimize the number of instance requests
 		if parent, slug, _ := middlewares.SplitHost(c.Request().Host); slug != "" {
@@ -263,7 +286,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 		return nil
 	})
 
-	main.HTTPErrorHandler = errors.ErrorHandler
+	main.HTTPErrorHandler = errors.HTMLErrorHandler
 	return main, nil
 }
 

@@ -16,14 +16,17 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 		}
 		i, err := instance.Get(c.Request().Host)
 		if err != nil {
+			var errHTTP *echo.HTTPError
 			switch err {
 			case instance.ErrNotFound:
-				return echo.NewHTTPError(http.StatusNotFound, err)
+				errHTTP = echo.NewHTTPError(http.StatusNotFound, err)
 			case instance.ErrIllegalDomain:
-				return echo.NewHTTPError(http.StatusBadRequest, err)
+				errHTTP = echo.NewHTTPError(http.StatusBadRequest, err)
 			default:
-				return echo.NewHTTPError(http.StatusInternalServerError, err)
+				errHTTP = echo.NewHTTPError(http.StatusInternalServerError, err)
 			}
+			errHTTP.Inner = err
+			return errHTTP
 		}
 		c.Set("instance", i)
 		return next(c)
@@ -34,4 +37,15 @@ func NeedInstance(next echo.HandlerFunc) echo.HandlerFunc {
 // context or panic if none exists
 func GetInstance(c echo.Context) *instance.Instance {
 	return c.Get("instance").(*instance.Instance)
+}
+
+// GetInstanceSafe will return the instance linked to the given echo
+// context
+func GetInstanceSafe(c echo.Context) (*instance.Instance, bool) {
+	i := c.Get("instance")
+	if i == nil {
+		return nil, false
+	}
+	inst, ok := i.(*instance.Instance)
+	return inst, ok
 }
