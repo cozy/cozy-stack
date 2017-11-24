@@ -10,8 +10,116 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
+
+const (
+	// WorkerTypeSharingUpdates is the string representation of the type of
+	// workers that deals with updating sharings.
+	WorkerTypeSharingUpdates = "sharingupdates"
+)
+
+// WorkerData describes the basic data the workers need to process the events
+// they will receive.
+type WorkerData struct {
+	DocID      string
+	SharingID  string
+	Selector   string
+	Values     []string
+	DocType    string
+	Recipients []*RecipientInfo
+}
+
+// SharingMessage describes the message that will be transmitted to the workers
+// "sharing_update" and "share_data".
+type SharingMessage struct {
+	SharingID string           `json:"sharing_id"`
+	Rule      permissions.Rule `json:"rule"`
+}
+
+// AddTrigger creates a new trigger on the updates of the shared documents
+// The delTrigger flag is when the trigger must only listen deletions, i.e.
+// an one-way on the recipient side, for the revocation
+func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string, delTrigger bool) error {
+	sched := globals.GetScheduler()
+
+	var eventArgs string
+	if rule.Selector != "" {
+		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
+			strings.Join(rule.Values, ",") + ":" + rule.Selector
+	} else {
+		if delTrigger {
+			eventArgs = rule.Type + ":DELETED:" +
+				strings.Join(rule.Values, ",")
+		} else {
+			eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
+				strings.Join(rule.Values, ",")
+		}
+
+	}
+
+	msg := SharingMessage{
+		SharingID: sharingID,
+		Rule:      rule,
+	}
+
+	workerArgs, err := jobs.NewMessage(msg)
+	if err != nil {
+		return err
+	}
+	t, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
+		Type:       "@event",
+		WorkerType: WorkerTypeSharingUpdates,
+		Domain:     instance.Domain,
+		Arguments:  eventArgs,
+		Message:    workerArgs,
+	})
+	if err != nil {
+		return err
+	}
+	instance.Logger().Infof("[sharings] AddTrigger: trigger created for "+
+		"sharing %s", sharingID)
+
+	return sched.Add(t)
+}
+
+func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
+	sched := globals.GetScheduler()
+	ts, err := sched.GetAll(ins.Domain)
+	if err != nil {
+		ins.Logger().Errorf("[sharings] removeSharingTriggers: Could not get "+
+			"the list of triggers: %s", err)
+		return err
+	}
+
+	for _, trigger := range ts {
+		infos := trigger.Infos()
+		if infos.WorkerType == WorkerTypeSharingUpdates {
+			msg := SharingMessage{}
+			errm := infos.Message.Unmarshal(&msg)
+			if errm != nil {
+				ins.Logger().Errorf("[sharings] removeSharingTriggers: An "+
+					"error occurred while trying to unmarshal trigger "+
+					"message: %s", errm)
+				continue
+			}
+
+			if msg.SharingID == sharingID {
+				errd := sched.Delete(ins.Domain, trigger.ID())
+				if errd != nil {
+					ins.Logger().Errorf("[sharings] removeSharingTriggers: "+
+						"Could not delete trigger %s: %s", trigger.ID(), errd)
+				}
+
+				ins.Logger().Infof("[sharings] Trigger %s deleted for "+
+					"sharing %s", trigger.ID(), sharingID)
+			}
+		}
+	}
+
+	return nil
+}
 
 // ShareDoc shares the documents specified in the Sharing structure to the
 // specified recipient

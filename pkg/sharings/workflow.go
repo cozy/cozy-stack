@@ -13,12 +13,20 @@ import (
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
-	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/labstack/echo"
 )
+
+// SharingRequestParams contains the basic information required to request
+// a sharing party
+type SharingRequestParams struct {
+	SharingID       string `json:"state"`
+	ClientID        string `json:"client_id"`
+	InboundClientID string `json:"inbound_client_id"`
+	Code            string `json:"code"`
+}
 
 // GenerateOAuthQueryString takes care of creating a correct OAuth request for
 // the given sharing and recipient.
@@ -485,43 +493,6 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
-func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
-	sched := globals.GetScheduler()
-	ts, err := sched.GetAll(ins.Domain)
-	if err != nil {
-		ins.Logger().Errorf("[sharings] removeSharingTriggers: Could not get "+
-			"the list of triggers: %s", err)
-		return err
-	}
-
-	for _, trigger := range ts {
-		infos := trigger.Infos()
-		if infos.WorkerType == WorkerTypeSharingUpdates {
-			msg := SharingMessage{}
-			errm := infos.Message.Unmarshal(&msg)
-			if errm != nil {
-				ins.Logger().Errorf("[sharings] removeSharingTriggers: An "+
-					"error occurred while trying to unmarshal trigger "+
-					"message: %s", errm)
-				continue
-			}
-
-			if msg.SharingID == sharingID {
-				errd := sched.Delete(ins.Domain, trigger.ID())
-				if errd != nil {
-					ins.Logger().Errorf("[sharings] removeSharingTriggers: "+
-						"Could not delete trigger %s: %s", trigger.ID(), errd)
-				}
-
-				ins.Logger().Infof("[sharings] Trigger %s deleted for "+
-					"sharing %s", trigger.ID(), sharingID)
-			}
-		}
-	}
-
-	return nil
-}
-
 func deleteOAuthClient(ins *instance.Instance, rs *Member) error {
 	client, err := oauth.FindClient(ins, rs.InboundClientID)
 	if err != nil {
@@ -655,11 +626,8 @@ func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *Recipie
 
 // IsAuthError returns true if the given error is an authentication one
 func IsAuthError(err error) bool {
-	switch v := err.(type) {
-	case *request.Error:
-		if v.Title == "Bad Request" || v.Title == "Unauthorized" {
-			return true
-		}
+	if v, ok := err.(*request.Error); ok {
+		return v.Title == "Bad Request" || v.Title == "Unauthorized"
 	}
 	return false
 }
