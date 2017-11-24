@@ -197,6 +197,9 @@ li[class^="io.cozy.bank.groups"]:before {
 li[class^="io.cozy.bills"]:before {
     background-image: url('../images/icon-bill.svg');
 }
+li[class^="io.cozy.contacts"]:before {
+    background-image: url('../images/icon-contacts.svg');
+}
 li[class^="io.cozy.files"]:before {
     background-image: url('../images/icon-files.svg');
 }
@@ -208,6 +211,9 @@ li[class^="io.cozy.konnectors.result"]:before {
 }
 li[class^="io.cozy.photos.albums"]:before {
     background-image: url('../images/icon-photos-album.svg');
+}
+li[class^="io.cozy.jobs"]:before {
+    background-image: url('../images/icon-triggers.svg');
 }
 li[class^="io.cozy.triggers"]:before {
     background-image: url('../images/icon-triggers.svg');
