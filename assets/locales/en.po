@@ -255,6 +255,9 @@ msgstr "Banking groups"
 msgid "Permissions io.cozy.bills"
 msgstr "Bills"
 
+msgid "Permissions io.cozy.contacts"
+msgstr "Contacts"
+
 msgid "Permissions io.cozy.files"
 msgstr "Files"
 
