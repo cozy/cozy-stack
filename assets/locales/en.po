@@ -105,6 +105,9 @@ msgstr "You need to activate your Cozy"
 msgid "Onboarding Not activated Check mails"
 msgstr "Your Cozy has not been yet activated. Check your email and click on the activation link to proceed to the installation of your Cozy."
 
+msgid "Onboarding Not activated Contact us"
+msgstr "Are you lost ? Feel free to contact us at contact@cozycloud.cc"
+
 msgid "Mail Password reset"
 msgstr "Reset you Cozy password"
 
