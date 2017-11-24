@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
 
@@ -217,18 +219,23 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			continue
 		}
 		t := &task{
+			w:    w,
 			ctx:  parentCtx,
 			job:  job,
 			conf: w.defaultedConf(job.Options),
 		}
 		var err error
+		var runResultLabel string
 		if err = t.run(); err != nil {
 			parentCtx.Logger().Errorf("[job] error while performing job: %s",
 				err.Error())
+			runResultLabel = metrics.WorkerExecResultErrored
 			err = job.Nack(err)
 		} else {
+			runResultLabel = metrics.WorkerExecResultSuccess
 			err = job.Ack()
 		}
+		metrics.WorkerExecCounter.WithLabelValues(w.Type, runResultLabel).Inc()
 		if err != nil {
 			parentCtx.Logger().Errorf("[job] error while acking job done: %s",
 				err.Error())
@@ -271,6 +278,7 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 }
 
 type task struct {
+	w    *Worker
 	ctx  *WorkerContext
 	conf *WorkerConfig
 	job  *Job
@@ -301,26 +309,42 @@ func (t *task) run() (err error) {
 		if !retry {
 			return err
 		}
+
 		if err != nil {
 			t.ctx.Logger().Warnf("[job] error while performing job: %s (retry in %s)",
 				err.Error(), delay)
 		}
+
 		if delay > 0 {
 			time.Sleep(delay)
 		}
+
 		t.ctx.Logger().Debugf("[job] executing job (%d) (timeout %s)",
 			t.execCount, timeout)
+
+		var execResultLabel string
+		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+			metrics.WorkerExecDurations.WithLabelValues(t.w.Type, execResultLabel).Observe(v)
+		}))
+
 		ctx, cancel := t.ctx.WithTimeout(timeout)
-		if err = t.exec(ctx); err == nil {
+		err = t.exec(ctx)
+		if err == nil {
+			execResultLabel = metrics.WorkerExecResultSuccess
+			timer.ObserveDuration()
 			cancel()
 			break
 		}
+		execResultLabel = metrics.WorkerExecResultErrored
+		timer.ObserveDuration()
+
 		// Even though ctx should have expired already, it is good practice to call
 		// its cancelation function in any case. Failure to do so may keep the
 		// context and its parent alive longer than necessary.
 		cancel()
 		t.execCount++
 	}
+	metrics.WorkerExecRetries.WithLabelValues(t.w.Type).Observe(float64(t.execCount))
 	return nil
 }
 

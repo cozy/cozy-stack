@@ -166,6 +166,14 @@ func (b *memBroker) QueueLen(workerType string) (int, error) {
 	return q.Len(), nil
 }
 
+func (b *memBroker) WorkersTypes() []string {
+	types := make([]string, len(b.workers))
+	for i, worker := range b.workers {
+		types[i] = worker.Type
+	}
+	return types
+}
+
 var (
 	_ Broker = &memBroker{}
 )

@@ -45,6 +45,8 @@ type (
 		// QueueLen returns the total element in the queue of the specified worker
 		// type.
 		QueueLen(workerType string) (int, error)
+		// WorkersTypes returns the list of registered workers types.
+		WorkersTypes() []string
 	}
 
 	// State represent the state of a job.

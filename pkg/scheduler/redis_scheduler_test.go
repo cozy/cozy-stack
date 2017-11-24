@@ -64,6 +64,10 @@ func (b *mockBroker) QueueLen(workerType string) (int, error) {
 	return count, nil
 }
 
+func (b *mockBroker) WorkersTypes() []string {
+	return []string{}
+}
+
 func TestRedisSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
