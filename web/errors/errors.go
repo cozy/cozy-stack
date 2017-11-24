@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
 )
@@ -79,11 +81,16 @@ func ErrorHandler(err error, c echo.Context) {
 func HTMLErrorHandler(err error, c echo.Context) {
 	status := http.StatusInternalServerError
 
-	if he, ok := err.(*echo.HTTPError); ok {
+	var he *echo.HTTPError
+	var ok bool
+	if he, ok = err.(*echo.HTTPError); ok {
 		status = he.Code
 		if he.Inner != nil {
 			err = he.Inner
 		}
+	} else {
+		he = echo.NewHTTPError(status, err)
+		he.Inner = err
 	}
 
 	var title, value string
@@ -98,7 +105,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			value = "Error Internal Server Error Message"
 		} else {
 			title = "Error Title"
-			value = err.Error()
+			value = fmt.Sprintf("%v", he.Message)
 		}
 	}
 
@@ -111,6 +118,6 @@ func HTMLErrorHandler(err error, c echo.Context) {
 			"Error":      value,
 		})
 	} else {
-		c.String(status, err.Error())
+		c.String(status, fmt.Sprintf("%v", he.Message))
 	}
 }
