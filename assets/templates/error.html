@@ -16,12 +16,12 @@
           <a href="https://cozy.io" target="_blank" title="Cozy Website"></a>
         </header>
         <div class="container">
-          <h1>{{t "Error Title"}}</h1>
+          <h1>{{if .ErrorTitle}}{{t .ErrorTitle}}{{else}}{{t "Error Title"}}{{end}}</h1>
           <footer>
             <div class="error">
               <div class="alert">
-                <h2>{{t "Error Message"}}</h2>
                 <p>{{t .Error}}</p>
+                <p><strong>{{t "Error Contact us"}}</strong></p>
               </div>
             </div>
           </footer>

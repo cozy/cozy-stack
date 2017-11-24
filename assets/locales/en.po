@@ -99,7 +99,10 @@ msgstr ""
 "You can manage your devices directly from your Cozy by following this link: %s.\n\n"
 "If you are not the source of this addition you can revoke the new device by following this link: %s. Or contact us on the following address: contact@cozycloud.cc."
 
-msgid "Onboarding Check Mails"
+msgid "Onboarding Not activated Title"
+msgstr "You need to activate your Cozy"
+
+msgid "Onboarding Not activated Check mails"
 msgstr "Your Cozy has not been yet activated. Check your email and click on the activation link to proceed to the installation of your Cozy."
 
 msgid "Mail Password reset"
@@ -181,10 +184,22 @@ msgid "Authorize Cancel Sharing"
 msgstr "Deny sharing"
 
 msgid "Error Title"
-msgstr "Sorry"
+msgstr "Sorry, an error occurred."
 
-msgid "Error Message"
-msgstr "An error occurred."
+msgid "Error Internal Server Error Title"
+msgstr "Oops…"
+
+msgid "Error Internal Server Error Message"
+msgstr "It seems that you Cozy is under water. Our team is working hard to put it back on its feet."
+
+msgid "Error Instance not found Title"
+msgstr "Address of this Cozy does not exist"
+
+msgid "Error Instance not found Message"
+msgstr "You may have entered a wrong address form a typing mistake. To make sure, please check the address of your Cozy sent to you by e-mail during its creation."
+
+msgid "Error Contact us"
+msgstr "A problem, a question ? Contact us at support@cozycloud.cc."
 
 msgid "Error No state parameter"
 msgstr "The state parameter is mandatory"
