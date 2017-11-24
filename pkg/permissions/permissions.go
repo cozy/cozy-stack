@@ -33,14 +33,20 @@ const (
 	// TypeKonnector if the value of Permission.Type for an application
 	TypeKonnector = "konnector"
 
-	// TypeShareByLink if the value of Permission.Type for a share (by link) permission doc
-	TypeShareByLink = "share"
-
 	// TypeOauth if the value of Permission.Type for a oauth permission doc
 	TypeOauth = "oauth"
 
 	// TypeCLI if the value of Permission.Type for a command-line permission doc
 	TypeCLI = "cli"
+
+	// TypeShareByLink if the value of Permission.Type for a share (by link) permission doc
+	TypeShareByLink = "share"
+
+	// TypeSharedByMe if the value of Permission.Type for a sharing permission doc (Owner=true)
+	TypeSharedByMe = "shared-by-me"
+
+	// TypeSharedWithMe if the value of Permission.Type for a sharing permission doc (Owner=false)
+	TypeSharedWithMe = "shared-with-me"
 )
 
 // ID implements jsonapi.Doc
@@ -283,7 +289,7 @@ func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug strin
 	return doc, nil
 }
 
-// CreateShareSet creates a Permission doc for sharing
+// CreateShareSet creates a Permission doc for sharing by link
 func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set) (*Permission, error) {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
@@ -306,6 +312,33 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 		return nil, err
 	}
 
+	return doc, nil
+}
+
+// CreateSharedByMeSet creates a Permission doc for sharing created on this instance
+func CreateSharedByMeSet(db couchdb.Database, codes map[string]string, set Set) (*Permission, error) {
+	doc := &Permission{
+		Type:        TypeSharedByMe,
+		Permissions: set,
+		Codes:       codes,
+	}
+	err := couchdb.CreateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+// CreateSharedWithMeSet creates a Permission doc for sharing accepted on this instance
+func CreateSharedWithMeSet(db couchdb.Database, set Set) (*Permission, error) {
+	doc := &Permission{
+		Type:        TypeSharedWithMe,
+		Permissions: set,
+	}
+	err := couchdb.CreateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
 	return doc, nil
 }
 

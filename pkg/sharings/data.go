@@ -124,7 +124,11 @@ func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
 // ShareDoc shares the documents specified in the Sharing structure to the
 // specified recipient
 func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
-	for _, rule := range sharing.Permissions {
+	permSet, err := sharing.PermissionsSet(instance)
+	if err != nil {
+		return err
+	}
+	for _, rule := range *permSet {
 		if len(rule.Values) == 0 {
 			return nil
 		}

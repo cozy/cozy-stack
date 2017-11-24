@@ -42,19 +42,18 @@ func GenerateOAuthQueryString(s *Sharing, rs *Member, scheme string) (string, er
 		return "", ErrRecipientHasNoURL
 	}
 
-	// In the sharing document the permissions are stored as a
-	// `permissions.Set`. We need to convert them in a proper format to be able
-	// to incorporate them in the OAuth query string.
-	//
-	// Optimization: the next four lines of code could be outside of this
-	// function and also outside of the for loop that iterates on the
-	// recipients in `SendSharingMails`.
-	// I found it was clearer to leave it here, at the price of being less
-	// optimized.
-	permissionsScope, err := s.Permissions.MarshalScopeString()
-	if err != nil {
-		return "", err
-	}
+	// Convert the local permissions doc in the OAuth scope
+	// TODO instance
+	// TODO change the HTTP verbs to ALL
+	// permSet, err := s.PermissionsSet(instance)
+	// if err != nil {
+	// 	return "", err
+	// }
+	// permissionsScope, err := permSet.MarshalScopeString()
+	// if err != nil {
+	// 	return "", err
+	// }
+	permissionsScope := "FOO"
 
 	oAuthQuery, err := url.Parse(rs.contact.Cozy[0].URL)
 	if err != nil {
@@ -171,7 +170,7 @@ func RecipientRefusedSharing(db couchdb.Database, sharingID string) (string, err
 
 // CreateSharingRequest checks fields integrity and creates a sharing document
 // for an incoming sharing request
-func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, clientID, appSlug string) (*Sharing, error) {
+func CreateSharingRequest(i *instance.Instance, desc, state, sharingType, scope, clientID, appSlug string) (*Sharing, error) {
 	if state == "" {
 		return nil, ErrMissingState
 	}
@@ -184,20 +183,20 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 	if clientID == "" {
 		return nil, ErrNoOAuthClient
 	}
-	permissions, err := permissions.UnmarshalScopeString(scope)
+	permsSet, err := permissions.UnmarshalScopeString(scope)
 	if err != nil {
 		return nil, err
 	}
 
 	sharerClient := &oauth.Client{}
-	err = couchdb.GetDoc(db, consts.OAuthClients, clientID, sharerClient)
+	err = couchdb.GetDoc(i, consts.OAuthClients, clientID, sharerClient)
 	if err != nil {
 		return nil, ErrNoOAuthClient
 	}
 
 	var res []Sharing
 	// TODO don't use the by-sharing index
-	err = couchdb.FindDocs(db, consts.Sharings, &couchdb.FindRequest{
+	err = couchdb.FindDocs(i, consts.Sharings, &couchdb.FindRequest{
 		UseIndex: "by-sharing-id",
 		Selector: mango.Equal("sharing_id", state),
 	}, &res)
@@ -222,14 +221,23 @@ func CreateSharingRequest(db couchdb.Database, desc, state, sharingType, scope, 
 		SharingType: sharingType,
 		// TODO force the ID
 		// SharingID:   state,
-		Permissions: permissions,
 		Owner:       false,
 		Description: desc,
 		Sharer:      sharer,
 		Revoked:     false,
 	}
 
-	err = couchdb.CreateDoc(db, sharing)
+	perms, err := permissions.CreateSharedWithMeSet(i, permsSet)
+	if err != nil {
+		return nil, err
+	}
+	sharing.RefPermissions = couchdb.DocReference{
+		Type: perms.DocType(),
+		ID:   perms.ID(),
+	}
+	sharing.permissions = perms
+
+	err = couchdb.CreateDoc(i, sharing)
 	return sharing, err
 }
 
@@ -297,7 +305,12 @@ func SendClientID(sharing *Sharing) error {
 
 // SendCode generates and sends an OAuth code to a recipient
 func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
-	scope, err := sharing.Permissions.MarshalScopeString()
+	permSet, err := sharing.PermissionsSet(instance)
+	if err != nil {
+		return err
+	}
+	// TODO check if changing the HTTP verbs to ALL is needed
+	scope, err := permSet.MarshalScopeString()
 	if err != nil {
 		return err
 	}

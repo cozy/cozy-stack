@@ -204,7 +204,11 @@ func SharingRequest(c echo.Context) error {
 		}
 	} else if sharing.SharingType == consts.OneWaySharing {
 		// The recipient listens deletes for a one-way sharing
-		for _, rule := range sharing.Permissions {
+		sharingPerms, err := sharing.PermissionsSet(instance)
+		if err != nil {
+			return err
+		}
+		for _, rule := range *sharingPerms {
 			err = sharings.AddTrigger(instance, rule, sharing.SID, true)
 			if err != nil {
 				return err
@@ -442,7 +446,11 @@ func getAccessToken(c echo.Context) error {
 	}
 	// Add triggers on the recipient side for each rule
 	if sharing.SharingType == consts.TwoWaySharing {
-		for _, rule := range sharing.Permissions {
+		sharingPerms, err := sharing.PermissionsSet(instance)
+		if err != nil {
+			return err
+		}
+		for _, rule := range *sharingPerms {
 			err = sharings.AddTrigger(instance, rule, sharing.SID, false)
 			if err != nil {
 				return wrapErrors(err)
@@ -515,11 +523,18 @@ func checkCreatePermissions(c echo.Context, params *sharings.CreateSharingParams
 // checkGetPermissions checks the requester's token has at least one doctype
 // permission declared in the sharing document
 func checkGetPermissions(c echo.Context, sharing *sharings.Sharing) error {
+	ins := middlewares.GetInstance(c)
+	sharingPerms, err := sharing.PermissionsSet(ins)
+	if err != nil {
+		return err
+	}
+
 	requestPerm, err := perm.GetPermission(c)
 	if err != nil {
 		return err
 	}
-	for _, rule := range sharing.Permissions {
+
+	for _, rule := range *sharingPerms {
 		if requestPerm.Permissions.RuleInSubset(rule) {
 			return nil
 		}

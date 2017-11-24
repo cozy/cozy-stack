@@ -20,17 +20,24 @@ type CreateSharingParams struct {
 
 // Sharing contains all the information about a sharing.
 type Sharing struct {
-	SID         string          `json:"_id,omitempty"`
-	SRev        string          `json:"_rev,omitempty"`
-	SharingType string          `json:"sharing_type"`
-	Permissions permissions.Set `json:"permissions,omitempty"`
-	Sharer      Member          `json:"sharer,omitempty"`
-	Recipients  []Member        `json:"recipients,omitempty"`
-	Description string          `json:"description,omitempty"`
-	PreviewPath string          `json:"preview_path,omitempty"`
-	AppSlug     string          `json:"app_slug"`
-	Owner       bool            `json:"owner"`
-	Revoked     bool            `json:"revoked,omitempty"`
+	SID         string `json:"_id,omitempty"`
+	SRev        string `json:"_rev,omitempty"`
+	SharingType string `json:"sharing_type"`
+	Revoked     bool   `json:"revoked,omitempty"`
+
+	// Only one of Sharer or Recipients is filled
+	// - Sharer is filled when Owner is false
+	// - Recipients is filled when Owner is true
+	Owner      bool     `json:"owner"`
+	Sharer     Member   `json:"sharer,omitempty"`
+	Recipients []Member `json:"recipients,omitempty"`
+
+	Description string `json:"description,omitempty"`
+	PreviewPath string `json:"preview_path,omitempty"`
+	AppSlug     string `json:"app_slug"`
+
+	RefPermissions couchdb.DocReference `json:"permissions,omitempty"`
+	permissions    *permissions.Permission
 }
 
 // ID returns the sharing qualified identifier
@@ -53,6 +60,18 @@ func (s *Sharing) SetID(id string) { s.SID = id }
 
 // SetRev changes the sharing revision
 func (s *Sharing) SetRev(rev string) { s.SRev = rev }
+
+// PermissionsSet returns the set of permissions for this sharing
+func (s *Sharing) PermissionsSet(db couchdb.Database) (*permissions.Set, error) {
+	if s.permissions == nil {
+		perm, err := permissions.GetByID(db, s.RefPermissions.ID)
+		if err != nil {
+			return nil, err
+		}
+		s.permissions = perm
+	}
+	return &s.permissions.Permissions, nil
+}
 
 // Contacts returns the sharing recipients
 // TODO see how this method is used to try to find something better
@@ -121,7 +140,6 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 
 	sharing := &Sharing{
 		SharingType: sharingType,
-		Permissions: params.Permissions,
 		Recipients:  make([]Member, 0, len(params.Recipients)),
 		Description: params.Description,
 		PreviewPath: params.PreviewPath,
@@ -139,8 +157,8 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 		recipient := Member{
 			Status: consts.SharingStatusPending,
 			RefContact: couchdb.DocReference{
-				Type: consts.Contacts,
-				ID:   contact.DocID,
+				Type: contact.DocType(),
+				ID:   contact.ID(),
 			},
 			contact: contact,
 		}
@@ -149,6 +167,26 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 	if len(sharing.Recipients) == 0 {
 		return nil, ErrRecipientDoesNotExist // TODO better error
 	}
+
+	// Create the permissions doc for previewing this sharing
+	codes := make(map[string]string, len(sharing.Recipients))
+	for _, recipient := range sharing.Recipients {
+		var err error
+		contactID := recipient.RefContact.ID
+		codes[contactID], err = permissions.CreateCode(instance.OAuthSecret, instance.Domain, contactID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	perms, err := permissions.CreateSharedByMeSet(instance, codes, params.Permissions)
+	if err != nil {
+		return nil, err
+	}
+	sharing.RefPermissions = couchdb.DocReference{
+		Type: perms.DocType(),
+		ID:   perms.ID(),
+	}
+	sharing.permissions = perms
 
 	if err := couchdb.CreateDoc(instance, sharing); err != nil {
 		return nil, err
