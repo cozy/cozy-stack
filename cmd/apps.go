@@ -186,7 +186,8 @@ var runKonnectorsCmd = &cobra.Command{
 		}
 
 		if len(triggers) == 0 {
-			return fmt.Errorf("Could not find a konnector %q", slug)
+			return fmt.Errorf("Could not find a konnector %q: "+
+				"it may be installed but it is not activated (no related trigger)", slug)
 		}
 
 		var trigger *localTrigger
