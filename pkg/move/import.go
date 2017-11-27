@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"path"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	vcardParser "github.com/emersion/go-vcard"
 )
@@ -187,7 +187,7 @@ func createFile(fs vfs.VFS, hdr *tar.Header, tr *tar.Reader, dstDoc *vfs.DirDoc,
 	if err != nil {
 		ext := path.Ext(fileDoc.DocName)
 		fileName := fileDoc.DocName[0 : len(fileDoc.DocName)-len(ext)]
-		fileDoc.DocName = fmt.Sprintf("%s-conflict-%d%s", fileName, rand.Int(), ext)
+		fileDoc.DocName = fmt.Sprintf("%s-conflict-%s%s", fileName, utils.RandomString(10), ext)
 		file, err = fs.CreateFile(fileDoc, nil)
 		if err != nil {
 			return err
