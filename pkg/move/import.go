@@ -245,7 +245,7 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 				}
 				parentName := path.Join(dst.Fullpath, path.Dir(name))
 				if parent, ok := dirs[parentName]; ok {
-					dir, err = vfs.NewDirDocWithParent(dirname, parent, nil)
+					dir, err = vfs.NewDirDocWithParent(path.Base(name), parent, nil)
 					if err == nil {
 						err = fs.CreateDir(dir)
 					}
