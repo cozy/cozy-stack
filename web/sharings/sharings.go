@@ -220,63 +220,17 @@ func SharingRequest(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
 }
 
-// RecipientRefusedSharing is called when the recipient refused the sharing (on
-// the recipient side).
-//
-// This function will delete the sharing document and inform the sharer by
-// returning her the sharing id, the client id (oauth) and nothing else (more
-// especially no scope and no access code).
-func RecipientRefusedSharing(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	// We collect the information we need to send to the sharer: the client id,
-	// the sharing id.
-	sharingID := c.FormValue("state")
-	if sharingID == "" {
-		return wrapErrors(sharings.ErrMissingState)
-	}
-	clientID := c.FormValue("client_id")
-	if clientID == "" {
-		return wrapErrors(sharings.ErrNoOAuthClient)
-	}
-
-	redirect, err := sharings.RecipientRefusedSharing(instance, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	u, err := url.ParseRequestURI(redirect)
-	if err != nil {
-		return err
-	}
-	q := u.Query()
-	q.Set("state", sharingID)
-	q.Set("client_id", clientID)
-	u.RawQuery = q.Encode()
-	u.Fragment = ""
-
-	return c.Redirect(http.StatusFound, u.String()+"#")
-}
-
 // SharingAnswer handles a sharing answer from the sharer side
 // TODO document this route
 // TODO can we use a verb that is not GET?
 // TODO can we make this request idempotent?
 func SharingAnswer(c echo.Context) error {
-	var err error
-	var u string
-
 	state := c.QueryParam("state")
 	clientID := c.QueryParam("client_id")
 	accessCode := c.QueryParam("access_code")
-
 	instance := middlewares.GetInstance(c)
 
-	// The sharing is refused if there is no access code
-	if accessCode != "" {
-		u, err = sharings.SharingAccepted(instance, state, clientID, accessCode)
-	} else {
-		u, err = sharings.SharingRefused(instance, state, clientID)
-	}
+	u, err := sharings.SharingAccepted(instance, state, clientID, accessCode)
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -471,7 +425,6 @@ func Routes(router *echo.Group) {
 
 	// HTML forms, to be consumed directly by a browser
 	router.GET("/request", SharingRequest)
-	router.POST("/formRefuse", RecipientRefusedSharing)
 	router.GET("/answer", SharingAnswer)
 
 	router.GET("/:sharing-id/discovery", discoveryForm)

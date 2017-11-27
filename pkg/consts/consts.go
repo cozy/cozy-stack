@@ -112,8 +112,6 @@ const (
 const (
 	// SharingStatusPending is the sharing pending status
 	SharingStatusPending = "pending"
-	// SharingStatusRefused is the sharing refused status
-	SharingStatusRefused = "refused"
 	// SharingStatusAccepted is the sharing accepted status
 	SharingStatusAccepted = "accepted"
 	// SharingStatusError is when the request could not be sent

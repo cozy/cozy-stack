@@ -188,7 +188,6 @@ The recipient' sharing status possible values are:
 
 * `pending`: the recipient didn't reply yet.
 * `accepted`: the recipient accepted.
-* `refused`: the recipient refused.
 * `error`: an error occured for this recipient.
 * `unregistered`: the registration failed.
 * `mail-not-sent`: the mail has not been sent.
