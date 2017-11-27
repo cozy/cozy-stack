@@ -809,7 +809,6 @@ func (i *Instance) RequestPassphraseReset() error {
 		"token": {hex.EncodeToString(i.PassphraseResetToken)},
 	})
 	return i.SendMail(&Mail{
-		SubjectKey:   "Mail Password reset",
 		TemplateName: "passphrase_reset",
 		TemplateValues: map[string]interface{}{
 			"BaseURL":             i.PageURL("/", nil),
@@ -820,7 +819,6 @@ func (i *Instance) RequestPassphraseReset() error {
 
 // Mail contains the informations to send a mail for the instance owner.
 type Mail struct {
-	SubjectKey     string
 	TemplateName   string
 	TemplateValues map[string]interface{}
 }
@@ -829,7 +827,6 @@ type Mail struct {
 func (i *Instance) SendMail(m *Mail) error {
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"mode":            "noreply",
-		"subject":         i.Translate(m.SubjectKey),
 		"template_name":   m.TemplateName,
 		"template_values": m.TemplateValues,
 	})

@@ -108,11 +108,8 @@ func (i *Instance) SendTwoFactorPasscode() ([]byte, error) {
 		return nil, err
 	}
 	err = i.SendMail(&Mail{
-		SubjectKey:   "Mail Two factor subject",
-		TemplateName: "two_factor",
-		TemplateValues: map[string]interface{}{
-			"TwoFactorPasscode": passcode,
-		},
+		TemplateName:   "two_factor",
+		TemplateValues: map[string]interface{}{"TwoFactorPasscode": passcode},
 	})
 	if err != nil {
 		return nil, err
