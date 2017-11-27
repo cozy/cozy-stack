@@ -23,7 +23,10 @@ type Sharing struct {
 	SID         string `json:"_id,omitempty"`
 	SRev        string `json:"_rev,omitempty"`
 	SharingType string `json:"sharing_type"`
-	Revoked     bool   `json:"revoked,omitempty"`
+
+	// TODO check where it makes sense to use this flag
+	// TODO use a date (RevokedAt *time.Time)?
+	Revoked bool `json:"revoked,omitempty"`
 
 	// Only one of Sharer or Recipients is filled
 	// - Sharer is filled when Owner is false

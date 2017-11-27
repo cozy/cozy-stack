@@ -180,7 +180,7 @@ func (m *Member) RegisterClient(i *instance.Instance, u *url.URL) error {
 	if err != nil {
 		publicName = "Sharing"
 	}
-	redirectURI := i.PageURL("/sharings/answer", nil) // TODO
+	redirectURI := i.PageURL("/sharings/answer", nil)
 	clientURI := i.PageURL("", nil)
 	authClient := &auth.Client{
 		RedirectURIs: []string{redirectURI},

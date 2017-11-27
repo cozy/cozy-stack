@@ -255,61 +255,8 @@ func discovery(c echo.Context) error {
 	return c.Redirect(http.StatusFound, oAuthRedirect)
 }
 
-// SharingRequest handles a sharing request from the recipient side.
-// It creates a temporary sharing document and redirects to the authorize page.
-// TODO: this route should be protected against 'DDoS' attacks: one could spam
-// this route to force a doc creation at each request
-// TODO document this route
-// TODO can we use a verb that is not GET?
-// TODO can we make this request idempotent?
-func SharingRequest(c echo.Context) error {
-	scope := c.QueryParam("scope")
-	state := c.QueryParam("state")
-	sharingType := c.QueryParam("sharing_type")
-	desc := c.QueryParam("description")
-	clientID := c.QueryParam("client_id")
-	appSlug := c.QueryParam(consts.QueryParamAppSlug)
-
-	instance := middlewares.GetInstance(c)
-
-	sharing, err := sharings.CreateSharingRequest(instance, desc, state,
-		sharingType, scope, clientID, appSlug)
-	if err == sharings.ErrSharingAlreadyExist {
-		redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
-		return c.Redirect(http.StatusSeeOther, redirectAuthorize)
-	}
-	if err != nil {
-		return wrapErrors(err)
-	}
-	// Particular case for two-way: register the sharer
-	if sharingType == consts.TwoWaySharing {
-		if err = sharings.RegisterSharer(instance, sharing); err != nil {
-			return wrapErrors(err)
-		}
-		if err = sharings.SendClientID(sharing); err != nil {
-			return wrapErrors(err)
-		}
-	} else if sharing.SharingType == consts.OneWaySharing {
-		// The recipient listens deletes for a one-way sharing
-		sharingPerms, err := sharing.PermissionsSet(instance)
-		if err != nil {
-			return err
-		}
-		for _, rule := range *sharingPerms {
-			err = sharings.AddTrigger(instance, rule, sharing.SID, true)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
-	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
-}
-
 // SharingAnswer handles a sharing answer from the sharer side
 // TODO document this route
-// TODO can we use a verb that is not GET?
 // TODO can we make this request idempotent?
 func SharingAnswer(c echo.Context) error {
 	state := c.QueryParam("state")
@@ -401,7 +348,6 @@ func Routes(router *echo.Group) {
 	router.GET("/:sharing-id/discovery", discoveryForm)
 	router.POST("/:sharing-id/discovery", discovery)
 
-	router.GET("/request", SharingRequest)
 	router.POST("/answer", SharingAnswer)
 
 	// Internal routes, to be called by a cozy-stack

@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
@@ -442,6 +443,7 @@ type authorizeParams struct {
 	clientID    string
 	redirectURI string
 	scope       string
+	resType     string
 	client      *oauth.Client
 }
 
@@ -464,6 +466,11 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	if params.scope == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error No scope parameter",
+		})
+	}
+	if params.resType != "code" && params.resType != "cozy_sharing" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid response type",
 		})
 	}
 
@@ -490,13 +497,9 @@ func authorizeForm(c echo.Context) error {
 		clientID:    c.QueryParam("client_id"),
 		redirectURI: c.QueryParam("redirect_uri"),
 		scope:       c.QueryParam("scope"),
+		resType:     c.QueryParam("response_type"),
 	}
 
-	if c.QueryParam("response_type") != "code" {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid response type",
-		})
-	}
 	if hasError, err := checkAuthorizeParams(c, &params); hasError {
 		return err
 	}
@@ -516,39 +519,35 @@ func authorizeForm(c echo.Context) error {
 	}
 	params.client.ClientID = params.client.CouchID
 
-	if c.QueryParam("sharing_type") != "" {
-		err = c.Render(http.StatusOK, "authorize_sharing.html", echo.Map{
-			"Domain":      instance.Domain,
-			"Locale":      instance.Locale,
-			"Client":      params.client,
-			"State":       params.state,
-			"RedirectURI": params.redirectURI,
-			"Scope":       params.scope,
-			"Permissions": permissions,
-			"CSRF":        c.Get("csrf"),
-		})
-	} else {
-		err = c.Render(http.StatusOK, "authorize.html", echo.Map{
-			"Domain":      instance.Domain,
-			"Locale":      instance.Locale,
-			"Client":      params.client,
-			"State":       params.state,
-			"RedirectURI": params.redirectURI,
-			"Scope":       params.scope,
-			"Permissions": permissions,
-			"CSRF":        c.Get("csrf"),
-		})
+	tmpl := "authorize.html"
+	if params.resType == "cozy_sharing" {
+		tmpl = "authorize_sharing.html"
 	}
-	return err
+	return c.Render(http.StatusOK, tmpl, echo.Map{
+		"Domain":      instance.Domain,
+		"Locale":      instance.Locale,
+		"Client":      params.client,
+		"State":       params.state,
+		"RedirectURI": params.redirectURI,
+		"Scope":       params.scope,
+		"Permissions": permissions,
+		"CSRF":        c.Get("csrf"),
+	})
 }
 
 func authorize(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
 	params := authorizeParams{
-		instance:    middlewares.GetInstance(c),
+		instance:    instance,
 		state:       c.FormValue("state"),
 		clientID:    c.FormValue("client_id"),
 		redirectURI: c.FormValue("redirect_uri"),
 		scope:       c.FormValue("scope"),
+		resType:     c.FormValue("response_type"),
+	}
+
+	if hasError, err := checkAuthorizeParams(c, &params); hasError {
+		return err
 	}
 
 	if !middlewares.IsLoggedIn(c) {
@@ -564,11 +563,6 @@ func authorize(c echo.Context) error {
 		})
 	}
 
-	hasError, err := checkAuthorizeParams(c, &params)
-	if hasError {
-		return err
-	}
-
 	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
 	if err != nil {
 		return err
@@ -580,6 +574,13 @@ func authorize(c echo.Context) error {
 	q.Set("client_id", params.clientID)
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
+
+	if params.resType == "cozy_sharing" {
+		if err = sharings.AcceptSharingRequest(instance, u.String()); err != nil {
+			return err
+		}
+		return Home(c)
+	}
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }

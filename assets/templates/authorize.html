@@ -22,6 +22,7 @@
             <input type="hidden" name="state" value="{{.State}}" />
             <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
             <input type="hidden" name="scope" value="{{.Scope}}" />
+            <input type="hidden" name="response_type" value="code" />
             <div role="region">
               <h1>{{t "Authorize Title" .Client.ClientName}}</h1>
               {{if .Client.LogoURI}}

@@ -23,6 +23,20 @@ type SharingRequestParams struct {
 	Code            string `json:"code"`
 }
 
+// FindContactByShareCode returns the contact that is linked to a sharing by
+// the given shareCode
+func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*contacts.Contact, error) {
+	// XXX hack to fill s.permissions
+	if _, err := s.PermissionsSet(i); err != nil {
+		return nil, err
+	}
+	contactID, ok := s.permissions.Codes[code]
+	if !ok {
+		return nil, ErrRecipientDoesNotExist
+	}
+	return GetContact(i, contactID)
+}
+
 // GenerateOAuthQueryString takes care of creating a correct OAuth request for
 // the given sharing and recipient.
 func GenerateOAuthURL(i *instance.Instance, s *Sharing, m *Member, code string) (string, error) {
@@ -64,16 +78,86 @@ func GenerateOAuthURL(i *instance.Instance, s *Sharing, m *Member, code string) 
 	return u.String(), nil
 }
 
-func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*contacts.Contact, error) {
-	// XXX hack to fill s.permissions
-	if _, err := s.PermissionsSet(i); err != nil {
-		return nil, err
+// RegisterClientOnTheRecipient is called on the owner to register its-self as
+// an OAuth Client on the cozy instance of the recipient
+func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u *url.URL) error {
+	err := m.RegisterClient(i, u)
+	if err != nil {
+		i.Logger().Errorf("[sharing] Could not register at %s: %v", u, err)
+		return err
 	}
-	contactID, ok := s.permissions.Codes[code]
-	if !ok {
-		return nil, ErrRecipientDoesNotExist
+	m.Status = consts.SharingStatusMailNotSent
+	return couchdb.UpdateDoc(i, s)
+}
+
+// RegisterSharer registers the sharer for two-way sharing
+func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
+	// Register the sharer as a recipient
+	sharer := sharing.Sharer
+	doc := &contacts.Contact{
+		Cozy: []contacts.Cozy{
+			contacts.Cozy{
+				URL: sharer.URL,
+			},
+		},
 	}
-	return GetContact(i, contactID)
+	err := CreateOrUpdateRecipient(instance, doc)
+	if err != nil {
+		return err
+	}
+	ref := couchdb.DocReference{
+		ID:   doc.ID(),
+		Type: consts.Contacts,
+	}
+	sharer.RefContact = ref
+	// TODO err = sharer.RegisterClient(instance)
+	if err != nil {
+		instance.Logger().Error("[sharing] Could not register at "+sharer.URL+" ", err)
+		return err
+	}
+	return couchdb.UpdateDoc(instance, sharing)
+}
+
+func AcceptSharingRequest(i *instance.Instance, answerURL string) error {
+	return nil
+
+	// TODO
+	// - call the answerURL
+	// - from the response, create the sharing and the permissions doc
+	// - if one-way sharing, add a trigger for deletes (see the code below)
+	// - if two-way sharing, setup the replication in the other way
+
+	// Code from SharingRequest
+	// sharing, err := sharings.CreateSharingRequest(instance, desc, state,
+	// 	sharingType, scope, clientID, appSlug)
+	// if err == sharings.ErrSharingAlreadyExist {
+	// 	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
+	// 	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
+	// }
+	// if err != nil {
+	// 	return wrapErrors(err)
+	// }
+	// // Particular case for two-way: register the sharer
+	// if sharingType == consts.TwoWaySharing {
+	// 	if err = sharings.RegisterSharer(instance, sharing); err != nil {
+	// 		return wrapErrors(err)
+	// 	}
+	// 	if err = sharings.SendClientID(sharing); err != nil {
+	// 		return wrapErrors(err)
+	// 	}
+	// } else if sharing.SharingType == consts.OneWaySharing {
+	// 	// The recipient listens deletes for a one-way sharing
+	// 	sharingPerms, err := sharing.PermissionsSet(instance)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	for _, rule := range *sharingPerms {
+	// 		err = sharings.AddTrigger(instance, rule, sharing.SID, true)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// }
 }
 
 // SharingAccepted handles an accepted sharing on the sharer side and returns
@@ -176,46 +260,6 @@ func CreateSharingRequest(i *instance.Instance, desc, state, sharingType, scope,
 
 	err = couchdb.CreateDoc(i, sharing)
 	return sharing, err
-}
-
-// RegisterClientOnTheRecipient is called on the owner to register its-self as
-// an OAuth Client on the cozy instance of the recipient
-func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u *url.URL) error {
-	err := m.RegisterClient(i, u)
-	if err != nil {
-		i.Logger().Errorf("[sharing] Could not register at %s: %v", u, err)
-		return err
-	}
-	m.Status = consts.SharingStatusMailNotSent
-	return couchdb.UpdateDoc(i, s)
-}
-
-// RegisterSharer registers the sharer for two-way sharing
-func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
-	// Register the sharer as a recipient
-	sharer := sharing.Sharer
-	doc := &contacts.Contact{
-		Cozy: []contacts.Cozy{
-			contacts.Cozy{
-				URL: sharer.URL,
-			},
-		},
-	}
-	err := CreateOrUpdateRecipient(instance, doc)
-	if err != nil {
-		return err
-	}
-	ref := couchdb.DocReference{
-		ID:   doc.ID(),
-		Type: consts.Contacts,
-	}
-	sharer.RefContact = ref
-	// TODO err = sharer.RegisterClient(instance)
-	if err != nil {
-		instance.Logger().Error("[sharing] Could not register at "+sharer.URL+" ", err)
-		return err
-	}
-	return couchdb.UpdateDoc(instance, sharing)
 }
 
 // SendClientID sends the registered clientId to the sharer
