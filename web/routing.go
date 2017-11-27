@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/metrics"
 	"github.com/cozy/cozy-stack/pkg/utils"
@@ -72,19 +73,19 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	} else {
 		// TODO: improve language detection with a package like
 		// "golang.org/x/text/language"
-		lang := defaultLocale
+		lang := i18n.DefaultLocale
 		acceptLanguage := c.Request().Header.Get("Accept-Language")
 		acceptLanguageSplit := strings.SplitN(acceptLanguage, ";", 2)
 		if len(acceptLanguage) >= 1 {
 			langs := utils.SplitTrimString(acceptLanguageSplit[0], ",")
 			for _, l := range langs {
-				if utils.IsInArray(l, supportedLocales) {
+				if utils.IsInArray(l, i18n.SupportedLocales) {
 					lang = l
 					break
 				}
 			}
 		}
-		funcMap = template.FuncMap{"t": Translator(lang)}
+		funcMap = template.FuncMap{"t": i18n.Translator(lang)}
 	}
 	t, err := r.t.Clone()
 	if err != nil {

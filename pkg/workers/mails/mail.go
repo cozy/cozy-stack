@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -60,9 +61,11 @@ type Options struct {
 	Dialer         *gomail.DialerOptions `json:"dialer,omitempty"`
 	Date           *time.Time            `json:"date"`
 	Parts          []*Part               `json:"parts"`
+	RecipientName  string                `json:"recipient_name"`
 	TemplateName   string                `json:"template_name"`
 	TemplateValues interface{}           `json:"template_values"`
 	Attachments    []*Attachment         `json:"attachments,omitempty"`
+	Locale         string                `json:"locale"`
 }
 
 // Part represent a part of the content of the mail. It has a type
@@ -92,9 +95,7 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		}
 		opts.To = []*Address{toAddr}
 		opts.From = &Address{Email: from}
-		if tmpl, ok := opts.TemplateValues.(map[string]interface{}); ok {
-			tmpl["RecipientName"] = toAddr.Name
-		}
+		opts.RecipientName = toAddr.Name
 	case ModeFrom:
 		sender, err := addressFromDomain(domain)
 		if err != nil {
@@ -104,6 +105,13 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		opts.From = &Address{Name: sender.Name, Email: from}
 	default:
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
+	}
+	if opts.TemplateName != "" && opts.Locale == "" {
+		i, err := instance.Get(domain)
+		if err != nil {
+			return err
+		}
+		opts.Locale = i.Locale
 	}
 	return sendMail(ctx, &opts)
 }
@@ -128,7 +136,7 @@ func addressFromDomain(domain string) (*Address, error) {
 }
 
 func doSendMail(ctx context.Context, opts *Options) error {
-	if opts.Subject == "" {
+	if opts.TemplateName == "" && opts.Subject == "" {
 		return errors.New("Missing mail subject")
 	}
 	if len(opts.To) == 0 {
@@ -152,6 +160,18 @@ func doSendMail(ctx context.Context, opts *Options) error {
 	for i, to := range opts.To {
 		toAddresses[i] = mail.FormatAddress(to.Email, to.Name)
 	}
+
+	var parts []*Part
+	var err error
+	if opts.TemplateName != "" {
+		opts.Subject, parts, err = mailTemplater.Execute(opts.TemplateName, opts.Locale, opts.RecipientName, opts.TemplateValues)
+		if err != nil {
+			return err
+		}
+	} else {
+		parts = opts.Parts
+	}
+
 	headers := map[string][]string{
 		"From":    {mail.FormatAddress(opts.From.Email, opts.From.Name)},
 		"To":      toAddresses,
@@ -165,27 +185,19 @@ func doSendMail(ctx context.Context, opts *Options) error {
 	mail.SetHeaders(headers)
 	mail.SetDateHeader("Date", date)
 
-	var parts []*Part
-	var err error
-	if opts.TemplateName != "" {
-		parts, err = mailTemplater.Execute(opts.TemplateName, opts.TemplateValues)
-		if err != nil {
-			return err
-		}
-	} else {
-		parts = opts.Parts
-	}
 	for _, part := range parts {
 		if err = addPart(mail, part); err != nil {
 			return err
 		}
 	}
+
 	for _, attachment := range opts.Attachments {
 		mail.Attach(attachment.Filename, gomail.SetCopyFunc(func(w io.Writer) error {
 			_, err := w.Write([]byte(attachment.Content))
 			return err
 		}))
 	}
+
 	dialer := gomail.NewDialer(dialerOptions)
 	if deadline, ok := ctx.Deadline(); ok {
 		dialer.SetDeadline(deadline)

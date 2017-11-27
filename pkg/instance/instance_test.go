@@ -367,28 +367,6 @@ func TestInstanceDestroy(t *testing.T) {
 	}
 }
 
-func TestTranslate(t *testing.T) {
-	instance.LoadLocale("fr", `
-msgid "english"
-msgstr "french"
-
-msgid "hello %s"
-msgstr "bonjour %s"
-`)
-
-	fr := &instance.Instance{Locale: "fr"}
-	s := fr.Translate("english")
-	assert.Equal(t, "french", s)
-	s = fr.Translate("hello %s", "toto")
-	assert.Equal(t, "bonjour toto", s)
-
-	no := &instance.Instance{Locale: "it"}
-	s = no.Translate("english")
-	assert.Equal(t, "english", s)
-	s = no.Translate("hello %s", "toto")
-	assert.Equal(t, "hello toto", s)
-}
-
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 

@@ -181,9 +181,9 @@ func generateMailMessage(s *Sharing, r *contacts.Contact, mailValues *mailTempla
 	return jobs.NewMessage(mails.Options{
 		Mode:           "from",
 		To:             mailAddresses,
-		Subject:        "New sharing request / Nouvelle demande de partage",
 		TemplateName:   "sharing_request",
 		TemplateValues: mailValues,
+		RecipientName:  mailValues.RecipientName,
 	})
 }
 

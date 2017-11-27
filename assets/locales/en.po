@@ -72,9 +72,6 @@ msgstr "Trust this computer"
 msgid "Login Two factor device trust help"
 msgstr "By checking this option, this device won't be asked for two factor authentication in the future"
 
-msgid "Mail Two factor subject"
-msgstr "Verify your connection to Cozy"
-
 msgid "Login Connect from oauth help"
 msgstr "Hello! Once you've confirmed your password, you'll access the permission board where you can allow the application to access your data or not. It's up to you !"
 
@@ -107,9 +104,6 @@ msgstr "Your Cozy has not been yet activated. Check your email and click on the 
 
 msgid "Onboarding Not activated Contact us"
 msgstr "Are you lost ? Feel free to contact us at contact@cozycloud.cc"
-
-msgid "Mail Password reset"
-msgstr "Reset you Cozy password"
 
 msgid "Passphrase reset Help"
 msgstr "Are you sure you want to reset your password?"
@@ -234,9 +228,6 @@ msgstr "Invalid scope"
 msgid "Error Must be authenticated"
 msgstr "You must be authenticated"
 
-msgid "Error Konnector execution"
-msgstr "Collection problem for your %s account"
-
 msgid "Error Invalid reset token"
 msgstr "The link to reset the password is truncated or has expired"
 
@@ -335,3 +326,63 @@ msgstr "Send"
 
 msgid "Hello recipient email"
 msgstr "Hello %s!"
+
+msgid "Mail Greeting"
+msgstr "Hello"
+
+msgid "Mail Trouble Text"
+msgstr "If you’re having trouble with the button '{ACTION}', copy and paste the URL below into your web browser."
+
+msgid "Mail Reset Passphrase Subject"
+msgstr "Reset your Cozy password"
+
+msgid "Mail Reset Passphrase Intro"
+msgstr "Forgot your password? No worries, let's get you a new one!"
+
+msgid "Mail Reset Passphrase Button instruction"
+msgstr "Click on the this button to safely change it."
+
+msgid "Mail Reset Passphrase Button text"
+msgstr "Reset my password"
+
+msgid "Mail Reset Passphrase Outro"
+msgstr "You never asked for a new password? In this case you can forget this email.\n"
+msgstr "Just so you know, you have 15 minutes to choose a new password, then this email will self-destruct."
+
+msgid "Mail Sharing Request Subject"
+msgstr "New sharing request for your Cozy"
+
+msgid "Mail Sharing Request Intro"
+msgstr "{{.SharerPublicName}} wants to share a document with you! You will only be able to view it."
+
+msgid "Mail Sharing Request Button instruction"
+msgstr "The description given is: {{.Description}}."
+
+msgid "Mail Sharing Request Button text"
+msgstr "Accept this sharing"
+
+msgid "Mail Konnector Error Subject"
+msgstr "Collection problem for your Cozy"
+
+msgid "Mail Konnector Error Intro"
+msgstr "Something wrong happened when we tried to gather the data from your {{.KonnectorName}} account.\n"
+msgstr "If you want more information, please go to the configuration page {{.KonnectorPage}} of your account.\n"
+msgstr "If the problem remains, please contact us at contact@cozycloud.cc\n"
+
+msgid "Mail Archive Subject"
+msgstr "Archive of your Cozy data"
+
+msgid "Mail Archive Intro"
+msgstr "You can now download the archive with all your Cozy data."
+
+msgid "Mail Archive Button instruction"
+msgstr "You can download is by clicking on the following link."
+
+msgid "Mail Archive Button text"
+msgstr "Download your data"
+
+msgstr "Mail Two Factor Subject"
+msgstr "Verify your connection to Cozy"
+
+msgstr "Mail Two Factor Intro"
+msgid "Here is the code to use for two-factor authentication: {{.TwoFactorPasscode}}."

@@ -25,18 +25,10 @@ func exporter(c echo.Context) error {
 	}
 
 	link := fmt.Sprintf("http://%s%s%s", domain, c.Path(), filename)
-	subject := "The archive with all your Cozy data is ready"
-	if instance.Locale == "fr" {
-		subject = "L'archive contenant toutes les données de Cozy est prête"
-	}
 	msg, err := jobs.NewMessage(workers.Options{
-		Mode:         workers.ModeNoReply,
-		Subject:      subject,
-		TemplateName: "archiver_" + instance.Locale,
-		TemplateValues: map[string]string{
-			"RecipientName": domain,
-			"Link":          link,
-		},
+		Mode:           workers.ModeNoReply,
+		TemplateName:   "archiver",
+		TemplateValues: map[string]string{"ArchiveLink": link},
 	})
 	if err != nil {
 		return err

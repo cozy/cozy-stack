@@ -198,22 +198,28 @@ func export(tw *tar.Writer, instance *instance.Instance) error {
 }
 
 // Export is used to create a tarball with files and photos from an instance
-func Export(instance *instance.Instance) (string, error) {
+func Export(instance *instance.Instance) (filename string, err error) {
 	domain := instance.Domain
 	tab := crypto.GenerateRandomBytes(20)
 	id := base32.StdEncoding.EncodeToString(tab)
-	filename := fmt.Sprintf("%s-%s.tar.gz", domain, id)
+	filename = fmt.Sprintf("%s-%s.tar.gz", domain, id)
 
 	w, err := os.Create(filename)
 	if err != nil {
-		return "", err
+		return
 	}
 	defer w.Close()
 
 	gw := gzip.NewWriter(w)
 	tw := tar.NewWriter(gw)
 	err = export(tw, instance)
-	tw.Close()
-	gw.Close()
-	return filename, err
+	defer func() {
+		if errc := tw.Close(); err == nil && errc != nil {
+			err = errc
+		}
+		if errc := gw.Close(); err == nil && errc != nil {
+			err = errc
+		}
+	}()
+	return
 }
