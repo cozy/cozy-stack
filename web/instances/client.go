@@ -17,7 +17,15 @@ func createToken(c echo.Context) error {
 	subject := c.QueryParam("Subject")
 	in, err := instance.Get(domain)
 	if err != nil {
-		return wrapError(err)
+		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
+		// With a cluster of couchdb, we can have a race condition where we
+		// query an index before it has been updated for an instance that has
+		// just been created.
+		time.Sleep(1 * time.Second)
+		in, err = instance.Get(domain)
+		if err != nil {
+			return wrapError(err)
+		}
 	}
 	switch audience {
 	case "app":
