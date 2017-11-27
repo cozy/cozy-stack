@@ -13,8 +13,8 @@
   const twoFactorPasscodeInput = document.getElementById('two-factor-passcode')
   const twoFactorTokenInput = document.getElementById('two-factor-token')
   const twoFactorTrustDeviceCheckbox = document.getElementById('two-factor-trust-device')
-  const twoFactorForm = document.getElementById('two-factor-form')
-  const passwordForm = document.getElementById('password-form')
+  const twoFactorForms = document.getElementsByClassName('two-factor-form')
+  const passwordForms = document.getElementsByClassName('password-form')
 
   let errorPanel = loginForm && loginForm.querySelector('.errors')
 
@@ -130,8 +130,12 @@
   }
 
   function renderTwoFactorForm(twoFactorToken) {
-    twoFactorForm.classList.remove('display-none')
-    passwordForm.classList.add('display-none')
+    for (let i = 0; i < twoFactorForms.length; i++) {
+      twoFactorForms[i].classList.remove('display-none')
+    }
+    for (let i = 0; i < passwordForms.length; i++) {
+      passwordForms[i].classList.add('display-none')
+    }
     submitButton.removeAttribute('disabled')
     twoFactorTokenInput.value = twoFactorToken
     twoFactorPasscodeInput.value = ''
