@@ -165,21 +165,6 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	return middlewares.Compose(appsHandler, mws...)
 }
 
-// SetupAssets add assets routing and handling to the given router. It also
-// adds a Renderer to render templates.
-func SetupAssets(router *echo.Echo, assetsPath string) error {
-	r, err := newRenderer(assetsPath)
-	if err != nil {
-		return err
-	}
-
-	router.Renderer = r
-	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r)))
-	router.GET("/favicon.ico", echo.WrapHandler(r))
-	router.GET("/robots.txt", echo.WrapHandler(r))
-	return nil
-}
-
 // SetupRoutes sets the routing for HTTP endpoints
 func SetupRoutes(router *echo.Echo) error {
 	router.Use(timersMiddleware)
@@ -260,20 +245,26 @@ func SetupAdminRoutes(router *echo.Echo) error {
 // proxy routing if the host of the request match an application, and route to
 // the given router otherwise.
 func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*echo.Echo, error) {
-	if err := SetupAssets(router, config.GetConfig().Assets); err != nil {
+	assetsRenderer, err := newRenderer(config.GetConfig().Assets)
+	if err != nil {
 		return nil, err
 	}
 
+	root := echo.New()
+	root.HideBanner = true
+	root.Renderer = assetsRenderer
+	root.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", assetsRenderer)))
+	root.GET("/robots.txt", echo.WrapHandler(assetsRenderer))
+
+	router.Renderer = assetsRenderer
+	router.GET("/favicon.ico", echo.WrapHandler(assetsRenderer))
 	if err := SetupRoutes(router); err != nil {
 		return nil, err
 	}
 
 	appsHandler = SetupAppsHandler(appsHandler)
 
-	main := echo.New()
-	main.HideBanner = true
-	main.Renderer = router.Renderer
-	main.Any("/*", func(c echo.Context) error {
+	root.Any("/*", func(c echo.Context) error {
 		// TODO(optim): minimize the number of instance requests
 		if parent, slug, _ := middlewares.SplitHost(c.Request().Host); slug != "" {
 			if i, err := instance.Get(parent); err == nil {
