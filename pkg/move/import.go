@@ -240,7 +240,19 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 			if doctype == "files" {
 				dirname := path.Join(dst.Fullpath, name)
 				var dir *vfs.DirDoc
-				if dir, err = vfs.MkdirAll(fs, dirname, nil); err != nil {
+				if _, ok := dirs[dirname]; ok {
+					continue
+				}
+				parentName := path.Join(dst.Fullpath, path.Dir(name))
+				if parent, ok := dirs[parentName]; ok {
+					dir, err = vfs.NewDirDocWithParent(dirname, parent, nil)
+					if err == nil {
+						err = fs.CreateDir(dir)
+					}
+				} else {
+					dir, err = vfs.MkdirAll(fs, dirname, nil)
+				}
+				if err != nil {
 					logger.WithDomain(instance.Domain).Errorf("Can't import directory %s: %s", hdr.Name, err)
 				} else {
 					dirs[dirname] = dir
