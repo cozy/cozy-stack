@@ -448,13 +448,13 @@ func TestCheckSharingTypeSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestGetSharingRecipientFromClientIDNoRecipient(t *testing.T) {
+func TestGetMemberFromClientIDNoRecipient(t *testing.T) {
 	sharing := &Sharing{}
-	_, err := sharing.GetSharingRecipientFromClientID(TestPrefix, "")
+	_, err := sharing.GetMemberFromClientID(TestPrefix, "")
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
 }
 
-func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
+func TestGetMemberFromClientIDNoClient(t *testing.T) {
 	clientID := "fake client"
 
 	rStatus := &Member{
@@ -466,7 +466,7 @@ func TestGetSharingRecipientFromClientIDNoClient(t *testing.T) {
 	sharing := &Sharing{
 		Recipients: []*Member{rStatus},
 	}
-	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromClientID(TestPrefix,
 		clientID)
 
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
@@ -502,7 +502,7 @@ func TestGetMemberFromRecipientNotFound(t *testing.T) {
 	assert.Nil(t, recStatus)
 }
 
-func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
+func TestGetMemberFromClientIDSuccess(t *testing.T) {
 	clientID := "fake client"
 	rs := &Member{
 		Client: auth.Client{
@@ -514,7 +514,7 @@ func TestGetSharingRecipientFromClientIDSuccess(t *testing.T) {
 		Recipients: []*Member{rs},
 	}
 
-	recStatus, err := sharing.GetSharingRecipientFromClientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromClientID(TestPrefix,
 		clientID)
 	assert.NoError(t, err)
 	assert.Equal(t, rs, recStatus)

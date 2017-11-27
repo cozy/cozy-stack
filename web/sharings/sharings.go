@@ -264,11 +264,11 @@ func SharingAnswer(c echo.Context) error {
 	accessCode := c.QueryParam("access_code")
 	instance := middlewares.GetInstance(c)
 
-	u, err := sharings.SharingAccepted(instance, state, clientID, accessCode)
+	res, err := sharings.SharingAccepted(instance, state, clientID, accessCode)
 	if err != nil {
 		return wrapErrors(err)
 	}
-	return c.Redirect(http.StatusFound, u)
+	return c.JSON(http.StatusFound, res)
 }
 
 // ReceiveClientID receives an OAuth ClientID in a two-way context.

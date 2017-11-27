@@ -162,31 +162,45 @@ func AcceptSharingRequest(i *instance.Instance, answerURL string) error {
 
 // SharingAccepted handles an accepted sharing on the sharer side and returns
 // the redirect url.
-func SharingAccepted(instance *instance.Instance, state, clientID, accessCode string) (string, error) {
-	sharing, recStatus, err := FindSharingRecipient(instance, state, clientID)
+func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode string) (string, error) {
+	perms, err := permissions.GetForShareCode(i, shareCode)
 	if err != nil {
 		return "", err
 	}
+
+	s, err := GetSharingFromPermissions(i, perms)
+	if err != nil {
+		return "", err
+	}
+
+	m, err := s.GetMemberFromClientID(i, clientID)
+	if err != nil {
+		return "", err
+	}
+
 	// Update the sharing status and asks the recipient for access
-	recStatus.Status = consts.SharingStatusAccepted
-	err = ExchangeCodeForToken(instance, sharing, recStatus, accessCode)
+	token, err := m.getAccessToken(i, accessCode)
 	if err != nil {
 		return "", err
 	}
-
-	// Particular case for two-way sharing: the recipients needs credentials
-	if sharing.SharingType == consts.TwoWaySharing {
-		err = SendCode(instance, sharing, recStatus)
-		if err != nil {
-			return "", err
-		}
+	m.Status = consts.SharingStatusAccepted
+	m.AccessToken = *token
+	if err = couchdb.UpdateDoc(i, s); err != nil {
+		return "", err
 	}
-	// Share all the documents with the recipient
-	err = ShareDoc(instance, sharing, recStatus)
 
-	// Redirect the recipient after acceptation
-	redirect := recStatus.contact.Cozy[0].URL
-	return redirect, err
+	// Particular case for two-way sharing: the recipient needs credentials
+	if s.SharingType == consts.TwoWaySharing {
+		// TODO
+		// err = SendCode(instance, sharing, recStatus)
+		// if err != nil {
+		// 	return "", err
+		// }
+	}
+
+	// Share all the documents with the recipient
+	err = ShareDoc(i, s, m)
+	return "", err
 }
 
 // CreateSharingRequest checks fields integrity and creates a sharing document
@@ -304,17 +318,6 @@ func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Member) 
 		Code:      access.Code,
 	}
 	return Request("POST", domain, scheme, path, params)
-}
-
-// ExchangeCodeForToken asks for an AccessToken based on an AccessCode
-func ExchangeCodeForToken(instance *instance.Instance, sharing *Sharing, recStatus *Member, code string) error {
-	// Fetch the access and refresh tokens.
-	access, err := recStatus.getAccessToken(instance, code)
-	if err != nil {
-		return err
-	}
-	recStatus.AccessToken = *access
-	return couchdb.UpdateDoc(instance, sharing)
 }
 
 // Request is a utility method to send request to remote sharing party

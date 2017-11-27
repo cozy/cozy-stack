@@ -198,3 +198,31 @@ func (m *Member) RegisterClient(i *instance.Instance, u *url.URL) error {
 	m.Client = *resClient
 	return nil
 }
+
+// RecipientInfo describes the recipient information that will be transmitted to
+// the sharing workers.
+type RecipientInfo struct {
+	URL         string
+	Scheme      string
+	Client      auth.Client
+	AccessToken auth.AccessToken
+}
+
+// ExtractRecipientInfo returns a RecipientInfo from a Member
+func ExtractRecipientInfo(db couchdb.Database, rec *Member) (*RecipientInfo, error) {
+	recipient, err := GetContact(db, rec.RefContact.ID)
+	if err != nil {
+		return nil, err
+	}
+	u, scheme, err := ExtractDomainAndScheme(recipient)
+	if err != nil {
+		return nil, err
+	}
+	info := &RecipientInfo{
+		URL:         u,
+		Scheme:      scheme,
+		AccessToken: rec.AccessToken,
+		Client:      rec.Client,
+	}
+	return info, nil
+}

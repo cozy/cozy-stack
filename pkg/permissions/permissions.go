@@ -219,7 +219,7 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	}
 
 	if len(res.Rows) > 1 {
-		return nil, fmt.Errorf("Bad state : several permission docs for token %v", tokenCode)
+		return nil, fmt.Errorf("Bad state: several permission docs for token %v", tokenCode)
 	}
 
 	var pdoc Permission

@@ -1,7 +1,8 @@
 package sharings
 
 import (
-	"github.com/cozy/cozy-stack/client/auth"
+	"errors"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -93,12 +94,12 @@ func (s *Sharing) Contacts(db couchdb.Database) ([]*contacts.Contact, error) {
 	return recipients, nil
 }
 
-// GetSharingRecipientFromClientID returns the Recipient associated with the
+// GetMemberFromClientID returns the Recipient associated with the
 // given clientID.
-func (s *Sharing) GetSharingRecipientFromClientID(db couchdb.Database, clientID string) (*Member, error) {
-	for _, recStatus := range s.Recipients {
-		if recStatus.Client.ClientID == clientID {
-			return &recStatus, nil
+func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*Member, error) {
+	for _, m := range s.Recipients {
+		if m.Client.ClientID == clientID {
+			return &m, nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist
@@ -214,7 +215,7 @@ func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	if err != nil {
 		return nil, nil, err
 	}
-	sRec, err := sharing.GetSharingRecipientFromClientID(db, clientID)
+	sRec, err := sharing.GetMemberFromClientID(db, clientID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -224,32 +225,11 @@ func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 	return sharing, sRec, nil
 }
 
-// RecipientInfo describes the recipient information that will be transmitted to
-// the sharing workers.
-type RecipientInfo struct {
-	URL         string
-	Scheme      string
-	Client      auth.Client
-	AccessToken auth.AccessToken
-}
-
-// ExtractRecipientInfo returns a RecipientInfo from a Member
-func ExtractRecipientInfo(db couchdb.Database, rec *Member) (*RecipientInfo, error) {
-	recipient, err := GetContact(db, rec.RefContact.ID)
-	if err != nil {
-		return nil, err
-	}
-	u, scheme, err := ExtractDomainAndScheme(recipient)
-	if err != nil {
-		return nil, err
-	}
-	info := &RecipientInfo{
-		URL:         u,
-		Scheme:      scheme,
-		AccessToken: rec.AccessToken,
-		Client:      rec.Client,
-	}
-	return info, nil
+// TODO i *instance.Instance vs db couchdb.Database on the whole pkg/sharings
+// TODO add a comment
+func GetSharingFromPermissions(i *instance.Instance, perms *permissions.Permission) (*Sharing, error) {
+	// TODO
+	return nil, errors.New("Not implemented yet")
 }
 
 var (
