@@ -30,10 +30,10 @@
                 </div>
               </figure>
             </header>
-            <div role="region">
-              <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="login auth">
-              <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
-              <input id="passphrase-reset-token" type="hidden" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
+            <form id="renew-passphrase-form" method="POST" action="/auth/passphrase_renew" class="login auth">
+              <div role="region">
+                <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
+                <input id="passphrase-reset-token" type="hidden" name="passphrase_reset_token" value="{{.PassphraseResetToken}}" />
                 <p class="help" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
                 <p class="line">
                   <label for="password" aria-describedby="login-password-tip">{{t "Passphrase renew Field"}}</label>
@@ -44,13 +44,13 @@
                   <input id="password" name="passphrase" placeholder="Password" type="password" autofocus="true" autocomplete="new-password" />
                   <progress id="password-strength" step='1' min='0' max='100' value=0 class="pw-weak" />
                 </p>
-              </form>
-            </div>
-            <footer>
-              <div class="controls">
-                <button id="login-submit" form="renew-passphrase-form" type="submit" disabled>{{t "Passphrase renew Submit"}}</button>
               </div>
-            </footer>
+              <footer>
+                <div class="controls">
+                  <button id="login-submit" form="renew-passphrase-form" type="submit" disabled>{{t "Passphrase renew Submit"}}</button>
+                </div>
+              </footer>
+            </form>
           </div>
         </div>
       </main>

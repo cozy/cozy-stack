@@ -30,17 +30,17 @@
                 </div>
               </figure>
             </header>
-            <div role="region">
-              <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset" class="login auth">
+            <form id="reset-passphrase-form" method="POST" action="/auth/passphrase_reset" class="login auth">
+              <div role="region">
                 <input type="hidden" name="csrf_token" value="{{.CSRF}}" />
                 <p class="help" id="login-password-tip">{{t "Passphrase reset Help"}}</p>
-              </form>
-            </div>
-            <footer>
-              <div class="controls">
-                <button id="reset-submit" form="reset-passphrase-form" type="submit">{{t "Passphrase reset Submit"}}</button>
               </div>
-            </footer>
+              <footer>
+                <div class="controls">
+                  <input id="reset-submit" form="reset-passphrase-form" type="submit">{{t "Passphrase reset Submit"}}</button>
+                </div>
+              </footer>
+            </form>
           </div>
         </div>
       </main>
