@@ -158,19 +158,29 @@ func (m *MailTemplater) Execute(name, locale string, recipientName string, data 
 				c.greeting = i18n.Translate("Mail Greeting", locale)
 			}
 			c.signature = i18n.Translate("Mail Signature", locale)
-			c.subject = i18n.Translate(tpl.Subject, locale)
-			c.intro, err = createTemplate(tpl.Intro, locale)
-			if err != nil {
-				return
+			if tpl.Subject != "" {
+				c.subject = i18n.Translate(tpl.Subject, locale)
 			}
-			c.outro, err = createTemplate(tpl.Outro, locale)
-			if err != nil {
-				return
+			if tpl.Intro != "" {
+				c.intro, err = template.New("").Parse(i18n.Translate(tpl.Intro, locale))
+				if err != nil {
+					return
+				}
+			}
+			if tpl.Outro != "" {
+				c.outro, err = template.New("").Parse(i18n.Translate(tpl.Outro, locale))
+				if err != nil {
+					return
+				}
 			}
 			c.actions = make([]mailActionCache, len(tpl.Actions))
 			for i, a := range tpl.Actions {
-				c.actions[i].instructions = i18n.Translate(a.Instructions, locale)
-				c.actions[i].text = i18n.Translate(a.Text, locale)
+				if a.Instructions != "" {
+					c.actions[i].instructions = i18n.Translate(a.Instructions, locale)
+				}
+				if a.Text != "" {
+					c.actions[i].text = i18n.Translate(a.Text, locale)
+				}
 				c.actions[i].link, err = template.New("").Parse(a.Link)
 				if err != nil {
 					return
@@ -204,10 +214,6 @@ func (m *MailTemplater) Execute(name, locale string, recipientName string, data 
 		{Body: text, Type: "text/plain"},
 	}
 	return
-}
-
-func createTemplate(s string, locale string) (*template.Template, error) {
-	return template.New("").Parse(i18n.Translate(s, locale))
 }
 
 func init() {
