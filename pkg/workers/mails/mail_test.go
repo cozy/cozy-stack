@@ -182,14 +182,14 @@ Content-Transfer-Encoding: quoted-printable
 Content-Type: text/html; charset=UTF-8`,
 		`Content-Transfer-Encoding: quoted-printable
 Content-Type: text/plain; charset=UTF-8
-Hi ,
+Mail Greeting,
 intro1
 intro2 My page
 instructions https://foobar.baz
 outro1
 outro2 My page
-Yours truly,
-Cozy - https://cozy.io
+Mail Signature,
+Mail Cozy Team - https://cozy.io
 .
 QUIT
 `}
