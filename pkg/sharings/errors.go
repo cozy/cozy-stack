@@ -3,6 +3,7 @@ package sharings
 import "errors"
 
 var (
+	// TODO does all these errors still make sense?
 	// ErrBadSharingType is used when the given sharing type is not valid
 	ErrBadSharingType = errors.New("Invalid sharing type")
 	// ErrBadPermission is used when a given permission is not valid

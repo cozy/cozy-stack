@@ -15,7 +15,7 @@ import (
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
 	Status string `json:"status,omitempty"`
-	URL    string `json:"url,omitempty"`
+	URL    string `json:"url,omitempty"` // TODO check that this URL is well filled
 
 	// Only a reference on the contact is persisted in the sharing document
 	RefContact couchdb.DocReference `json:"contact,omitempty"`
@@ -168,39 +168,20 @@ func (m *Member) getAccessToken(db couchdb.Database, code string) (*auth.AccessT
 	return req.GetAccessToken(&m.Client, code)
 }
 
-// Register asks the recipient to register the sharer as a new OAuth client.
-//
-// The following information must be provided to register:
-// - redirect uri: where the recipient must answer the sharing request. Our
-//		protocol forces this field to be: "sharerdomain/sharings/answer".
-// - client name: the sharer's public name.
-// - client kind: "sharing" since this will be a sharing oriented OAuth client.
-// - software id: the link to the github repository of the stack.
-// - client URI: the domain of the sharer's Cozy.
-// TODO refactor this method
-func (rs *Member) Register(instance *instance.Instance) error {
-	if rs.contact == nil {
-		r, err := GetContact(instance, rs.RefContact.ID)
-		if err != nil {
-			return err
-		}
-		rs.contact = r
+// RegisterClient asks the Cozy of the member to register a new OAuth client.
+func (m *Member) RegisterClient(i *instance.Instance, u *url.URL) error {
+	req := &auth.Request{
+		Domain:     u.Host,
+		Scheme:     u.Scheme,
+		HTTPClient: new(http.Client),
 	}
 
-	// If the recipient has no URL there is no point in registering.
-	if len(rs.contact.Cozy) == 0 {
-		return ErrRecipientHasNoURL
-	}
-
-	publicName, err := instance.PublicName()
+	publicName, err := i.PublicName()
 	if err != nil {
-		return err
+		publicName = "Sharing"
 	}
-
-	redirectURI := instance.PageURL("/sharings/answer", nil)
-	clientURI := instance.PageURL("", nil)
-
-	// We have all we need to register an OAuth client.
+	redirectURI := i.PageURL("/sharings/answer", nil) // TODO
+	clientURI := i.PageURL("", nil)
 	authClient := &auth.Client{
 		RedirectURIs: []string{redirectURI},
 		ClientName:   publicName,
@@ -209,23 +190,11 @@ func (rs *Member) Register(instance *instance.Instance) error {
 		ClientURI:    clientURI,
 	}
 
-	recipientURL, scheme, err := ExtractDomainAndScheme(rs.contact)
-	if err != nil {
-		return err
-	}
-
-	req := &auth.Request{
-		Domain:     recipientURL,
-		Scheme:     scheme,
-		HTTPClient: new(http.Client),
-	}
-
-	// We launch the register process.
 	resClient, err := req.RegisterClient(authClient)
 	if err != nil {
 		return err
 	}
-
-	rs.Client = *resClient
+	m.URL = u.String()
+	m.Client = *resClient
 	return nil
 }

@@ -30,59 +30,55 @@ type SharingRequestParams struct {
 
 // GenerateOAuthQueryString takes care of creating a correct OAuth request for
 // the given sharing and recipient.
-func GenerateOAuthQueryString(s *Sharing, rs *Member, scheme string) (string, error) {
-
-	// Check if an oauth client exists for the owner at the recipient's.
-	if rs.Client.ClientID == "" || len(rs.Client.RedirectURIs) < 1 {
+func GenerateOAuthURL(i *instance.Instance, s *Sharing, m *Member, code string) (string, error) {
+	// Check that we have an OAuth client that we can use
+	if m.URL == "" || m.Client.ClientID == "" || len(m.Client.RedirectURIs) < 1 {
 		return "", ErrNoOAuthClient
 	}
 
-	// Check if the recipient has an URL.
-	if len(rs.contact.Cozy) == 0 {
-		return "", ErrRecipientHasNoURL
-	}
-
-	// Convert the local permissions doc in the OAuth scope
-	// TODO instance
-	// TODO change the HTTP verbs to ALL
-	// permSet, err := s.PermissionsSet(instance)
-	// if err != nil {
-	// 	return "", err
-	// }
-	// permissionsScope, err := permSet.MarshalScopeString()
-	// if err != nil {
-	// 	return "", err
-	// }
-	permissionsScope := "FOO"
-
-	oAuthQuery, err := url.Parse(rs.contact.Cozy[0].URL)
+	u, err := url.Parse(m.URL)
 	if err != nil {
 		return "", err
 	}
-	// Special scenario: if r.URL doesn't have an "http://" or "https://" prefix
-	// then `url.Parse` doesn't set any host.
-	if oAuthQuery.Host == "" {
-		oAuthQuery.Host = rs.contact.Cozy[0].URL
+	u.Path = "/auth/authorize"
+
+	// Convert the local permissions doc to an OAuth scope
+	if _, err = s.PermissionsSet(i); err != nil {
+		return "", err
 	}
-	oAuthQuery.Path = "/sharings/request"
-	// The link/button we put in the email has to have an http:// or https://
-	// prefix, otherwise it cannot be open in the browser.
-	if oAuthQuery.Scheme != "http" && oAuthQuery.Scheme != "https" {
-		oAuthQuery.Scheme = scheme
+	cloned := s.permissions.Clone().(*permissions.Permission)
+	permSet := cloned.Permissions
+	for _, rule := range permSet {
+		rule.Verbs = permissions.ALL
+	}
+	scope, err := permSet.MarshalScopeString()
+	if err != nil {
+		return "", err
 	}
 
-	mapParamOAuthQuery := url.Values{
+	q := url.Values{
 		consts.QueryParamAppSlug: {s.AppSlug},
-		"client_id":              {rs.Client.ClientID},
-		"redirect_uri":           {rs.Client.RedirectURIs[0]},
-		"response_type":          {"code"},
-		"scope":                  {permissionsScope},
-		"sharing_type":           {s.SharingType},
-		"state":                  {s.SID},
+		"client_id":              {m.Client.ClientID},
+		"redirect_uri":           {m.Client.RedirectURIs[0]},
+		"response_type":          {"cozy_sharing"},
+		"scope":                  {scope},
+		"state":                  {code},
 	}
-	oAuthQuery.RawQuery = mapParamOAuthQuery.Encode()
+	u.RawQuery = q.Encode()
 
-	return oAuthQuery.String(), nil
+	return u.String(), nil
+}
+
+func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*contacts.Contact, error) {
+	// XXX hack to fill s.permissions
+	if _, err := s.PermissionsSet(i); err != nil {
+		return nil, err
+	}
+	contactID, ok := s.permissions.Codes[code]
+	if !ok {
+		return nil, ErrRecipientDoesNotExist
+	}
+	return GetContact(i, contactID)
 }
 
 // SharingAccepted handles an accepted sharing on the sharer side and returns
@@ -187,22 +183,16 @@ func CreateSharingRequest(i *instance.Instance, desc, state, sharingType, scope,
 	return sharing, err
 }
 
-// RegisterRecipient registers a sharing recipient
-// TODO use the cozyURL param
-func RegisterRecipient(instance *instance.Instance, rs *Member, cozyURL string) error {
-	err := rs.Register(instance)
+// RegisterClientOnTheRecipient is called on the owner to register its-self as
+// an OAuth Client on the cozy instance of the recipient
+func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u *url.URL) error {
+	err := m.RegisterClient(i, u)
 	if err != nil {
-		if rs.contact != nil {
-			instance.Logger().Errorf("[sharing] Could not register at %v : %v",
-				rs.contact.Cozy[0].URL, err)
-			rs.Status = consts.SharingStatusUnregistered
-		} else {
-			instance.Logger().Error("[sharing] Sharing recipient not found")
-		}
-	} else {
-		rs.Status = consts.SharingStatusMailNotSent
+		i.Logger().Errorf("[sharing] Could not register at %s: %v", u, err)
+		return err
 	}
-	return err
+	m.Status = consts.SharingStatusMailNotSent
+	return couchdb.UpdateDoc(i, s)
 }
 
 // RegisterSharer registers the sharer for two-way sharing
@@ -225,10 +215,10 @@ func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
 		Type: consts.Contacts,
 	}
 	sharer.RefContact = ref
-	err = sharer.Register(instance)
+	// TODO err = sharer.RegisterClient(instance)
 	if err != nil {
 		instance.Logger().Error("[sharing] Could not register at "+sharer.URL+" ", err)
-		sharer.Status = consts.SharingStatusUnregistered
+		return err
 	}
 	return couchdb.UpdateDoc(instance, sharing)
 }

@@ -2,7 +2,6 @@ package sharings
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -168,6 +167,94 @@ func AddSharingRecipient(c echo.Context) error {
 
 }
 
+func renderDiscoveryForm(c echo.Context, i *instance.Instance, code int, sharingID, shareCode string, recipient *contacts.Contact) error {
+	urlErr := ""
+	if code != http.StatusOK {
+		urlErr = i.Translate(DiscoveryErrorKey)
+	}
+	publicName, err := i.PublicName()
+	if err != nil {
+		publicName = ""
+	}
+	recName := ""
+	if mail, err := recipient.ToMailAddress(); err == nil {
+		recName = mail.Name
+	}
+	recCozy := recipient.PrimaryCozyURL()
+
+	return c.Render(code, "sharing_discovery.html", echo.Map{
+		"Locale":        i.Locale,
+		"SharingID":     sharingID,
+		"ShareCode":     shareCode,
+		"RecipientName": recName,
+		"RecipientCozy": recCozy,
+		"PublicName":    publicName,
+		"URLError":      urlErr,
+	})
+}
+
+func discoveryForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	shareCode := c.QueryParam("sharecode")
+
+	sharing, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid sharing id",
+		})
+	}
+	recipient, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid sharecode",
+		})
+	}
+
+	return renderDiscoveryForm(c, instance, http.StatusOK, sharingID, shareCode, recipient)
+}
+
+func discovery(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	shareCode := c.FormValue("sharecode")
+	cozyURL := c.FormValue("url")
+
+	sharing, err := sharings.FindSharing(instance, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	recipient, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid sharecode",
+		})
+	}
+	u, err := url.Parse(cozyURL)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if u.Scheme == "" {
+		u.Scheme = "https" // Set https as the default scheme
+	}
+
+	member, err := sharing.GetMemberFromRecipientID(instance, recipient.ID())
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	if err = sharings.RegisterClientOnTheRecipient(instance, sharing, member, u); err != nil {
+		return renderDiscoveryForm(c, instance, http.StatusBadRequest, sharingID, shareCode, recipient)
+	}
+
+	oAuthRedirect, err := sharings.GenerateOAuthURL(instance, sharing, member, shareCode)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	return c.Redirect(http.StatusFound, oAuthRedirect)
+}
+
 // SharingRequest handles a sharing request from the recipient side.
 // It creates a temporary sharing document and redirects to the authorize page.
 // TODO: this route should be protected against 'DDoS' attacks: one could spam
@@ -235,119 +322,6 @@ func SharingAnswer(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	return c.Redirect(http.StatusFound, u)
-}
-
-func renderDiscoveryForm(c echo.Context, i *instance.Instance, code int, sharingID, shareCode string, recipient *contacts.Contact) error {
-	urlErr := ""
-	if code != http.StatusOK {
-		urlErr = i.Translate(DiscoveryErrorKey)
-	}
-	publicName, err := i.PublicName()
-	if err != nil {
-		publicName = ""
-	}
-	recName := ""
-	if mail, err := recipient.ToMailAddress(); err == nil {
-		recName = mail.Name
-	}
-	recCozy := recipient.PrimaryCozyURL()
-
-	return c.Render(code, "sharing_discovery.html", echo.Map{
-		"Locale":        i.Locale,
-		"SharingID":     sharingID,
-		"ShareCode":     shareCode,
-		"RecipientName": recName,
-		"RecipientCozy": recCozy,
-		"PublicName":    publicName,
-		"URLError":      urlErr,
-	})
-}
-
-func discoveryForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	shareCode := c.QueryParam("sharecode")
-
-	sharing, err := sharings.FindSharing(instance, sharingID)
-	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid sharing id",
-		})
-	}
-	fmt.Printf("sharing = %#v\n", sharing)                     // TODO
-	recipient, err := sharings.GetContact(instance, shareCode) // TODO
-	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid sharecode",
-		})
-	}
-
-	return renderDiscoveryForm(c, instance, http.StatusOK, sharingID, shareCode, recipient)
-}
-
-func discovery(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	sharingID := c.Param("sharing-id")
-	recipientURL := c.FormValue("url")
-	shareCode := c.FormValue("sharecode")
-
-	sharing, err := sharings.FindSharing(instance, sharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	// Save the URL in db
-	recipient, err := sharings.GetContact(instance, shareCode) // TODO
-	if err != nil {
-		return wrapErrors(err)
-	}
-	recURL, err := url.Parse(recipientURL)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	// Set https as the default scheme
-	if recURL.Scheme == "" {
-		recURL.Scheme = "https"
-	}
-
-	cozyURL := recURL.String()
-	found := false
-	for _, c := range recipient.Cozy {
-		if c.URL == cozyURL {
-			found = true
-			break
-		}
-	}
-	if !found {
-		recipient.Cozy = append(recipient.Cozy, contacts.Cozy{URL: cozyURL})
-	}
-
-	// Register the recipient with the given URL and save in db
-	recStatus, err := sharing.GetMemberFromRecipientID(instance, recipient.ID())
-	if err != nil {
-		return wrapErrors(err)
-	}
-	recStatus.ForceRecipient(recipient)
-	if err = sharings.RegisterRecipient(instance, recStatus, cozyURL); err != nil {
-		return renderDiscoveryForm(c, instance, http.StatusBadRequest, sharingID, shareCode, recipient)
-	}
-
-	// TODO we should persist the contact only when the sharing is approved
-	if !found {
-		if err = couchdb.UpdateDoc(instance, recipient); err != nil {
-			return wrapErrors(err)
-		}
-	}
-	if err = couchdb.UpdateDoc(instance, sharing); err != nil {
-		return wrapErrors(err)
-	}
-
-	// Generate the oauth URL and redirect the recipient
-	oAuthRedirect, err := sharings.GenerateOAuthQueryString(sharing, recStatus, instance.Scheme())
-	if err != nil {
-		return wrapErrors(err)
-	}
-	return c.Redirect(http.StatusFound, oAuthRedirect)
 }
 
 // ReceiveClientID receives an OAuth ClientID in a two-way context.
@@ -423,12 +397,12 @@ func Routes(router *echo.Group) {
 	router.GET("/:sharing-id", GetSharingDoc)
 	router.POST("/:id/recipients", AddSharingRecipient)
 
-	// HTML forms, to be consumed directly by a browser
-	router.GET("/request", SharingRequest)
-	router.GET("/answer", SharingAnswer)
-
+	// HTML pages, to be consumed by the recipients in their browser
 	router.GET("/:sharing-id/discovery", discoveryForm)
 	router.POST("/:sharing-id/discovery", discovery)
+
+	router.GET("/request", SharingRequest)
+	router.POST("/answer", SharingAnswer)
 
 	// Internal routes, to be called by a cozy-stack
 	router.POST("/access/client", ReceiveClientID)

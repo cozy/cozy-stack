@@ -49,12 +49,6 @@
                 {{end}}
               </ul>
               <p>
-                {{if .Client.PolicyURI}}
-                {{t "Authorize Policy sentence"}}
-                <a href="{{.Client.PolicyURI}}">{{t "Authorize Policy link"}}</a>.
-                {{end}}
-              </p>
-              <p>
                 {{t "Authorize Give permission start"}}<strong>{{t "Authorize Give Sharing permission keyword"}}</strong>{{t "Authorize Give Sharing permission end" .Client.ClientName}}
               </p>
             </div>

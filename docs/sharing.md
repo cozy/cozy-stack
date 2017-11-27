@@ -187,10 +187,9 @@ missing, a discovery mail will be sent in order to ask the recipient to give it.
 The recipient' sharing status possible values are:
 
 * `pending`: the recipient didn't reply yet.
-* `accepted`: the recipient accepted.
-* `error`: an error occured for this recipient.
-* `unregistered`: the registration failed.
-* `mail-not-sent`: the mail has not been sent.
+* `mail-not-sent`: no invitation mail was sent for this recipient (no known
+  email or an error on sending the mail).
+* `accepted`: the recipient accepted the sharing.
 * `revoked`: the recipient has been revoked.
 
 ##### access_token

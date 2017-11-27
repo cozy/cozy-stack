@@ -86,8 +86,17 @@ func SendMails(instance *instance.Instance, s *Sharing) error {
 	return err
 }
 
-func linkForRecipient(i *instance.Instance, s *Sharing, rs *Member) string {
-	code := "XXX" // TODO
+func linkForRecipient(i *instance.Instance, s *Sharing, m *Member) string {
+	// TODO be sure that s.permissions is not nil
+	if s.permissions == nil {
+		return ""
+	}
+
+	// TODO check if codes is map code->contactID or contactID->code
+	code, ok := s.permissions.Codes[m.RefContact.ID]
+	if !ok {
+		return ""
+	}
 	query := url.Values{"sharecode": {code}}
 
 	if s.PreviewPath == "" || s.AppSlug == "" {
