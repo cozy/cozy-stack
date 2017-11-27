@@ -38,40 +38,34 @@ users.
 
 ### Sharing document
 
-A sharing document has the following structure. Note some fields are purposely
-left empty for space convenience.
+A sharing document has the following structure in CouchDB. Note some fields
+are purposely left empty for space convenience.
 
 ```json
 {
   "_id": "xxx",
   "_rev": "yyy",
-  "type": "io.cozy.sharings",
   "sharing_type": "one-shot",
   "description": "Give it to me baby!",
-  "sharing_id": "zzz",
   "owner": true,
   "app_slug": "cal",
-
+  "preview_path": "/sharings/preview",
   "permissions": {
-    "doctype1": {
-      "description": "doctype1 description",
-      "type": "io.cozy.doctype1",
-      "values": ["docid1", "docid2"],
-      "selector": "calendar-id", //not supported yet
-      "verbs": ["GET", "POST", "PUT"]
-    }
+    "type": "io.cozy.permissions",
+    "id": "80a466d6-d034-11e7-bf9e-e3c1c4a9f82a"
   },
   "recipients": [
     {
       "recipient": { "id": "mycontactid1", "type": "io.cozy.contacts" },
       "status": "accepted",
-      "AccessToken": {},
-      "Client": {},
-      "HostClientID": "myhostclientid"
+      "url": "https://example.mycozy.cloud/",
+      "access_token": {},
+      "client": {},
+      "inbound_client_id": "myhostclientid"
     },
     {
       "recipient": { "id": "mycontactid2", "type": "io.cozy.contacts" },
-      "status": "pending",
+      "status": "pending"
     }
   ]
 }
@@ -83,11 +77,16 @@ To tell if the owner of the Cozy is also the owner of the sharing. This field is
 set automatically by the stack when creating (`true`) or receiving (`false`)
 one.
 
+#### revoked
+
+An additional field, `revoked`, will be added to the document, with the value
+`true` when the sharing has been revoked.
+
 #### permissions
 
 Which documents will be shared. See the
-[permissions](https://cozy.github.io/cozy-stack/permissions.html) for a
-detailed explanation of the permissions format.
+[permissions](https://cozy.github.io/cozy-stack/permissions.html) for a detailed
+explanation of the permissions format.
 
 The supported permissions are the following:
 
@@ -139,9 +138,8 @@ Example of a photo album sharing:
 ```
 
 It is worth mentionning that the permissions are defined on the sharer side, but
-are enforced on the recipients side (and also on the sharer side if the
-sharing is a master-master type), as the documents are pushed to their
-databases.
+are enforced on the recipients side (and also on the sharer side if the sharing
+is a two-way type), as the documents are pushed to their databases.
 
 #### recipients
 
@@ -152,10 +150,11 @@ List all the recipients of the sharing:
     {
         "recipient": {"id": "mycontactid1", "type": "io.cozy.contacts"},
         "status": "accepted",
+        "url": "https://example.mycozy.cloud/"
     },
     {
         "recipient": {"id": "mycontactid2", "type": "io.cozy.contacts"},
-        "status": "pending",
+        "status": "pending"
     }
 ]
 ```
@@ -183,19 +182,19 @@ A contact has the following minimal structure:
 Note that the `email` is mandatory to contact the recipient. If the `URL` is
 missing, a discovery mail will be sent in order to ask the recipient to give it.
 
-##### Status
+##### status
 
 The recipient' sharing status possible values are:
 
 * `pending`: the recipient didn't reply yet.
 * `accepted`: the recipient accepted.
 * `refused`: the recipient refused.
-* `error`: an error occured for this recipient
-* `unregistered`: the registration failed
-* `mail-not-sent`: the mail has not been sent
-* `revoked`: the recipient has been revoked
+* `error`: an error occured for this recipient.
+* `unregistered`: the registration failed.
+* `mail-not-sent`: the mail has not been sent.
+* `revoked`: the recipient has been revoked.
 
-##### AccessToken
+##### access_token
 
 The OAuth credentials used to authenticate to the recipient's Cozy.
 
@@ -206,7 +205,7 @@ for structure details.
 Here, the `scope` corresponds to the accepted sharing permissions by the
 recipient.
 
-##### Client
+##### client
 
 From a OAuth perspective, Bob being Alice's recipient means Alice is registered
 as a OAuth client to Bob's Cozy. Thus, we store for each recipient the
@@ -216,42 +215,43 @@ See
 [here](https://github.com/cozy/cozy-stack/blob/master/docs/auth.md#post-authaccess_token)
 for structure details.
 
-##### HostClientID
+##### inbound_client_id
 
-This field is only used for `master-master` sharing. It corresponds to the id of
-the OAuth document stored in the host database, containing the recipient's OAuth
+This field is only used for `two-way` sharing. It corresponds to the id of the
+OAuth document stored in the host database, containing the recipient's OAuth
 information after registration.
+
+#### owner
+
+It's the same structure as a recipient, but it's only here for the sharing
+document that is not the owner of the sharing.
 
 #### sharing_type
 
-The type of sharing. It should be one of the followings: `master-master`,
-`master-slave`, `one-shot`. They represent the access rights the recipient and sender have:
+The type of sharing. It should be one of the followings: `two-way`, `one-way`,
+`one-shot`. They represent the access rights the recipient and sender have:
 
 * `one-shot`: the documents are sent and no modification is propagated.
-* `master-slave`: only the sharer can propagate modifications to the recipient.
-  The recipient can only modify the documents localy.
-* `master-master`: both recipient and sharer can modify the documents and have
-  their modifications propagated to the other.
+* `one-way`: only the sharer can propagate modifications to the recipient. The
+  recipient can only modify the documents localy.
+* `two-way`: both recipient and sharer can modify the documents and have their
+  modifications propagated to the other.
 
 #### description
 
 The answer to the question: "What are you sharing?". It is an optional field
 but, still, it is recommended to provide a human-readable description.
 
-#### sharing_id
+#### preview_path
 
-This uniquely identify a sharing. It is automatically generated at the sharing
-creation.
+**TODO**
 
 ### Routes
 
 #### POST /sharings/
 
 Create a new sharing. The sharing type, permissions and recipients must be
-specified. The description field is optionnal.
-
-Note the recipient id must correspond to an actual contact previously inserted
-in the database.
+specified. The description and preview_path fields are optional.
 
 ##### Request
 
@@ -264,25 +264,25 @@ Content-Type: application/json
 ```json
 {
   "sharing_type": "one-shot",
-  "description": "sharing test",
   "permissions": {
     "tests": {
       "description": "test",
       "type": "io.cozy.tests",
-      "verbs": ["GET", "POST"],
       "values": ["test-id"]
     }
   },
   "recipients": [
-    {
-      "recipient": {
-        "type": "io.cozy.contacts",
-        "id": "2a31ce0128b5f89e40fd90da3f014087"
-      }
-    }
-  ]
+    "2a31ce0128b5f89e40fd90da3f014087"
+  ],
+  "description": "sharing test",
+  "preview_path": "/sharings/preview"
 }
 ```
+
+**Note:** for the permissions, the HTTP `verbs` will be overwritten by the
+cozy-stack with the values needed to operate the sharing. The recipients field
+is an array with ids of contacts (that must have been already created on the
+cozy).
 
 #### Response
 
@@ -296,31 +296,33 @@ Content-Type: application/vnd.api+json
   "data": {
     "type": "io.cozy.sharings",
     "id": "ce8835a061d0ef68947afe69a0046722",
-    "attributes": {
-      "owner": true,
-      "sharing_id": "wccKeeGnAppnHgXWqBxKqSpKNpZiMeFR",
-      "sharing_type": "one-shot",
-      "permissions": {
-        "tests": {
-          "type": "io.cozy.tests",
-          "description": "test",
-          "values": ["test-id"]
-        }
-      }
-    },
     "meta": {
       "rev": "1-4859c6c755143adf0838d225c5e97882"
+    },
+    "attributes": {
+      "sharing_id": "wccKeeGnAppnHgXWqBxKqSpKNpZiMeFR",
+      "sharing_type": "one-shot",
+      "description": "sharing test",
+      "preview_path": "/sharings/preview",
+      "app_slug": "cal",
+      "owner": true
     },
     "links": {
       "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
     },
     "relationships": {
+      "permissions": {
+        "data": {
+          "id": "46b25ad6-d044-11e7-af96-579d7e6c689e",
+          "type": "io.cozy.permissions"
+        }
+      },
       "recipients": {
         "data": [
           {
             "id": "2a31ce0128b5f89e40fd90da3f014087",
             "type": "io.cozy.contacts",
-            "status": "pending",
+            "status": "pending"
           }
         ]
       }
@@ -328,8 +330,37 @@ Content-Type: application/vnd.api+json
   },
   "included": [
     {
+      "type": "io.cozy.permissions",
+      "id": "46b25ad6-d044-11e7-af96-579d7e6c689e",
+      "meta": {
+        "rev": "1-fbed00fed407"
+      },
+      "attributes": {
+        "type": "shared-by-me",
+        "source_id": "io.cozy.sharings/ce8835a061d0ef68947afe69a0046722",
+        "codes": {
+          "yuot7NaiaeGugh8T": "2a31ce0128b5f89e40fd90da3f014087",
+        },
+        "expires_at": 1483951978,
+        "permissions": {
+          "tests": {
+            "description": "test",
+            "type": "io.cozy.tests",
+            "values": ["test-id"],
+            "verbs": ["GET"]
+          }
+        }
+      },
+      "links": {
+        "self": "/permissions/46b25ad6-d044-11e7-af96-579d7e6c689e"
+      }
+    },
+    {
       "type": "io.cozy.contacts",
       "id": "2a31ce0128b5f89e40fd90da3f014087",
+      "meta": {
+        "rev": "1-461114b45855dc6acdb9bdc5d67e1092"
+      },
       "attributes": {
         "email": {
           "address": "toto@fr"
@@ -337,9 +368,6 @@ Content-Type: application/vnd.api+json
         "cozy": {
           "url": "url.fr"
         }
-      },
-      "meta": {
-        "rev": "1-461114b45855dc6acdb9bdc5d67e1092"
       },
       "links": {
         "self": "/contacts/2a31ce0128b5f89e40fd90da3f014087"
@@ -354,7 +382,7 @@ Content-Type: application/vnd.api+json
 Revoke a sharing. Depending on the role of the logged-in user and the type of
 sharing, the implications are different:
 
-| ROLE / SHARING-TYPE | MASTER-SLAVE SHARING                                    | MASTER-MASTER SHARING                                            |
+| ROLE / SHARING-TYPE | ONE-WAY SHARING                                         | TWO-WAY SHARING                                                  |
 | ------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
 | Sharer              | Delete all triggers linked to the sharing.              | Delete all triggers linked to the sharing.                       |
 |                     | Ask all recipients to revoke the sharing.               | Ask all recipients to revoke the sharing.                        |
@@ -394,9 +422,9 @@ sharer that its owner has revoked the sharing.
 Revoke a recipient from a sharing. Only the sharer can make that action and
 depending on the type of sharing the implications differ:
 
-* for both _Master-Master_ and _Master-Slave_ sharings the sharer asks the
-  recipient to revoke the sharing;
-* for _Master-Master_ sharing the sharer also deletes the OAuth client of the
+* for both _Two-way_ and _One-way_ sharings the sharer asks the recipient to
+  revoke the sharing;
+* for _Two-way_ sharing the sharer also deletes the OAuth client of the
   recipient for that sharing.
 
 #### Request
@@ -418,8 +446,8 @@ Content-Type: application/json
 ### POST /sharings/destination/:doctype
 
 Sets the destination directory of the given application. The "destination
-directory" is where the shared files received by this application will go.
-Only files shared using "Cozy to Cozy sharings" are concerned.
+directory" is where the shared files received by this application will go. Only
+files shared using "Cozy to Cozy sharings" are concerned.
 
 For example if a user sets the destination directory of the application "Photos"
 to `/Shared with Me/Photos` (by providing its **id**) then all shared photos
@@ -448,11 +476,9 @@ Content-Type: application/json
 
 #### Note
 
-The slug of the application that makes this request is extracted from its
-token and stored in the config document. The application that creates the
-sharing on the other cozy instance must have the same slug to trigger this
-behaviour.
-
+The slug of the application that makes this request is extracted from its token
+and stored in the config document. The application that creates the sharing on
+the other cozy instance must have the same slug to trigger this behaviour.
 
 ### Frequently Asked Questions
 
@@ -483,12 +509,12 @@ Having its id, you can fetch it and get all the information you need.
 
 * _One-shot_: the documents are sent to the recipients and that's it. No
   updates, no nothing. It's as if you gave them a copy of the data on a usb key.
-* _Master-slave_: updates you make on the documents are propagated to the
-  recipients. The recipients can only consult as everything they do will not be
-  propagated back.
-* _Master-master_: what you and the recipients do is propagated to everybody.
-  Updates, deletions, additions are shared to all parties no matter if they are
-  the sharer or the recipients.
+* _One-way_: updates you make on the documents are propagated to the recipients.
+  The recipients can only consult as everything they do will not be propagated
+  back.
+* _Two-way_: what you and the recipients do is propagated to everybody. Updates,
+  deletions, additions are shared to all parties no matter if they are the
+  sharer or the recipients.
 
 #### Do you have use-cases for the different types of sharings?
 
@@ -496,11 +522,11 @@ Yes!
 
 * For _one-shot_: an official paper (such as a bill or an ID) you want to give
   to someone.
-* For _master-slave_: a password file that the sysadmins want to share to the
-  rest of the company. Only the sysadmins can modify the password file, the
-  others can only consult them.
-* For _master-master_: a folder containing shared resources for a project. You
-  want all parties to be able to modify the content as well as adding new ones.
+* For _one-way_: a password file that the sysadmins want to share to the rest of
+  the company. Only the sysadmins can modify the password file, the others can
+  only consult them.
+* For _two-way_: a folder containing shared resources for a project. You want
+  all parties to be able to modify the content as well as adding new ones.
 
 #### What are the information required for a recipient?
 
@@ -514,9 +540,9 @@ When the user asks to share a resource, a sharing document is created. That
 happens before the emails are sent to the recipients. That also means that if
 all recipients refuse the sharing, the sharing document will still be there.
 
-The permissions associated are described in that document but **no actual permission
-documents are created, at any point in the protocol** — permissions are still enforced,
-there is just no need to create permission documents.
+The permissions associated are described in that document but **no actual
+permission documents are created, at any point in the protocol** — permissions
+are still enforced, there is just no need to create permission documents.
 
 When the recipients accept, a sharing document is created on their own Cozy. The
 sharing document the recipients have is slighty different from the sharer's one.

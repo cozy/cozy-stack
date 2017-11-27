@@ -26,7 +26,7 @@ type RecipientStatus struct {
 	AccessToken auth.AccessToken `json:"access_token"`
 
 	// The OAuth ClientID refering to the host's client stored in its db
-	HostClientID string `json:"host_client_id,omitempty"`
+	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
 // ExtractDomainAndScheme returns the recipient's domain and the scheme
@@ -127,6 +127,7 @@ func (rs *RecipientStatus) ForceRecipient(r *contacts.Contact) {
 }
 
 // GetRecipient returns the Recipient stored in database from a given ID
+// TODO rename this function to GetContact
 func GetRecipient(db couchdb.Database, recID string) (*contacts.Contact, error) {
 	doc := &contacts.Contact{}
 	err := couchdb.GetDoc(db, consts.Contacts, recID, doc)

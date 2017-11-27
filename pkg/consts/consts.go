@@ -103,10 +103,10 @@ const (
 const (
 	// OneShotSharing is a sharing with no continuous updates
 	OneShotSharing = "one-shot"
-	// MasterSlaveSharing is a sharing with unilateral continuous updates
-	MasterSlaveSharing = "master-slave"
-	// MasterMasterSharing is a sharing with bilateral continuous updates
-	MasterMasterSharing = "master-master"
+	// OneWaySharing is a sharing with unilateral continuous updates
+	OneWaySharing = "one-way"
+	// TwoWaySharing is a sharing with bilateral continuous updates
+	TwoWaySharing = "two-way"
 )
 
 const (

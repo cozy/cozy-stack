@@ -177,9 +177,9 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 			},
 		}
 
-		if sharingType == consts.MasterMasterSharing {
+		if sharingType == consts.TwoWaySharing {
 			hostClient := createOAuthClient(t)
-			rs.HostClientID = hostClient.ClientID
+			rs.InboundClientID = hostClient.ClientID
 		}
 
 		if owner {
@@ -665,7 +665,7 @@ func TestRecipientRefusedSharingSuccess(t *testing.T) {
 		Verbs:    permissions.ALL,
 	}
 
-	sharing := insertSharingIntoDB(t, "", consts.MasterMasterSharing, false,
+	sharing := insertSharingIntoDB(t, "", consts.TwoWaySharing, false,
 		"io.cozy.events", []*contacts.Contact{}, rule)
 
 	_, err := RecipientRefusedSharing(testInstance, sharing.SharingID)
@@ -725,34 +725,20 @@ func TestCreateSharingRequestSuccess(t *testing.T) {
 }
 
 func TestCreateSharingAndRegisterSharer(t *testing.T) {
-	rec := &contacts.Contact{
-		Email: []contacts.Email{
-			contacts.Email{Address: "test@test.fr"},
-		},
-	}
-
-	recStatus := &RecipientStatus{
-		RefRecipient: couchdb.DocReference{
-			ID:   "123",
-			Type: consts.Contacts,
-		},
-		recipient: rec,
-	}
-
-	sharing := &Sharing{
-		SharingType:      "shotmedown",
-		RecipientsStatus: []*RecipientStatus{recStatus},
+	sharing := &CreateSharingParams{
+		SharingType: "shotmedown",
+		Recipients:  []string{"123"},
 	}
 
 	// `SharingType` is wrong.
-	err := CreateSharing(in, sharing)
+	_, err := CreateSharing(in, sharing, "drive")
 	assert.Equal(t, ErrBadSharingType, err)
 
 	// `SharingType` is correct.
 	sharing.SharingType = consts.OneShotSharing
 	// However the recipient is not persisted in the database.
-	err = CreateSharing(in, sharing)
-	assert.Equal(t, ErrRecipientDoesNotExist, err)
+	_, err = CreateSharing(in, sharing, "drive")
+	assert.Error(t, err)
 
 	// The CreateSharingAndRegisterSharer scenario that succeeds is already
 	// tested in `createSharing`.
@@ -770,7 +756,7 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		Verbs:    permissions.ALL,
 		Values:   []string{docEvent.ID()},
 	}
-	_ = insertSharingIntoDB(t, "", consts.MasterSlaveSharing, false,
+	_ = insertSharingIntoDB(t, "", consts.OneWaySharing, false,
 		"io.cozy.events", []*contacts.Contact{}, rule1)
 
 	err := RemoveDocumentIfNotShared(testInstance, "io.cozy.events",
@@ -801,7 +787,7 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		Verbs:    permissions.ALL,
 		Values:   []string{"io.cozy.photos.albums/456"},
 	}
-	_ = insertSharingIntoDB(t, "", consts.MasterSlaveSharing, false,
+	_ = insertSharingIntoDB(t, "", consts.OneWaySharing, false,
 		"io.cozy.events", []*contacts.Contact{}, rule2)
 
 	// Test: the file matches a permission in a sharing it should NOT be
@@ -885,7 +871,7 @@ func TestRevokeSharing(t *testing.T) {
 	}
 	// We create a sharing where the user is the owner.
 	sharingSharerMM := insertSharingIntoDB(t, sharingIDSharerMM,
-		consts.MasterMasterSharing, true, "",
+		consts.TwoWaySharing, true, "",
 		[]*contacts.Contact{recipient1, recipient2}, rule)
 	// We add a trigger to this sharing.
 	sched := globals.GetScheduler()
@@ -907,10 +893,10 @@ func TestRevokeSharing(t *testing.T) {
 	// Check: the OAuth clients for all the recipients were deleted. Both calls
 	// to `FindClient` should return errors.
 	_, err = oauth.FindClient(testInstance,
-		sharingSharerMM.RecipientsStatus[0].HostClientID)
+		sharingSharerMM.RecipientsStatus[0].InboundClientID)
 	assert.Error(t, err)
 	_, err = oauth.FindClient(testInstance,
-		sharingSharerMM.RecipientsStatus[1].HostClientID)
+		sharingSharerMM.RecipientsStatus[1].InboundClientID)
 	assert.Error(t, err)
 	// Check: the sharing is revoked.
 	doc := &Sharing{}
@@ -921,7 +907,7 @@ func TestRevokeSharing(t *testing.T) {
 
 	// We create a sharing where the user is the recipient.
 	sharingRecipientMM := insertSharingIntoDB(t, sharingIDRecipientMM,
-		consts.MasterMasterSharing, false, "", []*contacts.Contact{recipient1}, rule)
+		consts.TwoWaySharing, false, "", []*contacts.Contact{recipient1}, rule)
 	// We add a trigger to this sharing.
 	err = AddTrigger(testInstance, rule, sharingRecipientMM.SharingID, false)
 	assert.NoError(t, err)
@@ -938,7 +924,7 @@ func TestRevokeSharing(t *testing.T) {
 	assert.Len(t, triggers, nbTriggers)
 	// Check: the OAuth client for the sharer is deleted.
 	_, err = oauth.FindClient(testInstance,
-		sharingRecipientMM.Sharer.SharerStatus.HostClientID)
+		sharingRecipientMM.Sharer.SharerStatus.InboundClientID)
 	assert.Error(t, err)
 	// Check: the sharing is revoked.
 	doc = &Sharing{}
@@ -952,7 +938,7 @@ func TestRevokeSharing(t *testing.T) {
 func TestRevokeRecipient(t *testing.T) {
 	// Test: we try to revoke a recipient from a sharing while we are not the
 	// owner of the sharing.
-	sharingNotSharer := insertSharingIntoDB(t, "", consts.MasterMasterSharing,
+	sharingNotSharer := insertSharingIntoDB(t, "", consts.TwoWaySharing,
 		false, "", []*contacts.Contact{}, permissions.Rule{})
 	err := RevokeRecipientByClientID(testInstance, sharingNotSharer, "wontbeused")
 	assert.Error(t, err)
@@ -998,7 +984,7 @@ func TestRevokeRecipient(t *testing.T) {
 		Values:   []string{"io.cozy.calendar/123"},
 		Verbs:    permissions.ALL,
 	}
-	sharing := insertSharingIntoDB(t, sharingID, consts.MasterMasterSharing,
+	sharing := insertSharingIntoDB(t, sharingID, consts.TwoWaySharing,
 		true, "", []*contacts.Contact{recipient1, recipient2}, rule)
 
 	// We add a trigger to this sharing.
@@ -1020,10 +1006,10 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, doc.Revoked)
 	assert.Equal(t, consts.SharingStatusRevoked, doc.RecipientsStatus[0].Status)
-	assert.Empty(t, doc.RecipientsStatus[0].HostClientID)
+	assert.Empty(t, doc.RecipientsStatus[0].InboundClientID)
 	assert.Empty(t, doc.RecipientsStatus[0].Client.ClientID)
 	assert.Empty(t, doc.RecipientsStatus[0].AccessToken.AccessToken)
-	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[0].HostClientID)
+	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[0].InboundClientID)
 	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers+1)
@@ -1040,10 +1026,10 @@ func TestRevokeRecipient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, doc.Revoked)
 	assert.Equal(t, consts.SharingStatusRevoked, doc.RecipientsStatus[1].Status)
-	assert.Empty(t, doc.RecipientsStatus[1].HostClientID)
+	assert.Empty(t, doc.RecipientsStatus[1].InboundClientID)
 	assert.Empty(t, doc.RecipientsStatus[1].Client.ClientID)
 	assert.Empty(t, doc.RecipientsStatus[1].AccessToken.AccessToken)
-	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[1].HostClientID)
+	_, err = oauth.FindClient(testInstance, doc.RecipientsStatus[1].InboundClientID)
 	assert.Error(t, err)
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers)
@@ -1053,11 +1039,11 @@ func TestDeleteOAuthClient(t *testing.T) {
 	client := createOAuthClient(t)
 
 	err := deleteOAuthClient(testInstance, &RecipientStatus{
-		HostClientID: "fakeid",
+		InboundClientID: "fakeid",
 	})
 	assert.Error(t, err)
 	err = deleteOAuthClient(testInstance, &RecipientStatus{
-		HostClientID: client.ClientID,
+		InboundClientID: client.ClientID,
 	})
 	assert.NoError(t, err)
 

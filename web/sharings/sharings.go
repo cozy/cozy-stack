@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"errors"
 
@@ -23,12 +24,33 @@ import (
 // DiscoveryErrorKey is the key for translating the discovery error message
 const DiscoveryErrorKey = "URL Discovery error"
 
+type apiRecipient struct {
+	*contacts.Contact
+}
+
+func (r *apiRecipient) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.Contact)
+}
+
+func (r *apiRecipient) Relationships() jsonapi.RelationshipMap { return nil }
+func (r *apiRecipient) Included() []jsonapi.Object             { return nil }
+func (r *apiRecipient) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/data/io.cozy.contacts/" + r.DocID}
+}
+
+type apiReference struct {
+	ID     string `json:"id"`
+	Type   string `json:"type"`
+	Status string `json:"status"`
+}
+
 type apiSharing struct {
 	*sharings.Sharing
 }
 
 func (s *apiSharing) MarshalJSON() ([]byte, error) {
 	// XXX do not put the recipients (and their OAuth infos) in the response
+	// TODO do the same for the sharer
 	return json.Marshal(&struct {
 		Recipients []*sharings.RecipientStatus `json:"recipients,omitempty"`
 		*sharings.Sharing
@@ -40,12 +62,6 @@ func (s *apiSharing) MarshalJSON() ([]byte, error) {
 
 func (s *apiSharing) Links() *jsonapi.LinksList {
 	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
-}
-
-type apiReference struct {
-	ID     string `json:"id"`
-	Type   string `json:"type"`
-	Status string `json:"status"`
 }
 
 // Relationships is part of the jsonapi.Object interface
@@ -63,6 +79,7 @@ func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
 
 // Included is part of the jsonapi.Object interface
 func (s *apiSharing) Included() []jsonapi.Object {
+	// TODO add the permissions in relationships + included
 	var included []jsonapi.Object
 	for _, rec := range s.RecipientsStatus {
 		r := rec.GetCachedRecipient()
@@ -73,20 +90,6 @@ func (s *apiSharing) Included() []jsonapi.Object {
 	return included
 }
 
-type apiRecipient struct {
-	*contacts.Contact
-}
-
-func (r *apiRecipient) MarshalJSON() ([]byte, error) {
-	return json.Marshal(r.Contact)
-}
-
-func (r *apiRecipient) Relationships() jsonapi.RelationshipMap { return nil }
-func (r *apiRecipient) Included() []jsonapi.Object             { return nil }
-func (r *apiRecipient) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/data/io.cozy.contacts/" + r.DocID}
-}
-
 var _ jsonapi.Object = (*apiSharing)(nil)
 var _ jsonapi.Object = (*apiRecipient)(nil)
 
@@ -95,22 +98,20 @@ var _ jsonapi.Object = (*apiRecipient)(nil)
 // sending them a mail invitation.
 func CreateSharing(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	params := &sharings.CreateSharingParams{}
+	if err := json.NewDecoder(c.Request().Body).Decode(params); err != nil {
+		return jsonapi.BadRequest(errors.New("Invalid body"))
+	}
+	slug, err := checkCreatePermissions(c, params)
+	if err != nil {
+		return err
+	}
 
-	sharing := new(sharings.Sharing)
-	if err := json.NewDecoder(c.Request().Body).Decode(sharing); err != nil {
-		return err
-	}
-	// TODO we should enforce the app_slug
-	if err := checkCreatePermissions(c, sharing); err != nil {
-		return err
-	}
-	err := sharings.CreateSharing(instance, sharing)
+	sharing, err := sharings.CreateSharing(instance, params, slug)
 	if err != nil {
 		return wrapErrors(err)
 	}
-
-	err = sharings.SendSharingMails(instance, sharing)
-	if err != nil {
+	if err = sharings.SendSharingMails(instance, sharing); err != nil {
 		return wrapErrors(err)
 	}
 
@@ -195,16 +196,16 @@ func SharingRequest(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	// Particular case for master-master: register the sharer
-	if sharingType == consts.MasterMasterSharing {
+	// Particular case for two-way: register the sharer
+	if sharingType == consts.TwoWaySharing {
 		if err = sharings.RegisterSharer(instance, sharing); err != nil {
 			return wrapErrors(err)
 		}
 		if err = sharings.SendClientID(sharing); err != nil {
 			return wrapErrors(err)
 		}
-	} else if sharing.SharingType == consts.MasterSlaveSharing {
-		// The recipient listens deletes for a master-slave sharing
+	} else if sharing.SharingType == consts.OneWaySharing {
+		// The recipient listens deletes for a one-way sharing
 		for _, rule := range sharing.Permissions {
 			err = sharings.AddTrigger(instance, rule, sharing.SharingID, true)
 			if err != nil {
@@ -419,9 +420,9 @@ func discovery(c echo.Context) error {
 	return c.Redirect(http.StatusFound, oAuthRedirect)
 }
 
-// ReceiveClientID receives an OAuth ClientID in a master-master context.
+// ReceiveClientID receives an OAuth ClientID in a two-way context.
 // This is called from a recipient, after he registered himself to the sharer.
-// The received clientID is called a HostClientID, as it refers to a client
+// The received clientID is called a InboundClientID, as it refers to a client
 // created by the sharer, i.e. the host here.
 func ReceiveClientID(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -434,7 +435,7 @@ func ReceiveClientID(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	rec.HostClientID = p.HostClientID
+	rec.InboundClientID = p.InboundClientID
 	err = couchdb.UpdateDoc(instance, sharing)
 	if err != nil {
 		return err
@@ -443,7 +444,7 @@ func ReceiveClientID(c echo.Context) error {
 }
 
 // getAccessToken asks for an Access Token, from the recipient side.
-// It is called in a master-master context, after the sharer received the
+// It is called in a two-way context, after the sharer received the
 // answer from the recipient.
 func getAccessToken(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
@@ -468,7 +469,7 @@ func getAccessToken(c echo.Context) error {
 		return wrapErrors(err)
 	}
 	// Add triggers on the recipient side for each rule
-	if sharing.SharingType == consts.MasterMasterSharing {
+	if sharing.SharingType == consts.TwoWaySharing {
 		for _, rule := range sharing.Permissions {
 			err = sharings.AddTrigger(instance, rule, sharing.SharingID, false)
 			if err != nil {
@@ -477,202 +478,6 @@ func getAccessToken(c echo.Context) error {
 		}
 	}
 	return c.JSON(http.StatusOK, nil)
-}
-
-// receiveDocument stores a shared document in the Cozy.
-//
-// If the document to store is a "io.cozy.files" our custom handler will be
-// called, otherwise we will redirect to /data.
-func receiveDocument(c echo.Context) error {
-	ins := middlewares.GetInstance(c)
-	sharingID := c.QueryParam(consts.QueryParamSharingID)
-	if sharingID == "" {
-		return jsonapi.BadRequest(errors.New("Missing sharing id"))
-	}
-
-	sharing, errf := sharings.FindSharing(ins, sharingID)
-	if errf != nil {
-		return errf
-	}
-
-	var err error
-	switch c.Param("doctype") {
-	case consts.Files:
-		err = creationWithIDHandler(c, ins, sharing.AppSlug)
-	default:
-		doctype := c.Param("doctype")
-		if !doctypeExists(ins, doctype) {
-			err = couchdb.CreateDB(ins, doctype)
-			if err != nil {
-				return err
-			}
-		}
-		err = data.UpdateDoc(c)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	ins.Logger().Debugf("[sharings] Received %s: %s", c.Param("doctype"),
-		c.Param("docid"))
-	return c.JSON(http.StatusOK, nil)
-}
-
-// Depending on the doctype this function does two things:
-// 1. If it's a file, its content is updated.
-// 2. If it's a JSON document, its content is updated and a check is performed
-//    to see if the document is still shared after the update. If not then it is
-//    deleted.
-func updateDocument(c echo.Context) error {
-	ins := middlewares.GetInstance(c)
-	ins.Logger().Debugf("[sharings] Updating %s: %s", c.Param("doctype"),
-		c.Param("docid"))
-
-	var err error
-	switch c.Param("doctype") {
-	case consts.Files:
-		err = updateFile(c)
-	default:
-		err = data.UpdateDoc(c)
-		if err != nil {
-			return err
-		}
-
-		ins := middlewares.GetInstance(c)
-		err = sharings.RemoveDocumentIfNotShared(ins, c.Param("doctype"),
-			c.Param("docid"))
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, nil)
-}
-
-func deleteDocument(c echo.Context) error {
-	ins := middlewares.GetInstance(c)
-	ins.Logger().Debugf("[sharings] Deleting %s: %s", c.Param("doctype"),
-		c.Param("docid"))
-
-	var err error
-	switch c.Param("doctype") {
-	case consts.Files:
-		err = trashHandler(c)
-
-	default:
-		err = data.DeleteDoc(c)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, nil)
-}
-
-// Set sharing to revoked and delete all associated OAuth Clients.
-func revokeSharing(c echo.Context) error {
-	ins := middlewares.GetInstance(c)
-
-	sharingID := c.Param("sharing-id")
-	sharing, err := sharings.FindSharing(ins, sharingID)
-	if err != nil {
-		return jsonapi.NotFound(err)
-	}
-
-	permType, err := checkRevokeSharingPermissions(c, sharing)
-	if err != nil {
-		return c.JSON(http.StatusForbidden, err)
-	}
-	recursive := permType == permissions.TypeWebapp
-
-	if err = sharings.RevokeSharing(ins, sharing, recursive); err != nil {
-		return wrapErrors(err)
-	}
-	ins.Logger().Debugf("[sharings] revokeSharing: Sharing %s was revoked", sharingID)
-
-	return c.NoContent(http.StatusOK)
-}
-
-func revokeRecipient(c echo.Context) error {
-	ins := middlewares.GetInstance(c)
-
-	sharingID := c.Param("sharing-id")
-	sharing, err := sharings.FindSharing(ins, sharingID)
-	if err != nil {
-		return jsonapi.NotFound(err)
-	}
-
-	recipientClientID := c.Param("client-id")
-
-	err = checkRevokeRecipientPermissions(c, sharing, recipientClientID)
-	if err != nil {
-		return c.JSON(http.StatusForbidden, err)
-	}
-
-	err = sharings.RevokeRecipientByClientID(ins, sharing, recipientClientID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return c.NoContent(http.StatusOK)
-}
-
-func revokeContact(c echo.Context) error {
-	ins := middlewares.GetInstance(c)
-
-	sharingID := c.Param("sharing-id")
-	sharing, err := sharings.FindSharing(ins, sharingID)
-	if err != nil {
-		return jsonapi.NotFound(err)
-	}
-
-	contactID := c.Param("contact-id")
-
-	err = checkRevokeContactPermissions(c, sharing)
-	if err != nil {
-		return c.JSON(http.StatusForbidden, err)
-	}
-
-	err = sharings.RevokeRecipientByContactID(ins, sharing, contactID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-
-	return c.NoContent(http.StatusOK)
-}
-
-func setDestination(c echo.Context) error {
-	pdoc, err := perm.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeWebapp {
-		return jsonapi.BadRequest(errors.New("Invalid request"))
-	}
-	slug := pdoc.SourceID
-
-	doctype := c.Param("doctype")
-	if doctype == "" {
-		return jsonapi.BadRequest(errors.New("Missing doctype"))
-	}
-	if doctype != consts.Files {
-		return jsonapi.BadRequest(errors.New("Not supported doctype"))
-	}
-
-	dirID := c.QueryParam(consts.QueryParamDirID)
-	if dirID == "" {
-		return jsonapi.BadRequest(errors.New("Missing directory id"))
-	}
-	ins := middlewares.GetInstance(c)
-	if _, err = ins.VFS().DirByID(dirID); err != nil {
-		return jsonapi.BadRequest(errors.New("Directory does not exist"))
-	}
-
-	err = sharings.UpdateApplicationDestinationDirID(ins, slug, doctype, dirID)
-	if err != nil {
-		return err
-	}
-	return c.NoContent(http.StatusOK)
 }
 
 // Routes sets the routing for the sharing service
@@ -710,96 +515,29 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:sharing-id/recipient/:contact-id", revokeContact)
 }
 
-func checkRevokeContactPermissions(c echo.Context, sharing *sharings.Sharing) error {
-	requestPerm, err := perm.GetPermission(c)
-	if err != nil {
-		return err
+func extractSlugFromSourceID(sourceID string) (string, error) {
+	parts := strings.SplitN(sourceID, "/", 2)
+	if len(parts) < 2 {
+		return "", jsonapi.BadRequest(errors.New("Invalid request"))
 	}
-
-	if sharing.Owner && sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
-		return nil
-	}
-
-	return sharings.ErrForbidden
-}
-
-func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, recipientClientID string) error {
-	requestPerm, err := perm.GetPermission(c)
-	if err != nil {
-		return err
-	}
-
-	if requestPerm.Type != permissions.TypeOauth {
-		return sharings.ErrForbidden
-	}
-
-	if !sharing.Permissions.HasSameRules(requestPerm.Permissions) {
-		return permissions.ErrInvalidToken
-	}
-
-	if sharing.Owner {
-		for _, rec := range sharing.RecipientsStatus {
-			if rec.Client.ClientID == recipientClientID {
-				if requestPerm.SourceID == rec.HostClientID {
-					return nil
-				}
-			}
-		}
-	} else {
-		sharerClientID := sharing.Sharer.SharerStatus.HostClientID
-		if requestPerm.SourceID == sharerClientID {
-			return nil
-		}
-	}
-
-	return sharings.ErrForbidden
-}
-
-// Check if the permissions given in the revoke request apply.
-//
-// Two scenarii can lead to valid permissions:
-// 1. The permissions identify the application
-// 2. The permissions identify the user that is to be revoked or the sharer.
-func checkRevokeSharingPermissions(c echo.Context, sharing *sharings.Sharing) (string, error) {
-	requestPerm, err := perm.GetPermission(c)
-	if err != nil {
-		return "", err
-	}
-
-	switch requestPerm.Type {
-	case permissions.TypeWebapp:
-		if sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
-			return requestPerm.Type, nil
-		}
-		return "", sharings.ErrForbidden
-
-	case permissions.TypeOauth:
-		if !sharing.Permissions.HasSameRules(requestPerm.Permissions) {
-			return "", permissions.ErrInvalidToken
-		}
-		if !sharing.Owner {
-			sharerClientID := sharing.Sharer.SharerStatus.HostClientID
-			if requestPerm.SourceID == sharerClientID {
-				return requestPerm.Type, nil
-			}
-		}
-		return "", sharings.ErrForbidden
-	}
-
-	return "", permissions.ErrInvalidAudience
+	slug := parts[1]
+	return slug, nil
 }
 
 // checkCreatePermissions checks the sharer's token has all the permissions
 // matching the ones defined in the sharing document
-func checkCreatePermissions(c echo.Context, sharing *sharings.Sharing) error {
+func checkCreatePermissions(c echo.Context, params *sharings.CreateSharingParams) (string, error) {
 	requestPerm, err := perm.GetPermission(c)
 	if err != nil {
-		return err
+		return "", err
 	}
-	if !sharing.Permissions.IsSubSetOf(requestPerm.Permissions) {
-		return echo.NewHTTPError(http.StatusForbidden)
+	if requestPerm.Type != permissions.TypeWebapp {
+		return "", permissions.ErrInvalidAudience
 	}
-	return nil
+	if !params.Permissions.IsSubSetOf(requestPerm.Permissions) {
+		return "", echo.NewHTTPError(http.StatusForbidden)
+	}
+	return extractSlugFromSourceID(requestPerm.SourceID)
 }
 
 // checkGetPermissions checks the requester's token has at least one doctype
@@ -835,9 +573,4 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	}
 	return err
-}
-
-func doctypeExists(ins *instance.Instance, doctype string) bool {
-	_, err := couchdb.DBStatus(ins, doctype)
-	return err == nil
 }

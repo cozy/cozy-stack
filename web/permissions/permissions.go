@@ -310,11 +310,6 @@ func revokePermission(c echo.Context) error {
 func Routes(router *echo.Group) {
 	// API Routes
 	router.POST("", createPermission)
-	router.GET("/doctype/:doctype/sharedByLink", listPermissionsByDoctype)
-	router.GET("/doctype/:doctype/sharedWithMe",
-		listSharedWithMePermissionsByDoctype)
-	router.GET("/doctype/:doctype/sharedWithOthers",
-		listSharedWithOthersPermissionsByDoctype)
 	router.GET("/self", displayPermissions)
 	router.POST("/exists", listPermissions)
 	router.PATCH("/:permdocid", patchPermission(permissions.GetByID, "permdocid"))
@@ -322,4 +317,8 @@ func Routes(router *echo.Group) {
 
 	router.PATCH("/apps/:slug", patchPermission(permissions.GetForWebapp, "slug"))
 	router.PATCH("/konnectors/:slug", patchPermission(permissions.GetForKonnector, "slug"))
+
+	router.GET("/doctype/:doctype/sharedByLink", listPermissionsByDoctype)
+	router.GET("/doctype/:doctype/sharedWithMe", listSharedWithMePermissionsByDoctype)
+	router.GET("/doctype/:doctype/sharedWithOthers", listSharedWithOthersPermissionsByDoctype)
 }

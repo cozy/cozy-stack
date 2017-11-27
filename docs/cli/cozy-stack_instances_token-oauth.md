@@ -14,8 +14,7 @@ cozy-stack instances token-oauth [domain] [clientid] [scopes] [flags]
 ### Options
 
 ```
-      --expire duration   Make the token expires in this amount of time
-  -h, --help              help for token-oauth
+  -h, --help   help for token-oauth
 ```
 
 ### Options inherited from parent commands

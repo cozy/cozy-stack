@@ -294,7 +294,7 @@ func TestRevokedRecipient(t *testing.T) {
 		Values:   []string{"third/789"},
 	}
 	recipient := createRecipient(t, "email", "url")
-	sharing := createSharing(t, consts.MasterSlaveSharing, true,
+	sharing := createSharing(t, consts.OneWaySharing, true,
 		[]*contacts.Contact{recipient}, rule)
 
 	sharingID := sharing.SharingID

@@ -187,64 +187,6 @@ func generateMailMessage(s *Sharing, r *contacts.Contact, mailValues *mailTempla
 	})
 }
 
-// GenerateOAuthQueryString takes care of creating a correct OAuth request for
-// the given sharing and recipient.
-func GenerateOAuthQueryString(s *Sharing, rs *RecipientStatus, scheme string) (string, error) {
-
-	// Check if an oauth client exists for the owner at the recipient's.
-	if rs.Client.ClientID == "" || len(rs.Client.RedirectURIs) < 1 {
-		return "", ErrNoOAuthClient
-	}
-
-	// Check if the recipient has an URL.
-	if len(rs.recipient.Cozy) == 0 {
-		return "", ErrRecipientHasNoURL
-	}
-
-	// In the sharing document the permissions are stored as a
-	// `permissions.Set`. We need to convert them in a proper format to be able
-	// to incorporate them in the OAuth query string.
-	//
-	// Optimization: the next four lines of code could be outside of this
-	// function and also outside of the for loop that iterates on the
-	// recipients in `SendSharingMails`.
-	// I found it was clearer to leave it here, at the price of being less
-	// optimized.
-	permissionsScope, err := s.Permissions.MarshalScopeString()
-	if err != nil {
-		return "", err
-	}
-
-	oAuthQuery, err := url.Parse(rs.recipient.Cozy[0].URL)
-	if err != nil {
-		return "", err
-	}
-	// Special scenario: if r.URL doesn't have an "http://" or "https://" prefix
-	// then `url.Parse` doesn't set any host.
-	if oAuthQuery.Host == "" {
-		oAuthQuery.Host = rs.recipient.Cozy[0].URL
-	}
-	oAuthQuery.Path = "/sharings/request"
-	// The link/button we put in the email has to have an http:// or https://
-	// prefix, otherwise it cannot be open in the browser.
-	if oAuthQuery.Scheme != "http" && oAuthQuery.Scheme != "https" {
-		oAuthQuery.Scheme = scheme
-	}
-
-	mapParamOAuthQuery := url.Values{
-		consts.QueryParamAppSlug: {s.AppSlug},
-		"client_id":              {rs.Client.ClientID},
-		"redirect_uri":           {rs.Client.RedirectURIs[0]},
-		"response_type":          {"code"},
-		"scope":                  {permissionsScope},
-		"sharing_type":           {s.SharingType},
-		"state":                  {s.SharingID},
-	}
-	oAuthQuery.RawQuery = mapParamOAuthQuery.Encode()
-
-	return oAuthQuery.String(), nil
-}
-
 func generateDiscoveryLink(instance *instance.Instance, s *Sharing, rs *RecipientStatus) (string, error) {
 	// Check if the recipient has an URL.
 	if len(rs.recipient.Email) == 0 {

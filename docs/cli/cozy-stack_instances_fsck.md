@@ -18,8 +18,9 @@ cozy-stack instances fsck [domain] [flags]
 ### Options
 
 ```
-      --dry    Don't modify the VFS, only show the inconsistencies
-  -h, --help   help for fsck
+      --dry     Don't modify the VFS, only show the inconsistencies
+  -h, --help    help for fsck
+      --prune   Try to solve inconsistencies by modifying the file system
 ```
 
 ### Options inherited from parent commands

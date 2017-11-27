@@ -189,7 +189,8 @@ Content-Type: application/vnd.api+json
     "type": "io.cozy.permissions",
     "id": "5a9c1844-d427-11e6-ab36-2b684d437b0d",
     "attributes": {
-      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "type": "app",
+      "source_id": "io.cozy.apps/my-awesome-game",
       "permissions": {
         "contacts": {
           "description": "Required for autocompletion on @name",
@@ -242,7 +243,7 @@ Accept: application/vnd.api+json
   "data": {
     "type": "io.cozy.permissions",
     "attributes": {
-      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "source_id": "io.cozy.apps/my-awesome-game",
       "permissions": {
         "images": {
           "type": "io.cozy.files",
@@ -268,7 +269,8 @@ Content-Type: application/vnd.api+json
     "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
     "type": "io.cozy.permissions",
     "attributes": {
-      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "type": "share",
+      "source_id": "io.cozy.apps/my-awesome-game",
       "codes": {
         "yuot7NaiaeGugh8T": "bob",
         "Yohyoo8BHahh1lie": "jane"
@@ -312,7 +314,8 @@ Content-Type: application/vnd.api+json
     "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
     "type": "io.cozy.permissions",
     "attributes": {
-      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "type": "share",
+      "source_id": "io.cozy.apps/my-awesome-game",
       "codes": {
         "yuot7NaiaeGugh8T": "bob",
         "Yohyoo8BHahh1lie": "jane"
@@ -425,7 +428,8 @@ Content-Type: application/vnd.api+json
     "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
     "type": "io.cozy.permissions",
     "attributes": {
-      "application-id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+      "type": "share",
+      "source_id": "io.cozy.apps/my-awesome-game",
       "codes": {
         "yuot7NaiaeGugh8T": "bob"
       },
@@ -462,9 +466,64 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3O
 HTTP/1.1 204 No Content
 ```
 
+### POST /permissions/exists
+
+List permissions for some documents
+
+#### Request
+
+```http
+POST /permissions/exists HTTP/1.1
+Host: cozy.example.net
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+Content-Type: application/vnd.api+json
+Accept: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+    { "type": "io.cozy.files", "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863" }
+    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6" }
+    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
+  ]
+}
+```
+
+#### Reponse
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [
+    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4",
+      "verbs":["GET"] }
+    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
+      "verbs":["GET", "POST"] }
+  ]
+}
+```
+
+### PATCH /permissions/apps/:slug
+
+Add permissions or remove permissions to the web application with specified
+slug. It behaves like the `PATCH /permissions/:id` route. See this route for
+more examples.
+
+### PATCH /permissions/konnectors/:slug
+
+Add permissions or remove permissions to the konnector with specified slug. It
+behaves like the `PATCH /permissions/:id` route. See this route for more
+examples.
+
 ### GET /permissions/doctype/:doctype/sharedByLink
 
-List permissions for a doctype
+List permissions for a doctype that are used for a "share by links"
 
 #### Request
 
@@ -524,62 +583,7 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-Permissions required : GET on whole type
-
-### POST /permissions/exists
-
-List permissions for some documents
-
-#### Request
-
-```http
-POST /permissions/exists HTTP/1.1
-Host: cozy.example.net
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
-Content-Type: application/vnd.api+json
-Accept: application/vnd.api+json
-```
-
-```json
-{
-  "data": [
-    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
-    { "type": "io.cozy.files", "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863" }
-    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6" }
-    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4" }
-  ]
-}
-```
-
-#### Reponse
-
-```http
-HTTP/1.1 200 OK
-Content-Type: application/vnd.api+json
-```
-
-```json
-{
-  "data": [
-    { "type": "io.cozy.files", "id": "94375086-e2e2-11e6-81b9-5bc0b9dd4aa4",
-      "verbs":["GET"] }
-    { "type": "io.cozy.files", "id": "a340d5e0-d647-11e6-b66c-5fc9ce1e17c6",
-      "verbs":["GET", "POST"] }
-  ]
-}
-```
-
-### PATCH /permissions/apps/:slug
-
-Add permissions or remove permissions to the web application with specified
-slug. It behaves like the `PATCH /permissions/:id` route. See this route for
-more examples.
-
-### PATCH /permissions/konnectors/:slug
-
-Add permissions or remove permissions to the konnector with specified slug. It
-behaves like the `PATCH /permissions/:id` route. See this route for more
-examples.
+Permissions required : GET on the whole doctype
 
 ### GET /permissions/doctype/:doctype/sharedWithMe
 
