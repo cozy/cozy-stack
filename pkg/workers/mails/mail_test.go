@@ -32,7 +32,7 @@ const serverString = `220 hello world
 `
 
 func TestMailSendServer(t *testing.T) {
-	clientString := `EHLO localhost
+	clientStrings := []string{`EHLO localhost
 HELO localhost
 MAIL FROM:<me@me>
 RCPT TO:<you1@you>
@@ -40,7 +40,7 @@ DATA
 Hey !!!
 .
 QUIT
-`
+`}
 
 	expectedHeaders := map[string]string{
 		"From":    "me@me",
@@ -52,7 +52,7 @@ QUIT
 		"Mime-Version":              "1.0",
 	}
 
-	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
+	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
 		msg := &Options{
 			From: &Address{Email: "me@me"},
 			To: []*Address{
@@ -71,13 +71,14 @@ QUIT
 					Type: "text/plain",
 				},
 			},
+			Locale: "en",
 		}
 		return sendMail(context.Background(), msg)
 	})
 }
 
 func TestMailSendTemplateMail(t *testing.T) {
-	clientString := `EHLO localhost
+	clientStrings := []string{`EHLO localhost
 HELO localhost
 MAIL FROM:<me@me>
 RCPT TO:<you1@you>
@@ -94,7 +95,7 @@ DATA
 </html>
 .
 QUIT
-`
+`}
 
 	expectedHeaders := map[string]string{
 		"From":    "me@me",
@@ -118,7 +119,7 @@ QUIT
 </html>
 `
 
-	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
+	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
 		msg := &Options{
 			From: &Address{Email: "me@me"},
 			To: []*Address{
@@ -134,6 +135,7 @@ QUIT
 			Parts: []*Part{
 				{Body: mailBody, Type: "text/html"},
 			},
+			Locale: "en",
 		}
 		return sendMail(context.Background(), msg)
 	})
@@ -141,8 +143,9 @@ QUIT
 
 func TestMailMissingSubject(t *testing.T) {
 	msg := &Options{
-		From: &Address{Email: "me@me"},
-		To:   []*Address{{Email: "you@you"}},
+		From:   &Address{Email: "me@me"},
+		To:     []*Address{{Email: "you@you"}},
+		Locale: "en",
 	}
 	err := sendMail(context.Background(), msg)
 	if assert.Error(t, err) {
@@ -161,6 +164,7 @@ func TestMailBadBodyType(t *testing.T) {
 				Body: "foo",
 			},
 		},
+		Locale: "en",
 	}
 	err := sendMail(context.Background(), msg)
 	if assert.Error(t, err) {
@@ -169,31 +173,26 @@ func TestMailBadBodyType(t *testing.T) {
 }
 
 func TestMailMultiParts(t *testing.T) {
-	clientString := `EHLO localhost
+	clientStrings := []string{`EHLO localhost
 HELO localhost
 MAIL FROM:<me@me>
 RCPT TO:<you1@you>
 DATA
 Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=UTF-8`,
+		`Content-Transfer-Encoding: quoted-printable
 Content-Type: text/plain; charset=UTF-8
-My page
-My photos
-My blog
-Content-Transfer-Encoding: quoted-printable
-Content-Type: text/html; charset=UTF-8
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset=3D"UTF-8">
-    <title>My page</title>
-  </head>
-  <body>
-    <div>My photos</div><div>My blog</div>
-  </body>
-</html>
+Hi ,
+intro1
+intro2 My page
+instructions https://foobar.baz
+outro1
+outro2 My page
+Yours truly,
+Cozy - https://cozy.io
 .
 QUIT
-`
+`}
 
 	expectedHeaders := map[string]string{
 		"From":         "me@me",
@@ -204,48 +203,31 @@ QUIT
 		"Mime-Version": "1.0",
 	}
 
-	const htmlTpl = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>{{.Title}}</title>
-  </head>
-  <body>
-    {{range .Items}}<div>{{ . }}</div>{{else}}<div><strong>no rows</strong></div>{{end}}
-  </body>
-</html>`
-
-	const textTpl = `
-{{.Title}}
-
-{{range .Items}}
-{{ . }}
-{{else}}
-**no rows**
-{{end}}
-`
-
-	mailTemplater = newMailTemplater([]*MailTemplate{
+	mailTemplater = &MailTemplater{[]*MailTemplate{
 		{
-			Name:     "test",
-			BodyHTML: htmlTpl,
-			BodyText: textTpl,
+			Name:    "test",
+			Subject: "Up?",
+			Intro:   "intro1\nintro2 {{.Title}}",
+			Outro:   "outro1\noutro2 {{.Title}}",
+			Actions: []MailAction{
+				{
+					Instructions: "instructions",
+					Text:         "button",
+					Link:         "{{.Link}}",
+				},
+			},
 		},
-	})
+	}}
 
 	data := struct {
 		Title string
-		Items []string
+		Link  string
 	}{
 		Title: "My page",
-		Items: []string{
-			"My photos",
-			"My blog",
-		},
+		Link:  "https://foobar.baz",
 	}
 
-	mailServer(t, serverString, clientString, expectedHeaders, func(host string, port int) error {
+	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
 		msg := &Options{
 			From: &Address{Email: "me@me"},
 			To: []*Address{
@@ -260,14 +242,17 @@ QUIT
 			},
 			TemplateName:   "test",
 			TemplateValues: data,
+			Locale:         "en",
 		}
 		return sendMail(context.Background(), msg)
 	})
 }
 
-func mailServer(t *testing.T, serverString, clientString string, expectedHeader map[string]string, send func(string, int) error) {
+func mailServer(t *testing.T, serverString string, clientStrings []string, expectedHeader map[string]string, send func(string, int) error) {
 	serverString = strings.Join(strings.Split(serverString, "\n"), "\r\n")
-	clientString = strings.Join(strings.Split(clientString, "\n"), "\r\n")
+	for i, s := range clientStrings {
+		clientStrings[i] = strings.Join(strings.Split(s, "\n"), "\r\n")
+	}
 
 	var cmdbuf bytes.Buffer
 	bcmdbuf := bufio.NewWriter(&cmdbuf)
@@ -352,8 +337,8 @@ func mailServer(t *testing.T, serverString, clientString string, expectedHeader 
 	<-done
 	bcmdbuf.Flush()
 	actualcmds := cmdbuf.String()
-	if !assert.Equal(t, clientString, actualcmds) {
-		return
+	for _, s := range clientStrings {
+		assert.Contains(t, actualcmds, s)
 	}
 	assert.EqualValues(t, expectedHeader, headers)
 }
@@ -390,6 +375,7 @@ func TestSendMailNoReply(t *testing.T) {
 				Body: "foo",
 			},
 		},
+		Locale: "en",
 	})
 	j := jobs.NewJob(&jobs.JobRequest{
 		Domain:     "noreply.triggers",
@@ -436,6 +422,7 @@ func TestSendMailFrom(t *testing.T) {
 				Body: "foo",
 			},
 		},
+		Locale: "en",
 	})
 	j := jobs.NewJob(&jobs.JobRequest{
 		Domain:     "from.triggers",

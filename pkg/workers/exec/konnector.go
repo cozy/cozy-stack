@@ -319,8 +319,7 @@ func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
 	// konnectorURL.Fragment = "/category/all/" + w.slug
 	// mail := mails.Options{
 	// 	Mode:         mails.ModeNoReply,
-	// 	Subject:      i.Translate("Error Konnector execution", ctx.Domain()),
-	// 	TemplateName: "konnector_error_" + i.Locale,
+	// 	TemplateName: "konnector_error",
 	// 	TemplateValues: map[string]string{
 	// 		"KonnectorName": w.slug,
 	// 		"KonnectorPage": konnectorURL.String(),

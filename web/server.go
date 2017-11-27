@@ -13,12 +13,11 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
-	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	webapps "github.com/cozy/cozy-stack/web/apps"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/leonelquinteros/gotext"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -27,40 +26,6 @@ import (
 	"github.com/spf13/afero"
 )
 
-const defaultLocale = "en"
-
-var supportedLocales = []string{"en", "fr"}
-
-// TODO: Cleanup locales loading and translation functions described in both
-// "instance" and "web" packages.
-var translations = make(map[string]*gotext.Po)
-
-// LoadLocale creates the translation object for a locale from the content of a .po file
-func LoadLocale(identifier, rawPO string) {
-	po := &gotext.Po{Language: identifier}
-	po.Parse(rawPO)
-	translations[identifier] = po
-}
-
-// Translator returns a translation function of the locale specified
-func Translator(locale string) func(key string, vars ...interface{}) string {
-	return func(key string, vars ...interface{}) string {
-		if po, ok := translations[locale]; ok {
-			translated := po.Get(key, vars...)
-			if translated != key && translated != "" {
-				return translated
-			}
-		}
-		if po, ok := translations[defaultLocale]; ok {
-			translated := po.Get(key, vars...)
-			if translated != key && translated != "" {
-				return translated
-			}
-		}
-		return fmt.Sprintf(key, vars...)
-	}
-}
-
 // LoadSupportedLocales reads the po files packed in go or from the assets directory
 // and loads them for translations
 func LoadSupportedLocales() error {
@@ -68,14 +33,13 @@ func LoadSupportedLocales() error {
 	// but use assets from the disk is assets option is filled in config
 	assetsPath := config.GetConfig().Assets
 	if assetsPath != "" {
-		for _, locale := range supportedLocales {
+		for _, locale := range i18n.SupportedLocales {
 			pofile := path.Join(assetsPath, "locales", locale+".po")
 			po, err := ioutil.ReadFile(pofile)
 			if err != nil {
 				return fmt.Errorf("Can't load the po file for %s", locale)
 			}
-			instance.LoadLocale(locale, string(po))
-			LoadLocale(locale, string(po))
+			i18n.LoadLocale(locale, string(po))
 		}
 		return nil
 	}
@@ -84,7 +48,7 @@ func LoadSupportedLocales() error {
 	if err != nil {
 		return err
 	}
-	for _, locale := range supportedLocales {
+	for _, locale := range i18n.SupportedLocales {
 		f, err := statikFS.Open("/locales/" + locale + ".po")
 		if err != nil {
 			return fmt.Errorf("Can't load the po file for %s", locale)
@@ -93,8 +57,7 @@ func LoadSupportedLocales() error {
 		if err != nil {
 			return err
 		}
-		instance.LoadLocale(locale, string(po))
-		LoadLocale(locale, string(po))
+		i18n.LoadLocale(locale, string(po))
 	}
 	return nil
 }

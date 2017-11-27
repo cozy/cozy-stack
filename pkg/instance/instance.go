@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/hooks"
+	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -29,7 +30,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsafero"
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/leonelquinteros/gotext"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
@@ -676,34 +676,9 @@ func getFromCouch(domain string) (*Instance, error) {
 	return i, nil
 }
 
-var translations = make(map[string]*gotext.Po)
-
-// LoadLocale creates the translation object for a locale from the content of a .po file
-func LoadLocale(identifier, rawPO string) {
-	po := &gotext.Po{Language: identifier}
-	po.Parse(rawPO)
-	translations[identifier] = po
-}
-
 // Translate is used to translate a string to the locale used on this instance
 func (i *Instance) Translate(key string, vars ...interface{}) string {
-	if po, ok := translations[i.Locale]; ok {
-		translated := po.Get(key, vars...)
-		if translated != key && translated != "" {
-			return translated
-		}
-	}
-	if po, ok := translations[DefaultLocale]; ok {
-		translated := po.Get(key, vars...)
-		if translated != key && translated != "" {
-			return translated
-		}
-	}
-	i.Logger().Infof("Translation not found for '%s'", key)
-	if strings.HasPrefix(key, "Permissions ") {
-		key = strings.Replace(key, "Permissions ", "", 1)
-	}
-	return fmt.Sprintf(key, vars...)
+	return i18n.Translate(key, i.Locale, vars...)
 }
 
 // List returns the list of declared instances.
@@ -855,7 +830,7 @@ func (i *Instance) SendMail(m *Mail) error {
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"mode":            "noreply",
 		"subject":         i.Translate(m.SubjectKey),
-		"template_name":   m.TemplateName + "_" + i.Locale,
+		"template_name":   m.TemplateName,
 		"template_values": m.TemplateValues,
 	})
 	if err != nil {
