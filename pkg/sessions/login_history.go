@@ -178,7 +178,7 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry, clientRegistrati
 		content = i.Translate("Session New connection for registration content", devicesLink, revokeLink)
 	} else {
 		title = i.Translate("Session New connection title")
-		content = i.Translate("Session New connection content", l.City, l.Country, l.IP, l.Browser, l.OS)
+		content = i.Translate("Session New connection content", i.Domain, l.City, l.Country, l.IP, l.Browser, l.OS)
 	}
 
 	notif := &notifications.Notification{
