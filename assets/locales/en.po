@@ -80,7 +80,7 @@ msgstr "Oops ! Something unusual just happened on your Cozy"
 
 msgid "Session New connection content"
 msgstr ""
-"We have registered a new login to your Cozy %s, from %s (%s) with web browser %s on a %s?\n\n"
+"We have registered a new login to your Cozy %s, from %s, %s (%s) with web browser %s on a %s.\n\n"
 "Do you recognize this activity?\n"
 "- If yes:\n"
 "Great news! Keep calm and get Cozy again.\n"
