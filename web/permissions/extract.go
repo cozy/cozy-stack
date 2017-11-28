@@ -73,12 +73,15 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 		return nil, permissions.ErrExpiredToken
 	}
 
-	if claims.SessionID != "" {
-		s, ok := middlewares.GetSession(c)
-		if !ok || s.ID() != claims.SessionID {
-			return nil, permissions.ErrInvalidToken
-		}
-	}
+	// TODO: find out how we have a mismatch between the session cookie and the
+	// application token.
+	//
+	// if claims.SessionID != "" {
+	// s, ok := middlewares.GetSession(c)
+	// if !ok || s.ID() != claims.SessionID {
+	// 	return nil, permissions.ErrInvalidToken
+	// }
+	// }
 
 	switch claims.Audience {
 	case permissions.AccessTokenAudience:
