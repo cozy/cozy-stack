@@ -103,7 +103,7 @@ msgid "Onboarding Not activated Check mails"
 msgstr "Your Cozy has not been yet activated. Check your email and click on the activation link to proceed to the installation of your Cozy."
 
 msgid "Onboarding Not activated Contact us"
-msgstr "Are you lost ? Feel free to contact us at contact@cozycloud.cc"
+msgstr "Are you lost ? Feel free to contact us at"
 
 msgid "Passphrase reset Help"
 msgstr "Are you sure you want to reset your password?"
@@ -196,7 +196,7 @@ msgid "Error Instance not found Message"
 msgstr "You may have entered a wrong address form a typing mistake. To make sure, please check the address of your Cozy sent to you by e-mail during its creation."
 
 msgid "Error Contact us"
-msgstr "A problem, a question ? Contact us at contact@cozycloud.cc."
+msgstr "A problem, a question ? Contact us at"
 
 msgid "Error No state parameter"
 msgstr "The state parameter is mandatory"
