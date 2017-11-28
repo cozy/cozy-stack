@@ -242,13 +242,16 @@ func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 // SetupAdminRoutes sets the routing for the administration HTTP endpoints
 func SetupAdminRoutes(router *echo.Echo) error {
+	var mws []echo.MiddlewareFunc
 	if !config.IsDevRelease() {
-		router.Use(middlewares.BasicAuth(config.AdminSecretFileName))
+		mws = append(mws, middlewares.BasicAuth(config.AdminSecretFileName))
 	}
 
+	// XXX Do not set basic authentication on the /metrics routes.
 	metrics.Routes(router.Group("/metrics"))
-	instances.Routes(router.Group("/instances"))
-	version.Routes(router.Group("/version"))
+
+	instances.Routes(router.Group("/instances", mws...))
+	version.Routes(router.Group("/version", mws...))
 
 	setupRecover(router)
 
