@@ -26,11 +26,11 @@ type SharingRequestParams struct {
 // FindContactByShareCode returns the contact that is linked to a sharing by
 // the given shareCode
 func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*contacts.Contact, error) {
-	// XXX hack to fill s.permissions
-	if _, err := s.PermissionsSet(i); err != nil {
+	perms, err := s.Permissions(i)
+	if err != nil {
 		return nil, err
 	}
-	contactID, ok := s.permissions.Codes[code]
+	contactID, ok := perms.Codes[code]
 	if !ok {
 		return nil, ErrRecipientDoesNotExist
 	}
@@ -52,10 +52,11 @@ func GenerateOAuthURL(i *instance.Instance, s *Sharing, m *Member, code string) 
 	u.Path = "/auth/authorize"
 
 	// Convert the local permissions doc to an OAuth scope
-	if _, err = s.PermissionsSet(i); err != nil {
+	perms, err := s.Permissions(i)
+	if err != nil {
 		return "", err
 	}
-	cloned := s.permissions.Clone().(*permissions.Permission)
+	cloned := perms.Clone().(*permissions.Permission)
 	permSet := cloned.Permissions
 	for _, rule := range permSet {
 		rule.Verbs = permissions.ALL
@@ -147,7 +148,7 @@ func AcceptSharingRequest(i *instance.Instance, answerURL string) error {
 	// 	}
 	// } else if sharing.SharingType == consts.OneWaySharing {
 	// 	// The recipient listens deletes for a one-way sharing
-	// 	sharingPerms, err := sharing.PermissionsSet(instance)
+	// 	sharingPerms, err := sharing.Permissions(instance)
 	// 	if err != nil {
 	// 		return err
 	// 	}
@@ -262,18 +263,16 @@ func CreateSharingRequest(i *instance.Instance, desc, state, sharingType, scope,
 		Revoked:     false,
 	}
 
-	perms, err := permissions.CreateSharedWithMeSet(i, permsSet)
+	err = couchdb.CreateDoc(i, sharing)
 	if err != nil {
 		return nil, err
 	}
-	sharing.RefPermissions = couchdb.DocReference{
-		Type: perms.DocType(),
-		ID:   perms.ID(),
+	perms, err := permissions.CreateSharedWithMeSet(i, sharing.SID, permsSet)
+	if err != nil {
+		return nil, err
 	}
 	sharing.permissions = perms
-
-	err = couchdb.CreateDoc(i, sharing)
-	return sharing, err
+	return sharing, nil
 }
 
 // SendClientID sends the registered clientId to the sharer
@@ -294,12 +293,12 @@ func SendClientID(sharing *Sharing) error {
 
 // SendCode generates and sends an OAuth code to a recipient
 func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
-	permSet, err := sharing.PermissionsSet(instance)
+	perms, err := sharing.Permissions(instance)
 	if err != nil {
 		return err
 	}
 	// TODO check if changing the HTTP verbs to ALL is needed
-	scope, err := permSet.MarshalScopeString()
+	scope, err := perms.Permissions.MarshalScopeString()
 	if err != nil {
 		return err
 	}

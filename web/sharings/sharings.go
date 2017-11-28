@@ -314,18 +314,18 @@ func getAccessToken(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	sharer := sharing.Sharer
-	err = sharings.ExchangeCodeForToken(instance, sharing, &sharer, p.Code)
+	// sharer := sharing.Sharer
+	// err = sharings.ExchangeCodeForToken(instance, sharing, &sharer, p.Code)
 	if err != nil {
 		return wrapErrors(err)
 	}
 	// Add triggers on the recipient side for each rule
 	if sharing.SharingType == consts.TwoWaySharing {
-		sharingPerms, err := sharing.PermissionsSet(instance)
+		sharingPerms, err := sharing.Permissions(instance)
 		if err != nil {
 			return err
 		}
-		for _, rule := range *sharingPerms {
+		for _, rule := range sharingPerms.Permissions {
 			err = sharings.AddTrigger(instance, rule, sharing.SID, false)
 			if err != nil {
 				return wrapErrors(err)
@@ -397,7 +397,7 @@ func checkCreatePermissions(c echo.Context, params *sharings.CreateSharingParams
 // permission declared in the sharing document
 func checkGetPermissions(c echo.Context, sharing *sharings.Sharing) error {
 	ins := middlewares.GetInstance(c)
-	sharingPerms, err := sharing.PermissionsSet(ins)
+	sharingPerms, err := sharing.Permissions(ins)
 	if err != nil {
 		return err
 	}
@@ -407,7 +407,7 @@ func checkGetPermissions(c echo.Context, sharing *sharings.Sharing) error {
 		return err
 	}
 
-	for _, rule := range *sharingPerms {
+	for _, rule := range sharingPerms.Permissions {
 		if requestPerm.Permissions.RuleInSubset(rule) {
 			return nil
 		}

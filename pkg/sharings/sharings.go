@@ -2,6 +2,7 @@ package sharings
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
@@ -40,8 +41,8 @@ type Sharing struct {
 	PreviewPath string `json:"preview_path,omitempty"`
 	AppSlug     string `json:"app_slug"`
 
-	RefPermissions couchdb.DocReference `json:"permissions,omitempty"`
-	permissions    *permissions.Permission
+	// Just a cache for faster access to the permissions doc
+	permissions *permissions.Permission
 }
 
 // ID returns the sharing qualified identifier
@@ -65,16 +66,22 @@ func (s *Sharing) SetID(id string) { s.SID = id }
 // SetRev changes the sharing revision
 func (s *Sharing) SetRev(rev string) { s.SRev = rev }
 
-// PermissionsSet returns the set of permissions for this sharing
-func (s *Sharing) PermissionsSet(db couchdb.Database) (*permissions.Set, error) {
+// Permissions returns the permissions doc for this sharing
+func (s *Sharing) Permissions(db couchdb.Database) (*permissions.Permission, error) {
+	var perms *permissions.Permission
 	if s.permissions == nil {
-		perm, err := permissions.GetByID(db, s.RefPermissions.ID)
+		var err error
+		if s.Owner {
+			perms, err = permissions.GetForSharedByMe(db, s.SID)
+		} else {
+			perms, err = permissions.GetForSharedWithMe(db, s.SID)
+		}
 		if err != nil {
 			return nil, err
 		}
-		s.permissions = perm
+		s.permissions = perms
 	}
-	return &s.permissions.Permissions, nil
+	return s.permissions, nil
 }
 
 // Contacts returns the sharing recipients
@@ -182,19 +189,15 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 			return nil, err
 		}
 	}
-	perms, err := permissions.CreateSharedByMeSet(instance, codes, params.Permissions)
-	if err != nil {
-		return nil, err
-	}
-	sharing.RefPermissions = couchdb.DocReference{
-		Type: perms.DocType(),
-		ID:   perms.ID(),
-	}
-	sharing.permissions = perms
 
 	if err := couchdb.CreateDoc(instance, sharing); err != nil {
 		return nil, err
 	}
+	perms, err := permissions.CreateSharedByMeSet(instance, sharing.SID, codes, params.Permissions)
+	if err != nil {
+		return nil, err
+	}
+	sharing.permissions = perms
 	return sharing, nil
 }
 
@@ -227,9 +230,12 @@ func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sha
 
 // TODO i *instance.Instance vs db couchdb.Database on the whole pkg/sharings
 // TODO add a comment
-func GetSharingFromPermissions(i *instance.Instance, perms *permissions.Permission) (*Sharing, error) {
-	// TODO
-	return nil, errors.New("Not implemented yet")
+func GetSharingFromPermissions(db couchdb.Database, perms *permissions.Permission) (*Sharing, error) {
+	parts := strings.SplitN(perms.SourceID, "/", 2)
+	if len(parts) != 2 || parts[0] != consts.Sharings {
+		return nil, errors.New("Invalid SourceID")
+	}
+	return FindSharing(db, parts[1])
 }
 
 var (

@@ -85,7 +85,7 @@ func revokeContact(c echo.Context) error {
 
 func checkRevokeContactPermissions(c echo.Context, sharing *sharings.Sharing) error {
 	ins := middlewares.GetInstance(c)
-	sharingPerms, err := sharing.PermissionsSet(ins)
+	sharingPerms, err := sharing.Permissions(ins)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func checkRevokeContactPermissions(c echo.Context, sharing *sharings.Sharing) er
 		return err
 	}
 
-	if sharing.Owner && sharingPerms.IsSubSetOf(requestPerm.Permissions) {
+	if sharing.Owner && sharingPerms.Permissions.IsSubSetOf(requestPerm.Permissions) {
 		return nil
 	}
 
@@ -104,7 +104,7 @@ func checkRevokeContactPermissions(c echo.Context, sharing *sharings.Sharing) er
 
 func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, recipientClientID string) error {
 	ins := middlewares.GetInstance(c)
-	sharingPerms, err := sharing.PermissionsSet(ins)
+	sharingPerms, err := sharing.Permissions(ins)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, 
 		return sharings.ErrForbidden
 	}
 
-	if !sharingPerms.HasSameRules(requestPerm.Permissions) {
+	if !sharingPerms.Permissions.HasSameRules(requestPerm.Permissions) {
 		return permissions.ErrInvalidToken
 	}
 
@@ -147,7 +147,7 @@ func checkRevokeRecipientPermissions(c echo.Context, sharing *sharings.Sharing, 
 // 2. The permissions identify the user that is to be revoked or the sharer.
 func checkRevokeSharingPermissions(c echo.Context, sharing *sharings.Sharing) (string, error) {
 	ins := middlewares.GetInstance(c)
-	sharingPerms, err := sharing.PermissionsSet(ins)
+	sharingPerms, err := sharing.Permissions(ins)
 	if err != nil {
 		return "", err
 	}
@@ -159,13 +159,13 @@ func checkRevokeSharingPermissions(c echo.Context, sharing *sharings.Sharing) (s
 
 	switch requestPerm.Type {
 	case permissions.TypeWebapp:
-		if sharingPerms.IsSubSetOf(requestPerm.Permissions) {
+		if sharingPerms.Permissions.IsSubSetOf(requestPerm.Permissions) {
 			return requestPerm.Type, nil
 		}
 		return "", sharings.ErrForbidden
 
 	case permissions.TypeOauth:
-		if !sharingPerms.HasSameRules(requestPerm.Permissions) {
+		if !sharingPerms.Permissions.HasSameRules(requestPerm.Permissions) {
 			return "", permissions.ErrInvalidToken
 		}
 		if !sharing.Owner {

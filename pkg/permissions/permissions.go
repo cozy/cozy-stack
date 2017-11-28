@@ -161,38 +161,44 @@ func GetForCLI(claims *Claims) (*Permission, error) {
 
 // GetForWebapp retrieves the Permission doc for a given webapp
 func GetForWebapp(db couchdb.Database, slug string) (*Permission, error) {
-	return getForApp(db, TypeWebapp, consts.Apps, slug)
+	return getFromSource(db, TypeWebapp, consts.Apps, slug)
 }
 
 // GetForKonnector retrieves the Permission doc for a given konnector
 func GetForKonnector(db couchdb.Database, slug string) (*Permission, error) {
-	return getForApp(db, TypeKonnector, consts.Konnectors, slug)
+	return getFromSource(db, TypeKonnector, consts.Konnectors, slug)
 }
 
-func getForApp(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
+// GetForSharedByMe retrieves the Permission doc for a sharing owned by
+// the current cozy
+func GetForSharedByMe(db couchdb.Database, sharingID string) (*Permission, error) {
+	return getFromSource(db, TypeSharedByMe, consts.Sharings, sharingID)
+}
+
+// GetForSharedWithMe retrieves the Permission doc for a sharing accepted by
+// the current cozy
+func GetForSharedWithMe(db couchdb.Database, sharingID string) (*Permission, error) {
+	return getFromSource(db, TypeSharedWithMe, consts.Sharings, sharingID)
+}
+
+func getFromSource(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
 	var res []Permission
-	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
+	req := couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
 		Selector: mango.And(
 			mango.Equal("type", permType),
 			mango.Equal("source_id", docType+"/"+slug),
 		),
 		Limit: 1,
-	}, &res)
+	}
+	err := couchdb.FindDocs(db, consts.Permissions, &req, &res)
 	if err != nil {
 		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
 		// With a cluster of couchdb, we can have a race condition where we
 		// query an index before it has been updated for an app that has
 		// just been created.
 		time.Sleep(1 * time.Second)
-		err = couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
-			UseIndex: "by-source-and-type",
-			Selector: mango.And(
-				mango.Equal("type", permType),
-				mango.Equal("source_id", docType+"/"+slug),
-			),
-			Limit: 1,
-		}, &res)
+		err = couchdb.FindDocs(db, consts.Permissions, &req, &res)
 		if err != nil {
 			return nil, err
 		}
@@ -316,11 +322,12 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 }
 
 // CreateSharedByMeSet creates a Permission doc for sharing created on this instance
-func CreateSharedByMeSet(db couchdb.Database, codes map[string]string, set Set) (*Permission, error) {
+func CreateSharedByMeSet(db couchdb.Database, sharingID string, codes map[string]string, set Set) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharedByMe,
 		Permissions: set,
 		Codes:       codes,
+		SourceID:    consts.Sharings + "/" + sharingID,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
@@ -330,10 +337,11 @@ func CreateSharedByMeSet(db couchdb.Database, codes map[string]string, set Set) 
 }
 
 // CreateSharedWithMeSet creates a Permission doc for sharing accepted on this instance
-func CreateSharedWithMeSet(db couchdb.Database, set Set) (*Permission, error) {
+func CreateSharedWithMeSet(db couchdb.Database, sharingID string, set Set) (*Permission, error) {
 	doc := &Permission{
 		Type:        TypeSharedWithMe,
 		Permissions: set,
+		SourceID:    consts.Sharings + "/" + sharingID,
 	}
 	err := couchdb.CreateDoc(db, doc)
 	if err != nil {
