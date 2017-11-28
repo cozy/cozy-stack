@@ -3,6 +3,7 @@ package instances
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/globals"
@@ -64,7 +65,9 @@ func importer(c echo.Context) error {
 		filename = "cozy.tar.gz"
 	}
 
-	err = move.Import(instance, filename, dst)
+	increaseQuota, _ := strconv.ParseBool(c.QueryParam("increase_quota"))
+
+	err = move.Import(instance, filename, dst, increaseQuota)
 	if err != nil {
 		return err
 	}

@@ -290,33 +290,53 @@ func untar(r io.Reader, dst *vfs.DirDoc, instance *instance.Instance) error {
 }
 
 // Import is used to import a tarball with files, photos, contacts to an instance
-func Import(instance *instance.Instance, filename, destination string) error {
+func Import(i *instance.Instance, filename, destination string, increaseQuota bool) error {
 	r, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
-	fs := instance.VFS()
+	fs := i.VFS()
 	exist, err := vfs.DirExists(fs, destination)
 	if err != nil {
-		logger.WithDomain(instance.Domain).Errorf("Error for destination %s: %s", destination, err)
+		logger.WithDomain(i.Domain).Errorf("Error for destination %s: %s", destination, err)
 		return err
 	}
 	var dst *vfs.DirDoc
 	if !exist {
 		dst, err = vfs.Mkdir(fs, destination, nil)
 		if err != nil {
-			logger.WithDomain(instance.Domain).Errorf("Can't create destination directory %s: %s", destination, err)
+			logger.WithDomain(i.Domain).Errorf("Can't create destination directory %s: %s", destination, err)
 			return err
 		}
 	} else {
 		dst, err = fs.DirByPath(destination)
 		if err != nil {
-			logger.WithDomain(instance.Domain).Errorf("Can't find destination directory %s: %s", destination, err)
+			logger.WithDomain(i.Domain).Errorf("Can't find destination directory %s: %s", destination, err)
 			return err
 		}
 	}
 
-	return untar(r, dst, instance)
+	// If increaseQuota flag is activated, the disk quota limit is lifted for
+	// the import, and when finished, we put it again a quota (the old one if
+	// it is enough or a new one based on the usage if we need to increase it)
+	oldQuota := i.BytesDiskQuota
+	if increaseQuota && oldQuota != 0 {
+		i.BytesDiskQuota = 0
+		defer func() {
+			i.BytesDiskQuota = oldQuota
+			usage, err := fs.DiskUsage()
+			if err != nil {
+				return
+			}
+			usage = (usage/1e9 + 1) * 1e9 // Round to the superior Go
+			if usage > oldQuota {
+				i.BytesDiskQuota = usage
+				instance.Update(i)
+			}
+		}()
+	}
+
+	return untar(r, dst, i)
 }
