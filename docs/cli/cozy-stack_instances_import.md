@@ -17,6 +17,7 @@ cozy-stack instances import [domain] [tarball] [flags]
       --directory string   Put the imported files inside this directory
       --domain string      Specify the domain name of the instance
   -h, --help               help for import
+      --increase-quota     Increase the disk quota if needed for importing all the files
 ```
 
 ### Options inherited from parent commands
