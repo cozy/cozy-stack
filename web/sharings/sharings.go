@@ -282,7 +282,7 @@ func ReceiveClientID(c echo.Context) error {
 	if err := json.NewDecoder(c.Request().Body).Decode(p); err != nil {
 		return err
 	}
-	sharing, rec, err := sharings.FindSharingRecipient(instance, p.SharingID, p.ClientID)
+	sharing, rec, err := sharings.FindSharingMember(instance, p.SharingID, p.ClientID)
 	if err != nil {
 		return wrapErrors(err)
 	}

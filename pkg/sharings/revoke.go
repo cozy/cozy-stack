@@ -269,7 +269,8 @@ func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *Recipie
 		Scheme:     opts.Scheme,
 		HTTPClient: new(http.Client),
 	}
-	sharing, recStatus, err := FindSharingRecipient(ins, sharingID, rec.Client.ClientID)
+	// TODO should we be able to refresh a token for recipient->owner
+	sharing, recStatus, err := FindSharingMember(ins, sharingID, rec.Client.ClientID)
 	if err != nil {
 		return nil, err
 	}

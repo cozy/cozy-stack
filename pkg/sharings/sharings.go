@@ -187,21 +187,17 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 	return res, nil
 }
 
-// FindSharingRecipient retrieve a sharing recipient from its clientID and sharingID
-// TODO see how this method is used to try to find a better name (or refactor)
-func FindSharingRecipient(db couchdb.Database, sharingID, clientID string) (*Sharing, *Member, error) {
+// FindSharingMember retrieve a sharing recipient from its clientID and sharingID
+func FindSharingMember(db couchdb.Database, sharingID, clientID string) (*Sharing, *Member, error) {
 	sharing, err := FindSharing(db, sharingID)
 	if err != nil {
 		return nil, nil, err
 	}
-	sRec, err := sharing.GetMemberFromClientID(db, clientID)
+	m, err := sharing.GetMemberFromClientID(db, clientID)
 	if err != nil {
 		return nil, nil, err
 	}
-	if sRec == nil {
-		return nil, nil, ErrRecipientDoesNotExist
-	}
-	return sharing, sRec, nil
+	return sharing, m, nil
 }
 
 // TODO i *instance.Instance vs db couchdb.Database on the whole pkg/sharings
