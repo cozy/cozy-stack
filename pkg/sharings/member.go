@@ -2,7 +2,6 @@ package sharings
 
 import (
 	"encoding/json"
-	"net/http"
 	"net/url"
 
 	"github.com/cozy/cozy-stack/client/auth"
@@ -122,9 +121,8 @@ func (m *Member) getAccessToken(code string) (*auth.AccessToken, error) {
 	}
 
 	req := &auth.Request{
-		Domain:     u.Host,
-		Scheme:     u.Scheme,
-		HTTPClient: new(http.Client),
+		Domain: u.Host,
+		Scheme: u.Scheme,
 	}
 	return req.GetAccessToken(&m.Client, code)
 }
@@ -132,14 +130,13 @@ func (m *Member) getAccessToken(code string) (*auth.AccessToken, error) {
 // RegisterClient asks the Cozy of the member to register a new OAuth client.
 func (m *Member) RegisterClient(i *instance.Instance, u *url.URL) error {
 	req := &auth.Request{
-		Domain:     u.Host,
-		Scheme:     u.Scheme,
-		HTTPClient: new(http.Client),
+		Domain: u.Host,
+		Scheme: u.Scheme,
 	}
 
 	publicName, err := i.PublicName()
 	if err != nil {
-		publicName = "Sharing"
+		publicName = i.Domain
 	}
 	redirectURI := i.PageURL("/sharings/answer", nil)
 	clientURI := i.PageURL("", nil)

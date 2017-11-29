@@ -1,27 +1,19 @@
 package sharings
 
 import (
-	"io"
+	"encoding/json"
+	"fmt"
 	"net/url"
 
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
-
-// SharingRequestParams contains the basic information required to request
-// a sharing party
-type SharingRequestParams struct {
-	SharingID       string `json:"state"`
-	ClientID        string `json:"client_id"`
-	InboundClientID string `json:"inbound_client_id"`
-	Code            string `json:"code"`
-}
 
 // FindContactByShareCode returns the contact that is linked to a sharing by
 // the given shareCode
@@ -35,6 +27,18 @@ func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*con
 		return nil, ErrRecipientDoesNotExist
 	}
 	return contacts.Find(i, contactID)
+}
+
+// extractScopeFromPermissions returns a scope string from a permissions doc
+// XXX we force the HTTP verbs to ALL for the needs of the replication between
+// the two cozy instances
+func extractScopeFromPermissions(p *permissions.Permission) (string, error) {
+	cloned := p.Clone().(*permissions.Permission)
+	permSet := cloned.Permissions
+	for _, rule := range permSet {
+		rule.Verbs = permissions.ALL
+	}
+	return permSet.MarshalScopeString()
 }
 
 // GenerateOAuthQueryString takes care of creating a correct OAuth request for
@@ -56,12 +60,7 @@ func GenerateOAuthURL(i *instance.Instance, s *Sharing, m *Member, code string) 
 	if err != nil {
 		return "", err
 	}
-	cloned := perms.Clone().(*permissions.Permission)
-	permSet := cloned.Permissions
-	for _, rule := range permSet {
-		rule.Verbs = permissions.ALL
-	}
-	scope, err := permSet.MarshalScopeString()
+	scope, err := extractScopeFromPermissions(perms)
 	if err != nil {
 		return "", err
 	}
@@ -91,256 +90,151 @@ func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u
 	return couchdb.UpdateDoc(i, s)
 }
 
-// RegisterSharer registers the sharer for two-way sharing
-func RegisterSharer(instance *instance.Instance, sharing *Sharing) error {
-	// Register the sharer as a recipient
-	sharer := sharing.Sharer
-	doc := &contacts.Contact{
-		Cozy: []contacts.Cozy{
-			contacts.Cozy{
-				URL: sharer.URL,
-			},
-		},
-	}
-	err := CreateOrUpdateRecipient(instance, doc)
+func AcceptSharingRequest(i *instance.Instance, answerURL, scope string) error {
+	res, err := request.Req(&request.Options{
+		Addr:    answerURL,
+		Headers: request.Headers{"Accept": "application/json"},
+	})
 	if err != nil {
 		return err
 	}
-	ref := couchdb.DocReference{
-		ID:   doc.ID(),
-		Type: consts.Contacts,
-	}
-	sharer.RefContact = ref
-	// TODO err = sharer.RegisterClient(instance)
-	if err != nil {
-		instance.Logger().Error("[sharing] Could not register at "+sharer.URL+" ", err)
+	defer res.Body.Close()
+	sharing := &Sharing{}
+	if err := json.NewDecoder(res.Body).Decode(sharing); err != nil {
 		return err
 	}
-	return couchdb.UpdateDoc(instance, sharing)
-}
 
-func AcceptSharingRequest(i *instance.Instance, answerURL string) error {
+	if err := CheckSharingType(sharing.SharingType); err != nil {
+		return err
+	}
+	sharing.Owner = false
+	// TODO sharing.Sharer.RefContact = ...
+	if err := couchdb.CreateNamedDoc(i, sharing); err != nil {
+		return err
+	}
+	permsSet, err := permissions.UnmarshalScopeString(scope)
+	if err != nil {
+		return err
+	}
+	// TODO HTTP verbs for the permissions
+	perms, err := permissions.CreateSharedWithMeSet(i, sharing.SID, permsSet)
+	if err != nil {
+		return err
+	}
+	sharing.permissions = perms
+
+	// Add triggers on the recipient side for each rule
+	if sharing.SharingType != consts.OneShotSharing {
+		for _, rule := range perms.Permissions {
+			// On a one-way sharing, we observe deletions because we assume
+			// that deleting the main shared folder means that we should revoke
+			// the sharing
+			delTrigger := sharing.SharingType == consts.OneWaySharing
+			if err = AddTrigger(i, rule, sharing.SID, delTrigger); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
-
-	// TODO
-	// - call the answerURL
-	// - from the response, create the sharing and the permissions doc
-	// - if one-way sharing, add a trigger for deletes (see the code below)
-	// - if two-way sharing, setup the replication in the other way
-
-	// Code from SharingRequest
-	// sharing, err := sharings.CreateSharingRequest(instance, desc, state,
-	// 	sharingType, scope, clientID, appSlug)
-	// if err == sharings.ErrSharingAlreadyExist {
-	// 	redirectAuthorize := instance.PageURL("/auth/authorize", c.QueryParams())
-	// 	return c.Redirect(http.StatusSeeOther, redirectAuthorize)
-	// }
-	// if err != nil {
-	// 	return wrapErrors(err)
-	// }
-	// // Particular case for two-way: register the sharer
-	// if sharingType == consts.TwoWaySharing {
-	// 	if err = sharings.RegisterSharer(instance, sharing); err != nil {
-	// 		return wrapErrors(err)
-	// 	}
-	// 	if err = sharings.SendClientID(sharing); err != nil {
-	// 		return wrapErrors(err)
-	// 	}
-	// } else if sharing.SharingType == consts.OneWaySharing {
-	// 	// The recipient listens deletes for a one-way sharing
-	// 	sharingPerms, err := sharing.Permissions(instance)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	for _, rule := range *sharingPerms {
-	// 		err = sharings.AddTrigger(instance, rule, sharing.SID, true)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
 }
 
 // SharingAccepted handles an accepted sharing on the sharer side and returns
 // the redirect url.
-func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode string) (string, error) {
+func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode string) (*Sharing, error) {
 	perms, err := permissions.GetForShareCode(i, shareCode)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	s, err := GetSharingFromPermissions(i, perms)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	m, err := s.GetMemberFromClientID(i, clientID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Update the sharing status and asks the recipient for access
 	token, err := m.getAccessToken(accessCode)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	m.Status = consts.SharingStatusAccepted
 	m.AccessToken = *token
 	if err = couchdb.UpdateDoc(i, s); err != nil {
-		return "", err
+		return nil, err
+	}
+
+	res := &Sharing{
+		SID:         s.SID,
+		SharingType: s.SharingType,
+		Sharer: Member{
+			Status:          consts.SharingStatusAccepted,
+			URL:             i.PageURL("", nil),
+			InboundClientID: clientID,
+		},
+		Description: s.Description,
+		AppSlug:     s.AppSlug,
 	}
 
 	// Particular case for two-way sharing: the recipient needs credentials
 	if s.SharingType == consts.TwoWaySharing {
-		// TODO
-		// err = SendCode(instance, sharing, recStatus)
-		// if err != nil {
-		// 	return "", err
-		// }
-	}
+		// Create an OAuth client
+		name := m.URL
+		if contact := m.Contact(i); contact != nil {
+			if addr, err := contact.ToMailAddress(); err != nil {
+				name = addr.Name
+			}
+		}
+		redirectURI := fmt.Sprintf("%s/%s", m.URL, "/sharings/answer")
+		c := oauth.Client{
+			RedirectURIs: []string{redirectURI},
+			ClientName:   name,
+			ClientKind:   "sharing",
+			SoftwareID:   "github.com/cozy/cozy-stack",
+			ClientURI:    m.URL,
+		}
+		if err := c.Create(i); err != nil {
+			return nil, ErrNoOAuthClient
+		}
+		res.Sharer.Client = auth.Client{
+			ClientID:          c.ClientID,
+			ClientSecret:      c.ClientSecret,
+			SecretExpiresAt:   c.SecretExpiresAt,
+			RegistrationToken: c.RegistrationToken,
+			RedirectURIs:      c.RedirectURIs,
+			ClientName:        c.ClientName,
+			ClientKind:        c.ClientKind,
+			ClientURI:         c.ClientURI,
+			SoftwareID:        c.SoftwareID,
+		}
 
-	// Share all the documents with the recipient
-	err = ShareDoc(i, s, m)
-	return "", err
-}
-
-// CreateSharingRequest checks fields integrity and creates a sharing document
-// for an incoming sharing request
-func CreateSharingRequest(i *instance.Instance, desc, state, sharingType, scope, clientID, appSlug string) (*Sharing, error) {
-	if state == "" {
-		return nil, ErrMissingState
-	}
-	if err := CheckSharingType(sharingType); err != nil {
-		return nil, err
-	}
-	if scope == "" {
-		return nil, ErrMissingScope
-	}
-	if clientID == "" {
-		return nil, ErrNoOAuthClient
-	}
-	permsSet, err := permissions.UnmarshalScopeString(scope)
-	if err != nil {
-		return nil, err
-	}
-
-	sharerClient := &oauth.Client{}
-	err = couchdb.GetDoc(i, consts.OAuthClients, clientID, sharerClient)
-	if err != nil {
-		return nil, ErrNoOAuthClient
-	}
-
-	var res []Sharing
-	// TODO don't use the by-sharing index
-	err = couchdb.FindDocs(i, consts.Sharings, &couchdb.FindRequest{
-		UseIndex: "by-sharing-id",
-		Selector: mango.Equal("sharing_id", state),
-	}, &res)
-	if err == nil && len(res) > 0 {
-		return nil, ErrSharingAlreadyExist
-	}
-
-	sharer := Member{
-		URL:             sharerClient.ClientURI,
-		InboundClientID: clientID,
-		contact: &contacts.Contact{
-			Cozy: []contacts.Cozy{
-				contacts.Cozy{
-					URL: sharerClient.ClientURI,
-				},
-			},
-		},
-	}
-
-	sharing := &Sharing{
-		AppSlug:     appSlug,
-		SharingType: sharingType,
-		// TODO force the ID
-		// SharingID:   state,
-		Owner:       false,
-		Description: desc,
-		Sharer:      sharer,
-		Revoked:     false,
-	}
-
-	err = couchdb.CreateDoc(i, sharing)
-	if err != nil {
-		return nil, err
-	}
-	perms, err := permissions.CreateSharedWithMeSet(i, sharing.SID, permsSet)
-	if err != nil {
-		return nil, err
-	}
-	sharing.permissions = perms
-	return sharing, nil
-}
-
-// SendClientID sends the registered clientId to the sharer
-func SendClientID(sharing *Sharing) error {
-	return nil
-	// domain, scheme, err := ExtractDomainAndScheme(sharing.Sharer.contact)
-	// if err != nil {
-	// 	return nil
-	// }
-	// path := "/sharings/access/client"
-	// newClientID := sharing.Sharer.Client.ClientID
-	// params := SharingRequestParams{
-	// 	SharingID:       sharing.SID,
-	// 	ClientID:        sharing.Sharer.InboundClientID,
-	// 	InboundClientID: newClientID,
-	// }
-	// return Request("POST", domain, scheme, path, params)
-}
-
-// SendCode generates and sends an OAuth code to a recipient
-func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
-	return nil
-	// perms, err := sharing.Permissions(instance)
-	// if err != nil {
-	// 	return err
-	// }
-	// // TODO check if changing the HTTP verbs to ALL is needed
-	// scope, err := perms.Permissions.MarshalScopeString()
-	// if err != nil {
-	// 	return err
-	// }
-	// clientID := recStatus.Client.ClientID
-	// access, err := oauth.CreateAccessCode(instance, clientID, scope)
-	// if err != nil {
-	// 	return err
-	// }
-	// domain, scheme, err := ExtractDomainAndScheme(recStatus.contact)
-	// if err != nil {
-	// 	return nil
-	// }
-	// path := "/sharings/access/code"
-	// params := SharingRequestParams{
-	// 	SharingID: sharing.SID,
-	// 	Code:      access.Code,
-	// }
-	// return Request("POST", domain, scheme, path, params)
-}
-
-// Request is a utility method to send request to remote sharing party
-func Request(method, domain, scheme, path string, params interface{}) error {
-	var body io.Reader
-	var err error
-	if params != nil {
-		body, err = request.WriteJSON(params)
+		// And an OAuth access token
+		scope, err := extractScopeFromPermissions(perms)
 		if err != nil {
-			return nil
+			return nil, err
+		}
+		access, err := c.CreateJWT(i, permissions.AccessTokenAudience, scope)
+		if err != nil {
+			return nil, err
+		}
+		refresh, err := c.CreateJWT(i, permissions.RefreshTokenAudience, scope)
+		if err != nil {
+			return nil, err
+		}
+		res.Sharer.AccessToken = auth.AccessToken{
+			TokenType:    "bearer",
+			AccessToken:  access,
+			RefreshToken: refresh,
+			Scope:        scope,
 		}
 	}
-	_, err = request.Req(&request.Options{
-		Domain: domain,
-		Scheme: scheme,
-		Method: method,
-		Path:   path,
-		Headers: request.Headers{
-			"Content-Type": "application/json",
-			"Accept":       "application/json",
-		},
-		Body: body,
-	})
-	return err
+
+	// TODO is it too soon (the recipient may not be ready)?
+	// Share all the documents with the recipient
+	err = ShareDoc(i, s, m)
+	return res, err
 }

@@ -47,6 +47,8 @@ func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID st
 
 	var eventArgs string
 	if rule.Selector != "" {
+		// TODO to be confirmed, but it looks like we shouldn't add a trigger
+		// when delTrigger is true when there is a selector for the rule
 		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
 			strings.Join(rule.Values, ",") + ":" + rule.Selector
 	} else {
@@ -146,15 +148,12 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Member) 
 		if rule.Selector != "" {
 			// Selector-based sharing
 			values, err = sharingBySelector(instance, rule)
-			if err != nil {
-				return err
-			}
 		} else {
 			// Value-based sharing
 			values, err = sharingByValues(instance, rule)
-			if err != nil {
-				return err
-			}
+		}
+		if err != nil {
+			return err
 		}
 		err = sendData(instance, sharing, recStatus, values, rule)
 		if err != nil {

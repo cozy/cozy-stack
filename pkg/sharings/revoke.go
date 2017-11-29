@@ -265,9 +265,8 @@ func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *Recipie
 		"Trying to renew the token for %v", rec.Domain)
 
 	req := &auth.Request{
-		Domain:     opts.Domain,
-		Scheme:     opts.Scheme,
-		HTTPClient: new(http.Client),
+		Domain: opts.Domain,
+		Scheme: opts.Scheme,
 	}
 	// TODO should we be able to refresh a token for recipient->owner
 	sharing, recStatus, err := FindSharingMember(ins, sharingID, rec.Client.ClientID)

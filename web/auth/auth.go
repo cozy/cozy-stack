@@ -576,7 +576,7 @@ func authorize(c echo.Context) error {
 	u.Fragment = ""
 
 	if params.resType == "cozy_sharing" {
-		if err = sharings.AcceptSharingRequest(instance, u.String()); err != nil {
+		if err = sharings.AcceptSharingRequest(instance, u.String(), params.scope); err != nil {
 			return err
 		}
 		return Home(c)

@@ -271,70 +271,6 @@ func SharingAnswer(c echo.Context) error {
 	return c.JSON(http.StatusFound, res)
 }
 
-// ReceiveClientID receives an OAuth ClientID in a two-way context.
-// This is called from a recipient, after he registered himself to the sharer.
-// The received clientID is called a InboundClientID, as it refers to a client
-// created by the sharer, i.e. the host here.
-func ReceiveClientID(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	p := &sharings.SharingRequestParams{}
-	if err := json.NewDecoder(c.Request().Body).Decode(p); err != nil {
-		return err
-	}
-	sharing, rec, err := sharings.FindSharingMember(instance, p.SharingID, p.ClientID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	rec.InboundClientID = p.InboundClientID
-	err = couchdb.UpdateDoc(instance, sharing)
-	if err != nil {
-		return err
-	}
-	return c.JSON(http.StatusOK, nil)
-}
-
-// getAccessToken asks for an Access Token, from the recipient side.
-// It is called in a two-way context, after the sharer received the
-// answer from the recipient.
-func getAccessToken(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	p := &sharings.SharingRequestParams{}
-	if err := json.NewDecoder(c.Request().Body).Decode(p); err != nil {
-		return err
-	}
-	if p.SharingID == "" {
-		return wrapErrors(sharings.ErrMissingState)
-	}
-	if p.Code == "" {
-		return wrapErrors(sharings.ErrMissingCode)
-	}
-	sharing, err := sharings.FindSharing(instance, p.SharingID)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	// sharer := sharing.Sharer
-	// err = sharings.ExchangeCodeForToken(instance, sharing, &sharer, p.Code)
-	if err != nil {
-		return wrapErrors(err)
-	}
-	// Add triggers on the recipient side for each rule
-	if sharing.SharingType == consts.TwoWaySharing {
-		sharingPerms, err := sharing.Permissions(instance)
-		if err != nil {
-			return err
-		}
-		for _, rule := range sharingPerms.Permissions {
-			err = sharings.AddTrigger(instance, rule, sharing.SID, false)
-			if err != nil {
-				return wrapErrors(err)
-			}
-		}
-	}
-	return c.JSON(http.StatusOK, nil)
-}
-
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	// API endpoints for the apps
@@ -348,11 +284,8 @@ func Routes(router *echo.Group) {
 	router.GET("/:sharing-id/discovery", discoveryForm)
 	router.POST("/:sharing-id/discovery", discovery)
 
-	router.POST("/answer", SharingAnswer)
-
 	// Internal routes, to be called by a cozy-stack
-	router.POST("/access/client", ReceiveClientID)
-	router.POST("/access/code", getAccessToken)
+	router.POST("/answer", SharingAnswer)
 
 	group := router.Group("/doc/:doctype", data.ValidDoctype)
 	group.POST("/:docid", receiveDocument)
