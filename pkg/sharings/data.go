@@ -1,6 +1,7 @@
 package sharings
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -276,13 +277,16 @@ func sharingByValues(instance *instance.Instance, rule permissions.Rule) ([]stri
 func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Member, values []string, rule permissions.Rule) error {
 	// Create a sharedata worker for each doc to send
 	for _, val := range values {
-		domain, scheme, err := ExtractDomainAndScheme(recStatus.contact)
+		if recStatus.URL == "" {
+			return ErrRecipientHasNoURL
+		}
+		u, err := url.Parse(recStatus.URL)
 		if err != nil {
 			return err
 		}
 		rec := &RecipientInfo{
-			URL:         domain,
-			Scheme:      scheme,
+			Domain:      u.Host,
+			Scheme:      u.Scheme,
 			AccessToken: recStatus.AccessToken,
 			Client:      recStatus.Client,
 		}

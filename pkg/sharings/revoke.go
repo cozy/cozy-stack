@@ -213,14 +213,18 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *Member, recipient
 			return nil
 		}
 	}
-	domain, scheme, err := ExtractDomainAndScheme(rs.contact)
+
+	if rs.URL == "" {
+		return ErrRecipientHasNoURL
+	}
+	u, err := url.Parse(rs.URL)
 	if err != nil {
 		return err
 	}
 
 	reqOpts := &request.Options{
-		Domain:  domain,
-		Scheme:  scheme,
+		Domain:  u.Host,
+		Scheme:  u.Scheme,
 		Path:    path,
 		Method:  http.MethodDelete,
 		Queries: url.Values{consts.QueryParamRecursive: {"false"}},
@@ -258,7 +262,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *Member, recipient
 // It tries to renew the access_token and request again
 func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *RecipientInfo, opts *request.Options) (*http.Response, error) {
 	ins.Logger().Errorf("[sharing] The request is not authorized. "+
-		"Trying to renew the token for %v", rec.URL)
+		"Trying to renew the token for %v", rec.Domain)
 
 	req := &auth.Request{
 		Domain:     opts.Domain,

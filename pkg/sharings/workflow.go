@@ -277,46 +277,48 @@ func CreateSharingRequest(i *instance.Instance, desc, state, sharingType, scope,
 
 // SendClientID sends the registered clientId to the sharer
 func SendClientID(sharing *Sharing) error {
-	domain, scheme, err := ExtractDomainAndScheme(sharing.Sharer.contact)
-	if err != nil {
-		return nil
-	}
-	path := "/sharings/access/client"
-	newClientID := sharing.Sharer.Client.ClientID
-	params := SharingRequestParams{
-		SharingID:       sharing.SID,
-		ClientID:        sharing.Sharer.InboundClientID,
-		InboundClientID: newClientID,
-	}
-	return Request("POST", domain, scheme, path, params)
+	return nil
+	// domain, scheme, err := ExtractDomainAndScheme(sharing.Sharer.contact)
+	// if err != nil {
+	// 	return nil
+	// }
+	// path := "/sharings/access/client"
+	// newClientID := sharing.Sharer.Client.ClientID
+	// params := SharingRequestParams{
+	// 	SharingID:       sharing.SID,
+	// 	ClientID:        sharing.Sharer.InboundClientID,
+	// 	InboundClientID: newClientID,
+	// }
+	// return Request("POST", domain, scheme, path, params)
 }
 
 // SendCode generates and sends an OAuth code to a recipient
 func SendCode(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
-	perms, err := sharing.Permissions(instance)
-	if err != nil {
-		return err
-	}
-	// TODO check if changing the HTTP verbs to ALL is needed
-	scope, err := perms.Permissions.MarshalScopeString()
-	if err != nil {
-		return err
-	}
-	clientID := recStatus.Client.ClientID
-	access, err := oauth.CreateAccessCode(instance, clientID, scope)
-	if err != nil {
-		return err
-	}
-	domain, scheme, err := ExtractDomainAndScheme(recStatus.contact)
-	if err != nil {
-		return nil
-	}
-	path := "/sharings/access/code"
-	params := SharingRequestParams{
-		SharingID: sharing.SID,
-		Code:      access.Code,
-	}
-	return Request("POST", domain, scheme, path, params)
+	return nil
+	// perms, err := sharing.Permissions(instance)
+	// if err != nil {
+	// 	return err
+	// }
+	// // TODO check if changing the HTTP verbs to ALL is needed
+	// scope, err := perms.Permissions.MarshalScopeString()
+	// if err != nil {
+	// 	return err
+	// }
+	// clientID := recStatus.Client.ClientID
+	// access, err := oauth.CreateAccessCode(instance, clientID, scope)
+	// if err != nil {
+	// 	return err
+	// }
+	// domain, scheme, err := ExtractDomainAndScheme(recStatus.contact)
+	// if err != nil {
+	// 	return nil
+	// }
+	// path := "/sharings/access/code"
+	// params := SharingRequestParams{
+	// 	SharingID: sharing.SID,
+	// 	Code:      access.Code,
+	// }
+	// return Request("POST", domain, scheme, path, params)
 }
 
 // Request is a utility method to send request to remote sharing party

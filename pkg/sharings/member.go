@@ -29,25 +29,6 @@ type Member struct {
 	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
-// ExtractDomainAndScheme returns the recipient's domain and the scheme
-// TODO kill this method
-func ExtractDomainAndScheme(r *contacts.Contact) (string, string, error) {
-	if len(r.Cozy) == 0 {
-		return "", "", ErrRecipientHasNoURL
-	}
-	// TODO We should use the Member.URL (to be confirmed)
-	u, err := url.Parse(r.Cozy[0].URL)
-	if err != nil {
-		return "", "", err
-	}
-	host := u.Host
-	scheme := u.Scheme
-	if scheme == "" {
-		scheme = "https"
-	}
-	return host, scheme, nil
-}
-
 // GetContact returns the contact stored in database from a given ID
 // TODO move this function to the contacts package
 func GetContact(db couchdb.Database, contactID string) (*contacts.Contact, error) {
@@ -202,27 +183,27 @@ func (m *Member) RegisterClient(i *instance.Instance, u *url.URL) error {
 // RecipientInfo describes the recipient information that will be transmitted to
 // the sharing workers.
 type RecipientInfo struct {
-	URL         string
+	Domain      string
 	Scheme      string
 	Client      auth.Client
 	AccessToken auth.AccessToken
 }
 
 // ExtractRecipientInfo returns a RecipientInfo from a Member
-func ExtractRecipientInfo(db couchdb.Database, rec *Member) (*RecipientInfo, error) {
-	recipient, err := GetContact(db, rec.RefContact.ID)
+// TODO db is not needed
+func ExtractRecipientInfo(db couchdb.Database, m *Member) (*RecipientInfo, error) {
+	if m.URL == "" {
+		return nil, ErrRecipientHasNoURL
+	}
+	u, err := url.Parse(m.URL)
 	if err != nil {
 		return nil, err
 	}
-	u, scheme, err := ExtractDomainAndScheme(recipient)
-	if err != nil {
-		return nil, err
+	info := RecipientInfo{
+		Domain:      u.Host,
+		Scheme:      u.Scheme,
+		AccessToken: m.AccessToken,
+		Client:      m.Client,
 	}
-	info := &RecipientInfo{
-		URL:         u,
-		Scheme:      scheme,
-		AccessToken: rec.AccessToken,
-		Client:      rec.Client,
-	}
-	return info, nil
+	return &info, nil
 }
