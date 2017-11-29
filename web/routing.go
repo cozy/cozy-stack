@@ -146,9 +146,6 @@ func newRenderer(assetsPath string) (*renderer, error) {
 // SetupAppsHandler adds all the necessary middlewares for the application
 // handler.
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
-	mws := []echo.MiddlewareFunc{
-		middlewares.LoadSession,
-	}
 	if !config.GetConfig().DisableCSP {
 		secure := middlewares.Secure(&middlewares.SecureConfig{
 			HSTSMaxAge:    hstsMaxAge,
@@ -159,10 +156,9 @@ func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 			CSPFrameSrc:   []middlewares.CSPSource{middlewares.CSPSrcSiblings},
 			XFrameOptions: middlewares.XFrameSameOrigin,
 		})
-		mws = append([]echo.MiddlewareFunc{secure}, mws...)
+		return secure(appsHandler)
 	}
-
-	return middlewares.Compose(appsHandler, mws...)
+	return appsHandler
 }
 
 // SetupAssets add assets routing and handling to the given router. It also
@@ -197,10 +193,7 @@ func SetupRoutes(router *echo.Echo) error {
 
 	router.Use(middlewares.CORS)
 
-	mws := []echo.MiddlewareFunc{
-		middlewares.NeedInstance,
-		middlewares.LoadSession,
-	}
+	mws := []echo.MiddlewareFunc{middlewares.NeedInstance}
 	router.GET("/", auth.Home, mws...)
 	// accounts routes does not all use middlewares
 	konnectorsauth.Routes(router.Group("/accounts"))
