@@ -90,6 +90,7 @@ func (claims *Claims) Expired() bool {
 	return validUntil.Before(time.Now().UTC())
 }
 
+// CreateCode returns a new sharecode to put the codes field of a permissions document
 func CreateCode(oauthSecret []byte, domain, name string) (string, error) {
 	return crypto.NewJWT(oauthSecret, &Claims{
 		StandardClaims: jwt.StandardClaims{

@@ -188,7 +188,7 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 		// Create an OAuth client
 		name := m.URL
 		if contact := m.Contact(i); contact != nil {
-			if addr, err := contact.ToMailAddress(); err != nil {
+			if addr, errc := contact.ToMailAddress(); errc != nil {
 				name = addr.Name
 			}
 		}
@@ -216,17 +216,17 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 		}
 
 		// And an OAuth access token
-		scope, err := extractScopeFromPermissions(perms)
-		if err != nil {
-			return nil, err
+		scope, errb := extractScopeFromPermissions(perms)
+		if errb != nil {
+			return nil, errb
 		}
-		access, err := c.CreateJWT(i, permissions.AccessTokenAudience, scope)
-		if err != nil {
-			return nil, err
+		access, errb := c.CreateJWT(i, permissions.AccessTokenAudience, scope)
+		if errb != nil {
+			return nil, errb
 		}
-		refresh, err := c.CreateJWT(i, permissions.RefreshTokenAudience, scope)
-		if err != nil {
-			return nil, err
+		refresh, errb := c.CreateJWT(i, permissions.RefreshTokenAudience, scope)
+		if errb != nil {
+			return nil, errb
 		}
 		res.Sharer.AccessToken = auth.AccessToken{
 			TokenType:    "bearer",
