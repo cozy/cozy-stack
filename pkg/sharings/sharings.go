@@ -200,8 +200,7 @@ func FindSharingMember(db couchdb.Database, sharingID, clientID string) (*Sharin
 	return sharing, m, nil
 }
 
-// TODO i *instance.Instance vs db couchdb.Database on the whole pkg/sharings
-// TODO add a comment
+// GetSharingFromPermissions returns the sharing linked to the given permissions doc
 func GetSharingFromPermissions(db couchdb.Database, perms *permissions.Permission) (*Sharing, error) {
 	parts := strings.SplitN(perms.SourceID, "/", 2)
 	if len(parts) != 2 || parts[0] != consts.Sharings {

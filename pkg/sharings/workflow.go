@@ -41,7 +41,7 @@ func extractScopeFromPermissions(p *permissions.Permission) (string, error) {
 	return permSet.MarshalScopeString()
 }
 
-// GenerateOAuthQueryString takes care of creating a correct OAuth request for
+// GenerateOAuthURL takes care of creating a correct OAuth request for
 // the given sharing and recipient.
 func GenerateOAuthURL(i *instance.Instance, s *Sharing, m *Member, code string) (string, error) {
 	// Check that we have an OAuth client that we can use
@@ -90,6 +90,9 @@ func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u
 	return couchdb.UpdateDoc(i, s)
 }
 
+// AcceptSharingRequest is called on the recipient when the permissions for the
+// sharing are accepted. It calls the cozy of the owner to start the sharing,
+// and then create the sharing (and other stuff) in its couchdb.
 func AcceptSharingRequest(i *instance.Instance, answerURL, scope string) error {
 	res, err := request.Req(&request.Options{
 		Addr:    answerURL,
@@ -100,16 +103,16 @@ func AcceptSharingRequest(i *instance.Instance, answerURL, scope string) error {
 	}
 	defer res.Body.Close()
 	sharing := &Sharing{}
-	if err := json.NewDecoder(res.Body).Decode(sharing); err != nil {
+	if err = json.NewDecoder(res.Body).Decode(sharing); err != nil {
 		return err
 	}
 
-	if err := CheckSharingType(sharing.SharingType); err != nil {
+	if err = CheckSharingType(sharing.SharingType); err != nil {
 		return err
 	}
 	sharing.Owner = false
 	// TODO sharing.Sharer.RefContact = ...
-	if err := couchdb.CreateNamedDoc(i, sharing); err != nil {
+	if err = couchdb.CreateNamedDoc(i, sharing); err != nil {
 		return err
 	}
 	permsSet, err := permissions.UnmarshalScopeString(scope)
