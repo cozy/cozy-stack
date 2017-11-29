@@ -11,6 +11,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/web/jsonapi"
+	"github.com/cozy/cozy-stack/web/middlewares"
 
 	"github.com/labstack/echo"
 	"github.com/sirupsen/logrus"
@@ -113,7 +114,13 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	if c.Request().Method == http.MethodHead {
 		c.NoContent(status)
 	} else if acceptHTML {
+		var domain string
+		i, ok := middlewares.GetInstanceSafe(c)
+		if ok {
+			domain = i.PageURL("", nil)
+		}
 		c.Render(status, "error.html", echo.Map{
+			"Domain":     domain,
 			"ErrorTitle": title,
 			"Error":      value,
 		})
