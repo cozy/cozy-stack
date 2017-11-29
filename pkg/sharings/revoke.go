@@ -240,7 +240,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *Member, recipient
 
 	if err != nil {
 		if IsAuthError(err) {
-			recInfo, errInfo := ExtractRecipientInfo(ins, rs)
+			recInfo, errInfo := ExtractRecipientInfo(rs)
 			if errInfo != nil {
 				return errInfo
 			}

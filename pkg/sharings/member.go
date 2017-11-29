@@ -117,18 +117,9 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *contacts.Contact) error {
 	return couchdb.CreateDoc(db, doc)
 }
 
-// ForceRecipient forces the recipient. It is useful when testing the URL of
-// the cozy instances of the recipient before saving the recipient if
-// successful.
-// TODO kill this method
-func (rs *Member) ForceRecipient(r *contacts.Contact) {
-	rs.contact = r
-}
-
 // getAccessToken sends an "access_token" request to the recipient using the
 // given authorization code.
-// TODO db parameter is not needed
-func (m *Member) getAccessToken(db couchdb.Database, code string) (*auth.AccessToken, error) {
+func (m *Member) getAccessToken(code string) (*auth.AccessToken, error) {
 	if m.URL == "" {
 		return nil, ErrRecipientHasNoURL
 	}
@@ -190,8 +181,7 @@ type RecipientInfo struct {
 }
 
 // ExtractRecipientInfo returns a RecipientInfo from a Member
-// TODO db is not needed
-func ExtractRecipientInfo(db couchdb.Database, m *Member) (*RecipientInfo, error) {
+func ExtractRecipientInfo(m *Member) (*RecipientInfo, error) {
 	if m.URL == "" {
 		return nil, ErrRecipientHasNoURL
 	}

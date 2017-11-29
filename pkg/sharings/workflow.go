@@ -180,7 +180,7 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 	}
 
 	// Update the sharing status and asks the recipient for access
-	token, err := m.getAccessToken(i, accessCode)
+	token, err := m.getAccessToken(accessCode)
 	if err != nil {
 		return "", err
 	}

@@ -266,7 +266,7 @@ func TestGetAccessTokenNoAuth(t *testing.T) {
 		},
 		Client: auth.Client{},
 	}
-	_, err := rs.getAccessToken(in, code)
+	_, err := rs.getAccessToken(code)
 	assert.Error(t, err)
 }
 
@@ -277,7 +277,7 @@ func TestGetAccessTokenNoURL(t *testing.T) {
 		Client:    auth.Client{},
 	}
 
-	_, err := rs.getAccessToken(in, code)
+	_, err := rs.getAccessToken(code)
 	assert.Equal(t, ErrRecipientHasNoURL, err)
 }
 
