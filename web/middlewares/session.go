@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/labstack/echo"
 )
@@ -15,21 +14,18 @@ func IsLoggedIn(c echo.Context) bool {
 }
 
 // GetSession returns the sessions associated with the given context.
-func GetSession(c echo.Context) (s *sessions.Session, ok bool) {
-	s, ok = c.Get(sessionKey).(*sessions.Session)
-	if ok {
-		return
+func GetSession(c echo.Context) (*sessions.Session, bool) {
+	if session, ok := c.Get(sessionKey).(*sessions.Session); ok {
+		return session, true
 	}
-	var i *instance.Instance
-	i, ok = GetInstanceSafe(c)
+	i, ok := GetInstanceSafe(c)
 	if !ok {
-		return
+		return nil, false
 	}
-	var err error
-	s, err = sessions.GetSession(c, i)
-	ok = err == nil
-	if ok {
-		c.Set(sessionKey, s)
+	session, err := sessions.FromCookie(c, i)
+	if err != nil {
+		return nil, false
 	}
-	return
+	c.Set(sessionKey, session)
+	return session, true
 }

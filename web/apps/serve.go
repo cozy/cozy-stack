@@ -40,7 +40,7 @@ func Serve(c echo.Context) error {
 
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		if code := c.QueryParam("code"); code != "" {
-			return tryAuthWithSessionCode(c, i, code)
+			return tryAuthWithSessionCode(c, i, code, slug)
 		}
 	}
 
@@ -123,7 +123,8 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		needAuth = !route.Public
 	}
 
-	session, isLoggedIn := middlewares.GetSession(c)
+	session, err := sessions.FromAppCookie(c, i, slug)
+	isLoggedIn := err == nil
 	if needAuth && !isLoggedIn {
 		if file != route.Index {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
@@ -141,7 +142,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	filepath := path.Join("/", route.Folder, file)
 	version := app.Version()
 	if file != route.Index {
-		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
+		err = fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 		if os.IsNotExist(err) {
 			return echo.NewHTTPError(http.StatusNotFound)
 		}
@@ -198,17 +199,15 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	})
 }
 
-func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value string) error {
+func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug string) error {
 	u := c.Request().URL
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
 	if !middlewares.IsLoggedIn(c) {
 		if code := sessions.FindCode(value, u.Host); code != nil {
-			var session sessions.Session
-			err := couchdb.GetDoc(i, consts.Sessions, code.SessionID, &session)
+			session, err := sessions.Get(i, code.SessionID)
 			if err == nil {
-				session.Instance = i
-				cookie, err := session.ToAppCookie(u.Host)
+				cookie, err := session.ToAppCookie(u.Host, slug)
 				if err == nil {
 					c.SetCookie(cookie)
 				}
