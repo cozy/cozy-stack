@@ -137,3 +137,10 @@ func (c *Contact) PrimaryCozyURL() string {
 	}
 	return c.Cozy[0].URL
 }
+
+// Find returns the contact stored in database from a given ID
+func Find(db couchdb.Database, contactID string) (*Contact, error) {
+	doc := &Contact{}
+	err := couchdb.GetDoc(db, consts.Contacts, contactID, doc)
+	return doc, err
+}

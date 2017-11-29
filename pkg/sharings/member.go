@@ -29,24 +29,13 @@ type Member struct {
 	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
-// GetContact returns the contact stored in database from a given ID
-// TODO move this function to the contacts package
-func GetContact(db couchdb.Database, contactID string) (*contacts.Contact, error) {
-	doc := &contacts.Contact{}
-	err := couchdb.GetDoc(db, consts.Contacts, contactID, doc)
-	if couchdb.IsNotFoundError(err) {
-		err = ErrRecipientDoesNotExist
-	}
-	return doc, err
-}
-
 // Contact get the actual contact of a Member
 func (m *Member) Contact(db couchdb.Database) *contacts.Contact {
 	if m.contact == nil {
 		if db == nil {
 			return nil
 		}
-		c, err := GetContact(db, m.RefContact.ID)
+		c, err := contacts.Find(db, m.RefContact.ID)
 		if err != nil {
 			return nil
 		}

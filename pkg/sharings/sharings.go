@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
-	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -84,23 +83,6 @@ func (s *Sharing) Permissions(db couchdb.Database) (*permissions.Permission, err
 	return s.permissions, nil
 }
 
-// Contacts returns the sharing recipients
-// TODO see how this method is used to try to find something better
-func (s *Sharing) Contacts(db couchdb.Database) ([]*contacts.Contact, error) {
-	var recipients []*contacts.Contact
-
-	for _, rec := range s.Recipients {
-		recipient, err := GetContact(db, rec.RefContact.ID)
-		if err != nil {
-			return nil, err
-		}
-		rec.contact = recipient
-		recipients = append(recipients, recipient)
-	}
-
-	return recipients, nil
-}
-
 // GetMemberFromClientID returns the Recipient associated with the
 // given clientID.
 func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*Member, error) {
@@ -114,18 +96,15 @@ func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*
 
 // GetMemberFromRecipientID returns the Member associated with the
 // given recipient ID.
-// TODO refactor
+// TODO rename
 func (s *Sharing) GetMemberFromRecipientID(db couchdb.Database, recID string) (*Member, error) {
-	for _, recStatus := range s.Recipients {
-		if recStatus.contact == nil {
-			r, err := GetContact(db, recStatus.RefContact.ID)
-			if err != nil {
-				return nil, err
-			}
-			recStatus.contact = r
+	for _, m := range s.Recipients {
+		contact := m.Contact(db)
+		if contact == nil {
+			continue
 		}
-		if recStatus.contact.ID() == recID {
-			return &recStatus, nil
+		if contact.ID() == recID {
+			return &m, nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist
@@ -161,17 +140,15 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 
 	// Fetch the recipients in the database and populate Recipients
 	for _, contactID := range params.Recipients {
-		contact, err := GetContact(instance, contactID)
-		if err != nil {
-			continue
-		}
 		recipient := Member{
 			Status: consts.SharingStatusPending,
 			RefContact: couchdb.DocReference{
-				Type: contact.DocType(),
-				ID:   contact.ID(),
+				Type: consts.Contacts,
+				ID:   contactID,
 			},
-			contact: contact,
+		}
+		if contact := recipient.Contact(instance); contact == nil {
+			continue
 		}
 		sharing.Recipients = append(sharing.Recipients, recipient)
 	}

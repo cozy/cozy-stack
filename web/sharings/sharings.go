@@ -204,14 +204,14 @@ func discoveryForm(c echo.Context) error {
 			"Error": "Error Invalid sharing id",
 		})
 	}
-	recipient, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
+	contact, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error Invalid sharecode",
 		})
 	}
 
-	return renderDiscoveryForm(c, instance, http.StatusOK, sharingID, shareCode, recipient)
+	return renderDiscoveryForm(c, instance, http.StatusOK, sharingID, shareCode, contact)
 }
 
 func discovery(c echo.Context) error {
@@ -225,7 +225,7 @@ func discovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	recipient, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
+	contact, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error Invalid sharecode",
@@ -239,13 +239,13 @@ func discovery(c echo.Context) error {
 		u.Scheme = "https" // Set https as the default scheme
 	}
 
-	member, err := sharing.GetMemberFromRecipientID(instance, recipient.ID())
+	member, err := sharing.GetMemberFromRecipientID(instance, contact.ID())
 	if err != nil {
 		return wrapErrors(err)
 	}
 
 	if err = sharings.RegisterClientOnTheRecipient(instance, sharing, member, u); err != nil {
-		return renderDiscoveryForm(c, instance, http.StatusBadRequest, sharingID, shareCode, recipient)
+		return renderDiscoveryForm(c, instance, http.StatusBadRequest, sharingID, shareCode, contact)
 	}
 
 	oAuthRedirect, err := sharings.GenerateOAuthURL(instance, sharing, member, shareCode)

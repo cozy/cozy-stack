@@ -34,7 +34,7 @@ func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*con
 	if !ok {
 		return nil, ErrRecipientDoesNotExist
 	}
-	return GetContact(i, contactID)
+	return contacts.Find(i, contactID)
 }
 
 // GenerateOAuthQueryString takes care of creating a correct OAuth request for
