@@ -239,7 +239,7 @@ func discovery(c echo.Context) error {
 		u.Scheme = "https" // Set https as the default scheme
 	}
 
-	member, err := sharing.GetMemberFromRecipientID(instance, contact.ID())
+	member, err := sharing.GetMemberFromContactID(instance, contact.ID())
 	if err != nil {
 		return wrapErrors(err)
 	}

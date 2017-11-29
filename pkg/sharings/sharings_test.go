@@ -478,7 +478,7 @@ func TestGetMemberFromRecipientNoRecipient(t *testing.T) {
 	sharing := &Sharing{
 		Recipients: []*Member{rs},
 	}
-	recStatus, err := sharing.GetMemberFromRecipientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromContactID(TestPrefix,
 		"bad recipient")
 	assert.Error(t, err)
 	assert.Nil(t, recStatus)
@@ -496,7 +496,7 @@ func TestGetMemberFromRecipientNotFound(t *testing.T) {
 		Recipients: []*Member{rs},
 	}
 
-	recStatus, err := sharing.GetMemberFromRecipientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromContactID(TestPrefix,
 		"bad recipient")
 	assert.Equal(t, ErrRecipientDoesNotExist, err)
 	assert.Nil(t, recStatus)
@@ -520,7 +520,7 @@ func TestGetMemberFromClientIDSuccess(t *testing.T) {
 	assert.Equal(t, rs, recStatus)
 }
 
-func TestGetMemberFromRecipientIDSuccess(t *testing.T) {
+func TestGetMemberFromContactIDSuccess(t *testing.T) {
 	recID := "fake recipient"
 	rec := &contacts.Contact{}
 	rec.SetID(recID)
@@ -532,7 +532,7 @@ func TestGetMemberFromRecipientIDSuccess(t *testing.T) {
 		Recipients: []*Member{rs},
 	}
 
-	recStatus, err := sharing.GetMemberFromRecipientID(TestPrefix,
+	recStatus, err := sharing.GetMemberFromContactID(TestPrefix,
 		recID)
 	assert.NoError(t, err)
 	assert.Equal(t, rs, recStatus)

@@ -94,16 +94,15 @@ func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*
 	return nil, ErrRecipientDoesNotExist
 }
 
-// GetMemberFromRecipientID returns the Member associated with the
-// given recipient ID.
-// TODO rename
-func (s *Sharing) GetMemberFromRecipientID(db couchdb.Database, recID string) (*Member, error) {
+// GetMemberFromContactID returns the Member associated with the
+// given contact ID.
+func (s *Sharing) GetMemberFromContactID(db couchdb.Database, contactID string) (*Member, error) {
 	for _, m := range s.Recipients {
 		contact := m.Contact(db)
 		if contact == nil {
 			continue
 		}
-		if contact.ID() == recID {
+		if contact.ID() == contactID {
 			return &m, nil
 		}
 	}
