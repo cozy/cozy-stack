@@ -147,7 +147,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 // handler.
 func SetupAppsHandler(appsHandler echo.HandlerFunc) echo.HandlerFunc {
 	mws := []echo.MiddlewareFunc{
-		middlewares.LoadSession,
+		middlewares.LoadAppSession,
 	}
 	if !config.GetConfig().DisableCSP {
 		secure := middlewares.Secure(&middlewares.SecureConfig{

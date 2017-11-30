@@ -7,6 +7,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/cache"
 )
 
+const sessionCacheKey = "session"
+
 type sessionsCache struct {
 	base cache.Cache
 }
@@ -34,7 +36,7 @@ func getCache() *sessionsCache {
 
 	if globalCache == nil {
 		globalCache = &sessionsCache{
-			base: cache.Create(SessionContextKey, 5*time.Minute),
+			base: cache.Create(sessionCacheKey, 5*time.Minute),
 		}
 	}
 

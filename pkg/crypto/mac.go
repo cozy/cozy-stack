@@ -135,7 +135,9 @@ func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error)
 
 	// Skip name prefix
 	buf := bytes.NewBuffer(dec)
-	buf.Next(len(c.Name))
+	if len(additionalData) > 0 {
+		buf.Next(len(additionalData))
+	}
 
 	// Read time and verify time ranges
 	var time int64

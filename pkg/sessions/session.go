@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -17,16 +18,20 @@ import (
 // SessionCookieName : name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
 
-// SessionContextKey name of the session in echo.Context
-const SessionContextKey = "session"
+const (
+	// SessionMaxAge is the maximum duration of the session in seconds
+	SessionMaxAge = 7 * 24 * 60 * 60
 
-// SessionMaxAge : duration of the session
-const SessionMaxAge = 7 * 24 * 60 * 60
-const maxAgeDuration = SessionMaxAge * time.Second
+	// AppCookieMaxAge is the maximum duration of the application cookie is
+	// seconds
+	AppCookieMaxAge = 24 * 60 * 60
+)
 
 var (
 	// ErrNoCookie is returned by GetSession if there is no cookie
 	ErrNoCookie = errors.New("No session cookie")
+	// ErrExpired is returned when the session has expired
+	ErrExpired = errors.New("Session expired")
 	// ErrInvalidID is returned by GetSession if the cookie contains wrong ID
 	ErrInvalidID = errors.New("Session cookie has wrong ID")
 )
@@ -78,7 +83,6 @@ func New(i *instance.Instance) (*Session, error) {
 		Instance: i,
 		LastSeen: time.Now(),
 	}
-
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
 	}
@@ -86,33 +90,14 @@ func New(i *instance.Instance) (*Session, error) {
 	return s, nil
 }
 
-// GetSession retrieves the session from a echo.Context
-func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
-	var err error
-	// check for cached session in context
-	si := c.Get(SessionContextKey)
-	if si != nil {
-		if sp, ok := si.(*Session); ok {
-			return sp, nil
-		}
-	}
-
-	cookie, err := c.Cookie(SessionCookieName)
-	if err != nil || cookie.Value == "" {
-		return nil, ErrNoCookie
-	}
-
-	sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i), []byte(cookie.Value), nil)
-	if err != nil {
-		return nil, err
-	}
-
+// Get fetch the session
+func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	updateCache := false
-	s := getCache().Get(i.Domain, string(sessionID))
+
+	s := getCache().Get(i.Domain, sessionID)
 	if s == nil {
 		s = &Session{}
-		err = couchdb.GetDoc(i, consts.Sessions, string(sessionID), s)
-		// invalid session id
+		err := couchdb.GetDoc(i, consts.Sessions, sessionID, s)
 		if couchdb.IsNotFoundError(err) {
 			return nil, ErrInvalidID
 		}
@@ -121,24 +106,74 @@ func GetSession(c echo.Context, i *instance.Instance) (*Session, error) {
 		}
 		updateCache = true
 	}
+	s.Instance = i
 
-	// if the session is older than half its maxAgeDuration,
-	// save the new LastSeen
-	if s.OlderThan(maxAgeDuration / 2) {
+	// if the session is older than the session max age, it has expired and
+	// should be deleted.
+	if s.OlderThan(SessionMaxAge * time.Second) {
+		err := couchdb.DeleteDoc(i, s)
+		if err != nil {
+			i.Logger().Warn("[session] Failed to delte expired session:", err)
+		}
+		if updateCache {
+			getCache().Revoke(i.Domain, s.DocID)
+		}
+		return nil, ErrExpired
+	}
+
+	// if the session is older than half its half-life, update the LastSeen date.
+	if s.OlderThan((SessionMaxAge * time.Second) / 2) {
+		lastSeen := s.LastSeen
 		s.LastSeen = time.Now()
 		err := couchdb.UpdateDoc(i, s)
 		if err != nil {
 			i.Logger().Warn("[session] Failed to update session last seen:", err)
+		} else {
+			s.LastSeen = lastSeen
+			updateCache = true
 		}
-		updateCache = true
 	}
 
 	if updateCache {
 		getCache().Set(i.Domain, s.DocID, s)
 	}
 
-	c.Set(SessionContextKey, s)
 	return s, nil
+}
+
+// FromCookie retrieves the session from a echo.Context cookies.
+func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
+	cookie, err := c.Cookie(SessionCookieName)
+	if err != nil || cookie.Value == "" {
+		return nil, ErrNoCookie
+	}
+
+	sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i, SessionMaxAge),
+		[]byte(cookie.Value), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return Get(i, string(sessionID))
+}
+
+// FromAppCookie retrives the session from a application submain's cookie.
+func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session, error) {
+	if config.GetConfig().Subdomains == config.FlatSubdomains {
+		cookie, err := c.Cookie(SessionCookieName)
+		if err != nil || cookie.Value == "" {
+			return nil, ErrNoCookie
+		}
+
+		sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i, AppCookieMaxAge),
+			[]byte(cookie.Value), []byte(slug))
+		if err != nil {
+			return nil, err
+		}
+
+		return Get(i, string(sessionID))
+	}
+	return FromCookie(c, i)
 }
 
 // GetAll return all active sessions
@@ -169,7 +204,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 
 // ToCookie returns an http.Cookie for this Session
 func (s *Session) ToCookie() (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()), nil)
+	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance, SessionMaxAge), []byte(s.ID()), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +221,8 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 }
 
 // ToAppCookie returns an http.Cookie for this Session on an app subdomain
-func (s *Session) ToAppCookie(domain string) (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance), []byte(s.ID()), nil)
+func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
+	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance, AppCookieMaxAge), []byte(s.ID()), []byte(slug))
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +230,7 @@ func (s *Session) ToAppCookie(domain string) (*http.Cookie, error) {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   86400, // 1 day
+		MaxAge:   AppCookieMaxAge,
 		Path:     "/",
 		Domain:   utils.StripPort(domain),
 		Secure:   !s.Instance.Dev,
@@ -241,11 +276,11 @@ func DeleteOthers(i *instance.Instance, selfSessionID string) error {
 //
 // 256 bytes should be sufficient enough to support any type of session.
 //
-func cookieMACConfig(i *instance.Instance) *crypto.MACConfig {
+func cookieMACConfig(i *instance.Instance, maxAge int64) *crypto.MACConfig {
 	return &crypto.MACConfig{
 		Name:   SessionCookieName,
 		Key:    i.SessionSecret,
-		MaxAge: SessionMaxAge,
+		MaxAge: maxAge,
 		MaxLen: 256,
 	}
 }

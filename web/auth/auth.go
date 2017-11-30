@@ -44,6 +44,11 @@ func Home(c echo.Context) error {
 	if session, ok := middlewares.GetSession(c); ok {
 		redirect := instance.DefaultRedirection()
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
+		cookie, err := session.ToCookie()
+		if err != nil {
+			return err
+		}
+		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
@@ -84,7 +89,6 @@ func addCodeToRedirect(redirect *url.URL, domain, sessionID string) *url.URL {
 // SetCookieForNewSession creates a new session and sets the cookie on echo context
 func SetCookieForNewSession(c echo.Context) (string, error) {
 	instance := middlewares.GetInstance(c)
-
 	session, err := sessions.New(instance)
 	if err != nil {
 		return "", err
@@ -169,6 +173,11 @@ func loginForm(c echo.Context) error {
 	session, ok := middlewares.GetSession(c)
 	if ok {
 		redirect = addCodeToRedirect(redirect, instance.Domain, session.ID())
+		cookie, err := session.ToCookie()
+		if err != nil {
+			return err
+		}
+		c.SetCookie(cookie)
 		return c.Redirect(http.StatusSeeOther, redirect.String())
 	}
 
