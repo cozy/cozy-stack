@@ -120,18 +120,22 @@ body > svg {
 }
 main {
     display: -ms-flexbox;
+    display: -webkit-flex;
     display: flex;
     -ms-flex-direction: column;
-    flex-direction: column
+    -webkit-flex-direction: column;
+            flex-direction: column
 }
 main>div {
     display: -ms-flexbox;
+    display: -webkit-flex;
     display: flex;
     min-height: 100vh
 }
 .main-wrapper {
     -ms-flex: 0 1 30em;
-    flex: 0 1 30em;
+    -webkit-flex: 0 1 30em;
+            flex: 0 1 30em;
     margin: auto;
     padding: 3em 1em
 }
@@ -177,9 +181,11 @@ a {
 form .line {
     position: relative;
     display: -ms-flexbox;
+    display: -webkit-flex;
     display: flex;
     -ms-flex-direction: column;
-    flex-direction: column
+    -webkit-flex-direction: column;
+            flex-direction: column
 }
 form .line button[action=password-visibility] {
     position: absolute;
@@ -359,12 +365,14 @@ footer button {
 }
 footer ol {
     display: -ms-flexbox;
+    display: -webkit-flex;
     display: flex;
     list-style-type: none
 }
 footer li {
     -ms-flex: 1 1 1em;
-    flex: 1 1 1em;
+    -webkit-flex: 1 1 1em;
+            flex: 1 1 1em;
     margin: 3px;
     height: 3px;
     border-radius: 3px;

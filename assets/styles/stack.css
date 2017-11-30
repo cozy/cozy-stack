@@ -24,10 +24,18 @@ a:focus {
 }
 
 [role=application] {
+    display: -webkit-flex;
+    display: -ms-flexbox;
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
+    -webkit-flex-direction: row;
+        -ms-flex-direction: row;
+            flex-direction: row;
+    -webkit-align-items: center;
+        -ms-flex-align: center;
+            align-items: center;
+    -webkit-justify-content: center;
+        -ms-flex-pack: center;
+            justify-content: center;
     min-height: 100%;
 }
 .btn {
@@ -82,12 +90,15 @@ a:focus {
     padding: 0;
     white-space: nowrap;
     clip: rect(1px, 1px, 1px, 1px);
-    clip-path: inset(50%);
+    -webkit-clip-path: inset(50%);
+            clip-path: inset(50%);
 }
 
 /* Wrapper */
 .popup {
-    flex: 0 0 33rem;
+    -webkit-flex: 0 0 33rem;
+        -ms-flex: 0 0 33rem;
+            flex: 0 0 33rem;
     padding: 1em 0;
 }
 
@@ -121,13 +132,23 @@ h1 {
 
 /* Form controls */
 .controls {
+    display: -webkit-flex;
+    display: -ms-flexbox;
     display: flex;
-    flex-wrap: nowrap;
-    align-items: stretch;
-    justify-content: space-between;
+    -webkit-flex-wrap: nowrap;
+        -ms-flex-wrap: nowrap;
+            flex-wrap: nowrap;
+    -webkit-align-items: stretch;
+        -ms-flex-align: stretch;
+            align-items: stretch;
+    -webkit-justify-content: space-between;
+        -ms-flex-pack: justify;
+            justify-content: space-between;
 }
 .controls .btn {
-    flex: 0 0 48.5%;
+    -webkit-flex: 0 0 48.5%;
+        -ms-flex: 0 0 48.5%;
+            flex: 0 0 48.5%;
 }
 
 /* Toggle More */
@@ -257,7 +278,9 @@ li[class^="fr.maif.maifuser.sinistre"]:before {
     }
     .popup {
         box-sizing: border-box;
-        flex-basis: 100%;
+        -webkit-flex-basis: 100%;
+            -ms-flex-preferred-size: 100%;
+                flex-basis: 100%;
         padding: 1em;
     }
     h1 {
