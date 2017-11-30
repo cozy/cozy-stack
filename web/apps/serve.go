@@ -203,7 +203,9 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 	u := c.Request().URL
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
-	if !middlewares.IsLoggedIn(c) {
+	// if we are not already connected
+	_, err := sessions.FromAppCookie(c, i, slug)
+	if err != nil {
 		if code := sessions.FindCode(value, u.Host); code != nil {
 			session, err := sessions.Get(i, code.SessionID)
 			if err == nil {
