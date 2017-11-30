@@ -145,9 +145,13 @@ func AcceptSharingRequest(i *instance.Instance, answerURL, scope string) error {
 // SharingAccepted handles an accepted sharing on the sharer side and returns
 // the redirect url.
 func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode string) (*Sharing, error) {
+	if shareCode == "" {
+		return nil, ErrMissingCode
+	}
+
 	perms, err := permissions.GetForShareCode(i, shareCode)
 	if err != nil {
-		return nil, err
+		return nil, ErrForbidden
 	}
 
 	s, err := GetSharingFromPermissions(i, perms)

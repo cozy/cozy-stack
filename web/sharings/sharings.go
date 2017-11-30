@@ -104,7 +104,7 @@ func CreateSharing(c echo.Context) error {
 	}
 	slug, err := checkCreatePermissions(c, params)
 	if err != nil {
-		return err
+		return wrapErrors(sharings.ErrForbidden)
 	}
 
 	sharing, err := sharings.CreateSharing(instance, params, slug)
@@ -130,7 +130,7 @@ func GetSharingDoc(c echo.Context) error {
 		return jsonapi.NotFound(err)
 	}
 	if err = checkGetPermissions(c, sharing); err != nil {
-		return err
+		return wrapErrors(sharings.ErrForbidden)
 	}
 	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 }
@@ -345,7 +345,7 @@ func checkGetPermissions(c echo.Context, sharing *sharings.Sharing) error {
 			return nil
 		}
 	}
-	return echo.NewHTTPError(http.StatusForbidden)
+	return sharings.ErrForbidden
 }
 
 // wrapErrors returns a formatted error
@@ -355,8 +355,8 @@ func wrapErrors(err error) error {
 		return jsonapi.InvalidParameter("sharing_type", err)
 	case sharings.ErrRecipientDoesNotExist:
 		return jsonapi.NotFound(err)
-	case sharings.ErrMissingScope, sharings.ErrMissingState, sharings.ErrRecipientHasNoURL,
-		sharings.ErrRecipientHasNoEmail, sharings.ErrRecipientBadParams:
+	case sharings.ErrMissingScope, sharings.ErrMissingState, sharings.ErrMissingCode,
+		sharings.ErrRecipientHasNoURL, sharings.ErrRecipientHasNoEmail, sharings.ErrRecipientBadParams:
 		return jsonapi.BadRequest(err)
 	case sharings.ErrSharingDoesNotExist, sharings.ErrPublicNameNotDefined:
 		return jsonapi.NotFound(err)
@@ -364,6 +364,8 @@ func wrapErrors(err error) error {
 		return jsonapi.InternalServerError(err)
 	case sharings.ErrNoOAuthClient:
 		return jsonapi.BadRequest(err)
+	case sharings.ErrForbidden:
+		return echo.NewHTTPError(http.StatusForbidden)
 	}
 	return err
 }
