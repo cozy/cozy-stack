@@ -934,16 +934,12 @@ func getDocAtRecipient(ins *instance.Instance, newDoc *couchdb.JSONDoc, opts *Se
 			"Authorization": "Bearer " + recInfo.AccessToken.AccessToken,
 		},
 	}
-	var res *http.Response
-	var err error
-	res, err = request.Req(reqOpts)
+	res, err := request.Req(reqOpts)
+	if sharings.IsAuthError(err) {
+		res, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
+	}
 	if err != nil {
-		if sharings.IsAuthError(err) {
-			res, err = sharings.RefreshTokenAndRetry(ins, opts.SharingID, recInfo, reqOpts)
-			if err != nil {
-				return nil, err
-			}
-		}
+		return nil, err
 	}
 	doc := &couchdb.JSONDoc{}
 	if err := request.ReadJSON(res.Body, doc); err != nil {

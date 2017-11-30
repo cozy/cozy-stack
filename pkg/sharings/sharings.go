@@ -179,7 +179,7 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 
 // FindSharing retrieves a sharing document from its ID
 func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
-	var res *Sharing
+	res := &Sharing{}
 	err := couchdb.GetDoc(db, consts.Sharings, sharingID, res)
 	if err != nil {
 		return nil, err

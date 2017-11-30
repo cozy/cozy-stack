@@ -8,7 +8,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -70,21 +69,10 @@ func SharingUpdates(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	var res []sharings.Sharing
-	// TODO don't use the by-sharing index
-	err = couchdb.FindDocs(i, consts.Sharings, &couchdb.FindRequest{
-		UseIndex: "by-sharing-id",
-		Selector: mango.Equal("sharing_id", sharingID),
-	}, &res)
+	sharing, err := sharings.FindSharing(i, sharingID)
 	if err != nil {
-		return err
-	}
-	if len(res) < 1 {
 		return ErrSharingDoesNotExist
-	} else if len(res) > 1 {
-		return ErrSharingIDNotUnique
 	}
-	sharing := &res[0]
 
 	// One-Shot sharing do not propagate updates.
 	if sharing.SharingType == consts.OneShotSharing {
@@ -110,7 +98,6 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 
 	if sendToSharer {
 		// We are on the recipient side
-
 		recInfos = make([]*sharings.RecipientInfo, 1)
 		sharerStatus := sharing.Sharer
 		info, err := sharings.ExtractRecipientInfo(&sharerStatus)
@@ -131,6 +118,10 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 				recInfos = append(recInfos, info)
 			}
 		}
+	}
+
+	if len(recInfos) == 0 {
+		return nil
 	}
 
 	opts := &SendOptions{
