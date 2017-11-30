@@ -1296,7 +1296,7 @@ func TestMain(m *testing.M) {
 }
 
 func fakeAPI(g *echo.Group) {
-	g.Use(middlewares.NeedInstance)
+	g.Use(middlewares.NeedInstance, middlewares.LoadSession)
 	g.GET("", func(c echo.Context) error {
 		var content string
 		if middlewares.IsLoggedIn(c) {

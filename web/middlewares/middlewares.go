@@ -4,7 +4,18 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/labstack/echo"
 )
+
+// Compose can be used to compose a list of middlewares together with a main
+// handler function. It returns a new handler that should be the composition of
+// all the middlwares with the initial handler.
+func Compose(handler echo.HandlerFunc, mws ...echo.MiddlewareFunc) echo.HandlerFunc {
+	for i := len(mws) - 1; i >= 0; i-- {
+		handler = mws[i](handler)
+	}
+	return handler
+}
 
 // SplitHost returns a splitted host domain taking into account the subdomains
 // configuration mode used.

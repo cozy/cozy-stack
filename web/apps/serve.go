@@ -123,8 +123,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		needAuth = !route.Public
 	}
 
-	session, err := sessions.FromAppCookie(c, i, slug)
-	isLoggedIn := err == nil
+	session, isLoggedIn := middlewares.GetSession(c)
 	if needAuth && !isLoggedIn {
 		if file != route.Index {
 			return echo.NewHTTPError(http.StatusUnauthorized, "You must be authenticated")
@@ -142,7 +141,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 	filepath := path.Join("/", route.Folder, file)
 	version := app.Version()
 	if file != route.Index {
-		err = fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
+		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 		if os.IsNotExist(err) {
 			return echo.NewHTTPError(http.StatusNotFound)
 		}
@@ -203,9 +202,7 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 	u := c.Request().URL
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
-	// if we are not already connected
-	_, err := sessions.FromAppCookie(c, i, slug)
-	if err != nil {
+	if !middlewares.IsLoggedIn(c) {
 		if code := sessions.FindCode(value, u.Host); code != nil {
 			session, err := sessions.Get(i, code.SessionID)
 			if err == nil {
