@@ -1,4 +1,4 @@
-package sharings
+package sharings_test
 
 import (
 	"bytes"
@@ -22,6 +22,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -123,24 +124,19 @@ func createOAuthClient(t *testing.T) *oauth.Client {
 	return client
 }
 
-func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, slug string, recipients []*contacts.Contact, rule permissions.Rule) *Sharing {
-	sharing := &Sharing{
+func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool, slug string, recipients []*contacts.Contact, rule permissions.Rule) *sharings.Sharing {
+	sharing := &sharings.Sharing{
 		SharingType: sharingType,
 		Owner:       owner,
-		Permissions: permissions.Set{rule},
-		Recipients:  []*Member{},
+		Recipients:  []sharings.Member{},
 	}
+
+	// TODO do something with sharingID and rule
 
 	if slug == "" {
 		sharing.AppSlug = utils.RandomString(15)
 	} else {
 		sharing.AppSlug = slug
-	}
-
-	if sharingID == "" {
-		sharing.SharingID = utils.RandomString(32)
-	} else {
-		sharing.SharingID = sharingID
 	}
 
 	scope, err := rule.MarshalScopeString()
@@ -151,7 +147,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 			for _, cozy := range recipient.Cozy {
 				cozy.URL = strings.TrimPrefix(cozy.URL, "http://")
 			}
-			err = CreateOrUpdateRecipient(testInstance, recipient)
+			err = sharings.CreateOrUpdateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
 		}
 
@@ -161,7 +157,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 			permissions.AccessTokenAudience, scope)
 		assert.NoError(t, errc)
 
-		rs := &Member{
+		rs := sharings.Member{
 			Status: consts.SharingStatusAccepted,
 			RefContact: couchdb.DocReference{
 				ID:   recipient.ID(),
@@ -184,10 +180,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 		if owner {
 			sharing.Recipients = append(sharing.Recipients, rs)
 		} else {
-			sharing.Sharer = Sharer{
-				SharerStatus: rs,
-				URL:          recipient.Cozy[0].URL,
-			}
+			sharing.Sharer = rs
 			break
 		}
 	}
@@ -258,41 +251,27 @@ func addPublicName(t *testing.T, instance *instance.Instance) {
 
 func TestGetAccessTokenNoAuth(t *testing.T) {
 	code := "sesame"
-	rs := &Member{
-		recipient: &contacts.Contact{
-			Cozy: []contacts.Cozy{
-				contacts.Cozy{URL: recipientURL},
-			},
-		},
+	rs := &sharings.Member{
+		URL:    recipientURL,
 		Client: auth.Client{},
 	}
-	_, err := rs.getAccessToken(code)
+	_, err := rs.GetAccessToken(code)
 	assert.Error(t, err)
 }
 
 func TestGetAccessTokenNoURL(t *testing.T) {
 	code := "dummy"
-	rs := &Member{
-		recipient: &contacts.Contact{},
-		Client:    auth.Client{},
+	rs := &sharings.Member{
+		Client: auth.Client{},
 	}
 
-	_, err := rs.getAccessToken(code)
-	assert.Equal(t, ErrRecipientHasNoURL, err)
+	_, err := rs.GetAccessToken(code)
+	assert.Equal(t, sharings.ErrRecipientHasNoURL, err)
 }
 
-func TestRegisterNoURL(t *testing.T) {
-	rs := &Member{
-		recipient: &contacts.Contact{
-			DocID: "dummyid",
-		},
-	}
-	err := rs.Register(in)
-	assert.Error(t, err)
-	assert.Equal(t, ErrRecipientHasNoURL, err)
-}
+func TestRegisterClientSuccess(t *testing.T) {
+	addPublicName(t, in)
 
-func TestRegisterSuccess(t *testing.T) {
 	// In Go 1.8 url.Parse returns the following error if we try to parse an
 	// url that looks like "127.0.0.1:46473": "first path segment in URL cannot
 	// contain colon".
@@ -301,26 +280,17 @@ func TestRegisterSuccess(t *testing.T) {
 	if !strings.HasPrefix(rURL, "http://") {
 		rURL = "http://" + rURL
 	}
-
-	rs := &Member{
-		recipient: &contacts.Contact{
-			Cozy: []contacts.Cozy{
-				contacts.Cozy{URL: rURL},
-			},
-			Email: []contacts.Email{
-				contacts.Email{Address: "xerxes@fr"},
-			},
-			DocID: "dummyid",
-		},
-	}
-
-	addPublicName(t, in)
-
-	err := rs.Register(in)
+	u, err := url.Parse(rURL)
 	assert.NoError(t, err)
-	assert.NotNil(t, rs.Client)
+
+	m := &sharings.Member{}
+	err = m.RegisterClient(in, u)
+	assert.NoError(t, err)
+	assert.NotNil(t, m.Client)
+	assert.NotNil(t, m.URL)
 }
 
+/*
 func TestGetContact(t *testing.T) {
 	recipient := &contacts.Contact{}
 
@@ -953,6 +923,7 @@ func TestDeleteOAuthClient(t *testing.T) {
 	assert.Error(t, err)
 }
 
+*/
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	testutils.NeedCouchdb()

@@ -105,9 +105,9 @@ func CreateOrUpdateRecipient(db couchdb.Database, doc *contacts.Contact) error {
 	return couchdb.CreateDoc(db, doc)
 }
 
-// getAccessToken sends an "access_token" request to the recipient using the
+// GetAccessToken sends an "access_token" request to the recipient using the
 // given authorization code.
-func (m *Member) getAccessToken(code string) (*auth.AccessToken, error) {
+func (m *Member) GetAccessToken(code string) (*auth.AccessToken, error) {
 	if m.URL == "" {
 		return nil, ErrRecipientHasNoURL
 	}

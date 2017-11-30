@@ -12,9 +12,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
-// The sharing-dependant information: the recipient's name, the sharer's public
-// name, the description of the sharing, and the OAuth query string.
-type mailTemplateValues struct {
+// MailTemplateValues is a struct with the recipient's name, the sharer's
+// public name, the description of the sharing, and the link to the sharing.
+type MailTemplateValues struct {
 	RecipientName    string
 	SharerPublicName string
 	Description      string
@@ -52,7 +52,7 @@ func SendMails(instance *instance.Instance, s *Sharing) error {
 			continue
 		}
 		link := linkForRecipient(instance, s, &recipient)
-		mailValues := &mailTemplateValues{
+		mailValues := &MailTemplateValues{
 			RecipientName:    mailAddress.Name,
 			SharerPublicName: sharerPublicName,
 			Description:      desc,
