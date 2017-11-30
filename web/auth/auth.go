@@ -486,6 +486,14 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		})
 	}
 
+	isSharingType := params.resType == "cozy_sharing"
+	isSharingKind := params.client.ClientKind == "sharing"
+	if isSharingType != isSharingKind {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Error": "Error Invalid response type",
+		})
+	}
+
 	return false, nil
 }
 
@@ -577,7 +585,15 @@ func authorize(c echo.Context) error {
 
 	if params.resType == "cozy_sharing" {
 		if err = sharings.AcceptSharingRequest(instance, u.String(), params.scope); err != nil {
-			return err
+			instance.Logger().Warnf("[sharing] Error on accepting a sharing: %s", err)
+			// It is safer to delete the client, as it may have a token and
+			// this cozy has no document to acknowledge that
+			if errd := params.client.Delete(params.instance); errd != nil {
+				instance.Logger().Warnf("[sharing] and can't delete the client: %s", errd)
+			}
+			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+				"Error": "Error Invalid redirect_uri",
+			})
 		}
 		return Home(c)
 	}

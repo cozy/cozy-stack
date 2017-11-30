@@ -225,6 +225,9 @@ msgstr "Invalid response type"
 msgid "Error Invalid scope"
 msgstr "Invalid scope"
 
+msgid "Error Accept sharing failed"
+msgstr "Sorry, the setup of the sharing failed"
+
 msgid "Error Must be authenticated"
 msgstr "You must be authenticated"
 
