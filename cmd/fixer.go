@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client"
@@ -17,6 +18,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/cobra"
 )
+
+var dryRunFlag bool
 
 var fixerCmdGroup = &cobra.Command{
 	Use:   "fixer [command]",
@@ -240,12 +243,53 @@ var redisFixer = &cobra.Command{
 	},
 }
 
+var orphanAccountsFixer = &cobra.Command{
+	Use:     "accounts-orphans [domain]",
+	Aliases: []string{"account-orphans"},
+	Short:   "Rebuild triggers associated with orphan accounts",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newAdminClient()
+		res, err := c.Req(&request.Options{
+			Method: "POST",
+			Path:   fmt.Sprintf("/instances/%s/orphan_accounts", url.PathEscape(domain)),
+			Queries: url.Values{
+				"DryRun": {strconv.FormatBool(dryRunFlag)},
+			},
+		})
+		if err != nil {
+			return err
+		}
+		var data []json.RawMessage
+		if err = request.ReadJSON(res.Body, &data); err != nil {
+			return err
+		}
+		b, err := json.MarshalIndent(data, "", "  ")
+		if err != nil {
+			return err
+		}
+		if len(data) == 0 {
+			fmt.Println("Nothing to do")
+		} else {
+			fmt.Println(string(b))
+		}
+		return nil
+	},
+}
+
 func init() {
+	orphanAccountsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
+
 	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(jobsFixer)
 	fixerCmdGroup.AddCommand(md5FixerCmd)
 	fixerCmdGroup.AddCommand(mimeFixerCmd)
 	fixerCmdGroup.AddCommand(onboardingsFixer)
 	fixerCmdGroup.AddCommand(redisFixer)
+	fixerCmdGroup.AddCommand(orphanAccountsFixer)
+
 	RootCmd.AddCommand(fixerCmdGroup)
 }

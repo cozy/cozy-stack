@@ -2,14 +2,22 @@ package instances
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/cozy/cozy-stack/pkg/accounts"
+	"github.com/cozy/cozy-stack/pkg/apps"
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/labstack/echo"
@@ -208,6 +216,128 @@ func rebuildRedis(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+func cleanOrphanAccounts(c echo.Context) error {
+	type result struct {
+		Result  string                  `json:"result"`
+		Error   string                  `json:"error,omitempty"`
+		Trigger *scheduler.TriggerInfos `json:"trigger,omitempty"`
+	}
+
+	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
+	results := make([]*result, 0)
+	domain := c.Param("domain")
+	db := couchdb.SimpleDatabasePrefix(domain)
+
+	var as []*accounts.Account
+	err := couchdb.GetAllDocs(db, consts.Accounts, nil, &as)
+	if couchdb.IsNoDatabaseError(err) {
+		return c.JSON(http.StatusOK, results)
+	}
+	if err != nil {
+		return err
+	}
+
+	sched := globals.GetScheduler()
+	ts, err := sched.GetAll(domain)
+	if couchdb.IsNoDatabaseError(err) {
+		return c.JSON(http.StatusOK, results)
+	}
+	if err != nil {
+		return err
+	}
+
+	konnectors, err := apps.ListKonnectors(db)
+	if couchdb.IsNoDatabaseError(err) {
+		return c.JSON(http.StatusOK, results)
+	}
+	if err != nil {
+		return err
+	}
+
+	triggersAccounts := make(map[string]struct{})
+
+	for _, trigger := range ts {
+		if trigger.Infos().WorkerType == "konnector" {
+			var v struct {
+				Account string `json:"account"`
+			}
+			if err = json.Unmarshal(trigger.Infos().Message, &v); err != nil {
+				continue
+			}
+			if v.Account != "" {
+				triggersAccounts[v.Account] = struct{}{}
+			}
+		}
+	}
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for _, account := range as {
+		_, ok := triggersAccounts[account.ID()]
+		if ok {
+			continue
+		}
+
+		var konnectorFound bool
+		for _, k := range konnectors {
+			if k.Slug() == account.AccountType {
+				konnectorFound = true
+				break
+			}
+		}
+
+		if !konnectorFound {
+			continue
+		}
+
+		msg, _ := json.Marshal(struct {
+			Account      string `json:"account"`
+			Konnector    string `json:"konnector"`
+			FolderToSave string `json:"folder_to_save"`
+		}{
+			Account:   account.ID(),
+			Konnector: account.AccountType,
+		})
+
+		var args string
+		{
+			d := rng.Intn(7) + 1
+			h := rng.Intn(6) // during the night, between 0 and 5
+			m := rng.Intn(60)
+			args = fmt.Sprintf("0 %d %d * * %d", m, h, d)
+		}
+
+		var r result
+		infos := &scheduler.TriggerInfos{
+			WorkerType: "konnector",
+			Domain:     domain,
+			Type:       "@cron",
+			Arguments:  args,
+			Message:    jobs.Message(msg),
+		}
+		r.Trigger = infos
+		t, err := scheduler.NewTrigger(infos)
+		if err != nil {
+			r.Result = "failed"
+			r.Error = err.Error()
+			continue
+		}
+		if !dryRun {
+			err = sched.Add(t)
+		} else {
+			err = nil
+		}
+		if err != nil {
+			r.Result = "failed"
+			r.Error = err.Error()
+		} else {
+			r.Result = "created"
+		}
+		results = append(results, &r)
+	}
+
+	return c.JSON(http.StatusOK, results)
+}
+
 func wrapError(err error) error {
 	switch err {
 	case instance.ErrNotFound:
@@ -241,5 +371,6 @@ func Routes(router *echo.Group) {
 	router.POST("/oauth_client", registerClient)
 	router.POST("/:domain/export", exporter)
 	router.POST("/:domain/import", importer)
+	router.POST("/:domain/orphan_accounts", cleanOrphanAccounts)
 	router.POST("/redis", rebuildRedis)
 }
