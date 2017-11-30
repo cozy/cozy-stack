@@ -121,6 +121,12 @@ const (
 )
 
 const (
+	// SharingResponseType is the response_type of the OAuth client used for
+	// sharings between two cozy instances
+	SharingResponseType = "cozy_sharing"
+)
+
+const (
 	// SelectorReferencedBy is the "referenced_by" selector.
 	SelectorReferencedBy = couchdb.SelectorReferencedBy
 )

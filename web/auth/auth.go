@@ -468,7 +468,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			"Error": "Error No scope parameter",
 		})
 	}
-	if params.resType != "code" && params.resType != "cozy_sharing" {
+	if params.resType != "code" && params.resType != consts.SharingResponseType {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Error": "Error Invalid response type",
 		})
@@ -486,7 +486,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		})
 	}
 
-	isSharingType := params.resType == "cozy_sharing"
+	isSharingType := params.resType == consts.SharingResponseType
 	isSharingKind := params.client.ClientKind == "sharing"
 	if isSharingType != isSharingKind {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
@@ -528,7 +528,7 @@ func authorizeForm(c echo.Context) error {
 	params.client.ClientID = params.client.CouchID
 
 	tmpl := "authorize.html"
-	if params.resType == "cozy_sharing" {
+	if params.resType == consts.SharingResponseType {
 		tmpl = "authorize_sharing.html"
 	}
 	return c.Render(http.StatusOK, tmpl, echo.Map{
@@ -583,7 +583,7 @@ func authorize(c echo.Context) error {
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
 
-	if params.resType == "cozy_sharing" {
+	if params.resType == consts.SharingResponseType {
 		if err = sharings.AcceptSharingRequest(instance, u.String(), params.scope); err != nil {
 			instance.Logger().Warnf("[sharing] Error on accepting a sharing: %s", err)
 			// It is safer to delete the client, as it may have a token and

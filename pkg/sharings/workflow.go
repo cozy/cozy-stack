@@ -69,7 +69,7 @@ func GenerateOAuthURL(i *instance.Instance, s *Sharing, m *Member, code string) 
 		consts.QueryParamAppSlug: {s.AppSlug},
 		"client_id":              {m.Client.ClientID},
 		"redirect_uri":           {m.Client.RedirectURIs[0]},
-		"response_type":          {"cozy_sharing"},
+		"response_type":          {consts.SharingResponseType},
 		"scope":                  {scope},
 		"state":                  {code},
 	}
