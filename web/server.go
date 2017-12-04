@@ -22,7 +22,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 
-	"github.com/rakyll/statik/fs"
+	"github.com/cozy/statik/fs"
 	"github.com/spf13/afero"
 )
 

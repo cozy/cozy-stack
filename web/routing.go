@@ -1,4 +1,4 @@
-//go:generate statik -src=../.assets -dest=.
+//go:generate statik -src=../assets -dest=. -externals=../assets/externals
 
 package web
 
@@ -39,9 +39,9 @@ import (
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
 
+	"github.com/cozy/statik/fs"
 	"github.com/labstack/echo"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rakyll/statik/fs"
 )
 
 var (
@@ -138,8 +138,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		}
 	}
 
-	h := http.FileServer(statikFS)
-	r := &renderer{t: t, Handler: h}
+	r := &renderer{t: t, Handler: statikFS}
 	return r, nil
 }
 
@@ -174,7 +173,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 	}
 
 	router.Renderer = r
-	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r)))
+	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets", r)))
 	router.GET("/favicon.ico", echo.WrapHandler(r))
 	router.GET("/robots.txt", echo.WrapHandler(r))
 	return nil
