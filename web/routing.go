@@ -113,7 +113,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 			return nil, fmt.Errorf("Can't load the assets from %s", assetsPath)
 		}
 		h := http.FileServer(http.Dir(assetsPath))
-		r := &renderer{t: t, Handler: h}
+		r := &renderer{t: t, Handler: http.StripPrefix("/assets", h)}
 		return r, nil
 	}
 
@@ -144,7 +144,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		}
 	}
 
-	r := &renderer{t: t, Handler: statikFS.Handler(privateAssets...)}
+	r := &renderer{t: t, Handler: statikFS.Handler("/assets", privateAssets...)}
 	return r, nil
 }
 
@@ -179,7 +179,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 	}
 
 	router.Renderer = r
-	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets", r)))
+	router.GET("/assets/*", echo.WrapHandler(r))
 	router.GET("/favicon.ico", echo.WrapHandler(r))
 	router.GET("/robots.txt", echo.WrapHandler(r))
 	return nil
