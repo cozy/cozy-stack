@@ -85,14 +85,15 @@ func RevokeRecipientByContactID(ins *instance.Instance, sharing *Sharing, contac
 		return ErrOnlySharerCanRevokeRecipient
 	}
 
-	for _, rs := range sharing.Recipients {
+	for i, _ := range sharing.Recipients {
+		rs := &sharing.Recipients[i]
 		c := rs.Contact(ins)
 		if c != nil && c.DocID == contactID {
 			// TODO check how askToRevokeRecipient behave when no recipient has accepted the sharing
-			if err := askToRevokeSharing(ins, sharing, &rs); err != nil {
+			if err := askToRevokeSharing(ins, sharing, rs); err != nil {
 				return err
 			}
-			return RevokeRecipient(ins, sharing, &rs)
+			return RevokeRecipient(ins, sharing, rs)
 		}
 	}
 
@@ -106,9 +107,10 @@ func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientI
 		return ErrOnlySharerCanRevokeRecipient
 	}
 
-	for _, rs := range sharing.Recipients {
+	for i, _ := range sharing.Recipients {
+		rs := &sharing.Recipients[i]
 		if rs.Client.ClientID == clientID {
-			return RevokeRecipient(ins, sharing, &rs)
+			return RevokeRecipient(ins, sharing, rs)
 		}
 	}
 
@@ -154,6 +156,8 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
+// DeleteOAuthClient deletes the OAuth client used by the member for
+// authentifying its requests to this cozy.
 func DeleteOAuthClient(ins *instance.Instance, rs *Member) error {
 	client, err := oauth.FindClient(ins, rs.InboundClientID)
 	if err != nil {
@@ -207,8 +211,7 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *Member, recipient
 		// grants him the rights to request the sharer, as he doesn't have
 		// any credentials otherwise.
 		if sharing.SharingType == consts.TwoWaySharing {
-			path = fmt.Sprintf("/sharings/%s/recipient/%s", sharingID,
-				rs.InboundClientID)
+			path = fmt.Sprintf("/sharings/%s/%s", sharingID, rs.InboundClientID)
 		} else {
 			return nil
 		}

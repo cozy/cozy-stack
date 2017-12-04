@@ -56,6 +56,10 @@ func (s *Sharing) DocType() string { return consts.Sharings }
 // Clone implements couchdb.Doc
 func (s *Sharing) Clone() couchdb.Doc {
 	cloned := *s
+	cloned.Recipients = make([]Member, len(s.Recipients))
+	for i, _ := range s.Recipients {
+		cloned.Recipients[i] = s.Recipients[i]
+	}
 	return &cloned
 }
 

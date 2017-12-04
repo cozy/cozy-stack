@@ -323,10 +323,6 @@ func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Member, 
 func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) error {
 	fs := ins.VFS()
 
-	// TODO Using a cursor might lead to inconsistency. Change it if the need
-	// arises.
-	cursor := couchdb.NewSkipCursor(10000, 0)
-
 	doc := couchdb.JSONDoc{}
 	err := couchdb.GetDoc(ins, doctype, docID, &doc)
 	if err != nil {
@@ -339,9 +335,9 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		doc.Type = doctype
 	}
 
+	cursor := couchdb.NewSkipCursor(10000, 0)
 	for {
-		perms, errg := permissions.GetSharedWithMePermissionsByDoctype(ins,
-			doctype, cursor)
+		perms, errg := permissions.GetSharedWithMePermissionsByDoctype(ins, doctype, cursor)
 		if errg != nil {
 			return errg
 		}
@@ -349,6 +345,7 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		for _, perm := range perms {
 			if perm.Permissions.Allow(permissions.GET, doc) ||
 				perm.Permissions.Allow(permissions.POST, doc) ||
+				perm.Permissions.Allow(permissions.PATCH, doc) ||
 				perm.Permissions.Allow(permissions.PUT, doc) ||
 				perm.Permissions.Allow(permissions.DELETE, doc) {
 				return nil

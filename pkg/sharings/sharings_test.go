@@ -131,8 +131,6 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 		Recipients:  []sharings.Member{},
 	}
 
-	// TODO do something with sharingID and rule
-
 	if slug == "" {
 		sharing.AppSlug = utils.RandomString(15)
 	} else {
@@ -151,6 +149,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 			assert.NoError(t, err)
 		}
 
+		u := recipient.PrimaryCozyURL()
 		client := createOAuthClient(t)
 		client.CouchID = client.ClientID
 		accessToken, errc := client.CreateJWT(testInstance,
@@ -159,6 +158,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 
 		rs := sharings.Member{
 			Status: consts.SharingStatusAccepted,
+			URL:    u,
 			RefContact: couchdb.DocReference{
 				ID:   recipient.ID(),
 				Type: recipient.DocType(),
@@ -185,22 +185,19 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 		}
 	}
 
-	err = couchdb.CreateDoc(testInstance, sharing)
+	if sharingID == "" {
+		err = couchdb.CreateDoc(testInstance, sharing)
+	} else {
+		sharing.SID = sharingID
+		err = couchdb.CreateNamedDoc(testInstance, sharing)
+	}
+	assert.NoError(t, err)
+
+	set := permissions.Set{rule}
+	_, err = permissions.CreateSharedByMeSet(testInstance, sharing.SID, nil, set)
 	assert.NoError(t, err)
 
 	return sharing
-}
-
-func insertClientDocumentInDB(db couchdb.Database, clientID, url string) error {
-	client := couchdb.JSONDoc{
-		Type: consts.OAuthClients,
-		M: map[string]interface{}{
-			"_id":        clientID,
-			"client_uri": url,
-		},
-	}
-
-	return couchdb.CreateNamedDocWithDB(db, client)
 }
 
 func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.DocReference) *vfs.FileDoc {
@@ -438,24 +435,6 @@ func TestGetMemberFromRecipientNoRecipient(t *testing.T) {
 	assert.Nil(t, recStatus)
 }
 
-func TestGetMemberFromRecipientNotFound(t *testing.T) {
-	recID := "fake recipient"
-	rec := &contacts.Contact{}
-	rec.SetID(recID)
-	rs := sharings.Member{
-	// recipient: rec,
-	}
-
-	sharing := &sharings.Sharing{
-		Recipients: []sharings.Member{rs},
-	}
-
-	recStatus, err := sharing.GetMemberFromContactID(TestPrefix,
-		"bad recipient")
-	assert.Equal(t, sharings.ErrRecipientDoesNotExist, err)
-	assert.Nil(t, recStatus)
-}
-
 func TestGetMemberFromClientIDSuccess(t *testing.T) {
 	clientID := "fake client"
 	rs := sharings.Member{
@@ -490,6 +469,10 @@ func TestGetMemberFromContactIDSuccess(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, rs, *recStatus)
 }
+
+/*
+// TODO uncomment the following test when
+// permissions.GetSharedWithMePermissionsByDoctype will have been updated
 
 func TestRemoveDocumentIfNotShared(t *testing.T) {
 	// First set of tests: JSON documents.
@@ -542,7 +525,6 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		"testRemoveIfNotSharedAlbumContent", []couchdb.DocReference{
 			couchdb.DocReference{Type: "io.cozy.photos.albums", ID: "456"},
 		})
-
 	err = sharings.RemoveDocumentIfNotShared(testInstance, consts.Files, fileAlbum.ID())
 	assert.NoError(t, err)
 	fileDoc, err := testInstance.VFS().FileByID(fileAlbum.ID())
@@ -554,14 +536,13 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 	fileToDelete := createFile(t, testInstance.VFS(),
 		"testRemoveIfNotSharedToDelete", "testRemoveIfNotSharedToDeleteContent",
 		[]couchdb.DocReference{})
-
-	err = sharings.RemoveDocumentIfNotShared(testInstance, consts.Files,
-		fileToDelete.ID())
+	err = sharings.RemoveDocumentIfNotShared(testInstance, consts.Files, fileToDelete.ID())
 	assert.NoError(t, err)
-	fileDoc, err = testInstance.VFS().FileByID(fileToDelete.ID())
+	fileDoc, err := testInstance.VFS().FileByID(fileToDelete.ID())
 	assert.NoError(t, err)
 	assert.True(t, fileDoc.Trashed)
 }
+*/
 
 func TestRevokeSharing(t *testing.T) {
 	sharingIDSharerMM := utils.RandomString(20)
@@ -572,16 +553,12 @@ func TestRevokeSharing(t *testing.T) {
 			router.DELETE("/:id", func(c echo.Context) error {
 				counterRevokeSharing = counterRevokeSharing + 1
 				assert.Equal(t, sharingIDSharerMM, c.Param("id"))
-				assert.Equal(t, "false",
-					c.QueryParam(consts.QueryParamRecursive))
 				return c.NoContent(http.StatusOK)
 			})
-			router.DELETE("/:id/recipient/:recipient-id",
+			router.DELETE("/:id/:client-id",
 				func(c echo.Context) error {
 					counterRevokeRecipient = counterRevokeRecipient + 1
 					assert.Equal(t, sharingIDRecipientMM, c.Param("id"))
-					assert.Equal(t, "false",
-						c.QueryParam(consts.QueryParamRecursive))
 					return c.NoContent(http.StatusOK)
 				},
 			)
@@ -638,16 +615,13 @@ func TestRevokeSharing(t *testing.T) {
 	assert.Len(t, triggers, nbTriggers)
 	// Check: the OAuth clients for all the recipients were deleted. Both calls
 	// to `FindClient` should return errors.
-	_, err = oauth.FindClient(testInstance,
-		sharingSharerMM.Recipients[0].InboundClientID)
+	_, err = oauth.FindClient(testInstance, sharingSharerMM.Recipients[0].InboundClientID)
 	assert.Error(t, err)
-	_, err = oauth.FindClient(testInstance,
-		sharingSharerMM.Recipients[1].InboundClientID)
+	_, err = oauth.FindClient(testInstance, sharingSharerMM.Recipients[1].InboundClientID)
 	assert.Error(t, err)
 	// Check: the sharing is revoked.
 	doc := &sharings.Sharing{}
-	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingSharerMM.ID(),
-		doc)
+	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingSharerMM.ID(), doc)
 	assert.NoError(t, err)
 	assert.True(t, doc.Revoked)
 
@@ -669,13 +643,11 @@ func TestRevokeSharing(t *testing.T) {
 	triggers, _ = sched.GetAll(testInstance.Domain)
 	assert.Len(t, triggers, nbTriggers)
 	// Check: the OAuth client for the sharer is deleted.
-	_, err = oauth.FindClient(testInstance,
-		sharingRecipientMM.Sharer.InboundClientID)
+	_, err = oauth.FindClient(testInstance, sharingRecipientMM.Sharer.InboundClientID)
 	assert.Error(t, err)
 	// Check: the sharing is revoked.
 	doc = &sharings.Sharing{}
-	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingRecipientMM.ID(),
-		doc)
+	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingRecipientMM.ID(), doc)
 	assert.NoError(t, err)
 	assert.True(t, doc.Revoked)
 
@@ -696,8 +668,6 @@ func TestRevokeRecipient(t *testing.T) {
 		"/sharings": func(router *echo.Group) {
 			router.DELETE("/:id", func(c echo.Context) error {
 				assert.Equal(t, sharingID, c.Param("id"))
-				assert.Equal(t, "false",
-					c.QueryParam(consts.QueryParamRecursive))
 				return c.NoContent(http.StatusOK)
 			})
 		},
