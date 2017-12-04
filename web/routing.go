@@ -58,6 +58,12 @@ var (
 		"passphrase_renew.html",
 		"sharing_discovery.html",
 	}
+
+	privateAssets = []string{
+		"/templates/",
+		"/locales/",
+		"/externals",
+	}
 )
 
 type renderer struct {
@@ -138,7 +144,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		}
 	}
 
-	r := &renderer{t: t, Handler: statikFS}
+	r := &renderer{t: t, Handler: statikFS.Handler(privateAssets...)}
 	return r, nil
 }
 
