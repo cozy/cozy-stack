@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/afero"
 )
 
+var unixZeroEpoch = time.Time{}
+
 // FileServer interface defines a way to access and serve the application's
 // data files.
 type FileServer interface {
@@ -60,12 +62,12 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	}
 	defer f.Close()
 
-	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"])
+	w.Header().Set("Cache-Control", "no-cache")
 	if req.Header.Get("Range") == "" {
 		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
 	}
 
-	http.ServeContent(w, req, objName, lastModified, f)
+	http.ServeContent(w, req, objName, unixZeroEpoch, f)
 	return nil
 }
 
@@ -110,11 +112,6 @@ func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	return err
 }
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
-	infos, err := s.fs.Stat(filepath)
-	if err != nil {
-		return err
-	}
-
 	rc, err := s.fs.Open(filepath)
 	if err != nil {
 		return err
@@ -132,7 +129,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, hex.EncodeToString(h.Sum(nil))))
 	}
 
-	http.ServeContent(w, req, filepath, infos.ModTime(), bytes.NewReader(b))
+	http.ServeContent(w, req, filepath, unixZeroEpoch, bytes.NewReader(b))
 	return nil
 }
 
