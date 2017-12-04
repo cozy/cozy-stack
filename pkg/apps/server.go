@@ -1,7 +1,12 @@
 package apps
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -54,8 +59,12 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 		return wrapSwiftErr(err)
 	}
 	defer f.Close()
+
 	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"])
-	w.Header().Set("Etag", o["Etag"])
+	if req.Header.Get("Range") == "" {
+		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
+	}
+
 	http.ServeContent(w, req, objName, lastModified, f)
 	return nil
 }
@@ -105,12 +114,25 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	if err != nil {
 		return err
 	}
-	r, err := s.fs.Open(filepath)
+
+	rc, err := s.fs.Open(filepath)
 	if err != nil {
 		return err
 	}
-	defer r.Close()
-	http.ServeContent(w, req, filepath, infos.ModTime(), r)
+	defer rc.Close()
+
+	h := md5.New()
+	r := io.TeeReader(rc, h)
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	if req.Header.Get("Range") == "" {
+		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, hex.EncodeToString(h.Sum(nil))))
+	}
+
+	http.ServeContent(w, req, filepath, infos.ModTime(), bytes.NewReader(b))
 	return nil
 }
 

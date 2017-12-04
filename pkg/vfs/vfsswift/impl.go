@@ -776,7 +776,17 @@ func (f *swiftFileCreation) Close() (err error) {
 		var md5sum []byte
 		headers, err = f.f.Headers()
 		if err == nil {
-			md5sum, err = hex.DecodeString(headers["Etag"])
+			// Etags may be double-quoted
+			etag := headers["Etag"]
+			if l := len(etag); l >= 2 {
+				if etag[0] == '"' {
+					etag = etag[1:]
+				}
+				if etag[l-1] == '"' {
+					etag = etag[:l-1]
+				}
+			}
+			md5sum, err = hex.DecodeString(etag)
 			if err == nil {
 				newdoc.MD5Sum = md5sum
 			}
