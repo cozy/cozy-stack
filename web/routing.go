@@ -39,7 +39,7 @@ import (
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
 
-	"github.com/cozy/statik/fs"
+	statikFS "github.com/cozy/statik/fs"
 	"github.com/labstack/echo"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -115,11 +115,6 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		h := http.FileServer(http.Dir(assetsPath))
 		r := &renderer{t: t, Handler: http.StripPrefix("/assets", h)}
 		return r, nil
-	}
-
-	statikFS, err := fs.New()
-	if err != nil {
-		return nil, err
 	}
 
 	var t, tmpl *template.Template
