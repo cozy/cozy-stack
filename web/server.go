@@ -22,7 +22,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 
-	"github.com/rakyll/statik/fs"
+	statikFS "github.com/cozy/statik/fs"
 	"github.com/spf13/afero"
 )
 
@@ -44,10 +44,6 @@ func LoadSupportedLocales() error {
 		return nil
 	}
 
-	statikFS, err := fs.New()
-	if err != nil {
-		return err
-	}
 	for _, locale := range i18n.SupportedLocales {
 		f, err := statikFS.Open("/locales/" + locale + ".po")
 		if err != nil {

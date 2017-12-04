@@ -180,17 +180,13 @@ do_deploy() {
 }
 
 do_assets() {
-	clean_assets
 	tx -r "${WORK_DIR}" pull -a || echo "Do you have configured transifex?"
-	prepare_assets
-	printf "executing go generate... "
-	go get -u github.com/rakyll/statik
-	rm -f "${WORK_DIR}/web/statik/statik.go"
+	printf "executing go generate...\n"
+	go get -u github.com/cozy/statik
 	pushd "${WORK_DIR}" > /dev/null
 	go generate ./web
 	popd > /dev/null
 	echo "ok"
-	clean_assets
 }
 
 do_docker_dev_image() {
@@ -213,101 +209,8 @@ do_docker_dev_image() {
 	rm -rf "${docker_work_dir}"
 }
 
-clean_assets() {
-	rm -rf "${WORK_DIR}/.assets"
-}
-
-prepare_assets() {
-	assets_dst="${WORK_DIR}/.assets"
-	assets_src="${WORK_DIR}/assets"
-	assets_externals="${assets_src}/externals"
-
-	if [ "$(git -C "${WORK_DIR}" diff --shortstat HEAD -- "${assets_externals}" | wc -l)" -gt 0 ]; then
-		echo_err "file ${assets_externals} is dirty."
-		echo_err "it should be commited into git in order to generate the asset file."
-		exit 1
-	fi
-
-	assets_mod_time=$(git -C "${WORK_DIR}" log --pretty=format:%cd -n 1 --date=iso "${assets_externals}")
-	case "$(uname -s)" in
-		Darwin)
-			assets_mod_time=$(date -j -f '%Y-%m-%d %H:%M:%S %z' "${assets_mod_time}" +%Y%m%d%H%M.%S)
-			;;
-		*)
-			assets_mod_time=$(date -d "${assets_mod_time}" +%Y%m%d%H%M.%S)
-			;;
-	esac
-
-	mkdir "${assets_dst}"
-
-	asset_name=""
-	asset_url=""
-	asset_sha=""
-	while IFS= read -r line; do
-		if [ "${line:0:1}" = "#" ]; then
-			continue
-		fi
-
-		if [ -z "${line}" ]; then
-			[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
-			asset_name=""
-			asset_url=""
-			asset_sha=""
-			continue
-		fi
-
-		IFS=" " read -r -a line_split <<< "${line}"
-		case "${line_split[0]}" in
-			name)
-				asset_name="${line_split[1]}"
-				;;
-			url)
-				asset_url="${line_split[1]}"
-				;;
-			sha256)
-				asset_sha="${line_split[1]}"
-				;;
-			*)
-				echo_err "Failed to parse ${assets_src}/externals file"
-				echo_err "Unknown field named \"${line_split[0]}\""
-				exit 1
-				;;
-		esac
-	done < "${assets_externals}"
-
-	[ -n "${asset_name}" ] && download_asset "${asset_name}" "${asset_url}" "${asset_sha}"
-
-	cp -a "${assets_src}/." "${assets_dst}"
-	rm -f "${assets_dst}/externals"
-}
-
-download_asset() {
-	printf "downloading %s: " "${1}"
-	mkdir -p "${assets_dst}/${1%/*}"
-	if ! curl -sSL --fail "${2}" 1> "${assets_dst}/${1}" 2>/dev/null; then
-		echo "failed"
-		echo_err "Could not fetch resource with curl: ${2}"
-		exit 1
-	fi
-	if [ -n "${3}" ]; then
-		dgst=$(openssl dgst -sha256 < "${assets_dst}/${1}" | sed 's/^.* //')
-		if [ "${3}" != "${dgst}" ]; then
-			echo "failed"
-			echo_err "Checksum SHA256 does not match for asset ${1} downloaded on ${2}:"
-			echo_err "  expecting \"${dgst}\", got \"${3}\"."
-			exit 1
-		fi
-	fi
-	asset_size=$(du -h "${assets_dst}/${1}" | awk '{print $1}')
-	# reuse the same mod time properties as the externals files so have
-	# reproductible output
-	touch -m -t "${assets_mod_time}" "${assets_dst}/${1}"
-	printf "%s\n" "${asset_size}"
-}
-
 do_clean() {
 	find "${WORK_DIR}" -name "cozy-stack-*" -print -delete
-	clean_assets
 }
 
 check_env() {

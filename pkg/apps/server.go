@@ -1,7 +1,12 @@
 package apps
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -10,6 +15,8 @@ import (
 	"github.com/cozy/swift"
 	"github.com/spf13/afero"
 )
+
+var unixZeroEpoch = time.Time{}
 
 // FileServer interface defines a way to access and serve the application's
 // data files.
@@ -54,9 +61,13 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 		return wrapSwiftErr(err)
 	}
 	defer f.Close()
-	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"])
-	w.Header().Set("Etag", o["Etag"])
-	http.ServeContent(w, req, objName, lastModified, f)
+
+	w.Header().Set("Cache-Control", "no-cache")
+	if req.Header.Get("Range") == "" {
+		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
+	}
+
+	http.ServeContent(w, req, objName, unixZeroEpoch, f)
 	return nil
 }
 
@@ -101,16 +112,24 @@ func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	return err
 }
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
-	infos, err := s.fs.Stat(filepath)
+	rc, err := s.fs.Open(filepath)
 	if err != nil {
 		return err
 	}
-	r, err := s.fs.Open(filepath)
+	defer rc.Close()
+
+	h := md5.New()
+	r := io.TeeReader(rc, h)
+	b, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}
-	defer r.Close()
-	http.ServeContent(w, req, filepath, infos.ModTime(), r)
+
+	if req.Header.Get("Range") == "" {
+		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, hex.EncodeToString(h.Sum(nil))))
+	}
+
+	http.ServeContent(w, req, filepath, unixZeroEpoch, bytes.NewReader(b))
 	return nil
 }
 

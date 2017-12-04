@@ -336,13 +336,10 @@ func iconHandler(c echo.Context) error {
 	filepath := path.Join("/", app.Icon)
 	fs := instance.AppsFileServer()
 	err = fs.ServeFileContent(c.Response(), c.Request(), app.Slug(), app.Version(), filepath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return echo.NewHTTPError(http.StatusNotFound, err)
-		}
-		return err
+	if os.IsNotExist(err) {
+		return echo.NewHTTPError(http.StatusNotFound, err)
 	}
-	return nil
+	return err
 }
 
 // WebappsRoutes sets the routing for the web apps service

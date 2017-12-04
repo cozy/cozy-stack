@@ -1,4 +1,4 @@
-//go:generate statik -src=../.assets -dest=.
+//go:generate statik -src=../assets -dest=. -externals=../assets/externals
 
 package web
 
@@ -39,9 +39,9 @@ import (
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
 
+	statikFS "github.com/cozy/statik/fs"
 	"github.com/labstack/echo"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rakyll/statik/fs"
 )
 
 var (
@@ -57,6 +57,12 @@ var (
 		"passphrase_reset.html",
 		"passphrase_renew.html",
 		"sharing_discovery.html",
+	}
+
+	privateAssets = []string{
+		"/templates/",
+		"/locales/",
+		"/externals",
 	}
 )
 
@@ -107,13 +113,8 @@ func newRenderer(assetsPath string) (*renderer, error) {
 			return nil, fmt.Errorf("Can't load the assets from %s", assetsPath)
 		}
 		h := http.FileServer(http.Dir(assetsPath))
-		r := &renderer{t: t, Handler: h}
+		r := &renderer{t: t, Handler: http.StripPrefix("/assets", h)}
 		return r, nil
-	}
-
-	statikFS, err := fs.New()
-	if err != nil {
-		return nil, err
 	}
 
 	var t, tmpl *template.Template
@@ -138,8 +139,7 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		}
 	}
 
-	h := http.FileServer(statikFS)
-	r := &renderer{t: t, Handler: h}
+	r := &renderer{t: t, Handler: statikFS.Handler("/assets", privateAssets...)}
 	return r, nil
 }
 
@@ -174,7 +174,7 @@ func SetupAssets(router *echo.Echo, assetsPath string) error {
 	}
 
 	router.Renderer = r
-	router.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", r)))
+	router.GET("/assets/*", echo.WrapHandler(r))
 	router.GET("/favicon.ico", echo.WrapHandler(r))
 	router.GET("/robots.txt", echo.WrapHandler(r))
 	return nil

@@ -138,6 +138,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		}
 		return c.Redirect(http.StatusFound, i.PageURL("/auth/login", redirect))
 	}
+
 	filepath := path.Join("/", route.Folder, file)
 	version := app.Version()
 	if file != route.Index {
@@ -150,9 +151,11 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		}
 		return nil
 	}
+
 	if intentID := c.QueryParam("intent"); intentID != "" {
 		handleIntent(c, i, slug, intentID)
 	}
+
 	// For index file, we inject the locale, the stack domain, and a token if the
 	// user is connected
 	content, err := fs.Open(slug, version, filepath)

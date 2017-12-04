@@ -41,8 +41,10 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request, img
 		return wrapSwiftErr(err)
 	}
 	defer f.Close()
+
 	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"]) // #nosec
-	w.Header().Set("Etag", o["Etag"])
+	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
+
 	http.ServeContent(w, req, name, lastModified, f)
 	return nil
 }

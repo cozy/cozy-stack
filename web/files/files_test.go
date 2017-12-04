@@ -902,6 +902,7 @@ func TestDownloadFileByIDSuccess(t *testing.T) {
 	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme1"))
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
 	assert.NotEmpty(t, res2.Header.Get("Etag"))
+	assert.Equal(t, res2.Header.Get("Etag")[:1], `"`)
 	assert.Equal(t, res2.Header.Get("Content-Length"), "3")
 	assert.Equal(t, res2.Header.Get("Accept-Ranges"), "bytes")
 	assert.Equal(t, body, string(resbody))

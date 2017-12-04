@@ -4,6 +4,7 @@ import (
 
 	// #nosec
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -197,7 +198,7 @@ func ServeFileContent(fs VFS, doc *FileDoc, disposition string, req *http.Reques
 
 	if header.Get("Range") == "" {
 		eTag := base64.StdEncoding.EncodeToString(doc.MD5Sum)
-		header.Set("Etag", eTag)
+		header.Set("Etag", fmt.Sprintf(`"%s"`, eTag))
 	}
 
 	content, err := fs.OpenFile(doc)
