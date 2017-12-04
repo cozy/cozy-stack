@@ -22,16 +22,12 @@ var recStatus = sharings.Member{
 	},
 }
 
-var mailValues = &sharings.MailTemplateValues{}
-
 var sharingTest = &sharings.Sharing{
 	SID:         "sparta-id",
 	AppSlug:     "spartapp",
 	SharingType: consts.OneShotSharing,
 	Recipients:  []sharings.Member{recStatus},
 }
-
-var instanceScheme = "http"
 
 func TestSendSharingMails(t *testing.T) {
 	rec := &contacts.Contact{

@@ -40,7 +40,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 			}
 
 			if sharing.SharingType == consts.TwoWaySharing {
-				err = deleteOAuthClient(ins, &rs)
+				err = DeleteOAuthClient(ins, &rs)
 				if err != nil {
 					continue
 				}
@@ -60,7 +60,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 			}
 		}
 
-		err = deleteOAuthClient(ins, &sharing.Sharer)
+		err = DeleteOAuthClient(ins, &sharing.Sharer)
 		if err != nil {
 			return err
 		}
@@ -125,7 +125,7 @@ func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientI
 // trigger is deleted.
 func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member) error {
 	if sharing.SharingType == consts.TwoWaySharing {
-		if err := deleteOAuthClient(ins, recipient); err != nil {
+		if err := DeleteOAuthClient(ins, recipient); err != nil {
 			return err
 		}
 		recipient.InboundClientID = ""
@@ -154,16 +154,16 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
-func deleteOAuthClient(ins *instance.Instance, rs *Member) error {
+func DeleteOAuthClient(ins *instance.Instance, rs *Member) error {
 	client, err := oauth.FindClient(ins, rs.InboundClientID)
 	if err != nil {
-		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
+		ins.Logger().Errorf("[sharings] DeleteOAuthClient: Could not "+
 			"find OAuth client %s: %s", rs.InboundClientID, err)
 		return err
 	}
 	crErr := client.Delete(ins)
 	if crErr != nil {
-		ins.Logger().Errorf("[sharings] deleteOAuthClient: Could not "+
+		ins.Logger().Errorf("[sharings] DeleteOAuthClient: Could not "+
 			"delete OAuth client %s: %s", rs.InboundClientID, err)
 		return errors.New(crErr.Error)
 	}

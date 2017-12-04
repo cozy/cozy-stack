@@ -98,11 +98,7 @@ func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*
 // given contact ID.
 func (s *Sharing) GetMemberFromContactID(db couchdb.Database, contactID string) (*Member, error) {
 	for _, m := range s.Recipients {
-		contact := m.Contact(db)
-		if contact == nil {
-			continue
-		}
-		if contact.ID() == contactID {
+		if m.RefContact.ID == contactID {
 			return &m, nil
 		}
 	}
