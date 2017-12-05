@@ -23,8 +23,9 @@ var blackList = map[string]bool{
 
 	// TODO: uncomment to restric jobs permissions (make these none instead of
 	// readable).
-	consts.Jobs:     readable,
-	consts.Triggers: readable,
+	consts.Jobs:          readable,
+	consts.Triggers:      readable,
+	consts.TriggersState: readable,
 
 	consts.Apps:           readable,
 	consts.Konnectors:     readable,

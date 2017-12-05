@@ -54,6 +54,8 @@ const (
 	Sharings = "io.cozy.sharings"
 	// Triggers doc type for triggers, jobs launchers
 	Triggers = "io.cozy.triggers"
+	// TriggersState doc type for triggers current state, jobs launchers
+	TriggersState = "io.cozy.triggers.state"
 	// Accounts doc type for accounts
 	Accounts = "io.cozy.accounts"
 	// AccountTypes doc type for account types

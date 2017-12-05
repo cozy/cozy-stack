@@ -40,6 +40,10 @@ type (
 	apiTrigger struct {
 		t *scheduler.TriggerInfos
 	}
+	apiTriggerState struct {
+		t *scheduler.TriggerInfos
+		s *scheduler.TriggerState
+	}
 	apiTriggerRequest struct {
 		Type            string           `json:"type"`
 		Arguments       string           `json:"arguments"`
@@ -88,6 +92,21 @@ func (t apiTrigger) Links() *jsonapi.LinksList {
 }
 func (t apiTrigger) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.t)
+}
+
+func (t apiTriggerState) ID() string                             { return t.t.TID }
+func (t apiTriggerState) Rev() string                            { return "" }
+func (t apiTriggerState) DocType() string                        { return consts.TriggersState }
+func (t apiTriggerState) Clone() couchdb.Doc                     { return t }
+func (t apiTriggerState) SetID(_ string)                         {}
+func (t apiTriggerState) SetRev(_ string)                        {}
+func (t apiTriggerState) Relationships() jsonapi.RelationshipMap { return nil }
+func (t apiTriggerState) Included() []jsonapi.Object             { return nil }
+func (t apiTriggerState) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/jobs/triggers/" + t.ID() + "/state"}
+}
+func (t apiTriggerState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.s)
 }
 
 func getQueue(c echo.Context) error {
@@ -193,10 +212,32 @@ func getTrigger(c echo.Context) error {
 	if err != nil {
 		return wrapJobsError(err)
 	}
-	if err := permissions.Allow(c, permissions.GET, t); err != nil {
+	if err = permissions.Allow(c, permissions.GET, t); err != nil {
 		return err
 	}
-	return jsonapi.Data(c, http.StatusOK, apiTrigger{t.Infos()}, nil)
+	tInfos := t.Infos()
+	tInfos.CurrentState, err = scheduler.GetTriggerState(t)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, apiTrigger{tInfos}, nil)
+}
+
+func getTriggerState(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	sched := globals.GetScheduler()
+	t, err := sched.Get(instance.Domain, c.Param("trigger-id"))
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	if err = permissions.Allow(c, permissions.GET, t); err != nil {
+		return err
+	}
+	state, err := scheduler.GetTriggerState(t)
+	if err != nil {
+		return wrapJobsError(err)
+	}
+	return jsonapi.Data(c, http.StatusOK, apiTriggerState{t: t.Infos(), s: state}, nil)
 }
 
 func getTriggerJobs(c echo.Context) error {
@@ -360,6 +401,7 @@ func Routes(router *echo.Group) {
 	router.POST("/triggers", newTrigger)
 	router.GET("/triggers", getAllTriggers)
 	router.GET("/triggers/:trigger-id", getTrigger)
+	router.GET("/triggers/:trigger-id/state", getTriggerState)
 	router.GET("/triggers/:trigger-id/jobs", getTriggerJobs)
 	router.POST("/triggers/:trigger-id/launch", launchTrigger)
 	router.DELETE("/triggers/:trigger-id", deleteTrigger)
