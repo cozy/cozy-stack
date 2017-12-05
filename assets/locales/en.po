@@ -388,7 +388,7 @@ msgstr "We just detected a connection to your Cozy"
 
 msgid "Mail New Connection Intro"
 msgstr ""
-"We just detected a connection to your Cozy.\n
+"We just detected a connection to your Cozy.\n"
 "Here are the details of this connection:"
 
 msgid "Mail New Connection Place"
