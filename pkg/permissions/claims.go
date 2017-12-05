@@ -38,10 +38,7 @@ var (
 	konnectorTokenValidityDuration = 30 * time.Minute
 	cliTokenValidityDuration       = 30 * time.Minute
 
-	shareTokenValidityDuration        = 7 * 24 * time.Hour
-	registrationTokenValidityDuration = 7 * 24 * time.Hour
-	accessTokenValidityDuration       = 7 * 24 * time.Hour
-	refreshTokenValidityDuration      = 24 * time.Hour
+	accessTokenValidityDuration = 7 * 24 * time.Hour
 )
 
 // Claims is used for JWT used in OAuth2 flow and applications token
@@ -70,18 +67,22 @@ func (claims *Claims) Expired() bool {
 		} else {
 			validityDuration = appTokenValidityDuration
 		}
+
 	case KonnectorAudience:
 		validityDuration = konnectorTokenValidityDuration
+
 	case CLIAudience:
 		validityDuration = cliTokenValidityDuration
-	case ShareAudience:
-		validityDuration = shareTokenValidityDuration
-	case RegistrationTokenAudience:
-		validityDuration = registrationTokenValidityDuration
+
 	case AccessTokenAudience:
 		validityDuration = accessTokenValidityDuration
+
+	// Share, RefreshToken and RegistrationToken never expire
+	case ShareAudience:
+	case RegistrationTokenAudience:
 	case RefreshTokenAudience:
-		validityDuration = refreshTokenValidityDuration
+		return false
+
 	default:
 		validityDuration = defaultValidityDuration
 	}
