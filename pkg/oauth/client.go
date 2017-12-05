@@ -346,6 +346,10 @@ func (c *Client) ValidToken(i *instance.Instance, audience, token string) (permi
 		i.Logger().Errorf("[oauth] Failed to verify the %s token: %s", audience, err)
 		return claims, false
 	}
+	if claims.Expired() {
+		i.Logger().Errorf("[oauth] Failed to verify the %s token: expired", audience)
+		return claims, false
+	}
 	// Note: the refresh and registration tokens don't expire, no need to check its issue date
 	if claims.Audience != audience {
 		i.Logger().Errorf("[oauth] Unexpected audience for %s token: %s", audience, claims.Audience)
