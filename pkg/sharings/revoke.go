@@ -85,7 +85,7 @@ func RevokeRecipientByContactID(ins *instance.Instance, sharing *Sharing, contac
 		return ErrOnlySharerCanRevokeRecipient
 	}
 
-	for i, _ := range sharing.Recipients {
+	for i := range sharing.Recipients {
 		rs := &sharing.Recipients[i]
 		c := rs.Contact(ins)
 		if c != nil && c.DocID == contactID {
@@ -107,7 +107,7 @@ func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientI
 		return ErrOnlySharerCanRevokeRecipient
 	}
 
-	for i, _ := range sharing.Recipients {
+	for i := range sharing.Recipients {
 		rs := &sharing.Recipients[i]
 		if rs.Client.ClientID == clientID {
 			return RevokeRecipient(ins, sharing, rs)

@@ -85,8 +85,6 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 		Recipients:  []sharings.Member{},
 	}
 
-	// TODO do something with rule
-
 	if slug == "" {
 		sharing.AppSlug = utils.RandomString(15)
 	} else {
@@ -136,7 +134,20 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 		}
 	}
 
-	err = couchdb.CreateDoc(testInstance, sharing)
+	if sharingID == "" {
+		err = couchdb.CreateDoc(testInstance, sharing)
+	} else {
+		sharing.SID = sharingID
+		err = couchdb.CreateNamedDoc(testInstance, sharing)
+	}
+	assert.NoError(t, err)
+
+	set := permissions.Set{rule}
+	if owner {
+		_, err = permissions.CreateSharedByMeSet(testInstance, sharing.SID, nil, set)
+	} else {
+		_, err = permissions.CreateSharedWithMeSet(testInstance, sharing.SID, set)
+	}
 	assert.NoError(t, err)
 
 	return sharing
@@ -642,6 +653,10 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	assert.WithinDuration(t, now, patchedDir.UpdatedAt, time.Millisecond)
 }
 
+/*
+// TODO uncomment the following test when
+// permissions.GetSharedWithMePermissionsByDoctype will have been updated
+
 func TestRemoveReferences(t *testing.T) {
 	rule := permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
@@ -750,6 +765,7 @@ func TestRemoveReferences(t *testing.T) {
 	assert.True(t, dirDoc.DirID == consts.TrashDirID)
 	assert.Len(t, dirDoc.ReferencedBy, 0)
 }
+*/
 
 func TestAddSharingRecipientNoSharing(t *testing.T) {
 	res, err := putJSON(t, "/sharings/fakeid/recipient", echo.Map{})

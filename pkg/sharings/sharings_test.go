@@ -1,9 +1,7 @@
 package sharings_test
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -101,6 +99,7 @@ func createSettings(instance *instance.Instance) {
 	}
 }
 
+/*
 func createDoc(t *testing.T, ins *instance.Instance, doctype string, m map[string]interface{}) *couchdb.JSONDoc {
 	doc := &couchdb.JSONDoc{
 		Type: doctype,
@@ -111,6 +110,7 @@ func createDoc(t *testing.T, ins *instance.Instance, doctype string, m map[strin
 	assert.NoError(t, err)
 	return doc
 }
+*/
 
 func createOAuthClient(t *testing.T) *oauth.Client {
 	client := &oauth.Client{
@@ -200,6 +200,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 	return sharing
 }
 
+/*
 func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.DocReference) *vfs.FileDoc {
 	doc, err := vfs.NewFileDoc(name, "", -1, nil, "foo/bar", "foo", time.Now(),
 		false, false, []string{"this", "is", "spartest"})
@@ -220,6 +221,7 @@ func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.D
 
 	return doc
 }
+*/
 
 func createDir(t *testing.T, fs vfs.VFS, name string, refs []couchdb.DocReference) *vfs.DirDoc {
 	dirDoc, err := vfs.NewDirDoc(fs, name, "", []string{"It's", "me", "again"})

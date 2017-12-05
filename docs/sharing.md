@@ -407,6 +407,9 @@ HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
+Note: this route is also used internally by the sharer to inform the cozy of
+the recipient that the sharing has been revoked on its side.
+
 ### DELETE /sharings/:sharing-id/:recipient-client-id
 
 This internal route is used by the cozy instance of the recipient to inform the

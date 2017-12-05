@@ -79,9 +79,9 @@ func updateDocument(c echo.Context) error {
 			return err
 		}
 
-		ins := middlewares.GetInstance(c)
-		err = sharings.RemoveDocumentIfNotShared(ins, c.Param("doctype"),
-			c.Param("docid"))
+		// TODO uncomment this code when RemoveDocumentIfNotShared will be fixed
+		// ins := middlewares.GetInstance(c)
+		// err = sharings.RemoveDocumentIfNotShared(ins, c.Param("doctype"), c.Param("docid"))
 	}
 
 	if err != nil {
