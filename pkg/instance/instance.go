@@ -72,6 +72,8 @@ var (
 	ErrContextNotFound = errors.New("Context not found")
 	// ErrResetAlreadyRequested is returned when a passphrase reset token is already set and valid
 	ErrResetAlreadyRequested = errors.New("The passphrase reset has already been requested")
+	// ErrMailIsNotConfirmed is returned when the mail has not been confirmed
+	ErrMailIsNotConfirmed = errors.New("Mail has not been confirmed")
 )
 
 // An Instance has the informations relatives to the logical cozy instance,
@@ -86,11 +88,10 @@ type Instance struct {
 	NoAutoUpdate bool     `json:"no_auto_update,omitempty"` // Whether or not the instance has auto updates for its applications
 	Dev          bool     `json:"dev,omitempty"`            // Whether or not the instance is for development
 
-	OnboardingFinished bool `json:"onboarding_finished"` // Whether or not the onboarding is complete
-
-	BytesDiskQuota int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
-
-	IndexViewsVersion int `json:"indexes_version"`
+	OnboardingFinished bool  `json:"onboarding_finished"`         // Whether or not the onboarding is complete.
+	MailConfirmed      bool  `json:"mail_confirmed"`              // Whether or not the mail has been confirmed.
+	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
+	IndexViewsVersion  int   `json:"indexes_version"`
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.

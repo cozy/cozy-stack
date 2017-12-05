@@ -125,7 +125,10 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		} else {
 			tmpl = t.New(name)
 		}
-		tmpl = tmpl.Funcs(template.FuncMap{"t": fmt.Sprintf})
+		tmpl = tmpl.Funcs(template.FuncMap{
+			"t":     fmt.Sprintf,
+			"Split": strings.Split,
+		})
 		f, err := statikFS.Open("/templates/" + name)
 		if err != nil {
 			return nil, fmt.Errorf("Can't load asset %s", name)

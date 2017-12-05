@@ -71,6 +71,7 @@ func updateInstance(c echo.Context) error {
 	}
 
 	needUpdate := false
+	needMailConfirmation := false
 
 	if locale, ok := doc.M["locale"].(string); ok {
 		delete(doc.M, "locale")
@@ -94,6 +95,8 @@ func updateInstance(c echo.Context) error {
 		if inst.AuthMode != authMode {
 			inst.AuthMode = authMode
 			needUpdate = true
+			needMailConfirmation =
+				authMode == instance.TwoFactorMail && !inst.MailConfirmed
 		}
 	}
 
@@ -105,6 +108,16 @@ func updateInstance(c echo.Context) error {
 
 	if err := couchdb.UpdateDoc(inst, doc); err != nil {
 		return err
+	}
+
+	if needMailConfirmation {
+		confirmLink, err := inst.MailConfirmationLink()
+		if err == nil {
+			inst.SendMail(&instance.Mail{
+				TemplateName:   "two_factor_mail_confirmation",
+				TemplateValues: map[string]interface{}{"ConfirmLink": confirmLink},
+			})
+		}
 	}
 
 	doc.M["locale"] = inst.Locale

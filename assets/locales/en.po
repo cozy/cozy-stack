@@ -213,6 +213,15 @@ msgstr "The link to reset the password is truncated or has expired"
 msgid "Error Reset already requested"
 msgstr "The reset of the password has already been requested. Please check your mail inbox, and the spam folder!"
 
+msgid "Error Invalid mail token"
+msgstr "The link to confirm your email is truncated or has expired"
+
+msgid "Two Factor Activation"
+msgstr Authentication with two-factor is activated"
+
+msgid "Confirmation User Content"
+msgstr "Your e-mail is now confirmed. We successfully activated two-factor authentication for your Cozy."
+
 msgid "Permissions Read only"
 msgstr ", for read only"
 
@@ -420,3 +429,18 @@ msgstr "If you are not the source of this addition you can revoke the new device
 
 msgid "Mail New Registration Revoke text"
 msgstr "Revoke this device"
+
+msgid "Mail Two Factor Mail Confirmation Subject"
+msgstr "You want to enable two-factor authentication on your Cozy"
+
+msgid "Mail Two Factor Mail Confirmation Intro"
+msgstr "You want to enable two-factor authentication on your Cozy."
+
+msgid "Mail Two Factor Mail Confirmation Button instruction"
+msgstr "Click on the followng button to activate it."
+
+msgid "Mail Two Factor Mail Confirmation Button text"
+msgstr "Activate 2-step verification"
+
+msgid "Mail Two Factor Mail Confirmation Outro"
+msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"

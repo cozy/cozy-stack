@@ -334,6 +334,19 @@ func init() {
 				},
 			},
 		},
+		{
+			Name:    "two_factor_mail_confirmation",
+			Subject: "Mail Two Factor Mail Confirmation Subject",
+			Intro:   "Mail Two Factor Mail Confirmation Intro",
+			Actions: []MailAction{
+				{
+					Instructions: "Mail Two Factor Mail Confirmation Button instruction",
+					Text:         "Mail Two Factor Mail Confirmation Button text",
+					Link:         "{{.ConfirmLink}}",
+				},
+			},
+			Outro: "Mail Two Factor Mail Confirmation Outro",
+		},
 	}}
 }
 
