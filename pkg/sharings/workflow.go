@@ -22,11 +22,12 @@ func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*con
 	if err != nil {
 		return nil, err
 	}
-	contactID, ok := perms.Codes[code]
-	if !ok {
-		return nil, ErrRecipientDoesNotExist
+	for contactID, c := range perms.Codes {
+		if c == code {
+			return contacts.Find(i, contactID)
+		}
 	}
-	return contacts.Find(i, contactID)
+	return nil, ErrRecipientDoesNotExist
 }
 
 // extractScopeFromPermissions returns a scope string from a permissions doc

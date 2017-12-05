@@ -92,7 +92,6 @@ func linkForRecipient(i *instance.Instance, s *Sharing, m *Member) string {
 		return ""
 	}
 
-	// TODO check if codes is map code->contactID or contactID->code
 	code, ok := s.permissions.Codes[m.RefContact.ID]
 	if !ok {
 		return ""

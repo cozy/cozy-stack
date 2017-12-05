@@ -95,6 +95,7 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 	assert.NoError(t, err)
 
 	for _, recipient := range recipients {
+		fmt.Printf("recipient.ID() = %v\n", recipient.ID())
 		if recipient.ID() == "" {
 			err = sharings.CreateOrUpdateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
@@ -144,7 +145,13 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 
 	set := permissions.Set{rule}
 	if owner {
-		_, err = permissions.CreateSharedByMeSet(testInstance, sharing.SID, nil, set)
+		// Using dumb codes for tests: it is 'code-' + the recipient id
+		codes := make(map[string]string, len(sharing.Recipients))
+		for _, recipient := range sharing.Recipients {
+			contactID := recipient.RefContact.ID
+			codes[contactID] = "code-" + contactID
+		}
+		_, err = permissions.CreateSharedByMeSet(testInstance, sharing.SID, codes, set)
 	} else {
 		_, err = permissions.CreateSharedWithMeSet(testInstance, sharing.SID, set)
 	}
@@ -1253,7 +1260,7 @@ func TestDiscoveryFormNoRecipient(t *testing.T) {
 		[]*contacts.Contact{}, permissions.Rule{})
 	res, err := requestGET("/sharings/"+sharing.SID+"/discovery", nil)
 	assert.NoError(t, err)
-	assert.Equal(t, 500, res.StatusCode)
+	assert.Equal(t, 400, res.StatusCode)
 }
 
 func TestDiscoveryFormInvalidShareCode(t *testing.T) {
@@ -1265,19 +1272,43 @@ func TestDiscoveryFormInvalidShareCode(t *testing.T) {
 	}
 	res, err := requestGET("/sharings/"+sharing.SID+"/discovery", urlVal)
 	assert.NoError(t, err)
-	assert.Equal(t, 404, res.StatusCode)
+	assert.Equal(t, 400, res.StatusCode)
 }
 
-func TestDiscoverySuccess(t *testing.T) {
-	recipient := createRecipient(t, "email6", recipientURL)
+func TestDiscoveryFormSuccess(t *testing.T) {
+	recipient := createRecipient(t, "email6", "url6")
 	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
 		[]*contacts.Contact{recipient}, permissions.Rule{})
 	urlVal := url.Values{
-		"sharing_id":   {sharing.SID},
-		"recipient_id": {sharing.Recipients[0].RefContact.ID},
-		"url":          {recipientURL},
+		"sharecode": {"code-" + recipient.ID()},
 	}
-	res, err := formPOST("/sharings/discovery", urlVal)
+	res, err := requestGET("/sharings/"+sharing.SID+"/discovery", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+}
+
+func TestDiscoveryInvalidShareCode(t *testing.T) {
+	recipient := createRecipient(t, "email7", "url7")
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
+		[]*contacts.Contact{recipient}, permissions.Rule{})
+	urlVal := url.Values{
+		"sharecode": {"invalid-code"},
+		"url":       {"url7"},
+	}
+	res, err := formPOST("/sharings/"+sharing.SID+"/discovery", urlVal)
+	assert.NoError(t, err)
+	assert.Equal(t, 400, res.StatusCode)
+}
+
+func TestDiscoverySuccess(t *testing.T) {
+	recipient := createRecipient(t, "email8", recipientURL)
+	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
+		[]*contacts.Contact{recipient}, permissions.Rule{})
+	urlVal := url.Values{
+		"sharecode": {"code-" + recipient.ID()},
+		"url":       {recipientURL},
+	}
+	res, err := formPOST("/sharings/"+sharing.SID+"/discovery", urlVal)
 	assert.NoError(t, err)
 	assert.Equal(t, 302, res.StatusCode)
 }
@@ -1335,6 +1366,7 @@ func TestMergeTags(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	config.UseTestFile()
+	config.GetConfig().Assets = "../../assets"
 	testutils.NeedCouchdb()
 
 	setup = testutils.NewSetup(m, "sharing_test_alice")
