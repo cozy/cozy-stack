@@ -87,7 +87,7 @@ func createPermission(c echo.Context) error {
 	if names != nil {
 		codes = make(map[string]string, len(names))
 		for _, name := range names {
-			codes[name], err = permissions.CreateCode(instance.OAuthSecret, instance.Domain, name)
+			codes[name], err = instance.CreateShareCode(name)
 			if err != nil {
 				return err
 			}

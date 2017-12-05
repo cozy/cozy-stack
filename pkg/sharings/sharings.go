@@ -160,7 +160,7 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 	for _, recipient := range sharing.Recipients {
 		var err error
 		contactID := recipient.RefContact.ID
-		codes[contactID], err = permissions.CreateCode(instance.OAuthSecret, instance.Domain, contactID)
+		codes[contactID], err = instance.CreateShareCode(contactID)
 		if err != nil {
 			return nil, err
 		}
