@@ -6,10 +6,12 @@ import (
 	"encoding/hex"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -49,10 +51,10 @@ func updatePassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	// Event if the current passphrase is sent in this request to work, we only
-	// allow enforce a valid session to avoid having an unauthorized enpoint to
-	// bruteforce.
-	if !middlewares.IsLoggedIn(c) {
-		return c.NoContent(http.StatusUnauthorized)
+	// allow enforce a valid permission to avoid having an unauthorized enpoint
+	// for bruteforce.
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
+		return err
 	}
 
 	args := &struct {
