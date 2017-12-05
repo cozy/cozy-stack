@@ -50,9 +50,9 @@ func registerPassphrase(c echo.Context) error {
 func updatePassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	// Event if the current passphrase is sent in this request to work, we only
-	// allow enforce a valid permission to avoid having an unauthorized enpoint
-	// for bruteforce.
+	// Even if the current passphrase is needed for this request to work, we
+	// enforce a valid permission to avoid having an unauthorized enpoint that
+	// can be bruteforced.
 	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
 		return err
 	}
