@@ -3,8 +3,10 @@ package instance
 import (
 	"crypto/sha256"
 	"encoding/base32"
+	"encoding/base64"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -103,6 +105,9 @@ func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool
 // SendTwoFactorPasscode sends by mail the two factor secret to the owner of
 // the instance. It returns the generated token.
 func (i *Instance) SendTwoFactorPasscode() ([]byte, error) {
+	if i.AuthMode == TwoFactorMail && !i.MailConfirmed {
+		return nil, ErrMailIsNotConfirmed
+	}
 	token, passcode, err := i.GenerateTwoFactorSecrets()
 	if err != nil {
 		return nil, err
@@ -137,6 +142,42 @@ func (i *Instance) ValidateTwoFactorTrustedDeviceSecret(req *http.Request, token
 	return err == nil
 }
 
+// MailConfirmationLink returns a link to confirm the email address associated
+// with the instance.
+func (i *Instance) MailConfirmationLink() (string, error) {
+	settings, err := i.SettingsDocument()
+	if err != nil {
+		return "", err
+	}
+	email, _ := settings.M["email"].(string)
+	token, err := crypto.EncodeAuthMessage(i.mailConfirmationMACConfig(), nil, []byte(email))
+	if err != nil {
+		return "", err
+	}
+	return i.PageURL("/auth/confirm_mail", url.Values{
+		"confirmation_token": {base64.URLEncoding.EncodeToString(token)},
+	}), nil
+}
+
+// ConfirmMail set the `MailConfirmed` field to true after verifying the given
+// token.
+func (i *Instance) ConfirmMail(token []byte) error {
+	if i.MailConfirmed {
+		return nil
+	}
+	settings, err := i.SettingsDocument()
+	if err != nil {
+		return err
+	}
+	email, _ := settings.M["email"].(string)
+	_, err = crypto.DecodeAuthMessage(i.mailConfirmationMACConfig(), token, []byte(email))
+	if err != nil {
+		return err
+	}
+	i.MailConfirmed = true
+	return Update(i)
+}
+
 func (i *Instance) totpMACConfig() *crypto.MACConfig {
 	return &crypto.MACConfig{
 		Name:   "totp",
@@ -149,6 +190,15 @@ func (i *Instance) totpMACConfig() *crypto.MACConfig {
 func (i *Instance) trustedDeviceMACConfig() *crypto.MACConfig {
 	return &crypto.MACConfig{
 		Name:   "trusted-device",
+		Key:    i.SessionSecret,
+		MaxAge: 0,
+		MaxLen: 256,
+	}
+}
+
+func (i *Instance) mailConfirmationMACConfig() *crypto.MACConfig {
+	return &crypto.MACConfig{
+		Name:   "mail",
 		Key:    i.SessionSecret,
 		MaxAge: 0,
 		MaxLen: 256,

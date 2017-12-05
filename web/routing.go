@@ -101,6 +101,11 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 }
 
 func newRenderer(assetsPath string) (*renderer, error) {
+	funcsMap := template.FuncMap{
+		"t":     fmt.Sprintf,
+		"Split": strings.Split,
+	}
+
 	// By default, use the assets packed in the binary
 	if assetsPath != "" {
 		list := make([]string, len(templatesList))
@@ -108,9 +113,9 @@ func newRenderer(assetsPath string) (*renderer, error) {
 			list[i] = path.Join(assetsPath, "templates", name)
 		}
 		var err error
-		t := template.New("stub").Funcs(template.FuncMap{"t": fmt.Sprintf})
+		t := template.New("stub").Funcs(funcsMap)
 		if t, err = t.ParseFiles(list...); err != nil {
-			return nil, fmt.Errorf("Can't load the assets from %s", assetsPath)
+			return nil, fmt.Errorf("Can't load the assets from %q: %s", assetsPath, err)
 		}
 		h := http.FileServer(http.Dir(assetsPath))
 		r := &renderer{t: t, Handler: http.StripPrefix("/assets", h)}
@@ -125,10 +130,10 @@ func newRenderer(assetsPath string) (*renderer, error) {
 		} else {
 			tmpl = t.New(name)
 		}
-		tmpl = tmpl.Funcs(template.FuncMap{"t": fmt.Sprintf})
+		tmpl = tmpl.Funcs(funcsMap)
 		f, err := statikFS.Open("/templates/" + name)
 		if err != nil {
-			return nil, fmt.Errorf("Can't load asset %s", name)
+			return nil, fmt.Errorf("Can't load asset %q: %s", name, err)
 		}
 		b, err := ioutil.ReadAll(f)
 		if err != nil {

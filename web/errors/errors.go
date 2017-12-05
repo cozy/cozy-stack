@@ -65,7 +65,7 @@ func ErrorHandler(err error, c echo.Context) {
 	}
 
 	if je != nil {
-		if c.Request().Method == http.MethodHead {
+		if req.Method == http.MethodHead {
 			c.NoContent(je.Status)
 			return
 		}
@@ -81,6 +81,19 @@ func ErrorHandler(err error, c echo.Context) {
 // per-se.
 func HTMLErrorHandler(err error, c echo.Context) {
 	status := http.StatusInternalServerError
+
+	req := c.Request()
+
+	var log *logrus.Entry
+	if config.IsDevRelease() {
+		inst, ok := c.Get("instance").(*instance.Instance)
+		if ok {
+			log = inst.Logger()
+		} else {
+			log = logger.WithNamespace("http")
+		}
+		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+	}
 
 	var he *echo.HTTPError
 	var ok bool
@@ -110,21 +123,25 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		}
 	}
 
-	acceptHTML := strings.Contains(c.Request().Header.Get("Accept"), echo.MIMETextHTML)
-	if c.Request().Method == http.MethodHead {
-		c.NoContent(status)
+	acceptHTML := strings.Contains(req.Header.Get("Accept"), echo.MIMETextHTML)
+	if req.Method == http.MethodHead {
+		err = c.NoContent(status)
 	} else if acceptHTML {
 		var domain string
 		i, ok := middlewares.GetInstanceSafe(c)
 		if ok {
 			domain = i.PageURL("", nil)
 		}
-		c.Render(status, "error.html", echo.Map{
+		err = c.Render(status, "error.html", echo.Map{
 			"Domain":     domain,
 			"ErrorTitle": title,
 			"Error":      value,
 		})
 	} else {
-		c.String(status, fmt.Sprintf("%v", he.Message))
+		err = c.String(status, fmt.Sprintf("%v", he.Message))
+	}
+
+	if err != nil && log != nil {
+		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
 	}
 }
