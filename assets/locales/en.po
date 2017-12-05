@@ -75,27 +75,6 @@ msgstr "By checking this option, this device won't be asked for two factor authe
 msgid "Login Connect from oauth help"
 msgstr "Hello! Once you've confirmed your password, you'll access the permission board where you can allow the application to access your data or not. It's up to you !"
 
-msgid "Session New connection title"
-msgstr "Oops ! Something unusual just happened on your Cozy"
-
-msgid "Session New connection content"
-msgstr ""
-"We have registered a new login to your Cozy %s, from %s, %s (%s) with web browser %s on a %s.\n\n"
-"Do you recognize this activity?\n"
-"- If yes:\n"
-"Great news! Keep calm and get Cozy again.\n"
-"- If no:\n"
-"Don't worry! Please reset your password to avoid compromising the security of your account."
-
-msgid "Session New connection for registration title"
-msgstr "A new device connected to your Cozy"
-
-msgid "Session New connection for registration content"
-msgstr ""
-"Congrats, the registration of a new device to your Cozy has been successful.\n"
-"You can manage your devices directly from your Cozy by following this link: %s.\n\n"
-"If you are not the source of this addition you can revoke the new device by following this link: %s. Or contact us on the following address: contact@cozycloud.cc."
-
 msgid "Onboarding Not activated Title"
 msgstr "You need to activate your Cozy"
 
@@ -394,3 +373,50 @@ msgstr "Verify your connection to Cozy"
 
 msgid "Mail Two Factor Intro"
 msgstr "Here is the code to use for two-factor authentication: {{.TwoFactorPasscode}}."
+
+msgid "Mail New Connection Subject"
+msgstr "We just detected a connection to your Cozy"
+
+msgid "Mail New Connection Intro"
+msgstr ""
+"We just detected a connection to your Cozy.\n
+"Here are the details of this connection:"
+
+msgid "Mail New Connection Place"
+msgstr "Location"
+
+msgid "Mail New Connection IP"
+msgstr "IP Address"
+
+msgid "Mail New Connection Browser"
+msgstr "Browser"
+
+msgid "Mail New Connection OS"
+msgstr "Operating System"
+
+msgid "Mail New Connection Change Passphrase instruction"
+msgstr "That was you ? Great ! We are reassured. Sorry for the inconvenience. If not, change your password now."
+
+msgid "Mail New Connection Change Passphrase text"
+msgstr "Change my password"
+
+msgid "Mail New Connection Outro"
+msgstr "Why this e-mail? The safety of your Cozy is our priority and we take care to warn you of any unusual connection."
+
+msgid "Mail New Registration Subject"
+msgstr "A new device connected to your Cozy"
+
+msgid "Mail New Registration Intro"
+msgstr "Congrats, the registration of a new device to your Cozy has been successful."
+
+msgid "Mail New Registration Devices instruction"
+msgstr "You can manage your devices directly from your Cozy:"
+
+msgid "Mail New Registration Devices text"
+msgstr "Manage my devices"
+
+msgid "Mail New Registration Revoke instruction"
+msgstr "If you are not the source of this addition you can revoke the new device"
+
+msgid "Mail New Registration Revoke text"
+msgstr "Revoke this device"

@@ -48,6 +48,13 @@ func registerPassphrase(c echo.Context) error {
 func updatePassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
+	// Event if the current passphrase is sent in this request to work, we only
+	// allow enforce a valid session to avoid having an unauthorized enpoint to
+	// bruteforce.
+	if !middlewares.IsLoggedIn(c) {
+		return c.NoContent(http.StatusUnauthorized)
+	}
+
 	args := &struct {
 		Current    string `json:"current_passphrase"`
 		Passphrase string `json:"new_passphrase"`
