@@ -217,7 +217,7 @@ msgid "Error Invalid mail token"
 msgstr "The link to confirm your email is truncated or has expired"
 
 msgid "Two Factor Activation"
-msgstr Authentication with two-factor is activated"
+msgstr "Authentication with two-factor is activated"
 
 msgid "Confirmation User Content"
 msgstr "Your e-mail is now confirmed. We successfully activated two-factor authentication for your Cozy."
