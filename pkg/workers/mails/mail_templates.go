@@ -49,6 +49,7 @@ type MailTemplate struct {
 	Intro      string
 	Outro      string
 	Actions    []MailAction
+	Entries    []MailEntry
 
 	cacheMu sync.Mutex
 	cache   map[string]*mailCache
@@ -61,6 +62,12 @@ type MailAction struct {
 	Link         string
 }
 
+// MailEntry describes an row entry in a mail template.
+type MailEntry struct {
+	Key string
+	Val string
+}
+
 type mailCache struct {
 	subject   string
 	greeting  string
@@ -68,12 +75,18 @@ type mailCache struct {
 	intro     *template.Template
 	outro     *template.Template
 	actions   []mailActionCache
+	entries   []mailEntryCache
 }
 
 type mailActionCache struct {
 	instructions string
 	text         string
 	link         *template.Template
+}
+
+type mailEntryCache struct {
+	key string
+	val *template.Template
 }
 
 func (m *mailCache) ToBody(recipientName string, data interface{}) (body hermes.Body, err error) {
@@ -98,6 +111,7 @@ func (m *mailCache) ToBody(recipientName string, data interface{}) (body hermes.
 		}
 	}
 	as := make([]hermes.Action, len(m.actions))
+	es := make([]hermes.Entry, len(m.entries))
 	for i, a := range m.actions {
 		link := new(bytes.Buffer)
 		if err = a.link.Execute(link, data); err != nil {
@@ -111,12 +125,23 @@ func (m *mailCache) ToBody(recipientName string, data interface{}) (body hermes.
 			},
 		}
 	}
+	for i, e := range m.entries {
+		value := new(bytes.Buffer)
+		if err = e.val.Execute(value, data); err != nil {
+			return
+		}
+		es[i] = hermes.Entry{
+			Key:   e.key,
+			Value: value.String(),
+		}
+	}
 	body.Greeting = m.greeting
 	body.Signature = m.signature
 	body.Name = recipientName
 	body.Intros = intros
 	body.Outros = outros
 	body.Actions = as
+	body.Dictionary = es
 	return
 }
 
@@ -182,6 +207,14 @@ func (m *MailTemplater) Execute(name, locale string, recipientName string, data 
 					c.actions[i].text = i18n.Translate(a.Text, locale)
 				}
 				c.actions[i].link, err = template.New("").Parse(a.Link)
+				if err != nil {
+					return
+				}
+			}
+			c.entries = make([]mailEntryCache, len(tpl.Entries))
+			for i, e := range tpl.Entries {
+				c.entries[i].key = i18n.Translate(e.Key, locale)
+				c.entries[i].val, err = template.New("").Parse(e.Val)
 				if err != nil {
 					return
 				}
@@ -264,6 +297,42 @@ func init() {
 			Name:    "two_factor",
 			Subject: "Mail Two Factor Subject",
 			Intro:   "Mail Two Factor Intro",
+		},
+		{
+			Name:    "new_connexion",
+			Subject: "Mail New Connection Subject",
+			Intro:   "Mail New Connection Intro",
+			Entries: []MailEntry{
+				{Key: "Mail New Connection Place", Val: "{{.City}}, {{.Country}}"},
+				{Key: "Mail New Connection IP", Val: "{{.IP}}"},
+				{Key: "Mail New Connection Browser", Val: "{{.Browser}}"},
+				{Key: "Mail New Connection OS", Val: "{{.OS}}"},
+			},
+			Actions: []MailAction{
+				{
+					Instructions: "Mail New Connection Change Passphrase instruction",
+					Text:         "Mail New Connection Change Passphrase text",
+					Link:         "{{.ChangePassphraseLink}}",
+				},
+			},
+			Outro: "Mail New Connection Outro",
+		},
+		{
+			Name:    "new_registration",
+			Subject: "Mail New Registration Subject",
+			Intro:   "Mail New Registration Intro",
+			Actions: []MailAction{
+				{
+					Instructions: "Mail New Registration Devices instruction",
+					Text:         "Mail New Registration Devices text",
+					Link:         "{{.DevicesLink}}",
+				},
+				{
+					Instructions: "Mail New Registration Revoke instruction",
+					Text:         "Mail New Registration Revoke text",
+					Link:         "{{.RevokeLink}}",
+				},
+			},
 		},
 	}}
 }

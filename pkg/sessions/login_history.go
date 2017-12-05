@@ -13,7 +13,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/notifications"
 	"github.com/mssola/user_agent"
 	maxminddb "github.com/oschwald/maxminddb-golang"
 )
@@ -166,25 +165,37 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry, clientRegistrati
 		return nil
 	}
 
-	var title, content string
+	var templateName string
+	var templateValues map[string]interface{}
 	if clientRegistrationID != "" {
 		devicesLink := i.SubDomain(consts.SettingsSlug)
-		devicesLink.Fragment = "connectedDevices"
+		devicesLink.Fragment = "/connectedDevices"
 
 		revokeLink := i.SubDomain(consts.SettingsSlug)
-		revokeLink.Fragment = "connectedDevices/" + url.PathEscape(clientRegistrationID)
+		revokeLink.Fragment = "/connectedDevices/" + url.PathEscape(clientRegistrationID)
 
-		title = i.Translate("Session New connection for registration title")
-		content = i.Translate("Session New connection for registration content", devicesLink, revokeLink)
+		templateName = "new_registration"
+		templateValues = map[string]interface{}{
+			"DevicesLink": devicesLink.String(),
+			"RevokeLink":  revokeLink.String(),
+		}
 	} else {
-		title = i.Translate("Session New connection title")
-		content = i.Translate("Session New connection content", i.Domain, l.City, l.Country, l.IP, l.Browser, l.OS)
+		changePassphraseURL := i.SubDomain(consts.SettingsSlug)
+		changePassphraseURL.Fragment = "/profile/changePassphrase"
+		templateName = "new_connexion"
+		templateValues = map[string]interface{}{
+			"City":    l.City,
+			"Country": l.Country,
+			"IP":      l.IP,
+			"Browser": l.Browser,
+			"OS":      l.OS,
+			"ChangePassphraseLink": changePassphraseURL.String(),
+		}
 	}
 
-	notif := &notifications.Notification{
-		Reference: "New connexion",
-		Title:     title,
-		Content:   content,
-	}
-	return notifications.Create(i, "stack", notif)
+	// TODO: use notifications
+	return i.SendMail(&instance.Mail{
+		TemplateName:   templateName,
+		TemplateValues: templateValues,
+	})
 }

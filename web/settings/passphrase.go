@@ -6,10 +6,12 @@ import (
 	"encoding/hex"
 	"net/http"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -47,6 +49,13 @@ func registerPassphrase(c echo.Context) error {
 
 func updatePassphrase(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+
+	// Even if the current passphrase is needed for this request to work, we
+	// enforce a valid permission to avoid having an unauthorized enpoint that
+	// can be bruteforced.
+	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
+		return err
+	}
 
 	args := &struct {
 		Current    string `json:"current_passphrase"`
