@@ -35,8 +35,11 @@ following line to the .bash_profile
 		switch args[0] {
 		case "bash":
 			return RootCmd.GenBashCompletion(os.Stdout)
+		case "zsh":
+			// Zsh completion support is still basic
+			// https://github.com/spf13/cobra/issues/107
+			return RootCmd.GenZshCompletion(os.Stdout)
 		}
-		// TODO add zsh - https://github.com/spf13/cobra/issues/107
 		return errors.New("Unsupported shell")
 	},
 }
