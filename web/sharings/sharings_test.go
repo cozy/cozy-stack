@@ -1424,17 +1424,6 @@ func postJSON(t *testing.T, path string, v echo.Map) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-func putJSON(t *testing.T, path string, v echo.Map) (*http.Response, error) {
-	body, _ := json.Marshal(v)
-	req, err := http.NewRequest(http.MethodPut, ts.URL+path,
-		bytes.NewReader(body))
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	req.Header.Add(echo.HeaderContentType, "application/json")
-
-	return http.DefaultClient.Do(req)
-}
-
 func requestGET(u string, v url.Values) (*http.Response, error) {
 	if v != nil {
 		u = u + "?" + v.Encode()
