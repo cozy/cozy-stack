@@ -372,6 +372,12 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+### POST /sharings/answer
+
+This route is used by the cozy of the recipient to inform the cozy of the
+owner that the sharing has been accepted, and to setup the OAuth clients and
+start the replication of the shared documents.
+
 ### DELETE /sharings/:sharing-id
 
 Revoke a sharing. Depending on the role of the logged-in user and the type of

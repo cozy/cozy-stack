@@ -256,8 +256,6 @@ func discovery(c echo.Context) error {
 }
 
 // SharingAnswer handles a sharing answer from the sharer side
-// TODO document this route
-// TODO can we make this request idempotent?
 func SharingAnswer(c echo.Context) error {
 	state := c.QueryParam("state")
 	clientID := c.QueryParam("client_id")

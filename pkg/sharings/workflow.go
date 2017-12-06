@@ -144,7 +144,7 @@ func AcceptSharingRequest(i *instance.Instance, answerURL, scope string) error {
 }
 
 // SharingAccepted handles an accepted sharing on the sharer side and returns
-// the redirect url.
+// the sharing.
 func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode string) (*Sharing, error) {
 	if shareCode == "" {
 		return nil, ErrMissingCode
@@ -163,6 +163,9 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 	m, err := s.GetMemberFromClientID(i, clientID)
 	if err != nil {
 		return nil, err
+	}
+	if m.Status != consts.SharingStatusPending {
+		return nil, ErrSharingAlreadyExist
 	}
 
 	// Update the sharing status and asks the recipient for access
