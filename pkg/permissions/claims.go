@@ -8,26 +8,13 @@ import (
 
 // #nosec
 const (
-	// AppAudience is the audience for JWT used by client-side apps
-	AppAudience = "app"
-
-	// KonnectorAudience is the audience for JWT used by konnectors
-	KonnectorAudience = "konn"
-
-	// CliAudience is the audience for JWT used by command line interface
-	CLIAudience = "cli"
-
-	// ShareAudience is the audience field of JWT for access tokens
-	ShareAudience = "share"
-
-	// RegistrationTokenAudience is the audience field of JWT for registration tokens
-	RegistrationTokenAudience = "registration"
-
-	// AccessTokenAudience is the audience field of JWT for access tokens
-	AccessTokenAudience = "access"
-
-	// RefreshTokenAudience is the audience field of JWT for refresh tokens
-	RefreshTokenAudience = "refresh"
+	AppAudience               = "app"          // used by client-side apps
+	KonnectorAudience         = "konn"         // used by konnectors
+	CLIAudience               = "cli"          // used by command line interface
+	ShareAudience             = "share"        // access tokens
+	RegistrationTokenAudience = "registration" // registration tokens
+	AccessTokenAudience       = "access"       // access tokens
+	RefreshTokenAudience      = "refresh"      // refresh tokens
 )
 
 // TokenValidityDuration is the duration where a token is valid in seconds (1 week)
@@ -38,10 +25,7 @@ var (
 	konnectorTokenValidityDuration = 30 * time.Minute
 	cliTokenValidityDuration       = 30 * time.Minute
 
-	shareTokenValidityDuration        = 7 * 24 * time.Hour
-	registrationTokenValidityDuration = 7 * 24 * time.Hour
-	accessTokenValidityDuration       = 7 * 24 * time.Hour
-	refreshTokenValidityDuration      = 24 * time.Hour
+	accessTokenValidityDuration = 7 * 24 * time.Hour
 )
 
 // Claims is used for JWT used in OAuth2 flow and applications token
@@ -70,18 +54,20 @@ func (claims *Claims) Expired() bool {
 		} else {
 			validityDuration = appTokenValidityDuration
 		}
+
 	case KonnectorAudience:
 		validityDuration = konnectorTokenValidityDuration
+
 	case CLIAudience:
 		validityDuration = cliTokenValidityDuration
-	case ShareAudience:
-		validityDuration = shareTokenValidityDuration
-	case RegistrationTokenAudience:
-		validityDuration = registrationTokenValidityDuration
+
 	case AccessTokenAudience:
 		validityDuration = accessTokenValidityDuration
-	case RefreshTokenAudience:
-		validityDuration = refreshTokenValidityDuration
+
+	// Share, RefreshToken and RegistrationToken never expire
+	case ShareAudience, RegistrationTokenAudience, RefreshTokenAudience:
+		return false
+
 	default:
 		validityDuration = defaultValidityDuration
 	}
