@@ -209,6 +209,44 @@ func GetSharingFromPermissions(db couchdb.Database, perms *permissions.Permissio
 	return FindSharing(db, parts[1])
 }
 
+// AddRecipient adds a recipient identified by a contact_id to a sharing.
+func (s *Sharing) AddRecipient(i *instance.Instance, contactID string) error {
+	if !s.Owner {
+		return ErrBadSharingType
+	}
+
+	// Add the recipient to the sharing document
+	recipient := Member{
+		Status: consts.SharingStatusPending,
+		RefContact: couchdb.DocReference{
+			Type: consts.Contacts,
+			ID:   contactID,
+		},
+	}
+	if contact := recipient.Contact(i); contact == nil {
+		return ErrRecipientDoesNotExist
+	}
+	s.Recipients = append(s.Recipients, recipient)
+
+	// Add a sharecode in the permissions document
+	perms, err := s.Permissions(i)
+	if err != nil {
+		return err
+	}
+	if perms.Codes == nil {
+		perms.Codes = make(map[string]string)
+	}
+	perms.Codes[contactID], err = i.CreateShareCode(contactID)
+	if err != nil {
+		return err
+	}
+	if err = couchdb.UpdateDoc(i, perms); err != nil {
+		return err
+	}
+
+	return couchdb.UpdateDoc(i, s)
+}
+
 var (
 	_ couchdb.Doc = &Sharing{}
 )

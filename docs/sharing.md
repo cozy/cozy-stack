@@ -372,13 +372,27 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-### POST /sharings/answer
+#### GET /sharings/:sharing-id
+
+Get the informations about a sharing.
+
+#### POST /sharings/answer
 
 This route is used by the cozy of the recipient to inform the cozy of the
 owner that the sharing has been accepted, and to setup the OAuth clients and
 start the replication of the shared documents.
 
-### DELETE /sharings/:sharing-id
+#### POST /sharings/:sharing-id/recipients
+
+Add a recipient to a sharing.
+
+##### Query-String
+
+| Parameter | Description                  |
+| --------- | ---------------------------- |
+| ContactID | the id of the contact to add |
+
+#### DELETE /sharings/:sharing-id
 
 Revoke a sharing. Depending on the role of the logged-in user and the type of
 sharing, the implications are different:
@@ -397,7 +411,7 @@ Permissions for that route are checked as following:
 * The application at the origin of the sharing can revoke it.
 * The sharer can ask the recipients to revoke the sharing.
 
-#### Request
+##### Request
 
 ```http
 DELETE /sharings/CfFNWhvEDzHDYOxQvzqPAfHcqQolmjEY HTTP/1.1
@@ -406,7 +420,7 @@ Host: cozy.example.net
 Content-Type: application/json
 ```
 
-#### Response
+##### Response
 
 ```http
 HTTP/1.1 204 No Content
@@ -416,12 +430,12 @@ Content-Type: application/json
 Note: this route is also used internally by the sharer to inform the cozy of
 the recipient that the sharing has been revoked on its side.
 
-### DELETE /sharings/:sharing-id/:recipient-client-id
+#### DELETE /sharings/:sharing-id/:recipient-client-id
 
 This internal route is used by the cozy instance of the recipient to inform the
 sharer that its owner has revoked the sharing.
 
-### DELETE /sharings/:sharing-id/recipient/:contact-id
+#### DELETE /sharings/:sharing-id/recipient/:contact-id
 
 Revoke a recipient from a sharing. Only the sharer can make that action and
 depending on the type of sharing the implications differ:
@@ -431,7 +445,7 @@ depending on the type of sharing the implications differ:
 * for _Two-way_ sharing the sharer also deletes the OAuth client of the
   recipient for that sharing.
 
-#### Request
+##### Request
 
 ```http
 DELETE /sharings/xkWMVOrVitZVSqXAAvErcmUAdEKMCLlx/recipient/f319a796-bfed-11e7-9903-d3d8f0929aa5 HTTP/1.1
@@ -440,14 +454,14 @@ Host: cozy.example.net
 Content-Type: application/json
 ```
 
-#### Response
+##### Response
 
 ```http
 HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
-### POST /sharings/destination/:doctype
+#### POST /sharings/destination/:doctype
 
 Sets the destination directory of the given application. The "destination
 directory" is where the shared files received by this application will go. Only
@@ -457,7 +471,7 @@ For example if a user sets the destination directory of the application "Photos"
 to `/Shared with Me/Photos` (by providing its **id**) then all shared photos
 will go there.
 
-#### Request
+##### Request
 
 Required parameters:
 
@@ -471,14 +485,14 @@ Host: cozy.example.net
 Content-Type: application/json
 ```
 
-#### Response
+##### Response
 
 ```http
 HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
-#### Note
+##### Note
 
 The slug of the application that makes this request is extracted from its token
 and stored in the config document. The application that creates the sharing on
