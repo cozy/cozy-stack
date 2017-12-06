@@ -93,6 +93,8 @@ log:
   level: info
   # send logs to the local syslog - flags: --log-syslog
   syslog: false
+  # redis url to synchronize loggers between cozy-stack process
+  # redis: redis://localhost:6379/8
 
 # It is possible to customize some behaviors of cozy-stack in function of the
 # context of an instance (the context field of the settings document of this
