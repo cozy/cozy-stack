@@ -166,7 +166,7 @@ msgid "Error Internal Server Error Title"
 msgstr "Oops…"
 
 msgid "Error Internal Server Error Message"
-msgstr "It seems that you Cozy is under water. Our team is working hard to put it back on its feet."
+msgstr "It seems that your Cozy is under water. Our team is working hard to put it back on its feet."
 
 msgid "Error Instance not found Title"
 msgstr "Address of this Cozy does not exist"
