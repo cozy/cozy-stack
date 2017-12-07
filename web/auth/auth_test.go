@@ -46,6 +46,7 @@ var client *http.Client
 var clientID string
 var clientSecret string
 var registrationToken string
+var sharingClientID string
 var altClientID string
 var altRegistrationToken string
 var csrfToken string
@@ -437,6 +438,32 @@ func TestRegisterClientSuccessWithAllFields(t *testing.T) {
 	altRegistrationToken = client.RegistrationToken
 }
 
+func TestRegisterSharingClientSuccess(t *testing.T) {
+	res, err := postJSON("/auth/register", echo.Map{
+		"redirect_uris": []string{"https://cozy.example.org/sharings/answer"},
+		"client_name":   "John",
+		"software_id":   "github.com/cozy/cozy-stack",
+		"client_kind":   "sharing",
+		"client_uri":    "https://cozy.example.org",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "201 Created", res.Status)
+	var client oauth.Client
+	err = json.NewDecoder(res.Body).Decode(&client)
+	assert.NoError(t, err)
+	assert.NotEqual(t, client.ClientID, "")
+	assert.NotEqual(t, client.ClientID, "ignored")
+	assert.NotEqual(t, client.ClientSecret, "")
+	assert.NotEqual(t, client.ClientSecret, "ignored")
+	assert.NotEqual(t, client.RegistrationToken, "")
+	assert.NotEqual(t, client.RegistrationToken, "ignored")
+	assert.Equal(t, client.SecretExpiresAt, 0)
+	assert.Equal(t, client.RedirectURIs, []string{"https://cozy.example.org/sharings/answer"})
+	assert.Equal(t, client.ClientName, "John")
+	assert.Equal(t, client.SoftwareID, "github.com/cozy/cozy-stack")
+	sharingClientID = client.ClientID
+}
+
 func TestDeleteClientInvalidClientID(t *testing.T) {
 	req, _ := http.NewRequest("DELETE", ts.URL+"/auth/register/123456789", nil)
 	req.Host = domain
@@ -704,8 +731,8 @@ func TestAuthorizeFormSuccess(t *testing.T) {
 }
 
 func TestAuthorizeFormSharingSuccess(t *testing.T) {
-	u := url.QueryEscape("https://example.org/oauth/callback")
-	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=code&sharing_type=one-shot&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+clientID, nil)
+	u := url.QueryEscape("https://cozy.example.org/sharings/answer")
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=cozy_sharing&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+sharingClientID, nil)
 	req.Host = domain
 	res, err := client.Do(req)
 	assert.NoError(t, err)
@@ -786,11 +813,12 @@ func TestAuthorizeWithNoClientID(t *testing.T) {
 
 func TestAuthorizeWithInvalidClientID(t *testing.T) {
 	res, err := postForm("/auth/authorize", &url.Values{
-		"state":        {"123456"},
-		"client_id":    {"987"},
-		"redirect_uri": {"https://example.org/oauth/callback"},
-		"scope":        {"files:read"},
-		"csrf_token":   {csrfToken},
+		"state":         {"123456"},
+		"client_id":     {"987"},
+		"redirect_uri":  {"https://example.org/oauth/callback"},
+		"scope":         {"files:read"},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -802,26 +830,28 @@ func TestAuthorizeWithInvalidClientID(t *testing.T) {
 
 func TestAuthorizeWithNoRedirectURI(t *testing.T) {
 	res, err := postForm("/auth/authorize", &url.Values{
-		"state":      {"123456"},
-		"client_id":  {clientID},
-		"scope":      {"files:read"},
-		"csrf_token": {csrfToken},
+		"state":         {"123456"},
+		"client_id":     {clientID},
+		"scope":         {"files:read"},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, "400 Bad Request", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), "The redirect_uri parameter is invalid")
+	assert.Contains(t, string(body), "The redirect_uri parameter is mandatory")
 }
 
 func TestAuthorizeWithInvalidURI(t *testing.T) {
 	res, err := postForm("/auth/authorize", &url.Values{
-		"state":        {"123456"},
-		"client_id":    {clientID},
-		"redirect_uri": {"/oauth/callback"},
-		"scope":        {"files:read"},
-		"csrf_token":   {csrfToken},
+		"state":         {"123456"},
+		"client_id":     {clientID},
+		"redirect_uri":  {"/oauth/callback"},
+		"scope":         {"files:read"},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -833,10 +863,11 @@ func TestAuthorizeWithInvalidURI(t *testing.T) {
 
 func TestAuthorizeWithNoScope(t *testing.T) {
 	res, err := postForm("/auth/authorize", &url.Values{
-		"state":        {"123456"},
-		"client_id":    {clientID},
-		"redirect_uri": {"https://example.org/oauth/callback"},
-		"csrf_token":   {csrfToken},
+		"state":         {"123456"},
+		"client_id":     {clientID},
+		"redirect_uri":  {"https://example.org/oauth/callback"},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -848,11 +879,12 @@ func TestAuthorizeWithNoScope(t *testing.T) {
 
 func TestAuthorizeSuccess(t *testing.T) {
 	res, err := postForm("/auth/authorize", &url.Values{
-		"state":        {"123456"},
-		"client_id":    {clientID},
-		"redirect_uri": {"https://example.org/oauth/callback"},
-		"scope":        {"files:read"},
-		"csrf_token":   {csrfToken},
+		"state":         {"123456"},
+		"client_id":     {clientID},
+		"redirect_uri":  {"https://example.org/oauth/callback"},
+		"scope":         {"files:read"},
+		"csrf_token":    {csrfToken},
+		"response_type": {"code"},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()

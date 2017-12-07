@@ -114,19 +114,18 @@ const (
 const (
 	// SharingStatusPending is the sharing pending status
 	SharingStatusPending = "pending"
-	// SharingStatusRefused is the sharing refused status
-	SharingStatusRefused = "refused"
-	// SharingStatusAccepted is the sharing accepted status
-	SharingStatusAccepted = "accepted"
-	// SharingStatusError is when the request could not be sent
-	SharingStatusError = "error"
-	// SharingStatusUnregistered is when the sharer could not register herself
-	// as an OAuth client at the recipient's
-	SharingStatusUnregistered = "unregistered"
 	// SharingStatusMailNotSent is when the mail invitation was not sent
 	SharingStatusMailNotSent = "mail-not-sent"
+	// SharingStatusAccepted is the sharing accepted status
+	SharingStatusAccepted = "accepted"
 	// SharingStatusRevoked is to tell if a recipient is revoked.
 	SharingStatusRevoked = "revoked"
+)
+
+const (
+	// SharingResponseType is the response_type of the OAuth client used for
+	// sharings between two cozy instances
+	SharingResponseType = "cozy_sharing"
 )
 
 const (

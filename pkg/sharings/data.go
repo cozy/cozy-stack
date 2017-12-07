@@ -1,6 +1,7 @@
 package sharings
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -10,19 +11,133 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/scheduler"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
+const (
+	// WorkerTypeSharingUpdates is the string representation of the type of
+	// workers that deals with updating sharings.
+	WorkerTypeSharingUpdates = "sharingupdates"
+)
+
+// WorkerData describes the basic data the workers need to process the events
+// they will receive.
+type WorkerData struct {
+	DocID      string
+	SharingID  string
+	Selector   string
+	Values     []string
+	DocType    string
+	Recipients []*RecipientInfo
+}
+
+// SharingMessage describes the message that will be transmitted to the workers
+// "sharing_update" and "share_data".
+type SharingMessage struct {
+	SharingID string           `json:"sharing_id"`
+	Rule      permissions.Rule `json:"rule"`
+}
+
+// AddTrigger creates a new trigger on the updates of the shared documents
+// The delTrigger flag is when the trigger must only listen deletions, i.e.
+// an one-way on the recipient side, for the revocation
+func AddTrigger(instance *instance.Instance, rule permissions.Rule, sharingID string, delTrigger bool) error {
+	sched := globals.GetScheduler()
+
+	var eventArgs string
+	if rule.Selector != "" {
+		// TODO to be confirmed, but it looks like we shouldn't add a trigger
+		// when delTrigger is true when there is a selector for the rule
+		eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
+			strings.Join(rule.Values, ",") + ":" + rule.Selector
+	} else {
+		if delTrigger {
+			eventArgs = rule.Type + ":DELETED:" +
+				strings.Join(rule.Values, ",")
+		} else {
+			eventArgs = rule.Type + ":CREATED,UPDATED,DELETED:" +
+				strings.Join(rule.Values, ",")
+		}
+
+	}
+
+	msg := SharingMessage{
+		SharingID: sharingID,
+		Rule:      rule,
+	}
+
+	workerArgs, err := jobs.NewMessage(msg)
+	if err != nil {
+		return err
+	}
+	t, err := scheduler.NewTrigger(&scheduler.TriggerInfos{
+		Type:       "@event",
+		WorkerType: WorkerTypeSharingUpdates,
+		Domain:     instance.Domain,
+		Arguments:  eventArgs,
+		Message:    workerArgs,
+	})
+	if err != nil {
+		return err
+	}
+	instance.Logger().Infof("[sharings] AddTrigger: trigger created for "+
+		"sharing %s", sharingID)
+
+	return sched.Add(t)
+}
+
+func removeSharingTriggers(ins *instance.Instance, sharingID string) error {
+	sched := globals.GetScheduler()
+	ts, err := sched.GetAll(ins.Domain)
+	if err != nil {
+		ins.Logger().Errorf("[sharings] removeSharingTriggers: Could not get "+
+			"the list of triggers: %s", err)
+		return err
+	}
+
+	for _, trigger := range ts {
+		infos := trigger.Infos()
+		if infos.WorkerType == WorkerTypeSharingUpdates {
+			msg := SharingMessage{}
+			errm := infos.Message.Unmarshal(&msg)
+			if errm != nil {
+				ins.Logger().Errorf("[sharings] removeSharingTriggers: An "+
+					"error occurred while trying to unmarshal trigger "+
+					"message: %s", errm)
+				continue
+			}
+
+			if msg.SharingID == sharingID {
+				errd := sched.Delete(ins.Domain, trigger.ID())
+				if errd != nil {
+					ins.Logger().Errorf("[sharings] removeSharingTriggers: "+
+						"Could not delete trigger %s: %s", trigger.ID(), errd)
+				}
+
+				ins.Logger().Infof("[sharings] Trigger %s deleted for "+
+					"sharing %s", trigger.ID(), sharingID)
+			}
+		}
+	}
+
+	return nil
+}
+
 // ShareDoc shares the documents specified in the Sharing structure to the
 // specified recipient
-func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus) error {
-	for _, rule := range sharing.Permissions {
+func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Member) error {
+	perms, err := sharing.Permissions(instance)
+	if err != nil {
+		return err
+	}
+	for _, rule := range perms.Permissions {
 		if len(rule.Values) == 0 {
 			return nil
 		}
 		// Trigger the updates if the sharing is not one-shot
 		if sharing.SharingType != consts.OneShotSharing {
-			err := AddTrigger(instance, rule, sharing.SharingID, false)
+			err := AddTrigger(instance, rule, sharing.SID, false)
 			if err != nil {
 				return err
 			}
@@ -33,15 +148,12 @@ func ShareDoc(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 		if rule.Selector != "" {
 			// Selector-based sharing
 			values, err = sharingBySelector(instance, rule)
-			if err != nil {
-				return err
-			}
 		} else {
 			// Value-based sharing
 			values, err = sharingByValues(instance, rule)
-			if err != nil {
-				return err
-			}
+		}
+		if err != nil {
+			return err
 		}
 		err = sendData(instance, sharing, recStatus, values, rule)
 		if err != nil {
@@ -161,23 +273,26 @@ func sharingByValues(instance *instance.Instance, rule permissions.Rule) ([]stri
 	return values, nil
 }
 
-func sendData(instance *instance.Instance, sharing *Sharing, recStatus *RecipientStatus, values []string, rule permissions.Rule) error {
+func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Member, values []string, rule permissions.Rule) error {
 	// Create a sharedata worker for each doc to send
 	for _, val := range values {
-		domain, scheme, err := ExtractDomainAndScheme(recStatus.recipient)
+		if recStatus.URL == "" {
+			return ErrRecipientHasNoURL
+		}
+		u, err := url.Parse(recStatus.URL)
 		if err != nil {
 			return err
 		}
 		rec := &RecipientInfo{
-			URL:         domain,
-			Scheme:      scheme,
+			Domain:      u.Host,
+			Scheme:      u.Scheme,
 			AccessToken: recStatus.AccessToken,
 			Client:      recStatus.Client,
 		}
 
 		workerMsg, err := jobs.NewMessage(WorkerData{
 			DocID:      val,
-			SharingID:  sharing.SharingID,
+			SharingID:  sharing.SID,
 			Selector:   rule.Selector,
 			Values:     rule.Values,
 			DocType:    rule.Type,
@@ -208,10 +323,6 @@ func sendData(instance *instance.Instance, sharing *Sharing, recStatus *Recipien
 func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) error {
 	fs := ins.VFS()
 
-	// TODO Using a cursor might lead to inconsistency. Change it if the need
-	// arises.
-	cursor := couchdb.NewSkipCursor(10000, 0)
-
 	doc := couchdb.JSONDoc{}
 	err := couchdb.GetDoc(ins, doctype, docID, &doc)
 	if err != nil {
@@ -224,9 +335,9 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		doc.Type = doctype
 	}
 
+	cursor := couchdb.NewSkipCursor(10000, 0)
 	for {
-		perms, errg := permissions.GetSharedWithMePermissionsByDoctype(ins,
-			doctype, cursor)
+		perms, errg := permissions.GetSharedWithMePermissionsByDoctype(ins, doctype, cursor)
 		if errg != nil {
 			return errg
 		}
@@ -234,6 +345,7 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 		for _, perm := range perms {
 			if perm.Permissions.Allow(permissions.GET, doc) ||
 				perm.Permissions.Allow(permissions.POST, doc) ||
+				perm.Permissions.Allow(permissions.PATCH, doc) ||
 				perm.Permissions.Allow(permissions.PUT, doc) ||
 				perm.Permissions.Allow(permissions.DELETE, doc) {
 				return nil

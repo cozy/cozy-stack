@@ -33,14 +33,20 @@ const (
 	// TypeKonnector if the value of Permission.Type for an application
 	TypeKonnector = "konnector"
 
-	// TypeShareByLink if the value of Permission.Type for a share (by link) permission doc
-	TypeShareByLink = "share"
-
 	// TypeOauth if the value of Permission.Type for a oauth permission doc
 	TypeOauth = "oauth"
 
 	// TypeCLI if the value of Permission.Type for a command-line permission doc
 	TypeCLI = "cli"
+
+	// TypeShareByLink if the value of Permission.Type for a share (by link) permission doc
+	TypeShareByLink = "share"
+
+	// TypeSharedByMe if the value of Permission.Type for a sharing permission doc (Owner=true)
+	TypeSharedByMe = "shared-by-me"
+
+	// TypeSharedWithMe if the value of Permission.Type for a sharing permission doc (Owner=false)
+	TypeSharedWithMe = "shared-with-me"
 )
 
 // ID implements jsonapi.Doc
@@ -155,38 +161,44 @@ func GetForCLI(claims *Claims) (*Permission, error) {
 
 // GetForWebapp retrieves the Permission doc for a given webapp
 func GetForWebapp(db couchdb.Database, slug string) (*Permission, error) {
-	return getForApp(db, TypeWebapp, consts.Apps, slug)
+	return getFromSource(db, TypeWebapp, consts.Apps, slug)
 }
 
 // GetForKonnector retrieves the Permission doc for a given konnector
 func GetForKonnector(db couchdb.Database, slug string) (*Permission, error) {
-	return getForApp(db, TypeKonnector, consts.Konnectors, slug)
+	return getFromSource(db, TypeKonnector, consts.Konnectors, slug)
 }
 
-func getForApp(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
+// GetForSharedByMe retrieves the Permission doc for a sharing owned by
+// the current cozy
+func GetForSharedByMe(db couchdb.Database, sharingID string) (*Permission, error) {
+	return getFromSource(db, TypeSharedByMe, consts.Sharings, sharingID)
+}
+
+// GetForSharedWithMe retrieves the Permission doc for a sharing accepted by
+// the current cozy
+func GetForSharedWithMe(db couchdb.Database, sharingID string) (*Permission, error) {
+	return getFromSource(db, TypeSharedWithMe, consts.Sharings, sharingID)
+}
+
+func getFromSource(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
 	var res []Permission
-	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
+	req := couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
 		Selector: mango.And(
 			mango.Equal("type", permType),
 			mango.Equal("source_id", docType+"/"+slug),
 		),
 		Limit: 1,
-	}, &res)
+	}
+	err := couchdb.FindDocs(db, consts.Permissions, &req, &res)
 	if err != nil {
 		// FIXME https://issues.apache.org/jira/browse/COUCHDB-3336
 		// With a cluster of couchdb, we can have a race condition where we
 		// query an index before it has been updated for an app that has
 		// just been created.
 		time.Sleep(1 * time.Second)
-		err = couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
-			UseIndex: "by-source-and-type",
-			Selector: mango.And(
-				mango.Equal("type", permType),
-				mango.Equal("source_id", docType+"/"+slug),
-			),
-			Limit: 1,
-		}, &res)
+		err = couchdb.FindDocs(db, consts.Permissions, &req, &res)
 		if err != nil {
 			return nil, err
 		}
@@ -213,7 +225,7 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	}
 
 	if len(res.Rows) > 1 {
-		return nil, fmt.Errorf("Bad state : several permission docs for token %v", tokenCode)
+		return nil, fmt.Errorf("Bad state: several permission docs for token %v", tokenCode)
 	}
 
 	var pdoc Permission
@@ -283,7 +295,7 @@ func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug strin
 	return doc, nil
 }
 
-// CreateShareSet creates a Permission doc for sharing
+// CreateShareSet creates a Permission doc for sharing by link
 func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set) (*Permission, error) {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
@@ -306,6 +318,35 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 		return nil, err
 	}
 
+	return doc, nil
+}
+
+// CreateSharedByMeSet creates a Permission doc for sharing created on this instance
+func CreateSharedByMeSet(db couchdb.Database, sharingID string, codes map[string]string, set Set) (*Permission, error) {
+	doc := &Permission{
+		Type:        TypeSharedByMe,
+		Permissions: set,
+		Codes:       codes,
+		SourceID:    consts.Sharings + "/" + sharingID,
+	}
+	err := couchdb.CreateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+// CreateSharedWithMeSet creates a Permission doc for sharing accepted on this instance
+func CreateSharedWithMeSet(db couchdb.Database, sharingID string, set Set) (*Permission, error) {
+	doc := &Permission{
+		Type:        TypeSharedWithMe,
+		Permissions: set,
+		SourceID:    consts.Sharings + "/" + sharingID,
+	}
+	err := couchdb.CreateDoc(db, doc)
+	if err != nil {
+		return nil, err
+	}
 	return doc, nil
 }
 
@@ -465,6 +506,7 @@ func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, curs
 	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
+	// TODO kill the SharedWithPermissionView
 	err := couchdb.ExecView(db, consts.SharedWithPermissionsView, req, &res)
 	if err != nil {
 		return nil, err

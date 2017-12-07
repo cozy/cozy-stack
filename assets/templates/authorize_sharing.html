@@ -22,6 +22,7 @@
             <input type="hidden" name="state" value="{{.State}}" />
             <input type="hidden" name="redirect_uri" value="{{.RedirectURI}}" />
             <input type="hidden" name="scope" value="{{.Scope}}" />
+            <input type="hidden" name="response_type" value="cozy_sharing" />
             <div role="region">
               <h1>{{t "Authorize Sharing Title" .Client.ClientName}}</h1>
               {{if .Client.LogoURI}}
@@ -48,12 +49,6 @@
                 </li>
                 {{end}}
               </ul>
-              <p>
-                {{if .Client.PolicyURI}}
-                {{t "Authorize Policy sentence"}}
-                <a href="{{.Client.PolicyURI}}">{{t "Authorize Policy link"}}</a>.
-                {{end}}
-              </p>
               <p>
                 {{t "Authorize Give permission start"}}<strong>{{t "Authorize Give Sharing permission keyword"}}</strong>{{t "Authorize Give Sharing permission end" .Client.ClientName}}
               </p>

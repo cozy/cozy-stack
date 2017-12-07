@@ -986,6 +986,14 @@ func (i *Instance) BuildKonnectorToken(m apps.Manifest) string {
 	return token
 }
 
+// CreateShareCode returns a new sharecode to put the codes field of a
+// permissions document
+func (i *Instance) CreateShareCode(subject string) (string, error) {
+	scope := ""
+	sessionID := ""
+	return i.MakeJWT(permissions.ShareAudience, subject, scope, sessionID, time.Now())
+}
+
 func validateDomain(domain string) (string, error) {
 	domain = strings.TrimSpace(domain)
 	if domain == "" || domain == ".." || domain == "." {

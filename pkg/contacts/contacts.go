@@ -3,6 +3,7 @@ package contacts
 import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
 // Name is a struct describing a name of a contact
@@ -101,3 +102,45 @@ func (c *Contact) SetID(id string) { c.DocID = id }
 
 // SetRev changes the contact revision
 func (c *Contact) SetRev(rev string) { c.DocRev = rev }
+
+// ToMailAddress returns a struct that can be used by cozy-stack to send an
+// email to this contact
+func (c *Contact) ToMailAddress() (*mails.Address, error) {
+	if len(c.Email) == 0 {
+		return nil, ErrNoMailAddress
+	}
+	mail := c.Email[0].Address
+	for _, email := range c.Email {
+		if email.Primary {
+			mail = email.Address
+		}
+	}
+	name := mail
+	if c.FullName != "" {
+		name = c.FullName
+	} else if c.Name.GivenName != "" || c.Name.FamilyName != "" {
+		name = c.Name.GivenName + " " + c.Name.FamilyName
+	}
+	return &mails.Address{Name: name, Email: mail}, nil
+}
+
+// PrimaryCozyURL returns the URL of the primary cozy,
+// or a blank string if the contact has no known cozy.
+func (c *Contact) PrimaryCozyURL() string {
+	if len(c.Cozy) == 0 {
+		return ""
+	}
+	for _, cozy := range c.Cozy {
+		if cozy.Primary {
+			return cozy.URL
+		}
+	}
+	return c.Cozy[0].URL
+}
+
+// Find returns the contact stored in database from a given ID
+func Find(db couchdb.Database, contactID string) (*Contact, error) {
+	doc := &Contact{}
+	err := couchdb.GetDoc(db, consts.Contacts, contactID, doc)
+	return doc, err
+}

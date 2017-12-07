@@ -2,6 +2,8 @@ package sharings
 
 import "errors"
 
+// TODO i *instance.Instance vs db couchdb.Database on the whole pkg/sharings
+// TODO does all these errors still make sense?
 var (
 	// ErrBadSharingType is used when the given sharing type is not valid
 	ErrBadSharingType = errors.New("Invalid sharing type")

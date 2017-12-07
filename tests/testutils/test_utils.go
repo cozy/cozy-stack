@@ -2,6 +2,7 @@ package testutils
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -148,6 +149,15 @@ func (c *TestSetup) GetTestClient(scopes string) (*oauth.Client, string) {
 	return &client, token
 }
 
+// stupidRenderer is a renderer for echo that does nothing.
+// It is used just to avoid the error "Renderer not registered" for rendering
+// error pages.
+type stupidRenderer struct{}
+
+func (sr *stupidRenderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
+	return nil
+}
+
 // GetTestServer start a testServer with a single group on prefix
 // The server will be closed on container cleanup
 func (c *TestSetup) GetTestServer(prefix string, routes func(*echo.Group),
@@ -176,6 +186,7 @@ func (c *TestSetup) GetTestServerMultipleRoutes(mpr map[string]func(*echo.Group)
 		handler = mw(handler)
 	}
 	handler.HTTPErrorHandler = errors.ErrorHandler
+	handler.Renderer = &stupidRenderer{}
 	ts := httptest.NewServer(handler)
 	c.AddCleanup(func() error { ts.Close(); return nil })
 	c.ts = ts

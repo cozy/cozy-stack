@@ -1,10 +1,11 @@
-package sharings
+package sharings_test
 
 import (
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,10 +15,10 @@ func TestUpdateApplicationDestinationDirID(t *testing.T) {
 	dirID := "randomdirid"
 	doctype := "io.cozy.foos"
 
-	err := UpdateApplicationDestinationDirID(testInstance, slug, doctype, dirID)
+	err := sharings.UpdateApplicationDestinationDirID(testInstance, slug, doctype, dirID)
 	assert.NoError(t, err)
 
-	s := &SharingSettings{}
+	s := &sharings.SharingSettings{}
 	err = couchdb.GetDoc(testInstance, consts.Settings,
 		consts.SharingSettingsID, s)
 	assert.NoError(t, err)
@@ -25,11 +26,11 @@ func TestUpdateApplicationDestinationDirID(t *testing.T) {
 
 	// Test: update the same destination directory and see if the change was
 	// persisted.
-	err = UpdateApplicationDestinationDirID(testInstance, slug, doctype,
+	err = sharings.UpdateApplicationDestinationDirID(testInstance, slug, doctype,
 		"otherdirid")
 	assert.NoError(t, err)
 
-	sbis := &SharingSettings{}
+	sbis := &sharings.SharingSettings{}
 	err = couchdb.GetDoc(testInstance, consts.Settings,
 		consts.SharingSettingsID, sbis)
 	assert.NoError(t, err)
@@ -38,7 +39,7 @@ func TestUpdateApplicationDestinationDirID(t *testing.T) {
 
 func TestRetrieveApplicationDestinationDirID(t *testing.T) {
 	// Test retrive destination dirID when sharing settings does not exist.
-	s := SharingSettings{}
+	s := sharings.SharingSettings{}
 	err := couchdb.GetDoc(testInstance, consts.Settings,
 		consts.SharingSettingsID, &s)
 	if err == nil {
@@ -46,11 +47,11 @@ func TestRetrieveApplicationDestinationDirID(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	dirID, err := RetrieveApplicationDestinationDirID(testInstance,
+	dirID, err := sharings.RetrieveApplicationDestinationDirID(testInstance,
 		"randomslug", "io.cozy.files")
 	assert.NoError(t, err)
 
-	s = SharingSettings{}
+	s = sharings.SharingSettings{}
 	err = couchdb.GetDoc(testInstance, consts.Settings,
 		consts.SharingSettingsID, &s)
 	assert.NoError(t, err)
@@ -62,33 +63,33 @@ func TestRetrieveApplicationDestinationDirID(t *testing.T) {
 	slug := "randomretrieveslug"
 	doctype := "io.cozy.foos.bars"
 
-	err = UpdateApplicationDestinationDirID(testInstance, slug, doctype,
+	err = sharings.UpdateApplicationDestinationDirID(testInstance, slug, doctype,
 		dirDoc.ID())
 	assert.NoError(t, err)
 
-	retrievedDirID, err := RetrieveApplicationDestinationDirID(testInstance,
+	retrievedDirID, err := sharings.RetrieveApplicationDestinationDirID(testInstance,
 		slug, doctype)
 	assert.NoError(t, err)
 	assert.Equal(t, dirDoc.ID(), retrievedDirID)
 
 	// Test: set a destination directory while the directory doesn't exist and
 	// check that we receive the shared with me dirid.
-	err = UpdateApplicationDestinationDirID(testInstance, slug, consts.Files,
+	err = sharings.UpdateApplicationDestinationDirID(testInstance, slug, consts.Files,
 		"randomdirid")
 	assert.NoError(t, err)
-	s = SharingSettings{}
+	s = sharings.SharingSettings{}
 	err = couchdb.GetDoc(testInstance, consts.Settings,
 		consts.SharingSettingsID, &s)
 	assert.NoError(t, err)
 
-	retrievedDirID, err = RetrieveApplicationDestinationDirID(testInstance,
+	retrievedDirID, err = sharings.RetrieveApplicationDestinationDirID(testInstance,
 		slug, consts.Files)
 	assert.NoError(t, err)
 	assert.Equal(t, s.SharedWithMeDirID, retrievedDirID)
 
 	// Test: fetch a destination directory for a doctype for which we didn't set
 	// any and check that we receive the shared with me dirid.
-	defaultDirID, err := RetrieveApplicationDestinationDirID(testInstance, slug,
+	defaultDirID, err := sharings.RetrieveApplicationDestinationDirID(testInstance, slug,
 		"io.cozy.bazs")
 	assert.NoError(t, err)
 	assert.Equal(t, s.SharedWithMeDirID, defaultDirID)

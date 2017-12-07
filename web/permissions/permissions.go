@@ -8,12 +8,10 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
-	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
 // exports all constants from pkg/permissions to avoid double imports
@@ -89,15 +87,7 @@ func createPermission(c echo.Context) error {
 	if names != nil {
 		codes = make(map[string]string, len(names))
 		for _, name := range names {
-			codes[name], err = crypto.NewJWT(instance.OAuthSecret, &permissions.Claims{
-				StandardClaims: jwt.StandardClaims{
-					Audience: permissions.ShareAudience,
-					Issuer:   instance.Domain,
-					IssuedAt: crypto.Timestamp(),
-					Subject:  name,
-				},
-				Scope: "",
-			})
+			codes[name], err = instance.CreateShareCode(name)
 			if err != nil {
 				return err
 			}

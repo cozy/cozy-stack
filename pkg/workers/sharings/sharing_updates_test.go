@@ -29,6 +29,19 @@ func createDoc(t *testing.T, docType string, params map[string]interface{}) couc
 	return doc
 }
 
+func createNamedDoc(t *testing.T, docType string, params map[string]interface{}) couchdb.JSONDoc {
+	// map are references, so beware to remove previous set values
+	delete(params, "_rev")
+	doc := couchdb.JSONDoc{
+		Type: docType,
+		M:    params,
+	}
+	err := couchdb.CreateNamedDoc(in, &doc)
+	assert.NoError(t, err)
+
+	return doc
+}
+
 func createEvent(t *testing.T, doc couchdb.JSONDoc, sharingID, eventType string) (jobs.Message, jobs.Event) {
 	data := &sharings.SharingMessage{
 		SharingID: sharingID,
@@ -66,21 +79,23 @@ func createRecipient(t *testing.T, email, url string) *contacts.Contact {
 
 func createSharing(t *testing.T, sharingType string, owner bool, recipients []*contacts.Contact, rule permissions.Rule) sharings.Sharing {
 	sharing := sharings.Sharing{
-		Owner:            owner,
-		SharingType:      sharingType,
-		SharingID:        utils.RandomString(32),
-		Permissions:      permissions.Set{rule},
-		RecipientsStatus: []*sharings.RecipientStatus{},
+		Owner:       owner,
+		SharingType: sharingType,
+		Recipients:  []sharings.Member{},
 	}
 
+	// TODO do something with rule
+
 	for _, recipient := range recipients {
+		u := recipient.Cozy[0].URL
 		if recipient.ID() == "" {
-			recipient = createRecipient(t, recipient.Email[0].Address, recipient.Cozy[0].URL)
+			recipient = createRecipient(t, recipient.Email[0].Address, u)
 		}
 
-		rs := &sharings.RecipientStatus{
+		rs := sharings.Member{
 			Status: consts.SharingStatusAccepted,
-			RefRecipient: couchdb.DocReference{
+			URL:    u,
+			RefContact: couchdb.DocReference{
 				ID:   recipient.ID(),
 				Type: recipient.DocType(),
 			},
@@ -92,7 +107,7 @@ func createSharing(t *testing.T, sharingType string, owner bool, recipients []*c
 				RefreshToken: utils.RandomString(32),
 			},
 		}
-		sharing.RecipientsStatus = append(sharing.RecipientsStatus, rs)
+		sharing.Recipients = append(sharing.Recipients, rs)
 	}
 	err := couchdb.CreateDoc(in, &sharing)
 	assert.NoError(t, err)
@@ -115,75 +130,21 @@ func TestSharingUpdatesNoSharing(t *testing.T) {
 
 	err := SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
 	assert.Error(t, err)
-	assert.Equal(t, "Sharing does not exist", err.Error())
-
-}
-
-func TestSharingUpdatesBadSharing(t *testing.T) {
-	params := map[string]interface{}{
-		"sharing_id": "mysharona",
-	}
-	doc := createDoc(t, testDocType, params)
-	sharingDoc := createDoc(t, consts.Sharings, params)
-	defer func() {
-		couchdb.DeleteDoc(in, doc)
-		couchdb.DeleteDoc(in, sharingDoc)
-	}()
-
-	msg, event := createEvent(t, doc, "badsharingid", "")
-
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     domainSharer,
-		Message:    msg,
-		WorkerType: "sharingupdates",
-	})
-
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
-	assert.Error(t, err)
 	assert.Equal(t, ErrSharingDoesNotExist, err)
-
-}
-
-func TestSharingUpdatesTooManySharing(t *testing.T) {
-	params := map[string]interface{}{
-		"sharing_id": "mysharona",
-	}
-	doc := createDoc(t, testDocType, params)
-	sharingDoc := createDoc(t, consts.Sharings, params)
-	sharingDoc2 := createDoc(t, consts.Sharings, params)
-	defer func() {
-		couchdb.DeleteDoc(in, doc)
-		couchdb.DeleteDoc(in, sharingDoc)
-		couchdb.DeleteDoc(in, sharingDoc2)
-
-	}()
-	sharingID := doc.M["sharing_id"].(string)
-
-	msg, event := createEvent(t, doc, sharingID, "UPDATED")
-
-	j := jobs.NewJob(&jobs.JobRequest{
-		Domain:     domainSharer,
-		Message:    msg,
-		WorkerType: "sharingupdates",
-	})
-
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
-	assert.Error(t, err)
-	assert.Equal(t, ErrSharingIDNotUnique, err)
 }
 
 func TestSharingUpdatesBadSharingType(t *testing.T) {
 	params := map[string]interface{}{
-		"sharing_id":   "mysharona.badtype",
+		"_id":          "mysharona.badtype",
 		"sharing_type": consts.OneShotSharing,
 	}
+	sharingID := params["_id"].(string)
+	sharingDoc := createNamedDoc(t, consts.Sharings, params)
 	doc := createDoc(t, testDocType, params)
-	sharingDoc := createDoc(t, consts.Sharings, params)
 	defer func() {
 		couchdb.DeleteDoc(in, doc)
 		couchdb.DeleteDoc(in, sharingDoc)
 	}()
-	sharingID := sharingDoc.M["sharing_id"].(string)
 	msg, event := createEvent(t, doc, sharingID, "UPDATED")
 
 	j := jobs.NewJob(&jobs.JobRequest{
@@ -204,20 +165,15 @@ func TestSharingUpdatesNoRecipient(t *testing.T) {
 	doc := createDoc(t, testDocType, params)
 
 	sharingParams := map[string]interface{}{
-		"sharing_id": "mysharona.norecipient",
+		"_id":   "mysharona.norecipient",
+		"owner": true,
 	}
-	r := permissions.Rule{
-		Values: []string{doc.ID()},
-	}
-	perm := permissions.Set{r}
-	sharingParams["permissions"] = perm
-
-	sharingDoc := createDoc(t, consts.Sharings, sharingParams)
+	sharingID := sharingParams["_id"].(string)
+	sharingDoc := createNamedDoc(t, consts.Sharings, sharingParams)
 	defer func() {
 		couchdb.DeleteDoc(in, doc)
 		couchdb.DeleteDoc(in, sharingDoc)
 	}()
-	sharingID := sharingDoc.M["sharing_id"].(string)
 	msg, event := createEvent(t, doc, sharingID, "CREATED")
 
 	j := jobs.NewJob(&jobs.JobRequest{
@@ -237,20 +193,15 @@ func TestSharingUpdatesBadRecipient(t *testing.T) {
 	doc := createDoc(t, testDocType, params)
 
 	sharingParams := map[string]interface{}{
-		"sharing_id": "mysharona.badrecipient",
+		"_id":   "mysharona.badrecipient",
+		"owner": true,
 	}
-	r := permissions.Rule{
-		Values: []string{doc.ID()},
-	}
-	perm := permissions.Set{r}
-	sharingParams["permissions"] = perm
-
-	sharingDoc := createDoc(t, consts.Sharings, sharingParams)
+	sharingID := sharingParams["_id"].(string)
+	sharingDoc := createNamedDoc(t, consts.Sharings, sharingParams)
 	defer func() {
 		couchdb.DeleteDoc(in, doc)
 		couchdb.DeleteDoc(in, sharingDoc)
 	}()
-	sharingID := sharingDoc.M["sharing_id"].(string)
 	msg, event := createEvent(t, doc, sharingID, "CREATED")
 
 	j := jobs.NewJob(&jobs.JobRequest{
@@ -297,8 +248,8 @@ func TestRevokedRecipient(t *testing.T) {
 	sharing := createSharing(t, consts.OneWaySharing, true,
 		[]*contacts.Contact{recipient}, rule)
 
-	sharingID := sharing.SharingID
-	sharing.RecipientsStatus[0].Status = consts.SharingStatusRevoked
+	sharingID := sharing.SID
+	sharing.Recipients[0].Status = consts.SharingStatusRevoked
 	err := couchdb.UpdateDoc(in, &sharing)
 	assert.NoError(t, err)
 
