@@ -22,16 +22,6 @@ func ErrorHandler(err error, c echo.Context) {
 	var je *jsonapi.Error
 	var ce *couchdb.Error
 
-	var log *logrus.Entry
-	if config.IsDevRelease() {
-		inst, ok := c.Get("instance").(*instance.Instance)
-		if ok {
-			log = inst.Logger()
-		} else {
-			log = logger.WithNamespace("http")
-		}
-	}
-
 	res := c.Response()
 	req := c.Request()
 
@@ -57,6 +47,13 @@ func ErrorHandler(err error, c echo.Context) {
 	}
 
 	if config.IsDevRelease() {
+		var log *logrus.Entry
+		inst, ok := c.Get("instance").(*instance.Instance)
+		if ok {
+			log = inst.Logger()
+		} else {
+			log = logger.WithNamespace("http")
+		}
 		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
 	}
 
@@ -85,18 +82,15 @@ func HTMLErrorHandler(err error, c echo.Context) {
 	req := c.Request()
 
 	var log *logrus.Entry
-	if config.IsDevRelease() {
-		inst, ok := c.Get("instance").(*instance.Instance)
-		if ok {
-			log = inst.Logger()
-		} else {
-			log = logger.WithNamespace("http")
-		}
-		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+	inst, ok := c.Get("instance").(*instance.Instance)
+	if ok {
+		log = inst.Logger()
+	} else {
+		log = logger.WithNamespace("http")
 	}
+	log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
 
 	var he *echo.HTTPError
-	var ok bool
 	if he, ok = err.(*echo.HTTPError); ok {
 		status = he.Code
 		if he.Inner != nil {
