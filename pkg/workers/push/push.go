@@ -1,4 +1,4 @@
-package notifications
+package push
 
 import (
 	"crypto/ecdsa"
@@ -34,7 +34,7 @@ var (
 )
 
 func init() {
-	jobs.AddWorker("notification", &jobs.WorkerConfig{
+	jobs.AddWorker("push", &jobs.WorkerConfig{
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
 		Timeout:      10 * time.Second,
@@ -173,7 +173,7 @@ func pushToAndroid(ctx *jobs.WorkerContext, msg *Message) error {
 
 func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
 	if iosClient == nil {
-		ctx.Logger().Warn("Could not send android notification: not configured")
+		ctx.Logger().Warn("Could not send iOS notification: not configured")
 		return nil
 	}
 
