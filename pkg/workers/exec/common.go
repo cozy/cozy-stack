@@ -123,7 +123,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() execWorker) {
 	workerFunc := makeExecWorkerFunc()
 
-	workerInit := func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
+	workerStart := func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
 		return ctx.WithCookie(createWorker()), nil
 	}
 
@@ -135,7 +135,7 @@ func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() exec
 	}
 
 	cfg = cfg.Clone()
-	cfg.WorkerInit = workerInit
+	cfg.WorkerStart = workerStart
 	cfg.WorkerFunc = workerFunc
 	cfg.WorkerCommit = workerCommit
 

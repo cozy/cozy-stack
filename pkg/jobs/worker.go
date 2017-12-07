@@ -25,9 +25,14 @@ var (
 )
 
 type (
-	// WorkerInitFunc is optionally called at the beginning of the process and
-	// can produce a context value.
-	WorkerInitFunc func(ctx *WorkerContext) (*WorkerContext, error)
+	// WorkerInitFunc is called at the start of the worker system, only once. It
+	// is not called before every job process. It can be useful to initialize a
+	// global variable used by the worker.
+	WorkerInitFunc func() error
+
+	// WorkerStartFunc is optionally called at the beginning of the each job
+	// process and can produce a context value.
+	WorkerStartFunc func(ctx *WorkerContext) (*WorkerContext, error)
 
 	// WorkerFunc represent the work function that a worker should implement.
 	WorkerFunc func(ctx *WorkerContext) error
@@ -41,6 +46,7 @@ type (
 	// function that perform the work against a job's message.
 	WorkerConfig struct {
 		WorkerInit   WorkerInitFunc
+		WorkerStart  WorkerStartFunc
 		WorkerFunc   WorkerFunc
 		WorkerCommit WorkerCommit
 		Concurrency  int           `json:"concurrency"`
@@ -79,6 +85,12 @@ func setNbSlots(nb int) {
 	for i := 0; i < nb; i++ {
 		slots <- struct{}{}
 	}
+}
+
+// Clone clones the worker config
+func (w *WorkerConfig) Clone() *WorkerConfig {
+	cloned := *w
+	return &cloned
 }
 
 // NewWorkerContext returns a context.Context usable by a worker.
@@ -176,6 +188,11 @@ func (w *Worker) Start(jobs chan *Job) error {
 	}
 	w.jobs = jobs
 	w.closed = make(chan struct{})
+	if w.Conf.WorkerInit != nil {
+		if err := w.Conf.WorkerInit(); err != nil {
+			return fmt.Errorf("Could not start worker %s: %s", w.Type, err)
+		}
+	}
 	for i := 0; i < w.Conf.Concurrency; i++ {
 		name := fmt.Sprintf("%s/%d", w.Type, i)
 		joblog.Debugf("Start worker %s", name)
@@ -290,8 +307,8 @@ type task struct {
 func (t *task) run() (err error) {
 	t.startTime = time.Now()
 	t.execCount = 0
-	if t.conf.WorkerInit != nil {
-		t.ctx, err = t.conf.WorkerInit(t.ctx)
+	if t.conf.WorkerStart != nil {
+		t.ctx, err = t.conf.WorkerStart(t.ctx)
 		if err != nil {
 			return err
 		}

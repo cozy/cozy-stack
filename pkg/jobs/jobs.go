@@ -324,20 +324,6 @@ func (e Event) Unmarshal(evt interface{}) error {
 	return json.Unmarshal(e, &evt)
 }
 
-// Clone clones the worker config
-func (w *WorkerConfig) Clone() *WorkerConfig {
-	return &WorkerConfig{
-		WorkerInit:   w.WorkerInit,
-		WorkerFunc:   w.WorkerFunc,
-		WorkerCommit: w.WorkerCommit,
-		Concurrency:  w.Concurrency,
-		MaxExecCount: w.MaxExecCount,
-		MaxExecTime:  w.MaxExecTime,
-		Timeout:      w.Timeout,
-		RetryDelay:   w.RetryDelay,
-	}
-}
-
 var (
 	_ permissions.Validable = (*JobRequest)(nil)
 	_ permissions.Validable = (*Job)(nil)

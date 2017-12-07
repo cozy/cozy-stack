@@ -89,12 +89,13 @@ type Config struct {
 	Hooks      string
 	GeoDB      string
 
-	AutoUpdates AutoUpdates
-	Fs          Fs
-	CouchDB     CouchDB
-	Jobs        Jobs
-	Konnectors  Konnectors
-	Mail        *gomail.DialerOptions
+	Fs            Fs
+	CouchDB       CouchDB
+	Jobs          Jobs
+	Konnectors    Konnectors
+	Mail          *gomail.DialerOptions
+	AutoUpdates   AutoUpdates
+	Notifications Notifications
 
 	Cache                       RedisConfig
 	Lock                        RedisConfig
@@ -136,6 +137,19 @@ type Konnectors struct {
 type AutoUpdates struct {
 	Activated bool
 	Schedule  string
+}
+
+// Notifications contains the configuration for the mobile push-notification
+// center, for Android and iOS
+type Notifications struct {
+	Development bool
+
+	AndroidAPIKey string
+
+	IOSCertificateKeyPath  string
+	IOSCertificatePassword string
+	IOSKeyID               string
+	IOSTeamID              string
 }
 
 // RedisConfig contains the configuration values for a redis system
@@ -337,6 +351,16 @@ func UseViper(v *viper.Viper) error {
 		AutoUpdates: AutoUpdates{
 			Activated: v.GetString("auto_updates.schedule") != "",
 			Schedule:  v.GetString("auto_updates.schedule"),
+		},
+		Notifications: Notifications{
+			Development: v.GetBool("notifications.development"),
+
+			AndroidAPIKey: v.GetString("notifications.android_api_key"),
+
+			IOSCertificateKeyPath:  v.GetString("notifications.ios_certificate_key_path"),
+			IOSCertificatePassword: v.GetString("notifications.ios_certificate_password"),
+			IOSKeyID:               v.GetString("notifications.ios_key_id"),
+			IOSTeamID:              v.GetString("notifications.ios_team_id"),
 		},
 		Cache:                       NewRedisConfig(v.GetString("cache.url")),
 		Lock:                        NewRedisConfig(v.GetString("lock.url")),
