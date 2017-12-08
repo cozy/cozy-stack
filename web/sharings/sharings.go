@@ -8,9 +8,7 @@ import (
 
 	"errors"
 
-	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
-	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
@@ -136,35 +134,27 @@ func GetSharingDoc(c echo.Context) error {
 }
 
 // AddSharingRecipient adds an existing recipient to an existing sharing
-// TODO document this route
-// TODO use a query param to pass the contact id (instead of JSON)
-// TODO check that the contact exists
 func AddSharingRecipient(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	// Get sharing doc
-	id := c.Param("id")
-	sharing := &sharings.Sharing{}
-	err := couchdb.GetDoc(instance, consts.Sharings, id, sharing)
+	sharingID := c.Param("sharing-id")
+	sharing, err := sharings.FindSharing(instance, sharingID)
 	if err != nil {
-		return wrapErrors(sharings.ErrSharingDoesNotExist)
+		return jsonapi.NotFound(err)
+	}
+	if err = checkAddRecipientPermissions(c, sharing); err != nil {
+		return wrapErrors(sharings.ErrForbidden)
 	}
 
-	// Create recipient, register, and send mail
-	ref := couchdb.DocReference{}
-	if err = json.NewDecoder(c.Request().Body).Decode(&ref); err != nil {
-		return err
+	contactID := c.QueryParam("ContactID")
+	if err = sharing.AddRecipient(instance, contactID); err != nil {
+		return wrapErrors(err)
 	}
-	rs := sharings.Member{
-		RefContact: ref,
-	}
-	sharing.Recipients = append(sharing.Recipients, rs)
-
 	if err = sharings.SendMails(instance, sharing); err != nil {
 		return wrapErrors(err)
 	}
-	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 
+	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
 }
 
 func renderDiscoveryForm(c echo.Context, i *instance.Instance, code int, sharingID, shareCode string, recipient *contacts.Contact) error {
@@ -276,7 +266,7 @@ func Routes(router *echo.Group) {
 
 	router.POST("/", CreateSharing)
 	router.GET("/:sharing-id", GetSharingDoc)
-	router.POST("/:id/recipients", AddSharingRecipient)
+	router.POST("/:sharing-id/recipients", AddSharingRecipient)
 
 	// HTML pages, to be consumed by the recipients in their browser
 	router.GET("/:sharing-id/discovery", discoveryForm)
@@ -344,6 +334,26 @@ func checkGetPermissions(c echo.Context, sharing *sharings.Sharing) error {
 		}
 	}
 	return sharings.ErrForbidden
+}
+
+// checkAddRecipientPermissions checks the requester is the application that
+// has created the sharing
+func checkAddRecipientPermissions(c echo.Context, sharing *sharings.Sharing) error {
+	requestPerm, err := perm.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if requestPerm.Type != permissions.TypeWebapp {
+		return sharings.ErrForbidden
+	}
+	slug, err := extractSlugFromSourceID(requestPerm.SourceID)
+	if err != nil {
+		return err
+	}
+	if slug != sharing.AppSlug {
+		return sharings.ErrForbidden
+	}
+	return nil
 }
 
 // wrapErrors returns a formatted error

@@ -95,7 +95,6 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 	assert.NoError(t, err)
 
 	for _, recipient := range recipients {
-		fmt.Printf("recipient.ID() = %v\n", recipient.ID())
 		if recipient.ID() == "" {
 			err = sharings.CreateOrUpdateRecipient(testInstance, recipient)
 			assert.NoError(t, err)
@@ -775,22 +774,29 @@ func TestRemoveReferences(t *testing.T) {
 */
 
 func TestAddSharingRecipientNoSharing(t *testing.T) {
-	res, err := putJSON(t, "/sharings/fakeid/recipient", echo.Map{})
+	u := "/sharings/fakeid/recipients?ContactID=fakecontactid"
+	res, err := postJSON(t, u, echo.Map{})
 	assert.NoError(t, err)
 	assert.Equal(t, 404, res.StatusCode)
 }
 
-func TestAddSharingRecipientBadRecipient(t *testing.T) {
-	sharing := createSharing(t, "", consts.OneShotSharing, true, "",
-		[]*contacts.Contact{}, permissions.Rule{})
-	args := echo.Map{
-		"ID":   "fakeid",
-		"Type": "io.cozy.recipients",
+func TestAddSharingRecipientSuccess(t *testing.T) {
+	rule := permissions.Rule{
+		Type:   "io.cozy.foos",
+		Values: []string{"bar", "baz"},
+		Verbs:  permissions.ALL,
 	}
-	url := "/sharings/" + sharing.ID() + "/recipient"
-	res, err := putJSON(t, url, args)
+	appToken, slug := generateAppToken(t, rule)
+	sharing := createSharing(t, "", consts.OneShotSharing, true, slug,
+		[]*contacts.Contact{}, rule)
+	contact := createRecipient(t, "add-me@example.com", "add-me.example.com")
+	path := "/sharings/" + sharing.ID() + "/recipients?ContactID=" + contact.ID()
+	req, err := http.NewRequest(http.MethodPost, ts.URL+path, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, 404, res.StatusCode)
+	req.Header.Add(echo.HeaderAuthorization, "Bearer "+appToken)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
 }
 
 func TestSharingAnswerBadState(t *testing.T) {
@@ -1410,17 +1416,6 @@ func TestMain(m *testing.M) {
 func postJSON(t *testing.T, path string, v echo.Map) (*http.Response, error) {
 	body, _ := json.Marshal(v)
 	req, err := http.NewRequest(http.MethodPost, ts.URL+path,
-		bytes.NewReader(body))
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	req.Header.Add(echo.HeaderContentType, "application/json")
-
-	return http.DefaultClient.Do(req)
-}
-
-func putJSON(t *testing.T, path string, v echo.Map) (*http.Response, error) {
-	body, _ := json.Marshal(v)
-	req, err := http.NewRequest(http.MethodPut, ts.URL+path,
 		bytes.NewReader(body))
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
