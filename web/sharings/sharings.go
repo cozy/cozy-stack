@@ -204,6 +204,7 @@ func discoveryForm(c echo.Context) error {
 	return renderDiscoveryForm(c, instance, http.StatusOK, sharingID, shareCode, contact)
 }
 
+// We don't have an anti-CSRF system, we rely on shareCode being secret
 func discovery(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
