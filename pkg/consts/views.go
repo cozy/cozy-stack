@@ -7,7 +7,7 @@ import (
 
 // IndexViewsVersion is the version of current definition of views & indexes.
 // This number should be incremented when this file changes.
-const IndexViewsVersion int = 12
+const IndexViewsVersion int = 13
 
 // GlobalIndexes is the index list required on the global databases to run
 // properly.
@@ -129,20 +129,20 @@ function(doc) {
 }`,
 }
 
-// SharedWithPermissionsView returns the list of permissions associated with
-// sharings.
-var SharedWithPermissionsView = &couchdb.View{
-	Name:    "sharedWithPermissions",
-	Doctype: Sharings,
+// PermissionsByDoctype returns a list of permissions that have at least one
+// rule for the given doctype.
+var PermissionsByDoctype = &couchdb.View{
+	Name:    "permissions-by-doctype",
+	Doctype: Permissions,
 	Map: `
 function(doc) {
-  Object.keys(doc.permissions).forEach(function(k) {
-    var rule = doc.permissions[k];
-    for (var i=0; i<rule.values.length; i++) {
-      emit([rule.type, doc.owner, doc.sharing_id], rule);
-    }
-  });
-}`,
+  if (doc.permissions) {
+    Object.keys(doc.permissions).forEach(function(k) {
+	  emit([doc.permissions[k].type, doc.type]);
+	});
+  }
+}
+`,
 }
 
 // SharingRecipientView is used to find a contact that is a sharing recipient,
@@ -174,7 +174,7 @@ var Views = []*couchdb.View{
 	FilesByParentView,
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
-	SharedWithPermissionsView,
+	PermissionsByDoctype,
 	SharingRecipientView,
 }
 

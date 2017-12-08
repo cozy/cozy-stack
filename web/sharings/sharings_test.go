@@ -659,10 +659,6 @@ func TestPatchDirOrFileSuccessDir(t *testing.T) {
 	assert.WithinDuration(t, now, patchedDir.UpdatedAt, time.Millisecond)
 }
 
-/*
-// TODO uncomment the following test when
-// permissions.GetSharedWithMePermissionsByDoctype will have been updated
-
 func TestRemoveReferences(t *testing.T) {
 	rule := permissions.Rule{
 		Selector: consts.SelectorReferencedBy,
@@ -771,7 +767,6 @@ func TestRemoveReferences(t *testing.T) {
 	assert.True(t, dirDoc.DirID == consts.TrashDirID)
 	assert.Len(t, dirDoc.ReferencedBy, 0)
 }
-*/
 
 func TestAddSharingRecipientNoSharing(t *testing.T) {
 	u := "/sharings/fakeid/recipients?ContactID=fakecontactid"

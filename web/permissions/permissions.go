@@ -106,35 +106,9 @@ func createPermission(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiPermission{pdoc}, nil)
 }
 
-type refAndVerb struct {
-	ID      string               `json:"id"`
-	DocType string               `json:"type"`
-	Verbs   *permissions.VerbSet `json:"verbs"`
-}
-
 const limitPermissionsByDoctype = 30
 
-func listPermissionsByDoctype(c echo.Context) error {
-	return listSharedPermissionsByDoctype(c, "shared-by-link",
-		permissions.GetPermissionsByType)
-}
-
-// listSharedWithMePermissionsByDoctype returns the list of all the permissions
-// that apply for a given doctype for documents that were shared to the user.
-func listSharedWithMePermissionsByDoctype(c echo.Context) error {
-	return listSharedPermissionsByDoctype(c, "shared-with-me",
-		permissions.GetSharedWithMePermissionsByDoctype)
-}
-
-// listSharedByMePermissionsByDoctype returns the list of all the
-// permissions that apply for a given doctype for documents that the user
-// shared with others.
-func listSharedByMePermissionsByDoctype(c echo.Context) error {
-	return listSharedPermissionsByDoctype(c, "shared-by-me",
-		permissions.GetSharedWithOthersPermissionsByDoctype)
-}
-
-func listSharedPermissionsByDoctype(c echo.Context, route string, f func(couchdb.Database, string, couchdb.Cursor) ([]*permissions.Permission, error)) error {
+func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 	ins := middlewares.GetInstance(c)
 	doctype := c.Param("doctype")
 	if doctype == "" {
@@ -156,7 +130,7 @@ func listSharedPermissionsByDoctype(c echo.Context, route string, f func(couchdb
 		return err
 	}
 
-	perms, err := f(ins, doctype, cursor)
+	perms, err := permissions.GetPermissionsByDoctype(ins, permType, doctype, cursor)
 	if err != nil {
 		return err
 	}
@@ -173,10 +147,34 @@ func listSharedPermissionsByDoctype(c echo.Context, route string, f func(couchdb
 
 	out := make([]jsonapi.Object, len(perms))
 	for i, p := range perms {
-		out[i] = &apiPermission{p}
+		p.Codes = nil // Don't let an app get sharecodes for permissions it may not own
+		out[i] = &apiPermission{&p}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, out, links)
+}
+
+func listByLinkPermissionsByDoctype(c echo.Context) error {
+	return listPermissionsByDoctype(c, "shared-by-link", permissions.TypeShareByLink)
+}
+
+// listSharedWithMePermissionsByDoctype returns the list of all the permissions
+// that apply for a given doctype for documents that were shared to the user.
+func listSharedWithMePermissionsByDoctype(c echo.Context) error {
+	return listPermissionsByDoctype(c, "shared-with-me", permissions.TypeSharedWithMe)
+}
+
+// listSharedByMePermissionsByDoctype returns the list of all the
+// permissions that apply for a given doctype for documents that the user
+// shared with others.
+func listSharedByMePermissionsByDoctype(c echo.Context) error {
+	return listPermissionsByDoctype(c, "shared-by-me", permissions.TypeSharedByMe)
+}
+
+type refAndVerb struct {
+	ID      string               `json:"id"`
+	DocType string               `json:"type"`
+	Verbs   *permissions.VerbSet `json:"verbs"`
 }
 
 func listPermissions(c echo.Context) error {
@@ -308,12 +306,12 @@ func Routes(router *echo.Group) {
 	router.PATCH("/apps/:slug", patchPermission(permissions.GetForWebapp, "slug"))
 	router.PATCH("/konnectors/:slug", patchPermission(permissions.GetForKonnector, "slug"))
 
-	router.GET("/doctype/:doctype/shared-by-link", listPermissionsByDoctype)
+	router.GET("/doctype/:doctype/shared-by-link", listByLinkPermissionsByDoctype)
 	router.GET("/doctype/:doctype/shared-with-me", listSharedWithMePermissionsByDoctype)
 	router.GET("/doctype/:doctype/shared-by-me", listSharedByMePermissionsByDoctype)
 
 	// Legacy routes, kept here for compatibility reasons
-	router.GET("/doctype/:doctype/sharedByLink", listPermissionsByDoctype)
+	router.GET("/doctype/:doctype/sharedByLink", listByLinkPermissionsByDoctype)
 	router.GET("/doctype/:doctype/sharedWithMe", listSharedWithMePermissionsByDoctype)
 	router.GET("/doctype/:doctype/sharedWithOthers", listSharedByMePermissionsByDoctype)
 }
