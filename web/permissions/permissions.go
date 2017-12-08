@@ -115,22 +115,22 @@ type refAndVerb struct {
 const limitPermissionsByDoctype = 30
 
 func listPermissionsByDoctype(c echo.Context) error {
-	return listSharedPermissionsByDoctype(c, "sharedByLink",
+	return listSharedPermissionsByDoctype(c, "shared-by-link",
 		permissions.GetPermissionsByType)
 }
 
 // listSharedWithMePermissionsByDoctype returns the list of all the permissions
 // that apply for a given doctype for documents that were shared to the user.
 func listSharedWithMePermissionsByDoctype(c echo.Context) error {
-	return listSharedPermissionsByDoctype(c, "sharedWithMe",
+	return listSharedPermissionsByDoctype(c, "shared-with-me",
 		permissions.GetSharedWithMePermissionsByDoctype)
 }
 
-// listSharedWithOthersPermissionsByDoctype returns the list of all the
+// listSharedByMePermissionsByDoctype returns the list of all the
 // permissions that apply for a given doctype for documents that the user
 // shared with others.
-func listSharedWithOthersPermissionsByDoctype(c echo.Context) error {
-	return listSharedPermissionsByDoctype(c, "sharedWithOthers",
+func listSharedByMePermissionsByDoctype(c echo.Context) error {
+	return listSharedPermissionsByDoctype(c, "shared-by-me",
 		permissions.GetSharedWithOthersPermissionsByDoctype)
 }
 
@@ -308,7 +308,12 @@ func Routes(router *echo.Group) {
 	router.PATCH("/apps/:slug", patchPermission(permissions.GetForWebapp, "slug"))
 	router.PATCH("/konnectors/:slug", patchPermission(permissions.GetForKonnector, "slug"))
 
+	router.GET("/doctype/:doctype/shared-by-link", listPermissionsByDoctype)
+	router.GET("/doctype/:doctype/shared-with-me", listSharedWithMePermissionsByDoctype)
+	router.GET("/doctype/:doctype/shared-by-me", listSharedByMePermissionsByDoctype)
+
+	// Legacy routes, kept here for compatibility reasons
 	router.GET("/doctype/:doctype/sharedByLink", listPermissionsByDoctype)
 	router.GET("/doctype/:doctype/sharedWithMe", listSharedWithMePermissionsByDoctype)
-	router.GET("/doctype/:doctype/sharedWithOthers", listSharedWithOthersPermissionsByDoctype)
+	router.GET("/doctype/:doctype/sharedWithOthers", listSharedByMePermissionsByDoctype)
 }

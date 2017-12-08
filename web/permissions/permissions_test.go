@@ -462,7 +462,7 @@ func TestListPermission(t *testing.T) {
 		}
 	}
 
-	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/sharedByLink", nil)
+	req2, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/shared-by-link", nil)
 	req2.Header.Add("Authorization", "Bearer "+token)
 	req2.Header.Add("Content-Type", "application/json")
 	res2, err := http.DefaultClient.Do(req2)
@@ -478,7 +478,7 @@ func TestListPermission(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, resBody.Data, 2)
 
-	req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/sharedByLink?page[limit]=1", nil)
+	req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/shared-by-link?page[limit]=1", nil)
 	req3.Header.Add("Authorization", "Bearer "+token)
 	req3.Header.Add("Content-Type", "application/json")
 	res3, err := http.DefaultClient.Do(req3)
@@ -509,7 +509,7 @@ func TestGetSharedWithMePermissionsByDoctype(t *testing.T) {
 		[]string{"GET", "PUT"})
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+
-		"/permissions/doctype/io.cozy.events/sharedWithMe", nil)
+		"/permissions/doctype/io.cozy.events/shared-with-me", nil)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add(echo.HeaderContentType, "application/json")
@@ -538,7 +538,7 @@ func TestGetSharedWithOthersPermissionsByDoctype(t *testing.T) {
 		[]string{"GET", "PUT"})
 
 	req, err := http.NewRequest(http.MethodGet, ts.URL+
-		"/permissions/doctype/io.cozy.contacts/sharedWithOthers", nil)
+		"/permissions/doctype/io.cozy.contacts/shared-by-me", nil)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
 	req.Header.Add(echo.HeaderContentType, "application/json")
