@@ -327,11 +327,11 @@ func init() {
 					Text:         "Mail New Registration Devices text",
 					Link:         "{{.DevicesLink}}",
 				},
-				{
-					Instructions: "Mail New Registration Revoke instruction",
-					Text:         "Mail New Registration Revoke text",
-					Link:         "{{.RevokeLink}}",
-				},
+				// {
+				// 	Instructions: "Mail New Registration Revoke instruction",
+				// 	Text:         "Mail New Registration Revoke text",
+				// 	Link:         "{{.RevokeLink}}",
+				// },
 			},
 		},
 		{
