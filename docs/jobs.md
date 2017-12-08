@@ -532,6 +532,52 @@ Accept: application/vnd.api+json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.triggers` for the verb `GET`.
 
+### GET /jobs/triggers/:trigger-id/state
+
+Get the trigger current state, to give a big picture of the health of the
+trigger.
+
+- last executed job status (`done`, `errored`, `queued` or `running`)
+- last executed job that resulted in a successful executoin
+- last executed job that resulted in an error
+- last executed job from a manual execution (not executed by the trigger
+  directly)
+
+#### Request
+
+```
+GET /jobs/triggers/123123/state HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```json
+{
+  "data": {
+    "type": "io.cozy.jobs.state",
+    "id": "123123",
+    "attributes": {
+      "status": "done",
+      "last_success": "2017-11-20T13:31:09.01641731",
+      "last_successful_job_id": "abcde",
+      "last_execution": "2017-11-20T13:31:09.01641731",
+      "last_executed_job_id": "abcde",
+      "last_failure": "2017-11-20T13:31:09.01641731",
+      "last_failed_job_id": "abcde",
+      "last_error": "error value",
+      "last_manual_execution": "2017-11-20T13:31:09.01641731",
+      "last_manual_job_id": "abcde"
+    }
+  }
+}
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.triggers` for the verb `GET`.
+
 ### GET /jobs/triggers/:trigger-id/jobs
 
 Get the jobs launched by the trigger with the specified ID.
