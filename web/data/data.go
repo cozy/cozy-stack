@@ -9,6 +9,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	perm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
@@ -61,7 +62,7 @@ func allDoctypes(c echo.Context) error {
 	}
 	var doctypes []string
 	for _, typ := range types {
-		if CheckReadable(typ) == nil {
+		if perm.CheckReadable(typ) == nil {
 			doctypes = append(doctypes, typ)
 		}
 	}
@@ -74,7 +75,7 @@ func getDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Get("docid").(string)
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -111,7 +112,7 @@ func createDoc(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := CheckWritable(doctype); err != nil {
+	if err := perm.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -166,7 +167,7 @@ func UpdateDoc(c echo.Context) error {
 
 	doc.Type = c.Param("doctype")
 
-	if err := CheckWritable(doc.Type); err != nil {
+	if err := perm.CheckWritable(doc.Type); err != nil {
 		return err
 	}
 
@@ -241,7 +242,7 @@ func DeleteDoc(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, "delete without revision")
 	}
 
-	if err := CheckWritable(doctype); err != nil {
+	if err := perm.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -282,7 +283,7 @@ func defineIndex(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -314,7 +315,7 @@ func findDocuments(c echo.Context) error {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -414,7 +415,7 @@ func changesFeed(c echo.Context) error {
 func allDocs(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
