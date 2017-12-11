@@ -407,7 +407,9 @@ msgid "Mail New Connection OS"
 msgstr "Operating System"
 
 msgid "Mail New Connection Change Passphrase instruction"
-msgstr "That was you ? Great ! We are reassured. Sorry for the inconvenience. If not, change your password now."
+msgstr ""
+"That was you ? Great ! We are reassured. Sorry for the inconvenience. If not, change your password now.\n"
+"If not, change your password now by clicking on the following button:"
 
 msgid "Mail New Connection Change Passphrase text"
 msgstr "Change my password"

@@ -708,7 +708,12 @@ func (dt *MailTheme) HTMLTemplate() string {
                       {{ with .Email.Body.Actions }}
                         {{ if gt (len .) 0 }}
                           {{ range $action := . }}
-                            <p>{{ $action.Instructions }}</p>
+                            {{$instr := splitList "\n" $action.Instructions}}
+                            {{range $i, $p := $instr}}
+                              {{if ne $p ""}}
+                              <p>{{$p}}</p>
+                              {{end}}
+                            {{end}}
                             <table class="body-action" align="center" width="100%" cellpadding="0" cellspacing="0">
                               <tr>
                                 <td align="center">
