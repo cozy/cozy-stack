@@ -111,12 +111,8 @@ func updateInstance(c echo.Context) error {
 	}
 
 	if needMailConfirmation {
-		confirmLink, err := inst.MailConfirmationLink()
-		if err == nil {
-			inst.SendMail(&instance.Mail{
-				TemplateName:   "two_factor_mail_confirmation",
-				TemplateValues: map[string]interface{}{"ConfirmLink": confirmLink},
-			})
+		if err := inst.SendMailConfirmationCode(); err != nil {
+			inst.Logger().Errorf("Could not send mail confirmation code: %s", err)
 		}
 	}
 

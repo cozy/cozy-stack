@@ -95,6 +95,35 @@ HTTP/1.1 204 No Content
 Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
 ```
 
+### PUT /settings/confirm_mail
+
+The user can confirm its mail for activation of two-factor authentication. The code used as confirmation should have is sent via email.
+
+Status codes:
+  * `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
+  * `422 Unprocessable Entity`: when the confirmation code given is not good.
+
+#### Request
+
+```http
+PUT /settings/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
+```
+
+```json
+{
+  "mail_confirmation_code": "12345678",
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
+
 ## Instance
 
 ### GET /settings/instance

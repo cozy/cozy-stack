@@ -3,10 +3,8 @@ package instance
 import (
 	"crypto/sha256"
 	"encoding/base32"
-	"encoding/base64"
 	"io"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
@@ -142,40 +140,57 @@ func (i *Instance) ValidateTwoFactorTrustedDeviceSecret(req *http.Request, token
 	return err == nil
 }
 
-// MailConfirmationLink returns a link to confirm the email address associated
-// with the instance.
-func (i *Instance) MailConfirmationLink() (string, error) {
-	settings, err := i.SettingsDocument()
-	if err != nil {
-		return "", err
-	}
-	email, _ := settings.M["email"].(string)
-	token, err := crypto.EncodeAuthMessage(i.mailConfirmationMACConfig(), nil, []byte(email))
-	if err != nil {
-		return "", err
-	}
-	return i.PageURL("/auth/confirm_mail", url.Values{
-		"confirmation_token": {base64.URLEncoding.EncodeToString(token)},
-	}), nil
-}
-
-// ConfirmMail set the `MailConfirmed` field to true after verifying the given
-// token.
-func (i *Instance) ConfirmMail(token []byte) error {
+// SendMailConfirmationCode send a code to validate the email of the instance
+// in order to activate 2FA.
+func (i *Instance) SendMailConfirmationCode() error {
 	if i.MailConfirmed {
 		return nil
 	}
-	settings, err := i.SettingsDocument()
+	email, err := i.SettingsEMail()
 	if err != nil {
 		return err
 	}
-	email, _ := settings.M["email"].(string)
-	_, err = crypto.DecodeAuthMessage(i.mailConfirmationMACConfig(), token, []byte(email))
+	hkdf := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
+	key := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, key)
 	if err != nil {
 		return err
+	}
+	passcode, err := totp.GenerateCodeCustom(base32.StdEncoding.EncodeToString(key),
+		time.Now().UTC(), twoFactorTOTPOptions)
+	if err != nil {
+		return err
+	}
+	return i.SendMail(&Mail{
+		TemplateName:   "two_factor_mail_confirmation",
+		TemplateValues: map[string]interface{}{"TwoFactorActivationPasscode": passcode},
+	})
+}
+
+// ConfirmMail set the `MailConfirmed` field to true after verifying the code
+// token.
+func (i *Instance) ConfirmMail(passcode string) bool {
+	if i.MailConfirmed {
+		return true
+	}
+	email, err := i.SettingsEMail()
+	if err != nil {
+		return false
+	}
+	hkdf := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
+	key := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, key)
+	if err != nil {
+		return false
+	}
+	ok, err := totp.ValidateCustom(passcode, base32.StdEncoding.EncodeToString(key),
+		time.Now().UTC(), twoFactorTOTPOptions)
+	if !ok || err != nil {
+		return false
 	}
 	i.MailConfirmed = true
-	return Update(i)
+	Update(i)
+	return true
 }
 
 func (i *Instance) totpMACConfig() *crypto.MACConfig {
@@ -190,15 +205,6 @@ func (i *Instance) totpMACConfig() *crypto.MACConfig {
 func (i *Instance) trustedDeviceMACConfig() *crypto.MACConfig {
 	return &crypto.MACConfig{
 		Name:   "trusted-device",
-		Key:    i.SessionSecret,
-		MaxAge: 0,
-		MaxLen: 256,
-	}
-}
-
-func (i *Instance) mailConfirmationMACConfig() *crypto.MACConfig {
-	return &crypto.MACConfig{
-		Name:   "mail",
 		Key:    i.SessionSecret,
 		MaxAge: 0,
 		MaxLen: 256,

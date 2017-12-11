@@ -3,7 +3,6 @@ package auth
 
 import (
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -892,35 +891,6 @@ func passphraseRenew(c echo.Context) error {
 	return c.Redirect(http.StatusSeeOther, inst.PageURL("/auth/login", nil))
 }
 
-func confirmMail(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-
-	if !middlewares.IsLoggedIn(c) {
-		u := inst.PageURL("/auth/login", url.Values{
-			"redirect": {inst.FromURL(c.Request().URL)},
-		})
-		return c.Redirect(http.StatusSeeOther, u)
-	}
-
-	token, err := base64.URLEncoding.DecodeString(c.QueryParam("confirmation_token"))
-	if err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid mail token",
-		})
-	}
-
-	if err = inst.ConfirmMail(token); err != nil {
-		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid mail token",
-		})
-	}
-
-	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"ErrorTitle": "Confirmation User Mail",
-		"Error":      "Confirmation User Content",
-	})
-}
-
 // Routes sets the routing for the status service
 func Routes(router *echo.Group) {
 	noCSRF := middleware.CSRFWithConfig(middleware.CSRFConfig{
@@ -941,8 +911,6 @@ func Routes(router *echo.Group) {
 	router.POST("/passphrase_reset", passphraseReset, noCSRF)
 	router.GET("/passphrase_renew", passphraseRenewForm, noCSRF)
 	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
-
-	router.GET("/confirm_mail", confirmMail)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
