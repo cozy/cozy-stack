@@ -119,10 +119,13 @@ func redirect(c echo.Context) error {
 		if accountType.TokenEndpoint == "" {
 			params := c.QueryParams()
 			params.Del("state")
-			account.Oauth = &accounts.OauthInfo{
-				ClientID:     accountType.ClientID,
-				ClientSecret: accountType.ClientSecret,
-				Query:        &params,
+			account = &accounts.Account{
+				AccountType: accountTypeID,
+				Oauth: &accounts.OauthInfo{
+					ClientID:     accountType.ClientID,
+					ClientSecret: accountType.ClientSecret,
+					Query:        &params,
+				},
 			}
 		} else {
 			account, err = accountType.RequestAccessToken(i, accessCode, stateCode, state.Nonce)
