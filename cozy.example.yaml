@@ -88,6 +88,19 @@ auto_updates:
 registries:
   - https://apps-registry.cozy.io/
 
+notifications:
+  # Activate development APIs (iOS only)
+  development: false
+
+  # Firebase Cloud Messaging API Key for Android notifications
+  # android_api_key:
+
+  # APNS/2 certificates for iOS notifications
+  # ios_certificate_key_path: path/to/certificate.p12
+  # ios_certificate_password: mycertificatepasswordifany
+  # ios_key_id: my_key_id_if_any
+  # ios_team_id: my_team_id_if_any
+
 log:
   # logger level (debug, info, warning, panic, fatal) - flags: --log-level
   level: info
