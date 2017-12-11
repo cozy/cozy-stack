@@ -305,6 +305,16 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 		return nil, ErrNotSubset
 	}
 
+	for _, rule := range set {
+		// XXX io.cozy.files is allowed and handled with specific code for sharings
+		if rule.Type == consts.Files {
+			continue
+		}
+		if err := CheckWritable(rule.Type); err != nil {
+			return nil, err
+		}
+	}
+
 	// SourceID stays the same, allow quick destruction of all children permissions
 	doc := &Permission{
 		Type:        TypeShareByLink,

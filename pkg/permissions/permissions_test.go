@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -292,6 +293,16 @@ func TestSubset(t *testing.T) {
 	s6 := Set{Rule{Type: "io.cozy.events", Selector: "calendar", Values: []string{"foo"}}}
 	assert.True(t, s6.IsSubSetOf(s5))
 	assert.False(t, s5.IsSubSetOf(s6))
+}
+
+func TestCreateShareSetBlacklist(t *testing.T) {
+	s := Set{Rule{Type: "io.cozy.notifications"}}
+	parent := &Permission{Type: TypeWebapp, Permissions: s}
+	_, err := CreateShareSet(nil, parent, nil, s)
+	assert.Error(t, err)
+	e, ok := err.(*echo.HTTPError)
+	assert.True(t, ok)
+	assert.Equal(t, "reserved doctype io.cozy.notifications unwritable", e.Message)
 }
 
 func assertEqualJSON(t *testing.T, value []byte, expected string) {

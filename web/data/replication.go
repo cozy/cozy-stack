@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	perm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
@@ -42,7 +43,7 @@ func getLocalDoc(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -57,7 +58,7 @@ func setLocalDoc(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -71,7 +72,7 @@ func bulkGet(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -85,7 +86,7 @@ func bulkDocs(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckWritable(doctype); err != nil {
+	if err := perm.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -114,7 +115,7 @@ func createDB(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckWritable(doctype); err != nil {
+	if err := perm.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -128,7 +129,7 @@ func fullCommit(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckWritable(doctype); err != nil {
+	if err := perm.CheckWritable(doctype); err != nil {
 		return err
 	}
 
@@ -142,7 +143,7 @@ func revsDiff(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
@@ -157,7 +158,7 @@ func dbStatus(c echo.Context) error {
 		return err
 	}
 
-	if err := CheckReadable(doctype); err != nil {
+	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
 
