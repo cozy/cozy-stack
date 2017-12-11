@@ -36,28 +36,28 @@ const ContextPermissionSet = "permissions_set"
 // #nosec
 const ContextClaims = "token_claims"
 
-type apiPermission struct {
+type APIPermission struct {
 	*permissions.Permission
 }
 
-func (p *apiPermission) MarshalJSON() ([]byte, error) {
+func (p *APIPermission) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.Permission)
 }
 
 // Relationships implements jsonapi.Doc
-func (p *apiPermission) Relationships() jsonapi.RelationshipMap { return nil }
+func (p *APIPermission) Relationships() jsonapi.RelationshipMap { return nil }
 
 // Included implements jsonapi.Doc
-func (p *apiPermission) Included() []jsonapi.Object { return nil }
+func (p *APIPermission) Included() []jsonapi.Object { return nil }
 
 // Links implements jsonapi.Doc
-func (p *apiPermission) Links() *jsonapi.LinksList {
-	// Cozy to Cozy sharings permissions
-	if p.PID == "" && p.Type == consts.Sharings {
-		return &jsonapi.LinksList{Self: "/sharings/" + p.SourceID}
+func (p *APIPermission) Links() *jsonapi.LinksList {
+	links := &jsonapi.LinksList{Self: "/permissions/" + p.PID}
+	parts := strings.SplitN(p.SourceID, "/", 2)
+	if parts[0] == consts.Sharings {
+		links.Related = "/sharings/" + parts[1]
 	}
-
-	return &jsonapi.LinksList{Self: "/permissions/" + p.PID}
+	return links
 }
 
 type getPermsFunc func(db couchdb.Database, id string) (*permissions.Permission, error)
@@ -103,7 +103,7 @@ func createPermission(c echo.Context) error {
 		return err
 	}
 
-	return jsonapi.Data(c, http.StatusOK, &apiPermission{pdoc}, nil)
+	return jsonapi.Data(c, http.StatusOK, &APIPermission{pdoc}, nil)
 }
 
 const limitPermissionsByDoctype = 30
@@ -148,7 +148,7 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 	out := make([]jsonapi.Object, len(perms))
 	for i, p := range perms {
 		p.Codes = nil // Don't let an app get sharecodes for permissions it may not own
-		out[i] = &apiPermission{&p}
+		out[i] = &APIPermission{&p}
 	}
 
 	return jsonapi.DataList(c, http.StatusOK, out, links)
@@ -265,7 +265,7 @@ func patchPermission(getPerms getPermsFunc, paramName string) echo.HandlerFunc {
 			return err
 		}
 
-		return jsonapi.Data(c, http.StatusOK, &apiPermission{toPatch}, nil)
+		return jsonapi.Data(c, http.StatusOK, &APIPermission{toPatch}, nil)
 	}
 }
 

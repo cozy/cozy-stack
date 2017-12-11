@@ -39,8 +39,8 @@ users.
 ### Sharing document
 
 A sharing document has the following structure in CouchDB. Note some fields are
-purposely left empty for space convenience. And the response from the API
-hide some fields from the document (OAuth credentials in particular).
+purposely left empty for space convenience. And the response from the API hide
+some fields from the document (OAuth credentials in particular).
 
 ```json
 {
@@ -87,8 +87,8 @@ An additional field, `revoked`, will be added to the document, with the value
 
 Which documents will be shared. See the
 [permissions](https://cozy.github.io/cozy-stack/permissions.html) for a detailed
-explanation of the permissions format. In the sharing document, there is only
-a reference to the permissions document.
+explanation of the permissions format. In the sharing document, there is only a
+reference to the permissions document.
 
 The supported permissions are the following:
 
@@ -98,12 +98,12 @@ Example of a single file sharing permission:
 
 ```json
 "permissions": {
-    "files": {
-        "description": "My secret document",
-        "type": "io.cozy.files",
-        "values": ["fileid"],
-        "verbs": ["ALL"]
-    }
+  "files": {
+    "description": "My secret document",
+    "type": "io.cozy.files",
+    "values": ["fileid"],
+    "verbs": ["ALL"]
+  }
 },
 ```
 
@@ -123,19 +123,19 @@ Example of a photo album sharing:
 
 ```json
 "permissions": {
-    "photos": {
-        "description": "Holidays album",
-        "type": "io.cozy.albums.photos",
-        "values": ["albumdocid"],
-        "verbs": ["ALL"]
-    },
-    "files": {
-        "description": "Holidays photos",
-        "type": "io.cozy.files",
-        "values": ["io.cozy.albums.photos/albumdocid"],
-        "selector": "referenced_by",
-        "verbs": ["ALL"]
-    }
+  "photos": {
+    "description": "Holidays album",
+    "type": "io.cozy.albums.photos",
+    "values": ["albumdocid"],
+    "verbs": ["ALL"]
+  },
+  "files": {
+    "description": "Holidays photos",
+    "type": "io.cozy.files",
+    "values": ["io.cozy.albums.photos/albumdocid"],
+    "selector": "referenced_by",
+    "verbs": ["ALL"]
+  }
 }
 ```
 
@@ -149,15 +149,15 @@ List all the recipients of the sharing:
 
 ```json
 "recipients": [
-    {
-        "contact": {"id": "mycontactid1", "type": "io.cozy.contacts"},
-        "status": "accepted",
-        "url": "https://example.mycozy.cloud/"
-    },
-    {
-        "contact": {"id": "mycontactid2", "type": "io.cozy.contacts"},
-        "status": "pending"
-    }
+  {
+    "contact": {"id": "mycontactid1", "type": "io.cozy.contacts"},
+    "status": "accepted",
+    "url": "https://example.mycozy.cloud/"
+  },
+  {
+    "contact": {"id": "mycontactid2", "type": "io.cozy.contacts"},
+    "status": "pending"
+  }
 ]
 ```
 
@@ -181,8 +181,9 @@ A contact has the following minimal structure:
 }
 ```
 
-Note that the `email` is mandatory to contact the recipient. If the cozy `URL` is
-missing, a discovery mail will be sent in order to ask the recipient to give it.
+Note that the `email` is mandatory to contact the recipient. If the cozy `URL`
+is missing, a discovery mail will be sent in order to ask the recipient to give
+it.
 
 ##### url
 
@@ -251,8 +252,8 @@ but, still, it is recommended to provide a human-readable description.
 The path part of the URL on the application that will be used by recipients to
 preview the sharing before accepting it. It is optional.
 
-The application has to define a public route for this path in its manifest,
-else the recipients will be denied the access to this page.
+The application has to define a public route for this path in its manifest, else
+the recipients will be denied the access to this page.
 
 ### Routes
 
@@ -388,9 +389,9 @@ Get the informations about a sharing.
 
 #### POST /sharings/answer
 
-This route is used by the cozy of the recipient to inform the cozy of the
-owner that the sharing has been accepted, and to setup the OAuth clients and
-start the replication of the shared documents.
+This route is used by the cozy of the recipient to inform the cozy of the owner
+that the sharing has been accepted, and to setup the OAuth clients and start the
+replication of the shared documents.
 
 #### POST /sharings/:sharing-id/recipients
 
@@ -421,9 +422,9 @@ the right to display the to-be-shared documents.
 
 #### POST /sharings/:sharing-id/discovery
 
-Give to the cozy of the sharer the URL of the Cozy of one recipient. The
-sharer will register its-self as an OAuth client on the recipient cozy, and
-then will ask the recipient to accept the permissions on its instance.
+Give to the cozy of the sharer the URL of the Cozy of one recipient. The sharer
+will register its-self as an OAuth client on the recipient cozy, and then will
+ask the recipient to accept the permissions on its instance.
 
 ##### Parameters (`x-www-url-encoded`)
 
@@ -467,8 +468,8 @@ HTTP/1.1 204 No Content
 Content-Type: application/json
 ```
 
-Note: this route is also used internally by the sharer to inform the cozy of
-the recipient that the sharing has been revoked on its side.
+Note: this route is also used internally by the sharer to inform the cozy of the
+recipient that the sharing has been revoked on its side.
 
 #### DELETE /sharings/:sharing-id/:recipient-client-id
 

@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	"github.com/cozy/cozy-stack/pkg/contacts"
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
@@ -46,13 +47,30 @@ type apiSharing struct {
 	*sharings.Sharing
 }
 
+func createAPISharing(ins *instance.Instance, s *sharings.Sharing) *apiSharing {
+	// Be sure that the cached for permissions and contacts are filled,
+	// because we can't make couchdb requests in the Relationships and
+	// Included methods.
+	_, _ = s.Permissions(ins)
+	if s.Owner {
+		_ = s.Sharer.Contact(ins)
+	} else {
+		for i := range s.Recipients {
+			_ = s.Recipients[i].Contact(ins)
+		}
+	}
+	return &apiSharing{s}
+}
+
 func (s *apiSharing) MarshalJSON() ([]byte, error) {
-	// XXX do not put the recipients (and their OAuth infos) in the response
-	// TODO do the same for the sharer
+	// XXX do not put the sharer and the recipients (with their OAuth infos)
+	// in the response
 	return json.Marshal(&struct {
+		Sharer     *sharings.Member   `json:"sharer,omitempty"`
 		Recipients []*sharings.Member `json:"recipients,omitempty"`
 		*sharings.Sharing
 	}{
+		Sharer:     nil,
 		Recipients: nil,
 		Sharing:    s.Sharing,
 	})
@@ -65,6 +83,26 @@ func (s *apiSharing) Links() *jsonapi.LinksList {
 // Relationships is part of the jsonapi.Object interface
 // It is used to generate the recipients relationships
 func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
+	perms := jsonapi.Relationship{}
+	if p, err := s.Permissions(nil); err == nil {
+		perms.Links = &jsonapi.LinksList{Self: "/permissions/" + p.ID()}
+		perms.Data = couchdb.DocReference{ID: p.ID(), Type: p.Type}
+	}
+
+	if s.Owner {
+		c := s.Sharer.RefContact
+		sharer := apiReference{ID: c.ID, Type: c.Type, Status: s.Sharer.Status}
+		return jsonapi.RelationshipMap{
+			"sharer": jsonapi.Relationship{
+				Links: &jsonapi.LinksList{
+					Self: "/data/" + c.Type + "/" + c.ID,
+				},
+				Data: sharer,
+			},
+			"permissions": perms,
+		}
+	}
+
 	l := len(s.Recipients)
 	data := make([]apiReference, l)
 	for i, rec := range s.Recipients {
@@ -72,19 +110,33 @@ func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
 		data[i] = apiReference{ID: r.ID, Type: r.Type, Status: rec.Status}
 	}
 	contents := jsonapi.Relationship{Data: data}
-	return jsonapi.RelationshipMap{"recipients": contents}
+	return jsonapi.RelationshipMap{
+		"recipients":  contents,
+		"permissions": perms,
+	}
 }
 
 // Included is part of the jsonapi.Object interface
 func (s *apiSharing) Included() []jsonapi.Object {
-	// TODO add the permissions in relationships + included
 	var included []jsonapi.Object
-	for _, rec := range s.Recipients {
-		c := rec.Contact(nil)
+	if p, err := s.Permissions(nil); err == nil {
+		included = append(included, &perm.APIPermission{p})
+	}
+
+	if s.Owner {
+		c := s.Sharer.Contact(nil)
 		if c != nil {
 			included = append(included, &apiRecipient{c})
 		}
+	} else {
+		for _, rec := range s.Recipients {
+			c := rec.Contact(nil)
+			if c != nil {
+				included = append(included, &apiRecipient{c})
+			}
+		}
 	}
+
 	return included
 }
 
@@ -113,7 +165,7 @@ func CreateSharing(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	return jsonapi.Data(c, http.StatusCreated, &apiSharing{sharing}, nil)
+	return jsonapi.Data(c, http.StatusCreated, createAPISharing(instance, sharing), nil)
 }
 
 // GetSharingDoc returns the sharing document associated to the given sharingID.
@@ -130,7 +182,7 @@ func GetSharingDoc(c echo.Context) error {
 	if err = checkGetPermissions(c, sharing); err != nil {
 		return wrapErrors(sharings.ErrForbidden)
 	}
-	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
+	return jsonapi.Data(c, http.StatusOK, createAPISharing(instance, sharing), nil)
 }
 
 // AddSharingRecipient adds an existing recipient to an existing sharing
@@ -154,7 +206,7 @@ func AddSharingRecipient(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	return jsonapi.Data(c, http.StatusOK, &apiSharing{sharing}, nil)
+	return jsonapi.Data(c, http.StatusOK, createAPISharing(instance, sharing), nil)
 }
 
 func renderDiscoveryForm(c echo.Context, i *instance.Instance, code int, sharingID, shareCode string, recipient *contacts.Contact) error {
