@@ -20,9 +20,6 @@ func init() {
 
 // RandomString returns a string of random alpha characters of the specified
 // length.
-//
-// TODO(optim): check the usage of the global locked rng does not become a
-// bottleneck.
 func RandomString(n int) string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	b := make([]byte, n)

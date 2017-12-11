@@ -1,7 +1,9 @@
 package sharings_test
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -99,7 +101,6 @@ func createSettings(instance *instance.Instance) {
 	}
 }
 
-/*
 func createDoc(t *testing.T, ins *instance.Instance, doctype string, m map[string]interface{}) *couchdb.JSONDoc {
 	doc := &couchdb.JSONDoc{
 		Type: doctype,
@@ -110,7 +111,6 @@ func createDoc(t *testing.T, ins *instance.Instance, doctype string, m map[strin
 	assert.NoError(t, err)
 	return doc
 }
-*/
 
 func createOAuthClient(t *testing.T) *oauth.Client {
 	client := &oauth.Client{
@@ -194,13 +194,16 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 	assert.NoError(t, err)
 
 	set := permissions.Set{rule}
-	_, err = permissions.CreateSharedByMeSet(testInstance, sharing.SID, nil, set)
+	if owner {
+		_, err = permissions.CreateSharedByMeSet(testInstance, sharing.SID, nil, set)
+	} else {
+		_, err = permissions.CreateSharedWithMeSet(testInstance, sharing.SID, set)
+	}
 	assert.NoError(t, err)
 
 	return sharing
 }
 
-/*
 func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.DocReference) *vfs.FileDoc {
 	doc, err := vfs.NewFileDoc(name, "", -1, nil, "foo/bar", "foo", time.Now(),
 		false, false, []string{"this", "is", "spartest"})
@@ -221,7 +224,6 @@ func createFile(t *testing.T, fs vfs.VFS, name, content string, refs []couchdb.D
 
 	return doc
 }
-*/
 
 func createDir(t *testing.T, fs vfs.VFS, name string, refs []couchdb.DocReference) *vfs.DirDoc {
 	dirDoc, err := vfs.NewDirDoc(fs, name, "", []string{"It's", "me", "again"})
@@ -472,10 +474,6 @@ func TestGetMemberFromContactIDSuccess(t *testing.T) {
 	assert.Equal(t, rs, *recStatus)
 }
 
-/*
-// TODO uncomment the following test when
-// permissions.GetSharedWithMePermissionsByDoctype will have been updated
-
 func TestRemoveDocumentIfNotShared(t *testing.T) {
 	// First set of tests: JSON documents.
 	// Test: the document matches a permission in a sharing so it should NOT be
@@ -540,11 +538,10 @@ func TestRemoveDocumentIfNotShared(t *testing.T) {
 		[]couchdb.DocReference{})
 	err = sharings.RemoveDocumentIfNotShared(testInstance, consts.Files, fileToDelete.ID())
 	assert.NoError(t, err)
-	fileDoc, err := testInstance.VFS().FileByID(fileToDelete.ID())
+	fileDoc, err = testInstance.VFS().FileByID(fileToDelete.ID())
 	assert.NoError(t, err)
 	assert.True(t, fileDoc.Trashed)
 }
-*/
 
 func TestRevokeSharing(t *testing.T) {
 	sharingIDSharerMM := utils.RandomString(20)

@@ -445,142 +445,32 @@ func GetPermissionsForIDs(db couchdb.Database, doctype string, ids []string) (ma
 	return result, nil
 }
 
-// GetPermissionsByType gets all share permissions for a given doctype.
-// The passed Cursor will be modified in place
-func GetPermissionsByType(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
-
+// GetPermissionsByDoctype returns the list of all permissions of the given
+// type (shared-with-me by example) that have at least one rule for the given
+// doctype. The cursor will be modified in place.
+func GetPermissionsByDoctype(db couchdb.Database, permType, doctype string, cursor couchdb.Cursor) ([]Permission, error) {
 	var req = &couchdb.ViewRequest{
-		StartKey:    []string{doctype},
-		EndKey:      []string{doctype, couchdb.MaxString},
+		Key:         [2]interface{}{doctype, permType},
 		IncludeDocs: true,
 	}
-
 	cursor.ApplyTo(req)
 
 	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.PermissionsShareByDocView, req, &res)
+	err := couchdb.ExecView(db, consts.PermissionsByDoctype, req, &res)
 	if err != nil {
 		return nil, err
 	}
-
 	cursor.UpdateFrom(&res)
 
-	result := make([]*Permission, len(res.Rows))
+	result := make([]Permission, len(res.Rows))
+
 	for i, row := range res.Rows {
-		var pdoc Permission
-		err := json.Unmarshal(row.Doc, &pdoc)
+		var doc Permission
+		err := json.Unmarshal(row.Doc, &doc)
 		if err != nil {
 			return nil, err
 		}
-		result[i] = &pdoc
-	}
-
-	return result, nil
-}
-
-// GetSharedWithMePermissionsByDoctype retrieves the permissions in all
-// the sharings that apply to the given doctype, where the user is a recipient
-// (i.e. owner is false).
-//
-// The cursor will be modified in place.
-func GetSharedWithMePermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
-	return getSharedWithPermissionsByDoctype(db, doctype, cursor, false)
-}
-
-// GetSharedWithOthersPermissionsByDoctype retrieves the permissions in all the
-// sharings that apply to the given doctype, where the user is the sharer (i.e.
-// owner is true).
-//
-// The cursor will be modified in place.
-func GetSharedWithOthersPermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor) ([]*Permission, error) {
-	return getSharedWithPermissionsByDoctype(db, doctype, cursor, true)
-}
-
-func getSharedWithPermissionsByDoctype(db couchdb.Database, doctype string, cursor couchdb.Cursor, owner bool) ([]*Permission, error) {
-	var req = &couchdb.ViewRequest{
-		StartKey:    [2]interface{}{doctype, owner},
-		EndKey:      [3]interface{}{doctype, owner, couchdb.MaxString},
-		IncludeDocs: false,
-	}
-
-	cursor.ApplyTo(req)
-
-	var res couchdb.ViewResponse
-	// TODO kill the SharedWithPermissionView
-	err := couchdb.ExecView(db, consts.SharedWithPermissionsView, req, &res)
-	if err != nil {
-		return nil, err
-	}
-
-	cursor.UpdateFrom(&res)
-
-	result := make([]*Permission, len(res.Rows))
-
-	// The rows have the following format:
-	// "id": "_id", "key": [type, owner, sharing_id], "value": [rule]
-	// see consts/views.go and the view "SharedWithPermissionView"
-	for i, row := range res.Rows {
-		keys := row.Key.([]interface{})
-
-		var rule Rule
-		rule.Verbs = VerbSet{} // needed for Merge
-
-		// Since we didn't include the Sharing document (it contains all the
-		// permissions, possibly more than what where are interested in),
-		// we have to manually parse the rule.
-		mRule := row.Value.(map[string]interface{})
-		for field := range mRule {
-			switch field {
-			case "description":
-				rule.Description = mRule[field].(string)
-			case "selector":
-				rule.Selector = mRule[field].(string)
-			case "type":
-				rule.Type = mRule[field].(string)
-			case "values":
-				values := mRule[field].([]interface{})
-				rule.Values = make([]string, len(values))
-				for i, value := range values {
-					rule.Values[i] = value.(string)
-				}
-			case "verbs":
-				verbs := mRule[field].([]interface{})
-				if len(verbs) == 0 {
-					rule.Verbs = ALL
-					continue
-				}
-				for _, verbStr := range verbs {
-					var verb Verb
-					switch verbStr.(string) {
-					case "GET":
-						verb = GET
-					case "POST":
-						verb = POST
-					case "PUT":
-						verb = PUT
-					case "PATCH":
-						verb = PATCH
-					case "DELETE":
-						verb = DELETE
-					default:
-						continue
-					}
-
-					rule.Verbs.Merge(&VerbSet{
-						verb: struct{}{},
-					})
-				}
-			default:
-				continue
-			}
-		}
-
-		pdoc := &Permission{
-			Type:        consts.Sharings,
-			SourceID:    keys[2].(string),
-			Permissions: Set{rule},
-		}
-		result[i] = pdoc
+		result[i] = doc
 	}
 
 	return result, nil

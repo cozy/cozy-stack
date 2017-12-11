@@ -27,9 +27,6 @@ var token string
 
 var ts *httptest.Server
 
-// @TODO this should be moved to our couchdb package or to
-// some test helpers files.
-
 type stackUpdateResponse struct {
 	ID      string          `json:"id"`
 	Rev     string          `json:"rev"`

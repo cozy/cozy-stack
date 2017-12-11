@@ -521,14 +521,14 @@ Add permissions or remove permissions to the konnector with specified slug. It
 behaves like the `PATCH /permissions/:id` route. See this route for more
 examples.
 
-### GET /permissions/doctype/:doctype/sharedByLink
+### GET /permissions/doctype/:doctype/shared-by-link
 
 List permissions for a doctype that are used for a "share by links"
 
 #### Request
 
 ```http
-GET /permissions/doctype/io.cozy.events/sharedByLink HTTP/1.1
+GET /permissions/doctype/io.cozy.events/shared-by-link HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
 Content-Type: application/vnd.api+json
@@ -585,7 +585,7 @@ Content-Type: application/vnd.api+json
 
 Permissions required : GET on the whole doctype
 
-### GET /permissions/doctype/:doctype/sharedWithMe
+### GET /permissions/doctype/:doctype/shared-with-me
 
 Returns the list of permissions associated with sharings where the user is a
 recipient (those documents are shared with the user).
@@ -593,7 +593,7 @@ recipient (those documents are shared with the user).
 #### Request
 
 ```http
-GET /permissions/doctype/io.cozy.files/sharedWithMe HTTP/1.1
+GET /permissions/doctype/io.cozy.files/shared-with-me HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json
@@ -639,7 +639,7 @@ Content-Type: application/vnd.api+json
 
 Permission required: GET on the whole type.
 
-### GET /permissions/doctype/:doctype/sharedWithOthers
+### GET /permissions/doctype/:doctype/shared-by-me
 
 Returns the list of permissions associated with sharings where the user is the
 sharer (the user is sharing those documents with others).
@@ -647,7 +647,7 @@ sharer (the user is sharing those documents with others).
 #### Request
 
 ```http
-GET /permissions/doctype/io.cozy.files/sharedWithOthers HTTP/1.1
+GET /permissions/doctype/io.cozy.files/shared-by-me HTTP/1.1
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
 Content-Type: application/vnd.api+json
 Accept: application/vnd.api+json

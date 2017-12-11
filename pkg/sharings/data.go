@@ -337,7 +337,7 @@ func RemoveDocumentIfNotShared(ins *instance.Instance, doctype, docID string) er
 
 	cursor := couchdb.NewSkipCursor(10000, 0)
 	for {
-		perms, errg := permissions.GetSharedWithMePermissionsByDoctype(ins, doctype, cursor)
+		perms, errg := permissions.GetPermissionsByDoctype(ins, permissions.TypeSharedWithMe, doctype, cursor)
 		if errg != nil {
 			return errg
 		}
