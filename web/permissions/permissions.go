@@ -36,10 +36,13 @@ const ContextPermissionSet = "permissions_set"
 // #nosec
 const ContextClaims = "token_claims"
 
+// APIPermission is the struct that will be used to serialized a permission to
+// JSON-API
 type APIPermission struct {
 	*permissions.Permission
 }
 
+// MarshalJSON implements jsonapi.Doc
 func (p *APIPermission) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.Permission)
 }

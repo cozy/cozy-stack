@@ -120,7 +120,7 @@ func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
 func (s *apiSharing) Included() []jsonapi.Object {
 	var included []jsonapi.Object
 	if p, err := s.Permissions(nil); err == nil {
-		included = append(included, &perm.APIPermission{p})
+		included = append(included, &perm.APIPermission{Permission: p})
 	}
 
 	if s.Owner {
