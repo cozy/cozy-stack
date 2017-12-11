@@ -97,7 +97,8 @@ Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp
 
 ### PUT /settings/confirm_mail
 
-The user can confirm its mail for activation of two-factor authentication. The code used as confirmation should have is sent via email.
+The user can confirm its mail for activation of two-factor authentication. The
+code used as confirmation should have been sent via email.
 
 Status codes:
   * `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
@@ -106,7 +107,7 @@ Status codes:
 #### Request
 
 ```http
-PUT /settings/passphrase HTTP/1.1
+PUT /settings/confirm_mail HTTP/1.1
 Host: alice.example.com
 Content-Type: application/json
 Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
