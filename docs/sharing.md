@@ -39,8 +39,8 @@ users.
 ### Sharing document
 
 A sharing document has the following structure in CouchDB. Note some fields are
-purposely left empty for space convenience. And the response from the API hide
-some fields from the document (OAuth credentials in particular).
+purposely left empty for space convenience. And the response from the API
+hides some fields from the document (OAuth credentials in particular).
 
 ```json
 {
