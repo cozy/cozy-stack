@@ -18,6 +18,13 @@ import (
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 
+const (
+	// AndroidPlatform platform using Firebase Cloud Messaging (FCM)
+	AndroidPlatform = "android"
+	// IOSPlatform platform using APNS/2
+	IOSPlatform = "ios"
+)
+
 // ClientSecretLen is the number of random bytes used for generating the client secret
 const ClientSecretLen = 24 // #nosec
 
@@ -222,6 +229,15 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
+	switch c.NotificationPlatform {
+	case "":
+	case AndroidPlatform, IOSPlatform:
+	default:
+		return &ClientRegistrationError{
+			Code:  http.StatusBadRequest,
+			Error: "invalid_client_metadata",
+		}
+	}
 
 	if err = couchdb.CreateDoc(i, c); err != nil {
 		return &ClientRegistrationError{
@@ -290,6 +306,15 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	}
 	if c.NotificationDeviceToken == "" {
 		c.NotificationDeviceToken = old.NotificationDeviceToken
+	}
+	switch c.NotificationPlatform {
+	case "":
+	case AndroidPlatform, IOSPlatform:
+	default:
+		return &ClientRegistrationError{
+			Code:  http.StatusBadRequest,
+			Error: "invalid_client_metadata",
+		}
 	}
 
 	if err := couchdb.UpdateDoc(i, c); err != nil {

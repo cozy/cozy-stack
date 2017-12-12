@@ -24,13 +24,6 @@ import (
 	apns_token "github.com/sideshow/apns2/token"
 )
 
-const (
-	// Android platform using Firebase Cloud Messaging (FCM)
-	Android = "android"
-	// IOS platform using APNS/2
-	IOS = "ios"
-)
-
 var (
 	fcmClient *fcm.Client
 	iosClient *apns.Client
@@ -129,9 +122,9 @@ func Worker(ctx *jobs.WorkerContext) error {
 		msg.DeviceToken = c.NotificationDeviceToken
 	}
 	switch msg.Platform {
-	case Android:
+	case oauth.AndroidPlatform:
 		return pushToAndroid(ctx, &msg)
-	case IOS:
+	case oauth.IOSPlatform:
 		return pushToIOS(ctx, &msg)
 	default:
 		return fmt.Errorf("notifications: unknown platform %q", msg.Platform)
