@@ -14,6 +14,7 @@ source: applicationID
 reference: text // useful to "hide notif like this"
 title: text
 content: text
+content_html: html
 icon?: image
 actions?: [{text, intent}]
 ```
