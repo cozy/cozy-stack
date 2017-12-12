@@ -398,7 +398,6 @@ msgstr "Here is the code to enable two-factor authentication on your Cozy: {{.Tw
 msgid "Mail Two Factor Mail Confirmation Outro"
 msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
 
-
 msgid "Mail New Connection Subject"
 msgstr "We just detected a connection to your Cozy"
 
