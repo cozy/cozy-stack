@@ -111,7 +111,7 @@ func synchronized(c echo.Context) error {
 	}
 
 	client.SynchronizedAt = time.Now()
-	if err := couchdb.UpdateDoc(instance, &client); err != nil {
+	if err := couchdb.UpdateDoc(instance, client); err != nil {
 		return err
 	}
 	return c.NoContent(http.StatusNoContent)

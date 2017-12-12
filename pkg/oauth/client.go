@@ -115,13 +115,16 @@ func GetAll(i *instance.Instance) ([]*Client, error) {
 }
 
 // FindClient loads a client from the database
-func FindClient(i *instance.Instance, id string) (Client, error) {
+func FindClient(i *instance.Instance, id string) (*Client, error) {
 	var c Client
 	if err := couchdb.GetDoc(i, consts.OAuthClients, id, &c); err != nil {
 		i.Logger().Errorf("[oauth] Failed to find the client %s: %s", id, err)
-		return c, err
+		return nil, err
 	}
-	return c, nil
+	if c.ClientID == "" {
+		c.ClientID = c.CouchID
+	}
+	return &c, nil
 }
 
 // ClientRegistrationError is a Client Registration Error Response, as described
@@ -167,7 +170,15 @@ func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationE
 			Description: "software_id is mandatory",
 		}
 	}
-
+	switch c.NotificationPlatform {
+	case "":
+	case AndroidPlatform, IOSPlatform:
+	default:
+		return &ClientRegistrationError{
+			Code:  http.StatusBadRequest,
+			Error: "invalid_client_metadata",
+		}
+	}
 	return nil
 }
 
@@ -266,7 +277,7 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 
 // Update will update the client metadata
 func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationError {
-	if c.ClientID != old.CouchID {
+	if c.ClientID != old.ClientID {
 		return &ClientRegistrationError{
 			Code:        http.StatusBadRequest,
 			Error:       "invalid_client_id",
@@ -306,15 +317,6 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	}
 	if c.NotificationDeviceToken == "" {
 		c.NotificationDeviceToken = old.NotificationDeviceToken
-	}
-	switch c.NotificationPlatform {
-	case "":
-	case AndroidPlatform, IOSPlatform:
-	default:
-		return &ClientRegistrationError{
-			Code:  http.StatusBadRequest,
-			Error: "invalid_client_metadata",
-		}
 	}
 
 	if err := couchdb.UpdateDoc(i, c); err != nil {
