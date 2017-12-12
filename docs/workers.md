@@ -3,18 +3,62 @@
 # Workers
 
 This page list all the currently available workers on the cozy-stack. It
-describes their input arguments object. See the [jobs document](jobs.md) to know
-more about the API context in which you can see how to use these arguments.
+describes their input arguments object. See the [jobs document](jobs.md) to
+know more about the API context in which you can see how to use these
+arguments.
 
 ## log worker
 
 The `log` worker will just print in the log file the job sent to it. It can
 useful for debugging for example.
 
+## push worker
+
+The `push` worker can be used to send push-notifications to a user's device.
+The options are:
+
+* `client_id`: the ID of the oauth client to push a notification to.
+* `title`: the title of the notification
+* `message`: the content of the notification
+* `data`: key-value string map for additional metadata (optional)
+* `priority`: the notification priority: `high` or `normal` (optional)
+* `topic`: the topic identifier of the notification (optional)
+* `sound`: a sound associated with the notification (optional)
+
+### Example
+
+```json
+{
+  "client_id": "abcdef123123123",
+  "title": "My Notification",
+  "message": "My notification content.",
+  "priority": "high",
+}
+```
+
+### Permissions
+
+To use this worker from a client-side application, you will need to ask the
+permission. It is done by adding this to the manifest:
+
+```json
+{
+  "permissions": {
+    "push-notification": {
+      "description": "Required to send notifications",
+      "type": "io.cozy.jobs",
+      "verbs": ["POST"],
+      "selector": "worker",
+      "values": ["push"]
+    }
+  }
+}
+```
+
 ## unzip worker
 
-The `unzip` worker can take a zip archive from the VFS, and will unzip the files
-inside it to a directory of the VFS. The options are:
+The `unzip` worker can take a zip archive from the VFS, and will unzip the
+files inside it to a directory of the VFS. The options are:
 
 * `zip`: the ID of the zip file
 * `destination`: the ID of the directory where the files will be unzipped.

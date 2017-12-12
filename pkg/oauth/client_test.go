@@ -63,6 +63,9 @@ func TestCreateClient(t *testing.T) {
 		ClientName:   "foo",
 		RedirectURIs: []string{"https://foobar"},
 		SoftwareID:   "bar",
+
+		NotificationPlatform:    "android",
+		NotificationDeviceToken: "foobar",
 	}
 	assert.Nil(t, client.Create(testInstance))
 
@@ -70,6 +73,9 @@ func TestCreateClient(t *testing.T) {
 		ClientName:   "foo",
 		RedirectURIs: []string{"https://foobar"},
 		SoftwareID:   "bar",
+
+		NotificationPlatform:    "ios",
+		NotificationDeviceToken: "foobar",
 	}
 	assert.Nil(t, client2.Create(testInstance))
 
@@ -91,6 +97,37 @@ func TestCreateClient(t *testing.T) {
 	assert.Equal(t, "foo-2", client2.ClientName)
 	assert.Equal(t, "foo-3", client3.ClientName)
 	assert.Equal(t, "foo-2-2", client4.ClientName)
+}
+
+func TestCreateClientWithNotifications(t *testing.T) {
+	goodClient := &oauth.Client{
+		ClientName:   "client-5",
+		RedirectURIs: []string{"https://foobar"},
+		SoftwareID:   "bar",
+	}
+	if !assert.Nil(t, goodClient.Create(testInstance)) {
+		return
+	}
+
+	{
+		var err error
+		goodClient, err = oauth.FindClient(testInstance, goodClient.ClientID)
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	{
+		client := goodClient.Clone().(*oauth.Client)
+		client.NotificationPlatform = "android"
+		assert.Nil(t, client.Update(testInstance, goodClient))
+	}
+
+	{
+		client := goodClient.Clone().(*oauth.Client)
+		client.NotificationPlatform = "unknown"
+		assert.NotNil(t, client.Update(testInstance, goodClient))
+	}
 }
 
 func TestParseJWTInvalidIssuer(t *testing.T) {
