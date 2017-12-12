@@ -170,6 +170,7 @@ func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationE
 			Description: "software_id is mandatory",
 		}
 	}
+	c.NotificationPlatform = strings.ToLower(c.NotificationPlatform)
 	switch c.NotificationPlatform {
 	case "", AndroidPlatform, IOSPlatform:
 	default:

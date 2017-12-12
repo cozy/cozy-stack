@@ -92,7 +92,7 @@ func Init() (err error) {
 			}
 			iosClient = apns.NewTokenClient(t)
 		} else {
-			iosClient = apns.NewClient(certificateKey).Development()
+			iosClient = apns.NewClient(certificateKey)
 		}
 		if conf.Development {
 			iosClient = iosClient.Development()
