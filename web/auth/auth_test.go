@@ -1189,10 +1189,8 @@ func TestPassphraseReset(t *testing.T) {
 		return
 	}
 	defer res2.Body.Close()
-	if assert.Equal(t, "303 See Other", res2.Status) {
-		assert.Equal(t, "https://cozy.example.net/auth/login?msg=passphrase-reset-requested",
-			res2.Header.Get("Location"))
-	}
+	assert.Equal(t, "200 OK", res2.Status)
+	assert.Equal(t, "text/html; charset=UTF-8", res2.Header.Get("Content-Type"))
 }
 
 func TestPassphraseRenewFormNoToken(t *testing.T) {
@@ -1269,7 +1267,7 @@ func TestPassphraseRenew(t *testing.T) {
 		return
 	}
 	defer res2.Body.Close()
-	assert.Equal(t, "303 See Other", res2.Status)
+	assert.Equal(t, "200 OK", res2.Status)
 	in2, err := instance.Get(d)
 	if !assert.NoError(t, err) {
 		return
