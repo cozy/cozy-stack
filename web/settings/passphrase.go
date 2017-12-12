@@ -53,7 +53,7 @@ func updatePassphrase(c echo.Context) error {
 	// Even if the current passphrase is needed for this request to work, we
 	// enforce a valid permission to avoid having an unauthorized enpoint that
 	// can be bruteforced.
-	if err := permissions.AllowWholeType(c, permissions.GET, consts.Settings); err != nil {
+	if err := permissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
 		return err
 	}
 
@@ -73,6 +73,30 @@ func updatePassphrase(c echo.Context) error {
 
 	if _, err := auth.SetCookieForNewSession(c); err != nil {
 		return err
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+func confirmMail(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := permissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
+		return err
+	}
+
+	if inst.MailConfirmed {
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	args := struct {
+		MailConfirmationCode string `json:"mail_confirmation_code"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	if ok := inst.ConfirmMail(args.MailConfirmationCode); !ok {
+		return c.NoContent(http.StatusUnprocessableEntity)
 	}
 	return c.NoContent(http.StatusNoContent)
 }

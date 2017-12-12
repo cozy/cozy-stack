@@ -297,6 +297,13 @@ func init() {
 			Name:    "two_factor",
 			Subject: "Mail Two Factor Subject",
 			Intro:   "Mail Two Factor Intro",
+			Outro:   "Mail Two Factor Outro",
+		},
+		{
+			Name:    "two_factor_mail_confirmation",
+			Subject: "Mail Two Factor Mail Confirmation Subject",
+			Intro:   "Mail Two Factor Mail Confirmation Intro",
+			Outro:   "Mail Two Factor Mail Confirmation Outro",
 		},
 		{
 			Name:    "new_connexion",
@@ -328,24 +335,11 @@ func init() {
 					Link:         "{{.DevicesLink}}",
 				},
 				// {
-				// 	Instructions: "Mail New Registration Revoke instruction",
-				// 	Text:         "Mail New Registration Revoke text",
-				// 	Link:         "{{.RevokeLink}}",
+				//  Instructions: "Mail New Registration Revoke instruction",
+				//  Text:         "Mail New Registration Revoke text",
+				//  Link:         "{{.RevokeLink}}",
 				// },
 			},
-		},
-		{
-			Name:    "two_factor_mail_confirmation",
-			Subject: "Mail Two Factor Mail Confirmation Subject",
-			Intro:   "Mail Two Factor Mail Confirmation Intro",
-			Actions: []MailAction{
-				{
-					Instructions: "Mail Two Factor Mail Confirmation Button instruction",
-					Text:         "Mail Two Factor Mail Confirmation Button text",
-					Link:         "{{.ConfirmLink}}",
-				},
-			},
-			Outro: "Mail Two Factor Mail Confirmation Outro",
 		},
 	}}
 }

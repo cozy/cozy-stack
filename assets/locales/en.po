@@ -386,6 +386,19 @@ msgstr "Verify your connection to Cozy"
 msgid "Mail Two Factor Intro"
 msgstr "Here is the code to use for two-factor authentication: {{.TwoFactorPasscode}}."
 
+msgid "Mail Two Factor Outro"
+msgstr "If you think you are not the right recipient, please contact us at contact@cozycloud.cc"
+
+msgid "Mail Two Factor Mail Confirmation Subject"
+msgstr "You want to enable two-factor authentication on your Cozy"
+
+msgid "Mail Two Factor Mail Confirmation Intro"
+msgstr "Here is the code to enable two-factor authentication on your Cozy: {{.TwoFactorActivationPasscode}}"
+
+msgid "Mail Two Factor Mail Confirmation Outro"
+msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"
+
+
 msgid "Mail New Connection Subject"
 msgstr "We just detected a connection to your Cozy"
 
@@ -434,18 +447,3 @@ msgstr "If you are not the source of this addition you can revoke the new device
 
 msgid "Mail New Registration Revoke text"
 msgstr "Revoke this device"
-
-msgid "Mail Two Factor Mail Confirmation Subject"
-msgstr "You want to enable two-factor authentication on your Cozy"
-
-msgid "Mail Two Factor Mail Confirmation Intro"
-msgstr "You want to enable two-factor authentication on your Cozy."
-
-msgid "Mail Two Factor Mail Confirmation Button instruction"
-msgstr "Click on the followng button to activate it."
-
-msgid "Mail Two Factor Mail Confirmation Button text"
-msgstr "Activate 2-step verification"
-
-msgid "Mail Two Factor Mail Confirmation Outro"
-msgstr "If you have not made this change, please contact us at contact@cozycloud.cc"

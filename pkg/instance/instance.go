@@ -286,6 +286,17 @@ func (i *Instance) SettingsDocument() (*couchdb.JSONDoc, error) {
 	return doc, nil
 }
 
+// SettingsEMail returns the email address defined in the settings of this
+// instance.
+func (i *Instance) SettingsEMail() (string, error) {
+	settings, err := i.SettingsDocument()
+	if err != nil {
+		return "", err
+	}
+	email, _ := settings.M["email"].(string)
+	return email, nil
+}
+
 // Context returns the map from the config that matches the context of this instance
 func (i *Instance) Context() (map[string]interface{}, error) {
 	doc, err := i.SettingsDocument()

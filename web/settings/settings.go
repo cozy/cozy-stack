@@ -56,6 +56,7 @@ func Routes(router *echo.Group) {
 
 	router.POST("/passphrase", registerPassphrase)
 	router.PUT("/passphrase", updatePassphrase)
+	router.PUT("/confirm_mail", confirmMail)
 
 	router.GET("/instance", getInstance)
 	router.PUT("/instance", updateInstance)
