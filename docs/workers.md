@@ -20,6 +20,7 @@ The options are:
 * `client_id`: the ID of the oauth client to push a notification to.
 * `title`: the title of the notification
 * `message`: the content of the notification
+* `data`: key-value string map for additional metadata (optional)
 * `priority`: the notification priority: `high` or `normal` (optional)
 * `topic`: the topic identifier of the notification (optional)
 * `sound`: a sound associated with the notification (optional)
