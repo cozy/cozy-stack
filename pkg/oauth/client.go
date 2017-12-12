@@ -171,8 +171,7 @@ func (c *Client) checkMandatoryFields(i *instance.Instance) *ClientRegistrationE
 		}
 	}
 	switch c.NotificationPlatform {
-	case "":
-	case AndroidPlatform, IOSPlatform:
+	case "", AndroidPlatform, IOSPlatform:
 	default:
 		return &ClientRegistrationError{
 			Code:  http.StatusBadRequest,
@@ -240,15 +239,6 @@ func (c *Client) Create(i *instance.Instance) *ClientRegistrationError {
 	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
-	switch c.NotificationPlatform {
-	case "":
-	case AndroidPlatform, IOSPlatform:
-	default:
-		return &ClientRegistrationError{
-			Code:  http.StatusBadRequest,
-			Error: "invalid_client_metadata",
-		}
-	}
 
 	if err = couchdb.CreateDoc(i, c); err != nil {
 		return &ClientRegistrationError{
@@ -311,7 +301,6 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
-
 	if c.NotificationPlatform == "" {
 		c.NotificationPlatform = old.NotificationPlatform
 	}
