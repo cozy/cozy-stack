@@ -181,7 +181,8 @@ func sendLoginNotification(i *instance.Instance, l *LoginEntry, clientRegistrati
 		}
 	} else {
 		changePassphraseURL := i.SubDomain(consts.SettingsSlug)
-		changePassphraseURL.Fragment = "/profile/changePassphrase"
+		// TODO: changePassphraseURL.Fragment = "/profile/changePassphrase"
+		changePassphraseURL.Fragment = "/profile"
 		templateName = "new_connexion"
 		templateValues = map[string]interface{}{
 			"City":    l.City,
