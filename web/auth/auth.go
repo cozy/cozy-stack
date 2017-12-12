@@ -825,9 +825,9 @@ func passphraseReset(c echo.Context) error {
 		c.SetCookie(session.Delete(i))
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
-		"ErrorTitle": "Passphrase resetted Title",
-		"Error":      "Passphrase resetted Body",
-		"Button":     "Passphrase resetted Login Button",
+		"ErrorTitle": "Passphrase is reset Title",
+		"Error":      "Passphrase is reset Body",
+		"Button":     "Passphrase is reset Login Button",
 		"ButtonLink": i.PageURL("/auth/login", nil),
 	})
 }
