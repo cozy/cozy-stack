@@ -17,9 +17,10 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 
 	fcm "github.com/appleboy/go-fcm"
+
 	apns "github.com/sideshow/apns2"
 	apns_cert "github.com/sideshow/apns2/certificate"
-	"github.com/sideshow/apns2/payload"
+	apns_payload "github.com/sideshow/apns2/payload"
 	apns_token "github.com/sideshow/apns2/token"
 )
 
@@ -201,7 +202,7 @@ func pushToIOS(ctx *jobs.WorkerContext, msg *Message) error {
 		priority = apns.PriorityHigh
 	}
 
-	payload := payload.NewPayload().
+	payload := apns_payload.NewPayload().
 		AlertTitle(msg.Title).
 		Alert(msg.Message).
 		Sound(msg.Sound)
