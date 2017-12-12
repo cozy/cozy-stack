@@ -412,7 +412,7 @@ func registerClient(c echo.Context) error {
 }
 
 func readClient(c echo.Context) error {
-	client := c.Get("client").(oauth.Client)
+	client := c.Get("client").(*oauth.Client)
 	client.TransformIDAndRev()
 	return c.JSON(http.StatusOK, client)
 }
@@ -423,16 +423,16 @@ func updateClient(c echo.Context) error {
 	if err := json.NewDecoder(c.Request().Body).Decode(client); err != nil {
 		return err
 	}
-	oldClient := c.Get("client").(oauth.Client)
+	oldClient := c.Get("client").(*oauth.Client)
 	instance := middlewares.GetInstance(c)
-	if err := client.Update(instance, &oldClient); err != nil {
+	if err := client.Update(instance, oldClient); err != nil {
 		return c.JSON(err.Code, err)
 	}
 	return c.JSON(http.StatusOK, client)
 }
 
 func deleteClient(c echo.Context) error {
-	client := c.Get("client").(oauth.Client)
+	client := c.Get("client").(*oauth.Client)
 	instance := middlewares.GetInstance(c)
 	if err := client.Delete(instance); err != nil {
 		return c.JSON(err.Code, err)
