@@ -90,6 +90,17 @@ msgstr "Are you sure you want to reset your password?"
 msgid "Passphrase reset Submit"
 msgstr "Reset password"
 
+msgid "Passphrase is reset Title"
+msgstr "Check your emails !"
+
+msgid "Passphrase is reset Body"
+msgstr ""
+"We just sent you a (very) special link by mail. Click on it to reset your password.\n"
+"We prefer to warn you, this mail can be found in Spam, Notification or Social folders. Do not hesitate to take a look at these folders to find it."
+
+msgid "Passphrase is reset Login Button"
+msgstr "Return to the login page"
+
 msgid "Passphrase renew Help"
 msgstr "Enter a new password"
 

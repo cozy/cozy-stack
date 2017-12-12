@@ -813,12 +813,7 @@ func passphraseReset(c echo.Context) error {
 	i := middlewares.GetInstance(c)
 	// TODO: check user informations to allow the reset of the passphrase since
 	// this route is of course not protected by authentication/permission check.
-	if err := i.RequestPassphraseReset(); err != nil {
-		if err == instance.ErrResetAlreadyRequested {
-			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Error": "Error Reset already requested",
-			})
-		}
+	if err := i.RequestPassphraseReset(); err != nil && err != instance.ErrResetAlreadyRequested {
 		return err
 	}
 	// Disconnect the user if it is logged in. The idea is that if the user
@@ -829,9 +824,12 @@ func passphraseReset(c echo.Context) error {
 	if ok {
 		c.SetCookie(session.Delete(i))
 	}
-	v := url.Values{}
-	v.Add("msg", "passphrase-reset-requested")
-	return c.Redirect(http.StatusSeeOther, i.PageURL("/auth/login", v))
+	return c.Render(http.StatusOK, "error.html", echo.Map{
+		"ErrorTitle": "Passphrase is reset Title",
+		"Error":      "Passphrase is reset Body",
+		"Button":     "Passphrase is reset Login Button",
+		"ButtonLink": i.PageURL("/auth/login", nil),
+	})
 }
 
 func passphraseRenewForm(c echo.Context) error {
