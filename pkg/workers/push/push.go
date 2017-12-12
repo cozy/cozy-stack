@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
+	"github.com/cozy/cozy-stack/pkg/oauth"
 
 	multierror "github.com/hashicorp/go-multierror"
 
@@ -45,8 +47,9 @@ func init() {
 
 // Message contains a push notification request.
 type Message struct {
-	Platform    string `json:"platform"`
-	DeviceToken string `json:"device_token"`
+	ClientID    string `json:"client_id,omitempty"`
+	Platform    string `json:"platform,omitempty"`
+	DeviceToken string `json:"device_token,omitempty"`
 	Topic       string `json:"topic,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Message     string `json:"message,omitempty"`
@@ -61,7 +64,7 @@ func Init() (err error) {
 	conf := config.GetConfig().Notifications
 
 	if conf.AndroidAPIKey != "" {
-		fcmClient, err = fcm.NewClient(config.GetConfig().Notifications.AndroidAPIKey)
+		fcmClient, err = fcm.NewClient(conf.AndroidAPIKey)
 		if err != nil {
 			return
 		}
@@ -73,9 +76,11 @@ func Init() (err error) {
 
 		switch filepath.Ext(conf.IOSCertificateKeyPath) {
 		case ".p12":
-			certificateKey, err = apns_cert.FromP12File(conf.IOSCertificateKeyPath, conf.IOSCertificatePassword)
+			certificateKey, err = apns_cert.FromP12File(
+				conf.IOSCertificateKeyPath, conf.IOSCertificatePassword)
 		case ".pem":
-			certificateKey, err = apns_cert.FromPemFile(conf.IOSCertificateKeyPath, conf.IOSCertificatePassword)
+			certificateKey, err = apns_cert.FromPemFile(
+				conf.IOSCertificateKeyPath, conf.IOSCertificatePassword)
 		case ".p8":
 			authKey, err = apns_token.AuthKeyFromFile(conf.IOSCertificateKeyPath)
 		default:
@@ -109,6 +114,18 @@ func Worker(ctx *jobs.WorkerContext) error {
 	var msg Message
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
+	}
+	if msg.ClientID != "" {
+		inst, err := instance.Get(ctx.Domain())
+		if err != nil {
+			return err
+		}
+		c, err := oauth.FindClient(inst, msg.ClientID)
+		if err != nil {
+			return err
+		}
+		msg.Platform = c.NotificationPlatform
+		msg.DeviceToken = c.NotificationDeviceToken
 	}
 	switch msg.Platform {
 	case Android:

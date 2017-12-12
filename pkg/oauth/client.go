@@ -49,6 +49,10 @@ type Client struct {
 	SoftwareID      string   `json:"software_id"`                // Declared by the client (mandatory)
 	SoftwareVersion string   `json:"software_version,omitempty"` // Declared by the client (optional)
 
+	// Notifications parameters
+	NotificationPlatform    string `json:"notification_platform,omitempty"`     // Declared by the client (optional)
+	NotificationDeviceToken string `json:"notification_device_token,omitempty"` // Declared by the client (optional)
+
 	// XXX omitempty does not work for time.Time, thus the interface{} type
 	SynchronizedAt interface{} `json:"synchronized_at,omitempty"` // Date of the last synchronization, updated by /settings/synchronized
 }
@@ -280,6 +284,13 @@ func (c *Client) Update(i *instance.Instance, old *Client) *ClientRegistrationEr
 	c.RegistrationToken = ""
 	c.GrantTypes = []string{"authorization_code", "refresh_token"}
 	c.ResponseTypes = []string{"code"}
+
+	if c.NotificationPlatform == "" {
+		c.NotificationPlatform = old.NotificationPlatform
+	}
+	if c.NotificationDeviceToken == "" {
+		c.NotificationDeviceToken = old.NotificationDeviceToken
+	}
 
 	if err := couchdb.UpdateDoc(i, c); err != nil {
 		return &ClientRegistrationError{
