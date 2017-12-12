@@ -102,6 +102,18 @@ a:focus {
     padding: 1em 0;
 }
 
+.popup-btn, a.popup-btn {
+    display: block;
+    text-align: center;
+    margin: 2em 1em 0 1em;
+    padding: 0.5em 0;
+    background-color: white;
+    text-decoration: none;
+    color: black;
+    text-transform: uppercase;
+    border: 1px solid #D6D8Da;
+}
+
 /* Header */
 header a {
     position: relative;

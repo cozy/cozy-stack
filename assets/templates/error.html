@@ -17,7 +17,7 @@
         </header>
         <div class="container">
           <h1>{{if .ErrorTitle}}{{t .ErrorTitle}}{{else}}{{t "Error Title"}}{{end}}</h1>
-          <footer>
+          <content>
             <div class="error">
               <div class="alert">
                 {{$err := t .Error}}
@@ -30,7 +30,12 @@
                 <p><strong>{{t "Error Contact us" }} <a href="mailto:contact@cozycloud.cc">contact@cozycloud.cc</a>.</strong></p>
               </div>
             </div>
+          </content>
+          {{if .Button}}
+          <footer>
+            <a class="popup-btn" href="{{.ButtonLink}}">{{t .Button}}</a>
           </footer>
+          {{end}}
         </div>
       </section>
     </main>
