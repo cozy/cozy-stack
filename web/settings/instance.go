@@ -67,7 +67,7 @@ func updateInstance(c echo.Context) error {
 	doc.SetID(consts.InstanceSettingsID)
 	doc.SetRev(obj.Meta.Rev)
 
-	if err := webpermissions.Allow(c, webpermissions.PUT, doc); err != nil {
+	if err = webpermissions.Allow(c, webpermissions.PUT, doc); err != nil {
 		return err
 	}
 
