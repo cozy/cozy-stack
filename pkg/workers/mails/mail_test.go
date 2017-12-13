@@ -50,6 +50,7 @@ QUIT
 		"Content-Transfer-Encoding": "quoted-printable",
 		"Content-Type":              "text/plain; charset=UTF-8",
 		"Mime-Version":              "1.0",
+		"X-Cozy":                    "cozy.example.com",
 	}
 
 	mailServer(t, serverString, clientStrings, expectedHeaders, func(host string, port int) error {
@@ -72,6 +73,7 @@ QUIT
 				},
 			},
 			Locale: "en",
+			domain: "cozy.example.com",
 		}
 		return sendMail(context.Background(), msg)
 	})
@@ -105,6 +107,7 @@ QUIT
 		"Content-Transfer-Encoding": "quoted-printable",
 		"Content-Type":              "text/html; charset=UTF-8",
 		"Mime-Version":              "1.0",
+		"X-Cozy":                    "cozy.example.com",
 	}
 
 	mailBody := `<!DOCTYPE html>
@@ -136,6 +139,7 @@ QUIT
 				{Body: mailBody, Type: "text/html"},
 			},
 			Locale: "en",
+			domain: "cozy.example.com",
 		}
 		return sendMail(context.Background(), msg)
 	})
@@ -201,6 +205,7 @@ QUIT
 		"Date":         "Mon, 01 Jan 0001 00:00:00 +0000",
 		"Content-Type": "multipart/alternative;",
 		"Mime-Version": "1.0",
+		"X-Cozy":       "cozy.example.com",
 	}
 
 	mailTemplater = &MailTemplater{[]*MailTemplate{
@@ -243,6 +248,7 @@ QUIT
 			TemplateName:   "test",
 			TemplateValues: data,
 			Locale:         "en",
+			domain:         "cozy.example.com",
 		}
 		return sendMail(context.Background(), msg)
 	})
