@@ -66,6 +66,7 @@ type Options struct {
 	TemplateValues interface{}           `json:"template_values"`
 	Attachments    []*Attachment         `json:"attachments,omitempty"`
 	Locale         string                `json:"locale"`
+	domain         string
 }
 
 // Part represent a part of the content of the mail. It has a type
@@ -82,14 +83,14 @@ func SendMail(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	domain := ctx.Domain()
+	opts.domain = ctx.Domain()
 	from := config.GetConfig().NoReply
 	if from == "" {
-		from = "noreply@" + utils.StripPort(domain)
+		from = "noreply@" + utils.StripPort(opts.domain)
 	}
 	switch opts.Mode {
 	case ModeNoReply:
-		toAddr, err := addressFromDomain(domain)
+		toAddr, err := addressFromDomain(opts.domain)
 		if err != nil {
 			return err
 		}
@@ -97,7 +98,7 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		opts.From = &Address{Email: from}
 		opts.RecipientName = toAddr.Name
 	case ModeFrom:
-		sender, err := addressFromDomain(domain)
+		sender, err := addressFromDomain(opts.domain)
 		if err != nil {
 			return err
 		}
@@ -107,7 +108,7 @@ func SendMail(ctx *jobs.WorkerContext) error {
 		return fmt.Errorf("Mail sent with unknown mode %s", opts.Mode)
 	}
 	if opts.TemplateName != "" && opts.Locale == "" {
-		i, err := instance.Get(domain)
+		i, err := instance.Get(opts.domain)
 		if err != nil {
 			return err
 		}
@@ -176,6 +177,7 @@ func doSendMail(ctx context.Context, opts *Options) error {
 		"From":    {mail.FormatAddress(opts.From.Email, opts.From.Name)},
 		"To":      toAddresses,
 		"Subject": {opts.Subject},
+		"X-Cozy":  {opts.domain},
 	}
 	if opts.ReplyTo != nil {
 		headers["Reply-To"] = []string{
