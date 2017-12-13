@@ -17,6 +17,7 @@ content: text
 content_html: html
 icon?: image
 actions?: [{text, intent}]
+created_at: timestamp
 ```
 
 All applications, services and konnectors can create notifications if they have
