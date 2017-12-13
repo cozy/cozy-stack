@@ -1,6 +1,8 @@
 package notifications
 
 import (
+	"time"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
@@ -19,6 +21,7 @@ type Notification struct {
 	ContentHTML string    `json:"content_html"`
 	Icon        string    `json:"icon"`
 	Actions     []*Action `json:"actions"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -69,6 +72,7 @@ func Create(db couchdb.Database, sourceID string, n *Notification) error {
 		n.Actions = make([]*Action, 0)
 	}
 	n.Source = sourceID
+	n.CreatedAt = time.Now()
 	if err := couchdb.CreateDoc(db, n); err != nil {
 		return err
 	}
