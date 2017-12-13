@@ -9,9 +9,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	"github.com/cozy/cozy-stack/web/permissions"
+	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
 )
 
@@ -46,7 +47,7 @@ func getInstance(c echo.Context) error {
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 
-	if err = permissions.Allow(c, permissions.GET, doc); err != nil {
+	if err = webpermissions.Allow(c, permissions.GET, doc); err != nil {
 		return err
 	}
 
@@ -66,7 +67,12 @@ func updateInstance(c echo.Context) error {
 	doc.SetID(consts.InstanceSettingsID)
 	doc.SetRev(obj.Meta.Rev)
 
-	if err := permissions.Allow(c, permissions.PUT, doc); err != nil {
+	if err = webpermissions.Allow(c, webpermissions.PUT, doc); err != nil {
+		return err
+	}
+
+	oldDoc, err := inst.SettingsDocument()
+	if err != nil {
 		return err
 	}
 
@@ -98,6 +104,13 @@ func updateInstance(c echo.Context) error {
 			needMailConfirmation =
 				authMode == instance.TwoFactorMail && !inst.MailConfirmed
 		}
+	}
+
+	// Only allow to change the TOS version and UUID via CLI
+	pdoc, err := webpermissions.GetPermission(c)
+	if err != nil || pdoc.Type != permissions.TypeCLI {
+		doc.M["tos"] = oldDoc.M["tos"]
+		doc.M["uuid"] = oldDoc.M["uuid"]
 	}
 
 	if needUpdate {
