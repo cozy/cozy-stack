@@ -95,20 +95,24 @@ func (m *mailCache) ToBody(recipientName string, data interface{}) (body hermes.
 	var outros []string
 	introB := new(bytes.Buffer)
 	outroB := new(bytes.Buffer)
-	if err = m.intro.Execute(introB, data); err != nil {
-		return
-	}
-	if err = m.outro.Execute(outroB, data); err != nil {
-		return
-	}
-	for _, b := range bytes.Split(introB.Bytes(), []byte("\n")) {
-		if len(b) > 0 {
-			intros = append(intros, string(b))
+	if m.intro != nil {
+		if err = m.intro.Execute(introB, data); err != nil {
+			return
+		}
+		for _, b := range bytes.Split(introB.Bytes(), []byte("\n")) {
+			if len(b) > 0 {
+				intros = append(intros, string(b))
+			}
 		}
 	}
-	for _, b := range bytes.Split(outroB.Bytes(), []byte("\n")) {
-		if len(b) > 0 {
-			outros = append(outros, string(b))
+	if m.outro != nil {
+		if err = m.outro.Execute(outroB, data); err != nil {
+			return
+		}
+		for _, b := range bytes.Split(outroB.Bytes(), []byte("\n")) {
+			if len(b) > 0 {
+				outros = append(outros, string(b))
+			}
 		}
 	}
 	as := make([]hermes.Action, len(m.actions))
