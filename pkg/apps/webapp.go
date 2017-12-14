@@ -40,13 +40,20 @@ type Service struct {
 // Services is a map to define services assciated with an application.
 type Services map[string]*Service
 
-// Locale can be used to describe a locale.
-type Locale struct {
-	Description string `json:"description"`
+// Locales is a map to define the available locales of the application.
+type Locales map[string]interface{}
+
+// Developer is the name and url of a developer.
+type Developer struct {
+	Name string `json:"name"`
+	URL  string `json:"url,omitempty"`
 }
 
-// Locales is a map to define the available locales of the application.
-type Locales map[string]Locale
+// Platform is a supported additional device platform of the application.
+type Platform struct {
+	Type string `json:"type"`
+	URL  string `json:"url"`
+}
 
 // Intent is a declaration of a service for other client-side apps
 type Intent struct {
@@ -60,29 +67,32 @@ type Intent struct {
 type WebappManifest struct {
 	DocRev string `json:"_rev,omitempty"` // WebappManifest revision
 
-	Type string `json:"type,omitempty"`
+	Name             string      `json:"name"`
+	Type             string      `json:"type,omitempty"`
+	Editor           string      `json:"editor"`
+	DocSlug          string      `json:"slug"`
+	Developer        Developer   `json:"developer"`
+	LongDescription  string      `json:"long_description"`
+	ShortDescription string      `json:"short_description"`
+	Category         string      `json:"category"`
+	Locales          Locales     `json:"locales"`
+	Langs            []string    `json:"langs"`
+	Tags             []string    `json:"tags"`
+	Icon             string      `json:"icon"`
+	Screenshots      []string    `json:"screenshots"`
+	Platforms        []*Platform `json:"platforms,omitempty"`
+	License          string      `json:"license"`
 
-	Name        string     `json:"name"`
-	Editor      string     `json:"editor"`
-	DocSource   string     `json:"source"`
-	DocSlug     string     `json:"slug"`
-	DocState    State      `json:"state"`
-	Icon        string     `json:"icon"`
-	Category    string     `json:"category"`
-	Description string     `json:"description"`
-	Developer   *Developer `json:"developer"`
-
-	DefaultLocale string  `json:"default_locale"`
-	Locales       Locales `json:"locales"`
-
+	DocState       State           `json:"state"`
+	DocSource      string          `json:"source"`
 	DocVersion     string          `json:"version"`
-	License        string          `json:"license"`
 	DocPermissions permissions.Set `json:"permissions"`
 	Intents        []Intent        `json:"intents"`
 	Routes         Routes          `json:"routes"`
 	Services       Services        `json:"services"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	Instance SubDomainer `json:"-"` // Used for JSON-API links
 
@@ -104,10 +114,6 @@ func (m *WebappManifest) DocType() string { return consts.Apps }
 // Clone implements couchdb.Doc
 func (m *WebappManifest) Clone() couchdb.Doc {
 	cloned := *m
-	if m.Developer != nil {
-		tmp := *m.Developer
-		cloned.Developer = &tmp
-	}
 
 	cloned.Routes = make(Routes, len(m.Routes))
 	for k, v := range m.Routes {
