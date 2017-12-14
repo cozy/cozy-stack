@@ -87,12 +87,12 @@ func SendMails(instance *instance.Instance, s *Sharing) error {
 }
 
 func linkForRecipient(i *instance.Instance, s *Sharing, m *Member) string {
-	// TODO be sure that s.permissions is not nil
-	if s.permissions == nil {
+	perms, err := s.Permissions(i)
+	if err != nil {
 		return ""
 	}
 
-	code, ok := s.permissions.Codes[m.RefContact.ID]
+	code, ok := perms.Codes[m.RefContact.ID]
 	if !ok {
 		return ""
 	}

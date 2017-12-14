@@ -14,7 +14,7 @@ import (
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
 	Status string `json:"status,omitempty"`
-	URL    string `json:"url,omitempty"` // TODO check that this URL is well filled
+	URL    string `json:"url,omitempty"`
 
 	// Only a reference on the contact is persisted in the sharing document
 	RefContact couchdb.DocReference `json:"contact,omitempty"`
