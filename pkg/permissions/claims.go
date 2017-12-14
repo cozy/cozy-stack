@@ -11,10 +11,10 @@ const (
 	AppAudience               = "app"          // used by client-side apps
 	KonnectorAudience         = "konn"         // used by konnectors
 	CLIAudience               = "cli"          // used by command line interface
-	ShareAudience             = "share"        // access tokens
-	RegistrationTokenAudience = "registration" // registration tokens
-	AccessTokenAudience       = "access"       // access tokens
-	RefreshTokenAudience      = "refresh"      // refresh tokens
+	ShareAudience             = "share"        // used for share by links code
+	RegistrationTokenAudience = "registration" // OAuth registration tokens
+	AccessTokenAudience       = "access"       // OAuth access tokens
+	RefreshTokenAudience      = "refresh"      // OAuth refresh tokens
 )
 
 // TokenValidityDuration is the duration where a token is valid in seconds (1 week)

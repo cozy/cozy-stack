@@ -544,7 +544,7 @@ the other cozy instance must have the same slug to trigger this behaviour.
 #### How can I know if something is shared with me?
 
 First, call the route
-[GET /permissions/doctype/:doctype/sharedWithMe](permissions.md#get-permissionsdoctypedoctypesharedwithme)
+[GET /permissions/doctype/:doctype/shared-with-me](permissions.md#get-permissionsdoctypedoctypeshared-with-me)
 to get a list of permissions. This route will only look for permissions that
 apply to sharings where the logged-in user is a recipient.
 
@@ -554,7 +554,7 @@ case then the resource was shared with the logged-in user.
 #### How can I know if something was shared by me?
 
 Same as above except you need to call the route
-[GET /permissions/doctype/:doctype/sharedWithOthers](permissions.md#get-permissionsdoctypedoctypesharedwithothers).
+[GET /permissions/doctype/:doctype/shared-by-me](permissions.md#get-permissionsdoctypedoctypeshared-by-me).
 
 #### Great! I know that my resource is shared. Can I have more information regarding the sharing?
 
