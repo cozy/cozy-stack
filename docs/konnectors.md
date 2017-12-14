@@ -10,21 +10,26 @@ _via_ our [job system](jobs.md) and the [konnector worker](workers.md).
 
 ## The manifest
 
-| Field          | Description                                                                                                     |
-| -------------- | --------------------------------------------------------------------------------------------------------------- |
-| name           | the name to display on the home                                                                                 |
-| type           | the type of the konnector source ("node" is the only supported for now)                                         |
-| slug           | the default slug (it can be changed at install time)                                                            |
-| icon           | an icon for the home                                                                                            |
-| description    | a short description of the konnector                                                                            |
-| source         | where the files of the app can be downloaded                                                                    |
-| developer      | `name` and `url` for the developer                                                                              |
-| default_locale | the locale used for the name and description fields                                                             |
-| locales        | translations of the name and description fields in other locales                                                |
-| version        | the current version number                                                                                      |
-| parameters     | any json object that will be passed to the konnector on execution in the `COZY_PARAMETERS` environment variable |
-| license        | [the SPDX license identifier](https://spdx.org/licenses/)                                                       |
-| permissions    | a map of permissions needed by the app (see [here](permissions.md) for more details)                            |
+| Field             | Description                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| name              | the name to display on the home                                                                                 |
+| slug              | the default slug (it can be changed at install time)                                                            |
+| editor            | the editor's name to display on the cozy-bar of the app                                                         |
+| type              | the type of the konnector source ("node" is the only supported for now)                                         |
+| icon              | an icon for the home                                                                                            |
+| screenshots       | an array of path to the screenshots of the application                                                          |
+| category          | the category of the application                                                                                 |
+| short_description | a short description of the application                                                                          |
+| long_description  | a long description of the application                                                                           |
+| source            | where the files of the app can be downloaded                                                                    |
+| developer         | `name` and `url` for the developer                                                                              |
+| default_locale    | the locale used for the name and description fields                                                             |
+| locales           | translations of the name and description fields in other locales                                                |
+| langs             | list of languages tags supported by the application                                                             |
+| version           | the current version number                                                                                      |
+| parameters        | any json object that will be passed to the konnector on execution in the `COZY_PARAMETERS` environment variable |
+| license           | [the SPDX license identifier](https://spdx.org/licenses/)                                                       |
+| permissions       | a map of permissions needed by the app (see [here](permissions.md) for more details)                            |
 
 ### POST /konnectors/:slug
 

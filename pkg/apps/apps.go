@@ -52,12 +52,6 @@ const (
 // konnectors sources.
 const KonnectorArchiveName = "app.tar"
 
-// Developer is the name and url of a developer.
-type Developer struct {
-	Name string `json:"name"`
-	URL  string `json:"url,omitempty"`
-}
-
 // SubDomainer is an interface with a single method to build an URL from a slug
 type SubDomainer interface {
 	SubDomain(s string) *url.URL

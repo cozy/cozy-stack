@@ -15,25 +15,30 @@ import (
 type KonnManifest struct {
 	DocRev string `json:"_rev,omitempty"` // KonnManifest revision
 
-	Name        string     `json:"name"`
-	Type        string     `json:"type,omitempty"`
-	DocSource   string     `json:"source"`
-	DocSlug     string     `json:"slug"`
-	DocState    State      `json:"state"`
-	Icon        string     `json:"icon,omitempty"`
-	Description string     `json:"description"`
-	Category    string     `json:"category"`
-	Developer   *Developer `json:"developer"`
+	Name             string      `json:"name"`
+	Type             string      `json:"type,omitempty"`
+	Editor           string      `json:"editor"`
+	DocSlug          string      `json:"slug"`
+	Developer        Developer   `json:"developer"`
+	LongDescription  string      `json:"long_description"`
+	ShortDescription string      `json:"short_description"`
+	Category         string      `json:"category"`
+	Locales          Locales     `json:"locales"`
+	Langs            []string    `json:"langs"`
+	Tags             []string    `json:"tags"`
+	Icon             string      `json:"icon"`
+	Screenshots      []string    `json:"screenshots"`
+	Platforms        []*Platform `json:"platforms"`
+	License          string      `json:"license"`
 
-	DefaultLocale string  `json:"default_locale"`
-	Locales       Locales `json:"locales"`
-
+	DocState       State            `json:"state"`
+	DocSource      string           `json:"source"`
 	Parameters     *json.RawMessage `json:"parameters"`
 	DocVersion     string           `json:"version"`
-	License        string           `json:"license"`
 	DocPermissions permissions.Set  `json:"permissions"`
-	CreatedAt      time.Time        `json:"created_at"`
-	UpdatedAt      time.Time        `json:"updated_at"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	Err string `json:"error,omitempty"`
 	err error
@@ -51,10 +56,6 @@ func (m *KonnManifest) DocType() string { return consts.Konnectors }
 // Clone is part of the Manifest interface
 func (m *KonnManifest) Clone() couchdb.Doc {
 	cloned := *m
-	if m.Developer != nil {
-		tmp := *m.Developer
-		cloned.Developer = &tmp
-	}
 
 	cloned.Locales = make(Locales, len(m.Locales))
 	for k, v := range m.Locales {
