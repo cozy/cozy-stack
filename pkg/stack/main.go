@@ -92,7 +92,7 @@ security features. Please do not use this binary as your production server.
 
 	jobsConfig := config.GetConfig().Jobs
 	nbWorkers := jobsConfig.Workers
-	if cli := jobsConfig.Redis.Client(); cli != nil {
+	if cli := jobsConfig.Client(); cli != nil {
 		broker = jobs.NewRedisBroker(nbWorkers, cli)
 		schder = scheduler.NewRedisScheduler(cli)
 	} else {

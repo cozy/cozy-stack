@@ -11,12 +11,12 @@ import (
 const eventsRedisKey = "realtime:events"
 
 type redisHub struct {
-	c     *redis.Client
+	c     redis.UniversalClient
 	mem   *memHub
 	local *topic
 }
 
-func newRedisHub(c *redis.Client) *redisHub {
+func newRedisHub(c redis.UniversalClient) *redisHub {
 	local := newTopic("*")
 	mem := newMemHub()
 	hub := &redisHub{c, mem, local}
