@@ -7,8 +7,7 @@ import (
 	"text/template"
 
 	"github.com/cozy/cozy-stack/pkg/i18n"
-	// XXX Using fork for now (see https://github.com/matcornic/hermes/pull/29)
-	"github.com/jinroh/hermes"
+	"github.com/matcornic/hermes"
 )
 
 // TODO: avoid having a lock by init-ing hermes instances after loading
