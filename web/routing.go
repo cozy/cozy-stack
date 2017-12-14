@@ -1,4 +1,4 @@
-//go:generate statik -src=../assets -dest=. -externals=../assets/externals
+//go:generate statik -src=../assets -dest=. -externals=../assets/.externals
 
 package web
 
