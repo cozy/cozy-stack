@@ -49,7 +49,7 @@ type Developer struct {
 	URL  string `json:"url,omitempty"`
 }
 
-// Platform
+// Platform is a supported additional device platform of the application.
 type Platform struct {
 	Type string `json:"type"`
 	URL  string `json:"url"`
@@ -80,7 +80,7 @@ type WebappManifest struct {
 	Tags             []string    `json:"tags"`
 	Icon             string      `json:"icon"`
 	Screenshots      []string    `json:"screenshots"`
-	Platforms        []*Platform `json:"platforms"`
+	Platforms        []*Platform `json:"platforms,omitempty"`
 	License          string      `json:"license"`
 
 	DocState       State           `json:"state"`

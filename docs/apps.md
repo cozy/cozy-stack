@@ -37,6 +37,7 @@ filename for this file: `manifest.webapp`.
 | langs             | list of languages tags supported by the application                                  |
 | version           | the current version number                                                           |
 | license           | [the SPDX license identifier](https://spdx.org/licenses/)                            |
+| platforms         | a list of `type`, `url` values for derivate of the application for other devices     |
 | intents           | a list of intents provided by this app (see [here](intents.md) for more details)     |
 | permissions       | a map of permissions needed by the app (see [here](permissions.md) for more details) |
 | services          | a map of the services associated with the app (see below for more details)           |
