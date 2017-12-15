@@ -165,7 +165,7 @@ func fetchHTTP(src *url.URL, shasum []byte, fs Copier, man Manifest, prefix stri
 			continue
 		}
 		name := hdr.Name
-		if len(prefix) > 0 && strings.HasPrefix(name, prefix) {
+		if len(prefix) > 0 && strings.HasPrefix(path.Join("/", name), path.Join("/", prefix)) {
 			name = name[len(prefix):]
 		}
 		err = fs.Copy(&fileInfo{
