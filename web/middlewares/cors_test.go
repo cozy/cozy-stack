@@ -27,7 +27,7 @@ func TestCORSMiddlewareNotAuth(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPath(req.URL.Path)
-	h := CORS(CORSOptions{})(echo.NotFoundHandler)
+	h := CORS(CORSOptions{BlackList: []string{"/auth/"}})(echo.NotFoundHandler)
 	h(c)
 	assert.Equal(t, "", rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 }
