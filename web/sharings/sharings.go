@@ -225,6 +225,7 @@ func renderDiscoveryForm(c echo.Context, i *instance.Instance, code int, sharing
 	recCozy := recipient.PrimaryCozyURL()
 
 	return c.Render(code, "sharing_discovery.html", echo.Map{
+		"Domain":        i.Domain,
 		"Locale":        i.Locale,
 		"SharingID":     sharingID,
 		"ShareCode":     shareCode,
@@ -243,13 +244,15 @@ func discoveryForm(c echo.Context) error {
 	sharing, err := sharings.FindSharing(instance, sharingID)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid sharing id",
+			"Domain": instance.Domain,
+			"Error":  "Error Invalid sharing id",
 		})
 	}
 	contact, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid sharecode",
+			"Domain": instance.Domain,
+			"Error":  "Error Invalid sharecode",
 		})
 	}
 
@@ -271,7 +274,8 @@ func discovery(c echo.Context) error {
 	contact, err := sharings.FindContactByShareCode(instance, sharing, shareCode)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid sharecode",
+			"Domain": instance.Domain,
+			"Error":  "Error Invalid sharecode",
 		})
 	}
 	u, err := url.Parse(cozyURL)

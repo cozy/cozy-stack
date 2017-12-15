@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <title>Cozy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/assets/fonts/fonts.css">
-    <link rel="stylesheet" href="/assets/styles/stack.css">
-    <link rel="icon" type="image/png" href="/assets/images/happycloud.png" />
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
+    <link rel="icon" type="image/png" href="{{asset .Domain "/images/happycloud.png"}}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{asset .Domain "/favicon.ico"}}">
   </head>
   <body>
     <main role="application">
@@ -69,6 +69,6 @@
         </div>
       </section>
     </main>
-    <script src="/assets/scripts/cancel-button.js"></script>
+    <script src="{{asset .Domain "/scripts/cancel-button.js"}}"></script>
   </body>
 </html>

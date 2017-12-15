@@ -20,6 +20,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo"
 )
 
@@ -141,14 +142,27 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 
 	filepath := path.Join("/", route.Folder, file)
 	version := app.Version()
+
 	if file != route.Index {
+		// If file is not the index, it is considered an asset of the application
+		// (JS, image, ...). For theses assets we check if it contains an unique
+		// identifier to help caching. In such case, a long cache (1 year) is set.
+		//
+		// A unique identifier is matched when the file base contains a "long"
+		// hexadecimal subpart between '.', of at least 10 characters: for instance
+		// "app.badf00dbadf00d.js".
+		if _, id := statik.ExtractAssetID(file); id != "" {
+			c.Response().Header().Set("Cache-Control", "max-age=31536000")
+		}
+
 		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 		if os.IsNotExist(err) {
-			return echo.NewHTTPError(http.StatusNotFound)
+			return echo.NewHTTPError(http.StatusNotFound, "Asset not found")
 		}
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err)
 		}
+
 		return nil
 	}
 
@@ -163,21 +177,25 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		return err
 	}
 	defer content.Close()
+
 	buf, err := ioutil.ReadAll(content)
 	if err != nil {
 		return err
 	}
+
 	tmpl, err := template.New(file).Parse(string(buf))
 	if err != nil {
 		i.Logger().Warnf("[apps] %s cannot be parsed as a template: %s", file, err)
 		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 	}
+
 	var token string
 	if isLoggedIn {
 		token = i.BuildAppToken(app, session.ID())
 	} else {
 		token = c.QueryParam("sharecode")
 	}
+
 	tracking := "false"
 	settings, err := i.SettingsDocument()
 	if err == nil {
@@ -185,8 +203,10 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 			tracking = t
 		}
 	}
+
 	res := c.Response()
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
+	res.Header().Set("Cache-Control", "private, no-store, must-revalidate")
 	res.WriteHeader(http.StatusOK)
 	return tmpl.Execute(res, echo.Map{
 		"Token":        token,
@@ -222,14 +242,35 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 	return c.Redirect(http.StatusFound, u.String())
 }
 
-var clientTemplate = template.Must(template.New("cozy-client-js").Parse(`` +
-	`<script defer src="//{{.Domain}}/assets/js/cozy-client.min.js"></script>`,
-))
+var assetHelper func(domain, file string) string
+var clientTemplate *template.Template
+var barTemplate *template.Template
 
-var barTemplate = template.Must(template.New("cozy-bar").Parse(`` +
-	`<link rel="stylesheet" type="text/css" href="//{{.Domain}}/assets/css/cozy-bar.min.css">` +
-	`<script defer src="//{{.Domain}}/assets/js/cozy-bar.min.js"></script>`,
-))
+func init() {
+	h := statik.NewHandler(statik.Options{Prefix: "/assets"})
+	assetHelper = func(domain, file string) string {
+		file = h.AssetPath(file)
+		if domain != "" {
+			return "//" + domain + file
+		}
+		return file
+	}
+
+	funcsMap := template.FuncMap{
+		"split": strings.Split,
+		"asset": assetHelper,
+	}
+
+	clientTemplate = template.Must(template.New("cozy-client-js").Funcs(funcsMap).Parse(`` +
+		`<script defer src="{{asset .Domain "/js/cozy-client.min.js"}}"></script>`,
+	))
+
+	barTemplate = template.Must(template.New("cozy-bar").Funcs(funcsMap).Parse(`` +
+		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/fonts/fonts.css"}}">` +
+		`<link rel="stylesheet" type="text/css" href="{{asset .Domain "/css/cozy-bar.min.css"}}">` +
+		`<script defer src="{{asset .Domain "/js/cozy-bar.min.js"}}"></script>`,
+	))
+}
 
 func cozyclientjs(i *instance.Instance) template.HTML {
 	buf := new(bytes.Buffer)

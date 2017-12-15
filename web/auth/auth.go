@@ -56,6 +56,7 @@ func Home(c echo.Context) error {
 	if len(instance.RegisterToken) > 0 {
 		if !webpermissions.CheckRegisterToken(c, instance) {
 			return c.Render(http.StatusOK, "need_onboarding.html", echo.Map{
+				"Domain": instance.Domain,
 				"Locale": instance.Locale,
 			})
 		}
@@ -131,6 +132,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 	}
 
 	return c.Render(code, "login.html", echo.Map{
+		"Domain":           i.Domain,
 		"Locale":           i.Locale,
 		"Title":            title,
 		"PasswordHelp":     help,
@@ -154,6 +156,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		title = i.Translate("Login Welcome name", publicName)
 	}
 	return c.Render(code, "login.html", echo.Map{
+		"Domain":           i.Domain,
 		"Locale":           i.Locale,
 		"Title":            title,
 		"PasswordHelp":     "",
@@ -454,39 +457,46 @@ type authorizeParams struct {
 func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
 	if params.state == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error No state parameter",
+			"Domain": params.instance.Domain,
+			"Error":  "Error No state parameter",
 		})
 	}
 	if params.clientID == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error No client_id parameter",
+			"Domain": params.instance.Domain,
+			"Error":  "Error No client_id parameter",
 		})
 	}
 	if params.redirectURI == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error No redirect_uri parameter",
+			"Domain": params.instance.Domain,
+			"Error":  "Error No redirect_uri parameter",
 		})
 	}
 	if params.scope == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error No scope parameter",
+			"Domain": params.instance.Domain,
+			"Error":  "Error No scope parameter",
 		})
 	}
 	if params.resType != "code" && params.resType != consts.SharingResponseType {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid response type",
+			"Domain": params.instance.Domain,
+			"Error":  "Error Invalid response type",
 		})
 	}
 
 	params.client = new(oauth.Client)
 	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error No registered client",
+			"Domain": params.instance.Domain,
+			"Error":  "Error No registered client",
 		})
 	}
 	if !params.client.AcceptRedirectURI(params.redirectURI) {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Incorrect redirect_uri",
+			"Domain": params.instance.Domain,
+			"Error":  "Error Incorrect redirect_uri",
 		})
 	}
 
@@ -494,7 +504,8 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 	isSharingKind := params.client.ClientKind == "sharing"
 	if isSharingType != isSharingKind {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid response type",
+			"Domain": params.instance.Domain,
+			"Error":  "Error Invalid response type",
 		})
 	}
 
@@ -526,7 +537,8 @@ func authorizeForm(c echo.Context) error {
 	permissions, err := permissions.UnmarshalScopeString(params.scope)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid scope",
+			"Domain": instance.Domain,
+			"Error":  "Error Invalid scope",
 		})
 	}
 	params.client.ClientID = params.client.CouchID
@@ -564,14 +576,16 @@ func authorize(c echo.Context) error {
 
 	if !middlewares.IsLoggedIn(c) {
 		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Error": "Error Must be authenticated",
+			"Domain": instance.Domain,
+			"Error":  "Error Must be authenticated",
 		})
 	}
 
 	u, err := url.ParseRequestURI(params.redirectURI)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid redirect_uri",
+			"Domain": instance.Domain,
+			"Error":  "Error Invalid redirect_uri",
 		})
 	}
 
@@ -596,7 +610,8 @@ func authorize(c echo.Context) error {
 				instance.Logger().Warnf("[sharing] and can't delete the client: %s", errd)
 			}
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Error": "Error Invalid redirect_uri",
+				"Domain": instance.Domain,
+				"Error":  "Error Invalid redirect_uri",
 			})
 		}
 		return Home(c)
@@ -634,7 +649,8 @@ func authorizeApp(c echo.Context) error {
 
 	if !middlewares.IsLoggedIn(c) {
 		return c.Render(http.StatusUnauthorized, "error.html", echo.Map{
-			"Error": "Error Must be authenticated",
+			"Domain": instance.Domain,
+			"Error":  "Error Must be authenticated",
 		})
 	}
 
@@ -647,7 +663,8 @@ func authorizeApp(c echo.Context) error {
 	err = app.Update(instance)
 	if err != nil {
 		return c.Render(http.StatusInternalServerError, "error.html", echo.Map{
-			"Error": fmt.Sprintf("Could not activate application: %s", err.Error()),
+			"Domain": instance.Domain,
+			"Error":  fmt.Sprintf("Could not activate application: %s", err.Error()),
 		})
 	}
 
@@ -660,16 +677,19 @@ func getApp(c echo.Context, instance *instance.Instance, slug string) (apps.Mani
 	if err != nil {
 		if couchdb.IsNotFoundError(err) {
 			return nil, false, c.Render(http.StatusNotFound, "error.html", echo.Map{
-				"Error": `Application should have state "installed"`,
+				"Domain": instance.Domain,
+				"Error":  `Application should have state "installed"`,
 			})
 		}
 		return nil, false, c.Render(http.StatusInternalServerError, "error.html", echo.Map{
-			"Error": fmt.Sprintf("Could not fetch application: %s", err.Error()),
+			"Domain": instance.Domain,
+			"Error":  fmt.Sprintf("Could not fetch application: %s", err.Error()),
 		})
 	}
 	if app.State() != apps.Installed {
 		return nil, false, c.Render(http.StatusExpectationFailed, "error.html", echo.Map{
-			"Error": `Application should have state "installed"`,
+			"Domain": instance.Domain,
+			"Error":  `Application should have state "installed"`,
 		})
 	}
 	return app, true, nil
@@ -806,6 +826,7 @@ func checkRegistrationToken(next echo.HandlerFunc) echo.HandlerFunc {
 func passphraseResetForm(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	return c.Render(http.StatusOK, "passphrase_reset.html", echo.Map{
+		"Domain": instance.Domain,
 		"Locale": instance.Locale,
 		"CSRF":   c.Get("csrf"),
 	})
@@ -827,6 +848,7 @@ func passphraseReset(c echo.Context) error {
 		c.SetCookie(session.Delete(i))
 	}
 	return c.Render(http.StatusOK, "error.html", echo.Map{
+		"Domain":     i.Domain,
 		"ErrorTitle": "Passphrase is reset Title",
 		"Error":      "Passphrase is reset Body",
 		"Button":     "Passphrase is reset Login Button",
@@ -845,13 +867,15 @@ func passphraseRenewForm(c echo.Context) error {
 	token, err := hex.DecodeString(c.QueryParam("token"))
 	if err != nil || len(token) == 0 {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid reset token",
+			"Domain": inst.Domain,
+			"Error":  "Error Invalid reset token",
 		})
 	}
 	if err = inst.CheckPassphraseRenewToken(token); err != nil {
 		if err == instance.ErrMissingToken {
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Error": "Error Invalid reset token",
+				"Domain": inst.Domain,
+				"Error":  "Error Invalid reset token",
 			})
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{
@@ -859,6 +883,7 @@ func passphraseRenewForm(c echo.Context) error {
 		})
 	}
 	return c.Render(http.StatusOK, "passphrase_renew.html", echo.Map{
+		"Domain":               inst.Domain,
 		"Locale":               inst.Locale,
 		"PassphraseResetToken": hex.EncodeToString(token),
 		"CSRF":                 c.Get("csrf"),
@@ -875,13 +900,15 @@ func passphraseRenew(c echo.Context) error {
 	token, err := hex.DecodeString(c.FormValue("passphrase_reset_token"))
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Error": "Error Invalid reset token",
+			"Domain": inst.Domain,
+			"Error":  "Error Invalid reset token",
 		})
 	}
 	if err := inst.PassphraseRenew(pass, token); err != nil {
 		if err == instance.ErrMissingToken {
 			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Error": "Error Invalid reset token",
+				"Domain": inst.Domain,
+				"Error":  "Error Invalid reset token",
 			})
 		}
 		return c.JSON(http.StatusBadRequest, echo.Map{

@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <title>Cozy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="{{ .Domain }}/assets/fonts/fonts.css">
-    <link rel="stylesheet" href="{{ .Domain }}/assets/styles/stack.css">
-    <link rel="icon" type="image/png" href="{{ .Domain }}/assets/images/happycloud.png" />
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/stack.css"}}">
+    <link rel="icon" type="image/png" href="{{asset .Domain "/images/happycloud.png"}}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{asset .Domain "/favicon.ico"}}">
   </head>
   <body>
     <main role="application">
@@ -21,7 +21,7 @@
             <div class="error">
               <div class="alert">
                 {{$err := t .Error}}
-                {{$arr := Split $err "\n"}}
+                {{$arr := split $err "\n"}}
                 {{range $i, $p := $arr}}
                   {{if ne $p ""}}
                   <p>{{$p}}</p>
