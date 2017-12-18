@@ -130,7 +130,8 @@ func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Validable) (s
 	return pdoc.SourceID, nil
 }
 
-// Get the sourceID of a permission
+// GetSourceID returns the sourceID of the permissions associated with the
+// given context.
 func GetSourceID(c echo.Context) (slug string, err error) {
 	pdoc, err := GetPermission(c)
 	if err != nil {
