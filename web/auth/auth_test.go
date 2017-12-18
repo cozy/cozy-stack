@@ -190,10 +190,10 @@ func TestLoginWithBadPassphrase(t *testing.T) {
 }
 
 func TestLoginWithGoodPassphrase(t *testing.T) {
-	csrfToken := getLoginCSRFToken(client, t)
+	token := getLoginCSRFToken(client, t)
 	res, err := postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
-		"csrf_token": {csrfToken},
+		"csrf_token": {token},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -203,7 +203,7 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 		cookies := res.Cookies()
 		assert.Len(t, cookies, 2)
 		assert.Equal(t, cookies[0].Name, "_csrf")
-		assert.Equal(t, cookies[0].Value, csrfToken)
+		assert.Equal(t, cookies[0].Value, token)
 		assert.Equal(t, cookies[1].Name, sessions.SessionCookieName)
 		assert.NotEmpty(t, cookies[1].Value)
 
