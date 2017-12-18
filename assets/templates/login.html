@@ -37,6 +37,7 @@
               </header>
               <div role="region">
                 <input id="redirect" type="hidden" name="redirect" value="{{.Redirect}}" />
+                <input id="csrf_token" type="hidden" name="csrf_token" value="{{.CSRF}}" />
                 {{if not .TwoFactorForm}}
                 <p class="help password-form" id="login-password-tip">{{.PasswordHelp}}</p>
                 <p class="line password-form">

@@ -138,6 +138,7 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		"Redirect":         redirectStr,
 		"TwoFactorForm":    false,
 		"TwoFactorToken":   "",
+		"CSRF":             c.Get("csrf"),
 	})
 }
 
@@ -160,6 +161,7 @@ func renderTwoFactorForm(c echo.Context, i *instance.Instance, code int, redirec
 		"Redirect":         redirect.String(),
 		"TwoFactorForm":    true,
 		"TwoFactorToken":   string(twoFactorToken),
+		"CSRF":             c.Get("csrf"),
 	})
 }
 
@@ -898,8 +900,9 @@ func Routes(router *echo.Group) {
 		CookieSecure:   !config.IsDevRelease(),
 	})
 
-	router.GET("/login", loginForm)
-	router.POST("/login", login)
+	router.GET("/login", loginForm, noCSRF)
+	router.POST("/login", login, noCSRF)
+
 	router.DELETE("/login/others", logoutOthers)
 	router.OPTIONS("/login/others", logoutPreflight)
 	router.DELETE("/login", logout)

@@ -15,6 +15,7 @@
   const twoFactorTrustDeviceCheckbox = document.getElementById('two-factor-trust-device')
   const twoFactorForms = document.getElementsByClassName('two-factor-form')
   const passwordForms = document.getElementsByClassName('password-form')
+  const csrfTokenInput = document.getElementById('csrf_token')
 
   let errorPanel = loginForm && loginForm.querySelector('.errors')
 
@@ -57,7 +58,8 @@
     headers.append('Accept', 'application/json')
     const reqBody = 'passphrase=' + encodeURIComponent(passphrase) +
       '&two-factor-trusted-device-token=' + encodeURIComponent(twoFactorTrustedDeviceToken) +
-      '&redirect=' + encodeURIComponent(redirect);
+      '&redirect=' + encodeURIComponent(redirect) +
+      '&csrf_token=' + encodeURIComponent(csrfTokenInput.value);
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
@@ -101,7 +103,8 @@
     const reqBody = 'two-factor-passcode=' + encodeURIComponent(passcode) +
       '&two-factor-token=' + encodeURIComponent(token) +
       '&two-factor-generate-trusted-device-token=' + encodeURIComponent(trustDevice) +
-      '&redirect=' + encodeURIComponent(redirect);
+      '&redirect=' + encodeURIComponent(redirect) +
+      '&csrf_token=' + encodeURIComponent(csrfTokenInput.value);
     fetch('/auth/login', {
       method: 'POST',
       headers: headers,
