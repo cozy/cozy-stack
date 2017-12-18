@@ -39,7 +39,11 @@ func createHandler(c echo.Context) error {
 	if _, err := jsonapi.Bind(c.Request(), &n); err != nil {
 		return err
 	}
-	sourceID, err := permissions.AllowForApp(c, permissions.POST, n)
+	err := permissions.Allow(c, permissions.POST, n)
+	if err != nil {
+		return err
+	}
+	sourceID, err := permissions.GetSourceID(c)
 	if err != nil {
 		return err
 	}

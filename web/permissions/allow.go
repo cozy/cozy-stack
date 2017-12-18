@@ -130,6 +130,16 @@ func AllowForApp(c echo.Context, v permissions.Verb, o permissions.Validable) (s
 	return pdoc.SourceID, nil
 }
 
+// GetSourceID returns the sourceID of the permissions associated with the
+// given context.
+func GetSourceID(c echo.Context) (slug string, err error) {
+	pdoc, err := GetPermission(c)
+	if err != nil {
+		return "", err
+	}
+	return pdoc.SourceID, nil
+}
+
 // AllowLogout checks if the current permission allows loging out.
 // all apps can trigger a logout.
 func AllowLogout(c echo.Context) bool {
