@@ -69,25 +69,26 @@ const (
 	SchemeSwift = "swift"
 )
 
-// AdminSecretFileName is the name of the file containing the administration
-// hashed passphrase.
-const AdminSecretFileName = "cozy-admin-passphrase" // #nosec
+// defaultAdminSecretFileName is the default name of the file containing the
+// administration hashed passphrase.
+const defaultAdminSecretFileName = "cozy-admin-passphrase" // #nosec
 
 var config *Config
 var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host       string
-	Port       int
-	Assets     string
-	Doctypes   string
-	Subdomains SubdomainType
-	AdminHost  string
-	AdminPort  int
-	NoReply    string
-	Hooks      string
-	GeoDB      string
+	Host                string
+	Port                int
+	Assets              string
+	Doctypes            string
+	Subdomains          SubdomainType
+	AdminHost           string
+	AdminPort           int
+	AdminSecretFileName string
+	NoReply             string
+	Hooks               string
+	GeoDB               string
 
 	Fs            Fs
 	CouchDB       CouchDB
@@ -173,11 +174,11 @@ func NewRedisConfig(u string) (conf RedisConfig, err error) {
 }
 
 // GetRedisConfig returns a
-func GetRedisConfig(v *viper.Viper, main *redis.UniversalOptions, key, ptr string) (conf RedisConfig, err error) {
+func GetRedisConfig(v *viper.Viper, mainOpt *redis.UniversalOptions, key, ptr string) (conf RedisConfig, err error) {
 	var localOpt *redis.Options
 
-	localKey := key + "." + ptr
-	redisKey := "redis.db_" + key
+	localKey := fmt.Sprintf("%s.%s", key, ptr)
+	redisKey := fmt.Sprintf("redis.databases.%s", key)
 
 	if u := v.GetString(localKey); u != "" {
 		localOpt, err = redis.ParseURL(u)
@@ -187,31 +188,32 @@ func GetRedisConfig(v *viper.Viper, main *redis.UniversalOptions, key, ptr strin
 		}
 	}
 
-	if main != nil {
-		opts := *main
+	if mainOpt != nil && localOpt != nil {
+		err = fmt.Errorf("config: ambiguous configuration: the key %q is now "+
+			"deprecated and should be removed in favor of %q",
+			localKey,
+			redisKey)
+		return
+	}
+
+	if mainOpt != nil {
+		opts := *mainOpt
 		dbNumber := v.GetString(redisKey)
-		if dbNumber != "" && localOpt != nil {
-			err = fmt.Errorf("config: ambiguous configuration with both keys %q and %q filled in",
-				redisKey,
-				localKey)
-		}
 		if dbNumber == "" {
-			err = fmt.Errorf("config: missing DB number for key %q", redisKey)
+			err = fmt.Errorf("config: missing DB number for database %q "+
+				"in the field %q", key, redisKey)
 			return
 		}
-		if localOpt != nil {
-			opts.DB = localOpt.DB
-		} else {
-			opts.DB, err = strconv.Atoi(dbNumber)
-			if err != nil {
-				err = fmt.Errorf("config: could not parse key %q: %s", redisKey, err)
-				return
-			}
+		opts.DB, err = strconv.Atoi(dbNumber)
+		if err != nil {
+			err = fmt.Errorf("config: could not parse key %q: %s", redisKey, err)
+			return
 		}
 		conf.cli = redis.NewUniversalClient(&opts)
 	} else if localOpt != nil {
 		conf.cli = redis.NewClient(localOpt)
 	}
+
 	return
 }
 
@@ -356,7 +358,7 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	var redisOptions *redis.UniversalOptions
-	if m := v.GetStringMap("redis"); len(m) > 0 {
+	if v.GetString("redis.addrs") != "" {
 		redisOptions = &redis.UniversalOptions{
 			// Either a single address or a seed list of host:port addresses
 			// of cluster/sentinel nodes.
@@ -414,17 +416,29 @@ func UseViper(v *viper.Viper) error {
 		return err
 	}
 
+	adminSecretFile := v.GetString("admin.secret_filename")
+	if adminSecretFile == "" {
+		adminSecretFile = defaultAdminSecretFileName
+	}
+
+	if !IsDevRelease() {
+		if _, err := FindConfigFile(adminSecretFile); err != nil {
+			return err
+		}
+	}
+
 	config = &Config{
-		Host:       v.GetString("host"),
-		Port:       v.GetInt("port"),
-		Subdomains: subdomains,
-		AdminHost:  v.GetString("admin.host"),
-		AdminPort:  v.GetInt("admin.port"),
-		Assets:     v.GetString("assets"),
-		Doctypes:   v.GetString("doctypes"),
-		NoReply:    v.GetString("mail.noreply_address"),
-		Hooks:      v.GetString("hooks"),
-		GeoDB:      v.GetString("geodb"),
+		Host:                v.GetString("host"),
+		Port:                v.GetInt("port"),
+		Subdomains:          subdomains,
+		AdminHost:           v.GetString("admin.host"),
+		AdminPort:           v.GetInt("admin.port"),
+		AdminSecretFileName: adminSecretFile,
+		Assets:              v.GetString("assets"),
+		Doctypes:            v.GetString("doctypes"),
+		NoReply:             v.GetString("mail.noreply_address"),
+		Hooks:               v.GetString("hooks"),
+		GeoDB:               v.GetString("geodb"),
 		Fs: Fs{
 			URL: fsURL,
 		},
@@ -600,7 +614,7 @@ func FindConfigFile(name string) (string, error) {
 			return filename, nil
 		}
 	}
-	return "", fmt.Errorf("Could not find config file %s", name)
+	return "", fmt.Errorf("Could not find config file %q", name)
 }
 
 func parseURL(u string) (*url.URL, *url.Userinfo, error) {

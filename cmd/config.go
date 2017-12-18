@@ -63,7 +63,7 @@ example: cozy-stack config passwd ~/.cozy/
 			filename = filepath.Join(utils.AbsPath(args[0]))
 			ok, err := utils.DirExists(filename)
 			if err == nil && ok {
-				filename = path.Join(filename, config.AdminSecretFileName)
+				filename = path.Join(filename, config.GetConfig().AdminSecretFileName)
 			}
 		}
 

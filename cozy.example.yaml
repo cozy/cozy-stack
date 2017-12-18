@@ -1,4 +1,14 @@
-# cozy-stack configuration file
+# This file contain an example of cozy-stack configuration file.
+# It provides a description for all available fields to configure the stack.
+#
+# It is possible to pass environnment variable to this configuration using the
+# template language of golang, delimited by "{{" and "}}". See:
+#
+#     https://golang.org/pkg/text/template/.
+#
+# The env map is available in the ".Env" variable. For instance
+# ".Env.COUCHDB_PASSPHRASE" will access to "COUCHDB_PASSPHRASE" environment
+# variable. The template is evaluated at startup of the stack.
 
 # server host - flags: --host
 host: localhost
@@ -13,14 +23,21 @@ subdomains: nested
 
 # path to the directory with the assets - flags: --assets
 # default is to use the assets packed in the binary
-assets: ""
+# assets: ""
 
+# administration endpoint parameters. this endpoint should be protected
 admin:
   # server host - flags: --admin-host
   host: localhost
   # server port - flags: --admin-port
   port: 6060
+  # secret file name containing the derived passphrase to access to the
+  # administration endpoint. this secret file can be generated using the `cozy-
+  # stack config passwd` command. this file should be located in the same path
+  # as the configuration file.
+  secret_filename: cozy-admin-passphrase
 
+# file system parameters
 fs:
   # file system url - flags: --fs-url
   # default url is the directory relative to the binary: ./storage
@@ -28,35 +45,24 @@ fs:
   # url: file://localhost/var/lib/cozy
   # url: swift://openstack/?UserName={{ .Env.OS_USERNAME }}&Password={{ .Env.OS_PASSWORD }}&ProjectName={{ .Env.OS_PROJECT_NAME }}&UserDomainName={{ .Env.OS_USER_DOMAIN_NAME }}
 
+# couchdb parameters
 couchdb:
   # CouchDB URL - flags: --couchdb-url
   url: http://localhost:5984/
 
-cache:
-  # url: redis://localhost:6379/1
-
-lock:
-  # url: redis://localhost:6379/2
-
-sessions:
-  # url: redis://localhost:6379/3
-
-downloads:
-  # url: redis://localhost:6379/4
-
+# jobs parameters to configure the job system
 jobs:
+  # workers define the number of concurrent workers running on the system. if
+  # this parameter is set to 0, no worker is running
   workers: 1
-  # url: redis://localhost:6379/5
 
+# konnectors execution parameters for executing external processes.
 konnectors:
   cmd: ./scripts/konnector-node-run.sh # run connectors with node
   # cmd: ./scripts/konnector-rkt-run.sh # run connectors with rkt
   # cmd: ./scripts/konnector-nsjail-run.sh # run connectors with nsjail
-  # oauthstate: redis://localhost:6379/6
 
-realtime:
-  # url: redis://localhost:6379/7
-
+# mail service parameters for sending email via SMTP
 mail:
   # mail noreply address - flags: --mail-noreply-address
   noreply_address: noreply@localhost
@@ -65,9 +71,9 @@ mail:
   # mail smtp port - flags: --mail-port
   port: 465
   # mail smtp username - flags: --mail-username
-  username: user
+  username: {{.Env.COZY_MAIL_USER}}
   # mail smtp password - flags: --mail-password
-  password: pass
+  password: {{.Env.COZY_MAIL_PASSWORD}}
   # disable mail tls - flags: --mail-disable-tls
   disable_tls: false
   # skip the certificate validation (may be useful on localhost)
@@ -79,6 +85,47 @@ hooks: ./scripts/hooks
 # location of the database for IP -> City lookups - flags: --geodb
 # See https://dev.maxmind.com/geoip/geoip2/geolite2/
 geodb: ""
+
+# redis namespace to configure its usage for different part of the stack. redis
+# is not mandatory and is specifically useful to run the stack in an
+# environment where multiple stacks run simultaneously.
+redis:
+  # the redis clients created can be configured to be used with a cluster of
+  # redis. if addrs field is left empty, redis is not used.
+
+  # either a single address or a seed list of host:port addresses
+  # of cluster/sentinel nodes separated by whitespaces.
+  addrs: # localhost:1234 localhost:4321
+
+  # the sentinel master name - only failover clients.
+  master:
+
+  # redis password
+  password:
+
+  # databases number for each part of the stack using a specific database.
+  databases:
+    jobs: 0
+    cache: 1
+    lock: 2
+    sessions: 3
+    downloads: 4
+    konnectors: 5
+    realtime: 6
+    log: 7
+
+  # advanced parameters for advanced users
+
+  # dial_timeout: 5s
+  # read_timeout: 3s
+  # write_timeout: 3s
+  # pool_size: 10 * runtime.NumCPU()
+  # pool_timeout: 3s
+  # idle_timeout: 5m
+  # idle_check_frequency: 1m
+
+  # enables read only queries on slave nodes.
+  # read_only_slave: false
 
 # Auto updates scheduler
 auto_updates:
@@ -93,7 +140,7 @@ notifications:
   development: false
 
   # Firebase Cloud Messaging API Key for Android notifications
-  # android_api_key:
+  # android_api_key: ""
 
   # APNS/2 certificates for iOS notifications
   # ios_certificate_key_path: path/to/certificate.p12
@@ -106,8 +153,6 @@ log:
   level: info
   # send logs to the local syslog - flags: --log-syslog
   syslog: false
-  # redis url to synchronize loggers between cozy-stack process
-  # redis: redis://localhost:6379/8
 
 # It is possible to customize some behaviors of cozy-stack in function of the
 # context of an instance (the context field of the settings document of this
