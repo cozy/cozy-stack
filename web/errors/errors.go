@@ -117,9 +117,13 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		}
 	}
 
-	acceptHTML := strings.Contains(req.Header.Get("Accept"), echo.MIMETextHTML)
+	accept := req.Header.Get("Accept")
+	acceptHTML := strings.Contains(accept, echo.MIMETextHTML)
+	acceptJSON := strings.Contains(accept, echo.MIMEApplicationJSON)
 	if req.Method == http.MethodHead {
 		err = c.NoContent(status)
+	} else if acceptJSON {
+		err = c.JSON(status, echo.Map{"error": he.Message})
 	} else if acceptHTML {
 		var domain string
 		i, ok := middlewares.GetInstanceSafe(c)

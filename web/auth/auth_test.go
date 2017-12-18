@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -160,9 +161,28 @@ func TestShowLoginPageWithRedirectSuccess(t *testing.T) {
 	assert.Contains(t, string(body), `<input id="redirect" type="hidden" name="redirect" value="https://sub.cozy.example.net/foo/bar?query=foo#myfragment" />`)
 }
 
+func getLoginCSRFToken(c *http.Client, t *testing.T) string {
+	req, _ := http.NewRequest("GET", ts.URL+"/auth/login", nil)
+	req.Host = domain
+	res, err := c.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	return res.Cookies()[0].Value
+}
+
+func TestLoginWithoutCSRFToken(t *testing.T) {
+	res, err := postForm("/auth/login", &url.Values{
+		"passphrase": {"MyPassphrase"},
+	})
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "400 Bad Request", res.Status)
+}
+
 func TestLoginWithBadPassphrase(t *testing.T) {
 	res, err := postForm("/auth/login", &url.Values{
 		"passphrase": {"Nope"},
+		"csrf_token": {getLoginCSRFToken(client, t)},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -170,8 +190,10 @@ func TestLoginWithBadPassphrase(t *testing.T) {
 }
 
 func TestLoginWithGoodPassphrase(t *testing.T) {
+	csrfToken := getLoginCSRFToken(client, t)
 	res, err := postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
+		"csrf_token": {csrfToken},
 	})
 	assert.NoError(t, err)
 	defer res.Body.Close()
@@ -179,9 +201,11 @@ func TestLoginWithGoodPassphrase(t *testing.T) {
 		assert.Equal(t, "https://drive.cozy.example.net/",
 			res.Header.Get("Location"))
 		cookies := res.Cookies()
-		assert.Len(t, cookies, 1)
-		assert.Equal(t, cookies[0].Name, sessions.SessionCookieName)
-		assert.NotEmpty(t, cookies[0].Value)
+		assert.Len(t, cookies, 2)
+		assert.Equal(t, cookies[0].Name, "_csrf")
+		assert.Equal(t, cookies[0].Value, csrfToken)
+		assert.Equal(t, cookies[1].Name, sessions.SessionCookieName)
+		assert.NotEmpty(t, cookies[1].Value)
 
 		var results []*sessions.LoginEntry
 		err = couchdb.GetAllDocs(
@@ -202,6 +226,7 @@ func TestLoginWithRedirect(t *testing.T) {
 	res1, err := postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
 		"redirect":   {"foo.bar"},
+		"csrf_token": {getLoginCSRFToken(client, t)},
 	})
 	assert.NoError(t, err)
 	defer res1.Body.Close()
@@ -210,6 +235,7 @@ func TestLoginWithRedirect(t *testing.T) {
 	res2, err := postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
 		"redirect":   {"https://sub." + domain + "/#myfragment"},
+		"csrf_token": {getLoginCSRFToken(client, t)},
 	})
 	assert.NoError(t, err)
 	defer res2.Body.Close()
@@ -235,6 +261,7 @@ func TestLoginWithSessionCode(t *testing.T) {
 	res, err = postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
 		"redirect":   {"https://cozy-app.example.net/private"},
+		"csrf_token": {getLoginCSRFToken(client, t)},
 	})
 	assert.NoError(t, err)
 	res.Body.Close()
@@ -267,6 +294,7 @@ func TestLoginWithSessionCode(t *testing.T) {
 	res, err = postForm("/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
 		"redirect":   {"https://cozy-app.example.net/private"},
+		"csrf_token": {getLoginCSRFToken(client, t)},
 	})
 	assert.NoError(t, err)
 	res.Body.Close()
@@ -1099,21 +1127,38 @@ func TestLogoutSuccess(t *testing.T) {
 }
 
 func TestLogoutOthers(t *testing.T) {
-	anonymousClient := &http.Client{CheckRedirect: noRedirect}
+	var anonymousClient1, anonymousClient2 *http.Client
+	{
+		u1, _ := url.Parse(testInstance.PageURL("/", nil))
+		u2, _ := url.Parse(testInstance.PageURL("/", nil))
+		jar1, _ := cookiejar.New(nil)
+		jar2, _ := cookiejar.New(nil)
+		anonymousClient1 = &http.Client{
+			CheckRedirect: noRedirect,
+			Jar:           &testutils.CookieJar{Jar: jar1, URL: u1},
+		}
+		anonymousClient2 = &http.Client{
+			CheckRedirect: noRedirect,
+			Jar:           &testutils.CookieJar{Jar: jar2, URL: u2},
+		}
+	}
 
-	res1, err := postFormWithClient(anonymousClient, "/auth/login", &url.Values{
+	res1, err := postFormWithClient(anonymousClient1, "/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
+		"csrf_token": {getLoginCSRFToken(anonymousClient1, t)},
 	})
 	assert.NoError(t, err)
 	defer res1.Body.Close()
+
 	if !assert.Equal(t, "303 See Other", res1.Status) {
 		return
 	}
 	cookies1 := res1.Cookies()
-	assert.Len(t, cookies1, 1)
+	assert.Len(t, cookies1, 2)
 
-	res2, err := postFormWithClient(anonymousClient, "/auth/login", &url.Values{
+	res2, err := postFormWithClient(anonymousClient2, "/auth/login", &url.Values{
 		"passphrase": {"MyPassphrase"},
+		"csrf_token": {getLoginCSRFToken(anonymousClient2, t)},
 	})
 	assert.NoError(t, err)
 	defer res2.Body.Close()
@@ -1121,7 +1166,7 @@ func TestLogoutOthers(t *testing.T) {
 		return
 	}
 	cookies2 := res2.Cookies()
-	assert.Len(t, cookies2, 1)
+	assert.Len(t, cookies2, 2)
 
 	a := app.WebappManifest{DocSlug: "home"}
 	token := testInstance.BuildAppToken(&a, getSessionID(cookies1))
@@ -1130,7 +1175,7 @@ func TestLogoutOthers(t *testing.T) {
 	reqLogout1, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
 	reqLogout1.Host = domain
 	reqLogout1.Header.Add("Authorization", "Bearer "+token)
-	reqLogout1.AddCookie(cookies1[0])
+	reqLogout1.AddCookie(cookies1[1])
 	resLogout1, err := client.Do(reqLogout1)
 	assert.NoError(t, err)
 	defer resLogout1.Body.Close()
@@ -1139,7 +1184,7 @@ func TestLogoutOthers(t *testing.T) {
 	reqLogout2, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
 	reqLogout2.Host = domain
 	reqLogout2.Header.Add("Authorization", "Bearer "+token)
-	reqLogout2.AddCookie(cookies2[0])
+	reqLogout2.AddCookie(cookies2[1])
 	resLogout2, err := client.Do(reqLogout2)
 	assert.NoError(t, err)
 	defer resLogout2.Body.Close()
@@ -1148,7 +1193,7 @@ func TestLogoutOthers(t *testing.T) {
 	reqLogout3, _ := http.NewRequest("DELETE", ts.URL+"/auth/login/others", nil)
 	reqLogout3.Host = domain
 	reqLogout3.Header.Add("Authorization", "Bearer "+token)
-	reqLogout3.AddCookie(cookies1[0])
+	reqLogout3.AddCookie(cookies1[1])
 	resLogout3, err := client.Do(reqLogout3)
 	assert.NoError(t, err)
 	defer resLogout3.Body.Close()
