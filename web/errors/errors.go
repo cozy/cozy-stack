@@ -128,7 +128,7 @@ func HTMLErrorHandler(err error, c echo.Context) {
 		var domain string
 		i, ok := middlewares.GetInstanceSafe(c)
 		if ok {
-			domain = i.PageURL("", nil)
+			domain = i.Domain
 		}
 		err = c.Render(status, "error.html", echo.Map{
 			"Domain":     domain,

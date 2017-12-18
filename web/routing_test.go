@@ -25,10 +25,19 @@ func TestSetupAssets(t *testing.T) {
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	assert.Equal(t, 200, res.StatusCode)
+	{
+		res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
+		assert.NoError(t, err)
+		defer res.Body.Close()
+		assert.Equal(t, 200, res.StatusCode)
+	}
+
+	{
+		res, err := http.Head(ts.URL + "/assets/images/cozy.svg")
+		assert.NoError(t, err)
+		defer res.Body.Close()
+		assert.Equal(t, 200, res.StatusCode)
+	}
 }
 
 func TestSetupAssetsStatik(t *testing.T) {
@@ -41,10 +50,44 @@ func TestSetupAssetsStatik(t *testing.T) {
 	ts := httptest.NewServer(e)
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	assert.Equal(t, 200, res.StatusCode)
+	{
+		res, err := http.Get(ts.URL + "/assets/images/cozy.svg")
+		assert.NoError(t, err)
+		defer res.Body.Close()
+		assert.Equal(t, 200, res.StatusCode)
+		assert.NotContains(t, res.Header.Get("Cache-Control"), "max-age=")
+	}
+
+	{
+		res, err := http.Get(ts.URL + "/assets/images/cozy.badbeefbadbeef.svg")
+		assert.NoError(t, err)
+		defer res.Body.Close()
+		assert.Equal(t, 200, res.StatusCode)
+		assert.Contains(t, res.Header.Get("Cache-Control"), "max-age=")
+	}
+
+	{
+		res, err := http.Get(ts.URL + "/assets/images/cozy.immutable.svg")
+		assert.NoError(t, err)
+		defer res.Body.Close()
+		assert.Equal(t, 200, res.StatusCode)
+		assert.Contains(t, res.Header.Get("Cache-Control"), "max-age=")
+	}
+
+	{
+		res, err := http.Head(ts.URL + "/assets/images/cozy.svg")
+		assert.NoError(t, err)
+		defer res.Body.Close()
+		assert.Equal(t, 200, res.StatusCode)
+	}
+
+	{
+		res, err := http.Head(ts.URL + "/assets/images/cozy.badbeefbadbeef.svg")
+		assert.NoError(t, err)
+		defer res.Body.Close()
+		assert.Equal(t, 200, res.StatusCode)
+		assert.Contains(t, res.Header.Get("Cache-Control"), "max-age=")
+	}
 }
 
 func TestSetupRoutes(t *testing.T) {

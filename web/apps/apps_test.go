@@ -141,6 +141,15 @@ func doGet(path string, auth bool) (*http.Response, error) {
 	return c.Do(req)
 }
 
+func doGetAll(t *testing.T, path string, auth bool) []byte {
+	res, err := doGet(path, auth)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, res.StatusCode)
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err)
+	return body
+}
+
 func assertGet(t *testing.T, contentType, content string, res *http.Response) {
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, contentType, res.Header.Get("Content-Type"))
@@ -191,9 +200,9 @@ func TestServe(t *testing.T) {
 }
 
 func TestCozyBar(t *testing.T) {
-	assertAuthGet(t, "/bar/", "text/html; charset=utf-8", ``+
-		`<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar.min.css">`+
-		`<script defer src="//cozywithapps.example.net/assets/js/cozy-bar.min.js"></script>`)
+	body := doGetAll(t, "/bar/", true)
+	assert.Contains(t, string(body), `<link rel="stylesheet" type="text/css" href="//cozywithapps.example.net/assets/css/cozy-bar`)
+	assert.Contains(t, string(body), `<script defer src="//cozywithapps.example.net/assets/js/cozy-bar`)
 }
 
 func TestServeWithAnIntents(t *testing.T) {

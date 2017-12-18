@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <title>Cozy</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="/assets/fonts/fonts.css">
-    <link rel="stylesheet" href="/assets/styles/login.css">
-    <link rel="icon" type="image/png" href="/assets/images/happycloud.png" />
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="{{asset .Domain "/fonts/fonts.css"}}">
+    <link rel="stylesheet" href="{{asset .Domain "/styles/login.css"}}">
+    <link rel="icon" type="image/png" href="{{asset .Domain "/images/happycloud.png"}}" />
+    <link rel="shortcut icon" type="image/x-icon" href="{{asset .Domain "/favicon.ico"}}">
   </head>
   <body>
     <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -55,9 +55,9 @@
         </div>
       </main>
     </div>
-    <script src="/assets/scripts/password-helper.js"></script>
-    <script src="/assets/scripts/password-visibility.js"></script>
-    <script src="/assets/scripts/submit.js"></script>
-    <script src="/assets/scripts/passwd-strength-indicator.js"></script>
+    <script src="{{asset .Domain "/scripts/password-helper.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/password-visibility.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/submit.js"}}"></script>
+    <script src="{{asset .Domain "/scripts/passwd-strength-indicator.js"}}"></script>
   </body>
 </html>

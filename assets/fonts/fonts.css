@@ -2,13 +2,13 @@
     font-family: Lato;
     font-style: normal;
     font-weight: normal;
-    src:  url('../fonts/Lato-Regular.woff2') format('woff2'),
-          url('../fonts/Lato-Regular.woff') format('woff');
+    src:  url('../fonts/Lato-Regular.immutable.woff2') format('woff2'),
+          url('../fonts/Lato-Regular.immutable.woff') format('woff');
 }
 @font-face {
     font-family: Lato;
     font-style: normal;
     font-weight: bold;
-    src:  url('../fonts/Lato-Bold.woff2') format('woff2'),
-          url('../fonts/Lato-Bold.woff') format('woff');
+    src:  url('../fonts/Lato-Bold.immutable.woff2') format('woff2'),
+          url('../fonts/Lato-Bold.immutable.woff') format('woff');
 }
