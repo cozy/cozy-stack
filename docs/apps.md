@@ -128,6 +128,20 @@ The `trigger` field should follow the available triggers described in the
 [jobs documentation](./jobs.md). The `file` field should specify the service
 code run and the `type` field describe the code type (only `"node"` for now).
 
+## Resource caching
+
+To help caching of applications assets, we detect the presence of a unique
+identifier in the name of assets: a unique identifier is matched when the file
+base name contains a long hexadecimal subpart between '.', of at least 10
+characters. For instance `app.badf00dbadf00d.js` or `icon.badbeefbadbeef.1.png`.
+
+With such a unique identifier, the asset is considered immutable, and a long
+cache-control is added on corresponding HTTP responses.
+
+We recommend the use of bundling tools like
+[webpack](https://webpack.github.io/) which offer the possibility to add such
+identifier on the building step of the application packages for all assets.
+
 ## Sources
 
 Here is the available sources, defined by the scheme of the source URL:

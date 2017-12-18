@@ -48,7 +48,6 @@ func CORS(opts CORSOptions) echo.MiddlewareFunc {
 			req := c.Request()
 			res := c.Response()
 
-			// @TODO validate origin against oauth clients ?
 			origin := req.Header.Get(echo.HeaderOrigin)
 			if origin == "" {
 				return next(c)
