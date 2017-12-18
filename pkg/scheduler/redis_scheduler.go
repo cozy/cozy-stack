@@ -55,7 +55,7 @@ return t`
 // them and schedules jobs accordingly.
 type RedisScheduler struct {
 	broker  jobs.Broker
-	client  *redis.Client
+	client  redis.UniversalClient
 	closed  chan struct{}
 	stopped chan struct{}
 	log     *logrus.Entry
@@ -63,7 +63,7 @@ type RedisScheduler struct {
 
 // NewRedisScheduler creates a new scheduler that use redis to synchronize with
 // other cozy-stack processes to schedule jobs.
-func NewRedisScheduler(client *redis.Client) *RedisScheduler {
+func NewRedisScheduler(client redis.UniversalClient) *RedisScheduler {
 	return &RedisScheduler{
 		client:  client,
 		log:     logger.WithNamespace("scheduler-redis"),

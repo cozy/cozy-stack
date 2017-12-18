@@ -133,7 +133,7 @@ func (s *memStore) GetArchive(domain, key string) (*Archive, error) {
 }
 
 type redisStore struct {
-	c *redis.Client
+	c redis.UniversalClient
 }
 
 func (s *redisStore) AddFile(domain, filePath string) (string, error) {

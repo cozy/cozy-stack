@@ -22,7 +22,7 @@ var loggersMu sync.RWMutex
 type Options struct {
 	Syslog bool
 	Level  string
-	Redis  *redis.Client
+	Redis  redis.UniversalClient
 }
 
 // Init initializes the logger module with the specified options.
@@ -109,7 +109,7 @@ func removeDebugDomain(domain string) {
 	delete(loggers, domain)
 }
 
-func subscribeLoggersDebug(cli *redis.Client) {
+func subscribeLoggersDebug(cli redis.UniversalClient) {
 	sub := cli.Subscribe(debugRedisAddChannel, debugRedisRmvChannel)
 	for msg := range sub.Channel() {
 		domain := msg.Payload
@@ -122,7 +122,7 @@ func subscribeLoggersDebug(cli *redis.Client) {
 	}
 }
 
-func publishLoggersDebug(cli *redis.Client, channel, domain string) error {
+func publishLoggersDebug(cli redis.UniversalClient, channel, domain string) error {
 	cmd := cli.Publish(channel, domain)
 	return cmd.Err()
 }

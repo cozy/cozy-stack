@@ -163,7 +163,7 @@ func timersMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 func SetupAdminRoutes(router *echo.Echo) error {
 	var mws []echo.MiddlewareFunc
 	if !config.IsDevRelease() {
-		mws = append(mws, middlewares.BasicAuth(config.AdminSecretFileName))
+		mws = append(mws, middlewares.BasicAuth(config.GetConfig().AdminSecretFileName))
 	}
 
 	// XXX Do not set basic authentication on the /metrics routes.

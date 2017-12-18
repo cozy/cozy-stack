@@ -512,8 +512,12 @@ func TestMain(m *testing.M) {
 	// prefix = "test:"
 	config.UseTestFile()
 	cfg := config.GetConfig()
-	was := cfg.Jobs.Redis
-	cfg.Jobs.Redis = config.NewRedisConfig(redisURL)
+	was := cfg.Jobs.RedisConfig
+	var err error
+	cfg.Jobs.RedisConfig, err = config.NewRedisConfig(redisURL)
+	if err != nil {
+		panic(err)
+	}
 
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "test_redis_scheduler")
@@ -521,7 +525,7 @@ func TestMain(m *testing.M) {
 	instanceName = testInstance.Domain
 
 	setup.AddCleanup(func() error {
-		cfg.Jobs.Redis = was
+		cfg.Jobs.RedisConfig = was
 		opts, _ := redis.ParseURL(redisURL)
 		client := redis.NewClient(opts)
 		return client.Del(scheduler.TriggersKey, scheduler.SchedKey).Err()

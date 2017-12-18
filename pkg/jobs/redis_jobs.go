@@ -15,7 +15,7 @@ import (
 const redisPrefix = "j/"
 
 type redisBroker struct {
-	client    *redis.Client
+	client    redis.UniversalClient
 	queues    map[string]chan *Job
 	nbWorkers int
 	workers   []*Worker
@@ -25,7 +25,7 @@ type redisBroker struct {
 
 // NewRedisBroker creates a new broker that will use redis to distribute
 // the jobs among several cozy-stack processes.
-func NewRedisBroker(nbWorkers int, client *redis.Client) Broker {
+func NewRedisBroker(nbWorkers int, client redis.UniversalClient) Broker {
 	return &redisBroker{
 		client:    client,
 		nbWorkers: nbWorkers,
