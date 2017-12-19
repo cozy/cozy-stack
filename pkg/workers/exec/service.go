@@ -1,7 +1,9 @@
 package exec
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -96,6 +98,23 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Insta
 }
 
 func (w *serviceWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error {
+	var msg struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(line, &msg); err != nil {
+		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
+	}
+	switch msg.Type {
+	case konnectorMsgTypeDebug:
+		log.Debug(msg.Message)
+	case konnectorMsgTypeWarning:
+		log.Warn(msg.Message)
+	case konnectorMsgTypeError:
+		log.Error(msg.Message)
+	case konnectorMsgTypeCritical:
+		log.Error(msg.Message)
+	}
 	return nil
 }
 
