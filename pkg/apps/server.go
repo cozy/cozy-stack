@@ -62,9 +62,8 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	}
 	defer f.Close()
 
-	w.Header().Set("Cache-Control", "no-cache")
-	if req.Header.Get("Range") == "" {
-		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
+	if req.Header.Get("Cache-Control") == "" && req.Header.Get("Range") == "" {
+		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"][:10]))
 	}
 
 	http.ServeContent(w, req, objName, unixZeroEpoch, f)
@@ -125,7 +124,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		return err
 	}
 
-	if req.Header.Get("Range") == "" {
+	if req.Header.Get("Cache-Control") == "" && req.Header.Get("Range") == "" {
 		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, hex.EncodeToString(h.Sum(nil))))
 	}
 
