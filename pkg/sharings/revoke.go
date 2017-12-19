@@ -23,58 +23,45 @@ import (
 // trigger(s) and OAuth client(s) to delete.
 // In every other cases only the sharer has trigger(s) to delete and only the
 // recipients have an OAuth client to delete.
-//
-// When this function is called it needs to call either `RevokerSharing` or
-// `RevokeRecipient` depending on who initiated the revocation. This is
-// represented by the `recursive` boolean parameter. The first call has this set
-// to `true` while the subsequent call has it set to `false`.
 func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) error {
-	var err error
 	if sharing.Owner {
 		for _, rs := range sharing.Recipients {
 			if recursive {
-				err = askToRevokeSharing(ins, sharing, &rs)
-				if err != nil {
+				if err := askToRevokeSharing(ins, sharing, &rs); err != nil {
+					ins.Logger().Infof("[sharings] Can't revoke a recipient for %s: %s", sharing.SID, err)
 					continue
 				}
 			}
 
 			if sharing.SharingType == consts.TwoWaySharing {
-				err = DeleteOAuthClient(ins, &rs)
-				if err != nil {
+				if err := DeleteOAuthClient(ins, &rs); err != nil {
 					continue
 				}
 			}
 		}
 
-		err = removeSharingTriggers(ins, sharing.SID)
-		if err != nil {
+		if err := removeSharingTriggers(ins, sharing.SID); err != nil {
 			return err
 		}
 
 	} else {
 		if recursive {
-			err = askToRevokeRecipient(ins, sharing, &sharing.Sharer)
-			if err != nil {
-				return err
+			if err := askToRevokeRecipient(ins, sharing, &sharing.Sharer); err != nil {
+				ins.Logger().Infof("[sharings] Can't revoke the sharer for %s: %s", sharing.SID, err)
 			}
 		}
 
-		err = DeleteOAuthClient(ins, &sharing.Sharer)
-		if err != nil {
-			return err
-		}
+		_ = DeleteOAuthClient(ins, &sharing.Sharer)
 
 		if sharing.SharingType == consts.TwoWaySharing {
-			err = removeSharingTriggers(ins, sharing.SID)
-			if err != nil {
+			if err := removeSharingTriggers(ins, sharing.SID); err != nil {
 				return err
 			}
 		}
 	}
+
 	sharing.Revoked = true
-	ins.Logger().Debugf("[sharings] Setting status of sharing %s to revoked",
-		sharing.SID)
+	ins.Logger().Debugf("[sharings] Setting status of sharing %s to revoked", sharing.SID)
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
@@ -100,8 +87,9 @@ func RevokeRecipientByContactID(ins *instance.Instance, sharing *Sharing, contac
 	return nil
 }
 
-// RevokeRecipientByClientID revokes a recipient from the given sharing. Only the sharer
-// can make this action.
+// RevokeRecipientByClientID revokes a recipient from the given sharing on the
+// Cozy of the sharer. The recipient has already revoked the sharing on its
+// Cozy.
 func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientID string) error {
 	if !sharing.Owner {
 		return ErrOnlySharerCanRevokeRecipient
@@ -127,10 +115,7 @@ func RevokeRecipientByClientID(ins *instance.Instance, sharing *Sharing, clientI
 // trigger is deleted.
 func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member) error {
 	if sharing.SharingType == consts.TwoWaySharing {
-		if err := DeleteOAuthClient(ins, recipient); err != nil {
-			return err
-		}
-		recipient.InboundClientID = ""
+		_ = DeleteOAuthClient(ins, recipient)
 	}
 
 	recipient.Client = auth.Client{}
@@ -159,14 +144,16 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member
 // DeleteOAuthClient deletes the OAuth client used by the member for
 // authentifying its requests to this cozy.
 func DeleteOAuthClient(ins *instance.Instance, rs *Member) error {
+	if rs.InboundClientID == "" {
+		return nil
+	}
 	client, err := oauth.FindClient(ins, rs.InboundClientID)
 	if err != nil {
 		ins.Logger().Errorf("[sharings] DeleteOAuthClient: Could not "+
 			"find OAuth client %s: %s", rs.InboundClientID, err)
 		return err
 	}
-	crErr := client.Delete(ins)
-	if crErr != nil {
+	if crErr := client.Delete(ins); crErr != nil {
 		ins.Logger().Errorf("[sharings] DeleteOAuthClient: Could not "+
 			"delete OAuth client %s: %s", rs.InboundClientID, err)
 		return errors.New(crErr.Error)
@@ -263,6 +250,8 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *Member, recipient
 
 // RefreshTokenAndRetry is called after an authentication failure.
 // It tries to renew the access_token and request again
+// TODO move this function outside of revoke.go
+// TODO we should just refresh the token, the retry should be outside of this function
 func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *RecipientInfo, opts *request.Options) (*http.Response, error) {
 	ins.Logger().Errorf("[sharing] The request is not authorized. "+
 		"Trying to renew the token for %v", rec.Domain)
@@ -271,7 +260,7 @@ func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *Recipie
 		Domain: opts.Domain,
 		Scheme: opts.Scheme,
 	}
-	// TODO should we be able to refresh a token for recipient->owner
+	// TODO we should be able to refresh a token for recipient->owner
 	sharing, recStatus, err := FindSharingMember(ins, sharingID, rec.Client.ClientID)
 	if err != nil {
 		return nil, err
