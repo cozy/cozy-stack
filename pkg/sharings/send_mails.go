@@ -24,87 +24,92 @@ type MailTemplateValues struct {
 // SendMails send an email to each recipient, so that they can accept or
 // refuse the sharing.
 func SendMails(instance *instance.Instance, s *Sharing) error {
-	sharerPublicName, err := instance.PublicName()
-	if err != nil || sharerPublicName == "" {
-		sharerPublicName = "Someone"
+	sharer, err := instance.PublicName()
+	if err != nil || sharer == "" {
+		sharer = "Someone"
 	}
-	// Fill in the description.
 	desc := s.Description
 	if desc == "" {
 		desc = "Surprise!"
 	}
 
+	var errm error
 	for _, recipient := range s.Recipients {
 		if recipient.Status != consts.SharingStatusPending &&
 			recipient.Status != consts.SharingStatusMailNotSent {
 			continue
 		}
 
-		// TODO we should check that the contact is not nil
-		mailAddress, erro := recipient.Contact(instance).ToMailAddress()
-		if erro != nil {
-			instance.Logger().Errorf("[sharing] Recipient has no email address: %#v", recipient.RefContact)
-			err = ErrRecipientHasNoEmail
+		if err = sendMail(instance, s, &recipient, sharer, desc); err != nil {
+			instance.Logger().Errorf("[sharing] Can't send email for %#v: %s", recipient.RefContact, err)
+			errm = ErrRecipientHasNoEmail
 			recipient.Status = consts.SharingStatusMailNotSent
-			if erru := couchdb.UpdateDoc(instance, s); erru != nil {
-				instance.Logger().Errorf("[sharing] Can't save status: %s", err)
-			}
-			continue
-		}
-		link := linkForRecipient(instance, s, &recipient)
-		mailValues := &MailTemplateValues{
-			RecipientName:    mailAddress.Name,
-			SharerPublicName: sharerPublicName,
-			Description:      desc,
-			SharingLink:      link,
-		}
-		msg, erro := jobs.NewMessage(mails.Options{
-			Mode:           "from",
-			To:             []*mails.Address{mailAddress},
-			TemplateName:   "sharing_request",
-			TemplateValues: mailValues,
-			RecipientName:  mailValues.RecipientName,
-		})
-		if erro == nil {
-			_, erro = globals.GetBroker().PushJob(&jobs.JobRequest{
-				Domain:     instance.Domain,
-				WorkerType: "sendmail",
-				Options:    nil,
-				Message:    msg,
-			})
-		}
-		if erro != nil {
-			instance.Logger().Errorf("[sharing] Can't send email: %s", erro)
-			err = ErrMailCouldNotBeSent
-			recipient.Status = consts.SharingStatusMailNotSent
-			if erru := couchdb.UpdateDoc(instance, s); erru != nil {
+			if err = couchdb.UpdateDoc(instance, s); err != nil {
 				instance.Logger().Errorf("[sharing] Can't save status: %s", err)
 			}
 		}
 	}
 
+	return errm
+}
+
+func sendMail(i *instance.Instance, s *Sharing, m *Member, sharer, description string) error {
+	contact := m.Contact(i)
+	if contact == nil {
+		return ErrRecipientDoesNotExist
+	}
+	mailAddress, err := contact.ToMailAddress()
+	if err != nil {
+		return err
+	}
+	link, err := linkForRecipient(i, s, m)
+	if err != nil {
+		return err
+	}
+	mailValues := &MailTemplateValues{
+		RecipientName:    mailAddress.Name,
+		SharerPublicName: sharer,
+		Description:      description,
+		SharingLink:      link,
+	}
+	msg, err := jobs.NewMessage(mails.Options{
+		Mode:           "from",
+		To:             []*mails.Address{mailAddress},
+		TemplateName:   "sharing_request",
+		TemplateValues: mailValues,
+		RecipientName:  mailValues.RecipientName,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
+		Domain:     i.Domain,
+		WorkerType: "sendmail",
+		Options:    nil,
+		Message:    msg,
+	})
 	return err
 }
 
-func linkForRecipient(i *instance.Instance, s *Sharing, m *Member) string {
+func linkForRecipient(i *instance.Instance, s *Sharing, m *Member) (string, error) {
 	perms, err := s.Permissions(i)
 	if err != nil {
-		return ""
+		return "", err
 	}
 
 	code, ok := perms.Codes[m.RefContact.ID]
 	if !ok {
-		return ""
+		return "", ErrRecipientDoesNotExist
 	}
 	query := url.Values{"sharecode": {code}}
 
 	if s.PreviewPath == "" || s.AppSlug == "" {
 		path := fmt.Sprintf("/sharings/%s/discovery", s.SID)
-		return i.PageURL(path, query)
+		return i.PageURL(path, query), nil
 	}
 
 	u := i.SubDomain(s.AppSlug)
 	u.Path = s.PreviewPath
 	u.RawQuery = query.Encode()
-	return u.String()
+	return u.String(), nil
 }
