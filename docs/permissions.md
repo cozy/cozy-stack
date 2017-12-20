@@ -231,7 +231,7 @@ associated to the sent token.
 #### Request
 
 ```http
-POST /permissions?codes=bob,jane&ttl=1d HTTP/1.1
+POST /permissions?codes=bob,jane&ttl=1D HTTP/1.1
 Host: cozy.example.net
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
 Content-Type: application/vnd.api+json

@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	"github.com/justincampbell/bigduration"
 	"github.com/labstack/echo"
 )
 
@@ -76,6 +78,7 @@ func displayPermissions(c echo.Context) error {
 func createPermission(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 	names := strings.Split(c.QueryParam("codes"), ",")
+	ttl := c.QueryParam("ttl")
 	parent, err := GetPermission(c)
 	if err != nil {
 		return err
@@ -101,7 +104,14 @@ func createPermission(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusUnauthorized, "no parent")
 	}
 
-	pdoc, err := permissions.CreateShareSet(instance, parent, codes, subdoc.Permissions)
+	var expiresAt interface{} = nil
+	if ttl != "" {
+		if d, err := bigduration.ParseDuration(ttl); err != nil {
+			expiresAt = time.Now().Add(d)
+		}
+	}
+
+	pdoc, err := permissions.CreateShareSet(instance, parent, codes, subdoc.Permissions, expiresAt)
 	if err != nil {
 		return err
 	}
