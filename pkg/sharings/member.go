@@ -156,30 +156,3 @@ func (m *Member) RegisterClient(i *instance.Instance, u *url.URL) error {
 	m.Client = *resClient
 	return nil
 }
-
-// RecipientInfo describes the recipient information that will be transmitted to
-// the sharing workers.
-type RecipientInfo struct {
-	Domain      string
-	Scheme      string
-	Client      auth.Client
-	AccessToken auth.AccessToken
-}
-
-// ExtractRecipientInfo returns a RecipientInfo from a Member
-func ExtractRecipientInfo(m *Member) (*RecipientInfo, error) {
-	if m.URL == "" {
-		return nil, ErrRecipientHasNoURL
-	}
-	u, err := url.Parse(m.URL)
-	if err != nil {
-		return nil, err
-	}
-	info := RecipientInfo{
-		Domain:      u.Host,
-		Scheme:      u.Scheme,
-		AccessToken: m.AccessToken,
-		Client:      m.Client,
-	}
-	return &info, nil
-}

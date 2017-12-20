@@ -187,19 +187,6 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 	return res, nil
 }
 
-// FindSharingMember retrieve a sharing recipient from its clientID and sharingID
-func FindSharingMember(db couchdb.Database, sharingID, clientID string) (*Sharing, *Member, error) {
-	sharing, err := FindSharing(db, sharingID)
-	if err != nil {
-		return nil, nil, err
-	}
-	m, err := sharing.GetMemberFromClientID(db, clientID)
-	if err != nil {
-		return nil, nil, err
-	}
-	return sharing, m, nil
-}
-
 // GetSharingFromPermissions returns the sharing linked to the given permissions doc
 func GetSharingFromPermissions(db couchdb.Database, perms *permissions.Permission) (*Sharing, error) {
 	parts := strings.SplitN(perms.SourceID, "/", 2)

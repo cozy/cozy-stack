@@ -122,14 +122,14 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member
 	recipient.AccessToken = auth.AccessToken{}
 	recipient.Status = consts.SharingStatusRevoked
 
-	toRevoke := true
+	noActiveRecipients := true
 	for _, recipient := range sharing.Recipients {
 		if recipient.Status != consts.SharingStatusRevoked {
-			toRevoke = false
+			noActiveRecipients = false
 		}
 	}
 
-	if toRevoke {
+	if noActiveRecipients {
 		// TODO check how removeSharingTriggers behave when no recipient has accepted the sharing
 		if err := removeSharingTriggers(ins, sharing.SID); err != nil {
 			ins.Logger().Errorf("[sharings] RevokeRecipient: Could not remove "+
@@ -246,45 +246,4 @@ func askToRevoke(ins *instance.Instance, sharing *Sharing, rs *Member, recipient
 	rs.Client = auth.Client{}
 	rs.AccessToken = auth.AccessToken{}
 	return nil
-}
-
-// RefreshTokenAndRetry is called after an authentication failure.
-// It tries to renew the access_token and request again
-// TODO move this function outside of revoke.go
-// TODO we should just refresh the token, the retry should be outside of this function
-func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, rec *RecipientInfo, opts *request.Options) (*http.Response, error) {
-	ins.Logger().Errorf("[sharing] The request is not authorized. "+
-		"Trying to renew the token for %v", rec.Domain)
-
-	req := &auth.Request{
-		Domain: opts.Domain,
-		Scheme: opts.Scheme,
-	}
-	// TODO we should be able to refresh a token for recipient->owner
-	sharing, recStatus, err := FindSharingMember(ins, sharingID, rec.Client.ClientID)
-	if err != nil {
-		return nil, err
-	}
-	refreshToken := rec.AccessToken.RefreshToken
-	access, err := req.RefreshToken(&rec.Client, &rec.AccessToken)
-	if err != nil {
-		ins.Logger().Errorf("[sharing] Refresh token request failed: %v", err)
-		return nil, err
-	}
-	access.RefreshToken = refreshToken
-	recStatus.AccessToken = *access
-	if err = couchdb.UpdateDoc(ins, sharing); err != nil {
-		return nil, err
-	}
-	opts.Headers["Authorization"] = "Bearer " + access.AccessToken
-	res, err := request.Req(opts)
-	return res, err
-}
-
-// IsAuthError returns true if the given error is an authentication one
-func IsAuthError(err error) bool {
-	if v, ok := err.(*request.Error); ok {
-		return v.Title == "Bad Request" || v.Title == "Unauthorized"
-	}
-	return false
 }
