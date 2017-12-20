@@ -25,10 +25,6 @@ type Sharing struct {
 	SRev        string `json:"_rev,omitempty"`
 	SharingType string `json:"sharing_type"`
 
-	// TODO check where it makes sense to use this flag
-	// TODO use a date (RevokedAt *time.Time)?
-	Revoked bool `json:"revoked,omitempty"`
-
 	// Only one of Sharer or Recipients is filled
 	// - Sharer is filled when Owner is false
 	// - Recipients is filled when Owner is true
@@ -134,7 +130,6 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 		PreviewPath: params.PreviewPath,
 		AppSlug:     slug,
 		Owner:       true,
-		Revoked:     false,
 	}
 
 	// Fetch the recipients in the database and populate Recipients

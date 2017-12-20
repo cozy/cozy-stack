@@ -618,11 +618,6 @@ func TestRevokeSharing(t *testing.T) {
 	assert.Error(t, err)
 	_, err = oauth.FindClient(testInstance, sharingSharerMM.Recipients[1].InboundClientID)
 	assert.Error(t, err)
-	// Check: the sharing is revoked.
-	doc := &sharings.Sharing{}
-	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingSharerMM.ID(), doc)
-	assert.NoError(t, err)
-	assert.True(t, doc.Revoked)
 
 	// We create a sharing where the user is the recipient.
 	sharingRecipientMM := insertSharingIntoDB(t, sharingIDRecipientMM,
@@ -644,12 +639,6 @@ func TestRevokeSharing(t *testing.T) {
 	// Check: the OAuth client for the sharer is deleted.
 	_, err = oauth.FindClient(testInstance, sharingRecipientMM.Sharer.InboundClientID)
 	assert.Error(t, err)
-	// Check: the sharing is revoked.
-	doc = &sharings.Sharing{}
-	err = couchdb.GetDoc(testInstance, consts.Sharings, sharingRecipientMM.ID(), doc)
-	assert.NoError(t, err)
-	assert.True(t, doc.Revoked)
-
 }
 
 func TestRevokeRecipient(t *testing.T) {
@@ -719,7 +708,6 @@ func TestRevokeRecipient(t *testing.T) {
 	doc := sharings.Sharing{}
 	err = couchdb.GetDoc(testInstance, consts.Sharings, sharing.ID(), &doc)
 	assert.NoError(t, err)
-	assert.False(t, doc.Revoked)
 	assert.Equal(t, consts.SharingStatusRevoked, doc.Recipients[0].Status)
 	assert.Empty(t, doc.Recipients[0].InboundClientID)
 	assert.Empty(t, doc.Recipients[0].Client.ClientID)
@@ -739,7 +727,6 @@ func TestRevokeRecipient(t *testing.T) {
 	doc = sharings.Sharing{}
 	err = couchdb.GetDoc(testInstance, consts.Sharings, sharing.ID(), &doc)
 	assert.NoError(t, err)
-	assert.True(t, doc.Revoked)
 	assert.Equal(t, consts.SharingStatusRevoked, doc.Recipients[1].Status)
 	assert.Empty(t, doc.Recipients[1].InboundClientID)
 	assert.Empty(t, doc.Recipients[1].Client.ClientID)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -12,18 +13,25 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
+	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/labstack/echo"
 )
 
 // RevokeSharing revokes the sharing and deletes all the OAuth client and
 // triggers associated with it.
 //
-// Revoking a sharing consists of setting the field `Revoked` to `true`.
-// When the sharing is of type "two-way" both recipients and sharer have
-// trigger(s) and OAuth client(s) to delete.
-// In every other cases only the sharer has trigger(s) to delete and only the
-// recipients have an OAuth client to delete.
+// Revoking a sharing consists of marking the permissions revoked.
+// When the sharing is of type "two-way" both recipients and
+// sharer have trigger(s) and OAuth client(s) to delete. In every other cases
+// only the sharer has trigger(s) to delete and only the recipients have an
+// OAuth client to delete.
 func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) error {
+	if perms, err := sharing.Permissions(ins); err == nil {
+		if err = expirePermissions(ins, perms); err != nil {
+			return err
+		}
+	}
+
 	if sharing.Owner {
 		for _, rs := range sharing.Recipients {
 			if recursive {
@@ -60,7 +68,6 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 		}
 	}
 
-	sharing.Revoked = true
 	ins.Logger().Debugf("[sharings] Setting status of sharing %s to revoked", sharing.SID)
 	return couchdb.UpdateDoc(ins, sharing)
 }
@@ -135,10 +142,14 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member
 			ins.Logger().Errorf("[sharings] RevokeRecipient: Could not remove "+
 				"triggers for sharing %s: %s", sharing.SID, err)
 		}
-		sharing.Revoked = true
 	}
 
 	return couchdb.UpdateDoc(ins, sharing)
+}
+
+func expirePermissions(i *instance.Instance, perms *permissions.Permission) error {
+	perms.ExpiresAt = time.Now()
+	return couchdb.UpdateDoc(i, perms)
 }
 
 // DeleteOAuthClient deletes the OAuth client used by the member for

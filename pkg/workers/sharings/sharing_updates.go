@@ -91,9 +91,10 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 
 	// sharing revoked: drop it
 	// NOTE: this should never happen as a revoked sharing removes the triggers
-	if sharing.Revoked {
-		return nil
-	}
+	// TODO we should check the status of each member
+	// if sharing.Revoked {
+	// 	return nil
+	// }
 	sendToSharer := !sharing.Owner
 
 	if sendToSharer {
