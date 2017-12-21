@@ -31,10 +31,14 @@
                   </svg>
                 </div>
               </figure>
-            <h1>{{t "Hello recipient email" .RecipientName}}</h1>
+            <h1>{{t "Connect to Cozy"}}</h1>
             </header>
             <div role="region">
-              <p class="help">{{t "Discovery URL help" .PublicName}}</p>
+              <p class="help">
+                {{t "Hello recipient email" .RecipientName}}
+                <br />
+                {{t "Discovery URL help" .PublicName}}
+              </p>
               <p class="line">
                 <label for="URL"> {{t "Discovery URL field"}}</label>
                 <input id="url" name="url" placeholder="{{t "Discovery URL placeholder"}}" type="text" autofocus="true" value="{{.RecipientCozy}}" />
@@ -51,6 +55,25 @@
               </div>
             </footer>
           </form>
+          <p>
+            {{t "No Cozy"}}
+            <a href="{{t "Discover Cozy URL"}}">
+              {{t "Discover Cozy"}}
+            </a>
+          </p>
+          <p>
+            {{t "Forgotten URL"}}
+            <br />
+            {{t "Forgotten URL email"}}
+          </p>
+          <p>
+            <strong>
+              {{t "Feeling lost"}}
+              <a href="{{t "Online help URL"}}">
+                {{t "Online help"}}
+              </a>
+            </strong>
+          </p>
         </div>
       </div>
     </main>

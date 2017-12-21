@@ -314,6 +314,12 @@ msgstr "Insurance claims (Maif)"
 msgid "Sharings Shared with Me directory"
 msgstr "Shared with Me"
 
+msgid "Connect to Cozy"
+msgstr "Connect to your Cozy"
+
+msgid "Hello recipient email"
+msgstr "Happy to see you %s!"
+
 msgid "Discovery URL help"
 msgstr "Please enter your Cozy URL to receive the sharing from %s"
 
@@ -326,8 +332,29 @@ msgstr "https://yourcozyaddress.cozy"
 msgid "Discovery Submit"
 msgstr "Send"
 
-msgid "Hello recipient email"
-msgstr "Hello %s!"
+msgid "No Cozy"
+msgstr "Don't have a Cozy yet?"
+
+msgid "Discover Cozy URL"
+msgstr "https://cozy.io/en/try-it/?from=home"
+
+msgid "Discover Cozy"
+msgstr "Discover Cozy now!"
+
+msgid "Forgotten URL"
+msgstr "Forgotten the URL? Don't panic."
+
+msgid "Forgotten URL email"
+msgstr "Search your email inbox for \"Cozy\"."
+
+msgid "Feeling lost"
+msgstr "Feeling a bit lost?"
+
+msgid "Online help URL"
+msgstr "http://cozy-cloud-help.helpscoutdocs.com/article/113-a-is-for-cozy-address"
+
+msgid "Online help"
+msgstr "Try out online help."
 
 msgid "Mail Greeting"
 msgstr "Hello"
