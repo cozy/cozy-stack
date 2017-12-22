@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"time"
 )
 
 var (
@@ -16,8 +17,8 @@ var (
 )
 
 const (
-	macLen  = 32
-	timeLen = 8
+	macLen  = 32 // sha256 hash size
+	timeLen = 8  // int64 for unix timestamp in seconds
 )
 
 // MACConfig contains all the options to encode or decode a message along with
@@ -29,19 +30,9 @@ const (
 // Name is an optional message name that won't be contained in the MACed
 // messaged itself but will be MACed against.
 type MACConfig struct {
-	Key    []byte
 	Name   string
-	MaxAge int64
+	MaxAge time.Duration
 	MaxLen int
-}
-
-func assertMACConfig(c *MACConfig) {
-	if c.Key == nil {
-		panic("hash key is not set")
-	}
-	if len(c.Key) < 16 {
-		panic("hash key is not long enough")
-	}
 }
 
 // EncodeAuthMessage associates the given value with a message authentication
@@ -57,47 +48,53 @@ func assertMACConfig(c *MACConfig) {
 //  | name | additional data |    time |  value  |     hmac |
 //  | ---- |       ---       | 8 bytes |   ---   | 32 bytes |
 //
-func EncodeAuthMessage(c *MACConfig, value, additionalData []byte) ([]byte, error) {
-	assertMACConfig(c)
-
-	// Create byte slice with big endian representation of timestamp
-	timeBuf := make([]byte, timeLen)
-	binary.BigEndian.PutUint64(timeBuf, uint64(Timestamp()))
-
+func EncodeAuthMessage(c MACConfig, key, value, additionalData []byte) ([]byte, error) {
 	// Create message with MAC
 	sizeHidden := len(c.Name) + len(additionalData)
 	sizeMessageAndMAC := timeLen + len(value) + macLen
 	size := sizeHidden + sizeMessageAndMAC
 
-	buf := bytes.NewBuffer(make([]byte, 0, size))
-	buf.Write([]byte(c.Name))
-	buf.Write(additionalData)
-	buf.Write(timeBuf)
-	buf.Write(value)
+	buf := make([]byte, 0, size)
 
-	// Append mac
-	buf.Write(createMAC(c.Key, buf.Bytes()))
+	// Append name and additional data if any
+	if len(c.Name) > 0 {
+		buf = append(buf, []byte(c.Name)...)
+	}
+	if len(additionalData) > 0 {
+		buf = append(buf, additionalData...)
+	}
+
+	// Append timestamp.
+	// Increase the len of the buffer of 8 bytes; its capacity allows it.
+	buf = buf[:len(buf)+timeLen]
+	binary.BigEndian.PutUint64(buf[len(buf)-timeLen:], uint64(Timestamp()))
+
+	// Append value if any
+	if len(value) > 0 {
+		buf = append(buf, value...)
+	}
+
+	// Append MAC signature
+	buf = append(buf, createMAC(key, buf)...)
 
 	// Skip name
-	buf.Next(sizeHidden)
+	buf = buf[sizeHidden:]
 
 	// Check length
 	if c.MaxLen > 0 {
-		if base64.RawURLEncoding.EncodedLen(buf.Len()) > c.MaxLen {
+		if base64.RawURLEncoding.EncodedLen(len(buf)) > c.MaxLen {
 			panic("the value is too long")
 		}
 	}
 
 	// Encode to base64
-	return Base64Encode(buf.Bytes()), nil
+	return Base64Encode(buf), nil
 }
 
 // DecodeAuthMessage verifies a message authentified with message
 // authentication code and returns the message value algon with the issued time
 // of the message.
-func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error) {
-	assertMACConfig(c)
-
+func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, error) {
 	// Check length
 	if c.MaxLen > 0 {
 		if len(enc) > c.MaxLen {
@@ -106,12 +103,12 @@ func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error)
 	}
 
 	// Decode from base64
+	if base64.RawURLEncoding.DecodedLen(len(enc)) < macLen+timeLen {
+		return nil, errMACInvalid
+	}
 	dec, err := Base64Decode(enc)
 	if err != nil {
 		return nil, err
-	}
-	if len(dec) < macLen {
-		return nil, errMACInvalid
 	}
 
 	// Prepend name and additional data
@@ -126,7 +123,7 @@ func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error)
 	{
 		var mac = dec[len(dec)-macLen:]
 		dec = dec[:len(dec)-macLen]
-		if !verifyMAC(c.Key, dec, mac) {
+		if !verifyMAC(key, dec, mac) {
 			return nil, errMACInvalid
 		}
 	}
@@ -140,8 +137,8 @@ func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error)
 	// Read time and verify time ranges
 	timeBuf := buf.Next(timeLen)
 	if c.MaxAge != 0 {
-		time := int64(binary.BigEndian.Uint64(timeBuf))
-		if time < Timestamp()-c.MaxAge {
+		t := time.Unix(int64(binary.BigEndian.Uint64(timeBuf)), 0)
+		if t.Add(c.MaxAge).Before(time.Now()) {
 			return nil, errMACExpired
 		}
 	}

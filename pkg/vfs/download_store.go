@@ -11,18 +11,18 @@ import (
 	"github.com/go-redis/redis"
 )
 
+var downloadLinkMac = crypto.MACConfig{
+	Name:   "download-link",
+	MaxAge: 24 * time.Hour,
+}
+
 // GenerateSecureLinkSecret generates a signature that can be used in exchange
 // of a valid permission on the given fileID, signed with the given key.
 //
 // An optional sessionID can be specified in order to sign the associated
 // session in the returned token.
 func GenerateSecureLinkSecret(key []byte, doc *FileDoc, sessionID string) string {
-	downloadLinkMac := &crypto.MACConfig{
-		Key:    key,
-		Name:   "download-link",
-		MaxAge: int64((24 * time.Hour).Seconds()),
-	}
-	mac, err := crypto.EncodeAuthMessage(downloadLinkMac, []byte(doc.Rev()), []byte(doc.ID()+sessionID))
+	mac, err := crypto.EncodeAuthMessage(downloadLinkMac, key, nil, []byte(doc.ID()+sessionID))
 	if err != nil {
 		return ""
 	}
@@ -33,12 +33,7 @@ func GenerateSecureLinkSecret(key []byte, doc *FileDoc, sessionID string) string
 // checks that it corresponds to the given fileID. A sessionID may be given,
 // and will be checked as long with the fileID.
 func VerifySecureLinkSecret(key []byte, secret, fileID, sessionID string) bool {
-	downloadLinkMac := &crypto.MACConfig{
-		Key:    key,
-		Name:   "download-link",
-		MaxAge: int64((24 * time.Hour).Seconds()),
-	}
-	_, err := crypto.DecodeAuthMessage(downloadLinkMac, []byte(secret), []byte(fileID+sessionID))
+	_, err := crypto.DecodeAuthMessage(downloadLinkMac, key, []byte(secret), []byte(fileID+sessionID))
 	return err == nil
 }
 
