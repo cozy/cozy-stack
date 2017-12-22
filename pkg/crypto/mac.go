@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	errMACTooLong = errors.New("mac: too long")
 	errMACExpired = errors.New("mac: expired")
 	errMACInvalid = errors.New("mac: the value is not valid")
 )
@@ -98,7 +97,7 @@ func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, er
 	// Check length
 	if c.MaxLen > 0 {
 		if len(enc) > c.MaxLen {
-			return nil, errMACTooLong
+			return nil, errMACInvalid
 		}
 	}
 
@@ -108,7 +107,7 @@ func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, er
 	}
 	dec, err := Base64Decode(enc)
 	if err != nil {
-		return nil, err
+		return nil, errMACInvalid
 	}
 
 	// Prepend name and additional data

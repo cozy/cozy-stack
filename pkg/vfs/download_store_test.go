@@ -3,12 +3,12 @@ package vfs
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,11 +66,52 @@ func TestDownloadStoreInRedis(t *testing.T) {
 	assert.Nil(t, a3, "no expiration")
 }
 
+func TestGenerateSecureLinkSecret(t *testing.T) {
+	var keys [][]byte
+	var docs []*FileDoc
+	var sessionIDs []string
+
+	n := 5
+
+	for i := 0; i < n; i++ {
+		keys = append(keys, crypto.GenerateRandomBytes(32))
+	}
+	for i := 0; i < n; i++ {
+		docs = append(docs, &FileDoc{DocID: utils.RandomString(10), DocRev: utils.RandomString(10)})
+	}
+	for i := 0; i < n-1; i++ {
+		sessionIDs = append(sessionIDs, utils.RandomString(10))
+	}
+	sessionIDs = append(sessionIDs, "") // test an the valid usecase of empty sessionID (no session)
+
+	secrets := make([]string, 0, n*n*n)
+	for x := 0; x < n; x++ {
+		for y := 0; y < n; y++ {
+			for z := 0; z < n; z++ {
+				secrets = append(secrets, GenerateSecureLinkSecret(keys[x], docs[y], sessionIDs[z]))
+			}
+		}
+	}
+
+	for i, secret := range secrets {
+		for x := 0; x < n; x++ {
+			for y := 0; y < n; y++ {
+				for z := 0; z < n; z++ {
+					ok := VerifySecureLinkSecret(keys[x], secret, docs[y].DocID, sessionIDs[z])
+					if i == x*n*n+y*n+z {
+						assert.True(t, ok)
+					} else {
+						assert.False(t, ok)
+					}
+				}
+			}
+		}
+	}
+}
+
 var result interface{}
 
 func BenchmarkGenerateLinkSecret(b *testing.B) {
-	fmt.Println(">>>>>", time.Now(), time.Now().UTC())
-	fmt.Println(">>>>>", time.Now().Unix(), time.Now().UTC().Unix())
 	key := crypto.GenerateRandomBytes(64)
 	ids := make([]string, 256)
 	for i := range ids {

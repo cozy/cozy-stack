@@ -1,9 +1,10 @@
 package crypto
 
 import (
-	"bytes"
+	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -92,24 +93,103 @@ func TestMACMessageWithoutName(t *testing.T) {
 
 func TestMACWrongMessage(t *testing.T) {
 	k := []byte("0123456789012345")
-	o := MACConfig{}
-
-	buf1 := new(bytes.Buffer)
-	_, err1 := DecodeAuthMessage(o, k, buf1.Bytes(), nil)
-	if !assert.Equal(t, errMACInvalid, err1) {
-		return
+	o := MACConfig{
+		Name:   "name",
+		MaxLen: 256,
 	}
 
-	buf2 := Base64Encode(GenerateRandomBytes(32))
-	_, err2 := DecodeAuthMessage(o, k, buf2, nil)
-	if !assert.Equal(t, errMACInvalid, err2) {
-		return
+	{
+		_, err := DecodeAuthMessage(o, k, []byte(""), nil)
+		if !assert.Equal(t, errMACInvalid, err) {
+			return
+		}
 	}
 
-	buf3 := Base64Encode(createMAC(k, []byte("")))
-	_, err3 := DecodeAuthMessage(o, k, buf3, nil)
-	if !assert.Equal(t, errMACInvalid, err3) {
-		return
+	{
+		_, err := DecodeAuthMessage(o, k, []byte("ccc"), nil)
+		if !assert.Equal(t, errMACInvalid, err) {
+			return
+		}
+	}
+
+	{
+		buf := Base64Encode(GenerateRandomBytes(32))
+		_, err := DecodeAuthMessage(o, k, buf, nil)
+		if !assert.Equal(t, errMACInvalid, err) {
+			return
+		}
+	}
+
+	{
+		buf := Base64Encode(createMAC(k, []byte("")))
+		_, err := DecodeAuthMessage(o, k, buf, nil)
+		if !assert.Equal(t, errMACInvalid, err) {
+			return
+		}
+	}
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < 10000; i++ {
+		buf := Base64Encode(GenerateRandomBytes(rng.Intn(1000)))
+		_, err := DecodeAuthMessage(o, k, buf, nil)
+		if !assert.Equal(t, errMACInvalid, err) {
+			return
+		}
+	}
+}
+
+func TestMACMaxAge(t *testing.T) {
+	key := GenerateRandomBytes(16)
+	val := []byte("coucou")
+	add := []byte("additional")
+	c1 := MACConfig{
+		Name:   "max",
+		MaxAge: 1 * time.Second,
+	}
+	c2 := MACConfig{
+		Name:   "max",
+		MaxAge: 10 * time.Second,
+	}
+
+	var msg1, msg2 []byte
+
+	{
+		var err error
+		msg1, err = EncodeAuthMessage(c1, key, val, add)
+		if !assert.NoError(t, err) {
+			return
+		}
+		msg2, err = EncodeAuthMessage(c2, key, val, add)
+		if !assert.NoError(t, err) {
+			return
+		}
+	}
+
+	{
+		ret1, err := DecodeAuthMessage(c1, key, msg1, add)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, val, ret1)
+
+		ret2, err := DecodeAuthMessage(c2, key, msg2, add)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, val, ret2)
+	}
+
+	time.Sleep(1500 * time.Millisecond)
+
+	{
+		ret1, err := DecodeAuthMessage(c1, key, msg1, add)
+		assert.Error(t, err)
+		assert.Nil(t, ret1)
+		assert.Equal(t, errMACExpired, err)
+
+		ret2, err := DecodeAuthMessage(c2, key, msg2, add)
+		assert.NoError(t, err)
+		assert.Equal(t, val, ret2)
 	}
 }
 
