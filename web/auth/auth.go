@@ -602,7 +602,7 @@ func authorize(c echo.Context) error {
 	u.Fragment = ""
 
 	if params.resType == consts.SharingResponseType {
-		if err = sharings.AcceptSharingRequest(instance, u.String(), params.scope); err != nil {
+		if err = sharings.AcceptSharingRequest(instance, u, params.scope); err != nil {
 			instance.Logger().Warnf("[sharing] Error on accepting a sharing: %s", err)
 			// It is safer to delete the client, as it may have a token and
 			// this cozy has no document to acknowledge that

@@ -3,6 +3,7 @@ package sharings
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/cozy/cozy-stack/client/auth"
@@ -94,9 +95,13 @@ func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u
 // AcceptSharingRequest is called on the recipient when the permissions for the
 // sharing are accepted. It calls the cozy of the owner to start the sharing,
 // and then create the sharing (and other stuff) in its couchdb.
-func AcceptSharingRequest(i *instance.Instance, answerURL, scope string) error {
+func AcceptSharingRequest(i *instance.Instance, answerURL *url.URL, scope string) error {
 	res, err := request.Req(&request.Options{
-		Addr:    answerURL,
+		Method:  http.MethodPost,
+		Scheme:  answerURL.Scheme,
+		Domain:  answerURL.Host,
+		Path:    answerURL.Path,
+		Queries: answerURL.Query(),
 		Headers: request.Headers{"Accept": "application/json"},
 	})
 	if err != nil {
