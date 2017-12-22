@@ -187,7 +187,7 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 	res := &Sharing{
 		SID:         s.SID,
 		SharingType: s.SharingType,
-		Sharer: Member{
+		Sharer: &Member{
 			Status:          consts.SharingStatusAccepted,
 			URL:             i.PageURL("", nil),
 			InboundClientID: clientID,

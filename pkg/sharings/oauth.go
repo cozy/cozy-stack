@@ -58,7 +58,7 @@ func RefreshTokenAndRetry(ins *instance.Instance, sharingID string, info *Recipi
 		if sharing.Sharer.Client.ClientID != info.Client.ClientID {
 			return nil, ErrRecipientDoesNotExist
 		}
-		m = &sharing.Sharer
+		m = sharing.Sharer
 	}
 	refreshToken := info.AccessToken.RefreshToken
 	access, err := req.RefreshToken(&info.Client, &info.AccessToken)

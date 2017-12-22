@@ -101,7 +101,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 		// We are on the recipient side
 		recInfos = make([]*sharings.RecipientInfo, 1)
 		sharerStatus := sharing.Sharer
-		info, err := sharings.ExtractRecipientInfo(&sharerStatus)
+		info, err := sharings.ExtractRecipientInfo(sharerStatus)
 		if err != nil {
 			return err
 		}

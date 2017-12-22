@@ -54,12 +54,12 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 
 	} else {
 		if recursive {
-			if err := askToRevokeRecipient(ins, sharing, &sharing.Sharer); err != nil {
+			if err := askToRevokeRecipient(ins, sharing, sharing.Sharer); err != nil {
 				ins.Logger().Infof("[sharings] Can't revoke the sharer for %s: %s", sharing.SID, err)
 			}
 		}
 
-		_ = DeleteOAuthClient(ins, &sharing.Sharer)
+		_ = DeleteOAuthClient(ins, sharing.Sharer)
 
 		if sharing.SharingType == consts.TwoWaySharing {
 			if err := removeSharingTriggers(ins, sharing.SID); err != nil {

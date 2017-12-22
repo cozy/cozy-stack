@@ -29,7 +29,7 @@ type Sharing struct {
 	// - Sharer is filled when Owner is false
 	// - Recipients is filled when Owner is true
 	Owner      bool     `json:"owner"`
-	Sharer     Member   `json:"sharer,omitempty"`
+	Sharer     *Member  `json:"sharer,omitempty"`
 	Recipients []Member `json:"recipients,omitempty"`
 
 	Description string `json:"description,omitempty"`
