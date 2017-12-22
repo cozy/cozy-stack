@@ -545,7 +545,7 @@ Both endpoints can be used to update the metadata of a file or directory, or to
 rename/move it. The difference is the first one uses an id to identify the
 file/directory to update, and the second one uses the path.
 
-The parent relationship can be updated to move a file or directory.
+The `dir_id` attribute can be updated to move a file or directory.
 
 #### HTTP headers
 
@@ -568,16 +568,9 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "file",
       "name": "hi.txt",
+      "dir_id": "f2f36fec-8018-11e6-abd8-8b3814d9a465",
       "trashed": false,
       "tags": ["poem"]
-    },
-    "relationships": {
-      "parent": {
-        "data": {
-          "type": "io.cozy.files",
-          "id": "f2f36fec-8018-11e6-abd8-8b3814d9a465"
-        }
-      }
     }
   }
 }
