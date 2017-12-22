@@ -49,6 +49,19 @@ func GetSession(c echo.Context) (session *sessions.Session, ok bool) {
 	v := c.Get(sessionKey)
 	if v != nil {
 		session, ok = v.(*sessions.Session)
+		if ok {
+			return session, true
+		}
 	}
-	return session, ok
+	return nil, false
+}
+
+// GetSessionID returns the current session identifier if any. Returns an empty
+// string if there is none.
+func GetSessionID(c echo.Context) string {
+	s, ok := GetSession(c)
+	if ok {
+		return s.ID()
+	}
+	return ""
 }

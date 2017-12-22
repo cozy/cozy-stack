@@ -15,8 +15,10 @@ var (
 	errMACInvalid = errors.New("mac: the value is not valid")
 )
 
-const defaultMaxLen = 4096
-const macLen = 32
+const (
+	macLen  = 32
+	timeLen = 8
+)
 
 // MACConfig contains all the options to encode or decode a message along with
 // a proof of integrity and authenticity.
@@ -58,22 +60,19 @@ func assertMACConfig(c *MACConfig) {
 func EncodeAuthMessage(c *MACConfig, value, additionalData []byte) ([]byte, error) {
 	assertMACConfig(c)
 
-	maxLength := c.MaxLen
-	if maxLength == 0 {
-		maxLength = defaultMaxLen
-	}
-
-	time := Timestamp()
+	// Create byte slice with big endian representation of timestamp
+	timeBuf := make([]byte, timeLen)
+	binary.BigEndian.PutUint64(timeBuf, uint64(Timestamp()))
 
 	// Create message with MAC
 	sizeHidden := len(c.Name) + len(additionalData)
-	sizeMessageAndMAC := binary.Size(time) + len(value) + macLen
+	sizeMessageAndMAC := timeLen + len(value) + macLen
 	size := sizeHidden + sizeMessageAndMAC
 
 	buf := bytes.NewBuffer(make([]byte, 0, size))
 	buf.Write([]byte(c.Name))
 	buf.Write(additionalData)
-	binary.Write(buf, binary.BigEndian, time)
+	buf.Write(timeBuf)
 	buf.Write(value)
 
 	// Append mac
@@ -83,8 +82,10 @@ func EncodeAuthMessage(c *MACConfig, value, additionalData []byte) ([]byte, erro
 	buf.Next(sizeHidden)
 
 	// Check length
-	if base64.RawURLEncoding.EncodedLen(buf.Len()) > maxLength {
-		panic("the value is too long")
+	if c.MaxLen > 0 {
+		if base64.RawURLEncoding.EncodedLen(buf.Len()) > c.MaxLen {
+			panic("the value is too long")
+		}
 	}
 
 	// Encode to base64
@@ -97,14 +98,11 @@ func EncodeAuthMessage(c *MACConfig, value, additionalData []byte) ([]byte, erro
 func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error) {
 	assertMACConfig(c)
 
-	maxLength := c.MaxLen
-	if maxLength == 0 {
-		maxLength = defaultMaxLen
-	}
-
 	// Check length
-	if len(enc) > maxLength {
-		return nil, errMACTooLong
+	if c.MaxLen > 0 {
+		if len(enc) > c.MaxLen {
+			return nil, errMACTooLong
+		}
 	}
 
 	// Decode from base64
@@ -140,12 +138,12 @@ func DecodeAuthMessage(c *MACConfig, enc, additionalData []byte) ([]byte, error)
 	}
 
 	// Read time and verify time ranges
-	var time int64
-	if err = binary.Read(buf, binary.BigEndian, &time); err != nil {
-		return nil, errMACInvalid
-	}
-	if c.MaxAge != 0 && time < Timestamp()-c.MaxAge {
-		return nil, errMACExpired
+	timeBuf := buf.Next(timeLen)
+	if c.MaxAge != 0 {
+		time := int64(binary.BigEndian.Uint64(timeBuf))
+		if time < Timestamp()-c.MaxAge {
+			return nil, errMACExpired
+		}
 	}
 
 	// Returns the value

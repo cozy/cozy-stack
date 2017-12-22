@@ -11,11 +11,40 @@ import (
 	"github.com/go-redis/redis"
 )
 
+// GenerateSecureLinkSecret generates a signature that can be used in exchange
+// of a valid permission on the given fileID, signed with the given key.
+//
+// An optional sessionID can be specified in order to sign the associated
+// session in the returned token.
+func GenerateSecureLinkSecret(key []byte, doc *FileDoc, sessionID string) string {
+	downloadLinkMac := &crypto.MACConfig{
+		Key:    key,
+		Name:   "download-link",
+		MaxAge: int64((24 * time.Hour).Seconds()),
+	}
+	mac, err := crypto.EncodeAuthMessage(downloadLinkMac, []byte(doc.Rev()), []byte(doc.ID()+sessionID))
+	if err != nil {
+		return ""
+	}
+	return string(mac)
+}
+
+// VerifySecureLinkSecret verifies the given secret with the given key, and
+// checks that it corresponds to the given fileID. A sessionID may be given,
+// and will be checked as long with the fileID.
+func VerifySecureLinkSecret(key []byte, secret, fileID, sessionID string) bool {
+	downloadLinkMac := &crypto.MACConfig{
+		Key:    key,
+		Name:   "download-link",
+		MaxAge: int64((24 * time.Hour).Seconds()),
+	}
+	_, err := crypto.DecodeAuthMessage(downloadLinkMac, []byte(secret), []byte(fileID+sessionID))
+	return err == nil
+}
+
 // A DownloadStore is essentially an object to store Archives & Files by keys
 type DownloadStore interface {
-	AddFile(domain, filePath string) (string, error)
 	AddArchive(domain string, archive *Archive) (string, error)
-	GetFile(domain, key string) (string, error)
 	GetArchive(domain, key string) (*Archive, error)
 }
 
@@ -72,17 +101,6 @@ func (s *memStore) cleaner() {
 	}
 }
 
-func (s *memStore) AddFile(domain, filePath string) (string, error) {
-	key := makeSecret()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.vals[domain+":"+key] = &memRef{
-		val: filePath,
-		exp: time.Now().Add(downloadStoreTTL),
-	}
-	return key, nil
-}
-
 func (s *memStore) AddArchive(domain string, archive *Archive) (string, error) {
 	key := makeSecret()
 	s.mu.Lock()
@@ -92,25 +110,6 @@ func (s *memStore) AddArchive(domain string, archive *Archive) (string, error) {
 		exp: time.Now().Add(downloadStoreTTL),
 	}
 	return key, nil
-}
-
-func (s *memStore) GetFile(domain, key string) (string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	key = domain + ":" + key
-	ref, ok := s.vals[key]
-	if !ok {
-		return "", nil
-	}
-	if time.Now().After(ref.exp) {
-		delete(s.vals, key)
-		return "", nil
-	}
-	f, ok := ref.val.(string)
-	if !ok {
-		return "", nil
-	}
-	return f, nil
 }
 
 func (s *memStore) GetArchive(domain, key string) (*Archive, error) {
@@ -136,14 +135,6 @@ type redisStore struct {
 	c redis.UniversalClient
 }
 
-func (s *redisStore) AddFile(domain, filePath string) (string, error) {
-	key := makeSecret()
-	if err := s.c.Set(domain+":"+key, filePath, downloadStoreTTL).Err(); err != nil {
-		return "", err
-	}
-	return key, nil
-}
-
 func (s *redisStore) AddArchive(domain string, archive *Archive) (string, error) {
 	v, err := json.Marshal(archive)
 	if err != nil {
@@ -154,17 +145,6 @@ func (s *redisStore) AddArchive(domain string, archive *Archive) (string, error)
 		return "", err
 	}
 	return key, nil
-}
-
-func (s *redisStore) GetFile(domain, key string) (string, error) {
-	f, err := s.c.Get(domain + ":" + key).Result()
-	if err == redis.Nil {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	return f, nil
 }
 
 func (s *redisStore) GetArchive(domain, key string) (*Archive, error) {

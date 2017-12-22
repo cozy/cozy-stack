@@ -1,15 +1,20 @@
 package vfsafero
 
 import (
+	"bytes"
+	"crypto/md5"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/spf13/afero"
 )
+
+var unixZeroEpoch = time.Time{}
 
 // NewThumbsFs creates a new thumb filesystem base on a afero.Fs.
 func NewThumbsFs(fs afero.Fs) vfs.Thumbser {
@@ -37,17 +42,20 @@ func (t *thumbs) RemoveThumb(img *vfs.FileDoc, format string) error {
 func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,
 	img *vfs.FileDoc, format string) error {
 	name := t.makeName(img, format)
-	s, err := t.fs.Stat(name)
+	data, err := afero.ReadFile(t.fs, name)
 	if err != nil {
 		return err
 	}
-	f, err := t.fs.Open(name)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	http.ServeContent(w, req, name, s.ModTime(), f)
+	sum := md5sum(data)
+	w.Header().Set("Etag", fmt.Sprintf(`"%x"`, sum))
+	http.ServeContent(w, req, name, unixZeroEpoch, bytes.NewReader(data))
 	return nil
+}
+
+func md5sum(b []byte) []byte {
+	h := md5.New()
+	h.Write(b)
+	return h.Sum(nil)
 }
 
 func (t *thumbs) makeName(img *vfs.FileDoc, format string) string {

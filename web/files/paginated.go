@@ -24,8 +24,10 @@ type dir struct {
 }
 
 type file struct {
-	doc      *vfs.FileDoc
-	instance *instance.Instance
+	doc       *vfs.FileDoc
+	instance  *instance.Instance
+	sessionID string
+	dlSecret  string
 }
 
 type apiArchive struct {
@@ -92,13 +94,14 @@ func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.Dir
 
 func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	instance := middlewares.GetInstance(c)
+	sessionID := middlewares.GetSessionID(c)
 	count, cursor, children, err := getDirData(c, doc)
 	if err != nil {
 		return err
 	}
 
 	relsData := make([]couchdb.DocReference, 0)
-	included := make([]jsonapi.Object, 0)
+	included := make([]jsonapi.Object, 0, len(children))
 
 	for _, child := range children {
 		if child.ID() == consts.TrashDirID {
@@ -109,7 +112,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		if d != nil {
 			included = append(included, newDir(d))
 		} else {
-			included = append(included, newFile(f, instance))
+			included = append(included, newFile(f, instance, sessionID))
 		}
 	}
 
@@ -163,6 +166,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 	instance := middlewares.GetInstance(c)
+	sessionID := middlewares.GetSessionID(c)
 	count, cursor, children, err := getDirData(c, doc)
 	if err != nil {
 		return err
@@ -177,7 +181,7 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		if d != nil {
 			included = append(included, newDir(d))
 		} else {
-			included = append(included, newFile(f, instance))
+			included = append(included, newFile(f, instance, sessionID))
 		}
 	}
 
@@ -195,13 +199,23 @@ func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 }
 
 // newFile creates an instance of file struct from a vfs.FileDoc document.
-func newFile(doc *vfs.FileDoc, i *instance.Instance) *file {
-	return &file{doc, i}
+func newFile(doc *vfs.FileDoc, i *instance.Instance, sessionID string) *file {
+	return &file{doc: doc, instance: i, sessionID: sessionID}
 }
 
-func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, links *jsonapi.LinksList) error {
+func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withDownloadLink bool) error {
 	instance := middlewares.GetInstance(c)
-	return jsonapi.Data(c, statusCode, newFile(doc, instance), links)
+	f := newFile(doc, instance, middlewares.GetSessionID(c))
+	if withDownloadLink {
+		f.genSecureLinkSecret()
+	}
+	return jsonapi.Data(c, statusCode, f, nil)
+}
+
+func (f *file) genSecureLinkSecret() {
+	if f.dlSecret == "" {
+		f.dlSecret = vfs.GenerateSecureLinkSecret(f.instance.SessionSecret, f.doc, f.sessionID)
+	}
 }
 
 var (
@@ -264,15 +278,18 @@ func (f *file) MarshalJSON() ([]byte, error) {
 	return res, err
 }
 func (f *file) Links() *jsonapi.LinksList {
-	links := jsonapi.LinksList{Self: "/files/" + f.doc.DocID}
+	links := jsonapi.LinksList{
+		Self: "/files/" + f.doc.DocID,
+	}
+	fileID := f.doc.DocID
+	if f.dlSecret != "" {
+		links.Related = "/files/downloads/" + f.dlSecret + "/" + fileID
+	}
 	if f.doc.Class == "image" {
-		if path, err := f.doc.Path(f.instance.VFS()); err == nil {
-			if secret, err := vfs.GetStore().AddFile(f.instance.Domain, path); err == nil {
-				links.Small = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/small"
-				links.Medium = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/medium"
-				links.Large = "/files/" + f.doc.DocID + "/thumbnails/" + secret + "/large"
-			}
-		}
+		f.genSecureLinkSecret()
+		links.Small = "/files/" + fileID + "/thumbnails/" + f.dlSecret + "/small"
+		links.Medium = "/files/" + fileID + "/thumbnails/" + f.dlSecret + "/medium"
+		links.Large = "/files/" + fileID + "/thumbnails/" + f.dlSecret + "/large"
 	}
 	return &links
 }
