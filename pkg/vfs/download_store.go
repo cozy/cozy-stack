@@ -14,6 +14,7 @@ import (
 var downloadLinkMac = crypto.MACConfig{
 	Name:   "download-link",
 	MaxAge: 24 * time.Hour,
+	MaxLen: 64,
 }
 
 // GenerateSecureLinkSecret generates a signature that can be used in exchange
