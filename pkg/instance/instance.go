@@ -1016,7 +1016,7 @@ func validateDomain(domain string) (string, error) {
 	if strings.ContainsAny(domain[:1], illegalFirstChars) {
 		return "", ErrIllegalDomain
 	}
-	return domain, nil
+	return strings.ToLower(domain), nil
 }
 
 // ensure Instance implements couchdb.Doc
