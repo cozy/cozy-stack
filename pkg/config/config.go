@@ -421,12 +421,6 @@ func UseViper(v *viper.Viper) error {
 		adminSecretFile = defaultAdminSecretFileName
 	}
 
-	if !IsDevRelease() {
-		if _, err := FindConfigFile(adminSecretFile); err != nil {
-			return err
-		}
-	}
-
 	config = &Config{
 		Host:                v.GetString("host"),
 		Port:                v.GetInt("port"),
