@@ -372,6 +372,10 @@ func (s *RedisScheduler) GetAll(domain string) ([]Trigger, error) {
 
 // RebuildRedis puts all the triggers in redis (idempotent)
 func (s *RedisScheduler) RebuildRedis(domain string) error {
+	err := s.client.Del(TriggersKey, SchedKey).Err()
+	if err != nil {
+		return err
+	}
 	triggers, err := s.GetAll(domain)
 	if err != nil {
 		return err
