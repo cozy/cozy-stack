@@ -358,21 +358,7 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 		return wrapVfsError(err)
 	}
 
-	err = checkPerm(c, permissions.GET, nil, doc)
-	if err != nil {
-		return err
-	}
-
-	disposition := "inline"
-	if c.QueryParam("Dl") == "1" {
-		disposition = "attachment"
-	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
-	if err != nil {
-		return wrapVfsError(err)
-	}
-
-	return nil
+	return sendFile(c, instance, doc, true)
 }
 
 // HeadDirOrFile handles HEAD requests on directory or file to check their
@@ -407,34 +393,49 @@ func HeadDirOrFile(c echo.Context) error {
 	return nil
 }
 
-// ThumbnailHandler serves thumbnails of the images/photos
+// ThumbnailHandler serves thumbnails of the images/photos.
+//
+// In order to allow browsers applications to download thumbnails directly via
+// an <img> tag, this handler can handle a secret directly inside the URL. This
+// secret is only checked for a request send without an "Authorization" header
+// but with a valid session cookie.
 func ThumbnailHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
-	secret := c.Param("secret")
 	fileID := c.Param("file-id")
+	format := c.Param("format")
+	secret := c.Param("secret")
 
-	var sessionID string
-	if session, ok := middlewares.GetSession(c); ok {
-		sessionID = session.ID()
-	}
+	session, isLoggedIn := middlewares.GetSession(c)
+	authHeader := c.Request().Header.Get("Authorization")
 
-	if !vfs.VerifySecureLinkSecret(instance.SessionSecret, secret, fileID, sessionID) {
-		return jsonapi.NewError(http.StatusUnauthorized, "Wrong download token")
+	hasSecureLinkSecret := false
+	if isLoggedIn && authHeader == "" {
+		hasSecureLinkSecret = secret != "" &&
+			vfs.VerifySecureLinkSecret(instance.SessionSecret, secret, fileID, session.ID())
+		if !hasSecureLinkSecret {
+			return jsonapi.NewError(http.StatusUnauthorized, "Wrong download secret")
+		}
 	}
 
 	doc, err := instance.VFS().FileByID(fileID)
 	if err != nil {
 		return wrapVfsError(err)
 	}
+	if !hasSecureLinkSecret {
+		err = checkPerm(c, permissions.GET, nil, doc)
+		if err != nil {
+			return err
+		}
+	}
 
 	fs := instance.ThumbsFS()
-	return fs.ServeThumbContent(c.Response(), c.Request(), doc, c.Param("format"))
+	return fs.ServeThumbContent(c.Response(), c.Request(), doc, format)
 }
 
 func sendFile(c echo.Context, instance *instance.Instance, doc *vfs.FileDoc, checkPermission bool) error {
 	if checkPermission {
-		err := permissions.Allow(c, permissions.GET, doc)
+		err := checkPerm(c, permissions.GET, nil, doc)
 		if err != nil {
 			return err
 		}
@@ -527,16 +528,17 @@ func FileDownloadCreateHandler(c echo.Context) error {
 	var err error
 
 	if path := c.QueryParam("Path"); path != "" {
-		if doc, err = instance.VFS().FileByPath(path); err != nil {
-			return wrapVfsError(err)
-		}
+		doc, err = instance.VFS().FileByPath(path)
 	} else if id := c.QueryParam("Id"); id != "" {
-		if doc, err = instance.VFS().FileByID(id); err != nil {
-			return wrapVfsError(err)
-		}
+		doc, err = instance.VFS().FileByID(id)
+	} else {
+		return jsonapi.BadRequest(errors.New("Missing Id or Path query parameter"))
+	}
+	if err != nil {
+		return wrapVfsError(err)
 	}
 
-	err = checkPerm(c, "GET", nil, doc)
+	err = checkPerm(c, permissions.GET, nil, doc)
 	if err != nil {
 		return err
 	}
@@ -805,7 +807,6 @@ func Routes(router *echo.Group) {
 	router.POST("/_find", FindFilesMango)
 
 	router.HEAD("/:file-id", HeadDirOrFile)
-
 	router.GET("/metadata", ReadMetadataFromPathHandler)
 	router.GET("/:file-id", ReadMetadataFromIDHandler)
 	router.GET("/:file-id/relationships/contents", GetChildrenHandler)
@@ -817,7 +818,8 @@ func Routes(router *echo.Group) {
 	router.POST("/:dir-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
-	router.GET("/:file-id/thumbnails/:secret/:format", ThumbnailHandler)
+	router.GET("/:file-id/thumbnails/:format", ThumbnailHandler)
+	router.GET("/:file-id/thumbnails/:format/:secret", ThumbnailHandler)
 
 	router.POST("/archive", ArchiveDownloadCreateHandler)
 	router.GET("/archive/:secret/:fake-name", ArchiveDownloadHandler)

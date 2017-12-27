@@ -13,7 +13,7 @@ import (
 
 var downloadLinkMac = crypto.MACConfig{
 	Name:   "download-link",
-	MaxAge: 24 * time.Hour,
+	MaxAge: 0,
 	MaxLen: 64,
 }
 
@@ -23,7 +23,8 @@ var downloadLinkMac = crypto.MACConfig{
 // An optional sessionID can be specified in order to sign the associated
 // session in the returned token.
 func GenerateSecureLinkSecret(key []byte, doc *FileDoc, sessionID string) string {
-	mac, err := crypto.EncodeAuthMessage(downloadLinkMac, key, nil, []byte(doc.ID()+sessionID))
+	additionalData := []byte(doc.ID() + sessionID)
+	mac, err := crypto.EncodeAuthMessage(downloadLinkMac, key, nil, additionalData)
 	if err != nil {
 		return ""
 	}
@@ -34,6 +35,9 @@ func GenerateSecureLinkSecret(key []byte, doc *FileDoc, sessionID string) string
 // checks that it corresponds to the given fileID. A sessionID may be given,
 // and will be checked as long with the fileID.
 func VerifySecureLinkSecret(key []byte, secret, fileID, sessionID string) bool {
+	if sessionID == "" || fileID == "" {
+		return false
+	}
 	_, err := crypto.DecodeAuthMessage(downloadLinkMac, key, []byte(secret), []byte(fileID+sessionID))
 	return err == nil
 }

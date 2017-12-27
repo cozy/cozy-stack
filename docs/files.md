@@ -345,11 +345,11 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
     "links": {
       "self": "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b",
       "small":
-        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/small",
+        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/small/0f9cda56674282ac",
       "medium":
-        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/medium",
+        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/medium/0f9cda56674282ac",
       "large":
-        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/0f9cda56674282ac/large"
+        "/files/9152d568-7e7c-11e6-a377-37cbfb190b4b/thumbnails/large/0f9cda56674282ac"
     }
   }
 }
@@ -357,6 +357,62 @@ Location: http://cozy.example.com/files/9152d568-7e7c-11e6-a377-37cbfb190b4b
 
 **Note**: see [references of documents in VFS](references-docs-in-vfs.md) for
 more informations about the references field.
+
+### POST /files/_find
+
+Make a mango request to find files and directories.
+
+This request allows to make a mango request on the filesystem index. See the
+[find documents](docs/mango.md#find-documents) part of the mango documentation
+for more informations on mango requests.
+
+The response is in JSON-API format.
+
+#### Request
+
+```http
+POST /files/_find
+```
+
+```json
+{
+  "selector": {},
+  "limit": 2,
+  "skip": 3,
+}
+```
+
+#### Response
+
+```json
+{
+  "data": [
+    {
+      "type": "io.cozy.files",
+      "id": "df24aac0-7f3d-11e6-81c0-d38812bfa0a8",
+      "meta": {
+        "rev": "1-3b75377c"
+      },
+      "attributes": {
+        "type": "file",
+        "name": "foo.txt",
+        "trashed": true,
+        "md5sum": "YjAxMzQxZTc4MDNjODAwYwo=",
+        "created_at": "2016-09-19T12:38:04Z",
+        "updated_at": "2016-09-19T12:38:04Z",
+        "tags": [],
+        "size": 123,
+        "executable": false,
+        "class": "document",
+        "mime": "text/plain"
+      },
+      "links": {
+        "self": "/files/trash/df24aac0-7f3d-11e6-81c0-d38812bfa0a8"
+      }
+    }
+  ]
+}
+```
 
 ### GET /files/download/:file-id
 
@@ -395,10 +451,19 @@ By default the `content-disposition` will be `inline`, but it will be
 GET /files/download?Path=/Documents/hello.txt&Dl=1 HTTP/1.1
 ```
 
-### GET /files/:file-id/thumbnails/:secret/:format
+### GET /files/:file-id/thumbnails/:format
 
 Get a thumbnail of a file (for an image only). `:format` can be `small`
 (640x480), `medium` (1280x720), or `large` (1920x1080).
+
+### GET /files/:file-id/thumbnails/:format/:secret
+
+Get a thumbnail of a file on the specified format: like the `GET /files/:file-
+id/thumbnails/:format` route.
+
+This route does not need a specific permission with `Bearer` token. The
+permission itself is given by the `secret` value encoded in the path. It
+requires a valid session cookie though.
 
 ### PUT /files/:file-id
 

@@ -95,6 +95,7 @@ func TestMACWrongMessage(t *testing.T) {
 	k := []byte("0123456789012345")
 	o := MACConfig{
 		Name:   "name",
+		MaxAge: 1 * time.Minute,
 		MaxLen: 256,
 	}
 
@@ -197,7 +198,7 @@ func TestAuthentication(t *testing.T) {
 	hashKey := []byte("secret-key")
 	for _, value := range testStrings {
 		mac := createMAC(hashKey, []byte(value))
-		if !assert.Len(t, mac, macLen) {
+		if !assert.Len(t, mac, hmacLen) {
 			return
 		}
 		ok1 := verifyMAC(hashKey, []byte(value), mac)

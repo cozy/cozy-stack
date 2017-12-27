@@ -24,10 +24,11 @@ type dir struct {
 }
 
 type file struct {
-	doc       *vfs.FileDoc
-	instance  *instance.Instance
-	sessionID string
-	dlSecret  string
+	doc        *vfs.FileDoc
+	instance   *instance.Instance
+	withDlLink bool
+	dlSecret   string
+	sessionID  string
 }
 
 type apiArchive struct {
@@ -207,13 +208,14 @@ func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withDownloadLink
 	instance := middlewares.GetInstance(c)
 	f := newFile(doc, instance, middlewares.GetSessionID(c))
 	if withDownloadLink {
+		f.withDlLink = true
 		f.genSecureLinkSecret()
 	}
 	return jsonapi.Data(c, statusCode, f, nil)
 }
 
 func (f *file) genSecureLinkSecret() {
-	if f.dlSecret == "" {
+	if f.dlSecret == "" && f.sessionID != "" {
 		f.dlSecret = vfs.GenerateSecureLinkSecret(f.instance.SessionSecret, f.doc, f.sessionID)
 	}
 }
@@ -281,15 +283,27 @@ func (f *file) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{
 		Self: "/files/" + f.doc.DocID,
 	}
+
 	fileID := f.doc.DocID
-	if f.dlSecret != "" {
-		links.Related = "/files/downloads/" + f.dlSecret + "/" + fileID
+	if f.withDlLink {
+		if f.dlSecret != "" {
+			links.Related = "/files/downloads/" + f.dlSecret + "/" + fileID
+		} else {
+			links.Related = "/files/download/" + fileID
+		}
 	}
+
 	if f.doc.Class == "image" {
 		f.genSecureLinkSecret()
-		links.Small = "/files/" + fileID + "/thumbnails/" + f.dlSecret + "/small"
-		links.Medium = "/files/" + fileID + "/thumbnails/" + f.dlSecret + "/medium"
-		links.Large = "/files/" + fileID + "/thumbnails/" + f.dlSecret + "/large"
+		if f.dlSecret != "" {
+			links.Small = "/files/" + fileID + "/thumbnails/small/" + f.dlSecret
+			links.Medium = "/files/" + fileID + "/thumbnails/medium/" + f.dlSecret
+			links.Large = "/files/" + fileID + "/thumbnails/large/" + f.dlSecret
+		} else {
+			links.Small = "/files/" + fileID + "/thumbnails/small"
+			links.Medium = "/files/" + fileID + "/thumbnails/medium"
+			links.Large = "/files/" + fileID + "/thumbnails/large"
+		}
 	}
 	return &links
 }

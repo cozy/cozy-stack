@@ -15,8 +15,8 @@ var (
 )
 
 const (
-	macLen  = 32 // sha256 hash size
-	timeLen = 8  // int64 for unix timestamp in seconds
+	hmacLen = sha256.Size
+	timeLen = 8 // int64 for unix timestamp in seconds
 )
 
 // MACConfig contains all the options to encode or decode a message along with
@@ -49,7 +49,7 @@ type MACConfig struct {
 func EncodeAuthMessage(c MACConfig, key, value, additionalData []byte) ([]byte, error) {
 	// Create message with MAC
 	preludeLen := len(c.Name) + len(additionalData)
-	messageAndMACLen := timeLen + len(value) + macLen
+	messageAndMACLen := timeLen + len(value) + hmacLen
 	totalCap := preludeLen + messageAndMACLen
 
 	buf := make([]byte, 0, totalCap)
@@ -64,8 +64,10 @@ func EncodeAuthMessage(c MACConfig, key, value, additionalData []byte) ([]byte, 
 
 	// Append timestamp.
 	// Increase the len of the buffer of 8 bytes; its capacity allows it.
-	buf = buf[:preludeLen+timeLen]
-	binary.BigEndian.PutUint64(buf[preludeLen:], uint64(Timestamp()))
+	if c.MaxAge != 0 {
+		buf = buf[:preludeLen+timeLen]
+		binary.BigEndian.PutUint64(buf[preludeLen:], uint64(Timestamp()))
+	}
 
 	// Append value if any
 	if len(value) > 0 {
@@ -100,13 +102,22 @@ func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, er
 		}
 	}
 
+	// For a message without MaxAge (set to zero), no timestamp is encoded in the
+	// message. The minimum size is only the hash len of the HASHMAC.
+	var minSize int
+	if c.MaxAge > 0 {
+		minSize = hmacLen + timeLen
+	} else {
+		minSize = hmacLen
+	}
+
 	preludeLen := len(c.Name) + len(additionalData)
 	decCap := base64.RawURLEncoding.DecodedLen(len(enc))
 	totalCap := decCap + preludeLen
 
 	// decCap is the maximum size of the decoded value. The real decoded size may
 	// be inferior. This is an early check only.
-	if decCap < macLen+timeLen {
+	if decCap < minSize {
 		return nil, errMACInvalid
 	}
 
@@ -131,7 +142,7 @@ func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, er
 		}
 		// We re-check the len of the buffer, that is already checked against the
 		// maximum size of the decoded value `decCap`.
-		if decLen < macLen+timeLen {
+		if decLen < minSize {
 			return nil, errMACInvalid
 		}
 		// Shrink the buffer back to the exact size of the base64 decoded value.
@@ -140,8 +151,8 @@ func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, er
 
 	// Verify message with MAC
 	{
-		mac := buf[len(buf)-macLen:]
-		buf = buf[:len(buf)-macLen]
+		mac := buf[len(buf)-hmacLen:]
+		buf = buf[:len(buf)-hmacLen]
 		if !verifyMAC(key, buf, mac) {
 			return nil, errMACInvalid
 		}
@@ -151,9 +162,9 @@ func DecodeAuthMessage(c MACConfig, key, enc, additionalData []byte) ([]byte, er
 	buf = buf[preludeLen:]
 
 	// Read time and verify time ranges
-	var timeBuf []byte
-	timeBuf, buf = buf[:timeLen], buf[timeLen:]
 	if c.MaxAge != 0 {
+		var timeBuf []byte
+		timeBuf, buf = buf[:timeLen], buf[timeLen:]
 		t := time.Unix(int64(binary.BigEndian.Uint64(timeBuf)), 0)
 		if t.Add(c.MaxAge).Before(time.Now()) {
 			return nil, errMACExpired
