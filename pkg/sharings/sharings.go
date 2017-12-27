@@ -86,9 +86,9 @@ func (s *Sharing) Permissions(db couchdb.Database) (*permissions.Permission, err
 // GetMemberFromClientID returns the Recipient associated with the
 // given clientID.
 func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*Member, error) {
-	for _, m := range s.Recipients {
-		if m.Client.ClientID == clientID {
-			return &m, nil
+	for i := range s.Recipients {
+		if s.Recipients[i].Client.ClientID == clientID {
+			return &s.Recipients[i], nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist
@@ -97,9 +97,9 @@ func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*
 // GetMemberFromContactID returns the Member associated with the
 // given contact ID.
 func (s *Sharing) GetMemberFromContactID(db couchdb.Database, contactID string) (*Member, error) {
-	for _, m := range s.Recipients {
-		if m.RefContact.ID == contactID {
-			return &m, nil
+	for i := range s.Recipients {
+		if s.Recipients[i].RefContact.ID == contactID {
+			return &s.Recipients[i], nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist

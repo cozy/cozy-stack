@@ -88,7 +88,6 @@ func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u
 		i.Logger().Errorf("[sharing] Could not register at %s: %v", u, err)
 		return err
 	}
-	m.Status = consts.SharingStatusMailNotSent
 	return couchdb.UpdateDoc(i, s)
 }
 

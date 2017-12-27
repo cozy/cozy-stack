@@ -313,7 +313,7 @@ func SharingAnswer(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	return c.JSON(http.StatusFound, res)
+	return c.JSON(http.StatusCreated, res)
 }
 
 // Routes sets the routing for the sharing service
