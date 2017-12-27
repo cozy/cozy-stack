@@ -79,6 +79,13 @@ example), you can use the --appdir flag like this:
 			}
 		}
 
+		if !config.IsDevRelease() {
+			adminSecretFile := config.GetConfig().AdminSecretFileName
+			if _, err := config.FindConfigFile(adminSecretFile); err != nil {
+				return err
+			}
+		}
+
 		broker, schder, processes, err := stack.Start()
 		if err != nil {
 			return err
