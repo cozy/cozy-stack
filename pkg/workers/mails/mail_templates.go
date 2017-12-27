@@ -79,7 +79,7 @@ type mailCache struct {
 }
 
 type mailActionCache struct {
-	instructions string
+	instructions *template.Template
 	text         string
 	link         *template.Template
 }
@@ -121,8 +121,12 @@ func (m *mailCache) ToBody(recipientName string, data interface{}) (body hermes.
 		if err = a.link.Execute(link, data); err != nil {
 			return
 		}
+		inst := new(bytes.Buffer)
+		if err = a.instructions.Execute(inst, data); err != nil {
+			return
+		}
 		as[i] = hermes.Action{
-			Instructions: a.instructions,
+			Instructions: inst.String(),
 			Button: hermes.Button{
 				Text: a.text,
 				Link: link.String(),
@@ -205,7 +209,11 @@ func (m *MailTemplater) Execute(name, locale string, recipientName string, data 
 			c.actions = make([]mailActionCache, len(tpl.Actions))
 			for i, a := range tpl.Actions {
 				if a.Instructions != "" {
-					c.actions[i].instructions = i18n.Translate(a.Instructions, locale)
+					c.actions[i].instructions, err = template.New("").Parse(
+						i18n.Translate(a.Instructions, locale))
+					if err != nil {
+						return
+					}
 				}
 				if a.Text != "" {
 					c.actions[i].text = i18n.Translate(a.Text, locale)
