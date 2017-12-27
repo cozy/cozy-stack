@@ -24,11 +24,9 @@ type dir struct {
 }
 
 type file struct {
-	doc        *vfs.FileDoc
-	instance   *instance.Instance
-	withDlLink bool
-	dlSecret   string
-	sessionID  string
+	doc       *vfs.FileDoc
+	instance  *instance.Instance
+	sessionID string
 }
 
 type apiArchive struct {
@@ -207,17 +205,24 @@ func newFile(doc *vfs.FileDoc, i *instance.Instance, sessionID string) *file {
 func fileData(c echo.Context, statusCode int, doc *vfs.FileDoc, withDownloadLink bool) error {
 	instance := middlewares.GetInstance(c)
 	f := newFile(doc, instance, middlewares.GetSessionID(c))
+	var links *jsonapi.LinksList
 	if withDownloadLink {
-		f.withDlLink = true
-		f.genSecureLinkSecret()
+		links = &jsonapi.LinksList{}
+		dlSecret := f.genSecureLinkSecret()
+		if dlSecret != "" {
+			links.Related = "/files/downloads/" + dlSecret + "/" + doc.DocID
+		} else {
+			links.Related = "/files/download/" + doc.DocID
+		}
 	}
-	return jsonapi.Data(c, statusCode, f, nil)
+	return jsonapi.Data(c, statusCode, f, links)
 }
 
-func (f *file) genSecureLinkSecret() {
-	if f.dlSecret == "" && f.sessionID != "" {
-		f.dlSecret = vfs.GenerateSecureLinkSecret(f.instance.SessionSecret, f.doc, f.sessionID)
+func (f *file) genSecureLinkSecret() string {
+	if f.sessionID != "" {
+		return vfs.GenerateSecureLinkSecret(f.instance.SessionSecret, f.doc, f.sessionID)
 	}
+	return ""
 }
 
 var (
@@ -283,22 +288,13 @@ func (f *file) Links() *jsonapi.LinksList {
 	links := jsonapi.LinksList{
 		Self: "/files/" + f.doc.DocID,
 	}
-
-	fileID := f.doc.DocID
-	if f.withDlLink {
-		if f.dlSecret != "" {
-			links.Related = "/files/downloads/" + f.dlSecret + "/" + fileID
-		} else {
-			links.Related = "/files/download/" + fileID
-		}
-	}
-
 	if f.doc.Class == "image" {
-		f.genSecureLinkSecret()
-		if f.dlSecret != "" {
-			links.Small = "/files/" + fileID + "/thumbnails/small/" + f.dlSecret
-			links.Medium = "/files/" + fileID + "/thumbnails/medium/" + f.dlSecret
-			links.Large = "/files/" + fileID + "/thumbnails/large/" + f.dlSecret
+		fileID := f.doc.DocID
+		dlSecret := f.genSecureLinkSecret()
+		if dlSecret != "" {
+			links.Small = "/files/" + fileID + "/thumbnails/small/" + dlSecret
+			links.Medium = "/files/" + fileID + "/thumbnails/medium/" + dlSecret
+			links.Large = "/files/" + fileID + "/thumbnails/large/" + dlSecret
 		} else {
 			links.Small = "/files/" + fileID + "/thumbnails/small"
 			links.Medium = "/files/" + fileID + "/thumbnails/medium"
