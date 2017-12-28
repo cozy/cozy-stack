@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/cozy/cozy-stack/client"
@@ -66,8 +67,13 @@ func printSettings(obj map[string]interface{}) {
 	if !ok {
 		return
 	}
-	for k, v := range attrs {
-		fmt.Printf("- %s: %v\n", k, v)
+	keys := make([]string, 0, len(attrs))
+	for k := range attrs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Printf("- %s: %v\n", k, attrs[k])
 	}
 }
 
