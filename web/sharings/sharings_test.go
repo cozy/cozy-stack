@@ -129,7 +129,7 @@ func createSharing(t *testing.T, sharingID, sharingType string, owner bool, slug
 		if owner {
 			sharing.Recipients = append(sharing.Recipients, rs)
 		} else {
-			sharing.Sharer = rs
+			sharing.Sharer = &rs
 			break
 		}
 	}

@@ -180,7 +180,7 @@ func insertSharingIntoDB(t *testing.T, sharingID, sharingType string, owner bool
 		if owner {
 			sharing.Recipients = append(sharing.Recipients, rs)
 		} else {
-			sharing.Sharer = rs
+			sharing.Sharer = &rs
 			break
 		}
 	}

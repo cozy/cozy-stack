@@ -76,6 +76,7 @@ func (p *Permission) SetID(id string) { p.PID = id }
 // SetRev implements jsonapi.Doc
 func (p *Permission) SetRev(rev string) { p.PRev = rev }
 
+// Expired returns true if the permissions are no longer valid
 func (p *Permission) Expired() bool {
 	if p.ExpiresAt == nil {
 		return false
