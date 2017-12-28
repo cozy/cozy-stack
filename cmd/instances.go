@@ -284,9 +284,9 @@ and all its data.
 
 		if !flagForce {
 			reader := bufio.NewReader(os.Stdin)
-			fmt.Printf(`Are you sure you want to remove instance for domain %s ?
+			fmt.Printf(`Are you sure you want to remove instance for domain %s?
 All data associated with this domain will be permanently lost.
-[yes/NO]: `, domain)
+Type again the domain to confirm: `, domain)
 
 			str, err := reader.ReadString('\n')
 			if err != nil {
@@ -294,8 +294,8 @@ All data associated with this domain will be permanently lost.
 			}
 
 			str = strings.ToLower(strings.TrimSpace(str))
-			if str != "yes" && str != "y" {
-				return nil
+			if str != domain {
+				return errors.New("Aborted")
 			}
 
 			fmt.Println()
