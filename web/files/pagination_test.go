@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,81 @@ func getJSON(t *testing.T, url string, out interface{}) error {
 	assert.Equal(t, 200, res.StatusCode)
 	return json.NewDecoder(res.Body).Decode(&out)
 
+}
+
+func TestTrashIsSkipped(t *testing.T) {
+	nb := 15
+	body := "foo"
+	for i := 0; i < nb; i++ {
+		name := "foo" + strconv.Itoa(i)
+		upload(t, "/files/io.cozy.files.root-dir?Type=file&Name="+name, "text/plain", body, "rL0Y20zC+Fzt72VPzMSk2A==")
+	}
+
+	var opts = &url.Values{}
+	opts.Add("page[limit]", "5")
+	var result struct {
+		Data struct {
+			Relationships struct {
+				Contents struct {
+					Links *jsonapi.LinksList
+					Data  []couchdb.DocReference
+				}
+			}
+		}
+		Included []interface{}
+		Links    *jsonapi.LinksList
+	}
+
+	ids := []string{}
+
+	getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result)
+	assert.Len(t, result.Data.Relationships.Contents.Data, 5)
+	assert.Len(t, result.Included, 5)
+
+	for i, ref := range result.Data.Relationships.Contents.Data {
+		id := result.Included[i].(map[string]interface{})["id"].(string)
+		assert.Equal(t, id, ref.ID)
+		assert.NotEqual(t, id, consts.TrashDirID)
+		for _, seen := range ids {
+			assert.NotEqual(t, id, seen)
+		}
+		ids = append(ids, id)
+	}
+
+	next := result.Links.Next
+	assert.NotEmpty(t, next)
+
+	getJSON(t, next, &result)
+	assert.Len(t, result.Data.Relationships.Contents.Data, 5)
+	assert.Len(t, result.Included, 5)
+
+	for i, ref := range result.Data.Relationships.Contents.Data {
+		id := result.Included[i].(map[string]interface{})["id"].(string)
+		assert.Equal(t, id, ref.ID)
+		assert.NotEqual(t, id, consts.TrashDirID)
+		for _, seen := range ids {
+			assert.NotEqual(t, id, seen)
+		}
+		ids = append(ids, id)
+	}
+
+	next = result.Links.Next
+	assert.NotEmpty(t, next)
+
+	opts.Add("page[skip]", "10")
+	getJSON(t, "/files/io.cozy.files.root-dir?"+opts.Encode(), &result)
+	assert.Len(t, result.Data.Relationships.Contents.Data, 5)
+	assert.Len(t, result.Included, 5)
+
+	for i, ref := range result.Data.Relationships.Contents.Data {
+		id := result.Included[i].(map[string]interface{})["id"].(string)
+		assert.Equal(t, id, ref.ID)
+		assert.NotEqual(t, id, consts.TrashDirID)
+		for _, seen := range ids {
+			assert.NotEqual(t, id, seen)
+		}
+		ids = append(ids, id)
+	}
 }
 
 func TestZeroCountIsPresent(t *testing.T) {

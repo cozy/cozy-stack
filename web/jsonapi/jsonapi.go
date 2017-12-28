@@ -215,21 +215,19 @@ func PaginationCursorToParams(cursor couchdb.Cursor) (url.Values, error) {
 		return v, nil
 	}
 
-	switch cursor.(type) {
+	switch c := cursor.(type) {
 	case *couchdb.StartKeyCursor:
-		skc := cursor.(*couchdb.StartKeyCursor)
-		cursorObj := []interface{}{skc.NextKey, skc.NextDocID}
+		cursorObj := []interface{}{c.NextKey, c.NextDocID}
 		cursorBytes, err := json.Marshal(cursorObj)
 		if err != nil {
 			return nil, err
 		}
-		v.Set("page[limit]", strconv.Itoa(skc.Limit))
+		v.Set("page[limit]", strconv.Itoa(c.Limit))
 		v.Set("page[cursor]", string(cursorBytes))
 
 	case *couchdb.SkipCursor:
-		sc := cursor.(*couchdb.SkipCursor)
-		v.Set("page[limit]", strconv.Itoa(sc.Limit))
-		v.Set("page[skip]", strconv.Itoa(sc.Skip))
+		v.Set("page[limit]", strconv.Itoa(c.Limit))
+		v.Set("page[skip]", strconv.Itoa(c.Skip))
 	}
 
 	return v, nil
