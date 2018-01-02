@@ -19,6 +19,7 @@ import (
 	"github.com/cozy/gomail"
 	"github.com/go-redis/redis"
 	"github.com/spf13/viper"
+	"time"
 )
 
 var (
@@ -91,6 +92,7 @@ type Config struct {
 	NoReply             string
 	Hooks               string
 	GeoDB               string
+	PasswordResetInterval time.Duration
 
 	Fs            Fs
 	CouchDB       CouchDB
@@ -264,6 +266,10 @@ func IsDevRelease() bool {
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
+}
+
+func PasswordResetInterval() time.Duration {
+	return config.PasswordResetInterval
 }
 
 // Setup Viper to read the environment and the optional config file
@@ -505,6 +511,8 @@ func UseViper(v *viper.Viper) error {
 		NoReply:             v.GetString("mail.noreply_address"),
 		Hooks:               v.GetString("hooks"),
 		GeoDB:               v.GetString("geodb"),
+		PasswordResetInterval: v.GetDuration("password_reset_interval"),
+
 		Fs: Fs{
 			URL: fsURL,
 		},
