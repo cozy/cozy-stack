@@ -278,7 +278,11 @@ func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	switch t := t.(type) {
 	case *EventTrigger:
 		hKey := eventsKey(t.Infos().Domain)
-		return s.client.HSet(hKey, t.ID(), t.Infos().Arguments).Err()
+		pipe := s.client.Pipeline()
+		pipe.HSet(hKey, t.ID(), t.Infos().Arguments)
+		pipe.ZRem(SchedKey, redisKey(t.Infos()))
+		_, err := pipe.Exec()
+		return err
 	case *AtTrigger:
 		timestamp = t.at
 	case *CronTrigger:
@@ -294,7 +298,7 @@ func (s *RedisScheduler) addToRedis(t Trigger, prev time.Time) error {
 	pipe.ZAdd(TriggersKey, redis.Z{
 		Score:  float64(timestamp.UTC().Unix()),
 		Member: redisKey(t.Infos()),
-	}).Err()
+	})
 	pipe.ZRem(SchedKey, redisKey(t.Infos()))
 	_, err := pipe.Exec()
 	return err
