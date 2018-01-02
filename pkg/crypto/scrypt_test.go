@@ -10,7 +10,7 @@ import (
 var pass = []byte("This is secret")
 
 var oldhash = []byte("scrypt$16384$8$1$172721d78c4dc2d6$d74e5214536e31193b5300d6e162e2fdcb9f0c1bffc5be446b93edee65a0570d")
-var goodhash = []byte("scrypt$16384$8$1$615705b4db4b15c8c4a54f906f3ba032$a8ea0f7c37c40dd314b9bab56ea50030ce10591e70e90d4a0a5346e849f2c7c4")
+var goodhash = []byte("scrypt$32768$8$1$bc39ced1a16922f626b7036edc2711a9$84a3e30dbde37dcb1b169365a8f7b88c5d0dde057d8b85e3a361fedf8a80d1ef")
 var badhash = []byte("scrypt$16384$8$1$3a371fe057cef0063d01fce866acb989$3228bf807f307badbadbadbadbadbadbadbad09fc011f5859ad6a1504de56455")
 
 func TestGenerateFromPassphrase(t *testing.T) {
