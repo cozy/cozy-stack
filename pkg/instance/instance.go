@@ -43,10 +43,6 @@ const (
 	OauthSecretLen        = 128
 )
 
-// passwordResetValidityDuration is the validity duration of the passphrase
-// reset token.
-var passwordResetValidityDuration = 15 * time.Minute
-
 // DefaultLocale is the default locale when creating an instance
 const DefaultLocale = "en"
 
@@ -811,7 +807,7 @@ func (i *Instance) RequestPassphraseReset() error {
 		return ErrResetAlreadyRequested
 	}
 	i.PassphraseResetToken = crypto.GenerateRandomBytes(PasswordResetTokenLen)
-	i.PassphraseResetTime = time.Now().UTC().Add(passwordResetValidityDuration)
+	i.PassphraseResetTime = time.Now().UTC().Add(config.PasswordResetInterval())
 	if err := Update(i); err != nil {
 		return err
 	}
