@@ -18,7 +18,9 @@ import (
 // - https://www.tarsnap.com/scrypt/scrypt-slides.pdf
 // - https://godoc.org/golang.org/x/crypto/scrypt#Key
 // - https://godoc.org/github.com/elithrar/simple-scrypt#DefaultParams
-const defaultN = 16384
+// - https://blog.filippo.io/the-scrypt-parameters/
+// - https://github.com/golang/go/issues/22082
+const defaultN = 32768
 const defaultR = 8
 const defaultP = 1
 
