@@ -36,25 +36,63 @@ func newDir(doc *vfs.DirDoc) *dir {
 	return &dir{doc: doc}
 }
 
-func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
+func getDirData(c echo.Context, doc *vfs.DirDoc) (int, couchdb.Cursor, []vfs.DirOrFileDoc, error) {
 	instance := middlewares.GetInstance(c)
 	fs := instance.VFS()
 
 	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
 	if err != nil {
-		return err
+		return 0, nil, nil, err
 	}
 
 	count, err := fs.DirLength(doc)
 	if err != nil {
-		return err
+		return 0, nil, nil, err
 	}
-	// Do not count the trash folder when listing the root directory.
-	if count > 0 && doc.ID() == consts.RootDirID {
-		count--
+
+	// Hide the trash folder when listing the root directory.
+	var limit int
+	if doc.ID() == consts.RootDirID {
+		if count > 0 {
+			count--
+		}
+		switch c := cursor.(type) {
+		case *couchdb.StartKeyCursor:
+			limit = c.Limit
+			if c.NextKey == nil {
+				c.Limit++
+			}
+		case *couchdb.SkipCursor:
+			limit = c.Limit
+			if c.Skip == 0 {
+				c.Limit++
+			} else {
+				c.Skip++
+			}
+		}
 	}
 
 	children, err := fs.DirBatch(doc, cursor)
+	if err != nil {
+		return 0, nil, nil, err
+	}
+
+	if doc.ID() == consts.RootDirID {
+		switch c := cursor.(type) {
+		case *couchdb.StartKeyCursor:
+			c.Limit = limit
+		case *couchdb.SkipCursor:
+			c.Limit = limit
+			c.Skip--
+		}
+	}
+
+	return count, cursor, children, nil
+}
+
+func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
+	instance := middlewares.GetInstance(c)
+	count, cursor, children, err := getDirData(c, doc)
 	if err != nil {
 		return err
 	}
@@ -111,6 +149,7 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 		}
 		next := "/files/" + doc.DocID + "/relationships/contents?" + params.Encode()
 		rel["contents"].Links.Next = next
+		links.Next = "/files/" + doc.DocID + "?" + params.Encode()
 	}
 
 	d := &dir{
@@ -123,24 +162,8 @@ func dirData(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
 }
 
 func dirDataList(c echo.Context, statusCode int, doc *vfs.DirDoc) error {
-	cursor, err := jsonapi.ExtractPaginationCursor(c, defPerPage)
-	if err != nil {
-		return err
-	}
-
 	instance := middlewares.GetInstance(c)
-	fs := instance.VFS()
-
-	count, err := fs.DirLength(doc)
-	if err != nil {
-		return err
-	}
-	// Do not count the trash folder when listing the root directory.
-	if count > 0 && doc.ID() == consts.RootDirID {
-		count--
-	}
-
-	children, err := fs.DirBatch(doc, cursor)
+	count, cursor, children, err := getDirData(c, doc)
 	if err != nil {
 		return err
 	}
