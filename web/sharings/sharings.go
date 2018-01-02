@@ -53,11 +53,11 @@ func createAPISharing(ins *instance.Instance, s *sharings.Sharing) *apiSharing {
 	// Included methods.
 	_, _ = s.Permissions(ins)
 	if s.Owner {
-		_ = s.Sharer.Contact(ins)
-	} else {
 		for i := range s.Recipients {
 			_ = s.Recipients[i].Contact(ins)
 		}
+	} else {
+		_ = s.Sharer.Contact(ins)
 	}
 	return &apiSharing{s}
 }
@@ -89,7 +89,7 @@ func (s *apiSharing) Relationships() jsonapi.RelationshipMap {
 		perms.Data = couchdb.DocReference{ID: p.ID(), Type: p.Type}
 	}
 
-	if s.Owner {
+	if !s.Owner {
 		c := s.Sharer.RefContact
 		sharer := apiReference{ID: c.ID, Type: c.Type, Status: s.Sharer.Status}
 		return jsonapi.RelationshipMap{
@@ -124,16 +124,16 @@ func (s *apiSharing) Included() []jsonapi.Object {
 	}
 
 	if s.Owner {
-		c := s.Sharer.Contact(nil)
-		if c != nil {
-			included = append(included, &apiRecipient{c})
-		}
-	} else {
 		for _, rec := range s.Recipients {
 			c := rec.Contact(nil)
 			if c != nil {
 				included = append(included, &apiRecipient{c})
 			}
+		}
+	} else {
+		c := s.Sharer.Contact(nil)
+		if c != nil {
+			included = append(included, &apiRecipient{c})
 		}
 	}
 
@@ -313,7 +313,7 @@ func SharingAnswer(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(err)
 	}
-	return c.JSON(http.StatusFound, res)
+	return c.JSON(http.StatusCreated, res)
 }
 
 // Routes sets the routing for the sharing service

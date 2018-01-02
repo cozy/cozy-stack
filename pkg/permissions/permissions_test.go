@@ -298,7 +298,7 @@ func TestSubset(t *testing.T) {
 func TestCreateShareSetBlacklist(t *testing.T) {
 	s := Set{Rule{Type: "io.cozy.notifications"}}
 	parent := &Permission{Type: TypeWebapp, Permissions: s}
-	_, err := CreateShareSet(nil, parent, nil, s)
+	_, err := CreateShareSet(nil, parent, nil, s, nil)
 	assert.Error(t, err)
 	e, ok := err.(*echo.HTTPError)
 	assert.True(t, ok)

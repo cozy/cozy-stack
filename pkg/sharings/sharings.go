@@ -25,15 +25,11 @@ type Sharing struct {
 	SRev        string `json:"_rev,omitempty"`
 	SharingType string `json:"sharing_type"`
 
-	// TODO check where it makes sense to use this flag
-	// TODO use a date (RevokedAt *time.Time)?
-	Revoked bool `json:"revoked,omitempty"`
-
 	// Only one of Sharer or Recipients is filled
 	// - Sharer is filled when Owner is false
 	// - Recipients is filled when Owner is true
 	Owner      bool     `json:"owner"`
-	Sharer     Member   `json:"sharer,omitempty"`
+	Sharer     *Member  `json:"sharer,omitempty"`
 	Recipients []Member `json:"recipients,omitempty"`
 
 	Description string `json:"description,omitempty"`
@@ -90,9 +86,9 @@ func (s *Sharing) Permissions(db couchdb.Database) (*permissions.Permission, err
 // GetMemberFromClientID returns the Recipient associated with the
 // given clientID.
 func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*Member, error) {
-	for _, m := range s.Recipients {
-		if m.Client.ClientID == clientID {
-			return &m, nil
+	for i := range s.Recipients {
+		if s.Recipients[i].Client.ClientID == clientID {
+			return &s.Recipients[i], nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist
@@ -101,9 +97,9 @@ func (s *Sharing) GetMemberFromClientID(db couchdb.Database, clientID string) (*
 // GetMemberFromContactID returns the Member associated with the
 // given contact ID.
 func (s *Sharing) GetMemberFromContactID(db couchdb.Database, contactID string) (*Member, error) {
-	for _, m := range s.Recipients {
-		if m.RefContact.ID == contactID {
-			return &m, nil
+	for i := range s.Recipients {
+		if s.Recipients[i].RefContact.ID == contactID {
+			return &s.Recipients[i], nil
 		}
 	}
 	return nil, ErrRecipientDoesNotExist
@@ -134,7 +130,6 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 		PreviewPath: params.PreviewPath,
 		AppSlug:     slug,
 		Owner:       true,
-		Revoked:     false,
 	}
 
 	// Fetch the recipients in the database and populate Recipients
@@ -185,19 +180,6 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 		return nil, err
 	}
 	return res, nil
-}
-
-// FindSharingMember retrieve a sharing recipient from its clientID and sharingID
-func FindSharingMember(db couchdb.Database, sharingID, clientID string) (*Sharing, *Member, error) {
-	sharing, err := FindSharing(db, sharingID)
-	if err != nil {
-		return nil, nil, err
-	}
-	m, err := sharing.GetMemberFromClientID(db, clientID)
-	if err != nil {
-		return nil, nil, err
-	}
-	return sharing, m, nil
 }
 
 // GetSharingFromPermissions returns the sharing linked to the given permissions doc

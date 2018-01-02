@@ -13,13 +13,15 @@ import (
 // Permission is a storable object containing a set of rules and
 // several codes
 type Permission struct {
-	PID         string            `json:"_id,omitempty"`
-	PRev        string            `json:"_rev,omitempty"`
-	Type        string            `json:"type,omitempty"`
-	SourceID    string            `json:"source_id,omitempty"`
-	Permissions Set               `json:"permissions,omitempty"`
-	ExpiresAt   int               `json:"expires_at,omitempty"`
-	Codes       map[string]string `json:"codes,omitempty"`
+	PID         string `json:"_id,omitempty"`
+	PRev        string `json:"_rev,omitempty"`
+	Type        string `json:"type,omitempty"`
+	SourceID    string `json:"source_id,omitempty"`
+	Permissions Set    `json:"permissions,omitempty"`
+
+	// XXX omitempty does not work for time.Time, thus the interface{} type
+	ExpiresAt interface{}       `json:"expires_at,omitempty"`
+	Codes     map[string]string `json:"codes,omitempty"`
 }
 
 const (
@@ -74,6 +76,14 @@ func (p *Permission) SetID(id string) { p.PID = id }
 // SetRev implements jsonapi.Doc
 func (p *Permission) SetRev(rev string) { p.PRev = rev }
 
+// Expired returns true if the permissions are no longer valid
+func (p *Permission) Expired() bool {
+	if p.ExpiresAt == nil {
+		return false
+	}
+	return p.ExpiresAt.(time.Time).Before(time.Now())
+}
+
 // AddRules add some rules to the permission doc
 func (p *Permission) AddRules(rules ...Rule) {
 	newperms := append(p.Permissions, rules...)
@@ -112,9 +122,14 @@ func (p *Permission) ParentOf(child *Permission) bool {
 
 // GetByID fetch a permission by its ID
 func GetByID(db couchdb.Database, id string) (*Permission, error) {
-	var perm Permission
-	err := couchdb.GetDoc(db, consts.Permissions, id, &perm)
-	return &perm, err
+	perm := &Permission{}
+	if err := couchdb.GetDoc(db, consts.Permissions, id, perm); err != nil {
+		return nil, err
+	}
+	if perm.Expired() {
+		return nil, ErrExpiredToken
+	}
+	return perm, nil
 }
 
 // GetForRegisterToken create a non-persisted permissions doc with hard coded
@@ -206,7 +221,11 @@ func getFromSource(db couchdb.Database, permType, docType, slug string) (*Permis
 	if len(res) == 0 {
 		return nil, fmt.Errorf("no permission doc for %v", slug)
 	}
-	return &res[0], nil
+	perm := &res[0]
+	if perm.Expired() {
+		return nil, ErrExpiredToken
+	}
+	return perm, nil
 }
 
 // GetForShareCode retrieves the Permission doc for a given sharing code
@@ -228,13 +247,16 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 		return nil, fmt.Errorf("Bad state: several permission docs for token %v", tokenCode)
 	}
 
-	var pdoc Permission
-	err = json.Unmarshal(res.Rows[0].Doc, &pdoc)
+	perm := &Permission{}
+	err = json.Unmarshal(res.Rows[0].Doc, perm)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pdoc, nil
+	if perm.Expired() {
+		return nil, ErrExpiredToken
+	}
+	return perm, nil
 }
 
 // CreateWebappSet creates a Permission doc for an app
@@ -296,7 +318,7 @@ func updateAppSet(db couchdb.Database, doc *Permission, typ, docType, slug strin
 }
 
 // CreateShareSet creates a Permission doc for sharing by link
-func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set) (*Permission, error) {
+func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]string, set Set, expiresAt interface{}) (*Permission, error) {
 	if parent.Type != TypeWebapp && parent.Type != TypeKonnector && parent.Type != TypeOauth {
 		return nil, ErrOnlyAppCanCreateSubSet
 	}
@@ -321,6 +343,7 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 		SourceID:    parent.SourceID,
 		Permissions: set,
 		Codes:       codes,
+		ExpiresAt:   expiresAt,
 	}
 
 	err := couchdb.CreateDoc(db, doc)

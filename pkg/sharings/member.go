@@ -14,7 +14,7 @@ import (
 // Member contains the information about a recipient (or the sharer) for a sharing
 type Member struct {
 	Status string `json:"status,omitempty"`
-	URL    string `json:"url,omitempty"` // TODO check that this URL is well filled
+	URL    string `json:"url,omitempty"`
 
 	// Only a reference on the contact is persisted in the sharing document
 	RefContact couchdb.DocReference `json:"contact,omitempty"`
@@ -155,31 +155,4 @@ func (m *Member) RegisterClient(i *instance.Instance, u *url.URL) error {
 	m.URL = u.String()
 	m.Client = *resClient
 	return nil
-}
-
-// RecipientInfo describes the recipient information that will be transmitted to
-// the sharing workers.
-type RecipientInfo struct {
-	Domain      string
-	Scheme      string
-	Client      auth.Client
-	AccessToken auth.AccessToken
-}
-
-// ExtractRecipientInfo returns a RecipientInfo from a Member
-func ExtractRecipientInfo(m *Member) (*RecipientInfo, error) {
-	if m.URL == "" {
-		return nil, ErrRecipientHasNoURL
-	}
-	u, err := url.Parse(m.URL)
-	if err != nil {
-		return nil, err
-	}
-	info := RecipientInfo{
-		Domain:      u.Host,
-		Scheme:      u.Scheme,
-		AccessToken: m.AccessToken,
-		Client:      m.Client,
-	}
-	return &info, nil
 }
