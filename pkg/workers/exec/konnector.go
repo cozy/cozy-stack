@@ -185,7 +185,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 	return
 }
 
-func (w *konnectorWorker) ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error {
+func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error {
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`

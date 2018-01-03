@@ -39,7 +39,7 @@ type execWorker interface {
 	Slug() string
 	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error)
 	PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
-	ScanOuput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error
+	ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error
 	Error(i *instance.Instance, err error) error
 	Commit(ctx *jobs.WorkerContext, errjob error) error
 }
@@ -106,7 +106,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		}()
 
 		for scanOut.Scan() {
-			if errOut := worker.ScanOuput(ctx, inst, log, scanOut.Bytes()); errOut != nil {
+			if errOut := worker.ScanOutput(ctx, inst, log, scanOut.Bytes()); errOut != nil {
 				log.Error(errOut)
 			}
 		}
