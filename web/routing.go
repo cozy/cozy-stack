@@ -141,6 +141,12 @@ func SetupRoutes(router *echo.Echo) error {
 		version.Routes(router.Group("/version"))
 	}
 
+	// dev routes
+	if config.IsDevRelease() {
+		router.GET("/dev/mails/:name", devMailsHandler)
+		router.GET("/dev/templates/:name", devTemplatesHandler)
+	}
+
 	setupRecover(router)
 	router.HTTPErrorHandler = errors.ErrorHandler
 	return nil

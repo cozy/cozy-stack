@@ -137,7 +137,7 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	if ok {
 		funcMap = template.FuncMap{"t": i.Translate}
 	} else {
-		lang := getLanguageFromHeader(c.Request().Header)
+		lang := GetLanguageFromHeader(c.Request().Header)
 		funcMap = template.FuncMap{"t": i18n.Translator(lang)}
 	}
 	t, err := r.t.Clone()
@@ -147,7 +147,9 @@ func (r *renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return t.Funcs(funcMap).ExecuteTemplate(w, name, data)
 }
 
-func getLanguageFromHeader(header http.Header) (lang string) {
+// GetLanguageFromHeader return the language tag given the Accept-Language
+// header.
+func GetLanguageFromHeader(header http.Header) (lang string) {
 	// TODO: improve language detection with a package like
 	// "golang.org/x/text/language"
 	lang = i18n.DefaultLocale
