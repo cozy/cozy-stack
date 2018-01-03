@@ -17,7 +17,8 @@ import (
 )
 
 func init() {
-	jobs.AddWorker("sharingupdates", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:  "sharingupdates",
 		Concurrency: runtime.NumCPU(),
 		WorkerFunc:  SharingUpdates,
 	})

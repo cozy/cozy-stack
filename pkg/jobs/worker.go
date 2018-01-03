@@ -19,7 +19,6 @@ import (
 var (
 	defaultConcurrency  = runtime.NumCPU()
 	defaultMaxExecCount = 3
-	defaultMaxExecTime  = 60 * time.Second
 	defaultRetryDelay   = 60 * time.Millisecond
 	defaultTimeout      = 10 * time.Second
 )
@@ -49,11 +48,11 @@ type (
 		WorkerStart  WorkerStartFunc
 		WorkerFunc   WorkerFunc
 		WorkerCommit WorkerCommit
-		Concurrency  int           `json:"concurrency"`
-		MaxExecCount int           `json:"max_exec_count"`
-		MaxExecTime  time.Duration `json:"max_exec_time"`
-		Timeout      time.Duration `json:"timeout"`
-		RetryDelay   time.Duration `json:"retry_delay"`
+		WorkerType   string
+		Concurrency  int
+		MaxExecCount int
+		Timeout      time.Duration
+		RetryDelay   time.Duration
 	}
 
 	// Worker is a unit of work that will consume from a queue and execute the do
@@ -181,6 +180,14 @@ func (c *WorkerContext) Cookie() interface{} {
 	return c.cookie
 }
 
+// NewWorker creates a new instance of Worker with the given configuration.
+func NewWorker(conf *WorkerConfig) *Worker {
+	return &Worker{
+		Type: conf.WorkerType,
+		Conf: conf,
+	}
+}
+
 // Start is used to start the worker consumption of messages from its queue.
 func (w *Worker) Start(jobs chan *Job) error {
 	if !atomic.CompareAndSwapUint32(&w.running, 0, 1) {
@@ -270,9 +277,6 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 	if c.MaxExecCount == 0 {
 		c.MaxExecCount = defaultMaxExecCount
 	}
-	if c.MaxExecTime == 0 {
-		c.MaxExecTime = defaultMaxExecTime
-	}
 	if c.RetryDelay == 0 {
 		c.RetryDelay = defaultRetryDelay
 	}
@@ -284,9 +288,6 @@ func (w *Worker) defaultedConf(opts *JobOptions) *WorkerConfig {
 	}
 	if opts.MaxExecCount != 0 && opts.MaxExecCount < c.MaxExecCount {
 		c.MaxExecCount = opts.MaxExecCount
-	}
-	if opts.MaxExecTime > 0 && opts.MaxExecTime < c.MaxExecTime {
-		c.MaxExecTime = opts.MaxExecTime
 	}
 	if opts.Timeout > 0 && opts.Timeout < c.Timeout {
 		c.Timeout = opts.Timeout
@@ -366,9 +367,14 @@ func (t *task) run() (err error) {
 }
 
 func (t *task) exec(ctx *WorkerContext) (err error) {
-	slot := <-slots
+	var slot struct{}
+	if slots != nil {
+		slot = <-slots
+	}
 	defer func() {
-		slots <- slot
+		if slots != nil {
+			slots <- slot
+		}
 		if r := recover(); r != nil {
 			var ok bool
 			err, ok = r.(error)
@@ -383,18 +389,14 @@ func (t *task) exec(ctx *WorkerContext) (err error) {
 
 func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
 	c := t.conf
-	execTime := time.Since(t.startTime)
 
-	if t.execCount >= c.MaxExecCount || execTime > c.MaxExecTime {
+	if t.execCount >= c.MaxExecCount {
 		return false, 0, 0
 	}
 
 	// the worker timeout should take into account the maximum execution time
 	// allowed to the task
 	timeout := c.Timeout
-	if execTime+timeout > c.MaxExecTime {
-		timeout = c.MaxExecTime - execTime
-	}
 
 	var nextDelay time.Duration
 	if t.execCount == 0 {
@@ -406,10 +408,6 @@ func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
 		// fuzzDelay number between delay * (1 +/- 0.1)
 		fuzzDelay := int(0.1 * float64(nextDelay))
 		nextDelay = nextDelay + time.Duration((rand.Intn(2*fuzzDelay) - fuzzDelay))
-	}
-
-	if execTime+nextDelay > c.MaxExecTime {
-		return false, 0, 0
 	}
 
 	return true, nextDelay, timeout

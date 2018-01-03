@@ -9,7 +9,8 @@ import (
 )
 
 func init() {
-	jobs.AddWorker("log", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:   "log",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 1,
 		Timeout:      1 * time.Second,

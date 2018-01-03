@@ -27,8 +27,9 @@ var formats = map[string]string{
 }
 
 func init() {
-	jobs.AddWorker("thumbnail", &jobs.WorkerConfig{
-		Concurrency:  (runtime.NumCPU() + 1) / 2,
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:   "thumbnail",
+		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
 		Timeout:      15 * time.Second,
 		WorkerFunc:   Worker,

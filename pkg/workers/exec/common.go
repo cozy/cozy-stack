@@ -19,7 +19,6 @@ func init() {
 	addExecWorker("konnector", &jobs.WorkerConfig{
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
-		MaxExecTime:  200 * time.Second,
 		Timeout:      200 * time.Second,
 	}, func() execWorker {
 		return &konnectorWorker{}
@@ -28,7 +27,6 @@ func init() {
 	addExecWorker("service", &jobs.WorkerConfig{
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
-		MaxExecTime:  200 * time.Second,
 		Timeout:      200 * time.Second,
 	}, func() execWorker {
 		return &serviceWorker{}
@@ -120,7 +118,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 	}
 }
 
-func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() execWorker) {
+func addExecWorker(workerType string, cfg *jobs.WorkerConfig, createWorker func() execWorker) {
 	workerFunc := makeExecWorkerFunc()
 
 	workerStart := func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
@@ -135,11 +133,11 @@ func addExecWorker(name string, cfg *jobs.WorkerConfig, createWorker func() exec
 	}
 
 	cfg = cfg.Clone()
+	cfg.WorkerType = workerType
 	cfg.WorkerStart = workerStart
 	cfg.WorkerFunc = workerFunc
 	cfg.WorkerCommit = workerCommit
-
-	jobs.AddWorker(name, cfg)
+	jobs.AddWorker(cfg)
 }
 
 func wrapErr(ctx context.Context, err error) error {

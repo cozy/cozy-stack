@@ -200,6 +200,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 
 	main := echo.New()
 	main.HideBanner = true
+	main.HidePort = true
 	main.Renderer = router.Renderer
 	main.Any("/*", func(c echo.Context) error {
 		// TODO(optim): minimize the number of instance requests

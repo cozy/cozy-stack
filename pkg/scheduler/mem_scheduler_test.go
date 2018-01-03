@@ -40,9 +40,10 @@ func TestTriggersBadArguments(t *testing.T) {
 func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 	var wAt sync.WaitGroup
 	var wIn sync.WaitGroup
-	bro := jobs.NewMemBroker(1)
+	bro := jobs.NewMemBroker()
 	bro.Start(jobs.WorkersList{
-		"worker": {
+		{
+			WorkerType:   "worker",
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,
@@ -139,9 +140,10 @@ func TestMemSchedulerWithTimeTriggers(t *testing.T) {
 
 func TestMemSchedulerWithDebounce(t *testing.T) {
 	called := 0
-	bro := jobs.NewMemBroker(1)
+	bro := jobs.NewMemBroker()
 	bro.Start(jobs.WorkersList{
-		"worker": {
+		{
+			WorkerType:   "worker",
 			Concurrency:  1,
 			MaxExecCount: 1,
 			Timeout:      1 * time.Millisecond,

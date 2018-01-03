@@ -380,7 +380,8 @@ func TestMain(m *testing.M) {
 	testutils.NeedCouchdb()
 	setup := testutils.NewSetup(m, "jobs_test")
 
-	jobs.AddWorker("print", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:  "print",
 		Concurrency: 4,
 		WorkerFunc: func(ctx *jobs.WorkerContext) error {
 			var msg string

@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -23,11 +24,10 @@ type (
 
 	// memBroker is an in-memory broker implementation of the Broker interface.
 	memBroker struct {
-		nbWorkers int
-		queues    map[string]*memQueue
-		workers   []*Worker
-		running   uint32
-		closed    chan struct{}
+		queues  map[string]*memQueue
+		workers []*Worker
+		running uint32
+		closed  chan struct{}
 	}
 )
 
@@ -77,11 +77,10 @@ func (q *memQueue) Len() int {
 //
 // The in-memory implementation of the job system has the specifity that
 // workers are actually launched by the broker at its creation.
-func NewMemBroker(nbWorkers int) Broker {
+func NewMemBroker() Broker {
 	return &memBroker{
-		nbWorkers: nbWorkers,
-		queues:    make(map[string]*memQueue),
-		closed:    make(chan struct{}),
+		queues: make(map[string]*memQueue),
+		closed: make(chan struct{}),
 	}
 }
 
@@ -89,23 +88,31 @@ func (b *memBroker) Start(ws WorkersList) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 0, 1) {
 		return ErrClosed
 	}
-	if b.nbWorkers <= 0 {
-		return nil
-	}
-	joblog.Infof("Starting in-memory broker with %d workers", b.nbWorkers)
-	setNbSlots(b.nbWorkers)
-	for workerType, conf := range ws {
-		q := newMemQueue(workerType)
-		w := &Worker{
-			Type: workerType,
-			Conf: conf,
+
+	for _, conf := range ws {
+		if conf.Concurrency <= 0 {
+			continue
 		}
-		b.queues[workerType] = q
+		q := newMemQueue(conf.WorkerType)
+		w := NewWorker(conf)
+		b.queues[conf.WorkerType] = q
 		b.workers = append(b.workers, w)
 		if err := w.Start(q.Jobs); err != nil {
 			return err
 		}
 	}
+
+	if len(b.workers) > 0 {
+		joblog.Infof("Started in-memory broker for %d workers type", len(b.workers))
+	}
+
+	// XXX for retro-compat
+	if slots := config.GetConfig().Jobs.NbWorkers; len(b.workers) > 0 && slots > 0 {
+		joblog.Warnf("Limiting the number of total concurrent workers to %d", slots)
+		joblog.Warnf("Please update your configuration file to avoid a hard limit")
+		setNbSlots(slots)
+	}
+
 	return nil
 }
 
@@ -113,7 +120,7 @@ func (b *memBroker) Shutdown(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
 	}
-	if b.nbWorkers <= 0 {
+	if len(b.workers) == 0 {
 		return nil
 	}
 	fmt.Print("  shutting down in-memory broker...")
