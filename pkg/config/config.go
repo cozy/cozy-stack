@@ -459,19 +459,29 @@ func UseViper(v *viper.Viper) error {
 						w.Concurrency = &zero
 					}
 				} else if m, ok := mapInterface.(map[string]interface{}); ok {
-					if concurrency, ok := m["concurrency"].(int); ok {
-						w.Concurrency = &concurrency
-					}
-					if maxExecCount, ok := m["max_exec_count"].(int); ok {
-						w.MaxExecCount = &maxExecCount
-					}
-					if timeout, ok := m["timeout"].(string); ok {
-						d, err := time.ParseDuration(timeout)
-						if err != nil {
-							return fmt.Errorf("config: could not parse timeout duration for worker %q: %s",
-								workerType, err)
+					for k, v := range m {
+						switch k {
+						case "concurrency":
+							if concurrency, ok := v.(int); ok {
+								w.Concurrency = &concurrency
+							}
+						case "max_exec_count":
+							if maxExecCount, ok := v.(int); ok {
+								w.MaxExecCount = &maxExecCount
+							}
+						case "timeout":
+							if timeout, ok := v.(string); ok {
+								d, err := time.ParseDuration(timeout)
+								if err != nil {
+									return fmt.Errorf("config: could not parse timeout duration for worker %q: %s",
+										workerType, err)
+								}
+								w.Timeout = &d
+							}
+						default:
+							return fmt.Errorf("config: unknown key %q",
+								"jobs.workers."+workerType+"."+k)
 						}
-						w.Timeout = &d
 					}
 				} else {
 					return fmt.Errorf("config: expecting a map in the key %q",
