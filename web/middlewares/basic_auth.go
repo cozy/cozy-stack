@@ -2,13 +2,13 @@ package middlewares
 
 import (
 	"bytes"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"os"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/labstack/echo"
 )
 
@@ -47,9 +47,10 @@ func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 			if err != nil {
 				return echo.NewHTTPError(http.StatusForbidden, "bad passphrase")
 			}
-
 			if needUpdate {
-				return errors.New("Passphrase hash needs update and should be regenerated")
+				logger.
+					WithDomain("admin").
+					Warnf("Passphrase hash from %q needs update and should be regenerated", secretFileName)
 			}
 
 			return next(c)
