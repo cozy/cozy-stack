@@ -1,12 +1,14 @@
 package statik
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/textproto"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -44,6 +46,25 @@ type AssetRenderer interface {
 	http.Handler
 }
 
+type dir string
+
+func (d dir) Open(name string) (http.File, error) {
+	if filepath.Separator != '/' && strings.ContainsRune(name, filepath.Separator) {
+		return nil, errors.New("http: invalid character in file path")
+	}
+	dir := string(d)
+	if dir == "" {
+		dir = "."
+	}
+	name, _ = ExtractAssetID(name)
+	fullName := filepath.Join(dir, filepath.FromSlash(path.Clean("/"+name)))
+	f, err := os.Open(fullName)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
 // NewDirRenderer returns a renderer with assets opened from a specified local
 // directory.
 func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
@@ -53,11 +74,13 @@ func NewDirRenderer(assetsPath string) (AssetRenderer, error) {
 	}
 
 	t := template.New("stub")
-	h := http.StripPrefix("/assets", http.FileServer(http.Dir(assetsPath)))
+	h := http.StripPrefix("/assets", http.FileServer(dir(assetsPath)))
 	funcsMap := template.FuncMap{
 		"t":     fmt.Sprintf,
 		"split": strings.Split,
-		"asset": AssetResolver,
+		"asset": func(domain, file string) string {
+			return AssetResolver(domain, path.Join("/assets", file))
+		},
 	}
 
 	var err error
