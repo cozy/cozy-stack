@@ -14,11 +14,11 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/lock"
+	"github.com/cozy/cozy-stack/pkg/magic"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/afero"
-
-	"camlistore.org/pkg/magic"
 )
 
 // aferoVFS is a struct implementing the vfs.VFS interface associated with
