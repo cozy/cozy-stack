@@ -261,6 +261,12 @@ func (m *MailTemplater) Execute(name, locale string, recipientName string, data 
 	return
 }
 
+// RenderMail returns a rendered mail for the given template name with the
+// specified locale, recipient name and template data values.
+func RenderMail(name, locale, recipientName string, templateValues interface{}) (string, []*Part, error) {
+	return mailTemplater.Execute(name, locale, recipientName, templateValues)
+}
+
 func init() {
 	mailTemplater = &MailTemplater{[]*MailTemplate{
 		{
