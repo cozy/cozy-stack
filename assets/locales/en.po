@@ -336,7 +336,7 @@ msgid "No Cozy"
 msgstr "Don't have a Cozy yet?"
 
 msgid "Discover Cozy URL"
-msgstr "https://cozy.io/en/try-it/?from=home"
+msgstr "https://cozy.io/en/try-it/?from=sharing"
 
 msgid "Discover Cozy"
 msgstr "Discover Cozy now!"
