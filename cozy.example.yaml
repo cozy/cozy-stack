@@ -52,9 +52,49 @@ couchdb:
 
 # jobs parameters to configure the job system
 jobs:
-  # workers define the number of concurrent workers running on the system. if
-  # this parameter is set to 0, no worker is running
-  workers: 1
+  # workers individual configrations.
+  #
+  # For each worker type it is possible to configure the following fields:
+  #   - concurrency: the maximum number of jobs executed in parallel. when set
+  #     to zero, the worker is deactivated
+  #   - max_exec_count: the maximum number of retries for one job in case of an
+  #     error
+  #   - timeout: the maximum amount of time allowed for one execution of a job
+  #
+  # List of available workers:
+  #
+  #   - "konnector":      launching konnectors
+  #   - "push":           sending push notifications
+  #   - "sendmail":       sending mails
+  #   - "service":        launching services
+  #   - "sharedata":      data sharing between cozies
+  #   - "sharingupdates": update of sharings data
+  #   - "thumbnail":      creatings and deleting thumbnails for images
+  #   - "unzip":          unzipping tarball
+  #
+  # When no configuration is given for a worker, a default configuration is
+  # used. When a false boolean value is given, the worker is deactivated.
+  #
+  # To deactivate all workers, the workers field can be set to "false" or
+  # "none".
+  workers:
+    # thumbnail:
+    #   concurrency: {{mul .NumCPU 4}}
+    #   max_exec_count: 2
+    #   timeout: 15s
+
+    # konnector:
+    #   concurrency: {{.NumCPU}}
+    #   max_exec_count: 2
+    #   timeout: 200s
+
+    # service:
+    #   concurrency: {{.NumCPU}}
+    #   max_exec_count: 2
+    #   timeout: 200s
+
+    # sharedata:      false
+    # sharingupdates: false
 
 # konnectors execution parameters for executing external processes.
 konnectors:

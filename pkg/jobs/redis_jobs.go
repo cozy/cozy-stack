@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/go-redis/redis"
 	multierror "github.com/hashicorp/go-multierror"
 )
@@ -15,20 +16,18 @@ import (
 const redisPrefix = "j/"
 
 type redisBroker struct {
-	client    redis.UniversalClient
-	nbWorkers int
-	workers   []*Worker
-	running   uint32
-	closed    chan struct{}
+	client  redis.UniversalClient
+	workers []*Worker
+	running uint32
+	closed  chan struct{}
 }
 
 // NewRedisBroker creates a new broker that will use redis to distribute
 // the jobs among several cozy-stack processes.
-func NewRedisBroker(nbWorkers int, client redis.UniversalClient) Broker {
+func NewRedisBroker(client redis.UniversalClient) Broker {
 	return &redisBroker{
-		client:    client,
-		nbWorkers: nbWorkers,
-		closed:    make(chan struct{}),
+		client: client,
+		closed: make(chan struct{}),
 	}
 }
 
@@ -37,25 +36,30 @@ func (b *redisBroker) Start(ws WorkersList) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 0, 1) {
 		return ErrClosed
 	}
-	if b.nbWorkers <= 0 {
-		return nil
-	}
-
-	setNbSlots(b.nbWorkers)
-	joblog.Infof("Starting redis broker with %d workers", b.nbWorkers)
 
 	b.workers = make([]*Worker, 0, len(ws))
-	for workerType, conf := range ws {
-		ch := make(chan *Job)
-		w := &Worker{
-			Type: workerType,
-			Conf: conf,
+	for _, conf := range ws {
+		if conf.Concurrency <= 0 {
+			continue
 		}
+		ch := make(chan *Job)
+		w := NewWorker(conf)
 		b.workers = append(b.workers, w)
 		if err := w.Start(ch); err != nil {
 			return err
 		}
-		go b.pollLoop(redisPrefix+workerType, ch)
+		go b.pollLoop(redisPrefix+conf.WorkerType, ch)
+	}
+
+	if len(b.workers) > 0 {
+		joblog.Infof("Started redis broker for %d workers type", len(b.workers))
+	}
+
+	// XXX for retro-compat
+	if slots := config.GetConfig().Jobs.NbWorkers; len(b.workers) > 0 && slots > 0 {
+		joblog.Warnf("Limiting the number of total concurrent workers to %d", slots)
+		joblog.Warnf("Please update your configuration file to avoid a hard limit")
+		setNbSlots(slots)
 	}
 
 	return nil
@@ -73,7 +77,7 @@ func (b *redisBroker) Shutdown(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&b.running, 1, 0) {
 		return ErrClosed
 	}
-	if b.nbWorkers <= 0 {
+	if len(b.workers) == 0 {
 		return nil
 	}
 
@@ -109,7 +113,7 @@ func (b *redisBroker) Shutdown(ctx context.Context) error {
 	return errm
 }
 
-var redisBRPopTimeout = 30 * time.Second
+var redisBRPopTimeout = 10 * time.Second
 
 func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 	defer func() {

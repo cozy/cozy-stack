@@ -29,7 +29,8 @@ import (
 )
 
 func init() {
-	jobs.AddWorker("sharedata", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:  "sharedata",
 		Concurrency: 1, // no concurency, to make sure directory hierarchy order is respected
 		WorkerFunc:  SendData,
 	})

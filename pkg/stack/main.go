@@ -90,16 +90,21 @@ security features. Please do not use this binary as your production server.
 		return
 	}
 
+	workersList, err := jobs.GetWorkersList()
+	if err != nil {
+		return
+	}
+
 	jobsConfig := config.GetConfig().Jobs
-	nbWorkers := jobsConfig.Workers
 	if cli := jobsConfig.Client(); cli != nil {
-		broker = jobs.NewRedisBroker(nbWorkers, cli)
+		broker = jobs.NewRedisBroker(cli)
 		schder = scheduler.NewRedisScheduler(cli)
 	} else {
-		broker = jobs.NewMemBroker(nbWorkers)
+		broker = jobs.NewMemBroker()
 		schder = scheduler.NewMemScheduler()
 	}
-	if err = broker.Start(jobs.GetWorkersList()); err != nil {
+
+	if err = broker.Start(workersList); err != nil {
 		return
 	}
 	if err = schder.Start(broker); err != nil {

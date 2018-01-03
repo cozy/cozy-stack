@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -163,9 +162,6 @@ func init() {
 
 	flags.String("downloads-url", "", "URL for the download secret storage, redis or in-memory")
 	checkNoErr(viper.BindPFlag("downloads.url", flags.Lookup("downloads-url")))
-
-	flags.Int("jobs-workers", runtime.NumCPU(), "Number of parallel workers (0 to disable the processing of jobs)")
-	checkNoErr(viper.BindPFlag("jobs.workers", flags.Lookup("jobs-workers")))
 
 	flags.String("jobs-url", "", "URL for the jobs system synchronization, redis or in-memory")
 	checkNoErr(viper.BindPFlag("jobs.url", flags.Lookup("jobs-url")))

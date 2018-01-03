@@ -33,7 +33,8 @@ func TestRedisJobs(t *testing.T) {
 	w.Add(2*n + 1)
 
 	var workersTestList = WorkersList{
-		"test": {
+		{
+			WorkerType:  "test",
 			Concurrency: 4,
 			WorkerFunc: func(ctx *WorkerContext) error {
 				var msg string
@@ -59,11 +60,11 @@ func TestRedisJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := NewRedisBroker(4, client)
+	broker1 := NewRedisBroker(client)
 	err := broker1.Start(workersTestList)
 	assert.NoError(t, err)
 
-	broker2 := NewRedisBroker(4, client)
+	broker2 := NewRedisBroker(client)
 	err = broker2.Start(workersTestList)
 	assert.NoError(t, err)
 

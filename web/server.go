@@ -143,6 +143,7 @@ func checkExists(filepath string) error {
 func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
 	e := echo.New()
 	e.HideBanner = true
+	e.HidePort = true
 
 	major, err := CreateSubdomainProxy(e, appsHandler)
 	if err != nil {
@@ -160,6 +161,7 @@ func listenAndServe(appsHandler echo.HandlerFunc) (*Servers, error) {
 
 	admin := echo.New()
 	admin.HideBanner = true
+	admin.HidePort = true
 
 	if err = SetupAdminRoutes(admin); err != nil {
 		return nil, err

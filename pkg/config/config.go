@@ -8,10 +8,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
+	"github.com/Masterminds/sprig"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -128,7 +131,10 @@ type CouchDB struct {
 // synchronization
 type Jobs struct {
 	RedisConfig
-	Workers int
+	NoWorkers bool
+	Workers   []Worker
+	// XXX for retro-compatibility
+	NbWorkers int
 }
 
 // Konnectors contains the configuration values for the konnectors
@@ -153,6 +159,14 @@ type Notifications struct {
 	IOSCertificatePassword string
 	IOSKeyID               string
 	IOSTeamID              string
+}
+
+// Worker contains the configuration fields for a specific worker type.
+type Worker struct {
+	WorkerType   string
+	Concurrency  *int
+	MaxExecCount *int
+	Timeout      *time.Duration
 }
 
 // RedisConfig contains the configuration values for a redis system
@@ -278,14 +292,20 @@ func Setup(cfgFile string) (err error) {
 
 	tmpl := template.New(filepath.Base(cfgFile))
 	tmpl = tmpl.Option("missingkey=zero")
-	tmpl, err = tmpl.ParseFiles(cfgFile)
+	tmpl, err = tmpl.Funcs(sprig.TxtFuncMap()).ParseFiles(cfgFile)
 	if err != nil {
 		return fmt.Errorf("Unable to open and parse configuration file "+
 			"template %s: %s", cfgFile, err)
 	}
 
 	dest := new(bytes.Buffer)
-	ctxt := &struct{ Env map[string]string }{Env: envMap()}
+	ctxt := &struct {
+		Env    map[string]string
+		NumCPU int
+	}{
+		Env:    envMap(),
+		NumCPU: runtime.NumCPU(),
+	}
 	err = tmpl.ExecuteTemplate(dest, filepath.Base(cfgFile), ctxt)
 	if err != nil {
 		return fmt.Errorf("Template error for config file %s: %s", cfgFile, err)
@@ -421,6 +441,49 @@ func UseViper(v *viper.Viper) error {
 		adminSecretFile = defaultAdminSecretFileName
 	}
 
+	jobs := Jobs{RedisConfig: jobsRedis}
+	{
+		if nbWorkers := v.GetInt("jobs.workers"); nbWorkers > 0 {
+			jobs.NbWorkers = nbWorkers
+		} else if ws := v.GetString("jobs.workers"); ws == "false" || ws == "none" {
+			jobs.NoWorkers = true
+		} else if workersMap := v.GetStringMap("jobs.workers"); len(workersMap) > 0 {
+			workers := make([]Worker, 0, len(workersMap))
+
+			for workerType, mapInterface := range workersMap {
+				w := Worker{WorkerType: workerType}
+
+				if enabled, ok := mapInterface.(bool); ok {
+					if !enabled {
+						zero := 0
+						w.Concurrency = &zero
+					}
+				} else if m, ok := mapInterface.(map[string]interface{}); ok {
+					if concurrency, ok := m["concurrency"].(int); ok {
+						w.Concurrency = &concurrency
+					}
+					if maxExecCount, ok := m["max_exec_count"].(int); ok {
+						w.MaxExecCount = &maxExecCount
+					}
+					if timeout, ok := m["timeout"].(string); ok {
+						d, err := time.ParseDuration(timeout)
+						if err != nil {
+							return fmt.Errorf("config: could not parse timeout duration for worker %q: %s",
+								workerType, err)
+						}
+						w.Timeout = &d
+					}
+				} else {
+					return fmt.Errorf("config: expecting a map in the key %q",
+						"jobs.workers."+workerType)
+				}
+
+				workers = append(workers, w)
+			}
+			jobs.Workers = workers
+		}
+	}
+
 	config = &Config{
 		Host:                v.GetString("host"),
 		Port:                v.GetInt("port"),
@@ -440,10 +503,7 @@ func UseViper(v *viper.Viper) error {
 			Auth: couchAuth,
 			URL:  couchURL,
 		},
-		Jobs: Jobs{
-			Workers:     v.GetInt("jobs.workers"),
-			RedisConfig: jobsRedis,
-		},
+		Jobs: jobs,
 		Konnectors: Konnectors{
 			Cmd: v.GetString("konnectors.cmd"),
 		},

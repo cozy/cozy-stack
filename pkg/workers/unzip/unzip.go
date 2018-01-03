@@ -21,8 +21,9 @@ type zipMessage struct {
 }
 
 func init() {
-	jobs.AddWorker("unzip", &jobs.WorkerConfig{
-		Concurrency:  (runtime.NumCPU() + 1) / 2,
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:   "unzip",
+		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
 		Timeout:      30 * time.Second,
 		WorkerFunc:   Worker,

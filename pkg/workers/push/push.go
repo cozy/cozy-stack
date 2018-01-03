@@ -30,7 +30,8 @@ var (
 )
 
 func init() {
-	jobs.AddWorker("push", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:   "push",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
 		Timeout:      10 * time.Second,

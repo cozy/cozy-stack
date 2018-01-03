@@ -18,7 +18,8 @@ import (
 )
 
 func init() {
-	jobs.AddWorker("sendmail", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:  "sendmail",
 		Concurrency: runtime.NumCPU(),
 		WorkerFunc:  SendMail,
 	})
