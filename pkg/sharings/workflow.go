@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/client/request"
@@ -124,7 +125,6 @@ func AcceptSharingRequest(i *instance.Instance, answerURL *url.URL, scope string
 	if err != nil {
 		return err
 	}
-	// TODO HTTP verbs for the permissions
 	perms, err := permissions.CreateSharedWithMeSet(i, sharing.SID, permsSet)
 	if err != nil {
 		return err
@@ -232,6 +232,7 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 		if errb != nil {
 			return nil, errb
 		}
+		c.CouchID = c.ClientID
 		access, errb := c.CreateJWT(i, permissions.AccessTokenAudience, scope)
 		if errb != nil {
 			return nil, errb
@@ -248,8 +249,12 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 		}
 	}
 
-	// TODO is it too soon (the recipient may not be ready)?
 	// Share all the documents with the recipient
-	err = ShareDoc(i, s, m)
-	return res, err
+	go func() {
+		time.Sleep(1 * time.Second)
+		if errs := ShareDoc(i, s, m); errs != nil {
+			i.Logger().Infof("[sharings] Cannot setup the initial share docs: %s", errs)
+		}
+	}()
+	return res, nil
 }
