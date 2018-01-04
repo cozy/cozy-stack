@@ -14,7 +14,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/sprig"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -292,7 +291,7 @@ func Setup(cfgFile string) (err error) {
 
 	tmpl := template.New(filepath.Base(cfgFile))
 	tmpl = tmpl.Option("missingkey=zero")
-	tmpl, err = tmpl.Funcs(sprig.TxtFuncMap()).ParseFiles(cfgFile)
+	tmpl, err = tmpl.Funcs(numericFuncsMap).ParseFiles(cfgFile)
 	if err != nil {
 		return fmt.Errorf("Unable to open and parse configuration file "+
 			"template %s: %s", cfgFile, err)
