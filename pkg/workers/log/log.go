@@ -24,6 +24,6 @@ func Worker(ctx *jobs.WorkerContext) error {
 	if err := ctx.UnmarshalMessage(&msg); err != nil {
 		return err
 	}
-	logger.WithDomain(ctx.Domain()).Infof(msg)
+	logger.WithDomain(ctx.Domain()).Info(msg)
 	return nil
 }

@@ -3,23 +3,30 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
-// redisPrefix is the prefix for jobs queues in redis.
-const redisPrefix = "j/"
+const (
+	// redisPrefix is the prefix for jobs queues in redis.
+	redisPrefix = "j/"
+	// redisHighPrioritySuffix suffix is the suffix used for prioritized queue.
+	redisHighPrioritySuffix = "/p0"
+)
 
 type redisBroker struct {
-	client  redis.UniversalClient
-	workers []*Worker
-	running uint32
-	closed  chan struct{}
+	client       redis.UniversalClient
+	workers      []*Worker
+	workersTypes []string
+	running      uint32
+	closed       chan struct{}
 }
 
 // NewRedisBroker creates a new broker that will use redis to distribute
@@ -37,8 +44,8 @@ func (b *redisBroker) Start(ws WorkersList) error {
 		return ErrClosed
 	}
 
-	b.workers = make([]*Worker, 0, len(ws))
 	for _, conf := range ws {
+		b.workersTypes = append(b.workersTypes, conf.WorkerType)
 		if conf.Concurrency <= 0 {
 			continue
 		}
@@ -66,11 +73,7 @@ func (b *redisBroker) Start(ws WorkersList) error {
 }
 
 func (b *redisBroker) WorkersTypes() []string {
-	types := make([]string, len(b.workers))
-	for i, worker := range b.workers {
-		types[i] = worker.Type
-	}
-	return types
+	return b.workersTypes
 }
 
 func (b *redisBroker) Shutdown(ctx context.Context) error {
@@ -120,12 +123,24 @@ func (b *redisBroker) pollLoop(key string, ch chan<- *Job) {
 		b.closed <- struct{}{}
 	}()
 
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
 		if atomic.LoadUint32(&b.running) == 0 {
 			return
 		}
 
-		results, err := b.client.BRPop(redisBRPopTimeout, key).Result()
+		// The brpop redis command will always take elements in priority from the
+		// first key containing elements at the call. By always priorizing the
+		// manual queue, this would cause a starvation for our main queue if too
+		// many "manual" jobs are pushed. By randomizing the order we make sure we
+		// avoid such starvation. For one in three call, the main queue is
+		// selected.
+		keyP0 := key + redisHighPrioritySuffix
+		keyP1 := key
+		if rng.Intn(3) == 0 {
+			keyP1, keyP0 = keyP0, keyP1
+		}
+		results, err := b.client.BRPop(redisBRPopTimeout, keyP0, keyP1).Result()
 		if err != nil || len(results) < 2 {
 			time.Sleep(100 * time.Millisecond)
 			continue
@@ -162,6 +177,10 @@ func (b *redisBroker) PushJob(req *JobRequest) (*Job, error) {
 		return nil, ErrClosed
 	}
 
+	if !utils.IsInArray(req.WorkerType, b.workersTypes) {
+		return nil, ErrUnknownWorker
+	}
+
 	job := NewJob(req)
 	if err := job.Create(); err != nil {
 		return nil, err
@@ -169,6 +188,13 @@ func (b *redisBroker) PushJob(req *JobRequest) (*Job, error) {
 
 	key := redisPrefix + job.WorkerType
 	val := job.Domain + "/" + job.JobID
+
+	// When the job is manual, it is being pushed in a specific prioritized
+	// queue.
+	if job.Manual {
+		key += redisHighPrioritySuffix
+	}
+
 	if err := b.client.LPush(key, val).Err(); err != nil {
 		return nil, err
 	}

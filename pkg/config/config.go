@@ -622,9 +622,6 @@ cache:
 
 log:
     level: info
-
-jobs:
-    workers: 2
 `
 
 // UseTestFile can be used in a test file to inject a configuration

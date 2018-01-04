@@ -17,9 +17,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const redisURL = "redis://localhost:6379/15"
+const redisURL1 = "redis://localhost:6379/0"
+const redisURL2 = "redis://localhost:6379/1"
 
-var client *redis.Client
+var client1 *redis.Client
+var client2 *redis.Client
 
 func randomMicro(min, max int) time.Duration {
 	return time.Duration(rand.Intn(max-min)+min) * time.Microsecond
@@ -60,11 +62,11 @@ func TestRedisJobs(t *testing.T) {
 		},
 	}
 
-	broker1 := NewRedisBroker(client)
+	broker1 := NewRedisBroker(client1)
 	err := broker1.Start(workersTestList)
 	assert.NoError(t, err)
 
-	broker2 := NewRedisBroker(client)
+	broker2 := NewRedisBroker(client2)
 	err = broker2.Start(workersTestList)
 	assert.NoError(t, err)
 
@@ -96,6 +98,7 @@ func TestRedisJobs(t *testing.T) {
 				Domain:     "cozy.local.redisjobs",
 				WorkerType: "test",
 				Message:    msg,
+				Manual:     true,
 			})
 			assert.NoError(t, err)
 			time.Sleep(randomMicro(0, v))
@@ -120,7 +123,9 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	opts, _ := redis.ParseURL(redisURL)
-	client = redis.NewClient(opts)
+	opts1, _ := redis.ParseURL(redisURL1)
+	opts2, _ := redis.ParseURL(redisURL2)
+	client1 = redis.NewClient(opts1)
+	client2 = redis.NewClient(opts2)
 	os.Exit(m.Run())
 }

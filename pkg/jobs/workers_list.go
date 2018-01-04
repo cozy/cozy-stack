@@ -10,22 +10,24 @@ import (
 // configuration.
 type WorkersList []*WorkerConfig
 
-// WorkersList is the list of available workers with their associated Do
+// workersList is the list of available workers with their associated to
 // function.
 var workersList WorkersList
 
-// GetWorkersList returns a globally defined worker config list.
+// GetWorkersList returns a list of all activated workers, configured
+// as defined by the configuration file.
 func GetWorkersList() ([]*WorkerConfig, error) {
-	if config.GetConfig().Jobs.NoWorkers {
-		return nil, nil
-	}
-
 	workersConfs := config.GetConfig().Jobs.Workers
 	workers := make(WorkersList, 0, len(workersList))
 	for _, w := range workersList {
-		for _, c := range workersConfs {
-			if c.WorkerType == w.WorkerType {
-				w = applyWorkerConfig(w, c)
+		if config.GetConfig().Jobs.NoWorkers {
+			w = w.Clone()
+			w.Concurrency = 0
+		} else {
+			for _, c := range workersConfs {
+				if c.WorkerType == w.WorkerType {
+					w = applyWorkerConfig(w, c)
+				}
 			}
 		}
 		workers = append(workers, w)

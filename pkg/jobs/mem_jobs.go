@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -24,10 +25,11 @@ type (
 
 	// memBroker is an in-memory broker implementation of the Broker interface.
 	memBroker struct {
-		queues  map[string]*memQueue
-		workers []*Worker
-		running uint32
-		closed  chan struct{}
+		queues       map[string]*memQueue
+		workers      []*Worker
+		workersTypes []string
+		running      uint32
+		closed       chan struct{}
 	}
 )
 
@@ -90,6 +92,7 @@ func (b *memBroker) Start(ws WorkersList) error {
 	}
 
 	for _, conf := range ws {
+		b.workersTypes = append(b.workersTypes, conf.WorkerType)
 		if conf.Concurrency <= 0 {
 			continue
 		}
@@ -149,6 +152,9 @@ func (b *memBroker) PushJob(req *JobRequest) (*Job, error) {
 		return nil, ErrClosed
 	}
 	workerType := req.WorkerType
+	if !utils.IsInArray(req.WorkerType, b.workersTypes) {
+		return nil, ErrUnknownWorker
+	}
 	q, ok := b.queues[workerType]
 	if !ok {
 		return nil, ErrUnknownWorker
@@ -174,11 +180,7 @@ func (b *memBroker) QueueLen(workerType string) (int, error) {
 }
 
 func (b *memBroker) WorkersTypes() []string {
-	types := make([]string, len(b.workers))
-	for i, worker := range b.workers {
-		types[i] = worker.Type
-	}
-	return types
+	return b.workersTypes
 }
 
 var (
