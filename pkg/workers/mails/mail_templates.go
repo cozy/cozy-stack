@@ -3,17 +3,27 @@ package mails
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"sync"
 	"text/template"
 
 	"github.com/cozy/cozy-stack/pkg/i18n"
-	"github.com/matcornic/hermes"
+	"github.com/cozy/hermes"
 )
 
 // TODO: avoid having a lock by init-ing hermes instances after loading
 // locales.
 var hermeses map[string]hermes.Hermes
 var hermesesMu sync.Mutex
+
+var templateFuncsMap = map[string]interface{}{
+	"splitList": func(sep, orig string) []string {
+		return strings.Split(orig, sep)
+	},
+	"replace": func(old, new, src string) string {
+		return strings.Replace(src, old, new, -1)
+	},
+}
 
 func getHermes(locale string) hermes.Hermes {
 	hermesesMu.Lock()
@@ -31,6 +41,7 @@ func getHermes(locale string) hermes.Hermes {
 					Copyright:   "",
 					TroubleText: i18n.Translate("Mail Trouble Text", locale),
 				},
+				TemplateFuncsMap: templateFuncsMap,
 			}
 		}
 	}
