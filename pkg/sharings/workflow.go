@@ -118,6 +118,7 @@ func AcceptSharingRequest(i *instance.Instance, answerURL *url.URL, scope string
 	}
 	sharing.Owner = false
 	// TODO sharing.Sharer.RefContact = ...
+	sharing.UpdatedAt = time.Now()
 	if err = couchdb.CreateNamedDoc(i, sharing); err != nil {
 		return err
 	}
@@ -179,6 +180,7 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 	}
 	m.Status = consts.SharingStatusAccepted
 	m.AccessToken = *token
+	s.UpdatedAt = time.Now()
 	if err = couchdb.UpdateDoc(i, s); err != nil {
 		return nil, err
 	}
@@ -193,6 +195,8 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 		},
 		Description: s.Description,
 		AppSlug:     s.AppSlug,
+		CreatedAt:   s.CreatedAt,
+		UpdatedAt:   s.UpdatedAt,
 	}
 
 	// Particular case for two-way sharing: the recipient needs credentials
