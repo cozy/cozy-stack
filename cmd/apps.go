@@ -216,7 +216,12 @@ var runKonnectorsCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println("job", j)
+		json, err := json.MarshalIndent(j, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(json))
 		return nil
 	},
 }
