@@ -29,29 +29,37 @@
               <img class="client-logo" src="{{.Client.LogoURI}}" />
               {{end}}
               <p class="help">
-                <strong>
-                {{if .Client.ClientURI}}
-                <a href="{{.Client.ClientURI}}">{{.Client.ClientName}}</a>
-                {{else}}
-                {{.Client.ClientName}}
-                {{end}}
-                </strong>
-                {{t "Authorize Sharing presentation"}}<br />
-                {{if .Domain}}
-                <strong>{{.Domain}}</strong> :<br />
-                {{end}}
+                {{t "Authorize Sharing Request" .Client.ClientName}}
               </p>
               <ul class="perm-list">
                 {{range $index, $perm := .Permissions}}
                 <li class="{{ $perm.Type }}">
                   {{- t $perm.TranslationKey -}}
-                  {{- if $perm.Verbs.ReadOnly}}{{t "Permissions Read only"}}{{end -}}
                 </li>
                 {{end}}
               </ul>
               <p>
-                {{t "Authorize Give permission start"}}<strong>{{t "Authorize Give Sharing permission keyword"}}</strong>{{t "Authorize Give Sharing permission end" .Client.ClientName}}
+                {{t "Authorize Sharing Permission start"}}
+                <strong>
+                  {{- if .ReadOnly}}
+                    {{t "Authorize Sharing Permission readonly"}}
+                  {{else}}
+                    {{t "Authorize Sharing Permission readwrite"}}
+                  {{end -}}
+                </strong>
+                {{t "Authorize Sharing Permission end"}}
               </p>
+              <p>
+                {{t "Authorize Sharing Sync"}}
+              </p>
+              <ul>
+                <li>
+                  {{t "Authorize Sharing Self" .Domain}}
+                </li>
+                <li>
+                  {{t "Authorize Sharing Client" .ClientDomain}}
+                </li>
+              </ul>
             </div>
             <footer>
               <div class="controls">
