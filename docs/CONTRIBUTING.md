@@ -48,7 +48,7 @@ Fork the project on GitHub and
 [check out your copy locally](http://blog.campoy.cat/2014/03/github-and-go-forking-pull-requests-and.html).
 
 ```
-$ go get -u github.com/cozy/cozy-stack.git
+$ go get -u github.com/cozy/cozy-stack
 $ cd $(go env GOPATH)/src/github.com/cozy/cozy-stack
 $ git remote add fork git://github.com/username/cozy-stack.git
 ```
