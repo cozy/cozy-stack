@@ -337,7 +337,7 @@ func (t *task) run() (err error) {
 			time.Sleep(delay)
 		}
 
-		t.ctx.Logger().Debugf("[job] executing job (%d) (timeout %s)",
+		t.ctx.Logger().Debugf("[job] executing job (%d) (timeout set to %s)",
 			t.execCount, timeout)
 
 		var execResultLabel string
