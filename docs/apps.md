@@ -103,9 +103,9 @@ declared as part of the application in its manifest.
 In contrast to [konnectors](./konnectors.md), services have the same permissions
 as the web application and can not access to internet. They are not intended to
 collect outside informations but rather analyse the current set of collected
-information inside the cozy. However they share the same mechanisms as the
-konnectors to describe how and when they should be executed: via our trigger
-system.
+information inside the cozy (but nothing prevents them to access internet at the moment).
+However they share the same mechanisms as the konnectors to describe how and when they should be
+executed: via our trigger system.
 
 To define a service, first the code needs to be stored with the application
 content, as single (packaged) javascript files. In the manifest, declare the
