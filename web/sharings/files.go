@@ -27,9 +27,21 @@ import (
 // - to manage conflicts
 // - fix some tricky edge cases (see RemoveDocumentIfNotShared)
 
-func creationWithIDHandler(c echo.Context, ins *instance.Instance, slug string) error {
-	dirID := c.QueryParam(consts.QueryParamDirID)
+func creationWithIDHandler(c echo.Context) error {
+	ins := middlewares.GetInstance(c)
 
+	sharingID := c.QueryParam(consts.QueryParamSharingID)
+	if sharingID == "" {
+		return jsonapi.BadRequest(errors.New("Missing sharing id"))
+	}
+
+	sharing, errf := sharings.FindSharing(ins, sharingID)
+	if errf != nil {
+		return errf
+	}
+	slug := sharing.AppSlug
+
+	dirID := c.QueryParam(consts.QueryParamDirID)
 	var err error
 	if dirID == "" {
 		dirID, err = sharings.RetrieveApplicationDestinationDirID(ins, slug,
