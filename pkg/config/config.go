@@ -444,7 +444,7 @@ func UseViper(v *viper.Viper) error {
 	{
 		if nbWorkers := v.GetInt("jobs.workers"); nbWorkers > 0 {
 			jobs.NbWorkers = nbWorkers
-		} else if ws := v.GetString("jobs.workers"); ws == "false" || ws == "none" {
+		} else if ws := v.GetString("jobs.workers"); ws == "false" || ws == "none" || ws == "0" {
 			jobs.NoWorkers = true
 		} else if workersMap := v.GetStringMap("jobs.workers"); len(workersMap) > 0 {
 			workers := make([]Worker, 0, len(workersMap))
