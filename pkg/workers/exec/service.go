@@ -108,6 +108,8 @@ func (w *serviceWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance
 	switch msg.Type {
 	case konnectorMsgTypeDebug:
 		log.Debug(msg.Message)
+	case konnectorMsgTypeInfo:
+		log.Debug(msg.Message)
 	case konnectorMsgTypeWarning:
 		log.Warn(msg.Message)
 	case konnectorMsgTypeError:

@@ -33,6 +33,7 @@ type konnectorWorker struct {
 
 const (
 	konnectorMsgTypeDebug    = "debug"
+	konnectorMsgTypeInfo     = "info"
 	konnectorMsgTypeWarning  = "warning"
 	konnectorMsgTypeError    = "error"
 	konnectorMsgTypeCritical = "critical"
@@ -196,6 +197,8 @@ func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instan
 
 	switch msg.Type {
 	case konnectorMsgTypeDebug:
+		log.Debug(msg.Message)
+	case konnectorMsgTypeInfo:
 		log.Debug(msg.Message)
 	case konnectorMsgTypeWarning:
 		log.Warn(msg.Message)
