@@ -53,7 +53,7 @@ func CreationHandler(c echo.Context) error {
 	}
 
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return jsonapi.Data(c, http.StatusCreated, doc, nil)
@@ -145,9 +145,14 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 	var olddoc *vfs.FileDoc
 	var newdoc *vfs.FileDoc
 
-	olddoc, err = instance.VFS().FileByID(c.Param("file-id"))
+	fileID := c.Param("file-id")
+	if fileID == "" {
+		fileID = c.Param("docid") // Used by sharings.updateDocument
+	}
+
+	olddoc, err = instance.VFS().FileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	newdoc, err = FileDocFromReq(
@@ -157,13 +162,13 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		olddoc.Tags,
 	)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	newdoc.ReferencedBy = olddoc.ReferencedBy
 
 	if err = CheckIfMatch(c, olddoc.Rev()); err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.PUT, nil, olddoc)
@@ -171,6 +176,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return
 	}
 
+	newdoc.SetID(olddoc.ID()) // The ID can be useful to check permissions
 	err = checkPerm(c, permissions.PUT, nil, newdoc)
 	if err != nil {
 		return
@@ -178,7 +184,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 
 	file, err := instance.VFS().CreateFile(newdoc, olddoc)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	defer func() {
@@ -186,7 +192,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 			err = cerr
 		}
 		if err != nil {
-			err = wrapVfsError(err)
+			err = WrapVfsError(err)
 			return
 		}
 		err = fileData(c, http.StatusOK, newdoc, nil)
@@ -203,13 +209,13 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 func ModifyMetadataByIDHandler(c echo.Context) error {
 	patch, err := getPatch(c)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	instance := middlewares.GetInstance(c)
 	dir, file, err := instance.VFS().DirOrFileByID(c.Param("file-id"))
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return applyPatch(c, instance, patch, dir, file)
@@ -222,13 +228,13 @@ func ModifyMetadataByIDHandler(c echo.Context) error {
 func ModifyMetadataByPathHandler(c echo.Context) error {
 	patch, err := getPatch(c)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	instance := middlewares.GetInstance(c)
 	dir, file, err := instance.VFS().DirOrFileByPath(c.QueryParam("Path"))
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return applyPatch(c, instance, patch, dir, file)
@@ -263,7 +269,7 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 	}
 
 	if err := CheckIfMatch(c, rev); err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if err := checkPerm(c, permissions.PATCH, dir, file); err != nil {
@@ -273,14 +279,14 @@ func applyPatch(c echo.Context, instance *instance.Instance, patch *vfs.DocPatch
 	if dir != nil {
 		doc, err := vfs.ModifyDirMetadata(instance.VFS(), dir, patch)
 		if err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 		return dirData(c, http.StatusOK, doc)
 	}
 
 	doc, err := vfs.ModifyFileMetadata(instance.VFS(), file, patch)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 	return fileData(c, http.StatusOK, doc, nil)
 }
@@ -294,7 +300,7 @@ func ReadMetadataFromIDHandler(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if err := checkPerm(c, permissions.GET, dir, file); err != nil {
@@ -315,7 +321,7 @@ func GetChildrenHandler(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if file != nil {
@@ -334,7 +340,7 @@ func ReadMetadataFromPathHandler(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByPath(c.QueryParam("Path"))
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if err := checkPerm(c, permissions.GET, dir, file); err != nil {
@@ -355,7 +361,7 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 
 	doc, err := instance.VFS().FileByID(c.Param("file-id"))
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.GET, nil, doc)
@@ -369,7 +375,7 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	}
 	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return nil
@@ -382,7 +388,7 @@ func HeadDirOrFile(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByID(c.Param("file-id"))
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if dir != nil {
@@ -404,7 +410,7 @@ func ThumbnailHandler(c echo.Context) error {
 	secret := c.Param("secret")
 	path, err := vfs.GetStore().GetFile(instance.Domain, secret)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 	if path == "" {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
@@ -412,12 +418,12 @@ func ThumbnailHandler(c echo.Context) error {
 
 	doc, err := instance.VFS().FileByID(c.Param("file-id"))
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	expected, err := doc.Path(instance.VFS())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 	if expected != path {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
@@ -432,7 +438,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 
 	doc, err := instance.VFS().FileByPath(path)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if checkPermission {
@@ -453,7 +459,7 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 	}
 	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return nil
@@ -486,7 +492,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 
 	entries, err := archive.GetEntries(instance.VFS())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	for _, e := range entries {
@@ -503,7 +509,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 
 	secret, err := vfs.GetStore().AddArchive(instance.Domain, archive)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 	archive.Secret = secret
 
@@ -526,14 +532,14 @@ func FileDownloadCreateHandler(c echo.Context) error {
 
 	if path = c.QueryParam("Path"); path != "" {
 		if doc, err = instance.VFS().FileByPath(path); err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 	} else if id := c.QueryParam("Id"); id != "" {
 		if doc, err = instance.VFS().FileByID(id); err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 		if path, err = doc.Path(instance.VFS()); err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 	}
 
@@ -544,7 +550,7 @@ func FileDownloadCreateHandler(c echo.Context) error {
 
 	secret, err := vfs.GetStore().AddFile(instance.Domain, path)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	links := &jsonapi.LinksList{
@@ -561,7 +567,7 @@ func ArchiveDownloadHandler(c echo.Context) error {
 	secret := c.Param("secret")
 	archive, err := vfs.GetStore().GetArchive(instance.Domain, secret)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 	if archive == nil {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
@@ -576,7 +582,7 @@ func FileDownloadHandler(c echo.Context) error {
 	secret := c.Param("secret")
 	path, err := vfs.GetStore().GetFile(instance.Domain, secret)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 	if path == "" {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
@@ -591,10 +597,13 @@ func TrashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("file-id")
+	if fileID == "" {
+		fileID = c.Param("docid") // Used by sharings.deleteDocument
+	}
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.PUT, dir, file)
@@ -610,20 +619,20 @@ func TrashHandler(c echo.Context) error {
 	}
 
 	if err := CheckIfMatch(c, rev); err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if dir != nil {
 		doc, errt := vfs.TrashDir(instance.VFS(), dir)
 		if errt != nil {
-			return wrapVfsError(errt)
+			return WrapVfsError(errt)
 		}
 		return dirData(c, http.StatusOK, doc)
 	}
 
 	doc, errt := vfs.TrashFile(instance.VFS(), file)
 	if errt != nil {
-		return wrapVfsError(errt)
+		return WrapVfsError(errt)
 	}
 	return fileData(c, http.StatusOK, doc, nil)
 }
@@ -635,7 +644,7 @@ func ReadTrashFilesHandler(c echo.Context) error {
 
 	trash, err := instance.VFS().DirByID(consts.TrashDirID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.GET, trash, nil)
@@ -655,7 +664,7 @@ func RestoreTrashFileHandler(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.PUT, dir, file)
@@ -666,14 +675,14 @@ func RestoreTrashFileHandler(c echo.Context) error {
 	if dir != nil {
 		doc, errt := vfs.RestoreDir(instance.VFS(), dir)
 		if errt != nil {
-			return wrapVfsError(errt)
+			return WrapVfsError(errt)
 		}
 		return dirData(c, http.StatusOK, doc)
 	}
 
 	doc, errt := vfs.RestoreFile(instance.VFS(), file)
 	if errt != nil {
-		return wrapVfsError(errt)
+		return WrapVfsError(errt)
 	}
 	return fileData(c, http.StatusOK, doc, nil)
 }
@@ -684,7 +693,7 @@ func ClearTrashHandler(c echo.Context) error {
 
 	trash, err := instance.VFS().DirByID(consts.TrashDirID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.DELETE, trash, nil)
@@ -694,7 +703,7 @@ func ClearTrashHandler(c echo.Context) error {
 
 	err = instance.VFS().DestroyDirContent(trash)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return c.NoContent(204)
@@ -708,7 +717,7 @@ func DestroyFileHandler(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.DELETE, dir, file)
@@ -724,7 +733,7 @@ func DestroyFileHandler(c echo.Context) error {
 	}
 
 	if err = CheckIfMatch(c, rev); err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if dir != nil {
@@ -733,7 +742,7 @@ func DestroyFileHandler(c echo.Context) error {
 		err = instance.VFS().DestroyFile(file)
 	}
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return c.NoContent(204)
@@ -842,8 +851,8 @@ func Routes(router *echo.Group) {
 	router.DELETE("/:file-id", TrashHandler)
 }
 
-// wrapVfsError returns a formatted error from a golang error emitted by the vfs
-func wrapVfsError(err error) error {
+// WrapVfsError returns a formatted error from a golang error emitted by the vfs
+func WrapVfsError(err error) error {
 	switch err {
 	case ErrDocTypeInvalid:
 		return jsonapi.InvalidAttribute("type", err)

@@ -6,6 +6,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/web/data"
+	"github.com/cozy/cozy-stack/web/files"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/labstack/echo"
 )
@@ -46,7 +47,7 @@ func updateDocument(c echo.Context) error {
 
 	var err error
 	if doctype == consts.Files {
-		err = updateFile(c)
+		err = files.OverwriteFileContentHandler(c)
 	} else {
 		if err = data.UpdateDoc(c); err != nil {
 			return err
@@ -68,7 +69,7 @@ func deleteDocument(c echo.Context) error {
 
 	var err error
 	if doctype == consts.Files {
-		err = trashHandler(c)
+		err = files.TrashHandler(c)
 	} else {
 		err = data.DeleteDoc(c)
 	}

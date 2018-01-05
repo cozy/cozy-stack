@@ -143,7 +143,7 @@ func AddReferencesHandler(c echo.Context) error {
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	docRef := couchdb.DocReference{
@@ -158,7 +158,7 @@ func AddReferencesHandler(c echo.Context) error {
 	for _, fRef := range references {
 		dir, file, err := instance.VFS().DirOrFileByID(fRef.ID)
 		if err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 		if file == nil {
 			dir.AddReferencedBy(docRef)
@@ -168,7 +168,7 @@ func AddReferencesHandler(c echo.Context) error {
 			err = couchdb.UpdateDoc(instance, file)
 		}
 		if err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 	}
 
@@ -185,7 +185,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	docRef := couchdb.DocReference{
@@ -200,7 +200,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 	for _, fRef := range references {
 		dir, file, err := instance.VFS().DirOrFileByID(fRef.ID)
 		if err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 		if file == nil {
 			dir.RemoveReferencedBy(docRef)
@@ -210,7 +210,7 @@ func RemoveReferencesHandler(c echo.Context) error {
 			err = couchdb.UpdateDoc(instance, file)
 		}
 		if err != nil {
-			return wrapVfsError(err)
+			return WrapVfsError(err)
 		}
 	}
 

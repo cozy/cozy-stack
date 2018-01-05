@@ -280,7 +280,7 @@ func TestReceiveDocumentSuccessDir(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 204, resp.StatusCode)
 
 	// Ensure that the folder was created by fetching it.
 	fs := testInstance.VFS()
@@ -302,7 +302,7 @@ func TestReceiveDocumentSuccessDir(t *testing.T) {
 
 	resp, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 204, resp.StatusCode)
 
 	dirDoc, err = fs.DirByID(id)
 	assert.NoError(t, err)
@@ -347,7 +347,7 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 204, resp.StatusCode)
 
 	fs := testInstance.VFS()
 	_, err = fs.FileByID(id)
@@ -372,7 +372,7 @@ func TestReceiveDocumentSuccessFile(t *testing.T) {
 
 	resp, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, 204, resp.StatusCode)
 
 	fileDoc, err := fs.FileByID(id)
 	assert.NoError(t, err)

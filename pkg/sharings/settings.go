@@ -95,10 +95,10 @@ func UpdateApplicationDestinationDirID(ins *instance.Instance, slug, doctype, di
 	return err
 }
 
-// RetrieveApplicationDestinationDirID retrieves the destination directory for
+// RetrieveAppDestDirID retrieves the destination directory for
 // the given application and doctype. The default value is the id of the
 // "/Shared with Me" directory.
-func RetrieveApplicationDestinationDirID(ins *instance.Instance, slug, doctype string) (string, error) {
+func RetrieveAppDestDirID(ins *instance.Instance, slug, doctype string) (string, error) {
 	s := &SharingSettings{}
 	err := couchdb.GetDoc(ins, consts.Settings, consts.SharingSettingsID, s)
 	if err != nil {
