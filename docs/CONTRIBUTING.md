@@ -49,7 +49,7 @@ Fork the project on GitHub and
 
 ```
 $ go get -u github.com/cozy/cozy-stack.git
-$ cd $GOPATH/src/github.com/cozy/cozy-stack
+$ cd $(go env GOPATH)/src/github.com/cozy/cozy-stack
 $ git remote add fork git://github.com/username/cozy-stack.git
 ```
 
@@ -132,7 +132,7 @@ godoc -http=:6060       # To start the documentation server
 ## Writing documentation
 
 Documentation improvements are very welcome. We try to keep a good documentation
-in the `docs/` folder. But, you know, we are developers, we can't forget to
+in the `docs/` folder. But, you know, we are developers, we can forget to
 document important stuff that look obvious to us. And documentation can always
 be improved.
 
