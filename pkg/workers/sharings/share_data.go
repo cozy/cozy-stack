@@ -1008,9 +1008,6 @@ func getDirOrFileMetadataAtRecipient(ins *instance.Instance, opts *SendOptions, 
 
 func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id, headType string, recInfo *sharings.RecipientInfo) error {
 	path := fmt.Sprintf("/files/%s", id)
-	queries := url.Values{
-		"Type": {headType},
-	}
 	reqOpts := &request.Options{
 		Domain: recInfo.Domain,
 		Scheme: recInfo.Scheme,
@@ -1020,7 +1017,6 @@ func headDirOrFileMetadataAtRecipient(ins *instance.Instance, sharingID, id, hea
 			echo.HeaderContentType:   echo.MIMEApplicationJSON,
 			echo.HeaderAuthorization: "Bearer " + recInfo.AccessToken.AccessToken,
 		},
-		Queries: queries,
 	}
 
 	_, err := request.Req(reqOpts)

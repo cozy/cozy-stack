@@ -278,7 +278,7 @@ func discovery(c echo.Context) error {
 			"Error":  "Error Invalid sharecode",
 		})
 	}
-	u, err := url.Parse(cozyURL)
+	u, err := url.Parse(strings.TrimSpace(cozyURL))
 	if err != nil {
 		return wrapErrors(err)
 	}

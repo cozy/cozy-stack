@@ -69,6 +69,7 @@ func RevokeSharing(ins *instance.Instance, sharing *Sharing, recursive bool) err
 	}
 
 	ins.Logger().Debugf("[sharings] Setting status of sharing %s to revoked", sharing.SID)
+	sharing.UpdatedAt = time.Now()
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
@@ -144,6 +145,7 @@ func RevokeRecipient(ins *instance.Instance, sharing *Sharing, recipient *Member
 		}
 	}
 
+	sharing.UpdatedAt = time.Now()
 	return couchdb.UpdateDoc(ins, sharing)
 }
 
@@ -180,7 +182,7 @@ func askToRevokeSharing(ins *instance.Instance, sharing *Sharing, rs *Member) er
 }
 
 func askToRevokeRecipient(ins *instance.Instance, sharing *Sharing, rs *Member) error {
-	// TODO: If the recipient revoke a one-way sharing, he  cannot request
+	// TODO: If the recipient revoke a one-way sharing, he cannot request
 	// the sharer yet, as he have no credentials
 	if rs.RefContact.ID != "" {
 		return askToRevoke(ins, sharing, rs, rs.Client.ClientID)

@@ -68,7 +68,9 @@ hides some fields from the document (OAuth credentials in particular).
       "contact": { "id": "mycontactid2", "type": "io.cozy.contacts" },
       "status": "pending"
     }
-  ]
+  ],
+  "created_at": "2018-01-04T12:35:08Z",
+  "updated_at": "2018-01-04T13:45:43Z"
 }
 ```
 
@@ -255,6 +257,12 @@ preview the sharing before accepting it. It is optional.
 The application has to define a public route for this path in its manifest, else
 the recipients will be denied the access to this page.
 
+#### created_at and updated_at
+
+The first field, `created_at`, is the date and tile where the sharing was
+created. And the other, `updated_at`, is the date and time of the last
+modification.
+
 ### Routes
 
 #### POST /sharings/
@@ -311,7 +319,9 @@ Content-Type: application/vnd.api+json
       "description": "sharing test",
       "preview_path": "/sharings/preview",
       "app_slug": "cal",
-      "owner": true
+      "owner": true,
+      "created_at": "2018-01-04T12:35:08Z",
+      "updated_at": "2018-01-04T13:45:43Z"
     },
     "links": {
       "self": "/sharings/ce8835a061d0ef68947afe69a0046722"

@@ -3,6 +3,7 @@ package sharings
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -38,6 +39,9 @@ type Sharing struct {
 
 	// Just a cache for faster access to the permissions doc
 	permissions *permissions.Permission
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ID returns the sharing qualified identifier
@@ -147,7 +151,7 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 		sharing.Recipients = append(sharing.Recipients, recipient)
 	}
 	if len(sharing.Recipients) == 0 {
-		return nil, ErrRecipientDoesNotExist // TODO better error
+		return nil, ErrRecipientDoesNotExist
 	}
 
 	// Create the permissions doc for previewing this sharing
@@ -160,6 +164,9 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 			return nil, err
 		}
 	}
+
+	sharing.CreatedAt = time.Now()
+	sharing.UpdatedAt = sharing.CreatedAt
 
 	if err := couchdb.CreateDoc(instance, sharing); err != nil {
 		return nil, err
@@ -226,6 +233,7 @@ func (s *Sharing) AddRecipient(i *instance.Instance, contactID string) error {
 		return err
 	}
 
+	s.UpdatedAt = time.Now()
 	return couchdb.UpdateDoc(i, s)
 }
 
