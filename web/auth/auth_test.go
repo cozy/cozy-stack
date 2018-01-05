@@ -768,7 +768,7 @@ func TestAuthorizeFormSharingSuccess(t *testing.T) {
 	assert.Equal(t, "200 OK", res.Status)
 	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), "would like permission to share with your Cozy")
+	assert.Contains(t, string(body), "would like to share the following data with you")
 	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
 	matches := re.FindStringSubmatch(string(body))
 	if assert.Len(t, matches, 2) {

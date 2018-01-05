@@ -120,7 +120,7 @@ msgid "Authorize App Title"
 msgstr "The application %s will not transmit any personal data to any third parties."
 
 msgid "Authorize Sharing Title"
-msgstr "Accept sharing from %s"
+msgstr "New sharing from %s"
 
 msgid "Authorize More"
 msgstr "More…"
@@ -128,8 +128,29 @@ msgstr "More…"
 msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
 
-msgid "Authorize Sharing presentation"
-msgstr "would like permission to share with your Cozy"
+msgid "Authorize Sharing Request"
+msgstr "%s would like to share the following data with you:"
+
+msgid "Authorize Sharing Permission start"
+msgstr "You can"
+
+msgid "Authorize Sharing Permission readonly"
+msgstr "view it"
+
+msgid "Authorize Sharing Permission readwrite"
+msgstr "view and change it"
+
+msgid "Authorize Sharing Permission end"
+msgstr "by confirming the sharing."
+
+msgid "Authorize Sharing Sync"
+msgstr "Changes will be instantly available in both Cozy:"
+
+msgid "Authorize Sharing Self"
+msgstr "Your Cozy: %s"
+
+msgid "Authorize Sharing Client"
+msgstr "Your contact's Cozy: %s"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data "
@@ -162,7 +183,7 @@ msgid "Authorize Submit"
 msgstr "Authorize access"
 
 msgid "Authorize Submit Sharing"
-msgstr "Accept sharing"
+msgstr "Confirm"
 
 msgid "Authorize Cancel"
 msgstr "Deny access"

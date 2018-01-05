@@ -96,9 +96,9 @@ a:focus {
 
 /* Wrapper */
 .popup {
-    -webkit-flex: 0 0 33rem;
-        -ms-flex: 0 0 33rem;
-            flex: 0 0 33rem;
+    -webkit-flex: 0 0 30rem;
+        -ms-flex: 0 0 30rem;
+            flex: 0 0 30rem;
     padding: 1em 0;
 }
 
@@ -153,9 +153,9 @@ h1 {
     -webkit-align-items: stretch;
         -ms-flex-align: stretch;
             align-items: stretch;
-    -webkit-justify-content: space-between;
-        -ms-flex-pack: justify;
-            justify-content: space-between;
+    -webkit-justify-content: space-around;
+        -ms-flex-pack: center;
+            justify-content: space-around;
 }
 .controls .btn {
     -webkit-flex: 0 0 48.5%;

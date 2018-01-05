@@ -541,21 +541,37 @@ func authorizeForm(c echo.Context) error {
 			"Error":  "Error Invalid scope",
 		})
 	}
+	readOnly := true
+	for _, p := range permissions {
+		if !p.Verbs.ReadOnly() {
+			readOnly = false
+		}
+	}
 	params.client.ClientID = params.client.CouchID
+
+	clientURL, err := url.Parse(params.client.ClientURI)
+	var clientDomain string
+	if err != nil {
+		clientDomain = params.client.ClientURI
+	} else {
+		clientDomain = clientURL.Hostname()
+	}
 
 	tmpl := "authorize.html"
 	if params.resType == consts.SharingResponseType {
 		tmpl = "authorize_sharing.html"
 	}
 	return c.Render(http.StatusOK, tmpl, echo.Map{
-		"Domain":      instance.Domain,
-		"Locale":      instance.Locale,
-		"Client":      params.client,
-		"State":       params.state,
-		"RedirectURI": params.redirectURI,
-		"Scope":       params.scope,
-		"Permissions": permissions,
-		"CSRF":        c.Get("csrf"),
+		"Domain":       instance.Domain,
+		"ClientDomain": clientDomain,
+		"Locale":       instance.Locale,
+		"Client":       params.client,
+		"State":        params.state,
+		"RedirectURI":  params.redirectURI,
+		"Scope":        params.scope,
+		"Permissions":  permissions,
+		"ReadOnly":     readOnly,
+		"CSRF":         c.Get("csrf"),
 	})
 }
 
