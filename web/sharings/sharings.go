@@ -337,8 +337,7 @@ func Routes(router *echo.Group) {
 	group.PUT("/:docid", updateDocument)
 	group.PATCH("/:docid", patchDirOrFile)
 	group.DELETE("/:docid", deleteDocument)
-
-	router.DELETE("/files/:file-id/referenced_by", removeReferences)
+	group.DELETE("/:file-id/referenced_by", removeReferences)
 
 	// Revoke a sharing
 	router.DELETE("/:sharing-id", revokeSharing)

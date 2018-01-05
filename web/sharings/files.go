@@ -346,8 +346,7 @@ func removeReferences(c echo.Context) error {
 
 	if !sharer {
 		ins := middlewares.GetInstance(c)
-		err = sharings.RemoveDocumentIfNotShared(ins, consts.Files,
-			c.Param("file-id"))
+		err = sharings.RemoveDocumentIfNotShared(ins, consts.Files, c.Param("file-id"))
 		if err != nil {
 			return err
 		}

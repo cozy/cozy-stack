@@ -482,5 +482,4 @@ func Routes(router *echo.Group) {
 	group.POST("/_all_docs", allDocs)
 	group.POST("/_index", defineIndex)
 	group.POST("/_find", findDocuments)
-	// group.DELETE("/:docid", DeleteDoc)
 }

@@ -794,7 +794,7 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 	if method == http.MethodPost {
 		path = fmt.Sprintf("/files/%s/relationships/referenced_by", opts.DocID)
 	} else {
-		path = fmt.Sprintf("/sharings/files/%s/referenced_by", opts.DocID)
+		path = fmt.Sprintf("/sharings/doc/io.cozy.files/%s/referenced_by", opts.DocID)
 	}
 
 	values := url.Values{

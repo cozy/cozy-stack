@@ -688,7 +688,7 @@ func TestRemoveReferences(t *testing.T) {
 
 	removeRefURL, err := url.Parse(ts.URL)
 	assert.NoError(t, err)
-	removeRefURL.Path = fmt.Sprintf("/sharings/files/%s/referenced_by",
+	removeRefURL.Path = fmt.Sprintf("/sharings/doc/io.cozy.files/%s/referenced_by",
 		fileToKeep.ID())
 	removeRefURL.RawQuery = url.Values{
 		consts.QueryParamSharer: {"false"},
@@ -743,7 +743,7 @@ func TestRemoveReferences(t *testing.T) {
 	dirToTrash := createDir(t, testInstance.VFS(), "testRemoveReferenceDir",
 		[]couchdb.DocReference{refAlbum123})
 
-	removeRefURL.Path = fmt.Sprintf("/sharings/files/%s/referenced_by",
+	removeRefURL.Path = fmt.Sprintf("/sharings/doc/io.cozy.files/%s/referenced_by",
 		dirToTrash.ID())
 	removeRefURL.RawQuery = url.Values{
 		consts.QueryParamSharer: {"false"},
