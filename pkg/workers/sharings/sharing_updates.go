@@ -147,7 +147,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			// If deleted: propagate event
 			errVfs := err.(*couchdb.Error)
 			if errVfs.StatusCode == http.StatusNotFound {
-				return DeleteDirOrFile(ins, opts, true)
+				return DeleteDirOrFile(ins, opts)
 			}
 			return err
 		}
@@ -180,7 +180,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 			if fileDoc.Trashed {
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %#v", fileDoc)
-				return DeleteDirOrFile(ins, opts, false)
+				return DeleteDirOrFile(ins, opts)
 			}
 
 			stillShared := isDocumentStillShared(fs, opts, fileDoc.ReferencedBy)
@@ -204,7 +204,7 @@ func sendToRecipients(ins *instance.Instance, domain string, sharing *sharings.S
 				}
 				ins.Logger().Debugf("[sharings] sharing_update: Sending "+
 					"trash: %v", dirDoc)
-				return DeleteDirOrFile(ins, opts, false)
+				return DeleteDirOrFile(ins, opts)
 			}
 
 			stillShared := isDocumentStillShared(fs, opts, dirDoc.ReferencedBy)

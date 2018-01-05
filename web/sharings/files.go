@@ -22,6 +22,11 @@ import (
 	"github.com/labstack/echo"
 )
 
+// We need custom handlers for files for several reasons:
+// - to be able to put the shared directories in the "Shared with me" directory
+// - to manage conflicts
+// - fix some tricky edge cases (see RemoveDocumentIfNotShared)
+
 func creationWithIDHandler(c echo.Context, ins *instance.Instance, slug string) error {
 	dirID := c.QueryParam(consts.QueryParamDirID)
 
@@ -359,14 +364,12 @@ func trashHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
 
 	fileID := c.Param("docid")
-	hardDelete, _ := strconv.ParseBool(c.QueryParam("hard_delete"))
-
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
 		return err
 	}
 
-	var rev, path string
+	var rev string
 	if dir != nil {
 		rev = dir.Rev()
 	} else {
@@ -381,15 +384,7 @@ func trashHandler(c echo.Context) error {
 		if err = permissions.AllowVFS(c, permissions.DELETE, dir); err != nil {
 			return err
 		}
-		if hardDelete {
-			path, err = dir.Path(instance.VFS())
-			if err != nil {
-				return err
-			}
-			err = vfs.Remove(instance.VFS(), path)
-		} else {
-			_, err = vfs.TrashDir(instance.VFS(), dir)
-		}
+		_, err = vfs.TrashDir(instance.VFS(), dir)
 		if err != nil {
 			return err
 		}
@@ -399,15 +394,7 @@ func trashHandler(c echo.Context) error {
 	if err = permissions.AllowVFS(c, permissions.DELETE, file); err != nil {
 		return err
 	}
-	if hardDelete {
-		path, err = file.Path(instance.VFS())
-		if err != nil {
-			return err
-		}
-		err = vfs.Remove(instance.VFS(), path)
-	} else {
-		_, err = vfs.TrashFile(instance.VFS(), file)
-	}
+	_, err = vfs.TrashFile(instance.VFS(), file)
 	if err != nil {
 		return err
 	}
