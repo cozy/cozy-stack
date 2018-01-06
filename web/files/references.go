@@ -19,7 +19,7 @@ import (
 
 const maxRefLimit = 100
 
-func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Object, error) {
+func rawMessageToObject(i *instance.Instance, sessionID string, bb json.RawMessage) (jsonapi.Object, error) {
 	var dof vfs.DirOrFileDoc
 	err := json.Unmarshal(bb, &dof)
 	if err != nil {
@@ -29,8 +29,7 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 	if d != nil {
 		return newDir(d), nil
 	}
-
-	return newFile(f, i), nil
+	return newFile(f, i, sessionID), nil
 }
 
 // ListReferencesHandler list all files referenced by a doc
@@ -38,6 +37,7 @@ func rawMessageToObject(i *instance.Instance, bb json.RawMessage) (jsonapi.Objec
 // Beware, this is actually used in the web/data Routes
 func ListReferencesHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	sessionID := middlewares.GetSessionID(c)
 	doctype := c.Get("doctype").(string)
 	id := c.Param("docid")
 	include := c.QueryParam("include")
@@ -123,7 +123,7 @@ func ListReferencesHandler(c echo.Context) error {
 		}
 
 		if includeDocs {
-			docs[i], err = rawMessageToObject(instance, row.Doc)
+			docs[i], err = rawMessageToObject(instance, sessionID, row.Doc)
 			if err != nil {
 				return err
 			}

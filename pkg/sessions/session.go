@@ -20,11 +20,11 @@ const SessionCookieName = "cozysessid"
 
 const (
 	// SessionMaxAge is the maximum duration of the session in seconds
-	SessionMaxAge = 7 * 24 * 60 * 60
+	SessionMaxAge = 7 * 24 * time.Hour
 
 	// AppCookieMaxAge is the maximum duration of the application cookie is
 	// seconds
-	AppCookieMaxAge = 24 * 60 * 60
+	AppCookieMaxAge = 24 * time.Hour
 )
 
 var (
@@ -110,7 +110,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 
 	// if the session is older than the session max age, it has expired and
 	// should be deleted.
-	if s.OlderThan(SessionMaxAge * time.Second) {
+	if s.OlderThan(SessionMaxAge) {
 		err := couchdb.DeleteDoc(i, s)
 		if err != nil {
 			i.Logger().Warn("[session] Failed to delte expired session:", err)
@@ -122,7 +122,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	}
 
 	// if the session is older than half its half-life, update the LastSeen date.
-	if s.OlderThan((SessionMaxAge * time.Second) / 2) {
+	if s.OlderThan(SessionMaxAge / 2) {
 		lastSeen := s.LastSeen
 		s.LastSeen = time.Now()
 		err := couchdb.UpdateDoc(i, s)
@@ -148,7 +148,7 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 		return nil, ErrNoCookie
 	}
 
-	sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i, SessionMaxAge),
+	sessionID, err := crypto.DecodeAuthMessage(cookieSessionMACConfig, i.SessionSecret,
 		[]byte(cookie.Value), nil)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session,
 			return nil, ErrNoCookie
 		}
 
-		sessionID, err := crypto.DecodeAuthMessage(cookieMACConfig(i, AppCookieMaxAge),
+		sessionID, err := crypto.DecodeAuthMessage(cookieAppMACConfig, i.SessionSecret,
 			[]byte(cookie.Value), []byte(slug))
 		if err != nil {
 			return nil, err
@@ -204,7 +204,7 @@ func (s *Session) Delete(i *instance.Instance) *http.Cookie {
 
 // ToCookie returns an http.Cookie for this Session
 func (s *Session) ToCookie() (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance, SessionMaxAge), []byte(s.ID()), nil)
+	encoded, err := crypto.EncodeAuthMessage(cookieSessionMACConfig, s.Instance.SessionSecret, []byte(s.ID()), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   SessionMaxAge,
+		MaxAge:   int(SessionMaxAge.Seconds()),
 		Path:     "/",
 		Domain:   utils.StripPort("." + s.Instance.Domain),
 		Secure:   !s.Instance.Dev,
@@ -222,7 +222,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 
 // ToAppCookie returns an http.Cookie for this Session on an app subdomain
 func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
-	encoded, err := crypto.EncodeAuthMessage(cookieMACConfig(s.Instance, AppCookieMaxAge), []byte(s.ID()), []byte(slug))
+	encoded, err := crypto.EncodeAuthMessage(cookieAppMACConfig, s.Instance.SessionSecret, []byte(s.ID()), []byte(slug))
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (s *Session) ToAppCookie(domain, slug string) (*http.Cookie, error) {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   AppCookieMaxAge,
+		MaxAge:   int(AppCookieMaxAge.Seconds()),
 		Path:     "/",
 		Domain:   utils.StripPort(domain),
 		Secure:   !s.Instance.Dev,
@@ -276,11 +276,14 @@ func DeleteOthers(i *instance.Instance, selfSessionID string) error {
 //
 // 256 bytes should be sufficient enough to support any type of session.
 //
-func cookieMACConfig(i *instance.Instance, maxAge int64) *crypto.MACConfig {
-	return &crypto.MACConfig{
-		Name:   SessionCookieName,
-		Key:    i.SessionSecret,
-		MaxAge: maxAge,
-		MaxLen: 256,
-	}
+var cookieAppMACConfig = crypto.MACConfig{
+	Name:   SessionCookieName,
+	MaxAge: SessionMaxAge,
+	MaxLen: 256,
+}
+
+var cookieSessionMACConfig = crypto.MACConfig{
+	Name:   SessionCookieName,
+	MaxAge: AppCookieMaxAge,
+	MaxLen: 256,
 }

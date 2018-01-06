@@ -21,6 +21,18 @@ var twoFactorTOTPOptions = totp.ValidateOpts{
 	Algorithm: otp.AlgorithmSHA256,
 }
 
+var totpMACConfig = crypto.MACConfig{
+	Name:   "totp",
+	MaxAge: 0,
+	MaxLen: 256,
+}
+
+var trustedDeviceMACConfig = crypto.MACConfig{
+	Name:   "trusted-device",
+	MaxAge: 0,
+	MaxLen: 256,
+}
+
 // AuthMode defines the authentication mode chosen for the connection to this
 // instance.
 type AuthMode int
@@ -65,7 +77,7 @@ func (i *Instance) GenerateTwoFactorSecrets() (token []byte, passcode string, er
 	// we check the first step of the 2FA ("the passphrase step"). This salt is
 	// given to the user and signed in the "two-factor-token" MAC.
 	salt := crypto.GenerateRandomBytes(sha256.Size)
-	token, err = crypto.EncodeAuthMessage(i.totpMACConfig(), salt, nil)
+	token, err = crypto.EncodeAuthMessage(totpMACConfig, i.SessionSecret, salt, nil)
 	if err != nil {
 		return
 	}
@@ -84,7 +96,7 @@ func (i *Instance) GenerateTwoFactorSecrets() (token []byte, passcode string, er
 // ValidateTwoFactorPasscode validates the given (token, passcode) pair for two
 // factor authentication.
 func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool {
-	salt, err := crypto.DecodeAuthMessage(i.totpMACConfig(), token, nil)
+	salt, err := crypto.DecodeAuthMessage(totpMACConfig, i.SessionSecret, token, nil)
 	if err != nil {
 		return false
 	}
@@ -127,7 +139,7 @@ func (i *Instance) GenerateTwoFactorTrustedDeviceSecret(req *http.Request) ([]by
 	ua := user_agent.New(req.UserAgent())
 	browser, _ := ua.Browser()
 	additionalData := []byte(i.Domain + ua.OS() + browser)
-	return crypto.EncodeAuthMessage(i.trustedDeviceMACConfig(), nil, additionalData)
+	return crypto.EncodeAuthMessage(trustedDeviceMACConfig, i.SessionSecret, nil, additionalData)
 }
 
 // ValidateTwoFactorTrustedDeviceSecret validates the given token used to check
@@ -136,7 +148,7 @@ func (i *Instance) ValidateTwoFactorTrustedDeviceSecret(req *http.Request, token
 	ua := user_agent.New(req.UserAgent())
 	browser, _ := ua.Browser()
 	additionalData := []byte(i.Domain + ua.OS() + browser)
-	_, err := crypto.DecodeAuthMessage(i.trustedDeviceMACConfig(), token, additionalData)
+	_, err := crypto.DecodeAuthMessage(trustedDeviceMACConfig, i.SessionSecret, token, additionalData)
 	return err == nil
 }
 
@@ -191,22 +203,4 @@ func (i *Instance) ConfirmMail(passcode string) bool {
 	i.MailConfirmed = true
 	Update(i)
 	return true
-}
-
-func (i *Instance) totpMACConfig() *crypto.MACConfig {
-	return &crypto.MACConfig{
-		Name:   "totp",
-		Key:    i.SessionSecret,
-		MaxAge: 0,
-		MaxLen: 256,
-	}
-}
-
-func (i *Instance) trustedDeviceMACConfig() *crypto.MACConfig {
-	return &crypto.MACConfig{
-		Name:   "trusted-device",
-		Key:    i.SessionSecret,
-		MaxAge: 0,
-		MaxLen: 256,
-	}
 }

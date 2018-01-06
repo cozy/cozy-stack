@@ -11,6 +11,8 @@ import (
 	"github.com/cozy/swift"
 )
 
+var unixZeroEpoch = time.Time{}
+
 // NewThumbsFs creates a new thumb filesystem base on swift.
 func NewThumbsFs(c *swift.Connection, domain string) vfs.Thumbser {
 	return &thumbs{c: c, container: "data-" + domain}
@@ -42,10 +44,8 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request, img
 	}
 	defer f.Close()
 
-	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"]) // #nosec
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
-
-	http.ServeContent(w, req, name, lastModified, f)
+	http.ServeContent(w, req, name, unixZeroEpoch, f)
 	return nil
 }
 
