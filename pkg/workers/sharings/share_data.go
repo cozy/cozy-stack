@@ -601,7 +601,7 @@ func RemoveDirOrFileFromSharing(ins *instance.Instance, opts *SendOptions, sendT
 
 // DeleteDirOrFile asks the recipients to put the file or directory in the
 // trash, if hardDelete is false
-func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions, hardDelete bool) error {
+func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions) error {
 	var errFinal error
 	for _, recipient := range opts.Recipients {
 		rev, err := getDirOrFileRevAtRecipient(ins, opts, recipient)
@@ -626,7 +626,6 @@ func DeleteDirOrFile(ins *instance.Instance, opts *SendOptions, hardDelete bool)
 				consts.QueryParamSharingID: {opts.SharingID},
 				consts.QueryParamRev:       {opts.DocRev},
 				consts.QueryParamType:      {opts.Type},
-				"hard_delete":              {strconv.FormatBool(hardDelete)},
 			},
 			NoResponse: true,
 		}
@@ -794,7 +793,7 @@ func updateReferencesAtRecipient(ins *instance.Instance, method string, refs []c
 	if method == http.MethodPost {
 		path = fmt.Sprintf("/files/%s/relationships/referenced_by", opts.DocID)
 	} else {
-		path = fmt.Sprintf("/sharings/files/%s/referenced_by", opts.DocID)
+		path = fmt.Sprintf("/sharings/doc/io.cozy.files/%s/referenced_by", opts.DocID)
 	}
 
 	values := url.Values{

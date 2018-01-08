@@ -20,7 +20,7 @@ func AddReferencedHandler(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.PATCH, dir, file)
@@ -30,7 +30,7 @@ func AddReferencedHandler(c echo.Context) error {
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if dir == nil {
@@ -42,7 +42,7 @@ func AddReferencedHandler(c echo.Context) error {
 	}
 
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -58,7 +58,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 
 	dir, file, err := instance.VFS().DirOrFileByID(fileID)
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	err = checkPerm(c, permissions.DELETE, nil, file)
@@ -68,7 +68,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 
 	references, err := jsonapi.BindRelations(c.Request())
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	if dir != nil {
@@ -80,7 +80,7 @@ func RemoveReferencedHandler(c echo.Context) error {
 	}
 
 	if err != nil {
-		return wrapVfsError(err)
+		return WrapVfsError(err)
 	}
 
 	return c.NoContent(http.StatusNoContent)
