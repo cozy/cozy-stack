@@ -79,17 +79,17 @@ var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host                string
-	Port                int
-	Assets              string
-	Doctypes            string
-	Subdomains          SubdomainType
-	AdminHost           string
-	AdminPort           int
-	AdminSecretFileName string
-	NoReply             string
-	Hooks               string
-	GeoDB               string
+	Host                  string
+	Port                  int
+	Assets                string
+	Doctypes              string
+	Subdomains            SubdomainType
+	AdminHost             string
+	AdminPort             int
+	AdminSecretFileName   string
+	NoReply               string
+	Hooks                 string
+	GeoDB                 string
 	PasswordResetInterval time.Duration
 
 	Fs            Fs
@@ -255,6 +255,7 @@ func GetConfig() *Config {
 	return config
 }
 
+// PasswordResetInterval returns the minimal delay between two password reset
 func PasswordResetInterval() time.Duration {
 	return config.PasswordResetInterval
 }
