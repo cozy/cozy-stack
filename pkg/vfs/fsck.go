@@ -94,7 +94,7 @@ func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
 			orphan = true
 		} else {
 			fullpath := path.Join(parentDir.Fullpath, fileDoc.Name())
-			if _, err := indexer.FileByPath(fullpath); err == nil {
+			if _, err := indexer.FileByPath(fullpath); err != nil {
 				entry.PruneError = err
 				return
 			}
