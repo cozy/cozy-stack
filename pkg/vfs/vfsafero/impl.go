@@ -450,8 +450,7 @@ func fileInfosToFileDoc(dir *vfs.DirDoc, fullpath string, fileinfo os.FileInfo) 
 func (afs *aferoVFS) FsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
 	for _, entry := range logbook {
 		switch entry.Type {
-		case vfs.FileMissing:
-		case vfs.IndexMissing:
+		case vfs.FileMissing, vfs.IndexMissing:
 			vfs.FsckPrune(afs, afs.Indexer, entry, dryrun)
 		case vfs.TypeMismatch:
 			if entry.IsFile {

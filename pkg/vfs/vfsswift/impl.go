@@ -507,8 +507,7 @@ func objectToFileDoc(dir *vfs.DirDoc, object swift.Object) (*vfs.FileDoc, error)
 func (sfs *swiftVFS) FsckPrune(logbook []*vfs.FsckLog, dryrun bool) {
 	for _, entry := range logbook {
 		switch entry.Type {
-		case vfs.FileMissing:
-		case vfs.IndexMissing:
+		case vfs.FileMissing, vfs.IndexMissing:
 			vfs.FsckPrune(sfs, sfs.Indexer, entry, dryrun)
 		case vfs.TypeMismatch:
 			if entry.IsFile {
