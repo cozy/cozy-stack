@@ -47,3 +47,4 @@ These pages are the results of studies we made:
 
 * [Moving](moving.md)
 * [Golang Couchdb Plugins](couchdb-plugins.md)
+* [Konnectors design](konnectors_design.md)

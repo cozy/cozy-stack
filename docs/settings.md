@@ -405,6 +405,5 @@ Cookie: sessionid=xxxx
 
 #### Permissions
 
-To use this endpoint, an application needs a permission on the type
-`io.cozy.settings` for the verb `GET`. It can be restricted to the id
-`io.cozy.settings.context`.
+To use this endpoint, an application needs a valid token, but no explicit
+permission is required.
