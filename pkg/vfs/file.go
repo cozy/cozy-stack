@@ -1,7 +1,6 @@
 package vfs
 
 import (
-
 	// #nosec
 	"encoding/base64"
 	"fmt"

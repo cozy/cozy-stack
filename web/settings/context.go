@@ -7,7 +7,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
-	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
@@ -62,8 +61,7 @@ func context(c echo.Context) error {
 	}
 
 	doc := &apiContext{ctx}
-	pdoc, err := webpermissions.GetPermission(c)
-	if err != nil || pdoc.Type != permissions.TypeWebapp {
+	if _, err = webpermissions.GetPermission(c); err != nil {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
