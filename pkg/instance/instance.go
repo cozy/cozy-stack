@@ -86,6 +86,7 @@ type Instance struct {
 
 	OnboardingFinished bool  `json:"onboarding_finished"`         // Whether or not the onboarding is complete.
 	MailConfirmed      bool  `json:"mail_confirmed"`              // Whether or not the mail has been confirmed.
+	SwiftLayoutV2      bool  `json:"swift_v2,omitempty"`          // Wherther or not the new swift layout is used
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
 	IndexViewsVersion  int   `json:"indexes_version"`
 
@@ -193,7 +194,11 @@ func (i *Instance) makeVFS() error {
 	case config.SchemeFile, config.SchemeMem:
 		i.vfs, err = vfsafero.New(index, disk, mutex, fsURL, i.DirName())
 	case config.SchemeSwift:
-		i.vfs, err = vfsswift.New(index, disk, mutex, i.Domain)
+		if i.SwiftLayoutV2 {
+			i.vfs, err = vfsswift.NewV2(index, disk, mutex, i.Domain)
+		} else {
+			i.vfs, err = vfsswift.New(index, disk, mutex, i.Domain)
+		}
 	default:
 		err = fmt.Errorf("instance: unknown storage provider %s", fsURL.Scheme)
 	}
@@ -540,6 +545,7 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	i.BytesDiskQuota = opts.DiskQuota
 	i.Dev = opts.Dev
 	i.IndexViewsVersion = consts.IndexViewsVersion
+	i.SwiftLayoutV2 = true
 
 	i.PassphraseHash = nil
 	i.PassphraseResetToken = nil
