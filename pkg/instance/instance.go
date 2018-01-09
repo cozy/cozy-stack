@@ -270,6 +270,9 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
 		return vfsafero.NewThumbsFs(baseFS)
 	case config.SchemeSwift:
+		if i.SwiftLayoutV2 {
+			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i.Domain)
+		}
 		return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
 	default:
 		panic(fmt.Sprintf("instance: unknown storage provider %s", fsURL.Scheme))

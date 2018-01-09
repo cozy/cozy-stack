@@ -22,6 +22,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const swiftV1ContainerPrefix = "cozy-"
+
 const versionSuffix = "-version"
 const maxFileSize = 5 << (3 * 10) // 5 GiB
 const dirContentType = "directory"
@@ -47,8 +49,8 @@ func New(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, dom
 		DiskThresholder: disk,
 
 		c:         config.GetSwiftConnection(),
-		container: "cozy-" + domain,
-		version:   "cozy-" + domain + versionSuffix,
+		container: swiftV1ContainerPrefix + domain,
+		version:   swiftV1ContainerPrefix + domain + versionSuffix,
 		mu:        mu,
 		log:       logger.WithDomain(domain),
 	}, nil

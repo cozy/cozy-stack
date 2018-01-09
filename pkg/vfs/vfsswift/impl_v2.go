@@ -33,6 +33,8 @@ type swiftVFSV2 struct {
 	log       *logrus.Entry
 }
 
+const swiftV2ContainerPrefix = "cozy-v2-"
+
 // NewV2 returns a vfs.VFS instance associated with the specified indexer and
 // the swift storage url.
 //
@@ -48,8 +50,8 @@ func NewV2(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, d
 		DiskThresholder: disk,
 
 		c:         config.GetSwiftConnection(),
-		container: "cozy-" + domain,
-		version:   "cozy-" + domain + versionSuffix,
+		container: swiftV2ContainerPrefix + domain,
+		version:   swiftV2ContainerPrefix + domain + versionSuffix,
 		mu:        mu,
 		log:       logger.WithDomain(domain),
 	}, nil
@@ -375,7 +377,8 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 					Filename: path.Join(vfs.OrphansDirName, fileDoc.Name()),
 				})
 			} else {
-				md5sum, err := hex.DecodeString(obj.Hash)
+				var md5sum []byte
+				md5sum, err = hex.DecodeString(obj.Hash)
 				if err != nil {
 					return nil, err
 				}
