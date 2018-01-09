@@ -18,6 +18,7 @@ type CreateSharingParams struct {
 	Recipients  []string        `json:"recipients"`
 	Description string          `json:"description,omitempty"`
 	PreviewPath string          `json:"preview_path,omitempty"`
+	AppSlug     string          `json:"app_slug,omitempty"`
 }
 
 // Sharing contains all the information about a sharing.
@@ -121,7 +122,7 @@ func CheckSharingType(sharingType string) error {
 // CreateSharing checks the sharing, creates the document in
 // base and starts the sharing process by registering the sharer at each
 // recipient as a new OAuth client.
-func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slug string) (*Sharing, error) {
+func CreateSharing(instance *instance.Instance, params *CreateSharingParams) (*Sharing, error) {
 	sharingType := params.SharingType
 	if err := CheckSharingType(sharingType); err != nil {
 		return nil, err
@@ -132,7 +133,7 @@ func CreateSharing(instance *instance.Instance, params *CreateSharingParams, slu
 		Recipients:  make([]Member, 0, len(params.Recipients)),
 		Description: params.Description,
 		PreviewPath: params.PreviewPath,
-		AppSlug:     slug,
+		AppSlug:     params.AppSlug,
 		Owner:       true,
 	}
 
