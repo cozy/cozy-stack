@@ -282,7 +282,6 @@ func Setup(cfgFile string) (err error) {
 
 	viper.SetDefault("password_reset_interval", defaultPasswordResetInterval)
 
-
 	if cfgFile == "" {
 		for _, ext := range viper.SupportedExts {
 			var file string
