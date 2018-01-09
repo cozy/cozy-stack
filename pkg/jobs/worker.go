@@ -70,7 +70,6 @@ type (
 	WorkerContext struct {
 		context.Context
 		job    *Job
-		evt    Event
 		log    *logrus.Entry
 		id     string
 		cookie interface{}
@@ -105,15 +104,6 @@ func NewWorkerContext(workerID string, job *Job) *WorkerContext {
 	}
 }
 
-// NewWorkerContextWithEvent returns a context.Context usable by a worker. It
-// returns the same context as NewWorkerContext except that it also includes
-// the event responsible for the job, from a @event trigger for instance.
-func NewWorkerContextWithEvent(workerID string, job *Job, event Event) *WorkerContext {
-	ctx := NewWorkerContext(workerID, job)
-	ctx.evt = event
-	return ctx
-}
-
 // WithTimeout returns a clone of the context with a different deadline.
 func (c *WorkerContext) WithTimeout(timeout time.Duration) (*WorkerContext, context.CancelFunc) {
 	ctx, cancel := context.WithTimeout(c.Context, timeout)
@@ -133,7 +123,6 @@ func (c *WorkerContext) clone() *WorkerContext {
 	return &WorkerContext{
 		Context: c.Context,
 		job:     c.job,
-		evt:     c.evt,
 		log:     c.log,
 		id:      c.id,
 		cookie:  c.cookie,
@@ -157,10 +146,10 @@ func (c *WorkerContext) UnmarshalMessage(v interface{}) error {
 
 // UnmarshalEvent unmarshals the event contained in the worker context.
 func (c *WorkerContext) UnmarshalEvent(v interface{}) error {
-	if c.evt == nil {
+	if c.job == nil || c.job.Event == nil {
 		return errors.New("jobs: does not have an event associated")
 	}
-	return c.evt.Unmarshal(v)
+	return c.job.Event.Unmarshal(v)
 }
 
 // Domain returns the domain associated with the worker context.
@@ -231,12 +220,7 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			joblog.Errorf("[job] %s: missing domain from job request", workerID)
 			continue
 		}
-		var parentCtx *WorkerContext
-		if event := job.Event; event != nil {
-			parentCtx = NewWorkerContextWithEvent(workerID, job, event)
-		} else {
-			parentCtx = NewWorkerContext(workerID, job)
-		}
+		parentCtx := NewWorkerContext(workerID, job)
 		if err := job.AckConsumed(); err != nil {
 			parentCtx.Logger().Errorf("[job] error acking consume job: %s",
 				err.Error())
