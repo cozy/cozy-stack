@@ -470,7 +470,7 @@ var oauthClientInstanceCmd = &cobra.Command{
 }
 
 var updateCmd = &cobra.Command{
-	Use:   "update [domain] [slugs...]",
+	Use:   "update [slugs...]",
 	Short: "Start the updates for the specified domain instance.",
 	Long: `Start the updates for the specified domain instance. Use whether the --domain
 flag to specify the instance or the --all-domains flags to updates all domains.
