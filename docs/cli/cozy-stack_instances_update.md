@@ -4,14 +4,13 @@ Start the updates for the specified domain instance.
 
 ### Synopsis
 
-
 Start the updates for the specified domain instance. Use whether the --domain
 flag to specify the instance or the --all-domains flags to updates all domains.
 The slugs arguments can be used to select which applications should be
 updated.
 
 ```
-cozy-stack instances update [domain] [slugs...] [flags]
+cozy-stack instances update [slugs...] [flags]
 ```
 
 ### Options
@@ -35,5 +34,6 @@ cozy-stack instances update [domain] [slugs...] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

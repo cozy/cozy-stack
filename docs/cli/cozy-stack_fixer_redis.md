@@ -4,7 +4,6 @@ Rebuild scheduling data strucutures in redis
 
 ### Synopsis
 
-
 Rebuild scheduling data strucutures in redis
 
 ```
@@ -29,5 +28,6 @@ cozy-stack fixer redis [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

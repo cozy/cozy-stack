@@ -4,7 +4,6 @@ Print the version number
 
 ### Synopsis
 
-
 Print the current version number of the binary
 
 ```
@@ -29,5 +28,6 @@ cozy-stack version [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 

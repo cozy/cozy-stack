@@ -4,7 +4,6 @@ Generate a new application token
 
 ### Synopsis
 
-
 Generate a new application token
 
 ```
@@ -29,5 +28,6 @@ cozy-stack instances token-app [domain] [slug] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

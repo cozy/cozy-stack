@@ -5,7 +5,6 @@ Interact with the cozy applications
 ### Synopsis
 
 
-
 cozy-stack konnectors allows to interact with the cozy konnectors.
 
 It provides commands to install or update applications on
@@ -37,6 +36,7 @@ cozy-stack konnectors [command] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack konnectors install](cozy-stack_konnectors_install.md)	 - Install a konnector with the specified slug name
 from the given source URL.

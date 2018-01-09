@@ -5,7 +5,6 @@ Check and repair a vfs
 ### Synopsis
 
 
-
 The cozy-stack fsck command checks that the files in the VFS are not
 desynchronized, ie a file present in CouchDB but not swift/localfs, or present
 in swift/localfs but not couchdb.
@@ -35,5 +34,6 @@ cozy-stack instances fsck [domain] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

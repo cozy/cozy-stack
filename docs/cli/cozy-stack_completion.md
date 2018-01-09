@@ -5,7 +5,6 @@ Output shell completion code for the specified shell
 ### Synopsis
 
 
-
 Output shell completion code for the specified shell (bash or zsh).
 The shell code must be evalutated to provide interactive
 completion of kubectl commands.  This can be done by sourcing it from
@@ -49,5 +48,6 @@ cozy-stack completion [shell] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 

@@ -5,7 +5,6 @@ start a bug report
 ### Synopsis
 
 
-
 Bug opens the default browser and starts a new bug report.
 The report includes useful system information.
 	
@@ -32,5 +31,6 @@ cozy-stack bug [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 

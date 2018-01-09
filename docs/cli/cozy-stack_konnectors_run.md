@@ -4,7 +4,6 @@ Run a konnector.
 
 ### Synopsis
 
-
 Run a konnector named with specified slug using the specified options.
 
 ```
@@ -33,5 +32,6 @@ cozy-stack konnectors run [slug] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 

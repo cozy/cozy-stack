@@ -4,7 +4,6 @@ Fix the class computed from the mime-type
 
 ### Synopsis
 
-
 Fix the class computed from the mime-type
 
 ```
@@ -29,5 +28,6 @@ cozy-stack fixer mime [domain] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

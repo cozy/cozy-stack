@@ -5,7 +5,6 @@ Manage instances of a stack
 ### Synopsis
 
 
-
 cozy-stack instances allows to manage the instances of this stack
 
 An instance is a logical space owned by one user and identified by a domain.
@@ -38,6 +37,7 @@ cozy-stack instances [command] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack instances add](cozy-stack_instances_add.md)	 - Manage instances of a stack
 * [cozy-stack instances clean](cozy-stack_instances_clean.md)	 - Clean badly removed instances

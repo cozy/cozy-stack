@@ -4,7 +4,6 @@ Update the konnector with the specified slug name.
 
 ### Synopsis
 
-
 Update the konnector with the specified slug name.
 
 ```
@@ -32,5 +31,6 @@ cozy-stack konnectors update [slug] [sourceurl] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 

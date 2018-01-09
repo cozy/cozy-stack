@@ -4,7 +4,6 @@ Clean badly removed instances
 
 ### Synopsis
 
-
 Clean badly removed instances
 
 ```
@@ -29,5 +28,6 @@ cozy-stack instances clean [domain] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

@@ -4,7 +4,6 @@ Update the application with the specified slug name.
 
 ### Synopsis
 
-
 Update the application with the specified slug name.
 
 ```
@@ -31,5 +30,6 @@ cozy-stack apps update [slug] [sourceurl] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
 

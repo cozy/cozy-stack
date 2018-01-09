@@ -4,7 +4,6 @@ Take a look at the consistency of the jobs
 
 ### Synopsis
 
-
 Take a look at the consistency of the jobs
 
 ```
@@ -29,5 +28,6 @@ cozy-stack fixer jobs [domain] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

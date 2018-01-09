@@ -5,7 +5,6 @@ Display and update settings
 ### Synopsis
 
 
-
 cozy-stack settings displays the settings.
 
 It can also take a list of settings to update.
@@ -40,5 +39,6 @@ $ cozy-stack settings --domain cozy.tools:8080 context:beta,public_name:John
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 

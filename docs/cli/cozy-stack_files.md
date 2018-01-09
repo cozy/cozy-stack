@@ -5,7 +5,6 @@ Interact with the cozy filesystem
 ### Synopsis
 
 
-
 cozy-stack files allows to interact with the cozy filesystem.
 
 It provides command to create, move copy or delete files and
@@ -37,6 +36,7 @@ cozy-stack files [command] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack files exec](cozy-stack_files_exec.md)	 - Execute the given command on the specified domain and leave
 * [cozy-stack files import](cozy-stack_files_import.md)	 - Import the specified file or directory into cozy

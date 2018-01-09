@@ -4,7 +4,6 @@ Fix missing md5 from contents in the vfs
 
 ### Synopsis
 
-
 Fix missing md5 from contents in the vfs
 
 ```
@@ -29,5 +28,6 @@ cozy-stack fixer md5 [domain] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

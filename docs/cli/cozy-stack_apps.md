@@ -5,7 +5,6 @@ Interact with the cozy applications
 ### Synopsis
 
 
-
 cozy-stack apps allows to interact with the cozy applications.
 
 It provides commands to install or update applications on
@@ -36,6 +35,7 @@ cozy-stack apps [command] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack apps install](cozy-stack_apps_install.md)	 - Install an application with the specified slug name
 from the given source URL.

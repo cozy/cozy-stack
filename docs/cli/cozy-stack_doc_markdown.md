@@ -4,7 +4,6 @@ Print the documentation of cozy-stack as markdown
 
 ### Synopsis
 
-
 Print the documentation of cozy-stack as markdown
 
 ```
@@ -35,5 +34,6 @@ $ cozy-stack doc markdown docs/cli
 ```
 
 ### SEE ALSO
+
 * [cozy-stack doc](cozy-stack_doc.md)	 - Print the documentation
 

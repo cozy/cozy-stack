@@ -4,7 +4,6 @@ Check if the HTTP server is running
 
 ### Synopsis
 
-
 Check if the HTTP server has been started and answer 200 for /status.
 
 ```
@@ -29,5 +28,6 @@ cozy-stack status [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 

@@ -5,7 +5,6 @@ Change the disk-quota of the instance
 ### Synopsis
 
 
-
 cozy-stack instances set-disk-quota allows to change the disk-quota of the
 instance of the given domain. Set the quota to 0 to remove the quota.
 
@@ -38,5 +37,6 @@ $ cozy-stack instances set-disk-quota cozy.tools:8080 3GB
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

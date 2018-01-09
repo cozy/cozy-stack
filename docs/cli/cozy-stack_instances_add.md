@@ -5,7 +5,6 @@ Manage instances of a stack
 ### Synopsis
 
 
-
 cozy-stack instances add allows to create an instance on the cozy for a
 given domain.
 
@@ -47,5 +46,6 @@ $ cozy-stack instances add --dev --passphrase cozy --apps drive,photos,settings 
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

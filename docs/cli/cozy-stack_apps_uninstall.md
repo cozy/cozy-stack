@@ -4,7 +4,6 @@ Uninstall the application with the specified slug name.
 
 ### Synopsis
 
-
 Uninstall the application with the specified slug name.
 
 ```
@@ -31,5 +30,6 @@ cozy-stack apps uninstall [slug] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
 

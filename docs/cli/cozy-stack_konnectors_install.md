@@ -5,7 +5,6 @@ from the given source URL.
 
 ### Synopsis
 
-
 Install a konnector with the specified slug name
 from the given source URL.
 
@@ -40,5 +39,6 @@ $ cozy-stack konnectors install --domain cozy.tools:8080 trainline 'git://github
 ```
 
 ### SEE ALSO
+
 * [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 

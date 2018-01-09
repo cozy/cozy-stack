@@ -5,7 +5,6 @@ Show and manage configuration elements
 ### Synopsis
 
 
-
 cozy-stack config allows to print and generate some parts of the configuration
 
 
@@ -27,6 +26,7 @@ cozy-stack config allows to print and generate some parts of the configuration
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 * [cozy-stack config passwd](cozy-stack_config_passwd.md)	 - Generate an admin passphrase
 * [cozy-stack config print](cozy-stack_config_print.md)	 - Display the configuration

@@ -4,7 +4,6 @@ Generate a new CLI access token (global access)
 
 ### Synopsis
 
-
 Generate a new CLI access token (global access)
 
 ```
@@ -29,5 +28,6 @@ cozy-stack instances token-cli [domain] [scopes] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

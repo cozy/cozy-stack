@@ -4,7 +4,6 @@ Import the specified file or directory into cozy
 
 ### Synopsis
 
-
 Import the specified file or directory into cozy
 
 ```
@@ -34,5 +33,6 @@ cozy-stack files import [--domain domain] [--from name] [--to name] [--match pat
 ```
 
 ### SEE ALSO
+
 * [cozy-stack files](cozy-stack_files.md)	 - Interact with the cozy filesystem
 

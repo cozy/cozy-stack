@@ -5,7 +5,6 @@ from the given source URL.
 
 ### Synopsis
 
-
 [Some schemes](../../docs/apps.md#sources) are allowed as `[sourceurl]`.
 
 ```
@@ -15,7 +14,7 @@ cozy-stack apps install [slug] [sourceurl] [flags]
 ### Examples
 
 ```
-$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#build-drive'
+$ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/cozy-drive.git#latest-drive'
 ```
 
 ### Options
@@ -39,5 +38,6 @@ $ cozy-stack apps install --domain cozy.tools:8080 drive 'git://github.com/cozy/
 ```
 
 ### SEE ALSO
+
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
 

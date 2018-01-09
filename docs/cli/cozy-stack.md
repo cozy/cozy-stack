@@ -4,7 +4,6 @@ cozy-stack is the main command
 
 ### Synopsis
 
-
 Cozy is a platform that brings all your web services in the same private space.
 With it, your web apps and your devices can share data easily, providing you
 with a new experience. You can install Cozy on your own hardware where no one
@@ -27,6 +26,7 @@ cozy-stack [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
 * [cozy-stack bug](cozy-stack_bug.md)	 - start a bug report
 * [cozy-stack completion](cozy-stack_completion.md)	 - Output shell completion code for the specified shell

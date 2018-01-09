@@ -4,7 +4,6 @@ Starts the stack and listens for HTTP calls
 
 ### Synopsis
 
-
 Starts the stack and listens for HTTP calls
 It will accept HTTP requests on localhost:8080 by default.
 Use the --port and --host flags to change the listening option.
@@ -46,12 +45,11 @@ example), you can use the --appdir flag like this:
       --disable-csp                    Disable the Content Security Policy (only available for development)
       --doctypes string                path to the directory with the doctypes (for developing/testing a remote doctype)
       --downloads-url string           URL for the download secret storage, redis or in-memory
-      --fs-url string                  filesystem url (default "file://./storage")
+      --fs-url string                  filesystem url (default "file:///Users/pierre/go/src/github.com/cozy/cozy-stack/storage")
       --geodb string                   define the location of the database for IP -> City lookups (default ".")
   -h, --help                           help for serve
       --hooks string                   define the directory used for hook scripts (default ".")
       --jobs-url string                URL for the jobs system synchronization, redis or in-memory
-      --jobs-workers int               Number of parallel workers (0 to disable the processing of jobs) (default 4)
       --konnectors-cmd string          konnectors command to be executed
       --konnectors-oauthstate string   URL for the storage of OAuth state for konnectors, redis or in-memory
       --lock-url string                URL for the locks, redis or in-memory
@@ -80,5 +78,6 @@ example), you can use the --appdir flag like this:
 ```
 
 ### SEE ALSO
+
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
 

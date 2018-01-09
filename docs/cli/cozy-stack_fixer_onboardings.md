@@ -4,7 +4,6 @@ Add the onboarding_finished flag to user that have registered their passphrase
 
 ### Synopsis
 
-
 Add the onboarding_finished flag to user that have registered their passphrase
 
 ```
@@ -29,5 +28,6 @@ cozy-stack fixer onboardings [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

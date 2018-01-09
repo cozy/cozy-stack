@@ -5,7 +5,6 @@ Remove instance
 ### Synopsis
 
 
-
 cozy-stack instances destroy allows to remove an instance
 and all its data.
 
@@ -33,5 +32,6 @@ cozy-stack instances destroy [domain] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

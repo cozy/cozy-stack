@@ -4,7 +4,6 @@ Add a created_at field for albums where it's missing
 
 ### Synopsis
 
-
 Add a created_at field for albums where it's missing
 
 ```
@@ -29,5 +28,6 @@ cozy-stack fixer albums-created-at [domain] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack fixer](cozy-stack_fixer.md)	 - A set of tools to fix issues or migrate content for retro-compatibility.
 

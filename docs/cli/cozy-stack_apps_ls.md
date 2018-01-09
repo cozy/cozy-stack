@@ -4,7 +4,6 @@ List the installed applications.
 
 ### Synopsis
 
-
 List the installed applications.
 
 ```
@@ -31,5 +30,6 @@ cozy-stack apps ls [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack apps](cozy-stack_apps.md)	 - Interact with the cozy applications
 

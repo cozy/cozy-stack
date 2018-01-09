@@ -4,7 +4,6 @@ List the installed konnectors.
 
 ### Synopsis
 
-
 List the installed konnectors.
 
 ```
@@ -32,5 +31,6 @@ cozy-stack konnectors ls [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 

@@ -4,7 +4,6 @@ Import a tarball
 
 ### Synopsis
 
-
 Import a tarball with files, photos albums and contacts to an instance
 
 ```
@@ -32,5 +31,6 @@ cozy-stack instances import [domain] [tarball] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

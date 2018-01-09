@@ -5,7 +5,6 @@ Generate an admin passphrase
 ### Synopsis
 
 
-
 cozy-stack instances passphrase generate a passphrase hash and save it to the
 specified file. If no file is specified, it is directly printed in standard output.
 This passphrase is the one used to authenticate accesses to the administration API.
@@ -38,5 +37,6 @@ cozy-stack config passwd [filepath] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack config](cozy-stack_config.md)	 - Show and manage configuration elements
 

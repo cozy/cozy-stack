@@ -4,7 +4,6 @@ Display the configuration
 
 ### Synopsis
 
-
 Read the environment variables, the config file and
 the given parameters to display the configuration.
 
@@ -30,5 +29,6 @@ cozy-stack config print [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack config](cozy-stack_config.md)	 - Show and manage configuration elements
 

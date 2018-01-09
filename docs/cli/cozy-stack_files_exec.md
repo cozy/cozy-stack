@@ -4,7 +4,6 @@ Execute the given command on the specified domain and leave
 
 ### Synopsis
 
-
 Execute a command on the VFS of the specified domain.
 Available commands:
 
@@ -43,5 +42,6 @@ cozy-stack files exec [--domain domain] [command] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack files](cozy-stack_files.md)	 - Interact with the cozy filesystem
 

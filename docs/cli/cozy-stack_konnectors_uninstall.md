@@ -4,7 +4,6 @@ Uninstall the konnector with the specified slug name.
 
 ### Synopsis
 
-
 Uninstall the konnector with the specified slug name.
 
 ```
@@ -32,5 +31,6 @@ cozy-stack konnectors uninstall [slug] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack konnectors](cozy-stack_konnectors.md)	 - Interact with the cozy applications
 

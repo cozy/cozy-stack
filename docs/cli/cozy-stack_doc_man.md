@@ -4,7 +4,6 @@ Print the manpages of cozy-stack
 
 ### Synopsis
 
-
 Print the manual pages for using cozy-stack in command-line
 
 ```
@@ -38,5 +37,6 @@ $ man cozy-stack
 ```
 
 ### SEE ALSO
+
 * [cozy-stack doc](cozy-stack_doc.md)	 - Print the documentation
 

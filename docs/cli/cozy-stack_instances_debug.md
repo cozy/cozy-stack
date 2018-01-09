@@ -5,7 +5,6 @@ Activate or deactivate debugging of the instance
 ### Synopsis
 
 
-
 cozy-stack instances debug allows to activate or deactivate the debugging of a
 specific domain.
 
@@ -32,5 +31,6 @@ cozy-stack instances debug [domain] [true/false] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

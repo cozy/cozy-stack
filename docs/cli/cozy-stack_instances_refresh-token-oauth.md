@@ -4,7 +4,6 @@ Generate a new OAuth refresh token
 
 ### Synopsis
 
-
 Generate a new OAuth refresh token
 
 ```
@@ -29,5 +28,6 @@ cozy-stack instances refresh-token-oauth [domain] [clientid] [scopes] [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 

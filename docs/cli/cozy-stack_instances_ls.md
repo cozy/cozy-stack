@@ -5,7 +5,6 @@ List instances
 ### Synopsis
 
 
-
 cozy-stack instances ls allows to list all the instances that can be served
 by this server.
 
@@ -32,5 +31,6 @@ cozy-stack instances ls [flags]
 ```
 
 ### SEE ALSO
+
 * [cozy-stack instances](cozy-stack_instances.md)	 - Manage instances of a stack
 
