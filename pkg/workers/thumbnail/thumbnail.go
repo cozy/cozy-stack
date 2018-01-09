@@ -26,6 +26,12 @@ var formats = map[string]string{
 	"large":  "1920x1080",
 }
 
+var formatsNames = []string{
+	"small",
+	"medium",
+	"large",
+}
+
 func init() {
 	jobs.AddWorker(&jobs.WorkerConfig{
 		WorkerType:   "thumbnail",
@@ -138,11 +144,5 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 }
 
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
-	var e error
-	for format := range formats {
-		if err := i.ThumbsFS().RemoveThumb(img, format); err != nil {
-			e = err
-		}
-	}
-	return e
+	return i.ThumbsFS().RemoveThumbs(img, formatsNames)
 }
