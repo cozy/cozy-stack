@@ -267,6 +267,8 @@ func GetConfig() *Config {
 	return config
 }
 
+var defaultPasswordResetInterval = 15 * time.Minute
+
 // PasswordResetInterval returns the minimal delay between two password reset
 func PasswordResetInterval() time.Duration {
 	return config.PasswordResetInterval
@@ -277,6 +279,9 @@ func Setup(cfgFile string) (err error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetEnvPrefix("cozy")
 	viper.AutomaticEnv()
+
+	viper.SetDefault("password_reset_interval", defaultPasswordResetInterval)
+
 
 	if cfgFile == "" {
 		for _, ext := range viper.SupportedExts {
