@@ -17,6 +17,18 @@ import (
 	"github.com/cozy/cozy-stack/pkg/permissions"
 )
 
+// AcceptSharingParams is a struct used for sending a sharing as JSON with some
+// additional informations when a sharing is accepted.
+type AcceptSharingParams struct {
+	*Sharing
+	SharerContact acceptMemberParams `json:"share_contact"`
+}
+
+type acceptMemberParams struct {
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
+}
+
 // FindContactByShareCode returns the contact that is linked to a sharing by
 // the given shareCode
 func FindContactByShareCode(i *instance.Instance, s *Sharing, code string) (*contacts.Contact, error) {
@@ -92,6 +104,39 @@ func RegisterClientOnTheRecipient(i *instance.Instance, s *Sharing, m *Member, u
 	return couchdb.UpdateDoc(i, s)
 }
 
+func buildSharerContactFromAcceptParams(db couchdb.Database, params *AcceptSharingParams) (*contacts.Contact, error) {
+	if params.SharerContact.Email == "" {
+		return nil, contacts.ErrNotFound
+	}
+	contact, err := contacts.FindByEmail(db, params.SharerContact.Email)
+	toSave := false
+	if err != nil {
+		contact = &contacts.Contact{}
+	}
+	if contact.FullName == "" && params.SharerContact.Name != "" {
+		contact.FullName = params.SharerContact.Name
+		toSave = true
+	}
+	if len(contact.Cozy) == 0 {
+		cozy := contacts.Cozy{
+			URL:     params.Sharer.URL,
+			Primary: true,
+		}
+		contact.Cozy = append(contact.Cozy, cozy)
+		toSave = true
+	}
+	if contact.ID() == "" {
+		if err = couchdb.CreateDoc(db, contact); err != nil {
+			return nil, err
+		}
+	} else if toSave {
+		if err = couchdb.UpdateDoc(db, contact); err != nil {
+			return nil, err
+		}
+	}
+	return contact, nil
+}
+
 // AcceptSharingRequest is called on the recipient when the permissions for the
 // sharing are accepted. It calls the cozy of the owner to start the sharing,
 // and then create the sharing (and other stuff) in its couchdb.
@@ -108,16 +153,25 @@ func AcceptSharingRequest(i *instance.Instance, answerURL *url.URL, scope string
 		return err
 	}
 	defer res.Body.Close()
-	sharing := &Sharing{}
-	if err = json.NewDecoder(res.Body).Decode(sharing); err != nil {
+	sharingParams := &AcceptSharingParams{}
+	if err = json.NewDecoder(res.Body).Decode(sharingParams); err != nil {
 		return err
 	}
 
+	sharing := sharingParams.Sharing
 	if err = CheckSharingType(sharing.SharingType); err != nil {
 		return err
 	}
 	sharing.Owner = false
-	// TODO sharing.Sharer.RefContact = ...
+	contact, err := buildSharerContactFromAcceptParams(i, sharingParams)
+	if err != nil {
+		return err
+	}
+	sharing.Sharer.contact = contact
+	sharing.Sharer.RefContact = couchdb.DocReference{
+		ID:   contact.ID(),
+		Type: consts.Contacts,
+	}
 	sharing.UpdatedAt = time.Now()
 	if err = couchdb.CreateNamedDoc(i, sharing); err != nil {
 		return err
@@ -150,7 +204,7 @@ func AcceptSharingRequest(i *instance.Instance, answerURL *url.URL, scope string
 
 // SharingAccepted handles an accepted sharing on the sharer side and returns
 // the sharing.
-func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode string) (*Sharing, error) {
+func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode string) (*AcceptSharingParams, error) {
 	if shareCode == "" {
 		return nil, ErrMissingCode
 	}
@@ -185,18 +239,31 @@ func SharingAccepted(i *instance.Instance, shareCode, clientID, accessCode strin
 		return nil, err
 	}
 
-	res := &Sharing{
-		SID:         s.SID,
-		SharingType: s.SharingType,
-		Sharer: &Member{
-			Status:          consts.SharingStatusAccepted,
-			URL:             i.PageURL("", nil),
-			InboundClientID: clientID,
+	// name is optional, but email is mandatory
+	publicName, _ := i.PublicName()
+	email, err := i.SettingsEMail()
+	if err != nil {
+		return nil, err
+	}
+
+	res := &AcceptSharingParams{
+		SharerContact: acceptMemberParams{
+			Name:  publicName,
+			Email: email,
 		},
-		Description: s.Description,
-		AppSlug:     s.AppSlug,
-		CreatedAt:   s.CreatedAt,
-		UpdatedAt:   s.UpdatedAt,
+		Sharing: &Sharing{
+			SID:         s.SID,
+			SharingType: s.SharingType,
+			Sharer: &Member{
+				Status:          consts.SharingStatusAccepted,
+				URL:             i.PageURL("", nil),
+				InboundClientID: clientID,
+			},
+			Description: s.Description,
+			AppSlug:     s.AppSlug,
+			CreatedAt:   s.CreatedAt,
+			UpdatedAt:   s.UpdatedAt,
+		},
 	}
 
 	// Particular case for two-way sharing: the recipient needs credentials
