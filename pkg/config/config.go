@@ -605,54 +605,35 @@ func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
 	return regs, nil
 }
 
-const defaultTestConfig = `
-host: localhost
-port: 8080
-assets: ./assets
-subdomains: nested
-
-fs:
-  url: mem://test
-
-couchdb:
-    url: http://localhost:5984/
-
-cache:
-    url: redis://localhost:6379/0
-
-log:
-    level: info
-`
+func createTestViper() *viper.Viper {
+	v := viper.New()
+	v.SetConfigName("cozy.test")
+	v.AddConfigPath("$HOME/.cozy")
+	v.SetEnvPrefix("cozy")
+	v.AutomaticEnv()
+	v.SetDefault("host", "localhost")
+	v.SetDefault("port", 8080)
+	v.SetDefault("assets", "./assets")
+	v.SetDefault("subdomains", "nested")
+	v.SetDefault("fs.url", "mem://test")
+	v.SetDefault("couchdb.url", "http://localhost:5984/")
+	v.SetDefault("cache.url", "redis://localhost:6379/0")
+	v.SetDefault("log.level", "info")
+	return v
+}
 
 // UseTestFile can be used in a test file to inject a configuration
 // from a cozy.test.* file. If it can not find this file in your
 // $HOME/.cozy directory it will use the default one.
 func UseTestFile() {
-	v := viper.New()
-	v.SetConfigName("cozy.test")
-	v.AddConfigPath("$HOME/.cozy")
+	v := createTestViper()
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			v = createTestViper()
+		} else {
 			panic(fmt.Errorf("fatal error test config file: %s", err))
 		}
-		UseTestYAML(defaultTestConfig)
-		return
-	}
-
-	if err := UseViper(v); err != nil {
-		panic(fmt.Errorf("fatal error test config file: %s", err))
-	}
-}
-
-// UseTestYAML can be used in a test file to inject a configuration
-// from a YAML string.
-func UseTestYAML(yaml string) {
-	v := viper.New()
-	v.SetConfigType("yaml")
-
-	if err := v.ReadConfig(strings.NewReader(yaml)); err != nil {
-		panic(fmt.Errorf("fatal error test config file: %s", err))
 	}
 
 	if err := UseViper(v); err != nil {
