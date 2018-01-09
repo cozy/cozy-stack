@@ -126,6 +126,9 @@ hooks: ./scripts/hooks
 # See https://dev.maxmind.com/geoip/geoip2/geolite2/
 geodb: ""
 
+# minimal duration between two password reset
+password_reset_interval: 15m
+
 # redis namespace to configure its usage for different part of the stack. redis
 # is not mandatory and is specifically useful to run the stack in an
 # environment where multiple stacks run simultaneously.

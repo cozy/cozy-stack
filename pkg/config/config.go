@@ -80,17 +80,18 @@ var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host                string
-	Port                int
-	Assets              string
-	Doctypes            string
-	Subdomains          SubdomainType
-	AdminHost           string
-	AdminPort           int
-	AdminSecretFileName string
-	NoReply             string
-	Hooks               string
-	GeoDB               string
+	Host                  string
+	Port                  int
+	Assets                string
+	Doctypes              string
+	Subdomains            SubdomainType
+	AdminHost             string
+	AdminPort             int
+	AdminSecretFileName   string
+	NoReply               string
+	Hooks                 string
+	GeoDB                 string
+	PasswordResetInterval time.Duration
 
 	Fs            Fs
 	CouchDB       CouchDB
@@ -266,11 +267,21 @@ func GetConfig() *Config {
 	return config
 }
 
+var defaultPasswordResetInterval = 15 * time.Minute
+
+// PasswordResetInterval returns the minimal delay between two password reset
+func PasswordResetInterval() time.Duration {
+	return config.PasswordResetInterval
+}
+
 // Setup Viper to read the environment and the optional config file
 func Setup(cfgFile string) (err error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetEnvPrefix("cozy")
 	viper.AutomaticEnv()
+
+	viper.SetDefault("password_reset_interval", defaultPasswordResetInterval)
+
 
 	if cfgFile == "" {
 		for _, ext := range viper.SupportedExts {
@@ -505,6 +516,8 @@ func UseViper(v *viper.Viper) error {
 		NoReply:             v.GetString("mail.noreply_address"),
 		Hooks:               v.GetString("hooks"),
 		GeoDB:               v.GetString("geodb"),
+		PasswordResetInterval: v.GetDuration("password_reset_interval"),
+
 		Fs: Fs{
 			URL: fsURL,
 		},

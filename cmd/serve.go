@@ -205,6 +205,9 @@ func init() {
 	flags.Bool("mail-disable-tls", false, "disable smtp over tls")
 	checkNoErr(viper.BindPFlag("mail.disable_tls", flags.Lookup("mail-disable-tls")))
 
+	flags.String("password-reset-interval", "15m", "minimal duration between two password reset")
+	checkNoErr(viper.BindPFlag("password_reset_interval", flags.Lookup("password-reset-interval")))
+
 	RootCmd.AddCommand(serveCmd)
 	serveCmd.Flags().BoolVar(&flagAllowRoot, "allow-root", false, "Allow to start as root (disabled by default)")
 	serveCmd.Flags().StringSliceVar(&flagAppdirs, "appdir", nil, "Mount a directory as the 'app' application")
