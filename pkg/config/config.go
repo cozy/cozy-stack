@@ -279,8 +279,7 @@ func Setup(cfgFile string) (err error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetEnvPrefix("cozy")
 	viper.AutomaticEnv()
-
-	viper.SetDefault("password_reset_interval", defaultPasswordResetInterval)
+	applyDefaults(viper.GetViper())
 
 	if cfgFile == "" {
 		for _, ext := range viper.SupportedExts {
@@ -332,6 +331,10 @@ func Setup(cfgFile string) (err error) {
 	}
 
 	return UseViper(viper.GetViper())
+}
+
+func applyDefaults(v *viper.Viper) {
+	v.SetDefault("password_reset_interval", defaultPasswordResetInterval)
 }
 
 func envMap() map[string]string {
@@ -631,6 +634,7 @@ func createTestViper() *viper.Viper {
 	v.SetDefault("couchdb.url", "http://localhost:5984/")
 	v.SetDefault("cache.url", "redis://localhost:6379/0")
 	v.SetDefault("log.level", "info")
+	applyDefaults(v)
 	return v
 }
 
