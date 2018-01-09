@@ -54,8 +54,17 @@ msgstr "Confirm your password"
 msgid "Login Reconnect help"
 msgstr "Hello! Once you've confirmed your password, you'll access the permission board to allow or not the access to mobile app. It's up to you !"
 
+msgid "Login Connect from sharing title"
+msgstr "Hello %s!"
+
+msgid "Login Connect from sharing help"
+msgstr "Enter you password now"
+
 msgid "Login Connect from oauth title"
 msgstr "Confirm your password"
+
+msgid "Login Connect from oauth help"
+msgstr "Hello! Once you've confirmed your password, you'll access the permission board where you can allow the application to access your data or not. It's up to you !"
 
 msgid "Login Two factor error"
 msgstr "The passcode you entered is incorrect, please try again."
@@ -71,9 +80,6 @@ msgstr "Trust this computer"
 
 msgid "Login Two factor device trust help"
 msgstr "By checking this option, this device won't be asked for two factor authentication in the future"
-
-msgid "Login Connect from oauth help"
-msgstr "Hello! Once you've confirmed your password, you'll access the permission board where you can allow the application to access your data or not. It's up to you !"
 
 msgid "Onboarding Not activated Title"
 msgstr "You need to activate your Cozy"
