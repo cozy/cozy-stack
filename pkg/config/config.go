@@ -80,17 +80,18 @@ var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
 type Config struct {
-	Host                string
-	Port                int
-	Assets              string
-	Doctypes            string
-	Subdomains          SubdomainType
-	AdminHost           string
-	AdminPort           int
-	AdminSecretFileName string
-	NoReply             string
-	Hooks               string
-	GeoDB               string
+	Host                  string
+	Port                  int
+	Assets                string
+	Doctypes              string
+	Subdomains            SubdomainType
+	AdminHost             string
+	AdminPort             int
+	AdminSecretFileName   string
+	NoReply               string
+	Hooks                 string
+	GeoDB                 string
+	PasswordResetInterval time.Duration
 
 	Fs            Fs
 	CouchDB       CouchDB
@@ -266,11 +267,19 @@ func GetConfig() *Config {
 	return config
 }
 
+var defaultPasswordResetInterval = 15 * time.Minute
+
+// PasswordResetInterval returns the minimal delay between two password reset
+func PasswordResetInterval() time.Duration {
+	return config.PasswordResetInterval
+}
+
 // Setup Viper to read the environment and the optional config file
 func Setup(cfgFile string) (err error) {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetEnvPrefix("cozy")
 	viper.AutomaticEnv()
+	applyDefaults(viper.GetViper())
 
 	if cfgFile == "" {
 		for _, ext := range viper.SupportedExts {
@@ -322,6 +331,10 @@ func Setup(cfgFile string) (err error) {
 	}
 
 	return UseViper(viper.GetViper())
+}
+
+func applyDefaults(v *viper.Viper) {
+	v.SetDefault("password_reset_interval", defaultPasswordResetInterval)
 }
 
 func envMap() map[string]string {
@@ -505,6 +518,8 @@ func UseViper(v *viper.Viper) error {
 		NoReply:             v.GetString("mail.noreply_address"),
 		Hooks:               v.GetString("hooks"),
 		GeoDB:               v.GetString("geodb"),
+		PasswordResetInterval: v.GetDuration("password_reset_interval"),
+
 		Fs: Fs{
 			URL: fsURL,
 		},
@@ -619,6 +634,7 @@ func createTestViper() *viper.Viper {
 	v.SetDefault("couchdb.url", "http://localhost:5984/")
 	v.SetDefault("cache.url", "redis://localhost:6379/0")
 	v.SetDefault("log.level", "info")
+	applyDefaults(v)
 	return v
 }
 
