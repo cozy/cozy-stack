@@ -2,6 +2,7 @@ package vfs
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path"
 	"time"
@@ -175,10 +176,10 @@ func (c *couchdbIndexer) DirByID(fileID string) (*DirDoc, error) {
 	}
 	if err != nil {
 		if fileID == consts.RootDirID {
-			panic("Root directory is not in database")
+			return nil, errors.New("Root directory is not in database")
 		}
 		if fileID == consts.TrashDirID {
-			panic("Trash directory is not in database")
+			return nil, errors.New("Trash directory is not in database")
 		}
 		return nil, err
 	}
@@ -205,7 +206,7 @@ func (c *couchdbIndexer) DirByPath(name string) (*DirDoc, error) {
 	}
 	if len(docs) == 0 {
 		if name == "/" {
-			panic("Root directory is not in database")
+			return nil, errors.New("Root directory is not in database")
 		}
 		return nil, os.ErrNotExist
 	}
