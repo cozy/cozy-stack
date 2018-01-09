@@ -61,7 +61,9 @@ func (f *FsckLog) MarshalJSON() ([]byte, error) {
 	}
 	if f.PruneAction != "" {
 		v["prune_action"] = f.PruneAction
-		v["prune_error"] = f.PruneError.Error()
+		if f.PruneError != nil {
+			v["prune_error"] = f.PruneError.Error()
+		}
 	}
 	return json.Marshal(v)
 }
@@ -94,7 +96,7 @@ func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
 			orphan = true
 		} else {
 			fullpath := path.Join(parentDir.Fullpath, fileDoc.Name())
-			if _, err := indexer.FileByPath(fullpath); err == nil {
+			if _, err := indexer.FileByPath(fullpath); err != nil {
 				entry.PruneError = err
 				return
 			}
