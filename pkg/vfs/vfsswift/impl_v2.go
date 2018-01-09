@@ -55,6 +55,24 @@ func NewV2(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, d
 	}, nil
 }
 
+// makeObjectName build the swift object name for a given file document. It
+// creates a virtual subfolder by splitting the document ID, which should be 32
+// bytes long, on the 27nth byte. This avoid having a flat hierarchy in swift with no bound
+func makeObjectName(f *vfs.FileDoc) string {
+	docID := f.DocID
+	if len(docID) != 32 {
+		return docID
+	}
+	return docID[:22] + "/" + docID[22:27] + "/" + docID[27:]
+}
+
+func makeDocID(objName string) string {
+	if len(objName) != 34 {
+		return objName
+	}
+	return objName[:22] + objName[23:28] + objName[29:]
+}
+
 func (sfs *swiftVFSV2) InitFs() error {
 	if lockerr := sfs.mu.Lock(); lockerr != nil {
 		return lockerr
@@ -212,7 +230,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 	if newsize >= 0 {
 		h = swift.Headers{"Content-Length": strconv.FormatInt(newsize, 10)}
 	}
-	objName := newdoc.DocID
+	objName := makeObjectName(newdoc)
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
 		sfs.container,
@@ -300,7 +318,8 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
-	f, _, err := sfs.c.ObjectOpen(sfs.container, doc.DocID, false, nil)
+	objName := makeObjectName(doc)
+	f, _, err := sfs.c.ObjectOpen(sfs.container, objName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
 	}
@@ -341,7 +360,8 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 			return nil, err
 		}
 		for _, obj := range objs {
-			if f, ok := entries[obj.Name]; !ok {
+			docID := makeDocID(obj.Name)
+			if f, ok := entries[docID]; !ok {
 				logbook = append(logbook, &vfs.FsckLog{
 					Type:     vfs.IndexMissing,
 					IsFile:   true,
@@ -349,7 +369,7 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 					Filename: f.fullpath,
 				})
 			} else {
-				delete(entries, obj.Name)
+				delete(entries, docID)
 			}
 		}
 		return objs, err
