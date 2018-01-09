@@ -17,12 +17,16 @@ const (
 	// TypeMismatch is used when a document type does not match in the index and
 	// underlying filesystem.
 	TypeMismatch
+	// ContentMismatch is used when a document content checksum does not match
+	// with the one in the underlying fs.
+	ContentMismatch
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
 type FsckLog struct {
 	Type        FsckLogType
 	FileDoc     *FileDoc
+	OldFileDoc  *FileDoc
 	IsFile      bool
 	DirDoc      *DirDoc
 	Filename    string
@@ -45,6 +49,8 @@ func (f *FsckLog) String() string {
 		return "it's a directory in the index but a file on the filesystem"
 	case IndexMissing:
 		return "the document is present on the local filesystem but not in the index"
+	case ContentMismatch:
+		return "then document content does not match the store content checksum"
 	}
 	panic("bad FsckLog type")
 }
@@ -126,6 +132,14 @@ func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
 			fileDoc.DirID = orphanDir.ID()
 		}
 		if err := indexer.CreateFileDoc(fileDoc); err != nil {
+			entry.PruneError = err
+		}
+	case ContentMismatch:
+		if !entry.IsFile {
+			return
+		}
+		entry.PruneAction = "updating the index informations to match the stored data"
+		if err := indexer.UpdateFileDoc(entry.OldFileDoc, entry.FileDoc); err != nil {
 			entry.PruneError = err
 		}
 	}
