@@ -390,7 +390,6 @@ func (dt *MailTheme) HTMLTemplate() string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <style type="text/css" rel="stylesheet" media="all">
-    /* Base ------------------------------ */
     *:not(br):not(tr):not(html) {
       font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
       -webkit-box-sizing: border-box;
@@ -401,28 +400,28 @@ func (dt *MailTheme) HTMLTemplate() string {
       height: 100%;
       margin: 0;
       line-height: 1.4;
-      background-color: #F2F4F6;
+      background-color: #F5F6F7;
       color: #74787E;
       -webkit-text-size-adjust: none;
     }
     a {
       color: #3869D4;
     }
-    /* Layout ------------------------------ */
+
     .email-wrapper {
       width: 100%;
       margin: 0;
       padding: 0;
-      background-color: #F2F4F6;
+      background-color: #F5F6F7;
     }
     .email-content {
       width: 100%;
       margin: 0;
       padding: 0;
     }
-    /* Masthead ----------------------- */
+
     .email-masthead {
-      padding: 25px 0;
+      padding: 16px 0;
       text-align: center;
     }
     .email-masthead_logo {
@@ -439,32 +438,32 @@ func (dt *MailTheme) HTMLTemplate() string {
     .email-logo {
       max-height: 50px;
     }
-    /* Body ------------------------------ */
+
     .email-body {
       width: 100%;
       margin: 0;
       padding: 0;
-      border-top: 1px solid #EDEFF2;
-      border-bottom: 1px solid #EDEFF2;
-      background-color: #FFF;
     }
     .email-body_inner {
-      width: 570px;
+      width: 600px;
       margin: 0 auto;
       padding: 0;
+      background-color: #FFF;
+      border-bottom: 1px solid #95999D;
+      border-left: 1px solid #E2E4E9;
+      border-right: 1px solid #E2E4E9;
     }
     .email-footer {
       width: 570px;
       margin: 0 auto;
-      padding: 0;
       text-align: center;
     }
     .email-footer p {
-      color: #AEAEAE;
+      color: #95999D;
     }
     .body-action {
       width: 100%;
-      margin: 30px auto;
+      margin: 14px auto;
       padding: 0;
       text-align: center;
     }
@@ -487,26 +486,42 @@ func (dt *MailTheme) HTMLTemplate() string {
       margin-bottom: 10px;
     }
     .body-sub {
-      margin-top: 25px;
-      padding-top: 25px;
-      border-top: 1px solid #EDEFF2;
-      table-layout: fixed;
+      text-align: center;
+      font-weight: bold;
+      padding: 8px 0;
+    }
+    .body-sub td {
+      padding: 0;
+    }
+    .body-sub p {
+      margin: 0;
     }
     .body-sub a {
       word-break: break-all;
+      color:: #297EF1;
+      text-decoration: none;
     }
     .content-cell {
-      padding: 35px;
+      padding: 24px;
+    }
+    .content-block {
+      border-top: 1px solid #95999D;
+      border-bottom: 1px solid #95999D;
+      margin-bottom: 24px;
+      padding: 24px 0 8px;
+      text-align: center;
     }
     .align-right {
       text-align: right;
     }
-    /* Type ------------------------------ */
+
     h1 {
-      margin-top: 0;
-      color: #2F3133;
-      font-size: 19px;
+      margin: 0 0 24px;
+      color: #32363F;
+      font-size: 20px;
       font-weight: bold;
+      line-height: 1.2;
+      text-align: center;
     }
     h2 {
       margin-top: 0;
@@ -544,7 +559,7 @@ func (dt *MailTheme) HTMLTemplate() string {
     }
     p {
       margin-top: 0;
-      color: #74787E;
+      color: #32363F;
       font-size: 16px;
       line-height: 1.5em;
     }
@@ -577,7 +592,7 @@ func (dt *MailTheme) HTMLTemplate() string {
       align: center;
       padding: 0;
     }
-    /* Data table ------------------------------ */
+
     .data-wrapper {
       width: 100%;
       margin: 0;
@@ -604,21 +619,47 @@ func (dt *MailTheme) HTMLTemplate() string {
       font-size: 15px;
       line-height: 18px;
     }
-    /* Buttons ------------------------------ */
+
     .button {
       display: inline-block;
-      width: 200px;
-      background-color: #3869D4;
+      margin-bottom: 8px;
+      width: 300px;
+      background-color: #297EF1;
       border-radius: 3px;
       color: #ffffff;
       font-size: 15px;
-      line-height: 45px;
+      line-height: 40px;
       text-align: center;
       text-decoration: none;
+      text-transform: uppercase;
       -webkit-text-size-adjust: none;
       mso-hide: all;
     }
-    /*Media Queries ------------------------------ */
+
+    .button-fallback {
+      font-size: 12px;
+    }
+
+    .button-fallback a {
+      font-weight: bold;
+      color: #32363F;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .footer-link {
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      text-align: right;
+      color: #95999d;
+      text-decoration: none;
+    }
+
+    .footer-link:hover,
+    .footer-link:focus {
+      text-decoration: underline;
+    }
+
     @media only screen and (max-width: 600px) {
       .email-body_inner,
       .email-footer {
