@@ -156,8 +156,11 @@ func CreateSharing(c echo.Context) error {
 	if err != nil {
 		return wrapErrors(sharings.ErrForbidden)
 	}
+	if params.AppSlug == "" {
+		params.AppSlug = slug
+	}
 
-	sharing, err := sharings.CreateSharing(instance, params, slug)
+	sharing, err := sharings.CreateSharing(instance, params)
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -361,11 +364,15 @@ func checkCreatePermissions(c echo.Context, params *sharings.CreateSharingParams
 	if err != nil {
 		return "", err
 	}
-	if requestPerm.Type != permissions.TypeWebapp {
+	if requestPerm.Type != permissions.TypeWebapp &&
+		requestPerm.Type != permissions.TypeOauth {
 		return "", permissions.ErrInvalidAudience
 	}
 	if !params.Permissions.IsSubSetOf(requestPerm.Permissions) {
 		return "", echo.NewHTTPError(http.StatusForbidden)
+	}
+	if requestPerm.Type == permissions.TypeOauth {
+		return "", nil
 	}
 	return extractSlugFromSourceID(requestPerm.SourceID)
 }

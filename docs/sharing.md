@@ -257,6 +257,11 @@ preview the sharing before accepting it. It is optional.
 The application has to define a public route for this path in its manifest, else
 the recipients will be denied the access to this page.
 
+#### app_slug
+
+The app_slug is used for redirecting the recipient to the good application
+after they accept a sharing.
+
 #### created_at and updated_at
 
 The first field, `created_at`, is the date and tile where the sharing was
@@ -268,7 +273,9 @@ modification.
 #### POST /sharings/
 
 Create a new sharing. The sharing type, permissions and recipients must be
-specified. The `description` and `preview_path` fields are optional.
+specified. The `description` and `preview_path` fields are optional. The
+`app_slug` field is optional and is the slug of the web app by default: its
+main usage is by mobile apps.
 
 ##### Request
 
@@ -290,7 +297,8 @@ Content-Type: application/json
   },
   "recipients": ["2a31ce0128b5f89e40fd90da3f014087"],
   "description": "sharing test",
-  "preview_path": "/sharings/preview"
+  "preview_path": "/sharings/preview",
+  "app_slug": "cal"
 }
 ```
 
