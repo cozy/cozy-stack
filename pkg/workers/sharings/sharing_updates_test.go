@@ -124,11 +124,12 @@ func TestSharingUpdatesNoSharing(t *testing.T) {
 
 	j := jobs.NewJob(&jobs.JobRequest{
 		Domain:     domainSharer,
+		Event:      event,
 		Message:    msg,
 		WorkerType: "sharingupdates",
 	})
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
+	err := SharingUpdates(jobs.NewWorkerContext("123", j))
 	assert.Error(t, err)
 	assert.Equal(t, ErrSharingDoesNotExist, err)
 }
@@ -149,11 +150,12 @@ func TestSharingUpdatesBadSharingType(t *testing.T) {
 
 	j := jobs.NewJob(&jobs.JobRequest{
 		Domain:     domainSharer,
+		Event:      event,
 		Message:    msg,
 		WorkerType: "sharingupdates",
 	})
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
+	err := SharingUpdates(jobs.NewWorkerContext("123", j))
 	assert.Error(t, err)
 	assert.Equal(t, ErrDocumentNotLegitimate, err)
 }
@@ -178,11 +180,12 @@ func TestSharingUpdatesNoRecipient(t *testing.T) {
 
 	j := jobs.NewJob(&jobs.JobRequest{
 		Domain:     domainSharer,
+		Event:      event,
 		Message:    msg,
 		WorkerType: "sharingupdates",
 	})
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
+	err := SharingUpdates(jobs.NewWorkerContext("123", j))
 	assert.NoError(t, err)
 }
 
@@ -206,11 +209,12 @@ func TestSharingUpdatesBadRecipient(t *testing.T) {
 
 	j := jobs.NewJob(&jobs.JobRequest{
 		Domain:     domainSharer,
+		Event:      event,
 		Message:    msg,
 		WorkerType: "sharingupdates",
 	})
 
-	err := SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
+	err := SharingUpdates(jobs.NewWorkerContext("123", j))
 	assert.NoError(t, err)
 }
 
@@ -261,10 +265,11 @@ func TestRevokedRecipient(t *testing.T) {
 
 	j := jobs.NewJob(&jobs.JobRequest{
 		Domain:     domainSharer,
+		Event:      event,
 		Message:    msg,
 		WorkerType: "sharingupdates",
 	})
 
-	err = SharingUpdates(jobs.NewWorkerContextWithEvent("123", j, event))
+	err = SharingUpdates(jobs.NewWorkerContext("123", j))
 	assert.NoError(t, err)
 }
