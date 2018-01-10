@@ -120,8 +120,13 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
 	} else if redirect.Host == i.Domain && redirect.Path == "/auth/authorize" {
-		title = i.Translate("Login Connect from oauth title")
-		help = i.Translate("Login Connect from oauth help")
+		if strings.Contains(redirectStr, "sharing") {
+			title = i.Translate("Login Connect from sharing title", publicName)
+			help = i.Translate("Login Connect from sharing help")
+		} else {
+			title = i.Translate("Login Connect from oauth title")
+			help = i.Translate("Login Connect from oauth help")
+		}
 	} else {
 		if publicName == "" {
 			title = i.Translate("Login Welcome")
