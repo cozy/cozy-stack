@@ -2,6 +2,7 @@ package apps
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -10,13 +11,14 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"time"
+	"strconv"
+	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/magic"
+	web_utils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/swift"
 	"github.com/spf13/afero"
 )
-
-var unixZeroEpoch = time.Time{}
 
 // FileServer interface defines a way to access and serve the application's
 // data files.
@@ -47,26 +49,55 @@ func NewSwiftFileServer(conn *swift.Connection, appsType AppType) FileServer {
 
 func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
 	objName := s.makeObjectName(slug, version, file)
-	f, _, err := s.c.ObjectOpen(s.container, objName, false, nil)
+	f, h, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
 		return nil, wrapSwiftErr(err)
+	}
+	o := h.ObjectMetadata()
+	if contentEncoding := o["content-encoding"]; contentEncoding == "gzip" {
+		return gzip.NewReader(f)
 	}
 	return f, nil
 }
 
 func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
 	objName := s.makeObjectName(slug, version, file)
-	f, o, err := s.c.ObjectOpen(s.container, objName, false, nil)
+	f, h, err := s.c.ObjectOpen(s.container, objName, false, nil)
 	if err != nil {
 		return wrapSwiftErr(err)
 	}
 	defer f.Close()
 
-	if req.Header.Get("Cache-Control") == "" && req.Header.Get("Range") == "" {
-		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"][:10]))
+	if checkETag := req.Header.Get("Cache-Control") != ""; checkETag {
+		etag := fmt.Sprintf(`"%s"`, h["Etag"][:10])
+		if web_utils.CheckPreconditions(w, req, etag) {
+			return nil
+		}
+		w.Header().Set("Etag", etag)
 	}
 
-	http.ServeContent(w, req, objName, unixZeroEpoch, f)
+	var r io.Reader = f
+	contentLength := h["Content-Length"]
+	contentType := h["Content-Type"]
+	o := h.ObjectMetadata()
+	if contentEncoding := o["content-encoding"]; contentEncoding == "gzip" {
+		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+			w.Header().Set("Content-Encoding", "gzip")
+		} else {
+			contentLength = o["original-content-length"]
+			r, err = gzip.NewReader(f)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if contentType == "" {
+		contentType = magic.MIMETypeByExtension(path.Ext(file))
+	}
+
+	size, _ := strconv.ParseInt(contentLength, 10, 64)
+	web_utils.ServeContent(w, req, contentType, size, r)
 	return nil
 }
 
@@ -91,12 +122,23 @@ func NewAferoFileServer(fs afero.Fs, makePath func(slug, version, file string) s
 }
 
 func (s *aferoServer) Open(slug, version, file string) (io.ReadCloser, error) {
+	isGzipped := true
 	filepath := s.mkPath(slug, version, file)
-	f, err := s.open(filepath)
+	f, err := s.open(filepath + ".gz")
+	if os.IsNotExist(err) {
+		isGzipped = false
+		f, err = s.open(filepath)
+	}
 	if os.IsNotExist(err) {
 		return s.open(retroCompatMakePath(slug, version, file))
 	}
-	return f, err
+	if err != nil {
+		return nil, err
+	}
+	if isGzipped {
+		return gzip.NewReader(f)
+	}
+	return f, nil
 }
 func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
 	return s.fs.Open(filepath)
@@ -111,24 +153,52 @@ func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	return err
 }
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
-	rc, err := s.fs.Open(filepath)
+	isGzipped := true
+	rc, err := s.fs.Open(filepath + ".gz")
+	if os.IsNotExist(err) {
+		isGzipped = false
+		rc, err = s.fs.Open(filepath)
+	}
 	if err != nil {
 		return err
 	}
 	defer rc.Close()
 
-	h := md5.New()
-	r := io.TeeReader(rc, h)
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
+	var content io.Reader
+	var size int64
+	if checkEtag := req.Header.Get("Cache-Control") != ""; checkEtag {
+		var b []byte
+		h := md5.New()
+		r := io.TeeReader(rc, h)
+		b, err = ioutil.ReadAll(r)
+		if err != nil {
+			return err
+		}
+		etag := fmt.Sprintf(`"%s"`, hex.EncodeToString(h.Sum(nil)))
+		if web_utils.CheckPreconditions(w, req, etag) {
+			return nil
+		}
+		w.Header().Set("Etag", etag)
+		size = int64(len(b))
+		content = bytes.NewReader(b)
+	} else {
+		size, err = rc.Seek(0, io.SeekEnd)
+		if err != nil {
+			return err
+		}
+		_, err = rc.Seek(0, io.SeekStart)
+		if err != nil {
+			return err
+		}
+		content = rc
 	}
 
-	if req.Header.Get("Cache-Control") == "" && req.Header.Get("Range") == "" {
-		w.Header().Set("Etag", fmt.Sprintf(`"%s"`, hex.EncodeToString(h.Sum(nil))))
+	if isGzipped {
+		w.Header().Set("Content-Encoding", "gzip")
 	}
 
-	http.ServeContent(w, req, filepath, unixZeroEpoch, bytes.NewReader(b))
+	contentType := magic.MIMETypeByExtension(path.Ext(filepath))
+	web_utils.ServeContent(w, req, contentType, size, content)
 	return nil
 }
 

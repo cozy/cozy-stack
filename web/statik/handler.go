@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/textproto"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
+	web_utils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/statik/fs"
 	"github.com/labstack/echo"
 )
@@ -287,34 +287,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if inm := r.Header.Get("If-None-Match"); inm != "" {
-		var match bool
-		for {
-			inm = textproto.TrimString(inm)
-			if len(inm) == 0 {
-				break
-			}
-			if inm[0] == ',' {
-				inm = inm[1:]
-			}
-			if inm[0] == '*' {
-				match = true
-				break
-			}
-			etag, remain := scanETag(inm)
-			if etag == "" {
-				break
-			}
-			if etagWeakMatch(etag, f.Etag()) {
-				match = true
-				break
-			}
-			inm = remain
-		}
-		if match {
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
+	checkETag := id == ""
+	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag()) {
+		return
 	}
 
 	headers := w.Header()
@@ -330,11 +305,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		headers.Set("Content-Length", f.Size())
 	}
 
-	if id != "" {
-		headers.Set("Cache-Control", "max-age=31536000, public, immutable")
-	} else {
+	if checkETag {
 		headers.Set("Etag", f.Etag())
 		headers.Set("Cache-Control", "no-cache, public")
+	} else {
+		headers.Set("Cache-Control", "max-age=31536000, public, immutable")
 	}
 
 	if r.Method == http.MethodGet {
@@ -344,41 +319,4 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			io.Copy(w, f.Reader())
 		}
 	}
-}
-
-// scanETag determines if a syntactically valid ETag is present at s. If so,
-// the ETag and remaining text after consuming ETag is returned. Otherwise,
-// it returns "", "".
-func scanETag(s string) (etag string, remain string) {
-	start := 0
-
-	if len(s) >= 2 && s[0] == 'W' && s[1] == '/' {
-		start = 2
-	}
-
-	if len(s[start:]) < 2 || s[start] != '"' {
-		return "", ""
-	}
-
-	// ETag is either W/"text" or "text".
-	// See RFC 7232 2.3.
-	for i := start + 1; i < len(s); i++ {
-		c := s[i]
-		switch {
-		// Character values allowed in ETags.
-		case c == 0x21 || c >= 0x23 && c <= 0x7E || c >= 0x80:
-		case c == '"':
-			return s[:i+1], s[i+1:]
-		default:
-			return "", ""
-		}
-	}
-
-	return "", ""
-}
-
-// etagWeakMatch reports whether a and b match using weak ETag comparison.
-// Assumes a and b are valid ETags.
-func etagWeakMatch(a, b string) bool {
-	return strings.TrimPrefix(a, "W/") == strings.TrimPrefix(b, "W/")
 }

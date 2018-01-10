@@ -2,11 +2,14 @@ package apps
 
 import (
 	"archive/tar"
+	"compress/gzip"
 	"io"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/magic"
 	"github.com/cozy/swift"
 	"github.com/spf13/afero"
 )
@@ -73,7 +76,19 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		}
 	}()
 	objName := path.Join(f.rootObj, stat.Name())
-	file, err := f.c.ObjectCreate(f.container, objName, false, "", "", nil)
+	objMeta := swift.Metadata{
+		"content-encoding":        "gzip",
+		"original-content-length": strconv.FormatInt(stat.Size(), 10),
+	}
+
+	var contentType string
+	contentType, src = magic.MIMETypeFromReader(src)
+	if contentType == "" {
+		contentType = magic.MIMETypeByExtension(path.Ext(stat.Name()))
+	}
+
+	file, err := f.c.ObjectCreate(f.container, objName, false, "",
+		contentType, objMeta.ObjectHeaders())
 	if err != nil {
 		return err
 	}
@@ -82,7 +97,18 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 			err = errc
 		}
 	}()
-	_, err = io.Copy(file, src)
+
+	gw, err := gzip.NewWriterLevel(file, gzip.BestCompression)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == nil {
+			err = gw.Close()
+		}
+	}()
+
+	_, err = io.Copy(gw, src)
 	return err
 }
 
@@ -114,7 +140,8 @@ func (f *aferoCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 	if !f.started {
 		panic("copier should call Start() before Copy()")
 	}
-	fullpath := path.Join(f.appDir, stat.Name())
+
+	fullpath := path.Join(f.appDir, stat.Name()) + ".gz"
 	dir := path.Dir(fullpath)
 	if err = f.fs.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -124,6 +151,7 @@ func (f *aferoCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 			f.fs.RemoveAll(f.appDir) // #nosec
 		}
 	}()
+
 	dst, err := f.fs.Create(fullpath)
 	if err != nil {
 		return err
@@ -133,7 +161,18 @@ func (f *aferoCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 			err = errc
 		}
 	}()
-	_, err = io.Copy(dst, src)
+
+	gw, err := gzip.NewWriterLevel(dst, gzip.BestCompression)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err == nil {
+			err = gw.Close()
+		}
+	}()
+
+	_, err = io.Copy(gw, src)
 	return err
 }
 
