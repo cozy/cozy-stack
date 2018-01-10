@@ -52,5 +52,5 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 }
 
 func (t *thumbsV2) makeName(img *vfs.FileDoc, format string) string {
-	return fmt.Sprintf("thumbs/%s-%s", img.ID(), format)
+	return fmt.Sprintf("thumbs/%s-%s", MakeObjectName(img.ID()), format)
 }

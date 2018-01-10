@@ -57,11 +57,10 @@ func NewV2(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, d
 	}, nil
 }
 
-// makeObjectName build the swift object name for a given file document. It
+// MakeObjectName build the swift object name for a given file document. It
 // creates a virtual subfolder by splitting the document ID, which should be 32
 // bytes long, on the 27nth byte. This avoid having a flat hierarchy in swift with no bound
-func makeObjectName(f *vfs.FileDoc) string {
-	docID := f.DocID
+func MakeObjectName(docID string) string {
 	if len(docID) != 32 {
 		return docID
 	}
@@ -232,7 +231,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 	if newsize >= 0 {
 		h = swift.Headers{"Content-Length": strconv.FormatInt(newsize, 10)}
 	}
-	objName := makeObjectName(newdoc)
+	objName := MakeObjectName(newdoc.DocID)
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
 		sfs.container,
@@ -320,7 +319,7 @@ func (sfs *swiftVFSV2) OpenFile(doc *vfs.FileDoc) (vfs.File, error) {
 		return nil, lockerr
 	}
 	defer sfs.mu.RUnlock()
-	objName := makeObjectName(doc)
+	objName := MakeObjectName(doc.DocID)
 	f, _, err := sfs.c.ObjectOpen(sfs.container, objName, false, nil)
 	if err == swift.ObjectNotFound {
 		return nil, os.ErrNotExist
