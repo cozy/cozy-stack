@@ -42,10 +42,12 @@
                 <p class="help password-form" id="login-password-tip">{{.PasswordHelp}}</p>
                 <p class="line password-form">
                   <label for="password" aria-describedby="login-password-tip">{{t "Login Password field"}}</label>
-                  <button id="password-visibility-button" class="icon password-visibility-icon masked"
+                  <button id="password-visibility-button" class="password-visibility-button"
                     type="button"
                     title="{{t "Login Password show"}}"
-                    name="password-visibility"></button>
+                    name="password-visibility"
+                    data-show="{{t "Login Password button show"}}"
+                    data-hide="{{t "Login Password button hide"}}">{{t "Login Password button show"}}</button>
                   <input id="password" name="passphrase" pplaceholder="{{t "Login Password field"}}" type="password" autofocus="true" autocomplete="current-password" />
                 </p>
                 {{end}}
