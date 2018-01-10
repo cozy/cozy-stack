@@ -26,7 +26,7 @@
             <div role="region">
               <h1>{{t "Authorize Sharing Title" .Client.ClientName}}</h1>
               {{if .Client.LogoURI}}
-              <img class="client-logo" src="{{.Client.LogoURI}}" />
+              <img nonce="{{.ClientLogoNonce}}" class="client-logo" src="{{.Client.LogoURI}}" />
               {{end}}
               <p class="help">
                 {{t "Authorize Sharing Request" .Client.ClientName}}
