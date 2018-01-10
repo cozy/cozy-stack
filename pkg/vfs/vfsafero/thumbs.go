@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/afero"
 )
 
@@ -30,8 +31,14 @@ func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (io.WriteCloser, e
 	return t.fs.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0640)
 }
 
-func (t *thumbs) RemoveThumb(img *vfs.FileDoc, format string) error {
-	return t.fs.Remove(t.makeName(img, format))
+func (t *thumbs) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
+	var errm error
+	for _, format := range formats {
+		if err := t.fs.Remove(t.makeName(img, format)); err != nil && !os.IsNotExist(err) {
+			errm = multierror.Append(errm, err)
+		}
+	}
+	return errm
 }
 
 func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,

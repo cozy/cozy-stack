@@ -30,8 +30,13 @@ func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (io.WriteCloser, e
 	return t.c.ObjectCreate(t.container, t.makeName(img, format), false, "", "", nil)
 }
 
-func (t *thumbs) RemoveThumb(img *vfs.FileDoc, format string) error {
-	return t.c.ObjectDelete(t.container, t.makeName(img, format))
+func (t *thumbs) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
+	objNames := make([]string, len(formats))
+	for i, format := range formats {
+		objNames[i] = t.makeName(img, format)
+	}
+	_, err := t.c.BulkDelete(t.container, objNames)
+	return err
 }
 
 func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request, img *vfs.FileDoc, format string) error {

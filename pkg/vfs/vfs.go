@@ -177,7 +177,7 @@ type DiskThresholder interface {
 // Thumbser defines an interface to define a thumbnail filesystem.
 type Thumbser interface {
 	CreateThumb(img *FileDoc, format string) (io.WriteCloser, error)
-	RemoveThumb(img *FileDoc, format string) error
+	RemoveThumbs(img *FileDoc, formats []string) error
 	ServeThumbContent(w http.ResponseWriter, req *http.Request,
 		img *FileDoc, format string) error
 }
