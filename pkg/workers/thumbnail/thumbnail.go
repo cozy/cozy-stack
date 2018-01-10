@@ -11,7 +11,6 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
-	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 )
 
@@ -44,20 +43,17 @@ func init() {
 
 // Worker is a worker that creates thumbnails for photos and images.
 func Worker(ctx *jobs.WorkerContext) error {
-	domain := ctx.Domain()
-
 	var img imageEvent
 	if err := ctx.UnmarshalEvent(&img); err != nil {
 		return err
 	}
-
 	if img.Verb != "DELETED" && img.Doc.Trashed {
 		return nil
 	}
 
-	log := logger.WithDomain(domain)
-	log.Infof("[jobs] thumbnail: %s %s", img.Verb, img.Doc.ID())
-	i, err := instance.Get(domain)
+	log := ctx.Logger()
+	log.Debugf("thumbnail: %s %s", img.Verb, img.Doc.ID())
+	i, err := instance.Get(ctx.Domain())
 	if err != nil {
 		return err
 	}
@@ -66,7 +62,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 		return generateThumbnails(ctx, i, &img.Doc)
 	case "UPDATED":
 		if err = removeThumbnails(i, &img.Doc); err != nil {
-			log.Infof("[jobs] failed to remove thumbnails for %s", img.Doc.ID())
+			log.Debugf("failed to remove thumbnails for %s: %s", img.Doc.ID(), err)
 		}
 		return generateThumbnails(ctx, i, &img.Doc)
 	case "DELETED":
