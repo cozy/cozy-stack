@@ -7,6 +7,9 @@
     passwordVisibility = !passwordVisibility
     passwordInput.type = passwordVisibility ? 'text' : 'password'
     passwordInput.setAttribute('autocomplete', passwordVisibility ? 'off' : 'current-password')
-    passwordVisibilityButton.setAttribute('aria-pressed', passwordVisibility)
+
+    passwordVisibilityButton.textContent = passwordVisibility
+      ? passwordVisibilityButton.getAttribute('data-hide')
+      : passwordVisibilityButton.getAttribute('data-show')
   })
 })(window.document)

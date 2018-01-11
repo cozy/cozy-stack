@@ -187,24 +187,6 @@ form .line {
     -webkit-flex-direction: column;
             flex-direction: column
 }
-form .line button[action=password-visibility] {
-    position: absolute;
-    top: 0;
-    right: 0
-}
-form .line button.icon {
-    background-color: transparent;
-    background-repeat: no-repeat;
-    padding: 0;
-    padding-top: .7em;
-    width: 1.3em;
-    height: 1.3em;
-    display: block
-}
-form .line button.icon svg {
-    width: 1.3em;
-    height: 1.3em
-}
 label {
     display: block;
     text-transform: uppercase;
@@ -388,17 +370,20 @@ footer li:last-child {
 footer li[aria-selected=true]~li {
     background-color: #dde6ef
 }
-.password-visibility-icon {
+.password-visibility-button {
     position: absolute;
+    display: block;
     top: 0;
     right: 0;
-    min-height: 2em;
-    background-position: 50%;
-    background-image: url("../images/icon-eye-open.svg")
+    padding: 0;
+    padding-top: .7em;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    text-transform: uppercase;
+    color: #297EF2;
+    font-weight: 700;
 }
-.password-visibility-icon[aria-pressed=true] {
-    background-image: url("../images/icon-eye-closed.svg")
-}
+
 .forgot[aria-disabled=true] {
     cursor: default;
     opacity: .5

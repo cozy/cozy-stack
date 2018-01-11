@@ -36,6 +36,12 @@ msgstr "Password"
 msgid "Login Password show"
 msgstr "Show password"
 
+msgid "Login Password button show"
+msgstr "show"
+
+msgid "Login Password button hide"
+msgstr "hide"
+
 msgid "Login Submit"
 msgstr "Log in"
 

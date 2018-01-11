@@ -37,10 +37,12 @@
                 <p class="help" id="login-password-tip">{{t "Passphrase renew Help"}}</p>
                 <p class="line">
                   <label for="password" aria-describedby="login-password-tip">{{t "Passphrase renew Field"}}</label>
-                  <button id="password-visibility-button" class="icon password-visibility-icon masked"
-                      type="button"
-                      title="Show password"
-                      name="password-visibility"></button>
+                  <button id="password-visibility-button" class="password-visibility-button"
+                    type="button"
+                    title="{{t "Login Password show"}}"
+                    name="password-visibility"
+                    data-show="{{t "Login Password button show"}}"
+                    data-hide="{{t "Login Password button hide"}}">{{t "Login Password button show"}}</button>
                   <input id="password" name="passphrase" placeholder="Password" type="password" autofocus="true" autocomplete="new-password" />
                   <progress id="password-strength" step='1' min='0' max='100' value=0 class="pw-weak" />
                 </p>
