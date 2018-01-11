@@ -171,7 +171,11 @@ func makeCSPHeader(parent, siblings, header string, sources []CSPSource, isSecur
 				headers[i] = "ws://" + parent
 			}
 		case CSPSrcSiblings:
-			headers[i] = siblings
+			if isSecure {
+				headers[i] = "https://" + siblings
+			} else {
+				headers[i] = "http://" + siblings
+			}
 		case CSPSrcAny:
 			headers[i] = "*"
 		case CSPUnsafeInline:

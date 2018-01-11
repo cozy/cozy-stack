@@ -58,7 +58,7 @@ func TestSecureMiddlewareCSP(t *testing.T) {
 
 	assert.Equal(t, "", rec1.Header().Get(echo.HeaderContentSecurityPolicy))
 	assert.Equal(t, "script-src 'self';frame-src *;", rec2.Header().Get(echo.HeaderContentSecurityPolicy))
-	assert.Equal(t, "script-src *.cozy.local;frame-src *;connect-src cozy.local 'self';", rec3.Header().Get(echo.HeaderContentSecurityPolicy))
+	assert.Equal(t, "script-src https://*.cozy.local;frame-src *;connect-src https://cozy.local 'self';", rec3.Header().Get(echo.HeaderContentSecurityPolicy))
 }
 
 func TestSecureMiddlewareXFrame(t *testing.T) {
