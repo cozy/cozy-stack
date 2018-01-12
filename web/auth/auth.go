@@ -3,7 +3,6 @@ package auth
 
 import (
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
@@ -556,12 +554,18 @@ func authorizeForm(c echo.Context) error {
 	}
 	params.client.ClientID = params.client.CouchID
 
-	clientURL, err := url.Parse(params.client.ClientURI)
 	var clientDomain string
+	clientURL, err := url.Parse(params.client.ClientURI)
 	if err != nil {
 		clientDomain = params.client.ClientURI
 	} else {
 		clientDomain = clientURL.Hostname()
+	}
+
+	var logoDomain string
+	logoURL, err := url.Parse(params.client.LogoURI)
+	if err == nil {
+		logoDomain = logoURL.Hostname()
 	}
 
 	tmpl := "authorize.html"
@@ -571,31 +575,25 @@ func authorizeForm(c echo.Context) error {
 
 	// This Content-Security-Policy (CSP) nonce is here to allow the display of
 	// logos for OAuth clients on the authorize page.
-	var logoNonce string
 	if logoURI := params.client.LogoURI; logoURI != "" {
-		logoNonce = base64.URLEncoding.EncodeToString(crypto.GenerateRandomBytes(16))
 		csp := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
 		if !strings.Contains(csp, "img-src") {
-			if csp != "" && csp[len(csp)-1] != ';' {
-				csp += ";"
-			}
 			c.Response().Header().Set(echo.HeaderContentSecurityPolicy,
-				fmt.Sprintf("%s img-src 'nonce-%s';", csp, logoNonce))
+				fmt.Sprintf("%simg-src 'self' https://%s;", csp, logoDomain))
 		}
 	}
 
 	return c.Render(http.StatusOK, tmpl, echo.Map{
-		"Domain":          instance.Domain,
-		"ClientDomain":    clientDomain,
-		"Locale":          instance.Locale,
-		"Client":          params.client,
-		"ClientLogoNonce": logoNonce,
-		"State":           params.state,
-		"RedirectURI":     params.redirectURI,
-		"Scope":           params.scope,
-		"Permissions":     permissions,
-		"ReadOnly":        readOnly,
-		"CSRF":            c.Get("csrf"),
+		"Domain":       instance.Domain,
+		"ClientDomain": clientDomain,
+		"Locale":       instance.Locale,
+		"Client":       params.client,
+		"State":        params.state,
+		"RedirectURI":  params.redirectURI,
+		"Scope":        params.scope,
+		"Permissions":  permissions,
+		"ReadOnly":     readOnly,
+		"CSRF":         c.Get("csrf"),
 	})
 }
 
