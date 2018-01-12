@@ -69,7 +69,7 @@ const (
 	// CSPWhitelist is a whitelist of domains that are allowed in CSP. It's not
 	// permanent, this whitelist will be removed when we will have a more
 	// generic way to enable client-side apps to access some domains (proxy).
-	CSPWhitelist = "piwik.cozycloud.cc *.tile.openstreetmap.org *.tile.osm.org *.tiles.mapbox.com api.mapbox.com"
+	CSPWhitelist = "https://piwik.cozycloud.cc https://*.tile.openstreetmap.org https://*.tile.osm.org https://*.tiles.mapbox.com https://api.mapbox.com"
 )
 
 // Secure returns a Middlefunc that can be used to define all the necessary
@@ -93,12 +93,12 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			hsts := true
+			isSecure := true
 			if in := c.Get("instance"); in != nil && in.(*instance.Instance).Dev {
-				hsts = false
+				isSecure = false
 			}
 			h := c.Response().Header()
-			if hsts && hstsHeader != "" {
+			if isSecure && hstsHeader != "" {
 				h.Set(echo.HeaderStrictTransportSecurity, hstsHeader)
 			}
 			if xFrameHeader != "" {
@@ -107,37 +107,37 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 			var cspHeader string
 			parent, _, siblings := SplitHost(c.Request().Host)
 			if len(conf.CSPDefaultSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "default-src", conf.CSPDefaultSrc, isSecure)
 			}
 			if len(conf.CSPScriptSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "script-src", conf.CSPScriptSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "script-src", conf.CSPScriptSrc, isSecure)
 			}
 			if len(conf.CSPFrameSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "frame-src", conf.CSPFrameSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "frame-src", conf.CSPFrameSrc, isSecure)
 			}
 			if len(conf.CSPConnectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "connect-src", conf.CSPConnectSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "connect-src", conf.CSPConnectSrc, isSecure)
 			}
 			if len(conf.CSPFontSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "font-src", conf.CSPFontSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "font-src", conf.CSPFontSrc, isSecure)
 			}
 			if len(conf.CSPImgSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "img-src", conf.CSPImgSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "img-src", conf.CSPImgSrc, isSecure)
 			}
 			if len(conf.CSPManifestSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "manifest-src", conf.CSPManifestSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "manifest-src", conf.CSPManifestSrc, isSecure)
 			}
 			if len(conf.CSPMediaSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "media-src", conf.CSPMediaSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "media-src", conf.CSPMediaSrc, isSecure)
 			}
 			if len(conf.CSPObjectSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "object-src", conf.CSPObjectSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "object-src", conf.CSPObjectSrc, isSecure)
 			}
 			if len(conf.CSPStyleSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "style-src", conf.CSPStyleSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "style-src", conf.CSPStyleSrc, isSecure)
 			}
 			if len(conf.CSPWorkerSrc) > 0 {
-				cspHeader += makeCSPHeader(parent, siblings, "worker-src", conf.CSPWorkerSrc)
+				cspHeader += makeCSPHeader(parent, siblings, "worker-src", conf.CSPWorkerSrc, isSecure)
 			}
 			if cspHeader != "" {
 				h.Set(echo.HeaderContentSecurityPolicy, cspHeader)
@@ -148,7 +148,7 @@ func Secure(conf *SecureConfig) echo.MiddlewareFunc {
 	}
 }
 
-func makeCSPHeader(parent, siblings, header string, sources []CSPSource) string {
+func makeCSPHeader(parent, siblings, header string, sources []CSPSource, isSecure bool) string {
 	headers := make([]string, len(sources))
 	for i, src := range sources {
 		switch src {
@@ -159,11 +159,23 @@ func makeCSPHeader(parent, siblings, header string, sources []CSPSource) string 
 		case CSPSrcBlob:
 			headers[i] = "blob:"
 		case CSPSrcParent:
-			headers[i] = parent
+			if isSecure {
+				headers[i] = "https://" + parent
+			} else {
+				headers[i] = "http://" + parent
+			}
 		case CSPSrcWS:
-			headers[i] = "ws://" + parent + " wss://" + parent
+			if isSecure {
+				headers[i] = "wss://" + parent
+			} else {
+				headers[i] = "ws://" + parent
+			}
 		case CSPSrcSiblings:
-			headers[i] = siblings
+			if isSecure {
+				headers[i] = "https://" + siblings
+			} else {
+				headers[i] = "http://" + siblings
+			}
 		case CSPSrcAny:
 			headers[i] = "*"
 		case CSPUnsafeInline:
