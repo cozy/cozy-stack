@@ -562,12 +562,6 @@ func authorizeForm(c echo.Context) error {
 		clientDomain = clientURL.Hostname()
 	}
 
-	var logoDomain string
-	logoURL, err := url.Parse(params.client.LogoURI)
-	if err == nil {
-		logoDomain = logoURL.Hostname()
-	}
-
 	tmpl := "authorize.html"
 	if params.resType == consts.SharingResponseType {
 		tmpl = "authorize_sharing.html"
@@ -576,10 +570,13 @@ func authorizeForm(c echo.Context) error {
 	// This Content-Security-Policy (CSP) nonce is here to allow the display of
 	// logos for OAuth clients on the authorize page.
 	if logoURI := params.client.LogoURI; logoURI != "" {
-		csp := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
-		if !strings.Contains(csp, "img-src") {
-			c.Response().Header().Set(echo.HeaderContentSecurityPolicy,
-				fmt.Sprintf("%simg-src 'self' https://%s;", csp, logoDomain))
+		logoURL, err := url.Parse(params.client.LogoURI)
+		if err == nil {
+			csp := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
+			if !strings.Contains(csp, "img-src") {
+				c.Response().Header().Set(echo.HeaderContentSecurityPolicy,
+					fmt.Sprintf("%simg-src 'self' %s;", csp, logoURL.Hostname()+logoURL.EscapedPath()))
+			}
 		}
 	}
 
