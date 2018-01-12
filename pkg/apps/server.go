@@ -129,6 +129,9 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	if contentType == "" {
 		contentType = magic.MIMETypeByExtension(path.Ext(file))
 	}
+	if contentType == "text/html" {
+		contentType = "text/html; charset=utf-8"
+	}
 
 	size, _ := strconv.ParseInt(contentLength, 10, 64)
 	web_utils.ServeContent(w, req, contentType, size, r)
@@ -235,6 +238,9 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	contentType := magic.MIMETypeByExtension(path.Ext(filepath))
+	if contentType == "text/html" {
+		contentType = "text/html; charset=utf-8"
+	}
 	web_utils.ServeContent(w, req, contentType, size, content)
 	return nil
 }
