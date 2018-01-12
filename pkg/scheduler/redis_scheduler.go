@@ -230,6 +230,9 @@ func (s *RedisScheduler) Poll(now int64) error {
 		case *EventTrigger: // Debounced
 			job := t.Infos().JobRequest()
 			job.Debounced = true
+			if err = s.client.ZRem(SchedKey, results[0]).Err(); err != nil {
+				return err
+			}
 			if _, err = s.broker.PushJob(job); err != nil {
 				return err
 			}
