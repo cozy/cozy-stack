@@ -504,7 +504,7 @@ func TestRedisSchedulerWithDebounce(t *testing.T) {
 		realtime.GetHub().Publish(event)
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(12 * time.Second)
 	count, _ := bro.QueueLen("incr")
 	assert.Equal(t, 2, count)
 }
