@@ -570,7 +570,7 @@ func authorizeForm(c echo.Context) error {
 	// This Content-Security-Policy (CSP) nonce is here to allow the display of
 	// logos for OAuth clients on the authorize page.
 	if logoURI := params.client.LogoURI; logoURI != "" {
-		logoURL, err := url.Parse(params.client.LogoURI)
+		logoURL, err := url.Parse(logoURI)
 		if err == nil {
 			csp := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
 			if !strings.Contains(csp, "img-src") {
