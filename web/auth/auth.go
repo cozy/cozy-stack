@@ -575,7 +575,7 @@ func authorizeForm(c echo.Context) error {
 			csp := c.Response().Header().Get(echo.HeaderContentSecurityPolicy)
 			if !strings.Contains(csp, "img-src") {
 				c.Response().Header().Set(echo.HeaderContentSecurityPolicy,
-					fmt.Sprintf("%simg-src 'self' %s;", csp, logoURL.Hostname()+logoURL.EscapedPath()))
+					fmt.Sprintf("%simg-src 'self' https://%s;", csp, logoURL.Hostname()+logoURL.EscapedPath()))
 			}
 		}
 	}
