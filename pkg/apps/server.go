@@ -38,6 +38,37 @@ type aferoServer struct {
 	fs     afero.Fs
 }
 
+type gzipReadCloser struct {
+	gr *gzip.Reader
+	cl io.Closer
+}
+
+// The Close method of gzip.Reader does not closes the underlying reader. This
+// little wrapper does the closing.
+func newGzipReadCloser(r io.ReadCloser) (io.ReadCloser, error) {
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+	return gzipReadCloser{gr: gr, cl: r}, nil
+}
+
+func (g gzipReadCloser) Read(b []byte) (int, error) {
+	return g.gr.Read(b)
+}
+
+func (g gzipReadCloser) Close() error {
+	err1 := g.gr.Close()
+	err2 := g.cl.Close()
+	if err1 != nil {
+		return err1
+	}
+	if err2 != nil {
+		return err2
+	}
+	return nil
+}
+
 // NewSwiftFileServer returns provides the apps.FileServer implementation
 // using the swift backend as file server.
 func NewSwiftFileServer(conn *swift.Connection, appsType AppType) FileServer {
@@ -55,7 +86,7 @@ func (s *swiftServer) Open(slug, version, file string) (io.ReadCloser, error) {
 	}
 	o := h.ObjectMetadata()
 	if contentEncoding := o["content-encoding"]; contentEncoding == "gzip" {
-		return gzip.NewReader(f)
+		return newGzipReadCloser(f)
 	}
 	return f, nil
 }
@@ -81,14 +112,17 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	contentType := h["Content-Type"]
 	o := h.ObjectMetadata()
 	if contentEncoding := o["content-encoding"]; contentEncoding == "gzip" {
-		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+		if acceptGzipEncoding(req) {
 			w.Header().Set("Content-Encoding", "gzip")
 		} else {
 			contentLength = o["original-content-length"]
-			r, err = gzip.NewReader(f)
+			var gr *gzip.Reader
+			gr, err = gzip.NewReader(f)
 			if err != nil {
 				return err
 			}
+			defer gr.Close()
+			r = gr
 		}
 	}
 
@@ -129,14 +163,11 @@ func (s *aferoServer) Open(slug, version, file string) (io.ReadCloser, error) {
 		isGzipped = false
 		f, err = s.open(filepath)
 	}
-	if os.IsNotExist(err) {
-		return s.open(retroCompatMakePath(slug, version, file))
-	}
 	if err != nil {
 		return nil, err
 	}
 	if isGzipped {
-		return gzip.NewReader(f)
+		return newGzipReadCloser(f)
 	}
 	return f, nil
 }
@@ -146,11 +177,7 @@ func (s *aferoServer) open(filepath string) (io.ReadCloser, error) {
 
 func (s *aferoServer) ServeFileContent(w http.ResponseWriter, req *http.Request, slug, version, file string) error {
 	filepath := s.mkPath(slug, version, file)
-	err := s.serveFileContent(w, req, filepath)
-	if os.IsNotExist(err) {
-		return s.serveFileContent(w, req, retroCompatMakePath(slug, version, file))
-	}
-	return err
+	return s.serveFileContent(w, req, filepath)
 }
 func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request, filepath string) error {
 	isGzipped := true
@@ -194,7 +221,17 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	if isGzipped {
-		w.Header().Set("Content-Encoding", "gzip")
+		if acceptGzipEncoding(req) {
+			w.Header().Set("Content-Encoding", "gzip")
+		} else {
+			var gr *gzip.Reader
+			gr, err = gzip.NewReader(content)
+			if err != nil {
+				return err
+			}
+			defer gr.Close()
+			content = gr
+		}
 	}
 
 	contentType := magic.MIMETypeByExtension(path.Ext(filepath))
@@ -208,10 +245,8 @@ func defaultMakePath(slug, version, file string) string {
 	return path.Join(basepath, filepath)
 }
 
-// FIXME: retro-compatibility code to serve application that were not installed
-// in a versioned directory.
-func retroCompatMakePath(slug, version, file string) string {
-	return path.Join("/", slug, file)
+func acceptGzipEncoding(req *http.Request) bool {
+	return strings.Contains(req.Header.Get("Accept-Encoding"), "gzip")
 }
 
 func containerName(appsType AppType) string {

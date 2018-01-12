@@ -103,8 +103,8 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == nil {
-			err = gw.Close()
+		if errc := gw.Close(); errc != nil && err == nil {
+			err = errc
 		}
 	}()
 
@@ -167,8 +167,8 @@ func (f *aferoCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		return err
 	}
 	defer func() {
-		if err == nil {
-			err = gw.Close()
+		if errc := gw.Close(); errc != nil && err == nil {
+			err = errc
 		}
 	}()
 
