@@ -312,7 +312,10 @@ func (m Message) Unmarshal(msg interface{}) error {
 	if m == nil {
 		return ErrMessageNil
 	}
-	return json.Unmarshal(m, &msg)
+	if err := json.Unmarshal(m, &msg); err != nil {
+		return ErrMessageUnmarshal
+	}
+	return nil
 }
 
 // Unmarshal can be used to unmarshal the encoded message value in the
@@ -321,7 +324,10 @@ func (e Event) Unmarshal(evt interface{}) error {
 	if e == nil {
 		return ErrMessageNil
 	}
-	return json.Unmarshal(e, &evt)
+	if err := json.Unmarshal(e, &evt); err != nil {
+		return ErrMessageUnmarshal
+	}
+	return nil
 }
 
 var (

@@ -307,7 +307,7 @@ func (t *task) run() (err error) {
 		}
 	}()
 	for {
-		retry, delay, timeout := t.nextDelay()
+		retry, delay, timeout := t.nextDelay(err)
 		if !retry {
 			return err
 		}
@@ -371,7 +371,13 @@ func (t *task) exec(ctx *WorkerContext) (err error) {
 	return t.conf.WorkerFunc(ctx)
 }
 
-func (t *task) nextDelay() (bool, time.Duration, time.Duration) {
+func (t *task) nextDelay(prevError error) (bool, time.Duration, time.Duration) {
+	// for certain kinds of errors, we do not have a retry since these error
+	// cannot be recovered from
+	if prevError == ErrMessageUnmarshal || prevError == ErrMessageNil {
+		return false, 0, 0
+	}
+
 	c := t.conf
 
 	if t.execCount >= c.MaxExecCount {

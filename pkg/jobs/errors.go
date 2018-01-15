@@ -13,4 +13,6 @@ var (
 	ErrUnknownWorker = errors.New("jobs: could not find worker")
 	// ErrMessageNil is used for an nil message
 	ErrMessageNil = errors.New("jobs: message is nil")
+	// ErrMessageUnmarshal is used when unmarshalling a message causes an error
+	ErrMessageUnmarshal = errors.New("jobs: message unmarshal")
 )
