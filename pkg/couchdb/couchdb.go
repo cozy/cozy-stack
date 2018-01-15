@@ -261,7 +261,12 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 	}
 
 	log := logger.WithDomain(db.Prefix())
-	if logger.IsDebug(log) {
+
+	// We do not log the account doctype to avoid printing account informations
+	// in the log files.
+	logDebug := doctype != "io.cozy.accounts" && logger.IsDebug(log)
+
+	if logDebug {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
 	}
 
@@ -316,7 +321,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 		return nil
 	}
 
-	if logger.IsDebug(log) {
+	if logDebug {
 		var data []byte
 		data, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
