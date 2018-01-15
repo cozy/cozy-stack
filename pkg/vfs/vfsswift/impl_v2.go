@@ -365,7 +365,8 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 			f, ok := entries[docID]
 			if !ok {
 				var fileDoc *vfs.FileDoc
-				fileDoc, err = objectToFileDoc(nil, obj)
+				var filePath string
+				filePath, fileDoc, err = objectToFileDoc(nil, obj)
 				if err != nil {
 					return nil, err
 				}
@@ -373,7 +374,7 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 					Type:     vfs.IndexMissing,
 					IsFile:   true,
 					FileDoc:  fileDoc,
-					Filename: path.Join(vfs.OrphansDirName, fileDoc.Name()),
+					Filename: filePath,
 				})
 			} else {
 				var md5sum []byte

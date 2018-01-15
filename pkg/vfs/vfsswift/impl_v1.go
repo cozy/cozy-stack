@@ -437,7 +437,7 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 				return nil, err
 			} else if info.ContentType != dirContentType {
 				var fileDoc *vfs.FileDoc
-				fileDoc, err = objectToFileDoc(dir, info)
+				_, fileDoc, err = objectToFileDoc(dir, info)
 				if err != nil {
 					continue
 				}
@@ -468,16 +468,15 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			if object.Bytes == 0 {
 				continue
 			}
-			fileDoc, err := objectToFileDoc(dir, object)
+			filePath, fileDoc, err := objectToFileDoc(dir, object)
 			if err != nil {
 				continue
 			}
-			filename := path.Join(dir.Fullpath, name)
 			logbook = append(logbook, &vfs.FsckLog{
 				Type:     vfs.IndexMissing,
 				IsFile:   true,
 				FileDoc:  fileDoc,
-				Filename: filename,
+				Filename: filePath,
 			})
 		}
 	}
@@ -485,19 +484,22 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 	return logbook, nil
 }
 
-func objectToFileDoc(dir *vfs.DirDoc, object swift.Object) (*vfs.FileDoc, error) {
+func objectToFileDoc(dir *vfs.DirDoc, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
 	var trashed bool
 	var dirID string
 	if dir != nil {
 		trashed = strings.HasPrefix(dir.Fullpath, vfs.TrashDirName)
 		dirID = dir.DocID
+		filePath = path.Join(dir.Fullpath, fileDoc.Name())
+	} else {
+		filePath = path.Join(vfs.OrphansDirName, fileDoc.Name())
 	}
 	md5sum, err := hex.DecodeString(object.Hash)
 	if err != nil {
-		return nil, err
+		return
 	}
 	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
-	return vfs.NewFileDoc(
+	fileDoc, err = vfs.NewFileDoc(
 		path.Base(object.Name),
 		dirID,
 		object.Bytes,
@@ -508,6 +510,7 @@ func objectToFileDoc(dir *vfs.DirDoc, object swift.Object) (*vfs.FileDoc, error)
 		false,
 		trashed,
 		nil)
+	return
 }
 
 // FsckPrune tries to fix the given list on inconsistencies in the VFS
