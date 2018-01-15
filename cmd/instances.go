@@ -36,6 +36,7 @@ var flagJSON bool
 var flagDirectory string
 var flagIncreaseQuota bool
 var flagForceRegistry bool
+var flagSwiftCluster int
 
 // instanceCmdGroup represents the instances command
 var instanceCmdGroup = &cobra.Command{
@@ -110,28 +111,35 @@ given domain.
 			return cmd.Usage()
 		}
 
-		var quota int64
+		var quota *int64
 		if flagDiskQuota != "" {
-			diskQuota, err := humanize.ParseBytes(flagDiskQuota)
+			diskQuotaU, err := humanize.ParseBytes(flagDiskQuota)
 			if err != nil {
 				return err
 			}
-			quota = int64(diskQuota)
+			diskQuota := int64(diskQuotaU)
+			quota = &diskQuota
+		}
+
+		var swiftCluster *int
+		if flagSwiftCluster > 0 {
+			swiftCluster = &flagSwiftCluster
 		}
 
 		domain := args[0]
 		c := newAdminClient()
 		in, err := c.CreateInstance(&client.InstanceOptions{
-			Domain:     domain,
-			Apps:       flagApps,
-			Locale:     flagLocale,
-			Timezone:   flagTimezone,
-			Email:      flagEmail,
-			PublicName: flagPublicName,
-			Settings:   flagSettings,
-			DiskQuota:  &quota,
-			Dev:        flagDev,
-			Passphrase: flagPassphrase,
+			Domain:       domain,
+			Apps:         flagApps,
+			Locale:       flagLocale,
+			Timezone:     flagTimezone,
+			Email:        flagEmail,
+			PublicName:   flagPublicName,
+			Settings:     flagSettings,
+			DiskQuota:    quota,
+			SwiftCluster: swiftCluster,
+			Dev:          flagDev,
+			Passphrase:   flagPassphrase,
 		})
 		if err != nil {
 			errPrintfln(
@@ -555,6 +563,7 @@ func init() {
 	addInstanceCmd.Flags().StringSliceVar(&flagApps, "apps", nil, "Apps to be preinstalled")
 	addInstanceCmd.Flags().BoolVar(&flagDev, "dev", false, "To create a development instance")
 	addInstanceCmd.Flags().StringVar(&flagPassphrase, "passphrase", "", "Register the instance with this passphrase (useful for tests)")
+	addInstanceCmd.Flags().IntVar(&flagSwiftCluster, "swift-cluster", 0, "Specify a cluster number for swift")
 	destroyInstanceCmd.Flags().BoolVar(&flagForce, "force", false, "Force the deletion without asking for confirmation")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckDry, "dry", false, "Don't modify the VFS, only show the inconsistencies")
 	fsckInstanceCmd.Flags().BoolVar(&flagFsckPrune, "prune", false, "Try to solve inconsistencies by modifying the file system")

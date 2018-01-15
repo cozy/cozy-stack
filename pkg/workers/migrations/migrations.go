@@ -36,7 +36,8 @@ func init() {
 const swiftV1ToV2 = "swift-v1-to-v2"
 
 type message struct {
-	Type string `json:"type"`
+	Type    string `json:"type"`
+	Cluster int    `json:"cluster"`
 }
 
 func worker(ctx *jobs.WorkerContext) error {
@@ -68,7 +69,7 @@ func commit(ctx *jobs.WorkerContext, err error) error {
 
 	switch msg.Type {
 	case swiftV1ToV2:
-		return commitSwiftV1ToV2(domain)
+		return commitSwiftV1ToV2(domain, msg.Cluster)
 	default:
 		return fmt.Errorf("unknown migration type %q", msg.Type)
 	}
@@ -85,7 +86,7 @@ func migrateSwiftV1ToV2(domain string) error {
 	if err != nil {
 		return err
 	}
-	if inst.SwiftLayoutV2 {
+	if inst.SwiftCluster > 0 {
 		return nil
 	}
 
@@ -132,12 +133,15 @@ func migrateSwiftV1ToV2(domain string) error {
 	return errm
 }
 
-func commitSwiftV1ToV2(domain string) error {
+func commitSwiftV1ToV2(domain string, swiftCluster int) error {
 	inst, err := instance.Get(domain)
 	if err != nil {
 		return err
 	}
-	inst.SwiftLayoutV2 = true
+	if swiftCluster == 0 {
+		swiftCluster = 1
+	}
+	inst.SwiftCluster = swiftCluster
 	return instance.Update(inst)
 }
 

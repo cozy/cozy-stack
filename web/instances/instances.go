@@ -71,13 +71,26 @@ func createHandler(c echo.Context) error {
 	if name := c.QueryParam("PublicName"); name != "" {
 		settings.M["public_name"] = name
 	}
+
+	fmt.Println(">>>>", c.QueryParam("SwiftCluster"))
+
+	var swiftCluster int
+	if cluster := c.QueryParam("SwiftCluster"); cluster != "" {
+		var err error
+		swiftCluster, err = strconv.Atoi(cluster)
+		if err != nil {
+			return wrapError(err)
+		}
+	}
+
 	in, err := instance.Create(&instance.Options{
-		Domain:    c.QueryParam("Domain"),
-		Locale:    c.QueryParam("Locale"),
-		DiskQuota: diskQuota,
-		Settings:  settings,
-		Apps:      utils.SplitTrimString(c.QueryParam("Apps"), ","),
-		Dev:       (c.QueryParam("Dev") == "true"),
+		Domain:       c.QueryParam("Domain"),
+		Locale:       c.QueryParam("Locale"),
+		DiskQuota:    diskQuota,
+		Settings:     settings,
+		SwiftCluster: swiftCluster,
+		Apps:         utils.SplitTrimString(c.QueryParam("Apps"), ","),
+		Dev:          (c.QueryParam("Dev") == "true"),
 	})
 	if err != nil {
 		return wrapError(err)

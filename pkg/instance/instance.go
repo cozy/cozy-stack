@@ -86,9 +86,11 @@ type Instance struct {
 
 	OnboardingFinished bool  `json:"onboarding_finished"`         // Whether or not the onboarding is complete.
 	MailConfirmed      bool  `json:"mail_confirmed"`              // Whether or not the mail has been confirmed.
-	SwiftLayoutV2      bool  `json:"swift_v2,omitempty"`          // Wherther or not the new swift layout is used
 	BytesDiskQuota     int64 `json:"disk_quota,string,omitempty"` // The total size in bytes allowed to the user
 	IndexViewsVersion  int   `json:"indexes_version"`
+
+	// Swift cluster number, indexed from 1. If not zero, it indicates we're using swift layout 2, see pkg/vfs/swift.
+	SwiftCluster int `json:"swift_cluster,omitempty"`
 
 	// PassphraseHash is a hash of the user's passphrase. For more informations,
 	// see crypto.GenerateFromPassphrase.
@@ -114,12 +116,13 @@ type Instance struct {
 
 // Options holds the parameters to create a new instance.
 type Options struct {
-	Domain    string
-	Locale    string
-	DiskQuota int64
-	Apps      []string
-	Dev       bool
-	Settings  couchdb.JSONDoc
+	Domain       string
+	Locale       string
+	DiskQuota    int64
+	Apps         []string
+	SwiftCluster int
+	Dev          bool
+	Settings     couchdb.JSONDoc
 }
 
 // DocType implements couchdb.Doc
@@ -194,7 +197,7 @@ func (i *Instance) makeVFS() error {
 	case config.SchemeFile, config.SchemeMem:
 		i.vfs, err = vfsafero.New(index, disk, mutex, fsURL, i.DirName())
 	case config.SchemeSwift:
-		if i.SwiftLayoutV2 {
+		if i.SwiftCluster > 0 {
 			i.vfs, err = vfsswift.NewV2(index, disk, mutex, i.Domain)
 		} else {
 			i.vfs, err = vfsswift.New(index, disk, mutex, i.Domain)
@@ -270,7 +273,7 @@ func (i *Instance) ThumbsFS() vfs.Thumbser {
 			path.Join(fsURL.Path, i.DirName(), vfs.ThumbsDirName))
 		return vfsafero.NewThumbsFs(baseFS)
 	case config.SchemeSwift:
-		if i.SwiftLayoutV2 {
+		if i.SwiftCluster > 0 {
 			return vfsswift.NewThumbsFsV2(config.GetSwiftConnection(), i.Domain)
 		}
 		return vfsswift.NewThumbsFs(config.GetSwiftConnection(), i.Domain)
@@ -548,7 +551,13 @@ func CreateWithoutHooks(opts *Options) (*Instance, error) {
 	i.BytesDiskQuota = opts.DiskQuota
 	i.Dev = opts.Dev
 	i.IndexViewsVersion = consts.IndexViewsVersion
-	i.SwiftLayoutV2 = true
+
+	// If not cluster number is given, we rely on cluster one.
+	if opts.SwiftCluster == 0 {
+		i.SwiftCluster = 1
+	} else {
+		i.SwiftCluster = opts.SwiftCluster
+	}
 
 	i.PassphraseHash = nil
 	i.PassphraseResetToken = nil

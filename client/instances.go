@@ -38,6 +38,7 @@ type InstanceOptions struct {
 	Email              string
 	PublicName         string
 	Settings           string
+	SwiftCluster       *int
 	DiskQuota          *int64
 	Apps               []string
 	Dev                bool
@@ -108,6 +109,9 @@ func (c *Client) CreateInstance(opts *InstanceOptions) (*Instance, error) {
 	}
 	if opts.DiskQuota != nil {
 		q.Add("DiskQuota", strconv.FormatInt(*opts.DiskQuota, 10))
+	}
+	if opts.SwiftCluster != nil {
+		q.Add("SwiftCluster", strconv.Itoa(*opts.SwiftCluster))
 	}
 	res, err := c.Req(&request.Options{
 		Method:  "POST",
