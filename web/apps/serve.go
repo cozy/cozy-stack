@@ -152,7 +152,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		// hexadecimal subpart between '.', of at least 10 characters: for instance
 		// "app.badf00dbadf00d.js".
 		if _, id := statik.ExtractAssetID(file); id != "" {
-			c.Response().Header().Set("Cache-Control", "max-age=31536000")
+			c.Response().Header().Set("Cache-Control", "max-age=31536000, immutable")
 		}
 
 		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
