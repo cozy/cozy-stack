@@ -28,38 +28,9 @@ func ServeContent(w http.ResponseWriter, r *http.Request, contentType string, si
 // CheckPreconditions evaluates request preconditions based only on the Etag
 // values.
 func CheckPreconditions(w http.ResponseWriter, r *http.Request, etag string) (done bool) {
-	if etag != "" && (checkIfMatch(w, r, etag) || checkIfNoneMatch(w, r, etag)) {
+	if etag != "" && !checkIfNoneMatch(w, r, etag) {
 		writeNotModified(w)
 		return true
-	}
-	return false
-}
-
-func checkIfMatch(w http.ResponseWriter, r *http.Request, definedETag string) (match bool) {
-	im := r.Header.Get("If-Match")
-	if im == "" {
-		return false
-	}
-	for {
-		im = textproto.TrimString(im)
-		if len(im) == 0 {
-			break
-		}
-		if im[0] == ',' {
-			im = im[1:]
-			continue
-		}
-		if im[0] == '*' {
-			return true
-		}
-		etag, remain := scanETag(im)
-		if etag == "" {
-			break
-		}
-		if etagStrongMatch(etag, definedETag) {
-			return true
-		}
-		im = remain
 	}
 	return false
 }
