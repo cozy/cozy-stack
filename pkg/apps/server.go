@@ -99,7 +99,7 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	}
 	defer f.Close()
 
-	if checkETag := req.Header.Get("Cache-Control") != ""; checkETag {
+	if checkETag := req.Header.Get("Cache-Control") == ""; checkETag {
 		etag := fmt.Sprintf(`"%s"`, h["Etag"][:10])
 		if web_utils.CheckPreconditions(w, req, etag) {
 			return nil
@@ -196,7 +196,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 
 	var content io.Reader
 	var size int64
-	if checkEtag := req.Header.Get("Cache-Control") != ""; checkEtag {
+	if checkEtag := req.Header.Get("Cache-Control") == ""; checkEtag {
 		var b []byte
 		h := md5.New()
 		r := io.TeeReader(rc, h)
