@@ -28,8 +28,8 @@ func ServeContent(w http.ResponseWriter, r *http.Request, contentType string, si
 // CheckPreconditions evaluates request preconditions based only on the Etag
 // values.
 func CheckPreconditions(w http.ResponseWriter, r *http.Request, etag string) (done bool) {
-	if etag != "" && !checkIfNoneMatch(w, r, etag) {
-		w.WriteHeader(http.StatusNotModified)
+	if etag != "" && checkIfNoneMatch(w, r, etag) {
+		writeNotModified(w)
 		return true
 	}
 	return false
@@ -50,18 +50,18 @@ func checkIfNoneMatch(w http.ResponseWriter, r *http.Request, definedETag string
 			buf = buf[1:]
 		}
 		if buf[0] == '*' {
-			return false
+			return true
 		}
 		etag, remain := scanETag(buf)
 		if etag == "" {
 			break
 		}
 		if etagWeakMatch(etag, definedETag) {
-			return false
+			return true
 		}
 		buf = remain
 	}
-	return true
+	return false
 }
 
 // etagWeakMatch reports whether a and b match using weak ETag comparison.
@@ -101,4 +101,11 @@ func scanETag(s string) (etag string, remain string) {
 		}
 	}
 	return "", ""
+}
+
+func writeNotModified(w http.ResponseWriter) {
+	h := w.Header()
+	delete(h, "Content-Type")
+	delete(h, "Content-Length")
+	w.WriteHeader(http.StatusNotModified)
 }
