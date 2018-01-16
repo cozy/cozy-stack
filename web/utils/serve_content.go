@@ -29,7 +29,7 @@ func ServeContent(w http.ResponseWriter, r *http.Request, contentType string, si
 // values.
 func CheckPreconditions(w http.ResponseWriter, r *http.Request, etag string) (done bool) {
 	if etag != "" && !checkIfNoneMatch(w, r, etag) {
-		writeNotModified(w)
+		w.WriteHeader(http.StatusNotModified)
 		return true
 	}
 	return false
@@ -101,11 +101,4 @@ func scanETag(s string) (etag string, remain string) {
 		}
 	}
 	return "", ""
-}
-
-func writeNotModified(w http.ResponseWriter) {
-	h := w.Header()
-	delete(h, "Content-Type")
-	delete(h, "Content-Length")
-	w.WriteHeader(http.StatusNotModified)
 }
