@@ -72,8 +72,6 @@ func createHandler(c echo.Context) error {
 		settings.M["public_name"] = name
 	}
 
-	fmt.Println(">>>>", c.QueryParam("SwiftCluster"))
-
 	var swiftCluster int
 	if cluster := c.QueryParam("SwiftCluster"); cluster != "" {
 		var err error
