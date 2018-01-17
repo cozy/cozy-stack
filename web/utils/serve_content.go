@@ -70,12 +70,6 @@ func etagWeakMatch(a, b string) bool {
 	return strings.TrimPrefix(a, "W/") == strings.TrimPrefix(b, "W/")
 }
 
-// etagStrongMatch reports whether a and b match using strong ETag comparison.
-// Assumes a and b are valid ETags.
-func etagStrongMatch(a, b string) bool {
-	return a == b && a != "" && a[0] == '"'
-}
-
 // scanETag determines if a syntactically valid ETag is present at s. If so,
 // the ETag and remaining text after consuming ETag is returned. Otherwise,
 // it returns "", "".
