@@ -109,41 +109,22 @@ func (sfs *swiftVFSV2) InitFs() error {
 }
 
 func (sfs *swiftVFSV2) Delete() error {
-	err := sfs.deleteContainer(sfs.version)
-	if err != nil {
-		sfs.log.Errorf("[vfsswift] Could not delete version container %s: %s",
-			sfs.version, err.Error())
-		return err
+	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
+	sfs.log.Infof("[vfsswift] Marking containers %q and %q as to-be-deleted",
+		sfs.container, sfs.dataContainer)
+	err1 := sfs.c.ContainerUpdate(sfs.container, containerMeta)
+	err2 := sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
+	if err1 != nil {
+		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
+			sfs.container, err1)
+		return err1
 	}
-	err = sfs.deleteContainer(sfs.container)
-	if err != nil {
-		sfs.log.Errorf("[vfsswift] Could not delete container %s: %s",
-			sfs.container, err.Error())
-		return err
+	if err2 != nil {
+		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
+			sfs.dataContainer, err2)
+		return err2
 	}
-	sfs.log.Infof("[vfsswift] Deleted container %s", sfs.container)
 	return nil
-}
-
-func (sfs *swiftVFSV2) deleteContainer(container string) error {
-	_, _, err := sfs.c.Container(container)
-	if err == swift.ContainerNotFound {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	objectNames, err := sfs.c.ObjectNamesAll(container, nil)
-	if err != nil {
-		return err
-	}
-	if len(objectNames) > 0 {
-		_, err = sfs.c.BulkDelete(container, objectNames)
-		if err != nil {
-			return err
-		}
-	}
-	return sfs.c.ContainerDelete(container)
 }
 
 func (sfs *swiftVFSV2) CreateDir(doc *vfs.DirDoc) error {
