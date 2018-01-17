@@ -141,6 +141,16 @@ func commitSwiftV1ToV2(domain string, swiftCluster int) error {
 	if err != nil {
 		return err
 	}
+
+	c := config.GetSwiftConnection()
+
+	containerName := swiftV1ContainerPrefixCozy + domain
+	containerMeta := &swift.Metadata{"cozy-v1-migrated": "1"}
+	err = c.ContainerUpdate(containerName, containerMeta.ContainerHeaders())
+	if err != nil {
+		return err
+	}
+
 	if swiftCluster == 0 {
 		swiftCluster = 1
 	}
