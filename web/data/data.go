@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -350,68 +349,6 @@ func findDocuments(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-var allowedChangesParams = map[string]bool{
-	"feed":         true,
-	"style":        true,
-	"since":        true,
-	"limit":        true,
-	"timeout":      true,
-	"include_docs": true,
-	"heartbeat":    true, // Pouchdb sends heartbeet even for non-continuous
-	"_nonce":       true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
-}
-
-func changesFeed(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	var doctype = c.Get("doctype").(string)
-
-	// Drop a clear error for parameters not supported by stack
-	for key := range c.QueryParams() {
-		if !allowedChangesParams[key] {
-			return jsonapi.NewError(http.StatusBadRequest, "Unsuported query parameter '%s'", key)
-		}
-	}
-
-	feed, err := couchdb.ValidChangesMode(c.QueryParam("feed"))
-	if err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
-	}
-
-	feedStyle, err := couchdb.ValidChangesStyle(c.QueryParam("style"))
-	if err != nil {
-		return jsonapi.NewError(http.StatusBadRequest, err)
-	}
-
-	limitString := c.QueryParam("limit")
-	limit := 0
-	if limitString != "" {
-		if limit, err = strconv.Atoi(limitString); err != nil {
-			return jsonapi.NewError(http.StatusBadRequest, "Invalid limit value '%s'", err.Error())
-		}
-	}
-
-	includeDocs := paramIsTrue(c, "include_docs")
-
-	if err = permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
-		return err
-	}
-
-	results, err := couchdb.GetChanges(instance, &couchdb.ChangesRequest{
-		DocType:     doctype,
-		Feed:        feed,
-		Style:       feedStyle,
-		Since:       c.QueryParam("since"),
-		Limit:       limit,
-		IncludeDocs: includeDocs,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, results)
-}
-
 func allDocs(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 
@@ -465,6 +402,22 @@ func Routes(router *echo.Group) {
 	// API Routes that don't depend on a doctype
 	router.GET("/", dataAPIWelcome)
 	router.GET("/_all_doctypes", allDoctypes)
+
+	// Accounts are handled specifically to remove the auth fields
+	{
+		accountGroup := router.Group("/"+consts.Accounts, accountDoctype)
+		accountGroup.GET("/:docid", getAccount)
+		accountGroup.PUT("/:docid", updateAccount)
+		accountGroup.DELETE("/:docid", DeleteDoc)
+		accountGroup.GET("/:docid/relationships/references", echo.NotFoundHandler)
+		accountGroup.POST("/:docid/relationships/references", echo.MethodNotAllowedHandler)
+		accountGroup.DELETE("/:docid/relationships/references", echo.MethodNotAllowedHandler)
+		accountGroup.POST("/", createAccount)
+		accountGroup.GET("/_all_docs", allDocs)
+		accountGroup.POST("/_all_docs", allDocs)
+		accountGroup.POST("/_index", defineIndex)
+		accountGroup.POST("/_find", findDocuments)
+	}
 
 	group := router.Group("/:doctype", ValidDoctype)
 

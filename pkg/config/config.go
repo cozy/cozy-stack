@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/gomail"
@@ -76,6 +78,8 @@ const (
 const defaultAdminSecretFileName = "cozy-admin-passphrase" // #nosec
 
 var config *Config
+var vault *Vault
+
 var log = logger.WithNamespace("config")
 
 // Config contains the configuration values of the application
@@ -92,6 +96,9 @@ type Config struct {
 	Hooks                 string
 	GeoDB                 string
 	PasswordResetInterval time.Duration
+
+	CredentialsEncryptorKey string
+	CredentialsDecryptorKey string
 
 	Fs            Fs
 	CouchDB       CouchDB
@@ -113,6 +120,25 @@ type Config struct {
 	Registries map[string][]*url.URL
 
 	DisableCSP bool
+}
+
+// Vault contains security keys used for various encryption or signing of
+// critical assets.
+type Vault struct {
+	credsEncryptor *keymgmt.NACLKey
+	credsDecryptor *keymgmt.NACLKey
+}
+
+// CredentialsEncryptorKey returns the key used to encrypt credentials values,
+// stored in accounts.
+func (v *Vault) CredentialsEncryptorKey() *keymgmt.NACLKey {
+	return v.credsEncryptor
+}
+
+// CredentialsDecryptorKey returns the key used to decrypt credentials values,
+// stored in accounts.
+func (v *Vault) CredentialsDecryptorKey() *keymgmt.NACLKey {
+	return v.credsDecryptor
 }
 
 // Fs contains the configuration values of the file-system
@@ -265,6 +291,11 @@ func IsDevRelease() bool {
 // GetConfig returns the configured instance of Config
 func GetConfig() *Config {
 	return config
+}
+
+// GetVault returns the configured instance of Vault
+func GetVault() *Vault {
+	return vault
 }
 
 var defaultPasswordResetInterval = 15 * time.Minute
@@ -483,7 +514,8 @@ func UseViper(v *viper.Viper) error {
 							}
 						case "timeout":
 							if timeout, ok := v.(string); ok {
-								d, err := time.ParseDuration(timeout)
+								var d time.Duration
+								d, err = time.ParseDuration(timeout)
 								if err != nil {
 									return fmt.Errorf("config: could not parse timeout duration for worker %q: %s",
 										workerType, err)
@@ -519,6 +551,9 @@ func UseViper(v *viper.Viper) error {
 		Hooks:               v.GetString("hooks"),
 		GeoDB:               v.GetString("geodb"),
 		PasswordResetInterval: v.GetDuration("password_reset_interval"),
+
+		CredentialsEncryptorKey: v.GetString("vault.credentials_encryptor_key"),
+		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),
 
 		Fs: Fs{
 			URL: fsURL,
@@ -569,6 +604,40 @@ func UseViper(v *viper.Viper) error {
 	}
 
 	return logger.Init(config.Logger)
+}
+
+// MakeVault initializes the global vault.
+func MakeVault(c *Config) error {
+	var credsEncryptor *keymgmt.NACLKey
+	var credsDecryptor *keymgmt.NACLKey
+
+	if credsEncryptorKey := config.CredentialsEncryptorKey; credsEncryptorKey != "" {
+		keyBytes, err := ioutil.ReadFile(credsEncryptorKey)
+		if err != nil {
+			return err
+		}
+		credsEncryptor, err = keymgmt.UnmarshalNACLKey(keyBytes)
+		if err != nil {
+			return err
+		}
+	}
+
+	if credsDecryptorKey := config.CredentialsDecryptorKey; credsDecryptorKey != "" {
+		keyBytes, err := ioutil.ReadFile(credsDecryptorKey)
+		if err != nil {
+			return err
+		}
+		credsDecryptor, err = keymgmt.UnmarshalNACLKey(keyBytes)
+		if err != nil {
+			return err
+		}
+	}
+
+	vault = &Vault{
+		credsEncryptor: credsEncryptor,
+		credsDecryptor: credsDecryptor,
+	}
+	return nil
 }
 
 func makeRegistries(v *viper.Viper) (map[string][]*url.URL, error) {
@@ -654,6 +723,16 @@ func UseTestFile() {
 
 	if err := UseViper(v); err != nil {
 		panic(fmt.Errorf("fatal error test config file: %s", err))
+	}
+
+	credsEncryptor, credsDecryptor, err := keymgmt.GenerateKeyPair()
+	if err != nil {
+		panic(fmt.Errorf("fatal error test config: could not generate key: %s", err))
+	}
+
+	vault = &Vault{
+		credsEncryptor: credsEncryptor,
+		credsDecryptor: credsDecryptor,
 	}
 }
 

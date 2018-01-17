@@ -37,6 +37,13 @@ admin:
   # as the configuration file.
   secret_filename: cozy-admin-passphrase
 
+# vault contains keyfiles informations
+vault:
+  # the path to the key used to encrypt credentials
+  credentials_encryptor_key: /path/to/key.enc
+  # the path to the key used to decrypt credentials
+  credentials_decryptor_key: /path/to/key.dec
+
 # file system parameters
 fs:
   # file system url - flags: --fs-url
