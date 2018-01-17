@@ -17,7 +17,7 @@ var unixEpochZero = time.Time{}
 // This version stores the thumbnails in the same container as the main data
 // container.
 func NewThumbsFsV2(c *swift.Connection, domain string) vfs.Thumbser {
-	return &thumbsV2{c: c, container: swiftV2ContainerPrefix + domain}
+	return &thumbsV2{c: c, container: swiftV2ContainerPrefixData + domain}
 }
 
 type thumbsV2 struct {

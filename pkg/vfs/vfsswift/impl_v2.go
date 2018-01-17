@@ -26,14 +26,18 @@ import (
 type swiftVFSV2 struct {
 	vfs.Indexer
 	vfs.DiskThresholder
-	c         *swift.Connection
-	container string
-	version   string
-	mu        lock.ErrorRWLocker
-	log       *logrus.Entry
+	c             *swift.Connection
+	container     string
+	version       string
+	dataContainer string
+	mu            lock.ErrorRWLocker
+	log           *logrus.Entry
 }
 
-const swiftV2ContainerPrefix = "cozy-v2-"
+const (
+	swiftV2ContainerPrefixCozy = "cozy-v2-"
+	swiftV2ContainerPrefixData = "data-v2-"
+)
 
 // NewV2 returns a vfs.VFS instance associated with the specified indexer and
 // the swift storage url.
@@ -49,11 +53,12 @@ func NewV2(index vfs.Indexer, disk vfs.DiskThresholder, mu lock.ErrorRWLocker, d
 		Indexer:         index,
 		DiskThresholder: disk,
 
-		c:         config.GetSwiftConnection(),
-		container: swiftV2ContainerPrefix + domain,
-		version:   swiftV2ContainerPrefix + domain + versionSuffix,
-		mu:        mu,
-		log:       logger.WithDomain(domain),
+		c:             config.GetSwiftConnection(),
+		container:     swiftV2ContainerPrefixCozy + domain,
+		version:       swiftV2ContainerPrefixCozy + domain + versionSuffix,
+		dataContainer: swiftV2ContainerPrefixData + domain,
+		mu:            mu,
+		log:           logger.WithDomain(domain),
 	}, nil
 }
 
@@ -93,6 +98,11 @@ func (sfs *swiftVFSV2) InitFs() error {
 		if err = sfs.c.ContainerDelete(sfs.version); err != nil {
 			return err
 		}
+	}
+	if err := sfs.c.ContainerCreate(sfs.dataContainer, nil); err != nil {
+		sfs.log.Errorf("[vfsswift] Could not create container %s: %s",
+			sfs.dataContainer, err.Error())
+		return err
 	}
 	sfs.log.Infof("[vfsswift] Created container %s", sfs.container)
 	return nil

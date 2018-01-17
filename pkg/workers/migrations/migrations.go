@@ -20,6 +20,7 @@ import (
 const swiftV1ContainerPrefixCozy = "cozy-"
 const swiftV1ContainerPrefixData = "data-"
 const swiftV2ContainerPrefixCozy = "cozy-v2-"
+const swiftV2ContainerPrefixData = "data-v2"
 const versionSuffix = "-version"
 const dirContentType = "directory"
 
@@ -76,8 +77,9 @@ func commit(ctx *jobs.WorkerContext, err error) error {
 }
 
 type object struct {
-	obj       swift.Object
-	container string
+	obj          swift.Object
+	containerSrc string
+	containerDst string
 }
 
 func migrateSwiftV1ToV2(domain string) error {
@@ -95,6 +97,7 @@ func migrateSwiftV1ToV2(domain string) error {
 
 	// container containing thumbnails
 	containerV1Data := swiftV1ContainerPrefixData + domain
+	containerV2Data := swiftV2ContainerPrefixData + domain
 
 	err = c.VersionContainerCreate(containerV2, containerV2+versionSuffix)
 	if err != nil {
@@ -105,15 +108,15 @@ func migrateSwiftV1ToV2(domain string) error {
 	errc := make(chan error)
 
 	go func() {
-		errc <- readObjects(c, objc, containerV1)
-		errc <- readObjects(c, objc, containerV1Data)
+		errc <- readObjects(c, objc, containerV1, containerV2)
+		errc <- readObjects(c, objc, containerV1Data, containerV2Data)
 		close(objc)
 	}()
 
 	const N = 4
 
 	for i := 0; i < N; i++ {
-		go copyObjects(c, inst, containerV2, objc, errc)
+		go copyObjects(c, inst, objc, errc)
 	}
 
 	var errm error
@@ -145,21 +148,25 @@ func commitSwiftV1ToV2(domain string, swiftCluster int) error {
 	return instance.Update(inst)
 }
 
-func readObjects(c *swift.Connection, objc chan object, containerSrc string) error {
+func readObjects(c *swift.Connection, objc chan object,
+	containerSrc, containerDst string) error {
 	return c.ObjectsWalk(containerSrc, nil, func(opts *swift.ObjectsOpts) (interface{}, error) {
 		objs, err := c.Objects(containerSrc, opts)
 		if err != nil {
 			return nil, err
 		}
 		for _, obj := range objs {
-			objc <- object{obj, containerSrc}
+			objc <- object{
+				obj:          obj,
+				containerSrc: containerSrc,
+				containerDst: containerDst,
+			}
 		}
 		return objs, err
 	})
 }
 
 func copyObjects(c *swift.Connection, db couchdb.Database,
-	containerDst string,
 	objc chan object,
 	errc chan error) {
 
@@ -167,7 +174,8 @@ func copyObjects(c *swift.Connection, db couchdb.Database,
 
 	for obj := range objc {
 		var err error
-		containerSrc := obj.container
+		containerSrc := obj.containerSrc
+		containerDst := obj.containerDst
 		switch {
 		case strings.HasPrefix(containerSrc, swiftV1ContainerPrefixCozy):
 			err = copyFileDataObject(c, db, containerSrc, containerDst, obj.obj, copyBuffer)
@@ -217,7 +225,6 @@ func copyThumbnailDataObject(c *swift.Connection, db couchdb.Database,
 	if len(split) != 2 {
 		return nil
 	}
-
 	objNameDst := "thumbs/" + vfsswift.MakeObjectName(split[0]) + "-" + split[1]
 	return copyObject(c, db, containerSrc, containerDst, objSrc, objNameDst, copyBuffer)
 }
