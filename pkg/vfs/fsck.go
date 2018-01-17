@@ -2,6 +2,7 @@ package vfs
 
 import (
 	"encoding/json"
+	"os"
 	"path"
 )
 
@@ -16,12 +17,16 @@ const (
 	// TypeMismatch is used when a document type does not match in the index and
 	// underlying filesystem.
 	TypeMismatch
+	// ContentMismatch is used when a document content checksum does not match
+	// with the one in the underlying fs.
+	ContentMismatch
 )
 
 // FsckLog is a struct for an inconsistency in the VFS
 type FsckLog struct {
 	Type        FsckLogType
 	FileDoc     *FileDoc
+	OldFileDoc  *FileDoc
 	IsFile      bool
 	DirDoc      *DirDoc
 	Filename    string
@@ -44,6 +49,8 @@ func (f *FsckLog) String() string {
 		return "it's a directory in the index but a file on the filesystem"
 	case IndexMissing:
 		return "the document is present on the local filesystem but not in the index"
+	case ContentMismatch:
+		return "then document content does not match the store content checksum"
 	}
 	panic("bad FsckLog type")
 }
@@ -68,7 +75,7 @@ func (f *FsckLog) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// FsckPrune tries to fix the given list on inconsistencies in the VFS
+// FsckPrune tries to fix the given entry in the VFS
 func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
 	switch entry.Type {
 	case FileMissing:
@@ -91,14 +98,21 @@ func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
 		}
 		fileDoc := entry.FileDoc
 		var orphan bool
-		parentDir, err := indexer.DirByID(fileDoc.DirID)
-		if err != nil {
+		if fileDoc.DirID == "" {
 			orphan = true
 		} else {
-			fullpath := path.Join(parentDir.Fullpath, fileDoc.Name())
-			if _, err := indexer.FileByPath(fullpath); err != nil {
+			parentDir, err := indexer.DirByID(fileDoc.DirID)
+			if os.IsNotExist(err) {
+				orphan = true
+			} else if err != nil {
 				entry.PruneError = err
 				return
+			} else {
+				fullpath := path.Join(parentDir.Fullpath, fileDoc.Name())
+				if _, err := indexer.FileByPath(fullpath); err != nil {
+					entry.PruneError = err
+					return
+				}
 			}
 		}
 		if orphan {
@@ -118,6 +132,14 @@ func FsckPrune(fs VFS, indexer Indexer, entry *FsckLog, dryrun bool) {
 			fileDoc.DirID = orphanDir.ID()
 		}
 		if err := indexer.CreateFileDoc(fileDoc); err != nil {
+			entry.PruneError = err
+		}
+	case ContentMismatch:
+		if !entry.IsFile {
+			return
+		}
+		entry.PruneAction = "updating the index informations to match the stored data"
+		if err := indexer.UpdateFileDoc(entry.OldFileDoc, entry.FileDoc); err != nil {
 			entry.PruneError = err
 		}
 	}
