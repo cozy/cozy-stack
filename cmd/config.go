@@ -125,8 +125,12 @@ var genKeysCmd = &cobra.Command{
 	Short: "Generate an key pair for encryption and decryption of credentials",
 	Long: `
 cozy-stack config gen-keys generate a key-pair and save them in the
-specified path. The decryptor key filename is given a ".dec" extension suffix
-and the encryptor filename a ".dec". The files permissions are 0400.
+specified path.
+
+The decryptor key filename is given the ".dec" extension suffix.
+The encryptor key filename is given the ".enc" extension suffix.
+
+The files permissions are 0400.
 
 example: cozy-stack config gen-keys ~/credentials-key
 keyfiles written in:
