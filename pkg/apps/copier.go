@@ -81,10 +81,12 @@ func (f *swiftCopier) Copy(stat os.FileInfo, src io.Reader) (err error) {
 		"original-content-length": strconv.FormatInt(stat.Size(), 10),
 	}
 
-	var contentType string
-	contentType, src = magic.MIMETypeFromReader(src)
+	contentType := magic.MIMETypeByExtension(path.Ext(stat.Name()))
 	if contentType == "" {
-		contentType = magic.MIMETypeByExtension(path.Ext(stat.Name()))
+		contentType, src = magic.MIMETypeFromReader(src)
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
 	}
 
 	file, err := f.c.ObjectCreate(f.container, objName, false, "",

@@ -126,11 +126,15 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 		}
 	}
 
+	ext := path.Ext(file)
 	if contentType == "" {
-		contentType = magic.MIMETypeByExtension(path.Ext(file))
+		contentType = magic.MIMETypeByExtension(ext)
 	}
 	if contentType == "text/html" {
 		contentType = "text/html; charset=utf-8"
+	} else if contentType == "text/xml" && ext == ".svg" {
+		// override for files with text/xml content because of leading <?xml tag
+		contentType = "image/svg+xml"
 	}
 
 	size, _ := strconv.ParseInt(contentLength, 10, 64)
