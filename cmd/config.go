@@ -130,8 +130,8 @@ and the encryptor filename a ".dec". The files permissions are 0400.
 
 example: cozy-stack config gen-keys ~/credentials-key
 keyfiles written in:
-	~/credentials-key
-	~/credentials-key.pub
+	~/credentials-key.enc
+	~/credentials-key.dec
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
