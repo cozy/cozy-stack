@@ -81,7 +81,7 @@ func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 	}
 
 	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
+		if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
 			err = cerr
 		}
 	}()
