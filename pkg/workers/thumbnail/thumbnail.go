@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -78,20 +80,30 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 	if err != nil {
 		return err
 	}
-	in, err = recGenerateThub(ctx, in, fs, img, "large")
+
+	var env []string
+	{
+		tempDir, err := ioutil.TempDir("", "magick")
+		if err == nil {
+			defer os.RemoveAll(tempDir) // #nosec
+			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
+			env = []string{envTempDir}
+		}
+	}
+
+	in, err = recGenerateThub(ctx, in, fs, img, "large", env, false)
 	if err != nil {
 		return err
 	}
-	in, err = recGenerateThub(ctx, in, fs, img, "medium")
+	in, err = recGenerateThub(ctx, in, fs, img, "medium", env, false)
 	if err != nil {
 		return err
 	}
-	// TODO(optim): no need for the last output
-	_, err = recGenerateThub(ctx, in, fs, img, "small")
+	_, err = recGenerateThub(ctx, in, fs, img, "small", env, true)
 	return err
 }
 
-func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string) (r io.Reader, err error) {
+func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
 	defer func() {
 		if inCloser, ok := in.(io.Closer); ok {
 			if errc := inCloser.Close(); errc != nil && err == nil {
@@ -104,9 +116,15 @@ func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vf
 		return nil, err
 	}
 	defer file.Close()
-	buffer := new(bytes.Buffer)
-	ws := io.MultiWriter(file, buffer)
-	err = generateThumb(ctx, in, ws, format)
+	var buffer *bytes.Buffer
+	var out io.Writer
+	if noOuput {
+		out = file
+	} else {
+		buffer = new(bytes.Buffer)
+		out = io.MultiWriter(file, buffer)
+	}
+	err = generateThumb(ctx, in, out, format, env)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +138,7 @@ func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vf
 // We are using some complicated ImageMagick options to optimize the speed and
 // quality of the generated thumbnails.
 // See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
-func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string) error {
+func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string, env []string) error {
 	args := []string{
 		"-limit", "Memory", "2GB",
 		"-limit", "Map", "3GB",
@@ -134,6 +152,7 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
 	cmd := exec.CommandContext(ctx, "convert", args...) // #nosec
+	cmd.Env = env
 	cmd.Stdin = in
 	cmd.Stdout = out
 	return cmd.Run()
