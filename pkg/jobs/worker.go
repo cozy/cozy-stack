@@ -232,9 +232,12 @@ func (w *Worker) work(workerID string, closed chan<- struct{}) {
 			job:  job,
 			conf: w.defaultedConf(job.Options),
 		}
-		var err error
 		var runResultLabel string
-		if err = t.run(); err != nil {
+		err := t.run()
+		if err == ErrAbort {
+			err = nil
+		}
+		if err != nil {
 			parentCtx.Logger().Errorf("[job] error while performing job: %s",
 				err.Error())
 			runResultLabel = metrics.WorkerExecResultErrored
@@ -311,7 +314,6 @@ func (t *task) run() (err error) {
 		if !retry {
 			return err
 		}
-
 		if err != nil {
 			t.ctx.Logger().Warnf("[job] error while performing job: %s (retry in %s)",
 				err.Error(), delay)
@@ -374,7 +376,8 @@ func (t *task) exec(ctx *WorkerContext) (err error) {
 func (t *task) nextDelay(prevError error) (bool, time.Duration, time.Duration) {
 	// for certain kinds of errors, we do not have a retry since these error
 	// cannot be recovered from
-	if prevError == ErrMessageUnmarshal || prevError == ErrMessageNil {
+	switch prevError {
+	case ErrAbort, ErrMessageUnmarshal, ErrMessageNil:
 		return false, 0, 0
 	}
 

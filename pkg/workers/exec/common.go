@@ -2,6 +2,7 @@ package exec
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/metrics"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
@@ -35,7 +37,7 @@ func init() {
 
 type execWorker interface {
 	Slug() string
-	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (string, error)
+	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir, fileExecPath string, err error)
 	PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
 	ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error
 	Error(i *instance.Instance, err error) error
@@ -52,7 +54,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return err
 		}
 
-		workDir, err := worker.PrepareWorkDir(ctx, inst)
+		workDir, fileExecPath, err := worker.PrepareWorkDir(ctx, inst)
 		if err != nil {
 			return err
 		}
@@ -63,21 +65,29 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return err
 		}
 
-		cmd := exec.CommandContext(ctx, cmdStr, workDir) // #nosec
+		log := ctx.Logger()
+
+		var stderrBuf bytes.Buffer
+		cmd := exec.CommandContext(ctx, cmdStr, workDir, fileExecPath) // #nosec
 		cmd.Env = env
 
-		cmdErr, err := cmd.StderrPipe()
-		if err != nil {
-			return err
-		}
+		// set stderr writable with a bytes.Buffer limited total size of 256Ko
+		cmd.Stderr = utils.LimitWriterDiscard(&stderrBuf, 256*1024)
+
+		// Log out all things printed in stderr, whatever the result of the
+		// konnector is.
+		defer func() {
+			if stderrBuf.Len() > 0 {
+				log.Error("Stderr: ", stderrBuf.String())
+			}
+		}()
+
 		cmdOut, err := cmd.StdoutPipe()
 		if err != nil {
 			return err
 		}
-
-		scanErr := bufio.NewScanner(cmdErr)
 		scanOut := bufio.NewScanner(cmdOut)
-		scanOut.Buffer(nil, 256*1024)
+		scanOut.Buffer(nil, 16*1024)
 
 		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 			var result string
@@ -96,13 +106,6 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return wrapErr(ctx, err)
 		}
 
-		log := ctx.Logger().WithField("slug", worker.Slug())
-		go func() {
-			for scanErr.Scan() {
-				log.Errorf("Stderr: %s", scanErr.Text())
-			}
-		}()
-
 		for scanOut.Scan() {
 			if errOut := worker.ScanOutput(ctx, inst, log, scanOut.Bytes()); errOut != nil {
 				log.Error(errOut)
@@ -111,7 +114,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 
 		if err = cmd.Wait(); err != nil {
 			err = wrapErr(ctx, err)
-			log.Errorf("failed: %s", err)
+			log.Errorf("cmd failed: %s", err)
 		}
 
 		return worker.Error(inst, err)

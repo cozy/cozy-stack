@@ -37,6 +37,10 @@ type KonnManifest struct {
 	DocVersion     string           `json:"version"`
 	DocPermissions permissions.Set  `json:"permissions"`
 
+	// OnDeleteAccount can be used to specify a file path which will be executed
+	// when an account associated with the konnector is deleted.
+	OnDeleteAccount string `json:"on_delete_account,omitempty"`
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 

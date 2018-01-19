@@ -15,4 +15,7 @@ var (
 	ErrMessageNil = errors.New("jobs: message is nil")
 	// ErrMessageUnmarshal is used when unmarshalling a message causes an error
 	ErrMessageUnmarshal = errors.New("jobs: message unmarshal")
+	// ErrAbort can be used to abort the execution of the job without causing
+	// errors.
+	ErrAbort = errors.New("jobs: abort")
 )

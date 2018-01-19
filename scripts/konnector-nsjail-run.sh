@@ -1,10 +1,17 @@
 #!/bin/bash
 
 rundir="${1}"
+runfile="${2}"
 
 if [ -z "${rundir}" ]; then
-  >&2 echo "Usage: $0 [dir]"
+  >&2 echo "Usage: $0 directory [file]"
   exit 1
+fi
+
+if [ -z "${runfile}" ]; then
+  runfile="/usr/src/konnector"
+else
+  runfile="/usr/src/konnector/${runfile}"
 fi
 
 if [ -z "${COZY_JOB_ID}" ]; then
@@ -129,7 +136,7 @@ nsjail \
   -R /dev/urandom \
   -R /etc/resolv.conf \
   -R /etc/ssl/certs \
-  -- /usr/bin/nodejs /usr/src/konnector
+  -- /usr/bin/nodejs "${runfile}"
 
 # Via a chroot with nodejs installed inside
 # nsjail \
@@ -151,4 +158,4 @@ nsjail \
 #   -E "COZY_CREDENTIALS=${COZY_CREDENTIALS}" \
 #   -E "COZY_LOCALE=${COZY_LOCALE}" \
 #   -R "${rundir}:/usr/src/konnector/" \
-#   -- /usr/bin/nodejs /usr/src/konnector/index.js
+#   -- /usr/bin/nodejs "${runfile}"
