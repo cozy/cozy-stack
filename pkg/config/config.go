@@ -131,8 +131,9 @@ type CouchDB struct {
 // synchronization
 type Jobs struct {
 	RedisConfig
-	NoWorkers bool
-	Workers   []Worker
+	NoWorkers             bool
+	Workers               []Worker
+	ImageMagickConvertCmd string
 	// XXX for retro-compatibility
 	NbWorkers int
 }
@@ -335,6 +336,7 @@ func Setup(cfgFile string) (err error) {
 
 func applyDefaults(v *viper.Viper) {
 	v.SetDefault("password_reset_interval", defaultPasswordResetInterval)
+	v.SetDefault("jobs.imagemagick_convert_cmd", "convert")
 }
 
 func envMap() map[string]string {
@@ -453,7 +455,10 @@ func UseViper(v *viper.Viper) error {
 		adminSecretFile = defaultAdminSecretFileName
 	}
 
-	jobs := Jobs{RedisConfig: jobsRedis}
+	jobs := Jobs{
+		RedisConfig:           jobsRedis,
+		ImageMagickConvertCmd: v.GetString("jobs.imagemagick_convert_cmd"),
+	}
 	{
 		if nbWorkers := v.GetInt("jobs.workers"); nbWorkers > 0 {
 			jobs.NbWorkers = nbWorkers

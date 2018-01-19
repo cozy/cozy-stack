@@ -52,6 +52,9 @@ couchdb:
 
 # jobs parameters to configure the job system
 jobs:
+  # path to the imagemagick convert binary
+  # imagemagick_convert_cmd: convert
+
   # workers individual configrations.
   #
   # For each worker type it is possible to configure the following fields:

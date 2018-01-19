@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -139,6 +140,10 @@ func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vf
 // quality of the generated thumbnails.
 // See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
 func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string, env []string) error {
+	convertCmd := config.GetConfig().Jobs.ImageMagickConvertCmd
+	if convertCmd == "" {
+		convertCmd = "convert"
+	}
 	args := []string{
 		"-limit", "Memory", "2GB",
 		"-limit", "Map", "3GB",
@@ -151,7 +156,7 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 		"-colorspace", "sRGB", // Use the colorspace recommended for web, sRGB
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
-	cmd := exec.CommandContext(ctx, "convert", args...) // #nosec
+	cmd := exec.CommandContext(ctx, convertCmd, args...) // #nosec
 	cmd.Env = env
 	cmd.Stdin = in
 	cmd.Stdout = out
