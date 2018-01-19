@@ -2,7 +2,6 @@ package thumbnail
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -39,7 +38,7 @@ func init() {
 		WorkerType:   "thumbnail",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
-		Timeout:      15 * time.Second,
+		Timeout:      30 * time.Second,
 		WorkerFunc:   Worker,
 	})
 }
@@ -74,7 +73,7 @@ func Worker(ctx *jobs.WorkerContext) error {
 	return fmt.Errorf("Unknown type %s for image event", img.Verb)
 }
 
-func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.FileDoc) error {
+func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
 	fs := i.ThumbsFS()
 	var in io.Reader
 	in, err := i.VFS().OpenFile(img)
@@ -105,7 +104,7 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 	return err
 }
 
-func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
+func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
 	defer func() {
 		if inCloser, ok := in.(io.Closer); ok {
 			if errc := inCloser.Close(); errc != nil && err == nil {
@@ -140,7 +139,7 @@ func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vf
 // We are using some complicated ImageMagick options to optimize the speed and
 // quality of the generated thumbnails.
 // See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
-func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string, env []string) error {
+func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, format string, env []string) error {
 	convertCmd := config.GetConfig().Jobs.ImageMagickConvertCmd
 	if convertCmd == "" {
 		convertCmd = "convert"
@@ -157,11 +156,19 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 		"-colorspace", "sRGB", // Use the colorspace recommended for web, sRGB
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
+	var stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, convertCmd, args...) // #nosec
 	cmd.Env = env
 	cmd.Stdin = in
 	cmd.Stdout = out
-	return cmd.Run()
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		ctx.Logger().
+			WithField("stderr", stderr.String()).
+			Errorf("imagemagick failed: %s", err)
+		return err
+	}
+	return nil
 }
 
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
