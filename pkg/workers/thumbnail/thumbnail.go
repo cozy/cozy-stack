@@ -84,7 +84,8 @@ func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.File
 
 	var env []string
 	{
-		tempDir, err := ioutil.TempDir("", "magick")
+		var tempDir string
+		tempDir, err = ioutil.TempDir("", "magick")
 		if err == nil {
 			defer os.RemoveAll(tempDir) // #nosec
 			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
