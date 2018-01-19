@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -223,10 +222,6 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		}
 	}
 
-	var h swift.Headers
-	if newsize >= 0 {
-		h = swift.Headers{"Content-Length": strconv.FormatInt(newsize, 10)}
-	}
 	objName := newdoc.DirID + "/" + newdoc.DocName
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
@@ -235,7 +230,7 @@ func (sfs *swiftVFS) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error) {
 		hash != "",
 		hash,
 		newdoc.Mime,
-		h,
+		nil,
 	)
 	if err != nil {
 		return nil, err
@@ -758,6 +753,9 @@ func (f *swiftFileCreation) Close() (err error) {
 	}()
 
 	if err = f.f.Close(); err != nil {
+		if err == swift.ObjectCorrupted {
+			err = vfs.ErrInvalidHash
+		}
 		if f.meta != nil {
 			(*f.meta).Abort(err)
 			f.meta = nil
