@@ -7,6 +7,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
@@ -79,7 +80,10 @@ func (ac *Account) Valid(field, expected string) bool {
 func init() {
 	couchdb.AddHook(consts.Accounts, couchdb.EventDelete,
 		func(domain string, doc couchdb.Doc, old couchdb.Doc) error {
-			trigs, err := globals.GetScheduler().GetAll(domain)
+			sched := globals.GetScheduler()
+			broker := globals.GetBroker()
+
+			trigs, err := sched.GetAll(domain)
 			if err != nil {
 				logger.WithDomain(domain).Error(
 					"Failed to fetch triggers after account deletion: ", err)
@@ -98,17 +102,60 @@ func init() {
 				err := t.Infos().Message.Unmarshal(&msg)
 				if err != nil {
 					toDelete = true
-				} else {
-					if msg.Account == doc.ID() {
-						toDelete = true
-					}
+				} else if msg.Account == doc.ID() {
+					toDelete = true
 				}
 				if toDelete {
-					if err := globals.GetScheduler().Delete(domain, t.ID()); err != nil {
+					if err := sched.Delete(domain, t.ID()); err != nil {
 						logger.WithDomain(domain).Errorln("failed to delete orphan trigger", err)
 					}
 				}
 			}
+
+			// When an account is deleted, we need to push a new job in order to
+			// delete possible data associated with this account. This is done via
+			// this hook.
+			//
+			// This may require additionnal specifications to allow konnectors to
+			// define more explicitly when and how they want to be called in order to
+			// cleanup or update their associated content. For now we make this
+			// process really specific to the deletion of an account, which is our
+			// only detailed usecase.
+			{
+				var acc Account
+				switch v := doc.(type) {
+				case *Account:
+					acc = *v
+				case *couchdb.JSONDoc:
+					acc.DocID = v.ID()
+					acc.AccountType, _ = v.M["account_type"].(string)
+				default:
+				}
+				if acc.AccountType == "" {
+					return nil
+				}
+
+				msg, err := jobs.NewMessage(struct {
+					Account        string `json:"account"`
+					Konnector      string `json:"konnector"`
+					AccountDeleted bool   `json:"account_deleted"`
+				}{
+					Account:        acc.DocID,
+					Konnector:      acc.AccountType,
+					AccountDeleted: true,
+				})
+				if err != nil {
+					return err
+				}
+				if _, err = broker.PushJob(&jobs.JobRequest{
+					Domain:     domain,
+					WorkerType: "konnector",
+					Message:    msg,
+				}); err != nil {
+					return err
+				}
+			}
+
 			return nil
 		})
 }

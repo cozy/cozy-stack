@@ -29,7 +29,7 @@ type serviceWorker struct {
 	man  *apps.WebappManifest
 }
 
-func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
+func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir, fileExecPath string, err error) {
 	opts := &ServiceOptions{}
 	if err = ctx.UnmarshalMessage(&opts); err != nil {
 		return
@@ -77,7 +77,7 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 		return
 	}
 
-	return workDir, nil
+	return workDir, "", nil
 }
 
 func (w *serviceWorker) Slug() string {

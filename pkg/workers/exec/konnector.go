@@ -24,7 +24,7 @@ import (
 
 type konnectorWorker struct {
 	slug string
-	msg  map[string]interface{}
+	msg  *konnectorMessage
 	man  *apps.KonnManifest
 
 	err     error
@@ -38,6 +38,22 @@ const (
 	konnectorMsgTypeError    = "error"
 	konnectorMsgTypeCritical = "critical"
 )
+
+type konnectorMessage struct {
+	Account           string `json:"account"`
+	Konnector         string `json:"konnector"`
+	FolderToSave      string `json:"folder_to_save"`
+	DefaultFolderPath string `json:"default_folder_path"`
+	AccountDeleted    bool   `json:"account_deleted"`
+
+	// Data contains the original value of the message, even fields that are not
+	// part of our message definition.
+	data json.RawMessage
+}
+
+func (m *konnectorMessage) ToJSON() string {
+	return string(m.data)
+}
 
 // konnectorResult stores the result of a konnector execution.
 // TODO: remove this type kept for retro-compatibility.
@@ -58,16 +74,42 @@ func (r *konnectorResult) Clone() couchdb.Doc { c := *r; return &c }
 func (r *konnectorResult) SetID(id string)    { r.DocID = id }
 func (r *konnectorResult) SetRev(rev string)  { r.DocRev = rev }
 
-func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
-	var msg map[string]interface{}
-	if err = ctx.UnmarshalMessage(&msg); err != nil {
-		return
+func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir, fileExecPath string, err error) {
+	var data json.RawMessage
+	var msg konnectorMessage
+	{
+		if err = ctx.UnmarshalMessage(&data); err != nil {
+			return
+		}
+		if err = json.Unmarshal(data, &msg); err != nil {
+			return
+		}
+		msg.data = data
 	}
 
-	slug, _ := msg["konnector"].(string)
+	slug := msg.Konnector
 	man, err := apps.GetKonnectorBySlug(i, slug)
 	if err != nil {
 		return
+	}
+
+	w.slug = slug
+	w.msg = &msg
+	w.man = man
+
+	// If we get the AccountDeleted flag on, we check if the konnector manifest
+	// has defined an "on_delete_account" field, containing the path of the file
+	// to execute on account deletation. If no such field is present, the job is
+	// aborted.
+	if w.msg.AccountDeleted {
+		// make sure we are not executing a path outside of the konnector's
+		// directory
+		fileExecPath = path.Join("/", path.Clean(w.man.OnDeleteAccount))
+		fileExecPath = fileExecPath[1:]
+		if fileExecPath == "" {
+			err = jobs.ErrAbort
+			return
+		}
 	}
 
 	// TODO: disallow konnectors on state Installed to be run when we define our
@@ -76,10 +118,6 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		err = errors.New("Konnector is not ready")
 		return
 	}
-
-	w.slug = slug
-	w.msg = msg
-	w.man = man
 
 	osFS := afero.NewOsFs()
 	workDir, err = afero.TempDir(osFS, "", "konnector-"+slug)
@@ -97,14 +135,14 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	// Create the folder in which the konnector has the right to write.
 	// {
 	// 	fs := i.VFS()
-	// 	folderToSave, _ := msg["folder_to_save"].(string)
+	// 	folderToSave := msg.FolderToSave
 	// 	if folderToSave != "" {
 	// 		if _, err = fs.DirByID(folderToSave); os.IsNotExist(err) {
 	// 			folderToSave = ""
 	// 		}
 	// 	}
 	// 	if folderToSave == "" {
-	// 		defaultFolderPath, _ := msg["default_folder_path"].(string)
+	// 		defaultFolderPath := msg.DefaultFolderPath
 	// 		if defaultFolderPath == "" {
 	// 			name := i.Translate("Tree Administrative")
 	// 			defaultFolderPath = fmt.Sprintf("/%s/%s", name, strings.Title(slug))
@@ -116,7 +154,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	// 			log.Warnf("Can't create the default folder %s for konnector %s: %s", defaultFolderPath, slug, err)
 	// 			return
 	// 		}
-	// 		msg["folder_to_save"] = dir.ID()
+	// 		msg.FolderToSave = dir.ID()
 	// 	}
 	// }
 
@@ -125,7 +163,8 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		var hdr *tar.Header
 		hdr, err = tr.Next()
 		if err == io.EOF {
-			break
+			err = nil
+			return
 		}
 		if err != nil {
 			return
@@ -151,8 +190,6 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 			return
 		}
 	}
-
-	return workDir, nil
 }
 
 func (w *konnectorWorker) Slug() string {
@@ -160,24 +197,20 @@ func (w *konnectorWorker) Slug() string {
 }
 
 func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
-	// Directly pass the job message as fields parameters
-	fieldsJSON, err := json.Marshal(w.msg)
-	if err != nil {
-		return
-	}
-
 	paramsJSON, err := json.Marshal(w.man.Parameters)
 	if err != nil {
 		return
 	}
 
+	// Directly pass the job message as fields parameters
+	fieldsJSON := w.msg.ToJSON()
 	token := i.BuildKonnectorToken(w.man)
 
 	cmd = config.GetConfig().Konnectors.Cmd
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
-		"COZY_FIELDS=" + string(fieldsJSON),
+		"COZY_FIELDS=" + fieldsJSON,
 		"COZY_PARAMETERS=" + string(paramsJSON),
 		"COZY_TYPE=" + w.man.Type,
 		"COZY_LOCALE=" + i.Locale,
@@ -235,9 +268,13 @@ func (w *konnectorWorker) Error(i *instance.Instance, err error) error {
 }
 
 func (w *konnectorWorker) Commit(ctx *jobs.WorkerContext, errjob error) error {
+	if w.msg == nil {
+		return nil
+	}
+
 	// TODO: remove this retro-compatibility block
 	// <<<<<<<<<<<<<
-	accountID, _ := w.msg["account"].(string)
+	accountID := w.msg.Account
 	domain := ctx.Domain()
 
 	inst, err := instance.Get(domain)

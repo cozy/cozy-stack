@@ -1,6 +1,14 @@
 #!/bin/bash
+set -e
 
 rundir="${1}"
+runfile="${2}"
 
-cd $rundir
-node index.js
+if [ -z "${runfile}" ]; then
+  runfile="./index.js"
+else
+  runfile="./${runfile}"
+fi
+
+cd "${rundir}"
+node "${runfile}"
