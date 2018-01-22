@@ -74,7 +74,7 @@ func (r *konnectorResult) Clone() couchdb.Doc { c := *r; return &c }
 func (r *konnectorResult) SetID(id string)    { r.DocID = id }
 func (r *konnectorResult) SetRev(rev string)  { r.DocRev = rev }
 
-func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir, fileExecPath string, err error) {
+func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error) {
 	var data json.RawMessage
 	var msg konnectorMessage
 	{
@@ -101,6 +101,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	// has defined an "on_delete_account" field, containing the path of the file
 	// to execute on account deletation. If no such field is present, the job is
 	// aborted.
+	var fileExecPath string
 	if w.msg.AccountDeleted {
 		// make sure we are not executing a path outside of the konnector's
 		// directory
@@ -164,7 +165,7 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 		hdr, err = tr.Next()
 		if err == io.EOF {
 			err = nil
-			return
+			break
 		}
 		if err != nil {
 			return
@@ -190,6 +191,10 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 			return
 		}
 	}
+	if fileExecPath != "" {
+		workDir = path.Join(workDir, fileExecPath)
+	}
+	return
 }
 
 func (w *konnectorWorker) Slug() string {

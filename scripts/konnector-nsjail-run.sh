@@ -1,17 +1,24 @@
 #!/bin/bash
+set -e
 
 rundir="${1}"
-runfile="${2}"
+
+usage() {
+  >&2 echo -e "Usage: $0 [dir]"
+}
 
 if [ -z "${rundir}" ]; then
-  >&2 echo "Usage: $0 directory [file]"
+  usage
   exit 1
 fi
 
-if [ -z "${runfile}" ]; then
+if [ -f "${rundir}" ]; then
+  runfile="/usr/src/konnector/$(basename "${rundir}")"
+elif [ -d "${rundir}" ]; then
   runfile="/usr/src/konnector"
 else
-  runfile="/usr/src/konnector/${runfile}"
+  >&2 echo "${rundir} does not exist"
+  exit 1
 fi
 
 if [ -z "${COZY_JOB_ID}" ]; then

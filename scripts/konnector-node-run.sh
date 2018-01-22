@@ -1,14 +1,11 @@
 #!/bin/bash
 set -e
 
-rundir="${1}"
-runfile="${2}"
+arg="${1}"
 
-if [ -z "${runfile}" ]; then
-  runfile="./index.js"
-else
-  runfile="./${runfile}"
+if [ ! -f "${arg}" ] && [ ! -d "${arg}" ]; then
+  >&2 echo "${arg} does not exist"
+  exit 1
 fi
 
-cd "${rundir}"
-node "${runfile}"
+node "${arg}"

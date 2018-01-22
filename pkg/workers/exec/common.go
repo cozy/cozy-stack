@@ -37,7 +37,7 @@ func init() {
 
 type execWorker interface {
 	Slug() string
-	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir, fileExecPath string, err error)
+	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error)
 	PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
 	ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error
 	Error(i *instance.Instance, err error) error
@@ -54,7 +54,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return err
 		}
 
-		workDir, fileExecPath, err := worker.PrepareWorkDir(ctx, inst)
+		workDir, err := worker.PrepareWorkDir(ctx, inst)
 		if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		log := ctx.Logger()
 
 		var stderrBuf bytes.Buffer
-		cmd := exec.CommandContext(ctx, cmdStr, workDir, fileExecPath) // #nosec
+		cmd := exec.CommandContext(ctx, cmdStr, workDir) // #nosec
 		cmd.Env = env
 
 		// set stderr writable with a bytes.Buffer limited total size of 256Ko
