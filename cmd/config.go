@@ -11,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/crypto"
+	"github.com/cozy/cozy-stack/pkg/keymgmt"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/howeyc/gopass"
 	"github.com/spf13/cobra"
@@ -119,8 +120,65 @@ example: cozy-stack config passwd ~/.cozy/
 	},
 }
 
+var genKeysCmd = &cobra.Command{
+	Use:   "gen-keys [filepath]",
+	Short: "Generate an key pair for encryption and decryption of credentials",
+	Long: `
+cozy-stack config gen-keys generate a key-pair and save them in the
+specified path.
+
+The decryptor key filename is given the ".dec" extension suffix.
+The encryptor key filename is given the ".enc" extension suffix.
+
+The files permissions are 0400.
+
+example: cozy-stack config gen-keys ~/credentials-key
+keyfiles written in:
+	~/credentials-key.enc
+	~/credentials-key.dec
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+
+		filename := filepath.Join(utils.AbsPath(args[0]))
+		encryptorFilename := filename + ".enc"
+		decryptorFilename := filename + ".dec"
+
+		marshaledEncryptorKey, marshaledDecryptorKey, err := keymgmt.GenerateEncodedNACLKeyPair()
+		if err != nil {
+			return nil
+		}
+		if err = writeFile(encryptorFilename, marshaledEncryptorKey, 0400); err != nil {
+			return err
+		}
+		if err = writeFile(decryptorFilename, marshaledDecryptorKey, 0400); err != nil {
+			return err
+		}
+		errPrintfln("keyfiles written in:\n  %s\n  %s", encryptorFilename, decryptorFilename)
+		return nil
+	},
+}
+
+func writeFile(filename string, data []byte, perm os.FileMode) error {
+	f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
+	if err != nil {
+		return err
+	}
+	n, err := f.Write(data)
+	if err == nil && n < len(data) {
+		err = io.ErrShortWrite
+	}
+	if err1 := f.Close(); err == nil {
+		err = err1
+	}
+	return err
+}
+
 func init() {
 	configCmdGroup.AddCommand(configPrintCmd)
 	configCmdGroup.AddCommand(adminPasswdCmd)
+	configCmdGroup.AddCommand(genKeysCmd)
 	RootCmd.AddCommand(configCmdGroup)
 }

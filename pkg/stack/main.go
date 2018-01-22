@@ -44,6 +44,10 @@ security features. Please do not use this binary as your production server.
 		fmt.Fprintf(os.Stderr, "Error on gops agent: %s\n", err)
 	}
 
+	if err = config.MakeVault(config.GetConfig()); err != nil {
+		return
+	}
+
 	// Check that we can properly reach CouchDB.
 	u := config.CouchURL()
 	u.User = config.GetConfig().CouchDB.Auth

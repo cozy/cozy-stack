@@ -2,9 +2,11 @@ package data
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	perm "github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
@@ -148,6 +150,72 @@ func revsDiff(c echo.Context) error {
 	}
 
 	return proxy(c, "_revs_diff")
+}
+
+var allowedChangesParams = map[string]bool{
+	"feed":         true,
+	"style":        true,
+	"since":        true,
+	"limit":        true,
+	"timeout":      true,
+	"include_docs": true,
+	"heartbeat":    true, // Pouchdb sends heartbeet even for non-continuous
+	"_nonce":       true, // Pouchdb sends a request hash to avoid agressive caching by some browsers
+}
+
+func changesFeed(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	var doctype = c.Get("doctype").(string)
+
+	// Drop a clear error for parameters not supported by stack
+	for key := range c.QueryParams() {
+		if !allowedChangesParams[key] {
+			return jsonapi.NewError(http.StatusBadRequest, "Unsuported query parameter '%s'", key)
+		}
+	}
+
+	feed, err := couchdb.ValidChangesMode(c.QueryParam("feed"))
+	if err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
+	}
+
+	feedStyle, err := couchdb.ValidChangesStyle(c.QueryParam("style"))
+	if err != nil {
+		return jsonapi.NewError(http.StatusBadRequest, err)
+	}
+
+	limitString := c.QueryParam("limit")
+	limit := 0
+	if limitString != "" {
+		if limit, err = strconv.Atoi(limitString); err != nil {
+			return jsonapi.NewError(http.StatusBadRequest, "Invalid limit value '%s'", err.Error())
+		}
+	}
+
+	includeDocs := paramIsTrue(c, "include_docs")
+
+	if err = perm.CheckReadable(doctype); err != nil {
+		return err
+	}
+
+	if err = permissions.AllowWholeType(c, permissions.GET, doctype); err != nil {
+		return err
+	}
+
+	results, err := couchdb.GetChanges(instance, &couchdb.ChangesRequest{
+		DocType:     doctype,
+		Feed:        feed,
+		Style:       feedStyle,
+		Since:       c.QueryParam("since"),
+		Limit:       limit,
+		IncludeDocs: includeDocs,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, results)
 }
 
 func dbStatus(c echo.Context) error {

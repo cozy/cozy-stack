@@ -140,5 +140,4 @@ func GetChanges(db Database, req *ChangesRequest) (*ChangesResponse, error) {
 		return nil, err
 	}
 	return &response, nil
-
 }
