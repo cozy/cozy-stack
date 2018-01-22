@@ -12,9 +12,16 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 const defaultUserAgent = "go-cozy-client"
+
+// defaultClient is the client used by default to access the stack. We avoid
+// the use of http.DefaultClient which does not have any timeout.
+var defaultClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
 
 type (
 	// Authorizer is an interface to represent any element that can be used as a
@@ -142,7 +149,7 @@ func Req(opts *Options) (*http.Response, error) {
 
 	client := opts.Client
 	if client == nil {
-		client = http.DefaultClient
+		client = defaultClient
 	}
 
 	res, err := client.Do(req)

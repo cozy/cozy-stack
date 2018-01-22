@@ -16,6 +16,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 )
 
+var accountsClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
+
 // This file contains the account_type object as defined in
 // docs/konnectors_oauth
 
@@ -180,7 +184,7 @@ func (at *AccountType) RequestAccessToken(i *instance.Instance, accessCode, stat
 		req.Header.Add("Authorization", "Basic "+base64.StdEncoding.EncodeToString(auth))
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := accountsClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

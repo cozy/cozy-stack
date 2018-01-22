@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -25,6 +26,11 @@ import (
 	statikFS "github.com/cozy/statik/fs"
 	"github.com/spf13/afero"
 )
+
+// ReadHeaderTimeout is the amount of time allowed to read request headers for
+// all servers. This is activated for all handlers from all http servers
+// created by the stack.
+var ReadHeaderTimeout = 15 * time.Second
 
 // LoadSupportedLocales reads the po files packed in go or from the assets directory
 // and loads them for translations
@@ -184,13 +190,21 @@ type Servers struct {
 // Start starts the servers.
 func (e *Servers) Start() {
 	e.errs = make(chan error)
-	go e.start(e.major, "major", config.ServerAddr())
-	go e.start(e.admin, "admin", config.AdminServerAddr())
+
+	go e.start(e.major, "major", &http.Server{
+		Addr:              config.ServerAddr(),
+		ReadHeaderTimeout: ReadHeaderTimeout,
+	})
+
+	go e.start(e.admin, "admin", &http.Server{
+		Addr:              config.AdminServerAddr(),
+		ReadHeaderTimeout: ReadHeaderTimeout,
+	})
 }
 
-func (e *Servers) start(s *echo.Echo, name, addr string) {
-	fmt.Printf("  http server %s started on %q\n", name, addr)
-	e.errs <- s.Start(addr)
+func (e *Servers) start(s *echo.Echo, name string, server *http.Server) {
+	fmt.Printf("  http server %s started on %q\n", name, server.Addr)
+	e.errs <- s.StartServer(server)
 }
 
 // Wait for servers to stop or fall in error.
