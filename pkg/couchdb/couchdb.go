@@ -451,14 +451,15 @@ func DeleteDoc(db Database, doc Doc) error {
 	if id == "" {
 		return fmt.Errorf("Missing ID for DeleteDoc")
 	}
-
+	old := doc.Clone()
 	var res updateResponse
 	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(doc.Rev())
 	err = makeRequest(db, doc.DocType(), http.MethodDelete, url, nil, &res)
 	if err != nil {
 		return err
 	}
-	rtevent(db, realtime.EventDelete, doc, nil)
+	doc.SetRev(res.Rev)
+	rtevent(db, realtime.EventDelete, doc, old)
 	return nil
 }
 

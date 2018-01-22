@@ -270,7 +270,6 @@ func DeleteDoc(c echo.Context) error {
 		"type":    doc.DocType(),
 		"deleted": true,
 	})
-
 }
 
 func defineIndex(c echo.Context) error {

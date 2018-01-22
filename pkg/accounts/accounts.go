@@ -121,9 +121,9 @@ func init() {
 			// cleanup or update their associated content. For now we make this
 			// process really specific to the deletion of an account, which is our
 			// only detailed usecase.
-			{
+			if old != nil {
 				var konnector string
-				switch v := doc.(type) {
+				switch v := old.(type) {
 				case *Account:
 					konnector = v.AccountType
 				case *couchdb.JSONDoc:
@@ -139,8 +139,8 @@ func init() {
 					Konnector      string `json:"konnector"`
 					AccountDeleted bool   `json:"account_deleted"`
 				}{
-					Account:        doc.ID(),
-					AccountRev:     doc.Rev(),
+					Account:        old.ID(),
+					AccountRev:     old.Rev(),
 					Konnector:      konnector,
 					AccountDeleted: true,
 				})
