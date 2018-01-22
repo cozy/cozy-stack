@@ -43,7 +43,13 @@ func getAccount(c echo.Context) error {
 	}
 
 	var out couchdb.JSONDoc
-	err := couchdb.GetDoc(instance, doctype, docid, &out)
+	var err error
+	rev := c.QueryParam("rev")
+	if rev != "" {
+		err = couchdb.GetDocRev(instance, doctype, docid, rev, &out)
+	} else {
+		err = couchdb.GetDoc(instance, doctype, docid, &out)
+	}
 	if err != nil {
 		return fixErrorNoDatabaseIsWrongDoctype(err)
 	}

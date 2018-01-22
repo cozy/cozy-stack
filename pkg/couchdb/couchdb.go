@@ -376,6 +376,21 @@ func GetDoc(db Database, doctype, id string, out Doc) error {
 	return makeRequest(db, doctype, http.MethodGet, url.PathEscape(id), nil, out)
 }
 
+// GetDocRev fetch a document by its docType and ID on a specific revision, out
+// is filled with the document by json.Unmarshal-ing
+func GetDocRev(db Database, doctype, id, rev string, out Doc) error {
+	var err error
+	id, err = validateDocID(id)
+	if err != nil {
+		return err
+	}
+	if id == "" {
+		return fmt.Errorf("Missing ID for GetDoc")
+	}
+	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(rev)
+	return makeRequest(db, doctype, http.MethodGet, url, nil, out)
+}
+
 // CreateDB creates the necessary database for a doctype
 func CreateDB(db Database, doctype string) error {
 	return makeRequest(db, doctype, http.MethodPut, "", nil, nil)
@@ -438,13 +453,11 @@ func DeleteDoc(db Database, doc Doc) error {
 	}
 
 	var res updateResponse
-	qs := url.Values{"rev": []string{doc.Rev()}}
-	url := url.PathEscape(id) + "?" + qs.Encode()
+	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(doc.Rev())
 	err = makeRequest(db, doc.DocType(), http.MethodDelete, url, nil, &res)
 	if err != nil {
 		return err
 	}
-	doc.SetRev(res.Rev)
 	rtevent(db, realtime.EventDelete, doc, nil)
 	return nil
 }

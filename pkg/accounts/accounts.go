@@ -122,26 +122,26 @@ func init() {
 			// process really specific to the deletion of an account, which is our
 			// only detailed usecase.
 			{
-				var acc Account
+				var konnector string
 				switch v := doc.(type) {
 				case *Account:
-					acc = *v
+					konnector = v.AccountType
 				case *couchdb.JSONDoc:
-					acc.DocID = v.ID()
-					acc.AccountType, _ = v.M["account_type"].(string)
-				default:
+					konnector, _ = v.M["account_type"].(string)
 				}
-				if acc.AccountType == "" {
+				if konnector == "" {
 					return nil
 				}
 
 				msg, err := jobs.NewMessage(struct {
 					Account        string `json:"account"`
+					AccountRev     string `json:"account_rev"`
 					Konnector      string `json:"konnector"`
 					AccountDeleted bool   `json:"account_deleted"`
 				}{
-					Account:        acc.DocID,
-					Konnector:      acc.AccountType,
+					Account:        doc.ID(),
+					AccountRev:     doc.Rev(),
+					Konnector:      konnector,
 					AccountDeleted: true,
 				})
 				if err != nil {

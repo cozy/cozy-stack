@@ -63,6 +63,7 @@ type konnectorResult struct {
 	CreatedAt   time.Time `json:"last_execution"`
 	LastSuccess time.Time `json:"last_success"`
 	Account     string    `json:"account"`
+	AccountRev  string    `json:"account_rev"`
 	State       string    `json:"state"`
 	Error       string    `json:"error"`
 }
