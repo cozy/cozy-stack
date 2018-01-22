@@ -2,13 +2,15 @@ package thumbnail
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
 
+	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
@@ -36,7 +38,7 @@ func init() {
 		WorkerType:   "thumbnail",
 		Concurrency:  runtime.NumCPU(),
 		MaxExecCount: 2,
-		Timeout:      15 * time.Second,
+		Timeout:      30 * time.Second,
 		WorkerFunc:   Worker,
 	})
 }
@@ -71,27 +73,38 @@ func Worker(ctx *jobs.WorkerContext) error {
 	return fmt.Errorf("Unknown type %s for image event", img.Verb)
 }
 
-func generateThumbnails(ctx context.Context, i *instance.Instance, img *vfs.FileDoc) error {
+func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
 	fs := i.ThumbsFS()
 	var in io.Reader
 	in, err := i.VFS().OpenFile(img)
 	if err != nil {
 		return err
 	}
-	in, err = recGenerateThub(ctx, in, fs, img, "large")
+
+	var env []string
+	{
+		var tempDir string
+		tempDir, err = ioutil.TempDir("", "magick")
+		if err == nil {
+			defer os.RemoveAll(tempDir) // #nosec
+			envTempDir := fmt.Sprintf("MAGICK_TEMPORARY_PATH=%s", tempDir)
+			env = []string{envTempDir}
+		}
+	}
+
+	in, err = recGenerateThub(ctx, in, fs, img, "large", env, false)
 	if err != nil {
 		return err
 	}
-	in, err = recGenerateThub(ctx, in, fs, img, "medium")
+	in, err = recGenerateThub(ctx, in, fs, img, "medium", env, false)
 	if err != nil {
 		return err
 	}
-	// TODO(optim): no need for the last output
-	_, err = recGenerateThub(ctx, in, fs, img, "small")
+	_, err = recGenerateThub(ctx, in, fs, img, "small", env, true)
 	return err
 }
 
-func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string) (r io.Reader, err error) {
+func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img *vfs.FileDoc, format string, env []string, noOuput bool) (r io.Reader, err error) {
 	defer func() {
 		if inCloser, ok := in.(io.Closer); ok {
 			if errc := inCloser.Close(); errc != nil && err == nil {
@@ -104,9 +117,15 @@ func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vf
 		return nil, err
 	}
 	defer file.Close()
-	buffer := new(bytes.Buffer)
-	ws := io.MultiWriter(file, buffer)
-	err = generateThumb(ctx, in, ws, format)
+	var buffer *bytes.Buffer
+	var out io.Writer
+	if noOuput {
+		out = file
+	} else {
+		buffer = new(bytes.Buffer)
+		out = io.MultiWriter(file, buffer)
+	}
+	err = generateThumb(ctx, in, out, format, env)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +139,11 @@ func recGenerateThub(ctx context.Context, in io.Reader, fs vfs.Thumbser, img *vf
 // We are using some complicated ImageMagick options to optimize the speed and
 // quality of the generated thumbnails.
 // See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
-func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format string) error {
+func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, format string, env []string) error {
+	convertCmd := config.GetConfig().Jobs.ImageMagickConvertCmd
+	if convertCmd == "" {
+		convertCmd = "convert"
+	}
 	args := []string{
 		"-limit", "Memory", "2GB",
 		"-limit", "Map", "3GB",
@@ -133,10 +156,19 @@ func generateThumb(ctx context.Context, in io.Reader, out io.Writer, format stri
 		"-colorspace", "sRGB", // Use the colorspace recommended for web, sRGB
 		"jpg:-", // Send the output on stdout, in JPEG format
 	}
-	cmd := exec.CommandContext(ctx, "convert", args...) // #nosec
+	var stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, convertCmd, args...) // #nosec
+	cmd.Env = env
 	cmd.Stdin = in
 	cmd.Stdout = out
-	return cmd.Run()
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		ctx.Logger().
+			WithField("stderr", stderr.String()).
+			Errorf("imagemagick failed: %s", err)
+		return err
+	}
+	return nil
 }
 
 func removeThumbnails(i *instance.Instance, img *vfs.FileDoc) error {
