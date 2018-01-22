@@ -14,6 +14,7 @@ fi
 
 if [ -f "${rundir}" ]; then
   runfile="/usr/src/konnector/$(basename "${rundir}")"
+  rundir="$(dirname "${rundir}")"
 elif [ -d "${rundir}" ]; then
   runfile="/usr/src/konnector"
 else
