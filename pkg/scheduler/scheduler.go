@@ -2,11 +2,11 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
-	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/realtime"
@@ -153,20 +153,29 @@ func (t *TriggerInfos) Valid(key, value string) bool {
 func GetJobs(t Trigger, limit int) ([]*jobs.Job, error) {
 	triggerInfos := t.Infos()
 	db := couchdb.SimpleDatabasePrefix(triggerInfos.Domain)
-	var jobs []*jobs.Job
 	if limit <= 0 || limit > 50 {
 		limit = 50
 	}
-	req := &couchdb.FindRequest{
-		UseIndex: "by-trigger-id",
-		Selector: mango.Equal("trigger_id", triggerInfos.ID()),
-		Limit:    limit,
+	var res couchdb.ViewResponse
+	req := &couchdb.ViewRequest{
+		StartKey:    []string{triggerInfos.ID()},
+		EndKey:      []string{triggerInfos.ID(), couchdb.MaxString},
+		IncludeDocs: true,
+		Limit:       limit,
 	}
-	err := couchdb.FindDocs(db, consts.Jobs, req, &jobs)
+	err := couchdb.ExecView(db, consts.TriggersJobs, req, &res)
 	if err != nil {
 		return nil, err
 	}
-	return jobs, nil
+	list := make([]*jobs.Job, 0, res.Total)
+	for _, row := range res.Rows {
+		var j jobs.Job
+		if err = json.Unmarshal(row.Doc, &j); err != nil {
+			return nil, err
+		}
+		list = append(list, &j)
+	}
+	return list, nil
 }
 
 // GetTriggerState returns the state of the trigger, calculated from the last
