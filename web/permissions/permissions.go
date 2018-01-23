@@ -160,7 +160,12 @@ func listPermissionsByDoctype(c echo.Context, route, permType string) error {
 
 	out := make([]jsonapi.Object, len(perms))
 	for i, p := range perms {
-		p.Codes = nil // Don't let an app get sharecodes for permissions it may not own
+		// Don't let an app get sharecodes for permissions it may not own
+		codes := p.Codes
+		p.Codes = make(map[string]string)
+		for k := range codes {
+			p.Codes[k] = "secret"
+		}
 		out[i] = &APIPermission{&p}
 	}
 
