@@ -186,7 +186,9 @@ func GetTriggerState(t Trigger) (*TriggerState, error) {
 	state.Status = jobs.Done
 	state.TID = t.ID()
 
-	for _, j := range js {
+	// jobs are ordered from the oldest to most recent job
+	for i := len(js) - 1; i >= 0; i-- {
+		j := js[i]
 		startedAt := &j.StartedAt
 		switch j.State {
 		case jobs.Errored:
