@@ -868,12 +868,12 @@ type findResponse struct {
 
 // FindRequest is used to build a find request
 type FindRequest struct {
-	Selector mango.Filter  `json:"selector"`
-	UseIndex string        `json:"use_index,omitempty"`
-	Limit    int           `json:"limit,omitempty"`
-	Skip     int           `json:"skip,omitempty"`
-	Sort     *mango.SortBy `json:"sort,omitempty"`
-	Fields   []string      `json:"fields,omitempty"`
+	Selector mango.Filter `json:"selector"`
+	UseIndex string       `json:"use_index,omitempty"`
+	Limit    int          `json:"limit,omitempty"`
+	Skip     int          `json:"skip,omitempty"`
+	Sort     mango.SortBy `json:"sort,omitempty"`
+	Fields   []string     `json:"fields,omitempty"`
 }
 
 // AllDocsRequest is used to build a _all_docs request

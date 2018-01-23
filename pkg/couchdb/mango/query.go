@@ -181,8 +181,12 @@ const Asc SortDirection = "asc"
 const Desc SortDirection = "desc"
 
 // SortBy is a sorting rule to be used as the sort of a couchdb.FindRequest
-// a (field, direction) combination.
-type SortBy struct {
+// a list of (field, direction) combination.
+type SortBy []SortByField
+
+// SortByField is a sorting rule to be used as the sort for a pair of (field,
+// direction).
+type SortByField struct {
 	Field     string
 	Direction SortDirection
 }
@@ -190,7 +194,10 @@ type SortBy struct {
 // MarshalJSON implements json.Marshaller on SortBy
 // it will returns a json array [field, direction]
 func (s SortBy) MarshalJSON() ([]byte, error) {
-	asSlice := []Map{makeMap(s.Field, string(s.Direction))}
+	asSlice := make([]Map, len(s))
+	for i, f := range s {
+		asSlice[i] = makeMap(f.Field, string(f.Direction))
+	}
 	return json.Marshal(asSlice)
 }
 

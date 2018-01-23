@@ -27,26 +27,13 @@ var Indexes = []*mango.Index{
 
 	// Used to lookup a queued and running jobs
 	mango.IndexOnFields(Jobs, "by-worker-and-state", []string{"worker", "state"}),
+	mango.IndexOnFields(Jobs, "by-trigger-id", []string{"trigger_id", "queued_at"}),
 
 	// Used to lookup oauth clients by name
 	mango.IndexOnFields(OAuthClients, "by-client-name", []string{"client_name"}),
 
 	// Used to looked login history by OS, browser, and IP
 	mango.IndexOnFields(SessionsLogins, "by-os-browser-ip", []string{"os", "browser", "ip"}),
-}
-
-// TriggersJobs is the view used to get the jobs associated with a given
-// trigger and ordered by their date of creation.
-var TriggersJobs = &couchdb.View{
-	Name:    "trigger-jobs",
-	Doctype: Jobs,
-	Map: `
-function(doc) {
-  if (doc.trigger_id) {
-    emit([ doc.trigger_id, doc.queued_at ])
-  }
-}
-`,
 }
 
 // DiskUsageView is the view used for computing the disk usage
@@ -181,7 +168,6 @@ function(doc) {
 
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
-	TriggersJobs,
 	DiskUsageView,
 	FilesReferencedByView,
 	ReferencedBySortedByDatetimeView,
