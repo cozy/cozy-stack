@@ -42,6 +42,6 @@ func TestSortMarshaling(t *testing.T) {
 	}
 	j1, err := json.Marshal(s1)
 	if assert.NoError(t, err) {
-		assert.Equal(t, j1, []byte(`[{"dir_id":"asc","foo_bar":"desc"}]`))
+		assert.Equal(t, j1, []byte(`[{"dir_id":"asc"},{"foo_bar":"desc"}]`))
 	}
 }
