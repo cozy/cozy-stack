@@ -202,6 +202,9 @@ log:
 # instance). Here, the "beta" context is customized with.
 contexts:
   beta:
+    # Indicates if debug related features should be enabled in front
+    # applications.
+    debug: false
     # Redirect to a specific route of cozy-collect after the onboarding
     onboarded_redirection: collect/#/discovery/?intro
     # Redirect to the photos application after login
