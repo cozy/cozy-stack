@@ -33,7 +33,7 @@ func RandomString(n int) string {
 // RandomStringFast returns a random string containing printable ascii
 // characters: [0-9a-zA-Z_-]{n}. Each character encodes 6bits of entropy. To
 // avoid wasting entropy, it is better to create a string whose length is a
-// multiple of 10. For instance a 20 bytes string will encode 120 bytes of
+// multiple of 10. For instance a 20 bytes string will encode 120 bits of
 // entropy.
 func RandomStringFast(rng *rand.Rand, n int) string {
 	// extract 10 letters — 60 bits of entropy — for each pseudo-random uint64
