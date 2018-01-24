@@ -471,11 +471,12 @@ func TestListPermission(t *testing.T) {
 	defer res2.Body.Close()
 
 	var resBody struct {
-		Data []*permissions.Permission
+		Data []map[string]interface{}
 	}
 	err = json.NewDecoder(res2.Body).Decode(&resBody)
 	assert.NoError(t, err)
 	assert.Len(t, resBody.Data, 2)
+	assert.NotEqual(t, resBody.Data[0]["id"], resBody.Data[1]["id"])
 
 	req3, _ := http.NewRequest("GET", ts.URL+"/permissions/doctype/io.cozy.events/shared-by-link?page[limit]=1", nil)
 	req3.Header.Add("Authorization", "Bearer "+token)
@@ -487,7 +488,7 @@ func TestListPermission(t *testing.T) {
 	defer res3.Body.Close()
 
 	var resBody3 struct {
-		Data  []*permissions.Permission
+		Data  []interface{}
 		Links *jsonapi.LinksList
 	}
 	err = json.NewDecoder(res3.Body).Decode(&resBody3)
