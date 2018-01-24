@@ -3,6 +3,7 @@ package permissions
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -113,9 +114,7 @@ func (p *Permission) Revoke(db couchdb.Database) error {
 
 // ParentOf check if child has been created by p
 func (p *Permission) ParentOf(child *Permission) bool {
-
 	canBeParent := p.Type == TypeWebapp || p.Type == TypeOauth
-
 	return child.Type == TypeShareByLink && canBeParent &&
 		child.SourceID == p.SourceID
 }
@@ -254,6 +253,14 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	}
 
 	if perm.Expired() {
+		return nil, ErrExpiredToken
+	}
+	parts := strings.SplitN(perm.SourceID, "/", 2)
+	if len(parts) != 2 {
+		return nil, ErrExpiredToken
+	}
+	var doc couchdb.JSONDoc
+	if err := couchdb.GetDoc(db, parts[0], parts[1], &doc); err != nil {
 		return nil, ErrExpiredToken
 	}
 	return perm, nil
@@ -414,21 +421,21 @@ func ForceWebapp(db couchdb.Database, slug string, set Set) error {
 
 // DestroyWebapp remove all Permission docs for a given app
 func DestroyWebapp(db couchdb.Database, slug string) error {
-	return destroyApp(db, consts.Apps, slug)
+	return destroyApp(db, TypeWebapp, consts.Apps, slug)
 }
 
 // DestroyKonnector remove all Permission docs for a given konnector
 func DestroyKonnector(db couchdb.Database, slug string) error {
-	return destroyApp(db, consts.Konnectors, slug)
+	return destroyApp(db, TypeKonnector, consts.Konnectors, slug)
 }
 
-func destroyApp(db couchdb.Database, docType, slug string) error {
+func destroyApp(db couchdb.Database, permType, docType, slug string) error {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
 		Selector: mango.And(
 			mango.Equal("source_id", docType+"/"+slug),
-			mango.Exists("type"),
+			mango.Equal("type", permType),
 		),
 	}, &res)
 	if err != nil {
