@@ -3,6 +3,7 @@ package permissions
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -113,9 +114,7 @@ func (p *Permission) Revoke(db couchdb.Database) error {
 
 // ParentOf check if child has been created by p
 func (p *Permission) ParentOf(child *Permission) bool {
-
 	canBeParent := p.Type == TypeWebapp || p.Type == TypeOauth
-
 	return child.Type == TypeShareByLink && canBeParent &&
 		child.SourceID == p.SourceID
 }
@@ -254,6 +253,14 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	}
 
 	if perm.Expired() {
+		return nil, ErrExpiredToken
+	}
+	parts := strings.SplitN(perm.SourceID, "/", 2)
+	if len(parts) != 2 {
+		return nil, ErrExpiredToken
+	}
+	var doc couchdb.JSONDoc
+	if err := couchdb.GetDoc(db, parts[0], parts[1], &doc); err != nil {
 		return nil, ErrExpiredToken
 	}
 	return perm, nil
