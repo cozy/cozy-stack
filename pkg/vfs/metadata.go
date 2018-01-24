@@ -95,7 +95,11 @@ func (e *ImageExtractor) Write(p []byte) (n int, err error) {
 
 // Close is called when all the bytes has been pushed, to finalize the extraction
 func (e *ImageExtractor) Close() error {
-	return e.w.Close()
+	err := e.w.Close()
+	if err != nil {
+		<-e.ch
+	}
+	return err
 }
 
 // Abort is called when the extractor can be discarded
