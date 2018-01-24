@@ -272,8 +272,8 @@ Content-Type: application/vnd.api+json
       "type": "share",
       "source_id": "io.cozy.apps/my-awesome-game",
       "codes": {
-        "yuot7NaiaeGugh8T": "bob",
-        "Yohyoo8BHahh1lie": "jane"
+        "bob": "yuot7NaiaeGugh8T",
+        "jane": "Yohyoo8BHahh1lie"
       },
       "expires_at": 1483951978,
       "permissions": {
@@ -317,8 +317,8 @@ Content-Type: application/vnd.api+json
       "type": "share",
       "source_id": "io.cozy.apps/my-awesome-game",
       "codes": {
-        "yuot7NaiaeGugh8T": "bob",
-        "Yohyoo8BHahh1lie": "jane"
+        "bob": "yuot7NaiaeGugh8T",
+        "jane": "Yohyoo8BHahh1lie"
       },
       "expires_at": 1483951978,
       "permissions": {
@@ -360,7 +360,7 @@ Accept: application/vnd.api+json
     "type": "io.cozy.permissions",
     "attributes": {
       "codes": {
-        "Yohyoo8BHahh1lie": "jane"
+        "jane": "Yohyoo8BHahh1lie"
       }
     }
   }
@@ -431,7 +431,7 @@ Content-Type: application/vnd.api+json
       "type": "share",
       "source_id": "io.cozy.apps/my-awesome-game",
       "codes": {
-        "yuot7NaiaeGugh8T": "bob"
+        "bob": "yuot7NaiaeGugh8T"
       },
       "expires_at": 1483951978,
       "permissions": {
