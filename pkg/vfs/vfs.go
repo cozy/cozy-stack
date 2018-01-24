@@ -558,8 +558,8 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 		mime = contentType
 	}
 
-	contentType = strings.TrimSpace(contentType)
-	switch contentType {
+	mime = strings.TrimSpace(mime)
+	switch mime {
 	case DefaultContentType:
 		class = "files"
 	case "application/x-apple-diskimage", "application/x-msdownload":
@@ -585,11 +585,11 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 		"application/zip", "application/gzip", "application/x-tar":
 		class = "zip"
 	default:
-		slashIndex := strings.Index(contentType, "/")
+		slashIndex := strings.Index(mime, "/")
 		if slashIndex >= 0 {
-			class = contentType[:slashIndex]
+			class = mime[:slashIndex]
 		} else {
-			class = contentType
+			class = mime
 		}
 	}
 
