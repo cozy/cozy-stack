@@ -17,8 +17,9 @@ import (
 )
 
 type imageEvent struct {
-	Verb string      `json:"Verb"`
-	Doc  vfs.FileDoc `json:"Doc"`
+	Verb   string       `json:"verb"`
+	Doc    vfs.FileDoc  `json:"doc"`
+	OldDoc *vfs.FileDoc `json:"old,omitempty"`
 }
 
 var formats = map[string]string{
@@ -63,7 +64,12 @@ func Worker(ctx *jobs.WorkerContext) error {
 	case "CREATED":
 		return generateThumbnails(ctx, i, &img.Doc)
 	case "UPDATED":
-		if err = removeThumbnails(i, &img.Doc); err != nil {
+		oldDoc := img.OldDoc
+		newDoc := img.Doc
+		if oldDoc != nil && len(oldDoc.MD5Sum) > 0 && bytes.Equal(oldDoc.MD5Sum, img.Doc.MD5Sum) {
+			return nil
+		}
+		if err = removeThumbnails(i, &newDoc); err != nil {
 			log.Debugf("failed to remove thumbnails for %s: %s", img.Doc.ID(), err)
 		}
 		return generateThumbnails(ctx, i, &img.Doc)
