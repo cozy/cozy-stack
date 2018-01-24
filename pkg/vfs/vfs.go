@@ -558,6 +558,7 @@ func ExtractMimeAndClass(contentType string) (mime, class string) {
 		mime = contentType
 	}
 
+	contentType = strings.TrimSpace(contentType)
 	switch contentType {
 	case DefaultContentType:
 		class = "files"
