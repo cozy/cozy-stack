@@ -30,6 +30,26 @@ func RandomString(n int) string {
 	return string(b)
 }
 
+// RandomStringFast returns a random string containing printable ascii
+// characters: [0-9a-zA-Z_-]{n}. Each character encodes 6bits of entropy. To
+// avoid wasting entropy, it is better to create a string whose length is a
+// multiple of 10. For instance a 20 bytes string will encode 120 bits of
+// entropy.
+func RandomStringFast(rng *rand.Rand, n int) string {
+	// extract 10 letters — 60 bits of entropy — for each pseudo-random uint64
+	const K = 10
+	const L = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-"
+	b := make([]byte, ((n+K-1)/K)*K)
+	for i := 0; i < n; i += K {
+		rn := rng.Uint64()
+		for j := 0; j < K; j++ {
+			b[i+j] = L[rn&0x3F]
+			rn >>= 6
+		}
+	}
+	return string(b[:n])
+}
+
 // IsInArray returns whether or not a string is in the given array of strings.
 func IsInArray(s string, a []string) bool {
 	for _, ss := range a {

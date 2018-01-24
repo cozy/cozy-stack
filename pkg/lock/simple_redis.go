@@ -2,6 +2,7 @@ package lock
 
 import (
 	"errors"
+	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -38,7 +39,7 @@ const (
 
 	// LockValueSize is the size of the random value used to ensure a lock
 	// is ours. If two stack were to generate the same value, locks will break.
-	lockTokenSize = 16
+	lockTokenSize = 20
 
 	// LockTimeout is the expiration of a redis lock
 	// if any operation is longer than this, it should
@@ -64,6 +65,7 @@ type redisLock struct {
 	key    string
 	token  string
 	log    *logrus.Entry
+	rng    *rand.Rand
 }
 
 func (rl *redisLock) Lock() error {
@@ -85,7 +87,7 @@ func (rl *redisLock) Lock() error {
 		rl.token = ""
 	}
 
-	token := utils.RandomString(lockTokenSize)
+	token := utils.RandomStringFast(rl.rng, lockTokenSize)
 
 	// Calculate the timestamp we are willing to wait for
 	stop := time.Now().Add(LockTimeout)
@@ -128,6 +130,7 @@ func makeRedisSimpleLock(c subRedisInterface, ns string) *redisLock {
 		client: c,
 		key:    basicLockNS + ns,
 		log:    logger.WithDomain(ns),
+		rng:    rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 

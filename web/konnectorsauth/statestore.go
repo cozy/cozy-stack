@@ -1,13 +1,14 @@
 package konnectorsauth
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"sync"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/logger"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/go-redis/redis"
 )
 
@@ -30,23 +31,20 @@ type memStateStorage map[string]*stateHolder
 
 func (store memStateStorage) Add(state *stateHolder) (string, error) {
 	state.ExpiresAt = time.Now().UTC().Add(stateTTL).Unix()
-	ref := utils.RandomString(16)
+	ref := hex.EncodeToString(crypto.GenerateRandomBytes(16))
 	store[ref] = state
 	return ref, nil
 }
 
 func (store memStateStorage) Find(ref string) *stateHolder {
-
 	state, ok := store[ref]
 	if !ok {
 		return nil
 	}
-
 	if state.ExpiresAt < time.Now().UTC().Unix() {
 		delete(store, ref)
 		return nil
 	}
-
 	return state
 }
 
@@ -60,7 +58,7 @@ type redisStateStorage struct {
 }
 
 func (store *redisStateStorage) Add(s *stateHolder) (string, error) {
-	ref := utils.RandomString(16)
+	ref := hex.EncodeToString(crypto.GenerateRandomBytes(16))
 	bb, err := json.Marshal(s)
 	if err != nil {
 		return "", err
