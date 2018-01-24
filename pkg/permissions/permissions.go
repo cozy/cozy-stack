@@ -255,13 +255,14 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	if perm.Expired() {
 		return nil, ErrExpiredToken
 	}
+
+	// Check for sharing made by a webapp/konnector that the app is still present (but not for OAuth)
 	parts := strings.SplitN(perm.SourceID, "/", 2)
-	if len(parts) != 2 {
-		return nil, ErrExpiredToken
-	}
-	var doc couchdb.JSONDoc
-	if err := couchdb.GetDoc(db, parts[0], parts[1], &doc); err != nil {
-		return nil, ErrExpiredToken
+	if len(parts) == 2 {
+		var doc couchdb.JSONDoc
+		if err := couchdb.GetDoc(db, parts[0], parts[1], &doc); err != nil {
+			return nil, ErrExpiredToken
+		}
 	}
 	return perm, nil
 }
