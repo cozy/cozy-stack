@@ -414,21 +414,21 @@ func ForceWebapp(db couchdb.Database, slug string, set Set) error {
 
 // DestroyWebapp remove all Permission docs for a given app
 func DestroyWebapp(db couchdb.Database, slug string) error {
-	return destroyApp(db, consts.Apps, slug)
+	return destroyApp(db, TypeWebapp, consts.Apps, slug)
 }
 
 // DestroyKonnector remove all Permission docs for a given konnector
 func DestroyKonnector(db couchdb.Database, slug string) error {
-	return destroyApp(db, consts.Konnectors, slug)
+	return destroyApp(db, TypeKonnector, consts.Konnectors, slug)
 }
 
-func destroyApp(db couchdb.Database, docType, slug string) error {
+func destroyApp(db couchdb.Database, permType, docType, slug string) error {
 	var res []Permission
 	err := couchdb.FindDocs(db, consts.Permissions, &couchdb.FindRequest{
 		UseIndex: "by-source-and-type",
 		Selector: mango.And(
 			mango.Equal("source_id", docType+"/"+slug),
-			mango.Exists("type"),
+			mango.Equal("type", permType),
 		),
 	}, &res)
 	if err != nil {
