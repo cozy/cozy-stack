@@ -260,7 +260,7 @@ func GetForShareCode(db couchdb.Database, tokenCode string) (*Permission, error)
 	parts := strings.SplitN(perm.SourceID, "/", 2)
 	if len(parts) == 2 {
 		var doc couchdb.JSONDoc
-		if err := couchdb.GetDoc(db, parts[0], parts[1], &doc); err != nil {
+		if err := couchdb.GetDoc(db, parts[0], parts[0]+"/"+parts[1], &doc); err != nil {
 			return nil, ErrExpiredToken
 		}
 	}
