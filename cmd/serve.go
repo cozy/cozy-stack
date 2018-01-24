@@ -190,6 +190,9 @@ func init() {
 	flags.String("mail-noreply-address", "", "mail address used for sending mail as a noreply (forgot passwords for example)")
 	checkNoErr(viper.BindPFlag("mail.noreply_address", flags.Lookup("mail-noreply-address")))
 
+	flags.String("mail-noreply-name", "", "mail name used for sending mail as a noreply (forgot passwords for example)")
+	checkNoErr(viper.BindPFlag("mail.noreply_name", flags.Lookup("mail-noreply-name")))
+
 	flags.String("mail-host", "localhost", "mail smtp host")
 	checkNoErr(viper.BindPFlag("mail.host", flags.Lookup("mail-host")))
 
