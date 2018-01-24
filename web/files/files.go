@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -911,6 +912,16 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 	contentType := header.Get("Content-Type")
 	if contentType == "" {
 		mime, class = vfs.ExtractMimeAndClassFromFilename(name)
+	} else if contentType == "application/octet-stream" {
+		// TODO: remove this special path for the heic/heif file extensions with
+		// when we deal with a better detection of the files magic numbers.
+		switch path.Ext(name) {
+		case ".heif":
+			contentType = "image/heif"
+		case ".heic":
+			contentType = "image/heic"
+		}
+		mime, class = vfs.ExtractMimeAndClass(contentType)
 	} else {
 		mime, class = vfs.ExtractMimeAndClass(contentType)
 	}
