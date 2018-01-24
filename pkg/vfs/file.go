@@ -71,6 +71,10 @@ func (f *FileDoc) Clone() couchdb.Doc {
 	copy(cloned.Tags, f.Tags)
 	cloned.ReferencedBy = make([]couchdb.DocReference, len(f.ReferencedBy))
 	copy(cloned.ReferencedBy, f.ReferencedBy)
+	cloned.Metadata = make(Metadata, len(f.Metadata))
+	for k, v := range f.Metadata {
+		cloned.Metadata[k] = v
+	}
 	return &cloned
 }
 
