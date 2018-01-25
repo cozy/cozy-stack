@@ -202,14 +202,18 @@ func (e *ExifExtractor) Result() Metadata {
 				"long": long,
 			}
 		}
-		if xDimension, err := x.Get("PixelXDimension"); err == nil {
-			if width, err := xDimension.Int(0); err == nil {
-				m["width"] = width
+		if _, ok := m["width"]; !ok {
+			if xDimension, err := x.Get("PixelXDimension"); err == nil {
+				if width, err := xDimension.Int(0); err == nil {
+					m["width"] = width
+				}
 			}
 		}
-		if yDimension, err := x.Get("PixelYDimension"); err == nil {
-			if height, err := yDimension.Int(0); err == nil {
-				m["height"] = height
+		if _, ok := m["height"]; !ok {
+			if yDimension, err := x.Get("PixelYDimension"); err == nil {
+				if height, err := yDimension.Int(0); err == nil {
+					m["height"] = height
+				}
 			}
 		}
 		if o, err := x.Get("Orientation"); err == nil {
