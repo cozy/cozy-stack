@@ -28,6 +28,7 @@ cozy-stack config allows to print and generate some parts of the configuration
 ### SEE ALSO
 
 * [cozy-stack](cozy-stack.md)	 - cozy-stack is the main command
+* [cozy-stack config gen-keys](cozy-stack_config_gen-keys.md)	 - Generate an key pair for encryption and decryption of credentials
 * [cozy-stack config passwd](cozy-stack_config_passwd.md)	 - Generate an admin passphrase
 * [cozy-stack config print](cozy-stack_config_print.md)	 - Display the configuration
 

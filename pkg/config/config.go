@@ -92,7 +92,8 @@ type Config struct {
 	AdminHost             string
 	AdminPort             int
 	AdminSecretFileName   string
-	NoReply               string
+	NoReplyAddr           string
+	NoReplyName           string
 	Hooks                 string
 	GeoDB                 string
 	PasswordResetInterval time.Duration
@@ -552,7 +553,8 @@ func UseViper(v *viper.Viper) error {
 		AdminSecretFileName: adminSecretFile,
 		Assets:              v.GetString("assets"),
 		Doctypes:            v.GetString("doctypes"),
-		NoReply:             v.GetString("mail.noreply_address"),
+		NoReplyAddr:         v.GetString("mail.noreply_address"),
+		NoReplyName:         v.GetString("mail.noreply_name"),
 		Hooks:               v.GetString("hooks"),
 		GeoDB:               v.GetString("geodb"),
 		PasswordResetInterval: v.GetDuration("password_reset_interval"),

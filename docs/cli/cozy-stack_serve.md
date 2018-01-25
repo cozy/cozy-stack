@@ -37,33 +37,35 @@ example), you can use the --appdir flag like this:
 ### Options
 
 ```
-      --allow-root                     Allow to start as root (disabled by default)
-      --appdir strings                 Mount a directory as the 'app' application
-      --assets string                  path to the directory with the assets (use the packed assets by default)
-      --cache-url string               URL for the cache, redis or in-memory
-      --couchdb-url string             CouchDB URL (default "http://localhost:5984/")
-      --disable-csp                    Disable the Content Security Policy (only available for development)
-      --doctypes string                path to the directory with the doctypes (for developing/testing a remote doctype)
-      --downloads-url string           URL for the download secret storage, redis or in-memory
-      --fs-url string                  filesystem url (default "file:///Users/pierre/go/src/github.com/cozy/cozy-stack/storage")
-      --geodb string                   define the location of the database for IP -> City lookups (default ".")
-  -h, --help                           help for serve
-      --hooks string                   define the directory used for hook scripts (default ".")
-      --jobs-url string                URL for the jobs system synchronization, redis or in-memory
-      --konnectors-cmd string          konnectors command to be executed
-      --konnectors-oauthstate string   URL for the storage of OAuth state for konnectors, redis or in-memory
-      --lock-url string                URL for the locks, redis or in-memory
-      --log-level string               define the log level (default "info")
-      --log-syslog                     use the local syslog for logging
-      --mail-disable-tls               disable smtp over tls
-      --mail-host string               mail smtp host (default "localhost")
-      --mail-noreply-address string    mail address used for sending mail as a noreply (forgot passwords for example)
-      --mail-password string           mail smtp password
-      --mail-port int                  mail smtp port (default 465)
-      --mail-username string           mail smtp username
-      --realtime-url string            URL for realtime in the browser via webocket, redis or in-memory
-      --sessions-url string            URL for the sessions storage, redis or in-memory
-      --subdomains string              how to structure the subdomains for apps (can be nested or flat) (default "nested")
+      --allow-root                       Allow to start as root (disabled by default)
+      --appdir strings                   Mount a directory as the 'app' application
+      --assets string                    path to the directory with the assets (use the packed assets by default)
+      --cache-url string                 URL for the cache, redis or in-memory
+      --couchdb-url string               CouchDB URL (default "http://localhost:5984/")
+      --disable-csp                      Disable the Content Security Policy (only available for development)
+      --doctypes string                  path to the directory with the doctypes (for developing/testing a remote doctype)
+      --downloads-url string             URL for the download secret storage, redis or in-memory
+      --fs-url string                    filesystem url (default "file:///Users/pierre/go/src/github.com/cozy/cozy-stack/storage")
+      --geodb string                     define the location of the database for IP -> City lookups (default ".")
+  -h, --help                             help for serve
+      --hooks string                     define the directory used for hook scripts (default ".")
+      --jobs-url string                  URL for the jobs system synchronization, redis or in-memory
+      --konnectors-cmd string            konnectors command to be executed
+      --konnectors-oauthstate string     URL for the storage of OAuth state for konnectors, redis or in-memory
+      --lock-url string                  URL for the locks, redis or in-memory
+      --log-level string                 define the log level (default "info")
+      --log-syslog                       use the local syslog for logging
+      --mail-disable-tls                 disable smtp over tls
+      --mail-host string                 mail smtp host (default "localhost")
+      --mail-noreply-address string      mail address used for sending mail as a noreply (forgot passwords for example)
+      --mail-noreply-name string         mail name used for sending mail as a noreply (forgot passwords for example)
+      --mail-password string             mail smtp password
+      --mail-port int                    mail smtp port (default 465)
+      --mail-username string             mail smtp username
+      --password-reset-interval string   minimal duration between two password reset (default "15m")
+      --realtime-url string              URL for realtime in the browser via webocket, redis or in-memory
+      --sessions-url string              URL for the sessions storage, redis or in-memory
+      --subdomains string                how to structure the subdomains for apps (can be nested or flat) (default "nested")
 ```
 
 ### Options inherited from parent commands
