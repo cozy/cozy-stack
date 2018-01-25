@@ -72,8 +72,8 @@ type WebappManifest struct {
 	Editor           string      `json:"editor"`
 	DocSlug          string      `json:"slug"`
 	Developer        Developer   `json:"developer"`
-	LongDescription  string      `json:"long_description"`
 	ShortDescription string      `json:"short_description"`
+	LongDescription  string      `json:"long_description"`
 	Category         string      `json:"category"`
 	Locales          Locales     `json:"locales"`
 	Langs            []string    `json:"langs"`
@@ -100,6 +100,9 @@ type WebappManifest struct {
 
 	Err string `json:"error,omitempty"`
 	err error
+
+	// NOTE: Do not forget to propagate changes made to this structure to the
+	// structure AppManifest in client/apps.go.
 }
 
 // ID is part of the Manifest interface
