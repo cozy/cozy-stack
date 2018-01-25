@@ -48,8 +48,10 @@ type MetaExtractor interface {
 func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 	var e MetaExtractor
 	switch doc.Mime {
-	case "image/jpeg", "image/heic", "image/heif":
-		e = NewExifExtractor()
+	case "image/jpeg":
+		e = NewExifExtractor(true)
+	case "image/heic", "image/heif":
+		e = NewExifExtractor(false)
 	case "image/png", "image/gif":
 		e = NewImageExtractor()
 	case "audio/mp3", "audio/mpeg", "audio/ogg", "audio/x-m4a", "audio/flac":
@@ -130,9 +132,11 @@ type ExifExtractor struct {
 }
 
 // NewExifExtractor returns an extractor for EXIF metadata
-func NewExifExtractor() *ExifExtractor {
+func NewExifExtractor(withImageExtractor bool) *ExifExtractor {
 	e := &ExifExtractor{}
-	e.im = NewImageExtractor()
+	if withImageExtractor {
+		e.im = NewImageExtractor()
+	}
 	e.r, e.w = io.Pipe()
 	e.ch = make(chan interface{})
 	go e.Start()
@@ -152,26 +156,37 @@ func (e *ExifExtractor) Start() {
 
 // Write is called to push some bytes to the extractor
 func (e *ExifExtractor) Write(p []byte) (n int, err error) {
-	e.im.Write(p)
+	if e.im != nil {
+		e.im.Write(p)
+	}
 	return e.w.Write(p)
 }
 
 // Close is called when all the bytes has been pushed, to finalize the extraction
 func (e *ExifExtractor) Close() error {
-	e.im.Close()
+	if e.im != nil {
+		e.im.Close()
+	}
 	return e.w.Close()
 }
 
 // Abort is called when the extractor can be discarded
 func (e *ExifExtractor) Abort(err error) {
-	e.im.Abort(err)
+	if e.im != nil {
+		e.im.Abort(err)
+	}
 	e.w.CloseWithError(err)
 	<-e.ch
 }
 
 // Result is called to get the extracted metadata
 func (e *ExifExtractor) Result() Metadata {
-	m := e.im.Result()
+	var m Metadata
+	if e.im != nil {
+		m = e.im.Result()
+	} else {
+		m = NewMetadata()
+	}
 	x := <-e.ch
 	switch x := x.(type) {
 	case *exif.Exif:
@@ -185,6 +200,16 @@ func (e *ExifExtractor) Result() Metadata {
 			m["gps"] = map[string]float64{
 				"lat":  lat,
 				"long": long,
+			}
+		}
+		if xDimension, err := x.Get("PixelXDimension"); err == nil {
+			if width, err := xDimension.Int(0); err == nil {
+				m["width"] = width
+			}
+		}
+		if yDimension, err := x.Get("PixelYDimension"); err == nil {
+			if height, err := yDimension.Int(0); err == nil {
+				m["height"] = height
 			}
 		}
 		if o, err := x.Get("Orientation"); err == nil {
