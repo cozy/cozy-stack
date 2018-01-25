@@ -20,36 +20,41 @@ type AppManifest struct {
 	ID    string `json:"id"`
 	Rev   string `json:"rev"`
 	Attrs struct {
-		Name        string    `json:"name"`
-		Editor      string    `json:"editor"`
-		Slug        string    `json:"slug"`
-		Source      string    `json:"source"`
-		State       string    `json:"state"`
-		Error       string    `json:"error,omitempty"`
-		Icon        string    `json:"icon"`
-		CreatedAt   time.Time `json:"created_at"`
-		UpdatedAt   time.Time `json:"updated_at"`
-		Category    string    `json:"category"`
-		Description string    `json:"description"`
-		Developer   struct {
+		Name      string `json:"name"`
+		Editor    string `json:"editor"`
+		Slug      string `json:"slug"`
+		Developer struct {
 			Name string `json:"name"`
 			URL  string `json:"url,omitempty"`
 		} `json:"developer"`
+		ShortDescription string                 `json:"short_description"`
+		LongDescription  string                 `json:"long_description"`
+		Category         string                 `json:"category"`
+		Locales          map[string]interface{} `json:"locales"`
+		Langs            []string               `json:"langs"`
+		Tags             []string               `json:"tags"`
+		Icon             string                 `json:"icon"`
+		Screenshots      []string               `json:"screenshots"`
+		Platforms        []struct {
+			Type string `json:"type"`
+			URL  string `json:"url"`
+		} `json:"platforms,omitempty"`
+		License string `json:"license"`
 
-		DefaultLocale string `json:"default_locale"`
-		Locales       map[string]struct {
-			Description string `json:"description"`
-		} `json:"locales"`
-
+		State       string           `json:"state"`
+		Source      string           `json:"source"`
 		Version     string           `json:"version"`
-		License     string           `json:"license"`
 		Permissions *permissions.Set `json:"permissions"`
-		Routes      *map[string]struct {
+		Intents     []struct {
+			Action string   `json:"action"`
+			Types  []string `json:"type"`
+			Href   string   `json:"href"`
+		} `json:"intents"`
+		Routes *map[string]struct {
 			Folder string `json:"folder"`
 			Index  string `json:"index"`
 			Public bool   `json:"public"`
 		} `json:"routes,omitempty"`
-
 		Services *map[string]struct {
 			Type           string `json:"type"`
 			File           string `json:"file"`
@@ -57,6 +62,11 @@ type AppManifest struct {
 			TriggerOptions string `json:"trigger"`
 			TriggerID      string `json:"trigger_id"`
 		} `json:"services"`
+
+		CreatedAt time.Time `json:"created_at"`
+		UpdatedAt time.Time `json:"updated_at"`
+
+		Error string `json:"error,omitempty"`
 
 		Parameters json.RawMessage `json:"parameters,omitempty"`
 	} `json:"attributes,omitempty"`
