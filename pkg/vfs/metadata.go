@@ -48,7 +48,7 @@ type MetaExtractor interface {
 func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 	var e MetaExtractor
 	switch doc.Mime {
-	case "image/jpeg":
+	case "image/jpeg", "image/heic", "image/heif":
 		e = NewExifExtractor()
 	case "image/png", "image/gif":
 		e = NewImageExtractor()
