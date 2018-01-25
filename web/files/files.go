@@ -915,7 +915,7 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 	} else if contentType == "application/octet-stream" {
 		// TODO: remove this special path for the heic/heif file extensions with
 		// when we deal with a better detection of the files magic numbers.
-		switch path.Ext(name) {
+		switch strings.ToLower(path.Ext(name)) {
 		case ".heif":
 			contentType = "image/heif"
 		case ".heic":
