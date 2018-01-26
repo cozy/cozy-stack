@@ -225,7 +225,11 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 	return
 }
 
-func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error {
+func (w *konnectorWorker) Logger(ctx *jobs.WorkerContext) *logrus.Entry {
+	return ctx.Logger().WithField("slug", w.slug)
+}
+
+func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -234,6 +238,7 @@ func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instan
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
 
+	log := w.Logger(ctx)
 	switch msg.Type {
 	case konnectorMsgTypeDebug:
 		log.Debug(msg.Message)
