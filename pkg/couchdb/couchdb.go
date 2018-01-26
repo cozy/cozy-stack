@@ -16,6 +16,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/logger"
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/google/go-querystring/query"
+	"github.com/sirupsen/logrus"
 )
 
 // MaxString is the unicode character "\uFFFF", useful in query as
@@ -25,6 +26,10 @@ const MaxString = mango.MaxString
 // SelectorReferencedBy is the string constant for the references in a JSON
 // document.
 const SelectorReferencedBy = "referenced_by"
+
+// accountDocType is equal to consts.Accounts which we cannot import without
+// a circular dependency for now.
+const accountDocType = "io.cozy.account"
 
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
@@ -264,7 +269,7 @@ func makeRequest(db Database, doctype, method, path string, reqbody interface{},
 
 	// We do not log the account doctype to avoid printing account informations
 	// in the log files.
-	logDebug := doctype != "io.cozy.accounts" && logger.IsDebug(log)
+	logDebug := doctype != accountDocType && logger.IsDebug(log)
 
 	if logDebug {
 		log.Debugf("request: %s %s %s", method, path, string(bytes.TrimSpace(reqjson)))
@@ -452,6 +457,20 @@ func DeleteDoc(db Database, doc Doc) error {
 		return fmt.Errorf("Missing ID for DeleteDoc")
 	}
 	old := doc.Clone()
+
+	// XXX Specific log for the deletion of an account, to help monitor this
+	// metric.
+	if doc.DocType() == accountDocType {
+		logger.WithDomain(db.Prefix()).
+			WithFields(logrus.Fields{
+				"log_id":      "account_delete",
+				"domain":      db.Prefix(),
+				"account_id":  doc.ID(),
+				"account_rev": doc.Rev(),
+			}).
+			Infof("Deleting account %s", doc.ID())
+	}
+
 	var res updateResponse
 	url := url.PathEscape(id) + "?rev=" + url.QueryEscape(doc.Rev())
 	err = makeRequest(db, doc.DocType(), http.MethodDelete, url, nil, &res)
