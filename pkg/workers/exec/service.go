@@ -97,7 +97,11 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Insta
 	return
 }
 
-func (w *serviceWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error {
+func (w *serviceWorker) Logger(ctx *jobs.WorkerContext) *logrus.Entry {
+	return ctx.Logger().WithField("slug", w.Slug())
+}
+
+func (w *serviceWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error {
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
@@ -105,6 +109,7 @@ func (w *serviceWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
 	}
+	log := w.Logger(ctx)
 	switch msg.Type {
 	case konnectorMsgTypeDebug:
 		log.Debug(msg.Message)

@@ -39,8 +39,9 @@ type execWorker interface {
 	Slug() string
 	PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Instance) (workDir string, err error)
 	PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error)
-	ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, log *logrus.Entry, line []byte) error
+	ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance, line []byte) error
 	Error(i *instance.Instance, err error) error
+	Logger(ctx *jobs.WorkerContext) *logrus.Entry
 	Commit(ctx *jobs.WorkerContext, errjob error) error
 }
 
@@ -65,8 +66,6 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return err
 		}
 
-		log := ctx.Logger()
-
 		var stderrBuf bytes.Buffer
 		cmd := exec.CommandContext(ctx, cmdStr, workDir) // #nosec
 		cmd.Env = env
@@ -76,6 +75,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 
 		// Log out all things printed in stderr, whatever the result of the
 		// konnector is.
+		log := worker.Logger(ctx)
 		defer func() {
 			if stderrBuf.Len() > 0 {
 				log.Error("Stderr: ", stderrBuf.String())
@@ -107,7 +107,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		}
 
 		for scanOut.Scan() {
-			if errOut := worker.ScanOutput(ctx, inst, log, scanOut.Bytes()); errOut != nil {
+			if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
 				log.Error(errOut)
 			}
 		}
