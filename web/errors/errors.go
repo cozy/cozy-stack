@@ -107,7 +107,8 @@ func NormalizeError(err error) *ErrorNormalized {
 			n.detail = he.Inner.Error()
 			err = he.Inner
 		} else {
-			n.detail = fmt.Sprintf("%v", he.Message)
+			n.title = fmt.Sprintf("%v", he.Message)
+			n.detail = n.title
 		}
 	}
 
@@ -216,12 +217,7 @@ func WriteError(err error, res http.ResponseWriter, c echo.Context) {
 	res.Header().Set("Content-Type", contentType)
 	res.Header().Set("Content-Length", strconv.Itoa(b.Len()))
 	res.WriteHeader(errn.Status())
-	_, errw := res.Write(b.Bytes())
-
-	if errw != nil && log != nil {
-		log.Errorf("[http] could not write out request: %s %s: %s",
-			req.Method, req.URL.Path, err)
-	}
+	res.Write(b.Bytes())
 }
 
 var bufferPool = sync.Pool{

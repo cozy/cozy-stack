@@ -104,7 +104,7 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	assert.NoError(t, err)
 	defer res1.Body.Close()
 	assert.Equal(t, "400 Bad Request", res1.Status)
-	assert.Equal(t, "text/plain; charset=UTF-8", res1.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html", res1.Header.Get("Content-Type"))
 
 	req2, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("foo.bar"), nil)
 	req2.Host = domain
@@ -112,7 +112,7 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	assert.NoError(t, err)
 	defer res2.Body.Close()
 	assert.Equal(t, "400 Bad Request", res2.Status)
-	assert.Equal(t, "text/plain; charset=UTF-8", res2.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html", res2.Header.Get("Content-Type"))
 
 	req3, _ := http.NewRequest("GET", ts.URL+"/auth/login?redirect="+url.QueryEscape("ftp://sub."+domain+"/foo"), nil)
 	req3.Host = domain
@@ -120,7 +120,7 @@ func TestShowLoginPageWithRedirectBadURL(t *testing.T) {
 	assert.NoError(t, err)
 	defer res3.Body.Close()
 	assert.Equal(t, "400 Bad Request", res3.Status)
-	assert.Equal(t, "text/plain; charset=UTF-8", res3.Header.Get("Content-Type"))
+	assert.Equal(t, "text/html", res3.Header.Get("Content-Type"))
 }
 
 func TestShowLoginPageWithRedirectXSS(t *testing.T) {

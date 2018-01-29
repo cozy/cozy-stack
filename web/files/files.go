@@ -103,7 +103,7 @@ func createFileHandler(c echo.Context, inst *instance.Instance) error {
 		return err
 	}
 
-	uploadFileContent(c, dst, doc.Size(), func(err error) (*file, error) {
+	uploadFileContent(c, http.StatusCreated, dst, doc.Size(), func(err error) (*file, error) {
 		if cerr := dst.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
 			err = cerr
 		}
@@ -208,7 +208,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return WrapVfsError(err)
 	}
 
-	uploadFileContent(c, dst, newdoc.Size(), func(err error) (*file, error) {
+	uploadFileContent(c, http.StatusOK, dst, newdoc.Size(), func(err error) (*file, error) {
 		if cerr := dst.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
@@ -334,9 +334,9 @@ func (t *timeoutReadWriter) WriteHeader(code int) {
 	t.c.Response().Committed = true
 	t.c.Response().Status = code
 
-	fmt.Fprintf(t.w, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
-	t.Header().Write(t.w)
-	fmt.Fprintf(t.w, "\r\n")
+	fmt.Fprintf(t, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
+	t.Header().Write(t)
+	fmt.Fprintf(t, "\r\n")
 }
 
 func (t *timeoutReadWriter) Close() error {
@@ -345,7 +345,7 @@ func (t *timeoutReadWriter) Close() error {
 	return t.conn.Close()
 }
 
-func uploadFileContent(c echo.Context, dst io.Writer, size int64, deferred func(error) (*file, error)) {
+func uploadFileContent(c echo.Context, okStatus int, dst io.Writer, size int64, deferred func(error) (*file, error)) {
 	trw, err := newTimeoutReadWriter(c, size, readWriteTimeout)
 	defer func() {
 		f, errc := deferred(err)
@@ -353,13 +353,13 @@ func uploadFileContent(c echo.Context, dst io.Writer, size int64, deferred func(
 			if errc != nil {
 				trw.WriteError(errc)
 			} else {
-				trw.WriteData(http.StatusCreated, f, nil)
+				trw.WriteData(okStatus, f, nil)
 			}
+			trw.Close()
 		}
 	}()
 
 	if err == nil {
-		defer trw.Close()
 		// TODO: we could probably reduce the number of intermediary buffers to
 		// copy the request body into the VFS, maybe benefit from the underlying
 		// bufio.Reader and/or bufio.Writer thanks to the WriteTo/ReadFrom methods.
