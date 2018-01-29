@@ -4,17 +4,22 @@
 package files
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -23,6 +28,7 @@ import (
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	web_errors "github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -32,9 +38,23 @@ import (
 // TagSeparator is the character separating tags
 const TagSeparator = ","
 
-// ErrDocTypeInvalid is used when the document type sent is not
-// recognized
-var ErrDocTypeInvalid = errors.New("Invalid document type")
+var (
+	// ErrDocTypeInvalid is used when the document type sent is not recognized.
+	ErrDocTypeInvalid = errors.New("Invalid document type")
+
+	// ErrInvalidContentLength is used when the Content-Length header is not
+	// valid and could not be parsed as a positive number.
+	ErrInvalidContentLength = errors.New("Invalid content length")
+
+	// ErrInvalidContentMD5 is used when the given Content-MD5 is not properly
+	// encoded in base64.
+	ErrInvalidContentMD5 = errors.New("Invalid MD5 checksum")
+)
+
+// readWriteTimeout is the timeout duration that we use to calculate our
+// timeout window for each read/write during in our upload handler. This
+// timeout bypass the global timeouts of our http.Server.
+var readWriteTimeout = 15 * time.Second
 
 // CreationHandler handle all POST requests on /files/:file-id
 // aiming at creating a new document in the FS. Given the Type
@@ -42,61 +62,61 @@ var ErrDocTypeInvalid = errors.New("Invalid document type")
 // create a new directory.
 func CreationHandler(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	queryType := c.QueryParam("Type")
+	if queryType == consts.FileType {
+		if err := createFileHandler(c, instance); err != nil {
+			return WrapVfsError(err)
+		}
+		return nil
+	}
 	var doc jsonapi.Object
 	var err error
-	switch c.QueryParam("Type") {
-	case consts.FileType:
-		doc, err = createFileHandler(c, instance.VFS())
-	case consts.DirType:
-		doc, err = createDirHandler(c, instance.VFS())
-	default:
+	if queryType == consts.DirType {
+		doc, err = createDirHandler(c, instance)
+	} else {
 		err = ErrDocTypeInvalid
 	}
-
 	if err != nil {
 		return WrapVfsError(err)
 	}
-
 	return jsonapi.Data(c, http.StatusCreated, doc, nil)
 }
 
-func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
+func createFileHandler(c echo.Context, inst *instance.Instance) error {
+	fs := inst.VFS()
 	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 
 	dirID := c.Param("file-id")
 	name := c.QueryParam("Name")
-	var doc *vfs.FileDoc
-	doc, err = FileDocFromReq(c, name, dirID, tags)
+	doc, err := FileDocFromReq(c, name, dirID, tags)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = checkPerm(c, "POST", nil, doc)
 	if err != nil {
-		return
+		return err
 	}
 
-	file, err := fs.CreateFile(doc, nil)
+	dst, err := fs.CreateFile(doc, nil)
 	if err != nil {
-		return
+		return err
 	}
 
-	defer func() {
-		if cerr := file.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+	doUpload(c, dst, doc.Size(), func(err error) (*file, error) {
+		if cerr := dst.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
 			err = cerr
 		}
-	}()
-
-	_, err = io.Copy(file, c.Request().Body)
-	if err != nil {
-		return
-	}
-	instance := middlewares.GetInstance(c)
-	f = newFile(doc, instance)
-	return
+		if err != nil {
+			return nil, err
+		}
+		return newFile(doc, inst), nil
+	})
+	return nil
 }
 
-func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
+func createDirHandler(c echo.Context, inst *instance.Instance) (*dir, error) {
+	fs := inst.VFS()
 	path := c.QueryParam("Path")
 	tags := utils.SplitTrimString(c.QueryParam("Tags"), TagSeparator)
 
@@ -142,7 +162,8 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 // OverwriteFileContentHandler handles PUT requests on /files/:file-id
 // to overwrite the content of a file given its identifier.
 func OverwriteFileContentHandler(c echo.Context) (err error) {
-	var instance = middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
+	fs := inst.VFS()
 	var olddoc *vfs.FileDoc
 	var newdoc *vfs.FileDoc
 
@@ -151,7 +172,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		fileID = c.Param("docid") // Used by sharings.updateDocument
 	}
 
-	olddoc, err = instance.VFS().FileByID(fileID)
+	olddoc, err = fs.FileByID(fileID)
 	if err != nil {
 		return WrapVfsError(err)
 	}
@@ -167,6 +188,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 	}
 
 	newdoc.ReferencedBy = olddoc.ReferencedBy
+	newdoc.SetID(olddoc.ID()) // The ID can be useful to check permissions
 
 	if err = CheckIfMatch(c, olddoc.Rev()); err != nil {
 		return WrapVfsError(err)
@@ -176,31 +198,193 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 	if err != nil {
 		return
 	}
-
-	newdoc.SetID(olddoc.ID()) // The ID can be useful to check permissions
 	err = checkPerm(c, permissions.PUT, nil, newdoc)
 	if err != nil {
 		return
 	}
 
-	file, err := instance.VFS().CreateFile(newdoc, olddoc)
+	dst, err := fs.CreateFile(newdoc, olddoc)
 	if err != nil {
 		return WrapVfsError(err)
 	}
 
-	defer func() {
-		if cerr := file.Close(); cerr != nil && err == nil {
+	doUpload(c, dst, newdoc.Size(), func(err error) (*file, error) {
+		if cerr := dst.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
 		if err != nil {
-			err = WrapVfsError(err)
+			return nil, err
+		}
+		return newFile(newdoc, inst), nil
+	})
+	return nil
+}
+
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		buf := make([]byte, 64*1024)
+		return &buf
+	},
+}
+
+// timeoutReadWriter is an io.ReadCloser/http.ResponseWriter allowing reading
+// the body of a request and writing the body of a response with a moving
+// timeout window, when the total length of the request is known in advance.
+// For each read operation the read deadline is reset with the given duration,
+// bypassing the global read/write timeouts for long uploads.
+//
+// The Close method closes the underlying connection.
+//
+// At the end of the read, when all bytes have been consumed, the write
+// deadline is set to the same given duration.
+//
+// Warning: this reader hijacks the http response, hence the response .Body
+// field should not be used when using this reader.
+type timeoutReadWriter struct {
+	r    io.Reader
+	w    *bufio.Writer
+	c    echo.Context
+	conn net.Conn
+	n    int64
+	d    time.Duration
+
+	chunked         bool
+	expectsContinue bool
+}
+
+func newTimeoutReadWriter(c echo.Context, size int64, d time.Duration) (trw *timeoutReadWriter, err error) {
+	h, ok := c.Response().Writer.(http.Hijacker)
+	if !ok {
+		return nil, errors.New("files: respose does not implement http.Hijacker")
+	}
+
+	conn, rw, err := h.Hijack()
+	if err != nil {
+		return
+	}
+
+	expectsContinue := c.Request().Header.Get("Expect") == "100-continue"
+	trw = new(timeoutReadWriter)
+	trw.r = rw.Reader
+	trw.w = rw.Writer
+	trw.conn = conn
+	trw.n = size
+	trw.d = d
+	trw.c = c
+	trw.expectsContinue = expectsContinue
+
+	// body request is expected to be chunked if the size is -1
+	if size < 0 {
+		trw.r = httputil.NewChunkedReader(trw.r)
+		trw.chunked = true
+	}
+	return
+}
+
+func (t *timeoutReadWriter) Read(p []byte) (n int, err error) {
+	if !t.chunked {
+		if t.n <= 0 {
+			return 0, io.EOF
+		}
+		if int64(len(p)) > t.n {
+			p = p[0:t.n]
+		}
+	}
+	if t.expectsContinue {
+		t.expectsContinue = false
+		t.w.WriteString("HTTP/1.1 100 Continue\r\n\r\n")
+		t.w.Flush()
+	}
+	t.conn.SetReadDeadline(time.Now().Add(t.d))
+	n, err = t.r.Read(p)
+	if !t.chunked {
+		t.n -= int64(n)
+	}
+	return
+}
+
+func (t *timeoutReadWriter) Write(p []byte) (n int, err error) {
+	t.conn.SetWriteDeadline(time.Now().Add(t.d))
+	return t.w.Write(p)
+}
+
+func (t *timeoutReadWriter) Header() http.Header {
+	return t.c.Response().Header()
+}
+
+func (t *timeoutReadWriter) WriteHeader(code int) {
+	// set the Committed flag to avoid any usage of the response by another
+	// handler, for instance the error handler.
+	t.c.Response().Committed = true
+	t.c.Response().Status = code
+
+	fmt.Fprintf(t.w, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
+	t.Header().Write(t.w)
+	fmt.Fprintf(t.w, "\r\n")
+}
+
+func (t *timeoutReadWriter) Close() error {
+	t.conn.SetWriteDeadline(time.Now().Add(t.d))
+	t.w.Flush()
+	return t.conn.Close()
+}
+
+func doUpload(c echo.Context, dst io.Writer, size int64, deferred func(error) (*file, error)) {
+	trw, err := newTimeoutReadWriter(c, size, readWriteTimeout)
+	defer func() {
+		f, errc := deferred(err)
+		if err != nil {
 			return
 		}
-		err = fileData(c, http.StatusOK, newdoc, nil)
+
+		var b bytes.Buffer
+		var status int
+		if errc != nil {
+			errn := web_errors.NormalizeError(errc)
+			status = errn.Status()
+			jsonapi.WriteError(&b, errn.ToJSONAPI())
+		} else {
+			status = http.StatusCreated
+			jsonapi.WriteData(&b, f, nil)
+		}
+
+		trw.Header().Set("Connection", "close")
+		trw.Header().Set("Content-Type", jsonapi.ContentType)
+		trw.Header().Set("Content-Length", strconv.Itoa(b.Len()))
+		trw.WriteHeader(status)
+		trw.Write(b.Bytes())
+		trw.Close()
 	}()
 
-	_, err = io.Copy(file, c.Request().Body)
-	return
+	if err == nil {
+		// TODO: we could probably reduce the number of intermediary buffers to
+		// copy the request body into the VFS, maybe benefit from the underlying
+		// bufio.Reader and/or bufio.Writer thanks to the WriteTo/ReadFrom methods.
+		bufP := bufferPool.Get().(*[]byte)
+		_, err = io.CopyBuffer(dst, trw, *bufP)
+		bufferPool.Put(bufP)
+	}
+}
+
+func serveFileContent(c echo.Context, fs vfs.VFS, doc *vfs.FileDoc, disposition string) {
+	trw, err := newTimeoutReadWriter(c, c.Request().ContentLength, readWriteTimeout)
+	if err != nil {
+		return
+	}
+
+	trw.Header().Set("Connection", "close")
+	defer trw.Close()
+
+	err = vfs.ServeFileContent(fs, doc, disposition, c.Request(), trw)
+	if err != nil {
+		var b bytes.Buffer
+		errn := web_errors.NormalizeError(WrapVfsError(err))
+		jsonapi.WriteError(&b, errn.ToJSONAPI())
+		trw.Header().Set("Content-Type", jsonapi.ContentType)
+		trw.Header().Set("Content-Length", strconv.Itoa(b.Len()))
+		trw.WriteHeader(errn.Status())
+		trw.Write(b.Bytes())
+	}
 }
 
 // ModifyMetadataByIDHandler handles PATCH requests on /files/:file-id
@@ -374,11 +558,8 @@ func ReadFileContentFromIDHandler(c echo.Context) error {
 	if c.QueryParam("Dl") == "1" {
 		disposition = "attachment"
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
-	if err != nil {
-		return WrapVfsError(err)
-	}
 
+	serveFileContent(c, instance.VFS(), doc, disposition)
 	return nil
 }
 
@@ -458,11 +639,8 @@ func sendFileFromPath(c echo.Context, path string, checkPermission bool) error {
 			c.Response().Header().Del(echo.HeaderXFrameOptions)
 		}
 	}
-	err = vfs.ServeFileContent(instance.VFS(), doc, disposition, c.Request(), c.Response())
-	if err != nil {
-		return WrapVfsError(err)
-	}
 
+	serveFileContent(c, instance.VFS(), doc, disposition)
 	return nil
 }
 
@@ -886,12 +1064,7 @@ func WrapVfsError(err error) error {
 func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.FileDoc, error) {
 	header := c.Request().Header
 
-	size, err := parseContentLength(header.Get("Content-Length"))
-	if err != nil {
-		err = jsonapi.InvalidParameter("Content-Length", err)
-		return nil, err
-	}
-
+	var err error
 	var md5Sum []byte
 	if md5Str := header.Get("Content-MD5"); md5Str != "" {
 		md5Sum, err = parseMD5Hash(md5Str)
@@ -926,6 +1099,7 @@ func FileDocFromReq(c echo.Context, name, dirID string, tags []string) (*vfs.Fil
 		mime, class = vfs.ExtractMimeAndClass(contentType)
 	}
 
+	size := c.Request().ContentLength
 	executable := c.QueryParam("Executable") == "true"
 	trashed := false
 	return vfs.NewFileDoc(
@@ -969,32 +1143,12 @@ func checkPerm(c echo.Context, v pkgperm.Verb, d *vfs.DirDoc, f *vfs.FileDoc) er
 }
 
 func parseMD5Hash(md5B64 string) ([]byte, error) {
-	// Encoded md5 hash in base64 should at least have 22 caracters in
-	// base64: 16*3/4 = 21+1/3
-	//
-	// The padding may add up to 2 characters (non useful). If we are
-	// out of these boundaries we know we don't have a good hash and we
-	// can bail immediately.
-	if len(md5B64) < 22 || len(md5B64) > 24 {
-		return nil, fmt.Errorf("Given Content-MD5 is invalid")
+	if base64.StdEncoding.DecodedLen(len(md5B64)) > 18 {
+		return nil, ErrInvalidContentMD5
 	}
-
 	md5Sum, err := base64.StdEncoding.DecodeString(md5B64)
 	if err != nil || len(md5Sum) != 16 {
-		return nil, fmt.Errorf("Given Content-MD5 is invalid")
+		return nil, ErrInvalidContentMD5
 	}
-
 	return md5Sum, nil
-}
-
-func parseContentLength(contentLength string) (int64, error) {
-	if contentLength == "" {
-		return -1, nil
-	}
-
-	size, err := strconv.ParseInt(contentLength, 10, 64)
-	if err != nil {
-		err = fmt.Errorf("Invalid content length")
-	}
-	return size, err
 }

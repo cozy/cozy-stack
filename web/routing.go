@@ -214,7 +214,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 		return nil
 	})
 
-	main.HTTPErrorHandler = errors.HTMLErrorHandler
+	main.HTTPErrorHandler = errors.ErrorHandler
 	return main, nil
 }
 
