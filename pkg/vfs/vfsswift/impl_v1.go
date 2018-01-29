@@ -834,6 +834,13 @@ func (f *swiftFileCreation) Close() (err error) {
 	return
 }
 
+func (f *swiftFileCreation) CloseWithError(err error) error {
+	if f.err == nil {
+		f.err = err
+	}
+	return f.Close()
+}
+
 type swiftFileOpen struct {
 	f  *swift.ObjectOpenFile
 	br *bytes.Reader
@@ -865,6 +872,10 @@ func (f *swiftFileOpen) Write(p []byte) (int, error) {
 
 func (f *swiftFileOpen) Close() error {
 	return f.f.Close()
+}
+
+func (f *swiftFileOpen) CloseWithError(err error) error {
+	return f.Close()
 }
 
 var (

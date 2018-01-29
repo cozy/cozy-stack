@@ -21,7 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/utils"
-	web_errors "github.com/cozy/cozy-stack/web/errors"
+	weberrors "github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
@@ -39,7 +39,7 @@ const (
 
 func defaultContentType(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		c.Set(web_errors.DefaultContentTypeOfferKey, echo.MIMETextHTML)
+		c.Set(weberrors.DefaultContentTypeOfferKey, echo.MIMETextHTML)
 		return next(c)
 	}
 }

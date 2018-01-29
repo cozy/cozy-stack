@@ -28,7 +28,7 @@ import (
 	pkgperm "github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
-	web_errors "github.com/cozy/cozy-stack/web/errors"
+	weberrors "github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/jsonapi"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
@@ -104,7 +104,7 @@ func createFileHandler(c echo.Context, inst *instance.Instance) error {
 	}
 
 	uploadFileContent(c, http.StatusCreated, dst, doc.Size(), func(err error) (*file, error) {
-		if cerr := dst.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
+		if cerr := dst.CloseWithError(err); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
 			err = cerr
 		}
 		if err != nil {
@@ -209,7 +209,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 	}
 
 	uploadFileContent(c, http.StatusOK, dst, newdoc.Size(), func(err error) (*file, error) {
-		if cerr := dst.Close(); cerr != nil && err == nil {
+		if cerr := dst.CloseWithError(err); cerr != nil && err == nil {
 			err = cerr
 		}
 		if err != nil {
@@ -252,22 +252,22 @@ type timeoutReadWriter struct {
 	expectsContinue bool
 }
 
-func newTimeoutReadWriter(c echo.Context, size int64, d time.Duration) (trw *timeoutReadWriter, err error) {
+func newTimeoutReadWriter(c echo.Context, size int64, d time.Duration) *timeoutReadWriter {
 	h, ok := c.Response().Writer.(http.Hijacker)
 	if !ok {
-		return nil, errors.New("files: respose does not implement http.Hijacker")
+		panic("unexpected: response does not implement http.Hijacker")
 	}
 
 	conn, rw, err := h.Hijack()
 	if err != nil {
-		return
+		panic(fmt.Errorf("unexpected: could not hijack connection: %s", err))
 	}
 
 	// The connection will be closed at the end of the use of this read/writer.
 	c.Response().Header().Set("Connection", "close")
 
 	expectsContinue := c.Request().Header.Get("Expect") == "100-continue"
-	trw = new(timeoutReadWriter)
+	trw := new(timeoutReadWriter)
 	trw.r = rw.Reader
 	trw.w = rw.Writer
 	trw.conn = conn
@@ -281,7 +281,15 @@ func newTimeoutReadWriter(c echo.Context, size int64, d time.Duration) (trw *tim
 		trw.r = httputil.NewChunkedReader(trw.r)
 		trw.chunked = true
 	}
-	return
+	return trw
+}
+
+func newTimeoutWriter(c echo.Context, d time.Duration) interface {
+	http.ResponseWriter
+	io.Closer
+	WriteError(error)
+} {
+	return newTimeoutReadWriter(c, -1, d)
 }
 
 func (t *timeoutReadWriter) Read(p []byte) (n int, err error) {
@@ -312,7 +320,7 @@ func (t *timeoutReadWriter) Write(p []byte) (n int, err error) {
 }
 
 func (t *timeoutReadWriter) WriteError(err error) {
-	web_errors.WriteError(WrapVfsError(err), t, t.c)
+	weberrors.WriteError(WrapVfsError(err), t, t.c)
 }
 
 func (t *timeoutReadWriter) WriteData(status int, o jsonapi.Object, links *jsonapi.LinksList) {
@@ -346,40 +354,33 @@ func (t *timeoutReadWriter) Close() error {
 }
 
 func uploadFileContent(c echo.Context, okStatus int, dst io.Writer, size int64, deferred func(error) (*file, error)) {
-	trw, err := newTimeoutReadWriter(c, size, readWriteTimeout)
+	var err error
+
+	trw := newTimeoutReadWriter(c, size, readWriteTimeout)
 	defer func() {
 		f, errc := deferred(err)
-		if err == nil {
-			if errc != nil {
-				trw.WriteError(errc)
-			} else {
-				trw.WriteData(okStatus, f, nil)
-			}
-			trw.Close()
+		if errc != nil {
+			trw.WriteError(errc)
+		} else {
+			trw.WriteData(okStatus, f, nil)
 		}
+		trw.Close()
 	}()
 
-	if err == nil {
-		// TODO: we could probably reduce the number of intermediary buffers to
-		// copy the request body into the VFS, maybe benefit from the underlying
-		// bufio.Reader and/or bufio.Writer thanks to the WriteTo/ReadFrom methods.
-		bufP := bufferPool.Get().(*[]byte)
-		_, err = io.CopyBuffer(dst, trw, *bufP)
-		bufferPool.Put(bufP)
-	}
+	// TODO: we could probably reduce the number of intermediary buffers to
+	// copy the request body into the VFS, maybe benefit from the underlying
+	// bufio.Reader and/or bufio.Writer thanks to the WriteTo/ReadFrom methods.
+	bufP := bufferPool.Get().(*[]byte)
+	_, err = io.CopyBuffer(dst, trw, *bufP)
+	bufferPool.Put(bufP)
 }
 
 func serveFileContent(c echo.Context, fs vfs.VFS, doc *vfs.FileDoc, disposition string) {
-	trw, err := newTimeoutReadWriter(c, c.Request().ContentLength, readWriteTimeout)
+	tw := newTimeoutWriter(c, readWriteTimeout)
+	defer tw.Close()
+	err := vfs.ServeFileContent(fs, doc, disposition, c.Request(), tw)
 	if err != nil {
-		return
-	}
-
-	defer trw.Close()
-
-	err = vfs.ServeFileContent(fs, doc, disposition, c.Request(), trw)
-	if err != nil {
-		trw.WriteError(err)
+		tw.WriteError(err)
 	}
 }
 
@@ -679,7 +680,9 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 
 	// if accept header is application/zip, send the archive immediately
 	if c.Request().Header.Get("Accept") == "application/zip" {
-		return archive.Serve(instance.VFS(), c.Response())
+		tw := newTimeoutWriter(c, readWriteTimeout)
+		defer tw.Close()
+		return archive.Serve(instance.VFS(), tw)
 	}
 
 	secret, err := vfs.GetStore().AddArchive(instance.Domain, archive)
@@ -747,7 +750,9 @@ func ArchiveDownloadHandler(c echo.Context) error {
 	if archive == nil {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
-	return archive.Serve(instance.VFS(), c.Response())
+	tw := newTimeoutWriter(c, readWriteTimeout)
+	defer tw.Close()
+	return archive.Serve(instance.VFS(), tw)
 }
 
 // FileDownloadHandler send a file that have previously be defined

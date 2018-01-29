@@ -633,6 +633,10 @@ func (f *aferoFileOpen) Close() error {
 	return f.f.Close()
 }
 
+func (f *aferoFileOpen) CloseWithError(err error) error {
+	return f.Close()
+}
+
 // aferoFileCreation represents a file open for writing. It is used to
 // create of file or to modify the content of a file.
 //
@@ -757,6 +761,13 @@ func (f *aferoFileCreation) Close() (err error) {
 		return f.afs.Indexer.CreateNamedFileDoc(newdoc)
 	}
 	return f.afs.Indexer.UpdateFileDoc(olddoc, newdoc)
+}
+
+func (f *aferoFileCreation) CloseWithError(err error) error {
+	if f.err == nil {
+		f.err = err
+	}
+	return f.Close()
 }
 
 func safeCreateFile(name string, mode os.FileMode, fs afero.Fs) (afero.File, error) {

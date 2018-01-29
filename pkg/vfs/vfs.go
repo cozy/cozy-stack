@@ -89,6 +89,7 @@ type File interface {
 	io.Seeker
 	io.Writer
 	io.Closer
+	CloseWithError(error) error
 }
 
 // FilePather is an interface for computing the fullpath of a filedoc

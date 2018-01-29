@@ -711,6 +711,13 @@ func (f *swiftFileCreationV2) Close() (err error) {
 	return
 }
 
+func (f *swiftFileCreationV2) CloseWithError(err error) error {
+	if f.err == nil {
+		f.err = err
+	}
+	return f.Close()
+}
+
 type swiftFileOpenV2 struct {
 	f  *swift.ObjectOpenFile
 	br *bytes.Reader
@@ -742,6 +749,9 @@ func (f *swiftFileOpenV2) Write(p []byte) (int, error) {
 
 func (f *swiftFileOpenV2) Close() error {
 	return f.f.Close()
+}
+func (f *swiftFileOpenV2) CloseWithError(err error) error {
+	return f.Close()
 }
 
 func objectToFileDocV2(c *swift.Connection, container string, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
