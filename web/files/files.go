@@ -103,7 +103,7 @@ func createFileHandler(c echo.Context, inst *instance.Instance) error {
 		return err
 	}
 
-	doUpload(c, dst, doc.Size(), func(err error) (*file, error) {
+	uploadFileContent(c, dst, doc.Size(), func(err error) (*file, error) {
 		if cerr := dst.Close(); cerr != nil && (err == nil || err == io.ErrUnexpectedEOF) {
 			err = cerr
 		}
@@ -208,7 +208,7 @@ func OverwriteFileContentHandler(c echo.Context) (err error) {
 		return WrapVfsError(err)
 	}
 
-	doUpload(c, dst, newdoc.Size(), func(err error) (*file, error) {
+	uploadFileContent(c, dst, newdoc.Size(), func(err error) (*file, error) {
 		if cerr := dst.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
@@ -263,6 +263,9 @@ func newTimeoutReadWriter(c echo.Context, size int64, d time.Duration) (trw *tim
 		return
 	}
 
+	// The connection will be closed at the end of the use of this read/writer.
+	c.Response().Header().Set("Connection", "close")
+
 	expectsContinue := c.Request().Header.Get("Expect") == "100-continue"
 	trw = new(timeoutReadWriter)
 	trw.r = rw.Reader
@@ -308,6 +311,19 @@ func (t *timeoutReadWriter) Write(p []byte) (n int, err error) {
 	return t.w.Write(p)
 }
 
+func (t *timeoutReadWriter) WriteError(err error) {
+	web_errors.WriteError(WrapVfsError(err), t, t.c)
+}
+
+func (t *timeoutReadWriter) WriteData(status int, o jsonapi.Object, links *jsonapi.LinksList) {
+	var b bytes.Buffer
+	jsonapi.WriteData(&b, o, links)
+	t.Header().Set("Content-Type", jsonapi.ContentType)
+	t.Header().Set("Content-Length", strconv.Itoa(b.Len()))
+	t.WriteHeader(status)
+	t.Write(b.Bytes())
+}
+
 func (t *timeoutReadWriter) Header() http.Header {
 	return t.c.Response().Header()
 }
@@ -329,34 +345,21 @@ func (t *timeoutReadWriter) Close() error {
 	return t.conn.Close()
 }
 
-func doUpload(c echo.Context, dst io.Writer, size int64, deferred func(error) (*file, error)) {
+func uploadFileContent(c echo.Context, dst io.Writer, size int64, deferred func(error) (*file, error)) {
 	trw, err := newTimeoutReadWriter(c, size, readWriteTimeout)
 	defer func() {
 		f, errc := deferred(err)
-		if err != nil {
-			return
+		if err == nil {
+			if errc != nil {
+				trw.WriteError(errc)
+			} else {
+				trw.WriteData(http.StatusCreated, f, nil)
+			}
 		}
-
-		var b bytes.Buffer
-		var status int
-		if errc != nil {
-			errn := web_errors.NormalizeError(errc)
-			status = errn.Status()
-			jsonapi.WriteError(&b, errn.ToJSONAPI())
-		} else {
-			status = http.StatusCreated
-			jsonapi.WriteData(&b, f, nil)
-		}
-
-		trw.Header().Set("Connection", "close")
-		trw.Header().Set("Content-Type", jsonapi.ContentType)
-		trw.Header().Set("Content-Length", strconv.Itoa(b.Len()))
-		trw.WriteHeader(status)
-		trw.Write(b.Bytes())
-		trw.Close()
 	}()
 
 	if err == nil {
+		defer trw.Close()
 		// TODO: we could probably reduce the number of intermediary buffers to
 		// copy the request body into the VFS, maybe benefit from the underlying
 		// bufio.Reader and/or bufio.Writer thanks to the WriteTo/ReadFrom methods.
@@ -372,18 +375,11 @@ func serveFileContent(c echo.Context, fs vfs.VFS, doc *vfs.FileDoc, disposition 
 		return
 	}
 
-	trw.Header().Set("Connection", "close")
 	defer trw.Close()
 
 	err = vfs.ServeFileContent(fs, doc, disposition, c.Request(), trw)
 	if err != nil {
-		var b bytes.Buffer
-		errn := web_errors.NormalizeError(WrapVfsError(err))
-		jsonapi.WriteError(&b, errn.ToJSONAPI())
-		trw.Header().Set("Content-Type", jsonapi.ContentType)
-		trw.Header().Set("Content-Length", strconv.Itoa(b.Len()))
-		trw.WriteHeader(errn.Status())
-		trw.Write(b.Bytes())
+		trw.WriteError(err)
 	}
 }
 

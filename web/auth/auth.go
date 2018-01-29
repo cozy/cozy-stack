@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/utils"
+	web_errors "github.com/cozy/cozy-stack/web/errors"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
 	"github.com/labstack/echo"
@@ -35,6 +36,13 @@ const (
 	// user when he/she enters incorrect two factor secret
 	TwoFactorErrorKey = "Login Two factor error"
 )
+
+func defaultContentType(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Set(web_errors.DefaultContentTypeOfferKey, echo.MIMETextHTML)
+		return next(c)
+	}
+}
 
 // Home is the handler for /
 // It redirects to the login page is the user is not yet authentified
@@ -962,29 +970,29 @@ func Routes(router *echo.Group) {
 		CookieSecure:   !config.IsDevRelease(),
 	})
 
-	router.GET("/login", loginForm, noCSRF)
-	router.POST("/login", login, noCSRF)
+	router.GET("/login", loginForm, defaultContentType, noCSRF)
+	router.POST("/login", login, defaultContentType, noCSRF)
 
 	router.DELETE("/login/others", logoutOthers)
 	router.OPTIONS("/login/others", logoutPreflight)
 	router.DELETE("/login", logout)
 	router.OPTIONS("/login", logoutPreflight)
 
-	router.GET("/passphrase_reset", passphraseResetForm, noCSRF)
-	router.POST("/passphrase_reset", passphraseReset, noCSRF)
-	router.GET("/passphrase_renew", passphraseRenewForm, noCSRF)
-	router.POST("/passphrase_renew", passphraseRenew, noCSRF)
+	router.GET("/passphrase_reset", passphraseResetForm, defaultContentType, noCSRF)
+	router.POST("/passphrase_reset", passphraseReset, defaultContentType, noCSRF)
+	router.GET("/passphrase_renew", passphraseRenewForm, defaultContentType, noCSRF)
+	router.POST("/passphrase_renew", passphraseRenew, defaultContentType, noCSRF)
 
 	router.POST("/register", registerClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON)
 	router.GET("/register/:client-id", readClient, middlewares.AcceptJSON, checkRegistrationToken)
 	router.PUT("/register/:client-id", updateClient, middlewares.AcceptJSON, middlewares.ContentTypeJSON, checkRegistrationToken)
 	router.DELETE("/register/:client-id", deleteClient, checkRegistrationToken)
 
-	authorizeGroup := router.Group("/authorize", noCSRF)
+	authorizeGroup := router.Group("/authorize", defaultContentType, noCSRF)
 	authorizeGroup.GET("", authorizeForm)
 	authorizeGroup.POST("", authorize)
 	authorizeGroup.GET("/app", authorizeAppForm)
 	authorizeGroup.POST("/app", authorizeApp)
 
-	router.POST("/access_token", accessToken)
+	router.POST("/access_token", accessToken, defaultContentType)
 }

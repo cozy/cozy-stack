@@ -1,9 +1,12 @@
 package errors
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
+	"sync"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -17,16 +20,18 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	contentTypeOffers = []string{
-		jsonapi.ContentType,
-		echo.MIMEApplicationJSON,
-		echo.MIMETextHTML,
-		echo.MIMETextPlain,
-	}
+var contentTypeOffers = []string{
+	jsonapi.ContentType,
+	echo.MIMEApplicationJSON,
+	echo.MIMETextHTML,
+	echo.MIMETextPlain,
+}
 
-	defaultContentTypeOffer = jsonapi.ContentType
-)
+const defaultContentTypeOffer = jsonapi.ContentType
+
+// DefaultContentTypeOfferKey is a key for the echo.Context that can be used
+// to set a default content-type offer for the error response.
+const DefaultContentTypeOfferKey = "default-content-type"
 
 // ErrorNormalized is created by the error handler to normalize any error into
 // a struct containing all the elements to create a full HTTP error response.
@@ -144,9 +149,14 @@ func NormalizeError(err error) *ErrorNormalized {
 
 // ErrorHandler is the default error handler of our APIs.
 func ErrorHandler(err error, c echo.Context) {
-	res := c.Response()
-	req := c.Request()
+	WriteError(err, c.Response(), c)
+}
 
+// WriteError can be used to write an error response in a specific
+// http.ResponseWriter different than the echo.Content response. It is
+// particularly useful for hijacked responses.
+func WriteError(err error, res http.ResponseWriter, c echo.Context) {
+	req := c.Request()
 	inst, _ := middlewares.GetInstanceSafe(c)
 
 	var log *logrus.Entry
@@ -159,39 +169,63 @@ func ErrorHandler(err error, c echo.Context) {
 		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
 	}
 
-	if res.Committed {
+	if c.Response().Committed {
 		return
 	}
 
-	var errw error
-	errn := NormalizeError(err)
-	contentTypeOffer := httputil.NegotiateContentType(req, contentTypeOffers, defaultContentTypeOffer)
+	wantedContentTypeOffer := defaultContentTypeOffer
+	if s, ok := c.Get(DefaultContentTypeOfferKey).(string); ok {
+		wantedContentTypeOffer = s
+	}
 
+	errn := NormalizeError(err)
+	contentTypeOffer := httputil.NegotiateContentType(req, contentTypeOffers, wantedContentTypeOffer)
+
+	b := bufferPool.Get().(*bytes.Buffer)
+	defer func() {
+		b.Reset()
+		bufferPool.Put(b)
+	}()
+
+	var contentType string
 	switch contentTypeOffer {
 	case jsonapi.ContentType, echo.MIMEApplicationJSON:
-		errw = jsonapi.DataError(c, errn.ToJSONAPI())
+		contentType = jsonapi.ContentType
+		jsonapi.WriteError(b, errn.ToJSONAPI())
 	case echo.MIMETextHTML:
+		contentType = echo.MIMETextHTML
 		var domain string
 		if inst != nil {
 			domain = inst.Domain
 		}
-		errw = c.Render(errn.Status(), "error.html", echo.Map{
+		c.Echo().Renderer.Render(b, "error.html", echo.Map{
 			"Domain":     domain,
 			"ErrorTitle": errn.TitleLocale(),
 			"Error":      errn.DetailLocale(),
-		})
+		}, c)
 	case echo.MIMETextPlain:
-		var text string
+		contentType = echo.MIMETextPlain
 		title, detail := errn.Title(), errn.Detail()
 		if detail != "" {
-			text = fmt.Sprintf("%s: %s", title, detail)
+			fmt.Fprintf(b, "%s: %s", title, detail)
 		} else {
-			text = title
+			b.WriteString(title)
 		}
-		errw = c.String(errn.Status(), text)
 	}
 
+	res.Header().Set("Content-Type", contentType)
+	res.Header().Set("Content-Length", strconv.Itoa(b.Len()))
+	res.WriteHeader(errn.Status())
+	_, errw := res.Write(b.Bytes())
+
 	if errw != nil && log != nil {
-		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+		log.Errorf("[http] could not write out request: %s %s: %s",
+			req.Method, req.URL.Path, err)
 	}
+}
+
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
 }

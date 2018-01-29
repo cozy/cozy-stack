@@ -204,6 +204,7 @@ func CreateSubdomainProxy(router *echo.Echo, appsHandler echo.HandlerFunc) (*ech
 		// TODO(optim): minimize the number of instance requests
 		if parent, slug, _ := middlewares.SplitHost(c.Request().Host); slug != "" {
 			if i, err := instance.Get(parent); err == nil {
+				c.Set(errors.DefaultContentTypeOfferKey, echo.MIMETextHTML)
 				c.Set("instance", i)
 				c.Set("slug", slug)
 				return appsHandler(c)
