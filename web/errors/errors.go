@@ -99,28 +99,26 @@ func NormalizeError(err error) *ErrorNormalized {
 		return nil
 	}
 
-	n := ErrorNormalized{inner: err}
+	n := ErrorNormalized{
+		inner:  err,
+		status: http.StatusInternalServerError,
+	}
 
 	if he, ok := err.(*echo.HTTPError); ok {
 		n.status = he.Code
 		if he.Inner != nil {
-			n.detail = he.Inner.Error()
 			err = he.Inner
 		} else {
-			n.title = fmt.Sprintf("%v", he.Message)
-			n.detail = n.title
+			n.detail = fmt.Sprintf("%v", he.Message)
 		}
 	}
 
 	if os.IsExist(err) {
-		err = jsonapi.Conflict(err)
+		n.status = http.StatusConflict
 	} else if os.IsNotExist(err) {
-		err = jsonapi.NotFound(err)
-	}
-
-	if err == instance.ErrNotFound {
 		n.status = http.StatusNotFound
-		n.title = err.Error()
+	} else if err == instance.ErrNotFound {
+		n.status = http.StatusNotFound
 		n.titleLocale = "Error Instance not found Title"
 		n.detailLocale = "Error Instance not found Message"
 	} else if je, ok := err.(*jsonapi.Error); ok {
@@ -131,18 +129,20 @@ func NormalizeError(err error) *ErrorNormalized {
 		n.status = ce.StatusCode
 		n.title = ce.Name
 		n.detail = ce.Reason
-	} else if n.status == 0 {
-		n.status = http.StatusInternalServerError
-		n.detail = err.Error()
 	}
 
 	if n.title == "" {
+		n.title = http.StatusText(n.status)
 		if n.status >= http.StatusInternalServerError {
 			n.titleLocale = "Error Internal Server Error Title"
 			n.detailLocale = "Error Internal Server Error Message"
 		} else {
 			n.titleLocale = "Error Title"
 		}
+	}
+
+	if n.detail == "" {
+		n.detail = err.Error()
 	}
 
 	return &n
