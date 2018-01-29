@@ -54,7 +54,7 @@ var (
 // readWriteTimeout is the timeout duration that we use to calculate our
 // timeout window for each read/write during in our upload handler. This
 // timeout bypass the global timeouts of our http.Server.
-var readWriteTimeout = 15 * time.Second
+var readWriteTimeout = 20 * time.Second
 
 // CreationHandler handle all POST requests on /files/:file-id
 // aiming at creating a new document in the FS. Given the Type
@@ -359,10 +359,14 @@ func uploadFileContent(c echo.Context, okStatus int, dst io.Writer, size int64, 
 	trw := newTimeoutReadWriter(c, size, readWriteTimeout)
 	defer func() {
 		f, errc := deferred(err)
-		if errc != nil {
-			trw.WriteError(errc)
-		} else {
-			trw.WriteData(okStatus, f, nil)
+		// do not deal with networking timeout error, in such cases we just close
+		// the connection.
+		if errn, ok := err.(net.Error); !ok || !errn.Timeout() {
+			if errc != nil {
+				trw.WriteError(errc)
+			} else {
+				trw.WriteData(okStatus, f, nil)
+			}
 		}
 		trw.Close()
 	}()
