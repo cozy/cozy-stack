@@ -373,6 +373,9 @@ func doRequest(method, url, tok, body string) (map[string]interface{}, error) {
 	if len(resbody) == 0 {
 		return nil, nil
 	}
+	if res.StatusCode/200 != 1 {
+		return nil, fmt.Errorf("Bad request: %d", res.StatusCode)
+	}
 	var out map[string]interface{}
 	err = json.Unmarshal(resbody, &out)
 	if err != nil {
