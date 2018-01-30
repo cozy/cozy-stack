@@ -901,6 +901,7 @@ func TestDownloadFileByIDSuccess(t *testing.T) {
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Disposition"), "inline"))
 	assert.True(t, strings.Contains(res2.Header.Get("Content-Disposition"), "filename=downloadme1"))
 	assert.True(t, strings.HasPrefix(res2.Header.Get("Content-Type"), "text/plain"))
+	assert.Equal(t, res2.ContentLength, int64(len(body)))
 	assert.NotEmpty(t, res2.Header.Get("Etag"))
 	assert.Equal(t, res2.Header.Get("Etag")[:1], `"`)
 	assert.Equal(t, res2.Header.Get("Content-Length"), "3")
@@ -1050,7 +1051,7 @@ func TestArchiveDirectDownload(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Equal(t, "application/zip", res.Header.Get("Content-Type"))
-
+	assert.Equal(t, int64(-1), res.ContentLength)
 }
 
 func TestArchiveCreateAndDownload(t *testing.T) {
@@ -1102,6 +1103,7 @@ func TestArchiveCreateAndDownload(t *testing.T) {
 	assert.Equal(t, 200, res2.StatusCode)
 	disposition := res2.Header.Get("Content-Disposition")
 	assert.Equal(t, `attachment; filename=archive.zip`, disposition)
+	assert.Equal(t, int64(-1), res2.ContentLength)
 }
 
 func TestFileCreateAndDownloadByPath(t *testing.T) {

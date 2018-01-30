@@ -241,13 +241,15 @@ var bufferPool = sync.Pool{
 // Warning: this reader hijacks the http response, hence the response .Body
 // field should not be used when using this reader.
 type timeoutReadWriter struct {
-	r    io.Reader
-	w    *bufio.Writer
-	c    echo.Context
-	conn net.Conn
-	n    int64
-	d    time.Duration
+	bufrw *bufio.ReadWriter
+	r     io.Reader
+	w     io.Writer
+	c     echo.Context
+	conn  net.Conn
+	n     int64
+	d     time.Duration
 
+	headerWritten   bool
 	chunked         bool
 	expectsContinue bool
 }
@@ -268,6 +270,7 @@ func newTimeoutReadWriter(c echo.Context, size int64, d time.Duration) *timeoutR
 
 	expectsContinue := c.Request().Header.Get("Expect") == "100-continue"
 	trw := new(timeoutReadWriter)
+	trw.bufrw = rw
 	trw.r = rw.Reader
 	trw.w = rw.Writer
 	trw.conn = conn
@@ -281,15 +284,28 @@ func newTimeoutReadWriter(c echo.Context, size int64, d time.Duration) *timeoutR
 		trw.r = httputil.NewChunkedReader(trw.r)
 		trw.chunked = true
 	}
+
 	return trw
 }
 
-func newTimeoutWriter(c echo.Context, d time.Duration) interface {
+func newTimeoutWriter(c echo.Context, size int64, d time.Duration) interface {
 	http.ResponseWriter
 	io.Closer
 	WriteError(error)
 } {
-	return newTimeoutReadWriter(c, -1, d)
+	tr := newTimeoutReadWriter(c, -1, d)
+	tr.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	return tr
+}
+
+func newTimeoutChunkedWriter(c echo.Context, d time.Duration) interface {
+	http.ResponseWriter
+	io.Closer
+} {
+	tr := newTimeoutReadWriter(c, -1, d)
+	tr.Header().Set("Transfer-Encoding", "chunked")
+	tr.w = httputil.NewChunkedWriter(tr.w)
+	return tr
 }
 
 func (t *timeoutReadWriter) Read(p []byte) (n int, err error) {
@@ -303,8 +319,8 @@ func (t *timeoutReadWriter) Read(p []byte) (n int, err error) {
 	}
 	if t.expectsContinue {
 		t.expectsContinue = false
-		t.w.WriteString("HTTP/1.1 100 Continue\r\n\r\n")
-		t.w.Flush()
+		t.bufrw.WriteString("HTTP/1.1 100 Continue\r\n\r\n")
+		t.bufrw.Flush()
 	}
 	t.conn.SetReadDeadline(time.Now().Add(t.d))
 	n, err = t.r.Read(p)
@@ -315,11 +331,15 @@ func (t *timeoutReadWriter) Read(p []byte) (n int, err error) {
 }
 
 func (t *timeoutReadWriter) Write(p []byte) (n int, err error) {
+	if !t.headerWritten {
+		t.WriteHeader(http.StatusOK)
+	}
 	t.conn.SetWriteDeadline(time.Now().Add(t.d))
 	return t.w.Write(p)
 }
 
 func (t *timeoutReadWriter) WriteError(err error) {
+	// NOTE: WriteError does call the WriteHeader method for us.
 	weberrors.WriteError(WrapVfsError(err), t, t.c)
 }
 
@@ -337,19 +357,29 @@ func (t *timeoutReadWriter) Header() http.Header {
 }
 
 func (t *timeoutReadWriter) WriteHeader(code int) {
+	if t.headerWritten {
+		panic("unexpected: headers already written")
+	}
 	// set the Committed flag to avoid any usage of the response by another
 	// handler, for instance the error handler.
 	t.c.Response().Committed = true
 	t.c.Response().Status = code
 
-	fmt.Fprintf(t, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
-	t.Header().Write(t)
-	fmt.Fprintf(t, "\r\n")
+	t.headerWritten = true
+	t.conn.SetWriteDeadline(time.Now().Add(t.d))
+	fmt.Fprintf(t.bufrw, "HTTP/1.1 %03d %s\r\n", code, http.StatusText(code))
+	t.Header().Write(t.bufrw)
+	fmt.Fprintf(t.bufrw, "\r\n")
 }
 
-func (t *timeoutReadWriter) Close() error {
+func (t *timeoutReadWriter) Close() (errc error) {
 	t.conn.SetWriteDeadline(time.Now().Add(t.d))
-	t.w.Flush()
+	// io.Closer can be implemented for example by the ChunkedWriter to write a
+	// 0-length chunk and close the connection.
+	if c, ok := t.w.(io.Closer); ok {
+		c.Close()
+	}
+	t.bufrw.Flush()
 	return t.conn.Close()
 }
 
@@ -380,7 +410,7 @@ func uploadFileContent(c echo.Context, okStatus int, dst io.Writer, size int64, 
 }
 
 func serveFileContent(c echo.Context, fs vfs.VFS, doc *vfs.FileDoc, disposition string) {
-	tw := newTimeoutWriter(c, readWriteTimeout)
+	tw := newTimeoutWriter(c, doc.Size(), readWriteTimeout)
 	defer tw.Close()
 	err := vfs.ServeFileContent(fs, doc, disposition, c.Request(), tw)
 	if err != nil {
@@ -684,7 +714,7 @@ func ArchiveDownloadCreateHandler(c echo.Context) error {
 
 	// if accept header is application/zip, send the archive immediately
 	if c.Request().Header.Get("Accept") == "application/zip" {
-		tw := newTimeoutWriter(c, readWriteTimeout)
+		tw := newTimeoutChunkedWriter(c, readWriteTimeout)
 		defer tw.Close()
 		return archive.Serve(instance.VFS(), tw)
 	}
@@ -754,7 +784,7 @@ func ArchiveDownloadHandler(c echo.Context) error {
 	if archive == nil {
 		return jsonapi.NewError(http.StatusBadRequest, "Wrong download token")
 	}
-	tw := newTimeoutWriter(c, readWriteTimeout)
+	tw := newTimeoutChunkedWriter(c, readWriteTimeout)
 	defer tw.Close()
 	return archive.Serve(instance.VFS(), tw)
 }
