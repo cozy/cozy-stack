@@ -143,7 +143,7 @@ func init() {
 
 				logger.
 					WithField("konnector", konnector).
-					Info("Pusing job for konnector on_delete")
+					Info("Pushing job for konnector on_delete")
 
 				msg, err := jobs.NewMessage(struct {
 					Account        string `json:"account"`
