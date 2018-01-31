@@ -151,7 +151,7 @@
 
   resetForm && resetForm.addEventListener('submit', function(event) {
     event.preventDefault()
-    const { label } = window.password.getStrength(passphraseInput.value)
+    const label = window.password.getStrength(passphraseInput.value).label
     if (label == 'weak') {
       return false
     } else {
@@ -160,7 +160,7 @@
   })
 
   resetForm && passphraseInput.addEventListener('input', function(event) {
-    const { label } = window.password.getStrength(event.target.value)
+    const label = window.password.getStrength(event.target.value).label
     submitButton[label == 'weak' ? 'setAttribute' : 'removeAttribute']('disabled', '')
   })
 
