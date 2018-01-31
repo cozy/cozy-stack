@@ -212,7 +212,8 @@ h1 {
     background-size: contain;
     vertical-align: -9px;
 }
-li[class^="io.cozy.settings"]:before {
+li[class^="io.cozy.settings"]:before,
+li[class^="io.cozy.bank.settings"]:before {
     background-image: url('../images/icon-settings.svg');
 }
 li[class^="io.cozy.accounts"]:before {
@@ -226,6 +227,9 @@ li[class^="io.cozy.bank.accounts"]:before {
 }
 li[class^="io.cozy.bank.groups"]:before {
     background-image: url('../images/icon-bank-groups.svg');
+}
+li[class^="io.cozy.bank.operations"]:before {
+    background-image: url('../images/icon-bank-operations.svg');
 }
 li[class^="io.cozy.bills"]:before {
     background-image: url('../images/icon-bill.svg');
@@ -241,6 +245,9 @@ li[class^="io.cozy.konnectors"]:before {
 }
 li[class^="io.cozy.konnectors.result"]:before {
     background-image: url('../images/icon-konnectors-result.svg');
+}
+li[class^="io.cozy.notifications"]:before {
+    background-image: url('../images/icon-notifications.svg');
 }
 li[class^="io.cozy.photos.albums"]:before {
     background-image: url('../images/icon-photos-album.svg');
