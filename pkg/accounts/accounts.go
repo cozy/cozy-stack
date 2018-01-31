@@ -3,7 +3,6 @@ package accounts
 import (
 	"net/url"
 	"time"
-
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
@@ -126,13 +125,14 @@ func init() {
 				switch v := old.(type) {
 				case *Account:
 					konnector = v.AccountType
-				case *couchdb.JSONDoc:
-					konnector, _ = v.M["account_type"].(string)
-				}
+				case couchdb.JSONDoc:
+					konnector, _ = v.Get("account_type").(string)
 				if konnector == "" {
+					logger.WithDomain(domain).Info("No associated konnector for account, cannot create on_delete job")
 					return nil
 				}
 
+				logger.WithDomain(domain).Info("Creating job for konnector on_delete", konnector)
 				msg, err := jobs.NewMessage(struct {
 					Account        string `json:"account"`
 					AccountRev     string `json:"account_rev"`
