@@ -36,7 +36,7 @@ const TagSeparator = ","
 // recognized
 var ErrDocTypeInvalid = errors.New("Invalid document type")
 
-// CreationHandler handle all POST requests on /files/:dir-id
+// CreationHandler handle all POST requests on /files/:file-id
 // aiming at creating a new document in the FS. Given the Type
 // parameter of the request, it will either upload a new file or
 // create a new directory.
@@ -63,7 +63,7 @@ func CreationHandler(c echo.Context) error {
 func createFileHandler(c echo.Context, fs vfs.VFS) (f *file, err error) {
 	tags := strings.Split(c.QueryParam("Tags"), TagSeparator)
 
-	dirID := c.Param("dir-id")
+	dirID := c.Param("file-id")
 	name := c.QueryParam("Name")
 	var doc *vfs.FileDoc
 	doc, err = FileDocFromReq(c, name, dirID, tags)
@@ -114,7 +114,7 @@ func createDirHandler(c echo.Context, fs vfs.VFS) (*dir, error) {
 		return newDir(doc), nil
 	}
 
-	dirID := c.Param("dir-id")
+	dirID := c.Param("file-id")
 	name := c.QueryParam("Name")
 	doc, err = vfs.NewDirDoc(fs, name, dirID, tags)
 	if err != nil {
@@ -829,7 +829,7 @@ func Routes(router *echo.Group) {
 	router.PATCH("/:file-id", ModifyMetadataByIDHandler)
 
 	router.POST("/", CreationHandler)
-	router.POST("/:dir-id", CreationHandler)
+	router.POST("/:file-id", CreationHandler)
 	router.PUT("/:file-id", OverwriteFileContentHandler)
 
 	router.GET("/:file-id/thumbnails/:secret/:format", ThumbnailHandler)
