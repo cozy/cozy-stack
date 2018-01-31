@@ -141,7 +141,7 @@ func init() {
 					return nil
 				}
 
-				logger.
+				log.
 					WithField("konnector", konnector).
 					Info("Pushing job for konnector on_delete")
 
