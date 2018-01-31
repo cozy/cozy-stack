@@ -62,7 +62,7 @@ func (e *ErrorNormalized) Title() string {
 	if e.title != "" {
 		return e.title
 	}
-	return e.inner.Error()
+	return http.StatusText(e.status)
 }
 
 // Detail returns the error detailed string value.
@@ -130,8 +130,7 @@ func NormalizeError(err error) *ErrorNormalized {
 		n.detail = ce.Reason
 	}
 
-	if n.title == "" {
-		n.title = http.StatusText(n.status)
+	if n.titleLocale == "" {
 		if n.status >= http.StatusInternalServerError {
 			n.titleLocale = "Error Internal Server Error Title"
 			n.detailLocale = "Error Internal Server Error Message"
