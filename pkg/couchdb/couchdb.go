@@ -29,7 +29,7 @@ const SelectorReferencedBy = "referenced_by"
 
 // accountDocType is equal to consts.Accounts which we cannot import without
 // a circular dependency for now.
-const accountDocType = "io.cozy.account"
+const accountDocType = "io.cozy.accounts"
 
 // Doc is the interface that encapsulate a couchdb document, of any
 // serializable type. This interface defines method to set and get the
