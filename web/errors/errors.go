@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
@@ -160,14 +159,26 @@ func WriteError(err error, res http.ResponseWriter, c echo.Context) {
 	req := c.Request()
 	inst, _ := middlewares.GetInstanceSafe(c)
 
+	errn := NormalizeError(err)
 	var log *logrus.Entry
-	if config.IsDevRelease() {
-		if inst != nil {
-			log = inst.Logger()
-		} else {
-			log = logger.WithNamespace("http")
-		}
-		log.Errorf("[http] %s %s %s", req.Method, req.URL.Path, err)
+	if inst != nil {
+		log = inst.Logger()
+	} else {
+		log = logger.WithNamespace("http")
+	}
+
+	log = log.WithFields(logrus.Fields{
+		"log_id": "http_error_response",
+		"method": req.Method,
+		"path":   req.URL.Path,
+		"status": errn.Status(),
+		"title":  errn.Title(),
+		"detail": errn.Detail(),
+	})
+	if errn.Status() >= http.StatusInternalServerError {
+		log.Error("[http]")
+	} else {
+		log.Warn("[http]")
 	}
 
 	if c.Response().Committed {
@@ -179,7 +190,6 @@ func WriteError(err error, res http.ResponseWriter, c echo.Context) {
 		wantedContentTypeOffer = s
 	}
 
-	errn := NormalizeError(err)
 	contentTypeOffer := httputil.NegotiateContentType(req, contentTypeOffers, wantedContentTypeOffer)
 
 	b := bufferPool.Get().(*bytes.Buffer)
