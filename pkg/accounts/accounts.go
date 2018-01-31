@@ -122,16 +122,28 @@ func init() {
 			// process really specific to the deletion of an account, which is our
 			// only detailed usecase.
 			if old != nil {
+				log := logger.WithDomain(domain).
+					WithField("account_id", old.ID()).
+					WithField("account_rev", old.Rev())
+
 				var konnector string
 				switch v := old.(type) {
 				case *Account:
 					konnector = v.AccountType
 				case *couchdb.JSONDoc:
 					konnector, _ = v.M["account_type"].(string)
+				case couchdb.JSONDoc:
+					konnector, _ = v.M["account_type"].(string)
 				}
 				if konnector == "" {
+					log.Info("No associated konnector for account: " +
+						"cannot create on_delete job")
 					return nil
 				}
+
+				logger.
+					WithField("konnector", konnector).
+					Info("Pusing job for konnector on_delete")
 
 				msg, err := jobs.NewMessage(struct {
 					Account        string `json:"account"`
