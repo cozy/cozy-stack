@@ -65,9 +65,9 @@
       headers: headers,
       body: reqBody,
       credentials: 'same-origin'
-    }).then((response) => {
+    }).then(function(response) {
       const loginSuccess = response.status < 400
-      response.json().then((body) => {
+      response.json().then(function(body) {
         if (loginSuccess) {
           if (body.two_factor_token) {
             renderTwoFactorForm(body.two_factor_token)
@@ -110,9 +110,9 @@
       headers: headers,
       body: reqBody,
       credentials: 'same-origin'
-    }).then((response) => {
+    }).then(function(response) {
       const loginSuccess = response.status < 400
-      response.json().then((body) => {
+      response.json().then(function(body) {
         if (loginSuccess) {
           submitButton.innerHTML = '<svg width="16" height="16"><use xlink:href="#fa-check"/></svg>'
           submitButton.classList.add('btn-success')
@@ -149,7 +149,7 @@
 
   loginForm && loginForm.addEventListener('submit', onSubmitPassphrase)
 
-  resetForm && resetForm.addEventListener('submit', (event) => {
+  resetForm && resetForm.addEventListener('submit', function(event) {
     event.preventDefault()
     const { label } = window.password.getStrength(passphraseInput.value)
     if (label == 'weak') {
