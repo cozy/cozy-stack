@@ -411,7 +411,7 @@ Get the current application icon.
 #### Request
 
 ```http
-GET /registry/drive/icon
+GET /registry/drive/icon HTTP/1.1
 ```
 
 #### Response
@@ -433,7 +433,7 @@ the application.
 #### Request
 
 ```http
-GET /registry/drive/screenshots/screen1.jpg
+GET /registry/drive/screenshots/screen1.jpg HTTP/1.1
 ```
 
 #### Response
