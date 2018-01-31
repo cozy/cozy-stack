@@ -53,5 +53,7 @@
     return {percentage: strengthPercentage, label: strengthLabel}
   }
 
-  window.password.getStrength = getStrength
+  window.password = {
+    getStrength: getStrength
+  }
 })(window)
