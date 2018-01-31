@@ -9,13 +9,16 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/lock"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	"github.com/cozy/swift"
 	multierror "github.com/hashicorp/go-multierror"
@@ -218,6 +221,11 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 	}
 
 	objName := MakeObjectName(newdoc.DocID)
+	objMeta := swift.Metadata{
+		"creation-name": newdoc.Name(),
+		"created-at":    newdoc.CreatedAt.Format(time.RFC3339),
+		"exec":          strconv.FormatBool(newdoc.Executable),
+	}
 	hash := hex.EncodeToString(newdoc.MD5Sum)
 	f, err := sfs.c.ObjectCreate(
 		sfs.container,
@@ -225,7 +233,7 @@ func (sfs *swiftVFSV2) CreateFile(newdoc, olddoc *vfs.FileDoc) (vfs.File, error)
 		hash != "",
 		hash,
 		newdoc.Mime,
-		nil,
+		objMeta.ObjectHeaders(),
 	)
 	if err != nil {
 		return nil, err
@@ -352,7 +360,7 @@ func (sfs *swiftVFSV2) Fsck() ([]*vfs.FsckLog, error) {
 			if !ok {
 				var fileDoc *vfs.FileDoc
 				var filePath string
-				filePath, fileDoc, err = objectToFileDoc(nil, obj)
+				filePath, fileDoc, err = objectToFileDocV2(sfs.c, sfs.container, obj)
 				if err != nil {
 					return nil, err
 				}
@@ -728,6 +736,45 @@ func (f *swiftFileOpenV2) Write(p []byte) (int, error) {
 
 func (f *swiftFileOpenV2) Close() error {
 	return f.f.Close()
+}
+
+func objectToFileDocV2(c *swift.Connection, container string, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
+	var h swift.Headers
+	_, h, err = c.Object(container, object.Name)
+	if err != nil {
+		return
+	}
+	md5sum, err := hex.DecodeString(object.Hash)
+	if err != nil {
+		return
+	}
+	objMeta := h.ObjectMetadata()
+	name := objMeta["creation-name"]
+	if name == "" {
+		name = fmt.Sprintf("Unknown %s", utils.RandomString(10))
+	}
+	var cdate time.Time
+	if v := objMeta["created-at"]; v != "" {
+		cdate, _ = time.Parse(time.RFC3339, v)
+	}
+	if cdate.IsZero() {
+		cdate = time.Now()
+	}
+	executable, _ := strconv.ParseBool(objMeta["exec"])
+	mime, class := vfs.ExtractMimeAndClass(object.ContentType)
+	filePath = path.Join(vfs.OrphansDirName, name)
+	fileDoc, err = vfs.NewFileDoc(
+		name,
+		"",
+		object.Bytes,
+		md5sum,
+		mime,
+		class,
+		cdate,
+		executable,
+		false,
+		nil)
+	return
 }
 
 var (

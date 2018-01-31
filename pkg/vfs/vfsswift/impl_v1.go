@@ -432,7 +432,7 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 				return nil, err
 			} else if info.ContentType != dirContentType {
 				var fileDoc *vfs.FileDoc
-				_, fileDoc, err = objectToFileDoc(dir, info)
+				_, fileDoc, err = objectToFileDocV1(dir, info)
 				if err != nil {
 					continue
 				}
@@ -463,7 +463,7 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 			if object.Bytes == 0 {
 				continue
 			}
-			filePath, fileDoc, err := objectToFileDoc(dir, object)
+			filePath, fileDoc, err := objectToFileDocV1(dir, object)
 			if err != nil {
 				continue
 			}
@@ -479,16 +479,10 @@ func (sfs *swiftVFS) fsckWalk(dir *vfs.DirDoc, logbook []*vfs.FsckLog) ([]*vfs.F
 	return logbook, nil
 }
 
-func objectToFileDoc(dir *vfs.DirDoc, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
-	var trashed bool
-	var dirID string
-	if dir != nil {
-		trashed = strings.HasPrefix(dir.Fullpath, vfs.TrashDirName)
-		dirID = dir.DocID
-		filePath = path.Join(dir.Fullpath, fileDoc.Name())
-	} else {
-		filePath = path.Join(vfs.OrphansDirName, fileDoc.Name())
-	}
+func objectToFileDocV1(dir *vfs.DirDoc, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {
+	trashed := strings.HasPrefix(dir.Fullpath, vfs.TrashDirName)
+	dirID := dir.DocID
+	filePath = path.Join(dir.Fullpath, path.Base(object.Name))
 	md5sum, err := hex.DecodeString(object.Hash)
 	if err != nil {
 		return
