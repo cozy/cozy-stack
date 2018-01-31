@@ -296,6 +296,12 @@ msgstr "Banking accounts"
 msgid "Permissions io.cozy.bank.groups"
 msgstr "Banking groups"
 
+msgid "Permissions io.cozy.bank.operations"
+msgstr "Bank transactions"
+
+msgid "Permissions io.cozy.bank.settings"
+msgstr "Application settings"
+
 msgid "Permissions io.cozy.bills"
 msgstr "Bills"
 
@@ -307,6 +313,9 @@ msgstr "Files"
 
 msgid "Permissions io.cozy.konnectors"
 msgstr "Connectors for importing data"
+
+msgid "Permissions io.cozy.notifications"
+msgstr "Application notifications preferences"
 
 msgid "Permissions io.cozy.photos.albums"
 msgstr "Photo albums"
