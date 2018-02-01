@@ -111,11 +111,9 @@ func (w *serviceWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instance
 	}
 	log := w.Logger(ctx)
 	switch msg.Type {
-	case konnectorMsgTypeDebug:
+	case konnectorMsgTypeDebug, konnectorMsgTypeInfo:
 		log.Debug(msg.Message)
-	case konnectorMsgTypeInfo:
-		log.Debug(msg.Message)
-	case konnectorMsgTypeWarning:
+	case konnectorMsgTypeWarning, "warn":
 		log.Warn(msg.Message)
 	case konnectorMsgTypeError:
 		log.Error(msg.Message)
