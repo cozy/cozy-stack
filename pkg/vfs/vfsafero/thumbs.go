@@ -2,7 +2,6 @@ package vfsafero
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path"
@@ -21,14 +20,41 @@ type thumbs struct {
 	fs afero.Fs
 }
 
-func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (io.WriteCloser, error) {
-	name := t.makeName(img, format)
-	if base := path.Dir(name); base != "." {
-		if err := t.fs.MkdirAll(path.Dir(name), 0755); err != nil {
+type thumb struct {
+	afero.File
+	fs      afero.Fs
+	tmpname string
+	newname string
+}
+
+func (t *thumb) Abort() error {
+	return t.fs.Remove(t.tmpname)
+}
+
+func (t *thumb) Commit() error {
+	return t.fs.Rename(t.tmpname, t.newname)
+}
+
+func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, error) {
+	newname := t.makeName(img, format)
+	dir := path.Dir(newname)
+	if base := dir; base != "." {
+		if err := t.fs.MkdirAll(dir, 0755); err != nil {
 			return nil, err
 		}
 	}
-	return t.fs.OpenFile(name, os.O_WRONLY|os.O_CREATE, 0640)
+	f, err := afero.TempFile(t.fs, dir, "cozy-thumb")
+	if err != nil {
+		return nil, err
+	}
+	tmpname := path.Join(dir, path.Base(f.Name()))
+	th := &thumb{
+		File:    f,
+		fs:      t.fs,
+		tmpname: tmpname,
+		newname: newname,
+	}
+	return th, nil
 }
 
 func (t *thumbs) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
@@ -39,6 +65,18 @@ func (t *thumbs) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
 		}
 	}
 	return errm
+}
+
+func (t *thumbs) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
+	name := t.makeName(img, format)
+	infos, err := t.fs.Stat(name)
+	if os.IsNotExist(err) || infos.Size() == 0 {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,

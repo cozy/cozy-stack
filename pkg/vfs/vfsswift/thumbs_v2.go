@@ -1,6 +1,8 @@
 package vfsswift
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,8 +27,68 @@ type thumbsV2 struct {
 	container string
 }
 
-func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (io.WriteCloser, error) {
-	return t.c.ObjectCreate(t.container, t.makeName(img, format), false, "", "", nil)
+type thumb struct {
+	io.WriteCloser
+	c         *swift.Connection
+	container string
+	name      string
+}
+
+func (t *thumb) Abort() error {
+	errc := t.WriteCloser.Close()
+	errd := t.c.ObjectDelete(t.container, t.name)
+	if errc != nil {
+		return errc
+	}
+	if errd != nil {
+		return errd
+	}
+	return nil
+}
+
+func (t *thumb) Commit() error {
+	return t.WriteCloser.Close()
+}
+
+func (t *thumbsV2) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, error) {
+	name := t.makeName(img, format)
+	objMeta := swift.Metadata{
+		"file-md5": hex.EncodeToString(img.MD5Sum),
+	}
+	obj, err := t.c.ObjectCreate(t.container, name, false, "", img.Mime,
+		objMeta.ObjectHeaders())
+	if err != nil {
+		return nil, err
+	}
+	th := &thumb{
+		WriteCloser: obj,
+		c:           t.c,
+		container:   t.container,
+		name:        name,
+	}
+	return th, nil
+}
+
+func (t *thumbsV2) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
+	name := t.makeName(img, format)
+	infos, headers, err := t.c.Object(t.container, name)
+	if err == swift.ObjectNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if infos.Bytes == 0 {
+		return false, nil
+	}
+	if md5 := headers["file-md5"]; md5 != "" {
+		var md5sum []byte
+		md5sum, err = hex.DecodeString(md5)
+		if err == nil && !bytes.Equal(md5sum, img.MD5Sum) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (t *thumbsV2) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
