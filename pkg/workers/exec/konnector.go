@@ -240,11 +240,9 @@ func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instan
 
 	log := w.Logger(ctx)
 	switch msg.Type {
-	case konnectorMsgTypeDebug:
+	case konnectorMsgTypeDebug, konnectorMsgTypeInfo:
 		log.Debug(msg.Message)
-	case konnectorMsgTypeInfo:
-		log.Debug(msg.Message)
-	case konnectorMsgTypeWarning:
+	case konnectorMsgTypeWarning, "warn":
 		log.Warn(msg.Message)
 	case konnectorMsgTypeError:
 		// For retro-compatibility, we still use "error" logs as returned error,
