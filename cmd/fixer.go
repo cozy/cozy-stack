@@ -280,8 +280,34 @@ var orphanAccountsFixer = &cobra.Command{
 	},
 }
 
+var thumbnailsFixer = &cobra.Command{
+	Use:   "thumbnails [domain]",
+	Short: "Rebuild thumbnails image for images files",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) != 1 {
+			return cmd.Usage()
+		}
+		domain := args[0]
+		c := newClient(domain, "io.cozy.jobs")
+		res, err := c.JobPush(&client.JobOptions{
+			Worker:    "thumbnailck",
+			Arguments: nil,
+		})
+		if err != nil {
+			return err
+		}
+		b, err := json.MarshalIndent(res, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(b))
+		return nil
+	},
+}
+
 func init() {
 	orphanAccountsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
+	thumbnailsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
 
 	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(jobsFixer)
@@ -290,6 +316,7 @@ func init() {
 	fixerCmdGroup.AddCommand(onboardingsFixer)
 	fixerCmdGroup.AddCommand(redisFixer)
 	fixerCmdGroup.AddCommand(orphanAccountsFixer)
+	fixerCmdGroup.AddCommand(thumbnailsFixer)
 
 	RootCmd.AddCommand(fixerCmdGroup)
 }

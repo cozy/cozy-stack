@@ -176,10 +176,20 @@ type DiskThresholder interface {
 
 // Thumbser defines an interface to define a thumbnail filesystem.
 type Thumbser interface {
-	CreateThumb(img *FileDoc, format string) (io.WriteCloser, error)
+	ThumbExists(img *FileDoc, format string) (ok bool, err error)
+	CreateThumb(img *FileDoc, format string) (ThumbFiler, error)
 	RemoveThumbs(img *FileDoc, formats []string) error
 	ServeThumbContent(w http.ResponseWriter, req *http.Request,
 		img *FileDoc, format string) error
+}
+
+// ThumbFiler defines a interface to handle the creation of thumbnails. It is
+// an io.Writer that can be aborted in case of error, or committed in case of
+// success.
+type ThumbFiler interface {
+	io.Writer
+	Abort() error
+	Commit() error
 }
 
 // VFS is composed of the Indexer and Fs interface. It is the common interface

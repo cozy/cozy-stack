@@ -42,6 +42,14 @@ func init() {
 		Timeout:      30 * time.Second,
 		WorkerFunc:   Worker,
 	})
+
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType:   "thumbnailck",
+		Concurrency:  runtime.NumCPU(),
+		MaxExecCount: 1,
+		Timeout:      10 * time.Minute,
+		WorkerFunc:   WorkerCheck,
+	})
 }
 
 // Worker is a worker that creates thumbnails for photos and images.
@@ -72,6 +80,38 @@ func Worker(ctx *jobs.WorkerContext) error {
 		return removeThumbnails(i, &img.Doc)
 	}
 	return fmt.Errorf("Unknown type %s for image event", img.Verb)
+}
+
+// WorkerCheck is a worker function that checks all the images to generate
+// missing thumbnails.
+func WorkerCheck(ctx *jobs.WorkerContext) error {
+	i, err := instance.Get(ctx.Domain())
+	if err != nil {
+		return err
+	}
+	fs := i.ThumbsFS()
+	return vfs.Walk(i.VFS(), "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
+		if err != nil {
+			return err
+		}
+		if dir != nil || img.Class != "image" {
+			return nil
+		}
+		allExists := true
+		for _, format := range formatsNames {
+			exists, err := fs.ThumbExists(img, format)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				allExists = false
+			}
+		}
+		if !allExists {
+			return generateThumbnails(ctx, i, img)
+		}
+		return nil
+	})
 }
 
 func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
@@ -113,18 +153,24 @@ func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img
 			}
 		}
 	}()
-	file, err := fs.CreateThumb(img, format)
+	th, err := fs.CreateThumb(img, format)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if err != nil {
+			th.Abort()
+		} else {
+			th.Commit()
+		}
+	}()
 	var buffer *bytes.Buffer
 	var out io.Writer
 	if noOuput {
-		out = file
+		out = th
 	} else {
 		buffer = new(bytes.Buffer)
-		out = io.MultiWriter(file, buffer)
+		out = io.MultiWriter(th, buffer)
 	}
 	err = generateThumb(ctx, in, out, format, env)
 	if err != nil {

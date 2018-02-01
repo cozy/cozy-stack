@@ -2,7 +2,6 @@ package vfsswift
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"time"
@@ -21,13 +20,36 @@ type thumbs struct {
 	container string
 }
 
-func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (io.WriteCloser, error) {
+func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, error) {
 	// TODO(optim): proper initialization of the container to avoir having to
 	// recreate it every time.
 	if err := t.c.ContainerCreate(t.container, nil); err != nil {
 		return nil, err
 	}
-	return t.c.ObjectCreate(t.container, t.makeName(img, format), false, "", "", nil)
+	name := t.makeName(img, format)
+	obj, err := t.c.ObjectCreate(t.container, name, false, "", "", nil)
+	if err != nil {
+		return nil, err
+	}
+	th := &thumb{
+		WriteCloser: obj,
+		c:           t.c,
+		container:   t.container,
+		name:        name,
+	}
+	return th, nil
+}
+
+func (t *thumbs) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
+	name := t.makeName(img, format)
+	infos, _, err := t.c.Object(t.container, name)
+	if err == swift.ObjectNotFound {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return infos.Bytes > 0, nil
 }
 
 func (t *thumbs) RemoveThumbs(img *vfs.FileDoc, formats []string) error {

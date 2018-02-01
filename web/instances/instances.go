@@ -237,10 +237,14 @@ func cleanOrphanAccounts(c echo.Context) error {
 	dryRun, _ := strconv.ParseBool(c.QueryParam("DryRun"))
 	results := make([]*result, 0)
 	domain := c.Param("domain")
-	db := couchdb.SimpleDatabasePrefix(domain)
+
+	db, err := instance.Get(domain)
+	if err != nil {
+		return err
+	}
 
 	var as []*accounts.Account
-	err := couchdb.GetAllDocs(db, consts.Accounts, nil, &as)
+	err = couchdb.GetAllDocs(db, consts.Accounts, nil, &as)
 	if couchdb.IsNoDatabaseError(err) {
 		return c.JSON(http.StatusOK, results)
 	}
@@ -311,7 +315,7 @@ func cleanOrphanAccounts(c echo.Context) error {
 
 		var args string
 		{
-			d := rng.Intn(7) + 1
+			d := rng.Intn(7)
 			h := rng.Intn(6) // during the night, between 0 and 5
 			m := rng.Intn(60)
 			args = fmt.Sprintf("0 %d %d * * %d", m, h, d)
