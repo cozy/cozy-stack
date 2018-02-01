@@ -49,10 +49,7 @@ func (t *thumbs) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if infos.Bytes == 0 {
-		return false, nil
-	}
-	return true, nil
+	return infos.Bytes > 0, nil
 }
 
 func (t *thumbs) RemoveThumbs(img *vfs.FileDoc, formats []string) error {

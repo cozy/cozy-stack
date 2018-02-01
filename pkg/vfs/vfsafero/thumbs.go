@@ -70,13 +70,13 @@ func (t *thumbs) RemoveThumbs(img *vfs.FileDoc, formats []string) error {
 func (t *thumbs) ThumbExists(img *vfs.FileDoc, format string) (bool, error) {
 	name := t.makeName(img, format)
 	infos, err := t.fs.Stat(name)
-	if os.IsNotExist(err) || infos.Size() == 0 {
+	if os.IsNotExist(err) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	return true, nil
+	return infos.Size() > 0, nil
 }
 
 func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,
