@@ -81,7 +81,10 @@ func (w *serviceWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.Inst
 }
 
 func (w *serviceWorker) Slug() string {
-	return w.opts.Slug
+	if w.opts != nil {
+		return w.opts.Slug
+	}
+	return ""
 }
 
 func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {

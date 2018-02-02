@@ -57,12 +57,14 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 
 		workDir, err := worker.PrepareWorkDir(ctx, inst)
 		if err != nil {
+			worker.Logger(ctx).Errorf("PrepareWorkDir: %s", err)
 			return err
 		}
 		defer os.RemoveAll(workDir)
 
 		cmdStr, env, err := worker.PrepareCmdEnv(ctx, inst)
 		if err != nil {
+			worker.Logger(ctx).Errorf("PrepareCmdEnv: %s", err)
 			return err
 		}
 

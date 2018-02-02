@@ -89,14 +89,14 @@ func (w *konnectorWorker) PrepareWorkDir(ctx *jobs.WorkerContext, i *instance.In
 	}
 
 	slug := msg.Konnector
-	man, err := apps.GetKonnectorBySlug(i, slug)
+	w.slug = slug
+	w.msg = &msg
+	w.man, err = apps.GetKonnectorBySlug(i, slug)
 	if err != nil {
 		return
 	}
 
-	w.slug = slug
-	w.msg = &msg
-	w.man = man
+	man := w.man
 
 	// If we get the AccountDeleted flag on, we check if the konnector manifest
 	// has defined an "on_delete_account" field, containing the path of the file
