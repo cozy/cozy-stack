@@ -113,11 +113,9 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	if s.OlderThan(SessionMaxAge * time.Second) {
 		err := couchdb.DeleteDoc(i, s)
 		if err != nil {
-			i.Logger().Warn("[session] Failed to delte expired session:", err)
+			i.Logger().Warn("[session] Failed to delete expired session:", err)
 		}
-		if updateCache {
-			getCache().Revoke(i.Domain, s.DocID)
-		}
+		getCache().Revoke(i.Domain, s.DocID)
 		return nil, ErrExpired
 	}
 
@@ -188,8 +186,8 @@ func GetAll(inst *instance.Instance) ([]*Session, error) {
 // Delete is a function to delete the session in couchdb,
 // and returns a cookie with a negative MaxAge to clear it
 func (s *Session) Delete(i *instance.Instance) *http.Cookie {
-	getCache().Revoke(i.Domain, s.DocID)
 	err := couchdb.DeleteDoc(i, s)
+	getCache().Revoke(i.Domain, s.DocID)
 	if err != nil {
 		i.Logger().Error("[session] Failed to delete session:", err)
 	}
