@@ -15,14 +15,14 @@ import (
 	"github.com/labstack/echo"
 )
 
-// SessionCookieName : name of the cookie created by cozy
+// SessionCookieName: name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
 
 const (
 	// SessionMaxAge is the maximum duration of the session in seconds
 	SessionMaxAge = 7 * 24 * 60 * 60
 
-	// AppCookieMaxAge is the maximum duration of the application cookie is
+	// AppCookieMaxAge is the maximum duration of the application cookie in
 	// seconds
 	AppCookieMaxAge = 24 * 60 * 60
 )
@@ -72,7 +72,7 @@ func (s *Session) Clone() couchdb.Doc {
 // ensure Session implements couchdb.Doc
 var _ couchdb.Doc = (*Session)(nil)
 
-// OlderThan check if a session last seen is older than t from now
+// OlderThan checks if a session last seen is older than t from now
 func (s *Session) OlderThan(t time.Duration) bool {
 	return time.Now().After(s.LastSeen.Add(t))
 }
@@ -90,7 +90,7 @@ func New(i *instance.Instance) (*Session, error) {
 	return s, nil
 }
 
-// Get fetch the session
+// Get fetches the session
 func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	updateCache := false
 
@@ -108,7 +108,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 	}
 	s.Instance = i
 
-	// if the session is older than the session max age, it has expired and
+	// If the session is older than the session max age, it has expired and
 	// should be deleted.
 	if s.OlderThan(SessionMaxAge * time.Second) {
 		err := couchdb.DeleteDoc(i, s)
@@ -121,7 +121,7 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 		return nil, ErrExpired
 	}
 
-	// if the session is older than half its half-life, update the LastSeen date.
+	// If the session is older than half its half-life, update the LastSeen date.
 	if s.OlderThan((SessionMaxAge * time.Second) / 2) {
 		lastSeen := s.LastSeen
 		s.LastSeen = time.Now()
@@ -157,7 +157,7 @@ func FromCookie(c echo.Context, i *instance.Instance) (*Session, error) {
 	return Get(i, string(sessionID))
 }
 
-// FromAppCookie retrives the session from a application submain's cookie.
+// FromAppCookie retrives the session from an application submain cookie.
 func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session, error) {
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		cookie, err := c.Cookie(SessionCookieName)
@@ -176,7 +176,7 @@ func FromAppCookie(c echo.Context, i *instance.Instance, slug string) (*Session,
 	return FromCookie(c, i)
 }
 
-// GetAll return all active sessions
+// GetAll returns all the active sessions
 func GetAll(inst *instance.Instance) ([]*Session, error) {
 	var sessions []*Session
 	if err := couchdb.GetAllDocs(inst, consts.Sessions, nil, &sessions); err != nil {
