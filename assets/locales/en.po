@@ -455,7 +455,7 @@ msgid "Mail Archive Intro"
 msgstr "You can now download the archive with all your Cozy data."
 
 msgid "Mail Archive Button instruction"
-msgstr "You can download is by clicking on the following link."
+msgstr "You can download it by clicking on the following link."
 
 msgid "Mail Archive Button text"
 msgstr "Download your data"
