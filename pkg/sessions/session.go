@@ -38,10 +38,11 @@ var (
 
 // A Session is an instance opened in a browser
 type Session struct {
-	Instance *instance.Instance `json:"-"`
-	DocID    string             `json:"_id,omitempty"`
-	DocRev   string             `json:"_rev,omitempty"`
-	LastSeen time.Time          `json:"last_seen,omitempty"`
+	Instance  *instance.Instance `json:"-"`
+	DocID     string             `json:"_id,omitempty"`
+	DocRev    string             `json:"_rev,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	LastSeen  time.Time          `json:"last_seen"`
 }
 
 // DocType implements couchdb.Doc
@@ -79,9 +80,11 @@ func (s *Session) OlderThan(t time.Duration) bool {
 
 // New creates a session in couchdb for the given instance
 func New(i *instance.Instance) (*Session, error) {
-	var s = &Session{
-		Instance: i,
-		LastSeen: time.Now(),
+	now := time.Now()
+	s := &Session{
+		Instance:  i,
+		LastSeen:  now,
+		CreatedAt: now,
 	}
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
