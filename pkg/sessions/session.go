@@ -15,7 +15,7 @@ import (
 	"github.com/labstack/echo"
 )
 
-// SessionCookieName: name of the cookie created by cozy
+// SessionCookieName is name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
 
 const (
