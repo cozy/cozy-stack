@@ -216,7 +216,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   0, // session cookie without maxage
+		MaxAge:   10 * 365 * 24 * 3600, // 10 years
 		Path:     "/",
 		Domain:   utils.StripPort("." + s.Instance.Domain),
 		Secure:   !s.Instance.Dev,
