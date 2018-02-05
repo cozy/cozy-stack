@@ -126,8 +126,9 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 		err := couchdb.UpdateDoc(i, s)
 		if err != nil {
 			i.Logger().Warn("[session] Failed to update session last seen:", err)
-		} else {
 			s.LastSeen = lastSeen
+			updateCache = false
+		} else {
 			updateCache = true
 		}
 	}
