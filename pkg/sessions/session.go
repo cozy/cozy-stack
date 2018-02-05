@@ -119,8 +119,10 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 		return nil, ErrExpired
 	}
 
-	// If the session is older than half its half-life, update the LastSeen date.
-	if s.OlderThan((SessionMaxAge * time.Second) / 2) {
+	// In order to avoid too many updates of the session document, we have an
+	// update period of one day for the `last_seen` date, which is a good enough
+	// granularity.
+	if s.OlderThan(24 * time.Hour) {
 		lastSeen := s.LastSeen
 		s.LastSeen = time.Now()
 		err := couchdb.UpdateDoc(i, s)
@@ -211,7 +213,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   SessionMaxAge,
+		MaxAge:   0, // session cookie without maxage
 		Path:     "/",
 		Domain:   utils.StripPort("." + s.Instance.Domain),
 		Secure:   !s.Instance.Dev,
