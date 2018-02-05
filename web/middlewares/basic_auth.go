@@ -35,6 +35,7 @@ func BasicAuth(secretFileName string) echo.MiddlewareFunc {
 			if err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, err)
 			}
+			defer f.Close()
 
 			b, err := ioutil.ReadAll(f)
 			if err != nil {
