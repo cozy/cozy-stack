@@ -15,7 +15,7 @@ import (
 	"github.com/labstack/echo"
 )
 
-// SessionCookieName: name of the cookie created by cozy
+// SessionCookieName is name of the cookie created by cozy
 const SessionCookieName = "cozysessid"
 
 const (
@@ -38,10 +38,11 @@ var (
 
 // A Session is an instance opened in a browser
 type Session struct {
-	Instance *instance.Instance `json:"-"`
-	DocID    string             `json:"_id,omitempty"`
-	DocRev   string             `json:"_rev,omitempty"`
-	LastSeen time.Time          `json:"last_seen,omitempty"`
+	Instance  *instance.Instance `json:"-"`
+	DocID     string             `json:"_id,omitempty"`
+	DocRev    string             `json:"_rev,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	LastSeen  time.Time          `json:"last_seen"`
 }
 
 // DocType implements couchdb.Doc
@@ -79,9 +80,11 @@ func (s *Session) OlderThan(t time.Duration) bool {
 
 // New creates a session in couchdb for the given instance
 func New(i *instance.Instance) (*Session, error) {
-	var s = &Session{
-		Instance: i,
-		LastSeen: time.Now(),
+	now := time.Now()
+	s := &Session{
+		Instance:  i,
+		LastSeen:  now,
+		CreatedAt: now,
 	}
 	if err := couchdb.CreateDoc(i, s); err != nil {
 		return nil, err
@@ -119,15 +122,18 @@ func Get(i *instance.Instance, sessionID string) (*Session, error) {
 		return nil, ErrExpired
 	}
 
-	// If the session is older than half its half-life, update the LastSeen date.
-	if s.OlderThan((SessionMaxAge * time.Second) / 2) {
+	// In order to avoid too many updates of the session document, we have an
+	// update period of one day for the `last_seen` date, which is a good enough
+	// granularity.
+	if s.OlderThan(24 * time.Hour) {
 		lastSeen := s.LastSeen
 		s.LastSeen = time.Now()
 		err := couchdb.UpdateDoc(i, s)
 		if err != nil {
 			i.Logger().Warn("[session] Failed to update session last seen:", err)
-		} else {
 			s.LastSeen = lastSeen
+			updateCache = false
+		} else {
 			updateCache = true
 		}
 	}
@@ -210,7 +216,7 @@ func (s *Session) ToCookie() (*http.Cookie, error) {
 	return &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    string(encoded),
-		MaxAge:   SessionMaxAge,
+		MaxAge:   0, // session cookie without maxage
 		Path:     "/",
 		Domain:   utils.StripPort("." + s.Instance.Domain),
 		Secure:   !s.Instance.Dev,
