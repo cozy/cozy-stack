@@ -5,10 +5,8 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"runtime"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -71,8 +69,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		}
 
 		var stderrBuf bytes.Buffer
-		cmd := exec.Command(cmdStr, workDir) // #nosec
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		cmd := createCmd(cmdStr, workDir) // #nosec
 		cmd.Env = env
 
 		// set stderr writable with a bytes.Buffer limited total size of 256Ko
@@ -129,7 +126,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		case err = <-waitDone:
 		case <-ctx.Done():
 			err = ctx.Err()
-			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			killCmd(cmd)
 			<-waitDone
 		}
 
