@@ -19,7 +19,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/realtime"
 	"github.com/sirupsen/logrus"
 
-	"github.com/spf13/afero"
+	"github.com/cozy/afero"
 )
 
 type konnectorWorker struct {

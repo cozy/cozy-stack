@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/magic"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/swift"
-	"github.com/spf13/afero"
 )
 
 // Copier is an interface defining a common set of functions for the installer
@@ -131,7 +131,7 @@ func (f *swiftCopier) Commit() error {
 	}
 	for _, srcObjectName := range objectNames {
 		dstObjectName := path.Join(f.appObj, strings.TrimPrefix(srcObjectName, f.tmpObj))
-		err := f.c.ObjectMove(f.container, srcObjectName, f.container, dstObjectName)
+		err = f.c.ObjectMove(f.container, srcObjectName, f.container, dstObjectName)
 		if err != nil {
 			return f.Abort()
 		}
@@ -156,7 +156,7 @@ func (f *aferoCopier) Start(slug, version string) (bool, error) {
 		return exists, err
 	}
 	dir := path.Dir(f.appDir)
-	if err := f.fs.MkdirAll(dir, 0755); err != nil {
+	if err = f.fs.MkdirAll(dir, 0755); err != nil {
 		return false, err
 	}
 	f.tmpDir, err = afero.TempDir(f.fs, dir, "tmp")

@@ -17,12 +17,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/afero"
 	git "github.com/cozy/go-git"
 	gitPlumbing "github.com/cozy/go-git/plumbing"
 	gitObject "github.com/cozy/go-git/plumbing/object"
 	gitStorage "github.com/cozy/go-git/storage/filesystem"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 	gitOsFS "gopkg.in/src-d/go-billy.v2/osfs"
 )
 

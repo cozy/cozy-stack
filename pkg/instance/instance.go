@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -31,7 +32,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs/vfsswift"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
 

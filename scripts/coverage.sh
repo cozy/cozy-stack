@@ -6,6 +6,16 @@ echo "" > coverage.txt
 failed=false
 gosrc="$(go env GOPATH)/src"
 
+if git grep -l \
+  -e 'github.com/labstack/gommon/log' \
+  -e 'github.com/dgrijalva/jwt-go' \
+  -e 'github.com/cozy/echo' \
+  -e 'github.com/spf13/afero' \
+  -- '*.go'; then
+  echo "Forbidden packages"
+  exit 1
+fi
+
 for d in $(go list ./pkg/... ./web/...); do
 	if test -n "$(find $gosrc/$d -maxdepth 1 -name '*_test.go' -print -quit)"; then
 		go test \

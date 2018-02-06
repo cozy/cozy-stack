@@ -23,8 +23,8 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 
+	"github.com/cozy/afero"
 	statikFS "github.com/cozy/statik/fs"
-	"github.com/spf13/afero"
 )
 
 // ReadHeaderTimeout is the amount of time allowed to read request headers for
