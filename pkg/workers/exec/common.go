@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -156,6 +157,16 @@ func addExecWorker(workerType string, cfg *jobs.WorkerConfig, createWorker func(
 	cfg.WorkerFunc = workerFunc
 	cfg.WorkerCommit = workerCommit
 	jobs.AddWorker(cfg)
+}
+
+func ctxToTimeLimit(ctx *jobs.WorkerContext) (timeLimit string) {
+	if deadline, ok := ctx.Deadline(); ok {
+		diff := time.Until(deadline)
+		if diff > 0 {
+			timeLimit = strconv.Itoa(int(diff.Seconds()) + 1)
+		}
+	}
+	return
 }
 
 func wrapErr(ctx context.Context, err error) error {
