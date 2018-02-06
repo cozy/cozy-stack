@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -69,7 +70,8 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		}
 
 		var stderrBuf bytes.Buffer
-		cmd := exec.CommandContext(ctx, cmdStr, workDir) // #nosec
+		cmd := exec.Command(cmdStr, workDir) // #nosec
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		cmd.Env = env
 
 		// set stderr writable with a bytes.Buffer limited total size of 256Ko
@@ -108,15 +110,26 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return wrapErr(ctx, err)
 		}
 
-		for scanOut.Scan() {
-			if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
-				log.Error(errOut)
+		go func() {
+			for scanOut.Scan() {
+				if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
+					log.Error(errOut)
+				}
 			}
-		}
+		}()
 
-		if err = cmd.Wait(); err != nil {
-			err = wrapErr(ctx, err)
-			log.Errorf("cmd failed: %s", err)
+		waitDone := make(chan error)
+		go func() {
+			waitDone <- cmd.Wait()
+			close(waitDone)
+		}()
+
+		select {
+		case err = <-waitDone:
+		case <-ctx.Done():
+			err = ctx.Err()
+			syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			<-waitDone
 		}
 
 		return worker.Error(inst, err)
