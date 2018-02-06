@@ -14,6 +14,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 type imageEvent struct {
@@ -90,7 +91,8 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 		return err
 	}
 	fs := i.ThumbsFS()
-	return vfs.Walk(i.VFS(), "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
+	var errm error
+	vfs.Walk(i.VFS(), "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
@@ -99,19 +101,24 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 		}
 		allExists := true
 		for _, format := range formatsNames {
-			exists, err := fs.ThumbExists(img, format)
+			var exists bool
+			exists, err = fs.ThumbExists(img, format)
 			if err != nil {
-				return err
+				errm = multierror.Append(errm, err)
+				return nil
 			}
 			if !exists {
 				allExists = false
 			}
 		}
 		if !allExists {
-			return generateThumbnails(ctx, i, img)
+			if generateThumbnails(ctx, i, img); err != nil {
+				errm = multierror.Append(errm, err)
+			}
 		}
 		return nil
 	})
+	return errm
 }
 
 func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
