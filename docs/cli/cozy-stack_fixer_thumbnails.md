@@ -13,8 +13,9 @@ cozy-stack fixer thumbnails [domain] [flags]
 ### Options
 
 ```
-      --dry-run   Dry run
-  -h, --help      help for thumbnails
+      --dry-run         Dry run
+  -h, --help            help for thumbnails
+      --with-metadata   Recalculate images metadata
 ```
 
 ### Options inherited from parent commands

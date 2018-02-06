@@ -83,6 +83,10 @@ func Worker(ctx *jobs.WorkerContext) error {
 	return fmt.Errorf("Unknown type %s for image event", img.Verb)
 }
 
+type thumbnailMsg struct {
+	WithMetadata bool `json:"with_metadata"`
+}
+
 // WorkerCheck is a worker function that checks all the images to generate
 // missing thumbnails.
 func WorkerCheck(ctx *jobs.WorkerContext) error {
@@ -90,9 +94,14 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 	if err != nil {
 		return err
 	}
-	fs := i.ThumbsFS()
+	var msg thumbnailMsg
+	if err = ctx.UnmarshalMessage(&msg); err != nil {
+		return err
+	}
+	fs := i.VFS()
+	fsThumb := i.ThumbsFS()
 	var errm error
-	vfs.Walk(i.VFS(), "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
+	vfs.Walk(fs, "/", func(name string, dir *vfs.DirDoc, img *vfs.FileDoc, err error) error {
 		if err != nil {
 			return err
 		}
@@ -102,7 +111,7 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 		allExists := true
 		for _, format := range formatsNames {
 			var exists bool
-			exists, err = fs.ThumbExists(img, format)
+			exists, err = fsThumb.ThumbExists(img, format)
 			if err != nil {
 				errm = multierror.Append(errm, err)
 				return nil
@@ -112,13 +121,50 @@ func WorkerCheck(ctx *jobs.WorkerContext) error {
 			}
 		}
 		if !allExists {
-			if generateThumbnails(ctx, i, img); err != nil {
+			if err = generateThumbnails(ctx, i, img); err != nil {
 				errm = multierror.Append(errm, err)
+			}
+		}
+		if msg.WithMetadata {
+			var meta *vfs.Metadata
+			meta, err = calculateMetadata(fs, img)
+			if err != nil {
+				errm = multierror.Append(errm, err)
+			}
+			if meta != nil {
+				newImg := img.Clone().(*vfs.FileDoc)
+				newImg.Metadata = *meta
+				if err = fs.UpdateFileDoc(img, newImg); err != nil {
+					errm = multierror.Append(errm, err)
+				}
 			}
 		}
 		return nil
 	})
 	return errm
+}
+
+func calculateMetadata(fs vfs.VFS, img *vfs.FileDoc) (*vfs.Metadata, error) {
+	exifP := vfs.NewMetaExtractor(img)
+	if exifP == nil {
+		return nil, nil
+	}
+	exif := *exifP
+	f, err := fs.OpenFile(img)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if errc := f.Close(); err == nil {
+			err = errc
+		}
+	}()
+	_, err = io.Copy(exif, io.LimitReader(f, 128*1024))
+	if err != nil {
+		return nil, err
+	}
+	meta := exif.Result()
+	return &meta, nil
 }
 
 func generateThumbnails(ctx *jobs.WorkerContext, i *instance.Instance, img *vfs.FileDoc) error {
