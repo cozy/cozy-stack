@@ -69,10 +69,11 @@ type (
 	// execution and contains specific values from the job.
 	WorkerContext struct {
 		context.Context
-		job    *Job
-		log    *logrus.Entry
-		id     string
-		cookie interface{}
+		job     *Job
+		log     *logrus.Entry
+		id      string
+		cookie  interface{}
+		noRetry bool
 	}
 )
 
@@ -117,6 +118,16 @@ func (c *WorkerContext) WithCookie(cookie interface{}) *WorkerContext {
 	newCtx := c.clone()
 	newCtx.cookie = cookie
 	return newCtx
+}
+
+// SetNoRetry set the no-retry flag to prevent a retry on the next execution.
+func (w *WorkerContext) SetNoRetry() {
+	w.noRetry = true
+}
+
+// NoRetry returns the no-retry flag.
+func (w *WorkerContext) NoRetry() bool {
+	return w.noRetry
 }
 
 func (c *WorkerContext) clone() *WorkerContext {
@@ -347,6 +358,10 @@ func (t *task) run() (err error) {
 		// context and its parent alive longer than necessary.
 		cancel()
 		t.execCount++
+
+		if ctx.NoRetry() {
+			break
+		}
 	}
 	metrics.WorkerExecRetries.WithLabelValues(t.w.Type).Observe(float64(t.execCount))
 	return nil
@@ -367,7 +382,7 @@ func (t *task) exec(ctx *WorkerContext) (err error) {
 			if !ok {
 				err = fmt.Errorf("%v", r)
 			}
-			joblog.Errorf("%s: %s", r, debug.Stack())
+			ctx.Logger().Errorf("[panic] %s: %s", r, debug.Stack())
 		}
 	}()
 	return t.conf.WorkerFunc(ctx)

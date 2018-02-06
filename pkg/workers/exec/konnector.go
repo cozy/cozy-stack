@@ -235,6 +235,7 @@ func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instan
 	var msg struct {
 		Type    string `json:"type"`
 		Message string `json:"message"`
+		NoRetry bool   `json:"no_retry"`
 	}
 	if err := json.Unmarshal(line, &msg); err != nil {
 		return fmt.Errorf("Could not parse stdout as JSON: %q", string(line))
@@ -254,6 +255,9 @@ func (w *konnectorWorker) ScanOutput(ctx *jobs.WorkerContext, i *instance.Instan
 		log.Error(msg.Message)
 	case konnectorMsgTypeCritical:
 		w.err = errors.New(msg.Message)
+		if msg.NoRetry {
+			ctx.SetNoRetry()
+		}
 		log.Error(msg.Message)
 	}
 
