@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -19,7 +20,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/stack"
-	"github.com/spf13/afero"
 )
 
 var localGitCmd *exec.Cmd
@@ -173,7 +173,16 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	baseFS = afero.NewMemMapFs()
+	var tmpDir string
+	osFS := afero.NewOsFs()
+	tmpDir, err = afero.TempDir(osFS, "", "cozy-installer-test")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer osFS.RemoveAll(tmpDir)
+
+	baseFS = afero.NewBasePathFs(osFS, tmpDir)
 	fs = apps.NewAferoCopier(baseFS)
 
 	go serveGitRep()

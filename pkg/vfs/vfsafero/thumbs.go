@@ -6,9 +6,9 @@ import (
 	"os"
 	"path"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/vfs"
 	multierror "github.com/hashicorp/go-multierror"
-	"github.com/spf13/afero"
 )
 
 // NewThumbsFs creates a new thumb filesystem base on a afero.Fs.
@@ -47,7 +47,7 @@ func (t *thumbs) CreateThumb(img *vfs.FileDoc, format string) (vfs.ThumbFiler, e
 	if err != nil {
 		return nil, err
 	}
-	tmpname := path.Join(dir, path.Base(f.Name()))
+	tmpname := f.Name()
 	th := &thumb{
 		File:    f,
 		fs:      t.fs,

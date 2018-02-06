@@ -5,8 +5,8 @@ import (
 	"path"
 	"testing"
 
+	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/apps"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 

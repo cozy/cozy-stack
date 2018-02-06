@@ -102,17 +102,16 @@ func (f *httpFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 
 func fetchHTTP(src *url.URL, shasum []byte, fs Copier, man Manifest, prefix string) (err error) {
 	exists, err := fs.Start(man.Slug(), man.Version())
-	if err != nil {
+	if err != nil || exists {
 		return err
 	}
 	defer func() {
-		if errc := fs.Close(); errc != nil && err == nil {
-			err = errc
+		if err != nil {
+			fs.Abort()
+		} else {
+			err = fs.Commit()
 		}
 	}()
-	if exists {
-		return nil
-	}
 
 	req, err := http.NewRequest(http.MethodGet, src.String(), nil)
 	if err != nil {
