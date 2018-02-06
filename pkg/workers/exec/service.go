@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"path"
+	"strconv"
+	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -90,11 +92,19 @@ func (w *serviceWorker) Slug() string {
 func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Instance) (cmd string, env []string, err error) {
 	token := i.BuildAppToken(w.man, "")
 	cmd = config.GetConfig().Konnectors.Cmd
+	var timeLimit string
+	if deadline, ok := ctx.Deadline(); ok {
+		diff := time.Until(deadline)
+		if diff > 0 {
+			timeLimit = strconv.Itoa(int(diff.Seconds()) + 1)
+		}
+	}
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
 		"COZY_TYPE=" + w.opts.Type,
 		"COZY_LOCALE=" + i.Locale,
+		"COZY_TIME_LIMIT=" + timeLimit,
 		"COZY_JOB_ID=" + ctx.ID(),
 	}
 	return

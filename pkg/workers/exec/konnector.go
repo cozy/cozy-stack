@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -209,6 +210,14 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 		return
 	}
 
+	var timeLimit string
+	if deadline, ok := ctx.Deadline(); ok {
+		diff := time.Until(deadline)
+		if diff > 0 {
+			timeLimit = strconv.Itoa(int(diff.Seconds()) + 1)
+		}
+	}
+
 	// Directly pass the job message as fields parameters
 	fieldsJSON := w.msg.ToJSON()
 	token := i.BuildKonnectorToken(w.man)
@@ -221,6 +230,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 		"COZY_PARAMETERS=" + string(paramsJSON),
 		"COZY_TYPE=" + w.man.Type,
 		"COZY_LOCALE=" + i.Locale,
+		"COZY_TIME_LIMIT=" + timeLimit,
 		"COZY_JOB_ID=" + ctx.ID(),
 	}
 	return
