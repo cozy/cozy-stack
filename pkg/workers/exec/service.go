@@ -95,6 +95,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Insta
 		"COZY_CREDENTIALS=" + token,
 		"COZY_TYPE=" + w.opts.Type,
 		"COZY_LOCALE=" + i.Locale,
+		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),
 		"COZY_JOB_ID=" + ctx.ID(),
 	}
 	return

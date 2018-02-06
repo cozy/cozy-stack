@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/instance"
@@ -17,11 +17,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var defaultTimeout = 300 * time.Second
+
 func init() {
 	addExecWorker("konnector", &jobs.WorkerConfig{
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
-		Timeout:      300 * time.Second,
+		Timeout:      defaultTimeout,
 	}, func() execWorker {
 		return &konnectorWorker{}
 	})
@@ -29,7 +31,7 @@ func init() {
 	addExecWorker("service", &jobs.WorkerConfig{
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
-		Timeout:      300 * time.Second,
+		Timeout:      defaultTimeout,
 	}, func() execWorker {
 		return &serviceWorker{}
 	})
@@ -69,7 +71,7 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		}
 
 		var stderrBuf bytes.Buffer
-		cmd := exec.CommandContext(ctx, cmdStr, workDir) // #nosec
+		cmd := createCmd(cmdStr, workDir) // #nosec
 		cmd.Env = env
 
 		// set stderr writable with a bytes.Buffer limited total size of 256Ko
@@ -108,15 +110,26 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 			return wrapErr(ctx, err)
 		}
 
-		for scanOut.Scan() {
-			if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
-				log.Error(errOut)
+		go func() {
+			for scanOut.Scan() {
+				if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
+					log.Error(errOut)
+				}
 			}
-		}
+		}()
 
-		if err = cmd.Wait(); err != nil {
-			err = wrapErr(ctx, err)
-			log.Errorf("cmd failed: %s", err)
+		waitDone := make(chan error)
+		go func() {
+			waitDone <- cmd.Wait()
+			close(waitDone)
+		}()
+
+		select {
+		case err = <-waitDone:
+		case <-ctx.Done():
+			err = ctx.Err()
+			killCmd(cmd)
+			<-waitDone
 		}
 
 		return worker.Error(inst, err)
@@ -143,6 +156,18 @@ func addExecWorker(workerType string, cfg *jobs.WorkerConfig, createWorker func(
 	cfg.WorkerFunc = workerFunc
 	cfg.WorkerCommit = workerCommit
 	jobs.AddWorker(cfg)
+}
+
+func ctxToTimeLimit(ctx *jobs.WorkerContext) string {
+	var limit int
+	if deadline, ok := ctx.Deadline(); ok {
+		limit = int(time.Until(deadline).Seconds())
+	}
+	if limit <= 0 {
+		limit = int(defaultTimeout.Seconds())
+	}
+	// add a little gap of 5 seconds to prevent racing the two deadlines
+	return strconv.Itoa(limit + 5)
 }
 
 func wrapErr(ctx context.Context, err error) error {

@@ -221,6 +221,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 		"COZY_PARAMETERS=" + string(paramsJSON),
 		"COZY_TYPE=" + w.man.Type,
 		"COZY_LOCALE=" + i.Locale,
+		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),
 		"COZY_JOB_ID=" + ctx.ID(),
 	}
 	return
