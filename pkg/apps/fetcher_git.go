@@ -216,17 +216,16 @@ func (g *gitFetcher) fetchWithGit(gitFs afero.Fs, gitDir string, src *url.URL, f
 
 	// If the application folder already exists, we can bail early.
 	exists, err := fs.Start(slug, version)
-	if err != nil {
+	if err != nil || exists {
 		return err
 	}
 	defer func() {
-		if errc := fs.Close(); errc != nil && err == nil {
-			err = errc
+		if err != nil {
+			fs.Abort()
+		} else {
+			err = fs.Commit()
 		}
 	}()
-	if exists {
-		return nil
-	}
 
 	cmd = exec.CommandContext(ctx, "git",
 		"clone",
@@ -321,17 +320,16 @@ func (g *gitFetcher) fetchWithGoGit(gitDir string, src *url.URL, fs Copier, man 
 
 	// If the application folder already exists, we can bail early.
 	exists, err := fs.Start(slug, version)
-	if err != nil {
+	if err != nil || exists {
 		return err
 	}
 	defer func() {
-		if errc := fs.Close(); errc != nil {
-			err = errc
+		if err != nil {
+			fs.Abort()
+		} else {
+			err = fs.Commit()
 		}
 	}()
-	if exists {
-		return nil
-	}
 
 	commit, err := rep.CommitObject(ref.Hash())
 	if err != nil {

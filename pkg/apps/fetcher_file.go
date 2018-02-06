@@ -42,17 +42,16 @@ func (f *fileFetcher) Fetch(src *url.URL, fs Copier, man Manifest) (err error) {
 	version := man.Version() + "-" + utils.RandomString(10)
 	man.SetVersion(version)
 	exists, err := fs.Start(man.Slug(), man.Version())
-	if err != nil {
+	if err != nil || exists {
 		return err
 	}
 	defer func() {
-		if errc := fs.Close(); errc != nil && err == nil {
-			err = errc
+		if err != nil {
+			fs.Abort()
+		} else {
+			err = fs.Commit()
 		}
 	}()
-	if exists {
-		return nil
-	}
 	return copyRec(src.Path, "/", fs)
 }
 
