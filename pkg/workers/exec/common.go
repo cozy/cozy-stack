@@ -160,7 +160,8 @@ func ctxToTimeLimit(ctx *jobs.WorkerContext) (timeLimit string) {
 	if deadline, ok := ctx.Deadline(); ok {
 		diff := time.Until(deadline)
 		if diff > 0 {
-			timeLimit = strconv.Itoa(int(diff.Seconds()) + 1)
+			// add a little gap of 5 seconds to prevent racing the two deadlines
+			timeLimit = strconv.Itoa(int(diff.Seconds()) + 5)
 		}
 	}
 	return
