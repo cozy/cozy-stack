@@ -17,11 +17,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var defaultTimeout = 300 * time.Second
+
 func init() {
 	addExecWorker("konnector", &jobs.WorkerConfig{
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
-		Timeout:      300 * time.Second,
+		Timeout:      defaultTimeout,
 	}, func() execWorker {
 		return &konnectorWorker{}
 	})
@@ -29,7 +31,7 @@ func init() {
 	addExecWorker("service", &jobs.WorkerConfig{
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
-		Timeout:      300 * time.Second,
+		Timeout:      defaultTimeout,
 	}, func() execWorker {
 		return &serviceWorker{}
 	})
@@ -156,15 +158,16 @@ func addExecWorker(workerType string, cfg *jobs.WorkerConfig, createWorker func(
 	jobs.AddWorker(cfg)
 }
 
-func ctxToTimeLimit(ctx *jobs.WorkerContext) (timeLimit string) {
+func ctxToTimeLimit(ctx *jobs.WorkerContext) string {
+	var limit int
 	if deadline, ok := ctx.Deadline(); ok {
-		diff := time.Until(deadline)
-		if diff > 0 {
-			// add a little gap of 5 seconds to prevent racing the two deadlines
-			timeLimit = strconv.Itoa(int(diff.Seconds()) + 5)
-		}
+		limit = int(time.Until(deadline).Seconds())
 	}
-	return
+	if limit <= 0 {
+		limit = int(defaultTimeout.Seconds())
+	}
+	// add a little gap of 5 seconds to prevent racing the two deadlines
+	return strconv.Itoa(limit + 5)
 }
 
 func wrapErr(ctx context.Context, err error) error {
