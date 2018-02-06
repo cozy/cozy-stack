@@ -121,13 +121,13 @@ func (c *WorkerContext) WithCookie(cookie interface{}) *WorkerContext {
 }
 
 // SetNoRetry set the no-retry flag to prevent a retry on the next execution.
-func (w *WorkerContext) SetNoRetry() {
-	w.noRetry = true
+func (c *WorkerContext) SetNoRetry() {
+	c.noRetry = true
 }
 
 // NoRetry returns the no-retry flag.
-func (w *WorkerContext) NoRetry() bool {
-	return w.noRetry
+func (c *WorkerContext) NoRetry() bool {
+	return c.noRetry
 }
 
 func (c *WorkerContext) clone() *WorkerContext {
