@@ -91,8 +91,9 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		if err != nil {
 			return err
 		}
+		scanBuf := make([]byte, 16*1024)
 		scanOut := bufio.NewScanner(cmdOut)
-		scanOut.Buffer(nil, 16*1024)
+		scanOut.Buffer(scanBuf, 64*1024)
 
 		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
 			var result string
@@ -116,6 +117,9 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 				if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
 					log.Error(errOut)
 				}
+			}
+			if errs := scanOut.Err(); errs != nil {
+				log.Errorf("could not scan stdout: %s", err)
 			}
 		}()
 
