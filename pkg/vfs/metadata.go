@@ -8,7 +8,7 @@ import (
 	"time"
 
 	// Packages image/... are not used explicitly in the code below,
-	// but are imported for its initialization side-effect
+	// but are imported for their initialization side-effects
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"

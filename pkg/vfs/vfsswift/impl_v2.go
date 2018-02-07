@@ -630,15 +630,15 @@ func (f *swiftFileCreationV2) Close() (err error) {
 		}
 	}
 
-	if f.err != nil {
-		return f.err
-	}
-
 	newdoc, olddoc, written := f.newdoc, f.olddoc, f.w
 	if f.meta != nil {
 		if errc := (*f.meta).Close(); errc == nil {
 			newdoc.Metadata = (*f.meta).Result()
 		}
+	}
+
+	if f.err != nil {
+		return f.err
 	}
 
 	// The actual check of the optionally given md5 hash is handled by the swift
