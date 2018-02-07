@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -42,6 +43,9 @@ func Serve(c echo.Context) error {
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		if code := c.QueryParam("code"); code != "" {
 			return tryAuthWithSessionCode(c, i, code, slug)
+		}
+		if disconnect := c.QueryParam("disconnect"); disconnect == "true" || disconnect == "1" {
+			return deleteAppCookie(c, i, slug)
 		}
 	}
 
@@ -222,17 +226,15 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 }
 
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug string) error {
-	u := c.Request().URL
+	u := *(c.Request().URL)
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
-	if !middlewares.IsLoggedIn(c) {
-		if code := sessions.FindCode(value, u.Host); code != nil {
-			session, err := sessions.Get(i, code.SessionID)
+	if code := sessions.FindCode(value, u.Host); code != nil {
+		session, err := sessions.Get(i, code.SessionID)
+		if err == nil {
+			cookie, err := session.ToAppCookie(u.Host, slug)
 			if err == nil {
-				cookie, err := session.ToAppCookie(u.Host, slug)
-				if err == nil {
-					c.SetCookie(cookie)
-				}
+				c.SetCookie(cookie)
 			}
 		}
 	}
@@ -240,6 +242,33 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 	q.Del("code")
 	u.RawQuery = q.Encode()
 	return c.Redirect(http.StatusFound, u.String())
+}
+
+func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
+	c.SetCookie(&http.Cookie{
+		Name:   sessions.SessionCookieName,
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/",
+		Domain: utils.StripPort(i.Domain),
+	})
+
+	redirect := *(c.Request().URL)
+	redirect.Scheme = i.Scheme()
+	redirect.Host = c.Request().Host
+
+	queries := make(url.Values)
+	for k, v := range redirect.Query() {
+		if k != "disconnect" {
+			queries[k] = v
+		}
+	}
+	redirect.RawQuery = queries.Encode()
+
+	u := i.PageURL("/auth/login", url.Values{
+		"redirect": {redirect.String()},
+	})
+	return c.Redirect(http.StatusFound, u)
 }
 
 var assetHelper func(domain, file string) string
