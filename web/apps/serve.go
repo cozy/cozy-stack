@@ -226,17 +226,15 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 }
 
 func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug string) error {
-	u := c.Request().URL
+	u := *(c.Request().URL)
 	u.Scheme = i.Scheme()
 	u.Host = c.Request().Host
-	if !middlewares.IsLoggedIn(c) {
-		if code := sessions.FindCode(value, u.Host); code != nil {
-			session, err := sessions.Get(i, code.SessionID)
+	if code := sessions.FindCode(value, u.Host); code != nil {
+		session, err := sessions.Get(i, code.SessionID)
+		if err == nil {
+			cookie, err := session.ToAppCookie(u.Host, slug)
 			if err == nil {
-				cookie, err := session.ToAppCookie(u.Host, slug)
-				if err == nil {
-					c.SetCookie(cookie)
-				}
+				c.SetCookie(cookie)
 			}
 		}
 	}
