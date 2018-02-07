@@ -81,7 +81,7 @@ type Fs interface {
 	FsckPrune(logbook []*FsckLog, dryrun bool)
 }
 
-// File is a reader, writer, seeker, closer iterface reprsenting an opened
+// File is a reader, writer, seeker, closer iterface representing an opened
 // file for reading or writing.
 type File interface {
 	io.Reader
