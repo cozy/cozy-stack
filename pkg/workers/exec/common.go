@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -159,15 +160,15 @@ func addExecWorker(workerType string, cfg *jobs.WorkerConfig, createWorker func(
 }
 
 func ctxToTimeLimit(ctx *jobs.WorkerContext) string {
-	var limit int
+	var limit float64
 	if deadline, ok := ctx.Deadline(); ok {
-		limit = int(time.Until(deadline).Seconds())
+		limit = time.Until(deadline).Seconds()
 	}
 	if limit <= 0 {
-		limit = int(defaultTimeout.Seconds())
+		limit = defaultTimeout.Seconds()
 	}
 	// add a little gap of 5 seconds to prevent racing the two deadlines
-	return strconv.Itoa(limit + 5)
+	return strconv.Itoa(int(math.Ceil(limit)) + 5)
 }
 
 func wrapErr(ctx context.Context, err error) error {
