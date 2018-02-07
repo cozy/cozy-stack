@@ -360,7 +360,7 @@ DELETE /data/:type/:id HTTP/1.1
 ```
 
 ```http
-DELETE /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee HTTP/1.1
+DELETE /data/io.cozy.events/6494e0ac-dfcb-11e5-88c1-472e84a9cbee?rev=1-82a7144c9ec228c9a851b8a1c1aa225b HTTP/1.1
 Accept: application/json
 ```
 
