@@ -18,6 +18,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/intents"
 	"github.com/cozy/cozy-stack/pkg/sessions"
+	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/permissions"
 	"github.com/cozy/cozy-stack/web/statik"
@@ -42,6 +43,9 @@ func Serve(c echo.Context) error {
 	if config.GetConfig().Subdomains == config.FlatSubdomains {
 		if code := c.QueryParam("code"); code != "" {
 			return tryAuthWithSessionCode(c, i, code, slug)
+		}
+		if disconnect := c.QueryParam("disconnect"); disconnect == "true" || disconnect == "1" {
+			return deleteAppCookie(c, i, slug)
 		}
 	}
 
@@ -240,6 +244,33 @@ func tryAuthWithSessionCode(c echo.Context, i *instance.Instance, value, slug st
 	q.Del("code")
 	u.RawQuery = q.Encode()
 	return c.Redirect(http.StatusFound, u.String())
+}
+
+func deleteAppCookie(c echo.Context, i *instance.Instance, slug string) error {
+	c.SetCookie(&http.Cookie{
+		Name:   sessions.SessionCookieName,
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/",
+		Domain: utils.StripPort(i.Domain),
+	})
+
+	redirect := *(c.Request().URL)
+	redirect.Scheme = i.Scheme()
+	redirect.Host = c.Request().Host
+
+	queries := make(url.Values)
+	for k, v := range redirect.Query() {
+		if k != "disconnect" {
+			queries[k] = v
+		}
+	}
+	redirect.RawQuery = queries.Encode()
+
+	u := i.PageURL("/auth/login", url.Values{
+		"redirect": {redirect.String()},
+	})
+	return c.Redirect(http.StatusFound, u)
 }
 
 var assetHelper func(domain, file string) string
