@@ -206,6 +206,13 @@ func (b *redisBroker) PushJob(req *JobRequest) (*Job, error) {
 // specified worker type.
 func (b *redisBroker) QueueLen(workerType string) (int, error) {
 	key := redisPrefix + workerType
-	l, err := b.client.LLen(key).Result()
-	return int(l), err
+	l1, err := b.client.LLen(key).Result()
+	if err != nil {
+		return 0, err
+	}
+	l2, err := b.client.LLen(key + redisHighPrioritySuffix).Result()
+	if err != nil {
+		return 0, err
+	}
+	return int(l1 + l2), nil
 }
