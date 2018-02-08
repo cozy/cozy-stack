@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/request"
@@ -29,6 +28,7 @@ type Upload struct {
 	FileRev       string
 	ContentMD5    []byte
 	Contents      io.Reader
+	ContentType   string
 	ContentLength int64
 	Overwrite     bool
 }
@@ -214,13 +214,19 @@ func (c *Client) Upload(u *Upload) (*File, error) {
 	if u.ContentMD5 != nil {
 		headers["Content-MD5"] = base64.StdEncoding.EncodeToString(u.ContentMD5)
 	}
-	if u.ContentLength > 0 {
-		headers["Content-Length"] = strconv.FormatInt(u.ContentLength, 10)
+	if u.ContentType != "" {
+		headers["Content-Type"] = u.ContentType
 	}
+	headers["Expect"] = "100-continue"
+
 	opts := &request.Options{
 		Body:    u.Contents,
 		Headers: headers,
 	}
+	if u.ContentLength > 0 {
+		opts.ContentLength = u.ContentLength
+	}
+
 	if u.Overwrite {
 		opts.Method = "PUT"
 		opts.Path = "/files/" + url.PathEscape(u.FileID)

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"mime"
 	"os"
 	"path"
 	"path/filepath"
@@ -379,6 +380,11 @@ func (i *importer) upload(localname, distname string) error {
 		}
 	}
 
+	infos, err := os.Stat(localname)
+	if err != nil {
+		return err
+	}
+
 	r, err := os.Open(localname)
 	if err != nil {
 		return err
@@ -386,9 +392,11 @@ func (i *importer) upload(localname, distname string) error {
 	defer r.Close()
 
 	_, err = i.c.Upload(&client.Upload{
-		Name:     path.Base(distname),
-		DirID:    dirID,
-		Contents: r,
+		Name:          path.Base(distname),
+		DirID:         dirID,
+		Contents:      r,
+		ContentLength: infos.Size(),
+		ContentType:   mime.TypeByExtension(localname),
 	})
 	return err
 }
@@ -397,12 +405,21 @@ func importFiles(c *client.Client, from, to string, match *regexp.Regexp) error 
 	from = path.Clean(from)
 	to = path.Clean(to)
 
-	fmt.Printf("Importing from %s to cozy://%s\n", from, to)
-
 	i := &importer{
 		c:     c,
 		paths: make(map[string]string),
 	}
+
+	fromInfos, err := os.Stat(from)
+	if err != nil {
+		return err
+	}
+	if !fromInfos.IsDir() {
+		fmt.Printf("Importing file %s to cozy://%s\n", from, to)
+		return i.upload(from, to)
+	}
+
+	fmt.Printf("Importing from %s to cozy://%s\n", from, to)
 
 	// TODO: symlinks ?
 	return filepath.Walk(from, func(localname string, f os.FileInfo, err error) error {
