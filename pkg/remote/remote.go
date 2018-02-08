@@ -21,6 +21,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/httpcache"
 	"github.com/labstack/echo"
 )
 
@@ -41,9 +42,17 @@ var (
 	// ErrInvalidContentType is used when the response has a content-type that
 	// we deny for security reasons
 	ErrInvalidContentType = errors.New("the content-type for the response is not authorized")
+	// ErrRemoteAssetNotFound is used when the wanted remote asset is not part of
+	// our defined list.
+	ErrRemoteAssetNotFound = errors.New("wanted remote asset is not part of our asset list")
 )
 
 const rawURL = "https://raw.githubusercontent.com/cozy/cozy-doctypes/master/%s/request"
+
+var remoteClient = http.Client{
+	Timeout:   20 * time.Second,
+	Transport: httpcache.NewMemoryCacheTransport(32),
+}
 
 // Doctype is used to describe a doctype, its request for a remote doctype for example
 type Doctype struct {
@@ -349,8 +358,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 		req.Header.Set(k, v)
 	}
 
-	client := http.Client{Timeout: 20 * time.Second}
-	res, err := client.Do(req)
+	res, err := remoteClient.Do(req)
 	if err != nil {
 		log.Infof("Error on request %s: %s", remote.URL.String(), err)
 		return ErrRequestFailed
@@ -389,8 +397,8 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	}
 	log.Debugf("Remote request: %#v\n", logged)
 
-	rw.WriteHeader(res.StatusCode)
 	copyHeader(rw.Header(), res.Header)
+	rw.WriteHeader(res.StatusCode)
 	_, err = io.Copy(rw, res.Body)
 	if err != nil {
 		log.Infof("Error on copying response from %s: %s", remote.URL.String(), err)
@@ -398,8 +406,39 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 	return nil
 }
 
+// ProxyRemoteAsset proxy the given http request to fetch an asset from our
+// list of available asset list.
+func ProxyRemoteAsset(name string, w http.ResponseWriter, req *http.Request) error {
+	assetURL, ok := config.GetConfig().RemoteAssets[name]
+	if !ok {
+		return ErrRemoteAssetNotFound
+	}
+
+	req, err := http.NewRequest(http.MethodGet, assetURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent",
+		"cozy-stack "+config.Version+" ("+runtime.Version()+")")
+
+	res, err := remoteClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	copyHeader(w.Header(), res.Header)
+	w.WriteHeader(res.StatusCode)
+
+	_, err = io.Copy(w, res.Body)
+	return err
+}
+
 func copyHeader(dst, src http.Header) {
 	for k, vv := range src {
+		if k == "Set-Cookie" {
+			continue
+		}
 		for _, v := range vv {
 			dst.Add(k, v)
 		}

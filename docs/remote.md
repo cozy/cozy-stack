@@ -150,6 +150,18 @@ JSON or XML are accepted. Other content-types are blocked the time to evaluate
 if they are useful and their security implication (javascript is probably not
 something we want to allow).
 
+### GET `/remote/assets/:asset-name`
+
+The client application can fetch a list of predefined assets via this route.
+The resources available are defined in the configuration file.
+
+Example:
+
+```http
+GET /remote/assets/bank
+Host: alice.cozy.tools
+```
+
 ## Logs
 
 The requests are logged as the `io.cozy.remote.requests` doctype, with the
