@@ -412,7 +412,7 @@ func (remote *Remote) ProxyTo(doctype string, ins *instance.Instance, rw http.Re
 
 // ProxyRemoteAsset proxy the given http request to fetch an asset from our
 // list of available asset list.
-func ProxyRemoteAsset(name string, w http.ResponseWriter, req *http.Request) error {
+func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 	assetURL, ok := config.GetConfig().RemoteAssets[name]
 	if !ok {
 		return ErrRemoteAssetNotFound

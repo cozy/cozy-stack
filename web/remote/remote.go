@@ -54,7 +54,7 @@ func remoteAsset(c echo.Context) error {
 		return err
 	}
 	return wrapRemoteErr(remote.
-		ProxyRemoteAsset(c.Param("asset-name"), c.Response(), c.Request()))
+		ProxyRemoteAsset(c.Param("asset-name"), c.Response()))
 }
 
 // Routes set the routing for the remote service
