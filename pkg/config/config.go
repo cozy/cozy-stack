@@ -101,6 +101,8 @@ type Config struct {
 	CredentialsEncryptorKey string
 	CredentialsDecryptorKey string
 
+	RemoteAssets map[string]string
+
 	Fs            Fs
 	CouchDB       CouchDB
 	Jobs          Jobs
@@ -558,6 +560,8 @@ func UseViper(v *viper.Viper) error {
 		Hooks:               v.GetString("hooks"),
 		GeoDB:               v.GetString("geodb"),
 		PasswordResetInterval: v.GetDuration("password_reset_interval"),
+
+		RemoteAssets: v.GetStringMapString("remote_assets"),
 
 		CredentialsEncryptorKey: v.GetString("vault.credentials_encryptor_key"),
 		CredentialsDecryptorKey: v.GetString("vault.credentials_decryptor_key"),

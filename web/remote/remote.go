@@ -48,10 +48,20 @@ func remotePost(c echo.Context) error {
 	return nil
 }
 
+func remoteAsset(c echo.Context) error {
+	_, err := permissions.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	return wrapRemoteErr(remote.
+		ProxyRemoteAsset(c.Param("asset-name"), c.Response()))
+}
+
 // Routes set the routing for the remote service
 func Routes(router *echo.Group) {
 	router.GET("/:doctype", remoteGet)
 	router.POST("/:doctype", remotePost)
+	router.GET("/assets/:asset-name", remoteAsset)
 }
 
 func wrapRemoteErr(err error) error {
@@ -68,6 +78,8 @@ func wrapRemoteErr(err error) error {
 		return jsonapi.BadRequest(err)
 	case remote.ErrInvalidContentType:
 		return jsonapi.BadGateway(err)
+	case remote.ErrRemoteAssetNotFound:
+		return jsonapi.NotFound(err)
 	}
 	return err
 }
