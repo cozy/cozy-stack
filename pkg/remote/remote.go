@@ -186,8 +186,12 @@ func Find(ins *instance.Instance, doctype string) (*Remote, error) {
 		if err != nil || dt.UpdatedAt.Add(24*time.Hour).Before(time.Now()) {
 			rev := dt.Rev()
 			u := fmt.Sprintf(rawURL, doctype)
-			res, err := http.Get(u)
+			req, err := http.NewRequest(http.MethodGet, u, nil)
+			if err != nil {
+				return nil, err
+			}
 			log.Debugf("Fetch remote doctype from %s\n", doctype)
+			res, err := remoteClient.Do(req)
 			if err != nil {
 				log.Infof("Request not found for remote doctype %s: %s", doctype, err)
 				return nil, ErrNotFoundRemote
