@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 )
 
@@ -38,16 +37,17 @@ type (
 	// The NoResponse field can be used in case the call's response if not used. In
 	// such cases, the response body is automatically closed.
 	Options struct {
-		Addr       string
-		Domain     string
-		Scheme     string
-		Method     string
-		Path       string
-		Queries    url.Values
-		Headers    Headers
-		Body       io.Reader
-		Authorizer Authorizer
-		NoResponse bool
+		Addr          string
+		Domain        string
+		Scheme        string
+		Method        string
+		Path          string
+		Queries       url.Values
+		Headers       Headers
+		Body          io.Reader
+		Authorizer    Authorizer
+		ContentLength int64
+		NoResponse    bool
 
 		DisableSecure bool
 		Client        *http.Client
@@ -120,20 +120,11 @@ func Req(opts *Options) (*http.Response, error) {
 	}
 
 	req.Host = opts.Domain
-
-	if opts.Headers != nil {
-		for k, v := range opts.Headers {
-			if k == "Content-Length" {
-				var contentLength int64
-				contentLength, err = strconv.ParseInt(v, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("Invalid Content-Length value")
-				}
-				req.ContentLength = contentLength
-			} else {
-				req.Header.Add(k, v)
-			}
-		}
+	if opts.ContentLength > 0 {
+		req.ContentLength = opts.ContentLength
+	}
+	for k, v := range opts.Headers {
+		req.Header.Add(k, v)
 	}
 
 	if opts.Authorizer != nil {
