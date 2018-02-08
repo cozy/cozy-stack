@@ -158,7 +158,7 @@ The resources available are defined in the configuration file.
 Example:
 
 ```http
-GET /remote/assets/bank
+GET /remote/assets/bank HTTP/1.1
 Host: alice.cozy.tools
 ```
 
