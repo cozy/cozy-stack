@@ -129,6 +129,14 @@ func updateAccount(c echo.Context) error {
 		return fixErrorNoDatabaseIsWrongDoctype(errUpdate)
 	}
 
+	perm, err := permissions.GetPermission(c)
+	if err != nil {
+		return err
+	}
+	if perm.Type == perms.TypeKonnector {
+		decryptAccount(doc)
+	}
+
 	return c.JSON(http.StatusOK, echo.Map{
 		"ok":   true,
 		"id":   doc.ID(),
