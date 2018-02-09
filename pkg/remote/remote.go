@@ -49,7 +49,11 @@ var (
 
 const rawURL = "https://raw.githubusercontent.com/cozy/cozy-doctypes/master/%s/request"
 
-var remoteClient = http.Client{
+var remoteClient = &http.Client{
+	Timeout: 20 * time.Second,
+}
+
+var assetsClient = &http.Client{
 	Timeout:   20 * time.Second,
 	Transport: httpcache.NewMemoryCacheTransport(32),
 }
@@ -425,7 +429,7 @@ func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 	req.Header.Set("User-Agent",
 		"cozy-stack "+config.Version+" ("+runtime.Version()+")")
 
-	res, err := remoteClient.Do(req)
+	res, err := assetsClient.Do(req)
 	if err != nil {
 		return err
 	}
