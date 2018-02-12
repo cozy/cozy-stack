@@ -11,12 +11,12 @@
 #
 
 name    ./js/cozy-client.min.js
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.6.2/dist/cozy-client.min.js
-sha256  a94685dfd398f9f589d5672c03beb9c55da91396edc3a89885caf81ffc6c8d49
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.7.0/dist/cozy-client.min.js
+sha256  0317136564d910d9f6436ffb484b61e1c12a25092e3d75489259406fbcf24485
 
 name    ./js/cozy-client.min.js.map
-url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.6.2/dist/cozy-client.min.js.map
-sha256  274ed546920a9287bfd7feb13f4fc88ef177d31e8a5717d961b50c0a8c42db4a
+url     https://raw.githubusercontent.com/cozy/cozy-client-js/v0.7.0/dist/cozy-client.min.js.map
+sha256  5e1b4402e4dced89e970c2931d511b9c1d10fb382dd974ba7e186a99ccc52f4f
 
 name    ./js/cozy-bar.min.js
 url     https://unpkg.com/cozy-bar@4.8.7/dist/cozy-bar.min.js
