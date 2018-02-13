@@ -734,11 +734,11 @@ func ForeachInstances(fn func(*Instance) error) error {
 // Update is used to save changes made to an instance, it will invalidate
 // caching
 func Update(i *Instance) error {
-	getCache().Revoke(i.Domain)
 	if err := couchdb.UpdateDoc(couchdb.GlobalDB, i); err != nil {
 		i.Logger().Errorf("Could not update: %s", err.Error())
 		return err
 	}
+	getCache().Revoke(i.Domain)
 	return nil
 }
 
