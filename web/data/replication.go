@@ -251,7 +251,7 @@ func replicationRoutes(group *echo.Group) {
 	group.POST("/_ensure_full_commit", fullCommit)
 
 	// useful for Pouchdb replication
-	group.GET("/_bulk_get", bulkGet)
+	group.POST("/_bulk_get", bulkGet) // https://github.com/couchbase/sync_gateway/wiki/Bulk-GET
 	group.POST("/_bulk_docs", bulkDocs)
 
 	group.POST("/_revs_diff", revsDiff)
