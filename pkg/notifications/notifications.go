@@ -6,8 +6,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/globals"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
+	"github.com/cozy/cozy-stack/pkg/workers/push"
 )
 
 // Notification data containing associated to an application a list of actions
@@ -22,6 +24,10 @@ type Notification struct {
 	Icon        string    `json:"icon"`
 	Actions     []*Action `json:"actions"`
 	CreatedAt   time.Time `json:"created_at"`
+
+	// XXX: this field is temporary to test push notifications. It will be
+	// removed when they are actually integrated into a notification center.
+	WithPush *push.Message `json:"with_push,omitempty"`
 }
 
 // ID is used to implement the couchdb.Doc interface
@@ -64,7 +70,7 @@ type Action struct {
 }
 
 // Create a new notification in database.
-func Create(db couchdb.Database, sourceID string, n *Notification) error {
+func Create(inst *instance.Instance, sourceID string, n *Notification) error {
 	if n.Content == "" || n.Title == "" {
 		return ErrBadNotification
 	}
@@ -73,13 +79,46 @@ func Create(db couchdb.Database, sourceID string, n *Notification) error {
 	}
 	n.Source = sourceID
 	n.CreatedAt = time.Now()
-	if err := couchdb.CreateDoc(db, n); err != nil {
+	err := couchdb.CreateDoc(inst, n)
+	if err != nil {
 		return err
 	}
-	return sendMail(db, n)
+
+	var worker string
+	var msg jobs.Message
+	if n.WithPush != nil {
+		worker, msg, err = sendPush(inst, n)
+	} else {
+		worker, msg, err = sendMail(inst, n)
+	}
+	if err != nil {
+		return err
+	}
+	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
+		Domain:     inst.Domain,
+		WorkerType: worker,
+		Message:    msg,
+	})
+	return err
 }
 
-func sendMail(db couchdb.Database, n *Notification) error {
+func sendPush(inst *instance.Instance, n *Notification) (string, jobs.Message, error) {
+	push := push.Message{
+		Title: n.Title,
+
+		ClientID:    n.WithPush.ClientID,
+		Platform:    n.WithPush.Platform,
+		DeviceToken: n.WithPush.DeviceToken,
+		Topic:       n.WithPush.Topic,
+		Message:     n.WithPush.Message,
+		Priority:    n.WithPush.Priority,
+		Sound:       n.WithPush.Sound,
+	}
+	msg, err := jobs.NewMessage(&push)
+	return "push", msg, err
+}
+
+func sendMail(inst *instance.Instance, n *Notification) (string, jobs.Message, error) {
 	var parts []*mails.Part
 	if n.ContentHTML == "" {
 		parts = []*mails.Part{
@@ -97,13 +136,5 @@ func sendMail(db couchdb.Database, n *Notification) error {
 		Parts:   parts,
 	}
 	msg, err := jobs.NewMessage(&mail)
-	if err != nil {
-		return err
-	}
-	_, err = globals.GetBroker().PushJob(&jobs.JobRequest{
-		Domain:     db.Prefix(),
-		WorkerType: "sendmail",
-		Message:    msg,
-	})
-	return err
+	return "sendmail", msg, err
 }
