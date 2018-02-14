@@ -56,19 +56,19 @@
                 <p class="line two-factor-form{{if not .TwoFactorForm}} display-none{{end}}">
                   <label for="two-factor-passcode" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor field"}}</label>
                   <input id="two-factor-passcode" name="two-factor-passcode" placeholder="{{t "Login Two factor field"}}" type="text" autofocus="true" autocomplete="current-password" />
-                  </p>
-                  <!--
-                  <p class="help two-factor-form{{if not .TwoFactorForm}} display-none{{end}}" id="login-two-factor-trust-device-tip">{{t "Login Two factor device trust help"}}</p>
-                  -->
-                  <p class="{{if not .TwoFactorForm}} display-none{{end}}">
-                    <label class="two-factor-trust-device-label" for="two-factor-trust-device" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor trust field"}}</label>
-                    <input id="two-factor-trust-device" class="two-factor-trust-device-checkbox" name="two-factor-trust-device" type="checkbox" />
-                  </p>
-                  {{if .CredentialsError}}
-                  <div class="errors">
-                    <p>{{.CredentialsError}}</p>
-                  </div>
-                  {{end}}
+                </p>
+                <p class="two-factor-form{{if not .TwoFactorForm}} display-none{{end}}">
+                  <label class="two-factor-trust-device-label" for="two-factor-trust-device" aria-describedby="login-two-factor-passcode-tip">{{t "Login Two factor device trust field"}}</label>
+                  <input id="two-factor-trust-device" class="two-factor-trust-device-checkbox" name="two-factor-trust-device" type="checkbox" />
+                </p>
+                <!--
+                <p class="help two-factor-form{{if not .TwoFactorForm}} display-none{{end}}" id="login-two-factor-trust-device-tip">{{t "Login Two factor device trust help"}}</p>
+                -->
+                {{if .CredentialsError}}
+                <div class="errors">
+                  <p>{{.CredentialsError}}</p>
+                </div>
+                {{end}}
               </div>
               <footer>
                 <div class="controls">
