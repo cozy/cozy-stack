@@ -194,6 +194,15 @@ label {
     font-size: .9em;
     padding: .55em 0
 }
+/* Specific styles for trust-device checkbox */
+.two-factor-trust-device-label {
+  display: inline-block;
+  padding-right: 10px;
+}
+.two-factor-trust-device-checkbox {
+  position: relative;
+  top: 3px;
+}
 .error-label {
     display: none;
     color: #ff3713
