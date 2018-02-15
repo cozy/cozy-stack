@@ -195,7 +195,7 @@ func decryptMap(m map[string]interface{}) bool {
 			decrypted = true
 		}
 	}
-	if len(login) > 0 && len(password) > 0 {
+	if decrypted {
 		delete(m, "credentials_encrypted")
 		m["login"] = login
 		m["password"] = password
