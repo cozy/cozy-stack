@@ -22,6 +22,10 @@ func TestEncryptDecrytCredentials(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
+	encryptedCreds3, err := EncryptCredentials("", "fzEE6HFWsSp8jP")
+	if !assert.NoError(t, err) {
+		return
+	}
 	assert.False(t, bytes.Equal(encryptedCreds1, encryptedCreds2))
 
 	{
@@ -38,6 +42,14 @@ func TestEncryptDecrytCredentials(t *testing.T) {
 			return
 		}
 		assert.Equal(t, "me@mycozy.cloud", login)
+		assert.Equal(t, "fzEE6HFWsSp8jP", password)
+	}
+	{
+		login, password, err := DecryptCredentials(encryptedCreds3)
+		if !assert.NoError(t, err) {
+			return
+		}
+		assert.Equal(t, "", login)
 		assert.Equal(t, "fzEE6HFWsSp8jP", password)
 	}
 }
