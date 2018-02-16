@@ -112,10 +112,11 @@ func (sfs *swiftVFSV2) InitFs() error {
 
 func (sfs *swiftVFSV2) Delete() error {
 	containerMeta := swift.Metadata{"to-be-deleted": "1"}.ContainerHeaders()
-	sfs.log.Infof("[vfsswift] Marking containers %q and %q as to-be-deleted",
-		sfs.container, sfs.dataContainer)
+	sfs.log.Infof("[vfsswift] Marking containers %q, %q and %q as to-be-deleted",
+		sfs.container, sfs.version, sfs.dataContainer)
 	err1 := sfs.c.ContainerUpdate(sfs.container, containerMeta)
 	err2 := sfs.c.ContainerUpdate(sfs.dataContainer, containerMeta)
+	err3 := sfs.c.ContainerUpdate(sfs.version, containerMeta)
 	if err1 != nil {
 		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
 			sfs.container, err1)
@@ -125,6 +126,11 @@ func (sfs *swiftVFSV2) Delete() error {
 		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
 			sfs.dataContainer, err2)
 		return err2
+	}
+	if err3 != nil {
+		sfs.log.Errorf("[vfsswift] Could not mark container %q as to-be-deleted: %s",
+			sfs.version, err3)
+		return err3
 	}
 	return nil
 }
