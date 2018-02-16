@@ -69,9 +69,11 @@ const (
 	// OnboardingSlug is the slug of the onboarding app, where the user is
 	// redirected when he has no passphrase.
 	OnboardingSlug = "onboarding"
-	// StoreSlug is the slug of the only app that can install other apps.
+	// StoreSlug is the slug of the store application: it can install
+	// konnectors and applications.
 	StoreSlug = "store"
-	// CollectSlug is the slug of the only app that can install konnectors.
+	// CollectSlug is the slug of the collect application: it can install
+	// konnectors and applications.
 	CollectSlug = "collect"
 	// SettingsSlug is the slog of the settings application.
 	SettingsSlug = "settings"
