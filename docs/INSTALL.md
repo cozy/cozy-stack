@@ -11,6 +11,9 @@
 To install CouchDB 2 through Docker, take a look at our
 [Docker specific documentation](docker.md).
 
+**Note:** to generate thumbnails for heic/heif images, the version 7.0.7-22 of
+Image Magick is required.
+
 ## Install for self-hosting
 
 We have started to write documentation on how to install cozy on your own
