@@ -5,12 +5,13 @@ services:
   - redis
 language: go
 go:
-  - 1.8.x
-  - 1.9.x
+  - "1.8"
+  - "1.9"
+  - "1.10"
 
 before_install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.1
-  - nvm install 6
+  - nvm install 8
 
 before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
@@ -19,7 +20,7 @@ before_script:
   - gometalinter --config=.golinter ./...
 
 script:
-  - nvm use 6
+  - nvm use 8
   - ./scripts/coverage.sh
   - ./scripts/integration.sh
 
