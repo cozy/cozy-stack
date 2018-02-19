@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -ev
 
 if git grep -l \
   -e 'github.com/labstack/gommon/log' \

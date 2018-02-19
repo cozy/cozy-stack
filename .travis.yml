@@ -6,30 +6,34 @@ services:
 language: go
 matrix:
   include:
-    - go: "1.8"
-    - go: "1.9"
     - go: "1.10"
-      env: COVERAGE=true
+      env: BUILD=lint
+    - go: "1.8"
+      env: BUILD=test
+    - go: "1.9"
+      env: BUILD=test
+    - go: "1.10"
+      env: BUILD=coverage
 
 before_install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.1
-
-before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
-  - go get -u github.com/alecthomas/gometalinter
-  - gometalinter --install
-  - gometalinter --config=.golinter ./...
-  - ./scripts/no-forbidden-packages.sh
 
 script:
-  - if [[ "$COVERAGE" == "true" ]]; then
+  - if [[ "$BUILD" == "coverage" ]]; then
       ./scripts/coverage.sh;
-    else
+    elif [[ "$BUILD" == "test" ]]; then
       go test -timeout 2m ./...;
+    elif [[ "$BUILD" == "lint" ]]; then
+      ./scripts/lint.sh;
+      ./scripts/no-forbidden-packages.sh;
+    else
+      echo "Unknown BUILD variables: $BUILD";
+      exit 1;
     fi
 
 after_success:
-  - if [[ "$COVERAGE" == "true" ]]; then
+  - if [[ "$BUILD" == "coverage" ]]; then
       bash <(curl -s https://codecov.io/bash);
     fi
 
