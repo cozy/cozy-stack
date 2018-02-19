@@ -27,10 +27,17 @@ import (
 	statikFS "github.com/cozy/statik/fs"
 )
 
-// ReadHeaderTimeout is the amount of time allowed to read request headers for
-// all servers. This is activated for all handlers from all http servers
-// created by the stack.
-var ReadHeaderTimeout = 15 * time.Second
+var (
+	// ReadTimeout is the amount of time allowed to read the request body. It
+	// impacts all handlers except the one that hijack the connection: for
+	// download/upload handlers.
+	ReadTimeout = 20 * time.Second
+
+	// WriteTimeout is the amount of time allowed to write into the response body.
+	// It impacts all handlers except the one that hijack the connection: for
+	// download/upload handlers.
+	WriteTimeout = 20 * time.Second
+)
 
 // LoadSupportedLocales reads the po files packed in go or from the assets directory
 // and loads them for translations
@@ -192,13 +199,15 @@ func (e *Servers) Start() {
 	e.errs = make(chan error)
 
 	go e.start(e.major, "major", &http.Server{
-		Addr:              config.ServerAddr(),
-		ReadHeaderTimeout: ReadHeaderTimeout,
+		Addr:         config.ServerAddr(),
+		ReadTimeout:  ReadTimeout,
+		WriteTimeout: WriteTimeout,
 	})
 
 	go e.start(e.admin, "admin", &http.Server{
-		Addr:              config.AdminServerAddr(),
-		ReadHeaderTimeout: ReadHeaderTimeout,
+		Addr:         config.AdminServerAddr(),
+		ReadTimeout:  ReadTimeout,
+		WriteTimeout: WriteTimeout,
 	})
 }
 

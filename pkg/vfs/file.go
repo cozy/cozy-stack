@@ -3,7 +3,6 @@ package vfs
 import (
 	// #nosec
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	webutils "github.com/cozy/cozy-stack/web/utils"
 )
 
 // FileDoc is a struct containing all the informations about a file.
@@ -190,18 +190,17 @@ func NewFileDoc(name, dirID string, size int64, md5Sum []byte, mime, class strin
 // offering support to Range, If-Modified-Since and If-None-Match
 // requests. It uses the revision of the file as the Etag value for
 // non-ranged requests
-//
-// The content disposition is inlined.
 func ServeFileContent(fs VFS, doc *FileDoc, disposition string, req *http.Request, w http.ResponseWriter) error {
 	header := w.Header()
-	header.Set("Content-Type", doc.Mime)
 	if disposition != "" {
 		header.Set("Content-Disposition", ContentDisposition(disposition, doc.DocName))
 	}
 
 	if header.Get("Range") == "" {
 		eTag := base64.StdEncoding.EncodeToString(doc.MD5Sum)
-		header.Set("Etag", fmt.Sprintf(`"%s"`, eTag))
+		if webutils.CheckPreconditions(w, req, eTag) {
+			return nil
+		}
 	}
 
 	content, err := fs.OpenFile(doc)
@@ -210,7 +209,7 @@ func ServeFileContent(fs VFS, doc *FileDoc, disposition string, req *http.Reques
 	}
 	defer content.Close()
 
-	http.ServeContent(w, req, doc.DocName, doc.UpdatedAt, content)
+	webutils.ServeContentRanges(w, req, doc.Mime, doc.Size(), content)
 	return nil
 }
 

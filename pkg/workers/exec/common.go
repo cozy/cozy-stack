@@ -75,8 +75,8 @@ func makeExecWorkerFunc() jobs.WorkerFunc {
 		cmd := createCmd(cmdStr, workDir) // #nosec
 		cmd.Env = env
 
-		// set stderr writable with a bytes.Buffer limited total size of 256Ko
-		cmd.Stderr = utils.LimitWriterDiscard(&stderrBuf, 256*1024)
+		// set stderr writable with a bytes.Buffer limited total size of 32Ko
+		cmd.Stderr = utils.LimitWriterDiscard(&stderrBuf, 32*1024)
 
 		// Log out all things printed in stderr, whatever the result of the
 		// konnector is.

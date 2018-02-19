@@ -56,6 +56,15 @@ func WriteData(w io.Writer, o Object, links *LinksList) error {
 	return json.NewEncoder(w).Encode(doc)
 }
 
+// WriteError can be called to write a JSON-API error document into an
+// io.Writer.
+func WriteError(w io.Writer, err *Error) error {
+	doc := Document{
+		Errors: ErrorList{err},
+	}
+	return json.NewEncoder(w).Encode(doc)
+}
+
 // Data can be called to send an answer with a JSON-API document containing a
 // single object as data
 func Data(c echo.Context, statusCode int, o Object, links *LinksList) error {
@@ -137,13 +146,10 @@ func DataRelations(c echo.Context, statusCode int, refs []couchdb.DocReference, 
 // DataError can be called to send an error answer with a JSON-API document
 // containing a single value error.
 func DataError(c echo.Context, err *Error) error {
-	doc := Document{
-		Errors: ErrorList{err},
-	}
 	resp := c.Response()
 	resp.Header().Set("Content-Type", ContentType)
 	resp.WriteHeader(err.Status)
-	return json.NewEncoder(resp).Encode(doc)
+	return WriteError(resp, err)
 }
 
 // DataErrorList can be called to send an error answer with a JSON-API document

@@ -83,12 +83,13 @@ func TestGetPermissionsForRevokedClient(t *testing.T) {
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
+	req.Header.Set("Accept", "text/plain")
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, `Invalid JWT token`, string(body))
+	assert.Equal(t, `Bad Request: Invalid JWT token`, string(body))
 }
 
 func TestGetPermissionsForExpiredToken(t *testing.T) {
@@ -98,12 +99,13 @@ func TestGetPermissionsForExpiredToken(t *testing.T) {
 	assert.NoError(t, err)
 	req, _ := http.NewRequest("GET", ts.URL+"/permissions/self", nil)
 	req.Header.Add("Authorization", "Bearer "+tok)
+	req.Header.Set("Accept", "text/plain")
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, 400, res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	assert.NoError(t, err)
-	assert.Equal(t, `Expired token`, string(body))
+	assert.Equal(t, `Bad Request: Expired token`, string(body))
 }
 
 func TestBadPermissionsBearer(t *testing.T) {

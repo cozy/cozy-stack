@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/md5"
-	"encoding/hex"
-	"fmt"
+	"encoding/base64"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,7 +15,7 @@ import (
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/magic"
-	web_utils "github.com/cozy/cozy-stack/web/utils"
+	webutils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/swift"
 )
 
@@ -100,11 +99,13 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	defer f.Close()
 
 	if checkETag := req.Header.Get("Cache-Control") == ""; checkETag {
-		etag := fmt.Sprintf(`"%s"`, h["Etag"][:10])
-		if web_utils.CheckPreconditions(w, req, etag) {
+		var eTag string
+		if eTag = h["Etag"]; eTag != "" && len(eTag) > 10 {
+			eTag = eTag[:10]
+		}
+		if webutils.CheckPreconditions(w, req, eTag) {
 			return nil
 		}
-		w.Header().Set("Etag", etag)
 	}
 
 	var r io.Reader = f
@@ -138,7 +139,7 @@ func (s *swiftServer) ServeFileContent(w http.ResponseWriter, req *http.Request,
 	}
 
 	size, _ := strconv.ParseInt(contentLength, 10, 64)
-	web_utils.ServeContent(w, req, contentType, size, r)
+	webutils.ServeContent(w, req, contentType, size, r)
 	return nil
 }
 
@@ -208,11 +209,10 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 		if err != nil {
 			return err
 		}
-		etag := fmt.Sprintf(`"%s"`, hex.EncodeToString(h.Sum(nil)))
-		if web_utils.CheckPreconditions(w, req, etag) {
+		eTag := base64.StdEncoding.EncodeToString(h.Sum(nil))
+		if webutils.CheckPreconditions(w, req, eTag) {
 			return nil
 		}
-		w.Header().Set("Etag", etag)
 		size = int64(len(b))
 		content = bytes.NewReader(b)
 	} else {
@@ -245,7 +245,7 @@ func (s *aferoServer) serveFileContent(w http.ResponseWriter, req *http.Request,
 	if contentType == "text/html" {
 		contentType = "text/html; charset=utf-8"
 	}
-	web_utils.ServeContent(w, req, contentType, size, content)
+	webutils.ServeContent(w, req, contentType, size, content)
 	return nil
 }
 

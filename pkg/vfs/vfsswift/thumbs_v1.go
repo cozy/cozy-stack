@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	webutils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/swift"
 )
 
@@ -68,11 +68,15 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request, img
 		return wrapSwiftErr(err)
 	}
 	defer f.Close()
-
-	lastModified, _ := time.Parse(http.TimeFormat, o["Last-Modified"]) // #nosec
-	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
-
-	http.ServeContent(w, req, name, lastModified, f)
+	size, err := f.Length()
+	if err != nil {
+		return err
+	}
+	eTag := o["Etag"]
+	if !webutils.CheckPreconditions(w, req, eTag) {
+		return nil
+	}
+	webutils.ServeContent(w, req, "image/jpeg", size, f)
 	return nil
 }
 

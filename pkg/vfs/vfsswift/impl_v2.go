@@ -655,16 +655,16 @@ func (f *swiftFileCreationV2) Close() (err error) {
 		headers, err = f.f.Headers()
 		if err == nil {
 			// Etags may be double-quoted
-			etag := headers["Etag"]
-			if l := len(etag); l >= 2 {
-				if etag[0] == '"' {
-					etag = etag[1:]
+			eTag := headers["Etag"]
+			if l := len(eTag); l >= 2 {
+				if eTag[0] == '"' {
+					eTag = eTag[1:]
 				}
-				if etag[l-1] == '"' {
-					etag = etag[:l-1]
+				if eTag[l-1] == '"' {
+					eTag = eTag[:l-1]
 				}
 			}
-			md5sum, err = hex.DecodeString(etag)
+			md5sum, err = hex.DecodeString(eTag)
 			if err == nil {
 				newdoc.MD5Sum = md5sum
 			}
@@ -711,6 +711,13 @@ func (f *swiftFileCreationV2) Close() (err error) {
 	return
 }
 
+func (f *swiftFileCreationV2) CloseWithError(err error) error {
+	if f.err == nil {
+		f.err = err
+	}
+	return f.Close()
+}
+
 type swiftFileOpenV2 struct {
 	f  *swift.ObjectOpenFile
 	br *bytes.Reader
@@ -742,6 +749,9 @@ func (f *swiftFileOpenV2) Write(p []byte) (int, error) {
 
 func (f *swiftFileOpenV2) Close() error {
 	return f.f.Close()
+}
+func (f *swiftFileOpenV2) CloseWithError(err error) error {
+	return f.Close()
 }
 
 func objectToFileDocV2(c *swift.Connection, container string, object swift.Object) (filePath string, fileDoc *vfs.FileDoc, err error) {

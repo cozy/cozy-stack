@@ -15,7 +15,7 @@ import (
 	"github.com/cozy/cozy-stack/pkg/i18n"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
-	web_utils "github.com/cozy/cozy-stack/web/utils"
+	webutils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/statik/fs"
 	"github.com/labstack/echo"
 )
@@ -288,7 +288,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	checkETag := id == ""
-	if checkETag && web_utils.CheckPreconditions(w, r, f.Etag()) {
+	if checkETag && webutils.CheckPreconditions(w, r, f.Etag()) {
 		return
 	}
 

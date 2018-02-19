@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 
@@ -53,11 +52,11 @@ func Serve(c echo.Context) error {
 	if err != nil {
 		switch err {
 		case apps.ErrNotFound:
-			return echo.NewHTTPError(http.StatusNotFound, "Application not found")
+			return echo.NewHTTPError(http.StatusNotFound, err)
 		case apps.ErrInvalidSlugName:
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+			return echo.NewHTTPError(http.StatusBadRequest, err)
 		default:
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+			return echo.NewHTTPError(http.StatusInternalServerError, err)
 		}
 	}
 
@@ -158,16 +157,7 @@ func ServeAppFile(c echo.Context, i *instance.Instance, fs apps.FileServer, app 
 		if _, id := statik.ExtractAssetID(file); id != "" {
 			c.Response().Header().Set("Cache-Control", "max-age=31536000, immutable")
 		}
-
-		err := fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
-		if os.IsNotExist(err) {
-			return echo.NewHTTPError(http.StatusNotFound, "Asset not found")
-		}
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err)
-		}
-
-		return nil
+		return fs.ServeFileContent(c.Response(), c.Request(), slug, version, filepath)
 	}
 
 	if intentID := c.QueryParam("intent"); intentID != "" {
