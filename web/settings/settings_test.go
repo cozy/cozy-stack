@@ -161,6 +161,8 @@ func TestGetInstance(t *testing.T) {
 }
 
 func TestUpdateInstance(t *testing.T) {
+	var newRev string
+
 	checkResult := func(res *http.Response) {
 		assert.Equal(t, 200, res.StatusCode)
 		var result map[string]interface{}
@@ -175,6 +177,7 @@ func TestUpdateInstance(t *testing.T) {
 		rev := meta["rev"].(string)
 		assert.NotEmpty(t, rev)
 		assert.NotEqual(t, instanceRev, rev)
+		newRev = rev
 		attrs, ok := data["attributes"].(map[string]interface{})
 		assert.True(t, ok)
 		email, ok := attrs["email"].(string)
@@ -216,6 +219,86 @@ func TestUpdateInstance(t *testing.T) {
 	res, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
 	checkResult(res)
+
+	instanceRev = newRev
+}
+
+func TestUpdatePassphraseWithTwoFactorAuth(t *testing.T) {
+	body := `{
+		"data": {
+			"type": "io.cozy.settings",
+			"id": "io.cozy.settings.instance",
+			"meta": {
+				"rev": "%s"
+			},
+			"attributes": {
+				"auth_mode": "two_factor_mail"
+			}
+		}
+	}`
+	body = fmt.Sprintf(body, instanceRev)
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Accept", "application/vnd.api+json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	if !assert.Equal(t, "200 OK", res.Status) {
+		return
+	}
+
+	mailPassCode, err := testInstance.GenerateMailConfirmationCode()
+	assert.NoError(t, err)
+	body = `{
+		"mail_confirmation_code": "%s"
+	}`
+	body = fmt.Sprintf(body, mailPassCode)
+	req, _ = http.NewRequest("PUT", ts.URL+"/settings/confirm_mail", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	if !assert.Equal(t, "204 No Content", res.Status) {
+		return
+	}
+
+	args, _ := json.Marshal(&echo.Map{
+		"current_passphrase": "MyPassphrase",
+	})
+	req, _ = http.NewRequest("PUT", ts.URL+"/settings/passphrase", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "200 OK", res.Status)
+
+	var result map[string]interface{}
+	err = json.NewDecoder(res.Body).Decode(&result)
+	assert.NoError(t, err)
+
+	{
+		twoFactorToken, ok := result["two_factor_token"].(string)
+		assert.True(t, ok)
+		assert.NotEmpty(t, twoFactorToken)
+	}
+
+	twoFactorToken, twoFactorPasscode, err := testInstance.GenerateTwoFactorSecrets()
+	assert.NoError(t, err)
+
+	args, _ = json.Marshal(&echo.Map{
+		"new_passphrase":      "MyLastPassphrase",
+		"two_factor_token":    twoFactorToken,
+		"two_factor_passcode": twoFactorPasscode,
+	})
+	req, _ = http.NewRequest("PUT", ts.URL+"/settings/passphrase", bytes.NewReader(args))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+token)
+	res, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, "204 No Content", res.Status)
 }
 
 func TestListClients(t *testing.T) {
