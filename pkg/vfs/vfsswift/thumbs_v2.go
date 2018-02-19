@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	webutils "github.com/cozy/cozy-stack/web/utils"
 	"github.com/cozy/swift"
 )
-
-var unixEpochZero = time.Time{}
 
 // NewThumbsFsV2 creates a new thumb filesystem base on swift.
 //
@@ -107,9 +105,15 @@ func (t *thumbsV2) ServeThumbContent(w http.ResponseWriter, req *http.Request, i
 		return wrapSwiftErr(err)
 	}
 	defer f.Close()
-
-	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, o["Etag"]))
-	http.ServeContent(w, req, name, unixEpochZero, f)
+	size, err := f.Length()
+	if err != nil {
+		return err
+	}
+	eTag := o["Etag"]
+	if !webutils.CheckPreconditions(w, req, eTag) {
+		return nil
+	}
+	webutils.ServeContent(w, req, "image/jpeg", size, f)
 	return nil
 }
 

@@ -1,13 +1,19 @@
 package vfsafero
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/base64"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 
 	"github.com/cozy/afero"
 	"github.com/cozy/cozy-stack/pkg/vfs"
+	webutils "github.com/cozy/cozy-stack/web/utils"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -90,8 +96,17 @@ func (t *thumbs) ServeThumbContent(w http.ResponseWriter, req *http.Request,
 	if err != nil {
 		return err
 	}
+	h := md5.New() // #nosec
+	b, err := ioutil.ReadAll(io.TeeReader(f, h))
+	if err != nil {
+		return err
+	}
 	defer f.Close()
-	http.ServeContent(w, req, name, s.ModTime(), f)
+	eTag := base64.StdEncoding.EncodeToString(h.Sum(nil)[:16])
+	if webutils.CheckPreconditions(w, req, eTag) {
+		return nil
+	}
+	webutils.ServeContent(w, req, "image/jpeg", s.Size(), bytes.NewReader(b))
 	return nil
 }
 
