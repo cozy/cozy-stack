@@ -18,6 +18,7 @@ before_script:
   - go get -u github.com/alecthomas/gometalinter
   - gometalinter --install
   - gometalinter --config=.golinter ./...
+  - ./scripts/no-forbidden-packages.sh
 
 script:
   - nvm use 8
