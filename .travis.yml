@@ -4,10 +4,12 @@ services:
   - docker
   - redis
 language: go
-go:
-  - "1.8"
-  - "1.9"
-  - "1.10"
+matrix:
+  include:
+    - go: "1.8"
+    - go: "1.9"
+    - go: "1.10"
+      env: COVERAGE=true
 
 before_install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.1
@@ -20,10 +22,16 @@ before_script:
   - ./scripts/no-forbidden-packages.sh
 
 script:
-  - ./scripts/coverage.sh
+  - if [[ "$COVERAGE" == "true" ]]; then
+      ./scripts/coverage.sh;
+    else
+      go test -timeout 2m ./...;
+    fi
 
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
+  - if [[ "$COVERAGE" == "true" ]]; then
+      bash <(curl -s https://codecov.io/bash);
+    fi
 
 after_failure:
   - docker ps -a
