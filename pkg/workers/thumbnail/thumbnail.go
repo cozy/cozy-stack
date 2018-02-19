@@ -179,7 +179,7 @@ func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img
 		buffer = new(bytes.Buffer)
 		out = io.MultiWriter(th, buffer)
 	}
-	err = generateThumb(ctx, in, out, format, env)
+	err = generateThumb(ctx, in, out, img.ID(), format, env)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +193,7 @@ func recGenerateThub(ctx *jobs.WorkerContext, in io.Reader, fs vfs.Thumbser, img
 // We are using some complicated ImageMagick options to optimize the speed and
 // quality of the generated thumbnails.
 // See https://www.smashingmagazine.com/2015/06/efficient-image-resizing-with-imagemagick/
-func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, format string, env []string) error {
+func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, fileID string, format string, env []string) error {
 	convertCmd := config.GetConfig().Jobs.ImageMagickConvertCmd
 	if convertCmd == "" {
 		convertCmd = "convert"
@@ -219,6 +219,7 @@ func generateThumb(ctx *jobs.WorkerContext, in io.Reader, out io.Writer, format 
 	if err := cmd.Run(); err != nil {
 		ctx.Logger().
 			WithField("stderr", stderr.String()).
+			WithField("file_id", fileID).
 			Errorf("imagemagick failed: %s", err)
 		return err
 	}
