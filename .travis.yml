@@ -11,7 +11,6 @@ go:
 
 before_install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.1
-  - nvm install 8
 
 before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
@@ -21,9 +20,7 @@ before_script:
   - ./scripts/no-forbidden-packages.sh
 
 script:
-  - nvm use 8
   - ./scripts/coverage.sh
-  - ./scripts/integration.sh
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
