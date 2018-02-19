@@ -70,9 +70,9 @@ func (i *Instance) GenerateTwoFactorSecrets() (token []byte, passcode string, er
 		return
 	}
 
-	hkdf := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
+	h := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
 	key := make([]byte, 32)
-	_, err = io.ReadFull(hkdf, key)
+	_, err = io.ReadFull(h, key)
 	if err != nil {
 		return
 	}
@@ -89,9 +89,9 @@ func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool
 		return false
 	}
 
-	hkdf := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
+	h := hkdf.New(sha256.New, i.SessionSecret, salt, nil)
 	key := make([]byte, 32)
-	_, err = io.ReadFull(hkdf, key)
+	_, err = io.ReadFull(h, key)
 	if err != nil {
 		return false
 	}
@@ -150,9 +150,9 @@ func (i *Instance) SendMailConfirmationCode() error {
 	if err != nil {
 		return err
 	}
-	hkdf := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
+	h := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
 	key := make([]byte, 32)
-	_, err = io.ReadFull(hkdf, key)
+	_, err = io.ReadFull(h, key)
 	if err != nil {
 		return err
 	}
@@ -177,9 +177,9 @@ func (i *Instance) ConfirmMail(passcode string) bool {
 	if err != nil {
 		return false
 	}
-	hkdf := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
+	h := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
 	key := make([]byte, 32)
-	_, err = io.ReadFull(hkdf, key)
+	_, err = io.ReadFull(h, key)
 	if err != nil {
 		return false
 	}

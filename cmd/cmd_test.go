@@ -16,8 +16,10 @@ import (
 	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/config"
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/globals"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/stack"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
@@ -34,6 +36,13 @@ func TestMain(m *testing.M) {
 		fmt.Println("This test need couchdb to run.")
 		os.Exit(1)
 	}
+
+	b, s, _, err := stack.Start()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	globals.Set(b, s)
 
 	tempdir, err := ioutil.TempDir("", "cozy-stack")
 	if err != nil {
