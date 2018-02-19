@@ -60,6 +60,7 @@ func Routes(router *echo.Group) {
 
 	router.GET("/instance", getInstance)
 	router.PUT("/instance", updateInstance)
+	router.PUT("/instance/confirm_mail_tfa", sendTwoFactorConfirmMail)
 	router.GET("/sessions", getSessions)
 
 	router.GET("/clients", listClients)

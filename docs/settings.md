@@ -232,6 +232,35 @@ Content-type: application/json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.settings` for the verb `PUT`.
 
+### PUT /settings/instance/confirm_mail_tfa
+
+Re-send the two factor authorization code to confirm the user's email address.
+If the mail is already confirmed, no mail is resent.
+
+The `auth_mode` should be set to `two_factor_mail` before using this route. On
+the first activation of this mode, using the `PUT /instance` route, the
+confirmation mail is already sent if needed. This route is only useful to re-
+send the mail on user demand.
+
+#### Request
+
+```http
+PUT /settings/instance/confirm_mail_tfa HTTP/1.1
+Host: alice.example.com
+Content-type: application/vnd.api+json
+Cookie: sessionid=xxxxx
+Authorization: Bearer settings-token
+```
+
+```
+HTTP/1.1 204 No Content
+```
+
+#### Permissions
+
+To use this endpoint, an application needs a permission on the type
+`io.cozy.settings` for the verb `PUT`.
+
 ### GET /settings/sessions
 
 This route allows to get all the currently active sessions.
