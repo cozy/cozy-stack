@@ -1,41 +1,34 @@
 ---
 dist: trusty
+
 services:
   - docker
   - redis
+
 language: go
+
 matrix:
   include:
     - go: "1.10"
-      env: BUILD=lint
+      env: COMMAND=scripts/coverage.sh
     - go: "1.8"
-      env: BUILD=test
+      env: COMMAND=scripts/unit-test.sh
     - go: "1.9"
-      env: BUILD=test
+      env: COMMAND=scripts/unit-test.sh
     - go: "1.10"
-      env: BUILD=coverage
+      env: COMMAND=scripts/coverage.sh CODECOV=true
 
 before_install:
   - docker run -d -p 5984:5984 --net=host --name couch apache/couchdb:2.1
+
+before_script:
   - curl -X PUT http://127.0.0.1:5984/{_users,_replicator,_global_changes}
 
 script:
-  - if [[ "$BUILD" == "coverage" ]]; then
-      ./scripts/coverage.sh;
-    elif [[ "$BUILD" == "test" ]]; then
-      go test -timeout 2m ./...;
-    elif [[ "$BUILD" == "lint" ]]; then
-      ./scripts/lint.sh;
-      ./scripts/no-forbidden-packages.sh;
-    else
-      echo "Unknown BUILD variables: $BUILD";
-      exit 1;
-    fi
+  - bash $COMMAND
 
 after_success:
-  - if [[ "$BUILD" == "coverage" ]]; then
-      bash <(curl -s https://codecov.io/bash);
-    fi
+  - if [[ "$CODECOV" == "true" ]]; then bash <(curl -s https://codecov.io/bash); fi
 
 after_failure:
   - docker ps -a
