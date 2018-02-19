@@ -4,6 +4,8 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -134,4 +136,36 @@ func updateInstance(c echo.Context) error {
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
+}
+
+func sendTwoFactorConfirmMail(c echo.Context) error {
+	err := webpermissions.AllowWholeType(c, webpermissions.PUT, consts.Settings)
+	if err != nil {
+		return err
+	}
+
+	inst := middlewares.GetInstance(c)
+	if inst.MailConfirmed {
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	doc, err := inst.SettingsDocument()
+	if err != nil {
+		return err
+	}
+
+	authModeStr, _ := doc.M["auth_mode"].(string)
+	authMode := instance.StringToAuthMode(authModeStr)
+	if authMode != instance.TwoFactorMail {
+		return jsonapi.BadRequest(
+			errors.New(`Authentication mode is not "two_factor_mail"`))
+	}
+
+	err = inst.SendMailConfirmationCode()
+	if err != nil {
+		return jsonapi.InternalServerError(
+			fmt.Errorf("Could not send mail: %s", err))
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
