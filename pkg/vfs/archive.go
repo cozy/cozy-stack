@@ -137,7 +137,7 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 				Method: zip.Deflate,
 				Flags:  0x800, // bit 11 set to force utf-8
 			}
-			header.SetModTime(file.UpdatedAt)
+			header.SetModTime(file.UpdatedAt) // nolint: megacheck
 			ze, err := zw.CreateHeader(header)
 			if err != nil {
 				return fmt.Errorf("Can't create zip entry <%s>: %s", name, err)
