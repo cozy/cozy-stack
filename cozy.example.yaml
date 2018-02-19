@@ -235,11 +235,6 @@ contexts:
         name: 'Store'
         slug: 'store'
         category: 'cozy'
-      bank:
-        editor: 'Cozy'
-        name: 'Bank'
-        slug: 'bank'
-        category: 'partners'
     # claudy actions list
     claudy_actions:
         - desktop
