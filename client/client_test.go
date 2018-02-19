@@ -29,6 +29,7 @@ func testClient(assertFn testAssertReq) *http.Client {
 func TestClientWithOAuth(t *testing.T) {
 	c := &Client{
 		Domain: "foobar",
+		Scheme: "https",
 		Client: testClient(func(req *http.Request) {
 			header := req.Header
 			assert.Equal(t, "", header.Get("Authorization"))
@@ -69,6 +70,7 @@ func TestClientWithoutOAuth(t *testing.T) {
 	}
 	c := &Client{
 		Domain:     "foobar",
+		Scheme:     "https",
 		UserAgent:  "user/agent",
 		Authorizer: &request.BearerAuthorizer{Token: "token"},
 		Client: testClient(func(req *http.Request) {

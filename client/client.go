@@ -96,6 +96,7 @@ func (c *Client) Authenticate() (request.Authorizer, error) {
 			ClientParams: c.AuthClient,
 			Scopes:       c.AuthScopes,
 			Domain:       c.Domain,
+			Scheme:       c.Scheme,
 			HTTPClient:   c.Client,
 			UserAgent:    c.UserAgent,
 			UserAccept:   c.AuthAccept,
