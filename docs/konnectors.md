@@ -159,3 +159,62 @@ Content-Type: application/vnd.api+json
   when the manifest or the source of the konnector is not reachable.
 * 422 Unprocessable Entity, when the sent data is invalid (for example, the slug
   is invalid or the Source parameter is not a proper or supported url)
+
+## List installed konnectors
+
+### GET /konnectors/
+
+#### Request
+
+```http
+GET /konnectors/ HTTP/1.1
+Accept: application/vnd.api+json
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": [{
+    "id": "4cfbd8be-8968-11e6-9708-ef55b7c20863",
+    "type": "io.cozy.konnectors",
+    "meta": {
+      "rev": "1-7a1f918147df94580c92b47275e4604a"
+    },
+    "attributes": {
+      "name": "bank101",
+      "state": "installing",
+      "slug": "bank101",
+      ...
+    },
+    "links": {
+      "self": "/konnectors/bank101"
+    }
+  }]
+}
+```
+
+## Get informations about a konnector
+
+### GET /konnectors/:slug
+
+## Uninstall a konnector
+
+### DELETE /apps/:slug
+
+#### Request
+
+```http
+DELETE /konnectors/bank101 HTTP/1.1
+```
+
+#### Response
+
+```http
+HTTP/1.1 204 No Content
+```
