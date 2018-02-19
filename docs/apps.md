@@ -347,6 +347,10 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+## Get informations about an application
+
+### GET /apps/:slug
+
 ## Get the icon of an application
 
 ### GET /apps/:slug/icon
