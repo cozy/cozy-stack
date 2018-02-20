@@ -147,11 +147,36 @@ func (j JSONDoc) SetRev(rev string) {
 // Clone is used to create a copy of the document
 func (j JSONDoc) Clone() Doc {
 	cloned := JSONDoc{Type: j.Type}
-	cloned.M = make(map[string]interface{})
-	for k, v := range j.M {
-		cloned.M[k] = v
-	}
+	cloned.M = deepClone(j.M)
 	return cloned
+}
+
+func deepClone(m map[string]interface{}) map[string]interface{} {
+	clone := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		if vv, ok := v.(map[string]interface{}); ok {
+			clone[k] = deepClone(vv)
+		} else if vv, ok := v.([]interface{}); ok {
+			clone[k] = deepCloneSlice(vv)
+		} else {
+			clone[k] = v
+		}
+	}
+	return clone
+}
+
+func deepCloneSlice(s []interface{}) []interface{} {
+	clone := make([]interface{}, len(s))
+	for i, v := range s {
+		if vv, ok := v.(map[string]interface{}); ok {
+			clone[i] = deepClone(vv)
+		} else if vv, ok := v.([]interface{}); ok {
+			clone[i] = deepCloneSlice(vv)
+		} else {
+			clone[i] = v
+		}
+	}
+	return clone
 }
 
 // MarshalJSON implements json.Marshaller by proxying to internal map

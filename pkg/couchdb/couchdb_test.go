@@ -1,8 +1,10 @@
 package couchdb
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -314,6 +316,38 @@ func TestMain(m *testing.M) {
 	DeleteDB(TestPrefix, TestDoctype)
 
 	os.Exit(res)
+}
+
+func TestJSONDocClone(t *testing.T) {
+	var m map[string]interface{}
+	data := []byte(`{
+	"foo1":"bar",
+	"foo2": [0,1,2,3],
+	"foo3": ["abc", 1, 1.1],
+	"foo4": {
+		"bar1":"bar",
+		"bar2": [0,1,2,3],
+		"bar3": ["abc", 1, 1.1, { "key": "value", "key2": [{}, 1, 2, 3] }],
+		"bar4": {}
+	},
+	"foo5": 1,
+	"foo6": 0.001
+}`)
+
+	err := json.Unmarshal(data, &m)
+	assert.NoError(t, err)
+	j1 := JSONDoc{
+		Type: "toto",
+		M:    m,
+	}
+	j2 := j1.Clone().(JSONDoc)
+
+	assert.Equal(t, j1.Type, j2.Type)
+	assert.True(t, reflect.DeepEqual(j1.M, j2.M))
+
+	assert.False(t, reflect.ValueOf(j1.M["foo2"]).Pointer() == reflect.ValueOf(j2.M["foo2"]).Pointer())
+	assert.False(t, reflect.ValueOf(j1.M["foo3"]).Pointer() == reflect.ValueOf(j2.M["foo3"]).Pointer())
+	assert.False(t, reflect.ValueOf(j1.M["foo4"]).Pointer() == reflect.ValueOf(j2.M["foo4"]).Pointer())
 }
 
 func assertGotEvent(t *testing.T, eventType, id string) bool {
