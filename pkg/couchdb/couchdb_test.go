@@ -1,11 +1,14 @@
 package couchdb
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/cozy/checkup"
 	"github.com/cozy/cozy-stack/pkg/config"
@@ -314,6 +317,58 @@ func TestMain(m *testing.M) {
 	DeleteDB(TestPrefix, TestDoctype)
 
 	os.Exit(res)
+}
+
+func TestJSONDocClone(t *testing.T) {
+	var m map[string]interface{}
+	data := []byte(`{
+	"foo1": "bar",
+	"foo2": [0,1,2,3],
+	"foo3": ["abc", 1, 1.1],
+	"foo4": {
+		"bar1":"bar",
+		"bar2": [0,1,2,3],
+		"bar3": ["abc", 1, 1.1, { "key": "value", "key2": [{}, 1, 2, 3] }],
+		"bar4": {}
+	},
+	"foo5": 1,
+	"foo6": 0.001,
+	"foo7": "toto"
+}`)
+
+	err := json.Unmarshal(data, &m)
+	assert.NoError(t, err)
+	j1 := JSONDoc{
+		Type: "toto",
+		M:    m,
+	}
+	j2 := j1.Clone().(JSONDoc)
+
+	assert.Equal(t, j1.Type, j2.Type)
+	assert.True(t, reflect.DeepEqual(j1.M, j2.M))
+
+	assert.False(t, reflect.ValueOf(j1.M["foo2"]).Pointer() == reflect.ValueOf(j2.M["foo2"]).Pointer())
+	assert.False(t, reflect.ValueOf(j1.M["foo3"]).Pointer() == reflect.ValueOf(j2.M["foo3"]).Pointer())
+	assert.False(t, reflect.ValueOf(j1.M["foo4"]).Pointer() == reflect.ValueOf(j2.M["foo4"]).Pointer())
+
+	s1 := j1.M["foo1"].(string)
+	s2 := j2.M["foo1"].(string)
+	s3 := j1.M["foo7"].(string)
+	s4 := j2.M["foo7"].(string)
+
+	hdr1 := (*reflect.StringHeader)(unsafe.Pointer(&s1))
+	hdr2 := (*reflect.StringHeader)(unsafe.Pointer(&s2))
+	hdr3 := (*reflect.StringHeader)(unsafe.Pointer(&s3))
+	hdr4 := (*reflect.StringHeader)(unsafe.Pointer(&s4))
+
+	assert.Equal(t, hdr1.Data, hdr2.Data)
+	assert.Equal(t, hdr1.Len, hdr2.Len)
+
+	assert.Equal(t, hdr3.Data, hdr4.Data)
+	assert.Equal(t, hdr3.Len, hdr4.Len)
+
+	assert.NotEqual(t, hdr1.Data, hdr4.Data)
+	assert.NotEqual(t, hdr1.Len, hdr4.Len)
 }
 
 func assertGotEvent(t *testing.T, eventType, id string) bool {
