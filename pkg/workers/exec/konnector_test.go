@@ -23,8 +23,6 @@ import (
 
 var inst *instance.Instance
 
-var konnectorWorkerFunc = makeExecWorkerFunc()
-
 func TestUnknownDomain(t *testing.T) {
 	msg, err := jobs.NewMessage(map[string]interface{}{
 		"konnector": "unknownapp",
@@ -36,7 +34,7 @@ func TestUnknownDomain(t *testing.T) {
 		WorkerType: "konnector",
 	})
 	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
-	err = konnectorWorkerFunc(ctx)
+	err = worker(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Instance not found", err.Error())
 }
@@ -52,7 +50,7 @@ func TestUnknownApp(t *testing.T) {
 		WorkerType: "konnector",
 	})
 	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
-	err = konnectorWorkerFunc(ctx)
+	err = worker(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "Application is not installed", err.Error())
 }
@@ -92,12 +90,12 @@ func TestBadFileExec(t *testing.T) {
 
 	config.GetConfig().Konnectors.Cmd = ""
 	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
-	err = konnectorWorkerFunc(ctx)
+	err = worker(ctx)
 	assert.Error(t, err)
 	assert.Equal(t, "fork/exec : no such file or directory", err.Error())
 
 	config.GetConfig().Konnectors.Cmd = "echo"
-	err = konnectorWorkerFunc(ctx)
+	err = worker(ctx)
 	assert.NoError(t, err)
 }
 
@@ -197,7 +195,7 @@ echo "{\"type\": \"manifest\", \"message\": \"$(ls ${1}/manifest.konnector)\" }"
 
 	config.GetConfig().Konnectors.Cmd = tmpScript.Name()
 	ctx := jobs.NewWorkerContext("id", j).WithCookie(&konnectorWorker{})
-	err = konnectorWorkerFunc(ctx)
+	err = worker(ctx)
 	assert.NoError(t, err)
 
 	wg.Wait()

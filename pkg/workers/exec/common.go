@@ -21,20 +21,28 @@ import (
 var defaultTimeout = 300 * time.Second
 
 func init() {
-	addExecWorker("konnector", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType: "konnector",
+		WorkerStart: func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
+			return ctx.WithCookie(&konnectorWorker{}), nil
+		},
+		WorkerFunc:   worker,
+		WorkerCommit: commit,
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
 		Timeout:      defaultTimeout,
-	}, func() execWorker {
-		return &konnectorWorker{}
 	})
 
-	addExecWorker("service", &jobs.WorkerConfig{
+	jobs.AddWorker(&jobs.WorkerConfig{
+		WorkerType: "service",
+		WorkerStart: func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
+			return ctx.WithCookie(&serviceWorker{}), nil
+		},
+		WorkerFunc:   worker,
+		WorkerCommit: commit,
 		Concurrency:  runtime.NumCPU() * 2,
 		MaxExecCount: 2,
 		Timeout:      defaultTimeout,
-	}, func() execWorker {
-		return &serviceWorker{}
 	})
 }
 
@@ -48,119 +56,99 @@ type execWorker interface {
 	Commit(ctx *jobs.WorkerContext, errjob error) error
 }
 
-func makeExecWorkerFunc() jobs.WorkerFunc {
-	return func(ctx *jobs.WorkerContext) (err error) {
-		worker := ctx.Cookie().(execWorker)
-		domain := ctx.Domain()
+func worker(ctx *jobs.WorkerContext) (err error) {
+	worker := ctx.Cookie().(execWorker)
+	domain := ctx.Domain()
 
-		inst, err := instance.Get(domain)
-		if err != nil {
-			return err
-		}
-
-		workDir, err := worker.PrepareWorkDir(ctx, inst)
-		if err != nil {
-			worker.Logger(ctx).Errorf("PrepareWorkDir: %s", err)
-			return err
-		}
-		defer os.RemoveAll(workDir)
-
-		cmdStr, env, err := worker.PrepareCmdEnv(ctx, inst)
-		if err != nil {
-			worker.Logger(ctx).Errorf("PrepareCmdEnv: %s", err)
-			return err
-		}
-
-		var stderrBuf bytes.Buffer
-		cmd := createCmd(cmdStr, workDir) // #nosec
-		cmd.Env = env
-
-		// set stderr writable with a bytes.Buffer limited total size of 256Ko
-		cmd.Stderr = utils.LimitWriterDiscard(&stderrBuf, 256*1024)
-
-		// Log out all things printed in stderr, whatever the result of the
-		// konnector is.
-		log := worker.Logger(ctx)
-		defer func() {
-			if stderrBuf.Len() > 0 {
-				log.Error("Stderr: ", stderrBuf.String())
-			}
-		}()
-
-		cmdOut, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		scanBuf := make([]byte, 16*1024)
-		scanOut := bufio.NewScanner(cmdOut)
-		scanOut.Buffer(scanBuf, 64*1024)
-
-		timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
-			var result string
-			if err != nil {
-				result = metrics.WorkerExecResultErrored
-			} else {
-				result = metrics.WorkerExecResultSuccess
-			}
-			metrics.WorkersKonnectorsExecDurations.
-				WithLabelValues(worker.Slug(), result).
-				Observe(v)
-		}))
-		defer timer.ObserveDuration()
-
-		if err = cmd.Start(); err != nil {
-			return wrapErr(ctx, err)
-		}
-
-		go func() {
-			for scanOut.Scan() {
-				if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
-					log.Error(errOut)
-				}
-			}
-			if errs := scanOut.Err(); errs != nil {
-				log.Errorf("could not scan stdout: %s", err)
-			}
-		}()
-
-		waitDone := make(chan error)
-		go func() {
-			waitDone <- cmd.Wait()
-			close(waitDone)
-		}()
-
-		select {
-		case err = <-waitDone:
-		case <-ctx.Done():
-			err = ctx.Err()
-			killCmd(cmd)
-			<-waitDone
-		}
-
-		return worker.Error(inst, err)
+	inst, err := instance.Get(domain)
+	if err != nil {
+		return err
 	}
+
+	workDir, err := worker.PrepareWorkDir(ctx, inst)
+	if err != nil {
+		worker.Logger(ctx).Errorf("PrepareWorkDir: %s", err)
+		return err
+	}
+	defer os.RemoveAll(workDir)
+
+	cmdStr, env, err := worker.PrepareCmdEnv(ctx, inst)
+	if err != nil {
+		worker.Logger(ctx).Errorf("PrepareCmdEnv: %s", err)
+		return err
+	}
+
+	var stderrBuf bytes.Buffer
+	cmd := createCmd(cmdStr, workDir) // #nosec
+	cmd.Env = env
+
+	// set stderr writable with a bytes.Buffer limited total size of 256Ko
+	cmd.Stderr = utils.LimitWriterDiscard(&stderrBuf, 256*1024)
+
+	// Log out all things printed in stderr, whatever the result of the
+	// konnector is.
+	log := worker.Logger(ctx)
+	defer func() {
+		if stderrBuf.Len() > 0 {
+			log.Error("Stderr: ", stderrBuf.String())
+		}
+	}()
+
+	cmdOut, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	scanBuf := make([]byte, 16*1024)
+	scanOut := bufio.NewScanner(cmdOut)
+	scanOut.Buffer(scanBuf, 64*1024)
+
+	timer := prometheus.NewTimer(prometheus.ObserverFunc(func(v float64) {
+		var result string
+		if err != nil {
+			result = metrics.WorkerExecResultErrored
+		} else {
+			result = metrics.WorkerExecResultSuccess
+		}
+		metrics.WorkersKonnectorsExecDurations.
+			WithLabelValues(worker.Slug(), result).
+			Observe(v)
+	}))
+	defer timer.ObserveDuration()
+
+	if err = cmd.Start(); err != nil {
+		return wrapErr(ctx, err)
+	}
+
+	go func() {
+		for scanOut.Scan() {
+			if errOut := worker.ScanOutput(ctx, inst, scanOut.Bytes()); errOut != nil {
+				log.Error(errOut)
+			}
+		}
+		if errs := scanOut.Err(); errs != nil {
+			log.Errorf("could not scan stdout: %s", err)
+		}
+	}()
+
+	waitDone := make(chan error)
+	go func() {
+		waitDone <- cmd.Wait()
+		close(waitDone)
+	}()
+
+	select {
+	case err = <-waitDone:
+	case <-ctx.Done():
+		err = ctx.Err()
+		killCmd(cmd)
+		<-waitDone
+	}
+
+	return worker.Error(inst, err)
 }
 
-func addExecWorker(workerType string, cfg *jobs.WorkerConfig, createWorker func() execWorker) {
-	workerFunc := makeExecWorkerFunc()
-
-	workerStart := func(ctx *jobs.WorkerContext) (*jobs.WorkerContext, error) {
-		return ctx.WithCookie(createWorker()), nil
-	}
-
-	workerCommit := func(ctx *jobs.WorkerContext, errjob error) error {
-		if w, ok := ctx.Cookie().(execWorker); ok {
-			return w.Commit(ctx, errjob)
-		}
-		return nil
-	}
-
-	cfg = cfg.Clone()
-	cfg.WorkerType = workerType
-	cfg.WorkerStart = workerStart
-	cfg.WorkerFunc = workerFunc
-	cfg.WorkerCommit = workerCommit
-	jobs.AddWorker(cfg)
+func commit(ctx *jobs.WorkerContext, errjob error) error {
+	return ctx.Cookie().(execWorker).Commit(ctx, errjob)
 }
 
 func ctxToTimeLimit(ctx *jobs.WorkerContext) string {
