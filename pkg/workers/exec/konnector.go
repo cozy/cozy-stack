@@ -209,6 +209,11 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 		return
 	}
 
+	language := w.man.Language
+	if language == "" {
+		language = "node"
+	}
+
 	// Directly pass the job message as fields parameters
 	fieldsJSON := w.msg.ToJSON()
 	token := i.BuildKonnectorToken(w.man)
@@ -219,7 +224,7 @@ func (w *konnectorWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Ins
 		"COZY_CREDENTIALS=" + token,
 		"COZY_FIELDS=" + fieldsJSON,
 		"COZY_PARAMETERS=" + string(paramsJSON),
-		"COZY_TYPE=" + w.man.Type,
+		"COZY_LANGUAGE=" + language,
 		"COZY_LOCALE=" + i.Locale,
 		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),
 		"COZY_JOB_ID=" + ctx.ID(),

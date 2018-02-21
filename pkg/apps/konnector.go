@@ -16,10 +16,10 @@ type KonnManifest struct {
 	DocRev string `json:"_rev,omitempty"` // KonnManifest revision
 
 	Name             string      `json:"name"`
-	Type             string      `json:"type,omitempty"`
 	Editor           string      `json:"editor"`
 	DocSlug          string      `json:"slug"`
 	Developer        Developer   `json:"developer"`
+	Language         string      `json:"language,omitempty"`
 	LongDescription  string      `json:"long_description"`
 	ShortDescription string      `json:"short_description"`
 	Category         string      `json:"category"`
@@ -138,9 +138,6 @@ func (m *KonnManifest) Valid(field, value string) bool {
 func (m *KonnManifest) ReadManifest(r io.Reader, slug, sourceURL string) error {
 	var newManifest KonnManifest
 	if err := json.NewDecoder(r).Decode(&newManifest); err != nil {
-		return ErrBadManifest
-	}
-	if newManifest.Type != "node" {
 		return ErrBadManifest
 	}
 
