@@ -20,6 +20,7 @@ import (
 )
 
 var dryRunFlag bool
+var withMetadataFlag bool
 
 var fixerCmdGroup = &cobra.Command{
 	Use:   "fixer [command]",
@@ -290,8 +291,12 @@ var thumbnailsFixer = &cobra.Command{
 		domain := args[0]
 		c := newClient(domain, "io.cozy.jobs")
 		res, err := c.JobPush(&client.JobOptions{
-			Worker:    "thumbnailck",
-			Arguments: nil,
+			Worker: "thumbnailck",
+			Arguments: struct {
+				WithMetadata bool `json:"with_metadata"`
+			}{
+				WithMetadata: withMetadataFlag,
+			},
 		})
 		if err != nil {
 			return err
@@ -307,7 +312,9 @@ var thumbnailsFixer = &cobra.Command{
 
 func init() {
 	orphanAccountsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
+
 	thumbnailsFixer.Flags().BoolVar(&dryRunFlag, "dry-run", false, "Dry run")
+	thumbnailsFixer.Flags().BoolVar(&withMetadataFlag, "with-metadata", false, "Recalculate images metadata")
 
 	fixerCmdGroup.AddCommand(albumsCreatedAtFixerCmd)
 	fixerCmdGroup.AddCommand(jobsFixer)
