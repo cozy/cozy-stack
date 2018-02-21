@@ -2,7 +2,7 @@
 
 # See https://golang.org/doc/go1.10#test
 go test \
-	-coverprofile=coverage.txt \
+	-coverprofile=tests/coverage.txt \
 	-covermode=count \
 	-coverpkg=./pkg/...,./web/... \
 	-vet=off \
