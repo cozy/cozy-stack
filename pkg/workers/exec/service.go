@@ -93,7 +93,7 @@ func (w *serviceWorker) PrepareCmdEnv(ctx *jobs.WorkerContext, i *instance.Insta
 	env = []string{
 		"COZY_URL=" + i.PageURL("/", nil),
 		"COZY_CREDENTIALS=" + token,
-		"COZY_TYPE=" + w.opts.Type,
+		"COZY_LANGUAGE=node", // default to node language for services
 		"COZY_LOCALE=" + i.Locale,
 		"COZY_TIME_LIMIT=" + ctxToTimeLimit(ctx),
 		"COZY_JOB_ID=" + ctx.ID(),
