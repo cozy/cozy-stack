@@ -233,7 +233,7 @@ func login(c echo.Context) error {
 			switch {
 			// In case the second factor authentication mode is "mail", we also
 			// check that the mail has been confirmed. If not, 2FA is not actived.
-			case inst.AuthMode == instance.TwoFactorMail && inst.MailConfirmed:
+			case inst.HasAuthMode(instance.TwoFactorMail):
 				if len(twoFactorTrustedDeviceToken) > 0 {
 					successfulAuthentication = inst.ValidateTwoFactorTrustedDeviceSecret(
 						c.Request(), twoFactorTrustedDeviceToken)

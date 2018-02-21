@@ -65,6 +65,17 @@ func StringToAuthMode(authMode string) AuthMode {
 	}
 }
 
+// HasAuthMode returns whether or not the instance has the given authentication
+// mode activated.
+func (i *Instance) HasAuthMode(authMode AuthMode) bool {
+	switch authMode {
+	case TwoFactorMail:
+		return i.AuthMode == TwoFactorMail && i.MailConfirmed
+	default:
+		return i.AuthMode == authMode
+	}
+}
+
 // GenerateTwoFactorSecrets generates a (token, passcode) pair that can be
 // used as a two factor authentication secret value. The token is used to allow
 // the two-factor form — meaning the user has correctly entered its passphrase
@@ -152,24 +163,27 @@ func (i *Instance) ValidateTwoFactorTrustedDeviceSecret(req *http.Request, token
 	return err == nil
 }
 
-// SendMailConfirmationCode send a code to validate the email of the instance
-// in order to activate 2FA.
-func (i *Instance) SendMailConfirmationCode() error {
-	if i.MailConfirmed {
-		return nil
-	}
+// GenerateMailConfirmationCode generates a code for validating the user's
+// email.
+func (i *Instance) GenerateMailConfirmationCode() (string, error) {
 	email, err := i.SettingsEMail()
 	if err != nil {
-		return err
+		return "", err
 	}
 	h := hkdf.New(sha256.New, i.SessionSecret, nil, []byte(email))
 	key := make([]byte, 32)
 	_, err = io.ReadFull(h, key)
 	if err != nil {
-		return err
+		return "", err
 	}
-	passcode, err := totp.GenerateCodeCustom(base32.StdEncoding.EncodeToString(key),
+	return totp.GenerateCodeCustom(base32.StdEncoding.EncodeToString(key),
 		time.Now().UTC(), twoFactorTOTPOptions)
+}
+
+// SendMailConfirmationCode send a code to validate the email of the instance
+// in order to activate 2FA.
+func (i *Instance) SendMailConfirmationCode() error {
+	passcode, err := i.GenerateMailConfirmationCode()
 	if err != nil {
 		return err
 	}

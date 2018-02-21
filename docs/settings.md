@@ -68,9 +68,12 @@ HTTP/1.1 204 No Content
 Set-Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
 ```
 
-### PUT /settings/passphrase
+### PUT /settings/passphrase (without two-factor authentication)
 
-The user can change its passphrase with this route
+The user can change its passphrase with this route.
+
+For users with two-factor authentication activated, a second step on the same
+route is necessary to actually update the passphrase. See below.
 
 #### Request
 
@@ -89,6 +92,70 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 ```
 
 #### Response
+
+```http
+HTTP/1.1 204 No Content
+Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
+
+### PUT /settings/passphrase (with two-factor authentication)
+
+The user can change its passphrase with this route, with two-factor
+authentication to verify the user with more than its passphrase.
+
+#### Request (first step)
+
+```http
+PUT /settings/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
+```
+
+```json
+{
+  "current_passphrase": "ThisIsTheNewShinnyPassphraseChoosedByAlice"
+}
+```
+
+#### Response (first step)
+
+```http
+HTTP/1.1 200 OK
+Set-Cookie: cozysessid=AAAAShoo3uo1Maic4VibuGohlik2eKUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa; Path=/; Domain=alice.example.com; Max-Age=604800; HttpOnly; Secure
+```
+
+```json
+{
+  "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw=="
+}
+```
+
+At this point, the current passphrase has been exchanged against a token, and
+a passcode should have been sent to the user to authenticate on the second
+step.
+
+The token/passcode pair can be used on the second step to update the
+passphrase.
+
+#### Request (second step)
+
+```http
+PUT /settings/passphrase HTTP/1.1
+Host: alice.example.com
+Content-Type: application/json
+Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
+```
+
+```json
+{
+  "new_passphrase": "AliceHasChangedHerPassphraseAndThisIsTheNewPassphrase",
+  "two_factor_token": "YxOSUjxd0SNmuwEEDRHXfw==",
+  "two_factor_passcode": "4947178"
+}
+```
+
+#### Response (second step)
 
 ```http
 HTTP/1.1 204 No Content

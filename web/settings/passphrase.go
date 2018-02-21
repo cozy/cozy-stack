@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/sessions"
 	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -48,7 +49,7 @@ func registerPassphrase(c echo.Context) error {
 }
 
 func updatePassphrase(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
+	inst := middlewares.GetInstance(c)
 
 	// Even if the current passphrase is needed for this request to work, we
 	// enforce a valid permission to avoid having an unauthorized enpoint that
@@ -57,23 +58,42 @@ func updatePassphrase(c echo.Context) error {
 		return err
 	}
 
-	args := &struct {
-		Current    string `json:"current_passphrase"`
-		Passphrase string `json:"new_passphrase"`
+	args := struct {
+		Current           string `json:"current_passphrase"`
+		Passphrase        string `json:"new_passphrase"`
+		TwoFactorPasscode string `json:"two_factor_passcode"`
+		TwoFactorToken    []byte `json:"two_factor_token"`
 	}{}
-	if err := c.Bind(&args); err != nil {
-		return err
+	err := c.Bind(&args)
+	if err != nil {
+		return jsonapi.BadRequest(err)
 	}
 
 	newPassphrase := []byte(args.Passphrase)
 	currentPassphrase := []byte(args.Current)
-	if err := instance.UpdatePassphrase(newPassphrase, currentPassphrase); err != nil {
-		return jsonapi.BadRequest(err)
+
+	if inst.HasAuthMode(instance.TwoFactorMail) && len(args.TwoFactorToken) == 0 {
+		if inst.CheckPassphrase(currentPassphrase) == nil {
+			var twoFactorToken []byte
+			twoFactorToken, err = inst.SendTwoFactorPasscode()
+			if err != nil {
+				return err
+			}
+			return c.JSON(http.StatusOK, echo.Map{
+				"two_factor_token": twoFactorToken,
+			})
+		}
 	}
 
-	if _, err := auth.SetCookieForNewSession(c); err != nil {
+	err = inst.UpdatePassphrase(newPassphrase, currentPassphrase,
+		args.TwoFactorPasscode, args.TwoFactorToken)
+	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	if _, err = auth.SetCookieForNewSession(c); err != nil {
 		return err
 	}
+
 	return c.NoContent(http.StatusNoContent)
 }
 

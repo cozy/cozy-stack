@@ -222,13 +222,13 @@ func TestUpdatePassphrase(t *testing.T) {
 	badPass := []byte("not-passphrase")
 	empty := []byte("")
 
-	err = i.UpdatePassphrase(newPass, empty)
+	err = i.UpdatePassphrase(newPass, empty, "", nil)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = i.UpdatePassphrase(newPass, badPass)
+	err = i.UpdatePassphrase(newPass, badPass, "", nil)
 	assert.Error(t, err, "UpdatePassphrase requires the current passphrase")
 
-	err = i.UpdatePassphrase(newPass, currentPass)
+	err = i.UpdatePassphrase(newPass, currentPass, "", nil)
 	assert.NoError(t, err)
 
 	assert.NotEmpty(t, i.PassphraseHash, "PassphraseHash has not been saved")

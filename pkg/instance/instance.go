@@ -64,6 +64,9 @@ var (
 	ErrMissingPassphrase = errors.New("Missing new passphrase")
 	// ErrInvalidPassphrase is returned when the passphrase is invalid
 	ErrInvalidPassphrase = errors.New("Invalid passphrase")
+	// ErrInvalidTwoFactor is returned when the two-factor authentication
+	// verification is invalid.
+	ErrInvalidTwoFactor = errors.New("Invalid two-factor parameters")
 	// ErrContextNotFound is returned when the instance has no context
 	ErrContextNotFound = errors.New("Context not found")
 	// ErrResetAlreadyRequested is returned when a passphrase reset token is already set and valid
@@ -900,15 +903,24 @@ func (i *Instance) PassphraseRenew(pass, tok []byte) error {
 }
 
 // UpdatePassphrase replace the passphrase
-func (i *Instance) UpdatePassphrase(pass, current []byte) error {
+func (i *Instance) UpdatePassphrase(pass, current []byte, twoFactorPasscode string, twoFactorToken []byte) error {
 	if len(pass) == 0 {
 		return ErrMissingPassphrase
 	}
-	// the needUpdate flag is not checked against since the passphrase will be
-	// regenerated with updated parameters just after, if the passphrase match.
-	_, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current)
-	if err != nil {
-		return ErrInvalidPassphrase
+	// With two factor authentication, we do not check the validity of the
+	// current passphrase, but the validity of the pair passcode/token which has
+	// been exchanged against the current passphrase.
+	if i.HasAuthMode(TwoFactorMail) {
+		if !i.ValidateTwoFactorPasscode(twoFactorToken, twoFactorPasscode) {
+			return ErrInvalidTwoFactor
+		}
+	} else {
+		// the needUpdate flag is not checked against since the passphrase will be
+		// regenerated with updated parameters just after, if the passphrase match.
+		_, err := crypto.CompareHashAndPassphrase(i.PassphraseHash, current)
+		if err != nil {
+			return ErrInvalidPassphrase
+		}
 	}
 	hash, err := crypto.GenerateFromPassphrase(pass)
 	if err != nil {
