@@ -20,7 +20,7 @@ func GenerateRandomBytes(n int) []byte {
 
 // Timestamp returns the current timestamp, in seconds.
 func Timestamp() int64 {
-	return time.Now().UTC().Unix()
+	return time.Now().Unix()
 }
 
 // Base64Encode encodes a value using base64.
