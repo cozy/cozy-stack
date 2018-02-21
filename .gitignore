@@ -1,9 +1,9 @@
 /assets/locales/*.po
 !/assets/locales/en.po
-/coverage.txt
 /cozy-stack*
 /debian
 /storage
+/tests/coverage.txt
 /.cozy
 /.assets
 *.log
