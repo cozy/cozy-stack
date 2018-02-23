@@ -149,7 +149,7 @@ func (a *Archive) Serve(fs VFS, w http.ResponseWriter) error {
 			defer f.Close()
 			_, err = io.Copy(ze, f)
 			return err
-		})
+		}, 0)
 	}
 
 	return nil

@@ -806,7 +806,7 @@ func TestAuthorizeWithInvalidCSRFToken(t *testing.T) {
 	defer res.Body.Close()
 	assert.Equal(t, "403 Forbidden", res.Status)
 	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), "Invalid csrf token")
+	assert.Contains(t, string(body), "invalid csrf token")
 }
 
 func TestAuthorizeWithNoState(t *testing.T) {

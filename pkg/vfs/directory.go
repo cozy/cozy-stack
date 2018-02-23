@@ -236,7 +236,7 @@ func setTrashedForFilesInsideDir(fs VFS, doc *DirDoc, trashed bool) error {
 			files = append(files, file)
 		}
 		return err
-	})
+	}, 0)
 	if err != nil {
 		return err
 	}
