@@ -40,6 +40,7 @@
 * `/remote` - [Proxy for remote data/API](remote.md)
 * `/settings` - [Settings](settings.md)
 * `/sharings` - [Sharing](sharing.md)
+  * [Request for comments](sharing-design.md)
 
 ## Archives
 
