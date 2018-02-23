@@ -45,9 +45,17 @@ const (
 	conflictFormat = "%s (__cozy__: %s)"
 )
 
+// maxWalkRecursive is the maximum amount of recursion allowed for the
+// recursive walk process.
+const maxWalkRecursive = 512
+
 // ErrSkipDir is used in WalkFn as an error to skip the current
 // directory. It is not returned by any function of the package.
 var ErrSkipDir = errors.New("skip directories")
+
+// ErrWalkOverflow is used in the walk process when the maximum amount of
+// recursivity allowed is reached when browsing the index tree.
+var ErrWalkOverflow = errors.New("vfs: walk overflow")
 
 // Fs is an interface providing a set of high-level methods to interact with
 // the file-system binaries and metadata.
@@ -517,10 +525,13 @@ func Walk(fs VFS, root string, walkFn WalkFn) error {
 	if err != nil {
 		return walkFn(root, dir, file, err)
 	}
-	return walk(fs, root, dir, file, walkFn)
+	return walk(fs, root, dir, file, walkFn, 0)
 }
 
-func walk(fs VFS, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn) error {
+func walk(fs VFS, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, count int) error {
+	if count >= maxWalkRecursive {
+		return ErrWalkOverflow
+	}
 	err := walkFn(name, dir, file, nil)
 	if err != nil {
 		if dir != nil && err == ErrSkipDir {
@@ -546,7 +557,7 @@ func walk(fs VFS, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn) error 
 		} else {
 			fullpath = path.Join(name, d.DocName)
 		}
-		if err = walk(fs, fullpath, d, f, walkFn); err != nil {
+		if err = walk(fs, fullpath, d, f, walkFn, count+1); err != nil {
 			return err
 		}
 	}
