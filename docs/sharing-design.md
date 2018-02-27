@@ -1,5 +1,36 @@
 # Request for comments about the sharings
 
+## Hypothesis
+
+1. A sharer may not know the adresses of the recipients' cozy instances, but
+he/she has a way to send them an URL on his/her cozy to start the process.
+2. A user can preview a sharing before accepting it if the application
+supports this option. Else, he/she will have only the description and rules to
+make his/her mind about accepting or refusing the sharing.
+3. The data is duplicated: it is both on the owner's cozy, and on the
+recipients' cozy (no cloud federation like NextCloud).
+4. The applications say what is shared, the stack synchronizes that. The stack
+does the low-level stuff and gives primitives to the applications. The
+applications must use them in a responsible manner, and in particular, to
+avoid transitivity issues.
+5. The CouchDB replication will be used to synchronize the documents. It means
+that the documents will be same on the owner and on the recipients ("symetric
+sharing").
+6. For files and folders, the replicator will be customized to handle the
+specificities of the `io.cozy.files` doctype.
+7. The applications must be able to work with broken relationships between
+documents.
+8. The applications should know how to deal with CouchDB conflicts. At least,
+the default choice of a winner for conflicts by CouchDB should be acceptable
+if the applications don't do anything to detect and resolve conflicts.
+9. First safety principle: when a user B accepts a sharing from user A, the
+documents that were on the user B's cozy before the sharing are not sent to
+user A without an explicit action of user B (like moving a file to a shared
+directory).
+10. Second saferty principle: when two users, A and B, are sharing documents,
+a change of a document on the user A's cozy can't make an exiting document of
+user B enter in the sharing.
+
 ## Setup of a sharing
 
 ### Step 1: the owner creates the sharing
