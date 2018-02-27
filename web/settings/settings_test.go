@@ -19,6 +19,8 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
+
+	_ "github.com/cozy/cozy-stack/pkg/workers/mails"
 )
 
 var ts *httptest.Server
