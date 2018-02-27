@@ -16,10 +16,8 @@ import (
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
-	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web/jsonapi"
-	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 	jwt "gopkg.in/dgrijalva/jwt-go.v3"
 )
@@ -501,74 +499,6 @@ func TestListPermission(t *testing.T) {
 
 }
 
-func TestGetSharedWithMePermissionsByDoctype(t *testing.T) {
-	var err error
-	_, err = createSharingDocument(testInstance, "io.cozy.events", false,
-		permissions.Verbs(permissions.GET, permissions.POST))
-	assert.NoError(t, err)
-	_, err = createSharingDocument(testInstance, "io.cozy.events", false,
-		permissions.Verbs())
-	assert.NoError(t, err)
-	_, err = createSharingDocument(testInstance, "io.cozy.contacts", false,
-		permissions.Verbs())
-	assert.NoError(t, err)
-	_, err = createSharingDocument(testInstance, "io.cozy.events", true,
-		permissions.Verbs(permissions.GET, permissions.PUT))
-	assert.NoError(t, err)
-
-	req, err := http.NewRequest(http.MethodGet, ts.URL+
-		"/permissions/doctype/io.cozy.events/shared-with-me", nil)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	req.Header.Add(echo.HeaderContentType, "application/json")
-	res, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-
-	var resBody struct {
-		Data  []map[string]interface{}
-		Links *jsonapi.LinksList
-	}
-
-	err = json.NewDecoder(res.Body).Decode(&resBody)
-	assert.NoError(t, err)
-	assert.Len(t, resBody.Data, 2)
-}
-
-func TestGetSharedWithOthersPermissionsByDoctype(t *testing.T) {
-	var err error
-	_, err = createSharingDocument(testInstance, "io.cozy.contacts", true,
-		permissions.Verbs(permissions.GET, permissions.POST))
-	assert.NoError(t, err)
-	_, err = createSharingDocument(testInstance, "io.cozy.contacts", false,
-		permissions.Verbs())
-	assert.NoError(t, err)
-	_, err = createSharingDocument(testInstance, "io.cozy.contacts", true,
-		permissions.Verbs())
-	assert.NoError(t, err)
-	_, err = createSharingDocument(testInstance, "io.cozy.events", true,
-		permissions.Verbs(permissions.GET, permissions.PUT))
-	assert.NoError(t, err)
-
-	req, err := http.NewRequest(http.MethodGet, ts.URL+
-		"/permissions/doctype/io.cozy.contacts/shared-by-me", nil)
-	assert.NoError(t, err)
-	req.Header.Add(echo.HeaderAuthorization, "Bearer "+token)
-	req.Header.Add(echo.HeaderContentType, "application/json")
-	res, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-
-	var resBody struct {
-		Data  []map[string]interface{}
-		Links *jsonapi.LinksList
-	}
-
-	err = json.NewDecoder(res.Body).Decode(&resBody)
-	assert.NoError(t, err)
-	assert.Len(t, resBody.Data, 2)
-}
-
 func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {
 	e := &couchdb.JSONDoc{
 		Type: "io.cozy.events",
@@ -576,20 +506,4 @@ func createTestEvent(i *instance.Instance) (*couchdb.JSONDoc, error) {
 	}
 	err := couchdb.CreateDoc(i, e)
 	return e, err
-}
-
-func createSharingDocument(i *instance.Instance, doctype string, owner bool, verbs permissions.VerbSet) (*permissions.Permission, error) {
-	sharingID := utils.RandomString(32)
-	set := permissions.Set{
-		permissions.Rule{
-			Type:     doctype,
-			Selector: "referenced_by",
-			Values:   []string{"eventsrandomid"},
-			Verbs:    verbs,
-		},
-	}
-	if owner {
-		return permissions.CreateSharedByMeSet(i, sharingID, nil, set)
-	}
-	return permissions.CreateSharedWithMeSet(i, sharingID, set)
 }

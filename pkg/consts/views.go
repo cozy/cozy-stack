@@ -145,27 +145,6 @@ function(doc) {
 `,
 }
 
-// SharingRecipientView is used to find a contact that is a sharing recipient,
-// by its email or its cozy instance.
-var SharingRecipientView = &couchdb.View{
-	Name:    "sharingRecipient",
-	Doctype: Contacts,
-	Map: `
-function(doc) {
-  if (isArray(doc.email)) {
-    for (var i = 0; i < doc.email.length; i++) {
-      emit([doc.email[i].address, 'email']);
-    }
-  }
-  if (isArray(doc.cozy)) {
-    for (var i = 0; i < doc.cozy.length; i++) {
-      emit([doc.cozy[i].url, 'cozy']);
-    }
-  }
-}
-`,
-}
-
 // Views is the list of all views that are created by the stack.
 var Views = []*couchdb.View{
 	DiskUsageView,
@@ -175,7 +154,6 @@ var Views = []*couchdb.View{
 	PermissionsShareByCView,
 	PermissionsShareByDocView,
 	PermissionsByDoctype,
-	SharingRecipientView,
 }
 
 // ViewsByDoctype returns the list of views for a specified doc type.

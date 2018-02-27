@@ -60,12 +60,6 @@ msgstr "Confirm your password"
 msgid "Login Reconnect help"
 msgstr "Hello! Once you've confirmed your password, you'll access the permission board to allow or not the access to mobile app. It's up to you !"
 
-msgid "Login Connect from sharing title"
-msgstr "Hello %s!"
-
-msgid "Login Connect from sharing help"
-msgstr "Enter you password now"
-
 msgid "Login Connect from oauth title"
 msgstr "Confirm your password"
 
@@ -131,38 +125,11 @@ msgstr "Authorize %s to access your profile"
 msgid "Authorize App Title"
 msgstr "The application %s will not transmit any personal data to any third parties."
 
-msgid "Authorize Sharing Title"
-msgstr "New sharing from %s"
-
 msgid "Authorize More"
 msgstr "More…"
 
 msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
-
-msgid "Authorize Sharing Request"
-msgstr "%s would like to share the following data with you:"
-
-msgid "Authorize Sharing Permission start"
-msgstr "You can"
-
-msgid "Authorize Sharing Permission readonly"
-msgstr "view it"
-
-msgid "Authorize Sharing Permission readwrite"
-msgstr "view and change it"
-
-msgid "Authorize Sharing Permission end"
-msgstr "by confirming the sharing."
-
-msgid "Authorize Sharing Sync"
-msgstr "Changes will be instantly available in both Cozy:"
-
-msgid "Authorize Sharing Self"
-msgstr "Your Cozy: %s"
-
-msgid "Authorize Sharing Client"
-msgstr "Your contact's Cozy: %s"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data "
@@ -176,17 +143,11 @@ msgstr "By electing "
 msgid "Authorize Give permission keyword"
 msgstr "Authorize"
 
-msgid "Authorize Give Sharing permission keyword"
-msgstr "Accept"
-
 msgid "Authorize Give permission end"
 msgstr ", you accept that the application obtains access to your data, and in compliance with the terms of service and the privacy policy."
 
 msgid "Authorize Give App permission end"
 msgstr ", you accept that the application %s obtains access to your data, only locally and within your Cozy, and in compliance with the terms of service and the privacy policy."
-
-msgid "Authorize Give Sharing permission end"
-msgstr ", you authorize that the Cozy of %s obtains access to share data, in compliance with the terms of service and the privacy policy."
 
 msgid "Authorize Give App permission desc"
 msgstr "In order to improve the value of your Cozy (%s), the application %s requires access to the following data:"
@@ -194,14 +155,8 @@ msgstr "In order to improve the value of your Cozy (%s), the application %s requ
 msgid "Authorize Submit"
 msgstr "Authorize access"
 
-msgid "Authorize Submit Sharing"
-msgstr "Confirm"
-
 msgid "Authorize Cancel"
 msgstr "Deny access"
-
-msgid "Authorize Cancel Sharing"
-msgstr "Deny sharing"
 
 msgid "Error Title"
 msgstr "Sorry, an error occurred."
@@ -247,9 +202,6 @@ msgstr "Invalid response type"
 
 msgid "Error Invalid scope"
 msgstr "Invalid scope"
-
-msgid "Error Accept sharing failed"
-msgstr "Sorry, the setup of the sharing failed"
 
 msgid "Error Must be authenticated"
 msgstr "You must be authenticated"
@@ -353,51 +305,6 @@ msgstr "Societary (Maif)"
 msgid "Permissions org.fing.mesinfos.insuranceclaim"
 msgstr "Insurance claims (Maif)"
 
-msgid "Sharings Shared with Me directory"
-msgstr "Shared with Me"
-
-msgid "Connect to Cozy"
-msgstr "Connect to your Cozy"
-
-msgid "Hello recipient email"
-msgstr "Happy to see you %s!"
-
-msgid "Discovery URL help"
-msgstr "Please enter your Cozy URL to receive the sharing from %s"
-
-msgid "Discovery URL field"
-msgstr "URL"
-
-msgid "Discovery URL placeholder"
-msgstr "https://yourcozyaddress.cozy"
-
-msgid "Discovery Submit"
-msgstr "Send"
-
-msgid "No Cozy"
-msgstr "Don't have a Cozy yet?"
-
-msgid "Discover Cozy URL"
-msgstr "https://cozy.io/en/try-it/?from=sharing"
-
-msgid "Discover Cozy"
-msgstr "Discover Cozy now!"
-
-msgid "Forgotten URL"
-msgstr "Forgotten the URL? Don't panic."
-
-msgid "Forgotten URL email"
-msgstr "Search your email inbox for \"Cozy\"."
-
-msgid "Feeling lost"
-msgstr "Feeling a bit lost?"
-
-msgid "Online help URL"
-msgstr "http://cozy-cloud-help.helpscoutdocs.com/article/113-a-is-for-cozy-address"
-
-msgid "Online help"
-msgstr "Try out online help."
-
 msgid "Mail Greeting"
 msgstr "Hello"
 
@@ -426,18 +333,6 @@ msgid "Mail Reset Passphrase Outro"
 msgstr ""
 "You never asked for a new password? In this case you can forget this email.\n"
 "Just so you know, you have 15 minutes to choose a new password, then this email will self-destruct."
-
-msgid "Mail Sharing Request Subject"
-msgstr "New sharing request for your Cozy"
-
-msgid "Mail Sharing Request Intro"
-msgstr "{{.SharerPublicName}} wants to share a document with you!"
-
-msgid "Mail Sharing Request Button instruction"
-msgstr "The given description is: {{.Description}}."
-
-msgid "Mail Sharing Request Button text"
-msgstr "Accept this sharing"
 
 msgid "Mail Konnector Error Subject"
 msgstr "Collection problem for your Cozy"

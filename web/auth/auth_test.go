@@ -758,24 +758,6 @@ func TestAuthorizeFormSuccess(t *testing.T) {
 	}
 }
 
-func TestAuthorizeFormSharingSuccess(t *testing.T) {
-	u := url.QueryEscape("https://cozy.example.org/sharings/answer")
-	req, _ := http.NewRequest("GET", ts.URL+"/auth/authorize?response_type=cozy_sharing&state=123456&scope=files:read&redirect_uri="+u+"&client_id="+sharingClientID, nil)
-	req.Host = domain
-	res, err := client.Do(req)
-	assert.NoError(t, err)
-	defer res.Body.Close()
-	assert.Equal(t, "200 OK", res.Status)
-	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
-	body, _ := ioutil.ReadAll(res.Body)
-	assert.Contains(t, string(body), "would like to share the following data with you")
-	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
-	matches := re.FindStringSubmatch(string(body))
-	if assert.Len(t, matches, 2) {
-		csrfToken = matches[1]
-	}
-}
-
 func TestAuthorizeWhenNotLoggedIn(t *testing.T) {
 	anonymousClient := &http.Client{CheckRedirect: noRedirect}
 	v := &url.Values{

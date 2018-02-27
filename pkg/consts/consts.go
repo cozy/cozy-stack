@@ -1,9 +1,5 @@
 package consts
 
-import (
-	"github.com/cozy/cozy-stack/pkg/couchdb"
-)
-
 // Instances doc type for User's instance document
 const Instances = "instances"
 
@@ -100,78 +96,6 @@ const (
 	DiskUsageID = "io.cozy.settings.disk-usage"
 	// InstanceSettingsID is the id of settings document for the instance
 	InstanceSettingsID = "io.cozy.settings.instance"
-	// SharingSettingsID is the id of the settings document for sharings.
-	SharingSettingsID = "io.cozy.settings.sharings"
-)
-
-const (
-	// OneShotSharing is a sharing with no continuous updates
-	OneShotSharing = "one-shot"
-	// OneWaySharing is a sharing with unilateral continuous updates
-	OneWaySharing = "one-way"
-	// TwoWaySharing is a sharing with bilateral continuous updates
-	TwoWaySharing = "two-way"
-)
-
-const (
-	// SharingStatusPending is the sharing pending status
-	SharingStatusPending = "pending"
-	// SharingStatusMailNotSent is when the mail invitation was not sent
-	SharingStatusMailNotSent = "mail-not-sent"
-	// SharingStatusAccepted is the sharing accepted status
-	SharingStatusAccepted = "accepted"
-	// SharingStatusRevoked is to tell if a recipient is revoked.
-	SharingStatusRevoked = "revoked"
-)
-
-const (
-	// SharingResponseType is the response_type of the OAuth client used for
-	// sharings between two cozy instances
-	SharingResponseType = "cozy_sharing"
-)
-
-const (
-	// SelectorReferencedBy is the "referenced_by" selector.
-	SelectorReferencedBy = couchdb.SelectorReferencedBy
-)
-
-const (
-	// QueryParamRev is the key for the revision value in a query string. In
-	// web/data the revision is expected as "rev", not "Rev".
-	QueryParamRev = "rev"
-	// QueryParamDirID is the key for the `DirID` field of a vfs.FileDoc or
-	// vfs.DirDoc, in a query string.
-	QueryParamDirID = "Dir_id"
-	// QueryParamName is the key for the name value in a query string.
-	QueryParamName = "Name"
-	// QueryParamType is the key for the `type` value (file or directory) in
-	// a query string.
-	QueryParamType = "Type"
-	// QueryParamExecutable is key for the `executable` field of a vfs.FileDoc
-	// in a query string.
-	QueryParamExecutable = "Executable"
-	// QueryParamCreatedAt is the key for the `created_at` value in a query
-	// string.
-	QueryParamCreatedAt = "Created_at"
-	// QueryParamUpdatedAt is the key for the `Updated_at` value in a query
-	// string.
-	QueryParamUpdatedAt = "Updated_at"
-	// QueryParamRecursive is the key for the `recursive` value in a query
-	// string.
-	QueryParamRecursive = "Recursive"
-	// QueryParamTags is the key for the `tags` values in a query string.
-	QueryParamTags = "Tags"
-	// QueryParamReferencedBy is the key for the `referenced_by` values in a
-	// query string.
-	QueryParamReferencedBy = "Referenced_by"
-	// QueryParamSharer is used to tell if the user that received the query is
-	// the sharer or not.
-	QueryParamSharer = "Sharer"
-	// QueryParamAppSlug is used to transmit the application slug in a query
-	// string.
-	QueryParamAppSlug = "App_slug"
-	// QueryParamSharingID is used to transmit the sharingID in a query string.
-	QueryParamSharingID = "Sharing_id"
 )
 
 // AppsRegistry is an hard-coded list of known apps, with their source URLs

@@ -294,18 +294,6 @@ func init() {
 			Outro: "Mail Reset Passphrase Outro",
 		},
 		{
-			Name:    "sharing_request",
-			Subject: "Mail Sharing Request Subject",
-			Intro:   "Mail Sharing Request Intro",
-			Actions: []MailAction{
-				{
-					Instructions: "Mail Sharing Request Button instruction",
-					Text:         "Mail Sharing Request Button text",
-					Link:         "{{.SharingLink}}",
-				},
-			},
-		},
-		{
 			Name:    "konnector_error",
 			Subject: "Mail Konnector Error Subject",
 			Intro:   "Mail Konnector Error Intro",

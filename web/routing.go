@@ -25,7 +25,6 @@ import (
 	"github.com/cozy/cozy-stack/web/registry"
 	"github.com/cozy/cozy-stack/web/remote"
 	"github.com/cozy/cozy-stack/web/settings"
-	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
@@ -125,7 +124,6 @@ func SetupRoutes(router *echo.Echo) error {
 		realtime.Routes(router.Group("/realtime", mws...))
 		remote.Routes(router.Group("/remote", mws...))
 		settings.Routes(router.Group("/settings", mws...))
-		sharings.Routes(router.Group("/sharings", mws...))
 
 		// Careful, the normal middlewares NeedInstance and LoadSession are not
 		// applied to this group in web/routing since they should not be used for
