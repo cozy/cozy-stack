@@ -356,7 +356,7 @@ Content-Type: application/json
 ### Request
 
 ```http
-DELETE /data/:type/:id HTTP/1.1
+DELETE /data/:type/:id?rev=:rev HTTP/1.1
 ```
 
 ```http
