@@ -93,6 +93,15 @@ func IsCouchError(err error) (*Error, bool) {
 	return couchErr, isCouchErr
 }
 
+// IsInternalServerError checks if CouchDB has returned a 5xx code
+func IsInternalServerError(err error) bool {
+	couchErr, isCouchErr := IsCouchError(err)
+	if !isCouchErr {
+		return false
+	}
+	return couchErr.StatusCode/100 == 5
+}
+
 // IsNoDatabaseError checks if the given error is a couch no_db_file
 // error
 func IsNoDatabaseError(err error) bool {

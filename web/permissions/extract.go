@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/oauth"
@@ -86,6 +87,9 @@ func ParseJWT(c echo.Context, instance *instance.Instance, token string) (*permi
 	case permissions.AccessTokenAudience:
 		// An OAuth2 token is only valid if the client has not been revoked
 		if _, err := oauth.FindClient(instance, claims.Subject); err != nil {
+			if couchdb.IsInternalServerError(err) {
+				return nil, err
+			}
 			return nil, permissions.ErrInvalidToken
 		}
 		return permissions.GetForOauth(&claims)
