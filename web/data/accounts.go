@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	"net/url"
 
 	"github.com/cozy/cozy-stack/pkg/accounts"
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -19,20 +18,6 @@ import (
 // TODO: make specific routes for managing accounts. The overriding of the
 // /data/io.cozy.accounts/* routes is here mainly for retro-compatible reasons,
 // but specific routes would improve the API.
-
-func accountDoctype(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		doctype := consts.Accounts
-		c.Set("doctype", doctype)
-		docidraw := c.Param("docid")
-		docid, err := url.QueryUnescape(docidraw)
-		if err != nil {
-			return jsonapi.NewError(http.StatusBadRequest, "Invalid docid '%s'", docid)
-		}
-		c.Set("docid", docid)
-		return next(c)
-	}
-}
 
 func getAccount(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
