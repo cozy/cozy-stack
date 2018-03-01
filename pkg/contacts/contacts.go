@@ -1,8 +1,6 @@
 package contacts
 
 import (
-	"encoding/json"
-
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/workers/mails"
@@ -144,24 +142,5 @@ func (c *Contact) PrimaryCozyURL() string {
 func Find(db couchdb.Database, contactID string) (*Contact, error) {
 	doc := &Contact{}
 	err := couchdb.GetDoc(db, consts.Contacts, contactID, doc)
-	return doc, err
-}
-
-// FindByEmail returns the contact with the given email address, when possible
-func FindByEmail(db couchdb.Database, email string) (*Contact, error) {
-	var res couchdb.ViewResponse
-	err := couchdb.ExecView(db, consts.SharingRecipientView, &couchdb.ViewRequest{
-		Key:         []string{email, "email"},
-		IncludeDocs: true,
-		Limit:       1,
-	}, &res)
-	if err != nil {
-		return nil, err
-	}
-	if len(res.Rows) == 0 {
-		return nil, ErrNotFound
-	}
-	doc := &Contact{}
-	err = json.Unmarshal(res.Rows[0].Doc, &doc)
 	return doc, err
 }

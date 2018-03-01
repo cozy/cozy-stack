@@ -19,7 +19,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/oauth"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sessions"
-	"github.com/cozy/cozy-stack/pkg/sharings"
 	"github.com/cozy/cozy-stack/pkg/utils"
 	"github.com/cozy/cozy-stack/web/middlewares"
 	webpermissions "github.com/cozy/cozy-stack/web/permissions"
@@ -120,13 +119,8 @@ func renderLoginForm(c echo.Context, i *instance.Instance, code int, credsErrors
 		title = i.Translate("Login Reconnect title")
 		help = i.Translate("Login Reconnect help")
 	} else if redirect.Host == i.Domain && redirect.Path == "/auth/authorize" {
-		if strings.Contains(redirectStr, "sharing") {
-			title = i.Translate("Login Connect from sharing title", publicName)
-			help = i.Translate("Login Connect from sharing help")
-		} else {
-			title = i.Translate("Login Connect from oauth title")
-			help = i.Translate("Login Connect from oauth help")
-		}
+		title = i.Translate("Login Connect from oauth title")
+		help = i.Translate("Login Connect from oauth help")
 	} else {
 		if publicName == "" {
 			title = i.Translate("Login Welcome")
@@ -484,7 +478,7 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 			"Error":  "Error No scope parameter",
 		})
 	}
-	if params.resType != "code" && params.resType != consts.SharingResponseType {
+	if params.resType != "code" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.Domain,
 			"Error":  "Error Invalid response type",
@@ -502,15 +496,6 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error)
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.Domain,
 			"Error":  "Error Incorrect redirect_uri",
-		})
-	}
-
-	isSharingType := params.resType == consts.SharingResponseType
-	isSharingKind := params.client.ClientKind == "sharing"
-	if isSharingType != isSharingKind {
-		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-			"Domain": params.instance.Domain,
-			"Error":  "Error Invalid response type",
 		})
 	}
 
@@ -562,11 +547,6 @@ func authorizeForm(c echo.Context) error {
 		clientDomain = clientURL.Hostname()
 	}
 
-	tmpl := "authorize.html"
-	if params.resType == consts.SharingResponseType {
-		tmpl = "authorize_sharing.html"
-	}
-
 	// This Content-Security-Policy (CSP) nonce is here to allow the display of
 	// logos for OAuth clients on the authorize page.
 	if logoURI := params.client.LogoURI; logoURI != "" {
@@ -580,7 +560,7 @@ func authorizeForm(c echo.Context) error {
 		}
 	}
 
-	return c.Render(http.StatusOK, tmpl, echo.Map{
+	return c.Render(http.StatusOK, "authorize.html", echo.Map{
 		"Domain":       instance.Domain,
 		"ClientDomain": clientDomain,
 		"Locale":       instance.Locale,
@@ -635,22 +615,6 @@ func authorize(c echo.Context) error {
 	q.Set("client_id", params.clientID)
 	u.RawQuery = q.Encode()
 	u.Fragment = ""
-
-	if params.resType == consts.SharingResponseType {
-		if err = sharings.AcceptSharingRequest(instance, u, params.scope); err != nil {
-			instance.Logger().Warnf("[sharing] Error on accepting a sharing: %s", err)
-			// It is safer to delete the client, as it may have a token and
-			// this cozy has no document to acknowledge that
-			if errd := params.client.Delete(params.instance); errd != nil {
-				instance.Logger().Warnf("[sharing] and can't delete the client: %s", errd)
-			}
-			return c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": instance.Domain,
-				"Error":  "Error Invalid redirect_uri",
-			})
-		}
-		return Home(c)
-	}
 
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }

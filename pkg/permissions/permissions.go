@@ -44,12 +44,6 @@ const (
 
 	// TypeShareByLink if the value of Permission.Type for a share (by link) permission doc
 	TypeShareByLink = "share"
-
-	// TypeSharedByMe if the value of Permission.Type for a sharing permission doc (Owner=true)
-	TypeSharedByMe = "shared-by-me"
-
-	// TypeSharedWithMe if the value of Permission.Type for a sharing permission doc (Owner=false)
-	TypeSharedWithMe = "shared-with-me"
 )
 
 // ID implements jsonapi.Doc
@@ -181,18 +175,6 @@ func GetForWebapp(db couchdb.Database, slug string) (*Permission, error) {
 // GetForKonnector retrieves the Permission doc for a given konnector
 func GetForKonnector(db couchdb.Database, slug string) (*Permission, error) {
 	return getFromSource(db, TypeKonnector, consts.Konnectors, slug)
-}
-
-// GetForSharedByMe retrieves the Permission doc for a sharing owned by
-// the current cozy
-func GetForSharedByMe(db couchdb.Database, sharingID string) (*Permission, error) {
-	return getFromSource(db, TypeSharedByMe, consts.Sharings, sharingID)
-}
-
-// GetForSharedWithMe retrieves the Permission doc for a sharing accepted by
-// the current cozy
-func GetForSharedWithMe(db couchdb.Database, sharingID string) (*Permission, error) {
-	return getFromSource(db, TypeSharedWithMe, consts.Sharings, sharingID)
 }
 
 func getFromSource(db couchdb.Database, permType, docType, slug string) (*Permission, error) {
@@ -362,38 +344,8 @@ func CreateShareSet(db couchdb.Database, parent *Permission, codes map[string]st
 	return doc, nil
 }
 
-// CreateSharedByMeSet creates a Permission doc for sharing created on this instance
-func CreateSharedByMeSet(db couchdb.Database, sharingID string, codes map[string]string, set Set) (*Permission, error) {
-	doc := &Permission{
-		Type:        TypeSharedByMe,
-		Permissions: set,
-		Codes:       codes,
-		SourceID:    consts.Sharings + "/" + sharingID,
-	}
-	err := couchdb.CreateDoc(db, doc)
-	if err != nil {
-		return nil, err
-	}
-	return doc, nil
-}
-
-// CreateSharedWithMeSet creates a Permission doc for sharing accepted on this instance
-func CreateSharedWithMeSet(db couchdb.Database, sharingID string, set Set) (*Permission, error) {
-	doc := &Permission{
-		Type:        TypeSharedWithMe,
-		Permissions: set,
-		SourceID:    consts.Sharings + "/" + sharingID,
-	}
-	err := couchdb.CreateDoc(db, doc)
-	if err != nil {
-		return nil, err
-	}
-	return doc, nil
-}
-
 // DeleteShareSet revokes all the code in a permission set
 func DeleteShareSet(db couchdb.Database, permID string) error {
-
 	var doc *Permission
 	err := couchdb.GetDoc(db, consts.Permissions, permID, doc)
 	if err != nil {

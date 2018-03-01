@@ -82,8 +82,6 @@ jobs:
   #   - "push":           sending push notifications
   #   - "sendmail":       sending mails
   #   - "service":        launching services
-  #   - "sharedata":      data sharing between cozies
-  #   - "sharingupdates": update of sharings data
   #   - "thumbnail":      creatings and deleting thumbnails for images
   #   - "unzip":          unzipping tarball
   #
@@ -108,8 +106,8 @@ jobs:
     #   max_exec_count: 2
     #   timeout: 200s
 
-    # sharedata:      false
-    # sharingupdates: false
+    # push:     false
+    # sendmail: false
 
 # konnectors execution parameters for executing external processes.
 konnectors:

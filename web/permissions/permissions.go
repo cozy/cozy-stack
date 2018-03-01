@@ -170,19 +170,6 @@ func listByLinkPermissionsByDoctype(c echo.Context) error {
 	return listPermissionsByDoctype(c, "shared-by-link", permissions.TypeShareByLink)
 }
 
-// listSharedWithMePermissionsByDoctype returns the list of all the permissions
-// that apply for a given doctype for documents that were shared to the user.
-func listSharedWithMePermissionsByDoctype(c echo.Context) error {
-	return listPermissionsByDoctype(c, "shared-with-me", permissions.TypeSharedWithMe)
-}
-
-// listSharedByMePermissionsByDoctype returns the list of all the
-// permissions that apply for a given doctype for documents that the user
-// shared with others.
-func listSharedByMePermissionsByDoctype(c echo.Context) error {
-	return listPermissionsByDoctype(c, "shared-by-me", permissions.TypeSharedByMe)
-}
-
 type refAndVerb struct {
 	ID      string               `json:"id"`
 	DocType string               `json:"type"`
@@ -319,11 +306,7 @@ func Routes(router *echo.Group) {
 	router.PATCH("/konnectors/:slug", patchPermission(permissions.GetForKonnector, "slug"))
 
 	router.GET("/doctype/:doctype/shared-by-link", listByLinkPermissionsByDoctype)
-	router.GET("/doctype/:doctype/shared-with-me", listSharedWithMePermissionsByDoctype)
-	router.GET("/doctype/:doctype/shared-by-me", listSharedByMePermissionsByDoctype)
 
 	// Legacy routes, kept here for compatibility reasons
 	router.GET("/doctype/:doctype/sharedByLink", listByLinkPermissionsByDoctype)
-	router.GET("/doctype/:doctype/sharedWithMe", listSharedWithMePermissionsByDoctype)
-	router.GET("/doctype/:doctype/sharedWithOthers", listSharedByMePermissionsByDoctype)
 }
