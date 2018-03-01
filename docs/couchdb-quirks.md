@@ -29,7 +29,10 @@ reasons. In general, you can follow these two rules of thumb:
    documents for a login from `windows`, sorted by `browser`, you can use the
    index, but you should use `os, browser, ip` for the sort (or at least `os,
    browser`, even if it is seems to weird to sort on `os` when all the sorted
-   documents will have the same value, `windows`).
+   documents will have the same value, `windows`). Please note that using
+   `use_index` on a request, the results will be sorted by default according
+   to this rule. So, you can omit the `sort` operator on the query (except if
+   you want the `descending` order).
 
 
 ## Old revisions
@@ -46,7 +49,7 @@ recreate the document from this revision.
 
 With an old revision, it's possible to get the content of the document at this
 revision with `GET /db/{docid}?rev={rev}` if the database was not compacted.
-On CouchDB 2.x, compacts happen automatically on all databases on times to
+On CouchDB 2.x, compacts happen automatically on all databases from times to
 times.
 
 A `purge` operation consists to remove the tombstone for the deleted
