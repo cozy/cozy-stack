@@ -145,10 +145,6 @@ func sendTwoFactorConfirmMail(c echo.Context) error {
 	}
 
 	inst := middlewares.GetInstance(c)
-	if inst.MailConfirmed {
-		return c.NoContent(http.StatusNoContent)
-	}
-
 	doc, err := inst.SettingsDocument()
 	if err != nil {
 		return err
