@@ -27,7 +27,7 @@ if the applications don't do anything to detect and resolve conflicts.
 documents that were on the user B's cozy before the sharing are not sent to
 user A without an explicit action of user B (like moving a file to a shared
 directory).
-10. Second saferty principle: when two users, A and B, are sharing documents,
+10. Second safety principle: when two users, A and B, are sharing documents,
 a change of a document on the user A's cozy can't make an exiting document of
 user B enter in the sharing.
 
@@ -57,7 +57,7 @@ Alice’s instance the answer.
 
 ### Step 3: the initial replication starts
 
-Alice’s Cozy instance creates token and send them with other informations as the
+Alice’s Cozy instance creates token and sends them with other informations as the
 response of the answer request from Bob’s instance. At this moment, both
 instances are ready to start to replicate data to the other instances. So, let’s
 do the initial replication.
