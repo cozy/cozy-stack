@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -35,107 +34,6 @@ func TestTriggersBadArguments(t *testing.T) {
 	if assert.Error(t, err) {
 		assert.Equal(t, ErrUnknownTrigger, err)
 	}
-}
-
-func TestMemSchedulerWithTimeTriggers(t *testing.T) {
-	var wAt sync.WaitGroup
-	var wIn sync.WaitGroup
-	bro := jobs.NewMemBroker()
-	bro.Start(jobs.WorkersList{
-		{
-			WorkerType:   "worker",
-			Concurrency:  1,
-			MaxExecCount: 1,
-			Timeout:      1 * time.Millisecond,
-			WorkerFunc: func(ctx *jobs.WorkerContext) error {
-				var msg string
-				if err := ctx.UnmarshalMessage(&msg); err != nil {
-					return err
-				}
-				switch msg {
-				case "@at":
-					wAt.Done()
-				case "@in":
-					wIn.Done()
-				}
-				return nil
-			},
-		},
-	})
-
-	msg1, _ := jobs.NewMessage("@at")
-	msg2, _ := jobs.NewMessage("@in")
-
-	wAt.Add(1) // 1 time in @at
-	wIn.Add(1) // 1 time in @in
-
-	at := &TriggerInfos{
-		Type:       "@at",
-		Domain:     "cozy.local.memsched_timetriggers",
-		Arguments:  time.Now().Add(2 * time.Second).Format(time.RFC3339),
-		WorkerType: "worker",
-		Message:    msg1,
-	}
-	in := &TriggerInfos{
-		Domain:     "cozy.local.memsched_timetriggers",
-		Type:       "@in",
-		Arguments:  "1s",
-		WorkerType: "worker",
-		Message:    msg2,
-	}
-
-	triggers := []*TriggerInfos{at, in}
-	sch := newMemScheduler()
-	sch.Start(bro)
-
-	for _, infos := range triggers {
-		trigger, err := NewTrigger(infos)
-		if !assert.NoError(t, err) {
-			return
-		}
-		err = sch.Add(trigger)
-		if !assert.NoError(t, err) {
-			return
-		}
-	}
-
-	ts, err := sch.GetAll("cozy.local.memsched_timetriggers")
-	assert.NoError(t, err)
-	assert.Len(t, ts, len(triggers))
-
-	for _, trigger := range ts {
-		switch trigger.Infos().Type {
-		case "@at":
-			assert.EqualValues(t, at, trigger.Infos())
-		case "@in":
-			assert.EqualValues(t, in, trigger.Infos())
-		default:
-			t.Fatalf("unknown trigger ID %s", trigger.Infos().TID)
-		}
-	}
-
-	done := make(chan bool)
-	go func() {
-		wAt.Wait()
-		done <- true
-	}()
-
-	go func() {
-		wIn.Wait()
-		done <- true
-	}()
-
-	for i := 0; i < len(ts); i++ {
-		<-done
-	}
-
-	for _, trigger := range triggers {
-		err = sch.Delete(trigger.Domain, trigger.TID)
-		assert.NoError(t, err)
-	}
-
-	err = sch.Shutdown(context.Background())
-	assert.NoError(t, err)
 }
 
 func TestMemSchedulerWithDebounce(t *testing.T) {

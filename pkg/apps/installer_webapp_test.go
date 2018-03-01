@@ -509,55 +509,6 @@ func TestWebappInstallFromHTTP(t *testing.T) {
 	}
 }
 
-func TestWebappInstallFromHTTPWithBadChecksum(t *testing.T) {
-	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
-		Type:      apps.Webapp,
-		Slug:      "http-cozy-drive-bad-checksum",
-		SourceURL: "https://github.com/cozy/cozy-drive/archive/71e5cde66f754f986afc7111962ed2dd361bd5e4.tar.gz#466aa0815926fdbf33fda523af2b9bf34520906ffbb9bf512ddf20df2992a46f",
-	})
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	go inst.Run()
-
-	_, _, err = inst.Poll()
-	assert.NoError(t, err)
-
-	_, _, err = inst.Poll()
-	assert.Error(t, err)
-	assert.Equal(t, apps.ErrBadChecksum, err)
-}
-
-func TestWebappInstallFromHTTPWithGoodChecksum(t *testing.T) {
-	manGen = manifestWebapp
-	manName = apps.WebappManifestName
-	inst, err := apps.NewInstaller(db, fs, &apps.InstallerOptions{
-		Operation: apps.Install,
-		Type:      apps.Webapp,
-		Slug:      "http-cozy-drive-good-checksum",
-		SourceURL: "https://github.com/cozy/cozy-drive/archive/71e5cde66f754f986afc7111962ed2dd361bd5e4.tar.gz#290c3fbeaa61506493fbb4075105b0c7d4eba42020bcc6fd5e1d7a834c20b417",
-	})
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	go inst.Run()
-
-	for {
-		_, done, err := inst.Poll()
-		if !assert.NoError(t, err) {
-			return
-		}
-		if done {
-			break
-		}
-	}
-}
-
 func TestWebappUninstall(t *testing.T) {
 	manGen = manifestWebapp
 	manName = apps.WebappManifestName
