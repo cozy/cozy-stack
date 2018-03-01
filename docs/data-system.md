@@ -477,6 +477,8 @@ Content-Type: application/json
 ["io.cozy.files", "io.cozy.jobs", "io.cozy.triggers", "io.cozy.settings"]
 ```
 
-## Mango
+## Others
 
-The creation and usage of [Mango indexes](mango.md) is possible.
+- The creation and usage of [Mango indexes](mango.md) is possible.
+- CouchDB behaviors are not always straight forward: see [some
+  quirks](couchdb-quirks.md) for more details.
