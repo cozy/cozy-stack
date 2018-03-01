@@ -74,6 +74,11 @@ func getDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	docid := c.Get("docid").(string)
 
+	// Accounts are handled specifically to remove the auth fields
+	if doctype == consts.Accounts {
+		return getAccount(c)
+	}
+
 	if err := perm.CheckReadable(doctype); err != nil {
 		return err
 	}
@@ -105,6 +110,11 @@ func getDoc(c echo.Context) error {
 func createDoc(c echo.Context) error {
 	doctype := c.Get("doctype").(string)
 	instance := middlewares.GetInstance(c)
+
+	// Accounts are handled specifically to remove the auth fields
+	if doctype == consts.Accounts {
+		return createAccount(c)
+	}
 
 	doc := couchdb.JSONDoc{Type: doctype}
 	if err := json.NewDecoder(c.Request().Body).Decode(&doc.M); err != nil {
@@ -158,13 +168,19 @@ func createNamedDoc(c echo.Context, doc couchdb.JSONDoc) error {
 // the given id.
 func UpdateDoc(c echo.Context) error {
 	instance := middlewares.GetInstance(c)
+	doctype := c.Param("doctype")
+
+	// Accounts are handled specifically to remove the auth fields
+	if doctype == consts.Accounts {
+		return updateAccount(c)
+	}
 
 	var doc couchdb.JSONDoc
 	if err := json.NewDecoder(c.Request().Body).Decode(&doc); err != nil {
 		return jsonapi.NewError(http.StatusBadRequest, err)
 	}
 
-	doc.Type = c.Param("doctype")
+	doc.Type = doctype
 
 	if err := perm.CheckWritable(doc.Type); err != nil {
 		return err
@@ -401,22 +417,6 @@ func Routes(router *echo.Group) {
 	// API Routes that don't depend on a doctype
 	router.GET("/", dataAPIWelcome)
 	router.GET("/_all_doctypes", allDoctypes)
-
-	// Accounts are handled specifically to remove the auth fields
-	{
-		accountGroup := router.Group("/"+consts.Accounts, accountDoctype)
-		accountGroup.GET("/:docid", getAccount)
-		accountGroup.PUT("/:docid", updateAccount)
-		accountGroup.DELETE("/:docid", DeleteDoc)
-		accountGroup.GET("/:docid/relationships/references", echo.NotFoundHandler)
-		accountGroup.POST("/:docid/relationships/references", echo.MethodNotAllowedHandler)
-		accountGroup.DELETE("/:docid/relationships/references", echo.MethodNotAllowedHandler)
-		accountGroup.POST("/", createAccount)
-		accountGroup.GET("/_all_docs", allDocs)
-		accountGroup.POST("/_all_docs", allDocs)
-		accountGroup.POST("/_index", defineIndex)
-		accountGroup.POST("/_find", findDocuments)
-	}
 
 	group := router.Group("/:doctype", ValidDoctype)
 
