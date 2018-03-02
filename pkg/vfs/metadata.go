@@ -49,11 +49,11 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 	var e MetaExtractor
 	switch doc.Mime {
 	case "image/jpeg":
-		e = NewExifExtractor(true)
+		e = NewExifExtractor(doc.CreatedAt, true)
 	case "image/heic", "image/heif":
-		e = NewExifExtractor(false)
+		e = NewExifExtractor(doc.CreatedAt, false)
 	case "image/png", "image/gif":
-		e = NewImageExtractor()
+		e = NewImageExtractor(doc.CreatedAt)
 	case "audio/mp3", "audio/mpeg", "audio/ogg", "audio/x-m4a", "audio/flac":
 		e = NewAudioExtractor()
 	}
@@ -65,14 +65,15 @@ func NewMetaExtractor(doc *FileDoc) *MetaExtractor {
 
 // ImageExtractor is used to extract width/height from images
 type ImageExtractor struct {
-	w  *io.PipeWriter
-	r  *io.PipeReader
-	ch chan interface{}
+	w         *io.PipeWriter
+	r         *io.PipeReader
+	ch        chan interface{}
+	createdAt time.Time
 }
 
 // NewImageExtractor returns an extractor for images
-func NewImageExtractor() *ImageExtractor {
-	e := &ImageExtractor{}
+func NewImageExtractor(createdAt time.Time) *ImageExtractor {
+	e := &ImageExtractor{createdAt: createdAt}
 	e.r, e.w = io.Pipe()
 	e.ch = make(chan interface{})
 	go e.Start()
@@ -113,7 +114,7 @@ func (e *ImageExtractor) Abort(err error) {
 // Result is called to get the extracted metadata
 func (e *ImageExtractor) Result() Metadata {
 	m := NewMetadata()
-	m["datetime"] = time.Now()
+	m["datetime"] = e.createdAt
 	cfg := <-e.ch
 	switch cfg := cfg.(type) {
 	case image.Config:
@@ -132,10 +133,10 @@ type ExifExtractor struct {
 }
 
 // NewExifExtractor returns an extractor for EXIF metadata
-func NewExifExtractor(withImageExtractor bool) *ExifExtractor {
+func NewExifExtractor(createdAt time.Time, withImageExtractor bool) *ExifExtractor {
 	e := &ExifExtractor{}
 	if withImageExtractor {
-		e.im = NewImageExtractor()
+		e.im = NewImageExtractor(createdAt)
 	}
 	e.r, e.w = io.Pipe()
 	e.ch = make(chan interface{})
