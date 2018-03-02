@@ -82,9 +82,8 @@ func updatePassphrase(c echo.Context) error {
 			return c.JSON(http.StatusOK, echo.Map{
 				"two_factor_token": twoFactorToken,
 			})
-		} else {
-			return instance.ErrInvalidPassphrase
 		}
+		return instance.ErrInvalidPassphrase
 	}
 
 	err = inst.UpdatePassphrase(newPassphrase, currentPassphrase,
