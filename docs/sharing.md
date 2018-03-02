@@ -105,7 +105,7 @@ Content-Type: application/vnd.api+json
       "app_slug": "drive",
       "owner": true,
       "created_at": "2018-01-04T12:35:08Z",
-      "updated_at": "2018-01-04T13:45:43Z"
+      "updated_at": "2018-01-04T13:45:43Z",
       "members": [
         {
           "status": "owner",
@@ -114,12 +114,11 @@ Content-Type: application/vnd.api+json
           "instance": "alice.example.net"
         },
         {
-          "status": "pending",
+          "status": "mail-not-sent",
           "name": "Bob",
           "email": "bob@example.net",
-          "instance": ""
         },
-      ]
+      ],
       "rules": [
         {
           "title": "folder",

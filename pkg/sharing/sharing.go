@@ -4,8 +4,17 @@ import (
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/instance"
+)
+
+const (
+	// StatusOwner is the status for the member that is owner
+	StatusOwner = "owner"
+	// StatusMailNotSent is the initial status for a recipient, before the
+	// mail invitation is sent
+	StatusMailNotSent = "mail-not-sent"
 )
 
 // Member contains the information about a recipient (or the sharer) for a sharing
@@ -77,20 +86,61 @@ func (s *Sharing) Clone() couchdb.Doc {
 	return &cloned
 }
 
+// BeOwner is a function that setup a sharing on the cozy of its owner
+func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
+	if s.AppSlug == "" {
+		s.AppSlug = slug
+	}
+	s.CreatedAt = time.Now()
+	s.UpdatedAt = s.CreatedAt
+	s.Owner = true
+
+	name, err := inst.PublicName()
+	if err != nil {
+		return err
+	}
+	email, err := inst.SettingsEMail()
+	if err != nil {
+		return err
+	}
+
+	s.Members = make([]Member, 1)
+	s.Members[0].Status = StatusOwner
+	s.Members[0].Name = name
+	s.Members[0].Email = email
+	s.Members[0].Instance = inst.Domain
+
+	return nil
+}
+
+// AddContact adds the contact with the given identifier
+func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
+	c, err := contacts.Find(inst, contactID)
+	if err != nil {
+		return err
+	}
+	addr, err := c.ToMailAddress()
+	if err != nil {
+		return err
+	}
+	m := Member{
+		Status:   StatusMailNotSent,
+		Name:     addr.Name,
+		Email:    addr.Email,
+		Instance: c.PrimaryCozyURL(),
+	}
+	s.Members = append(s.Members, m)
+	return nil
+}
+
 // Create checks that the sharing is OK and it persists it in CouchDB if it is the case.
-func (s *Sharing) Create(inst *instance.Instance, slug string) error {
+func (s *Sharing) Create(inst *instance.Instance) error {
 	if len(s.Rules) == 0 {
 		return ErrNoRules
 	}
 	if len(s.Members) < 2 {
 		return ErrNoRecipients
 	}
-
-	if s.AppSlug == "" {
-		s.AppSlug = slug
-	}
-	s.CreatedAt = time.Now()
-	s.UpdatedAt = s.CreatedAt
 
 	if err := couchdb.CreateDoc(inst, s); err != nil {
 		return err

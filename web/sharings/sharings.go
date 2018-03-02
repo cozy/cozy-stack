@@ -2,10 +2,10 @@ package sharings
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -41,15 +41,25 @@ func CreateSharing(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden)
 	}
 
-	if rel, ok := obj.GetRelationship("recipients"); ok {
-		fmt.Printf("rel = %#v\n", rel)
-		// TODO rel should be an array of { id, type } to be used to fill sharing.Members
-	}
-
-	if err := s.Create(inst, slug); err != nil {
+	if err := s.BeOwner(inst, slug); err != nil {
 		return wrapErrors(err)
 	}
 
+	if rel, ok := obj.GetRelationship("recipients"); ok {
+		if data, ok := rel.Data.([]interface{}); ok {
+			for _, ref := range data {
+				if id, ok := ref.(map[string]interface{})["id"].(string); ok {
+					if err := s.AddContact(inst, id); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	if err := s.Create(inst); err != nil {
+		return wrapErrors(err)
+	}
 	return jsonapi.Data(c, http.StatusCreated, &apiSharing{&s}, nil)
 }
 
@@ -78,6 +88,7 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 		requestPerm.Type != permissions.TypeOauth {
 		return "", permissions.ErrInvalidAudience
 	}
+	// TODO add tests
 	for _, r := range s.Rules {
 		pr := permissions.Rule{
 			Title:    r.Title,
@@ -99,6 +110,8 @@ func checkCreatePermissions(c echo.Context, s *sharing.Sharing) (string, error) 
 // wrapErrors returns a formatted error
 func wrapErrors(err error) error {
 	switch err {
+	case contacts.ErrNoMailAddress:
+		return jsonapi.InvalidAttribute("recipients", err)
 	case sharing.ErrNoRecipients, sharing.ErrNoRules:
 		return jsonapi.BadRequest(err)
 	}
