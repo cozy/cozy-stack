@@ -1,0 +1,2 @@
+Contact: mailto:security@cozycloud.cc
+Policy: https://cozy.github.io/cozy-stack/security.html
