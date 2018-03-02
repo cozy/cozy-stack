@@ -461,6 +461,7 @@ func copyHeader(dst, src http.Header) {
 		for _, h := range doNotCopyHeaders {
 			if k == h {
 				copy = false
+				break
 			}
 		}
 		if copy {
