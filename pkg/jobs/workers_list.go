@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cozy/cozy-stack/pkg/config"
+	"github.com/cozy/cozy-stack/pkg/logger"
 )
 
 // WorkersList is a map associating a worker type with its acutal
@@ -36,7 +37,8 @@ func GetWorkersList() ([]*WorkerConfig, error) {
 	for _, c := range workersConfs {
 		_, found := findWorkerByType(c.WorkerType)
 		if !found {
-			return nil, fmt.Errorf("Defined configuration for the worker %q that does not exist",
+			logger.WithNamespace("workers_list").Warnf(
+				"Defined configuration for the worker %q that does not exist",
 				c.WorkerType)
 		}
 	}
