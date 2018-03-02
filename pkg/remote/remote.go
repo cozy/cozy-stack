@@ -442,13 +442,31 @@ func ProxyRemoteAsset(name string, w http.ResponseWriter) error {
 	return err
 }
 
+var doNotCopyHeaders = []string{
+	"Set-Cookie",
+	"Access-Control-Allow-Origin",
+	"Access-Control-Allow-Methods",
+	"Access-Control-Allow-Credentials",
+	"Access-Control-Allow-Headers",
+	"Access-Control-Expose-Headers",
+	"Access-Control-Max-Age",
+	"Content-Security-Policy",
+	"Strict-Transport-Security",
+	"X-Frame-Options",
+}
+
 func copyHeader(dst, src http.Header) {
 	for k, vv := range src {
-		if k == "Set-Cookie" {
-			continue
+		copy := true
+		for _, h := range doNotCopyHeaders {
+			if k == h {
+				copy = false
+			}
 		}
-		for _, v := range vv {
-			dst.Add(k, v)
+		if copy {
+			for _, v := range vv {
+				dst.Add(k, v)
+			}
 		}
 	}
 }
