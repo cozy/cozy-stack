@@ -490,6 +490,13 @@ HTTP/1.1 302 Moved Temporarily
 Location: https://client.org/?state=Eh6ahshepei5Oojo&access_code=Aih7ohth#
 ```
 
+### GET /auth/authorize/sharing & POST /auth/authorize/sharing
+
+They are similar to `/auth/authorize`: they also make the user accept an OAuth
+thing, but it is specialized for sharing. They are a few differences, like the
+scope format (sharing rules, not permissions) and the redirection after the
+POST.
+
 ### POST /auth/access_token
 
 Now, the client can check that the state is correct, and if it is the case, ask

@@ -66,6 +66,12 @@ msgstr "Confirm your password"
 msgid "Login Connect from oauth help"
 msgstr "Hello! Once you've confirmed your password, you'll access the permission board where you can allow the application to access your data or not. It's up to you !"
 
+msgid "Login Connect from sharing title"
+msgstr "Hello %s!"
+
+msgid "Login Connect from sharing help"
+msgstr "Enter you password now"
+
 msgid "Login Two factor error"
 msgstr "The passcode you entered is incorrect, please try again."
 
@@ -125,11 +131,38 @@ msgstr "Authorize %s to access your profile"
 msgid "Authorize App Title"
 msgstr "The application %s will not transmit any personal data to any third parties."
 
+msgid "Authorize Sharing Title"
+msgstr "New sharing from %s"
+
 msgid "Authorize More"
 msgstr "More…"
 
 msgid "Authorize Client presentation"
 msgstr "would like permission to access your Cozy"
+
+msgid "Authorize Sharing Request"
+msgstr "%s would like to share the following data with you:"
+
+msgid "Authorize Sharing Permission start"
+msgstr "You can"
+
+msgid "Authorize Sharing Permission readonly"
+msgstr "view it"
+
+msgid "Authorize Sharing Permission readwrite"
+msgstr "view and change it"
+
+msgid "Authorize Sharing Permission end"
+msgstr "by confirming the sharing."
+
+msgid "Authorize Sharing Sync"
+msgstr "Changes will be instantly available in both Cozy:"
+
+msgid "Authorize Sharing Self"
+msgstr "Your Cozy: %s"
+
+msgid "Authorize Sharing Client"
+msgstr "Your contact's Cozy: %s"
 
 msgid "Authorize Policy sentence"
 msgstr "You can read its policy about the usage it will make of your data "
@@ -154,6 +187,9 @@ msgstr "In order to improve the value of your Cozy (%s), the application %s requ
 
 msgid "Authorize Submit"
 msgstr "Authorize access"
+
+msgid "Authorize Submit Sharing"
+msgstr "Confirm"
 
 msgid "Authorize Cancel"
 msgstr "Deny access"
