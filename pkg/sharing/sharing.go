@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"errors"
+	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -47,8 +48,8 @@ type Sharing struct {
 	Owner       bool      `json:"owner"`
 	Open        bool      `json:"open_sharing,omitempty"`
 	Description string    `json:"description,omitempty"`
-	PreviewPath string    `json:"preview_path,omitempty"`
 	AppSlug     string    `json:"app_slug"`
+	PreviewPath string    `json:"preview_path,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
@@ -162,8 +163,25 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 
 // FindMemberByShareCode returns the member that is linked to the sharing by
 // the given share code
-func (s *Sharing) FindMemberByShareCode(inst *instance.Instance, shareCode string) (*Member, error) {
+func (s *Sharing) FindMemberByShareCode(db couchdb.Database, shareCode string) (*Member, error) {
 	return nil, errors.New("Not implemented")
+}
+
+// RegisterCozyURL saves a new Cozy URL for a member
+func (s *Sharing) RegisterCozyURL(db couchdb.Database, m *Member, u *url.URL) error {
+	if u.Host == "" {
+		return ErrInvalidURL
+	}
+	if u.Scheme == "" {
+		u.Scheme = "https" // Set https as the default scheme
+	}
+	u.Path = ""
+	u.RawPath = ""
+	u.RawQuery = ""
+	u.Fragment = ""
+	m.Instance = u.String()
+	// TODO persist
+	return nil
 }
 
 var _ couchdb.Doc = &Sharing{}

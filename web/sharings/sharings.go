@@ -3,6 +3,7 @@ package sharings
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/contacts"
@@ -104,10 +105,47 @@ func GetDiscovery(c echo.Context) error {
 	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, shareCode, member)
 }
 
+// PostDiscovery is called when the recipient has given its Cozy URL. Either an
+// error is returned or the recipient will be redirected to their cozy.
+//
+// Note: we don't have an anti-CSRF system, we rely on shareCode being secret.
+func PostDiscovery(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	shareCode := c.FormValue("sharecode")
+	cozyURL := c.FormValue("url")
+
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return wrapErrors(err)
+	}
+
+	member, err := s.FindMemberByShareCode(inst, shareCode)
+	if err != nil {
+		return wrapErrors(err)
+	}
+	u, err := url.Parse(strings.TrimSpace(cozyURL))
+	if err != nil {
+		return wrapErrors(err)
+	}
+	if err := s.RegisterCozyURL(inst, member, u); err != nil {
+		return wrapErrors(err)
+	}
+
+	redirectURL := member.Instance + "/auth/sharing"
+	if c.Request().Header.Get("Accept") == "application/json" {
+		return c.JSON(http.StatusOK, echo.Map{
+			"redirect": redirectURL,
+		})
+	}
+	return c.Redirect(http.StatusFound, redirectURL)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
 	router.GET("/:sharing-id/discovery", GetDiscovery)
+	router.POST("/:sharing-id/discovery", PostDiscovery)
 }
 
 func extractSlugFromSourceID(sourceID string) (string, error) {
@@ -156,6 +194,8 @@ func wrapErrors(err error) error {
 		return jsonapi.InvalidAttribute("recipients", err)
 	case sharing.ErrNoRecipients, sharing.ErrNoRules:
 		return jsonapi.BadRequest(err)
+	case sharing.ErrInvalidURL:
+		return jsonapi.InvalidParameter("url", err)
 	}
 	return err
 }

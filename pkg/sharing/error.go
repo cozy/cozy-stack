@@ -7,4 +7,6 @@ var (
 	ErrNoRules = errors.New("A sharing must have rules")
 	// ErrNoRecipients is used when a sharing is created without a recipient
 	ErrNoRecipients = errors.New("A sharing must have recipients")
+	// ErrInvalidURL is used for invalid URL of a Cozy instance
+	ErrInvalidURL = errors.New("The Cozy URL is invalid")
 )

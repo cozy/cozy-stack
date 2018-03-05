@@ -48,7 +48,7 @@ Create a new sharing. The sharing rules and recipients must be specified. The
 
 ```http
 POST /sharings/ HTTP/1.1
-Host: cozy.example.net
+Host: alice.example.net
 Content-Type: application/vnd.api+json
 ```
 
@@ -137,7 +137,7 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-#### GET /sharings/:sharing-id/discovery
+### GET /sharings/:sharing-id/discovery
 
 If no preview_path is set, it's an URL to this route that will be sent to the
 users to notify them that someone wants to share something with them. On this
@@ -145,7 +145,7 @@ page, they can fill the URL of their Cozy (if the user has already filled its
 Cozy URL in a previous sharing, the form will be pre-filled and the user will
 just have to click OK).
 
-##### Query-String
+#### Query-String
 
 | Parameter | Description                        |
 | --------- | ---------------------------------- |
@@ -154,5 +154,68 @@ just have to click OK).
 The sharecode is the same as the one used on the preview page to give the user
 the right to display the to-be-shared documents.
 
+#### Example
+
+```http
+GET /sharings/ce8835a061d0ef68947afe69a0046722/discovery?sharecode=eiJ3iepoaihohz1Y HTTP/1.1
+Host: alice.example.net
+```
+
+### POST /sharings/:sharing-id/discovery
+
+Give to the cozy of the sharer the URL of the Cozy of one recipient. The sharer
+will register its-self as an OAuth client on the recipient cozy, and then will
+ask the recipient to accept the permissions on its instance.
+
+This route exists in two versions, the version is selected by the HTTP header
+`Accept`
+
+#### Classical (`x-www-url-encoded`)
+
+| Parameter | Description                           |
+| --------- | ------------------------------------- |
+| sharecode | a code that identify the recipient    |
+| url       | the URL of the Cozy for the recipient |
+
+##### Example
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/discovery HTTP/1.1
+Host: alice.example.org
+Content-Type: application/x-www-form-urlencoded
+Accept: text/html
+
+sharecode=eiJ3iepoaihohz1Y&url=https://bob.example.net/
+```
+
+```http
+HTTP/1.1 302 Moved Temporarily
+Location: https://bob.example.net/auth/sharing?...
+```
+
+#### JSON
+
+This version can be more convenient for applications that implement the
+preview page.
+
+##### Example
+
+```http
+POST /sharings/ce8835a061d0ef68947afe69a0046722/discovery HTTP/1.1
+Host: alice.example.org
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+sharecode=eiJ3iepoaihohz1Y&url=https://bob.example.net/
+```
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "redirect": "https://bob.example.net/auth/sharing?..."
+}
+```
 
 {% endraw %}
