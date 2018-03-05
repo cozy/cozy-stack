@@ -421,3 +421,48 @@ msgstr "If you are not the source of this addition you can revoke the new device
 
 msgid "Mail New Registration Revoke text"
 msgstr "Revoke this device"
+
+msgid "Sharing Connect to Cozy"
+msgstr "Connect to your Cozy"
+
+msgid "Sharing Hello recipient email"
+msgstr "Happy to see you %s!"
+
+msgid "Sharing Discovery URL help"
+msgstr "Please enter your Cozy URL to receive the sharing from %s"
+
+msgid "Sharing Discovery URL field"
+msgstr "URL"
+
+msgid "Sharing Discovery URL placeholder"
+msgstr "https://yourcozyaddress.cozy"
+
+msgid "Sharing URL Discovery error"
+msgstr "The Cozy URL you entered is incorrect, please try again"
+
+msgid "Sharing Discovery Submit"
+msgstr "Send"
+
+msgid "Sharing No Cozy"
+msgstr "Don't have a Cozy yet?"
+
+msgid "Sharing Discover Cozy URL"
+msgstr "https://cozy.io/en/try-it/?from=sharing"
+
+msgid "Sharing Discover Cozy"
+msgstr "Discover Cozy now!"
+
+msgid "Sharing Forgotten URL"
+msgstr "Forgotten the URL? Don't panic."
+
+msgid "Sharing Forgotten URL email"
+msgstr "Search your email inbox for \"Cozy\"."
+
+msgid "Sharing Feeling lost"
+msgstr "Feeling a bit lost?"
+
+msgid "Sharing Online help URL"
+msgstr "http://cozy-cloud-help.helpscoutdocs.com/article/113-a-is-for-cozy-address"
+
+msgid "Sharing Online help"
+msgstr "Try out online help."

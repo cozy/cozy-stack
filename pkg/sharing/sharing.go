@@ -1,6 +1,7 @@
 package sharing
 
 import (
+	"errors"
 	"time"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -147,6 +148,22 @@ func (s *Sharing) Create(inst *instance.Instance) error {
 	}
 	// TODO create the permissions set for preview if preview_path is filled
 	return nil
+}
+
+// FindSharing retrieves a sharing document from its ID
+func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
+	res := &Sharing{}
+	err := couchdb.GetDoc(db, consts.Sharings, sharingID, res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// FindMemberByShareCode returns the member that is linked to the sharing by
+// the given share code
+func (s *Sharing) FindMemberByShareCode(inst *instance.Instance, shareCode string) (*Member, error) {
+	return nil, errors.New("Not implemented")
 }
 
 var _ couchdb.Doc = &Sharing{}

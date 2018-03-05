@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cozy/cozy-stack/pkg/contacts"
+	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/web/jsonapi"
@@ -63,9 +64,50 @@ func CreateSharing(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusCreated, &apiSharing{&s}, nil)
 }
 
+func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, shareCode string, m *sharing.Member) error {
+	publicName, _ := inst.PublicName()
+	return c.Render(code, "sharing_discovery.html", echo.Map{
+		"Domain":        inst.Domain,
+		"Locale":        inst.Locale,
+		"PublicName":    publicName,
+		"RecipientCozy": m.Instance,
+		"RecipientName": m.Name,
+		"SharingID":     sharingID,
+		"ShareCode":     shareCode,
+		"URLError":      code != http.StatusOK,
+	})
+}
+
+// GetDiscovery displays a form where a recipient can give the adress of their
+// cozy instance
+func GetDiscovery(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+	sharingID := c.Param("sharing-id")
+	shareCode := c.QueryParam("sharecode")
+
+	s, err := sharing.FindSharing(inst, sharingID)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": inst.Domain,
+			"Error":  "Error Invalid sharing id",
+		})
+	}
+
+	member, err := s.FindMemberByShareCode(inst, shareCode)
+	if err != nil {
+		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": inst.Domain,
+			"Error":  "Error Invalid sharecode",
+		})
+	}
+
+	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, shareCode, member)
+}
+
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
 	router.POST("/", CreateSharing)
+	router.GET("/:sharing-id/discovery", GetDiscovery)
 }
 
 func extractSlugFromSourceID(sourceID string) (string, error) {

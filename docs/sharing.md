@@ -137,4 +137,22 @@ Content-Type: application/vnd.api+json
 }
 ```
 
+#### GET /sharings/:sharing-id/discovery
+
+If no preview_path is set, it's an URL to this route that will be sent to the
+users to notify them that someone wants to share something with them. On this
+page, they can fill the URL of their Cozy (if the user has already filled its
+Cozy URL in a previous sharing, the form will be pre-filled and the user will
+just have to click OK).
+
+##### Query-String
+
+| Parameter | Description                        |
+| --------- | ---------------------------------- |
+| sharecode | a code that identify the recipient |
+
+The sharecode is the same as the one used on the preview page to give the user
+the right to display the to-be-shared documents.
+
+
 {% endraw %}
