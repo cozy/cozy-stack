@@ -40,7 +40,7 @@ func (s *Sharing) SendMails(inst *instance.Instance) error {
 	}
 
 	for i, m := range s.Members {
-		if i == 0 || m.Status != StatusMailNotSent { //i == 0 is for the owner
+		if i == 0 || m.Status != MemberStatusMailNotSent { //i == 0 is for the owner
 			continue
 		}
 		link := m.MailLink(inst, s, &s.Credentials[i-1])
@@ -48,7 +48,7 @@ func (s *Sharing) SendMails(inst *instance.Instance) error {
 			inst.Logger().Errorf("[sharing] Can't send email for %#v: %s", m.Email, err)
 			return ErrMailNotSent
 		}
-		m.Status = StatusPendingInvitation
+		m.Status = MemberStatusPendingInvitation
 	}
 
 	return couchdb.UpdateDoc(inst, s)

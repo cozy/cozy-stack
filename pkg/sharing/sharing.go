@@ -4,6 +4,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cozy/cozy-stack/client/auth"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
@@ -17,14 +18,14 @@ const (
 )
 
 const (
-	// StatusOwner is the status for the member that is owner
-	StatusOwner = "owner"
-	// StatusMailNotSent is the initial status for a recipient, before the
-	// mail invitation is sent
-	StatusMailNotSent = "mail-not-sent"
-	// StatusPendingInvitation is for a recipient that has not (yet) accepted
-	// the sharing, but the invitation mail was sent
-	StatusPendingInvitation = "pending"
+	// MemberStatusOwner is the status for the member that is owner
+	MemberStatusOwner = "owner"
+	// MemberStatusMailNotSent is the initial status for a recipient, before
+	// the mail invitation is sent
+	MemberStatusMailNotSent = "mail-not-sent"
+	// MemberStatusPendingInvitation is for a recipient that has not (yet)
+	// accepted the sharing, but the invitation mail was sent
+	MemberStatusPendingInvitation = "pending"
 )
 
 // Member contains the information about a recipient (or the sharer) for a sharing
@@ -38,7 +39,15 @@ type Member struct {
 // Credentials is the struct with the secret stuff used for authentication &
 // authorization.
 type Credentials struct {
-	State string `json:"state"` // OAuth state to accept the sharing
+	// OAuth state to accept the sharing (authorize phase)
+	State string `json:"state"`
+
+	// Information needed to send data to the member
+	Client      *auth.Client      `json:"client,omitempty"`
+	AccessToken *auth.AccessToken `json:"access_token,omitempty"`
+
+	// The OAuth ClientID used for authentifying incoming requests from the member
+	InboundClientID string `json:"inbound_client_id,omitempty"`
 }
 
 // Rule describes how the sharing behave when a document matching the rule is
@@ -129,7 +138,7 @@ func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
 	}
 
 	s.Members = make([]Member, 1)
-	s.Members[0].Status = StatusOwner
+	s.Members[0].Status = MemberStatusOwner
 	s.Members[0].Name = name
 	s.Members[0].Email = email
 	s.Members[0].Instance = inst.Domain
@@ -148,7 +157,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 		return err
 	}
 	m := Member{
-		Status:   StatusMailNotSent,
+		Status:   MemberStatusMailNotSent,
 		Name:     addr.Name,
 		Email:    addr.Email,
 		Instance: c.PrimaryCozyURL(),
@@ -206,8 +215,37 @@ func (s *Sharing) FindMemberByState(db couchdb.Database, state string) (*Member,
 	return nil, ErrMemberNotFound
 }
 
+// RegisterClient asks the Cozy of the member to register a new OAuth client
+func (m *Member) RegisterClient(inst *instance.Instance, u *url.URL) (*auth.Client, error) {
+	req := &auth.Request{
+		Domain: u.Host,
+		Scheme: u.Scheme,
+	}
+
+	publicName, _ := inst.PublicName()
+	if publicName == "" {
+		publicName = inst.Domain
+	}
+	redirectURI := inst.PageURL("/sharings/answer", nil)
+	clientURI := inst.PageURL("", nil)
+	authClient := &auth.Client{
+		RedirectURIs: []string{redirectURI},
+		ClientName:   publicName,
+		ClientKind:   "sharing",
+		SoftwareID:   "github.com/cozy/cozy-stack",
+		ClientURI:    clientURI,
+	}
+
+	resClient, err := req.RegisterClient(authClient)
+	if err != nil {
+		return nil, err
+	}
+	m.Instance = u.String()
+	return resClient, nil
+}
+
 // RegisterCozyURL saves a new Cozy URL for a member
-func (s *Sharing) RegisterCozyURL(db couchdb.Database, m *Member, u *url.URL) error {
+func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, u *url.URL) error {
 	if u.Host == "" {
 		return ErrInvalidURL
 	}
@@ -218,9 +256,30 @@ func (s *Sharing) RegisterCozyURL(db couchdb.Database, m *Member, u *url.URL) er
 	u.RawPath = ""
 	u.RawQuery = ""
 	u.Fragment = ""
-	m.Instance = u.String()
-	// TODO persist
-	return nil
+
+	if !s.Owner {
+		return ErrInvalidSharing
+	}
+	if len(s.Members) != len(s.Credentials)+1 {
+		return ErrInvalidSharing
+	}
+	var creds *Credentials
+	for i, member := range s.Members {
+		if *m == member {
+			creds = &s.Credentials[i-1]
+		}
+	}
+	if creds == nil {
+		return ErrInvalidSharing
+	}
+
+	client, err := m.RegisterClient(inst, u)
+	if err != nil {
+		// TODO log
+		return ErrInvalidURL
+	}
+	creds.Client = client
+	return couchdb.UpdateDoc(inst, s)
 }
 
 var _ couchdb.Doc = &Sharing{}
