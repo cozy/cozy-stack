@@ -71,8 +71,6 @@ var (
 	ErrContextNotFound = errors.New("Context not found")
 	// ErrResetAlreadyRequested is returned when a passphrase reset token is already set and valid
 	ErrResetAlreadyRequested = errors.New("The passphrase reset has already been requested")
-	// ErrMailIsNotConfirmed is returned when the mail has not been confirmed
-	ErrMailIsNotConfirmed = errors.New("Mail has not been confirmed")
 	// ErrUnknownAuthMode is returned when an unknwon authentication mode is
 	// used.
 	ErrUnknownAuthMode = errors.New("Unknown authentication mode")

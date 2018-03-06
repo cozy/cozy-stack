@@ -123,9 +123,6 @@ func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool
 // SendTwoFactorPasscode sends by mail the two factor secret to the owner of
 // the instance. It returns the generated token.
 func (i *Instance) SendTwoFactorPasscode() ([]byte, error) {
-	if i.HasAuthMode(TwoFactorMail) {
-		return nil, ErrMailIsNotConfirmed
-	}
 	token, passcode, err := i.GenerateTwoFactorSecrets()
 	if err != nil {
 		return nil, err
