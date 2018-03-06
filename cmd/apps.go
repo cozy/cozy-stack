@@ -82,6 +82,14 @@ var showWebappCmd = &cobra.Command{
 	},
 }
 
+var showWebappTriggersCmd = &cobra.Command{
+	Use:   "show-triggers [slug]",
+	Short: "Show the application triggers",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return showWebAppTriggers(cmd, args, consts.Apps)
+	},
+}
+
 var showKonnectorCmd = &cobra.Command{
 	Use:   "show [slug]",
 	Short: "Show the application attributes",
@@ -395,6 +403,45 @@ func showApp(cmd *cobra.Command, args []string, appType string) error {
 	return nil
 }
 
+func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error {
+	if flagAppsDomain == "" {
+		errPrintfln("%s", errAppsMissingDomain)
+		return cmd.Usage()
+	}
+	if len(args) < 1 {
+		return cmd.Usage()
+	}
+	c := newClient(flagAppsDomain, appType, consts.Triggers)
+	app, err := c.GetApp(&client.AppOptions{
+		Slug:    args[0],
+		AppType: appType,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	var triggerIds []string
+	for _, service := range *app.Attrs.Services {
+		triggerIds = append(triggerIds, service.TriggerID)
+	}
+	var triggers []*client.Trigger
+	for _, triggerId := range triggerIds {
+		trigger, err := c.GetTrigger(triggerId)
+		if err != nil {
+			return err
+		}
+
+		triggers = append(triggers, trigger)
+	}
+	json, err := json.MarshalIndent(triggers, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
@@ -453,6 +500,7 @@ func init() {
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(showWebappCmd)
+	webappsCmdGroup.AddCommand(showWebappTriggersCmd)
 	webappsCmdGroup.AddCommand(installWebappCmd)
 	webappsCmdGroup.AddCommand(updateWebappCmd)
 	webappsCmdGroup.AddCommand(uninstallWebappCmd)
