@@ -282,7 +282,7 @@ confirmation should have been sent via email.
 
 Status codes:
   * `204 No Content`: when the mail has been confirmed and two-factor authentication is activated
-  * `422 Unprocessable Entity`: when the confirmation code given is not good.
+  * `422 Unprocessable Entity`: when the given confirmation code is not good.
 
 #### Request
 
