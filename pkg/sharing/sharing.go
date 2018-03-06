@@ -8,7 +8,13 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+)
+
+const (
+	// StateLen is the number of bytes for the OAuth state parameter
+	StateLen = 16
 )
 
 const (
@@ -25,6 +31,12 @@ type Member struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Instance string `json:"instance,omitempty"`
+}
+
+// Credentials is the struct with the secret stuff used for authentication &
+// authorization.
+type Credentials struct {
+	State string `json:"state"` // OAuth state to accept the sharing
 }
 
 // Rule describes how the sharing behave when a document matching the rule is
@@ -53,10 +65,14 @@ type Sharing struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
+	Rules []Rule `json:"rules"`
+
 	// Members[0] is the owner, Members[1...] are the recipients
 	Members []Member `json:"members"`
 
-	Rules []Rule `json:"rules"`
+	// On the owner, credentials[i] is associated to members[i+1]
+	// On a recipient, there is only credentials[0] (for the owner)
+	Credentials []Credentials `json:"credentials"`
 }
 
 // ID returns the sharing qualified identifier
@@ -80,6 +96,10 @@ func (s *Sharing) Clone() couchdb.Doc {
 	cloned.Members = make([]Member, len(s.Members))
 	for i := range s.Members {
 		cloned.Members[i] = s.Members[i]
+	}
+	cloned.Credentials = make([]Credentials, len(s.Credentials))
+	for i := range s.Credentials {
+		cloned.Credentials[i] = s.Credentials[i]
 	}
 	cloned.Rules = make([]Rule, len(s.Rules))
 	for i := range s.Rules {
@@ -132,6 +152,11 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 		Instance: c.PrimaryCozyURL(),
 	}
 	s.Members = append(s.Members, m)
+	state := crypto.Base64Encode(crypto.GenerateRandomBytes(StateLen))
+	creds := Credentials{
+		State: string(state),
+	}
+	s.Credentials = append(s.Credentials, creds)
 	return nil
 }
 

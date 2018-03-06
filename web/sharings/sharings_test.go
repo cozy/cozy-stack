@@ -85,6 +85,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 	assert.Equal(t, attrs["owner"], true)
 	assert.NotEmpty(t, attrs["created_at"])
 	assert.NotEmpty(t, attrs["updated_at"])
+	assert.Nil(t, attrs["credentials"])
 
 	members := attrs["members"].([]interface{})
 	assert.Len(t, members, 2)

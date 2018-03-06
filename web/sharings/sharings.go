@@ -18,6 +18,8 @@ import (
 
 type apiSharing struct {
 	*sharing.Sharing
+	// XXX Hide the credentials
+	Credentials *interface{} `json:"credentials,omitempty"`
 }
 
 func (s *apiSharing) Included() []jsonapi.Object             { return nil }
@@ -62,7 +64,7 @@ func CreateSharing(c echo.Context) error {
 	if err := s.Create(inst); err != nil {
 		return wrapErrors(err)
 	}
-	return jsonapi.Data(c, http.StatusCreated, &apiSharing{&s}, nil)
+	return jsonapi.Data(c, http.StatusCreated, &apiSharing{&s, nil}, nil)
 }
 
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, shareCode string, m *sharing.Member) error {
