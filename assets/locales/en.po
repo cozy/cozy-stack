@@ -458,8 +458,26 @@ msgstr "If you are not the source of this addition you can revoke the new device
 msgid "Mail New Registration Revoke text"
 msgstr "Revoke this device"
 
+msgid "Mail Sharing Request Subject"
+msgstr "New sharing request for your Cozy"
+
+msgid "Mail Sharing Request Intro"
+msgstr "{{.SharerPublicName}} wants to share a document with you!"
+
+msgid "Mail Sharing Request Button instruction"
+msgstr "The given description is: {{.Description}}."
+
+msgid "Mail Sharing Request Button text"
+msgstr "Accept this sharing"
+
 msgid "Sharing Connect to Cozy"
 msgstr "Connect to your Cozy"
+
+msgid "Sharing Empty name"
+msgstr "Someone"
+
+msgid "Sharing Empty description"
+msgstr "Surprise!"
 
 msgid "Sharing Hello recipient email"
 msgstr "Happy to see you %s!"

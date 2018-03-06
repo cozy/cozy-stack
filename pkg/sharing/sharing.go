@@ -1,7 +1,6 @@
 package sharing
 
 import (
-	"errors"
 	"net/url"
 	"time"
 
@@ -23,6 +22,9 @@ const (
 	// StatusMailNotSent is the initial status for a recipient, before the
 	// mail invitation is sent
 	StatusMailNotSent = "mail-not-sent"
+	// StatusPendingInvitation is for a recipient that has not (yet) accepted
+	// the sharing, but the invitation mail was sent
+	StatusPendingInvitation = "pending"
 )
 
 // Member contains the information about a recipient (or the sharer) for a sharing
@@ -162,6 +164,7 @@ func (s *Sharing) AddContact(inst *instance.Instance, contactID string) error {
 
 // Create checks that the sharing is OK and it persists it in CouchDB if it is the case.
 func (s *Sharing) Create(inst *instance.Instance) error {
+	// TODO validate the doctype of each rule
 	if len(s.Rules) == 0 {
 		return ErrNoRules
 	}
@@ -186,10 +189,21 @@ func FindSharing(db couchdb.Database, sharingID string) (*Sharing, error) {
 	return res, nil
 }
 
-// FindMemberByShareCode returns the member that is linked to the sharing by
-// the given share code
-func (s *Sharing) FindMemberByShareCode(db couchdb.Database, shareCode string) (*Member, error) {
-	return nil, errors.New("Not implemented")
+// FindMemberByState returns the member that is linked to the sharing by
+// the given state
+func (s *Sharing) FindMemberByState(db couchdb.Database, state string) (*Member, error) {
+	if !s.Owner {
+		return nil, ErrInvalidSharing
+	}
+	for i, c := range s.Credentials {
+		if c.State == state {
+			if len(s.Members) <= i+1 {
+				return nil, ErrInvalidSharing
+			}
+			return &s.Members[i+1], nil
+		}
+	}
+	return nil, ErrMemberNotFound
 }
 
 // RegisterCozyURL saves a new Cozy URL for a member

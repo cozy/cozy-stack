@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -456,7 +457,7 @@ type authorizeParams struct {
 	client      *oauth.Client
 }
 
-func checkAuthorizeParams(c echo.Context, params *authorizeParams, sharing true) (bool, error) {
+func checkAuthorizeParams(c echo.Context, params *authorizeParams, sharing bool) (bool, error) {
 	if params.state == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.Domain,
@@ -696,7 +697,7 @@ func authorizeSharing(c echo.Context) error {
 		})
 	}
 
-	u, err := url.ParseRequestURI(params.redirectURI)
+	_, err := url.ParseRequestURI(params.redirectURI)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": instance.Domain,
@@ -704,36 +705,12 @@ func authorizeSharing(c echo.Context) error {
 		})
 	}
 
-	access, err := oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
+	_, err = oauth.CreateAccessCode(params.instance, params.clientID, params.scope)
 	if err != nil {
 		return err
 	}
 
-	return errors.new("Not implemented") // TODO
-}
-
-func authorizeAppForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-
-	if !middlewares.IsLoggedIn(c) {
-		u := instance.PageURL("/auth/login", url.Values{
-			"redirect": {instance.FromURL(c.Request().URL)},
-		})
-		return c.Redirect(http.StatusSeeOther, u)
-	}
-
-	app, ok, err := getApp(c, instance, c.QueryParam("slug"))
-	if !ok || err != nil {
-		return err
-	}
-
-	permissions := app.Permissions()
-	return c.Render(http.StatusOK, "authorize_app.html", echo.Map{
-		"Domain":      instance.Domain,
-		"Slug":        app.Slug(),
-		"Permissions": permissions,
-		"CSRF":        c.Get("csrf"),
-	})
+	return errors.New("Not implemented") // TODO
 }
 
 func authorizeAppForm(c echo.Context) error {

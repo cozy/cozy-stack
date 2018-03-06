@@ -149,15 +149,12 @@ just have to click OK).
 
 | Parameter | Description                        |
 | --------- | ---------------------------------- |
-| sharecode | a code that identify the recipient |
-
-The sharecode is the same as the one used on the preview page to give the user
-the right to display the to-be-shared documents.
+| state     | a code that identify the recipient |
 
 #### Example
 
 ```http
-GET /sharings/ce8835a061d0ef68947afe69a0046722/discovery?sharecode=eiJ3iepoaihohz1Y HTTP/1.1
+GET /sharings/ce8835a061d0ef68947afe69a0046722/discovery?state=eiJ3iepoaihohz1Y HTTP/1.1
 Host: alice.example.net
 ```
 
@@ -174,7 +171,7 @@ This route exists in two versions, the version is selected by the HTTP header
 
 | Parameter | Description                           |
 | --------- | ------------------------------------- |
-| sharecode | a code that identify the recipient    |
+| state     | a code that identify the recipient    |
 | url       | the URL of the Cozy for the recipient |
 
 ##### Example
@@ -185,7 +182,7 @@ Host: alice.example.org
 Content-Type: application/x-www-form-urlencoded
 Accept: text/html
 
-sharecode=eiJ3iepoaihohz1Y&url=https://bob.example.net/
+state=eiJ3iepoaihohz1Y&url=https://bob.example.net/
 ```
 
 ```http
@@ -198,6 +195,16 @@ Location: https://bob.example.net/auth/sharing?...
 This version can be more convenient for applications that implement the
 preview page.
 
+##### Parameters
+
+| Parameter | Description                           |
+| --------- | ------------------------------------- |
+| sharecode | a code that identify the recipient    |
+| url       | the URL of the Cozy for the recipient |
+
+The sharecode is the same as the one used on the preview page to give the user
+the right to display the to-be-shared documents.
+
 ##### Example
 
 ```http
@@ -206,7 +213,7 @@ Host: alice.example.org
 Content-Type: application/x-www-form-urlencoded
 Accept: application/json
 
-sharecode=eiJ3iepoaihohz1Y&url=https://bob.example.net/
+sharecode=eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhcHAiLCJpYXQiOjE1MjAzNDM4NTc&url=https://bob.example.net/
 ```
 
 ```http

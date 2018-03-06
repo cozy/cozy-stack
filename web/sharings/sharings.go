@@ -64,10 +64,13 @@ func CreateSharing(c echo.Context) error {
 	if err := s.Create(inst); err != nil {
 		return wrapErrors(err)
 	}
+	if err = s.SendMails(inst); err != nil {
+		return wrapErrors(err)
+	}
 	return jsonapi.Data(c, http.StatusCreated, &apiSharing{&s, nil}, nil)
 }
 
-func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, shareCode string, m *sharing.Member) error {
+func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
 	publicName, _ := inst.PublicName()
 	return c.Render(code, "sharing_discovery.html", echo.Map{
 		"Domain":        inst.Domain,
@@ -76,7 +79,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 		"RecipientCozy": m.Instance,
 		"RecipientName": m.Name,
 		"SharingID":     sharingID,
-		"ShareCode":     shareCode,
+		"State":         state,
 		"URLError":      code != http.StatusOK,
 	})
 }
@@ -86,7 +89,7 @@ func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, shar
 func GetDiscovery(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
-	shareCode := c.QueryParam("sharecode")
+	state := c.QueryParam("state")
 
 	s, err := sharing.FindSharing(inst, sharingID)
 	if err != nil {
@@ -96,15 +99,15 @@ func GetDiscovery(c echo.Context) error {
 		})
 	}
 
-	member, err := s.FindMemberByShareCode(inst, shareCode)
+	member, err := s.FindMemberByState(inst, state)
 	if err != nil {
 		return c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": inst.Domain,
-			"Error":  "Error Invalid sharecode",
+			"Error":  "Error Invalid state",
 		})
 	}
 
-	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, shareCode, member)
+	return renderDiscoveryForm(c, inst, http.StatusOK, sharingID, state, member)
 }
 
 // PostDiscovery is called when the recipient has given its Cozy URL. Either an
@@ -114,7 +117,7 @@ func GetDiscovery(c echo.Context) error {
 func PostDiscovery(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 	sharingID := c.Param("sharing-id")
-	shareCode := c.FormValue("sharecode")
+	state := c.FormValue("state")
 	cozyURL := c.FormValue("url")
 
 	s, err := sharing.FindSharing(inst, sharingID)
@@ -122,7 +125,8 @@ func PostDiscovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	member, err := s.FindMemberByShareCode(inst, shareCode)
+	// TODO find member by sharecode (preview)
+	member, err := s.FindMemberByState(inst, state)
 	if err != nil {
 		return wrapErrors(err)
 	}
@@ -198,6 +202,12 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrInvalidURL:
 		return jsonapi.InvalidParameter("url", err)
+	case sharing.ErrInvalidSharing:
+		return jsonapi.BadRequest(err)
+	case sharing.ErrMemberNotFound:
+		return jsonapi.NotFound(err)
+	case sharing.ErrMailNotSent:
+		return jsonapi.BadRequest(err)
 	}
 	return err
 }
