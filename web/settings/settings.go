@@ -59,8 +59,8 @@ func Routes(router *echo.Group) {
 
 	router.GET("/instance", getInstance)
 	router.PUT("/instance", updateInstance)
-	router.PUT("/instance/send_code_tfa", sendTwoFactorConfirmMail)
-	router.PUT("/instance/activate_tfa", activateTwoFactorMail)
+	router.PUT("/instance/tfa", activateTwoFactorMail)
+	router.POST("/instance/tfa/code", sendTwoFactorConfirmMail)
 	router.GET("/sessions", getSessions)
 
 	router.GET("/clients", listClients)

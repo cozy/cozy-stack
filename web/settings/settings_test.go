@@ -255,7 +255,7 @@ func TestUpdatePassphraseWithTwoFactorAuth(t *testing.T) {
 		"two_factor_activation_code": "%s"
 	}`
 	body = fmt.Sprintf(body, mailPassCode)
-	req, _ = http.NewRequest("PUT", ts.URL+"/settings/confirm_mail", bytes.NewBufferString(body))
+	req, _ = http.NewRequest("PUT", ts.URL+"/settings/instance/tfa", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)

@@ -275,7 +275,7 @@ Content-type: application/json
 To use this endpoint, an application needs a permission on the type
 `io.cozy.settings` for the verb `PUT`.
 
-### PUT /settings/instance/activate_tfa
+### PUT /settings/instance/tfa
 
 The user can activate of two-factor authentication. The code used as
 confirmation should have been sent via email.
@@ -287,7 +287,7 @@ Status codes:
 #### Request
 
 ```http
-PUT /settings/instance/activate_tfa HTTP/1.1
+PUT /settings/instance/tfa HTTP/1.1
 Host: alice.example.com
 Content-Type: application/json
 Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja56hPgHwufpJCBBGJC2mLeJ5LCRrFFkHwaVVa
@@ -299,7 +299,7 @@ Cookie: cozysessid=AAAAAFhSXT81MWU0ZTBiMzllMmI1OGUyMmZiN2Q0YTYzNDAxN2Y5NjCmp2Ja5
 }
 ```
 
-### PUT /settings/instance/send_code_tfa
+### POST /settings/instance/tfa/code
 
 Re-send the two factor authorization code to confirm the user's email address.
 If the mail is already confirmed, no mail is resent.
@@ -312,7 +312,7 @@ send the mail on user demand.
 #### Request
 
 ```http
-PUT /settings/instance/send_code_tfa HTTP/1.1
+POST /settings/instance/tfa/code HTTP/1.1
 Host: alice.example.com
 Content-type: application/vnd.api+json
 Cookie: sessionid=xxxxx
