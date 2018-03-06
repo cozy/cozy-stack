@@ -25,7 +25,7 @@ var flagKonnectorsParameters string
 
 var webappsCmdGroup = &cobra.Command{
 	Use:   "apps [command]",
-	Short: "Interact with the cozy applications",
+	Short: "Interact with the applications",
 	Long: `
 cozy-stack apps allows to interact with the cozy applications.
 
@@ -92,7 +92,7 @@ var showKonnectorCmd = &cobra.Command{
 
 var konnectorsCmdGroup = &cobra.Command{
 	Use:   "konnectors [command]",
-	Short: "Interact with the cozy applications",
+	Short: "Interact with the konnectors",
 	Long: `
 cozy-stack konnectors allows to interact with the cozy konnectors.
 
