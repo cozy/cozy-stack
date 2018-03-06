@@ -272,7 +272,6 @@ func TestUpdatePassphraseWithTwoFactorAuth(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 
-	fmt.Println(">>>", result)
 	{
 		twoFactorToken, ok := result["two_factor_token"].(string)
 		assert.True(t, ok)
