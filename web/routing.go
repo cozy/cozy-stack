@@ -25,6 +25,7 @@ import (
 	"github.com/cozy/cozy-stack/web/registry"
 	"github.com/cozy/cozy-stack/web/remote"
 	"github.com/cozy/cozy-stack/web/settings"
+	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/cozy/cozy-stack/web/status"
 	"github.com/cozy/cozy-stack/web/version"
@@ -142,6 +143,7 @@ func SetupRoutes(router *echo.Echo) error {
 	if config.IsDevRelease() {
 		router.GET("/dev/mails/:name", devMailsHandler)
 		router.GET("/dev/templates/:name", devTemplatesHandler)
+		sharings.Routes(router.Group("/sharings"))
 	}
 
 	setupRecover(router)
