@@ -61,7 +61,7 @@ Content-Type: application/vnd.api+json
       "preview_path": "/preview-sharing",
       "rules": [
         {
-          "title": "folder",
+          "title": "Hawaii",
           "doctype": "io.cozy.files",
           "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
           "add": "sync",
@@ -116,12 +116,12 @@ Content-Type: application/vnd.api+json
         {
           "status": "mail-not-sent",
           "name": "Bob",
-          "email": "bob@example.net",
-        },
+          "email": "bob@example.net"
+        }
       ],
       "rules": [
         {
-          "title": "folder",
+          "title": "Hawaii",
           "doctype": "io.cozy.files",
           "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
           "add": "sync",
@@ -224,5 +224,115 @@ Content-Type: application/json
   "redirect": "https://bob.example.net/auth/sharing?..."
 }
 ```
+
+### PUT /sharings/:sharing-id
+
+The sharer's cozy sends a request to this route on the recipient's cozy to
+create a sharing request, with most of the informations about the sharing.
+These informations will be displayed to the recipient just before its final
+acceptation of the sharing, to be sure he/she knows what will be shared.
+
+#### Request
+
+```http
+PUT /sharings/ce8835a061d0ef68947afe69a0046722 HTTP/1.1
+Host: bob.example.net
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+    "type": "io.cozy.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "attributes": {
+      "description": "sharing test",
+      "preview_path": "/preview-sharing",
+      "app_slug": "drive",
+      "owner": true,
+      "created_at": "2018-01-04T12:35:08Z",
+      "updated_at": "2018-01-04T13:45:43Z",
+      "members": [
+        {
+          "status": "owner",
+          "name": "Alice",
+          "email": "alice@example.net",
+          "instance": "alice.example.net"
+        },
+        {
+          "status": "mail-not-sent",
+          "name": "Bob",
+          "email": "bob@example.net",
+          "instance": "bob.example.net"
+        }
+      ],
+      "rules": [
+        {
+          "title": "Hawaii",
+          "doctype": "io.cozy.files",
+          "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
+          "add": "sync",
+          "update": "sync",
+          "remove": "sync"
+        }
+      ]
+    }
+  }
+}
+```
+
+#### Response
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/vnd.api+json
+```
+
+```json
+{
+  "data": {
+    "type": "io.cozy.sharings",
+    "id": "ce8835a061d0ef68947afe69a0046722",
+    "meta": {
+      "rev": "1-f579a69a9fa5dd720010a1dbb82320be"
+    },
+    "attributes": {
+      "description": "sharing test",
+      "preview_path": "/preview-sharing",
+      "app_slug": "drive",
+      "owner": true,
+      "created_at": "2018-01-04T12:35:08Z",
+      "updated_at": "2018-01-04T13:45:43Z",
+      "members": [
+        {
+          "status": "owner",
+          "name": "Alice",
+          "email": "alice@example.net",
+          "instance": "alice.example.net"
+        },
+        {
+          "status": "mail-not-sent",
+          "name": "Bob",
+          "email": "bob@example.net",
+          "instance": "bob.example.net"
+        }
+      ],
+      "rules": [
+        {
+          "title": "Hawaii",
+          "doctype": "io.cozy.files",
+          "values": ["612acf1c-1d72-11e8-b043-ef239d3074dd"],
+          "add": "sync",
+          "update": "sync",
+          "remove": "sync"
+        }
+      ]
+    },
+    "links": {
+      "self": "/sharings/ce8835a061d0ef68947afe69a0046722"
+    }
+  }
+}
+```
+
 
 {% endraw %}

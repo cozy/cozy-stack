@@ -244,6 +244,12 @@ func (m *Member) RegisterClient(inst *instance.Instance, u *url.URL) (*auth.Clie
 	return resClient, nil
 }
 
+// CreateSharingRequest sends information about the sharing to the recipient's cozy
+func (m *Member) CreateSharingRequest(inst *instance.Instance, u *url.URL) error {
+	// TODO translate ids of files/folders in the rules sent to the recipients
+	return nil
+}
+
 // RegisterCozyURL saves a new Cozy URL for a member
 func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, u *url.URL) error {
 	if u.Host == "" {
@@ -279,6 +285,10 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, u *url.URL
 		return ErrInvalidURL
 	}
 	creds.Client = client
+
+	if err = m.CreateSharingRequest(inst, u); err != nil {
+		return err
+	}
 	return couchdb.UpdateDoc(inst, s)
 }
 
