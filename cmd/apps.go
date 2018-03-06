@@ -96,7 +96,7 @@ var showWebappCmd = &cobra.Command{
 }
 
 var showWebappTriggersCmd = &cobra.Command{
-	Use:   "show-triggers [slug]",
+	Use:   "show-from-app [slug]",
 	Short: "Show the application triggers",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return showWebAppTriggers(cmd, args, consts.Apps)
@@ -548,10 +548,10 @@ func init() {
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
 	triggersCmdGroup.AddCommand(launchTriggerCmd)
+	triggersCmdGroup.AddCommand(showWebappTriggersCmd)
 
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(showWebappCmd)
-	webappsCmdGroup.AddCommand(showWebappTriggersCmd)
 	webappsCmdGroup.AddCommand(installWebappCmd)
 	webappsCmdGroup.AddCommand(updateWebappCmd)
 	webappsCmdGroup.AddCommand(uninstallWebappCmd)
