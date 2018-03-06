@@ -103,8 +103,10 @@ func updateInstance(c echo.Context) error {
 		if inst.AuthMode != authMode {
 			inst.AuthMode = authMode
 			needUpdate = true
-			needMailConfirmation =
-				authMode == instance.TwoFactorMail && !inst.MailConfirmed
+			needMailConfirmation = authMode == instance.TwoFactorMail
+			if inst.AuthMode != instance.TwoFactorMail {
+				inst.MailConfirmed = false
+			}
 		}
 	}
 

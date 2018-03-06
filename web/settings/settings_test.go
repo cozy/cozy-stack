@@ -252,7 +252,7 @@ func TestUpdatePassphraseWithTwoFactorAuth(t *testing.T) {
 	mailPassCode, err := testInstance.GenerateMailConfirmationCode()
 	assert.NoError(t, err)
 	body = `{
-		"mail_confirmation_code": "%s"
+		"two_factor_activation_code": "%s"
 	}`
 	body = fmt.Sprintf(body, mailPassCode)
 	req, _ = http.NewRequest("PUT", ts.URL+"/settings/confirm_mail", bytes.NewBufferString(body))

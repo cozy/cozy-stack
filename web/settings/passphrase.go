@@ -98,7 +98,7 @@ func updatePassphrase(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func confirmMail(c echo.Context) error {
+func activateTwoFactorMail(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	if err := permissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
@@ -110,13 +110,13 @@ func confirmMail(c echo.Context) error {
 	}
 
 	args := struct {
-		MailConfirmationCode string `json:"mail_confirmation_code"`
+		TwoFactorActivationCode string `json:"two_factor_activation_code"`
 	}{}
 	if err := c.Bind(&args); err != nil {
 		return err
 	}
 
-	if ok := inst.ConfirmMail(args.MailConfirmationCode); !ok {
+	if ok := inst.ConfirmMail(args.TwoFactorActivationCode); !ok {
 		return c.NoContent(http.StatusUnprocessableEntity)
 	}
 	return c.NoContent(http.StatusNoContent)
