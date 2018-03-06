@@ -37,6 +37,19 @@ a cozy.
 	},
 }
 
+var triggersCmdGroup = &cobra.Command{
+	Use:   "triggers [command]",
+	Short: "Interact with the triggers",
+	Long: `
+cozy-stack apps allows to interact with the cozy triggers.
+
+It provides command to run a specific trigger.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Usage()
+	},
+}
+
 var installWebappCmd = &cobra.Command{
 	Use: "install [slug] [sourceurl]",
 	Short: `Install an application with the specified slug name
@@ -442,6 +455,42 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 	return nil
 }
 
+var launchTriggerCmd = &cobra.Command{
+	Use:     "launch [triggerId]",
+	Short:   `Creates a job from a specific trigger`,
+	Example: "$ cozy-stack triggers launch --domain cozy.tools:8080 748f42b65aca8c99ec2492eb660d1891",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return launchTrigger(cmd, args)
+	},
+}
+
+func launchTrigger(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return cmd.Usage()
+	}
+	if flagAppsDomain == "" {
+		errPrintfln("%s", errAppsMissingDomain)
+		return cmd.Usage()
+	}
+
+	// Creates client
+	c := newClient(flagAppsDomain, consts.Triggers)
+
+	// Creates job
+	j, err := c.TriggerLaunch(args[0])
+	if err != nil {
+		return err
+	}
+
+	// Print JSON
+	json, err := json.MarshalIndent(j, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
@@ -498,6 +547,8 @@ func init() {
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
+	triggersCmdGroup.AddCommand(launchTriggerCmd)
+
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(showWebappCmd)
 	webappsCmdGroup.AddCommand(showWebappTriggersCmd)
@@ -516,6 +567,7 @@ func init() {
 	konnectorsCmdGroup.AddCommand(uninstallKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(runKonnectorsCmd)
 
+	RootCmd.AddCommand(triggersCmdGroup)
 	RootCmd.AddCommand(webappsCmdGroup)
 	RootCmd.AddCommand(konnectorsCmdGroup)
 }
