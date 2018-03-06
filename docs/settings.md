@@ -285,8 +285,8 @@ Available authentication modes:
   - `two_factor_mail`: authentication with passphrase and validation with a
     code sent via email to the user.
 
-When asking for activation of the two-factor authentication, a side-effect is
-can be triggered to send the user its code (via email for instance), and the
+When asking for activation of the two-factor authentication, a side-effect can
+be triggered to send the user its code (via email for instance), and the
 activation not being effective. This side-effect should provide the user with
 a code that can be used to finalize the activation of the two-factor
 authentication.
