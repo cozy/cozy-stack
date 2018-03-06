@@ -4,8 +4,6 @@ package settings
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/cozy/cozy-stack/pkg/consts"
@@ -79,7 +77,6 @@ func updateInstance(c echo.Context) error {
 	}
 
 	needUpdate := false
-	needMailConfirmation := false
 
 	if locale, ok := doc.M["locale"].(string); ok {
 		delete(doc.M, "locale")
@@ -97,17 +94,8 @@ func updateInstance(c echo.Context) error {
 		}
 	}
 
-	if authModeStr, ok := doc.M["auth_mode"].(string); ok {
+	if _, ok := doc.M["auth_mode"]; ok {
 		delete(doc.M, "auth_mode")
-		authMode := instance.StringToAuthMode(authModeStr)
-		if inst.AuthMode != authMode {
-			inst.AuthMode = authMode
-			needUpdate = true
-			needMailConfirmation = authMode == instance.TwoFactorMail
-			if inst.AuthMode != instance.TwoFactorMail {
-				inst.MailConfirmed = false
-			}
-		}
 	}
 
 	// Only allow to change the TOS version and UUID via CLI
@@ -127,12 +115,6 @@ func updateInstance(c echo.Context) error {
 		return err
 	}
 
-	if needMailConfirmation {
-		if err := inst.SendMailConfirmationCode(); err != nil {
-			inst.Logger().Errorf("Could not send mail confirmation code: %s", err)
-		}
-	}
-
 	doc.M["locale"] = inst.Locale
 	doc.M["onboarding_finished"] = inst.OnboardingFinished
 	doc.M["auto_update"] = !inst.NoAutoUpdate
@@ -140,53 +122,46 @@ func updateInstance(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 
-func activateTwoFactorMail(c echo.Context) error {
+func updateInstanceAuthMode(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
 	if err := webpermissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
 		return err
 	}
 
-	if inst.MailConfirmed {
-		return c.NoContent(http.StatusNoContent)
-	}
-
 	args := struct {
+		AuthMode                string `json:"auth_mode"`
 		TwoFactorActivationCode string `json:"two_factor_activation_code"`
 	}{}
 	if err := c.Bind(&args); err != nil {
 		return err
 	}
 
-	if ok := inst.ConfirmMail(args.TwoFactorActivationCode); !ok {
-		return c.NoContent(http.StatusUnprocessableEntity)
-	}
-	return c.NoContent(http.StatusNoContent)
-}
-
-func sendTwoFactorConfirmMail(c echo.Context) error {
-	err := webpermissions.AllowWholeType(c, webpermissions.PUT, consts.Settings)
+	authMode, err := instance.StringToAuthMode(args.AuthMode)
 	if err != nil {
+		return jsonapi.BadRequest(err)
+	}
+	if inst.HasAuthMode(authMode) {
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	switch authMode {
+	case instance.Basic:
+	case instance.TwoFactorMail:
+		if args.TwoFactorActivationCode == "" {
+			if err = inst.SendMailConfirmationCode(); err != nil {
+				return err
+			}
+			return c.NoContent(http.StatusNoContent)
+		}
+		if ok := inst.ValidateMailConfirmationCode(args.TwoFactorActivationCode); !ok {
+			return c.NoContent(http.StatusUnprocessableEntity)
+		}
+	}
+
+	inst.AuthMode = authMode
+	if err = instance.Update(inst); err != nil {
 		return err
-	}
-
-	inst := middlewares.GetInstance(c)
-	doc, err := inst.SettingsDocument()
-	if err != nil {
-		return err
-	}
-
-	authModeStr, _ := doc.M["auth_mode"].(string)
-	authMode := instance.StringToAuthMode(authModeStr)
-	if authMode != instance.TwoFactorMail {
-		return jsonapi.BadRequest(
-			errors.New(`Authentication mode is not "two_factor_mail"`))
-	}
-
-	err = inst.SendMailConfirmationCode()
-	if err != nil {
-		return jsonapi.InternalServerError(
-			fmt.Errorf("Could not send mail: %s", err))
 	}
 
 	return c.NoContent(http.StatusNoContent)
