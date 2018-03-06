@@ -56,24 +56,21 @@ func AuthModeToString(authMode AuthMode) string {
 
 // StringToAuthMode converts a string encoded authentication mode into a
 // AuthMode int.
-func StringToAuthMode(authMode string) AuthMode {
+func StringToAuthMode(authMode string) (AuthMode, error) {
 	switch authMode {
 	case "two_factor_mail":
-		return TwoFactorMail
+		return TwoFactorMail, nil
+	case "basic":
+		return Basic, nil
 	default:
-		return Basic
+		return 0, ErrUnknownAuthMode
 	}
 }
 
 // HasAuthMode returns whether or not the instance has the given authentication
 // mode activated.
 func (i *Instance) HasAuthMode(authMode AuthMode) bool {
-	switch authMode {
-	case TwoFactorMail:
-		return i.AuthMode == TwoFactorMail && i.MailConfirmed
-	default:
-		return i.AuthMode == authMode
-	}
+	return i.AuthMode == authMode
 }
 
 // GenerateTwoFactorSecrets generates a (token, passcode) pair that can be
@@ -126,9 +123,6 @@ func (i *Instance) ValidateTwoFactorPasscode(token []byte, passcode string) bool
 // SendTwoFactorPasscode sends by mail the two factor secret to the owner of
 // the instance. It returns the generated token.
 func (i *Instance) SendTwoFactorPasscode() ([]byte, error) {
-	if i.AuthMode == TwoFactorMail && !i.MailConfirmed {
-		return nil, ErrMailIsNotConfirmed
-	}
 	token, passcode, err := i.GenerateTwoFactorSecrets()
 	if err != nil {
 		return nil, err
@@ -193,12 +187,8 @@ func (i *Instance) SendMailConfirmationCode() error {
 	})
 }
 
-// ConfirmMail set the `MailConfirmed` field to true after verifying the code
-// token.
-func (i *Instance) ConfirmMail(passcode string) bool {
-	if i.MailConfirmed {
-		return true
-	}
+// ValidateMailConfirmationCode returns true if the given passcode is valid.
+func (i *Instance) ValidateMailConfirmationCode(passcode string) bool {
 	email, err := i.SettingsEMail()
 	if err != nil {
 		return false
@@ -214,7 +204,5 @@ func (i *Instance) ConfirmMail(passcode string) bool {
 	if !ok || err != nil {
 		return false
 	}
-	i.MailConfirmed = true
-	Update(i)
 	return true
 }

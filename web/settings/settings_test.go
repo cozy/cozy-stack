@@ -227,35 +227,27 @@ func TestUpdateInstance(t *testing.T) {
 
 func TestUpdatePassphraseWithTwoFactorAuth(t *testing.T) {
 	body := `{
-		"data": {
-			"type": "io.cozy.settings",
-			"id": "io.cozy.settings.instance",
-			"meta": {
-				"rev": "%s"
-			},
-			"attributes": {
-				"auth_mode": "two_factor_mail"
-			}
-		}
+		"auth_mode": "two_factor_mail"
 	}`
 	body = fmt.Sprintf(body, instanceRev)
-	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance", bytes.NewBufferString(body))
-	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add("Accept", "application/vnd.api+json")
+	req, _ := http.NewRequest("PUT", ts.URL+"/settings/instance/auth_mode", bytes.NewBufferString(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err)
-	if !assert.Equal(t, "200 OK", res.Status) {
+	if !assert.Equal(t, "204 No Content", res.Status) {
 		return
 	}
 
 	mailPassCode, err := testInstance.GenerateMailConfirmationCode()
 	assert.NoError(t, err)
 	body = `{
+		"auth_mode": "two_factor_mail",
 		"two_factor_activation_code": "%s"
 	}`
 	body = fmt.Sprintf(body, mailPassCode)
-	req, _ = http.NewRequest("PUT", ts.URL+"/settings/instance/tfa", bytes.NewBufferString(body))
+	req, _ = http.NewRequest("PUT", ts.URL+"/settings/instance/auth_mode", bytes.NewBufferString(body))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", "Bearer "+token)
@@ -280,6 +272,7 @@ func TestUpdatePassphraseWithTwoFactorAuth(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&result)
 	assert.NoError(t, err)
 
+	fmt.Println(">>>", result)
 	{
 		twoFactorToken, ok := result["two_factor_token"].(string)
 		assert.True(t, ok)
