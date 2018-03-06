@@ -56,11 +56,11 @@ func Routes(router *echo.Group) {
 
 	router.POST("/passphrase", registerPassphrase)
 	router.PUT("/passphrase", updatePassphrase)
-	router.PUT("/confirm_mail", confirmMail)
 
 	router.GET("/instance", getInstance)
 	router.PUT("/instance", updateInstance)
-	router.PUT("/instance/confirm_mail_tfa", sendTwoFactorConfirmMail)
+	router.PUT("/instance/tfa", activateTwoFactorMail)
+	router.POST("/instance/tfa/code", sendTwoFactorConfirmMail)
 	router.GET("/sessions", getSessions)
 
 	router.GET("/clients", listClients)

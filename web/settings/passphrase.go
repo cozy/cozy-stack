@@ -97,27 +97,3 @@ func updatePassphrase(c echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 }
-
-func confirmMail(c echo.Context) error {
-	inst := middlewares.GetInstance(c)
-
-	if err := permissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
-		return err
-	}
-
-	if inst.MailConfirmed {
-		return c.NoContent(http.StatusNoContent)
-	}
-
-	args := struct {
-		MailConfirmationCode string `json:"mail_confirmation_code"`
-	}{}
-	if err := c.Bind(&args); err != nil {
-		return err
-	}
-
-	if ok := inst.ConfirmMail(args.MailConfirmationCode); !ok {
-		return c.NoContent(http.StatusUnprocessableEntity)
-	}
-	return c.NoContent(http.StatusNoContent)
-}

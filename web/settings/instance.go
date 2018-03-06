@@ -103,8 +103,10 @@ func updateInstance(c echo.Context) error {
 		if inst.AuthMode != authMode {
 			inst.AuthMode = authMode
 			needUpdate = true
-			needMailConfirmation =
-				authMode == instance.TwoFactorMail && !inst.MailConfirmed
+			needMailConfirmation = authMode == instance.TwoFactorMail
+			if inst.AuthMode != instance.TwoFactorMail {
+				inst.MailConfirmed = false
+			}
 		}
 	}
 
@@ -136,6 +138,30 @@ func updateInstance(c echo.Context) error {
 	doc.M["auto_update"] = !inst.NoAutoUpdate
 	doc.M["auth_mode"] = instance.AuthModeToString(inst.AuthMode)
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
+}
+
+func activateTwoFactorMail(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := webpermissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
+		return err
+	}
+
+	if inst.MailConfirmed {
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	args := struct {
+		TwoFactorActivationCode string `json:"two_factor_activation_code"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	if ok := inst.ConfirmMail(args.TwoFactorActivationCode); !ok {
+		return c.NoContent(http.StatusUnprocessableEntity)
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 func sendTwoFactorConfirmMail(c echo.Context) error {
