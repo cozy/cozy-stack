@@ -140,6 +140,30 @@ func updateInstance(c echo.Context) error {
 	return jsonapi.Data(c, http.StatusOK, &apiInstance{doc}, nil)
 }
 
+func activateTwoFactorMail(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	if err := webpermissions.AllowWholeType(c, permissions.PUT, consts.Settings); err != nil {
+		return err
+	}
+
+	if inst.MailConfirmed {
+		return c.NoContent(http.StatusNoContent)
+	}
+
+	args := struct {
+		TwoFactorActivationCode string `json:"two_factor_activation_code"`
+	}{}
+	if err := c.Bind(&args); err != nil {
+		return err
+	}
+
+	if ok := inst.ConfirmMail(args.TwoFactorActivationCode); !ok {
+		return c.NoContent(http.StatusUnprocessableEntity)
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 func sendTwoFactorConfirmMail(c echo.Context) error {
 	err := webpermissions.AllowWholeType(c, webpermissions.PUT, consts.Settings)
 	if err != nil {
