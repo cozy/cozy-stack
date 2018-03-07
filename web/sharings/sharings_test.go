@@ -3,6 +3,7 @@ package sharings
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,7 +14,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
+	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/labstack/echo"
@@ -27,6 +30,72 @@ var ts *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
+var sharingLink string
+
+func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
+	var result map[string]interface{}
+	assert.NoError(t, json.NewDecoder(body).Decode(&result))
+	data := result["data"].(map[string]interface{})
+	assert.Equal(t, data["type"], consts.Sharings)
+	sid := data["id"].(string)
+	assert.NotEmpty(t, sid)
+	assert.NotEmpty(t, data["meta"].(map[string]interface{})["rev"])
+	self := "/sharings/" + sid
+	assert.Equal(t, data["links"].(map[string]interface{})["self"], self)
+
+	attrs := data["attributes"].(map[string]interface{})
+	assert.Equal(t, attrs["description"], "this is a test")
+	assert.Equal(t, attrs["app_slug"], "testapp")
+	assert.Equal(t, attrs["owner"], true)
+	assert.NotEmpty(t, attrs["created_at"])
+	assert.NotEmpty(t, attrs["updated_at"])
+	assert.Nil(t, attrs["credentials"])
+
+	members := attrs["members"].([]interface{})
+	assert.Len(t, members, 2)
+	owner := members[0].(map[string]interface{})
+	assert.Equal(t, owner["status"], "owner")
+	assert.Equal(t, owner["name"], "Alice")
+	assert.Equal(t, owner["email"], "alice@example.net")
+	assert.Equal(t, owner["instance"], aliceInstance.Domain)
+	recipient := members[1].(map[string]interface{})
+	assert.Equal(t, recipient["status"], "mail-not-sent")
+	assert.Equal(t, recipient["name"], "Bob")
+	assert.Equal(t, recipient["email"], "bob@example.net")
+
+	rules := attrs["rules"].([]interface{})
+	assert.Len(t, rules, 1)
+	rule := rules[0].(map[string]interface{})
+	assert.Equal(t, rule["title"], "test one")
+	assert.Equal(t, rule["doctype"], iocozytests)
+	assert.Equal(t, rule["values"], []interface{}{"foobar"})
+}
+
+func assertInvitationMailWasSent(t *testing.T) {
+	var jobs []jobs.Job
+	couchReq := &couchdb.FindRequest{
+		UseIndex: "by-worker-and-state",
+		Selector: mango.And(
+			mango.Equal("worker", "sendmail"),
+			mango.Exists("state"),
+		),
+		Limit: 1,
+	}
+	err := couchdb.FindDocs(aliceInstance, consts.Jobs, couchReq, &jobs)
+	assert.NoError(t, err)
+	assert.Len(t, jobs, 1)
+	var msg map[string]interface{}
+	err = json.Unmarshal(jobs[0].Message, &msg)
+	assert.NoError(t, err)
+	assert.Equal(t, msg["mode"], "from")
+	assert.Equal(t, msg["template_name"], "sharing_request")
+	values := msg["template_values"].(map[string]interface{})
+	assert.Equal(t, values["RecipientName"], "Bob")
+	assert.Equal(t, values["SharerPublicName"], "Alice")
+	assert.Equal(t, values["Description"], "this is a test")
+	sharingLink = values["SharingLink"].(string)
+	assert.Contains(t, sharingLink, "/discovery?state=")
+}
 
 func TestCreateSharingSuccess(t *testing.T) {
 	assert.NotEmpty(t, aliceAppToken)
@@ -69,42 +138,8 @@ func TestCreateSharingSuccess(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, res.StatusCode)
 	defer res.Body.Close()
 
-	var result map[string]interface{}
-	assert.NoError(t, json.NewDecoder(res.Body).Decode(&result))
-	data := result["data"].(map[string]interface{})
-	assert.Equal(t, data["type"], consts.Sharings)
-	sid := data["id"].(string)
-	assert.NotEmpty(t, sid)
-	assert.NotEmpty(t, data["meta"].(map[string]interface{})["rev"])
-	self := "/sharings/" + sid
-	assert.Equal(t, data["links"].(map[string]interface{})["self"], self)
-
-	attrs := data["attributes"].(map[string]interface{})
-	assert.Equal(t, attrs["description"], "this is a test")
-	assert.Equal(t, attrs["app_slug"], "testapp")
-	assert.Equal(t, attrs["owner"], true)
-	assert.NotEmpty(t, attrs["created_at"])
-	assert.NotEmpty(t, attrs["updated_at"])
-	assert.Nil(t, attrs["credentials"])
-
-	members := attrs["members"].([]interface{})
-	assert.Len(t, members, 2)
-	owner := members[0].(map[string]interface{})
-	assert.Equal(t, owner["status"], "owner")
-	assert.Equal(t, owner["name"], "Alice")
-	assert.Equal(t, owner["email"], "alice@example.net")
-	assert.Equal(t, owner["instance"], aliceInstance.Domain)
-	recipient := members[1].(map[string]interface{})
-	assert.Equal(t, recipient["status"], "mail-not-sent")
-	assert.Equal(t, recipient["name"], "Bob")
-	assert.Equal(t, recipient["email"], "bob@example.net")
-
-	rules := attrs["rules"].([]interface{})
-	assert.Len(t, rules, 1)
-	rule := rules[0].(map[string]interface{})
-	assert.Equal(t, rule["title"], "test one")
-	assert.Equal(t, rule["doctype"], iocozytests)
-	assert.Equal(t, rule["values"], []interface{}{"foobar"})
+	assertSharingIsCorrectOnSharer(t, res.Body)
+	assertInvitationMailWasSent(t)
 }
 
 func TestMain(m *testing.M) {
