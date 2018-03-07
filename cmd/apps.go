@@ -434,13 +434,14 @@ func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error
 		return err
 	}
 
-	var triggerIds []string
+	var triggerIDs []string
 	for _, service := range *app.Attrs.Services {
-		triggerIds = append(triggerIds, service.TriggerID)
+		triggerIDs = append(triggerIDs, service.TriggerID)
 	}
 	var triggers []*client.Trigger
-	for _, triggerId := range triggerIds {
-		trigger, err := c.GetTrigger(triggerId)
+	var trigger *client.Trigger
+	for _, triggerID := range triggerIDs {
+		trigger, err = c.GetTrigger(triggerID)
 		if err != nil {
 			return err
 		}
