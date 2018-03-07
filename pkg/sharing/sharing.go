@@ -279,12 +279,13 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, u *url.URL
 		return ErrInvalidSharing
 	}
 
-	client, err := m.RegisterClient(inst, u)
+	// client, err := m.RegisterClient(inst, u)
+	var err error
 	if err != nil {
 		// TODO log
 		return ErrInvalidURL
 	}
-	creds.Client = client
+	// creds.Client = client
 
 	if err = m.CreateSharingRequest(inst, u); err != nil {
 		return err

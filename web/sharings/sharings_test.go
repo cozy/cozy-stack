@@ -1,12 +1,15 @@
-package sharings
+package sharings_test
 
 import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cozy/cozy-stack/pkg/apps"
@@ -19,6 +22,9 @@ import (
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
 	"github.com/cozy/cozy-stack/tests/testutils"
+	"github.com/cozy/cozy-stack/web"
+	"github.com/cozy/cozy-stack/web/sharings"
+	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo"
 	"github.com/stretchr/testify/assert"
 )
@@ -26,11 +32,16 @@ import (
 const iocozytests = "io.cozy.tests"
 
 var setup *testutils.TestSetup
+
+// Things that live on Alice's Cozy
 var ts *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
 var sharingLink string
+
+// Things that live on Bob's browser
+var bobUA *http.Client
 
 func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	var result map[string]interface{}
@@ -142,9 +153,44 @@ func TestCreateSharingSuccess(t *testing.T) {
 	assertInvitationMailWasSent(t)
 }
 
+func TestDiscovery(t *testing.T) {
+	parts := strings.Split(ts.URL, "://")
+	u, err := url.Parse(sharingLink)
+	assert.NoError(t, err)
+	u.Scheme = parts[0]
+	u.Host = parts[1]
+	state := u.Query()["state"][0]
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	assert.NoError(t, err)
+	res, err := bobUA.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "Happy to see you Bob!")
+	assert.Contains(t, string(body), "Please enter your Cozy URL to receive the sharing from Alice")
+	assert.Contains(t, string(body), `<input id="url" name="url"`)
+	assert.Contains(t, string(body), `<input type="hidden" name="state" value="`+state)
+
+	u.RawQuery = ""
+	v := &url.Values{
+		"state": {state},
+		"url":   {"https://bob.example.net/"},
+	}
+	req, err = http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	assert.NoError(t, err)
+	res, err = bobUA.Do(req)
+	assert.NoError(t, err)
+	defer res.Body.Close()
+	assert.Equal(t, http.StatusFound, res.StatusCode)
+	assert.Equal(t, "/auth/sharing", res.Header.Get("Location"))
+}
+
 func TestMain(m *testing.M) {
 	config.UseTestFile()
 	config.GetConfig().Assets = "../../assets"
+	web.LoadSupportedLocales()
 	testutils.NeedCouchdb()
 
 	// Prepare Alice's instance
@@ -160,12 +206,16 @@ func TestMain(m *testing.M) {
 	aliceAppToken = generateAppToken(aliceInstance, "testapp")
 	bobContact = createContact(aliceInstance, "Bob", "bob@example.net")
 
-	// Routing
-	routes := map[string]func(*echo.Group){
-		"/sharings": Routes,
+	// Prepare Bob's browser
+	jar := setup.GetCookieJar()
+	bobUA = &http.Client{
+		CheckRedirect: noRedirect,
+		Jar:           jar,
 	}
-	ts = setup.GetTestServerMultipleRoutes(routes)
 
+	ts = setup.GetTestServer("/sharings", sharings.Routes)
+	r, _ := statik.NewDirRenderer("../../assets")
+	ts.Config.Handler.(*echo.Echo).Renderer = r
 	os.Exit(setup.Run())
 }
 
@@ -208,4 +258,8 @@ func generateAppToken(inst *instance.Instance, slug string) string {
 		return ""
 	}
 	return inst.BuildAppToken(manifest, "")
+}
+
+func noRedirect(*http.Request, []*http.Request) error {
+	return http.ErrUseLastResponse
 }
