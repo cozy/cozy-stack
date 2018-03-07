@@ -25,12 +25,25 @@ var flagKonnectorsParameters string
 
 var webappsCmdGroup = &cobra.Command{
 	Use:   "apps [command]",
-	Short: "Interact with the cozy applications",
+	Short: "Interact with the applications",
 	Long: `
 cozy-stack apps allows to interact with the cozy applications.
 
 It provides commands to install or update applications on
 a cozy.
+`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Usage()
+	},
+}
+
+var triggersCmdGroup = &cobra.Command{
+	Use:   "triggers [command]",
+	Short: "Interact with the triggers",
+	Long: `
+cozy-stack apps allows to interact with the cozy triggers.
+
+It provides command to run a specific trigger.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Usage()
@@ -82,6 +95,14 @@ var showWebappCmd = &cobra.Command{
 	},
 }
 
+var showWebappTriggersCmd = &cobra.Command{
+	Use:   "show-from-app [slug]",
+	Short: "Show the application triggers",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return showWebAppTriggers(cmd, args, consts.Apps)
+	},
+}
+
 var showKonnectorCmd = &cobra.Command{
 	Use:   "show [slug]",
 	Short: "Show the application attributes",
@@ -92,7 +113,7 @@ var showKonnectorCmd = &cobra.Command{
 
 var konnectorsCmdGroup = &cobra.Command{
 	Use:   "konnectors [command]",
-	Short: "Interact with the cozy applications",
+	Short: "Interact with the konnectors",
 	Long: `
 cozy-stack konnectors allows to interact with the cozy konnectors.
 
@@ -395,6 +416,82 @@ func showApp(cmd *cobra.Command, args []string, appType string) error {
 	return nil
 }
 
+func showWebAppTriggers(cmd *cobra.Command, args []string, appType string) error {
+	if flagAppsDomain == "" {
+		errPrintfln("%s", errAppsMissingDomain)
+		return cmd.Usage()
+	}
+	if len(args) < 1 {
+		return cmd.Usage()
+	}
+	c := newClient(flagAppsDomain, appType, consts.Triggers)
+	app, err := c.GetApp(&client.AppOptions{
+		Slug:    args[0],
+		AppType: appType,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	var triggerIDs []string
+	for _, service := range *app.Attrs.Services {
+		triggerIDs = append(triggerIDs, service.TriggerID)
+	}
+	var triggers []*client.Trigger
+	var trigger *client.Trigger
+	for _, triggerID := range triggerIDs {
+		trigger, err = c.GetTrigger(triggerID)
+		if err != nil {
+			return err
+		}
+
+		triggers = append(triggers, trigger)
+	}
+	json, err := json.MarshalIndent(triggers, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
+var launchTriggerCmd = &cobra.Command{
+	Use:     "launch [triggerId]",
+	Short:   `Creates a job from a specific trigger`,
+	Example: "$ cozy-stack triggers launch --domain cozy.tools:8080 748f42b65aca8c99ec2492eb660d1891",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return launchTrigger(cmd, args)
+	},
+}
+
+func launchTrigger(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 {
+		return cmd.Usage()
+	}
+	if flagAppsDomain == "" {
+		errPrintfln("%s", errAppsMissingDomain)
+		return cmd.Usage()
+	}
+
+	// Creates client
+	c := newClient(flagAppsDomain, consts.Triggers)
+
+	// Creates job
+	j, err := c.TriggerLaunch(args[0])
+	if err != nil {
+		return err
+	}
+
+	// Print JSON
+	json, err := json.MarshalIndent(j, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(json))
+	return nil
+}
+
 func lsApps(cmd *cobra.Command, args []string, appType string) error {
 	if flagAppsDomain == "" {
 		errPrintfln("%s", errAppsMissingDomain)
@@ -451,6 +548,9 @@ func init() {
 
 	runKonnectorsCmd.PersistentFlags().StringVar(&flagKonnectorAccountID, "account-id", "", "specify the account ID to use for running the konnector")
 
+	triggersCmdGroup.AddCommand(launchTriggerCmd)
+	triggersCmdGroup.AddCommand(showWebappTriggersCmd)
+
 	webappsCmdGroup.AddCommand(lsWebappsCmd)
 	webappsCmdGroup.AddCommand(showWebappCmd)
 	webappsCmdGroup.AddCommand(installWebappCmd)
@@ -468,6 +568,7 @@ func init() {
 	konnectorsCmdGroup.AddCommand(uninstallKonnectorCmd)
 	konnectorsCmdGroup.AddCommand(runKonnectorsCmd)
 
+	RootCmd.AddCommand(triggersCmdGroup)
 	RootCmd.AddCommand(webappsCmdGroup)
 	RootCmd.AddCommand(konnectorsCmdGroup)
 }
