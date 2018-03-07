@@ -114,6 +114,8 @@ func ProxyBulkDocs(db Database, doctype string, req *http.Request) (*httputil.Re
 					var event string
 					if doc.Rev() == "" {
 						event = realtime.EventCreate
+					} else if doc.Get("_deleted") == true {
+						event = realtime.EventDelete
 					} else {
 						event = realtime.EventUpdate
 					}
