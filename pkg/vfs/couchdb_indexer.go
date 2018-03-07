@@ -173,6 +173,32 @@ func (c *couchdbIndexer) DeleteDirDoc(doc *DirDoc) error {
 	return couchdb.DeleteDoc(c.db, doc)
 }
 
+func (c *couchdbIndexer) DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) (ids []string, err error) {
+	var files []interface{}
+	if !onlyContent {
+		files = append(files, doc)
+	}
+	err = walk(c, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
+		if err != nil {
+			return err
+		}
+		if dir != nil {
+			if dir.ID() == doc.ID() {
+				return nil
+			}
+			files = append(files, dir)
+		} else {
+			files = append(files, file)
+			ids = append(ids, file.ID())
+		}
+		return err
+	}, 0)
+	if err == nil {
+		err = couchdb.BulkDeleteDocs(c.db, consts.Files, files)
+	}
+	return
+}
+
 func (c *couchdbIndexer) moveDir(oldpath, newpath string) error {
 	var docs []interface{}
 	var children []*DirDoc

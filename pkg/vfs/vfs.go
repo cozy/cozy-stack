@@ -142,6 +142,10 @@ type Indexer interface {
 	UpdateDirDoc(olddoc, newdoc *DirDoc) error
 	// DeleteDirDoc removes from the index the specified directory document.
 	DeleteDirDoc(doc *DirDoc) error
+	// DeleteDirDocAndContent removes from the index the specified directory as
+	// well all its children. It returns the list of the children files ids that
+	// were removed.
+	DeleteDirDocAndContent(doc *DirDoc, onlyContent bool) ([]string, error)
 
 	// DirByID returns the directory document information associated with the
 	// specified identifier.

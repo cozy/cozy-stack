@@ -571,6 +571,36 @@ func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
 	return nil
 }
 
+// BulkDeleteDocs is used to delete serveral documents in one call.
+func BulkDeleteDocs(db Database, doctype string, docs []interface{}) error {
+	if len(docs) == 0 {
+		return nil
+	}
+	body := struct {
+		Docs []json.RawMessage `json:"docs"`
+	}{
+		Docs: make([]json.RawMessage, 0, len(docs)),
+	}
+	for _, doc := range docs {
+		if d, ok := doc.(Doc); ok {
+			body.Docs = append(body.Docs, json.RawMessage(
+				fmt.Sprintf(`{"_id":"%s","_rev":"%s","_deleted":true}`, d.ID(), d.Rev()),
+			))
+		}
+	}
+	var res []updateResponse
+	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
+		return err
+	}
+	for i, doc := range docs {
+		if d, ok := doc.(Doc); ok {
+			d.SetRev(res[i].Rev)
+			rtevent(db, realtime.EventDelete, d, nil)
+		}
+	}
+	return nil
+}
+
 // CreateNamedDoc persist a document with an ID.
 // if the document already exist, it will return a 409 error.
 // The document ID should be fillled.

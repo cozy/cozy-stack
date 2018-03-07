@@ -18,7 +18,6 @@ import (
 	"github.com/cozy/cozy-stack/pkg/vfs"
 
 	"github.com/cozy/afero"
-	multierror "github.com/hashicorp/go-multierror"
 )
 
 // aferoVFS is a struct implementing the vfs.VFS interface associated with
@@ -218,7 +217,26 @@ func (afs *aferoVFS) DestroyDirContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
-	return afs.destroyDirContent(doc)
+	_, err := afs.Indexer.DeleteDirDocAndContent(doc, true)
+	if err != nil {
+		return err
+	}
+	infos, err := afero.ReadDir(afs.fs, doc.Fullpath)
+	if err != nil {
+		return err
+	}
+	for _, info := range infos {
+		fullpath := path.Join(doc.Fullpath, info.Name())
+		if info.IsDir() {
+			err = afs.fs.RemoveAll(fullpath)
+		} else {
+			err = afs.fs.Remove(fullpath)
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
@@ -226,7 +244,11 @@ func (afs *aferoVFS) DestroyDirAndContent(doc *vfs.DirDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
-	return afs.destroyDirAndContent(doc)
+	_, err := afs.Indexer.DeleteDirDocAndContent(doc, false)
+	if err != nil {
+		return err
+	}
+	return afs.fs.RemoveAll(doc.Fullpath)
 }
 
 func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
@@ -234,45 +256,6 @@ func (afs *aferoVFS) DestroyFile(doc *vfs.FileDoc) error {
 		return lockerr
 	}
 	defer afs.mu.Unlock()
-	return afs.destroyFile(doc)
-}
-
-func (afs *aferoVFS) destroyDirContent(doc *vfs.DirDoc) error {
-	iter := afs.Indexer.DirIterator(doc, nil)
-	var errm error
-	for {
-		d, f, erri := iter.Next()
-		if erri == vfs.ErrIteratorDone {
-			return errm
-		}
-		if erri != nil {
-			return erri
-		}
-		var errd error
-		if d != nil {
-			errd = afs.destroyDirAndContent(d)
-		} else {
-			errd = afs.destroyFile(f)
-		}
-		if errd != nil {
-			errm = multierror.Append(errm, errd)
-		}
-	}
-}
-
-func (afs *aferoVFS) destroyDirAndContent(doc *vfs.DirDoc) error {
-	err := afs.destroyDirContent(doc)
-	if err != nil {
-		return err
-	}
-	err = afs.fs.RemoveAll(doc.Fullpath)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return afs.Indexer.DeleteDirDoc(doc)
-}
-
-func (afs *aferoVFS) destroyFile(doc *vfs.FileDoc) error {
 	path, err := afs.Indexer.FilePath(doc)
 	if err != nil {
 		return err
