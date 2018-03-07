@@ -143,7 +143,7 @@ func PostDiscovery(c echo.Context) error {
 		return wrapErrors(err)
 	}
 
-	redirectURL := member.Instance + "/auth/sharing"
+	redirectURL, err := member.GenerateOAuthURL(s)
 	if c.Request().Header.Get("Accept") == "application/json" {
 		return c.JSON(http.StatusOK, echo.Map{
 			"redirect": redirectURL,
@@ -219,6 +219,8 @@ func wrapErrors(err error) error {
 		return jsonapi.BadRequest(err)
 	case sharing.ErrRequestFailed:
 		return jsonapi.BadGateway(err)
+	case sharing.ErrNoOAuthClient:
+		return jsonapi.BadRequest(err)
 	}
 	return err
 }

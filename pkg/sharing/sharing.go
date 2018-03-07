@@ -387,4 +387,42 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, u *url.URL
 	return couchdb.UpdateDoc(inst, s)
 }
 
+// GenerateOAuthURL takes care of creating a correct OAuth request for
+// the given member of the sharing.
+func (m *Member) GenerateOAuthURL(s *Sharing) (string, error) {
+	if !s.Owner {
+		return "", ErrInvalidSharing
+	}
+	if len(s.Members) != len(s.Credentials)+1 {
+		return "", ErrInvalidSharing
+	}
+	var creds *Credentials
+	for i, member := range s.Members {
+		if *m == member {
+			creds = &s.Credentials[i-1]
+		}
+	}
+	if creds == nil {
+		return "", ErrInvalidSharing
+	}
+	if m.Instance == "" || creds.Client.ClientID == "" {
+		return "", ErrNoOAuthClient
+	}
+
+	u, err := url.Parse(m.Instance)
+	if err != nil {
+		return "", err
+	}
+	u.Path = "/auth/authorize/sharing"
+
+	q := url.Values{
+		"sharing_id": {s.SID},
+		"client_id":  {creds.Client.ClientID},
+		"state":      {creds.State},
+	}
+	u.RawQuery = q.Encode()
+
+	return u.String(), nil
+}
+
 var _ couchdb.Doc = &Sharing{}

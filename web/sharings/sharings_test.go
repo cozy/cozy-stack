@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
 	"github.com/cozy/cozy-stack/web/auth"
+	"github.com/cozy/cozy-stack/web/middlewares"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo"
@@ -39,7 +41,6 @@ var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
 var sharingID string
-var discoveryLink string
 
 // Things that live on Bob's Cozy
 var tsB *httptest.Server
@@ -47,6 +48,9 @@ var bobInstance *instance.Instance
 
 // Bob's browser
 var bobUA *http.Client
+var discoveryLink string
+var authorizeLink string
+var csrfToken string
 
 func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	var result map[string]interface{}
@@ -214,6 +218,7 @@ func TestDiscovery(t *testing.T) {
 	res, err := bobUA.Do(req)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
 	assert.Contains(t, string(body), "Happy to see you Bob!")
@@ -233,10 +238,49 @@ func TestDiscovery(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusFound, res.StatusCode)
-	assert.Equal(t, tsB.URL+"/auth/sharing", res.Header.Get("Location"))
+	authorizeLink = res.Header.Get("Location")
+	assert.Contains(t, authorizeLink, tsB.URL)
+	assert.Contains(t, authorizeLink, "/auth/authorize/sharing")
 
 	assertOAuthClientHasBeenRegistered(t)
 	assertSharingRequestHasBeenCreated(t)
+}
+
+func bobLogin(t *testing.T) {
+	res, err := bobUA.Get(tsB.URL + "/auth/login")
+	assert.NoError(t, err)
+	res.Body.Close()
+	token := res.Cookies()[0].Value
+
+	v := &url.Values{
+		"passphrase": {"MyPassphrase"},
+		"csrf_token": {token},
+	}
+	req, err := http.NewRequest(http.MethodPost, tsB.URL+"/auth/login", bytes.NewBufferString(v.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	assert.NoError(t, err)
+	res, err = bobUA.Do(req)
+	assert.NoError(t, err)
+	res.Body.Close()
+	assert.Equal(t, http.StatusSeeOther, res.StatusCode)
+	assert.Contains(t, res.Header.Get("Location"), "drive")
+}
+
+func TestAuthorizeSharing(t *testing.T) {
+	bobLogin(t)
+
+	res, err := bobUA.Get(authorizeLink)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.Equal(t, "text/html; charset=UTF-8", res.Header.Get("Content-Type"))
+	defer res.Body.Close()
+	body, _ := ioutil.ReadAll(res.Body)
+	assert.Contains(t, string(body), "would like to share the following data with you")
+	re := regexp.MustCompile(`<input type="hidden" name="csrf_token" value="(\w+)"`)
+	matches := re.FindStringSubmatch(string(body))
+	if assert.Len(t, matches, 2) {
+		csrfToken = matches[1]
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -278,8 +322,16 @@ func TestMain(m *testing.M) {
 	bobInstance = altSetup.GetTestInstance(&instance.Options{
 		Settings: settingsB,
 	})
+	bobInstance.RegisterPassphrase([]byte("MyPassphrase"), bobInstance.RegisterToken)
+	bobInstance.OnboardingFinished = true
+	if err := instance.Update(bobInstance); err != nil {
+		testutils.Fatal(err)
+	}
 	tsB = altSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
-		"/auth":     auth.Routes,
+		"/auth": func(g *echo.Group) {
+			g.Use(middlewares.LoadSession)
+			auth.Routes(g)
+		},
 		"/sharings": sharings.Routes,
 	})
 	tsB.Config.Handler.(*echo.Echo).Renderer = render

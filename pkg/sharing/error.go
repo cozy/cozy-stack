@@ -20,4 +20,7 @@ var (
 	// ErrRequestFailed is used when a cozy tries to create a sharing request
 	// on another cozy, but it failed
 	ErrRequestFailed = errors.New("The sharing request failed")
+	// ErrNoOAuthClient is used when the owner of the Cozy has not yet
+	// registered to the recipient as an OAuth client.
+	ErrNoOAuthClient = errors.New("No OAuth client was found")
 )

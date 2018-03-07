@@ -457,7 +457,7 @@ type authorizeParams struct {
 	client      *oauth.Client
 }
 
-func checkAuthorizeParams(c echo.Context, params *authorizeParams, sharing bool) (bool, error) {
+func checkAuthorizeParams(c echo.Context, params *authorizeParams) (bool, error) {
 	if params.state == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.Domain,
@@ -470,19 +470,17 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams, sharing bool)
 			"Error":  "Error No client_id parameter",
 		})
 	}
-	if !sharing {
-		if params.redirectURI == "" {
-			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": params.instance.Domain,
-				"Error":  "Error No redirect_uri parameter",
-			})
-		}
-		if params.resType != "code" {
-			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": params.instance.Domain,
-				"Error":  "Error Invalid response type",
-			})
-		}
+	if params.redirectURI == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No redirect_uri parameter",
+		})
+	}
+	if params.resType != "code" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error Invalid response type",
+		})
 	}
 	if params.scope == "" {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
@@ -498,20 +496,10 @@ func checkAuthorizeParams(c echo.Context, params *authorizeParams, sharing bool)
 			"Error":  "Error No registered client",
 		})
 	}
-	if !sharing {
-		if !params.client.AcceptRedirectURI(params.redirectURI) {
-			return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
-				"Domain": params.instance.Domain,
-				"Error":  "Error Incorrect redirect_uri",
-			})
-		}
-	}
-
-	isSharingKind := params.client.ClientKind == "sharing"
-	if sharing != isSharingKind {
+	if !params.client.AcceptRedirectURI(params.redirectURI) {
 		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
 			"Domain": params.instance.Domain,
-			"Error":  "Error Invalid response type",
+			"Error":  "Error Incorrect redirect_uri",
 		})
 	}
 
@@ -529,7 +517,7 @@ func authorizeForm(c echo.Context) error {
 		resType:     c.QueryParam("response_type"),
 	}
 
-	if hasError, err := checkAuthorizeParams(c, &params, false); hasError {
+	if hasError, err := checkAuthorizeParams(c, &params); hasError {
 		return err
 	}
 
@@ -601,7 +589,7 @@ func authorize(c echo.Context) error {
 		resType:     c.FormValue("response_type"),
 	}
 
-	if hasError, err := checkAuthorizeParams(c, &params, false); hasError {
+	if hasError, err := checkAuthorizeParams(c, &params); hasError {
 		return err
 	}
 
@@ -635,16 +623,55 @@ func authorize(c echo.Context) error {
 	return c.Redirect(http.StatusFound, u.String()+"#")
 }
 
-func authorizeSharingForm(c echo.Context) error {
-	instance := middlewares.GetInstance(c)
-	params := authorizeParams{
-		instance: instance,
-		state:    c.QueryParam("state"),
-		clientID: c.QueryParam("client_id"),
-		scope:    c.QueryParam("scope"),
+type authorizeSharingParams struct {
+	instance  *instance.Instance
+	state     string
+	clientID  string
+	sharingID string
+	client    *oauth.Client
+}
+
+func checkAuthorizeSharingParams(c echo.Context, params *authorizeSharingParams) (bool, error) {
+	if params.state == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No state parameter",
+		})
+	}
+	if params.clientID == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No client_id parameter",
+		})
+	}
+	if params.sharingID == "" {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No sharing_id parameter",
+		})
 	}
 
-	if hasError, err := checkAuthorizeParams(c, &params, true); hasError {
+	params.client = new(oauth.Client)
+	if err := couchdb.GetDoc(params.instance, consts.OAuthClients, params.clientID, params.client); err != nil {
+		return true, c.Render(http.StatusBadRequest, "error.html", echo.Map{
+			"Domain": params.instance.Domain,
+			"Error":  "Error No registered client",
+		})
+	}
+
+	return false, nil
+}
+
+func authorizeSharingForm(c echo.Context) error {
+	instance := middlewares.GetInstance(c)
+	params := authorizeSharingParams{
+		instance:  instance,
+		state:     c.QueryParam("state"),
+		clientID:  c.QueryParam("client_id"),
+		sharingID: c.QueryParam("sharing_id"),
+	}
+
+	if hasError, err := checkAuthorizeSharingParams(c, &params); hasError {
 		return err
 	}
 
@@ -655,7 +682,7 @@ func authorizeSharingForm(c echo.Context) error {
 		return c.Redirect(http.StatusSeeOther, u)
 	}
 
-	// TODO parse rules and readonly
+	// TODO load sharing, parse rules and readonly
 	params.client.ClientID = params.client.CouchID
 
 	var clientDomain string
@@ -672,7 +699,6 @@ func authorizeSharingForm(c echo.Context) error {
 		"Locale":       instance.Locale,
 		"Client":       params.client,
 		"State":        params.state,
-		"Scope":        params.scope,
 		"CSRF":         c.Get("csrf"),
 	})
 }
@@ -686,7 +712,7 @@ func authorizeSharing(c echo.Context) error {
 		scope:    c.FormValue("scope"),
 	}
 
-	if hasError, err := checkAuthorizeParams(c, &params, false); hasError {
+	if hasError, err := checkAuthorizeParams(c, &params); hasError {
 		return err
 	}
 

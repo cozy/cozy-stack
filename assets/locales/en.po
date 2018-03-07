@@ -227,6 +227,9 @@ msgstr "The scope parameter is mandatory"
 msgid "Error No registered client"
 msgstr "The client must be registered"
 
+msgid "Error No sharing_id parameter"
+msgstr "The sharing_id parameter is mandatory"
+
 msgid "Error Incorrect redirect_uri"
 msgstr "The redirect_uri parameter doesn't match the registered ones"
 
