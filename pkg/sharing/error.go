@@ -17,4 +17,7 @@ var (
 	ErrMemberNotFound = errors.New("The member was not found")
 	// ErrMailNotSent is used when the invitation mail failed to be sent
 	ErrMailNotSent = errors.New("The mail cannot be sent")
+	// ErrRequestFailed is used when a cozy tries to create a sharing request
+	// on another cozy, but it failed
+	ErrRequestFailed = errors.New("The sharing request failed")
 )

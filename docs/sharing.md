@@ -242,6 +242,7 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
+  "data": {
     "type": "io.cozy.sharings",
     "id": "ce8835a061d0ef68947afe69a0046722",
     "attributes": {

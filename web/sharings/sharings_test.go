@@ -21,8 +21,10 @@ import (
 	"github.com/cozy/cozy-stack/pkg/instance"
 	"github.com/cozy/cozy-stack/pkg/jobs"
 	"github.com/cozy/cozy-stack/pkg/permissions"
+	"github.com/cozy/cozy-stack/pkg/sharing"
 	"github.com/cozy/cozy-stack/tests/testutils"
 	"github.com/cozy/cozy-stack/web"
+	"github.com/cozy/cozy-stack/web/auth"
 	"github.com/cozy/cozy-stack/web/sharings"
 	"github.com/cozy/cozy-stack/web/statik"
 	"github.com/labstack/echo"
@@ -31,16 +33,19 @@ import (
 
 const iocozytests = "io.cozy.tests"
 
-var setup *testutils.TestSetup
-
 // Things that live on Alice's Cozy
-var ts *httptest.Server
+var tsA *httptest.Server
 var aliceInstance *instance.Instance
 var aliceAppToken string
 var bobContact *contacts.Contact
-var sharingLink string
+var sharingID string
+var discoveryLink string
 
-// Things that live on Bob's browser
+// Things that live on Bob's Cozy
+var tsB *httptest.Server
+var bobInstance *instance.Instance
+
+// Bob's browser
 var bobUA *http.Client
 
 func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
@@ -48,10 +53,10 @@ func assertSharingIsCorrectOnSharer(t *testing.T, body io.Reader) {
 	assert.NoError(t, json.NewDecoder(body).Decode(&result))
 	data := result["data"].(map[string]interface{})
 	assert.Equal(t, data["type"], consts.Sharings)
-	sid := data["id"].(string)
-	assert.NotEmpty(t, sid)
+	sharingID = data["id"].(string)
+	assert.NotEmpty(t, sharingID)
 	assert.NotEmpty(t, data["meta"].(map[string]interface{})["rev"])
-	self := "/sharings/" + sid
+	self := "/sharings/" + sharingID
 	assert.Equal(t, data["links"].(map[string]interface{})["self"], self)
 
 	attrs := data["attributes"].(map[string]interface{})
@@ -104,8 +109,8 @@ func assertInvitationMailWasSent(t *testing.T) {
 	assert.Equal(t, values["RecipientName"], "Bob")
 	assert.Equal(t, values["SharerPublicName"], "Alice")
 	assert.Equal(t, values["Description"], "this is a test")
-	sharingLink = values["SharingLink"].(string)
-	assert.Contains(t, sharingLink, "/discovery?state=")
+	discoveryLink = values["SharingLink"].(string)
+	assert.Contains(t, discoveryLink, "/discovery?state=")
 }
 
 func TestCreateSharingSuccess(t *testing.T) {
@@ -140,7 +145,7 @@ func TestCreateSharingSuccess(t *testing.T) {
 	body, _ := json.Marshal(v)
 	r := bytes.NewReader(body)
 
-	req, err := http.NewRequest(http.MethodPost, ts.URL+"/sharings/", r)
+	req, err := http.NewRequest(http.MethodPost, tsA.URL+"/sharings/", r)
 	assert.NoError(t, err)
 	req.Header.Add(echo.HeaderContentType, "application/vnd.api+json")
 	req.Header.Add(echo.HeaderAuthorization, "Bearer "+aliceAppToken)
@@ -153,9 +158,53 @@ func TestCreateSharingSuccess(t *testing.T) {
 	assertInvitationMailWasSent(t)
 }
 
+func assertOAuthClientHasBeenRegistered(t *testing.T) {
+	var results []map[string]interface{}
+	req := couchdb.AllDocsRequest{}
+	err := couchdb.GetAllDocs(bobInstance, consts.OAuthClients, &req, &results)
+	assert.NoError(t, err)
+	assert.Len(t, results, 1)
+	client := results[0]
+	assert.Equal(t, client["client_name"], "Alice")
+	assert.Equal(t, client["client_kind"], "sharing")
+	assert.Equal(t, client["client_uri"], "https://"+aliceInstance.Domain)
+}
+
+func assertSharingRequestHasBeenCreated(t *testing.T) {
+	var results []*sharing.Sharing
+	req := couchdb.AllDocsRequest{}
+	err := couchdb.GetAllDocs(bobInstance, consts.Sharings, &req, &results)
+	assert.NoError(t, err)
+	assert.Len(t, results, 1)
+	s := results[0]
+	assert.Equal(t, s.SID, sharingID)
+	assert.False(t, s.Active)
+	assert.False(t, s.Owner)
+	assert.Equal(t, s.Description, "this is a test")
+	assert.Equal(t, s.AppSlug, "testapp")
+
+	assert.Len(t, s.Members, 2)
+	owner := s.Members[0]
+	assert.Equal(t, owner.Status, "owner")
+	assert.Equal(t, owner.Name, "Alice")
+	assert.Equal(t, owner.Email, "alice@example.net")
+	assert.Equal(t, owner.Instance, aliceInstance.Domain)
+	recipient := s.Members[1]
+	assert.Equal(t, recipient.Status, "mail-not-sent")
+	assert.Equal(t, recipient.Name, "Bob")
+	assert.Equal(t, recipient.Email, "bob@example.net")
+	assert.Equal(t, recipient.Instance, tsB.URL)
+
+	assert.Len(t, s.Rules, 1)
+	rule := s.Rules[0]
+	assert.Equal(t, rule.Title, "test one")
+	assert.Equal(t, rule.DocType, iocozytests)
+	assert.Equal(t, rule.Values, []string{"foobar"})
+}
+
 func TestDiscovery(t *testing.T) {
-	parts := strings.Split(ts.URL, "://")
-	u, err := url.Parse(sharingLink)
+	parts := strings.Split(tsA.URL, "://")
+	u, err := url.Parse(discoveryLink)
 	assert.NoError(t, err)
 	u.Scheme = parts[0]
 	u.Host = parts[1]
@@ -175,7 +224,7 @@ func TestDiscovery(t *testing.T) {
 	u.RawQuery = ""
 	v := &url.Values{
 		"state": {state},
-		"url":   {"https://bob.example.net/"},
+		"url":   {tsB.URL},
 	}
 	req, err = http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -184,7 +233,10 @@ func TestDiscovery(t *testing.T) {
 	assert.NoError(t, err)
 	defer res.Body.Close()
 	assert.Equal(t, http.StatusFound, res.StatusCode)
-	assert.Equal(t, "/auth/sharing", res.Header.Get("Location"))
+	assert.Equal(t, tsB.URL+"/auth/sharing", res.Header.Get("Location"))
+
+	assertOAuthClientHasBeenRegistered(t)
+	assertSharingRequestHasBeenCreated(t)
 }
 
 func TestMain(m *testing.M) {
@@ -192,9 +244,10 @@ func TestMain(m *testing.M) {
 	config.GetConfig().Assets = "../../assets"
 	web.LoadSupportedLocales()
 	testutils.NeedCouchdb()
+	render, _ := statik.NewDirRenderer("../../assets")
 
 	// Prepare Alice's instance
-	setup = testutils.NewSetup(m, "sharing_test_alice")
+	setup := testutils.NewSetup(m, "sharing_test_alice")
 	var settings couchdb.JSONDoc
 	settings.M = map[string]interface{}{
 		"email":       "alice@example.net",
@@ -205,6 +258,8 @@ func TestMain(m *testing.M) {
 	})
 	aliceAppToken = generateAppToken(aliceInstance, "testapp")
 	bobContact = createContact(aliceInstance, "Bob", "bob@example.net")
+	tsA = setup.GetTestServer("/sharings", sharings.Routes)
+	tsA.Config.Handler.(*echo.Echo).Renderer = render
 
 	// Prepare Bob's browser
 	jar := setup.GetCookieJar()
@@ -213,9 +268,26 @@ func TestMain(m *testing.M) {
 		Jar:           jar,
 	}
 
-	ts = setup.GetTestServer("/sharings", sharings.Routes)
-	r, _ := statik.NewDirRenderer("../../assets")
-	ts.Config.Handler.(*echo.Echo).Renderer = r
+	// Prepare Bob's instance
+	altSetup := testutils.NewSetup(m, "sharing_test_bob")
+	var settingsB couchdb.JSONDoc
+	settingsB.M = map[string]interface{}{
+		"email":       "bob@example.net",
+		"public_name": "Bob",
+	}
+	bobInstance = altSetup.GetTestInstance(&instance.Options{
+		Settings: settingsB,
+	})
+	tsB = altSetup.GetTestServerMultipleRoutes(map[string]func(*echo.Group){
+		"/auth":     auth.Routes,
+		"/sharings": sharings.Routes,
+	})
+	tsB.Config.Handler.(*echo.Echo).Renderer = render
+
+	setup.AddCleanup(func() error {
+		altSetup.Cleanup()
+		return nil
+	})
 	os.Exit(setup.Run())
 }
 

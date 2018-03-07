@@ -1,15 +1,21 @@
 package sharing
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/cozy/cozy-stack/client/auth"
+	"github.com/cozy/cozy-stack/client/request"
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/contacts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/crypto"
 	"github.com/cozy/cozy-stack/pkg/instance"
+	"github.com/cozy/cozy-stack/pkg/logger"
+	"github.com/cozy/cozy-stack/web/jsonapi"
 )
 
 const (
@@ -40,7 +46,7 @@ type Member struct {
 // authorization.
 type Credentials struct {
 	// OAuth state to accept the sharing (authorize phase)
-	State string `json:"state"`
+	State string `json:"state,omitempty"`
 
 	// Information needed to send data to the member
 	Client      *auth.Client      `json:"client,omitempty"`
@@ -68,7 +74,8 @@ type Sharing struct {
 	SID  string `json:"_id,omitempty"`
 	SRev string `json:"_rev,omitempty"`
 
-	Owner       bool      `json:"owner"`
+	Active      bool      `json:"active,omitempty"`
+	Owner       bool      `json:"owner,omitempty"`
 	Open        bool      `json:"open_sharing,omitempty"`
 	Description string    `json:"description,omitempty"`
 	AppSlug     string    `json:"app_slug"`
@@ -83,7 +90,7 @@ type Sharing struct {
 
 	// On the owner, credentials[i] is associated to members[i+1]
 	// On a recipient, there is only credentials[0] (for the owner)
-	Credentials []Credentials `json:"credentials"`
+	Credentials []Credentials `json:"credentials,omitempty"`
 }
 
 // ID returns the sharing qualified identifier
@@ -121,12 +128,13 @@ func (s *Sharing) Clone() couchdb.Doc {
 
 // BeOwner is a function that setup a sharing on the cozy of its owner
 func (s *Sharing) BeOwner(inst *instance.Instance, slug string) error {
+	s.Active = true
+	s.Owner = true
 	if s.AppSlug == "" {
 		s.AppSlug = slug
 	}
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = s.CreatedAt
-	s.Owner = true
 
 	name, err := inst.PublicName()
 	if err != nil {
@@ -184,8 +192,30 @@ func (s *Sharing) Create(inst *instance.Instance) error {
 	if err := couchdb.CreateDoc(inst, s); err != nil {
 		return err
 	}
-	// TODO create the permissions set for preview if preview_path is filled
+	if s.Owner && s.AppSlug != "" && s.PreviewPath != "" {
+		// TODO create the permissions set for preview
+	}
 	return nil
+}
+
+// CreateRequest prepares a sharing as just a request that the user will have to
+// accept before it does anything.
+func (s *Sharing) CreateRequest(inst *instance.Instance) error {
+	// TODO validate the doctype of each rule
+	if len(s.Rules) == 0 {
+		return ErrNoRules
+	}
+	if len(s.Members) < 2 {
+		return ErrNoRecipients
+	}
+	// TODO check members
+
+	s.Active = false
+	s.Owner = false
+	s.UpdatedAt = time.Now()
+	s.Credentials = make([]Credentials, 1)
+
+	return couchdb.CreateNamedDoc(inst, s)
 }
 
 // FindSharing retrieves a sharing document from its ID
@@ -214,6 +244,26 @@ func (s *Sharing) FindMemberByState(db couchdb.Database, state string) (*Member,
 	}
 	return nil, ErrMemberNotFound
 }
+
+// APISharing is used to serialize a Sharing to JSON-API
+type APISharing struct {
+	*Sharing
+	// XXX Hide the credentials
+	Credentials *interface{} `json:"credentials,omitempty"`
+}
+
+// Included is part of jsonapi.Object interface
+func (s *APISharing) Included() []jsonapi.Object { return nil }
+
+// Relationships is part of jsonapi.Object interface
+func (s *APISharing) Relationships() jsonapi.RelationshipMap { return nil }
+
+// Links is part of jsonapi.Object interface
+func (s *APISharing) Links() *jsonapi.LinksList {
+	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
+}
+
+var _ jsonapi.Object = (*APISharing)(nil)
 
 // RegisterClient asks the Cozy of the member to register a new OAuth client
 func (m *Member) RegisterClient(inst *instance.Instance, u *url.URL) (*auth.Client, error) {
@@ -245,8 +295,52 @@ func (m *Member) RegisterClient(inst *instance.Instance, u *url.URL) (*auth.Clie
 }
 
 // CreateSharingRequest sends information about the sharing to the recipient's cozy
-func (m *Member) CreateSharingRequest(inst *instance.Instance, u *url.URL) error {
+func (m *Member) CreateSharingRequest(inst *instance.Instance, s *Sharing, u *url.URL) error {
 	// TODO translate ids of files/folders in the rules sent to the recipients
+	sh := APISharing{
+		&Sharing{
+			SID:         s.SID,
+			Active:      false,
+			Owner:       false,
+			Open:        s.Open,
+			Description: s.Description,
+			AppSlug:     s.AppSlug,
+			PreviewPath: s.PreviewPath,
+			CreatedAt:   s.CreatedAt,
+			UpdatedAt:   s.UpdatedAt,
+			Rules:       s.Rules,
+			Members:     s.Members,
+		},
+		nil,
+	}
+	data, err := jsonapi.MarshalObject(&sh)
+	if err != nil {
+		return err
+	}
+	body, err := json.Marshal(jsonapi.Document{Data: &data})
+	if err != nil {
+		return err
+	}
+	res, err := request.Req(&request.Options{
+		Method: http.MethodPut,
+		Scheme: u.Scheme,
+		Domain: u.Host,
+		Path:   "/sharings/" + s.SID,
+		Headers: request.Headers{
+			"Accept":       "application/vnd.api+json",
+			"Content-Type": "application/vnd.api+json",
+		},
+		Body: bytes.NewReader(body),
+	})
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode/100 != 2 {
+		return ErrRequestFailed
+	}
+
 	return nil
 }
 
@@ -279,16 +373,16 @@ func (s *Sharing) RegisterCozyURL(inst *instance.Instance, m *Member, u *url.URL
 		return ErrInvalidSharing
 	}
 
-	// client, err := m.RegisterClient(inst, u)
-	var err error
+	client, err := m.RegisterClient(inst, u)
 	if err != nil {
-		// TODO log
+		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on OAuth client registration: %s", err)
 		return ErrInvalidURL
 	}
-	// creds.Client = client
+	creds.Client = client
 
-	if err = m.CreateSharingRequest(inst, u); err != nil {
-		return err
+	if err = m.CreateSharingRequest(inst, s, u); err != nil {
+		logger.WithDomain(inst.Domain).Warnf("[sharing] Error on sharing request: %s", err)
+		return ErrRequestFailed
 	}
 	return couchdb.UpdateDoc(inst, s)
 }

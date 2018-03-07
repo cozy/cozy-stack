@@ -16,21 +16,7 @@ import (
 	"github.com/labstack/echo"
 )
 
-type apiSharing struct {
-	*sharing.Sharing
-	// XXX Hide the credentials
-	Credentials *interface{} `json:"credentials,omitempty"`
-}
-
-func (s *apiSharing) Included() []jsonapi.Object             { return nil }
-func (s *apiSharing) Relationships() jsonapi.RelationshipMap { return nil }
-func (s *apiSharing) Links() *jsonapi.LinksList {
-	return &jsonapi.LinksList{Self: "/sharings/" + s.SID}
-}
-
-var _ jsonapi.Object = (*apiSharing)(nil)
-
-// CreateSharing initializes a new sharing
+// CreateSharing initializes a new sharing (on the sharer)
 func CreateSharing(c echo.Context) error {
 	inst := middlewares.GetInstance(c)
 
@@ -67,7 +53,26 @@ func CreateSharing(c echo.Context) error {
 	if err = s.SendMails(inst); err != nil {
 		return wrapErrors(err)
 	}
-	return jsonapi.Data(c, http.StatusCreated, &apiSharing{&s, nil}, nil)
+	as := &sharing.APISharing{&s, nil}
+	return jsonapi.Data(c, http.StatusCreated, as, nil)
+}
+
+// PutSharing creates a sharing request (on the recipient's cozy)
+func PutSharing(c echo.Context) error {
+	inst := middlewares.GetInstance(c)
+
+	var s sharing.Sharing
+	obj, err := jsonapi.Bind(c.Request(), &s)
+	if err != nil {
+		return jsonapi.BadJSON()
+	}
+	s.SID = obj.ID
+
+	if err := s.CreateRequest(inst); err != nil {
+		return wrapErrors(err)
+	}
+	as := &sharing.APISharing{&s, nil}
+	return jsonapi.Data(c, http.StatusCreated, as, nil)
 }
 
 func renderDiscoveryForm(c echo.Context, inst *instance.Instance, code int, sharingID, state string, m *sharing.Member) error {
@@ -149,7 +154,11 @@ func PostDiscovery(c echo.Context) error {
 
 // Routes sets the routing for the sharing service
 func Routes(router *echo.Group) {
-	router.POST("/", CreateSharing)
+	// Create a sharing
+	router.POST("/", CreateSharing)        // On the sharer
+	router.PUT("/:sharing-id", PutSharing) // On a recipient
+
+	// Register the URL of their Cozy for recipients
 	router.GET("/:sharing-id/discovery", GetDiscovery)
 	router.POST("/:sharing-id/discovery", PostDiscovery)
 }
@@ -208,6 +217,8 @@ func wrapErrors(err error) error {
 		return jsonapi.NotFound(err)
 	case sharing.ErrMailNotSent:
 		return jsonapi.BadRequest(err)
+	case sharing.ErrRequestFailed:
+		return jsonapi.BadGateway(err)
 	}
 	return err
 }
