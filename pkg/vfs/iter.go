@@ -1,12 +1,14 @@
 package vfs
 
 import (
+	"path"
+
 	"github.com/cozy/cozy-stack/pkg/consts"
 	"github.com/cozy/cozy-stack/pkg/couchdb"
 	"github.com/cozy/cozy-stack/pkg/couchdb/mango"
 )
 
-const iterMaxFetchSize = 100
+const iterMaxFetchSize = 256
 
 // iter is a struct allowing to iterate over the children of a
 // directory. The iterator is not thread-safe.
@@ -15,6 +17,7 @@ type iter struct {
 	sel    mango.Filter
 	opt    *IteratorOptions
 	list   []*DirOrFileDoc
+	path   string
 	offset int
 	index  int
 	done   bool
@@ -37,9 +40,10 @@ func NewIterator(db couchdb.Database, dir *DirDoc, opt *IteratorOptions) DirIter
 		sel = mango.And(sel, mango.Gt("_id", opt.AfterID))
 	}
 	return &iter{
-		db:  db,
-		sel: sel,
-		opt: opt,
+		db:   db,
+		sel:  sel,
+		opt:  opt,
+		path: dir.Fullpath,
 	}
 }
 
@@ -55,6 +59,9 @@ func (i *iter) Next() (*DirDoc, *FileDoc, error) {
 		}
 	}
 	d, f := i.list[i.index].Refine()
+	if f != nil {
+		f.fullpath = path.Join(i.path, f.DocName)
+	}
 	i.index++
 	return d, f, nil
 }

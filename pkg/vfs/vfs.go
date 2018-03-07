@@ -520,7 +520,7 @@ type WalkFn func(name string, dir *DirDoc, file *FileDoc, err error) error
 
 // Walk walks the file tree document rooted at root. It should work
 // like filepath.Walk.
-func Walk(fs VFS, root string, walkFn WalkFn) error {
+func Walk(fs Indexer, root string, walkFn WalkFn) error {
 	dir, file, err := fs.DirOrFileByPath(root)
 	if err != nil {
 		return walkFn(root, dir, file, err)
@@ -528,7 +528,7 @@ func Walk(fs VFS, root string, walkFn WalkFn) error {
 	return walk(fs, root, dir, file, walkFn, 0)
 }
 
-func walk(fs VFS, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, count int) error {
+func walk(fs Indexer, name string, dir *DirDoc, file *FileDoc, walkFn WalkFn, count int) error {
 	if count >= maxWalkRecursive {
 		return ErrWalkOverflow
 	}
@@ -633,10 +633,10 @@ func getRestoreDir(fs VFS, name, restorePath string) (*DirDoc, error) {
 		return nil, ErrFileNotInTrash
 	}
 
-	// If the restore path is set, it means that the file is part of a directory
-	// hierarchy which has been trashed. The parent directory at the root of the
-	// trash directory is the document which contains the information of
-	// the restore path.
+	// If the restore path is not set, it means that the file is part of a
+	// directory hierarchy which has been trashed. The parent directory at the
+	// root of the trash directory is the document which contains the information
+	// of the restore path.
 	//
 	// For instance, when trying the restore the baz file inside
 	// TrashDirName/foo/bar/baz/quz, it should extract the "foo" (root) and
@@ -667,9 +667,8 @@ func getRestoreDir(fs VFS, name, restorePath string) (*DirDoc, error) {
 	// directory hierarchy to restore the file in.
 	restoreDir, err := fs.DirByPath(restorePath)
 	if os.IsNotExist(err) {
-		restoreDir, err = MkdirAll(fs, restorePath, nil)
+		return MkdirAll(fs, restorePath, nil)
 	}
-
 	return restoreDir, err
 }
 
