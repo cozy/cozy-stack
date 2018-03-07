@@ -547,9 +547,14 @@ func UpdateDoc(db Database, doc Doc) error {
 
 // BulkUpdateDocs is used to update several docs in one call, as a bulk.
 func BulkUpdateDocs(db Database, doctype string, docs []interface{}) error {
+	if len(docs) == 0 {
+		return nil
+	}
 	body := struct {
 		Docs []interface{} `json:"docs"`
-	}{docs}
+	}{
+		Docs: docs,
+	}
 	var res []updateResponse
 	if err := makeRequest(db, doctype, http.MethodPost, "_bulk_docs", body, &res); err != nil {
 		return err

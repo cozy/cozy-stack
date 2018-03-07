@@ -277,7 +277,7 @@ func RestoreDir(fs VFS, olddoc *DirDoc) (*DirDoc, error) {
 		newdoc.DirID = restoreDir.DocID
 		newdoc.RestorePath = ""
 		newdoc.DocName = name
-		newdoc.Fullpath = path.Join(TrashDirName, name)
+		newdoc.Fullpath = path.Join(restoreDir.Fullpath, name)
 		return fs.UpdateDirDoc(olddoc, newdoc)
 	})
 	if err != nil {

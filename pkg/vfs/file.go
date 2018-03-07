@@ -300,6 +300,8 @@ func TrashFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		newdoc.DirID = trashDirID
 		newdoc.RestorePath = restorePath
 		newdoc.DocName = name
+		newdoc.Trashed = true
+		newdoc.fullpath = path.Join(TrashDirName, name)
 		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
 
@@ -326,6 +328,8 @@ func RestoreFile(fs VFS, olddoc *FileDoc) (*FileDoc, error) {
 		newdoc.DirID = restoreDir.DocID
 		newdoc.RestorePath = ""
 		newdoc.DocName = name
+		newdoc.Trashed = false
+		newdoc.fullpath = path.Join(restoreDir.Fullpath, name)
 		return fs.UpdateFileDoc(olddoc, newdoc)
 	})
 

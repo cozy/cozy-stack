@@ -433,7 +433,7 @@ func (c *couchdbIndexer) DirChildExists(dirID, name string) (bool, error) {
 func (c *couchdbIndexer) setTrashedForFilesInsideDir(doc *DirDoc, trashed bool) error {
 	var files []interface{}
 	err := walk(c, doc.Name(), doc, nil, func(name string, dir *DirDoc, file *FileDoc, err error) error {
-		if file != nil {
+		if file != nil && file.Trashed != trashed {
 			file.Trashed = trashed
 			files = append(files, file)
 		}
